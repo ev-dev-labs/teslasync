@@ -13,12 +13,13 @@ import { EmptyState, QueryError } from '@/components/feedback';
 import { Grid } from '@/components/layout';
 import { GlassPanel, PanelTitle } from '@/components/ui';
 import { useUnits } from '@/hooks/useUnits';
-import { fmtInt, fmtNumber, fmtPercent } from '@/lib/numberFormat';
+
 import type { RegenEfficiencyData } from '@/types/driving';
 
 import type { RegenEfficiencyModel } from '../../lib/regenEfficiency';
 import { DetailScopeNotice } from './DetailScopeNotice';
 import type { RegenSectionState } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 const KPI_COLUMNS = { default: 2, sm: 3, xl: 6 } as const;
 
@@ -35,6 +36,7 @@ export function RegenKpiBand({
   aggregateState,
   detailState,
 }: RegenKpiBandProps) {
+  const { fmtPercent, fmtInt, fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const { formatEnergy } = useUnits();
   const aggregateTotalsUnavailable =
@@ -70,7 +72,7 @@ export function RegenKpiBand({
     Number.isFinite(aggregate.totalDriveWh) &&
     aggregate.totalDriveWh > 0 &&
     Number.isFinite(aggregate.regenRatio)
-      ? fmtPercent(aggregate.regenRatio, 1)
+      ? fmtPercent(aggregate.regenRatio)
       : '—';
   const returnedRowsSubtitle = detailState.isLoading
     ? t('regen.states.detailLoading', 'Detailed query loading.')
@@ -113,7 +115,7 @@ export function RegenKpiBand({
           <MetricCard
             label={t('regen.kpis.aggregateRecovered', 'Aggregate recovered')}
             value={aggregateValue(
-              formatEnergy(aggregate?.totalRegenWh, { precision: 1 }),
+              formatEnergy(aggregate?.totalRegenWh),
             )}
             subtitle={t(
               'regen.kpis.aggregateRecoveredHint',
@@ -134,7 +136,7 @@ export function RegenKpiBand({
           />
           <MetricCard
             label={t('regen.kpis.packCycles', 'Equivalent full-pack cycles')}
-            value={aggregateValue(fmtNumber(aggregate?.freeCharges, 1))}
+            value={aggregateValue(fmtNumber(aggregate?.freeCharges))}
             subtitle={t(
               'regen.kpis.packCyclesHint',
               'Using the reported capacity estimate',
@@ -145,7 +147,7 @@ export function RegenKpiBand({
           <MetricCard
             label={t('regen.kpis.aggregateDenominator', 'Aggregate drive energy')}
             value={aggregateValue(
-              formatEnergy(aggregate?.totalDriveWh, { precision: 1 }),
+              formatEnergy(aggregate?.totalDriveWh),
             )}
             subtitle={t(
               'regen.kpis.aggregateDenominatorHint',

@@ -1,0 +1,1525 @@
+- generic [ref=f30e1]:
+  - generic [ref=f30e2]:
+    - status [ref=f30e3]
+    - link "Skip to main content" [ref=f30e4] [cursor=pointer]:
+      - /url: "#main-content"
+    - generic [ref=f30e5]:
+      - status [ref=f30e6]
+      - alert [ref=f30e7]
+      - banner "Site header" [ref=f30e342]:
+        - button "Open sidebar" [ref=f30e343] [cursor=pointer]
+        - generic [ref=f30e345]: TeslaSync
+        - button "Notifications" [ref=f30e352] [cursor=pointer]
+        - button "Open theme picker" [expanded] [active] [ref=f30e357] [cursor=pointer]
+      - generic [ref=f30e205]:
+        - status [ref=f30e365]:
+          - generic [ref=f30e366]:
+            - generic [ref=f30e367]:
+              - text: Sample data present
+              - generic [ref=f30e368]: · Not live
+            - button "Details" [ref=f30e369] [cursor=pointer]
+        - main [ref=f30e249]:
+          - generic [ref=f30e250]:
+            - navigation "Breadcrumb" [ref=f30e372]:
+              - link "Dashboard" [ref=f30e373] [cursor=pointer]:
+                - /url: /
+              - generic [ref=f30e379]: Charging
+              - generic [ref=f30e382]: Charging overview
+            - status [ref=f30e384]:
+              - generic [ref=f30e389]:
+                - paragraph [ref=f30e390]: Install TeslaSync
+                - paragraph [ref=f30e391]: Add to home screen for native experience
+              - button "Install" [ref=f30e392] [cursor=pointer]
+              - button "Dismiss install prompt" [ref=f30e393] [cursor=pointer]
+            - generic [ref=f30e397]:
+              - generic [ref=f30e398]:
+                - generic [ref=f30e402]:
+                  - heading "Charging sessions" [level=1] [ref=f30e403]
+                  - generic [ref=f30e404]:
+                    - 'button "More info: Charging sessions" [ref=f30e405] [cursor=pointer]'
+                    - tooltip "Live readiness, cost exposure, charger behavior, and charging history"
+                - group "Actions" [ref=f30e408]:
+                  - button "Refresh data · Stale · 1m ago" [ref=f30e411] [cursor=pointer]:
+                    - generic [ref=f30e418]: Stale · 1m ago
+                  - generic [ref=f30e420]:
+                    - generic [ref=f30e423]:
+                      - button "Saved views" [ref=f30e424] [cursor=pointer]
+                      - tooltip "Saved views"
+                    - generic [ref=f30e427]:
+                      - button "Copy link to this view" [ref=f30e428] [cursor=pointer]
+                      - tooltip "Copy link"
+              - region "Search and filters" [ref=f30e433]:
+                - combobox "Search charging — try \"charger:home\", \"cost:>5\", \"kwh:>20\", \"Costco\"" [ref=f30e443]
+              - generic [ref=f30e444]:
+                - region "Overview" [ref=f30e446]:
+                  - generic [ref=f30e447]:
+                    - generic [ref=f30e449]:
+                      - heading "Overview" [level=3] [ref=f30e450]
+                      - paragraph [ref=f30e451]: "Last 30 days · Sep 4, 2026 – Oct 3, 2026·Prior-period comparison unavailable: Aug 5, 2026 – Sep 3, 2026"
+                    - generic [ref=f30e452]:
+                      - generic [ref=f30e455]:
+                        - paragraph [ref=f30e456]:
+                          - generic [ref=f30e457]: Sessions
+                        - paragraph [ref=f30e458]: "31"
+                      - generic [ref=f30e461]:
+                        - paragraph [ref=f30e462]:
+                          - generic [ref=f30e463]: Energy (kWh)
+                        - paragraph [ref=f30e464]: "814"
+                      - generic [ref=f30e467]:
+                        - paragraph [ref=f30e468]:
+                          - generic [ref=f30e469]: Cost
+                        - paragraph [ref=f30e470]: $171.2
+                      - generic [ref=f30e473]:
+                        - paragraph [ref=f30e474]:
+                          - generic [ref=f30e475]: Avg rate (kW)
+                        - paragraph [ref=f30e476]: "12.0"
+                      - generic [ref=f30e479]:
+                        - paragraph [ref=f30e480]:
+                          - generic [ref=f30e481]: Avg duration
+                        - paragraph [ref=f30e482]: 2h 12m
+                      - generic [ref=f30e485]:
+                        - paragraph [ref=f30e486]:
+                          - generic [ref=f30e487]: Avg power (kW)
+                        - paragraph [ref=f30e488]: "22.9"
+                    - generic [ref=f30e490]:
+                      - generic [ref=f30e491]: 21 home · 10 SC · 0 DC
+                      - generic [ref=f30e492]: ·
+                      - generic [ref=f30e493]: 0 free
+                      - generic [ref=f30e494]: ·
+                      - generic [ref=f30e495]: Battery score A
+                      - generic [ref=f30e496]: ·
+                      - generic [ref=f30e497]: "Most common start: 6 AM"
+                - region "Charging over time" [ref=f30e499]:
+                  - figure [ref=f30e500]:
+                    - generic [ref=f30e501]:
+                      - heading "Charging over time" [level=3] [ref=f30e504]
+                      - generic [ref=f30e505]:
+                        - tablist "Charging over time metric" [ref=f30e507]:
+                          - tab "Sessions" [selected] [ref=f30e508] [cursor=pointer]
+                          - tab "Energy" [ref=f30e510] [cursor=pointer]
+                          - tab "Cost" [ref=f30e512] [cursor=pointer]
+                          - tab "Avg power" [ref=f30e514] [cursor=pointer]
+                        - button "Export chart" [ref=f30e517] [cursor=pointer]
+                    - img "Charging over time chart with metric switcher" [ref=f30e521]:
+                      - img [ref=f30e524]:
+                        - generic [ref=f30e529]:
+                          - generic [ref=f30e530]: Sep 4
+                          - generic [ref=f30e532]: Sep 10
+                          - generic [ref=f30e534]: Sep 17
+                          - generic [ref=f30e536]: Sep 24
+                          - generic [ref=f30e538]: Oct 2
+                        - generic [ref=f30e541]:
+                          - generic [ref=f30e542]: "0"
+                          - generic [ref=f30e544]: "1"
+                          - generic [ref=f30e546]: "2"
+                          - generic [ref=f30e548]: "3"
+                    - table [ref=f30e613]:
+                      - caption [ref=f30e614]: Charging over time — data table
+                      - rowgroup [ref=f30e615]:
+                        - row [ref=f30e616]:
+                          - columnheader "Date" [ref=f30e617]
+                          - columnheader "Sessions" [ref=f30e618]
+                      - rowgroup [ref=f30e619]:
+                        - row [ref=f30e620]:
+                          - cell "2026-09-04" [ref=f30e621]
+                          - cell "1" [ref=f30e622]
+                        - row [ref=f30e623]:
+                          - cell "2026-09-05" [ref=f30e624]
+                          - cell "1" [ref=f30e625]
+                        - row [ref=f30e626]:
+                          - cell "2026-09-06" [ref=f30e627]
+                          - cell "1" [ref=f30e628]
+                        - row [ref=f30e629]:
+                          - cell "2026-09-07" [ref=f30e630]
+                          - cell "1" [ref=f30e631]
+                        - row [ref=f30e632]:
+                          - cell "2026-09-08" [ref=f30e633]
+                          - cell "1" [ref=f30e634]
+                        - row [ref=f30e635]:
+                          - cell "2026-09-09" [ref=f30e636]
+                          - cell "1" [ref=f30e637]
+                        - row [ref=f30e638]:
+                          - cell "2026-09-10" [ref=f30e639]
+                          - cell "1" [ref=f30e640]
+                        - row [ref=f30e641]:
+                          - cell "2026-09-11" [ref=f30e642]
+                          - cell "1" [ref=f30e643]
+                        - row [ref=f30e644]:
+                          - cell "2026-09-12" [ref=f30e645]
+                          - cell "1" [ref=f30e646]
+                        - row [ref=f30e647]:
+                          - cell "2026-09-13" [ref=f30e648]
+                          - cell "2" [ref=f30e649]
+                        - row [ref=f30e650]:
+                          - cell "2026-09-14" [ref=f30e651]
+                          - cell "1" [ref=f30e652]
+                        - row [ref=f30e653]:
+                          - cell "2026-09-15" [ref=f30e654]
+                          - cell "1" [ref=f30e655]
+                        - row [ref=f30e656]:
+                          - cell "2026-09-16" [ref=f30e657]
+                          - cell "1" [ref=f30e658]
+                        - row [ref=f30e659]:
+                          - cell "2026-09-17" [ref=f30e660]
+                          - cell "1" [ref=f30e661]
+                        - row [ref=f30e662]:
+                          - cell "2026-09-18" [ref=f30e663]
+                          - cell "1" [ref=f30e664]
+                        - row [ref=f30e665]:
+                          - cell "2026-09-19" [ref=f30e666]
+                          - cell "1" [ref=f30e667]
+                        - row [ref=f30e668]:
+                          - cell "2026-09-20" [ref=f30e669]
+                          - cell "1" [ref=f30e670]
+                        - row [ref=f30e671]:
+                          - cell "2026-09-21" [ref=f30e672]
+                          - cell "1" [ref=f30e673]
+                        - row [ref=f30e674]:
+                          - cell "2026-09-22" [ref=f30e675]
+                          - cell "1" [ref=f30e676]
+                        - row [ref=f30e677]:
+                          - cell "2026-09-23" [ref=f30e678]
+                          - cell "1" [ref=f30e679]
+                        - row [ref=f30e680]:
+                          - cell "2026-09-24" [ref=f30e681]
+                          - cell "2" [ref=f30e682]
+                        - row [ref=f30e683]:
+                          - cell "2026-09-25" [ref=f30e684]
+                          - cell "1" [ref=f30e685]
+                        - row [ref=f30e686]:
+                          - cell "2026-09-26" [ref=f30e687]
+                          - cell "1" [ref=f30e688]
+                        - row [ref=f30e689]:
+                          - cell "2026-09-27" [ref=f30e690]
+                          - cell "1" [ref=f30e691]
+                        - row [ref=f30e692]:
+                          - cell "2026-09-28" [ref=f30e693]
+                          - cell "1" [ref=f30e694]
+                        - row [ref=f30e695]:
+                          - cell "2026-09-29" [ref=f30e696]
+                          - cell "1" [ref=f30e697]
+                        - row [ref=f30e698]:
+                          - cell "2026-09-30" [ref=f30e699]
+                          - cell "1" [ref=f30e700]
+                        - row [ref=f30e701]:
+                          - cell "2026-10-01" [ref=f30e702]
+                          - cell "1" [ref=f30e703]
+                        - row [ref=f30e704]:
+                          - cell "2026-10-02" [ref=f30e705]
+                          - cell "1" [ref=f30e706]
+              - region "All charging sessions" [ref=f30e708]:
+                - generic [ref=f30e709]:
+                  - heading "All sessions (31)" [level=2] [ref=f30e710]:
+                    - text: All sessions
+                    - generic [ref=f30e713]: (31)
+                  - generic [ref=f30e714]:
+                    - generic [ref=f30e715]:
+                      - combobox "Sort by" [ref=f30e717]:
+                        - option "Date" [selected]
+                        - option "Energy"
+                        - option "Cost"
+                        - option "Duration"
+                        - option "Power"
+                      - 'button "Sort direction: Descending" [ref=f30e718] [cursor=pointer]'
+                    - radiogroup "List density" [ref=f30e722]:
+                      - radio "Compact" [checked] [ref=f30e723] [cursor=pointer]
+                      - radio "Comfortable" [ref=f30e726] [cursor=pointer]
+                    - button "Export list" [ref=f30e731] [cursor=pointer]
+                - generic [ref=f30e736]:
+                  - region "Oct 2, 2026 · Yesterday 1 charging session · 26.3 kWh" [ref=f30e737]:
+                    - generic [ref=f30e738]:
+                      - generic [ref=f30e739]:
+                        - generic [ref=f30e740]: Oct 2, 2026
+                        - generic [ref=f30e741]: · Yesterday
+                      - generic [ref=f30e743]: 1 charging session · 26.3 kWh
+                    - generic [ref=f30e747]:
+                      - checkbox "Select charging session" [ref=f30e750]
+                      - 'link "Battery-friendly score: 85 22h ago Oct 2, 2026, 06:13 AM · 3h 0m Home / AC 26.3 kWh Demo Home" [ref=f30e752] [cursor=pointer]':
+                        - /url: /charging/1
+                        - generic [ref=f30e754]:
+                          - 'generic "Battery-friendly score: 85" [ref=f30e756]': A
+                          - generic [ref=f30e757]:
+                            - generic [ref=f30e758]:
+                              - generic [ref=f30e759]:
+                                - generic [ref=f30e760]: 22h ago
+                                - tooltip "Oct 2, 2026, 06:13 AM"
+                              - generic [ref=f30e761]: ·
+                              - generic [ref=f30e762]: 3h 0m
+                              - generic [ref=f30e763]: Home / AC
+                              - generic [ref=f30e764]: 26.3 kWh
+                            - generic [ref=f30e765]: Demo Home
+                      - button "Quick view charging session" [ref=f30e775] [cursor=pointer]
+                  - region "Oct 1, 2026 · 2d ago 1 charging session · 26.3 kWh" [ref=f30e779]:
+                    - generic [ref=f30e780]:
+                      - generic [ref=f30e781]:
+                        - generic [ref=f30e782]: Oct 1, 2026
+                        - generic [ref=f30e783]: · 2d ago
+                      - generic [ref=f30e785]: 1 charging session · 26.3 kWh
+                    - generic [ref=f30e789]:
+                      - checkbox "Select charging session" [ref=f30e792]
+                      - 'link "Battery-friendly score: 85 1d ago Oct 1, 2026, 08:13 AM · 3h 0m Home / AC 26.3 kWh Demo Home" [ref=f30e794] [cursor=pointer]':
+                        - /url: /charging/2
+                        - generic [ref=f30e796]:
+                          - 'generic "Battery-friendly score: 85" [ref=f30e798]': A
+                          - generic [ref=f30e799]:
+                            - generic [ref=f30e800]:
+                              - generic [ref=f30e801]:
+                                - generic [ref=f30e802]: 1d ago
+                                - tooltip "Oct 1, 2026, 08:13 AM"
+                              - generic [ref=f30e803]: ·
+                              - generic [ref=f30e804]: 3h 0m
+                              - generic [ref=f30e805]: Home / AC
+                              - generic [ref=f30e806]: 26.3 kWh
+                            - generic [ref=f30e807]: Demo Home
+                      - button "Quick view charging session" [ref=f30e817] [cursor=pointer]
+                  - region "Sep 30, 2026 · 3d ago 1 charging session · 26.3 kWh" [ref=f30e821]:
+                    - generic [ref=f30e822]:
+                      - generic [ref=f30e823]:
+                        - generic [ref=f30e824]: Sep 30, 2026
+                        - generic [ref=f30e825]: · 3d ago
+                      - generic [ref=f30e827]: 1 charging session · 26.3 kWh
+                    - generic [ref=f30e831]:
+                      - checkbox "Select charging session" [ref=f30e834]
+                      - 'link "Battery-friendly score: 85 2d ago Sep 30, 2026, 10:13 AM · 30m Supercharger 26.3 kWh Demo Home" [ref=f30e836] [cursor=pointer]':
+                        - /url: /charging/3
+                        - generic [ref=f30e838]:
+                          - 'generic "Battery-friendly score: 85" [ref=f30e840]': A
+                          - generic [ref=f30e841]:
+                            - generic [ref=f30e842]:
+                              - generic [ref=f30e843]:
+                                - generic [ref=f30e844]: 2d ago
+                                - tooltip "Sep 30, 2026, 10:13 AM"
+                              - generic [ref=f30e845]: ·
+                              - generic [ref=f30e846]: 30m
+                              - generic [ref=f30e847]: Supercharger
+                              - generic [ref=f30e848]: 26.3 kWh
+                            - generic [ref=f30e849]: Demo Home
+                      - button "Quick view charging session" [ref=f30e859] [cursor=pointer]
+                  - region "Sep 29, 2026 · 4d ago 1 charging session · 26.3 kWh" [ref=f30e863]:
+                    - generic [ref=f30e864]:
+                      - generic [ref=f30e865]:
+                        - generic [ref=f30e866]: Sep 29, 2026
+                        - generic [ref=f30e867]: · 4d ago
+                      - generic [ref=f30e869]: 1 charging session · 26.3 kWh
+                    - generic [ref=f30e873]:
+                      - checkbox "Select charging session" [ref=f30e876]
+                      - 'link "Battery-friendly score: 85 3d ago Sep 29, 2026, 12:13 PM · 3h 0m Home / AC 26.3 kWh Demo Home" [ref=f30e878] [cursor=pointer]':
+                        - /url: /charging/4
+                        - generic [ref=f30e880]:
+                          - 'generic "Battery-friendly score: 85" [ref=f30e882]': A
+                          - generic [ref=f30e883]:
+                            - generic [ref=f30e884]:
+                              - generic [ref=f30e885]:
+                                - generic [ref=f30e886]: 3d ago
+                                - tooltip "Sep 29, 2026, 12:13 PM"
+                              - generic [ref=f30e887]: ·
+                              - generic [ref=f30e888]: 3h 0m
+                              - generic [ref=f30e889]: Home / AC
+                              - generic [ref=f30e890]: 26.3 kWh
+                            - generic [ref=f30e891]: Demo Home
+                      - button "Quick view charging session" [ref=f30e901] [cursor=pointer]
+                  - region "Sep 28, 2026 · 5d ago 1 charging session · 26.3 kWh" [ref=f30e905]:
+                    - generic [ref=f30e906]:
+                      - generic [ref=f30e907]:
+                        - generic [ref=f30e908]: Sep 28, 2026
+                        - generic [ref=f30e909]: · 5d ago
+                      - generic [ref=f30e911]: 1 charging session · 26.3 kWh
+                    - generic [ref=f30e915]:
+                      - checkbox "Select charging session" [ref=f30e918]
+                      - 'link "Battery-friendly score: 85 4d ago Sep 28, 2026, 02:13 PM · 3h 0m Home / AC 26.3 kWh Demo Home" [ref=f30e920] [cursor=pointer]':
+                        - /url: /charging/5
+                        - generic [ref=f30e922]:
+                          - 'generic "Battery-friendly score: 85" [ref=f30e924]': A
+                          - generic [ref=f30e925]:
+                            - generic [ref=f30e926]:
+                              - generic [ref=f30e927]:
+                                - generic [ref=f30e928]: 4d ago
+                                - tooltip "Sep 28, 2026, 02:13 PM"
+                              - generic [ref=f30e929]: ·
+                              - generic [ref=f30e930]: 3h 0m
+                              - generic [ref=f30e931]: Home / AC
+                              - generic [ref=f30e932]: 26.3 kWh
+                            - generic [ref=f30e933]: Demo Home
+                      - button "Quick view charging session" [ref=f30e943] [cursor=pointer]
+                  - region "Sep 27, 2026 · 6d ago 1 charging session · 26.3 kWh" [ref=f30e947]:
+                    - generic [ref=f30e948]:
+                      - generic [ref=f30e949]:
+                        - generic [ref=f30e950]: Sep 27, 2026
+                        - generic [ref=f30e951]: · 6d ago
+                      - generic [ref=f30e953]: 1 charging session · 26.3 kWh
+                    - generic [ref=f30e957]:
+                      - checkbox "Select charging session" [ref=f30e960]
+                      - 'link "Battery-friendly score: 85 5d ago Sep 27, 2026, 04:13 PM · 30m Supercharger 26.3 kWh Demo Home" [ref=f30e962] [cursor=pointer]':
+                        - /url: /charging/6
+                        - generic [ref=f30e964]:
+                          - 'generic "Battery-friendly score: 85" [ref=f30e966]': A
+                          - generic [ref=f30e967]:
+                            - generic [ref=f30e968]:
+                              - generic [ref=f30e969]:
+                                - generic [ref=f30e970]: 5d ago
+                                - tooltip "Sep 27, 2026, 04:13 PM"
+                              - generic [ref=f30e971]: ·
+                              - generic [ref=f30e972]: 30m
+                              - generic [ref=f30e973]: Supercharger
+                              - generic [ref=f30e974]: 26.3 kWh
+                            - generic [ref=f30e975]: Demo Home
+                      - button "Quick view charging session" [ref=f30e985] [cursor=pointer]
+                  - region "Sep 26, 2026 · 1w ago 1 charging session · 26.3 kWh" [ref=f30e989]:
+                    - generic [ref=f30e990]:
+                      - generic [ref=f30e991]:
+                        - generic [ref=f30e992]: Sep 26, 2026
+                        - generic [ref=f30e993]: · 1w ago
+                      - generic [ref=f30e995]: 1 charging session · 26.3 kWh
+                    - generic [ref=f30e999]:
+                      - checkbox "Select charging session" [ref=f30e1002]
+                      - 'link "Battery-friendly score: 85 6d ago Sep 26, 2026, 06:13 PM · 3h 0m Home / AC 26.3 kWh Demo Home" [ref=f30e1004] [cursor=pointer]':
+                        - /url: /charging/7
+                        - generic [ref=f30e1006]:
+                          - 'generic "Battery-friendly score: 85" [ref=f30e1008]': A
+                          - generic [ref=f30e1009]:
+                            - generic [ref=f30e1010]:
+                              - generic [ref=f30e1011]:
+                                - generic [ref=f30e1012]: 6d ago
+                                - tooltip "Sep 26, 2026, 06:13 PM"
+                              - generic [ref=f30e1013]: ·
+                              - generic [ref=f30e1014]: 3h 0m
+                              - generic [ref=f30e1015]: Home / AC
+                              - generic [ref=f30e1016]: 26.3 kWh
+                            - generic [ref=f30e1017]: Demo Home
+                      - button "Quick view charging session" [ref=f30e1027] [cursor=pointer]
+                  - region "Sep 25, 2026 · 1w ago 1 charging session · 26.3 kWh" [ref=f30e1031]:
+                    - generic [ref=f30e1032]:
+                      - generic [ref=f30e1033]:
+                        - generic [ref=f30e1034]: Sep 25, 2026
+                        - generic [ref=f30e1035]: · 1w ago
+                      - generic [ref=f30e1037]: 1 charging session · 26.3 kWh
+                    - generic [ref=f30e1041]:
+                      - checkbox "Select charging session" [ref=f30e1044]
+                      - 'link "Battery-friendly score: 85 Sep 25, 2026 Sep 25, 2026, 08:13 PM · 3h 0m Home / AC 26.3 kWh Demo Home" [ref=f30e1046] [cursor=pointer]':
+                        - /url: /charging/8
+                        - generic [ref=f30e1048]:
+                          - 'generic "Battery-friendly score: 85" [ref=f30e1050]': A
+                          - generic [ref=f30e1051]:
+                            - generic [ref=f30e1052]:
+                              - generic [ref=f30e1053]:
+                                - generic [ref=f30e1054]: Sep 25, 2026
+                                - tooltip "Sep 25, 2026, 08:13 PM"
+                              - generic [ref=f30e1055]: ·
+                              - generic [ref=f30e1056]: 3h 0m
+                              - generic [ref=f30e1057]: Home / AC
+                              - generic [ref=f30e1058]: 26.3 kWh
+                            - generic [ref=f30e1059]: Demo Home
+                      - button "Quick view charging session" [ref=f30e1069] [cursor=pointer]
+                  - region "Sep 24, 2026 · 1w ago 2 charging sessions · 52.5 kWh" [ref=f30e1073]:
+                    - generic [ref=f30e1074]:
+                      - generic [ref=f30e1075]:
+                        - generic [ref=f30e1076]: Sep 24, 2026
+                        - generic [ref=f30e1077]: · 1w ago
+                      - generic [ref=f30e1079]: 2 charging sessions · 52.5 kWh
+                    - generic [ref=f30e1080]:
+                      - generic [ref=f30e1083]:
+                        - checkbox "Select charging session" [ref=f30e1086]
+                        - 'link "Battery-friendly score: 85 Sep 24, 2026 Sep 24, 2026, 10:13 PM · 30m Supercharger 26.3 kWh Demo Home" [ref=f30e1088] [cursor=pointer]':
+                          - /url: /charging/9
+                          - generic [ref=f30e1090]:
+                            - 'generic "Battery-friendly score: 85" [ref=f30e1092]': A
+                            - generic [ref=f30e1093]:
+                              - generic [ref=f30e1094]:
+                                - generic [ref=f30e1095]:
+                                  - generic [ref=f30e1096]: Sep 24, 2026
+                                  - tooltip "Sep 24, 2026, 10:13 PM"
+                                - generic [ref=f30e1097]: ·
+                                - generic [ref=f30e1098]: 30m
+                                - generic [ref=f30e1099]: Supercharger
+                                - generic [ref=f30e1100]: 26.3 kWh
+                              - generic [ref=f30e1101]: Demo Home
+                        - button "Quick view charging session" [ref=f30e1111] [cursor=pointer]
+                      - generic [ref=f30e1117]:
+                        - checkbox "Select charging session" [ref=f30e1120]
+                        - 'link "Battery-friendly score: 85 Sep 24, 2026 Sep 24, 2026, 12:13 AM · 3h 0m Home / AC 26.3 kWh Demo Home" [ref=f30e1122] [cursor=pointer]':
+                          - /url: /charging/10
+                          - generic [ref=f30e1124]:
+                            - 'generic "Battery-friendly score: 85" [ref=f30e1126]': A
+                            - generic [ref=f30e1127]:
+                              - generic [ref=f30e1128]:
+                                - generic [ref=f30e1129]:
+                                  - generic [ref=f30e1130]: Sep 24, 2026
+                                  - tooltip "Sep 24, 2026, 12:13 AM"
+                                - generic [ref=f30e1131]: ·
+                                - generic [ref=f30e1132]: 3h 0m
+                                - generic [ref=f30e1133]: Home / AC
+                                - generic [ref=f30e1134]: 26.3 kWh
+                              - generic [ref=f30e1135]: Demo Home
+                        - button "Quick view charging session" [ref=f30e1145] [cursor=pointer]
+                  - region "Sep 23, 2026 · 1w ago 1 charging session · 26.3 kWh" [ref=f30e1149]:
+                    - generic [ref=f30e1150]:
+                      - generic [ref=f30e1151]:
+                        - generic [ref=f30e1152]: Sep 23, 2026
+                        - generic [ref=f30e1153]: · 1w ago
+                      - generic [ref=f30e1155]: 1 charging session · 26.3 kWh
+                    - generic [ref=f30e1159]:
+                      - checkbox "Select charging session" [ref=f30e1162]
+                      - 'link "Battery-friendly score: 85 Sep 23, 2026 Sep 23, 2026, 02:13 AM · 3h 0m Home / AC 26.3 kWh Demo Home" [ref=f30e1164] [cursor=pointer]':
+                        - /url: /charging/11
+                        - generic [ref=f30e1166]:
+                          - 'generic "Battery-friendly score: 85" [ref=f30e1168]': A
+                          - generic [ref=f30e1169]:
+                            - generic [ref=f30e1170]:
+                              - generic [ref=f30e1171]:
+                                - generic [ref=f30e1172]: Sep 23, 2026
+                                - tooltip "Sep 23, 2026, 02:13 AM"
+                              - generic [ref=f30e1173]: ·
+                              - generic [ref=f30e1174]: 3h 0m
+                              - generic [ref=f30e1175]: Home / AC
+                              - generic [ref=f30e1176]: 26.3 kWh
+                            - generic [ref=f30e1177]: Demo Home
+                      - button "Quick view charging session" [ref=f30e1187] [cursor=pointer]
+                  - region "Sep 22, 2026 · 1w ago 1 charging session · 26.3 kWh" [ref=f30e1191]:
+                    - generic [ref=f30e1192]:
+                      - generic [ref=f30e1193]:
+                        - generic [ref=f30e1194]: Sep 22, 2026
+                        - generic [ref=f30e1195]: · 1w ago
+                      - generic [ref=f30e1197]: 1 charging session · 26.3 kWh
+                    - generic [ref=f30e1201]:
+                      - checkbox "Select charging session" [ref=f30e1204]
+                      - 'link "Battery-friendly score: 85 Sep 22, 2026 Sep 22, 2026, 04:13 AM · 30m Supercharger 26.3 kWh Demo Home" [ref=f30e1206] [cursor=pointer]':
+                        - /url: /charging/12
+                        - generic [ref=f30e1208]:
+                          - 'generic "Battery-friendly score: 85" [ref=f30e1210]': A
+                          - generic [ref=f30e1211]:
+                            - generic [ref=f30e1212]:
+                              - generic [ref=f30e1213]:
+                                - generic [ref=f30e1214]: Sep 22, 2026
+                                - tooltip "Sep 22, 2026, 04:13 AM"
+                              - generic [ref=f30e1215]: ·
+                              - generic [ref=f30e1216]: 30m
+                              - generic [ref=f30e1217]: Supercharger
+                              - generic [ref=f30e1218]: 26.3 kWh
+                            - generic [ref=f30e1219]: Demo Home
+                      - button "Quick view charging session" [ref=f30e1229] [cursor=pointer]
+                  - region "Sep 21, 2026 · 1w ago 1 charging session · 26.3 kWh" [ref=f30e1233]:
+                    - generic [ref=f30e1234]:
+                      - generic [ref=f30e1235]:
+                        - generic [ref=f30e1236]: Sep 21, 2026
+                        - generic [ref=f30e1237]: · 1w ago
+                      - generic [ref=f30e1239]: 1 charging session · 26.3 kWh
+                    - generic [ref=f30e1243]:
+                      - checkbox "Select charging session" [ref=f30e1246]
+                      - 'link "Battery-friendly score: 85 Sep 21, 2026 Sep 21, 2026, 06:13 AM · 3h 0m Home / AC 26.3 kWh Demo Home" [ref=f30e1248] [cursor=pointer]':
+                        - /url: /charging/13
+                        - generic [ref=f30e1250]:
+                          - 'generic "Battery-friendly score: 85" [ref=f30e1252]': A
+                          - generic [ref=f30e1253]:
+                            - generic [ref=f30e1254]:
+                              - generic [ref=f30e1255]:
+                                - generic [ref=f30e1256]: Sep 21, 2026
+                                - tooltip "Sep 21, 2026, 06:13 AM"
+                              - generic [ref=f30e1257]: ·
+                              - generic [ref=f30e1258]: 3h 0m
+                              - generic [ref=f30e1259]: Home / AC
+                              - generic [ref=f30e1260]: 26.3 kWh
+                            - generic [ref=f30e1261]: Demo Home
+                      - button "Quick view charging session" [ref=f30e1271] [cursor=pointer]
+                  - region "Sep 20, 2026 · 1w ago 1 charging session · 26.3 kWh" [ref=f30e1275]:
+                    - generic [ref=f30e1276]:
+                      - generic [ref=f30e1277]:
+                        - generic [ref=f30e1278]: Sep 20, 2026
+                        - generic [ref=f30e1279]: · 1w ago
+                      - generic [ref=f30e1281]: 1 charging session · 26.3 kWh
+                    - generic [ref=f30e1285]:
+                      - checkbox "Select charging session" [ref=f30e1288]
+                      - 'link "Battery-friendly score: 85 Sep 20, 2026 Sep 20, 2026, 08:13 AM · 3h 0m Home / AC 26.3 kWh Demo Home" [ref=f30e1290] [cursor=pointer]':
+                        - /url: /charging/14
+                        - generic [ref=f30e1292]:
+                          - 'generic "Battery-friendly score: 85" [ref=f30e1294]': A
+                          - generic [ref=f30e1295]:
+                            - generic [ref=f30e1296]:
+                              - generic [ref=f30e1297]:
+                                - generic [ref=f30e1298]: Sep 20, 2026
+                                - tooltip "Sep 20, 2026, 08:13 AM"
+                              - generic [ref=f30e1299]: ·
+                              - generic [ref=f30e1300]: 3h 0m
+                              - generic [ref=f30e1301]: Home / AC
+                              - generic [ref=f30e1302]: 26.3 kWh
+                            - generic [ref=f30e1303]: Demo Home
+                      - button "Quick view charging session" [ref=f30e1313] [cursor=pointer]
+                  - region "Sep 19, 2026 · 2w ago 1 charging session · 26.3 kWh" [ref=f30e1317]:
+                    - generic [ref=f30e1318]:
+                      - generic [ref=f30e1319]:
+                        - generic [ref=f30e1320]: Sep 19, 2026
+                        - generic [ref=f30e1321]: · 2w ago
+                      - generic [ref=f30e1323]: 1 charging session · 26.3 kWh
+                    - generic [ref=f30e1327]:
+                      - checkbox "Select charging session" [ref=f30e1330]
+                      - 'link "Battery-friendly score: 85 Sep 19, 2026 Sep 19, 2026, 10:13 AM · 30m Supercharger 26.3 kWh Demo Home" [ref=f30e1332] [cursor=pointer]':
+                        - /url: /charging/15
+                        - generic [ref=f30e1334]:
+                          - 'generic "Battery-friendly score: 85" [ref=f30e1336]': A
+                          - generic [ref=f30e1337]:
+                            - generic [ref=f30e1338]:
+                              - generic [ref=f30e1339]:
+                                - generic [ref=f30e1340]: Sep 19, 2026
+                                - tooltip "Sep 19, 2026, 10:13 AM"
+                              - generic [ref=f30e1341]: ·
+                              - generic [ref=f30e1342]: 30m
+                              - generic [ref=f30e1343]: Supercharger
+                              - generic [ref=f30e1344]: 26.3 kWh
+                            - generic [ref=f30e1345]: Demo Home
+                      - button "Quick view charging session" [ref=f30e1355] [cursor=pointer]
+                  - region "Sep 18, 2026 · 2w ago 1 charging session · 26.3 kWh" [ref=f30e1359]:
+                    - generic [ref=f30e1360]:
+                      - generic [ref=f30e1361]:
+                        - generic [ref=f30e1362]: Sep 18, 2026
+                        - generic [ref=f30e1363]: · 2w ago
+                      - generic [ref=f30e1365]: 1 charging session · 26.3 kWh
+                    - generic [ref=f30e1369]:
+                      - checkbox "Select charging session" [ref=f30e1372]
+                      - 'link "Battery-friendly score: 85 Sep 18, 2026 Sep 18, 2026, 12:13 PM · 3h 0m Home / AC 26.3 kWh Demo Home" [ref=f30e1374] [cursor=pointer]':
+                        - /url: /charging/16
+                        - generic [ref=f30e1376]:
+                          - 'generic "Battery-friendly score: 85" [ref=f30e1378]': A
+                          - generic [ref=f30e1379]:
+                            - generic [ref=f30e1380]:
+                              - generic [ref=f30e1381]:
+                                - generic [ref=f30e1382]: Sep 18, 2026
+                                - tooltip "Sep 18, 2026, 12:13 PM"
+                              - generic [ref=f30e1383]: ·
+                              - generic [ref=f30e1384]: 3h 0m
+                              - generic [ref=f30e1385]: Home / AC
+                              - generic [ref=f30e1386]: 26.3 kWh
+                            - generic [ref=f30e1387]: Demo Home
+                      - button "Quick view charging session" [ref=f30e1397] [cursor=pointer]
+                  - region "Sep 17, 2026 · 2w ago 1 charging session · 26.3 kWh" [ref=f30e1401]:
+                    - generic [ref=f30e1402]:
+                      - generic [ref=f30e1403]:
+                        - generic [ref=f30e1404]: Sep 17, 2026
+                        - generic [ref=f30e1405]: · 2w ago
+                      - generic [ref=f30e1407]: 1 charging session · 26.3 kWh
+                    - generic [ref=f30e1411]:
+                      - checkbox "Select charging session" [ref=f30e1414]
+                      - 'link "Battery-friendly score: 85 Sep 17, 2026 Sep 17, 2026, 02:13 PM · 3h 0m Home / AC 26.3 kWh Demo Home" [ref=f30e1416] [cursor=pointer]':
+                        - /url: /charging/17
+                        - generic [ref=f30e1418]:
+                          - 'generic "Battery-friendly score: 85" [ref=f30e1420]': A
+                          - generic [ref=f30e1421]:
+                            - generic [ref=f30e1422]:
+                              - generic [ref=f30e1423]:
+                                - generic [ref=f30e1424]: Sep 17, 2026
+                                - tooltip "Sep 17, 2026, 02:13 PM"
+                              - generic [ref=f30e1425]: ·
+                              - generic [ref=f30e1426]: 3h 0m
+                              - generic [ref=f30e1427]: Home / AC
+                              - generic [ref=f30e1428]: 26.3 kWh
+                            - generic [ref=f30e1429]: Demo Home
+                      - button "Quick view charging session" [ref=f30e1439] [cursor=pointer]
+                  - region "Sep 16, 2026 · 2w ago 1 charging session · 26.3 kWh" [ref=f30e1443]:
+                    - generic [ref=f30e1444]:
+                      - generic [ref=f30e1445]:
+                        - generic [ref=f30e1446]: Sep 16, 2026
+                        - generic [ref=f30e1447]: · 2w ago
+                      - generic [ref=f30e1449]: 1 charging session · 26.3 kWh
+                    - generic [ref=f30e1453]:
+                      - checkbox "Select charging session" [ref=f30e1456]
+                      - 'link "Battery-friendly score: 85 Sep 16, 2026 Sep 16, 2026, 04:13 PM · 30m Supercharger 26.3 kWh Demo Home" [ref=f30e1458] [cursor=pointer]':
+                        - /url: /charging/18
+                        - generic [ref=f30e1460]:
+                          - 'generic "Battery-friendly score: 85" [ref=f30e1462]': A
+                          - generic [ref=f30e1463]:
+                            - generic [ref=f30e1464]:
+                              - generic [ref=f30e1465]:
+                                - generic [ref=f30e1466]: Sep 16, 2026
+                                - tooltip "Sep 16, 2026, 04:13 PM"
+                              - generic [ref=f30e1467]: ·
+                              - generic [ref=f30e1468]: 30m
+                              - generic [ref=f30e1469]: Supercharger
+                              - generic [ref=f30e1470]: 26.3 kWh
+                            - generic [ref=f30e1471]: Demo Home
+                      - button "Quick view charging session" [ref=f30e1481] [cursor=pointer]
+                  - region "Sep 15, 2026 · 2w ago 1 charging session · 26.3 kWh" [ref=f30e1485]:
+                    - generic [ref=f30e1486]:
+                      - generic [ref=f30e1487]:
+                        - generic [ref=f30e1488]: Sep 15, 2026
+                        - generic [ref=f30e1489]: · 2w ago
+                      - generic [ref=f30e1491]: 1 charging session · 26.3 kWh
+                    - generic [ref=f30e1495]:
+                      - checkbox "Select charging session" [ref=f30e1498]
+                      - 'link "Battery-friendly score: 85 Sep 15, 2026 Sep 15, 2026, 06:13 PM · 3h 0m Home / AC 26.3 kWh Demo Home" [ref=f30e1500] [cursor=pointer]':
+                        - /url: /charging/19
+                        - generic [ref=f30e1502]:
+                          - 'generic "Battery-friendly score: 85" [ref=f30e1504]': A
+                          - generic [ref=f30e1505]:
+                            - generic [ref=f30e1506]:
+                              - generic [ref=f30e1507]:
+                                - generic [ref=f30e1508]: Sep 15, 2026
+                                - tooltip "Sep 15, 2026, 06:13 PM"
+                              - generic [ref=f30e1509]: ·
+                              - generic [ref=f30e1510]: 3h 0m
+                              - generic [ref=f30e1511]: Home / AC
+                              - generic [ref=f30e1512]: 26.3 kWh
+                            - generic [ref=f30e1513]: Demo Home
+                      - button "Quick view charging session" [ref=f30e1523] [cursor=pointer]
+                  - region "Sep 14, 2026 · 2w ago 1 charging session · 26.3 kWh" [ref=f30e1527]:
+                    - generic [ref=f30e1528]:
+                      - generic [ref=f30e1529]:
+                        - generic [ref=f30e1530]: Sep 14, 2026
+                        - generic [ref=f30e1531]: · 2w ago
+                      - generic [ref=f30e1533]: 1 charging session · 26.3 kWh
+                    - generic [ref=f30e1537]:
+                      - checkbox "Select charging session" [ref=f30e1540]
+                      - 'link "Battery-friendly score: 85 Sep 14, 2026 Sep 14, 2026, 08:13 PM · 3h 0m Home / AC 26.3 kWh Demo Home" [ref=f30e1542] [cursor=pointer]':
+                        - /url: /charging/20
+                        - generic [ref=f30e1544]:
+                          - 'generic "Battery-friendly score: 85" [ref=f30e1546]': A
+                          - generic [ref=f30e1547]:
+                            - generic [ref=f30e1548]:
+                              - generic [ref=f30e1549]:
+                                - generic [ref=f30e1550]: Sep 14, 2026
+                                - tooltip "Sep 14, 2026, 08:13 PM"
+                              - generic [ref=f30e1551]: ·
+                              - generic [ref=f30e1552]: 3h 0m
+                              - generic [ref=f30e1553]: Home / AC
+                              - generic [ref=f30e1554]: 26.3 kWh
+                            - generic [ref=f30e1555]: Demo Home
+                      - button "Quick view charging session" [ref=f30e1565] [cursor=pointer]
+                  - region "Sep 13, 2026 · 2w ago 2 charging sessions · 52.5 kWh" [ref=f30e1569]:
+                    - generic [ref=f30e1570]:
+                      - generic [ref=f30e1571]:
+                        - generic [ref=f30e1572]: Sep 13, 2026
+                        - generic [ref=f30e1573]: · 2w ago
+                      - generic [ref=f30e1575]: 2 charging sessions · 52.5 kWh
+                    - generic [ref=f30e1576]:
+                      - generic [ref=f30e1579]:
+                        - checkbox "Select charging session" [ref=f30e1582]
+                        - 'link "Battery-friendly score: 85 Sep 13, 2026 Sep 13, 2026, 10:13 PM · 30m Supercharger 26.3 kWh Demo Home" [ref=f30e1584] [cursor=pointer]':
+                          - /url: /charging/21
+                          - generic [ref=f30e1586]:
+                            - 'generic "Battery-friendly score: 85" [ref=f30e1588]': A
+                            - generic [ref=f30e1589]:
+                              - generic [ref=f30e1590]:
+                                - generic [ref=f30e1591]:
+                                  - generic [ref=f30e1592]: Sep 13, 2026
+                                  - tooltip "Sep 13, 2026, 10:13 PM"
+                                - generic [ref=f30e1593]: ·
+                                - generic [ref=f30e1594]: 30m
+                                - generic [ref=f30e1595]: Supercharger
+                                - generic [ref=f30e1596]: 26.3 kWh
+                              - generic [ref=f30e1597]: Demo Home
+                        - button "Quick view charging session" [ref=f30e1607] [cursor=pointer]
+                      - generic [ref=f30e1613]:
+                        - checkbox "Select charging session" [ref=f30e1616]
+                        - 'link "Battery-friendly score: 85 Sep 13, 2026 Sep 13, 2026, 12:13 AM · 3h 0m Home / AC 26.3 kWh Demo Home" [ref=f30e1618] [cursor=pointer]':
+                          - /url: /charging/22
+                          - generic [ref=f30e1620]:
+                            - 'generic "Battery-friendly score: 85" [ref=f30e1622]': A
+                            - generic [ref=f30e1623]:
+                              - generic [ref=f30e1624]:
+                                - generic [ref=f30e1625]:
+                                  - generic [ref=f30e1626]: Sep 13, 2026
+                                  - tooltip "Sep 13, 2026, 12:13 AM"
+                                - generic [ref=f30e1627]: ·
+                                - generic [ref=f30e1628]: 3h 0m
+                                - generic [ref=f30e1629]: Home / AC
+                                - generic [ref=f30e1630]: 26.3 kWh
+                              - generic [ref=f30e1631]: Demo Home
+                        - button "Quick view charging session" [ref=f30e1641] [cursor=pointer]
+                  - region "Sep 12, 2026 · 3w ago 1 charging session · 26.3 kWh" [ref=f30e1645]:
+                    - generic [ref=f30e1646]:
+                      - generic [ref=f30e1647]:
+                        - generic [ref=f30e1648]: Sep 12, 2026
+                        - generic [ref=f30e1649]: · 3w ago
+                      - generic [ref=f30e1651]: 1 charging session · 26.3 kWh
+                    - generic [ref=f30e1655]:
+                      - checkbox "Select charging session" [ref=f30e1658]
+                      - 'link "Battery-friendly score: 85 Sep 12, 2026 Sep 12, 2026, 02:13 AM · 3h 0m Home / AC 26.3 kWh Demo Home" [ref=f30e1660] [cursor=pointer]':
+                        - /url: /charging/23
+                        - generic [ref=f30e1662]:
+                          - 'generic "Battery-friendly score: 85" [ref=f30e1664]': A
+                          - generic [ref=f30e1665]:
+                            - generic [ref=f30e1666]:
+                              - generic [ref=f30e1667]:
+                                - generic [ref=f30e1668]: Sep 12, 2026
+                                - tooltip "Sep 12, 2026, 02:13 AM"
+                              - generic [ref=f30e1669]: ·
+                              - generic [ref=f30e1670]: 3h 0m
+                              - generic [ref=f30e1671]: Home / AC
+                              - generic [ref=f30e1672]: 26.3 kWh
+                            - generic [ref=f30e1673]: Demo Home
+                      - button "Quick view charging session" [ref=f30e1683] [cursor=pointer]
+                  - region "Sep 11, 2026 · 3w ago 1 charging session · 26.3 kWh" [ref=f30e1687]:
+                    - generic [ref=f30e1688]:
+                      - generic [ref=f30e1689]:
+                        - generic [ref=f30e1690]: Sep 11, 2026
+                        - generic [ref=f30e1691]: · 3w ago
+                      - generic [ref=f30e1693]: 1 charging session · 26.3 kWh
+                    - generic [ref=f30e1697]:
+                      - checkbox "Select charging session" [ref=f30e1700]
+                      - 'link "Battery-friendly score: 85 Sep 11, 2026 Sep 11, 2026, 04:13 AM · 30m Supercharger 26.3 kWh Demo Home" [ref=f30e1702] [cursor=pointer]':
+                        - /url: /charging/24
+                        - generic [ref=f30e1704]:
+                          - 'generic "Battery-friendly score: 85" [ref=f30e1706]': A
+                          - generic [ref=f30e1707]:
+                            - generic [ref=f30e1708]:
+                              - generic [ref=f30e1709]:
+                                - generic [ref=f30e1710]: Sep 11, 2026
+                                - tooltip "Sep 11, 2026, 04:13 AM"
+                              - generic [ref=f30e1711]: ·
+                              - generic [ref=f30e1712]: 30m
+                              - generic [ref=f30e1713]: Supercharger
+                              - generic [ref=f30e1714]: 26.3 kWh
+                            - generic [ref=f30e1715]: Demo Home
+                      - button "Quick view charging session" [ref=f30e1725] [cursor=pointer]
+                  - region "Sep 10, 2026 · 3w ago 1 charging session · 26.3 kWh" [ref=f30e1729]:
+                    - generic [ref=f30e1730]:
+                      - generic [ref=f30e1731]:
+                        - generic [ref=f30e1732]: Sep 10, 2026
+                        - generic [ref=f30e1733]: · 3w ago
+                      - generic [ref=f30e1735]: 1 charging session · 26.3 kWh
+                    - generic [ref=f30e1739]:
+                      - checkbox "Select charging session" [ref=f30e1742]
+                      - 'link "Battery-friendly score: 85 Sep 10, 2026 Sep 10, 2026, 06:13 AM · 3h 0m Home / AC 26.3 kWh Demo Home" [ref=f30e1744] [cursor=pointer]':
+                        - /url: /charging/25
+                        - generic [ref=f30e1746]:
+                          - 'generic "Battery-friendly score: 85" [ref=f30e1748]': A
+                          - generic [ref=f30e1749]:
+                            - generic [ref=f30e1750]:
+                              - generic [ref=f30e1751]:
+                                - generic [ref=f30e1752]: Sep 10, 2026
+                                - tooltip "Sep 10, 2026, 06:13 AM"
+                              - generic [ref=f30e1753]: ·
+                              - generic [ref=f30e1754]: 3h 0m
+                              - generic [ref=f30e1755]: Home / AC
+                              - generic [ref=f30e1756]: 26.3 kWh
+                            - generic [ref=f30e1757]: Demo Home
+                      - button "Quick view charging session" [ref=f30e1767] [cursor=pointer]
+                  - region "Sep 9, 2026 · 3w ago 1 charging session · 26.3 kWh" [ref=f30e1771]:
+                    - generic [ref=f30e1772]:
+                      - generic [ref=f30e1773]:
+                        - generic [ref=f30e1774]: Sep 9, 2026
+                        - generic [ref=f30e1775]: · 3w ago
+                      - generic [ref=f30e1777]: 1 charging session · 26.3 kWh
+                    - generic [ref=f30e1781]:
+                      - checkbox "Select charging session" [ref=f30e1784]
+                      - 'link "Battery-friendly score: 85 Sep 9, 2026 Sep 9, 2026, 08:13 AM · 3h 0m Home / AC 26.3 kWh Demo Home" [ref=f30e1786] [cursor=pointer]':
+                        - /url: /charging/26
+                        - generic [ref=f30e1788]:
+                          - 'generic "Battery-friendly score: 85" [ref=f30e1790]': A
+                          - generic [ref=f30e1791]:
+                            - generic [ref=f30e1792]:
+                              - generic [ref=f30e1793]:
+                                - generic [ref=f30e1794]: Sep 9, 2026
+                                - tooltip "Sep 9, 2026, 08:13 AM"
+                              - generic [ref=f30e1795]: ·
+                              - generic [ref=f30e1796]: 3h 0m
+                              - generic [ref=f30e1797]: Home / AC
+                              - generic [ref=f30e1798]: 26.3 kWh
+                            - generic [ref=f30e1799]: Demo Home
+                      - button "Quick view charging session" [ref=f30e1809] [cursor=pointer]
+                  - region "Sep 8, 2026 · 3w ago 1 charging session · 26.3 kWh" [ref=f30e1813]:
+                    - generic [ref=f30e1814]:
+                      - generic [ref=f30e1815]:
+                        - generic [ref=f30e1816]: Sep 8, 2026
+                        - generic [ref=f30e1817]: · 3w ago
+                      - generic [ref=f30e1819]: 1 charging session · 26.3 kWh
+                    - generic [ref=f30e1823]:
+                      - checkbox "Select charging session" [ref=f30e1826]
+                      - 'link "Battery-friendly score: 85 Sep 8, 2026 Sep 8, 2026, 10:13 AM · 30m Supercharger 26.3 kWh Demo Home" [ref=f30e1828] [cursor=pointer]':
+                        - /url: /charging/27
+                        - generic [ref=f30e1830]:
+                          - 'generic "Battery-friendly score: 85" [ref=f30e1832]': A
+                          - generic [ref=f30e1833]:
+                            - generic [ref=f30e1834]:
+                              - generic [ref=f30e1835]:
+                                - generic [ref=f30e1836]: Sep 8, 2026
+                                - tooltip "Sep 8, 2026, 10:13 AM"
+                              - generic [ref=f30e1837]: ·
+                              - generic [ref=f30e1838]: 30m
+                              - generic [ref=f30e1839]: Supercharger
+                              - generic [ref=f30e1840]: 26.3 kWh
+                            - generic [ref=f30e1841]: Demo Home
+                      - button "Quick view charging session" [ref=f30e1851] [cursor=pointer]
+                  - region "Sep 7, 2026 · 3w ago 1 charging session · 26.3 kWh" [ref=f30e1855]:
+                    - generic [ref=f30e1856]:
+                      - generic [ref=f30e1857]:
+                        - generic [ref=f30e1858]: Sep 7, 2026
+                        - generic [ref=f30e1859]: · 3w ago
+                      - generic [ref=f30e1861]: 1 charging session · 26.3 kWh
+                    - generic [ref=f30e1865]:
+                      - checkbox "Select charging session" [ref=f30e1868]
+                      - 'link "Battery-friendly score: 85 Sep 7, 2026 Sep 7, 2026, 12:13 PM · 3h 0m Home / AC 26.3 kWh Demo Home" [ref=f30e1870] [cursor=pointer]':
+                        - /url: /charging/28
+                        - generic [ref=f30e1872]:
+                          - 'generic "Battery-friendly score: 85" [ref=f30e1874]': A
+                          - generic [ref=f30e1875]:
+                            - generic [ref=f30e1876]:
+                              - generic [ref=f30e1877]:
+                                - generic [ref=f30e1878]: Sep 7, 2026
+                                - tooltip "Sep 7, 2026, 12:13 PM"
+                              - generic [ref=f30e1879]: ·
+                              - generic [ref=f30e1880]: 3h 0m
+                              - generic [ref=f30e1881]: Home / AC
+                              - generic [ref=f30e1882]: 26.3 kWh
+                            - generic [ref=f30e1883]: Demo Home
+                      - button "Quick view charging session" [ref=f30e1893] [cursor=pointer]
+                  - region "Sep 6, 2026 · 3w ago 1 charging session · 26.3 kWh" [ref=f30e1897]:
+                    - generic [ref=f30e1898]:
+                      - generic [ref=f30e1899]:
+                        - generic [ref=f30e1900]: Sep 6, 2026
+                        - generic [ref=f30e1901]: · 3w ago
+                      - generic [ref=f30e1903]: 1 charging session · 26.3 kWh
+                    - generic [ref=f30e1907]:
+                      - checkbox "Select charging session" [ref=f30e1910]
+                      - 'link "Battery-friendly score: 85 Sep 6, 2026 Sep 6, 2026, 02:13 PM · 3h 0m Home / AC 26.3 kWh Demo Home" [ref=f30e1912] [cursor=pointer]':
+                        - /url: /charging/29
+                        - generic [ref=f30e1914]:
+                          - 'generic "Battery-friendly score: 85" [ref=f30e1916]': A
+                          - generic [ref=f30e1917]:
+                            - generic [ref=f30e1918]:
+                              - generic [ref=f30e1919]:
+                                - generic [ref=f30e1920]: Sep 6, 2026
+                                - tooltip "Sep 6, 2026, 02:13 PM"
+                              - generic [ref=f30e1921]: ·
+                              - generic [ref=f30e1922]: 3h 0m
+                              - generic [ref=f30e1923]: Home / AC
+                              - generic [ref=f30e1924]: 26.3 kWh
+                            - generic [ref=f30e1925]: Demo Home
+                      - button "Quick view charging session" [ref=f30e1935] [cursor=pointer]
+                  - region "Sep 5, 2026 · 4w ago 1 charging session · 26.3 kWh" [ref=f30e1939]:
+                    - generic [ref=f30e1940]:
+                      - generic [ref=f30e1941]:
+                        - generic [ref=f30e1942]: Sep 5, 2026
+                        - generic [ref=f30e1943]: · 4w ago
+                      - generic [ref=f30e1945]: 1 charging session · 26.3 kWh
+                    - generic [ref=f30e1949]:
+                      - checkbox "Select charging session" [ref=f30e1952]
+                      - 'link "Battery-friendly score: 85 Sep 5, 2026 Sep 5, 2026, 04:13 PM · 30m Supercharger 26.3 kWh Demo Home" [ref=f30e1954] [cursor=pointer]':
+                        - /url: /charging/30
+                        - generic [ref=f30e1956]:
+                          - 'generic "Battery-friendly score: 85" [ref=f30e1958]': A
+                          - generic [ref=f30e1959]:
+                            - generic [ref=f30e1960]:
+                              - generic [ref=f30e1961]:
+                                - generic [ref=f30e1962]: Sep 5, 2026
+                                - tooltip "Sep 5, 2026, 04:13 PM"
+                              - generic [ref=f30e1963]: ·
+                              - generic [ref=f30e1964]: 30m
+                              - generic [ref=f30e1965]: Supercharger
+                              - generic [ref=f30e1966]: 26.3 kWh
+                            - generic [ref=f30e1967]: Demo Home
+                      - button "Quick view charging session" [ref=f30e1977] [cursor=pointer]
+                  - region "Sep 4, 2026 · 4w ago 1 charging session · 26.3 kWh" [ref=f30e1981]:
+                    - generic [ref=f30e1982]:
+                      - generic [ref=f30e1983]:
+                        - generic [ref=f30e1984]: Sep 4, 2026
+                        - generic [ref=f30e1985]: · 4w ago
+                      - generic [ref=f30e1987]: 1 charging session · 26.3 kWh
+                    - generic [ref=f30e1991]:
+                      - checkbox "Select charging session" [ref=f30e1994]
+                      - 'link "Battery-friendly score: 85 Sep 4, 2026 Sep 4, 2026, 06:13 PM · 3h 0m Home / AC 26.3 kWh Demo Home" [ref=f30e1996] [cursor=pointer]':
+                        - /url: /charging/31
+                        - generic [ref=f30e1998]:
+                          - 'generic "Battery-friendly score: 85" [ref=f30e2000]': A
+                          - generic [ref=f30e2001]:
+                            - generic [ref=f30e2002]:
+                              - generic [ref=f30e2003]:
+                                - generic [ref=f30e2004]: Sep 4, 2026
+                                - tooltip "Sep 4, 2026, 06:13 PM"
+                              - generic [ref=f30e2005]: ·
+                              - generic [ref=f30e2006]: 3h 0m
+                              - generic [ref=f30e2007]: Home / AC
+                              - generic [ref=f30e2008]: 26.3 kWh
+                            - generic [ref=f30e2009]: Demo Home
+                      - button "Quick view charging session" [ref=f30e2019] [cursor=pointer]
+                - navigation "Pagination" [ref=f30e2023]:
+                  - generic [ref=f30e2024]:
+                    - generic [ref=f30e2025]: Showing 1–31 of 31
+                    - generic [ref=f30e2026]:
+                      - generic [ref=f30e2027]: Rows
+                      - combobox "Rows per page" [ref=f30e2029]:
+                        - option "25 / page"
+                        - option "50 / page" [selected]
+                        - option "100 / page"
+                  - generic [ref=f30e2030]:
+                    - generic [ref=f30e2031]:
+                      - generic [ref=f30e2032]:
+                        - button "First page" [disabled]
+                        - button "Previous page" [disabled]
+                      - button "Page 1 of 1" [ref=f30e2034] [cursor=pointer]: "1"
+                      - generic [ref=f30e2035]:
+                        - button "Next page" [disabled]
+                        - button "Last page" [disabled]
+                    - generic [ref=f30e2036]:
+                      - generic [ref=f30e2037]: Go to page
+                      - textbox "Go to page" [ref=f30e2041]: "1"
+                      - button "Go" [ref=f30e2042] [cursor=pointer]
+              - region [ref=f30e2043]:
+                - generic [ref=f30e2045]:
+                  - generic [ref=f30e2046]:
+                    - generic [ref=f30e2047]:
+                      - generic [ref=f30e2048]:
+                        - generic [ref=f30e2049]: Charging posture
+                        - generic [ref=f30e2050]: On track
+                        - generic [ref=f30e2052]: Last 30 days · Sep 4, 2026 – Oct 3, 2026
+                        - generic [ref=f30e2053]:
+                          - generic "Live" [ref=f30e2054]
+                          - generic "Historical" [ref=f30e2058]
+                      - heading "Cost, reliability, and battery-friendly behavior" [level=3] [ref=f30e2063]
+                      - paragraph [ref=f30e2064]: Current charging state, departure readiness, cost exposure, and charger behavior are paired with the selected session history.
+                    - button "Review details" [ref=f30e2066] [cursor=pointer]
+                  - list [ref=f30e2069]:
+                    - listitem [ref=f30e2070]:
+                      - generic [ref=f30e2071]:
+                        - generic [ref=f30e2072]: Current posture
+                        - generic [ref=f30e2073]: Not charging
+                      - paragraph [ref=f30e2074]: Latest battery state is 74%; the vehicle is not drawing charge.
+                    - listitem [ref=f30e2075]:
+                      - generic [ref=f30e2076]:
+                        - generic [ref=f30e2077]: Departure readiness
+                        - generic [ref=f30e2078]: 74%
+                      - paragraph [ref=f30e2079]: Battery state supports near-term departure; confirm route range before leaving.
+                    - listitem [ref=f30e2080]:
+                      - generic [ref=f30e2081]:
+                        - generic [ref=f30e2082]: Cost exposure
+                        - generic [ref=f30e2083]: $171.2
+                      - paragraph [ref=f30e2084]: $0.2/kWh blended across recorded charging energy.
+                    - listitem [ref=f30e2085]:
+                      - generic [ref=f30e2086]:
+                        - generic [ref=f30e2087]: Charging efficiency
+                        - generic [ref=f30e2088]: Not measured
+                      - paragraph [ref=f30e2089]: Independent wall-input and battery-retained energy are not present in the session contract; delivery rate is shown below instead.
+                    - listitem [ref=f30e2090]:
+                      - generic [ref=f30e2091]:
+                        - generic [ref=f30e2092]: Potential interruptions
+                        - generic [ref=f30e2093]: "0"
+                      - paragraph [ref=f30e2094]: Sessions with a telemetry gap or sustained unexpectedly low DC power.
+                    - listitem [ref=f30e2095]:
+                      - generic [ref=f30e2096]:
+                        - generic [ref=f30e2097]: Charger reliability
+                        - generic [ref=f30e2098]: 100% clear
+                      - paragraph [ref=f30e2099]: Share of sessions without telemetry gaps, sustained low power, or prolonged trickle behavior; not a charger-uptime SLA.
+              - generic [ref=f30e2101]:
+                - heading "Shared-charger queue" [level=3] [ref=f30e2103]
+                - generic [ref=f30e2107]:
+                  - generic [ref=f30e2108]:
+                    - paragraph [ref=f30e2109]: Demo Model Y
+                    - generic [ref=f30e2110]:
+                      - generic [ref=f30e2111]: Now %
+                      - spinbutton "Now % Now %" [ref=f30e2114]: "40"
+                    - generic [ref=f30e2115]:
+                      - generic [ref=f30e2116]: Target %
+                      - spinbutton "Target % Target %" [ref=f30e2119]: "80"
+                    - generic [ref=f30e2120]:
+                      - generic [ref=f30e2121]: Ready by
+                      - textbox "Ready by Ready by" [ref=f30e2124]: 07:30
+                  - generic [ref=f30e2125]:
+                    - paragraph [ref=f30e2126]: Demo Model 3
+                    - generic [ref=f30e2127]:
+                      - generic [ref=f30e2128]: Now %
+                      - spinbutton [ref=f30e2131]: "40"
+                    - generic [ref=f30e2132]:
+                      - generic [ref=f30e2133]: Target %
+                      - spinbutton [ref=f30e2136]: "80"
+                    - generic [ref=f30e2137]:
+                      - generic [ref=f30e2138]: Ready by
+                      - textbox [ref=f30e2141]: 07:30
+                  - generic [ref=f30e2142]:
+                    - generic [ref=f30e2144]:
+                      - generic [ref=f30e2145]: Charger (kW)
+                      - spinbutton "Charger (kW)" [ref=f30e2148]: "11"
+                    - button "Plan queue" [ref=f30e2149] [cursor=pointer]
+              - region "Charging insights" [ref=f30e2151]:
+                - heading "Charging insights" [level=2] [ref=f30e2152]
+                - generic [ref=f30e2153]:
+                  - generic [ref=f30e2155]:
+                    - heading "Charging stats by type" [level=3] [ref=f30e2156]
+                    - generic [ref=f30e2159]:
+                      - paragraph [ref=f30e2160]: Energy split (AC vs DC)
+                      - 'img "Energy split: 68% AC, 32% DC" [ref=f30e2161]':
+                        - generic [ref=f30e2162]: AC 67.7%
+                        - generic [ref=f30e2163]: DC 32.3%
+                      - generic [ref=f30e2164]:
+                        - generic [ref=f30e2165]: "AC: 551.3 kWh"
+                        - generic [ref=f30e2166]: "Total: 813.8 kWh"
+                        - generic [ref=f30e2167]: "DC: 262.5 kWh"
+                    - generic [ref=f30e2169]:
+                      - generic [ref=f30e2170]:
+                        - searchbox "Search loaded rows" [ref=f30e2179]
+                        - generic [ref=f30e2180]:
+                          - radiogroup "List density" [ref=f30e2181]:
+                            - radio "Compact" [checked] [ref=f30e2182] [cursor=pointer]
+                            - radio "Comfortable" [ref=f30e2185] [cursor=pointer]
+                          - button "Export list" [ref=f30e2189] [cursor=pointer]
+                          - button "Reorder or hide columns" [ref=f30e2194] [cursor=pointer]:
+                            - generic [ref=f30e2197]: Columns
+                        - paragraph [ref=f30e2198]: Exports include only matching loaded rows, or selected loaded rows.
+                      - table "charging:ac-dc-stats" [ref=f30e2200]:
+                        - caption [ref=f30e2201]: charging:ac-dc-stats
+                        - rowgroup [ref=f30e2202]:
+                          - row [ref=f30e2203]:
+                            - columnheader "Type" [ref=f30e2204]:
+                              - separator "Resize column Type" [ref=f30e2215]
+                            - columnheader "Energy" [ref=f30e2216]:
+                              - separator "Resize column Energy" [ref=f30e2227]
+                            - columnheader "Cost" [ref=f30e2228]:
+                              - separator "Resize column Cost" [ref=f30e2239]
+                        - rowgroup [ref=f30e2240]:
+                          - row [ref=f30e2241]:
+                            - cell "AC charging" [ref=f30e2242]
+                            - cell "551.3 kWh" [ref=f30e2243]
+                            - cell "$66.1" [ref=f30e2244]
+                          - row [ref=f30e2246]:
+                            - cell "DC charging" [ref=f30e2247]
+                            - cell "262.5 kWh" [ref=f30e2248]
+                            - cell "$105.0" [ref=f30e2249]
+                      - navigation "Pagination" [ref=f30e2252]:
+                        - generic [ref=f30e2253]:
+                          - generic [ref=f30e2254]: Showing 1–2 of 2
+                          - generic [ref=f30e2255]:
+                            - generic [ref=f30e2256]: Rows
+                            - combobox "Rows per page" [ref=f30e2258]:
+                              - option "25 / page" [selected]
+                              - option "50 / page"
+                              - option "100 / page"
+                        - generic [ref=f30e2259]:
+                          - generic [ref=f30e2260]:
+                            - generic [ref=f30e2261]:
+                              - button "First page" [disabled]
+                              - button "Previous page" [disabled]
+                            - button "Page 1 of 1" [ref=f30e2263] [cursor=pointer]: "1"
+                            - generic [ref=f30e2264]:
+                              - button "Next page" [disabled]
+                              - button "Last page" [disabled]
+                          - generic [ref=f30e2265]:
+                            - generic [ref=f30e2266]: Go to page
+                            - textbox "Go to page" [ref=f30e2270]: "1"
+                            - button "Go" [ref=f30e2271] [cursor=pointer]
+                  - generic [ref=f30e2273]:
+                    - heading "Battery level at charge start" [level=3] [ref=f30e2274]
+                    - paragraph [ref=f30e2279]: How low do you typically go before charging?
+                    - figure [ref=f30e2280]:
+                      - heading "Battery level at charge start" [level=3] [ref=f30e2281]
+                      - img "Charging sessions by starting battery level" [ref=f30e2282]:
+                        - img [ref=f30e2285]:
+                          - generic [ref=f30e2290]:
+                            - generic [ref=f30e2291]: 10-20%
+                            - generic [ref=f30e2293]: 40-50%
+                            - generic [ref=f30e2295]: 60-70%
+                            - generic [ref=f30e2297]: 90-100%
+                          - generic [ref=f30e2300]:
+                            - generic [ref=f30e2301]: "0"
+                            - generic [ref=f30e2303]: "8"
+                            - generic [ref=f30e2305]: "16"
+                            - generic [ref=f30e2307]: "24"
+                            - generic [ref=f30e2309]: "32"
+                      - table [ref=f30e2319]:
+                        - caption [ref=f30e2320]: Battery level at charge start — data table
+                        - rowgroup [ref=f30e2321]:
+                          - row [ref=f30e2322]:
+                            - columnheader "Battery level" [ref=f30e2323]
+                            - columnheader "Sessions" [ref=f30e2324]
+                        - rowgroup [ref=f30e2325]:
+                          - row [ref=f30e2326]:
+                            - cell "0-10%" [ref=f30e2327]
+                            - cell "0" [ref=f30e2328]
+                          - row [ref=f30e2329]:
+                            - cell "10-20%" [ref=f30e2330]
+                            - cell "0" [ref=f30e2331]
+                          - row [ref=f30e2332]:
+                            - cell "20-30%" [ref=f30e2333]
+                            - cell "0" [ref=f30e2334]
+                          - row [ref=f30e2335]:
+                            - cell "30-40%" [ref=f30e2336]
+                            - cell "0" [ref=f30e2337]
+                          - row [ref=f30e2338]:
+                            - cell "40-50%" [ref=f30e2339]
+                            - cell "31" [ref=f30e2340]
+                          - row [ref=f30e2341]:
+                            - cell "50-60%" [ref=f30e2342]
+                            - cell "0" [ref=f30e2343]
+                          - row [ref=f30e2344]:
+                            - cell "60-70%" [ref=f30e2345]
+                            - cell "0" [ref=f30e2346]
+                          - row [ref=f30e2347]:
+                            - cell "70-80%" [ref=f30e2348]
+                            - cell "0" [ref=f30e2349]
+                          - row [ref=f30e2350]:
+                            - cell "80-90%" [ref=f30e2351]
+                            - cell "0" [ref=f30e2352]
+                          - row [ref=f30e2353]:
+                            - cell "90-100%" [ref=f30e2354]
+                            - cell "0" [ref=f30e2355]
+                  - generic [ref=f30e2357]:
+                    - generic [ref=f30e2361]:
+                      - heading "Charging delivery rate" [level=3] [ref=f30e2362]
+                      - paragraph [ref=f30e2363]: Observed energy per elapsed hour; this is power delivery, not wall-to-battery efficiency.
+                    - generic [ref=f30e2364]:
+                      - generic [ref=f30e2365]:
+                        - generic [ref=f30e2366]: 12.0 kW
+                        - generic [ref=f30e2367]: Average delivery rate
+                        - paragraph [ref=f30e2368]: Time-weighted power across completed sessions with usable energy and duration.
+                      - generic [ref=f30e2369]:
+                        - generic [ref=f30e2370]: 52.5 kW
+                        - generic [ref=f30e2371]: Highest-rate session
+                        - paragraph [ref=f30e2372]: Sep 30, 2026, 10:13 AM
+                      - generic [ref=f30e2373]:
+                        - generic [ref=f30e2374]: 8.8 kW
+                        - generic [ref=f30e2375]: Lowest-rate session
+                        - paragraph [ref=f30e2376]: Sep 4, 2026, 06:13 PM
+                      - generic [ref=f30e2377]:
+                        - generic [ref=f30e2378]: 813.8 kWh
+                        - generic [ref=f30e2379]: Observed delivery
+                        - paragraph [ref=f30e2380]: 68.0 h across 31 sessions
+                  - generic [ref=f30e2382]:
+                    - heading "Charger specs breakdown" [level=3] [ref=f30e2383]
+                    - generic [ref=f30e2387]:
+                      - status [ref=f30e2389]:
+                        - paragraph [ref=f30e2390]: No voltage data
+                      - status [ref=f30e2392]:
+                        - paragraph [ref=f30e2393]: No phase data
+                      - generic [ref=f30e2394]:
+                        - paragraph [ref=f30e2395]: By cable
+                        - generic [ref=f30e2400]:
+                          - generic [ref=f30e2401]:
+                            - generic [ref=f30e2402]: j1772
+                            - generic [ref=f30e2403]: 21 sessions · 551.3 kWh
+                          - generic [ref=f30e2404]:
+                            - generic [ref=f30e2405]: ccs
+                            - generic [ref=f30e2406]: 10 sessions · 262.5 kWh
+                      - generic [ref=f30e2407]:
+                        - paragraph [ref=f30e2408]: By brand
+                        - generic [ref=f30e2411]:
+                          - generic [ref=f30e2412]:
+                            - generic [ref=f30e2413]: ac
+                            - generic [ref=f30e2414]: 21 sessions · 11 kW avg
+                          - generic [ref=f30e2415]:
+                            - generic [ref=f30e2416]: supercharger
+                            - generic [ref=f30e2417]: 10 sessions · 150 kW avg
+                - generic [ref=f30e2423]:
+                  - paragraph [ref=f30e2424]: Save ~$73.5/month by adjusting your charging schedule
+                  - generic [ref=f30e2425]: Based on your charging patterns, shifting to off-peak hours could reduce your monthly costs.
+                - generic [ref=f30e2426]:
+                  - generic [ref=f30e2428]:
+                    - heading "Charging habits" [level=3] [ref=f30e2429]
+                    - generic [ref=f30e2432]:
+                      - generic [ref=f30e2433]:
+                        - generic [ref=f30e2434]: Sessions/week
+                        - generic [ref=f30e2435]: "7.9"
+                      - generic [ref=f30e2436]:
+                        - generic [ref=f30e2437]: Home charging
+                        - generic [ref=f30e2438]: 0.0%
+                      - generic [ref=f30e2439]:
+                        - generic [ref=f30e2440]: Avg charge target
+                        - generic [ref=f30e2441]: 80.0%
+                      - generic [ref=f30e2442]:
+                        - generic [ref=f30e2443]: Common start hour
+                        - generic [ref=f30e2444]: 13:00
+                      - generic [ref=f30e2445]:
+                        - generic [ref=f30e2446]: Most common
+                        - generic [ref=f30e2447]: weekday
+                  - generic [ref=f30e2449]:
+                    - meter "Battery-friendly score" [ref=f30e2450]:
+                      - generic [ref=f30e2451]: "Battery-friendly score: 90"
+                      - generic [ref=f30e2452]: "90"
+                    - paragraph [ref=f30e2458]: Your habits are battery-friendly
+                  - generic [ref=f30e2460]:
+                    - heading "Cost analysis" [level=3] [ref=f30e2461]
+                    - generic [ref=f30e2464]:
+                      - generic [ref=f30e2465]:
+                        - generic [ref=f30e2466]: Peak rate
+                        - generic [ref=f30e2467]: $0.4/kWh
+                      - generic [ref=f30e2468]:
+                        - generic [ref=f30e2469]: Off-peak rate
+                        - generic [ref=f30e2470]: $0.1/kWh
+                      - generic [ref=f30e2471]:
+                        - generic [ref=f30e2472]: Sessions during peak
+                        - generic [ref=f30e2473]: 31.3%
+                      - generic [ref=f30e2474]:
+                        - generic [ref=f30e2475]:
+                          - generic [ref=f30e2476]: Peak hours
+                          - generic [ref=f30e2477]: 5:00, 11:00, 17:00, 23:00
+                        - generic [ref=f30e2478]:
+                          - generic [ref=f30e2479]: Off-peak hours
+                          - generic [ref=f30e2480]: 7:00, 15:00, 19:00, 21:00
+                - generic [ref=f30e2482]:
+                  - heading "Charging cost heatmap" [level=3] [ref=f30e2483]
+                  - generic [ref=f30e2488]:
+                    - img "Average charging cost per kWh by weekday and hour of day" [ref=f30e2489]:
+                      - generic [ref=f30e2490]:
+                        - generic [ref=f30e2491]: "0"
+                        - generic [ref=f30e2494]: "3"
+                        - generic [ref=f30e2497]: "6"
+                        - generic [ref=f30e2500]: "9"
+                        - generic [ref=f30e2503]: "12"
+                        - generic [ref=f30e2506]: "15"
+                        - generic [ref=f30e2509]: "18"
+                        - generic [ref=f30e2512]: "21"
+                      - generic [ref=f30e2515]:
+                        - generic [ref=f30e2516]: Sun
+                        - generic "Sun 0:00" [ref=f30e2517]
+                        - generic "Sun 1:00 — 1 sessions, $0.1/kWh" [ref=f30e2518]
+                        - generic "Sun 2:00" [ref=f30e2519]
+                        - generic "Sun 3:00" [ref=f30e2520]
+                        - generic "Sun 4:00" [ref=f30e2521]
+                        - generic "Sun 5:00" [ref=f30e2522]
+                        - generic "Sun 6:00" [ref=f30e2523]
+                        - generic "Sun 7:00 — 1 sessions, $0.1/kWh" [ref=f30e2524]
+                        - generic "Sun 8:00" [ref=f30e2525]
+                        - generic "Sun 9:00" [ref=f30e2526]
+                        - generic "Sun 10:00" [ref=f30e2527]
+                        - generic "Sun 11:00" [ref=f30e2528]
+                        - generic "Sun 12:00" [ref=f30e2529]
+                        - generic "Sun 13:00" [ref=f30e2530]
+                        - generic "Sun 14:00" [ref=f30e2531]
+                        - generic "Sun 15:00 — 1 sessions, $0.1/kWh" [ref=f30e2532]
+                        - generic "Sun 16:00" [ref=f30e2533]
+                        - generic "Sun 17:00" [ref=f30e2534]
+                        - generic "Sun 18:00" [ref=f30e2535]
+                        - generic "Sun 19:00" [ref=f30e2536]
+                        - generic "Sun 20:00" [ref=f30e2537]
+                        - generic "Sun 21:00 — 1 sessions, $0.1/kWh" [ref=f30e2538]
+                        - generic "Sun 22:00" [ref=f30e2539]
+                        - generic "Sun 23:00 — 1 sessions, $0.4/kWh" [ref=f30e2540]
+                      - generic [ref=f30e2541]:
+                        - generic [ref=f30e2542]: Mon
+                        - generic "Mon 0:00" [ref=f30e2543]
+                        - generic "Mon 1:00" [ref=f30e2544]
+                        - generic "Mon 2:00" [ref=f30e2545]
+                        - generic "Mon 3:00" [ref=f30e2546]
+                        - generic "Mon 4:00" [ref=f30e2547]
+                        - generic "Mon 5:00 — 1 sessions, $0.4/kWh" [ref=f30e2548]
+                        - generic "Mon 6:00" [ref=f30e2549]
+                        - generic "Mon 7:00" [ref=f30e2550]
+                        - generic "Mon 8:00" [ref=f30e2551]
+                        - generic "Mon 9:00" [ref=f30e2552]
+                        - generic "Mon 10:00" [ref=f30e2553]
+                        - generic "Mon 11:00" [ref=f30e2554]
+                        - generic "Mon 12:00" [ref=f30e2555]
+                        - generic "Mon 13:00 — 1 sessions, $0.1/kWh" [ref=f30e2556]
+                        - generic "Mon 14:00" [ref=f30e2557]
+                        - generic "Mon 15:00" [ref=f30e2558]
+                        - generic "Mon 16:00" [ref=f30e2559]
+                        - generic "Mon 17:00" [ref=f30e2560]
+                        - generic "Mon 18:00" [ref=f30e2561]
+                        - generic "Mon 19:00 — 1 sessions, $0.1/kWh" [ref=f30e2562]
+                        - generic "Mon 20:00" [ref=f30e2563]
+                        - generic "Mon 21:00 — 1 sessions, $0.1/kWh" [ref=f30e2564]
+                        - generic "Mon 22:00" [ref=f30e2565]
+                        - generic "Mon 23:00" [ref=f30e2566]
+                      - generic [ref=f30e2567]:
+                        - generic [ref=f30e2568]: Tue
+                        - generic "Tue 0:00" [ref=f30e2569]
+                        - generic "Tue 1:00" [ref=f30e2570]
+                        - generic "Tue 2:00" [ref=f30e2571]
+                        - generic "Tue 3:00 — 1 sessions, $0.1/kWh" [ref=f30e2572]
+                        - generic "Tue 4:00" [ref=f30e2573]
+                        - generic "Tue 5:00" [ref=f30e2574]
+                        - generic "Tue 6:00" [ref=f30e2575]
+                        - generic "Tue 7:00" [ref=f30e2576]
+                        - generic "Tue 8:00" [ref=f30e2577]
+                        - generic "Tue 9:00" [ref=f30e2578]
+                        - generic "Tue 10:00" [ref=f30e2579]
+                        - generic "Tue 11:00 — 1 sessions, $0.4/kWh" [ref=f30e2580]
+                        - generic "Tue 12:00" [ref=f30e2581]
+                        - generic "Tue 13:00" [ref=f30e2582]
+                        - generic "Tue 14:00" [ref=f30e2583]
+                        - generic "Tue 15:00" [ref=f30e2584]
+                        - generic "Tue 16:00" [ref=f30e2585]
+                        - generic "Tue 17:00 — 1 sessions, $0.4/kWh" [ref=f30e2586]
+                        - generic "Tue 18:00" [ref=f30e2587]
+                        - generic "Tue 19:00 — 1 sessions, $0.1/kWh" [ref=f30e2588]
+                        - generic "Tue 20:00" [ref=f30e2589]
+                        - generic "Tue 21:00" [ref=f30e2590]
+                        - generic "Tue 22:00" [ref=f30e2591]
+                        - generic "Tue 23:00" [ref=f30e2592]
+                      - generic [ref=f30e2593]:
+                        - generic [ref=f30e2594]: Wed
+                        - generic "Wed 0:00" [ref=f30e2595]
+                        - generic "Wed 1:00 — 1 sessions, $0.1/kWh" [ref=f30e2596]
+                        - generic "Wed 2:00" [ref=f30e2597]
+                        - generic "Wed 3:00" [ref=f30e2598]
+                        - generic "Wed 4:00" [ref=f30e2599]
+                        - generic "Wed 5:00" [ref=f30e2600]
+                        - generic "Wed 6:00" [ref=f30e2601]
+                        - generic "Wed 7:00" [ref=f30e2602]
+                        - generic "Wed 8:00" [ref=f30e2603]
+                        - generic "Wed 9:00 — 1 sessions, $0.1/kWh" [ref=f30e2604]
+                        - generic "Wed 10:00" [ref=f30e2605]
+                        - generic "Wed 11:00" [ref=f30e2606]
+                        - generic "Wed 12:00" [ref=f30e2607]
+                        - generic "Wed 13:00" [ref=f30e2608]
+                        - generic "Wed 14:00" [ref=f30e2609]
+                        - generic "Wed 15:00 — 1 sessions, $0.1/kWh" [ref=f30e2610]
+                        - generic "Wed 16:00" [ref=f30e2611]
+                        - generic "Wed 17:00 — 1 sessions, $0.4/kWh" [ref=f30e2612]
+                        - generic "Wed 18:00" [ref=f30e2613]
+                        - generic "Wed 19:00" [ref=f30e2614]
+                        - generic "Wed 20:00" [ref=f30e2615]
+                        - generic "Wed 21:00" [ref=f30e2616]
+                        - generic "Wed 22:00" [ref=f30e2617]
+                        - generic "Wed 23:00 — 1 sessions, $0.4/kWh" [ref=f30e2618]
+                      - generic [ref=f30e2619]:
+                        - generic [ref=f30e2620]: Thu
+                        - generic "Thu 0:00" [ref=f30e2621]
+                        - generic "Thu 1:00" [ref=f30e2622]
+                        - generic "Thu 2:00" [ref=f30e2623]
+                        - generic "Thu 3:00" [ref=f30e2624]
+                        - generic "Thu 4:00" [ref=f30e2625]
+                        - generic "Thu 5:00" [ref=f30e2626]
+                        - generic "Thu 6:00" [ref=f30e2627]
+                        - generic "Thu 7:00 — 1 sessions, $0.1/kWh" [ref=f30e2628]
+                        - generic "Thu 8:00" [ref=f30e2629]
+                        - generic "Thu 9:00" [ref=f30e2630]
+                        - generic "Thu 10:00" [ref=f30e2631]
+                        - generic "Thu 11:00" [ref=f30e2632]
+                        - generic "Thu 12:00" [ref=f30e2633]
+                        - generic "Thu 13:00 — 1 sessions, $0.1/kWh" [ref=f30e2634]
+                        - generic "Thu 14:00" [ref=f30e2635]
+                        - generic "Thu 15:00 — 1 sessions, $0.1/kWh" [ref=f30e2636]
+                        - generic "Thu 16:00" [ref=f30e2637]
+                        - generic "Thu 17:00" [ref=f30e2638]
+                        - generic "Thu 18:00" [ref=f30e2639]
+                        - generic "Thu 19:00" [ref=f30e2640]
+                        - generic "Thu 20:00" [ref=f30e2641]
+                        - generic "Thu 21:00 — 1 sessions, $0.1/kWh" [ref=f30e2642]
+                        - generic "Thu 22:00" [ref=f30e2643]
+                        - generic "Thu 23:00" [ref=f30e2644]
+                      - generic [ref=f30e2645]:
+                        - generic [ref=f30e2646]: Fri
+                        - generic "Fri 0:00" [ref=f30e2647]
+                        - generic "Fri 1:00" [ref=f30e2648]
+                        - generic "Fri 2:00" [ref=f30e2649]
+                        - generic "Fri 3:00 — 1 sessions, $0.1/kWh" [ref=f30e2650]
+                        - generic "Fri 4:00" [ref=f30e2651]
+                        - generic "Fri 5:00 — 1 sessions, $0.4/kWh" [ref=f30e2652]
+                        - generic "Fri 6:00" [ref=f30e2653]
+                        - generic "Fri 7:00" [ref=f30e2654]
+                        - generic "Fri 8:00" [ref=f30e2655]
+                        - generic "Fri 9:00" [ref=f30e2656]
+                        - generic "Fri 10:00" [ref=f30e2657]
+                        - generic "Fri 11:00 — 1 sessions, $0.4/kWh" [ref=f30e2658]
+                        - generic "Fri 12:00" [ref=f30e2659]
+                        - generic "Fri 13:00 — 1 sessions, $0.1/kWh" [ref=f30e2660]
+                        - generic "Fri 14:00" [ref=f30e2661]
+                        - generic "Fri 15:00" [ref=f30e2662]
+                        - generic "Fri 16:00" [ref=f30e2663]
+                        - generic "Fri 17:00" [ref=f30e2664]
+                        - generic "Fri 18:00" [ref=f30e2665]
+                        - generic "Fri 19:00 — 1 sessions, $0.1/kWh" [ref=f30e2666]
+                        - generic "Fri 20:00" [ref=f30e2667]
+                        - generic "Fri 21:00" [ref=f30e2668]
+                        - generic "Fri 22:00" [ref=f30e2669]
+                        - generic "Fri 23:00" [ref=f30e2670]
+                      - generic [ref=f30e2671]:
+                        - generic [ref=f30e2672]: Sat
+                        - generic "Sat 0:00" [ref=f30e2673]
+                        - generic "Sat 1:00 — 1 sessions, $0.1/kWh" [ref=f30e2674]
+                        - generic "Sat 2:00" [ref=f30e2675]
+                        - generic "Sat 3:00 — 1 sessions, $0.1/kWh" [ref=f30e2676]
+                        - generic "Sat 4:00" [ref=f30e2677]
+                        - generic "Sat 5:00" [ref=f30e2678]
+                        - generic "Sat 6:00" [ref=f30e2679]
+                        - generic "Sat 7:00" [ref=f30e2680]
+                        - generic "Sat 8:00" [ref=f30e2681]
+                        - generic "Sat 9:00 — 1 sessions, $0.1/kWh" [ref=f30e2682]
+                        - generic "Sat 10:00" [ref=f30e2683]
+                        - generic "Sat 11:00" [ref=f30e2684]
+                        - generic "Sat 12:00" [ref=f30e2685]
+                        - generic "Sat 13:00" [ref=f30e2686]
+                        - generic "Sat 14:00" [ref=f30e2687]
+                        - generic "Sat 15:00" [ref=f30e2688]
+                        - generic "Sat 16:00" [ref=f30e2689]
+                        - generic "Sat 17:00 — 1 sessions, $0.4/kWh" [ref=f30e2690]
+                        - generic "Sat 18:00" [ref=f30e2691]
+                        - generic "Sat 19:00" [ref=f30e2692]
+                        - generic "Sat 20:00" [ref=f30e2693]
+                        - generic "Sat 21:00" [ref=f30e2694]
+                        - generic "Sat 22:00" [ref=f30e2695]
+                        - generic "Sat 23:00 — 1 sessions, $0.4/kWh" [ref=f30e2696]
+                    - generic [ref=f30e2697]:
+                      - generic [ref=f30e2698]: Cheap
+                      - generic [ref=f30e2705]: Expensive
+                - generic [ref=f30e2707]:
+                  - heading "Optimization recommendations" [level=3] [ref=f30e2708]
+                  - generic [ref=f30e2711]:
+                    - generic [ref=f30e2715]:
+                      - generic [ref=f30e2716]:
+                        - generic [ref=f30e2717]: Shift home charging to off-peak hours
+                        - generic [ref=f30e2718]: high
+                        - generic [ref=f30e2719]: ~$73.5/mo
+                      - paragraph [ref=f30e2720]: 31% of sessions start during peak rates. Scheduling after 11 PM could save ~$74/month.
+                    - generic [ref=f30e2724]:
+                      - generic [ref=f30e2725]:
+                        - generic [ref=f30e2726]: Enable scheduled departure
+                        - generic [ref=f30e2727]: low
+                      - paragraph [ref=f30e2728]: Scheduled departure pre-conditions the battery while plugged in, saving 3-5% range — especially in cold weather.
+      - navigation "Quick navigation" [ref=f30e2729]:
+        - link "Home" [ref=f30e2730] [cursor=pointer]:
+          - /url: /
+        - link "Drives" [ref=f30e2737] [cursor=pointer]:
+          - /url: /drives
+        - link "Charging" [ref=f30e2743] [cursor=pointer]:
+          - /url: /charging
+        - link "Battery" [ref=f30e2750] [cursor=pointer]:
+          - /url: /battery
+        - link "Map" [ref=f30e2755] [cursor=pointer]:
+          - /url: /live
+        - link "More" [ref=f30e2764] [cursor=pointer]:
+          - /url: /explore
+      - contentinfo "Application status" [ref=f30e282]:
+        - generic [ref=f30e283]:
+          - generic [ref=f30e284]:
+            - 'link "API connection status: Online (9ms)" [ref=f30e2769] [cursor=pointer]':
+              - /url: /system-status
+            - tooltip "API connection · Online · 9ms"
+          - generic [ref=f30e292]:
+            - 'link "Live telemetry status: Live" [ref=f30e293] [cursor=pointer]':
+              - /url: /signal-diff
+            - tooltip "Live telemetry stream · Last message 10s ago"
+          - generic [ref=f30e301]:
+            - link "Telemetry honesty meter" [ref=f30e302] [cursor=pointer]:
+              - /url: /
+            - tooltip "Live 0 · Stale 0 · Guessed 2 · Missing 0 · Stream live"
+          - generic [ref=f30e307]:
+            - button "Current data with live actions available." [ref=f30e308] [cursor=pointer]
+            - tooltip "Current data with live actions available."
+        - generic [ref=f30e314]:
+          - generic [ref=f30e315]:
+            - button "Open recently viewed pages, 10 saved" [ref=f30e316] [cursor=pointer]
+            - tooltip "Recently viewed pages - 10 pages"
+          - generic [ref=f30e2770]:
+            - button "Open more status options. Update or release notes available" [ref=f30e2771] [cursor=pointer]
+            - tooltip "Update or release notes available"
+          - generic [ref=f30e336]:
+            - button "Open Helix chat" [ref=f30e337] [cursor=pointer]
+            - tooltip "Open Helix chat"
+      - status "Application status announcements" [ref=f30e341]: "Telemetry honesty: guessed"
+  - generic [aria-hidden] [ref=f30e2777]: "17"
+  - dialog "Open theme picker" [ref=f30e2778]:
+    - generic [ref=f30e2779]:
+      - generic [ref=f30e2780]:
+        - paragraph [ref=f30e2782]: Display mode
+        - generic [ref=f30e2784]:
+          - paragraph [ref=f30e2785]:
+            - text: Core
+            - generic [ref=f30e2786]: (3)
+          - generic [ref=f30e2787]:
+            - button [ref=f30e2788] [cursor=pointer]:
+              - paragraph [ref=f30e2794]: Dark
+            - button [pressed] [ref=f30e2800] [cursor=pointer]:
+              - paragraph [ref=f30e2810]: Light
+            - button [ref=f30e2819] [cursor=pointer]:
+              - paragraph [ref=f30e2825]: Auto (System)
+        - button "Browse all 141 modes" [ref=f30e2831] [cursor=pointer]
+      - generic [ref=f30e2832]:
+        - paragraph [ref=f30e2833]: Accent color
+        - generic [ref=f30e2834]:
+          - button [pressed] [ref=f30e2835] [cursor=pointer]:
+            - paragraph [ref=f30e2837]: Signal Blue
+          - button [ref=f30e2842] [cursor=pointer]:
+            - paragraph [ref=f30e2844]: Tesla Red
+          - button [ref=f30e2845] [cursor=pointer]:
+            - paragraph [ref=f30e2847]: Matrix Green
+          - button [ref=f30e2848] [cursor=pointer]:
+            - paragraph [ref=f30e2850]: Royal Purple
+          - button [ref=f30e2851] [cursor=pointer]:
+            - paragraph [ref=f30e2853]: Solar Amber
+    - button "Customize…" [ref=f30e2855] [cursor=pointer]

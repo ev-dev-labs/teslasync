@@ -140,15 +140,15 @@ describe('ChargerTypeBreakdown — populated detail list', () => {
     expect(screen.getAllByText('Home')).toHaveLength(2);
 
     // Supercharger row: 60% share, $/kWh = 30/100, 100 kWh, "$30.00 · 5 sessions".
-    expect(screen.getByText('60.0%')).toBeInTheDocument();
-    expect(screen.getByText('100.0 kWh')).toBeInTheDocument();
-    expect(screen.getByText('$0.300/kWh')).toBeInTheDocument();
+    expect(screen.getByText('60.00%')).toBeInTheDocument();
+    expect(screen.getByText('100.00 kWh')).toBeInTheDocument();
+    expect(screen.getByText('$0.30/kWh')).toBeInTheDocument();
     expect(container.textContent).toContain('$30.00 · 5 sessions');
 
     // Home row: 40% share, $/kWh = 20/80, 80 kWh, "$20.00 · 8 sessions".
-    expect(screen.getByText('40.0%')).toBeInTheDocument();
-    expect(screen.getByText('80.0 kWh')).toBeInTheDocument();
-    expect(screen.getByText('$0.250/kWh')).toBeInTheDocument();
+    expect(screen.getByText('40.00%')).toBeInTheDocument();
+    expect(screen.getByText('80.00 kWh')).toBeInTheDocument();
+    expect(screen.getByText('$0.25/kWh')).toBeInTheDocument();
     expect(container.textContent).toContain('$20.00 · 8 sessions');
   });
 });
@@ -160,10 +160,10 @@ describe('ChargerTypeBreakdown — share-of-total math + bar clamp', () => {
       totalCost: 100,
     });
 
-    expect(screen.getByText('25.0%')).toBeInTheDocument();
+    expect(screen.getByText('25.00%')).toBeInTheDocument();
     expect(barWidth(container)).toBe('25%');
     // $/kWh stays derived from cost/energy (25/50) regardless of the share.
-    expect(screen.getByText('$0.500/kWh')).toBeInTheDocument();
+    expect(screen.getByText('$0.50/kWh')).toBeInTheDocument();
   });
 
   it('falls back to 0% share (and no NaN) when totalCost is 0', () => {
@@ -172,10 +172,10 @@ describe('ChargerTypeBreakdown — share-of-total math + bar clamp', () => {
       totalCost: 0,
     });
 
-    expect(screen.getByText('0.0%')).toBeInTheDocument();
+    expect(screen.getByText('0.00%')).toBeInTheDocument();
     expect(barWidth(container)).toBe('0%');
     // $/kWh is independent of totalCost, so it still renders.
-    expect(screen.getByText('$0.500/kWh')).toBeInTheDocument();
+    expect(screen.getByText('$0.50/kWh')).toBeInTheDocument();
     expect(container.textContent).not.toMatch(/NaN/);
   });
 
@@ -186,7 +186,7 @@ describe('ChargerTypeBreakdown — share-of-total math + bar clamp', () => {
     });
 
     // The numeric label is honest…
-    expect(screen.getByText('150.0%')).toBeInTheDocument();
+    expect(screen.getByText('150.00%')).toBeInTheDocument();
     // …but the visual bar can't overflow its track.
     expect(barWidth(container)).toBe('100%');
   });
@@ -197,9 +197,9 @@ describe('ChargerTypeBreakdown — share-of-total math + bar clamp', () => {
       totalCost: 100,
     });
 
-    expect(screen.getByText('0.0 kWh')).toBeInTheDocument();
+    expect(screen.getByText('0.00 kWh')).toBeInTheDocument();
     expect(screen.getByText('—')).toBeInTheDocument();
-    expect(screen.getByText('10.0%')).toBeInTheDocument();
+    expect(screen.getByText('10.00%')).toBeInTheDocument();
   });
 });
 
@@ -211,10 +211,16 @@ describe('ChargerTypeBreakdown — CostSection states', () => {
       totalCost: 100,
     });
 
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
+    const skeleton = container.querySelector('[data-print-card] > [aria-hidden="true"]');
+    expect(skeleton).not.toBeNull();
+    expect(skeleton).toHaveClass('h-4', 'w-full', 'rounded', 'bg-[var(--skeleton-bg)]');
+    expect(skeleton).toHaveStyle('height: 280px');
+    expect(container.querySelector('.animate-pulse')).toBeNull();
     expect(screen.getByRole('heading', { level: 3, name: HEADING })).toBeInTheDocument();
     // Loading strictly precedes the data / empty / error branches.
     expect(screen.queryByRole('img', { name: CHART_LABEL })).toBeNull();
+    expect(screen.queryByText('Supercharger')).toBeNull();
+    expect(container.querySelector('div.transition-all')).toBeNull();
     expect(screen.queryByRole('status')).toBeNull();
     expect(screen.queryByRole('alert')).toBeNull();
   });
@@ -278,8 +284,8 @@ describe('ChargerTypeBreakdown — null-safety hardening', () => {
     });
 
     expect(screen.getAllByText('Home / AC')).toHaveLength(2);
-    expect(screen.getByText('0.0 kWh')).toBeInTheDocument();
-    expect(screen.getByText('0.0%')).toBeInTheDocument();
+    expect(screen.getByText('0.00 kWh')).toBeInTheDocument();
+    expect(screen.getByText('0.00%')).toBeInTheDocument();
     expect(container.textContent).toContain('$0.00 · 0 sessions');
     expect(barWidth(container)).toBe('0%');
     expect(container.textContent).not.toMatch(/NaN/);

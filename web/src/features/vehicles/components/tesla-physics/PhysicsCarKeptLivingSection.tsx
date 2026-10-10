@@ -1,6 +1,5 @@
 import { Link } from 'react-router-dom';
-import { MetricCard } from '@/components/data-display';
-import { Grid } from '@/components/layout';
+import { PhysicsEvidenceBrief } from '../operationalbrief-n-z/PhysicsEvidenceBrief';
 import { Badge, Text } from '@/components/ui';
 import { Evidence } from './Evidence';
 import { type PhysicsPage, seconds, time, unknown } from './PhysicsPageShell';
@@ -20,32 +19,32 @@ export default function PhysicsCarKeptLivingSection({ physics }: { physics: Phys
   const scope = report?.evidence;
   return <>
     <Evidence title={physics.title} honesty={living?.honesty}>
-      <Grid cols={{ default: 1, md: 3 }} gap={3}>
-        <MetricCard label={t('teslaOnly.lastTelemetry', 'Last recorded telemetry')} value={time(last, t)} color="cyan" />
-        <MetricCard label={t('teslaOnly.missingSince', 'Elapsed since last event')} value={seconds(living?.never_received_gap_s, t)} color="amber" />
-        <MetricCard label={t('teslaOnly.queued', 'Queued')} value={living?.queued_count ?? unknown(t)} color="purple" />
-      </Grid>
-      <div className="flex flex-wrap gap-2">
-        <Badge variant={living?.mqtt_connected == null ? 'neutral' : living.mqtt_connected ? 'success' : 'warning'} size="sm">
-          {living?.mqtt_connected == null ? t('teslaOnly.mqttUnknown', 'MQTT state unknown') : living.mqtt_connected ? t('teslaOnly.mqttUp', 'MQTT connected') : t('teslaOnly.mqttDown', 'MQTT not connected')}</Badge>
-        <Badge variant={living?.replay_preserves_event_time ? 'info' : 'warning'} size="sm">
-          {living?.replay_preserves_event_time ? t('teslaOnly.replay', 'Replay keeps event time') : t('teslaOnly.replayUnverified', 'Replay event-time preservation not confirmed')}</Badge>
-      </div>
-      <Text as="p" variant="bodySm">{t('teslaOnly.livingClockComparison', 'Three Clocks latest event: {{value}} · matches last telemetry: {{match}}', {
+      <PhysicsEvidenceBrief physics={physics} id="physics-living-summary" available={living != null}
+        description={t('teslaOnly.livingCaution', 'Broker connectivity cannot reconstruct events never received; distinguish ingestion delay from missing vehicle history. Queue size is a snapshot, not a count of lost events.')}
+        metrics={[
+          { metricId: 'text', occurrenceId: 'last', label: t('teslaOnly.lastTelemetry', 'Last recorded telemetry'), rawValue: last == null ? null : time(last, t), context: last },
+          { metricId: 'duration', occurrenceId: 'gap', label: t('teslaOnly.missingSince', 'Elapsed since last event'), rawValue: living?.never_received_gap_s, display: { formatter: raw => ({ value: seconds(raw, t), unit: '' }) } },
+          { metricId: 'count', occurrenceId: 'queued', label: t('teslaOnly.queued', 'Queued'), rawValue: living?.queued_count },
+          { metricId: 'duration', occurrenceId: 'offset', label: t('teslaOnly.livingClockOffsetLabel', 'Absolute difference between returned last-event clocks'), rawValue: clockOffset, display: { formatter: raw => ({ value: seconds(raw, t), unit: '' }) } },
+          { metricId: 'status', occurrenceId: 'mqtt', label: t('teslaOnly.mqttLabel', 'MQTT connection'), rawValue: living?.mqtt_connected == null ? null : living.mqtt_connected ? t('teslaOnly.mqttUp', 'MQTT connected') : t('teslaOnly.mqttDown', 'MQTT not connected') },
+          { metricId: 'status', occurrenceId: 'replay', label: t('teslaOnly.replayLabel', 'Replay event-time preservation'), rawValue: living?.replay_preserves_event_time == null ? null : living.replay_preserves_event_time ? t('teslaOnly.replay', 'Replay keeps event time') : t('teslaOnly.replayUnverified', 'Replay event-time preservation not confirmed'), missingReason: t('teslaOnly.replayUnverified', 'Replay event-time preservation not confirmed') },
+        ]} />
+      <Text as="p" variant="bodySm">{t('teslaOnly.livingClockComparison', 'Three clocks latest event: {{value}} · matches last telemetry: {{match}}', {
         value: time(clockLast, t), match: sameLast == null ? unknown(t) : sameLast ? t('teslaOnly.yes', 'Yes') : t('teslaOnly.no', 'No'),
       })}</Text>
       <Text as="p" variant="bodySm">{t('teslaOnly.livingClockOffset', 'Absolute difference between returned last-event clocks: {{value}}', { value: seconds(clockOffset, t) })}</Text>
-      <Text as="p" variant="caption">{t('teslaOnly.livingCaution', 'Broker connectivity cannot reconstruct events never received; distinguish ingestion delay from missing vehicle history. Queue size is a snapshot, not a count of lost events.')}</Text>
     </Evidence>
     <Evidence title={t('teslaOnly.livingInvestigation', 'Ingestion and missing-history investigation')}>
       <Text as="p" variant="bodySm">{t('teslaOnly.livingSourceBound', 'Bounded history: {{count}} rows; available: {{status}}', {
         count: scope?.history_rows ?? unknown(t), status: scope?.history_available == null ? unknown(t) : scope.history_available ? t('teslaOnly.yes', 'Yes') : t('teslaOnly.no', 'No'),
       })}</Text>
-      <Grid cols={{ default: 1, md: 2 }} gap={3}>
-        <MetricCard label={t('teslaOnly.livingClockIngest', 'Latest stored ingest timestamp')} value={time(clock?.ingest_time, t)} color="cyan" />
-        <MetricCard label={t('teslaOnly.livingIngestLag', 'Latest paired ingest lag')} value={seconds(storedLag, t)} color="amber" />
-      </Grid>
-      <Text as="p" variant="caption">{t('teslaOnly.livingLagCaution', 'Paired ingest lag is measured for a returned clock reading only. It does not describe missing vehicle events or queue processing time.')}</Text>
+      <PhysicsEvidenceBrief physics={physics} id="physics-living-ingestion" available={report?.clocks != null}
+        description={t('teslaOnly.livingLagCaution', 'Paired ingest lag is measured for a returned clock reading only. It does not describe missing vehicle events or queue processing time.')}
+        metrics={[
+          { metricId: 'text', occurrenceId: 'ingest', label: t('teslaOnly.livingClockIngest', 'Latest stored ingest timestamp'), rawValue: clock?.ingest_time == null ? null : time(clock.ingest_time, t), context: clock?.ingest_time },
+          { metricId: 'duration', occurrenceId: 'lag', label: t('teslaOnly.livingIngestLag', 'Latest paired ingest lag'), rawValue: storedLag, display: { formatter: raw => ({ value: seconds(raw, t), unit: '' }) } },
+          { metricId: 'count', occurrenceId: 'history', label: t('teslaOnly.historyRowsLabel', 'Bounded history rows'), rawValue: scope?.history_available ? scope.history_rows : null },
+        ]} />
       {scope?.history_truncated && <Badge variant="warning" size="sm">{t('teslaOnly.historyCapped', 'History row cap reached')}</Badge>}
       {!scope && <Text as="p" variant="caption">{t('teslaOnly.scopeUnavailable', 'Evidence coverage metadata was not returned; counts cannot establish completeness.')}</Text>}
       <Text as="p" variant="caption">{t('teslaOnly.livingTriage', 'A connected broker with no recent vehicle event does not establish a silent vehicle. A queued event may arrive later with its original event time; the broker snapshot does not prove that all intervening telemetry was received.')}</Text>

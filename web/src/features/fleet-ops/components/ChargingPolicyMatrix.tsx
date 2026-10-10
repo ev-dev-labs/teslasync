@@ -2,12 +2,14 @@ import { BatteryCharging, Pencil, Plus, Trash2 } from 'lucide-react';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { EmptyState, QueryError, Skeleton } from '@/components/feedback';
-import { Button, DataTable, GlassPanel, PanelTitle, StatusPill, type Column } from '@/components/ui';
+import { Button, DataTable, Text, StatusPill, type Column } from '@/components/ui';
+import { LayoutCard } from '@/components/layout';
 import { useUnits } from '@/hooks/useUnits';
 import type { FleetChargingPolicy } from '@/api/hooks/useFleetOps';
 
 interface ChargingPolicyMatrixProps {
   items: FleetChargingPolicy[];
+  enableValueFilters?: boolean;
   loading: boolean;
   error: unknown;
   onRetry: () => void;
@@ -22,6 +24,7 @@ const dayKeys = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'] as const;
 
 export function ChargingPolicyMatrix({
   items,
+  enableValueFilters = false,
   loading,
   error,
   onRetry,
@@ -34,25 +37,30 @@ export function ChargingPolicyMatrix({
   const { t } = useTranslation();
   const { formatPower } = useUnits();
   const windowLabel = (item: FleetChargingPolicy) => item.windows.map((window) => {
-    const day = t(`fleetOps.days.${dayKeys[window.day_of_week]}`, dayKeys[window.day_of_week].toUpperCase());
+    const dayKey = dayKeys[window.day_of_week];
+    const day = t(`fleetOps.days.${dayKey}`, dayKey.charAt(0).toUpperCase() + dayKey.slice(1));
     return `${day} ${window.start_local_time}–${window.end_local_time}`;
   }).join(', ');
   const columns = useMemo<Column<FleetChargingPolicy>[]>(() => [
     {
       key: 'vehicle',
       header: t('fleetOps.policies.vehicle', 'Vehicle'),
+      filterValue: (item) => item.vehicle_id ?? null,
+      filterValueLabel: (_value, item) => item.vehicle_display_name,
       render: (item) => item.vehicle_display_name,
       visibleOnMobile: true,
     },
     {
       key: 'policy',
       header: t('fleetOps.policies.policy', 'Policy'),
+      filterValue: (item) => item.id,
+      filterValueLabel: (_value, item) => item.name,
       render: (item) => (
         <div>
-          <p className="font-medium">{item.name}</p>
-          <p className="text-xs text-[var(--text-muted)]">
+          <Text as="p" weight="medium">{item.name}</Text>
+          <Text as="p" variant="caption">
             {t('fleetOps.policies.priority', 'Priority')} {item.priority}
-          </p>
+          </Text>
         </div>
       ),
       visibleOnMobile: true,
@@ -60,12 +68,17 @@ export function ChargingPolicyMatrix({
     {
       key: 'target',
       header: t('fleetOps.policies.targetSoc', 'Target SoC'),
+      filterValue: (item) => item.target_soc_pct ?? null,
+      filterValueLabel: (value) => value == null ? '—' : `${value}%`,
+      groupStart: true,
       render: (item) => `${item.target_soc_pct}%`,
       align: 'right',
     },
     {
       key: 'power',
       header: t('fleetOps.policies.maxPower', 'Max power'),
+      filterValue: (item) => item.max_power_w ?? null,
+      filterValueLabel: (_value, item) => formatPower(item.max_power_w),
       render: (item) => formatPower(item.max_power_w),
       align: 'right',
     },
@@ -77,6 +90,9 @@ export function ChargingPolicyMatrix({
     {
       key: 'enabled',
       header: t('fleetOps.policies.state', 'State'),
+      filterValue: (item) => item.enabled ?? null,
+      filterValueLabel: (_value, item) => item.enabled == null ? '—' : item.enabled
+        ? t('fleetOps.policies.enabled', 'Enabled') : t('fleetOps.policies.disabled', 'Disabled'),
       render: (item) => (
         <StatusPill color={item.enabled ? 'bg-emerald-500' : 'bg-slate-500'}>
           {item.enabled ? t('fleetOps.policies.enabled', 'Enabled') : t('fleetOps.policies.disabled', 'Disabled')}
@@ -101,13 +117,11 @@ export function ChargingPolicyMatrix({
   ], [actionsDisabled, actionsDisabledReason, formatPower, onDelete, onEdit, t]);
 
   return (
-    <GlassPanel className="p-5">
-      <div className="flex items-center justify-between gap-3">
-        <PanelTitle>{t('fleetOps.policies.title', 'Charging policy matrix')}</PanelTitle>
+    <LayoutCard title={t('fleetOps.policies.title', 'Charging policy matrix')} actions={
         <Button type="button" size="sm" icon={<Plus className="h-4 w-4" />} onClick={onAdd} disabled={actionsDisabled} title={actionsDisabledReason}>
           {t('fleetOps.policies.add', 'Add policy')}
         </Button>
-      </div>
+      }>
       {loading ? <Skeleton lines={6} /> : error ? (
         <QueryError error={error} onRetry={onRetry} resourceName={t('fleetOps.policies.resource', 'Charging policies')} />
       ) : items.length === 0 ? (
@@ -124,12 +138,13 @@ export function ChargingPolicyMatrix({
             tableId="fleet-ops:charging-policies"
             columns={columns}
             data={items}
+            enableValueFilters={enableValueFilters}
             keyExtractor={(item) => item.id}
             mobileColumns={['vehicle', 'policy', 'actions']}
             pagination
           />
         </div>
       )}
-    </GlassPanel>
+    </LayoutCard>
   );
 }

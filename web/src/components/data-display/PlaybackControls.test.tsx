@@ -22,12 +22,14 @@
 
 import type { ComponentProps } from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent, act } from '@testing-library/react';
+import { render, screen, fireEvent, act, cleanup } from '@testing-library/react';
 import '@/i18n';
 import { PlaybackControls } from './PlaybackControls';
 import { _resetShortcutRegistry } from '@/hooks/useShortcutRegistry';
+import { getFormatterPreferences, setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat';
 
 type Props = ComponentProps<typeof PlaybackControls>;
+let previousPreferences: ReturnType<typeof getFormatterPreferences>;
 
 function makeProps(overrides: Partial<Props> = {}): Props {
   return {
@@ -55,6 +57,9 @@ function pressKey(key: string, init: KeyboardEventInit = {}) {
 }
 
 beforeEach(() => {
+  previousPreferences = getFormatterPreferences();
+  setGlobalPrecision(0);
+  setGlobalLocale('en-US');
   // jsdom has no matchMedia; framer-motion's useReducedMotion (via the
   // scrubber) reads it. Default to "motion allowed" for deterministic renders.
   Object.defineProperty(window, 'matchMedia', {
@@ -74,8 +79,11 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  cleanup();
   vi.useRealTimers();
   _resetShortcutRegistry();
+  setGlobalPrecision(previousPreferences.precision);
+  setGlobalLocale(previousPreferences.locale);
 });
 
 describe('PlaybackControls — transport controls (render + a11y)', () => {
@@ -106,13 +114,11 @@ describe('PlaybackControls — transport controls (render + a11y)', () => {
   });
 
   it('falls back to an em-dash when the pre-formatted times are missing', () => {
-    const { container } = render(
-      <PlaybackControls
-        {...makeProps()}
-        elapsed={undefined as unknown as string}
-        total={undefined as unknown as string}
-      />,
-    );
+    const props = makeProps();
+    // Exercise missing runtime values without widening the public clock props.
+    Reflect.set(props, 'elapsed', undefined);
+    Reflect.set(props, 'total', undefined);
+    const { container } = render(<PlaybackControls {...props} />);
     expect(container).toHaveTextContent('— / —');
   });
 
@@ -181,6 +187,17 @@ describe('PlaybackControls — keyboard shortcuts are opt-in', () => {
 });
 
 describe('PlaybackControls — keyboard shortcuts (enabled)', () => {
+  it('refreshes the mounted shortcut formatter while retaining seek math and clock strings', () => {
+    const props = makeProps({ enableKeyboardShortcuts: true })
+    render(<PlaybackControls {...props} />)
+    pressKey('3')
+    expect(screen.getByText('30%')).toBeInTheDocument()
+    act(() => setGlobalPrecision(3))
+    pressKey('3')
+    expect(screen.getByText('30.000%')).toBeInTheDocument()
+    expect(props.onSeek).toHaveBeenLastCalledWith(0.3)
+    expect(screen.getByText(/0:00/)).toBeInTheDocument()
+  })
   it('toggles play/pause on Space and on K', () => {
     const onPlay = vi.fn();
     const onPause = vi.fn();
@@ -392,5 +409,180 @@ describe('PlaybackControls — scrubber wiring', () => {
     expect(
       screen.getByRole('button', { name: /charge start/i }),
     ).toBeInTheDocument();
+  });
+});
+
+describe('PlaybackControls — optional capabilities and adaptive frame', () => {
+  it('supports a minimal play/pause/seek-only caller without optional controls', () => {
+    const onPlay = vi.fn();
+    const onPause = vi.fn();
+    const onSeek = vi.fn();
+    const { rerender } = render(
+      <PlaybackControls
+        isPlaying={false}
+        progress={0.25}
+        elapsed="1:15"
+        total="5:00"
+        onPlay={onPlay}
+        onPause={onPause}
+        onSeek={onSeek}
+      />,
+    );
+    expect(screen.getAllByRole('button')).toHaveLength(1);
+    expect(screen.queryByRole('button', { name: 'Reset' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Restart' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Stop' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Playback speed/ })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Play' }));
+    expect(onPlay).toHaveBeenCalledTimes(1);
+    fireEvent.keyDown(screen.getByRole('slider', { name: 'Playback progress' }), { key: 'ArrowRight' });
+    expect(onSeek).toHaveBeenLastCalledWith(0.26);
+    // The renderer does not update caller-owned playback state or clock.
+    expect(screen.getByRole('button', { name: 'Play' })).toBeInTheDocument();
+    expect(screen.getByText('1:15 / 5:00')).toBeInTheDocument();
+    rerender(
+      <PlaybackControls
+        isPlaying
+        progress={0.25}
+        elapsed="1:15"
+        total="5:00"
+        onPlay={onPlay}
+        onPause={onPause}
+        onSeek={onSeek}
+      />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Pause' }));
+    expect(onPause).toHaveBeenCalledTimes(1);
+  });
+
+  it('routes explicit restart and stop to distinct callbacks without a duplicate Reset', () => {
+    const onRestart = vi.fn();
+    const onStop = vi.fn();
+    render(<PlaybackControls {...makeProps({ onRestart, onStop })} />);
+    expect(screen.queryByRole('button', { name: 'Reset' })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Restart' }));
+    expect(onRestart).toHaveBeenCalledTimes(1);
+    expect(onStop).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'Stop' }));
+    expect(onStop).toHaveBeenCalledTimes(1);
+    expect(onRestart).toHaveBeenCalledTimes(1);
+  });
+
+  it('supports restart without a stop capability', () => {
+    const onRestart = vi.fn();
+    render(<PlaybackControls {...makeProps({ onStop: undefined, onRestart })} />);
+    expect(screen.queryByRole('button', { name: 'Stop' })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Restart' }));
+    expect(onRestart).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([
+    { speed: undefined, onSpeedChange: vi.fn() },
+    { speed: 1 as const, onSpeedChange: undefined },
+  ])('omits speed selection when its value or callback is absent: %o', (capability) => {
+    render(<PlaybackControls {...makeProps(capability)} />);
+    expect(screen.queryByRole('button', { name: /Playback speed/ })).not.toBeInTheDocument();
+  });
+
+  it('removes framing for embedded use and wraps within allocated width without duplicating controls', () => {
+    const props = makeProps({ onRestart: vi.fn() });
+    const { container, rerender } = render(<PlaybackControls {...props} className="caller-slot" />);
+    const frame = container.firstElementChild;
+    expect(frame).toHaveClass('relative', 'min-w-0', 'rounded-panel', 'border', 'px-4', 'py-3', 'shadow-panel', 'caller-slot');
+    const transport = frame?.lastElementChild;
+    expect(transport).toHaveClass('flex', 'min-w-0', 'flex-wrap');
+    const scrubberSlot = screen.getByRole('slider').closest('.flex-replay-scrubber');
+    expect(scrubberSlot).toHaveClass('min-w-0', 'flex-replay-scrubber');
+
+    rerender(<PlaybackControls {...props} framed={false} className="caller-slot" />);
+    expect(frame).toHaveClass('relative', 'min-w-0', 'caller-slot');
+    expect(frame).not.toHaveClass('rounded-panel', 'border', 'px-4', 'py-3', 'shadow-panel', 'backdrop-blur-sm');
+    expect(screen.getAllByRole('button', { name: 'Restart' })).toHaveLength(1);
+    expect(screen.getAllByRole('button', { name: 'Play' })).toHaveLength(1);
+    expect(screen.getAllByRole('button', { name: 'Stop' })).toHaveLength(1);
+    expect(screen.getAllByRole('button', { name: /Playback speed/ })).toHaveLength(1);
+    expect(screen.getAllByRole('slider')).toHaveLength(1);
+  });
+
+  it('leaves unavailable speed/frame/relative-seek shortcuts unclaimed even when opted in', () => {
+    render(
+      <PlaybackControls
+        {...makeProps({ speed: undefined, onSpeedChange: undefined, enableKeyboardShortcuts: true })}
+      />,
+    );
+    for (const key of ['+', '-', ',', '.', 'ArrowLeft', 'ArrowRight', 'j', 'l']) {
+      const event = new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true });
+      act(() => { window.dispatchEvent(event); });
+      expect(event.defaultPrevented).toBe(false);
+    }
+    expect(screen.queryByText('Faster')).not.toBeInTheDocument();
+    expect(screen.queryByText('Slower')).not.toBeInTheDocument();
+  });
+
+  it('retains caller-owned relative-speed shortcuts without requiring a speed menu', () => {
+    const onSpeedRelative = vi.fn();
+    render(
+      <PlaybackControls
+        {...makeProps({
+          speed: undefined,
+          onSpeedChange: undefined,
+          enableKeyboardShortcuts: true,
+          onSpeedRelative,
+        })}
+      />,
+    );
+    expect(screen.queryByRole('button', { name: /Playback speed/ })).not.toBeInTheDocument();
+    pressKey('+');
+    expect(onSpeedRelative).toHaveBeenLastCalledWith(1);
+    pressKey('-');
+    expect(onSpeedRelative).toHaveBeenLastCalledWith(-1);
+  });
+
+  it('does not intercept native transport keys or duplicate scrubber keyboard seeking', () => {
+    const props = makeProps({ enableKeyboardShortcuts: true, durationMs: 100_000, progress: 0.2 });
+    render(<PlaybackControls {...props} />);
+    const play = screen.getByRole('button', { name: 'Play' });
+    fireEvent.keyDown(play, { key: ' ' });
+    expect(props.onPlay).not.toHaveBeenCalled();
+    expect(play).toHaveAttribute('type', 'button');
+    fireEvent.click(play);
+    expect(props.onPlay).toHaveBeenCalledTimes(1);
+    fireEvent.keyDown(screen.getByRole('slider', { name: 'Playback progress' }), { key: 'ArrowRight' });
+    expect(props.onSeek).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(props.onSeek).mock.calls[0][0]).toBeCloseTo(0.21);
+  });
+
+  it('keeps transport targets reachable and inherits primitive focus and forced-color chrome', () => {
+    render(<PlaybackControls {...makeProps({ enableKeyboardShortcuts: true })} />);
+    for (const name of ['Reset', 'Play', 'Stop', 'Show keyboard shortcuts']) {
+      const button = screen.getByRole('button', { name });
+      expect(button).toHaveAttribute('type', 'button');
+      expect(button).toHaveClass('h-11', 'w-11', 'shrink-0', 'rounded-shape-sm');
+      expect(button).toHaveClass('focus-visible:outline-2', 'forced-colors:focus-visible:outline-[Highlight]');
+      expect(button).not.toHaveClass('focus:outline-none', 'focus-visible:ring-white/40');
+    }
+    expect(screen.getByRole('button', { name: /Playback speed:/ })).toHaveClass('h-11', 'min-w-11');
+    const help = screen.getByRole('button', { name: 'Show keyboard shortcuts' });
+    fireEvent.focus(help);
+    const tooltip = screen.getByRole('tooltip');
+    expect(tooltip).toHaveTextContent('Trip replay shortcuts');
+    expect(tooltip.querySelectorAll('kbd')).toHaveLength(4);
+    expect(tooltip.querySelector('.grid')).toHaveClass('grid-cols-replay-shortcuts', 'gap-x-3', 'gap-y-1');
+    for (const key of tooltip.querySelectorAll('kbd')) {
+      expect(key).toHaveClass('text-xs', 'font-mono', 'border-current');
+      expect(key).not.toHaveClass('text-2xs', 'text-[var(--text-primary)]');
+    }
+  });
+
+  it('retains caller clocks, zero position and latest playback position after presentation updates', () => {
+    const props = makeProps({ enableKeyboardShortcuts: true, durationMs: 100_000 });
+    const { rerender } = render(<PlaybackControls {...props} />);
+    expect(screen.getByRole('slider')).toHaveAttribute('aria-valuenow', '0');
+    expect(screen.getByText('0:00 / 5:00')).toHaveClass('text-end');
+    rerender(<PlaybackControls {...props} progress={0.7} elapsed="1:10" total="1:40" />);
+    pressKey('ArrowRight');
+    expect(vi.mocked(props.onSeek).mock.calls[0][0]).toBeCloseTo(0.75);
+    expect(screen.getByText('1:10 / 1:40')).toBeInTheDocument();
+    expect(screen.getByRole('slider')).toHaveAttribute('aria-valuenow', '70');
   });
 });

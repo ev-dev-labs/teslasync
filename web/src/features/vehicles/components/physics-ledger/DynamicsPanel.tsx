@@ -1,13 +1,17 @@
 import type {
   PhysicsLedger
 } from '@/api/types';
-import { Badge, Caption, GlassPanel, PanelTitle, Text } from '@/components/ui';
+import { Caption, GlassPanel, PanelTitle, Text } from '@/components/ui';
 import { useUnits } from '@/hooks/useUnits';
-import { fmtNumber } from '@/lib/numberFormat';
+
 import { asList, unknownLabel, useT } from './helpers';
 import { MotionCharts } from './MotionCharts';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import type { DataStatus } from '@/api/dataState';
+import { LedgerEvidenceBrief } from '../operationalbrief-n-z/LedgerEvidenceBrief';
 
-export function DynamicsPanel({ ledger }: { ledger: PhysicsLedger }) {
+export function DynamicsPanel({ ledger, status }: { ledger: PhysicsLedger; status?: DataStatus }) {
+  const { fmtNumber } = useNumberFormatting();
   const t = useT();
   const { formatEnergy, formatSpeed } = useUnits();
   const d = ledger.dynamics;
@@ -18,19 +22,15 @@ export function DynamicsPanel({ ledger }: { ledger: PhysicsLedger }) {
       <Text as="p" size="sm" color="secondary">
         {d?.honesty ?? t('physicsLedger.dynamics.empty', 'No motion samples were recorded in this window.')}
       </Text>
-      <div className="flex flex-wrap gap-2">
-        <Badge variant={d?.unknown ? 'warning' : 'success'} size="sm">
-          {t('physicsLedger.massSource', 'mass')}: {d?.mass_source ?? unknownLabel(t)}
-          {d?.mass_kg != null ? ` (${fmtNumber(d.mass_kg, 0)} kg)` : ''}
-        </Badge>
-        <Badge variant="neutral" size="sm">
-          {t('physicsLedger.dynamics.regen', 'Regen')}: {d?.regen_wh != null ? formatEnergy(d.regen_wh) : unknownLabel(t)}
-        </Badge>
-        <Badge variant="neutral" size="sm">
-          {t('physicsLedger.dynamics.friction', 'Friction brake')}:{' '}
-          {d?.friction_brake_wh != null ? formatEnergy(d.friction_brake_wh) : unknownLabel(t)}
-        </Badge>
-      </div>
+      <LedgerEvidenceBrief ledger={ledger} id="ledger-dynamics-summary" status={status}
+        available={d != null && !d.unknown}
+        title={t('physicsLedger.dynamics.title', 'Longitudinal dynamics')}
+        description={d?.honesty ?? t('physicsLedger.dynamics.empty', 'No motion samples were recorded in this window.')}
+        metrics={[
+          { metricId: 'mass', occurrenceId: 'mass', label: t('physicsLedger.massSource', 'mass'), rawValue: d?.mass_kg, display: { formatter: raw => ({ value: `${fmtNumber(raw)} kg`, unit: '' }) }, context: d?.mass_source ?? unknownLabel(t) },
+          { metricId: 'energy', occurrenceId: 'regen', label: t('physicsLedger.dynamics.regen', 'Regen'), rawValue: d?.regen_wh, display: { formatter: raw => ({ value: formatEnergy(raw), unit: '' }) } },
+          { metricId: 'energy', occurrenceId: 'friction', label: t('physicsLedger.dynamics.friction', 'Friction brake'), rawValue: d?.friction_brake_wh, display: { formatter: raw => ({ value: formatEnergy(raw), unit: '' }) } },
+        ]} />
       {points.length > 1 ? (
         <MotionCharts points={points} />
       ) : (

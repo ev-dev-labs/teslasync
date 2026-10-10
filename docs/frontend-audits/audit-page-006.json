@@ -1,0 +1,475 @@
+{
+  "item": "audit-page-006",
+  "page": "web\\src\\features\\admin\\pages\\BackupRestorePage.tsx",
+  "routes": ["/backup"],
+  "purpose": "Fleet-independent administration of scheduled database backups, returned backup-run history, integrity checks and restore previews, plus portable settings JSON export/import.",
+  "primaryGoal": "Configure and inspect data protection, download or verify completed snapshots, and transfer supported settings safely without confusing a preview with a database restore.",
+  "dataSources": [
+    {
+      "name": "configsQuery",
+      "hook": "Inline useQuery<BackupConfig[]>",
+      "file": "web\\src\\features\\admin\\pages\\BackupRestorePage.tsx",
+      "line": 212,
+      "queryKey": ["backup-configs"],
+      "endpoints": ["GET /api/v1/backup/configs"],
+      "sourceOwner": "internal\\api\\backup\\restore_handler.go",
+      "routeEvidence": "internal\\api\\router.go:4940-4946",
+      "behavior": "Independent snapshot; missing payload defaults to [] for iteration, while summary raw values use hasData. Local DataState preserves retained rows on refresh failure.",
+      "knownLimits": "Reads do not forward TanStack Query's AbortSignal. No vehicle/date scope is requested."
+    },
+    {
+      "name": "runsQuery",
+      "hook": "Inline useQuery<BackupRun[]>",
+      "file": "web\\src\\features\\admin\\pages\\BackupRestorePage.tsx",
+      "line": 217,
+      "queryKey": ["backup-runs"],
+      "endpoints": ["GET /api/v1/backup/runs"],
+      "sourceOwner": "internal\\api\\backup\\restore_handler.go",
+      "routeEvidence": "internal\\api\\router.go:4949",
+      "behavior": "Polls every 5 seconds if a returned row is queued/running; otherwise every 30 seconds. All summary/reliability calculations use only this returned array.",
+      "knownLimits": "Backend defaults to limit=50, offset=0 and permits limit up to 200 (restore_handler.go:148-171). Page sends neither bound; DataTable pagination only paginates loaded rows. Summary explicitly discloses returned-list coverage, but older history is not fetched."
+    },
+    {
+      "name": "Backup operations",
+      "hook": "Inline useMutation and callbacks",
+      "file": "web\\src\\features\\admin\\pages\\BackupRestorePage.tsx",
+      "line": 339,
+      "endpoints": [
+        "POST /api/v1/backup/configs",
+        "PUT /api/v1/backup/configs/{configID}",
+        "DELETE /api/v1/backup/configs/{configID}",
+        "POST /api/v1/backup/configs/{configID}/trigger",
+        "POST /api/v1/backup/quick",
+        "POST /api/v1/backup/runs/{runID}/verify",
+        "GET /api/v1/backup/runs/{runID}/download",
+        "GET /api/v1/backup/runs/{runID}/preview"
+      ],
+      "sourceOwner": "internal\\api\\backup\\restore_handler.go",
+      "routeEvidence": "internal\\api\\router.go:4942-4953",
+      "behavior": "Config changes and triggers invalidate both existing query keys. Verify reports a toast; download uses apiUrl and window.open; preview fetches tables and checksum flag into a modal. Delete route uses RequireSudo. No database-restore mutation exists in this inspected router group or page.",
+      "knownLimits": "No operations were executed. Preview endpoint says it parses without importing, but processor internals were not inspected. checksum_verified is derived from run.Checksum != nil, not the result of VerifyBackup."
+    },
+    {
+      "name": "Portable settings bundle",
+      "hook": "useExportSettings / useDryRunImport / useApplyImport",
+      "file": "web\\src\\api\\hooks\\useSettingsBackup.ts",
+      "line": 40,
+      "endpoints": ["GET /api/v1/settings/export", "POST /api/v1/settings/import"],
+      "sourceOwner": "Settings export/import handlers registered in internal\\api\\router.go:3680-3681",
+      "behavior": "Export caches bundle and downloads JSON. Import parses a <=1 MiB file, validates schema, previews dry_run=true section counts, then explicitly applies dry_run=false through requiresLiveMode=true and shared sudo handling. Cancelled sudo keeps preview. Supported sections: settings, alert_rules, geofences, quiet_hours.",
+      "knownLimits": "Schema helper implementation and backend settings handlers were not inspected; component/hook contracts are source evidence, not proof of backend secrecy or merge guarantees."
+    }
+  ],
+  "components": [
+    {
+      "name": "PageLayout / PageContainer",
+      "owner": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+      "usage": "Page title/subtitle, responsive full-width content, secondary actions, aggregated freshness and independent dataSources.",
+      "evidence": ["BackupRestorePage.tsx:752-779", "PageLayout.tsx:5-16", "web\\src\\components\\layout\\PageContainer.tsx:102-108,222,253"]
+    },
+    {
+      "name": "AdminSummary / OperationalBrief",
+      "owner": "web\\src\\features\\admin\\components\\operationalbrief-a-g\\AdminSummary.tsx",
+      "usage": "Six source-backed metrics adapted by useOperationalMetrics, with source scope and trust status; do not replace with another KPI implementation.",
+      "evidence": ["BackupRestorePage.tsx:261-282,783-792", "AdminSummary.tsx:7-50"]
+    },
+    {
+      "name": "LayoutCard / SourceContent / QueryError / EmptyState / Skeleton",
+      "owner": "Existing @/components/layout and @/components/feedback category contracts",
+      "usage": "Persistent configuration/history/reliability shells; independent fatal recovery, custom empty CTAs, retained notices and contextual loading.",
+      "evidence": ["BackupRestorePage.tsx:800-827,835-848,927-960", "web\\src\\components\\layout\\layout-reference\\SourceContent.tsx:9-31,35-77"]
+    },
+    {
+      "name": "DataTable",
+      "owner": "web\\src\\components\\ui\\DataTable.tsx",
+      "usage": "Three stable tableIds, canonical raw value filters, loaded-row pagination and sortable run fields. Current mobileColumns hide non-allowlisted cells below md; mobilePresentation is the existing opt-in full-detail alternative.",
+      "evidence": ["BackupRestorePage.tsx:808-823,946-958,1115-1129", "DataTable.tsx:144-188,714-725"]
+    },
+    {
+      "name": "MetricBar",
+      "owner": "web\\src\\components\\data-display\\MetricBar.tsx",
+      "usage": "Completion ratio and provider byte footprint. Existing size='slim' and fill='solid' support less decorative tracks; unknown numeric values remain representable.",
+      "evidence": ["BackupRestorePage.tsx:859-865,876-887", "MetricBar.tsx:8-28,46-68,95-102"]
+    },
+    {
+      "name": "Modal / ConfirmDialog / Input / Select / Textarea / Toggle / FormSection",
+      "owner": "Existing @/components/ui and @/components/forms category contracts",
+      "usage": "Create/edit provider-aware configuration form, destructive confirmation and read-only restore-preview dialog. ConfirmDialog already exposes loading and confirmDisabled.",
+      "evidence": ["BackupRestorePage.tsx:976-1081,1085-1150", "web\\src\\components\\ui\\ConfirmDialog.tsx:12-27,123-137"]
+    },
+    {
+      "name": "SettingsExportImport",
+      "owner": "web\\src\\features\\settings\\components\\SettingsExportImport.tsx",
+      "usage": "Canonical portable settings transfer surface mounted here, distinct from database snapshots. Internal SectionDiffList preserves per-section counters.",
+      "evidence": ["BackupRestorePage.tsx:965-973", "SettingsExportImport.tsx:63-87,233-470"]
+    },
+    {
+      "name": "DataSourceNotice / deriveDataState",
+      "owner": "web\\src\\components\\feedback\\DataSourceNotice.tsx and web\\src\\api\\dataState.ts",
+      "usage": "Existing source-scoped retry/paused/refresh-failed notices and retained payload contract. Page must not introduce another trust vocabulary.",
+      "evidence": ["BackupRestorePage.tsx:225-250", "DataSourceNotice.tsx:65-112", "dataState.ts:130-177,202-215"]
+    },
+    {
+      "name": "Typography / Badge / Button / TimeStamp / FadeIn",
+      "owner": "Existing category barrels",
+      "usage": "Localized labels, semantic status, accessible named row actions, shared time display and motion. No new font, palette, overlay or icon registry is required.",
+      "evidence": ["BackupRestorePage.tsx:4-30,533-570,595-626,679-705"]
+    }
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\admin\\pages\\BackupRestorePage.tsx",
+      "line": 792,
+      "rule": "MDC-002 / mission 33: keep pages as orchestrators",
+      "detail": "Configuration and history panels repeat source-state branching, specialized empty bodies and DataTable composition; source fetching and domain column definitions also occupy the 1,153-line page. Reliability has a third bespoke state branch.",
+      "fix": "Extract page-owned config table, history table, reliability and config-form components; retain existing SourceContent rather than creating another generic async panel. Move only this page's typed backup queries/mutations behind a domain hook after explicit ownership is assigned.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "responsive": [
+    {
+      "file": "web\\src\\features\\admin\\pages\\BackupRestorePage.tsx",
+      "line": 812,
+      "rule": "MDC-023 / MDC-043: preserve mobile data and actions",
+      "detail": "Configs allow only name/provider/schedule on mobile; frequency, type/options and action cells are hidden. Runs at line 950 allow only file_name/status/created_at, hiding size, records, duration, provider, run type and download/verify/preview actions. DataTable.tsx:724-725 applies hidden md:table-cell; neither caller supplies mobilePresentation or expandable details.",
+      "fix": "Adopt DataTable's existing mobilePresentation adapter with stable row keys, all displayed fields in details and reachable row actions. Preserve desktop pipeline, filters, ordering, pagination, tableIds and loaded-result export semantics. Do not add a second mobile table controller.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\settings\\components\\SettingsExportImport.tsx",
+      "line": 261,
+      "rule": "MDC-043: narrow/long-content reflow",
+      "detail": "Export explanation/button is an unwrapped horizontal flex row; preview filename and Change file share another row at line 348. Long translated text and filenames have no explicit filename wrapping or small-container stacking policy.",
+      "fix": "Use the existing density/spacing tokens with container-aware wrapping/stacking and break-word treatment, retaining every explanation, count and action. Exercise 320px, long translations and 200% text before declaring overflow.",
+      "owner": "integration",
+      "confidence": "medium"
+    }
+  ],
+  "accessibility": [
+    {
+      "file": "web\\src\\features\\admin\\pages\\BackupRestorePage.tsx",
+      "line": 1013,
+      "rule": "MDC-021 / MDC-040: programmatic requirements and field feedback",
+      "detail": "Required provider fields only append ' *' to translated labels; Input/Textarea at lines 1017-1033 receive no required or aria-required. Save at line 1062 is disabled only for blank name, so required provider values are not checked here. The container is not a form; native submit validation would not run merely by adding required.",
+      "fix": "Use explicit stable field IDs, required semantics and page-owned validated submit behavior with localized per-field feedback before issuing the same mutation. Preserve technical keys, defaults, secret/password types and backend authentication.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\admin\\pages\\BackupRestorePage.tsx",
+      "line": 534,
+      "rule": "MDC-040: contextual action names and target reachability",
+      "detail": "Icon-only actions have localized names, but repeated Edit/Delete/Trigger/Download labels omit row identity. Small compact buttons need real target/focus review; no measured 44px or keyboard result is claimed. Mobile hidden actions are a separate confirmed source issue.",
+      "fix": "Include configuration/run identity in localized accessible action names without exposing credentials, retain visible focus and use current Button sizing/mobile adapter policies. Validate table navigation and all open dialog states.",
+      "owner": "page",
+      "confidence": "medium"
+    }
+  ],
+  "states": [
+    {
+      "file": "web\\src\\features\\admin\\pages\\BackupRestorePage.tsx",
+      "line": 792,
+      "rule": "MDC-026: initial paused/unknown is not empty",
+      "detail": "Panel state maps isLoading -> loading, stale -> retained, otherwise [] -> empty. A first-load paused query can have no data, isLoading=false, fatalError=null and status='initial'; configurations/history then announce no data and offer mutation CTAs even though nothing was observed. Reliability at line 835 has the same no-data branch. The page-level DataSourceNotice reports paused, but does not repair contradictory empty panel content.",
+      "fix": "Gate authoritative empty state on successful source availability; represent initial paused/unknown separately while preserving independently available neighbors. Reuse current DataState/DataSourceNotice and avoid guessed counts.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\admin\\pages\\BackupRestorePage.tsx",
+      "line": 1085,
+      "rule": "MDC-020 / MDC-024: pending destructive operation feedback",
+      "detail": "Delete confirmation never receives loading={deleteMutation.isPending}. The shared dialog supports loading, disables both buttons and prevents Escape/backdrop cancellation when busy; this call leaves repeated confirms and cancellation possible during the request.",
+      "fix": "Pass existing loading contract and keep dialog mounted until the existing success/error callbacks resolve. Do not weaken danger confirmation or RequireSudo.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\admin\\pages\\BackupRestorePage.tsx",
+      "line": 454,
+      "rule": "MDC-026: asynchronous preview recovery and race safety",
+      "detail": "Preview requests have no in-flight row state, AbortSignal or obsolete-request guard. The modal opens only after success; repeated clicks on different completed rows can let the last-resolving request replace the intended selection. The TableSkeleton inside an open preview modal is not the normal initial request state.",
+      "fix": "Use a selected-run keyed read hook with signal forwarding and independent loading/error/retry; preserve table/checksum fields and ensure switching/closing cannot commit an obsolete preview.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\settings\\components\\SettingsExportImport.tsx",
+      "line": 300,
+      "rule": "MDC-010 / mission 5-8: reduced-noise semantic palette",
+      "detail": "Active dropzone uses border-neon-cyan and bg-neon-cyan/5. The dedicated backup page itself has zero neon class matches; its imported transfer surface still escalates decoration for drag state.",
+      "fix": "Use restrained existing accent/border/surface tokens for active drop feedback, retaining visible state and focus distinction. Do not change saved theme IDs or force-reset explicit user palettes.",
+      "owner": "integration",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\admin\\pages\\BackupRestorePage.tsx",
+      "line": 144,
+      "rule": "MDC-010 / MDC-012 / MDC-025: meaning-driven theme-aware status",
+      "detail": "Completed/failed/running icon colors are fixed emerald/rose/cyan-300; preview checksum text repeats fixed colors at line 1103. Provider identities also use warning/info/success badge tones despite not being severity states (lines 117-122). Shared labels keep these color-independent, but light-theme contrast and unnecessary semantic hue are unmeasured.",
+      "fix": "Reuse subdued semantic foreground tokens for actual success/error/progress; use neutral provider badges with existing labels/icons. Measure effective contrast in themes rather than assuming 300-level colors pass.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\admin\\pages\\BackupRestorePage.tsx",
+      "line": 859,
+      "rule": "MDC-010 / MDC-034: restrained operational visualization",
+      "detail": "Completion/provider bars omit fill and size, so existing MetricBar defaults to animated gradient and 2.5-height track. Provider chart-series colors are legitimate identity encodings, not a new neon palette, but a whole side panel of gradients increases emphasis.",
+      "fix": "Reuse MetricBar fill='solid', size='slim' with source-backed labels/counts/bytes and current chosen palette. Keep reduced-motion behavior and all measurements; no shared rewrite is needed.",
+      "owner": "page",
+      "confidence": "medium"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\features\\admin\\pages\\BackupRestorePage.tsx",
+      "line": 214,
+      "rule": "MDC-002: forward read cancellation",
+      "detail": "Both list queryFns ignore the supplied query context and do not pass signal into request().",
+      "fix": "Use queryFn: ({ signal }) => request(path, { signal }) inside a typed backup domain hook, preserving query keys, intervals and inherited policy.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\admin\\pages\\BackupRestorePage.tsx",
+      "line": 219,
+      "rule": "MDC-026 / preservation: distinguish loaded history from complete history",
+      "detail": "Only backend's default first 50 runs are fetched. DataTable pagination at line 958 cannot reach additional server rows. Summary correctly says returned-list measurements, but Backup history offers no server paging or coverage bound.",
+      "fix": "Retain current snapshot metric semantics and explicitly surface coverage. If complete-history navigation is assigned, use existing limit/offset server parameters and preserve loaded versus full-result export distinction; a total is unknown until supplied by backend.",
+      "owner": "integration",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\admin\\pages\\BackupRestorePage.tsx",
+      "line": 1103,
+      "rule": "MDC-026 / MDC-045: do not overstate integrity evidence",
+      "detail": "Preview says 'Checksum verified' when checksum_verified=true; inspected backend sets that flag solely from run.Checksum != nil (restore_handler.go:358). Separate VerifyBackup actually invokes processor.VerifyBackup (line 301). Stored checksum presence is not proof that preview verified it.",
+      "fix": "Coordinate API evidence semantics with the backend owner; until established, show checksum presence rather than success verification in preview. Preserve standalone Verify action and never invent an integrity result.",
+      "owner": "integration",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\admin\\pages\\BackupRestorePage.tsx",
+      "line": 429,
+      "rule": "MDC-046: preserve configuration values through edit",
+      "detail": "BackupConfig includes optional include_tables at line 60 and ConfigFormData includes it via Omit, but openEdit reconstructs form without it. Updating an existing selective config may omit its table selection. Backend omission/preservation behavior was not traced.",
+      "fix": "Confirm update contract with the domain owner and retain include_tables on edit/save without inventing a new selector or changing full/incremental behavior. Treat omission as a preservation risk, not permission to remove it.",
+      "owner": "integration",
+      "confidence": "medium"
+    }
+  ],
+  "priority": {
+    "level": "high",
+    "order": [
+      "Restore mobile access to existing row operations and full displayed details.",
+      "Correct initial-paused versus empty mapping and destructive pending state.",
+      "Resolve checksum evidence wording with backend contract owner.",
+      "Add cancellation/race-safe preview using existing query infrastructure.",
+      "Preserve edit payload, clarify loaded history coverage, then decompose and reduce decorative emphasis."
+    ],
+    "scope": "Recommendations only; Phase 0 source audit did not implement or exercise behavior."
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "Reuse DataTable mobilePresentation; page-specific backup adapters, no new shared table",
+      "existingOwnerFile": "web\\src\\components\\ui\\DataTable.tsx",
+      "propsVariantsStates": {
+        "existingProps": ["mobilePresentation", "variant: embedded", "columns", "tableId", "pagination", "enableValueFilters"],
+        "neededContract": "Page-owned display adapter includes config/run title, essential summary, every remaining displayed field in details and accessible existing row actions. Retain matchingLoaded/selectedLoaded/fullResult semantics; fullResult is not promised for the current 50-row response.",
+        "states": ["loading", "empty", "noMatch", "error with retained rows", "ready"],
+        "identity": ["admin:backup-configs", "admin:backup-runs", "admin:backup-preview-tables"]
+      },
+      "usedBy": ["BackupRestorePage configuration table", "BackupRestorePage history table"],
+      "dependsOn": ["DataTable existing mobile adapter API", "current typed BackupConfig/BackupRun rows", "page-specific action callbacks"],
+      "decision": "reuse existing owner; no shared source edit justified by this audit"
+    },
+    {
+      "name": "Reuse destructive pending confirmation",
+      "existingOwnerFile": "web\\src\\components\\ui\\ConfirmDialog.tsx",
+      "propsVariantsStates": {
+        "existingProps": ["variant: danger", "loading", "confirmDisabled", "onConfirm", "onCancel"],
+        "neededContract": "Bind deletion isPending to loading; preserve danger confirmation, both-button disabled/busy state and cancellation suppression.",
+        "states": ["idle", "pending", "failure retaining dialog", "success close"]
+      },
+      "usedBy": ["BackupRestorePage delete configuration"],
+      "dependsOn": ["existing deleteMutation", "shared request sudo flow"],
+      "decision": "reuse; no shared component change"
+    },
+    {
+      "name": "Settings transfer presentation modernization",
+      "existingOwnerFile": "web\\src\\features\\settings\\components\\SettingsExportImport.tsx",
+      "propsVariantsStates": {
+        "publicProps": "None; canonical self-contained domain component",
+        "neededContract": "Restrained token-based drop-active appearance and narrow-container wrapping; retain hidden file input, accessible picker, JSON validation, section diff and same Apply gating.",
+        "states": ["idle", "parsing", "parse failure", "dry-run preview", "apply pending", "sudo cancelled", "applied"]
+      },
+      "usedBy": ["BackupRestorePage portable settings section; no additional mounted consumer verified"],
+      "dependsOn": ["useSettingsBackup", "settingsImportSchema", "existing UI typography/buttons/input", "shared authentication/live-mode contract"],
+      "decision": "integration owner needed for page-specific imported dependency; not authorization to edit it in this audit"
+    },
+    {
+      "name": "Restore-preview integrity evidence",
+      "existingOwnerFile": "internal\\api\\backup\\restore_handler.go",
+      "propsVariantsStates": {
+        "currentResponse": ["tables: { name, rows }[]", "metadata", "checksum_verified"],
+        "neededContract": "Explicitly distinguish stored checksum presence, actual verification result and unavailable evidence; do not infer a verification success from a non-null checksum.",
+        "states": ["not checked", "verified", "mismatch", "verification failed/unavailable"]
+      },
+      "usedBy": ["BackupRestorePage preview checksum message", "BackupRestorePage separate verify action"],
+      "dependsOn": ["backend integrity semantics", "existing VerifyBackup behavior", "localized neutral/success/error copy"],
+      "decision": "integration clarification/correction needed; no speculative backend change proposed as a prerequisite for this audit"
+    }
+  ],
+  "competingImplementations": [
+    {
+      "name": "Operational snapshot versus portable settings transfer",
+      "evidence": "BackupRestorePage.tsx:965-973 and SettingsExportImport.tsx:263-294",
+      "assessment": "Distinct preserved capabilities, not duplicate backups. Do not merge away either flow or add a competing export/import renderer."
+    },
+    {
+      "name": "Source-content wrappers",
+      "evidence": "BackupRestorePage.tsx:792-827,835-848,935-960",
+      "assessment": "Existing SourceContent already fits configs/history; reliability duplicates branch logic. Reuse shared state owner, not another universal panel."
+    },
+    {
+      "name": "Backup domain query ownership",
+      "evidence": "BackupRestorePage.tsx:50-103,212-224,339-409",
+      "assessment": "Page owns inline types and operations, whereas settings transfer already owns typed hooks. No second backup-hook implementation was verified; extraction must preserve exact cache and mutation behavior."
+    }
+  ],
+  "preservation": {
+    "sourceHash": "31F0D43D6A6A9E900E854C89204F729BFC7BD9280204C9254AEDF49ECAF437DC",
+    "sourceHashAlgorithm": "SHA256",
+    "sourceHashScope": "Exact root page file bytes: web\\src\\features\\admin\\pages\\BackupRestorePage.tsx",
+    "currentLineCount": 1153,
+    "sections": [
+      {"name": "Backup overview", "line": 783, "count": 1, "details": "Six metrics: configs, backups, success rate, failed runs, last backup, total size; description/scope/status retained."},
+      {"name": "Backup configurations", "line": 800, "count": 1, "details": "Seven columns: name/type/provider/frequency/schedule/options/actions; independent loading/empty/fatal/retained handling."},
+      {"name": "Reliability & storage", "line": 833, "count": 1, "details": "Three subsections: success ratio, storage by provider, five recent failed-run error messages."},
+      {"name": "Backup history", "line": 915, "count": 1, "details": "Nine columns: time/run type/status/provider/file/size/records/duration/actions; refresh, filters, loaded pagination."},
+      {"name": "Portable settings JSON bundle", "line": 965, "count": 1, "details": "Export and import; file picker/dropzone, preview/apply section counters, recovery and done flow."},
+      {"name": "Create/edit configuration modal", "line": 976, "count": 1, "details": "Name/enabled/type/provider/frequency/retention/provider credential fields/compress/encrypt/cancel/save."},
+      {"name": "Delete confirmation", "line": 1085, "count": 1, "details": "Named destructive confirmation with cancel and backend sudo."},
+      {"name": "Restore preview modal", "line": 1098, "count": 1, "details": "Checksum message, table names/row counts, empty table state and close; no database restore Apply action."}
+    ],
+    "sectionCounts": {
+      "topLevelVisibleSections": 5,
+      "conditionalDialogs": 3,
+      "reliabilitySubsections": 3,
+      "settingsTransferFlows": 2,
+      "summaryMetrics": 6,
+      "pageLayoutCount": 1,
+      "pageLayoutCardCount": 3,
+      "pageDataTableCount": 3,
+      "importedSettingsGlassPanelCount": 1,
+      "pageGlassPanelCount": 0,
+      "pageChartContainerCount": 0
+    },
+    "actions": [
+      "New configuration from header and config-empty CTA",
+      "Edit configuration, cancel, create or save changes",
+      "Change provider and its technical credential fields",
+      "Toggle enabled, compress and encrypt",
+      "Change full/incremental, schedule frequency and retention",
+      "Trigger individual configuration backup",
+      "Quick backup from header and run-empty CTA",
+      "Confirm/cancel configuration deletion",
+      "Refresh history",
+      "Filter and paginate loaded configuration/history/preview rows",
+      "Sort sortable run time/status/size columns",
+      "Download completed snapshot through canonical apiUrl",
+      "Verify completed snapshot and display success/warning/error toast",
+      "Preview completed snapshot and close preview",
+      "Export portable JSON settings bundle",
+      "Choose or drop JSON bundle; validate size/schema and preview section changes",
+      "Change file/cancel dry-run, apply changes through live-mode/sudo gate",
+      "Retain preview when sudo cancelled; retry apply after error; reset after completion",
+      "Retry independent failed configuration/run source"
+    ],
+    "data": [
+      "Keep raw wire/cache values, existing backup query keys, inherited policies and 5s/30s polling.",
+      "Keep file_size as backend bytes and duration_ms as current API milliseconds; use existing formatting only at display boundary. This audit does not relabel backend duration_ms as SI seconds or change wire units.",
+      "Keep unknown summary rawValue undefined; an empty loaded run list has unknown success percentage, not a fabricated success rate.",
+      "Keep summary explicitly bounded to returned list, first returned completed row for last backup and all-run denominator including queued/running.",
+      "Keep provider grouping, missing provider fallback to local, sum behavior, current ordering and recent-error slice semantics unless separately authorized.",
+      "Keep independent configs/runs fatal errors and retained data, page-level source notices and neighbor visibility.",
+      "Keep full/incremental and local/S3/Azure/GCS options, defaults, provider_config keys, password fields and provider-switch reset.",
+      "Preserve optional include_tables through edit after confirming backend semantics; current omission is an unresolved preservation risk.",
+      "Keep backup metadata/checksum fields in typed payloads; metadata currently is not rendered, so no invented metadata section is counted as existing.",
+      "Keep previewTables null fallback and distinguish no tables from absent/failed preview.",
+      "Keep stable table IDs, raw filter values, loaded rows and existing user table persistence; no fake full-result export or fabricated total.",
+      "Keep canonical settings bundle ownership, 1 MiB intake limit, four section count displays, apply live-mode requirement and authentication cancellation behavior.",
+      "Keep /backup fleet-wide with no workspace range or vehicle selectors: workspaceScope.ts:22-76 does not enable range, and :114 explicitly disables vehicle.",
+      "Keep localized labels/technical source values, shared formatting, typography, motion and user theme/format preferences."
+    ]
+  },
+  "evidenceLimits": {
+    "method": "Read-only source inspection of assigned page and direct dependencies plus route/response evidence; scoped regex counts and root hash readback.",
+    "runtime": "unverified",
+    "visual": "unverified",
+    "keyboard": "unverified",
+    "screenReader": "unverified",
+    "contrast": "unverified",
+    "viewports": "All contract widths unverified; mobile hidden-cell findings are source-based.",
+    "motion": "Actual reduced-motion rendering unverified; shared MetricBar uses existing useMotionPreference.",
+    "backend": "Routes, default ListRuns bounds and preview checksum construction inspected. Processor, repositories, settings handlers and production values not inspected or exercised.",
+    "checks": [
+      {
+        "command": "Get-FileHash -Algorithm SHA256 'web\\src\\features\\admin\\pages\\BackupRestorePage.tsx'; (Get-Content 'web\\src\\features\\admin\\pages\\BackupRestorePage.tsx').Count",
+        "exitCode": 0,
+        "output": "SHA256 31F0D43D6A6A9E900E854C89204F729BFC7BD9280204C9254AEDF49ECAF437DC; 1153"
+      },
+      {
+        "command": "Scoped PowerShell [regex]::Matches counts for style=\\{\\{, <(button|input|textarea|select|table)\\b and (?:border|bg|text)-neon-[\\w/-]+ on the page and SettingsExportImport",
+        "exitCode": 0,
+        "output": "BackupRestorePage.tsx | inline styles=0 | raw controls=0 | neon classes=0\nSettingsExportImport.tsx | inline styles=0 | raw controls=0 | neon classes=2"
+      },
+      {
+        "command": "rg source pattern style=|raw controls|direct recharts/react-leaflet/framer-motion imports|fixed text classes|neon-|/api/v1/|vehicleId= on the page and SettingsExportImport",
+        "exitCode": null,
+        "output": "SettingsExportImport.tsx:300: ? 'border-neon-cyan bg-neon-cyan/5'",
+        "note": "rg tool returned matching source; process exit code not exposed."
+      },
+      {
+        "command": "Initial combined PowerShell count command with improperly escaped import regex",
+        "exitCode": 1,
+        "output": "",
+        "note": "No result claimed; corrected scoped count command completed with exit 0."
+      }
+    ],
+    "notRun": [
+      "audit-violations/audit.sh inspected, not executed because it unconditionally invokes whole-web npx tsc --noEmit; assignment forbids full validation and reserves audit-only writes.",
+      "No TypeScript, build, lint, tests, browser, production backup/restore, export/import, integrity verification or authentication prompt exercised.",
+      "No Git commands, queue/config/catalog/source/shared edits or catalog regeneration."
+    ],
+    "scopeOfWrites": ["docs\\frontend-audits\\audit-page-006.json", ".agent-status\\audit-page-006.txt"]
+  },
+  "filesRead": [
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\admin\\pages\\BackupRestorePage.tsx",
+    "web\\src\\features\\admin\\components\\operationalbrief-a-g\\AdminSummary.tsx",
+    "web\\src\\features\\settings\\components\\SettingsExportImport.tsx",
+    "web\\src\\api\\hooks\\useSettingsBackup.ts",
+    "web\\src\\api\\dataState.ts",
+    "web\\src\\App.tsx",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\layout\\layout-reference\\SourceContent.tsx",
+    "web\\src\\components\\layout\\PageContainer.tsx",
+    "web\\src\\components\\ui\\DataTable.tsx",
+    "web\\src\\components\\ui\\ConfirmDialog.tsx",
+    "web\\src\\components\\ui\\mobile-grid-reference\\types.ts",
+    "web\\src\\components\\data-display\\MetricBar.tsx",
+    "web\\src\\components\\feedback\\DataSourceNotice.tsx",
+    "internal\\api\\router.go",
+    "internal\\api\\backup\\restore_handler.go"
+  ]
+}

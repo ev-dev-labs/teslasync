@@ -70,7 +70,7 @@ export function VehiclePicker({
   return (
     <div
       className={cn(
-        'flex items-center gap-2 px-3 py-2 lg:px-4 lg:py-2 border-b border-[var(--glass-border)] shrink-0',
+        'flex min-w-0 items-center gap-2 px-3 py-2 lg:px-4 lg:py-2 border-b border-[var(--border-subtle)] shrink-0',
         className,
       )}
     >
@@ -81,9 +81,9 @@ export function VehiclePicker({
           selectOnly
           noClearButton
           icon={<Car aria-hidden="true" className="h-4 w-4" />}
-          inputClassName="h-11 min-w-0 cursor-pointer truncate rounded-pill border-[var(--control-border)] bg-[var(--control-bg)] ps-10 pe-9 font-medium shadow-e1 hover:border-[var(--control-border-hover)] hover:bg-[var(--control-bg-hover)] sm:h-9"
-          listboxClassName="mt-2 rounded-2xl p-1.5 shadow-e3 sm:start-auto sm:w-72"
-          optionClassName="rounded-xl min-h-11 sm:min-h-9"
+          inputClassName="h-11 min-w-0 cursor-pointer truncate rounded-shape-sm border-[var(--control-border)] bg-[var(--control-bg)] ps-10 pe-9 font-medium shadow-none hover:border-[var(--control-border-hover)] hover:bg-[var(--control-bg-hover)] focus:ring-0 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus-ring)] forced-colors:focus-visible:outline-[Highlight] motion-reduce:transition-none md:h-9"
+          listboxClassName="mt-2 rounded-shape-lg border-[var(--border-default)] p-1 shadow-e2 sm:start-auto sm:w-72"
+          optionClassName="rounded-shape-sm min-h-11 motion-reduce:transition-none md:min-h-9"
           value={options.find((option) => option.value === String(vehicleId)) ?? null}
           onChange={(option) => {
             const next = Number(option?.value);

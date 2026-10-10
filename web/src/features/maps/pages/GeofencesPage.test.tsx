@@ -7,7 +7,7 @@
  * Its own responsibilities (what these tests exercise) are:
  *
  *   1. A KPI band derived from the geofences (total / reviewed / pending),
- *      always visible with a 0 placeholder — loading shows skeletons.
+ *      always visible with unknown values for unavailable sources — loading shows skeletons.
  *   2. Section-local loading / error / empty / no-search-match branches for the
  *      Zones panel — no panel is gated away or left blank.
  *   3. Per-place behaviour: review status, edit → modal prefill, delete → confirm → DELETE.
@@ -311,13 +311,13 @@ const zones = () => within(screen.getByRole('region', { name: 'Places and chargi
 
 // Read a KPI card's value by its label text.
 function kpiValue(label: string): string {
-  const card = summary().getByText(label).closest('[data-role="metric-card"]');
-  return card?.querySelector('[data-role="metric-value"]')?.textContent ?? '';
+  const card = summary().getByText(label).closest('[data-operational-metric]');
+  return card?.querySelector('[data-operational-value]')?.textContent ?? '';
 }
 
 async function openCreateModal() {
-  fireEvent.click(screen.getByRole('button', { name: 'Add Geofence' }));
-  return screen.findByRole('dialog', { name: 'Create Geofence' });
+  fireEvent.click(screen.getByRole('button', { name: 'Add geofence' }));
+  return screen.findByRole('dialog', { name: 'Create geofence' });
 }
 
 beforeEach(() => {
@@ -349,12 +349,21 @@ afterEach(() => {
 
 // ── KPI band ─────────────────────────────────────────────────────────────────
 describe('GeofencesPage — KPI band', () => {
+  it('opens the real summary drawer with separate candidate evidence and retains the create action', async () => {
+    renderPage();
+    await waitFor(() => expect(kpiValue('Total geofences')).toBe('3'));
+    fireEvent.click(summary().getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog', { name: 'Geofence summary details' });
+    expect(within(drawer).getByText('Returned visited-place candidates; separate from saved geofence totals.')).toBeInTheDocument();
+    expect(within(drawer).getByText('Awaiting review')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Add geofence' })).toBeInTheDocument();
+  });
   it('derives all four KPIs from the geofences and always shows the band', async () => {
     renderPage();
     await zones().findByText('Home');
 
-    expect(summary().getByText('Total Geofences')).toBeInTheDocument();
-    expect(kpiValue('Total Geofences')).toBe('3');
+    expect(summary().getByText('Total geofences')).toBeInTheDocument();
+    expect(kpiValue('Total geofences')).toBe('3');
     expect(kpiValue('Reviewed places')).toBe('2');
     expect(kpiValue('Awaiting review')).toBe('1');
     expect(kpiValue('Visited candidates')).toBe('0');
@@ -369,7 +378,7 @@ describe('GeofencesPage — KPI band', () => {
       }];
       renderPage();
       fireEvent.click(await screen.findByRole('button', { name: 'Review place' }));
-      const dialog = await screen.findByRole('dialog', { name: 'Create Geofence' });
+      const dialog = await screen.findByRole('dialog', { name: 'Create geofence' });
       expect((within(dialog).getByLabelText('Name') as HTMLInputElement).value).toBe('Office Garage');
       expect((within(dialog).getByLabelText('Radius (meters)') as HTMLInputElement).value).toBe('75');
       fireEvent.click(within(dialog).getByRole('switch', { name: 'This is a charging location' }));
@@ -401,18 +410,23 @@ describe('GeofencesPage — KPI band', () => {
     store.mode = 'pending';
     const { container } = renderPage();
 
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
-    expect(screen.queryByText('Total Geofences')).toBeNull();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).not.toBeNull();
+    expect(summary().getByText('Total geofences')).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Geofence summary' })).toHaveAttribute('aria-busy', 'true');
+    expect(screen.getByRole('region', { name: 'Geofence summary' }).querySelector('[data-operational-value]')).toBeNull();
   });
 
-  it('keeps the KPI band visible with zero placeholders when the feed errors', async () => {
+  it('keeps the KPI band visible with unknown geofence counts when the feed errors', async () => {
     store.mode = 'reject';
     store.error = new Error('kaboom');
     renderPage();
 
-    // KPI band never disappears — it degrades to zeros.
-    await waitFor(() => expect(kpiValue('Total Geofences')).toBe('0'));
-    expect(kpiValue('Reviewed places')).toBe('0');
+    // A failed source is unknown, not a measured empty directory.
+    await zones().findByRole('button', { name: 'Retry' });
+    expect(kpiValue('Total geofences')).toBe('—');
+    expect(kpiValue('Reviewed places')).toBe('—');
+    expect(kpiValue('Awaiting review')).toBe('—');
+    await waitFor(() => expect(kpiValue('Visited candidates')).toBe('0'));
   });
 });
 
@@ -451,7 +465,7 @@ describe('GeofencesPage — zones panel states', () => {
         'No active places yet. Existing and future confirmed charging locations appear automatically.',
       ),
     ).toBeInTheDocument();
-    expect(zones().getByRole('button', { name: 'Add Place' })).toBeInTheDocument();
+    expect(zones().getByRole('button', { name: 'Add place' })).toBeInTheDocument();
     expect(zones().queryByText('Home')).toBeNull();
   });
 });
@@ -508,7 +522,7 @@ describe('GeofencesPage — card mutations', () => {
 
     // Nothing is deleted until the destructive confirm is accepted.
     expect(callsMatching('DELETE', (u) => u === '/geofences/1')).toHaveLength(0);
-    const dialog = await screen.findByRole('dialog', { name: 'Delete Geofence' });
+    const dialog = await screen.findByRole('dialog', { name: 'Delete geofence' });
     expect(within(dialog).getByText(/Are you sure you want to delete "Home"/)).toBeInTheDocument();
 
     fireEvent.click(within(dialog).getByRole('button', { name: 'Delete' }));
@@ -522,7 +536,7 @@ describe('GeofencesPage — card mutations', () => {
     await zones().findByText('Home');
 
     fireEvent.click(screen.getByRole('button', { name: 'Edit geofence Home' }));
-    const dialog = await screen.findByRole('dialog', { name: 'Edit Geofence' });
+    const dialog = await screen.findByRole('dialog', { name: 'Edit geofence' });
     fireEvent.change(within(dialog).getByLabelText('Category'), {
       target: { value: 'work' },
     });
@@ -635,7 +649,7 @@ describe('GeofencesPage — create modal', () => {
     fireEvent.click(within(discard).getByRole('button', { name: 'Discard changes' }));
 
     await waitFor(() =>
-      expect(screen.queryByRole('dialog', { name: 'Create Geofence' })).toBeNull(),
+      expect(screen.queryByRole('dialog', { name: 'Create geofence' })).toBeNull(),
     );
   });
 
@@ -645,8 +659,8 @@ describe('GeofencesPage — create modal', () => {
     await zones().findByText('Home');
     const dialog = await openCreateModal();
 
-    fireEvent.change(within(dialog).getByLabelText('Select Vehicle'), { target: { value: '5' } });
-    fireEvent.click(within(dialog).getByRole('button', { name: 'Get Location' }));
+    fireEvent.change(within(dialog).getByLabelText('Select vehicle'), { target: { value: '5' } });
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Get location' }));
 
     await waitFor(() =>
       expect((within(dialog).getByLabelText('Latitude') as HTMLInputElement).value).toBe('12.34'),
@@ -668,8 +682,8 @@ describe('GeofencesPage — create modal', () => {
     renderPage();
     await zones().findByText('Home');
     const dialog = await openCreateModal();
-    fireEvent.change(within(dialog).getByLabelText('Select Vehicle'), { target: { value: '5' } });
-    fireEvent.click(within(dialog).getByRole('button', { name: 'Get Location' }));
+    fireEvent.change(within(dialog).getByLabelText('Select vehicle'), { target: { value: '5' } });
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Get location' }));
     await waitFor(() =>
       expect((within(dialog).getByLabelText('Name') as HTMLInputElement).value).toBe('Saved Depot'),
     );
@@ -683,7 +697,7 @@ describe('GeofencesPage — create modal', () => {
     const dialog = await openCreateModal();
 
     fireEvent.click(within(dialog).getByRole('tab', { name: /Browser/ }));
-    fireEvent.click(within(dialog).getByRole('button', { name: 'Get Location' }));
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Get location' }));
 
     await waitFor(() => expect(toastMock.error).toHaveBeenCalledWith('Location access denied'));
   });
@@ -696,7 +710,7 @@ describe('GeofencesPage — create modal', () => {
     const dialog = await openCreateModal();
 
     fireEvent.click(within(dialog).getByRole('tab', { name: /Browser/ }));
-    fireEvent.click(within(dialog).getByRole('button', { name: 'Get Location' }));
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Get location' }));
 
     await waitFor(() =>
       expect(toastMock.error).toHaveBeenCalledWith('Geolocation is not supported by this browser'),
@@ -726,7 +740,7 @@ describe('GeofencesPage — edit modal', () => {
     await zones().findByText('Home');
 
     fireEvent.click(screen.getByRole('button', { name: 'Edit geofence Home' }));
-    const dialog = await screen.findByRole('dialog', { name: 'Edit Geofence' });
+    const dialog = await screen.findByRole('dialog', { name: 'Edit geofence' });
 
     // Prefilled from the selected geofence.
     expect((within(dialog).getByLabelText('Name') as HTMLInputElement).value).toBe('Home');
@@ -774,7 +788,7 @@ describe('GeofencesPage — AI Helix section', () => {
     await zones().findByText('Home');
 
     fireEvent.click(screen.getByTestId('ai-apply-draft'));
-    const dialog = await screen.findByRole('dialog', { name: 'Create Geofence' });
+    const dialog = await screen.findByRole('dialog', { name: 'Create geofence' });
 
     expect((within(dialog).getByLabelText('Name') as HTMLInputElement).value).toBe('AI Zone');
     expect((within(dialog).getByLabelText('Latitude') as HTMLInputElement).value).toBe('12.5');

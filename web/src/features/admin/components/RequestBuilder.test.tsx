@@ -219,7 +219,7 @@ describe('RequestBuilder', () => {
       }),
     })
 
-    expect(screen.getByText('Request Body')).toBeInTheDocument()
+    expect(screen.getByText('Request body')).toBeInTheDocument()
     expect(screen.getByText('application/json')).toBeInTheDocument()
 
     const textarea = screen.getByPlaceholderText('{ "key": "value" }') as HTMLTextAreaElement
@@ -262,7 +262,7 @@ describe('RequestBuilder', () => {
     expect(alert).toHaveTextContent('This is a DELETE request')
 
     // Confirming dispatches with the destructive method and closes the alert.
-    fireEvent.click(within(alert).getByRole('button', { name: /yes, send/i }))
+    fireEvent.click(within(alert).getByRole('button', { name: /Yes, send/i }))
     expect(onSend).toHaveBeenCalledTimes(1)
     expect(onSend).toHaveBeenCalledWith('/drives/7', 'DELETE', undefined, {})
     expect(screen.queryByRole('alert')).toBeNull()
@@ -277,7 +277,7 @@ describe('RequestBuilder', () => {
 
     fireEvent.click(sendButton())
     const alert = screen.getByRole('alert')
-    fireEvent.click(within(alert).getByRole('button', { name: /cancel/i }))
+    fireEvent.click(within(alert).getByRole('button', { name: /Cancel/i }))
 
     expect(screen.queryByRole('alert')).toBeNull()
     expect(onSend).not.toHaveBeenCalled()
@@ -324,7 +324,7 @@ describe('RequestBuilder', () => {
     })
 
     fireEvent.click(sendButton())
-    fireEvent.click(within(screen.getByRole('alert')).getByRole('button', { name: /yes, send/i }))
+    fireEvent.click(within(screen.getByRole('alert')).getByRole('button', { name: /Yes, send/i }))
 
     expect(onSend).toHaveBeenCalledWith(
       '/alerts/rules',

@@ -337,21 +337,21 @@ describe('MapOverviewPage — full render', () => {
     renderPage()
 
     expect(
-      await screen.findByRole('heading', { level: 1, name: 'Map Overview' }),
+      await screen.findByRole('heading', { level: 1, name: 'Map overview' }),
     ).toBeInTheDocument()
 
     // KPI band derives live status from the latest position (SI → km).
-    expect(await screen.findByText('90.0 km/h')).toBeInTheDocument()
-    expect(screen.getByText('Current Speed')).toBeInTheDocument()
-    expect(screen.getByText('42°')).toBeInTheDocument()
+    expect(await screen.findByText('90.00 km/h')).toBeInTheDocument()
+    expect(screen.getByText('Current speed')).toBeInTheDocument()
+    expect(screen.getByText('42.00°')).toBeInTheDocument()
     expect(screen.getByText('37.5000, -121.9000')).toBeInTheDocument()
-    expect(screen.getByText('Last Updated')).toBeInTheDocument()
+    expect(screen.getByText('Last updated')).toBeInTheDocument()
 
     // Every section panel is present — nothing stubbed out.
-    expect(screen.getByText('Location Details')).toBeInTheDocument()
-    expect(screen.getByText('Quick Links')).toBeInTheDocument()
-    expect(screen.getByText('Recent Route Playback')).toBeInTheDocument()
-    expect(screen.getByText('Recent Location History')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Location details' })).toBeInTheDocument()
+    expect(screen.getByText('Quick links')).toBeInTheDocument()
+    expect(screen.getByText('Recent route playback')).toBeInTheDocument()
+    expect(screen.getByText('Recent location history')).toBeInTheDocument()
 
     // The hero map rendered with the vehicle marker + popup name (scoped to the
     // popup so it doesn't collide with the vehicle-picker <option>).
@@ -370,9 +370,9 @@ describe('MapOverviewPage — full render', () => {
   it('renders location-details tri-state badges and a null odometer as an em dash', async () => {
     renderPage()
 
-    expect(await screen.findByText('At Home')).toBeInTheDocument()
-    expect(screen.getByText('At Work')).toBeInTheDocument()
-    expect(screen.getByText('HomeLink Nearby')).toBeInTheDocument()
+    expect(await screen.findByText('At home')).toBeInTheDocument()
+    expect(screen.getByText('At work')).toBeInTheDocument()
+    expect(screen.getByText('HomeLink nearby')).toBeInTheDocument()
     expect(screen.getByText('Odometer')).toBeInTheDocument()
 
     // located_at_home=true → Yes, located_at_work=false → No.
@@ -386,8 +386,8 @@ describe('MapOverviewPage — full render', () => {
     h.unit.current = 'mi'
     renderPage()
 
-    expect(await screen.findByText('55.9 mph')).toBeInTheDocument()
-    expect(screen.queryByText('90.0 km/h')).toBeNull()
+    expect(await screen.findByText('55.92 mph')).toBeInTheDocument()
+    expect(screen.queryByText('90.00 km/h')).toBeNull()
   })
 })
 
@@ -437,7 +437,7 @@ describe('MapOverviewPage — empty data', () => {
     expect(await screen.findByText('No vehicle selected')).toBeInTheDocument()
     expect(screen.getByText('Set up TeslaSync')).toBeInTheDocument()
     // The data scaffolding never mounts without a vehicle.
-    expect(screen.queryByText('Current Speed')).toBeNull()
+    expect(screen.queryByText('Current speed')).toBeNull()
   })
 })
 
@@ -473,7 +473,7 @@ describe('MapOverviewPage — per-section errors', () => {
     install({ latestError: true })
     renderPage()
 
-    expect(await screen.findByRole('heading', { level: 1, name: 'Map Overview' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { level: 1, name: 'Map overview' })).toBeInTheDocument()
     expect(await screen.findByText("Can't reach server")).toBeInTheDocument()
 
     const before = latestCalls()
@@ -488,7 +488,7 @@ describe('MapOverviewPage — per-section errors', () => {
     // Map hero still renders (latest is fine) …
     expect(await screen.findByTestId('map-container')).toBeInTheDocument()
     // … while the location rail shows its own error, not a blank panel.
-    expect(screen.getByText('Location Details')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Location details' })).toBeInTheDocument()
     expect(screen.getByText("Can't reach server")).toBeInTheDocument()
   })
 
@@ -496,7 +496,7 @@ describe('MapOverviewPage — per-section errors', () => {
     install({ historyError: true })
     renderPage()
 
-    await screen.findByText('Recent Route Playback')
+    await screen.findByText('Recent route playback')
     // Two independent surfaces read the same history query.
     await waitFor(() => {
       expect(screen.getAllByText("Can't reach server").length).toBeGreaterThanOrEqual(2)
@@ -513,17 +513,31 @@ describe('MapOverviewPage — position loading', () => {
     const { container } = renderPage()
 
     // The page shell mounts (fleet resolved) …
-    expect(await screen.findByText('Location Details')).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Location details' })).toBeInTheDocument()
     // … but the KPI band shows skeletons, not half-populated metrics.
-    expect(screen.queryByText('Current Speed')).toBeNull()
-    expect(screen.queryByText('90.0 km/h')).toBeNull()
-    expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThan(0)
+    const band = screen.getByRole('region', { name: 'Vehicle status' })
+    expect(within(band).getByText('Current speed')).toBeInTheDocument()
+    expect(band).toHaveAttribute('aria-busy', 'true')
+    expect(band.querySelector('[data-operational-value]')).toBeNull()
+    expect(screen.queryByText('90.00 km/h')).toBeNull()
+    expect(container.querySelectorAll('[class*="--skeleton-bg"]').length).toBeGreaterThan(0)
   })
 })
 
 /* ── Interactions ─────────────────────────────────────────────────────── */
 
 describe('MapOverviewPage — interactions', () => {
+  it('opens retained position evidence without changing map layers or playback', async () => {
+    renderPage()
+    const band = await screen.findByRole('region', { name: 'Vehicle status' })
+    await waitFor(() => expect(within(band).getByText('90.00 km/h')).toBeInTheDocument())
+    fireEvent.click(within(band).getByRole('button', { name: 'Review details' }))
+    const drawer = screen.getByRole('dialog', { name: 'Vehicle status details' })
+    expect(within(drawer).getByText('Auto-refreshes every 15 s')).toBeInTheDocument()
+    expect(within(drawer).getAllByText(/latest-50-position history request/).length).toBeGreaterThan(0)
+    expect(screen.getByTestId('map-marker')).toBeInTheDocument()
+    expect(screen.getByTestId('route-playback')).toBeInTheDocument()
+  })
   it('mirrors the chosen map layer into the URL so the view is shareable', async () => {
     renderPage()
 
@@ -540,7 +554,7 @@ describe('MapOverviewPage — interactions', () => {
   it('routes the quick links through the hash router', async () => {
     renderPage()
 
-    fireEvent.click(await screen.findByRole('button', { name: 'Navigation Route' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Navigation route' }))
     expect(window.location.hash).toBe('#/maps/navigation-route')
 
     fireEvent.click(screen.getByRole('button', { name: 'Geofences' }))

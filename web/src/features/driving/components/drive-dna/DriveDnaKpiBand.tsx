@@ -12,11 +12,12 @@ import { MetricCard } from '@/components/data-display';
 import { Grid } from '@/components/layout';
 import { GlassPanel, PanelTitle } from '@/components/ui';
 import type { UseUnitsResult } from '@/hooks/useUnits';
-import { fmtInt, fmtNumber } from '@/lib/numberFormat';
+
 import type { Drive } from '@/types/driving';
 import type { DriveDnaModel } from '../../lib/driveDNA';
 import { DriveDnaKpiNotices } from './DriveDnaKpiNotices';
 import type { DriveDnaSectionState } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 const KPI_COLUMNS = { default: 2, md: 3, xl: 6 } as const;
 
@@ -35,6 +36,7 @@ export function DriveDnaKpiBand({
   units,
   capReached,
 }: DriveDnaKpiBandProps) {
+  const { fmtNumber, fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const listLoading = state.list.isLoading;
   const telemetryLoading = state.telemetry.isLoading && state.hasDrive;
@@ -48,12 +50,12 @@ export function DriveDnaKpiBand({
         : '—';
   const regenShare =
     model.stats.regenEmissionShare != null
-      ? `${fmtNumber(model.stats.regenEmissionShare * 100, 1)}%`
+      ? `${fmtNumber(model.stats.regenEmissionShare * 100)}%`
       : '—';
   const socDelta =
     model.stats.socDeltaPct != null
       ? t('driveDna.kpis.percentagePoints', '{{value}} pp', {
-          value: `${model.stats.socDeltaPct > 0 ? '+' : ''}${fmtNumber(model.stats.socDeltaPct, 1)}`,
+          value: `${model.stats.socDeltaPct > 0 ? '+' : ''}${fmtNumber(model.stats.socDeltaPct)}`,
         })
       : '—';
 
@@ -74,7 +76,7 @@ export function DriveDnaKpiBand({
           <MetricCard
             label={t('driveDna.kpis.distance', 'Drive distance')}
             value={listValue(
-              drive ? units.formatDistance(drive.distanceM, { precision: 1 }) : '—',
+              drive ? units.formatDistance(drive.distanceM) : '—',
             )}
             subtitle={t(
               'driveDna.kpis.distanceHint',
@@ -86,7 +88,7 @@ export function DriveDnaKpiBand({
           <MetricCard
             label={t('driveDna.kpis.duration', 'Drive duration')}
             value={listValue(
-              drive ? units.formatDuration(drive.durationS, { precision: 2 }) : '—',
+              drive ? units.formatDuration(drive.durationS) : '—',
             )}
             subtitle={t(
               'driveDna.kpis.durationHint',
@@ -108,7 +110,7 @@ export function DriveDnaKpiBand({
           <MetricCard
             label={t('driveDna.kpis.topSpeed', 'Sampled top speed')}
             value={telemetryValue(
-              units.formatSpeed(model.stats.topSpeedMps, { precision: 1 }),
+              units.formatSpeed(model.stats.topSpeedMps),
             )}
             subtitle={t(
               'driveDna.kpis.topSpeedHint',

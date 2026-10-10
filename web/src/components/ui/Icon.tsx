@@ -1,11 +1,11 @@
-import { type SVGProps } from 'react';
+import { forwardRef, type SVGProps } from 'react';
 import { cn } from '@/lib/cn';
 import type { LucideIcon } from '@/lib/icons';
 
 export type IconSize = 'xs' | 'sm' | 'md' | 'lg' | 'xl';
 
 export interface IconProps extends Omit<SVGProps<SVGSVGElement>, 'ref'> {
-  /** The icon component from `Icons.<concept>` (see `@/lib/icons`). */
+  /** Canonical Lucide glyph; route-local named imports may follow `@/lib/icons` mappings. */
   icon: LucideIcon;
   /** Tailwind size token. Default `md` = h-4 w-4. */
   size?: IconSize;
@@ -15,6 +15,8 @@ export interface IconProps extends Omit<SVGProps<SVGSVGElement>, 'ref'> {
   'aria-hidden'?: boolean;
   /** Accessible label — when set, the icon is treated as meaningful (`role=img`). */
   'aria-label'?: string;
+  /** IDs of rendered naming elements; meaningful icons are not hidden. */
+  'aria-labelledby'?: string;
 }
 
 const SIZE_CLASSES: Record<IconSize, string> = {
@@ -26,27 +28,29 @@ const SIZE_CLASSES: Record<IconSize, string> = {
 };
 
 /**
- * Standardized icon renderer. Always use this with `Icons.<concept>` from
- * `@/lib/icons` instead of importing icons directly from `lucide-react`.
+ * Standardized icon renderer. Follow the canonical concept mapping in
+ * `@/lib/icons`; named route-local Lucide imports preserve startup locality.
+ * The registry is not a required runtime dependency of this wrapper.
  *
  * Defaults:
  *  - size = `md` (h-4 w-4)
- *  - decorative (`aria-hidden=true`) unless an `aria-label` is provided
+ *  - decorative (`aria-hidden=true`) unless an accessible name is provided
  *  - `shrink-0` so icons don't get squeezed inside flex containers
  *
  * @example
  *   import { Icon } from '@/components/ui';
- *   import { Icons } from '@/lib/icons';
- *   <Icon icon={Icons.battery} size="lg" />
+ *   import { Battery } from 'lucide-react';
+ *   <Icon icon={Battery} size="lg" />
  */
-export function Icon({
+export const Icon = forwardRef<SVGSVGElement, IconProps>(function Icon({
   icon: IconComponent,
   size = 'md',
   className,
   'aria-label': ariaLabel,
+  'aria-labelledby': ariaLabelledBy,
   'aria-hidden': ariaHidden,
   ...rest
-}: IconProps) {
+}, ref) {
   // Leaf design-system primitive rendered in hundreds of places — a missing
   // icon reference must degrade to rendering nothing rather than crashing the
   // whole subtree with React's "Element type is invalid" error.
@@ -56,12 +60,13 @@ export function Icon({
   // data so the icon never renders without its sizing box.
   const sizeClass = SIZE_CLASSES[size] ?? SIZE_CLASSES.md;
 
-  const a11y = ariaLabel
-    ? { 'aria-label': ariaLabel, role: 'img' as const }
+  const a11y = ariaLabel || ariaLabelledBy
+    ? { 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledBy, role: 'img' as const }
     : { 'aria-hidden': ariaHidden ?? true };
 
   return (
     <IconComponent
+      ref={ref}
       className={cn(sizeClass, 'shrink-0', className)}
       // Decorative SVGs must never become a legacy-browser tab stop; callers
       // can still override via `...rest` when the icon is genuinely focusable.
@@ -70,4 +75,4 @@ export function Icon({
       {...rest}
     />
   );
-}
+});

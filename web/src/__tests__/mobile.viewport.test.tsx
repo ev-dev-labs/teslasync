@@ -105,8 +105,8 @@ describe('mobile.viewport :: shared primitives at 375px', () => {
     // Mobile-first: no rounding + capped to dynamic viewport height.
     // Desktop-overrides are all sm:* so they only kick in ≥ 640px.
     expect(dialog!.className).toMatch(/rounded-none/);
-    expect(dialog!.className).toMatch(/max-h-\[100dvh\]/);
-    expect(dialog!.className).toMatch(/sm:rounded-lg/);
+    expect(dialog).toHaveClass('max-h-[calc(100dvh-var(--shell-chrome-bottom,0px))]');
+    expect(dialog).toHaveClass('sm:rounded-panel');
   });
 
   it('Modal close button has a ≥ 44 × 44 touch target', () => {
@@ -141,8 +141,8 @@ describe('mobile.viewport :: shared primitives at 375px', () => {
     const tabs = nav!.querySelectorAll('a[aria-label]');
     expect(tabs.length).toBeGreaterThanOrEqual(5);
     tabs.forEach((tab) => {
-      expect((tab as HTMLElement).className).toMatch(/min-h-\[44px\]/);
-      expect((tab as HTMLElement).className).toMatch(/min-w-\[(?:44|48)px\]/);
+      expect(tab).toHaveClass('min-h-11');
+      expect(tab).toHaveClass('min-w-12');
     });
   });
 
@@ -156,11 +156,13 @@ describe('mobile.viewport :: shared primitives at 375px', () => {
     // The flex container is the first descendant of the FadeIn wrapper.
     const flex = container.querySelector('.flex.flex-col.xl\\:flex-row') as HTMLElement | null;
     expect(flex).not.toBeNull();
-    // Subtitle uses a readable text-sm size regardless of viewport (no
-    // shrunken text-xs on mobile — PageHeader subtitles stay legible).
-    const subtitle = container.querySelector('p');
-    expect(subtitle?.className).toMatch(/text-sm/);
-    expect(subtitle?.className).not.toMatch(/text-xs/);
+    const info = screen.getByRole('button', { name: 'More info: Charging' });
+    const description = screen.getByRole('tooltip');
+    expect(info).toHaveAttribute('aria-describedby', description.id);
+    expect(info).toHaveClass('h-11', 'w-11');
+    expect(description).toHaveTextContent('14 sessions');
+    expect(description).toHaveClass('text-sm', 'whitespace-normal', 'max-w-tooltip-viewport');
+    expect(container.querySelector('p')).toBeNull();
   });
 
   it('DataTable with mobileColumns hides non-essential columns at < md', () => {
@@ -429,4 +431,3 @@ describe('mobile.viewport :: focus + touch targets (Drawer / FilterSheet)', () =
     expect(trigger.className).toMatch(/py-3/);
   });
 });
-

@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { ArrowLeft, Power } from 'lucide-react'
 
-import { GlassPanel, Badge, Button, Text } from '@/components/ui'
+import { Badge, Button, Text } from '@/components/ui'
 import type { Vehicle, VehicleStatus } from '@/api/types'
 import { VEHICLE_STATE_LABELS } from '@/types/fsm'
 import { statusVariant } from './helpers'
@@ -39,8 +39,8 @@ export function VehicleHeader({ vehicle, status, onWake, waking }: VehicleHeader
   const statusLabel = t(`vehicle.state.${status}`, VEHICLE_STATE_LABELS[status] ?? status)
 
   return (
-    <GlassPanel className="p-6">
-      <div className="flex items-center gap-4">
+    <div className="min-w-0">
+      <div className="flex min-w-0 flex-wrap items-center gap-3">
         <Link
           to="/vehicles"
           aria-label={t('common.back', 'Back')}
@@ -66,9 +66,9 @@ export function VehicleHeader({ vehicle, status, onWake, waking }: VehicleHeader
           loading={waking}
           icon={<Power className="h-4 w-4" aria-hidden="true" />}
         >
-          {t('common.wakeUp', 'Wake Up')}
+          {t('common.wakeUp', 'Wake up')}
         </Button>
       </div>
-    </GlassPanel>
+    </div>
   )
 }

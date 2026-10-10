@@ -73,9 +73,9 @@ describe('QuietHoursGuide', () => {
     const info = screen.getByText('Info');
 
     // danger / warning / info variants resolve to red / yellow / blue chips.
-    expect(critical).toHaveClass('bg-red-100', 'text-red-800');
-    expect(warning).toHaveClass('bg-yellow-100', 'text-yellow-800');
-    expect(info).toHaveClass('bg-blue-100', 'text-blue-800');
+    expect(critical).toHaveClass('bg-[var(--semantic-danger-bg)]', 'text-[var(--semantic-danger)]');
+    expect(warning).toHaveClass('bg-[var(--semantic-warning-bg)]', 'text-[var(--semantic-warning)]');
+    expect(info).toHaveClass('bg-[var(--semantic-info-bg)]', 'text-[var(--semantic-info)]');
 
     // Descriptions accompany each severity label.
     expect(screen.getByText(/urgent — usually always allowed/i)).toBeInTheDocument();

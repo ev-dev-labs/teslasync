@@ -382,9 +382,23 @@ afterEach(() => {
 });
 
 describe('DashboardPage — shell', () => {
+  it('retains the mounted grid and layout actions when the registry refresh fails', () => {
+    h.vehicles = makeQuery({
+      data: [{ id: 1, display_name: 'Model 3', vin: 'VIN1' }],
+      error: new Error('registry refresh failed'),
+      isError: true,
+    });
+    const { container } = renderPage();
+    expect(screen.getByTestId('dashboard-grid')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Customize' })).toBeInTheDocument();
+    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+    expect(container.querySelector('[data-layout-reference]')).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).toBeNull();
+  });
+
   it('renders the Fleet Operations identity without a fixed posture brief or workflow column', () => {
     renderPage();
-    expect(screen.getByRole('heading', { level: 1, name: 'Fleet Operations' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 1, name: 'Fleet operations' })).toBeInTheDocument();
     expect(
       screen.getByText('Monitor readiness, investigate exceptions, and act from one workspace'),
     ).toBeInTheDocument();
@@ -399,12 +413,17 @@ describe('DashboardPage — shell', () => {
     expect(screen.queryByTestId('layout-switcher')).toBeNull();
   });
 
-  it('renders the layout switcher when dashboards exist', () => {
+  it('renders the layout switcher in the compact shared header without a second workspace introduction', () => {
     h.layout.dashboards = [
       { id: 'd1', name: 'Main', widgets: [], layouts: {}, createdAt: '', updatedAt: '' },
     ];
     renderPage();
-    expect(screen.getByTestId('layout-switcher')).toBeInTheDocument();
+    const switcher = screen.getByTestId('layout-switcher');
+    expect(switcher).toBeInTheDocument();
+    expect(switcher.closest('header')).toBeInTheDocument();
+    expect(screen.queryByText('Personal workspace')).not.toBeInTheDocument();
+    expect(screen.queryByText('Arrange the live modules your team checks most often.')).not.toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Dashboard layouts' })).toContainElement(switcher);
   });
 });
 
@@ -469,14 +488,14 @@ describe('DashboardPage — edit-mode header', () => {
     h.layout.editMode = true;
     renderPage();
     expect(screen.queryByTestId('widget-picker')).toBeNull();
-    fireEvent.click(screen.getByRole('button', { name: 'Add Widget' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Add widget' }));
     expect(screen.getByTestId('widget-picker')).toBeInTheDocument();
   });
 
   it('auto-arrange button calls autoArrange and Done exits edit mode', () => {
     h.layout.editMode = true;
     renderPage();
-    fireEvent.click(screen.getByRole('button', { name: 'Auto Arrange' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Auto arrange' }));
     expect(h.layout.autoArrange).toHaveBeenCalledTimes(1);
     fireEvent.click(screen.getByRole('button', { name: 'Done' }));
     expect(h.layout.setEditMode).toHaveBeenCalledWith(false);
@@ -500,10 +519,30 @@ describe('DashboardPage — data states', () => {
   it('shows the loading skeleton while vehicles load', () => {
     h.vehicles = makeQuery({ data: undefined, isLoading: true });
     const { container } = renderPage();
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
+    const loading = screen.getByRole('status', { name: 'Loading command center' });
+    expect(loading).toBe(screen.getByTestId('dashboard-loading-skeleton'));
+    expect(within(loading).getByText('Loading command center')).toBeInTheDocument();
+    const placeholders = loading.querySelectorAll('[class~="bg-[var(--skeleton-bg)]"]');
+    expect(placeholders).toHaveLength(11);
+    for (const placeholder of placeholders) {
+      expect(placeholder).toHaveAttribute('aria-hidden', 'true');
+      expect(placeholder).not.toHaveClass('animate-pulse');
+    }
+    expect(placeholders[0]).toHaveClass('h-10', 'w-full', 'sm:w-72', 'rounded-shape-lg');
+    expect(placeholders[1]).toHaveClass('h-10', 'w-40', 'rounded-shape-lg');
+    for (const placeholder of Array.from(placeholders).slice(2, 6)) {
+      expect(placeholder).toHaveClass('h-28', 'rounded-panel');
+    }
+    expect(placeholders[6]).toHaveClass('h-64', 'rounded-panel', 'xl:col-span-8');
+    expect(placeholders[7]).toHaveClass('h-64', 'rounded-panel', 'xl:col-span-4');
+    for (const placeholder of Array.from(placeholders).slice(8)) {
+      expect(placeholder).toHaveClass('h-52', 'rounded-panel', 'xl:col-span-4');
+    }
+    expect(container.querySelector('.animate-pulse')).toBeNull();
     expect(screen.queryByTestId('dashboard-grid')).toBeNull();
     expect(screen.queryByText('Bring your vehicles into TeslaSync')).toBeNull();
     expect(screen.queryByText('Build a live operating picture of your Tesla fleet')).toBeNull();
+    expect(screen.queryByRole('region', { name: 'Dashboard widgets' })).toBeNull();
   });
 
   it('shows onboarding with a connect link when unauthenticated and no vehicles', () => {
@@ -600,7 +639,7 @@ describe('DashboardPage — status ownership', () => {
     h.layout.editMode = true;
     renderPage();
     const pageHeader = screen
-      .getByRole('heading', { level: 1, name: 'Fleet Operations' })
+      .getByRole('heading', { level: 1, name: 'Fleet operations' })
       .closest('[data-role="page-header"]');
     if (!pageHeader) throw new Error('Dashboard page header was not rendered');
 
@@ -689,7 +728,7 @@ describe('DashboardPage — widget picker', () => {
   it('adding from the dock calls addWidgets and marks onboarding complete', () => {
     h.layout.editMode = true;
     renderPage();
-    fireEvent.click(screen.getByRole('button', { name: 'Add Widget' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Add widget' }));
     expect(screen.getByTestId('widget-picker')).toBeInTheDocument();
     fireEvent.click(screen.getByTestId('picker-add'));
     expect(h.layout.addWidgets).toHaveBeenCalledWith(['battery-gauge']);

@@ -1,11 +1,12 @@
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { GitCommitHorizontal, ArrowUpDown, Layers, Waypoints } from 'lucide-react';
+import { GitCommitHorizontal, ArrowUpDown, Waypoints } from 'lucide-react';
 
-import { PageContainer } from '@/components/layout';
+import { PageLayout } from '@/components/layout';
 import { GlassPanel, PanelTitle, Text, Badge, Select, HelpTooltip } from '@/components/ui';
 
-import { MetricCard } from '@/components/data-display';
+import type { StatMetric } from '@/components/data-display';
+import { TelemetrySummaryBrief } from '../components/operationalbrief-all/TelemetrySummaryBrief';
 import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { NoVehicleSelected } from '@/features/onboarding/components/NoVehicleSelected';
@@ -18,16 +19,19 @@ import {
 import { useSignals, useSignalAnalysisHistory } from '@/api/hooks/useTelemetry';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { usePageTitle } from '@/hooks/usePageTitle';
-import { fmtNumber } from '@/lib/numberFormat';
+import { useDataState } from '@/hooks/useDataState';
+
 import { chartTokens } from '@/lib/tokens';
 
 import { summarizeSignalChangePoints, toNumericPoints } from '../lib/signalChangePoints';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 const HOURS = 72;
 
 export default function SignalChangePointsPage() {
+  const { fmtScientificNumber, fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
-  usePageTitle(t('signalChangePoints.title', 'Signal Change Points'));
+  usePageTitle(t('signalChangePoints.title', 'Signal change points'));
 
   const { vehicleId } = useSelectedVehicle();
   const id = vehicleId ?? 0;
@@ -35,6 +39,8 @@ export default function SignalChangePointsPage() {
 
   const signalsQuery = useSignals(id);
   const historyQuery = useSignalAnalysisHistory(id, signalName, HOURS);
+  const catalogState = useDataState(signalsQuery);
+  const historyState = useDataState(historyQuery, { provenance: 'historical' });
   const chosen = signalName !== '';
   const dataSources = useMemo(
     () => [
@@ -84,23 +90,42 @@ export default function SignalChangePointsPage() {
     [summary.changePoints, timeline],
   );
 
-  if (vehicleId == null) {
-    return <NoVehicleSelected pageTitle={t('signalChangePoints.title', 'Signal Change Points')} />;
-  }
-
   const historyHasData = historyQuery.data !== undefined;
   const isLoading = chosen && !historyHasData && historyQuery.isLoading;
-  const isError = chosen && historyQuery.isError && !historyHasData;
-  const error = historyQuery.error;
+  const isError = chosen && historyState.fatalError != null;
+  const error = historyState.fatalError;
   const hasData = chosen && summary.samples > 0;
   const biggest = summary.biggestChange;
+  const metrics: readonly StatMetric[] = [
+    { metricId: 'count', occurrenceId: 'change-points', rawValue: hasData ? summary.changePoints.length : null,
+      label: t('signalChangePoints.count', 'Change points'),
+      description: t('help.signalChangePoints.count', 'A change point closes the current segment and starts a fresh one only once the cumulative statistic crosses its alarm threshold, and never before the fixed minimum segment length has elapsed.'),
+      context: t('signalChangePoints.minSegment', 'min segment {{n}} samples', { n: summary.minSegmentSamples }) },
+    { metricId: 'number', occurrenceId: 'biggest-shift', rawValue: biggest?.magnitude,
+      label: t('signalChangePoints.biggest', 'Biggest shift'),
+      display: { formatter: (raw) => ({ value: fmtScientificNumber(raw, 3), unit: '' }) },
+      description: biggest != null ? t('signalChangePoints.biggestHint', '{{dir}} · confidence {{conf}}', {
+        dir: biggest.direction === 'up' ? t('signalChangePoints.up', 'up') : t('signalChangePoints.down', 'down'),
+        conf: fmtNumber(biggest.confidence),
+      }) : t('signalChangePoints.noShift', 'no shift detected') },
+    { metricId: 'count', occurrenceId: 'segments', rawValue: hasData ? summary.segments.length : null,
+      label: t('signalChangePoints.segments', 'Segments'),
+      description: t('signalChangePoints.segmentsHint', 'stable stretches between shifts') },
+    { metricId: 'count', occurrenceId: 'samples', rawValue: chosen && historyHasData ? summary.samples : null,
+      label: t('signalChangePoints.samples', 'Samples analyzed'),
+      description: t('signalChangePoints.noiseScale', 'noise scale {{n}}', { n: fmtScientificNumber(summary.globalSpread, 3) }) },
+  ];
+
+  if (vehicleId == null) {
+    return <NoVehicleSelected pageTitle={t('signalChangePoints.title', 'Signal change points')} />;
+  }
 
   return (
-    <PageContainer
-      title={t('signalChangePoints.title', 'Signal Change Points')}
+    <PageLayout
+      title={t('signalChangePoints.title', 'Signal change points')}
       subtitle={t(
         'signalChangePoints.subtitle',
-        'Robust Page-Hinkley detection of abrupt level shifts in a numeric signal — deliberately distinct from slow drift (Signal Trend) and drive-week regime clustering',
+        'Robust Page-Hinkley detection of abrupt level shifts in a numeric signal — deliberately distinct from slow drift (signal trend) and drive-week regime clustering',
       )}
       query={[signalsQuery, historyQuery]}
       dataSources={dataSources}
@@ -110,7 +135,7 @@ export default function SignalChangePointsPage() {
         <GlassPanel className="p-4 sm:p-5">
           <PanelTitle className="mb-3 flex items-center gap-2">
             <GitCommitHorizontal className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-            {t('signalChangePoints.pick', 'Choose a Signal')}
+            {t('signalChangePoints.pick', 'Choose a signal')}
             <HelpTooltip
               size="sm"
               i18nKey="help.signalChangePoints.pick"
@@ -118,8 +143,8 @@ export default function SignalChangePointsPage() {
               ariaLabel={t('help.signalChangePoints.iconLabel', 'More info about signal selection')}
             />
           </PanelTitle>
-          {signalsQuery.isError ? (
-            <QueryError error={signalsQuery.error} onRetry={() => signalsQuery.refetch()} />
+          {catalogState.fatalError ? (
+            <QueryError error={catalogState.fatalError} onRetry={() => signalsQuery.refetch()} />
           ) : signalsQuery.isLoading ? (
             <Skeleton height={80} />
           ) : options.length === 0 ? (
@@ -141,60 +166,15 @@ export default function SignalChangePointsPage() {
 
       {/* 2 — KPI band */}
       <FadeIn delay={0.1}>
-        <section
-          aria-label={t('signalChangePoints.kpis', 'Change-point metrics')}
-          className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4"
-        >
-          {isError ? (
-            <GlassPanel className="col-span-full p-4 sm:p-5">
-              <QueryError error={error} onRetry={() => historyQuery.refetch()} />
-            </GlassPanel>
-          ) : isLoading ? (
-            Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} height={96} className="rounded-xl" />)
-          ) : (
-            <>
-              <MetricCard
-                label={t('signalChangePoints.count', 'Change Points')}
-                value={hasData ? summary.changePoints.length : '—'}
-                subtitle={t('signalChangePoints.minSegment', 'min segment {{n}} samples', { n: summary.minSegmentSamples })}
-                icon={<GitCommitHorizontal className="h-5 w-5" />}
-                color={hasData && summary.changePoints.length > 0 ? 'amber' : 'green'}
-                help={{
-                  i18nKey: 'help.signalChangePoints.count',
-                  defaultValue: 'A change point closes the current segment and starts a fresh one only once the cumulative statistic crosses its alarm threshold, and never before the fixed minimum segment length has elapsed.',
-                }}
-              />
-              <MetricCard
-                label={t('signalChangePoints.biggest', 'Biggest Shift')}
-                value={biggest != null ? fmtNumber(biggest.magnitude, 3) : '—'}
-                subtitle={
-                  biggest != null
-                    ? t('signalChangePoints.biggestHint', '{{dir}} · confidence {{conf}}', {
-                        dir: biggest.direction === 'up' ? t('signalChangePoints.up', 'up') : t('signalChangePoints.down', 'down'),
-                        conf: fmtNumber(biggest.confidence, 2),
-                      })
-                    : t('signalChangePoints.noShift', 'no shift detected')
-                }
-                icon={<ArrowUpDown className="h-5 w-5" />}
-                color="purple"
-              />
-              <MetricCard
-                label={t('signalChangePoints.segments', 'Segments')}
-                value={hasData ? summary.segments.length : '—'}
-                subtitle={t('signalChangePoints.segmentsHint', 'stable stretches between shifts')}
-                icon={<Layers className="h-5 w-5" />}
-                color="blue"
-              />
-              <MetricCard
-                label={t('signalChangePoints.samples', 'Samples Analyzed')}
-                value={summary.samples}
-                subtitle={t('signalChangePoints.noiseScale', 'noise scale {{n}}', { n: fmtNumber(summary.globalSpread, 3) })}
-                icon={<Waypoints className="h-5 w-5" />}
-                color="cyan"
-              />
-            </>
-          )}
-        </section>
+        <TelemetrySummaryBrief title={t('signalChangePoints.kpis', 'Change-point metrics')}
+          metrics={metrics} testId="signal-change-points-summary" loading={isLoading}
+          unavailable={isError} unknown={!hasData} sourceStatus={historyState.status}
+          retained={historyHasData && (historyState.isRefreshing || historyState.status === 'stale' || historyState.refreshError != null)}
+          scope={t('telemetry.brief.historyWindow', '{{hours}}h requested · {{signal}}', { hours: HOURS, signal: signalName || '—' })}
+          sourceBounds={signalName ? [{ signal: signalName, from: historyQuery.data?.from, to: historyQuery.data?.to }] : []}
+          provenance={t('telemetry.brief.historyProvenance', 'Selected signal history; numeric samples only')}
+          description={t('telemetry.brief.analysisBounds', 'Analysis covers returned numeric samples, not guaranteed full-window coverage. Exact bounds remain unknown when not supplied by the source.')} />
+        {isError && <QueryError error={error} onRetry={() => historyQuery.refetch()} />}
       </FadeIn>
 
       {/* 3 — Timeline with segment levels and change-point markers */}
@@ -209,10 +189,12 @@ export default function SignalChangePointsPage() {
         ) : (
           // chart-legend-audit:skip two named series (actual + segment level) kept always visible together so the step-level context is never accidentally hidden
           <ChartContainer
-            title={t('signalChangePoints.timeline', 'Regime Timeline')}
+            title={t('signalChangePoints.timeline', 'Regime timeline')}
             subtitle={t('signalChangePoints.timelineHint', 'Raw values against each segment\u2019s mean; dashed markers are detected change points')}
             ariaLabel={t('signalChangePoints.timelineAria', 'Line chart of raw signal values overlaid with segment mean levels and detected abrupt change points')}
             loading={isLoading}
+            error={isError ? error : null}
+            onRetry={() => historyQuery.refetch()}
             empty={timeline.length === 0}
             height={340}
             data={timeline}
@@ -244,9 +226,13 @@ export default function SignalChangePointsPage() {
         <GlassPanel className="p-4 sm:p-5">
           <PanelTitle className="mb-3 flex items-center gap-2">
             <ArrowUpDown className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-            {t('signalChangePoints.reading', 'Reading the Result')}
+            {t('signalChangePoints.reading', 'Reading the result')}
           </PanelTitle>
-          {!hasData ? (
+          {isLoading ? (
+            <Skeleton height={80} />
+          ) : isError ? (
+            <QueryError error={error} onRetry={() => historyQuery.refetch()} />
+          ) : !hasData ? (
             <EmptyState /* no-action: the interpretation follows from the detected segments above. */
               icon={<GitCommitHorizontal className="h-8 w-8" />}
               message={t('signalChangePoints.noReading', 'Pick a signal to see how its change points should be read.')}
@@ -279,6 +265,6 @@ export default function SignalChangePointsPage() {
           )}
         </GlassPanel>
       </FadeIn>
-    </PageContainer>
+    </PageLayout>
   );
 }

@@ -170,11 +170,11 @@ describe('pctChange', () => {
 
 describe('trendFor', () => {
   it('reports an upward trend with a +signed magnitude string', () => {
-    expect(trendFor(120, 100)).toEqual({ direction: 'up', value: '+20.0%', positive: true });
+    expect(trendFor(120, 100)).toEqual({ direction: 'up', value: '+20.00%', positive: true });
   });
 
   it('reports a downward trend carrying the intrinsic minus sign', () => {
-    expect(trendFor(80, 100)).toEqual({ direction: 'down', value: '-20.0%', positive: false });
+    expect(trendFor(80, 100)).toEqual({ direction: 'down', value: '-20.00%', positive: false });
   });
 
   it('collapses sub-0.01 deltas to a neutral flat result', () => {
@@ -189,8 +189,8 @@ describe('trendFor', () => {
     expect(trendFor(80, 100, true)).toMatchObject({ direction: 'down', positive: true });
   });
 
-  it('formats growth-from-zero as +100.0%', () => {
-    expect(trendFor(50, 0)).toEqual({ direction: 'up', value: '+100.0%', positive: true });
+  it('formats growth-from-zero as +100.00%', () => {
+    expect(trendFor(50, 0)).toEqual({ direction: 'up', value: '+100.00%', positive: true });
   });
 });
 

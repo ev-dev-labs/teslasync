@@ -1,5 +1,5 @@
 import { useUpdateCheck, useVersionInfo } from '@/api/hooks/useSettings';
-import { useChangelog } from '@/hooks/useChangelog';
+import { useChangelogStatus } from '@/hooks/useChangelogStatus';
 import { useProductPreferences } from '@/hooks/useProductPreferences';
 
 const BUILD_VERSION: string = import.meta.env.VITE_APP_VERSION || 'dev';
@@ -16,7 +16,7 @@ function formatUptime(seconds: number | undefined | null): string | null {
 }
 
 export function useBuildNews() {
-  const changelog = useChangelog();
+  const changelog = useChangelogStatus();
   const { preferences } = useProductPreferences();
   const { data: updateCheck } = useUpdateCheck();
   return {

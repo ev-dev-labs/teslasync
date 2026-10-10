@@ -1,11 +1,17 @@
 import { useEffect, useRef, useState } from 'react';
 import { cn } from '@/lib/cn';
-import { fmtNumber, safeNumber } from '@/lib/numberFormat';
+import { safeNumber } from '@/lib/numberFormat';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface AnimatedNumberProps {
   value: number;
   duration?: number;
+  /** Explicit display precision; otherwise uses kind's default. */
   decimals?: number;
+  /** Defaults to a count; measurements follow Settings even at integer values. */
+  kind?: 'count' | 'measurement';
+  /** Caller-owned formatting (e.g. currency). Takes precedence over kind/decimals. */
+  formatValue?: (value: number) => string;
   prefix?: string;
   suffix?: string;
   className?: string;
@@ -28,14 +34,17 @@ function prefersReducedMotion(): boolean {
 export function AnimatedNumber({
   value,
   duration = 1,
-  decimals = 0,
+  decimals,
+  kind = 'count',
+  formatValue,
   prefix,
   suffix,
   className,
 }: AnimatedNumberProps) {
+  const { fmtNumber, fmtInt } = useNumberFormatting();
   // Sanitise once: NaN / Infinity / a runtime-undefined value must never enter
   // the easing math (it would spread NaN across every frame). safeNumber maps
-  // any non-finite input to 0 — the same value fmtNumber would ultimately show.
+  // any non-finite input to 0 for tween math only; missing display stays unknown.
   const target = safeNumber(value);
 
   const [display, setDisplay] = useState(0);
@@ -87,7 +96,8 @@ export function AnimatedNumber({
   return (
     <span className={cn('tabular-nums', className)}>
       {prefix}
-      {fmtNumber(display, decimals)}
+      {!Number.isFinite(value) ? '—' : formatValue ? formatValue(display)
+        : decimals == null && kind === 'count' ? fmtInt(display) : fmtNumber(display, decimals)}
       {suffix}
     </span>
   );

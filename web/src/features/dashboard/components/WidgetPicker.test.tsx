@@ -93,8 +93,8 @@ describe('WidgetPicker', () => {
   it('renders only widgets in the labelled catalogue, not layout templates', () => {
     renderPicker();
 
-    expect(screen.getByRole('complementary', { name: 'Add Widget' })).toBeInTheDocument();
-    expect(screen.queryByRole('dialog', { name: 'Add Widget' })).toBeNull();
+    expect(screen.getByRole('complementary', { name: 'Add widget' })).toBeInTheDocument();
+    expect(screen.queryByRole('dialog', { name: 'Add widget' })).toBeNull();
     expect(screen.getByRole('textbox', { name: /search widgets/i })).toBeInTheDocument();
 
     // "All" is the default-selected category filter.
@@ -102,7 +102,7 @@ describe('WidgetPicker', () => {
     expect(selected).toHaveTextContent('All');
     expect(selected).toHaveClass('rounded-shape-sm', 'bg-[var(--theme-primary)]');
     expect(
-      screen.getByRole('button', { name: 'Battery & Range', pressed: false }),
+      screen.getByRole('button', { name: 'Battery & range', pressed: false }),
     ).toHaveClass('rounded-shape-sm', 'border-[var(--control-border)]');
 
     // Layout creation lives in its own gallery, not among the widgets.
@@ -144,7 +144,7 @@ describe('WidgetPicker', () => {
   it('filtering by category narrows the list', () => {
     renderPicker();
     fireEvent.click(
-      screen.getByRole('button', { name: 'Battery & Range', pressed: false }),
+      screen.getByRole('button', { name: 'Battery & range', pressed: false }),
     );
 
     expect(widgetCard(BATTERY_GAUGE_DESC)).toBeInTheDocument();
@@ -153,6 +153,23 @@ describe('WidgetPicker', () => {
       screen.queryByRole('button', { name: new RegExp(VEHICLE_HERO_DESC, 'i') }),
     ).toBeNull();
     expect(screen.queryByText('Layout Presets')).toBeNull();
+  });
+
+  it('keeps category filters as independent pressed buttons, not document tabs', () => {
+    renderPicker();
+    const group = screen.getByRole('group', { name: 'Filter by category' });
+    const all = within(group).getByRole('button', { name: 'All' });
+    const battery = within(group).getByRole('button', { name: 'Battery & range' });
+    expect(screen.queryByRole('tablist')).toBeNull();
+    expect(all).toHaveAttribute('tabindex', '0');
+    expect(battery).toHaveAttribute('tabindex', '0');
+    fireEvent.keyDown(battery, { key: 'ArrowRight' });
+    expect(all).toHaveAttribute('aria-pressed', 'true');
+    fireEvent.click(battery);
+    expect(battery).toHaveAttribute('aria-pressed', 'true');
+    expect(all).toHaveAttribute('aria-pressed', 'false');
+    expect(widgetCard(BATTERY_GAUGE_DESC)).toBeInTheDocument();
+    expect(screen.queryByRole('tabpanel')).toBeNull();
   });
 
   it('searching filters to matches, shows a result-count header, and hides non-matches', () => {
@@ -254,26 +271,26 @@ describe('WidgetPicker', () => {
     localStorage.setItem(RECENT_KEY, JSON.stringify(['range-estimate']));
     renderPicker();
 
-    expect(screen.getByText('Recently Added')).toBeInTheDocument();
+    expect(screen.getByText('Recently added')).toBeInTheDocument();
     // The recent widget renders in both the recently-added strip and its
     // battery category group below.
     expect(screen.getAllByText(RANGE_ESTIMATE_DESC).length).toBeGreaterThanOrEqual(2);
 
     fireEvent.change(screen.getByRole('textbox'), { target: { value: 'range' } });
-    expect(screen.queryByText('Recently Added')).toBeNull();
+    expect(screen.queryByText('Recently added')).toBeNull();
   });
 
   it('omits active widgets from recently-added and tolerates corrupt storage', () => {
     // Corrupt JSON must not throw — loadRecentlyAdded swallows the parse error.
     localStorage.setItem(RECENT_KEY, '{not-json');
     const { unmount } = renderPicker();
-    expect(screen.queryByText('Recently Added')).toBeNull();
+    expect(screen.queryByText('Recently added')).toBeNull();
     unmount();
 
     // A recent id that is already active is filtered out of the section.
     localStorage.setItem(RECENT_KEY, JSON.stringify(['range-estimate']));
     renderPicker({ activeWidgetIds: ['range-estimate'] });
-    expect(screen.queryByText('Recently Added')).toBeNull();
+    expect(screen.queryByText('Recently added')).toBeNull();
   });
 
   it('keeps the footprint inline, without a hover preview', () => {

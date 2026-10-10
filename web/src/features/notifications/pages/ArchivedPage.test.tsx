@@ -184,7 +184,8 @@ describe('ArchivedPage', () => {
 
     // KPI band populates from the archived backlog. The summary section is an
     // accessible region; assert the derived counts inside it.
-    expect(await screen.findByText('Total archived')).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByTestId('notification-backlog-brief')).not.toHaveAttribute('aria-busy', 'true'));
+    expect(screen.getByText('Total archived')).toBeInTheDocument();
     const region = screen.getByRole('region', { name: 'Archived summary' });
     expect(within(region).getByText('6')).toBeInTheDocument(); // total
     expect(within(region).getByText('3')).toBeInTheDocument(); // critical
@@ -213,8 +214,10 @@ describe('ArchivedPage', () => {
 
     // Loading state renders the stat-grid skeleton, not the populated cards or
     // the empty state.
-    expect(await screen.findByTestId('stat-grid-skeleton')).toBeInTheDocument();
-    expect(screen.queryByText('Total archived')).toBeNull();
+    const brief = await screen.findByTestId('notification-backlog-brief');
+    expect(brief).toHaveAttribute('aria-busy', 'true');
+    expect(brief.querySelectorAll('[data-operational-metric]')).toHaveLength(6);
+    expect(brief.querySelectorAll('[data-operational-value]')).toHaveLength(0);
     expect(screen.queryByText('No archived notifications yet')).toBeNull();
 
     // The rest of the page still renders — never a frozen/blank surface.

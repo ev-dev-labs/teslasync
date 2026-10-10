@@ -5,21 +5,22 @@ import {
   LoaderCircle,
   Radio,
 } from 'lucide-react';
-import { GlassPanel, Heading, Text } from '@/components/ui';
-import { MetricTile, useIsStale } from '@/components/data-display';
+import { GlassPanel, Text } from '@/components/ui';
+import { useIsStale } from '@/components/data-display';
+import { SystemSummaryBrief } from '../operationalbrief-all/SystemSummaryBrief';
 import { InlineCallout } from '@/components/feedback';
 import {
   deriveTrustedVehicleStatus,
   isVehicleStateFieldCurrent,
   resolveVehicleStateFreshness,
 } from '@/api/hooks/useVehicles';
-import type { VehicleState } from '@/api/types';
+import type { VehicleStateReadings } from '@/api/types';
 import type { Vehicle } from '../../commands';
 import type { CommandExecutionFeedback } from './types';
 
 interface CommandReadinessStripProps {
   vehicle: Vehicle;
-  state: VehicleState | null;
+  state: VehicleStateReadings | null;
   stateTrust: Parameters<typeof deriveTrustedVehicleStatus>[1];
   stateLoading: boolean;
   stateError: unknown;
@@ -50,7 +51,7 @@ export function CommandReadinessStrip({
   const offline = status === 'offline';
   const statusLabel = t(
     `commands.status.${status}`,
-    status.replace(/_/g, ' ').replace(/\b\w/g, (value) => value.toUpperCase()),
+    status.replace(/_/g, ' ').replace(/^\w/, (value) => value.toUpperCase()),
   );
   const connection = verifiedStatus
     ? statusLabel
@@ -83,41 +84,21 @@ export function CommandReadinessStrip({
       className="space-y-4 p-4 sm:p-5"
       data-testid="command-readiness"
     >
-      <div>
-        <Heading level="section">
-          {t('commands.readiness.title', 'Command readiness')}
-        </Heading>
-        <Text as="p" variant="bodySm" className="mt-1">
-          {t(
-            'commands.readiness.description',
-            'Connection, telemetry, and motion context before a remote request is sent.',
-          )}
-        </Text>
-      </div>
-
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <MetricTile
-          value={connection}
-          label={t('commands.readiness.connection', 'Connection')}
-          align="start"
-        />
-        <MetricTile
-          value={availability}
-          label={t('commands.readiness.availability', 'Command delivery')}
-          align="start"
-        />
-        <MetricTile
-          value={motion}
-          label={t('commands.readiness.motion', 'Motion context')}
-          align="start"
-        />
-        <MetricTile
-          value={freshness}
-          label={t('commands.readiness.telemetry', 'Telemetry')}
-          sublabel={observedAt != null ? ageLabel : '—'}
-          align="start"
-        />
-      </div>
+      <SystemSummaryBrief
+        title={t('commands.readiness.title', 'Command readiness')}
+        description={t('commands.readiness.description', 'Connection, telemetry, and motion context before a remote request is sent.')}
+        scope={vehicle.display_name ?? vehicle.vin}
+        available={state != null} loading={stateLoading && !state} retained={!!stateError && state != null}
+        statusLabel={availability}
+        freshness={observedAt != null ? ageLabel : t('commands.readiness.freshnessUnknown', 'Unknown')}
+        metrics={[]}
+        textMetrics={[
+          { key: 'connection', value: connection, label: t('commands.readiness.connection', 'Connection'), detail: verifiedStatus ? statusLabel : t('commands.hero.lastKnownStatus', 'Last known: {{status}}', { status: statusLabel }) },
+          { key: 'delivery', value: availability, label: t('commands.readiness.availability', 'Command delivery'), detail: t('commands.readiness.description', 'Connection, telemetry, and motion context before a remote request is sent.') },
+          { key: 'motion', value: motion, label: t('commands.readiness.motion', 'Motion context'), valueState: moving == null ? 'missing' : 'value', detail: motion },
+          { key: 'telemetry', value: freshness, label: t('commands.readiness.telemetry', 'Telemetry'), valueState: signalFreshness === 'unknown' ? 'missing' : 'value', detail: observedAt != null ? ageLabel : '—' },
+        ]}
+      />
 
       {(asleep || offline) && (
         <InlineCallout

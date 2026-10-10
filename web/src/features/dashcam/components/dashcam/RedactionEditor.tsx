@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { Plus, Trash2 } from 'lucide-react';
-import { Button, GlassPanel, Select, Slider, Input } from '@/components/ui';
+import { Button, Select, Slider, Input, Caption } from '@/components/ui';
+import { LayoutCard } from '@/components/layout';
 import type { RedactionRegion } from '../../lib/types';
 import type { ClipRecord } from '../../lib/types';
 import { useUpdateClip } from '../../hooks/useClipCatalog';
@@ -14,12 +15,6 @@ function nextRegionId(): string {
     ? crypto.randomUUID()
     : `region_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
 }
-
-const KIND_OPTIONS = [
-  { value: 'face', label: 'Face' },
-  { value: 'plate', label: 'License plate' },
-  { value: 'general', label: 'General / other' },
-];
 
 /**
  * Editable, normalized (0..1) privacy-redaction rectangles. Persisted
@@ -58,41 +53,41 @@ export function RedactionEditor({ clip }: RedactionEditorProps) {
   };
 
   return (
-    <GlassPanel padding="md" className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-[var(--text-primary)]">
-          {t('dashcam.redaction.title', 'Privacy redaction masks')}
-        </h3>
-        <Button size="sm" variant="secondary" onClick={addRegion} icon={<Plus className="h-3.5 w-3.5" />}>
+    <LayoutCard
+      title={t('dashcam.redaction.title', 'Privacy redaction masks')}
+      description={t('dashcam.redaction.description', 'Rectangles are stored as normalized coordinates and rendered over playback. Export produces a redacted still frame or a manifest — never a modified video file.')}
+      actions={
+        <Button wrapLabel size="sm" variant="secondary" onClick={addRegion} icon={<Plus className="h-3.5 w-3.5" />}>
           {t('dashcam.redaction.add', 'Add region')}
         </Button>
-      </div>
-      <p className="text-xs text-[var(--text-muted)]">
-        {t(
-          'dashcam.redaction.description',
-          'Rectangles are stored as normalized coordinates and rendered over playback. Export produces a redacted still frame or a manifest — never a modified video file.',
-        )}
-      </p>
+      }
+    >
       {clip.redactions.length === 0 ? (
-        <p className="text-xs text-[var(--text-muted)]">{t('dashcam.redaction.empty', 'No redaction regions defined yet.')}</p>
+        <Caption>{t('dashcam.redaction.empty', 'No redaction regions defined yet.')}</Caption>
       ) : (
         <ul className="space-y-4">
           {clip.redactions.map((region) => (
             <li key={region.id} className="space-y-2 rounded-lg border border-[var(--border-subtle)] p-3">
-              <div className="flex items-center gap-2">
+              <div className="flex min-w-0 flex-wrap items-center gap-2">
                 <Select
                   size="sm"
-                  options={KIND_OPTIONS}
+                  aria-label={t('dashcam.redaction.kindLabel', 'Region kind')}
+                  options={[
+                    { value: 'face', label: t('dashcam.redaction.kind.face', 'Face') },
+                    { value: 'plate', label: t('dashcam.redaction.kind.plate', 'License plate') },
+                    { value: 'general', label: t('dashcam.redaction.kind.general', 'General / other') },
+                  ]}
                   value={region.kind}
                   onChange={(e) => updateRegion(region.id, { kind: e.target.value as RedactionRegion['kind'] })}
                   className="w-40"
                 />
                 <Input
                   size="sm"
+                  aria-label={t('dashcam.redaction.labelPlaceholder', 'Label')}
                   value={region.label}
                   onChange={(e) => updateRegion(region.id, { label: e.target.value })}
                   placeholder={t('dashcam.redaction.labelPlaceholder', 'Label')}
-                  className="flex-1"
+                  className="min-w-0 flex-1"
                 />
                 <Button
                   variant="ghost"
@@ -114,6 +109,6 @@ export function RedactionEditor({ clip }: RedactionEditorProps) {
           ))}
         </ul>
       )}
-    </GlassPanel>
+    </LayoutCard>
   );
 }

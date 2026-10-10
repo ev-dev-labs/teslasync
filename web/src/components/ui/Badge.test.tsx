@@ -19,8 +19,7 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import { createRef } from 'react';
-import { Badge } from './Badge';
-import { BADGE_VARIANTS } from '@/components/ui';
+import { Badge, BADGE_VARIANTS } from './Badge';
 
 describe('Badge', () => {
   it('renders a native <span> carrying its children', () => {
@@ -40,10 +39,10 @@ describe('Badge', () => {
   });
 
   it.each([
-    ['info', 'bg-blue-100'],
-    ['success', 'bg-green-100'],
-    ['warning', 'bg-yellow-100'],
-    ['danger', 'bg-red-100'],
+    ['info', BADGE_VARIANTS.info],
+    ['success', BADGE_VARIANTS.success],
+    ['warning', BADGE_VARIANTS.warning],
+    ['danger', BADGE_VARIANTS.danger],
     ['neutral', BADGE_VARIANTS.neutral],
   ] as const)('applies the %s variant background token', (variant, expected) => {
     render(
@@ -100,7 +99,7 @@ describe('Badge', () => {
     );
     const badge = screen.getByTestId('chip');
     expect(badge.className).toContain(BADGE_VARIANTS.neutral);
-    expect(badge.className).not.toContain('bg-blue-100');
+    expect(badge.className).not.toContain(BADGE_VARIANTS.info);
     expect(badge.className).not.toContain('undefined');
   });
 
@@ -166,4 +165,64 @@ describe('Badge', () => {
   it('exposes the expected displayName for devtools', () => {
     expect(Badge.displayName).toBe('Badge');
   });
+
+  it.each(['info', 'success', 'warning', 'danger'] as const)(
+    'uses the existing %s semantic foreground, tint and border roles',
+    (variant) => {
+      render(<Badge variant={variant} data-testid="chip">{variant}</Badge>);
+      const badge = screen.getByTestId('chip');
+      expect(badge).toHaveClass(
+        `text-[var(--semantic-${variant})]`,
+        `bg-[var(--semantic-${variant}-bg)]`,
+        `border-[var(--semantic-${variant}-border)]`,
+      );
+      expect(badge.className).not.toMatch(/(?:neon|glow|text-white|dark:|animate-)/);
+      expect(badge.textContent).toBe(variant);
+    },
+  );
+
+  it.each(['toString', '__proto__', 'constructor'])(
+    'falls back for inherited runtime variant and size keys: %s',
+    (key) => {
+      render(<Badge variant={key as never} size={key as never} data-testid="chip">Unknown</Badge>);
+      const badge = screen.getByTestId('chip');
+      expect(badge.className).toContain(BADGE_VARIANTS.neutral);
+      expect(badge).toHaveClass('px-2', 'text-xs');
+      expect(badge.textContent).toBe('Unknown');
+    },
+  );
+
+  it('keeps long translated labels intact with bounded wrapping and a shrink-free dot', () => {
+    const label = 'Verbindung wird hergestellt — Fahrzeugdaten werden synchronisiert '.repeat(8);
+    const { rerender } = render(<Badge dot id="connection-status">{label}</Badge>);
+    const badge = screen.getByText(label.trim());
+    expect(badge.textContent).toBe(label);
+    expect(badge).toHaveClass('min-w-0', 'max-w-full', 'whitespace-normal', 'break-words');
+    expect(badge.querySelector('[aria-hidden="true"]')).toHaveClass('shrink-0');
+    rerender(<Badge dot id="connection-status">Connecting</Badge>);
+    expect(screen.getByText('Connecting')).toBe(badge);
+    expect(badge.id).toBe('connection-status');
+  });
+
+  it('preserves measured zero and absent children without fabricating a status', () => {
+    const { rerender } = render(<Badge data-testid="chip">{0}</Badge>);
+    const badge = screen.getByTestId('chip');
+    expect(badge.textContent).toBe('0');
+    rerender(<Badge data-testid="chip">{null}</Badge>);
+    expect(badge.textContent).toBe('');
+    expect(badge.className).toContain(BADGE_VARIANTS.neutral);
+    rerender(<Badge data-testid="chip">{undefined}</Badge>);
+    expect(badge.textContent).toBe('');
+  });
+
+  it.each(['info', 'success', 'warning', 'danger', 'neutral'] as const)(
+    'preserves a system-color outline and textual state for %s in forced colors',
+    (variant) => {
+      render(<Badge variant={variant} dot data-testid="chip">{variant}</Badge>);
+      const badge = screen.getByTestId('chip');
+      expect(badge).toHaveClass('forced-colors:border', 'forced-colors:border-[CanvasText]');
+      expect(badge.textContent).toBe(variant);
+      expect(badge.querySelector('[aria-hidden="true"]')).toHaveClass('bg-current');
+    },
+  );
 });

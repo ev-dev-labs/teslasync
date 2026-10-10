@@ -2,7 +2,7 @@ import { CalendarDays } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { Badge, GlassPanel, PanelTitle, Text } from '@/components/ui';
-import { fmtInt, fmtNumber } from '@/lib/numberFormat';
+
 import type { DepartureForecast } from '../../lib/departureForecast';
 import { DepartureForecastSectionBody } from './DepartureForecastSectionBody';
 import {
@@ -10,6 +10,7 @@ import {
   departureWeekdayLabel,
 } from './labels';
 import type { DepartureForecastQueryState } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface DepartureForecastWeekdayRoutinesProps {
   forecast: DepartureForecast;
@@ -24,6 +25,7 @@ export function DepartureForecastWeekdayRoutines({
   locale,
   timeZone,
 }: DepartureForecastWeekdayRoutinesProps) {
+  const { fmtNumber, fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
 
   return (
@@ -78,7 +80,7 @@ export function DepartureForecastWeekdayRoutines({
                           ),
                           likelihood: fmtNumber(
                             profile.p * 100,
-                            1,
+                            undefined,
                             locale,
                           ),
                         },
@@ -93,7 +95,7 @@ export function DepartureForecastWeekdayRoutines({
                           activeDays: fmtInt(profile.activeDays),
                           concentration: fmtNumber(
                             (profile.concentration ?? 0) * 100,
-                            0,
+                            undefined,
                             locale,
                           ),
                         },

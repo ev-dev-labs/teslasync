@@ -2,7 +2,7 @@
  * `<TripOverviewPanel>` — behaviour + hardening coverage.
  *
  * The panel is a self-sufficient presentational section: it owns a single
- * GlassPanel whose title ("Overview") is ALWAYS visible, and it selects one
+ * LayoutCard whose title ("Overview") is ALWAYS visible, and it selects one
  * of four bodies from the `{ trip, isLoading, isError, error, onRetry }`
  * contract — a skeleton (first load), a branched `<QueryError>` (failure), an
  * `<EmptyState>` (no record), or the metadata `<KVList>` (ready). Those four
@@ -19,8 +19,7 @@
  *
  * Covered facets:
  *   - INVARIANT: the "Overview" heading renders in every state (loading /
- *     error / empty / ready), and its accessible name excludes the decorative
- *     icon (aria-hidden).
+ *     error / empty / ready), and its accessible name is exactly "Overview".
  *   - READY (complete trip): every KVList row maps correctly, timestamps carry
  *     the canonical ISO in their `title`, and the Notes row appears.
  *   - READY (in-progress + null-safety): "In progress" for a missing end date,
@@ -158,13 +157,11 @@ describe('TripOverviewPanel — panel shell invariant', () => {
     }
   });
 
-  it('keeps the decorative icon out of the heading accessible name', () => {
+  it('exposes exactly "Overview" as the shared heading accessible name', () => {
     renderPanel({ trip: makeTrip() });
     const heading = screen.getByRole('heading', { name: 'Overview' });
-    // The lucide <Info> icon is aria-hidden, so the title reads exactly
-    // "Overview" and the svg is not exposed to assistive tech.
-    expect(heading).toHaveTextContent('Overview');
-    expect(heading.querySelector('svg')?.getAttribute('aria-hidden')).toBe('true');
+    expect(heading).toHaveAccessibleName('Overview');
+    expect(heading).toHaveTextContent(/^Overview$/);
   });
 });
 
@@ -190,7 +187,7 @@ describe('TripOverviewPanel — ready state (complete trip)', () => {
   });
 
   it('does not render loading, error, or empty affordances', () => {
-    expect(document.querySelector('.animate-pulse')).toBeNull();
+    expect(document.querySelector('[class*="--skeleton-bg"]')).toBeNull();
     expect(screen.queryByRole('alert')).toBeNull();
     expect(screen.queryByRole('status')).toBeNull();
   });
@@ -233,7 +230,7 @@ describe('TripOverviewPanel — loading state', () => {
   it('renders a skeleton and no metadata when there is no cached trip', () => {
     renderPanel({ isLoading: true, trip: undefined });
 
-    expect(document.querySelector('.animate-pulse')).not.toBeNull();
+    expect(document.querySelector('[class*="--skeleton-bg"]')).not.toBeNull();
     expect(screen.queryByText('Trip ID')).toBeNull();
     expect(screen.queryByRole('alert')).toBeNull();
   });
@@ -244,7 +241,7 @@ describe('TripOverviewPanel — loading state', () => {
     renderPanel({ isLoading: true, trip: makeTrip({ id: 99 }) });
 
     expect(ddText('Trip ID')).toBe('99');
-    expect(document.querySelector('.animate-pulse')).toBeNull();
+    expect(document.querySelector('[class*="--skeleton-bg"]')).toBeNull();
   });
 });
 
@@ -289,7 +286,7 @@ describe('TripOverviewPanel — empty state', () => {
     const status = screen.getByRole('status');
     expect(status).toHaveTextContent('Trip not found');
     // Neither the skeleton nor the metadata body is present.
-    expect(document.querySelector('.animate-pulse')).toBeNull();
+    expect(document.querySelector('[class*="--skeleton-bg"]')).toBeNull();
     expect(screen.queryByText('Trip ID')).toBeNull();
   });
 });

@@ -1,0 +1,388 @@
+{
+  "item": "audit-page-115",
+  "page": "web\\src\\features\\driving\\pages\\EfficiencyPage.tsx",
+  "routes": ["/efficiency"],
+  "purpose": "Analyze vehicle driving energy intensity, lifetime driving aggregates, observed drive trends, speed relationships and temperature relationships.",
+  "primaryGoal": "Understand measured consumption and its relationship to driving conditions while distinguishing lifetime summary evidence from the selected-range observed drive sample.",
+  "dataSources": [
+    {
+      "name": "Lifetime driving summary",
+      "hook": "useDrivingStats(vehicleIdStr)",
+      "endpoint": "GET /drives/stats?vehicle_id=<selected vehicle>",
+      "owner": "web\\src\\api\\hooks\\useDriving.ts",
+      "evidence": ["web\\src\\features\\driving\\pages\\EfficiencyPage.tsx:34", "web\\src\\api\\hooks\\useDriving.ts:218-228", "internal\\api\\router.go:3463-3465"],
+      "behavior": "Vehicle-enabled query; driving-stats vehicle key; AbortSignal forwarded; retry false. Lifetime labeling is explicit in EfficiencyEvidenceBrief, not independently verified against backend aggregate implementation.",
+      "fields": ["totalDrives", "totalDistanceKm", "totalDurationS", "avgEfficiencyWhKm", "avgSpeedKmh", "topSpeedKmh", "regenRatio", "regenEnergyWh", "co2SavedKg"],
+      "units": "DrivingStats frontend contract retains km, km/h, Wh/km, seconds, Wh, kilograms and a 0-1 regen ratio. Model converts summary quantities for display. Backend JSON and numerical semantics were not inspected and must not be inferred to be canonical SI solely from the page.",
+      "trust": "inspectStats guards object shape, marks missing/nonfinite fields partial; useDataState receives historical provenance."
+    },
+    {
+      "name": "Observed drive history",
+      "hook": "useDrives(vehicleIdStr)",
+      "endpoint": "GET /drives?vehicle_id=<selected vehicle>",
+      "owner": "web\\src\\api\\hooks\\useDriving.ts",
+      "evidence": ["web\\src\\features\\driving\\pages\\EfficiencyPage.tsx:35-50", "web\\src\\api\\hooks\\useDriving.ts:90-128", "internal\\api\\router.go:3463-3464"],
+      "behavior": "Vehicle-enabled query; AbortSignal forwarded; FAST stale time; safeArray selection. Page sends no start/end/limit/offset. Hook documentation says API default is 50 rows; backend default not independently inspected. Workspace dates filter only returned rows.",
+      "fields": ["startTs", "distanceM", "energyUsedWh", "avgSpeedMps", "outsideTempAvgC"],
+      "units": "Drive frontend fields are meters, Wh, m/s and Celsius. Display conversion occurs in model; cache values are not rewritten.",
+      "trust": "inspectDrives keeps object rows, marks missing measurements partial, and independently selects eligible observations per series."
+    },
+    {
+      "name": "Workspace scope and presentation preferences",
+      "hook": ["useSelectedVehicle", "useRangeState({ persistKey: 'efficiency.range' })", "useUnits", "useSavedViewUrl"],
+      "endpoint": null,
+      "owner": ["web\\src\\hooks\\useSelectedVehicle.ts", "web\\src\\hooks\\useRangeState.ts", "web\\src\\hooks\\useUnits.ts", "web\\src\\hooks\\useSavedViewUrl.ts"],
+      "evidence": ["web\\src\\features\\driving\\pages\\EfficiencyPage.tsx:29-37", "web\\src\\lib\\workspaceScope.ts:44"],
+      "behavior": "Consumes shell vehicle/range ownership; no competing page pickers. SavedViewMenu applies query state on /efficiency. Hook internals and persistence runtime are unverified."
+    }
+  ],
+  "components": [
+    {
+      "name": "PageLayout / CardGrid",
+      "category": "layout",
+      "owner": "@/components/layout",
+      "props": ["title", "subtitle", "query", "dataSources", "overflowActions", "label", "items{id,size,content}"],
+      "usedBy": ["EfficiencyPage"],
+      "evidence": "web\\src\\features\\driving\\pages\\EfficiencyPage.tsx:70-115",
+      "inspection": "Page call sites only; no global layout audit."
+    },
+    {
+      "name": "SavedViewMenu / SectionTitle / FadeIn",
+      "category": "data-display / ui / motion",
+      "owner": ["@/components/data-display", "@/components/ui", "@/components/motion"],
+      "props": ["route", "currentQuery", "onApply", "delay", "children"],
+      "usedBy": ["EfficiencyPage"],
+      "evidence": "web\\src\\features\\driving\\pages\\EfficiencyPage.tsx:77-116"
+    },
+    {
+      "name": "EfficiencyEvidenceBrief / DrivingSummaryBrief",
+      "category": "domain adapters to OperationalBrief",
+      "owner": ["web\\src\\features\\driving\\components\\operationalbrief-a-m\\EfficiencyEvidenceBrief.tsx", "web\\src\\features\\driving\\components\\operationalbrief-a-m\\DrivingSummaryBrief.tsx"],
+      "props": ["StatsPresentation", "kind:kpis|insights", "metrics", "scope", "provenance", "preferences", "loading", "error", "retained", "onRetry", "statusLabel"],
+      "usedBy": ["Key metrics", "Energy insights"],
+      "dependsOn": ["efficiencyMetrics", "useOperationalMetrics", "OperationalBrief", "EfficiencySource", "GlossaryTerm"],
+      "evidence": ["web\\src\\features\\driving\\pages\\EfficiencyPage.tsx:84,114", "web\\src\\features\\driving\\components\\operationalbrief-a-m\\EfficiencyEvidenceBrief.tsx:15-69"]
+    },
+    {
+      "name": "EfficiencyOverview",
+      "category": "domain presentation",
+      "owner": "web\\src\\features\\driving\\components\\efficiency-modernization\\EfficiencyOverview.tsx",
+      "props": ["StatsPresentation"],
+      "usedBy": ["Overview"],
+      "dependsOn": ["LayoutCard", "EfficiencySource", "LinearGauge", "MetricBar", "MetricCard"],
+      "evidence": "web\\src\\features\\driving\\components\\efficiency-modernization\\EfficiencyOverview.tsx:11-59"
+    },
+    {
+      "name": "EfficiencyChart",
+      "category": "domain adapter to canonical ChartCard",
+      "owner": "web\\src\\features\\driving\\components\\efficiency-modernization\\EfficiencyChart.tsx",
+      "props": ["ChartContainerProps", "source", "data", "dataColumns", "ariaLabel", "annotations", "empty", "children"],
+      "usedBy": ["EfficiencyTrend", "EfficiencySpeedDistribution", "EfficiencyScatter: speed", "EfficiencyScatter: temperature"],
+      "dependsOn": ["ChartCard", "useCardPlacement", "containerPolicy", "StaleRefreshWarning"],
+      "evidence": "web\\src\\features\\driving\\components\\efficiency-modernization\\EfficiencyChart.tsx:17-41",
+      "behavior": "Forwards children through props into ChartCard; exportable and toolbar default true; responsive chart height derives from allocated placement. Shared toolbar implementations not inspected."
+    },
+    {
+      "name": "EfficiencySource",
+      "category": "domain source-state adapter",
+      "owner": "web\\src\\features\\driving\\components\\efficiency-modernization\\EfficiencySource.tsx",
+      "props": ["state", "loading", "malformed", "available", "label", "emptyMessage", "emptyContent", "children"],
+      "usedBy": ["EfficiencyOverview", "EfficiencyTemperatureTable", "EfficiencyEvidenceBrief"],
+      "dependsOn": ["ErrorDisplay", "Skeleton", "StaleRefreshWarning", "EmptyState"],
+      "evidence": "web\\src\\features\\driving\\components\\efficiency-modernization\\EfficiencySource.tsx:18-39"
+    },
+    {
+      "name": "EfficiencyTemperatureTable",
+      "category": "domain adapter to DataTable",
+      "owner": "web\\src\\features\\driving\\components\\efficiency-modernization\\EfficiencyTemperatureTable.tsx",
+      "props": ["DrivesPresentation", "tableId:driving:efficiency-temp-buckets", "variant:embedded", "compact", "pagination", "mobileColumns", "mobilePresentation"],
+      "usedBy": ["Temperature breakdown"],
+      "dependsOn": ["DataTable", "LayoutCard", "EfficiencySource", "Text", "useNumberFormatting"],
+      "evidence": "web\\src\\features\\driving\\components\\efficiency-modernization\\EfficiencyTemperatureTable.tsx:35-66"
+    }
+  ],
+  "duplicatedPatterns": [
+    {
+      "pattern": "Four charts already share one source-aware canonical chart-frame adapter.",
+      "evidence": "web\\src\\features\\driving\\components\\efficiency-modernization\\EfficiencyChart.tsx:17-41",
+      "decision": "Reuse EfficiencyChart and shared ChartCard; do not add another chart-state or toolbar engine."
+    },
+    {
+      "pattern": "Summary metrics deliberately recur in KPI and energy-insight contexts.",
+      "evidence": "web\\src\\features\\driving\\components\\efficiency-modernization\\metrics.ts:22-48",
+      "decision": "Keep eight KPI and six insight occurrences; shared metric derivation already exists. Repeated CO2/distance/top-speed/cost are preserved content, not deletion candidates."
+    },
+    {
+      "pattern": "Source-state notices and errors are repeated across source-dependent sections.",
+      "evidence": ["web\\src\\features\\driving\\components\\efficiency-modernization\\EfficiencySource.tsx:18-39", "web\\src\\features\\driving\\components\\efficiency-modernization\\EfficiencyChart.tsx:23-41"],
+      "decision": "Existing domain adapters separate chart and non-chart rendering. No evidence from this single page warrants a new global source-state composite."
+    }
+  ],
+  "responsive": {
+    "sourceEvidence": [
+      "Page uses min-w-0 sections and three CardGrid placements with third/half sizes: EfficiencyPage.tsx:83-115.",
+      "Saved-view action wraps with responsive gaps: EfficiencyPage.tsx:76-77.",
+      "EfficiencyChart.tsx:22-23,31-33 derives both chart heights from allocated placement policy; plots use ResponsiveContainer.",
+      "EfficiencyTemperatureTable.tsx:57-64 specifies range/count/intensity mobile summary with hidden reciprocal-economy/distance/speed roles. Comment states the existing details modal retains all columns; shared modal behavior was not inspected."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\driving\\components\\efficiency-modernization\\EfficiencyTemperatureTable.tsx",
+        "line": 57,
+        "rule": "MDC-023/MDC-043",
+        "detail": "Three of six values are hidden from the mobile summary. Preservation depends on the shared all-column details path; source comment is not proof of mounted reachability.",
+        "fix": "Exercise existing row details at narrow widths and ensure reciprocal economy, distance and average speed remain reachable; reuse DataTable, not a parallel mobile table.",
+        "owner": "integration",
+        "confidence": "high for configuration; runtime unknown"
+      }
+    ],
+    "verifiedViewports": [],
+    "unverifiedViewports": [320, 375, 390, 430, 768, 1024, 1280, 1440, 1920, 2560]
+  },
+  "accessibility": {
+    "sourceEvidence": [
+      "Four localized section aria-labels: EfficiencyPage.tsx:83,89,99,110.",
+      "All four chart occurrences provide localized ariaLabel and explicit dataColumns: EfficiencyTrend.tsx:15-21; EfficiencySpeedDistribution.tsx:16-22; EfficiencyScatter.tsx:18-27.",
+      "Six-column table uses DataTable and role typography rather than raw HTML controls: EfficiencyTemperatureTable.tsx:38-64.",
+      "Retry callbacks are wired in EfficiencySource.tsx:22,28,34,39 and EfficiencyChart.tsx:34."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\driving\\components\\efficiency-modernization\\EfficiencyTrend.tsx",
+        "line": 29,
+        "rule": "MDC-013/MDC-040",
+        "detail": "Axis labels use explicit 9px/10px sizes; speed distribution repeats this at lines 27-28 and scatters use 10px at lines 35-37. Small labels are a readability risk, not a measured contrast or accessibility failure.",
+        "fix": "Use existing chart typography policy and verify long localized labels, 200% text, accessible data tables and small allocated widths.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ],
+    "keyboard": "unverified",
+    "focus": "unverified",
+    "screenReader": "unverified",
+    "contrast": "unverified",
+    "forcedColors": "unverified",
+    "reducedMotion": "FadeIn is reused; actual reduced-motion and chart animation behavior unverified."
+  },
+  "states": {
+    "initialLoading": "Queries feed PageLayout; each domain source has skeleton/loading handling without hiding section shells.",
+    "empty": "Temperature table and distribution test zero eligible rows; trend requires three observations; scatters require four. KPI source includes ActionableEmptyState analytics.efficiency.",
+    "error": "Per-source fatal and malformed states use ErrorDisplay or ChartCard error props with retry; no page-wide data conditional.",
+    "partial": "Finite measurement inspections mark missing fields/invalid rows partial; partial warnings keep available observations.",
+    "staleAndRefresh": "StaleRefreshWarning receives DataState; OperationalBrief receives retained when stale or refreshError is present.",
+    "offline": "Delegated to existing DataState and shared frames; no independent offline simulation or source inspection of that infrastructure.",
+    "unknown": "Missing finite stats and absent observations use null or em dash, not fabricated zero measurements.",
+    "disabled": "Both driving queries disabled without a vehicle; source empty/unknown paths exist but mounted no-vehicle UX unverified.",
+    "issues": [
+      {
+        "file": "web\\src\\api\\hooks\\useDriving.ts",
+        "line": 125,
+        "rule": "MDC-026/MDC-046",
+        "detail": "safeArray converts null and non-array payloads to []; page inspectDrives therefore cannot distinguish malformed response from resolved empty history despite its malformed presentation branch.",
+        "fix": "Provide validated source-envelope evidence through the existing driving data owner without mutating raw query data or breaking existing list consumers; distinguish malformed, unavailable and actual empty.",
+        "owner": "integration",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\driving\\components\\efficiency-modernization\\EfficiencyTrend.tsx",
+        "line": 22,
+        "rule": "MDC-026/MDC-034",
+        "detail": "One or two valid trend points are marked empty; EfficiencyScatter.tsx:28 similarly marks one to three observations empty. Tables receive data props, but whether below-threshold observations remain accessible depends on shared frame behavior.",
+        "fix": "Preserve exact thresholds unless separately authorized; verify insufficient-sample messaging and accessible/exportable underlying observations rather than dropping sparse data.",
+        "owner": "integration",
+        "confidence": "high for thresholds; access behavior unknown"
+      }
+    ]
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\driving\\components\\efficiency-modernization\\model.ts",
+      "line": 15,
+      "rule": "MDC-010/MDC-034 / mission 43",
+      "detail": "Local efficiency ramp hardcodes fluorescent green #39ff14 and neon cyan #00f0ff. Overview independently hardcodes cyan/emerald/purple/amber bars at lines 37,42,47,52; trend hardcodes cyan gradient/stroke at lines 27,33; scatters hardcode amber/purple at line 39. These are source-confirmed neon/saturation inputs, not a rendered visual verdict.",
+      "fix": "Reuse restrained existing palette/semantic color ownership while retaining meaningful intensity thresholds, series distinctions and explicitly saved chart palette preferences. Do not create a new color engine.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\features\\driving\\pages\\EfficiencyPage.tsx",
+      "line": 35,
+      "rule": "MDC-032 / full-range query ownership",
+      "detail": "Workspace range is read at line 37 but never sent to useDrives. Model filters only the fetched default page, while query key omits range. Older/custom ranges can be empty or incomplete despite available backend history. Lifetime stats are explicitly independent and must not be silently range-filtered.",
+      "fix": "Pass both instants into an existing typed bounded driving-history contract and obtain all required observations through the existing data owner; describe sample scope honestly. Preserve vehicle scope, lifetime summary, query cancellation and date semantics.",
+      "owner": "integration",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\driving\\components\\efficiency-modernization\\EfficiencySpeedDistribution.tsx",
+      "line": 31,
+      "rule": "MDC-034/MDC-045",
+      "detail": "efficiencyColor expects Wh/km thresholds, but speedDist.avgEff is already converted into display Wh/mi or Wh/km in model.ts:141-145. Changing distance preference can change a bucket's semantic color for the same measurements.",
+      "fix": "Retain an unrounded source intensity for classification and convert only its displayed measurement; preserve thresholds and the exported efficiencyColor helper identity.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\driving\\components\\efficiency-modernization\\model.ts",
+      "line": 92,
+      "rule": "MDC-032/MDC-026",
+      "detail": "Missing or invalid drive dates are admitted even when a workspace range is selected. Partial inspection warns about dates, but selected-period series may include unknown-date observations.",
+      "fix": "Make unknown-date inclusion explicit in source scope and preserve existing behavior until a source-owner decision defines ranged eligibility; do not silently delete rows during cosmetic modernization.",
+      "owner": "integration",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\driving\\components\\efficiency-modernization\\metrics.ts",
+      "line": 17,
+      "rule": "MDC-033/MDC-045",
+      "detail": "Estimated cost/km uses fixed 0.12 multiplied by Wh/km divided by 1000, while EfficiencyEvidenceBrief.tsx:46 supplies literal '$' currency preferences. No tariff/settings source is visible in this derivation.",
+      "fix": "Preserve current estimate and both occurrences; disclose the assumption through existing context/help, and have the data/settings owner verify currency/tariff semantics before any business-calculation change.",
+      "owner": "integration",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\driving\\components\\efficiency-modernization\\EfficiencyOverview.tsx",
+      "line": 4,
+      "rule": "MDC-002 category imports",
+      "detail": "Overview and temperature table import LayoutCard from layout/layout-reference; EfficiencyChart imports policy/context there. Reviewed contract exposes LayoutCard from the category barrel; internal policy exports must not be guessed.",
+      "fix": "Adopt existing category export for LayoutCard; retain concrete policy/context imports until an existing public API is confirmed. No speculative barrel change.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "priority": {
+    "level": "high",
+    "reason": "Existing component decomposition and source-state preservation are strong, but workspace sample completeness, malformed-versus-empty classification, unit-invariant color classification and fluorescent palette inputs require scoped follow-up.",
+    "order": ["source scope and data trust", "unit-invariant semantic color", "restrained existing palette adoption", "responsive and accessibility runtime verification"],
+    "runtimeAcceptance": "not claimed"
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "Driving history scope and envelope integration",
+      "existingOwnerFile": "web\\src\\api\\hooks\\useDriving.ts",
+      "propsVariantsStates": {
+        "inputs": ["vehicleId", "DriveWindow.start inclusive", "DriveWindow.end exclusive", "bounded limit and pagination as needed"],
+        "states": ["initial loading", "retained refresh failure", "resolved empty", "unavailable", "malformed", "partial"],
+        "preserve": ["AbortSignal", "raw payload measurements", "existing consumer keys/defaults unless explicitly versioned", "independent lifetime stats"]
+      },
+      "usedBy": ["EfficiencyPage drive-based charts", "EfficiencyTemperatureTable"],
+      "dependsOn": ["existing /drives endpoint bound/pagination semantics; backend implementation unverified", "safeArray evidence loss at useDriving.ts:125"],
+      "detail": "Coordinate with the existing driving data owner. Do not introduce a second query engine, modify every driving consumer, or claim the default page is a complete range.",
+      "owner": "integration",
+      "confidence": "high"
+    }
+  ],
+  "competingImplementations": [
+    {
+      "pattern": "Feature-local chart color policy alongside shared palette ownership",
+      "localOwner": "web\\src\\features\\driving\\components\\efficiency-modernization\\model.ts:14-20",
+      "existingOwner": "web\\src\\lib\\colors.ts:30-66",
+      "decision": "Reuse existing palette/settings policy; keep domain intensity thresholds local and separate from display conversion. No shared palette edit is established as necessary."
+    },
+    {
+      "pattern": "Chart, summary, table and source-state architecture",
+      "decision": "Already delegates to ChartCard, OperationalBrief, DataTable and existing feedback primitives. No new ModernCard, table controller, stats renderer or date/vehicle picker warranted by this audit."
+    }
+  ],
+  "preservation": {
+    "sourceHash": "677AC65D0911708BFDCA548667C5F9141DF2812CCA6FBBD487CB7BB7705CBAF9",
+    "currentLineCount": 120,
+    "pageAndInspectedProductionDependencyLineCount": 810,
+    "lineCountScope": "Page plus 12 consumed production dependency files listed in filesRead; excludes barrel, tests, unmounted EfficiencyStats and fixtures. No historic baseline comparison was performed.",
+    "sectionCount": 4,
+    "sectionNames": ["Key metrics", "Overview and trend", "Speed and temperature analysis", "Breakdown and insights"],
+    "sections": [
+      {"name": "Key metrics", "line": 83, "content": "Eight KPI occurrences; lifetime evidence scope/provenance; efficiency/rated_range/phantom_drain glossary strip."},
+      {"name": "Overview and trend", "line": 89, "content": "Overview gauge plus four bars; annotated daily area trend with date/intensity/distance data columns."},
+      {"name": "Speed and temperature analysis", "line": 99, "content": "Speed distribution and two separate scatter plots; retain all three identities."},
+      {"name": "Breakdown and insights", "line": 110, "content": "Six-column temperature table and six energy-insight occurrences."}
+    ],
+    "counts": {
+      "kpis": 8,
+      "energyInsights": 6,
+      "overviewGauge": 1,
+      "overviewBars": 4,
+      "charts": 4,
+      "tableColumns": 6,
+      "cardGridGroups": 3,
+      "cardGridItems": 7,
+      "glossaryTerms": 3,
+      "literalPageGlassPanelOrChartContainer": 0
+    },
+    "kpis": ["Avg consumption", "Reciprocal efficiency distance/kWh", "Avg speed", "Top speed", "CO2 saved", "Total distance", "Estimated cost/km", "Drives analyzed"],
+    "energyInsights": ["Total regen", "Regen ratio", "CO2 saved", "Total distance", "Top speed", "Estimated cost/km"],
+    "tableColumns": ["Temperature range", "Drives", "Average consumption", "Distance/kWh", "Total distance", "Average speed"],
+    "actions": [
+      "Saved view apply and existing SavedViewMenu capabilities through route/currentQuery/onApply; menu internals unverified.",
+      "PageLayout dataSources for summary and drive history; preserve shared source/recovery actions.",
+      "Independent per-source retry callbacks.",
+      "Four charts retain exportable=true, toolbar=true, ariaLabel and dataColumns contracts; actual toolbar actions unverified.",
+      "Daily trend annotation identity efficiency-daily-trend, scope efficiency, selected vehicle.",
+      "Temperature DataTable compact pagination, stable tableId, mobile summaries and complete-row details contract.",
+      "GlossaryTerm interactions and ActionableEmptyState guidance analytics.efficiency.",
+      "Header-owned vehicle and date range; no duplicated local scope controls.",
+      "Public efficiencyColor and getEfficiency re-exports."
+    ],
+    "dataBehavior": [
+      "No source/cache mutation; Drive SI values remain meters/Wh/m/s/Celsius, summary legacy frontend units remain explicit pending backend verification.",
+      "Lifetime stats independent of range-filtered observations, with existing period captions.",
+      "Energy intensity eligibility: distance at least 1000 meters and finite positive consumed energy; zero/missing energy is not zero intensity.",
+      "Current half-open range filtering and existing unknown-date admission; fix scope through integration rather than accidental deletion.",
+      "Trend uses newest 30 eligible returned drives reversed, per-drive date labels rather than a synthesized daily aggregate; threshold three observations.",
+      "Separate speed/temperature scatters round display coordinates/intensity; threshold four observations.",
+      "Speed bucket boundaries 0-30,30-60,60-90,90-120,120+ use selected display-speed units; unweighted mean contributing-drive intensity.",
+      "Temperature buckets use Celsius boundaries 0,10,20,30 regardless of displayed F/C labels; keep count, mean intensity, total distance and unknown mean speed when any speed is missing.",
+      "Summary regen ratio multiplies 0-1 by 100; energy insight retains Wh source with display conversion.",
+      "Reciprocal economy, CO2 estimate and fixed-assumption cost remain specialist measurements, not replacement generic fake values.",
+      "Keep null/em dash, partial warnings, retained-data behavior, malformed errors and section shells."
+    ]
+  },
+  "evidenceLimits": {
+    "method": "Read-only mounted-page source audit and directly relevant dependency slices; no browser or application server invoked.",
+    "runtime": "unverified",
+    "visual": "unverified",
+    "keyboard": "unverified",
+    "contrast": "unverified",
+    "viewport": "unverified",
+    "backend": "Only /drives and /drives/stats registration inspected; SQL, bound handling, returned JSON units, defaults and aggregate scope unverified.",
+    "sharedInternals": "Global layout, ChartCard, DataTable details/export, saved-view persistence, DataState internals, authentication, catalogs and shell not audited.",
+    "noiseScope": "Scoped page regex found zero inline styles, raw forbidden controls, direct chart/map/motion imports, white/neon text or glow classes. Consumed domain presenters contain fluorescent hex inputs. No explicit glow/pure-white decoration was identified in inspected domain source; composed shared visuals remain unknown.",
+    "validation": [
+      {"command": "Get-FileHash 'web\\src\\features\\driving\\pages\\EfficiencyPage.tsx' -Algorithm SHA256", "exitCode": 0, "output": "677AC65D0911708BFDCA548667C5F9141DF2812CCA6FBBD487CB7BB7705CBAF9"},
+      {"command": "Scoped PowerShell line counts and regex matches against EfficiencyPage.tsx", "exitCode": 0, "output": "120 lines; style= 0; forbidden raw controls 0; direct recharts/react-leaflet/framer-motion imports 0; white/neon text or glow 0; section 4; CardGrid 3; literal GlassPanel/ChartContainer 0"},
+      {"command": "npx tsc --noEmit / full lint / build / audit-violations audit.sh", "exitCode": null, "output": "NOT RUN: atomic Phase0 source-only assignment forbids project-wide validation; inspected skill script includes project TypeScript, so it was not executed."}
+    ],
+    "ownedFiles": ["docs\\frontend-audits\\audit-page-115.json", ".agent-status\\audit-page-115.txt"],
+    "sourceEdits": "none",
+    "historicalAcceptance": "No historical receipts used as current runtime proof."
+  },
+  "filesRead": [
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\driving\\pages\\EfficiencyPage.tsx",
+    "web\\src\\features\\driving\\components\\efficiency-modernization\\index.ts",
+    "web\\src\\features\\driving\\components\\efficiency-modernization\\model.ts",
+    "web\\src\\features\\driving\\components\\efficiency-modernization\\metrics.ts",
+    "web\\src\\features\\driving\\components\\efficiency-modernization\\types.ts",
+    "web\\src\\features\\driving\\components\\efficiency-modernization\\EfficiencyOverview.tsx",
+    "web\\src\\features\\driving\\components\\efficiency-modernization\\EfficiencyTrend.tsx",
+    "web\\src\\features\\driving\\components\\efficiency-modernization\\EfficiencySpeedDistribution.tsx",
+    "web\\src\\features\\driving\\components\\efficiency-modernization\\EfficiencyScatter.tsx",
+    "web\\src\\features\\driving\\components\\efficiency-modernization\\EfficiencyTemperatureTable.tsx",
+    "web\\src\\features\\driving\\components\\efficiency-modernization\\EfficiencyChart.tsx",
+    "web\\src\\features\\driving\\components\\efficiency-modernization\\EfficiencySource.tsx",
+    "web\\src\\features\\driving\\components\\operationalbrief-a-m\\EfficiencyEvidenceBrief.tsx",
+    "web\\src\\features\\driving\\components\\operationalbrief-a-m\\DrivingSummaryBrief.tsx",
+    "web\\src\\api\\hooks\\useDriving.ts",
+    "web\\src\\types\\driving.ts",
+    "web\\src\\lib\\safeArray.ts",
+    "web\\src\\lib\\drivesAggregation.ts",
+    "web\\src\\lib\\colors.ts",
+    "web\\src\\lib\\workspaceScope.ts",
+    "internal\\api\\router.go"
+  ]
+}

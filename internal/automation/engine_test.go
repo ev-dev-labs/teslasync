@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"testing"
 	"time"
 
@@ -45,6 +46,40 @@ func TestAutomationRuntimeDispatchesTypedTriggerConditionAndAction(t *testing.T)
 			&models.AutomationAction{StepID: 73, CommandName: "lock", CommandParams: json.RawMessage(`{}`)},
 		},
 	}
+
+	t.Run("CanonicalWaitConfigConstruction", func(t *testing.T) {
+		for _, payload := range []any{
+			models.AutomationStepActionWait{StepID: 5, DurationS: 30},
+			&models.AutomationStepActionWait{StepID: 5, DurationS: 30},
+		} {
+			configs, err := buildTypedActionConfigs([]any{
+				&models.AutomationAction{CommandName: "cabin_overheat_protection_on"},
+				&models.AutomationAction{CommandName: "hvac_on"},
+				payload,
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(configs) != 3 || configs[0].Type != "command" || configs[1].Type != "command" || configs[2].Type != "wait" {
+				t.Fatalf("configs = %#v", configs)
+			}
+			wait, ok := configs[2].Payload.(*models.AutomationStepActionWait)
+			if !ok || wait.DurationS != 30 || wait.StepID != 5 {
+				t.Fatalf("typed payload = %#v", configs[2].Payload)
+			}
+			if strings.Contains(string(configs[2].Raw), "duration_seconds") {
+				t.Fatal("legacy wait JSON bridge used")
+			}
+		}
+		for _, payload := range []any{
+			(*models.AutomationStepActionWait)(nil),
+			models.AutomationStepActionWait{DurationS: 3601},
+		} {
+			if _, err := buildTypedActionConfigs([]any{payload}); err == nil {
+				t.Fatal("invalid wait config accepted")
+			}
+		}
+	})
 
 	executor := &typedActionRecorder{}
 	chain := action.NewChainExecutor(nil)
@@ -98,6 +133,69 @@ func TestAutomationRuntimeRejectsLegacyTriggerPayloadBridge(t *testing.T) {
 
 type runtimeAutomationStore struct {
 	automation *models.AutomationFull
+}
+
+func TestAutomationRuntimeWeekdayGateSkipsActions(t *testing.T) {
+	now := time.Now().UTC()
+	clock := time.Date(0, 1, 1, 0, 0, 0, 0, time.UTC)
+	automation := &models.AutomationFull{
+		Automation: models.Automation{ID: 9, Name: "Weekday gate", Enabled: true},
+		Steps: []models.AutomationStep{
+			{ID: 91, AutomationID: 9, StepOrder: 1, Kind: models.AutomationStepKindTriggerGeofence},
+			{ID: 92, AutomationID: 9, StepOrder: 2, Kind: models.AutomationStepKindConditionTimeWindow},
+			{ID: 93, AutomationID: 9, StepOrder: 3, Kind: models.AutomationStepKindActionCommand},
+		},
+		Triggers: []any{&models.AutomationStepTriggerGeofence{StepID: 91, PlaceID: 1, Event: "enter"}},
+		Conditions: []any{&models.AutomationStepConditionTimeWindow{
+			StepID: 92, StartTime: clock, EndTime: clock,
+			DaysOfWeek: []int16{int16((int(now.Weekday()) + 3) % 7)},
+		}},
+		Actions: []any{&models.AutomationAction{StepID: 93, CommandName: "lock"}},
+	}
+	executor := &typedActionRecorder{}
+	chain := action.NewChainExecutor(nil)
+	chain.Register("command", executor)
+	history := &runtimeHistoryStore{}
+	engine := NewEngine(&runtimeAutomationStore{automation: automation}, history, chain)
+	if err := engine.Evaluate(context.Background(), automation.ID, json.RawMessage(`{"kind":"trigger_geofence"}`)); err != nil {
+		t.Fatal(err)
+	}
+	if executor.typedCalled || executor.rawCalled {
+		t.Fatal("wrong weekday executed an action")
+	}
+	if history.created == nil || history.created.Status != "skipped" {
+		t.Fatalf("history = %#v, want skipped", history.created)
+	}
+}
+
+func TestAutomationTypedWeekdayCondition(t *testing.T) {
+	clock := time.Date(0, 1, 1, 0, 0, 0, 0, time.UTC)
+	engine := &Engine{}
+	now := time.Date(2026, 10, 6, 1, 0, 0, 0, time.UTC)
+	for _, tt := range []struct {
+		name, timezone, want string
+		days                 []int16
+	}{
+		{"UTC Tuesday allowed", "", "met", []int16{1, 2}},
+		{"UTC Tuesday rejected", "", "not_met", []int16{1}},
+		{"local Monday allowed", "America/Los_Angeles", "met", []int16{1}},
+		{"local Tuesday rejected", "America/Los_Angeles", "not_met", []int16{2}},
+		{"unrestricted", "", "met", nil},
+		{"invalid timezone", "Mars/Olympus", "unknown", nil},
+		{"invalid day", "", "unknown", []int16{7}},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			c := models.AutomationStepConditionTimeWindow{
+				StartTime: clock, EndTime: clock, Timezone: tt.timezone, DaysOfWeek: tt.days,
+			}
+			for _, payload := range []any{c, &c} {
+				result := engine.evaluateTypedCondition(0, payload, &models.AutomationFull{}, now)
+				if result.Result != tt.want {
+					t.Fatalf("payload %T: result = %#v, want %s", payload, result, tt.want)
+				}
+			}
+		})
+	}
 }
 
 func (s *runtimeAutomationStore) GetByID(_ context.Context, id int64) (*models.AutomationFull, error) {

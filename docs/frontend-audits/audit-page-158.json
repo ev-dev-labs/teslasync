@@ -1,0 +1,270 @@
+{
+  "item": "audit-page-158",
+  "page": "web\\src\\features\\ownership\\pages\\JurisdictionCompliancePage.tsx",
+  "routes": ["/ownership/jurisdiction-compliance"],
+  "purpose": "Vehicle-specific jurisdiction apportionment worksheet, user-maintained jurisdiction rates, sealed period records, and provenance review. Not a tax return or authority submission.",
+  "primaryGoal": "Cross-check recorded distance, liability and attributed emissions against configured jurisdiction bounding boxes, then preserve a chosen business period as an immutable filing record.",
+  "dataSources": [
+    {
+      "hook": "useComplianceApportionment",
+      "file": "web\\src\\api\\hooks\\useOwnership.ts",
+      "line": 602,
+      "endpoints": ["GET /api/v1/jurisdiction-compliance?vehicle_id={id}&window_days={days}"],
+      "owner": "ownership intelligence API/service",
+      "evidence": "internal\\api\\router.go:3918 delegates MountRoutes; internal\\handler\\v1\\ownershipintel\\handler.go:166-172 registers all six method/path pairs. The apportionment nested GET is registered as '/'; slash normalization was not exercised.",
+      "behavior": "Positive selected vehicle enables the query; default page window is 90 days, choices 30/90/180/365. Query key includes vehicle and window. Shared vehicle query forwards AbortSignal."
+    },
+    {
+      "hook": "useJurisdictionRates, useCreateJurisdictionRate, useDeleteJurisdictionRate",
+      "file": "web\\src\\api\\hooks\\useOwnership.ts",
+      "line": 610,
+      "endpoints": ["GET /api/v1/jurisdiction-compliance/rates", "POST /api/v1/jurisdiction-compliance/rates", "DELETE /api/v1/jurisdiction-compliance/rates/{id}"],
+      "owner": "ownership intelligence API/service; authenticated subject-owned rates",
+      "behavior": "Rate read is independent of selected vehicle and cancellable. Writes invalidate ownershipKeys.all and emit existing localized toasts. DELETE has page-owned danger confirmation."
+    },
+    {
+      "hook": "useComplianceFilings, useCreateFiling",
+      "file": "web\\src\\api\\hooks\\useOwnership.ts",
+      "line": 650,
+      "endpoints": ["GET /api/v1/jurisdiction-compliance/filings?vehicle_id={id}&limit=50&offset=0", "POST /api/v1/jurisdiction-compliance/filings"],
+      "owner": "ownership intelligence API/service",
+      "behavior": "Vehicle-scoped cancellable read. Sealing sends business period instants, vehicle_id and confirmed:true; success closes editor and invalidates ownership queries. No external legal submission is exposed or exercised."
+    },
+    {
+      "hook": "useSelectedVehicle, useUnits, useNumberFormatting, useDataState, useOperationalMetrics",
+      "file": "web\\src\\features\\ownership\\pages\\JurisdictionCompliancePage.tsx",
+      "line": 51,
+      "endpoints": [],
+      "owner": "existing workspace, saved display preferences, shared trust and metric infrastructure",
+      "behavior": "Distance m and energy Wh stay raw in hooks/types; display conversions occur in cells and shared metrics. Monetary payloads remain ISO minor units. No legacy unit converters or direct fetch present in the inspected page."
+    }
+  ],
+  "components": [
+    {"name": "PageLayout", "owner": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx", "role": "Existing full-width page adapter to PageContainer; inherits page freshness badge."},
+    {"name": "OwnershipPanel", "owner": "web\\src\\features\\ownership\\components\\OwnershipPanel.tsx", "role": "Existing domain adapter to LayoutCard and SourceContent; persistent shells, source-local loading/fatal/empty/retained states, editor policy and recovery."},
+    {"name": "OperationalBrief and complianceSummary", "owner": "web\\src\\features\\ownership\\components\\statstrip-compliance\\complianceSummaryMetrics.ts", "role": "Six source-backed metrics with recorded window, mixed/unknown currency withholding, display-only mass/currency conversion and missing reasons."},
+    {"name": "DataTable", "owner": "web\\src\\components\\ui\\DataTable.tsx", "role": "Three existing tables; owns loaded-row search/export and column persistence. Mobile presentation and sorting require explicit caller adapters."},
+    {"name": "Input, Select, Button, Badge, ConfirmDialog, Text", "owner": "existing @/components/ui category", "role": "Shared form, confirmation, status and typography primitives; no raw prohibited controls in page."},
+    {"name": "EvidencePanel, MoneyInput, MutationError", "owner": "web\\src\\features\\ownership\\components", "role": "Reusable domain evidence trailer, minor-unit form and inline mutation error banner."},
+    {"name": "AlertBanner and FadeIn", "owner": "existing feedback and motion categories", "role": "Permanent worksheet/legal warning and existing entrance transitions; reduced-motion implementation not inspected or exercised."}
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\ownership\\pages\\JurisdictionCompliancePage.tsx",
+      "line": 123,
+      "rule": "MDC-002/MDC-023",
+      "detail": "Three page-local column collections and repeated currency/distance/energy cell formatting use the existing DataTable owner. Do not introduce a parallel compliance table pipeline.",
+      "fix": "Retain one DataTable owner; optionally extract bounded page-specific typed columns/editors while preserving all columns, table IDs and canonical export values.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "responsive": {
+    "verified": "source only",
+    "observations": ["Rate form stacks then uses md two columns / xl four columns (page:467). Filing form stacks then md three columns (page:644). Evidence uses lg three columns (EvidencePanel:58). PageLayout retains w-full/min-w-0 and container scope (PageLayout:12)."],
+    "issues": [
+      {
+        "file": "web\\src\\features\\ownership\\pages\\JurisdictionCompliancePage.tsx",
+        "line": 421,
+        "rule": "MDC-023/MDC-031/MDC-043 preservation",
+        "detail": "All three tables supply restrictive mobileColumns (421,606,683) without mobilePresentation or row expansion. DataTable:504-505 only enables full mobile presentation when supplied, and 725 hides excluded cells below md. Mobile rate rows omit the Remove action, grid intensity and bounding box; apportionment omits distance, drives, energy, charges, registration and emissions; filings omit distance, energy and seal. This is source-confirmed hiding, not measured viewport acceptance.",
+        "fix": "Adopt the existing typed DataTable mobile presentation/details contract, preserving every field and Remove action; do not merely delete mobile allow-lists without checking narrow-width containment.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ],
+    "unverifiedWidths": [320,375,390,430,768,1024,1280,1440,1920,2560]
+  },
+  "accessibility": {
+    "verified": "source only",
+    "observations": ["Analysis Select has localized aria-label (366). Inputs have localized labels and native constraints. Decorative icons explicitly aria-hidden. Delete uses shared useConfirm/ConfirmDialog. Confidence includes numeric percentage rather than color alone."],
+    "issues": [
+      {
+        "file": "web\\src\\features\\ownership\\pages\\JurisdictionCompliancePage.tsx",
+        "line": 629,
+        "rule": "MDC-040 disclosure semantics",
+        "detail": "Rate and filing toggle buttons (451,629) expose Add/Cancel labels but no aria-expanded or aria-controls relationship to their conditional inline forms.",
+        "fix": "Add stable caller-owned form container IDs and matching disclosure attributes to existing Buttons, retaining cancel/draft behavior.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ],
+    "unverified": ["Keyboard order and focus after opening/closing editors or confirmation", "Screen-reader table and disclosure behavior", "44px effective targets", "Effective contrast in light/dark/custom themes", "Forced colors", "Reduced motion", "RTL and 200% text"]
+  },
+  "states": {
+    "observations": [
+      "All six panel shells remain mounted. OwnershipPanel:41-47 distinguishes disabled, editing, fatal, loading, stale retained and empty. SourceContent:39-72 provides skeleton/status, error recovery, empty body and retained-data retry.",
+      "PageLayout query array provides shared page-tier freshness, with report-specific stale label and last update in the brief. Rates/filings errors do not replace independent report panels.",
+      "Array nulls normalize to [] at page:104-106. Mutations have pending states and inline MutationError; toast handling remains in hooks.",
+      "No vehicle disables report/filing reads and seal submit; rates remain available. Disabled report panels fall back to generic empty copy rather than specific vehicle selection guidance."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\ownership\\pages\\JurisdictionCompliancePage.tsx",
+        "line": 382,
+        "rule": "MDC-026/MDC-033 missing-state preservation",
+        "detail": "Period liability sets empty={!report} without preserveSummary. OwnershipPanel:50-65 replaces children with skeleton/empty/error, so complianceSummary's six missing metrics, unknown period and unknown currency explanations are not shown on those states. Existing preserveSummary API already supports keeping the source-backed summary; this is not a claim that available data are fabricated.",
+        "fix": "Use the existing preserveSummary policy where appropriate and explicitly review no-vehicle/initial/fatal/empty states; preserve missing reasons without presenting stale or unknown data as current.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ],
+    "unverified": ["Actual initial loading", "Resolved empty responses", "Retained refresh failure", "Offline reconnect and retry", "Partial payloads", "Mutation recovery"]
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\ownership\\pages\\JurisdictionCompliancePage.tsx",
+      "line": 355,
+      "rule": "MDC-010/MDC-012/MDC-013",
+      "detail": "Seal metadata and period digest (page:703) use fixed text-cyan-300 and ad-hoc text-xs/text-sm; jurisdiction icons also use cyan (130). Seven fixed accent-class occurrences include semantic liability/confidence coloring, which must not be indiscriminately removed. These are toned-down accents, not literal neon classes, but metadata colors bypass theme text roles.",
+      "fix": "Use existing Code/Text and neutral semantic text tokens for fingerprints/metadata; retain subdued warning/success/error meanings for liability/confidence with real contrast validation.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\ownership\\components\\EvidencePanel.tsx",
+      "line": 136,
+      "rule": "MDC-010/MDC-015",
+      "detail": "Evidence cards use fixed border-white and bg-white opacity surfaces; cyan icon accents occur at 64/126. Domain-wide light/custom-theme suitability is not established by source.",
+      "fix": "Owner of the reused evidence component should replace decorative fixed-white surfaces with existing neutral surface/border tokens; preserve source details, quality and unsupported/legal notices.",
+      "owner": "shared",
+      "confidence": "high"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\features\\ownership\\pages\\JurisdictionCompliancePage.tsx",
+      "line": 76,
+      "rule": "MDC-032 workspace range ownership",
+      "detail": "A locally-owned windowDays Select controls apportionment, while /ownership/jurisdiction-compliance is absent from RANGE_ENABLED_PATHS (workspaceScope:23-77); no useRangeState is consumed. useComplianceApportionment:602-607 sends only window_days, not two instant bounds. This is a workspace integration gap, not a duplicate visible header date picker. Business filing dates are independently legitimate and must remain.",
+      "fix": "Coordinate the shared route-scope/hook/server extension to accept both workspace bounds with timezone/rolling/custom semantics before page adoption. Keep current 90-day default and 30/90/180/365 choices until a preservation-safe policy is agreed; do not client-filter the current response.",
+      "owner": "integration",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\ownership\\pages\\JurisdictionCompliancePage.tsx",
+      "line": 78,
+      "rule": "MDC-023 complete results",
+      "detail": "Filings fetch only limit=50 offset=0. The page passes items but never total, paginationControls, offset state or load-more. Later records are unreachable through this page, and default table exports cover loaded records rather than the entire server result.",
+      "fix": "Wire existing server pagination/total and explicitly labeled loaded/full-result export scope; do not invent an unsupported full-result endpoint.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\ownership\\pages\\JurisdictionCompliancePage.tsx",
+      "line": 156,
+      "rule": "MDC-023 table interaction",
+      "detail": "Apportionment distance/roadUsage/liability and filing period declare sortable:true, but their DataTable calls provide neither onSort nor sortKey. DataTable:1557 renders a sort button only with onSort; no page sorting adapter exists.",
+      "fix": "Use the existing controlled sorting helper with canonical typed accessors (distance_m, road_usage_charge_minor, total_liability_minor, period_start), retaining source ordering and table persistence policies.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\ownership\\formatters.ts",
+      "line": 52,
+      "rule": "MDC-044 saved locale",
+      "detail": "formatPricePerDistance defaults its separate locale argument to en-US, while page:254/257/510 pass only units.unitPrefs. Thus rate hints/cells do not use units.locale in this formatter even though monetary amount cells explicitly do.",
+      "fix": "Pass the saved locale explicitly at page call sites or coordinate a compatible formatter-owner fix using units.locale; keep minor-unit and per-metre semantics unchanged.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\ownership\\pages\\JurisdictionCompliancePage.tsx",
+      "line": 671,
+      "rule": "MDC-040 form validation",
+      "detail": "Business-period inputs require dates but have no coupled start/end constraint or field-level validation; rate bounding-box inputs constrain individual lat/lng but do not check min<=max. Server validation and interval inclusivity were not traced beyond the handler boundary.",
+      "fix": "Add localized coupled-field feedback using current form primitives without changing server semantics; explicitly verify period end semantics before any change to UTC instants.",
+      "owner": "page",
+      "confidence": "medium"
+    }
+  ],
+  "priority": {
+    "level": "high",
+    "order": ["Restore mobile full-detail/action access", "Expose complete filings results", "Preserve source trust and missing summary context", "Coordinate workspace-range integration", "Wire sorting and locale", "Restrained theme-aware metadata and disclosure semantics"],
+    "reason": "Page is functional source-wise and already adopts shared presentation/trust owners, but mobile hiding and fixed first-page filing access affect capability preservation."
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "Workspace range integration for jurisdiction compliance",
+      "owner": "web\\src\\lib\\workspaceScope.ts",
+      "existingOwnerFile": "web\\src\\lib\\workspaceScope.ts",
+      "props": ["Register exact /ownership/jurisdiction-compliance only after bounded query integration", "Existing useRangeState startInstant/endInstantExclusive contract"],
+      "variants": ["Rolling presets", "Custom date bounds"],
+      "states": ["No vehicle", "Scope changes cancel obsolete reads", "Timezone/DST boundaries"],
+      "usedBy": ["/ownership/jurisdiction-compliance"],
+      "dependsOn": ["web\\src\\api\\hooks\\useOwnership.ts useComplianceApportionment", "internal\\handler\\v1\\ownershipintel\\handler.go ComplianceApportionment and its service accepting both bounds"],
+      "detail": "Integration-owned, outside page audit write scope. Backend currently observed consuming window_days; support for arbitrary bounds remains unknown."
+    },
+    {
+      "name": "Neutral evidence-card presentation",
+      "owner": "web\\src\\features\\ownership\\components\\EvidencePanel.tsx",
+      "existingOwnerFile": "web\\src\\features\\ownership\\components\\EvidencePanel.tsx",
+      "props": ["Retain quality/evidence/limitations/unsupported/source/sourceEnabled"],
+      "variants": ["Existing quality badge semantics, no new registry"],
+      "states": ["Unavailable quality", "Empty evidence", "Fatal source", "Retained source"],
+      "usedBy": ["/ownership/jurisdiction-compliance", "Other ownership consumers described by EvidencePanel's domain comment; not enumerated in this bounded audit"],
+      "dependsOn": ["Existing surface/border/text tokens", "OwnershipPanel and SourceContent"],
+      "detail": "Extend reused owner rather than inventing a new evidence composite. Current contrast is unmeasured."
+    }
+  ],
+  "competingImplementations": [
+    {"pattern": "Page containers/panels", "assessment": "No competing implementation proposed. PageLayout, OwnershipPanel, LayoutCard and SourceContent already own this composition."},
+    {"pattern": "Operational stats", "assessment": "complianceSummary delegates to existing OperationalBrief metric bridge; preserve its mixed-currency guard and six metrics rather than replacing it with another KPI grid."},
+    {"pattern": "Mobile tables", "assessment": "Use DataTable's existing mobilePresentation/details owner. Do not create a separate compliance card-table/export controller."}
+  ],
+  "preservation": {
+    "sourceHash": "c678c14d3a527e5f8c393a7ae31cd68028062ae047bdce0340ca4f5c31d57919",
+    "hashAlgorithm": "SHA-256",
+    "hashTarget": "web\\src\\features\\ownership\\pages\\JurisdictionCompliancePage.tsx",
+    "currentLineCount": 727,
+    "sectionNames": ["Worksheet/legal warning", "Period liability", "Apportionment by jurisdiction", "Jurisdiction rate table and editor", "Sealed filings and business-period editor", "Period digest", "Evidence, quality, and limitations"],
+    "sectionCount": 7,
+    "counts": {"OwnershipPanel": 5, "EvidencePanel": 1, "DataTable": 3, "OperationalBrief": 1, "GlassPanel": 0, "ChartContainer": 0, "summaryMetrics": 6, "apportionmentColumns": 9, "rateColumns": 6, "filingColumns": 6, "rateFields": 10, "filingDateFields": 2},
+    "actions": ["Analysis window 30/90/180/365; default 90", "Add/cancel jurisdiction editor", "Save jurisdiction", "Confirmed permanent remove jurisdiction", "Open/cancel filing editor", "Seal period with selected vehicle and confirmed:true", "Shared table search, rate value filters, column settings and loaded-row exports", "Existing source retries and mutation error recovery"],
+    "dataBehavior": [
+      "Keep all m/Wh/minor-per-m/minor-unit/g-per-Wh payloads and query/cache values unchanged; convert only for display.",
+      "Preserve SI distance/energy, confidence percentages, drive counts, currency by jurisdiction, total liability, emissions and raw digests.",
+      "Keep mixed/unknown currency withholding and missing metric reasons in complianceSummary.",
+      "Keep source-provided window, evidence arrays, quality status/reasons/coverage and unknown-versus-zero distinctions.",
+      "Preserve selected vehicle owner, cancellable queries, keys, enablement, inherited retry/cache policy and invalidation/toasts.",
+      "Retain user-entered rates, ISO currency codes, code uppercasing, bounding-box precedence explanation and endpoint/cross-border confidence explanation.",
+      "Retain UTC date round-tripping and independent filing business dates; inclusive/exclusive server semantics unverified.",
+      "Retain exact table IDs ownership-compliance-apportion, ownership-compliance-rates and ownership-compliance-filings.",
+      "Keep worksheet warning and explicit exclusions for true polygons, authority submissions and legal interpretation. No audit activity seals a filing."
+    ]
+  },
+  "evidenceLimits": {
+    "mode": "Phase 0 read-only bounded source audit",
+    "reportProtocol": "Assigned JSON did not exist at initial read. Created report from docs\\frontend-worker-conventions.md Phase 0 required schema.",
+    "runtime": "UNVERIFIED: route mount, network, interaction, visual, viewport, keyboard, screen-reader, contrast, reduced-motion and native behavior not exercised.",
+    "backend": "Verified route delegation, six registrations, query/body handler boundaries only. Service/repository calculations, authorization enforcement, arbitrary bounds, interval semantics and live endpoint slash behavior were not exercised or fully traced.",
+    "validation": "No Git, source edits, queue edits, builds, lint, tests, TypeScript or legal/production mutations. Skill audit.sh was inspected but not executed because it unconditionally invokes project TypeScript; bounded source scans used instead.",
+    "sourceScan": {"command": "Python pathlib/re source scan over exact assigned page; hashlib.sha256 over raw bytes", "exitCode": 0, "output": "inline styles: 0\nraw controls: 0\ndirect chart/map/motion imports: 0\nold API imports: 0\nfixed accent classes: 7\nGlassPanel/ChartContainer: 0\nOwnershipPanel: 5\nEvidencePanel: 1\nDataTable: 3\nsourceHash: c678c14d3a527e5f8c393a7ae31cd68028062ae047bdce0340ca4f5c31d57919\nlines: 727", "meaning": "Pattern counts only, not 0 total violations or runtime acceptance."},
+    "failedProbe": "Initial PowerShell regex counting command exited 1 with ParserError (quote escaping). Replaced with successful Python read-only counts; no source written.",
+    "ownedFiles": ["docs\\frontend-audits\\audit-page-158.json", ".agent-status\\audit-page-158.txt"],
+    "concurrency": "Hash and citations describe inspected source snapshot; no claim that concurrently owned dependencies are locked."
+  },
+  "filesRead": [
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\ownership\\pages\\JurisdictionCompliancePage.tsx",
+    "web\\src\\features\\ownership\\components\\OwnershipPanel.tsx",
+    "web\\src\\features\\ownership\\components\\EvidencePanel.tsx",
+    "web\\src\\features\\ownership\\components\\MoneyInput.tsx",
+    "web\\src\\features\\ownership\\components\\MutationError.tsx",
+    "web\\src\\features\\ownership\\components\\statstrip-compliance\\complianceSummaryMetrics.ts",
+    "web\\src\\features\\ownership\\formatters.ts",
+    "web\\src\\api\\hooks\\useOwnership.ts",
+    "web\\src\\types\\ownership.ts",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\App.tsx",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\layout\\layout-reference\\SourceContent.tsx",
+    "web\\src\\components\\layout\\PageContainer.tsx",
+    "web\\src\\components\\ui\\DataTable.tsx",
+    "internal\\api\\router.go",
+    "internal\\handler\\v1\\ownershipintel\\handler.go"
+  ]
+}

@@ -152,11 +152,13 @@ describe('vehicle management response normalization', () => {
 
   it('humanizes Tesla identifiers for display without changing source data', () => {
     expect(humanizeManagementLabel('EXTENDED_WARRANTY')).toBe(
-      'Extended Warranty',
+      'Extended warranty',
     )
     expect(humanizeManagementLabel('warrantyDisplayName')).toBe(
-      'Warranty Display Name',
+      'Warranty display name',
     )
+    expect(humanizeManagementLabel('battery_SOC_and_VIN')).toBe('Battery SOC and VIN')
+    expect(humanizeManagementLabel('SI_API_FSD_status')).toBe('SI API FSD status')
   })
 
   it('normalizes scalar specifications and role objects', () => {
@@ -171,7 +173,7 @@ describe('vehicle management response normalization', () => {
       { key: 'model', label: 'Model', value: 'Model Y' },
       {
         key: 'trim_badging',
-        label: 'Trim Badging',
+        label: 'Trim badging',
         value: 'Performance',
       },
     ])

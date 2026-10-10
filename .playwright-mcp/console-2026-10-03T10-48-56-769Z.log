@@ -1,0 +1,19 @@
+[      92ms] [WARNING] Error with Permissions-Policy header: Unrecognized feature: 'join-ad-interest-group'. @ :0
+[      92ms] [WARNING] Error with Permissions-Policy header: Unrecognized feature: 'run-ad-auction'. @ :0
+[     379ms] [INFO] 🌐 i18next is made possible by our own product, Locize — consider powering your project with managed localization (AI, CDN, integrations): https://locize.com 💙 @ http://localhost:3119/assets/vendor-i18n-DQmZ8aYw.js:0
+[     496ms] [ERROR] Applying inline style violates the following Content Security Policy directive 'style-src-elem 'self' https://fonts.googleapis.com 'sha256-eC/LYFbFX0VPdH107k2WfWKmpi4owBWgEs9oH9HVTeI=' local.adguard.org 'unsafe-inline' 'nonce-8928e7a6f1b143faad8a1019e16''. Note that 'unsafe-inline' is ignored if either a hash or nonce value is present in the source list. The action has been blocked. @ http://localhost:3119/assets/index-CFugybPV.js:1457
+[     506ms] [ERROR] Applying inline style violates the following Content Security Policy directive 'style-src-elem 'self' https://fonts.googleapis.com 'sha256-eC/LYFbFX0VPdH107k2WfWKmpi4owBWgEs9oH9HVTeI=' local.adguard.org 'unsafe-inline' 'nonce-8928e7a6f1b143faad8a1019e16''. Note that 'unsafe-inline' is ignored if either a hash or nonce value is present in the source list. The action has been blocked. @ http://localhost:3119/assets/index-CFugybPV.js:1458
+[     576ms] [ERROR] Failed to load resource: the server responded with a status of 501 (Not Implemented) @ http://localhost:3119/api/v1/admin/rbac/matrix:0
+[     599ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://localhost:3119/api/v1/system/health:0
+[     600ms] [ERROR] Failed to load resource: the server responded with a status of 501 (Not Implemented) @ http://localhost:3119/api/v1/admin/impersonate:0
+[     600ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3119/api/v1/push/public-key:0
+[     730ms] [ERROR] Failed to load resource: the server responded with a status of 501 (Not Implemented) @ http://localhost:3119/api/v1/admin/rbac/matrix:0
+[     762ms] [ERROR] Failed to load resource: the server responded with a status of 501 (Not Implemented) @ http://localhost:3119/api/v1/admin/impersonate:0
+[     763ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3119/api/v1/push/public-key:0
+[     781ms] [INFO] Banner not shown: beforeinstallpromptevent.preventDefault() called. The page must call beforeinstallpromptevent.prompt() to show the banner. @ http://localhost:3119/battery:0
+[   30744ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://localhost:3119/api/v1/system/health:0
+[   30813ms] [ERROR] Failed to load resource: the server responded with a status of 501 (Not Implemented) @ http://localhost:3119/api/v1/admin/impersonate:0
+[   30823ms] [ERROR] Failed to load resource: the server responded with a status of 501 (Not Implemented) @ http://localhost:3119/api/v1/admin/impersonate:0
+[   60765ms] [ERROR] Failed to load resource: the server responded with a status of 503 (Service Unavailable) @ http://localhost:3119/api/v1/system/health:0
+[   60839ms] [ERROR] Failed to load resource: the server responded with a status of 501 (Not Implemented) @ http://localhost:3119/api/v1/admin/impersonate:0
+[   60852ms] [ERROR] Failed to load resource: the server responded with a status of 501 (Not Implemented) @ http://localhost:3119/api/v1/admin/impersonate:0

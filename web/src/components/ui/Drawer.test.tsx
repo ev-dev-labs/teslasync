@@ -28,6 +28,8 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render, screen, fireEvent, cleanup, act } from '@testing-library/react';
 import { Drawer } from './Drawer';
+import * as motionPreference from '@/hooks/useMotionPreference';
+import { typography } from '@/lib/tokens';
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -74,7 +76,7 @@ describe('<Drawer>', () => {
       </Drawer>,
     );
     const dialog = screen.getByRole('dialog', { name: 'Drive preview' });
-    expect(dialog.className).toContain('z-[60]');
+    expect(dialog.className).toContain('z-overlay');
     expect(dialog.className).not.toContain('z-50');
     expect(getPanel().className).toContain('bottom-[var(--shell-chrome-bottom)]');
   });
@@ -143,6 +145,9 @@ describe('<Drawer>', () => {
     );
     expect(screen.getByText('Drawer body content')).toBeInTheDocument();
     expect(screen.getByTestId('drawer-footer')).toBeInTheDocument();
+    const footer = screen.getByRole('dialog').querySelector('[data-drawer-footer]');
+    expect(footer).toHaveClass('bg-[var(--surface-1)]', 'border-[var(--border-default)]');
+    expect(footer).not.toHaveClass('bg-[var(--surface-overlay)]');
 
     // Dropping the footer prop installs the standard read-only Close action.
     rerender(
@@ -368,6 +373,16 @@ describe('<Drawer>', () => {
     expect(dialog.querySelector('[data-drawer-tabs]')).toContainElement(
       screen.getByRole('tablist'),
     );
+    const eyebrow = screen.getByText('Evidence');
+    expect(eyebrow.tagName).toBe('DIV');
+    expect(eyebrow).toHaveClass(
+      typography.size['2xs'],
+      typography.weight.semibold,
+      typography.color.muted,
+      'mb-1',
+      'uppercase',
+    );
+    expect(eyebrow.className).not.toMatch(/tracking-/);
   });
 
   it('locks background scrolling while open and restores it on close', () => {
@@ -385,5 +400,99 @@ describe('<Drawer>', () => {
       </Drawer>,
     );
     expect(document.body.style.overflow).toBe('auto');
+  });
+
+  it('uses theme-aware separators and restrained elevation without backdrop blur', () => {
+    render(
+      <Drawer open onClose={vi.fn()} title="Filters" tabs={<div role="tablist">Tabs</div>}>
+        <p>Body</p>
+      </Drawer>,
+    );
+    const dialog = screen.getByRole('dialog');
+    expect(getPanel()).toHaveClass('border-[var(--border-default)]', 'shadow-e3');
+    expect(getBackdrop()).toHaveClass('bg-[var(--surface-overlay)]');
+    expect(getBackdrop()).not.toHaveClass('backdrop-blur-sm');
+    for (const slot of ['header', 'tabs', 'footer']) {
+      expect(dialog.querySelector(`[data-drawer-${slot}]`)).toHaveClass('border-[var(--border-default)]');
+    }
+    expect(dialog.innerHTML).not.toContain('border-white');
+    expect(dialog.querySelector('[data-drawer-body]')).toHaveClass('min-h-0', 'flex-1', 'overflow-y-auto');
+    expect(screen.getAllByRole('button', { name: 'Close' })[0]).toHaveClass('h-11', 'w-11');
+  });
+
+  it('keeps translated long title and description identities stable through rerenders', () => {
+    const { rerender } = render(
+      <Drawer open onClose={vi.fn()} title="Evidence" description="Freshness">
+        <p>Body</p>
+      </Drawer>,
+    );
+    const dialog = screen.getByRole('dialog');
+    const titleId = dialog.getAttribute('aria-labelledby');
+    const descriptionId = dialog.getAttribute('aria-describedby');
+    const longTitle = 'Translated evidence scope and freshness '.repeat(20);
+    rerender(
+      <Drawer open onClose={vi.fn()} title={longTitle} description="Updated source timestamp">
+        <p>Body</p>
+      </Drawer>,
+    );
+    expect(dialog).toHaveAttribute('aria-labelledby', titleId);
+    expect(dialog).toHaveAttribute('aria-describedby', descriptionId);
+    expect(screen.getByRole('heading', { name: longTitle.trim() })).toHaveClass('min-w-0', 'break-words');
+    expect(screen.getByText('Updated source timestamp')).toHaveClass('whitespace-pre-wrap', 'break-words');
+  });
+
+  it('renders reduced-motion panels at their final position without an entrance transform', () => {
+    const preference = vi.spyOn(motionPreference, 'useMotionPreference')
+      .mockReturnValue({ reduce: true, durationMs: 0 });
+    try {
+      render(
+        <Drawer open onClose={vi.fn()} title="Filters" side="left">
+          <p>Body</p>
+        </Drawer>,
+      );
+      expect(getPanel().style.transform).toBe('none');
+      expect(getBackdrop().style.opacity).toBe('1');
+      expect(getPanel()).toHaveClass('left-0', 'border-r');
+      expect(document.activeElement).toBe(screen.getAllByRole('button', { name: 'Close' })[0]);
+    } finally {
+      preference.mockRestore();
+    }
+  });
+
+  it('preserves nested Escape isolation, focus restoration and reference-counted scroll locks', () => {
+    const parentClose = vi.fn();
+    const childClose = vi.fn();
+    const { rerender } = render(
+      <Drawer open onClose={parentClose} title="Parent">
+        <button type="button">Open child</button>
+      </Drawer>,
+    );
+    const trigger = screen.getByRole('button', { name: 'Open child' });
+    act(() => trigger.focus());
+    rerender(
+      <Drawer open onClose={parentClose} title="Parent">
+        <button type="button">Open child</button>
+        <Drawer open onClose={childClose} title="Child">
+          <p>Child body</p>
+        </Drawer>
+      </Drawer>,
+    );
+    const child = screen.getByRole('dialog', { name: 'Child' });
+    const childControls = child.querySelectorAll<HTMLButtonElement>('button');
+    act(() => childControls[childControls.length - 1].focus());
+    fireEvent.keyDown(child, { key: 'Tab' });
+    expect(document.activeElement).toBe(childControls[0]);
+    fireEvent.keyDown(child, { key: 'Escape' });
+    expect(childClose).toHaveBeenCalledTimes(1);
+    expect(parentClose).not.toHaveBeenCalled();
+    rerender(
+      <Drawer open onClose={parentClose} title="Parent">
+        <button type="button">Open child</button>
+      </Drawer>,
+    );
+    expect(document.activeElement).toBe(trigger);
+    expect(document.body.style.overflow).toBe('hidden');
+    fireEvent.keyDown(screen.getByRole('dialog', { name: 'Parent' }), { key: 'Escape' });
+    expect(parentClose).toHaveBeenCalledTimes(1);
   });
 });

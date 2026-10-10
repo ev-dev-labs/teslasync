@@ -98,8 +98,21 @@ describe('GDPRArtifactDetails — loading', () => {
       screen.getByRole('heading', { name: 'Artifact details' }),
     ).toBeInTheDocument();
 
-    // Six KV placeholder rows × two bars each = twelve pulses.
-    expect(container.querySelectorAll('.animate-pulse')).toHaveLength(12);
+    // Six KV placeholder rows × two static, decorative bars each.
+    const placeholders = panelEl(container).querySelectorAll(
+      '[aria-hidden="true"][class*="bg-[var(--skeleton-bg)]"]',
+    );
+    expect(placeholders).toHaveLength(12);
+    placeholders.forEach((placeholder, index) => {
+      expect(placeholder).toHaveAttribute('aria-hidden', 'true');
+      expect(placeholder).toHaveClass('rounded', 'bg-[var(--skeleton-bg)]');
+      expect(placeholder).toHaveStyle({
+        width: index % 2 === 0 ? '40%' : '80%',
+        height: index % 2 === 0 ? '12px' : '18px',
+      });
+      expect(placeholder).toBeEmptyDOMElement();
+    });
+    expect(panelEl(container).querySelectorAll('.animate-pulse')).toHaveLength(0);
 
     // The decorative grid is hidden from assistive tech, and the panel
     // advertises its busy state instead.
@@ -109,6 +122,8 @@ describe('GDPRArtifactDetails — loading', () => {
     // No real metadata and no empty-state while loading.
     expect(screen.queryByRole('status')).toBeNull();
     expect(screen.queryByText('ID')).toBeNull();
+    expect(panelEl(container).querySelector('dl')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Copy' })).toBeNull();
   });
 
   it('keeps rendering existing data (not a skeleton) when refetching over an artifact', () => {
@@ -119,7 +134,9 @@ describe('GDPRArtifactDetails — loading', () => {
 
     // `Boolean(loading) && !artifact` is false → the grid wins over the
     // skeleton so the panel updates progressively instead of flashing empty.
-    expect(container.querySelectorAll('.animate-pulse')).toHaveLength(0);
+    expect(panelEl(container).querySelectorAll(
+      '[aria-hidden="true"][class*="bg-[var(--skeleton-bg)]"]',
+    )).toHaveLength(0);
     expect(screen.getByText(artifact.id)).toBeInTheDocument();
     expect(panelEl(container).getAttribute('aria-busy')).toBe('false');
   });
@@ -227,7 +244,9 @@ describe('GDPRArtifactDetails — empty & null-safety', () => {
 
     // Panel chrome remains, but no data rows / skeletons and not busy.
     expect(screen.getByRole('heading', { name: 'Artifact details' })).toBeInTheDocument();
-    expect(container.querySelectorAll('.animate-pulse')).toHaveLength(0);
+    expect(panelEl(container).querySelectorAll(
+      '[aria-hidden="true"][class*="bg-[var(--skeleton-bg)]"]',
+    )).toHaveLength(0);
     expect(screen.queryByRole('button', { name: 'Copy' })).toBeNull();
     expect(panelEl(container).getAttribute('aria-busy')).toBe('false');
   });

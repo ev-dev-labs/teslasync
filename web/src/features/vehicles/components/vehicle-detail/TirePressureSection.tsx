@@ -1,84 +1,56 @@
-import { useCallback, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { CircleDot } from 'lucide-react'
-
-import { GlassPanel, Badge, PanelTitle, Text } from '@/components/ui'
+import { Badge } from '@/components/ui'
+import { OperationalBrief, type StatMetric } from '@/components/data-display'
+import { useOperationalMetrics } from '@/hooks/useOperationalMetrics'
 import { EmptyState } from '@/components/feedback'
-import { useUnits } from '@/hooks/useUnits'
 import type { TirePressureSnapshot } from '@/api/types'
 import { paToKpa, tirePressureStatus, tirePressureVariant } from './helpers'
+import { useVehicleDetailSummary, type VehicleDetailSummaryProps } from '../statstrip-vehicle-detail/useVehicleDetailSummary'
 
-interface TirePressureSectionProps {
+interface TirePressureSectionProps extends VehicleDetailSummaryProps {
   tireData: TirePressureSnapshot | null | undefined
 }
 
-export function TirePressureSection({ tireData }: TirePressureSectionProps) {
+export function TirePressureSection({ tireData, sourceQuery }: TirePressureSectionProps) {
   const { t } = useTranslation()
-  const { formatPressure } = useUnits()
+  const summary = useVehicleDetailSummary(t('vehicles.detail.tirePressure', 'Tire pressure'), sourceQuery, tireData?.created_at, tireData != null)
+  const corners = [
+    { id: 'front-left', label: t('vehicles.detail.tireFl', 'Front left'), value: tireData?.front_left },
+    { id: 'front-right', label: t('vehicles.detail.tireFr', 'Front right'), value: tireData?.front_right },
+    { id: 'rear-left', label: t('vehicles.detail.tireRl', 'Rear left'), value: tireData?.rear_left },
+    { id: 'rear-right', label: t('vehicles.detail.tireRr', 'Rear right'), value: tireData?.rear_right },
+  ]
+  const statusLabel = (value: number | null | undefined): string => {
+    switch (tirePressureStatus(value)) {
+      case 'normal': return t('common.normal', 'Normal')
+      case 'low': return t('common.low', 'Low')
+      case 'high': return t('common.high', 'High')
+      case 'critical-low':
+      case 'critical-high': return t('common.critical', 'Critical')
+      default: return t('common.noData', 'No data')
+    }
+  }
 
-  const tirePressures = useMemo(
-    () =>
-      tireData
-        ? [
-            { label: t('vehicles.detail.tireFl', 'Front Left'), value: tireData.front_left },
-            { label: t('vehicles.detail.tireFr', 'Front Right'), value: tireData.front_right },
-            { label: t('vehicles.detail.tireRl', 'Rear Left'), value: tireData.rear_left },
-            { label: t('vehicles.detail.tireRr', 'Rear Right'), value: tireData.rear_right },
-          ]
-        : [],
-    [tireData, t],
-  )
-
-  // Directional label so an over-inflated tyre reads "High", not "Low".
-  const statusLabel = useCallback(
-    (value: number | null | undefined): string => {
-      switch (tirePressureStatus(value)) {
-        case 'normal':
-          return t('common.normal', 'Normal')
-        case 'low':
-          return t('common.low', 'Low')
-        case 'high':
-          return t('common.high', 'High')
-        case 'critical-low':
-        case 'critical-high':
-          return t('common.critical', 'Critical')
-        default:
-          return t('common.noData', 'No Data')
-      }
-    },
-    [t],
-  )
-
+  const rawMetrics: readonly StatMetric[] = corners.map(corner => ({
+        metricId: 'pressure', occurrenceId: corner.id, label: corner.label,
+        rawValue: paToKpa(corner.value),
+        missingReason: paToKpa(corner.value) == null ? t('common.noDataAvailable', 'No data available') : undefined,
+        context: <Badge variant={tirePressureVariant(corner.value)} size="sm">{statusLabel(corner.value)}</Badge>,
+  }))
+  const metrics = useOperationalMetrics(rawMetrics)
   return (
-    <GlassPanel className="p-6">
-      <PanelTitle className="mb-4 flex items-center gap-2">
-        <CircleDot className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-        {t('vehicles.detail.tirePressure', 'Tire Pressure')}
-      </PanelTitle>
-      {tireData ? (
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-          {tirePressures.map((tp) => (
-            <GlassPanel key={tp.label} className="p-4 text-center">
-              <Text as="p" variant="caption" className="mb-1">{tp.label}</Text>
-              <Text as="p" size="2xl" weight="bold" color="primary" className="tabular-nums">
-                {formatPressure(paToKpa(tp.value))}
-              </Text>
-              <Badge
-                variant={tirePressureVariant(tp.value)}
-                size="sm"
-                className="mt-2"
-              >
-                {statusLabel(tp.value)}
-              </Badge>
-            </GlassPanel>
-          ))}
-        </div>
-      ) : (
-        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
-          icon={<CircleDot className="h-8 w-8" />}
-          message={t('vehicles.detail.noTireData', 'No tire pressure data available')}
-        />
+    <>
+      <OperationalBrief compact testId="vehicle-tire-pressure-summary" {...summary.brief}
+        eyebrow={t('vehicles.detail.systems', 'Vehicle systems')}
+        title={t('vehicles.detail.tirePressure', 'Tire pressure')}
+        description={t('vehicles.detail.brief.tireDescription', 'Four corner pressures with source-derived low, normal, high or critical status and explicit missing-data reasons.')}
+        metrics={metrics} />
+      {!tireData && (
+        // no-action: the independent source wrapper owns failure retry.
+        <EmptyState icon={<CircleDot className="h-8 w-8" aria-hidden="true" />}
+          message={t('vehicles.detail.noTireData', 'No tire pressure data available')} />
       )}
-    </GlassPanel>
+    </>
   )
 }

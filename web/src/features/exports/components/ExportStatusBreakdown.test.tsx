@@ -107,7 +107,7 @@ describe('ExportStatusBreakdown', () => {
   it('always renders the panel heading', () => {
     renderBreakdown({ stats: makeStats({ byStatus: { ready: 1 } }) });
     expect(
-      screen.getByRole('heading', { name: /status breakdown/i, level: 3 }),
+      screen.getByRole('heading', { name: /Status breakdown/i, level: 3 }),
     ).toBeInTheDocument();
   });
 
@@ -120,7 +120,7 @@ describe('ExportStatusBreakdown', () => {
       expect(region).toHaveAccessibleName(/loading/i);
       // No bars, no storage footer while loading.
       expect(screen.queryByText('Ready')).not.toBeInTheDocument();
-      expect(screen.queryByText('Storage Used')).not.toBeInTheDocument();
+      expect(screen.queryByText('Storage used')).not.toBeInTheDocument();
     });
   });
 
@@ -133,7 +133,7 @@ describe('ExportStatusBreakdown', () => {
       ).toBeInTheDocument();
       expect(screen.getByRole('status')).toBeInTheDocument();
       // The storage footer belongs to the data branch only.
-      expect(screen.queryByText('Storage Used')).not.toBeInTheDocument();
+      expect(screen.queryByText('Storage used')).not.toBeInTheDocument();
     });
   });
 
@@ -170,9 +170,8 @@ describe('ExportStatusBreakdown', () => {
         stats: makeStats({ byStatus: { ready: 3, failed: 1 } }),
       });
 
-      // total = 4 → ready 75%, failed 25% (percentage rendered at 0 decimals).
-      expect(screen.getByText(/3\s*\S\s*75%/)).toBeInTheDocument();
-      expect(screen.getByText(/1\s*\S\s*25%/)).toBeInTheDocument();
+      expect(screen.getByText(/3\s*\S\s*75\.00%/)).toBeInTheDocument();
+      expect(screen.getByText(/1\s*\S\s*25\.00%/)).toBeInTheDocument();
     });
 
     it('renders the storage footer with a formatted byte total', () => {
@@ -183,8 +182,8 @@ describe('ExportStatusBreakdown', () => {
         }),
       });
 
-      expect(screen.getByText('Storage Used')).toBeInTheDocument();
-      expect(screen.getByText('2.0 MB')).toBeInTheDocument();
+      expect(screen.getByText('Storage used')).toBeInTheDocument();
+      expect(screen.getByText('2.00 MB')).toBeInTheDocument();
     });
 
     it('renders an em dash for storage when no bytes have accumulated', () => {
@@ -192,7 +191,7 @@ describe('ExportStatusBreakdown', () => {
         stats: makeStats({ byStatus: { ready: 1 }, totalBytes: 0 }),
       });
 
-      expect(screen.getByText('Storage Used')).toBeInTheDocument();
+      expect(screen.getByText('Storage used')).toBeInTheDocument();
       expect(screen.getByText('—')).toBeInTheDocument();
     });
   });
@@ -232,7 +231,7 @@ describe('ExportStatusBreakdown', () => {
       });
 
       expect(screen.getByText("Can't reach server")).toBeInTheDocument();
-      expect(screen.queryByText('Storage Used')).not.toBeInTheDocument();
+      expect(screen.queryByText('Storage used')).not.toBeInTheDocument();
     });
   });
 
@@ -248,7 +247,7 @@ describe('ExportStatusBreakdown', () => {
       expect(
         screen.getByText('No export activity to summarize yet.'),
       ).toBeInTheDocument();
-      expect(screen.queryByText('Storage Used')).not.toBeInTheDocument();
+      expect(screen.queryByText('Storage used')).not.toBeInTheDocument();
     });
 
     it('does not crash and shows the empty state when byStatus is malformed', () => {

@@ -167,6 +167,9 @@ describe('AIAnomalyExplanations — AI-off render gate', () => {
     // The Helix title + Generate button prove the InnerSection body
     // actually mounted (not just the gate wrapper).
     expect(screen.getByText('Helix explanation')).toBeInTheDocument()
+    expect(screen.getByText(
+      'Generate independent, inferred narration for the selected vehicle over 30 days, not an explanation of the detector’s 7-day results or the baseline’s 14-day training data.',
+    )).toBeInTheDocument()
     expect(screen.getByRole('button', { name: BUTTON_NAME })).toBeInTheDocument()
   })
 })
@@ -207,6 +210,18 @@ describe('AIAnomalyExplanations — canStart mirrors the backend vehicle_id > 0 
     expect(button).toHaveAttribute('aria-disabled', 'false')
     expect(screen.queryByText(EMPTY_HINT)).not.toBeInTheDocument()
   })
+
+  it('keeps a negative vehicle id disabled without issuing a request', () => {
+    mockUseSettings.mockReturnValue(enabled())
+
+    render(<AIAnomalyExplanations vehicleId={-7} />)
+
+    const button = screen.getByRole('button', { name: BUTTON_NAME })
+    expect(button).toBeDisabled()
+    expect(screen.getByText(EMPTY_HINT)).toBeInTheDocument()
+    fireEvent.click(button)
+    expect(globalThis.fetch).not.toHaveBeenCalled()
+  })
 })
 
 describe('AIAnomalyExplanations — on-mode SSE wiring', () => {
@@ -231,6 +246,8 @@ describe('AIAnomalyExplanations — on-mode SSE wiring', () => {
     const root = screen.getByTestId(ROOT_TESTID)
     const button = screen.getByRole('button', { name: BUTTON_NAME })
     expect(button).not.toBeDisabled()
+    expect(button.tagName).toBe('BUTTON')
+    expect(button).toHaveAttribute('type', 'button')
 
     await act(async () => {
       fireEvent.click(button)
@@ -317,5 +334,52 @@ describe('AIAnomalyExplanations — on-mode SSE wiring', () => {
     const panel = await screen.findByTestId('ai-output-panel')
     expect(panel).toHaveTextContent(/Helix error/i)
     expect(panel).toHaveTextContent('stream_http_404')
+  })
+
+  it('aborts the old vehicle stream and clears its narration before generating for the next vehicle', async () => {
+    mockUseSettings.mockReturnValue(enabled())
+    const fetchCalls: Array<{ signal: AbortSignal | null | undefined; body: unknown }> = []
+    globalThis.fetch = vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
+      fetchCalls.push({
+        signal: init?.signal,
+        body: JSON.parse(String(init?.body)),
+      })
+      return new Response(
+        new ReadableStream<Uint8Array>({
+          start(controller) {
+            controller.enqueue(new TextEncoder().encode(sseFrame('delta', {
+              text: fetchCalls.length === 1 ? 'Previous vehicle narration.' : 'Current vehicle narration.',
+            })))
+          },
+        }),
+        { status: 200, headers: { 'Content-Type': 'text/event-stream' } },
+      )
+    })
+
+    const { rerender, unmount } = render(<AIAnomalyExplanations vehicleId={42} />)
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: BUTTON_NAME }))
+    })
+    await screen.findByText('Previous vehicle narration.')
+    expect(fetchCalls[0].signal?.aborted).toBe(false)
+
+    rerender(<AIAnomalyExplanations vehicleId={7} />)
+    await waitFor(() => {
+      expect(fetchCalls[0].signal?.aborted).toBe(true)
+      expect(screen.queryByText('Previous vehicle narration.')).not.toBeInTheDocument()
+      expect(screen.getByRole('button', { name: BUTTON_NAME })).not.toBeDisabled()
+    })
+    expect(fetchCalls).toHaveLength(1)
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: BUTTON_NAME }))
+    })
+    await screen.findByText('Current vehicle narration.')
+    expect(fetchCalls.map(({ body }) => body)).toEqual([
+      { vehicle_id: 42, days: 30 },
+      { vehicle_id: 7, days: 30 },
+    ])
+    unmount()
+    expect(fetchCalls[1].signal?.aborted).toBe(true)
   })
 })

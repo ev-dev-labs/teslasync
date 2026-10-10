@@ -216,7 +216,7 @@ describe('FsdDriveAnalyticsPanels', () => {
 
     const spotlight = screen.getByTestId('fsd-firmware-spotlight');
     expect(within(spotlight).getByText(/2026.8.1 vs 2026.20.3/)).toBeInTheDocument();
-    expect(within(spotlight).getByText('+40.0 pts')).toBeInTheDocument();
+    expect(within(spotlight).getByText('+40.00 pts')).toBeInTheDocument();
   });
 });
 

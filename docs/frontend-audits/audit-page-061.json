@@ -1,0 +1,200 @@
+{
+  "item": "audit-page-061",
+  "page": "web\\src\\features\\battery\\pages\\BatteryCellsPage.tsx",
+  "routes": ["/battery-cells"],
+  "purpose": "Vehicle-scoped battery brick/cell voltage exploration, temperature context, imbalance history and health recommendations.",
+  "primaryGoal": "Understand reported battery balance while distinguishing synthesized per-cell estimates from actual aggregate telemetry and unavailable measurements.",
+  "dataSources": [
+    {
+      "hook": "useBatteryCells(activeId)",
+      "endpoint": "GET /api/v1/analytics/battery-cells?vehicle_id=<encoded id>",
+      "owner": "web\\src\\api\\hooks\\useAnalytics.ts:294-353",
+      "routeEvidence": "internal\\api\\router.go:1103,3890",
+      "backendOwner": "internal\\api\\batterycells\\handler.go:66-217",
+      "behavior": "Vehicle-keyed query enabled only with an ID; AbortSignal forwarded; existing inherited query policy retained. No caller date bounds. Backend history is a fixed seven-day hourly window.",
+      "actualSources": [
+        "BrickVoltageMin/Max and NumBrickVoltageMin/Max",
+        "PackVoltage and ModuleTempMin/Max",
+        "Fresh distributed live signal read then StateReader.SignalAt fallback: handler.go:253-273",
+        "SignalLogReader.BrickVoltageHistory: handler.go:277-323"
+      ],
+      "provenance": "Per-cell rows are synthesized by linear interpolation of brick extrema; total count is estimated from pack/average voltage with fallback 96. Known brick indices overwrite synthetic extrema. This is not an individual-cell sensor feed (handler.go:153-196).",
+      "units": "Wire/cache readings remain volts and Celsius; existing delta_from_avg/imbalance_mv/voltage_spread fields are millivolts. Temperature spread is a Celsius delta. Preserve current field names and raw payload; do not introduce a conversion or rename during presentation work."
+    },
+    {
+      "hook": "ChartContainer annotation hooks",
+      "endpoint": "GET/POST /api/v1/annotations; DELETE /api/v1/annotations/{id}",
+      "owner": "web\\src\\api\\hooks\\useAnnotations.ts:84-85,101,115-125,154-156",
+      "routeEvidence": "internal\\api\\router.go:3707",
+      "consumer": "BatteryCellsPage.tsx:690; ChartContainer.tsx:344-400",
+      "behavior": "Battery-scope selected-vehicle annotations; stable chart ID battery-cells-spread-trend; add/delete and persisted show/hide owned by ChartContainer. Mutations were not executed."
+    },
+    {
+      "hook": "useSelectedVehicle, useNumberFormatting, useUnits, useOperationalMetrics",
+      "owner": "Existing workspace, number/unit preferences and operational metric pipeline",
+      "evidence": "BatteryCellsPage.tsx:169-197; BatteryCellsStats.tsx:31-39; BatteryEvidenceBrief.tsx:24-33",
+      "behavior": "Header vehicle is sole scope owner. No competing picker. Temperature conversion occurs only at display boundary; electrical specialist precision and locale retained."
+    }
+  ],
+  "components": [
+    {"name": "PageLayout/CardGrid/LayoutCard/ChartCard", "owner": "@/components/layout", "evidence": "BatteryCellsPage.tsx:9,377-389,403,516,574,685,798", "role": "Existing full-width page, responsive placements, panel titles and chart-host composition; ChartCard.tsx:13-47 forwards existing chart contract."},
+    {"name": "BatteryCellsStats", "owner": "web\\src\\features\\battery\\components\\battery-cells-modernization\\BatteryCellsStats.tsx", "evidence": "BatteryCellsStats.tsx:27-108", "role": "Overview six metrics, temperature four metrics, summary six metrics; numeric inputs, missing reasons, thresholds and specialist formatters."},
+    {"name": "BatteryEvidenceBrief/OperationalBrief", "owner": "web\\src\\features\\battery\\components\\operationalbrief-all\\BatteryEvidenceBrief.tsx", "evidence": "BatteryEvidenceBrief.tsx:19-55", "role": "Shared existing battery evidence adapter; source-window description, status, provenance, metrics, freshness and operational review surface."},
+    {"name": "EmbeddedChart/ChartContainer", "owner": "web\\src\\components\\charts\\EmbeddedChart.tsx", "evidence": "EmbeddedChart.tsx:19-41; ChartContainer.tsx:169-186,344-400", "role": "Five embedded voltage/distribution/history charts with accessible data; shared formatting, legend persistence and annotations. Spread trend uses ChartCard."},
+    {"name": "DataTable", "owner": "web\\src\\components\\ui\\DataTable.tsx", "evidence": "BatteryCellsPage.tsx:759-790; DataTable.tsx:186-191,256-267,361-379", "role": "Stable battery:cells identity; sorting, value filters, pagination, compact mode, all four mobile fields and native details; local-table export contract."},
+    {"name": "Button/Badge/Text/Caption/GlassPanel", "owner": "@/components/ui", "evidence": "BatteryCellsPage.tsx:11-14,107-160,359-366,406-419,828-836", "role": "Existing action/status/typography/panel primitives; no raw button/input/select/table in page."},
+    {"name": "useDataState/StaleRefreshWarning/Skeleton/EmptyState/QueryError", "owner": "Existing hooks and feedback category", "evidence": "BatteryCellsPage.tsx:180-191,384-400; StaleRefreshWarning.tsx:60-111", "role": "Source trust, retained data, polite warning and retry; fatal errors alone replace content."},
+    {"name": "FadeIn/NoVehicleSelected", "owner": "Existing motion and onboarding owners", "evidence": "BatteryCellsPage.tsx:24-25,371-372,392,854", "role": "Entrance wrappers and explicit no-selection guard; reduced-motion runtime behavior not exercised."}
+  ],
+  "duplicatedPatterns": [
+    {"file": "web\\src\\features\\battery\\pages\\BatteryCellsPage.tsx", "line": 420, "rule": "MDC-002/MDC-026", "detail": "Repeated initial skeleton/fatal retry/empty chart branches across the five EmbeddedCharts and spread ChartCard; the same cell bar exists both as heatmap alternate and dedicated reference chart.", "fix": "Reuse existing chart state props or a local typed section adapter where equivalent; retain both views, section-specific empty text, heights, references and accessible rows.", "owner": "page", "confidence": "high"},
+    {"file": "web\\src\\features\\battery\\pages\\BatteryCellsPage.tsx", "line": 393, "rule": "NO DATA LOSS", "detail": "Overview and final summary repeat several readings intentionally, but summary adds normal/total and temperature spread; this is not permission to drop the summary.", "fix": "Keep all sixteen metric occurrences and their distinct context/positions during hierarchy changes.", "owner": "page", "confidence": "high"}
+  ],
+  "responsive": {
+    "sourceEvidence": [
+      "Heatmap columns derive solely from sqrt(cell count), not allocated width: BatteryCellsPage.tsx:120-128.",
+      "Heatmap toggle is explicitly min-h-11/min-w-11: BatteryCellsPage.tsx:409-410.",
+      "Five charts use explicit mobile heights 224/256/288 and desktop 256/288: BatteryCellsPage.tsx:450-451,497-498,543-544,609-610,659-660.",
+      "Spread area uses h-48 sm:h-60: BatteryCellsPage.tsx:702.",
+      "Recommendations stack then become two columns at sm: BatteryCellsPage.tsx:821,827.",
+      "Table keyValue mobile presentation retains cell number, voltage, delta and status; native detail modal explicitly retains all columns and 640-767 branch delta: BatteryCellsPage.tsx:765-784."
+    ],
+    "issues": [
+      {"file": "web\\src\\features\\battery\\pages\\BatteryCellsPage.tsx", "line": 120, "rule": "MDC-043", "detail": "Count-only heatmap column choice plus two text rows/padding can squeeze scientific voltage labels at narrow allocated card widths; rotated histogram labels and right-edge reference labels also require measured overflow checks.", "fix": "Test 320-430px and actual CardGrid widths before adjusting a local heatmap layout; retain every cell identifier/value and all chart labels.", "owner": "page", "confidence": "medium"}
+    ],
+    "runtime": "Unverified at all required viewports, zoom levels, themes, RTL and long translated labels."
+  },
+  "accessibility": {
+    "sourceEvidence": [
+      "Toggle has localized aria-label and aria-pressed plus explicit touch dimensions: BatteryCellsPage.tsx:410-418.",
+      "Heat cells have role=img and value/delta aria-label/title; status badges use icon and localized text: BatteryCellsPage.tsx:147-149,359-364.",
+      "Five EmbeddedCharts pass ariaLabel/data/dataColumns: BatteryCellsPage.tsx:436-449,483-496,529-542,589-606,649-656.",
+      "Refresh warning uses role=status/aria-live=polite and localized retry: StaleRefreshWarning.tsx:89-111."
+    ],
+    "issues": [
+      {"file": "web\\src\\features\\battery\\pages\\BatteryCellsPage.tsx", "line": 683, "rule": "MDC-034/MDC-040", "detail": "Spread trend explicitly omits accessible history data, arguing that latest summary spread suffices. Latest snapshot does not provide the historical series or annotation context shown by the chart. Existing ChartCard already forwards data/dataColumns.", "fix": "Pass actual timestamp/spread rows and localized columns to ChartCard, preserve chart controls/annotations, and remove the insufficient no-table waiver.", "owner": "page", "confidence": "high"},
+      {"file": "web\\src\\features\\battery\\pages\\BatteryCellsPage.tsx", "line": 133, "rule": "MDC-025/MDC-040", "detail": "Heatmap semantic deviation categories are conveyed by color and a common ring; aria-label supplies numeric delta but not the localized status. Title alone is not a reliable touch disclosure.", "fix": "Include explicit localized category in the existing accessible description and preserve cell values plus table alternatives; assess whether visible non-color cues fit the local heatmap.", "owner": "page", "confidence": "medium"},
+      {"file": "web\\src\\features\\battery\\pages\\BatteryCellsPage.tsx", "line": 139, "rule": "MDC-042", "detail": "Local hover scale transition has no local reduced-motion variant; global CSS could mitigate it, but was not inspected for this selector.", "fix": "Verify composed reduced-motion behavior; if needed add local motion-reduce suppression, without changing shared animation preferences.", "owner": "page", "confidence": "medium"}
+    ],
+    "runtime": "Keyboard order, focus restoration, screen-reader output, contrast, target spacing, forced colors and reduced motion unverified."
+  },
+  "states": {
+    "initialLoading": "No retained data and no fatal error => section skeletons plus loading evidence briefs (BatteryCellsPage.tsx:186-189,393-397,420-425).",
+    "fatalError": "fatalError only; query retry in overview and affected content, sections/titles retained (BatteryCellsPage.tsx:187-191,399,423-424).",
+    "refreshFailureOffline": "useDataState keeps payload; StaleRefreshWarning distinguishes paused/offline and refreshError with nonblocking retry (dataState.ts:166-175,234-254; StaleRefreshWarning.tsx:67-81).",
+    "noVehicle": "NoVehicleSelected guard; request disabled for empty ID (BatteryCellsPage.tsx:175-179,371-372; useAnalytics.ts:352).",
+    "noCellSnapshot": "status=no_data marks unavailable, clears interpreted cell average/count/imbalance but retains pack/temperature envelope; empty charts/table and unknown cell metrics remain visible (BatteryCellsPage.tsx:182-196,384-389; BatteryCellsStats.tsx:40-43,58-63).",
+    "partial": "No explicit per-signal presence flags; source cannot honestly classify pack/temperature completeness. Preserve caution text instead of converting reported zeros into fabricated unknown or asserting health.",
+    "unknownVersusZero": "knownNumber rejects null/nonfinite/empty and preserves genuine numeric zero. Page filters measured cells and uses em dash; stats missingReason explicitly present (dataState.ts:378-386; BatteryCellsPage.tsx:130-149,193-197,340-353; BatteryCellsStats.tsx:44,54-57).",
+    "emptyHistory": "Separate history empty messages, but backend logs history query failure then returns empty array, indistinguishable from insufficient history (handler.go:277-288).",
+    "limits": "Initial offline pause can remain skeleton because the page derives loading only from no-data/no-fatal and warning returns null without retained data; current runtime acceptance not claimed."
+  },
+  "visualIssues": [
+    {"file": "web\\src\\features\\battery\\pages\\BatteryCellsPage.tsx", "line": 95, "rule": "MDC-010/MDC-025; mission visual intensity", "detail": "Three recommendation variants use neon-tinted border/background tokens, nested inside LayoutCard. Six neon class occurrences found. Severity has text/icon meaning, but need not tint every recommendation panel.", "fix": "Use existing subdued semantic/surface tokens with restrained status cue; preserve all recommendation text, thresholds and icon meaning.", "owner": "page", "confidence": "high"},
+    {"file": "web\\src\\features\\battery\\pages\\BatteryCellsPage.tsx", "line": 45, "rule": "MDC-010/MDC-012", "detail": "Hardcoded emerald/amber/red hex colors drive heatmap and voltage table text, bypassing theme-aware semantic tokens. At exactly 5/15 mV heatmap colors disagree with backend >5/>15 status cutoffs.", "fix": "Use existing semantic palette with accessible composed contrast; reconcile presentation categories against existing source status without altering backend calculations.", "owner": "page", "confidence": "high"},
+    {"file": "web\\src\\features\\battery\\pages\\BatteryCellsPage.tsx", "line": 706, "rule": "MDC-010/MDC-034", "detail": "Spread trend hardcodes saturated purple #a855f7 stroke and 0.3-opacity gradient outside CHART_COLORS while neighboring charts reuse the shared palette.", "fix": "Reuse current chart palette/preferences and subdue area decoration; preserve series, reference thresholds and exports.", "owner": "page", "confidence": "high"}
+  ],
+  "architectureIssues": [
+    {"file": "internal\\api\\batterycells\\handler.go", "line": 112, "rule": "MDC-026/MDC-045; unknown is not zero", "detail": "Presence flags for PackVoltage/ModuleTempMax/Min are discarded, so absent signals become numeric zeros; history nullable aggregates likewise become zero at lines 293-307. Client knownNumber cannot recover lost availability. One-sided brick data also enters aggregate calculations because no_data requires both absent at line 126.", "fix": "Integration owner should expose typed source availability and measurement times while retaining reported values and current response compatibility; page must not guess whether a zero was measured.", "owner": "integration", "confidence": "high"},
+    {"file": "web\\src\\features\\battery\\components\\battery-cells-modernization\\BatteryCellsStats.tsx", "line": 37, "rule": "MDC-026/MDC-033", "detail": "Snapshot observedAt is query success time. Caption correctly warns request time is not measurement time, but BatteryEvidenceBrief renders it as freshness. Historical StateReader fallback has no age metadata in this envelope.", "fix": "Label successful fetch time explicitly until integration supplies actual measured-at/freshness; preserve the timestamp and provenance caveat.", "owner": "page", "confidence": "high"},
+    {"file": "web\\src\\features\\battery\\pages\\BatteryCellsPage.tsx", "line": 212, "rule": "MDC-034/MDC-046", "detail": "Spread x values are localized date-only strings derived by split(',')[0], whereas annotation rendering passes timestamp through unchanged at line 714. Distinct hourly samples share labels and annotations can target incompatible categories.", "fix": "Retain original timestamp as x identity; use centralized formatter only on ticks/tooltips and align annotation mapping with the same timestamp domain.", "owner": "page", "confidence": "high"},
+    {"file": "web\\src\\features\\battery\\components\\battery-cells-modernization\\BatteryCellsStats.tsx", "line": 4, "rule": "MDC-002 component-first imports", "detail": "Feature imports StatMetric/StatPeriod through data-display/stat-reference instead of the category barrel; existing BatteryEvidenceBrief uses the category owner.", "fix": "Use accepted category exports or canonical type owner, preserving the metric pipeline; no new adapter or barrel edits in a page item.", "owner": "page", "confidence": "high"},
+    {"file": "internal\\api\\batterycells\\handler.go", "line": 153, "rule": "MDC-026; source-backed provenance", "detail": "Estimated total, synthetic interpolation and overwritten extrema underpin charts, table counts and healthy/critical recommendations. Provenance is present in evidence briefs but page subtitle and chart/table headings still sound like actual individual sensors.", "fix": "Keep every current reading and section but place existing synthesis/source limitation near cell charts/table and qualify derived recommendations; do not replace rows or invent a measured-cell feed.", "owner": "page", "confidence": "high"}
+  ],
+  "priority": {
+    "level": "high",
+    "reason": "Data-trust ambiguity and synthesized-cell interpretation precede cosmetic cleanup; accessible spread history and timestamp/annotation identity are concrete page-level improvements.",
+    "order": ["Protect synthetic/raw-source provenance and unknown-versus-zero semantics", "Restore spread-history accessibility and stable timestamp domain", "Reduce neon/hardcoded saturated decoration", "Verify narrow widths, themes, keyboard and reduced motion"]
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "Battery cell source-evidence response metadata",
+      "owner": "internal\\api\\batterycells\\handler.go; web\\src\\api\\hooks\\useAnalytics.ts",
+      "propsVariantsStates": "Typed optional/compatible per-signal presence, actual observation timestamps, source freshness and history availability/error metadata; explicit synthetic-cell/count-estimate provenance. Preserve valid zero, raw V/Celsius/existing mV fields and retained-data behavior.",
+      "usedBy": ["/battery-cells overview, temperature and summary evidence briefs", "/battery-cells cell charts/table and derived recommendations"],
+      "dependsOn": ["Existing LiveSignalStore/StateReader metadata capabilities must be verified by integration owner", "Existing BrickVoltageHistory result/error contract", "MDC-026/MDC-045/MDC-046"],
+      "scope": "Integration contract, not permission for this audit/page item to change backend/shared files. No new presentation composite is justified by this one-page evidence."
+    }
+  ],
+  "competingImplementations": [
+    {"pattern": "Stats/evidence", "assessment": "Already uses BatteryCellsStats -> BatteryEvidenceBrief -> OperationalBrief; retain existing owner, not a new KPI system.", "evidence": "BatteryCellsStats.tsx:98-105; BatteryEvidenceBrief.tsx:33-55"},
+    {"pattern": "Charts", "assessment": "Shared EmbeddedChart and ChartCard both converge on ChartContainer; local heatmap is domain-specific, not evidence for a new chart library.", "evidence": "EmbeddedChart.tsx:31-40; ChartCard.tsx:30-44"},
+    {"pattern": "Workspace selection", "assessment": "Single header vehicle owner; /battery-cells is not range-enabled and current server history is fixed seven days. Do not add a competing date picker or pretend the endpoint supports selected bounds.", "evidence": "BatteryCellsPage.tsx:174-179; workspaceScope.ts:23-77; handler.go:283"}
+  ],
+  "preservation": {
+    "sourceHash": "E0B9261A180AD6A23E344E19550BEA19A625B1E4B2905AD92B559CD867BC866F",
+    "hashAlgorithm": "SHA-256",
+    "currentLineCount": 863,
+    "pageSpecificStatsLineCount": 108,
+    "pageAndStatsLineCount": 971,
+    "sectionCount": 8,
+    "sections": [
+      {"name": "KPI overview", "line": 391, "metrics": 6},
+      {"name": "Heatmap/bar toggle and voltage distribution", "line": 401, "panels": 2},
+      {"name": "Dedicated cell bar with average/min/max references", "line": 514, "panels": 1},
+      {"name": "Voltage-over-time and imbalance history", "line": 572, "panels": 2},
+      {"name": "Annotated voltage-spread area trend", "line": 682, "panels": 1},
+      {"name": "Cell details table", "line": 738, "panels": 1},
+      {"name": "Temperature summary and health recommendations", "line": 796, "panels": 2, "temperatureMetrics": 4},
+      {"name": "Final summary band", "line": 853, "metrics": 6}
+    ],
+    "componentCounts": {"LayoutCard": 8, "ChartCard": 1, "EmbeddedChart": 5, "GlassPanelDynamicRecommendationTemplate": 1, "BatteryCellsStats": 3},
+    "actions": [
+      "Header vehicle scope and no-selection recovery",
+      "Heatmap/bar toggle including aria-pressed and localized names",
+      "Fatal retry and retained/offline refresh action",
+      "Cell sort/value filtering/local pagination and shared table persistence/export/detail behavior",
+      "History min/average/max legend visibility with battery-cells-voltage-history identity",
+      "Spread chart export toolbar and add/delete/show-hide annotations with battery-cells-spread-trend identity",
+      "Operational evidence review/details surfaces"
+    ],
+    "dataBehavior": [
+      "Never fabricate individual readings; all cell rows are backend synthesized estimates, with original row identity/order and actual-extrema overwrite behavior.",
+      "Preserve knownNumber null/nonfinite handling and real zero; no_data cannot erase pack/temperature envelope.",
+      "Preserve all thresholds: imbalance 5/15 mV, temperature spread 3/5 Celsius, status labels and all recommendations.",
+      "Keep all six overview, four temperature and six summary metrics including min/max cell number, pack voltage and normal/total ratio.",
+      "Keep fixed seven-day hourly history, histogram algorithm, references, series, annotation controls, charts and accessible tables.",
+      "Raw wire/cache values and query key/enablement/cancellation remain unchanged; temperatures and deltas format only at display boundary.",
+      "Retained data survives failed refresh or offline pause; fatal error alone replaces source contents."
+    ],
+    "staticScan": {
+      "method": "Focused PowerShell regex counts on the assigned page only; no skill script because it invokes prohibited full-package TypeScript.",
+      "dynamicInlineStyles": 3,
+      "rawButtonInputTextareaSelectTable": 0,
+      "directRechartsLeafletFramerMotionImports": 0,
+      "neonClassOccurrences": 6,
+      "textWhiteGlowShadowMatches": 0,
+      "interpretation": "No page-local fixed-white/glow/shadow match; hardcoded saturated colors and neon surfaces remain. These counts are source evidence, not runtime style/contrast acceptance."
+    }
+  },
+  "evidenceLimits": [
+    "Read-only Phase 0 snapshot; no source edits, Git operations, builds, full-repository lint, nested agents, browser actions or production mutations.",
+    "Runtime, mounted visual result, network responses, keyboard/screen-reader interaction, contrast, all viewport behavior and exports/annotations are unverified.",
+    "Shared dependencies were inspected only for the consumed contracts; no application-wide foundation audit or claim of shared component acceptance.",
+    "Backend source establishes computation and failure behavior, not actual deployed telemetry availability.",
+    "No new shared presentation component justified from this single page; only explicit integration metadata gap is requested.",
+    "Verification is scoped JSON validity, required-field presence, route/page/hash readback and source counts; TypeScript and audit.sh intentionally not run."
+  ],
+  "filesRead": [
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\battery\\pages\\BatteryCellsPage.tsx",
+    "web\\src\\features\\battery\\components\\battery-cells-modernization\\BatteryCellsStats.tsx",
+    "web\\src\\features\\battery\\components\\operationalbrief-all\\BatteryEvidenceBrief.tsx",
+    "web\\src\\api\\hooks\\useAnalytics.ts",
+    "web\\src\\api\\hooks\\useAnnotations.ts",
+    "web\\src\\api\\dataState.ts",
+    "web\\src\\hooks\\useDataState.ts",
+    "web\\src\\components\\feedback\\StaleRefreshWarning.tsx",
+    "web\\src\\components\\charts\\EmbeddedChart.tsx",
+    "web\\src\\components\\charts\\ChartContainer.tsx",
+    "web\\src\\components\\layout\\layout-reference\\ChartCard.tsx",
+    "web\\src\\components\\ui\\DataTable.tsx",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\App.tsx",
+    "internal\\api\\router.go",
+    "internal\\api\\batterycells\\handler.go"
+  ]
+}

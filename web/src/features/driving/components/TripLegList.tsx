@@ -7,15 +7,16 @@ import { useFormatting } from '@/hooks/useFormatting';
 import { MapPin, Zap, Clock, ArrowRight } from 'lucide-react';
 import type { TripLeg, TripChargeStop, TripLocation } from '@/types/driving';
 import { convertDistanceFromSI } from '@/lib/unitConversion';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { fmtNumber } from '@/lib/numberFormat';
 
 interface TripLegListProps {
   legs: TripLeg[];
   chargeStops: TripChargeStop[];
 }
 
-/** Round a possibly-missing number to an integer, treating null/undefined/NaN as 0. */
-function roundOrZero(value: number | null | undefined): number {
-  return typeof value === 'number' && Number.isFinite(value) ? Math.round(value) : 0;
+function finiteOrZero(value: number | null | undefined): number {
+  return typeof value === 'number' && Number.isFinite(value) ? value : 0;
 }
 
 /**
@@ -30,12 +31,13 @@ function locationLabel(loc: TripLocation | null | undefined): string {
   const lat = loc?.lat;
   const lng = loc?.lng;
   if (typeof lat === 'number' && Number.isFinite(lat) && typeof lng === 'number' && Number.isFinite(lng)) {
-    return `${lat.toFixed(2)}, ${lng.toFixed(2)}`;
+    return `${fmtNumber(lat)}, ${fmtNumber(lng)}`;
   }
   return '—';
 }
 
 export function TripLegList({ legs, chargeStops }: TripLegListProps) {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const { unitPrefs, formatEnergy } = useUnits();
   const { formatCurrency } = useFormatting();
@@ -65,7 +67,7 @@ export function TripLegList({ legs, chargeStops }: TripLegListProps) {
       <div className="space-y-3">
         {legItems.map((leg, idx) => {
           const stop = idx < stops.length ? stops[idx] : null;
-          const arrivalSoc = roundOrZero(leg.arrival_soc);
+          const arrivalSoc = finiteOrZero(leg.arrival_soc);
           return (
             <FadeIn key={idx} delay={idx * 0.03}>
               <div className="rounded-lg border border-white/[0.06] bg-white/[0.02] p-4">
@@ -87,26 +89,26 @@ export function TripLegList({ legs, chargeStops }: TripLegListProps) {
                   <div>
                     <Caption>{t('tripPlanner.legs.distance', 'Distance')}</Caption>
                     <Text as="p" weight="medium" color="primary">
-                      {toDistanceDisplay(leg.distance_m).toFixed(1)} {distanceUnit}
+                      {fmtNumber(toDistanceDisplay(leg.distance_m))} {distanceUnit}
                     </Text>
                   </div>
                   <div>
                     <Caption>{t('tripPlanner.legs.duration', 'Duration')}</Caption>
                     <Text as="p" weight="medium" color="primary">
-                      {roundOrZero((leg.duration_s ?? 0) / 60)} {t('common.min', 'min')}
+                      {fmtNumber((leg.duration_s ?? 0) / 60)} {t('common.min', 'min')}
                     </Text>
                   </div>
                   <div>
                     <Caption>{t('tripPlanner.legs.energy', 'Energy')}</Caption>
-                    <Text as="p" weight="medium" color="primary">{formatEnergy(leg.energy_wh, { precision: 1 })}</Text>
+                    <Text as="p" weight="medium" color="primary">{formatEnergy(leg.energy_wh)}</Text>
                   </div>
                   <div>
                     <Caption>{t('tripPlanner.legs.soc', 'Battery')}</Caption>
                     <Text as="p" weight="medium" color="primary">
-                      <span className="text-emerald-400">{roundOrZero(leg.start_soc)}%</span>
+                      <span className="text-emerald-400">{fmtNumber(leg.start_soc)}%</span>
                       <span className="text-[var(--text-muted)] mx-1">→</span>
                       <span className={arrivalSoc < 20 ? 'text-rose-400' : 'text-amber-400'}>
-                        {arrivalSoc}%
+                        {fmtNumber(arrivalSoc)}%
                       </span>
                     </Text>
                   </div>
@@ -122,12 +124,12 @@ export function TripLegList({ legs, chargeStops }: TripLegListProps) {
                     <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1 text-[var(--text-secondary)]">
                       <span className="flex items-center gap-1">
                         <Clock aria-hidden="true" className="h-3 w-3" />
-                        {roundOrZero((stop.charge_duration_s ?? 0) / 60)} {t('common.min', 'min')}
+                        {fmtNumber((stop.charge_duration_s ?? 0) / 60)} {t('common.min', 'min')}
                       </span>
                       <span>
-                        {roundOrZero(stop.charge_from_soc)}% → {roundOrZero(stop.charge_to_soc)}%
+                        {fmtNumber(stop.charge_from_soc)}% → {fmtNumber(stop.charge_to_soc)}%
                       </span>
-                      <span>{formatEnergy(stop.energy_wh, { precision: 1 })}</span>
+                      <span>{formatEnergy(stop.energy_wh)}</span>
                       <span className="text-emerald-400">{formatCurrency(stop.cost ?? 0)}</span>
                     </div>
                     {stop.is_recommended && (

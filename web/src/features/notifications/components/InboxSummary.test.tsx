@@ -3,7 +3,7 @@
  *
  * InboxSummary is a presentational KPI band: it receives a TanStack
  * `UseQueryResult<NotificationLog[]>` as a prop and never fetches itself, so
- * the tests drive it with hand-built query objects rather than mocking the
+ * the tests drive it with real query-observer snapshots rather than mocking the
  * network. Coverage:
  *   1. First-load skeleton grid (6 cards) inside the labelled region, no KPIs.
  *   2. Background refetch with cached data keeps the KPIs on screen (firstLoad
@@ -19,13 +19,14 @@
  */
 
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import type { UseQueryResult } from '@tanstack/react-query';
+import { QueryClient, QueryObserver, type UseQueryResult } from '@tanstack/react-query';
 import '../../../i18n';
 
 import { InboxSummary } from './InboxSummary';
 import type { NotificationLog } from '@/api/types';
+import { formatDateTime } from '@/lib/dateFormat';
 
 let logId = 1;
 function makeLog(overrides: Partial<NotificationLog> = {}): NotificationLog {
@@ -46,26 +47,43 @@ function makeLog(overrides: Partial<NotificationLog> = {}): NotificationLog {
   };
 }
 
-function makeQuery(
-  overrides: Partial<UseQueryResult<NotificationLog[], Error>> = {},
-): UseQueryResult<NotificationLog[], Error> {
-  return {
-    data: undefined,
-    error: null,
-    isLoading: false,
-    isPending: false,
-    isFetching: false,
-    isError: false,
-    isSuccess: false,
-    refetch: vi.fn(),
-    ...overrides,
-  } as unknown as UseQueryResult<NotificationLog[], Error>;
+interface QueryOverrides {
+  data?: NotificationLog[];
+  error?: Error | null;
+  isLoading?: boolean;
+  isPending?: boolean;
+  isFetching?: boolean;
+  isError?: boolean;
+  isSuccess?: boolean;
+  fetchStatus?: UseQueryResult<NotificationLog[], Error>['fetchStatus'];
+  dataUpdatedAt?: number;
+  refetch?: UseQueryResult<NotificationLog[], Error>['refetch'];
 }
 
-function renderSummary(query: UseQueryResult<NotificationLog[], Error>) {
+function makeQuery(overrides: QueryOverrides = {}): UseQueryResult<NotificationLog[], Error> {
+  const client = new QueryClient({ defaultOptions: { queries: { gcTime: Infinity } } });
+  const queryKey = ['inbox-summary-fixture'];
+  const query = client.getQueryCache().build<NotificationLog[], Error>(client, { queryKey });
+  query.setState({
+    data: overrides.data,
+    error: overrides.error ?? null,
+    status: overrides.error || overrides.isError ? 'error'
+      : overrides.data === undefined ? 'pending' : 'success',
+    fetchStatus: overrides.fetchStatus ?? (overrides.isFetching ? 'fetching' : 'idle'),
+    dataUpdatedAt: overrides.dataUpdatedAt ?? 0,
+  });
+  const observer = new QueryObserver<NotificationLog[], Error>(client, { queryKey, enabled: false });
+  const result = observer.getCurrentResult();
+  return {
+    ...result,
+    refetch: overrides.refetch ?? vi.fn<UseQueryResult<NotificationLog[], Error>['refetch']>(),
+  };
+}
+
+function renderSummary(query: UseQueryResult<NotificationLog[], Error>, archived = false) {
   return render(
     <MemoryRouter>
-      <InboxSummary query={query} />
+      <InboxSummary query={query} archived={archived} />
     </MemoryRouter>,
   );
 }
@@ -74,22 +92,32 @@ function getRegion() {
   return screen.getByRole('region', { name: /inbox summary/i });
 }
 
-// Read a MetricCard's rendered value by its (unique) label text. The label
-// lives in a <span> inside <p class="metric-label">; the value is that
-// paragraph's immediate sibling.
+// Scope the canonical value to its metric rather than old card DOM siblings.
 function cardValue(label: string): string {
-  const labelParagraph = screen.getByText(label).closest('p');
-  return labelParagraph?.nextElementSibling?.textContent ?? '';
+  const tile = screen.getByText(label).closest('[data-operational-metric]');
+  return tile?.querySelector('[data-operational-value]')?.textContent ?? '';
 }
 
 describe('InboxSummary — loading & error states', () => {
+  it('retains compact metrics after a failed cached refresh', () => {
+    renderSummary(makeQuery({
+      data: [makeLog({ severity: 'critical' })],
+      isError: true,
+      error: new Error('Refresh failed'),
+    }));
+    expect(cardValue('Recent notifications')).toBe('1');
+    expect(cardValue('Critical')).toBe('1');
+    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
   it('renders a six-card skeleton grid inside the labelled region on first load', () => {
     renderSummary(makeQuery({ isLoading: true, isPending: true, isFetching: true }));
 
     expect(getRegion()).toBeInTheDocument();
-    const skeleton = screen.getByTestId('stat-grid-skeleton');
+    const skeleton = screen.getByTestId('notification-backlog-brief');
     expect(skeleton).toHaveAttribute('aria-busy', 'true');
-    expect(skeleton.querySelectorAll('.animate-pulse')).toHaveLength(6);
+    expect(skeleton.querySelectorAll('[data-operational-metric]')).toHaveLength(6);
+    expect(skeleton.querySelectorAll('[data-operational-value]')).toHaveLength(0);
     // No KPI cards while first-loading.
     expect(screen.queryByText('Total')).not.toBeInTheDocument();
   });
@@ -119,6 +147,77 @@ describe('InboxSummary — loading & error states', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /retry/i }));
     expect(refetch).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('InboxSummary — accepted severity aliases and archived scope', () => {
+  it('counts accepted warning aliases without changing source rows or unknown severity', () => {
+    const data = [
+      makeLog({ severity: 'warn' }),
+      makeLog({ severity: ' Warning ' }),
+      makeLog({ severity: 'WARN' }),
+      makeLog({ severity: 'debug' }),
+    ];
+    const original = data.map((row) => ({ ...row }));
+    renderSummary(makeQuery({ data }));
+
+    expect(cardValue('Warnings')).toBe('3');
+    expect(cardValue('Recent notifications')).toBe('4');
+    expect(data).toEqual(original);
+    fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
+    expect(screen.getByRole('dialog')).toHaveTextContent('1 with unknown severity');
+  });
+
+  it('does not reinterpret other unknown active severity values as confirmed critical or info', () => {
+    renderSummary(makeQuery({ data: [
+      makeLog({ severity: ' CRITICAL ' }),
+      makeLog({ severity: 'INFO' }),
+    ] }));
+
+    expect(cardValue('Critical')).toBe('0');
+    expect(cardValue('Info')).toBe('0');
+    fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
+    expect(screen.getByRole('dialog')).toHaveTextContent('2 with unknown severity');
+  });
+
+  it('keeps archive timestamps, normalized counts and bounded all-time provenance', () => {
+    const archivedAt = new Date(Date.now() - 5 * 60_000).toISOString();
+    renderSummary(makeQuery({ data: [
+      makeLog({ severity: ' Warning ', archived_at: archivedAt, created_at: '' }),
+      makeLog({ severity: ' CRITICAL ', archived_at: 'not-a-date', created_at: '2026-10-08T12:00:00Z' }),
+    ] }), true);
+
+    expect(screen.getByRole('region', { name: 'Archived summary' })).toBeInTheDocument();
+    expect(cardValue('Total archived')).toBe('2');
+    expect(cardValue('Warnings')).toBe('1');
+    expect(cardValue('Critical')).toBe('1');
+    expect(cardValue('Last archived')).toMatch(/ago/i);
+    fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
+    expect(screen.getByRole('dialog')).toHaveTextContent('Latest 50 archived entries · all time');
+    expect(screen.getByRole('dialog')).toHaveTextContent('not the workspace period or the server total');
+    expect(screen.getByRole('dialog')).toHaveTextContent(formatDateTime(new Date(archivedAt)));
+  });
+
+  it('retains cached metrics and explicit paused trust instead of claiming a loaded fresh sample', () => {
+    renderSummary(makeQuery({ data: [makeLog()], fetchStatus: 'paused' }));
+
+    expect(cardValue('Recent notifications')).toBe('1');
+    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+    expect(screen.getByText('Refresh paused')).toBeInTheDocument();
+    expect(screen.queryByText('Sample loaded')).not.toBeInTheDocument();
+  });
+
+  it('preserves the active empty-state action destination', () => {
+    renderSummary(makeQuery({ data: [] }));
+
+    expect(screen.getByRole('link', { name: 'Manage alert rules' })).toHaveAttribute('href', '/notifications/rules');
+  });
+
+  it('preserves the archived empty-state action destination', () => {
+    renderSummary(makeQuery({ data: [] }), true);
+
+    expect(screen.getByText('No archived notifications yet')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Go to inbox' })).toHaveAttribute('href', '/notifications/inbox');
   });
 });
 
@@ -207,5 +306,22 @@ describe('InboxSummary — null-safety & accessibility', () => {
     // metric label + value carry the meaning.
     expect(container.querySelectorAll('svg[aria-hidden="true"]').length).toBeGreaterThan(0);
     expect(cardValue('Recent notifications')).toBe('1');
+  });
+
+  it('reviews the bounded sample, unread denominator, full timestamp, and severity uncertainty in the real drawer', () => {
+    renderSummary(makeQuery({ isSuccess: true, data: [
+      makeLog({ severity: 'critical', read_at: null, created_at: '2026-08-04T12:00:00Z' }),
+      makeLog({ severity: 'debug', read_at: '2026-08-04T13:00:00Z' }),
+    ] }));
+    const brief = screen.getByTestId('notification-backlog-brief');
+    expect(brief).toHaveAttribute('data-operational-brief');
+    expect(brief.querySelector('[data-operational-metric="inbox-unread"]')).toHaveAttribute('data-value-state', 'value');
+    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog');
+    expect(drawer).toHaveTextContent('Latest 50 active entries · all time');
+    expect(drawer).toHaveTextContent('not the workspace period or the server total');
+    expect(drawer).toHaveTextContent('1 of 2');
+    expect(drawer).toHaveTextContent('1 with unknown severity');
+    expect(drawer).toHaveTextContent('Last received');
   });
 });

@@ -167,8 +167,8 @@ describe('InfrastructureSection — loading & error body', () => {
     expect(status).toHaveAttribute('aria-busy', 'true')
     expect(status).toHaveAttribute('aria-label', 'Loading infrastructure diagnostics')
     // Cards must not render in the loading branch.
-    expect(screen.queryByText('SSE Connection')).not.toBeInTheDocument()
-    expect(screen.queryByText('Polling Engine')).not.toBeInTheDocument()
+    expect(screen.queryByText('SSE connection')).not.toBeInTheDocument()
+    expect(screen.queryByText('Polling engine')).not.toBeInTheDocument()
   })
 
   it('renders an alert instead of the cards when the query errors', () => {
@@ -178,7 +178,7 @@ describe('InfrastructureSection — loading & error body', () => {
 
     const alert = screen.getByRole('alert')
     expect(alert).toHaveTextContent('Unable to load infrastructure diagnostics.')
-    expect(screen.queryByText('SSE Connection')).not.toBeInTheDocument()
+    expect(screen.queryByText('SSE connection')).not.toBeInTheDocument()
   })
 })
 
@@ -188,8 +188,8 @@ describe('InfrastructureSection — expanded content', () => {
     render(<InfrastructureSection />)
     expand()
 
-    expect(screen.getByText('SSE Connection')).toBeInTheDocument()
-    expect(screen.getByText('Polling Engine')).toBeInTheDocument()
+    expect(screen.getByText('SSE connection')).toBeInTheDocument()
+    expect(screen.getByText('Polling engine')).toBeInTheDocument()
     expect(screen.getByText('telemetry.example.com:443')).toBeInTheDocument()
     expect(screen.getByText('grpc')).toBeInTheDocument()
     expect(screen.getByText('75x')).toBeInTheDocument()
@@ -207,7 +207,7 @@ describe('InfrastructureSection — expanded content', () => {
     render(<InfrastructureSection />)
     expand()
 
-    expect(screen.getByText('Yes — Polling')).toBeInTheDocument()
+    expect(screen.getByText('Yes — polling')).toBeInTheDocument()
     // Polling engine badge flips to Active; standby text must be gone.
     expect(screen.getByText('Active')).toBeInTheDocument()
     expect(screen.queryByText('Standby')).not.toBeInTheDocument()
@@ -240,7 +240,7 @@ describe('InfrastructureSection — database pool metrics', () => {
     render(<InfrastructureSection />)
     expand()
 
-    expect(screen.getByText('Total Conns')).toBeInTheDocument()
+    expect(screen.getByText('Total conns')).toBeInTheDocument()
     expect(screen.getByText('Acquired')).toBeInTheDocument()
     expect(screen.getByText('Idle')).toBeInTheDocument()
     expect(screen.getByText('30')).toBeInTheDocument()
@@ -254,7 +254,7 @@ describe('InfrastructureSection — database pool metrics', () => {
     render(<InfrastructureSection />)
     expand()
 
-    expect(screen.queryByText('Total Conns')).not.toBeInTheDocument()
+    expect(screen.queryByText('Total conns')).not.toBeInTheDocument()
     expect(screen.queryByText('Acquired')).not.toBeInTheDocument()
     expect(screen.queryByText('Idle')).not.toBeInTheDocument()
   })
@@ -268,7 +268,7 @@ describe('InfrastructureSection — database pool metrics', () => {
     // Telemetry cards are behind the loading skeleton, but the independent
     // pool query still surfaces its metrics.
     expect(screen.getByRole('status')).toHaveAttribute('aria-busy', 'true')
-    expect(screen.getByText('Total Conns')).toBeInTheDocument()
+    expect(screen.getByText('Total conns')).toBeInTheDocument()
     expect(screen.getByText('30')).toBeInTheDocument()
   })
 })
@@ -279,13 +279,13 @@ describe('InfrastructureSection — accessibility & interaction', () => {
     render(<InfrastructureSection />)
 
     // Body hidden until the header is activated.
-    expect(screen.queryByText('SSE Connection')).not.toBeInTheDocument()
+    expect(screen.queryByText('SSE connection')).not.toBeInTheDocument()
     const header = screen.getByRole('button', { name: /Infrastructure/i })
     expect(header).toHaveAttribute('aria-expanded', 'false')
 
     fireEvent.click(header)
     expect(header).toHaveAttribute('aria-expanded', 'true')
-    expect(screen.getByText('SSE Connection')).toBeInTheDocument()
+    expect(screen.getByText('SSE connection')).toBeInTheDocument()
   })
 
   it('is keyboard-operable — Enter on the header toggles it open', () => {
@@ -293,10 +293,17 @@ describe('InfrastructureSection — accessibility & interaction', () => {
     render(<InfrastructureSection />)
 
     const header = screen.getByRole('button', { name: /Infrastructure/i })
-    fireEvent.keyDown(header, { key: 'Enter' })
+    expect(header.tagName).toBe('BUTTON')
+    expect(header).toHaveAttribute('type', 'button')
+    header.focus()
+    expect(header).toHaveFocus()
+    expect(fireEvent.keyDown(header, { key: 'Enter' })).toBe(true)
+    fireEvent.keyUp(header, { key: 'Enter' })
+    // jsdom needs the activation click that a browser emits for the native button.
+    fireEvent.click(header)
 
     expect(header).toHaveAttribute('aria-expanded', 'true')
-    expect(screen.getByText('Polling Engine')).toBeInTheDocument()
+    expect(screen.getByText('Polling engine')).toBeInTheDocument()
   })
 
   it('marks its decorative icons aria-hidden so assistive tech ignores them', () => {

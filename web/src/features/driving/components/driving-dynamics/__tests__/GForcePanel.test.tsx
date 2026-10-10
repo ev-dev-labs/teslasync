@@ -237,7 +237,7 @@ describe('GForcePanel — loading + error states', () => {
     expect(
       screen.getByRole('heading', { name: /acceleration g-force/i }),
     ).toBeInTheDocument()
-    expect(container.querySelector('.animate-pulse')).not.toBeNull()
+    expect(container.querySelector('[class*="--skeleton-bg"]')).not.toBeNull()
     expect(screen.queryByText('Lateral')).toBeNull()
     expect(screen.queryByText('No G-force telemetry received yet')).toBeNull()
 

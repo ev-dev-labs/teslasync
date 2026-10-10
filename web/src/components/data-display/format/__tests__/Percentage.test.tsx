@@ -36,13 +36,13 @@ describe('Percentage — value branch (already a percent)', () => {
     const { container } = render(<Percentage value={0} precision={0} />);
     expect(container.textContent).toBe('0%');
     expect(container.textContent).not.toBe('—');
-    expect(span(container)?.getAttribute('title')).toBe('0.000%');
+    expect(span(container)?.getAttribute('title')).toBe('0%');
   });
 
   it('preserves the sign of a negative percentage (e.g. a delta)', () => {
     const { container } = render(<Percentage value={-5} precision={0} />);
     expect(container.textContent).toBe('-5%');
-    expect(span(container)?.getAttribute('title')).toBe('-5.000%');
+    expect(span(container)?.getAttribute('title')).toBe('-5%');
   });
 
   it('applies locale-aware thousands separators to large percentages', () => {
@@ -55,7 +55,7 @@ describe('Percentage — ratio branch (0–1 scaled to percent)', () => {
   it('multiplies a 0–1 ratio by 100 before display', () => {
     const { container } = render(<Percentage ratio={0.5} precision={0} />);
     expect(container.textContent).toBe('50%');
-    expect(span(container)?.getAttribute('title')).toBe('50.000%');
+    expect(span(container)?.getAttribute('title')).toBe('50%');
   });
 
   it('treats a zero ratio as a valid 0%, not an empty value', () => {
@@ -80,7 +80,7 @@ describe('Percentage — source precedence', () => {
     const { container } = render(<Percentage value={80} ratio={0.5} precision={0} />);
     expect(container.textContent).toBe('80%');
     // Title proves the value branch (80), not the ratio (→50), produced it.
-    expect(span(container)?.getAttribute('title')).toBe('80.000%');
+    expect(span(container)?.getAttribute('title')).toBe('80%');
   });
 
   it('falls back to the ratio branch when value is null', () => {
@@ -168,28 +168,28 @@ describe('Percentage — precision & locale', () => {
 });
 
 describe('Percentage — title (canonical hover value)', () => {
-  it('exposes the raw value at a fixed 3-decimal precision', () => {
+  it('formats the percentage title with the requested precision', () => {
     const { container } = render(<Percentage value={85.5} precision={1} />);
-    expect(span(container)?.getAttribute('title')).toBe('85.500%');
+    expect(span(container)?.getAttribute('title')).toBe('85.5%');
   });
 
-  it('keeps the title at 3 decimals independent of the display precision', () => {
+  it('uses the display precision for the title too', () => {
     const { container } = render(<Percentage value={85} precision={0} />);
-    // Display collapses to "85%" but the hover title stays canonical.
+    // The explicit integer override applies to both display and title.
     expect(container.textContent).toBe('85%');
-    expect(span(container)?.getAttribute('title')).toBe('85.000%');
+    expect(span(container)?.getAttribute('title')).toBe('85%');
   });
 
   it('derives the canonical title from the scaled ratio, not the raw ratio', () => {
     const { container } = render(<Percentage ratio={0.5} precision={0} />);
-    expect(span(container)?.getAttribute('title')).toBe('50.000%');
+    expect(span(container)?.getAttribute('title')).toBe('50%');
   });
 
-  it('keeps the canonical title free of locale grouping separators', () => {
+  it('uses locale grouping separators in the title', () => {
     setGlobalLocale('de-DE');
     const { container } = render(<Percentage value={12345} precision={0} />);
-    // toFixed(3) is locale-agnostic, so the title never picks up de-DE grouping.
-    expect(span(container)?.getAttribute('title')).toBe('12345.000%');
+    // Titles follow the same locale as the visible percentage.
+    expect(span(container)?.getAttribute('title')).toBe('12.345%');
   });
 });
 
@@ -199,7 +199,7 @@ describe('Percentage — DOM & re-render', () => {
     const el = span(container);
     expect(el).not.toBeNull();
     expect(el?.tagName).toBe('SPAN');
-    expect(el?.getAttribute('title')).toBe('42.000%');
+    expect(el?.getAttribute('title')).toBe('42%');
   });
 
   it('applies the className to the rendered value span', () => {
@@ -210,11 +210,11 @@ describe('Percentage — DOM & re-render', () => {
   it('recomputes the display and title when the value changes on re-render', () => {
     const { container, rerender } = render(<Percentage value={10} precision={0} />);
     expect(container.textContent).toBe('10%');
-    expect(span(container)?.getAttribute('title')).toBe('10.000%');
+    expect(span(container)?.getAttribute('title')).toBe('10%');
 
     rerender(<Percentage value={20} precision={0} />);
     expect(container.textContent).toBe('20%');
-    expect(span(container)?.getAttribute('title')).toBe('20.000%');
+    expect(span(container)?.getAttribute('title')).toBe('20%');
   });
 
   it('transitions from a valid value to the empty state when value becomes null', () => {
@@ -232,6 +232,6 @@ describe('Percentage — DOM & re-render', () => {
 
     rerender(<Percentage ratio={0.5} precision={0} />);
     expect(container.textContent).toBe('50%');
-    expect(span(container)?.getAttribute('title')).toBe('50.000%');
+    expect(span(container)?.getAttribute('title')).toBe('50%');
   });
 });

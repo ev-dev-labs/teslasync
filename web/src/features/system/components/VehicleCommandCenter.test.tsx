@@ -1,4 +1,8 @@
 import type { ReactNode } from 'react';
+vi.mock('@/hooks/useSettings', async importOriginal => ({
+  ...await importOriginal<typeof import('@/hooks/useSettings')>(),
+  useSettings: () => ({ settings: { locale: 'en-US', decimal_precision: 2, currency_symbol: '$', unit_of_length: 'km', unit_of_temp: 'C' }, settingsUnavailable: false }),
+}));
 import {
   act,
   fireEvent,
@@ -195,12 +199,13 @@ describe('VehicleCommandCenter — summary and readiness', () => {
   it('renders selected vehicle identity, converted telemetry, and all major sections', async () => {
     renderCenter();
 
-    expect(screen.getByText('My Tesla')).toBeInTheDocument();
+    expect(within(screen.getByTestId('command-center-hero')).getByRole('heading', { name: 'My Tesla' })).toBeInTheDocument();
     expect(screen.getByText(/Model 3/)).toBeInTheDocument();
     expect(screen.getByText(/5YJ3E1EA7KF000000/)).toBeInTheDocument();
-    expect(await screen.findByText('85')).toBeInTheDocument();
-    expect(screen.getByText('400')).toBeInTheDocument();
-    expect(screen.getByText('21')).toBeInTheDocument();
+    const vehicleState = within(screen.getByRole('region', { name: 'Vehicle state' }));
+    expect(await vehicleState.findByText('85.00%', { selector: '[data-operational-metric="battery"] [data-operational-value]' })).toBeInTheDocument();
+    expect(vehicleState.getByText('400 km', { selector: '[data-operational-metric="range"] [data-operational-value]' })).toBeInTheDocument();
+    expect(vehicleState.getByText('21°C', { selector: '[data-operational-metric="cabin"] [data-operational-value]' })).toBeInTheDocument();
     expect(screen.getByTestId('command-readiness')).toBeInTheDocument();
     expect(screen.getByTestId('command-workspace')).toBeInTheDocument();
     expect(screen.queryByTestId('command-safety')).not.toBeInTheDocument();
@@ -217,7 +222,7 @@ describe('VehicleCommandCenter — summary and readiness', () => {
       await screen.findByText("Can't reach server"),
     ).toBeInTheDocument();
     expect(screen.getByTestId('command-workspace')).toBeInTheDocument();
-    expect(screen.getAllByText('Wake Up').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Wake up').length).toBeGreaterThan(0);
   });
 
   it('does not block commands with the removed stale telemetry warning', () => {
@@ -231,22 +236,22 @@ describe('VehicleCommandCenter — summary and readiness', () => {
 
   it('does not mistake an old vehicle record for the last signal or current readiness', async () => {
     const veryOld = new Date(Date.now() - 3_653 * 60 * 60 * 1000).toISOString();
-    stateResponse = { state: makeState({ state: 'charging' }), live: true };
+    stateResponse = { state: makeState({ state: 'Charging' }), live: true };
     installRequestRouter();
 
     renderCenter(makeVehicle({ state: 'charging', updated_at: veryOld }));
 
     expect(await within(screen.getByTestId('command-center-hero')).findByText('Last known: Charging')).toBeInTheDocument();
-    expect(screen.getByText('No verified signal time')).toBeInTheDocument();
+    expect(within(screen.getByRole('region', { name: 'Vehicle state' })).getByText('No verified signal time')).toBeInTheDocument();
     expect(screen.queryByText('3653h ago')).not.toBeInTheDocument();
     expect(await screen.findByText('Delivery uncertain')).toBeInTheDocument();
-    expect(screen.getByText('Motion unknown')).toBeInTheDocument();
+    expect(within(screen.getByRole('region', { name: 'Command readiness' })).getByText('Motion unknown', { selector: '[data-operational-metric="motion"][data-value-state="missing"] [data-operational-value]' })).toBeInTheDocument();
     expect(screen.getByTestId('command-readiness')).toHaveTextContent('Unknown');
   });
 
   it('uses a verified signal observation for current status and readiness', async () => {
     stateResponse = {
-      state: makeState({ state: 'charging', is_charging: true }),
+      state: makeState({ state: 'Charging', is_charging: true }),
       observed_at: new Date().toISOString(),
       freshness: 'fresh',
       verified_fields: ['state', 'is_charging', 'speed'],
@@ -275,7 +280,7 @@ describe('VehicleCommandCenter — summary and readiness', () => {
     ).toBeInTheDocument();
     searchFor('flash_lights');
     expect(
-      screen.getByRole('button', { name: 'Flash Lights' }),
+      screen.getByRole('button', { name: 'Flash lights' }),
     ).not.toHaveAttribute('aria-disabled');
   });
 });
@@ -284,15 +289,15 @@ describe('VehicleCommandCenter — complete command catalogue', () => {
   it('keeps every domain, category, and configured action reachable', () => {
     renderCenter();
 
-    for (const domain of ['Access & Security', 'Climate & Comfort', 'Charging & Schedules', 'Vehicle Controls']) {
+    for (const domain of ['Access & security', 'Climate & comfort', 'Charging & schedules', 'Vehicle controls']) {
       expect(screen.getByRole('tab', { name: domain })).toBeInTheDocument();
     }
 
     const domainCategories = [
-      ['Access & Security', ['security', 'doors', 'drive', 'windows', 'sunroof']],
-      ['Climate & Comfort', ['climate', 'climate_protection']],
-      ['Charging & Schedules', ['charging', 'schedules']],
-      ['Vehicle Controls', ['alerts', 'navigation', 'software', 'vehicle', 'media']],
+      ['Access & security', ['security', 'doors', 'drive', 'windows', 'sunroof']],
+      ['Climate & comfort', ['climate', 'climate_protection']],
+      ['Charging & schedules', ['charging', 'schedules']],
+      ['Vehicle controls', ['alerts', 'navigation', 'software', 'vehicle', 'media']],
     ] as const;
 
     for (const [domain, categories] of domainCategories) {
@@ -323,7 +328,7 @@ describe('VehicleCommandCenter — command execution', () => {
     renderCenter();
     searchFor('flash_lights');
 
-    const command = screen.getByRole('button', { name: 'Flash Lights' });
+    const command = screen.getByRole('button', { name: 'Flash lights' });
     expect(command).toHaveAttribute('aria-disabled', 'true');
     fireEvent.click(command);
     expect(postCalls()).toHaveLength(0);
@@ -335,7 +340,7 @@ describe('VehicleCommandCenter — command execution', () => {
   it('preserves wake-up as a reachable command on the supported endpoint', async () => {
     renderCenter();
 
-    fireEvent.click(screen.getAllByRole('button', { name: 'Wake Up' })[0]);
+    fireEvent.click(screen.getAllByRole('button', { name: 'Wake up' })[0]);
 
     await waitFor(() => expect(postCalls()).toHaveLength(1));
     expect(postCalls()[0][0]).toBe('/vehicles/42/command');
@@ -346,13 +351,13 @@ describe('VehicleCommandCenter — command execution', () => {
     renderCenter();
     searchFor('flash_lights');
 
-    fireEvent.click(screen.getByRole('button', { name: 'Flash Lights' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Flash lights' }));
 
     await waitFor(() => expect(postCalls()).toHaveLength(1));
     expect(postCalls()[0][0]).toBe('/vehicles/42/command');
     expect(lastPostBody()).toEqual({ command: 'flash_lights' });
     expect(
-      await screen.findByText('Flash Lights request sent to My Tesla.'),
+      await screen.findByText('Flash lights request sent to My Tesla.'),
     ).toBeInTheDocument();
   });
 
@@ -360,7 +365,7 @@ describe('VehicleCommandCenter — command execution', () => {
     renderCenter();
     searchFor('speed_limit_clear_pin_admin');
 
-    fireEvent.click(screen.getByRole('button', { name: 'Clear Speed PIN' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Clear speed PIN' }));
 
     const dialog = screen.getByRole('dialog');
     expect(
@@ -379,7 +384,7 @@ describe('VehicleCommandCenter — command execution', () => {
   it('preserves input and select command payloads', async () => {
     renderCenter();
     searchFor('set_charge_limit');
-    fireEvent.click(screen.getByRole('button', { name: 'Set Limit' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Set limit' }));
 
     const inputDialog = screen.getByRole('dialog');
     fireEvent.change(within(inputDialog).getByDisplayValue('80'), {
@@ -394,7 +399,7 @@ describe('VehicleCommandCenter — command execution', () => {
     });
 
     searchFor('set_cop_temp');
-    fireEvent.click(screen.getByRole('button', { name: 'COP Temp' }));
+    fireEvent.click(screen.getByRole('button', { name: 'COP temp' }));
     const selectDialog = screen.getByRole('dialog');
     fireEvent.click(within(selectDialog).getByRole('button', { name: /Low/ }));
 
@@ -415,11 +420,11 @@ describe('VehicleCommandCenter — command execution', () => {
     renderCenter();
     searchFor('flash_lights');
 
-    const tile = screen.getByRole('button', { name: 'Flash Lights' });
+    const tile = screen.getByRole('button', { name: 'Flash lights' });
     fireEvent.click(tile);
 
     expect(await screen.findByTestId('command-pending-feedback')).toHaveTextContent(
-      'Sending Flash Lights…',
+      'Sending Flash lights…',
     );
     expect(tile).toHaveAttribute('aria-disabled', 'true');
     fireEvent.click(tile);
@@ -429,7 +434,7 @@ describe('VehicleCommandCenter — command execution', () => {
       resolveCommand?.({ success: true, result: 'success' });
     });
     expect(
-      await screen.findByText('Flash Lights request sent to My Tesla.'),
+      await screen.findByText('Flash lights request sent to My Tesla.'),
     ).toBeInTheDocument();
   });
 
@@ -440,7 +445,7 @@ describe('VehicleCommandCenter — command execution', () => {
     renderCenter();
     searchFor('flash_lights');
 
-    fireEvent.click(screen.getByRole('button', { name: 'Flash Lights' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Flash lights' }));
 
     expect(await screen.findByTestId('command-result-feedback')).toHaveTextContent(
       'vehicle is offline',
@@ -453,13 +458,13 @@ describe('VehicleCommandCenter — command execution', () => {
     renderCenter();
     searchFor('flash_lights');
 
-    fireEvent.click(screen.getByRole('button', { name: 'Flash Lights' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Flash lights' }));
 
     expect(await screen.findByTestId('command-result-feedback')).toHaveTextContent(
-      'Flash Lights failed: network down',
+      'Flash lights failed: network down',
     );
     expect(
-      screen.queryByText('Flash Lights request sent to My Tesla.'),
+      screen.queryByText('Flash lights request sent to My Tesla.'),
     ).not.toBeInTheDocument();
   });
 });

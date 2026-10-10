@@ -45,12 +45,14 @@ import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
 
 import type { Trip } from '@/api/types';
+import { ApiError } from '@/lib/resilience';
 
 // ── Hoisted, per-test controllable state ─────────────────────────────
 const h = vi.hoisted(() => ({
   tripsQuery: undefined as unknown,
   vehicleId: 7 as number | null,
   vehicles: [] as Array<{ id: number; display_name: string; vin: string }>,
+  tripsHook: vi.fn(),
 }));
 
 const refetchMock = vi.fn();
@@ -86,7 +88,13 @@ vi.mock('react-i18next', async () => {
 
 vi.mock('@/api/hooks/useTrips', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/api/hooks/useTrips')>();
-  return { ...actual, useTrips: () => h.tripsQuery };
+  return {
+    ...actual,
+    useTrips: (options: unknown) => {
+      h.tripsHook(options);
+      return h.tripsQuery;
+    },
+  };
 });
 
 vi.mock('@/hooks/useSelectedVehicle', () => ({
@@ -210,6 +218,7 @@ interface QueryStub {
   isError: boolean;
   error: unknown;
   isFetching: boolean;
+  fetchStatus: 'idle' | 'fetching' | 'paused';
   isStale: boolean;
   dataUpdatedAt: number;
   refetch: () => void;
@@ -222,6 +231,7 @@ function makeQuery(overrides: Partial<QueryStub> = {}): QueryStub {
     isError: false,
     error: null,
     isFetching: false,
+    fetchStatus: 'idle',
     isStale: false,
     dataUpdatedAt: Date.now(),
     refetch: refetchMock,
@@ -273,6 +283,21 @@ afterEach(() => {
 /* ── READY ─────────────────────────────────────────────────────────── */
 
 describe('SharingTripsPage — ready', () => {
+  it('uses the real OperationalBrief drawer for bounded recent-trip evidence', () => {
+    const { container } = renderPage();
+    const brief = screen.getByTestId('sharing-trips-operational-brief');
+    expect(brief).toHaveAttribute('data-operational-brief');
+    expect(brief.querySelectorAll('[data-operational-metric]')).toHaveLength(4);
+    expect(brief.querySelector('[data-operational-metric="distance"]')).toHaveAttribute('data-value-state', 'value');
+    expect(within(brief).getByText('70000m')).toBeInTheDocument();
+    expect(within(brief).getByText(/at most 20 trips/, { selector: 'p' })).toBeInTheDocument();
+    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog');
+    expect(within(drawer).getByText('70000m')).toBeInTheDocument();
+    expect(within(drawer).getAllByText(/at most 20 trips/).length).toBeGreaterThan(0);
+    expect(container.querySelector('[data-testid="sharing-trips-recent-list"]')).toBeInTheDocument();
+  });
+
   it('aggregates KPI totals across every trip and lists each as a listbox option', () => {
     renderPage();
 
@@ -321,7 +346,7 @@ describe('SharingTripsPage — loading', () => {
     expect(
       screen.getByRole('heading', { level: 1, name: 'Share a trip' }),
     ).toBeInTheDocument();
-    expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThan(0);
+    expect(container.querySelectorAll('[class*="--skeleton-bg"]').length).toBeGreaterThan(0);
     // No resolved KPI labels or list options leak while loading.
     expect(screen.queryByText('Shareable trips')).not.toBeInTheDocument();
     expect(screen.queryByRole('listbox', { name: 'Recent trips' })).not.toBeInTheDocument();
@@ -357,6 +382,21 @@ describe('SharingTripsPage — hard error', () => {
 /* ── RESILIENT ERROR (background refetch, data still cached) ────────── */
 
 describe('SharingTripsPage — background error with cached data', () => {
+  it('retains the brief, drawer values, selection and refresh after a failed refresh', () => {
+    h.tripsQuery = makeQuery({
+      isError: true,
+      error: new Error('transient refresh failure'),
+      data: [tripA, tripB, tripC],
+    });
+    renderPage();
+    const brief = screen.getByTestId('sharing-trips-operational-brief');
+    expect(within(brief).getByText('Cached trips; refresh failed')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('option', { name: 'Morning commute' }));
+    expect(screen.getByTestId('ai-card')).toHaveAttribute('data-trip-id', '101');
+    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+    expect(within(screen.getByRole('dialog')).getByText('14000Wh')).toBeInTheDocument();
+  });
+
   it('keeps rendering the cached totals + list instead of the destructive error banner', () => {
     h.tripsQuery = makeQuery({
       isError: true,
@@ -392,6 +432,21 @@ describe('SharingTripsPage — empty', () => {
     expect(within(kpis).getByText('Shareable trips')).toBeInTheDocument();
     expect(within(kpis).getByText('0m')).toBeInTheDocument();
     expect(screen.getByTestId('ai-card')).toHaveAttribute('data-trip-id', '');
+  });
+
+  describe('SharingTripsPage — unresolved initial source', () => {
+    it.each([
+      { fetchStatus: 'paused' as const, message: 'The recent-trip query is paused; no empty result is inferred.' },
+      { fetchStatus: 'idle' as const, message: 'Recent-trip availability has not resolved yet.' },
+    ])('keeps independent share and AI sections without inferring empty totals for $fetchStatus', ({ fetchStatus, message }) => {
+      h.tripsQuery = makeQuery({ fetchStatus });
+      renderPage();
+      expect(screen.getAllByText(message)).toHaveLength(2);
+      expect(screen.queryByText('No recent trips. Drive your vehicle to populate this list.')).not.toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: 'Static share cards' })).toBeInTheDocument();
+      expect(screen.getByTestId('ai-card')).toHaveAttribute('data-trip-id', '');
+      expect(screen.queryByText('Shareable trips')).not.toBeInTheDocument();
+    });
   });
 });
 
@@ -477,5 +532,93 @@ describe('SharingTripsPage — shared vehicle scope + refresh', () => {
     expect(pageRefreshButton()).toBeInTheDocument();
     // The deterministic page still renders end-to-end without a vehicle.
     expect(screen.getByRole('listbox', { name: 'Recent trips' })).toBeInTheDocument();
+  });
+});
+
+describe('SharingTripsPage — selected scope recovery', () => {
+  function previewRow(label: string): HTMLElement {
+    const row = screen.getByText(label).closest('div');
+    if (!row) throw new Error(`Missing preview row: ${label}`);
+    return row;
+  }
+
+  it('keeps every selected preview value and AI identity during a pending refresh, error and successful recovery', () => {
+    const view = renderPage();
+    fireEvent.click(screen.getByRole('option', { name: 'Morning commute' }));
+    const assertSelection = () => {
+      expect(screen.getByRole('option', { name: 'Morning commute' })).toHaveAttribute('aria-selected', 'true');
+      expect(screen.getByTestId('ai-card')).toHaveAttribute('data-trip-id', '101');
+      expect(within(previewRow('Distance')).getByText('12000m')).toBeInTheDocument();
+      expect(within(previewRow('Energy')).getByText('3000Wh')).toBeInTheDocument();
+      expect(within(previewRow('Duration')).getByText('30m')).toBeInTheDocument();
+      expect(within(previewRow('Drives')).getByText('2')).toBeInTheDocument();
+      expect(within(previewRow('Charges')).getByText('1')).toBeInTheDocument();
+      expect(within(previewRow('Cost')).getByText('$5.00')).toBeInTheDocument();
+      expect(screen.getByText(/Only this redacted summary is shared/)).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: 'Static share cards' })).toBeInTheDocument();
+    };
+    assertSelection();
+    fireEvent.click(pageRefreshButton());
+    expect(refetchMock).toHaveBeenCalledOnce();
+
+    h.tripsQuery = makeQuery({ data: [tripA, tripB, tripC], isFetching: true, fetchStatus: 'fetching' });
+    view.rerenderPage();
+    assertSelection();
+    h.tripsQuery = makeQuery({
+      data: [tripA, tripB, tripC], error: new Error('refresh failed'), isError: true,
+    });
+    view.rerenderPage();
+    assertSelection();
+    expect(screen.queryByText(/Can't reach server/i)).not.toBeInTheDocument();
+
+    const updated = { ...tripA, total_distance_m: 15000, total_energy_wh: 3500 };
+    h.tripsQuery = makeQuery({ data: [updated, tripB, tripC] });
+    view.rerenderPage();
+    expect(within(previewRow('Distance')).getByText('15000m')).toBeInTheDocument();
+    expect(within(previewRow('Energy')).getByText('3500Wh')).toBeInTheDocument();
+    expect(screen.getByTestId('ai-card')).toHaveAttribute('data-trip-id', '101');
+    expect(h.tripsHook).toHaveBeenLastCalledWith({ vehicle_id: 7, limit: 20 });
+    expect(tripA.total_distance_m).toBe(12000);
+  });
+
+  it('withholds a no-data permission failure without losing static guidance, then restores the same resolved selection', () => {
+    const view = renderPage();
+    fireEvent.click(screen.getByRole('option', { name: 'Morning commute' }));
+    h.tripsQuery = makeQuery({ error: new ApiError('forbidden', 403), isError: true });
+    view.rerenderPage();
+    expect(screen.getAllByText('Permission denied')).toHaveLength(2);
+    expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
+    expect(screen.queryByText('Distance')).not.toBeInTheDocument();
+    expect(screen.getByTestId('ai-card')).toHaveAttribute('data-trip-id', '');
+    expect(screen.getByRole('heading', { name: 'Static share cards' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Retry' })).not.toBeInTheDocument();
+
+    fireEvent.click(pageRefreshButton());
+    expect(refetchMock).toHaveBeenCalledOnce();
+    h.tripsQuery = makeQuery({ data: [tripA, tripB, tripC] });
+    view.rerenderPage();
+    expect(screen.queryByText('Permission denied')).not.toBeInTheDocument();
+    expect(screen.getByRole('option', { name: 'Morning commute' })).toHaveAttribute('aria-selected', 'true');
+    expect(within(previewRow('Distance')).getByText('12000m')).toBeInTheDocument();
+    expect(screen.getByTestId('ai-card')).toHaveAttribute('data-trip-id', '101');
+  });
+
+  it('passes a changed workspace vehicle and the unchanged twenty-trip bound to the hook, never sharing a stale member', () => {
+    const view = renderPage();
+    fireEvent.click(screen.getByRole('option', { name: 'Morning commute' }));
+    const otherTrip = makeTrip({ id: 901, vehicle_id: 9, name: 'Other vehicle trip' });
+    h.vehicleId = 9;
+    h.tripsQuery = makeQuery({ data: [otherTrip] });
+    view.rerenderPage();
+    expect(h.tripsHook).toHaveBeenLastCalledWith({ vehicle_id: 9, limit: 20 });
+    expect(screen.getByTestId('ai-card')).toHaveAttribute('data-trip-id', '');
+    expect(screen.queryByText('Distance')).not.toBeInTheDocument();
+    expect(screen.queryByRole('combobox', { name: 'Select vehicle' })).not.toBeInTheDocument();
+    expect(setVehicleIdMock).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole('option', { name: 'Other vehicle trip' }));
+    expect(screen.getByTestId('ai-card')).toHaveAttribute('data-trip-id', '901');
+    expect(within(previewRow('Distance')).getByText('1000m')).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: 'Other vehicle trip' })).toHaveAttribute('aria-selected', 'true');
   });
 });

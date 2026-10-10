@@ -138,9 +138,9 @@ export function HelixSidePanel({ open, onClose }: HelixSidePanelProps) {
         <div className="m-5 rounded-shape-xl border border-[var(--border-default)] bg-[var(--surface-1)] p-6">
           <HelixMark className="mb-4 h-8 w-8 text-[var(--theme-primary)]" aria-hidden="true" />
           <Text as="p" variant="bodySm" className="mb-3">
-            {t('statusBar.helix.disabled', 'Enable Helix Chat in Integrations to ask about this page.')}
+            {t('statusBar.helix.disabled', 'Enable Helix chat in integrations to ask about this page.')}
           </Text>
-          <Link className="text-[var(--theme-primary)] underline" to="/integrations/helix" onClick={onClose}>
+          <Link className="rounded-shape-sm text-[var(--text-primary)] underline underline-offset-4 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus-ring)]" to="/integrations/helix" onClick={onClose}>
             {t('statusBar.helix.configure', 'Configure Helix')}
           </Link>
         </div>
@@ -169,7 +169,7 @@ export function HelixSidePanel({ open, onClose }: HelixSidePanelProps) {
             <Text as="p" variant="caption">
               {t('statusBar.helix.contextHint', 'Only visible page text, not form entries or hidden panels, is sent to your configured AI provider when you ask.')}
             </Text>
-            <div data-role="helix-composer" className="w-full rounded-shape-xl border border-[var(--control-border)] bg-[var(--control-bg)] focus-within:border-[var(--theme-primary)] focus-within:ring-2 focus-within:ring-[var(--focus-ring)]">
+            <div data-role="helix-composer" className="w-full rounded-shape-lg border border-[var(--control-border)] bg-[var(--control-bg)] focus-within:border-[var(--focus-ring)] focus-within:ring-2 focus-within:ring-[var(--focus-ring)]">
               <Textarea
                 ref={inputRef}
                 value={draft}
@@ -192,7 +192,7 @@ export function HelixSidePanel({ open, onClose }: HelixSidePanelProps) {
                   type="button"
                   variant="primary"
                   size="sm"
-                  className="h-9 w-9 shrink-0 rounded-full p-0"
+                  className="h-11 w-11 shrink-0 rounded-full p-0 md:h-9 md:w-9"
                   aria-label={t('statusBar.helix.send', 'Send')}
                   title={t('statusBar.helix.send', 'Send')}
                   disabled={!draft.trim() || !!request}
@@ -218,14 +218,14 @@ export function HelixSidePanel({ open, onClose }: HelixSidePanelProps) {
       role="complementary"
       aria-label={t('statusBar.helix.title', 'Helix chat')}
       data-role="helix-side-panel"
-      className="flex h-full w-[420px] max-w-[40vw] shrink-0 flex-col border-l border-[var(--border-default)] bg-[var(--bg-app)] pb-7"
+      className="flex h-full w-side-panel max-w-side-panel-viewport min-w-0 shrink-0 flex-col border-s border-[var(--border-default)] bg-[var(--bg-app)] pb-7"
     >
-      <div className="flex h-[4.5rem] shrink-0 items-center justify-between border-b border-[var(--border-default)] bg-[var(--surface-1)] px-5">
-        <Text as="h2" variant="bodySm" className="flex items-center gap-2 font-semibold">
-          <HelixMark className="h-5 w-5 text-[var(--theme-primary)]" aria-hidden="true" />
+      <div className="flex min-h-side-panel-header shrink-0 items-center justify-between gap-3 border-b border-[var(--border-default)] bg-[var(--surface-1)] px-5 py-4">
+        <Text as="h2" variant="panelTitle" className="flex min-w-0 items-center gap-2 break-words">
+          <HelixMark className="h-5 w-5 shrink-0 text-[var(--theme-primary)]" aria-hidden="true" />
           {t('statusBar.helix.title', 'Helix chat')}
         </Text>
-        <Button type="button" variant="ghost" size="sm" onClick={onClose} aria-label={t('statusBar.helix.close', 'Close Helix chat')} className="min-h-9 min-w-9 p-0">
+        <Button type="button" variant="ghost" size="sm" onClick={onClose} aria-label={t('statusBar.helix.close', 'Close Helix chat')} className="min-h-9 min-w-9 shrink-0 p-0">
           <Icons.close className="h-4 w-4" aria-hidden="true" />
         </Button>
       </div>

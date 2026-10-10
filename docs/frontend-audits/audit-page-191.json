@@ -1,0 +1,288 @@
+{
+  "item": "audit-page-191",
+  "page": "web\\src\\features\\system\\pages\\NotFoundPage.tsx",
+  "routes": ["*"],
+  "purpose": "Catch-all route recovery page explaining the unmatched pathname and offering suggested destinations and escape actions.",
+  "primaryGoal": "Recover from an unknown URL by selecting a suggested page, returning to history, navigating to the dashboard, or opening the existing command palette.",
+  "dataSources": [
+    {
+      "name": "Router location and navigation",
+      "hooks": ["useLocation", "useNavigate"],
+      "owner": "react-router-dom",
+      "endpoint": null,
+      "file": "web\\src\\features\\system\\pages\\NotFoundPage.tsx",
+      "line": 26,
+      "detail": "pathname drives the message and suggestions; pathname plus search drives the diagnostic effect. No page API request or SI measurement."
+    },
+    {
+      "name": "Known route suggestions",
+      "hooks": ["useMemo"],
+      "owner": "web\\src\\lib\\closestRoute.ts",
+      "dependsOn": ["web\\src\\lib\\routeRegistry.ts"],
+      "endpoint": null,
+      "file": "web\\src\\features\\system\\pages\\NotFoundPage.tsx",
+      "line": 35,
+      "detail": "Up to five suggestions from the generated registry; hidden entries excluded; minimum pathname/English-label Levenshtein distance at most six; sort by distance then path. Empty normalized query returns no suggestions."
+    },
+    {
+      "name": "Localization and document title",
+      "hooks": ["useTranslation", "usePageTitle"],
+      "owner": "web\\src\\hooks\\usePageTitle.ts",
+      "endpoint": null,
+      "file": "web\\src\\features\\system\\pages\\NotFoundPage.tsx",
+      "line": 29,
+      "detail": "Uses notFound.* and registry-provided route i18n keys with existing fallbacks. Title hook writes through titleStore and restores the previous base title on cleanup; catalogs and titleStore implementation not inspected."
+    },
+    {
+      "name": "Browser recovery integration",
+      "hooks": ["useCallback", "useEffect"],
+      "owner": "web\\src\\features\\system\\pages\\NotFoundPage.tsx",
+      "endpoint": null,
+      "file": "web\\src\\features\\system\\pages\\NotFoundPage.tsx",
+      "line": 40,
+      "detail": "window.history.length determines history.back versus navigate('/'); dashboard action navigates('/'); search dispatches toggle-command-palette. Palette listener and actual history destinations are unverified."
+    }
+  ],
+  "components": [
+    {
+      "name": "PageLayout",
+      "kind": "layout",
+      "owner": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+      "file": "web\\src\\features\\system\\pages\\NotFoundPage.tsx",
+      "line": 59,
+      "props": ["title", "children"],
+      "dependsOn": ["web\\src\\components\\layout\\PageContainer.tsx"],
+      "detail": "Existing category-barrel adapter forwards PageContainer props and supplies a full-width min-w-0 container. PageContainer header source includes an h1 route-focus target."
+    },
+    {
+      "name": "GlassPanel",
+      "kind": "primitive surface",
+      "owner": "web\\src\\components\\ui\\GlassPanel.tsx",
+      "file": "web\\src\\features\\system\\pages\\NotFoundPage.tsx",
+      "line": 60,
+      "props": ["className", "children"],
+      "detail": "One centered max-w-2xl recovery text/action block. Existing neutral panel tokens, print marker and forced-color classes; default glow none and hover false."
+    },
+    {
+      "name": "SectionTitle / Text / Caption",
+      "kind": "typography primitives",
+      "owner": "web\\src\\components\\ui\\Typography.tsx",
+      "file": "web\\src\\features\\system\\pages\\NotFoundPage.tsx",
+      "line": 65,
+      "props": ["children", "as", "variant", "className"],
+      "detail": "Shared h2 section heading, body paragraph, suggestion-introduction paragraph and path captions. Existing role styling is retained."
+    },
+    {
+      "name": "Button",
+      "kind": "action primitive",
+      "owner": "web\\src\\components\\ui\\Button.tsx",
+      "file": "web\\src\\features\\system\\pages\\NotFoundPage.tsx",
+      "line": 102,
+      "props": ["variant: ghost / primary", "onClick", "icon", "children"],
+      "detail": "Three labeled recovery actions; inherited md size and wrapLabel false. Shared focus tokens and native button semantics."
+    },
+    {
+      "name": "Link and semantic navigation list",
+      "kind": "router navigation composition",
+      "owner": "react-router-dom Link; page-owned nav/ul/li composition",
+      "file": "web\\src\\features\\system\\pages\\NotFoundPage.tsx",
+      "line": 76,
+      "props": ["aria-label", "to", "className", "children"],
+      "detail": "Localized route labels retain visible path metadata and native link semantics."
+    },
+    {
+      "name": "Compass / ArrowLeft / Home / Search",
+      "kind": "decorative icons",
+      "owner": "lucide-react",
+      "file": "web\\src\\features\\system\\pages\\NotFoundPage.tsx",
+      "line": 61,
+      "props": ["className", "aria-hidden: true"],
+      "detail": "All four icons explicitly hidden from assistive technology; visible translated text names the actions."
+    }
+  ],
+  "duplicatedPatterns": [],
+  "responsive": {
+    "sourceEvidence": [
+      {"file": "web\\src\\features\\system\\pages\\NotFoundPage.tsx", "line": 60, "detail": "Centered constrained text block with p-4 and sm:p-6; this is not an analytical full-width page."},
+      {"file": "web\\src\\features\\system\\pages\\NotFoundPage.tsx", "line": 68, "detail": "Unmatched pathname paragraph uses break-all."},
+      {"file": "web\\src\\features\\system\\pages\\NotFoundPage.tsx", "line": 83, "detail": "Suggestions stack vertically; path captions have no explicit overflow/wrapping rule."},
+      {"file": "web\\src\\features\\system\\pages\\NotFoundPage.tsx", "line": 101, "detail": "Recovery action container uses flex-wrap and gap-3."}
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\system\\pages\\NotFoundPage.tsx",
+        "line": 116,
+        "rule": "MDC-043 / MDC-044: narrow containers and long translations",
+        "detail": "No recovery Button opts into the existing wrapLabel contract or maximum allocated width. Button defaults to fixed h-10 and wrapLabel false. Action-row wrapping alone does not establish long-label or 200%-text containment.",
+        "fix": "Use existing Button wrapLabel and suitable allocated-width classes for recovery actions; exercise long labels and text zoom without dropping any action.",
+        "owner": "page",
+        "confidence": "medium"
+      }
+    ],
+    "viewportAcceptance": "UNVERIFIED at 320, 375, 390, 430, 768, 1024, 1280, 1440, 1920 and 2560px; allocated-container, RTL and zoom behavior also unverified."
+  },
+  "accessibility": {
+    "sourceEvidence": [
+      {"file": "web\\src\\features\\system\\pages\\NotFoundPage.tsx", "line": 63, "detail": "Compass and all button icons use aria-hidden=true."},
+      {"file": "web\\src\\features\\system\\pages\\NotFoundPage.tsx", "line": 78, "detail": "Suggestions nav has a translated accessible label; links have translated labels plus path captions."},
+      {"file": "web\\src\\features\\system\\pages\\NotFoundPage.tsx", "line": 88, "detail": "Suggestion links include an explicit focus-visible ring, but its color is fixed cyan."},
+      {"file": "web\\src\\components\\layout\\PageContainer.tsx", "line": 187, "detail": "Inherited Heading level=page has tabIndex=-1 and data-route-focus-target; actual focus-manager execution not inspected."}
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\system\\pages\\NotFoundPage.tsx",
+        "line": 88,
+        "rule": "MDC-040: reachable mobile targets",
+        "detail": "Suggestion Link only adds px-1 with no minimum height or vertical padding. Recovery Buttons inherit md h-10 (Button.tsx:39). The stronger 44px mobile-target default is not explicitly provided; actual geometry and WCAG spacing exceptions are unmeasured.",
+        "fix": "Give suggestion links and recovery buttons explicit mobile target sizing using existing primitives/classes; retain native links, focus indication and all captions. Measure actual target spacing before asserting compliance.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ],
+    "runtimeAcceptance": "Keyboard, focus restoration, screen-reader announcements, effective text/UI contrast, forced colors, reduced motion and target geometry UNVERIFIED. No page-authored animation."
+  },
+  "states": {
+    "success": "The recovery UI itself is always rendered for this component; matching suggestions are optional supplemental navigation.",
+    "empty": "Zero suggestions hides only the suggestion nav (page:75); heading, unmatched pathname and all three recovery actions remain.",
+    "error": "This is an unmatched-route explanation, not an API error response. No page-owned network failure/retry state.",
+    "loading": "No asynchronous page-owned source or loading branch; route-registry calculation is synchronous.",
+    "stale": "No page-owned fetched/cache freshness state.",
+    "offline": "Local explanation and suggestions require no page fetch; destination routes and palette behavior offline remain unverified.",
+    "partial": "No asynchronous partial-data source; absence of suggestions does not hide recovery actions.",
+    "disabled": "Page does not pass disabled/loading to recovery buttons. Palette availability is not checked locally.",
+    "source": {"file": "web\\src\\features\\system\\pages\\NotFoundPage.tsx", "line": 58},
+    "limits": "PageLayout inherits broader operational-mode/announcement behavior through PageContainer; transitive shell/query behavior was not audited. No backend behavior is inferred."
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\system\\pages\\NotFoundPage.tsx",
+      "line": 88,
+      "rule": "MDC-010 / MDC-012 / MDC-040: restrained theme-aware navigation",
+      "detail": "Suggestion text-cyan-300 and focus-visible:ring-cyan-400 hardcode an accent independent of the saved theme/focus tokens. This is fixed saturated-color noise, not evidence of measured contrast failure. Page source has no explicit neon, glow or pure-white classes.",
+      "fix": "Use existing semantic/theme-aware navigation text and --focus-ring tokens, retaining hover underline, visible focus and route captions. Do not reset saved theme preferences.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\features\\system\\pages\\NotFoundPage.tsx",
+      "line": 32,
+      "rule": "MDC-046: privacy-preserving diagnostics",
+      "detail": "The effect unconditionally logs pathname plus the entire query string via console.warn, despite its comment describing a development aid. URLs can carry sensitive user-supplied values; no development guard or query redaction is present in this source. No actual sensitive URL or production log was observed.",
+      "fix": "Preserve diagnostic intent through development-only, redacted reporting; avoid logging arbitrary query strings. Retain pathname display and all route-recovery behavior.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\lib\\routeRegistry.ts",
+      "line": 102,
+      "rule": "MDC-030 / MDC-047: production recovery destinations",
+      "detail": "The generated registry includes /dev/grid-states, /dev/layout and /dev/stats without hidden=true. closestRoutes.ts:32 only excludes hidden entries, so these are eligible recovery candidates. Their current mounted availability/guards are unknown; this is an eligibility inconsistency, not a proven broken link.",
+      "fix": "Have the registry-generation integration owner define suggestion eligibility for internal/development routes using the existing hidden contract, without removing registered routes, public destinations or aliases.",
+      "owner": "integration",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\system\\pages\\NotFoundPage.tsx",
+      "line": 55,
+      "rule": "MDC-030: preserve existing shell action integration",
+      "detail": "Open command palette dispatches an event but this page does not establish a listener or availability contract. The source comment mentions both shell-contained and outside-shell mounting; those mounts and listener presence were not independently inspected.",
+      "fix": "Preserve the existing toggle-command-palette event and verify it on every catch-all mount during integration QA; do not invent a second palette or claim this action is broken from source alone.",
+      "owner": "integration",
+      "confidence": "medium"
+    }
+  ],
+  "priority": {
+    "level": "medium",
+    "rationale": "Small synchronous recovery page already uses shared layout, typography, surfaces and buttons. First address arbitrary URL logging; then theme-aware links, mobile/long-label reachability and generated suggestion eligibility. No redesign or new presentation component is justified."
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "Generated route suggestion eligibility",
+      "owner": "web\\scripts\\generate-route-registry.mjs",
+      "existingOwnerFile": "web\\src\\lib\\routeRegistry.ts",
+      "ownerEvidence": "Generated-file header at routeRegistry.ts:1-4 names the generator; generator implementation was not inspected.",
+      "props": ["RouteEntry.hidden?: boolean"],
+      "variants": ["suggestible public route", "hidden parameterized/internal route"],
+      "states": ["eligible candidates", "no eligible match"],
+      "usedBy": ["web\\src\\features\\system\\pages\\NotFoundPage.tsx", "web\\src\\lib\\closestRoute.ts"],
+      "dependsOn": ["existing frontend route-generation policy; current development-route availability is unverified"],
+      "detail": "Use the existing generated hidden flag consistently for confirmed development/internal entries. Preserve every registry identity, route, alias, i18n key and suggestion-ranking rule; no new component/API proposal.",
+      "file": "web\\src\\lib\\routeRegistry.ts",
+      "line": 102,
+      "rule": "MDC-030 / MDC-047",
+      "fix": "Review generator classification with its integration owner and regenerate through the existing tooling if confirmed.",
+      "confidence": "high"
+    }
+  ],
+  "competingImplementations": [],
+  "preservation": {
+    "sourceHash": "089FE33F5C9773299662BF447AF2A857A1E793218291FF63465F87EF05D6FD0B",
+    "hashAlgorithm": "SHA256",
+    "currentLineCount": 127,
+    "sectionCount": 3,
+    "sections": [
+      {"name": "Recovery explanation and unmatched pathname", "count": 1, "file": "web\\src\\features\\system\\pages\\NotFoundPage.tsx", "line": 61},
+      {"name": "Suggested pages with labels and path metadata", "count": 1, "conditional": "suggestions.length > 0", "file": "web\\src\\features\\system\\pages\\NotFoundPage.tsx", "line": 75},
+      {"name": "Recovery actions", "count": 1, "file": "web\\src\\features\\system\\pages\\NotFoundPage.tsx", "line": 101}
+    ],
+    "componentCounts": {"PageLayout": 1, "GlassPanel": 1, "SectionTitle": 1, "ChartContainer": 0, "suggestionNav": 1, "Button": 3},
+    "actions": [
+      {"name": "Suggested destination", "behavior": "Link to each s.path; translated label and path caption; up to five links", "line": 86},
+      {"name": "Go back", "behavior": "history.back when history.length > 1, otherwise navigate('/')", "line": 40},
+      {"name": "Go to dashboard", "behavior": "navigate('/')", "line": 52},
+      {"name": "Open command palette", "behavior": "dispatch existing toggle-command-palette Event", "line": 54}
+    ],
+    "dataBehavior": [
+      "Display location.pathname as React-escaped translated interpolation; do not replace it with fabricated routes.",
+      "Keep memoized pathname-driven closestRoutes call with limit=5 and generated route labels/i18n keys.",
+      "Preserve engine normalization, hidden exclusion, threshold=6, distance/path ordering and zero-suggestion behavior.",
+      "Preserve all navigation destinations, history fallback, title cleanup, visible metadata and translated accessible names.",
+      "Preserve diagnostic purpose while remediating unrestricted query-string logging; diagnostic redaction is not authorization to remove recovery features.",
+      "No page-owned API, telemetry values, units, export, vehicle selector or date scope exists; do not introduce them.",
+      "No source edit was made by this audit."
+    ]
+  },
+  "evidenceLimits": {
+    "mode": "Phase0 source-only audit",
+    "routeEvidence": "routes ['*'] is the exact assignment. Page comment describes two catch-all mounts; App.tsx and actual mounted reachability were not inspected.",
+    "unverified": ["runtime rendering", "visual appearance", "all viewport behavior", "keyboard and focus", "screen reader", "effective contrast", "forced colors", "RTL and translations", "command-palette listener", "history destinations", "development-route mounting", "backend behavior"],
+    "checks": [
+      {
+        "command": "Get-FileHash -LiteralPath 'web\\src\\features\\system\\pages\\NotFoundPage.tsx' -Algorithm SHA256; (Get-Content -LiteralPath 'web\\src\\features\\system\\pages\\NotFoundPage.tsx').Count",
+        "exitCode": 0,
+        "output": "SHA256 089FE33F5C9773299662BF447AF2A857A1E793218291FF63465F87EF05D6FD0B\nlines 127"
+      },
+      {
+        "command": "$s=Get-Content -LiteralPath 'web\\src\\features\\system\\pages\\NotFoundPage.tsx'; $patterns=[ordered]@{staticInlineStyles='style=\\{\\{';rawControlsCaseSensitive='<(button|input|textarea|select|table)\\b';directLibraries='from [''\\\"](recharts|react-leaflet|framer-motion)[''\\\"]';oldApiImports='from [''\\\"]\\.\\./(\\.\\./)?api[''\\\"]';doubleApiPrefix='/api/v1/';camelCaseQuery='[?&](vehicleId|driveId|sessionId|chargingId)=';neonGlowWhite='text-neon|bg-neon|glow|text-white|#fff\\b';fixedCyan='text-cyan|ring-cyan';glassPanels='<GlassPanel\\b';chartContainers='<ChartContainer\\b';sourceExports='^export ';pageLayouts='<PageLayout\\b';explicitSections='<(SectionTitle|nav)\\b'}; foreach($k in $patterns.Keys){Write-Output ($k+'='+@($s | Select-String -CaseSensitive -Pattern $patterns[$k]).Count)}",
+        "exitCode": 0,
+        "output": "staticInlineStyles=0\nrawControlsCaseSensitive=0\ndirectLibraries=0\noldApiImports=0\ndoubleApiPrefix=0\ncamelCaseQuery=0\nneonGlowWhite=0\nfixedCyan=1\nglassPanels=1\nchartContainers=0\nsourceExports=1\npageLayouts=1\nexplicitSections=2",
+        "limits": "Lexical source counts only. Initial case-insensitive raw-control search counted three shared Button tags; corrected count is zero. Three semantic preservation sections differ intentionally from two heading/nav tag matches."
+      }
+    ],
+    "notRun": [
+      "TypeScript, lint, build, tests and browser checks: no validation baton, and source-only assignment.",
+      "Skill audit.sh was read but not executed because it unconditionally runs project-wide TypeScript.",
+      "No Git commands, source edits, full-repository scan or other worker-owned writes."
+    ],
+    "deduplication": "Each imported presentation owner is listed once. No confirmed page-local duplicated renderer or competing implementation in inspected scope; no whole-app deduplication claim."
+  },
+  "filesRead": [
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\system\\pages\\NotFoundPage.tsx",
+    "web\\src\\lib\\closestRoute.ts",
+    "web\\src\\lib\\routeRegistry.ts",
+    "web\\src\\hooks\\usePageTitle.ts",
+    "web\\src\\components\\layout\\index.ts",
+    "web\\src\\components\\ui\\index.ts",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\layout\\PageContainer.tsx",
+    "web\\src\\components\\ui\\GlassPanel.tsx",
+    "web\\src\\components\\ui\\Button.tsx",
+    "web\\src\\components\\ui\\Typography.tsx"
+  ]
+}

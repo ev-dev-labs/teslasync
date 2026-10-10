@@ -147,7 +147,7 @@ describe('ActivityHourPanel — state machine', () => {
 
     // The panel title mounts in every state — never gated on data.
     expect(screen.getByText('By hour of day')).toBeInTheDocument();
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).not.toBeNull();
     expect(screen.queryByTestId('bar-chart')).toBeNull();
     expect(screen.queryByText(EMPTY_MESSAGE)).toBeNull();
   });

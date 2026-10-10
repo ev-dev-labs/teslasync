@@ -9,11 +9,12 @@ import {
   chartGrid, axisTickSm, chartMarginLabeled, chartAnimation,
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, EmbeddedChart,
 } from '@/components/charts';
-import { fmtNumber, fmtInt } from '@/lib/numberFormat';
+
 import { convertEnergyFromSI } from '@/lib/unitConversion';
 import { MiniStat } from './MiniStat';
 import { pctChange } from './helpers';
 import type { DigestMetrics, DailyEnergyEntry } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface ChargingSectionProps {
   metrics: DigestMetrics;
@@ -32,6 +33,7 @@ export function ChargingSection({
   error,
   onRetry,
 }: ChargingSectionProps) {
+  const { fmtNumber, fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const { formatCurrency } = useFormatting();
   const { formatEnergy, formatPower, unitPrefs } = useUnits();
@@ -60,12 +62,12 @@ export function ChargingSection({
       {/* Daily Energy Added bar chart */}
       <div>
         <Caption className="mb-2 block">
-          {t('analytics.weeklyDigest.dailyEnergyAdded', 'Daily Energy Added ({{unit}})', {
+          {t('analytics.weeklyDigest.dailyEnergyAdded', 'Daily energy added ({{unit}})', {
             unit: unitPrefs.energy,
           })}
         </Caption>
         <EmbeddedChart
-          title={t('analytics.weeklyDigest.dailyEnergyAdded', 'Daily Energy Added')}
+          title={t('analytics.weeklyDigest.dailyEnergyAdded', 'Daily energy added')}
           ariaLabel={t(
             'analytics.weeklyDigest.dailyEnergyChartLabel',
             'Bar chart of daily charging energy in {{unit}}',
@@ -76,7 +78,7 @@ export function ChargingSection({
             { key: 'day', label: t('analytics.weeklyDigest.day', 'Day') },
             {
               key: 'energy',
-              label: t('analytics.weeklyDigest.dailyEnergyAdded', 'Daily Energy Added ({{unit}})', {
+              label: t('analytics.weeklyDigest.dailyEnergyAdded', 'Daily energy added ({{unit}})', {
                 unit: unitPrefs.energy,
               }),
             },
@@ -97,11 +99,11 @@ export function ChargingSection({
               <BarChart data={energyChartData} margin={chartMarginLabeled}>
                 {chartGrid}
                 <XAxis dataKey="day" {...axisTickSm} />
-                <YAxis {...axisTickSm} tickFormatter={(v: number) => fmtNumber(v, 1)} />
+                <YAxis {...axisTickSm} tickFormatter={(v: number) => fmtNumber(v)} />
                 <Tooltip content={<ChartTooltip />} />
                 <Bar
                   dataKey="energy"
-                  name={t('analytics.weeklyDigest.energyAdded', 'Energy Added')}
+                  name={t('analytics.weeklyDigest.energyAdded', 'Energy added')}
                   fill={CHART_COLORS[1]}
                   radius={[4, 4, 0, 0]}
                   {...chartAnimation}
@@ -119,25 +121,25 @@ export function ChargingSection({
           icon={<Zap className="h-4 w-4" />}
         />
         <MiniStat
-          label={t('analytics.weeklyDigest.totalEnergyAdded', 'Total Energy Added')}
-          value={formatEnergy(metrics.chargeEnergyAddedWh ?? 0, { precision: 1 })}
+          label={t('analytics.weeklyDigest.totalEnergyAdded', 'Total energy added')}
+          value={formatEnergy(metrics.chargeEnergyAddedWh ?? 0)}
           icon={<Zap className="h-4 w-4" />}
         />
         <MiniStat
-          label={t('analytics.weeklyDigest.avgChargeRate', 'Avg Charge Rate')}
-          value={formatPower(metrics.avgChargePowerW ?? 0, { precision: 1 })}
+          label={t('analytics.weeklyDigest.avgChargeRate', 'Avg charge rate')}
+          value={formatPower(metrics.avgChargePowerW ?? 0)}
           icon={<Activity className="h-4 w-4" />}
         />
         <MiniStat
-          label={t('analytics.weeklyDigest.totalCost', 'Total Cost')}
-          value={formatCurrency(metrics.chargingCost ?? 0, 2)}
+          label={t('analytics.weeklyDigest.totalCost', 'Total cost')}
+          value={formatCurrency(metrics.chargingCost ?? 0)}
           icon={<Fuel className="h-4 w-4" />}
         />
       </div>
 
       {/* Charge energy week-over-week */}
       <GlassPanel className="mt-auto flex items-center justify-between gap-4 px-4 py-3">
-        <Caption>{t('analytics.weeklyDigest.energyVsLastWeek', 'Energy vs. Last Week')}</Caption>
+        <Caption>{t('analytics.weeklyDigest.energyVsLastWeek', 'Energy vs. last week')}</Caption>
         <Badge
           variant={
             (metrics.chargeEnergyAddedWh ?? 0) >= (metrics.prevChargeEnergyWh ?? 0)
@@ -152,7 +154,6 @@ export function ChargingSection({
                   metrics.chargeEnergyAddedWh ?? 0,
                   metrics.prevChargeEnergyWh ?? 0,
                 ),
-                1,
               )}%`
             : '—'}
         </Badge>

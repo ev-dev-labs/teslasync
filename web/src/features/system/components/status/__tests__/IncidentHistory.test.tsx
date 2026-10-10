@@ -61,4 +61,19 @@ describe('IncidentHistory', () => {
     expect(screen.getByText(/database/)).toBeInTheDocument()
     expect(screen.getByText('resolved')).toBeInTheDocument()
   })
+
+  it('retains the recorded history when refresh fails instead of inferring healthy uptime', () => {
+    mockUseIncidents.mockReturnValue({
+      data: {
+        count: 1,
+        incidents: [{ id: 7, title: 'Database restart', started_at: '2026-09-20T10:00:00Z', affected_components: ['database'], status: 'resolved' }],
+      },
+      error: new Error('history refresh'),
+      refetch: vi.fn(),
+    } as unknown as ReturnType<typeof useIncidents>)
+    renderHistory()
+    expect(screen.getByRole('link', { name: /Database restart/ })).toBeInTheDocument()
+    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument()
+    expect(screen.queryByText("Can't reach server")).toBeNull()
+  })
 })

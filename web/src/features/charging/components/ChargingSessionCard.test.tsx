@@ -190,11 +190,16 @@ describe('ChargingSessionCard — primary line + badges', () => {
 
   it('shows the "Free" badge only when the charge added energy at no cost', () => {
     renderCard({
-      session: makeSession({ charger_type: null, cost_decimal: null, total_energy_added_wh: 12_000 }),
+      session: makeSession({ charger_type: null, cost_decimal: 0, total_energy_added_wh: 12_000 }),
     });
 
     expect(screen.getByText('Home / AC')).toBeInTheDocument();
     expect(screen.getByText('Free')).toBeInTheDocument();
+  });
+
+  it('does not mark an unknown cost as free', () => {
+    renderCard({ session: makeSession({ cost_decimal: null, total_energy_added_wh: 12_000 }) });
+    expect(screen.queryByText('Free')).not.toBeInTheDocument();
   });
 
   it('hides the energy + free badges when no energy was added', () => {
@@ -241,7 +246,7 @@ describe('ChargingSessionCard — metric chips', () => {
     expect(screen.getByText(`${fmtNumber(250)} kW peak`)).toBeInTheDocument();
     expect(screen.getByText(`~${fmtNumber(80)} kW avg`)).toBeInTheDocument();
     // 20 → 80 % battery delta is exposed with an accessible label.
-    expect(screen.getByLabelText('Battery 20% to 80%')).toBeInTheDocument();
+    expect(screen.getByLabelText('Battery 20.00% to 80.00%')).toBeInTheDocument();
   });
 
   it('renders cost, cost-per-kWh and range-added chips and converts distance at the edge', () => {
@@ -257,7 +262,7 @@ describe('ChargingSessionCard — metric chips', () => {
       distanceUnit: 'km',
     });
 
-    expect(screen.getByText('DC Fast')).toBeInTheDocument();
+    expect(screen.getByText('DC fast')).toBeInTheDocument();
     expect(screen.getByText('$12.50')).toBeInTheDocument();
     // cost / (40 kWh) = $0.31/kWh, shown parenthesised.
     expect(container.textContent).toContain('($0.31/kWh)');
@@ -270,7 +275,7 @@ describe('ChargingSessionCard — metric chips', () => {
     renderCard({ session: makeSession(), density: 'compact' });
 
     expect(screen.queryByText(`${fmtNumber(250)} kW peak`)).toBeNull();
-    expect(screen.queryByLabelText('Battery 20% to 80%')).toBeNull();
+    expect(screen.queryByLabelText('Battery 20.00% to 80.00%')).toBeNull();
     // Primary chrome survives: only one "30m" (the primary duration, no chip).
     expect(screen.getAllByText('30m')).toHaveLength(1);
     expect(screen.getByText('Home / AC')).toBeInTheDocument();
@@ -331,7 +336,7 @@ describe('ChargingSessionCard — null safety + regressions', () => {
     expect(screen.getByText('—')).toBeInTheDocument();
     expect(screen.queryByText('0m')).toBeNull();
     // The battery delta still renders its own value (not a placeholder).
-    expect(screen.getByLabelText('Battery 30% to 45%')).toBeInTheDocument();
+    expect(screen.getByLabelText('Battery 30.00% to 45.00%')).toBeInTheDocument();
   });
 
   it('omits the score badge when a SOC endpoint is missing', () => {

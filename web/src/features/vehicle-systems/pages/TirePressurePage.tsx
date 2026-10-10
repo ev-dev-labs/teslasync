@@ -1,47 +1,36 @@
 import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useQuery } from '@tanstack/react-query';
-import {
-  Gauge, AlertTriangle, TrendingDown, Activity, Clock,
-} from 'lucide-react';
+import { AlertTriangle } from 'lucide-react';
 
-import { PageContainer } from '@/components/layout';
-import { GlassPanel, Badge, DataTable, PanelTitle, useSortToggle, type Column } from '@/components/ui';
-
-import { MetricCard } from '@/components/data-display';
-import {
-  ThresholdBar, ChartTooltip, CHART_COLORS, AREA_DEFAULTS, axisTickSm,
-  LineChart, Line, XAxis, YAxis, CartesianGrid,
-  Tooltip, ResponsiveContainer, ChartLegend, EmbeddedChart,
-} from '@/components/charts';
-import { Skeleton, EmptyState, AlertBanner, QueryError } from '@/components/feedback';
+import { PageLayout, CardGrid } from '@/components/layout';
+import { Badge, useSortToggle, type Column } from '@/components/ui';
+import { AlertBanner } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
+import { deriveDataState } from '@/api/dataState';
+import {
+  PressureSummary, PressureCurrentCard, PressureHistoryCard, PressureHistoryTable,
+  readPressurePa, summarisePressure, chronologicalPressure, pressureChartRows,
+  PRESSURE_THRESHOLDS_PA,
+} from '../components/pressure-modernization';
 
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useRangeState } from '@/hooks/useRangeState';
 import { useUnits } from '@/hooks/useUnits';
-import { convertPressureFromSI } from '@/lib/unitConversion';
+import { usePressureFormat } from '@/hooks/usePressureFormat';
 import { formatDateTime } from '@/lib/dateFormat';
-import { fmtNumber } from '@/lib/numberFormat';
-import { request } from '@/api/client';
-import { AITirePressureTrendReasoning } from '@/components/ai/AITirePressureTrendReasoning';
+
+import {
+  usePressurePageLatest, usePressurePageHistory, type TirePressureReading,
+} from '@/api/hooks/usePressurePage';
+import { AITirePressureTrendReasoning } from '@/components/ai';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 /* ------------------------------------------------------------------ */
 /*  Types (snake_case from backend)                                    */
 /* ------------------------------------------------------------------ */
 
-export interface TirePressureReading {
-  id: number;
-  vehicle_id: number;
-  front_left: number;
-  front_right: number;
-  rear_left: number;
-  rear_right: number;
-  tpms_hard_warnings?: string | null;
-  tpms_soft_warnings?: string | null;
-  created_at: string;
-}
+export type { TirePressureReading } from '@/api/hooks/usePressurePage';
 
 /* ------------------------------------------------------------------ */
 /*  Constants & helpers                                                */
@@ -66,34 +55,28 @@ export function hasTpmsWarning(val: string | null | undefined): boolean {
 }
 
 // Thresholds in Pascals (SI). Backend `signal_log` stores TpmsPressure
-// values in Pa; units.ToSI converts both bar and psi inputs to Pa per
+// values in Pa; units.ToSI converts the fixed-bar TPMS wire inputs to Pa per
 // `internal/tesla/units/units.go`.
 // 1 bar = 100_000 Pa, 1 psi ≈ 6894.757 Pa.
-const NORMAL_MIN_PA = 250_000; // 2.5 bar
-const NORMAL_MAX_PA = 350_000; // 3.5 bar
-const SOFT_LOW_PA = 200_000; // 2.0 bar
-const SOFT_HIGH_PA = 400_000; // 4.0 bar
 // Domain shown on the per-tyre threshold bars. A mounted tyre never reaches
 // 0 Pa, so anchoring the track at zero would spend most of its width on
 // states that cannot physically occur and compress the band that matters
 // (2.0-4.0 bar) into a sliver. These sit just outside the critical
 // thresholds so the reader always sees the edges they could drift toward.
-const DOMAIN_MIN_PA = 150_000; // 1.5 bar
-const DOMAIN_MAX_PA = 450_000; // 4.5 bar
+const {
+  normalMin: NORMAL_MIN_PA,
+  normalMax: NORMAL_MAX_PA,
+  softLow: SOFT_LOW_PA,
+  softHigh: SOFT_HIGH_PA,
+  domainMin: DOMAIN_MIN_PA,
+  domainMax: DOMAIN_MAX_PA,
+} = PRESSURE_THRESHOLDS_PA;
 
 /**
- * Interim adapter that coerces a raw TPMS value to Pa.
- *
- * Background: when `vehicle_unit_history` lacks a row for a vehicle, the
- * codec cannot run `units.ToSI` on TpmsPressure* atomics. The raw codec
- * value (bar for metric vehicles, psi for imperial) lands in `signal.Store`,
- * and the `/tire-pressure/latest` handler echoes it back verbatim. The bug
- * surfaced as gauges showing ~0 with all-critical badges, which reads as
- * "vehicle is broken" rather than "vehicle unit context is missing".
- *
- * Until the source-unit gap is fixed, this helper detects the three
- * plausible source units by value range and normalises to Pa so the page
- * renders accurate readings today.
+ * @deprecated Compatibility export for the inherited helper tests only.
+ * Production rendering reads canonical Pa without magnitude-based guessing.
+ * The live fixed-bar ToSI producer supersedes this adapter's old source-unit
+ * assumptions. Do not add call sites or use this as a wire contract.
  *
  * Ranges (typical passenger car tire pressures):
  *   - Pa     : 150_000–500_000   → return as-is
@@ -117,10 +100,10 @@ export type TirePosition = (typeof TIRE_POSITIONS)[number];
 // render boundary via `tireLabel(pos)` so translators can localise each
 // corner without touching this map.
 const TIRE_LABELS: Record<TirePosition, string> = {
-  fl: 'Front Left',
-  fr: 'Front Right',
-  rl: 'Rear Left',
-  rr: 'Rear Right',
+  fl: 'Front left',
+  fr: 'Front right',
+  rl: 'Rear left',
+  rr: 'Rear right',
 };
 
 export type PressureStatus = 'normal' | 'low' | 'high' | 'critical';
@@ -139,7 +122,7 @@ export function getTirePressureValue(
   reading: TirePressureReading,
   pos: TirePosition,
 ): number {
-  const map: Record<TirePosition, number> = {
+  const map: Record<TirePosition, number | null | undefined> = {
     fl: reading.front_left,
     fr: reading.front_right,
     rl: reading.rear_left,
@@ -176,33 +159,15 @@ export function statusVariant(
 }
 
 /* ------------------------------------------------------------------ */
-/*  Chart helpers                                                      */
-/* ------------------------------------------------------------------ */
-
-interface ChartDatum {
-  time: string;
-  fl: number;
-  fr: number;
-  rl: number;
-  rr: number;
-}
-
-const LINE_COLORS: Record<TirePosition, string> = {
-  fl: CHART_COLORS[0],
-  fr: CHART_COLORS[2],
-  rl: CHART_COLORS[1],
-  rr: CHART_COLORS[3],
-};
-
-/* ------------------------------------------------------------------ */
 /*  Page component                                                     */
 /* ------------------------------------------------------------------ */
 
 export default function TirePressurePage() {
+  const { fmtNumber, precision: displayPrecision, locale: displayLocale } = useNumberFormatting();
   const { t } = useTranslation();
-  usePageTitle(t('tirePressure.title', 'Tire Pressure'));
+  usePageTitle(t('tirePressure.title', 'Tire pressure'));
   const { unitPrefs } = useUnits();
-  const pressureUnit = unitPrefs.pressure;
+  const { pressureUnit, toPressureValue } = usePressureFormat();
 
   // i18n label resolvers — keep the English constant as the fallback so
   // untranslated locales still render a meaningful corner / status name.
@@ -219,8 +184,10 @@ export default function TirePressurePage() {
   // Backend `front_left`/`front_right`/`rear_left`/`rear_right` arrive
   // in Pa (SI). `convertPressureFromSI` expects kPa, so divide by 1000
   // at the boundary.
-  const pressureDisplayValue = (pa: number) =>
-    convertPressureFromSI(pa / 1000, unitPrefs.pressure);
+  const pressureDisplayValue = useCallback(
+    (pa: number) => toPressureValue(pa) ?? Number.NaN,
+    [toPressureValue],
+  );
 
   // Qualitative regions of the pressure domain, in display units. Edges and
   // colours are derived from the same pressureStatus()/pressureColor() helpers
@@ -231,7 +198,7 @@ export default function TirePressurePage() {
       min: pressureDisplayValue(DOMAIN_MIN_PA),
       max: pressureDisplayValue(DOMAIN_MAX_PA),
     }),
-    [unitPrefs.pressure],
+    [pressureDisplayValue],
   );
 
   const pressureBands = useMemo(() => {
@@ -253,7 +220,7 @@ export default function TirePressurePage() {
         label: statusLabel(pressureStatus(midPa)),
       };
     });
-  }, [unitPrefs.pressure, statusLabel]);
+  }, [pressureDisplayValue, statusLabel]);
 
   // Header VehiclePicker is the source of truth.
   const { vehicleId: activeVehicleId } = useSelectedVehicle();
@@ -263,35 +230,26 @@ export default function TirePressurePage() {
 
   /* ---- API queries ---- */
 
-  const latestQuery = useQuery({
-    queryKey: ['tire-pressure-latest', activeVehicleId],
-    queryFn: () =>
-      request<TirePressureReading>(
-        `/tire-pressure/latest?vehicle_id=${activeVehicleId}`,
-      ),
-    enabled: activeVehicleId !== null,
-  });
+  const latestQuery = usePressurePageLatest(activeVehicleId);
   const {
     data: latest,
     isLoading: loadingLatest,
-    error: latestError,
-    refetch: refetchLatest,
   } = latestQuery;
 
-  const historyQuery = useQuery({
-    queryKey: ['tire-pressure-history', activeVehicleId, start, end],
-    queryFn: () =>
-      request<TirePressureReading[]>(
-        `/tire-pressure?vehicle_id=${activeVehicleId}&start=${start}&end=${end}`,
-      ),
-    enabled: activeVehicleId !== null,
-  });
+  const historyQuery = usePressurePageHistory(activeVehicleId, start, end);
   const {
     data: history,
     isLoading: loadingHistory,
-    error: historyError,
-    refetch: refetchHistory,
   } = historyQuery;
+  const latestState = deriveDataState(latestQuery, {
+    provenance: 'cached',
+    unavailable: latest == null,
+    partial: latest != null && TIRE_POSITIONS.some(pos => readPressurePa(latest, pos) == null),
+  });
+  const historyState = deriveDataState(historyQuery, {
+    provenance: 'historical',
+    unavailable: !history?.length,
+  });
   const dataSources = useMemo(
     () => [
       {
@@ -316,50 +274,18 @@ export default function TirePressurePage() {
   const softWarning = hasTpmsWarning(latest?.tpms_soft_warnings);
   const hasWarning = hardWarning || softWarning;
 
-  const summaryStats = useMemo(() => {
-    if (!latest) return null;
-    // A corner that never reported normalises to 0 (see normaliseTpmsToPa).
-    // Treat those as "no reading", not 0 Pa — otherwise a vehicle that only
-    // reports some corners shows a phantom 0-bar minimum and inflated warning
-    // count, which reads as "broken" rather than "partial". Aggregate over the
-    // corners that actually have a reading; when none do, surface "no data".
-    const values = TIRE_POSITIONS.map((p) => getTirePressureValue(latest, p)).filter(
-      (v) => v > 0,
-    );
-    if (values.length === 0) return null;
-    const avg = values.reduce((sum, v) => sum + v, 0) / values.length;
-    const min = Math.min(...values);
-    const warningCount = values.filter(
-      (v) => v < NORMAL_MIN_PA || v > NORMAL_MAX_PA,
-    ).length;
-    return { avg, min, warningCount };
-  }, [latest]);
+  const summaryStats = useMemo(() => summarisePressure(latest), [latest]);
 
   // Canonical chronological order (oldest first). The /tire-pressure endpoint
   // forwards rows in StateReader.Timeline order (ASC) but the contract doesn't
   // pin that, so we sort defensively here. This becomes the single source of
   // truth for both the chart (renders left=oldest, right=newest) and the
   // newest-first table derivation below.
-  const historyAsc = useMemo<TirePressureReading[]>(() => {
-    if (!history?.length) return [];
-    return [...history].sort((a, b) =>
-      (a.created_at ?? '').localeCompare(b.created_at ?? ''),
-    );
-  }, [history]);
-
-  const chartData: ChartDatum[] = useMemo(() => {
-    if (historyAsc.length === 0) return [];
-    return historyAsc.map((r) => ({
-      time: formatDateTime(r.created_at),
-      fl: pressureDisplayValue(normaliseTpmsToPa(r.front_left)),
-      fr: pressureDisplayValue(normaliseTpmsToPa(r.front_right)),
-      rl: pressureDisplayValue(normaliseTpmsToPa(r.rear_left)),
-      rr: pressureDisplayValue(normaliseTpmsToPa(r.rear_right)),
-    }));
-    // unitPrefs.pressure is the only relevant primitive dep — depending on
-    // the closure-captured `pressureDisplayValue` would also work but referencing
-    // the primitive keeps the dep list stable for memo invalidation.
-  }, [historyAsc, unitPrefs.pressure]);
+  const historyAsc = useMemo(() => chronologicalPressure(history), [history]);
+  const chartData = useMemo(
+    () => pressureChartRows(historyAsc, toPressureValue),
+    [historyAsc, toPressureValue],
+  );
 
   // Newest entry in the selected range — used to populate "Last Updated"
   // because /tire-pressure/latest returns only field values (no timestamp).
@@ -373,7 +299,7 @@ export default function TirePressurePage() {
   /* ---- Table sort: newest-first by default, all sortable columns wired ---- */
 
   // Accessor used by useSortToggle to extract a comparable value per
-  // column key. Numeric tire columns sort by their normalised Pa value so
+  // column key. Numeric tire columns sort by their canonical Pa value so
   // the Badge-wrapped renders sort by magnitude, not by Badge label text.
   const sortAccessor = useCallback(
     (row: TirePressureReading, key: string): number | string => {
@@ -384,7 +310,9 @@ export default function TirePressurePage() {
         case 'fr':
         case 'rl':
         case 'rr':
-          return getTirePressureValue(row, key);
+          // Keep missing readings before measured positives, as in the
+          // inherited sort. This comparator sentinel is never displayed.
+          return readPressurePa(row, key) ?? 0;
         default:
           return '';
       }
@@ -415,13 +343,20 @@ export default function TirePressurePage() {
       ...TIRE_POSITIONS.map(
         (pos): Column<TirePressureReading> => ({
           key: pos,
+          align: 'right',
+          filterValue: (row) => {
+            return readPressurePa(row, pos);
+          },
+          filterValueLabel: (_value, row) => {
+            const value = readPressurePa(row, pos);
+            return value != null ? `${fmtNumber(pressureDisplayValue(value))} ${pressureUnit}` : '—';
+          },
           header: `${tireLabel(pos)} (${pressureUnit})`,
           render: (row: TirePressureReading) => {
-            const val = getTirePressureValue(row, pos);
-            const status = pressureStatus(val);
+            const val = readPressurePa(row, pos);
             return (
-              <Badge variant={statusVariant(status)} size="sm">
-                {fmtNumber(pressureDisplayValue(val ?? 0))}
+              <Badge variant={val != null ? statusVariant(pressureStatus(val)) : 'neutral'} size="sm">
+                {val != null ? fmtNumber(pressureDisplayValue(val)) : '—'}
               </Badge>
             );
           },
@@ -435,16 +370,21 @@ export default function TirePressurePage() {
           if (hasTpmsWarning(row.tpms_hard_warnings)) {
             return (
               <Badge variant="danger" size="sm" dot>
-                {t('tirePressure.warn.hardShort', 'Hard Warning')}
+                {t('tirePressure.warn.hardShort', 'Hard warning')}
               </Badge>
             );
           }
           if (hasTpmsWarning(row.tpms_soft_warnings)) {
             return (
               <Badge variant="warning" size="sm" dot>
-                {t('tirePressure.warn.softShort', 'Soft Warning')}
+                {t('tirePressure.warn.softShort', 'Soft warning')}
               </Badge>
             );
+          }
+          // The current Go mapping does not project TPMS flags. Their absence
+          // is unknown, not affirmative evidence of an OK vehicle.
+          if (row.tpms_hard_warnings == null || row.tpms_soft_warnings == null) {
+            return <Badge variant="neutral" size="sm">—</Badge>;
           }
           return (
             <Badge variant="success" size="sm">
@@ -457,14 +397,14 @@ export default function TirePressurePage() {
     // pressureUnit rebuilds the render closures with the correct display unit
     // when the user flips their pressure preference; between changes the deps
     // are stable so the columns keep their identity.
-    [t, tireLabel, pressureUnit],
+    [t, tireLabel, pressureUnit, fmtNumber, pressureDisplayValue],
   );
 
   /* ---- Render ---- */
 
   return (
-    <PageContainer
-      title={t('tirePressure.title', 'Tire Pressure')}
+    <PageLayout
+      title={t('tirePressure.title', 'Tire pressure')}
       subtitle={t(
         'tirePressure.subtitle',
         'Monitor tire pressure readings and history',
@@ -498,208 +438,46 @@ export default function TirePressurePage() {
         </AlertBanner>
       )}
 
-      {/* 1 — KPI band: full-width responsive metric grid */}
+      {/* One allocated-width observer packs all four persistent groups.
+          Content components consume placement INSIDE its provider. */}
       <FadeIn>
-        <section
-          aria-label={t('tirePressure.kpis', 'Tire pressure summary')}
-          className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4"
-        >
-          <MetricCard
-            label={t('tirePressure.avgPressure', 'Avg Pressure')}
-            value={
-              summaryStats
-                ? `${fmtNumber(pressureDisplayValue(summaryStats.avg ?? 0))} ${pressureUnit}`
-                : '—'
-            }
-            icon={<Activity className="h-5 w-5" aria-hidden="true" />}
-            color="cyan"
-          />
-          <MetricCard
-            label={t('tirePressure.minPressure', 'Min Pressure')}
-            value={
-              summaryStats
-                ? `${fmtNumber(pressureDisplayValue(summaryStats.min ?? 0))} ${pressureUnit}`
-                : '—'
-            }
-            icon={<TrendingDown className="h-5 w-5" aria-hidden="true" />}
-            color="green"
-          />
-          <MetricCard
-            label={t('tirePressure.warningCount', 'Warning Count')}
-            value={summaryStats?.warningCount ?? 0}
-            icon={<AlertTriangle className="h-5 w-5" aria-hidden="true" />}
-            color="amber"
-          />
-          <MetricCard
-            label={t('tirePressure.lastUpdated', 'Last Updated')}
-            value={lastUpdatedAt ? formatDateTime(lastUpdatedAt) : '—'}
-            icon={<Clock className="h-5 w-5" aria-hidden="true" />}
-            color="purple"
-          />
-        </section>
+        <CardGrid
+          label={t('tirePressure.readings', 'Current readings and trend')}
+          items={[
+            {
+              id: 'tire-pressure-summary',
+              size: 'full',
+              content: <PressureSummary summary={summaryStats} lastUpdatedAt={lastUpdatedAt}
+                units={unitPrefs} precision={displayPrecision} locale={displayLocale} latestLoading={loadingLatest && !latest}
+                historyLoading={loadingHistory && !history}
+                retained={Boolean(latestState.refreshError || historyState.refreshError
+                  || (latestState.hasData && latestState.isRefreshBlocked)
+                  || (historyState.hasData && historyState.isRefreshBlocked))} />,
+            },
+            {
+              id: 'tire-pressure-current',
+              size: 'third',
+              content: <PressureCurrentCard source={latestState} loading={loadingLatest}
+                label={tireLabel} status={pa => statusLabel(pressureStatus(pa))}
+                unit={pressureUnit} precision={displayPrecision} format={fmtNumber}
+                domain={pressureDomain} bands={pressureBands} convert={toPressureValue} />,
+            },
+            {
+              id: 'tire-pressure-history',
+              size: 'half',
+              content: <PressureHistoryCard source={historyState} loading={loadingHistory}
+                rows={chartData} label={tireLabel} format={fmtNumber} unit={pressureUnit} />,
+            },
+            {
+              id: 'tire-pressure-table',
+              size: 'full',
+              content: <PressureHistoryTable source={historyState} loading={loadingHistory}
+                rows={tableData} columns={historyColumns} sortKey={sortKey}
+                sortDir={sortDir} onSort={onSort} />,
+            },
+          ]}
+        />
       </FadeIn>
-
-      {/* 2 — Hero bento: current-reading gauges beside the history chart */}
-      <FadeIn delay={0.1}>
-        <section
-          aria-label={t('tirePressure.readings', 'Current readings and trend')}
-          className="grid grid-cols-1 gap-4 xl:grid-cols-3"
-        >
-          {/* Current readings — four corner threshold bars */}
-          <GlassPanel className="p-4 sm:p-5 xl:col-span-1">
-            <PanelTitle className="mb-3 flex items-center gap-2">
-              <Gauge className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-              {t('tirePressure.currentReadings', 'Current Readings')}
-            </PanelTitle>
-
-            {loadingLatest && !latest ? (
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 xl:grid-cols-2">
-                {TIRE_POSITIONS.map((pos) => (
-                  <Skeleton key={pos} height={148} className="w-full" />
-                ))}
-              </div>
-            ) : latestError ? (
-              <QueryError
-                error={latestError}
-                onRetry={() => refetchLatest()}
-                resourceName={t('tirePressure.resource', 'Tire pressure')}
-              />
-            ) : !latest ? (
-              <EmptyState /* no-action: transient empty state — surfaces when no live reading exists for the vehicle */
-                icon={<Gauge className="h-8 w-8" />}
-                message={t(
-                  'tirePressure.noReadings',
-                  'No current readings available',
-                )}
-              />
-            ) : (
-              <div className="flex flex-col gap-5">
-                {TIRE_POSITIONS.map((pos) => {
-                  const value = getTirePressureValue(latest, pos);
-                  return (
-                    <ThresholdBar
-                      key={pos}
-                      value={pressureDisplayValue(value)}
-                      min={pressureDomain.min}
-                      max={pressureDomain.max}
-                      bands={pressureBands}
-                      statusLabel={statusLabel(pressureStatus(value))}
-                      label={tireLabel(pos)}
-                      unit={pressureUnit}
-                      decimals={1}
-                    />
-                  );
-                })}
-              </div>
-            )}
-          </GlassPanel>
-
-          {/* Pressure history — hero time-series spanning the remaining width */}
-          <GlassPanel className="p-4 sm:p-5 xl:col-span-2">
-            <PanelTitle className="mb-3 flex items-center gap-2">
-              <Gauge className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-              {t('tirePressure.pressureHistory', 'Pressure History')}
-            </PanelTitle>
-
-            {loadingHistory && !history ? (
-              <Skeleton height={260} className="w-full" />
-            ) : historyError ? (
-              <QueryError
-                error={historyError}
-                onRetry={() => refetchHistory()}
-                resourceName={t('tirePressure.resource', 'Tire pressure')}
-              />
-            ) : chartData.length === 0 ? (
-              <EmptyState /* no-action: transient empty state — surfaces when the selected window has no history */
-                icon={<Gauge className="h-8 w-8" />}
-                message={t('tirePressure.noHistory', 'No history data')}
-              />
-            ) : (
-              <div className="h-56 sm:h-64 xl:h-72">
-                {/* chart-a11y:no-table tire pressure time-series for 4 positions — dense history, not tabular */}
-                <EmbeddedChart
-                  chartKey="tire-pressure-history"
-                  title={t('tirePressure.pressureHistory', 'Pressure History')}
-                  ariaLabel={t('tirePressure.pressureHistoryAria', 'Tire pressure over time for all four positions')}
-                  fluid
-                >
-                  {({ hiddenSeries }) => (
-                    <ResponsiveContainer width="100%" height="100%">
-                      <LineChart data={chartData}>
-                        <CartesianGrid
-                          strokeDasharray="3 3"
-                          stroke="var(--glass-border)"
-                          strokeOpacity={0.5}
-                        />
-                        <XAxis
-                          dataKey="time"
-                          tick={axisTickSm}
-                        />
-                        <YAxis
-                          domain={['auto', 'auto']}
-                          tick={axisTickSm}
-                          tickFormatter={(v: number) => fmtNumber(v, 1)}
-                        />
-                        <Tooltip content={<ChartTooltip />} />
-                        <ChartLegend wrapperStyle={{ fontSize: 11 }} />
-                        {TIRE_POSITIONS.map((pos) => (
-                          <Line
-                            key={pos}
-                            {...AREA_DEFAULTS}
-                            dataKey={pos}
-                            name={tireLabel(pos)}
-                            stroke={LINE_COLORS[pos]}
-                            hide={hiddenSeries?.isHidden(pos) ?? false}
-                          />
-                        ))}
-                      </LineChart>
-                    </ResponsiveContainer>
-                  )}
-                </EmbeddedChart>
-              </div>
-            )}
-          </GlassPanel>
-        </section>
-      </FadeIn>
-
-      {/* 3 — Detail band: full-width history table */}
-      <FadeIn delay={0.2}>
-        <GlassPanel className="p-4 sm:p-5">
-          <PanelTitle className="mb-3 flex items-center gap-2">
-            <Clock className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-            {t('tirePressure.historyTable', 'History Table')}
-          </PanelTitle>
-
-          {loadingHistory && !history ? (
-            <Skeleton height={220} className="w-full" />
-          ) : historyError ? (
-            <QueryError
-              error={historyError}
-              onRetry={() => refetchHistory()}
-              resourceName={t('tirePressure.resource', 'Tire pressure')}
-            />
-          ) : !history?.length ? (
-            <EmptyState /* no-action: transient empty state — surfaces when the selected window has no history */
-              icon={<Clock className="h-8 w-8" />}
-              message={t('tirePressure.noHistory', 'No history data')}
-            />
-          ) : (
-            <DataTable
-              tableId="vehicle-systems:tire-pressure-history"
-              columns={historyColumns}
-              mobileColumns={['created_at', 'warnings']}
-              data={tableData}
-              keyExtractor={(row) => row.id}
-              sortKey={sortKey}
-              sortDir={sortDir}
-              onSort={onSort}
-              emptyMessage={t('tirePressure.noHistory', 'No history data')}
-              compact
-              pagination
-            />
-          )}
-        </GlassPanel>
-      </FadeIn>
-    </PageContainer>
+    </PageLayout>
   );
 }

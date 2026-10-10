@@ -12,7 +12,7 @@ import { useTranslation } from 'react-i18next';
 import { Search } from 'lucide-react';
 
 import { ComboboxMulti } from '@/components/forms';
-import { HelpTooltip, Label } from '@/components/ui';
+import { Code, HelpTooltip, Label } from '@/components/ui';
 import { cn } from '@/lib/cn';
 
 export interface SignalSelectorProps {
@@ -25,6 +25,8 @@ export interface SignalSelectorProps {
   showLayerHelp?: boolean;
   /** Override the label (defaults to "Signals (N / max)"). */
   labelOverride?: string;
+  /** Caller-owned source loading; retained options and selection remain intact. */
+  loading?: boolean;
   className?: string;
 }
 
@@ -35,6 +37,7 @@ export function SignalSelector({
   max = 5,
   showLayerHelp = true,
   labelOverride,
+  loading = false,
   className,
 }: SignalSelectorProps) {
   const { t } = useTranslation();
@@ -58,8 +61,8 @@ export function SignalSelector({
   );
 
   return (
-    <div className={cn('w-full', className)}>
-      <Label className="flex items-center gap-1 mb-2">
+    <div className={cn('min-w-0 max-w-full w-full', className)}>
+      <Label className="mb-2 flex min-w-0 flex-wrap items-center gap-1 break-words">
         {labelOverride ??
           (max != null
             ? `${t('signalExplorer.signals', 'Signals')} (${safeValue.length} / ${max})`
@@ -81,10 +84,11 @@ export function SignalSelector({
         value={safeValue}
         onChange={handleChange}
         options={safeOptions}
+        loading={loading}
         getOptionLabel={(s) => s}
         getOptionKey={(s) => s}
-        maxItems={Number.isFinite(cap) ? (cap as number) : undefined}
-        renderOption={(s) => <span className="font-mono text-xs">{s}</span>}
+        maxItems={Number.isFinite(cap) ? cap : undefined}
+        renderOption={(s) => <Code className="break-words [overflow-wrap:anywhere]">{s}</Code>}
       />
     </div>
   );

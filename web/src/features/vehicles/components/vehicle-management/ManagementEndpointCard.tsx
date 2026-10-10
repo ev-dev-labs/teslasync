@@ -4,11 +4,10 @@ import {
   Badge,
   Button,
   Code,
-  GlassPanel,
-  PanelTitle,
   Text,
 } from '@/components/ui'
 import { AlertBanner } from '@/components/feedback'
+import { LayoutCard } from '@/components/layout'
 import { formatDateTime } from '@/lib/dateFormat'
 import { Icons } from '@/lib/icons'
 import type { ManagementEndpointKind } from './managementJson'
@@ -86,24 +85,20 @@ export function ManagementEndpointCard({
   const EndpointIcon = endpointIcon[kind]
 
   return (
-    <GlassPanel
-      className="flex flex-col gap-4 p-4 sm:p-5"
-      data-management-endpoint={endpointId}
-    >
-      <div className="flex flex-wrap items-start justify-between gap-2">
-        <div className="flex min-w-0 flex-1 items-start gap-3">
+    <div className="min-w-0" data-management-endpoint={endpointId}>
+      <LayoutCard title={title} actions={
+        <Badge variant={prerequisiteVariant[prerequisite]}>
+          {prerequisiteLabel}
+        </Badge>
+      }>
+        <div className="flex min-w-0 items-start gap-3">
           <div className="rounded-xl bg-cyan-500/10 p-2 text-cyan-300">
             <EndpointIcon className="h-4 w-4" aria-hidden="true" />
           </div>
           <div className="min-w-0 space-y-1">
-            <PanelTitle>{title}</PanelTitle>
             <Text variant="bodySm" as="p">{description}</Text>
           </div>
         </div>
-        <Badge variant={prerequisiteVariant[prerequisite]}>
-          {prerequisiteLabel}
-        </Badge>
-      </div>
 
       <Code className="w-fit max-w-full break-all rounded-md bg-[var(--surface-2)] px-2 py-1 text-[var(--text-secondary)]">
         {endpoint}
@@ -151,11 +146,13 @@ export function ManagementEndpointCard({
             disabled={refreshDisabled || unavailable}
             icon={<Icons.refresh className="h-4 w-4" aria-hidden="true" />}
             onClick={onRefresh}
+            wrapLabel
           >
             {actionLabel ?? t('vehicleManagement.action.refresh', 'Refresh from Tesla')}
           </Button>
         )}
       </div>
-    </GlassPanel>
+      </LayoutCard>
+    </div>
   )
 }

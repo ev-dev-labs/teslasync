@@ -59,8 +59,8 @@ export function HealthOverview({
             variant={getAlertVariant(overallHealth)}
             title={
               overallHealth === 'critical'
-                ? t('drivetrain.alert.criticalTitle', 'Critical Temperature Warning')
-                : t('drivetrain.alert.warningTitle', 'Elevated Temperatures Detected')
+                ? t('drivetrain.alert.criticalTitle', 'Critical temperature warning')
+                : t('drivetrain.alert.warningTitle', 'Elevated temperatures detected')
             }
             icon={<AlertTriangle className="h-4 w-4" aria-hidden="true" />}
           >
@@ -88,7 +88,7 @@ export function HealthOverview({
             <QueryError
               error={error}
               onRetry={onRetry}
-              resourceName={t('drivetrain.title', 'Drivetrain Health')}
+              resourceName={t('drivetrain.title', 'Drivetrain health')}
             />
           ) : !hasData ? (
             <EmptyState /* no-action: transient — health data missing until first telemetry */
@@ -105,19 +105,19 @@ export function HealthOverview({
                 <div>
                   <SectionTitle>
                     {overallHealth === 'good'
-                      ? t('drivetrain.healthGood', 'Drivetrain Healthy')
+                      ? t('drivetrain.healthGood', 'Drivetrain healthy')
                       : overallHealth === 'warning'
-                        ? t('drivetrain.healthWarn', 'Drivetrain Running Warm')
-                        : t('drivetrain.healthCrit', 'Drivetrain Overheating')}
+                        ? t('drivetrain.healthWarn', 'Drivetrain running warm')
+                        : t('drivetrain.healthCrit', 'Drivetrain overheating')}
                   </SectionTitle>
                   <Text as="p" size="sm" color="muted">
-                    {t('drivetrain.motorState', 'Motor State')}: {motorStatusLabel}
+                    {t('drivetrain.motorState', 'Motor state')}: {motorStatusLabel}
                   </Text>
                 </div>
               </div>
               <div className="flex items-center gap-3">
                 <Badge variant={healthBadgeVariant(overallHealth)} size="lg" dot>
-                  {t(`drivetrain.health.${overallHealth}`, overallHealth.toUpperCase())}
+                  {t(`drivetrain.health.${overallHealth}`, overallHealth.charAt(0).toUpperCase() + overallHealth.slice(1))}
                 </Badge>
                 <MetricValue className={cn('!text-2xl', healthTextClass)}>
                   <AnimatedNumber value={safeHealthScore} suffix="%" />

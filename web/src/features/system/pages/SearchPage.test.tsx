@@ -108,6 +108,10 @@ if (typeof window.matchMedia !== 'function') {
 import { request } from '@/api/client';
 import type { SearchHit, SearchHitType, SearchResponse } from '@/api/types';
 import SearchPage from './SearchPage';
+vi.mock('@/hooks/useSettings', async importOriginal => ({
+  ...await importOriginal<typeof import('@/hooks/useSettings')>(),
+  useSettings: () => ({ settings: { locale: 'en-US', decimal_precision: 2, currency_symbol: '$' }, settingsUnavailable: false }),
+}));
 
 const mockedRequest = request as unknown as ReturnType<typeof vi.fn>;
 
@@ -167,7 +171,7 @@ function renderPage(initialEntry = '/search') {
 /** The MetricCard root (`[data-role="metric-card"]`) that owns the given KPI label. */
 function metricCard(label: string): HTMLElement {
   const span = screen.getByText(label);
-  const root = span.closest('[data-role="metric-card"]');
+  const root = span.closest('[data-operational-metric]');
   if (!root) throw new Error(`no MetricCard root for "${label}"`);
   return root as HTMLElement;
 }
@@ -193,7 +197,7 @@ describe('SearchPage', () => {
 
     // Idle guidance, no KPI band, and — critically — no network call.
     expect(screen.getByText('Start typing to search')).toBeInTheDocument();
-    expect(screen.queryByText('Total Results')).not.toBeInTheDocument();
+    expect(screen.queryByText('Total results')).not.toBeInTheDocument();
     expect(mockedRequest).not.toHaveBeenCalled();
   });
 
@@ -203,7 +207,7 @@ describe('SearchPage', () => {
     renderPage('/search?q=a');
 
     expect(screen.getByText('Type at least 2 characters')).toBeInTheDocument();
-    expect(screen.queryByText('Total Results')).not.toBeInTheDocument();
+    expect(screen.queryByText('Total results')).not.toBeInTheDocument();
     expect(mockedRequest).not.toHaveBeenCalled();
   });
 
@@ -217,9 +221,26 @@ describe('SearchPage', () => {
       expect.stringContaining('q=model'),
       expect.anything(),
     );
-    // Resolved KPI labels are absent; the band is skeletonised instead.
-    expect(screen.queryByText('Total Results')).not.toBeInTheDocument();
-    expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThanOrEqual(4);
+    // The brief retains labels, but does not expose a resolved numeric value.
+    expect(screen.getByText('Total results')).toBeInTheDocument();
+    expect(metricCard('Total results').querySelector('[data-operational-value]')).toBeNull();
+    expect(screen.getByRole('region', { name: 'Search summary' })).toHaveAttribute('aria-busy', 'true');
+    const summary = screen.getByRole('region', { name: 'Search summary' });
+    expect(summary.querySelectorAll('[aria-hidden="true"][class~="bg-[var(--surface-3)]"][class~="h-5"][class~="w-20"]')).toHaveLength(4);
+    const heading = container.querySelector('[aria-hidden="true"][class~="bg-[var(--skeleton-bg)]"][class~="w-1/3"]');
+    expect(heading).toHaveClass('h-4');
+    const results = heading!.closest('[data-print-card]');
+    expect(results).not.toBeNull();
+    const placeholders = results!.querySelectorAll('[aria-hidden="true"][class~="bg-[var(--skeleton-bg)]"]');
+    expect(placeholders.length).toBeGreaterThanOrEqual(4);
+    expect(placeholders).toHaveLength(6);
+    const rows = results!.querySelectorAll('.space-y-2 > [aria-hidden="true"][class~="bg-[var(--skeleton-bg)]"]');
+    expect(rows).toHaveLength(5);
+    rows.forEach(row => {
+      expect(row).toHaveStyle({ height: '48px' });
+      expect(row).toHaveClass('w-full');
+    });
+    expect(screen.queryByRole('region', { name: 'Search results' })).not.toBeInTheDocument();
   });
 
   it('groups hits into ALL_TYPES order and derives the KPI band from the hit set', async () => {
@@ -248,9 +269,9 @@ describe('SearchPage', () => {
     expect(txt.indexOf('Drives')).toBeLessThan(txt.indexOf('Charging'));
 
     // KPI band: 6 total hits across 3 categories, no active filters.
-    expect(metricCard('Total Results')).toHaveTextContent('6');
+    expect(metricCard('Total results')).toHaveTextContent('6');
     expect(metricCard('Categories')).toHaveTextContent('3');
-    expect(metricCard('Active Filters')).toHaveTextContent('0');
+    expect(metricCard('Active filters')).toHaveTextContent('0');
   });
 
   it('surfaces the LARGEST group (not the first) as the Top Match KPI', async () => {
@@ -269,7 +290,7 @@ describe('SearchPage', () => {
 
     await screen.findByRole('region', { name: 'Search results' });
     // Drives (3) beats Vehicles (2) even though Vehicles sorts first.
-    const top = metricCard('Top Match');
+    const top = metricCard('Top match');
     expect(top).toHaveTextContent('Drives');
     expect(top).toHaveTextContent('3 results');
   });
@@ -283,8 +304,8 @@ describe('SearchPage', () => {
     expect(screen.getByText(/No matches for "zzz"/)).toBeInTheDocument();
 
     // The KPI band still renders (never gated) with zeroed derivations.
-    expect(metricCard('Total Results')).toHaveTextContent('0');
-    expect(metricCard('Top Match')).toHaveTextContent('—');
+    expect(metricCard('Total results')).toHaveTextContent('0');
+    expect(metricCard('Top match')).toHaveTextContent('—');
   });
 
   it('shows the QueryError banner on a failed fetch and re-issues on Retry', async () => {
@@ -331,7 +352,7 @@ describe('SearchPage', () => {
     // Chip is now pressed, Clear appears, and the KPI reflects one filter.
     expect(screen.getByRole('button', { name: 'Drives' })).toHaveAttribute('aria-pressed', 'true');
     expect(screen.getByRole('button', { name: 'Clear filters' })).toBeInTheDocument();
-    expect(metricCard('Active Filters')).toHaveTextContent('1');
+    expect(metricCard('Active filters')).toHaveTextContent('1');
 
     // The refined query threads the selected type to the backend.
     await waitFor(() =>
@@ -344,7 +365,7 @@ describe('SearchPage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Clear filters' }));
     expect(screen.getByRole('button', { name: 'Drives' })).toHaveAttribute('aria-pressed', 'false');
     expect(screen.queryByRole('button', { name: 'Clear filters' })).not.toBeInTheDocument();
-    expect(metricCard('Active Filters')).toHaveTextContent('0');
+    expect(metricCard('Active filters')).toHaveTextContent('0');
   });
 
   it('restores an active type filter from the URL on first mount', async () => {
@@ -355,7 +376,7 @@ describe('SearchPage', () => {
     // The Charging chip is pre-pressed and the KPI shows one active filter.
     expect(screen.getByRole('button', { name: 'Charging' })).toHaveAttribute('aria-pressed', 'true');
     await screen.findByRole('region', { name: 'Search results' });
-    expect(metricCard('Active Filters')).toHaveTextContent('1');
+    expect(metricCard('Active filters')).toHaveTextContent('1');
     expect(mockedRequest).toHaveBeenCalledWith(
       expect.stringContaining('types=charging'),
       expect.anything(),

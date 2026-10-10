@@ -83,7 +83,7 @@ vi.mock('@/components/forms', async () => {
 });
 
 vi.mock('@/components/layout', () => ({
-  PageContainer: ({
+  PageLayout: ({
     title,
     subtitle,
     actions,
@@ -126,41 +126,54 @@ vi.mock('@/features/onboarding/components/NoVehicleSelected', () => ({
   ),
 }));
 
-vi.mock('../components/speed-sweet-spot', async () => {
+type State = { isLoading: boolean; error: unknown };
+type SummaryProbe = {
+  sweetSpot: { fromKph: number; whPerKm: number } | null;
+};
+const status = (state: State) =>
+  state.error ? 'error' : state.isLoading ? 'loading' : 'ready';
+const section = (
+  testId: string,
+  state: State,
+  summary?: SummaryProbe,
+) => (
+  <section
+    data-testid={testId}
+    data-model-from={summary?.sweetSpot?.fromKph}
+    data-model-wh={summary?.sweetSpot?.whPerKm}
+  >
+    {status(state)}
+  </section>
+);
+
+vi.mock('../components/operationalbrief-n-z/SweetSpotSummaryBrief', async () => {
   const actual = await vi.importActual<
-    typeof import('../components/speed-sweet-spot/SpeedSweetSpotKpis')
-  >('../components/speed-sweet-spot/SpeedSweetSpotKpis');
-  type State = { isLoading: boolean; error: unknown };
-  type SummaryProbe = {
-    sweetSpot: { fromKph: number; whPerKm: number } | null;
-  };
-  const status = (state: State) =>
-    state.error ? 'error' : state.isLoading ? 'loading' : 'ready';
-  const section = (
-    testId: string,
-    state: State,
-    summary?: SummaryProbe,
-  ) => (
-    <section
-      data-testid={testId}
-      data-model-from={summary?.sweetSpot?.fromKph}
-      data-model-wh={summary?.sweetSpot?.whPerKm}
-    >
-      {status(state)}
-    </section>
-  );
-  const ActualKpis = actual.SpeedSweetSpotKpis;
+    typeof import('../components/operationalbrief-n-z/SweetSpotSummaryBrief')
+  >('../components/operationalbrief-n-z/SweetSpotSummaryBrief');
+  const ActualSummary = actual.SweetSpotSummaryBrief;
 
   return {
-    SpeedSweetSpotKpis: (props: Parameters<typeof ActualKpis>[0]) => (
+    SweetSpotSummaryBrief: (props: Parameters<typeof ActualSummary>[0]) => (
       <div data-testid="speed-sweet-spot-kpi-state" data-state={status(props)}>
-        <ActualKpis {...props} />
+        <ActualSummary {...props} />
       </div>
     ),
-    SweetSpotEvidence: (props: {
+  };
+});
+
+vi.mock('../components/operationalbrief-n-z/SweetSpotEvidenceBrief', () => ({
+    SweetSpotEvidenceBrief: (props: {
       state: State;
       summary: SummaryProbe;
     }) => section('speed-sweet-spot-evidence', props.state, props.summary),
+}));
+
+vi.mock('../components/operationalbrief-n-z/SweetSpotMethodBrief', () => ({
+    SweetSpotMethodBrief: (props: { state: State }) =>
+      section('speed-sweet-spot-method', props.state),
+}));
+
+vi.mock('../components/speed-sweet-spot', () => ({
     SpeedBandCoverage: (props: { state: State }) =>
       section('speed-sweet-spot-coverage', props.state),
     ConsumptionSpeedCurve: (props: { state: State }) =>
@@ -171,10 +184,7 @@ vi.mock('../components/speed-sweet-spot', async () => {
       section('speed-sweet-spot-monthly', props.state),
     SpeedBandScorecard: (props: { state: State }) =>
       section('speed-sweet-spot-scorecard', props.state),
-    SpeedSweetSpotMethodology: (props: { state: State }) =>
-      section('speed-sweet-spot-method', props.state),
-  };
-});
+}));
 
 import SpeedSweetSpotPage from './SpeedSweetSpotPage';
 
@@ -284,8 +294,8 @@ describe('SpeedSweetSpotPage', () => {
   });
 
   it.each([
-    ['loading', query({ isLoading: true })],
-    ['error', query({ isError: true, error: new Error('unavailable') })],
+    ['loading', query({ data: undefined, isLoading: true })],
+    ['error', query({ data: undefined, isError: true, error: new Error('unavailable') })],
   ])('propagates the %s state to every mounted section', (expected, result) => {
     useDrivesMock.mockReturnValue(result);
     render(<SpeedSweetSpotPage />);
@@ -332,8 +342,8 @@ describe('SpeedSweetSpotPage', () => {
     useDrivesMock.mockReturnValue(query({ data: [drive(1), drive(2), drive(3)] }));
     render(<SpeedSweetSpotPage />);
 
-    expect(screen.getByText('62–68 mph')).toBeInTheDocument();
-    expect(screen.getAllByText('241 Wh/mi')).toHaveLength(2);
+    expect(screen.getByText('62.14–68.35 mph')).toBeInTheDocument();
+    expect(screen.getAllByText('241.40 Wh/mi')).toHaveLength(2);
     expect(screen.getByTestId('speed-sweet-spot-evidence')).toHaveAttribute(
       'data-model-from',
       '100',
@@ -348,7 +358,7 @@ describe('SpeedSweetSpotPage', () => {
     useDrivesMock.mockReturnValue(query({ data: [drive(1), drive(2), drive(3)] }));
     render(<SpeedSweetSpotPage />);
 
-    expect(screen.getByText('100–110 km/h')).toBeInTheDocument();
-    expect(screen.getAllByText('150 Wh/km')).toHaveLength(2);
+    expect(screen.getByText('100.00–110.00 km/h')).toBeInTheDocument();
+    expect(screen.getAllByText('150.00 Wh/km')).toHaveLength(2);
   });
 });

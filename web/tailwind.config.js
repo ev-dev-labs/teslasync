@@ -7,6 +7,67 @@ export default {
   darkMode: 'class',
   theme: {
     extend: {
+      zIndex: {
+        overlay: '60',
+        'shell-status-bar': '55',
+        'shell-panel': '80',
+        'map-control': '1000',
+        'presentation-controls': '9999',
+        'presentation-dimmer': '9998',
+        'presentation-cursor': '9997',
+        'map-tile-control': '800',
+        'command-palette-backdrop': '200',
+        'command-palette-positioner': '201',
+      },
+      width: {
+        'side-panel': '420px',
+        'help-menu': 'min(92vw,260px)',
+        'theme-switcher': '22rem',
+        'connection-diagnostics': 'min(92vw, 320px)',
+        'presentation-menu': 'min(92vw, 340px)',
+        'workspace-context': 'min(92vw, 27rem)',
+        'alerts-preview': 'min(92vw, 380px)',
+        'recent-pages': 'min(92vw, 360px)',
+        'command-deck-collapsed': '76px',
+        'command-deck-expanded': '320px',
+      },
+      maxWidth: {
+        'modal-full': 'min(96vw,1100px)',
+        'tooltip-viewport': 'calc(100vw - 1.5rem)',
+        'side-panel-viewport': '40vw',
+        'shell-panel-viewport': 'calc(100vw - 1rem)',
+        'breadcrumb-label': '200px',
+        'background-summary': '180px',
+        'active-vehicle-label': '160px',
+        'active-vehicle-compact-label': '140px',
+      },
+      maxHeight: {
+        'more-menu': 'min(70vh,520px)',
+        modal: '90vh',
+        'notification-panel': 'calc(100vh - 6rem)',
+        'workspace-context': 'min(80vh, 38rem)',
+        'alerts-preview': '320px',
+        'status-options': '280px',
+        'table-filter-viewport': 'calc(100dvh - 2rem)',
+        'command-palette': '84vh',
+      },
+      minWidth: {
+        'freshness-age': '4.5rem',
+        'background-work': '260px',
+        'vehicle-options': '220px',
+      },
+      gridTemplateColumns: {
+        'metric-compact': 'minmax(0,1fr) minmax(0,1fr) 5rem',
+        'replay-shortcuts': 'auto 1fr',
+        'page-actions-scope': 'minmax(0,1fr) auto',
+        'workspace-header': 'minmax(0,1fr) minmax(18rem,22rem) minmax(0,1fr)',
+      },
+      padding: {
+        'command-palette-viewport': 'max(2rem,8vh)',
+      },
+      flex: {
+        'replay-scrubber': '1 1 12rem',
+      },
       screens: {
         // Ultra-wide breakpoint for the modern-ui full-width redesign.
         // Pages use `3xl:` grid columns so dashboards fill wide monitors
@@ -22,43 +83,43 @@ export default {
           gray: '#393c49',
         },
         neon: {
-          cyan: '#22d3ee',
-          blue: '#4f46e5',
-          purple: '#a855f7',
-          pink: '#ec4899',
-          green: '#10b981',
-          amber: '#f59e0b',
-          red: '#ef4444',
+          cyan: 'rgb(var(--semantic-info-rgb) / <alpha-value>)',
+          blue: 'rgb(var(--semantic-info-rgb) / <alpha-value>)',
+          purple: 'rgb(var(--semantic-purple-rgb) / <alpha-value>)',
+          pink: 'rgb(var(--semantic-danger-rgb) / <alpha-value>)',
+          green: 'rgb(var(--semantic-success-rgb) / <alpha-value>)',
+          amber: 'rgb(var(--semantic-warning-rgb) / <alpha-value>)',
+          red: 'rgb(var(--semantic-danger-rgb) / <alpha-value>)',
         },
         glass: {
-          light: 'rgba(255, 255, 255, 0.05)',
-          medium: 'rgba(255, 255, 255, 0.08)',
-          heavy: 'rgba(255, 255, 255, 0.12)',
-          border: 'rgba(255, 255, 255, 0.10)',
+          light: 'var(--surface-1)',
+          medium: 'var(--surface-2)',
+          heavy: 'var(--surface-3)',
+          border: 'var(--border-default)',
         },
         surface: {
-          1: '#11151c',
-          2: '#171c25',
-          3: '#202733',
-          4: '#293240',
+          1: 'var(--surface-1)',
+          2: 'var(--surface-2)',
+          3: 'var(--surface-3)',
+          4: 'var(--surface-3)',
         },
       },
       backgroundImage: {
         'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',
-        'glow-cyan': 'radial-gradient(ellipse at center, rgba(0,240,255,0.15) 0%, transparent 70%)',
-        'glow-purple': 'radial-gradient(ellipse at center, rgba(168,85,247,0.15) 0%, transparent 70%)',
-        'glow-blue': 'radial-gradient(ellipse at center, rgba(79,70,229,0.15) 0%, transparent 70%)',
-        'mesh-gradient': 'linear-gradient(135deg, #0f1019 0%, #1a1040 25%, #0f1019 50%, #0a1628 75%, #0f1019 100%)',
+        'glow-cyan': 'none',
+        'glow-purple': 'none',
+        'glow-blue': 'none',
+        'mesh-gradient': 'none',
       },
       boxShadow: {
-        'glow-sm': '0 0 15px rgba(0, 240, 255, 0.1)',
-        'glow-md': '0 0 30px rgba(0, 240, 255, 0.15)',
-        'glow-lg': '0 0 60px rgba(0, 240, 255, 0.2)',
-        'glow-red': '0 0 30px rgba(227, 25, 55, 0.2)',
-        'glow-green': '0 0 30px rgba(16, 185, 129, 0.2)',
-        'glow-purple': '0 0 30px rgba(168, 85, 247, 0.2)',
-        'inner-glow': 'inset 0 1px 0 rgba(255,255,255,0.05)',
-        'glass': '0 8px 32px rgba(0, 0, 0, 0.4)',
+        'glow-sm': 'var(--elevation-1)',
+        'glow-md': 'var(--elevation-2)',
+        'glow-lg': 'var(--elevation-3)',
+        'glow-red': 'var(--elevation-1)',
+        'glow-green': 'var(--elevation-1)',
+        'glow-purple': 'var(--elevation-1)',
+        'inner-glow': 'none',
+        'glass': 'var(--panel-shadow)',
         // Neutral elevation ladder — the modern default for expressing depth.
         // Mode-aware: the underlying vars are re-declared under
         // `:root.light-mode` in index.css. Prefer these over `shadow-glow-*`,
@@ -86,21 +147,20 @@ export default {
         '3xl': '1.5rem',
       },
       animation: {
-        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
-        'glow-pulse': 'glowPulse 2s ease-in-out infinite alternate',
+        'pulse-slow': 'none',
+        'glow-pulse': 'none',
         'slide-up': 'slideUp 0.5s ease-out',
         'fade-in': 'fadeIn 0.3s ease-out',
         'spin-slow': 'spin 3s linear infinite',
-        'border-flow': 'borderFlow 3s linear infinite',
+        'border-flow': 'none',
         'shimmer': 'shimmer 2s infinite linear',
         'skeleton-wave': 'skeletonWave 1.8s ease-in-out infinite',
         'chart-grow': 'chartGrow 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards',
-        'number-pop': 'numberPop 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+        'number-pop': 'none',
       },
       keyframes: {
         glowPulse: {
-          '0%': { boxShadow: '0 0 5px rgba(0, 240, 255, 0.1)' },
-          '100%': { boxShadow: '0 0 20px rgba(0, 240, 255, 0.3)' },
+          '0%, 100%': { boxShadow: 'var(--elevation-1)' },
         },
         slideUp: {
           '0%': { transform: 'translateY(10px)', opacity: '0' },
@@ -158,7 +218,8 @@ export default {
         bold: 'var(--font-weight-bold)',
       },
       fontSize: {
-        // Every size multiplies by --font-scale so text scales but layout
+        'size-inherit': 'inherit',
+        // Explicit sizes multiply by --font-scale so text scales but layout
         // spacing does not. Body sizes derive their line-height from
         // --leading (`calc(var(--leading) * 1em)`) so the line-height
         // control is real and scales with the text; larger display sizes
@@ -194,12 +255,17 @@ export default {
         'd-row': 'var(--density-row-h)',
       },
       minHeight: {
+        'error-fallback': '400px',
+        'side-panel-header': '4.5rem',
+        'vehicle-grid': '28rem',
         // Density-aware row height.
         // Use `min-h-d-row` on table rows / list items so the height
         // adapts to the user's density preference.
         'd-row': 'var(--density-row-h)',
       },
       height: {
+        'workspace-header': '4.5rem',
+        'vehicle-grid': 'min(72vh, 56rem)',
         // Same density-aware row height as a fixed-height utility.
         'd-row': 'var(--density-row-h)',
       },
@@ -209,6 +275,9 @@ export default {
       // | duration-slow` instead of raw `duration-NNN` numeric utilities so
       // motion timings stay consistent across the app. The audit script
       // `scripts/auditMotionTokens.mjs` enforces this.
+      transitionProperty: {
+        width: 'width',
+      },
       transitionDuration: {
         fast: 'var(--motion-duration-fast)',
         normal: 'var(--motion-duration-normal)',

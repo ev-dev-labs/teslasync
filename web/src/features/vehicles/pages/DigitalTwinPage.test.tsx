@@ -37,6 +37,9 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
 import type { SecurityEvent, ChargingTelemetry } from '@/api/types';
+import * as operationalBridge from '@/hooks/useOperationalMetrics';
+
+const operationalMetricsSpy = vi.spyOn(operationalBridge, 'useOperationalMetrics');
 
 type Veh = { id: number; display_name: string; vin: string; exterior_color: string | null };
 
@@ -118,6 +121,18 @@ vi.mock('@/hooks/useSelectedVehicle', () => ({
     setVehicleId: vi.fn(),
   }),
 }));
+
+vi.mock('@/hooks/useSettings', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/hooks/useSettings')>();
+  return {
+    ...actual,
+    useSettings: () => ({
+      settings: { unit_of_length: 'km', unit_of_temp: 'C', unit_of_pressure: 'bar',
+        decimal_precision: 1, locale: 'en-US', currency_symbol: '$' },
+      settingsUnavailable: false,
+    }),
+  };
+});
 
 vi.mock('@/api/hooks/useVehicles', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/api/hooks/useVehicles')>();
@@ -264,11 +279,11 @@ function expectKv(label: string, value: string) {
   expect(dt.parentElement).toHaveTextContent(value);
 }
 
-/** Assert the MetricCard identified by its (unique) subtitle shows `value`. */
+/** Assert the canonical metric identified by its unique context shows `value`. */
 function expectKpi(subtitle: string, value: string) {
-  const card = screen.getByText(subtitle).closest('div');
-  expect(card).not.toBeNull();
-  expect(within(card as HTMLElement).getByText(value)).toBeInTheDocument();
+  const card = screen.getByText(subtitle).closest('[data-operational-metric]');
+  if (!(card instanceof HTMLElement)) throw new Error(`Missing operational metric ${subtitle}`);
+  expect(within(card).getByText(value)).toBeInTheDocument();
 }
 
 beforeEach(() => {
@@ -290,19 +305,19 @@ describe('DigitalTwinPage', () => {
     renderPage();
 
     // Shell + a11y landmarks.
-    expect(screen.getByRole('heading', { name: 'Digital Twin', level: 1 })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Digital twin', level: 1 })).toBeInTheDocument();
     expect(screen.getByText('Real-time vehicle physical state')).toBeInTheDocument();
     expect(screen.getByRole('region', { name: 'Overview' })).toBeInTheDocument();
 
     // Section titles + panel titles (no hidden sections).
     for (const title of [
-      'Live Overview',
-      'Component State',
-      'Doors & Openings',
+      'Live overview',
+      'Component state',
+      'Doors & openings',
       'Windows',
-      'Security & Status',
-      'Lights & Signals',
-      'Live Status',
+      'Security & status',
+      'Lights & signals',
+      'Live status',
     ]) {
       expect(screen.getByText(title)).toBeInTheDocument();
     }
@@ -314,24 +329,24 @@ describe('DigitalTwinPage', () => {
     // Live status — two StatusBadges (Live Status panel + Security footer) show
     // the single-source "charging" status; the sentry chip is on.
     expect(screen.getAllByText('charging').length).toBeGreaterThanOrEqual(2);
-    expect(screen.getByText('Sentry On')).toBeInTheDocument();
+    expect(screen.getByText('Sentry on')).toBeInTheDocument();
 
     // Doors panel KV rows (from the JSON door_state).
-    expectKv('Driver Front', 'Open');
+    expectKv('Driver front', 'Open');
     expectKv('Frunk', 'Closed');
     expectKv('Trunk', 'Open');
 
     // Windows panel.
-    expectKv('Front Driver', 'Open');
-    expectKv('Front Passenger', 'Closed');
+    expectKv('Front driver', 'Open');
+    expectKv('Front passenger', 'Closed');
 
     // Lights panel.
     expectKv('Headlights', 'On');
     expectKv('Hazards', 'Off');
-    expectKv('Turn Signal', 'Left');
+    expectKv('Turn signal', 'Left');
 
     // Security panel — occupied seat + not driving while charging.
-    expectKv('Driver Seat', 'Occupied');
+    expectKv('Driver seat', 'Occupied');
     expectKv('Driving', 'No');
 
     // Last-updated caption (deterministic via the stubbed formatter).
@@ -343,12 +358,26 @@ describe('DigitalTwinPage', () => {
     h.state = makeQuery({ isLoading: true, isFetching: true, dataUpdatedAt: 0 });
     h.charging = makeQuery({ isLoading: true, isFetching: true, dataUpdatedAt: 0 });
 
-    const { container } = renderPage();
+    renderPage();
 
-    expect(screen.getByRole('heading', { name: 'Digital Twin', level: 1 })).toBeInTheDocument();
-    // Four panels → at least four skeletons; no KV rows leaked.
-    expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThanOrEqual(4);
-    expect(screen.queryByText('Driver Front')).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Digital twin', level: 1 })).toBeInTheDocument();
+    const components = screen.getByRole('region', { name: 'Component state' });
+    const skeletons = components.querySelectorAll(
+      '[aria-busy="true"] [aria-hidden="true"][class~="bg-[var(--skeleton-bg)]"]',
+    );
+    // Count only the four independent component panels, not overview metrics.
+    expect(skeletons.length).toBeGreaterThanOrEqual(4);
+    for (const title of ['Doors & openings', 'Windows', 'Security & status', 'Lights & signals']) {
+      const pending = within(components).getByRole('status', { name: `Loading ${title}` });
+      expect(pending.parentElement).toHaveAttribute('aria-busy', 'true');
+      const skeleton = pending.querySelector(
+        '[aria-hidden="true"][class~="bg-[var(--skeleton-bg)]"]',
+      );
+      expect(skeleton).toHaveStyle({ height: '132px' });
+      expect(skeleton).toHaveClass('w-full');
+      expect(skeleton).not.toHaveClass('animate-pulse');
+    }
+    expect(screen.queryByText('Driver front')).not.toBeInTheDocument();
     expect(screen.queryByText('No door data available')).not.toBeInTheDocument();
   });
 
@@ -360,6 +389,7 @@ describe('DigitalTwinPage', () => {
     renderPage();
 
     expect(screen.getAllByText(/Can't reach server/i).length).toBeGreaterThan(0);
+    expect(within(screen.getByTestId('digital-twin-summary')).getByText('Source request failed')).toBeInTheDocument();
 
     const retry = screen.getAllByRole('button', { name: /^Retry$/i });
     expect(retry.length).toBeGreaterThanOrEqual(3);
@@ -397,8 +427,8 @@ describe('DigitalTwinPage', () => {
       screen.getByText('No vehicles found. Add a vehicle to see its digital twin.'),
     ).toBeInTheDocument();
     // The data scaffolding must NOT render behind the guard.
-    expect(screen.queryByText('Live Overview')).not.toBeInTheDocument();
-    expect(screen.queryByText('Doors & Openings')).not.toBeInTheDocument();
+    expect(screen.queryByText('Live overview')).not.toBeInTheDocument();
+    expect(screen.queryByText('Doors & openings')).not.toBeInTheDocument();
   });
 
   it('renders the shell spinner and no data sections while the vehicles list is loading', () => {
@@ -408,13 +438,13 @@ describe('DigitalTwinPage', () => {
 
     const { container } = renderPage();
 
-    expect(screen.getByRole('heading', { name: 'Digital Twin', level: 1 })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Digital twin', level: 1 })).toBeInTheDocument();
     // PageContainer keeps the real header visible and renders the
     // accessible PageLoadSkeleton (role=status, name="Loading…") instead of
     // a centered spinner while the vehicles list is loading.
     expect(screen.getByRole('status', { name: 'Loading…' })).toBeInTheDocument();
     expect(container.querySelector('[data-testid="page-load-skeleton"]')).not.toBeNull();
-    expect(screen.queryByText('Live Overview')).not.toBeInTheDocument();
+    expect(screen.queryByText('Live overview')).not.toBeInTheDocument();
     expect(
       screen.queryByText('No vehicles found. Add a vehicle to see its digital twin.'),
     ).not.toBeInTheDocument();
@@ -444,6 +474,94 @@ describe('DigitalTwinPage', () => {
     renderPage();
 
     expect(screen.getAllByText('online').length).toBeGreaterThanOrEqual(2);
+  });
+
+  it('retains all component details and the interactive twin during a security refresh failure', () => {
+    h.security = makeQuery({ data: makeSecurity(), isError: true, error: new Error('refresh failed') });
+    renderPage();
+    expectKv('Driver front', 'Open');
+    expectKv('Front passenger', 'Closed');
+    expectKv('Headlights', 'On');
+    expectKv('Driver seat', 'Occupied');
+    expect(screen.getByText('Security & status may be out of date')).toBeInTheDocument();
+    expect(screen.queryByText('No door data available')).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Component state' })).toBeInTheDocument();
+    expect(h.security.refetch).not.toHaveBeenCalled();
+  });
+
+  it('keeps raw counts, component denominators and source reasons in the real Review details drawer', () => {
+    renderPage();
+    const brief = screen.getByTestId('digital-twin-summary');
+    expect(brief).toHaveAttribute('data-operational-brief');
+    expect(brief.querySelectorAll('[data-operational-metric]')).toHaveLength(6);
+    expect(brief.querySelector('[data-operational-metric="twin-doors"]')).toHaveAttribute('data-value-state', 'value');
+    expect(brief.querySelector('[data-operational-metric="twin-windows"]')).toHaveAttribute('data-value-state', 'value');
+    expect(operationalMetricsSpy).toHaveBeenCalledWith(expect.arrayContaining([
+      expect.objectContaining({ metricId: 'count', occurrenceId: 'twin-doors', rawValue: 2 }),
+      expect.objectContaining({ metricId: 'count', occurrenceId: 'twin-windows', rawValue: 1 }),
+    ]));
+    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog', { name: 'Physical-state summary details' });
+    expect(within(drawer).getByText('of 6 openings')).toBeInTheDocument();
+    expect(within(drawer).getByText('of 4 windows')).toBeInTheDocument();
+    expect(within(drawer).getByText('6 of 6 states known')).toBeInTheDocument();
+    expect(within(drawer).getByText('4 of 4 states known')).toBeInTheDocument();
+    expect(within(drawer).getByText(/Unreported openings are not assumed closed/)).toBeInTheDocument();
+    expect(within(drawer).getAllByText(/Source snapshots may differ in time/).length).toBeGreaterThan(0);
+    fireEvent.keyDown(drawer, { key: 'Escape' });
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Live overview' })).toBeInTheDocument();
+    expectKv('Driver front', 'Open');
+  });
+
+  it('keeps reported closed states at zero and false distinct from unreported components', () => {
+    h.state = makeQuery({ data: null });
+    h.charging = makeQuery({ data: null });
+    h.security = makeQuery({ data: makeSecurity({
+      door_state: '{"DriverFront":false}', fd_window: null, fp_window: null,
+      rd_window: null, rp_window: null, locked: false, sentry_mode: false,
+    }) });
+    renderPage();
+    const brief = screen.getByTestId('digital-twin-summary');
+    const doors = brief.querySelector('[data-operational-metric="twin-doors"]');
+    const windows = brief.querySelector('[data-operational-metric="twin-windows"]');
+    expect(doors).toHaveAttribute('data-value-state', 'value');
+    expect(doors).toHaveTextContent('0');
+    expect(doors).toHaveTextContent('1 of 6 states known');
+    expect(windows).toHaveAttribute('data-value-state', 'missing');
+    expect(windows).toHaveTextContent('—');
+    expect(brief.querySelector('[data-operational-metric="twin-lock"]')).toHaveTextContent('Unlocked');
+    expect(brief.querySelector('[data-operational-metric="twin-sentry"]')).toHaveTextContent('Inactive');
+    expect(within(brief).getByText('Mixed source availability')).toBeInTheDocument();
+    expect(operationalMetricsSpy).toHaveBeenCalledWith(expect.arrayContaining([
+      expect.objectContaining({ occurrenceId: 'twin-doors', rawValue: 0 }),
+      expect.objectContaining({ occurrenceId: 'twin-windows', rawValue: null }),
+    ]));
+  });
+
+  it('marks the brief busy without leaking measured values during initial loading', () => {
+    h.security = makeQuery({ isLoading: true, isFetching: true, dataUpdatedAt: 0 });
+    h.state = makeQuery({ isLoading: true, isFetching: true, dataUpdatedAt: 0 });
+    h.charging = makeQuery({ isLoading: true, isFetching: true, dataUpdatedAt: 0 });
+    renderPage();
+    const brief = screen.getByTestId('digital-twin-summary');
+    expect(brief).toHaveAttribute('aria-busy', 'true');
+    expect(brief.querySelectorAll('[data-operational-value]')).toHaveLength(0);
+    expect(within(brief).getByText('Loading source snapshots')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Component state' })).toBeInTheDocument();
+  });
+
+  it('keeps the brief and its reviewable counts after a retained refresh failure', () => {
+    h.security = makeQuery({ data: makeSecurity(), isError: true, error: new Error('refresh failed') });
+    renderPage();
+    const brief = screen.getByTestId('digital-twin-summary');
+    expect(within(brief).getByText('Retained source snapshots')).toBeInTheDocument();
+    expectKpi('of 6 openings', '2');
+    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog', { name: 'Physical-state summary details' });
+    expect(within(drawer).getByText('Retained source snapshots')).toBeInTheDocument();
+    expect(within(drawer).getByText('of 6 openings')).toBeInTheDocument();
+    expect(within(drawer).getByText(/retained values remain visible after a refresh failure/)).toBeInTheDocument();
   });
 });
 

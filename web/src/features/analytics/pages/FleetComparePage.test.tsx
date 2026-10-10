@@ -19,7 +19,7 @@
  *   3. Swap — the ⇄ control exchanges the two selected vehicles in place.
  *   4. Single-vehicle account — a focused EmptyState (not empty selectors),
  *      and its "Manage vehicles" CTA navigates to /vehicles.
- *   5. Loading — the page shows its spinner shell, never the table/selectors.
+ *   5. Loading — persistent section shells, never a fabricated table/selectors.
  *   6. Trend panels degrade: empty monthly rollups → EmptyStates (never a
  *      blank panel); a monthly fetch failure → <QueryError> in both panels.
  *   7. The disambiguation banner is visible by default, hides on dismiss and
@@ -42,6 +42,10 @@ vi.mock('@/components/charts', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/components/charts')>()
   const { chartTestDoubles } = await import('@/test/chartTestDoubles')
   return { ...actual, ...chartTestDoubles }
+})
+vi.mock('@/components/charts/EmbeddedChart', async () => {
+  const { chartTestDoubles } = await import('@/test/chartTestDoubles')
+  return { EmbeddedChart: chartTestDoubles.EmbeddedChart }
 })
 
 vi.mock('@/api/client', async () => {
@@ -82,6 +86,7 @@ vi.mock('react-i18next', async () => {
 
 import { request } from '@/api/client'
 import { ToastProvider } from '@/components/feedback/Toast'
+import { ThemeProvider } from '@/components/ui/ThemeProvider'
 import { setGlobalPrecision, setGlobalLocale } from '@/lib/numberFormat'
 import FleetComparePage from './FleetComparePage'
 import type { Vehicle } from '@/types/vehicle'
@@ -250,9 +255,11 @@ function renderPage() {
   return render(
     <MemoryRouter initialEntries={['/fleet-compare']}>
       <QueryClientProvider client={client}>
-        <ToastProvider>
-          <FleetComparePage />
-        </ToastProvider>
+        <ThemeProvider>
+          <ToastProvider>
+            <FleetComparePage />
+          </ToastProvider>
+        </ThemeProvider>
       </QueryClientProvider>
       <LocationProbe />
     </MemoryRouter>,
@@ -275,7 +282,7 @@ describe('FleetComparePage', () => {
 
     // Page chrome + both selectors.
     expect(
-      screen.getByRole('heading', { level: 1, name: 'Fleet Comparison' }),
+      screen.getByRole('heading', { level: 1, name: 'Fleet comparison' }),
     ).toBeInTheDocument()
     const selectA = (await screen.findByLabelText('Vehicle A')) as HTMLSelectElement
     const selectB = screen.getByLabelText('Vehicle B') as HTMLSelectElement
@@ -286,13 +293,13 @@ describe('FleetComparePage', () => {
 
     // Settle: the table shows real values only once both stats queries resolve.
     // There is a transient auto-select window where the values are still 0.00.
-    await screen.findByText('210.00')
+    await screen.findByText('210')
 
     // The lifetime table renders every metric row label (Avg Efficiency /
     // Charging Cost / CO₂ Saved also appear as KPI-band labels → getAllByText).
     for (const label of [
-      'Total Drives', 'Total Distance', 'Avg Efficiency', 'Avg Speed', 'Top Speed',
-      'Regen Ratio', 'CO₂ Saved', 'Charging Cost', 'Total Energy', 'Charge Sessions',
+      'Total drives', 'Total distance', 'Avg efficiency', 'Avg speed', 'Top speed',
+      'Regen ratio', 'CO₂ saved', 'Charging cost', 'Total energy', 'Charge sessions',
     ]) {
       expect(screen.getAllByText(label).length).toBeGreaterThan(0)
     }
@@ -300,34 +307,41 @@ describe('FleetComparePage', () => {
     // Real formatting boundary: km stays km, currency uses $, 2dp default.
     expect(screen.getAllByText('5,000.00 km').length).toBe(2)
     // KPI band interpolates the i18n "A vs B" connector with live/lifetime data.
-    expect(await screen.findByText('72% vs 65%')).toBeInTheDocument()
-    expect(await screen.findByText('$500 vs $650')).toBeInTheDocument()
+    const batteryReading = screen.getByText('Battery level · Model 3 LR').closest('[role="listitem"]') as HTMLElement
+    expect(await within(batteryReading).findByText('72% vs 65%')).toBeInTheDocument()
+    const chargingCostReading = screen.getByText('Charging cost · Model 3 LR').closest<HTMLElement>('[role="listitem"]')
+    if (!chargingCostReading) throw new Error('Charging cost · Model 3 LR must belong to a semantic listitem')
+    expect(await within(chargingCostReading).findByText('$500.00 vs $650.00')).toBeInTheDocument()
 
     // Vehicle names surface as the table's value-column headers.
     expect(screen.getAllByText('Model 3 LR').length).toBeGreaterThan(0)
     expect(screen.getAllByText('Model Y P').length).toBeGreaterThan(0)
+    expect(screen.queryByRole('button', { name: 'Reorder or hide columns' })).not.toBeInTheDocument()
+    const comparisonTable = screen.getByRole('table')
+    expect(comparisonTable.querySelectorAll('[role="separator"], [draggable="true"]')).toHaveLength(0)
   })
 
   it('annotates the winner with a ✓ across higher / lower / tie semantics', async () => {
     renderPage()
+    const comparisonTable = within(await screen.findByRole('table'))
 
     // Settle past the transient auto-select window before reading cell values.
     // 'higher' → A (210) beats B (140): ✓ sits with the winner only.
-    const drivesWinner = await screen.findByText('210.00')
+    const drivesWinner = await comparisonTable.findByText('210')
     expect(within(drivesWinner).getByText('✓')).toBeInTheDocument()
-    expect(within(screen.getByText('140.00')).queryByText('✓')).toBeNull()
+    expect(within(comparisonTable.getByText('140')).queryByText('✓')).toBeNull()
 
     // 'lower' → B (155 Wh/km) beats A (170 Wh/km).
-    const effWinner = screen.getByText('155.00 Wh/km')
+    const effWinner = comparisonTable.getByText('155.00 Wh/km')
     expect(within(effWinner).getByText('✓')).toBeInTheDocument()
-    expect(within(screen.getByText('170.00 Wh/km')).queryByText('✓')).toBeNull()
+    expect(within(comparisonTable.getByText('170.00 Wh/km')).queryByText('✓')).toBeNull()
 
     // 'neutral' → Avg Speed never annotates a winner even though the values differ.
-    expect(within(screen.getByText('60.00 km/h')).queryByText('✓')).toBeNull()
-    expect(within(screen.getByText('62.00 km/h')).queryByText('✓')).toBeNull()
+    expect(within(comparisonTable.getByText('60.00 km/h')).queryByText('✓')).toBeNull()
+    expect(within(comparisonTable.getByText('62.00 km/h')).queryByText('✓')).toBeNull()
 
     // a === b → equal Total Distance is a tie despite the 'higher' semantic.
-    for (const cell of screen.getAllByText('5,000.00 km')) {
+    for (const cell of comparisonTable.getAllByText('5,000.00 km')) {
       expect(within(cell).queryByText('✓')).toBeNull()
     }
   })
@@ -361,9 +375,10 @@ describe('FleetComparePage', () => {
       screen.getByText(/Fleet comparison shows two vehicles side-by-side/i),
     ).toBeInTheDocument()
 
-    // No selectors and no comparison table in this degenerate state.
+    // No unusable selectors or comparison table; the section shells survive.
     expect(screen.queryByLabelText('Vehicle A')).toBeNull()
     expect(screen.queryByRole('table')).toBeNull()
+    expect(screen.getByRole('heading', { name: 'Lifetime statistics', level: 2 })).toBeInTheDocument()
 
     // The CTA routes the user to vehicle management.
     fireEvent.click(screen.getByRole('button', { name: 'Manage vehicles' }))
@@ -376,14 +391,15 @@ describe('FleetComparePage', () => {
     install({ vehiclesPending: true })
     renderPage()
 
-    // Header is always present; the body is the spinner shell, never the
-    // selectors, table, or the single-vehicle empty state.
+    // Header and section shells survive loading without presenting selectors,
+    // a fabricated comparison table, or the single-vehicle empty state.
     expect(
-      screen.getByRole('heading', { level: 1, name: 'Fleet Comparison' }),
+      screen.getByRole('heading', { level: 1, name: 'Fleet comparison' }),
     ).toBeInTheDocument()
     expect(screen.queryByLabelText('Vehicle A')).toBeNull()
     expect(screen.queryByRole('table')).toBeNull()
     expect(screen.queryByText('Add a second vehicle to compare')).toBeNull()
+    expect(screen.getByRole('heading', { name: 'Lifetime statistics', level: 2 })).toBeInTheDocument()
   })
 
   it('degrades the trend panels to empty states when there are no monthly rollups', async () => {
@@ -392,7 +408,7 @@ describe('FleetComparePage', () => {
 
     // Settle stats first (real drive count), then assert both trend panels
     // degraded to their empty states rather than a transient skeleton.
-    await screen.findByText('210.00')
+    await screen.findByText('210')
     expect(
       await screen.findByText('No monthly data available yet'),
     ).toBeInTheDocument()
@@ -400,7 +416,7 @@ describe('FleetComparePage', () => {
       await screen.findByText('No drive data available yet'),
     ).toBeInTheDocument()
     // The rest of the page still renders — the table is unaffected.
-    expect(screen.getAllByText('Total Drives').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('Total drives').length).toBeGreaterThan(0)
   })
 
   it('surfaces a QueryError in both trend panels when monthly mileage fails', async () => {

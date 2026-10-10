@@ -112,7 +112,7 @@ export function CommandDeck({
   const safePinnedItems = pinnedItems ?? []
   const safeSuggestions = suggestions ?? []
   const safeCollections = collections ?? []
-  const { reduce, durationMs } = useMotionPreference(260)
+  const { reduce, durationMs } = useMotionPreference()
 
   const [view, setView] = useState<DeckSelection>(() => readStoredView(sections ?? [], activeSectionTitle))
   const [mobileLevel, setMobileLevel] = useState<'rail' | 'panel'>('rail')
@@ -227,12 +227,10 @@ export function CommandDeck({
             initial={reduce ? false : {
               opacity: 0,
               x: typeof document !== 'undefined' && document.documentElement.dir === 'rtl' ? 22 : -22,
-              scale: 0.98,
-              filter: 'blur(4px)',
             }}
-            animate={{ opacity: 1, x: 0, scale: 1, filter: 'blur(0px)' }}
-            transition={{ duration: durationMs / 1000, ease: [0.22, 1, 0.36, 1] }}
-            className={cn('flex min-h-0 shrink-0 origin-top-left flex-col overflow-visible transition-[width] duration-normal ease-out rtl:origin-top-right motion-reduce:transition-none', panelCollapsed ? 'w-[76px]' : 'w-[320px]')}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: durationMs / 1000, ease: [0.2, 0, 0, 1] }}
+            className={cn('flex min-h-0 shrink-0 origin-top-left flex-col overflow-visible transition-width duration-normal ease-standard rtl:origin-top-right motion-reduce:transition-none', panelCollapsed ? 'w-command-deck-collapsed' : 'w-command-deck-expanded')}
           >
             <AtlasPanel
               variant="secondary"
@@ -266,10 +264,9 @@ export function CommandDeck({
           initial={reduce ? false : {
             opacity: 0,
             x: typeof document !== 'undefined' && document.documentElement.dir === 'rtl' ? -22 : 22,
-            filter: 'blur(4px)',
           }}
-          animate={{ opacity: 1, x: 0, filter: 'blur(0px)' }}
-          transition={{ duration: durationMs / 1000, ease: [0.22, 1, 0.36, 1] }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: durationMs / 1000, ease: [0.2, 0, 0, 1] }}
           className="flex min-h-0 flex-1 xl:hidden"
         >
           <AtlasPanel

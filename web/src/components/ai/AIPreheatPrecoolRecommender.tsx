@@ -14,9 +14,9 @@
 //     section with a Draft button that POSTs to
 //     /api/v1/ai/climate/schedule/draft. The SSE response stream
 //     accumulates into the shared AiOutputPanel and the user is
-//     directed to click the existing canonical climate-controls
-//     Apply button to persist (the schedule is PROPOSE-only —
-//     Helix never persists).
+//     directed to the Vehicle command center for manual climate
+//     actions. The proposal is advisory, not saved or applied;
+//     Add precondition uses a fixed 7 AM daily schedule instead.
 //
 // The component does NOT replace the deterministic HVAC banner,
 // the climate status cards, the climate efficiency panel, the
@@ -49,8 +49,8 @@
 //     state='error' for the user, but the component is never
 //     rendered in off mode at all because of I5.
 //   - Propose-only:       Helix never persists a schedule; the
-//     narration explicitly directs the user to click the
-//     canonical Apply button on the climate controls below.
+//     narration directs the user to the Vehicle command center,
+//     without claiming its manual actions apply the proposed window.
 
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -121,8 +121,7 @@ interface InnerSectionProps {
  * Visual contract:
  *   - One GlassPanel sized to sit above the deterministic
  *     ClimateControlPage status cards.
- *   - Cyan AI badge in the header (matches the chatbot brand
- *     colour).
+ *   - Neutral AI badge and role typography supplied by AIFeatureCard.
  *   - Draft button is disabled while a stream is open OR when no
  *     vehicleId / cabin temperature / outside temperature /
  *     depart_by is available from the parent page.
@@ -133,9 +132,9 @@ interface InnerSectionProps {
  *     hovering for a tooltip understands the privacy contract — only
  *     the vehicle name may be narrated; the temperatures and
  *     timestamps are the same the page below shows. The recommender
- *     never persists a schedule — it only proposes one and the user
- *     must click the existing manual climate controls Apply button
- *     to save it.
+ *     never saves or applies a schedule. Manual climate actions live
+ *     in the Vehicle command center; Add precondition is a fixed
+ *     7 AM daily schedule, not a way to apply the proposed window.
  */
 function InnerSection({
   vehicleId,
@@ -208,7 +207,7 @@ function InnerSection({
       )}
       description={t(
         'climate.aiPreheatPrecool.description',
-        'Ask Helix to draft a preheat or precool window grounded in the deterministic departure heuristic \u2014 start time, end time, mode (preheat | precool), and target cabin temperature. The temperatures are the same the panels below show; Helix never persists a schedule. Review the proposal and click Apply on the climate controls below to save it.',
+        'Ask Helix to draft an advisory preheat or precool window using the departure heuristic and current temperatures. Helix does not save or apply a schedule. Review the proposal, then use the Vehicle command center for manual climate actions. Its Add precondition action uses a fixed 7 AM daily schedule, not the proposed window.',
       )}
       buttonLabel={t(
         'climate.aiPreheatPrecool.generateButton',

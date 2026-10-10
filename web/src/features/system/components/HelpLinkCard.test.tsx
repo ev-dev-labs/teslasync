@@ -105,14 +105,14 @@ describe('HelpLinkCard', () => {
   it('applies the accent hue to the icon chip only, and varies per accent', () => {
     const purple = renderCard(makeLink({ accent: 'purple' }))
     const purpleChip = screen.getByTestId('accent-icon').parentElement as HTMLElement
-    expect(purpleChip.className).toContain('bg-neon-purple/10')
+    expect(purpleChip.className).toContain('bg-[var(--semantic-purple-bg)]')
     // The body copy must NOT carry a neon text color — accent is chip-only.
     expect(screen.getByText('Read the API reference guide.').className).not.toMatch(/text-neon-/)
     purple.unmount()
 
     renderCard(makeLink({ accent: 'green' }))
     const greenChip = screen.getByTestId('accent-icon').parentElement as HTMLElement
-    expect(greenChip.className).toContain('bg-neon-green/10')
+    expect(greenChip.className).toContain('bg-[var(--semantic-success-bg)]')
   })
 
   it('is a keyboard-focusable target with a visible focus ring', () => {

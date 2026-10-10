@@ -5,7 +5,7 @@
  *   - option rendering (incl. per-option value/label/disabled) and the
  *     null-safe `?? []` guard so a nullish `options` never `.map`s on undefined,
  *   - placeholder empty-value option,
- *   - id resolution (explicit id › label slug › stable `useId` fallback that
+ *   - id resolution (explicit id › stable locale-independent `useId` fallback that
  *     never collapses to `undefined-error`),
  *   - required forwarding + `aria-required`,
  *   - error state (message node, `aria-invalid`, `aria-describedby`, red border),
@@ -83,14 +83,14 @@ describe('Select — option rendering', () => {
 });
 
 describe('Select — id resolution', () => {
-  it('derives a slugified id from the label and wires the <label htmlFor>', () => {
+  it('derives a stable implicit id and wires the <label htmlFor>', () => {
     render(<Select options={OPTIONS} label="Vehicle Type" />);
     const select = screen.getByLabelText('Vehicle Type');
-    expect(select.id).toBe('vehicle-type');
-    expect(document.querySelector('label[for="vehicle-type"]')).not.toBeNull();
+    expect(select.id).toMatch(/^select-/);
+    expect(document.querySelector('label')?.htmlFor).toBe(select.id);
   });
 
-  it('prefers an explicit id over the label-derived slug', () => {
+  it('prefers an explicit id over the implicit id', () => {
     render(<Select options={OPTIONS} label="Vehicle Type" id="custom-id" />);
     const select = screen.getByLabelText('Vehicle Type');
     expect(select.id).toBe('custom-id');
@@ -130,16 +130,16 @@ describe('Select — error state', () => {
     render(<Select options={OPTIONS} label="Model" error="Please pick a model" />);
     const select = screen.getByLabelText('Model');
     expect(select.getAttribute('aria-invalid')).toBe('true');
-    const errorEl = document.getElementById('model-error');
+    const errorEl = document.getElementById(`${select.id}-error`);
     expect(errorEl?.textContent).toBe('Please pick a model');
-    expect(select.getAttribute('aria-describedby')).toBe('model-error');
+    expect(select.getAttribute('aria-describedby')).toBe(`${select.id}-error`);
     expect(screen.getByRole('alert')).toHaveTextContent('Please pick a model');
   });
 
-  it('applies the red border class when in error', () => {
+  it('applies the semantic danger border when in error', () => {
     const { container } = render(<Select options={OPTIONS} label="Model" error="x" />);
     const select = container.querySelector('select') as HTMLSelectElement;
-    expect(select.className).toContain('border-rose-500');
+    expect(select.className).toContain('border-[var(--semantic-danger)]');
   });
 });
 
@@ -148,16 +148,16 @@ describe('Select — hint state', () => {
     render(<Select options={OPTIONS} label="Model" hint="Pick your trim" />);
     const select = screen.getByLabelText('Model');
     expect(select.getAttribute('aria-invalid')).toBeNull();
-    expect(document.getElementById('model-hint')?.textContent).toBe('Pick your trim');
-    expect(select.getAttribute('aria-describedby')).toBe('model-hint');
+    expect(document.getElementById(`${select.id}-hint`)?.textContent).toBe('Pick your trim');
+    expect(select.getAttribute('aria-describedby')).toBe(`${select.id}-hint`);
   });
 
   it('lets error win over hint: hint is not rendered and describedby targets the error', () => {
     render(<Select options={OPTIONS} label="Model" error="Bad" hint="Ignored hint" />);
     const select = screen.getByLabelText('Model');
-    expect(document.getElementById('model-hint')).toBeNull();
+    expect(document.getElementById(`${select.id}-hint`)).toBeNull();
     expect(screen.queryByText('Ignored hint')).toBeNull();
-    expect(select.getAttribute('aria-describedby')).toBe('model-error');
+    expect(select.getAttribute('aria-describedby')).toBe(`${select.id}-error`);
   });
 
   it('omits aria-describedby when neither error nor hint is present', () => {
@@ -178,9 +178,10 @@ describe('Select — hint state', () => {
         />
       </>,
     );
-    expect(screen.getByLabelText('Model')).toHaveAttribute(
+    const select = screen.getByLabelText('Model');
+    expect(select).toHaveAttribute(
       'aria-describedby',
-      'external-help model-hint',
+      `external-help ${select.id}-hint`,
     );
   });
 });
@@ -246,7 +247,7 @@ describe('Select — help affordance', () => {
     render(
       <Select options={OPTIONS} label="Notify Mode" help={{ content: 'When to notify you' }} />,
     );
-    expect(screen.getByRole('button', { name: 'Help for notify-mode' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Help for Notify Mode' })).toBeInTheDocument();
   });
 
   it('lets help.for override the field name announced in the trigger aria-label', () => {
@@ -259,5 +260,88 @@ describe('Select — help affordance', () => {
   it('does not render help when there is no label (help pairs with the label)', () => {
     render(<Select options={OPTIONS} help={{ content: 'orphan help' }} />);
     expect(screen.queryByRole('button')).toBeNull();
+  });
+});
+
+describe('Select — identity and native form preservation', () => {
+  it('retains identity, focus, value and descriptions when the label is translated', () => {
+    const ref = createRef<HTMLSelectElement>();
+    const { rerender } = render(
+      <Select ref={ref} options={OPTIONS} label="Vehicle" hint="Choose" aria-describedby="external" help={{ content: 'Help' }} />,
+    );
+    const select = screen.getByLabelText('Vehicle');
+    const id = select.id;
+    fireEvent.change(select, { target: { value: 'model-3' } });
+    select.focus();
+    rerender(
+      <Select ref={ref} options={OPTIONS} label="Fahrzeug" hint="Wählen" aria-describedby="external" help={{ content: 'Hilfe' }} />,
+    );
+    expect(screen.getByLabelText('Fahrzeug')).toBe(select);
+    expect(select.id).toBe(id);
+    expect(ref.current?.value).toBe('model-3');
+    expect(document.activeElement).toBe(select);
+    expect(select).toHaveAttribute('aria-describedby', `external ${id}-hint`);
+    expect(document.getElementById(`${id}-hint`)).toHaveTextContent('Wählen');
+    expect(screen.getByRole('button', { name: 'Help for Fahrzeug' })).toHaveAttribute('data-help-for', id);
+  });
+
+  it('gives repeated labels distinct control and feedback identities', () => {
+    render(<><Select options={OPTIONS} label="Model" error="First" /><Select options={OPTIONS} label="Model" hint="Second" /></>);
+    const [first, second] = screen.getAllByLabelText('Model');
+    expect(first.id).not.toBe(second.id);
+    expect(first).toHaveAttribute('aria-describedby', `${first.id}-error`);
+    expect(second).toHaveAttribute('aria-describedby', `${second.id}-hint`);
+    expect(document.getElementById(`${first.id}-error`)).toHaveTextContent('First');
+    expect(document.getElementById(`${second.id}-hint`)).toHaveTextContent('Second');
+  });
+
+  it('preserves explicit IDs, help names and empty overrides', () => {
+    const { rerender } = render(<Select options={OPTIONS} id="saved-model" label="Model" help={{ content: 'Help' }} />);
+    expect(screen.getByRole('button', { name: 'Help for saved-model' })).toHaveAttribute('data-help-for', 'saved-model');
+    rerender(<Select options={OPTIONS} id="saved-model" label="Modell" error="Bad" aria-describedby="external" help={{ content: 'Help', for: '', ariaLabel: '' }} />);
+    expect(screen.getByLabelText('Modell')).toHaveAttribute('id', 'saved-model');
+    expect(screen.getByLabelText('Modell')).toHaveAttribute('aria-describedby', 'external saved-model-error');
+    expect(screen.getByRole('button', { name: '' })).toHaveAttribute('data-help-for', '');
+    expect(screen.getByRole('button', { name: '' })).toHaveAttribute('aria-label', '');
+  });
+
+  it('retains zero-valued options, required validation and native form data', () => {
+    const { container } = render(
+      <form id="native-form">
+        <Select options={[{ value: '0', label: 'Zero' }]} label="Count" placeholder="Choose" name="count" required defaultValue="" />
+      </form>,
+    );
+    const form = container.querySelector('form');
+    const select = screen.getByRole('combobox', { name: 'Count required' });
+    expect(form?.checkValidity()).toBe(false);
+    fireEvent.change(select, { target: { value: '0' } });
+    expect(form?.checkValidity()).toBe(true);
+    expect(form && new FormData(form).get('count')).toBe('0');
+    form?.reset();
+    expect(form?.checkValidity()).toBe(false);
+  });
+
+  it('keeps controlled changes and the full long option label', () => {
+    const label = 'Very long localized vehicle model description '.repeat(10);
+    const onChange = vi.fn();
+    const { rerender } = render(<Select options={[{ value: '0', label }]} label={label} value="" placeholder="Choose" onChange={onChange} />);
+    const select = screen.getByRole('combobox', { name: label.trim() });
+    fireEvent.change(select, { target: { value: '0' } });
+    expect(onChange).toHaveBeenCalledTimes(1);
+    rerender(<Select options={[{ value: '0', label }]} label={label} value="0" onChange={onChange} />);
+    expect(select).toHaveValue('0');
+    expect(screen.getByRole('option')).toHaveTextContent(label.trim());
+    expect(document.querySelector('label')).toHaveClass('min-w-0', 'break-words');
+  });
+
+  it('uses bounded focus and motion with reachable fixed sizes without replacing density auto', () => {
+    const { rerender } = render(<Select options={OPTIONS} size="sm" />);
+    const select = screen.getByRole('combobox');
+    expect(select).toHaveClass('min-h-11', 'md:min-h-9', 'focus-visible:ring-offset-2', 'motion-reduce:transition-none');
+    rerender(<Select options={OPTIONS} size="md" />);
+    expect(select).toHaveClass('min-h-11', 'md:min-h-10');
+    rerender(<Select options={OPTIONS} size="auto" />);
+    expect(select).toHaveClass('min-h-d-row');
+    expect(select).not.toHaveClass('min-h-11');
   });
 });

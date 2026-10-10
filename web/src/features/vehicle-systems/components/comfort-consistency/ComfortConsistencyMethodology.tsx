@@ -9,9 +9,11 @@ import {
 import { useTranslation } from 'react-i18next';
 
 import { AlertBanner } from '@/components/feedback';
-import { GlassPanel, Heading, PanelTitle, Text } from '@/components/ui';
-import { fmtInt } from '@/lib/numberFormat';
+import { Heading, Text } from '@/components/ui';
+import { LayoutCard } from '@/components/layout';
+
 import type { ComfortConsistencySummary } from '../../lib/comfortConsistency';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface ComfortConsistencyMethodologyProps {
   summary: ComfortConsistencySummary;
@@ -20,6 +22,7 @@ interface ComfortConsistencyMethodologyProps {
 export function ComfortConsistencyMethodology({
   summary,
 }: ComfortConsistencyMethodologyProps) {
+  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const items = [
     {
@@ -80,11 +83,7 @@ export function ComfortConsistencyMethodology({
 
   return (
     <section data-testid="comfort-consistency-methodology">
-      <GlassPanel className="p-4 sm:p-5">
-        <PanelTitle className="mb-1 flex items-center gap-2">
-          <BookOpenCheck className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />
-          {t('comfortConsistency.method.title', 'Methodology and limitations')}
-        </PanelTitle>
+      <LayoutCard title={t('comfortConsistency.method.title', 'Methodology and limitations')}>
         <Text as="p" variant="caption" className="mb-4">
           {t(
             'comfortConsistency.method.subtitle',
@@ -118,7 +117,7 @@ export function ComfortConsistencyMethodology({
             )}
           </Text>
         </AlertBanner>
-      </GlassPanel>
+      </LayoutCard>
     </section>
   );
 }

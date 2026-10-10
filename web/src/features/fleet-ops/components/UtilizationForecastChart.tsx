@@ -3,7 +3,6 @@ import { useTranslation } from 'react-i18next';
 import {
   Area,
   ComposedChart,
-  ChartContainer,
   Line,
   ResponsiveContainer,
   Tooltip,
@@ -14,6 +13,7 @@ import {
   CHART_COLORS,
 } from '@/components/charts';
 import { AlertBanner, QueryError } from '@/components/feedback';
+import { ChartCard } from '@/components/layout';
 import type { FleetUtilizationForecast } from '@/api/hooks/useFleetOps';
 import { aggregateForecast } from '../helpers';
 
@@ -53,7 +53,7 @@ export function UtilizationForecastChart({
         <QueryError error={error} onRetry={onRetry} resourceName={t('fleetOps.forecast.resource', 'Utilization forecast')} />
       ) : (
         // chart-legend-audit:skip transparent lower offset and uncertainty width form one forecast band around the expected line
-        <ChartContainer
+        <ChartCard
           title={t('fleetOps.forecast.title', 'Utilization forecast')}
           subtitle={t('fleetOps.forecast.subtitle', 'Expected daily fleet utilization with uncertainty band')}
           ariaLabel={t('fleetOps.forecast.aria', 'Daily fleet utilization forecast with lower and upper uncertainty bounds')}
@@ -61,6 +61,7 @@ export function UtilizationForecastChart({
           empty={data.length === 0}
           height={320}
           chartKey="fleet-ops-utilization"
+          exportable
           data={data}
           dataColumns={[
             { key: 'date', label: t('fleetOps.forecast.date', 'Date') },
@@ -102,7 +103,7 @@ export function UtilizationForecastChart({
               />
             </ComposedChart>
           </ResponsiveContainer>
-        </ChartContainer>
+        </ChartCard>
       )}
     </div>
   );

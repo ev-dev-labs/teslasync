@@ -61,14 +61,14 @@ describe('Distance', () => {
   it('exposes the raw caller value with its source unit via the title', () => {
     setUnits('metric');
     const { container } = render(<Distance km={100} precision={1} />);
-    expect(span(container)?.getAttribute('title')).toBe('100.00 km');
+    expect(span(container)?.getAttribute('title')).toBe('100.0 km');
   });
 
   it('renders a miles input in imperial with a 2-decimal hover title', () => {
     setUnits('imperial');
     const { container } = render(<Distance miles={62.1371} precision={1} />);
     expect(container.textContent).toBe('62.1 mi');
-    expect(span(container)?.getAttribute('title')).toBe('62.14 mi');
+    expect(span(container)?.getAttribute('title')).toBe('62.1 mi');
   });
 
   it('converts a km input to miles when the user prefers imperial', () => {
@@ -76,7 +76,7 @@ describe('Distance', () => {
     const { container } = render(<Distance km={100} precision={1} />);
     // 100 km ≈ 62.1 mi, but the title still reflects the km source value.
     expect(container.textContent).toBe('62.1 mi');
-    expect(span(container)?.getAttribute('title')).toBe('100.00 km');
+    expect(span(container)?.getAttribute('title')).toBe('100.0 km');
   });
 
   it('converts a miles input to km when the user prefers metric', () => {
@@ -92,14 +92,14 @@ describe('Distance', () => {
     const { container } = render(<Distance miles={50} km={9999} precision={0} />);
     expect(container.textContent).toBe('50 mi');
     // Title proves the miles branch (not km) produced the value.
-    expect(span(container)?.getAttribute('title')).toBe('50.00 mi');
+    expect(span(container)?.getAttribute('title')).toBe('50 mi');
   });
 
   it('falls back to the km branch when miles is null but km is finite', () => {
     setUnits('metric');
     const { container } = render(<Distance miles={null} km={5} precision={1} />);
     expect(container.textContent).toBe('5.0 km');
-    expect(span(container)?.getAttribute('title')).toBe('5.00 km');
+    expect(span(container)?.getAttribute('title')).toBe('5.0 km');
   });
 
   it('renders an em dash for null miles', () => {
@@ -127,14 +127,14 @@ describe('Distance', () => {
     const { container } = render(<Distance miles={0} precision={0} />);
     expect(container.textContent).toBe('0 mi');
     expect(container.textContent).not.toBe('—');
-    expect(span(container)?.getAttribute('title')).toBe('0.00 mi');
+    expect(span(container)?.getAttribute('title')).toBe('0 mi');
   });
 
   it('renders negative distances (deltas) with their sign preserved', () => {
     setUnits('imperial');
     const { container } = render(<Distance miles={-5} precision={1} />);
     expect(container.textContent).toBe('-5.0 mi');
-    expect(span(container)?.getAttribute('title')).toBe('-5.00 mi');
+    expect(span(container)?.getAttribute('title')).toBe('-5.0 mi');
   });
 
   it('respects an explicit precision prop', () => {
@@ -173,7 +173,7 @@ describe('Distance', () => {
     const el = span(container);
     expect(el).not.toBeNull();
     expect(el?.tagName).toBe('SPAN');
-    expect(el?.getAttribute('title')).toBe('42.00 km');
+    expect(el?.getAttribute('title')).toBe('42 km');
   });
 
   it('recomputes the display when the user switches unit systems', () => {

@@ -128,10 +128,24 @@ afterEach(() => {
 /* ── Tests ────────────────────────────────────────────────────────── */
 
 describe('EventHistoryTable — structure', () => {
+  it('keeps explicit false separate from an unknown lock value in the value checklist', () => {
+    renderTable({ history: [
+      makeEvent({ id: 'locked', locked: true }),
+      makeEvent({ id: 'unlocked', locked: false }),
+      makeEvent({ id: 'unknown', locked: null }),
+    ] });
+    fireEvent.click(screen.getByRole('button', { name: 'Lock filter' }));
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Select all shown values' }));
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Unlocked' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Done' }));
+    expect(screen.getAllByTestId('ts')).toHaveLength(1);
+    expect(screen.getByText('Unlocked')).toBeInTheDocument();
+  });
+
   it('renders the panel title, all five column headers, and a data row', () => {
     renderTable({ history: [makeEvent({ locked: true, sentryMode: true })] });
 
-    expect(screen.getByText('Security Event History')).toBeInTheDocument();
+    expect(screen.getByText('Security event history')).toBeInTheDocument();
 
     // Every column header is present (Time is a sortable button, the rest spans).
     expect(screen.getByRole('button', { name: 'Time' })).toBeInTheDocument();
@@ -181,7 +195,7 @@ describe('EventHistoryTable — door + window branches', () => {
     const door = screen.getByText('Closed', { exact: true });
     expect(door.className).toContain('text-emerald-300');
 
-    const windows = screen.getByText('All Closed');
+    const windows = screen.getByText('All closed');
     expect(windows.className).toContain('text-emerald-300');
   });
 
@@ -194,7 +208,7 @@ describe('EventHistoryTable — door + window branches', () => {
     expect(door.className).toContain('text-amber-300');
 
     // 3 closed + 1 open → windowSummary interpolates "1 Open/Venting".
-    const windows = screen.getByText('1 Open/Venting');
+    const windows = screen.getByText('1 open/venting');
     expect(windows.className).toContain('text-amber-300');
   });
 });
@@ -221,10 +235,20 @@ describe('EventHistoryTable — loading + error states', () => {
   it('renders the skeleton (not the table) while loading', () => {
     const { container } = renderTable({ history: [], isLoading: true });
 
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
+    const panel = screen.getByText('Security event history').closest('[data-print-card]');
+    const skeleton = panel?.querySelector('.space-y-2[aria-hidden="true"]');
+    expect(skeleton).not.toBeNull();
+    expect(skeleton?.children).toHaveLength(8);
+    for (const [index, line] of Array.from(skeleton?.children ?? []).entries()) {
+      expect(line).toHaveClass('h-4', 'rounded', 'bg-[var(--skeleton-bg)]');
+      expect(line).toHaveStyle({ width: index === 7 ? '60%' : '100%' });
+    }
+    expect(container.querySelector('.animate-pulse')).toBeNull();
     expect(screen.queryByRole('table')).toBeNull();
+    expect(screen.queryByTestId('ts')).toBeNull();
+    expect(screen.queryByText('No security events recorded yet.')).toBeNull();
     // The panel chrome is still present so the surface never goes blank.
-    expect(screen.getByText('Security Event History')).toBeInTheDocument();
+    expect(screen.getByText('Security event history')).toBeInTheDocument();
   });
 
   it('an error wins over a concurrent loading flag and suppresses the table + skeleton', () => {
@@ -237,7 +261,8 @@ describe('EventHistoryTable — loading + error states', () => {
     // QueryError's network branch (jsdom is "online" → not-found/5xx skipped).
     expect(screen.getByText("Can't reach server")).toBeInTheDocument();
     expect(screen.queryByRole('table')).toBeNull();
-    expect(container.querySelector('.animate-pulse')).toBeNull();
+    expect(container.querySelector('.space-y-2[aria-hidden="true"]')).toBeNull();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).toBeNull();
   });
 
   it('invokes onRetry when the error banner Retry button is clicked', () => {

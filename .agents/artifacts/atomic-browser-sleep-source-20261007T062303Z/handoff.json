@@ -1,0 +1,84 @@
+{
+  "task": "battery-failed-sleep-refresh",
+  "status": "SOURCE AUTHORED; NOT EXECUTED OR ACCEPTED",
+  "actualStartUtc": "2026-10-07T06:18:01.8059265Z",
+  "deadlineUtc": "2026-10-07T06:38:01.8059265Z",
+  "releasedUtc": "2026-10-07T06:23:03.7490865Z",
+  "branch": "fix/dashboard-followups",
+  "ownershipReleased": true,
+  "ownedPaths": [
+    "web\\e2e\\operationalbrief-contracts\\battery-sleep-retention.supported.spec.ts",
+    "web\\e2e\\operationalbrief-contracts\\battery-sleep-retention.supported.fixtures.ts"
+  ],
+  "absentAtInitialProbe": {
+    "spec": true,
+    "fixtures": true
+  },
+  "templateCount": 1,
+  "variantCount": 4,
+  "themes": [
+    "light",
+    "dark"
+  ],
+  "widths": [
+    320,
+    1440
+  ],
+  "route": "/sleep-efficiency?from=2026-08-04&to=2026-08-06",
+  "endpoint": "GET /api/v1/analytics/sleep",
+  "exactQuery": {
+    "vehicle_id": "7",
+    "start": "2026-08-04",
+    "days": "3",
+    "end": "2026-08-06"
+  },
+  "setup": [
+    "Generated route registry presence; standard browser state/theme and strict mockApi harness",
+    "Read-only installExistingBatterySources; exact sleep route via fulfillApiFixture",
+    "Reuse sleepTransitionOnly then sleepWithDwell; no custom SSE or QueryClient/hook injection"
+  ],
+  "actions": [
+    "Real page-header Refresh data via focus/Enter",
+    "Review details via focus/Enter during retained error, Tab focus trap, Escape focus restore",
+    "Restore 200 fixture then same real page-header Refresh data"
+  ],
+  "assertions": [
+    "Initial 80.00% count share; missing duration and time-to-sleep, not measured zero",
+    "First HTTP 503 retains publication; remain 503 across real query retries until sleep-refresh-error",
+    "Final retained notice, stale notice state and Error refresh label; no fatal initial error",
+    "All published metric text/state/detail and source scope identical to initial; last-successful-fetch title unchanged",
+    "Review drawer retains 80.00% and missing-dwell context; retained source badge, no new observation, no 40%/75% and no retry caused by Review",
+    "Recovery publishes 40.00% count share and 75.00% duration, 12.00 min time-to-sleep; retained/error notice removed",
+    "Every source request GET and exact four query parameters; strict ledger entry fulfilled including 503",
+    "Only intentional exact-endpoint 503 fetch/xhr and corresponding HTTP console diagnostic allowed; no uncaught/static resource failures",
+    "Theme, drawer bounds, horizontal overflow and strict harness completeness assertions authored"
+  ],
+  "expectedSourceLedgerStatuses": [
+    200,
+    503,
+    503,
+    503,
+    503,
+    200
+  ],
+  "retryEvidence": "api/client directRequest + resilientFetch fallback each throw HTTP ApiError; DEFAULT_QUERY_CLIENT_CONFIG retry=1; useSleepEfficiency does not override retry; all four failing HTTP reads remain 503",
+  "routerEvidence": "internal/api/router.go:3874 r.Get(\"/analytics/sleep\", sleepHandler.GetSleepAnalytics)",
+  "executionCounts": {
+    "build": 0,
+    "commit": 0,
+    "typeScript": 0,
+    "preview": 0,
+    "deploy": 0,
+    "browser": 0,
+    "lint": 0,
+    "nestedAgents": 0,
+    "tests": 0,
+    "install": 0,
+    "officialAudit": 0,
+    "push": 0
+  },
+  "protectedHeldSuccessCase": "battery.smoke.spec.ts existing held-200/success case at lines 541-580 was read-only and remains untouched by this task",
+  "discoveryLimitation": "Current web/playwright.config.ts smoke project only matches .smoke.spec.ts. Requested .supported.spec.ts is authored but not currently included by that project; no shared config changed or runner executed.",
+  "artifactCopies": 9,
+  "hashMismatches": 0
+}

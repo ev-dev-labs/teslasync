@@ -162,4 +162,50 @@ describe('Avatar', () => {
     render(<Avatar name="Jane Doe" />);
     expect(screen.getByTestId('avatar').style.backgroundColor.length).toBeGreaterThan(0);
   });
+
+  it('retries a replacement image after the previous URL fails', () => {
+    const { rerender } = render(<Avatar name="Jane Smith" src="missing.png" />);
+    fireEvent.error(screen.getByTestId('avatar-image'));
+    expect(screen.getByRole('img', { name: 'Jane Smith' })).toHaveTextContent('JS');
+    rerender(<Avatar name="Jane Smith" src="replacement.png" />);
+    expect(screen.getByTestId('avatar-image')).toHaveAttribute('src', 'replacement.png');
+    expect(screen.getByTestId('avatar-image')).toHaveAttribute('alt', 'Jane Smith');
+    expect(screen.queryByTestId('avatar-initials')).toBeNull();
+  });
+
+  it('keeps a successfully loaded image instead of showing initials', () => {
+    render(<Avatar name="Jane Smith" src="portrait.png" />);
+    fireEvent.load(screen.getByTestId('avatar-image'));
+    expect(screen.getByTestId('avatar-image')).toHaveAttribute('src', 'portrait.png');
+    expect(screen.queryByTestId('avatar-initials')).toBeNull();
+  });
+
+  it('uses a dark foreground on restrained identity fills and system colors in forced colors', () => {
+    render(<Avatar name="Jane Smith" />);
+    const avatar = screen.getByTestId('avatar');
+    expect(avatar).toHaveClass('text-slate-900', 'forced-colors:text-[CanvasText]');
+    expect(avatar.style.color).toBe('');
+    expect(screen.getByRole('img', { name: 'Jane Smith' })).toHaveTextContent('JS');
+  });
+
+  it('keeps all public sizes, rounded shape and caller classes', () => {
+    const { rerender } = render(<Avatar size="xs" shape="rounded" className="my-avatar" />);
+    for (const [size, dimensions] of [
+      ['xs', 'h-4 w-4'], ['sm', 'h-6 w-6'], ['md', 'h-8 w-8'], ['lg', 'h-12 w-12'],
+    ] as const) {
+      rerender(<Avatar size={size} shape="rounded" className="my-avatar" />);
+      expect(screen.getByTestId('avatar')).toHaveClass(...dimensions.split(' '), 'rounded-lg', 'my-avatar');
+      expect(screen.getByRole('img', { name: 'Unknown user' })).toBeInTheDocument();
+    }
+  });
+
+  it.each([
+    ['online', 'bg-[var(--semantic-success)]', 'Online'],
+    ['idle', 'bg-[var(--semantic-warning)]', 'Idle'],
+    ['offline', 'bg-[var(--text-secondary)]', 'Offline'],
+  ] as const)('uses semantic presence roles for %s with an accessible label', (status, color, label) => {
+    render(<Avatar name="Jane Smith" status={status} />);
+    expect(screen.getByTestId('avatar-status')).toHaveClass(color);
+    expect(screen.getByRole('img', { name: label })).toBeInTheDocument();
+  });
 });

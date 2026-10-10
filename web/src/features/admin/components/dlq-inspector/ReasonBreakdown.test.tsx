@@ -33,6 +33,7 @@ import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
 
 import { ApiError } from '@/lib/resilience';
+import { chartTokens } from '@/lib/tokens';
 import type { DLQEntrySummary } from '@/types/admin-diagnostics';
 
 // Return the English fallback (2nd arg) for every t() call so the copy we
@@ -137,7 +138,10 @@ describe('ReasonBreakdown — state branches', () => {
   it('shows a skeleton on first load (loading with no rows yet)', () => {
     const { container } = renderRB({ rows: [], loading: true });
 
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
+    const skeleton = container.querySelector('[aria-hidden="true"][class~="bg-[var(--skeleton-bg)]"]');
+    expect(skeleton).not.toBeNull();
+    expect(skeleton).toHaveClass('w-full', 'rounded');
+    expect(skeleton).toHaveStyle({ height: '200px' });
     // No bars and no empty-state while we're still loading.
     expect(screen.queryByTestId('metric-bar')).toBeNull();
     expect(screen.queryByRole('status')).toBeNull();
@@ -149,7 +153,7 @@ describe('ReasonBreakdown — state branches', () => {
     const empty = screen.getByRole('status');
     expect(empty).toBeInTheDocument();
     expect(empty).toHaveTextContent(/No failed ingests/i);
-    expect(container.querySelector('.animate-pulse')).toBeNull();
+    expect(container.querySelector('[aria-hidden="true"][class~="bg-[var(--skeleton-bg)]"]')).toBeNull();
     expect(screen.queryByTestId('metric-bar')).toBeNull();
   });
 
@@ -173,7 +177,7 @@ describe('ReasonBreakdown — state branches', () => {
     });
 
     expect(screen.getByRole('alert')).toBeInTheDocument();
-    expect(container.querySelector('.animate-pulse')).toBeNull();
+    expect(container.querySelector('[aria-hidden="true"][class~="bg-[var(--skeleton-bg)]"]')).toBeNull();
     expect(screen.queryByTestId('metric-bar')).toBeNull();
   });
 
@@ -184,7 +188,7 @@ describe('ReasonBreakdown — state branches', () => {
     });
 
     // buckets.length > 0 → the `loading && empty` skeleton guard is skipped.
-    expect(container.querySelector('.animate-pulse')).toBeNull();
+    expect(container.querySelector('[aria-hidden="true"][class~="bg-[var(--skeleton-bg)]"]')).toBeNull();
     expect(screen.getAllByTestId('metric-bar')).toHaveLength(2);
   });
 });
@@ -220,7 +224,7 @@ describe('ReasonBreakdown — reason bucketing', () => {
 
     const bars = readBars();
     // 3/6 = 50, 2/6 = 33.3 → 33, 1/6 = 16.6 → 17 (rounded to 0 dp).
-    expect(bars.map((b) => b.sublabel)).toEqual(['3 · 50%', '2 · 33%', '1 · 17%']);
+    expect(bars.map((b) => b.sublabel)).toEqual(['3 · 50.00%', '2 · 33.33%', '1 · 16.67%']);
   });
 
   it('coalesces blank and whitespace-only reasons into a single "unknown" bucket', () => {
@@ -246,7 +250,7 @@ describe('ReasonBreakdown — reason bucketing', () => {
     expect(bars).toHaveLength(1);
     expect(bars[0].label).toBe('timeout');
     expect(bars[0].value).toBe('3');
-    expect(bars[0].sublabel).toBe('3 · 100%');
+    expect(bars[0].sublabel).toBe('3 · 100.00%');
   });
 
   it('cycles the colour palette back to the first colour after eight buckets', () => {
@@ -260,8 +264,11 @@ describe('ReasonBreakdown — reason bucketing', () => {
 
     const bars = readBars();
     expect(bars).toHaveLength(9);
-    expect(bars[0].color).toBe('#3b82f6'); // series[0]
-    expect(bars[8].color).toBe('#3b82f6'); // series[8 % 8] === series[0]
+    expect(chartTokens.series).toHaveLength(8);
+    expect(bars.map((bar) => bar.color)).toEqual([...chartTokens.series, chartTokens.series[0]]);
+    expect(bars[0].color).toBe('light-dark(#385e7e, #91b4d2)'); // series[0]
+    expect(bars[8].color).toBe('light-dark(#385e7e, #91b4d2)'); // series[8 % 8] === series[0]
+    expect(bars[0].color).toBe(bars[8].color);
     expect(bars[0].color).not.toBe(bars[1].color);
   });
 });
@@ -274,7 +281,7 @@ describe('ReasonBreakdown — accessibility', () => {
 
     renderRB({ rows });
 
-    const list = screen.getByRole('list', { name: /failure reasons breakdown/i });
+    const list = screen.getByRole('list', { name: /Failure reasons breakdown/i });
     expect(list).toBeInTheDocument();
     expect(screen.getAllByRole('listitem')).toHaveLength(2);
   });

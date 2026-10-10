@@ -1,12 +1,13 @@
 import { useState } from 'react';
-import { MetricCard } from '@/components/data-display';
-import { Grid } from '@/components/layout';
+import { PhysicsEvidenceBrief } from '../operationalbrief-n-z/PhysicsEvidenceBrief';
 import { Badge, Select, Text } from '@/components/ui';
-import { fmtNumber } from '@/lib/numberFormat';
+
 import { Evidence, RawRows } from './Evidence';
 import { type PhysicsPage, seconds, time } from './PhysicsPageShell';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export default function PhysicsLifeTapeSection({ physics }: { physics: PhysicsPage }) {
+  const { fmtNumber } = useNumberFormatting();
   const { report, t } = physics;
   const tape = report?.life_tape;
   const segments = tape?.segments ?? [];
@@ -28,24 +29,23 @@ export default function PhysicsLifeTapeSection({ physics }: { physics: PhysicsPa
   return <>
     <Evidence title={physics.title} honesty={tape?.honesty}>
       <Text as="p" variant="bodySm">{t('teslaOnly.lifeWindow', 'Observed window: {{from}} to {{to}}', { from: time(tape?.from, t), to: time(tape?.to, t) })}</Text>
-      <Grid cols={{ default: 1, md: 3 }} gap={3}>
-        <MetricCard label={t('teslaOnly.segmentCount', 'Classified intervals')} value={segments.length} color="cyan" />
-        <MetricCard label={t('teslaOnly.lifeClassified', 'Returned interval duration')} value={segments.length ? seconds(total, t) : t('teslaOnly.unknown', 'unknown')} color="green" />
-        <MetricCard label={t('teslaOnly.unclassifiedTime', 'Unclassified time')} value={byState.has('unknown') ? seconds(byState.get('unknown')?.duration, t) : t('teslaOnly.unknown', 'unknown')} color="amber" />
-      </Grid>
+      <PhysicsEvidenceBrief physics={physics} id="physics-life-summary" available={tape != null}
+        description={t('teslaOnly.lifeShareCaution', 'Classified interval duration is not telemetry completeness. Unclassified time may be absent from the returned intervals; do not treat the remainder as parked or driving.')}
+        metrics={[
+          { metricId: 'count', occurrenceId: 'segments', label: t('teslaOnly.segmentCountLabel', 'Classified intervals'), rawValue: tape ? segments.length : null, context: t('teslaOnly.segmentCount', '{{count}} classified intervals', { count: tape ? segments.length : t('teslaOnly.unknown', 'unknown') }) },
+          { metricId: 'duration', occurrenceId: 'classified', label: t('teslaOnly.lifeClassified', 'Returned interval duration'), rawValue: segments.length ? total : null, display: { formatter: raw => ({ value: seconds(raw, t), unit: '' }) } },
+          { metricId: 'duration', occurrenceId: 'unknown', label: t('teslaOnly.unclassifiedTimeLabel', 'Unclassified time'), rawValue: byState.get('unknown')?.duration, display: { formatter: raw => ({ value: seconds(raw, t), unit: '' }) }, context: t('teslaOnly.unclassifiedTime', 'Unclassified: {{value}}', { value: seconds(byState.get('unknown')?.duration, t) }) },
+          { metricId: 'percent', occurrenceId: 'share', label: t('teslaOnly.sampleCoverage', 'Sampled window'), rawValue: classifiedShare, display: { formatter: raw => ({ value: `${fmtNumber(raw)}%`, unit: '' }) }, context: t('teslaOnly.lifeShare', 'Sum of classified intervals / returned window: {{value}}', { value: classifiedShare == null ? t('teslaOnly.unknown', 'unknown') : `${fmtNumber(classifiedShare)}%` }) },
+        ]} />
       <div className="flex flex-wrap gap-2">
-        <Badge variant="neutral" size="sm">{t('teslaOnly.lifeShare', 'Sum of classified intervals / returned window: {{value}}', {
-          value: classifiedShare == null ? t('teslaOnly.unknown', 'unknown') : `${fmtNumber(classifiedShare, 1)}%`,
-        })}</Badge>
         {windowS != null && total > windowS && <Badge variant="warning" size="sm">{t('teslaOnly.lifeOverlap', 'Intervals sum beyond the window; no coverage percentage is inferred')}</Badge>}
       </div>
-      <Text as="p" variant="caption">{t('teslaOnly.lifeShareCaution', 'Classified interval duration is not telemetry completeness. Unclassified time may be absent from the returned intervals; do not treat the remainder as parked or driving.')}</Text>
       <div className="space-y-2">{states.map(([name, item]) => <div key={name} className="rounded-lg border border-[var(--glass-border)] p-3">
         <div className="flex justify-between gap-2"><Text as="span" variant="bodySm">{name}</Text>
-          <Badge variant={name === 'unknown' ? 'warning' : 'neutral'} size="sm">{seconds(item.duration, t)} · {total > 0 ? `${fmtNumber(100 * item.duration / total, 1)}%` : t('teslaOnly.unknown', 'unknown')}</Badge></div>
+          <Badge variant={name === 'unknown' ? 'warning' : 'neutral'} size="sm">{seconds(item.duration, t)} · {total > 0 ? `${fmtNumber(100 * item.duration / total)}%` : t('teslaOnly.unknown', 'unknown')}</Badge></div>
         <Text as="p" variant="caption">{t('teslaOnly.lifeIntervals', '{{count}} returned intervals', { count: item.count })}</Text>
       </div>)}</div>
-      <Text as="p" variant="caption">{t('teslaOnly.workbench.tapeCaution', 'State durations classify the returned window, not GPS distance. Neutral rolling is not confirmed Park; gaps stay Unknown.')}</Text>
+      <Text as="p" variant="caption">{t('teslaOnly.workbench.tapeCaution', 'State durations classify the returned window, not GPS distance. Neutral rolling is not confirmed park; gaps stay unknown.')}</Text>
     </Evidence>
     <Evidence title={t('teslaOnly.lifeTimeline', 'Longest interval and state chronology')}>
       {longest ? <Text as="p" variant="bodySm">{t('teslaOnly.lifeLongest', 'Longest returned interval: {{state}} for {{duration}}, {{from}} → {{to}}', {
@@ -63,7 +63,7 @@ export default function PhysicsLifeTapeSection({ physics }: { physics: PhysicsPa
           { key: 'state', header: t('teslaOnly.state', 'State'), render: (r) => r.state },
           { key: 'started', header: t('teslaOnly.started', 'Started'), render: (r) => time(r.started_at, t) },
           { key: 'ended', header: t('teslaOnly.ended', 'Ended'), render: (r) => time(r.ended_at, t) },
-          { key: 'duration', header: t('teslaOnly.duration', 'Duration'), render: (r) => seconds(r.duration_s, t) },
+          { key: 'duration', align: 'right', header: t('teslaOnly.duration', 'Duration'), render: (r) => seconds(r.duration_s, t) },
         ]} />
     </Evidence>
   </>;

@@ -67,7 +67,7 @@ describe('ActivityBreakdownPanel', () => {
       slices: [slice()],
     });
 
-    expect(screen.getByRole('heading', { name: /by category/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /By category/i })).toBeInTheDocument();
     expect(screen.getByTestId('title-icon')).toBeInTheDocument();
     expect(container.querySelector('.custom-panel-class')).not.toBeNull();
   });
@@ -78,7 +78,14 @@ describe('ActivityBreakdownPanel', () => {
     const status = screen.getByRole('status');
     expect(status).toHaveTextContent(/loading/i);
     expect(container.querySelector('[aria-busy="true"]')).not.toBeNull();
-    expect(container.querySelectorAll('.animate-pulse')).toHaveLength(5);
+    const pending = status.closest('[aria-busy="true"]');
+    expect(pending).not.toBeNull();
+    const lines = pending!.querySelectorAll('[aria-hidden="true"][class~="bg-[var(--skeleton-bg)]"]');
+    expect(lines).toHaveLength(5);
+    lines.forEach(line => {
+      expect(line).toHaveStyle({ height: '28px' });
+      expect(line).toHaveClass('w-full', 'rounded');
+    });
     // Loading must win over the list / empty branches.
     expect(screen.queryByRole('list')).toBeNull();
   });
@@ -158,8 +165,8 @@ describe('ActivityBreakdownPanel', () => {
     // i18n-key branch resolves to the fallback when no provider is mounted.
     expect(screen.getByText('Drive start')).toBeInTheDocument();
     // Sublabels: fmtInt(count) + ' · ' + fmtPercent(percent, 0).
-    expect(screen.getByText(`8 ${MIDDOT} 40%`)).toBeInTheDocument();
-    expect(screen.getByText(`12 ${MIDDOT} 60%`)).toBeInTheDocument();
+    expect(screen.getByText(`8 ${MIDDOT} 40.00%`)).toBeInTheDocument();
+    expect(screen.getByText(`12 ${MIDDOT} 60.00%`)).toBeInTheDocument();
   });
 
   it('prefers the i18n fallback chain: fallback → label → key', () => {
@@ -192,7 +199,7 @@ describe('ActivityBreakdownPanel', () => {
     renderPanel({ slices: [malformed] });
 
     expect(screen.getByText(EM_DASH)).toBeInTheDocument();
-    expect(screen.getByText(`0 ${MIDDOT} 0%`)).toBeInTheDocument();
+    expect(screen.getByText(`0 ${MIDDOT} 0.00%`)).toBeInTheDocument();
   });
 
   it('tolerates a nullish slices prop without throwing', () => {

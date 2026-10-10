@@ -69,13 +69,13 @@ describe('generateDriveReport', () => {
     const out = html()
 
     expect(out).toContain('Model 3')
-    expect(out).toContain('123.4') // distance, 1 decimal
-    expect(out).toContain('118') // max speed
+    expect(out).toContain('123.40')
+    expect(out).toContain('118.00')
     expect(out).toContain('88→60') // battery stat card
     expect(out).toContain('<td>Duration</td><td>1h 30m</td>')
-    expect(out).toContain('<td>Average Speed</td><td>82 km/h</td>')
+    expect(out).toContain('<td>Average Speed</td><td>82.27 km/h</td>')
     expect(out).toContain('<td>Battery Used</td><td>28%</td>')
-    expect(out).toContain('<td>Start Range</td><td>400 km</td>')
+    expect(out).toContain('<td>Start Range</td><td>400.00 km</td>')
   })
 
   it('HTML-escapes the vehicle display name to prevent script injection', () => {
@@ -151,11 +151,11 @@ describe('generateMonthlyReport', () => {
     expect(out).toMatch(/<link rel="stylesheet" href="[^"]+\/print\.css">/)
     expect(out).not.toContain('<style>')
     expect(out).toContain('<td>Total Vehicles</td><td>3</td>')
-    expect(out).toContain('12,345 km')
+    expect(out).toContain('12,345.00 km')
     expect(out).toContain('<td>Total Drives</td><td>42</td>')
-    expect(out).toContain('3,210 kWh')
+    expect(out).toContain('3,210.00 kWh')
     expect(out).toContain('$123.45')
-    expect(out).toContain('175 Wh/km')
+    expect(out).toContain('175.00 Wh/km')
     expect(close).toHaveBeenCalledTimes(1)
     expect(print).toHaveBeenCalledTimes(1)
   })
@@ -170,7 +170,7 @@ describe('generateMonthlyReport', () => {
     const out = html()
     expect(ok).toBe(true)
     expect(out).toContain('<td>Total Vehicles</td><td>0</td>')
-    expect(out).toContain('<td>Total Distance</td><td>0 km</td>')
+    expect(out).toContain('<td>Total Distance</td><td>0.00 km</td>')
     expect(out).toContain('<td>Total Drives</td><td>0</td>')
   })
 })

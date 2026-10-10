@@ -9,7 +9,8 @@ import {
 import { useTranslation } from 'react-i18next';
 
 import { Text } from '@/components/ui';
-import { fmtInt } from '@/lib/numberFormat';
+
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface RegenMethodologyListProps {
   historyLimit: number;
@@ -18,6 +19,7 @@ interface RegenMethodologyListProps {
 export function RegenMethodologyList({
   historyLimit,
 }: RegenMethodologyListProps) {
+  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const methods = [
     {

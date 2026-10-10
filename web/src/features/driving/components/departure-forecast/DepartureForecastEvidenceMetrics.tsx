@@ -1,11 +1,12 @@
 import { useTranslation } from 'react-i18next';
 
-import { fmtInt, fmtNumber } from '@/lib/numberFormat';
+
 import type { DepartureForecast } from '../../lib/departureForecast';
 import {
   DepartureForecastEvidenceMetricGroup,
   type DepartureForecastEvidenceMetric,
 } from './DepartureForecastEvidenceMetricGroup';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface DepartureForecastEvidenceMetricsProps {
   forecast: DepartureForecast;
@@ -16,11 +17,12 @@ export function DepartureForecastEvidenceMetrics({
   forecast,
   locale,
 }: DepartureForecastEvidenceMetricsProps) {
+  const { fmtNumber, fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const accounting = forecast.accounting;
   const evidence = forecast.evidenceStrength;
   const percent = (value: number | null): string =>
-    value != null ? `${fmtNumber(value * 100, 0, locale)}%` : '—';
+    value != null ? `${fmtNumber(value * 100, undefined, locale)}%` : '—';
   const excluded =
     accounting.invalidRows +
     accounting.futureRows +
@@ -64,14 +66,14 @@ export function DepartureForecastEvidenceMetrics({
       label: t('departure.quality.spanDays', 'Observed span (days)'),
       value:
         forecast.totalDepartures > 0
-          ? fmtNumber(forecast.observedSpanDays, 1, locale)
+          ? fmtNumber(forecast.observedSpanDays, undefined, locale)
           : '—',
     },
     {
       label: t('departure.quality.spanWeeks', 'Observed span (weeks)'),
       value:
         forecast.totalDepartures > 0
-          ? fmtNumber(forecast.observedWeeks, 1, locale)
+          ? fmtNumber(forecast.observedWeeks, undefined, locale)
           : '—',
     },
     {
@@ -98,7 +100,7 @@ export function DepartureForecastEvidenceMetrics({
         forecast.totalDepartures > 0
           ? fmtNumber(
               evidence.meanOccupiedCellOccurrences,
-              1,
+              undefined,
               locale,
             )
           : '—',

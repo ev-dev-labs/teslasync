@@ -183,10 +183,16 @@ describe('AlertsSection — loading', () => {
   it('renders a skeleton and withholds the breakdown, captions and empty state', () => {
     const { container } = renderSection({ isLoading: true });
 
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
+    const skeleton = container.querySelector('div[aria-hidden="true"][style]');
+    expect(skeleton).toHaveClass('h-4', 'w-full', 'rounded', 'bg-[var(--skeleton-bg)]');
+    expect(skeleton).toHaveAttribute('aria-hidden', 'true');
+    expect(skeleton).toHaveStyle({ height: '220px' });
+    expect(container.querySelector('.animate-pulse')).toBeNull();
+    expect(heading()).toBeInTheDocument();
+    expect(screen.queryByText('No severity breakdown to chart.')).toBeNull();
     expect(screen.queryByRole('list')).toBeNull();
-    expect(screen.queryByText('Alerts by Severity')).toBeNull();
-    expect(screen.queryByText('Alert Distribution')).toBeNull();
+    expect(screen.queryByText('Alerts by severity')).toBeNull();
+    expect(screen.queryByText('Alert distribution')).toBeNull();
     expect(screen.queryByRole('status')).toBeNull();
   });
 
@@ -197,7 +203,15 @@ describe('AlertsSection — loading', () => {
       error: new ApiError('still broken', 500),
     });
 
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
+    const skeleton = container.querySelector('div[aria-hidden="true"][style]');
+    expect(skeleton).toHaveClass('h-4', 'w-full', 'rounded', 'bg-[var(--skeleton-bg)]');
+    expect(skeleton).toHaveAttribute('aria-hidden', 'true');
+    expect(skeleton).toHaveStyle({ height: '220px' });
+    expect(container.querySelector('.animate-pulse')).toBeNull();
+    expect(heading()).toBeInTheDocument();
+    expect(screen.queryByRole('list')).toBeNull();
+    expect(screen.queryByText('No severity breakdown to chart.')).toBeNull();
+    expect(screen.queryByRole('status')).toBeNull();
     expect(screen.queryByRole('alert')).toBeNull();
   });
 });
@@ -215,7 +229,7 @@ describe('AlertsSection — error', () => {
 
     // The data list must not render behind the error affordance. (QueryError
     // renders its own help-links list, so target the labelled severity list.)
-    expect(screen.queryByRole('list', { name: 'Alerts by Severity' })).toBeNull();
+    expect(screen.queryByRole('list', { name: 'Alerts by severity' })).toBeNull();
   });
 
   it('prioritises the error over the empty state (error wins even at zero alerts)', () => {
@@ -242,7 +256,7 @@ describe('AlertsSection — empty (no alerts)', () => {
     const status = screen.getByRole('status');
     expect(status).toHaveTextContent('No alerts this week — everything looks great!');
     expect(screen.queryByRole('list')).toBeNull();
-    expect(screen.queryByText('Alert Distribution')).toBeNull();
+    expect(screen.queryByText('Alert distribution')).toBeNull();
   });
 });
 
@@ -252,13 +266,13 @@ describe('AlertsSection — populated breakdown', () => {
   it('renders a labelled list with one listitem per severity bucket', () => {
     renderSection();
 
-    const list = screen.getByRole('list', { name: 'Alerts by Severity' });
+    const list = screen.getByRole('list', { name: 'Alerts by severity' });
     expect(list).toBeInTheDocument();
     expect(within(list).getAllByRole('listitem')).toHaveLength(3);
 
     // Both column captions render (proving we're in the data branch).
-    expect(screen.getByText('Alerts by Severity')).toBeInTheDocument();
-    expect(screen.getByText('Alert Distribution')).toBeInTheDocument();
+    expect(screen.getByText('Alerts by severity')).toBeInTheDocument();
+    expect(screen.getByText('Alert distribution')).toBeInTheDocument();
   });
 
   it('shows each bucket label with its fmtInt count badge', () => {
@@ -283,10 +297,18 @@ describe('AlertsSection — populated breakdown', () => {
       'text-sky-300',
     );
 
-    // Badge variant → danger/warning/info class families.
-    expect(within(severityRow('critical')).getByText('3').className).toContain('bg-red-100');
-    expect(within(severityRow('warning')).getByText('2').className).toContain('bg-yellow-100');
-    expect(within(severityRow('info')).getByText('1').className).toContain('bg-blue-100');
+    expect(within(severityRow('critical')).getByText('3')).toHaveClass(
+      'border', 'border-[var(--semantic-danger-border)]',
+      'bg-[var(--semantic-danger-bg)]', 'text-[var(--semantic-danger)]',
+    );
+    expect(within(severityRow('warning')).getByText('2')).toHaveClass(
+      'border', 'border-[var(--semantic-warning-border)]',
+      'bg-[var(--semantic-warning-bg)]', 'text-[var(--semantic-warning)]',
+    );
+    expect(within(severityRow('info')).getByText('1')).toHaveClass(
+      'border', 'border-[var(--semantic-info-border)]',
+      'bg-[var(--semantic-info-bg)]', 'text-[var(--semantic-info)]',
+    );
   });
 
   it('falls back to the Info icon colour and info Badge for an unknown severity', () => {
@@ -298,14 +320,20 @@ describe('AlertsSection — populated breakdown', () => {
     const row = severityRow('mystery');
     // `SEVERITY_ICON_CLASS[severity] ?? 'text-sky-300'`
     expect(row.querySelector('svg')?.getAttribute('class')).toContain('text-sky-300');
+    expect(row.querySelector('svg')).toHaveClass('lucide-info');
+    expect(row.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
     // `SEVERITY_BADGE[severity] ?? 'info'`
-    expect(within(row).getByText('4').className).toContain('bg-blue-100');
+    expect(within(row).getByText('4')).toHaveClass(
+      'border', 'border-[var(--semantic-info-border)]',
+      'bg-[var(--semantic-info-bg)]', 'text-[var(--semantic-info)]',
+    );
   });
 
-  it('keeps the source severity string in the DOM (capitalisation is CSS-only)', () => {
+  it('preserves the source severity without forced presentation casing', () => {
     renderSection();
-    // The visual capitalise is a Tailwind class; the text node stays lowercase.
-    expect(screen.getByText('critical')).toBeInTheDocument();
+    const severity = screen.getByText('critical');
+    expect(severity).toBeInTheDocument();
+    expect(severity.closest('.uppercase, .capitalize, .lowercase')).toBeNull();
     expect(screen.queryByText('Critical')).toBeNull();
   });
 });
@@ -334,7 +362,7 @@ describe('AlertsSection — distribution pie region', () => {
     expect(screen.getByText('No severity breakdown to chart.')).toBeInTheDocument();
     expect(screen.queryByRole('img', { name: /pie chart/i })).toBeNull();
     // The severity list still renders alongside the placeholder.
-    expect(screen.getByRole('list', { name: 'Alerts by Severity' })).toBeInTheDocument();
+    expect(screen.getByRole('list', { name: 'Alerts by severity' })).toBeInTheDocument();
   });
 });
 
@@ -350,7 +378,7 @@ describe('AlertsSection — null-safety hardening', () => {
     });
 
     // Data branch is reached (total > 0) but the list has zero rows.
-    const list = screen.getByRole('list', { name: 'Alerts by Severity' });
+    const list = screen.getByRole('list', { name: 'Alerts by severity' });
     expect(within(list).queryAllByRole('listitem')).toHaveLength(0);
   });
 

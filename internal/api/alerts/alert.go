@@ -16,9 +16,11 @@ import (
 	"github.com/rs/zerolog/log"
 	"go.opentelemetry.io/otel"
 
+	"github.com/ev-dev-labs/teslasync/internal/alertmsg"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	dbalert "github.com/ev-dev-labs/teslasync/internal/database/alert"
 	dbnotif "github.com/ev-dev-labs/teslasync/internal/database/notification"
+	settingsdb "github.com/ev-dev-labs/teslasync/internal/database/settings"
 	"github.com/ev-dev-labs/teslasync/internal/signal"
 )
 
@@ -35,6 +37,7 @@ type AlertHandler struct {
 	liveSignals       signal.LiveSignalStore
 	computedEval      *ComputedMetricEvaluator
 	forwardAuthHeader string
+	messageSettings   alertmsg.SettingsReader
 }
 
 type alertRuleRepository interface {
@@ -73,15 +76,16 @@ type notificationRepository interface {
 func NewAlertHandler(db *database.DB, hub EventBroadcaster, mc pahomqtt.Client, store signal.LiveSignalStore) *AlertHandler {
 	repo := dbalert.NewAlertRuleRepo(db)
 	return &AlertHandler{
-		db:            db,
-		alertRuleRepo: repo,
-		bulkRuleRepo:  repo,
-		packRepo:      repo,
-		notifRepo:     dbnotif.NewNotificationRepo(db),
-		eventHub:      hub,
-		mqttClient:    mc,
-		liveSignals:   store,
-		computedEval:  NewComputedMetricEvaluator(db),
+		db:              db,
+		alertRuleRepo:   repo,
+		bulkRuleRepo:    repo,
+		packRepo:        repo,
+		notifRepo:       dbnotif.NewNotificationRepo(db),
+		eventHub:        hub,
+		mqttClient:      mc,
+		liveSignals:     store,
+		computedEval:    NewComputedMetricEvaluator(db),
+		messageSettings: settingsdb.NewSettingsRepo(db),
 	}
 }
 

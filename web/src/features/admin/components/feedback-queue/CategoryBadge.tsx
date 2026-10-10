@@ -25,7 +25,8 @@ export function CategoryBadge({ category }: { category: FeedbackCategory }) {
   // category outside the known union (e.g. a newer server enum reaching the SPA
   // before the types catch up). Without this guard the chip would render empty
   // and colourless, silently hiding the row's category instead of surfacing it.
-  const variant = CATEGORY_VARIANT[category] ?? 'neutral'
-  const text = label[category] ?? label.other
+  const isKnownCategory = Object.prototype.hasOwnProperty.call(CATEGORY_VARIANT, category)
+  const variant = isKnownCategory ? CATEGORY_VARIANT[category] : 'neutral'
+  const text = isKnownCategory ? label[category] : label.other
   return <Badge variant={variant}>{text}</Badge>
 }

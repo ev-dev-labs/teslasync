@@ -138,14 +138,14 @@ describe('OrderCard', () => {
     expect(screen.getByText('Upgrade available')).toBeInTheDocument();
   });
 
-  it('maps each lifecycle status onto its canonical Badge variant and title-cases the label', () => {
+  it('maps each lifecycle status onto its canonical Badge variant and sentence-cases the label', () => {
     const cases = [
-      { status: 'DELIVERED', label: 'Delivered', bg: 'bg-green-100' },
-      { status: 'IN_PRODUCTION', label: 'In Production', bg: 'bg-yellow-100' },
-      { status: 'CANCELED', label: 'Canceled', bg: 'bg-red-100' },
+      { status: 'DELIVERED', label: 'Delivered', bg: 'bg-[var(--semantic-success-bg)]' },
+      { status: 'IN_PRODUCTION', label: 'In production', bg: 'bg-[var(--semantic-warning-bg)]' },
+      { status: 'CANCELED', label: 'Canceled', bg: 'bg-[var(--semantic-danger-bg)]' },
       // READY_FOR_DELIVERY contains "DELIVER" but READY wins → info, not success.
-      { status: 'READY_FOR_DELIVERY', label: 'Ready For Delivery', bg: 'bg-blue-100' },
-      { status: 'WEIRD_STATE', label: 'Weird State', bg: BADGE_VARIANTS.neutral },
+      { status: 'READY_FOR_DELIVERY', label: 'Ready for delivery', bg: 'bg-[var(--semantic-info-bg)]' },
+      { status: 'WEIRD_STATE', label: 'Weird state', bg: BADGE_VARIANTS.neutral },
     ] as const;
 
     for (const c of cases) {
@@ -201,7 +201,7 @@ describe('OrderCard', () => {
 
     // Order id + delivery are present, so the model span is the only em-dash.
     expect(screen.getByText('—')).toBeInTheDocument();
-    expect(card()).toHaveAttribute('aria-label', '— order, In Production');
+    expect(card()).toHaveAttribute('aria-label', '— order, In production');
   });
 
   it('is null-safe: an empty order_id renders a placeholder with no dangling title (no blank cell)', () => {

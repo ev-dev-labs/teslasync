@@ -93,6 +93,16 @@ describe('ROUTE_META breadcrumb hierarchy', () => {
     }
   });
 
+  it.each([
+    ['/dev/grid-states', ['/dev-tools', '/dev/grid-states']],
+    ['/dev/layout', ['/dev-tools', '/dev/layout']],
+    ['/dev/stats', ['/dev-tools', '/dev/stats']],
+  ] as const)('nests %s under the reachable developer tools root', (path, expectedTrail) => {
+    expect(ROUTE_REGISTRY.some((route) => route.path === '/dev-tools')).toBe(true);
+    expect(ROUTE_META['/dev-tools'].parent).toBeUndefined();
+    expect(trailFor(path)).toEqual(expectedTrail);
+  });
+
   it('nests analytics sub-surfaces under /analytics', () => {
     for (const path of [
       '/analytics/anomalies',

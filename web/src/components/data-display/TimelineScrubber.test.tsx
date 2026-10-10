@@ -45,6 +45,8 @@ vi.mock('@/hooks/useMotionPreference', () => ({
 
 import { TimelineScrubber, type TimelineMarker } from './TimelineScrubber';
 import { useMotionPreference } from '@/hooks/useMotionPreference';
+import { setGlobalPrecision } from '@/lib/numberFormat';
+import { toReconstructionMarkers, type ReconstructionResult } from '@/features/dashcam/lib/timelineAlignment';
 
 /** Track width used by the stub — clientX / 200 is the normalized position. */
 const TRACK_WIDTH = 200;
@@ -77,6 +79,7 @@ function stubTrackRect(width = TRACK_WIDTH, left = 0) {
 const getTrack = () => screen.getByRole('slider');
 
 beforeEach(() => {
+  setGlobalPrecision(0);
   vi.mocked(useMotionPreference).mockReturnValue({ reduce: false, durationMs: 250 });
 });
 
@@ -387,6 +390,211 @@ describe('<TimelineScrubber> — presentation', () => {
       />,
     );
     expect(screen.getByTestId('spark')).toBeInTheDocument();
+  });
+
+  describe('<TimelineScrubber> — read-only event overview', () => {
+    const markers: TimelineMarker[] = [
+      { id: 'clip-end', at: 0.75, kind: 'stop', label: 'Clip end', timeLabel: 't=60s' },
+      { id: 'incident-a', at: 0.25, kind: 'event', label: 'Brake', description: 'Hard brake: z=4.2', count: 3 },
+      { id: 'clip-start', at: 0.25, kind: 'start', label: 'Clip start', timeLabel: 't=0s' },
+      { id: 'incident-b', at: 1, kind: 'event', label: 'Post-roll', description: 'Door opened at t=90s' },
+    ];
+
+    it('retains all caller geometry, order, identity, evidence and accessible names without playback', () => {
+      const { container, rerender } = render(
+        <TimelineScrubber mode="readOnly" label="Reconstruction events" markers={markers} background={<div data-testid="overview-background" />} />,
+      );
+      expect(screen.getByRole('group', { name: 'Reconstruction events' })).toBeInTheDocument();
+      const items = screen.getAllByRole('listitem');
+      expect(items.map((item) => item.dataset.markerId)).toEqual(markers.map((marker) => marker.id));
+      expect(items.map((item) => item.style.left)).toEqual(['75%', '25%', '25%', '100%']);
+      expect(items[1]).toHaveAccessibleName('Brake — Hard brake: z=4.2 — 3 events');
+      expect(items[1]).toHaveAttribute('title', 'Brake — Hard brake: z=4.2 — 3 events');
+      expect(items[0]).toHaveAccessibleName('Clip end — t=60s');
+      expect(items[3]).toHaveAccessibleName('Post-roll — Door opened at t=90s');
+      expect(screen.getByTestId('overview-background').parentElement).toHaveAttribute('aria-hidden', 'true');
+      expect(screen.queryByRole('slider')).not.toBeInTheDocument();
+      expect(screen.queryByRole('button')).not.toBeInTheDocument();
+      expect(container.querySelector('[tabindex]')).toBeNull();
+      expect(container.querySelector('[data-timeline-playhead]')).toBeNull();
+      expect(container.querySelector('[data-timeline-ghost-playhead]')).toBeNull();
+      expect(container.querySelector('[aria-valuenow]')).toBeNull();
+      expect(container.querySelector('[style*="width"]')).toBeNull();
+      expect(items[1]).toHaveClass('bg-[var(--surface-2)]');
+      rerender(<TimelineScrubber mode="readOnly" markers={[markers[2], markers[1], markers[0], markers[3]]} />);
+      expect(screen.getAllByRole('listitem')[2]).toBe(items[0]);
+    });
+
+    it('renders the full prepared ReconstructionTimeline window and every statistical event without reordering or truncation', () => {
+      const reconstruction: ReconstructionResult = {
+        clipWindow: { startSeconds: 0, endSeconds: 60 },
+        reconstructionWindow: { startSeconds: -30, endSeconds: 90 },
+        series: [],
+        incidentSequence: [
+          { id: 'post', atSeconds: 90, kind: 'state_change', signal: 'Door', description: 'Door opened in post-roll', zScore: 0 },
+          { id: 'pre', atSeconds: -15, kind: 'hard_brake', signal: 'Speed', description: 'Pre-roll braking (z=4.2)', zScore: 4.2 },
+          { id: 'clip', atSeconds: 0, kind: 'signal_spike', signal: 'Power', description: 'Clip-start power spike (z=5.1)', zScore: 5.1 },
+        ],
+        overallQuality: 'partial',
+        qualityNotes: ['Retained by caller'],
+      };
+      const prepared = toReconstructionMarkers(reconstruction);
+      render(<TimelineScrubber mode="readOnly" markers={prepared} duration={120} clockOriginSeconds={-30} formatTime={(seconds) => `t=${seconds}s`} />);
+      const items = screen.getAllByRole('listitem');
+      expect(items).toHaveLength(prepared.length);
+      expect(items.map((item) => item.style.left)).toEqual(['25%', '75%', '100%', '12.5%', '25%']);
+      expect(items.map((item) => item.getAttribute('aria-label'))).toEqual([
+        'Clip start — t=0s',
+        'Clip end — t=60s',
+        'Door opened in post-roll — t=90s',
+        'Pre-roll braking (z=4.2) — t=-15s',
+        'Clip-start power spike (z=5.1) — t=0s',
+      ]);
+      expect(reconstruction.incidentSequence.map((event) => event.id)).toEqual(['post', 'pre', 'clip']);
+    });
+
+    it('does not handle click, hover, drag or seeking keys or install seek listeners', () => {
+      const addListener = vi.spyOn(window, 'addEventListener');
+      const formatTime = vi.fn((seconds: number) => `t=${seconds}s`);
+      const { container } = render(
+        <TimelineScrubber mode="readOnly" markers={markers} duration={120} clockOriginSeconds={-30} formatTime={formatTime} />,
+      );
+      const overview = screen.getByRole('group');
+      const initialFormatCalls = formatTime.mock.calls.length;
+      fireEvent.click(overview, { clientX: 100 });
+      fireEvent.click(screen.getAllByRole('listitem')[0]);
+      fireEvent.pointerDown(overview, { clientX: 100, button: 0, pointerId: 1 });
+      fireEvent.pointerMove(overview, { clientX: 150, pointerId: 1 });
+      fireEvent.pointerUp(overview, { clientX: 150, pointerId: 1 });
+      fireEvent.mouseMove(overview, { clientX: 100 });
+      expect(fireEvent.keyDown(overview, { key: 'ArrowRight' })).toBe(true);
+      expect(fireEvent.keyDown(overview, { key: 'End' })).toBe(true);
+      expect(formatTime).toHaveBeenCalledTimes(initialFormatCalls);
+      expect(addListener.mock.calls.filter(([event]) => event === 'pointerup' || event === 'pointercancel')).toEqual([]);
+      expect(container.querySelector('[data-timeline-playhead]')).toBeNull();
+      expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
+    });
+
+    it('uses explicit caller clock origin and formatting, not window elapsed time', () => {
+      render(
+        <TimelineScrubber mode="readOnly" markers={markers} duration={120} clockOriginSeconds={-30} formatTime={(seconds) => `t=${seconds}s`} />,
+      );
+      expect(screen.getAllByRole('listitem')[1]).toHaveAccessibleName('Brake — Hard brake: z=4.2 — t=0s — 3 events');
+      expect(screen.getByText('t=-30s')).toBeInTheDocument();
+      expect(screen.getByText('t=90s')).toBeInTheDocument();
+      expect(screen.queryByText('0:30')).not.toBeInTheDocument();
+    });
+
+    it('preserves caller-prepared boundary and marker labels without interpreting clocks', () => {
+      render(
+        <TimelineScrubber
+          mode="readOnly"
+          duration={null}
+          clockOriginSeconds={null}
+          startLabel="Before clip (camera clock)"
+          endLabel="After clip (UTC+2)"
+          markers={[{ at: 0.4, kind: 'event', label: 'Signal change', timeLabel: '14:03:00 UTC+2', description: 'Coverage: partial' }]}
+        />,
+      );
+      expect(screen.getByText('Before clip (camera clock)')).toBeInTheDocument();
+      expect(screen.getByText('After clip (UTC+2)')).toBeInTheDocument();
+      expect(screen.getByRole('listitem')).toHaveAccessibleName('Signal change — Coverage: partial — 14:03:00 UTC+2');
+      expect(screen.getByRole('listitem')).toHaveStyle({ left: '40%' });
+    });
+
+    it.each([null, undefined, NaN, Infinity, -1])('does not invent times for unknown duration %s', (duration) => {
+      const formatTime = vi.fn(() => 'Invented time');
+      render(
+        <TimelineScrubber mode="readOnly" duration={duration} clockOriginSeconds={-30} formatTime={formatTime} markers={[{ at: 0.5, kind: 'event', label: 'Evidence retained' }]} />,
+      );
+      expect(formatTime).not.toHaveBeenCalled();
+      expect(screen.getByRole('listitem')).toHaveAccessibleName('Evidence retained');
+      expect(screen.getByRole('listitem')).toHaveStyle({ left: '50%' });
+    });
+
+    it.each([null, undefined, NaN, Infinity])('requires a valid explicit origin, not implicit elapsed zero (%s)', (clockOriginSeconds) => {
+      const formatTime = vi.fn(() => 'Invented time');
+      render(<TimelineScrubber mode="readOnly" duration={120} clockOriginSeconds={clockOriginSeconds} formatTime={formatTime} markers={[{ at: 0.5, kind: 'event' }]} />);
+      expect(formatTime).not.toHaveBeenCalled();
+      expect(screen.queryByText('Invented time')).not.toBeInTheDocument();
+    });
+
+    it('preserves zero duration and origin without division, fake progress or losing events', () => {
+      const { container } = render(
+        <TimelineScrubber mode="readOnly" duration={0} clockOriginSeconds={0} formatTime={(seconds) => `t=${seconds}s`} markers={[{ at: 0, kind: 'start' }, { at: 1, kind: 'stop' }]} />,
+      );
+      const items = screen.getAllByRole('listitem');
+      expect(items.map((item) => item.style.left)).toEqual(['0%', '100%']);
+      expect(items[0]).toHaveAccessibleName('start — t=0s');
+      expect(items[1]).toHaveAccessibleName('stop — t=0s');
+      expect(container.querySelector('[aria-valuenow]')).toBeNull();
+      expect(container.querySelector('[data-timeline-playhead]')).toBeNull();
+    });
+
+    it('retains invalid-position evidence without fabricating zero geometry or time', () => {
+      const formatTime = vi.fn((seconds: number) => String(seconds));
+      const { container } = render(
+        <TimelineScrubber mode="readOnly" duration={60} clockOriginSeconds={0} formatTime={formatTime} markers={[{ at: NaN, kind: 'event', label: 'Unknown position' }, { at: Infinity, kind: 'stop', description: 'Capture ended' }]} />,
+      );
+      expect(screen.getAllByRole('listitem')[0]).toHaveAccessibleName('Unknown position — Position unavailable');
+      expect(screen.getAllByRole('listitem')[1]).toHaveAccessibleName('stop — Capture ended — Position unavailable');
+      expect(screen.getAllByRole('listitem').map((item) => item.style.left)).toEqual(['', '']);
+      expect(container.innerHTML).not.toContain('NaN');
+      expect(formatTime.mock.calls.map(([seconds]) => seconds)).toEqual([0, 60]);
+    });
+
+    it('renders an empty overview without a numeric playback position', () => {
+      const { container } = render(<TimelineScrubber mode="readOnly" />);
+      expect(screen.getByRole('group', { name: 'Event overview' })).toBeInTheDocument();
+      expect(screen.getByRole('list')).toBeInTheDocument();
+      expect(screen.queryAllByRole('listitem')).toHaveLength(0);
+      expect(container.querySelector('[aria-valuenow]')).toBeNull();
+    });
+  });
+
+  describe('<TimelineScrubber> — disabled interactive seeking', () => {
+    it('retains interactive time formatting and position but disables keyboard, click, marker and drag seeks', () => {
+      const onSeek = vi.fn();
+      const preview = vi.fn(() => null);
+      render(
+        <TimelineScrubber disabled progress={0.5} duration={120} onSeek={onSeek} getPreviewAt={preview} markers={[{ id: 'event', at: 0.25, kind: 'event', label: 'Event' }]} />,
+      );
+      const slider = getTrack();
+      expect(slider).toHaveAttribute('aria-disabled', 'true');
+      expect(slider).toHaveAttribute('tabindex', '-1');
+      expect(slider).toHaveAttribute('aria-valuenow', '50');
+      expect(slider).toHaveAttribute('aria-valuetext', '1:00');
+      expect(screen.getByRole('button')).toBeDisabled();
+      fireEvent.keyDown(slider, { key: 'ArrowRight' });
+      fireEvent.keyDown(slider, { key: 'End' });
+      fireEvent.click(slider, { clientX: 100 });
+      fireEvent.click(screen.getByRole('button'));
+      fireEvent.pointerDown(slider, { clientX: 100, pointerId: 1 });
+      fireEvent.pointerMove(slider, { clientX: 200, pointerId: 1 });
+      fireEvent.pointerUp(slider, { clientX: 200, pointerId: 1 });
+      fireEvent.mouseMove(slider, { clientX: 100 });
+      expect(onSeek).not.toHaveBeenCalled();
+      expect(preview).not.toHaveBeenCalled();
+    });
+
+    it('preserves click seeking by default and restores seeking after re-enabling', () => {
+      const restore = stubTrackRect();
+      try {
+        const onSeek = vi.fn();
+        const { rerender } = render(<TimelineScrubber progress={0.5} duration={120} onSeek={onSeek} />);
+        fireEvent.click(getTrack(), { clientX: 50 });
+        expect(onSeek).toHaveBeenLastCalledWith(0.25);
+        rerender(<TimelineScrubber disabled progress={0.5} duration={120} onSeek={onSeek} />);
+        fireEvent.click(getTrack(), { clientX: 100 });
+        expect(onSeek).toHaveBeenCalledTimes(1);
+        rerender(<TimelineScrubber progress={0.5} duration={120} onSeek={onSeek} />);
+        fireEvent.keyDown(getTrack(), { key: 'Home' });
+        expect(onSeek).toHaveBeenLastCalledWith(0);
+        expect(getTrack()).toHaveAttribute('tabindex', '0');
+      } finally {
+        restore();
+      }
+    });
   });
 
   it('forwards a custom className onto the root element', () => {

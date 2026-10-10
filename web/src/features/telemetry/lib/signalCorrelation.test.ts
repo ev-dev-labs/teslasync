@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import type { SignalObservation } from '@/types/signals';
+import type { SignalHistoryPoint } from '@/api/types';
 import {
   crossCorrelate,
   effectiveSampleSize,
@@ -10,15 +10,15 @@ import {
 
 const ANCHOR = Date.UTC(2026, 6, 1, 0, 0, 0);
 
-function obs(name: string, secondsIn: number, value: number | boolean | null): SignalObservation {
+function obs(_name: string, secondsIn: number, value: number | boolean | null): SignalHistoryPoint {
   return {
-    vehicle_id: 1,
     ts: new Date(ANCHOR + secondsIn * 1000).toISOString(),
-    signal_name: name,
-    value_numeric: typeof value === 'number' ? value : null,
-    value_text: null,
-    value_bool: typeof value === 'boolean' ? value : null,
-    source: 'telemetry' as SignalObservation['source'],
+    kind: typeof value === 'boolean' ? 'ValueKindBool' : 'ValueKindDouble',
+    value,
+    ingest_origin: 'fleet_telemetry_mqtt',
+    source_emitted_at: null,
+    received_at: null,
+    normalization_version: 1,
   };
 }
 
@@ -29,7 +29,7 @@ function signal(
   stepS: number,
   fn: (i: number) => number,
   offsetS = 0,
-): SignalObservation[] {
+): SignalHistoryPoint[] {
   return Array.from({ length: n }, (_, i) => obs(name, offsetS + i * stepS, fn(i)));
 }
 
@@ -132,6 +132,23 @@ describe('effectiveSampleSize', () => {
 });
 
 describe('crossCorrelate', () => {
+  it('keeps canonical numeric zero and boolean false overlap without inventing correlation', () => {
+    const zeros = signal('a', 40, 60, () => 0);
+    const falses = zeros.map((point) => ({ ...point, kind: 'ValueKindBool', value: false }));
+    const r = crossCorrelate(zeros, falses)!;
+    expect(r.bestN).toBe(40);
+    expect(r.zeroLagR).toBe(0);
+    expect(r.bestR).toBe(0);
+    expect(r.bestLagS).toBe(0);
+    expect(r.significant).toBe(false);
+    expect(r.lead).toBe('none');
+    expect(r.seriesA.filled).toBe(40);
+    expect(r.seriesB.filled).toBe(40);
+    expect(r.seriesA.gaps).toBe(0);
+    expect(r.seriesB.gaps).toBe(0);
+    expect(r.seriesB.v.every((value) => value === 0)).toBe(true);
+  });
+
   it('returns null without enough data on both sides', () => {
     expect(crossCorrelate([], [])).toBeNull();
     expect(crossCorrelate([obs('a', 0, 1)], signal('b', 10, 60, (i) => i))).toBeNull();
@@ -224,14 +241,14 @@ describe('crossCorrelate', () => {
     expect([...lags].sort((x, y) => x - y)).toEqual(lags);
   });
 
-  it('reads the camelCase history shape as well as the snake_case log shape', () => {
-    // /signals/{id}/{name}/history returns { timestamp, valueNum }.
-    const camel = Array.from({ length: 60 }, (_, i) => ({
-      timestamp: new Date(ANCHOR + i * 60_000).toISOString(),
-      valueNum: Math.sin(i / 6),
+  it('reads canonical float and double histories without a row adapter', () => {
+    const floats = Array.from({ length: 60 }, (_, i) => ({
+      ts: new Date(ANCHOR + i * 60_000).toISOString(),
+      kind: 'ValueKindFloat',
+      value: Math.sin(i / 6),
     }));
-    const snake = signal('b', 60, 60, (i) => Math.sin(i / 6));
-    const r = crossCorrelate(camel, snake)!;
+    const doubles = signal('b', 60, 60, (i) => Math.sin(i / 6));
+    const r = crossCorrelate(floats, doubles)!;
     expect(r.bestLagS).toBe(0);
     expect(r.bestR).toBeGreaterThan(0.99);
   });
@@ -252,8 +269,8 @@ describe('crossCorrelate', () => {
     const on = (i: number) => (i >= 50 && i < 90 ? 1 : 0);
     const hvac = signal('hvac_on', 200, 60, on).map((o) => ({
       ...o,
-      value_numeric: null,
-      value_bool: o.value_numeric === 1,
+      kind: 'ValueKindBool',
+      value: o.value === 1,
     }));
     const temp = signal('cabin', 200, 60, (i) => (on(i) === 1 ? 24 : 18));
     const r = crossCorrelate(hvac, temp)!;

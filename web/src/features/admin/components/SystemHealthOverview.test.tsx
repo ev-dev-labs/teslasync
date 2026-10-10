@@ -165,7 +165,7 @@ describe('SystemHealthOverview — first paint', () => {
     expect(loading).toHaveAttribute('role', 'status')
     expect(loading).toHaveAttribute('aria-busy', 'true')
     expect(loading).toHaveAttribute('aria-label', expect.stringContaining('Loading system health'))
-    expect(loading.querySelectorAll('.animate-pulse')).toHaveLength(6)
+    expect(loading.querySelectorAll('[aria-hidden="true"][class~="bg-[var(--skeleton-bg)]"]')).toHaveLength(6)
     expect(screen.queryByTestId('system-overview')).not.toBeInTheDocument()
   })
 
@@ -197,7 +197,7 @@ describe('SystemHealthOverview — empty feeds', () => {
     expect(screen.getByTestId('system-overview')).toBeInTheDocument()
     expect(cardValue(LABELS.budgets)).toBe('0')
     expect(within(card(LABELS.budgets)).getByText('No active budgets')).toBeInTheDocument()
-    expect(cardValue(LABELS.peak)).toBe('0%')
+    expect(cardValue(LABELS.peak)).toBe('0.00%')
     expect(cardValue(LABELS.workers)).toBe('0 / 0')
     expect(cardValue(LABELS.backlog)).toBe('0')
     expect(cardValue(LABELS.succeeded)).toBe('0')
@@ -226,7 +226,7 @@ describe('SystemHealthOverview — rate-limit rollups', () => {
     expect(cardValue(LABELS.budgets)).toBe('3')
     expect(within(card(LABELS.budgets)).getByText('critical')).toBeInTheDocument()
     expect(cardTone(LABELS.budgets)).toBe('red') // worst severity → red
-    expect(cardValue(LABELS.peak)).toBe('90%') // tightest window
+    expect(cardValue(LABELS.peak)).toBe('90.00%') // tightest window
     expect(cardTone(LABELS.peak)).toBe('red') // 90% ≥ 80 → red
   })
 
@@ -238,7 +238,7 @@ describe('SystemHealthOverview — rate-limit rollups', () => {
       }),
       makeQuery<QueueStatusResponse>({ isSuccess: true, data: queueData([]) }),
     )
-    expect(cardValue(LABELS.peak)).toBe('60%')
+    expect(cardValue(LABELS.peak)).toBe('60.00%')
     expect(cardTone(LABELS.peak)).toBe('amber')
 
     rerender(
@@ -250,7 +250,7 @@ describe('SystemHealthOverview — rate-limit rollups', () => {
         queue={makeQuery<QueueStatusResponse>({ isSuccess: true, data: queueData([]) })}
       />,
     )
-    expect(cardValue(LABELS.peak)).toBe('30%')
+    expect(cardValue(LABELS.peak)).toBe('30.00%')
     expect(cardTone(LABELS.peak)).toBe('green')
   })
 
@@ -263,7 +263,7 @@ describe('SystemHealthOverview — rate-limit rollups', () => {
       makeQuery<QueueStatusResponse>({ isSuccess: true, data: queueData([]) }),
     )
 
-    expect(cardValue(LABELS.peak)).toBe('150%')
+    expect(cardValue(LABELS.peak)).toBe('150.00%')
     expect(cardTone(LABELS.peak)).toBe('red')
   })
 
@@ -280,7 +280,7 @@ describe('SystemHealthOverview — rate-limit rollups', () => {
     )
 
     // The limit-0 bucket contributes 0 (no divide-by-zero → no NaN/Infinity).
-    expect(cardValue(LABELS.peak)).toBe('40%')
+    expect(cardValue(LABELS.peak)).toBe('40.00%')
     expect(cardValue(LABELS.budgets)).toBe('2')
   })
 })
@@ -371,7 +371,7 @@ describe('SystemHealthOverview — resilience', () => {
       makeQuery<QueueStatusResponse>({ isSuccess: true, data: queueData([dirtyWorker]) }),
     )
 
-    expect(cardValue(LABELS.peak)).toBe('0%') // null current/limit → 0, never NaN
+    expect(cardValue(LABELS.peak)).toBe('0.00%') // null current/limit → 0, never NaN
     expect(cardValue(LABELS.backlog)).toBe('0')
     expect(cardValue(LABELS.succeeded)).toBe('0')
     expect(cardValue(LABELS.failed)).toBe('0')

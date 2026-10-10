@@ -93,7 +93,7 @@ export function ChannelCard({ channel, onEdit }: ChannelCardProps) {
           <div className="min-w-0">
             <Heading level="panel" as="h3" className="truncate">{channel.name}</Heading>
             <div className="mt-0.5 flex flex-wrap items-center gap-2">
-              <Text as="span" size="xs" weight="medium" className="capitalize" style={{ color: meta.color }}>
+              <Text as="span" size="xs" weight="medium" className="" style={{ color: meta.color }}>
                 {channel.kind}
               </Text>
               <Badge variant={channel.enabled ? 'success' : 'neutral'} size="sm">

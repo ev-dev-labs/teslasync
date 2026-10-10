@@ -9,11 +9,9 @@
  * computes charge rates from SI watt-hours, and buckets everything by calendar
  * year.
  *
- * Strategy (mirrors the sibling SessionComparisonChart test): the presentation
- * shells are stubbed to lightweight prop-echoing markers so the component's
- * derivations are asserted directly and deterministically —
- *   - <MetricCard>       → a <div> echoing label / value / subtitle / colour and
- *                          rendering the passed icon (so aria-hidden is checked).
+ * The actual OperationalBrief and typed metric bridge remain real so raw SI
+ * derivations, specialist units, and missing readings are asserted together.
+ * Only supporting shells are stubbed —
  *   - <YearlyTrendChart> → a <div> echoing the yearlyTrend array as JSON.
  *   - <SectionTitle>/<HelperText> → semantic wrappers echoing their text.
  * The pure `helpers` (isDcSession / durationMinutes / avg), `fmtNumber`, and
@@ -24,8 +22,7 @@
  *
  * Covered facets:
  *   1. HEADER    — localized section title + descriptive helper text.
- *   2. CARDS     — exactly four KPI cards, correct labels/colours, aria-hidden
- *                  icons (never an unlabelled icon-only control).
+ *   2. READINGS  — exactly four real operational readings with source labels.
  *   3. AVERAGES  — 10→80 / 20→80 means computed from completed DC sessions.
  *   4. EXTREMES  — fastest/slowest by kWh/h with their session-id subtitles.
  *   5. BUGFIX-1  — a live/incomplete (0-minute) session that already shows
@@ -77,7 +74,8 @@ vi.mock('react-i18next', async () => {
 });
 
 // Typography shells → semantic prop-echo so header copy is queryable.
-vi.mock('@/components/ui', () => ({
+vi.mock('@/components/ui', async importOriginal => ({
+  ...await importOriginal<typeof import('@/components/ui')>(),
   SectionTitle: ({ children }: { children?: ReactNode }) => (
     <h2 data-testid="section-title">{children}</h2>
   ),
@@ -86,33 +84,12 @@ vi.mock('@/components/ui', () => ({
   ),
 }));
 
-// MetricCard → prop echo. Renders the icon so the aria-hidden contract on the
-// decorative lucide glyph can be asserted.
-vi.mock('@/components/data-display', () => ({
-  MetricCard: ({
-    label,
-    value,
-    subtitle,
-    color,
-    icon,
-  }: {
-    label: string;
-    value: string | number;
-    subtitle?: string;
-    color?: string;
-    icon?: ReactNode;
-  }) => (
-    <div
-      data-testid="metric-card"
-      data-label={label}
-      data-value={String(value)}
-      data-subtitle={subtitle ?? ''}
-      data-color={color ?? ''}
-    >
-      {icon}
-    </div>
-  ),
-}));
+// Saved display preferences only; the renderer and metric bridge remain real.
+vi.mock('@/hooks/useUnits', () => ({ useUnits: () => ({ unitPrefs: {
+  distance: 'km', speed: 'km/h', temperature: '°C', pressure: 'kPa',
+  energy: 'kWh', duration: 'min', power: 'kW', precision: 2, locale: 'en-US',
+} }) }));
+vi.mock('@/hooks/useFormatting', () => ({ useFormatting: () => ({ currencySymbol: '$' }) }));
 
 // YearlyTrendChart → echo the derived trend array (recharts renders nothing
 // measurable under jsdom, so assert the data the section actually controls).
@@ -210,10 +187,10 @@ const L_SLOW = 'Slowest Session';
 
 // ── Query helpers ───────────────────────────────────────────────────────────
 function cards(): HTMLElement[] {
-  return screen.getAllByTestId('metric-card');
+  return Array.from(document.querySelectorAll<HTMLElement>('[data-operational-metric]'));
 }
 function cardByLabel(label: string): HTMLElement {
-  const found = cards().find((c) => c.getAttribute('data-label') === label);
+  const found = cards().find((c) => c.firstElementChild?.firstElementChild?.textContent === label);
   if (!found) throw new Error(`no metric card labelled "${label}"`);
   return found;
 }
@@ -232,10 +209,10 @@ describe('TimeToChargeSection', () => {
   it('renders the localized section header and description', () => {
     render(<TimeToChargeSection sessions={MAIN} />);
 
-    expect(screen.getByTestId('section-title')).toHaveTextContent('Time-to-Charge Analysis');
-    expect(screen.getByTestId('helper-text')).toHaveTextContent(
+    expect(screen.getByRole('heading', { name: 'Time-to-Charge Analysis' })).toBeInTheDocument();
+    expect(screen.getByText(
       'How long DC sessions take to reach key SOC thresholds',
-    );
+    )).toBeInTheDocument();
   });
 
   it('renders exactly four KPI cards with correct labels, colours and aria-hidden icons', () => {
@@ -243,13 +220,13 @@ describe('TimeToChargeSection', () => {
 
     expect(cards()).toHaveLength(4);
 
-    const labels = cards().map((c) => c.getAttribute('data-label'));
+    const labels = cards().map((c) => c.firstElementChild?.firstElementChild?.textContent);
     expect(labels).toEqual([L10, L20, L_FAST, L_SLOW]);
 
-    expect(cardByLabel(L10)).toHaveAttribute('data-color', 'cyan');
-    expect(cardByLabel(L20)).toHaveAttribute('data-color', 'blue');
-    expect(cardByLabel(L_FAST)).toHaveAttribute('data-color', 'green');
-    expect(cardByLabel(L_SLOW)).toHaveAttribute('data-color', 'amber');
+    expect(cardByLabel(L10)).toHaveAttribute('data-value-state', 'value');
+    expect(cardByLabel(L20)).toHaveAttribute('data-value-state', 'value');
+    expect(cardByLabel(L_FAST)).toHaveAttribute('data-value-state', 'value');
+    expect(cardByLabel(L_SLOW)).toHaveAttribute('data-value-state', 'value');
 
     // Every KPI icon is decorative — hidden from assistive tech, never an
     // unlabelled icon-only control.
@@ -264,21 +241,21 @@ describe('TimeToChargeSection', () => {
     render(<TimeToChargeSection sessions={MAIN} />);
 
     // 10→80: only s1 (10→80, 30 min) qualifies ⇒ 30 min.
-    expect(cardByLabel(L10)).toHaveAttribute('data-value', '30.00 min');
+    expect(cardByLabel(L10).querySelector('[data-operational-value]')).toHaveTextContent('30.00 min');
     // 20→80: s1 (30) + s2 (60) ⇒ avg 45 min.
-    expect(cardByLabel(L20)).toHaveAttribute('data-value', '45.00 min');
-    expect(cardByLabel(L10)).toHaveAttribute('data-subtitle', 'Avg duration');
-    expect(cardByLabel(L20)).toHaveAttribute('data-subtitle', 'Avg duration');
+    expect(cardByLabel(L20).querySelector('[data-operational-value]')).toHaveTextContent('45.00 min');
+    expect(cardByLabel(L10)).toHaveTextContent('Avg duration');
+    expect(cardByLabel(L20)).toHaveTextContent('Avg duration');
   });
 
   it('identifies the fastest and slowest sessions by kWh/h with their session ids', () => {
     render(<TimeToChargeSection sessions={MAIN} />);
 
-    expect(cardByLabel(L_FAST)).toHaveAttribute('data-value', '90.00 kWh/h');
-    expect(cardByLabel(L_FAST)).toHaveAttribute('data-subtitle', 'Session #1');
+    expect(cardByLabel(L_FAST).querySelector('[data-operational-value]')).toHaveTextContent('90.00 kWh/h');
+    expect(cardByLabel(L_FAST)).toHaveTextContent('Session #1');
 
-    expect(cardByLabel(L_SLOW)).toHaveAttribute('data-value', '30.00 kWh/h');
-    expect(cardByLabel(L_SLOW)).toHaveAttribute('data-subtitle', 'Session #2');
+    expect(cardByLabel(L_SLOW).querySelector('[data-operational-value]')).toHaveTextContent('30.00 kWh/h');
+    expect(cardByLabel(L_SLOW)).toHaveTextContent('Session #2');
   });
 
   it('excludes incomplete (zero-duration) sessions from the SOC-window averages', () => {
@@ -286,10 +263,10 @@ describe('TimeToChargeSection', () => {
     // ended_at (0 min). The average must stay 30 — not (30 + 0) / 2 = 15.
     render(<TimeToChargeSection sessions={[s1Fast, s3Live]} />);
 
-    expect(cardByLabel(L10)).toHaveAttribute('data-value', '30.00 min');
-    expect(cardByLabel(L20)).toHaveAttribute('data-value', '30.00 min');
+    expect(cardByLabel(L10).querySelector('[data-operational-value]')).toHaveTextContent('30.00 min');
+    expect(cardByLabel(L20).querySelector('[data-operational-value]')).toHaveTextContent('30.00 min');
     // The live session also never becomes the fastest — it has no charge rate.
-    expect(cardByLabel(L_FAST)).toHaveAttribute('data-subtitle', 'Session #1');
+    expect(cardByLabel(L_FAST)).toHaveTextContent('Session #1');
   });
 
   it('shows — for the SOC-window averages but resolves fastest/slowest when no charge spans 10→80 / 20→80', () => {
@@ -304,20 +281,20 @@ describe('TimeToChargeSection', () => {
     });
     render(<TimeToChargeSection sessions={[midCharge]} />);
 
-    expect(cardByLabel(L10)).toHaveAttribute('data-value', '—');
-    expect(cardByLabel(L20)).toHaveAttribute('data-value', '—');
+    expect(cardByLabel(L10).querySelector('[data-operational-value]')).toHaveTextContent('—');
+    expect(cardByLabel(L20).querySelector('[data-operational-value]')).toHaveTextContent('—');
     // 20 kWh over 30 min ⇒ 40 kWh/h, so both extreme cards resolve.
-    expect(cardByLabel(L_FAST)).toHaveAttribute('data-value', '40.00 kWh/h');
-    expect(cardByLabel(L_SLOW)).toHaveAttribute('data-value', '40.00 kWh/h');
+    expect(cardByLabel(L_FAST).querySelector('[data-operational-value]')).toHaveTextContent('40.00 kWh/h');
+    expect(cardByLabel(L_SLOW).querySelector('[data-operational-value]')).toHaveTextContent('40.00 kWh/h');
   });
 
   it('renders placeholders for every KPI and no trend rows when the session list is empty', () => {
     render(<TimeToChargeSection sessions={[]} />);
 
-    cards().forEach((c) => expect(c).toHaveAttribute('data-value', '—'));
+    cards().forEach((c) => expect(c.querySelector('[data-operational-value]')).toHaveTextContent('—'));
     expect(screen.getByTestId('yearly-trend')).toHaveAttribute('data-rows', '0');
     // Empty subtitles too — no dangling "Session #undefined".
-    expect(cardByLabel(L_FAST)).toHaveAttribute('data-subtitle', '');
+    expect(cardByLabel(L_FAST)).not.toHaveTextContent('Session #');
   });
 
   it('is null-safe: degrades to placeholders instead of throwing when sessions is undefined', () => {
@@ -327,15 +304,52 @@ describe('TimeToChargeSection', () => {
       ),
     ).not.toThrow();
 
-    cards().forEach((c) => expect(c).toHaveAttribute('data-value', '—'));
+    cards().forEach((c) => expect(c.querySelector('[data-operational-value]')).toHaveTextContent('—'));
     expect(screen.getByTestId('yearly-trend')).toHaveAttribute('data-rows', '0');
   });
 
   it('excludes non-DC (home/AC) sessions from every metric', () => {
     render(<TimeToChargeSection sessions={[s4Ac]} />);
 
-    cards().forEach((c) => expect(c).toHaveAttribute('data-value', '—'));
+    cards().forEach((c) => expect(c.querySelector('[data-operational-value]')).toHaveTextContent('—'));
     expect(yearlyRows()).toHaveLength(0);
+  });
+
+  it('keeps populated AC sessions out of DC thresholds, extremes and yearly totals', () => {
+    const explicitAc = makeSession({
+      id: 201, charger_type: 'AC', peak_power_w: 44_000,
+      started_at: '2026-08-25T08:00:00Z', ended_at: '2026-08-25T09:00:00Z',
+      total_energy_added_wh: 18_000, start_soc_pct: 0, end_soc_pct: 80,
+    });
+    const dc = makeSession({
+      id: 202, charger_type: 'DC', peak_power_w: 44_000,
+      started_at: '2026-08-24T08:00:00Z', ended_at: '2026-08-24T09:30:00Z',
+      total_energy_added_wh: 36_000, start_soc_pct: 10, end_soc_pct: 80,
+    });
+    const { container } = render(<TimeToChargeSection sessions={[explicitAc, dc]} />);
+    for (const key of ['avg10to80', 'avg20to80']) {
+      expect(container.querySelector(`[data-operational-metric="${key}"] [data-operational-value]`))
+        .toHaveTextContent('90.00 min');
+    }
+    for (const key of ['fastest', 'slowest']) {
+      const metric = container.querySelector(`[data-operational-metric="${key}"]`);
+      expect(metric?.querySelector('[data-operational-value]')).toHaveTextContent('24.00 kWh/h');
+      expect(metric).toHaveTextContent('Session #202');
+      expect(metric).not.toHaveTextContent('Session #201');
+    }
+    expect(yearlyRows()).toEqual([
+      { year: '2026', avg10to80: 90, avg20to80: 90, count: 1 },
+    ]);
+  });
+
+  it('keeps unknown DC metrics rather than inventing zero for an explicitly AC-only returned history', () => {
+    render(<TimeToChargeSection sessions={[makeSession({ charger_type: 'AC', peak_power_w: 44_000 })]} />);
+    expect(cards()).toHaveLength(4);
+    for (const metric of cards()) {
+      expect(metric).toHaveAttribute('data-value-state', 'missing');
+      expect(metric.querySelector('[data-operational-value]')).toHaveTextContent('—');
+    }
+    expect(yearlyRows()).toEqual([]);
   });
 
   it('builds a per-year trend sorted ascending, excluding zero-duration crossings', () => {

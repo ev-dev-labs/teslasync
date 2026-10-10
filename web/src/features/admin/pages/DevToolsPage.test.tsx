@@ -33,6 +33,11 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest'
+vi.mock('@/hooks/useSettings', async importOriginal => {
+  const actual = await importOriginal<typeof import('@/hooks/useSettings')>()
+  const { summaryTestPreferences } = await import('../components/operationalbrief-a-g/summaryTestPreferences')
+  return { ...actual, useSettings: summaryTestPreferences }
+})
 import { render, screen, within, fireEvent, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter, useLocation } from 'react-router-dom'
@@ -190,6 +195,20 @@ beforeEach(() => {
 })
 
 describe('DevToolsPage', () => {
+  it('separates independent live metrics from bundled catalog counts in actual reviewable briefs', async () => {
+    installResolved(makeErrorVins(2), makeVehicles(9))
+    renderPage()
+    const live = screen.getByTestId('devtools-live-summary')
+    await within(live).findByText('9')
+    const catalog = screen.getByTestId('devtools-catalog-summary')
+    expect(live.querySelectorAll('[data-operational-metric]')).toHaveLength(2)
+    expect(catalog.querySelectorAll('[data-operational-metric][data-value-state="value"]')).toHaveLength(3)
+    expect(catalog).toHaveTextContent('not measured live coverage')
+    fireEvent.click(within(live).getByRole('button', { name: 'Review details' }))
+    expect(screen.getByRole('dialog')).toHaveTextContent('independent vehicle inventory')
+    expect(screen.getByTestId('section-fleet-api')).toBeInTheDocument()
+  })
+
   it('renders truthful live KPI counts and mounts the default Fleet API section', async () => {
     installResolved(makeErrorVins(2), makeVehicles(3))
     renderPage()
@@ -230,10 +249,10 @@ describe('DevToolsPage', () => {
 
     renderPage()
 
-    // Both live KPIs are unknown → exactly two em-dash placeholders.
-    await waitFor(() =>
-      expect(within(overviewRegion()).getAllByText('—')).toHaveLength(2),
-    )
+    expect(screen.getByTestId('devtools-live-summary')).toHaveAttribute('aria-busy', 'true')
+    expect(screen.getByTestId('devtools-live-summary').querySelectorAll('[data-operational-metric]')).toHaveLength(2)
+    expect(screen.getByTestId('devtools-live-summary').querySelector('[data-operational-value]')).toBeNull()
+    expect(screen.getByTestId('devtools-catalog-summary').querySelectorAll('[data-operational-value]')).toHaveLength(3)
     // The toolbar button reflects the in-flight fetch.
     expect(refreshButton()).toHaveAttribute('aria-busy', 'true')
 
@@ -380,8 +399,45 @@ describe('DevToolsPage', () => {
     // Empty fleet is real data → the KPI legitimately reads 0, not "—".
     const region = overviewRegion()
     await waitFor(() =>
+      expect(screen.getByTestId('devtools-live-summary').querySelectorAll('[data-operational-metric][data-value-state="value"]')).toHaveLength(2),
+    )
+    await waitFor(() =>
       expect(within(region).queryAllByText('—')).toHaveLength(0),
     )
     expect(within(region).getAllByText('0').length).toBeGreaterThanOrEqual(2)
+  })
+
+  it('keeps the successful fleet metric when the neighboring telemetry source fails its first load', async () => {
+    mockedRequest.mockImplementation((path: string) =>
+      path === ERROR_VINS_PATH
+        ? Promise.reject(new Error('telemetry unavailable'))
+        : Promise.resolve(makeVehicles(9)),
+    )
+    renderPage()
+    expect(await screen.findByText(/Failed to load data: telemetry unavailable/)).toBeInTheDocument()
+    const band = overviewRegion()
+    await waitFor(() => expect(within(band).getByText('9')).toBeInTheDocument())
+    expect(within(band).getAllByText('—')).toHaveLength(1)
+    expect(within(band).queryByText('0')).toBeNull()
+    expect(screen.getByTestId('section-fleet-api')).toBeInTheDocument()
+  })
+
+  it('keeps both last-known metrics with source-specific stale feedback after a failed refresh', async () => {
+    installResolved(makeErrorVins(2), makeVehicles(9))
+    renderPage()
+    await within(overviewRegion()).findByText('9')
+    await waitFor(() => expect(refreshButton()).not.toHaveAttribute('aria-busy'))
+    mockedRequest.mockImplementation((path: string) =>
+      path === ERROR_VINS_PATH
+        ? Promise.reject(new Error('telemetry refresh failed'))
+        : Promise.resolve(makeVehicles(9)),
+    )
+    fireEvent.click(refreshButton())
+    expect(await screen.findByText(/Previously loaded data remains visible.*telemetry refresh failed/)).toBeInTheDocument()
+    expect(within(overviewRegion()).getByText('2')).toBeInTheDocument()
+    expect(within(overviewRegion()).getByText('9')).toBeInTheDocument()
+    expect(within(overviewRegion()).queryAllByText('—')).toHaveLength(0)
+    expect(screen.queryByText(/Failed to load data: telemetry refresh failed/)).toBeNull()
+    expect(screen.getByTestId('section-fleet-api')).toBeInTheDocument()
   })
 })

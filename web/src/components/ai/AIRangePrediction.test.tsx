@@ -26,28 +26,22 @@
 //        • double-submit guard + failure path (non-2xx → Helix error).
 //        • exported displayName metadata.
 //
-// react-i18next's useTranslation returns the second argument (English
-// fallback) when no provider is mounted, so no i18n setup is needed —
-// the same convention the sibling AI tests rely on. A file-level
-// vi.mock('@/hooks/useSettings') takes precedence over the global stub
-// in src/test-setup.ts, letting each test drive ai_mode / ai_features.
-// @testing-library/user-event is intentionally NOT a dependency of this
-// codebase (see web/package.json), so we use fireEvent.click for all
-// interactions — the convention every sibling AI wiring test follows.
+// The file-level settings mock takes precedence over the global stub,
+// letting each test drive ai_mode / ai_features while retaining real
+// card rendering and stream behavior.
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, act, waitFor, fireEvent } from '@testing-library/react'
 
 import type { AppSettings } from '@/api/types'
 
-vi.mock('@/hooks/useSettings', () => ({
-  useSettings: vi.fn(),
+const { mockUseSettings } = vi.hoisted(() => ({
+  mockUseSettings: vi.fn<() => { settings: AppSettings | undefined }>(),
 }))
 
-import { useSettings } from '@/hooks/useSettings'
-import { AIRangePrediction, canPredictRange } from './AIRangePrediction'
+vi.mock('@/hooks/useSettings', () => ({ useSettings: mockUseSettings }))
 
-const mockUseSettings = useSettings as unknown as ReturnType<typeof vi.fn>
+import { AIRangePrediction, canPredictRange } from './AIRangePrediction'
 
 // A complete AppSettings with realistic non-AI defaults. Per-test cases
 // override `ai_mode` + `ai_features` to exercise the gate.
@@ -120,9 +114,9 @@ beforeEach(() => {
   mockUseSettings.mockReset()
   mockUseSettings.mockReturnValue(enabled())
   // Fail loudly if a test triggers the network without arranging a mock.
-  globalThis.fetch = vi.fn(async () => {
+  globalThis.fetch = vi.fn<typeof fetch>(async () => {
     throw new Error('fetch not mocked')
-  }) as unknown as typeof globalThis.fetch
+  })
 })
 
 afterEach(() => {
@@ -254,10 +248,10 @@ describe('AIRangePrediction — canStart guarding', () => {
   })
 
   it('does not fire the network when the CTA is disabled', async () => {
-    const fetchSpy = vi.fn(async () => {
+    const fetchSpy = vi.fn<typeof fetch>(async () => {
       throw new Error('should not be called')
     })
-    globalThis.fetch = fetchSpy as unknown as typeof globalThis.fetch
+    globalThis.fetch = fetchSpy
 
     render(<AIRangePrediction vehicleId={0} />)
     const button = screen.getByRole('button', TRAIN_BUTTON)
@@ -276,7 +270,7 @@ describe('AIRangePrediction — stream wiring', () => {
       sseFrame('delta', {
         text: 'Mild/highway bucket learned 178 Wh/km from 22 drives; cold/highway falls back to the linear projection.',
       }) + sseFrame('done', { finish_reason: 'stop', usage: { in: 50, out: 12 } })
-    globalThis.fetch = vi.fn(
+    globalThis.fetch = vi.fn<typeof fetch>(
       async (input: RequestInfo | URL, init?: RequestInit) => {
         fetchCalls.push({ url: String(input), init })
         return new Response(makeReadableStream([sseBody]), {
@@ -284,7 +278,7 @@ describe('AIRangePrediction — stream wiring', () => {
           headers: { 'Content-Type': 'text/event-stream' },
         })
       },
-    ) as unknown as typeof globalThis.fetch
+    )
 
     render(<AIRangePrediction vehicleId={42} />)
     const button = screen.getByRole('button', TRAIN_BUTTON)
@@ -296,7 +290,8 @@ describe('AIRangePrediction — stream wiring', () => {
     const { url, init } = fetchCalls[0]
     expect(url).toBe('/api/v1/ai/ml/range/train')
     expect(init?.method).toBe('POST')
-    expect(JSON.parse(init?.body as string)).toEqual({ vehicle_id: 42, days: 14 })
+    expect(typeof init?.body).toBe('string')
+    expect(JSON.parse(String(init?.body))).toEqual({ vehicle_id: 42, days: 14 })
     const headers = new Headers(init?.headers)
     expect(headers.get('Accept')).toBe('text/event-stream')
     expect(headers.get('Content-Type')).toBe('application/json')
@@ -310,7 +305,7 @@ describe('AIRangePrediction — stream wiring', () => {
 
   it('guards against double-submit while a stream is in flight', async () => {
     let fetchCount = 0
-    globalThis.fetch = vi.fn(async () => {
+    globalThis.fetch = vi.fn<typeof fetch>(async () => {
       fetchCount += 1
       // Never enqueue, never close — keeps state='streaming'.
       return new Response(
@@ -321,7 +316,7 @@ describe('AIRangePrediction — stream wiring', () => {
         }),
         { status: 200, headers: { 'Content-Type': 'text/event-stream' } },
       )
-    }) as unknown as typeof globalThis.fetch
+    })
 
     render(<AIRangePrediction vehicleId={42} />)
     const button = screen.getByRole('button', TRAIN_BUTTON)
@@ -343,9 +338,9 @@ describe('AIRangePrediction — stream wiring', () => {
   })
 
   it('surfaces a Helix error in the output panel when the stream responds non-2xx', async () => {
-    globalThis.fetch = vi.fn(
+    globalThis.fetch = vi.fn<typeof fetch>(
       async () => new Response(null, { status: 404 }),
-    ) as unknown as typeof globalThis.fetch
+    )
 
     render(<AIRangePrediction vehicleId={42} />)
     await act(async () => {
@@ -357,6 +352,61 @@ describe('AIRangePrediction — stream wiring', () => {
       expect(panel).toHaveTextContent(/Helix error/i)
       expect(panel).toHaveTextContent(/stream_http_404/)
     })
+  })
+
+  it('clears completed source narration when vehicle scope becomes unknown without inventing a range', async () => {
+    const narration = 'Learned range: 0 m. Cold-weather range: unknown.'
+    globalThis.fetch = vi.fn<typeof fetch>(async () => new Response(
+      makeReadableStream([
+        sseFrame('delta', { text: narration }),
+        sseFrame('done', { finish_reason: 'stop', usage: { in: 1, out: 1 } }),
+      ]),
+      { status: 200, headers: { 'Content-Type': 'text/event-stream' } },
+    ))
+
+    const { rerender } = render(<AIRangePrediction vehicleId={42} />)
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', TRAIN_BUTTON))
+    })
+    await waitFor(() => expect(screen.getByTestId('ai-output-panel')).toHaveTextContent(narration))
+
+    rerender(<AIRangePrediction />)
+
+    await waitFor(() => expect(screen.queryByText(narration)).not.toBeInTheDocument())
+    expect(screen.getByRole('button', TRAIN_BUTTON)).toBeDisabled()
+    expect(screen.getByRole('heading', { name: /Learn per-vehicle range model/i })).toBeInTheDocument()
+    expect(globalThis.fetch).toHaveBeenCalledTimes(1)
+  })
+
+  it('aborts the prior training request on vehicle change and sends only the new scope on retry', async () => {
+    const requests: RequestInit[] = []
+    globalThis.fetch = vi.fn<typeof fetch>(async (_input, init) => {
+      if (init) requests.push(init)
+      return new Response(new ReadableStream<Uint8Array>(), {
+        status: 200,
+        headers: { 'Content-Type': 'text/event-stream' },
+      })
+    })
+
+    const { rerender, unmount } = render(<AIRangePrediction vehicleId={42} />)
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', TRAIN_BUTTON))
+    })
+    await waitFor(() => expect(requests).toHaveLength(1))
+    expect(requests[0].signal?.aborted).toBe(false)
+
+    rerender(<AIRangePrediction vehicleId={99} />)
+
+    await waitFor(() => expect(requests[0].signal?.aborted).toBe(true))
+    expect(screen.getByRole('button', TRAIN_BUTTON)).toBeEnabled()
+    expect(requests).toHaveLength(1)
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', TRAIN_BUTTON))
+    })
+    await waitFor(() => expect(requests).toHaveLength(2))
+    expect(JSON.parse(String(requests[1].body))).toEqual({ vehicle_id: 99, days: 14 })
+    unmount()
+    expect(requests[1].signal?.aborted).toBe(true)
   })
 })
 

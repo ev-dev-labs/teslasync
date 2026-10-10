@@ -1,4 +1,4 @@
-import { extendTailwindMerge } from 'tailwind-merge'
+import { extendTailwindMerge, getDefaultConfig } from 'tailwind-merge'
 
 interface ClassDictionary {
   [className: string]: unknown
@@ -47,8 +47,18 @@ function joinClassValues(values: readonly ClassValue[]): string {
  * the way every other Tailwind utility behaves.
  */
 const twMerge = extendTailwindMerge({
+  // Tailwind 3's bare `outline` sets style, not width (unlike Tailwind 4).
+  // Reuse every installed width validator, removing only the bare suffix.
+  override: {
+    classGroups: {
+      'outline-w': getDefaultConfig().classGroups['outline-w'].map(({ outline }) => ({
+        outline: outline.filter((value) => value !== ''),
+      })),
+    },
+  },
   extend: {
     classGroups: {
+      'outline-style': [{ outline: [''] }],
       rounded: [
         {
           rounded: [
@@ -65,6 +75,18 @@ const twMerge = extendTailwindMerge({
       'shadow': [{ shadow: ['e1', 'e2', 'e3', 'panel', 'panel-hover'] }],
       'duration': [{ duration: ['fast', 'normal', 'slow'] }],
       'ease': [{ ease: ['standard', 'accelerate', 'decelerate'] }],
+      'font-size': [{ text: ['size-inherit'] }],
+      z: [{ z: ['shell-panel', 'map-control', 'presentation-controls', 'presentation-dimmer', 'presentation-cursor', 'map-tile-control', 'command-palette-backdrop', 'command-palette-positioner', 'shell-status-bar'] }],
+      w: [{ w: ['side-panel', 'theme-switcher', 'connection-diagnostics', 'presentation-menu', 'workspace-context', 'alerts-preview', 'recent-pages', 'command-deck-collapsed', 'command-deck-expanded', 'help-menu'] }],
+      'max-w': [{ 'max-w': ['side-panel-viewport', 'shell-panel-viewport', 'breadcrumb-label', 'background-summary', 'active-vehicle-label', 'active-vehicle-compact-label'] }],
+      'min-w': [{ 'min-w': ['background-work', 'vehicle-options', 'freshness-age'] }],
+      'max-h': [{ 'max-h': ['notification-panel', 'workspace-context', 'alerts-preview', 'status-options', 'table-filter-viewport', 'command-palette', 'more-menu'] }],
+      h: [{ h: ['vehicle-grid', 'workspace-header'] }],
+      'min-h': [{ 'min-h': ['side-panel-header', 'vehicle-grid', 'error-fallback'] }],
+      'grid-cols': [{ 'grid-cols': ['replay-shortcuts', 'page-actions-scope', 'metric-compact', 'workspace-header'] }],
+      py: [{ py: ['command-palette-viewport'] }],
+      transition: [{ transition: ['width'] }],
+      flex: [{ flex: ['replay-scrubber'] }],
     },
   },
 })

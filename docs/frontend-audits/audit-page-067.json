@@ -1,0 +1,269 @@
+{
+  "item": "audit-page-067",
+  "page": "web\\src\\features\\battery\\pages\\EnergyFlowPage.tsx",
+  "routes": ["/energy-flow"],
+  "purpose": "Vehicle energy evidence: historical totals, daily energy/distance/efficiency and a current charging-power snapshot.",
+  "primaryGoal": "Understand the selected vehicle's energy consumption and charging evidence without confusing missing measurements, estimates or trailing-window coverage with measured facts.",
+  "dataSources": [
+    {
+      "hook": "useEnergyStats",
+      "file": "web\\src\\api\\hooks\\useEnergy.ts",
+      "line": 33,
+      "endpoint": "GET /api/v1/vehicles/{vehicleID}/energy?days=N",
+      "routeEvidence": "internal\\api\\router.go:3339",
+      "ownership": "internal\\api\\energy\\handler.go -> service.EnergyService.CalculateStats",
+      "scope": "Selected vehicle; inclusive calendar day count derived from workspace start/end, not actual workspace instants.",
+      "policy": "Key ['energy-stats', vehicleId, 'days:N']; enabled only for non-null ID; STANDARD staleTime; forwards AbortSignal; raw SI historical fields.",
+      "limitations": "Handler supports start-derived trailing days but no bounded historical end; used, charged and total energy response keys all alias stats.TotalEnergy (handler.go:146-148)."
+    },
+    {
+      "hook": "useEnergyFlow",
+      "file": "web\\src\\api\\hooks\\useEnergy.ts",
+      "line": 94,
+      "endpoint": "GET /api/v1/vehicles/{vehicleID}/energy/flow",
+      "routeEvidence": "internal\\api\\router.go:3340",
+      "ownership": "internal\\api\\energyflow\\handler.go -> signal.LiveStateReader.LiveState",
+      "scope": "Selected vehicle current state; intentionally independent of historical range.",
+      "policy": "Key ['energy-flow', vehicleId]; enabled only for non-null ID; REALTIME polling; retry false; STATIC staleTime; forwards AbortSignal.",
+      "limitations": "Handler converts canonical W to legacy kW for AC/DC response fields, forwards EnergyRemaining without explicit conversion, supplies nulls for missing readings and no sample timestamp."
+    },
+    {
+      "hook": "useSelectedVehicle",
+      "file": "web\\src\\hooks\\useSelectedVehicle.ts",
+      "line": 50,
+      "endpoint": "Indirect fleet lookup via useVehicles; endpoint not independently traced in this bounded audit.",
+      "ownership": "Existing workspace vehicle store and URL synchronization.",
+      "scope": "URL vehicle_id, persisted selection and known-fleet fallback. No page-owned vehicle selector."
+    },
+    {
+      "hook": "useRangeState",
+      "file": "web\\src\\hooks\\useRangeState.ts",
+      "line": 120,
+      "endpoint": null,
+      "ownership": "Existing header-owned workspace range and preferences.",
+      "scope": "/energy-flow registered in RANGE_ENABLED_PATHS at web\\src\\lib\\workspaceScope.ts:46; canonical startInstant/endInstantExclusive available but unused by this page."
+    }
+  ],
+  "components": [
+    { "name": "PageLayout", "owner": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx", "role": "PageContainer adapter and allocated-width container; existing shell remains owner." },
+    { "name": "CardGrid", "owner": "web\\src\\components\\layout\\layout-reference\\CardGrid.tsx", "role": "Container-width responsive layout, named groups and card placements." },
+    { "name": "LayoutCard", "owner": "web\\src\\components\\layout\\layout-reference\\LayoutCard.tsx", "role": "Eight persistent titled card shells, semantic heading association, wrapping header." },
+    { "name": "BatteryEvidenceBrief", "owner": "web\\src\\features\\battery\\components\\operationalbrief-all\\BatteryEvidenceBrief.tsx", "role": "Existing domain adapter to OperationalBrief/useOperationalMetrics; source-window caveats, specialist formatters and metric review details." },
+    { "name": "SectionState", "owner": "web\\src\\features\\battery\\components\\energy-flow-modernization\\SectionState.tsx", "role": "Source-local loading/fatal/paused/empty/retained-data recovery; eight call sites." },
+    { "name": "EmbeddedChart", "owner": "web\\src\\components\\charts\\EmbeddedChart.tsx", "role": "Three canonical ChartContainer frames with accessible data tables; fixed desktop/mobile heights; export/fullscreen explicitly disabled." },
+    { "name": "DataTable", "owner": "web\\src\\components\\ui\\DataTable.tsx", "role": "Shared value filters, sort, pagination and mobile cards/details; stable battery:energy-flow-history identity." },
+    { "name": "GlassPanel, Text, Caption, Label, Badge, LinearGauge, FadeIn", "owner": "Existing UI/charts/motion category barrels", "role": "Reused primitives; underlying gauge, motion and token implementations not exhaustively inspected." },
+    { "name": "FlowConnector, FlowNode, LivePowerRow", "owner": "web\\src\\features\\battery\\pages\\EnergyFlowPage.tsx", "role": "Local presentation helpers, not competing globally exported primitives." }
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\battery\\pages\\EnergyFlowPage.tsx",
+      "line": 614,
+      "rule": "MDC-002 / mission 4",
+      "detail": "Three charts repeat source-state wrapper, table-column adapters and fixed-height frame configuration (614,690,738). All already reuse SectionState and EmbeddedChart; no second chart engine.",
+      "fix": "Keep existing shared owners. A small battery-local chart configuration adapter is optional only if it preserves all three series, names and chart IDs; do not create a speculative app-wide wrapper.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "responsive": {
+    "sourceEvidence": [
+      "PageLayout.tsx:12 provides @container and min-w-0.",
+      "CardGrid.tsx:26-40 measures allocated width and delegates packing to the existing layout policy.",
+      "EnergyFlowPage.tsx:515 stacks the flow diagram until its 640px container breakpoint; arrow orientation switches at 167-168.",
+      "EnergyFlowPage.tsx:639-640,715-716,763-764 sets 288px desktop / 256px mobile chart heights.",
+      "EnergyFlowPage.tsx:806-824 supplies mobile card roles and display values including distance; DataTable.tsx:1389 forwards allColumns into the existing mobile adapter, so omitted mobileColumns alone does not establish distance loss."
+    ],
+    "issues": [],
+    "verification": "UNVERIFIED: actual ten-width rendering, long labels, density, RTL, 200% text, chart clipping and mobile details reachability were not exercised."
+  },
+  "accessibility": {
+    "sourceEvidence": [
+      "Decorative icons explicitly aria-hidden in page helpers and live diagram.",
+      "LayoutCard.tsx:27-39 associates cards with unique generated heading IDs.",
+      "EnergyFlowPage.tsx:625-637,703-713,751-761 gives chart accessible names and data-column alternatives.",
+      "SectionState.tsx:34-50 preserves source-local shared recovery buttons and status notice.",
+      "EnergyFlowPage.tsx:804 provides table caption and shared controller."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\battery\\pages\\EnergyFlowPage.tsx",
+        "line": 160,
+        "rule": "MDC-012 / MDC-040",
+        "detail": "Inactive connector content is dimmed to opacity-30; unavailable nodes/rows use opacity-50 (196,224). Missing-value and N/A text becomes dimmer together with decorative chrome. Effective contrast is unknown, not measured failure.",
+        "fix": "Keep missing/unsupported labels readable with semantic muted text and localize status; dim only decorative cues when appropriate. Measure composed light/dark/forced-color contrast before acceptance.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ],
+    "verification": "UNVERIFIED: keyboard, focus order/restoration, screen-reader output, touch targets, contrast, forced colors and reduced motion."
+  },
+  "states": {
+    "loading": "Summary retains six metric shells with OperationalBrief loading; remaining source shells use SectionState skeletons (SectionState:42).",
+    "empty": "Each source/section gets localized EmptyState with refresh callback; no-vehicle state provides /onboarding recovery.",
+    "error": "FatalError alone replaces source body; retained refresh failures show StaleRefreshWarning and keep neighboring historical/live facts (SectionState:34,44).",
+    "offlineStale": "Paused initial source explicitly unavailable; retained paused/error sources preserved. Page uses existing useDataState per source and PageLayout dataSources.",
+    "unknownPartial": "Missing flow readings show dash; either unknown charging operand keeps combined power unknown; unsupported motor/HVAC/accessories remain N/A, not fake measurements. Historical rows default to [] for safe iteration.",
+    "issues": [
+      {
+        "file": "web\\src\\features\\battery\\pages\\EnergyFlowPage.tsx",
+        "line": 131,
+        "rule": "MDC-026 / MDC-045",
+        "detail": "Efficiency chart drops every day whose efficiency is zero/null/nonpositive, while history retains the date. A non-finite positive value also passes this filter before scaleEfficiency returns null under a non-null assertion. Chart absence is not visibly distinguished from missing source evidence.",
+        "fix": "Retain dated gaps and validate finite measurements using the existing trust/display helpers; document the positive-only domain rule if intentional. Preserve current history and do not turn unknown into zero.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ],
+    "verification": "Source branches inspected only. Authored regression cases are not runtime evidence and were not run."
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\battery\\pages\\EnergyFlowPage.tsx",
+      "line": 165,
+      "rule": "MDC-010 / mission 7",
+      "detail": "Active power connectors add a 12px colored boxShadow. Dynamic styles are legitimate, but dynamic glow remains unnecessary visual intensity. Three chart hues and colored DC/AC/HVAC/accessory rows amplify semantic noise for unavailable channels.",
+      "fix": "Remove connector halo; use neutral surfaces and restrained semantic text/icons while retaining arrow direction, activity cue, values and saved chart palette. Do not reset user theme/chart preferences.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\features\\battery\\pages\\EnergyFlowPage.tsx",
+      "line": 249,
+      "rule": "MDC-032 / MDC-045",
+      "detail": "Page discards workspace startInstant/endInstantExclusive and derives only days from calendar dates (258-261), then requests trailing stats (267). Any two same-length ranges use the same query key/results regardless of actual dates, and rolling 24h loses instant semantics. The explicit unknown-period declaration at 420 is truthful mitigation, not bounded server filtering. Handler Stats at internal\\api\\energy\\handler.go:59-67 accepts only start-to-now/days.",
+      "fix": "Integration owner must extend the existing endpoint/service/hook with both canonical bounds and timezone-aware filtering; page consumes exact workspace instants. Keep current explicit trailing-source disclaimer until bounded support is proven. Do not add a local picker or silently filter loaded rows.",
+      "owner": "integration",
+      "confidence": "high"
+    },
+    {
+      "file": "internal\\api\\energy\\handler.go",
+      "line": 146,
+      "rule": "MDC-026 / MDC-045",
+      "detail": "total_energy_used_wh, total_energy_charged_wh and total_wh intentionally echo the same TotalEnergy source. Page summary presents Total energy and Total charged as two facts (427-430), although this inspected endpoint does not distinguish those quantities.",
+      "fix": "Preserve all current metric identities and inspect source semantics with the integration owner. Explain the alias in source context/review details; use distinct consumed/charged measurements only after coordinated backend evidence proves them. No invented independent charging statistic.",
+      "owner": "integration",
+      "confidence": "high"
+    },
+    {
+      "file": "internal\\api\\energyflow\\handler.go",
+      "line": 62,
+      "rule": "MDC-045",
+      "detail": "Live endpoint explicitly divides canonical W into legacy kW AC/DC responses, while EnergyRemaining is forwarded unchanged at 69-70. Page appends kW and kWh directly in its flow and power displays; EnergyFlowData has no unit metadata. EnergyRemaining generated UnitKindNone (signal_metadata_gen.go:1566) does not establish a canonical unit. Historical stats already use explicit SI and display converters.",
+      "fix": "Coordinate the existing live wire/type contract with SI owners: prove EnergyRemaining's source unit before converting, return explicit canonical fields and display through useUnits. Do not apply a guessed extra /1000 to current kW values or change wire/cache values in a cosmetic page pass.",
+      "owner": "integration",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\battery\\pages\\EnergyFlowPage.tsx",
+      "line": 356,
+      "rule": "MDC-026 / MDC-045",
+      "detail": "Sorting normalizes unknown energy, distance and efficiency to zero (356-358), although rendered/filter values distinguish null. Unknown and genuine zero therefore compare as identical.",
+      "fix": "Use the existing shared nullable-sort policy or an explicit page-local stable missing-last comparator; keep source values unchanged and preserve date/default descending behavior.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "priority": {
+    "level": "P1",
+    "reason": "Workspace-bound historical coverage and live SI/source alias truth need integration work before cosmetic modernization can imply accurate range or independently measured totals. Palette and nullable sorting are P2.",
+    "runtimeAcceptance": "Not claimed."
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "Existing bounded vehicle energy statistics contract",
+      "ownerFile": "web\\src\\api\\hooks\\useEnergy.ts",
+      "backendOwnerFile": "internal\\api\\energy\\handler.go",
+      "propsVariantsStates": "Extend existing EnergyStatsWindow to carry startInstant/endInstantExclusive with explicitly documented timezone/window semantics; query identity and AbortSignal must follow both bounds. Preserve response metrics, raw SI, aliases unless coordinated, null/empty/error and retained-data states.",
+      "usedBy": ["/energy-flow"],
+      "dependsOn": ["Integration-owned service/repository bounded-range implementation and exact semantic review of TotalEnergy aliases"],
+      "newComponent": false
+    },
+    {
+      "name": "Explicit live energy SI and observation-evidence contract",
+      "ownerFile": "web\\src\\types\\energy.ts",
+      "backendOwnerFile": "internal\\api\\energyflow\\handler.go",
+      "propsVariantsStates": "Coordinate explicit W/Wh source semantics and known/null readings; establish EnergyRemaining units and source freshness before any rename/conversion. Retain current vehicle ID key, independent live query, supported/unsupported channels and local trust-state rendering.",
+      "usedBy": ["/energy-flow"],
+      "dependsOn": ["SI canonical integration owner; verified Tesla EnergyRemaining signal semantics; live-state freshness contract"],
+      "newComponent": false
+    }
+  ],
+  "competingImplementations": [
+    {
+      "file": "web\\src\\features\\battery\\pages\\EnergyFlowPage.tsx",
+      "line": 146,
+      "detail": "Local flow node/connector/row helpers are page-domain rendering, not a second chart/table/layout engine. Existing canonical PageLayout/CardGrid/OperationalBrief/EmbeddedChart/DataTable owners are reused.",
+      "decision": "No new shared visual implementation justified by this single-page evidence."
+    }
+  ],
+  "preservation": {
+    "sourceHash": "BE8E756A5B8681172003E01160E34D6F23CA54CB633C2715A95E8B35E0F6DF6D",
+    "hashAlgorithm": "SHA256",
+    "sourceFile": "web\\src\\features\\battery\\pages\\EnergyFlowPage.tsx",
+    "currentLineCount": 835,
+    "sectionCount": 8,
+    "sectionNames": ["Energy summary metrics", "Energy flow diagram", "Live power", "Daily energy usage", "Efficiency metrics", "Daily distance", "Daily efficiency", "Daily energy history"],
+    "sourceCounts": { "LayoutCard": 8, "EmbeddedChart": 3, "GlassPanelTemplate": 1, "DataTable": 1, "visualBands": 5 },
+    "metrics": ["Total energy", "Total charged", "Distance", "Average efficiency and unit-aware rating", "Estimated avoided CO2 and explanation", "Period", "Average energy/day", "Battery SOC", "Battery remaining energy", "AC power", "DC power", "Combined known AC+DC power", "Charge state"],
+    "actions": ["Header-owned range/vehicle selection", "Independent historical/live retry or refresh", "No-vehicle /onboarding recovery", "OperationalBrief review details", "Table sorting", "Value filters", "Pagination", "Mobile row details and close", "Accessible chart data alternatives"],
+    "persistentIdentities": ["energy-flow.range", "battery:energy-flow-history", "energy-flow-daily-energy-usage", "energy-flow-daily-distance", "energy-flow-daily-efficiency", "vehicle-energy-summary", "vehicle-energy-flow"],
+    "dataBehavior": [
+      "Keep every source/section shell mounted independently.",
+      "Never fabricate motor/HVAC/accessory measurements; retain explicit unsupported N/A.",
+      "Preserve null distinct from zero, source-local refresh failure/paused behavior and independent retry.",
+      "Raw historical Wh/m/Wh-per-m values remain untouched in query/cache; convert only at display boundary using existing helpers.",
+      "Retain exact specialist whole-Wh efficiency scaling/rating thresholds and CO2 estimate explanation.",
+      "Keep raw daily date ordering/key and table loaded/filter/pagination controller; preserve mobile distance detail.",
+      "Do not infer custom-bound server coverage from a same-length trailing window.",
+      "Charts currently explicitly disable fullscreen and export; do not claim lost/available capabilities without exercising shared controls."
+    ]
+  },
+  "evidenceLimits": {
+    "mode": "Phase0 read-only source audit; only assigned report and heartbeat written.",
+    "runtime": "UNVERIFIED: route mount, real endpoints, visual appearance, keyboard, contrast, viewport, settings, offline and reduced-motion behavior not exercised.",
+    "commands": [
+      { "command": "Get-FileHash -Algorithm SHA256 -LiteralPath 'web\\src\\features\\battery\\pages\\EnergyFlowPage.tsx'", "exitCode": 0, "output": "BE8E756A5B8681172003E01160E34D6F23CA54CB633C2715A95E8B35E0F6DF6D" },
+      { "command": "(Get-Content -LiteralPath 'web\\src\\features\\battery\\pages\\EnergyFlowPage.tsx').Count", "exitCode": 0, "output": "835" },
+      { "command": "Scoped PowerShell regex counts on EnergyFlowPage.tsx", "exitCode": 0, "output": "raw controls: 0; direct chart/map/motion imports: 0; old API imports: 0; inline style openings: 4; LayoutCard sections: 8; EmbeddedChart frames: 3; GlassPanel templates: 1; DataTable: 1" }
+    ],
+    "notRun": ["audit.sh (also invokes project TypeScript)", "TypeScript", "lint", "build", "tests", "browser/runtime QA"],
+    "scopeLimits": "Only this mounted route and directly relevant owners were inspected; unrelated useEnergy exports, backend calculations, global foundation internals, all external consumers and catalogs were not fully audited. Source pattern counts are not a zero-violations or acceptance claim.",
+    "unknowns": ["EnergyRemaining canonical unit", "Independent consumed/charged source semantics", "Actual source-sample freshness versus successful request time", "Effective rendered contrast and chart/mobile geometry"],
+    "testEvidence": "EnergyFlowModernization.test.tsx includes retained-data, mobile-details, null and independent-source regressions; authored assertions are context only and were not executed."
+  },
+  "filesRead": [
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\battery\\pages\\EnergyFlowPage.tsx",
+    "web\\src\\features\\battery\\components\\energy-flow-modernization\\SectionState.tsx",
+    "web\\src\\features\\battery\\components\\energy-flow-modernization\\EnergyFlowModernization.test.tsx",
+    "web\\src\\features\\battery\\components\\operationalbrief-all\\BatteryEvidenceBrief.tsx",
+    "web\\src\\api\\hooks\\useEnergy.ts",
+    "web\\src\\types\\energy.ts",
+    "web\\src\\hooks\\useRangeState.ts",
+    "web\\src\\hooks\\useSelectedVehicle.ts",
+    "web\\src\\hooks\\useDataState.ts",
+    "web\\src\\api\\dataState.ts",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\App.tsx",
+    "web\\src\\lib\\routeRegistry.ts",
+    "web\\src\\components\\layout\\index.ts",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\layout\\layout-reference\\CardGrid.tsx",
+    "web\\src\\components\\layout\\layout-reference\\LayoutCard.tsx",
+    "web\\src\\components\\layout\\PageContainer.tsx",
+    "web\\src\\components\\charts\\index.ts",
+    "web\\src\\components\\charts\\EmbeddedChart.tsx",
+    "web\\src\\components\\charts\\chartUtils.tsx",
+    "web\\src\\components\\ui\\DataTable.tsx",
+    "internal\\api\\router.go",
+    "internal\\api\\energy\\handler.go",
+    "internal\\api\\energyflow\\handler.go",
+    "internal\\tesla\\protomodel\\signal_metadata_gen.go"
+  ]
+}

@@ -3,9 +3,10 @@ import { ArrowDown, ArrowUp, Columns3, RotateCcw } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/cn'
 import { Checkbox } from './Checkbox'
+import { Icon } from './Icon'
+import { Label, Text } from './Typography'
 import {
   applyColumnLayout,
-  defaultColumnLayout,
   effectiveColumnOrder,
   moveColumn,
   toggleHiddenColumn,
@@ -105,14 +106,19 @@ export function DataTableColumnMenu({
     [safeColumns, layout],
   )
 
-  const ensureLayout = (): ColumnLayout =>
-    layout ?? defaultColumnLayout(safeColumns)
+  const ensureLayout = (): ColumnLayout => ({
+    order: orderedKeys,
+    hidden: Array.from(effectiveHidden),
+  })
 
   // Effective hidden set used to drive checkbox `checked` state. When the
   // user hasn't touched anything yet, we honor `defaultVisible: false` so
   // the menu reflects the table's initial render.
   const effectiveHidden = useMemo(
-    () => new Set((layout ?? defaultColumnLayout(safeColumns)).hidden),
+    () => {
+      const visible = new Set(applyColumnLayout(safeColumns, layout).map((column) => column.key))
+      return new Set(safeColumns.filter((column) => !visible.has(column.key)).map((column) => column.key))
+    },
     [layout, safeColumns],
   )
 
@@ -126,6 +132,19 @@ export function DataTableColumnMenu({
     // programmatic / keyboard toggle can never violate it.
     if (!isHidden && (col?.required || visibleCount <= 1)) return
     onChange(toggleHiddenColumn(base, key))
+  }
+
+  const allVisible = safeColumns.length > 0 && visibleCount === safeColumns.length
+  const handleToggleAll = () => {
+    const base = ensureLayout()
+    if (!allVisible) {
+      onChange({ order: base.order, hidden: [] })
+      return
+    }
+    // A usable table always retains required columns, or its first ordered column.
+    const retained = new Set(safeColumns.filter(column => column.required).map(column => column.key))
+    if (retained.size === 0 && orderedKeys[0]) retained.add(orderedKeys[0])
+    onChange({ order: base.order, hidden: orderedKeys.filter(key => !retained.has(key)) })
   }
 
   const handleMove = (key: string, direction: -1 | 1) => {
@@ -155,15 +174,15 @@ export function DataTableColumnMenu({
           aria-expanded={open}
           aria-label={triggerLabel}
           className={cn(
-            'inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs',
-            'border border-white/[0.08] bg-white/[0.03]',
-            'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-white/[0.06]',
-            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500',
-            'transition-colors',
+            'inline-flex min-h-11 items-center gap-2 rounded-shape-sm px-3 py-2 md:min-h-9',
+            'border border-[var(--control-border)] bg-[var(--control-bg)]',
+            'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--control-bg-hover)]',
+            'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus-ring)]',
+            'transition-colors duration-fast ease-standard motion-reduce:transition-none',
           )}
         >
-          <Columns3 className="h-3.5 w-3.5" aria-hidden="true" />
-          <span>{t('table.columns.button', 'Columns')}</span>
+          <Icon icon={Columns3} size="sm" />
+          <Text variant="bodySm">{t('table.columns.button', 'Columns')}</Text>
         </button>
       )}
 
@@ -173,28 +192,42 @@ export function DataTableColumnMenu({
           aria-label={triggerLabel}
           data-testid="datatable-column-menu"
           className={cn(
-            'absolute right-0 z-30 mt-1 w-72 rounded-lg p-2',
-            'border border-white/[0.08] bg-[var(--surface-elevated)] shadow-xl',
+            'absolute end-0 z-30 mt-1 w-72 rounded-shape-lg p-2',
+            'border border-[var(--border-default)] bg-[var(--surface-elevated)] shadow-e2',
           )}
         >
-          <div className="flex items-center justify-between mb-2 px-1">
-            <span className="text-2xs font-medium uppercase tracking-wider text-[var(--text-muted)]">
+          <div className="mb-2 flex items-center justify-between gap-2 px-1">
+            <Label className="min-w-0 break-words">
               {reorderable
                 ? t('table.columns.headingReorder', 'Columns')
                 : t('table.columns.heading', 'Visible columns')}
-            </span>
+            </Label>
             <button
               type="button"
               onClick={() => {
                 onReset()
               }}
               data-testid="datatable-column-menu-reset"
-              className="inline-flex items-center gap-1 text-2xs font-medium text-cyan-300 hover:text-cyan-200 focus-visible:outline-none focus-visible:underline"
+              className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-shape-sm px-2 text-[var(--text-secondary)] hover:bg-[var(--control-bg-hover)] hover:text-[var(--text-primary)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus-ring)] md:min-h-6"
             >
-              <RotateCcw className="h-3 w-3" aria-hidden="true" />
-              <span>{t('table.columns.reset', 'Reset')}</span>
+              <Icon icon={RotateCcw} size="xs" />
+              <Text variant="bodySm">{t('table.columns.reset', 'Reset')}</Text>
             </button>
           </div>
+          {toggleable && safeColumns.length > 0 && (
+            <div className="mb-1 border-b border-[var(--border-subtle)] px-2 pb-2">
+              <Checkbox
+                label={t('table.columns.selectAll', 'Select all')}
+                aria-label={t('table.columns.selectAll', 'Select all')}
+                checked={allVisible}
+                indeterminate={!allVisible && visibleCount > 0}
+                aria-checked={allVisible ? true : visibleCount > 0 ? 'mixed' : false}
+                disabled={allVisible && (safeColumns.length === 1 || safeColumns.every(column => column.required))}
+                onChange={handleToggleAll}
+                className="min-h-11 w-full"
+              />
+            </div>
+          )}
           <ul className="space-y-0.5 max-h-72 overflow-y-auto" role="presentation">
             {orderedKeys.map((key, idx) => {
               const col = colByKey.get(key)
@@ -208,8 +241,8 @@ export function DataTableColumnMenu({
                 <li key={col.key}>
                   <div
                     className={cn(
-                      'flex items-center gap-2 px-2 py-1.5 rounded text-sm',
-                      'text-[var(--text-secondary)] hover:bg-white/[0.04] hover:text-[var(--text-primary)]',
+                      'flex items-center gap-2 rounded-shape-sm px-2 py-2',
+                      'text-[var(--text-secondary)] hover:bg-[var(--control-bg-hover)]',
                     )}
                   >
                     {toggleable && (
@@ -222,9 +255,9 @@ export function DataTableColumnMenu({
                         })}
                       />
                     )}
-                    <span className="flex-1 truncate">{col.header || col.key}</span>
+                    <Text variant="bodySm" className="min-w-0 flex-1 break-words">{col.header || col.key}</Text>
                     {reorderable && (
-                      <div className="flex items-center gap-0.5">
+                      <div className="flex shrink-0 items-center gap-1">
                         <button
                           type="button"
                           onClick={() => handleMove(col.key, -1)}
@@ -234,13 +267,13 @@ export function DataTableColumnMenu({
                           })}
                           data-testid={`datatable-column-menu-up-${col.key}`}
                           className={cn(
-                            'inline-flex h-6 w-6 items-center justify-center rounded',
-                            'text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-white/[0.06]',
-                            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500',
-                            'disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent',
+                            'inline-flex h-11 w-11 items-center justify-center rounded-shape-sm md:h-6 md:w-6',
+                            'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--control-bg-hover)]',
+                            'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus-ring)]',
+                            'disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:bg-transparent',
                           )}
                         >
-                          <ArrowUp className="h-3.5 w-3.5" aria-hidden="true" />
+                          <Icon icon={ArrowUp} size="sm" />
                         </button>
                         <button
                           type="button"
@@ -251,13 +284,13 @@ export function DataTableColumnMenu({
                           })}
                           data-testid={`datatable-column-menu-down-${col.key}`}
                           className={cn(
-                            'inline-flex h-6 w-6 items-center justify-center rounded',
-                            'text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-white/[0.06]',
-                            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500',
-                            'disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent',
+                            'inline-flex h-11 w-11 items-center justify-center rounded-shape-sm md:h-6 md:w-6',
+                            'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--control-bg-hover)]',
+                            'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus-ring)]',
+                            'disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:bg-transparent',
                           )}
                         >
-                          <ArrowDown className="h-3.5 w-3.5" aria-hidden="true" />
+                          <Icon icon={ArrowDown} size="sm" />
                         </button>
                       </div>
                     )}
@@ -268,9 +301,9 @@ export function DataTableColumnMenu({
             {orderedKeys.length === 0 && (
               <li
                 data-testid="datatable-column-menu-empty"
-                className="px-2 py-3 text-center text-2xs text-[var(--text-muted)]"
+                className="px-2 py-3 text-center"
               >
-                {t('table.columns.empty', 'No columns to configure')}
+                <Text variant="bodySm">{t('table.columns.empty', 'No columns to configure')}</Text>
               </li>
             )}
           </ul>

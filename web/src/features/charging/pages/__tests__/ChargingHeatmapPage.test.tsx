@@ -17,13 +17,13 @@
  *      (labelled regions, an icon-only refresh button, the heatmap `img`).
  *
  * Strategy mirrors PeriodComparePage: render the REAL page + REAL shared subtree
- * (PageContainer, MetricCard, MetricBar, HeatmapGrid, QueryError, charts). Only
+ * (PageLayout, StatStrip, MetricBar, HeatmapGrid, QueryError, charts). Only
  * the network `request` helper and i18n are mocked — the vehicle store, range
  * state, and settings-driven unit/format hooks all run for real so the SI →
  * display conversion and active-vehicle fallback are genuinely exercised.
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
@@ -220,13 +220,12 @@ function renderPage() {
   );
 }
 
-// Read a KPI card's value by its label text via MetricCard's stable semantic
-// hooks: the card root is `[data-role="metric-card"]` and its value node is
-// `[data-role="metric-value"]` (both siblings of `[data-role="metric-label"]`).
+// OperationalBrief keeps the complete display value separate from trust details.
 function kpiValue(label: string): string {
-  const card = screen.getByText(label).closest('[data-role="metric-card"]');
+  const card = within(screen.getByRole('region', { name: 'Charging summary' }))
+    .getByText(label).closest('[data-operational-metric]');
   expect(card).not.toBeNull();
-  const value = card!.querySelector('[data-role="metric-value"]');
+  const value = card!.querySelector('[data-operational-value]');
   expect(value).not.toBeNull();
   return value!.textContent ?? '';
 }
@@ -315,7 +314,7 @@ describe('ChargingHeatmapPage — average-duration derivation (regression)', () 
     expect(avg).not.toBe(1);
   });
 
-  it('shows a guarded zero (never NaN) when no session has an end time', async () => {
+  it('shows an honest unknown (never NaN or measured zero) when no session has an end time', async () => {
     const openOnly = [
       session({ id: 1, started_at: localIso(2024, 0, 1, 10, 0), ended_at: null, total_energy_added_wh: 10000, cost_decimal: 4 }),
       session({ id: 2, started_at: localIso(2024, 0, 2, 11, 0), ended_at: null, total_energy_added_wh: 10000, cost_decimal: 4 }),
@@ -326,7 +325,8 @@ describe('ChargingHeatmapPage — average-duration derivation (regression)', () 
 
     const text = kpiValue('Avg Duration');
     expect(text).not.toContain('NaN');
-    expect(parseFloat(text)).toBe(0);
+    expect(text).toBe('—');
+    expect(screen.getByText('Avg Duration').closest('[data-operational-metric]')).toHaveAttribute('data-value-state', 'missing');
     expect(kpiValue('Total Sessions')).toBe('2');
   });
 });
@@ -337,7 +337,7 @@ describe('ChargingHeatmapPage — loading / error / empty branches', () => {
     const { container } = renderPage();
 
     await waitFor(() =>
-      expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThan(0),
+      expect(container.querySelectorAll('[class*="--skeleton-bg"]').length).toBeGreaterThan(0),
     );
     // Panel chrome stays mounted — only the bodies are skeletons.
     expect(
@@ -346,8 +346,10 @@ describe('ChargingHeatmapPage — loading / error / empty branches', () => {
     expect(
       screen.getByRole('heading', { level: 3, name: 'Charging Insights' }),
     ).toBeInTheDocument();
-    // KPI values are replaced by skeletons, so no metric label leaks.
-    expect(screen.queryByText('Total Sessions')).toBeNull();
+    // Labels remain visible, but loading must not expose a measured KPI value.
+    expect(within(screen.getByRole('region', { name: 'Charging summary' }))
+      .getByText('Total Sessions').closest('[data-operational-metric]')
+      ?.querySelector('[data-operational-value]')).toBeNull();
     // The heatmap image is not rendered while loading.
     expect(screen.queryByRole('img', { name: GRID_ARIA })).toBeNull();
   });
@@ -356,14 +358,19 @@ describe('ChargingHeatmapPage — loading / error / empty branches', () => {
     installRequest({ chargingMode: 'reject', chargingError: new ApiError('kaboom', 500) });
     renderPage();
 
+    const when = screen.getByRole('region', { name: 'When You Charge' });
     await waitFor(() =>
-      expect(screen.getAllByRole('button', { name: 'Retry' }).length).toBeGreaterThan(0),
+      expect(within(when).getAllByText('Server error')).toHaveLength(2),
     );
+    expect(screen.getAllByRole('button', { name: 'Retry' }).length).toBeGreaterThan(0);
     // The error is surfaced in the data panels, not swallowed.
     expect(screen.getAllByText('Server error').length).toBeGreaterThan(0);
 
     const before = chargingCalls().length;
-    fireEvent.click(screen.getAllByRole('button', { name: 'Retry' })[0]);
+    const weekly = within(when).getByRole('heading', { level: 3, name: 'Weekly Charging Heatmap' })
+      .closest('[data-card]');
+    expect(weekly).not.toBeNull();
+    fireEvent.click(within(weekly!).getByRole('button', { name: 'Retry' }));
     await waitFor(() => expect(chargingCalls().length).toBeGreaterThan(before));
   });
 
@@ -456,7 +463,8 @@ describe('ChargingHeatmapPage — a11y & edge cases', () => {
 
     // The insights panel still mounts (hasData is true) but the busiest slot is
     // empty → the favorite value degrades to '—' instead of crashing.
-    await screen.findByText('—');
+    const favorite = await screen.findByText('Favorite Charging Time');
+    expect(within(favorite.parentElement!).getByText('—')).toBeInTheDocument();
     expect(screen.getByText('0 sessions')).toBeInTheDocument();
     // KPIs still count the sessions and sum their (date-independent) energy.
     expect(kpiValue('Total Sessions')).toBe('2');

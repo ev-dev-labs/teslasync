@@ -1,0 +1,216 @@
+{
+  "item": "audit-page-002",
+  "page": "web\\src\\features\\admin\\pages\\APIKeysPage.tsx",
+  "routes": [
+    {
+      "path": "/api-keys",
+      "file": "web\\src\\App.tsx",
+      "line": 700,
+      "mount": "SafeRoute name=APIKeys; lazy import at line 257",
+      "runtimeVerified": false
+    }
+  ],
+  "purpose": "Manage API credentials for programmatic integrations and identity-bound app sign-in.",
+  "primaryGoal": "Review loaded key identity, permission and lifecycle information; safely create, revoke or permanently delete a key.",
+  "dataSources": [
+    {
+      "hook": "useApiKeys",
+      "file": "web\\src\\api\\hooks\\useAdmin.ts",
+      "line": 56,
+      "endpoint": "GET /api/v1/api-keys",
+      "routeEvidence": "internal\\api\\router.go:4631-4633",
+      "owner": "internal\\api\\apikey\\handler.go:106-139",
+      "behavior": "Query key ['api-keys']; AbortSignal forwarded; safeArray selection; ordering originates from created_at DESC. Redacted list has no full secret. A missing database or query failure can return HTTP 200 with an empty array; scan failures can omit individual rows. There is no server observation-time field.",
+      "wireContract": "internal\\api\\apikey\\handler.go:88-97 uses numeric int64 id, snake_case key_prefix/created_at/last_used_at/expires_at, optional subject. web\\src\\types\\admin.ts:1-11 uses camelCase aliases and declares id as string. web\\src\\api\\client.ts:284-288 documents exposing both field-name forms, not numeric-to-string conversion."
+    },
+    {
+      "hook": "useCreateApiKey",
+      "file": "web\\src\\api\\hooks\\useAdmin.ts",
+      "line": 64,
+      "endpoint": "POST /api/v1/api-keys",
+      "routeEvidence": "internal\\api\\router.go:4634",
+      "owner": "internal\\api\\apikey\\handler.go:151-230",
+      "behavior": "Trimmed name, permission and optional app_token; requiresLiveMode, networkMode always, list invalidation and localized success/error toast. Server validates name and permissions; app binding requires admin and a forward-auth identity, rejects app-token callers. Raw key is returned once and remains dialog-local."
+    },
+    {
+      "hook": "useDeleteApiKey / useRevokeApiKey",
+      "file": "web\\src\\api\\hooks\\useAdmin.ts",
+      "line": 84,
+      "endpoints": ["DELETE /api/v1/api-keys/{id}", "POST /api/v1/api-keys/{id}/revoke"],
+      "routeEvidence": "internal\\api\\router.go:4635-4638",
+      "owner": "internal\\api\\apikey\\handler.go",
+      "behavior": "Both require live mode; both invalidate inventory and toast results; SudoCanceledError suppresses mutation error toast. Server routes require sudo. Audit issued no requests or mutations."
+    },
+    {
+      "hook": "useAuthMode",
+      "file": "web\\src\\api\\hooks\\useAuthMode.ts",
+      "line": 57,
+      "endpoint": "GET /api/v1/system/auth-mode",
+      "routeEvidence": "internal\\api\\router.go:4375",
+      "owner": "systemAuthModeHandler; handler implementation not inspected",
+      "behavior": "Mounted only when create dialog opens; ['auth','mode']; 5-minute stale time, no interval/focus refetch; dialog enables app sign-in only for forward_auth."
+    },
+    {
+      "hook": "useDataState / useOperationalMode",
+      "file": "web\\src\\hooks\\useDataState.ts",
+      "line": 31,
+      "endpoint": null,
+      "owner": "web\\src\\api\\dataState.ts:178-273; web\\src\\hooks\\useOperationalMode.tsx:41-116",
+      "behavior": "Retains failed-refresh payloads and pauses as stale; distinguishes fatal initial failures. Offline/as-of mode disables writes and closes create/delete dialogs. No workspace date or vehicle filter belongs on this inventory page."
+    }
+  ],
+  "components": [
+    {"name": "PageLayout / LayoutCard / SourceContent", "owner": "web\\src\\components\\layout\\layout-reference", "file": "web\\src\\features\\admin\\pages\\APIKeysPage.tsx", "line": 16, "role": "Existing layout adapters; page header, three persistent content panels and retained-source recovery."},
+    {"name": "AdminSummary / OperationalBrief", "owner": "web\\src\\features\\admin\\components\\operationalbrief-a-g\\AdminSummary.tsx", "file": "web\\src\\features\\admin\\pages\\APIKeysPage.tsx", "line": 118, "role": "Existing migrated four-metric summary with source scope and missing-value suppression; useOperationalMetrics preserves formatting ownership."},
+    {"name": "ApiKeyCard / ApiKeyPermissionBadge", "owner": "web\\src\\features\\admin\\components\\api-keys", "file": "web\\src\\features\\admin\\pages\\APIKeysPage.tsx", "line": 166, "role": "Feature-owned credential metadata and action presentation."},
+    {"name": "CreateApiKeyModal", "owner": "web\\src\\features\\admin\\components\\api-keys\\CreateApiKeyModal.tsx", "file": "web\\src\\features\\admin\\pages\\APIKeysPage.tsx", "line": 243, "role": "Existing form/reveal phases using Modal, Input, Select, Checkbox, FormSection, MaskedValue and CopyButton."},
+    {"name": "ConfirmDialog / Button / Text / Caption / Card / Badge / IconBox / Code", "owner": "web\\src\\components\\ui", "file": "web\\src\\features\\admin\\pages\\APIKeysPage.tsx", "line": 17, "role": "Canonical primitive, typography and destructive-confirmation ownership; overlay runtime internals not audited."},
+    {"name": "MetricBar", "owner": "web\\src\\components\\data-display\\MetricBar.tsx", "file": "web\\src\\features\\admin\\pages\\APIKeysPage.tsx", "line": 207, "role": "Existing permission-count bar with named progress semantics, reduced-motion support and solid-fill option."},
+    {"name": "EmptyState / Skeleton / QueryError / OperationalWriteNotice / FadeIn / StaggerContainer / StaggerItem", "owner": "web\\src\\components\\feedback and web\\src\\components\\motion", "file": "web\\src\\features\\admin\\pages\\APIKeysPage.tsx", "line": 21, "role": "Existing feedback/motion category imports; no competing library introduced."}
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\admin\\pages\\APIKeysPage.tsx", "line": 145, "rule": "MDC-002 / MDC-026", "detail": "Inventory and permission panels intentionally repeat fatal-error and retained retry treatment for one source (second branch at 189). Existing SourceContent already owns retained messaging. This is not evidence for another query-state component.", "fix": "Reuse SourceContent; consider a page-local derived source-state variable only if it preserves both persistent sections and independent recovery placement.", "owner": "page", "confidence": "high"
+    }
+  ],
+  "responsive": {
+    "sourceStrategy": "Page min-w-0/full-width adapter; single column until xl, inventory spans two of three columns; key cards split only at 2xl. Card labels and prefix wrap, metadata flex-wrap. Modal body uses constrained secret surface.",
+    "evidence": ["web\\src\\features\\admin\\pages\\APIKeysPage.tsx:128-164", "web\\src\\features\\admin\\components\\api-keys\\ApiKeyCard.tsx:47-98", "web\\src\\features\\admin\\components\\api-keys\\CreateApiKeyModal.tsx:90-110"],
+    "issues": [
+      {"file": "web\\src\\features\\admin\\pages\\APIKeysPage.tsx", "line": 128, "rule": "MDC-031 / MDC-043", "detail": "Page grid uses viewport xl/2xl thresholds while layout adapters expose container sizing. Narrow allocated content at a wide viewport can still force the supporting column and two-card grid; actual clipping is unverified.", "fix": "Use existing container-aware layout/card-grid policy if acceptance demonstrates insufficient allocated width; preserve all supporting content.", "owner": "page", "confidence": "medium"},
+      {"file": "web\\src\\features\\admin\\components\\api-keys\\ApiKeyCard.tsx", "line": 47, "rule": "MDC-043", "detail": "Key icon, identity and two fixed 44px controls share one non-wrapping top row. Long labels wrap, but 320px card space may leave identity very narrow.", "fix": "Test actual narrow allocation and long localized names; reflow existing actions below identity when needed without dropping prefix, ownership or lifecycle detail.", "owner": "page", "confidence": "medium"}
+    ],
+    "viewportAcceptance": "UNVERIFIED at 320/375/390/430/768/1024/1280/1440/1920/2560, RTL and 200% text."
+  },
+  "accessibility": {
+    "sourceStrengths": ["Localized labels and meaningful icon-only revoke/delete names include fallback key name.", "Decorative icons aria-hidden; permission labels/icons supplement color.", "Card actions explicitly 44x44; layout panels have labelled titles; retained notice uses polite status.", "Canonical fields and overlay components are reused, not replaced."],
+    "issues": [
+      {"file": "web\\src\\features\\admin\\pages\\APIKeysPage.tsx", "line": 102, "rule": "MDC-040", "detail": "Create uses size sm (shared Button h-9 = 36px); dialog Done/Generate/Cancel do too at CreateApiKeyModal.tsx:112,149,157. These fall below the contract's stronger 44px mobile default; WCAG spacing-exception compliance is not measured.", "fix": "Use existing Button sizing/class/wrapLabel APIs to achieve reachable 44px mobile controls; verify spacing and long translated labels.", "owner": "page", "confidence": "high"},
+      {"file": "web\\src\\features\\admin\\components\\api-keys\\ApiKeyCard.tsx", "line": 44, "rule": "MDC-012 / MDC-040", "detail": "Expired state dims the entire card to opacity-60, including readable metadata and enabled Delete control. Effective contrast may degrade on both themes; no measured contrast failure claimed.", "fix": "Convey expiry with existing danger Badge and restrained surface treatment, avoiding parent opacity on actionable/readable content; measure actual composed contrast.", "owner": "page", "confidence": "high"}
+    ],
+    "keyboardFocusScreenReaderContrast": "UNVERIFIED. No browser, focus-trap, clipboard, reveal, sudo or assistive-technology exercise."
+  },
+  "states": {
+    "initialLoading": "Four key skeletons and access skeleton; summary undefined raw values until hasData, loading flag suppresses fabricated measurements.",
+    "empty": "Two informative empty panels; create remains header-owned and guarded. Guidance stays visible.",
+    "fatalError": "QueryError and retry in inventory and access sections; summary remains mounted with unknown raw values.",
+    "retainedStale": "SourceContent retains cards and counts with notice/retry in both sections; summary reports retained; PageContainer adds DataFreshnessAuto.",
+    "offlineReadOnly": "OperationalWriteNotice and disabled creation/card controls; mode change closes create/delete dialogs. HTTP mutations additionally requiresLiveMode.",
+    "mutation": "Create/revoke/delete have pending state and hook-owned localized toasts; delete keeps confirmation until success, create transitions to local masked one-time key.",
+    "issues": [
+      {"file": "web\\src\\features\\admin\\components\\api-keys\\CreateApiKeyModal.tsx", "line": 42, "rule": "MDC-026 / MDC-044", "detail": "Auth-mode loading and failure are indistinguishable from open mode: canBindApp false silently hides App sign-in. Dialog does not present authMode loading/error/retry or retained-source trust.", "fix": "Add source-local capability loading/error/retry via existing feedback/data-state components; preserve normal device-key form and safe app-binding gate. Do not invent capability truth while unknown.", "owner": "page", "confidence": "high"},
+      {"file": "web\\src\\features\\admin\\pages\\APIKeysPage.tsx", "line": 122, "rule": "MDC-025 / MDC-026", "detail": "Successful [] produces keysState.status ok, not empty; AdminSummary reports Sources loaded although both derived panels are empty. Counts are correctly zero for that returned inventory, but source health is not proven because backend can conceal failures as [].", "fix": "Distinguish resolved empty inventory in summary copy; keep unavailable/failed backend health explicitly unknown unless API supplies evidence. Do not change existing server forgiving semantics as a cosmetic migration.", "owner": "page", "confidence": "high"}
+    ],
+    "runtimeAcceptance": "UNVERIFIED; APIKeysPage.test.tsx:379-407 contains retained-refresh preservation expectations but was not executed."
+  },
+  "visualIssues": [
+    {"file": "web\\src\\features\\admin\\components\\api-keys\\ApiKeyPermissionBadge.tsx", "line": 34, "rule": "MDC-010 / MDC-025 / mission 7", "detail": "Permission chip applies neonColorMap background/ring and fixed 300-level text (tokens.ts:21-25); repeated card icon containers also use this map. Tints are bounded, but their neon/saturated families still add decorative color noise and need theme review.", "fix": "Reuse or extend existing Badge/IconBox semantic subdued treatment; retain distinct permission label and icon, unknown handling and forced-color outline. No new status registry or saved-theme reset.", "owner": "shared", "confidence": "high"},
+    {"file": "web\\src\\features\\admin\\components\\api-keys\\constants.ts", "line": 32, "rule": "MDC-010 / MDC-034", "detail": "Permission bars hardcode green/amber/purple hex fills (also lines 41,50) and default MetricBar gradient; categorical permissions are not measured health/severity. These compete for attention with key inventory and summary.", "fix": "Reuse gaugeTone/theme tokens and existing MetricBar fill=solid for restrained categorical encoding, preserving labels/order/counts and descriptions.", "owner": "page", "confidence": "high"},
+    {"file": "web\\src\\features\\admin\\components\\api-keys\\ApiKeyCard.tsx", "line": 83, "rule": "MDC-010 / MDC-020", "detail": "Revoke/delete ghost actions add neon hover backgrounds, overriding canonical neutral controls (second occurrence line 93).", "fix": "Prefer existing semantic/neutral Button treatment; preserve danger meaning, accessible names, disabled reason and pending state.", "owner": "page", "confidence": "high"},
+    {"file": "web\\src\\features\\admin\\components\\api-keys\\ApiKeyCard.tsx", "line": 98, "rule": "MDC-012 / MDC-015", "detail": "Metadata divider is fixed border-white/[0.06], not a theme-aware border token. No literal pure-white text found in inspected feature presentation; fixed-white border remains theme-specific noise.", "fix": "Use canonical panel/default border variable; verify dark/light separation.", "owner": "page", "confidence": "high"},
+    {"file": "web\\src\\features\\admin\\pages\\APIKeysPage.tsx", "line": 138, "rule": "MDC-010 / MDC-016", "detail": "Fixed cyan-300 decoration repeats on inventory, access, guidance and every guidance bullet (lines 187,227,232), irrespective of theme or meaning.", "fix": "Use muted/tokenized icons for supporting information while retaining meaningful icons and text.", "owner": "page", "confidence": "high"}
+  ],
+  "architectureIssues": [
+    {"file": "web\\src\\types\\admin.ts", "line": 2, "rule": "MDC-002 / MDC-045", "detail": "APIKey.id is declared string while actual list wire id is int64 (handler.go:89). Current template URLs work for numeric runtime IDs, but generic typing does not establish the claimed string contract.", "fix": "Integration owner should reconcile existing wire and TypeScript identity contract and dependent hooks/tests without a speculative legacy adapter or backend cosmetic change.", "owner": "integration", "confidence": "high"},
+    {"file": "web\\src\\features\\admin\\components\\api-keys\\constants.ts", "line": 59, "rule": "MDC-025 / MDC-026", "detail": "Unknown permission falls back to Read, while summarizeKeys excludes it from known permission tallies (helpers.ts:56-57). Crash hardening is good, but unknown data can appear to have a known access level.", "fix": "Preserve own-key guard and graceful rendering; present unknown permission truthfully using existing Badge and localized copy, retaining raw inventory and known permission ordering.", "owner": "page", "confidence": "high"},
+    {"file": "web\\src\\features\\admin\\pages\\APIKeysPage.tsx", "line": 213, "rule": "MDC-033 / MDC-044", "detail": "String(count) overrides MetricBar's useNumberFormatting numeric readout with an unlocalized string.", "fix": "Use the existing count formatter/readout instead of a competing formatter; preserve integer count meaning and progress values.", "owner": "page", "confidence": "high"}
+  ],
+  "priority": {
+    "level": "P1",
+    "rationale": "Preserve already migrated layout/trust/write guards; address hidden capability failure, unknown-permission truth, mobile controls and restrained semantic presentation before cosmetic polish.",
+    "order": ["Resolve shared semantic presentation contracts without changing saved preferences.", "Reconcile typed identity with integration owner.", "Improve auth-mode source states and truthful permission/empty summary copy.", "Subdue decorative color, parent opacity and theme-specific borders.", "Run parent-owned focused and browser acceptance across states/themes/widths."]
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "Reuse/extend subdued semantic Badge and IconBox presentation",
+      "owner": "web\\src\\components\\ui\\Badge.tsx; web\\src\\components\\ui\\IconBox.tsx; web\\src\\lib\\tokens.ts",
+      "propsVariantsStates": "Existing Badge semantic variants and sizes; IconBox color/size/className currently neon-backed. Determine a theme-aware neutral/subdued icon/chip contract with readable text, icon+label, forced-colors and unknown state. Preserve existing consumers and persisted theme IDs; no new wrapper/registry.",
+      "usedBy": ["ApiKeyPermissionBadge", "ApiKeyCard"],
+      "dependsOn": ["MDC-010/011/012/025/040/041", "Shared theme/token owner", "Independent second production-consumer evidence before a new public API; this one-page audit does not establish whole-app demand"],
+      "disposition": "Shared owner review needed; existing Badge reuse may eliminate need for extension."
+    },
+    {
+      "name": "API key identity wire/type reconciliation",
+      "owner": "web\\src\\types\\admin.ts; web\\src\\api\\hooks\\useAdmin.ts; internal\\api\\apikey\\handler.go",
+      "propsVariantsStates": "Actual numeric list id versus declared string; preserve identity across list/card/revoke/delete, query invalidation and confirmation. Do not alter secret handling.",
+      "usedBy": ["APIKeysPage", "ApiKeyCard", "useApiKeys", "useDeleteApiKey", "useRevokeApiKey"],
+      "dependsOn": ["Existing snake_case plus camelCase alias client contract", "Integration owner and focused hook/type regressions"],
+      "disposition": "Outside page writer ownership."
+    }
+  ],
+  "competingImplementations": [
+    {"file": "web\\src\\features\\admin\\components\\api-keys\\ApiKeyPermissionBadge.tsx", "line": 25, "detail": "Hand-composed permission chip overlaps shared Badge's semantic presentation. Domain metadata/icons remain local; consolidate presentation only if shared API preserves them."},
+    {"file": "web\\src\\features\\admin\\components\\api-keys\\constants.ts", "line": 28, "detail": "Local permission fill palette overlaps existing gaugeTone owner. Domain permission order/labels are legitimate, not another application-wide status engine."},
+    {"file": "web\\src\\features\\admin\\components\\api-keys\\CreateApiKeyModal.tsx", "line": 92, "detail": "MaskedValue copyable plus adjacent CopyButton exposes two copy affordances. Preserve both until their actual accessibility and desktop/mobile intent are reviewed; no runtime duplication failure claimed."}
+  ],
+  "preservation": {
+    "sourceSHA256": "8E67A7A9E9768D7A89B78B2D824CE7211D56CEAE1701D0C996AFA9D26FD85DED",
+    "currentLineCount": 263,
+    "featureComponentLineCounts": {"ApiKeyCard.tsx": 116, "CreateApiKeyModal.tsx": 165, "ApiKeyPermissionBadge.tsx": 44},
+    "pagePlusPresentationComponentsLineCount": 588,
+    "sections": [
+      {"name": "Operational write notice", "file": "web\\src\\features\\admin\\pages\\APIKeysPage.tsx", "line": 112},
+      {"name": "API key summary (Total, Active, Expired, Admin access)", "file": "web\\src\\features\\admin\\pages\\APIKeysPage.tsx", "line": 118},
+      {"name": "Your API keys inventory", "file": "web\\src\\features\\admin\\pages\\APIKeysPage.tsx", "line": 132},
+      {"name": "Access levels and permission descriptions", "file": "web\\src\\features\\admin\\pages\\APIKeysPage.tsx", "line": 185},
+      {"name": "About API keys guidance", "file": "web\\src\\features\\admin\\pages\\APIKeysPage.tsx", "line": 225},
+      {"name": "Create key form and one-time generated-key reveal", "file": "web\\src\\features\\admin\\pages\\APIKeysPage.tsx", "line": 243},
+      {"name": "Named permanent-delete confirmation", "file": "web\\src\\features\\admin\\pages\\APIKeysPage.tsx", "line": 246}
+    ],
+    "sectionCounts": {"contentSections": 4, "operationalNotice": 1, "dialogs": 2, "LayoutCard": 3, "AdminSummary": 1, "SourceContent": 2, "GlassPanelInPage": 0, "ChartContainerInPage": 0},
+    "actions": ["Open Create key when live", "Trim name and generate Read/Read-write/Admin key", "Forward-auth App sign-in forces Admin; unchecking returns Read", "Masked reveal and copy, including reveal audit behavior", "Done/cancel/reset and unmount secret state", "Revoke non-expired key with per-key pending indicator and sudo", "Open named permanent-delete confirmation; confirm/cancel with pending and sudo", "Retry fatal or retained inventory/permission source", "Automatic write lock and dialog dismissal on operational mode change"],
+    "dataBehavior": ["Preserve query key, safeArray normalization, cancellation and mutation invalidation/toasts.", "Missing initial source is undefined, not fabricated zero; successful empty inventory counts remain zero.", "Preserve expired-time calculation, active/admin/per-permission counts and all guidance.", "Retained refresh failure must not destroy keys, metadata, counts, permission usage or delete target.", "Preserve key name/prefix, created/last-used/never-used, expiry and optional app-owner subject.", "No plaintext secret in inventory, persisted browser state or audit report; generated secret is local one-time presentation.", "No wire/cache SI changes, legacy converters, selectors, route changes or migration rollback."],
+    "existingMigrationsToKeep": ["PageLayout/LayoutCard/SourceContent adoption", "AdminSummary/OperationalBrief/useOperationalMetrics adoption", "DataState fatal-versus-retained behavior", "OperationalMode write guards plus requiresLiveMode", "Shared form/typography/masked-value/overlay ownership", "44px card icon controls and own-property permission hardening"]
+  },
+  "evidenceLimits": {
+    "method": "Read-only bounded source audit; only owned JSON report and heartbeat written. No Git, agents, HTTP requests, token/account mutations, dependency installation or UI/source edits.",
+    "runtime": "Not exercised. Route mount citation is source registration, not navigation proof.",
+    "visual": "No screenshots; saturation, glow, effective contrast and layout acceptance unverified. Inspected feature code uses no glow class; neonColorMap defines glow but inspected IconBox/permission badge consume bg/ring/text, not glow.",
+    "tests": "No test execution or full TypeScript/lint/build. Skill script was read but not run because it unconditionally runs package-wide TypeScript; bounded assignment/design contract centralize those gates.",
+    "boundedPatternCheck": {
+      "command": "PowerShell Get-Content on APIKeysPage.tsx, ApiKeyCard.tsx, CreateApiKeyModal.tsx and ApiKeyPermissionBadge.tsx; Select-String -CaseSensitive for style=\\{\\{, <(button|input|textarea|select|table)\\b, direct recharts/react-leaflet/framer-motion imports, and text-white|border-white.",
+      "exitCode": 0,
+      "output": "Each of the four files: style={{ count=0; raw lowercase controls count=0; direct library imports count=0. Fixed-white matches: APIKeysPage=0; ApiKeyCard=1 at line 98 border-white/[0.06]; CreateApiKeyModal=0; ApiKeyPermissionBadge=0.",
+      "correction": "Earlier non-case-sensitive PowerShell probe matched uppercase shared components as raw controls. Corrected case-sensitive probe is authoritative; no raw-control violations inferred.",
+      "notClaimed": "Not a complete AST audit, typecheck or runtime proof."
+    },
+    "backend": "Only page-specific route and API key handler source ranges inspected; no deployed behavior proven. Forgiving empty response is source-confirmed, not proof of actual service failure. Auth-mode handler internals and revoke/delete implementation details beyond router/hook contracts were not reviewed.",
+    "snapshot": "Source files may change under concurrent workers. Captured page SHA-256 is the read baseline; final JSON validation rechecks it.",
+    "ownedFiles": ["docs\\frontend-audits\\audit-page-002.json", ".agent-status\\audit-page-002.txt"]
+  },
+  "filesRead": [
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-mission.md (sections 0/1/3/4, text/intensity/surfaces, layout/responsive/mobile, overlays/states, accessibility/motion/architecture, visual QA and definition of done)",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\admin\\pages\\APIKeysPage.tsx",
+    "web\\src\\features\\admin\\pages\\APIKeysPage.test.tsx (retained-refresh case and scoped search)",
+    "web\\src\\features\\admin\\components\\api-keys\\ApiKeyCard.tsx",
+    "web\\src\\features\\admin\\components\\api-keys\\ApiKeyPermissionBadge.tsx",
+    "web\\src\\features\\admin\\components\\api-keys\\CreateApiKeyModal.tsx",
+    "web\\src\\features\\admin\\components\\api-keys\\constants.ts",
+    "web\\src\\features\\admin\\components\\api-keys\\helpers.ts",
+    "web\\src\\features\\admin\\components\\api-keys\\index.ts",
+    "web\\src\\features\\admin\\components\\operationalbrief-a-g\\AdminSummary.tsx",
+    "web\\src\\api\\hooks\\useAdmin.ts (API-key section)",
+    "web\\src\\api\\hooks\\useAuthMode.ts",
+    "web\\src\\api\\client.ts (scoped contract search)",
+    "web\\src\\api\\dataState.ts (deriveDataState and scoped search)",
+    "web\\src\\types\\admin.ts (APIKey and scoped search)",
+    "web\\src\\hooks\\useDataState.ts",
+    "web\\src\\hooks\\useOperationalMode.tsx",
+    "web\\src\\components\\layout\\index.ts (scoped export search)",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\layout\\layout-reference\\LayoutCard.tsx",
+    "web\\src\\components\\layout\\layout-reference\\SourceContent.tsx",
+    "web\\src\\components\\layout\\PageContainer.tsx (header/trust section)",
+    "web\\src\\components\\ui\\Button.tsx",
+    "web\\src\\components\\ui\\IconBox.tsx",
+    "web\\src\\components\\data-display\\MetricBar.tsx",
+    "web\\src\\lib\\tokens.ts (neon map search and severity/gauge-tone section)",
+    "web\\src\\App.tsx (assigned-route search)",
+    "web\\src\\lib\\workspaceScope.ts (assigned-route search)",
+    "internal\\api\\router.go (assigned-route and handler-owner search/range)",
+    "internal\\api\\apikey\\handler.go (lines 1-230)"
+  ]
+}

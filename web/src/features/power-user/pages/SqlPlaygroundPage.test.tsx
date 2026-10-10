@@ -171,12 +171,27 @@ function getEditor(): HTMLTextAreaElement {
 }
 
 describe('SqlPlaygroundPage', () => {
+  it('preserves exact untrimmed SQL for manual recovery after denial and retries without execution', async () => {
+    writeText.mockRejectedValueOnce(new Error('denied'));
+    renderPage();
+    const sql = '  SELECT distance_m FROM drives;\n  ';
+    fireEvent.change(getEditor(), { target: { value: sql } });
+    fireEvent.click(screen.getByRole('button', { name: 'Copy query' }));
+    expect(await screen.findByText(/Select the text manually/)).toBeInTheDocument();
+    getEditor().select();
+    expect(getEditor().selectionEnd).toBe(sql.length);
+    expect(getEditor().value).toBe(sql);
+    expect(window.localStorage.getItem(DRAFT_KEY)).toBe(sql);
+    fireEvent.click(screen.getByRole('button', { name: 'Copy query' }));
+    await waitFor(() => expect(screen.queryByText(/Select the text manually/)).toBeNull());
+    expect(writeText.mock.calls).toEqual([[sql], [sql]]);
+  });
   it('renders the deterministic baseline: header, editor, actions, reference panel, and every curated catalog table', async () => {
     renderPage();
 
     // Page chrome.
     expect(
-      await screen.findByRole('heading', { name: 'SQL Playground', level: 1 }),
+      await screen.findByRole('heading', { name: 'SQL playground', level: 1 }),
     ).toBeInTheDocument();
     expect(
       screen.getByText(/Compose read-only SELECT \/ WITH queries/i),
@@ -217,7 +232,7 @@ describe('SqlPlaygroundPage', () => {
     renderPage();
 
     const tablesCard = (await screen.findByText('Catalog tables')).closest(
-      '[data-role="metric-card"]',
+      '[data-operational-metric="tables"]',
     ) as HTMLElement;
     expect(tablesCard).not.toBeNull();
     expect(
@@ -226,7 +241,7 @@ describe('SqlPlaygroundPage', () => {
 
     const columnsCard = screen
       .getByText('Documented columns')
-      .closest('[data-role="metric-card"]') as HTMLElement;
+      .closest('[data-operational-metric="columns"]') as HTMLElement;
     expect(
       within(columnsCard).getByText(String(expectedColumns)),
     ).toBeInTheDocument();
@@ -234,6 +249,24 @@ describe('SqlPlaygroundPage', () => {
     // The two invariant KPIs render their literal values.
     expect(screen.getByText('Read-only')).toBeInTheDocument();
     expect(screen.getByText('SI units')).toBeInTheDocument();
+  });
+
+  it('reviews catalog evidence without changing, copying or executing the SQL draft', () => {
+    renderPage();
+    const query = 'SELECT distance_m FROM drives;';
+    fireEvent.change(getEditor(), { target: { value: query } });
+    fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog', { name: 'Catalog overview details' });
+    expect(within(drawer).getByText('SI units')).toBeInTheDocument();
+    expect(within(drawer).getByText('m · s · Wh')).toBeInTheDocument();
+    expect(within(drawer).getByText(/no query has been executed/)).toBeInTheDocument();
+    const close = within(drawer).getAllByRole('button', { name: 'Close' });
+    fireEvent.click(close[close.length - 1]);
+    expect(getEditor()).toHaveValue(query);
+    expect(window.localStorage.getItem(DRAFT_KEY)).toBe(query);
+    expect(writeText).not.toHaveBeenCalled();
+    expect(screen.queryByTestId('power-sql-run-message')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Run' })).toBeEnabled();
   });
 
   it('disables Run, Clear, and Copy while the editor is empty and enables them once a query is typed', async () => {

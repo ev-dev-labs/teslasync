@@ -1,0 +1,353 @@
+{
+  "item": "audit-page-085",
+  "phase": 0,
+  "mode": "READ-ONLY source audit",
+  "page": "web\\src\\features\\charging\\pages\\ChargingThermalTaxPage.tsx",
+  "routes": ["/charging-thermal-tax"],
+  "identity": {
+    "repositoryRoot": "F:\\github\\TeslaSync",
+    "export": "default ChargingThermalTaxPage",
+    "routeEvidence": "web\\src\\App.tsx:105,875 lazy-loads this page through SafeRoute",
+    "rootSourceSha256": "cc2ad88408b1b0a3c85267580f1c06e351078d7e0593fd3964ed07e8485c74e3",
+    "mountVerified": false
+  },
+  "purpose": "Inspect battery-heater energy overhead during a selected charging session using recorded charging telemetry.",
+  "primaryGoal": "Select a real session for the workspace vehicle, compare heater and charger power, and interpret derived energy, heater-on time, sampled phases and source uncertainty.",
+  "dataSources": [
+    {
+      "hook": "useSelectedVehicle -> useVehicles",
+      "file": "web\\src\\hooks\\useSelectedVehicle.ts",
+      "line": 49,
+      "endpoint": "GET /api/v1/vehicles",
+      "hookEvidence": "web\\src\\api\\hooks\\useVehicles.ts:73-80",
+      "routeEvidence": "internal\\api\\router.go:3319-3320",
+      "owner": "shared workspace selection and vehicle query",
+      "behavior": "URL path/query, persisted selection, then first fleet vehicle; page reads effective vehicleId and never creates a competing picker.",
+      "backendBehavior": "Route existence confirmed; response execution, permissions and database behavior unverified."
+    },
+    {
+      "hook": "useChargingHistory(vehicleIdStr)",
+      "file": "web\\src\\api\\hooks\\useCharging.ts",
+      "line": 72,
+      "endpoint": "GET /api/v1/charging?vehicle_id=<id>&limit=1000",
+      "routeEvidence": "internal\\api\\router.go:3502-3503",
+      "owner": "charging query; backend chargingHandler.ListByVehicle",
+      "behavior": "Distinct history query key, 1,000-row bounded window, enabled only with vehicle ID, MODERATE staleTime, safeArray and AbortSignal forwarding. No date bounds or pagination are supplied by this event-inspection page.",
+      "backendBehavior": "Actual ordering, truncation metadata and server limit enforcement were not inspected."
+    },
+    {
+      "hook": "useChargeTelemetry(numericSessionId)",
+      "file": "web\\src\\api\\hooks\\useCharging.ts",
+      "line": 109,
+      "endpoint": "GET /api/v1/charging/<sessionID>/telemetry",
+      "routeEvidence": "internal\\api\\router.go:3507-3509",
+      "owner": "charging query; backend chargingHandler.TelemetryReadings",
+      "behavior": "Disabled for null ID; selected history row must resolve before numeric ID is passed. Query key identifies session; safeArray and AbortSignal preserved. Analyzer consumes watts, watt-hours and timestamps, without hook conversion.",
+      "wireEvidence": "web\\src\\api\\types.ts:231-251",
+      "backendBehavior": "Actual sampling, full-session completeness and persistence implementation unverified."
+    },
+    {
+      "hook": "analyzeChargingThermalTax and presentation evidence",
+      "file": "web\\src\\features\\charging\\lib\\chargingThermalTax.ts",
+      "line": 187,
+      "endpoint": null,
+      "owner": "charging specialist calculation",
+      "behavior": "Pure derived analysis; trapezoidal heater integration, cumulative delivered-energy preference and power-integral fallback, 50 W heater threshold, 300 s coverage threshold. Zero-filled missing heater inputs are disclosed by the presentation adapter, not changed by this audit."
+    }
+  ],
+  "components": [
+    {
+      "owner": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+      "components": ["PageLayout", "PageContainer"],
+      "contract": "Forward existing page props, query freshness and busy state; full allocated width, min-w-0 and container-query composition."
+    },
+    {
+      "owner": "web\\src\\components\\layout\\layout-reference\\CardGrid.tsx",
+      "components": ["CardGrid", "LayoutCard", "useCardPlacement"],
+      "contract": "Two ordered half-size cards; measured allocated width drives placement, not page-specific media rules."
+    },
+    {
+      "owner": "web\\src\\features\\charging\\components\\operationalbrief-all\\ChargingSummaryBrief.tsx",
+      "components": ["ThermalTaxStats", "ChargingSummaryBrief", "OperationalBrief", "useOperationalMetrics"],
+      "contract": "Four raw-source metrics; event period, null missing values, specialist duration formatting, retained/loading state, evidence captions and recovery footer."
+    },
+    {
+      "owner": "web\\src\\components\\charts\\ChartContainer.tsx",
+      "components": ["ThermalPowerChart", "ChartContainer", "ChartTooltip", "ChartLegend"],
+      "contract": "Accessible chart name, same-source fallback table, exportData CSV, default image export, stable legend key; two raw-watt series and display-only power formatting."
+    },
+    {
+      "owner": "web\\src\\features\\charging\\components\\charging-thermal-tax-modernization\\ThermalPhases.tsx",
+      "components": ["ThermalPhases", "DataTable", "Badge", "HelpTooltip"],
+      "contract": "Embedded table with stable tableId, seven column definitions, five initially visible columns, keyValue mobile roles, sampled-boundary and missing-heater disclosure."
+    },
+    {
+      "owner": "existing UI/feedback/motion category barrels",
+      "components": ["Select", "Button", "Text", "EmptyState", "QueryError", "StaleRefreshWarning", "Skeleton", "FadeIn", "NoVehicleSelected"],
+      "contract": "Labeled explicit session control; shared retries and state surfaces; reduced-motion adapter; onboarding recovery for absent vehicle."
+    }
+  ],
+  "duplicatedPatterns": {
+    "confirmed": [],
+    "notes": [
+      "Loading-paused prose appears in stats, chart and phase shells because they share one telemetry source; the stats footer owns the actionable retry. Do not consolidate by removing independent section shells.",
+      "ChargingSummaryBrief already owns recurring charging metric presentation; no new metric grid or card engine is warranted."
+    ]
+  },
+  "responsive": {
+    "status": "source-inspected; viewport behavior unverified",
+    "evidence": [
+      "web\\src\\features\\charging\\pages\\ChargingThermalTaxPage.tsx:70 uses w-full/min-w-0 and sm:max-w-sm only for the selector.",
+      "web\\src\\features\\charging\\pages\\ChargingThermalTaxPage.tsx:104-114 delegates two half cards to CardGrid.",
+      "web\\src\\features\\charging\\components\\charging-thermal-tax-modernization\\ThermalPowerChart.tsx:30,50 uses placement classes and ResponsiveContainer.",
+      "web\\src\\features\\charging\\components\\charging-thermal-tax-modernization\\ThermalPhases.tsx:109-119 uses maxHeight=256 and keyValue mobile roles."
+    ],
+    "issues": [],
+    "requiredQA": ["320", "375", "390", "430", "768", "1024", "1280", "1440", "1920", "2560", "allocated-container widths", "long localized labels", "200% text", "phase hidden-column recovery"]
+  },
+  "accessibility": {
+    "status": "source-inspected; keyboard, focus, screen reader and contrast unverified",
+    "evidence": [
+      "Page:71-79 supplies a visible translated Select label and explicit charging-thermal-tax-session ID.",
+      "ThermalPowerChart.tsx:28,41-47 supplies ariaLabel and accessible data columns.",
+      "ThermalPhases.tsx:63-70 supplies contextual-help ariaLabel; table:104-106 supplies name, caption and columns.",
+      "Decorative metric and empty-state icons explicitly set aria-hidden.",
+      "web\\src\\components\\motion\\FadeIn.tsx:24-35 disables initial animation and delay through useMotionPreference when reduction is requested."
+    ],
+    "issues": [],
+    "requiredQA": ["session selection by keyboard", "legend toggles and export menu focus", "phase table column controls", "details drawer reachability", "contrast in composed light/dark themes", "forced colors", "reduced motion"]
+  },
+  "states": {
+    "initialLoading": "History selector disables while loading; telemetry metrics retain slots with loading suppression, chart skeleton and phase Skeleton. PageLayout query supplies shared freshness; not rendered here.",
+    "noVehicle": "Dedicated NoVehicleSelected onboarding recovery; history query disabled without ID.",
+    "noSelection": "All four section shells remain; four metric values are missing, chart prompts selection and phase panel says no session selected.",
+    "emptyHistory": "Explicit vehicle-specific message and history retry.",
+    "emptyTelemetry": "Chart and phases retain shells with empty messages; phases offer telemetry retry and metric values remain missing.",
+    "fatalError": "Only DataState.fatalError is passed to replacing source errors; history and telemetry recovery remain independent.",
+    "retainedRefreshError": "History and telemetry payloads remain; StaleRefreshWarning appears at selector and stats footer; selected session and phase/chart data are not discarded.",
+    "offlinePaused": "Initial paused history/telemetry prose and retries; retained paused telemetry is marked stale by the shared data-trust adapter.",
+    "partialUnknown": "Missing heater evidence gives null metrics unless enough valid readings exist. Incomplete zero-fill analysis is explicitly labeled; missing phase readings produce uncertain labels; chart nulls remain gaps.",
+    "measuredZero": "Finite recorded zero remains zero when integral/peak evidence requirements are met; missing is not automatically zero.",
+    "issues": [
+      {
+        "file": "web\\src\\features\\charging\\pages\\ChargingThermalTaxPage.tsx",
+        "line": 27,
+        "rule": "MDC-026/MDC-045 bounded-source disclosure",
+        "detail": "Session options expose a useChargingHistory window capped at 1,000 rows, but Inspect session contains no observed-window or limit explanation. The hook itself explicitly warns this is not lifetime coverage; the page does not communicate that distinction. Backend ordering and whether this vehicle reaches the cap are unknown.",
+        "fix": "Add localized history-window/source context beside the selector, preserving the exact limit and query/cache semantics; do not promise all/lifetime sessions or invent server pagination metadata.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ]
+  },
+  "visualIssues": [],
+  "visualAssessment": {
+    "status": "runtime visual acceptance unverified",
+    "evidence": "Scoped presentation scan found no explicit neon, glow, fixed-white styling, direct chart-library imports or static inline style attributes. Semantic badges, shared metric brief, chartTokens and shared surfaces are reused.",
+    "preserve": "Restrained semantic palette; no new hex palette, bright decorative gradients or metric-specific glow. Actual chart colors and composed contrast require browser verification."
+  },
+  "architectureIssues": [
+    {
+      "file": "web\\src\\features\\charging\\components\\charging-thermal-tax-modernization\\ThermalPhases.tsx",
+      "line": 3,
+      "rule": "MDC-002 category-barrel ownership",
+      "detail": "Feature imports LayoutCard from layout/layout-reference despite an existing layout category export at components/layout/index.ts:11. ThermalTaxStats.tsx:5 similarly imports types from data-display/stat-reference even though category types are exported.",
+      "fix": "Use the existing layout and data-display category barrels for these available APIs; retain the same actual implementations and props.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\charging\\components\\charging-thermal-tax-modernization\\ThermalPowerChart.tsx",
+      "line": 6,
+      "rule": "MDC-002 canonical placement contract",
+      "detail": "useCardPlacement is imported through the internal layout-reference barrel. The inspected public layout category barrel does not export this hook, so this remaining dependency cannot simply be rewritten like LayoutCard.",
+      "fix": "Have the layout owner establish a category-exported placement read contract or approved public adapter; keep existing span/class semantics. Do not duplicate placement logic in the feature.",
+      "owner": "shared",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\charging\\components\\charging-thermal-tax-modernization\\thermalPresentation.ts",
+      "line": 31,
+      "rule": "MDC-034/MDC-044 preserve source timestamp identity",
+      "detail": "Chart rows discard tMs after sorting and retain only a localized hour/minute time label. ThermalPowerChart.tsx:41-47 exports those rows unchanged with a Time column; date, timezone and seconds are absent from CSV/fallback rows. Repeated clock times across dates or DST and samples within a minute are ambiguous.",
+      "fix": "Retain an exact timestamp in the presentation row and CSV/accessibility columns while preserving short axis labels, raw watts, sample order and null gaps. Use shared date-formatting policy rather than a new formatter; no calculator changes.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\charging\\pages\\ChargingThermalTaxPage.tsx",
+      "line": 42,
+      "rule": "MDC-044 consistent selected locale",
+      "detail": "Session option formatDateShort is called without locale and its memo depends on sessions and t only; helper defaults to browser locale. Chart labels explicitly use i18n.language and phase dates pass that locale. App-selected language can therefore differ from selector dates.",
+      "fix": "Pass the existing locale-aware formatter options and include relevant locale dependency; preserve established timezone behavior unless the authoritative formatter owner requires a coordinated change.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "priority": {
+    "level": "medium",
+    "reason": "This is already a composed modernization page with retained-data recovery and SI boundaries. Address source timestamp/export ambiguity and bounded-source communication before superficial restyling; category and locale cleanup are smaller follow-ups."
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "Public layout placement reader",
+      "existingOwnerFile": "web\\src\\components\\layout\\index.ts",
+      "implementationOwnerFile": "web\\src\\components\\layout\\layout-reference\\CardPlacementContext.tsx",
+      "propsVariantsStates": {
+        "api": "Category-exported useCardPlacement, or an existing-layout-approved equivalent.",
+        "preserve": ["nullable outside-provider behavior", "allocated width", "size", "span", "placement className used by the chart", "unchanged CardGrid context semantics"]
+      },
+      "usedBy": ["web\\src\\features\\charging\\components\\charging-thermal-tax-modernization\\ThermalPowerChart.tsx:6,22,30"],
+      "dependsOn": ["layout owner confirms the stable public contract and targeted consumer acceptance"],
+      "scope": "Extension of existing owner only; no new component or placement implementation."
+    }
+  ],
+  "competingImplementations": {
+    "confirmedInAssignedScope": [],
+    "notes": [
+      "Page uses existing PageLayout/CardGrid/LayoutCard, OperationalBrief and DataTable rather than competing versions.",
+      "Specialist analyzer is deliberately distinct from charging-curve power-vs-SoC analysis; do not merge or replace it.",
+      "No application-wide duplicate inventory was attempted."
+    ]
+  },
+  "preservation": {
+    "sourceSha256": "cc2ad88408b1b0a3c85267580f1c06e351078d7e0593fd3964ed07e8485c74e3",
+    "currentLineCount": 117,
+    "pagePlusExtractedPresentationLineCount": 498,
+    "lineCountComposition": "117 page + 122 stats + 79 chart + 123 phases + 53 presentation + 4 barrel; excludes shared brief, specialist calculator and tests.",
+    "historicalOriginalLineCount": null,
+    "historicalComparison": "No frozen original was assigned or inspected; no preservation percentage claim.",
+    "sections": [
+      {"name": "Inspect session", "file": "web\\src\\features\\charging\\pages\\ChargingThermalTaxPage.tsx", "line": 65},
+      {"name": "Charging thermal tax metrics", "file": "web\\src\\features\\charging\\pages\\ChargingThermalTaxPage.tsx", "line": 98},
+      {"name": "Heater vs. Charge Power", "file": "web\\src\\features\\charging\\pages\\ChargingThermalTaxPage.tsx", "line": 107},
+      {"name": "Thermal Phases", "file": "web\\src\\features\\charging\\pages\\ChargingThermalTaxPage.tsx", "line": 111}
+    ],
+    "sectionCount": 4,
+    "metricCount": 4,
+    "metricNames": ["Heater Energy", "Heater Share", "Heater On Time", "Peak Heater Power"],
+    "chartSeries": ["heaterW area", "chargeW line"],
+    "phaseColumnCount": 7,
+    "phaseColumns": ["state", "duration", "power", "start", "end", "quality", "analysisState"],
+    "stableIdentities": ["charging-thermal-tax-session", "charging-thermal-tax-metrics", "charging-thermal-tax-power", "charging:thermal-tax-phases", "thermal-power", "thermal-phases"],
+    "actions": ["select a returned session", "independent history and telemetry retry/refresh", "legend series visibility persisted by chartKey", "shared chart image export", "CSV export from exportData", "phase table column controls and mobile presentation", "data-source contextual help", "shared operational metric evidence/details", "onboarding recovery link"],
+    "dataBehavior": [
+      "Preserve 1,000-row history bound, query keys, AbortSignal, inherited policies and safeArray handling.",
+      "Match string selector IDs against returned sessions and call telemetry with finite numeric ID only after selection.",
+      "Keep analysis in W/Wh/s and SI wire/cache operands; convert power/energy/duration only at display boundary.",
+      "Retain cumulative-energy preference, power-integral fallback, 50 W threshold, 300 s coverage and specialist phase/integration mathematics.",
+      "Keep zero-fill estimate disclosure, valid-reading guards, finite-zero semantics, uncertainty labels and null chart gaps.",
+      "Retain all independent section shells across no-selection, empty, fatal and retained-refresh failure states.",
+      "Route is vehicle-scoped but not range-enabled in workspaceScope.ts; selected-session inspection is an independent business selection, not a second workspace selector. Do not add a local date/vehicle picker.",
+      "No fullscreen or annotations are opted in by this chart; preserve current shared defaults rather than inventing capabilities."
+    ],
+    "sourceInventory": [
+      {"file": "web\\src\\features\\charging\\pages\\ChargingThermalTaxPage.tsx", "lines": 117, "sha256": "cc2ad88408b1b0a3c85267580f1c06e351078d7e0593fd3964ed07e8485c74e3"},
+      {"file": "web\\src\\features\\charging\\components\\charging-thermal-tax-modernization\\index.ts", "lines": 4, "sha256": "2a7c1622d481f09e8ced83b8694f449af9acd17d646927de6dc58a82880d9aea"},
+      {"file": "web\\src\\features\\charging\\components\\charging-thermal-tax-modernization\\ThermalTaxStats.tsx", "lines": 122, "sha256": "e602d1affd51c178e335be1c9154b704a4b00911f46b81a1079d09356ace8dd5"},
+      {"file": "web\\src\\features\\charging\\components\\charging-thermal-tax-modernization\\ThermalPowerChart.tsx", "lines": 79, "sha256": "8e4cce2aa6012964e43869a01cff736a5637e8f313b18d7fec8488f10e1fcccb"},
+      {"file": "web\\src\\features\\charging\\components\\charging-thermal-tax-modernization\\ThermalPhases.tsx", "lines": 123, "sha256": "27fb0efbe6e06f14cea729ec9e097a929f97b0188ba11b9742f85cac498e2df8"},
+      {"file": "web\\src\\features\\charging\\components\\charging-thermal-tax-modernization\\thermalPresentation.ts", "lines": 53, "sha256": "e679eb9931476b977935c0279b0afc12ff5bdca5258e63c32c9ae26e4cf70da7"},
+      {"file": "web\\src\\features\\charging\\lib\\chargingThermalTax.ts", "lines": 283, "sha256": "59af0fc988c87247cc4fbca5b74d0be95966e72af047737a8e2d9309e582a02c"},
+      {"file": "web\\src\\features\\charging\\components\\operationalbrief-all\\ChargingSummaryBrief.tsx", "lines": 73, "sha256": "8eb6ea58446fceb6acfcb1915f3d537f7ef1e3b5fc2475f63b8380c60df87698"}
+    ]
+  },
+  "evidenceLimits": {
+    "runtime": "UNVERIFIED",
+    "visual": "UNVERIFIED",
+    "keyboard": "UNVERIFIED",
+    "contrast": "UNVERIFIED",
+    "viewports": "UNVERIFIED",
+    "tests": "NOT RUN; authored runtime test source was inspected, not executed and not borrowed as acceptance.",
+    "fullGates": "NOT RUN per Phase0 read-only assignment. The skill audit.sh was read but not executed because it unconditionally invokes full-project npx tsc --noEmit. Bounded source checks replace only source-pattern inspection, not TypeScript or runtime proof.",
+    "backend": "Router declarations only; no handlers, database queries or requests executed.",
+    "localization": "Translation calls/fallbacks inspected; complete catalog coverage and actual language switching not verified.",
+    "sharedContracts": "Only directly relevant owners/export/frame/data-trust source was inspected; no whole-app foundation audit or sibling-page claim.",
+    "sourceDrift": "Hashes pin the exact read snapshot; other workers may independently change sources. Release validation must confirm the pinned root remains current.",
+    "mutations": "Only assigned JSON report and heartbeat written; no source/shared/queue edits, Git operations, builds, application requests or production mutations."
+  },
+  "filesRead": [
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    ".github\\instructions\\frontend-si-cutover.instructions.md",
+    "web\\src\\features\\charging\\pages\\ChargingThermalTaxPage.tsx",
+    "web\\src\\features\\charging\\components\\charging-thermal-tax-modernization\\index.ts",
+    "web\\src\\features\\charging\\components\\charging-thermal-tax-modernization\\ThermalTaxStats.tsx",
+    "web\\src\\features\\charging\\components\\charging-thermal-tax-modernization\\ThermalPowerChart.tsx",
+    "web\\src\\features\\charging\\components\\charging-thermal-tax-modernization\\ThermalPhases.tsx",
+    "web\\src\\features\\charging\\components\\charging-thermal-tax-modernization\\thermalPresentation.ts",
+    "web\\src\\features\\charging\\components\\charging-thermal-tax-modernization\\ChargingThermalTaxPage.runtime.test.tsx",
+    "web\\src\\features\\charging\\lib\\chargingThermalTax.ts",
+    "web\\src\\features\\charging\\components\\operationalbrief-all\\ChargingSummaryBrief.tsx",
+    "web\\src\\features\\onboarding\\components\\NoVehicleSelected.tsx",
+    "web\\src\\api\\hooks\\useCharging.ts",
+    "web\\src\\api\\hooks\\useVehicles.ts",
+    "web\\src\\api\\types.ts",
+    "web\\src\\api\\client.ts",
+    "web\\src\\api\\dataState.ts",
+    "web\\src\\types\\charging.ts",
+    "web\\src\\hooks\\useDataState.ts",
+    "web\\src\\hooks\\useSelectedVehicle.ts",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\lib\\dateFormat.ts",
+    "web\\src\\components\\layout\\index.ts",
+    "web\\src\\components\\data-display\\index.ts",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\layout\\layout-reference\\CardGrid.tsx",
+    "web\\src\\components\\layout\\PageContainer.tsx",
+    "web\\src\\components\\charts\\ChartContainer.tsx",
+    "web\\src\\components\\motion\\FadeIn.tsx",
+    "web\\src\\App.tsx",
+    "web\\src\\lib\\routeRegistry.ts",
+    "web\\src\\components\\layout\\sidebar\\collections.ts",
+    "web\\src\\components\\layout\\navSearchKeywords.ts",
+    "web\\src\\components\\layout\\Layout.tsx",
+    "web\\src\\features\\explore\\featureCatalog.ts",
+    "web\\src\\features\\charging\\components\\Phase4ChargingExports.source-contract.test.ts",
+    "web\\src\\__tests__\\lazyRoutes.list.ts",
+    "internal\\api\\router.go"
+  ],
+  "ownedFiles": ["docs\\frontend-audits\\audit-page-085.json", ".agent-status\\audit-page-085.txt"],
+  "checks": {
+    "scope": "Root page, three extracted TSX presentation components and ChargingSummaryBrief.tsx only",
+    "sourcePatternCounts": {
+      "staticInlineStyleAttributes": 0,
+      "directRechartsLeafletFramerImports": 0,
+      "legacyRelativeApiImports": 0,
+      "neonGlowClasses": 0,
+      "anyTypeTokens": 0,
+      "internalCategoryImports": 3,
+      "caseSensitiveRawHtml": 0,
+      "rootSectionCallSites": 4
+    },
+    "executedEvidence": [
+      {
+        "command": "Get-Content -Raw -LiteralPath 'docs\\frontend-audits\\audit-page-085.json' | ConvertFrom-Json",
+        "exitCode": 0,
+        "output": "JSON/schema/identity: PASS",
+        "detail": "Same PowerShell invocation additionally checked all 20 required convention fields, exact item and single route."
+      },
+      {
+        "command": "(Get-FileHash -Algorithm SHA256 -LiteralPath $source.file).Hash.ToLower()",
+        "exitCode": 0,
+        "output": "Pinned source hashes: 8/8 MATCH",
+        "detail": "Executed for every preservation.sourceInventory entry and compared against the report."
+      },
+      {
+        "command": "Select-String -LiteralPath $files -Pattern '<(button|input|textarea|select|table)\\b' -CaseSensitive",
+        "exitCode": 0,
+        "output": "Case-sensitive raw HTML count: 0",
+        "detail": "$files is the .tsx subset of preservation.sourceInventory."
+      },
+      {
+        "command": "Select-String -LiteralPath $root -Pattern '<LayoutCard|<ThermalTaxStats|<ThermalPowerChart|<ThermalPhases' -CaseSensitive",
+        "exitCode": 0,
+        "output": "Section call sites: 4",
+        "detail": "$root is the exact assigned page."
+      }
+    ],
+    "note": "Initial PowerShell raw-element search was case-insensitive and matched three shared Select/Button uses; the case-sensitive release check confirms zero raw HTML. All counts are scoped source evidence, not runtime, typechecking or all-checks-pass claims."
+  }
+}

@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { BookOpen, ExternalLink } from 'lucide-react';
-import { Badge, GlassPanel, PanelTitle, Caption, Heading, Text } from '@/components/ui';
+import { Badge, Caption, Heading, Text } from '@/components/ui';
+import { LayoutCard } from '@/components/layout';
 import { AlertBanner, EmptyState } from '@/components/feedback';
 import { DateTime } from '@/components/data-display';
 import type {
@@ -31,11 +32,8 @@ export function CommunicationsPanel({
   const stale = source?.status === 'stale';
 
   return (
-    <GlassPanel className="p-4 sm:p-5">
-      <PanelTitle className="mb-3 flex items-center gap-2">
-        <BookOpen className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-        {t('serviceIntelligence.communications.title', 'Manufacturer communications & TSBs')}
-      </PanelTitle>
+    <LayoutCard title={t('serviceIntelligence.communications.title', 'Manufacturer communications & TSBs')}
+      actions={<BookOpen className="h-4 w-4 text-cyan-300" aria-hidden="true" />}>
       <PanelState
         selected={selected}
         loading={loading}
@@ -167,6 +165,6 @@ export function CommunicationsPanel({
           </div>
         )}
       </PanelState>
-    </GlassPanel>
+    </LayoutCard>
   );
 }

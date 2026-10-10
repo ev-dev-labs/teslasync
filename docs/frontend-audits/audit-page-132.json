@@ -1,0 +1,442 @@
+{
+  "item": "audit-page-132",
+  "page": "web\\src\\features\\fleet-ops\\pages\\FleetOperationsPage.tsx",
+  "routes": [
+    {
+      "path": "/fleet-operations",
+      "evidence": "web\\src\\App.tsx:227,761; web\\src\\lib\\routeRegistry.ts:133",
+      "status": "Source registration confirmed by targeted search; mount, authentication and route reachability not exercised.",
+      "scope": "Fleet-wide operator workspace. Vehicle selector intentionally disabled at web\\src\\lib\\workspaceScope.ts:109-135; route absent from RANGE_ENABLED_PATHS at lines 23-77."
+    }
+  ],
+  "purpose": "Coordinate fleet drivers, vehicle assignments, reservations, charging policies, cost centers, maintenance and inferred capacity without reducing the fleet to a single selected vehicle.",
+  "primaryGoal": "Review loaded multi-vehicle operational records and their source coverage, then safely create, edit, cancel or delete records in live mode.",
+  "dataSources": [
+    {
+      "hook": "useVehicles",
+      "endpoint": "GET /vehicles",
+      "owner": "web\\src\\api\\hooks\\useVehicles.ts",
+      "evidence": "web\\src\\api\\hooks\\useVehicles.ts:73-80; web\\src\\features\\fleet-ops\\pages\\FleetOperationsPage.tsx:56,79,112-125,285",
+      "behavior": "Fleet-wide vehicle choices; safeArray selection and FAST stale time; forwarded AbortSignal. Empty/loading choices disable the header reservation action.",
+      "backendVerification": "Not inspected or exercised; endpoint is the hook request path, not a claim about backend response correctness."
+    },
+    {
+      "hooks": ["useFleetDrivers", "useFleetAssignments", "useFleetReservations", "useFleetCostCenters", "useFleetChargingPolicies", "useFleetWorkOrders"],
+      "endpoints": ["GET /fleet-ops/drivers?limit=100", "GET /fleet-ops/assignments?limit=100", "GET /fleet-ops/reservations?limit=100", "GET /fleet-ops/cost-centers?limit=100", "GET /fleet-ops/charging-policies?limit=100", "GET /fleet-ops/work-orders?limit=100"],
+      "owner": "web\\src\\api\\hooks\\useFleetOps.ts",
+      "evidence": "web\\src\\api\\hooks\\useFleetOps.ts:10-15,239-279,327-392; web\\src\\features\\fleet-ops\\pages\\FleetOperationsPage.tsx:57-62,73-78",
+      "behavior": "FleetPage items/total/limit/offset; first 100 records per domain; no vehicle, date or server-offset control passed by page. Shared fleet-ops query keys and inherited query policy; AbortSignal forwarded. Value filters enabled only when offset is zero and total equals loaded length.",
+      "ownership": "Typed API hooks own requests; page owns query orchestration; feature helpers derive loaded-record summaries.",
+      "backendVerification": "Server sorting, maximum limits, total reliability, auth and actual completeness are unknown. Do not treat loaded counts as server-wide totals."
+    },
+    {
+      "hook": "useFleetUtilizationForecast",
+      "endpoint": "GET /fleet-ops/utilization-forecast?from=<UTC-midnight>&to=<UTC-midnight-plus-14-days>",
+      "owner": "web\\src\\api\\hooks\\useFleetOps.ts",
+      "evidence": "web\\src\\api\\hooks\\useFleetOps.ts:131-154,394-402; web\\src\\features\\fleet-ops\\pages\\FleetOperationsPage.tsx:40-46,55,63,71",
+      "behavior": "No vehicle_id supplied, so fleet-wide forecast. UTC 14-day window memoized at mount; inferred provenance; preserve quality, history counts, generated_at, limitations and all returned vehicle-day points.",
+      "backendVerification": "Forecast model, history coverage and endpoint bound inclusivity are unknown. No claim that forecast is observed utilization or a guaranteed capacity prediction."
+    },
+    {
+      "hooks": ["useCreateFleetDriver", "useUpdateFleetDriver", "useDeleteFleetDriver", "useCreateFleetAssignment", "useUpdateFleetAssignment", "useDeleteFleetAssignment", "useCreateFleetReservation", "useUpdateFleetReservation", "useDeleteFleetReservation", "useCreateFleetCostCenter", "useUpdateFleetCostCenter", "useDeleteFleetCostCenter", "useCreateFleetChargingPolicy", "useUpdateFleetChargingPolicy", "useDeleteFleetChargingPolicy", "useCreateFleetWorkOrder", "useUpdateFleetWorkOrder", "useDeleteFleetWorkOrder"],
+      "endpoints": [
+        "POST /fleet-ops/{drivers|assignments|reservations|cost-centers|charging-policies|work-orders}",
+        "PUT /fleet-ops/{resource}/{id} with original version in body",
+        "DELETE /fleet-ops/{resource}/{id}?version=<original-version>"
+      ],
+      "owner": "web\\src\\api\\hooks\\useFleetOps.ts",
+      "evidence": "web\\src\\api\\hooks\\useFleetOps.ts:286-325,346-392; web\\src\\features\\fleet-ops\\components\\CancelReservationDialog.tsx:17-28,49-68; web\\src\\features\\fleet-ops\\components\\DeleteFleetResourceDialog.tsx:28-35,53-88",
+      "behavior": "requiresLiveMode true; networkMode always; successful mutations invalidate fleetOpsKeys.all. Cancellation is a versioned reservation PUT preserving the other fields, not a separate invented cancel endpoint.",
+      "backendVerification": "No mutation executed. Conflict detection, enforcement, atomicity, referential deletion constraints and driver guardrail enforcement are not proved."
+    }
+  ],
+  "components": [
+    {
+      "name": "PageLayout / PageContainer / Grid",
+      "kind": "existing shared layout",
+      "owner": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx; web\\src\\components\\layout\\PageContainer.tsx",
+      "evidence": "PageLayout.tsx:1-17; PageContainer.tsx:51-120,159-260; FleetOperationsPage.tsx:38,109-135,193",
+      "contract": "title, subtitle, primaryAction, query; full-width min-w-0 container; preserve header freshness, operational badge, route-focus target, normal shell gutters. Grid cols default=1/xl=2, gap=4.",
+      "dependsOn": ["existing shell", "PageActions", "DataFreshnessAuto", "PageErrorBoundary", "useOperationalMode"]
+    },
+    {
+      "name": "FleetKpis / OperationalBrief / useOperationalMetrics",
+      "kind": "feature adapter to existing shared summary",
+      "owner": "web\\src\\features\\fleet-ops\\components\\FleetKpis.tsx",
+      "evidence": "FleetKpis.tsx:18-44,87-172; FleetOperationsPage.tsx:150-174",
+      "contract": "Four numeric/null metrics, source states, pagination coverage, forecast window/receipt/generation/limitations, compact OperationalBrief. Preserve occurrence IDs, loaded-record semantics, independent source freshness and missing values.",
+      "dependsOn": ["web\\src\\features\\fleet-ops\\helpers.ts", "useOperationalMetrics", "OperationalBrief", "shared StatMetric formatter"]
+    },
+    {
+      "name": "DataTable",
+      "kind": "existing shared table and export owner",
+      "owner": "web\\src\\components\\ui\\DataTable.tsx",
+      "evidence": "DataTable.tsx:235-260,361-379,714-725,929-930,1385-1437; MobileDataTableAdapter.types.ts:6-24",
+      "contract": "Stable tableId, typed columns, raw ID keyExtractor, enableValueFilters, local pagination and existing column/export persistence. Reuse mobilePresentation with roles, displayValue, allDetails and inlineActions when adapting mobile rows; do not create a competing table/card controller.",
+      "usedBy": ["ReservationPanel", "DriverRoster", "AssignmentRoster", "ChargingPolicyMatrix"],
+      "dependsOn": ["existing table persistence", "MobileDataTableAdapter", "existing loaded/selected export scope", "localized caption/name"]
+    },
+    {
+      "name": "LayoutCard / ChartCard",
+      "kind": "existing shared section/chart frames",
+      "owner": "Shared layout category; implementations not inspected in this bounded audit.",
+      "evidence": "ReservationPanel.tsx:116; DriverRoster.tsx:116; AssignmentRoster.tsx:108; CostCenterAllocation.tsx:43; ChargingPolicyMatrix.tsx:120; WorkOrderBoard.tsx:59; UtilizationForecastChart.tsx:54-71",
+      "contract": "Six LayoutCard sections, header actions, contextual content states; one 320px ChartCard with title/subtitle/ariaLabel, chartKey fleet-ops-utilization, exportable data and four accessible data columns.",
+      "dependsOn": ["existing shared frame state/export behavior; browser acceptance unverified"]
+    },
+    {
+      "name": "OperationalWriteNotice / StaleRefreshWarning / useDataState",
+      "kind": "existing shared trust contracts",
+      "owner": "web\\src\\components\\feedback\\OperationalWriteNotice.tsx; web\\src\\components\\feedback\\StaleRefreshWarning.tsx; web\\src\\hooks\\useDataState.ts",
+      "evidence": "OperationalWriteNotice.tsx:15-43; StaleRefreshWarning.tsx:48-115; useDataState.ts:31-55; FleetOperationsPage.tsx:64-71,137-147",
+      "contract": "Read-only reason, independent source warning labels, retained data, fatalError only when no payload, paused/offline refresh, polite status announcements and per-source retry.",
+      "dependsOn": ["web\\src\\api\\dataState.ts", "web\\src\\hooks\\useOperationalMode.tsx", "DataStateNotice"]
+    },
+    {
+      "name": "FleetResourceEditorDialog / CancelReservationDialog / DeleteFleetResourceDialog",
+      "kind": "feature-owned workflows reusing existing overlays and fields",
+      "owner": "web\\src\\features\\fleet-ops\\components\\FleetResourceEditorDialog.tsx",
+      "evidence": "FleetResourceEditorDialog.tsx:42-111; FleetOperationsPage.tsx:281-312; MutationErrorDialog.tsx:19-44",
+      "contract": "Six typed editor kinds; Modal/ConfirmDialog, Button/Input/Select/Textarea/Toggle; original versions, pending state, validation, discard guard, 409 version/conflict refresh recovery. No replacement overlay engine.",
+      "dependsOn": ["six resource dialogs", "ReservationFields", "ChargingWindowsEditor", "useDiscardChangesGuard", "MutationErrorDialog", "useFleetOps"]
+    },
+    {
+      "name": "Button / Text / Subhead / StatusPill / feedback primitives / FadeIn",
+      "kind": "existing shared primitives",
+      "owner": "web\\src\\components\\ui\\StatusPill.tsx; existing category barrels",
+      "evidence": "StatusPill.tsx:4-32; ReservationActions.tsx:26-63; WorkOrderBoard.tsx:83-129; FleetOperationsPage.tsx:15-18,149-280",
+      "contract": "Native button semantics, localized action names, disabled reasons, explicit 44px icon controls, semantic status text plus a decorative dot; eight FadeIn content wrappers. Preserve OS/low-bandwidth motion preferences.",
+      "dependsOn": ["shared theme/density/typography/focus/motion contracts; only StatusPill internals inspected here"]
+    }
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\fleet-ops\\components\\DriverRoster.tsx",
+      "line": 77,
+      "rule": "MDC-020 / shared component reuse",
+      "detail": "Named edit/delete icon-button pairs repeat in DriverRoster, AssignmentRoster, ChargingPolicyMatrix, CostCenterAllocation and WorkOrderBoard. ReservationActions already centralizes the reservation-specific three-action pattern.",
+      "fix": "Keep domain callbacks and cancel eligibility local; reuse an existing shared action pattern if its named/disabled/44px contract fits. Otherwise consolidate only the proven repeated presentation after broader inventory evidence, not a speculative new global component.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\fleet-ops\\components\\AssignmentRoster.tsx",
+      "line": 121,
+      "rule": "MDC-026",
+      "detail": "Six content sections use the same loading skeleton, fatal error/retry and contextual empty-state branching. Existing feedback components are reused; this is repeated orchestration, not evidence of a competing state system.",
+      "fix": "Retain independent state surfaces; only adopt an existing shared content-state composition if it preserves section titles, actions, geometry and retry.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "responsive": {
+    "evidence": ["FleetOperationsPage.tsx:38,193-241", "ReservationPanel.tsx:130-159", "WorkOrderBoard.tsx:76-89", "CostCenterAllocation.tsx:66-107", "ChargingWindowsEditor.tsx:49"],
+    "currentSourceStrategy": "Page sections stack until xl; the roster/allocation group becomes two columns. Reservation day cards reflow 1/2/5 columns; maintenance lanes become five columns at xl, otherwise stack. Several feature children use min-w-0 and break-words. All four DataTables specify three mobile-visible columns.",
+    "issues": [
+      {
+        "file": "web\\src\\features\\fleet-ops\\components\\ChargingPolicyMatrix.tsx",
+        "line": 143,
+        "rule": "MDC-023 / MDC-043 / no mobile information loss",
+        "detail": "mobileColumns retains only vehicle/policy/actions, hiding target SoC, max power, allowed windows and enabled state below md. The other three tables similarly hide driver/status/period, assignment start/end and driver guardrails. DataTable.tsx:725 implements hidden md:table-cell; no mobilePresentation or expanded detail renderer is passed by these callers.",
+        "fix": "Use the existing mobilePresentation contract with allDetails and inlineActions to preserve every field, or retain a deliberate scrollable complete matrix. Preserve table IDs, loaded pagination/filter/export ownership and all actions. Do not require write mode to read hidden details.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\fleet-ops\\components\\CostCenterAllocation.tsx",
+        "line": 69,
+        "rule": "MDC-043 / narrow-container layout",
+        "detail": "Cost-center title and a non-wrapping status-plus-two-actions row share flex width; action controls alone require roughly 88px plus status and gaps. The title wrapper lacks min-w-0, creating a narrow-card/long-name overflow risk. This is source risk, not a reproduced viewport defect.",
+        "fix": "Allow header reflow, give the title column min-w-0 and deliberate wrapping, and retain status and both 44px named actions at 320px and narrow allocated card widths.",
+        "owner": "page",
+        "confidence": "medium"
+      }
+    ],
+    "verification": "No browser or viewport exercises. 320/375/390/430/768/1024/1280/1440/1920/2560, allocated-container widths, RTL, 200% text, long labels and touch overlap remain unverified."
+  },
+  "accessibility": {
+    "sourcePositives": [
+      "Named localized edit/cancel/delete controls and explicit min-h-11/min-w-11 targets in ReservationActions.tsx:26-63 and roster action cells.",
+      "Maintenance lanes use named section elements and article cards at WorkOrderBoard.tsx:81-89; status has textual labels, not only hue.",
+      "Forecast supplies localized ariaLabel and date/expected/lower/upper dataColumns at UtilizationForecastChart.tsx:54-71.",
+      "Charging-window fieldset associates group error via useId/aria-describedby and ErrorText at ChargingWindowsEditor.tsx:17,31-35,85.",
+      "Shared PageContainer route-focus heading and StaleRefreshWarning polite status semantics exist in inspected source."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\fleet-ops\\components\\DriverRoster.tsx",
+        "line": 139,
+        "rule": "MDC-040 / MDC-044 / meaningful localized table names",
+        "detail": "Four tables omit caption/name. DataTable.tsx:929-930 falls back to technical tableId, so accessible names are fleet-ops:drivers, fleet-ops:assignments, fleet-ops:reservations and fleet-ops:charging-policies rather than their localized visible section titles.",
+        "fix": "Pass the existing localized section title as caption or name; retain tableId unchanged as a persistence identity.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\fleet-ops\\components\\ChargingWindowsEditor.tsx",
+        "line": 38,
+        "rule": "MDC-040 / valid fieldset group semantics",
+        "detail": "The legend is nested inside a div rather than being the direct first fieldset legend child. Group naming should not rely on invalid legend placement.",
+        "fix": "Place the legend directly under fieldset and compose the add-window action alongside it without invalid nesting; preserve error association and all individual field labels.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ],
+    "verification": "Keyboard order, focus trap/restoration, nested delete/error/discard overlays, actual screen-reader announcement, composed contrast, forced colors, target sizes and reduced-motion behavior not exercised."
+  },
+  "states": {
+    "sourceEvidence": [
+      "FleetOperationsPage.tsx:64-79,137-147: eight independent DataState adapters, fatalError usage and source stale warnings.",
+      "FleetOperationsPage.tsx:97-102,118-123,281-312: read-only transitions close all mutation targets and gate mounts/actions.",
+      "ReservationPanel.tsx:117-127; DriverRoster.tsx:125-136; AssignmentRoster.tsx:121-130; ChargingPolicyMatrix.tsx:125-135; WorkOrderBoard.tsx:66-74: per-section skeleton/error/retry/empty.",
+      "FleetKpis.tsx:87-152: unavailable metrics use null, coverage and retained/partial source context remain visible.",
+      "MutationErrorDialog.tsx:19-44: localized generic and 409 version/conflict errors with close and conflict refresh."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\fleet-ops\\pages\\FleetOperationsPage.tsx",
+        "line": 127,
+        "rule": "MDC-026 / actionable initial dependency failure",
+        "detail": "vehiclesQuery is omitted from PageLayout.query and has no fatal error/initial-loading surface. Its StaleRefreshWarning at line 140 returns null without retained data (StaleRefreshWarning.tsx:60). A first-load vehicle failure therefore leaves New reservation disabled without a named vehicle error/retry; other vehicle-backed editors receive empty choices.",
+        "fix": "Add a source-specific initial failure/loading notice with retry and explicit choice-unavailable state; do not replace independent operational sections or reinterpret a failed vehicle source as an empty fleet.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\fleet-ops\\pages\\FleetOperationsPage.tsx",
+        "line": 227,
+        "rule": "MDC-026 / independent-source availability",
+        "detail": "Cost-center panel loading combines cost centers, reservations and work orders; error combines all three fatal errors. CostCenterAllocation.tsx:55-64 then replaces the entire panel, hiding successfully loaded cost-center identities and edit/delete controls when only an aggregate dependency fails.",
+        "fix": "Preserve usable cost-center records and actions while marking reservation/order-derived allocations unavailable with independent retry/context. Never calculate fabricated zeros from failed dependencies.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\fleet-ops\\components\\ReservationPanel.tsx",
+        "line": 123,
+        "rule": "MDC-026 / truthful empty-state scope",
+        "detail": "Empty text says no reservations in this planning window, but the page passes only limit=100 and no from/to. It is an undated loaded operational list, as FleetKpis.tsx:81 explicitly describes.",
+        "fix": "Align empty copy with the actual returned list scope; preserve the independent 14-day forecast window and do not imply server date filtering.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ],
+    "verification": "Initial/empty/partial/refresh-error/offline/as-of/success/disabled/conflict branches are source-inspected only. No fixtures or mutations run; existing tests are not borrowed runtime proof."
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\fleet-ops\\components\\ReservationActions.tsx",
+      "line": 44,
+      "rule": "MDC-010 / MDC-012 / MDC-020",
+      "detail": "Fixed text-amber-300 cancel and text-rose-300 delete styling overrides semantic shared button treatment. Similar fixed rose-300 classes repeat across five resource views and charging-window removal. These are meaningful danger/warning cues, not decorative neon, but theme contrast is not established.",
+      "fix": "Reuse existing theme-aware semantic danger/warning styling where applicable; retain labels, distinction and target sizing. Measure composed light/dark contrast rather than simply choosing a different fixed saturation.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\fleet-ops\\components\\MutationErrorDialog.tsx",
+      "line": 34,
+      "rule": "MDC-013 / canonical typography",
+      "detail": "Ad-hoc text-sm paragraph remains despite shared Text; charging-window legend/body likewise use text-sm/font-semibold at ChargingWindowsEditor.tsx:38,46.",
+      "fix": "Use existing Text/role wrappers with semantic element overrides; retain alert role and valid fieldset semantics.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\fleet-ops\\components\\CostCenterAllocation.tsx",
+      "line": 106,
+      "rule": "Mission visual hierarchy / MDC-013",
+      "detail": "A two-column inner grid contains bookings, maintenance-cost paragraph and open-orders as three unlike cells, producing an asymmetric hierarchy with a further mt-3 on maintenance cost. This is source layout evidence, not a screenshot assessment.",
+      "fix": "Use consistent label/value grouping and responsive geometry for all three values without dropping monetary context or inventing metrics.",
+      "owner": "page",
+      "confidence": "medium"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\features\\fleet-ops\\pages\\FleetOperationsPage.tsx",
+      "line": 57,
+      "rule": "MDC-023 / truthful result coverage",
+      "detail": "Six lists load limit=100 with no UI-driven server offset; table pagination only paginates loaded items. Summary discloses partial reservations/assignments/work orders, but driver/policy views, choice lists and cost-center aggregates do not expose complete per-source total/offset coverage. Records beyond the first batch may be unreachable; actual server volume is unknown.",
+      "fix": "Display loaded/source coverage per affected domain and distinguish incomplete choices/aggregates. If full result navigation is required, integrate the existing typed offset filters and explicit total metadata; coordinate integration before claiming complete backend results.",
+      "owner": "integration",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\fleet-ops\\helpers.ts",
+      "line": 63,
+      "rule": "MDC-045 / unknown is not measured zero",
+      "detail": "Allocation sums null cost_minor as zero, and mixes all related orders before selecting a single currency. Mixed currencies yield no displayed amount, while null-valued costs with one known currency can appear as a definite subtotal. formatMinorUnits at lines 102-104 always divides by 100 for any supplied currency. Backend minor-unit contract and completeness are unverified.",
+      "fix": "Preserve raw monetary fields and current behavior as a baseline, then resolve unknown-cost/partial-coverage/multi-currency semantics with the data owner. Use existing source-aware currency formatting only after equivalence is established; do not silently change calculations during cosmetic migration.",
+      "owner": "integration",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\fleet-ops\\components\\ReservationPanel.tsx",
+      "line": 47,
+      "rule": "MDC-032 / MDC-044 / date identity",
+      "detail": "Calendar groups starts_at by raw ISO date prefix, chooses first five unique dates in incoming order, and formats times through display helpers. The list is not necessarily sorted by date in inspected frontend source; UTC/source-day grouping may disagree with displayed local time near midnight. Backend ordering and timezone conventions are unknown.",
+      "fix": "Preserve full reservation table and original instants; verify intended business-day/timezone ordering before adapting calendar grouping. Do not replace independent reservation dates with workspace range controls.",
+      "owner": "integration",
+      "confidence": "medium"
+    }
+  ],
+  "priority": {
+    "level": "high",
+    "reason": "Operator-critical page already uses the current architecture and restrained surfaces; modernization should prioritize read-only access to complete mobile details, dependency-failure recovery and truthful loaded coverage over decorative replacement.",
+    "order": ["Preserve multi-vehicle workflows and concurrency guards", "Restore mobile field readability using existing table contract", "Expose failed/unavailable choice sources and partial aggregates", "Resolve data-owner currency/calendar semantics", "Normalize semantic button/typography presentation", "Centralized browser and accessibility acceptance"],
+    "visualNoiseAssessment": {
+      "pageLocal": "Bounded source scan found 0 neon/glow/fixed-white/shadow pattern matches, 0 raw prohibited controls, 0 static CSS-variable inline styles and 0 direct chart/map/motion imports in the page.",
+      "dependencies": "Inspected feature source uses neutral surface/border/text variables. Status dots use sky/amber/orange/rose/emerald 500 classes; StatusPill.tsx:23-28 confines color to a 1.5-unit decorative dot, with neutral text and surface. Do not equate every semantic dot with neon.",
+      "forecast": "Chart uses blue expected line plus 0.18-opacity orange uncertainty fill; chartUtils.tsx:5 maps CHART_COLORS to colors.ts:31-40,65 CB-safe palette, not the separate opt-in neon palette. No rainbow/glow source treatment found.",
+      "limits": "Actual saturation, contrast, pure-white inheritance and visual balance remain unverified in composed themes. Existing explicit user chart/theme preferences must not be force-reset."
+    }
+  },
+  "requiredSharedChanges": [],
+  "competingImplementations": [
+    {
+      "file": "web\\src\\features\\fleet-ops\\pages\\FleetOperationsPage.tsx",
+      "line": 15,
+      "rule": "MDC-002 / one existing architecture",
+      "detail": "No competing table, query client, overlay, theme, token, formatter or workspace selection engine observed in the assigned page and inspected dependencies. Existing feature rosters/calendar/board are domain presentations, not evidence of a rival design system.",
+      "fix": "Reuse DataTable.mobilePresentation, semantic Button variants, Text wrappers, PageLayout, OperationalBrief and current trust/overlay APIs; no new shared component requested by this evidence.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "preservation": {
+    "sourceSha256": "893e3a915993ed9e2ee11b05d4098c7f494a86963a398f48c2ca5fd4248d74fa",
+    "sourceHashAlgorithm": "SHA-256 of page file bytes",
+    "currentLineCount": 316,
+    "sectionCount": 8,
+    "sectionNames": [
+      {"name": "Operational record summary", "file": "web\\src\\features\\fleet-ops\\pages\\FleetOperationsPage.tsx", "line": 150, "count": 1, "preserve": "Four metrics and source/context details through OperationalBrief."},
+      {"name": "Reservation calendar and table", "file": "web\\src\\features\\fleet-ops\\pages\\FleetOperationsPage.tsx", "line": 178, "count": 1, "preserve": "First-five-day preview, all loaded reservation rows and row/day actions."},
+      {"name": "Fleet drivers", "file": "web\\src\\features\\fleet-ops\\pages\\FleetOperationsPage.tsx", "line": 195, "count": 1, "preserve": "Identity, reference, active state, charge cap and curfew."},
+      {"name": "Assignment roster", "file": "web\\src\\features\\fleet-ops\\pages\\FleetOperationsPage.tsx", "line": 209, "count": 1, "preserve": "Driver/vehicle IDs and names, start, nullable ongoing end and notes in editor."},
+      {"name": "Cost-center allocation", "file": "web\\src\\features\\fleet-ops\\pages\\FleetOperationsPage.tsx", "line": 223, "count": 1, "preserve": "Code/name/active state, bookings, maintenance money and open orders."},
+      {"name": "Charging policy matrix", "file": "web\\src\\features\\fleet-ops\\pages\\FleetOperationsPage.tsx", "line": 244, "count": 1, "preserve": "Vehicle, policy/priority, target SoC, nullable W limit, allowed windows, effective dates and enabled state."},
+      {"name": "Maintenance work-order board", "file": "web\\src\\features\\fleet-ops\\pages\\FleetOperationsPage.tsx", "line": 259, "count": 1, "preserve": "All five lanes: open, scheduled, in_progress, completed, cancelled; severity/title/vehicle/due threshold and actions."},
+      {"name": "Utilization forecast", "file": "web\\src\\features\\fleet-ops\\pages\\FleetOperationsPage.tsx", "line": 273, "count": 1, "preserve": "Expected mean, lower/upper uncertainty, quality/limitations, 0-100 axis, export/accessibility data and source window."}
+    ],
+    "frameCounts": {
+      "pageGlassPanel": 0,
+      "pageChartContainer": 0,
+      "featureLayoutCard": 6,
+      "featureChartCard": 1,
+      "featureOperationalBrief": 1,
+      "dataTables": 4,
+      "pageStaleRefreshWarnings": 8,
+      "pageConditionalDialogMounts": 3,
+      "editorKinds": 6,
+      "note": "Count semantic sections through extracted feature components, not only GlassPanel/ChartContainer tags in the 316-line orchestrator."
+    },
+    "actions": [
+      "Header New reservation; empty reservation Add action; reservation edit/cancel/delete from calendar cards and rows. Cancel shown only for requested/confirmed.",
+      "Add/edit/delete driver, assignment, cost center, charging policy and work order; dialog save/cancel/close, destructive confirmations, pending states and unsaved-discard guard.",
+      "Reservation status transitions requested->confirmed, confirmed->completed; terminal cancelled/completed remain terminal in ReservationFields.tsx:38-43.",
+      "Work-order allowed transitions and terminal states from WorkOrderDialog.tsx:29-35,115-128.",
+      "Per-source retry, stale refresh, aggregate dependency retry, conflict refresh and retained-data recovery.",
+      "Four table loaded-result pagination/value filters/column layout and inherited CSV/JSON export scope; preserve IDs fleet-ops:reservations, fleet-ops:drivers, fleet-ops:assignments, fleet-ops:charging-policies.",
+      "Forecast ChartCard exportable data, data-table alternative and stable chartKey fleet-ops-utilization. Additional shared chart controls are not inspected or claimed."
+    ],
+    "dataBehavior": [
+      "Keep fleet-wide reads and local per-record vehicle/driver selection; do not substitute a shell-selected single vehicle. Header vehicle/range selection intentionally does not scope these operational lists.",
+      "Eight independent requests and retained payloads; six loaded lists capped at 100; true source totals/offsets must remain distinct from loaded counts and local filters.",
+      "Four KPIs: requested/confirmed reservation count; distinct loaded assignment vehicle IDs, not currently active assignment count; nonterminal loaded orders; arithmetic mean of returned forecast vehicle-day utilization rounded to one decimal. helpers.ts:16-36.",
+      "Forecast UTC midnight-to-plus-14-days window is frozen per mount. Aggregate forecast groups by date and averages expected/lower/upper across returned vehicles, rounds to one decimal and derives band width. helpers.ts:76-99.",
+      "Read-only/as-of/offline write blocking, editor target clearing, original optimistic concurrency versions and live-mode request guards survive. No claims that these operational lists are historical snapshots.",
+      "Reservation driver must be assigned to selected vehicle for the entire period; vehicle changes clear selected driver. ReservationFields.tsx:55-67,102; ReservationDialog.tsx:75-81.",
+      "Retain inactive existing assignment-driver/cost-center choices when editing, plus client validation, nullable fields, full-period checks, guardrails and terminal-state restrictions.",
+      "Charging policy max_power_w and work-order due_odometer_m remain SI; display conversion uses useUnits, and WorkOrderDialog.tsx:57-59,185 converts editor distance to/from SI at the boundary. cost_minor/currency stay raw wire fields.",
+      "Charging windows preserve weekday/local-time values, overnight wrap and overlap validation. chargingWindowUtils.ts:15-40. Preserve device-local date form conversions in formUtils.ts:1-12 until timezone semantics are owner-resolved.",
+      "Cancellation preserves reservation vehicle/driver/cost center/title/purpose/start/end while changing status; delete/update preserve original version. All successful fleet mutations invalidate the existing fleet-ops key."
+    ],
+    "sourceUnchanged": "Page hash checked twice during inspection; final verification must compare report hash to current bytes. No source/UI change made.",
+    "lineCountEvidence": "Get-Content page count returned 316. Bounded feature production-file enumeration captured individual line counts; no pre-modernization comparison or runtime section count is claimed."
+  },
+  "evidenceLimits": {
+    "method": "Phase 0 bounded read-only source audit of one route and its page-specific presentation/data dependencies; targeted shared dependency excerpts only.",
+    "contractCitations": [
+      "docs\\frontend-worker-conventions.md:39-75 Phase 0 schema, scope, real citations and evidence limits.",
+      "docs\\frontend-design-contract.md:11-69 authority/preservation/one architecture; 74-109 reuse inventory; 167-188 MDC-010 through MDC-047; 339-395 centralized acceptance.",
+      "docs\\frontend-mission.md:19-105 sections 0/1; 238-394 color/text/intensity/surfaces; 507-778 layout/responsive/tables/forms/states; 812-1053 chart/accessibility/motion/data separation; 1416-1486 visual QA and page acceptance."
+    ],
+    "performed": [
+      {"command": "Get-FileHash web\\src\\features\\fleet-ops\\pages\\FleetOperationsPage.tsx -Algorithm SHA256", "exitCode": 0, "output": "893E3A915993ED9E2EE11B05D4098C7F494A86963A398F48C2CA5FD4248D74FA"},
+      {"command": "(Get-Content web\\src\\features\\fleet-ops\\pages\\FleetOperationsPage.tsx).Count", "exitCode": 0, "output": "316"},
+      {"command": "Inline Python re.findall over the assigned page: staticInlineStyle=style=\\{\\{[^\\n]*var\\(--; rawControls=<(button|input|textarea|select|table)\\b; directLibrary=from ['\"](recharts|react-leaflet|framer-motion)['\"]; neonGlowWhite=neon|glow|text-white|bg-white|shadow-; GlassPanel=<GlassPanel\\b; ChartContainer=<ChartContainer\\b", "exitCode": 0, "output": "staticInlineStyle=0\nrawControls=0\ndirectLibrary=0\nneonGlowWhite=0\nGlassPanel=0\nChartContainer=0", "limit": "Lexical page-only counts, not full semantic violations certification or dependent-source visual acceptance."}
+    ],
+    "executionFailures": [
+      "First bounded PowerShell regex batch exited 1 with ParserError Unexpected token ']' before execution; corrected batch ran successfully. No failed command is treated as passing evidence.",
+      "Initial useOperationalMode.ts and chartUtils.ts reads found no file; glob located and subsequent reads inspected useOperationalMode.tsx and chartUtils.tsx."
+    ],
+    "reportValidation": {
+      "command": "Inline Python json.loads plus assertions for 20 required top-level fields, issue metadata, citation line bounds, filesRead existence, page SHA-256 and line count.",
+      "exitCode": 0,
+      "output": "PASS JSON parse; 20 required fields; issue fields and line bounds; filesRead paths exist; SHA-256 unchanged; 316 page lines; 8 preserved content sections.",
+      "verifiedAtUtc": "2026-10-07T07:10:20Z",
+      "limit": "Report/source integrity only, not UI/runtime acceptance."
+    },
+    "notPerformed": [
+      "No Git operations, backend handler/router inspection, network requests, browser, screenshots, keyboard/screen reader tests, production mutations or nested agents.",
+      "No TypeScript, full violations audit script, lint, tests or build. Audit script was read but not executed because it unconditionally runs project TypeScript; assignment/design contract prohibit whole-project gates during this Phase 0 audit.",
+      "No current backend/runtime/unit/authentication/completeness acceptance; hook request strings are the only endpoint evidence.",
+      "No chart frame, Modal, discard guard, formatter, theme or shell implementation-wide audit. Imported shared contracts not directly inspected are identified as such.",
+      "Historical receipts and test filenames were not accepted as current proof. No migration completion percentages or all-checks-pass claim."
+    ],
+    "ownedFiles": ["docs\\frontend-audits\\audit-page-132.json", ".agent-status\\audit-page-132.txt"],
+    "sharedChangeConclusion": "No new shared API/source change required by confirmed evidence. Existing mobile table, localized caption/name, semantic Button, Text and trust-state APIs suffice; data semantics require integration-owner clarification before changing behavior."
+  },
+  "filesRead": [
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\fleet-ops\\pages\\FleetOperationsPage.tsx",
+    "web\\src\\features\\fleet-ops\\components\\index.ts",
+    "web\\src\\features\\fleet-ops\\components\\editorTypes.ts",
+    "web\\src\\features\\fleet-ops\\components\\FleetKpis.tsx",
+    "web\\src\\features\\fleet-ops\\components\\ReservationPanel.tsx",
+    "web\\src\\features\\fleet-ops\\components\\ReservationActions.tsx",
+    "web\\src\\features\\fleet-ops\\components\\DriverRoster.tsx",
+    "web\\src\\features\\fleet-ops\\components\\AssignmentRoster.tsx",
+    "web\\src\\features\\fleet-ops\\components\\CostCenterAllocation.tsx",
+    "web\\src\\features\\fleet-ops\\components\\ChargingPolicyMatrix.tsx",
+    "web\\src\\features\\fleet-ops\\components\\WorkOrderBoard.tsx",
+    "web\\src\\features\\fleet-ops\\components\\UtilizationForecastChart.tsx",
+    "web\\src\\features\\fleet-ops\\components\\FleetResourceEditorDialog.tsx",
+    "web\\src\\features\\fleet-ops\\components\\CancelReservationDialog.tsx",
+    "web\\src\\features\\fleet-ops\\components\\DeleteFleetResourceDialog.tsx",
+    "web\\src\\features\\fleet-ops\\components\\MutationErrorDialog.tsx",
+    "web\\src\\features\\fleet-ops\\components\\DriverDialog.tsx",
+    "web\\src\\features\\fleet-ops\\components\\AssignmentDialog.tsx",
+    "web\\src\\features\\fleet-ops\\components\\CostCenterDialog.tsx",
+    "web\\src\\features\\fleet-ops\\components\\ReservationDialog.tsx",
+    "web\\src\\features\\fleet-ops\\components\\ReservationFields.tsx",
+    "web\\src\\features\\fleet-ops\\components\\ChargingPolicyDialog.tsx",
+    "web\\src\\features\\fleet-ops\\components\\ChargingWindowsEditor.tsx",
+    "web\\src\\features\\fleet-ops\\components\\chargingWindowUtils.ts",
+    "web\\src\\features\\fleet-ops\\components\\WorkOrderDialog.tsx",
+    "web\\src\\features\\fleet-ops\\components\\formUtils.ts",
+    "web\\src\\features\\fleet-ops\\helpers.ts",
+    "web\\src\\api\\hooks\\useFleetOps.ts",
+    "web\\src\\api\\hooks\\useVehicles.ts",
+    "web\\src\\hooks\\useDataState.ts",
+    "web\\src\\hooks\\useOperationalMode.tsx",
+    "web\\src\\components\\feedback\\StaleRefreshWarning.tsx",
+    "web\\src\\components\\feedback\\OperationalWriteNotice.tsx",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\layout\\PageContainer.tsx",
+    "web\\src\\components\\ui\\DataTable.tsx",
+    "web\\src\\components\\ui\\MobileDataTableAdapter.types.ts",
+    "web\\src\\components\\ui\\StatusPill.tsx",
+    "web\\src\\components\\charts\\index.ts",
+    "web\\src\\components\\charts\\chartUtils.tsx",
+    "web\\src\\lib\\colors.ts",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\App.tsx",
+    "web\\src\\lib\\routeRegistry.ts",
+    "web\\src\\api\\dataState.ts"
+  ]
+}

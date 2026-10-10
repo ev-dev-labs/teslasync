@@ -113,11 +113,11 @@ beforeEach(() => {
 describe('ChargingHeatmapPage — KPI band branches', () => {
   it('shows skeletons (not cards) while the sessions query is in flight', () => {
     mockSessions.mockReturnValue(makeQuery({ isLoading: true, data: undefined }));
-    const { container } = renderPage();
+    renderPage();
 
     expect(kpiRegion()).toBeInTheDocument();
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
-    expect(within(kpiRegion()).queryByText('Total Sessions')).not.toBeInTheDocument();
+    expect(kpiRegion().querySelector('[data-operational-brief][aria-busy="true"] [data-operational-metric] [aria-hidden="true"][class*="bg-[var(--surface-3)]"]')).not.toBeNull();
+    expect(kpiRegion().querySelector('[data-operational-value]')).not.toBeInTheDocument();
   });
 
   it('shows a retryable error (never fabricated zeros) when the sessions query fails', () => {

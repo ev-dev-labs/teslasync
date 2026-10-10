@@ -145,7 +145,7 @@ describe('CommandsPage', () => {
     expect(
       screen.getByRole('heading', {
         level: 1,
-        name: 'Vehicle Command Center',
+        name: 'Vehicle command center',
       }),
     ).toBeInTheDocument();
     expect(screen.getByLabelText('Loading your fleet')).toBeInTheDocument();
@@ -209,6 +209,7 @@ describe('CommandsPage', () => {
     );
     expect(screen.queryByTestId('vehicle-management-workspace')).not.toBeInTheDocument();
     expect(screen.getByText('1/2 last reported active')).toBeInTheDocument();
+    expect(screen.getByText('1/2 last reported active').closest('[data-action-group="metadata"]')).not.toBeNull();
 
     expect(screen.queryByLabelText('Select vehicle')).not.toBeInTheDocument();
   });

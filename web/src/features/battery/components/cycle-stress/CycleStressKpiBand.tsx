@@ -28,6 +28,7 @@ import {
 } from './labels';
 import { CycleStressQueryStatus } from './CycleStressQueryStatus';
 import type { CycleStressQueryState } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface CycleStressKpiBandProps {
   result: CycleStressResult;
@@ -48,6 +49,7 @@ export function CycleStressKpiBand({
   onDeepThresholdChange,
   onExponentChange,
 }: CycleStressKpiBandProps) {
+  useNumberFormatting();
   const { t } = useTranslation();
   const resolved = state.isResolved && !state.error;
   const unresolvedSubtitle = !state.vehicleSelected
@@ -153,7 +155,6 @@ export function CycleStressKpiBand({
                 ? cycleStressNumber(
                     result.continuity.acceptedIntervals,
                     locale,
-                    0,
                   )
                 : '—'
             }
@@ -179,7 +180,6 @@ export function CycleStressKpiBand({
                 ? cycleStressNumber(
                     result.summary.equivalentFullCycles,
                     locale,
-                    2,
                   )
                 : '—'
             }
@@ -203,7 +203,6 @@ export function CycleStressKpiBand({
                 ? cycleStressNumber(
                     result.summary.depthWeightedIndex,
                     locale,
-                    2,
                   )
                 : '—'
             }
@@ -269,7 +268,6 @@ export function CycleStressKpiBand({
                 ? `${cycleStressNumber(
                     result.coverage.support.index,
                     locale,
-                    1,
                   )}/100`
                 : '—'
             }

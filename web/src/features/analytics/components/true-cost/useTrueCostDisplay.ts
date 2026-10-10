@@ -8,12 +8,15 @@ import {
   convertEnergyFromSI,
 } from '@/lib/unitConversion';
 import type { TrueCostDisplay } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { getGlobalPrecision } from '@/lib/numberFormat';
 
 function finite(value: number | null | undefined): value is number {
   return value != null && Number.isFinite(value);
 }
 
 export function useTrueCostDisplay(): TrueCostDisplay {
+  const { precision: displayPrecision, locale: displayLocale } = useNumberFormatting();
   const { i18n } = useTranslation();
   const { unitPrefs, formatDistance, formatEnergy } = useUnits();
   const { formatCurrency: currency } = useFormatting();
@@ -22,22 +25,22 @@ export function useTrueCostDisplay(): TrueCostDisplay {
   const energyUnit = unitPrefs.energy;
 
   const formatNumber = useCallback(
-    (value: number | null | undefined, precision = 2) =>
+    (value: number | null | undefined, precision = getGlobalPrecision()) =>
       finite(value)
         ? new Intl.NumberFormat(locale, {
-          minimumFractionDigits: 0,
+          minimumFractionDigits: precision,
           maximumFractionDigits: precision,
         }).format(value)
         : '—',
-    [locale],
+    [locale, displayPrecision, displayLocale],
   );
   const formatCurrency = useCallback(
-    (value: number | null | undefined, precision = 2) =>
+    (value: number | null | undefined, precision?: number) =>
       finite(value) ? currency(value, precision) : '—',
     [currency],
   );
   const formatSignedCurrency = useCallback(
-    (value: number | null | undefined, precision = 2) => {
+    (value: number | null | undefined, precision?: number) => {
       if (!finite(value)) return '—';
       return `${value > 0 ? '+' : ''}${currency(value, precision)}`;
     },
@@ -51,7 +54,7 @@ export function useTrueCostDisplay(): TrueCostDisplay {
   const formatDistanceKm = useCallback(
     (kilometres: number | null | undefined) =>
       finite(kilometres)
-        ? formatDistance(kilometres * 1000, { precision: 1 })
+        ? formatDistance(kilometres * 1000)
         : '—',
     [formatDistance],
   );
@@ -63,7 +66,7 @@ export function useTrueCostDisplay(): TrueCostDisplay {
   const formatCostPerDistance = useCallback(
     (costPerKm: number | null | undefined) =>
       finite(costPerKm)
-        ? currency(costPerDistanceValue(costPerKm), 4)
+        ? currency(costPerDistanceValue(costPerKm))
         : '—',
     [costPerDistanceValue, currency],
   );

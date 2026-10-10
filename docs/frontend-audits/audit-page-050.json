@@ -1,0 +1,331 @@
+{
+  "item": "audit-page-050",
+  "phase": "Phase0",
+  "page": "web\\src\\features\\analytics\\pages\\PeriodComparePage.tsx",
+  "routes": ["/period-compare"],
+  "auditMode": "read-only source inspection",
+  "purpose": "Compare one selected vehicle across two independently selected trailing-day windows.",
+  "primaryGoal": "Understand six period totals, semantic percentage changes and deterministic insights, with optional gated AI explanation.",
+  "dataSources": [
+    {
+      "hook": "usePeriodStats",
+      "file": "web\\src\\api\\hooks\\usePeriodStats.ts",
+      "line": 13,
+      "endpoint": "GET /api/v1/analytics/period-stats?vehicle_id={id}&days={days}",
+      "routeEvidence": "internal\\api\\router.go:3893",
+      "owner": "internal\\api\\periodstats\\handler.go",
+      "ownership": "Backend periodstats aggregate; independent A/B query keys ['period-stats', vehicleId, days]; AbortSignal forwarded; disabled without a vehicle.",
+      "knownContract": "Current response is explicitly km, kWh, Wh/km and kg, not fully SI-canonical wire values. DB columns are distance_m and total_energy_added_wh. No completeness metadata; days=0 means all time. Do not guess or silently reinterpret units.",
+      "evidence": ["web\\src\\api\\hooks\\usePeriodStats.ts:4-21", "internal\\api\\periodstats\\handler.go:49-65", "internal\\api\\periodstats\\handler.go:99-164"]
+    },
+    {
+      "hook": "useVehicles",
+      "file": "web\\src\\api\\hooks\\useVehicles.ts",
+      "line": 73,
+      "endpoint": "GET /api/v1/vehicles",
+      "routeEvidence": "internal\\api\\router.go:3319-3320",
+      "owner": "vehicleHandler.List",
+      "ownership": "Vehicle catalog supports banner visibility and the conditional fallback selector. Current route delegates vehicle selection to the workspace header.",
+      "evidence": ["web\\src\\features\\analytics\\pages\\PeriodComparePage.tsx:114-148", "web\\src\\api\\hooks\\useVehicles.ts:73-76"]
+    },
+    {
+      "hook": "useAiStream via AIPeriodCompareNarration",
+      "file": "web\\src\\components\\ai\\AIPeriodCompareNarration.tsx",
+      "line": 71,
+      "endpoint": "POST /api/v1/ai/analytics/period-compare/narrate",
+      "routeEvidence": "internal\\api\\ai_routes.go:134,353; internal\\api\\router.go:5053",
+      "owner": "AI guard and period-comparison narration handler",
+      "ownership": "Explicit user action only; vehicle_id/days_a/days_b operands and vehicle/window scopeKey; off-mode feature gate; never replaces deterministic comparison.",
+      "evidence": ["web\\src\\components\\ai\\AIPeriodCompareNarration.tsx:53-89", "web\\src\\components\\ai\\AIPeriodCompareNarration.tsx:116-120"]
+    }
+  ],
+  "components": [
+    {"name": "PageLayout", "owner": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx", "contract": "Existing PageContainer adapter, full allocated width, query freshness and dataSources notices; category barrel is canonical."},
+    {"name": "Section / CardGrid / LayoutCard", "owner": "web\\src\\components\\layout\\layout-reference", "contract": "One measurement/placement provider; four stable analysis-card identities; no new grid or surface owner."},
+    {"name": "OperationalBrief", "owner": "web\\src\\components\\data-display\\OperationalBrief.tsx", "contract": "Consumed existing summary renderer via category barrel and useOperationalMetrics; implementation not inspected in this audit."},
+    {"name": "DataTable", "owner": "web\\src\\components\\ui\\DataTable.tsx", "contract": "Stable tableId, numeric sort operands, pagination, inherited export pipeline, opt-in mobilePresentation and expandable details."},
+    {"name": "EmbeddedChart / ChartTooltip", "owner": "web\\src\\components\\charts", "contract": "Existing category barrel; chartKey, accessible tabular alternative, chart actions remain delegated. Shared internals not inspected."},
+    {"name": "PeriodSources", "owner": "web\\src\\features\\analytics\\components\\period-compare-modernization\\PeriodSources.tsx", "contract": "Page-specific A/B source summaries and independent retries preserve successful neighbors."},
+    {"name": "PeriodDeltaChart", "owner": "web\\src\\features\\analytics\\components\\period-compare-modernization\\PeriodDeltaChart.tsx", "contract": "Page-specific horizontal percent-delta bars; exclude zero baselines and explain omissions."},
+    {"name": "Select / Button / Badge / Text / VisuallyHidden / feedback / FadeIn", "owner": "Existing shared category barrels", "contract": "Named controls, localized text, hidden decorative icons and loading/empty/error feedback; shared behavior not runtime verified."},
+    {"name": "AIPeriodCompareNarration / AIFeatureCard", "owner": "web\\src\\components\\ai", "contract": "Opt-in gated narration, streaming-aware action and no-vehicle hint; no AI invocation performed."}
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\analytics\\pages\\PeriodComparePage.tsx",
+      "line": 170,
+      "rule": "MDC-002 / MDC-033",
+      "detail": "Six metric labels, endpoint-unit assumptions and display conversions recur in metrics, briefMetrics and PeriodSources rows.",
+      "fix": "Reuse a typed page-domain metric descriptor/operand adapter without moving queries or calculations into shared presentation. Keep null/zero, source units and independent A/B behavior.",
+      "owner": "page",
+      "confidence": "high",
+      "relatedEvidence": ["web\\src\\features\\analytics\\pages\\PeriodComparePage.tsx:170-216", "web\\src\\features\\analytics\\components\\period-compare-modernization\\PeriodSources.tsx:39-51"]
+    }
+  ],
+  "responsive": {
+    "verified": "source only",
+    "existingStrategy": "Controls wrap and are full width below sm; one CardGrid; source summaries use measured placement width >=640; chart has 320/280 heights. No viewport rendered.",
+    "findings": [
+      {
+        "file": "web\\src\\features\\analytics\\pages\\PeriodComparePage.tsx",
+        "line": 551,
+        "rule": "MDC-023 / MDC-043 / preservation",
+        "detail": "Details table hides Period A and Period B below md through mobileColumns. This caller supplies neither mobilePresentation nor expandable detail access and disables columnVisibility. DataTable applies hidden md:table-cell, so this table's baseline columns are unavailable on small screens, even though summary context retains measurements elsewhere.",
+        "fix": "Use the existing opt-in mobilePresentation with all five fields, or preserve all columns in a contained horizontal scroller. Do not remove baseline information to reduce width.",
+        "owner": "page",
+        "confidence": "high",
+        "relatedEvidence": ["web\\src\\components\\ui\\DataTable.tsx:237-248", "web\\src\\components\\ui\\DataTable.tsx:478,505,724-725", "web\\src\\features\\analytics\\pages\\PeriodComparePage.tsx:542-555"]
+      }
+    ],
+    "requiredRuntimeCoverage": ["320", "375", "390", "430", "768", "1024", "1280", "1440", "1920", "2560", "RTL", "200% text", "long translations", "chart actions and summary drawer open"]
+  },
+  "accessibility": {
+    "verified": "source only",
+    "positiveEvidence": "A/B selects and refresh have localized accessible names; decorative icons hidden; change arrows have spoken direction; chart supplies ariaLabel and dataColumns; source sections use associated headings.",
+    "findings": [
+      {
+        "file": "web\\src\\features\\analytics\\pages\\PeriodComparePage.tsx",
+        "line": 543,
+        "rule": "MDC-040 / MDC-044",
+        "detail": "DataTable receives tableId but no localized caption/name. Its native caption and aria-label fall back to the implementation identifier analytics:period-compare instead of Comparison details.",
+        "fix": "Pass a translated caption while preserving tableId persistence identity.",
+        "owner": "page",
+        "confidence": "high",
+        "relatedEvidence": ["web\\src\\components\\ui\\DataTable.tsx:924-930", "web\\src\\components\\ui\\DataTable.tsx:1446,1470"]
+      }
+    ],
+    "unverified": ["keyboard/focus order and restoration", "screen reader output", "touch target geometry", "effective contrast", "forced colors", "reduced motion"]
+  },
+  "states": {
+    "initialLoading": "comparisonState requires a pair; skeletons render for dependent outputs; successful neighbor remains visible through PeriodSources.",
+    "empty": "No selection shows a selection explanation; legitimate zero payloads remain numbers; no baseline chart is explained. The endpoint returns aggregate zeros for no rows and does not distinguish no observations from complete measured totals.",
+    "initialError": "Missing operand's fatal error suppresses dependent comparisons, not the independently available source. Per-source retry and global refresh exist.",
+    "refreshError": "Retained A/B payloads survive refresh errors; page dataSources and summary status expose degraded trust.",
+    "offline": "Paused queries retain operands; absent offline source displays waiting-for-connection explanation. Actual offline behavior unverified.",
+    "partialUnknown": "Source-level absence is preserved, but field-level nulls are coerced to zero in paired metrics; confidence is defensive because current backend always emits numeric fields.",
+    "findings": [
+      {
+        "file": "web\\src\\features\\analytics\\pages\\PeriodComparePage.tsx",
+        "line": 176,
+        "rule": "MDC-026 / unknown is not zero",
+        "detail": "When both objects exist, metric construction uses ??0 for every measurement and insights repeat the fallback. PeriodSources instead displays a dash for missing fields. A malformed/partial successful payload could become fabricated totals and favorable deltas. Current typed/server contract does not advertise nullable fields, so no present runtime failure is asserted.",
+        "fix": "Use known finite operands and missing reasons consistently; calculate each delta only when both corresponding measurements are known. Do not change legitimate server zero totals into unknowns without completeness evidence.",
+        "owner": "page",
+        "confidence": "medium",
+        "relatedEvidence": ["web\\src\\features\\analytics\\pages\\PeriodComparePage.tsx:176-187,318-325", "web\\src\\features\\analytics\\components\\period-compare-modernization\\PeriodSources.tsx:62-64"]
+      }
+    ],
+    "evidence": ["web\\src\\features\\analytics\\components\\period-compare-modernization\\comparisonState.ts:12-25", "web\\src\\features\\analytics\\pages\\PeriodComparePage.tsx:401-405,460-487,507-555", "web\\src\\components\\layout\\PageContainer.tsx:102-108,253"],
+    "tests": "Existing comparisonState and page modernization tests were inspected, NOTRUN. Mocks and historical tests are not current runtime acceptance."
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\analytics\\pages\\PeriodComparePage.tsx",
+      "line": 295,
+      "rule": "MDC-010 / MDC-012 / MDC-040",
+      "detail": "Positive/negative change body text uses fixed emerald-300/rose-300 rather than theme-resolved semantic text. Bar palette is local hard-coded hexes; contrast across light/custom/forced-color modes is unmeasured.",
+      "fix": "Reuse existing semantic text/chart tokens with restrained severity colors. Preserve neutral metrics and user-selected chart/theme preferences; measure composed contrast.",
+      "owner": "page",
+      "confidence": "high",
+      "relatedEvidence": ["web\\src\\features\\analytics\\lib\\periodCompare.ts:67-72", "web\\src\\features\\analytics\\components\\period-compare-modernization\\PeriodDeltaChart.tsx:102-103"]
+    },
+    {
+      "file": "web\\src\\features\\analytics\\pages\\PeriodComparePage.tsx",
+      "line": 271,
+      "rule": "MDC-033 / MDC-045 / specialist units",
+      "detail": "Comparison details formats all measurements as bare numbers; neither row labels nor Period A/B/change cells identify distance, energy, efficiency, cost or mass units. Summary includes units, but standalone table/export interpretation is ambiguous.",
+      "fix": "Carry unit metadata into ComparisonRow and show units in accessible cells or metric labels; preserve numeric sort operands and truthful exported raw/display values.",
+      "owner": "page",
+      "confidence": "high",
+      "relatedEvidence": ["web\\src\\features\\analytics\\pages\\PeriodComparePage.tsx:45-54,244-255,267-278,297", "web\\src\\features\\analytics\\pages\\PeriodComparePage.tsx:181-187"]
+    },
+    {
+      "file": "web\\src\\features\\analytics\\pages\\PeriodComparePage.tsx",
+      "line": 331,
+      "rule": "MDC-033 / clear comparison semantics",
+      "detail": "Distance/cost insight prose combines signed pctChange output with less/lower wording (for A<B, '-50% less'); zero movement chooses more/higher because pctChange.positive includes equality. Efficiency already uses unsigned magnitude and explicit unchanged handling.",
+      "fix": "Use unsigned localized magnitude for directional sentences and a no-change sentence at equality, retaining signed percentages in table/chart contexts.",
+      "owner": "page",
+      "confidence": "high",
+      "relatedEvidence": ["web\\src\\features\\analytics\\pages\\PeriodComparePage.tsx:331-350", "web\\src\\features\\analytics\\lib\\periodCompare.ts:38-46", "web\\src\\features\\analytics\\components\\period-compare-modernization\\PeriodCompareModernization.test.tsx:145"]
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\features\\analytics\\components\\period-compare-modernization\\PeriodDeltaChart.tsx",
+      "line": 9,
+      "rule": "MDC-002 / component-first category imports",
+      "detail": "Feature imports LayoutCard from the internal layout-reference entry rather than the canonical layout category barrel; PeriodSources does the same for useCardPlacement.",
+      "fix": "Consume the existing category export where available; if useCardPlacement is intentionally internal, have the shared owner confirm the supported consumer API rather than page-editing a barrel.",
+      "owner": "page",
+      "confidence": "high",
+      "relatedEvidence": ["web\\src\\features\\analytics\\components\\period-compare-modernization\\PeriodSources.tsx:5"]
+    },
+    {
+      "file": "web\\src\\features\\analytics\\pages\\PeriodComparePage.tsx",
+      "line": 183,
+      "rule": "MDC-026 / MDC-033 / source provenance",
+      "detail": "Energy used is actually summed charging energy added; avg efficiency is charging energy divided by completed-drive distance; CO2 saved is a fixed distance*0.120 estimate. Labels/insights can imply measured driving consumption and measured emissions savings. Current response also converts SI DB values to rounded km/kWh wire values despite SI-only target contract.",
+      "fix": "Integration owner must resolve the canonical endpoint/AI contract and provenance terminology in one coordinated change. Page owner should explain current added-energy and inferred-efficiency/CO2 semantics, without inventing measured drive consumption or independently converting the wire shape.",
+      "owner": "integration",
+      "confidence": "high",
+      "relatedEvidence": ["internal\\api\\periodstats\\handler.go:58-64,119-125,145-161", "web\\src\\api\\hooks\\usePeriodStats.ts:4-11", "web\\src\\features\\analytics\\pages\\PeriodComparePage.tsx:173-187"]
+    }
+  ],
+  "priority": {
+    "overall": "P1",
+    "P1": ["Mobile baseline access", "Unit-bearing table/export interpretation", "Truthful energy/efficiency/CO2 provenance and coordinated SI endpoint contract"],
+    "P2": ["Directional prose", "Theme-aware severity colors", "Localized table caption", "Canonical imports and descriptor duplication"],
+    "P2Defensive": ["Field-level null/finite handling"],
+    "noRedesignRequired": "Existing PageLayout/CardGrid/OperationalBrief/source-trust architecture is already adopted; preserve it."
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "Reuse DataTable mobile completeness and caption contracts",
+      "owner": "web\\src\\components\\ui\\DataTable.tsx",
+      "disposition": "reuse; no shared implementation change established",
+      "props": ["mobilePresentation", "expandable/renderExpanded", "caption", "exportValue/exportRow", "stable tableId"],
+      "variants": ["existing table or existing mobile presentation"],
+      "states": ["loading", "empty", "retained refresh error", "all five fields reachable"],
+      "usedBy": ["PeriodComparePage Comparison details"],
+      "dependsOn": ["page-owned typed row units and presentation adapter"]
+    },
+    {
+      "name": "Canonical period-stat source contract",
+      "owner": "internal\\api\\periodstats\\handler.go",
+      "disposition": "integration decision required; audit author does not modify backend or hooks",
+      "props": ["total_distance", "energy_used", "avg_efficiency", "total_cost", "co2_saved", "documented units/provenance"],
+      "variants": ["deterministic JSON", "AI narration grounded in same aggregates"],
+      "states": ["known zero", "unavailable query", "inferred values", "unknown completeness"],
+      "usedBy": ["PeriodComparePage", "PeriodSources", "AIPeriodCompareNarration"],
+      "dependsOn": ["SI cutover ownership", "existing periodstats and AI source compatibility"]
+    },
+    {
+      "name": "Reuse semantic severity and supported layout API",
+      "owner": "web\\src\\lib\\tokens.ts; web\\src\\components\\layout\\index.ts",
+      "disposition": "reuse existing tokens/category contracts; exported useCardPlacement availability not inspected",
+      "props": ["semantic text/bar colors", "LayoutCard", "placement width"],
+      "variants": ["neutral", "favorable", "unfavorable"],
+      "states": ["light/dark/custom themes", "forced colors", "measured container placement"],
+      "usedBy": ["PeriodComparePage", "PeriodDeltaChart", "PeriodSources"],
+      "dependsOn": ["existing shared-owner public API confirmation", "runtime contrast review"]
+    }
+  ],
+  "competingImplementations": {
+    "confirmed": [],
+    "notes": "No competing theme, formatter, grid, table or query system found in inspected page graph. Local delta color constants and repeated metric projections are consolidation opportunities, not evidence for building another component library."
+  },
+  "preservation": {
+    "rootSourceSha256": "C3810F79434F4D30470FBECC42B817E70D56D299D14AB151212A2B458D3F3534",
+    "currentLineCount": 565,
+    "pageAndPresentationComponentsLineCount": 759,
+    "includingDomainHelpersLineCount": 858,
+    "sectionCount": 1,
+    "analysisCardCount": 4,
+    "sectionNames": ["Comparison metrics", "Period A six-metric evidence / Period B baseline context", "Change vs period B (%)", "Insights", "Comparison details"],
+    "conditionalSections": ["Dismissible fleet-comparison banner", "Gated AI period-comparison narration", "Independent Period A/B source summaries when pair is absent"],
+    "metrics": ["Total distance", "Total drives", "Energy used", "Avg efficiency", "Total cost", "CO2 saved"],
+    "actions": ["Workspace vehicle selection", "Local fallback vehicle select only when header does not own vehicle", "Independent Period A select", "Independent Period B select", "Refresh both periods", "Retry individual source", "Dismiss banner", "Navigate to /vehicle-comparison", "Ask Helix when enabled", "Inherited summary details", "Inherited chart actions and accessible data", "Table numeric sorting/pagination/inherited export"],
+    "identities": ["period_a", "period_b", "phase40.compareBanner.dismissed.period", "period-compare-analysis", "period-compare-kpis", "period-compare-delta", "period-compare-insights", "period-compare-details", "analytics:period-compare", "period-compare-summary", "period-compare-delta-vs-b"],
+    "dataBehavior": [
+      "Keep independent 7/30/90/365/all-time A/B windows, defaults 30 and 90 and URL state. They are business comparison ranges, not duplicate workspace range selectors.",
+      "Workspace route scope exposes vehicle and does not expose global range for /period-compare. Do not register this page to replace independent windows with one header range.",
+      "Keep raw cache payloads/query keys/AbortSignal/enablement/inherited retry policy.",
+      "Retain every usable source on refresh failure; missing operands are never fabricated.",
+      "Preserve zero-baseline neutral dashes and chart omission explanation, neutral distance/drives and lower-better energy/efficiency/cost.",
+      "Keep current endpoint units until an authorized coordinated SI integration; display distance preference and number precision/locale without cache mutation.",
+      "Keep banner persistence, single-vehicle suppression, optional AI gate/scope cancellation and deterministic content.",
+      "No source changes, server requests, narration requests or production mutations performed."
+    ],
+    "sourcePatternCounts": {
+      "pageStaticInlineStyleAttributes": 0,
+      "pageRawRestrictedHtmlElementsCaseSensitive": 0,
+      "pageDirectChartMapMotionLibraryImports": 0,
+      "pageOldRelativeApiImports": 0,
+      "pageNeonWhiteGrayTextPatterns": 0,
+      "pageGlassPanelOpenings": 0,
+      "pageChartContainerOpenings": 0,
+      "pageSectionOpenings": 1,
+      "pageCardGridItems": 4,
+      "pageOperationalBriefOpenings": 1,
+      "dependencyEmbeddedChartOpenings": 1
+    },
+    "countLimits": "Counts describe this source snapshot, not a historical original or mounted geometry. GlassPanel/ChartContainer zero reflects shared LayoutCard/EmbeddedChart usage, not lost sections. Initial PowerShell raw-element scan was case-insensitive and counted Select; corrected case-sensitive scan returned zero."
+  },
+  "evidenceLimits": {
+    "runtime": "UNVERIFIED",
+    "visual": "UNVERIFIED",
+    "keyboard": "UNVERIFIED",
+    "contrast": "UNVERIFIED",
+    "viewport": "UNVERIFIED",
+    "tests": "NOTRUN",
+    "typescript": "NOTRUN: forbidden full gate for Phase0 read-only assignment",
+    "auditScript": "NOTRUN: inspected audit.sh embeds full npx tsc --noEmit; used bounded source-pattern inspection instead",
+    "git": "NOTRUN",
+    "backend": "Read only exact route/periodstats dependency evidence; no DB, HTTP execution or end-to-end completeness proof.",
+    "sourceInventory": "SHA256/line counts pin actual inspected files, with partial reads explicitly distinguished; shared transitive graph not exhaustively reviewed.",
+    "commandResults": [
+      {"command": "Get-FileHash <root page> -Algorithm SHA256", "exitCode": 0, "output": "C3810F79434F4D30470FBECC42B817E70D56D299D14AB151212A2B458D3F3534"},
+      {"command": "Get-Content owned page/presentation files; case-sensitive Select-String bounded patterns", "exitCode": 0, "output": "root=565 lines; PeriodSources=82; PeriodDeltaChart=112; periodCompare=72; restricted HTML=0; direct libraries=0; old API=0; neon/white/gray patterns=0; Section=1; card items=4"},
+      {"command": "rg scoped route/hook/data-trust/table evidence", "exitCode": 0, "output": "PeriodStats GET, vehicles GET, AI POST and canonical frontend mount source-confirmed."},
+      {"command": "rg web\\src\\hooks\\useOperationalMetrics.ts", "exitCode": null, "output": "Search path does not exist; implementation not inspected, no implementation finding claimed."}
+    ],
+    "ownedFiles": ["docs\\frontend-audits\\audit-page-050.json", ".agent-status\\audit-page-050.txt"]
+  },
+  "filesRead": [
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\analytics\\pages\\PeriodComparePage.tsx",
+    "web\\src\\features\\analytics\\components\\period-compare-modernization\\comparisonState.ts",
+    "web\\src\\features\\analytics\\components\\period-compare-modernization\\PeriodSources.tsx",
+    "web\\src\\features\\analytics\\components\\period-compare-modernization\\PeriodDeltaChart.tsx",
+    "web\\src\\features\\analytics\\lib\\periodCompare.ts",
+    "web\\src\\api\\hooks\\usePeriodStats.ts",
+    "web\\src\\api\\hooks\\useVehicles.ts",
+    "web\\src\\components\\ai\\AIPeriodCompareNarration.tsx",
+    "web\\src\\components\\ai\\AIFeatureCard.tsx",
+    "web\\src\\components\\ui\\DataTable.tsx",
+    "web\\src\\App.tsx",
+    "web\\src\\lib\\workspaceScope.ts",
+    "internal\\api\\router.go",
+    "internal\\api\\periodstats\\handler.go",
+    "internal\\api\\ai_routes.go",
+    "web\\src\\hooks\\useNumberFormatting.ts",
+    "web\\src\\lib\\numberFormat.ts",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\layout\\PageContainer.tsx",
+    "web\\src\\api\\dataState.ts",
+    "web\\src\\features\\analytics\\components\\period-compare-modernization\\comparisonState.test.ts",
+    "web\\src\\features\\analytics\\components\\period-compare-modernization\\PeriodCompareModernization.test.tsx"
+  ],
+  "sourceInventory": [
+    {"file":"docs\\frontend-design-contract.md","sha256":"17B542389CD4E98A0DFB7B4D2F2C4E2727F221AF0AC5ACB738DB5E987B282255","lineCount":394,"inspection":"full contract"},
+    {"file":"docs\\frontend-worker-conventions.md","sha256":"6CF8194644A7820926082FC065E9CBF87C1E1E2D8258C4D092DA8C962707ADC3","lineCount":80,"inspection":"full conventions"},
+    {"file":"docs\\frontend-mission.md","sha256":"2BD35429E32D06ABF109DD371C2DD011CB974EF6B8C1915B298D1A0C3D7FD98F","lineCount":1593,"inspection":"sections 0-4, 6-10, 14-18, 22-28, 30-34; headings search"},
+    {"file":".github\\skills\\audit-violations\\audit.sh","sha256":"3E5937AB2A4EA2F303A0152111794D5A3A45C24ABFE7B11400079BC4AC3DFE46","lineCount":141,"inspection":"full script; not executed"},
+    {"file":"web\\src\\features\\analytics\\pages\\PeriodComparePage.tsx","sha256":"C3810F79434F4D30470FBECC42B817E70D56D299D14AB151212A2B458D3F3534","lineCount":565,"inspection":"full root"},
+    {"file":"web\\src\\features\\analytics\\components\\period-compare-modernization\\comparisonState.ts","sha256":"E2AAE1E256837A8B28904B4D43C6FC361DE70CE8083E10AF52A24079FCC7144F","lineCount":27,"inspection":"full"},
+    {"file":"web\\src\\features\\analytics\\components\\period-compare-modernization\\PeriodSources.tsx","sha256":"0AECC4063B7DD006ACA576A6D926AACD6F260AE71343192E1ED48805EAB9A0C7","lineCount":82,"inspection":"full"},
+    {"file":"web\\src\\features\\analytics\\components\\period-compare-modernization\\PeriodDeltaChart.tsx","sha256":"668AE74B012EEFBA83329B626F8EF508D77C35E7E6206CBFCB2597C60E32982E","lineCount":112,"inspection":"full"},
+    {"file":"web\\src\\features\\analytics\\lib\\periodCompare.ts","sha256":"499FC9F5025B296659BD910AD3C1FF9EB1672B47A46AD02234FBD29607046533","lineCount":72,"inspection":"full"},
+    {"file":"web\\src\\api\\hooks\\usePeriodStats.ts","sha256":"8EC22043626B1F6090995DFB28411C23B1016E4CEBEEBEA8E8316308DEC49324","lineCount":23,"inspection":"full"},
+    {"file":"web\\src\\api\\hooks\\useVehicles.ts","sha256":"1D7AE8F07FD26C99622E84BE1E6E80B6E7C92E0FB6F17964D06DE4017D634D4B","lineCount":1898,"inspection":"hook query/request matches; only useVehicles relevant"},
+    {"file":"web\\src\\components\\ai\\AIPeriodCompareNarration.tsx","sha256":"61F16632EC7E2A94E487DEE229CDDD3529BC812E4F3513B3F343C1C51E87A743","lineCount":120,"inspection":"full"},
+    {"file":"web\\src\\components\\ai\\AIFeatureCard.tsx","sha256":"0DA96A5CE3DF7CB980AE9CCCF8D028062AB5C66A5C846D718BA39C2E37AD7111","lineCount":353,"inspection":"lines 1-220"},
+    {"file":"web\\src\\components\\ui\\DataTable.tsx","sha256":"92E3A46F15E401B57303823693AAC8825693B4EDC2B04CFE289663D8E1386438","lineCount":1687,"inspection":"lines 224-252,918-943,1400-1565 and mobile/export/naming matches"},
+    {"file":"web\\src\\App.tsx","sha256":"23A1CE852D2CE51DF5A26A5C2A5669FFA788A992355A8BCFAFB391C82B47DEF3","lineCount":918,"inspection":"PeriodCompare import and route matches only"},
+    {"file":"web\\src\\lib\\workspaceScope.ts","sha256":"AEB8C01D410F2377AA5FD713DE1A678A0360ACF647A9C882F03E46C80EFDFCD7","lineCount":168,"inspection":"full"},
+    {"file":"internal\\api\\router.go","sha256":"98B92853EBADE3DB74AD361D098BBA4472039884A407D61CE901DC3BF1FE3750","lineCount":5366,"inspection":"assigned endpoint registration matches only"},
+    {"file":"internal\\api\\periodstats\\handler.go","sha256":"76569A79E03403B9909B5017F69473B772723CD84C0FD87815B8CA05C047D0BF","lineCount":221,"inspection":"lines 49-220"},
+    {"file":"internal\\api\\ai_routes.go","sha256":"F0BCBD1B33717F76EFA91855587A239B03E8111956862F4906842251BAAC54B3","lineCount":1831,"inspection":"lines 325-357 and assigned route/mount matches"},
+    {"file":"web\\src\\hooks\\useNumberFormatting.ts","sha256":"CA9C9CE0D895CF31F23A17405FA4D4132F99FD524F970ECC75922903DEC27DD9","lineCount":47,"inspection":"full"},
+    {"file":"web\\src\\lib\\numberFormat.ts","sha256":"513E7EDF9F917D3B085D36C9449B9D2FE2DE7EE17A7B08D4C10A5A0329DA52C3","lineCount":172,"inspection":"lines 1-120"},
+    {"file":"web\\src\\components\\layout\\layout-reference\\PageLayout.tsx","sha256":"8DF73DE2D4B3FF7485019389F547D863FE8729AA0C95FA1F497487389D6B87F6","lineCount":17,"inspection":"full"},
+    {"file":"web\\src\\components\\layout\\PageContainer.tsx","sha256":"0E2E1842FCAC1FE5BD7C4C37299A76F9515D45EAFE43AD122A8E09A0BB817D55","lineCount":259,"inspection":"query/dataSources/freshness matches only"},
+    {"file":"web\\src\\api\\dataState.ts","sha256":"21FB454B3C1F01608169F3F3887911DE97F7C754663CC001236EBFDE58211761","lineCount":434,"inspection":"lines 1-240"},
+    {"file":"web\\src\\features\\analytics\\components\\period-compare-modernization\\comparisonState.test.ts","sha256":"7213F1679DE969231500520633778FE36D5E2BC98CE6D678690B06476C04EF35","lineCount":88,"inspection":"full; NOTRUN"},
+    {"file":"web\\src\\features\\analytics\\components\\period-compare-modernization\\PeriodCompareModernization.test.tsx","sha256":"B3B30111ABB75C0B275A9951A53C31E133C23FE38B331CB0781860848C84EBC6","lineCount":211,"inspection":"full; NOTRUN"}
+  ]
+}

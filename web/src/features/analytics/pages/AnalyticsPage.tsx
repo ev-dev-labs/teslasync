@@ -1,21 +1,20 @@
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Car, Zap, BarChart3, Battery } from 'lucide-react';
-import { PageContainer } from '@/components/layout';
-import { TabNav } from '@/components/ui';
-
-import { FadeIn } from '@/components/motion';
+import { PageLayout } from '@/components/layout';
 import { useRangeState } from '@/hooks/useRangeState';
 import { useFleetAnalytics } from '@/api/hooks/useAnalytics';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import {
-  HeroGauges, OverviewTab, DrivingTab, ChargingTab, BatteryTab,
+  OverviewTab, DrivingTab, ChargingTab, BatteryTab,
   type TabKey,
 } from '../components/analytics';
+import { FleetOverviewBrief } from '../components/operationalbrief-a-m/FleetOverviewBrief';
+import { AnalyticsWorkspace, retainFleetContent } from '../components/overview-modernization';
 
 export default function AnalyticsPage() {
   const { t } = useTranslation();
-  usePageTitle(t('analytics.title', 'Fleet Analytics'));
+  usePageTitle(t('analytics.title', 'Fleet analytics'));
 
   const [activeTab, setActiveTab] = useState<TabKey>('overview');
 
@@ -24,6 +23,7 @@ export default function AnalyticsPage() {
   });
 
   const fleetQuery = useFleetAnalytics({ start, end });
+  const contentQuery = retainFleetContent(fleetQuery);
 
   const tabs = useMemo(
     () => [
@@ -34,31 +34,30 @@ export default function AnalyticsPage() {
     ],
     [t],
   );
-
-
   return (
-    <PageContainer
-      title={t('analytics.title', 'Fleet Analytics')}
+    <PageLayout
+      title={t('analytics.title', 'Fleet analytics')}
       subtitle={t('analytics.subtitle', 'Comprehensive fleet performance insights')}
       query={fleetQuery}
+      busy={fleetQuery.isFetching}
+      dataSources={[{
+        id: 'analytics-fleet',
+        label: t('analytics.title', 'Fleet analytics'),
+        query: fleetQuery,
+      }]}
     >
-      {/* 1 — KPI band: full-width responsive metric grid, self-sufficient loading */}
-      <FadeIn>
-        <section aria-label={t('analytics.hero.kpis', 'Fleet summary metrics')}>
-          <HeroGauges query={fleetQuery} />
-        </section>
-      </FadeIn>
-
-      {/* 2 — Domain switcher */}
-      <nav className="mt-4" aria-label={t('analytics.tabsNav', 'Analytics sections')}>
-        <TabNav tabs={tabs} active={activeTab} onChange={(k) => setActiveTab(k as TabKey)} />
-      </nav>
-
-      {/* 3 — Active domain: responsive bento of charts, tables and breakdowns */}
-      {activeTab === 'overview' && <OverviewTab query={fleetQuery} />}
-      {activeTab === 'driving' && <DrivingTab query={fleetQuery} />}
-      {activeTab === 'charging' && <ChargingTab query={fleetQuery} />}
-      {activeTab === 'battery' && <BatteryTab query={fleetQuery} />}
-    </PageContainer>
+      <AnalyticsWorkspace
+        tabs={tabs}
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+        summary={<FleetOverviewBrief query={contentQuery} scope={`${start} – ${end}`}
+          retained={fleetQuery.data != null && (fleetQuery.isError || fleetQuery.fetchStatus === 'paused')} />}
+      >
+        {activeTab === 'overview' && <OverviewTab query={contentQuery} />}
+        {activeTab === 'driving' && <DrivingTab query={contentQuery} />}
+        {activeTab === 'charging' && <ChargingTab query={contentQuery} />}
+        {activeTab === 'battery' && <BatteryTab query={contentQuery} />}
+      </AnalyticsWorkspace>
+    </PageLayout>
   );
 }

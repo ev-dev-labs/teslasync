@@ -12,7 +12,7 @@ import {
   type RepairQuarantine,
   type RepairRule,
 } from '@/api/hooks/useDataRepair';
-import { ConfirmDialog, Textarea } from '@/components/ui';
+import { ConfirmDialog, Text, Textarea } from '@/components/ui';
 import { RepairCaseActionPanel } from './RepairCaseActionPanel';
 import { RepairImpactSummary } from './RepairImpactSummary';
 
@@ -178,9 +178,13 @@ export function RepairCaseControlledActions({
         variant={action === 'quarantine' ? 'danger' : 'warning'}
         loading={mutationPending}
         details={
-          action === 'apply' && preview.data
-            ? <RepairImpactSummary preview={preview.data} />
-            : (
+          <>
+            {!canWrite && <Text as="p" variant="caption" role="note">
+              {writeBlockReason ?? t('dataRepair.cases.readOnly', 'Repair controls are read-only')}
+            </Text>}
+            {action === 'apply' && preview.data
+              ? <RepairImpactSummary preview={preview.data} />
+              : (
                 <Textarea
                   id="repair-case-controlled-action-reason"
                   label={t('dataRepair.cases.reasonLabel', 'Operator note')}
@@ -189,10 +193,12 @@ export function RepairCaseControlledActions({
                   rows={3}
                   maxLength={action === 'quarantine' || action === 'restore' ? 1000 : 4000}
                   placeholder={t('dataRepair.cases.reasonPlaceholder', 'Explain the evidence and decision')}
+                  disabled={!canWrite}
                 />
-              )
+                )}
+          </>
         }
-        confirmDisabled={action !== 'apply' && !reason.trim()}
+        confirmDisabled={!canWrite || (action !== 'apply' && !reason.trim())}
       />
     </>
   );

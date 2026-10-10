@@ -11,10 +11,9 @@ import { AlertBanner } from '@/components/feedback';
 import {
   Badge,
   Code,
-  GlassPanel,
-  PanelTitle,
   Text,
 } from '@/components/ui';
+import { LayoutCard } from '@/components/layout';
 import { cn } from '@/lib/cn';
 import { BatteryPassportSectionBody } from './BatteryPassportSectionBody';
 import type {
@@ -112,23 +111,13 @@ export function BatteryPassportVerificationDiagnostics({
 
   return (
     <section data-testid="battery-passport-verification-diagnostics">
-      <GlassPanel className="p-4 sm:p-5">
-        <PanelTitle className="mb-1 flex items-center gap-2">
-          <Fingerprint
-            className="h-4 w-4 text-cyan-300"
-            aria-hidden="true"
-          />
-          {t(
+      <LayoutCard title={t(
             'batteryPassport.verification.title',
             'Verification diagnostics',
-          )}
-        </PanelTitle>
-        <Text as="p" variant="caption" className="mb-4">
-          {t(
+          )} description={t(
             'batteryPassport.verification.subtitle',
             'Current server recomputation compared with the supplied certificate digest.',
-          )}
-        </Text>
+          )} actions={<Fingerprint className="h-4 w-4 text-cyan-300" aria-hidden="true" />}>
         <BatteryPassportSectionBody state={state}>
           <div className="flex flex-wrap items-center gap-3">
             <statusView.Icon
@@ -189,7 +178,7 @@ export function BatteryPassportVerificationDiagnostics({
             </Text>
           </AlertBanner>
         </BatteryPassportSectionBody>
-      </GlassPanel>
+      </LayoutCard>
     </section>
   );
 }

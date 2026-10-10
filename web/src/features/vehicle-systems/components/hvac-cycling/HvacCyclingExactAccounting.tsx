@@ -1,19 +1,13 @@
-import { Binary } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import { Grid } from '@/components/layout';
-import {
-  Badge,
-  GlassPanel,
-  MetricLabel,
-  MetricValue,
-  PanelTitle,
-  Text,
-} from '@/components/ui';
-import { fmtInt } from '@/lib/numberFormat';
+import { LayoutCard, Grid } from '@/components/layout';
+import { Badge, MetricLabel, Text } from '@/components/ui';
+import { VehicleOperationalBrief } from '../operationalbrief-all/VehicleOperationalBrief';
+
 import type { HvacCyclingSummary } from '../../lib/hvacCycling';
 import { HvacCyclingSectionBody } from './HvacCyclingSectionBody';
 import type { HvacCyclingQueryState } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface HvacCyclingExactAccountingProps {
   summary: HvacCyclingSummary;
@@ -49,6 +43,7 @@ export function HvacCyclingExactAccounting({
   summary,
   state,
 }: HvacCyclingExactAccountingProps) {
+  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const row = summary.rows;
   const interval = summary.intervals;
@@ -66,11 +61,7 @@ export function HvacCyclingExactAccounting({
 
   return (
     <section data-testid="hvac-cycling-accounting">
-      <GlassPanel className="p-4 sm:p-5">
-        <PanelTitle className="mb-1 flex items-center gap-2">
-          <Binary className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />
-          {t('hvacCycling.accounting.title', 'Exact source and interval accounting')}
-        </PanelTitle>
+      <LayoutCard title={t('hvacCycling.accounting.title', 'Exact source and interval accounting')}>
         <Text as="p" variant="caption" className="mb-4">
           {t(
             'hvacCycling.accounting.subtitle',
@@ -142,16 +133,18 @@ export function HvacCyclingExactAccounting({
           <Text as="h4" variant="label" className="mb-3 mt-5">
             {t('hvacCycling.accounting.outcomes', 'Mutually exclusive returned-row outcomes')}
           </Text>
-          <Grid cols={{ default: 2, md: 5 }} gap={3}>
-            {outcomes.map(([label, value]) => (
-              <div key={label} className="rounded-lg border border-[var(--border-subtle)] p-3">
-                <MetricLabel>{label}</MetricLabel>
-                <MetricValue className="mt-1">{fmtInt(value)}</MetricValue>
-              </div>
-            ))}
-          </Grid>
+          <VehicleOperationalBrief embedded id="hvac-cycling-outcome-summary"
+            title={t('hvacCycling.accounting.outcomes', 'Mutually exclusive returned-row outcomes')}
+            retained={Boolean(state.refreshError) || Boolean(state.isPaused)}
+            period={{ kind: 'unknown', label: t('dataSources.labels.climateHistory', 'Climate history'),
+              reason: t('hvacCycling.accounting.subtitle', 'Mutually exclusive row outcomes and pair dispositions keep source rows, samples, intervals, and runs distinct.') }}
+            metrics={outcomes.map(([label, rawValue], index) => ({
+              metricId: 'count' as const, occurrenceId: `outcome-${index}`, label, rawValue,
+              display: { formatter: (raw: number) => ({ value: fmtInt(raw), unit: '' }) },
+            }))}
+          />
         </HvacCyclingSectionBody>
-      </GlassPanel>
+      </LayoutCard>
     </section>
   );
 }

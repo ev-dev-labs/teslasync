@@ -1,11 +1,11 @@
-import { BarChart3 } from 'lucide-react';
+import { LayoutCard } from '@/components/layout';
 import { useTranslation } from 'react-i18next';
 
 import {
   Bar,
   BarChart,
   CartesianGrid,
-  ChartContainer,
+  EmbeddedChart,
   ChartLegend,
   ChartTooltip,
   ResponsiveContainer,
@@ -13,7 +13,7 @@ import {
   XAxis,
   YAxis,
 } from '@/components/charts';
-import { GlassPanel, PanelTitle, Text } from '@/components/ui';
+import { Text } from '@/components/ui';
 import { chartTokens } from '@/lib/tokens';
 import type { PreconditioningSummary } from '../../lib/preconditioningEffectiveness';
 import { PreconditioningSectionBody } from './PreconditioningSectionBody';
@@ -37,18 +37,18 @@ export function PreconditioningImprovementDistribution({
   const data = summary.improvementDistribution.map((bin) => {
     const band = bin.lowerC == null
       ? t('preconditioningEffectiveness.distribution.below', 'Below {{upper}}', {
-          upper: formatDelta(bin.upperC, { precision: 0 }),
+          upper: formatDelta(bin.upperC),
         })
       : bin.upperC == null
         ? t('preconditioningEffectiveness.distribution.atLeast', 'At least {{lower}}', {
-            lower: formatDelta(bin.lowerC, { precision: 0 }),
+            lower: formatDelta(bin.lowerC),
           })
         : t(
             'preconditioningEffectiveness.distribution.range',
             '{{lower}} to below {{upper}}',
             {
-              lower: formatDelta(bin.lowerC, { precision: 0 }),
-              upper: formatDelta(bin.upperC, { precision: 0 }),
+              lower: formatDelta(bin.lowerC),
+              upper: formatDelta(bin.upperC),
             },
           );
     return {
@@ -61,14 +61,7 @@ export function PreconditioningImprovementDistribution({
 
   return (
     <section data-testid="preconditioning-improvement-distribution">
-      <GlassPanel className="p-4 sm:p-5">
-        <PanelTitle className="mb-1 flex items-center gap-2">
-          <BarChart3 className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />
-          {t(
-            'preconditioningEffectiveness.distribution.title',
-            'Observed improvement distribution',
-          )}
-        </PanelTitle>
+      <LayoutCard title={t('preconditioningEffectiveness.distribution.title', 'Observed improvement distribution')}>
         <Text as="p" variant="caption" className="mb-4">
           {t(
             'preconditioningEffectiveness.distribution.subtitle',
@@ -81,7 +74,7 @@ export function PreconditioningImprovementDistribution({
           requirement="classified"
           skeletonHeight={330}
         >
-          <ChartContainer
+          <EmbeddedChart toolbar exportable size="standard"
             title={t(
               'preconditioningEffectiveness.distribution.plotTitle',
               'Classified departures by improvement band',
@@ -126,9 +119,9 @@ export function PreconditioningImprovementDistribution({
                 </BarChart>
               </ResponsiveContainer>
             )}
-          </ChartContainer>
+          </EmbeddedChart>
         </PreconditioningSectionBody>
-      </GlassPanel>
+      </LayoutCard>
     </section>
   );
 }

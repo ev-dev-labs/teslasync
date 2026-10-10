@@ -2,6 +2,10 @@ import { type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { AlertTriangle } from 'lucide-react';
 import { ErrorBoundary } from './ErrorBoundary';
+import { Icon } from '../ui/Icon';
+import { Text, HelperText } from '../ui/Typography';
+import { cn } from '@/lib/cn';
+import { severityTokens } from '@/lib/tokens';
 
 interface SectionErrorBoundaryProps {
   children: ReactNode;
@@ -45,14 +49,18 @@ export function SectionErrorBoundary({
     const titleFallback = (
       <div
         role="alert"
-        className="flex items-center gap-3 rounded-xl border border-tesla-red/20 bg-tesla-red/5 p-4"
+        className={cn(
+          'flex min-w-0 items-start gap-3 rounded-panel border p-4',
+          severityTokens.critical.bg,
+          severityTokens.critical.border,
+        )}
       >
-        <AlertTriangle className="h-5 w-5 text-tesla-red shrink-0" aria-hidden="true" />
+        <Icon icon={AlertTriangle} size="lg" className={severityTokens.critical.fg} />
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium text-[var(--text-secondary)]">{fallbackTitle}</p>
-          <p className="text-xs text-[var(--text-muted)]">
+          <Text as="p" variant="bodySm" className="break-words">{fallbackTitle}</Text>
+          <HelperText className="break-words">
             {t('errors.section.subtitle', 'Other parts of the page should still work.')}
-          </p>
+          </HelperText>
         </div>
       </div>
     );

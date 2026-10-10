@@ -102,9 +102,9 @@ export default function InstallPackDialog({ pack, onClose }: Props) {
       <div className="flex min-h-11 items-center"><SeverityBadge severity={template.rule.severity} size="sm" /></div> },
     { key: 'operator', header: t('alertPacks.operator', 'Operator'), align: 'left', className: 'w-28 min-w-28', render: template =>
       <PackRuleTriggerEditor {...ruleProps(template)} field="operator" compact /> },
-    { key: 'value', header: t('alertPacks.valueColumn', 'Value'), align: 'left', className: 'w-32 min-w-32', render: template =>
+    { key: 'value', header: t('alertPacks.valueColumn', 'Value'), align: 'right', className: 'w-32 min-w-32', render: template =>
       <PackRuleTriggerEditor {...ruleProps(template)} field="value" compact /> },
-    { key: 'cooldown', header: t('notifications.alertStudio.editor.cooldownLabel', 'Cooldown (minutes)'), align: 'left', className: 'w-40 min-w-40', render: template =>
+    { key: 'cooldown', header: t('notifications.alertStudio.editor.cooldownLabel', 'Cooldown (minutes)'), align: 'right', className: 'w-40 min-w-40', render: template =>
       <PackRuleDeliveryEditor {...ruleProps(template)} field="cooldown" compact /> },
     { key: 'behavior', header: t('alertPacks.behavior', 'Alert behavior'), align: 'left', className: 'w-56 min-w-56', render: template =>
       <PackRuleDeliveryEditor {...ruleProps(template)} field="behavior" compact /> },
@@ -223,7 +223,7 @@ export default function InstallPackDialog({ pack, onClose }: Props) {
               <Caption>{t('alertPacks.showingRules', '{{count}} matching rules', { count: filtered.length })}</Caption>
             </div>
             {desktop ? <>
-              <Caption className="block" id="pack-rules-scroll-hint">{t('alertPacks.scrollHint', 'Scroll horizontally to review every rule setting. Use Tab to move between fields.')}</Caption>
+              <Caption className="block" id="pack-rules-scroll-hint">{t('alertPacks.scrollHint', 'Scroll horizontally to review every rule setting. Use tab to move between fields.')}</Caption>
               {/* eslint-disable jsx-a11y/no-noninteractive-tabindex -- the scroll region needs keyboard focus for off-screen columns */}
               <div role="region" aria-label={t('alertPacks.rulesEditor', 'Rule settings editor')} aria-describedby="pack-rules-scroll-hint"
                 tabIndex={0} className="max-w-full overflow-x-auto rounded-panel focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--border-strong)]">

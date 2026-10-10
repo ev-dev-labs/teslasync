@@ -67,25 +67,26 @@ export function FontFamilyPicker<Id extends FontFamilyId | MonoFamilyId>({
         placeholder={t('typography.searchPlaceholder', 'Search font families…')}
       />
       <div
-        className="grid max-h-80 grid-cols-1 gap-2 overflow-y-auto pr-1 sm:grid-cols-2 xl:grid-cols-3"
+        className="grid max-h-80 grid-cols-1 gap-2 overflow-y-auto pe-1 sm:grid-cols-2 xl:grid-cols-3"
       >
         {visible.map(choice => (
           <Button
             key={choice.id}
             variant="ghost"
+            wrapLabel
             aria-pressed={selected === choice.id}
             onFocus={() => preview(choice.id)}
             onMouseEnter={() => preview(choice.id)}
             onClick={() => onSelect(choice.id)}
             className={cn(
-              'h-auto min-h-16 flex-col items-start gap-1 rounded-xl border p-3 text-left',
+              'h-auto min-h-16 flex-col items-start gap-1 rounded-xl border p-3 text-start',
               selected === choice.id
                 ? 'border-[var(--theme-primary)] bg-[var(--surface-3)]'
                 : 'border-[var(--glass-border)] bg-[var(--surface-2)]',
             )}
           >
             <span className="flex w-full min-w-0 items-center justify-between gap-2">
-              <Text as="span" variant="bodySm" className="truncate font-medium">{choice.name}</Text>
+              <Text as="span" variant="bodySm" className="min-w-0 break-words font-medium [overflow-wrap:anywhere]">{choice.name}</Text>
               {selected === choice.id && <Check className="h-4 w-4 shrink-0 text-[var(--theme-primary)]" aria-hidden="true" />}
             </span>
             <span

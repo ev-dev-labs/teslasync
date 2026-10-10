@@ -59,10 +59,10 @@ vi.mock('@/hooks/useDateFormat', () => ({
 
 describe('FRESHNESS_COLORS', () => {
   it('exposes a dot + text color tier for every status', () => {
-    expect(FRESHNESS_COLORS.fresh.dot).toBe('bg-emerald-400')
-    expect(FRESHNESS_COLORS.fetching.dot).toBe('bg-sky-400')
-    expect(FRESHNESS_COLORS.stale.dot).toBe('bg-amber-400')
-    expect(FRESHNESS_COLORS.error.dot).toBe('bg-red-400')
+    expect(FRESHNESS_COLORS.fresh.dot).toBe('bg-[var(--semantic-success)]')
+    expect(FRESHNESS_COLORS.fetching.dot).toBe('bg-[var(--semantic-info)]')
+    expect(FRESHNESS_COLORS.stale.dot).toBe('bg-[var(--semantic-warning)]')
+    expect(FRESHNESS_COLORS.error.dot).toBe('bg-[var(--semantic-danger)]')
   })
 })
 
@@ -86,7 +86,13 @@ describe('DataFreshness', () => {
       />,
     )
     expect(screen.getByText('just now')).toBeInTheDocument()
-    expect(container.querySelector('.bg-emerald-400')).toBeInTheDocument()
+    expect(screen.getByText('just now')).toHaveClass(
+      'inline-block', 'min-w-freshness-age', 'break-words', 'text-start', 'tabular-nums',
+    )
+    expect(screen.getByText('just now')).not.toHaveClass('min-w-[4.5rem]')
+    expect(container.getElementsByClassName(FRESHNESS_COLORS.fresh.dot)[0]).toBeInTheDocument()
+    expect(screen.getByRole('status')).toHaveClass('border-0', 'bg-transparent')
+    expect(screen.getByRole('status')).not.toHaveClass('rounded-pill')
   })
 
   it('formats a 5-minute-old timestamp as "5m ago"', () => {
@@ -147,7 +153,7 @@ describe('DataFreshness', () => {
       />,
     )
     expect(screen.getByText('updating…')).toBeInTheDocument()
-    expect(container.querySelector('.bg-sky-400')).toBeInTheDocument()
+    expect(container.getElementsByClassName(FRESHNESS_COLORS.fetching.dot)[0]).toBeInTheDocument()
   })
 
   it('shows "error" with red dot when isError', () => {
@@ -160,7 +166,7 @@ describe('DataFreshness', () => {
       />,
     )
     expect(screen.getByText('error')).toBeInTheDocument()
-    expect(container.querySelector('.bg-red-400')).toBeInTheDocument()
+    expect(container.getElementsByClassName(FRESHNESS_COLORS.error.dot)[0]).toBeInTheDocument()
   })
 
   it('flags stale state with amber dot', () => {
@@ -172,11 +178,11 @@ describe('DataFreshness', () => {
         isError={false}
       />,
     )
-    expect(container.querySelector('.bg-amber-400')).toBeInTheDocument()
+    expect(container.getElementsByClassName(FRESHNESS_COLORS.stale.dot)[0]).toBeInTheDocument()
   })
 
   it('hides relative time text in compact mode', () => {
-    render(
+    const { container } = render(
       <DataFreshness
         updatedAt={Date.now() - 1000}
         isFetching={false}
@@ -186,6 +192,7 @@ describe('DataFreshness', () => {
       />,
     )
     expect(screen.queryByText('just now')).not.toBeInTheDocument()
+    expect(container.querySelector('.min-w-freshness-age')).toBeNull()
   })
 
   it('calls onRefresh when clicked and not fetching', () => {
@@ -199,7 +206,10 @@ describe('DataFreshness', () => {
         onRefresh={onRefresh}
       />,
     )
-    fireEvent.click(screen.getByRole('button', { name: /Refresh data/ }))
+    const refresh = screen.getByRole('button', { name: /Refresh data/ })
+    expect(refresh).toHaveClass('border-0', 'bg-transparent', '!px-0')
+    expect(refresh).not.toHaveClass('rounded-pill')
+    fireEvent.click(refresh)
     expect(onRefresh).toHaveBeenCalledTimes(1)
   })
 
@@ -216,6 +226,7 @@ describe('DataFreshness', () => {
     )
     const root = container.firstElementChild!
     expect(root).toBeDisabled()
+    expect(root).toHaveClass('disabled:!bg-transparent')
     fireEvent.click(root)
     expect(onRefresh).not.toHaveBeenCalled()
   })
@@ -249,9 +260,47 @@ describe('DataFreshness', () => {
     )
   })
 
-  // ── Background-refetch pulse ───────────────────────────────────────
+  it('retains the last successful age and source when a refresh fails', () => {
+    render(
+      <DataFreshness
+        updatedAt={Date.now() - 5 * 60_000}
+        isFetching={false}
+        isStale
+        isError
+        source="Battery analytics"
+      />,
+    )
+    expect(screen.getByText('5m ago')).toBeInTheDocument()
+    expect(screen.getByRole('status')).toHaveAccessibleName(
+      'Data freshness: Error · 5m ago · Source: Battery analytics',
+    )
+    expect(screen.getByRole('status')).toHaveAttribute(
+      'title', expect.stringContaining('Last updated:'),
+    )
+  })
 
-  it('pulses the dot while a background refetch is in flight (isFetching with prior data)', () => {
+  it('keeps error precedence while fetching and the native refresh disabled', () => {
+    const onRefresh = vi.fn()
+    render(
+      <DataFreshness
+        updatedAt={Date.now() - 60_000}
+        isFetching
+        isStale
+        isError
+        onRefresh={onRefresh}
+        compact
+      />,
+    )
+    const refresh = screen.getByRole('button', { name: 'Refresh data · Error · 1m ago' })
+    expect(refresh).toHaveAttribute('type', 'button')
+    expect(refresh).toBeDisabled()
+    fireEvent.click(refresh)
+    expect(onRefresh).not.toHaveBeenCalled()
+  })
+
+  // ── Background-refetch presentation ────────────────────────────────
+
+  it('identifies background refetch without decorative dot loops', () => {
     reducedMotionMock.mockReturnValue(false)
     const { container } = render(
       <DataFreshness
@@ -261,10 +310,9 @@ describe('DataFreshness', () => {
         isError={false}
       />,
     )
-    // The inner colored dot (sky-400 because status === 'fetching') gets
-    // animate-pulse on top of the existing animate-ping ring.
-    const dot = container.querySelector('span.bg-sky-400.animate-pulse')
-    expect(dot).not.toBeNull()
+    expect(container.getElementsByClassName(FRESHNESS_COLORS.fetching.dot)[0]).toBeInTheDocument()
+    expect(container.querySelector('.animate-pulse, .animate-ping')).toBeNull()
+    expect(container.querySelector('.animate-spin')).toBeInTheDocument()
     // Sanity-check the data-attribute used by tooling/tests to spot the state.
     expect(container.querySelector('[data-bg-refetch="true"]')).not.toBeNull()
   })
@@ -279,8 +327,7 @@ describe('DataFreshness', () => {
         isError={false}
       />,
     )
-    // Initial load: ping ring stays, but no pulse on the inner dot.
-    expect(container.querySelector('span.bg-sky-400.animate-pulse')).toBeNull()
+    expect(container.querySelector('.animate-pulse, .animate-ping')).toBeNull()
     expect(container.querySelector('[data-bg-refetch="true"]')).toBeNull()
   })
 
@@ -294,7 +341,7 @@ describe('DataFreshness', () => {
         isError={false}
       />,
     )
-    expect(container.querySelector('span.bg-sky-400.animate-pulse')).toBeNull()
+    expect(container.querySelector('.animate-pulse')).toBeNull()
     // The outer ping ring + spinning icon are also suppressed under reduce.
     expect(container.querySelector('.animate-ping')).toBeNull()
     expect(container.querySelector('.animate-spin')).toBeNull()
@@ -352,7 +399,7 @@ describe('DataFreshnessAuto', () => {
 
   it('renders fresh state from a healthy query', () => {
     const { container } = render(<DataFreshnessAuto query={makeQuery()} />)
-    expect(container.querySelector('.bg-emerald-400')).toBeInTheDocument()
+    expect(container.getElementsByClassName(FRESHNESS_COLORS.fresh.dot)[0]).toBeInTheDocument()
   })
 
   it('passes refetch through as the click handler by default', () => {
@@ -379,7 +426,7 @@ describe('DataFreshnessAuto', () => {
     const { container } = render(
       <DataFreshnessAuto query={query} forceStaleAfterMs={5 * 60_000} />,
     )
-    expect(container.querySelector('.bg-amber-400')).toBeInTheDocument()
+    expect(container.getElementsByClassName(FRESHNESS_COLORS.stale.dot)[0]).toBeInTheDocument()
   })
 
   it('does not force stale when forceStaleAfterMs is below the data age', () => {
@@ -387,7 +434,7 @@ describe('DataFreshnessAuto', () => {
     const { container } = render(
       <DataFreshnessAuto query={query} forceStaleAfterMs={5 * 60_000} />,
     )
-    expect(container.querySelector('.bg-emerald-400')).toBeInTheDocument()
+    expect(container.getElementsByClassName(FRESHNESS_COLORS.fresh.dot)[0]).toBeInTheDocument()
   })
 
   it('transitions to forced stale as the successful update ages', () => {
@@ -395,13 +442,13 @@ describe('DataFreshnessAuto', () => {
     const { container } = render(
       <DataFreshnessAuto query={query} forceStaleAfterMs={60_000} />,
     )
-    expect(container.querySelector('.bg-emerald-400')).toBeInTheDocument()
+    expect(container.getElementsByClassName(FRESHNESS_COLORS.fresh.dot)[0]).toBeInTheDocument()
 
     act(() => {
       vi.advanceTimersByTime(60_001)
     })
 
-    expect(container.querySelector('.bg-amber-400')).toBeInTheDocument()
+    expect(container.getElementsByClassName(FRESHNESS_COLORS.stale.dot)[0]).toBeInTheDocument()
     expect(screen.getByText('Stale · 1m ago')).toBeInTheDocument()
   })
 
@@ -417,6 +464,6 @@ describe('DataFreshnessAuto', () => {
     const { container } = render(
       <DataFreshnessAuto query={makeQuery({ isError: true })} />,
     )
-    expect(container.querySelector('.bg-red-400')).toBeInTheDocument()
+    expect(container.getElementsByClassName(FRESHNESS_COLORS.error.dot)[0]).toBeInTheDocument()
   })
 })

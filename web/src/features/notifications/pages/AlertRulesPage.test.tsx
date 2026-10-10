@@ -270,6 +270,23 @@ describe('AlertRulesPage — data state', () => {
     expect(within(kpis).getByText('2')).toBeInTheDocument(); // enabled
   });
 
+  it('reviews all six counts with unfiltered scope and overlapping snooze semantics without losing rules controls', () => {
+    renderPage();
+    const brief = screen.getByTestId('alert-rules-brief');
+    expect(brief.querySelectorAll('[data-operational-metric]')).toHaveLength(6);
+    expect(brief.querySelector('[data-operational-metric="rules-total"]')).toHaveAttribute('data-value-state', 'value');
+    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog');
+    expect(drawer).toHaveTextContent('before search and channel filtering');
+    expect(drawer).toHaveTextContent('Snoozed rules can overlap enabled or disabled rules');
+    for (const label of ['Total rules', 'Enabled', 'Disabled', 'Critical', 'Snoozed', 'Computed']) {
+      expect(drawer).toHaveTextContent(label);
+    }
+    fireEvent.click(within(drawer).getAllByRole('button', { name: 'Close' }).at(-1)!);
+    expect(screen.getByRole('table')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Create rule' })).toBeInTheDocument();
+  });
+
   it('renders all three insight panels and the rules table', () => {
     renderPage();
     expect(screen.getByText('Severity distribution')).toBeInTheDocument();
@@ -278,9 +295,9 @@ describe('AlertRulesPage — data state', () => {
     expect(screen.getByRole('table')).toBeInTheDocument();
     expect(screen.getByText('Zebra')).toBeInTheDocument();
     expect(screen.getByText('Mango')).toBeInTheDocument();
-    expect(
-      screen.getByRole('button', { name: 'Download CSV' }),
-    ).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Export list' }));
+    expect(screen.getByRole('menuitem', { name: 'Download as CSV' })).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: 'Download as JSON' })).toBeInTheDocument();
     expect(
       screen.getByRole('button', { name: 'Reorder or hide columns' }),
     ).toBeInTheDocument();
@@ -441,18 +458,22 @@ describe('AlertRulesPage — header actions & a11y', () => {
 
   it('refetches when the icon-only refresh control is activated', () => {
     renderPage();
-    // The page header renders its own icon-only "Refresh" alongside the
-    // PageContainer freshness chip's refresh. Scope to the actions cluster (the
-    // refresh + studio buttons share a parent) so we target the page control.
     const studio = screen.getByRole('button', { name: 'Create rule' });
-    const actions = studio.parentElement as HTMLElement;
+    const actions = studio.closest('[data-role="page-actions"]')
+      ?.querySelector<HTMLElement>('[data-action-group="secondary"]');
+    if (!actions) throw new Error('Alert-rule header secondary actions are missing');
     fireEvent.click(within(actions).getByRole('button', { name: 'Refresh' }));
     expect(H.refetch).toHaveBeenCalledTimes(1);
   });
 
   it('navigates to the studio from the header CTA', () => {
     renderPage();
-    fireEvent.click(screen.getByRole('button', { name: 'Create rule' }));
+    const createRule = screen.getByRole('button', { name: 'Create rule' });
+    expect(createRule.closest('[data-action-group]')).toHaveAttribute('data-action-group', 'primary');
+    const heading = screen.getByRole('heading', { level: 1, name: 'Alert rules' });
+    expect(heading).toHaveAttribute('data-route-focus-target', 'true');
+    expect(heading.closest('header')).toHaveClass('border-0', 'bg-transparent');
+    fireEvent.click(createRule);
     expect(H.navigate).toHaveBeenCalledWith('/notifications/studio');
   });
 

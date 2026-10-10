@@ -1,0 +1,294 @@
+{
+  "item": "audit-page-111",
+  "page": "web\\src\\features\\driving\\pages\\DrivesListPage.tsx",
+  "routes": ["/drives"],
+  "purpose": "Vehicle-scoped drive history with measured efficiency, prior-period comparisons, trend analysis, FSD enrichment and actionable drive evidence.",
+  "primaryGoal": "Find and inspect real drives in the workspace range, compare exceptions and export the selected vehicle's full date window.",
+  "dataSources": [
+    {
+      "hook": "useDrivesListPageData -> useDrives",
+      "file": "web\\src\\features\\driving\\hooks\\useDrivesListPageData.ts",
+      "line": 56,
+      "endpoint": "GET /api/v1/drives",
+      "routeEvidence": "internal\\api\\router.go:3463-3464",
+      "owner": "web\\src\\api\\hooks\\useDriving.ts:104-127",
+      "behavior": "Selected vehicle; padded current/prior calendar window; bounded request; retained rows and source-local retry. Raw Drive SI fields remain in cache; conversions happen in presentation."
+    },
+    {
+      "hook": "useFsdInsightsRange",
+      "file": "web\\src\\features\\driving\\hooks\\useDrivesListPageData.ts",
+      "line": 100,
+      "endpoint": "GET /api/v1/analytics/fsd",
+      "routeEvidence": "internal\\api\\router.go:3887",
+      "owner": "web\\src\\api\\hooks\\useAnalytics.ts:583-606",
+      "behavior": "Vehicle/timezone and exclusive calendar instants; disabled beyond 366 days; independent errors, refresh and per-drive confidence."
+    },
+    {
+      "hook": "useBulkDeleteDrives",
+      "file": "web\\src\\features\\driving\\hooks\\useDrivesListPageSelection.ts",
+      "line": 33,
+      "endpoint": "DELETE /api/v1/drives/bulk",
+      "routeEvidence": "internal\\api\\router.go:3470",
+      "owner": "web\\src\\api\\hooks\\useDriving.ts:392-400",
+      "behavior": "Live-mode mutation; confirmed selected IDs; clears selection after successful deletion. Not invoked."
+    },
+    {
+      "hook": "downloadDriveExport",
+      "file": "web\\src\\features\\driving\\hooks\\useDrivesListPageFilters.ts",
+      "line": 205,
+      "endpoint": "GET /api/v1/export/drives?vehicle_id=...&start=...&end=...&format=csv|json",
+      "routeEvidence": "internal\\api\\router.go:4957",
+      "owner": "web\\src\\features\\driving\\hooks\\useDrivesListPageFilters.ts:205-225",
+      "behavior": "Server export excludes list filters and selection; scope description is explicit. Actual backend completeness not exercised."
+    },
+    {
+      "hook": "AINLDriveSearch -> useAiStream",
+      "file": "web\\src\\components\\ai\\AINLDriveSearch.tsx",
+      "line": 21,
+      "endpoint": "POST /api/v1/ai/drives/search",
+      "owner": "web\\src\\components\\ai\\AINLDriveSearch.tsx",
+      "behavior": "Feature-gated opt-in prompt stream; ordinary typed search stays present. POST body contains prompt only. Route mount, workspace scoping, feature gate and result behavior remain unverified."
+    }
+  ],
+  "components": [
+    {"name": "PageLayout / PageContainer", "owner": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx:9", "role": "Existing shell-aligned page adapter, header actions and freshness; query prop does not replace source-local content."},
+    {"name": "DrivesStickySummary / DrivesOperationalBrief / DrivesOverview", "owner": "web\\src\\features\\driving\\components\\drives-orchestrator", "role": "Sticky scope, six contextual brief metrics, six overview metrics with independent prior-period comparisons."},
+    {"name": "DrivesAnalysisSection / PreservedPanelGrid", "owner": "web\\src\\features\\driving\\components\\layout-modernization", "role": "Existing Section/CardGrid composition retaining chart and highlights surfaces."},
+    {"name": "DrivesEvidenceTable / DataTable", "owner": "web\\src\\features\\driving\\components\\DrivesEvidenceTable.tsx", "role": "Desktop evidence, column/value/numeric filters, sort, selection, preview and pagination. DataTable remains table interaction owner."},
+    {"name": "DrivesMobileEvidence / DriveCard", "owner": "web\\src\\features\\driving\\components\\drives-orchestrator\\DrivesMobileEvidence.tsx", "role": "DateGroupedList, HistoryListRow, metrics, FSD/anomaly badges, selection and preview below 1024px."},
+    {"name": "DrivePreview / EntityPreviewDrawer", "owner": "web\\src\\features\\driving\\components\\continuation-driving-primary\\DrivePreview.tsx", "role": "Six preview fields plus contextual vehicle, charging, location, alert, service and signal navigation."},
+    {"name": "TableToolbar / PillFilterBar / ActiveFilterChips / BulkActionsToolbar", "owner": "Existing forms and data-display category barrels", "role": "Typed search, density, exports, mobile collection/FSD controls and confirmed bulk actions."},
+    {"name": "Source trust / motion / refresh", "owner": "Existing feedback, motion and mobile category barrels", "role": "DataStateNotice, StaleRefreshWarning, QueryError, EmptyState, Skeleton, FadeIn, StaggerContainer and PullToRefresh; no replacement system needed."}
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\driving\\components\\drives-orchestrator\\DrivesOperationalBrief.tsx",
+      "line": 69,
+      "rule": "MDC-033",
+      "detail": "Brief and overview deliberately repeat count/distance/efficiency in different contextual roles. This is not permission to remove either or create another KPI renderer.",
+      "fix": "Retain both roles; reuse existing OperationalBrief and stats formatting contracts when aligning presentation.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "responsive": {
+    "runtimeVerified": false,
+    "sourceStrategy": "useMediaQuery('(min-width: 1024px)') switches table to date-grouped cards. Mobile toolbar and collection/FSD pills remain available. Analysis uses existing CardGrid; page uses min-w-0 and full-width container composition.",
+    "evidence": ["web\\src\\features\\driving\\hooks\\useDrivesListPageData.ts:30", "web\\src\\features\\driving\\components\\drives-orchestrator\\DrivesEvidenceSection.tsx:48-50", "web\\src\\features\\driving\\components\\layout-modernization\\PreservedPanelGrid.tsx:28"],
+    "issues": [
+      {
+        "file": "web\\src\\features\\driving\\hooks\\useDrivesListPageFilters.ts",
+        "line": 238,
+        "rule": "MDC-023/MDC-043",
+        "detail": "Numeric and endpoint grid predicates apply only when desktopEvidence is true; resizing below 1024px changes results while the persisted grid_* URL values remain. Mobile clear-all chips only clear q/coll/fsd. Value selections do have an explicit mobile notice and clear action.",
+        "fix": "Expose active numeric/endpoint filters in mobile UI and preserve their predicates across widths, or explicitly communicate a deliberate scope change. Do not silently alter source results.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\driving\\components\\DriveCard.tsx",
+        "line": 140,
+        "rule": "MDC-023/MDC-043",
+        "detail": "Cards show average/max speed, battery, efficiency and estimated cost; desktop grid exposes specialist temperature/power/regen/score fields not present in the six-field preview. Detail navigation exists, but mobile equivalence and table preference access are not proven.",
+        "fix": "Preserve specialist fields and table actions through existing detail/preview or accessible card disclosure; validate the 640-1023 branch and desktop-to-mobile saved state rather than deleting metadata.",
+        "owner": "page",
+        "confidence": "medium"
+      }
+    ],
+    "requiredQA": "320/375/390/430/768/1024/1280/1440/1920/2560px, allocated container width, long routes and translated labels, table scrolling, drawer scroll and sticky summary overlap."
+  },
+  "accessibility": {
+    "runtimeVerified": false,
+    "sourceStrengths": [
+      "Drive evidence section has localized aria-label; numeric filters have localized minimum/unit names.",
+      "Card checkboxes identify the drive date; grade badges have readable labels; meaningful warnings expose text alternatives.",
+      "Native detail Links preserve navigation semantics; drawer and focus behavior are delegated to existing shared owners.",
+      "Highlights retain dl/dt/dd semantics; page header retains a programmatic route-focus target."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\driving\\pages\\DrivesListPage.tsx",
+        "line": 39,
+        "rule": "MDC-040/MDC-026",
+        "detail": "Page passes query for freshness but no loading/busy/error props. PageContainer's load announcement and aria-busy use those explicit props, not query. Section skeletons preserve content, but a page-level loading announcement is not connected by this call site.",
+        "fix": "Wire non-replacing busy/announcement state through the existing PageContainer contract while retaining independent FSD/drive source recovery. Verify source-local announcements before adding duplicates.",
+        "owner": "page",
+        "confidence": "medium"
+      }
+    ],
+    "requiredQA": "Keyboard sequence, visible focus, preview trap/restore/Escape, filter popovers, confirmed delete, screen-reader result/loading announcements, 44px touch reachability, effective contrast, forced colors and reduced motion."
+  },
+  "states": {
+    "runtimeVerified": false,
+    "loading": "Independent initial drive loading with brief source wrapper, overview loading, chart/highlight skeletons and five evidence skeleton rows.",
+    "empty": "Overview and highlights have local empty states; evidence reset/guidance present; no-vehicle path retains NoVehicleSelected.",
+    "error": "Fatal drive errors retry locally in overview/analysis/evidence. FSD errors have their own notice/retry and do not erase drive history.",
+    "staleOffline": "useDataState and StaleRefreshWarning retain payload and separate refresh errors; actual stale/offline presentation not exercised.",
+    "partialUnknown": "Missing energy coverage notice, measured-only efficiency, absent per-drive FSD notice, unsupported >366-day FSD window and truncation warning remain.",
+    "issues": [
+      {
+        "file": "web\\src\\features\\driving\\components\\drives-orchestrator\\DrivesEvidenceEmpty.tsx",
+        "line": 25,
+        "rule": "MDC-026/MDC-032",
+        "detail": "Reset filters clears q/coll/fsd/grid_values and workspace from/to but leaves grid_distance/grid_grade and other numeric/endpoint filters. Empty copy distinguishes only collection/FSD/value selections, not search or numeric filters; a filtered-out result can be labeled 'No drives recorded yet'.",
+        "fix": "Differentiate selected-range empty from search/filter empty; clear the complete relevant page-filter set without resetting header-owned date scope unless explicitly labeled. Keep helpful guidance only when genuinely unfiltered.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ]
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\lib\\drivesAggregation.ts",
+      "line": 35,
+      "rule": "MDC-010/MDC-012/MDC-025",
+      "detail": "Grade B uses saturated neon cyan #00f0ff in the shared Grade.color palette. Sticky summary applies avgGrade.color directly to text at DrivesStickySummary.tsx:31; mobile efficiency text applies score.color at DriveCard.tsx:160. This bypasses theme-aware semantic foregrounds; composed contrast is unverified.",
+      "fix": "Have the shared grade presentation map supply semantic, theme-aware text tones; preserve grade labels/numeric thresholds and domain calculations. Adapt both consumers together, not by introducing another palette.",
+      "owner": "shared",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\driving\\hooks\\useDrivesListPageFilters.ts",
+      "line": 425,
+      "rule": "MDC-010/MDC-034",
+      "detail": "Five chart metrics provide local cyan/green/purple/amber/red hex colors. Existing chartTokens.series already owns the palette. Source saturation is confirmed; rendered noise/contrast is not. Data-series semantic color must not be indiscriminately removed.",
+      "fix": "Reuse the accepted shared chart palette while retaining all five metrics, chosen metric, axes, values, missing behavior and saved chart preferences.",
+      "owner": "page",
+      "confidence": "medium"
+    },
+    {
+      "file": "web\\src\\features\\driving\\components\\DriveCard.tsx",
+      "line": 166,
+      "rule": "MDC-012",
+      "detail": "Estimated-cost body text uses fixed text-emerald-300 without a light-theme counterpart; effective contrast is unverified.",
+      "fix": "Use existing theme-aware semantic foreground tokens without changing cost approximation or configured-rate behavior.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\features\\driving\\hooks\\useDrivesListPageData.ts",
+      "line": 40,
+      "rule": "MDC-032/MDC-045",
+      "detail": "Controller reads only start/end day keys from useRangeState, derives padded day fetch bounds and reconstructs FSD calendar instants. It does not consume the hook's precise startInstant/endInstantExclusive rolling bounds (useRangeState.ts:656-662); list filtering also compares local day keys. A 24h/Live header scope therefore loses precise instant semantics.",
+      "fix": "Integrate exact workspace instants into reads, exports and current-window aggregation while retaining intentional prior-period fetching, vehicle timezone, calendar/DST semantics and source-local trust. Backend instant filtering support must be verified, not assumed.",
+      "owner": "integration",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\driving\\components\\DriveCard.tsx",
+      "line": 4,
+      "rule": "MDC-002",
+      "detail": "Feature imports Badge/Checkbox/InlineMetric through concrete shared paths. Analysis layout also imports Section/CardGrid directly from layout-reference despite canonical category barrels.",
+      "fix": "Use existing ui/data-display/layout category barrels for feature consumers; do not replace the previous extracted source migration or shared internal concrete-import policy.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "priority": {
+    "level": "high",
+    "order": ["Exact rolling scope and reset semantics", "Responsive filter continuity and mobile evidence access", "Shared grade foreground mapping", "Chart palette and import alignment", "Runtime responsive/accessibility acceptance"],
+    "reason": "Preserve the existing source migration. Correct scope/data trust risks before cosmetic adoption."
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "Theme-aware grade presentation mapping",
+      "existingOwnerFile": "web\\src\\lib\\drivesAggregation.ts",
+      "file": "web\\src\\lib\\drivesAggregation.ts",
+      "line": 32,
+      "rule": "MDC-010/MDC-012/MDC-025",
+      "detail": "Existing domain palette couples numeric grade calculation to saturated raw foreground color.",
+      "fix": "Coordinate a shared semantic presentation mapping; preserve existing Grade labels, numeric weights, thresholds and caller behavior.",
+      "owner": "shared",
+      "confidence": "high",
+      "propsVariantsStates": "A+/A success, B info, C warning, D danger, unknown neutral; text foregrounds must follow theme and forced-color modes. Do not change the numeric/label contract.",
+      "usedBy": ["web\\src\\features\\driving\\components\\drives-orchestrator\\DrivesStickySummary.tsx:31", "web\\src\\features\\driving\\components\\DriveCard.tsx:160"],
+      "dependsOn": ["docs\\frontend-design-contract.md:MDC-010,MDC-012,MDC-025", "Existing semantic tokens in web\\src\\lib\\tokens.ts; shared-owner contract acceptance and focused contrast tests"]
+    }
+  ],
+  "competingImplementations": [
+    {
+      "file": "web\\src\\features\\driving\\hooks\\useDrivesListPageFilters.ts",
+      "line": 425,
+      "rule": "MDC-034",
+      "detail": "Local trend colors duplicate an existing chart palette owner at web\\src\\lib\\tokens.ts:383-401.",
+      "fix": "Adopt the existing palette; do not create another chart/stats/layout system.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "preservation": {
+    "sourceHash": "8D9163762BE0471794D917E350441FD95C1BC9C9E238A4B6CDFAB637AC38324E",
+    "hashAlgorithm": "SHA-256",
+    "currentLineCount": 85,
+    "baselineComparison": "Current source snapshot only; no Git/history or original monolith comparison performed.",
+    "sectionCount": 10,
+    "sectionNames": ["Sticky summary", "Operational brief", "Source notices", "Opt-in natural-language search", "Mobile filter toolbar/chips", "Overview", "Trends and highlights", "Mobile collection/FSD filters", "Drive evidence desktop/mobile", "Drive preview"],
+    "sectionCounts": {"overviewMetrics": 6, "operationalBriefMetrics": 6, "trendMetrics": 5, "analysisPanels": 2, "previewFields": 6},
+    "actions": ["Saved-view apply", "Copy link", "Pull-to-refresh both supported sources with cross-tab invalidation", "Typed/deferred search", "Opt-in AI prompt search", "Collection/FSD/value/numeric/endpoint filters and clear actions", "Sort/density/pagination/page size", "CSV/JSON full selected-date-window export", "Select drives and compare exactly two", "Confirmed live-only bulk delete", "Source-local retries", "Anomaly drilldown", "Preview/details", "Related vehicle/charging/locations/alerts/service/signals navigation"],
+    "dataBehavior": ["Keep raw SI and current query keys/policies/cancellation", "Keep measured-energy coverage and unknown distinct from zero", "Keep independent FSD payload and confidence/reset metadata", "Keep prior-period comparisons separate from current window", "Keep server export scope separate from list filters/selection", "Keep truncation notice and all existing route/metadata/column capabilities", "Keep source-local retained-data refresh failures", "Keep workspace selection, locale, display units, timezone and URL/saved-view preferences"],
+    "sourceEdits": false
+  },
+  "evidenceLimits": {
+    "method": "Read-only page/dependency inspection and bounded source-pattern checks; no browser, production actions, Git, source edits or nested delegation.",
+    "runtime": "unverified",
+    "visual": "unverified",
+    "keyboard": "unverified",
+    "contrast": "unverified",
+    "viewports": "unverified",
+    "typescriptTestsBuild": "Not run: Phase 0 prohibits full-repository validation. Skill script inspected but not executed because it always runs full web TypeScript.",
+    "sourcePatternScope": "Page, drives-orchestrator TSX files, DriveCard, DrivesEvidenceTable and DrivesAnalysisSection only. Dynamic inline colors are palette issues, not static-style violations. No neon/glow/pure-white class matches in this bounded set; hex palette findings remain.",
+    "sourcePatternCounts": {"dynamicInlineStyles": 2, "rawHtmlControlsCaseSensitive": 0, "directRechartsLeafletFramerImports": 0, "neonGlowPureWhiteClassMatches": 0},
+    "validationOutput": [
+      "Corrected case-sensitive raw HTML controls: 0",
+      "JSON schema fields: 19/19 present",
+      "Page SHA-256 matches: 8D9163762BE0471794D917E350441FD95C1BC9C9E238A4B6CDFAB637AC38324E",
+      "Page lines: 85",
+      "PowerShell validation exit code: 0"
+    ],
+    "validationCaveat": "Initial PowerShell raw-control regex was case-insensitive and counted shared Button/Input/Select tags. Reran with Select-String -CaseSensitive; corrected count is zero. Counts are bounded source evidence, not runtime acceptance.",
+    "unknowns": ["AI route mount and backend scope", "Backend exact instant/export completeness", "Shared overlay/table/motion runtime behavior", "Current dependency-wide test acceptance"],
+    "filesWritten": ["docs\\frontend-audits\\audit-page-111.json", ".agent-status\\audit-page-111.txt"]
+  },
+  "filesRead": [
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\driving\\pages\\DrivesListPage.tsx",
+    "web\\src\\features\\driving\\hooks\\useDrivesListPage.ts",
+    "web\\src\\features\\driving\\hooks\\useDrivesListPageData.ts",
+    "web\\src\\features\\driving\\hooks\\useDrivesListPageFilters.ts",
+    "web\\src\\features\\driving\\hooks\\useDrivesListPageSelection.ts",
+    "web\\src\\features\\driving\\hooks\\useDrivesListPageSummary.ts",
+    "web\\src\\features\\driving\\components\\drives-orchestrator\\DrivesStickySummary.tsx",
+    "web\\src\\features\\driving\\components\\drives-orchestrator\\DrivesOperationalBrief.tsx",
+    "web\\src\\features\\driving\\components\\drives-orchestrator\\DrivesSourceNotices.tsx",
+    "web\\src\\features\\driving\\components\\drives-orchestrator\\DrivesMobileFilters.tsx",
+    "web\\src\\features\\driving\\components\\drives-orchestrator\\DrivesOverview.tsx",
+    "web\\src\\features\\driving\\components\\drives-orchestrator\\DrivesTrendAnalysis.tsx",
+    "web\\src\\features\\driving\\components\\drives-orchestrator\\DrivesCollectionFilters.tsx",
+    "web\\src\\features\\driving\\components\\drives-orchestrator\\DrivesEvidenceSection.tsx",
+    "web\\src\\features\\driving\\components\\drives-orchestrator\\DrivesEvidenceNotices.tsx",
+    "web\\src\\features\\driving\\components\\drives-orchestrator\\DrivesEvidenceEmpty.tsx",
+    "web\\src\\features\\driving\\components\\drives-orchestrator\\DrivesDesktopEvidence.tsx",
+    "web\\src\\features\\driving\\components\\drives-orchestrator\\DrivesMobileEvidence.tsx",
+    "web\\src\\features\\driving\\components\\DriveCard.tsx",
+    "web\\src\\features\\driving\\components\\DrivesEvidenceTable.tsx",
+    "web\\src\\features\\driving\\components\\continuation-driving-primary\\DrivePreview.tsx",
+    "web\\src\\features\\driving\\components\\layout-modernization\\DrivesAnalysisSection.tsx",
+    "web\\src\\features\\driving\\components\\layout-modernization\\PreservedPanelGrid.tsx",
+    "web\\src\\components\\ai\\AINLDriveSearch.tsx",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\layout\\PageContainer.tsx",
+    "web\\src\\api\\hooks\\useDriving.ts",
+    "web\\src\\api\\hooks\\useAnalytics.ts",
+    "web\\src\\hooks\\useRangeState.ts",
+    "web\\src\\lib\\drivesAggregation.ts",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\lib\\tokens.ts",
+    "web\\src\\App.tsx",
+    "internal\\api\\router.go"
+  ]
+}

@@ -1,10 +1,10 @@
 {
   "browserNotifications": {
-    "title": "Browser Notifications",
+    "title": "Browser notifications",
     "subtitle": "Get notified when the app tab is in the background",
     "permissionError": "Could not request browser permission. Check site settings and try again.",
     "unsupported": "Browser notifications are not supported in this browser.",
-    "enable": "Enable Browser Notifications",
+    "enable": "Enable browser notifications",
     "enabled": "Enabled",
     "blocked": "Notifications are blocked. Enable in your browser settings.",
     "events": "Notify me about",
@@ -23,7 +23,12 @@
       "pushEvents": "In-tab events",
       "tabSignals": "Tab signals",
       "soundChannels": "Sound channels",
-      "activeOfTotal": "{{active}} of {{total}} on"
+      "activeOfTotal": "{{active}} of {{total}} on",
+      "brief": {
+        "provenance": "Permission and in-tab events belong to this browser; tab signals use saved settings and sounds use device preferences. These are configuration counts, not delivery success rates.",
+        "title": "Permission and enabled notification surfaces",
+        "scope": "This browser · saved tab settings"
+      }
     }
   }
 }

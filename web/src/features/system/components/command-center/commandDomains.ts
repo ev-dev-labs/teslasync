@@ -28,7 +28,7 @@ export const COMMAND_DOMAINS: readonly CommandDomain[] = [
   {
     id: 'access',
     labelKey: 'commands.domain.access.title',
-    labelFallback: 'Access & Security',
+    labelFallback: 'Access & security',
     descriptionKey: 'commands.domain.access.description',
     descriptionFallback: 'Locks, security modes, openings, and drive authorization.',
     icon: ShieldCheck,
@@ -37,7 +37,7 @@ export const COMMAND_DOMAINS: readonly CommandDomain[] = [
   {
     id: 'comfort',
     labelKey: 'commands.domain.comfort.title',
-    labelFallback: 'Climate & Comfort',
+    labelFallback: 'Climate & comfort',
     descriptionKey: 'commands.domain.comfort.description',
     descriptionFallback: 'Cabin temperature, seats, steering heat, and protection modes.',
     icon: ThermometerSun,
@@ -46,7 +46,7 @@ export const COMMAND_DOMAINS: readonly CommandDomain[] = [
   {
     id: 'charging',
     labelKey: 'commands.domain.charging.title',
-    labelFallback: 'Charging & Schedules',
+    labelFallback: 'Charging & schedules',
     descriptionKey: 'commands.domain.charging.description',
     descriptionFallback: 'Charge controls, limits, and recurring vehicle schedules.',
     icon: BatteryCharging,
@@ -55,7 +55,7 @@ export const COMMAND_DOMAINS: readonly CommandDomain[] = [
   {
     id: 'vehicle',
     labelKey: 'commands.domain.vehicle.title',
-    labelFallback: 'Vehicle Controls',
+    labelFallback: 'Vehicle controls',
     descriptionKey: 'commands.domain.vehicle.description',
     descriptionFallback: 'Location, navigation, software, identity, and media controls.',
     icon: CarFront,

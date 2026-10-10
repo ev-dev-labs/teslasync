@@ -50,8 +50,8 @@ describe('ConflictWarnings', () => {
       />,
     )
     const alert = screen.getByRole('alert')
-    expect(alert.className).toContain('border-neon-amber/25')
-    expect(within(alert).getByText('Potential Conflict')).toBeInTheDocument()
+    expect(alert.className).toContain('border-[var(--semantic-warning-border)]')
+    expect(within(alert).getByText('Potential conflict')).toBeInTheDocument()
     expect(within(alert).getByText('"Night Charge": overlaps a schedule')).toBeInTheDocument()
   })
 
@@ -60,14 +60,14 @@ describe('ConflictWarnings', () => {
       <ConflictWarnings conflicts={[makeConflict({ severity: 'info', automation_name: 'FYI Rule' })]} />,
     )
     const alert = screen.getByRole('alert')
-    expect(alert.className).toContain('border-neon-cyan/25')
-    expect(alert.className).not.toContain('border-neon-amber/25')
+    expect(alert.className).toContain('border-[var(--semantic-info-border)]')
+    expect(alert.className).not.toContain('border-[var(--semantic-warning-border)]')
   })
 
   it('defaults unexpected severities to the info variant', () => {
     const weird = makeConflict({ severity: 'critical' as unknown as AutomationConflict['severity'] })
     render(<ConflictWarnings conflicts={[weird]} />)
-    expect(screen.getByRole('alert').className).toContain('border-neon-cyan/25')
+    expect(screen.getByRole('alert').className).toContain('border-[var(--semantic-info-border)]')
   })
 
   it('renders one alert per conflict, preserving order and mixed severities', () => {
@@ -85,8 +85,8 @@ describe('ConflictWarnings', () => {
     expect(within(alerts[0]).getByText('"A": r1')).toBeInTheDocument()
     expect(within(alerts[1]).getByText('"B": r2')).toBeInTheDocument()
     expect(within(alerts[2]).getByText('"C": r3')).toBeInTheDocument()
-    expect(alerts[0].className).toContain('border-neon-amber/25')
-    expect(alerts[1].className).toContain('border-neon-cyan/25')
+    expect(alerts[0].className).toContain('border-[var(--semantic-warning-border)]')
+    expect(alerts[1].className).toContain('border-[var(--semantic-info-border)]')
   })
 
   it('marks the leading icon as decorative (aria-hidden) so it is not announced', () => {

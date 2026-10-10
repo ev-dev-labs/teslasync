@@ -17,10 +17,11 @@ import {
   chartGrid,
 } from '@/components/charts';
 import { EmptyState, QueryError } from '@/components/feedback';
-import { fmtNumber } from '@/lib/numberFormat';
+
 
 import type { ConsistencySummary } from '../../lib/efficiencyTarget';
 import type { EfficiencyTargetSectionState } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface TargetConsistencyChartProps {
   consistency: ConsistencySummary;
@@ -33,6 +34,7 @@ export function TargetConsistencyChart({
   state,
   className,
 }: TargetConsistencyChartProps) {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const rows = useMemo(
     () =>
@@ -99,7 +101,7 @@ export function TargetConsistencyChart({
           {
             key: 'share',
             label: t('effTarget.col.share', 'Share (%)'),
-            format: (value) => `${fmtNumber(value, 1)}%`,
+            format: (value) => `${fmtNumber(value)}%`,
           },
         ]}
       >

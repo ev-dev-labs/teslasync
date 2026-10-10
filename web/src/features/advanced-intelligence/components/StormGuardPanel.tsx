@@ -20,41 +20,20 @@ import {
   Caption,
   ErrorText,
 } from '@/components/ui';
-import { QueryError, Skeleton } from '@/components/feedback';
-import { useDateFormat } from '@/hooks/useDateFormat';
+import { DataStateNotice, QueryError, Skeleton } from '@/components/feedback';
 import { useDataState } from '@/hooks/useDataState';
 import {
   useStormguardStatus,
   useStormguardEvents,
   useSaveStormguardConfig,
-  type StormLevel,
 } from '@/api/hooks/useStormguard';
-
-function levelVariant(level: StormLevel): 'success' | 'warning' | 'danger' | 'neutral' {
-  switch (level) {
-    case 'warning':
-      return 'danger';
-    case 'watch':
-      return 'warning';
-    default:
-      return 'success';
-  }
-}
-
-function levelLabel(t: (k: string, f: string) => string, level: StormLevel): string {
-  switch (level) {
-    case 'warning':
-      return t('stormguard.warning', 'Storm warning');
-    case 'watch':
-      return t('stormguard.watch', 'Storm watch');
-    default:
-      return t('stormguard.clear', 'Clear');
-  }
-}
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { StormGuardActivity } from './StormGuardActivity';
+import { stormLevelLabel, stormLevelVariant } from './stormguardPresentation';
 
 export function StormGuardPanel({ vehicleId }: { vehicleId?: number | null }) {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
-  const { formatDateTime } = useDateFormat();
 
   const statusQuery = useStormguardStatus(vehicleId);
   const statusState = useDataState(statusQuery);
@@ -97,23 +76,21 @@ export function StormGuardPanel({ vehicleId }: { vehicleId?: number | null }) {
       ? (saveMutation.error as Error)?.message || t('stormguard.saveError', 'Save failed')
       : '';
 
-  const events = eventsQuery.data ?? [];
-
   return (
     <GlassPanel padding="lg" className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <PanelTitle className="flex items-center gap-2">
           <Icons.cloudLightning className="h-4 w-4 text-amber-300" aria-hidden="true" />
-          {t('stormguard.title', 'Storm Guardian')}
+          {t('stormguard.title', 'Storm guardian')}
         </PanelTitle>
         {assessment && (
-          <Badge variant={levelVariant(assessment.level)} size="sm" className="gap-1">
+          <Badge variant={stormLevelVariant(assessment.level)} size="sm" className="gap-1">
             {assessment.level === 'none' ? (
               <Icons.securityCheck className="h-3.5 w-3.5" aria-hidden="true" />
             ) : (
               <Icons.warning className="h-3.5 w-3.5" aria-hidden="true" />
             )}
-            {levelLabel(t, assessment.level)}
+            {stormLevelLabel(t, assessment.level)}
           </Badge>
         )}
       </div>
@@ -122,7 +99,7 @@ export function StormGuardPanel({ vehicleId }: { vehicleId?: number | null }) {
         <Text variant="bodySm" color="secondary">
           {t('stormguard.noVehicle', 'Select a vehicle to configure storm protection.')}
         </Text>
-      ) : statusQuery.isLoading ? (
+      ) : statusQuery.isLoading && !statusState.hasData ? (
         <Skeleton height={180} />
       ) : statusState.fatalError || !assessment ? (
         statusState.fatalError ? (
@@ -132,11 +109,14 @@ export function StormGuardPanel({ vehicleId }: { vehicleId?: number | null }) {
         )
       ) : (
         <>
+          {statusState.status === 'stale' && (
+            <DataStateNotice state="stale" preserveSeverity />
+          )}
           <Text variant="bodySm">{assessment.reason}</Text>
           <div className="flex flex-wrap gap-x-6 gap-y-1">
             <Caption className="tabular-nums">
               {t('stormguard.peakGust', 'Peak gust {{gust}} m/s', {
-                gust: assessment.peak_gust_ms.toFixed(0),
+                gust: fmtNumber(assessment.peak_gust_ms),
               })}
             </Caption>
             {currentSoc != null && (
@@ -179,35 +159,14 @@ export function StormGuardPanel({ vehicleId }: { vehicleId?: number | null }) {
               disabled={!vehicleId || saveMutation.isPending}
               loading={saveMutation.isPending}
             >
-              {t('stormguard.save', 'Save Guard')}
+              {t('stormguard.save', 'Save guard')}
             </Button>
             {saveError && <ErrorText>{saveError}</ErrorText>}
           </div>
-
-          {events.length > 0 && (
-            <div className="space-y-2 border-t border-[var(--border-subtle)] pt-3">
-              <Text variant="bodySm" className="font-medium">
-                {t('stormguard.recent', 'Recent activity')}
-              </Text>
-              <ul className="space-y-1.5">
-                {events.slice(0, 5).map((e) => (
-                  <li key={e.id} className="flex items-center justify-between gap-2 text-sm">
-                    <span className="flex items-center gap-2 min-w-0">
-                      <Badge variant={levelVariant(e.level)} size="sm">
-                        {levelLabel(t, e.level)}
-                      </Badge>
-                      <Caption className="truncate">{e.reason}</Caption>
-                    </span>
-                    <Caption className="shrink-0 tabular-nums">
-                      {formatDateTime(e.created_at)}
-                      {e.acted && ` · ${t('stormguard.acted', 'acted')}`}
-                    </Caption>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
         </>
+      )}
+      {vehicleId != null && (
+        <StormGuardActivity query={eventsQuery} />
       )}
     </GlassPanel>
   );

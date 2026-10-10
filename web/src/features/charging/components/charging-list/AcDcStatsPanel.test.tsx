@@ -90,10 +90,20 @@ describe('formatEnergyDisplay', () => {
 });
 
 describe('AcDcStatsPanel — energy split bar', () => {
+  it('keeps a DC-only split in its non-zero second track rather than the empty AC track', () => {
+    render(<AcDcStatsPanel breakdown={{
+      ac: makeBucket(),
+      dc: makeBucket({ energy: 157.5, count: 6 }),
+      total: { energy: 157.5, cost: 0, freeEnergy: 0, freeCount: 0 },
+    }} />);
+    expect(screen.getByRole('img', { name: 'Energy split: 0% AC, 100% DC' })).toHaveStyle({ gridTemplateColumns: '0% 100%' });
+    expect(screen.getByText('DC 100.00%')).toHaveClass('col-start-2');
+  });
+
   it('exposes an accessible split summary, both percentage chips, and MWh-scaled totals', () => {
     const { container } = render(<AcDcStatsPanel breakdown={mixedBreakdown()} />);
 
-    expect(screen.getByText('Charging Stats by Type')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Charging stats by type' })).toBeInTheDocument();
 
     // The bar is a single labelled image for AT: "30% AC, 70% DC".
     expect(
@@ -122,8 +132,8 @@ describe('AcDcStatsPanel — per-type stats table', () => {
     expect(table).toBeInTheDocument();
 
     // Both charge types surface as rows.
-    expect(within(table).getByText('AC Charging')).toBeInTheDocument();
-    expect(within(table).getByText('DC Charging')).toBeInTheDocument();
+    expect(within(table).getByText('AC charging')).toBeInTheDocument();
+    expect(within(table).getByText('DC charging')).toBeInTheDocument();
 
     // Per-type cost + $/kWh flow through the real <Currency> ('$' from settings).
     expect(within(table).getByText('$12.00')).toBeInTheDocument(); // AC cost
@@ -148,7 +158,7 @@ describe('AcDcStatsPanel — per-type stats table', () => {
     render(<AcDcStatsPanel breakdown={breakdown} />);
 
     expect(screen.getByText('No AC/DC charging data')).toBeInTheDocument();
-    expect(screen.queryByText('AC Charging')).toBeNull();
+    expect(screen.queryByText('AC charging')).toBeNull();
   });
 });
 
@@ -156,7 +166,7 @@ describe('AcDcStatsPanel — free-charging footer', () => {
   it('shows the free summary when there are free sessions', () => {
     render(<AcDcStatsPanel breakdown={mixedBreakdown()} />);
 
-    expect(screen.getByText(/Free charged/)).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /Free charged/ })).toBeInTheDocument();
     // Interpolated count from t('...','{{count}} sessions',{count}).
     expect(screen.getByText('1 sessions')).toBeInTheDocument();
     // Footer free-energy strong renders exactly "50.00 kWh".
@@ -193,8 +203,8 @@ describe('AcDcStatsPanel — regression + null safety', () => {
     expect(screen.queryByRole('img')).toBeNull();
     // The table still lists the non-empty AC bucket at "0.00 kWh".
     const table = screen.getByRole('table');
-    expect(within(table).getByText('AC Charging')).toBeInTheDocument();
-    expect(within(table).queryByText('DC Charging')).toBeNull();
+    expect(within(table).getByText('AC charging')).toBeInTheDocument();
+    expect(within(table).queryByText('DC charging')).toBeNull();
     expect(within(table).getAllByText('0.00 kWh').length).toBeGreaterThanOrEqual(1);
   });
 
@@ -224,6 +234,6 @@ describe('AcDcStatsPanel — regression + null safety', () => {
     expect(screen.queryByText(/^DC .*%$/)).toBeNull();
     expect(container.textContent).not.toContain('NaN');
     // DC still appears as a (zero-energy) row in the table.
-    expect(within(screen.getByRole('table')).getByText('DC Charging')).toBeInTheDocument();
+    expect(within(screen.getByRole('table')).getByText('DC charging')).toBeInTheDocument();
   });
 });

@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Play, Pause, SkipBack } from 'lucide-react';
-import { Button, GlassPanel } from '@/components/ui';
-import { TimelineScrubber } from '@/components/data-display';
+import { Button, Text } from '@/components/ui';
+import { LayoutCard } from '@/components/layout';
+import { PlaybackControls } from '@/components/data-display';
 import { useUnits } from '@/hooks/useUnits';
 import type { ClipRecord } from '../../lib/types';
 import { useMotionAnalysis } from '../../hooks/useMotionAnalysis';
 import { RedactionOverlay } from './RedactionOverlay';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export interface ClipPlayerPanelProps {
   clip: ClipRecord;
@@ -19,11 +20,13 @@ export interface ClipPlayerPanelProps {
  * change and revoked on cleanup — no bytes are ever sent anywhere.
  */
 export function ClipPlayerPanel({ clip }: ClipPlayerPanelProps) {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const { formatDuration } = useUnits();
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [mediaDuration, setMediaDuration] = useState<number | null>(null);
   const motionAnalysis = useMotionAnalysis();
 
   const objectUrl = useMemo(() => URL.createObjectURL(clip.blob), [clip.blob]);
@@ -32,9 +35,16 @@ export function ClipPlayerPanel({ clip }: ClipPlayerPanelProps) {
   useEffect(() => {
     setIsPlaying(false);
     setProgress(0);
+    setMediaDuration(null);
   }, [clip.id]);
 
-  const duration = clip.durationSeconds ?? videoRef.current?.duration ?? 0;
+  const duration = clip.durationSeconds != null && Number.isFinite(clip.durationSeconds)
+    ? Math.max(0, clip.durationSeconds) : mediaDuration;
+
+  const handleDurationChange = () => {
+    const measured = videoRef.current?.duration;
+    setMediaDuration(measured != null && Number.isFinite(measured) && measured >= 0 ? measured : null);
+  };
 
   const handleTimeUpdate = () => {
     const video = videoRef.current;
@@ -49,16 +59,14 @@ export function ClipPlayerPanel({ clip }: ClipPlayerPanelProps) {
     setProgress(normalized);
   };
 
-  const togglePlay = () => {
+  const play = () => {
     const video = videoRef.current;
     if (!video) return;
-    if (video.paused) {
-      void video.play();
-      setIsPlaying(true);
-    } else {
-      video.pause();
-      setIsPlaying(false);
-    }
+    void video.play();
+  };
+
+  const pause = () => {
+    videoRef.current?.pause();
   };
 
   const restart = () => {
@@ -71,7 +79,7 @@ export function ClipPlayerPanel({ clip }: ClipPlayerPanelProps) {
   const motionStatus = clip.motion.status;
 
   return (
-    <GlassPanel padding="md" className="space-y-3">
+    <LayoutCard title={t('dashcam.tabs.player', 'Player')}>
       <div className="relative overflow-hidden rounded-lg border border-[var(--border-subtle)] bg-black">
         <video
           ref={videoRef}
@@ -79,6 +87,9 @@ export function ClipPlayerPanel({ clip }: ClipPlayerPanelProps) {
           muted
           playsInline
           onTimeUpdate={handleTimeUpdate}
+          onLoadStart={() => setMediaDuration(null)}
+          onLoadedMetadata={handleDurationChange}
+          onDurationChange={handleDurationChange}
           onPlay={() => setIsPlaying(true)}
           onPause={() => setIsPlaying(false)}
           onEnded={() => setIsPlaying(false)}
@@ -87,39 +98,38 @@ export function ClipPlayerPanel({ clip }: ClipPlayerPanelProps) {
         <RedactionOverlay regions={clip.redactions} />
       </div>
 
-      <div className="flex items-center gap-2">
-        <Button variant="ghost" size="sm" onClick={restart} aria-label={t('dashcam.player.restart', 'Restart')} className="h-8 w-8 p-0">
-          <SkipBack className="h-4 w-4" />
-        </Button>
-        <Button variant="ghost" size="sm" onClick={togglePlay} aria-label={isPlaying ? t('dashcam.player.pause', 'Pause') : t('dashcam.player.play', 'Play')} className="h-8 w-8 p-0">
-          {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
-        </Button>
-        <div className="flex-1">
-          <TimelineScrubber progress={progress} duration={duration} onSeek={handleSeek} />
-        </div>
-        <span className="min-w-[70px] text-right font-mono text-xs text-[var(--text-secondary)]">
-          {formatDuration(progress * duration)} / {formatDuration(duration)}
-        </span>
-      </div>
+      <PlaybackControls
+        framed={false}
+        isPlaying={isPlaying}
+        progress={progress}
+        elapsed={duration == null ? '—' : formatDuration(progress * duration)}
+        total={duration == null ? '—' : formatDuration(duration)}
+        durationMs={duration == null ? undefined : duration * 1000}
+        onPlay={play}
+        onPause={pause}
+        onRestart={restart}
+        onSeek={handleSeek}
+      />
 
-      <div className="flex items-center justify-between gap-3 border-t border-[var(--border-subtle)] pt-3">
-        <div className="text-xs text-[var(--text-muted)]">
+      <div className="flex min-w-0 flex-wrap items-center justify-between gap-3 border-t border-[var(--border-subtle)] pt-3">
+        <Text variant="caption" className="min-w-0 flex-1 break-words">
           {motionStatus === 'not_run' && t('dashcam.player.motionNotRun', 'Motion score not yet computed.')}
           {motionStatus === 'ok' && t('dashcam.player.motionScore', 'Sampled-frame pixel-difference score: {{score}} ({{pairs}} frame pairs)', {
-            score: clip.motion.score?.toFixed(3),
+            score: fmtNumber(clip.motion.score),
             pairs: clip.motion.samplePairs ?? 0,
           })}
           {motionStatus === 'unavailable' && t('dashcam.player.motionUnavailable', 'Motion analysis unavailable: {{reason}}', { reason: clip.motion.reason })}
-        </div>
+        </Text>
         <Button
           size="sm"
           variant="secondary"
+          wrapLabel
           loading={motionAnalysis.isPending}
           onClick={() => motionAnalysis.mutate(clip)}
         >
           {t('dashcam.player.runMotion', 'Run local motion analysis')}
         </Button>
       </div>
-    </GlassPanel>
+    </LayoutCard>
   );
 }

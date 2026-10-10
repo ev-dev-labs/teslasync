@@ -35,6 +35,10 @@ vi.mock('@/components/charts', async (importOriginal) => {
   const { chartTestDoubles } = await import('@/test/chartTestDoubles');
   return { ...actual, ...chartTestDoubles };
 });
+vi.mock('@/components/charts/EmbeddedChart', async () => {
+  const { chartTestDoubles } = await import('@/test/chartTestDoubles');
+  return { EmbeddedChart: chartTestDoubles.EmbeddedChart };
+});
 
 // jsdom lacks matchMedia; framer-motion (<FadeIn>) reads it at module load for
 // the reduced-motion preference. Install a no-op before any import runs.
@@ -195,6 +199,7 @@ interface QueryOverrides {
   isLoading?: boolean;
   error?: unknown;
   refetch?: () => void;
+  fetchStatus?: 'fetching' | 'paused' | 'idle';
 }
 
 function makeQuery(overrides: QueryOverrides = {}) {
@@ -207,6 +212,7 @@ function makeQuery(overrides: QueryOverrides = {}) {
     error: overrides.error ?? null,
     dataUpdatedAt: overrides.data != null ? Date.now() : 0,
     refetch: overrides.refetch ?? vi.fn(),
+    fetchStatus: overrides.fetchStatus ?? 'idle',
   };
 }
 
@@ -284,11 +290,11 @@ function renderPage() {
   );
 }
 
-/** Read a MetricCard's value text by its (unique) label. */
+/** Read the canonical stat tile's complete displayed value by its label. */
 function metricValue(label: string): string {
   const labelSpan = screen.getByText(label);
-  const card = labelSpan.closest('[data-role="metric-card"]');
-  return card?.querySelector('[data-role="metric-value"]')?.textContent ?? '';
+  const card = labelSpan.closest('[data-operational-metric]');
+  return card?.querySelector('[data-operational-value]')?.textContent ?? '';
 }
 
 beforeEach(() => {
@@ -392,12 +398,17 @@ describe('ProjectedRangePage · states', () => {
 
   it('renders skeletons (never KPI numbers) while the projection query is in flight', () => {
     rangeMock.mockReturnValue(makeQuery({ isLoading: true }));
-    const { container } = renderPage();
+    renderPage();
 
     // Panel shells stay visible; only the data slots are skeletoned.
     expect(screen.getByText('Range Scenarios')).toBeInTheDocument();
-    expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThan(0);
-    expect(screen.queryByText('Your Estimate')).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Range Scenarios', exact: true }).closest('[data-card]')!.querySelectorAll('[aria-hidden="true"][class~="bg-[var(--skeleton-bg)]"]').length).toBeGreaterThan(0);
+    // The estimate label persists, but its measurement slot is not ready.
+    const summary = screen.getByRole('region', { name: 'Range summary metrics' });
+    expect(summary).toHaveAttribute('aria-busy', 'true');
+    expect(within(summary).getByText('Your Estimate').closest('[data-operational-metric]'))
+      .toHaveAttribute('data-value-state', 'missing');
+    expect(summary.querySelector('[data-operational-value]')).not.toBeInTheDocument();
   });
 
   it('surfaces a retryable error banner in every data section on failure', () => {
@@ -418,8 +429,10 @@ describe('ProjectedRangePage · states', () => {
     rangeMock.mockReturnValue(makeQuery({ data: undefined }));
     renderPage();
 
-    // KPI shell still renders (with safe zeros), proving no whole-section hiding.
-    expect(metricValue('Your Estimate')).toContain('0');
+    // No measurement is not a measured zero (MDC-026 / dataState contract).
+    // The KPI shell remains, with an explicit missing value.
+    expect(metricValue('Your Estimate')).toBe('—');
+    expect(metricValue('Your Estimate')).not.toContain('0');
     // The `!data` branches of the gauge, curve and what-if calculator.
     expect(screen.getByText('Efficiency data unavailable yet.')).toBeInTheDocument();
     expect(screen.getByText('Range projection curve will appear once this vehicle logs drives.')).toBeInTheDocument();
@@ -477,12 +490,12 @@ describe('ProjectedRangePage · dashboard render', () => {
     // Efficiency matrix: bucket labels + populated cells (samples in parens).
     expect(screen.getByText('Suburban')).toBeInTheDocument();
     expect(screen.getByText('Freezing')).toBeInTheDocument();
-    expect(screen.getByText('190')).toBeInTheDocument();
-    expect(screen.getByText('210')).toBeInTheDocument();
+    expect(screen.getByText('190.00')).toBeInTheDocument();
+    expect(screen.getByText('210.00')).toBeInTheDocument();
 
     // Factors: signed impact badges + descriptions.
-    expect(screen.getByText('-8.5%')).toBeInTheDocument();
-    expect(screen.getByText('+4.2%')).toBeInTheDocument();
+    expect(screen.getByText('-8.50%')).toBeInTheDocument();
+    expect(screen.getByText('+4.20%')).toBeInTheDocument();
     expect(screen.getByText('Cold weather reduces range')).toBeInTheDocument();
 
     // Static tips always render.
@@ -516,7 +529,7 @@ describe('ProjectedRangePage · what-if calculator', () => {
     // Default: speed 80 (suburban) + temp 20 (mild) → heuristic 177.5 Wh/km,
     // 75 000 Wh × 72% ÷ 177.5 ≈ 304 km.
     expect(screen.getByText('177.50 Wh/km')).toBeInTheDocument();
-    expect(screen.getByText('304 km')).toBeInTheDocument();
+    expect(screen.getByText('304.20 km')).toBeInTheDocument();
 
     // Drag the temperature slider down to −10 °C (freezing): the heater penalty
     // pushes efficiency to 222.5 Wh/km and range down to ~243 km.
@@ -524,9 +537,9 @@ describe('ProjectedRangePage · what-if calculator', () => {
     fireEvent.change(tempSlider, { target: { value: '-10' } });
 
     expect(screen.getByText('222.50 Wh/km')).toBeInTheDocument();
-    expect(screen.getByText('243 km')).toBeInTheDocument();
+    expect(screen.getByText('242.70 km')).toBeInTheDocument();
     expect(screen.queryByText('177.50 Wh/km')).not.toBeInTheDocument();
-    expect(screen.queryByText('304 km')).not.toBeInTheDocument();
+    expect(screen.queryByText('304.20 km')).not.toBeInTheDocument();
   });
 });
 
@@ -541,8 +554,8 @@ describe('ProjectedRangePage · mile units', () => {
     // … as do the matrix cells (whole-number, unit in the title): fixture
     // highway/mild 190 Wh/km → 306, city/cold 210 Wh/km → 338.
     const matrix = screen.getByRole('region', { name: 'Personal Efficiency Matrix (Wh/mi)' });
-    expect(within(matrix).getByText('306')).toBeInTheDocument();
-    expect(within(matrix).getByText('338')).toBeInTheDocument();
+    expect(within(matrix).getByText('305.78')).toBeInTheDocument();
+    expect(within(matrix).getByText('337.96')).toBeInTheDocument();
 
     // … the what-if readout (177.5 Wh/km → Wh/mi) …
     expect(screen.getByText('285.66 Wh/mi')).toBeInTheDocument();
@@ -553,5 +566,81 @@ describe('ProjectedRangePage · mile units', () => {
 
     // No efficiency figure anywhere on the page may keep the km unit.
     expect(screen.queryAllByText(/Wh\/km/)).toHaveLength(0);
+  });
+
+  describe('ProjectedRangePage · modernization trust regressions', () => {
+    it('keeps every loaded data section and slider calculation after a refresh failure', () => {
+      rangeMock.mockReturnValue(makeQuery({ data: makeProjection(), error: new Error('refresh failed') }));
+      renderPage();
+
+      expect(metricValue('Your Estimate')).toContain('300');
+      expect(screen.getByText('Winter City')).toBeInTheDocument();
+      expect(screen.getByText('190.00')).toBeInTheDocument();
+      expect(screen.getByText('-8.50%')).toBeInTheDocument();
+      expect(screen.getByText('Based on 42 recent drives')).toBeInTheDocument();
+      expect(screen.getByRole('img', { name: 'Rated versus projected range across battery level' })).toBeInTheDocument();
+      expect(screen.queryByText("Can't reach server")).not.toBeInTheDocument();
+      expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+      fireEvent.change(screen.getByLabelText('Temperature'), { target: { value: '-10' } });
+      expect(screen.getByText('242.70 km')).toBeInTheDocument();
+    });
+
+    it('keeps a retained projection visible when its refresh is paused offline', () => {
+      rangeMock.mockReturnValue(makeQuery({ data: makeProjection(), fetchStatus: 'paused' }));
+      renderPage();
+
+      const notice = screen.getByTestId('stale-refresh-warning');
+      expect(notice).toHaveAttribute('role', 'status');
+      expect(notice).toHaveAttribute('data-data-state', 'stale');
+      expect(notice).toHaveAttribute('data-refresh-blocked', 'true');
+      expect(notice).toHaveTextContent('The latest values are temporarily unavailable. Previously loaded data remains visible.');
+      expect(notice).not.toHaveTextContent(/offline|failed/i);
+      expect(within(screen.getByRole('region', { name: 'Range summary metrics' }))
+        .getByText('Retained source evidence')).toBeInTheDocument();
+      expect(metricValue('Battery')).toContain('72');
+      expect(screen.getByText('177.50 Wh/km')).toBeInTheDocument();
+      expect(screen.getByText('Range Factors')).toBeInTheDocument();
+    });
+
+    it('distinguishes measured zero from missing range and battery measurements', () => {
+      rangeMock.mockReturnValue(makeQuery({ data: makeProjection({
+        your_estimate_km: 0, tesla_estimate_km: 0, current_battery_pct: 0,
+      }) }));
+      renderPage();
+
+      expect(metricValue('Your Estimate')).toBe('0.00 km');
+      expect(metricValue('Tesla Estimate')).toBe('0.00 km');
+      expect(metricValue('Battery')).toContain('0.00');
+      const calculator = screen.getByRole('heading', { name: 'What If Calculator', exact: true })
+        .closest('[data-card]') as HTMLElement;
+      expect(within(calculator).getByText('0.00 km')).toBeInTheDocument();
+      for (const label of ['Your Estimate', 'Tesla Estimate', 'Battery']) {
+        expect(screen.getByText(label).closest('[data-operational-metric]'))
+          .toHaveAttribute('data-value-state', 'value');
+      }
+    });
+
+    it('does not invent a 75 kWh usable capacity for incomplete calculator inputs', () => {
+      rangeMock.mockReturnValue(makeQuery({ data: {
+        ...makeProjection(), usable_capacity_wh: null,
+      } }));
+      renderPage();
+
+      expect(metricValue('Usable Capacity')).toBe('—');
+      expect(screen.getByText('Measured battery level and usable capacity are required to calculate a range.')).toBeInTheDocument();
+      expect(screen.queryByText('304.20 km')).not.toBeInTheDocument();
+      expect(screen.getByLabelText('Speed')).toBeInTheDocument();
+      expect(screen.getByText('Range Scenarios')).toBeInTheDocument();
+    });
+
+    it('retains all temperature and speed cells without a forced matrix minimum width', () => {
+      renderPage();
+      const matrix = screen.getByRole('region', { name: 'Personal Efficiency Matrix (Wh/km)' });
+
+      expect(within(matrix).getByLabelText('Mild, Highway')).toHaveTextContent('190.00');
+      expect(within(matrix).getByLabelText('Cold, City')).toHaveTextContent('210.00');
+      expect(matrix.querySelectorAll('[aria-label*=", "]')).toHaveLength(12);
+      expect(matrix.querySelector('[class*="min-w-["]')).toBeNull();
+    });
   });
 });

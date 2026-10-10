@@ -25,7 +25,8 @@
  * driven with `fireEvent`.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, cleanup, fireEvent, waitFor, within } from '@testing-library/react';
+import { render, screen, cleanup, fireEvent, waitFor, within, act } from '@testing-library/react';
+import { setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat';
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -69,7 +70,7 @@ function makeHistory(overrides: Partial<HistoryEntry> = {}): HistoryEntry {
 
 const RESPONSE_BODY = { name: 'Response body' } as const;
 const SNIPPET_LABEL = 'Generated code snippet';
-const SNIPPET_TOGGLE = { name: 'Code Snippet' } as const;
+const SNIPPET_TOGGLE = { name: 'Code snippet' } as const;
 const noop = () => {};
 
 const url = 'https://api.test/v1/vehicles';
@@ -79,6 +80,8 @@ const writeText = vi.fn(() => Promise.resolve());
 
 beforeEach(() => {
   cleanup();
+  setGlobalPrecision(2);
+  setGlobalLocale('en-US');
   writeText.mockClear();
   Object.defineProperty(navigator, 'clipboard', {
     configurable: true,
@@ -89,14 +92,41 @@ beforeEach(() => {
 /* ─── ResponseViewer ──────────────────────────────────────────────────── */
 
 describe('ResponseViewer', () => {
+  it('updates timing and size preferences without rewriting the raw response body', () => {
+    const response = makeResponse({
+      duration: 42.125,
+      size: 1536,
+      body: { duration: 42.125 },
+      bodyText: '{"duration":42.125}',
+    });
+    const view = render(
+      <ResponseViewer response={response} loading={false} history={[]} onReplay={noop} />,
+    );
+    try {
+      expect(screen.getByText('42.13ms · 1.50 KB')).toBeInTheDocument();
+      act(() => {
+        setGlobalPrecision(3);
+        setGlobalLocale('de-DE');
+      });
+      expect(screen.getByText('42,125ms · 1,500 KB')).toBeInTheDocument();
+      expect(screen.getByRole('region', RESPONSE_BODY)).toHaveTextContent('"duration": 42.125');
+      expect(response.duration).toBe(42.125);
+      expect(response.size).toBe(1536);
+    } finally {
+      view.unmount();
+      setGlobalPrecision(2);
+      setGlobalLocale('en-US');
+    }
+  });
+
   it('shows a loading skeleton (no empty state, no body) while a request is in flight', () => {
     const { container } = render(
       <ResponseViewer response={null} loading history={[]} onReplay={noop} />,
     );
     // The section title is always present.
     expect(screen.getByText('Response')).toBeInTheDocument();
-    // A pulsing skeleton stands in for the response.
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
+    // The shared static skeleton stands in for the response.
+    expect(container.querySelector('[aria-hidden="true"][class*="bg-[var(--skeleton-bg)]"]')).not.toBeNull();
     // The empty prompt and the body region are both suppressed.
     expect(screen.queryByText('Send a request to see the response')).toBeNull();
     expect(screen.queryByRole('region', RESPONSE_BODY)).toBeNull();
@@ -128,8 +158,7 @@ describe('ResponseViewer', () => {
     const statusLine = screen.getByText('200 OK');
     expect(statusLine).toBeInTheDocument();
     expect(statusLine.className).toContain('text-green-400');
-    // 1536 bytes → 1.5 KB.
-    expect(screen.getByText('42ms · 1.5 KB')).toBeInTheDocument();
+    expect(screen.getByText('42.00ms · 1.50 KB')).toBeInTheDocument();
     const region = screen.getByRole('region', RESPONSE_BODY);
     expect(region.textContent).toContain('"ok": true');
     expect(region.textContent).toContain('"n": 1');
@@ -156,10 +185,10 @@ describe('ResponseViewer', () => {
   });
 
   it.each([
-    [512, '42ms · 512 B'],
-    [1536, '42ms · 1.5 KB'],
-    [2 * 1024 * 1024, '42ms · 2.0 MB'],
-    [0, '42ms · 0 B'],
+    [512, '42.00ms · 512 B'],
+    [1536, '42.00ms · 1.50 KB'],
+    [2 * 1024 * 1024, '42.00ms · 2.00 MB'],
+    [0, '42.00ms · 0 B'],
   ])('humanises a %i-byte payload size', (size, meta) => {
     render(
       <ResponseViewer
@@ -181,7 +210,7 @@ describe('ResponseViewer', () => {
         onReplay={noop}
       />,
     );
-    expect(screen.getByText('42ms · 0 B')).toBeInTheDocument();
+    expect(screen.getByText('42.00ms · 0 B')).toBeInTheDocument();
     expect(screen.queryByText(/NaN/)).toBeNull();
 
     rerender(
@@ -192,7 +221,7 @@ describe('ResponseViewer', () => {
         onReplay={noop}
       />,
     );
-    expect(screen.getByText('42ms · 0 B')).toBeInTheDocument();
+    expect(screen.getByText('42.00ms · 0 B')).toBeInTheDocument();
   });
 
   it('shows raw bodyText for a non-JSON content type', () => {
@@ -254,7 +283,7 @@ describe('ResponseViewer', () => {
         onReplay={noop}
       />,
     );
-    expect(screen.queryByRole('button', { name: /Response Headers/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: /Response headers/ })).toBeNull();
   });
 
   it('expands and collapses the response headers, reflecting aria-expanded', () => {
@@ -268,7 +297,7 @@ describe('ResponseViewer', () => {
         onReplay={noop}
       />,
     );
-    const toggle = screen.getByRole('button', { name: /Response Headers \(2\)/ });
+    const toggle = screen.getByRole('button', { name: /Response headers \(2\)/ });
     expect(toggle).toHaveAttribute('aria-expanded', 'false');
     expect(screen.queryByText('abc123')).toBeNull();
 
@@ -284,7 +313,7 @@ describe('ResponseViewer', () => {
 
   it('does not render the history strip when there is no history', () => {
     render(<ResponseViewer response={null} loading={false} history={[]} onReplay={noop} />);
-    expect(screen.queryByText('Recent Requests')).toBeNull();
+    expect(screen.queryByText('Recent requests')).toBeNull();
   });
 
   it('is resilient to a nullish history prop (defensive ?? [])', () => {
@@ -296,7 +325,7 @@ describe('ResponseViewer', () => {
         onReplay={noop}
       />,
     );
-    expect(screen.queryByText('Recent Requests')).toBeNull();
+    expect(screen.queryByText('Recent requests')).toBeNull();
   });
 
   it('renders each history entry and replays the clicked one via onReplay', () => {
@@ -317,7 +346,7 @@ describe('ResponseViewer', () => {
         onReplay={onReplay}
       />,
     );
-    expect(screen.getByText('Recent Requests')).toBeInTheDocument();
+    expect(screen.getByText('Recent requests')).toBeInTheDocument();
     expect(screen.getByText('/vehicles')).toBeInTheDocument();
     expect(screen.getByText('/charging')).toBeInTheDocument();
 
@@ -469,7 +498,7 @@ describe('SnippetPanel', () => {
     const toggle = screen.getByRole('button', SNIPPET_TOGGLE);
     // The chevron inside the toggle is aria-hidden so the accessible name is
     // just "Code Snippet" (asserted implicitly by getByRole matching above).
-    expect(within(toggle).getByText('Code Snippet')).toBeInTheDocument();
+    expect(within(toggle).getByText('Code snippet')).toBeInTheDocument();
     expect(container.querySelector('svg[aria-hidden="true"]')).not.toBeNull();
   });
 });

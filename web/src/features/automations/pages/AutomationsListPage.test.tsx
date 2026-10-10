@@ -247,7 +247,7 @@ function kpiRegion(): HTMLElement {
 
 function metricValue(label: string): string {
   const labelEl = within(kpiRegion()).getByText(label);
-  const card = labelEl.closest('[data-role="metric-card"]') as HTMLElement;
+  const card = labelEl.closest('[data-operational-metric]') as HTMLElement;
   return within(card).getByText(/^\d+$/).textContent ?? '';
 }
 
@@ -309,9 +309,28 @@ describe('isRecord / isAutomationImportEnvelope', () => {
 // ═══ KPI band ════════════════════════════════════════════════════════════════
 
 describe('AutomationsListPage — KPI band', () => {
+  it('opens the real review drawer with loaded unfiltered rule context without mutating a rule', () => {
+    setAutomations([active, disabled, autoOff]);
+    renderPage();
+    fireEvent.click(within(kpiRegion()).getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog', { name: 'Rule inventory details' });
+    expect(within(drawer).getByText('Operational metrics')).toBeInTheDocument();
+    expect(within(drawer).getAllByText('Full loaded rule set, before status and search filters.').length).toBeGreaterThan(0);
+    expect(m.toggleMutate).not.toHaveBeenCalled();
+    expect(m.deleteMutate).not.toHaveBeenCalled();
+    expect(m.testRunMutate).not.toHaveBeenCalled();
+  });
   it('renders the page heading and subtitle', () => {
     renderPage();
-    expect(screen.getByRole('heading', { level: 1, name: 'Automations' })).toBeInTheDocument();
+    const heading = screen.getByRole('heading', { level: 1, name: 'Automations' });
+    expect(heading).toHaveAttribute('data-route-focus-target', 'true');
+    expect(heading.closest('header')).toHaveClass('border-0', 'bg-transparent');
+    expect(screen.getByRole('button', { name: 'Manage rules' })
+      .closest('[data-action-group]')).toHaveAttribute('data-action-group', 'secondary');
+    expect(screen.getByRole('button', { name: 'Import' })
+      .closest('[data-action-group]')).toHaveAttribute('data-action-group', 'overflow');
+    expect(screen.getByRole('button', { name: 'Create' })
+      .closest('[data-action-group]')).toHaveAttribute('data-action-group', 'primary');
     expect(
       screen.getByText(/Automate vehicle actions with typed triggers/),
     ).toBeInTheDocument();
@@ -331,7 +350,7 @@ describe('AutomationsListPage — KPI band', () => {
     expect(metricValue('Total')).toBe('6');
     expect(metricValue('Active')).toBe('3');
     expect(metricValue('Disabled')).toBe('2');
-    expect(metricValue('Auto-Disabled')).toBe('1');
+    expect(metricValue('Auto-disabled')).toBe('1');
   });
 });
 
@@ -445,7 +464,7 @@ describe('AutomationsListPage — workspace states', () => {
   it('renders skeleton placeholders while loading and no cards', () => {
     setAutomations(undefined, { isLoading: true });
     const { container } = renderPage();
-    expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThanOrEqual(4);
+    expect(container.querySelectorAll('[aria-hidden="true"][class*="bg-[var(--skeleton-bg)]"]').length).toBeGreaterThanOrEqual(4);
     expect(screen.queryByTestId('automation-card')).toBeNull();
   });
 

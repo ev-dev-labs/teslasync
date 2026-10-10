@@ -183,8 +183,8 @@ describe('FleetSummary — aggregate tiles', () => {
     // Total range = 900_000 m → 900 km, converted at the display boundary.
     const expectedKm = Math.round(convertDistanceFromSI(900_000, 'km'));
     expect(expectedKm).toBe(900);
-    expect(within(tile(/Total Range/)).getByText(String(expectedKm))).toBeInTheDocument();
-    expect(tile(/Total Range/)).toHaveTextContent(/km/);
+    expect(within(tile(/Total range/)).getByText(String(expectedKm))).toBeInTheDocument();
+    expect(tile(/Total range/)).toHaveTextContent(/km/);
 
     // 1 of 3 vehicles charging.
     expect(within(tile(/Charging/)).getByText('1')).toBeInTheDocument();
@@ -201,9 +201,9 @@ describe('FleetSummary — aggregate tiles', () => {
     renderSummary([makeVehicle(1)]);
 
     expect(screen.getByText('Vehicles')).toBeInTheDocument();
-    expect(screen.getByText('Avg Battery')).toBeInTheDocument();
-    expect(screen.getByText(/Total Range/)).toBeInTheDocument();
-    expect(screen.getByText('Charging / Online')).toBeInTheDocument();
+    expect(screen.getByText('Avg battery')).toBeInTheDocument();
+    expect(screen.getByText(/Total range/)).toBeInTheDocument();
+    expect(screen.getByText('Charging / online')).toBeInTheDocument();
   });
 });
 
@@ -230,7 +230,7 @@ describe('FleetSummary — resilience', () => {
     // Only the single online vehicle contributes to the averages.
     expect(await screen.findByText('80%')).toBeInTheDocument();
     const expectedKm = Math.round(convertDistanceFromSI(400_000, 'km'));
-    expect(within(tile(/Total Range/)).getByText(String(expectedKm))).toBeInTheDocument();
+    expect(within(tile(/Total range/)).getByText(String(expectedKm))).toBeInTheDocument();
 
     // 1 charging out of 1 online (the two failed vehicles are not "online").
     await waitFor(() => {
@@ -239,13 +239,28 @@ describe('FleetSummary — resilience', () => {
     expect(within(tile(/Charging/)).getByText('1')).toBeInTheDocument();
   });
 
-  it('renders zeros for an empty fleet and issues no network calls (enabled gate)', () => {
+  it('has no average for an empty fleet and issues no network calls', () => {
     renderSummary([]);
 
     expect(within(tile(/Vehicles/)).getByText('0')).toBeInTheDocument();
-    expect(within(tile(/Avg Battery/)).getByText('0%')).toBeInTheDocument();
+    expect(within(tile(/Avg battery/)).getByText('—')).toBeInTheDocument();
     expect(within(tile(/Charging/)).getByText('/ 0')).toBeInTheDocument();
     expect(fetchStateMock).not.toHaveBeenCalled();
+  });
+
+  it('does not dilute the battery average or fabricate totals from missing readings', async () => {
+    fetchStateMock.mockImplementation((id: number) => Promise.resolve({
+      state: id === 1 ? makeState({ battery_level: 80 }) : {
+        ...makeState({ vehicle_id: 2 }), battery_level: null, rated_range: null,
+        is_charging: null, state: null,
+      },
+      live: false,
+    }));
+    renderSummary([makeVehicle(1), makeVehicle(2)]);
+    expect(await screen.findByText('80%')).toBeInTheDocument();
+    expect(within(tile(/Total range/)).getByText('—')).toBeInTheDocument();
+    expect(within(tile(/Charging/)).getByText('/ —')).toBeInTheDocument();
+    expect(within(tile(/Charging/)).getByText('—')).toBeInTheDocument();
   });
 
   it('null-safety: an undefined vehicles prop renders zeros instead of throwing', () => {
@@ -276,8 +291,8 @@ describe('FleetSummary — units + a11y', () => {
 
     const expectedMi = Math.round(convertDistanceFromSI(900_000, 'mi'));
     expect(expectedMi).not.toBe(900); // proves the unit actually changed the value
-    expect(within(tile(/Total Range/)).getByText(String(expectedMi))).toBeInTheDocument();
-    expect(tile(/Total Range/)).toHaveTextContent(/mi/);
+    expect(within(tile(/Total range/)).getByText(String(expectedMi))).toBeInTheDocument();
+    expect(tile(/Total range/)).toHaveTextContent(/mi/);
   });
 
   it('hides the four decorative metric icons from the accessibility tree', () => {

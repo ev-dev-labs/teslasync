@@ -2,6 +2,7 @@ import { Component, type ReactNode } from 'react'
 import { AlertTriangle, RefreshCw, Home, WifiOff } from 'lucide-react'
 import i18n from 'i18next'
 import { Button } from '../ui/Button'
+import { Heading, Text } from '../ui/Typography'
 import { reportFrontendError } from '@/lib/errorReporter'
 
 interface Props {
@@ -152,61 +153,71 @@ export class ErrorBoundary extends Component<Props, State> {
 
       if (this.props.inline) {
         return (
-          <div className="flex items-center gap-3 rounded-xl border border-tesla-red/20 bg-tesla-red/5 p-4">
-            <AlertTriangle className="h-5 w-5 text-tesla-red shrink-0" />
+          <div className="flex flex-wrap items-center gap-3 rounded-shape-md border border-[var(--semantic-danger-border)] bg-[var(--semantic-danger-bg)] p-4">
+            <AlertTriangle className="h-5 w-5 text-[var(--semantic-danger)] shrink-0" aria-hidden="true" />
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-[var(--text-secondary)]">Component failed to load</p>
-              <p className="text-xs text-[var(--text-muted)] truncate">{this.state.error?.message}</p>
+              <Text as="p" variant="bodySm">
+                {i18n.t('errorBoundary.inlineTitle', 'Component failed to load')}
+              </Text>
+              <Text as="p" variant="caption" className="whitespace-pre-wrap break-words">{this.state.error?.message}</Text>
             </div>
-            <Button variant="secondary" size="sm" onClick={this.handleRetry} className="shrink-0">
-              <RefreshCw className="h-3 w-3" /> Retry
+            <Button variant="secondary" size="sm" wrapLabel onClick={this.handleRetry} className="shrink-0 max-md:min-h-11">
+              <RefreshCw className="h-3 w-3 shrink-0" aria-hidden="true" /> {i18n.t('errorBoundary.retry', 'Retry')}
             </Button>
           </div>
         )
       }
 
       return (
-        <div className="flex items-center justify-center min-h-[400px] p-8">
-          <div className="text-center max-w-md">
-            <div className="mx-auto mb-6 rounded-2xl bg-tesla-red/10 p-5 ring-1 ring-tesla-red/20 w-fit">
+        <div className="flex items-center justify-center min-h-error-fallback p-8">
+          <div className="text-center max-w-md min-w-0">
+            <div className="mx-auto mb-6 rounded-shape-md bg-[var(--semantic-danger-bg)] p-5 border border-[var(--semantic-danger-border)] w-fit">
               {isNetworkError ? (
-                <WifiOff className="h-10 w-10 text-tesla-red" />
+                <WifiOff className="h-10 w-10 text-[var(--semantic-danger)]" aria-hidden="true" />
               ) : (
-                <AlertTriangle className="h-10 w-10 text-tesla-red" />
+                <AlertTriangle className="h-10 w-10 text-[var(--semantic-danger)]" aria-hidden="true" />
               )}
             </div>
-            <h2 className="text-xl font-bold text-[var(--text-primary)] mb-2">
-              {isChunkError ? 'New Version Deployed' : isNetworkError ? 'Connection Lost' : 'Something went wrong'}
-            </h2>
-            <p className="text-sm text-[var(--text-secondary)] mb-2">
+            <Heading level="section" className="mb-2 break-words">
               {isChunkError
-                ? i18n.t('error.chunkLoad.body', 'A new version was deployed. Click Reload to load the latest assets.')
+                ? i18n.t('errorBoundary.chunkTitle', 'New Version Deployed')
                 : isNetworkError
-                ? 'Unable to reach the server. Check your connection and try again.'
-                : this.state.error?.message || 'An unexpected error occurred. Please try again.'}
-            </p>
+                ? i18n.t('errorBoundary.connectionTitle', 'Connection Lost')
+                : i18n.t('errorBoundary.title', 'Something went wrong')}
+            </Heading>
+            <Text as="p" variant="bodySm" className="mb-2 whitespace-pre-wrap break-words">
+              {isChunkError
+                ? i18n.t('errorBoundary.chunkBody', 'A new version was deployed. Click Reload to load the latest assets.')
+                : isNetworkError
+                ? i18n.t('errorBoundary.connectionBody', 'Unable to reach the server. Check your connection and try again.')
+                : this.state.error?.message || i18n.t('errorBoundary.body', 'An unexpected error occurred. Please try again.')}
+            </Text>
             {tooManyRetries && (
-              <p className="text-xs text-[var(--text-muted)] mb-4">
-                Multiple retries failed. Try refreshing the page or checking system status.
-              </p>
+              <Text as="p" variant="caption" className="mb-4 break-words">
+                {i18n.t('errorBoundary.retriesExceeded', 'Multiple retries failed. Try refreshing the page or checking system status.')}
+              </Text>
             )}
-            <div className="flex items-center justify-center gap-3 mt-6">
+            <div className="flex flex-wrap items-center justify-center gap-3 mt-6">
               <Button
                 onClick={this.handleRetry}
                 variant="primary"
+                wrapLabel
+                className="max-md:min-h-11"
               >
-                <RefreshCw className="h-4 w-4" />
-                {tooManyRetries ? 'Try Again Anyway' : 'Try Again'}
+                <RefreshCw className="h-4 w-4 shrink-0" aria-hidden="true" />
+                {tooManyRetries
+                  ? i18n.t('errorBoundary.tryAgainAnyway', 'Try Again Anyway')
+                  : i18n.t('errorBoundary.tryAgain', 'Try Again')}
               </Button>
-              <Button variant="secondary" onClick={() => { window.location.href = '/' }}>
-                <Home className="h-4 w-4" />
-                Go Home
+              <Button variant="secondary" wrapLabel className="max-md:min-h-11" onClick={() => { window.location.href = '/' }}>
+                <Home className="h-4 w-4 shrink-0" aria-hidden="true" />
+                {i18n.t('errorBoundary.goHome', 'Go Home')}
               </Button>
             </div>
             {this.state.retryCount > 0 && (
-              <p className="mt-4 text-2xs text-[var(--text-muted)]">
-                Retry attempt {this.state.retryCount}
-              </p>
+              <Text as="p" variant="caption" className="mt-4 break-words">
+                {i18n.t('errorBoundary.retryAttempt', { count: this.state.retryCount, defaultValue: 'Retry attempt {{count}}' })}
+              </Text>
             )}
           </div>
         </div>

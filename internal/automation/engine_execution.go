@@ -16,6 +16,21 @@ func buildTypedActionConfigs(items []any) ([]action.ActionConfig, error) {
 	configs := make([]action.ActionConfig, 0, len(items))
 	for i, item := range items {
 		switch a := item.(type) {
+		case *models.AutomationStepActionWait:
+			if a == nil || a.DurationS < 1 || a.DurationS > action.MaxWaitSeconds {
+				return nil, fmt.Errorf("action %d has invalid typed wait duration_s", i)
+			}
+			raw, err := json.Marshal(a)
+			if err != nil {
+				return nil, fmt.Errorf("action %d wait snapshot: %w", i, err)
+			}
+			configs = append(configs, action.ActionConfig{Type: "wait", Raw: raw, Payload: a})
+		case models.AutomationStepActionWait:
+			next, err := buildTypedActionConfigs([]any{&a})
+			if err != nil {
+				return nil, fmt.Errorf("action %d wait: %w", i, err)
+			}
+			configs = append(configs, next...)
 		case *models.AutomationAction:
 			raw, err := json.Marshal(a)
 			if err != nil {

@@ -1,13 +1,19 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Clock } from 'lucide-react';
-import { Badge } from '@/components/ui';
-import { EmptyState } from '@/components/feedback';
+import { Caption } from '@/components/ui';
+import { TimeStamp } from '@/components/data-display';
+import { EmptyState, QueryError, Skeleton } from '@/components/feedback';
+import { combineDataStates } from '@/api/dataState';
+import { useDataState } from '@/hooks/useDataState';
 import { useStateSummary, useTimeline } from '@/api/hooks/useAnalytics';
 import { useVehicles } from '@/api/hooks/useVehicles';
-import { fmtNumber, fmtInt } from '@/lib/numberFormat';
+
 import { WidgetShell } from './WidgetShell';
+import { WidgetStatusGrid } from './shared';
 import type { WidgetProps } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { StateComposition } from '../components/continuation-dashboard-1/StateComposition';
 
 /* ── State colors ───────────────────────────────────────────────── */
 const STATE_COLORS: Record<string, string> = {
@@ -65,18 +71,38 @@ export function buildSegments(
 }
 
 /* ── Compact stacked bar (pure CSS) ─────────────────────────────── */
-function StackedBar({ segments }: { segments: StateSegment[] }) {
+function StackedBar({ segments, t, compact }: { segments: StateSegment[]; t: (k: string, d: string) => string; compact: boolean }) {
+  const { fmtNumber } = useNumberFormatting();
+  const summary = segments.map(seg => `${t(`widget.stateTimeline.state.${seg.state}`, seg.state)}: ${fmtDuration(seg.totalMin, t)}, ${fmtNumber(seg.pct)}%`).join('; ');
+
+  // Compact widgets retain their five-cell status grid; the rail's mandatory
+  // complete legend would duplicate it and change that caller-owned limit.
+  if (compact) {
+    return (
+      <div role="img" aria-label={summary} className="flex h-5 w-full rounded-full overflow-hidden forced-colors:outline forced-colors:outline-1 forced-colors:outline-[CanvasText]">
+        {segments.map((seg, index) => (
+          <div
+            key={`${seg.state}-${index}`}
+            aria-hidden="true"
+            className="h-full first:rounded-s-full last:rounded-e-full motion-reduce:transition-none forced-colors:outline forced-colors:outline-1 forced-colors:outline-[CanvasText]"
+            style={{ width: `${seg.pct}%`, backgroundColor: stateColor(seg.state) }}
+            title={`${seg.state}: ${fmtNumber(seg.pct)}%`}
+          />
+        ))}
+      </div>
+    );
+  }
   return (
-    <div className="flex h-5 w-full rounded-full overflow-hidden">
-      {segments.map((seg) => (
-        <div
-          key={seg.state}
-          className="h-full first:rounded-l-full last:rounded-r-full transition-all duration-normal"
-          style={{ width: `${seg.pct}%`, backgroundColor: stateColor(seg.state) }}
-          title={`${seg.state}: ${fmtNumber(seg.pct, 1)}%`}
-        />
-      ))}
-    </div>
+    <StateComposition
+      summary={summary}
+      segments={segments.map((seg, index) => ({
+        id: `summary-${index}`,
+        label: t(`widget.stateTimeline.state.${seg.state}`, seg.state),
+        widthPercent: seg.pct,
+        color: stateColor(seg.state),
+        detail: <><span>{fmtDuration(seg.totalMin, t)}</span> · <span>{fmtNumber(seg.pct)}%</span></>,
+      }))}
+    />
   );
 }
 
@@ -88,70 +114,45 @@ function TimelineStripe({
   transitions: Array<{ state: string; startDate: string; durationMin: number }>;
   t: (k: string, d: string) => string;
 }) {
+  const { fmtNumber } = useNumberFormatting();
   const totalMin = transitions.reduce((sum, tr) => sum + (tr.durationMin ?? 0), 0);
   if (totalMin === 0) return null;
 
   return (
     <div className="space-y-1.5">
-      <span className="text-2xs uppercase tracking-wider text-[var(--text-muted)]">
-        {t('widget.stateTimeline.timeline', '24h Timeline')}
-      </span>
-      <div className="flex h-4 w-full rounded overflow-hidden">
-        {transitions.map((tr, i) => {
+      <Caption>
+        {t('widget.stateTimeline.timeline', '24h timeline')}
+      </Caption>
+      <StateComposition
+        summary={transitions.map(tr => `${t(`widget.stateTimeline.state.${tr.state}`, tr.state)}: ${fmtNumber(tr.durationMin ?? 0)} ${t('widget.driveTelemetry.min', 'min')}`).join('; ')}
+        segments={transitions.map((tr, index) => {
           const pct = ((tr.durationMin ?? 0) / totalMin) * 100;
-          if (pct < 0.5) return null;
-          return (
-            <div
-              key={`${tr.state}-${i}`}
-              className="h-full transition-all duration-normal"
-              style={{ width: `${pct}%`, backgroundColor: stateColor(tr.state ?? '') }}
-              title={`${tr.state}: ${fmtNumber(tr.durationMin ?? 0, 0)} min`}
-            />
-          );
+          return {
+            id: `transition-${index}`,
+            label: t(`widget.stateTimeline.state.${tr.state}`, tr.state),
+            widthPercent: pct,
+            color: stateColor(tr.state),
+            hideFromTrack: pct < 0.5,
+            detail: <><TimeStamp value={tr.startDate || null} /> · {fmtNumber(tr.durationMin ?? 0)} {t('widget.driveTelemetry.min', 'min')}</>,
+          };
         })}
-      </div>
-    </div>
-  );
-}
-
-/* ── State list row ─────────────────────────────────────────────── */
-function StateRow({
-  seg,
-  t,
-}: {
-  seg: StateSegment;
-  t: (k: string, d: string) => string;
-}) {
-  return (
-    <div className="flex items-center justify-between min-h-[44px]">
-      <div className="flex items-center gap-2">
-        <span
-          className="inline-block h-2.5 w-2.5 rounded-full flex-shrink-0"
-          style={{ backgroundColor: stateColor(seg.state) }}
-        />
-        <span className="text-xs text-[var(--text-primary)] capitalize truncate">
-          {t(`widget.stateTimeline.state.${seg.state}`, seg.state)}
-        </span>
-      </div>
-      <div className="flex items-center gap-2">
-        <span className="text-xs text-[var(--text-secondary)]">{fmtDuration(seg.totalMin, t)}</span>
-        <Badge variant="neutral" className="text-2xs tabular-nums">
-          {fmtNumber(seg.pct, 1)}%
-        </Badge>
-      </div>
+      />
     </div>
   );
 }
 
 /* ── Main widget ────────────────────────────────────────────────── */
 export default function StateTimelineWidget({ vehicleId, size }: WidgetProps) {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
   const { data: vehicles } = useVehicles();
   const id = vehicleId ?? vehicles?.[0]?.id ?? null;
-  const idStr = id != null ? String(id) : '';
+  const idStr = Number.isSafeInteger(id) && Number(id) > 0 ? String(id) : '';
 
   const summary = useStateSummary(idStr);
   const timeline = useTimeline(idStr);
+  const summaryState = useDataState(summary, { provenance: 'historical' });
+  const timelineState = useDataState(timeline, { provenance: 'historical' });
 
   const isCompact = size.cols <= 1;
   const isWide = size.cols >= 3;
@@ -170,71 +171,94 @@ export default function StateTimelineWidget({ vehicleId, size }: WidgetProps) {
     [timeline.data],
   );
 
-  const hasData = segments.length > 0;
+  const hasData = segments.length > 0 || (isWide && transitions.length > 0);
+  const retained = summaryState.hasData || timelineState.hasData;
+  const refresh = () => {
+    void summary.refetch();
+    void timeline.refetch();
+  };
+  const state = isWide ? {
+    ...combineDataStates([summaryState, timelineState]),
+    hasData: retained,
+    data: retained ? { summary: summary.data, timeline: timeline.data } : undefined,
+    retry: refresh,
+  } : summaryState;
 
   /* Freshness: merge from both queries */
-  const updatedAt = Math.max(summary.dataUpdatedAt ?? 0, timeline.dataUpdatedAt ?? 0);
+  const updatedAt = state.updatedAt ?? 0;
   const isFetching = summary.isFetching || timeline.isFetching;
   const isStale = summary.isStale || timeline.isStale;
   const isError = summary.isError || timeline.isError;
-  const isLoading = summary.isLoading || timeline.isLoading;
+  const isLoading = summary.isLoading && summary.data === undefined;
 
   return (
     <WidgetShell
-      title={isCompact ? undefined : t('widget.stateTimeline.title', 'State Timeline')}
+      dataState={state.hasData || isLoading || state.fatalError ? state : undefined}
+      title={t('widget.stateTimeline.title', 'State timeline')}
       icon={isCompact ? undefined : <Clock className="h-3.5 w-3.5 text-cyan-400" />}
       loading={isLoading}
       updatedAt={updatedAt}
       isFetching={isFetching}
       isStale={isStale}
       isError={isError}
-      onRefresh={() => {
-        summary.refetch();
-        timeline.refetch();
-      }}
+      onRefresh={refresh}
     >
-      {hasData ? (
+      {hasData || (isWide && (summaryState.fatalError || timelineState.fatalError || timeline.isLoading)) ? (
         <div className="flex flex-col gap-3 h-full">
-          {/* Stacked bar (always shown) */}
-          <StackedBar segments={segments} />
-
-          {isCompact ? (
-            /* Compact: legend dots + % */
-            <div className="flex flex-wrap gap-x-3 gap-y-1">
-              {segments.slice(0, 5).map((seg) => (
-                <div key={seg.state} className="flex items-center gap-1 min-h-[44px]">
-                  <span
-                    className="inline-block h-2 w-2 rounded-full flex-shrink-0"
-                    style={{ backgroundColor: stateColor(seg.state) }}
-                  />
-                  <span className="text-2xs text-[var(--text-secondary)] capitalize truncate">
-                    {t(`widget.stateTimeline.state.${seg.state}`, seg.state)}
-                  </span>
-                  <span className="text-2xs text-[var(--text-muted)] tabular-nums">
-                    {fmtInt(seg.pct)}%
-                  </span>
-                </div>
-              ))}
-            </div>
+          {summaryState.fatalError ? (
+            <QueryError error={summaryState.fatalError} onRetry={() => { void summary.refetch(); }} />
+          ) : segments.length === 0 ? (
+            <EmptyState
+              message={t('widget.stateTimeline.noData', 'No state data available')}
+              className="py-2"
+              action={idStr ? { label: t('common.refresh', 'Refresh'), onClick: () => { void summary.refetch(); } } : undefined}
+              actionTo={!idStr ? { label: t('nav.vehicles', 'Fleet'), to: '/vehicles' } : undefined}
+            />
           ) : (
-            /* Standard + Wide: state list */
-            <div className="flex flex-col gap-1 overflow-y-auto">
-              {segments.map((seg) => (
-                <StateRow key={seg.state} seg={seg} t={t} />
-              ))}
-            </div>
+            <>
+              <StackedBar segments={segments} t={t} compact={isCompact} />
+              {isCompact ? (
+                <WidgetStatusGrid
+                  compact
+                  cells={segments.slice(0, 5).map((seg) => ({
+                    id: seg.state,
+                    label: t(`widget.stateTimeline.state.${seg.state}`, seg.state),
+                    status: 'inactive',
+                    statusLabel: `${fmtNumber(seg.pct)}%`,
+                    icon: <span className="mt-1.5 block size-2 shrink-0 rounded-full" style={{ backgroundColor: stateColor(seg.state) }} />,
+                  }))}
+                />
+              ) : null}
+            </>
           )}
 
           {/* Wide: 24h timeline stripe */}
-          {isWide && transitions.length > 0 && (
-            <TimelineStripe transitions={transitions} t={t} />
+          {isWide && (
+            <div className="min-w-0">
+              {timelineState.fatalError ? (
+                <QueryError error={timelineState.fatalError} onRetry={() => { void timeline.refetch(); }} />
+              ) : timeline.isLoading && timeline.data === undefined ? (
+                <Skeleton className="h-8 rounded" />
+              ) : transitions.length > 0 ? (
+                <TimelineStripe transitions={transitions} t={t} />
+              ) : (
+                <EmptyState
+                  message={t('widget.stateTimeline.noData', 'No state data available')}
+                  className="py-2"
+                  action={idStr ? { label: t('common.refresh', 'Refresh'), onClick: () => { void timeline.refetch(); } } : undefined}
+                  actionTo={!idStr ? { label: t('nav.vehicles', 'Fleet'), to: '/vehicles' } : undefined}
+                />
+              )}
+            </div>
           )}
         </div>
       ) : (
-        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
+        <EmptyState
           icon={<Clock className="h-5 w-5" />}
           message={t('widget.stateTimeline.noData', 'No state data available')}
           className="py-4"
+          action={idStr ? { label: t('common.refresh', 'Refresh'), onClick: refresh } : undefined}
+          actionTo={!idStr ? { label: t('nav.vehicles', 'Fleet'), to: '/vehicles' } : undefined}
         />
       )}
     </WidgetShell>

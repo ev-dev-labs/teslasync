@@ -40,7 +40,7 @@ const H = vi.hoisted(() => {
   const STALE = { stale_charging: [{ id: 1 }], stale_drives: [{ id: 1 }, { id: 2 }] }
   const REPAIR_STATS = { open: 1, in_review: 2 }
 
-  const defaultReq = (url: unknown) => {
+  const defaultReq = (url: unknown, _options?: import('@/api/client').ApiRequestOptions) => {
     if (typeof url === 'string') {
       if (url.startsWith('/alerts')) return Promise.resolve(ALERTS)
       if (url === '/vehicles') return Promise.resolve(VEHICLES)
@@ -227,7 +227,7 @@ vi.mock('../feedback/Toast', () => ({ useToast: () => H.toast }))
 
 // ── API boundary ──────────────────────────────────────────────────────
 vi.mock('@/api/client', () => ({
-  request: (...args: unknown[]) => H.request(...args),
+  request: (...args: Parameters<typeof H.defaultReq>) => H.request(...args),
   ApiError: class ApiError extends Error {},
 }))
 vi.mock('@/api/hooks/useAuthMode', () => ({
@@ -273,7 +273,7 @@ vi.mock('../feedback/InstallPrompt', () => ({ default: () => <div data-testid="i
 vi.mock('../feedback/OfflineBanner', () => ({ OfflineBanner: () => null }))
 vi.mock('../feedback/NewVersionBanner', () => ({ NewVersionBanner: () => null }))
 vi.mock('../feedback/TeslaReauthBanner', () => ({ TeslaReauthBanner: () => null }))
-vi.mock('../feedback/RateLimitBanner', () => ({ RateLimitBanner: () => null }))
+vi.mock('../feedback/RateLimitBanner', () => ({ RateLimitBanner: () => <div data-testid="rate-limit-banner-stub" /> }))
 vi.mock('../feedback/MaintenanceBanner', () => ({ MaintenanceBanner: () => null }))
 vi.mock('../feedback/ImpersonationBanner', () => ({ ImpersonationBanner: () => null }))
 vi.mock('../feedback/TopProgress', () => ({ TopProgress: () => null }))
@@ -406,6 +406,9 @@ vi.mock('@/components/ui/runtime', async () => {
     ThemePicker: () => <div data-testid="theme-picker" />,
   }
 })
+vi.mock('../ui/CommandPaletteTrigger', () => ({
+  CommandPaletteTrigger: () => <div data-testid="cmd-trigger" />,
+}))
 vi.mock('@/components/ui/ThemePicker', () => ({
   ThemePicker: () => <div data-testid="theme-picker" />,
 }))
@@ -507,7 +510,7 @@ describe('navSections (data export)', () => {
 
   it('exposes the Action Center decision inbox from Home', () => {
     const actionCenter = navSections[0].items.find((i) => i.to === '/action-center')
-    expect(actionCenter?.label).toBe('Action Center')
+    expect(actionCenter?.label).toBe('Action center')
     expect(navSearchKeywords['/action-center']).toContain('decision inbox')
   })
 
@@ -516,7 +519,7 @@ describe('navSections (data export)', () => {
     const management = vehiclesSection?.items.find(
       (item) => item.to === '/vehicle-management',
     )
-    expect(management?.label).toBe('Vehicle Management')
+    expect(management?.label).toBe('Vehicle management')
     expect(navSearchKeywords['/vehicle-management']).toContain('enterprise roles')
   })
 
@@ -704,7 +707,7 @@ describe('Layout — grouped sidebar sections', () => {
       '/share-card', '/analytics/carbon', '/benchmarks/privacy',
     ])
     expect(reports?.items.slice(0, 3).map(item => item.label)).toEqual([
-      'Fleet Insights', 'Driving Efficiency', 'Costs',
+      'Fleet insights', 'Driving efficiency', 'Costs',
     ])
     // Flat rows key off the real location, not the group primary.
     expect(props.pathname).toBe('/analytics')
@@ -720,7 +723,7 @@ describe('Layout — grouped sidebar sections', () => {
       '/system-status', '/db-health', '/anomaly-detection',
       '/signals', '/admin/flags', '/admin/vehicle-cost', '/signal-correlation',
     ])
-    expect(diagnostics?.items.find(item => item.to === '/signals')?.label).toBe('Telemetry Troubleshooting')
+    expect(diagnostics?.items.find(item => item.to === '/signals')?.label).toBe('Telemetry troubleshooting')
     expect(props.pathname).toBe('/admin/ingest-xray')
     expect(navSections.find(section => section.title === 'Diagnostics')?.items).toHaveLength(33)
     expect(DIAGNOSTIC_GROUPS.every(group => group.pages.every(page =>
@@ -745,9 +748,9 @@ describe('Layout — grouped sidebar sections', () => {
       'Automation',
       'Notifications',
       'Security',
-      'Advanced Intelligence',
-      'Ownership Intelligence',
-      'Tesla Physics',
+      'Advanced intelligence',
+      'Ownership intelligence',
+      'Tesla physics',
       'Data',
       'Diagnostics',
       'Account',
@@ -768,6 +771,24 @@ describe('Layout — grouped sidebar sections', () => {
 })
 
 describe('Layout — global page chrome', () => {
+  it('keeps rate-limit notices inside the report column instead of consuming horizontal page space', () => {
+    const { container } = renderLayout('/')
+    const main = container.querySelector('[data-role="main-content"]')
+    expect(main?.parentElement).toContainElement(screen.getByTestId('rate-limit-banner-stub'))
+  })
+
+  it('keeps the outer shell out of native anchor scrolling', () => {
+    const { container } = renderLayout('/')
+    const main = container.querySelector('[data-role="main-content"]')
+
+    expect(main?.parentElement).toHaveClass(
+      'min-h-0',
+      'min-w-0',
+      'overflow-hidden',
+      'supports-[overflow:clip]:overflow-clip',
+    )
+  })
+
   it('places the install affordance in the scrollable page flow, not over page content', () => {
     const { container } = renderLayout('/')
     const main = container.querySelector('[data-role="main-content"]')
@@ -1018,6 +1039,84 @@ describe('Layout — nav item visibility', () => {
 // ══════════════════════════════════════════════════════════════════════
 
 describe('Layout — mobile drawer', () => {
+  it('contains keyboard focus and hides the background while keeping the backdrop usable', async () => {
+    renderLayout('/')
+    const aside = screen.getByRole('navigation', { name: 'Primary' })
+    const main = screen.getByRole('main')
+    fireEvent.click(screen.getByRole('button', { name: 'Open sidebar' }))
+    const lastLink = await within(aside).findByRole('link', { name: 'Current page' })
+    const firstLink = aside.querySelector<HTMLAnchorElement>('a[href="/"]')
+    expect(firstLink).not.toBeNull()
+
+    lastLink.focus()
+    fireEvent.keyDown(lastLink, { key: 'Tab' })
+    expect(firstLink).toHaveFocus()
+    fireEvent.keyDown(firstLink!, { key: 'Tab', shiftKey: true })
+    expect(lastLink).toHaveFocus()
+    expect(main.closest('[inert]')).not.toBeNull()
+    expect(screen.queryByRole('main')).toBeNull()
+
+    const backdrop = aside.previousElementSibling
+    expect(backdrop).not.toBeNull()
+    expect(backdrop).not.toHaveAttribute('inert')
+    fireEvent.click(backdrop!)
+    await waitFor(() => expect(main.closest('[inert]')).toBeNull())
+    expect(screen.getByRole('main')).toBe(main)
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Open sidebar' })).toHaveFocus())
+  })
+
+  it('releases the mobile overlay guard when the desktop breakpoint becomes active', async () => {
+    const desktopMedia = window.matchMedia('(min-width: 1280px)')
+    vi.mocked(window.matchMedia).mockReturnValue(desktopMedia)
+    const listen = vi.spyOn(desktopMedia, 'addEventListener')
+    const unlisten = vi.spyOn(desktopMedia, 'removeEventListener')
+    renderLayout('/')
+    const aside = screen.getByRole('navigation', { name: 'Primary' })
+    const main = screen.getByRole('main')
+    fireEvent.click(screen.getByRole('button', { name: 'Open sidebar' }))
+    await waitFor(() => expect(main.closest('[inert]')).not.toBeNull())
+    const listener = listen.mock.calls.find(([type]) => type === 'change')?.[1]
+    expect(typeof listener).toBe('function')
+
+    Object.defineProperty(desktopMedia, 'matches', { value: true, configurable: true })
+    act(() => {
+      if (typeof listener === 'function') listener(new Event('change'))
+    })
+
+    await waitFor(() => expect(aside).toHaveAttribute('data-sidebar-open', 'false'))
+    expect(main.closest('[inert]')).toBeNull()
+    expect(screen.getByRole('main')).toBe(main)
+    expect(unlisten).toHaveBeenCalledWith('change', listener)
+  })
+
+  it('provides a 44px mobile drawer close target', async () => {
+    renderLayout('/')
+    fireEvent.click(screen.getByRole('button', { name: 'Open sidebar' }))
+    expect(await screen.findByRole('button', { name: 'Close sidebar' })).toHaveClass('h-11', 'w-11')
+  })
+
+  it('does not restore the drawer trigger over a newly focused portaled modal', async () => {
+    renderLayout('/')
+    const aside = screen.getByRole('navigation', { name: 'Primary' })
+    fireEvent.click(screen.getByRole('button', { name: 'Open sidebar' }))
+    const dialog = document.createElement('div')
+    dialog.setAttribute('role', 'dialog')
+    dialog.setAttribute('aria-modal', 'true')
+    const action = document.createElement('button')
+    action.textContent = 'Dialog action'
+    dialog.append(action)
+    document.body.append(dialog)
+    try {
+      action.focus()
+      fireEvent.click(screen.getByRole('button', { name: 'Close sidebar' }))
+      await waitFor(() => expect(aside).toHaveAttribute('data-sidebar-open', 'false'))
+      await act(() => new Promise<void>((resolve) => requestAnimationFrame(() => resolve())))
+      expect(action).toHaveFocus()
+    } finally {
+      dialog.remove()
+    }
+  })
+
   it('opens and closes the sidebar drawer from the mobile header controls', async () => {
     renderLayout('/')
     const aside = screen.getByRole('navigation', { name: 'Primary' })
@@ -1454,5 +1553,46 @@ describe('Layout — nav pins under a rejected write', () => {
     } finally {
       setItem.mockRestore()
     }
+  })
+})
+
+describe('Layout — restrained host chrome and shared offsets', () => {
+  it('uses a neutral opaque mobile header and preserves safe-area clearance', () => {
+    const { container } = renderLayout('/')
+    const header = container.querySelector('[data-role="appbar"]')
+    expect(header).toHaveClass('bg-[var(--surface-1)]', 'xl:hidden')
+    expect(header).not.toHaveClass('backdrop-blur-md', 'bg-[var(--surface-1)]/95')
+    expect(header?.parentElement?.querySelector('[data-role="main-content"]')?.parentElement?.firstElementChild).toHaveClass('h-[calc(4.25rem+env(safe-area-inset-top,0px))]')
+    expect(within(header as HTMLElement).getByRole('button', { name: 'Open theme picker' })).toHaveClass(
+      'h-11', 'w-11', 'md:h-9', 'md:w-9',
+    )
+    expect(container.querySelector('[data-role="main-content"]')).toHaveClass(
+      'overflow-y-auto', 'pb-[var(--shell-chrome-bottom)]',
+    )
+  })
+
+  it('keeps the clickable drawer scrim theme-neutral without blur', () => {
+    const { container } = renderLayout('/')
+    fireEvent.click(screen.getByRole('button', { name: 'Open sidebar' }))
+    const scrim = container.querySelector('[data-sidebar-backdrop]')
+    expect(scrim).toHaveClass('bg-[var(--surface-overlay)]', 'xl:hidden')
+    expect(scrim).not.toHaveClass('backdrop-blur-sm', 'bg-[var(--bg-app)]')
+    fireEvent.click(scrim as HTMLElement)
+    expect(container.querySelector('[data-sidebar-backdrop]')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Open sidebar' })).toBeInTheDocument()
+  })
+
+  it.each(['report', 'kiosk'] as const)('reserves no absent mobile header or bottom chrome in %s mode', mode => {
+    H.presentation.mode = mode
+    const { container } = renderLayout('/')
+    expect(container.querySelector('[data-role="appbar"]')).not.toBeInTheDocument()
+    expect(container.querySelector('[data-role="main-content"]')?.parentElement?.firstElementChild).toBe(
+      container.querySelector('[data-role="main-content"]'),
+    )
+    expect(container.querySelector('[data-role="main-content"]')).not.toHaveClass(
+      'pb-[var(--shell-chrome-bottom)]',
+    )
+    expect(document.documentElement.dataset.statusBar).toBe('off')
+    expect(document.documentElement.dataset.tabBar).toBe('off')
   })
 })

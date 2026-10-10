@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, waitFor, within } from '@testing-library/react'
+import { act, render, screen, fireEvent, waitFor, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
@@ -13,6 +13,19 @@ import type { MaintenanceState } from '@/types/admin'
 // real and we can assert the exact URL + POST payload the backend receives.
 // Nothing ever touches the network. The `mock` prefix lets vitest hoist safely.
 let mockRequest: ReturnType<typeof vi.fn>
+const mode = vi.hoisted(() => ({ canWrite: true }))
+vi.mock('@/hooks/useOperationalMode', () => ({
+  useOperationalMode: () => ({
+    mode: mode.canWrite ? 'live' : 'as_of',
+    asOf: mode.canWrite ? null : '2026-07-05T12:00:00Z',
+    online: true,
+    isReadOnly: !mode.canWrite,
+    label: mode.canWrite ? 'Live' : 'Historical',
+    description: 'Operational source mode',
+    writeBlockReason: mode.canWrite ? null : 'Return to live mode',
+    canWrite: mode.canWrite,
+  }),
+}))
 
 vi.mock('@/api/client', async () => {
   const actual = await vi.importActual<typeof import('@/api/client')>('@/api/client')
@@ -50,15 +63,16 @@ function renderCard(now = NOW) {
   const qc = new QueryClient({
     defaultOptions: { queries: { retry: false, gcTime: 0 }, mutations: { retry: false } },
   })
-  return render(
+  const ui = () => (
     <QueryClientProvider client={qc}>
       <ToastProvider>
         <MemoryRouter>
           <ScheduledMaintenanceCard now={now} />
         </MemoryRouter>
       </ToastProvider>
-    </QueryClientProvider>,
+    </QueryClientProvider>
   )
+  return { ...render(ui()), client: qc, ui }
 }
 
 function getForm(): HTMLFormElement {
@@ -82,7 +96,57 @@ function postCount(): number {
 
 describe('ScheduledMaintenanceCard', () => {
   beforeEach(() => {
+    mode.canWrite = true
     stub(makeState({ mode: 'ok' }))
+  })
+
+  it('keeps an active maintenance message and remaining time after refresh failure', async () => {
+    const until = new Date(NOW + 60 * 60_000).toISOString()
+    stub(makeState({ mode: 'maintenance', maintenance_message: 'Original operator message', maintenance_until: until }))
+    const { client } = renderCard()
+    await screen.findByText('Original operator message')
+    mockRequest.mockRejectedValue(new Error('maintenance refresh failed'))
+    await act(async () => {
+      await client.refetchQueries({ queryKey: ['admin', 'maintenance'] })
+    })
+    expect(await screen.findByTestId('stale-refresh-warning')).toBeInTheDocument()
+    expect(screen.getByText('Original operator message')).toBeInTheDocument()
+    expect(screen.getByText(/60 min remaining/)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Clear maintenance' })).toBeEnabled()
+    expect(postCount()).toBe(0)
+  })
+
+  it('preserves unsaved business-date fields and discard protection through a read-source refresh failure', async () => {
+    const { client } = renderCard()
+    await waitFor(() => expect(mockRequest).toHaveBeenCalled())
+    fireEvent.click(screen.getByRole('button', { name: 'Schedule a window' }))
+    fireEvent.change(screen.getByLabelText(/^Start \(local\)/), { target: { value: '2026-07-06T02:00' } })
+    fireEvent.change(screen.getByLabelText(/^Duration \(minutes\)/), { target: { value: '90' } })
+    fireEvent.change(screen.getByLabelText('Operator message'), { target: { value: 'Draft operator context' } })
+    mockRequest.mockRejectedValue(new Error('maintenance refresh failed'))
+    await act(async () => {
+      await client.refetchQueries({ queryKey: ['admin', 'maintenance'] })
+    })
+    expect(await screen.findByTestId('stale-refresh-warning')).toBeInTheDocument()
+    expect(screen.getByLabelText(/^Start \(local\)/)).toHaveValue('2026-07-06T02:00')
+    expect(screen.getByLabelText(/^Duration \(minutes\)/)).toHaveValue(90)
+    expect(screen.getByLabelText('Operator message')).toHaveValue('Draft operator context')
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+    expect(await screen.findByRole('dialog', { name: 'Unsaved changes' })).toBeInTheDocument()
+    expect(postCount()).toBe(0)
+  })
+
+  it('preserves read-only evidence and clears a scheduling draft when operational write permission is lost', async () => {
+    const { rerender, ui } = renderCard()
+    await waitFor(() => expect(mockRequest).toHaveBeenCalled())
+    fireEvent.click(screen.getByRole('button', { name: 'Schedule a window' }))
+    fireEvent.change(screen.getByLabelText('Operator message'), { target: { value: 'Unsubmitted draft' } })
+    mode.canWrite = false
+    rerender(ui())
+    expect(screen.queryByLabelText('Operator message')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Schedule a window' })).toBeDisabled()
+    expect(screen.getByText('Maintenance controls are read-only')).toBeInTheDocument()
+    expect(postCount()).toBe(0)
   })
 
   it('renders the scheduler affordance and no active-mode chrome when maintenance is off', async () => {

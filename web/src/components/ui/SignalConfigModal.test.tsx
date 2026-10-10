@@ -24,7 +24,7 @@
  * are driven with `fireEvent` — matching every other component test here.
  */
 import { describe, it, expect, vi, afterEach } from 'vitest'
-import { render, screen, fireEvent, cleanup } from '@testing-library/react'
+import { render, screen, fireEvent, cleanup, within } from '@testing-library/react'
 
 vi.mock('react-i18next', async () => {
   const actual = await vi.importActual<typeof import('react-i18next')>('react-i18next')
@@ -84,6 +84,52 @@ function intervalSelect(signal: string): HTMLSelectElement {
 }
 
 describe('<SignalConfigModal>', () => {
+  it.each<[string, number[], boolean[]]>([
+    ['Real-time Driving', [1, 10, 86400, 10, 10], [true, true, true, true, true]],
+    ['Balanced', [10, 10, 10, 10, 10], [true, true, true, true, true]],
+    ['Low Power', [60, 60, 60, 60, 60], [true, true, true, true, true]],
+    ['Track Mode', [1, 30, 3600, 30, 30], [true, true, true, true, true]],
+    ['Cost Saver', [300, 300, 300, 300, 900], [false, true, false, false, true]],
+    ['Sleep Watch', [300, 60, 300, 300, 60], [false, true, false, false, true]],
+    ['Diagnostics', [10, 10, 3600, 60, 10], [true, true, true, true, true]],
+    ['Trip Logger', [5, 30, 300, 300, 60], [true, true, false, false, true]],
+  ])('retains the %s preset selection and cadence', (name, intervals, selected) => {
+    const categories = [
+      { category: 'Driving', fields: ['Speed'] },
+      { category: 'Charging', fields: ['Charge'] },
+      { category: 'Vehicle Config', fields: ['Config'] },
+      { category: 'Media', fields: ['Track'] },
+      { category: 'Vehicle State', fields: ['State'] },
+    ]
+    renderModal({ categories })
+    fireEvent.click(screen.getByRole('button', { name: new RegExp(name) }))
+    categories.forEach(({ fields }, index) => {
+      expect(intervalSelect(fields[0])).toHaveValue(String(intervals[index]))
+      expect(screen.getByRole('button', {
+        name: `${selected[index] ? 'Deselect' : 'Select'} ${fields[0]}`,
+      })).toHaveAttribute('aria-pressed', String(selected[index]))
+    })
+  })
+
+  it('retains every sampling option including the measured zero cadence', () => {
+    renderModal({ initialSelected: ['VehicleSpeed'] })
+    expect(within(intervalSelect('VehicleSpeed')).getAllByRole('option').map(option => option.getAttribute('value')))
+      .toEqual(['0', '1', '5', '10', '30', '60', '300', '900', '3600', '86400'])
+    fireEvent.change(intervalSelect('VehicleSpeed'), { target: { value: '0' } })
+    expect(intervalSelect('VehicleSpeed')).toHaveValue('0')
+    expect(screen.getByText(/1 at 500ms/)).toBeInTheDocument()
+  })
+
+  it('keeps hidden selections and in-progress changes through parent rerenders', () => {
+    const { props, rerender, onSubmit } = renderModal({ initialSelected: ['VehicleSpeed'] })
+    fireEvent.change(intervalSelect('VehicleSpeed'), { target: { value: '0' } })
+    fireEvent.change(screen.getByRole('textbox', { name: 'Search signals' }), { target: { value: 'Charge' } })
+    rerender(<SignalConfigModal {...props} initialSelected={['Gear']} initialInterval={60} />)
+    expect(screen.getByRole('textbox', { name: 'Search signals' })).toHaveValue('Charge')
+    fireEvent.click(screen.getByRole('button', { name: 'Subscribe 1 Signals' }))
+    expect(onSubmit).toHaveBeenCalledWith([{ name: 'VehicleSpeed', interval: 0 }])
+  })
+
   it('renders nothing while closed', () => {
     renderModal({ open: false, initialSelected: ['VehicleSpeed'] })
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()

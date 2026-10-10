@@ -28,7 +28,7 @@ export function SecurityStatusCards({ latest, isLoading, error, onRetry, classNa
 
   return (
     <GlassPanel className={cn('p-4 sm:p-5', className)}>
-      <PanelTitle className="mb-3">{t('admin.security.statusTitle', 'Security Status')}</PanelTitle>
+      <PanelTitle className="mb-3">{t('admin.security.statusTitle', 'Security status')}</PanelTitle>
       {error ? (
         <QueryError error={error} onRetry={onRetry} />
       ) : isLoading && !latest ? (
@@ -62,7 +62,7 @@ export function SecurityStatusCards({ latest, isLoading, error, onRetry, classNa
               )
             }
             tone={latest.locked == null ? 'muted' : latest.locked ? 'green' : 'red'}
-            label={t('admin.security.card.lockStatus', 'Lock Status')}
+            label={t('admin.security.card.lockStatus', 'Lock status')}
             value={
               latest.locked == null
                 ? t('admin.security.unknown', 'Unknown')
@@ -75,7 +75,7 @@ export function SecurityStatusCards({ latest, isLoading, error, onRetry, classNa
           <StatusTile
             icon={sentryOn ? <ShieldCheck className="h-5 w-5" /> : <ShieldAlert className="h-5 w-5" />}
             tone={sentryOn ? 'blue' : 'muted'}
-            label={t('admin.security.card.sentryMode', 'Sentry Mode')}
+            label={t('admin.security.card.sentryMode', 'Sentry mode')}
             value={sentryOn ? t('admin.security.active', 'Active') : t('admin.security.inactive', 'Inactive')}
             description={t('admin.security.card.sentryDesc', 'Camera surveillance system')}
           />
@@ -107,7 +107,7 @@ export function SecurityStatusCards({ latest, isLoading, error, onRetry, classNa
           <StatusTile
             icon={<UserCheck className="h-5 w-5" />}
             tone={latest.guestMode ? 'amber' : 'muted'}
-            label={t('admin.security.card.guestMode', 'Guest Mode')}
+            label={t('admin.security.card.guestMode', 'Guest mode')}
             value={latest.guestMode ? t('admin.security.enabled', 'Enabled') : t('admin.security.disabled', 'Disabled')}
             description={t('admin.security.card.guestDesc', 'Temporary access mode')}
           />

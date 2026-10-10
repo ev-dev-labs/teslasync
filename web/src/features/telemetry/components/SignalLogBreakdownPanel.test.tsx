@@ -96,8 +96,11 @@ afterEach(() => {
 // ── loading ──────────────────────────────────────────────────────────────
 describe('SignalLogBreakdownPanel — loading', () => {
   it('renders three skeletons and no bars/empty copy while loading', () => {
-    const { container } = renderPanel({ loading: true });
-    expect(container.querySelectorAll('.animate-pulse')).toHaveLength(3);
+    renderPanel({ loading: true });
+    const panel = screen.getByRole('heading', { name: /Value composition/ }).closest('[data-print-card]')!;
+    const skeletons = panel.querySelectorAll('[aria-hidden="true"][class~="bg-[var(--skeleton-bg)]"]');
+    expect(skeletons).toHaveLength(3);
+    skeletons.forEach((skeleton) => expect(skeleton).toHaveClass('h-9', 'w-full'));
     expect(screen.queryByText('Numeric')).toBeNull();
     expect(screen.queryByText('Run a query to see the value-type breakdown.')).toBeNull();
   });
@@ -105,9 +108,9 @@ describe('SignalLogBreakdownPanel — loading', () => {
   it('prioritises the loading state even after a query has resolved with data', () => {
     renderPanel({ loading: true, hasQueried: true, summary: POPULATED });
     // No bar sublabels while loading.
-    expect(screen.queryByText(/60 \u00b7 60%/)).toBeNull();
+    expect(screen.queryByText(/60 \u00b7 60\.00%/)).toBeNull();
     // The panel title always renders regardless of state.
-    expect(screen.getByRole('heading', { name: /Value Composition/ })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /Value composition/ })).toBeInTheDocument();
   });
 });
 
@@ -145,9 +148,9 @@ describe('SignalLogBreakdownPanel — populated', () => {
 
   it('formats each bar sublabel as "count · percent" of the total', () => {
     renderPanel();
-    expect(screen.getByText(/60 \u00b7 60%/)).toBeInTheDocument();
-    expect(screen.getByText(/30 \u00b7 30%/)).toBeInTheDocument();
-    expect(screen.getByText(/10 \u00b7 10%/)).toBeInTheDocument();
+    expect(screen.getByText(/60 \u00b7 60\.00%/)).toBeInTheDocument();
+    expect(screen.getByText(/30 \u00b7 30\.00%/)).toBeInTheDocument();
+    expect(screen.getByText(/10 \u00b7 10\.00%/)).toBeInTheDocument();
   });
 
   it('rounds fractional percentages to whole numbers', () => {
@@ -155,7 +158,7 @@ describe('SignalLogBreakdownPanel — populated', () => {
       summary: { ...EMPTY, totalRecords: 3, numericPoints: 1, textPoints: 1, boolPoints: 1 },
     });
     // 1/3 → 33.33% → "33%" at 0 decimals, for all three bars.
-    expect(screen.getAllByText(/1 \u00b7 33%/)).toHaveLength(3);
+    expect(screen.getAllByText(/1 \u00b7 33\.33%/)).toHaveLength(3);
   });
 
   it('renders the earliest and latest timestamps through the formatter', () => {

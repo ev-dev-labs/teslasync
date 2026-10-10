@@ -1,5 +1,7 @@
 import type { ReactNode } from 'react';
-import { EmptyState, QueryError, Skeleton } from '@/components/feedback';
+import { useTranslation } from 'react-i18next';
+import { EmptyState, Skeleton } from '@/components/feedback';
+import { SourceContent } from '@/components/layout';
 
 export interface PanelStateProps {
   selected: boolean;
@@ -28,24 +30,15 @@ export function PanelState({
   onRetry,
   children,
 }: PanelStateProps) {
-  if (!selected) {
-    return (
+  const { t } = useTranslation();
+  const emptyContent = !selected ? (
       <EmptyState
         /* no-action: the persistent vehicle selector in the page header owns this recovery action. */
         icon={icon}
         title={selectTitle}
         message={selectMessage}
       />
-    );
-  }
-  if (loading) {
-    return <Skeleton lines={4} className="py-3" />;
-  }
-  if (error) {
-    return <QueryError error={error} onRetry={onRetry} />;
-  }
-  if (empty) {
-    return (
+    ) : (
       <EmptyState
         /* no-action: an empty authoritative inventory has no safe mutation; source links are shown separately. */
         icon={icon}
@@ -53,6 +46,18 @@ export function PanelState({
         message={emptyMessage}
       />
     );
-  }
-  return children;
+  return (
+    <SourceContent
+      state={!selected ? 'empty' : loading ? 'loading' : error ? 'error' : empty ? 'empty' : 'ready'}
+      label={emptyTitle || selectTitle}
+      emptyMessage={emptyMessage}
+      errorMessage={t('serviceIntelligence.common.loadError', 'This source could not be loaded.')}
+      error={error}
+      errorRecovery={{ onRetry }}
+      loadingContent={<Skeleton lines={4} className="py-3" />}
+      emptyContent={emptyContent}
+    >
+      {children}
+    </SourceContent>
+  );
 }

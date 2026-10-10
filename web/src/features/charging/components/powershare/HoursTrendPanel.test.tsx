@@ -35,7 +35,7 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
 
-import type { TrendPoint } from './constants';
+import { HOURS_COLOR, type TrendPoint } from './constants';
 import { HoursTrendPanel } from './HoursTrendPanel';
 
 // ── i18n: resolve the string fallback (2nd arg) so assertions read on copy. ──
@@ -186,7 +186,7 @@ describe('HoursTrendPanel — populated', () => {
     // The "Hours Remaining" literal is routed through t() — the mock resolves
     // the English fallback, proving the string is translatable.
     expect(series).toHaveAttribute('data-name', 'Hours Remaining');
-    expect(series).toHaveAttribute('data-stroke', '#06b6d4');
+    expect(series).toHaveAttribute('data-stroke', HOURS_COLOR);
     expect(screen.getByTestId('x-axis')).toHaveAttribute('data-key', 'label');
     expect(screen.getByTestId('y-axis')).toHaveAttribute('data-unit', ' h');
   });
@@ -263,11 +263,19 @@ describe('HoursTrendPanel — empty', () => {
 
 describe('HoursTrendPanel — loading', () => {
   it('shows the skeleton and withholds both the chart and the empty state while isLoading', () => {
-    const { container } = renderPanel({ points: TREND, isLoading: true });
+    const { container } = renderPanel({ points: TREND, isLoading: true, error: new Error('stale') });
 
-    // The <Skeleton> is a pulsing placeholder — loading beats data.
-    expect(container.querySelector('.animate-pulse')).toBeInTheDocument();
+    // The existing chart double renders the real static Skeleton at 220px.
+    const skeleton = container.querySelector('div[aria-hidden="true"].w-full');
+    expect(skeleton).toBeInTheDocument();
+    expect(skeleton).toHaveClass('h-4', 'w-full', 'rounded', 'bg-[var(--skeleton-bg)]');
+    expect(skeleton).toHaveAttribute('aria-hidden', 'true');
+    expect(skeleton).toHaveStyle({ height: '220px' });
+    expect(container.querySelector('.animate-pulse')).not.toBeInTheDocument();
     expect(screen.queryByTestId('line-chart')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('line-chart-data')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('line-series')).not.toBeInTheDocument();
+    expect(screen.queryByText("Can't reach server")).not.toBeInTheDocument();
     // Neither the empty state (status) nor an error (alert) shows while loading.
     expect(screen.queryByRole('status')).not.toBeInTheDocument();
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();

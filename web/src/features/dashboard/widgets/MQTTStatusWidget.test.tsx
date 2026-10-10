@@ -28,7 +28,7 @@
  *   - refresh wiring: the accessible freshness control refetches.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
 import type { VehicleTelemetry } from '@/types/telemetry';
@@ -53,7 +53,7 @@ import MQTTStatusWidget, { deriveMqttStats } from './MQTTStatusWidget';
 const mockMqtt = useMQTTStatus as unknown as ReturnType<typeof vi.fn>;
 
  
-function makeQuery(over: Record<string, unknown> = {}): any {
+function makeQuery(over: Record<string, unknown> = {}) {
   return {
     data: undefined,
     error: null,
@@ -78,7 +78,7 @@ function minutesAgoIso(mins: number): string {
 }
 
  
-function makeStatus(over: Record<string, unknown> = {}): any {
+function makeStatus(over: Record<string, unknown> = {}) {
   return {
     connected: true,
     broker: 'mqtt://broker:1883',
@@ -106,6 +106,18 @@ beforeEach(() => {
 });
 
 describe('deriveMqttStats', () => {
+  it('opens the actual fleet-source review without implying calendar-day or verified-live coverage', () => {
+    mockMqtt.mockReturnValue(makeQuery({ data: makeStatus(), isError: true, error: new Error('refresh failed') }));
+    renderWidget(STANDARD);
+    const brief = screen.getByTestId('mqtt-operational-brief');
+    expect(within(brief).getByText('Retained readings')).toBeInTheDocument();
+    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog');
+    expect(within(drawer).getByText('12.50')).toBeInTheDocument();
+    expect(within(drawer).getByText('1,500')).toBeInTheDocument();
+    expect(within(drawer).getByText(/one missing operand makes the total unknown/)).toBeInTheDocument();
+    expect(within(drawer).getByText(/no complete calendar-day or verified-live coverage/, { selector: '[data-drawer-header] span' })).toBeInTheDocument();
+  });
   it('sums signal counts + rates and returns the most-recent lastReceived', () => {
     const out = deriveMqttStats([
       makeVehicle({ vin: 'A', signalCount: 1000, signalsPerSecond: 8.5, lastReceived: '2026-06-01T10:00:00Z' }),
@@ -119,12 +131,12 @@ describe('deriveMqttStats', () => {
 
   it('is null-safe for undefined, null, and empty vehicle lists', () => {
     const zero = { totalMessages: 0, messagesPerSec: 0, lastMessage: null };
-    expect(deriveMqttStats(undefined)).toEqual(zero);
-    expect(deriveMqttStats(null)).toEqual(zero);
+    expect(deriveMqttStats(undefined)).toEqual({ totalMessages: null, messagesPerSec: null, lastMessage: null });
+    expect(deriveMqttStats(null)).toEqual({ totalMessages: null, messagesPerSec: null, lastMessage: null });
     expect(deriveMqttStats([])).toEqual(zero);
   });
 
-  it('prefers camelCase fields, falls back to snake_case, and coerces junk counts to 0', () => {
+  it('prefers camelCase fields, falls back to snake_case, and rejects incomplete totals', () => {
     const out = deriveMqttStats([
       // camelCase present → wins over the snake_case alias.
       makeVehicle({ signalCount: 10, signal_count: 999, signalsPerSecond: 2, signals_per_second: 999 }),
@@ -134,8 +146,8 @@ describe('deriveMqttStats', () => {
       { vin: 'C', signalCount: 'oops', signalsPerSecond: null } as unknown as VehicleTelemetry,
     ]);
 
-    expect(out.totalMessages).toBe(15);
-    expect(out.messagesPerSec).toBe(5);
+    expect(out.totalMessages).toBeNull();
+    expect(out.messagesPerSec).toBeNull();
     expect(out.lastMessage).toBeNull();
   });
 
@@ -158,17 +170,17 @@ describe('MQTTStatusWidget — standard layout (2×2)', () => {
     mockMqtt.mockReturnValue(makeQuery({ data: makeStatus() }));
     renderWidget(STANDARD);
 
-    expect(screen.getByText('MQTT Status')).toBeInTheDocument();
-    expect(screen.getByText('online')).toBeInTheDocument();
+    expect(screen.getByText('MQTT status')).toBeInTheDocument();
+    expect(screen.getByText('Online')).toBeInTheDocument();
 
     // 8.5 + 4 = 12.5 signals/sec; 1000 + 500 = 1,500 total.
     expect(screen.getByText('Messages/sec')).toBeInTheDocument();
-    expect(screen.getByText('12.5')).toBeInTheDocument();
-    expect(screen.getByText('Total Messages')).toBeInTheDocument();
+    expect(screen.getByText('12.50')).toBeInTheDocument();
+    expect(screen.getByText('Total messages')).toBeInTheDocument();
     expect(screen.getByText('1,500')).toBeInTheDocument();
 
     // The latest of the two readings (3m ago) drives the footer.
-    expect(screen.getByText('Last Message')).toBeInTheDocument();
+    expect(screen.getByText('Last message')).toBeInTheDocument();
     expect(screen.getByText('3m ago')).toBeInTheDocument();
     expect(screen.getByText('Broker')).toBeInTheDocument();
     expect(screen.getByText('mqtt://broker:1883')).toBeInTheDocument();
@@ -178,7 +190,7 @@ describe('MQTTStatusWidget — standard layout (2×2)', () => {
     mockMqtt.mockReturnValue(makeQuery({ data: makeStatus({ connected: false }) }));
     renderWidget(STANDARD);
 
-    expect(screen.getByText('offline')).toBeInTheDocument();
+    expect(screen.getByText('Offline')).toBeInTheDocument();
     expect(screen.queryByText('online')).not.toBeInTheDocument();
   });
 
@@ -186,7 +198,7 @@ describe('MQTTStatusWidget — standard layout (2×2)', () => {
     mockMqtt.mockReturnValue(makeQuery({ data: makeStatus({ broker: '', vehicles: [] }) }));
     renderWidget(STANDARD);
 
-    expect(screen.getByText('0.0')).toBeInTheDocument(); // messages/sec
+    expect(screen.getByText('0.00')).toBeInTheDocument(); // messages/sec
     expect(screen.getByText('0')).toBeInTheDocument(); // total messages
     // Last-message (no vehicles) AND the blank broker both collapse to the
     // em-dash — the `|| '—'` broker guard is what turns '' into a placeholder.
@@ -199,12 +211,11 @@ describe('MQTTStatusWidget — compact layout (1×N)', () => {
     mockMqtt.mockReturnValue(makeQuery({ data: makeStatus() }));
     renderWidget(COMPACT);
 
-    expect(screen.getByText('online')).toBeInTheDocument();
-    expect(screen.getByText('12.5')).toBeInTheDocument();
+    expect(screen.getByText('Online')).toBeInTheDocument();
+    expect(screen.getByText('12.50')).toBeInTheDocument();
     expect(screen.getByText('msg/s')).toBeInTheDocument();
-    // Compact is title-less and omits the standard stat cards.
-    expect(screen.queryByText('MQTT Status')).not.toBeInTheDocument();
-    expect(screen.queryByText('Total Messages')).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'MQTT status' })).toBeInTheDocument();
+    expect(screen.queryByText('Total messages')).not.toBeInTheDocument();
   });
 });
 
@@ -216,16 +227,45 @@ describe('MQTTStatusWidget — states & interaction', () => {
     expect(screen.getByText('No MQTT status data')).toBeInTheDocument();
     expect(screen.getByRole('status')).toBeInTheDocument();
     // Standard keeps its header, but the stat cards are gated behind data.
-    expect(screen.getByText('MQTT Status')).toBeInTheDocument();
-    expect(screen.queryByText('Messages/sec')).not.toBeInTheDocument();
+    expect(screen.getByText('MQTT status')).toBeInTheDocument();
+    expect(screen.getByText('Messages/sec')).toBeInTheDocument();
+  });
+
+  describe('MQTTStatusWidget — unknown and retained readings', () => {
+    it('does not infer offline or zero counters from a partial payload', () => {
+      mockMqtt.mockReturnValue(makeQuery({ data: {} }));
+      renderWidget(STANDARD);
+      expect(screen.getByText('Unknown')).toBeInTheDocument();
+      expect(screen.getAllByText('—')).toHaveLength(4);
+      expect(screen.queryByText('Offline')).not.toBeInTheDocument();
+    });
+
+    it('keeps cached counters and status on a failed refresh in wide mode', () => {
+      mockMqtt.mockReturnValue(makeQuery({ data: makeStatus(), isError: true, error: new Error('refresh') }));
+      const { container } = renderWidget({ cols: 3, rows: 2 });
+      expect(screen.getByText('1,500')).toBeInTheDocument();
+      expect(screen.getByText('Online')).toBeInTheDocument();
+      expect(container.querySelector('[data-data-state="stale"]')).toBeTruthy();
+      expect(screen.queryByText("Can't reach server")).not.toBeInTheDocument();
+    });
+
+    it('keeps true zero counters alongside a genuinely disconnected broker', () => {
+      mockMqtt.mockReturnValue(makeQuery({ data: makeStatus({ connected: false, vehicles: [
+        makeVehicle({ signalsPerSecond: 0 }),
+      ] }) }));
+      renderWidget(STANDARD);
+      expect(screen.getByText('Offline')).toBeInTheDocument();
+      expect(screen.getByText('0')).toBeInTheDocument();
+      expect(screen.getByText('0.00')).toBeInTheDocument();
+    });
   });
 
   it('shows a loading skeleton and withholds the header + content while loading', () => {
     mockMqtt.mockReturnValue(makeQuery({ isLoading: true, data: undefined }));
     const { container } = renderWidget(STANDARD);
 
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
-    expect(screen.queryByText('MQTT Status')).not.toBeInTheDocument();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).not.toBeNull();
+    expect(screen.queryByText('MQTT status')).toBeInTheDocument();
     expect(screen.queryByText('No MQTT status data')).not.toBeInTheDocument();
   });
 
@@ -236,7 +276,7 @@ describe('MQTTStatusWidget — states & interaction', () => {
     // A non-ApiError falls through QueryError to the network/unknown branch.
     expect(screen.getByText("Can't reach server")).toBeInTheDocument();
     expect(screen.getByRole('alert')).toBeInTheDocument();
-    expect(screen.queryByText('MQTT Status')).not.toBeInTheDocument();
+    expect(screen.queryByText('MQTT status')).toBeInTheDocument();
   });
 
   it('refetches when the accessible Refresh control is clicked', () => {

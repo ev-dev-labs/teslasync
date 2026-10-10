@@ -1,0 +1,587 @@
+{
+  "item": "audit-page-012",
+  "phase": "Phase0",
+  "mode": "READ-ONLY source audit",
+  "page": "web\\src\\features\\admin\\pages\\FeedbackQueuePage.tsx",
+  "routes": [
+    "/admin/feedback"
+  ],
+  "purpose": "Admin queue for reviewing user-submitted bug reports, feature requests and questions, with manual triage and optional GitHub forwarding.",
+  "primaryGoal": "Inspect feedback evidence and safely triage individual or selected loaded rows without losing report content or source trust.",
+  "identity": {
+    "root": "F:\\github\\TeslaSync",
+    "component": "FeedbackQueuePage",
+    "routeEvidence": "web\\src\\App.tsx:268,705",
+    "mount": "lazy import inside SafeRoute; source registration confirmed, actual mounted runtime unverified",
+    "ownedFiles": [
+      "docs\\frontend-audits\\audit-page-012.json",
+      ".agent-status\\audit-page-012.txt"
+    ]
+  },
+  "dataSources": [
+    {
+      "hook": "useFeedbackList",
+      "file": "web\\src\\api\\hooks\\useFeedback.ts",
+      "line": 63,
+      "endpoint": "GET /api/v1/admin/feedback",
+      "routeEvidence": "internal\\api\\router.go:4683-4685",
+      "sourceOwner": "adminFeedbackHandler.List / userFeedbackRepo; response types at web\\src\\api\\types.ts:3232-3280",
+      "behavior": "One status/category-filtered list with limit 25 and page*25 offset, plus six independent limit:1 status/category count queries. AbortSignal is forwarded; existing query keys, keepPreviousData and inherited query policy must survive.",
+      "backendLimits": "Handler/database semantics, authorization enforcement, snapshot consistency and total accuracy not independently inspected or exercised."
+    },
+    {
+      "hook": "useUpdateFeedback / useBulkUpdateFeedback",
+      "file": "web\\src\\api\\hooks\\useFeedback.ts",
+      "line": 73,
+      "endpoint": "PATCH /api/v1/admin/feedback/{id}",
+      "routeEvidence": "internal\\api\\router.go:4686-4688",
+      "sourceOwner": "adminFeedbackHandler.Patch",
+      "behavior": "Manual status, GitHub issue URL and forwarding updates. Bulk uses validated/deduplicated IDs and Promise.allSettled over individual PATCH requests, then invalidates all feedback queries on settlement. Failed bulk preserves selection; toast owns mutation errors.",
+      "backendLimits": "No bulk backend endpoint is inferred. GitHub forwarding and partial-write behavior unverified; no mutation executed."
+    },
+    {
+      "hook": "useAiStream through AIFeedbackQueueTriage",
+      "file": "web\\src\\components\\ai\\AIFeedbackQueueTriage.tsx",
+      "line": 123,
+      "endpoint": "POST /api/v1/ai/feedback/triage/draft",
+      "routeEvidence": "internal\\api\\ai_routes.go:468-472; internal\\api\\router.go:5094",
+      "sourceOwner": "FeedbackQueueTriage handler and withAiFeature('feedback-queue-triage')",
+      "behavior": "Opt-in propose-only streamed advisor, scoped by feedbackId. Manual controls remain the sole persistence path. Source documents redacted envelope; server redaction and streaming behavior not runtime verified."
+    }
+  ],
+  "components": [
+    {
+      "name": "PageLayout",
+      "owner": "existing @/components/layout category",
+      "evidence": "FeedbackQueuePage.tsx:321-326",
+      "contract": "Full-width page title/subtitle and secondary refresh action; no second workspace selector."
+    },
+    {
+      "name": "AdminSummary / OperationalBrief",
+      "owner": "web\\src\\features\\admin\\components\\operationalbrief-a-g\\AdminSummary.tsx",
+      "evidence": "AdminSummary.tsx:19-44; FeedbackQueuePage.tsx:329-338",
+      "contract": "Typed count metrics through useOperationalMetrics; contextual description, scope and source status; preserve missing numeric values."
+    },
+    {
+      "name": "FeedbackFacetPanel / LayoutCard / SourceContent",
+      "owner": "web\\src\\features\\admin\\components\\feedback-queue\\FeedbackFacetPanel.tsx",
+      "evidence": "FeedbackFacetPanel.tsx:23-68",
+      "contract": "Persistent independent facet panels with combined DataState, partial KVList, skeleton, empty refresh and failure retry."
+    },
+    {
+      "name": "StatusDistribution / CompositionRail",
+      "owner": "web\\src\\features\\admin\\components\\feedback-queue\\StatusDistribution.tsx",
+      "evidence": "StatusDistribution.tsx:15-56",
+      "contract": "Complete status denominator only; preserve ordered categories, tiny-segment legend entries, counts, percentages and accessible summary."
+    },
+    {
+      "name": "CategoryMix / MetricBar",
+      "owner": "web\\src\\features\\admin\\components\\feedback-queue\\CategoryMix.tsx",
+      "evidence": "CategoryMix.tsx:13-48; web\\src\\components\\data-display\\MetricBar.tsx:9-27,43-100",
+      "contract": "Category-only denominator, ordered bars and count/percent readout. Existing solid fill accepts CSS variables; no new bar implementation needed."
+    },
+    {
+      "name": "DataTable",
+      "owner": "web\\src\\components\\ui\\DataTable.tsx",
+      "evidence": "FeedbackQueuePage.tsx:433-465; DataTable.tsx:715-725,757-772,873-916,1069-1180",
+      "contract": "Stable admin:feedback ID, persisted columns, loaded-row sort/export, named multi-selection and controlled expansion. Existing mobile adapter is opt-in and not supplied here."
+    },
+    {
+      "name": "FeedbackExpansion",
+      "owner": "web\\src\\features\\admin\\components\\feedback-queue\\FeedbackExpansion.tsx",
+      "evidence": "FeedbackExpansion.tsx:20-160",
+      "contract": "Body, metadata, audited masked email, conditional captured errors/console details, controlled draft URL, manual status/save/forward and propose-only AI."
+    },
+    {
+      "name": "BridgeStatus / badges / form and feedback primitives",
+      "owner": "existing feedback-queue domain components and @/components/ui, @/components/feedback, @/components/motion barrels",
+      "evidence": "BridgeStatus.tsx:13-56; CategoryBadge.tsx:17-31; StatusBadge.tsx:17-34; FeedbackQueuePage.tsx:4-18",
+      "contract": "Visible named bridge live region; localized semantic statuses; shared Select/Input/Button, trust warning, skeleton/empty/error and preference-aware motion."
+    }
+  ],
+  "duplicatedPatterns": [
+    {
+      "pattern": "Facet loading/partial/error/count formatting",
+      "assessment": "Already consolidated in FeedbackFacetPanel; retain it rather than duplicating status/category state handling.",
+      "evidence": "FeedbackFacetPanel.tsx:23-68"
+    },
+    {
+      "pattern": "Status/category colors versus semantic Badge mapping",
+      "assessment": "Local hard-coded distribution palette parallels Badge variants. Reuse existing theme-compatible presentation options; do not introduce another semantic registry.",
+      "evidence": "constants.ts:15-25; CategoryBadge.tsx:11-15; StatusBadge.tsx:11-15"
+    }
+  ],
+  "responsive": {
+    "status": "source-inspected; all viewport behavior unverified",
+    "existing": [
+      "Insights stack then become three columns at xl, status spanning two.",
+      "Filter toolbar stacks then wraps at sm; pagination wraps.",
+      "Expansion metadata is one/two/four columns.",
+      "Table explicitly prioritizes title/status/created_at below md."
+    ],
+    "issues": [
+      {
+        "id": "R1",
+        "file": "web\\src\\features\\admin\\pages\\FeedbackQueuePage.tsx",
+        "line": 437,
+        "rule": "MDC-023/MDC-043 preservation",
+        "detail": "mobileColumns hides category, page_route, reporter and github_issue_url below md. DataTable.tsx:724-725 applies hidden md:table-cell. Expansion provides reporter metadata but neither category nor page_route nor an existing issue link, so the mobile presentation does not provide equivalent access to all hidden row evidence/actions.",
+        "fix": "Use the existing typed DataTable mobile presentation/detail contract or enrich the existing expansion with localized category, route and existing issue navigation. Preserve all desktop columns, row selection, expansion and export scope.",
+        "owner": "page",
+        "confidence": "high-source"
+      },
+      {
+        "id": "R2",
+        "file": "web\\src\\features\\admin\\components\\feedback-queue\\FeedbackExpansion.tsx",
+        "line": 112,
+        "rule": "MDC-043 allocated-width responsiveness",
+        "detail": "The URL field has min-w-[260px] inside a p-4 expansion inside a padded panel and shell; report body is whitespace-pre-wrap without explicit long-token wrapping at line 52. Narrow allocated widths/long URLs can exceed available space. Actual overflow not measured.",
+        "fix": "Use min-w-0/w-full with responsive minimums and break-word/overflow-wrap behavior for untrusted long content; retain every field/action and explicit scroll ownership for captured logs.",
+        "owner": "page",
+        "confidence": "medium-source"
+      }
+    ],
+    "requiredWidths": [
+      320,
+      375,
+      390,
+      430,
+      768,
+      1024,
+      1280,
+      1440,
+      1920,
+      2560
+    ]
+  },
+  "accessibility": {
+    "status": "keyboard, screen reader, contrast, forced colors, focus and touch behavior unverified",
+    "positiveEvidence": [
+      "Named localized row selection uses category/title at FeedbackQueuePage.tsx:445-450.",
+      "Bridge status is labelled role=status with aria-busy at BridgeStatus.tsx:23.",
+      "Decorative icons are aria-hidden; shared fields and native details/summary semantics reused.",
+      "CompositionRail retains text legends including visually omitted tiny fills; MetricBar uses shared reduced-motion preference."
+    ],
+    "issues": [
+      {
+        "id": "A1",
+        "file": "web\\src\\components\\ui\\DataTable.tsx",
+        "line": 1135,
+        "rule": "MDC-040 contextual accessible action names",
+        "detail": "Expansion buttons use generic Expand row / Collapse row despite an existing rowLabel callback; the feedback page has many expandable actionable reports. Shared labels lack the category/title differentiation already provided to selection.",
+        "fix": "Extend the existing DataTable expansion label branch to reuse caller rowLabel for localized Expand/Collapse {{row}} with a generic fallback; preserve keyboard Enter, aria-expanded and focus.",
+        "owner": "shared",
+        "confidence": "high-source"
+      }
+    ]
+  },
+  "states": {
+    "loading": "List shows six skeleton lines only without retained data. Independent facet panels and summary handle their own loading.",
+    "empty": "Facet complete zeros show explanatory refreshable empty states; table zero rows shows submission guidance.",
+    "error": "List uses fatalError only; count panels show QueryError and retain available neighbor counts. Mutation toast supplies manual/bulk error feedback.",
+    "staleOffline": "List StaleRefreshWarning; facets map combined stale to SourceContent retained with retry; summary labels retained measurements. Actual offline pause behavior unverified.",
+    "partialUnknown": "Undefined counts retained as unknown; statusTotal only exists when all three finite. Facet children mount only when all counts finite. Bridge remains unknown when no list payload.",
+    "issues": [
+      {
+        "id": "S1",
+        "file": "web\\src\\api\\hooks\\useFeedback.ts",
+        "line": 69,
+        "rule": "MDC-026/MDC-046 retained scope trust",
+        "detail": "keepPreviousData retains prior filter/page rows during scope changes. FeedbackQueuePage reads neither isPlaceholderData nor a placeholder-specific scope indicator, and its manual/bulk row actions remain enabled apart from mutation state. useDataState accepts payload presence and does not inspect placeholder provenance. Prior-scope rows can appear under new filters without an explicit prior-scope notice.",
+        "fix": "Preserve keepPreviousData/query keys but distinguish placeholder rows from confirmed current-scope results using existing query flags and a source-specific retained notice; make mutation availability/scope explicit rather than silently operating on prior-filter rows.",
+        "owner": "page",
+        "confidence": "high-source"
+      },
+      {
+        "id": "S2",
+        "file": "web\\src\\features\\admin\\pages\\FeedbackQueuePage.tsx",
+        "line": 425,
+        "rule": "MDC-026 explanatory empty state",
+        "detail": "The same No feedback yet / submissions will appear here message is shown for a nonempty whole queue filtered down to no matching rows; status/category filtering is not acknowledged.",
+        "fix": "Differentiate genuinely empty queue from no matches using active filters and known source evidence; provide clear/reset filters while preserving whole-queue insights and refresh.",
+        "owner": "page",
+        "confidence": "high-source"
+      },
+      {
+        "id": "S3",
+        "file": "web\\src\\features\\admin\\components\\feedback-queue\\CategoryBadge.tsx",
+        "line": 29,
+        "rule": "MDC-025 unknown is not a known domain category",
+        "detail": "Unrecognized runtime category values are labelled Other / question through label.other, unlike StatusBadge's explicit Unknown fallback. This misrepresents a newer/unknown server enum as a recognized category.",
+        "fix": "Keep neutral styling but use localized Unknown and preserve original source identity where appropriate; do not recategorize wire/cache values.",
+        "owner": "page",
+        "confidence": "high-source"
+      }
+    ]
+  },
+  "visualIssues": [
+    {
+      "id": "V1",
+      "file": "web\\src\\features\\admin\\components\\feedback-queue\\constants.ts",
+      "line": 15,
+      "rule": "MDC-010/MDC-025 restrained semantic palette",
+      "detail": "Distribution colors are hard-coded amber/emerald/slate and rose/electric-cyan/purple rather than theme tokens. The comment at lines 8-12 states MetricBar requires six-digit hex, but the inspected MetricBar now offers fill='solid' supporting CSS variables. CategoryMix omits fill and inherits gradient. This is an existing adoption gap, not a need for a new renderer.",
+      "fix": "Adopt existing solid MetricBar fill and shared semantic/theme colors; keep category distinctions, text counts/percentages, legend order and user preferences. Remove obsolete hex-only assumption only in a future owned implementation.",
+      "owner": "page",
+      "confidence": "high-source"
+    },
+    {
+      "id": "V2",
+      "file": "web\\src\\features\\admin\\pages\\FeedbackQueuePage.tsx",
+      "line": 235,
+      "rule": "MDC-012/MDC-013 typography and text roles",
+      "detail": "Open issue link supplies text-xs and fixed cyan-300/cyan-200 classes rather than shared typography/theme text roles. Also decorative facet icons use fixed cyan at lines 346 and 363.",
+      "fix": "Retain native external anchor and rel/target semantics, compose current text/link tokens and typography role, and use subdued semantic icon treatment. Actual contrast remains unmeasured.",
+      "owner": "page",
+      "confidence": "high-source"
+    }
+  ],
+  "architectureIssues": [],
+  "priority": {
+    "level": "high",
+    "order": [
+      "Preserve mobile hidden metadata/navigation and narrow expansion actions.",
+      "Make retained prior-filter scope explicit before triage.",
+      "Correct no-match and unknown category meanings.",
+      "Reuse shared expansion naming, solid bars and restrained semantic roles."
+    ],
+    "rationale": "Action-bearing admin surface; preservation/source-trust gaps take precedence over palette cleanup."
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "Contextual DataTable expansion labels",
+      "existingOwnerFile": "web\\src\\components\\ui\\DataTable.tsx",
+      "propsVariantsStates": "Reuse rowLabel?: (row:T)=>string; localized Expand/Collapse {{row}} for collapsed/expanded rows, generic fallback when absent/blank. Preserve aria-expanded, keyboard Enter, touch target and selection labels.",
+      "usedBy": [
+        "FeedbackQueuePage expandable feedback rows"
+      ],
+      "dependsOn": [
+        "Existing DataTable rowLabel contract",
+        "Existing localization catalog owner for any new canonical keys"
+      ],
+      "issueIds": [
+        "A1"
+      ],
+      "acceptance": "Focused named-expansion tests, no rowLabel fallback regressions, keyboard and narrow-width QA; not executed in this audit."
+    }
+  ],
+  "competingImplementations": [
+    {
+      "assessment": "No new table, query store, workspace selector, formatter, overlay or chart library found in root/page-specific inspected production dependencies.",
+      "limits": "Not a repository-wide absence claim."
+    },
+    {
+      "assessment": "FeedbackStatTile is barrel-exported but not imported by this page; no runtime adoption inferred and its source not inspected.",
+      "evidence": "feedback-queue\\index.ts:1; FeedbackQueuePage.tsx:18-19,31-38"
+    }
+  ],
+  "preservation": {
+    "sourceSha256": "199A807BB19AA1F24A0022095A5832619E63AE3930924631B3BDEBBA700067C8",
+    "currentLineCount": 500,
+    "sourceInventory": [
+      {
+        "file": "docs\\frontend-design-contract.md",
+        "sha256": "17B542389CD4E98A0DFB7B4D2F2C4E2727F221AF0AC5ACB738DB5E987B282255",
+        "lineCount": 394,
+        "inspection": "source read"
+      },
+      {
+        "file": "docs\\frontend-worker-conventions.md",
+        "sha256": "6CF8194644A7820926082FC065E9CBF87C1E1E2D8258C4D092DA8C962707ADC3",
+        "lineCount": 80,
+        "inspection": "source read"
+      },
+      {
+        "file": "docs\\frontend-mission.md",
+        "sha256": "2BD35429E32D06ABF109DD371C2DD011CB974EF6B8C1915B298D1A0C3D7FD98F",
+        "lineCount": 1593,
+        "inspection": "bounded excerpts/search matches only"
+      },
+      {
+        "file": ".github\\skills\\audit-violations\\audit.sh",
+        "sha256": "3E5937AB2A4EA2F303A0152111794D5A3A45C24ABFE7B11400079BC4AC3DFE46",
+        "lineCount": 141,
+        "inspection": "source read"
+      },
+      {
+        "file": "web\\src\\features\\admin\\pages\\FeedbackQueuePage.tsx",
+        "sha256": "199A807BB19AA1F24A0022095A5832619E63AE3930924631B3BDEBBA700067C8",
+        "lineCount": 500,
+        "inspection": "source read"
+      },
+      {
+        "file": "web\\src\\features\\admin\\components\\feedback-queue\\index.ts",
+        "sha256": "548B21B99373F40A6A5A0615EC817CB2B9415B4E4D536169017152B7DF9AB8E9",
+        "lineCount": 7,
+        "inspection": "source read"
+      },
+      {
+        "file": "web\\src\\features\\admin\\components\\feedback-queue\\constants.ts",
+        "sha256": "F0B8C38C5BCE6A871CF72695A114186EF34BF0338C9DC8F3F16589BE4FF3B408",
+        "lineCount": 29,
+        "inspection": "source read"
+      },
+      {
+        "file": "web\\src\\features\\admin\\components\\feedback-queue\\BridgeStatus.tsx",
+        "sha256": "664940340E0576622087F8EAC10CEEEB16980F8230983205278EE26DFE33E20B",
+        "lineCount": 56,
+        "inspection": "source read"
+      },
+      {
+        "file": "web\\src\\features\\admin\\components\\feedback-queue\\CategoryBadge.tsx",
+        "sha256": "8D618EDA79D6F94895C157A992015908B5B9C0EF63E6486A446033805DE85387",
+        "lineCount": 31,
+        "inspection": "source read"
+      },
+      {
+        "file": "web\\src\\features\\admin\\components\\feedback-queue\\StatusBadge.tsx",
+        "sha256": "1E21766C3326867312132696644AD864DA2A1E7E61D0290CBA3731DEDA6458E9",
+        "lineCount": 34,
+        "inspection": "source read"
+      },
+      {
+        "file": "web\\src\\features\\admin\\components\\feedback-queue\\StatusDistribution.tsx",
+        "sha256": "580BAA7F2CA98A565572292480EFB074764668E9575689C30DA89158100110B0",
+        "lineCount": 56,
+        "inspection": "source read"
+      },
+      {
+        "file": "web\\src\\features\\admin\\components\\feedback-queue\\CategoryMix.tsx",
+        "sha256": "10D381DFA635385F456DE013A306945D932807880D98F381420CF93C570CD0E3",
+        "lineCount": 48,
+        "inspection": "source read"
+      },
+      {
+        "file": "web\\src\\features\\admin\\components\\feedback-queue\\FeedbackExpansion.tsx",
+        "sha256": "91D59F8E624F741941C5853F35D1E45BAD68D2813F57AC8D0042DA70083715E9",
+        "lineCount": 160,
+        "inspection": "source read"
+      },
+      {
+        "file": "web\\src\\features\\admin\\components\\feedback-queue\\FeedbackFacetPanel.tsx",
+        "sha256": "E399200BCEE438F68413365293392610BE4903D7B8AFFBBF551A3065579520A6",
+        "lineCount": 68,
+        "inspection": "source read"
+      },
+      {
+        "file": "web\\src\\features\\admin\\components\\operationalbrief-a-g\\AdminSummary.tsx",
+        "sha256": "EC9473B5CB1FE90178FFE38A38BCD5256686CDC1E339DC90B343FFF039BF4763",
+        "lineCount": 44,
+        "inspection": "source read"
+      },
+      {
+        "file": "web\\src\\api\\hooks\\useFeedback.ts",
+        "sha256": "A93DF6BC51B062A68752190463D52053EDB6A23E422207D1DDEBFBCC8DCA32E8",
+        "lineCount": 143,
+        "inspection": "source read"
+      },
+      {
+        "file": "web\\src\\api\\types.ts",
+        "sha256": "11A6003464BC550E085B640FED3779705799A2474CE4F255D1DCACA202CEEB9B",
+        "lineCount": 4194,
+        "inspection": "bounded excerpts/search matches only"
+      },
+      {
+        "file": "web\\src\\api\\dataState.ts",
+        "sha256": "21FB454B3C1F01608169F3F3887911DE97F7C754663CC001236EBFDE58211761",
+        "lineCount": 434,
+        "inspection": "bounded excerpts/search matches only"
+      },
+      {
+        "file": "web\\src\\hooks\\useDataState.ts",
+        "sha256": "785BD47E706B066874BEC8999D51093982E93B9680B8DEC16BDDC023DC57FB9B",
+        "lineCount": 65,
+        "inspection": "source read"
+      },
+      {
+        "file": "web\\src\\components\\ai\\AIFeedbackQueueTriage.tsx",
+        "sha256": "48394840C2887AE18242C1DFB67FE352EB5DD519CE22D4A82C00EDDE601AC1B5",
+        "lineCount": 163,
+        "inspection": "source read"
+      },
+      {
+        "file": "web\\src\\components\\ui\\DataTable.tsx",
+        "sha256": "92E3A46F15E401B57303823693AAC8825693B4EDC2B04CFE289663D8E1386438",
+        "lineCount": 1687,
+        "inspection": "bounded excerpts/search matches only"
+      },
+      {
+        "file": "web\\src\\components\\data-display\\CompositionRail.tsx",
+        "sha256": "3434CC1AD7C49BEE62B60B0FEDB1A018E003B168EAB41A39131490E04FD727B9",
+        "lineCount": 105,
+        "inspection": "source read"
+      },
+      {
+        "file": "web\\src\\components\\data-display\\MetricBar.tsx",
+        "sha256": "E3E0DA3087D96DB2FEC366EDB15FF2784A4787BEBF9F86C7C0C09364109AEA4A",
+        "lineCount": 92,
+        "inspection": "source read"
+      },
+      {
+        "file": "web\\src\\components\\layout\\layout-reference\\SourceContent.tsx",
+        "sha256": "283583E259342620CB0E24429E3F66FB6385F16498D869192F36CFFCFF9EEC43",
+        "lineCount": 72,
+        "inspection": "source read"
+      },
+      {
+        "file": "web\\src\\lib\\workspaceScope.ts",
+        "sha256": "AEB8C01D410F2377AA5FD713DE1A678A0360ACF647A9C882F03E46C80EFDFCD7",
+        "lineCount": 168,
+        "inspection": "source read"
+      },
+      {
+        "file": "web\\src\\App.tsx",
+        "sha256": "23A1CE852D2CE51DF5A26A5C2A5669FFA788A992355A8BCFAFB391C82B47DEF3",
+        "lineCount": 918,
+        "inspection": "bounded excerpts/search matches only"
+      },
+      {
+        "file": "internal\\api\\router.go",
+        "sha256": "98B92853EBADE3DB74AD361D098BBA4472039884A407D61CE901DC3BF1FE3750",
+        "lineCount": 5366,
+        "inspection": "bounded excerpts/search matches only"
+      },
+      {
+        "file": "internal\\api\\ai_routes.go",
+        "sha256": "F0BCBD1B33717F76EFA91855587A239B03E8111956862F4906842251BAAC54B3",
+        "lineCount": 1831,
+        "inspection": "bounded excerpts/search matches only"
+      },
+      {
+        "file": "internal\\api\\aifeedtri\\handler.go",
+        "sha256": "7AC22167DE25A5BA0B6632ED89AA8F268B96273B3DF77104F7758F0057A9DC51",
+        "lineCount": 323,
+        "inspection": "bounded excerpts/search matches only"
+      },
+      {
+        "file": "internal\\api\\aifeedtri\\handler_test.go",
+        "sha256": "D328FA7E9ADD0435753E14F83AF0096BC2C68AB2BA667D66C1D123DDA0B74203",
+        "lineCount": 251,
+        "inspection": "bounded excerpts/search matches only"
+      }
+    ],
+    "sectionNames": [
+      "Queue overview (six metrics)",
+      "Triage progress",
+      "Category mix",
+      "GitHub bridge footer",
+      "Queue filters and paginated table",
+      "Per-row report body",
+      "Per-row app/user/reporter/email metadata",
+      "Conditional captured frontend errors",
+      "Conditional console tail",
+      "Per-row manual triage and GitHub controls",
+      "Conditional propose-only Helix triage advisor"
+    ],
+    "sectionCounts": {
+      "topLevelBands": 3,
+      "summaryMetrics": 6,
+      "facetPanels": 2,
+      "bridgeFooters": 1,
+      "queueTables": 1,
+      "tableColumns": 7,
+      "rowExpansionSections": 6,
+      "rootGlassPanelOpenTags": 1,
+      "rootChartContainerOpenTags": 0
+    },
+    "actions": [
+      "Refresh list and all six facets together",
+      "Status/category filtering resets page to zero",
+      "Previous/next page of 25",
+      "Loaded-column sorting and table-owned persistence/export",
+      "Controlled multi-selection and row expansion",
+      "Bulk mark triaged/close/reopen",
+      "Manual row status change",
+      "Draft/save GitHub issue URL",
+      "Open existing external GitHub issue",
+      "Forward to GitHub only when enabled and not already linked",
+      "Reveal/copy audited masked email",
+      "Open native captured-error/console details",
+      "Opt-in suggest triage without automatic writes",
+      "Independent count-panel retry and list retry"
+    ],
+    "dataBehavior": [
+      "Status and category facets remain independent of table filters.",
+      "Status total requires every contributing finite count; category denominator excludes status counts.",
+      "Unknown values are not fabricated zero. Complete zero facets are empty, not unavailable failures.",
+      "Bulk partial failures invalidate queries and preserve operator selection.",
+      "URL draft resets only on changed persisted URL.",
+      "Email privacy/audit and AI feature/privacy boundaries remain.",
+      "No physical measurements or SI conversion introduced; counts are dimensionless and dates use existing formatter.",
+      "No second date/vehicle scope: /admin/feedback is not RANGE_ENABLED_PATHS and /admin disables vehicle control per workspaceScope.ts:23-79,97-99,178-193."
+    ],
+    "minimumFutureRootPlusExtractedLines": 350,
+    "baselineLimits": "Current root snapshot is 500 lines; no historical baseline or git inspection performed. Source inventory hashes do not establish functional parity."
+  },
+  "evidenceLimits": {
+    "runtime": "unverified",
+    "visual": "unverified",
+    "keyboard": "unverified",
+    "contrast": "unverified",
+    "viewport": "unverified",
+    "fullGates": "NOT RUN: TypeScript, full lint/build/tests and audit.sh (script contains full TypeScript gate) prohibited by assigned read-only Phase0 scope.",
+    "tests": "NOT RUN; test paths enumerated by glob are not test execution or source review.",
+    "backend": "Only mounted endpoint source excerpts inspected; handler/repository behavior, authentication, redaction, forwarding and server totals not proven.",
+    "shared": "Only bounded DataTable excerpts, SourceContent, MetricBar and CompositionRail inspected. Other shared component contracts are cited from current design contract/imports, not claimed as fully reviewed.",
+    "commands": [
+      {
+        "command": "Get-FileHash -Algorithm SHA256 <each filesRead path>; [System.IO.File]::ReadAllLines(<path>).Length",
+        "exitCode": 0,
+        "output": "Root SHA256=199A807BB19AA1F24A0022095A5832619E63AE3930924631B3BDEBBA700067C8; lines=500. Per-input results captured in preservation.sourceInventory."
+      },
+      {
+        "command": "Select-String -CaseSensitive -Path web\\src\\features\\admin\\pages\\FeedbackQueuePage.tsx -Pattern <inline style/raw controls/direct libraries/old API imports/fixed text regexes>",
+        "exitCode": 0,
+        "output": "inline style: 0\r\nraw controls: 0\r\ndirect libraries: 0\r\nold API imports: 0\r\nfixed white gray neon text: 0",
+        "limits": "Root only, case-sensitive source scan, not complete violations audit. Initial case-insensitive raw-control scan returned 8 shared component matches; corrected count is authoritative."
+      },
+      {
+        "command": "Get-Content -Raw docs\\frontend-audits\\audit-page-012.json | ConvertFrom-Json; assert all 20 conventions fields, item, exact route and Get-FileHash root equality",
+        "exitCode": 0,
+        "output": "JSON schema fields, exact identity/routes and root hash verified; inventory entries=30"
+      }
+    ],
+    "mutations": "Only assigned JSON report and heartbeat written. No source/shared/queue edits, git operations, production mutations, browser or full gates.",
+    "missionSectionsRead": [
+      "0",
+      "1",
+      "3 (partial architecture)",
+      "5-9",
+      "14-26",
+      "30-36"
+    ]
+  },
+  "filesRead": [
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\admin\\pages\\FeedbackQueuePage.tsx",
+    "web\\src\\features\\admin\\components\\feedback-queue\\index.ts",
+    "web\\src\\features\\admin\\components\\feedback-queue\\constants.ts",
+    "web\\src\\features\\admin\\components\\feedback-queue\\BridgeStatus.tsx",
+    "web\\src\\features\\admin\\components\\feedback-queue\\CategoryBadge.tsx",
+    "web\\src\\features\\admin\\components\\feedback-queue\\StatusBadge.tsx",
+    "web\\src\\features\\admin\\components\\feedback-queue\\StatusDistribution.tsx",
+    "web\\src\\features\\admin\\components\\feedback-queue\\CategoryMix.tsx",
+    "web\\src\\features\\admin\\components\\feedback-queue\\FeedbackExpansion.tsx",
+    "web\\src\\features\\admin\\components\\feedback-queue\\FeedbackFacetPanel.tsx",
+    "web\\src\\features\\admin\\components\\operationalbrief-a-g\\AdminSummary.tsx",
+    "web\\src\\api\\hooks\\useFeedback.ts",
+    "web\\src\\api\\types.ts",
+    "web\\src\\api\\dataState.ts",
+    "web\\src\\hooks\\useDataState.ts",
+    "web\\src\\components\\ai\\AIFeedbackQueueTriage.tsx",
+    "web\\src\\components\\ui\\DataTable.tsx",
+    "web\\src\\components\\data-display\\CompositionRail.tsx",
+    "web\\src\\components\\data-display\\MetricBar.tsx",
+    "web\\src\\components\\layout\\layout-reference\\SourceContent.tsx",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\App.tsx",
+    "internal\\api\\router.go",
+    "internal\\api\\ai_routes.go",
+    "internal\\api\\aifeedtri\\handler.go",
+    "internal\\api\\aifeedtri\\handler_test.go"
+  ],
+  "auditedAtUtc": "2026-10-07T10:30:18.2494146Z"
+}

@@ -23,9 +23,11 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
-import { PageContainer } from '@/components/layout'
+import { PageLayout } from '@/components/layout'
+import { deriveDataState } from '@/api/dataState'
 import { ConfirmDialog } from '@/components/ui'
 import { FadeIn } from '@/components/motion'
+import { DataStateNotice } from '@/components/feedback'
 import { useToast } from '@/components/feedback/Toast'
 import { usePageTitle } from '@/hooks/usePageTitle'
 import { useVersionInfo } from '@/api/hooks/useSettings'
@@ -43,11 +45,11 @@ import {
 } from '@/lib/cookieConsent'
 
 import {
-  PrivacyKpiCards,
   RecentPagesPanel,
   ConsentControlPanel,
   PrivacyGuaranteesPanel,
 } from '../components/privacy'
+import { PrivacyOperationalBrief } from '../components/statstrip-privacy/PrivacyOperationalBrief'
 
 /** Stable id for the "Don't ask again" opt-out on the clear-history dialog. */
 const CONFIRM_SILENCE_KEY = 'clear-recent-pages'
@@ -63,7 +65,9 @@ export default function PrivacyPage() {
   const [consent, setConsentLocal] = useState<ConsentState>(() => getConsent())
 
   const versionQuery = useVersionInfo()
+  const policyState = deriveDataState(versionQuery)
   const { refetch: refetchVersion } = versionQuery
+  const policyKnown = typeof versionQuery.data?.require_cookie_consent === 'boolean'
   const requireConsent = Boolean(versionQuery.data?.require_cookie_consent)
 
   // Single stable retry shared by the KPI band and the consent panel — both
@@ -111,7 +115,7 @@ export default function PrivacyPage() {
   }
 
   return (
-    <PageContainer
+    <PageLayout
       title={t('account.privacy.title', 'Privacy')}
       subtitle={t(
         'account.privacy.subtitle',
@@ -120,15 +124,16 @@ export default function PrivacyPage() {
       query={versionQuery}
       copyLink
     >
+      {policyState.status === 'stale' && <DataStateNotice state="stale" preserveSeverity />}
       <div className="space-y-6" data-testid="privacy-section">
         <FadeIn>
-          <PrivacyKpiCards
+          <PrivacyOperationalBrief
             recentCount={count}
             consent={consent}
-            requireConsent={requireConsent}
-            isLoading={versionQuery.isLoading}
-            isError={versionQuery.isError}
-            error={versionQuery.error}
+            requireConsent={policyKnown ? requireConsent : null}
+            policyLoading={policyState.status === 'initial'}
+            policyError={policyState.fatalError}
+            retained={policyState.status === 'stale'}
             onRetry={handleRetry}
           />
         </FadeIn>
@@ -142,8 +147,8 @@ export default function PrivacyPage() {
             <ConsentControlPanel
               consent={consent}
               requireConsent={requireConsent}
-              isLoading={versionQuery.isLoading}
-              isError={versionQuery.isError}
+              isLoading={policyState.status === 'initial'}
+              isError={policyState.fatalError != null || (policyState.status !== 'initial' && !policyKnown)}
               onRetry={handleRetry}
               onAccept={handleAcceptConsent}
               onDecline={handleDeclineConsent}
@@ -171,6 +176,6 @@ export default function PrivacyPage() {
         onConfirm={handleClearConfirm}
         onCancel={() => setConfirmOpen(false)}
       />
-    </PageContainer>
+    </PageLayout>
   )
 }

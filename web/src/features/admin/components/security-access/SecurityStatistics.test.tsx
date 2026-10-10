@@ -76,35 +76,35 @@ function metricValue(label: string): string {
 }
 
 const ALL_LABELS = [
-  'Lock/Unlock Events',
-  'Sentry Uptime',
-  'Door Open Events',
-  'Window Open Events',
-  'HomeLink Detections',
-  'Guest Mode Usage',
-  'Total Events',
+  'Lock/unlock events',
+  'Sentry uptime',
+  'Door open events',
+  'Window open events',
+  'HomeLink detections',
+  'Guest mode usage',
+  'Total events',
 ];
 
 describe('SecurityStatistics — data', () => {
   it('renders the panel title and all seven metrics with their derived values', () => {
     renderStats({ securityStats: makeStats(), sentryUptime: 87.6 });
 
-    expect(screen.getByText('Security Statistics')).toBeInTheDocument();
+    expect(screen.getByText('Security statistics')).toBeInTheDocument();
 
-    expect(metricValue('Lock/Unlock Events')).toBe('3');
-    expect(metricValue('Sentry Uptime')).toBe('88%'); // fmtInt rounds 87.6
-    expect(metricValue('Door Open Events')).toBe('5');
-    expect(metricValue('Window Open Events')).toBe('2');
-    expect(metricValue('HomeLink Detections')).toBe('4');
-    expect(metricValue('Guest Mode Usage')).toBe('1');
-    expect(metricValue('Total Events')).toBe('12');
+    expect(metricValue('Lock/unlock events')).toBe('3');
+    expect(metricValue('Sentry uptime')).toBe('88%'); // fmtInt rounds 87.6
+    expect(metricValue('Door open events')).toBe('5');
+    expect(metricValue('Window open events')).toBe('2');
+    expect(metricValue('HomeLink detections')).toBe('4');
+    expect(metricValue('Guest mode usage')).toBe('1');
+    expect(metricValue('Total events')).toBe('12');
   });
 
   it('exposes the metric cluster as a labelled group for assistive tech', () => {
-    renderStats();
+    const { container } = renderStats();
 
     const group = screen.getByRole('group', {
-      name: /security statistics metrics/i,
+      name: /Security statistics metrics/i,
     });
     expect(group).toBeInTheDocument();
     // All seven metric labels live inside that one group.
@@ -112,7 +112,8 @@ describe('SecurityStatistics — data', () => {
       expect(group).toContainElement(screen.getByText(label));
     }
     // Data branch → no skeletons, no empty state, no error alert.
-    expect(document.querySelector('.animate-pulse')).toBeNull();
+    expect(container.querySelector('.grid[aria-hidden="true"]')).toBeNull();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).toBeNull();
     expect(screen.queryByRole('alert')).toBeNull();
   });
 
@@ -123,7 +124,7 @@ describe('SecurityStatistics — data', () => {
     [100, '100%'],
   ])('formats sentryUptime %p as the rounded percentage %p', (uptime, shown) => {
     renderStats({ sentryUptime: uptime });
-    expect(metricValue('Sentry Uptime')).toBe(shown);
+    expect(metricValue('Sentry uptime')).toBe(shown);
   });
 });
 
@@ -137,12 +138,12 @@ describe('SecurityStatistics — null-safety', () => {
     });
 
     expect(
-      screen.getByRole('group', { name: /security statistics metrics/i }),
+      screen.getByRole('group', { name: /Security statistics metrics/i }),
     ).toBeInTheDocument();
-    expect(metricValue('Lock/Unlock Events')).toBe('0');
-    expect(metricValue('Door Open Events')).toBe('0');
-    expect(metricValue('Total Events')).toBe('0');
-    expect(metricValue('Sentry Uptime')).toBe('0%');
+    expect(metricValue('Lock/unlock events')).toBe('0');
+    expect(metricValue('Door open events')).toBe('0');
+    expect(metricValue('Total events')).toBe('0');
+    expect(metricValue('Sentry uptime')).toBe('0%');
   });
 });
 
@@ -154,15 +155,28 @@ describe('SecurityStatistics — loading', () => {
     });
 
     // Title still anchors the panel while loading.
-    expect(screen.getByText('Security Statistics')).toBeInTheDocument();
+    expect(screen.getByText('Security statistics')).toBeInTheDocument();
 
-    const skeletonGrid = container.querySelector('[aria-hidden="true"]');
+    const panel = screen.getByText('Security statistics').closest('[data-print-card]');
+    const skeletonGrid = panel?.querySelector('.grid[aria-hidden="true"]');
     expect(skeletonGrid).not.toBeNull();
-    expect(container.querySelectorAll('.animate-pulse').length).toBe(7);
+    expect(skeletonGrid).toHaveClass('grid-cols-2', 'gap-3', 'sm:grid-cols-3', 'xl:grid-cols-2');
+    expect(skeletonGrid?.children).toHaveLength(7);
+    const cells = skeletonGrid?.querySelectorAll(':scope > [aria-hidden="true"].h-4.w-full');
+    expect(cells).toHaveLength(7);
+    for (const cell of cells ?? []) {
+      expect(cell).toHaveClass('rounded', 'bg-[var(--skeleton-bg)]');
+      expect(cell).toHaveStyle({ height: '80px' });
+    }
+    expect(container.querySelectorAll('.animate-pulse').length).toBe(0);
 
     // Neither the metrics nor the empty state may render yet.
     expect(screen.queryByRole('group')).toBeNull();
-    expect(screen.queryByText('Lock/Unlock Events')).toBeNull();
+    expect(screen.queryByText('Lock/unlock events')).toBeNull();
+    for (const label of ALL_LABELS) {
+      expect(screen.queryByText(label)).toBeNull();
+    }
+    expect(screen.queryByRole('alert')).toBeNull();
     expect(screen.queryByText('No security events are available in this history window.')).toBeNull();
   });
 
@@ -172,19 +186,37 @@ describe('SecurityStatistics — loading', () => {
       securityStats: makeStats(),
     });
 
-    expect(container.querySelectorAll('.animate-pulse').length).toBe(7);
-    expect(screen.queryByText('Lock/Unlock Events')).toBeNull();
+    const panel = screen.getByText('Security statistics').closest('[data-print-card]');
+    const skeletonGrid = panel?.querySelector('.grid[aria-hidden="true"]');
+    expect(skeletonGrid).not.toBeNull();
+    expect(skeletonGrid?.children).toHaveLength(7);
+    const cells = skeletonGrid?.querySelectorAll(':scope > [aria-hidden="true"].h-4.w-full');
+    expect(cells).toHaveLength(7);
+    for (const cell of cells ?? []) {
+      expect(cell).toHaveClass('rounded', 'bg-[var(--skeleton-bg)]');
+      expect(cell).toHaveStyle({ height: '80px' });
+    }
+    expect(container.querySelectorAll('.animate-pulse').length).toBe(0);
+    expect(screen.queryByText('Lock/unlock events')).toBeNull();
+    for (const label of ALL_LABELS) {
+      expect(screen.queryByText(label)).toBeNull();
+    }
+    expect(screen.queryByRole('group')).toBeNull();
+    expect(screen.queryByText('88%')).toBeNull();
+    expect(screen.queryByRole('status')).toBeNull();
+    expect(screen.queryByRole('alert')).toBeNull();
   });
 });
 
 describe('SecurityStatistics — error', () => {
   it('renders a QueryError alert with a Retry that invokes onRetry', () => {
-    const { onRetry } = renderStats({ error: new Error('boom') });
+    const { container, onRetry } = renderStats({ error: new Error('boom') });
 
     expect(screen.getByRole('alert')).toBeInTheDocument();
     // The metrics grid and skeletons must not render.
     expect(screen.queryByRole('group')).toBeNull();
-    expect(document.querySelector('.animate-pulse')).toBeNull();
+    expect(container.querySelector('.grid[aria-hidden="true"]')).toBeNull();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).toBeNull();
 
     const retry = screen.getByRole('button', { name: /retry/i });
     fireEvent.click(retry);
@@ -199,6 +231,7 @@ describe('SecurityStatistics — error', () => {
     });
 
     expect(screen.getByRole('alert')).toBeInTheDocument();
+    expect(container.querySelector('.grid[aria-hidden="true"]')).toBeNull();
     expect(container.querySelectorAll('.animate-pulse').length).toBe(0);
     expect(screen.queryByRole('group')).toBeNull();
   });
@@ -223,10 +256,10 @@ describe('SecurityStatistics — error', () => {
 
 describe('SecurityStatistics — empty', () => {
   it('renders an EmptyState (never a blank panel) when there is no data', () => {
-    renderStats({ securityStats: null, isLoading: false, error: null });
+    const { container } = renderStats({ securityStats: null, isLoading: false, error: null });
 
     // Panel title + empty status region both present.
-    expect(screen.getByText('Security Statistics')).toBeInTheDocument();
+    expect(screen.getByText('Security statistics')).toBeInTheDocument();
     expect(screen.getByRole('status')).toBeInTheDocument();
     expect(
       screen.getByText('No security events are available in this history window.'),
@@ -238,7 +271,8 @@ describe('SecurityStatistics — empty', () => {
 
     // No metrics, skeletons, or error in the empty branch.
     expect(screen.queryByRole('group')).toBeNull();
-    expect(document.querySelector('.animate-pulse')).toBeNull();
+    expect(container.querySelector('.grid[aria-hidden="true"]')).toBeNull();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).toBeNull();
     expect(screen.queryByRole('alert')).toBeNull();
   });
 });

@@ -1,0 +1,337 @@
+{
+  "item": "audit-page-190",
+  "page": "web\\src\\features\\system\\pages\\MyActivityPage.tsx",
+  "routes": ["/me/activity"],
+  "purpose": "Personal activity intelligence derived from the current user's audit-log feed, separate from the admin-wide audit view.",
+  "primaryGoal": "Understand which actions I took, when I took them, their categories and affected entities, and navigate to supported entity destinations.",
+  "dataSources": [
+    {
+      "name": "Personal audit activity",
+      "hook": "useMyRecentActivity",
+      "owner": "web\\src\\api\\hooks\\useUser.ts",
+      "file": "web\\src\\api\\hooks\\useUser.ts",
+      "line": 77,
+      "endpoint": "GET /api/v1/users/me/activity",
+      "requestPath": "/users/me/activity",
+      "routeEvidence": "internal\\api\\router.go:4603-4607",
+      "parameters": ["start", "end", "limit", "offset"],
+      "pageParameters": {"start": "calendar start from useRangeState", "end": "calendar end from useRangeState", "limit": 200},
+      "queryBehavior": "Key ['users','me','activity',params]; forwards AbortSignal; safeArray select; STALE_TIMES.STANDARD. Page does not pass offset.",
+      "payload": "UserActivityEntry[]: id, ts, action, entity_type, entity_id, detail, ip, user_agent; snake_case is canonical.",
+      "typeEvidence": "web\\src\\types\\admin.ts:180-192",
+      "backendOwnership": "auditHandler.UserActivity, confirmed only by the route registration; handler/repository filtering and ordering were not inspected.",
+      "limits": "All six displayed sections use the same loaded payload, capped by the page at 200 entries. These are not full-range server aggregates or account-lifetime totals."
+    },
+    {
+      "name": "Range and local derivations",
+      "owner": "web\\src\\hooks\\useRangeState.ts",
+      "file": "web\\src\\features\\system\\pages\\MyActivityPage.tsx",
+      "line": 45,
+      "dependencies": [
+        "web\\src\\lib\\workspaceScope.ts:51",
+        "web\\src\\hooks\\useRangeState.ts:301-319",
+        "web\\src\\features\\system\\components\\my-activity\\myActivityAnalytics.ts:120-221"
+      ],
+      "behavior": "Page uses start/end URL keys and my-activity.range preference; derives four count KPIs, latest timestamp, inclusive gap-filled daily counts (366-day cap), top six action slices, top eight category slices and all 24 local-hour buckets. No additional endpoint or physical-unit conversion."
+    }
+  ],
+  "components": [
+    {"name": "PageLayout / PageContainer", "category": "layout", "owner": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx", "props": ["title", "subtitle", "query", "children"], "evidence": "web\\src\\features\\system\\pages\\MyActivityPage.tsx:81-89", "role": "Full-width container adapter and existing page header/freshness pipeline."},
+    {"name": "DataStateNotice / ErrorDisplay / StaleRefreshWarning", "category": "feedback", "owner": "web\\src\\components\\feedback", "props": ["state", "title", "message", "error"], "evidence": "web\\src\\features\\system\\pages\\MyActivityPage.tsx:89-108", "role": "Unsupported identity deployment, authentication failure, retained-data refresh/offline warning."},
+    {"name": "GlassPanel / PanelTitle", "category": "ui", "owner": "web\\src\\components\\ui", "props": ["className", "children"], "evidence": "web\\src\\features\\system\\pages\\MyActivityPage.tsx:92; web\\src\\features\\system\\components\\my-activity\\ActivityFeedPanel.tsx:44-49", "role": "Existing panel surface and title; do not introduce a new card library."},
+    {"name": "FadeIn", "category": "motion", "owner": "web\\src\\components\\motion", "props": ["delay", "children"], "evidence": "web\\src\\features\\system\\pages\\MyActivityPage.tsx:112-175", "role": "Four content bands plus gated notice entrance; implementation/reduced-motion behavior not inspected."},
+    {"name": "MyActivityKpiBand / SystemSummaryBrief / OperationalBrief", "category": "domain-to-shared composite", "owner": "web\\src\\features\\system\\components\\operationalbrief-all\\SystemSummaryBrief.tsx", "props": ["metrics", "textMetrics", "loading", "available", "retained", "scope", "freshness"], "evidence": "web\\src\\features\\system\\components\\my-activity\\MyActivityKpiBand.tsx:46-63", "role": "Existing raw-count bridge; preserves missing versus zero and source-limited scope."},
+    {"name": "ActivityTrendPanel / ActivityHourPanel / EmbeddedChart", "category": "domain charts", "owner": "web\\src\\features\\system\\components\\my-activity", "props": ["data", "isLoading", "isError", "isEmpty", "error", "onRetry", "className"], "evidence": "web\\src\\features\\system\\components\\my-activity\\ActivityTrendPanel.tsx:79-126; web\\src\\features\\system\\components\\my-activity\\ActivityHourPanel.tsx:57-105", "role": "Existing chart-barrel frames, tooltips, axes, numeric counts and dataColumns alternatives."},
+    {"name": "ActivityBreakdownPanel / MetricBar", "category": "domain ranked list", "owner": "web\\src\\features\\system\\components\\my-activity\\ActivityBreakdownPanel.tsx", "props": ["title", "icon", "slices", "isLoading", "isError", "isEmpty", "error", "onRetry", "emptyMessage", "emptyIcon"], "evidence": "web\\src\\features\\system\\pages\\MyActivityPage.tsx:132-163", "role": "Already reused for top actions and categories, with localized count/percentage readouts."},
+    {"name": "ActivityFeedPanel / RecentActivityFeed / Timeline", "category": "domain-to-shared timeline", "owner": "web\\src\\components\\data-display\\RecentActivityFeed.tsx", "props": ["entries", "emptyMessage", "className"], "evidence": "web\\src\\features\\system\\components\\my-activity\\ActivityFeedPanel.tsx:44-71; web\\src\\components\\data-display\\RecentActivityFeed.tsx:35-57,72-134", "role": "Retains input ordering, action icons/labels, entity metadata/details, relative timestamps, and encoded entity links."}
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\system\\components\\my-activity\\ActivityBreakdownPanel.tsx",
+      "line": 32,
+      "rule": "MDC-002 reuse",
+      "detail": "Top actions and categories already share one typed renderer; this is intentional reuse, not a second implementation.",
+      "fix": "Retain this owner and both call sites.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\system\\pages\\MyActivityPage.tsx",
+      "line": 123,
+      "rule": "Mission 33 / MDC-026",
+      "detail": "Each panel repeats loading/error/empty/retry props from the same source. Chart panels share panel/title/bar-chart structure but use different data and accessible descriptions.",
+      "fix": "Reuse the current chart and feedback owners; only factor a small feature-local state-props adapter if useful. No new universal panel/query-state engine is justified by this page.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "responsive": {
+    "sourceBehavior": [
+      "Trend/top-action band stacks until xl, then uses three columns with trend spanning two: MyActivityPage.tsx:119-124.",
+      "Category/hour band stacks below md and uses two columns from md: MyActivityPage.tsx:148-151.",
+      "Panels use p-4 sm:p-5 and charts ResponsiveContainer: ActivityTrendPanel.tsx:80,103; ActivityHourPanel.tsx:58,83.",
+      "Timeline titles/times wrap with min-w-0 and break-words: Timeline.tsx:132-141."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\components\\data-display\\Timeline.tsx",
+        "line": 145,
+        "rule": "MDC-043 long-content reachability",
+        "detail": "Subtitle includes raw entity IDs/details but has no explicit break-words/overflow-wrap treatment, unlike the title and timestamp. Long unbroken details are a source-level overflow risk.",
+        "fix": "Use the existing semantic text role with safe wrapping without truncating entity details; validate narrow containers and 200% text.",
+        "owner": "shared",
+        "confidence": "medium"
+      }
+    ],
+    "unverifiedWidths": [320,375,390,430,768,1024,1280,1440,1920,2560],
+    "status": "Source reflow inspected only; no viewport, clipping, touch-target or visual acceptance."
+  },
+  "accessibility": {
+    "sourceBehavior": [
+      "Two named section landmarks and aria-hidden decorative header icons: MyActivityPage.tsx:119-154.",
+      "Trend and hour charts supply ariaLabel and explicit dataColumns to EmbeddedChart; actual rendered alternative UI was not exercised.",
+      "Feed loading uses role=status, aria-busy and localized aria-label: ActivityFeedPanel.tsx:51-57.",
+      "Breakdown loading uses VisuallyHidden liveRegion and named MetricBar progressbars: ActivityBreakdownPanel.tsx:66-69; MetricBar.tsx:56-61.",
+      "Timeline uses a named ordered list and hidden summary: Timeline.tsx:92-97."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\components\\data-display\\RecentActivityFeed.tsx",
+        "line": 106,
+        "rule": "MDC-040 visible keyboard focus",
+        "detail": "Entity links remove their focus outline and rely on focus underline. Source does not establish that this is a sufficiently visible focus indicator on composed backgrounds.",
+        "fix": "Use the existing semantic link/focus tokens with a clear focus-visible outline; retain native Link navigation and localized titles.",
+        "owner": "shared",
+        "confidence": "high"
+      }
+    ],
+    "unverified": ["Keyboard traversal", "Screen-reader output", "Effective text/UI contrast", "Forced colors", "Reduced motion", "RTL", "Focus restoration", "Touch target spacing"]
+  },
+  "states": {
+    "initialLoading": "KPI bridge suppresses unavailable readings; each panel has skeleton/chart-frame loading. PageLayout is given query metadata, not a page-wide loading replacement.",
+    "empty": "Zero-length resolved payload renders count-zero KPI values with missing last-active, chart/list empty states and feed EmptyState. Counts refer only to the successfully loaded subset.",
+    "fatalError": "state.fatalError drives sectionIsError and retries; initial 503 gets an unsupported ForwardAuth explanation, initial 401 gets ErrorDisplay.",
+    "retainedRefresh": "Ordinary refresh errors retain data via useDataState and StaleRefreshWarning. KPI receives available/retained flags.",
+    "offline": "StaleRefreshWarning uses isRefreshBlocked to render an offline explanation for retained data; initial offline-paused panel behavior remains runtime-unverified.",
+    "issues": [
+      {
+        "file": "web\\src\\features\\system\\pages\\MyActivityPage.tsx",
+        "line": 61,
+        "rule": "MDC-026 retained data must survive refresh failure",
+        "detail": "hardGate reads raw query.error status (401/503), not state.fatalError. A background 503 after successful load takes the full gate branch at line 90 and removes all six retained sections even though state.hasData remains true.",
+        "fix": "Derive the unsupported gate from fatal/no-retained-data state; retain data plus the existing warning on deployment-unavailable refresh. Preserve explicit authentication policy rather than assuming authorization failures should expose data.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ]
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\system\\pages\\MyActivityPage.tsx",
+      "line": 134,
+      "rule": "MDC-010 / MDC-012 restrained theme-aware decoration",
+      "detail": "Fixed text-cyan-300 accents decorate unrelated top-action/category headings; similar fixed cyan icons occur in each feature panel. These are source-level theme/noise concerns, not measured contrast failures.",
+      "fix": "Use existing muted/secondary semantic icon tokens for structural headings; keep meaningful action/severity cues and persisted user chart colors.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\system\\components\\my-activity\\ActivityBreakdownPanel.tsx",
+      "line": 90,
+      "rule": "Mission 43 / MDC-010 avoid rainbow saturation and decorative gradients",
+      "detail": "Ranked slices cycle chartTokens.series by rank (analytics lines 200/216), including saturated pink/lime. MetricBar defaults to gradient (MetricBar.tsx:45,86). Rank does not establish semantic color meaning.",
+      "fix": "Use existing MetricBar fill='solid' and restrained caller-prepared theme colors for ranked lists without changing count, percentage, max, sort or labels. Keep chart-series ownership centralized.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\lib\\activityIcons.ts",
+      "line": 31,
+      "rule": "MDC-010 restrained shared action registry",
+      "detail": "The feed's vehicle-command fallback uses text-fuchsia-400, among many fixed-color action glyphs. The source confirms saturated decoration; no rendered fluorescence or contrast is claimed.",
+      "fix": "Have the existing action-visual registry owner review semantic token mapping; preserve every action mapping, i18n key, icon and prefix fallback.",
+      "owner": "shared",
+      "confidence": "medium"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\features\\system\\pages\\MyActivityPage.tsx",
+      "line": 45,
+      "rule": "MDC-032 one workspace range owner",
+      "detail": "Route is range-enabled at workspaceScope.ts:51, but explicit start/end URL keys disable headerOwned in useRangeState.ts:301-302. The shared hook has a change-event handoff for custom keys, so this is not proof that every header interaction fails; canonical from/to deep-link/default ownership remains inconsistent.",
+      "fix": "Consume the canonical header-owned range; preserve existing bookmarked start/end links through an explicit integration transition rather than silently deleting their semantics.",
+      "owner": "integration",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\system\\pages\\MyActivityPage.tsx",
+      "line": 51,
+      "rule": "MDC-032 full instant bounds and timezone semantics",
+      "detail": "Only calendar start/end reach the hook, whose parameter interface at useUser.ts:46-64 has no instant/exclusive-end fields. useRangeState exposes precise rolling instants at lines 661-662, but these are discarded here. The page cannot express a precise 24-hour window with its current date-only request.",
+      "fix": "Extend the existing typed hook/endpoint contract to carry both instant bounds when the server supports them; keep raw entry cache shape, query cancellation and inherited policies. Backend bound semantics need owner verification, not guessed support.",
+      "owner": "integration",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\system\\components\\my-activity\\myActivityAnalytics.ts",
+      "line": 145,
+      "rule": "MDC-044 consistent timezone and scope explanations",
+      "detail": "Daily grouping calls ymdInTz(date) without an explicit timezone and hourly grouping uses browser-local getHours(). No range timezone is passed to this derivation. Selected timezone parity is unverified, and daily trend silently caps at 366 days while other breakdowns use the loaded payload.",
+      "fix": "Preserve existing local-hour behavior while checking the formatting/timezone owner's policy; pass the resolved workspace timezone if required and explain the 366-day trend cap without deleting any other loaded-data section.",
+      "owner": "page",
+      "confidence": "medium"
+    }
+  ],
+  "priority": {
+    "level": "high",
+    "order": [
+      "Correct retained-data gate and clarify authentication policy.",
+      "Integrate canonical workspace range and exact server-bound semantics.",
+      "Preserve all six views and loaded-subset explanation.",
+      "Adopt restrained existing presentation props/tokens and improve shared link focus/wrapping.",
+      "Run centralized browser/accessibility acceptance after implementation."
+    ]
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "Existing personal-activity range contract",
+      "owner": "web\\src\\api\\hooks\\useUser.ts",
+      "backendOwner": "auditHandler.UserActivity, implementation path not inspected",
+      "props": ["MyActivityParams.start/end compatibility", "start instant", "exclusive end instant", "limit", "offset"],
+      "variants": ["calendar", "rolling 24h", "custom"],
+      "states": ["cancelled obsolete request", "initial failure", "retained refresh failure"],
+      "usedBy": ["web\\src\\features\\system\\pages\\MyActivityPage.tsx"],
+      "dependsOn": ["Existing backend date-filter semantics must be verified", "Canonical useRangeState startInstant/endInstantExclusive", "Preserve existing start/end bookmarked URLs"],
+      "scope": "Integration extension of existing owner, not a new query/range implementation."
+    },
+    {
+      "name": "Existing RecentActivityFeed native link focus",
+      "owner": "web\\src\\components\\data-display\\RecentActivityFeed.tsx",
+      "props": ["entries", "emptyMessage", "className"],
+      "variants": ["linked entity", "plain-text unsupported entity"],
+      "states": ["keyboard focus", "long localized action title"],
+      "usedBy": ["web\\src\\features\\system\\components\\my-activity\\ActivityFeedPanel.tsx"],
+      "dependsOn": ["Existing semantic focus/color tokens"],
+      "scope": "Repair current owner; no new link/navigation component."
+    },
+    {
+      "name": "Existing Timeline subtitle wrapping",
+      "owner": "web\\src\\components\\data-display\\Timeline.tsx",
+      "props": ["items[].subtitle", "label", "summaryBounds", "chronology"],
+      "variants": ["long unbroken entity/detail", "localized prose"],
+      "states": ["320px container", "200% text"],
+      "usedBy": ["web\\src\\components\\data-display\\RecentActivityFeed.tsx"],
+      "dependsOn": ["Existing typography roles and wrapping utilities"],
+      "scope": "No truncation, metadata removal or reordering."
+    },
+    {
+      "name": "Existing activity action-visual registry restraint",
+      "owner": "web\\src\\lib\\activityIcons.ts",
+      "props": ["ActivityVisual.color", "ActivityVisual.icon", "ActivityVisual.i18nKey", "ActivityVisual.fallback"],
+      "variants": ["exact action", "prefix match", "unknown action"],
+      "states": ["theme changes", "forced colors"],
+      "usedBy": ["web\\src\\components\\data-display\\RecentActivityFeed.tsx", "web\\src\\features\\system\\components\\my-activity\\myActivityAnalytics.ts"],
+      "dependsOn": ["Existing semantic token palette", "Retain all registry/prefix identities"],
+      "scope": "Owner review, not speculative global palette replacement."
+    }
+  ],
+  "competingImplementations": [
+    {
+      "file": "web\\src\\features\\system\\pages\\MyActivityPage.tsx",
+      "line": 45,
+      "rule": "MDC-032",
+      "detail": "Custom page URL keys/preference coexist with the canonical header-owned range, despite the registered dated route.",
+      "fix": "Consolidate through useRangeState and the existing endpoint integration; do not add a local date picker.",
+      "owner": "integration",
+      "confidence": "high"
+    }
+  ],
+  "preservation": {
+    "sourceHash": "EB920BDAA9EB68A49E73D6562E5A7B870BD7BA0D70758C4CF82CED5E0AA70A43",
+    "sourceHashAlgorithm": "SHA256",
+    "currentLineCount": 188,
+    "pageAndMyActivitySourceLineCount": 888,
+    "lineCountScope": "Page plus seven non-test source files in components\\my-activity, including analytics and barrel; shared SystemSummaryBrief is not included.",
+    "sectionCount": 6,
+    "sections": [
+      {"name": "Activity summary", "line": 113, "count": 1, "content": "Total actions, active days, action types, entities touched, last-active relative timestamp; source availability/retention and loaded-limit scope."},
+      {"name": "Activity over time", "line": 123, "count": 1, "content": "Gap-filled daily bar chart, integer counts, day labels, tooltip and dataColumns."},
+      {"name": "Top actions", "line": 132, "count": 1, "content": "Top six counts/percentages with translated registry labels and ranked bars."},
+      {"name": "By category", "line": 152, "count": 1, "content": "Top eight category counts/percentages, humanized labels and System / other fallback."},
+      {"name": "By hour of day", "line": 164, "count": 1, "content": "All 24 local-hour buckets, integer-count chart and dataColumns."},
+      {"name": "Activity feed", "line": 176, "count": 1, "content": "Every loaded row in source order, action identity, entity type/id, detail and relative timestamp; supported entity links."}
+    ],
+    "sectionStructure": {"pageSectionElements": 2, "contentFadeInBands": 4, "breakdownPanelInstances": 2, "conditionalHardGateNotice": 1},
+    "actions": [
+      "Retry/refetch the existing activity query through each section error handler: MyActivityPage.tsx:73-75.",
+      "Refresh retained data through StaleRefreshWarning's existing retry button: StaleRefreshWarning.tsx:107-121.",
+      "Navigate to encoded /vehicles/:id, /drives/:id and /charging/:id entity paths.",
+      "Navigate alert_rule to /notifications/inbox, automation to /automations, geofence to /geofences, data_export/export to /data-export and api_key to /api-keys: RecentActivityFeed.tsx:35-57.",
+      "Retain shared chart-frame tooltips/data alternatives and any inherited controls; frame implementation and runtime action availability were not inspected.",
+      "Retain shared PageContainer subtitle help and source freshness metadata; page does not opt into copy-link or page-level export."
+    ],
+    "dataBehavior": [
+      "One authenticated user-scoped endpoint, no new admin feed or invented aggregate endpoint.",
+      "Preserve raw payload fields/cache keys, AbortSignal, safeArray selection, limits and inherited query policies.",
+      "Maintain loaded-subset wording and maximum-200 qualifier; do not rename subset counts as full-range totals.",
+      "Preserve genuine resolved zero counts, missing last timestamp and unavailable readings as distinct states.",
+      "Retain four numeric counts and one timestamp metric, all derivations, 366-day guard, top-action/category caps and 24-hour buckets.",
+      "Retain existing sorting/tie behavior, null/blank action/entity handling and source feed ordering.",
+      "Preserve identity deployment/401 messaging and authorization boundaries while correcting the 503 retained-data regression.",
+      "No physical SI fields are transformed or introduced; retain unknown backend semantics explicitly."
+    ],
+    "sourceStableDuringAudit": true,
+    "verification": "Get-FileHash before inspection and before report returned the same SHA256; final release validation rechecks it."
+  },
+  "evidenceLimits": {
+    "mode": "Atomic Phase 0 source audit only.",
+    "runtime": "NOTRUN",
+    "visual": "NOTRUN",
+    "keyboard": "NOTRUN",
+    "contrast": "NOTRUN",
+    "viewport": "NOTRUN",
+    "lintTypecheckBuildTests": "NOTRUN: assignment prohibits project validation/source edits; audit.sh was inspected but not executed because it unconditionally runs project TypeScript.",
+    "routeReachability": "Assigned route retained exactly; workspace range registration and API registration inspected. Router mount/authenticated browser access not exercised.",
+    "backend": "Only the endpoint registration was inspected. Inclusive/exclusive filtering, timezone interpretation, identity enforcement, ordering and database behavior are not certified.",
+    "sharedScope": "Only direct page-specific rendering/trust/range owners inspected; broad shell/theme/catalog audits are outside this task.",
+    "sourceChecks": {
+      "command": "PowerShell Select-String over the page and seven non-test my-activity source files for style=, <(button|input|textarea|select|table)\\b, text-white|text-neon|glow; Get-Content line counts; Get-FileHash page -Algorithm SHA256",
+      "exitCode": 0,
+      "output": ["page lines=188", "page plus my-activity source lines=888", "pattern=style= matches=0", "pattern=<(button|input|textarea|select|table)\\b matches=0", "pattern=text-white|text-neon|glow matches=0", "SHA256=EB920BDAA9EB68A49E73D6562E5A7B870BD7BA0D70758C4CF82CED5E0AA70A43"],
+      "qualification": "Counts are scoped literal/pattern checks, not a complete violations audit or proof of absence of inherited neon/glow/pure-white styling. Saturated/gradient dependencies are reported separately.",
+      "failedProbe": "One initial PowerShell citation/count probe exited 1 with ParserError (quote escaping); it was corrected and rerun successfully without any file writes."
+    },
+    "ownedFiles": ["docs\\frontend-audits\\audit-page-190.json", ".agent-status\\audit-page-190.txt"]
+  },
+  "filesRead": [
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\system\\pages\\MyActivityPage.tsx",
+    "web\\src\\features\\system\\components\\my-activity\\index.ts",
+    "web\\src\\features\\system\\components\\my-activity\\MyActivityKpiBand.tsx",
+    "web\\src\\features\\system\\components\\my-activity\\ActivityTrendPanel.tsx",
+    "web\\src\\features\\system\\components\\my-activity\\ActivityBreakdownPanel.tsx",
+    "web\\src\\features\\system\\components\\my-activity\\ActivityHourPanel.tsx",
+    "web\\src\\features\\system\\components\\my-activity\\ActivityFeedPanel.tsx",
+    "web\\src\\features\\system\\components\\my-activity\\myActivityAnalytics.ts",
+    "web\\src\\features\\system\\components\\operationalbrief-all\\SystemSummaryBrief.tsx",
+    "web\\src\\api\\hooks\\useUser.ts",
+    "web\\src\\types\\admin.ts",
+    "web\\src\\hooks\\useRangeState.ts",
+    "web\\src\\hooks\\useDataState.ts",
+    "web\\src\\api\\dataState.ts",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\lib\\activityIcons.ts",
+    "web\\src\\lib\\tokens.ts",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\layout\\PageContainer.tsx",
+    "web\\src\\components\\feedback\\StaleRefreshWarning.tsx",
+    "web\\src\\components\\data-display\\RecentActivityFeed.tsx",
+    "web\\src\\components\\data-display\\Timeline.tsx",
+    "web\\src\\components\\data-display\\MetricBar.tsx",
+    "internal\\api\\router.go"
+  ]
+}

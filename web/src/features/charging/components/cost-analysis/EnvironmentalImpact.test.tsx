@@ -115,16 +115,16 @@ describe('EnvironmentalImpact — populated data', () => {
     }
 
     // Hero tiles: 1-dp CO2 and the metric-tons derive (88.87 / 1000 -> 0.09).
-    expect(screen.getByText('88.9')).toBeInTheDocument();
+    expect(screen.getByText('88.87')).toBeInTheDocument();
     expect(screen.getByText('0.09')).toBeInTheDocument();
     // Gallons at 1-dp.
-    expect(screen.getByText('12.3')).toBeInTheDocument();
+    expect(screen.getByText('12.30')).toBeInTheDocument();
     // Dollars saved use locale integer grouping, not a bare "1250".
-    expect(screen.getByText('1,250')).toBeInTheDocument();
+    expect(screen.getByText('1,250.00')).toBeInTheDocument();
     expect(screen.queryByText('1250')).toBeNull();
 
     // The tree figure is cited twice — once in its tile, once in the sentence.
-    expect(screen.getAllByText('4.0')).toHaveLength(2);
+    expect(screen.getAllByText('4.04')).toHaveLength(2);
 
     // No loading / empty / error chrome is present alongside real data.
     expect(screen.queryByRole('status')).toBeNull();
@@ -135,7 +135,7 @@ describe('EnvironmentalImpact — populated data', () => {
     const { container } = renderEnv({ coreStats: makeStats() });
 
     // The rounded (0-dp) CO2 mass appears inline with its unit in the sentence.
-    expect(screen.getByText('89 kg')).toBeInTheDocument();
+    expect(screen.getByText('88.87 kg')).toBeInTheDocument();
 
     // The full sentence reads coherently from its translated fragments.
     const prose = container.textContent ?? '';
@@ -162,10 +162,17 @@ describe('EnvironmentalImpact — loading / empty / error states', () => {
     expect(
       screen.getByRole('heading', { name: /environmental impact/i }),
     ).toBeInTheDocument();
-    // The skeleton block animates; the metric labels are suppressed.
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
+    // The decorative static block preserves the section's loading geometry.
+    const skeleton = container.querySelector('[data-print-card] > [aria-hidden="true"]');
+    expect(skeleton).not.toBeNull();
+    expect(skeleton).toHaveClass('h-4', 'w-full', 'rounded', 'bg-[var(--skeleton-bg)]');
+    expect(skeleton).toHaveStyle('height: 200px');
+    expect(container.querySelector('.animate-pulse')).toBeNull();
+    for (const label of LABELS) {
+      expect(screen.queryByText(label)).toBeNull();
+    }
     expect(screen.queryByText('kg CO₂ saved')).toBeNull();
-    expect(screen.queryByText('88.9')).toBeNull();
+    expect(screen.queryByText('88.87')).toBeNull();
     // Loading is not the empty or error branch.
     expect(screen.queryByRole('status')).toBeNull();
     expect(screen.queryByRole('alert')).toBeNull();
@@ -183,7 +190,7 @@ describe('EnvironmentalImpact — loading / empty / error states', () => {
     expect(screen.getByText('No data')).toBeInTheDocument();
     // Neither metrics nor a loading skeleton render.
     expect(screen.queryByText('kg CO₂ saved')).toBeNull();
-    expect(container.querySelector('.animate-pulse')).toBeNull();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).toBeNull();
   });
 
   it('renders an error with a working Retry that invokes onRetry', () => {
@@ -210,7 +217,7 @@ describe('EnvironmentalImpact — loading / empty / error states', () => {
     renderEnv({ coreStats: makeStats(), error: new Error('stale'), onRetry: vi.fn() });
 
     expect(screen.getByRole('alert')).toBeInTheDocument();
-    expect(screen.queryByText('88.9')).toBeNull();
+    expect(screen.queryByText('88.87')).toBeNull();
     expect(screen.queryByText('kg CO₂ saved')).toBeNull();
   });
 });
@@ -237,7 +244,7 @@ describe('EnvironmentalImpact — dirty-data hardening', () => {
 
     // The metric-tons derive (NaN / 1000) is neutralised to "0.00" — the guard
     // means the raw division never propagates a nullish/NaN operand to the DOM.
-    expect(screen.getByText('0.00')).toBeInTheDocument();
+    expect(screen.getByText('metric tons CO₂').previousElementSibling).toHaveTextContent('0.00');
     // Absolutely no "NaN" leaks anywhere in the rendered output.
     expect(container.textContent).not.toContain('NaN');
   });
@@ -247,6 +254,6 @@ describe('EnvironmentalImpact — dirty-data hardening', () => {
     expect(() => renderEnv({ coreStats: dirty })).not.toThrow();
     // A wholly-empty bag still renders every label and a finite metric-tons "0.00".
     expect(screen.getByText('metric tons CO₂')).toBeInTheDocument();
-    expect(screen.getByText('0.00')).toBeInTheDocument();
+    expect(screen.getByText('metric tons CO₂').previousElementSibling).toHaveTextContent('0.00');
   });
 });

@@ -226,7 +226,7 @@ describe('RegionSettings — populated region card', () => {
 
     expect(screen.getByText('Region')).toBeInTheDocument()
     expect(screen.getByText('eu')).toBeInTheDocument()
-    expect(screen.getByText('Fleet API Base URL')).toBeInTheDocument()
+    expect(screen.getByText('Fleet API base URL')).toBeInTheDocument()
     expect(
       screen.getByText('https://fleet-api.prd.eu.vn.cloud.tesla.com'),
     ).toBeInTheDocument()

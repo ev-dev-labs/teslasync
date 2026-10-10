@@ -124,8 +124,26 @@ describe('TirePressureReading + position/status unions', () => {
     rearRight: 3.05,
     tpmsHardWarning: false,
     tpmsSoftWarning: false,
-    timestamp: '2025-06-01T00:00:00Z',
+    created_at: '2025-06-01T00:00:00Z',
   };
+
+  it('preserves the history wire timestamp without inventing a timestamp field', () => {
+    const wire = {
+      id: 1,
+      created_at: '2025-06-01T00:00:00Z',
+      front_left: 280000,
+      front_right: null,
+    };
+    const normalized = camelCaseKeys(wire);
+
+    expect(normalized).toEqual({
+      ...wire,
+      createdAt: wire.created_at,
+      frontLeft: 280000,
+      frontRight: null,
+    });
+    expect(normalized).not.toHaveProperty('timestamp');
+  });
 
   it('pins TirePosition to the four corners and indexes the reading by each', () => {
     const positions: TirePosition[] = ['frontLeft', 'frontRight', 'rearLeft', 'rearRight'];

@@ -60,8 +60,16 @@ describe('resolveResilienceSite', () => {
     const r = resolveResilienceSite(session({ day: 0, energyWh: 1000, chargerType: 'supercharger' }));
     expect(r.groupedBy).toBe('charger_type');
     expect(r.key).toBe('type:supercharger');
-    expect(r.label).toBe('Supercharger');
+    expect(r.label).toBe('supercharger');
   });
+
+  it.each(['DC fast / CCS', 'Tesla Supercharger', 'user-defined site'])(
+    'preserves reported charger-type casing for %s', (chargerType) => {
+      const r = resolveResilienceSite(session({ day: 0, energyWh: 1000, chargerType }));
+      expect(r.label).toBe(chargerType);
+      expect(r.key).toBe(`type:${chargerType.toLowerCase()}`);
+    },
+  );
 
   it('buckets a session with no location signal at all into "Unknown location" rather than dropping it', () => {
     const r = resolveResilienceSite(session({ day: 0, energyWh: 1000 }));

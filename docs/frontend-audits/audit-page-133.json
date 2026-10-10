@@ -1,0 +1,325 @@
+{
+  "item": "audit-page-133",
+  "page": "web\\src\\features\\home-energy\\pages\\WholeHomeEnergyPage.tsx",
+  "routes": [
+    {
+      "path": "/energy-orchestrator",
+      "file": "web\\src\\App.tsx",
+      "line": 756,
+      "detail": "SafeRoute mounts the lazy WholeHomeEnergy component; lazy import is at line 222. Source registration only, not authenticated reachability proof."
+    }
+  ],
+  "purpose": "Whole-home, fleet-aware local energy planning recommendation using vehicle SoC, home energy history, optional home battery, and persisted user assumptions.",
+  "primaryGoal": "Compare readiness, cost, solar self-consumption, grid peaks and constraints, adjust assumptions, and download the complete recommendation without commanding any device.",
+  "dataSources": [
+    {
+      "name": "Account vehicles",
+      "hook": "useVehicles",
+      "endpoint": "GET /vehicles",
+      "sourceOwnership": "Shared vehicle query; account fleet, not a header-selected single vehicle.",
+      "file": "web\\src\\api\\hooks\\useVehicles.ts",
+      "line": 73,
+      "citations": ["web\\src\\api\\hooks\\useVehicles.ts:76", "internal\\api\\router.go:3320", "web\\src\\features\\home-energy\\hooks\\useHomeEnergyOrchestration.ts:110-112"],
+      "behavior": "Composition uses data ?? []; vehicles supply identity, names and list SoC fallback. Backend response correctness is unverified."
+    },
+    {
+      "name": "Fleet live state",
+      "hook": "useFleetStates(vehicles)",
+      "endpoint": "GET /vehicles/states?vehicle_ids=<comma-separated IDs>&limit=<batch limit>",
+      "sourceOwnership": "Shared vehicle live-query owner; batch observations and retained readings remain distinct from query completion time.",
+      "file": "web\\src\\api\\hooks\\useVehicles.ts",
+      "line": 1270,
+      "citations": ["web\\src\\api\\hooks\\useVehicles.ts:695-721", "web\\src\\api\\hooks\\useVehicles.ts:1270-1308", "internal\\api\\router.go:3325", "web\\src\\features\\home-energy\\hooks\\useHomeEnergyOrchestration.ts:201-230"],
+      "behavior": "Nonempty fleet enables request; cancellation signal is forwarded, live cache policy retained, failed entries may retain observations. Composition reports oldest observed timestamp, failed and retained counts instead of wrapper success freshness."
+    },
+    {
+      "name": "Home energy site discovery",
+      "hook": "useTeslaEnergySites",
+      "endpoint": "GET /tesla/energy-sites",
+      "sourceOwnership": "Shared Tesla home-energy query; separate from vehicle energy endpoints.",
+      "file": "web\\src\\api\\hooks\\useEnergy.ts",
+      "line": 181,
+      "citations": ["web\\src\\api\\hooks\\useEnergy.ts:181-187", "internal\\api\\router.go:3556", "web\\src\\features\\home-energy\\hooks\\useHomeEnergyOrchestration.ts:114-120"],
+      "behavior": "Select first battery/solar-capable site, otherwise first site. No page site picker; preserve this selection rather than introducing a new workspace filter."
+    },
+    {
+      "name": "Selected home site information",
+      "hook": "useTeslaEnergySiteInfo(siteId)",
+      "endpoint": "GET /tesla/energy-sites/{siteID}/site-info",
+      "sourceOwnership": "Shared home energy query; present in freshness/source notices, not used to derive actual tariff or model battery specification.",
+      "file": "web\\src\\api\\hooks\\useEnergy.ts",
+      "line": 204,
+      "citations": ["web\\src\\api\\hooks\\useEnergy.ts:204-211", "internal\\api\\router.go:3560-3562", "web\\src\\features\\home-energy\\hooks\\useHomeEnergyOrchestration.ts:122"],
+      "behavior": "Enabled only with site ID; slow stale-time policy and cancellation retained."
+    },
+    {
+      "name": "Home battery SoC",
+      "hook": "useTeslaEnergyLiveStatus(siteId)",
+      "endpoint": "GET /tesla/energy-sites/{siteID}/live-status",
+      "sourceOwnership": "Shared home energy live status; not vehicle battery state.",
+      "file": "web\\src\\api\\hooks\\useEnergy.ts",
+      "line": 396,
+      "citations": ["web\\src\\api\\hooks\\useEnergy.ts:396-403", "internal\\api\\router.go:3574", "web\\src\\features\\home-energy\\hooks\\useHomeEnergyOrchestration.ts:158-176"],
+      "behavior": "Only used when scenario battery is enabled; live percentage_charged precedes site percentage_charged, then a disclosed 50% model assumption."
+    },
+    {
+      "name": "Solar and household load history",
+      "hook": "useTeslaEnergyHistory(siteId, 'day')",
+      "endpoint": "GET /tesla/energy-sites/{siteID}/energy-history?period=day",
+      "sourceOwnership": "Shared home energy history query, consumed by two separate pure forecast adapters.",
+      "file": "web\\src\\api\\hooks\\useEnergy.ts",
+      "line": 253,
+      "citations": ["web\\src\\api\\hooks\\useEnergy.ts:253-274", "internal\\api\\router.go:3565", "web\\src\\features\\home-energy\\lib\\forecastAdapters.ts:1-33", "web\\src\\features\\home-energy\\lib\\forecastAdapters.ts:188-199"],
+      "behavior": "No since/until supplied here: day history informs future scenario horizon, not a workspace historical range. Frontend expects interval Wh and derives W using next sample gap or a five-minute fallback, UTC day-shape and nearest sampled slot filling. Missing history yields modeled zero series with confidence 0 / quality none, not measured zero. Backend parser/actual history unit and coverage not inspected or proven."
+    },
+    {
+      "name": "Persisted assumptions and local optimizer",
+      "hook": "useOrchestrationScenario / optimizeHomeEnergy",
+      "endpoint": null,
+      "sourceOwnership": "Feature-owned localStorage and pure computation; not server state or a device control API.",
+      "file": "web\\src\\features\\home-energy\\hooks\\useOrchestrationScenario.ts",
+      "line": 41,
+      "citations": ["web\\src\\features\\home-energy\\hooks\\useOrchestrationScenario.ts:41-52", "web\\src\\features\\home-energy\\hooks\\useOrchestrationScenario.ts:179-214", "web\\src\\features\\home-energy\\hooks\\useHomeEnergyOrchestration.ts:178-195", "web\\src\\features\\home-energy\\lib\\types.ts:1-12"],
+      "behavior": "Preserve teslasync:home-energy-orchestrator:scenario:v1, sanitizers, cross-tab storage subscriptions and in-memory fallback. W/Wh inputs and outputs remain raw; percent, ISO instants, slotMinutes and deliberate currency-per-kWh tariff representation remain unchanged. Optimizer implementation and algorithm correctness were not audited."
+    }
+  ],
+  "components": [
+    {"name": "PageLayout", "kind": "shared layout", "owner": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx", "line": 9, "contract": "Existing PageContainer props, busy/query freshness, full-width min-w-0 container. Shell owns workspace controls."},
+    {"name": "OperationalBrief / useOperationalMetrics", "kind": "shared composite/formatter", "owner": "web\\src\\components\\data-display\\OperationalBrief.tsx", "contract": "Existing stats pipeline; six raw modeled outcome metrics plus two independent forecast-confidence metrics, descriptions, context, status, scope and provenance. Implementation not read; typed usage inspected in KpiSummary and AssumptionsQualityPanel."},
+    {"name": "ChartCard", "kind": "shared chart layout", "owner": "web\\src\\components\\layout\\layout-reference\\ChartCard.tsx", "line": 13, "contract": "EmbeddedChart canonical pipeline, height/mobileHeight/fluid, data/dataColumns, exportData/exportable/fullscreen and hiddenSeries render callback. Energy-flow chartKey must persist."},
+    {"name": "LayoutCard", "kind": "shared surface", "owner": "web\\src\\components\\layout\\layout-reference\\LayoutCard.tsx", "line": 17, "contract": "title/description/actions/footer, labeled heading and min-w-0 content. Existing accessible description control retained."},
+    {"name": "FormSection / Grid / Slider / Select / Toggle / Button / Accordion / Badge / Text / Caption / ProgressRing", "kind": "existing shared primitives and composites", "owner": "Existing category barrels under web\\src\\components", "contract": "Reuse current controls, labels, localized values, semantic statuses, metric ring and responsive column APIs. Primitive internals except cited layout/motion/notice owners not reviewed."},
+    {"name": "DataStateNotice / QueryError / StaleRefreshWarning", "kind": "shared source trust", "owner": "web\\src\\components\\feedback\\StaleRefreshWarning.tsx", "line": 47, "contract": "Source-local fatal recovery, retained content, partial/stale/offline notices, retry and polite status. Never replace every section with a single error."},
+    {"name": "FadeIn", "kind": "shared motion", "owner": "web\\src\\components\\motion\\FadeIn.tsx", "line": 24, "contract": "useMotionPreference, initial=false when reduced, safe delay; runtime motion behavior not exercised."},
+    {"name": "Ten feature section components", "kind": "feature-owned presentation", "owner": "web\\src\\features\\home-energy\\components", "contract": "Preserve all ten component calls and source banners; no whole-page null-data gating or backend/device command addition."}
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\home-energy\\components\\TariffConstraintHeatmap.tsx",
+      "line": 18,
+      "rule": "MDC-002 / MDC-010 / MDC-034",
+      "detail": "Feature-local five-bucket heatColor and HEAT_LEGEND duplicate their own colors at lines 20-32; comment claims consistency with charging heatmap, but that other implementation was not semantically inspected.",
+      "fix": "Deduplicate scale/legend locally first; assess existing visualization contracts before any shared extraction. Do not substitute another feature's differently shaped heatmap.",
+      "owner": "page",
+      "confidence": "high for local duplication; cross-feature equivalence unverified"
+    }
+  ],
+  "responsive": {
+    "sourceEvidence": [
+      "PageLayout.tsx:12-13 supplies full-width min-w-0 container; all ten sections stack.",
+      "ScenarioControls.tsx:61 uses 1/md:2/xl:4 columns and lines 47-59 wrap action labels.",
+      "VehicleAssumptionsPanel.tsx:51 uses 1/sm:2 columns.",
+      "VehicleReadinessPanel.tsx:28-46 uses 1/sm:2/lg:3 grid, wrap and break-words.",
+      "EnergyFlowChart.tsx:28,70 fixes chart at 320px; PowerwallTrajectoryChart.tsx:28,65 fixes chart at 260px.",
+      "TariffConstraintHeatmap.tsx:100-107 provides internal horizontal scrolling rather than intentionally discarding slots."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\home-energy\\components\\TariffConstraintHeatmap.tsx",
+        "line": 104,
+        "rule": "MDC-043 / MDC-044",
+        "detail": "Every localized row label is fixed w-32 and truncated; no explicit full-label help is supplied. Dense 18px slot cells and long horizon scrolling need a mobile strategy that retains details.",
+        "fix": "Permit readable wrapped labels and provide a keyboard/touch-accessible slot detail or complete table through existing owners. Keep all slots and units; exercise 320px, long labels and RTL.",
+        "owner": "page",
+        "confidence": "high for truncation source; actual overflow unverified"
+      }
+    ],
+    "verification": "No viewport exercised. Required 320/375/390/430/768/1024/1280/1440/1920/2560, container widths and 200% text remain unverified."
+  },
+  "accessibility": {
+    "sourceEvidence": [
+      "EnergyFlowChart.tsx:49-66 and PowerwallTrajectoryChart.tsx:50-61 pass chart names, data columns, export and fullscreen to the canonical chart frame.",
+      "VehicleReadinessPanel.tsx:40-55 names the ring and combines textual readiness with icon/badge, not color alone.",
+      "StaleRefreshWarning.tsx:90-120 uses polite role=status and named disabled-during-refresh retry.",
+      "FadeIn.tsx:24-34 uses the shared reduced-motion preference; control labels are localized."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\home-energy\\components\\TariffConstraintHeatmap.tsx",
+        "line": 106,
+        "rule": "MDC-034 / MDC-040",
+        "detail": "Each row is role=img with only the row name; per-slot time/value exists solely on nonfocusable div title at lines 109-113. No complete data table, keyboard detail action or touch-readable value view is declared here. The Less/More legend has no numeric bucket semantics.",
+        "fix": "Provide an accessible per-slot table/detail view with time, tariff, utilization, power and optional battery SoC through current chart/table mechanisms; retain color plus explicit values and units.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ],
+    "verification": "No keyboard, screen reader, focus, touch target, forced-colors, reduced-motion or effective contrast testing performed. Shared chart accessibility is a source contract, not acceptance."
+  },
+  "states": {
+    "loading": "WholeHomeEnergyPage.tsx:69 passes busy for initial loading or refreshing. KpiSummary.tsx:35,40 suppresses modeled outcome raw values while loading/unavailable. Composition initial loading is essential vehicles only (useHomeEnergyOrchestration.ts:234); history confidence gets its own initial state in AssumptionsQualityPanel.tsx:60. Other modeled sections stay mounted.",
+    "empty": "Vehicle assumptions/readiness preserve Add vehicle navigation at VehicleAssumptionsPanel.tsx:29-34 and VehicleReadinessPanel.tsx:21-25; battery-disabled shell explains enabling in scenario at PowerwallTrajectoryChart.tsx:34-41. Heatmap and charts retain empty branches.",
+    "error": "Per-source fatalError is shown with QueryError/retry at WholeHomeEnergyPage.tsx:83-85; result sections remain reachable. Essential vehicle fatal error suppresses only headline metric values.",
+    "stale": "Per-source StaleRefreshWarning at WholeHomeEnergyPage.tsx:74-77 remains next to modeled sections; fleet freshness uses oldest observed timestamp and retained count, not wrapper resolution.",
+    "offline": "No-data blocked refresh is explicitly unavailable with role=status at WholeHomeEnergyPage.tsx:78-82. Shared warning handles blocked refresh with retained data. No runtime outage exercised.",
+    "partial": "WholeHomeEnergyPage.tsx:75-77 discloses unavailable vehicle readings and scenario assumptions. KpiSummary status separates partial/initial failures from modeled recommendation; forecast quality remains separate.",
+    "success": "ConstraintViolationsPanel.tsx:59-64 states all modeled hard constraints are satisfied, not a verified device outcome.",
+    "disabled": "Powerwall toggle conditionally mounts only its dependent controls; deadline toggle conditionally mounts departure control, not entire page sections. Retry is disabled while refreshing by shared warning.",
+    "issues": [
+      {
+        "file": "web\\src\\features\\home-energy\\components\\VehicleAssumptionsPanel.tsx",
+        "line": 53,
+        "rule": "MDC-026 / MDC-045",
+        "detail": "Current SoC used by model is shown as a percentage without per-vehicle provenance. Composition can choose fleet reading, list fallback or 50% default; global disclosure exists but cannot identify which vehicle is assumed or retained.",
+        "fix": "If extending presentation, expose per-vehicle provenance from existing composition without changing chosen values or optimizer behavior; retain the global 50% assumption disclosure and never label defaults measured.",
+        "owner": "integration",
+        "confidence": "high"
+      }
+    ]
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\home-energy\\components\\TariffConstraintHeatmap.tsx",
+      "line": 20,
+      "rule": "MDC-010 / MDC-012 / mission 43 visual intensity",
+      "detail": "Hard-coded fluorescent cyan rgba(0,240,255,...) at low buckets and green/amber/red saturation up to 0.75 at high bucket; duplicated legend bypasses theme/semantic palette. Dynamic computed styles are legitimate, but palette choice remains noisy.",
+      "fix": "Use restrained existing semantic/theme colors with a clearly labeled numerical scale; preserve all bucket thresholds and per-row normalizations unless a separate behavior change is authorized.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\home-energy\\components\\VehicleReadinessPanel.tsx",
+      "line": 39,
+      "rule": "MDC-010 / MDC-012 / MDC-025",
+      "detail": "ProgressRing hard-codes emerald/amber hex; unmet caption at line 66 forces text-amber-300, and violation icons separately force emerald/red/amber shades. These ignore effective theme contrast and shared severity tokens.",
+      "fix": "Resolve readiness and violation hues through existing semantic tokens; retain badge text, ring values, unmet energy and all severity meanings.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\features\\home-energy\\lib\\types.ts",
+      "line": 94,
+      "rule": "MDC-045 / source-boundary preservation",
+      "detail": "loadForecastW comment says household base load excludes vehicle charging, whereas forecastAdapters.ts:29-32 explicitly says Gateway household history may already include charging and cannot be decomposed. This is a source-documentation inconsistency, not proof of a backend or optimizer defect.",
+      "fix": "Retain the source caveat in user-facing assumptions; reconcile documentation under a separate scoped change without subtracting invented vehicle load or altering raw data.",
+      "owner": "integration",
+      "confidence": "high"
+    }
+  ],
+  "priority": {
+    "level": "medium",
+    "reason": "The page already composes shared layouts, canonical stats and charts with source-local trust handling and all ten sections. Main remaining source-backed concerns are inaccessible/noisy heatmap, semantic palette bypass and per-vehicle provenance clarity; no runtime blocker is established."
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "Assess canonical heatmap/table presentation reuse; no new shared API justified yet",
+      "existingOwnerFile": "web\\src\\components\\charts\\EmbeddedChart.tsx",
+      "missingOwner": "A generic semantic per-slot heatmap contract is not established by this bounded inspection.",
+      "propsVariantsStates": "Reuse chart data/dataColumns/ariaLabel, empty and export/fullscreen contracts where compatible. Any eventual heatmap contract needs row labels, timestamps, raw numeric values, display formatters, explicit bucket scale, keyboard/touch detail and complete accessible table; optional Powerwall row and retained/source state must survive.",
+      "usedBy": ["web\\src\\features\\home-energy\\components\\TariffConstraintHeatmap.tsx"],
+      "dependsOn": ["Canonical chart/table owner compatibility review", "Evidence from a second independent production consumer before a new shared composite", "MDC-010/MDC-034/MDC-040"],
+      "disposition": "Report for shared-owner assessment only. Page-local use of existing contracts and token palette is preferred; no shared source changes made."
+    }
+  ],
+  "competingImplementations": [
+    {
+      "file": "web\\src\\features\\home-energy\\lib\\planExport.ts",
+      "line": 9,
+      "rule": "MDC-002 / preservation",
+      "detail": "Local Blob download intentionally exports a single canonical object; source comment says shared exportAsJSON forces an array. Shared helper implementation not inspected, so equivalence is unverified.",
+      "fix": "Keep the versioned object shape and exact input/result/disclaimer. Do not replace with a record-list export merely to remove a local helper.",
+      "owner": "page",
+      "confidence": "high for local declared behavior; shared equivalence unknown"
+    }
+  ],
+  "preservation": {
+    "sourceSha256": "9b0bcb5317f5bd54d5476bdf02b63f5f211c9c6fd58ad387e8c33f3a8ad570d3",
+    "currentLineCount": 146,
+    "pagePlusPresentationLineCount": 1215,
+    "sectionCount": 10,
+    "sectionNamesAndCounts": [
+      {"name": "Planning outcomes / KpiSummary", "count": 1, "file": "web\\src\\features\\home-energy\\pages\\WholeHomeEnergyPage.tsx", "line": 90, "metrics": 6},
+      {"name": "Scenario & assumptions", "count": 1, "file": "web\\src\\features\\home-energy\\pages\\WholeHomeEnergyPage.tsx", "line": 96},
+      {"name": "Vehicle assumptions", "count": 1, "file": "web\\src\\features\\home-energy\\pages\\WholeHomeEnergyPage.tsx", "line": 101},
+      {"name": "Energy flow schedule", "count": 1, "file": "web\\src\\features\\home-energy\\pages\\WholeHomeEnergyPage.tsx", "line": 106, "series": 6},
+      {"name": "Per-vehicle readiness", "count": 1, "file": "web\\src\\features\\home-energy\\pages\\WholeHomeEnergyPage.tsx", "line": 111},
+      {"name": "Powerwall trajectory", "count": 1, "file": "web\\src\\features\\home-energy\\pages\\WholeHomeEnergyPage.tsx", "line": 116},
+      {"name": "Tariff & constraint heatmap", "count": 1, "file": "web\\src\\features\\home-energy\\pages\\WholeHomeEnergyPage.tsx", "line": 121, "rows": "4 plus optional Powerwall"},
+      {"name": "Constraint violations", "count": 1, "file": "web\\src\\features\\home-energy\\pages\\WholeHomeEnergyPage.tsx", "line": 126},
+      {"name": "Assumptions & forecast quality", "count": 1, "file": "web\\src\\features\\home-energy\\pages\\WholeHomeEnergyPage.tsx", "line": 131, "metrics": 2},
+      {"name": "Export plan", "count": 1, "file": "web\\src\\features\\home-energy\\pages\\WholeHomeEnergyPage.tsx", "line": 142}
+    ],
+    "actions": [
+      {"name": "Recompute from now", "citation": "ScenarioControls.tsx:49; useHomeEnergyOrchestration.ts:256", "behavior": "Re-anchor local horizon timestamp; not a Tesla refresh command."},
+      {"name": "Save stability baseline", "citation": "ScenarioControls.tsx:52; useHomeEnergyOrchestration.ts:257-263", "behavior": "Persist per-vehicle slot indices for stability scoring."},
+      {"name": "Reset defaults", "citation": "ScenarioControls.tsx:55; useOrchestrationScenario.ts:237-239", "behavior": "Reset only this persisted scenario; preserve storage synchronization."},
+      {"name": "Scenario controls", "citation": "ScenarioControls.tsx:64-200", "behavior": "Horizon 6-72 hours; balanced/cost/self-consumption/peak-shaving weight presets; peak/off-peak/export tariffs; UTC peak start/end; import/export W limits; battery enabled/capacity Wh/reserve/charge and discharge W."},
+      {"name": "Per-vehicle controls", "citation": "VehicleAssumptionsPanel.tsx:40-106", "behavior": "Expand accordion, priority, target SoC, usable Wh, maximum W, deadline and UTC departure hour; stable vehicle IDs."},
+      {"name": "Add vehicle navigation", "citation": "VehicleAssumptionsPanel.tsx:33; VehicleReadinessPanel.tsx:25", "behavior": "Retain /vehicles destination in both empty states."},
+      {"name": "Source retries", "citation": "WholeHomeEnergyPage.tsx:74-85; StaleRefreshWarning.tsx:101-120", "behavior": "Independent source recovery while retained modeled sections remain visible."},
+      {"name": "Chart interactions", "citation": "EnergyFlowChart.tsx:50-69; PowerwallTrajectoryChart.tsx:54-63", "behavior": "Retain exportData/fullscreen/data table contracts and all rows; energy-flow persisted chartKey and hidden-series callback. Actual toolbar operation unverified."},
+      {"name": "Canonical JSON download", "citation": "PlanExportPanel.tsx:17-20; planExport.ts:17-65", "behavior": "schemaVersion 1, generated timestamp, exact optimizer input/result and disclaimer as single object; date-based filename; Blob cleanup; no device control."}
+    ],
+    "dataBehavior": [
+      "Keep the separate vehicle fleet and home energy site sources. Do not replace home solar/load history with vehicle energy telemetry or assume site ownership from selected vehicle.",
+      "Vehicle SoC precedence: finite fleet battery_level, finite list battery_level/batteryLevel, then disclosed 50% model assumption. Battery precedence: live site SoC, discovery site SoC, then 50% when battery scenario enabled.",
+      "Preserve separate solar/load history confidence, sample count and latest timestamp; confidence is not source trust or vehicle readiness confidence.",
+      "Keep raw W/Wh in computation/export/cache; user preferences applied only at presentation. Existing currency-per-kWh tariff representation and slotMinutes are deliberate domain contracts, not a migration opportunity.",
+      "Preserve UTC tariff/departure/day-shape semantics, future horizon start/end-exclusive, default 15-minute slots/24-hour horizon, optional battery off by default, and forecast approximations.",
+      "Preserve six KPIs: overall score, projected net cost, self-consumption, peak import, ready/total vehicles and unmet Wh.",
+      "Preserve six energy flow series and sign conventions: battery positive charge/negative discharge, grid export rendered negative; chart data rounded at display preparation, canonical JSON keeps exact input/result.",
+      "All ten section calls remain mounted during source degradation. Conditional battery/deadline controls and optional heatmap row are legitimate business conditions, not global data gates.",
+      "No autonomous command, tariff fetch capability, actual site limits or measured battery specification may be invented."
+    ]
+  },
+  "evidenceLimits": {
+    "scope": "One routed page, direct feature presentation/composition/persistence/forecast/export/type dependencies and bounded shared/API/route contracts only.",
+    "runtime": "UNVERIFIED",
+    "visual": "UNVERIFIED",
+    "keyboard": "UNVERIFIED",
+    "contrast": "UNVERIFIED",
+    "viewports": "UNVERIFIED",
+    "backend": "Route registrations only; handler payload, actual permissions, unit conversion, persistence, source coverage and production responses not exercised.",
+    "tests": "WholeHomeEnergyPage.migration.test.tsx lines 1-5 explicitly calls itself authored NOTRUN and uses chart doubles. Lines 85-89 mount page directly at /home-energy, not production route reachability. It is context, not current acceptance. No tests executed in this audit.",
+    "commands": [
+      {"command": "Get-FileHash web\\src\\features\\home-energy\\pages\\WholeHomeEnergyPage.tsx -Algorithm SHA256; (Get-Content <page>).Count", "exitCode": 0, "output": "9B0BCB5317F5BD54D5476BDF02B63F5F211C9C6FD58AD387E8C33F3A8AD570D3; 146"},
+      {"command": "Scoped rg neon/glow/text-white/hex/style/raw-control patterns on web\\src\\features\\home-energy\\*.tsx", "exitCode": 0, "output": "TariffConstraintHeatmap.tsx:102,106,112,125 computed styles; VehicleReadinessPanel.tsx:39 hard-coded hex. No glow/fixed-white/neon class match in inspected page/presentation source. Neon rgba identified manually at heatmap lines 20-32."},
+      {"command": "$files=@(Get-Item web\\src\\features\\home-energy\\pages\\WholeHomeEnergyPage.tsx)+@(Get-ChildItem web\\src\\features\\home-energy\\components\\*.tsx); $files | Select-String -CaseSensitive -Pattern '<(button|input|textarea|select|table)\\b' (and separate fixedWhite/glow/neon class patterns)", "exitCode": 0, "output": "fixedWhite: 0; glow: 0; rawControls: 0; neonClasses: 0. Initial case-insensitive rawControls:6 matched shared uppercase control names and was corrected with -CaseSensitive."},
+      {"command": "Get-Content docs\\frontend-audits\\audit-page-133.json -Raw | ConvertFrom-Json; required-field presence check; Get-FileHash page comparison", "exitCode": 0, "output": "JSON parsed; required fields missing: 0; Hash unchanged: True"}
+    ],
+    "notRun": [
+      "Git, browser/runtime, agents, TypeScript, full repository lint/build and test suites were not run, as required by this Phase 0 assignment.",
+      "The loaded audit skill script was inspected but not executed because its mandatory TypeScript step is a project-wide gate outside this read-only audit. Equivalent scoped source searches were used; no clean whole-project claim.",
+      "No optimizer algorithm, unrelated route, locale catalog, shared formatter implementation or second production heatmap consumer was audited."
+    ],
+    "noiseLimit": "Page and direct presentation files contain no explicit glow/fixed-white/neon classes in scoped scans; this does not certify shared component/global theme output. Hard-coded fluorescent rgba and semantic hue bypass are explicitly reported.",
+    "ownedFiles": ["docs\\frontend-audits\\audit-page-133.json", ".agent-status\\audit-page-133.txt"]
+  },
+  "filesRead": [
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\home-energy\\pages\\WholeHomeEnergyPage.tsx",
+    "web\\src\\features\\home-energy\\pages\\WholeHomeEnergyPage.migration.test.tsx",
+    "web\\src\\features\\home-energy\\hooks\\useHomeEnergyOrchestration.ts",
+    "web\\src\\features\\home-energy\\hooks\\useOrchestrationScenario.ts",
+    "web\\src\\features\\home-energy\\components\\KpiSummary.tsx",
+    "web\\src\\features\\home-energy\\components\\ScenarioControls.tsx",
+    "web\\src\\features\\home-energy\\components\\VehicleAssumptionsPanel.tsx",
+    "web\\src\\features\\home-energy\\components\\EnergyFlowChart.tsx",
+    "web\\src\\features\\home-energy\\components\\VehicleReadinessPanel.tsx",
+    "web\\src\\features\\home-energy\\components\\PowerwallTrajectoryChart.tsx",
+    "web\\src\\features\\home-energy\\components\\TariffConstraintHeatmap.tsx",
+    "web\\src\\features\\home-energy\\components\\ConstraintViolationsPanel.tsx",
+    "web\\src\\features\\home-energy\\components\\AssumptionsQualityPanel.tsx",
+    "web\\src\\features\\home-energy\\components\\PlanExportPanel.tsx",
+    "web\\src\\features\\home-energy\\lib\\forecastAdapters.ts",
+    "web\\src\\features\\home-energy\\lib\\scenarioDefaults.ts",
+    "web\\src\\features\\home-energy\\lib\\planExport.ts",
+    "web\\src\\features\\home-energy\\lib\\types.ts",
+    "web\\src\\api\\hooks\\useVehicles.ts",
+    "web\\src\\api\\hooks\\useEnergy.ts",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\layout\\layout-reference\\LayoutCard.tsx",
+    "web\\src\\components\\layout\\layout-reference\\ChartCard.tsx",
+    "web\\src\\components\\motion\\FadeIn.tsx",
+    "web\\src\\components\\feedback\\StaleRefreshWarning.tsx",
+    "web\\src\\components\\charts\\EmbeddedChart.tsx",
+    "web\\src\\App.tsx",
+    "web\\src\\lib\\workspaceScope.ts",
+    "internal\\api\\router.go"
+  ]
+}

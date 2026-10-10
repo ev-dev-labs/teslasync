@@ -1,0 +1,445 @@
+{
+  "item": "audit-page-165",
+  "page": "web\\src\\features\\power-user\\pages\\SqlPlaygroundPage.tsx",
+  "routes": ["/power/sql"],
+  "purpose": "Compose and persist manual SQL against a bundled curated schema reference, optionally request a propose-only Helix SQL draft, and copy SQL into an external database client. The browser does not execute SQL.",
+  "primaryGoal": "Understand the available schema, author or review a query, and copy the exact query for external read-only execution without losing the manual editor or implying live results.",
+  "dataSources": [
+    {
+      "name": "Bundled schema reference",
+      "hook": null,
+      "endpoint": null,
+      "owner": "web\\src\\features\\power-user\\components\\sqlCatalog.ts",
+      "evidence": ["sqlCatalog.ts:38-117", "SqlPlaygroundPage.tsx:156-166,283-287"],
+      "behavior": "Deep-frozen static metadata; copied before alphabetical table sorting. Five tables and 33 documented columns, not database row counts. Column order is preserved.",
+      "backendOwner": "internal\\api\\ainlsql\\handler.go:366-429",
+      "trust": "Frontend and backend table/column names match the inspected curated lists; description text differs. No live database schema or physical-column existence was verified."
+    },
+    {
+      "name": "Manual SQL draft",
+      "hook": "useState, useEffect",
+      "endpoint": null,
+      "owner": "web\\src\\features\\power-user\\pages\\SqlPlaygroundPage.tsx:69-107",
+      "behavior": "Exact SQL persists in localStorage at ai.sqlPlayground.draft. Empty string removes the key; unavailable storage is silently tolerated. Run only displays external-client guidance."
+    },
+    {
+      "name": "Optional natural-language draft",
+      "hook": "useAiStream",
+      "endpoint": "POST /api/v1/ai/power/sql/draft",
+      "owner": "web\\src\\hooks\\useAiStream.ts",
+      "evidence": [
+        "web\\src\\components\\ai\\AINLSqlPlayground.tsx:131-146",
+        "internal\\api\\router.go:3020-3026,5105",
+        "internal\\api\\ai_routes.go:134,714-718"
+      ],
+      "behavior": "Body is {prompt: trimmedPrompt}; bare /ai/power/sql/draft is prefixed by the canonical stream hook, not doubly prefixed. Only successful draft_readonly_sql tool results with valid typed fields become applicable drafts. Unmount aborts the request; application requires an explicit click and never executes SQL.",
+      "backendOwner": "internal\\api\\ainlsql\\handler.go",
+      "trust": "Inspected handler limits/validates prompt and binds install-wide table scope. AI guard is attached at route registration. Backend tools, provider behavior, redaction, authentication and actual responses were not exercised."
+    },
+    {
+      "name": "AI feature enablement and display preferences",
+      "hook": "useAiEnabled -> useSettings; useOperationalMetrics",
+      "endpoint": "Not traced further in this bounded audit",
+      "owner": "web\\src\\hooks\\useAiEnabled.ts; web\\src\\hooks\\useOperationalMetrics.ts",
+      "evidence": ["web\\src\\components\\ai\\withAiFeature.tsx:44-57", "web\\src\\hooks\\useAiEnabled.ts:32-40", "web\\src\\features\\power-user\\components\\CatalogKpiBand.tsx:29-76"],
+      "behavior": "Fail-closed AI gate returns no optional panel when settings are absent, off or feature-disabled. Static catalog counts are passed as raw count metrics; invalid source counts are not coerced to zero by the rendered brief."
+    }
+  ],
+  "components": [
+    {
+      "name": "PageLayout and Grid",
+      "owner": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx; web\\src\\components\\layout\\Grid.tsx",
+      "props": "PageLayout title/subtitle; Grid cols={default:1,xl:3}, gap=4; editor xl:col-span-2",
+      "states": "Always-present deterministic baseline",
+      "dependencies": ["PageContainer", "cn"]
+    },
+    {
+      "name": "CatalogKpiBand",
+      "owner": "web\\src\\features\\power-user\\components\\CatalogKpiBand.tsx",
+      "props": "tableCount:number; columnCount:number",
+      "states": "Static reference; invalid catalog counts",
+      "dependencies": ["OperationalBrief from @/components/data-display", "useOperationalMetrics", "useTranslation"],
+      "sharedOwner": "web\\src\\components\\data-display\\OperationalBrief.tsx",
+      "note": "Shared owner identified through the category barrel; implementation not read. Existing caller already exposes scope, freshness, provenance and compact metrics; do not replace with decorative KPI cards."
+    },
+    {
+      "name": "QueryReferencePanel",
+      "owner": "web\\src\\features\\power-user\\components\\QueryReferencePanel.tsx",
+      "props": "No props; static localized tips and exact SQL example",
+      "states": "Ready; clipboard denial with manual-copy instructions",
+      "dependencies": ["GlassPanel", "PanelTitle", "Text", "CodeBlock wrap/action", "CopyButton onCopy/onCopyError", "InlineCallout"]
+    },
+    {
+      "name": "SchemaCatalogCard",
+      "owner": "web\\src\\features\\power-user\\components\\SchemaCatalogCard.tsx",
+      "props": "table:CuratedTable",
+      "states": "Documented columns; no columns; missing identity/type/description placeholders",
+      "dependencies": ["GlassPanel", "PanelTitle", "Text", "Table", "memo"],
+      "preserve": "Semantic table headings and row headers, primary-key icon with accessible label, raw SQL identifiers, descriptions and ordered columns"
+    },
+    {
+      "name": "Manual editor primitives",
+      "owner": "web\\src\\components\\ui\\Textarea.tsx; web\\src\\components\\ui\\Button.tsx; web\\src\\components\\ui\\CopyButton.tsx; web\\src\\components\\feedback\\InlineCallout.tsx",
+      "props": "Textarea controlled value/onChange, rows=12, spellCheck=false, accessible name; Button primary/secondary wrapLabel; CopyButton exact text, outline/md, localized label, failure callbacks; InlineCallout warning",
+      "states": "Blank/whitespace-only query disables actions; edited; persisted; guidance; clipboard error",
+      "dependencies": ["useTranslation", "shared control/focus/text tokens", "optional toast"]
+    },
+    {
+      "name": "AINLSqlPlayground and shared AI scaffold",
+      "owner": "web\\src\\components\\ai\\AINLSqlPlayground.tsx; web\\src\\components\\ai\\AIFeatureCard.tsx; web\\src\\components\\ai\\AiOutputPanel.tsx; web\\src\\components\\ai\\withAiFeature.tsx",
+      "props": "onApply(ReadonlySQLDraft); AIFeatureCard title/description/buttonLabel/badgeLabel/canStart/stream/onAction/inputSlot/children",
+      "states": "Off/disabled absent; idle; streaming; done with output; done empty; error; applicable typed proposal",
+      "dependencies": ["useAiStream", "useAiEnabled", "Textarea", "Button", "HelixEvidenceTrail", "AIThinkingIndicator"]
+    },
+    {
+      "name": "FadeIn",
+      "owner": "web\\src\\components\\motion\\FadeIn.tsx",
+      "props": "delay 0, 0.1, 0.2; min-w-0 max-w-full className",
+      "states": "Normal entrance; reduce=true uses initial=false and hook-selected duration",
+      "dependencies": ["useMotionPreference", "framer-motion encapsulated in the shared owner"]
+    }
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\power-user\\components\\sqlCatalog.ts",
+      "line": 38,
+      "rule": "MDC-002 / mission 33: preserve a single authoritative data contract",
+      "detail": "Client metadata intentionally mirrors the Go curated catalog at handler.go:366-429. Names/types currently agree in the inspected lists, but separate maintenance risks drift; this is not evidence of current identifier mismatch.",
+      "fix": "Keep current static/offline behavior. Request an integration-owned parity check for table names, column order, SQL types and SI meaning rather than introducing a new fetch or changing the allowlist during presentation modernization.",
+      "owner": "integration",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\power-user\\components\\QueryReferencePanel.tsx",
+      "line": 104,
+      "rule": "MDC-002: prefer existing primitives over new wrappers",
+      "detail": "Manual and example copy failures repeat the same localized recovery message with shared InlineCallout. Only two simple callsites are demonstrated, so a new composite is not justified.",
+      "fix": "Retain shared CopyButton failure callbacks and InlineCallout; do not add another clipboard engine or speculative recovery component.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "responsive": {
+    "verification": "unverified",
+    "sourceStrategy": [
+      "PageLayout retains full-width/min-w-0 container composition.",
+      "Workspace stacks by default and uses three viewport columns at xl with editor spanning two.",
+      "Actions wrap labels and flex-wrap; panels use responsive padding.",
+      "Catalog uses auto-fit minmax(min(100%,20rem),1fr); every table and all column details stay available.",
+      "CodeBlock wraps display text while preserving exact clipboard bytes; Table owns horizontal overflow containment."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\components\\ui\\Table.tsx",
+        "line": 20,
+        "rule": "MDC-040 / MDC-043: keyboard-accessible narrow table detail",
+        "detail": "Horizontal scrolling uses a plain wrapper div without an explicit focusable labeled scroll-region contract. Schema tables have no intrinsic interactive children. Cross-browser keyboard access when the table overflows remains a source-backed risk, not a demonstrated failure.",
+        "fix": "Shared table owner should validate overflow at narrow widths and provide opt-in focusable/labeled scroll-region props if native behavior is insufficient; preserve all three columns rather than hiding metadata.",
+        "owner": "shared",
+        "confidence": "medium"
+      }
+    ],
+    "requiredChecks": "All contract widths 320/375/390/430/768/1024/1280/1440/1920/2560; narrow allocated shell width at xl; long identifiers/descriptions; RTL; 200% text; keyboard horizontal scrolling. None exercised."
+  },
+  "accessibility": {
+    "verification": "Keyboard, screen reader, focus, contrast, touch-target and forced-colors behavior unverified",
+    "sourceStrengths": [
+      "Manual and AI textareas have localized aria-label values; shared Textarea creates stable IDs and supports visible labels/descriptions.",
+      "Sections have localized aria-label values; schema tables have table names, col headers and row headers.",
+      "Decorative page/reference icons are aria-hidden; primary key is conveyed with labeled icon and literal description, not color alone.",
+      "Run and clipboard guidance use shared InlineCallout role=status; AI errors use role=alert.",
+      "Shared Button provides focus tokens; wrapping labels preserve long translated actions."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\components\\ui\\CopyButton.tsx",
+        "line": 120,
+        "rule": "MDC-040 / MDC-026: perceivable action success",
+        "detail": "With a custom label, visibleLabel always uses that label instead of Copied. This page passes Copy query at SqlPlaygroundPage.tsx:236; withToast remains false. Success changes only the icon, so aria-live has no changed text and the successful main-query copy lacks a textual completion cue.",
+        "fix": "Shared CopyButton should expose/accept a localized copiedLabel or announce successful copying in a separate status region while retaining caller action labels, exact text and failure callbacks. Validate with both this custom-label button and the example default-label button.",
+        "owner": "shared",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\components\\ui\\Button.tsx",
+        "line": 37,
+        "rule": "MDC-040: 44px mobile default with documented exceptions",
+        "detail": "md controls have a 40px minimum and sm controls 36px. Manual actions use md; example copy and AI actions use sm. No local 44px override or target-spacing acceptance was exercised.",
+        "fix": "Use the existing lg/auto or an accepted shared touch-size contract where appropriate; measure actual spacing before claiming an exception or changing global density defaults.",
+        "owner": "page",
+        "confidence": "medium"
+      }
+    ]
+  },
+  "states": {
+    "verification": "Source inspection only",
+    "initialLoading": "Static reference/manual editor need no synthetic network skeleton. Optional AI is hidden while fail-closed enablement is unresolved.",
+    "empty": "Blank/trim-empty editor disables Run/Clear/Copy. Individual empty-column cards show explicit text. Bundled catalog is nonempty; zero-table fallback is not currently implemented, but no live empty catalog is claimed.",
+    "error": "Storage failures are silently ignored. Main/example copy failures show manual selection recovery. AI error panel surfaces a terminal error and the action can restart; manual neighbors remain visible.",
+    "offline": "Bundled schema and current manual text remain usable without a SQL API; new AI requests depend on network. Offline is not separately identified by the inspected AI renderer.",
+    "stale": "Editing manual SQL clears previous run/copy guidance; prompt editing clears already-captured typed draft, but late results are not invalidated. AI output remains until next start because scopeKey is omitted.",
+    "partial": "AiOutputPanel selects the error branch instead of showing retained streamed text on terminal failure. Manual editor/catalog remain intact.",
+    "success": "Typed proposals require explicit Apply; main Copy query retains its label and changes icon only; Run never creates results.",
+    "issues": [
+      {
+        "file": "web\\src\\components\\ai\\AINLSqlPlayground.tsx",
+        "line": 131,
+        "rule": "MDC-026 / MDC-046: keep asynchronous evidence bound to its request",
+        "detail": "onEvent captures any late successful draft tool result. Prompt Textarea remains editable during streaming (inputSlot:188-201); handlePromptChange:163-176 only clears the current draft. An old request can subsequently repopulate draft and enable Apply beside a newer prompt. Existing output also survives prompt edits because useAiStream has no scopeKey here.",
+        "fix": "Bind draft and output to the submitted prompt identity using the existing hook scopeKey/cancellation contract or an explicit request-generation check; ignore obsolete results and clear stale text/activity consistently. Keep editor application explicit and do not disable or delete the manual baseline.",
+        "owner": "shared",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\components\\ai\\AiOutputPanel.tsx",
+        "line": 84,
+        "rule": "MDC-026: refresh/partial failure must retain usable evidence",
+        "detail": "An error-state branch replaces accumulated stream text even when text is nonempty. A partial response disappears behind the error message although the hook retains it.",
+        "fix": "Shared AI renderer should show retained text plus a separately announced terminal error, with an explicit incomplete/proposal-only label and existing restart affordance. Never imply partial SQL is validated or executable.",
+        "owner": "shared",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\power-user\\pages\\SqlPlaygroundPage.tsx",
+        "line": 226,
+        "rule": "MDC-046: preserve editing and recovery actions",
+        "detail": "Clear uses disabled={!canRun}, where canRun is sql.trim().length>0 at line 168. A whitespace-only nonempty draft is persisted but cannot be cleared using the Clear action.",
+        "fix": "Separate clear enablement from run/copy enablement: allow clearing any nonempty raw editor string while retaining trimmed run eligibility and exact draft persistence.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ]
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\power-user\\pages\\SqlPlaygroundPage.tsx",
+      "line": 196,
+      "rule": "MDC-010 / MDC-012 / mission 5-7: color should communicate meaning",
+      "detail": "Decorative editor/catalog icons use fixed cyan-300 (also line 273); QueryReferencePanel.tsx:62,75 uses cyan icon and bullets. There are no explicit neon/glow classes in these page/domain sources, but repeated fixed decorative accent is unnecessary and is not theme-adaptive.",
+      "fix": "Use typography.color.secondary/muted or text-[var(--text-secondary)] for decorative icons and bg-[var(--text-muted)] for neutral bullets; retain accent for meaningful primary action/state only.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\power-user\\components\\SchemaCatalogCard.tsx",
+      "line": 43,
+      "rule": "MDC-010 / MDC-012 / MDC-015: restrained semantic hierarchy",
+      "detail": "All five schema cards repeat a cyan tinted/ringed icon badge; all column names use emerald-300 at line 93 despite not being success states. Primary-key amber at line 89 is meaningful but fixed. The no-columns state at line 111 uses a white overlay rather than a neutral surface token.",
+      "fix": "Neutralize icon badges with --surface-2/--border-subtle and secondary text; render SQL identifiers with Text color=primary/mono rather than emerald. Preserve primary-key label/shape with a reviewed semantic token. Replace bg-white/[0.02] with the existing neutral surface token.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\components\\ai\\AIFeatureCard.tsx",
+      "line": 296,
+      "rule": "MDC-010 / MDC-020: shared controls own restrained chrome",
+      "detail": "The Ask Helix button overrides outline chrome with fixed cyan border/background/light text and cyan focus ring, alongside the cyan badge at line 214. This competes with shared neutral control/focus tokens. Persisted user theme/chart accents must not be reset.",
+      "fix": "Shared owner should retain Button outline and existing --control-*/--focus-ring tokens, with a small semantic brand mark rather than saturated custom chrome; keep localized name, thinking state, wrapping and feature gating.",
+      "owner": "shared",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\components\\ai\\AiOutputPanel.tsx",
+      "line": 81,
+      "rule": "MDC-012 / MDC-013 / MDC-015: theme-aware surfaces and typography",
+      "detail": "Output uses bg-white/[0.02] and raw text-sm paragraphs; error uses fixed red-300 at lines 85-88. No rendered contrast or glow measurement was performed.",
+      "fix": "Use existing --surface-2 plus Text/ErrorText role components and accepted semantic severity tokens. Do not alter provider output, tool evidence, usage or whitespace preservation.",
+      "owner": "shared",
+      "confidence": "high"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\lib\\workspaceScope.ts",
+      "line": 156,
+      "rule": "MDC-032: scope controls must truthfully describe consumed data",
+      "detail": "/power/sql is absent from range-enabled and vehicle-disabled lists/prefixes, so the inspected resolver gives {range:false,vehicle:true}. This page consumes no selected vehicle; its draft request contains only prompt and its catalog is install-wide. The shell vehicle control may imply scope that neither reference nor draft body consumes.",
+      "fix": "Integration owner should make this install-wide route vehicle-disabled using the existing scope registry and verify the actual header/mobile drawer. Do not silently inject vehicle filters into user SQL or add a local vehicle/date selector.",
+      "owner": "integration",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\power-user\\components\\sqlCatalog.ts",
+      "line": 41,
+      "rule": "MDC-044: localize explanatory UI without recasing source data",
+      "detail": "Table and column descriptions are bundled English strings and rendered directly at SchemaCatalogCard.tsx:53,99. UI headings/actions are translated, but substantial human-readable schema explanations are not.",
+      "fix": "Preserve canonical names/types/raw metadata; provide localized display descriptions through existing catalog ownership and retain authoritative SI/PII meaning. Report catalog work to its owner rather than editing shared translation resources in a page item.",
+      "owner": "integration",
+      "confidence": "high"
+    }
+  ],
+  "priority": {
+    "overall": "P1",
+    "P1": ["Prevent late AI results from being applied beside an edited prompt"],
+    "P2": ["Retain partial AI output on failure", "Make install-wide scope explicit", "Restore whitespace-only Clear recovery", "Make custom-label copy success accessible", "Localize schema explanations without changing identifiers"],
+    "P3": ["Neutralize repeated decorative accents and white overlays", "Verify narrow table keyboard scrolling and mobile target spacing"],
+    "note": "No new SQL execution endpoint, replacement result grid or generic date controls are justified by this source."
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "Request-bound natural-language SQL proposals",
+      "owner": "web\\src\\components\\ai\\AINLSqlPlayground.tsx",
+      "props": "Retain onApply(ReadonlySQLDraft); supply existing useAiStream scopeKey or request-generation identity tied to submitted prompt",
+      "variants": "Existing enabled/off gate only; no new feature mode",
+      "states": ["Prompt edited mid-stream", "Late successful result ignored", "Completed old output invalidated", "Explicit current-draft Apply"],
+      "usedBy": ["web\\src\\features\\power-user\\pages\\SqlPlaygroundPage.tsx"],
+      "dependsOn": ["web\\src\\hooks\\useAiStream.ts", "web\\src\\components\\ai\\withAiFeature.tsx"],
+      "acceptance": "Start A, edit to B, deliver A tool_result, finish A: Apply must not expose A as B; manual editor remains unchanged until explicit Apply."
+    },
+    {
+      "name": "Retained AI output and neutral shared chrome",
+      "owner": "web\\src\\components\\ai\\AiOutputPanel.tsx; web\\src\\components\\ai\\AIFeatureCard.tsx",
+      "props": "Preserve text/state/error/activity/usage, inputSlot and action contracts; no replacement stream engine",
+      "variants": "Existing outline action, error and output presentation",
+      "states": ["Streaming", "Partial text plus error", "Empty done", "Off absent", "Long translated controls"],
+      "usedBy": ["web\\src\\components\\ai\\AINLSqlPlayground.tsx"],
+      "dependsOn": ["web\\src\\components\\ui\\Button.tsx", "web\\src\\lib\\tokens.ts"],
+      "acceptance": "Retained text and separately announced error remain visible; theme-aware neutral surfaces/focus are used. Additional AI consumers must be validated by shared owner, not inferred here."
+    },
+    {
+      "name": "Custom-label clipboard completion",
+      "owner": "web\\src\\components\\ui\\CopyButton.tsx",
+      "props": "Optional copiedLabel or separate localized status announcement; retain label/text/onCopy/onCopyError and exact clipboard content",
+      "variants": "Outline/md custom label and default ghost/sm example action",
+      "states": ["Success", "Denial", "Retry", "Text changed while clipboard promise pending"],
+      "usedBy": ["web\\src\\features\\power-user\\pages\\SqlPlaygroundPage.tsx", "web\\src\\features\\power-user\\components\\QueryReferencePanel.tsx"],
+      "dependsOn": ["web\\src\\components\\ui\\Button.tsx", "existing common copy translations"],
+      "acceptance": "Success is announced with a custom label and default label; denial keeps manual-copy recovery without execution."
+    },
+    {
+      "name": "Optional keyboard-reachable semantic table overflow",
+      "owner": "web\\src\\components\\ui\\Table.tsx",
+      "props": "If browser testing demonstrates the gap, opt-in scroll-region accessible name/focusability on the wrapper, separate from existing table aria-label",
+      "variants": "Retain standalone/embedded; no DataTable replacement for static schema matrices",
+      "states": ["Narrow overflow", "No overflow", "Keyboard focus", "Long SQL identifiers"],
+      "usedBy": ["web\\src\\features\\power-user\\components\\SchemaCatalogCard.tsx"],
+      "dependsOn": ["web\\src\\lib\\tokens.ts"],
+      "acceptance": "Keyboard can reach every column in actual overflow, with no duplicate needless tab stop where there is no overflow."
+    },
+    {
+      "name": "Truthful install-wide route scope and schema presentation metadata",
+      "owner": "web\\src\\lib\\workspaceScope.ts; web\\src\\features\\power-user\\components\\sqlCatalog.ts",
+      "props": "Existing route scope registry; preserve CuratedTable names/types/columns and allow localized display descriptions",
+      "variants": "Install-wide static reference",
+      "states": ["Header/mobile scope", "Non-English locale", "Offline reference"],
+      "usedBy": ["web\\src\\features\\power-user\\pages\\SqlPlaygroundPage.tsx", "web\\src\\features\\power-user\\components\\SchemaCatalogCard.tsx"],
+      "dependsOn": ["Existing canonical translation catalogs", "internal\\api\\ainlsql\\handler.go"],
+      "acceptance": "Route no longer suggests a selected-vehicle filter it does not use; all five tables, 33 columns and SI/PII explanation meanings remain."
+    }
+  ],
+  "competingImplementations": [
+    "No second page layout, table pipeline, clipboard engine, motion owner or SQL executor was found in the inspected page dependency slice.",
+    "Schema metadata is duplicated across bundled TypeScript and the backend allowlist by design; parity is an integration concern, not permission to widen the SQL surface.",
+    "AIFeatureCard's local cyan action overrides compete with Button's existing token-owned outline chrome; reuse the existing primitive rather than add another AI button."
+  ],
+  "preservation": {
+    "sourceHash": "50051395423268f9c1e678f76743dc25eee2c35f10d3ebb84e34436845e5ddc1",
+    "hashAlgorithm": "SHA-256",
+    "sourceHashScope": "Current raw bytes of web\\src\\features\\power-user\\pages\\SqlPlaygroundPage.tsx",
+    "lineCount": 294,
+    "relatedPresentationLineCounts": {
+      "CatalogKpiBand.tsx": 76,
+      "QueryReferencePanel.tsx": 111,
+      "SchemaCatalogCard.tsx": 121,
+      "pagePlusPresentationTotal": 602
+    },
+    "sectionCount": 4,
+    "sections": [
+      {"name": "Catalog overview brief", "line": 179, "count": 1, "contents": "4 metrics: 5 tables, 33 columns, read-only composing access, SI reference units; scope/freshness/provenance and review capability"},
+      {"name": "Optional Helix SQL drafter", "line": 185, "count": 1, "contents": "Prompt, Ask Helix/Draft SQL action, stream output/evidence, explicit Apply; entirely absent when gated off"},
+      {"name": "Query workspace", "line": 188, "count": 1, "contents": "Manual editor plus Working with queries reference; 4 tips, exact example SQL and copy recovery"},
+      {"name": "Curated schema catalog", "line": 269, "count": 1, "contents": "5 alphabetical table cards: alerts, charging_sessions, drives, signal_log_view, vehicles; 33 ordered columns total"}
+    ],
+    "renderedPanelInventory": "1 manual editor GlassPanel + 1 reference GlassPanel + 5 schema GlassPanels; one OperationalBrief; optional AI shared card. JSX declarations in page/domain components: 3 GlassPanel, 0 ChartContainer. This is source inventory, not mounted/runtime count.",
+    "actions": [
+      "Edit/paste exact manual SQL, including untrimmed content",
+      "Persist/reload draft through ai.sqlPlayground.draft",
+      "Run: guidance only, never execution or result fabrication",
+      "Clear draft and dismiss prior guidance",
+      "Copy exact current query; clipboard denial fallback",
+      "Copy exact reference SQL; independent denial fallback",
+      "Review bundled catalog evidence through existing OperationalBrief",
+      "When enabled: edit prompt, explicitly request draft, observe stream/tool evidence, explicitly Apply proposal to editor"
+    ],
+    "dataBehavior": [
+      "No SQL execution endpoint, live query results, export table or measured database-row metrics exists in the inspected baseline.",
+      "Frontend metadata stays immutable; sorting copies the list; column order and all descriptions remain.",
+      "Keep m/s, meters, seconds, Wh, watts and user-currency cents meanings; do not convert or rename SQL identifiers/wire/cache data.",
+      "Five curated tables and all 33 columns survive; VIN/display_name PII annotations and null numeric/string signal meanings remain visible.",
+      "Manual editor/catalog always survive AI off, unavailable settings or stream failure.",
+      "AI handoff remains propose-only and explicitly user-applied; never auto-run, auto-copy or overwrite editor on arrival.",
+      "Application/edit/clear reset guidance; copying uses raw SQL rather than trimmed display content.",
+      "Keep manual scope install-wide and independent of workspace dates; do not add page range or vehicle selectors or pretend queries are filtered.",
+      "Do not reset user themes, density, typography, AI modes/preferences or other persisted choices."
+    ]
+  },
+  "evidenceLimits": {
+    "method": "Read-only scoped source inspection with PowerShell hash/count probes and rg; only owned report and heartbeat written",
+    "runtime": "unverified",
+    "visual": "unverified",
+    "keyboard": "unverified",
+    "contrast": "unverified",
+    "viewports": "unverified at every required width",
+    "tests": "Not run. Existing SqlPlaygroundPage.test.tsx test names were inspected, not their full assertions or execution.",
+    "lintBuildTypeScript": "Not run: assignment forbids full lint/build and mutations; contract reserves consolidated TypeScript for parent. The skill audit.sh was inspected but not executed because it includes npx tsc --noEmit.",
+    "sourceCounts": {
+      "scope": "Root page, CatalogKpiBand, QueryReferencePanel and SchemaCatalogCard only",
+      "staticInlineStyles": 0,
+      "rawLowercaseButtonInputTextareaSelectTable": 0,
+      "directRechartsLeafletFramerMotionImports": 0,
+      "oldRelativeApiImports": 0,
+      "explicitNeonGlowClasses": 0,
+      "fixedWhiteSurfaceOccurrences": 1,
+      "note": "Case-sensitive corrected probe is authoritative: initial PowerShell Select-String was case-insensitive and falsely matched Textarea/Table component tags. No blanket zero-violations or shared/global cleanliness claim."
+    },
+    "probeEvidence": [
+      "Get-FileHash -LiteralPath web\\src\\features\\power-user\\pages\\SqlPlaygroundPage.tsx -Algorithm SHA256: exit 0; 50051395423268f9c1e678f76743dc25eee2c35f10d3ebb84e34436845e5ddc1",
+      "Get-Content counts: exit 0; page=294, CatalogKpiBand=76, QueryReferencePanel=111, SchemaCatalogCard=121",
+      "Select-String -CaseSensitive '<(button|input|textarea|select|table)\\b' and scoped import/style probes: exit 0; each of four files reports rawControls=0, staticInline=0, directLibraries=0, oldApiImports=0",
+      "rg color/style probes: source citations recorded above; no source or runtime changes"
+    ],
+    "unknowns": [
+      "Physical database schema, SQL tools/provider execution, redaction, actual AI guard/auth and installed backend capabilities beyond inspected registration/handler",
+      "Transitive settings endpoints, OperationalBrief internals, actual shell header rendering and shared motion preference internals",
+      "No current browser session was exercised; source-present behavior and prior test names are not acceptance",
+      "No whole-app inventory or unrelated page audit was performed"
+    ]
+  },
+  "filesRead": [
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\power-user\\pages\\SqlPlaygroundPage.tsx",
+    "web\\src\\features\\power-user\\components\\CatalogKpiBand.tsx",
+    "web\\src\\features\\power-user\\components\\QueryReferencePanel.tsx",
+    "web\\src\\features\\power-user\\components\\SchemaCatalogCard.tsx",
+    "web\\src\\features\\power-user\\components\\sqlCatalog.ts",
+    "web\\src\\components\\ai\\AINLSqlPlayground.tsx",
+    "web\\src\\components\\ai\\AIFeatureCard.tsx",
+    "web\\src\\components\\ai\\AiOutputPanel.tsx",
+    "web\\src\\components\\ai\\withAiFeature.tsx",
+    "web\\src\\components\\ui\\CopyButton.tsx",
+    "web\\src\\components\\ui\\Table.tsx",
+    "web\\src\\components\\ui\\Button.tsx",
+    "web\\src\\components\\ui\\Textarea.tsx",
+    "web\\src\\components\\ui\\CodeBlock.tsx",
+    "web\\src\\components\\feedback\\InlineCallout.tsx",
+    "web\\src\\components\\motion\\FadeIn.tsx",
+    "web\\src\\hooks\\useAiEnabled.ts",
+    "web\\src\\hooks\\useAiStream.ts",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\lib\\tokens.ts",
+    "web\\src\\components\\layout\\index.ts",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\layout\\Grid.tsx",
+    "web\\src\\components\\data-display\\index.ts",
+    "web\\src\\features\\power-user\\pages\\SqlPlaygroundPage.test.tsx",
+    "web\\src\\App.tsx",
+    "web\\src\\lib\\routeRegistry.ts",
+    "web\\src\\lib\\routeMeta.ts",
+    "internal\\api\\router.go",
+    "internal\\api\\ai_routes.go",
+    "internal\\api\\ainlsql\\handler.go"
+  ]
+}

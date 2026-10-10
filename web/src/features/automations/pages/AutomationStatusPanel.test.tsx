@@ -112,7 +112,7 @@ describe('AutomationStatusPanel', () => {
       stats: { total: 5, active: 3, disabled: 2, autoDisabled: 0 },
     });
 
-    expect(container.querySelector('.animate-pulse')).toBeInTheDocument();
+    expect(container.querySelector('[aria-hidden="true"][class*="bg-[var(--skeleton-bg)]"]')).toBeInTheDocument();
     expect(screen.queryByText('Active')).not.toBeInTheDocument();
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
     expect(screen.queryByText('No automations to summarize yet')).not.toBeInTheDocument();

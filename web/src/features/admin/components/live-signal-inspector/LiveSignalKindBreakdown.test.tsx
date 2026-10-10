@@ -30,7 +30,7 @@
  *      null count degrades to zero.
  */
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, within, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import type { ComponentProps, ReactNode } from 'react';
 
@@ -152,7 +152,7 @@ describe('LiveSignalKindBreakdown — panel chrome', () => {
     ];
     for (const status of statuses) {
       const { unmount } = renderPanel({ status, error: new Error('x') });
-      const heading = screen.getByRole('heading', { name: /signal kinds/i });
+      const heading = screen.getByRole('heading', { name: /Signal kinds/i });
       expect(heading).toBeInTheDocument();
       // The decorative BarChart3 icon must be hidden from the a11y tree.
       expect(heading.querySelector('svg[aria-hidden="true"]')).not.toBeNull();
@@ -245,12 +245,25 @@ describe('LiveSignalKindBreakdown — ready state', () => {
 
 describe('LiveSignalKindBreakdown — section states', () => {
   it('shows a skeleton at the requested height and no chart while loading', () => {
-    const { container } = renderPanel({ status: 'loading' });
+    const { container } = renderPanel({
+      status: 'loading',
+      stats: statsWithKinds([{ category: 'numeric', count: 12 }]),
+    });
 
-    const skeleton = container.querySelector('.animate-pulse');
+    const loading = within(container).getByRole('status');
+    expect(loading).toHaveAccessibleName('Loading {{label}}');
+    const skeletons = loading.querySelectorAll('[aria-hidden="true"]');
+    expect(skeletons).toHaveLength(1);
+    const [skeleton] = skeletons;
     expect(skeleton).not.toBeNull();
+    expect(skeleton).toHaveClass('h-4', 'w-full', 'rounded', 'bg-[var(--skeleton-bg)]');
+    expect(skeleton).toHaveAttribute('aria-hidden', 'true');
     expect(skeleton).toHaveStyle({ height: '256px' });
     expect(screen.queryByTestId('bar-chart')).not.toBeInTheDocument();
+    expect(screen.queryAllByTestId('bar-datum')).toHaveLength(0);
+    expect(screen.queryByTestId('responsive-container')).not.toBeInTheDocument();
+    expect(screen.queryByRole('img')).toBeNull();
+    expect(screen.queryByText('No live signals to categorise yet.')).not.toBeInTheDocument();
   });
 
   it('renders a retry-able error alert and forwards onRetry', () => {

@@ -1,0 +1,372 @@
+{
+  "item": "audit-page-104",
+  "phase": 0,
+  "page": "web\\src\\features\\driving\\pages\\ColdStartPage.tsx",
+  "routes": ["/cold-start"],
+  "purpose": "Explain observed cold-start consumption cost within the selected vehicle's returned drive window, with cold/warm cohorts, temperature evidence, parking strata, sample coverage and ranked opportunities.",
+  "primaryGoal": "Compare distance-weighted consumption after long versus short parking gaps without confusing bounded observational evidence, missing measurements or insufficient samples with a causal warm-up penalty.",
+  "dataSources": [
+    {
+      "hook": "useDrives(vehicleIdStr, { start, end, limit: 1000 })",
+      "file": "web\\src\\features\\driving\\pages\\ColdStartPage.tsx",
+      "line": 43,
+      "endpoint": "GET /api/v1/drives?vehicle_id=<selected vehicle>&start=<date>&end=<date>&limit=1000",
+      "sourceOwnership": "web\\src\\api\\hooks\\useDriving.ts:104-128 owns typed query, window-scoped keys, safeArray, AbortSignal forwarding, vehicle enablement and STALE_TIMES.FAST; internal\\api\\router.go:3463-3464 registers driveHandler.ListByVehicle.",
+      "behavior": "One capped request; no pagination or outside-window predecessor request. Server filtering, ordering, returned completeness and actual payload were not exercised. Hook clamps the limit to 1..1000.",
+      "trust": "Page derives historical useDataState, passes only fatalError into sections, and retains data on failed/paused refresh alongside StaleRefreshWarning.",
+      "citations": ["web\\src\\features\\driving\\pages\\ColdStartPage.tsx:35-50", "web\\src\\api\\hooks\\useDriving.ts:104-128", "internal\\api\\router.go:3463-3464"]
+    },
+    {
+      "hook": "useSelectedVehicle / useRangeState",
+      "file": "web\\src\\features\\driving\\pages\\ColdStartPage.tsx",
+      "line": 35,
+      "endpoint": null,
+      "sourceOwnership": "Existing workspace hooks and header controls; /cold-start is listed in web\\src\\lib\\workspaceScope.ts:34.",
+      "behavior": "No second vehicle or range picker. No vehicle returns NoVehicleSelected. The page requests start/end calendar strings rather than the hook's precise startInstant/endInstantExclusive contract.",
+      "citations": ["web\\src\\features\\driving\\pages\\ColdStartPage.tsx:35-46", "web\\src\\hooks\\useRangeState.ts:12-14,84-89,114-127", "web\\src\\lib\\workspaceScope.ts:34"]
+    },
+    {
+      "hook": "summarizeColdStarts(drives)",
+      "file": "web\\src\\features\\driving\\lib\\coldStart.ts",
+      "line": 232,
+      "endpoint": null,
+      "sourceOwnership": "Driving domain deterministic model, not a backend analytics endpoint.",
+      "behavior": "Sorts valid starts chronologically. Measured finite positive energy and distance >=1000 m qualify. Gap uses preceding returned drive's end or duration fallback. Warm <=3600 s, cold >=21600 s, intervening gaps ambiguous. Invalid/negative gaps and missing predecessor remain unclassified. Cohorts are distance weighted; aggregate delta requires >=5 drives per cohort. UTC monthly descriptive rollups, five gap buckets, measured-temperature cold/warm scatter and top positive drive-level baseline differences remain distinct.",
+      "citations": ["web\\src\\features\\driving\\lib\\coldStart.ts:12-21,125-177,179-230,232-336"]
+    },
+    {
+      "hook": "useFormatting / useColdStartDisplay / useNumberFormatting / useTranslation",
+      "file": "web\\src\\features\\driving\\pages\\ColdStartPage.tsx",
+      "line": 37,
+      "endpoint": null,
+      "sourceOwnership": "Existing currency/settings, useUnits display preferences, numeric formatting and localization owners.",
+      "behavior": "Cost exists only when penalty energy and a finite usable configured positive rate are available by the page's current checks; page checks rate non-null and >0, not explicit finiteness. Wh becomes kWh only for configured electricity-rate arithmetic. Display helper converts Wh/km to selected distance efficiency; raw drive m/Wh/s/C are retained. Model's derived Wh/km is an explicit existing aggregate contract, not a new wire field.",
+      "citations": ["web\\src\\features\\driving\\pages\\ColdStartPage.tsx:37,51-57", "web\\src\\features\\driving\\components\\cold-start\\useColdStartDisplay.ts:10-60", "web\\src\\features\\driving\\components\\cold-start\\TemperatureEfficiencyChart.tsx:30-56"]
+    }
+  ],
+  "components": [
+    {
+      "kind": "layout",
+      "name": "PageLayout / Grid / FadeIn",
+      "ownerFile": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+      "citations": ["web\\src\\features\\driving\\pages\\ColdStartPage.tsx:75-141", "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx:5-17"],
+      "detail": "Existing PageContainer adapter preserves full width/min-w-0/container composition; three default-one/xl-five-column analysis rows with 3/2 spans. Four entrance groups. Motion implementation was not inspected or exercised."
+    },
+    {
+      "kind": "composite",
+      "name": "ColdStartBrief -> DrivingSummaryBrief -> OperationalBrief / useOperationalMetrics",
+      "ownerFile": "web\\src\\features\\driving\\components\\operationalbrief-a-m\\ColdStartBrief.tsx",
+      "citations": ["web\\src\\features\\driving\\components\\operationalbrief-a-m\\ColdStartBrief.tsx:13-49", "web\\src\\features\\driving\\components\\operationalbrief-a-m\\DrivingSummaryBrief.tsx:25-50"],
+      "detail": "Four raw-source metrics, observed scope/provenance, nullable difference/energy/share, returned versus retained status and retry. Comparison also uses NestedDrivingBrief for three cohort measurements. Shared OperationalBrief internals and generic signed-efficiency handling are unverified."
+    },
+    {
+      "kind": "domain",
+      "name": "ColdWarmComparison / ColdStartMethodology / ColdStartOpportunities",
+      "ownerFile": "web\\src\\features\\driving\\components\\cold-start\\index.ts",
+      "citations": ["web\\src\\features\\driving\\components\\cold-start\\ColdWarmComparison.tsx:77-190", "web\\src\\features\\driving\\components\\cold-start\\ColdStartMethodology.tsx:45-137", "web\\src\\features\\driving\\components\\cold-start\\ColdStartOpportunities.tsx:69-153"],
+      "detail": "Three named region GlassPanels retain methodology, coverage, cap warning, weighted comparison, two MetricBars, recommendations and ranked top-five opportunities. UI primitives include Badge, HelpTooltip, PanelTitle, Text, MetricValue and MetricLabel."
+    },
+    {
+      "kind": "chart",
+      "name": "MonthlyColdStartChart / ParkingGapDistribution / TemperatureEfficiencyChart -> ChartContainer",
+      "ownerFile": "web\\src\\components\\charts\\ChartContainer.tsx",
+      "citations": ["web\\src\\features\\driving\\components\\cold-start\\MonthlyColdStartChart.tsx:57-197", "web\\src\\features\\driving\\components\\cold-start\\ParkingGapDistribution.tsx:82-165", "web\\src\\features\\driving\\components\\cold-start\\TemperatureEfficiencyChart.tsx:72-196", "web\\src\\components\\charts\\ChartContainer.tsx:650-845"],
+      "detail": "Category chart imports; monthly cold/warm consumption lines plus sample bars; five labeled gap buckets with shares; cold/warm temperature scatter with distance marker size and freezing reference. Named accessible figures, dataColumns/fallback tables, image export and monthly/temperature chart keys exist. exportData and fullscreen are not supplied by these callsites; do not infer CSV or fullscreen as existing page actions."
+    },
+    {
+      "kind": "state",
+      "name": "ColdStartSectionBody / StaleRefreshWarning / QueryError / EmptyState / Skeleton / NoVehicleSelected",
+      "ownerFile": "web\\src\\features\\driving\\components\\cold-start\\ColdStartSectionBody.tsx",
+      "citations": ["web\\src\\features\\driving\\components\\cold-start\\ColdStartSectionBody.tsx:24-45", "web\\src\\features\\driving\\pages\\ColdStartPage.tsx:59-82", "web\\src\\components\\feedback\\StaleRefreshWarning.tsx:55-120"],
+      "detail": "Per-panel loading/fatal-error gates retain shells; charts use own local branches. Shared retained-data notice distinguishes blocked offline refresh and refresh failure, with retry and polite live status."
+    }
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\driving\\components\\cold-start\\ColdStartKpis.tsx",
+      "line": 26,
+      "rule": "MDC-002/MDC-033",
+      "detail": "Original four-card KPI renderer remains barrel-exported, while this mounted page uses ColdStartBrief. Brief imports its props through a type-only ComponentProps dependency; this does not mount the older renderer. Repository-wide unusedness was not investigated.",
+      "fix": "Keep the current OperationalBrief pipeline authoritative for this page; assess other callers before removing or moving the existing prop contract. Do not revive the older cards as a modernization shortcut.",
+      "owner": "integration",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\driving\\components\\cold-start\\ColdStartSectionBody.tsx",
+      "line": 24,
+      "rule": "MDC-026",
+      "detail": "Non-chart domain panels reuse a domain state gate; the three charts independently repeat local fatal/empty branches inside ChartContainer.",
+      "fix": "Prefer existing ChartContainer error/onRetry/empty contracts where behavior is equivalent, while retaining each source-specific empty explanation and complete fallback/export behavior; no new state library.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "responsive": {
+    "verified": "Source only; no viewport or mounted visual validation.",
+    "existingStrategy": "Analysis rows stack until xl, then become 3/2 spans. Panel padding changes at sm; comparison's inner content reflows at lg. Charts use ResponsiveContainer and bounded shared viewports. No domain sections are omitted on mobile.",
+    "issues": [
+      {
+        "file": "web\\src\\features\\driving\\components\\cold-start\\ColdStartMethodology.tsx",
+        "line": 75,
+        "rule": "MDC-043/MDC-014",
+        "detail": "Three confidence counters stay in fixed equal columns at every width. The opportunities metric row also stays grid-cols-3 at ColdStartOpportunities.tsx:126; long translated labels, energy strings and large counts may crowd at 320px or 200% text.",
+        "fix": "Validate narrow allocated width and text zoom; allow local wrapping/stacking at small widths without hiding the numerator/threshold, classified count, distance, temperature or energy.",
+        "owner": "page",
+        "confidence": "medium"
+      },
+      {
+        "file": "web\\src\\features\\driving\\components\\cold-start\\ParkingGapDistribution.tsx",
+        "line": 143,
+        "rule": "MDC-034/MDC-043",
+        "detail": "A fixed 112px category axis plus plot margins competes with narrow width. Monthly dual axes and top-right four-entry legend similarly constrain space; scatter has a 62px axis. Actual overlap is unverified.",
+        "fix": "Test all ten contract widths, shell allocation and long labels; use existing chart layout capabilities or local axis/legend reflow, preserving every series and data-table column.",
+        "owner": "page",
+        "confidence": "medium"
+      }
+    ],
+    "requiredViewports": [320,375,390,430,768,1024,1280,1440,1920,2560]
+  },
+  "accessibility": {
+    "verified": "Source semantics only; keyboard, assistive technology, target geometry, effective contrast, forced colors and reduced motion unverified.",
+    "strengths": [
+      "Named region panels and section labels; decorative local icons aria-hidden.",
+      "Charts supply localized ariaLabel and full dataColumns; ChartContainer:765-845 renders a semantic fallback table and exposes it under forced colors.",
+      "ColdStartSectionBody:33-40 gives initial loading role=status with localized label.",
+      "StaleRefreshWarning:102-120 supplies polite status and shared Button retry.",
+      "Monthly series and parking buckets have textual names/counts; temperature data table includes group, date, temperature, consumption and distance."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\driving\\components\\cold-start\\ColdWarmComparison.tsx",
+        "line": 138,
+        "rule": "MDC-026/MDC-040/MDC-045",
+        "detail": "Both cohort MetricBars pass missing whPerKm as 0 (also line 147). The visible sublabel is an em dash but shared MetricBar treats the input as a measurement and announces aria-valuenow=0. Shared MetricBar already supports null and a localized No reading state.",
+        "fix": "Pass the nullable cohort measurement directly; keep the shared null track/accessibility contract and avoid representing absent cohort consumption as measured zero.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\components\\charts\\ChartLegend.tsx",
+        "line": 116,
+        "rule": "MDC-040",
+        "detail": "The existing interactive legend overrides shared Button sizing with h-auto min-h-0 p-0. Monthly and temperature charts consume this owner; effective mobile touch size and spacing exceptions were not measured.",
+        "fix": "Shared owner to verify target size/spacing and focus for multi-series legends, then extend existing legend hit-area behavior only if needed; do not build a page-only legend.",
+        "owner": "shared",
+        "confidence": "medium"
+      }
+    ]
+  },
+  "states": {
+    "initial": "sourceState.status==='initial' suppresses measured summary operands, renders section skeletons and chart loading geometry; methodology/comparison badges are outside these loading gates.",
+    "noVehicle": "NoVehicleSelected replaces the page when vehicleId is null; the underlying drive query remains disabled.",
+    "empty": "Summary explicitly explains no usable known-gap drives; comparison has no-cohort empty; methodology no-returned-drive empty; each chart distinguishes its absent evidence; opportunities separate insufficient samples, nonpositive aggregate delta and no positive individual differences.",
+    "insufficient": "Consumption observations may remain descriptive; aggregate delta and energy remain null until >=5 observations in each cohort. Monthly trends explicitly do not establish monthly penalties.",
+    "unknown": "Missing temperatures remain null and are omitted from scatter, not mapped to 0 C. Missing efficiency displays an em dash, except the MetricBar accessibility defect recorded once above. Missing rate suppresses cost.",
+    "fatalError": "fatalError only drives section gates and independent retry controls; page query is also supplied for shared freshness display, not as an explicit page-wide error replacement.",
+    "staleOffline": "useDataState and StaleRefreshWarning keep returned data under refresh failure or paused/offline refresh. Main summary receives retained=true; the nested comparison brief is not passed retained, so can say Returned evidence beside a global retained warning.",
+    "partial": "One drive source; partial/unavailable options are not supplied. Missing temperature and unclassified drives are described through analytical coverage, not independent backend source statuses.",
+    "issues": [
+      {
+        "file": "web\\src\\features\\driving\\components\\cold-start\\ColdStartMethodology.tsx",
+        "line": 56,
+        "rule": "MDC-026/MDC-025",
+        "detail": "Confidence badge renders before initial/fatal content gate. Initial/fatal empty summary therefore displays More samples needed even though the source has not successfully returned. The comparison badge at ColdWarmComparison.tsx:111 is inside its state gate and does not share this exact issue.",
+        "fix": "Retain badge position but derive loading/unavailable labels from section state before sample confidence; only claim insufficient samples from returned observations.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\driving\\components\\cold-start\\ColdWarmComparison.tsx",
+        "line": 118,
+        "rule": "MDC-026",
+        "detail": "NestedDrivingBrief supports retained but this caller does not receive/pass it; retained comparisons may announce Returned evidence while the top summary and warning identify retained data.",
+        "fix": "Thread the existing derived source trust into the domain comparison and pass retained to NestedDrivingBrief, without replacing retained measurements on refresh error.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ]
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\driving\\components\\cold-start\\ColdWarmComparison.tsx",
+      "line": 79,
+      "rule": "MDC-010/MDC-015; mission sections 5-7",
+      "detail": "Comparison panel adds a cyan-to-emerald gradient wash beyond the shared neutral surface. Cohort MetricBars also inherit gradient fill by default. Scoped source scan found one gradient declaration and no explicit neon/glow/pure-white patterns in the nine mounted page/domain TSX files; this is not composed-theme or palette acceptance.",
+      "fix": "Use the existing neutral panel surface and, where appropriate, MetricBar fill=solid with established semantic/chart colors. Preserve cohort distinction, saved chart palettes and existing Matrix/neon preference identities; do not globally reset user preferences.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\driving\\components\\cold-start\\ParkingGapDistribution.tsx",
+      "line": 29,
+      "rule": "MDC-010/MDC-034; mission section 43",
+      "detail": "Five parking buckets use five CHART_COLORS, while monthly/temperature use shared cohort colors. These are existing palette-backed data distinctions, not proof of fluorescent output; actual saturation, contrast and visual noise were not inspected in a browser.",
+      "fix": "Review composed palettes before acceptance. Subdue non-data decoration and, only if needed, adopt existing palette semantics without losing five strata or cold/warm legend identity; preserve labels and accessible tables.",
+      "owner": "integration",
+      "confidence": "medium"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\features\\driving\\pages\\ColdStartPage.tsx",
+      "line": 38,
+      "rule": "MDC-032/MDC-045",
+      "detail": "Registered workspace-range page requests calendar start/end instead of startInstant/endInstantExclusive. The shared hook documents precise rolling bounds and calendar timezone conversion; calendar strings cannot preserve a rolling 24-hour instant window. Vehicle-specific timezone is not provided at this callsite.",
+      "fix": "Consume existing precise bounds and the established vehicle timezone source, send both through useDrives and show accurate scope; retain cap disclosure and missing predecessor behavior. Verify backend exclusive instant filtering rather than assuming it.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\driving\\components\\cold-start\\ColdWarmComparison.tsx",
+      "line": 92,
+      "rule": "MDC-026/MDC-045; observational data trust",
+      "detail": "Help says comparing cohorts isolates the battery/cabin warm-up penalty; takeaway at lines 166-181 attributes warm-up overhead. The model only groups by parking gap and distance weights; temperature scatter is descriptive, not temperature/route/cabin conditioning or causal identification. ColdStartBrief explicitly says not a causal test.",
+      "fix": "Align existing localized explanations with observed cohort differences and conditional recommendations, retain thresholds/confidence/temperature context, and do not add invented adjusted models or guaranteed savings.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\driving\\components\\cold-start\\ColdWarmComparison.tsx",
+      "line": 6,
+      "rule": "MDC-002 category ownership",
+      "detail": "StatMetric type is imported from data-display/stat-reference rather than the category barrel; the two domain briefs similarly reference that implementation path. This audit did not inspect whether the category barrel re-exports every required type.",
+      "fix": "Use the existing category type contract if exported; otherwise request a narrowly owned shared type export, not another stats implementation.",
+      "owner": "integration",
+      "confidence": "high"
+    }
+  ],
+  "priority": {
+    "level": "P1",
+    "reason": "Resolve shared-range bound fidelity, unknown-as-zero accessible consumption, contradictory retained-source labels and overly causal explanation before cosmetic adoption.",
+    "next": "P2 neutral comparison styling, mobile confidence/opportunity reflow and shared legend touch review.",
+    "runtimeAcceptance": "Unverified; source audit is not implementation or acceptance."
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "Existing ChartLegend touch/focus acceptance",
+      "existingOwnerFile": "web\\src\\components\\charts\\ChartLegend.tsx",
+      "propsVariantsStates": "Interactive legend using chartKey context: active/hidden, aria-pressed, visible keyboard focus, long translated labels and mobile hit targets. Measure existing h-auto/min-h-0/p-0 geometry before deciding whether an API or style change is needed.",
+      "usedBy": ["MonthlyColdStartChart", "TemperatureEfficiencyChart"],
+      "dependsOn": ["ChartContainer chartKey and ChartHiddenSeriesContext", "shared Button", "MDC-040 mobile target/spacing contract"],
+      "owner": "shared",
+      "confidence": "medium"
+    },
+    {
+      "name": "Existing stats category type export confirmation",
+      "existingOwnerFile": "web\\src\\components\\data-display\\index.ts",
+      "propsVariantsStates": "Confirm existing exports of StatMetric and StatPeriod for domain brief contracts; export existing definitions only if absent. No replacement formatter or stats component.",
+      "usedBy": ["ColdStartBrief", "ColdWarmComparison", "DrivingSummaryBrief", "NestedDrivingBrief"],
+      "dependsOn": ["existing stat-reference types", "useOperationalMetrics", "MDC-002/MDC-033"],
+      "owner": "integration",
+      "confidence": "medium"
+    }
+  ],
+  "competingImplementations": [
+    {
+      "file": "web\\src\\features\\driving\\components\\cold-start\\ColdStartKpis.tsx",
+      "line": 26,
+      "rule": "MDC-002/MDC-033",
+      "detail": "Same four measures have an original MetricCard renderer and the mounted OperationalBrief adapter. The original is type-coupled and barrel-exported but not mounted by this page.",
+      "fix": "Do not introduce a third summary pipeline or reintroduce older KPI cards; other-caller discovery belongs to integration before cleanup.",
+      "owner": "integration",
+      "confidence": "high"
+    }
+  ],
+  "preservation": {
+    "sourceHash": "BD430F497FB59791EC306B81692489F3AF1A133E5FB6B44072578926E03F966A",
+    "hashAlgorithm": "SHA-256 of the exact root-relative page bytes",
+    "currentLineCount": 144,
+    "mountedPageAndDomainTsxLineCount": 1285,
+    "lineCountScope": "Page plus ColdStartBrief, six domain panels and ColdStartSectionBody. Shared helpers, old unmounted KPI renderer and analytical model excluded; source snapshot only, not a historical equivalence baseline.",
+    "sectionCount": 7,
+    "sections": [
+      {"name":"Cold start summary metrics","count":1,"file":"web\\src\\features\\driving\\pages\\ColdStartPage.tsx","line":85,"preserve":"Four summary metrics: signed penalty, nonnegative estimated extra Wh, cold share, analyzed drives; currency context, scope, provenance and retained status."},
+      {"name":"Cold and warm aggregate comparison","count":1,"file":"web\\src\\features\\driving\\pages\\ColdStartPage.tsx","line":96,"preserve":"Three cohort metrics, two bars, signed percentage delta, sample support, withheld difference, help and conditional preconditioning explanation."},
+      {"name":"Confidence and methodology","count":1,"file":"web\\src\\features\\driving\\pages\\ColdStartPage.tsx","line":102,"preserve":"Cold/5 and warm/5, classified count, ambiguous/unclassified coverage, gap rules, >=1km eligibility, weighting and 1000-drive cap warning."},
+      {"name":"Monthly cold and warm trend","count":1,"file":"web\\src\\features\\driving\\pages\\ColdStartPage.tsx","line":114,"preserve":"UTC month groups, two consumption lines with null gaps, two sample bars, dual axes, legend state and export/fallback columns."},
+      {"name":"Parking-gap classification coverage","count":1,"file":"web\\src\\features\\driving\\pages\\ColdStartPage.tsx","line":119,"preserve":"Warm <=1h, ambiguous 1-6h, cold 6-12h, 12-24h and >=24h; counts, shares and source ordering."},
+      {"name":"Temperature and consumption evidence","count":1,"file":"web\\src\\features\\driving\\pages\\ColdStartPage.tsx","line":130,"preserve":"Actual measured temperature and per-drive consumption split cold/warm; distance marker size, converted freezing reference, dates, units, hidden-series controls and accessible data."},
+      {"name":"Top cold-start opportunities","count":1,"file":"web\\src\\features\\driving\\pages\\ColdStartPage.tsx","line":135,"preserve":"Top five positive drive-level differences, deterministic rank, date, preceding gap, distance, nullable temperature and above-baseline Wh; distinct empty reasons."}
+    ],
+    "counts": {"pageGlassPanel":0,"pageChartContainer":0,"mountedDomainGlassPanel":3,"mountedDomainChartContainer":3,"summaryMetrics":4,"comparisonMetrics":3,"comparisonBars":2,"parkingGapBuckets":5,"monthlySeries":4,"temperatureSeries":2,"analysisGridRows":3},
+    "actions": [
+      "Existing workspace vehicle selection and header View settings; no competing page pickers.",
+      "Source/section retry and non-blocking stale/offline refresh via existing query refetch.",
+      "Cold/warm methodology help via HelpTooltip.",
+      "Monthly and temperature legend toggles using existing chartKey/hidden-series persistence.",
+      "Chart image export (PNG/SVG/clipboard via shared chart owner) when successful non-loading evidence exists; no supplied exportData CSV contract or explicit fullscreen action at these callsites.",
+      "Opportunity entries are observational ranked content, not drive links, vehicle commands or production actions."
+    ],
+    "dataBehavior": [
+      "Preserve raw SI m, s, Wh and C in drive data/cache/model; display conversions only at existing unit/format boundaries. Keep derived Wh/km aggregate and numeric stats bridge /1000 to Wh/m.",
+      "Preserve query key scope, cancellation, vehicle enablement, safeArray and existing cache/retry/stale policies.",
+      "Analyze returned selected window only, not guaranteed full range/lifetime. Preserve <=1000 cap disclosure, first-drive predecessor uncertainty and no invented external predecessor.",
+      "Retain actual measured temperature strata; do not invent temperature bands, adjusted causal cohorts, confidence intervals or matched-route comparisons absent from current model.",
+      "Retain invalid-start filtering, distance >=1000m, finite positive energy, chronological predecessor matching, invalid/negative gap exclusion and ambiguous band.",
+      "Preserve >=5 each support threshold, nullable withheld claims, signed cold-minus-warm delta, nonnegative total estimated extra energy and opportunities only for supported positive penalty.",
+      "Preserve weighted baseline, UTC month semantics, drive counts and separate descriptive monthly versus supported aggregate claims.",
+      "Preserve stable chart keys, series identity, unit/locale settings, missing-value dashes, existing ordered lists and all specialist explanations.",
+      "Never discard retained data on refresh failure/offline; unavailable is not zero, fixture data or causal proof."
+    ]
+  },
+  "evidenceLimits": {
+    "mode": "Read-only source audit; only assigned JSON and heartbeat written. No source edits, Git, production actions, nested agents or full-project validation.",
+    "route": "Lazy import App.tsx:147 and SafeRoute registration App.tsx:849 inspected by scoped search; authenticated route mount unverified.",
+    "runtime": "Unverified: no server/browser/API calls, screenshots, visual comparison, keyboard/focus, screen reader, contrast, viewport, chart exports/legend interaction, offline simulation or reduced-motion run.",
+    "backend": "Router registration inspected; handler, database query, ordering, cap enforcement, exclusive instant filtering and real payload not inspected or exercised.",
+    "shared": "Selected existing shared source contracts inspected, not a foundations audit. OperationalBrief formatter internals, theme palettes, NoVehicleSelected and FadeIn implementation were not inspected.",
+    "checks": [
+      {
+        "command": "PowerShell Get-FileHash -Algorithm SHA256 'web\\src\\features\\driving\\pages\\ColdStartPage.tsx'; (Get-Content <same path>).Count",
+        "exitCode": 0,
+        "output": "SHA256 BD430F497FB59791EC306B81692489F3AF1A133E5FB6B44072578926E03F966A; 144"
+      },
+      {
+        "command": "Scoped PowerShell Select-String counts on the page, ColdStartBrief and seven mounted cold-start domain TSX files; patterns rawControls/directLibraries/oldAPI/inlineStyles/neonGlowWhite/gradient plus GlassPanel/ChartContainer and Get-Content line counts",
+        "exitCode": 0,
+        "output": "rawControls: 0\ndirectLibraries: 0\noldAPI: 0\ninlineStyles: 0\nneonGlowWhite: 0\ngradient: 1\nColdStartPage.tsx: 144\nColdStartMethodology.tsx: 137\nColdStartOpportunities.tsx: 153\nColdStartSectionBody.tsx: 45\nColdWarmComparison.tsx: 190\nMonthlyColdStartChart.tsx: 201\nParkingGapDistribution.tsx: 167\nTemperatureEfficiencyChart.tsx: 198\nColdStartBrief.tsx: 50\nmounted GlassPanel: 3\nmounted ChartContainer: 3",
+        "limits": "Counts are pattern observations, not complete rule, theme or runtime acceptance. 1285 total scoped lines."
+      }
+    ],
+    "notRun": [
+      "audit-violations/audit.sh inspected but not run because it unconditionally invokes whole-project TypeScript; current Phase 0/parallel contract excludes that gate.",
+      "npx tsc --noEmit, lint, builds and test suites not run; centralized runtime/acceptance validation belongs to the parent."
+    ]
+  },
+  "filesRead": [
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-mission.md",
+    "docs\\frontend-audits\\audit-page-103.json",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\driving\\pages\\ColdStartPage.tsx",
+    "web\\src\\features\\driving\\lib\\coldStart.ts",
+    "web\\src\\features\\driving\\components\\cold-start\\index.ts",
+    "web\\src\\features\\driving\\components\\cold-start\\types.ts",
+    "web\\src\\features\\driving\\components\\cold-start\\useColdStartDisplay.ts",
+    "web\\src\\features\\driving\\components\\cold-start\\ColdStartKpis.tsx",
+    "web\\src\\features\\driving\\components\\cold-start\\ColdStartMethodology.tsx",
+    "web\\src\\features\\driving\\components\\cold-start\\ColdStartOpportunities.tsx",
+    "web\\src\\features\\driving\\components\\cold-start\\ColdStartSectionBody.tsx",
+    "web\\src\\features\\driving\\components\\cold-start\\ColdWarmComparison.tsx",
+    "web\\src\\features\\driving\\components\\cold-start\\MonthlyColdStartChart.tsx",
+    "web\\src\\features\\driving\\components\\cold-start\\ParkingGapDistribution.tsx",
+    "web\\src\\features\\driving\\components\\cold-start\\TemperatureEfficiencyChart.tsx",
+    "web\\src\\features\\driving\\components\\operationalbrief-a-m\\ColdStartBrief.tsx",
+    "web\\src\\features\\driving\\components\\operationalbrief-a-m\\DrivingSummaryBrief.tsx",
+    "web\\src\\features\\driving\\components\\operationalbrief-a-m\\NestedDrivingBrief.tsx",
+    "web\\src\\api\\hooks\\useDriving.ts",
+    "web\\src\\hooks\\useRangeState.ts",
+    "web\\src\\hooks\\useDataState.ts",
+    "web\\src\\api\\dataState.ts",
+    "web\\src\\components\\charts\\ChartContainer.tsx",
+    "web\\src\\components\\charts\\ChartLegend.tsx",
+    "web\\src\\components\\data-display\\MetricBar.tsx",
+    "web\\src\\components\\feedback\\StaleRefreshWarning.tsx",
+    "web\\src\\components\\layout\\PageContainer.tsx",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\App.tsx",
+    "internal\\api\\router.go"
+  ]
+}

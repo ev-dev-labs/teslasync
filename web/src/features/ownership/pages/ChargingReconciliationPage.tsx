@@ -10,7 +10,7 @@ import {
 } from '@/api/hooks/useOwnership';
 import { AlertBanner } from '@/components/feedback';
 
-import { PageContainer } from '@/components/layout';
+import { PageLayout } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
 import { Badge, Button, ConfirmDialog, DataTable, Input, Text, Textarea } from '@/components/ui';
 import type { Column } from '@/components/ui';
@@ -19,7 +19,8 @@ import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useUnits } from '@/hooks/useUnits';
 import { formatDateTime, isoUtcToLocalDatetimeInput, localDatetimeInputToIso } from '@/lib/dateFormat';
-import { fmtNumber } from '@/lib/numberFormat';
+import { downloadCSV, downloadJSON, objectsToCSV, type CsvCellValue } from '@/lib/csvExport';
+
 import type {
   ChargingInvoice,
   InvoiceLine,
@@ -32,10 +33,12 @@ import {
   MoneyInput,
   MutationError,
   OwnershipPanel,
-  StatGrid,
   VerdictBadge,
 } from '../components';
+import { OwnershipBrief } from '../components/operationalbrief-all/OwnershipBrief';
+import { specialistDisplay } from '../components/operationalbrief-all/specialistDisplay';
 import { formatCurrencyMinor, formatPct, formatSpan, fromDateInput, toDateInput } from '../formatters';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 function blankLine(): InvoiceLine {
   return {
@@ -51,7 +54,17 @@ function blankLine(): InvoiceLine {
   };
 }
 
+function exportSourceRows(
+  format: 'csv' | 'json',
+  filename: string,
+  rows: readonly Record<string, CsvCellValue>[],
+) {
+  if (format === 'csv') downloadCSV(filename, objectsToCSV(rows));
+  else downloadJSON(filename, rows);
+}
+
 export default function ChargingReconciliationPage() {
+  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const { vehicleId } = useSelectedVehicle();
   const units = useUnits();
@@ -69,7 +82,7 @@ export default function ChargingReconciliationPage() {
   });
   const [dispute, setDispute] = useState({ claimed_minor: 0, note: '', reasons: [] as string[] });
 
-  usePageTitle(t('ownership.reconcile.title', 'Charging Invoice Reconciliation'));
+  usePageTitle(t('ownership.reconcile.title', 'Charging invoice reconciliation'));
 
   const invoicesQuery = useChargingInvoices(vehicleId, 50, 0);
   const reportQuery = useReconciliationReport(activeInvoice);
@@ -95,6 +108,20 @@ export default function ChargingReconciliationPage() {
   const openDispute = useCreateDispute(activeInvoice);
 
   const invoices = useMemo(() => invoicesQuery.data?.items ?? [], [invoicesQuery.data?.items]);
+  const exportInvoices = (format: 'csv' | 'json') => {
+    const rows = invoices.map((row) => ({
+      invoice_ref: row.invoice_ref,
+      provider: row.provider,
+      period_start: row.period_start,
+      period_end: row.period_end,
+      billed_total_minor: row.billed_total_minor,
+      currency: row.currency,
+      line_count: row.line_count,
+      status: row.status,
+    }));
+    if (format === 'csv') downloadCSV('charging-invoices', objectsToCSV(rows));
+    else downloadJSON('charging-invoices', rows);
+  };
   const report = reportQuery.data;
   const currency = report?.invoice.currency ?? draft.currency;
   const money = (minor: number | null | undefined) =>
@@ -163,6 +190,7 @@ export default function ChargingReconciliationPage() {
     {
       key: 'total',
       header: t('ownership.reconcile.invoice.total', 'Billed'),
+      align: 'right',
       render: (row) => (
         <span className="tabular-nums">
           {formatCurrencyMinor(row.billed_total_minor, row.currency, units.unitPrefs.locale)}
@@ -173,7 +201,8 @@ export default function ChargingReconciliationPage() {
     {
       key: 'lines',
       header: t('ownership.reconcile.invoice.lines', 'Lines'),
-      render: (row) => <span className="tabular-nums">{fmtNumber(row.line_count, 0)}</span>,
+      align: 'right',
+      render: (row) => <span className="tabular-nums">{fmtInt(row.line_count)}</span>,
     },
     {
       key: 'status',
@@ -210,6 +239,8 @@ export default function ChargingReconciliationPage() {
     {
       key: 'ref',
       header: t('ownership.reconcile.line.ref', 'Line'),
+      filterValue: (row) => row.line.id,
+      filterValueLabel: (_value, row) => row.line.line_ref || t('ownership.reconcile.line.unnamed', 'Unnamed line'),
       render: (row) => (
         <div>
           <Text as="p" variant="label">
@@ -223,12 +254,13 @@ export default function ChargingReconciliationPage() {
     },
     {
       key: 'match',
+      filterValue: (row) => row.match_state,
       header: t('ownership.reconcile.line.match', 'Match'),
       render: (row) => (
         <div className="flex items-center gap-2">
           <VerdictBadge value={row.match_state} />
           <span className="tabular-nums text-xs text-[var(--text-muted)]">
-            {formatPct(row.match_confidence_pct, 0)}
+            {formatPct(row.match_confidence_pct)}
           </span>
         </div>
       ),
@@ -236,6 +268,9 @@ export default function ChargingReconciliationPage() {
     },
     {
       key: 'billedEnergy',
+      align: 'right',
+      filterValue: (row) => row.line.billed_energy_wh,
+      filterValueLabel: (_value, row) => units.formatEnergy(row.line.billed_energy_wh),
       header: t('ownership.reconcile.line.billedEnergy', 'Billed energy'),
       render: (row) => (
         <span className="tabular-nums">{units.formatEnergy(row.line.billed_energy_wh)}</span>
@@ -243,6 +278,9 @@ export default function ChargingReconciliationPage() {
     },
     {
       key: 'measuredEnergy',
+      align: 'right',
+      filterValue: (row) => row.measured_energy_wh,
+      filterValueLabel: (_value, row) => row.measured_energy_wh != null ? units.formatEnergy(row.measured_energy_wh) : '—',
       header: t('ownership.reconcile.line.measuredEnergy', 'Measured energy'),
       render: (row) =>
         row.measured_energy_wh != null ? (
@@ -253,6 +291,9 @@ export default function ChargingReconciliationPage() {
     },
     {
       key: 'energyDelta',
+      align: 'right',
+      filterValue: (row) => row.energy_delta_pct,
+      filterValueLabel: (_value, row) => row.energy_delta_pct != null ? formatPct(row.energy_delta_pct) : '—',
       header: t('ownership.reconcile.line.energyDelta', 'Energy Δ'),
       render: (row) =>
         row.energy_delta_pct != null ? (
@@ -267,22 +308,34 @@ export default function ChargingReconciliationPage() {
     },
     {
       key: 'timeDelta',
+      align: 'right',
+      filterValue: (row) => row.time_delta_s,
+      filterValueLabel: (_value, row) => row.time_delta_s != null ? formatSpan(row.time_delta_s) : '—',
       header: t('ownership.reconcile.line.timeDelta', 'Time Δ'),
       render: (row) => (row.time_delta_s != null ? formatSpan(row.time_delta_s) : '—'),
     },
     {
       key: 'billed',
       header: t('ownership.reconcile.line.billed', 'Billed'),
+      align: 'right',
+      filterValue: (row) => row.line.billed_total_minor,
+      filterValueLabel: (_value, row) => money(row.line.billed_total_minor),
       render: (row) => <span className="tabular-nums">{money(row.line.billed_total_minor)}</span>,
     },
     {
       key: 'expected',
       header: t('ownership.reconcile.line.expected', 'Expected'),
+      align: 'right',
+      filterValue: (row) => row.expected_cost_minor,
+      filterValueLabel: (_value, row) => money(row.expected_cost_minor),
       render: (row) => <span className="tabular-nums">{money(row.expected_cost_minor)}</span>,
     },
     {
       key: 'variance',
       header: t('ownership.reconcile.line.variance', 'Variance'),
+      align: 'right',
+      filterValue: (row) => row.variance_minor,
+      filterValueLabel: (_value, row) => money(row.variance_minor),
       render: (row) => (
         <span
           className={`tabular-nums ${row.variance_minor > 0 ? 'text-rose-300' : row.variance_minor < 0 ? 'text-emerald-300' : ''}`}
@@ -321,11 +374,13 @@ export default function ChargingReconciliationPage() {
     {
       key: 'lines',
       header: t('ownership.reconcile.bucket.lines', 'Lines'),
-      render: (row) => <span className="tabular-nums">{fmtNumber(row.line_count, 0)}</span>,
+      align: 'right',
+      render: (row) => <span className="tabular-nums">{fmtInt(row.line_count)}</span>,
     },
     {
       key: 'amount',
       header: t('ownership.reconcile.bucket.amount', 'Amount'),
+      align: 'right',
       render: (row) => (
         <span className={`tabular-nums ${row.amount_minor > 0 ? 'text-rose-300' : ''}`}>
           {money(row.amount_minor)}
@@ -336,6 +391,7 @@ export default function ChargingReconciliationPage() {
     {
       key: 'share',
       header: t('ownership.reconcile.bucket.share', 'Share of variance'),
+      align: 'right',
       render: (row) => (
         <div className="min-w-[7rem]">
           <div className="h-1.5 w-full overflow-hidden rounded-full bg-[var(--surface-2)]">
@@ -369,6 +425,8 @@ export default function ChargingReconciliationPage() {
   const uninvoicedColumns: Column<UninvoicedSession>[] = [
     {
       key: 'session',
+      filterValue: (row) => row.session_id,
+      filterValueLabel: (_value, row) => `#${row.session_id}`,
       header: t('ownership.reconcile.uninvoiced.session', 'Session'),
       render: (row) => (
         <div>
@@ -383,12 +441,16 @@ export default function ChargingReconciliationPage() {
     },
     {
       key: 'location',
+      filterValue: (row) => row.location || null,
       header: t('ownership.reconcile.uninvoiced.location', 'Location'),
       render: (row) => row.location || '—',
     },
     {
       key: 'energy',
       header: t('ownership.reconcile.uninvoiced.energy', 'Measured energy'),
+      align: 'right',
+      filterValue: (row) => row.energy_wh,
+      filterValueLabel: (_value, row) => units.formatEnergy(row.energy_wh),
       render: (row) => <span className="tabular-nums">{units.formatEnergy(row.energy_wh)}</span>,
       sortable: true,
     },
@@ -404,14 +466,13 @@ export default function ChargingReconciliationPage() {
   ];
 
   return (
-    <PageContainer
-      title={t('ownership.reconcile.title', 'Charging Invoice Reconciliation')}
+    <PageLayout
+      title={t('ownership.reconcile.title', 'Charging invoice reconciliation')}
       subtitle={t(
         'ownership.reconcile.subtitle',
         'Match every billed line against the session your car actually recorded, attribute the variance to a cause, and assemble a dispute packet you can send to the provider.',
       )}
-      loading={invoicesQuery.isLoading}
-      error={invoicesQuery.error as Error | null}
+      query={[invoicesQuery, reportQuery]}
     >
       <AlertBanner
         variant="info"
@@ -426,6 +487,9 @@ export default function ChargingReconciliationPage() {
       <FadeIn>
         <OwnershipPanel
           title={t('ownership.reconcile.invoices.title', 'Provider statements')}
+          source={invoicesQuery}
+          sourceEnabled={vehicleId != null}
+          editing={importOpen}
           description={t(
             'ownership.reconcile.invoices.subtitle',
             'Import a statement, then pick one to audit line by line.',
@@ -636,17 +700,17 @@ export default function ChargingReconciliationPage() {
             keyExtractor={(row) => row.id}
             tableId="ownership-reconcile-invoices"
             exportable
-            exportFilename="charging-invoices"
-            exportRow={(row) => ({
-              invoice_ref: row.invoice_ref,
-              provider: row.provider,
-              period_start: row.period_start,
-              period_end: row.period_end,
-              billed_total_minor: row.billed_total_minor,
-              currency: row.currency,
-              line_count: row.line_count,
-              status: row.status,
-            })}
+            controls={{
+              exports: {
+                onExportCsv: () => exportInvoices('csv'),
+                onExportJson: () => exportInvoices('json'),
+                disabled: invoices.length === 0,
+                description: t(
+                  'ownership.reconcile.invoices.exportScope',
+                  'Exports include all loaded statements, not the server total, with original fields and ISO currency minor amounts, regardless of table search or visible columns.',
+                ),
+              },
+            }}
             emptyMessage={t('ownership.reconcile.invoices.empty', 'No statements imported yet for this vehicle.')}
           />
           <MutationError error={remove.error} />
@@ -656,68 +720,88 @@ export default function ChargingReconciliationPage() {
       <FadeIn delay={0.05}>
         <OwnershipPanel
           title={t('ownership.reconcile.audit.title', 'Reconciliation result')}
+          source={reportQuery}
+          sourceEnabled={activeInvoice != null}
           description={t(
             'ownership.reconcile.audit.subtitle',
             'Net variance is what the provider owes you (positive) or what you under-paid (negative).',
           )}
           empty={!report}
+          preserveSummary
           emptyMessage={t(
             'ownership.reconcile.audit.empty',
             'Select a statement above to run the audit.',
           )}
         >
-          <StatGrid
-            stats={[
+          <OwnershipBrief
+            title={t('ownership.reconcile.brief.title', 'Statement amounts and variance')}
+            description={t('ownership.reconcile.audit.subtitle', 'Net variance is what the provider owes you (positive) or what you under-paid (negative).')}
+            scope={t('ownership.reconcile.brief.scope', 'Selected statement and matched telemetry; amounts retain the statement currency')}
+            source={reportQuery} enabled={activeInvoice != null}
+            window={report ? { from: report.invoice.period_start, to: report.invoice.period_end } : undefined}
+            metrics={[
               {
-                key: 'billed',
+                occurrenceId: 'billed', metricId: 'currency',
                 label: t('ownership.reconcile.stat.billed', 'Billed total'),
-                value: money(report?.billed_total_minor),
+                rawValue: report?.billed_total_minor,
+                display: specialistDisplay(money),
               },
               {
-                key: 'expected',
+                occurrenceId: 'expected', metricId: 'currency',
                 label: t('ownership.reconcile.stat.expected', 'Expected from telemetry'),
-                value: money(report?.expected_total_minor),
+                rawValue: report?.expected_total_minor,
+                display: specialistDisplay(money),
               },
               {
-                key: 'variance',
+                occurrenceId: 'variance', metricId: 'currency',
                 label: t('ownership.reconcile.stat.variance', 'Net variance'),
-                value: money(report?.net_variance_minor),
+                rawValue: report?.net_variance_minor,
+                display: specialistDisplay(money),
                 tone: (report?.net_variance_minor ?? 0) > 0 ? 'critical' : 'positive',
               },
               {
-                key: 'recoverable',
+                occurrenceId: 'recoverable', metricId: 'currency',
                 label: t('ownership.reconcile.stat.recoverable', 'Disputable amount'),
-                value: money(report?.recoverable_minor),
+                rawValue: report?.recoverable_minor,
+                display: specialistDisplay(money),
                 tone: (report?.recoverable_minor ?? 0) > 0 ? 'warning' : 'default',
               },
             ]}
           />
           <div className="mt-3">
-            <StatGrid
-              columns={4}
-              stats={[
+            <OwnershipBrief
+              title={t('ownership.reconcile.energyBrief.title', 'Statement matching and energy')}
+              description={t('ownership.reconcile.energyBrief.description', 'Matched and unmatched lines remain separate; measured energy is retained beside the energy variance.')}
+              scope={t('ownership.reconcile.brief.scope', 'Selected statement and matched telemetry; amounts retain the statement currency')}
+              source={reportQuery} enabled={activeInvoice != null}
+              window={report ? { from: report.invoice.period_start, to: report.invoice.period_end } : undefined}
+              metrics={[
                 {
-                  key: 'matched',
+                  occurrenceId: 'matched', metricId: 'count',
                   label: t('ownership.reconcile.stat.matched', 'Matched lines'),
-                  value: fmtNumber(report?.matched_line_count ?? 0, 0),
+                  rawValue: report?.matched_line_count,
+                  display: specialistDisplay(fmtInt),
                   tone: 'positive',
                 },
                 {
-                  key: 'unmatched',
+                  occurrenceId: 'unmatched', metricId: 'count',
                   label: t('ownership.reconcile.stat.unmatched', 'Unmatched lines'),
-                  value: fmtNumber(report?.unmatched_line_count ?? 0, 0),
+                  rawValue: report?.unmatched_line_count,
+                  display: specialistDisplay(fmtInt),
                   tone: (report?.unmatched_line_count ?? 0) > 0 ? 'warning' : 'default',
                 },
                 {
-                  key: 'billedEnergy',
+                  occurrenceId: 'billedEnergy', metricId: 'energy',
                   label: t('ownership.reconcile.stat.billedEnergy', 'Billed energy'),
-                  value: units.formatEnergy(report?.billed_energy_wh ?? 0),
+                  rawValue: report?.billed_energy_wh,
+                  display: specialistDisplay(units.formatEnergy),
                 },
                 {
-                  key: 'energyVariance',
+                  occurrenceId: 'energyVariance', metricId: 'energy',
                   label: t('ownership.reconcile.stat.energyVariance', 'Energy variance'),
-                  value: units.formatEnergy(report?.energy_variance_wh ?? 0),
-                  hint: units.formatEnergy(report?.measured_energy_wh ?? 0),
+                  rawValue: report?.energy_variance_wh,
+                  display: specialistDisplay(units.formatEnergy),
+                  context: report?.measured_energy_wh == null ? '—' : units.formatEnergy(report.measured_energy_wh),
                 },
               ]}
             />
@@ -728,6 +812,8 @@ export default function ChargingReconciliationPage() {
       <FadeIn delay={0.1}>
         <OwnershipPanel
           title={t('ownership.reconcile.lines.title', 'Line-by-line audit')}
+          source={reportQuery}
+          sourceEnabled={activeInvoice != null}
           empty={lines.length === 0}
           emptyMessage={t(
             'ownership.reconcile.lines.empty',
@@ -736,28 +822,29 @@ export default function ChargingReconciliationPage() {
         >
           <DataTable
             columns={lineColumns}
+            enableValueFilters
             mobileColumns={['ref', 'match', 'variance']}
             data={lines}
             keyExtractor={(row) => row.line.id || row.line.line_ref}
             tableId="ownership-reconcile-lines"
             exportable
             exportFilename="charging-reconciliation-lines"
-            exportRow={(row) => ({
+            onExport={(format, rows) => exportSourceRows(format, 'charging-reconciliation-lines', rows.map((row) => ({
               line_ref: row.line.line_ref,
-              location: row.line.location ?? '',
+              location: row.line.location,
               occurred_at: row.line.occurred_at,
               match_state: row.match_state,
               match_confidence_pct: row.match_confidence_pct,
               billed_energy_wh: row.line.billed_energy_wh,
-              measured_energy_wh: row.measured_energy_wh ?? '',
-              energy_delta_pct: row.energy_delta_pct ?? '',
-              time_delta_s: row.time_delta_s ?? '',
+              measured_energy_wh: row.measured_energy_wh,
+              energy_delta_pct: row.energy_delta_pct,
+              time_delta_s: row.time_delta_s,
               billed_total_minor: row.line.billed_total_minor,
               expected_cost_minor: row.expected_cost_minor,
               variance_minor: row.variance_minor,
               recoverable: row.recoverable,
-              variance_reasons: (row.variance_reasons ?? []).join(' '),
-            })}
+              variance_reasons: row.variance_reasons,
+            })))}
           />
         </OwnershipPanel>
       </FadeIn>
@@ -765,6 +852,8 @@ export default function ChargingReconciliationPage() {
       <FadeIn delay={0.15}>
         <OwnershipPanel
           title={t('ownership.reconcile.buckets.title', 'Variance attribution')}
+          source={reportQuery}
+          sourceEnabled={activeInvoice != null}
           description={t(
             'ownership.reconcile.buckets.subtitle',
             'Every currency unit of disagreement is assigned a cause, so a dispute never rests on "the number looks wrong".',
@@ -784,14 +873,14 @@ export default function ChargingReconciliationPage() {
             tableId="ownership-reconcile-buckets"
             exportable
             exportFilename="charging-variance-attribution"
-            exportRow={(row) => ({
+            onExport={(format, rows) => exportSourceRows(format, 'charging-variance-attribution', rows.map((row) => ({
               category: row.label,
               reason: row.reason,
               line_count: row.line_count,
               amount_minor: row.amount_minor,
               share_pct: row.share_pct,
               recoverable: row.recoverable,
-            })}
+            })))}
           />
         </OwnershipPanel>
       </FadeIn>
@@ -799,6 +888,8 @@ export default function ChargingReconciliationPage() {
       <FadeIn delay={0.2}>
         <OwnershipPanel
           title={t('ownership.reconcile.uninvoiced.title', 'Sessions the provider never billed')}
+          source={reportQuery}
+          sourceEnabled={activeInvoice != null}
           description={t(
             'ownership.reconcile.uninvoiced.subtitle',
             'Measured sessions inside the billing period with no matching line. Usually free or home charging — occasionally a statement that is genuinely incomplete.',
@@ -811,19 +902,20 @@ export default function ChargingReconciliationPage() {
         >
           <DataTable
             columns={uninvoicedColumns}
+            enableValueFilters
             mobileColumns={['session', 'location', 'energy']}
             data={uninvoiced}
             keyExtractor={(row) => row.session_id}
             tableId="ownership-reconcile-uninvoiced"
             exportable
             exportFilename="charging-uninvoiced-sessions"
-            exportRow={(row) => ({
+            onExport={(format, rows) => exportSourceRows(format, 'charging-uninvoiced-sessions', rows.map((row) => ({
               session_id: row.session_id,
               started_at: row.started_at,
-              location: row.location ?? '',
+              location: row.location,
               energy_wh: row.energy_wh,
               narrative: row.narrative,
-            })}
+            })))}
           />
         </OwnershipPanel>
       </FadeIn>
@@ -831,6 +923,9 @@ export default function ChargingReconciliationPage() {
       <FadeIn delay={0.25}>
         <OwnershipPanel
           title={t('ownership.reconcile.dispute.title', 'Dispute desk')}
+          source={reportQuery}
+          sourceEnabled={activeInvoice != null}
+          editing={disputeOpen}
           description={t(
             'ownership.reconcile.dispute.subtitle',
             'The packet digest fixes exactly which lines and measurements your claim rests on.',
@@ -942,6 +1037,8 @@ export default function ChargingReconciliationPage() {
 
       <FadeIn delay={0.3}>
         <EvidencePanel
+          source={reportQuery}
+          sourceEnabled={activeInvoice != null}
           quality={report?.quality}
           evidence={report?.evidence}
           unsupported={[
@@ -957,6 +1054,6 @@ export default function ChargingReconciliationPage() {
         />
       </FadeIn>
       {dialogProps && <ConfirmDialog {...dialogProps} />}
-    </PageContainer>
+    </PageLayout>
   );
 }

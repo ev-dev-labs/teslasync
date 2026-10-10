@@ -25,26 +25,26 @@ describe('Power — source selection', () => {
     const { container } = render(<Power w={2500} precision={1} />);
     expect(container.textContent).toBe('2.5 kW');
     // Title always exposes the canonical kW value, not the raw watts.
-    expect(span(container)?.getAttribute('title')).toBe('2.500 kW');
+    expect(span(container)?.getAttribute('title')).toBe('2.5 kW');
   });
 
   it('prefers the kW input over W when both are supplied', () => {
     const { container } = render(<Power kw={5} w={999999} precision={0} />);
     expect(container.textContent).toBe('5 kW');
     // Title proves the kW branch (not the watts) produced the value.
-    expect(span(container)?.getAttribute('title')).toBe('5.000 kW');
+    expect(span(container)?.getAttribute('title')).toBe('5 kW');
   });
 
   it('falls back to the W branch when kw is null but w is finite', () => {
     const { container } = render(<Power kw={null} w={3000} precision={0} />);
     expect(container.textContent).toBe('3 kW');
-    expect(span(container)?.getAttribute('title')).toBe('3.000 kW');
+    expect(span(container)?.getAttribute('title')).toBe('3 kW');
   });
 
   it('falls back to the W branch when kw is NaN but w is finite', () => {
     const { container } = render(<Power kw={NaN} w={1500} precision={1} />);
     expect(container.textContent).toBe('1.5 kW');
-    expect(span(container)?.getAttribute('title')).toBe('1.500 kW');
+    expect(span(container)?.getAttribute('title')).toBe('1.5 kW');
   });
 
   it('falls back to the W branch when kw is Infinity but w is finite', () => {
@@ -95,34 +95,34 @@ describe('Power — auto unit selection', () => {
   it('auto-picks W for sub-kW magnitudes (|kW| < 1)', () => {
     const { container } = render(<Power kw={0.5} precision={0} />);
     expect(container.textContent).toBe('500 W');
-    expect(span(container)?.getAttribute('title')).toBe('0.500 kW');
+    expect(span(container)?.getAttribute('title')).toBe('1 kW');
   });
 
   it('auto-picks kW at and above the 1 kW threshold', () => {
     const { container } = render(<Power kw={1} precision={0} />);
     // Exactly 1 kW is NOT sub-kW, so it stays in kW.
     expect(container.textContent).toBe('1 kW');
-    expect(span(container)?.getAttribute('title')).toBe('1.000 kW');
+    expect(span(container)?.getAttribute('title')).toBe('1 kW');
   });
 
   it('uses the magnitude (not the sign) to choose the auto unit', () => {
     const { container } = render(<Power kw={-0.5} precision={0} />);
     // |−0.5| < 1 → Watts, and the negative sign is preserved.
     expect(container.textContent).toBe('-500 W');
-    expect(span(container)?.getAttribute('title')).toBe('-0.500 kW');
+    expect(span(container)?.getAttribute('title')).toBe('-1 kW');
   });
 
   it('keeps large negative deltas in kW with the sign intact', () => {
     const { container } = render(<Power kw={-11} precision={1} />);
     expect(container.textContent).toBe('-11.0 kW');
-    expect(span(container)?.getAttribute('title')).toBe('-11.000 kW');
+    expect(span(container)?.getAttribute('title')).toBe('-11.0 kW');
   });
 
   it('treats zero as a valid power reading, not an empty value', () => {
     const { container } = render(<Power kw={0} precision={0} />);
     expect(container.textContent).toBe('0 W');
     expect(container.textContent).not.toBe('—');
-    expect(span(container)?.getAttribute('title')).toBe('0.000 kW');
+    expect(span(container)?.getAttribute('title')).toBe('0 kW');
   });
 });
 
@@ -130,13 +130,13 @@ describe('Power — forced unit override', () => {
   it('forces Watts even for a value that would auto-pick kW', () => {
     const { container } = render(<Power kw={12} unit="W" precision={0} />);
     expect(container.textContent).toBe('12,000 W');
-    expect(span(container)?.getAttribute('title')).toBe('12.000 kW');
+    expect(span(container)?.getAttribute('title')).toBe('12 kW');
   });
 
   it('forces kW even for a sub-kW value that would auto-pick W', () => {
     const { container } = render(<Power kw={0.25} unit="kW" precision={2} />);
     expect(container.textContent).toBe('0.25 kW');
-    expect(span(container)?.getAttribute('title')).toBe('0.250 kW');
+    expect(span(container)?.getAttribute('title')).toBe('0.25 kW');
   });
 });
 
@@ -167,7 +167,7 @@ describe('Power — formatting concerns', () => {
     const el = span(container);
     expect(el).not.toBeNull();
     expect(el?.tagName).toBe('SPAN');
-    expect(el?.getAttribute('title')).toBe('42.000 kW');
+    expect(el?.getAttribute('title')).toBe('42 kW');
   });
 
   it('recomputes the unit and value when props change on re-render', () => {

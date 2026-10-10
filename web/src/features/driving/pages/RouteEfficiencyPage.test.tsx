@@ -198,6 +198,12 @@ import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useUnits } from '@/hooks/useUnits';
 import RouteEfficiencyPage from './RouteEfficiencyPage';
 
+vi.mock('@/components/layout', async (importActual) => {
+  const actual = await importActual<typeof import('@/components/layout')>();
+  const charts = await import('@/components/charts');
+  return { ...actual, ChartCard: charts.ChartContainer };
+});
+
 const mockRouteEff = useRouteEfficiency as unknown as ReturnType<typeof vi.fn>;
 const mockSelected = useSelectedVehicle as unknown as ReturnType<typeof vi.fn>;
 const mockUnits = useUnits as unknown as ReturnType<typeof vi.fn>;
@@ -314,10 +320,10 @@ function renderPage(initialEntries: string[] = ['/route-efficiency?from=2026-01-
 const kpiRegion = () => screen.getByRole('region', { name: 'Route efficiency summary metrics' });
 const cardsRegion = () => screen.getByRole('region', { name: 'Most-driven routes' });
 
-/** Read a KPI MetricCard's value <p> given its label, scoped to the KPI band. */
+/** Read the real OperationalBrief value for a labelled source metric. */
 function kpiValue(label: string): string {
   const labelEl = within(kpiRegion()).getByText(label);
-  return labelEl.closest('p')?.nextElementSibling?.textContent ?? '';
+  return labelEl.closest('[data-operational-metric]')?.querySelector('[data-operational-value]')?.textContent ?? '';
 }
 
 beforeEach(() => {
@@ -339,10 +345,26 @@ describe('RouteEfficiencyPage — no vehicle selected', () => {
     const empties = screen.getAllByText('Select a vehicle to see route efficiency');
     // One in the Route Metrics panel, one in the route-cards section.
     expect(empties.length).toBeGreaterThanOrEqual(2);
+    expect(screen.queryByTestId('chart-loading')).not.toBeInTheDocument();
     // No route endpoints are rendered when there is nothing to show.
     expect(screen.queryByText('Beach')).not.toBeInTheDocument();
     expect(screen.queryByRole('navigation', { name: 'Pagination' })).not.toBeInTheDocument();
     // The AI panel is handed no id when the fleet is unselected.
+    expect(screen.getByTestId('ai-suggestions')).toHaveAttribute('data-vehicle-id', '');
+  });
+
+  it('does not attribute a retained vehicle response to an unselected workspace', () => {
+    mockSelected.mockReturnValue(selected(null));
+    mockRouteEff.mockReturnValue(makeQuery({
+      data: { routes: ROUTES }, isError: true, error: new Error('previous vehicle refresh'),
+    }));
+    renderPage();
+
+    expect(screen.getAllByText('Select a vehicle to see route efficiency').length).toBeGreaterThanOrEqual(2);
+    expect(screen.queryByTestId('chart-loading')).not.toBeInTheDocument();
+    expect(within(cardsRegion()).queryByText('Beach')).not.toBeInTheDocument();
+    expect(kpiValue('Routes')).toBe('—');
+    expect(within(kpiRegion()).getByText('Routes').closest('[data-operational-metric]')).toHaveAttribute('data-value-state', 'missing');
     expect(screen.getByTestId('ai-suggestions')).toHaveAttribute('data-vehicle-id', '');
   });
 });
@@ -354,8 +376,9 @@ describe('RouteEfficiencyPage — loading', () => {
 
     expect(screen.getByTestId('chart-loading')).toBeInTheDocument();
     expect(screen.queryByTestId('chart-empty')).not.toBeInTheDocument();
-    // While loading, the KPI band shows skeletons — the "Routes" tile is withheld.
-    expect(within(kpiRegion()).queryByText('Routes')).not.toBeInTheDocument();
+    expect(kpiRegion()).toHaveAttribute('aria-busy', 'true');
+    expect(within(kpiRegion()).getByText('Routes')).toBeInTheDocument();
+    expect(kpiRegion().querySelectorAll('[data-operational-value]')).toHaveLength(0);
     // The no-data empty copy must not appear during loading.
     expect(screen.queryByText('No route data')).not.toBeInTheDocument();
     expect(screen.queryByRole('navigation', { name: 'Pagination' })).not.toBeInTheDocument();
@@ -381,8 +404,8 @@ describe('RouteEfficiencyPage — error', () => {
     fireEvent.click(retries[0]);
     expect(refetch).toHaveBeenCalledTimes(1);
 
-    // The KPI band shows the error, not the metric tiles.
-    expect(within(kpiRegion()).queryByText('Total Trips')).not.toBeInTheDocument();
+    expect(within(kpiRegion()).getByText('Total Trips').closest('[data-operational-metric]')).toHaveAttribute('data-value-state', 'missing');
+    expect(kpiValue('Total Trips')).toBe('—');
     expect(screen.queryByRole('navigation', { name: 'Pagination' })).not.toBeInTheDocument();
   });
 
@@ -411,13 +434,14 @@ describe('RouteEfficiencyPage — populated (km)', () => {
     expect(screen.getByRole('heading', { name: 'Route Efficiency', level: 1 })).toBeInTheDocument();
     expect(kpiValue('Routes')).toBe('3');
     expect(kpiValue('Total Trips')).toBe(String(TOTAL_TRIPS));
-    expect(kpiValue('Best')).toBe(String(BEST_WH_KM));
-    expect(kpiValue('Avg')).toBe(String(AVG_WH_KM));
-    expect(kpiValue('Worst')).toBe(String(WORST_WH_KM));
+    expect(kpiValue('Best')).toBe(`${BEST_WH_KM} Wh/km`);
+    expect(kpiValue('Avg')).toBe(`${AVG_WH_KM} Wh/km`);
+    expect(kpiValue('Worst')).toBe(`${WORST_WH_KM} Wh/km`);
     // routes[0] is the most-driven under the API's trip-count-desc ordering.
     expect(kpiValue('Most-driven')).toBe('12');
     // The efficiency tiles carry the km unit subtitle.
-    expect(within(kpiRegion()).getAllByText('Wh/km').length).toBeGreaterThanOrEqual(3);
+    expect(kpiRegion().querySelectorAll('[data-operational-value]')).toHaveLength(6);
+    expect(['Best', 'Avg', 'Worst'].map(kpiValue).every((value) => value.endsWith(' Wh/km'))).toBe(true);
   });
 
   it('renders the comparison chart lowest-consumption-first with km headers', () => {
@@ -452,10 +476,10 @@ describe('RouteEfficiencyPage — unit boundary (mi)', () => {
     mockUnits.mockReturnValue(units('mi'));
     renderPage();
 
-    expect(within(kpiRegion()).getAllByText('Wh/mi').length).toBeGreaterThanOrEqual(3);
+    expect(['Best', 'Avg', 'Worst'].map(kpiValue).every((value) => value.endsWith(' Wh/mi'))).toBe(true);
     expect(within(kpiRegion()).queryByText('Wh/km')).not.toBeInTheDocument();
     // Best 130 Wh/km → 130 * 1.609344 → 209 Wh/mi.
-    expect(kpiValue('Best')).toBe(String(Math.round(BEST_WH_KM * KM_PER_MILE)));
+    expect(kpiValue('Best')).toBe(`${Math.round(BEST_WH_KM * KM_PER_MILE)} Wh/mi`);
     // The chart headers follow the same preference.
     expect(screen.getByText('Avg Wh/mi')).toBeInTheDocument();
   });

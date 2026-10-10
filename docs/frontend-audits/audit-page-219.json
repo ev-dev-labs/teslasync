@@ -1,0 +1,442 @@
+{
+  "item": "audit-page-219",
+  "page": "web\\src\\features\\vehicle-systems\\pages\\ComfortConsistencyPage.tsx",
+  "routes": ["/comfort-consistency"],
+  "purpose": "Read-only evidence-qualified cabin-to-setpoint adherence, stabilization and overshoot analysis of the returned climate timeline.",
+  "primaryGoal": "Understand comfort consistency while distinguishing measured support, excluded rows, continuity gaps, censored windows and unavailable analytical layers.",
+  "dataSources": [
+    {
+      "hook": "useClimateHistory(vehicleIdStr)",
+      "file": "web\\src\\api\\hooks\\useVehicleSystems.ts",
+      "line": 37,
+      "endpoint": "/api/v1/climate?vehicle_id=<selected vehicle>",
+      "routeEvidence": "internal\\api\\router.go:4116-4118 mounts GET /climate/ and /climate/latest; no double client prefix.",
+      "owner": "integration",
+      "sourceOwner": "internal\\api\\climate\\handler.go:79-115, signal.StateReader.Timeline",
+      "behavior": "History from the signal-log timeline; forward-folded state is explicitly not independent sensor measurements. Server defaults to now minus seven calendar days through now and supports ParseDateRange start/end. Current hook supplies neither bound, forwards AbortSignal, enables only for a nonempty vehicle ID, preserves the climate/history/vehicleId key and uses safeArray.",
+      "trust": "Page derives historical DataState and separates fatalError, retained refreshError and paused fetches. No age threshold is invented.",
+      "units": "Cabin/setpoint temperatures remain Celsius and durations seconds in analysis. Temperature differences use convertTempFromSI(value)-convertTempFromSI(0) at the display boundary; duration display uses useUnits. Confidence/share ratios become displayed percentages only in presentation.",
+      "limits": "Backend timeline implementation, live requests, database filtering, row completeness and actual payloads were not exercised."
+    },
+    {
+      "hook": "useSelectedVehicle",
+      "file": "web\\src\\hooks\\useSelectedVehicle.ts",
+      "line": 48,
+      "endpoint": "Indirect fleet lookup through useVehicles; its request implementation was not inspected.",
+      "owner": "shared",
+      "sourceOwner": "Existing URL/store/fleet workspace selection",
+      "behavior": "URL path/query selection precedes persisted selection then first known fleet vehicle. Page consumes vehicleId without adding a local selector. workspaceScope allows the vehicle picker for this route but not the date-range control.",
+      "limits": "Fleet loading/error behavior and actual header selection interaction were not exercised."
+    },
+    {
+      "hook": "summarizeComfortConsistency",
+      "file": "web\\src\\features\\vehicle-systems\\lib\\comfortConsistency.ts",
+      "line": 434,
+      "endpoint": null,
+      "owner": "page",
+      "sourceOwner": "Pure domain derivation from returned rows",
+      "behavior": "Ordered row eligibility, first-returned duplicate policy, chronological sorting, mean available front-row setpoint, HVAC normalization, qualified step intervals, browser-local hour splitting, active fragments, sustained-band windows, disclosed confidence shrinkage, exact identities and capped newest-first window directory. No synthetic telemetry."
+    }
+  ],
+  "components": [
+    {
+      "name": "PageLayout / PageContainer",
+      "kind": "layout",
+      "ownerFile": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+      "props": ["title", "subtitle", "query", "children", "busy", "announce"],
+      "variants": ["existing compactHeader default"],
+      "states": ["header freshness", "read-only operational mode", "source notices"],
+      "usedBy": ["ComfortConsistencyPage"],
+      "dependsOn": ["web\\src\\components\\layout\\PageContainer.tsx"]
+    },
+    {
+      "name": "LayoutCard",
+      "kind": "composite",
+      "ownerFile": "web\\src\\components\\layout\\layout-reference\\LayoutCard.tsx",
+      "props": ["title", "description", "actions", "footer", "size", "children"],
+      "variants": ["size defaults to full"],
+      "states": ["labelled card", "wrapping header", "description help when supplied"],
+      "usedBy": ["Fourteen comfort-consistency sections"],
+      "dependsOn": ["Card", "Heading", "Text", "Tooltip", "CardPlacementContext"]
+    },
+    {
+      "name": "VehicleOperationalBrief / SourceAvailabilityBrief",
+      "kind": "domain adapter over existing shared composite",
+      "ownerFile": "web\\src\\features\\vehicle-systems\\components\\operationalbrief-all\\VehicleOperationalBrief.tsx",
+      "props": ["id", "title", "metrics", "period", "preferences", "loading", "retained", "available", "error", "embedded", "footer"],
+      "variants": ["embedded source-summary wording", "compact OperationalBrief"],
+      "states": ["loading", "returned", "retained", "unavailable", "unknown"],
+      "usedBy": ["Evidence ledger", "Source availability", "Coverage/cadence", "Row disposition", "Interval composition", "Setpoint agreement", "Stabilization outcomes", "Score decomposition", "Boundary accounting", "Data availability"],
+      "dependsOn": ["web\\src\\components\\data-display\\OperationalBrief.tsx", "useOperationalMetrics", "web\\src\\features\\vehicle-systems\\components\\operationalbrief-all\\SourceAvailabilityBrief.tsx"]
+    },
+    {
+      "name": "EmbeddedChart / ChartContainer",
+      "kind": "composite",
+      "ownerFile": "web\\src\\components\\charts\\EmbeddedChart.tsx",
+      "props": ["title", "ariaLabel", "data", "dataColumns", "toolbar", "exportable", "size", "height", "mobileHeight", "metadata"],
+      "variants": ["embedded", "standard size"],
+      "states": ["loading", "error", "empty", "fallback data table", "image export"],
+      "usedBy": ["Hourly profile", "Deviation distribution", "Overshoot distribution"],
+      "dependsOn": ["web\\src\\components\\charts\\ChartContainer.tsx", "chartTokens", "ChartTooltip", "ResponsiveContainer"]
+    },
+    {
+      "name": "ComfortConsistencySectionBody / QueryStatus",
+      "kind": "domain evidence-state owner",
+      "ownerFile": "web\\src\\features\\vehicle-systems\\components\\comfort-consistency\\ComfortConsistencySectionBody.tsx",
+      "props": ["summary", "state", "requirement", "skeletonHeight", "className", "children"],
+      "variants": ["none", "timestamps", "samples", "intervals", "runs", "windows"],
+      "states": ["no vehicle", "initial loading", "fatal error", "pending", "insufficient gate", "retained content"],
+      "usedBy": ["Thirteen analytical panels; methodology stays mounted independently"],
+      "dependsOn": ["web\\src\\features\\vehicle-systems\\components\\comfort-consistency\\ComfortConsistencyQueryStatus.tsx", "Skeleton", "Text", "QueryError", "AlertBanner", "web\\src\\features\\vehicle-systems\\components\\VehicleSourcePause.tsx"]
+    },
+    {
+      "name": "FadeIn",
+      "kind": "motion primitive",
+      "ownerFile": "web\\src\\components\\motion\\FadeIn.tsx",
+      "props": ["delay", "className", "children"],
+      "variants": [],
+      "states": ["normal entrance", "reduced motion with initial=false and ignored delay"],
+      "usedBy": ["All fifteen root sections"],
+      "dependsOn": ["useMotionPreference"]
+    }
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\vehicle-systems\\components\\comfort-consistency\\ComfortConsistencyIntervalComposition.tsx",
+      "line": 48,
+      "rule": "MDC-002 / mission 4",
+      "detail": "Embedded VehicleOperationalBrief plus retained/source-period boilerplate repeats across analytical panels. This already has an existing domain adapter; it is not justification for another KPI or trust renderer.",
+      "fix": "Continue using VehicleOperationalBrief and SourceAvailabilityBrief; any future simplification must retain per-panel source explanations and specialist formatters.",
+      "owner": "page",
+      "confidence": "high",
+      "issue": false
+    },
+    {
+      "file": "web\\src\\features\\vehicle-systems\\components\\comfort-consistency\\ComfortConsistencyThresholdGateMatrix.tsx",
+      "line": 22,
+      "rule": "MDC-002 / mission 4",
+      "detail": "Gate, Quantile, Identity and Detail share small label/value tile structures but carry distinct affected counts, equations, balance states and boundary metadata.",
+      "fix": "Keep domain-local composition with existing Text/MetricLabel/Grid. Do not invent a universal tile without independent consumer evidence; preserve every distinct field.",
+      "owner": "page",
+      "confidence": "high",
+      "issue": false
+    }
+  ],
+  "responsive": {
+    "verified": false,
+    "sourceObservations": [
+      "PageLayout uses w-full/min-w-0 and a container context; LayoutCard retains min-w-0 and wrapping headers.",
+      "Compact OperationalBrief stacks metrics at default width, then uses sm two columns, md three and six at 1920px.",
+      "Window directory uses two/four/eight detail columns and a bounded internal vertical scroll region; methodology uses one/two/three columns.",
+      "Three charts have explicit 280/300px heights and shared responsive sizing; hourly support uses two/four/six/eight columns."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\vehicle-systems\\components\\comfort-consistency\\ComfortConsistencyWindowDirectory.tsx",
+        "line": 123,
+        "rule": "MDC-043 / MDC-044",
+        "detail": "The detail directory starts at two columns and reaches eight based on viewport width; long translated boundary labels/date values have no explicit break-words/min-w-0 on the local Detail value. Narrow allocated widths and text zoom need deliberate review.",
+        "fix": "Use a one-column narrow-container fallback and wrapping values through the existing Grid/Text contracts, keeping all eight fields and newest-first ordering. Verify before changing a breakpoint.",
+        "owner": "page",
+        "confidence": "medium",
+        "evidenceLimit": "Source risk, not an observed overflow."
+      }
+    ],
+    "requiredChecks": ["320", "375", "390", "430", "768", "1024", "1280", "1440", "1920", "2560", "allocated container widths", "200% text", "long translations", "RTL"]
+  },
+  "accessibility": {
+    "verified": false,
+    "sourceObservations": [
+      "LayoutCard labels its shared Card with generated heading IDs.",
+      "All three charts supply ariaLabel and data/dataColumns through EmbeddedChart for the shared fallback-table pipeline.",
+      "Window entries use ol/li; methodology uses article; meaningful outcomes include text, not color alone.",
+      "Decorative icons are aria-hidden. QueryStatus has a polite loading status and refresh-error alert with shared retry Button.",
+      "FadeIn honors the existing motion preference in source; actual reduced-motion and low-bandwidth rendering is unverified."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\vehicle-systems\\components\\comfort-consistency\\ComfortConsistencyWindowDirectory.tsx",
+        "line": 88,
+        "rule": "MDC-040 / mission 30",
+        "detail": "The max-height overflow-y-auto window list has no explicit accessible scroll-region label or focus target. Entries themselves have no focusable controls; keyboard access to all capped entries must be checked on supported browsers.",
+        "fix": "Exercise keyboard scrolling first; if the region is not reachable, add a localized named focusable region using existing focus styling without changing list semantics or deleting the internal scroll.",
+        "owner": "page",
+        "confidence": "medium",
+        "evidenceLimit": "Keyboard failure not demonstrated."
+      }
+    ],
+    "requiredChecks": ["keyboard retry and chart menus", "Review details drawer open/close/focus restoration", "directory scrolling", "screen-reader hierarchy and chart tables", "44px targets or documented exception", "composed text/UI contrast", "forced colors", "reduced motion"]
+  },
+  "states": {
+    "verified": "source inspection only",
+    "loading": "Evidence ledger loading flag, QueryStatus polite spinner/banner and panel-specific Skeleton heights; sections remain mounted.",
+    "empty": "Resolved zero rows produce an explicit endpoint-empty statement. Chronological/sample/interval/run/window gates provide distinct passive explanations; counts are valid zero only after resolution.",
+    "fatalError": "QueryStatus mounts QueryError with refetch; SectionBody provides passive source-unavailable guidance rather than replacing the entire page.",
+    "refreshError": "Retained summaries remain visible; QueryStatus offers a warning and retry; briefs receive retained=true.",
+    "offline": "Paused query invokes VehicleSourcePause, distinguishes retained versus unresolved data, and does not infer an empty endpoint.",
+    "partial": "Availability matrix and evidence requirements distinguish analytical layers. No fabricated score for absent active samples; neutral components are disclosed domain methodology, not sensor measurements.",
+    "stale": "Page passes climateQuery to shared header freshness. DataState is used for failure/paused retention, not a new arbitrary age threshold.",
+    "issues": [
+      {
+        "file": "web\\src\\features\\vehicle-systems\\components\\comfort-consistency\\ComfortConsistencyRowDisposition.tsx",
+        "line": 39,
+        "rule": "MDC-026 / MDC-045",
+        "detail": "The Exact balance badge is outside SectionBody, so the summary derived from data ?? [] can announce balance before any endpoint result. The window-directory shown/total/omitted caption is likewise outside its gate (WindowDirectory:72), and methodology's warning publishes zero row/sample/window counts without query state (Methodology:114). These are unresolved-source values presented as observations.",
+        "fix": "Keep each section, its description and methodology visible. Gate only source-derived badges/count sentences on resolved retained evidence; otherwise render a localized unknown/loading/paused explanation. Resolved empty arrays may still report actual zero counts.",
+        "owner": "page",
+        "confidence": "high",
+        "relatedEvidence": [
+          "web\\src\\features\\vehicle-systems\\pages\\ComfortConsistencyPage.tsx:48-51",
+          "web\\src\\features\\vehicle-systems\\components\\comfort-consistency\\ComfortConsistencyWindowDirectory.tsx:72-82",
+          "web\\src\\features\\vehicle-systems\\components\\comfort-consistency\\ComfortConsistencyMethodology.tsx:107-119"
+        ]
+      }
+    ]
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\vehicle-systems\\components\\comfort-consistency\\ComfortConsistencyEvidenceKpiLedger.tsx",
+      "line": 55,
+      "rule": "MDC-010 / MDC-012 / mission 7",
+      "detail": "Six KPI contexts use fixed cyan, indigo and purple accents, with a semantic score branch in emerald/amber/rose. This introduces unnecessary multihue emphasis and fixed light-toned icon styling across themes; no explicit neon/glow/pure-white classes were found in the root or page-specific TSX components.",
+      "fix": "Use the existing muted text token for decorative metric icons; retain localized score confidence text and use established severity tokens only where score meaning is genuinely communicated. Do not replace every icon with a new bright accent.",
+      "owner": "page",
+      "confidence": "high",
+      "relatedEvidence": ["ComfortConsistencyEvidenceKpiLedger.tsx:68,78,89,97,105"],
+      "contrast": "unverified"
+    },
+    {
+      "file": "web\\src\\features\\vehicle-systems\\components\\comfort-consistency\\ComfortConsistencyDeviationDistribution.tsx",
+      "line": 102,
+      "rule": "MDC-010 / MDC-034 / mission 27",
+      "detail": "Three separate single-series plots select unrelated saturated blue/purple/amber entries from chartTokens.series (tokens.ts:401), despite having no multiseries differentiation need.",
+      "fix": "Use an existing subdued theme-aware token consistently for ordinary single-series evidence, retaining an amber semantic hue only when justified by outcome meaning. Coordinate any global palette change with its shared owner; do not alter persisted user chart/theme choices or remove series.",
+      "owner": "page",
+      "confidence": "high",
+      "relatedEvidence": [
+        "web\\src\\features\\vehicle-systems\\components\\comfort-consistency\\ComfortConsistencyHourlyProfile.tsx:99",
+        "web\\src\\features\\vehicle-systems\\components\\comfort-consistency\\ComfortConsistencyStabilizationOutcomes.tsx:144",
+        "web\\src\\lib\\tokens.ts:383-401"
+      ],
+      "contrast": "unverified"
+    },
+    {
+      "file": "web\\src\\features\\vehicle-systems\\components\\comfort-consistency\\ComfortConsistencyCoverageCadence.tsx",
+      "line": 49,
+      "rule": "MDC-015 / MDC-031 / mission 7",
+      "detail": "The embedded domain brief still mounts OperationalBrief's GlassPanel with border/surface/shadow and its own title, while the host LayoutCard already supplies panel/title chrome. This repeats in multiple metric-heavy sections and adds repeated Review details actions.",
+      "fix": "Have the existing brief owner add a real embedded presentation variant rather than creating another renderer. Preserve metrics, rich captions, source trust, accessible section headings and every details drawer/action; page adoption follows shared acceptance.",
+      "owner": "shared",
+      "confidence": "high",
+      "relatedEvidence": [
+        "web\\src\\features\\vehicle-systems\\components\\operationalbrief-all\\VehicleOperationalBrief.tsx:50-58",
+        "web\\src\\components\\data-display\\OperationalBrief.tsx:117-160",
+        "web\\src\\features\\vehicle-systems\\components\\comfort-consistency\\ComfortConsistencyIntervalComposition.tsx:48"
+      ]
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\features\\vehicle-systems\\pages\\ComfortConsistencyPage.tsx",
+      "line": 46,
+      "rule": "MDC-032 / workspace dated-route contract",
+      "detail": "This dated analysis does not consume useRangeState. /comfort-consistency is absent from RANGE_ENABLED_PATHS, and useClimateHistory accepts only vehicleId. Header range preferences/from/to URLs therefore do not scope this page, although the climate handler supports start/end.",
+      "fix": "Integrate the existing header range owner with both bounds through an optional bounded climate-history hook contract and range-aware query key. Keep the existing seven-day unbounded hook behavior for other callers; preserve current default semantics through an explicit integration decision rather than silently widening the data window. Update methodology to disclose the actual requested period. Never add a local range picker or client-filter only loaded rows.",
+      "owner": "integration",
+      "confidence": "high",
+      "relatedEvidence": [
+        "web\\src\\api\\hooks\\useVehicleSystems.ts:14,37-44",
+        "web\\src\\lib\\workspaceScope.ts:23-80,171-182",
+        "internal\\api\\climate\\handler.go:87-100",
+        "web\\src\\features\\vehicle-systems\\components\\comfort-consistency\\ComfortConsistencyMethodology.tsx:34"
+      ]
+    }
+  ],
+  "priority": {
+    "overall": "medium",
+    "first": "Correct pre-resolution observational badges/count captions without hiding sections.",
+    "next": "Coordinate range ownership and a shared embedded brief contract, then restrain decorative icon/chart hues.",
+    "acceptance": "Targeted state/formatting regression tests and browser QA after implementation; this audit is not runtime acceptance."
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "OperationalBrief embedded presentation",
+      "ownerFile": "web\\src\\components\\data-display\\OperationalBrief.tsx",
+      "owner": "shared",
+      "props": ["Add opt-in variant='embedded' alongside the preserved standalone default; keep metrics, title, statusLabel/statusTone, scope, freshness, provenance, loading and details action"],
+      "variants": ["standalone existing default", "embedded borderless/shadowless host composition with semantic heading"],
+      "states": ["loading suppresses both summary/drawer measurements", "unknown", "returned", "retained", "source unavailable", "drawer open/close"],
+      "usedBy": ["ComfortConsistencyCoverageCadence", "ComfortConsistencyIntervalComposition", "ComfortConsistencyScoreDecomposition", "ComfortConsistencyExactAccounting"],
+      "dependsOn": ["VehicleOperationalBrief must forward its existing embedded prop", "LayoutCard owns visible host chrome", "OperationalBrief focused regressions", "shared category export acceptance"],
+      "evidence": "OperationalBrief.tsx:117-160; VehicleOperationalBrief.tsx:50-58",
+      "constraint": "Consumers listed are source-confirmed panels on this one page, not evidence of two independent routed-page consumers. A designated shared owner must establish cross-page evidence before authoring an extension."
+    },
+    {
+      "name": "Workspace-bounded climate-history query",
+      "ownerFile": "web\\src\\api\\hooks\\useVehicleSystems.ts",
+      "owner": "integration",
+      "props": ["Optional start/end instant bounds derived from existing useRangeState; vehicleId remains required"],
+      "variants": ["existing unbounded seven-day server default", "explicit two-bound workspace range"],
+      "states": ["disabled without vehicle", "cancellable initial load", "resolved empty", "fatal error", "retained refresh failure", "paused offline"],
+      "usedBy": ["ComfortConsistencyPage"],
+      "dependsOn": ["workspaceScope range registration", "useRangeState existing boundary semantics", "climateHistory query-key extension only for bounded requests", "handler ParseDateRange behavior", "methodology period disclosure"],
+      "evidence": "useVehicleSystems.ts:37-44; climate/handler.go:87-100",
+      "constraint": "No routing/config/shared edits authorized to this audit. Existing other hook callers are not inventoried; preserve their current behavior."
+    }
+  ],
+  "competingImplementations": [
+    {
+      "file": "web\\src\\features\\vehicle-systems\\components\\comfort-consistency\\ComfortConsistencySectionBody.tsx",
+      "line": 48,
+      "rule": "MDC-002 / MDC-026",
+      "detail": "Domain state gating complements, rather than replaces, shared deriveDataState, SourceContent, Skeleton and QueryError. Its analytical requirements are specific to this summary.",
+      "fix": "Keep domain eligibility gates separate from shared query trust; do not introduce a second asynchronous-state framework.",
+      "owner": "page",
+      "confidence": "high",
+      "issue": false
+    }
+  ],
+  "preservation": {
+    "sourceHash": "9c50db51cea98ec2ea77fb47d3abd628632d2b71f39f571a4270123d08daab55",
+    "hashAlgorithm": "SHA-256",
+    "sourceFile": "web\\src\\features\\vehicle-systems\\pages\\ComfortConsistencyPage.tsx",
+    "lineCount": 204,
+    "pageSpecificPresentationTsxLines": 2027,
+    "pagePlusPresentationTsxLines": 2231,
+    "sectionCount": 15,
+    "sectionNames": [
+      "Evidence KPI ledger",
+      "Source and field availability",
+      "Chronological coverage and cadence",
+      "Returned-row disposition",
+      "Active interval comfort composition",
+      "Hourly comfort consistency and observed support",
+      "Absolute deviation distribution and quantiles",
+      "Front-row setpoint agreement",
+      "Stabilization and overshoot outcomes",
+      "Score decomposition and confidence",
+      "Threshold and gate matrix",
+      "Stabilization-window directory",
+      "Exact source, interval and window accounting",
+      "Data-availability matrix",
+      "Methodology and limitations"
+    ],
+    "sectionCounts": {
+      "rootDomainComponents": 15,
+      "pageSpecificSectionElements": 15,
+      "layoutCards": 14,
+      "embeddedCharts": 3,
+      "rootFadeInWrappers": 15
+    },
+    "actions": [
+      "Use workspace header vehicle selection without adding a competing picker.",
+      "Retry fatal, refresh-failed or paused climate history through existing refetch.",
+      "Shared header freshness refresh where supplied by PageContainer's query.",
+      "Review details for ten operational/source-summary briefs; preserve drawer metrics, narratives, provenance, focus behavior and close controls.",
+      "Three chart image-export toolbars: PNG/SVG/copy-image through the existing ChartContainer controller.",
+      "Scroll newest-first stabilization directory; retain its disclosed cap and omitted count.",
+      "Access page subtitle help and shared chart fallback tables."
+    ],
+    "actionLimits": "No page business mutation, annotation configuration, zoom/legend persistence, explicit fullscreen or CSV exportData supplied. Do not invent those as existing capabilities. Browser export and drawer functionality unverified.",
+    "dataInventory": [
+      "Six headline metrics: adjusted score, analyzed samples, observed active seconds, within-band duration share, duration-weighted deviation, stabilized-window share.",
+      "Eight source fields/support counts and percentages against unique timestamp-valid rows.",
+      "Coverage endpoints/span, median/P90/max cadence, known-HVAC share, cadence and long-gap counts.",
+      "Nine mutually exclusive returned-row outcomes and timestamp reconciliation.",
+      "Within/above/below/observed duration, weighted deviation, observed/candidate pairs and exclusion categories.",
+      "Twenty-four browser-local hourly buckets, within-band share and observed duration support.",
+      "Deviation sample bins; mean, median, P90 and duration-weighted mean.",
+      "Paired/one-sided sample counts, mean/median/P90 setpoint disagreement and above-gate share.",
+      "Active/in-band/outside/hot/cold/stabilized/censored fragment counts, median time-to-band and overshoot distribution.",
+      "Four score components and weights, sample/window confidence, raw and adjusted index, neutral shrinkage explanation.",
+      "Eight analytical thresholds and observed affected counts.",
+      "Window index/start/end/span/samples/start deviation/time-to-band/overshoot/direction/left and right boundaries/censoring.",
+      "Seven exact accounting identities plus five boundary categories.",
+      "Eight independently gated availability layers and support values.",
+      "Six methodology explanations and source-support disclaimer."
+    ],
+    "dataBehavior": [
+      "Raw payloads/query keys/retries/cancellation and selected vehicle remain authoritative.",
+      "Forward-filled climate rows are timeline states, not independent measurements.",
+      "First-returned duplicate retained; invalid rows and missing timestamp/thermal/HVAC evidence accounted independently.",
+      "Default comfort band 1.5 C; maximum positive interval gap 1800 s; sustained-band gate two samples; target-shift gate 2 C; disagreement gate 1 C.",
+      "Directory default cap 80, bounded maximum 200; cap affects display only, not aggregate calculations.",
+      "Step interval uses eligible interval-start state; no arbitrary bridging of oversized gaps or absent eligible start evidence.",
+      "Browser-local hourly splitting is existing analytical semantics; do not silently change timezone behavior.",
+      "Score weights 50/25/15/10 percent; missing agreement/stabilization evidence stays disclosed neutral; confidence shrinks toward 50.",
+      "Celsius differences are converted without an absolute-temperature offset; seconds use saved display formatting.",
+      "Unknown stays unknown; real resolved zero counts survive. Retained rows survive refresh failure/offline pause.",
+      "All panels remain reachable regardless of query state; no content removal justified by visual simplification."
+    ]
+  },
+  "evidenceLimits": {
+    "runtime": "unverified",
+    "visual": "unverified",
+    "keyboard": "unverified",
+    "contrast": "unverified",
+    "viewport": "unverified",
+    "backend": "Handler and route source only; no requests or database inspection.",
+    "validation": "Read-only audit; no TypeScript, tests, full lint, build, Git operations or source/config/catalog/queue edits.",
+    "auditScript": "Inspected audit.sh but did not execute it: its mandatory project-wide TypeScript phase conflicts with this Phase0 contract's serialized validation rule. Bounded source patterns were inspected directly instead.",
+    "sourceCounts": {
+      "scope": "root page plus comfort-consistency/*.tsx only",
+      "neonOrGlow": 0,
+      "fixedWhite": 0,
+      "inlineStyles": 0,
+      "directRechartsLeafletMotionImports": 0,
+      "rawControlsCaseSensitive": 0,
+      "note": "The first PowerShell pattern probe failed parsing (exit 1); corrected probe succeeded. Its case-insensitive raw-control count of 1 was shared <Button> at QueryStatus:87, resolved by a successful case-sensitive probe to 0. These are pattern counts, not whole-repository compliance or contrast proof."
+    },
+    "sourceSnapshot": "Root hash measured at audit start and checked again before release. Dependencies can change under disjoint workers; no acceptance inferred from historical receipts.",
+    "ownedFiles": ["docs\\frontend-audits\\audit-page-219.json", ".agent-status\\audit-page-219.txt"]
+  },
+  "filesRead": [
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\vehicle-systems\\pages\\ComfortConsistencyPage.tsx",
+    "web\\src\\features\\vehicle-systems\\components\\comfort-consistency\\index.ts",
+    "web\\src\\features\\vehicle-systems\\components\\comfort-consistency\\types.ts",
+    "web\\src\\features\\vehicle-systems\\components\\comfort-consistency\\ComfortConsistencyEvidenceKpiLedger.tsx",
+    "web\\src\\features\\vehicle-systems\\components\\comfort-consistency\\ComfortConsistencySourceAvailability.tsx",
+    "web\\src\\features\\vehicle-systems\\components\\comfort-consistency\\ComfortConsistencyCoverageCadence.tsx",
+    "web\\src\\features\\vehicle-systems\\components\\comfort-consistency\\ComfortConsistencyRowDisposition.tsx",
+    "web\\src\\features\\vehicle-systems\\components\\comfort-consistency\\ComfortConsistencyIntervalComposition.tsx",
+    "web\\src\\features\\vehicle-systems\\components\\comfort-consistency\\ComfortConsistencyHourlyProfile.tsx",
+    "web\\src\\features\\vehicle-systems\\components\\comfort-consistency\\ComfortConsistencyDeviationDistribution.tsx",
+    "web\\src\\features\\vehicle-systems\\components\\comfort-consistency\\ComfortConsistencySetpointAgreement.tsx",
+    "web\\src\\features\\vehicle-systems\\components\\comfort-consistency\\ComfortConsistencyStabilizationOutcomes.tsx",
+    "web\\src\\features\\vehicle-systems\\components\\comfort-consistency\\ComfortConsistencyScoreDecomposition.tsx",
+    "web\\src\\features\\vehicle-systems\\components\\comfort-consistency\\ComfortConsistencyThresholdGateMatrix.tsx",
+    "web\\src\\features\\vehicle-systems\\components\\comfort-consistency\\ComfortConsistencyWindowDirectory.tsx",
+    "web\\src\\features\\vehicle-systems\\components\\comfort-consistency\\ComfortConsistencyExactAccounting.tsx",
+    "web\\src\\features\\vehicle-systems\\components\\comfort-consistency\\ComfortConsistencyDataAvailability.tsx",
+    "web\\src\\features\\vehicle-systems\\components\\comfort-consistency\\ComfortConsistencyMethodology.tsx",
+    "web\\src\\features\\vehicle-systems\\components\\comfort-consistency\\ComfortConsistencyQueryStatus.tsx",
+    "web\\src\\features\\vehicle-systems\\components\\comfort-consistency\\ComfortConsistencySectionBody.tsx",
+    "web\\src\\features\\vehicle-systems\\components\\operationalbrief-all\\VehicleOperationalBrief.tsx",
+    "web\\src\\features\\vehicle-systems\\components\\operationalbrief-all\\SourceAvailabilityBrief.tsx",
+    "web\\src\\features\\vehicle-systems\\components\\VehicleSourcePause.tsx",
+    "web\\src\\features\\vehicle-systems\\lib\\comfortConsistency.ts",
+    "web\\src\\features\\vehicle-systems\\lib\\hvacCycling.ts",
+    "web\\src\\api\\hooks\\useVehicleSystems.ts",
+    "web\\src\\api\\dataState.ts",
+    "web\\src\\api\\client.ts",
+    "web\\src\\hooks\\useSelectedVehicle.ts",
+    "web\\src\\lib\\safeArray.ts",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\lib\\tokens.ts",
+    "web\\src\\App.tsx",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\layout\\layout-reference\\LayoutCard.tsx",
+    "web\\src\\components\\layout\\PageContainer.tsx",
+    "web\\src\\components\\charts\\EmbeddedChart.tsx",
+    "web\\src\\components\\charts\\ChartContainer.tsx",
+    "web\\src\\components\\data-display\\OperationalBrief.tsx",
+    "web\\src\\components\\data-display\\DataFreshness.tsx",
+    "web\\src\\components\\motion\\FadeIn.tsx",
+    "internal\\api\\router.go",
+    "internal\\api\\climate\\handler.go"
+  ]
+}

@@ -71,7 +71,7 @@ describe('DataTable — column visibility (defaultVisible + persistence)', () =>
       />,
     )
     // Open the menu
-    fireEvent.click(screen.getByRole('button', { name: /show or hide columns/i }))
+    fireEvent.click(screen.getByRole('button', { name: /reorder or hide columns/i }))
     // Toggle the hidden 'Detail' column on
     const detailCheckbox = screen.getByRole('checkbox', { name: /detail/i })
     expect(detailCheckbox).not.toBeChecked()
@@ -272,6 +272,48 @@ describe('DataTable — expansion', () => {
     const expandButtons = screen.getAllByRole('button', { name: /expand row/i })
     fireEvent.click(expandButtons[0])
     expect(onChange).toHaveBeenCalledWith([1])
+  })
+
+  it('keeps contextual expansion and sorting on shared native buttons with visible focus', () => {
+    const onExpand = vi.fn()
+    const onSort = vi.fn()
+    const view = render(
+      <DataTable
+        variant="embedded"
+        columns={[{ ...COLS[1], sortable: true }]}
+        data={ROWS}
+        keyExtractor={r => r.id}
+        expandable
+        expandedKeys={[]}
+        onExpandedChange={onExpand}
+        renderExpanded={r => <span>{r.detail}</span>}
+        onSort={onSort}
+      />,
+    )
+    const expand = screen.getAllByRole('button', { name: 'Expand row' })[0]
+    expect(expand).toHaveAttribute('type', 'button')
+    expect(expand).toHaveAccessibleDescription('Alpha')
+    expect(expand).toHaveAttribute('aria-expanded', 'false')
+    expect(expand).toHaveClass('h-11', 'w-11', 'md:h-6', 'md:w-6',
+      'focus-visible:outline-2', 'focus-visible:outline-offset-2')
+    expand.focus()
+    expect(expand).toHaveFocus()
+    fireEvent.click(expand)
+    expect(onExpand).toHaveBeenCalledExactlyOnceWith([1])
+    const sort = screen.getByRole('button', { name: 'Name' })
+    expect(sort).toHaveClass('min-h-11', 'md:min-h-6', 'focus-visible:outline-2')
+    sort.focus()
+    expect(sort).toHaveFocus()
+    fireEvent.click(sort)
+    expect(onSort).toHaveBeenCalledExactlyOnceWith('name')
+    view.rerender(
+      <DataTable columns={COLS.slice(0, 3)} data={ROWS} keyExtractor={r => r.id}
+        expandable expandedKeys={[1]} onExpandedChange={onExpand}
+        renderExpanded={r => <span>{r.detail}</span>} />,
+    )
+    expect(screen.getByRole('button', { name: 'Collapse row' }))
+      .toHaveAccessibleDescription('1')
+    expect(screen.getByText('first row detail')).toBeInTheDocument()
   })
 })
 

@@ -95,21 +95,52 @@ function renderPanel(overrides: Partial<Props> = {}) {
 
 describe('RuntimePanel — state priority', () => {
   it('always renders the panel title and shows the skeleton (no content) while loading', () => {
-    const { container } = renderPanel({ isLoading: true, status: 'PowershareStatusActive' });
+    const { container } = renderPanel({
+      isLoading: true,
+      status: 'PowershareStatusActive',
+      shareType: 'PowershareTypeHome',
+      powerKw: 7.5,
+      hoursLeft: 4.2,
+      powerPeak: 10,
+      hoursPeak: 6,
+    });
 
     // Title chrome is always present regardless of state.
     expect(screen.getByText('Live Session')).toBeInTheDocument();
     // Loading paints the skeleton and suppresses the data rows.
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
+    const skeleton = container.querySelector('div[aria-hidden="true"].w-full');
+    expect(skeleton).not.toBeNull();
+    expect(skeleton).toHaveClass('h-4', 'w-full', 'rounded', 'bg-[var(--skeleton-bg)]');
+    expect(skeleton).toHaveAttribute('aria-hidden', 'true');
+    expect(skeleton).toHaveStyle({ height: '220px' });
+    expect(container.querySelector('.animate-pulse')).toBeNull();
     expect(screen.queryByText('Status')).toBeNull();
     expect(screen.queryByRole('status')).toBeNull();
+    expect(screen.queryByRole('alert')).toBeNull();
+    expect(screen.queryByText('Active')).toBeNull();
+    expect(screen.queryByText('Destination')).toBeNull();
+    expect(screen.queryByText('Home')).toBeNull();
+    expect(screen.queryByText('Output Power')).toBeNull();
+    expect(screen.queryByText('Hours Remaining')).toBeNull();
+    expect(screen.queryByText('7.50 kW')).toBeNull();
+    expect(screen.queryByText('4.20 h')).toBeNull();
   });
 
   it('lets loading win over a coexisting error (a sibling query can still be in-flight)', () => {
     const { container } = renderPanel({ isLoading: true, error: new Error('boom') });
 
     // Skeleton beats the error panel: no alert leaks through while loading.
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
+    const skeleton = container.querySelector('div[aria-hidden="true"].w-full');
+    expect(skeleton).not.toBeNull();
+    expect(skeleton).toHaveClass('h-4', 'w-full', 'rounded', 'bg-[var(--skeleton-bg)]');
+    expect(skeleton).toHaveAttribute('aria-hidden', 'true');
+    expect(skeleton).toHaveStyle({ height: '220px' });
+    expect(container.querySelector('.animate-pulse')).toBeNull();
+    expect(screen.getByRole('heading', { name: 'Live Session' })).toBeInTheDocument();
+    expect(screen.queryByRole('status')).toBeNull();
+    expect(screen.queryByText('Status')).toBeNull();
+    expect(screen.queryByText('Output Power')).toBeNull();
+    expect(screen.queryByText('Hours Remaining')).toBeNull();
     expect(screen.queryByRole('alert')).toBeNull();
     expect(screen.queryByText(/can't reach server/i)).toBeNull();
   });
@@ -165,7 +196,7 @@ describe('RuntimePanel — populated view', () => {
 
     // Hours remaining bar — 1dp h sublabel.
     expect(screen.getByText('Hours Remaining')).toBeInTheDocument();
-    expect(screen.getByText('4.2 h')).toBeInTheDocument();
+    expect(screen.getByText('4.20 h')).toBeInTheDocument();
   });
 
   it('falls back to "Unknown" status when only numeric data is present', () => {
@@ -181,7 +212,7 @@ describe('RuntimePanel — populated view', () => {
     renderPanel({ hoursLeft: 2.5, powerKw: null, shareType: null });
 
     expect(screen.getByText('Hours Remaining')).toBeInTheDocument();
-    expect(screen.getByText('2.5 h')).toBeInTheDocument();
+    expect(screen.getByText('2.50 h')).toBeInTheDocument();
     // No power reading → no output-power bar.
     expect(screen.queryByText('Output Power')).toBeNull();
     expect(screen.queryByText('Destination')).toBeNull();
@@ -197,7 +228,7 @@ describe('RuntimePanel — non-finite hardening', () => {
     expect(screen.queryByText(/kW/)).toBeNull();
     // Hours still renders normally.
     expect(screen.getByText('Hours Remaining')).toBeInTheDocument();
-    expect(screen.getByText('3.0 h')).toBeInTheDocument();
+    expect(screen.getByText('3.00 h')).toBeInTheDocument();
     // No NaN leaks into the DOM (e.g. as `width: NaN%`).
     expect(container.innerHTML).not.toContain('NaN');
   });

@@ -2,17 +2,16 @@ import { CalendarRange, Info } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { EmptyState } from '@/components/feedback';
+import { NestedDrivingBrief } from '../operationalbrief-a-m/NestedDrivingBrief';
 import {
   Badge,
   GlassPanel,
-  MetricLabel,
-  MetricValue,
   PanelTitle,
   Text,
 } from '@/components/ui';
 import { useUnits } from '@/hooks/useUnits';
 import { cn } from '@/lib/cn';
-import { fmtNumber } from '@/lib/numberFormat';
+
 
 import type {
   DrivingRhythm,
@@ -20,6 +19,7 @@ import type {
 } from '../../lib/drivingRhythm';
 import { DrivingRhythmSectionBody } from './DrivingRhythmSectionBody';
 import type { DrivingRhythmSectionState } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface WeekdayWeekendComparisonProps {
   summary: DrivingRhythm;
@@ -32,6 +32,7 @@ export function WeekdayWeekendComparison({
   state,
   className,
 }: WeekdayWeekendComparisonProps) {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const { formatDistance } = useUnits();
   const labels: Record<RhythmDayType, string> = {
@@ -98,45 +99,30 @@ export function WeekdayWeekendComparison({
                   </Text>
                   <Badge variant={row.key === 'weekday' ? 'info' : 'neutral'}>
                     {t('rhythm.comparison.shareValue', '{{share}}%', {
-                      share: fmtNumber(row.share * 100, 0),
+                      share: fmtNumber(row.share * 100),
                     })}
                   </Badge>
                 </div>
-                <div className="mt-4 grid grid-cols-2 gap-3">
-                  <div>
-                    <MetricValue>{row.drives}</MetricValue>
-                    <MetricLabel>
-                      {t('rhythm.comparison.drives', 'Valid drives')}
-                    </MetricLabel>
-                  </div>
-                  <div>
-                    <MetricValue>
-                      {row.drivesPerCalendarDay != null
-                        ? fmtNumber(row.drivesPerCalendarDay, 2)
-                        : '—'}
-                    </MetricValue>
-                    <MetricLabel>
-                      {t('rhythm.comparison.perDay', 'Drives / selected day')}
-                    </MetricLabel>
-                  </div>
-                  <div>
-                    <MetricValue>{row.activeDays}</MetricValue>
-                    <MetricLabel>
-                      {t('rhythm.comparison.activeDays', 'Active local days')}
-                    </MetricLabel>
-                  </div>
-                  <div>
-                    <MetricValue>
-                      {formatDistance(row.averageDistanceM, { precision: 1 })}
-                    </MetricValue>
-                    <MetricLabel>
-                      {t(
-                        'rhythm.comparison.averageDistance',
-                        'Avg measured distance',
-                      )}
-                    </MetricLabel>
-                  </div>
-                </div>
+                <NestedDrivingBrief title={row.label}
+                  description={t('rhythm.comparison.subtitle', 'Per-day rates use every selected calendar day, including days with no drive.')}
+                  loading={state.isLoading} unavailable={state.error != null}
+                  period={{ kind: 'unknown', label: `${row.label} · ${summary.timeZone}`,
+                    reason: row.calendarDays == null
+                      ? t('rhythm.comparison.noCalendarScope', 'Selected calendar-day coverage is unavailable; raw counts remain valid.')
+                      : t('rhythm.brief.calendarDenominator', '{{count}} selected local calendar days define the rate denominator.', { count: row.calendarDays }) }}
+                  metrics={[
+                    { metricId: 'count', occurrenceId: `${row.key}-drives`, rawValue: row.drives,
+                      label: t('rhythm.comparison.drives', 'Valid drives') },
+                    { metricId: 'rate', occurrenceId: `${row.key}-rate`, rawValue: row.drivesPerCalendarDay,
+                      label: t('rhythm.comparison.perDay', 'Drives / selected day'), display: { unit: '' },
+                      context: row.calendarDays == null ? t('rhythm.comparison.noCalendarScope', 'Selected calendar-day coverage is unavailable; raw counts remain valid.')
+                        : t('rhythm.brief.calendarDenominator', '{{count}} selected local calendar days define the rate denominator.', { count: row.calendarDays }) },
+                    { metricId: 'count', occurrenceId: `${row.key}-active`, rawValue: row.activeDays,
+                      label: t('rhythm.comparison.activeDays', 'Active local days') },
+                    { metricId: 'distance', occurrenceId: `${row.key}-distance`, rawValue: row.averageDistanceM,
+                      label: t('rhythm.comparison.averageDistance', 'Avg measured distance'),
+                      display: { formatter: raw => ({ value: formatDistance(raw), unit: '' }) } },
+                  ]} />
                 <Text as="p" variant="caption" className="mt-4">
                   {row.calendarDays != null
                     ? t(
@@ -149,7 +135,6 @@ export function WeekdayWeekendComparison({
                             row.measuredDistanceDrives > 0
                               ? row.distanceM
                               : null,
-                            { precision: 1 },
                           ),
                         },
                       )

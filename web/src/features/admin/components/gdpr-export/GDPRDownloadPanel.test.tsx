@@ -138,7 +138,9 @@ describe('GDPRDownloadPanel — download available', () => {
       screen.queryByText(/Download becomes available/),
     ).toBeNull();
     // And no skeleton placeholder.
-    expect(container.querySelector('.animate-pulse')).toBeNull();
+    expect(panelRoot(container).querySelector(
+      '[aria-hidden="true"][class*="bg-[var(--skeleton-bg)]"]',
+    )).toBeNull();
   });
 
   it('exposes ONE anchor and ZERO buttons (nested-interactive a11y fix)', () => {
@@ -202,7 +204,9 @@ describe('GDPRDownloadPanel — unavailable captions', () => {
       ).toBeInTheDocument();
       // No download control in this branch.
       expect(screen.queryByRole('link')).toBeNull();
-      expect(container.querySelector('.animate-pulse')).toBeNull();
+      expect(panelRoot(container).querySelector(
+        '[aria-hidden="true"][class*="bg-[var(--skeleton-bg)]"]',
+      )).toBeNull();
     },
   );
 
@@ -254,10 +258,27 @@ describe('GDPRDownloadPanel — loading', () => {
 
     // Heading stays mounted; the body is skeleton placeholders.
     expect(screen.getByRole('heading', { name: 'Download' })).toBeInTheDocument();
-    expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThan(0);
+    const placeholders = panelRoot(container).querySelectorAll(
+      '[aria-hidden="true"][class*="bg-[var(--skeleton-bg)]"]',
+    );
+    expect(placeholders.length).toBeGreaterThan(0);
+    expect(placeholders).toHaveLength(2);
+    placeholders.forEach((placeholder, index) => {
+      expect(placeholder).toHaveAttribute('aria-hidden', 'true');
+      expect(placeholder).toHaveClass('rounded', 'bg-[var(--skeleton-bg)]');
+      expect(placeholder).toHaveStyle({
+        width: index === 0 ? '90%' : '55%',
+        height: index === 0 ? '14px' : '44px',
+      });
+      expect(placeholder).toBeEmptyDOMElement();
+    });
+    expect(panelRoot(container).querySelectorAll('.animate-pulse')).toHaveLength(0);
     // No control and no caption while the first load is in flight.
     expect(screen.queryByRole('link')).toBeNull();
     expect(screen.queryByText(/No bundle available/)).toBeNull();
+    expect(screen.queryByText(/bundle streams from the backend/i)).toBeNull();
+    expect(screen.queryByText('Download becomes available once the export completes.')).toBeNull();
+    expect(screen.queryByText('This artifact has expired and is no longer downloadable.')).toBeNull();
   });
 
   it('keeps the resolved download control during a background refetch', () => {
@@ -272,7 +293,9 @@ describe('GDPRDownloadPanel — loading', () => {
     expect(
       screen.getByRole('link', { name: 'Download bundle' }),
     ).toBeInTheDocument();
-    expect(container.querySelector('.animate-pulse')).toBeNull();
+    expect(panelRoot(container).querySelector(
+      '[aria-hidden="true"][class*="bg-[var(--skeleton-bg)]"]',
+    )).toBeNull();
   });
 
   it('keeps the status caption during a background refetch of a queued artifact', () => {
@@ -285,7 +308,9 @@ describe('GDPRDownloadPanel — loading', () => {
     expect(
       screen.getByText('Download becomes available once the export completes.'),
     ).toBeInTheDocument();
-    expect(container.querySelector('.animate-pulse')).toBeNull();
+    expect(panelRoot(container).querySelector(
+      '[aria-hidden="true"][class*="bg-[var(--skeleton-bg)]"]',
+    )).toBeNull();
   });
 });
 

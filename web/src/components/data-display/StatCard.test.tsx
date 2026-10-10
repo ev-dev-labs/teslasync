@@ -189,8 +189,13 @@ describe('StatCard — loading state', () => {
     expect(status).not.toBeNull();
     expect(status).toHaveAttribute('aria-busy', 'true');
     expect(status).toHaveAttribute('aria-label', 'Loading');
-    // Two pulsing skeleton bars, and none of the resolved content.
-    expect(container.querySelectorAll('.animate-pulse')).toHaveLength(2);
+    // Two decorative, static skeleton bars, and none of the resolved content.
+    const skeletons = status.querySelectorAll('[aria-hidden="true"][class~="bg-[var(--skeleton-bg)]"]');
+    expect(skeletons).toHaveLength(2);
+    expect(skeletons[0]).toHaveStyle({ width: '60%', height: '16px' });
+    expect(skeletons[1]).toHaveStyle({ width: '40%', height: '32px' });
+    expect(skeletons[1]).toHaveClass('mt-2');
+    expect(container.querySelectorAll('.animate-pulse')).toHaveLength(0);
     expect(screen.queryByText('280')).not.toBeInTheDocument();
     expect(screen.queryByText('Range')).not.toBeInTheDocument();
   });

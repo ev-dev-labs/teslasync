@@ -1,139 +1,117 @@
-import { useId } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Activity, ArrowUpRight, ArrowDownRight } from 'lucide-react';
-import { GlassPanel } from '@/components/ui';
+import { GlassPanel, PanelTitle, Table, Text } from '@/components/ui';
 import { FadeIn } from '@/components/motion';
 import { useUnits } from '@/hooks/useUnits';
-import { convertDistanceFromSI } from '@/lib/unitConversion';
-import { fmtNumber, fmtInt, fmtWithUnit } from '@/lib/numberFormat';
+
 import type { DriveDetail } from '@/types/driving';
-import type { DriveStats } from './types';
+import type { ChartDataPoint, DriveStats } from './types';
+import { driveEnergyEvidence } from './energyEvidence';
+import { driveOdometerEvidence } from './odometerEvidence';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
-interface MoreDetailsPanelProps {
-  drive: DriveDetail;
-  stats: DriveStats;
-}
-
-/** Format an energy reading (Wh, SI) as kWh above 1 kWh, otherwise as Wh. */
-function fmtEnergy(wh: number): string {
-  return wh > 1000 ? fmtWithUnit(wh / 1000, 'kWh') : `${fmtNumber(wh)} Wh`;
-}
-
-export function MoreDetailsPanel({ drive, stats }: MoreDetailsPanelProps) {
+/**
+ * Evidence, not another dashboard: source and estimation remain attached to
+ * the reading. In particular energyUsedWh may already be signed/net; subtracting
+ * recovered energy again would fabricate "net consumption".
+ */
+export function MoreDetailsPanel({ drive, stats, chartData }: { drive: DriveDetail; stats: DriveStats; chartData?: ChartDataPoint[] }) {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
-  const { unitPrefs } = useUnits();
-  const headingId = useId();
-
-  // Efficiency is Wh per km at the SI floor (stats.consumptionWhKm). Convert to
-  // Wh per the user's distance unit through the shared SI converter
-  // (Wh/km ÷ display-units-per-km) rather than a hand-typed mile factor; see
-  // unit-conversion.instructions.md.
-  const displayUnitsPerKm = convertDistanceFromSI(1000, unitPrefs.distance);
-  const toEfficiencyDisplay = (whPerKm: number) =>
-    displayUnitsPerKm > 0 ? whPerKm / displayUnitsPerKm : whPerKm;
-
-  const distanceUnit = unitPrefs.distance;
-  const speedUnit = unitPrefs.speed;
-  const tempUnit = unitPrefs.temperature;
-  const efficiencyUnit = unitPrefs.distance === 'mi' ? 'Wh/mi' : 'Wh/km';
-
-  const energyWh = stats.energyWh ?? 0;
-  const regenWh = stats.regenWh ?? 0;
-  const netWh = energyWh - regenWh;
-  const consumptionWhKm = stats.consumptionWhKm ?? 0;
-  const elevGain = stats.elevGain ?? 0;
-  const elevLoss = stats.elevLoss ?? 0;
-  const avgPower = stats.avgPower ?? 0;
-  const minSpd = stats.minSpd ?? 0;
-
+  const { unitPrefs, formatEnergy } = useUnits();
+  const { energyWh: used, regenWh: recovered } = driveEnergyEvidence(drive, stats);
+  const odometer = driveOdometerEvidence(drive, stats, unitPrefs.distance, chartData);
+  const reported = t('driveDetail.report.persisted', 'Persisted drive aggregate');
+  const sampled = t('driveDetail.report.sampled', 'Recorded telemetry samples');
+  const missing = t('common.unknown', 'Unknown');
+  const rangePair = stats.startRange != null
+    ? `${fmtNumber(stats.startRange)} → ${stats.endRange != null ? fmtNumber(stats.endRange) : '—'} ${unitPrefs.distance}` : '—';
+  // Do not subtract ideal-at-departure from rated-at-arrival. The original
+  // merged fallback stats remain supported for leaf callers, while the report
+  // supplies samples and keeps each estimator's endpoints independent.
+  const ranges = [
+    { key: 'idealRange', label: t('driveDetail.rangeIdeal', 'Range (ideal)') },
+    { key: 'ratedRange', label: t('driveDetail.report.ratedRange', 'Range (rated)') },
+    { key: 'estRange', label: t('driveDetail.rangeEst', 'Range (est.)') },
+  ] as const;
+  const rangeRows = ranges.map((series) => {
+    const readings = (chartData ?? []).map((point) => point[series.key])
+      .filter((value): value is number => value != null && Number.isFinite(value));
+    const start = readings[0] ?? null;
+    const end = readings.length > 1 ? readings[readings.length - 1] : null;
+    return {
+      id: series.key, label: series.label, start, end,
+      value: start != null ? `${fmtNumber(start)} → ${end != null ? fmtNumber(end) : '—'} ${unitPrefs.distance}` : '—',
+      source: t('driveDetail.report.rangeSeriesSource', 'First/last recorded values of this range estimator; gaps are not zero'),
+    };
+  });
+  const selectedRange = rangeRows.find((row) => row.id === 'idealRange' && row.start != null)
+    ?? rangeRows.find((row) => row.id === 'ratedRange' && row.start != null);
+  const rows = [
+    {
+      id: 'used', label: t('driveDetail.energyConsumed', 'Energy consumed'),
+      value: used != null ? formatEnergy(used) : '—',
+      source: drive.energyUsedWh != null ? reported
+        : used != null ? t('driveDetail.report.energyEstimate', 'Estimate: absolute average power × duration; not metered energy') : missing,
+    },
+    {
+      id: 'regen', label: t('driveDetail.energyRecovered', 'Energy recovered'),
+      value: recovered != null ? formatEnergy(recovered) : '—',
+      source: drive.regenEnergyWh != null ? reported
+        : recovered != null ? t('driveDetail.report.regenEstimate', 'Estimate: negative-power sample mean × duration; assumes uniform sampling') : missing,
+    },
+    {
+      id: 'odometer', label: drive.endTs == null
+        ? t('driveDetail.report.ongoingOdometer', 'Odometer (start → latest)')
+        : t('driveDetail.odometer', 'Odometer (from → to)'),
+      value: odometer.start != null || odometer.end != null
+        ? `${odometer.start != null ? fmtNumber(odometer.start) : '—'} → ${odometer.end != null ? fmtNumber(odometer.end) : '—'} ${unitPrefs.distance}` : '—',
+      source: odometer.source === 'aggregate' ? reported : odometer.source === 'sampled' ? sampled
+        : t('driveDetail.report.odometerMixed', 'Recorded endpoints with telemetry fallback'),
+    },
+    ...(chartData != null ? rangeRows : [{
+      id: 'range', label: t('driveDetail.rangeStartEnd', 'Range (start → end)'),
+      value: rangePair,
+      source: t('driveDetail.report.rangeSource', 'First/last available ideal range; rated range is the fallback'),
+    }]),
+    {
+      id: 'range-used', label: t('driveDetail.rangeUsed', 'Range used'),
+      value: chartData != null
+        ? selectedRange?.start != null && selectedRange.end != null
+          ? `${fmtNumber(selectedRange.start - selectedRange.end)} ${unitPrefs.distance}` : '—'
+        : stats.startRange != null && stats.endRange != null
+          ? `${fmtNumber(stats.startRange - stats.endRange)} ${unitPrefs.distance}` : '—',
+      source: chartData != null
+        ? `${selectedRange?.label ?? missing} · ${t('driveDetail.report.rangeDelta', 'Difference of available range estimates, not distance travelled')}`
+        : t('driveDetail.report.rangeDelta', 'Difference of available range estimates, not distance travelled'),
+    },
+    {
+      id: 'battery-used', label: t('driveDetail.batteryUsed', 'Battery used'),
+      value: drive.startBatteryPct != null && drive.endBatteryPct != null
+        ? `${fmtNumber(drive.startBatteryPct - drive.endBatteryPct)}%` : '—',
+      source: t('driveDetail.report.batteryDelta', 'Endpoint SOC difference, not a measured energy total'),
+    },
+  ];
   return (
-    <FadeIn>
-      <GlassPanel className="p-5" role="region" aria-labelledby={headingId}>
-        <h3 id={headingId} className="text-sm font-semibold text-[var(--text-primary)] flex items-center gap-2 mb-4">
-          <Activity aria-hidden="true" className="h-4 w-4 text-cyan-400" /> {t('driveDetail.moreDetails', 'More Details')}
-        </h3>
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-4">
-          <div className="text-center">
-            <p className="text-2xs text-[var(--text-muted)] mb-1">{t('driveDetail.odometer', 'Odometer (From → To)')}</p>
-            <p className="text-lg font-bold text-cyan-400">
-              {stats.odometerStart && stats.odometerEnd
-                ? `${fmtNumber(stats.odometerStart)} → ${fmtNumber(stats.odometerEnd)}`
-                : '—'}{' '}
-              <span className="text-xs text-[var(--text-muted)]">{distanceUnit}</span>
-            </p>
-          </div>
-          <div className="text-center">
-            <p className="text-2xs text-[var(--text-muted)] mb-1">
-              {t('driveDetail.rangeStartEnd', 'Range (Start → End)')}
-            </p>
-            <p className="text-lg font-bold text-green-400">
-              {stats.startRange != null
-                ? `${fmtNumber(stats.startRange)} → ${stats.endRange != null ? fmtNumber(stats.endRange) : '—'}`
-                : '—'}{' '}
-              <span className="text-xs text-[var(--text-muted)]">{distanceUnit}</span>
-            </p>
-          </div>
-          <div className="text-center">
-            <p className="text-2xs text-[var(--text-muted)] mb-1">{t('driveDetail.elevSummary', 'Elevation Summary')}</p>
-            <div className="text-base font-bold">
-              <span className="text-green-400 flex items-center justify-center gap-1"><ArrowUpRight aria-hidden="true" className="h-3 w-3" />{fmtNumber(elevGain)} m</span>
-              <span className="text-red-400 flex items-center justify-center gap-1"><ArrowDownRight aria-hidden="true" className="h-3 w-3" />{fmtNumber(elevLoss)} m</span>
-            </div>
-          </div>
-          <div className="text-center">
-            <p className="text-2xs text-[var(--text-muted)] mb-1">{t('driveDetail.energyConsumed', 'Energy Consumed')}</p>
-            <p className="text-lg font-bold text-amber-400">{fmtEnergy(energyWh)}</p>
-          </div>
-          <div className="text-center">
-            <p className="text-2xs text-[var(--text-muted)] mb-1">{t('driveDetail.energyRecovered', 'Energy Recovered')}</p>
-            <p className="text-lg font-bold text-green-400">{fmtEnergy(regenWh)}</p>
-          </div>
-          <div className="text-center">
-            <p className="text-2xs text-[var(--text-muted)] mb-1">{t('driveDetail.consumptionRate', 'Consumption')}</p>
-            <p className="text-lg font-bold text-purple-400">
-              {consumptionWhKm > 0 ? fmtNumber(toEfficiencyDisplay(consumptionWhKm)) : '—'}{' '}
-              <span className="text-xs text-[var(--text-muted)]">{efficiencyUnit}</span>
-            </p>
-          </div>
-        </div>
-        <div className="mt-4 pt-4 border-t border-[var(--border-subtle)] grid grid-cols-2 sm:grid-cols-4 gap-4">
-          <div className="text-center">
-            <p className="text-2xs text-[var(--text-muted)] mb-1">{t('driveDetail.avgPower', 'Avg Power')}</p>
-            <p className="text-lg font-bold text-amber-400">{fmtNumber(avgPower)} <span className="text-xs text-[var(--text-muted)]">kW</span></p>
-          </div>
-          {stats.avgOutsideTemp !== null && (
-            <div className="text-center">
-              <p className="text-2xs text-[var(--text-muted)] mb-1">{t('driveDetail.avgOutsideTemp', 'Avg Outside Temp')}</p>
-              <p className="text-lg font-bold text-blue-400">{fmtNumber(stats.avgOutsideTemp)}{tempUnit}</p>
-            </div>
-          )}
-          {stats.avgInsideTemp !== null && (
-            <div className="text-center">
-              <p className="text-2xs text-[var(--text-muted)] mb-1">
-                {t('driveDetail.avgInsideTemp', 'Avg Inside Temp')}
-              </p>
-              <p className="text-lg font-bold text-orange-400">
-                {fmtNumber(stats.avgInsideTemp)}{tempUnit}
-              </p>
-            </div>
-          )}
-          <div className="text-center">
-            <p className="text-2xs text-[var(--text-muted)] mb-1">{t('driveDetail.minSpeed', 'Min Speed')}</p>
-            <p className="text-lg font-bold text-[var(--text-secondary)]">{fmtInt(minSpd)} {speedUnit}</p>
-          </div>
-          <div className="text-center">
-            <p className="text-2xs text-[var(--text-muted)] mb-1">{t('driveDetail.batteryUsed', 'Battery Used')}</p>
-            <p className="text-lg font-bold text-amber-400">
-              {drive.startBatteryPct != null && drive.endBatteryPct != null
-                ? `${drive.startBatteryPct - drive.endBatteryPct}%`
-                : '—'}
-            </p>
-          </div>
-          <div className="text-center">
-            <p className="text-2xs text-[var(--text-muted)] mb-1">{t('driveDetail.netEnergy', 'Net Consumption')}</p>
-            <p className="text-lg font-bold text-cyan-400">{fmtEnergy(netWh)}</p>
-          </div>
-        </div>
+    <FadeIn className="h-full">
+      <GlassPanel className="h-full space-y-3 p-4 sm:p-5" data-testid="drive-energy-evidence">
+        <PanelTitle>{t('driveDetail.report.energyEvidence', 'Energy and range evidence')}</PanelTitle>
+        <Table variant="embedded" aria-label={t('driveDetail.report.energyEvidence', 'Energy and range evidence')}>
+          <thead><tr>
+            <th scope="col">{t('driveDetail.report.metric', 'Metric')}</th>
+            <th scope="col">{t('driveDetail.whyEnded.signal.cols.value', 'Value')}</th>
+            <th scope="col">{t('driveDetail.report.source', 'Source and method')}</th>
+          </tr></thead>
+          <tbody>{rows.map((row) => (
+            <tr key={row.id}>
+              <th scope="row">{row.label}</th>
+              <td className="whitespace-nowrap tabular-nums">{row.value}</td>
+              <td className="min-w-48 text-[var(--text-muted)]">{row.source}</td>
+            </tr>
+          ))}</tbody>
+        </Table>
+        <Text as="p" variant="caption">
+          {t('driveDetail.report.noNet', 'Consumed and recovered energy retain their original source semantics. No additional net-energy total is inferred.')}
+        </Text>
       </GlassPanel>
     </FadeIn>
   );

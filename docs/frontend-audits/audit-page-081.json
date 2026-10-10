@@ -1,0 +1,428 @@
+{
+  "item": "audit-page-081",
+  "page": "web\\src\\features\\charging\\pages\\ChargingCurvePage.tsx",
+  "routes": ["/charging-curve", "/charging/curves"],
+  "purpose": "Inspect modeled charging power versus SOC, compare returned charging sessions, and review charger, monthly speed and DC time-to-charge statistics.",
+  "primaryGoal": "Use the workspace vehicle and range to inspect a session and compare charging behavior without confusing modeled curves, incomplete readings or bounded history with measured full-history telemetry.",
+  "dataSources": [
+    {
+      "hook": "useChargingSessionsPaginated",
+      "file": "web\\src\\api\\hooks\\useCharging.ts",
+      "line": 122,
+      "endpoint": "GET /api/v1/charging?vehicle_id=<id>&limit=200&offset=0&start=<date>&end=<date>",
+      "owner": "Charging query hook; chargingHandler.ListByVehicle",
+      "routeEvidence": "internal\\api\\router.go:3502-3503",
+      "behavior": "Enabled only when vehicleId is not null; key includes vehicle, both bounds, limit and offset; AbortSignal forwarded; STALE_TIMES.FAST and safeArray retained. This page requests one 200-session window, not an exhaustive aggregate.",
+      "units": "SI API fields include peak_power_w, avg_power_w and total_energy_added_wh; local chart view models explicitly contain display kW, kWh and minutes.",
+      "backendLimits": "Route registration verified; handler filtering, inclusive/exclusive bound interpretation, order and actual server cap were not inspected or exercised."
+    },
+    {
+      "hook": "useSelectedVehicle / useRangeState",
+      "file": "web\\src\\features\\charging\\pages\\ChargingCurvePage.tsx",
+      "line": 40,
+      "endpoint": null,
+      "owner": "Existing workspace hooks and workspaceScope",
+      "behavior": "No competing local vehicle/date selector. Both aliases are range-enabled at workspaceScope.ts:30,33. Page consumes calendar start/end rather than provided precise instants. Session selection resets when vehicle or calendar bounds change."
+    },
+    {
+      "hook": "AIChargingCurveFingerprintClustering / useAiStream",
+      "file": "web\\src\\components\\ai\\AIChargingCurveFingerprintClustering.tsx",
+      "line": 99,
+      "endpoint": "POST /api/v1/ai/charging/curves/clusters/explain",
+      "owner": "Existing opt-in AI feature and streaming infrastructure",
+      "behavior": "Positive finite vehicle ID required; vehicle_id body; scopeKey cancels/clears on vehicle change; independent feature toggle. No page range supplied.",
+      "backendLimits": "Endpoint observed in consumer source; corresponding AI route registration and backend scope were not traced."
+    },
+    {
+      "hook": "AIMLChargingCurveClustering / useAiStream",
+      "file": "web\\src\\components\\ai\\AIMLChargingCurveClustering.tsx",
+      "line": 79,
+      "endpoint": "POST /api/v1/ai/ml/charging-curves/cluster",
+      "owner": "Existing opt-in ML feature and streaming infrastructure",
+      "behavior": "User-initiated Train action, vehicle_id and fixed lookback_days=90; scopeKey follows vehicle; independent feature toggle. This is not the workspace range.",
+      "backendLimits": "Endpoint and request body source-confirmed only; no mutation executed and route registration not traced."
+    },
+    {
+      "hook": "useNumberFormatting / useFormatting / useChartPalette / useOperationalMetrics",
+      "file": "web\\src\\features\\charging\\components\\operationalbrief-all\\ChargingSummaryBrief.tsx",
+      "line": 18,
+      "endpoint": null,
+      "owner": "Existing settings, formatting and metric presentation infrastructure",
+      "behavior": "Preserve saved locale, precision, currency and chart_palette; palette supports cb_safe default and explicit neon opt-in. Settings endpoint not independently traced."
+    }
+  ],
+  "components": [
+    {
+      "name": "PageLayout, CardGrid, LayoutCard",
+      "owner": "web\\src\\components\\layout\\index.ts",
+      "line": 8,
+      "contract": "Existing category exports. CardGrid items carry stable id, size and content; container measurement owns packing. Preserve w-full/min-w-0, shared header and allocated width."
+    },
+    {
+      "name": "Select, Caption, HelperText, TimeStamp",
+      "owner": "web\\src\\components\\ui\\Select.tsx",
+      "line": 12,
+      "contract": "Native controlled Select with label/options/value/onChange/placeholder/disabled; existing focus and feedback wiring. Page min-h-11 provides 44px minimum height. TimeStamp retains source start timestamp."
+    },
+    {
+      "name": "useDataState, StaleRefreshWarning, CurveSourceSection",
+      "owner": "web\\src\\features\\charging\\components\\charging-curve-modernization\\CurveSourceSection.tsx",
+      "line": 9,
+      "contract": "state, vehicleSelected, hasSessions, height, onResetRange, onRetry, selectionRequired and children. Fatal errors, initial skeletons, missing vehicle, blocked connection, empty and selected-session states keep section shells; retained content is not replaced."
+    },
+    {
+      "name": "CurveSummary / ChargingSummaryBrief / OperationalBrief",
+      "owner": "web\\src\\features\\charging\\components\\operationalbrief-all\\ChargingSummaryBrief.tsx",
+      "line": 6,
+      "contract": "Typed StatMetric inputs, period, loading, retained, missing context and specialist display formatter. Six summary metrics and four DC metrics retain identities and bounded-history scope."
+    },
+    {
+      "name": "ChartContainer",
+      "owner": "web\\src\\components\\charts\\ChartContainer.tsx",
+      "line": 79,
+      "contract": "title/subtitle/ariaLabel/ariaDescription, data/dataColumns/exportData/exportFilename, metadata, chartKey, size/mobileHeight, loading/error/empty and capability controls. Five mounted chart sites already supply accessible data and exports."
+    },
+    {
+      "name": "SessionDetailPanel / GlassPanel / KVList",
+      "owner": "web\\src\\features\\charging\\components\\charging-curve\\SessionDetailPanel.tsx",
+      "line": 73,
+      "contract": "Named region and generated heading identity; six base detail fields and conditional average power, cost and place. Keep all existing optional detail fields."
+    },
+    {
+      "name": "AIChargingCurveFingerprintClustering / AIMLChargingCurveClustering",
+      "owner": "web\\src\\components\\ai\\AIChargingCurveFingerprintClustering.tsx",
+      "line": 140,
+      "contract": "Existing withAiFeature gates and AIFeatureCard/stream behavior; preserve Explain/Train, scope cancellation and independent toggles. AI-off must not suppress baseline sections."
+    }
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\charging\\components\\charging-curve\\SessionCurveChart.tsx",
+      "line": 87,
+      "rule": "MDC-012/MDC-034: repeated non-token axis label styling",
+      "detail": "Seven axis labels across four chart consumers repeat white-alpha fill and fontSize 11 despite existing token-backed axisTick/axisTickSm.",
+      "fix": "Consume one chart-owner label style from the existing chart utility/category export, preserving each localized label, angle and position.",
+      "owner": "shared",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\charging\\components\\charging-curve\\SummaryStatsGrid.tsx",
+      "line": 28,
+      "rule": "MDC-002/MDC-033: parallel summary renderer",
+      "detail": "The barrel still exposes the old six-color MetricCard summary while the mounted page uses CurveSummary and ChargingSummaryBrief.",
+      "fix": "Keep the mounted canonical summary; resolve remaining old-summary consumers before any cleanup. Do not re-adopt the older zero-default renderer.",
+      "owner": "integration",
+      "confidence": "high"
+    }
+  ],
+  "responsive": {
+    "verified": false,
+    "sourceEvidence": [
+      "ChargingCurvePage.tsx:176-180 stacks selector/context by default and reflows at sm with min-w-0 and break-words.",
+      "CardGrid.tsx:26-38 measures allocated container width and provides placement context rather than relying only on viewport breakpoints.",
+      "Charts use ResponsiveContainer width=100%, with explicit 280/300/320px inner heights."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\charging\\components\\charging-curve\\ChargerTypeChart.tsx",
+        "line": 152,
+        "rule": "MDC-043: preserve long-label mobile reachability",
+        "detail": "Charger footer pairs label and count/duration in a no-wrap flex row without min-w-0, gap or text-breaking strategy; long localized labels may overflow. Source risk, not observed overflow.",
+        "fix": "Allow footer wrapping or narrow-width stacking with semantic Text roles; retain label, count and average duration.",
+        "owner": "page",
+        "confidence": "medium"
+      }
+    ],
+    "requiredExercise": ["320", "375", "390", "430", "768", "1024", "1280", "1440", "1920", "2560", "long labels", "RTL", "200% text", "open export menus"]
+  },
+  "accessibility": {
+    "verified": false,
+    "sourceEvidence": [
+      "Five named page sections; native labeled Select; decorative icons hidden in detail/DC metric contexts.",
+      "Five ChartContainer sites supply ariaLabel, data and dataColumns; detail panel supplies role=region and aria-labelledby.",
+      "StaleRefreshWarning.tsx:89-98 uses role=status and aria-live=polite."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\charging\\components\\charging-curve\\ChargerTypeChart.tsx",
+        "line": 116,
+        "rule": "MDC-042: reduced-motion must cover bar series",
+        "detail": "Both charger bars lack AREA_DEFAULTS or chartAnimationProps; YearlyTrendChart.tsx:92 count bar has the same omission. Shared chartDefaults explicitly supplies motion-aware props for bars.",
+        "fix": "Apply existing chartAnimationProps to all three bars; keep line defaults, data, series and user preferences unchanged.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ],
+    "limits": "Keyboard, focus order/restoration, screen reader output, actual contrast, touch target spacing, reduced-motion rendering and forced-colors mode were not exercised."
+  },
+  "states": {
+    "initialLoading": "Per-source Skeleton through CurveSourceSection.tsx:42-48; summary loading via CurveSummary; PageLayout busy retains page composition.",
+    "noVehicle": "Disabled session selector and choose-workspace-vehicle message in each source shell.",
+    "empty": "Resolved empty session results retain shells and offer workspace range reset; summary distinguishes missing measurements from count zero.",
+    "fatalError": "QueryError with retry in each source shell and summary.",
+    "refreshError": "Retained sessions and selection stay visible; shared warning adjacent to content.",
+    "partial": "Availability counts energy, power, cost, SOC and positive duration; explicit partial message warns about unchanged zero-contributing calculations.",
+    "offline": "No-data blocked connection message and retained-data shared warning.",
+    "selectedSession": "Explicit selection required for curve and detail only; other analyses remain independent.",
+    "issues": [
+      {
+        "file": "web\\src\\features\\charging\\components\\charging-curve\\SessionDetailPanel.tsx",
+        "line": 41,
+        "rule": "MDC-026/MDC-045: unknown is not a measured zero",
+        "detail": "Missing energy and peak power become 0 kWh/0 kW in selected-session details. CurveSummary separately marks all-missing input unavailable, so trust differs within the same page.",
+        "fix": "Show unavailable placeholders for missing detail values; retain actual numeric zero and the unchanged legacy aggregate calculation/disclosure. Coordinate any calculation change separately.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\charging\\components\\charging-curve\\TimeToChargeSection.tsx",
+        "line": 87,
+        "rule": "MDC-026: unobserved threshold duration is not zero",
+        "detail": "avg([]) returns zero in yearly threshold buckets, although headline DC threshold metrics correctly use null. SpeedTrendChart.tsx:50-51 also assigns zero to a missing AC/DC monthly category.",
+        "fix": "Disclose no qualifying observations and distinguish gaps in a coordinated typed data-contract change; preserve all buckets/counts/exports and do not silently change statistical denominators.",
+        "owner": "integration",
+        "confidence": "high"
+      }
+    ]
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\charging\\components\\charging-curve\\SessionCurveChart.tsx",
+      "line": 87,
+      "rule": "MDC-012/MDC-034: theme-independent white axis labels",
+      "detail": "SessionCurveChart:87,96; SessionComparisonChart:88,97; SpeedTrendChart:107; YearlyTrendChart:76,87 use rgba(255,255,255,0.4). This bypasses semantic label tokens and is a light-theme contrast risk, not measured contrast failure.",
+      "fix": "Use the existing chart token family for subdued but legible axis-label text; keep meaningful primary series emphasis and all axis descriptions.",
+      "owner": "shared",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\charging\\components\\charging-curve\\ChargerTypeChart.tsx",
+      "line": 126,
+      "rule": "MDC-010/MDC-034: stable category color meaning",
+      "detail": "CHARGER_COLORS has Supercharger but not helper labels Home / AC or DC Fast. Those categories fall back to CHART_COLORS[3]/[4], so the footer and power bar use yellow while energy uses sky blue for the same category.",
+      "fix": "Resolve stable charger category identities through the existing color owner, with restrained semantic colors; retain distinct power/energy axes and opacity encoding. Do not key color meaning on translated text or reset explicit chart palette preferences.",
+      "owner": "shared",
+      "confidence": "high"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\features\\charging\\pages\\ChargingCurvePage.tsx",
+      "line": 44,
+      "rule": "MDC-032: precise workspace range semantics",
+      "detail": "Page destructures start/end and passes those dates at line 49 rather than startInstant/endInstantExclusive. useRangeState.ts:656-682 provides timezone-aware calendar bounds and precise rolling Live/24h instants. Rolling passage within a calendar day does not update this page's query bounds.",
+      "fix": "Have the integration owner confirm backend bound support, then use precise shared instants through the existing hook; update selection invalidation deliberately so rolling refresh does not unnecessarily unset a valid inspector. Preserve URL/shared preferences and full-server filtering.",
+      "owner": "integration",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\charging\\components\\charging-curve-modernization\\CurveSummary.tsx",
+      "line": 3,
+      "rule": "MDC-002: feature callers use category barrels",
+      "detail": "CurveSummary deep-imports LayoutCard and StatMetric from reference owners. CurveSourceSection.tsx:5 similarly deep-imports layout-reference for LayoutCard/useCardPlacement.",
+      "fix": "Use category exports for LayoutCard/StatMetric; ask the layout owner to expose the existing useCardPlacement if needed, not a competing context or wrapper.",
+      "owner": "shared",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\charging\\components\\charging-curve\\helpers.ts",
+      "line": 12,
+      "rule": "MDC-044: localize presentation without changing source identities",
+      "detail": "getChargerLabel returns untranslated Home / AC, Supercharger and DC Fast. These labels feed selector, details, grouping, colors and exports; changing them directly would also change category identities.",
+      "fix": "Keep stable category identifiers/calculations, add localized presentation at boundaries using canonical catalogs through the integration owner, and preserve grouping and exported schema.",
+      "owner": "integration",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\components\\ai\\AIMLChargingCurveClustering.tsx",
+      "line": 76,
+      "rule": "MDC-026/MDC-032: disclose independent source scope",
+      "detail": "ML training uses a fixed 90-day request while baseline charts use the workspace range and up to 200 rows. AI descriptions refer to baseline parity without exposing these independent windows beside the actions.",
+      "fix": "Retain current requests/gates; disclose the 90-day ML window and independently known explanation scope, avoiding claims of range equivalence. Do not alter AI model requests as a cosmetic modernization.",
+      "owner": "shared",
+      "confidence": "high"
+    }
+  ],
+  "priority": {
+    "level": "high",
+    "reason": "Existing page already adopts shared layout and trust shells. Prioritize workspace instant mismatch and unknown-versus-zero truthfulness, then motion, label tokens, palette/category identity and source-scope clarity; no page rewrite needed."
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "Token-backed chart axis label style",
+      "existingOwner": "web\\src\\components\\charts\\chartUtils.tsx",
+      "contract": {
+        "props": "Extend the existing utility/category barrel with label fill/fontSize based on chartTokens, usable in Recharts label style.",
+        "variants": ["existing small/default chart typography"],
+        "states": ["light", "dark", "custom theme", "forced colors"],
+        "preserve": "All axis text, unit, angle, position, locale, accessible tables and exports."
+      },
+      "usedBy": ["SessionCurveChart", "SessionComparisonChart", "SpeedTrendChart", "YearlyTrendChart"],
+      "dependsOn": ["existing chartTokens axisStroke", "shared charts barrel"],
+      "evidence": "chartUtils.tsx:7-8 already tokenizes ticks; seven consumer label styles do not."
+    },
+    {
+      "name": "Stable charger-category semantic colors",
+      "existingOwner": "web\\src\\lib\\colors.ts",
+      "contract": {
+        "props": "Resolve existing home/DC/Supercharger category identity to restrained semantic color, independent of localized display label.",
+        "variants": ["home/AC", "DC fast", "Supercharger", "unknown"],
+        "states": ["normal", "hidden series", "forced-color table alternative"],
+        "preserve": "Existing category grouping, SI values, explicit chart_palette choices and separate power/energy units."
+      },
+      "usedBy": ["ChargerTypeChart power bar", "ChargerTypeChart energy bar", "ChargerTypeChart category footer"],
+      "dependsOn": ["existing getChargerLabel/isDcSession logic", "colors.ts CHARGER_COLORS"],
+      "evidence": "colors.ts:71-82 versus helpers.ts:12-16; no new palette engine required."
+    },
+    {
+      "name": "Existing layout placement hook category export",
+      "existingOwner": "web\\src\\components\\layout\\index.ts",
+      "contract": {
+        "props": "Expose the existing useCardPlacement API from the canonical category without changing placement behavior.",
+        "variants": ["populated specialist placement", "empty/loading LayoutCard placement"],
+        "states": ["all container widths", "missing placement context"],
+        "preserve": "Stable CardGrid item IDs, sizes, packing and exact shared context."
+      },
+      "usedBy": ["CurveSourceSection"],
+      "dependsOn": ["layout-reference existing useCardPlacement", "exclusive shared barrel owner"],
+      "evidence": "CurveSourceSection.tsx:5,28,72; layout/index.ts:8-11 already exports the other consumed layouts."
+    },
+    {
+      "name": "Reuse ChartContainer metadata and canonical source-scope disclosures",
+      "existingOwner": "web\\src\\components\\charts\\ChartContainer.tsx",
+      "contract": {
+        "props": "Use existing metadata.rangeLabel/sourceLabel/freshnessLabel/freshness/unitLabel and ariaDescription; pass factual modeled/bounded-window context from page-specific adapters.",
+        "variants": ["modeled session curve", "first-ten returned comparison", "returned-window aggregate", "independent AI request window"],
+        "states": ["fresh", "stale", "unknown", "partial", "empty"],
+        "preserve": "No invented backend scope; retain all existing AI actions, export filenames, chart keys and payloads."
+      },
+      "usedBy": ["SessionCurveChart", "SessionComparisonChart", "ChargerTypeChart", "SpeedTrendChart", "YearlyTrendChart", "existing AI source descriptions"],
+      "dependsOn": ["ChartContainer metadata existing contract", "canonical i18n owner", "backend AI scope confirmation for unknown explanation period"],
+      "evidence": "ChartContainer.tsx:218-230; page modeled helper text at ChargingCurvePage.tsx:194-196 and bounded summary at CurveSummary.tsx:36-40.",
+      "changeNeeded": "Page adoption of existing API; AI owner supplies independent request-window prose. No replacement chart component."
+    }
+  ],
+  "competingImplementations": [
+    {
+      "name": "SummaryStatsGrid versus CurveSummary",
+      "file": "web\\src\\features\\charging\\components\\charging-curve\\index.ts",
+      "line": 1,
+      "detail": "Old summary remains exported; root imports CurveSummary instead. Existence is source-confirmed, remaining production consumers are not traced.",
+      "decision": "Keep the current OperationalBrief-backed summary and do not infer safe deletion."
+    },
+    {
+      "name": "Manual comparison legend versus shared ChartLegend",
+      "file": "web\\src\\features\\charging\\components\\charging-curve\\SessionComparisonChart.tsx",
+      "line": 115,
+      "detail": "Manual swatch/date legend has no series-toggle contract, while charger, monthly and yearly charts use shared ChartLegend.",
+      "decision": "Preserve all ten series and manual labels; investigate shared legend parity before migration. Do not claim missing existing toggle functionality."
+    }
+  ],
+  "preservation": {
+    "sourceHash": "d4dfd5e9423a8d8750a94b7d853ceac204ff9ebd19501f1b30bb816120a7a18e",
+    "hashAlgorithm": "SHA256",
+    "sourceHashScope": "Exact root ChargingCurvePage.tsx bytes at inspection",
+    "lineCount": 284,
+    "pageAndCurveDirectoryProductionLineCount": 1807,
+    "lineCountScope": "Root plus all non-test .ts/.tsx files in charging-curve and charging-curve-modernization, including index files and unmounted LoadingSkeleton/SummaryStatsGrid; excludes AI/shared/operationalbrief owners.",
+    "sections": [
+      {"name": "Opt-in AI narrator/trainer band", "line": 144, "count": 1, "children": ["Explain curve fingerprints", "Train learned clusters"]},
+      {"name": "Summary metrics", "line": 155, "count": 1, "metrics": ["Total Sessions", "Total Energy", "Avg Charge Rate (mean peak)", "Peak Rate", "Avg Duration", "Total Cost"]},
+      {"name": "Session inspector", "line": 167, "count": 1, "children": ["Inspect session selector", "Timestamp and place", "Modeled-curve disclosure", "Power vs SOC", "Session Details"]},
+      {"name": "Session Comparison", "line": 231, "count": 1, "children": ["First 10 returned sessions", "Overlay legend", "Accessible/export rows"]},
+      {"name": "Charger breakdown", "line": 242, "count": 1, "children": ["Charge Rate by Charger Type", "Charging Speed Trend"]},
+      {"name": "Time-to-Charge Analysis", "line": 274, "count": 1, "children": ["10-to-80 duration", "20-to-80 duration", "Fastest Session", "Slowest Session", "Yearly Charging Speed Trend"]}
+    ],
+    "sectionCounts": {"rootSemanticSections": 5, "aiBand": 1, "CurveSourceSectionSites": 6, "mountedSpecialistChartContainers": 5, "rootGlassPanelSites": 0, "rootChartContainerSites": 0, "detailGlassPanelSites": 1},
+    "actions": [
+      "Header-owned vehicle/range selection on both aliases",
+      "Native session select and clear placeholder",
+      "Retry fatal source and refresh retained source",
+      "Reset workspace date range when results are empty",
+      "Explain clusters and Train clusters under independent AI opt-in gates",
+      "Existing ChartContainer export controls and accessible fallback tables for all five charts",
+      "Export filenames power-vs-soc, session-comparison, charge-rate-by-type, charging-speed-trend, yearly-charging-trend",
+      "Existing series visibility state for charger-type-chart, charging-speed-trend and charging-curve-yearly-trend",
+      "OperationalBrief details/evidence behavior through the canonical existing owner"
+    ],
+    "data": [
+      "Raw SI wire/cache unchanged; display conversion only, including local display view-model units.",
+      "Single limit=200 offset=0 query, safeArray, complete query key, AbortSignal and inherited policies.",
+      "Existing aggregate denominator, null contribution rules and partial-coverage disclosure remain explicit; do not silently revise calculations.",
+      "Selection resets for workspace calendar/vehicle scope changes, but not ordinary retained-data refresh failures.",
+      "Modeled curve generation (not sampled telemetry), taper thresholds, AC/DC classification and first-ten comparison order.",
+      "Monthly AC/DC buckets, charger averages/count/duration, positive completed DC elapsed-time eligibility, yearly counts and fastest/slowest session IDs.",
+      "Optional average power/cost/location, SOC missing placeholder, timestamp and source metadata.",
+      "Saved currency/number/date/locale/chart preferences and all i18n keys.",
+      "Independent AI toggle/off behavior, positive vehicle guard, vehicle-scoped stream cancellation and fixed ML lookback."
+    ]
+  },
+  "evidenceLimits": {
+    "basis": "Read-only source inspection and bounded textual counts; no source or shared changes.",
+    "runtime": "unverified",
+    "visual": "unverified",
+    "accessibility": "unverified",
+    "keyboard": "unverified",
+    "contrast": "unverified",
+    "viewport": "unverified",
+    "backendFiltering": "unverified; only charging route registration inspected",
+    "aiRouteRegistration": "unverified; endpoints observed in page-specific AI consumer source",
+    "testing": "No tests, TypeScript, lint or builds run. The skill audit script was inspected but not run because it invokes project TypeScript; the assignment forbids broad validation.",
+    "sourceChecks": {
+      "rootInlineStyles": 0,
+      "rootRawControls": 0,
+      "rootDirectChartMapMotionImports": 0,
+      "rootLegacyApiImports": 0,
+      "method": "PowerShell regex count on exact root text; these counts are not an all-dependency compliance certificate."
+    },
+    "historicalEvidence": "No historical acceptance borrowed.",
+    "limitations": [
+      "Mounted routes confirmed by App.tsx text inspection at 55,795,801; no browser mount exercised.",
+      "No source fixtures inserted, mutations issued, server started, Git command run, or queues/config/catalogs modified.",
+      "Shared owners inspected only for contracts consumed by this page, not a whole-app foundation audit.",
+      "Some source searches returned test matches; test execution and complete test review are not claimed.",
+      "Line/hash snapshot may drift under concurrent disjoint work; release verification rechecks root hash."
+    ],
+    "ownedFiles": ["docs\\frontend-audits\\audit-page-081.json", ".agent-status\\audit-page-081.txt"]
+  },
+  "filesRead": [
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\charging\\pages\\ChargingCurvePage.tsx",
+    "web\\src\\features\\charging\\components\\charging-curve\\index.ts",
+    "web\\src\\features\\charging\\components\\charging-curve\\types.ts",
+    "web\\src\\features\\charging\\components\\charging-curve\\helpers.ts",
+    "web\\src\\features\\charging\\components\\charging-curve\\SessionCurveChart.tsx",
+    "web\\src\\features\\charging\\components\\charging-curve\\SessionDetailPanel.tsx",
+    "web\\src\\features\\charging\\components\\charging-curve\\SessionComparisonChart.tsx",
+    "web\\src\\features\\charging\\components\\charging-curve\\ChargerTypeChart.tsx",
+    "web\\src\\features\\charging\\components\\charging-curve\\SpeedTrendChart.tsx",
+    "web\\src\\features\\charging\\components\\charging-curve\\TimeToChargeSection.tsx",
+    "web\\src\\features\\charging\\components\\charging-curve\\YearlyTrendChart.tsx",
+    "web\\src\\features\\charging\\components\\charging-curve\\SummaryStatsGrid.tsx",
+    "web\\src\\features\\charging\\components\\charging-curve-modernization\\availability.ts",
+    "web\\src\\features\\charging\\components\\charging-curve-modernization\\CurveSourceSection.tsx",
+    "web\\src\\features\\charging\\components\\charging-curve-modernization\\CurveSummary.tsx",
+    "web\\src\\features\\charging\\components\\operationalbrief-all\\ChargingSummaryBrief.tsx",
+    "web\\src\\api\\hooks\\useCharging.ts",
+    "web\\src\\hooks\\useRangeState.ts",
+    "web\\src\\hooks\\useDataState.ts",
+    "web\\src\\hooks\\useChartPalette.ts",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\lib\\colors.ts",
+    "web\\src\\components\\charts\\index.ts",
+    "web\\src\\components\\charts\\ChartContainer.tsx",
+    "web\\src\\components\\charts\\chartUtils.tsx",
+    "web\\src\\components\\charts\\chartDefaults.tsx",
+    "web\\src\\components\\ui\\Select.tsx",
+    "web\\src\\components\\feedback\\StaleRefreshWarning.tsx",
+    "web\\src\\components\\layout\\index.ts",
+    "web\\src\\components\\layout\\layout-reference\\CardGrid.tsx",
+    "web\\src\\components\\ai\\AIChargingCurveFingerprintClustering.tsx",
+    "web\\src\\components\\ai\\AIMLChargingCurveClustering.tsx",
+    "web\\src\\App.tsx",
+    "internal\\api\\router.go"
+  ]
+}

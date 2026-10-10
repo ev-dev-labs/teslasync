@@ -4,9 +4,10 @@ import { useTranslation } from 'react-i18next';
 import { Text } from '@/components/ui';
 import { useDateFormat } from '@/hooks/useDateFormat';
 import { cn } from '@/lib/cn';
-import { fmtInt } from '@/lib/numberFormat';
+
 
 import type { ParkingSummary } from '../../lib/parkingDwell';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface ParkingMethodCaveatsProps {
   summary: ParkingSummary;
@@ -20,6 +21,7 @@ export function ParkingMethodCaveats({
   rangeStart,
   rangeEnd,
 }: ParkingMethodCaveatsProps) {
+  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const { formatDateTime } = useDateFormat();
   const coverage = summary.coverage;

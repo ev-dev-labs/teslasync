@@ -1,11 +1,21 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ToastProvider } from '@/components/feedback';
 import type { CostBreakdown } from '@/types/analytics';
+import type { StatMetric } from '@/components/data-display';
+
+const bridgeCapture = vi.hoisted(() => vi.fn<(metrics: readonly StatMetric[]) => void>());
+vi.mock('@/hooks/useOperationalMetrics', async importOriginal => {
+  const actual = await importOriginal<typeof import('@/hooks/useOperationalMetrics')>();
+  return { ...actual, useOperationalMetrics: (...args: Parameters<typeof actual.useOperationalMetrics>) => {
+    bridgeCapture(args[0]);
+    return actual.useOperationalMetrics(...args);
+  } };
+});
 
 const h = vi.hoisted(() => ({
   query: undefined as unknown,
@@ -90,12 +100,12 @@ vi.mock('@/hooks/useUnits', () => ({
       if (meters == null) return '—';
       const value = h.distance === 'mi' ? meters / 1609.344 : meters / 1000;
       return `${value.toLocaleString('en-US', {
-        minimumFractionDigits: 1,
-        maximumFractionDigits: 1,
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
       })} ${h.distance}`;
     },
     formatEnergy: (wh: number | null | undefined) =>
-      wh == null ? '—' : `${(wh / 1000).toFixed(1)} kWh`,
+      wh == null ? '—' : `${(wh / 1000).toFixed(2)} kWh`,
   }),
 }));
 
@@ -291,10 +301,25 @@ describe('TrueCostPage persistent query states', () => {
       isFetching: true,
       fetchStatus: 'fetching',
     });
-    const { container } = renderPage();
+    renderPage();
 
     expectPersistentShells();
-    expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThan(5);
+    const skeletons = SECTION_IDS.flatMap(id => Array.from(
+      screen.getByTestId(id).querySelectorAll(
+        '[role="status"] [aria-hidden="true"][class~="bg-[var(--skeleton-bg)]"]',
+      ),
+    ));
+    expect(skeletons.length).toBeGreaterThan(5);
+    for (const skeleton of skeletons) {
+      expect(skeleton).toHaveClass('w-full');
+      expect((skeleton as HTMLElement).style.height).toMatch(/^\d+px$/);
+    }
+    const brief = screen.getByTestId('tco-evidence-kpis');
+    expect(brief).toHaveAttribute('aria-busy', 'true');
+    expect(brief.querySelectorAll(
+      '[data-operational-metric] [aria-hidden="true"].h-5.w-20',
+    )).toHaveLength(8);
+    expect(brief.querySelector('[data-operational-value]')).toBeNull();
     expect(screen.queryAllByRole('button', { name: 'Export chart' })).toHaveLength(0);
   });
 
@@ -364,6 +389,44 @@ describe('TrueCostPage persistent query states', () => {
 });
 
 describe('TrueCostPage evidence rendering', () => {
+  it('reviews numeric source operands and preserved costing boundaries in the real drawer', () => {
+    renderPage();
+    const brief = screen.getByTestId('tco-evidence-kpis');
+    expect(brief).toHaveAttribute('data-operational-brief');
+    expect(brief.querySelectorAll('[data-operational-metric]')).toHaveLength(8);
+    const metrics = bridgeCapture.mock.calls.map(call => call[0])
+      .find(items => items.some(metric => metric.occurrenceId === 'tco-recorded-spend'));
+    expect(metrics).toHaveLength(8);
+    for (const metric of metrics ?? []) {
+      expect(metric.metricId).not.toBe('text');
+      if (metric.rawValue != null) expect(typeof metric.rawValue).toBe('number');
+    }
+    expect(metrics?.find(metric => metric.occurrenceId === 'tco-recorded-energy')?.metricId).toBe('energy');
+    expect(metrics?.find(metric => metric.occurrenceId === 'tco-drive-distance')?.metricId).toBe('distance');
+    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog');
+    expect(within(drawer).getByText('Positive-cost sessions only')).toBeInTheDocument();
+    expect(within(drawer).getByText('First-to-last positive-drive span; not tenure')).toBeInTheDocument();
+    expect(within(drawer).getByText(/not a complete ownership-cost account/)).toBeInTheDocument();
+    expect(refetch).not.toHaveBeenCalled();
+  });
+
+  it('keeps every accounting operand and temporal evidence row in accessible shared tables', () => {
+    renderPage();
+
+    const tables = within(screen.getByTestId('tco-accounting')).getAllByRole('table');
+    expect(tables.length).toBeGreaterThan(0);
+    for (const table of tables) {
+      expect(within(table).getAllByRole('rowheader').map((header) => header.textContent))
+        .toEqual(['Expected', 'Observed', 'Residual', 'Tolerance']);
+      expect(within(table).getAllByRole('cell').every((cell) => cell.classList.contains('text-right')))
+        .toBe(true);
+    }
+    const coverage = within(screen.getByTestId('tco-temporal-coverage')).getByRole('table');
+    expect(within(coverage).getAllByRole('rowheader')).toHaveLength(6);
+    expectPersistentShells();
+  });
+
   it('withholds the synthetic $50 maintenance floor for a resolved zero envelope', () => {
     h.query = query({
       data: cost({
@@ -439,8 +502,8 @@ describe('TrueCostPage evidence rendering', () => {
   it('converts canonical distance and cost/km to metric display units', () => {
     renderPage();
 
-    expect(screen.getByText('1,000.0 km')).toBeInTheDocument();
-    expect(screen.getAllByText('$0.1000').length).toBeGreaterThan(0);
+    expect(screen.getByText('1,000.00 km')).toBeInTheDocument();
+    expect(screen.getAllByText('$0.10').length).toBeGreaterThan(0);
     expect(screen.getByRole('heading', { name: 'Cost per km' })).toBeInTheDocument();
   });
 
@@ -448,8 +511,8 @@ describe('TrueCostPage evidence rendering', () => {
     h.distance = 'mi';
     renderPage();
 
-    expect(screen.getByText('621.4 mi')).toBeInTheDocument();
-    expect(screen.getAllByText('$0.1609').length).toBeGreaterThan(0);
+    expect(screen.getByText('621.37 mi')).toBeInTheDocument();
+    expect(screen.getAllByText('$0.16').length).toBeGreaterThan(0);
     expect(screen.getByRole('heading', { name: 'Cost per mi' })).toBeInTheDocument();
   });
 
@@ -472,6 +535,10 @@ describe('TrueCostPage evidence rendering', () => {
     expect(screen.getAllByText('Balances').length).toBeGreaterThan(5);
     expect(screen.getByText('1.0× MPG')).toBeInTheDocument();
     expect(screen.getAllByText(/Gas \$300\.00/).length).toBeGreaterThan(0);
+    const matrix = screen.getByTestId('tco-sensitivity');
+    expect(within(matrix).queryByRole('button', { name: 'Reorder or hide columns' })).not.toBeInTheDocument();
+    expect(within(matrix).queryAllByRole('separator')).toHaveLength(0);
+    expect(matrix.querySelectorAll('[draggable="true"]')).toHaveLength(0);
   });
 
   it('states endpoint assumptions without claiming a complete ownership calculation', () => {
@@ -480,6 +547,6 @@ describe('TrueCostPage evidence rendering', () => {
     expect(screen.getByText(/not a complete ownership-cost calculation/i)).toBeInTheDocument();
     expect(screen.getByText(/Lifetime gasoline equivalent is distance-derived/i)).toBeInTheDocument();
     expect(screen.getByText(/Only monthly gasoline equivalents are energy-derived/i)).toBeInTheDocument();
-    expect(screen.queryByText(/Total Cost of Ownership/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Total cost of Ownership/i)).not.toBeInTheDocument();
   });
 });

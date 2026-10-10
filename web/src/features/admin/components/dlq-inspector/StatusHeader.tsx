@@ -17,8 +17,9 @@ import { Ban, Database, Inbox, Power, ShieldCheck, Tags } from 'lucide-react';
 
 import { StatCard } from '@/components/data-display';
 import { AlertBanner } from '@/components/feedback';
-import { fmtInt, formatBytes } from '@/lib/numberFormat';
+
 import type { DLQEntrySummary, DLQListResponse } from '@/types/admin-diagnostics';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface StatusHeaderProps {
   data: DLQListResponse | undefined;
@@ -30,6 +31,7 @@ interface StatusHeaderProps {
 const EMPTY_ENTRIES: DLQEntrySummary[] = [];
 
 export function StatusHeader({ data, loading, error }: StatusHeaderProps) {
+  const { fmtInt, formatBytes } = useNumberFormatting();
   const { t } = useTranslation();
 
   // Derive every KPI from the single payload once per data/label change — the

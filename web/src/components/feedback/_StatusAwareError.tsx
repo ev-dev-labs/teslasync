@@ -66,7 +66,7 @@ export function StatusAwareError({
   if (!error) return null
 
   const retryAction = onRetry ? (
-    <Button type="button" onClick={onRetry} variant="secondary" size="sm">
+    <Button type="button" onClick={onRetry} variant="secondary" size="sm" wrapLabel>
       {t('error.retry', 'Retry')}
     </Button>
   ) : undefined
@@ -87,7 +87,7 @@ export function StatusAwareError({
    * table rows where a multi-line link list would be worse than nothing.
    */
   const footer = compact ? undefined : (
-    <div className="space-y-3">
+    <div className="min-w-0 space-y-3 break-words">
       {(kind === 'unauthorized' || kind === 'forbidden') && (
         <PermissionGuidanceNotice
           kind={kind === 'unauthorized' ? 'unauthenticated' : 'forbidden'}
@@ -104,10 +104,13 @@ export function StatusAwareError({
         role: 'status',
         tone: 'info',
         title: t('error.waiting.title', 'Waiting for upstream'),
-        message: t(
-          'error.waiting.message',
-          "We're pausing requests briefly. Data will refresh automatically.",
-        ),
+        message: onRetry
+          ? t('error.waiting.retryMessage', 'Requests are paused briefly. Wait before retrying.')
+          : t(
+            'error.waiting.message',
+            "We're pausing requests briefly. Data will refresh automatically.",
+          ),
+        action: retryAction,
       }
       break
     case 'not_found': {
@@ -125,6 +128,7 @@ export function StatusAwareError({
             onClick={() => navigate(listHref)}
             variant="secondary"
             size="sm"
+            wrapLabel
           >
             {t('error.notFound.cta', 'Back to list')}
           </Button>
@@ -148,6 +152,7 @@ export function StatusAwareError({
             }}
             variant="secondary"
             size="sm"
+            wrapLabel
           >
             {t('error.unauthorized.cta', 'Sign in')}
           </Button>
@@ -241,6 +246,7 @@ export function StatusAwareError({
             type="button"
             variant="secondary"
             size="sm"
+            wrapLabel
             disabled
             aria-disabled="true"
           >

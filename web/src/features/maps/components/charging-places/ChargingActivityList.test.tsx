@@ -110,11 +110,11 @@ describe('ChargingActivityList — loading/error/empty', () => {
   it('shows a loading skeleton', () => {
     mockedActivity.mockReturnValue(makeQuery({ isLoading: true, data: undefined }));
     const { container } = renderList();
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).not.toBeNull();
   });
 
   it('surfaces a QueryError with a working retry on failure', () => {
-    mockedActivity.mockReturnValue(makeQuery({ isError: true, error: new Error('boom') }));
+    mockedActivity.mockReturnValue(makeQuery({ data: undefined, isError: true, error: new Error('boom') }));
     renderList();
 
     expect(screen.getByRole('alert')).toBeInTheDocument();
@@ -130,6 +130,18 @@ describe('ChargingActivityList — loading/error/empty', () => {
 });
 
 describe('ChargingActivityList — rows', () => {
+  it('retains source-aligned sessions and zero energy/cost when refresh fails', () => {
+    mockedActivity.mockReturnValue(makeQuery({
+      data: [makeRow({ energy_wh: 0, cost_decimal: 0 })],
+      isError: true, error: new Error('refresh'),
+    }));
+    renderList();
+    expect(screen.getByText('0.0 kWh')).toBeInTheDocument();
+    expect(screen.getByText('$0.00')).toBeInTheDocument();
+    expect(screen.getByText('geofence_tariff')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Previous' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Next' })).toBeDisabled();
+  });
   it('renders started/ended, energy, cost, and the cost_source badge for a priced row', () => {
     mockedActivity.mockReturnValue(makeQuery({ data: [makeRow()] }));
     renderList();

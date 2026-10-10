@@ -106,7 +106,7 @@ beforeEach(() => {
 })
 
 function typeInput(value: string) {
-  fireEvent.change(screen.getByLabelText('Input Label'), { target: { value } })
+  fireEvent.change(screen.getByLabelText('Input label'), { target: { value } })
 }
 
 function output(): HTMLElement | null {
@@ -117,12 +117,12 @@ describe('UrlEncoderTool', () => {
   it('renders the tool shell with a labelled input, an encode/decode toggle group, and no output initially', () => {
     render(<UrlEncoderTool />)
 
-    expect(screen.getByText('Url Encoder')).toBeInTheDocument()
-    expect(screen.getByText('Url Encoder Desc')).toBeInTheDocument()
+    expect(screen.getByText('URL encoder')).toBeInTheDocument()
+    expect(screen.getByText('URL encoder desc')).toBeInTheDocument()
 
     // The textarea is programmatically labelled (WCAG 3.3.2), reachable by its
     // accessible name rather than a detached <span>.
-    expect(screen.getByLabelText('Input Label')).toBeInTheDocument()
+    expect(screen.getByLabelText('Input label')).toBeInTheDocument()
 
     // The mode buttons form a named group with a pressed-state toggle.
     const group = screen.getByRole('group', { name: 'Encoding mode' })
@@ -141,7 +141,7 @@ describe('UrlEncoderTool', () => {
 
     typeInput('hello world&foo=bar')
 
-    expect(screen.getByText('Output Label')).toBeInTheDocument()
+    expect(screen.getByText('Output label')).toBeInTheDocument()
     expect(output()).toHaveTextContent('hello%20world%26foo%3Dbar')
     expect(screen.getByRole('button', { name: 'Copy' })).toBeInTheDocument()
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
@@ -181,7 +181,7 @@ describe('UrlEncoderTool', () => {
 
     // Flip to decode without retyping: the SAME "%zz" is now malformed.
     fireEvent.click(screen.getByRole('button', { name: 'Decode' }))
-    expect(screen.getByRole('alert')).toHaveTextContent('Invalid Input')
+    expect(screen.getByRole('alert')).toHaveTextContent('Invalid input')
     expect(output()).toBeNull()
   })
 
@@ -192,13 +192,13 @@ describe('UrlEncoderTool', () => {
     typeInput('%zz')
 
     const alert = screen.getByRole('alert')
-    expect(alert).toHaveTextContent('Invalid Input')
+    expect(alert).toHaveTextContent('Invalid input')
 
     // The pre-fix build rendered the error string inside the output panel with a
     // Copy button. Neither must exist now.
     expect(output()).toBeNull()
     expect(screen.queryByRole('button', { name: 'Copy' })).not.toBeInTheDocument()
-    expect(screen.queryByText('Output Label')).not.toBeInTheDocument()
+    expect(screen.queryByText('Output label')).not.toBeInTheDocument()
   })
 
   it('returns to the idle state when the input is cleared (state transition)', () => {
@@ -210,13 +210,13 @@ describe('UrlEncoderTool', () => {
     typeInput('')
     expect(output()).toBeNull()
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
-    expect(screen.queryByText('Output Label')).not.toBeInTheDocument()
+    expect(screen.queryByText('Output label')).not.toBeInTheDocument()
   })
 
   it('reflects typed input in the textarea value', () => {
     render(<UrlEncoderTool />)
 
-    const input = screen.getByLabelText('Input Label') as HTMLTextAreaElement
+    const input = screen.getByLabelText('Input label') as HTMLTextAreaElement
     typeInput('some input')
 
     expect(input.value).toBe('some input')

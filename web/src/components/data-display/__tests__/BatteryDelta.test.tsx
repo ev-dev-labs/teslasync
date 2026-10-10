@@ -1,6 +1,9 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { BatteryDelta } from '../BatteryDelta';
+import { setGlobalPrecision } from '@/lib/numberFormat';
+
+beforeEach(() => setGlobalPrecision(0));
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({

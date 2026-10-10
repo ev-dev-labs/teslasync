@@ -260,6 +260,15 @@ func parseAutomationActionStep(raw json.RawMessage) (automationTypedStep, error)
 			return automationTypedStep{}, errors.New("command_name is required")
 		}
 		return automationTypedStep{Kind: kind, StepOrder: step.StepOrder, Payload: step}, nil
+	case models.AutomationStepKindActionWait:
+		var step automationActionWaitDTO
+		if err := decodeStrictAutomationJSON(raw, &step); err != nil {
+			return automationTypedStep{}, err
+		}
+		if step.DurationS < 1 || step.DurationS > 3600 {
+			return automationTypedStep{}, errors.New("duration_s must be an integer between 1 and 3600")
+		}
+		return automationTypedStep{Kind: kind, StepOrder: step.StepOrder, Payload: step}, nil
 	case models.AutomationStepKindActionNotify:
 		var step automationActionNotifyDTO
 		if err := decodeStrictAutomationJSON(raw, &step); err != nil {

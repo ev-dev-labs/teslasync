@@ -11,8 +11,8 @@ import { useTranslation } from 'react-i18next';
 import { Send, Square, History as HistoryIcon } from 'lucide-react';
 import { HelixMark } from '@/components/branding/HelixMark';
 
-import { PageContainer } from '@/components/layout';
-import { GlassPanel, Button, Textarea, Text } from '@/components/ui';
+import { PageLayout } from '@/components/layout';
+import { GlassPanel, Button, Drawer, Textarea, Text } from '@/components/ui';
 import { FadeIn } from '@/components/motion';
 import { VisuallyHidden } from '@/components/a11y';
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -40,10 +40,10 @@ import { ChatWelcome } from '../components/chatbot/ChatWelcome';
 // Chatbot LLM surface
 // rendered conditionally via withAiFeature('chatbot-llm', …); absent
 // in off mode (ADR-015 §I5 + §I6).
-import { AIChatbotIndicator } from '@/components/ai/AIChatbotIndicator';
+import { AIChatbotIndicator } from '@/components/ai';
 // Optional browser STT/TTS panel
 // mounted above the conversation; absent in off mode via withAiFeature.
-import { AIVoiceMode } from '@/components/ai/AIVoiceMode';
+import { AIVoiceMode } from '@/components/ai';
 
 // History sidebar visibility persists across reloads via localStorage so
 // that a desktop user who opens the History panel finds it still open
@@ -756,15 +756,15 @@ export default function ChatbotPage() {
   /* ─── render ──────────────────────────────────────────────────────── */
 
   return (
-    <PageContainer
+    <PageLayout
       title={t('chatbot.title', 'Helix')}
       subtitle={t(
         'chatbot.subtitle',
         'Evidence-grounded intelligence across your fleet and TeslaSync knowledge',
       )}
-      actions={
+      metadataActions={<AIChatbotIndicator />}
+      secondaryActions={
         <div className="flex flex-wrap items-center justify-end gap-2">
-          <AIChatbotIndicator />
           <Button
             onClick={() => setShowSessions((s) => !s)}
             variant="ghost"
@@ -786,18 +786,13 @@ export default function ChatbotPage() {
         <div className="relative flex min-h-0 gap-4 h-[calc(100dvh_-_12rem)]">
           {showSessions &&
             (isMobile ? (
-              <div
-                className="fixed inset-0 z-40 flex"
-                role="dialog"
-                aria-modal="true"
-                aria-label={t('chatbot.history', 'History')}
+              <Drawer
+                open
+                side="left"
+                size="sm"
+                title={t('chatbot.history', 'History')}
+                onClose={() => setShowSessions(false)}
               >
-                <div
-                  className="absolute inset-0 bg-[var(--surface-overlay)] backdrop-blur-sm"
-                  onClick={() => setShowSessions(false)}
-                  aria-hidden="true"
-                />
-                <div className="relative h-full w-[85vw] max-w-sm">
                   <SessionList
                     sessions={sessions}
                     activeSessionId={sessionId}
@@ -814,8 +809,7 @@ export default function ChatbotPage() {
                     isLoading={sessionsQuery.isLoading}
                     className="h-full w-full"
                   />
-                </div>
-              </div>
+              </Drawer>
             ) : (
               <FadeIn>
                 <SessionList
@@ -947,7 +941,7 @@ export default function ChatbotPage() {
           </GlassPanel>
         </div>
       </section>
-    </PageContainer>
+    </PageLayout>
   );
 }
 

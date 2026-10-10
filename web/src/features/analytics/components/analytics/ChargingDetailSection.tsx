@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useFormatting } from '@/hooks/useFormatting';
 import { Building2, Plug, DollarSign, TrendingUp } from 'lucide-react';
-import { MetricCard } from '@/components/data-display';
+import type { StatMetric } from '@/components/data-display';
 import { Text } from '@/components/ui';
 import {
   ChartTooltip,
@@ -12,10 +12,12 @@ import {
   XAxis, YAxis, Tooltip, ResponsiveContainer,
   AREA_DEFAULTS, areaGradient,
 } from '@/components/charts';
-import { fmtInt } from '@/lib/numberFormat';
+
 import { AnalyticsPanel } from './AnalyticsPanel';
 import { AnalyticsChartPanel } from './AnalyticsChartPanel';
 import type { FleetAnalyticsQuery } from './constants';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { FleetSectionBrief } from '../operationalbrief-a-m/FleetSectionBrief';
 
 /** Stable bar corner-radius — hoisted so the hot chart JSX never allocates a fresh array per render. */
 const BAR_RADIUS: [number, number, number, number] = [3, 3, 0, 0];
@@ -26,6 +28,7 @@ const BAR_RADIUS: [number, number, number, number] = [3, 3, 0, 0];
  * tab's bento; the Monthly Trend spans a full-width hero band.
  */
 export function ChargingDetailSection({ query }: { query: FleetAnalyticsQuery }) {
+  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const { formatCurrency } = useFormatting();
 
@@ -37,6 +40,16 @@ export function ChargingDetailSection({ query }: { query: FleetAnalyticsQuery })
   const chargerTypes = ca?.charger_types ?? [];
   const monthlyTrend = ca?.monthly_trend ?? [];
   const costStats = ca?.cost_stats;
+  const metrics: StatMetric[] = [
+    { metricId: 'currency', occurrenceId: 'charging-min-cost', rawValue: costStats?.min, label: t('analytics.charging.minCost', 'Min cost') },
+    { metricId: 'currency', occurrenceId: 'charging-average-cost', rawValue: costStats?.avg, label: t('analytics.charging.avgCost', 'Avg cost') },
+    { metricId: 'currency', occurrenceId: 'charging-median-cost', rawValue: costStats?.median, label: t('analytics.charging.medianCost', 'Median cost') },
+    { metricId: 'currency', occurrenceId: 'charging-max-cost', rawValue: costStats?.max, label: t('analytics.charging.maxCost', 'Max cost') },
+  ];
+  const costMetrics: StatMetric[] = metrics.map(metric => ({
+    ...metric,
+    display: { formatter: raw => ({ value: formatCurrency(raw), unit: '' }) },
+  }));
 
   const brandLeaderboard = useMemo(() => {
     const maxCount = brands.reduce((m, b) => Math.max(m, safe(b.count)), 0) || 1;
@@ -49,7 +62,7 @@ export function ChargingDetailSection({ query }: { query: FleetAnalyticsQuery })
     <>
       {/* Charger Brands */}
       <AnalyticsPanel
-        title={t('analytics.charging.chargerBrands', 'Charger Brands')}
+        title={t('analytics.charging.chargerBrands', 'Charger brands')}
         icon={<Building2 className="h-4 w-4" />}
         loading={isLoading}
         error={err}
@@ -82,7 +95,7 @@ export function ChargingDetailSection({ query }: { query: FleetAnalyticsQuery })
 
       {/* Cost by Charger Type */}
       <AnalyticsPanel
-        title={t('analytics.charging.costByType', 'Cost by Charger Type')}
+        title={t('analytics.charging.costByType', 'Cost by charger type')}
         icon={<Plug className="h-4 w-4" />}
         loading={isLoading}
         error={err}
@@ -115,7 +128,7 @@ export function ChargingDetailSection({ query }: { query: FleetAnalyticsQuery })
 
       {/* Cost Analysis Cards */}
       <AnalyticsPanel
-        title={t('analytics.charging.costAnalysis', 'Cost Analysis')}
+        title={t('analytics.brief.costTitle', 'Returned charging cost distribution')}
         icon={<DollarSign className="h-4 w-4" />}
         loading={isLoading}
         error={err}
@@ -124,38 +137,15 @@ export function ChargingDetailSection({ query }: { query: FleetAnalyticsQuery })
         emptyMessage={t('analytics.charging.noCostStats', 'No cost statistics')}
         skeletonHeight={140}
       >
-        <div className="grid grid-cols-2 gap-3">
-          <MetricCard
-            label={t('analytics.charging.minCost', 'Min Cost')}
-            value={formatCurrency(safe(costStats?.min), 2)}
-            icon={<DollarSign className="h-4 w-4" />}
-            color="green"
-          />
-          <MetricCard
-            label={t('analytics.charging.avgCost', 'Avg Cost')}
-            value={formatCurrency(safe(costStats?.avg), 2)}
-            icon={<DollarSign className="h-4 w-4" />}
-            color="cyan"
-          />
-          <MetricCard
-            label={t('analytics.charging.medianCost', 'Median Cost')}
-            value={formatCurrency(safe(costStats?.median), 2)}
-            icon={<DollarSign className="h-4 w-4" />}
-            color="purple"
-          />
-          <MetricCard
-            label={t('analytics.charging.maxCost', 'Max Cost')}
-            value={formatCurrency(safe(costStats?.max), 2)}
-            icon={<DollarSign className="h-4 w-4" />}
-            color="amber"
-          />
-        </div>
+        <FleetSectionBrief query={query} metrics={costMetrics}
+          title={t('analytics.charging.costAnalysis', 'Cost analysis')}
+          description={t('analytics.brief.costDescription', 'Minimum, average, median and maximum returned charging costs; missing prices are not free charging.')} />
       </AnalyticsPanel>
 
       {/* Monthly Charging Trend — hero band */}
       <AnalyticsChartPanel
         className="md:col-span-2 2xl:col-span-3"
-        title={t('analytics.charging.monthlyTrend', 'Monthly Charging Trend')}
+        title={t('analytics.charging.monthlyTrend', 'Monthly charging trend')}
         icon={<TrendingUp className="h-4 w-4" />}
         loading={isLoading}
         error={err}
@@ -171,7 +161,7 @@ export function ChargingDetailSection({ query }: { query: FleetAnalyticsQuery })
         dataColumns={[
           { key: 'month', label: t('analytics.charging.month', 'Month') },
           { key: 'energy', label: t('analytics.charging.energykWh', 'Energy (kWh)') },
-          { key: 'avg_power', label: t('analytics.charging.avgPowerkW', 'Avg Power (kW)') },
+          { key: 'avg_power', label: t('analytics.charging.avgPowerkW', 'Avg power (kW)') },
           { key: 'sessions', label: t('analytics.charging.sessions', 'Sessions') },
         ]}
         exportFilename="fleet-monthly-charging"
@@ -188,7 +178,7 @@ export function ChargingDetailSection({ query }: { query: FleetAnalyticsQuery })
               <ChartLegend />
               {areaGradient('monthlyEnergyGrad', CHART_COLORS[1])}
               <Area {...AREA_DEFAULTS} yAxisId="left" dataKey="energy" name={t('analytics.charging.energykWh', 'Energy (kWh)')} stroke={CHART_COLORS[1]} fill="url(#monthlyEnergyGrad)" hide={hiddenSeries?.isHidden('energy')} />
-              <Line {...AREA_DEFAULTS} yAxisId="right" dataKey="avg_power" name={t('analytics.charging.avgPowerkW', 'Avg Power (kW)')} stroke={CHART_COLORS[3]} hide={hiddenSeries?.isHidden('avg_power')} />
+              <Line {...AREA_DEFAULTS} yAxisId="right" dataKey="avg_power" name={t('analytics.charging.avgPowerkW', 'Avg power (kW)')} stroke={CHART_COLORS[3]} hide={hiddenSeries?.isHidden('avg_power')} />
               <Bar yAxisId="left" dataKey="sessions" name={t('analytics.charging.sessions', 'Sessions')} fill={CHART_COLORS[2]} radius={BAR_RADIUS} opacity={0.6} hide={hiddenSeries?.isHidden('sessions')} />
             </ComposedChart>
           </ResponsiveContainer>

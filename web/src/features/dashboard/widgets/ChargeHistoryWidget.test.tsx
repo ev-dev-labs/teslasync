@@ -14,7 +14,7 @@
  * The suite locks, facet by facet:
  *   1. Full view: the SI watt-hours land on disk are converted to kWh (÷1000)
  *      and the newest-first API rows are reversed to ascending chronological
- *      x-index; the chart receives the exact data/series/xKey/yFormatter it
+ *      timestamps; the chart receives the exact data/series/xKey/yFormatter it
  *      needs, plus a screen-reader `ariaLabel`; the header shows Total + Avg.
  *   2. Compact view: stats render, chart + title do NOT, and the id falls back
  *      to the first fleet vehicle — with the request URL carrying a snake_case
@@ -34,8 +34,26 @@
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import type { ComponentProps } from 'react';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+
+type AreaChartProps = ComponentProps<typeof import('@/components/charts').AreaChartWrapper>;
+
+const datePreferences = vi.hoisted(() => ({ timezone: 'UTC' }));
+vi.mock('@/hooks/useDateFormat', async (importActual) => {
+  const actual = await importActual<typeof import('@/hooks/useDateFormat')>();
+  const { formatDateTime } = await import('@/lib/dateFormat');
+  return {
+    ...actual,
+    useDateFormat: () => ({
+      ...actual.useDateFormat(),
+      formatDateTime: (value: string | Date | null | undefined) => formatDateTime(value, {
+        locale: 'en-US', tz: datePreferences.timezone,
+      }),
+    }),
+  };
+});
 
 // i18n passthrough: honour the English fallback so every copy assertion is real.
 vi.mock('react-i18next', () => ({
@@ -61,24 +79,28 @@ vi.mock('@/api/client', async () => {
 // Prop-capturing stub for the area chart — recharts' ResponsiveContainer renders
 // nothing measurable in jsdom, so we assert on the props the widget hands it.
 // `fmt` (re-exported from the same module) stays real via `...actual`.
-const chartCapture = vi.hoisted(() => ({
-  props: null as null | Record<string, unknown>,
+const chartCapture = vi.hoisted((): { props: AreaChartProps | null } => ({
+  props: null,
 }));
 vi.mock('@/components/charts', async (importActual) => {
   const actual = await importActual<typeof import('@/components/charts')>();
   return {
     ...actual,
-    AreaChartWrapper: (props: Record<string, unknown>) => {
+    AreaChartWrapper: (props: AreaChartProps) => {
       chartCapture.props = props;
       return (
-        <div data-testid="area-chart" role="img" aria-label={props.ariaLabel as string} />
+        <div data-testid="area-chart" role="img" aria-label={props.ariaLabel} />
       );
     },
   };
 });
 
 import ChargeHistoryWidget from './ChargeHistoryWidget';
-import { fmt } from '@/components/charts';
+
+it.each([1, 2, 3])('identifies charge history at %i columns', (cols) => {
+  renderWidget({ cols, rows: 4 });
+  expect(screen.getByRole('heading', { name: 'Charge history' })).toBeInTheDocument();
+});
 import { request } from '@/api/client';
 import type { WidgetSize } from './types';
 import type { ChargingSession } from '../types';
@@ -122,18 +144,21 @@ function fleet(...ids: number[]): { data: Vehicle[] } {
 
 function renderWidget(size: WidgetSize, vehicleId?: number) {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(
+  const view = render(
     <QueryClientProvider client={qc}>
       <MemoryRouter>
         <ChargeHistoryWidget vehicleId={vehicleId} size={size} />
       </MemoryRouter>
     </QueryClientProvider>,
   );
+  expect(view.container.querySelector('h3')).toHaveAccessibleName('Charge history');
+  return view;
 }
 
 beforeEach(() => {
   MOCK_VEHICLES = { data: [] };
   chartCapture.props = null;
+  datePreferences.timezone = 'UTC';
   mockedRequest.mockReset();
 });
 
@@ -142,12 +167,35 @@ afterEach(() => {
 });
 
 describe('ChargeHistoryWidget — full view', () => {
+  it.each([
+    ['UTC', 'Jul 1, 2026', '12:00 AM'],
+    ['America/Los_Angeles', 'Jun 30, 2026', '05:00 PM'],
+  ])('identifies sessions by their start time in %s, not an unexplained index', async (timezone, date, time) => {
+    datePreferences.timezone = timezone;
+    mockedRequest.mockResolvedValue([
+      makeSession({ started_at: '2026-07-02T00:00:00Z', total_energy_added_wh: 10_000 }),
+      makeSession({ started_at: '2026-07-01T00:00:00Z', total_energy_added_wh: 20_000 }),
+    ]);
+    renderWidget(FULL, 7);
+
+    expect(await screen.findByTestId('area-chart')).toBeInTheDocument();
+    expect(chartCapture.props?.xKey).toBe('started_at');
+    expect(chartCapture.props?.data).toEqual([
+      { started_at: '2026-07-01T00:00:00Z', energy: 20 },
+      { started_at: '2026-07-02T00:00:00Z', energy: 10 },
+    ]);
+    const label = chartCapture.props?.xFormatter?.('2026-07-01T00:00:00Z');
+    expect(label).toContain(date);
+    expect(label).toContain(time);
+    expect(chartCapture.props?.xFormatter?.('invalid-timestamp')).toBe('—');
+  });
+
   it('feeds the chart ascending-time kWh data, a summary, and an a11y label', async () => {
     mockedRequest.mockResolvedValue(THREE_SESSIONS);
     renderWidget(FULL, 7);
 
     // The full tile shows a header title.
-    expect(await screen.findByText('Charge History')).toBeInTheDocument();
+    expect(await screen.findByText('Charge history')).toBeInTheDocument();
 
     // Snake_case param, no /api/v1 double-prefix, bounded to 10 rows.
     expect(mockedRequest).toHaveBeenCalledWith('/charging?vehicle_id=7&limit=10');
@@ -155,19 +203,17 @@ describe('ChargeHistoryWidget — full view', () => {
     // Chart mounts only once the query resolves.
     expect(await screen.findByTestId('area-chart')).toBeInTheDocument();
 
-    // Newest-first rows are reversed to oldest→newest with an ascending index,
-    // and every SI watt-hours value is converted to kWh (÷1000).
+    // Preserve start timestamps and convert SI watt-hours to kWh.
     expect(chartCapture.props?.data).toEqual([
-      { i: '0', energy: 30 },
-      { i: '1', energy: 20 },
-      { i: '2', energy: 10 },
+      { started_at: '2026-07-01T00:00:00Z', energy: 30 },
+      { started_at: '2026-07-01T00:00:00Z', energy: 20 },
+      { started_at: '2026-07-01T00:00:00Z', energy: 10 },
     ]);
-    expect(chartCapture.props?.xKey).toBe('i');
+    expect(chartCapture.props?.xKey).toBe('started_at');
     expect(chartCapture.props?.series).toEqual([
       { key: 'energy', label: 'kWh', color: '#10b981' },
     ]);
-    const yFormatter = chartCapture.props?.yFormatter as (v: number) => string;
-    expect(yFormatter(30)).toBe('30 kWh');
+    expect(chartCapture.props?.yFormatter?.(30)).toBe('30 kWh');
 
     // a11y: the otherwise-opaque SVG announces a one-line summary.
     expect(chartCapture.props?.ariaLabel).toBe(CHART_LABEL);
@@ -176,14 +222,14 @@ describe('ChargeHistoryWidget — full view', () => {
     // Summary: total 60 kWh across the three sessions, 20 kWh average.
     expect(screen.getByText('Total')).toBeInTheDocument();
     expect(screen.getByText('Avg')).toBeInTheDocument();
-    expect(screen.getByText(fmt(60, 1))).toBeInTheDocument();
-    expect(screen.getByText(fmt(20, 1))).toBeInTheDocument();
+    expect(screen.getByText('60.00')).toBeInTheDocument();
+    expect(screen.getByText('20.00')).toBeInTheDocument();
     expect(screen.getAllByText('kWh')).toHaveLength(2);
   });
 });
 
 describe('ChargeHistoryWidget — compact view', () => {
-  it('renders stats from the first fleet vehicle, with no chart and no title', async () => {
+  it('renders titled stats from the first fleet vehicle without a chart', async () => {
     MOCK_VEHICLES = fleet(3);
     mockedRequest.mockResolvedValue(THREE_SESSIONS);
     renderWidget(COMPACT); // no explicit vehicleId → fall back to the fleet
@@ -193,12 +239,12 @@ describe('ChargeHistoryWidget — compact view', () => {
       expect(mockedRequest).toHaveBeenCalledWith('/charging?vehicle_id=3&limit=10'),
     );
 
-    expect(await screen.findByText(fmt(60, 1))).toBeInTheDocument();
-    expect(screen.getByText(fmt(20, 1))).toBeInTheDocument();
+    expect(await screen.findByText('60.00')).toBeInTheDocument();
+    expect(screen.getByText('20.00')).toBeInTheDocument();
 
     // A compact tile drops both the chart and the header title.
     expect(screen.queryByTestId('area-chart')).toBeNull();
-    expect(screen.queryByText('Charge History')).toBeNull();
+    expect(screen.getByRole('heading', { name: 'Charge history' })).toBeInTheDocument();
   });
 });
 
@@ -208,13 +254,13 @@ describe('ChargeHistoryWidget — empty / gated states', () => {
     renderWidget(FULL, 7);
 
     expect(await screen.findByText('No charge sessions yet')).toBeInTheDocument();
-    expect(screen.getByRole('status')).toBeInTheDocument();
+    expect(screen.getByText('No charge sessions yet').closest('[role="status"]')).toBeInTheDocument();
     expect(screen.queryByTestId('area-chart')).toBeNull();
     // No summary stats when there is nothing to summarise.
     expect(screen.queryByText('Total')).toBeNull();
   });
 
-  it('treats a lone session as "not enough to chart" (the > 1 gate)', async () => {
+  it('preserves a lone session instead of claiming there are no sessions', async () => {
     mockedRequest.mockResolvedValue([
       makeSession({ id: 9, total_energy_added_wh: 42_000 }),
     ]);
@@ -222,22 +268,31 @@ describe('ChargeHistoryWidget — empty / gated states', () => {
 
     // The request DID resolve with one row — this is the min-points gate, not a
     // still-loading state.
-    expect(await screen.findByText('No charge sessions yet')).toBeInTheDocument();
+    expect(await screen.findAllByText('42.00')).toHaveLength(2);
     expect(mockedRequest).toHaveBeenCalledWith('/charging?vehicle_id=7&limit=10');
-    expect(screen.queryByTestId('area-chart')).toBeNull();
-    expect(screen.queryByText('Total')).toBeNull();
+    expect(screen.getByTestId('area-chart')).toBeInTheDocument();
+    expect(screen.getByText('Total')).toBeInTheDocument();
   });
 });
 
 describe('ChargeHistoryWidget — query lifecycle', () => {
-  it('renders only a skeleton (no title / empty copy / chart) while pending', () => {
+  it('retains its heading above a pending skeleton without empty copy or chart', () => {
     mockedRequest.mockReturnValue(new Promise(() => {})); // never resolves
     const { container } = renderWidget(FULL, 7);
 
-    expect(container.querySelector('.animate-pulse')).toBeTruthy();
-    expect(screen.queryByText('Charge History')).toBeNull();
+    const skeleton = container.querySelector('.h-full.min-h-24.rounded-xl[aria-hidden="true"]');
+    expect(skeleton).toBeInTheDocument();
+    expect(skeleton).toHaveClass('w-full', 'bg-[var(--skeleton-bg)]');
+    expect(skeleton?.closest('[aria-busy]')).toHaveAttribute('aria-busy', 'true');
+    expect(container.querySelectorAll('.h-full.min-h-24.rounded-xl[aria-hidden="true"]')).toHaveLength(1);
+    expect(container.querySelector('.animate-pulse')).toBeNull();
+    expect(screen.queryByText('Charge history')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Charge history', level: 3 })).toBeVisible();
     expect(screen.queryByText('No charge sessions yet')).toBeNull();
     expect(screen.queryByTestId('area-chart')).toBeNull();
+    expect(chartCapture.props).toBeNull();
+    expect(screen.queryByText('Total')).toBeNull();
+    expect(screen.queryByText('Avg')).toBeNull();
   });
 
   it('disables the query and never hits the network when no vehicle exists', () => {
@@ -249,13 +304,44 @@ describe('ChargeHistoryWidget — query lifecycle', () => {
     expect(screen.queryByTestId('area-chart')).toBeNull();
   });
 
-  it('degrades to the empty state (no crash) when the request rejects', async () => {
+  it('shows a retryable error when the request rejects without cached data', async () => {
     mockedRequest.mockRejectedValue(new Error('boom'));
     renderWidget(FULL, 7);
 
-    expect(await screen.findByText('No charge sessions yet')).toBeInTheDocument();
+    expect(await screen.findByText("Can't reach server")).toBeInTheDocument();
     expect(mockedRequest).toHaveBeenCalledWith('/charging?vehicle_id=7&limit=10');
     expect(screen.queryByTestId('area-chart')).toBeNull();
+  });
+
+  describe('ChargeHistoryWidget — incomplete readings', () => {
+    it('preserves null gaps, signed energy and real zero without averaging missing rows as zero', async () => {
+      mockedRequest.mockResolvedValue([
+        makeSession({ total_energy_added_wh: null as unknown as number }),
+        makeSession({ total_energy_added_wh: 0 }),
+        makeSession({ total_energy_added_wh: -2000 }),
+      ]);
+      renderWidget(FULL, 7);
+      expect(await screen.findByTestId('area-chart')).toBeInTheDocument();
+      expect(chartCapture.props?.data).toEqual([
+        { started_at: '2026-07-01T00:00:00Z', energy: -2 },
+        { started_at: '2026-07-01T00:00:00Z', energy: 0 },
+        { started_at: '2026-07-01T00:00:00Z', energy: null },
+      ]);
+      expect(screen.getByText('-2.00')).toBeInTheDocument();
+      expect(screen.getByText('-1.00')).toBeInTheDocument();
+      expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+    });
+
+    it('keeps summaries and charts on screen after a failed refresh', async () => {
+      mockedRequest.mockResolvedValue(THREE_SESSIONS);
+      renderWidget(FULL, 7);
+      expect(await screen.findByTestId('area-chart')).toBeInTheDocument();
+      mockedRequest.mockRejectedValue(new Error('refresh failed'));
+      fireEvent.click(screen.getByRole('button', { name: /^Refresh/i }));
+      expect(await screen.findByTestId('stale-refresh-warning')).toBeInTheDocument();
+      expect(screen.getByTestId('area-chart')).toBeInTheDocument();
+      expect(screen.getByText('60.00')).toBeInTheDocument();
+    });
   });
 
   it('refetches when the accessible "Refresh" freshness control is activated', async () => {
@@ -264,7 +350,7 @@ describe('ChargeHistoryWidget — query lifecycle', () => {
 
     // Wait for the first load to settle — visible stats imply the query is no
     // longer fetching, so the refresh control is armed.
-    expect(await screen.findByText(fmt(60, 1))).toBeInTheDocument();
+    expect(await screen.findByText('60.00')).toBeInTheDocument();
     expect(mockedRequest).toHaveBeenCalledTimes(1);
 
     fireEvent.click(screen.getByRole('button', { name: /^Refresh/i }));

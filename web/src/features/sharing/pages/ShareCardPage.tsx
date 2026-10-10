@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 
 import { useDrives } from '@/api/hooks/useDriving';
 
-import { Grid, PageContainer } from '@/components/layout';
+import { Grid, PageLayout } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useRangeState } from '@/hooks/useRangeState';
@@ -29,10 +29,12 @@ import {
   useShareCardDisplay,
 } from '../components/share-card';
 import { analyzeShareCard } from '../lib/shareCard';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export default function ShareCardPage() {
+  useNumberFormatting();
   const { t } = useTranslation();
-  usePageTitle(t('shareCard.title', 'Share Card Studio'));
+  usePageTitle(t('shareCard.title', 'Share card studio'));
   const { vehicleId } = useSelectedVehicle();
   const timezone = useTimezone('vehicle');
   const display = useShareCardDisplay();
@@ -72,18 +74,14 @@ export default function ShareCardPage() {
   );
 
   return (
-    <PageContainer
-      title={t('shareCard.title', 'Share Card Studio')}
+    <PageLayout
+      title={t('shareCard.title', 'Share card studio')}
       subtitle={t(
         'shareCard.subtitle',
         'Compose a local, evidence-backed SVG without overstating selected-window coverage',
       )}
       query={vehicleId != null ? drivesQuery : undefined}
       copyLink
-      actions={(
-        <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3">
-        </div>
-      )}
     >
       <FadeIn><ShareCardEvidenceLedger {...sectionProps} /></FadeIn>
       <FadeIn delay={0.02}><ShareCardSourceScopeLedger {...sectionProps} /></FadeIn>
@@ -105,6 +103,6 @@ export default function ShareCardPage() {
       <FadeIn delay={0.12}><ShareCardRepresentativeDirectory {...sectionProps} /></FadeIn>
       <FadeIn delay={0.13}><ShareCardAccountingIdentities {...sectionProps} /></FadeIn>
       <FadeIn delay={0.14}><ShareCardMethodology {...sectionProps} /></FadeIn>
-    </PageContainer>
+    </PageLayout>
   );
 }

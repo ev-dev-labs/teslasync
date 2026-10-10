@@ -19,35 +19,36 @@ function history(
   offsetMs = 0,
 ): MutualInformationSample[] {
   return values.map((value, index) => ({
-    timestamp: new Date(ANCHOR + offsetMs + index * cadenceMs).toISOString(),
-    valueNum: value,
+    ts: new Date(ANCHOR + offsetMs + index * cadenceMs).toISOString(),
+    kind: 'ValueKindDouble',
+    value,
   }));
 }
 
 describe('history preparation', () => {
   it('accepts numeric and boolean values while dropping malformed rows', () => {
     const values = toTimedValues([
-      { timestamp: new Date(ANCHOR).toISOString(), valueBool: false },
-      { ts: new Date(ANCHOR + 1_000).toISOString(), value_bool: true },
-      { timestamp: 'bad', valueNum: 4 },
+      { ts: new Date(ANCHOR).toISOString(), kind: 'ValueKindBool', value: false },
+      { ts: new Date(ANCHOR + 1_000).toISOString(), kind: 'ValueKindBool', value: true },
+      { ts: 'bad', kind: 'ValueKindDouble', value: 4 },
     ]);
     expect(values.map((point) => point.value)).toEqual([0, 1]);
   });
 
   it('sorts and keeps the last row at duplicate timestamps', () => {
-    const timestamp = new Date(ANCHOR).toISOString();
+    const ts = new Date(ANCHOR).toISOString();
     expect(toTimedValues([
-      { timestamp: new Date(ANCHOR + 1_000).toISOString(), valueNum: 3 },
-      { timestamp, valueNum: 1 },
-      { timestamp, valueNum: 2 },
+      { ts: new Date(ANCHOR + 1_000).toISOString(), kind: 'ValueKindDouble', value: 3 },
+      { ts, kind: 'ValueKindDouble', value: 1 },
+      { ts, kind: 'ValueKindDouble', value: 2 },
     ]).map((point) => point.value)).toEqual([2, 3]);
   });
 
   it('uses a median cadence that resists a long outage', () => {
     const points = toTimedValues([
       ...history([0, 1, 2], 60_000),
-      { timestamp: new Date(ANCHOR + 3_600_000).toISOString(), valueNum: 3 },
-      { timestamp: new Date(ANCHOR + 3_660_000).toISOString(), valueNum: 4 },
+      { ts: new Date(ANCHOR + 3_600_000).toISOString(), kind: 'ValueKindDouble', value: 3 },
+      { ts: new Date(ANCHOR + 3_660_000).toISOString(), kind: 'ValueKindDouble', value: 4 },
     ]);
     expect(robustCadence(points)).toBe(60_000);
   });
@@ -66,8 +67,8 @@ describe('alignHistories', () => {
   it('does not bridge observations beyond the staleness tolerance', () => {
     const a = history([0, 1, 2, 3, 4], 60_000);
     const b = [
-      { timestamp: new Date(ANCHOR).toISOString(), valueNum: 10 },
-      { timestamp: new Date(ANCHOR + 240_000).toISOString(), valueNum: 20 },
+      { ts: new Date(ANCHOR).toISOString(), kind: 'ValueKindDouble', value: 10 },
+      { ts: new Date(ANCHOR + 240_000).toISOString(), kind: 'ValueKindDouble', value: 20 },
     ];
     const result = alignHistories(a, b, 60_000, 0.4);
     expect(result.points).toHaveLength(2);
@@ -119,6 +120,23 @@ describe('deterministic permutation support', () => {
 });
 
 describe('analyzeSignalMutualInformation', () => {
+  it('retains numeric zero and boolean false without fabricating dependence', () => {
+    const zeros = history(Array.from({ length: 40 }, () => 0));
+    const falses: MutualInformationSample[] = zeros.map((point) => ({
+      ...point, kind: 'ValueKindBool', value: false,
+    }));
+    const result = analyzeSignalMutualInformation(zeros, falses, { permutations: 10 })!;
+    expect(result.alignedCount).toBe(40);
+    expect(result.cadenceMs).toBe(60_000);
+    expect(result.aligned.every((point) => point.a === 0 && point.b === 0)).toBe(true);
+    expect(result.entropyA).toBe(0);
+    expect(result.entropyB).toBe(0);
+    expect(result.mutualInformation).toBe(0);
+    expect(result.normalizedMutualInformation).toBe(0);
+    expect(result.significant).toBe(false);
+    expect(result.cells.reduce((sum, cell) => sum + cell.count, 0)).toBe(40);
+  });
+
   it('returns null below the aligned sample minimum', () => {
     expect(analyzeSignalMutualInformation(history([1, 2]), history([2, 4]))).toBeNull();
   });

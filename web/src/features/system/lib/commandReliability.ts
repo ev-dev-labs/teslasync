@@ -138,13 +138,14 @@ export function classifyStatus(status: string): 'success' | 'failure' | 'pending
   return 'failure';
 }
 
-/** `honk_horn` / `HONK-HORN` → `Honk Horn`. */
+/** Human-friendly sentence case without changing all-uppercase identifiers. */
 export function humanizeCommand(command: string): string {
   return command
     .replace(/[_-]+/g, ' ')
     .replace(/([a-z])([A-Z])/g, '$1 $2')
     .trim()
-    .replace(/\b\w/g, (c) => c.toUpperCase());
+    .replace(/\b[A-Z][a-z]+\b/g, (word) => word.toLowerCase())
+    .replace(/^\w/, (c) => c.toUpperCase());
 }
 
 /** Trim a raw error to a comparable signature so counts group sensibly. */

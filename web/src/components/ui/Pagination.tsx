@@ -1,94 +1,151 @@
+import { useEffect, useId, useState } from 'react'
 import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
+import { Button } from './Button'
+import { Input } from './Input'
+import { Select } from './Select'
+import { Text } from './Typography'
+import { useNumberFormatting } from '@/hooks/useNumberFormatting'
 
-interface PaginationProps {
+export interface PaginationProps {
   page: number
   pageSize: number
   total: number
+  /** Defaults to exact. In loaded mode total counts rows on the requested page; unknown mode ignores total. */
+  totalKind?: 'exact' | 'loaded' | 'unknown'
+  /** Non-exact totals never infer another page from a full loaded page. */
+  hasNextPage?: boolean
   onPageChange: (page: number) => void
   onPageSizeChange?: (size: number) => void
   pageSizeOptions?: number[]
 }
 
-/**
- * Table pagination controls with first/prev/next/last buttons and optional
- * page-size selector.
- *
- * Accessibility: the control set is wrapped in a landmark `<nav>` so screen readers announce it as a pagination region. The
- * "showing X–Y of Z" copy lives inside `aria-live="polite"` so the count
- * update is announced as the user pages without stealing focus.
- */
-export function Pagination({ page, pageSize, total, onPageChange, onPageSizeChange, pageSizeOptions = [25, 50, 100] }: PaginationProps) {
+/** Caller-owned pagination; counts remain row counts, never loaded-page counts. */
+export function Pagination({ page, pageSize, total, totalKind = 'exact', hasNextPage, onPageChange, onPageSizeChange, pageSizeOptions = [25, 50, 100] }: PaginationProps) {
   const { t } = useTranslation()
-
-  // A zero/negative pageSize would divide by zero and blow totalPages up to
-  // Infinity; a negative total (miscomputed by a caller) would render a
-  // backwards "0–-5 of -5" range. Guard both, falling back to the first
-  // configured page-size option when pageSize is unusable.
-  const safePageSize = pageSize > 0 ? pageSize : (pageSizeOptions[0] ?? 25)
-  const safeTotal = Math.max(0, total ?? 0)
+  const { fmtInt } = useNumberFormatting()
+  const inputId = useId()
+  const configuredOptions = [...new Set((pageSizeOptions ?? []).filter(size => Number.isSafeInteger(size) && size > 0))]
+  const safePageSize = Number.isSafeInteger(pageSize) && pageSize > 0 ? pageSize : (configuredOptions[0] ?? 25)
+  const safeTotal = Number.isFinite(total) ? Math.min(Number.MAX_SAFE_INTEGER, Math.max(0, Math.floor(total))) : 0
   const totalPages = Math.max(1, Math.ceil(safeTotal / safePageSize))
-  // Clamp the active page into [1, totalPages] so an out-of-range page never
-  // yields a reversed "41–20 of 20" range or a "5 / 2" indicator.
-  const safePage = Math.min(Math.max(1, page ?? 1), totalPages)
+  const exactTotal = totalKind === 'exact'
+  const safePage = Number.isFinite(page) ? Math.min(Math.max(1, Math.floor(page)), exactTotal ? totalPages : Number.MAX_SAFE_INTEGER) : 1
+  const canGoNext = safePage < Number.MAX_SAFE_INTEGER && (exactTotal ? safePage < totalPages : hasNextPage === true)
   const start = safeTotal > 0 ? (safePage - 1) * safePageSize + 1 : 0
-  const end = Math.min(safePage * safePageSize, safeTotal)
-  const isFirstPage = safePage <= 1
-  const isLastPage = safePage >= totalPages
-  const options = pageSizeOptions ?? []
+  const options = configuredOptions.includes(safePageSize) ? configuredOptions : [safePageSize, ...configuredOptions]
+  const [destination, setDestination] = useState(String(safePage))
+  const [invalidDestination, setInvalidDestination] = useState(false)
+  useEffect(() => {
+    setDestination(String(safePage))
+    setInvalidDestination(false)
+  }, [safePage, safePageSize, safeTotal, totalKind])
+
+  // Narrow containers keep the current page inline; the form preserves direct jumps.
+  const pageSlots: (number | 'start-gap' | 'end-gap')[] = !exactTotal ? [safePage] : totalPages <= 5
+    ? Array.from({ length: totalPages }, (_, index) => index + 1)
+    : safePage <= 3
+      ? [1, 2, 3, 'end-gap', totalPages]
+      : safePage >= totalPages - 2
+        ? [1, 'start-gap', totalPages - 2, totalPages - 1, totalPages]
+        : [1, 'start-gap', safePage, 'end-gap', totalPages]
+  const buttonClass = 'h-11 min-w-11 px-2 md:h-9 md:min-w-9'
+  const edgeButtonClass = `${buttonClass} hidden @[15rem]/pagination:inline-flex`
 
   return (
-    <nav
-      aria-label={t('a11y.pagination', 'Pagination')}
-      className="flex flex-col sm:flex-row flex-wrap items-start sm:items-center justify-between gap-2 sm:gap-3 pt-4"
-    >
-      <div className="flex items-center gap-2 text-xs text-[var(--text-muted)]">
-        <span className="whitespace-nowrap" aria-live="polite" aria-atomic="true">
-          {t('pagination.showing', 'Showing {{start}}–{{end}} of {{total}}', { start, end, total: safeTotal })}
-        </span>
+    <nav aria-label={t('a11y.pagination', 'Pagination')}
+      className="@container/pagination flex min-w-0 flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+      <div className="flex min-w-0 flex-wrap items-center justify-between gap-x-4 gap-y-2 sm:justify-start">
+        <Text variant="caption" className="min-w-0 break-words tabular-nums" aria-live="polite" aria-atomic="true">
+          {exactTotal ? t('pagination.showing', 'Showing {{start}}–{{end}} of {{total}}', {
+            start: fmtInt(start), end: fmtInt(Math.min(safePage * safePageSize, safeTotal)), total: fmtInt(safeTotal),
+          }) : totalKind === 'loaded' ? t('table.filter.loadedRowCount', '{{filtered}} matching / {{loaded}} loaded rows', {
+            filtered: fmtInt(safeTotal), loaded: fmtInt(safeTotal),
+          }) : t('pagination.currentPage', 'Page {{page}} of {{total}}', {
+            page: fmtInt(safePage), total: t('common.unknown', 'Unknown'),
+          })}
+          {totalKind === 'loaded' && <Text variant="caption" className="block">
+            {t('pagination.currentPage', 'Page {{page}} of {{total}}', {
+              page: fmtInt(safePage), total: t('common.unknown', 'Unknown'),
+            })}
+          </Text>}
+        </Text>
         {onPageSizeChange && (
-          <select
-            value={safePageSize}
-            onChange={e => onPageSizeChange(Number(e.target.value))}
-            aria-label={t('pagination.pageSize', 'Rows per page')}
-            className="rounded-md bg-white/[0.04] px-2 py-1 text-xs text-[var(--text-secondary)] outline-none ring-1 ring-white/[0.08]"
-          >
-            {options.map(s => (
-              <option key={s} value={s} className="bg-[var(--bg)]">
-                {t('pagination.perPage', '{{count}} / page', { count: s })}
-              </option>
-            ))}
-          </select>
+          <div className="flex min-w-0 max-w-full flex-wrap items-center gap-2">
+            <Text variant="caption">{t('pagination.rows', 'Rows')}</Text>
+            <Select value={safePageSize} size="sm" className="min-h-11 md:min-h-9"
+              aria-label={t('pagination.pageSize', 'Rows per page')}
+              onChange={event => onPageSizeChange(Number(event.target.value))}
+              options={options.map(size => ({
+                value: String(size),
+                label: t('pagination.rowsOption', '{{size}} / page', { size: fmtInt(size) }),
+              }))} />
+          </div>
         )}
       </div>
-      <div className="flex items-center gap-1 self-end sm:self-auto">
-        <button onClick={() => onPageChange(1)} disabled={isFirstPage}
-          aria-label={t('pagination.first', 'First page')}
-          className="rounded-md p-1.5 text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-white/[0.06] disabled:opacity-30 disabled:pointer-events-none transition-colors">
-          <ChevronsLeft className="h-4 w-4" aria-hidden="true" />
-        </button>
-        <button onClick={() => onPageChange(safePage - 1)} disabled={isFirstPage}
-          aria-label={t('pagination.previous', 'Previous page')}
-          className="rounded-md p-1.5 text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-white/[0.06] disabled:opacity-30 disabled:pointer-events-none transition-colors">
-          <ChevronLeft className="h-4 w-4" aria-hidden="true" />
-        </button>
-        <span
-          className="px-3 text-xs font-medium text-[var(--text-secondary)]"
-          aria-current="page"
-          aria-label={t('pagination.currentPage', 'Page {{page}} of {{total}}', { page: safePage, total: totalPages })}
-        >
-          {safePage} / {totalPages}
-        </span>
-        <button onClick={() => onPageChange(safePage + 1)} disabled={isLastPage}
-          aria-label={t('pagination.next', 'Next page')}
-          className="rounded-md p-1.5 text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-white/[0.06] disabled:opacity-30 disabled:pointer-events-none transition-colors">
-          <ChevronRight className="h-4 w-4" aria-hidden="true" />
-        </button>
-        <button onClick={() => onPageChange(totalPages)} disabled={isLastPage}
-          aria-label={t('pagination.last', 'Last page')}
-          className="rounded-md p-1.5 text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-white/[0.06] disabled:opacity-30 disabled:pointer-events-none transition-colors">
-          <ChevronsRight className="h-4 w-4" aria-hidden="true" />
-        </button>
+      <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end sm:gap-x-4 sm:gap-y-2">
+        <div className="flex w-full items-center gap-1 sm:w-auto">
+          <div className="flex gap-1">
+            <Button type="button" variant="ghost" size="sm" className={edgeButtonClass}
+              disabled={safePage === 1} onClick={() => onPageChange(1)} aria-label={t('pagination.first', 'First page')}>
+              <ChevronsLeft className="h-4 w-4 shrink-0 rtl:rotate-180" aria-hidden="true" />
+            </Button>
+            <Button type="button" variant="ghost" size="sm" className={buttonClass}
+              disabled={safePage === 1} onClick={() => onPageChange(safePage - 1)} aria-label={t('pagination.previous', 'Previous page')}>
+              <ChevronLeft className="h-4 w-4 shrink-0 rtl:rotate-180" aria-hidden="true" />
+            </Button>
+          </div>
+          <div className="flex min-w-0 flex-1 items-center justify-center gap-1">
+            {pageSlots.map(slot => typeof slot === 'number' ? (
+              <Button key={slot} type="button" variant={slot === safePage ? 'secondary' : 'ghost'} size="sm"
+                className={slot === safePage ? buttonClass : `${buttonClass} hidden @[27rem]/pagination:inline-flex`}
+                onClick={() => { if (slot !== safePage) onPageChange(slot) }}
+                aria-current={slot === safePage ? 'page' : undefined}
+                aria-label={slot === safePage && exactTotal
+                  ? t('pagination.currentPage', 'Page {{page}} of {{total}}', { page: fmtInt(slot), total: fmtInt(totalPages) })
+                  : t('pagination.page', 'Page {{page}}', { page: fmtInt(slot) })}>
+                {fmtInt(slot)}
+              </Button>
+            ) : <Text key={slot} variant="caption" className="hidden min-w-6 justify-center @[27rem]/pagination:flex" aria-hidden="true">…</Text>)}
+          </div>
+          <div className="flex gap-1">
+            <Button type="button" variant="ghost" size="sm" className={buttonClass}
+              disabled={!canGoNext} onClick={() => onPageChange(safePage + 1)} aria-label={t('pagination.next', 'Next page')}>
+              <ChevronRight className="h-4 w-4 shrink-0 rtl:rotate-180" aria-hidden="true" />
+            </Button>
+            {exactTotal && <Button type="button" variant="ghost" size="sm" className={edgeButtonClass}
+              disabled={safePage === totalPages} onClick={() => onPageChange(totalPages)} aria-label={t('pagination.last', 'Last page')}>
+              <ChevronsRight className="h-4 w-4 shrink-0 rtl:rotate-180" aria-hidden="true" />
+            </Button>}
+          </div>
+        </div>
+        <form className="flex max-w-full flex-wrap items-center justify-between gap-2 sm:justify-end" noValidate onSubmit={event => {
+          event.preventDefault()
+          const target = Number(destination)
+          if (!/^\d+$/.test(destination.trim()) || !Number.isSafeInteger(target) || target < 1 || (exactTotal && target > totalPages)) {
+            setInvalidDestination(true)
+            return
+          }
+          setInvalidDestination(false)
+          setDestination(String(target))
+          if (target !== safePage) onPageChange(target)
+        }}>
+          <Text variant="caption">{t('pagination.goToPage', 'Go to page')}</Text>
+          <div className="flex items-center gap-2">
+            <div className="w-16">
+              <Input id={inputId} size="sm" className="min-h-11 md:min-h-9" type="text" inputMode="numeric" autoComplete="off"
+                aria-label={t('pagination.goToPage', 'Go to page')}
+                aria-invalid={invalidDestination || undefined} aria-describedby={invalidDestination ? `${inputId}-invalid` : undefined}
+                value={destination} onChange={event => { setDestination(event.target.value); setInvalidDestination(false) }} />
+            </div>
+            <Button type="submit" variant="secondary" size="sm" wrapLabel className="min-h-11 min-w-11 px-2 md:min-h-9 md:min-w-9">{t('pagination.go', 'Go')}</Button>
+          </div>
+          {invalidDestination && (
+            <Text id={`${inputId}-invalid`} variant="error" role="alert" className="basis-full">
+              {t('pagination.invalidPage', 'Enter a page from 1 to {{total}}.', { total: fmtInt(exactTotal ? totalPages : Number.MAX_SAFE_INTEGER) })}
+            </Text>
+          )}
+        </form>
       </div>
     </nav>
   )

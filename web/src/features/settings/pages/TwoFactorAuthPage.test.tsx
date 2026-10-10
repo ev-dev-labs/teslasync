@@ -34,6 +34,13 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter } from 'react-router-dom'
 import type { ReactNode } from 'react'
 
+vi.mock('@/hooks/useUnits', () => ({
+  useUnits: () => ({ unitPrefs: { distance: 'km', speed: 'km/h', temperature: '°C',
+    pressure: 'bar', energy: 'kWh', duration: 'h', power: 'kW', locale: 'en-US', precision: 2 } }),
+}))
+vi.mock('@/hooks/useFormatting', () => ({
+  useFormatting: () => ({ currencySymbol: '$' }),
+}))
 vi.mock('@/api/client', async () => {
   const actual = await vi.importActual<typeof import('@/api/client')>('@/api/client')
   return {
@@ -71,7 +78,7 @@ vi.mock('react-i18next', async () => {
   }
 })
 
-import { request } from '@/api/client'
+import { request, ApiError } from '@/api/client'
 import { ToastProvider } from '@/components/feedback/Toast'
 import TwoFactorAuthPage from './TwoFactorAuthPage'
 
@@ -164,7 +171,7 @@ describe('TwoFactorAuthPage — open mode', () => {
 
     // Both bento sections expose accessible region names (a11y landmarks).
     expect(
-      screen.getByRole('region', { name: /Manage two-factor authentication/i }),
+      screen.getByRole('region', { name: /Manage Two-factor authentication/i }),
     ).toBeInTheDocument()
     expect(
       screen.getByRole('region', { name: /Two-factor apps and recovery/i }),
@@ -300,9 +307,28 @@ describe('TwoFactorAuthPage — loading', () => {
     // Interactive section shows its loading affordance…
     expect(await screen.findByText('Loading two-factor settings…')).toBeInTheDocument()
     // …the KPI band is in skeleton mode, so no metric cells have rendered yet…
-    expect(screen.queryByText('Protection')).toBeNull()
+    expect(screen.getByText('Protection')).toBeInTheDocument()
+    expect(screen.getByTestId('totp-summary')).toHaveAttribute('aria-busy', 'true')
+    expect(screen.getByTestId('totp-summary').querySelectorAll('[data-operational-value]')).toHaveLength(0)
     // …but the static guidance panels are always mounted.
     expect(screen.getByText('How setup works')).toBeInTheDocument()
     expect(screen.getByText('Compatible apps')).toBeInTheDocument()
+  })
+
+  describe('TwoFactorAuthPage — source failure', () => {
+    it('does not misrepresent a failed status request as open auth mode or expose credentials', async () => {
+      mockedRequest.mockRejectedValue(new ApiError('Status unavailable', 500, 'INTERNAL'))
+      renderPage()
+      expect(await screen.findByText('Server error')).toBeInTheDocument()
+      expect(screen.queryByTestId('totp-section-open-mode')).toBeNull()
+      expect(screen.queryByTestId('totp-enroll')).toBeNull()
+      expect(screen.queryByTestId('totp-secret')).toBeNull()
+      expect(screen.queryByTestId('totp-backup-list')).toBeNull()
+      expect(screen.getByText('How setup works')).toBeInTheDocument()
+      expect(screen.getByText('Compatible apps')).toBeInTheDocument()
+      expect(screen.getByText('Recovery & good habits')).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: /Retry/i })).toBeInTheDocument()
+      expect(mockedRequest.mock.calls.every(call => call[0] === '/auth/totp')).toBe(true)
+    })
   })
 })

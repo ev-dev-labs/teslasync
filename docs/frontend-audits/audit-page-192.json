@@ -1,0 +1,285 @@
+{
+  "item": "audit-page-192",
+  "page": "web\\src\\features\\system\\pages\\OutageAutobiographyPage.tsx",
+  "routes": ["/outage"],
+  "purpose": "Explain selected-vehicle outage evidence, unknown telemetry intervals and original-event-time replay, and download the original session certificate.",
+  "primaryGoal": "Understand what remains known during an outage without treating missing evidence as zero, then retain the certificate evidence as JSON.",
+  "dataSources": [
+    {
+      "name": "outageQuery",
+      "hook": "useOutageAutobiography(vehicleIdStr)",
+      "owner": "web\\src\\api\\hooks\\useTeslaPhysics.ts",
+      "file": "web\\src\\api\\hooks\\useTeslaPhysics.ts",
+      "line": 99,
+      "endpoint": "GET /api/v1/physics/outage?vehicle_id=<selected vehicle>",
+      "routeEvidence": "internal\\api\\router.go:3515-3520",
+      "sourceOwnership": "physicsHandler.Outage; handler internals and backend production behavior were not inspected.",
+      "type": "OutageAutobiography at web\\src\\types\\teslaPhysics.ts:142-151",
+      "behavior": "Vehicle-scoped physics/outage cache key; enabled only with a vehicle ID; request receives cancellation signal; historical query policy. Page derives live-provenance DataState and preserves its retained payload.",
+      "consumers": ["page subtitle", "SystemSummaryBrief", "outage evidence panel", "outage stale warning"],
+      "fields": ["vehicle_id", "last_telemetry_at", "gap_s", "mqtt_connected", "replay_preserves_event_time", "unknown_since", "notes", "honesty"],
+      "unknowns": ["Server default reporting interval, source freshness and collection semantics are unverified."]
+    },
+    {
+      "name": "certificateQuery",
+      "hook": "useSessionCertificate(vehicleIdStr)",
+      "owner": "web\\src\\api\\hooks\\useTeslaPhysics.ts",
+      "file": "web\\src\\api\\hooks\\useTeslaPhysics.ts",
+      "line": 119,
+      "endpoint": "GET /api/v1/physics/certificate?vehicle_id=<selected vehicle>",
+      "routeEvidence": "internal\\api\\router.go:3515-3522",
+      "sourceOwnership": "physicsHandler.Certificate; handler internals, integrity verification and server interval selection were not inspected.",
+      "type": "SessionCertificate at web\\src\\types\\teslaPhysics.ts:129-140",
+      "behavior": "Independent vehicle-scoped physics/certificate cache key, vehicle prerequisite, cancellation signal and historical query policy. Historical DataState warning/error handling does not suppress outage evidence. Download uses the original query payload, not a presentation projection.",
+      "consumers": ["certificate readiness panel", "certificate stale warning", "session certificate JSON download"],
+      "fields": ["vehicle_id", "issued_at", "from", "to", "rules", "drives", "charges", "integrity_sha256", "hmac_sha256", "honesty"]
+    },
+    {
+      "name": "workspace vehicle and presentation preferences",
+      "owner": "web\\src\\features\\system\\pages\\OutageAutobiographyPage.tsx",
+      "file": "web\\src\\features\\system\\pages\\OutageAutobiographyPage.tsx",
+      "line": 19,
+      "behavior": "Consumes useSelectedVehicle without a competing picker; no page date controls or fixed reporting range. useNumberFormatting retains locale and numeric precision; formatDateTime remains the timestamp display owner.",
+      "dependencyEvidence": ["web\\src\\hooks\\useNumberFormatting.ts:20-29", "web\\src\\lib\\dateFormat.ts:54-58", "web\\src\\api\\scope.ts:118-139"],
+      "unknowns": ["Vehicle-provider implementation and actual header vehicle visibility were not exercised or traced."]
+    }
+  ],
+  "components": [
+    {
+      "name": "PageLayout / PageContainer",
+      "owner": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+      "kind": "layout",
+      "evidence": ["web\\src\\features\\system\\pages\\OutageAutobiographyPage.tsx:31-49", "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx:9-15", "web\\src\\components\\layout\\PageContainer.tsx:92-109"],
+      "props": ["title", "subtitle", "secondaryActions", "query"],
+      "states": ["header freshness metadata", "independent child content"],
+      "dependsOn": ["web\\src\\components\\layout\\PageContainer.tsx"]
+    },
+    {
+      "name": "SystemSummaryBrief / OperationalBrief",
+      "owner": "web\\src\\features\\system\\components\\operationalbrief-all\\SystemSummaryBrief.tsx",
+      "kind": "domain adapter over shared composite",
+      "evidence": ["web\\src\\features\\system\\pages\\OutageAutobiographyPage.tsx:51-77", "web\\src\\features\\system\\components\\operationalbrief-all\\SystemSummaryBrief.tsx:21-60", "web\\src\\components\\data-display\\OperationalBrief.tsx:119-199,235-270"],
+      "props": ["title", "description", "scope", "freshness", "available", "loading", "retained", "metrics", "textMetrics"],
+      "states": ["loading", "available", "unavailable", "retained", "review details drawer"],
+      "dependsOn": ["web\\src\\components\\data-display\\OperationalBrief.tsx", "useOperationalMetrics"]
+    },
+    {
+      "name": "SourceContent",
+      "owner": "web\\src\\components\\layout\\layout-reference\\SourceContent.tsx",
+      "kind": "shared source-state composite",
+      "evidence": ["web\\src\\features\\system\\pages\\OutageAutobiographyPage.tsx:79-99,107-116", "web\\src\\components\\layout\\layout-reference\\SourceContent.tsx:12-31,40-73"],
+      "props": ["state", "label", "emptyMessage", "errorMessage", "error", "errorRecovery"],
+      "availableReuse": ["emptyContent for vehicle/offline prerequisite explanations", "retainedMessage and retained state when appropriate", "emptyRecovery"],
+      "dependsOn": ["existing Skeleton", "existing EmptyState", "existing ErrorDisplay"]
+    },
+    {
+      "name": "StaleRefreshWarning / QueryError",
+      "owner": "web\\src\\components\\feedback\\StaleRefreshWarning.tsx",
+      "kind": "feedback",
+      "evidence": ["web\\src\\features\\system\\pages\\OutageAutobiographyPage.tsx:50,103-105", "web\\src\\components\\feedback\\StaleRefreshWarning.tsx:58-116"],
+      "props": ["state", "label", "error", "onRetry"],
+      "states": ["retained refresh failure", "retained paused/offline refresh", "fatal certificate failure"]
+    },
+    {
+      "name": "Button / Badge / GlassPanel / PanelTitle / Text",
+      "owner": "web\\src\\components\\ui",
+      "kind": "existing category-barrel primitives",
+      "evidence": ["web\\src\\features\\system\\pages\\OutageAutobiographyPage.tsx:5,35-46,78-102,113-115", "web\\src\\components\\ui\\Button.tsx:9-15,27-49,63-87"],
+      "props": ["Button variant=secondary size=sm disabled", "Badge variant=info size=sm", "Text as=span variant=caption", "Text as=p variant=bodySm"],
+      "states": ["disabled certificate export", "replay event-time badge", "persistent evidence surfaces"]
+    }
+  ],
+  "duplicatedPatterns": [
+    {
+      "name": "Independent source-state panels",
+      "evidence": "web\\src\\features\\system\\pages\\OutageAutobiographyPage.tsx:78-118",
+      "assessment": "Two source panels intentionally retain independent state and retry ownership. Both already reuse SourceContent; certificate fatal failure uses QueryError. Do not create another outage-specific state renderer.",
+      "existingOwners": ["SourceContent", "StaleRefreshWarning", "QueryError"]
+    },
+    {
+      "name": "Repeated honesty and timestamp context",
+      "evidence": "web\\src\\features\\system\\pages\\OutageAutobiographyPage.tsx:33,53,57,71-75",
+      "assessment": "Header help and summary/details reuse source context intentionally. Preserve all explanations; simplify local expressions only if useful, not by deleting content."
+    }
+  ],
+  "responsive": {
+    "sourceEvidence": [
+      "Page panels use p-4 sm:p-5 and replay badges flex-wrap at page lines 78,88,101.",
+      "PageLayout preserves full-width min-w-0 container at its lines 11-12.",
+      "Compact OperationalBrief stacks one column, then sm two and md three; xl header reflows; min-[1920px] allows six columns at its lines 129-175."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\system\\pages\\OutageAutobiographyPage.tsx",
+        "line": 37,
+        "rule": "MDC-040 / MDC-043",
+        "detail": "Certificate action selects Button size=sm, whose h-9 base is 36px, below the contract's stronger 44px mobile default. It does not opt into the existing wrapLabel behavior; long translated labels need allocated-width testing.",
+        "fix": "Reuse Button's existing sizing/className and wrapLabel props to provide a mobile 44px minimum and preserve long labels; measure actual composed target/spacing before declaring a WCAG failure.",
+        "owner": "page",
+        "confidence": "high for source sizing; runtime target and overflow unverified"
+      }
+    ],
+    "viewportChecks": "Not run at 320,375,390,430,768,1024,1280,1440,1920 or 2560px; no clipping or successful reflow claim."
+  },
+  "accessibility": {
+    "sourceEvidence": [
+      "Localized certificate action text and decorative Download aria-hidden at page lines 44-45.",
+      "Notes retain ul/li semantics and Text as=span at page lines 93-97.",
+      "OperationalBrief uses aria-labelledby, a metric list, aria-busy, and an existing Drawer for details at its lines 119,169-184,235-242.",
+      "SourceContent loading uses role=status at its line 43; StaleRefreshWarning uses role=status aria-live=polite at its lines 97-98.",
+      "Button retains shared focus and disabled tokens at Button.tsx:27-34."
+    ],
+    "issues": [],
+    "followUp": "Validate certificate disabled-state explanation, all retry/details actions, drawer focus/restoration, screen-reader ordering, 200% text, long labels, contrast and forced colors. Mobile target finding is recorded once in responsive.",
+    "verification": "Keyboard, screen reader, focus, contrast and reduced-motion behavior unverified."
+  },
+  "states": {
+    "loading": "Independent initial query loading maps to SourceContent and summary suppression at page lines 58,80,108. Shared summary and details values suppress measurements during loading (OperationalBrief.tsx:191-196,256-263).",
+    "empty": "Outage and certificate have localized empty copy at page lines 82 and 110.",
+    "error": "Outage fatal failure uses SourceContent with retry at page lines 80-85; certificate fatal failure uses QueryError with independent retry at lines 104-105.",
+    "retained": "Both source warnings are mounted separately at page lines 50 and 103; retained payload is not dropped after refresh failure.",
+    "offline": "Retained paused sources have shared warnings, but initial paused requests have no explicit prerequisite/offline representation here.",
+    "unknown": "MQTT null is distinct from false; missing timestamp is a dash; gap_s stays undefined/null rather than zero; unknown_since explains missingness at page lines 54-75.",
+    "disabled": "Certificate action disabled until query payload exists, with an additional onClick guard at page lines 38-41.",
+    "issues": [
+      {
+        "file": "web\\src\\features\\system\\pages\\OutageAutobiographyPage.tsx",
+        "line": 80,
+        "rule": "MDC-026 / MDC-032",
+        "detail": "With no selected vehicle, both hooks are disabled (useTeslaPhysics.ts:104,124), but lack of data is rendered as no recorded evidence/no available certificate. An initial paused request similarly has no data and isLoading is false. Neither condition establishes an authoritative empty result.",
+        "fix": "Distinguish vehicle prerequisite and initial offline/paused loading from resolved empty using vehicleId, query flags and DataState.isRefreshBlocked. Reuse SourceContent.emptyContent and existing feedback; retain both panels and workspace-owned vehicle selection.",
+        "owner": "page",
+        "confidence": "high for source branch logic; mounted outcomes unverified"
+      },
+      {
+        "file": "web\\src\\features\\system\\pages\\OutageAutobiographyPage.tsx",
+        "line": 58,
+        "rule": "MDC-026",
+        "detail": "Summary retained flag is hasData && isError only. A paused retained source is stale in DataState but SystemSummaryBrief chooses Source available; fatal initial failure is summarized as unavailable without failure context. The adjacent warning/error remains present, so this is a summary trust mismatch rather than loss of content.",
+        "fix": "Derive summary retention/context from the shared DataState status, including paused refresh; reuse available retained and statusLabel props with localized failure/offline context rather than adding another trust registry.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\system\\pages\\OutageAutobiographyPage.tsx",
+        "line": 87,
+        "rule": "MDC-026",
+        "detail": "A nonempty outage object with replay_preserves_event_time=false and notes=[] produces a ready but visually contentless evidence panel. The null-safe list avoids a crash, but there is no explanation for the missing details.",
+        "fix": "Keep the evidence panel and summary; add localized detail-unavailable content when neither replay assurance nor notes exist. Do not invent a replay failure or interpret absent notes as zero incidents.",
+        "owner": "page",
+        "confidence": "high for conditional rendering; backend occurrence unknown"
+      }
+    ]
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\system\\pages\\OutageAutobiographyPage.tsx",
+      "line": 78,
+      "rule": "MDC-031 / mission 43",
+      "detail": "The first evidence surface has no explicit section title while the certificate surface has PanelTitle. It can become a blank framed block under the ready-without-details case recorded in states.",
+      "fix": "Use the existing PanelTitle and source-appropriate localized heading while preserving replay assurance and every note. Keep one section shell, not another nested card.",
+      "owner": "page",
+      "confidence": "high for source hierarchy; visual severity unverified"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\features\\system\\pages\\OutageAutobiographyPage.tsx",
+      "line": 26,
+      "rule": "MDC-026 / MDC-046",
+      "detail": "Page declares live provenance although the hook selects historical policy. That policy has five-minute staleTime and no interval/reconnect/focus refresh (queryPolicy.ts:156-166). DataState has no maxAgeMs here. Current-looking MQTT/gap evidence therefore needs a source-freshness review, not an assumed live guarantee.",
+      "fix": "Confirm physicsHandler.Outage source semantics with the integration owner before changing provenance or refresh policy. Reuse existing queryPolicy/DataState contracts, retain current query keys/cancellation and avoid silently adding polling.",
+      "owner": "integration",
+      "confidence": "high for source configuration mismatch; backend freshness unknown"
+    }
+  ],
+  "priority": {
+    "level": "P2",
+    "reason": "Already uses shared layout, metrics, source-state handling and null-safe display; prioritize truthful prerequisite/offline/summary states, detail-empty clarity and mobile action reachability rather than redesigning architecture.",
+    "order": ["source prerequisites and trust summaries", "empty detail explanation and section hierarchy", "mobile action sizing and long labels", "integration freshness review", "centralized runtime/accessibility/visual acceptance"]
+  },
+  "requiredSharedChanges": [],
+  "competingImplementations": {
+    "confirmed": [],
+    "assessment": "No competing formatter, fetch layer, picker, overlay, state registry or surface implementation in the inspected page. Preserve SystemSummaryBrief over OperationalBrief and the existing SourceContent pipeline.",
+    "sharedChangeDecision": "None required by current bounded evidence. Existing SourceContent emptyContent, Button wrapLabel/className and SystemSummaryBrief retained/statusLabel props cover the page findings. Freshness policy review is an integration dependency, not authorization to edit shared code.",
+    "visualNoiseCheck": "Assigned-page source has zero matches for neon, glow, fixed white, hex-white or saturation patterns. Shared OperationalBrief uses semantic toned text and variable surfaces; its theme-primary accent is preference-driven, not proof of unnecessary saturation. Actual composed themes, glow and contrast remain unverified."
+  },
+  "preservation": {
+    "sourceHash": "7652BCF6F04461E817054741FEAC2CAF22BC340A9CA918BB3671192D9BD893D2",
+    "hashAlgorithm": "SHA-256",
+    "currentLineCount": 121,
+    "sections": [
+      {"name": "Page header, source honesty help and certificate action", "file": "web\\src\\features\\system\\pages\\OutageAutobiographyPage.tsx", "line": 31, "endLine": 49, "count": 1},
+      {"name": "Catch-up summary and review-details drawer", "file": "web\\src\\features\\system\\pages\\OutageAutobiographyPage.tsx", "line": 51, "endLine": 77, "count": 1},
+      {"name": "Outage replay assurance and notes evidence", "file": "web\\src\\features\\system\\pages\\OutageAutobiographyPage.tsx", "line": 78, "endLine": 100, "count": 1},
+      {"name": "Session certificate readiness and independent recovery", "file": "web\\src\\features\\system\\pages\\OutageAutobiographyPage.tsx", "line": 101, "endLine": 118, "count": 1}
+    ],
+    "sectionCount": 4,
+    "bodySectionCount": 3,
+    "componentCounts": {"GlassPanel": 2, "SystemSummaryBrief": 1, "SourceContent": 2, "StaleRefreshWarning": 2, "ChartContainer": 0},
+    "actions": [
+      "Download original certificate payload as dated session-certificate-YYYY-MM-DD.json; retain data guard, all boundaries/rules/hash/HMAC/honesty fields and JSON formatting (page:35-46; csvExport.ts:139-164).",
+      "Retry outage fatal source (page:85) and certificate fatal source (page:105) independently.",
+      "Refresh retained source via each StaleRefreshWarning; retry disabled while refreshing (page:50,103; StaleRefreshWarning.ts:103-114).",
+      "Open/close operational review-details drawer, retain narrative, source scope/freshness, all three metrics and provenance (OperationalBrief.tsx:150-160,235-270).",
+      "Retain header freshness metadata and localized honesty help, inherited through PageContainer."
+    ],
+    "dataBehavior": [
+      "Use workspace-selected vehicle, stringified only for typed hooks; no duplicate page picker or invented date range.",
+      "Keep independent physics/outage and physics/certificate keys, vehicle prerequisite, cancellation signals, raw payloads and existing policy until integration review authorizes changes.",
+      "Keep telemetry gap raw seconds; divide by 60 only for display using saved numeric precision/locale. Keep unknown distinct from measured zero.",
+      "Keep MQTT unknown/connected/disconnected labels and neutral/success/warning semantics.",
+      "Retain last telemetry original event time, unknown_since gap explanation, honesty, every note and replay event-time assurance.",
+      "Preserve independent loading, empty, fatal retry, retained refresh warning and download readiness; do not gate all sections behind outage success.",
+      "No backend evidence, additional metrics, fake queue counts, unsupported reporting period or source-unit conversion may be invented."
+    ]
+  },
+  "evidenceLimits": {
+    "method": "Atomic Phase0 source inspection only; read ranges and searches were restricted to assigned page, its immediate presentation/data dependencies, route evidence and mandated documents.",
+    "runtime": "NOT RUN",
+    "visual": "NOT RUN",
+    "keyboard": "NOT RUN",
+    "contrast": "NOT MEASURED",
+    "viewport": "NOT RUN",
+    "typescript": "NOT RUN: concurrent source-only audit assignment forbids project validation.",
+    "lintBuildTests": "NOT RUN: no full-repository lint/build or test/runtime acceptance permitted.",
+    "skillScript": "NOT RUN: inspected audit.sh; its mandatory TypeScript step exceeds this assignment. Bounded assigned-page source regex checks were used instead.",
+    "backend": "Only exact physics router registrations inspected; no handler/database freshness, availability, integrity or period behavior asserted.",
+    "catalogs": "Translation calls inspected, catalog key existence and real translated labels not checked.",
+    "scopedCheck": {
+      "command": "PowerShell Get-Content of the exact assigned page; regex counts for static inline style, raw controls, direct libraries, legacy imports, neon/glow/saturated/white and section components",
+      "exitCode": 0,
+      "output": "StaticInlineStyle=0\nRawControls=0\nDirectLibraries=0\nLegacyApiImports=0\nNeonGlowSaturatedWhite=0\nGlassPanels=2\nChartContainers=0\nSummaryBriefs=1\nScoped source-only counts; no TypeScript, skill script, lint, build, runtime or browser checks executed.",
+      "interpretation": "Pattern counts only, not a full semantic audit or rendered acceptance."
+    },
+    "sourceHashCommand": "Get-FileHash -Algorithm SHA256 'web\\src\\features\\system\\pages\\OutageAutobiographyPage.tsx'",
+    "sourceEdits": "None; only assigned JSON and heartbeat are owned."
+  },
+  "filesRead": [
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\system\\pages\\OutageAutobiographyPage.tsx",
+    "web\\src\\features\\system\\components\\operationalbrief-all\\SystemSummaryBrief.tsx",
+    "web\\src\\api\\hooks\\useTeslaPhysics.ts",
+    "web\\src\\types\\teslaPhysics.ts",
+    "web\\src\\hooks\\useDataState.ts",
+    "web\\src\\api\\dataState.ts",
+    "web\\src\\api\\scope.ts",
+    "web\\src\\api\\queryPolicy.ts",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\layout\\layout-reference\\SourceContent.tsx",
+    "web\\src\\components\\layout\\PageContainer.tsx",
+    "web\\src\\components\\data-display\\OperationalBrief.tsx",
+    "web\\src\\components\\feedback\\StaleRefreshWarning.tsx",
+    "web\\src\\components\\ui\\Button.tsx",
+    "web\\src\\hooks\\useNumberFormatting.ts",
+    "web\\src\\lib\\dateFormat.ts",
+    "web\\src\\lib\\csvExport.ts",
+    "internal\\api\\router.go",
+    "web\\src\\App.tsx",
+    "web\\src\\lib\\workspaceScope.ts"
+  ]
+}

@@ -58,7 +58,7 @@ const unitsRef = vi.hoisted(() => ({
     (v: number | null | undefined): string =>
       v === null || v === undefined || !Number.isFinite(v)
         ? '—'
-        : `${Number(v).toFixed(1)}°C`,
+        : `${Number(v).toFixed(2)}°C`,
   ),
 }));
 
@@ -122,7 +122,7 @@ describe('TemperatureMetricCards — states (loading > empty > data)', () => {
   it('renders six aria-hidden skeletons and no tiles while loading', () => {
     const { container } = renderCards({ loading: true });
 
-    expect(container.querySelectorAll('.animate-pulse')).toHaveLength(6);
+    expect(container.querySelectorAll('[class*="--skeleton-bg"]')).toHaveLength(6);
     expect(container.querySelector('[aria-hidden="true"]')).not.toBeNull();
     // Loading strictly precedes the empty / data branches.
     expect(screen.queryByText('Health Score')).toBeNull();
@@ -132,7 +132,7 @@ describe('TemperatureMetricCards — states (loading > empty > data)', () => {
   it('loading wins even when the sensor list is empty (no EmptyState flash)', () => {
     const { container } = renderCards({ sensors: [], loading: true });
 
-    expect(container.querySelectorAll('.animate-pulse')).toHaveLength(6);
+    expect(container.querySelectorAll('[class*="--skeleton-bg"]')).toHaveLength(6);
     expect(screen.queryByRole('status')).toBeNull();
   });
 
@@ -171,8 +171,8 @@ describe('TemperatureMetricCards — populated tiles', () => {
   it('shows the formatter output for finite readings and "—" for a missing one', () => {
     renderCards();
 
-    expect(screen.getByText('60.0°C')).toBeInTheDocument();
-    expect(screen.getByText('84.0°C')).toBeInTheDocument();
+    expect(screen.getByText('60.00°C')).toBeInTheDocument();
+    expect(screen.getByText('84.00°C')).toBeInTheDocument();
     // Battery has no reading → em-dash, never "NaN°C".
     expect(screen.getByText('—')).toBeInTheDocument();
   });
@@ -180,8 +180,8 @@ describe('TemperatureMetricCards — populated tiles', () => {
   it('computes the "% of max" subtitle from reading / ceiling', () => {
     renderCards();
 
-    expect(screen.getByText('40% of max')).toBeInTheDocument(); // 60 / 150
-    expect(screen.getByText('70% of max')).toBeInTheDocument(); // 84 / 120
+    expect(screen.getByText('40.00% of max')).toBeInTheDocument(); // 60 / 150
+    expect(screen.getByText('70.00% of max')).toBeInTheDocument(); // 84 / 120
     // The missing-reading tile falls back to the "No data" copy.
     expect(screen.getByText('No data')).toBeInTheDocument();
   });
@@ -258,13 +258,13 @@ describe('TemperatureMetricCards — Health Score tile', () => {
 
   it('renders the health score as a percent', () => {
     renderCards({ healthScore: 60, overallHealth: 'warning' });
-    expect(screen.getByText('60%')).toBeInTheDocument();
+    expect(screen.getByText('60.00%')).toBeInTheDocument();
   });
 
   it('guards a non-finite health score to 0% (never "NaN%")', () => {
     const { container } = renderCards({ healthScore: Number.NaN });
 
-    expect(screen.getByText('0%')).toBeInTheDocument();
+    expect(screen.getByText('0.00%')).toBeInTheDocument();
     expect(container.textContent).not.toMatch(/NaN/);
   });
 });
@@ -272,7 +272,7 @@ describe('TemperatureMetricCards — Health Score tile', () => {
 describe('TemperatureMetricCards — Peak Power tile', () => {
   it('formats a positive peak power as locale-grouped kW', () => {
     renderCards({ peakPower: 1234 });
-    expect(screen.getByText('1,234 kW')).toBeInTheDocument();
+    expect(screen.getByText('1,234.00 kW')).toBeInTheDocument();
   });
 
   it('renders "—" for a zero / non-positive peak power', () => {
@@ -300,6 +300,6 @@ describe('TemperatureMetricCards — a11y', () => {
     const { container } = renderCards({ loading: true });
     const grid = container.querySelector('div[aria-hidden="true"]');
     expect(grid).not.toBeNull();
-    expect(grid?.querySelectorAll('.animate-pulse')).toHaveLength(6);
+    expect(grid?.querySelectorAll('[class*="--skeleton-bg"]')).toHaveLength(6);
   });
 });

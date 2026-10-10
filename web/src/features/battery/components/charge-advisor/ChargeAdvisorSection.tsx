@@ -3,7 +3,8 @@ import { Database, PlugZap } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { EmptyState, Skeleton } from '@/components/feedback';
-import { GlassPanel, PanelTitle, Text } from '@/components/ui';
+import { LayoutCard, SourceContent } from '@/components/layout';
+import { Text } from '@/components/ui';
 import { cn } from '@/lib/cn';
 
 import type { ChargeAdvisorDependency, ChargeAdvisorQueryState } from './types';
@@ -30,26 +31,35 @@ export function ChargeAdvisorSection({
   className,
 }: ChargeAdvisorSectionProps) {
   const { t } = useTranslation();
+  const needsDrive = dependency === 'drive' || dependency === 'both';
+  const needsCharging = dependency === 'charging' || dependency === 'both';
   const loading =
-    state.isLoading
-    || (dependency !== 'charging' && state.driveLoading)
-    || (dependency !== 'drive' && state.chargingLoading);
-  const missingDrive = dependency !== 'charging' && !state.driveAvailable;
-  const missingCharging = dependency !== 'drive' && !state.chargingAvailable;
+    (needsDrive && state.driveLoading)
+    || (needsCharging && state.chargingLoading);
+  const missingDrive = needsDrive && !state.driveAvailable;
+  const missingCharging = needsCharging && !state.chargingAvailable;
 
   return (
     <section data-testid={dataTestId} className={cn('min-w-0', className)}>
-      <GlassPanel className="h-full p-4 sm:p-5">
-        <PanelTitle className="mb-1 flex items-center gap-2">
-          {icon ?? <Database className="h-4 w-4 text-cyan-300" aria-hidden="true" />}
-          {title}
-        </PanelTitle>
-        {subtitle && (
-          <Text as="p" variant="caption" className="mb-4">
-            {subtitle}
+      <LayoutCard title={title} description={subtitle}
+        actions={icon ?? <Database className="h-4 w-4 text-cyan-300" aria-hidden="true" />}>
+        {state.vehicleSelected && !loading && (missingDrive || missingCharging) ? (
+          <Text as="p" variant="bodySm" className="py-10 text-center">
+            {missingDrive ? t(
+              'chargeAdvisor.states.driveUnavailable',
+              'Drive history is unavailable; retry from the evidence band above.',
+            ) : t(
+              'chargeAdvisor.states.chargingUnavailable',
+              'Charging history is unavailable. No charging profile is inferred.',
+            )}
           </Text>
-        )}
-        {!state.vehicleSelected ? (
+        ) : <SourceContent
+          label={title}
+          state={!state.vehicleSelected ? 'empty' : loading ? 'loading' : 'ready'}
+          loadingContent={<Skeleton height={180} />}
+          emptyMessage={t('chargeAdvisor.states.selectVehicle', 'Select a vehicle to show its charge-advisor evidence.')}
+          errorMessage={t('chargeAdvisor.states.driveUnavailable', 'Drive history is unavailable; retry from the evidence band above.')}
+          emptyContent={!state.vehicleSelected ? (
           <EmptyState /* no-action: vehicle and scenario controls in the surrounding section determine this result */
             className="py-10"
             icon={<PlugZap className="h-7 w-7" aria-hidden="true" />}
@@ -58,26 +68,11 @@ export function ChargeAdvisorSection({
               'Select a vehicle to show its charge-advisor evidence.',
             )}
           />
-        ) : loading ? (
-          <Skeleton height={180} />
-        ) : missingDrive ? (
-          <Text as="p" variant="bodySm" className="py-10 text-center">
-            {t(
-              'chargeAdvisor.states.driveUnavailable',
-              'Drive history is unavailable; retry from the evidence band above.',
-            )}
-          </Text>
-        ) : missingCharging ? (
-          <Text as="p" variant="bodySm" className="py-10 text-center">
-            {t(
-              'chargeAdvisor.states.chargingUnavailable',
-              'Charging history is unavailable. No charging profile is inferred.',
-            )}
-          </Text>
-        ) : (
-          children
-        )}
-      </GlassPanel>
+        ) : null}
+        >
+          {children}
+        </SourceContent>}
+      </LayoutCard>
     </section>
   );
 }

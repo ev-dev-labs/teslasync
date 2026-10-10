@@ -9,7 +9,7 @@
  *   - forwarded props (height, icon, message, error, onRetry) reach the
  *     inner component,
  *   - the error branch never goes blank — even for a nullish error,
- *   - only the `ready` branch renders `children`.
+ *   - ready/retained render children; retained-empty keeps specialist empty copy.
  *
  * QueryError pulls in i18n (`useTranslation`) + Router (`useNavigate`) +
  * `useOnlineStatus`, so we import `@/i18n`, wrap in a MemoryRouter, and
@@ -80,19 +80,31 @@ describe('LiveSectionState', () => {
 
   describe('loading branch', () => {
     it('renders a pulsing skeleton at the requested height and hides children', () => {
-      const { container, queryByTestId } = renderState('loading', {
+      const { queryByTestId } = renderState('loading', {
         skeletonHeight: 320,
       });
-      const skeleton = container.querySelector('.animate-pulse');
+      const loading = screen.getByRole('status', { name: 'Loading Live snapshot' });
+      const skeletons = loading.querySelectorAll<HTMLElement>('[aria-hidden="true"]');
+      expect(skeletons).toHaveLength(1);
+      const [skeleton] = skeletons;
       expect(skeleton).not.toBeNull();
-      expect((skeleton as HTMLElement).style.height).toBe('320px');
+      expect(skeleton).toHaveClass('h-4', 'w-full', 'rounded', 'bg-[var(--skeleton-bg)]');
+      expect(skeleton).toHaveAttribute('aria-hidden', 'true');
+      expect(skeleton.style.height).toBe('320px');
+      expect(loading).toBeInTheDocument();
       expect(queryByTestId('ready-body')).toBeNull();
     });
 
     it('falls back to the default skeleton height (220) when none is supplied', () => {
-      const { container } = renderState('loading');
-      const skeleton = container.querySelector('.animate-pulse') as HTMLElement;
+      const { queryByTestId } = renderState('loading');
+      const loading = screen.getByRole('status', { name: 'Loading Live snapshot' });
+      const skeletons = loading.querySelectorAll<HTMLElement>('[aria-hidden="true"]');
+      expect(skeletons).toHaveLength(1);
+      const [skeleton] = skeletons;
+      expect(skeleton).toHaveClass('h-4', 'w-full', 'rounded', 'bg-[var(--skeleton-bg)]');
+      expect(skeleton).toHaveAttribute('aria-hidden', 'true');
       expect(skeleton.style.height).toBe('220px');
+      expect(queryByTestId('ready-body')).toBeNull();
     });
   });
 
@@ -155,8 +167,32 @@ describe('LiveSectionState', () => {
       expect(screen.getByText('snapshot table')).toBeInTheDocument();
       // No EmptyState (role=status), no Skeleton, no QueryError.
       expect(screen.queryByRole('status')).toBeNull();
-      expect(container.querySelector('.animate-pulse')).toBeNull();
+      expect(container.querySelectorAll('[aria-hidden="true"].h-4.w-full')).toHaveLength(0);
       expect(screen.queryByRole('button', { name: /retry/i })).toBeNull();
     });
-  });
+
+    describe('retained branch', () => {
+      it('keeps the specialist body visible and retries without replacing it with an error', () => {
+        const onRetry = vi.fn();
+        renderState('retained', { error: new ApiError('refresh failed', 500), onRetry });
+        expect(screen.getByTestId('ready-body')).toBeInTheDocument();
+        expect(screen.getByRole('status')).toHaveTextContent('Previously loaded data remains visible');
+        expect(screen.queryByRole('alert')).toBeNull();
+        fireEvent.click(screen.getByRole('button', { name: /^retry$/i }));
+        expect(onRetry).toHaveBeenCalledTimes(1);
+        expect(screen.getByTestId('ready-body')).toBeInTheDocument();
+      });
+
+      it('keeps a retained empty snapshot distinct from a fresh empty answer or a fatal error', () => {
+        const onRetry = vi.fn();
+        renderState('retained-empty', { error: new ApiError('refresh failed', 500), onRetry });
+        expect(screen.getByText('Redis has no live snapshot for this vehicle yet.')).toBeInTheDocument();
+        expect(screen.getByText('Previously loaded data remains visible while affected sources recover.')).toBeInTheDocument();
+        expect(screen.queryByTestId('ready-body')).toBeNull();
+        expect(screen.queryByRole('alert')).toBeNull();
+        fireEvent.click(screen.getByRole('button', { name: /^retry$/i }));
+        expect(onRetry).toHaveBeenCalledTimes(1);
+      });
+    });
+  })
 });

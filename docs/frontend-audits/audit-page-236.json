@@ -1,0 +1,493 @@
+{
+  "item": "audit-page-236",
+  "page": "web\\src\\features\\vehicles\\pages\\UtilizationPage.tsx",
+  "routes": [
+    "/utilization"
+  ],
+  "purpose": "Historical, drive-derived vehicle utilization with observed-window time, distance, active-day, distribution and estimated energy-cost evidence.",
+  "primaryGoal": "Understand how intensively the selected vehicle was used within the requested workspace range, and inspect coverage before trusting estimates.",
+  "phase": "Phase0",
+  "auditMode": "read-only source inspection; only assigned report and heartbeat written",
+  "identity": {
+    "routeEvidence": "web\\src\\App.tsx:149,851",
+    "workspaceEvidence": "web\\src\\lib\\workspaceScope.ts:75",
+    "sourceSha256": "38EFEF1CCB9277E174F202B876CE23DEA4D5EED8351552FAD73817EB63AC5D09"
+  },
+  "dataSources": [
+    {
+      "hook": "useDrives",
+      "file": "web\\src\\api\\hooks\\useDriving.ts",
+      "line": 114,
+      "endpoint": "GET /api/v1/drives?vehicle_id=<selected>&start=<calendar date>&end=<calendar date>&limit=1000",
+      "routerEvidence": "internal\\api\\router.go:3463-3464",
+      "ownership": "Driving domain query; server drive list; client utilization model",
+      "behavior": "Selected vehicle enables query. Vehicle, bounds and limit participate in key; AbortSignal is forwarded; safeArray normalizes data; FAST stale policy is inherited. One capped response, not guaranteed complete history.",
+      "backendLimits": "Route registration verified; handler filtering, actual data and returned ordering not executed or inspected."
+    },
+    {
+      "hook": "useSelectedVehicle -> useVehicles",
+      "file": "web\\src\\hooks\\useSelectedVehicle.ts",
+      "line": 51,
+      "endpoint": "GET /api/v1/vehicles",
+      "routerEvidence": "internal\\api\\router.go:3319-3320",
+      "ownership": "Existing workspace vehicle store and URL precedence",
+      "behavior": "URL/store/first-known-vehicle selection, no duplicate local picker; null selection uses onboarding guidance. Fleet query cancellation preserved."
+    },
+    {
+      "hook": "useFormatting -> useSettings -> getSettings",
+      "file": "web\\src\\hooks\\useFormatting.ts",
+      "line": 39,
+      "endpoint": "GET /api/v1/settings",
+      "routerEvidence": "internal\\api\\router.go:3659",
+      "ownership": "Settings source and canonical formatting hooks",
+      "behavior": "Configured electricity rate, currency, precision and unit preferences; unavailable settings yield null cost rate; retained settings have a pricingState. Page currently ignores that state."
+    },
+    {
+      "hook": "useRangeState",
+      "file": "web\\src\\hooks\\useRangeState.ts",
+      "line": 656,
+      "endpoint": null,
+      "ownership": "Header View settings, shared URL/preference range",
+      "behavior": "Provides precise rolling and timezone-aware calendar instant bounds, but this page consumes only calendar date strings."
+    }
+  ],
+  "components": [
+    {
+      "name": "PageLayout / PageContainer / Grid",
+      "owner": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+      "role": "Canonical full-width container, header metadata, responsive grid; no page-owned scope controls"
+    },
+    {
+      "name": "VehicleEvidenceBrief -> OperationalBrief / useOperationalMetrics",
+      "owner": "web\\src\\features\\vehicles\\components\\operationalbrief-n-z\\VehicleEvidenceBrief.tsx",
+      "role": "Source-backed summary and coverage, numeric metric bridge, existing trust labels"
+    },
+    {
+      "name": "ChartContainer / chart barrels",
+      "owner": "web\\src\\components\\charts\\ChartContainer.tsx",
+      "role": "Five chart frames, export menus, accessible fallback tables and stable legend keys"
+    },
+    {
+      "name": "GlassPanel / PanelTitle / Text / Table / Badge / HelpTooltip",
+      "owner": "web\\src\\components\\ui",
+      "role": "Four mounted panel sites, semantic read-only matrices and typography, localized help and sample labels"
+    },
+    {
+      "name": "StaleRefreshWarning / QueryError / EmptyState / Skeleton",
+      "owner": "web\\src\\components\\feedback",
+      "role": "Retained-refresh trust, retry and recoverable empty/loading states"
+    },
+    {
+      "name": "FadeIn",
+      "owner": "web\\src\\components\\motion\\FadeIn.tsx",
+      "role": "Seven entrance wrappers; shared reduced-motion handling"
+    },
+    {
+      "name": "utilization sections and summarizeUtilization",
+      "owner": "web\\src\\features\\vehicles\\components\\utilization",
+      "role": "Feature-specific analytical presentation; SI rollup derivation stays in lib/utilization.ts"
+    }
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\vehicles\\components\\utilization\\DriveDistributions.tsx",
+      "line": 145,
+      "rule": "MDC-002 reuse",
+      "detail": "Sample-sufficiency Badge wording and chart error branches repeat across distributions, trend, weekday and consistency. Already reuse Badge/QueryError; not evidence for a new global library.",
+      "fix": "Consider a local typed sample badge only if these sections are edited together; retain sample size/minimum and contextual captions. Prefer ChartContainer error/onRetry over duplicated frame-body errors when behavior remains equivalent.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "responsive": {
+    "sourceStrategy": [
+      "Root trend/weekday Grid stacks until xl; time/cost and distributions use one column until xl.",
+      "BusiestDays.tsx:98-132 uses a semantic desktop table from sm; :133-190 uses mobile cards preserving rank, date, driving time, distance, drives and energy.",
+      "UtilizationMethodology.tsx:217 uses a two-column xl layout and :240 uses md coverage matrices.",
+      "Shared PageLayout supplies w-full/min-w-0; ChartContainer exposes mobileHeight/size."
+    ],
+    "issues": [],
+    "unverified": "All ten required viewport widths, allocated narrow containers, long localized table cells, chart-axis collisions, 200% text, RTL and overflow. No rendered-responsive failure asserted."
+  },
+  "accessibility": {
+    "sourceEvidence": [
+      "Every mounted chart supplies ariaLabel, data and localized dataColumns; chart fallback tables remain shared-owned.",
+      "BusiestDays has scoped column/row headers; methodology tables have row headers and accessible names.",
+      "Section regions, localized HelpTooltip names and aria-hidden decorative icons are present.",
+      "UtilizationSectionBody.tsx:32-40 provides named loading status; FadeIn.tsx:25-37 respects shared reduced motion."
+    ],
+    "issues": [],
+    "unverified": "Keyboard order, actual focus restoration, export-menu navigation, help visibility, screen-reader output, effective contrast, forced colors and touch targets."
+  },
+  "states": {
+    "loading": "Feature skeletons/chart loading preserve section shells; summary bridge receives loading. No whole-page content gate.",
+    "empty": "Each analytical section keeps a named frame with contextual empty content; root browse-drives CTA and no-vehicle onboarding action exist.",
+    "fatalError": "fatalError, not raw query.error, supplies section failures and individual retry.",
+    "refreshError": "Retained drives stay visible with StaleRefreshWarning; no neighbor content is dropped.",
+    "offline": "Retained paused source is supported by dataState/StaleRefreshWarning. Initial offline-paused behavior not executed.",
+    "issues": [
+      {
+        "file": "web\\src\\features\\vehicles\\components\\utilization\\WeekdayProfile.tsx",
+        "line": 67,
+        "rule": "MDC-026 / MDC-045 unknown is not zero",
+        "detail": "Rows coerce null activeDayShare and averageDistancePerActiveDayM to zero at lines 70 and 78. With a short observed window, unobserved weekdays become measured 0%/0 distance in plots, fallback tables and exported rows.",
+        "fix": "Retain null for unavailable weekday operands and render a localized unavailable value in fallback tables/export; preserve genuine observed zero active rate. Do not invent measurements.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\vehicles\\pages\\UtilizationPage.tsx",
+        "line": 47,
+        "rule": "MDC-026 independent source trust",
+        "detail": "Only costPerKwh/formatCurrency are read from useFormatting, ignoring available pricingState. Summary status and header query reflect drives alone (:105,115); retained settings refresh errors can leave a stale rate behind a Source returned label.",
+        "fix": "Consume existing pricingState and provide cost-specific loading/unavailable/stale notice and retry, retaining unrelated drive metrics and existing null-rate behavior.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\vehicles\\pages\\UtilizationPage.tsx",
+        "line": 115,
+        "rule": "MDC-026 partial source coverage",
+        "detail": "Main utilization brief uses drivesState.status without the history-cap guard. Coverage brief separately maps an ok capped source to partial in UtilizationMethodology.tsx:202. Top metrics can therefore describe a capped response as Source returned without immediate partial context.",
+        "fix": "Propagate the existing cap disclosure into the summary source trust/scope while retaining returned rows, capped calculation behavior and all coverage details.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\vehicles\\lib\\utilization.ts",
+        "line": 838,
+        "rule": "MDC-026 missing measurement coverage",
+        "detail": "Distance per observed day is calculated from initialized distanceM even when no eligible rows have usable distance. Driving share similarly uses initialized duration totals (:832-835). TimeCostOverview.tsx:219 renders the distance total unconditionally for eligible rows. An eligible drive with missing distance/duration can appear as zero utilization rather than unavailable; field accounting exists but does not guard these aggregates.",
+        "fix": "Keep existing accounting and rollup formulas, but expose operand availability and guard summary/chart/panel displays when usable field count is zero; disclose partial field coverage without treating missing observations as zero.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ]
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\vehicles\\components\\utilization\\UtilizationMethodology.tsx",
+      "line": 292,
+      "rule": "MDC-010 / MDC-012 restrained semantic presentation",
+      "detail": "The below-cap informational disclosure always uses an amber-tinted surface. Fixed cyan-300 decorative icons also recur (:169,327; TimeCostOverview.tsx:155,240; BusiestDays.tsx:56) instead of theme-neutral metadata tokens.",
+      "fix": "Use neutral semantic tokens for routine source metadata and decorative icons; reserve amber for actual capped/limited evidence. Keep saved chart palette and all warnings unchanged.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\features\\vehicles\\pages\\UtilizationPage.tsx",
+      "line": 49,
+      "rule": "MDC-032 precise workspace bounds",
+      "detail": "Registered workspace page passes start/end calendar strings to useDrives (:54-57) and to a UTC-only parser (:67-68; lib/utilization.ts:243-263). Shared useRangeState.ts:656-669 provides rolling instants and timezone-aware exclusive bounds. Thus Live/24h and non-UTC calendar scope cannot retain header semantics. Frozen asOfMs (:48) also clips later refreshes to page-mount time.",
+      "fix": "Coordinate page and utilization model to accept the existing startInstant/endInstantExclusive contract, preserve explicit calendar labels and observed-window calculations, and deliberately reconcile frozen analysis semantics with rolling scope. No second picker, legacy adapter, fake data or backend capability invention.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "priority": {
+    "level": "high",
+    "order": [
+      "Restore precise workspace range equivalence in query and analytical model.",
+      "Preserve unknown/partial field measurements and independent pricing trust.",
+      "Make cap trust consistent in summary and methodology.",
+      "Reduce non-semantic fixed accents; keep existing architecture and every section."
+    ]
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "Existing independent source trust and cost estimate presentation",
+      "existingOwnerFile": "web\\src\\hooks\\useFormatting.ts",
+      "propsVariantsStates": "pricingState already supplies data/status/fatalError/refreshError/retry; reuse StaleRefreshWarning and source-specific notices without new shared props.",
+      "usedBy": [
+        "/utilization cost-per-distance summary",
+        "/utilization cost ledger"
+      ],
+      "dependsOn": [
+        "Existing useDataState and StaleRefreshWarning"
+      ],
+      "changeNeeded": false,
+      "detail": "Page adoption gap, not missing shared contract."
+    },
+    {
+      "name": "Existing workspace instant range",
+      "existingOwnerFile": "web\\src\\hooks\\useRangeState.ts",
+      "propsVariantsStates": "startInstant, endInstantExclusive, timezone, presetId; rolling Live/24h and calendar scopes",
+      "usedBy": [
+        "/utilization useDrives",
+        "/utilization summarizeUtilization"
+      ],
+      "dependsOn": [
+        "DriveWindow existing instant bounds",
+        "Feature model coordinated scope semantics"
+      ],
+      "changeNeeded": false,
+      "detail": "Current shared hook and driving query already support precise bounds. Do not change shared scope owner."
+    },
+    {
+      "name": "Existing chart frame state presentation",
+      "existingOwnerFile": "web\\src\\components\\charts\\ChartContainer.tsx",
+      "propsVariantsStates": "loading, error, onRetry, emptyMessage, data/dataColumns, exportData, chartKey, size/mobileHeight",
+      "usedBy": [
+        "UtilizationTrend",
+        "WeekdayProfile",
+        "DriveDistributions",
+        "ActiveDayConsistency"
+      ],
+      "dependsOn": [
+        "Retained versus fatal DataState distinction"
+      ],
+      "changeNeeded": false,
+      "detail": "Reuse existing capabilities, not a competing chart/error renderer."
+    }
+  ],
+  "competingImplementations": [
+    {
+      "file": "web\\src\\features\\vehicles\\components\\utilization\\UtilizationKpis.tsx",
+      "line": 22,
+      "rule": "MDC-002 / MDC-033 single summary pipeline",
+      "detail": "Barrel exports an alternate KPI renderer using preformatted metricId text operands (:70-84), while mounted page uses VehicleEvidenceBrief with numeric measurements. This component is not mounted by this page; no claim about consumers outside scope.",
+      "fix": "Do not migrate the mounted page back to this alternate renderer. Resolve external callers before any later consolidation; preserve current numeric source bridge and IDs.",
+      "owner": "integration",
+      "confidence": "high"
+    }
+  ],
+  "preservation": {
+    "sourceSha256": "38EFEF1CCB9277E174F202B876CE23DEA4D5EED8351552FAD73817EB63AC5D09",
+    "currentLineCount": 199,
+    "sectionNames": [
+      "Utilization summary metrics",
+      "Observed time split and energy-only cost ledger",
+      "Monthly utilization trend",
+      "Weekday utilization profile",
+      "Drive duration and distance distributions",
+      "Active-day consistency",
+      "Ranked busiest observed days",
+      "Coverage and methodology"
+    ],
+    "sectionCounts": {
+      "logicalGroups": 8,
+      "mountedGlassPanelSites": 4,
+      "mountedChartContainerSites": 5,
+      "mountedVehicleEvidenceBriefSites": 2,
+      "rootFadeInSites": 7,
+      "notes": "Time/cost and distribution groups each contain two panels/charts. Alternate unmounted UtilizationKpis adds one GlassPanel but is excluded from mounted counts."
+    },
+    "actions": [
+      "Retry initial drives failure in summary and section error surfaces",
+      "Retry retained stale/offline source with shared refresh warning",
+      "Browse drives when eligible response is empty",
+      "Onboarding setup guidance when no selected vehicle",
+      "Localized utilization and methodology help",
+      "Five chart export menus with source-derived export rows",
+      "Persisted legend toggles for monthly, weekday and consistency chartKey identities"
+    ],
+    "dataBehavior": [
+      "Never change canonical meters, seconds or watt-hours in drives payload/cache/model; convert only at rendering.",
+      "Keep 1000-row cap, explicit capped-history warning and source exclusions; do not relabel as full lifetime data.",
+      "Keep observed first-eligible-drive window, timestamp eligibility, frozen-clock explanation until explicitly reconciled with rolling range.",
+      "Keep boundary-clipped driving time, UTC day splitting and withheld full-drive distance/energy/distribution samples for boundary-crossing drives.",
+      "Keep monthly/weekday rollups, latest 26 consistency weeks, sample guards, longest active streak and top five ranking tie-breaks.",
+      "Keep energy-only estimate and matched distance/duration cost denominators; retain non-causal inactive-time explanation.",
+      "Keep both full desktop ranking and mobile detail cards, all field coverage tables and six methodology notes.",
+      "Retain selection precedence, URL/shared range preferences, query keys/cancellation/stale policy and localized formatting preferences."
+    ],
+    "lineComparison": "No source edits; current snapshot only, not historical preservation acceptance.",
+    "sourceInventory": [
+      {
+        "file": "web\\src\\features\\vehicles\\pages\\UtilizationPage.tsx",
+        "sha256": "38EFEF1CCB9277E174F202B876CE23DEA4D5EED8351552FAD73817EB63AC5D09",
+        "lineCount": 199,
+        "scope": "page dependency source"
+      },
+      {
+        "file": "web\\src\\features\\vehicles\\components\\utilization\\ActiveDayConsistency.tsx",
+        "sha256": "736588FC5C7D225CBC5301198F15262AE574A0699F12262B8F58328F651B11FB",
+        "lineCount": 283,
+        "scope": "page dependency source"
+      },
+      {
+        "file": "web\\src\\features\\vehicles\\components\\utilization\\BusiestDays.tsx",
+        "sha256": "16B9F32516988CB960D89676EA81B3139B8C7C3ADB0F08455921281B8DFACF40",
+        "lineCount": 196,
+        "scope": "page dependency source"
+      },
+      {
+        "file": "web\\src\\features\\vehicles\\components\\utilization\\DriveDistributions.tsx",
+        "sha256": "3F291CDB8B37929B6A07E6BECB97239168C82416E816C3F841706DD1B0C69789",
+        "lineCount": 402,
+        "scope": "page dependency source"
+      },
+      {
+        "file": "web\\src\\features\\vehicles\\components\\utilization\\TimeCostOverview.tsx",
+        "sha256": "87DAB513B9D2DAE0973701695DF645C7DADF45DA14CD57C4C6606424780851E2",
+        "lineCount": 274,
+        "scope": "page dependency source"
+      },
+      {
+        "file": "web\\src\\features\\vehicles\\components\\utilization\\UtilizationMethodology.tsx",
+        "sha256": "937D9A3082E372469FF298011D28094ABA595452FEF7981AFCDC13C4ED512326",
+        "lineCount": 339,
+        "scope": "page dependency source"
+      },
+      {
+        "file": "web\\src\\features\\vehicles\\components\\utilization\\UtilizationSectionBody.tsx",
+        "sha256": "48F12A9C16BF42912732B670D4D8D50B417FB0E0070D45582F5F4836C2EBA5A1",
+        "lineCount": 47,
+        "scope": "page dependency source"
+      },
+      {
+        "file": "web\\src\\features\\vehicles\\components\\utilization\\UtilizationTrend.tsx",
+        "sha256": "2CFB2A1464FDB2C3F7E05A01676D15F2161340B45536D4059339D51273B4A547",
+        "lineCount": 274,
+        "scope": "page dependency source"
+      },
+      {
+        "file": "web\\src\\features\\vehicles\\components\\utilization\\WeekdayProfile.tsx",
+        "sha256": "F5AD19CB1BE968D47285D6109F9751FA3B43926202A0BB795D73CC371C6962AB",
+        "lineCount": 278,
+        "scope": "page dependency source"
+      },
+      {
+        "file": "web\\src\\features\\vehicles\\components\\operationalbrief-n-z\\VehicleEvidenceBrief.tsx",
+        "sha256": "C4621D24D68FB62C8DCF6DBBE6EA13535487346D578CEB2A4091604EDF24D1D8",
+        "lineCount": 43,
+        "scope": "page dependency source"
+      },
+      {
+        "file": "web\\src\\features\\vehicles\\components\\utilization\\UtilizationKpis.tsx",
+        "sha256": "81874DB970B1CF4051D5DFCA308E76D5ABCFAD7E1AE9D1DBDCC1E9CF802F99A6",
+        "lineCount": 103,
+        "scope": "alternate exported component; not mounted by assigned page"
+      },
+      {
+        "file": "web\\src\\features\\vehicles\\components\\utilization\\index.ts",
+        "sha256": "8B34D54B2C5D067F1D1D4374C4D412BBC3D1249C440C09384DBE30E0F1E2E17D",
+        "lineCount": 10,
+        "scope": "page dependency source"
+      },
+      {
+        "file": "web\\src\\features\\vehicles\\components\\utilization\\types.ts",
+        "sha256": "B180E4A380C29EB07249DC90969A926946964C4DE83911555AE27C655656C669",
+        "lineCount": 5,
+        "scope": "page dependency source"
+      },
+      {
+        "file": "web\\src\\features\\vehicles\\components\\utilization\\useUtilizationDisplay.ts",
+        "sha256": "BDFD273281375BAA9EA37B221F45EEA6ADC37B91DAA77E516F20897EA84B1A3E",
+        "lineCount": 52,
+        "scope": "page dependency source"
+      },
+      {
+        "file": "web\\src\\features\\vehicles\\lib\\utilization.ts",
+        "sha256": "B14AAABB5963DE2EC281F690C33C6B745301A7AC53EBE5D9F1EA5EBC553C109A",
+        "lineCount": 852,
+        "scope": "page dependency source"
+      }
+    ],
+    "mountedPageAndPresentationLineCount": 2335.0
+  },
+  "evidenceLimits": {
+    "runtime": "unverified",
+    "visual": "unverified",
+    "keyboard": "unverified",
+    "contrast": "unverified",
+    "viewport": "unverified",
+    "backendBehavior": "Registered read endpoints confirmed only; no server/API/database operation executed.",
+    "tests": "NOTRUN: read-only Phase0; no validation baton/full gates authorized. Existing UtilizationTables.test.tsx inspected as source, not borrowed acceptance.",
+    "skillScript": "NOTRUN: audit.sh includes project-wide npx tsc --noEmit, prohibited by assignment. Equivalent bounded source-pattern checks run instead.",
+    "commands": [
+      {
+        "command": "PowerShell Get-Content / Get-FileHash -Algorithm SHA256 for exact utilization root and presentation/model dependencies",
+        "exitCode": 0,
+        "output": "Root 199 lines, SHA256 38EFEF1CCB9277E174F202B876CE23DEA4D5EED8351552FAD73817EB63AC5D09; dependency hashes and counts inspected."
+      },
+      {
+        "command": "PowerShell Select-String bounded utilization sources: style={{, direct chart/map/motion libraries, legacy API imports, fixed white/gray/neon text, /api/v1/, vehicleId=",
+        "exitCode": 0,
+        "output": "Each listed pattern count=0. This is targeted lexical evidence, not a complete semantic compliance certificate."
+      },
+      {
+        "command": "PowerShell Select-String -CaseSensitive -Pattern '<(button|input|textarea|select|table)\\b' on bounded utilization sources",
+        "exitCode": 0,
+        "output": "CASE-SENSITIVE raw HTML count=0. Initial case-insensitive count=3 matched shared <Table> and was corrected; no raw table violation."
+      },
+      {
+        "command": "Select-String -Path $source -CaseSensitive -Pattern 'style=\\{\\{|<(button|input|textarea|select|table)\\b|from ['\"'](recharts|react-leaflet|framer-motion)['\"']|text-(neon-|white|gray-)|/api/v1/|vehicleId=';",
+        "scope": [
+          "web\\src\\features\\vehicles\\pages\\UtilizationPage.tsx",
+          "web\\src\\features\\vehicles\\components\\utilization\\ActiveDayConsistency.tsx",
+          "web\\src\\features\\vehicles\\components\\utilization\\BusiestDays.tsx",
+          "web\\src\\features\\vehicles\\components\\utilization\\DriveDistributions.tsx",
+          "web\\src\\features\\vehicles\\components\\utilization\\TimeCostOverview.tsx",
+          "web\\src\\features\\vehicles\\components\\utilization\\UtilizationMethodology.tsx",
+          "web\\src\\features\\vehicles\\components\\utilization\\UtilizationSectionBody.tsx",
+          "web\\src\\features\\vehicles\\components\\utilization\\UtilizationTrend.tsx",
+          "web\\src\\features\\vehicles\\components\\utilization\\WeekdayProfile.tsx",
+          "web\\src\\features\\vehicles\\components\\operationalbrief-n-z\\VehicleEvidenceBrief.tsx",
+          "web\\src\\features\\vehicles\\components\\utilization\\UtilizationKpis.tsx",
+          "web\\src\\features\\vehicles\\components\\utilization\\index.ts",
+          "web\\src\\features\\vehicles\\components\\utilization\\types.ts",
+          "web\\src\\features\\vehicles\\components\\utilization\\useUtilizationDisplay.ts",
+          "web\\src\\features\\vehicles\\lib\\utilization.ts"
+        ],
+        "exitCode": 0,
+        "output": "Combined case-sensitive lexical matches: 0"
+      }
+    ],
+    "scope": "Only assigned page, relevant direct presentation/data owners, scoped route registration and mission/contracts. No Git, queue, source/shared edits or full-project gates.",
+    "inventory": "Hashes describe readback snapshots; shared owners may change concurrently. Partial source reads and unreviewed transitive implementations remain explicit, not mounted proof.",
+    "readCoverage": "Feature utilization source read in full; tests read in full. App/workspace/barrels/API hook settings/router/types inspected by scoped matching lines. Shared hooks, chart/container/API dependencies read in indicated relevant ranges, not exhaustive transitive graph."
+  },
+  "filesRead": [
+    "web\\src\\features\\vehicles\\pages\\UtilizationPage.tsx",
+    "web\\src\\features\\vehicles\\components\\utilization\\ActiveDayConsistency.tsx",
+    "web\\src\\features\\vehicles\\components\\utilization\\BusiestDays.tsx",
+    "web\\src\\features\\vehicles\\components\\utilization\\DriveDistributions.tsx",
+    "web\\src\\features\\vehicles\\components\\utilization\\TimeCostOverview.tsx",
+    "web\\src\\features\\vehicles\\components\\utilization\\UtilizationMethodology.tsx",
+    "web\\src\\features\\vehicles\\components\\utilization\\UtilizationSectionBody.tsx",
+    "web\\src\\features\\vehicles\\components\\utilization\\UtilizationTrend.tsx",
+    "web\\src\\features\\vehicles\\components\\utilization\\WeekdayProfile.tsx",
+    "web\\src\\features\\vehicles\\components\\operationalbrief-n-z\\VehicleEvidenceBrief.tsx",
+    "web\\src\\features\\vehicles\\components\\utilization\\UtilizationKpis.tsx",
+    "web\\src\\features\\vehicles\\components\\utilization\\index.ts",
+    "web\\src\\features\\vehicles\\components\\utilization\\types.ts",
+    "web\\src\\features\\vehicles\\components\\utilization\\useUtilizationDisplay.ts",
+    "web\\src\\features\\vehicles\\lib\\utilization.ts",
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\App.tsx",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\components\\layout\\index.ts",
+    "web\\src\\components\\charts\\index.ts",
+    "web\\src\\components\\data-display\\index.ts",
+    "web\\src\\api\\hooks\\useDriving.ts",
+    "web\\src\\hooks\\useRangeState.ts",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\hooks\\useDataState.ts",
+    "web\\src\\components\\feedback\\StaleRefreshWarning.tsx",
+    "web\\src\\components\\motion\\FadeIn.tsx",
+    "web\\src\\components\\charts\\ChartContainer.tsx",
+    "web\\src\\hooks\\useFormatting.ts",
+    "web\\src\\hooks\\useSelectedVehicle.ts",
+    "web\\src\\features\\onboarding\\components\\NoVehicleSelected.tsx",
+    "web\\src\\components\\layout\\PageContainer.tsx",
+    "web\\src\\hooks\\useSettings.ts",
+    "web\\src\\api\\hooks\\useVehicles.ts",
+    "web\\src\\api\\hooks\\useSettings.ts",
+    "web\\src\\api\\dataState.ts",
+    "web\\src\\api\\settings.ts",
+    "web\\src\\features\\vehicles\\components\\utilization\\UtilizationTables.test.tsx",
+    "web\\src\\types\\driving.ts",
+    "internal\\api\\router.go"
+  ],
+  "ownedFiles": [
+    "docs\\frontend-audits\\audit-page-236.json",
+    ".agent-status\\audit-page-236.txt"
+  ],
+  "completedAtUtc": "2026-10-07T10:32:41.4251140Z"
+}

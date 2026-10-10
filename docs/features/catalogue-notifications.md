@@ -6,6 +6,7 @@ Sidebar group **Notifications**. In the app, expand this section in the left nav
 | ------ | ---- | ------------ | ---------- |
 | Notifications overview | `/notifications` | Historical trigger and delivery reporting by source, event type, severity, channel, status, and day; the unified inbox is available below the report. | Reporting panels and the inbox each show their own empty or error state. |
 | Notification Inbox | `/notifications/inbox` | Same unified view of alert, system, automation, and scheduled notifications; open alert-backed rows to inspect and acknowledge them. | Renders an empty state when no data is available — the page is not hidden. |
+| Archived notifications | `/notifications/archived` | Inspect archived events and restore them to the inbox without losing recorded details. | Keeps filter controls available when the archive or filtered result is empty. |
 | Alert Studio | `/notifications/studio` | Create signal, computed-metric, system-service outage/recovery, and saved-place arrival/departure rules from templates or a dynamic form. | Templates are available without installed rules. Place rules require a configured place. |
 | Alert Rules | `/notifications/rules` | Search, filter, manage, and fully edit every rule type. System-service rules apply to the whole fleet; place rules can target one or more vehicles. | Create the first rule in Studio. |
 | [Alert Packs](./alert-packs.md) | `/notifications/packs` | Preview and install curated or Helix-proposed groups, view installed packs, and open their rules for editing. | Pack previews remain available without installations or AI. |
@@ -14,10 +15,20 @@ Sidebar group **Notifications**. In the app, expand this section in the left nav
 | Quiet Hours | `/notifications/quiet-hours` | Mute non-critical alerts during set times. | Renders an empty state when no data is available — the page is not hidden. |
 | Notification Health | `/notifications/health` | One page with alert-fatigue scores and hourly noise, delivery SLO burn rates with 1h/24h windows and severity breakdowns, and latency percentiles, Apdex, cohorts, and slow records. Fatigue uses recorded inbox events (including archived ones); reliability and latency use channel-delivery attempts, not trigger-only rows. | Each section keeps its own loading, error, and empty states; the other sections remain available if one query fails. |
 
-The inbox table defaults to **All time**, independently of the workspace's
-saved range, so older Alert Studio notifications remain visible. Selecting a
-date range filters the table and its Notification activity report; without an
-explicit selection the report keeps its own bounded default period.
+The header's **View settings** owns the date range for inbox history and its
+Notification activity report. Use **All time** to include older Alert Studio
+notifications rather than adding a second date picker inside the page.
+
+The inbox and archive default to compact evidence tables. Column-header filters
+control severity, notification text, source/vehicle/rule, and read state. On
+phones, the **Notification** header exposes all these filters and a reset.
+Filters are saved in the URL and applied by the server to rows and counts before
+pagination; the current page is not treated as a complete list of filter values.
+Headers and reset controls remain available for loading, empty, and failed
+results. Grouped threads remain an optional view with their own controls.
+Inspect a row for its full message, recorded timestamps, source, delivery
+metadata, and actions; unavailable metadata stays unknown rather than becoming
+a successful delivery.
 
 **Triggers** count recorded
 notification events once, even when no delivery channel is configured; **channel
@@ -38,5 +49,14 @@ available on the same page. Metrics stack on phones, form two columns on
 tablets, and four columns on wide screens. Each section retains its own
 loading, retry/error, and no-data presentation; no section is hidden when a
 different history source fails.
+
+The inbox and archive keep pagination inside the grid footer. Changing **Rows**
+requests 25, 50, or 100 records from the server and resets to the first page
+without clearing the active filters. Numbered pages and **Go to page** use the
+server's total, not just the loaded rows. The Columns menu's **Select all**
+reflects partial visibility and always retains at least one usable column.
+Flat tables use the shared Search, Compact/Comfortable, Export, and Columns
+toolbar. Search filters messages on the server and resets pagination; exports
+cover the loaded page or selected loaded records, not the entire server history.
 
 [← All groups](./catalogue.md)

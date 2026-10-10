@@ -133,7 +133,7 @@ export default function RequestBuilder({ endpoint, onSend, loading }: RequestBui
       {/* Path parameters */}
       {pathParams.length > 0 && (
         <GlassPanel className="p-4 space-y-3">
-          <Text as="h4" size="xs" weight="semibold" color="muted" className="uppercase tracking-wider">
+          <Text as="h4" size="xs" weight="semibold" color="muted" className="tracking-wider">
             {t('playground.pathParams', 'Path Parameters')}
           </Text>
           {pathParams.map(p => (
@@ -156,7 +156,7 @@ export default function RequestBuilder({ endpoint, onSend, loading }: RequestBui
       {/* Query parameters */}
       {queryParams.length > 0 && (
         <GlassPanel className="p-4 space-y-3">
-          <Text as="h4" size="xs" weight="semibold" color="muted" className="uppercase tracking-wider">
+          <Text as="h4" size="xs" weight="semibold" color="muted" className="tracking-wider">
             {t('playground.queryParams', 'Query Parameters')}
           </Text>
           {queryParams.map(p => (
@@ -180,8 +180,8 @@ export default function RequestBuilder({ endpoint, onSend, loading }: RequestBui
       {/* Request body */}
       {endpoint.requestBody && (
         <GlassPanel className="p-4">
-          <Text as="h4" size="xs" weight="semibold" color="muted" className="mb-2 uppercase tracking-wider">
-            {t('playground.requestBody', 'Request Body')}
+          <Text as="h4" size="xs" weight="semibold" color="muted" className="mb-2 tracking-wider">
+            {t('playground.requestBody', 'Request body')}
             <Text weight="regular" color="muted" className="ml-2">
               {endpoint.requestBody.contentType}
             </Text>
@@ -198,8 +198,8 @@ export default function RequestBuilder({ endpoint, onSend, loading }: RequestBui
 
       {/* API Key header (optional) */}
       <GlassPanel className="p-4">
-        <Text as="h4" size="xs" weight="semibold" color="muted" className="mb-2 uppercase tracking-wider">
-          {t('playground.authHeader', 'Authentication (Optional)')}
+        <Text as="h4" size="xs" weight="semibold" color="muted" className="mb-2 tracking-wider">
+          {t('playground.authHeader', 'Authentication (optional)')}
         </Text>
         <div className="flex items-center gap-3">
           <label htmlFor="api-key-input" className="w-28 shrink-0 font-mono text-xs text-[var(--text-muted)]">X-API-Key</label>

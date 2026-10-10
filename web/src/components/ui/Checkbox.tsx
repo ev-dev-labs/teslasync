@@ -1,6 +1,7 @@
-import { forwardRef, useEffect, useRef, type InputHTMLAttributes, type ReactNode } from 'react';
+import { forwardRef, useEffect, useId, useRef, type InputHTMLAttributes, type ReactNode } from 'react';
 import { Check, Minus } from 'lucide-react';
 import { cn } from '@/lib/cn';
+import { Text } from './Typography';
 
 const sizes = {
   sm: { box: 'h-3.5 w-3.5', icon: 'h-2.5 w-2.5' },
@@ -45,11 +46,14 @@ export const Checkbox = forwardRef<HTMLInputElement, CheckboxProps>(
       disabled,
       checked,
       defaultChecked,
+      id,
       ...inputProps
     },
     forwardedRef,
   ) => {
     const localRef = useRef<HTMLInputElement | null>(null);
+    const generatedId = useId();
+    const inputId = id ?? generatedId;
 
     useEffect(() => {
       const el = localRef.current;
@@ -60,7 +64,7 @@ export const Checkbox = forwardRef<HTMLInputElement, CheckboxProps>(
     const setRefs = (node: HTMLInputElement | null) => {
       localRef.current = node;
       if (typeof forwardedRef === 'function') forwardedRef(node);
-      else if (forwardedRef) (forwardedRef as { current: HTMLInputElement | null }).current = node;
+      else if (forwardedRef) forwardedRef.current = node;
     };
 
     const dims = sizes[size];
@@ -69,12 +73,13 @@ export const Checkbox = forwardRef<HTMLInputElement, CheckboxProps>(
       <span
         aria-hidden="true"
         className={cn(
-          'checkbox-indicator inline-flex shrink-0 items-center justify-center rounded border transition-colors',
+          'checkbox-indicator inline-flex shrink-0 items-center justify-center rounded-shape-sm border transition-colors duration-fast ease-standard motion-reduce:transition-none',
           dims.box,
-          'border-[var(--border-strong)] bg-[var(--surface-2)] text-transparent',
-          'peer-checked:border-cyan-700 peer-checked:bg-cyan-700 peer-checked:text-[var(--text-on-accent)] dark:peer-checked:border-cyan-400 dark:peer-checked:bg-cyan-400 dark:peer-checked:text-[var(--text-inverse)]',
-          'peer-indeterminate:border-cyan-700 peer-indeterminate:bg-cyan-700 peer-indeterminate:text-[var(--text-on-accent)] dark:peer-indeterminate:border-cyan-400 dark:peer-indeterminate:bg-cyan-400 dark:peer-indeterminate:text-[var(--text-inverse)]',
-          'peer-focus-visible:ring-2 peer-focus-visible:ring-cyan-500 peer-focus-visible:ring-offset-1 peer-focus-visible:ring-offset-transparent',
+          'border-[var(--control-border)] bg-[var(--control-bg)] text-transparent',
+          'peer-checked:border-[var(--theme-primary)] peer-checked:bg-[var(--theme-primary)] peer-checked:text-[var(--theme-on-primary)]',
+          'peer-indeterminate:border-[var(--theme-primary)] peer-indeterminate:bg-[var(--theme-primary)] peer-indeterminate:text-[var(--theme-on-primary)]',
+          'peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-[var(--focus-ring)]',
+          'forced-colors:border-[var(--border-strong)] forced-colors:bg-[var(--surface-2)] forced-colors:peer-focus-visible:outline-[var(--theme-primary)]',
           'peer-disabled:cursor-not-allowed peer-disabled:opacity-80',
         )}
       >
@@ -84,14 +89,16 @@ export const Checkbox = forwardRef<HTMLInputElement, CheckboxProps>(
 
     return (
       <label
+        htmlFor={inputId}
         className={cn(
-          'inline-flex cursor-pointer items-center gap-2 select-none',
+          'relative inline-flex min-h-11 min-w-11 max-w-full cursor-pointer items-center gap-2 select-none md:min-h-6 md:min-w-6',
           disabled && 'cursor-not-allowed opacity-60',
           className,
         )}
       >
         <input
           ref={setRefs}
+          id={inputId}
           type="checkbox"
           // `peer` powers the indicator's checked/focus/disabled styles
           // via Tailwind's peer-* variants. `sr-only` hides it visually
@@ -107,7 +114,7 @@ export const Checkbox = forwardRef<HTMLInputElement, CheckboxProps>(
           {...inputProps}
         />
         {indicator}
-        {label != null && <span className="text-sm text-[var(--text-primary)]">{label}</span>}
+        {label != null && <Text variant="bodySm" className="min-w-0 break-words">{label}</Text>}
       </label>
     );
   },

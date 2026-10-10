@@ -18,13 +18,15 @@ import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Activity } from 'lucide-react';
 
-import { GlassPanel, DataTable, Toggle, SectionTitle, type Column } from '@/components/ui';
+import { Caption, GlassPanel, DataTable, Text, Toggle, SectionTitle, type Column } from '@/components/ui';
 import { EmptyState, Skeleton } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
+import { SourceContent } from '@/components/layout';
 import { CHART_COLORS } from '@/lib/colors';
-import { fmtNumber, fmtInt } from '@/lib/numberFormat';
+
 import { cn } from '@/lib/cn';
 import type { SignalStat } from '../hooks/useLiveSignalStream';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export interface SignalStatsPanelProps {
   stats: SignalStat[];
@@ -35,6 +37,9 @@ export interface SignalStatsPanelProps {
    */
   selectedSignals?: string[];
   loading?: boolean;
+  /** Initial failure only; do not pass background-refresh errors here. */
+  error?: Error | null;
+  onRetry?: () => void;
   /** Override panel title. */
   title?: string;
   className?: string;
@@ -60,10 +65,13 @@ export function SignalStatsPanel({
   stats,
   selectedSignals,
   loading = false,
+  error,
+  onRetry,
   title,
   className,
   signalIndex,
 }: SignalStatsPanelProps) {
+  const { fmtNumber, fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const [hideEmpty, setHideEmpty] = useState(false);
 
@@ -105,59 +113,66 @@ export function SignalStatsPanel({
   // so the em-dash isn't announced as literal punctuation. Finite values go
   // through the shared locale formatter.
   const renderNumeric = useCallback(
-    (n: number, valueClassName: string) =>
+    (n: number, emphasis: 'primary' | 'secondary') =>
       Number.isFinite(n) ? (
-        <span className={cn('font-mono', valueClassName)}>{fmtNumber(n)}</span>
+        <Text mono size="xs" color={emphasis}>{fmtNumber(n)}</Text>
       ) : (
-        <span
-          className="text-[var(--text-muted)]"
+        <Caption
           aria-label={t('signalStats.noData', 'No data')}
         >
           —
-        </span>
+        </Caption>
       ),
-    [t],
+    [t, fmtNumber],
   );
 
   const columns: Column<SignalStat>[] = useMemo(() => [
     {
       key: 'signal',
       header: t('signalStats.signal', 'Signal'),
+      filterValue: (s) => s.signal,
+      filterValueLabel: (_value, s) => s.signal,
       render: (s) => {
         const idx = signalIndex?.[s.signal] ?? positionIndex.get(s.signal) ?? 0;
         const color = CHART_COLORS[Math.max(0, idx) % CHART_COLORS.length];
         return (
-          <div className="flex flex-col gap-0.5">
-            <span className="font-mono font-semibold" style={{ color }}>
-              {s.signal}
-            </span>
+          <div className="flex min-w-0 flex-col gap-0.5">
+            <div className="flex min-w-0 items-start gap-2">
+              <span aria-hidden="true" className="mt-1 h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: color }} />
+              <Text mono size="xs" weight="medium" color="secondary" className="break-words [overflow-wrap:anywhere]">
+                {s.signal}
+              </Text>
+            </div>
             {isEmptyStat(s) && (
-              <span className="text-2xs text-[var(--text-muted)]">
+              <Caption>
                 {t('signalStats.noDataInRange', 'No data in range')}
-              </span>
+              </Caption>
             )}
           </div>
         );
       },
     },
-    { key: 'min', header: t('signalStats.min', 'Min'), render: (s) => renderNumeric(s.min, 'text-[var(--text-secondary)]') },
-    { key: 'max', header: t('signalStats.max', 'Max'), render: (s) => renderNumeric(s.max, 'text-[var(--text-secondary)]') },
-    { key: 'avg', header: t('signalStats.avg', 'Avg'), render: (s) => renderNumeric(s.avg, 'text-[var(--text-primary)]') },
+    { key: 'min', header: t('signalStats.min', 'Min'), align: 'right', groupStart: true, filterValue: (s) => Number.isFinite(s.min) ? s.min : null, filterValueLabel: (_value, s) => Number.isFinite(s.min) ? fmtNumber(s.min) : '—', render: (s) => renderNumeric(s.min, 'secondary') },
+    { key: 'max', header: t('signalStats.max', 'Max'), align: 'right', filterValue: (s) => Number.isFinite(s.max) ? s.max : null, filterValueLabel: (_value, s) => Number.isFinite(s.max) ? fmtNumber(s.max) : '—', render: (s) => renderNumeric(s.max, 'secondary') },
+    { key: 'avg', header: t('signalStats.avg', 'Avg'), align: 'right', filterValue: (s) => Number.isFinite(s.avg) ? s.avg : null, filterValueLabel: (_value, s) => Number.isFinite(s.avg) ? fmtNumber(s.avg) : '—', render: (s) => renderNumeric(s.avg, 'primary') },
     {
       key: 'count',
       header: t('signalStats.count', 'Count'),
+      align: 'right',
+      filterValue: (s) => s.count,
+      filterValueLabel: (_value, s) => fmtInt(s.count),
       render: (s) => (
-        <span className="font-mono text-[var(--text-muted)]">{fmtInt(s.count)}</span>
+        <Text mono size="xs" color="muted">{fmtInt(s.count)}</Text>
       ),
     },
-  ], [positionIndex, renderNumeric, signalIndex, t]);
+  ], [positionIndex, renderNumeric, signalIndex, t, fmtNumber, fmtInt]);
 
   return (
-    <FadeIn>
-      <GlassPanel className={cn('p-4 sm:p-5', className)}>
-        <div className="mb-3 flex items-center justify-between gap-2">
-          <SectionTitle>{title ?? t('signalStats.title', 'Stats Summary')}</SectionTitle>
-          {emptyCount > 0 && (
+    <FadeIn className="min-w-0 max-w-full">
+      <GlassPanel className={cn('min-w-0 max-w-full p-4 sm:p-5', className)}>
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+          <SectionTitle>{title ?? t('signalStats.title', 'Stats summary')}</SectionTitle>
+          {emptyCount > 0 && !error && (
             <Toggle
               checked={hideEmpty}
               onChange={setHideEmpty}
@@ -168,6 +183,14 @@ export function SignalStatsPanel({
             />
           )}
         </div>
+        <SourceContent
+          state={error ? 'error' : 'ready'}
+          label={title ?? t('signalStats.title', 'Stats summary')}
+          error={error}
+          errorMessage={t('error.loadFailed', 'Failed to load data')}
+          emptyMessage={t('signalStats.emptyMessage', 'No aggregate statistics are available.')}
+          errorRecovery={{ onRetry }}
+        >
         {loading ? (
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             {[1, 2, 3, 4].map((i) => <Skeleton key={i} className="h-20" />)}
@@ -175,6 +198,8 @@ export function SignalStatsPanel({
         ) : visibleStats.length > 0 ? (
           <DataTable
             tableId="telemetry:signal-stats"
+            enableValueFilters
+            filterData={displayStats}
             columns={columns}
             mobileColumns={['signal', 'avg', 'count']}
             data={visibleStats}
@@ -194,6 +219,7 @@ export function SignalStatsPanel({
             className="py-8"
           />
         )}
+        </SourceContent>
       </GlassPanel>
     </FadeIn>
   );

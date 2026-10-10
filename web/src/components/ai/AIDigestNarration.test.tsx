@@ -30,8 +30,10 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, act, waitFor, fireEvent } from '@testing-library/react';
+import type { FormEvent } from 'react';
 
 import type { AppSettings } from '@/api/types';
+import { EXTREME_TEXT } from '../../../e2e/fixtures/frontend-modernization';
 
 vi.mock('@/hooks/useSettings', () => ({
   useSettings: vi.fn(),
@@ -232,6 +234,85 @@ describe('AIDigestNarration — empty-state hint', () => {
 });
 
 describe('AIDigestNarration — wired SSE POST', () => {
+  it('keeps generation a native non-submit action inside an enclosing form', async () => {
+    enableFeature();
+    const onSubmit = vi.fn((event: FormEvent<HTMLFormElement>) => event.preventDefault());
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(makeReadableStream([sseFrame('done', {
+        finish_reason: 'stop', usage: { in: 0, out: 0 },
+      })]), { headers: { 'Content-Type': 'text/event-stream' } }),
+    );
+
+    render(
+      <form onSubmit={onSubmit}>
+        <AIDigestNarration vehicleId={42} />
+      </form>,
+    );
+    const button = screen.getByRole('button', { name: GENERATE });
+    expect(button).toHaveAttribute('type', 'button');
+    button.focus();
+    expect(button).toHaveFocus();
+    await act(async () => { fireEvent.click(button); });
+    expect(onSubmit).not.toHaveBeenCalled();
+    await waitFor(() => {
+      expect(screen.getByTestId('ai-output-panel')).toHaveTextContent('No output was generated.');
+    });
+  });
+
+  it('keeps full long narrative, failure details and redacted evidence together', async () => {
+    enableFeature();
+    const text = `${EXTREME_TEXT.identifier}\n${EXTREME_TEXT.label}`;
+    const frames = [
+      sseFrame('tool_call', { id: 'digest-evidence', name: 'weekly_digest', arguments: {} }),
+      sseFrame('tool_result', { id: 'digest-evidence', name: 'weekly_digest', ok: true }),
+      sseFrame('delta', { text }),
+      sseFrame('error', { message: 'digest_source_unavailable' }),
+    ];
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(makeReadableStream(frames), {
+        headers: { 'Content-Type': 'text/event-stream' },
+      }),
+    );
+
+    render(<AIDigestNarration vehicleId={42} />);
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: GENERATE })); });
+    await waitFor(() => {
+      expect(screen.getByRole('alert')).toHaveTextContent('digest_source_unavailable');
+    });
+    const panel = screen.getByTestId('ai-output-panel');
+    expect(panel).toHaveTextContent(EXTREME_TEXT.identifier);
+    expect(panel).toHaveTextContent(EXTREME_TEXT.label.trim());
+    expect(panel).toHaveTextContent('Weekly digest');
+    expect(screen.getByRole('button', { name: GENERATE })).toBeEnabled();
+  });
+
+  it('aborts old vehicle narration and removes its output before generating in the new scope', async () => {
+    enableFeature();
+    let oldSignal: AbortSignal | null | undefined;
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (_input, init) => {
+      oldSignal = init?.signal;
+      return new Response(new ReadableStream<Uint8Array>({
+        start(controller) {
+          controller.enqueue(new TextEncoder().encode(sseFrame('delta', { text: 'Vehicle 42 recap' })));
+        },
+      }), { headers: { 'Content-Type': 'text/event-stream' } });
+    });
+
+    const { rerender } = render(<AIDigestNarration vehicleId={42} />);
+    await act(async () => { fireEvent.click(screen.getByRole('button', { name: GENERATE })); });
+    await waitFor(() => {
+      expect(screen.getByTestId('ai-output-panel')).toHaveTextContent('Vehicle 42 recap');
+    });
+    expect(oldSignal?.aborted).toBe(false);
+    rerender(<AIDigestNarration vehicleId={7} />);
+    await waitFor(() => {
+      expect(oldSignal?.aborted).toBe(true);
+      expect(screen.queryByTestId('ai-output-panel')).not.toBeInTheDocument();
+      expect(screen.getByRole('button', { name: GENERATE })).toBeEnabled();
+    });
+    expect(globalThis.fetch).toHaveBeenCalledTimes(1);
+  });
+
   it('clicking Generate POSTs exactly once to /api/v1/ai/digests/weekly/narrate and renders the first delta', async () => {
     enableFeature();
 

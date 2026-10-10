@@ -18,6 +18,8 @@ import { useState } from 'react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 import { UnitInput, type UnitInputProps } from '../UnitInput'
+import { SignalUnitInput } from '../SignalUnitInput'
+import { UnitListInput } from '../UnitListInput'
 import type { AppSettings } from '@/api/types'
 import { useSettings } from '@/hooks/useSettings'
 
@@ -64,6 +66,59 @@ function mockSettings(overrides: Partial<AppSettings> = {}): void {
     settings: settings(overrides),
   } as never)
 }
+
+describe('preferred-unit lists and constraints', () => {
+  it('parses decimal-comma lists and preserves exact canonical thresholds', () => {
+    mockSettings({ unit_of_temp: 'F', locale: 'de-DE' })
+    const onChange = vi.fn()
+    render(<UnitListInput label="Values" unit="temperature" values={[20, 25]} onChange={onChange} />)
+    const input = screen.getByRole('textbox', { name: 'Values' })
+    expect(input).toHaveValue('68,00; 77,00')
+    fireEvent.focus(input)
+    fireEvent.change(input, { target: { value: '68,12345; 77,6789' } })
+    expect(onChange.mock.calls.at(-1)?.[0][0]).toBeCloseTo((68.12345 - 32) / 1.8, 10)
+    expect(onChange.mock.calls.at(-1)?.[0][1]).toBeCloseTo((77.6789 - 32) / 1.8, 10)
+  })
+
+  it('does not recommit a rounded list on untouched blur', () => {
+    mockSettings({ unit_of_temp: 'F', decimal_precision: 0 })
+    const onChange = vi.fn()
+    render(<UnitListInput label="Values" unit="temperature" values={[20.123456]} onChange={onChange} />)
+    const input = screen.getByRole('textbox', { name: 'Values' })
+    fireEvent.focus(input)
+    fireEvent.blur(input)
+    expect(onChange).not.toHaveBeenCalled()
+  })
+
+  it('keeps focused list units across preference changes and reports invalid tokens', () => {
+    mockSettings({ unit_of_temp: 'F' })
+    const onChange = vi.fn()
+    const { rerender } = render(<UnitListInput label="Values" unit="temperature" values={[20]} onChange={onChange} />)
+    const input = screen.getByRole('textbox', { name: 'Values' })
+    fireEvent.focus(input)
+    mockSettings({ unit_of_temp: 'C' })
+    rerender(<UnitListInput label="Values" unit="temperature" values={[20]} onChange={onChange} />)
+    fireEvent.change(input, { target: { value: '77; 86' } })
+    expect(onChange).toHaveBeenLastCalledWith([25, 30])
+    fireEvent.change(input, { target: { value: '77; broken' } })
+    expect(onChange).toHaveBeenLastCalledWith(null)
+    expect(screen.getByText('Enter a valid number')).toBeInTheDocument()
+  })
+
+  it('validates canonical bounds after converting preferred temperature input', () => {
+    mockSettings({ unit_of_temp: 'F' })
+    const onChange = vi.fn()
+    render(<UnitInput label="Temperature" unit="temperature" min={15} max={30} value={20} onChange={onChange} commitOnChange />)
+    const input = screen.getByRole('textbox', { name: 'Temperature' })
+    fireEvent.focus(input)
+    fireEvent.change(input, { target: { value: '77' } })
+    expect(onChange).toHaveBeenLastCalledWith(25)
+    fireEvent.change(input, { target: { value: '100' } })
+    expect(onChange).toHaveBeenLastCalledWith(null)
+    fireEvent.blur(input)
+    expect(screen.getByText('Enter a valid number')).toBeInTheDocument()
+  })
+})
 
 interface HarnessProps extends Omit<UnitInputProps, 'value' | 'onChange'> {
   initial?: number | null
@@ -124,9 +179,9 @@ describe('UnitInput — display & symbol', () => {
     expect(screen.getByTestId('unit-input-symbol').textContent).toBe('%')
   })
 
-  it('formats canonical 60 mi as "97" when display unit is km (decimal_precision=0)', () => {
+  it('formats canonical meters as preferred kilometers at selected precision', () => {
     mockSettings({ unit_of_length: 'km', decimal_precision: 0 })
-    render(<Harness label="Distance" unit="distance" initial={60} />)
+    render(<Harness label="Distance" unit="distance" initial={96560.64} />)
     const input = screen.getByLabelText(/distance/i) as HTMLInputElement
     expect(input.value).toBe('97')
   })
@@ -155,10 +210,10 @@ describe('UnitInput — commit on blur / Enter', () => {
     fireEvent.focus(input)
     fireEvent.change(input, { target: { value: '70' } })
     fireEvent.blur(input)
-    expect(onCommit).toHaveBeenCalledWith(70)
+    expect(onCommit.mock.calls[0][0]).toBeCloseTo(31.2928, 7)
   })
 
-  it('converts typed display unit → canonical on commit (km/h → mph)', () => {
+  it('converts preferred km/h to canonical m/s on commit', () => {
     mockSettings({ unit_of_length: 'km', decimal_precision: 4 })
     const onCommit = vi.fn()
     render(<Harness label="Speed" unit="speed" initial={null} onCommit={onCommit} />)
@@ -166,11 +221,10 @@ describe('UnitInput — commit on blur / Enter', () => {
     fireEvent.focus(input)
     fireEvent.change(input, { target: { value: '100' } })
     fireEvent.blur(input)
-    // Km/h → ~62.137 mph (canonical)
     expect(onCommit).toHaveBeenCalledTimes(1)
     const arg = onCommit.mock.calls[0][0]
     expect(arg).not.toBeNull()
-    expect(arg).toBeCloseTo(62.137, 2)
+    expect(arg).toBeCloseTo(27.77777778, 7)
   })
 
   it('commits on Enter key without losing focus contract', () => {
@@ -181,7 +235,7 @@ describe('UnitInput — commit on blur / Enter', () => {
     fireEvent.focus(input)
     fireEvent.change(input, { target: { value: '42' } })
     fireEvent.keyDown(input, { key: 'Enter' })
-    expect(onCommit).toHaveBeenCalledWith(42)
+    expect(onCommit.mock.calls[0][0]).toBeCloseTo(67592.448, 7)
   })
 
   it('strips trailing unit suffix from typed value before parsing', () => {
@@ -192,7 +246,7 @@ describe('UnitInput — commit on blur / Enter', () => {
     fireEvent.focus(input)
     fireEvent.change(input, { target: { value: '80 km/h' } })
     fireEvent.blur(input)
-    expect(onCommit.mock.calls[0][0]).toBeCloseTo(49.71, 1)
+    expect(onCommit.mock.calls[0][0]).toBeCloseTo(22.22222222, 7)
   })
 
   it('commits null when the field is cleared', () => {
@@ -206,7 +260,7 @@ describe('UnitInput — commit on blur / Enter', () => {
     expect(onCommit).toHaveBeenCalledWith(null)
   })
 
-  it('renormalises display after commit (typing "60.0001" → blur → settings precision 2 → "60")', () => {
+  it('rounds display without rounding the committed canonical measurement', () => {
     mockSettings({ unit_of_length: 'mi', decimal_precision: 2 })
     const onCommit = vi.fn()
     render(<Harness label="Distance" unit="distance" initial={null} onCommit={onCommit} />)
@@ -214,10 +268,8 @@ describe('UnitInput — commit on blur / Enter', () => {
     fireEvent.focus(input)
     fireEvent.change(input, { target: { value: '60.0001' } })
     fireEvent.blur(input)
-    // Display rounds to 2 decimals → "60"
-    expect(input.value).toBe('60')
-    // Canonical preserves precision (60.0001)
-    expect(onCommit.mock.calls[0][0]).toBeCloseTo(60.0001)
+    expect(input.value).toBe('60.00')
+    expect(onCommit.mock.calls[0][0]).toBeCloseTo(96560.8009344, 7)
   })
 })
 
@@ -225,7 +277,7 @@ describe('UnitInput — re-display on settings change', () => {
   it('rerenders the same canonical value in the new unit when settings flip', () => {
     mockSettings({ unit_of_length: 'mi', decimal_precision: 0 })
     const { rerender } = render(
-      <Harness label="Distance" unit="distance" initial={60} />,
+      <Harness label="Distance" unit="distance" initial={96560.64} />,
     )
     const input = screen.getByLabelText(/distance/i) as HTMLInputElement
     expect(input.value).toBe('60')
@@ -233,7 +285,7 @@ describe('UnitInput — re-display on settings change', () => {
 
     // Flip to km
     mockSettings({ unit_of_length: 'km', decimal_precision: 0 })
-    rerender(<Harness label="Distance" unit="distance" initial={60} />)
+    rerender(<Harness label="Distance" unit="distance" initial={96560.64} />)
     expect(input.value).toBe('97')
     expect(screen.getByTestId('unit-input-symbol').textContent).toBe('km')
   })
@@ -254,6 +306,58 @@ describe('UnitInput — re-display on settings change', () => {
 
     // The local buffer must be preserved
     expect(input.value).toBe('123')
+    expect(screen.getByTestId('unit-input-symbol')).toHaveTextContent('mi')
+  })
+
+  it('does not commit a rounded display value when an unchanged field loses focus', () => {
+    const onCommit = vi.fn()
+    mockSettings({ unit_of_length: 'mi', decimal_precision: 0 })
+    render(<Harness label="Distance" unit="distance" initial={96560.8009344} onCommit={onCommit} />)
+    const input = screen.getByLabelText(/distance/i)
+    fireEvent.focus(input)
+    fireEvent.blur(input)
+    expect(onCommit).not.toHaveBeenCalled()
+  })
+
+  it('commits edits using the units and locale present when editing began', () => {
+    const onCommit = vi.fn()
+    mockSettings({ unit_of_length: 'mi', locale: 'en-US', decimal_precision: 2 })
+    const { rerender } = render(<Harness label="Distance" unit="distance" initial={null} onCommit={onCommit} />)
+    const input = screen.getByLabelText(/distance/i) as HTMLInputElement
+    fireEvent.focus(input)
+    fireEvent.change(input, { target: { value: '1.25' } })
+    mockSettings({ unit_of_length: 'km', locale: 'de-DE', decimal_precision: 3 })
+    rerender(<Harness label="Distance" unit="distance" initial={null} onCommit={onCommit} />)
+    expect(input.value).toBe('1.25')
+    expect(screen.getByTestId('unit-input-symbol')).toHaveTextContent('mi')
+    fireEvent.blur(input)
+    expect(onCommit.mock.calls[0][0]).toBeCloseTo(2011.68, 7)
+    expect(input.value).toBe('2,012')
+    expect(screen.getByTestId('unit-input-symbol')).toHaveTextContent('km')
+  })
+
+  it('does not commit twice or lose precision when Enter is followed by blur', () => {
+    const onCommit = vi.fn()
+    render(<Harness label="Distance" unit="distance" initial={null} onCommit={onCommit} />)
+    const input = screen.getByLabelText(/distance/i)
+    fireEvent.focus(input)
+    fireEvent.change(input, { target: { value: '60.0001' } })
+    fireEvent.keyDown(input, { key: 'Enter' })
+    fireEvent.blur(input)
+    expect(onCommit).toHaveBeenCalledTimes(1)
+    expect(onCommit.mock.calls[0][0]).toBeCloseTo(96560.8009344, 7)
+  })
+
+  it('shows an explicit error for invalid text instead of silently fabricating zero', () => {
+    const onCommit = vi.fn()
+    render(<Harness label="Speed" unit="speed" initial={null} onCommit={onCommit} />)
+    const input = screen.getByLabelText(/speed/i)
+    fireEvent.focus(input)
+    fireEvent.change(input, { target: { value: 'invalid' } })
+    fireEvent.blur(input)
+    expect(screen.getByText('Enter a valid number')).toBeInTheDocument()
+    expect(input).toHaveAttribute('aria-invalid', 'true')
+    expect(onCommit).toHaveBeenCalledWith(null)
   })
 })
 
@@ -276,6 +380,47 @@ describe('UnitInput — strict & required', () => {
     fireEvent.change(input, { target: { value: '0,5' } })
     fireEvent.blur(input)
     expect(onCommit).toHaveBeenCalledWith(null)
+  })
+
+  describe('canonical signal input', () => {
+    it('keeps draft state current with full-precision SI values while preserving typed text', () => {
+      const onCommit = vi.fn()
+      render(<Harness label="Speed" unit="speed" initial={null} onCommit={onCommit} commitOnChange />)
+      const input = screen.getByLabelText(/speed/i) as HTMLInputElement
+      fireEvent.focus(input)
+      fireEvent.change(input, { target: { value: '70.0001' } })
+      expect(onCommit.mock.calls[0][0]).toBeCloseTo(31.292844704, 8)
+      expect(input.value).toBe('70.0001')
+    })
+
+    it('projects raw telemetry Pa into preferred pressure and saves Pa again', () => {
+      const onCommit = vi.fn()
+      mockSettings({ unit_of_pressure: 'bar', decimal_precision: 2 })
+      const { rerender } = render(
+        <SignalUnitInput label="Pressure" unitKind="pressure" value={241316.495} onChange={onCommit} />,
+      )
+      const input = screen.getByLabelText(/pressure/i) as HTMLInputElement
+      expect(input.value).toBe('2.41')
+      expect(screen.getByTestId('unit-input-symbol')).toHaveTextContent('bar')
+      fireEvent.focus(input)
+      fireEvent.change(input, { target: { value: '2.75' } })
+      fireEvent.blur(input)
+      expect(onCommit).toHaveBeenCalledWith(275000)
+
+      mockSettings({ unit_of_pressure: 'psi', locale: 'de-DE', decimal_precision: 3 })
+      rerender(<SignalUnitInput label="Pressure" unitKind="pressure" value={241316.495} onChange={onCommit} />)
+      expect(input.value).toBe('35,000')
+      expect(screen.getByTestId('unit-input-symbol')).toHaveTextContent('psi')
+      fireEvent.focus(input)
+      fireEvent.blur(input)
+      expect(onCommit).toHaveBeenCalledTimes(1)
+    })
+
+    it('never invents a unit when signal metadata is unavailable', () => {
+      render(<SignalUnitInput label="Value" unitKind={undefined} value={null} onChange={vi.fn()} />)
+      expect(screen.getByLabelText('Value')).toHaveValue('')
+      expect(screen.queryByTestId('unit-input-symbol')).toBeNull()
+    })
   })
 
   it('forwards `required` to the underlying input element', () => {

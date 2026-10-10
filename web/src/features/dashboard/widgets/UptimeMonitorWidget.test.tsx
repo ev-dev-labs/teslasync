@@ -6,7 +6,7 @@
  * behaviour surface — the thing under test:
  *
  *   1. Two layouts driven by `size.cols`:
- *        - compact  (cols <= 1): a title-less shell with the Overall badge + a
+ *        - compact  (cols <= 1): a titled shell with the Overall badge + a
  *          single "healthy / total" count (role="img" with an accessible
  *          "services healthy" label). The widget's registered minSize is 1×2, so
  *          this branch MUST be reachable at one column (the hardened bug: the
@@ -14,7 +14,7 @@
  *          1-wide widget wrongly rendered the full per-service list).
  *        - standard (cols >= 2): a titled shell with the Overall badge + a row
  *          per service; a tall (rows >= 2) standard widget also shows the DB
- *          size / table-count detail strip.
+ *          size text / typed table-count source brief.
  *   2. `classifyStatus` — the backend-contract status → visual kind mapping:
  *        - 'healthy'/'ok'                          → success (OK badge, green dot)
  *        - 'degraded'/'warning'                    → warning (Degraded, amber)
@@ -45,7 +45,7 @@
  * every render because the error branch's <QueryError> reaches for react-router.
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { render, screen, fireEvent, cleanup } from '@testing-library/react';
+import { render, screen, fireEvent, cleanup, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import type { SystemHealth, SystemHealthComponent } from '@/types/admin';
 import UptimeMonitorWidget from './UptimeMonitorWidget';
@@ -163,13 +163,13 @@ describe('UptimeMonitorWidget — standard layout', () => {
 
     renderWidget({ cols: 2, rows: 2 });
 
-    expect(screen.getByText('Uptime Monitor')).toBeInTheDocument();
+    expect(screen.getByText('Uptime monitor')).toBeInTheDocument();
     expect(screen.getByText('Overall')).toBeInTheDocument();
     expect(screen.getByText('All OK')).toBeInTheDocument();
     // Service labels derive from the key when the i18n default falls through.
     expect(screen.getByText('Database')).toBeInTheDocument();
-    expect(screen.getByText('Mqtt')).toBeInTheDocument();
-    expect(screen.getByText('Tesla Api')).toBeInTheDocument();
+    expect(screen.getByText('MQTT')).toBeInTheDocument();
+    expect(screen.getByText('Tesla API')).toBeInTheDocument();
     expect(screen.getByText('Fleet Telemetry')).toBeInTheDocument();
     // All four services healthy → four "OK" status badges.
     expect(screen.getAllByText('OK')).toHaveLength(4);
@@ -182,7 +182,7 @@ describe('UptimeMonitorWidget — standard layout', () => {
 
     renderWidget({ cols: 2, rows: 3 });
 
-    expect(screen.getByText('DB Size')).toBeInTheDocument();
+    expect(screen.getByText('DB size')).toBeInTheDocument();
     expect(screen.getByText('512 MB')).toBeInTheDocument();
     expect(screen.getByText('Tables')).toBeInTheDocument();
     expect(screen.getByText('87')).toBeInTheDocument();
@@ -195,9 +195,87 @@ describe('UptimeMonitorWidget — standard layout', () => {
 
     renderWidget({ cols: 2, rows: 2 });
 
-    // `tableCount ?? '—'` keeps a legitimate 0; `databaseSize || '—'` replaces ''.
+    // A raw count of 0 is measured; empty database-size text remains missing.
     expect(screen.getByText('0')).toBeInTheDocument();
     expect(screen.getByText('—')).toBeInTheDocument();
+  });
+});
+
+describe('UptimeMonitorWidget — real database source brief', () => {
+  it('keeps measured zero distinct from a missing table count and preserves opaque size text in review details', () => {
+    const databaseSize = 'server-reported size (not numeric bytes)';
+    const health = makeHealth({ databaseSize, tableCount: 0 });
+    useSystemHealthMock.mockReturnValue(makeQuery({ data: health }));
+
+    renderWidget({ cols: 2, rows: 2 });
+    const brief = screen.getByTestId('dashboard-uptime-snapshot-brief');
+    const count = brief.querySelector('[data-operational-metric="uptime-database-table-count"]');
+    const sizeText = brief.querySelector('[data-operational-metric="uptime-database-size-text"]');
+    expect(count).toHaveAttribute('data-value-state', 'value');
+    expect(count).toHaveTextContent('0');
+    expect(sizeText).toHaveAttribute('data-value-state', 'value');
+    expect(sizeText).toHaveTextContent(databaseSize);
+    expect(within(brief).getByText(/not complete fleet history/)).toBeInTheDocument();
+
+    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+    const details = screen.getByRole('dialog');
+    expect(within(details).getByText(databaseSize)).toBeInTheDocument();
+    expect(within(details).getByText('0')).toBeInTheDocument();
+    expect(within(details).getByText(/no byte count is supplied/)).toBeInTheDocument();
+
+    cleanup();
+    const withoutCount: Omit<SystemHealth, 'tableCount'> = {
+      status: health.status,
+      components: health.components,
+      databaseSize,
+    };
+    useSystemHealthMock.mockReturnValue({ ...makeQuery(), data: withoutCount });
+    renderWidget({ cols: 2, rows: 2 });
+    const missingBrief = screen.getByTestId('dashboard-uptime-snapshot-brief');
+    const missingCount = missingBrief.querySelector('[data-operational-metric="uptime-database-table-count"]');
+    expect(missingCount).toHaveAttribute('data-value-state', 'missing');
+    expect(within(missingBrief).getByText('—')).toBeInTheDocument();
+    expect(within(missingBrief).queryByText('0')).not.toBeInTheDocument();
+    expect(screen.getAllByText('OK')).toHaveLength(4);
+  });
+
+  it('shares the single health-query trust state, retains counts on refresh failure and excludes ineligible layouts', () => {
+    useSystemHealthMock.mockReturnValue(makeQuery({
+      data: makeHealth({ tableCount: 0 }),
+      error: new Error('snapshot refresh failed'),
+      isError: true,
+    }));
+
+    const { rerender } = renderWidget({ cols: 3, rows: 2 });
+    const brief = screen.getByTestId('dashboard-uptime-snapshot-brief');
+    expect(within(brief).getByText('Retained readings')).toBeInTheDocument();
+    expect(brief.querySelector('[data-provenance="cached"]')).toHaveAttribute('data-data-status', 'stale');
+    expect(within(brief).getByText('0')).toBeInTheDocument();
+    expect(screen.getAllByText('OK')).toHaveLength(4);
+    expect(screen.queryByText("Can't reach server")).not.toBeInTheDocument();
+
+    rerender(<MemoryRouter><UptimeMonitorWidget size={{ cols: 1, rows: 2 }} /></MemoryRouter>);
+    expect(screen.queryByTestId('dashboard-uptime-snapshot-brief')).not.toBeInTheDocument();
+    expect(screen.getByText('4/4')).toBeInTheDocument();
+    rerender(<MemoryRouter><UptimeMonitorWidget size={{ cols: 2, rows: 1 }} /></MemoryRouter>);
+    expect(screen.queryByTestId('dashboard-uptime-snapshot-brief')).not.toBeInTheDocument();
+    expect(screen.getAllByText('OK')).toHaveLength(4);
+
+    useSystemHealthMock.mockReturnValue(makeQuery({
+      data: undefined,
+      error: new Error('initial health failure'),
+      isError: true,
+    }));
+    rerender(<MemoryRouter><UptimeMonitorWidget size={{ cols: 2, rows: 2 }} /></MemoryRouter>);
+    expect(screen.getByText("Can't reach server")).toBeInTheDocument();
+    expect(screen.queryByTestId('dashboard-uptime-snapshot-brief')).not.toBeInTheDocument();
+
+    useSystemHealthMock.mockReturnValue(makeQuery());
+    rerender(<MemoryRouter><UptimeMonitorWidget size={{ cols: 2, rows: 2 }} /></MemoryRouter>);
+    const unavailable = screen.getByTestId('dashboard-uptime-snapshot-brief');
+    expect(within(unavailable).getByText('No source readings')).toBeInTheDocument();
+    expect(within(unavailable).getAllByText('—')).toHaveLength(2);
+    expect(screen.getByText('No system health data')).toBeInTheDocument();
   });
 });
 
@@ -217,11 +295,11 @@ describe('UptimeMonitorWidget — status classification', () => {
       }),
     );
 
-    const { container } = renderWidget({ cols: 2, rows: 2 });
+    renderWidget({ cols: 2, rows: 2 });
 
     expect(screen.getByText('Degraded')).toBeInTheDocument();
-    // Fresh (not stale) so the only amber dot is the degraded service dot.
-    expect(container.querySelector('.bg-amber-400')).toBeTruthy();
+    expect(screen.getByText('Database').closest('.relative')?.querySelector('[aria-hidden="true"]'))
+      .toHaveClass('bg-[var(--semantic-warning)]');
   });
 
   it('maps a "warning" service to Degraded (not danger) and never leaks the raw status (regression)', () => {
@@ -242,12 +320,13 @@ describe('UptimeMonitorWidget — status classification', () => {
       }),
     );
 
-    const { container } = renderWidget({ cols: 2, rows: 2 });
+    renderWidget({ cols: 2, rows: 2 });
 
     expect(screen.getByText('Degraded')).toBeInTheDocument();
     expect(screen.queryByText('warning')).not.toBeInTheDocument();
     expect(screen.queryByText('Down')).not.toBeInTheDocument();
-    expect(container.querySelector('.bg-amber-400')).toBeTruthy();
+    expect(screen.getByText('Database').closest('.relative')?.querySelector('[aria-hidden="true"]'))
+      .toHaveClass('bg-[var(--semantic-warning)]');
   });
 
   it('collapses the whole broken family (unhealthy/offline/down/failed) to a single "Down" label', () => {
@@ -265,14 +344,15 @@ describe('UptimeMonitorWidget — status classification', () => {
       }),
     );
 
-    const { container } = renderWidget({ cols: 2, rows: 2 });
+    renderWidget({ cols: 2, rows: 2 });
 
     // Four broken services, overall still "All OK" → exactly four "Down" badges.
     expect(screen.getAllByText('Down')).toHaveLength(4);
     // None of the raw backend status strings leak into the DOM.
     expect(screen.queryByText('offline')).not.toBeInTheDocument();
     expect(screen.queryByText('failed')).not.toBeInTheDocument();
-    expect(container.querySelector('.bg-red-500')).toBeTruthy();
+    expect(screen.getByText('Database').closest('.relative')?.querySelector('[aria-hidden="true"]'))
+      .toHaveClass('bg-[var(--semantic-danger)]');
   });
 
   it('maps an "unknown" service to a neutral Unknown badge + gray dot', () => {
@@ -290,10 +370,10 @@ describe('UptimeMonitorWidget — status classification', () => {
       }),
     );
 
-    const { container } = renderWidget({ cols: 2, rows: 2 });
+    renderWidget({ cols: 2, rows: 2 });
 
     expect(screen.getByText('Unknown')).toBeInTheDocument();
-    expect(container.querySelector('.bg-gray-400')).toBeTruthy();
+    expect(screen.getByText('Unknown').parentElement?.parentElement?.className).toContain('bg-[var(--surface-2)]');
   });
 });
 
@@ -341,11 +421,9 @@ describe('UptimeMonitorWidget — failure + last-error surfacing', () => {
     renderWidget({ cols: 2, rows: 2 });
 
     // The failure count is exposed to assistive tech, not just as a "×3" glyph.
-    expect(screen.getByRole('img', { name: '3 consecutive failures' })).toBeInTheDocument();
+    expect(screen.getByText(/×3 consecutive failures/)).toBeInTheDocument();
     // lastError is reachable as the row's native tooltip.
-    const row = screen.getByText('Database').closest('[title]');
-    expect(row).not.toBeNull();
-    expect(row).toHaveAttribute('title', 'connection refused');
+    expect(screen.getByText(/connection refused/)).toBeInTheDocument();
   });
 
   it('omits the failure indicator for a healthy service with zero failures', () => {
@@ -365,15 +443,14 @@ describe('UptimeMonitorWidget — compact layout', () => {
 
     renderWidget({ cols: 1, rows: 2 });
 
-    // Compact drops the title and the per-service rows …
-    expect(screen.queryByText('Uptime Monitor')).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Uptime monitor' })).toBeInTheDocument();
     expect(screen.queryByText('Database')).not.toBeInTheDocument();
     // … and shows the accessible count + the Overall badge.
     expect(screen.getByText('4/4')).toBeInTheDocument();
-    expect(screen.getByRole('img', { name: '4/4 services healthy' })).toBeInTheDocument();
+    expect(screen.getByText('Services healthy')).toBeInTheDocument();
     expect(screen.getByText('All OK')).toBeInTheDocument();
     // The tall detail strip is suppressed in compact mode.
-    expect(screen.queryByText('DB Size')).not.toBeInTheDocument();
+    expect(screen.queryByText('DB size')).not.toBeInTheDocument();
   });
 
   it('reflects the number of healthy services in the compact count', () => {
@@ -394,7 +471,7 @@ describe('UptimeMonitorWidget — compact layout', () => {
     renderWidget({ cols: 1, rows: 2 });
 
     expect(screen.getByText('3/4')).toBeInTheDocument();
-    expect(screen.getByRole('img', { name: '3/4 services healthy' })).toBeInTheDocument();
+    expect(screen.getByText('Services healthy')).toBeInTheDocument();
   });
 });
 
@@ -404,9 +481,19 @@ describe('UptimeMonitorWidget — query states', () => {
 
     const { container } = renderWidget({ cols: 2, rows: 2 });
 
-    expect(container.querySelector('.animate-pulse')).toBeTruthy();
-    expect(screen.queryByText('Uptime Monitor')).not.toBeInTheDocument();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).toBeTruthy();
+    expect(screen.queryByText('Uptime monitor')).toBeInTheDocument();
     expect(screen.queryByText('No system health data')).not.toBeInTheDocument();
+  });
+
+  describe('UptimeMonitorWidget — missing component honesty', () => {
+    it('keeps absent tracked components neutral even if overall status is healthy', () => {
+      useSystemHealthMock.mockReturnValue(makeQuery({ data: makeHealth({ components: {} }) }));
+      renderWidget({ cols: 3, rows: 2 });
+      expect(screen.getAllByText('Unknown')).toHaveLength(4);
+      expect(screen.queryByText('Down')).not.toBeInTheDocument();
+      expect(screen.queryByText('%')).not.toBeInTheDocument();
+    });
   });
 
   it('renders the full-panel QueryError on an initial load failure (no cached data)', () => {
@@ -418,7 +505,7 @@ describe('UptimeMonitorWidget — query states', () => {
 
     // Generic (non-HTTP) error → network/unknown branch of <QueryError>.
     expect(screen.getByText("Can't reach server")).toBeInTheDocument();
-    expect(screen.queryByText('Uptime Monitor')).not.toBeInTheDocument();
+    expect(screen.queryByText('Uptime monitor')).toBeInTheDocument();
     expect(screen.queryByText('Overall')).not.toBeInTheDocument();
   });
 
@@ -430,20 +517,19 @@ describe('UptimeMonitorWidget — query states', () => {
     renderWidget({ cols: 2, rows: 2 });
 
     // Titled shell still renders; the body degrades to the placeholder.
-    expect(screen.getByText('Uptime Monitor')).toBeInTheDocument();
+    expect(screen.getByText('Uptime monitor')).toBeInTheDocument();
     expect(screen.getByText('No system health data')).toBeInTheDocument();
-    expect(screen.queryByText('Overall')).not.toBeInTheDocument();
+    expect(screen.getByText('Overall')).toBeInTheDocument();
   });
 
   it('degrades a partial {} payload to per-service defaults without throwing (null-safety)', () => {
     useSystemHealthMock.mockReturnValue(makeQuery({ data: {} as SystemHealth }));
 
     expect(() => renderWidget({ cols: 2, rows: 2 })).not.toThrow();
-    expect(screen.getByText('Uptime Monitor')).toBeInTheDocument();
-    // Missing components default to danger → four "Down" badges; the missing
-    // overall status resolves to the neutral "Unknown".
-    expect(screen.getAllByText('Down')).toHaveLength(4);
-    expect(screen.getByText('Unknown')).toBeInTheDocument();
+    expect(screen.getByText('Uptime monitor')).toBeInTheDocument();
+    // Neither absent components nor an absent overall status imply downtime.
+    expect(screen.queryByText('Down')).not.toBeInTheDocument();
+    expect(screen.getAllByText('Unknown')).toHaveLength(5);
   });
 });
 
@@ -487,14 +573,15 @@ describe('UptimeMonitorWidget — graceful degradation on transient error', () =
       }),
     );
 
-    const { container } = renderWidget({ cols: 2, rows: 2 });
+    renderWidget({ cols: 2, rows: 2 });
 
     // Content is still on screen …
-    expect(screen.getByText('Uptime Monitor')).toBeInTheDocument();
+    expect(screen.getByText('Uptime monitor')).toBeInTheDocument();
     expect(screen.getByText('All OK')).toBeInTheDocument();
     // … the full-panel error is NOT shown …
     expect(screen.queryByText("Can't reach server")).not.toBeInTheDocument();
-    // … and the freshness indicator is in its error state (red dot).
-    expect(container.querySelector('.bg-red-400')).toBeTruthy();
+    // … and the freshness indicator is in its error state (danger dot).
+    expect(screen.getByRole('button', { name: 'Refresh data · {{state}}' }).querySelector('[aria-hidden="true"].rounded-full'))
+      .toHaveClass('bg-[var(--semantic-danger)]');
   });
 });

@@ -1,7 +1,6 @@
 import { type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { cn } from '@/lib/cn';
-import { GlassPanel, PanelTitle } from '@/components/ui';
+import { LayoutCard } from '@/components/layout';
 import { KVList } from '@/components/data-display';
 import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
 
@@ -64,12 +63,9 @@ export function TwinDetailPanel({
   const rows = items ?? [];
 
   return (
-    <GlassPanel className={cn('flex flex-col p-4 sm:p-5', className)}>
-      <PanelTitle className="mb-3 flex items-center gap-2">
-        {icon}
-        <span className="truncate">{title}</span>
-      </PanelTitle>
-      <div className="flex-1" aria-busy={isLoading ? true : undefined}>
+    <LayoutCard title={title} footer={ready ? footer : undefined}>
+      <div className={className} aria-busy={isLoading ? true : undefined}>
+        {icon && <div aria-hidden="true">{icon}</div>}
         {isLoading ? (
           <div
             role="status"
@@ -87,9 +83,6 @@ export function TwinDetailPanel({
           <KVList items={rows} columns={columns} />
         )}
       </div>
-      {ready && footer ? (
-        <div className="mt-3 border-t border-[var(--border-subtle)] pt-3">{footer}</div>
-      ) : null}
-    </GlassPanel>
+    </LayoutCard>
   );
 }

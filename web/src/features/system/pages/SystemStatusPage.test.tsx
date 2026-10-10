@@ -33,6 +33,7 @@ import { render, screen, within, fireEvent } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import type { ReactNode } from 'react'
 import { ToastProvider } from '@/components/feedback/Toast'
+import { neonColorMap } from '@/lib/tokens'
 
 // ── i18n: return the fallback/default string and interpolate {{vars}} ──
 vi.mock('react-i18next', async () => {
@@ -274,16 +275,37 @@ function q<T>(data: T, over: Record<string, unknown> = {}) {
     error: null,
     refetch: vi.fn(),
     dataUpdatedAt: Date.now(),
+    errorUpdatedAt: 0,
+    errorUpdateCount: 0,
+    failureCount: 0,
+    failureReason: null,
+    isError: false,
+    isPending: false,
+    isSuccess: true,
+    isLoadingError: false,
+    isRefetchError: false,
+    isInitialLoading: false,
+    isFetched: true,
+    isFetchedAfterMount: true,
+    isRefetching: false,
+    isPaused: false,
+    isPlaceholderData: false,
+    isEnabled: true,
+    isStale: false,
+    status: 'success' as const,
+    fetchStatus: 'idle' as const,
+    promise: Promise.resolve(data),
     ...over,
   }
 }
 
 // mutable per-test state driving the inline useQuery + refresh spies
 let inline: Record<string, unknown>
-let refetchHealth: ReturnType<typeof vi.fn>
-let liveReconnect: ReturnType<typeof vi.fn>
-let invalidateQueries: ReturnType<typeof vi.fn>
-let scrollSpy: ReturnType<typeof vi.fn>
+let inlineOverrides: Record<string, Record<string, unknown>>
+let refetchHealth: ReturnType<typeof vi.fn<() => void>>
+let liveReconnect: ReturnType<typeof vi.fn<() => void>>
+let invalidateQueries: ReturnType<typeof vi.fn<(options: { queryKey: string[] }) => void>>
+let scrollSpy: ReturnType<typeof vi.fn<(options?: boolean | ScrollIntoViewOptions) => void>>
 
 function renderPage() {
   return render(
@@ -317,6 +339,7 @@ beforeEach(() => {
     'backup-stats': backupStats(),
     workers: workersHealth(),
   }
+  inlineOverrides = {}
   mockUseQuery.mockImplementation(
     (opts: unknown) =>
       ({
@@ -325,6 +348,7 @@ beforeEach(() => {
         isFetching: false,
         error: null,
         refetch: vi.fn(),
+        ...inlineOverrides[String((opts as { queryKey: unknown[] }).queryKey[1])],
          
       }) as any,
   )
@@ -360,7 +384,7 @@ describe('SystemStatusPage — healthy populated view', () => {
   it('renders the page scaffolding, hero, sticky chrome, chip bar and live pill', () => {
     renderPage()
 
-    expect(screen.getByRole('heading', { level: 1, name: 'System Status' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 1, name: 'System status' })).toBeInTheDocument()
     // healthy + fresh → the real StatusHero shows its default headline.
     expect(screen.getByText('All systems operational')).toBeInTheDocument()
     // subline reports recency, not an error/stale banner.
@@ -484,7 +508,7 @@ describe('SystemStatusPage — operator action items', () => {
     expect(a.getByText('Update available — v1.3.0')).toBeInTheDocument()
     expect(a.getByText('Tesla token expires in 3 day(s)')).toBeInTheDocument()
     expect(a.getByText('Last backup is 10 days old')).toBeInTheDocument()
-    expect(a.queryByText(/Tesla API estimated cost/)).not.toBeInTheDocument()
+    expect(a.queryByText(/Tesla API Estimated cost/)).not.toBeInTheDocument()
     expect(a.getByText('2 of 3 workers unhealthy')).toBeInTheDocument()
     expect(a.getByText('export, geocode')).toBeInTheDocument()
   })
@@ -543,7 +567,7 @@ describe('SystemStatusPage — loading / stale / error', () => {
 
     expect(screen.getByTestId('status-skeleton')).toBeInTheDocument()
     // scaffolding stays, rich content does not.
-    expect(screen.getByRole('heading', { level: 1, name: 'System Status' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 1, name: 'System status' })).toBeInTheDocument()
     expect(screen.queryByText('All systems operational')).not.toBeInTheDocument()
     expect(screen.queryByTestId('sticky-compact-hero')).not.toBeInTheDocument()
   })
@@ -605,14 +629,15 @@ describe('SystemStatusPage — missing data placeholders', () => {
     expect(screen.getByText('Awaiting first check')).toBeInTheDocument()
     const r = healthRegion()
     expect(r.getByText('no data')).toBeInTheDocument() // services
-    expect(r.getByText('connected')).toBeInTheDocument() // database (no latency/size)
+    expect(r.queryByText('connected')).not.toBeInTheDocument() // absent database source is not connected
     expect(r.getByText('No vehicle telemetry to assess')).toBeInTheDocument()
-    expect(r.getByText('unknown')).toBeInTheDocument() // workers
-    expect(r.getByText('Not connected')).toBeInTheDocument() // tesla auth
+    expect(r.getAllByText('unknown')).toHaveLength(3) // database, workers and Tesla auth
+    expect(r.queryByText('Not connected')).not.toBeInTheDocument()
 
     // Errors + system-info honest fallbacks.
     expect(document.querySelector('#errors')).toBeNull()
-    expect(screen.getByText('Loading system info…')).toBeInTheDocument()
+    expect(within(document.getElementById('system')!).getByText('System info is unavailable.')).toBeInTheDocument()
+    expect(screen.queryByText('Loading system info…')).not.toBeInTheDocument()
     // Infrastructure details are available in the operator disclosure.
     expect(document.querySelector('#operator-details #resources')).not.toBeNull()
     // Nothing actionable → empty action list.
@@ -627,9 +652,43 @@ describe('SystemStatusPage — missing data placeholders', () => {
     renderPage()
 
     // The page still mounts (crash guard: Object.entries(health.components ?? {})).
-    expect(screen.getByRole('heading', { level: 1, name: 'System Status' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 1, name: 'System status' })).toBeInTheDocument()
     expect(screen.getByText('Current component status is unavailable.')).toBeInTheDocument()
     expect(healthRegion().getByText('no data')).toBeInTheDocument()
+  })
+})
+
+describe('SystemStatusPage — continuation source preservation', () => {
+  it('keeps scalar Telemetry, independent sources and body recovery outside the refresh control', () => {
+    inlineOverrides['backup-stats'] = { error: new Error('statistics refresh failed') }
+    mockAuthStatus.mockReturnValue(
+      q<ReturnType<typeof useAuthStatus>['data']>(undefined, { error: new Error('auth source unavailable') }) as ReturnType<typeof useAuthStatus>,
+    )
+    renderPage()
+    expect(healthRegion().getByText('Telemetry')).toBeInTheDocument()
+    expect(screen.getByTestId('telemetry-card')).toHaveTextContent('positions:1000')
+    expect(resourcesRegion().getByText('101,069')).toBeInTheDocument()
+    expect(screen.getByText('App version')).toBeInTheDocument()
+    expect(screen.getByText('1.2.3')).toBeInTheDocument()
+    // The page source notice and both retained resource rows expose recovery.
+    expect(screen.getAllByTestId('stale-refresh-warning')).toHaveLength(3)
+    const refresh = screen.getByRole('button', { name: 'Refresh (r)' })
+    expect(refresh).toHaveAttribute('title', 'Press r to refresh')
+    expect(within(refresh).queryByTestId('stale-refresh-warning')).not.toBeInTheDocument()
+    expect(within(refresh).queryByRole('button')).not.toBeInTheDocument()
+  })
+
+  it('keeps extended runtime evidence when version info is unavailable rather than claiming it is loading', () => {
+    inline.version = undefined
+    inlineOverrides.version = { error: new Error('version unavailable') }
+    renderPage()
+    expect(screen.getByText('System info is unavailable.')).toBeInTheDocument()
+    expect(screen.queryByText('Loading system info…')).not.toBeInTheDocument()
+    const system = document.getElementById('system')!
+    expect(within(system).getByText('Goroutines')).toBeInTheDocument()
+    expect(within(system).getByText('150')).toBeInTheDocument()
+    expect(within(system).getByText('App version').nextElementSibling).toHaveTextContent('—')
+    expect(screen.getByTestId('workers-card')).toHaveTextContent('workers:2')
   })
 })
 
@@ -637,7 +696,7 @@ describe('SystemStatusPage — interactions', () => {
   it('fans the header refresh button out to refetch + invalidate + reconnect', () => {
     renderPage()
 
-    fireEvent.click(screen.getByRole('button', { name: 'Refresh (R)' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh (r)' }))
 
     expect(refetchHealth).toHaveBeenCalledTimes(1)
     expect(invalidateQueries).toHaveBeenCalledWith({ queryKey: ['system-status'] })
@@ -678,8 +737,157 @@ describe('SystemStatusPage — interactions', () => {
     )
     renderPage()
 
-    const btn = screen.getByRole('button', { name: 'Refresh (R)' })
+    const btn = screen.getByRole('button', { name: 'Refresh (r)' })
     expect(btn).toBeDisabled()
     expect(btn).toHaveAttribute('aria-busy', 'true')
+  })
+})
+
+describe('SystemStatusPage — Resource source adoption', () => {
+  function workerRow() {
+    const row = resourcesRegion().getByText('Workers').closest('div.min-w-0.space-y-2')
+    if (!(row instanceof HTMLElement)) throw new Error('Workers resource row missing')
+    return within(row)
+  }
+
+  it.each([
+    { healthy: 95, total: 100, status: 'Degraded', color: neonColorMap.amber.dot },
+    { healthy: 100, total: 100, status: 'Healthy', color: neonColorMap.green.dot },
+    { healthy: 0, total: 10, status: 'Critical', color: neonColorMap.red.dot },
+  ])('uses raw worker health $healthy/$total rather than utilization', ({ healthy, total, status, color }) => {
+    inline.workers = workersHealth({ healthy_count: healthy, total })
+    renderPage()
+    const row = workerRow()
+    expect(row.getByText(`${healthy} / ${total}`)).toBeInTheDocument()
+    expect(row.getByText(status)).toBeInTheDocument()
+    const bar = row.getByRole('progressbar', { name: 'Workers health' })
+    expect(bar).toHaveAttribute('aria-valuenow', String(Math.round(healthy / total * 100)))
+    expect(bar.firstElementChild).toHaveClass(color)
+    expect(bar.firstElementChild).toHaveStyle({ width: `${healthy / total * 100}%` })
+  })
+
+  it.each([
+    { healthy: undefined, total: 10 },
+    { healthy: 1, total: undefined },
+    { healthy: null, total: 10 },
+    { healthy: 0, total: 0 },
+    { healthy: 11, total: 10 },
+    { healthy: -1, total: 10 },
+    { healthy: 1.5, total: 10 },
+    { healthy: 1, total: 1.5 },
+    { healthy: NaN, total: 10 },
+    { healthy: 1, total: Infinity },
+    { healthy: Infinity, total: 10 },
+    { healthy: 1, total: Number.MAX_SAFE_INTEGER + 1 },
+  ])('does not invent health for invalid raw counts $healthy/$total', ({ healthy, total }) => {
+    inline.workers = workersHealth({ healthy_count: healthy, total })
+    renderPage()
+    expect(workerRow().getByText('Unknown')).toBeInTheDocument()
+    expect(workerRow().queryByRole('progressbar')).not.toBeInTheDocument()
+    expect(resourcesRegion().getByRole('progressbar', { name: 'DB connections usage' })).toHaveAttribute('aria-valuenow', '20')
+  })
+
+  it.each([
+    { acquired: 7, total: 10, status: 'Warning', color: neonColorMap.amber.dot },
+    { acquired: 9, total: 10, status: 'Critical', color: neonColorMap.red.dot },
+  ])('retains DB utilization at $acquired/$total independently of worker health', ({ acquired, total, status, color }) => {
+    const extended = extHealth()
+    extended.components.database_pool.acquired_conns = acquired
+    extended.components.database_pool.total_conns = total
+    inline['extended-health'] = extended
+    renderPage()
+    const bar = resourcesRegion().getByRole('progressbar', { name: 'DB connections usage' })
+    expect(bar).toHaveAttribute('aria-valuenow', String(acquired / total * 100))
+    expect(bar.firstElementChild).toHaveClass(color)
+    const row = bar.closest('div.min-w-0.space-y-2')
+    if (!(row instanceof HTMLElement)) throw new Error('DB resource row missing')
+    expect(within(row).getByText(status)).toBeInTheDocument()
+    expect(workerRow().getByText('Healthy')).toBeInTheDocument()
+    expect(resourcesRegion().getByRole('heading', { name: 'Server resources' })).toBeInTheDocument()
+  })
+
+  it('retains the unresolved worker row without inventing zero or blanking neighbors', () => {
+    inline.workers = undefined
+    inlineOverrides.workers = { isLoading: true, isFetching: true }
+    renderPage()
+    expect(workerRow().getByText('Loading')).toBeInTheDocument()
+    expect(workerRow().queryByText('0 / 0')).not.toBeInTheDocument()
+    expect(workerRow().queryByRole('progressbar')).not.toBeInTheDocument()
+    expect(resourcesRegion().getByText('512 MB')).toBeInTheDocument()
+    expect(resourcesRegion().getByText('1d 1h 1m')).toBeInTheDocument()
+  })
+
+  it('limits a fatal worker error and its retry to that row', () => {
+    const retry = vi.fn()
+    inline.workers = undefined
+    inlineOverrides.workers = { error: new Error('worker probes unavailable'), refetch: retry }
+    renderPage()
+    const row = workerRow()
+    expect(row.queryByRole('progressbar')).not.toBeInTheDocument()
+    fireEvent.click(row.getByRole('button'))
+    expect(retry).toHaveBeenCalledTimes(1)
+    expect(resourcesRegion().getByText('101,069')).toBeInTheDocument()
+    expect(resourcesRegion().getByRole('progressbar', { name: 'DB connections usage' })).toBeInTheDocument()
+  })
+
+  it('keeps healthy retained counts with nonblocking refresh recovery', () => {
+    const retry = vi.fn()
+    inlineOverrides.workers = { error: new Error('worker refresh failed'), refetch: retry, dataUpdatedAt: 1234 }
+    renderPage()
+    const row = workerRow()
+    expect(row.getByText('2 / 2')).toBeInTheDocument()
+    expect(row.getByText('Healthy')).toBeInTheDocument()
+    expect(row.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '100')
+    expect(row.getByText('Workers may be out of date')).toBeInTheDocument()
+    fireEvent.click(row.getByRole('button', { name: 'Refresh' }))
+    expect(retry).toHaveBeenCalledTimes(1)
+    expect(resourcesRegion().getByText('512 MB')).toBeInTheDocument()
+  })
+
+  it('keeps paused worker counts without claiming device offline or fabricating observation age', () => {
+    inlineOverrides.workers = { fetchStatus: 'paused', dataUpdatedAt: 0 }
+    renderPage()
+    const row = workerRow()
+    expect(row.getByTestId('stale-refresh-warning')).toHaveAttribute('data-refresh-blocked', 'true')
+    expect(row.getByText('2 / 2')).toBeInTheDocument()
+    expect(row.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '100')
+    expect(row.queryByText(/ago|offline/i)).not.toBeInTheDocument()
+  })
+
+  it('threads independent refresh recovery to every existing backing resource row', () => {
+    const extendedRetry = vi.fn()
+    const backupRetry = vi.fn()
+    const versionRetry = vi.fn()
+    inlineOverrides['extended-health'] = { error: new Error('extended refresh failed'), refetch: extendedRetry }
+    inlineOverrides['backup-stats'] = { error: new Error('backup refresh failed'), refetch: backupRetry }
+    inlineOverrides.version = { error: new Error('version refresh failed'), refetch: versionRetry }
+    renderPage()
+    const notices = resourcesRegion().getAllByTestId('stale-refresh-warning')
+    expect(notices).toHaveLength(5)
+    for (const notice of notices) {
+      fireEvent.click(within(notice).getByRole('button', { name: 'Refresh' }))
+    }
+    expect(extendedRetry).toHaveBeenCalledTimes(2)
+    expect(backupRetry).toHaveBeenCalledTimes(2)
+    expect(versionRetry).toHaveBeenCalledTimes(1)
+    expect(workerRow().queryByTestId('stale-refresh-warning')).not.toBeInTheDocument()
+    expect(workerRow().getByText('Healthy')).toBeInTheDocument()
+  })
+
+  it('assigns fallback uptime to extended recovery rather than failed version recovery', () => {
+    const extendedRetry = vi.fn()
+    const versionRetry = vi.fn()
+    inline.version = undefined
+    inlineOverrides.version = { error: new Error('version unavailable'), refetch: versionRetry }
+    inlineOverrides['extended-health'] = { error: new Error('extended refresh failed'), refetch: extendedRetry }
+    renderPage()
+    const notices = resourcesRegion().getAllByTestId('stale-refresh-warning')
+    expect(notices).toHaveLength(3)
+    expect(resourcesRegion().getByText('1h 0m')).toBeInTheDocument()
+    for (const notice of notices) {
+      fireEvent.click(within(notice).getByRole('button', { name: 'Refresh' }))
+    }
+    expect(extendedRetry).toHaveBeenCalledTimes(3)
+    expect(versionRetry).not.toHaveBeenCalled()
   })
 })

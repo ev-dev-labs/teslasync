@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
-import { render, screen, cleanup } from '@testing-library/react'
+import { render, screen, cleanup, fireEvent } from '@testing-library/react'
 import { afterEach } from 'vitest'
 
 // The modal renders its copy through react-i18next; echo the English fallback
@@ -35,6 +35,32 @@ afterEach(() => {
 })
 
 describe('SignalConfigModal viewport bounds', () => {
+  it('keeps long configuration names and actions in the shared scroll-body/footer slots', () => {
+    const signal = 'LongTelemetrySignalName'.repeat(20)
+    const onClose = vi.fn()
+    const onSubmit = vi.fn()
+    render(
+      <SignalConfigModal open onClose={onClose}
+        categories={[{ category: 'Long category name '.repeat(10), fields: [signal] }]}
+        initialSelected={[signal]} initialInterval={0} onSubmit={onSubmit} />,
+    )
+    expect(screen.getByText(signal)).toHaveClass('break-all', 'min-w-0')
+    const submit = screen.getByRole('button', { name: 'Subscribe 1 Signals' })
+    expect(submit.closest('[data-modal-footer]')).not.toBeNull()
+    expect(submit.closest('[data-modal-scroll-body]')).toBeNull()
+    expect(screen.getByRole('textbox', { name: 'Search signals' }).closest('[data-modal-scroll-body]')).not.toBeNull()
+    const close = screen.getByRole('button', { name: 'Close' })
+    expect(close).toHaveFocus()
+    submit.focus()
+    fireEvent.keyDown(submit, { key: 'Tab' })
+    expect(close).toHaveFocus()
+    fireEvent.keyDown(close, { key: 'Tab', shiftKey: true })
+    expect(submit).toHaveFocus()
+    fireEvent.keyDown(submit, { key: 'Escape' })
+    expect(onClose).toHaveBeenCalledTimes(1)
+    expect(onSubmit).not.toHaveBeenCalled()
+  })
+
   // SignalConfigModal was a hand-rolled full-viewport
   // overlay that bypassed <Modal>'s viewport-bounds (max-h-[90vh] desktop /
   // max-h-[100dvh] mobile). It now renders inside the shared <Modal>, which

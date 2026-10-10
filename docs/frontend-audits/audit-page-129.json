@@ -1,0 +1,381 @@
+{
+  "item": "audit-page-129",
+  "page": "web\\src\\features\\driving\\pages\\WhatIfPage.tsx",
+  "routes": ["/what-if"],
+  "purpose": "Replay a recorded drive with locally recomputed speed, tire, climate and ambient-temperature scenarios, comparing estimated energy, arrival battery and duration.",
+  "primaryGoal": "Select a real drive, adjust four simulation controls, and understand the baseline/scenario energy components and estimated savings or extra consumption without changing recorded data.",
+  "dataSources": [
+    {
+      "hook": "useSelectedVehicle -> useVehicles",
+      "endpoint": "GET /api/v1/vehicles",
+      "owner": "web\\src\\hooks\\useSelectedVehicle.ts",
+      "citations": ["web\\src\\features\\driving\\pages\\WhatIfPage.tsx:61-65", "web\\src\\hooks\\useSelectedVehicle.ts:48-78", "web\\src\\api\\hooks\\useVehicles.ts:73-76"],
+      "behavior": "Workspace vehicle comes from URL, persisted selection or first available vehicle. No competing local vehicle picker. Vehicle-hook failure handling is not exposed by this page.",
+      "endpointVerification": "Hook request inspected; vehicle backend route not traced in this bounded audit."
+    },
+    {
+      "hook": "useDrives(vehicleIdStr)",
+      "endpoint": "GET /api/v1/drives?vehicle_id={id}",
+      "owner": "web\\src\\api\\hooks\\useDriving.ts",
+      "citations": ["web\\src\\features\\driving\\pages\\WhatIfPage.tsx:65-69", "web\\src\\api\\hooks\\useDriving.ts:113-138", "internal\\api\\router.go:3463-3464"],
+      "behavior": "Enabled only with vehicle ID, normalizes arrays with safeArray, passes cancellation signal, uses drivingKeys.drives and FAST staleTime. No range, limit or pagination requested by page; hook documentation identifies backend default 50-row window.",
+      "endpointVerification": "Source route match; handler pagination/order/auth behavior not executed."
+    },
+    {
+      "hook": "useDrive(activeId)",
+      "endpoint": "GET /api/v1/drives/{driveID}",
+      "owner": "web\\src\\api\\hooks\\useDriving.ts",
+      "citations": ["web\\src\\features\\driving\\pages\\WhatIfPage.tsx:68-76", "web\\src\\api\\hooks\\useDriving.ts:204-215", "internal\\api\\router.go:3471-3472"],
+      "behavior": "Singular drive cache key; enabled with nonempty ID; cancellation signal forwarded; FAST polling only for live=true detail. Supplies distanceM, durationS, avgSpeedMps, energyUsedWh and battery percentages to model.",
+      "endpointVerification": "Source route match; payload completeness/live-record behavior unverified."
+    },
+    {
+      "hook": "useDriveTelemetry(activeId)",
+      "endpoint": "GET /api/v1/drives/{driveID}/telemetry",
+      "owner": "web\\src\\api\\hooks\\useDriving.ts",
+      "citations": ["web\\src\\features\\driving\\pages\\WhatIfPage.tsx:72-76", "web\\src\\api\\hooks\\useDriving.ts:321-327", "internal\\api\\router.go:3475"],
+      "behavior": "drive-telemetry cache identity; enabled with drive ID; safeArray and cancellation signal retained. Elevation, climate flags and outside temperature inform model; undefined telemetry currently becomes empty input.",
+      "endpointVerification": "Source route match; historical telemetry sampling/completeness and actual units not independently validated against handler."
+    },
+    {
+      "hook": "simulateWhatIf + useUnits + useNumberFormatting",
+      "endpoint": null,
+      "owner": "web\\src\\features\\driving\\lib\\whatIfModel.ts",
+      "citations": ["web\\src\\features\\driving\\pages\\WhatIfPage.tsx:57-64", "web\\src\\features\\driving\\pages\\WhatIfPage.tsx:74-133", "web\\src\\features\\driving\\lib\\whatIfModel.ts:119-214"],
+      "behavior": "Pure local simulation with generic EV constants and optional inferred pack capacity. Inputs/cache remain unchanged; display uses existing units/number/date helpers. No mutation, export or server-side simulation is present."
+    }
+  ],
+  "components": [
+    {
+      "name": "PageLayout -> PageContainer",
+      "kind": "layout",
+      "owner": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+      "citations": ["web\\src\\features\\driving\\pages\\WhatIfPage.tsx:134-150", "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx:5-16", "web\\src\\components\\layout\\PageContainer.tsx:26-48"],
+      "reuse": "Existing category barrel and header contextActions; query array feeds worst-query freshness. Do not add another header, width system or scope selector."
+    },
+    {
+      "name": "DrivingSummaryBrief -> OperationalBrief + useOperationalMetrics",
+      "kind": "domain adapter / shared composite",
+      "owner": "web\\src\\features\\driving\\components\\operationalbrief-n-z\\DrivingSummaryBrief.tsx",
+      "citations": ["web\\src\\features\\driving\\pages\\WhatIfPage.tsx:110-164", "web\\src\\features\\driving\\components\\operationalbrief-n-z\\DrivingSummaryBrief.tsx:21-51"],
+      "reuse": "Canonical numeric StatMetric bridge; energy/arrival/duration, comparison captions, scope/provenance and unknown observation time. Retain specialist unit formatter callbacks."
+    },
+    {
+      "name": "WhatIfEnergyBreakdown -> CompositionRail",
+      "kind": "domain adapter / shared composite",
+      "owner": "web\\src\\features\\driving\\components\\WhatIfEnergyBreakdown.tsx",
+      "citations": ["web\\src\\features\\driving\\pages\\WhatIfPage.tsx:268-284", "web\\src\\features\\driving\\components\\WhatIfEnergyBreakdown.tsx:17-39", "web\\src\\components\\data-display\\CompositionRail.tsx:54-108"],
+      "reuse": "Presentation owner already supports complete text legend, image summary, common denominator, small-segment visual omission and forced-color outlines. No new chart renderer needed."
+    },
+    {
+      "name": "GlassPanel, PanelTitle, Text, Button, Badge, Select, Slider, Toggle",
+      "kind": "primitives",
+      "owner": "web\\src\\components\\ui",
+      "citations": ["web\\src\\features\\driving\\pages\\WhatIfPage.tsx:8", "web\\src\\features\\driving\\pages\\WhatIfPage.tsx:196-258", "web\\src\\features\\driving\\pages\\WhatIfPage.tsx:303-324"],
+      "reuse": "Reuse current surface, typography, field, status and action owners; not page-local replacements."
+    },
+    {
+      "name": "Skeleton, EmptyState, QueryError, FadeIn",
+      "kind": "feedback / motion",
+      "owner": "existing feedback and motion category barrels",
+      "citations": ["web\\src\\features\\driving\\pages\\WhatIfPage.tsx:12-13", "web\\src\\features\\driving\\pages\\WhatIfPage.tsx:165-194"],
+      "reuse": "Preserve recovery link, list retry and entrance behavior; motion implementation not independently reviewed."
+    }
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\driving\\pages\\WhatIfPage.tsx",
+      "line": 286,
+      "rule": "MDC-002 / MDC-034 / mission 0.6",
+      "detail": "Page repeats the five scenario category labels, swatches and amounts immediately after two CompositionRail adapters, each of which already renders all five category labels and amounts. This creates three readable legends, two for the scenario.",
+      "fix": "Keep baseline and scenario totals plus every category amount and existing takeaway; prefer the complete shared rail legends rather than a competing handwritten legend. Any removal must prove semantic equivalence, including tiny segments and both scenarios.",
+      "owner": "page",
+      "confidence": "high",
+      "citations": ["web\\src\\features\\driving\\components\\WhatIfEnergyBreakdown.tsx:19-39", "web\\src\\components\\data-display\\CompositionRail.tsx:82-108"]
+    }
+  ],
+  "responsive": {
+    "status": "source inspected; runtime unverified",
+    "sourceBehavior": [
+      "One column until xl; xl uses one-third controls and two-thirds outcomes; loading matches this broad geometry (WhatIfPage.tsx:171-173,195-196,260).",
+      "Header action wrapper wraps; baseline/scenario captions wrap; shared rails have min-w-0 and wrapping readable legends (WhatIfPage.tsx:140; WhatIfEnergyBreakdown.tsx:33-36; CompositionRail.tsx:82-104).",
+      "Preserve all information at 320/375/390/430/768/1024/1280/1440/1920/2560; no mobile-only capability removal."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\driving\\pages\\WhatIfPage.tsx",
+        "line": 142,
+        "rule": "MDC-043 / MDC-031",
+        "detail": "Drive option labels combine date and formatted distance; page does not constrain the intrinsic Select wrapper width. Takeaway also keeps icon, sentence and badge in one nonwrapping row. Long localized text may exceed narrow allocated width; not observed in a browser.",
+        "fix": "Exercise long option labels and takeaway at narrow allocated widths; use existing Select className/layout wrapping and min-w-0, and allow badge reflow only if confirmed necessary. Retain every action and amount.",
+        "owner": "page",
+        "confidence": "medium",
+        "citations": ["web\\src\\features\\driving\\pages\\WhatIfPage.tsx:79-86,303-324", "web\\src\\components\\ui\\Select.tsx:71,93-95"]
+      }
+    ],
+    "viewportsExercised": []
+  },
+  "accessibility": {
+    "status": "source evidence only; keyboard, focus, screen-reader, effective contrast and touch geometry unverified",
+    "sourceStrengths": [
+      "Both selects have localized accessible names; sliders associate label with generated native range ID and provide aria-valuetext; Toggle exposes native button role=switch and checked state (WhatIfPage.tsx:143,231; Slider.tsx:99-123; Toggle.tsx:96-107).",
+      "Energy has readable totals/category details in addition to colored tracks; decorative populated-state icons are aria-hidden (WhatIfPage.tsx:199,263,305-307; CompositionRail.tsx:56-108).",
+      "Typography uses role wrappers; existing PageContainer owns route heading/focus target. Localized visible strings predominantly use t()."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\components\\ui\\Toggle.tsx",
+        "line": 14,
+        "rule": "MDC-040 / MDC-014",
+        "detail": "Default switch track is h-6 (24px) and Slider track wrapper h-9 (36px); default Select is min-h-10 (40px). Source does not prove the stronger 44px mobile interactive target or a documented spacing exception. Page uses these defaults.",
+        "fix": "Shared primitive owner should assess mobile interactive hit areas and extend existing control sizing/hit-area contract where needed, without changing native semantics, values or persisted density defaults.",
+        "owner": "shared",
+        "confidence": "medium",
+        "citations": ["web\\src\\components\\ui\\Toggle.tsx:12-15,110-119", "web\\src\\components\\ui\\Slider.tsx:110-112", "web\\src\\components\\ui\\Select.tsx:34-38", "web\\src\\features\\driving\\pages\\WhatIfPage.tsx:216-254"]
+      },
+      {
+        "file": "web\\src\\features\\driving\\pages\\WhatIfPage.tsx",
+        "line": 222,
+        "rule": "MDC-044",
+        "detail": "Speed slider formats a percentage with Math.round interpolation rather than the page's locale-aware fmtNumber. Native range's aria-valuetext receives the same nonlocalized digits.",
+        "fix": "Reuse useNumberFormatting for the percentage display and accessible value without changing slider bounds, steps or stored dimensionless factor.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ]
+  },
+  "states": {
+    "initialLoading": "Summary loading plus two 340px skeletons; loading combines three queries (WhatIfPage.tsx:109,160,169-175). PageLayout is not passed loading or busy, so PageContainer's loading announcement/aria-busy does not receive this local loading boolean.",
+    "empty": "No active drive renders no-drives message and /drives navigation; model not ok renders no-energy message. Summary remains mounted (WhatIfPage.tsx:153-194).",
+    "success": "All knobs, baseline/scenario rails, five-category evidence, three outcome metrics and delta takeaway render only when result.ok and no list error/loading.",
+    "retained": "Summary retained flag uses detail/telemetry isError; page header gets the query array. Actual retained/fatal distinction is not derived locally.",
+    "offlineStale": "Header delegates aggregate freshness through query array. No per-source dataSources notices or explicit paused/offline model confidence are supplied.",
+    "issues": [
+      {
+        "file": "web\\src\\features\\driving\\pages\\WhatIfPage.tsx",
+        "line": 165,
+        "rule": "MDC-026",
+        "detail": "Any list isError replaces all successful simulator sections with QueryError, even when cached drives/detail/telemetry remain. A refresh failure can hide usable controls and outcomes.",
+        "fix": "Use existing DataState fatalError versus refreshError and retain successful sections; show a nonblocking retry notice for retained list failures.",
+        "owner": "page",
+        "confidence": "high",
+        "citations": ["web\\src\\api\\dataState.ts:130-146,158-177"]
+      },
+      {
+        "file": "web\\src\\features\\driving\\pages\\WhatIfPage.tsx",
+        "line": 184,
+        "rule": "MDC-026 / MDC-045",
+        "detail": "Detail failure without data becomes the no-energy message, with no specific detail retry. Telemetry failure can still yield result.ok because undefined telemetry becomes []; fallback climate/elevation assumptions then look like available simulation evidence, while summary merely says retained even if nothing was retained.",
+        "fix": "Distinguish detail fatal/refresh errors and telemetry unavailable/partial/retained states using existing source trust owners; expose separate retries and assumption context while preserving valid model output and neighbors.",
+        "owner": "page",
+        "confidence": "high",
+        "citations": ["web\\src\\features\\driving\\pages\\WhatIfPage.tsx:74-76,161-162,184-190", "web\\src\\features\\driving\\lib\\whatIfModel.ts:106-107,124,144-145"]
+      },
+      {
+        "file": "web\\src\\features\\driving\\pages\\WhatIfPage.tsx",
+        "line": 138,
+        "rule": "MDC-040 / MDC-026",
+        "detail": "query metadata informs freshness but not PageContainer's loading/announcement props. Page only computes loading locally, so the shared loading announcement cannot track the actual local transition.",
+        "fix": "Consider forwarding busy={loading} without replacing the always-mounted summary; integrate shared source/recovery announcements without double announcements or gating all content.",
+        "owner": "page",
+        "confidence": "high",
+        "citations": ["web\\src\\components\\layout\\PageContainer.tsx:143-149,182-186"]
+      }
+    ]
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\driving\\pages\\WhatIfPage.tsx",
+      "line": 199,
+      "rule": "MDC-010 / MDC-012 / mission 43",
+      "detail": "Gauge and Wind section icons use fixed cyan-300, while takeaway icons use fixed emerald-300/rose-300. Body text already uses shared typography and there is no page neon, fixed-white text or glow. Decorative fixed accents need theme-aware restraint; actual contrast is unmeasured.",
+      "fix": "Use existing muted theme tokens for nonsemantic section icons and existing severity tokens for meaningful save/cost icons. Retain Badge success/warning meaning and user chart palette; no new palette.",
+      "owner": "page",
+      "confidence": "high",
+      "citations": ["web\\src\\features\\driving\\pages\\WhatIfPage.tsx:263,305-320"]
+    },
+    {
+      "file": "web\\src\\features\\driving\\pages\\WhatIfPage.tsx",
+      "line": 286,
+      "rule": "MDC-034 / mission 43",
+      "detail": "The additional scenario legend amplifies labels/colors already present in both shared rails; unnecessary noise is repeated evidence rather than a missing new visual system.",
+      "fix": "Address the single duplicate-pattern finding; retain all categories and both scenario contexts through CompositionRail.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\features\\driving\\pages\\WhatIfPage.tsx",
+      "line": 69,
+      "rule": "MDC-032 / MDC-046",
+      "detail": "selectedId persists independently of workspace vehicle. After explicitly selecting a drive then changing vehicle, activeId continues pointing to the previous vehicle's drive, even when absent from new driveOptions. Detail/telemetry keys use only that drive ID.",
+      "fix": "Scope or reconcile selected drive identity against the currently resolved vehicle/list, distinguishing pending list from successful empty list. Preserve knob values and use existing workspace vehicle owner, not a new store.",
+      "owner": "page",
+      "confidence": "high",
+      "citations": ["web\\src\\features\\driving\\pages\\WhatIfPage.tsx:61-72,79-87,142-147"]
+    },
+    {
+      "file": "web\\src\\features\\driving\\pages\\WhatIfPage.tsx",
+      "line": 65,
+      "rule": "MDC-032 / mission 0.2",
+      "detail": "Picker sees the default drives request window only; no paging or date bounds. /what-if is not a range-enabled workspace route. A selected-record simulator is not automatically a dated aggregate page, so absence of a header date selector is not itself a confirmed violation.",
+      "fix": "Preserve current selection behavior and explicitly describe current observed history window. If broader browse/range scope is required, use existing hook bounds and shared header owner; do not add a local competing date picker or imply lifetime access.",
+      "owner": "integration",
+      "confidence": "high",
+      "citations": ["web\\src\\api\\hooks\\useDriving.ts:93-109,113-138", "web\\src\\lib\\workspaceScope.ts:23-77,166-170"]
+    },
+    {
+      "file": "web\\src\\features\\driving\\pages\\WhatIfPage.tsx",
+      "line": 210,
+      "rule": "MDC-045 / MDC-026 / mission 0.3",
+      "detail": "Knob blurb claims 'no guesswork'; baseline is labeled 'Actual drive', but the model uses generic constants, default 75000Wh pack, telemetry fallbacks and residual max(0,observed-modeled). Baseline total can exceed observed energy when modeled components already exceed it. Brief correctly calls outputs estimates, making confidence language inconsistent.",
+      "fix": "Preserve all calculations during presentation modernization; label decomposition and pack/telemetry assumptions honestly through existing help/provenance. Refer any mathematical reconciliation change to the domain/integration owner with dedicated model tests, not an aesthetic rewrite.",
+      "owner": "integration",
+      "confidence": "high",
+      "citations": ["web\\src\\features\\driving\\pages\\WhatIfPage.tsx:156-159,211,269", "web\\src\\features\\driving\\lib\\whatIfModel.ts:22-31,106-107,126-128,152-161,187-197"]
+    },
+    {
+      "file": "web\\src\\features\\driving\\pages\\WhatIfPage.tsx",
+      "line": 188,
+      "rule": "MDC-026 / MDC-044",
+      "detail": "Single no-energy explanation also covers absent detail, distance under 10m or nonpositive average speed, not just missing energy. Comment attributes all neutral results to imported drives lacking counters without evidence.",
+      "fix": "Provide truthful localized unavailable/insufficient-input explanation and source-specific recovery without inventing import provenance. Keep the drive picker as recovery.",
+      "owner": "page",
+      "confidence": "high",
+      "citations": ["web\\src\\features\\driving\\lib\\whatIfModel.ts:142"]
+    }
+  ],
+  "priority": {
+    "level": "high",
+    "reason": "Workspace vehicle/drive identity mismatch and source failure confidence can mislead scenario interpretation. Presentation already uses major canonical owners; focus on trust, preservation and reduced duplication rather than replacement design.",
+    "order": ["vehicle/drive reconciliation", "source-level retained/fatal/partial recovery", "truthful model provenance", "legend deduplication and semantic accents", "localized slider and responsive/accessibility validation"]
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "Existing control mobile hit-area assessment, conditional extension",
+      "owner": "shared",
+      "existingOwnerFile": "web\\src\\components\\ui\\Toggle.tsx",
+      "additionalExistingOwners": ["web\\src\\components\\ui\\Slider.tsx", "web\\src\\components\\ui\\Select.tsx"],
+      "propsVariantsStates": "Preserve Toggle checked/onChange/label/disabled/size; Slider value/min/max/step/formatValue/native keyboard/disabled; Select options/native value/label/aria-name/size/density/focus. If measured geometry confirms a gap, extend existing mobile hit-area behavior without changing visible defaults or saved preferences.",
+      "usedBy": ["web\\src\\features\\driving\\pages\\WhatIfPage.tsx:142,216,230,242,248"],
+      "dependsOn": ["Shared owner actual mobile target measurements and spacing-exception review", "Independent production consumer evidence before any API extension; not collected in this page-only audit"],
+      "detail": "This is a shared validation request, not authorization for a new component or speculative variant.",
+      "confidence": "medium"
+    }
+  ],
+  "competingImplementations": [
+    {
+      "file": "web\\src\\features\\driving\\pages\\WhatIfPage.tsx",
+      "line": 286,
+      "rule": "MDC-002",
+      "detail": "Handwritten composition legend competes with existing CompositionRail text legend, not with another chart library.",
+      "fix": "Reuse current owner with complete scenario evidence; do not create a WhatIf-specific universal rail or chart system.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\driving\\pages\\WhatIfPage.tsx",
+      "line": 7,
+      "rule": "MDC-002 / MDC-032 / MDC-033",
+      "detail": "Positive source finding: PageLayout, DrivingSummaryBrief and CompositionRail already reuse canonical layout/stat/composition owners. Local drive selector selects a business record, not a competing workspace vehicle/range owner.",
+      "fix": "Retain existing owners; extend caller mapping/state rather than replacing the architecture.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "preservation": {
+    "sourceHash": "D3A4426086C11AC23F3B94AF7FE7C21CD39676A11A24AEEFA9A539542AD9E8B0",
+    "sourceHashAlgorithm": "SHA-256",
+    "currentLineCount": 332,
+    "pageSpecificPresentationLineCounts": {
+      "web\\src\\features\\driving\\components\\WhatIfEnergyBreakdown.tsx": 42,
+      "web\\src\\features\\driving\\components\\operationalbrief-n-z\\DrivingSummaryBrief.tsx": 53
+    },
+    "sections": [
+      {"name": "Header, subtitle help, freshness and drive picker", "count": 1, "citation": "web\\src\\features\\driving\\pages\\WhatIfPage.tsx:134-150"},
+      {"name": "Simulated drive outcome brief", "count": 1, "citation": "web\\src\\features\\driving\\pages\\WhatIfPage.tsx:153-164"},
+      {"name": "Knobs and explanation", "count": 1, "citation": "web\\src\\features\\driving\\pages\\WhatIfPage.tsx:196-258"},
+      {"name": "Energy breakdown with actual and what-if comparisons", "count": 1, "citation": "web\\src\\features\\driving\\pages\\WhatIfPage.tsx:261-301"},
+      {"name": "Savings/cost takeaway and badge", "count": 1, "citation": "web\\src\\features\\driving\\pages\\WhatIfPage.tsx:303-325"}
+    ],
+    "sectionCounts": {
+      "successSemanticSectionsIncludingHeader": 5,
+      "successGlassPanels": 3,
+      "allSourceGlassPanelOccurrences": 6,
+      "ChartContainerOccurrences": 0,
+      "DrivingSummaryBrief": 1,
+      "outcomeMetrics": 3,
+      "energyBreakdownAdapters": 2,
+      "energyCategoriesPerComparison": 5,
+      "localScenarioKnobs": 4,
+      "alternativeFeedbackStates": 4
+    },
+    "actions": [
+      "Choose recorded drive; initial fallback is first list entry; labels retain date and distance.",
+      "Reset all knobs to speedFactor=1, tires=nominal, hvac=true, ambientC=18.",
+      "Adjust speed factor 0.8..1.2, step 0.05.",
+      "Choose low/nominal/high tire preset; preserve signed localized labels.",
+      "Toggle HVAC on/off.",
+      "Adjust ambient temperature -10..40 Celsius, step 1, display using user temperature preference.",
+      "Retry drives list via QueryError.refetch.",
+      "Browse /drives from no-drive state.",
+      "Existing PageContainer compact-header subtitle help and shared brief affordances remain owned by their existing composites; internal brief interactions not separately inspected."
+    ],
+    "dataBehavior": [
+      "Do not mutate recorded drives/telemetry or add fixture measurements; all scenarios recompute locally using memoized model inputs.",
+      "Preserve list/detail/telemetry query identities, enabled conditions, cancellation, retry inheritance, FAST list staleTime and live-detail polling.",
+      "Preserve raw SI fields and all model constants, cold penalties, clamp rules, residual treatment, pack inference bounds and default pack behavior unless a separate domain correction is authorized.",
+      "Preserve aero, rolling, elevation, climate, other and total for baseline and scenario, their common max denominator, and visual omission <=0.5% while keeping readable category evidence.",
+      "Preserve estimated energy, arrival percentage, duration and baseline contexts; null arrival remains unknown, not zero. Preserve signed delta and save/cost semantics.",
+      "Preserve display preferences, locale-aware number/date/unit owners, existing chartTokens category palette and muted residual; dynamic swatch style is source-driven, not a static CSS-var violation.",
+      "Preserve unavailable/loading/error explanations and recovery. Extend truthful source states rather than hiding successful neighboring data.",
+      "Knobs and drive choice are currently component-local state, not persisted scenario settings. No page export/share/save/vehicle mutation action is defined."
+    ]
+  },
+  "evidenceLimits": {
+    "phase": "Phase0 source-only audit",
+    "runtime": "unverified",
+    "visual": "unverified",
+    "keyboard": "unverified",
+    "focus": "unverified",
+    "contrast": "unverified",
+    "viewport": "unverified",
+    "screenReader": "unverified",
+    "motion": "unverified",
+    "backend": "Three direct page hook paths match router source. No handler/server calls, payload measurements, authentication or mutation exercised; indirect vehicle backend mount not traced.",
+    "validation": "No TypeScript, lint, tests, full build, Git or runtime commands run. Skill audit.sh was read but not executed because it invokes project-wide TypeScript; assignment permits source-only audit.",
+    "sourceScan": {
+      "command": "PowerShell Get-Content -Raw WhatIfPage.tsx followed by regex Matches counts for rawControls, directLibraries, oldApi, inlineStyles, neonText, fixedWhiteGray, glassPanels, chartContainers",
+      "exitCode": 0,
+      "output": ["rawControls=0", "directLibraries=0", "oldApi=0", "inlineStyles=1", "neonText=0", "fixedWhiteGray=0", "glassPanels=6", "chartContainers=0"],
+      "interpretation": "Bounded literal-pattern scan, not a semantic all-violations certificate. Single dynamic swatch style at line 292 is intentional category color.",
+      "priorAttempt": "First PowerShell regex command failed parsing quoted regex (exit 1); corrected command produced the recorded counts."
+    },
+    "unreadDependencies": ["OperationalBrief internals", "useOperationalMetrics internals", "useUnits internals", "useNumberFormatting internals", "dateFormat internals", "global styles/theme runtime", "FadeIn internals", "drive handlers and API response transforms"],
+    "scope": "Only assigned report and heartbeat written. Findings are current source snapshot, not historical acceptance or application-wide coverage."
+  },
+  "filesRead": [
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\driving\\pages\\WhatIfPage.tsx",
+    "web\\src\\features\\driving\\components\\WhatIfEnergyBreakdown.tsx",
+    "web\\src\\features\\driving\\components\\operationalbrief-n-z\\DrivingSummaryBrief.tsx",
+    "web\\src\\features\\driving\\lib\\whatIfModel.ts",
+    "web\\src\\api\\hooks\\useDriving.ts",
+    "web\\src\\api\\hooks\\useVehicles.ts",
+    "internal\\api\\router.go",
+    "web\\src\\App.tsx",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\hooks\\useSelectedVehicle.ts",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\layout\\PageContainer.tsx",
+    "web\\src\\components\\data-display\\CompositionRail.tsx",
+    "web\\src\\components\\ui\\Select.tsx",
+    "web\\src\\components\\ui\\Slider.tsx",
+    "web\\src\\components\\ui\\Toggle.tsx",
+    "web\\src\\api\\dataState.ts"
+  ]
+}

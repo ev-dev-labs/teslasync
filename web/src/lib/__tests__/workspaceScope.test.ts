@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest';
+import nodePath from 'node:path';
+import { sourceHookCalls } from '../../test/sourceHookGraph';
 import {
   RANGE_ENABLED_PATHS,
   VEHICLE_DISABLED_PATHS,
@@ -25,6 +27,22 @@ const routedPages = [...appSource.matchAll(
 )].map(([, path, name]) => ({ path: `/${path.replace(/^\/+/, '')}`, name }));
 
 describe('getWorkspaceRouteScope', () => {
+  it('does not scope account-wide energy installations to a vehicle or date range', () => {
+    for (const path of ['/energy-products', '/energy-products/', '/energy-products?site_id=42']) {
+      expect(getWorkspaceRouteScope(path), path).toEqual({ range: false, vehicle: false });
+    }
+    for (const path of ['/projected-range', '/analytics/range']) {
+      expect(getWorkspaceRouteScope(path), path).toEqual({ range: false, vehicle: true });
+    }
+  });
+
+  it('does not imply live workspace scope for synthetic developer references', () => {
+    for (const path of ['/dev/grid-states', '/dev/layout', '/dev/stats']) {
+      expect(getWorkspaceRouteScope(path)).toEqual({ range: false, vehicle: false });
+    }
+    expect(getWorkspaceRouteScope('/dev-tools')).toEqual({ range: false, vehicle: false });
+  });
+
   it('offers year-to-date and year navigation only for Drive Calendar', () => {
     expect(getWorkspaceQuickRangePresets('/drive-calendar/')).toEqual(['7d', '30d', '90d', 'ytd']);
     expect(getWorkspaceQuickRangePresets('/drives')).toEqual(['24h', '7d', '30d', '90d']);
@@ -81,6 +99,19 @@ describe('getWorkspaceRouteScope', () => {
     });
     expect(getWorkspaceRouteScope('/power-flow')).toEqual({
       range: true,
+      vehicle: false,
+    });
+  });
+
+  it('owns the period comparison vehicle without overriding independent periods', () => {
+    for (const path of ['/period-compare', '/period-compare/', '/period-compare?period_a=7&period_b=0']) {
+      expect(getWorkspaceRouteScope(path), path).toEqual({
+        range: false,
+        vehicle: true,
+      });
+    }
+    expect(getWorkspaceRouteScope('/vehicle-comparison')).toEqual({
+      range: false,
       vehicle: false,
     });
   });
@@ -208,7 +239,10 @@ describe('workspace scope metadata', () => {
     const unscoped = routedPages.flatMap(({ path, name }) => {
       const page = pageSources[lazyPages.get(name) ?? ''];
       if (!page) return [];
-      const hasRange = page.includes('useRangeState(') ||
+      const pageFile = nodePath.resolve(process.cwd(), 'src/lib/__tests__', lazyPages.get(name) ?? '');
+      const hasRange = (getWorkspaceRouteScope(path).range && sourceHookCalls(pageFile).some((call) =>
+        call.name === 'useRangeState' &&
+        call.module === nodePath.resolve(process.cwd(), 'src/hooks/useRangeState.ts'))) ||
         (name === 'ArchivedPage' && page.includes('<InboxBody'));
       const hasPagePicker = page.includes('<RangePicker');
       if (getWorkspaceRouteScope(path).range && !hasRange) return [path];

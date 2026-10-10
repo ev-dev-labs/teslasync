@@ -63,7 +63,7 @@ vi.mock('react-i18next', async () => {
 // ── Fixtures ─────────────────────────────────────────────────────────
 const mockRefetch = vi.fn();
 
-type QueryStub = { isLoading: boolean; isError: boolean; error: unknown; refetch: () => void };
+type QueryStub = { data?: unknown; isLoading: boolean; isError: boolean; error: unknown; refetch: () => void };
 
 function makeQuery(overrides: Partial<QueryStub> = {}): SignalGapAnalysis['query'] {
   return {
@@ -121,6 +121,20 @@ beforeEach(() => {
 });
 
 describe('SignalGapFreshnessPanel', () => {
+  it('retains the freshness gauge and complete worst-offender names after refresh failure', () => {
+    const name = 'very_long_vendor_specific_signal_name_'.repeat(8);
+    renderPanel(makeAnalysis({
+      query: makeQuery({ data: {}, isError: true, error: new Error('refresh failed') }),
+      buckets: makeBuckets({ total: 10, active: 8, stale: 2 }),
+      freshnessPct: 80,
+      topStale: [staleRow(name, 600)],
+    }));
+    expect(screen.getByText('80%')).toBeInTheDocument();
+    expect(screen.getByText(name).className).not.toContain('truncate');
+    expect(screen.queryByText('No signal data available')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+    expect(mockRefetch).toHaveBeenCalledTimes(1);
+  });
   it('prompts to select a vehicle and renders no gauge when none is chosen', () => {
     renderPanel(makeAnalysis(), false);
 
@@ -135,7 +149,13 @@ describe('SignalGapFreshnessPanel', () => {
   it('shows a loading skeleton (and no data copy) while the query loads', () => {
     const { container } = renderPanel(makeAnalysis({ query: makeQuery({ isLoading: true }) }));
 
-    expect(container.querySelector('.animate-pulse')).toBeTruthy();
+    const panel = screen.getByRole('heading', { name: 'Freshness' }).closest('[data-print-card]')!;
+    const skeletonSelector = '[aria-hidden="true"][class~="bg-[var(--skeleton-bg)]"]';
+    expect(panel.querySelector(skeletonSelector)).toBeTruthy();
+    expect(panel.querySelectorAll(skeletonSelector)).toHaveLength(1);
+    expect(panel.querySelector(skeletonSelector)).toHaveClass('w-full');
+    expect(panel.querySelector(skeletonSelector)).toHaveStyle({ height: '260px' });
+    expect(gaugeStroke(container)).toBeNull();
     expect(screen.queryByText('fresh')).not.toBeInTheDocument();
     expect(
       screen.queryByText('Select a vehicle to inspect its signal freshness.'),

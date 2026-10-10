@@ -182,6 +182,29 @@ describe('ChargingPlacesWorkspace — data threading', () => {
     expect(screen.getByTestId('stub-places-table')).toHaveTextContent('loading=true');
   });
 
+  it('keeps directory, review queue, rates and selected details during independent refresh failures', () => {
+    const places = [makePlace({ id: 4 })];
+    mockedPlaces.mockReturnValue({
+      data: places, isLoading: false, isError: true,
+      error: new Error('directory refresh failed'), refetch: vi.fn(),
+    });
+    mockedNeedsReview.mockReturnValue({
+      data: [makePlace({ id: 9, needs_review: true })], isLoading: false, isError: true,
+      error: new Error('review refresh failed'), refetch: vi.fn(),
+    });
+    mockedCurrentRates.mockReturnValue({
+      data: [{ id: 1, geofence_id: 4 } as GeofenceRate], isLoading: false, isError: true,
+      error: new Error('rates refresh failed'), refetch: vi.fn(),
+    });
+    render(<MemoryRouter><ChargingPlacesWorkspace /></MemoryRouter>);
+
+    expect(screen.getByTestId('stub-needs-setup')).toHaveTextContent('places=1 loading=false error=false');
+    expect(screen.getByTestId('stub-places-table')).toHaveTextContent('places=1 rates=1 loading=false error=false');
+    fireEvent.click(screen.getByText('stub-select-first'));
+    expect(screen.getByTestId('stub-detail-panel')).toHaveTextContent('place=4');
+    expect(screen.queryByRole('button', { name: 'Retry' })).not.toBeInTheDocument();
+  });
+
   it('keeps the place directory usable when only current-rate loading fails', () => {
     mockedPlaces.mockReturnValue({
       data: [makePlace()],

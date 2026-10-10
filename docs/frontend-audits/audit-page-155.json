@@ -1,0 +1,435 @@
+{
+  "item": "audit-page-155",
+  "page": "web\\src\\features\\ownership\\pages\\DataGovernancePage.tsx",
+  "routes": ["/ownership/data-governance"],
+  "purpose": "Inspect database storage and retention intent, manage policies, compute non-enforcing dry-run plans, and inspect the plan ledger and source evidence.",
+  "primaryGoal": "Understand reclaimable storage versus analytical fidelity before any separate operator enforcement; retain legal holds and distinguish policy writes from data deletion.",
+  "dataSources": [
+    {
+      "hook": "useGovernanceOverview",
+      "file": "web\\src\\api\\hooks\\useOwnership.ts",
+      "line": 489,
+      "endpoint": "GET /api/v1/data-governance",
+      "ownership": "Ownership intelligence service through internal\\handler\\v1\\ownershipintel\\handler.go:152-157; internal\\api\\router.go:3918 mounts this route group.",
+      "data": "Inventory, policies, raw byte totals, coverage percentage, legal holds, plan_only, as_of, quality and evidence.",
+      "queryPolicy": "ownershipKeys.governance(); query signal forwarded; no page-specific retry or stale-time override."
+    },
+    {
+      "hook": "useRetentionRuns(50, 0)",
+      "file": "web\\src\\api\\hooks\\useOwnership.ts",
+      "line": 496,
+      "endpoint": "GET /api/v1/data-governance/runs?limit=50&offset=0",
+      "ownership": "internal\\handler\\v1\\ownershipintel\\handler.go:157,685-697",
+      "data": "OwnershipPage<RetentionRun>; page consumes items only.",
+      "queryPolicy": "ownershipKeys.governanceRuns(50,0); abort signal forwarded; no server-pagination controls supplied by page."
+    },
+    {
+      "hook": "useUpsertRetentionPolicy",
+      "file": "web\\src\\api\\hooks\\useOwnership.ts",
+      "line": 506,
+      "endpoint": "PUT /api/v1/data-governance/policies",
+      "ownership": "internal\\handler\\v1\\ownershipintel\\handler.go:154",
+      "data": "dataset, retention_s, nullable downsample_after_s/downsample_bucket_s, legal_hold, enabled.",
+      "queryPolicy": "Invalidates ownershipKeys.all; localized success/error toast; successful save closes inline editor."
+    },
+    {
+      "hook": "useDeleteRetentionPolicy",
+      "file": "web\\src\\api\\hooks\\useOwnership.ts",
+      "line": 524,
+      "endpoint": "DELETE /api/v1/data-governance/policies/{id}",
+      "ownership": "internal\\handler\\v1\\ownershipintel\\handler.go:155",
+      "data": "Policy ID only; removes retention intent, not dataset rows.",
+      "queryPolicy": "Danger confirmation precedes mutation; invalidates ownershipKeys.all; localized toast and inline error."
+    },
+    {
+      "hook": "useSimulateGovernance",
+      "file": "web\\src\\api\\hooks\\useOwnership.ts",
+      "line": 538,
+      "endpoint": "POST /api/v1/data-governance/simulate",
+      "ownership": "internal\\handler\\v1\\ownershipintel\\handler.go:156",
+      "data": "Explicit selected datasets or fallback policy datasets, confirmed:true; response totals, impacts, as_of, plan_only, quality and evidence.",
+      "queryPolicy": "Mutation-driven, never automatically executes; invalidates governanceRuns(25,0), which differs from page's (50,0)."
+    }
+  ],
+  "components": [
+    {
+      "name": "PageLayout / PageContainer",
+      "owner": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+      "dependencies": ["web\\src\\components\\layout\\PageContainer.tsx"],
+      "props": ["title", "subtitle", "query", "primaryAction"],
+      "role": "Existing full-width container, source freshness metadata and shared action/header pipeline."
+    },
+    {
+      "name": "OwnershipPanel",
+      "owner": "web\\src\\features\\ownership\\components\\OwnershipPanel.tsx",
+      "dependencies": ["web\\src\\components\\layout\\layout-reference\\LayoutCard.tsx", "web\\src\\components\\layout\\layout-reference\\SourceContent.tsx", "web\\src\\api\\dataState.ts"],
+      "props": ["title", "description", "actions", "source", "empty", "emptyMessage", "editing", "preserveSummary"],
+      "role": "Five page panels plus EvidencePanel's shell; source-level loading/fatal/retained/empty isolation."
+    },
+    {
+      "name": "OwnershipBrief / OperationalBrief",
+      "owner": "web\\src\\features\\ownership\\components\\operationalbrief-all\\OwnershipBrief.tsx",
+      "props": ["title", "description", "scope", "metrics", "source", "observedAt", "window", "enabled"],
+      "role": "Two retained numeric-source summaries; existing useOperationalMetrics and specialistDisplay pipeline, not a new KPI renderer."
+    },
+    {
+      "name": "DataTable",
+      "owner": "web\\src\\components\\ui\\DataTable.tsx",
+      "props": ["columns", "data", "keyExtractor", "tableId", "enableValueFilters", "mobileColumns", "variant", "mobilePresentation"],
+      "role": "Four tables; shared persistence/filter/export pipeline must remain the sole owner."
+    },
+    {
+      "name": "MobileDataTableAdapter",
+      "owner": "web\\src\\components\\ui\\MobileDataTableAdapter.tsx",
+      "dependencies": ["web\\src\\components\\ui\\MobileDataTableAdapter.types.ts"],
+      "props": ["roles", "displayValue", "allDetails", "inlineActions", "state", "onRetry"],
+      "role": "Existing available opt-in mobile presentation, not currently passed by this page."
+    },
+    {
+      "name": "EvidencePanel / MutationError",
+      "owner": "web\\src\\features\\ownership\\components\\EvidencePanel.tsx",
+      "dependencies": ["web\\src\\features\\ownership\\components\\MutationError.tsx"],
+      "props": ["quality", "evidence", "limitations", "unsupported", "source"],
+      "role": "Quality/source/limitations trailer and request-error banners."
+    },
+    {
+      "name": "Existing primitives and interaction owners",
+      "owners": ["web\\src\\components\\ui\\Button.tsx", "web\\src\\components\\motion\\FadeIn.tsx"],
+      "role": "Category-barrel Button/Badge/Input/Select/Toggle/Text/ConfirmDialog, useConfirm and shared reduced-motion entrance wrapper. Only Button and FadeIn implementations inspected here; other primitive runtime behavior is unverified."
+    }
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\ownership\\pages\\DataGovernancePage.tsx",
+      "line": 536,
+      "rule": "MDC-002/MDC-023",
+      "detail": "Four repeated table integrations already use DataTable. They share absent mobile detail/action mapping and nested standalone framing.",
+      "fix": "Use the same existing DataTable embedded/mobilePresentation contract with typed per-table accessors; keep business selection and policy mutations local.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\ownership\\pages\\DataGovernancePage.tsx",
+      "line": 472,
+      "rule": "MDC-033",
+      "detail": "Storage and dry-run summaries already converge on OwnershipBrief and specialistDisplay. Do not introduce a parallel summary/stat component.",
+      "fix": "Retain the nine source-backed metric occurrences and current formatters; extend the existing domain adapter only for concrete source-state/scope gaps.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "responsive": {
+    "verified": "source only",
+    "currentStrategy": "PageLayout provides min-w-0 and full-width container flow; policy editor stacks then uses md two-column/xl three-column grid; EvidencePanel stacks then lg three columns. Four mobileColumns lists hide non-listed columns below viewport md, without mobilePresentation.",
+    "issues": [
+      {
+        "file": "web\\src\\features\\ownership\\pages\\DataGovernancePage.tsx",
+        "line": 539,
+        "rule": "MDC-043/MDC-023 preservation",
+        "detail": "Inventory mobileColumns excludes select and rows/perRow. Below 768px the Plan Include/In plan action is hidden; DataTable.tsx:724-725 applies hidden md:table-cell, with no page mobile adapter or alternate selection control.",
+        "fix": "Provide mobilePresentation roles/displayValue/allDetails and an inline dataset toggle. Retain row counts, bytes/row, span, flags and all raw identifiers in accessible details.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\ownership\\pages\\DataGovernancePage.tsx",
+        "line": 643,
+        "rule": "MDC-043/MDC-023 preservation",
+        "detail": "Policies hide actions and bucket on mobile; impact list at line 704 hides fidelity, retained/expiring/downsampled rows and runway; ledger at line 728 hides all numeric impact columns. No expandable/details/mobilePresentation is supplied.",
+        "fix": "Keep concise mobile summaries with complete allDetails and reachable Edit/Remove actions using the existing mobile adapter; preserve desktop columns and saved table IDs.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ],
+    "mobileStrategy": "Adopt existing DataTable mobilePresentation below allocated 640px, preserve full details and inline actions, keep 640-767px branch non-lossy, avoid page overflow, keep editor one-column with wrapping 44px controls. Never discard metadata to simplify mobile.",
+    "requiredViewports": [320,375,390,430,768,1024,1280,1440,1920,2560],
+    "viewportChecks": "NOTRUN; long labels, RTL, 200% text, actual shell container width and open editor/dialog need runtime review."
+  },
+  "accessibility": {
+    "positiveEvidence": "Localized labels on all six editor controls, decorative icons aria-hidden, shared Text semantics, danger ConfirmDialog through useConfirm, existing reduced-motion-aware FadeIn.",
+    "issues": [
+      {
+        "file": "web\\src\\features\\ownership\\pages\\DataGovernancePage.tsx",
+        "line": 116,
+        "rule": "MDC-040",
+        "detail": "Dataset toggle changes variant and label but exposes no aria-pressed state or dataset-specific accessible name; repeated Include/Edit/Remove names need row context. size=sm is 36px in Button.tsx:39, below contract's default 44px mobile target.",
+        "fix": "Use aria-pressed, localized dataset-aware action labels, and existing Button className/wrapLabel support for min-h-11/min-w-11 in mobile controls; retain keyboard-operable native button semantics.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\ownership\\pages\\DataGovernancePage.tsx",
+        "line": 558,
+        "rule": "MDC-040",
+        "detail": "Define policy/Cancel toggles the inline editor without aria-expanded/aria-controls. Source does not associate trigger and form or restore focus after save/cancel.",
+        "fix": "Give the existing inline editor stable identity, expose expansion semantics and deliberately manage initial/returned focus without adding an overlay system.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ],
+    "keyboard": "unverified",
+    "screenReader": "unverified",
+    "contrast": "unmeasured",
+    "focusAndTouch": "source findings only; no exercised keyboard or pointer interactions"
+  },
+  "states": {
+    "initialLoading": "Overview/runs sources go through OwnershipPanel to SourceContent skeletons; preserveSummary keeps OwnershipBrief's loading geometry. Page does not globally hide other sources.",
+    "empty": "Inventory, policies, impacts and runs have localized empty messages; editor bypasses empty policy shell; pre-simulation summary keeps unknown measurements rather than displaying zeros.",
+    "fatalError": "Overview/runs isolate fatal errors and refetch recovery through OwnershipPanel. MutationError handles policy errors when its enclosing body is reachable.",
+    "retained": "Overview/runs retain data on refresh failure or paused fetch, show generic retained message and retry; OwnershipBrief shows retained status. Offline versus refresh-error messaging is not differentiated by domain adapter.",
+    "partial": "Independent overview, ledger and mutation results exist; no explicit partial-source descriptor list supplied to PageLayout.",
+    "issues": [
+      {
+        "file": "web\\src\\features\\ownership\\pages\\DataGovernancePage.tsx",
+        "line": 654,
+        "rule": "MDC-026",
+        "detail": "Dry-run impact OwnershipPanel receives no source although OwnershipBrief receives simulate. Before first result, empty state owns the panel; mutation errors/pending state rely on preserved child content rather than a consistent source-level state shell.",
+        "fix": "Keep pre-run guidance distinct from loading/failure/retained results; wire simulation source into the existing domain state adapter without losing first-run retry or previous result context.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\ownership\\pages\\DataGovernancePage.tsx",
+        "line": 447,
+        "rule": "Mission 23/MDC-026",
+        "detail": "Run dry-run plan remains enabled when no dataset selection and no policies exist. runSimulation at lines 105-109 silently returns with zero datasets; there is no actionable prerequisite explanation tied to the command.",
+        "fix": "Disable only when prerequisites are absent and explain how to define/select a governed dataset; preserve the selected-or-policy fallback and explicit user-triggered mutation.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ],
+    "trust": "Bytes are catalog snapshots; policies express intent, not execution; simulated reclaim/fidelity are modelled outputs. Preserve as_of, quality/evidence and legal-hold signals. Do not describe snapshot freshness as live telemetry.",
+    "SI": "retention_s/downsample_after_s/downsample_bucket_s remain canonical seconds on wire/cache. Day inputs round-trip via daysToSeconds/secondsToDays at form boundary. Raw bytes and percentages retain source semantics; binary byte formatting and specialist duration precision must survive.",
+    "workspaceScope": {
+      "actual": "getWorkspaceRouteScope resolves range:false, vehicle:true for /ownership/data-governance because route is absent from range and vehicle-disabled sets.",
+      "consumed": "Page and all five governance hooks consume neither selected vehicle nor shared date range; backend transport receives subject identity, dataset scope and ledger limit/offset, not vehicle/time bounds.",
+      "strategy": "This is database-wide current governance, not a vehicle/time analytical view. Hide misleading vehicle scope through integration owner; do not add a second picker or invent filtering."
+    }
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\ownership\\pages\\DataGovernancePage.tsx",
+      "line": 333,
+      "rule": "MDC-010/MDC-012",
+      "detail": "Reclaimable values use fixed emerald-300; fidelity at line 347 uses fixed rose-300/amber-300 and decorative inventory icon at 534 uses cyan-300. These are not literal neon/glow but remain fixed bright hues independent of theme.",
+      "fix": "Use subdued existing semantic severity tokens for meaningful thresholds and muted text token for decorative icon; keep thresholds and numeric text visible, with non-color severity context.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\ownership\\components\\EvidencePanel.tsx",
+      "line": 129,
+      "rule": "MDC-010/MDC-012/MDC-015",
+      "detail": "Evidence cards use fixed white border/background overlays, not surface/border tokens. Cyan icons at 64/120 and amber-400 panel at 177 add repeated saturated decoration. This is inherited domain presentation, not page-local neon.",
+      "fix": "Reuse neutral surface/border tokens and muted decorative icons; reserve restrained warning semantic treatment for actual unsupported capability notice. Preserve all evidence and limitation text.",
+      "owner": "shared",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\ownership\\pages\\DataGovernancePage.tsx",
+      "line": 536,
+      "rule": "MDC-015/Mission 7",
+      "detail": "Four tables inside OwnershipPanel/ LayoutCard omit variant, so DataTable defaults to standalone framed surface (DataTable.tsx:452,1339). Repeated nested chrome competes with section hierarchy.",
+      "fix": "Use existing variant=embedded where enclosing card owns surface, retaining toolbar, table boundaries, content and exports.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\api\\hooks\\useOwnership.ts",
+      "line": 548,
+      "rule": "MDC-046 cache correctness",
+      "detail": "Successful simulation invalidates governanceRuns(25,0), but mounted ledger subscribes to governanceRuns(50,0) at page line 50. Those query keys have different numeric segments, so this targeted invalidation does not refresh the mounted ledger.",
+      "fix": "Have API integration owner invalidate the governance-runs key prefix covering loaded page sizes/offsets while preserving keys, query cancellation and existing cache policy.",
+      "owner": "integration",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\ownership\\pages\\DataGovernancePage.tsx",
+      "line": 50,
+      "rule": "MDC-023 no inaccessible data",
+      "detail": "Plan ledger fetches only first 50 rows and ignores server total/pagination; DataTable gets no server paginationControls or exportAll. Its local loaded-row pagination/export cannot access older plans.",
+      "fix": "Integrate existing typed list limit/offset/total and DataTable paginationControls; preserve loaded-result export scope unless a verified full-result fetch is deliberately supplied.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\lib\\workspaceScope.ts",
+      "line": 156,
+      "rule": "MDC-032",
+      "detail": "Default vehicle-enabled scope exposes a selected-vehicle control for a page whose governance queries do not accept vehicle scope.",
+      "fix": "Integration owner should add this exact database-wide route to existing vehicle-disabled routing policy, with focused scope test. Keep range disabled.",
+      "owner": "integration",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\ownership\\components\\EvidencePanel.tsx",
+      "line": 79,
+      "rule": "MDC-026 unknown is not zero",
+      "detail": "quality.sample_count ?? 0 converts a missing runtime value into a displayed zero; this dependency already uses null-safe unknown handling for coverage.",
+      "fix": "Retain measured zero but show unknown fallback when sample_count is missing/non-finite; do not change source schema or fabricate measurements.",
+      "owner": "shared",
+      "confidence": "medium"
+    },
+    {
+      "file": "web\\src\\features\\ownership\\pages\\DataGovernancePage.tsx",
+      "line": 385,
+      "rule": "MDC-044",
+      "detail": "Warning identifiers and ledger modes (line 416) are displayed by replacing underscores rather than localized known-code mappings; EvidencePanel prints raw quality.status.",
+      "fix": "Map supported codes to existing localized captions where available, retain unknown raw source values as explicit fallback, and let catalog owner handle genuinely missing keys.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "priority": {
+    "level": "high",
+    "first": ["Preserve mobile Plan/Edit/Remove actions and complete detail fields", "Correct ledger invalidation and server paging", "Remove misleading workspace vehicle scope"],
+    "then": ["Restrained theme-aware colors and embedded tables", "Editor/action accessibility and no-op prerequisites", "Distinct simulation source trust states"],
+    "acceptance": "Source audit only; no UI migration or runtime acceptance."
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "Ownership governance read/mutation cache integration",
+      "existingOwnerFile": "web\\src\\api\\hooks\\useOwnership.ts",
+      "props": ["ownershipKeys.governanceRuns(limit, offset)", "useRetentionRuns(limit, offset)", "useSimulateGovernance"],
+      "variants": ["all mounted governance ledger page sizes/offsets"],
+      "states": ["successful simulation invalidates visible ledger", "abortable read", "failed mutation retains prior results"],
+      "usedBy": ["web\\src\\features\\ownership\\pages\\DataGovernancePage.tsx"],
+      "dependsOn": ["internal\\handler\\v1\\ownershipintel\\handler.go", "web\\src\\types\\ownership.ts"],
+      "change": "Fix governance-runs invalidation prefix, not a new query/store implementation."
+    },
+    {
+      "name": "Database-wide governance workspace scope",
+      "existingOwnerFile": "web\\src\\lib\\workspaceScope.ts",
+      "props": ["getWorkspaceRouteScope(pathname)", "VEHICLE_DISABLED_PATHS"],
+      "variants": ["/ownership/data-governance: range false, vehicle false"],
+      "states": ["desktop header", "mobile shell selector visibility"],
+      "usedBy": ["web\\src\\features\\ownership\\pages\\DataGovernancePage.tsx"],
+      "dependsOn": ["web\\src\\App.tsx"],
+      "change": "Scope integration belongs to shared owner; no page-local selector."
+    },
+    {
+      "name": "Ownership evidence presentation/trust",
+      "existingOwnerFile": "web\\src\\features\\ownership\\components\\EvidencePanel.tsx",
+      "props": ["quality", "evidence", "limitations", "unsupported", "source", "sourceEnabled"],
+      "variants": ["neutral evidence surfaces", "semantic unsupported warning"],
+      "states": ["unknown sample count", "measured zero", "empty evidence", "retained source", "localized quality"],
+      "usedBy": ["web\\src\\features\\ownership\\pages\\DataGovernancePage.tsx"],
+      "dependsOn": ["web\\src\\features\\ownership\\components\\OwnershipPanel.tsx", "web\\src\\lib\\tokens.ts"],
+      "change": "Replace white overlays/saturated decorative cues and preserve unknown-versus-zero; existing owner, no second evidence component."
+    }
+  ],
+  "competingImplementations": [
+    {
+      "pattern": "Mobile governance table/detail presentation",
+      "existing": "web\\src\\components\\ui\\DataTable.tsx plus MobileDataTableAdapter",
+      "decision": "Reuse opt-in roles/displayValue/allDetails/inlineActions, not a page-owned card list with separate sorting/export state."
+    },
+    {
+      "pattern": "Storage and impact metric summaries",
+      "existing": "OwnershipBrief -> useOperationalMetrics -> OperationalBrief",
+      "decision": "Retain source metrics and specialistDisplay; no new stat grid or conversion engine."
+    },
+    {
+      "pattern": "Source trust and confirmation",
+      "existing": "OwnershipPanel/SourceContent/dataState and useConfirm/ConfirmDialog",
+      "decision": "Extend caller wiring, not another loading/error/focus overlay system."
+    }
+  ],
+  "preservation": {
+    "sourceHash": "b5f6acf0c2511fe9e34f03689af5e73ab01782dc047c32573d87637a845e512c",
+    "hashAlgorithm": "SHA-256",
+    "currentLineCount": 756,
+    "sourceLines": [
+      {"range": "1-30", "purpose": "Category-barrel primitives, ownership hooks, domain owners and formatters"},
+      {"range": "32-109", "purpose": "Editor/selection state, five hooks, confirm-remove, canonical seconds serialization and dry-run dispatch"},
+      {"range": "111-201", "purpose": "Six inventory columns"},
+      {"range": "203-285", "purpose": "Five policy columns with Edit/Remove"},
+      {"range": "287-397", "purpose": "Seven impact columns"},
+      {"range": "399-437", "purpose": "Six ledger columns"},
+      {"range": "439-756", "purpose": "Page header/actions, notice, six content sections, editor and confirmation"}
+    ],
+    "sectionCount": 6,
+    "sections": [
+      {"name": "Storage posture", "line": 470, "preserve": "Five metrics: total bytes, governed bytes + coverage, ungoverned bytes, hold count, source enforcement mode; scope and freshness."},
+      {"name": "Dataset inventory", "line": 522, "preserve": "Plan toggle, dataset label/identifier, hypertable/no-policy badges, row count, on-disk bytes, bytes/row, history span and oldest timestamp; value filters."},
+      {"name": "Retention policies", "line": 548, "preserve": "Dataset, legal-hold/enabled badges, retention/downsample/bucket, Edit/Remove and complete six-control inline form."},
+      {"name": "Dry-run impact", "line": 654, "preserve": "Four summary metrics, dataset/retention, expiring/retained/downsampled rows, reclaim bytes/share, fidelity, growth/runway, holds/warnings and mutation errors."},
+      {"name": "Plan ledger", "line": 715, "preserve": "Execution timestamp, dataset, mode, expiring rows, reclaim bytes, fidelity and source recovery."},
+      {"name": "Evidence, quality, and limitations", "line": 737, "preserve": "Quality status/samples/coverage/window/reasons, evidence sources/summary/sample/date, explicit non-deletion and attribution limitations."}
+    ],
+    "additionalPersistentNotice": {"line": 459, "name": "Plan only — nothing is ever deleted here", "preserve": "Read-only plan calculation versus separate operator enforcement, including audit-ledger write explanation."},
+    "componentCounts": {"OwnershipPanel": 5, "OwnershipBrief": 2, "DataTable": 4, "EvidencePanel": 1, "FadeIn": 6, "GlassPanel": 0, "ChartContainer": 0},
+    "actions": [
+      {"name": "Run dry-run plan", "line": 453, "behavior": "Explicit selected datasets or fallback policy datasets; confirmed:true; never automatic."},
+      {"name": "Include / In plan", "line": 120, "behavior": "Local dataset toggle; disabled for ungoverned datasets."},
+      {"name": "Define policy / Cancel", "line": 558, "behavior": "Toggle inline editor; preserve unsaved draft behavior."},
+      {"name": "Edit policy", "line": 257, "behavior": "Populate all draft fields from selected policy; convert canonical seconds to display days."},
+      {"name": "Remove policy", "line": 278, "behavior": "Danger confirmation; cancel does not mutate; per-row pending state."},
+      {"name": "Save policy", "line": 632, "behavior": "Native form submission, required positive retention, nullable downsample values, legal hold/enabled, canonical serialization; close only on success."},
+      {"name": "Table interactions and exports", "line": 536, "behavior": "Preserve value filters where enabled, loaded-row export semantics, sorting/paging/column visibility and shared table persistence; do not claim a current full-result export."},
+      {"name": "Source retry", "line": 524, "behavior": "OwnershipPanel supplies refetch recovery for overview/runs; retain successful neighbors and retained payloads."}
+    ],
+    "tableIds": ["ownership-governance-inventory", "ownership-governance-policies", "ownership-governance-impact", "ownership-governance-runs"],
+    "metricCount": 9,
+    "dataBehavior": [
+      "Null lists normalized to empty arrays; nullable values display unknown rather than measured zero.",
+      "Keep raw snake_case response identity, source timestamps and typed ownership metadata.",
+      "Preserve binary B/KiB/MiB/GiB/TiB formatting, percentage precision, existing date locale handling and duration display.",
+      "Do not change SI wire/cache seconds, legal holds, enabled policy defaults, 365-day initial retention or explicit confirmation.",
+      "Preserve selected datasets, draft state, mutation errors, success/error toasts, endpoint paths, abort signals and stable query/table IDs.",
+      "Do not repurpose a retention-policy delete into dataset enforcement or invoke any mutation during audit.",
+      "Simulation response quality/evidence and plan_only exist in types but are not presented by the overview-backed evidence trailer; record as a trust opportunity, not invented existing UI."
+    ],
+    "inheritedWork": "Read current source only; no migration, rollback, source/config/catalog/queue changes or Git operations."
+  },
+  "evidenceLimits": {
+    "scope": "Assigned page plus direct presentation/data/router/workspace dependencies; no broader ownership-page audit.",
+    "runtime": "NOTRUN",
+    "screenshots": "NOTRUN",
+    "visualRendering": "UNVERIFIED",
+    "keyboard": "NOTRUN",
+    "contrast": "UNMEASURED",
+    "viewports": "NOTRUN",
+    "backendBehavior": "Only transport route composition/subject contract inspected; service/database enforcement, pagination order and exact live payloads not verified.",
+    "validation": {
+      "method": "Targeted PowerShell Get-Content and regex source counts; no production requests.",
+      "exitCode": 0,
+      "rawOutput": ["style= : 0", "<(button|input|textarea|select|table)\\b : 0", "text-neon|shadow-neon|glow : 0", "text-white|bg-white|border-white : 0", "<OwnershipPanel\\b : 5", "<OwnershipBrief\\b : 2", "<DataTable\\b : 4", "<EvidencePanel\\b : 1"],
+      "interpretation": "Counts apply only to root source, not shared dependency styling or rendered acceptance. Shared white overlays and fixed bright hue findings are explicitly cited.",
+      "notRun": "Audit skill script ends with project-wide TypeScript; not run under read-only scoped Phase 0/centralized-validation policy. No full lint/build/tests or browser interaction."
+    }
+  },
+  "filesRead": [
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\ownership\\pages\\DataGovernancePage.tsx",
+    "web\\src\\features\\ownership\\components\\OwnershipPanel.tsx",
+    "web\\src\\features\\ownership\\components\\EvidencePanel.tsx",
+    "web\\src\\features\\ownership\\components\\MutationError.tsx",
+    "web\\src\\features\\ownership\\components\\operationalbrief-all\\OwnershipBrief.tsx",
+    "web\\src\\features\\ownership\\components\\operationalbrief-all\\specialistDisplay.ts",
+    "web\\src\\features\\ownership\\formatters.ts",
+    "web\\src\\api\\hooks\\useOwnership.ts",
+    "web\\src\\types\\ownership.ts",
+    "web\\src\\api\\dataState.ts",
+    "web\\src\\App.tsx",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\lib\\tokens.ts",
+    "web\\src\\components\\layout\\index.ts",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\layout\\layout-reference\\LayoutCard.tsx",
+    "web\\src\\components\\layout\\layout-reference\\SourceContent.tsx",
+    "web\\src\\components\\layout\\PageContainer.tsx",
+    "web\\src\\components\\ui\\DataTable.tsx",
+    "web\\src\\components\\ui\\MobileDataTableAdapter.tsx",
+    "web\\src\\components\\ui\\MobileDataTableAdapter.types.ts",
+    "web\\src\\components\\ui\\Button.tsx",
+    "web\\src\\components\\motion\\FadeIn.tsx",
+    "internal\\api\\router.go",
+    "internal\\handler\\v1\\ownershipintel\\handler.go"
+  ]
+}

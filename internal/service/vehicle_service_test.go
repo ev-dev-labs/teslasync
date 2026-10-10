@@ -503,6 +503,33 @@ func TestBuildStateFromSignalStore_DoesNotReadSnapshotTables(t *testing.T) {
 	}
 }
 
+func TestBuildStateFromSignalStore_PowerSI(t *testing.T) {
+	const vehicleID int64 = 7
+	tests := []struct {
+		name    string
+		signals map[string]interface{}
+		want    float64
+	}{
+		{"direct draw", map[string]interface{}{"Power": 40000.0}, 40000},
+		{"computed draw", map[string]interface{}{"PackVoltage": 400.0, "PackCurrent": 100.0}, 40000},
+		{"direct regen", map[string]interface{}{"Power": -4200.0}, -4200},
+		{"computed regen", map[string]interface{}{"PackVoltage": 400.0, "PackCurrent": -10.5}, -4200},
+		{"computed zero", map[string]interface{}{"PackVoltage": 400.0, "PackCurrent": 0.0}, 0},
+		{"direct zero wins", map[string]interface{}{"Power": 0.0, "PackVoltage": 400.0, "PackCurrent": 100.0}, 0},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			state := newSvc(nil).BuildStateFromSignalStore(
+				newStore(t, vehicleID, tt.signals),
+				&vehiclemodel.Vehicle{ID: vehicleID},
+			)
+			if state.Power != tt.want {
+				t.Errorf("Power = %v W, want %v W", state.Power, tt.want)
+			}
+		})
+	}
+}
+
 // TestBuildStateFromSignalStore_AcceptsCodecNumericTypes is the regression
 // for the dashboard-blank bug: the codec stores Float5 fields as float32 and
 // Int3/Int4 fields as int32, but the projection layer was narrowing to

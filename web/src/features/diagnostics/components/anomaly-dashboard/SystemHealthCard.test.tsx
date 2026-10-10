@@ -32,8 +32,8 @@ describe('SystemHealthCard', () => {
     expect(screen.getByText('battery')).toBeInTheDocument();
     expect(screen.getByText('normal')).toBeInTheDocument();
     // 'normal' → success (green) tone on the row container.
-    expect(item.className).toContain('bg-emerald-500/10');
-    expect(item.className).toContain('border-emerald-500/30');
+    expect(item.className).toContain('bg-[var(--semantic-success-bg)]');
+    expect(item.className).toContain('border-[var(--semantic-success-border)]');
     // Known category → its own lucide glyph, not the fallback shield.
     expect(container.querySelector('svg.lucide-battery')).not.toBeNull();
     expect(container.querySelector('svg.lucide-shield')).toBeNull();
@@ -43,7 +43,7 @@ describe('SystemHealthCard', () => {
     const { container } = renderCard({ category: 'tires', status: 'warning' });
 
     const item = screen.getByRole('listitem');
-    expect(item.className).toContain('bg-amber-500/10');
+    expect(item.className).toContain('bg-[var(--semantic-warning-bg)]');
     expect(screen.getByText('warning')).toBeInTheDocument();
     expect(container.querySelector('svg.lucide-car')).not.toBeNull();
   });
@@ -52,7 +52,7 @@ describe('SystemHealthCard', () => {
     const { container } = renderCard({ category: 'motors', status: 'critical' });
 
     const item = screen.getByRole('listitem');
-    expect(item.className).toContain('bg-red-500/10');
+    expect(item.className).toContain('bg-[var(--semantic-danger-bg)]');
     expect(screen.getByText('critical')).toBeInTheDocument();
     expect(container.querySelector('svg.lucide-zap')).not.toBeNull();
   });
@@ -64,8 +64,8 @@ describe('SystemHealthCard', () => {
     const { container } = renderCard({ category: 'hvac', status: 'info' });
 
     const item = screen.getByRole('listitem');
-    expect(item.className).toContain('bg-sky-500/10');
-    expect(item.className).not.toContain('bg-emerald-500/10');
+    expect(item.className).toContain('bg-[var(--semantic-info-bg)]');
+    expect(item.className).not.toContain('bg-[var(--semantic-success-bg)]');
     expect(screen.getByText('info')).toBeInTheDocument();
     expect(container.querySelector('svg.lucide-wind')).not.toBeNull();
   });
@@ -82,8 +82,8 @@ describe('SystemHealthCard', () => {
     const { container } = renderCard({ category: 'charging', status: null });
 
     const item = screen.getByRole('listitem');
-    expect(item.className).toContain('bg-sky-500/10');
-    expect(item.className).not.toContain('bg-emerald-500/10');
+    expect(item.className).toContain('bg-[var(--semantic-info-bg)]');
+    expect(item.className).not.toContain('bg-[var(--semantic-success-bg)]');
     // Status label falls back to a friendly 'Unknown' — never 'anomaly.status.'.
     expect(screen.getByText('Unknown')).toBeInTheDocument();
     expect(screen.queryByText(/anomaly\.status/)).toBeNull();
@@ -98,7 +98,7 @@ describe('SystemHealthCard', () => {
     expect(screen.queryByText(/anomaly\.category/)).toBeNull();
     // The (valid) status is still respected.
     expect(screen.getByText('critical')).toBeInTheDocument();
-    expect(screen.getByRole('listitem').className).toContain('bg-red-500/10');
+    expect(screen.getByRole('listitem').className).toContain('bg-[var(--semantic-danger-bg)]');
   });
 
   it('exposes the full category name via a title attribute on the truncated label', () => {

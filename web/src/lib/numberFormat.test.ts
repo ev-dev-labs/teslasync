@@ -249,11 +249,20 @@ describe('numberFormat — formatBytes', () => {
   it('formats bytes into binary units', () => {
     expect(formatBytes(0)).toBe('0 B')
     expect(formatBytes(512)).toBe('512 B')
-    expect(formatBytes(1024)).toBe('1.0 KB')
-    expect(formatBytes(1536)).toBe('1.5 KB')
-    expect(formatBytes(1048576)).toBe('1.0 MB')
-    expect(formatBytes(1073741824)).toBe('1.0 GB')
-    expect(formatBytes(5 * 1073741824)).toBe('5.0 GB')
+    expect(formatBytes(1024)).toBe('1.00 KB')
+    expect(formatBytes(1536)).toBe('1.50 KB')
+    expect(formatBytes(1048576)).toBe('1.00 MB')
+    expect(formatBytes(1073741824)).toBe('1.00 GB')
+    expect(formatBytes(5 * 1073741824)).toBe('5.00 GB')
+  })
+
+  it('uses selected precision and locale for scaled units without changing byte counts', () => {
+    setGlobalPrecision(3)
+    setGlobalLocale('de-DE')
+    expect(formatBytes(512)).toBe('512 B')
+    expect(formatBytes(1536)).toBe('1,500 KB')
+    expect(formatBytes(1572864)).toBe('1,500 MB')
+    expect(formatBytes(1610612736)).toBe('1,500 GB')
   })
 
   it('returns the empty placeholder for null / undefined / non-finite input', () => {

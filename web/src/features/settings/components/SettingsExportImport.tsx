@@ -25,7 +25,7 @@
 import { useCallback, useId, useMemo, useRef, useState, type ChangeEvent, type DragEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Database, Download, Upload, FileJson, AlertTriangle } from 'lucide-react';
-import { fmtInt } from '@/lib/numberFormat';
+
 
 import {
   GlassPanel,
@@ -55,6 +55,7 @@ import {
   type SettingsImportResult,
   type SettingsBundleSectionKey,
 } from '@/lib/settingsImportSchema';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 const MAX_IMPORT_FILE_BYTES = 1 << 20; // 1 MiB — matches backend MaxSettingsImportBodyBytes
 
@@ -67,6 +68,7 @@ interface PendingImport {
 }
 
 export function SettingsExportImport() {
+  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation('settings');
   const toast = useToast();
 
@@ -244,7 +246,7 @@ export function SettingsExportImport() {
           </IconBox>
           <div className="flex-1 min-w-0">
             <Heading level="section">
-              {t('backup.title', 'Backup & Restore')}
+              {t('backup.title', 'Backup & restore')}
             </Heading>
             <Text variant="bodySm">
               {t(

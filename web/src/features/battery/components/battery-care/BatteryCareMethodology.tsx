@@ -8,7 +8,7 @@ import {
   Text,
 } from '@/components/ui';
 import { formatDate } from '@/lib/dateFormat';
-import { fmtInt, fmtPercent } from '@/lib/numberFormat';
+
 import { useUnits } from '@/hooks/useUnits';
 
 import {
@@ -21,6 +21,7 @@ import {
 } from '../../lib/batteryCare';
 import { BatteryCareSection } from './BatteryCareSection';
 import type { BatteryCareSectionState } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface BatteryCareMethodologyProps {
   care: CareScore;
@@ -38,6 +39,7 @@ export function BatteryCareMethodology({
   driveLimit,
   className,
 }: BatteryCareMethodologyProps) {
+  const { fmtInt, fmtPercent } = useNumberFormatting();
   const { t } = useTranslation();
   const { formatPower } = useUnits();
   const coverage = care.coverage;
@@ -147,7 +149,6 @@ export function BatteryCareMethodology({
                 energy: MIN_SCORE_ENERGY_SESSIONS,
                 coverage: fmtPercent(
                   MIN_ENERGY_CLASSIFICATION_COVERAGE * 100,
-                  0,
                 ),
               },
             )}
@@ -174,7 +175,7 @@ export function BatteryCareMethodology({
             {t(
               'batteryCare.method.classification',
               'AC/DC classification uses explicit charger labels; an unlabeled session is treated as DC only when peak power exceeds {{power}}. Other energy remains unclassified.',
-              { power: formatPower(DC_INFERENCE_POWER_W, { precision: 0 }) },
+              { power: formatPower(DC_INFERENCE_POWER_W) },
             )}
           </Text>
         </div>

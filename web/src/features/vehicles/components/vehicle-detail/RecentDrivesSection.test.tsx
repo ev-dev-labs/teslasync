@@ -117,7 +117,7 @@ describe('RecentDrivesSection — structure & a11y', () => {
   it('renders the panel heading with a decorative, aria-hidden icon', () => {
     renderSection([makeDrive()])
 
-    const heading = screen.getByRole('heading', { level: 3, name: 'Recent Drives' })
+    const heading = screen.getByRole('heading', { level: 3, name: 'Recent drives' })
     expect(heading).toBeInTheDocument()
     // The lucide glyph is decorative — hidden from assistive tech so it does
     // not pollute the heading's accessible name.

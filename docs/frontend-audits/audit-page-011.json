@@ -1,0 +1,419 @@
+{
+  "item": "audit-page-011",
+  "phase": 0,
+  "page": "web\\src\\features\\admin\\pages\\FeatureFlagsPage.tsx",
+  "routes": ["/admin/flags"],
+  "identity": {
+    "component": "FeatureFlagsPage",
+    "lazyBinding": "FeatureFlagsAdmin",
+    "mountEvidence": "web\\src\\App.tsx:273,709",
+    "routeRegistryEvidence": "web\\src\\lib\\routeRegistry.ts:34",
+    "distinctFrom": "TeslaFeatureFlagsPage is a different Tesla-account surface; not this assigned platform registry.",
+    "auditMode": "read-only source inspection",
+    "runtime": "unverified"
+  },
+  "purpose": "Operator management of the platform's opaque JSON feature-flag registry and its recent audited changes.",
+  "primaryGoal": "Review current values and type composition; create, edit or delete a flag with an audit reason and the existing server sudo challenge.",
+  "dataSources": [
+    {
+      "hook": "useFlags",
+      "file": "web\\src\\api\\hooks\\useFeatureFlags.ts",
+      "line": 50,
+      "endpoint": "GET /api/v1/system/flags",
+      "ownership": "Registry hook owns cancellable reads; apiflagsh handler and configured FlagStore own backend registry.",
+      "routeEvidence": "internal\\api\\router.go:3167,4352,4469-4475",
+      "behavior": "Shared list key; moderate stale time, standard interval, no background interval, retry 1; abort signal forwarded. Page uses flags.data.flags, not response count."
+    },
+    {
+      "hook": "useFlagChanges(null, 50)",
+      "file": "web\\src\\api\\hooks\\useFeatureFlags.ts",
+      "line": 80,
+      "endpoint": "GET /api/v1/system/flags/changes?limit=50",
+      "ownership": "Separate audit hook; backend FeatureFlagChangesRepo supplied to apiflagsh handler.",
+      "routeEvidence": "internal\\api\\router.go:4476-4477",
+      "behavior": "Latest returned global subset only, not lifetime or workspace-range totals. Encoded per-key history URL also exists in this hook but this page calls only global history."
+    },
+    {
+      "hook": "useSetFlag",
+      "file": "web\\src\\api\\hooks\\useFeatureFlags.ts",
+      "line": 106,
+      "endpoint": "PUT /api/v1/system/flags/{encoded key}",
+      "ownership": "Mutation hook owns toast and shared invalidation; client owns live-mode guard and sudo replay; server owns write authorization and audit.",
+      "routeEvidence": "internal\\api\\router.go:4482-4485",
+      "behavior": "JSON body {value, reason}; requiresLiveMode true; invalidates system/flags prefix and per-key entry; canceled sudo is silently handled. Not exercised."
+    },
+    {
+      "hook": "useDeleteFlag",
+      "file": "web\\src\\api\\hooks\\useFeatureFlags.ts",
+      "line": 143,
+      "endpoint": "DELETE /api/v1/system/flags/{encoded key}?reason={URLSearchParams encoded reason}",
+      "ownership": "Same hook/client/server separation as set.",
+      "routeEvidence": "internal\\api\\router.go:4486-4489",
+      "behavior": "Mandatory trimmed reason; live-only write; same invalidation/toast handling. Not exercised."
+    }
+  ],
+  "components": [
+    {
+      "name": "PageLayout / PageContainer",
+      "owner": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+      "contract": "Reuse title, subtitle, primaryAction, query and named dataSources; full-width min-w-0 container; PageContainer owns header trust notice, freshness and page fallback.",
+      "evidence": "PageLayout.tsx:5-16; web\\src\\components\\layout\\PageContainer.tsx:94-112,247-255"
+    },
+    {
+      "name": "LayoutCard / SectionErrorBoundary / FadeIn",
+      "owner": "web\\src\\components\\layout\\layout-reference\\LayoutCard.tsx",
+      "contract": "Retain independent registry/composition/audit shells, title associations and error boundaries. Existing FadeIn delegates OS/low-bandwidth motion preference; do not add another animation system.",
+      "evidence": "FeatureFlagsPage.tsx:148-203; LayoutCard.tsx:16-29; web\\src\\components\\motion\\FadeIn.tsx:24-36"
+    },
+    {
+      "name": "DataTable",
+      "owner": "web\\src\\components\\ui\\DataTable.tsx",
+      "contract": "Preserve columns, tableId, sorting, value filters, local pagination and built-in export/persistence. Existing mobilePresentation / expandable renderExpanded and column exportValue provide reuse paths, not a replacement table.",
+      "usedBy": ["FlagsTable", "ChangesPanel"],
+      "propsVariantsStates": ["tableId", "mobileColumns", "mobilePresentation", "expandable", "renderExpanded", "Column.exportValue", "pagination", "enableValueFilters"],
+      "evidence": "DataTable.tsx:145-166,234-259,324-329,872-895,1370-1405"
+    },
+    {
+      "name": "FeatureFlagsOperationalBrief / OperationalBrief / useOperationalMetrics",
+      "owner": "web\\src\\features\\admin\\components\\statstrip-coverage-flags-secrets\\FeatureFlagsOperationalBrief.tsx",
+      "contract": "Six raw count metrics; independent unknown/retained source context; provenance and Review details stay. Existing shared bridge handles saved display preferences.",
+      "evidence": "FeatureFlagsOperationalBrief.tsx:12-77; web\\src\\hooks\\useOperationalMetrics.tsx:11-24; web\\src\\components\\data-display\\OperationalBrief.tsx:119-160"
+    },
+    {
+      "name": "MetricBar",
+      "owner": "web\\src\\components\\data-display\\MetricBar.tsx",
+      "contract": "Use label, numeric value/max, color and optional fill='solid'; null remains no reading; shared progressbar semantics and reduced motion remain. No new composition renderer needed.",
+      "usedBy": ["FlagCompositionPanel"],
+      "propsVariantsStates": ["label", "value", "max", "color", "sublabel", "fill: solid|gradient", "size: default|slim", "unknown"],
+      "evidence": "MetricBar.tsx:8-27,43-65,76-86"
+    },
+    {
+      "name": "Drawer / Modal / Input / Textarea / Button",
+      "owner": "web\\src\\components\\ui\\Drawer.tsx",
+      "contract": "Keep canonical field identity/help/error semantics and overlay focus/scroll/close behavior. Page caller can guard onClose during pending save without another dialog engine.",
+      "usedBy": ["FlagEditDrawer", "FeatureFlagsPage delete modal"],
+      "propsVariantsStates": ["open", "onClose", "title", "footer", "saving", "loading", "disabled", "required", "error"],
+      "evidence": "Drawer.tsx:38-57,80-87,109-125,176-210; FlagEditDrawer.tsx:101-173; FeatureFlagsPage.tsx:216-265"
+    },
+    {
+      "name": "deriveDataState / sourceStatus / sourceFreshness",
+      "owner": "web\\src\\api\\dataState.ts",
+      "contract": "Retained payload survives refresh errors; fatal error replaces only never-loaded source; paused refresh is stale, not zero. Source labels remain independent.",
+      "evidence": "dataState.ts:158-177,212-250; sourceMetadata.ts:4-17"
+    }
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\admin\\components\\statstrip-coverage-flags-secrets\\FeatureFlagsOperationalBrief.tsx",
+      "line": 72,
+      "rule": "MDC-002 / mission 4 reuse",
+      "detail": "Identical provenance text is supplied to OperationalBrief and repeated directly below at line 73. Existing legacy FlagStatsBand independently computes the same six metric categories and remains barrel-exported; it is not mounted by this page.",
+      "fix": "Keep canonical OperationalBrief and one deliberately placed visible provenance explanation; reconcile legacy band only in separately assigned ownership after checking consumers.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "responsive": {
+    "verified": "source only",
+    "strategy": "One-column sections until xl, then registry spans two of three columns. Both tables use stable mobile allow-lists; drawer is full width below sm; deletion actions wrap.",
+    "issues": [
+      {
+        "file": "web\\src\\features\\admin\\components\\feature-flags\\ChangesPanel.tsx",
+        "line": 43,
+        "rule": "MDC-023 / MDC-043 / no information loss",
+        "detail": "Mobile list includes only changed_at, actor, operation. Key, old/new value and reason are hidden below md by DataTable's hidden md:table-cell policy. This caller supplies neither mobilePresentation nor expandable details, so the audit event identity and explanation lack a source-confirmed mobile read path.",
+        "fix": "Reuse DataTable mobilePresentation with full-detail disclosure, or expandable details retaining all seven columns and long values; keep tableId and exports. Do not just hide audit metadata.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\admin\\components\\feature-flags\\FlagsTable.tsx",
+        "line": 130,
+        "rule": "MDC-043 / long-content responsive behavior",
+        "detail": "Actions are a non-wrapping flex row alongside unbroken key and JSON text; all three columns remain on phones. Table-local scrolling is supported, but source does not prove reachability or comfortable targets at 320px and with long translations.",
+        "fix": "Use existing mobile table contract and wrapping action labels; preserve key/value/edit/delete rather than removing columns. Validate container width and long-key cases.",
+        "owner": "page",
+        "confidence": "medium"
+      }
+    ],
+    "requiredViewports": [320, 375, 390, 430, 768, 1024, 1280, 1440, 1920, 2560],
+    "viewportExecution": "unverified"
+  },
+  "accessibility": {
+    "sourceStrengths": ["Localized row-specific edit/delete names", "Shared field labels/required and parse error props", "Section titles associated by LayoutCard", "Composition list and labeled MetricBar progressbars", "Shared overlay focus owner", "Shared reduced-motion FadeIn and MetricBar"],
+    "issues": [
+      {
+        "file": "web\\src\\features\\admin\\components\\feature-flags\\FlagsTable.tsx",
+        "line": 51,
+        "rule": "MDC-040 / complete text alternatives",
+        "detail": "Registry previews truncate at 120 characters. Audit compact() separately truncates old/new values at 60 characters (ChangesPanel.tsx:45-52). Neither table provides an expanded full-value read surface; registry editing exposes current JSON but is not a read-only alternative and cannot recover the previous audit value.",
+        "fix": "Keep compact previews and provide keyboard-accessible read-only full JSON detail using the existing Drawer or DataTable expansion. Preserve null as JSON null and opaque data text without recasing.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ],
+    "keyboard": "unverified",
+    "screenReader": "unverified",
+    "focusRestoration": "unverified",
+    "contrast": "unverified; no composed-background measurements",
+    "touchTargets": "unverified",
+    "forcedColors": "unverified",
+    "reducedMotion": "source reuse confirmed; actual motion unverified"
+  },
+  "states": {
+    "initialLoading": "Registry/audit use loading emptyMessage in DataTable, not a contextual skeleton or table busy prop. Composition has five-line Skeleton; summary loading is true only when both feeds are initial.",
+    "empty": "Registry explanatory empty message; audit EmptyState; composition EmptyState; known empty feeds produce legitimate zero counts.",
+    "fatalError": "Independent QueryError retry for registry, composition and audit plus summary source retries; sections remain mounted.",
+    "refreshError": "Page uses fatalError only, preserving cached rows. Summary exposes refresh-error alert and retained indication; PageContainer also receives named sources.",
+    "offlineStale": "deriveDataState marks retained paused reads stale; summary labels independent sources. No network or offline scenario exercised.",
+    "unknown": "Summary uses null counts when feed has not supplied data; successful missing arrays are normalized to empty by existing behavior.",
+    "mutation": "Save failure keeps drawer open by catch; delete failure keeps modal open. Server sudo and client live-mode guard retained.",
+    "issues": [
+      {
+        "file": "web\\src\\features\\admin\\pages\\FeatureFlagsPage.tsx",
+        "line": 209,
+        "rule": "MDC-046 / pending mutation preservation",
+        "detail": "Editor onClose unconditionally clears editing/open while setFlag is pending. FlagEditDrawer disables only footer Cancel; Drawer invokes onClose from header Close, scrim and shared Escape handling. Delete modal already guards onClose during pending. A pending save can therefore outlive its dismissed editor, unlike deletion.",
+        "fix": "Guard the page editor onClose while setFlag.isPending and preserve input until the existing mutation settles; do not bypass sudo or introduce a new cancellation/mutation mechanism. Test Close/scrim/Escape during save and reauth.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\admin\\components\\feature-flags\\ChangesPanel.tsx",
+        "line": 164,
+        "rule": "MDC-026 / mission 22 initial loading semantics",
+        "detail": "Table loading is represented only by emptyMessage; registry does the same at FlagsTable.tsx:172. DataTable does not receive loading, and PageLayout receives neither loading nor busy, so page aria-busy is not driven by these feeds. Composition/summary already have independent designed loading states.",
+        "fix": "Reuse localized contextual Skeleton within each table source on first load and shared busy announcement contracts; never replace retained rows during refresh or gate the whole page.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ]
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\admin\\components\\feature-flags\\FlagCompositionPanel.tsx",
+      "line": 36,
+      "rule": "MDC-010 / MDC-034 / restrained palette",
+      "detail": "Six page-owned hex accents include bright cyan/purple and are passed to MetricBar with its default gradient fill. Page card icons also hardcode text-cyan-300 (FeatureFlagsPage.tsx:154,175,191). No actual contrast/visual measurement made.",
+      "fix": "Reuse current restrained theme/semantic palette and MetricBar fill='solid' where appropriate; neutralize purely decorative icons. Preserve type labels/counts/percentages and user theme choices.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\features\\admin\\components\\feature-flags\\FlagEditDrawer.tsx",
+      "line": 22,
+      "rule": "MDC-002 / category barrel imports",
+      "detail": "Feature directly imports Text from @/components/ui/Typography instead of the category barrel used for its other primitives.",
+      "fix": "Import Text from the existing @/components/ui barrel; no shared export or new wrapper needed.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\admin\\components\\feature-flags\\ChangesPanel.tsx",
+      "line": 104,
+      "rule": "MDC-023 / export preservation",
+      "detail": "Old/new value columns render truncated compact strings and supply no exportValue. Registry value similarly renders truncated preview. DataTable prefers rendered text for CSV (DataTable.tsx:884-893), so CSV uses previews instead of complete stored JSON. JSON export follows raw values for supported types; do not claim both formats are truncated.",
+      "fix": "Supply complete canonical JSON exportValue for these opaque value columns using existing DataTable contract; retain preview formatting, table IDs and loaded-subset scope. Validate null, booleans, arrays, nested objects, quotes/newlines and long strings.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\admin\\components\\statstrip-coverage-flags-secrets\\sourceMetadata.ts",
+      "line": 15,
+      "rule": "MDC-044 / mission 26 saved date-time preferences",
+      "detail": "Freshness uses new Date(updatedAt).toLocaleString() without the app's formatting bridge, selecting host/browser defaults rather than explicitly following saved display preferences. This dependency is shared by nearby admin briefs, so it is not an exclusive page edit.",
+      "fix": "Have the assigned integration owner reuse the existing formatting hook/preferences for fetched timestamps, retaining localized unknown freshness and epoch input; no new formatter.",
+      "owner": "integration",
+      "confidence": "medium"
+    }
+  ],
+  "priority": {
+    "level": "medium",
+    "first": ["Preserve full mobile audit details", "Guard pending editor dismissal", "Recover full-value read and CSV export paths"],
+    "then": ["Contextual table loading", "Restrained composition palette", "Category barrel and formatting integration"],
+    "reason": "Existing section/data trust architecture is strong; remaining issues concern complete operator evidence, pending writes and presentation consistency, not a page replacement."
+  },
+  "requiredSharedChanges": [],
+  "sharedChangeAssessment": "No new shared component or public API is justified by this bounded audit. Existing DataTable detail/export contracts, MetricBar solid fill and shared Drawer are sufficient. sourceMetadata freshness normalization is an integration-owned dependency follow-up, not permission for this worker to edit it.",
+  "competingImplementations": [
+    {
+      "name": "Legacy FlagStatsBand versus mounted FeatureFlagsOperationalBrief",
+      "file": "web\\src\\features\\admin\\components\\feature-flags\\FlagStatsBand.tsx",
+      "line": 45,
+      "detail": "Legacy MetricCard band repeats six metric calculations and remains exported by index.ts:4, but FeatureFlagsPage imports the OperationalBrief directly instead. No claim of global dead code; consumer graph outside the assigned page was not audited.",
+      "resolution": "Retain mounted canonical stats bridge; report legacy coexistence without deleting unassigned consumers."
+    }
+  ],
+  "preservation": {
+    "sourceSha256": "3a979a153428fa4c216cbe785f4dee46734c60e9fc90c325f3fbde57b7bb2833",
+    "currentLineCount": 270,
+    "mountedPageSpecificPresentationLineCount": 1007,
+    "lineCountBasis": "270 page + 181 FlagsTable + 173 ChangesPanel + 129 composition + 177 editor + 77 OperationalBrief; excludes unmounted legacy band and shared owners.",
+    "sections": [
+      {"name": "Summary / registry and recent changes", "line": 145, "metrics": ["Total flags", "Boolean toggles", "Structured", "Recent changes", "Deletes", "Contributors"]},
+      {"name": "Registry", "line": 153},
+      {"name": "Value composition", "line": 174, "kinds": ["boolean", "number", "string", "object", "array", "null"]},
+      {"name": "Recent changes", "line": 190}
+    ],
+    "sectionCount": 4,
+    "pageLayoutCardCount": 3,
+    "pageGlassPanelCount": 0,
+    "pageChartContainerCount": 0,
+    "mountedFeatureGlassPanelCount": 3,
+    "overlays": ["Create/edit FlagEditDrawer:205", "Delete Modal:216", "OperationalBrief Review details uses its existing shared drawer"],
+    "actions": ["Add flag", "Edit row", "Delete row", "Required delete reason", "Confirm/cancel delete", "Create/edit JSON and required reason", "Immutable existing key", "Save/cancel editor", "Retry failed registry/audit", "Summary Review details", "Table sort/filter/pagination/export/persistence"],
+    "tableIds": ["admin:feature-flags", "admin:flag-changes"],
+    "dataBehavior": [
+      "Never change opaque stored JSON value meaning, including null/false/zero.",
+      "Current registry and recent limit-50 audit subset remain separate; counts are not lifetime totals.",
+      "Contributor metric counts distinct nonempty trimmed actors; structured counts object plus array; boolean counts both true and false.",
+      "Retain independent fatal versus background-refresh errors, retained rows, null unknown metrics, last-success metadata and retries.",
+      "Keep query keys, polling, cancellation, retry/stale policy, mutation invalidation and source ownership.",
+      "Keep live-only write guard, encoded keys/reasons, mandatory audit reason, server sudo/reauth replay, and toast behavior.",
+      "Do not add a date/vehicle selector: workspaceScope excludes /admin/flags from range ownership and disables vehicle for /admin.",
+      "No physical SI conversion is involved: feature values are opaque JSON and metrics are counts. Do not infer units for stored numbers.",
+      "Retain shared localization, formatting, reduced-motion, theme IDs, table persistence and auth/session boundaries."
+    ],
+    "sourceUnchanged": "Root SHA-256 rechecked unchanged after report creation. No source writes performed."
+  },
+  "evidenceLimits": {
+    "runtime": "unverified",
+    "visual": "unverified",
+    "keyboard": "unverified",
+    "contrast": "unverified",
+    "viewport": "unverified",
+    "backend": "Only mounted route registration inspected. Handler validation/storage transactions/actual ordering and server responses not executed or independently proved.",
+    "tests": "FeatureFlagsPage.test.tsx test names inspected only; no test run or borrowed historical acceptance.",
+    "scope": "Only assigned page and page-dependency traces. App/router/workspace ranges and shared component APIs inspected solely to establish this page's contracts; no foundation-wide audit.",
+    "fullGates": "NOTRUN: TypeScript, lint, build and full tests are explicitly prohibited by Phase 0 assignment. audit.sh was inspected but not executed because it invokes project-wide tsc.",
+    "failedLookup": "useOperationalMetrics.ts did not exist; glob resolved actual useOperationalMetrics.tsx, which was inspected.",
+    "sourceScan": {
+      "command": "PowerShell Select-String -LiteralPath <six mounted page/presentation paths> -Pattern <listed patterns> -CaseSensitive",
+      "exitCode": 0,
+      "output": ["style= count=0", "<(button|input|textarea|select|table)\\b count=0", "from ['\\\"](recharts|react-leaflet|framer-motion)['\\\"] count=0", "from ['\\\"]\\.\\./(\\.\\./)?api['\\\"] count=0", "text-neon- count=0", "<GlassPanel\\b count=3", "<ChartContainer\\b count=0", "<LayoutCard\\b count=3"],
+      "limits": "Pattern counts only; not a clean whole-codebase certificate. Initial case-insensitive raw-control count 11 was uppercase shared components, corrected by case-sensitive scan. Header cyan and hex palette issues remain despite zero text-neon matches."
+    }
+  },
+  "sourceInventory": {
+    "capturedAtUtc": "2026-10-07T10:34:21Z",
+    "hashAlgorithm": "SHA-256",
+    "limits": "Hashes describe on-disk files at final inventory capture, not frozen full-file semantic review. Shared files can change under concurrent ownership. Root source hash matches the initial read. Files read only by ranges or matching lines are identified below.",
+    "partialInspections": {
+      "docs\\frontend-mission.md": "Sections 0,1,3,5-10,14-25,30-37; heading index.",
+      ".github\\instructions\\react-frontend.instructions.md": "Lines 1-150.",
+      "web\\src\\api\\dataState.ts": "Lines 1-265.",
+      "web\\src\\api\\client.ts": "Relevant sudo/live-mode/API-prefix matches and lines 360-454.",
+      "web\\src\\types\\admin-diagnostics.ts": "Feature-flag type matches and context around lines 155-205.",
+      "web\\src\\components\\ui\\DataTable.tsx": "Relevant mobile/export/detail matches; ranges 130-180,230-285,706-736,870-900,1148-1173,1370-1405.",
+      "web\\src\\components\\data-display\\OperationalBrief.tsx": "Lines 1-160.",
+      "web\\src\\features\\admin\\pages\\FeatureFlagsPage.test.tsx": "Test names only.",
+      "web\\src\\App.tsx": "Assigned lazy import and route matches only.",
+      "web\\src\\lib\\routeRegistry.ts": "Assigned route match only.",
+      "internal\\api\\router.go": "Assigned route matches and lines 4450-4510."
+    },
+    "files": [
+      {"file":"docs\\frontend-design-contract.md","sha256":"17b542389cd4e98a0dfb7b4d2f2c4e2727f221af0ac5acb738db5e987b282255","lines":394},
+      {"file":"docs\\frontend-worker-conventions.md","sha256":"6cf8194644a7820926082fc065e9cbf87c1e1e2d8258c4d092da8c962707adc3","lines":80},
+      {"file":"docs\\frontend-mission.md","sha256":"2bd35429e32d06abf109dd371c2dd011cb974ef6b8c1915b298d1a0c3d7fd98f","lines":1593},
+      {"file":".github\\skills\\audit-violations\\audit.sh","sha256":"3e5937ab2a4ea2f303a0152111794d5a3a45c24abfe7b11400079bc4ac3dfe46","lines":141},
+      {"file":".github\\instructions\\react-frontend.instructions.md","sha256":"4583e9b2c262d1eda8a0b22d24f58befb65414f2ad4b6657035221abb48ec83e","lines":629},
+      {"file":"web\\src\\features\\admin\\pages\\FeatureFlagsPage.tsx","sha256":"3a979a153428fa4c216cbe785f4dee46734c60e9fc90c325f3fbde57b7bb2833","lines":270},
+      {"file":"web\\src\\features\\admin\\components\\feature-flags\\index.ts","sha256":"c9de7c5c591234216ccce0c6334a392b0f201d559dafef2f1c4d55100d27e62c","lines":10},
+      {"file":"web\\src\\features\\admin\\components\\feature-flags\\FlagsTable.tsx","sha256":"6c8b043e22f429232bcbc02b3190057183250d1fb3b11551f83c02be997e0da1","lines":181},
+      {"file":"web\\src\\features\\admin\\components\\feature-flags\\ChangesPanel.tsx","sha256":"d4c99025a9038ab7063a8a7f81caaa316e65a927de020ec0717f998665c3f281","lines":173},
+      {"file":"web\\src\\features\\admin\\components\\feature-flags\\FlagCompositionPanel.tsx","sha256":"17cd7a14ef47ef627513931baed4391fbb68a532d555aba15a31f8e3b10aae98","lines":129},
+      {"file":"web\\src\\features\\admin\\components\\feature-flags\\FlagEditDrawer.tsx","sha256":"85f08fd8f42557e77920eaee1c1c56bda5548fab7ed95b3ee81492c724ccb88d","lines":177},
+      {"file":"web\\src\\features\\admin\\components\\feature-flags\\FlagStatsBand.tsx","sha256":"e06b8654e5ca322a525b9dd3c0da2f6c857ecd03324eb55def2dc6c3e902c04d","lines":135},
+      {"file":"web\\src\\features\\admin\\components\\feature-flags\\flagValueKind.ts","sha256":"f859741d299c376906a28656cd4cf030873f10036cdd96bcf83df76bc8432902","lines":43},
+      {"file":"web\\src\\features\\admin\\components\\statstrip-coverage-flags-secrets\\FeatureFlagsOperationalBrief.tsx","sha256":"00ef0883e66a7d5e3885c286aae561aec490f18eb7952053dc51141c44be6810","lines":77},
+      {"file":"web\\src\\features\\admin\\components\\statstrip-coverage-flags-secrets\\sourceMetadata.ts","sha256":"5b4f63b00ff67026e7742c1dc06ff33c9143d9b34e7350d4df0c095d20b79ef1","lines":17},
+      {"file":"web\\src\\api\\hooks\\useFeatureFlags.ts","sha256":"f7dcbb878744e4cce1bc5335cc5c04a1270ab2f317a68fac5e2db0af1ceca80a","lines":165},
+      {"file":"web\\src\\api\\dataState.ts","sha256":"21fb454b3c1f01608169f3f3887911de97f7c754663cc001236ebfde58211761","lines":434},
+      {"file":"web\\src\\api\\client.ts","sha256":"a9732175455ed2dc207cc59cb42dcf7e66065453303e68593efe317a8c233428","lines":478},
+      {"file":"web\\src\\types\\admin-diagnostics.ts","sha256":"f8ac356f20528c8ac27b486dae4f59dee7cbfde8f13632271468a022bbac9662","lines":302},
+      {"file":"web\\src\\lib\\workspaceScope.ts","sha256":"aeb8c01d410f2377aa5fd713de1a678a0360acf647a9c882f03e46c80efdfcd7","lines":168},
+      {"file":"web\\src\\components\\layout\\layout-reference\\PageLayout.tsx","sha256":"8df73de2d4b3ff7485019389f547d863fe8729aa0c95fa1f497487389d6b87f6","lines":17},
+      {"file":"web\\src\\components\\layout\\layout-reference\\LayoutCard.tsx","sha256":"1fedeb6b5cf17436d31cb0f19dac09ee1c6591d1866b09ed511387bd110e7d9a","lines":64},
+      {"file":"web\\src\\components\\layout\\PageContainer.tsx","sha256":"0e2e1842fcac1fe5bd7c4c37299a76f9515d45eafe43ad122a8e09a0bb817d55","lines":259},
+      {"file":"web\\src\\components\\ui\\DataTable.tsx","sha256":"92e3a46f15e401b57303823693aac8825693b4edc2b04cfe289663d8e1386438","lines":1687},
+      {"file":"web\\src\\components\\ui\\Drawer.tsx","sha256":"3efaf21230269bc621a96a56bd61d2377e83410aa8c77a390f6aa4067cb39a3f","lines":211},
+      {"file":"web\\src\\components\\data-display\\MetricBar.tsx","sha256":"e3e0da3087d96db2fec366edb15ff2784a4787bebf9f86c7c0c09364109aea4a","lines":92},
+      {"file":"web\\src\\components\\data-display\\OperationalBrief.tsx","sha256":"b24b19024effebb6d8457171be61e6899672cd8f668b41bb3814aeb29ada42e5","lines":303},
+      {"file":"web\\src\\components\\motion\\FadeIn.tsx","sha256":"8624fff5c039500e35b04dd4a53d3697a7186a92bdc922bb2a8e1f69001da32f","lines":39},
+      {"file":"web\\src\\hooks\\useNumberFormatting.ts","sha256":"ca9c9ce0d895cf31f23a17405fa4d4132f99fd524f970ecc75922903dec27dd9","lines":47},
+      {"file":"web\\src\\hooks\\useOperationalMetrics.tsx","sha256":"7284c6bf00f99271ac578b40129eb18b0b18c360e205c82903ad8450c0ee148c","lines":24},
+      {"file":"web\\src\\features\\admin\\pages\\FeatureFlagsPage.test.tsx","sha256":"52c6f94ee5bcee08a739f54d9bca7a6581573d77c6aaac45f6eb4a8c1d2da861","lines":484},
+      {"file":"web\\src\\App.tsx","sha256":"23a1ce852d2ce51df5a26a5c2a5669ffa788a992355a8bcfafb391c82b47def3","lines":918},
+      {"file":"web\\src\\lib\\routeRegistry.ts","sha256":"2f59a162f3dc2180031df87aed196830767fd7720388fa1e6f0c211e550c0a97","lines":289},
+      {"file":"internal\\api\\router.go","sha256":"98b92853ebade3db74ad361d098bba4472039884a407d61ce901dc3bf1fe3750","lines":5366}
+    ],
+    "additionalRouteSearchMatchesOnly": [
+      "web\\src\\__tests__\\lazyRoutes.list.ts",
+      "web\\src\\__tests__\\lazyRoutes.list.test.ts",
+      "web\\src\\features\\admin\\pages\\TeslaFeatureFlagsPage.tsx",
+      "web\\src\\features\\admin\\pages\\TeslaFeatureFlagsPage.test.tsx",
+      "web\\src\\features\\admin\\components\\feature-flags\\FlagEditDrawer.test.tsx",
+      "web\\src\\lib\\routeMeta.ts",
+      "web\\src\\features\\explore\\featureCatalog.ts",
+      "web\\src\\components\\layout\\Layout.tsx",
+      "web\\src\\components\\layout\\Layout.test.tsx",
+      "web\\src\\api\\hooks\\useFeatureFlags.test.tsx",
+      "web\\src\\components\\layout\\sidebar\\sidebarIcons.ts",
+      "web\\src\\components\\layout\\sidebar\\collections.ts"
+    ]
+  },
+  "filesRead": [
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    ".github\\instructions\\react-frontend.instructions.md",
+    "web\\src\\features\\admin\\pages\\FeatureFlagsPage.tsx",
+    "web\\src\\features\\admin\\components\\feature-flags\\index.ts",
+    "web\\src\\features\\admin\\components\\feature-flags\\FlagsTable.tsx",
+    "web\\src\\features\\admin\\components\\feature-flags\\ChangesPanel.tsx",
+    "web\\src\\features\\admin\\components\\feature-flags\\FlagCompositionPanel.tsx",
+    "web\\src\\features\\admin\\components\\feature-flags\\FlagEditDrawer.tsx",
+    "web\\src\\features\\admin\\components\\feature-flags\\FlagStatsBand.tsx",
+    "web\\src\\features\\admin\\components\\feature-flags\\flagValueKind.ts",
+    "web\\src\\features\\admin\\components\\statstrip-coverage-flags-secrets\\FeatureFlagsOperationalBrief.tsx",
+    "web\\src\\features\\admin\\components\\statstrip-coverage-flags-secrets\\sourceMetadata.ts",
+    "web\\src\\api\\hooks\\useFeatureFlags.ts",
+    "web\\src\\api\\dataState.ts",
+    "web\\src\\api\\client.ts",
+    "web\\src\\types\\admin-diagnostics.ts",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\layout\\layout-reference\\LayoutCard.tsx",
+    "web\\src\\components\\layout\\PageContainer.tsx",
+    "web\\src\\components\\ui\\DataTable.tsx",
+    "web\\src\\components\\ui\\Drawer.tsx",
+    "web\\src\\components\\data-display\\MetricBar.tsx",
+    "web\\src\\components\\data-display\\OperationalBrief.tsx",
+    "web\\src\\components\\motion\\FadeIn.tsx",
+    "web\\src\\hooks\\useNumberFormatting.ts",
+    "web\\src\\hooks\\useOperationalMetrics.tsx",
+    "web\\src\\features\\admin\\pages\\FeatureFlagsPage.test.tsx",
+    "web\\src\\App.tsx",
+    "web\\src\\lib\\routeRegistry.ts",
+    "internal\\api\\router.go",
+    "web\\src\\__tests__\\lazyRoutes.list.ts",
+    "web\\src\\__tests__\\lazyRoutes.list.test.ts",
+    "web\\src\\features\\admin\\pages\\TeslaFeatureFlagsPage.tsx",
+    "web\\src\\features\\admin\\pages\\TeslaFeatureFlagsPage.test.tsx",
+    "web\\src\\features\\admin\\components\\feature-flags\\FlagEditDrawer.test.tsx",
+    "web\\src\\lib\\routeMeta.ts",
+    "web\\src\\features\\explore\\featureCatalog.ts",
+    "web\\src\\components\\layout\\Layout.tsx",
+    "web\\src\\components\\layout\\Layout.test.tsx",
+    "web\\src\\api\\hooks\\useFeatureFlags.test.tsx",
+    "web\\src\\components\\layout\\sidebar\\sidebarIcons.ts",
+    "web\\src\\components\\layout\\sidebar\\collections.ts"
+  ],
+  "ownedFiles": [
+    "docs\\frontend-audits\\audit-page-011.json",
+    ".agent-status\\audit-page-011.txt"
+  ]
+}

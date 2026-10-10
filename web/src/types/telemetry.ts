@@ -1,3 +1,5 @@
+import type { SignalHistoryPoint } from '@/api/types';
+
 export interface SignalPoint {
   timestamp: string;
   valueNum?: number;
@@ -18,7 +20,7 @@ export interface SignalHistoryResponse {
   from: string;
   to: string;
   count: number;
-  data: SignalPoint[];
+  data: SignalHistoryPoint[];
 }
 
 export interface SignalLogEntry {

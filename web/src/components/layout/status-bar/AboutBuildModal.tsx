@@ -1,7 +1,11 @@
 import { ExternalLink, Sparkles, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Button, Modal } from '@/components/ui/runtime';
-import { openChangelogModal } from '@/hooks/useChangelog';
+import { Icon } from '@/components/ui/Icon';
+import { Text } from '@/components/ui/Typography';
+import { openChangelogModal } from '@/hooks/useChangelogStatus';
+import { cn } from '@/lib/cn';
+import { severityTokens } from '@/lib/tokens';
 import { useAboutBuild } from './useAboutBuild';
 
 interface AboutBuildModalProps {
@@ -30,79 +34,79 @@ export function AboutBuildModal({
       onClose={onClose}
       title={t('statusBar.version.modalTitle', 'About this build')}
     >
-      <div className="space-y-4 text-sm text-[var(--text-secondary)]">
-        <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2">
-          <dt className="text-[var(--text-muted)]">
+      <div className="min-w-0 space-y-4">
+        <dl className="grid min-w-0 grid-cols-1 gap-x-4 gap-y-2 sm:grid-cols-2">
+          <Text as="dt" variant="bodySm">
             {t('statusBar.version.appVersion', 'App version')}
-          </dt>
-          <dd className="font-mono text-[var(--text-primary)]">
+          </Text>
+          <Text as="dd" variant="body" mono className="min-w-0 break-words">
             v{appVersion}
-          </dd>
+          </Text>
 
-          <dt className="text-[var(--text-muted)]">
+          <Text as="dt" variant="bodySm">
             {t('statusBar.version.commit', 'Commit')}
-          </dt>
-          <dd className="font-mono text-[var(--text-primary)]">{sha}</dd>
+          </Text>
+          <Text as="dd" variant="body" mono className="min-w-0 break-words">{sha}</Text>
 
           {versionInfo?.chart_version &&
             versionInfo.chart_version !== 'unknown' && (
               <>
-                <dt className="text-[var(--text-muted)]">
+                <Text as="dt" variant="bodySm">
                   {t('statusBar.version.chart', 'Helm chart')}
-                </dt>
-                <dd className="font-mono text-[var(--text-primary)]">
+                </Text>
+                <Text as="dd" variant="body" mono className="min-w-0 break-words">
                   v{versionInfo.chart_version}
-                </dd>
+                </Text>
               </>
             )}
 
           {versionInfo?.go_version && (
             <>
-              <dt className="text-[var(--text-muted)]">
+              <Text as="dt" variant="bodySm">
                 {t('statusBar.version.go', 'Go runtime')}
-              </dt>
-              <dd className="font-mono text-[var(--text-primary)]">
+              </Text>
+              <Text as="dd" variant="body" mono className="min-w-0 break-words">
                 {versionInfo.go_version}
-              </dd>
+              </Text>
             </>
           )}
 
           {(versionInfo?.os || versionInfo?.arch) && (
             <>
-              <dt className="text-[var(--text-muted)]">
+              <Text as="dt" variant="bodySm">
                 {t('statusBar.version.platform', 'Platform')}
-              </dt>
-              <dd className="font-mono text-[var(--text-primary)]">
+              </Text>
+              <Text as="dd" variant="body" mono className="min-w-0 break-words">
                 {[versionInfo?.os, versionInfo?.arch]
                   .filter(Boolean)
                   .join('/')}
-              </dd>
+              </Text>
             </>
           )}
 
           {uptime && (
             <>
-              <dt className="text-[var(--text-muted)]">
+              <Text as="dt" variant="bodySm">
                 {t('statusBar.version.uptimeLabel', 'Server uptime')}
-              </dt>
-              <dd className="text-[var(--text-primary)]">{uptime}</dd>
+              </Text>
+              <Text as="dd" variant="body" className="min-w-0 break-words">{uptime}</Text>
             </>
           )}
         </dl>
 
         {updateAvailable && (
-          <div className="rounded-lg border border-amber-400/30 bg-amber-500/10 p-3 text-amber-200">
-            <p className="text-sm font-medium">
+          <div className={cn('min-w-0 rounded-shape-sm border p-3', severityTokens.warn.bg, severityTokens.warn.border)}>
+            <Text as="p" variant="body" className="break-words">
               {t(
                 'statusBar.version.updateBanner',
                 'A newer release is available',
               )}
               {updateCheck?.latest ? `: v${updateCheck.latest}` : ''}
-            </p>
+            </Text>
             {updateCheck?.message && (
-              <p className="mt-1 text-xs text-amber-100/80">
+              <Text as="p" variant="bodySm" className="mt-1 break-words">
                 {updateCheck.message}
-              </p>
+              </Text>
             )}
           </div>
         )}
@@ -110,22 +114,27 @@ export function AboutBuildModal({
         <div className="flex flex-wrap items-center justify-end gap-2 pt-2">
           <Button
             variant="ghost"
+            wrapLabel
+            className="min-h-11 md:min-h-10"
+            icon={<Icon icon={Sparkles} size="sm" />}
             onClick={() => {
               onClose();
               openChangelogModal();
             }}
           >
-            <Sparkles className="mr-1.5 h-3.5 w-3.5" aria-hidden />
             {t('changelog.openModal', "What's new")}
             {hasUnseen && (
               <span
-                className="ml-1.5 inline-block h-1.5 w-1.5 rounded-full bg-cyan-400"
+                className={cn('ms-1.5 inline-block h-1.5 w-1.5 rounded-full', severityTokens.info.dot)}
                 aria-hidden
               />
             )}
           </Button>
           <Button
             variant="ghost"
+            wrapLabel
+            className="min-h-11 md:min-h-10"
+            icon={<Icon icon={ExternalLink} size="sm" />}
             onClick={() =>
               window.open(
                 'https://github.com/ev-dev-labs/teslasync/releases',
@@ -134,11 +143,14 @@ export function AboutBuildModal({
               )
             }
           >
-            <ExternalLink className="mr-1.5 h-3.5 w-3.5" aria-hidden />
             {t('statusBar.version.changelog', 'Release notes')}
           </Button>
-          <Button onClick={onClose}>
-            <X className="mr-1.5 h-3.5 w-3.5" aria-hidden />
+          <Button
+            onClick={onClose}
+            wrapLabel
+            className="min-h-11 md:min-h-10"
+            icon={<Icon icon={X} size="sm" />}
+          >
             {t('statusBar.version.close', 'Close')}
           </Button>
         </div>

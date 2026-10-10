@@ -5,9 +5,10 @@ import { GlassPanel, Badge } from '@/components/ui';
 import { PanelTitle, Caption } from '@/components/ui/Typography';
 import { LinearGauge } from '@/components/charts';
 import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
-import { fmtInt, safeNumber } from '@/lib/numberFormat';
+import { safeNumber } from '@/lib/numberFormat';
 import { formatDateTime } from '@/lib/dateFormat';
 import type { FeatureFlagSummary } from './parseFeatureFlags';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface FeatureConfigDistributionProps {
   summary: FeatureFlagSummary;
@@ -33,6 +34,7 @@ export function FeatureConfigDistribution({
   error,
   onRetry,
 }: FeatureConfigDistributionProps) {
+  const { fmtInt, precision: displayPrecision } = useNumberFormatting();
   const { t } = useTranslation();
 
   // Defensive normalisation. The parent always hands us a well-formed
@@ -68,10 +70,10 @@ export function FeatureConfigDistribution({
             value={enabledRate}
             max={100}
             unit="%"
-            decimals={0}
+            decimals={displayPrecision}
             color={GAUGE_COLOR}
             size={148}
-            label={t('featureConfig.kpi.enabledRate', 'Enabled Rate')}
+            label={t('featureConfig.kpi.enabledRate', 'Enabled rate')}
           />
           <div className="flex flex-wrap items-center justify-center gap-2">
             <Badge variant="success" dot>

@@ -10,7 +10,9 @@ import {
 import { useGeofences } from '@/api/hooks/useLocations';
 import { DAYS, COMMON_TIMEZONES } from '@/lib/constants';
 import { Plus, Trash2 } from 'lucide-react';
-import { buildSignalFieldOptions, BOOL_FIELD_KEYS } from '@/lib/signals';
+import { buildSignalFieldOptions, BOOL_FIELD_KEYS, unitKindForSignal } from '@/lib/signals';
+import { UnitInput, UnitListInput, WeekdaySelect } from '@/components/forms';
+import { useSettings } from '@/hooks/useSettings';
 import type {
   AutomationConditionKind,
   AutomationConditionSignalOp,
@@ -29,22 +31,22 @@ export const CONDITION_TYPES: ConditionKindOption[] = [
   {
     value: 'condition_signal',
     labelKey: 'automations.conditions.signal',
-    fallback: 'Signal Check',
+    fallback: 'Signal check',
   },
   {
     value: 'condition_time_window',
     labelKey: 'automations.conditions.timeWindow',
-    fallback: 'Time Window',
+    fallback: 'Time window',
   },
   {
     value: 'condition_geofence',
     labelKey: 'automations.conditions.geofence',
-    fallback: 'Geofence State',
+    fallback: 'Geofence state',
   },
   {
     value: 'condition_other_automation',
     labelKey: 'automations.conditions.otherAutomation',
-    fallback: 'Other Automation',
+    fallback: 'Other automation',
   },
 ];
 
@@ -80,7 +82,7 @@ const OTHER_AUTOMATION_STATES: {
   {
     value: 'recently_triggered',
     labelKey: 'automations.otherAutomation.recentlyTriggered',
-    fallback: 'Recently Triggered',
+    fallback: 'Recently triggered',
   },
 ];
 
@@ -125,6 +127,9 @@ function conditionValueFromInput(
   value: string,
 ): AutomationConditionStepInput {
   if (BOOL_FIELD_KEYS.has(condition.signal)) {
+    if (condition.op === 'in') {
+      return { kind: 'condition_signal', signal: condition.signal, op: condition.op, value_text: value };
+    }
     return {
       kind: 'condition_signal',
       signal: condition.signal,
@@ -144,12 +149,8 @@ function conditionValueFromInput(
     kind: 'condition_signal',
     signal: condition.signal,
     op: condition.op,
-    value_num: Number.parseFloat(value) || 0,
+    value_num: value.trim() !== '' && Number.isFinite(Number(value)) ? Number(value) : undefined,
   };
-}
-
-function numericValue(value: number | null | undefined, fallback: number): number {
-  return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
 }
 
 export function ConditionBuilder({ conditions, onChange }: ConditionBuilderProps) {
@@ -199,7 +200,7 @@ export function ConditionBuilder({ conditions, onChange }: ConditionBuilderProps
               <div className="flex flex-wrap items-end gap-3">
                 <UiSelect
                   label={index === 0
-                    ? t('automations.builder.conditionType', 'Condition Type')
+                    ? t('automations.builder.conditionType', 'Condition type')
                     : undefined}
                   options={conditionTypeOptions}
                   value={condition.kind}
@@ -232,7 +233,7 @@ export function ConditionBuilder({ conditions, onChange }: ConditionBuilderProps
 
       <UiButton type="button" variant="ghost" size="sm" onClick={addCondition}>
         <Plus className="mr-1 h-4 w-4" />
-        {t('automations.builder.addCondition', 'Add Condition')}
+        {t('automations.builder.addCondition', 'Add condition')}
       </UiButton>
     </div>
   );
@@ -240,8 +241,9 @@ export function ConditionBuilder({ conditions, onChange }: ConditionBuilderProps
 
 function ConditionFields({ condition, onChange, geofenceOptions }: ConditionFieldsProps) {
   const { t } = useTranslation();
+  const { settings } = useSettings();
 
-  const signalOptions = useMemo(() => buildSignalFieldOptions(t), [t]);
+  const signalOptions = useMemo(() => buildSignalFieldOptions(t, settings), [t, settings]);
 
   const operatorOptions = useMemo(() => {
     const isBool = condition.kind === 'condition_signal' && BOOL_FIELD_KEYS.has(condition.signal);
@@ -266,10 +268,12 @@ function ConditionFields({ condition, onChange, geofenceOptions }: ConditionFiel
       const isBool = BOOL_FIELD_KEYS.has(condition.signal);
       const isRange = condition.op === 'between';
       const value = isBool
-        ? String(condition.value_bool ?? true)
+        ? condition.op === 'in'
+          ? condition.value_text ?? String(condition.value_bool ?? true)
+          : String(condition.value_bool ?? (condition.value_text === 'false' ? false : true))
         : condition.signal === 'state' || condition.op === 'in'
           ? (condition.value_text ?? '')
-          : String(condition.value_num ?? 20);
+          : String(condition.value_num ?? condition.value_min ?? '');
 
       return (
         <div className="flex flex-1 flex-wrap items-end gap-3">
@@ -307,8 +311,8 @@ function ConditionFields({ condition, onChange, geofenceOptions }: ConditionFiel
                   kind: 'condition_signal',
                   signal: condition.signal,
                   op,
-                  value_min: numericValue(condition.value_min ?? condition.value_num, 0),
-                  value_max: numericValue(condition.value_max, 100),
+                  value_min: condition.value_min ?? condition.value_num,
+                  value_max: condition.value_max,
                 });
                 return;
               }
@@ -318,23 +322,27 @@ function ConditionFields({ condition, onChange, geofenceOptions }: ConditionFiel
           />
           {isRange ? (
             <>
-              <UiInput
+              <UnitInput
+                key={`${condition.signal}-min`}
                 label={t('automations.builder.minValue', 'Min')}
-                type="number"
-                value={numericValue(condition.value_min, 0)}
-                onChange={(event) => onChange({
+                unit={unitKindForSignal(condition.signal)}
+                value={condition.value_min ?? null}
+                commitOnChange
+                onChange={(next) => onChange({
                   ...condition,
-                  value_min: Number.parseFloat(event.target.value) || 0,
+                  value_min: next ?? undefined,
                 })}
                 className="w-28"
               />
-              <UiInput
+              <UnitInput
+                key={`${condition.signal}-max`}
                 label={t('automations.builder.maxValue', 'Max')}
-                type="number"
-                value={numericValue(condition.value_max, 100)}
-                onChange={(event) => onChange({
+                unit={unitKindForSignal(condition.signal)}
+                value={condition.value_max ?? null}
+                commitOnChange
+                onChange={(next) => onChange({
                   ...condition,
-                  value_max: Number.parseFloat(event.target.value) || 0,
+                  value_max: next ?? undefined,
                 })}
                 className="w-28"
               />
@@ -345,21 +353,55 @@ function ConditionFields({ condition, onChange, geofenceOptions }: ConditionFiel
               options={[
                 { value: 'true', label: t('common.true', 'True') },
                 { value: 'false', label: t('common.false', 'False') },
+                ...(condition.op === 'in' ? [{
+                  value: 'true,false',
+                  label: `${t('common.true', 'True')} / ${t('common.false', 'False')}`,
+                }] : []),
               ]}
               value={value}
               onChange={(event) => onChange(conditionValueFromInput(condition, event.target.value))}
               className="w-28"
             />
-          ) : (
+          ) : condition.op === 'in' && condition.signal !== 'state' ? (
+            <UnitListInput
+              key={`${condition.signal}-list`}
+              label={t('automations.builder.value', 'Value')}
+              unit={unitKindForSignal(condition.signal)}
+              values={(condition.value_text ?? '').split(',').filter(part => part.trim()).map(Number)}
+              onChange={(next) => onChange({
+                kind: 'condition_signal',
+                signal: condition.signal,
+                op: condition.op,
+                value_text: next?.length ? next.join(',') : undefined,
+              })}
+              className="w-56"
+            />
+          ) : condition.signal === 'state' ? (
             <UiInput
               label={t('automations.builder.value', 'Value')}
-              type={condition.signal === 'state' || condition.op === 'in' ? 'text' : 'number'}
+              type="text"
               value={value}
               onChange={(event) => onChange(conditionValueFromInput(condition, event.target.value))}
               placeholder={condition.signal === 'state'
                 ? t('automations.builder.statePlaceholder', 'online')
                 : undefined}
               className="w-40"
+            />
+          ) : (
+            <UnitInput
+              key={condition.signal}
+              label={t('automations.builder.value', 'Value')}
+              unit={unitKindForSignal(condition.signal)}
+              value={condition.value_num ?? null}
+              commitOnChange
+              onChange={(next) => onChange({
+                kind: 'condition_signal',
+                signal: condition.signal,
+                op: condition.op,
+                value_num: next ?? undefined,
+              })}
+              className="w-40"
+              required
             />
           )}
         </div>
@@ -399,33 +441,20 @@ function ConditionFields({ condition, onChange, geofenceOptions }: ConditionFiel
             <Text as="span" variant="subhead">
               {t('automations.builder.days', 'Days')}
             </Text>
-            <div className="mt-1 flex gap-1">
-              {DAYS.map((label, day) => {
-                const active = selectedDays.includes(day);
-                return (
-                  <UiButton
-                    key={label}
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    aria-pressed={active}
-                    className={`!h-9 !w-9 !rounded !p-0 text-xs font-medium ${
-                      active
-                        ? '!bg-[var(--accent)]/20 text-[var(--accent)] ring-1 ring-[var(--accent)]/50'
-                        : '!bg-white/[0.03] text-[var(--text-muted)] hover:!bg-white/[0.06]'
-                    }`}
-                    onClick={() => {
-                      const days = active
-                        ? selectedDays.filter((currentDay) => currentDay !== day)
-                        : [...selectedDays, day].sort((a, b) => a - b);
-                      onChange({ ...condition, days_of_week: days });
-                    }}
-                  >
-                    {t(`common.days.short.${day}`, label)}
-                  </UiButton>
-                );
+            <WeekdaySelect
+              className="mt-1"
+              ariaLabel={t('automations.builder.days', 'Days')}
+              options={DAYS.map((label, id) => ({
+                id,
+                label: t(`common.days.short.${id}`, label),
+                ariaLabel: t(`common.days.short.${id}`, label),
+              }))}
+              selectedIds={selectedDays}
+              onChange={(days) => onChange({
+                ...condition,
+                days_of_week: days.length > selectedDays.length ? days.sort((a, b) => a - b) : days,
               })}
-            </div>
+            />
           </div>
         </div>
       );

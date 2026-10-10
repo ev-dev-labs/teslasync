@@ -1,12 +1,14 @@
-import { useEffect, useId, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Flag, Wrench, MapPin, AlertTriangle, ArrowUpCircle, Tag,
 } from 'lucide-react';
-import { Input, Button, Modal, Text } from '@/components/ui';
-import { cn } from '@/lib/cn';
+import { Input } from '@/components/ui/Input';
+import { Button } from '@/components/ui/Button';
+import { Modal, type ModalProps } from '@/components/ui/Modal';
+import { ErrorText, HelperText, Text } from '@/components/ui/Typography';
+import { Icon } from '@/components/ui/Icon';
 import type { AnnotationCategory } from '@/types/annotations';
-import { ANNOTATION_COLORS } from '@/types/annotations';
 
 /**
  * Normalises any ISO-ish timestamp into the `YYYY-MM-DD` value expected by
@@ -33,15 +35,24 @@ export function toIsoTimestamp(date: string): string {
   return `${date}T00:00:00Z`;
 }
 
+interface AnnotationCreateAuthority {
+  targetLabel: string;
+  canSubmit: boolean;
+  getSettlementAuthority: () => 'current' | 'stale';
+}
+
 interface AddAnnotationPopoverProps {
   open: boolean;
   timestamp: string;
-  onAdd: (label: string, category: AnnotationCategory, description?: string, occurredAt?: string) => void;
+  onAdd: (label: string, category: AnnotationCategory, description?: string, occurredAt?: string) => void | Promise<void>;
+  onAdded?: () => void;
+  createAuthority?: AnnotationCreateAuthority;
   onCancel: () => void;
   /** When true, the timestamp becomes editable via a `<Input type="date">`.
    *  Used by the new managed `<ChartContainer annotations>` flow where the
    *  user picks the date from the header rather than clicking the chart. */
   editableDate?: boolean;
+  getReturnFocusTarget?: ModalProps['getReturnFocusTarget'];
 }
 
 const CATEGORY_OPTIONS: ReadonlyArray<{
@@ -61,102 +72,254 @@ export function AddAnnotationPopover({
   open,
   timestamp,
   onAdd,
+  onAdded,
+  createAuthority,
   onCancel,
   editableDate = false,
+  getReturnFocusTarget,
 }: AddAnnotationPopoverProps) {
   const { t } = useTranslation();
   const categoryLabelId = useId();
+  const feedbackId = useId();
+  const contextFeedbackId = useId();
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const inFlight = useRef(false);
+  const retainDate = useRef(false);
+  const mounted = useRef(false);
+  const generation = useRef(0);
+  const latestAuthority = useRef(createAuthority);
+  latestAuthority.current = createAuthority;
+  const latestOpen = useRef(open);
+  latestOpen.current = open;
+  const latestTimestamp = useRef(timestamp);
+  latestTimestamp.current = timestamp;
+  const [pending, setPending] = useState(false);
+  const [failed, setFailed] = useState(false);
+  const [notificationFailed, setNotificationFailed] = useState(false);
+  const [savedReference, setSavedReference] = useState<{
+    targetLabel: string;
+    contextChanged: boolean;
+  } | null>(null);
   const [label, setLabel] = useState('');
   const [category, setCategory] = useState<AnnotationCategory>('milestone');
   const [description, setDescription] = useState('');
   const [editedDate, setEditedDate] = useState(() => toDateInputValue(timestamp));
+  const contextChanged = createAuthority?.canSubmit === false;
+  const locked = pending || notificationFailed || savedReference !== null;
+
+  useEffect(() => {
+    if (!open) {
+      setPending(false);
+      setFailed(false);
+      setNotificationFailed(false);
+      setSavedReference(null);
+      setLabel('');
+      setCategory('milestone');
+      setDescription('');
+      return;
+    }
+    // A managed form's date belongs to its captured target, not subsequent props.
+    retainDate.current = latestAuthority.current !== undefined;
+    if (retainDate.current) setEditedDate(toDateInputValue(latestTimestamp.current));
+    return () => {
+      generation.current += 1;
+      inFlight.current = false;
+    };
+  }, [open]);
+
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+      generation.current += 1;
+    };
+  }, []);
+
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    if (!open || !dialog) return;
+    // Native capture also contains keys from a focused control disabled by saving.
+    const containPendingEscape = (event: KeyboardEvent) => {
+      if (!inFlight.current || event.key !== 'Escape') return;
+      event.preventDefault();
+      event.stopImmediatePropagation();
+    };
+    // Disabled focused fields can dispatch to body; match the shared focus owner's
+    // topmost-dialog recovery before document-level outer dismissal listeners.
+    const containPendingBodyEscape = (event: KeyboardEvent) => {
+      if (event.target !== document.body) return;
+      const dialogs = document.querySelectorAll('[role="dialog"], [role="alertdialog"]');
+      if (dialogs[dialogs.length - 1] === dialog) containPendingEscape(event);
+    };
+    dialog.addEventListener('keydown', containPendingEscape, true);
+    document.addEventListener('keydown', containPendingBodyEscape, true);
+    return () => {
+      dialog.removeEventListener('keydown', containPendingEscape, true);
+      document.removeEventListener('keydown', containPendingBodyEscape, true);
+    };
+  }, [open]);
 
   // Re-sync the date field whenever the popover re-opens with a fresh
   // timestamp (e.g. user clicked a different point on the chart).
   useEffect(() => {
-    if (open) setEditedDate(toDateInputValue(timestamp));
+    if (open && !inFlight.current && !retainDate.current) setEditedDate(toDateInputValue(timestamp));
   }, [open, timestamp]);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!label.trim()) return;
-    const occurredAt = editableDate ? toIsoTimestamp(editedDate) : timestamp;
-    if (!occurredAt) return;
-    onAdd(label.trim(), category, description.trim() || undefined, occurredAt);
+  const resetDraft = () => {
     setLabel('');
     setCategory('milestone');
     setDescription('');
   };
 
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!open || inFlight.current || notificationFailed || savedReference || contextChanged || !label.trim()) return;
+    const occurredAt = editableDate ? toIsoTimestamp(editedDate) : timestamp;
+    if (!occurredAt) return;
+    inFlight.current = true;
+    const attempt = ++generation.current;
+    const targetLabel = createAuthority?.targetLabel ?? '';
+    const attemptAuthority = createAuthority;
+    const isCurrent = () => mounted.current && latestOpen.current && generation.current === attempt;
+    const reject = () => {
+      if (!isCurrent()) return;
+      inFlight.current = false;
+      retainDate.current = true;
+      setPending(false);
+      setFailed(true);
+    };
+    const accept = () => {
+      if (!isCurrent()) return;
+      setPending(false);
+      setFailed(false);
+      let authority: 'current' | 'stale';
+      try {
+        authority = (latestAuthority.current ?? attemptAuthority)?.getSettlementAuthority() ?? 'current';
+      } catch {
+        // Persistence already succeeded; an authority error cannot enable retry.
+        retainDate.current = true;
+        inFlight.current = false;
+        setSavedReference({ targetLabel, contextChanged: false });
+        return;
+      }
+      if (authority === 'stale') {
+        retainDate.current = true;
+        inFlight.current = false;
+        setSavedReference({ targetLabel, contextChanged: true });
+        return;
+      }
+      retainDate.current = false;
+      resetDraft();
+      // Notification is not persistence: its failure must never enable create retry.
+      const reportNotificationFailure = () => {
+        if (isCurrent()) setNotificationFailed(true);
+      };
+      try {
+        void Promise.resolve(onAdded?.()).catch(reportNotificationFailure);
+      } catch {
+        reportNotificationFailure();
+      } finally {
+        if (isCurrent()) inFlight.current = false;
+      }
+    };
+    setFailed(false);
+    setNotificationFailed(false);
+    let result: void | Promise<void>;
+    try {
+      result = onAdd(label.trim(), category, description.trim() || undefined, occurredAt);
+    } catch {
+      reject();
+      return;
+    }
+    if (result) {
+      setPending(true);
+      void result.then(accept, reject);
+    } else {
+      accept();
+    }
+  };
+
   const handleClose = () => {
-    setLabel('');
-    setCategory('milestone');
-    setDescription('');
+    if (inFlight.current) return;
+    generation.current += 1;
+    retainDate.current = false;
+    resetDraft();
+    setFailed(false);
+    setNotificationFailed(false);
+    setSavedReference(null);
     onCancel();
   };
 
   return (
     <Modal
+      ref={dialogRef}
       open={open}
       onClose={handleClose}
+      getReturnFocusTarget={getReturnFocusTarget}
       title={t('annotation.addTitle', 'Add Annotation')}
       size="sm"
+      onKeyDownCapture={(e) => {
+        if (inFlight.current && e.key === 'Escape') {
+          e.preventDefault();
+          e.stopPropagation();
+        }
+      }}
     >
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form
+        onSubmit={handleSubmit}
+        className="space-y-4"
+        aria-busy={pending || undefined}
+        aria-describedby={[
+          pending || failed || notificationFailed || savedReference ? feedbackId : '',
+          contextChanged && !pending && !savedReference ? contextFeedbackId : '',
+        ].filter(Boolean).join(' ') || undefined}
+      >
         {editableDate ? (
           <Input
             type="date"
             value={editedDate}
-            onChange={(e) => setEditedDate(e.target.value)}
+            onChange={(e) => { if (!inFlight.current && !locked) setEditedDate(e.target.value); }}
+            disabled={locked}
             label={t('annotation.date', 'Date')}
             max={toDateInputValue(new Date().toISOString())}
             required
           />
         ) : (
-          <Text as="div" variant="caption">
+          <Text as="div" variant="caption" className="break-words">
             {timestamp}
           </Text>
         )}
 
         <Input
           value={label}
-          onChange={(e) => setLabel(e.target.value)}
+          onChange={(e) => { if (!inFlight.current && !locked) setLabel(e.target.value); }}
+          disabled={locked}
           placeholder={t('annotation.labelPlaceholder', 'e.g., Battery replaced')}
           autoFocus
           maxLength={50}
           label={t('annotation.label', 'Label')}
         />
 
-        {/* Category pills */}
         <div>
-          <Text as="span" variant="subhead" className="mb-1.5 block" id={categoryLabelId}>
+          <Text as="span" variant="label" className="mb-2 block" id={categoryLabelId}>
             {t('annotation.category', 'Category')}
           </Text>
-          <div className="flex flex-wrap gap-1.5" role="group" aria-labelledby={categoryLabelId}>
+          <div className="flex flex-wrap gap-2" role="group" aria-labelledby={categoryLabelId}>
             {CATEGORY_OPTIONS.map((opt) => {
-              const Icon = opt.icon;
               const isSelected = category === opt.value;
               return (
                 <Button
                   key={opt.value}
                   type="button"
-                  variant="ghost"
+                  variant={isSelected ? 'secondary' : 'ghost'}
                   size="sm"
-                  onClick={() => setCategory(opt.value)}
+                  wrapLabel
+                  icon={<Icon icon={opt.icon} size="sm" />}
+                  onClick={() => { if (!inFlight.current && !locked) setCategory(opt.value); }}
+                  disabled={locked}
                   aria-pressed={isSelected}
-                  className={cn(
-                    '!h-auto rounded-full border px-2.5 py-1 text-xs font-normal',
-                    isSelected
-                      ? 'border-current bg-[var(--control-bg)] font-medium'
-                      : 'border-transparent text-[var(--text-muted)] hover:text-[var(--text-secondary)]',
-                  )}
-                  style={
-                    isSelected
-                      ? { color: ANNOTATION_COLORS[opt.value] }
-                      : undefined
-                  }
+                  className="min-h-11 md:min-h-9"
                 >
-                  <Icon className="h-3 w-3" />
                   {t(`annotation.cat.${opt.value}`, opt.label)}
                 </Button>
               );
@@ -166,17 +329,42 @@ export function AddAnnotationPopover({
 
         <Input
           value={description}
-          onChange={(e) => setDescription(e.target.value)}
+          onChange={(e) => { if (!inFlight.current && !locked) setDescription(e.target.value); }}
+          disabled={locked}
           placeholder={t('annotation.descPlaceholder', 'Optional description...')}
           maxLength={200}
           label={t('annotation.description', 'Description')}
         />
 
-        <div className="flex justify-end gap-2 pt-1">
-          <Button variant="ghost" size="sm" type="button" onClick={handleClose}>
-            {t('common.cancel', 'Cancel')}
+        {pending && <HelperText id={feedbackId} role="status">{t('common.saving', 'Saving…')}</HelperText>}
+        {savedReference && (
+          <HelperText id={feedbackId} role="status">
+            {savedReference.contextChanged
+              ? t('annotation.savedStale', 'Annotation saved for {{target}}. The chart context changed. This form is retained for reference; close it before adding another annotation.', { target: savedReference.targetLabel })
+              : t('toast.annotation.created.success', 'Annotation added')}
+          </HelperText>
+        )}
+        {contextChanged && !pending && !savedReference && (
+          <HelperText id={contextFeedbackId} role="status">
+            {t('annotation.contextChanged', 'This form belongs to {{target}}. Return to that context to save, or cancel and open a new form.', { target: createAuthority?.targetLabel })}
+          </HelperText>
+        )}
+        {failed && (
+          <ErrorText id={feedbackId}>
+            {t('toast.annotation.created.error', 'Failed to add annotation')}. {t('statusBar.background.tryAgain', 'Please try again')}
+          </ErrorText>
+        )}
+        {notificationFailed && (
+          <ErrorText id={feedbackId}>
+            {t('toast.annotation.created.success', 'Annotation added')}. {t('toast.common.error', 'Something went wrong')}
+          </ErrorText>
+        )}
+
+        <div className="flex flex-wrap justify-end gap-2 pt-1">
+          <Button variant="ghost" size="sm" wrapLabel className="min-h-11 md:min-h-9" type="button" onClick={handleClose} disabled={pending}>
+            {savedReference ? t('common.close', 'Close') : t('common.cancel', 'Cancel')}
           </Button>
-          <Button size="sm" type="submit" disabled={!label.trim()}>
+          <Button size="sm" wrapLabel className="min-h-11 md:min-h-9" type="submit" disabled={locked || contextChanged || !label.trim()} loading={pending}>
             {t('annotation.add', 'Add Annotation')}
           </Button>
         </div>

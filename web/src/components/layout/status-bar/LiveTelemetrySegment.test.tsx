@@ -8,6 +8,11 @@ import type { LiveConnectionState } from '@/hooks/useLiveConnection'
 
 // ── Controllable live-connection state ────────────────────────────────────────
 let mockState: LiveConnectionState
+let mockReduceMotion = false
+
+vi.mock('@/hooks/useMotionPreference', () => ({
+  useMotionPreference: () => ({ reduce: mockReduceMotion, durationMs: mockReduceMotion ? 0 : 250 }),
+}))
 
 vi.mock('@/hooks/useLiveConnection', () => ({
   useLiveConnection: () => mockState,
@@ -56,6 +61,7 @@ function renderSegment(props: Partial<ComponentProps<typeof LiveTelemetrySegment
 const getLink = () => screen.getByRole('link')
 
 beforeEach(() => {
+  mockReduceMotion = false
   vi.spyOn(Date, 'now').mockReturnValue(NOW)
   setState('connected', agoIso(5_000))
 })
@@ -66,34 +72,34 @@ afterEach(() => {
 })
 
 describe('LiveTelemetrySegment', () => {
-  it('renders the connected state: Live label, emerald text, static Wifi icon, emerald dot and freshness', () => {
+  it('renders the connected state: Live label, success text, static Wifi icon, success dot and freshness', () => {
     setState('connected', agoIso(5_000))
     renderSegment()
 
     const link = getLink()
     expect(link).toHaveAttribute('href', '/signal-diff')
     expect(link).toHaveAttribute('aria-label', 'Live telemetry status: Live')
-    expect(link.className).toContain('text-emerald-300')
+    expect(link.className).toContain('text-[var(--semantic-success)]')
 
     // Visible short label + inline freshness age.
     expect(within(link).getByText('Live')).toBeInTheDocument()
     expect(link).toHaveTextContent('5s')
 
     // Colored dot present, icon present, and NOT spinning when connected.
-    expect(link.querySelector('.bg-emerald-400')).not.toBeNull()
+    expect(link.querySelector('span[aria-hidden]')).toHaveClass('bg-[var(--semantic-success)]')
     expect(link.querySelector('svg')).not.toBeNull()
     expect(link.querySelector('.animate-spin')).toBeNull()
   })
 
-  it('renders the reconnecting state: amber label, spinning icon, amber dot and no inline age', () => {
+  it('renders the reconnecting state: warning label, spinning icon, warning dot and no inline age', () => {
     setState('reconnecting')
     renderSegment()
 
     const link = getLink()
     expect(link).toHaveTextContent('Reconnecting')
-    expect(link.className).toContain('text-amber-300')
+    expect(link.className).toContain('text-[var(--semantic-warning)]')
     expect(link.querySelector('.animate-spin')).not.toBeNull()
-    expect(link.querySelector('.bg-amber-400')).not.toBeNull()
+    expect(link.querySelector('span[aria-hidden]')).toHaveClass('bg-[var(--semantic-warning)]')
     // Freshness age is a connected-only affordance — the inline "·" must be absent.
     expect(link).not.toHaveTextContent('·')
   })
@@ -106,8 +112,8 @@ describe('LiveTelemetrySegment', () => {
     expect(link).toHaveTextContent('Stale')
     expect(link).toHaveTextContent('2m')
     expect(link).toHaveAttribute('aria-label', 'Live telemetry status: Stale')
-    expect(link.className).toContain('text-amber-300')
-    expect(link.querySelector('.bg-amber-400')).not.toBeNull()
+    expect(link.className).toContain('text-[var(--semantic-warning)]')
+    expect(link.querySelector('span[aria-hidden]')).toHaveClass('bg-[var(--semantic-warning)]')
   })
 
   it('transitions from Live to Stale on its local freshness cadence', () => {
@@ -124,15 +130,15 @@ describe('LiveTelemetrySegment', () => {
     expect(getLink()).toHaveTextContent('2m')
   })
 
-  it('renders the disconnected state: rose Offline label + rose dot', () => {
+  it('renders the disconnected state: neutral Offline label + neutral dot', () => {
     setState('disconnected')
     renderSegment()
 
     const link = getLink()
     expect(link).toHaveTextContent('Offline')
     expect(link).toHaveAttribute('aria-label', 'Live telemetry status: Offline')
-    expect(link.className).toContain('text-rose-300')
-    expect(link.querySelector('.bg-rose-400')).not.toBeNull()
+    expect(link.className).toContain('text-[var(--text-secondary)]')
+    expect(link.querySelector('span[aria-hidden]')).toHaveClass('bg-[var(--text-secondary)]')
   })
 
   it('announces meaningful status transitions through the separate live region', () => {
@@ -164,7 +170,7 @@ describe('LiveTelemetrySegment', () => {
     const link = getLink()
     expect(link).toHaveTextContent('Idle')
     expect(link).toHaveAttribute('aria-label', 'Live telemetry status: Idle')
-    expect(link.className).toContain('text-[var(--text-muted)]')
+    expect(link.className).toContain('text-[var(--text-secondary)]')
   })
 
   it('iconOnly hides the text label and freshness but keeps the accessible name, dot and icon', () => {
@@ -177,7 +183,7 @@ describe('LiveTelemetrySegment', () => {
     expect(link).not.toHaveTextContent('5s')
     // ...but the control is still labelled and shows its dot + icon.
     expect(link).toHaveAttribute('aria-label', 'Live telemetry status: Live')
-    expect(link.querySelector('.bg-emerald-400')).not.toBeNull()
+    expect(link.querySelector('span[aria-hidden]')).toHaveClass('bg-[var(--semantic-success)]')
     expect(link.querySelector('svg')).not.toBeNull()
   })
 
@@ -236,19 +242,25 @@ describe('LiveTelemetrySegment', () => {
     expect(tooltip).not.toHaveTextContent('Last message')
   })
 
-  it('links to the signal explorer and is keyboard focusable with a visible focus ring', () => {
+  it('links to the signal explorer and is keyboard focusable with a visible focus ring', async () => {
     setState('connected', agoIso(5_000))
     renderSegment()
 
     const link = getLink()
     expect(link).toHaveAttribute('href', '/signal-diff')
-    expect(link.className).toContain('focus-visible:ring-1')
+    expect(link.className).toContain('focus-visible:ring-2')
+    expect(link.className).toContain('focus-visible:ring-offset-2')
+    expect(link.className).toContain('focus-visible:ring-[var(--focus-ring)]')
 
-    link.focus()
+    await act(async () => {
+      link.focus()
+    })
     expect(link).toHaveFocus()
 
     // The anchor is a real link, so activating it does not throw.
-    expect(() => fireEvent.click(link)).not.toThrow()
+    await act(async () => {
+      expect(() => fireEvent.click(link)).not.toThrow()
+    })
   })
 
   it('marks the status dot and icon as decorative so only the link name is announced', () => {
@@ -265,15 +277,23 @@ describe('LiveTelemetrySegment', () => {
 
   it('falls back to the muted idle variant for an out-of-contract status instead of crashing', () => {
     // Simulate a future/contract-breaking value leaking out of the hook.
-    mockState = {
-      status: 'bogus' as unknown as LiveConnectionState['status'],
-      lastMessageAt: null,
-      channels: { sse: 'closed' },
-    }
+    setState('unknown')
+    Reflect.set(mockState, 'status', 'bogus')
 
     expect(() => renderSegment()).not.toThrow()
     const link = getLink()
     expect(link).toHaveTextContent('Idle')
-    expect(link.className).toContain('text-[var(--text-muted)]')
+    expect(link.className).toContain('text-[var(--text-secondary)]')
+  })
+
+  it('keeps reconnecting feedback and navigation static when motion is reduced or bandwidth is low', () => {
+    mockReduceMotion = true
+    setState('reconnecting')
+    renderSegment()
+
+    expect(getLink()).toHaveTextContent('Reconnecting')
+    expect(getLink()).toHaveAttribute('href', '/signal-diff')
+    expect(getLink().querySelector('svg')).toBeInTheDocument()
+    expect(getLink().querySelector('.animate-spin')).toBeNull()
   })
 })

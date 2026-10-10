@@ -1,20 +1,18 @@
-import { ArrowDownUp } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import { Grid } from '@/components/layout';
+import { LayoutCard, Grid } from '@/components/layout';
 import {
-  GlassPanel,
   MetricLabel,
-  PanelTitle,
   Text,
 } from '@/components/ui';
 import type { UnitFormatter } from '@/hooks/useUnits';
-import { fmtInt, fmtPercent } from '@/lib/numberFormat';
+
 import type { TemperatureUnitPref } from '@/lib/unitConversion';
 import type { CabinThermalSummary, SoakEvent } from '../../lib/cabinThermal';
 import { formatTemperatureDelta } from './labels';
 import { CabinThermalSectionBody } from './CabinThermalSectionBody';
 import type { CabinThermalQueryState } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface CabinThermalDirectionProfileProps {
   summary: CabinThermalSummary;
@@ -48,6 +46,7 @@ function DirectionCard({
   temperatureUnit: TemperatureUnitPref;
   formatDuration: UnitFormatter;
 }) {
+  const { fmtInt, fmtPercent } = useNumberFormatting();
   const { t } = useTranslation();
   const meanR2 = events.length > 0
     ? events.reduce((sum, event) => sum + event.r2, 0) / events.length
@@ -79,7 +78,7 @@ function DirectionCard({
             color="primary"
             className="mt-1"
           >
-            {tauMin != null ? formatDuration(tauMin * 60, { precision: 1 }) : '—'}
+            {tauMin != null ? formatDuration(tauMin * 60) : '—'}
           </Text>
         </div>
         <div>
@@ -91,7 +90,7 @@ function DirectionCard({
             color="primary"
             className="mt-1"
           >
-            {meanR2 != null ? fmtPercent(meanR2 * 100, 1) : '—'}
+            {meanR2 != null ? fmtPercent(meanR2 * 100) : '—'}
           </Text>
         </div>
       </Grid>
@@ -117,11 +116,7 @@ export function CabinThermalDirectionProfile({
 
   return (
     <section data-testid="cabin-thermal-direction-profile">
-      <GlassPanel className="p-4 sm:p-5">
-        <PanelTitle className="mb-1 flex items-center gap-2">
-          <ArrowDownUp className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />
-          {t('cabinThermal.profile.title', 'Cooling versus warming profile')}
-        </PanelTitle>
+      <LayoutCard title={t('cabinThermal.profile.title', 'Cooling versus warming profile')}>
         <Text as="p" variant="caption" className="mb-4">
           {t(
             'cabinThermal.profile.subtitle',
@@ -134,7 +129,7 @@ export function CabinThermalDirectionProfile({
             <DirectionCard label={t('cabinThermal.direction.warming', 'Warming')} events={warming} tauMin={summary.warmingTauMin} locale={locale} temperatureUnit={temperatureUnit} formatDuration={formatDuration} />
           </Grid>
         </CabinThermalSectionBody>
-      </GlassPanel>
+      </LayoutCard>
     </section>
   );
 }

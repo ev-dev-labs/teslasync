@@ -72,7 +72,7 @@ export function SoftwareUpdateCadenceChart({ data }: SoftwareUpdateCadenceChartP
   return (
     <div className="h-56 sm:h-64 xl:h-72">
       <EmbeddedChart
-        title={t('softwareUpdates.cadence.title', 'Update Cadence')}
+        title={t('softwareUpdates.cadence.title', 'Update cadence')}
         ariaLabel={t('softwareUpdates.cadence.aria', 'Software updates per calendar month')}
         empty={points.length === 0}
         emptyMessage={t('softwareUpdates.cadence.empty', 'No update activity in this range')}

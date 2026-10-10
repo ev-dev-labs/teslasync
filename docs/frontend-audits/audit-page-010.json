@@ -1,0 +1,350 @@
+{
+  "item": "audit-page-010",
+  "page": "web\\src\\features\\admin\\pages\\DLQInspectorPage.tsx",
+  "routes": ["/admin/dlq"],
+  "purpose": "Operator inspection of dead-letter ingest payloads, failure reasons and recent replay audit evidence.",
+  "primaryGoal": "Identify a failed ingest, inspect exact envelope and inner payload, and deliberately replay a replayable entry through existing live-mode, sudo and server gates.",
+  "identity": {
+    "phase": 0,
+    "mode": "read-only source audit",
+    "root": "F:\\github\\TeslaSync",
+    "component": "DLQInspectorPage",
+    "routeEvidence": [
+      {"file": "web\\src\\App.tsx", "line": 272, "detail": "Lazy page import"},
+      {"file": "web\\src\\App.tsx", "line": 708, "detail": "admin/dlq mounted through SafeRoute"}
+    ],
+    "runtime": "unverified"
+  },
+  "dataSources": [
+    {
+      "hook": "useDLQList",
+      "file": "web\\src\\api\\hooks\\useDLQ.ts",
+      "line": 68,
+      "endpoint": "GET /api/v1/system/dlq",
+      "routeFile": "internal\\api\\router.go",
+      "routeLine": 4449,
+      "owner": "internal\\api\\dlq\\handler.go:87; internal\\mqtt\\dlq_inspector.go",
+      "behavior": "Inspector Snapshot, count equals snapshot entry count; no workspace vehicle/date query. Polls foreground only with retry 1, shared moderate stale policy and AbortSignal."
+    },
+    {
+      "hook": "useDLQEntry",
+      "file": "web\\src\\api\\hooks\\useDLQ.ts",
+      "line": 86,
+      "endpoint": "GET /api/v1/system/dlq/{id}",
+      "routeFile": "internal\\api\\router.go",
+      "routeLine": 4453,
+      "owner": "internal\\api\\dlq\\handler.go:105",
+      "behavior": "Lazy full entry read; static cache, retry 1 and AbortSignal. Frontend numeric validation conflicts with actual opaque string identity; see ID-01."
+    },
+    {
+      "hook": "useDLQAudit",
+      "file": "web\\src\\api\\hooks\\useDLQ.ts",
+      "line": 108,
+      "endpoint": "GET /api/v1/system/dlq/audit?limit=50",
+      "routeFile": "internal\\api\\router.go",
+      "routeLine": 4451,
+      "owner": "internal\\api\\dlq\\handler.go:205",
+      "behavior": "Page uses global recent 50 rows, not selected-entry audit; foreground polling, clamped limit and AbortSignal. Hook also supports GET /system/dlq/{id}/audit registered at router line 4455, but this page does not call it."
+    },
+    {
+      "hook": "useDLQReplay",
+      "file": "web\\src\\api\\hooks\\useDLQ.ts",
+      "line": 149,
+      "endpoint": "POST /api/v1/system/dlq/{id}/replay",
+      "routeFile": "internal\\api\\router.go",
+      "routeLine": 4459,
+      "owner": "internal\\api\\dlq\\handler.go:136",
+      "behavior": "Existing live-mode-only mutation; sudo and IP throttling in router, server replay gate. Invalidates system/dlq queries; cancellation silent, 403 page banner, other errors toast. Never invoked during audit."
+    }
+  ],
+  "components": [
+    {"name": "PageLayout / PageContainer", "owner": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx", "role": "Full-width orchestration, canonical header, shared freshness and source notices"},
+    {"name": "LayoutCard", "owner": "web\\src\\components\\layout\\layout-reference\\LayoutCard.tsx", "role": "Three titled content panels, min-width and semantic heading owner"},
+    {"name": "DLQOperationalBrief", "owner": "web\\src\\features\\admin\\components\\statstrip-ingest-dlq-redis\\DLQOperationalBrief.tsx", "role": "Six source-backed metrics via existing OperationalBrief and useOperationalMetrics; dlqMetrics and briefSourceStatus are adapters"},
+    {"name": "EntriesTable", "owner": "web\\src\\features\\admin\\components\\dlq-inspector\\EntriesTable.tsx", "role": "Eight columns, sort/value filters, pagination and row inspection"},
+    {"name": "ReasonBreakdown", "owner": "web\\src\\features\\admin\\components\\dlq-inspector\\ReasonBreakdown.tsx", "role": "Snapshot-derived counts and percentages; shared MetricBar and chartTokens"},
+    {"name": "AuditPanel", "owner": "web\\src\\features\\admin\\components\\dlq-inspector\\AuditPanel.tsx", "role": "Seven audit columns, value filters and pagination"},
+    {"name": "EntryDrawer", "owner": "web\\src\\features\\admin\\components\\dlq-inspector\\EntryDrawer.tsx", "role": "Eight metadata fields, two payload tabs, decoding and CopyButton, Close and Replay"},
+    {"name": "DataTable", "owner": "web\\src\\components\\ui\\DataTable.tsx", "role": "Single table pipeline; persistence, loaded/selected exports, filtering, paging and mobile contract"},
+    {"name": "Drawer / Tabs", "owner": "web\\src\\components\\ui\\Drawer.tsx", "role": "Canonical overlay, focus-hook delegation, reduced-motion behavior; Tabs owns tab identities and roving keyboard focus"},
+    {"name": "ConfirmDialog, Badge, Button, Text, Caption, Code, GlassPanel, KVList, TimeStamp, FadeIn, AlertBanner, QueryError, EmptyState, Skeleton, SectionErrorBoundary", "owner": "Existing category barrels used by inspected page/dependencies", "role": "Reuse existing primitives and composites, not new page-local systems"}
+  ],
+  "duplicatedPatterns": [
+    {
+      "id": "FMT-01",
+      "file": "web\\src\\features\\admin\\components\\dlq-inspector\\EntriesTable.tsx",
+      "line": 37,
+      "rule": "MDC-002 / MDC-033 / mission 26",
+      "detail": "Local formatBytes duplicates lib/numberFormat.ts:163, stops at MB, while shared formatter handles GB and explicit precision/locale. Entry table and operational brief should not establish competing byte formatting.",
+      "fix": "Reuse shared formatBytes with current preferences and preserve invalid-negative handling, raw bytes and exact table/export semantics.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "responsive": {
+    "sourceStrategy": "Page hero stacks below xl, uses min-w-0 and full-width shared layout. Drawer is full width below sm, constrained at sm with fixed footer and internal scrolling. Payload pre has bounded overflow.",
+    "viewports": "320/375/390/430/768/1024/1280/1440/1920/2560 all unverified",
+    "issues": [
+      {
+        "id": "MOB-01",
+        "file": "web\\src\\features\\admin\\components\\dlq-inspector\\AuditPanel.tsx",
+        "line": 140,
+        "rule": "MDC-023 / MDC-043 preservation",
+        "detail": "mobileColumns exposes only replayed_at, actor and result. DataTable.tsx:237-245 explicitly hides other columns below md. AuditPanel supplies no row-detail action or mobilePresentation, so DLQ ID, destination, error and trace are not available in this mobile row presentation. EntriesTable.tsx:191 similarly prioritizes three columns, but its Inspect drawer recovers metadata unlike the audit panel.",
+        "fix": "Adopt existing DataTable mobilePresentation/full-detail contract for audit rows while preserving all fields, filters, loaded/selected exports and stable table IDs. Verify real controls and column-menu behavior before asserting recovery.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ]
+  },
+  "accessibility": {
+    "sourcePositives": [
+      "EntriesTable.tsx:162 has localized unique row inspect names.",
+      "EntryDrawer uses shared dialog and localized payload tab names; loading blocks provide status and aria-busy.",
+      "Tabs.tsx provides keyboard roving focus, arrows, Home/End and 44px minimum targets.",
+      "ReasonBreakdown exposes labeled list and textual counts/percentages; badges include textual outcome codes."
+    ],
+    "issues": [
+      {
+        "id": "A11Y-01",
+        "file": "web\\src\\features\\admin\\components\\dlq-inspector\\EntryDrawer.tsx",
+        "line": 207,
+        "rule": "MDC-040 / Tabs consumer identity contract",
+        "detail": "Tabs renders aria-controls using its generated prefix (Tabs.tsx:109-119), but EntryDrawer does not pass idBase and its tabpanel at lines 255-262 has neither matching id nor aria-labelledby. The controls therefore reference absent panel identities.",
+        "fix": "Use React useId as stable idBase and wire active panel id and aria-labelledby to the current Tabs naming contract; retain tabs, content, copy action and keyboard behavior.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ],
+    "unverified": ["keyboard", "focus restoration with stacked drawer/confirm", "screen reader", "actual contrast", "forced colors", "touch reachability", "RTL", "200% text", "long content"]
+  },
+  "states": {
+    "initial": "Summary, reason breakdown and drawer have contextual skeletons. Entries/audit tables use loading empty-message text rather than contextual table skeletons.",
+    "empty": "Source-confirmed empty table, reason and audit messages; unselected drawer EmptyState.",
+    "fatal": "List and audit use deriveDataState fatalError and QueryError retry independently.",
+    "retained": "List/audit retained data remain visible on refresh failure; PageContainer/DataSourceNotice reports source degradation. Summary displays explicit retained text on list.isError.",
+    "offline": "Shared source notice and request guards exist; lazy entry read is omitted from page dataSources and receives no error/paused contract.",
+    "issues": [
+      {
+        "id": "STATE-01",
+        "file": "web\\src\\features\\admin\\pages\\DLQInspectorPage.tsx",
+        "line": 198,
+        "rule": "MDC-026 / MDC-046 / mission 24-25",
+        "detail": "Drawer gets data and isLoading only, not entry.error, fetchStatus, trust state or retry. EntryDrawer.tsx:162-178 treats missing/empty decoded payload as non-UTF-8 data with summary byte count; CopyButton receives empty text when full data is absent. Failed, disabled or paused entry loads can look like measured binary payload rather than unavailable details. This is especially relevant to ID-01.",
+        "fix": "Pass existing derived entry DataState and refetch to drawer; distinguish initial, paused/unavailable, fatal and retained refresh error without deleting summary, metadata, real binary fallback or independent page panels.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "id": "STATE-02",
+        "file": "web\\src\\features\\admin\\components\\dlq-inspector\\EntryDrawer.tsx",
+        "line": 162,
+        "rule": "MDC-026 unknown/empty distinction",
+        "detail": "decodeBase64Utf8 returns empty string both for an empty decoded payload and failure; truthiness fallback labels a valid zero-byte UTF-8 payload as non-UTF-8 binary. Missing full details also shares this branch.",
+        "fix": "Represent decode outcomes explicitly as missing, valid text (including empty) or opaque binary, preserving base64 copy for actual binary data.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ]
+  },
+  "visualIssues": [
+    {
+      "id": "VIS-01",
+      "file": "web\\src\\features\\admin\\pages\\DLQInspectorPage.tsx",
+      "line": 149,
+      "rule": "MDC-010 / mission 5-7",
+      "detail": "All three decorative panel action icons use fixed text-cyan-300 (also lines 165,183) rather than theme-aware neutral hierarchy. No neon/glow source matches were found in bounded production feature files; rendered intensity/contrast are not proven.",
+      "fix": "Use existing muted/semantic text tokens for non-action icons; keep real warning/error meaning and all saved palette choices.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "id": "VIS-02",
+      "file": "web\\src\\components\\ui\\Drawer.tsx",
+      "line": 133,
+      "rule": "MDC-010 / MDC-012",
+      "detail": "Shared Drawer side, header and tab borders use fixed border-white/[0.06] (also lines 138,194) while footer uses border-default. This is a theme consistency risk, not measured contrast failure.",
+      "fix": "Shared owner should map those borders to existing semantic surface/border tokens without changing overlay geometry, scroll, focus or saved settings.",
+      "owner": "shared",
+      "confidence": "high"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "id": "ID-01",
+      "file": "web\\src\\api\\hooks\\useDLQ.ts",
+      "line": 91,
+      "rule": "MDC-046 source identity / typed API contract",
+      "detail": "Frontend DTO DLQEntrySummary.id is number (types/admin-diagnostics.ts:87) and useDLQEntry requires positive integers, replacing other values with 0 and disabling the query. Actual handler DLQEntrySummary.ID is string (internal/api/dlq/handler.go:53), and MQTT inspector declares a random 128-bit hex string at dlq_inspector.go:91-94. A real selected string ID therefore cannot enable the full-payload read. Replay DTO replayed_id and audit response dlq_id also disagree with handler strings; scoped audit hook rejects strings.",
+      "fix": "Align DLQ opaque IDs and query-key/path/scoped-audit contracts with actual string source identity across the DTO and hook integration. Encode path segments, preserve numeric database audit-row IDs separately, existing keys' purpose, lazy loading and gates. Add source-realistic string-ID regressions before page migration; never invent numeric coercion.",
+      "owner": "integration",
+      "confidence": "high",
+      "priority": "P0",
+      "runtime": "unverified; source-confirmed incompatibility"
+    }
+  ],
+  "priority": {
+    "overall": "P0 integration identity repair, then P1 drawer trust/mobile/a11y adoption; P2 restrained presentation and formatting deduplication",
+    "orderedFindings": ["ID-01", "STATE-01", "MOB-01", "A11Y-01", "STATE-02", "FMT-01", "VIS-01", "VIS-02"]
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "Reuse existing DataTable mobile full-detail presentation",
+      "existingOwnerFile": "web\\src\\components\\ui\\DataTable.tsx",
+      "changeType": "reuse; no speculative new shared component",
+      "propsVariantsStates": ["mobilePresentation", "all seven audit fields", "stable tableId", "loaded/selected export scope", "loading/empty/retained/error supplied by caller", "existing pagination and value filters"],
+      "usedBy": ["web\\src\\features\\admin\\components\\dlq-inspector\\AuditPanel.tsx"],
+      "dependsOn": ["Existing MobileDataTablePresentation contract inspection and source-realistic adapter review before implementation", "ID-01 integration repair for opaque DLQ IDs"],
+      "acceptance": "All desktop audit fields reachable at 320-767px without page overflow or loss of export/filter controls."
+    },
+    {
+      "name": "Theme-aware Drawer structural borders",
+      "existingOwnerFile": "web\\src\\components\\ui\\Drawer.tsx",
+      "changeType": "extend existing primitive styles only by shared owner",
+      "propsVariantsStates": ["existing sm/md/lg sizes", "left/right", "header/tabs/footer", "open/closed", "light/dark/custom/forced colors", "reduced motion"],
+      "usedBy": ["web\\src\\features\\admin\\components\\dlq-inspector\\EntryDrawer.tsx"],
+      "dependsOn": ["MDC-010/MDC-012 tokens", "shared owner exclusive scope"],
+      "acceptance": "Restrained borders visible in real light/dark themes; no focus/scroll/body-lock/mobile-footer regression."
+    }
+  ],
+  "competingImplementations": [
+    {"pattern": "byte formatter", "local": "web\\src\\features\\admin\\components\\dlq-inspector\\EntriesTable.tsx:37", "canonical": "web\\src\\lib\\numberFormat.ts:163", "decision": "Reuse canonical owner, preserving source and invalid-state semantics"},
+    {"pattern": "overlay, table, summary, query/trust and workspace systems", "decision": "No replacement library or parallel system justified. Keep current owners; entry trust and mobile gaps are caller adoption/integration work."}
+  ],
+  "preservation": {
+    "sourceSha256": "6fe3cf33c0d955dde97a0924b3dfe629ed15907c0e7b68310a744ac6ffcd8c7a",
+    "currentLineCount": 223,
+    "sectionNames": ["DLQ operational summary", "Dead-letter entries", "Failure reasons", "Recent replay activity"],
+    "sectionCount": 4,
+    "layoutCardCount": 3,
+    "pageGlassPanelCount": 0,
+    "pageChartContainerCount": 0,
+    "drawerGlassPanelCount": 2,
+    "overlayNames": ["Entry detail Drawer", "Replay ConfirmDialog"],
+    "overlayCount": 2,
+    "metrics": ["total entries", "replayable", "blocked", "distinct reasons", "raw queued bytes", "replay mode"],
+    "metricCount": 6,
+    "entryColumns": ["arrived_at", "parsed_reason", "parsed_vin", "parsed_source_topic", "parsed_redeliveries", "raw_payload_size", "replayable", "actions"],
+    "auditColumns": ["replayed_at", "actor", "dlq_id", "result", "dst_topic", "error", "trace_id"],
+    "drawerMetadata": ["id", "arrived_at", "dlq_topic", "parsed_reason", "parsed_vin", "parsed_source_topic", "parsed_redeliveries", "parse_error"],
+    "actions": ["inspect selected row", "entry sorting", "entry/audit value filters", "entry/audit page-size and pagination", "existing DataTable loaded/selected CSV/JSON exports and column preferences", "inner/raw payload tab switching", "copy decoded text or binary base64", "close drawer", "ask Replay", "confirm/cancel Replay", "retry list/audit reads", "dismiss replay-blocked warning"],
+    "dataBehavior": [
+      "Keep raw payloads, byte counts, backend strings and reason identities unchanged; no SI conversion of opaque payload contents.",
+      "Preserve foreground polling, AbortSignal, cache/stale/retry policy and mutation invalidation; do not introduce local fetch or duplicate server state.",
+      "Keep server replay flag, entry replayability, pending state, live-only request guard, sudo challenge/cancellation, success drawer closing and finally dialog dismissal.",
+      "Maintain independent sections and retained rows during refresh failure.",
+      "Preserve tableIds admin:dlq-entries and admin:dlq-audit, scoped ID contract if adopted, and default page size 25 with 25/50/100 options.",
+      "Global latest 50 audit rows are not full historical result coverage. Inspector count is snapshot count, not proven durable queue depth.",
+      "WorkspaceScope excludes /admin from vehicle selection and /admin/dlq is not range-enabled. Keep this global operational surface unscoped; do not add competing local/global selectors."
+    ]
+  },
+  "evidenceLimits": {
+    "runtime": "unverified",
+    "visual": "unverified",
+    "keyboard": "unverified",
+    "contrast": "unverified",
+    "viewport": "unverified",
+    "tests": "not run; Phase0 source-only audit with no full gates",
+    "typescript": "npx tsc --noEmit NOTRUN per assigned no-full-gates protocol",
+    "skillScript": "Inspected .github\\skills\\audit-violations\\audit.sh; not executed because it unconditionally runs full frontend TypeScript. Equivalent bounded source-pattern counts collected separately, not a script pass.",
+    "backend": "Only mounted route, direct handler DTO/read/replay mapping and DLQ identity declaration inspected. No MQTT connection, queue action, replay, mutation or API request executed. Durable audit persistence, runtime auth, ring capacity/retention and deployment replay capability unverified.",
+    "sourceInventory": "Exact read/scanned source paths and SHA-256 snapshots appended as sourceInventory. Inventory is not full repository or runtime coverage.",
+    "historicalEvidence": "No prior acceptance reused as current proof."
+  },
+  "protocolEvidence": {
+    "startedUtc": "2026-10-07T10:19:21.4403263Z",
+    "heartbeatUtc": ["2026-10-07T10:19:21.4403263Z", "2026-10-07T10:22:10.5977201Z", "2026-10-07T10:34:34.9627379Z"],
+    "heartbeatCadence": "Start and release updates recorded. Three-minute cadence was missed during report drafting (10:22 to 10:34); not retroactively fabricated.",
+    "scope": "Only report and heartbeat written. No Git, source/shared/queue edits, full gates, API calls or replays.",
+    "validationCommand": "python -m json.tool docs\\frontend-audits\\audit-page-010.json > $null",
+    "validationExpectedOutput": "No output on valid JSON; exit 0. Actual result recorded in tool transcript.",
+    "hashValidation": "Inline read-only Python validated all 31 SHA-256/line-count inventory entries, exact route/item, distinct finding IDs, required issue fields and valid source line ranges; exit 0. Raw output is in sourceChecks and tool transcript."
+  },
+  "filesRead": [
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\admin\\pages\\DLQInspectorPage.tsx",
+    "web\\src\\api\\hooks\\useDLQ.ts",
+    "web\\src\\types\\admin-diagnostics.ts",
+    "web\\src\\api\\dataState.ts",
+    "web\\src\\App.tsx",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\features\\admin\\components\\dlq-inspector\\index.ts",
+    "web\\src\\features\\admin\\components\\dlq-inspector\\EntriesTable.tsx",
+    "web\\src\\features\\admin\\components\\dlq-inspector\\EntryDrawer.tsx",
+    "web\\src\\features\\admin\\components\\dlq-inspector\\AuditPanel.tsx",
+    "web\\src\\features\\admin\\components\\dlq-inspector\\ReasonBreakdown.tsx",
+    "web\\src\\features\\admin\\components\\dlq-inspector\\EntryDrawer.test.tsx",
+    "web\\src\\features\\admin\\components\\statstrip-ingest-dlq-redis\\DLQOperationalBrief.tsx",
+    "web\\src\\features\\admin\\components\\statstrip-ingest-dlq-redis\\dlqMetrics.ts",
+    "web\\src\\features\\admin\\components\\statstrip-ingest-dlq-redis\\briefSourceStatus.ts",
+    "web\\src\\components\\ui\\Tabs.tsx",
+    "web\\src\\components\\ui\\Drawer.tsx",
+    "web\\src\\components\\ui\\DataTable.tsx",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\layout\\layout-reference\\LayoutCard.tsx",
+    "web\\src\\components\\layout\\PageContainer.tsx",
+    "web\\src\\components\\feedback\\DataSourceNotice.tsx",
+    "web\\src\\lib\\numberFormat.ts",
+    "web\\src\\api\\client.ts",
+    "internal\\api\\router.go",
+    "internal\\api\\dlq\\handler.go",
+    "internal\\mqtt\\dlq_inspector.go"
+  ],
+  "sourceInventory": [
+    {"file":"docs\\frontend-design-contract.md","sha256":"17b542389cd4e98a0dfb7b4d2f2c4e2727f221af0ac5acb738db5e987b282255","lineCount":394,"inspection":"lines 1-394"},
+    {"file":"docs\\frontend-worker-conventions.md","sha256":"6cf8194644a7820926082fc065e9cbf87c1e1e2d8258c4d092da8c962707adc3","lineCount":80,"inspection":"full"},
+    {"file":"docs\\frontend-mission.md","sha256":"2bd35429e32d06abf109dd371c2dd011cb974ef6b8c1915b298d1a0c3d7fd98f","lineCount":1593,"inspection":"sections 0-38 and start of 39, lines 1-1200"},
+    {"file":".github\\skills\\audit-violations\\audit.sh","sha256":"3e5937ab2a4ea2f303a0152111794d5a3a45c24abfe7b11400079bc4ac3dfe46","lineCount":141,"inspection":"full; not executed"},
+    {"file":"web\\src\\features\\admin\\pages\\DLQInspectorPage.tsx","sha256":"6fe3cf33c0d955dde97a0924b3dfe629ed15907c0e7b68310a744ac6ffcd8c7a","lineCount":223,"inspection":"full"},
+    {"file":"web\\src\\api\\hooks\\useDLQ.ts","sha256":"3c0107f65e2df8bab401302ddf38efee1ad104ee7036cb10570b94ad05b53b66","lineCount":174,"inspection":"full"},
+    {"file":"web\\src\\types\\admin-diagnostics.ts","sha256":"f8ac356f20528c8ac27b486dae4f59dee7cbfde8f13632271468a022bbac9662","lineCount":302,"inspection":"lines 1-240 and DLQ field search"},
+    {"file":"web\\src\\api\\dataState.ts","sha256":"21fb454b3c1f01608169f3f3887911de97f7c754663cc001236ebfde58211761","lineCount":434,"inspection":"lines 1-220"},
+    {"file":"web\\src\\App.tsx","sha256":"23a1ce852d2ce51df5a26a5c2a5669ffa788a992355a8bcfafb391c82b47def3","lineCount":918,"inspection":"target page import and mounted route search only"},
+    {"file":"web\\src\\lib\\workspaceScope.ts","sha256":"aeb8c01d410f2377aa5fd713de1a678a0360acf647a9c882f03e46c80efdfcd7","lineCount":168,"inspection":"full"},
+    {"file":"web\\src\\features\\admin\\components\\dlq-inspector\\index.ts","sha256":"7879f7d560dffd8a9c6124b7331a59c369e18956bc10a2fe37819ca50013910a","lineCount":5,"inspection":"full; StatusHeader export is not consumed by assigned page"},
+    {"file":"web\\src\\features\\admin\\components\\dlq-inspector\\EntriesTable.tsx","sha256":"e8867d81a6481ea656f3f9ffb0c694e96bb5df69e1e984f6fef30450e18e322e","lineCount":194,"inspection":"full"},
+    {"file":"web\\src\\features\\admin\\components\\dlq-inspector\\EntryDrawer.tsx","sha256":"08d231d8e4b0522c31e82572cccdbf24a5ac1bd9ec9e4afd2f9bebebfe7b65b6","lineCount":288,"inspection":"full"},
+    {"file":"web\\src\\features\\admin\\components\\dlq-inspector\\AuditPanel.tsx","sha256":"3909255a61b6852be127e34c3864c24f0a850a66e31e4d48453bea14023e1798","lineCount":143,"inspection":"full"},
+    {"file":"web\\src\\features\\admin\\components\\dlq-inspector\\ReasonBreakdown.tsx","sha256":"5573f09d670019bfed8f11e8489c0f75ab4dbfd5fcabe74743f1202472d74561","lineCount":96,"inspection":"full"},
+    {"file":"web\\src\\features\\admin\\components\\dlq-inspector\\EntryDrawer.test.tsx","sha256":"6e931e761620d6281e43415ecdb2714b8ea3b7314437e337529838caffee0094","lineCount":377,"inspection":"targeted error/tabpanel/binary/loading/replay search; not executed"},
+    {"file":"web\\src\\features\\admin\\components\\statstrip-ingest-dlq-redis\\DLQOperationalBrief.tsx","sha256":"1abd47aa55e725ffa0e4892a91c103b4aa6ba2231f8f114743e7c37ad6698e4a","lineCount":45,"inspection":"full"},
+    {"file":"web\\src\\features\\admin\\components\\statstrip-ingest-dlq-redis\\dlqMetrics.ts","sha256":"826d60dca7beebbe4c704afa9138c2f6f2ebec48d355b23c9ead5db330c5b4a7","lineCount":46,"inspection":"full"},
+    {"file":"web\\src\\features\\admin\\components\\statstrip-ingest-dlq-redis\\briefSourceStatus.ts","sha256":"8b9ac5836ffe8c7e6855c93f7bc89e11d1ff194648f8c1c53a600a04eb11ede7","lineCount":16,"inspection":"full"},
+    {"file":"web\\src\\components\\ui\\Tabs.tsx","sha256":"6754cd3469dbec346cc6069fa5c12d6660204dd2b721e4ab2752f6ecb0fb82bf","lineCount":132,"inspection":"full"},
+    {"file":"web\\src\\components\\ui\\Drawer.tsx","sha256":"3efaf21230269bc621a96a56bd61d2377e83410aa8c77a390f6aa4067cb39a3f","lineCount":211,"inspection":"full"},
+    {"file":"web\\src\\components\\ui\\DataTable.tsx","sha256":"92e3a46f15e401b57303823693aac8825693b4edc2b04cfe289663d8e1386438","lineCount":1687,"inspection":"lines 229-251 and targeted mobile/loading/overflow/export search only"},
+    {"file":"web\\src\\components\\layout\\layout-reference\\PageLayout.tsx","sha256":"8df73de2d4b3ff7485019389f547d863fe8729aa0c95fa1f497487389d6b87f6","lineCount":17,"inspection":"full"},
+    {"file":"web\\src\\components\\layout\\layout-reference\\LayoutCard.tsx","sha256":"1fedeb6b5cf17436d31cb0f19dac09ee1c6591d1866b09ed511387bd110e7d9a","lineCount":64,"inspection":"full"},
+    {"file":"web\\src\\components\\layout\\PageContainer.tsx","sha256":"0e2e1842fcac1fe5bd7c4c37299a76f9515d45eafe43ad122a8e09a0bb817d55","lineCount":259,"inspection":"full"},
+    {"file":"web\\src\\components\\feedback\\DataSourceNotice.tsx","sha256":"6dd2afb640cdbe3fcd5e32330c1c5d7be4a3e66eded3a61eae119bbc50d8ad7c","lineCount":270,"inspection":"lines 1-180"},
+    {"file":"web\\src\\lib\\numberFormat.ts","sha256":"513e7edf9f917d3b085d36c9449b9d2fe2de7ee17a7b08d4c10a5a0329da52c3","lineCount":172,"inspection":"formatBytes targeted search and lines 129-172"},
+    {"file":"web\\src\\api\\client.ts","sha256":"a9732175455ed2dc207cc59cb42dcf7e66065453303e68593efe317a8c233428","lineCount":478,"inspection":"sudo/live-mode targeted search and lines 350-403"},
+    {"file":"internal\\api\\router.go","sha256":"98b92853ebade3db74ad361d098bba4472039884a407d61ce901dc3bf1fe3750","lineCount":5366,"inspection":"DLQ/system route search and lines 4425-4465"},
+    {"file":"internal\\api\\dlq\\handler.go","sha256":"7047600470112f44100f7c35430374a97a8fa561720f91e21d500661fc275d7b","lineCount":305,"inspection":"lines 1-300 and DTO identity search"},
+    {"file":"internal\\mqtt\\dlq_inspector.go","sha256":"279a4da3df79e2179d82e451651febc924be169eedc73fef96bcd5f2a21b8714","lineCount":359,"inspection":"targeted ID declaration/generation search only"}
+  ],
+  "sourceChecks": {
+    "method": "Python case-sensitive regex scan ignoring comment-only lines, seven assigned production feature/page files; hook URL patterns inspected separately. PowerShell exploratory counts were rejected because case-insensitive matching and reserved $Matches polluted counts.",
+    "exitCode": 0,
+    "rawOutput": [
+      "AUDIT inlineStyles count=0 []",
+      "AUDIT rawHtml count=0 []",
+      "AUDIT directLibraries count=0 []",
+      "AUDIT oldApi count=0 []",
+      "AUDIT neonGlow count=0 []",
+      "AUDIT anyType count=0 []",
+      "hook audit request.*['\\\"]/api/v1 count=0",
+      "hook audit [?&](vehicleId|driveId|sessionId|chargingId)= count=0",
+      "Report parses; required fields present: True",
+      "Root source unchanged; no runtime validation performed"
+    ],
+    "sectionCountMethod": "Source JSX/manual inventory: page LayoutCard 3, page GlassPanel 0, page ChartContainer 0; drawer GlassPanel 2; six metrics and four page sections.",
+    "pageAndPresentationLineCount": 989,
+    "lineCountScope": "223 page + 194 EntriesTable + 288 EntryDrawer + 143 AuditPanel + 96 ReasonBreakdown + 45 DLQOperationalBrief. Pure adapters add 46 dlqMetrics and 16 briefSourceStatus. No original source rewritten; reduction comparison not applicable.",
+    "notRun": ["TypeScript", "full lint", "build", "tests", "browser", "API requests", "mutations", "replays", "Git"]
+  },
+  "ownedFiles": ["docs\\frontend-audits\\audit-page-010.json", ".agent-status\\audit-page-010.txt"]
+}

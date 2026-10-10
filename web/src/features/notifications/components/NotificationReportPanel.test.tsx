@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import type { NotificationReport } from '@/api/types';
 
@@ -18,9 +18,16 @@ vi.mock('@/components/charts', () => ({
   XAxis: () => null,
   YAxis: () => null,
 }));
-vi.mock('react-i18next', () => ({
-  useTranslation: () => ({ t: (_key: string, fallback: string) => fallback }),
-}));
+vi.mock('react-i18next', async () => {
+  const { createInstance } = await import('i18next');
+  const translations = createInstance();
+  await translations.init({
+    lng: 'en', fallbackLng: 'en', resources: {},
+    interpolation: { escapeValue: false },
+  });
+  const t = translations.getFixedT('en');
+  return { useTranslation: () => ({ t }) };
+});
 
 import { useNotificationReport } from '@/api/hooks/useNotifications';
 import { NotificationReportPanel } from './NotificationReportPanel';
@@ -53,21 +60,30 @@ beforeEach(() => {
 });
 
 describe('NotificationReportPanel', () => {
+  it('keeps every breakdown row in the shared evidence table engine', () => {
+    renderPanel();
+    expect(screen.getAllByRole('table')).toHaveLength(5);
+    const sources = screen.getByRole('table', { name: 'Trigger sources' });
+    expect(within(sources).getAllByRole('row')).toHaveLength(report.by_source.length + 1);
+    expect(within(sources).getByRole('cell', { name: 'System' })).toBeInTheDocument();
+    expect(within(sources).getByRole('cell', { name: '2' })).toHaveClass('text-right', 'tabular-nums');
+  });
+
   it('separates triggered events from multi-channel deliveries and shows each breakdown', () => {
     renderPanel();
     expect(useReport).toHaveBeenCalledWith('2026-01-01T08:00:00Z', '2026-01-31T08:00:00Z', 'America/Los_Angeles');
     expect(screen.queryByText('Choose date range')).not.toBeInTheDocument();
     expect(screen.getByText('Triggers recorded')).toBeInTheDocument();
     expect(screen.getByText('Channel deliveries')).toBeInTheDocument();
-    expect(screen.getByText('Outbound HTTP calls').closest('[data-role="metric-card"]')).toHaveTextContent('11');
+    expect(screen.getByText('Outbound HTTP calls').closest('[data-operational-metric]')).toHaveTextContent('11');
     expect(screen.getByText(/Outbound HTTP calls include retries and failures/)).toBeInTheDocument();
     expect(screen.getByText(/Compare with Notifications under API Logs’ By Service/)).toBeInTheDocument();
-    expect(screen.getByText('1.7')).toBeInTheDocument();
+    expect(screen.getByText('1.67')).toBeInTheDocument();
     expect(screen.getByText('Deliveries without a linked trigger')).toBeInTheDocument();
     expect(screen.getByText('System')).toBeInTheDocument();
     expect(screen.getByText('Alert')).toBeInTheDocument();
-    expect(screen.getByText('System Mqtt Outage')).toBeInTheDocument();
-    expect(screen.getByText('Delivery outcomes')).toBeInTheDocument();
+    expect(screen.getByText('System MQTT outage')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Delivery outcomes' })).toBeInTheDocument();
     expect(screen.getByText('Daily activity')).toBeInTheDocument();
   });
 
@@ -78,8 +94,8 @@ describe('NotificationReportPanel', () => {
       isError: false,
     } as ReturnType<typeof useNotificationReport>);
     renderPanel();
-    expect(screen.getByText('1.0')).toBeInTheDocument();
-    expect(screen.getByText('Deliveries without a linked trigger').closest('[data-role="metric-card"]')).toHaveTextContent('2');
+    expect(screen.getByText('1.00')).toBeInTheDocument();
+    expect(screen.getByText('Deliveries without a linked trigger').closest('[data-operational-metric]')).toHaveTextContent('2');
     expect(screen.getByText(/Older deliveries without an event identifier appear only in delivery counts/)).toBeInTheDocument();
   });
 
@@ -118,11 +134,50 @@ describe('NotificationReportPanel', () => {
   it('shows loading and error feedback rather than success-shaped zero counts', () => {
     useReport.mockReturnValue({ data: undefined, isLoading: true, isError: false } as ReturnType<typeof useNotificationReport>);
     const view = renderPanel();
-    expect(screen.queryByText('Triggers recorded')).not.toBeInTheDocument();
+    const brief = screen.getByTestId('notification-report-brief');
+    expect(brief).toHaveAttribute('aria-busy', 'true');
+    expect(brief.querySelectorAll('[data-operational-value]')).toHaveLength(0);
+    expect(brief.querySelectorAll('[data-operational-metric]')).toHaveLength(5);
+    expect(screen.getByRole('heading', { name: 'Delivery outcomes' })).toBeInTheDocument();
     view.unmount();
     useReport.mockReturnValue({ data: undefined, isLoading: false, isError: true, error: new Error('offline'), refetch: vi.fn() } as ReturnType<typeof useNotificationReport>);
     renderPanel();
     expect(screen.getByRole('alert')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Retry' })).toBeInTheDocument();
+    const unavailable = screen.getByTestId('notification-report-brief');
+    expect(unavailable.querySelector('[data-operational-metric="report-triggered"]')).toHaveAttribute('data-value-state', 'missing');
+    expect(unavailable.querySelector('[data-operational-value]')).toHaveTextContent('—');
+    expect(screen.getByRole('heading', { name: 'Trigger sources' })).toBeInTheDocument();
+  });
+
+  it('retains the complete cached report when a background refresh fails', () => {
+    useReport.mockReturnValue({
+      data: report, dataUpdatedAt: Date.now(), isLoading: false, isError: true,
+      error: new Error('refresh offline'), refetch: vi.fn(),
+    } as ReturnType<typeof useNotificationReport>);
+    renderPanel();
+    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+    expect(screen.getAllByRole('table')).toHaveLength(5);
+    expect(screen.getByText('Triggers recorded')).toBeInTheDocument();
+    expect(screen.getByText('System MQTT outage')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Retry' })).not.toBeInTheDocument();
+  });
+
+  it('reviews raw-count evidence, attribution limits, HTTP scope, and exact exclusive bounds in the actual drawer', () => {
+    renderPanel();
+    const brief = screen.getByTestId('notification-report-brief');
+    expect(brief.querySelectorAll('[data-operational-metric]')).toHaveLength(5);
+    expect(brief.querySelector('[data-operational-metric="report-fanout"]')).toHaveAttribute('data-value-state', 'value');
+    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog');
+    expect(drawer).toHaveTextContent('1.67');
+    expect(drawer).toHaveTextContent('Older deliveries without an event identifier');
+    expect(drawer).toHaveTextContent('Outbound HTTP calls include retries and failures');
+    expect(drawer).toHaveTextContent('2026-01-01T08:00:00Z');
+    expect(drawer).toHaveTextContent('2026-01-31T08:00:00Z');
+    expect(drawer).toHaveTextContent('America/Los_Angeles');
+    expect(drawer).toHaveTextContent('2026-01-01T08:00:00Z to 2026-01-31T08:00:00Z (exclusive) · America/Los_Angeles');
+    fireEvent.click(within(drawer).getAllByRole('button', { name: 'Close' }).at(-1)!);
+    expect(screen.getAllByRole('table')).toHaveLength(5);
   });
 });

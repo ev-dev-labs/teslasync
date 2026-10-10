@@ -74,20 +74,21 @@ vi.mock('@/components/charts', () => ({
   Bar: () => null,
   BarChart: ({ children }: { children: ReactNode }) => <div>{children}</div>,
   CartesianGrid: () => null,
-  ChartContainer: ({
+  EmbeddedChart: ({
     children,
     title,
     ariaLabel,
   }: {
-    children: ReactNode;
+    children: ReactNode | ((context: { hiddenSeries?: undefined }) => ReactNode);
     title: string;
     ariaLabel: string;
   }) => (
     <div>
       <h4>{title}</h4>
-      <div role="img" aria-label={ariaLabel}>{children}</div>
+      <div role="img" aria-label={ariaLabel}>{typeof children === 'function' ? children({}) : children}</div>
     </div>
   ),
+  ChartLegend: () => null,
   ChartTooltip: () => null,
   Legend: () => null,
   ResponsiveContainer: ({ children }: { children: ReactNode }) => <div>{children}</div>,
@@ -181,6 +182,16 @@ function expectEverySection(): void {
   }
 }
 
+function evidenceMetric(label: string): HTMLElement {
+  const metric = within(screen.getByTestId('hvac-cycling-kpis'))
+    .getAllByRole('listitem')
+    .find(item => within(item).queryByText(label) !== null);
+  if (!metric) {
+    throw new Error(`Missing evidence metric: ${label}`);
+  }
+  return metric;
+}
+
 beforeEach(() => {
   vi.clearAllMocks();
   h.vehicleId = 7;
@@ -193,12 +204,17 @@ describe('HvacCyclingPage', () => {
 
     expect(screen.getByRole('heading', {
       level: 1,
-      name: 'HVAC Cycling',
+      name: 'HVAC cycling',
     })).toBeInTheDocument();
     expectEverySection();
     expect(h.historyHook).toHaveBeenLastCalledWith('7');
     expect(screen.getByText('2-run denominator')).toBeInTheDocument();
     expect(screen.getAllByText('Complete support').length).toBeGreaterThan(0);
+    expect(screen.getByRole('heading', { name: 'Hourly HVAC duty' })).toBeInTheDocument();
+    expect(screen.getByRole('img', {
+      name: 'Bar chart of HVAC duty by local hour with observed-time support in the data table',
+    })).toBeInTheDocument();
+    expect(within(evidenceMetric('Observed duration')).getByText('35.0 min')).toBeInTheDocument();
   });
 
   it('keeps the header and every shell without a vehicle or duplicate control', () => {
@@ -254,6 +270,7 @@ describe('HvacCyclingPage', () => {
       'Climate history could not refresh. Showing the most recently loaded HVAC evidence.',
     )).toBeInTheDocument();
     expect(screen.getAllByText('Complete support').length).toBeGreaterThan(0);
+    expect(within(evidenceMetric('Observed duration')).getByText('35.0 min')).toBeInTheDocument();
     const retries = screen.getAllByRole('button', { name: 'Retry' });
     expect(retries).toHaveLength(1);
     fireEvent.click(retries[0]!);
@@ -320,5 +337,7 @@ describe('HvacCyclingPage', () => {
     expect(screen.getByText(
       'The denominator is zero: every active fragment is left-censored, right-censored, or both. No short-cycle rate is published.',
     )).toBeInTheDocument();
+    expect(within(evidenceMetric('Qualified short-cycle rate')).getByText('—')).toBeInTheDocument();
+    expect(evidenceMetric('Qualified short-cycle rate')).toHaveAttribute('data-value-state', 'missing');
   });
 });

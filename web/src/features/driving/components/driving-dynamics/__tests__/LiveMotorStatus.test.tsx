@@ -203,7 +203,7 @@ describe('LiveMotorStatus — powertrain readouts', () => {
     expect(screen.getByLabelText('Rear RPM')).toHaveAttribute('aria-valuenow', '11000')
     // Motor temp = the hotter axle (50 not 45).
     expect(screen.getByLabelText('Motor')).toHaveAttribute('aria-valuenow', '50')
-    expect(screen.getByText('50.0°C')).toBeInTheDocument()
+    expect(screen.getByText('50.00°C')).toBeInTheDocument()
 
     expect(screen.queryByText('Awaiting live motor data')).toBeNull()
     expect(container.textContent).not.toMatch(/°°/)
@@ -224,7 +224,7 @@ describe('LiveMotorStatus — powertrain readouts', () => {
     expect(screen.getByLabelText('Torque')).toHaveAttribute('aria-valuenow', '250')
     expect(screen.getByLabelText('Front RPM')).toHaveAttribute('aria-valuenow', '8000')
     // Rear temp null → the sentinel is ignored, front wins.
-    expect(screen.getByText('30.0°C')).toBeInTheDocument()
+    expect(screen.getByText('30.00°C')).toBeInTheDocument()
   })
 })
 
@@ -269,8 +269,8 @@ describe('LiveMotorStatus — motor temperature', () => {
 
     // 90°C is the hotter axle → 194°F. If it had wrongly picked the
     // cooler front axle it would render 104.0°F.
-    expect(screen.getByText('194.0°F')).toBeInTheDocument()
-    expect(screen.queryByText('104.0°F')).toBeNull()
+    expect(screen.getByText('194.00°F')).toBeInTheDocument()
+    expect(screen.queryByText('104.00°F')).toBeNull()
     // The unit pref already includes the degree — never double it.
     expect(container.textContent).not.toMatch(/°°/)
   })
@@ -317,8 +317,8 @@ describe('LiveMotorStatus — shift state', () => {
     const badge = screen.getByLabelText('Shift State: D')
     expect(badge).toBeInTheDocument()
     expect(badge).toHaveTextContent('D')
-    // Drive is visually distinguished via the success (green) variant.
-    expect(badge.className).toContain('bg-green')
+    // Drive is visually distinguished via the shared, theme-aware success variant.
+    expect(badge.className).toContain(BADGE_VARIANTS.success)
     // The caption below the chip labels it for sighted users.
     expect(screen.getByText('Shift State')).toBeInTheDocument()
   })
@@ -333,6 +333,6 @@ describe('LiveMotorStatus — shift state', () => {
     // exported Badge palette so a re-skin of the neutral chip cannot silently
     // invalidate this check.
     expect(badge.className).toContain(BADGE_VARIANTS.neutral)
-    expect(badge.className).not.toContain('bg-green')
+    expect(badge.className).not.toContain(BADGE_VARIANTS.success)
   })
 })

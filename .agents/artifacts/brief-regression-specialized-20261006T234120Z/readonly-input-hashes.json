@@ -1,0 +1,1474 @@
+[
+  {
+    "sha256": "1DDBC5B374B677ACBC783459AA0BE041994A7CE0FDBB1B0F4A3454303B9DD9C3",
+    "path": "web\\src\\features\\dashcam\\index.ts"
+  },
+  {
+    "sha256": "A50EFC8B5F2FA32BFC52B415FB6724A7967CB682BC9BA1D03C0CBF89A6E08A5E",
+    "path": "web\\src\\features\\dashcam\\components\\dashcam\\ClipCatalogList.tsx"
+  },
+  {
+    "sha256": "B81A7404AA367BC8DD9ACBA8B9C3922F8D24FB4D352706F6FB4A2AA7E60A2238",
+    "path": "web\\src\\features\\dashcam\\components\\dashcam\\ClipDetailPanel.tsx"
+  },
+  {
+    "sha256": "4EB79EDD0B7E7FDEF6709B2FADC1C6A9F286CB5685128A623B8CE3150AEB2128",
+    "path": "web\\src\\features\\dashcam\\components\\dashcam\\ClipFilterBar.tsx"
+  },
+  {
+    "sha256": "79E79896B2A19B0A93A450672618A4F7561A40090D569F908E4AA72119E08EF2",
+    "path": "web\\src\\features\\dashcam\\components\\dashcam\\ClipPlayerPanel.test.tsx"
+  },
+  {
+    "sha256": "95535C816B963B1C40E38F44D576AAD430ECB90788ABFEDA348C7E9C99264AAC",
+    "path": "web\\src\\features\\dashcam\\components\\dashcam\\ClipPlayerPanel.tsx"
+  },
+  {
+    "sha256": "0B989BA187A4436FBDF82B0008CB1E5E6576C275FBF188FBEF17BDB7AF7BE5AC",
+    "path": "web\\src\\features\\dashcam\\components\\dashcam\\constants.ts"
+  },
+  {
+    "sha256": "3D389C9F5770E9C4B6697F25AFE94C31BF88EB07A60D43D5810379AFDADC3380",
+    "path": "web\\src\\features\\dashcam\\components\\dashcam\\EventEvidencePanel.tsx"
+  },
+  {
+    "sha256": "B818ADB55C2453D4B1D6297D8C4C5DCFE4DC9DCDA9D70F96A8C2DCB53CD18EA5",
+    "path": "web\\src\\features\\dashcam\\components\\dashcam\\ExportManifestPanel.tsx"
+  },
+  {
+    "sha256": "907D35196E93B7BC5C4045FBB1D725BC141659B92A8255C2D4B728278FFE3D98",
+    "path": "web\\src\\features\\dashcam\\components\\dashcam\\helpers.ts"
+  },
+  {
+    "sha256": "B55FB50CCB91A9F5BE46ADD634520954AF3A884B36609408155564009C447D88",
+    "path": "web\\src\\features\\dashcam\\components\\dashcam\\ImportPanel.tsx"
+  },
+  {
+    "sha256": "E645AAEC2A70A0062D59CDAE8B97EE71106CB3633AB1A4225A78A6D7601CC83F",
+    "path": "web\\src\\features\\dashcam\\components\\dashcam\\index.ts"
+  },
+  {
+    "sha256": "AF86D246630605FF0B9223523C19E9E064A2BEE0BB225911DBED121EE754FF36",
+    "path": "web\\src\\features\\dashcam\\components\\dashcam\\ReconstructionSeriesList.tsx"
+  },
+  {
+    "sha256": "59DDE256D22DC3A14F9149FD0C68CC6057FE694A294425106DA443BC2750DE89",
+    "path": "web\\src\\features\\dashcam\\components\\dashcam\\ReconstructionTimeline.test.tsx"
+  },
+  {
+    "sha256": "5151F6EED1A075CEDDDDB65703BD507147C411C5B9609DB4AE350BC8DB892B22",
+    "path": "web\\src\\features\\dashcam\\components\\dashcam\\ReconstructionTimeline.tsx"
+  },
+  {
+    "sha256": "A3881772E52D709DB8541B6A253BC9161540CF5CB8A2827157FAEE0095428F98",
+    "path": "web\\src\\features\\dashcam\\components\\dashcam\\RedactionEditor.tsx"
+  },
+  {
+    "sha256": "745298198F0DD0C73447AAEC2D2CC9BF84DD4C4FF5D6CEC407C73E302CA03C90",
+    "path": "web\\src\\features\\dashcam\\components\\dashcam\\RedactionOverlay.tsx"
+  },
+  {
+    "sha256": "AC2A4D880B45A0134E2A9FD2FA615B66D8A948BDF10F0FE7B14C137DD3CB4BC7",
+    "path": "web\\src\\features\\dashcam\\components\\dashcam\\ResidualPresenters.test.tsx"
+  },
+  {
+    "sha256": "3A7CA134599782A36B2817C819E5AC36FB0AE4A85D111E2BA612AD65EB288AEE",
+    "path": "web\\src\\features\\dashcam\\components\\dashcam\\SignalPicker.test.tsx"
+  },
+  {
+    "sha256": "8BDC6166AB062647BCA96D068CCCA60FC9C2300C8283441AC4B18823B2D3A501",
+    "path": "web\\src\\features\\dashcam\\components\\dashcam\\SignalPicker.tsx"
+  },
+  {
+    "sha256": "DCB1669350EDE4790201B0811F109312508F8F61937C6B190158D9F72B084C85",
+    "path": "web\\src\\features\\dashcam\\components\\operationalbrief-all\\DashcamIntelligencePage.retained.test.tsx"
+  },
+  {
+    "sha256": "1FCFAF08B396AB17D1210197817FF9D105EC7C9A3431491F8363F91DDE75BC15",
+    "path": "web\\src\\features\\dashcam\\hooks\\useClipCatalog.ts"
+  },
+  {
+    "sha256": "7B957AD2AAE830D0EFA1EC0A0DD8FBB6A5D1A675FE5AEBEF50BE020BB73A294F",
+    "path": "web\\src\\features\\dashcam\\hooks\\useDashcamDb.ts"
+  },
+  {
+    "sha256": "2FE251D368C583F608755949884DD2678FEB0595062B2960452352CEB207C7D3",
+    "path": "web\\src\\features\\dashcam\\hooks\\useDashcamSettings.ts"
+  },
+  {
+    "sha256": "15A0F32650AF012FBC6FC4F2CEB35B9E4995AC287EA184CBB3528618DFF41182",
+    "path": "web\\src\\features\\dashcam\\hooks\\useMotionAnalysis.ts"
+  },
+  {
+    "sha256": "C265E8A1CA5883C5727A7E60616AF0F75C05DD60C812D1B050078D44E3E6685A",
+    "path": "web\\src\\features\\dashcam\\hooks\\useReconstruction.test.tsx"
+  },
+  {
+    "sha256": "DADA5B969EC868537945835FADB1B0090BDAB8429D40D5CD493A2AE45656ED0F",
+    "path": "web\\src\\features\\dashcam\\hooks\\useReconstruction.ts"
+  },
+  {
+    "sha256": "3937B038BF5570B8A2564D4ECB874E15873C8748CB42A1883C62E0BF99D9B296",
+    "path": "web\\src\\features\\dashcam\\lib\\clipFilter.ts"
+  },
+  {
+    "sha256": "9B39202CE4B00146A025A19E9B5135E49B8C77EB0B8EFE2E40944E99D295B022",
+    "path": "web\\src\\features\\dashcam\\lib\\clipMetadata.ts"
+  },
+  {
+    "sha256": "1274302E1109BFF6C15321ACFE5480890A4099B6CE803F09FAD724C6960FEE49",
+    "path": "web\\src\\features\\dashcam\\lib\\clipParsing.ts"
+  },
+  {
+    "sha256": "CF744A13A25C7DFE7F82C65E26B5594DFB2AD7DC127354B7D630E0EE3E44CDA3",
+    "path": "web\\src\\features\\dashcam\\lib\\constants.ts"
+  },
+  {
+    "sha256": "A696F8ECE53D9BD206A6BFF1324C9F47AAA2A1AA8A3234CF1E463E1EDE5B3EDA",
+    "path": "web\\src\\features\\dashcam\\lib\\eventDetection.ts"
+  },
+  {
+    "sha256": "8AECE2C4380B7BB8197433BBE699F25903C5B6CA9BC77BD85477546506273D39",
+    "path": "web\\src\\features\\dashcam\\lib\\motionScore.ts"
+  },
+  {
+    "sha256": "59FBB2D2A8B24309DCE805A5DCFA6AEFC40BEF9D05E8E91F5C719D9187E83160",
+    "path": "web\\src\\features\\dashcam\\lib\\redactionExport.ts"
+  },
+  {
+    "sha256": "45D08F5E75A16CB8E04DCE2123F8A46841E805121A4008E9968C2882BF1543BB",
+    "path": "web\\src\\features\\dashcam\\lib\\timelineAlignment.ts"
+  },
+  {
+    "sha256": "6A6B808EB81194E2ADFFFE38173761CABD215CF3EED4229060D264CDF7161433",
+    "path": "web\\src\\features\\dashcam\\lib\\types.ts"
+  },
+  {
+    "sha256": "9C7D771898B04A800458F2BF24259B15E5C499DBE9DB3669B7641EE0B9235363",
+    "path": "web\\src\\features\\dashcam\\lib\\db\\index.ts"
+  },
+  {
+    "sha256": "EEDC9FC1376DB818F4FCB0F0BF59EA8A06145D29BA8566C9BEF09B62E5748407",
+    "path": "web\\src\\features\\dashcam\\lib\\db\\indexedDbAdapter.ts"
+  },
+  {
+    "sha256": "474832E9220820036B99D7FE1F7B08391E4AA5CD5C421FF027A3ACF1CBACB03B",
+    "path": "web\\src\\features\\dashcam\\lib\\db\\memoryAdapter.ts"
+  },
+  {
+    "sha256": "01DA93FEE988EA1594E8E62E7C03867D032D6EECFD2206460130568725E3B1FF",
+    "path": "web\\src\\features\\dashcam\\lib\\db\\types.ts"
+  },
+  {
+    "sha256": "E0BEDD7181B5BAD9196A3F1B4402A9B776B7145F0490AD6D3B57818A4296B8A2",
+    "path": "web\\src\\features\\dashcam\\pages\\DashcamIntelligencePage.tsx"
+  },
+  {
+    "sha256": "339C26AFB7CE34C3157C710026AEC421BB9BECA76E25C4E5F12D17570728570D",
+    "path": "web\\src\\features\\dashcam\\__tests__\\clipFilter.test.ts"
+  },
+  {
+    "sha256": "05B9027F1AE27AA48ABD7DE4259EB9300C4E5FE929F32C4DE445957AEEC52283",
+    "path": "web\\src\\features\\dashcam\\__tests__\\clipMetadata.test.ts"
+  },
+  {
+    "sha256": "C66EC186D266AB8FA5FF043EF76AF80A5FE637966FA81993AE7542A521CA7685",
+    "path": "web\\src\\features\\dashcam\\__tests__\\clipParsing.test.ts"
+  },
+  {
+    "sha256": "E10AA4A26FE1F95B0CB4FAD5A70A3CB055D21C366D7D4CE4BDB193B773F550F6",
+    "path": "web\\src\\features\\dashcam\\__tests__\\eventDetection.test.ts"
+  },
+  {
+    "sha256": "D2F24AEB5BDFCD2A021E123F184E1C3997A3E5AAD811F418E955F901484C8343",
+    "path": "web\\src\\features\\dashcam\\__tests__\\indexedDbAdapter.test.ts"
+  },
+  {
+    "sha256": "FC9C7E66F8DB38C90788B5ADCA4D3368EB35019B5C9A6C1301135BE4FBDB8D3B",
+    "path": "web\\src\\features\\dashcam\\__tests__\\memoryAdapter.test.ts"
+  },
+  {
+    "sha256": "57B87E70151B04836BC95B10D566D2F779373FE9B4CD04775212DC57093735B4",
+    "path": "web\\src\\features\\dashcam\\__tests__\\motionScore.test.ts"
+  },
+  {
+    "sha256": "F514CEC8CE0C61D88450527A76A83DFA12F3BD66254E687C3D5F8D3165F940EE",
+    "path": "web\\src\\features\\dashcam\\__tests__\\redactionExport.test.ts"
+  },
+  {
+    "sha256": "8EDCF9B76E2AF40940FCF725C308E567BCEEF23DB67A7BE5D98087D8595E14A7",
+    "path": "web\\src\\features\\dashcam\\__tests__\\timelineAlignment.test.ts"
+  },
+  {
+    "sha256": "8669E9F7D053C2A25234963621888A43517C7A61FFF64D7955EE97E9A01B2462",
+    "path": "web\\src\\features\\developer-reference\\components\\shared-library-completion\\BulkFixtures.tsx"
+  },
+  {
+    "sha256": "967A68C90840423A4A5CD77C4FADB80242262B0EC47B018A1B41958E51A6B05F",
+    "path": "web\\src\\features\\developer-reference\\components\\shared-library-completion\\ChartFixtures.test.tsx"
+  },
+  {
+    "sha256": "7D14D22E32168B5273D4A2D3A7C66335261DF62CBC22DB351172D0B07B9396C9",
+    "path": "web\\src\\features\\developer-reference\\components\\shared-library-completion\\ChartFixtures.tsx"
+  },
+  {
+    "sha256": "036D91A48AF62E660918071FFB37CF2E0E60EA36E89A881BEE71BF16BC4EF014",
+    "path": "web\\src\\features\\developer-reference\\components\\shared-library-completion\\CodeCopyFixtures.tsx"
+  },
+  {
+    "sha256": "B996420D22B57FC496555212113FBD844E8E59DDBF5E7AD07B50D8A52CEF7CE0",
+    "path": "web\\src\\features\\developer-reference\\components\\shared-library-completion\\completionCopy.ts"
+  },
+  {
+    "sha256": "247204C74473FA6F38D9D93439D6B8A87090901698DFF32E1D4EF4226A4D2FD9",
+    "path": "web\\src\\features\\developer-reference\\components\\shared-library-completion\\EventFixtures.tsx"
+  },
+  {
+    "sha256": "944FC634000DA45F8F048CFFA1123C4FD399678DCFA0865D9761228E6E8B59E5",
+    "path": "web\\src\\features\\developer-reference\\components\\shared-library-completion\\EvidenceFixtures.tsx"
+  },
+  {
+    "sha256": "C3B0F051717BB5E4D0B0862213A1772BAF7CD1BE7A0FE07318C3E9FCF4FCE664",
+    "path": "web\\src\\features\\developer-reference\\components\\shared-library-completion\\fixtureData.ts"
+  },
+  {
+    "sha256": "E0CAE1E7E8183F21474CC021BD3CD433767BD920A2112D62B7E96CA1CDBF7AAB",
+    "path": "web\\src\\features\\developer-reference\\components\\shared-library-completion\\FixtureSection.tsx"
+  },
+  {
+    "sha256": "1B3BB565BC61AC0E60840DF5A5F2C4F33E985F2BAFA6CCDF9C15645A71462899",
+    "path": "web\\src\\features\\developer-reference\\components\\shared-library-completion\\FixtureStateControls.tsx"
+  },
+  {
+    "sha256": "C834C8CB56C3350207253636B9266C35CFA25DE6832910B98A59A98F21920A11",
+    "path": "web\\src\\features\\developer-reference\\components\\shared-library-completion\\InteractionFixtures.test.tsx"
+  },
+  {
+    "sha256": "3F8F7A8B3180479CEC30B41AF28C4D2BFB473EE85E3C971267856C86F1110C66",
+    "path": "web\\src\\features\\developer-reference\\components\\shared-library-completion\\SelectionEvidenceFixtures.test.tsx"
+  },
+  {
+    "sha256": "0F6A1E8F20E07514DA99F4D6B2730EC00FB62A56E28575D7488A01A02A797010",
+    "path": "web\\src\\features\\developer-reference\\components\\shared-library-completion\\SelectionFixtures.tsx"
+  },
+  {
+    "sha256": "6ADD6295970895EA86FA421516C33E919B5B2186E1773AAFB21C204818F4E0A4",
+    "path": "web\\src\\features\\developer-reference\\components\\shared-library-completion\\SharedLibraryCompletionReference.test.tsx"
+  },
+  {
+    "sha256": "E7B4BB436F933BA0C76986940F44BA38BC33F045982D32350613ACB84F143BC4",
+    "path": "web\\src\\features\\developer-reference\\components\\shared-library-completion\\SharedLibraryCompletionReference.tsx"
+  },
+  {
+    "sha256": "4AAB07ECF548118937B5D094F389037ED98A4F362B2FC49BCD3643D56241C6C3",
+    "path": "web\\src\\features\\developer-reference\\components\\shared-library-completion\\SourceFixtures.tsx"
+  },
+  {
+    "sha256": "2A131CE0DB982F5F6F8F127624FE864EE0B8D2EB64EE8E333A5A2C7F2294827E",
+    "path": "web\\src\\features\\developer-reference\\components\\shared-library-completion\\useCompletionLabels.ts"
+  },
+  {
+    "sha256": "8462468ACF52D368EDBA8BF31B9A118340A9395116D68A8E38E23BB82139811F",
+    "path": "web\\src\\features\\developer-reference\\components\\shared-library-completion\\WidgetFixtures.tsx"
+  },
+  {
+    "sha256": "06B6946EE7BF8F2DB18D1B08CEF993B953D1BA107920EC96DE697916BDC496D6",
+    "path": "web\\src\\features\\developer-reference\\layout\\fixtures.test.ts"
+  },
+  {
+    "sha256": "DBB44300D0E991610EA74EBDF77D914A5343AF02C786DD43A5697A189589C6E1",
+    "path": "web\\src\\features\\developer-reference\\layout\\fixtures.ts"
+  },
+  {
+    "sha256": "DB58DB49C760D16E0A2E97E623D95D3A00E7213F236356DCE734FC65B9468361",
+    "path": "web\\src\\features\\developer-reference\\layout\\LayoutReferencePage.tsx"
+  },
+  {
+    "sha256": "25FA1CCB865D3C0801F848123349B854F7017B3DE04DF36F8E224320DA0C9D2E",
+    "path": "web\\src\\features\\developer-reference\\layout\\ReferenceCharts.tsx"
+  },
+  {
+    "sha256": "FFABE43BFDB2B108DB1A8AC226E7B7C6C2BA0577F68C69370041EE3D046A2FA1",
+    "path": "web\\src\\features\\developer-reference\\layout\\ReferenceDailyChart.tsx"
+  },
+  {
+    "sha256": "2A4D10EA8F2E3AA88175108EB547114731135EC12CB0ADB598AC0A5DC8AC5CC5",
+    "path": "web\\src\\features\\developer-reference\\layout\\ReferenceFillRows.tsx"
+  },
+  {
+    "sha256": "31F1EB6A2518E6514D719CB8B89002468726EDF309CF8B31FBDFC5658F191B38",
+    "path": "web\\src\\features\\developer-reference\\layout\\ReferenceLists.tsx"
+  },
+  {
+    "sha256": "9647DA546E2432D0C1EE73BD2CE288623D450D4863013919F7C0F1F3CA8DC46D",
+    "path": "web\\src\\features\\developer-reference\\layout\\ReferenceMethodology.tsx"
+  },
+  {
+    "sha256": "B255BF7DBF5E5C651F42017B9BF22CE8DFBE1F29FF635F74D7D4C788E78CCC70",
+    "path": "web\\src\\features\\developer-reference\\layout\\ReferenceSourceStates.tsx"
+  },
+  {
+    "sha256": "AEF7352BE161CC68768B82DDEE8DC6382A46D65A4B73D0E1BF0CA3834D01EC70",
+    "path": "web\\src\\features\\developer-reference\\layout\\ReferenceStats.tsx"
+  },
+  {
+    "sha256": "985D888C46804AB182B67862931E650932F2387A42146CB94EBA6931DFC90EFD",
+    "path": "web\\src\\features\\developer-reference\\layout\\ReferenceTabs.test.tsx"
+  },
+  {
+    "sha256": "7A90E4759C70DE5B5C8A1B73486FE4738976719BD3F821FE39012C5B09760F8E",
+    "path": "web\\src\\features\\developer-reference\\layout\\ReferenceTabs.tsx"
+  },
+  {
+    "sha256": "2A2A307EB72BFBC94CC2B4994672D32F6E38B7C61BD32BDCB4F959CD7737A306",
+    "path": "web\\src\\features\\developer-reference\\mobile-grid\\fixtureHelpers.test.ts"
+  },
+  {
+    "sha256": "1B819517E3B44BC6A7C000CD2165D633EAB1F209B5CD5E6966AC307C2A521BB9",
+    "path": "web\\src\\features\\developer-reference\\mobile-grid\\fixtureHelpers.ts"
+  },
+  {
+    "sha256": "C01C45E5B1789836C9E2844A2E16B8DA36B2D7EE94327184D7A9E170BBC011A6",
+    "path": "web\\src\\features\\developer-reference\\mobile-grid\\fixtures.ts"
+  },
+  {
+    "sha256": "3A656E8952A7A5CF93183AE90A19B7793AB0A0353F7E55BD87522BA4D498635E",
+    "path": "web\\src\\features\\developer-reference\\mobile-grid\\MobileGridReferencePage.tsx"
+  },
+  {
+    "sha256": "3F50082FB00F6D8738D31834560B5F68175D39D6032B02DCB71A5567163AAA73",
+    "path": "web\\src\\features\\developer-reference\\mobile-grid\\ReferenceDesktopTable.tsx"
+  },
+  {
+    "sha256": "3F37D416B8BDAFE46CD1D70AE6EE1EF597A559DCCF591A9A137C1D1B532A914C",
+    "path": "web\\src\\features\\developer-reference\\mobile-grid\\ReferenceRecordDialog.test.tsx"
+  },
+  {
+    "sha256": "EE8ADF35BC9EC62368089E77987053C7C87E60BB91ED6E28F888D80F2132CE88",
+    "path": "web\\src\\features\\developer-reference\\mobile-grid\\ReferenceRecordDialog.tsx"
+  },
+  {
+    "sha256": "68456BAC69BFA0A1546A19BD4D5434869FB54B06C54854B11DE760D7D9045757",
+    "path": "web\\src\\features\\developer-reference\\mobile-grid\\ReferenceScenarioPanel.tsx"
+  },
+  {
+    "sha256": "26C5854B8379AAD77760FA5BC7EF902174FA3A6C9C9F9FB971BBFAB7D715D8EC",
+    "path": "web\\src\\features\\developer-reference\\mobile-grid\\useReferenceController.test.tsx"
+  },
+  {
+    "sha256": "9A3B66133BABBB66CA224F82395516E78E1E3AA9773444210DA11F068CBF71C1",
+    "path": "web\\src\\features\\developer-reference\\mobile-grid\\useReferenceController.ts"
+  },
+  {
+    "sha256": "41CB650BEF7DA8D79E7DD98000A19FE7F6D6C78FF3B9D5E52262C6DC006FF88D",
+    "path": "web\\src\\features\\developer-reference\\mobile-grid\\useReferencePresentation.ts"
+  },
+  {
+    "sha256": "C8B11F60BB5D84256EE6BD5B88C841FB740618B7F72AD49A6C5E34A89904D5D5",
+    "path": "web\\src\\features\\developer-reference\\shared-library\\RemainingEvidenceReference.tsx"
+  },
+  {
+    "sha256": "A8453ECED7AA4556083AC1239D27095A1A1B6BE3B05B79DEF926ADFFD0455A3E",
+    "path": "web\\src\\features\\developer-reference\\shared-library\\RemainingTransportReference.tsx"
+  },
+  {
+    "sha256": "1A673AB75FEAA680F554D85288653236B665823B3C4F658F4F5B764D910F74A2",
+    "path": "web\\src\\features\\developer-reference\\shared-library\\SharedLibraryCompletionPage.tsx"
+  },
+  {
+    "sha256": "A3B97D37184A8192E0753DD199798F6FFCBFA0F4E3E78F9E9926B5DF80E6C6F7",
+    "path": "web\\src\\features\\developer-reference\\stats\\fixtures.ts"
+  },
+  {
+    "sha256": "FAB6753D6763071C526F139EF01BC47AD6457CC1145ECBEDB40078E3B9FBB63A",
+    "path": "web\\src\\features\\developer-reference\\stats\\FormatExamples.tsx"
+  },
+  {
+    "sha256": "01EC587079BA926AE77A88BB14F03977A7C75B3209CCAB439C2D618B352F8299",
+    "path": "web\\src\\features\\developer-reference\\stats\\index.ts"
+  },
+  {
+    "sha256": "0FF06FE2CE0B06FE9E126FF6720013ECD0B37A1E2D03E153F3509D1CC91E424C",
+    "path": "web\\src\\features\\developer-reference\\stats\\playwright.reference.config.ts"
+  },
+  {
+    "sha256": "4C69EF3269FE13818F8919EC6B67BA748CD30F86DD99FF07C9ED5DB45CF8E39A",
+    "path": "web\\src\\features\\developer-reference\\stats\\ReferenceGlossary.tsx"
+  },
+  {
+    "sha256": "75C47962BA8741C341093553872F2B3BC740DE42F53BEF2F6833D7CD977D69E5",
+    "path": "web\\src\\features\\developer-reference\\stats\\ReferencePreferences.tsx"
+  },
+  {
+    "sha256": "EA58860505AC3D3D4030E72CAE2493F2EADE8D50EACF975A8AD17A5AACBBAA1A",
+    "path": "web\\src\\features\\developer-reference\\stats\\StatReferencePage.tsx"
+  },
+  {
+    "sha256": "DD8FE905AAB43D8D40F7147E344A119EBE050D46A0DE9FB2EA971588138DC56D",
+    "path": "web\\src\\features\\developer-reference\\stats\\stats-reference.browser.spec.ts"
+  },
+  {
+    "sha256": "0504A670187FF1965CDE80388431B2BFC5692CBFC62515269D53C3825F48F7BB",
+    "path": "web\\src\\features\\developer-reference\\stats\\StripExamples.tsx"
+  },
+  {
+    "sha256": "7FB71E113EEC199CF444D7F611335F6B36E7F1B027EB2DE1A5575E6050F2C6D7",
+    "path": "web\\src\\features\\diagnostics\\components\\EvidenceSourceNotice.test.tsx"
+  },
+  {
+    "sha256": "4B937C0E7C0D27DE377BA49BA24C4C896C53F7A87BB517DDFDA64B4F42486B3D",
+    "path": "web\\src\\features\\diagnostics\\components\\EvidenceSourceNotice.tsx"
+  },
+  {
+    "sha256": "72F2B499574FB6559E590CF48DA90A21B295C4A9B32AFE3A69EB871CABA7937B",
+    "path": "web\\src\\features\\diagnostics\\components\\index.ts"
+  },
+  {
+    "sha256": "AF7D94E859D7D4B0ACE27710CF9D0062506479723A0551D3317EFE081B2ABD07",
+    "path": "web\\src\\features\\diagnostics\\components\\QualityBadge.tsx"
+  },
+  {
+    "sha256": "6D3967C4B7E618B75748217E11FE7DF467DD65FB3830B8D0065B2D0CE9E89E49",
+    "path": "web\\src\\features\\diagnostics\\components\\RootCauseEvidenceGraph.tsx"
+  },
+  {
+    "sha256": "A6AAE9D94C1C49E8ECABAD480D969E806501BD0CAA8D608BFEDC74AF9014116F",
+    "path": "web\\src\\features\\diagnostics\\components\\RootCauseHypothesisList.tsx"
+  },
+  {
+    "sha256": "6BD1ABD8A8F1D0DED326BA85AC1DC1211109338E190FC4136431DD4C26AAF7DA",
+    "path": "web\\src\\features\\diagnostics\\components\\RootCauseInterpretationPanel.tsx"
+  },
+  {
+    "sha256": "96624644A64071076A394B0889F57DE17B13CFF0B10EF9554D50C4DDE676F678",
+    "path": "web\\src\\features\\diagnostics\\components\\RootCauseSignalTimelineChart.tsx"
+  },
+  {
+    "sha256": "BE470BE944B013E9A4FE23B0C9B7A1B554092699303ED3B02F14FBFCDF673A78",
+    "path": "web\\src\\features\\diagnostics\\components\\ServiceEvidenceIntegrityPanel.tsx"
+  },
+  {
+    "sha256": "FED946C38C4351D001787FE29F41B105A9A585F950C4E6A651C955CF30F858FF",
+    "path": "web\\src\\features\\diagnostics\\components\\ServiceEvidenceInventoryTable.tsx"
+  },
+  {
+    "sha256": "3F80E53F076EA939A45055481938BCCE133078C1D8E4AC89FE1EFDFB0CE018A0",
+    "path": "web\\src\\features\\diagnostics\\components\\ServiceEvidencePackPreview.tsx"
+  },
+  {
+    "sha256": "4731E72EBA09ADD0C1548D3ED877CBC999DE287FAF5AB538B78DFE76827D6EE4",
+    "path": "web\\src\\features\\diagnostics\\components\\ServiceEvidencePrivacyPanel.tsx"
+  },
+  {
+    "sha256": "0E22AEACBEB2A3B97C1D5754BE8D1CEFB670B684607F81A6BD47E7EFB7290F9B",
+    "path": "web\\src\\features\\diagnostics\\components\\SignalEvidenceSourceList.test.tsx"
+  },
+  {
+    "sha256": "4594AFF6FCF902478AF86FA273397A2539DB524817C7B275B534556B033E0A92",
+    "path": "web\\src\\features\\diagnostics\\components\\SignalEvidenceSourceList.tsx"
+  },
+  {
+    "sha256": "B047979B5D082032A7C2176CA3893FF732D07B606BFDC7430DB7A695EDF4A2AD",
+    "path": "web\\src\\features\\diagnostics\\components\\SignalWindowPicker.tsx"
+  },
+  {
+    "sha256": "5629257F5FB618E6911B2FC58A98659B12F334D5B506DA7405734E70357D7021",
+    "path": "web\\src\\features\\diagnostics\\components\\anomaly-dashboard\\anomalyHelpers.test.ts"
+  },
+  {
+    "sha256": "71D1CED1C06449771B7060B4950F3A00827ECF0A499C68DB84FBCA8F3F452BF5",
+    "path": "web\\src\\features\\diagnostics\\components\\anomaly-dashboard\\anomalyHelpers.ts"
+  },
+  {
+    "sha256": "AE1656A053E38741DC8C27964378972C078C0C810F0B720BF9A42FDCF711B15E",
+    "path": "web\\src\\features\\diagnostics\\components\\anomaly-dashboard\\AnomalyTimelineCard.test.tsx"
+  },
+  {
+    "sha256": "996D8D3277CC2D635AF1609D587B579E8C01F66870A9A5F8C26201C4D6450698",
+    "path": "web\\src\\features\\diagnostics\\components\\anomaly-dashboard\\AnomalyTimelineCard.tsx"
+  },
+  {
+    "sha256": "085C1BEDFA12C49DC76D37C914A73D9DC10A4E5EB87DB56938FE3FBEBB64E07B",
+    "path": "web\\src\\features\\diagnostics\\components\\anomaly-dashboard\\index.ts"
+  },
+  {
+    "sha256": "8E7EA83BC7EADA03BAEE7D50413F9C6FCECD3CD94471E52C187ED69CFF53229A",
+    "path": "web\\src\\features\\diagnostics\\components\\anomaly-dashboard\\SystemHealthCard.test.tsx"
+  },
+  {
+    "sha256": "E16B66B2274B539A901EC653617A512D332A61760217816809E4972A5A9A32B8",
+    "path": "web\\src\\features\\diagnostics\\components\\anomaly-dashboard\\SystemHealthCard.tsx"
+  },
+  {
+    "sha256": "4A09B83DC93E5FE2016FBC4824A13313676489D4088413FEDE661C8F977A10A3",
+    "path": "web\\src\\features\\diagnostics\\components\\operationalbrief-all\\DiagnosticEvidenceBrief.tsx"
+  },
+  {
+    "sha256": "2FE33C856A5911B5C399556AB52E27EA3E6C5897A3F2CF2450705ED1AFDD02A8",
+    "path": "web\\src\\features\\diagnostics\\components\\operationalbrief-all\\NextServiceBrief.tsx"
+  },
+  {
+    "sha256": "0F5649E67D10D43E36CC9E5760A33F67E67DBAC5311E6A1BCE37B889CE682ABE",
+    "path": "web\\src\\features\\diagnostics\\components\\statstrip-anomaly\\anomalySummary.test.ts"
+  },
+  {
+    "sha256": "4B83457DB885EB325BFDFC946EFCC4055AAFE57B166A223AA2A37E733C8D97D3",
+    "path": "web\\src\\features\\diagnostics\\components\\statstrip-anomaly\\anomalySummary.ts"
+  },
+  {
+    "sha256": "0D0CCB1D53F43CC11EC5F093783C35F09F244E951A228B75A3AFF1B652E1A32F",
+    "path": "web\\src\\features\\diagnostics\\hooks\\useRootCauseWorkspace.test.tsx"
+  },
+  {
+    "sha256": "F215933EC78C1FBB2DF95D1C24FB0A97E4E1E7611AEF66974B011784A94B6155",
+    "path": "web\\src\\features\\diagnostics\\hooks\\useRootCauseWorkspace.ts"
+  },
+  {
+    "sha256": "A69C208F9031199B4C1958FDEC810720E275814E079701B9A0264C5FA5515AB5",
+    "path": "web\\src\\features\\diagnostics\\lib\\rootCauseIntelligence.test.ts"
+  },
+  {
+    "sha256": "8D9CADC97DB35509EB958A3C2E2B6FC94B6251D6E2121E2C835E5705DDC9D12B",
+    "path": "web\\src\\features\\diagnostics\\lib\\rootCauseIntelligence.ts"
+  },
+  {
+    "sha256": "9C086D66A86DE1E125D8DF87A570F38414115978B7D7ADD7F84F0A2782E2EFCB",
+    "path": "web\\src\\features\\diagnostics\\lib\\serviceEvidencePack.test.ts"
+  },
+  {
+    "sha256": "CA4B02D504691395065EA26B9A87DF00D6AC76B9FA320347C1CE61AE478EBBAA",
+    "path": "web\\src\\features\\diagnostics\\lib\\serviceEvidencePack.ts"
+  },
+  {
+    "sha256": "71BF2D530BD91A8FC1DC3B91F76DFCB079FE69838585B1A370D0FB8D6E778BC2",
+    "path": "web\\src\\features\\diagnostics\\lib\\signalEvidenceAvailability.ts"
+  },
+  {
+    "sha256": "545752E31AE5D39C51C5219E69440FA662BA2983B0DF17A89A4DA6B279B3813B",
+    "path": "web\\src\\features\\diagnostics\\pages\\AnomalyDashboardPage.test.tsx"
+  },
+  {
+    "sha256": "46227AFDF879F2A022CFCD85FB6F16A582DF5B857D2104819E96F6954188D562",
+    "path": "web\\src\\features\\diagnostics\\pages\\AnomalyDashboardPage.tsx"
+  },
+  {
+    "sha256": "BA1C20F899E97904EDA563943AB529088C7C23AC7B64D04E76B7683331A9E29F",
+    "path": "web\\src\\features\\diagnostics\\pages\\EvidencePages.retained.test.tsx"
+  },
+  {
+    "sha256": "4BB7CC8955E9C05EDCEDDB570F9C400FC918F05E5D9473003BD35ED778F41EAE",
+    "path": "web\\src\\features\\diagnostics\\pages\\RemainingUsefulLifePage.test.tsx"
+  },
+  {
+    "sha256": "85377CFBF0B30961E20F576D41FB41202E66A1D727ED2C9E1D1E1F93259841A3",
+    "path": "web\\src\\features\\diagnostics\\pages\\RemainingUsefulLifePage.tsx"
+  },
+  {
+    "sha256": "492857948E0C9F31801E96B1B99DD6A55117622C426EF9F95CD03048B227DC44",
+    "path": "web\\src\\features\\diagnostics\\pages\\RootCauseIntelligencePage.tsx"
+  },
+  {
+    "sha256": "F6010DB38804F962FE94AA287A74431B191DDF0D022D2C759BCE9EA56DEB03A0",
+    "path": "web\\src\\features\\diagnostics\\pages\\ServiceEvidencePackPage.tsx"
+  },
+  {
+    "sha256": "55E63C387A5A0ACA08EB19EB5E7C1A393B4998FB9FCC52E662B2E7C924254EDF",
+    "path": "web\\src\\features\\diagnostics\\__tests__\\TestAnomalyDashboardAIOffUsesStaticExplanation.test.tsx"
+  },
+  {
+    "sha256": "DA8237F8A317BFEEB7C6C8334A56C10C1B130A293340EA770DB9DA61EB16C52D",
+    "path": "web\\src\\features\\diagnostics\\__tests__\\TestLearnedAnomalyBaselineAIOffUsesSafeRangesOnly.test.tsx"
+  },
+  {
+    "sha256": "5701F9D953819322E07234C06A8DF94C76AA1ECA9ED0E5B0FCDEA68747A7A16E",
+    "path": "web\\src\\features\\diagnostics\\__tests__\\TestLearnedPerVehicleAnomalyBaselinesAIOnWiredCallsRoute.test.tsx"
+  },
+  {
+    "sha256": "44F7AF4C21610C280A22BD0CCC6F6AB365E802B473B4C7CB1CBC242DE42A1C13",
+    "path": "web\\src\\features\\explore\\featureCatalog.ts"
+  },
+  {
+    "sha256": "11F0F9FBAF526208D69E45D0253005BFEC636E315F16BD1EE6BA1CBBB4F319D0",
+    "path": "web\\src\\features\\explore\\pages\\ExplorePage.test.tsx"
+  },
+  {
+    "sha256": "98629FDBECA0FB6AA890E98A3ACB0CD530FF8CB21295987A163FE427EDA977CC",
+    "path": "web\\src\\features\\explore\\pages\\ExplorePage.tsx"
+  },
+  {
+    "sha256": "D0B43829C34EBC5101942D3AC26B06D92DA0826C84AA48BECE9240A08B2D4064",
+    "path": "web\\src\\features\\explore\\__tests__\\featureCatalog.test.ts"
+  },
+  {
+    "sha256": "4BBFACA7609210B721956069DD41564D0EB634C4DA263644FB22A9FB54BB0B57",
+    "path": "web\\src\\features\\home-energy\\components\\AssumptionsQualityPanel.tsx"
+  },
+  {
+    "sha256": "4FE4A18B6BCE7CC1E0608574A8FC5D1521540C5BEA4CBC03C09AFDE2B2CC8C69",
+    "path": "web\\src\\features\\home-energy\\components\\ConstraintViolationsPanel.tsx"
+  },
+  {
+    "sha256": "C7208785CDCB766D8FB832E27545AA643AD25F444156071F2672FB6FB140DF9C",
+    "path": "web\\src\\features\\home-energy\\components\\EnergyFlowChart.tsx"
+  },
+  {
+    "sha256": "6D5D56B688252A7FBB0592487E5E2511280B8A146D93CA55C940DD01F1D586F5",
+    "path": "web\\src\\features\\home-energy\\components\\index.ts"
+  },
+  {
+    "sha256": "518055399E38C8B78CD184763896DECB0CD8DA2F2E7A9C0078905DBCEAFCF099",
+    "path": "web\\src\\features\\home-energy\\components\\KpiSummary.tsx"
+  },
+  {
+    "sha256": "FE3BAA02FEBD53194B6EF245B7A3FB0C5479405AA748E1790E8768C762DB9328",
+    "path": "web\\src\\features\\home-energy\\components\\PlanExportPanel.tsx"
+  },
+  {
+    "sha256": "CCA00FBA86F6C47B48C7D4E05D703650DF2742E6ED0324E1C0A2B9A627DD8BC3",
+    "path": "web\\src\\features\\home-energy\\components\\PowerwallTrajectoryChart.tsx"
+  },
+  {
+    "sha256": "45BDC36F088F72C8108364042F57115820F572CE9390E85543C5D8C8AB6509C0",
+    "path": "web\\src\\features\\home-energy\\components\\ScenarioControls.tsx"
+  },
+  {
+    "sha256": "7583BA405D14D8BB10670D65C415820EF23876AFB47DFBC3A0AFAA31D2EC11B7",
+    "path": "web\\src\\features\\home-energy\\components\\TariffConstraintHeatmap.tsx"
+  },
+  {
+    "sha256": "CD9ED321F21AA068B912025378529B977A06784D14CAA655AB4A66BE2F8A7A9F",
+    "path": "web\\src\\features\\home-energy\\components\\VehicleAssumptionsPanel.tsx"
+  },
+  {
+    "sha256": "954E9BD060FAEFDF65118EF11C2713BA7059D3694FBC228ADEBC8E894EB64105",
+    "path": "web\\src\\features\\home-energy\\components\\VehicleReadinessPanel.tsx"
+  },
+  {
+    "sha256": "073C4198FEACC3A2087D763EE2FE2D2785EC450C2C930714884BF63CEB90B0CC",
+    "path": "web\\src\\features\\home-energy\\hooks\\useHomeEnergyOrchestration.source-contract.test.ts"
+  },
+  {
+    "sha256": "B4D59D2AFDE38099BB556E5EDD34C3CAAFDD6B7234D41F3BF7DF430A361BE151",
+    "path": "web\\src\\features\\home-energy\\hooks\\useHomeEnergyOrchestration.ts"
+  },
+  {
+    "sha256": "893DB83426C251706FA0FE227655989138679A84C45EE8AFDBAE5B0C9EBFFF6A",
+    "path": "web\\src\\features\\home-energy\\hooks\\useOrchestrationScenario.test.tsx"
+  },
+  {
+    "sha256": "82D0B6B458943E81A7F02A1D0D2FFFB8980888E16077A70A98F8AB2DEF4FB8F1",
+    "path": "web\\src\\features\\home-energy\\hooks\\useOrchestrationScenario.ts"
+  },
+  {
+    "sha256": "DAD250550C9393B6BEAA6EEC8E6AB30A064F4F4682233EF05DCC6D298FA00977",
+    "path": "web\\src\\features\\home-energy\\lib\\forecastAdapters.test.ts"
+  },
+  {
+    "sha256": "3ACA51DD62C2AFA1EF300F17E6DDF4BCB12FD9C2CABB2AA546AD06282D9E65E8",
+    "path": "web\\src\\features\\home-energy\\lib\\forecastAdapters.ts"
+  },
+  {
+    "sha256": "C13D15482FB693C2E4D5B791A2E887982836742B0DB62FFA50412F5C89EBBF59",
+    "path": "web\\src\\features\\home-energy\\lib\\optimizer.test.ts"
+  },
+  {
+    "sha256": "29829726EDC8EA05001D691673AB81271BF319BD102426D92CC1B23C8C6CFE1A",
+    "path": "web\\src\\features\\home-energy\\lib\\optimizer.ts"
+  },
+  {
+    "sha256": "EF27EF0BACABF40DB0324FCE898095FA168B8B8D2723EE33D9E17700BEBFD7D1",
+    "path": "web\\src\\features\\home-energy\\lib\\planExport.test.ts"
+  },
+  {
+    "sha256": "672E09FAB49DD12EAD6FB7690D80488D4BC2F42DDFC27B39305012DCB6FB7006",
+    "path": "web\\src\\features\\home-energy\\lib\\planExport.ts"
+  },
+  {
+    "sha256": "F126B55F5817C165CFDBBB00571B0276D81B37F7D50304A9CFA6ADFB24A854E7",
+    "path": "web\\src\\features\\home-energy\\lib\\scenarioDefaults.test.ts"
+  },
+  {
+    "sha256": "BA4E7311F51A7F50044074FE5049AD1F7972C40391EB533E5FDC0C1C5F93EECE",
+    "path": "web\\src\\features\\home-energy\\lib\\scenarioDefaults.ts"
+  },
+  {
+    "sha256": "B80282CDC7204A3BD196A77B78E302FB04DAC6813FCD5A58B66F41135047CF3D",
+    "path": "web\\src\\features\\home-energy\\lib\\types.ts"
+  },
+  {
+    "sha256": "5CC44ED2EDC7035E8BB5827ADF7946F14112E7663D3ED1604FDB51C561A8D946",
+    "path": "web\\src\\features\\home-energy\\pages\\WholeHomeEnergyPage.migration.test.tsx"
+  },
+  {
+    "sha256": "9B0BCB5317F5BD54D5476BDF02B63F5F211C9C6FD58AD387E8C33F3A8AD570D3",
+    "path": "web\\src\\features\\home-energy\\pages\\WholeHomeEnergyPage.tsx"
+  },
+  {
+    "sha256": "6861BF8A2ABB8AA35BA8216083FA1B35A9D67ADC1BBF0176ADCD151FCEC3709A",
+    "path": "web\\src\\features\\maps\\geofenceCategories.ts"
+  },
+  {
+    "sha256": "978EA1B8F809F7B1284AD280317F85F8A44268D9E0AADE0799661ABC87851A14",
+    "path": "web\\src\\features\\maps\\components\\EfficiencyDetectivePanel.test.tsx"
+  },
+  {
+    "sha256": "3E78655308D20B2D94CD94D58395F7D7C5FA8456A3A0466BCE5C712638B8914F",
+    "path": "web\\src\\features\\maps\\components\\EfficiencyDetectivePanel.tsx"
+  },
+  {
+    "sha256": "0683B2204957A4C18AE87CFF9CE0E0329810BB3655DB90A98D1D9CB79EAE655C",
+    "path": "web\\src\\features\\maps\\components\\LocationLeaderboardPanel.test.tsx"
+  },
+  {
+    "sha256": "0668B9A06DA97C0672F096CA939DAE15F12937583080C80202A394CCB370B9A9",
+    "path": "web\\src\\features\\maps\\components\\LocationLeaderboardPanel.tsx"
+  },
+  {
+    "sha256": "ED2E678649E0DAF071B158E59BF33BB7FA7428FD4631FA44BC34FDB13BD21BBC",
+    "path": "web\\src\\features\\maps\\components\\MobilitySourcePresenters.test.tsx"
+  },
+  {
+    "sha256": "021B559A3A74F23999CC5312E7EECF14817FEE1EE353E9CECF1E82B9CDD1CA9D",
+    "path": "web\\src\\features\\maps\\components\\charging-places\\ChargingActivityList.test.tsx"
+  },
+  {
+    "sha256": "962DA29B794464DFFB7602D0FDAACC55650CDA458A6739A725F795B38631AD57",
+    "path": "web\\src\\features\\maps\\components\\charging-places\\ChargingActivityList.tsx"
+  },
+  {
+    "sha256": "F96CE8C88DB42388D6ED9365AF073DD6292A23C42BC659DA9F6BB7054707B1A9",
+    "path": "web\\src\\features\\maps\\components\\charging-places\\ChargingPlacesWorkspace.test.tsx"
+  },
+  {
+    "sha256": "A558DFD1B6883328552BD4D494E5B623784680BA142F66229F4CC35E9B39AEA9",
+    "path": "web\\src\\features\\maps\\components\\charging-places\\ChargingPlacesWorkspace.tsx"
+  },
+  {
+    "sha256": "D48A473936D501A30FEBA23582300A8A45F6BCED8CC32BE5F88D972965D523A9",
+    "path": "web\\src\\features\\maps\\components\\charging-places\\ChargingSummaryPanel.test.tsx"
+  },
+  {
+    "sha256": "837474D7276377A1E51CDAB30CCA818EDAE9BAF8BF556B37329CA72E1D8C5A17",
+    "path": "web\\src\\features\\maps\\components\\charging-places\\ChargingSummaryPanel.tsx"
+  },
+  {
+    "sha256": "5F5B613CF59DCC42B958D2151670D509D7B1066DE3000110F39C946F7B130045",
+    "path": "web\\src\\features\\maps\\components\\charging-places\\helpers.test.ts"
+  },
+  {
+    "sha256": "48DBF0870DB3B137ACCB1587E11E382512BBCC1A0DEB4364CC479629D22EFCA3",
+    "path": "web\\src\\features\\maps\\components\\charging-places\\helpers.ts"
+  },
+  {
+    "sha256": "EFB95ED4FB03FA873A05784D455D868903FD54193F2397F88D744CBFB792CCC0",
+    "path": "web\\src\\features\\maps\\components\\charging-places\\index.ts"
+  },
+  {
+    "sha256": "2B874C0251033289B9F76333001E06E3E35D6666CCCFCFE31F3CD909359985FA",
+    "path": "web\\src\\features\\maps\\components\\charging-places\\NeedsSetupQueue.test.tsx"
+  },
+  {
+    "sha256": "A84D7FF453CA5A2D66C496FE70A6ACB9C2AD4CB2310F263C3A84DB1E038FED34",
+    "path": "web\\src\\features\\maps\\components\\charging-places\\NeedsSetupQueue.tsx"
+  },
+  {
+    "sha256": "ACFF042BF3CFF4FC070742D98BD291981785791F0F3C8DD1F46483AC4300C65B",
+    "path": "web\\src\\features\\maps\\components\\charging-places\\PlaceDetailPanel.test.tsx"
+  },
+  {
+    "sha256": "0436D23D9AE681899F65437D6A3A4619D28A694782E13839A078A3DD5D7A9B92",
+    "path": "web\\src\\features\\maps\\components\\charging-places\\PlaceDetailPanel.tsx"
+  },
+  {
+    "sha256": "83844A1DE424DC5C5FC636AA8EC0A974939668A05EE40BC7D3918C7D3F93B2D5",
+    "path": "web\\src\\features\\maps\\components\\charging-places\\PlacesTable.test.tsx"
+  },
+  {
+    "sha256": "310293D50CA9BBC8C4B2D4E1CB22456D6CD15484DB078AA431FBBD79524261FB",
+    "path": "web\\src\\features\\maps\\components\\charging-places\\PlacesTable.tsx"
+  },
+  {
+    "sha256": "BE7A8856B795D443E565E1A2116088D4E602EEE4F7EB00C1F92B0C0078D17523",
+    "path": "web\\src\\features\\maps\\components\\charging-places\\PreviewApplyPanel.test.tsx"
+  },
+  {
+    "sha256": "7971C2DB267A4700E2F510CBAC876792926D785DFBF3C2A78331047778BC2BC6",
+    "path": "web\\src\\features\\maps\\components\\charging-places\\PreviewApplyPanel.tsx"
+  },
+  {
+    "sha256": "B17841790D1E663BAA76A33B1942B8D00F24B41B48A060B8AB0B53C9F1AA291B",
+    "path": "web\\src\\features\\maps\\components\\charging-places\\RateForm.test.tsx"
+  },
+  {
+    "sha256": "216467BD71BC8D7E5790850C783D56DD3EF1891FDCA128B4F72139119838FD9B",
+    "path": "web\\src\\features\\maps\\components\\charging-places\\RateForm.tsx"
+  },
+  {
+    "sha256": "D3CE19A1B7FC758EB5F661910F3910FE9C9F4B86DCFA417015CC27615F4D1372",
+    "path": "web\\src\\features\\maps\\components\\charging-places\\RateHistoryPanel.test.tsx"
+  },
+  {
+    "sha256": "41BBB0F69602805C08295712490DF98706FDF13DD4189CA95AC540FD786D9D04",
+    "path": "web\\src\\features\\maps\\components\\charging-places\\RateHistoryPanel.tsx"
+  },
+  {
+    "sha256": "60D78EDBEAD756BB20CC6F1436D2BF1B16CA82756608915F1F0CDA7207DB4B45",
+    "path": "web\\src\\features\\maps\\components\\charging-places\\VisitedCandidates.tsx"
+  },
+  {
+    "sha256": "620678432122D1FE9D6E3E3B2A883B5042DC4936D790CE98EEFB39B094DD4B29",
+    "path": "web\\src\\features\\maps\\components\\operationalbrief-all\\MapsOperationalBrief.test.tsx"
+  },
+  {
+    "sha256": "B3FAB8319DB09CFE5EAA4F7D43562A6DF2AD25875EE24353345D00557EBB2BB3",
+    "path": "web\\src\\features\\maps\\components\\operationalbrief-all\\MapsOperationalBrief.tsx"
+  },
+  {
+    "sha256": "4A74D779B624633C8F3855916455C24A2F1761A37868D7627E53414D72793E88",
+    "path": "web\\src\\features\\maps\\pages\\GeofencesPage.test.tsx"
+  },
+  {
+    "sha256": "CEBFB91479F676CF8E3B04DE74246B0012EBB4830CD4D8694BAFD0C370BBDAF3",
+    "path": "web\\src\\features\\maps\\pages\\GeofencesPage.tsx"
+  },
+  {
+    "sha256": "2F2119B59CA168DF928A17F1917F9B1F6A312B78404BDF1DAA38A052321316B2",
+    "path": "web\\src\\features\\maps\\pages\\LocationsPage.test.tsx"
+  },
+  {
+    "sha256": "A35F52870B3016B9486EA6FF3ABB0818D0D80C95ECCEFD71B010586AC012B9E2",
+    "path": "web\\src\\features\\maps\\pages\\LocationsPage.tsx"
+  },
+  {
+    "sha256": "7B1AADAF123ADA566BE17AF9DAD82DB92858CD147221835CF2DC848C99555A80",
+    "path": "web\\src\\features\\maps\\pages\\MapOverviewPage.test.tsx"
+  },
+  {
+    "sha256": "E09B138FE0807F0A679AC43DC153BE1F61E6F6A393FF25420872F75CBCED6ACD",
+    "path": "web\\src\\features\\maps\\pages\\MapOverviewPage.tsx"
+  },
+  {
+    "sha256": "D44C588560E4E2E0A91D5AC379C97E8260202AEE2D9B653A4363282384AEC3C3",
+    "path": "web\\src\\features\\maps\\pages\\NavigationRoutePage.test.tsx"
+  },
+  {
+    "sha256": "BDB98EA594DD59E33337CFD57F1CB490605C690BAF9C56BE14884395C24B915A",
+    "path": "web\\src\\features\\maps\\pages\\NavigationRoutePage.tsx"
+  },
+  {
+    "sha256": "139C87E891940F88B6420C90B7B94366C36D9A35F93EA86EDA006909431D62D3",
+    "path": "web\\src\\features\\maps\\pages\\TemperatureImpactPage.test.tsx"
+  },
+  {
+    "sha256": "77074CC48E9FB6F7E9932F0D9E3E189984A6694CE5246886CCE3B15A10E338A7",
+    "path": "web\\src\\features\\maps\\pages\\TemperatureImpactPage.tsx"
+  },
+  {
+    "sha256": "028A005F3C7B77BC433D33E4071B64DB93ABAD8FDD0BB73CD6991AB7E31B583A",
+    "path": "web\\src\\features\\maps\\schemas\\geofence.test.ts"
+  },
+  {
+    "sha256": "245E801C7B39B7F50CC4A49755388B7E13EDBF1143AFAF58C1BE434ECF843402",
+    "path": "web\\src\\features\\maps\\schemas\\geofence.ts"
+  },
+  {
+    "sha256": "DCF332E467233EE84EBDE5AC99705BA15088D922B2B1E4D525E3BCC551BBA385",
+    "path": "web\\src\\features\\maps\\__tests__\\TestCabinTemperatureNarrativeAIOffShowsChartsOnly.test.tsx"
+  },
+  {
+    "sha256": "96E812070EADF689FA3F3D83D2B2855BC9C32488CABDE7C502BA9C834BEC5CC3",
+    "path": "web\\src\\features\\maps\\__tests__\\TestCabinTemperatureNarrativeAIOnWiredCallsRoute.test.tsx"
+  },
+  {
+    "sha256": "7A776491D6F9B1D107DA4C6FEBED6879D7F35FB443BC63639D67C65B92F44270",
+    "path": "web\\src\\features\\onboarding\\checklist.ts"
+  },
+  {
+    "sha256": "EC58024712DEFDF9A8E46DB708B239C3D137E3C41663D750CE7AD9967512ED02",
+    "path": "web\\src\\features\\onboarding\\completion.ts"
+  },
+  {
+    "sha256": "ADEFFCC4BE7B678FFEB60C87DF26DB4E5AC526EC3EC374B3D8D10C9C47300A78",
+    "path": "web\\src\\features\\onboarding\\TourLauncher.test.tsx"
+  },
+  {
+    "sha256": "A95BBB0F00B5386CA122BEC922064C9AC3DF7D3CB4049B6C6DE8E228CE9DF71D",
+    "path": "web\\src\\features\\onboarding\\TourLauncher.tsx"
+  },
+  {
+    "sha256": "9A166B142CAF5FEC132E1FE7C971BBFA5CFDAD006BC6CE1EDF8A77253B55C28A",
+    "path": "web\\src\\features\\onboarding\\tourSteps.test.ts"
+  },
+  {
+    "sha256": "7622ADF93B14AAC110F97B90304D1B4E37D34EED995B2E3A8D159A2DE8A424E2",
+    "path": "web\\src\\features\\onboarding\\tourSteps.ts"
+  },
+  {
+    "sha256": "5A27B0EE921564586E4BCFA057572E0888C504DA71999A82F6D029857EF6E237",
+    "path": "web\\src\\features\\onboarding\\components\\NoVehicleSelected.test.tsx"
+  },
+  {
+    "sha256": "D936024C8298D84B499F47C4BEB7DAA8F145FEEB10A23D8FA97E95458737DC61",
+    "path": "web\\src\\features\\onboarding\\components\\NoVehicleSelected.tsx"
+  },
+  {
+    "sha256": "802C9AE61011B47AAD5F944F8BA7D6801E2BAB6280BAFDE1CBAF632261E253BC",
+    "path": "web\\src\\features\\onboarding\\components\\OnboardingFeaturePreview.test.tsx"
+  },
+  {
+    "sha256": "CB3385169FB98F93871C8C66DC2E84B5C22EC3F5CE15FB5DA4DA4A2F11520ADE",
+    "path": "web\\src\\features\\onboarding\\components\\OnboardingFeaturePreview.tsx"
+  },
+  {
+    "sha256": "F2A2234B3BC3D5DD13A40719BA6D1B05469EB916F5353271B1FD4E29F1C1CA0B",
+    "path": "web\\src\\features\\onboarding\\components\\OnboardingGate.test.tsx"
+  },
+  {
+    "sha256": "C5A27A9428A338985EBA249724C4BAFF5B74909A6DF0A757B25E3B94974F8274",
+    "path": "web\\src\\features\\onboarding\\components\\OnboardingGate.tsx"
+  },
+  {
+    "sha256": "3848053A85E96B023BBC906DC1B70B329BE7445A4BB9D01CB20E1A5F99E5A162",
+    "path": "web\\src\\features\\onboarding\\components\\OnboardingResources.test.tsx"
+  },
+  {
+    "sha256": "D463BA976CB995CC257B26478ED0376E2CB92D0CD408C4B330BAE623DB6E12AC",
+    "path": "web\\src\\features\\onboarding\\components\\OnboardingResources.tsx"
+  },
+  {
+    "sha256": "B782BCACA390C97C37F320AF853FF260BC4A194A9C31EFAB19D5F5F9C191C9E0",
+    "path": "web\\src\\features\\onboarding\\components\\OnboardingRuntimeHealthNotice.tsx"
+  },
+  {
+    "sha256": "AFF7FD7E63BC4C1CF7CB4BBF49E24450121D983BA1D72FEDCF73A2F8156A5DA7",
+    "path": "web\\src\\features\\onboarding\\components\\OnboardingSetupStatusBand.test.tsx"
+  },
+  {
+    "sha256": "973A26C5F82FB354D1A4C31E5D70ADCAD7B7A5EFD4BDAA9D4870719F6771BCDB",
+    "path": "web\\src\\features\\onboarding\\components\\OnboardingSetupStatusBand.tsx"
+  },
+  {
+    "sha256": "647FD46399244535DA9D84BB03258B52082F7952AB918838D09D52E7013F5079",
+    "path": "web\\src\\features\\onboarding\\components\\OnboardingStatusCard.test.tsx"
+  },
+  {
+    "sha256": "C13DB2793EC47732AAF09828BD013D8B44E43D61C626749E6232A8057DCAF977",
+    "path": "web\\src\\features\\onboarding\\components\\OnboardingStatusCard.tsx"
+  },
+  {
+    "sha256": "BB3586280E1E2A76BF9B017C6C23E1BFFF501F463CB8F5EA5832A2E3C2D5F1C6",
+    "path": "web\\src\\features\\onboarding\\components\\Stepper.test.tsx"
+  },
+  {
+    "sha256": "B3EA5A17BA4086492CD1577A9643FACED9C3EF3D9A2D1761C108CB49E2E6A5A3",
+    "path": "web\\src\\features\\onboarding\\components\\Stepper.tsx"
+  },
+  {
+    "sha256": "8DE3D0F48B6499DC386653FA65D9814AAB506EC4602B967F882FAEF7E5DE7DDC",
+    "path": "web\\src\\features\\onboarding\\components\\TaskOnboardingHint.tsx"
+  },
+  {
+    "sha256": "A449494E7FFF8FDD566E0E1C1AEA5E6D287856B32BE9FDE9939AADF417269762",
+    "path": "web\\src\\features\\onboarding\\components\\TaskOnboardingHost.tsx"
+  },
+  {
+    "sha256": "00EB877A7477A225174DF88F66F5C0DBAA2307B0C89A848D1E482007C1EDC79C",
+    "path": "web\\src\\features\\onboarding\\hooks\\useCachedOnboardingEvidence.test.tsx"
+  },
+  {
+    "sha256": "4C120682FCAED9552B432B2D0D2EA1572944E13F4586630F75233C4DCF64BB62",
+    "path": "web\\src\\features\\onboarding\\hooks\\useCachedOnboardingEvidence.ts"
+  },
+  {
+    "sha256": "FCE01B18032B4D5492B54014DAA2F615717CBD2F2DCF24E9CFA560D44CE1701F",
+    "path": "web\\src\\features\\onboarding\\hooks\\useOnboardingSkip.test.ts"
+  },
+  {
+    "sha256": "828D0F63FFB2A9412CC4D22EC3097143F6AAE3768CE591AF71B34491DE650BA4",
+    "path": "web\\src\\features\\onboarding\\hooks\\useOnboardingSkip.ts"
+  },
+  {
+    "sha256": "67BAF986494086A865B17B7AAC3CEDEF8865A4075DD066EF1A0416EA1E1C4E7B",
+    "path": "web\\src\\features\\onboarding\\hooks\\useTaskOnboarding.ts"
+  },
+  {
+    "sha256": "4A42714DF4E7D1858C146EDE8CBE01399963075A8852C3D184B2E863CEC9F4D8",
+    "path": "web\\src\\features\\onboarding\\pages\\OnboardingPage.test.tsx"
+  },
+  {
+    "sha256": "AB4403ED96040AA11821583DC9D5BE2D6A326232379C71492101C4F0332D8C32",
+    "path": "web\\src\\features\\onboarding\\pages\\OnboardingPage.tsx"
+  },
+  {
+    "sha256": "5802D3B927BB16F54C9EDEBC693FABB70ED8CE50DACF57C742537FC2DFD3A553",
+    "path": "web\\src\\features\\onboarding\\tours\\alertsTour.test.ts"
+  },
+  {
+    "sha256": "12C795FEE8D434A21B3250D43AFF80710DA7C1BBBB6B2F9D6D546D7F3D459E00",
+    "path": "web\\src\\features\\onboarding\\tours\\alertsTour.ts"
+  },
+  {
+    "sha256": "D17B55F31F758318A558ECEA9F72BB2E4F781929A75D2E15BF16A025FC6E5555",
+    "path": "web\\src\\features\\onboarding\\tours\\automationsTour.test.ts"
+  },
+  {
+    "sha256": "283A200BE1FEF4746A24120B8CBE67B1E5E8A885D7436611CBDEC51F3E975B53",
+    "path": "web\\src\\features\\onboarding\\tours\\automationsTour.ts"
+  },
+  {
+    "sha256": "909A66C591E5DFA975482E917F5B13135B1A11CCAB92FB9D2E6AB36FE85F7148",
+    "path": "web\\src\\features\\onboarding\\tours\\chargingTour.test.ts"
+  },
+  {
+    "sha256": "0B7DF9B3AF8479B49BBCFEE37E34A50044CA8C4DB9F4A64C96DE4E3A74D8EB4F",
+    "path": "web\\src\\features\\onboarding\\tours\\chargingTour.ts"
+  },
+  {
+    "sha256": "BE7913547BF90D59FDD55B0603EB13245AC7DC10F13E08E30D79BAF10902597C",
+    "path": "web\\src\\features\\onboarding\\tours\\debuggerTour.test.ts"
+  },
+  {
+    "sha256": "FA22AAE3892410A54DE6982639777229A53CB97A97823936BDCBFDC36635D326",
+    "path": "web\\src\\features\\onboarding\\tours\\debuggerTour.ts"
+  },
+  {
+    "sha256": "4EC14F3A3EC321C1C98A86216C3E69868F8507D540388AB97147B10914A5A1A7",
+    "path": "web\\src\\features\\onboarding\\tours\\drivesTour.test.ts"
+  },
+  {
+    "sha256": "EE9835C9EDB760D7BAB62DF0527AD1310B1D2F3BDA3009919293824D9745DA55",
+    "path": "web\\src\\features\\onboarding\\tours\\drivesTour.ts"
+  },
+  {
+    "sha256": "3BADB6329E42E92B0C02D905FEFDB504258E9B90FBA809088A3BCE468850081C",
+    "path": "web\\src\\features\\onboarding\\tours\\mainTour.test.ts"
+  },
+  {
+    "sha256": "2B83219E6CE8FDE0F9178F44674E2AD3CE3F09D91D5DA8B4541A371F2F20BA14",
+    "path": "web\\src\\features\\onboarding\\tours\\mainTour.ts"
+  },
+  {
+    "sha256": "257029DC36B0E0A5A475797E7749659A32AB9D4E20913334A0723CC065FCCA30",
+    "path": "web\\src\\features\\onboarding\\tours\\settingsTour.test.ts"
+  },
+  {
+    "sha256": "617AEB3B6AE91E8E120D186624346898CB948C63F691C067C9BD8849F7561E15",
+    "path": "web\\src\\features\\onboarding\\tours\\settingsTour.ts"
+  },
+  {
+    "sha256": "4D68D9081D024403BB39F18F0AC8C96F7C9F828B34D52152D42F0CDCDC98499A",
+    "path": "web\\src\\features\\onboarding\\tours\\vehiclesTour.test.ts"
+  },
+  {
+    "sha256": "542F6BCE01BBB2B0E23739D3E4D49A68D8E7B29C9BE149C6E2F8680B0ADFD549",
+    "path": "web\\src\\features\\onboarding\\tours\\vehiclesTour.ts"
+  },
+  {
+    "sha256": "4B2E242D032987A4ED17C3DF7FCCD81353BF0B68A01D330DA311513D67EC4361",
+    "path": "web\\src\\features\\onboarding\\__tests__\\checklist.test.ts"
+  },
+  {
+    "sha256": "9E5DD10F07193C59D80608AF27B66BC98C30B1200CB3F0980CC024E010F9EE70",
+    "path": "web\\src\\features\\onboarding\\__tests__\\completion.test.tsx"
+  },
+  {
+    "sha256": "FD1BD35E20F40FA8B02F613263E5A2C6FC31E3CC189F51AFA49943292EB80594",
+    "path": "web\\src\\features\\onboarding\\__tests__\\taskOnboardingHost.test.tsx"
+  },
+  {
+    "sha256": "7CDF84A7DA30B0B7C61F2EB0C4F4332391D826AC73C6C6DC45989652A445F292",
+    "path": "web\\src\\features\\onboarding\\__tests__\\taskOnboardingReactivity.test.tsx"
+  },
+  {
+    "sha256": "A65A7C77659728F481FABA233B20A5A9B905C2AC4475736E5A3B5293C9D034DC",
+    "path": "web\\src\\features\\onboarding\\__tests__\\tours.test.ts"
+  },
+  {
+    "sha256": "70DD7B9F2360C60480E31291C33170A6436148C75C6ED44967BC99999242CC35",
+    "path": "web\\src\\features\\power-user\\components\\CatalogKpiBand.test.tsx"
+  },
+  {
+    "sha256": "F1669D2A2FEF4CD65813266DCC7F5A96B65D6886CF22555E4D8059E83DE7734D",
+    "path": "web\\src\\features\\power-user\\components\\CatalogKpiBand.tsx"
+  },
+  {
+    "sha256": "2A4CAD3DB94FB57B62B1992C371156D4EA453E6EBBA0B99201C495E40FA7B81F",
+    "path": "web\\src\\features\\power-user\\components\\QueryReferencePanel.test.tsx"
+  },
+  {
+    "sha256": "BB5E6399BA8DFCEB724B27B86AE141466CC0F13866824BE478E81CC68E00B67A",
+    "path": "web\\src\\features\\power-user\\components\\QueryReferencePanel.tsx"
+  },
+  {
+    "sha256": "72ABA3110923A97869B5CC3619CEC7DEBFA249DE4897C307D915104651155FAA",
+    "path": "web\\src\\features\\power-user\\components\\SchemaCatalogCard.test.tsx"
+  },
+  {
+    "sha256": "EF26AE942D30666CBCAC8F94EDF7140B1953401109E70CABC3AAD3712D954090",
+    "path": "web\\src\\features\\power-user\\components\\SchemaCatalogCard.tsx"
+  },
+  {
+    "sha256": "15BDEA2D504C45FE7F85C8EA2BD7042317DDB4D5EF30569601DF4E73F0D016EB",
+    "path": "web\\src\\features\\power-user\\components\\sqlCatalog.test.tsx"
+  },
+  {
+    "sha256": "E463FEADEDF2485EC56EFE1EE737E7B1C44D2BD629CCC197C24B105C6BE8B9C0",
+    "path": "web\\src\\features\\power-user\\components\\sqlCatalog.ts"
+  },
+  {
+    "sha256": "DD1F6966F89D4AE10C23874BBD10576D398E404E485EE48D33D9138B5F89BDF3",
+    "path": "web\\src\\features\\power-user\\pages\\DashboardsPage.test.tsx"
+  },
+  {
+    "sha256": "4916FBF626E86B2B1B956A68F96A5CB794CD60707BF445B1E6DF5500A8EE298C",
+    "path": "web\\src\\features\\power-user\\pages\\DashboardsPage.tsx"
+  },
+  {
+    "sha256": "BB10BC857AC81A630A2F4A2D2C4FF419BCA9138C4ADF145E4810B5E3362B050A",
+    "path": "web\\src\\features\\power-user\\pages\\GrafanaPanelPage.test.tsx"
+  },
+  {
+    "sha256": "44973FE6712FA3D511697DD8327A7A8BF1964F2306DE95CD00B641EF6C92590B",
+    "path": "web\\src\\features\\power-user\\pages\\GrafanaPanelPage.tsx"
+  },
+  {
+    "sha256": "3DB0AD5D1BB9F084782FEB0FFEFDA79DDE986A3470C88080AFC1DD7C69B787C0",
+    "path": "web\\src\\features\\power-user\\pages\\SqlPlaygroundPage.test.tsx"
+  },
+  {
+    "sha256": "50051395423268F9C1E678F76743DC25EEE2C35F10D3EBB84E34436845E5DDC1",
+    "path": "web\\src\\features\\power-user\\pages\\SqlPlaygroundPage.tsx"
+  },
+  {
+    "sha256": "7893474B34BBA50940ABAABB4A86920D501A945FFF887D7415BE11F886AD250F",
+    "path": "web\\src\\features\\power-user\\__tests__\\TestNLDashboardComposerAIOffManualComposerWorks.test.tsx"
+  },
+  {
+    "sha256": "2D5B4B4882F4CFB699443B93CDCAD23CE68057ABD2869F2A8D264B96CBECC542",
+    "path": "web\\src\\features\\power-user\\__tests__\\TestNlDashboardComposerAIOnWiredCallsRoute.test.tsx"
+  },
+  {
+    "sha256": "37355ADFDE5A2B733F4478159C878ADDA3214BA90120E9FF44CE81084E2926E2",
+    "path": "web\\src\\features\\power-user\\__tests__\\TestNLGrafanaPanelAIOffManualEditorWorks.test.tsx"
+  },
+  {
+    "sha256": "03E53D6F2F66DA6F2697BD8B0C4F638BAF252A769F8EAC9C0C9C5A86C4846756",
+    "path": "web\\src\\features\\power-user\\__tests__\\TestNlGrafanaPanelAIOnWiredCallsRoute.test.tsx"
+  },
+  {
+    "sha256": "F09BA48F4395BF38F02BA8F661C9F73BDAF2B5793490F3839FCC408AC7FC82E8",
+    "path": "web\\src\\features\\power-user\\__tests__\\TestNLSQLPlaygroundAIOffManualSQLWorks.test.tsx"
+  },
+  {
+    "sha256": "FE35035AF9B58B5C98B25258FC2CB85C977702D3DD6A17C1133C1954925346F0",
+    "path": "web\\src\\features\\power-user\\__tests__\\TestNlSqlPlaygroundAIOnWiredCallsRoute.test.tsx"
+  },
+  {
+    "sha256": "86435781FF717FD39ECB83A1535211AFA5BE98B12B34CF25821CD4CFFD5F8A94",
+    "path": "web\\src\\features\\resale-vault\\components\\AuditTrailPanel.test.tsx"
+  },
+  {
+    "sha256": "26FC47CF87228149EE5209F494D1CEA3BD4591F0D26FCC72EA2968A7F5A16FC7",
+    "path": "web\\src\\features\\resale-vault\\components\\AuditTrailPanel.tsx"
+  },
+  {
+    "sha256": "1071E1A36CA8D7EDA6F749592C9FF467F645B9B73D19DE387C6838250D4F5CDE",
+    "path": "web\\src\\features\\resale-vault\\components\\BatteryCertificatePanel.test.tsx"
+  },
+  {
+    "sha256": "4DFDD868657436BCFAA57401BF72C7782D0D5A268683C459DB20453786DFAB6D",
+    "path": "web\\src\\features\\resale-vault\\components\\BatteryCertificatePanel.tsx"
+  },
+  {
+    "sha256": "B7139544C0B175274217DD0BA54B615D4F4BE910907E3541A1B99F78D4056086",
+    "path": "web\\src\\features\\resale-vault\\components\\BatterySummaryPanel.test.tsx"
+  },
+  {
+    "sha256": "2656A03658F9FAE36899BC701F0D1F7AC79E55FCB839D952D0F21B81521C276A",
+    "path": "web\\src\\features\\resale-vault\\components\\BatterySummaryPanel.tsx"
+  },
+  {
+    "sha256": "97689BBEBECBC8318181CB963EE573F49B0C3B65C5A18D509F0A52515A0C5FA7",
+    "path": "web\\src\\features\\resale-vault\\components\\DisclosureProfileBuilder.test.tsx"
+  },
+  {
+    "sha256": "AF142D52A2248499C8EA2E6F38ED79AF9517ECF043F31D41A6134789EAEB688F",
+    "path": "web\\src\\features\\resale-vault\\components\\DisclosureProfileBuilder.tsx"
+  },
+  {
+    "sha256": "04AA80BA806CA231FFB810F451A05B93A2702B6CF258D00E4B4EDC928BBCE680",
+    "path": "web\\src\\features\\resale-vault\\components\\DrivingChargingSummaryPanel.test.tsx"
+  },
+  {
+    "sha256": "5C0AB9F03380643378996DA8EF6D1B27DA50314A93AC7CC64675693923081078",
+    "path": "web\\src\\features\\resale-vault\\components\\DrivingChargingSummaryPanel.tsx"
+  },
+  {
+    "sha256": "5796506B408B536FFD0E3A2FF09171E72141533F60672FE2FCA0AEA582DCB8BE",
+    "path": "web\\src\\features\\resale-vault\\components\\EvidenceInventoryPanel.test.tsx"
+  },
+  {
+    "sha256": "A0BB6BF5DCAE1976FC273439C0BD524AFAAB060D67D32CFD13B80947295FEF50",
+    "path": "web\\src\\features\\resale-vault\\components\\EvidenceInventoryPanel.tsx"
+  },
+  {
+    "sha256": "2E5435763A67160A7CA353C919FCAF377ED90AD9D83BEE9C6E55A16716BC5BD1",
+    "path": "web\\src\\features\\resale-vault\\components\\ExportReportPanel.preservation.test.tsx"
+  },
+  {
+    "sha256": "C17337C916E14EF4529149783311B51DE8216A7956AF89BAE913B34561F3AB52",
+    "path": "web\\src\\features\\resale-vault\\components\\ExportReportPanel.test.tsx"
+  },
+  {
+    "sha256": "E4FD1D9E9FFBFA8B84EA7EEB8B0E4866A223FF4C2F5CABF53B91B7E1F24927E4",
+    "path": "web\\src\\features\\resale-vault\\components\\ExportReportPanel.tsx"
+  },
+  {
+    "sha256": "29022F6ABE1D1EA701792387F0A4B61E7BC35F16B10A6B4841211C98DAF00C00",
+    "path": "web\\src\\features\\resale-vault\\components\\ImportVerifyPanel.preservation.test.tsx"
+  },
+  {
+    "sha256": "9FDEF6A92F259879700B520CE3960C5B81172CB06348E5B85F1FAE9BD1E96DE8",
+    "path": "web\\src\\features\\resale-vault\\components\\ImportVerifyPanel.test.tsx"
+  },
+  {
+    "sha256": "CE620A4A777A59245E5D9B5ECCA011BAAF6E84C18310DA9F6370881D73A78D53",
+    "path": "web\\src\\features\\resale-vault\\components\\ImportVerifyPanel.tsx"
+  },
+  {
+    "sha256": "12E13DD91A105B80616E80C7AAE4DE9FFA96118B5FFF8D538A7C9FE5E4299D71",
+    "path": "web\\src\\features\\resale-vault\\components\\IncidentSummaryPanel.test.tsx"
+  },
+  {
+    "sha256": "583D93E7B88362D962237699B9BC837D55CB924528EA0FD7933B5C515533CADE",
+    "path": "web\\src\\features\\resale-vault\\components\\IncidentSummaryPanel.tsx"
+  },
+  {
+    "sha256": "C0AA3AF31B8E423654F87FD9BCA3DE9A4809903BB9AC6ECFE04C327F488D06E1",
+    "path": "web\\src\\features\\resale-vault\\components\\index.ts"
+  },
+  {
+    "sha256": "FA5639765A8D808A33AD7861F68F8ADCD6E15CE8161BBE585515BF5E58D9D7A7",
+    "path": "web\\src\\features\\resale-vault\\components\\MaintenanceSummaryPanel.test.tsx"
+  },
+  {
+    "sha256": "FDBDD57FAE383C9EAFA7811C73C848B8F414B1B91477485DB19DC469FE70BCB9",
+    "path": "web\\src\\features\\resale-vault\\components\\MaintenanceSummaryPanel.tsx"
+  },
+  {
+    "sha256": "287EED29154023AA977FA0539E7FFCED6E7CAF03280E87E5EB1B6A38B9D2C18B",
+    "path": "web\\src\\features\\resale-vault\\components\\PrivacyPreviewPanel.test.tsx"
+  },
+  {
+    "sha256": "9B4EAE9CB1E1F1BF4E2EADC4D7143B9D3CB6167C16A76CE8A5A2783FE037FF7B",
+    "path": "web\\src\\features\\resale-vault\\components\\PrivacyPreviewPanel.tsx"
+  },
+  {
+    "sha256": "77E29AE212680118A39F25770A53B653F30F61506883653C0A62C174430BAAD1",
+    "path": "web\\src\\features\\resale-vault\\components\\sectionLabels.ts"
+  },
+  {
+    "sha256": "8963B387BA5069C45524AE556B2BA4468DBD7E17A5D79D0B9A9580DCD01B8DF4",
+    "path": "web\\src\\features\\resale-vault\\components\\SignatureKeyPanel.test.tsx"
+  },
+  {
+    "sha256": "AC570320C59A8525FA54B334563A56B1DF85B8679CE3B2ADD015AE19D6B208B4",
+    "path": "web\\src\\features\\resale-vault\\components\\SignatureKeyPanel.tsx"
+  },
+  {
+    "sha256": "BE47CB8EBF3CB97265AB7D04E046932495FFFFE382F655E6B0DD8854E928D1D4",
+    "path": "web\\src\\features\\resale-vault\\components\\SoftwareUpdateSummaryPanel.test.tsx"
+  },
+  {
+    "sha256": "8D55F391C6E9F47C5CAD814A2B81807F8EEAF70EF7B0E953354F597D9679BC47",
+    "path": "web\\src\\features\\resale-vault\\components\\SoftwareUpdateSummaryPanel.tsx"
+  },
+  {
+    "sha256": "4619685D52E15ADA9235363871EC0B2AFEBEB901C45369D366CA4775B8243EB1",
+    "path": "web\\src\\features\\resale-vault\\components\\WarrantySummaryPanel.test.tsx"
+  },
+  {
+    "sha256": "DF9B99199156308336B582C6E485E0896691E2F359627570A02D42555649322B",
+    "path": "web\\src\\features\\resale-vault\\components\\WarrantySummaryPanel.tsx"
+  },
+  {
+    "sha256": "B785B664B64EEE60DA9A2E6F3762193D890D3C3036BFB6FF9BB807437717E8C5",
+    "path": "web\\src\\features\\resale-vault\\components\\operationalbrief-all\\VaultSummaryBrief.test.tsx"
+  },
+  {
+    "sha256": "439C274578DF50A3BECFA6B527129C3B802005EC95C3DAC519398735C8DBB06E",
+    "path": "web\\src\\features\\resale-vault\\components\\operationalbrief-all\\VaultSummaryBrief.tsx"
+  },
+  {
+    "sha256": "864A149DE5BDA2C4E0B3C05E6EC77CEE4FB372A4441A0A5967C76BF2F544E1DA",
+    "path": "web\\src\\features\\resale-vault\\hooks\\useDisclosureSelection.test.tsx"
+  },
+  {
+    "sha256": "6A36ECC0946D97B045C58D190822A3670DD4F5017464770973BE5B515492B2E5",
+    "path": "web\\src\\features\\resale-vault\\hooks\\useDisclosureSelection.ts"
+  },
+  {
+    "sha256": "9DE81D9EA9581012F91CD00DCB2D5E1D969D674BEC3235C037BCA983165367AD",
+    "path": "web\\src\\features\\resale-vault\\hooks\\useSigningVault.test.tsx"
+  },
+  {
+    "sha256": "0484D9ED625BD47FA6804CA43F050D145274427682E3177E3B96914126044E5D",
+    "path": "web\\src\\features\\resale-vault\\hooks\\useSigningVault.ts"
+  },
+  {
+    "sha256": "0EAF2146DB802F0BFA993616E940AE30D295C9DA3E20C7B623A37D474886DEA9",
+    "path": "web\\src\\features\\resale-vault\\hooks\\useVaultEvidence.test.tsx"
+  },
+  {
+    "sha256": "20E0F73E83535147FCBFEDD3A6EE6B225524BED73E18558D7543AD0C1B128AF0",
+    "path": "web\\src\\features\\resale-vault\\hooks\\useVaultEvidence.ts"
+  },
+  {
+    "sha256": "3C0A61D08EE05A8E86EE8AF86213DB3F1B377AC766A7E7BB5819D2E4851CAEAD",
+    "path": "web\\src\\features\\resale-vault\\lib\\auditTrail.test.ts"
+  },
+  {
+    "sha256": "89793D983B795BD51DD621C8D1128010A4ED795218191C3399D666D2E01AFC55",
+    "path": "web\\src\\features\\resale-vault\\lib\\auditTrail.ts"
+  },
+  {
+    "sha256": "E2990094A33070746895E9A355DD7D1F4044002B85C496EAA1666F76AB4E6424",
+    "path": "web\\src\\features\\resale-vault\\lib\\canonicalJson.test.ts"
+  },
+  {
+    "sha256": "84FA9765A42C9B174469A25CD8C7E1B284FCC27384CE50652F099C84F4A71E92",
+    "path": "web\\src\\features\\resale-vault\\lib\\canonicalJson.ts"
+  },
+  {
+    "sha256": "63E15F0A54C572491825C1D839F18A4034C9BBDE2EFC9F7BCB394ECCFC242534",
+    "path": "web\\src\\features\\resale-vault\\lib\\constants.ts"
+  },
+  {
+    "sha256": "222DAA129FE789321CF387A5F5816458B5D03D56B8DCA7297EF28D1CB1AD492B",
+    "path": "web\\src\\features\\resale-vault\\lib\\cryptoAvailability.test.ts"
+  },
+  {
+    "sha256": "DD843FA1FE7A46E02F54FF23F388C902F2F0C8D52F6A4EC25C2970290B3A10EF",
+    "path": "web\\src\\features\\resale-vault\\lib\\cryptoAvailability.ts"
+  },
+  {
+    "sha256": "25D90740811DCF2D50DC63BA1F18CAE2535D87F1897745DB27FADBB2B81A4DD2",
+    "path": "web\\src\\features\\resale-vault\\lib\\evidenceNormalizers.test.ts"
+  },
+  {
+    "sha256": "2D0957A1071FE43000F2911760E4878CF13E3F8E8534887B0AF2F4058A6D2680",
+    "path": "web\\src\\features\\resale-vault\\lib\\evidenceNormalizers.ts"
+  },
+  {
+    "sha256": "059033D3E88A738097C7913EBC13CF78E7A3208EECF49CA292EFA63E416BD979",
+    "path": "web\\src\\features\\resale-vault\\lib\\fakeIndexedDb.ts"
+  },
+  {
+    "sha256": "3693FD03366AF8FF37A34B662770497C03A9C527030F71A8C66CD6371C791605",
+    "path": "web\\src\\features\\resale-vault\\lib\\redaction.test.ts"
+  },
+  {
+    "sha256": "381F2FB48148A04CCC859FBAA67B7D989AD27287C205370D986CB33EF37D5EEE",
+    "path": "web\\src\\features\\resale-vault\\lib\\redaction.ts"
+  },
+  {
+    "sha256": "67CA10DF32DDA5AB169DFE5C4D0821AAC77D7DBF8756472EB56F70DDC3DD0749",
+    "path": "web\\src\\features\\resale-vault\\lib\\reportBuilder.test.ts"
+  },
+  {
+    "sha256": "FFF76F09E822E7A841ECDF340B7BE2236D4B4256EE93AB96F4946F7394122459",
+    "path": "web\\src\\features\\resale-vault\\lib\\reportBuilder.ts"
+  },
+  {
+    "sha256": "1AB7BDCDA6B2315040B7F8F6CF599E9AC8B22AF0596E5D8A84FE4C20EAE33C9D",
+    "path": "web\\src\\features\\resale-vault\\lib\\reportSigner.test.ts"
+  },
+  {
+    "sha256": "1CBF73E491EBF7F0B41F45CAB67B0F4D1A671F74AF008A40E935816CDD11B4F1",
+    "path": "web\\src\\features\\resale-vault\\lib\\reportSigner.ts"
+  },
+  {
+    "sha256": "B1897373369A73177F080E363027108C5C4A59F6F73DDDA3CEAA8365985CEBA0",
+    "path": "web\\src\\features\\resale-vault\\lib\\reportVerifier.ts"
+  },
+  {
+    "sha256": "F3E90A8A7181B48C989A9C29F1A49777471284EA5912C440BB185F4F7E5D6EAC",
+    "path": "web\\src\\features\\resale-vault\\lib\\signingKeyRepository.test.ts"
+  },
+  {
+    "sha256": "767634C6AB252F6A45BFD4B4CB5A3C49087693B5EC2920BB41BE806BE233CA78",
+    "path": "web\\src\\features\\resale-vault\\lib\\signingKeyRepository.ts"
+  },
+  {
+    "sha256": "F43D97EA335BBCE458DB807553501E66F8D3A9DA60011E940E87F4FC1D1C944E",
+    "path": "web\\src\\features\\resale-vault\\lib\\testFixtures.ts"
+  },
+  {
+    "sha256": "A2D09F8894ACE9BE8387CC7058640EFEAD22CD5E8CAAD3F76E7A9F580DD32829",
+    "path": "web\\src\\features\\resale-vault\\lib\\types.ts"
+  },
+  {
+    "sha256": "1461875A27E25B19482D88D81BB08549CE0C053A897852D540AA2631298ACDD6",
+    "path": "web\\src\\features\\resale-vault\\lib\\vaultDb.test.ts"
+  },
+  {
+    "sha256": "FFC727BD644A19AF67113E76713E6B8F35FF6A5A9EDAC496A419A2E1F2050E37",
+    "path": "web\\src\\features\\resale-vault\\lib\\vaultDb.ts"
+  },
+  {
+    "sha256": "56371E12254E2BF551C99DE973FEE112E527979B0623BBB971DD31833AE2F896",
+    "path": "web\\src\\features\\resale-vault\\pages\\WarrantyResaleVaultPage.test.tsx"
+  },
+  {
+    "sha256": "A030F014CF39399C275803581DE8CE3194F3B9C79B7491D7FEF1C108ACA4F52A",
+    "path": "web\\src\\features\\resale-vault\\pages\\WarrantyResaleVaultPage.tsx"
+  },
+  {
+    "sha256": "38DC15465C6418C12D2E64380BF579C1ECCBF84C1313F1F9747075D8E114CDF2",
+    "path": "web\\src\\features\\watch\\pages\\WatchFacePage.test.tsx"
+  },
+  {
+    "sha256": "3F6B51D7C7167EC74E3B84F2BF16E985690E1AE25E7A241B4C3D122F9F8A6B78",
+    "path": "web\\src\\features\\watch\\pages\\WatchFacePage.tsx"
+  },
+  {
+    "sha256": "98F51C76BA441B25ADE848571BD297E9F7378822A6521F86E142F3B7D3889115",
+    "path": "web\\src\\features\\watch\\__tests__\\TestWatchFaceNLAIOffUsesFixedCardsOnly.test.tsx"
+  },
+  {
+    "sha256": "4BA43F64FB65C50A795F1B8CBA3D05EE580C7C7E7C641321E784B41590C30DB5",
+    "path": "web\\src\\features\\watch\\__tests__\\TestWatchFaceNlResponseAIOnWiredCallsRoute.test.tsx"
+  },
+  {
+    "sha256": "476E613BF23D5A1E3E341E6E83718CB9985CAB0956EB5A7205992DB8EB5156E6",
+    "path": "web\\e2e\\mockApi.ts"
+  },
+  {
+    "sha256": "E5B33A955AF2EED54D20EC1669876E73452009A7F335327ABC91BA7CA48B0654",
+    "path": "web\\e2e\\qualityAssertions.ts"
+  },
+  {
+    "sha256": "69F858A76EBD06C211E7641E966F68343101CC42011AB1AF0BEA978DCDEDB239",
+    "path": "web\\e2e\\routeRegistry.ts"
+  },
+  {
+    "sha256": "31607F8D206C99CC68D471ECDA49609970F2AC86DF1AF76A7A73A397D35D84FB",
+    "path": "web\\playwright.config.ts"
+  },
+  {
+    "sha256": "23A1CE852D2CE51DF5A26A5C2A5669FFA788A992355A8BCFAFB391C82B47DEF3",
+    "path": "web\\src\\App.tsx"
+  },
+  {
+    "sha256": "2F59A162F3DC2180031DF87AED196830767FD7720388FA1E6F0C211E550C0A97",
+    "path": "web\\src\\lib\\routeRegistry.ts"
+  },
+  {
+    "sha256": "B24B19024EFFEBB6D8457171BE61E6899672CD8F668B41BB3814AEB29ADA42E5",
+    "path": "web\\src\\components\\data-display\\OperationalBrief.tsx"
+  },
+  {
+    "sha256": "C5BF53E032495D474513937D3A06420E21490464FE8A5837E2FC6FA1FA42498C",
+    "path": "web\\src\\lib\\operationalMetrics.tsx"
+  }
+]

@@ -95,8 +95,9 @@ describe('ServiceStatusBanner', () => {
 
     const banner = screen.getByRole('status')
     expect(banner).not.toHaveAttribute('style')
-    expect(banner.className).toContain('bg-red-500/15')
-    expect(banner.className).toContain('text-red-300')
+    expect(banner.className).toContain('bg-[var(--surface-2)]')
+    expect(banner.className).toContain('text-[var(--text-secondary)]')
+    expect(banner.className).toContain('border-[var(--border-default)]')
   })
 
   it('hides the decorative WifiOff icon from the accessibility tree', () => {
@@ -145,32 +146,32 @@ function renderDot(status?: SystemStatus) {
 }
 
 describe('SystemHealthDot', () => {
-  it('renders a green glowing dot for a healthy system', () => {
+  it('renders a restrained success dot for a healthy system', () => {
     renderDot(makeStatus('healthy'))
     const dot = screen.getByRole('img')
-    expect(dot.className).toContain('bg-neon-green')
-    expect(dot.className).toContain('shadow-')
+    expect(dot.className).toContain('bg-[var(--semantic-success)]')
+    expect(dot.className).not.toContain('shadow-')
     expect(dot).toHaveAttribute('aria-label', 'System: healthy')
   })
 
   it('renders an amber dot for a degraded system', () => {
     renderDot(makeStatus('degraded'))
     const dot = screen.getByRole('img')
-    expect(dot.className).toContain('bg-neon-amber')
+    expect(dot.className).toContain('bg-[var(--semantic-warning)]')
     expect(dot).toHaveAccessibleName('System: degraded')
   })
 
   it('renders a red dot for an unhealthy (or unrecognised) overall status', () => {
     renderDot(makeStatus('unhealthy'))
     const dot = screen.getByRole('img')
-    expect(dot.className).toContain('bg-neon-red')
+    expect(dot.className).toContain('bg-[var(--semantic-danger)]')
     expect(dot).toHaveAttribute('title', 'System: unhealthy')
   })
 
   it('falls back to a muted "unknown" dot while data is loading (no query cache)', () => {
     renderDot()
     const dot = screen.getByRole('img')
-    expect(dot.className).toContain('bg-[var(--text-muted)]')
+    expect(dot.className).toContain('bg-[var(--text-secondary)]')
     expect(dot.className).not.toContain('bg-neon-')
     expect(dot).toHaveAttribute('aria-label', 'System: unknown')
   })
@@ -179,5 +180,20 @@ describe('SystemHealthDot', () => {
     renderDot(makeStatus('healthy'))
     expect(screen.getByRole('img')).toBeInTheDocument()
     expect(screen.getByRole('img').tagName).toBe('SPAN')
+  })
+
+  it('preserves an unrecognised nonempty status label and danger classification', () => {
+    renderDot(makeStatus('maintenance'))
+    const dot = screen.getByRole('img')
+    expect(dot.className).toContain('bg-[var(--semantic-danger)]')
+    expect(dot).toHaveAccessibleName('System: maintenance')
+    expect(dot).toHaveAttribute('title', 'System: maintenance')
+  })
+
+  it('preserves empty status as an unknown tone without inventing its label', () => {
+    renderDot(makeStatus(''))
+    const dot = screen.getByRole('img')
+    expect(dot.className).toContain('bg-[var(--text-secondary)]')
+    expect(dot).toHaveAttribute('aria-label', 'System: ')
   })
 })

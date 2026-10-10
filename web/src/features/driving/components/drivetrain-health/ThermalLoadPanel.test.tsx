@@ -126,7 +126,7 @@ vi.mock('@/hooks/useUnits', () => ({
     },
     formatDistance: (v: number | null | undefined) => String(v ?? 0),
     formatSpeed: (v: number | null | undefined) => String(v ?? 0),
-    formatTemperature: (v: number | null | undefined) => `${v ?? 0}°C`,
+    formatTemperature: (v: number | null | undefined) => `${Number(v ?? 0).toFixed(2)}°C`,
     formatPressure: (v: number | null | undefined) => String(v ?? 0),
     formatEnergy: (v: number | null | undefined) => String(v ?? 0),
     formatDuration: (v: number | null | undefined) => String(v ?? 0),
@@ -232,8 +232,8 @@ describe('ThermalLoadPanel — sensor rows', () => {
     render(<ThermalLoadPanel {...makeProps()} />);
 
     // displayTemp(42, wrapper) → formatTemperature(42) → "42°C".
-    expect(sublabelFor('Front Motor')).toBe('42°C');
-    expect(sublabelFor('Rear Motor')).toBe('88°C');
+    expect(sublabelFor('Front Motor')).toBe('42.00°C');
+    expect(sublabelFor('Rear Motor')).toBe('88.00°C');
   });
 
   it('shows an em dash (not "0°C" / NaN) for a null sensor reading and does not throw', () => {
@@ -248,10 +248,10 @@ describe('ThermalLoadPanel — inline metrics (populated)', () => {
   it('formats peak power, avg power, drive count and regen ratio against their labels', () => {
     render(<ThermalLoadPanel {...makeProps()} />);
 
-    expect(inlineValueFor('Peak Power')).toBe('350 kW');
-    expect(inlineValueFor('Avg Power')).toBe('125.5 kW');
+    expect(inlineValueFor('Peak Power')).toBe('350.00 kW');
+    expect(inlineValueFor('Avg Power')).toBe('125.50 kW');
     expect(inlineValueFor('Drives')).toBe('42');
-    expect(inlineValueFor('Regen Ratio')).toBe('20.0%');
+    expect(inlineValueFor('Regen Ratio')).toBe('20.00%');
   });
 });
 
@@ -271,7 +271,7 @@ describe('ThermalLoadPanel — inline metric fallbacks', () => {
     expect(inlineValueFor('Avg Power')).toBe('—');
     // Stats-backed cells still render — only the power scalars fell back.
     expect(inlineValueFor('Drives')).toBe('42');
-    expect(inlineValueFor('Regen Ratio')).toBe('20.0%');
+    expect(inlineValueFor('Regen Ratio')).toBe('20.00%');
   });
 
   it('collapses drives and regen ratio to an em dash when stats is undefined, keeping power', () => {
@@ -287,8 +287,8 @@ describe('ThermalLoadPanel — inline metric fallbacks', () => {
     expect(inlineValueFor('Drives')).toBe('—');
     expect(inlineValueFor('Regen Ratio')).toBe('—');
     // Power scalars are independent of stats.
-    expect(inlineValueFor('Peak Power')).toBe('350 kW');
-    expect(inlineValueFor('Avg Power')).toBe('125.5 kW');
+    expect(inlineValueFor('Peak Power')).toBe('350.00 kW');
+    expect(inlineValueFor('Avg Power')).toBe('125.50 kW');
   });
 });
 
@@ -296,7 +296,7 @@ describe('ThermalLoadPanel — loading + empty', () => {
   it('shows a skeleton and withholds every metric while loading, keeping the title', () => {
     const { container } = render(<ThermalLoadPanel {...makeProps({ loading: true })} />);
 
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).not.toBeNull();
     // Title persists so the layout does not jump.
     expect(screen.getByRole('heading', { level: 3, name: 'Thermal Load Indicators' })).toBeInTheDocument();
     // No sensor rows, no inline metrics.

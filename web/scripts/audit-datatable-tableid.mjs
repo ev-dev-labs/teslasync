@@ -16,6 +16,7 @@
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import process from 'node:process';
+import ts from 'typescript';
 
 const ROOT = join('src', 'features');
 const offenders = [];
@@ -44,134 +45,35 @@ function walk(dir) {
   }
 }
 
-// Build a list of [start, end) ranges in `text` that correspond to
-// string literals or comments. Used to filter out false-positive
-// `<DataTable` matches inside JSDoc / block comments / strings.
-function buildMaskedRegions(text) {
-  const regions = [];
-  let i = 0;
-  while (i < text.length) {
-    const c = text[i];
-    const next = text[i + 1];
-    if (c === '/' && next === '/') {
-      const start = i;
-      i += 2;
-      while (i < text.length && text[i] !== '\n') i++;
-      regions.push([start, i]);
-      continue;
-    }
-    if (c === '/' && next === '*') {
-      const start = i;
-      i += 2;
-      while (i < text.length - 1 && !(text[i] === '*' && text[i + 1] === '/')) i++;
-      i += 2;
-      regions.push([start, i]);
-      continue;
-    }
-    if (c === '"' || c === "'" || c === '`') {
-      const quote = c;
-      const start = i;
-      i++;
-      while (i < text.length && text[i] !== quote) {
-        if (text[i] === '\\') i += 2;
-        else i++;
-      }
-      i++;
-      regions.push([start, i]);
-      continue;
-    }
-    i++;
-  }
-  return regions;
-}
-
-function isMaskedRegion(regions, offset) {
-  for (const [s, e] of regions) {
-    if (offset >= s && offset < e) return true;
-    if (s > offset) return false;
-  }
-  return false;
-}
-
-// Scan forward from `from` (just past the `<DataTable` token) until we
-// hit the matching `>` or `/>` that closes the JSX opening tag, while
-// tracking brace depth and string/template state so embedded JS
-// expressions (`columns={...}`) don't trip us up. Also handles the
-// TypeScript generic-parameter form `<DataTable<Foo>...>` by skipping
-// the immediately-following `<...>` block before scanning.
-function findTagEnd(text, from) {
-  let i = from;
-  // Skip a leading TS generic param block: `<DataTable<Foo, Bar<Baz>>(...)`.
-  if (text[i] === '<') {
-    let angle = 0;
-    for (; i < text.length; i++) {
-      const c = text[i];
-      if (c === '<') angle++;
-      else if (c === '>') {
-        angle--;
-        if (angle === 0) {
-          i++;
-          break;
-        }
-      }
-    }
-  }
-  let depth = 0;
-  let inString = null; // ' " or `
-  for (; i < text.length; i++) {
-    const c = text[i];
-    if (inString) {
-      if (c === inString && text[i - 1] !== '\\') inString = null;
-      continue;
-    }
-    if (c === '"' || c === "'" || c === '`') {
-      inString = c;
-      continue;
-    }
-    if (c === '{') {
-      depth++;
-      continue;
-    }
-    if (c === '}') {
-      depth--;
-      continue;
-    }
-    if (depth === 0 && (c === '>' || (c === '/' && text[i + 1] === '>'))) {
-      return c === '/' ? i + 2 : i + 1;
-    }
-  }
-  return -1;
-}
-
 function auditFile(path) {
   const text = readFileSync(path, 'utf8');
-  const masked = buildMaskedRegions(text);
-  // Match `<DataTable` followed by either whitespace, `<` (for the
-  // generic-arg form `<DataTable<Foo>`), `/`, or `>`. Excludes
-  // `<DataTableColumnsMenu`, `<DataTableResizer`, etc.
-  const re = /<DataTable(?=[\s</>])/g;
-  let m;
-  while ((m = re.exec(text)) !== null) {
-    if (isMaskedRegion(masked, m.index)) continue;
-    const tagEnd = findTagEnd(text, m.index + '<DataTable'.length);
-    if (tagEnd === -1) {
-      const line = text.slice(0, m.index).split('\n').length;
-      offenders.push({
-        where: `${path}:${line}`,
-        why: '<DataTable opening tag never closes — could not parse',
-      });
-      continue;
-    }
-    const tagSource = text.slice(m.index, tagEnd);
-    const hasTableId = /\btableId\s*=/.test(tagSource);
-    if (!hasTableId) {
-      const line = text.slice(0, m.index).split('\n').length;
-      offenders.push({
-        where: `${path}:${line}`,
-        why: 'missing tableId — column visibility / widths / sort / page size will not persist',
-      });
-    }
+  const source = ts.createSourceFile(path, text, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+  for (const diagnostic of source.parseDiagnostics) {
+    const line = source.getLineAndCharacterOfPosition(diagnostic.start ?? 0).line + 1;
+    offenders.push({
+      where: `${path}:${line}`,
+      why: `invalid TSX: ${ts.flattenDiagnosticMessageText(diagnostic.messageText, ' ')}`,
+    });
   }
+  function visit(node) {
+    if (
+      (ts.isJsxOpeningElement(node) || ts.isJsxSelfClosingElement(node))
+      && node.tagName.getText(source) === 'DataTable'
+    ) {
+      const hasTableId = node.attributes.properties.some(
+        attribute => ts.isJsxAttribute(attribute) && attribute.name.getText(source) === 'tableId',
+      );
+      if (!hasTableId) {
+        const line = source.getLineAndCharacterOfPosition(node.getStart(source)).line + 1;
+        offenders.push({
+          where: `${path}:${line}`,
+          why: 'missing tableId — column visibility / widths / sort / page size will not persist',
+        });
+      }
+    }
+    ts.forEachChild(node, visit);
+  }
+  visit(source);
 }
 
 walk(ROOT);

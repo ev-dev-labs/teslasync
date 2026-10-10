@@ -1,8 +1,11 @@
-import { createContext, useContext, useId, useMemo, useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { createContext, useContext, useEffect, useId, useMemo, useRef, useState } from 'react';
+import { motion, AnimatePresence } from '@/components/motion';
 import { Lock, Unlock, Shield } from 'lucide-react';
 import { cn } from '@/lib/cn';
-import { Tooltip } from '@/components/ui';
+import { Tooltip } from '@/components/ui/Tooltip';
+import { Button } from '@/components/ui/Button';
+import { Text } from '@/components/ui/Typography';
+import { VisuallyHidden } from '@/components/a11y/VisuallyHidden';
 import type { VehicleTwinState, WindowState, TurnSignalState } from '@/lib/vehicleState';
 import {
   FALLBACK_PAINT,
@@ -12,6 +15,8 @@ import { buildCompositorUrl, COMPOSITOR_METRICS } from '@/lib/teslaCompositor';
 import { useVehiclePaint } from '@/hooks/useVehiclePaint';
 import { ambientFrames, ambientLoop } from '@/components/motion/ambient';
 import { useMotionPreference } from '@/hooks/useMotionPreference';
+import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 
 const SIZE_MAP = { sm: 300, md: 440, lg: 560 } as const;
 const VIEWBOX_WIDTH = 560;
@@ -204,30 +209,30 @@ function useTwinCtx(): TwinContextValue {
  */
 const C = {
   cladding: 'rgba(10,13,20,0.88)',
-  glassStroke: 'rgba(125,211,252,0.32)',
+  glassStroke: 'var(--semantic-info-border)',
   glassOpen: 'rgba(3,7,18,0.72)',
-  glassPartial: 'rgba(100,200,255,0.05)',
-  glassUnknown: 'rgba(255,255,255,0.04)',
-  doorClosed: 'rgba(255,255,255,0.13)',
-  doorOpen: 'rgba(251,191,36,0.72)',
-  doorUnknown: 'rgba(255,255,255,0.07)',
+  glassPartial: 'var(--semantic-warning-bg)',
+  glassUnknown: 'var(--surface-2)',
+  doorClosed: 'var(--border-default)',
+  doorOpen: 'var(--semantic-warning)',
+  doorUnknown: 'var(--text-secondary)',
   headlightOff: 'rgba(255,255,255,0.14)',
   headlightOn: 'rgba(255,255,220,0.9)',
   headlightBeam: 'rgba(255,255,220,0.08)',
-  headlightGlow: 'rgba(34,211,238,0.35)',
+  headlightGlow: 'var(--semantic-info-border)',
   taillightBase: 'rgba(239,68,68,0.45)',
   taillightActive: 'rgba(239,68,68,0.85)',
   amber: 'rgba(251,191,36,0.78)',
-  amberFill: 'rgba(251,191,36,0.18)',
-  chargeGreen: 'rgba(34,197,94,0.82)',
-  chargeGreenFill: 'rgba(34,197,94,0.22)',
-  lockedGreen: 'rgba(34,197,94,0.9)',
-  unlockedRed: 'rgba(239,68,68,0.9)',
-  sentryRed: 'rgba(239,68,68,0.8)',
-  sentryGlow: 'rgba(239,68,68,0.35)',
-  seatOccupied: 'rgba(34,211,238,0.32)',
-  frunkTrunkOpen: 'rgba(251,191,36,0.2)',
-  neutral: 'rgba(255,255,255,0.05)',
+  amberFill: 'var(--semantic-warning-bg)',
+  chargeGreen: 'var(--semantic-info)',
+  chargeGreenFill: 'var(--semantic-info-bg)',
+  lockedGreen: 'var(--text-secondary)',
+  unlockedRed: 'var(--semantic-info)',
+  sentryRed: 'var(--semantic-info)',
+  sentryGlow: 'var(--semantic-info-border)',
+  seatOccupied: 'var(--semantic-info-bg)',
+  frunkTrunkOpen: 'var(--semantic-warning-bg)',
+  neutral: 'var(--surface-2)',
   shadow: 'rgba(0,0,0,0.5)',
   wheelDark: 'rgba(0,0,0,0.94)',
   wheelSidewall: 'rgba(8,12,22,0.95)',
@@ -245,19 +250,19 @@ function windowFill(state: WindowState, glassClosedRef: string): string {
 
 function windowStroke(state: WindowState): string {
   switch (state) {
-    case 'open': return C.amber;
-    case 'partial': return 'rgba(245,158,11,0.45)';
+    case 'open': return C.doorOpen;
+    case 'partial': return 'var(--semantic-warning-border)';
     case 'closed': return C.glassStroke;
-    default: return 'rgba(255,255,255,0.08)';
+    default: return 'var(--text-secondary)';
   }
 }
 
-function windowLabel(state: WindowState): string {
+function windowLabel(state: WindowState, t: TFunction): string {
   switch (state) {
-    case 'closed': return 'Closed';
-    case 'open': return 'Open';
-    case 'partial': return 'Partially open';
-    default: return 'Unknown';
+    case 'closed': return t('common.closed');
+    case 'open': return t('common.open');
+    case 'partial': return t('dayLog.windowStates.partial');
+    default: return t('common.unknown');
   }
 }
 
@@ -266,8 +271,8 @@ function doorStroke(open: boolean | null): string {
   return open ? C.doorOpen : C.doorClosed;
 }
 
-function stateLabel(value: boolean | null, trueText: string, falseText: string): string {
-  if (value === null) return 'Unknown';
+function stateLabel(value: boolean | null, trueText: string, falseText: string, t?: TFunction): string {
+  if (value === null) return t ? t('common.unknown') : 'Unknown';
   return value ? trueText : falseText;
 }
 
@@ -293,7 +298,7 @@ function InteractiveHotspot({
   return (
     <foreignObject x={x} y={y} width={width} height={height}>
       <Tooltip content={label} side={side}>
-        <span className="block w-full h-full" />
+        <Button type="button" variant="ghost" aria-label={label} className="block w-full h-full rounded-none p-0 hover:bg-transparent" />
       </Tooltip>
     </foreignObject>
   );
@@ -323,27 +328,15 @@ function GroundShadow() {
 }
 
 function ChargingUnderglow() {
-  const { ids } = useTwinCtx();
   return (
     <g pointerEvents="none">
-      <motion.ellipse
-        cx={298}
-        cy={255}
-        rx={190}
-        ry={16}
-        fill="rgba(34,197,94,0.18)"
-        filter={`url(#${ids.glow})`}
-        animate={ambientFrames({ opacity: [0.2, 0.55, 0.2], rx: [160, 205, 160] })}
-        transition={ambientLoop({ duration: 2.4, repeat: Infinity, ease: 'easeInOut' })}
-      />
-      <motion.path
+      <path
         d="M 152 246 C 240 253 360 253 446 244"
         fill="none"
-        stroke="rgba(34,197,94,0.38)"
+        stroke={C.chargeGreen}
         strokeWidth={2}
         strokeLinecap="round"
-        animate={ambientFrames({ opacity: [0.18, 0.75, 0.18] })}
-        transition={ambientLoop({ duration: 1.8, repeat: Infinity, ease: 'easeInOut' })}
+        opacity={0.45}
       />
     </g>
   );
@@ -373,8 +366,9 @@ function WheelSVG({
       {/* Sidewall */}
       <circle cx={cx} cy={cy} r={34} fill={C.wheelSidewall} stroke="rgba(255,255,255,0.06)" strokeWidth={0.7} />
       <motion.g
+        data-svg-wheel-rotor={cx === FRONT_WHEEL_CX ? 'front' : 'rear'}
         initial={shouldSpin ? { rotate: 0 } : false}
-        animate={shouldSpin ? { rotate: driving ? -360 : -1080 } : undefined}
+        animate={{ rotate: shouldSpin ? (driving ? -360 : -1080) : 0 }}
         transition={
           shouldSpin
             ? {
@@ -382,7 +376,7 @@ function WheelSVG({
               repeat: driving ? Infinity : 0,
               ease: 'linear',
             }
-            : undefined
+            : { duration: 0, repeat: 0 }
         }
         style={{ transformOrigin: `${cx}px ${cy}px` }}
       >
@@ -476,6 +470,8 @@ function BodyShell({
   photo?: boolean;
 }) {
   const { ids, bodyAccent } = useTwinCtx();
+  const { reduce, durationMs } = useMotionPreference();
+  const { t } = useTranslation();
   return (
     <g>
       {!photo && (
@@ -532,10 +528,10 @@ function BodyShell({
             fill={C.frunkTrunkOpen}
             stroke={C.doorOpen}
             strokeWidth={1.2}
-            initial={{ opacity: 0, y: 8 }}
+            initial={reduce ? false : { opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 8 }}
-            transition={{ duration: 0.25 }}
+            exit={reduce ? { opacity: 0, y: 0 } : { opacity: 0, y: 8 }}
+            transition={{ duration: durationMs / 1000 }}
           />
         )}
       </AnimatePresence>
@@ -557,10 +553,10 @@ function BodyShell({
             fill={C.frunkTrunkOpen}
             stroke={C.doorOpen}
             strokeWidth={1.2}
-            initial={{ opacity: 0, y: 8 }}
+            initial={reduce ? false : { opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 8 }}
-            transition={{ duration: 0.25 }}
+            exit={reduce ? { opacity: 0, y: 0 } : { opacity: 0, y: 8 }}
+            transition={{ duration: durationMs / 1000 }}
           />
         )}
       </AnimatePresence>
@@ -571,7 +567,7 @@ function BodyShell({
         y={140}
         width={150}
         height={48}
-        label={`Frunk: ${stateLabel(frunkOpen, 'Open', 'Closed')}`}
+        label={`${t('digitalTwin.frunk')}: ${stateLabel(frunkOpen, t('common.open'), t('common.closed'), t)}`}
         side="left"
       />
       <InteractiveHotspot
@@ -580,7 +576,7 @@ function BodyShell({
         y={94}
         width={88}
         height={46}
-        label={`Trunk: ${stateLabel(trunkOpen, 'Open', 'Closed')}`}
+        label={`${t('digitalTwin.trunk')}: ${stateLabel(trunkOpen, t('common.open'), t('common.closed'), t)}`}
         side="right"
       />
     </g>
@@ -621,30 +617,28 @@ function BodyReflections() {
   const { ids } = useTwinCtx();
   return (
     <g id="body-reflections" pointerEvents="none">
-      <motion.path
+      <path
         d="M 96 170 C 200 152 330 140 468 120"
         fill="none"
         stroke={`url(#${ids.shoulderHighlight})`}
         strokeWidth={1.4}
         strokeLinecap="round"
-        animate={ambientFrames({ opacity: [0.4, 0.7, 0.4] })}
-        transition={ambientLoop({ duration: 5.5, repeat: Infinity, ease: 'easeInOut' })}
+        opacity={0.4}
       />
-      <motion.path
+      <path
         d="M 212 154 C 280 150 380 145 458 136 L 450 144 C 372 151 282 156 218 160 Z"
         fill={`url(#${ids.softReflection})`}
-        animate={ambientFrames({ opacity: [0.28, 0.55, 0.28] })}
-        transition={ambientLoop({ duration: 6.5, repeat: Infinity, ease: 'easeInOut' })}
+        opacity={0.28}
       />
-      <motion.path
+      <path
         d="M 118 166 C 230 148 390 134 508 120"
         fill="none"
         stroke="rgba(255,255,255,0.1)"
         strokeWidth={1}
         strokeLinecap="round"
         strokeDasharray="58 420"
-        animate={ambientFrames({ strokeDashoffset: [0, -420], opacity: [0, 0.32, 0] })}
-        transition={ambientLoop({ duration: 7.5, repeat: Infinity, ease: 'easeInOut' })}
+        strokeDashoffset={0}
+        opacity={0.1}
       />
     </g>
   );
@@ -665,6 +659,7 @@ function SideWindows({
   interactive?: boolean;
   photo?: boolean;
 }) {
+  const { t } = useTranslation();
   const { ids } = useTwinCtx();
   const glassClosedRef = `url(#${ids.glassGrad})`;
   const passengerAlert = wFP === 'open' || wFP === 'partial' || wRP === 'open' || wRP === 'partial';
@@ -734,15 +729,15 @@ function SideWindows({
           strokeWidth={1.4}
           strokeLinecap="round"
         />
-        <motion.path
+        <path
           d="M 236 114 C 300 95 378 91 456 105"
           fill="none"
           stroke="rgba(255,255,255,0.16)"
           strokeWidth={1}
           strokeLinecap="round"
           strokeDasharray="42 260"
-          animate={ambientFrames({ strokeDashoffset: [0, -260], opacity: [0.1, 0.42, 0.1] })}
-          transition={ambientLoop({ duration: 6.8, repeat: Infinity, ease: 'easeInOut' })}
+          strokeDashoffset={0}
+          opacity={0.1}
         />
       </g>
 
@@ -784,14 +779,12 @@ function SideWindows({
       )}
 
       {passengerAlert && (
-        <motion.path
+        <path
           d="M 236 116 C 290 97 340 90 390 92.5 C 420 95.5 450 103 476 112"
           fill="none"
-          stroke={C.amber}
+          stroke="var(--semantic-warning)"
           strokeWidth={2}
           strokeLinecap="round"
-          animate={ambientFrames({ opacity: [0.35, 1, 0.35] })}
-          transition={ambientLoop({ duration: 1.4, repeat: Infinity })}
         />
       )}
       <InteractiveHotspot
@@ -800,7 +793,7 @@ function SideWindows({
         y={92}
         width={98}
         height={50}
-        label={`Front driver window: ${windowLabel(wFD)}`}
+        label={`${t('digitalTwin.windowFD')} ${t('teslaOnly.window')}: ${windowLabel(wFD, t)}`}
       />
       <InteractiveHotspot
         enabled={interactive}
@@ -808,10 +801,10 @@ function SideWindows({
         y={90}
         width={96}
         height={46}
-        label={`Rear driver window: ${windowLabel(wRD)}`}
+        label={`${t('digitalTwin.windowRD')} ${t('teslaOnly.window')}: ${windowLabel(wRD, t)}`}
       />
       <title>
-        Front passenger window: {windowLabel(wFP)}. Rear passenger window: {windowLabel(wRP)}.
+        {t('digitalTwin.windowFP')} {t('teslaOnly.window')}: {windowLabel(wFP, t)}. {t('digitalTwin.windowRP')} {t('teslaOnly.window')}: {windowLabel(wRP, t)}.
       </title>
     </g>
   );
@@ -826,10 +819,13 @@ function DoorOverlay({
 }: {
   kind: 'front' | 'rear';
   open: boolean | null;
-  label: string;
+  label: 'digitalTwin.doorDriverFront' | 'digitalTwin.doorDriverRear';
   interactive?: boolean;
   photo?: boolean;
 }) {
+  const { t } = useTranslation();
+  const doorLabel = `${t(label)} ${t('teslaOnly.door')}`;
+  const { reduce, durationMs } = useMotionPreference();
   const isFront = kind === 'front';
   const seam = isFront
     ? { d: 'M 306 141 C 302 176 300 210 299 243', handleX: 243, handleY: 157 }
@@ -850,10 +846,10 @@ function DoorOverlay({
             fill={C.amberFill}
             stroke={C.doorOpen}
             strokeWidth={1.4}
-            initial={{ opacity: 0, scaleX: 0.9 }}
+            initial={reduce ? false : { opacity: 0, scaleX: 0.9 }}
             animate={{ opacity: 1, scaleX: 1 }}
-            exit={{ opacity: 0, scaleX: 0.9 }}
-            transition={{ duration: 0.25 }}
+            exit={reduce ? { opacity: 0, scaleX: 1 } : { opacity: 0, scaleX: 0.9 }}
+            transition={{ duration: durationMs / 1000 }}
           />
         )}
       </AnimatePresence>
@@ -886,10 +882,10 @@ function DoorOverlay({
         y={hotspot.y}
         width={hotspot.width}
         height={hotspot.height}
-        label={`${label}: ${stateLabel(open, 'Open', 'Closed')}`}
+        label={`${doorLabel}: ${stateLabel(open, t('common.open'), t('common.closed'), t)}`}
         side={hotspot.side}
       />
-      <title>{label}: {stateLabel(open, 'Open', 'Closed')}</title>
+      <title>{doorLabel}: {stateLabel(open, t('common.open'), t('common.closed'), t)}</title>
     </g>
   );
 }
@@ -906,25 +902,21 @@ function PassengerDoorAlerts({
   return (
     <g>
       {passengerFront && (
-        <motion.path
+        <path
           d="M 306 140.5 C 276 142.5 246 144.5 218 146.2"
           fill="none"
           stroke={C.doorOpen}
           strokeWidth={2}
           strokeLinecap="round"
-          animate={ambientFrames({ opacity: [0.45, 1, 0.45] })}
-          transition={ambientLoop({ duration: 1.2, repeat: Infinity })}
         />
       )}
       {passengerRear && (
-        <motion.path
+        <path
           d="M 434 132 C 448 130 466 122 480 113.5"
           fill="none"
           stroke={C.doorOpen}
           strokeWidth={2}
           strokeLinecap="round"
-          animate={ambientFrames({ opacity: [0.45, 1, 0.45] })}
-          transition={ambientLoop({ duration: 1.2, repeat: Infinity })}
         />
       )}
     </g>
@@ -971,21 +963,18 @@ function HeadlightGlows({
       )}
       {headlightsActive && (
         <>
-          <motion.ellipse
+          <ellipse
             cx={66}
             cy={181}
             rx={16}
             ry={6}
             fill={C.headlightGlow}
-            filter={`url(#${ids.glow})`}
-            animate={ambientFrames({ opacity: driveIn ? [0.1, 0.95, 0.22, 0.85, 0.28] : [0.35, 0.85, 0.35] })}
-            transition={ambientLoop(driveIn ? { duration: 1.35, ease: 'easeInOut' } : { duration: 2.8, repeat: Infinity, ease: 'easeInOut' })}
+            opacity={0.28}
           />
-          <motion.path
+          <path
             d="M 44 194 L 0 180 L 0 216 Z"
             fill={C.headlightBeam}
-            animate={ambientFrames({ opacity: driveIn ? [0, 0.72, 0.18, 0.58, 0.12] : [0.45, 0.8, 0.45] })}
-            transition={ambientLoop(driveIn ? { duration: 1.35, ease: 'easeInOut' } : { duration: 2.8, repeat: Infinity, ease: 'easeInOut' })}
+            opacity={0.12}
           />
         </>
       )}
@@ -1051,24 +1040,21 @@ function TaillightGlows({
       )}
       {driveIn && (
         <>
-          <motion.ellipse
+          <ellipse
             cx={543}
             cy={148}
             rx={18}
             ry={9}
             fill={C.taillightActive}
-            filter={`url(#${ids.glow})`}
-            animate={ambientFrames({ opacity: [0, 0.95, 0.18, 0.9, 0.22] })}
-            transition={{ delay: 1.2, duration: 0.75, ease: 'easeOut' }}
+            opacity={0.18}
           />
-          <motion.path
+          <path
             d="M 538.5 141 C 543 140.5 547 143 548.5 146.5 C 549.5 150 549 153.5 547 155.5"
             fill="none"
             stroke={C.taillightActive}
             strokeWidth={3.6}
             strokeLinecap="round"
-            animate={ambientFrames({ opacity: [0, 1, 0.2, 1, 0.35] })}
-            transition={{ delay: 1.2, duration: 0.75, ease: 'easeOut' }}
+            opacity={0.35}
           />
         </>
       )}
@@ -1103,24 +1089,15 @@ function ChargePortIndicator({
       )}
       {charging && (
         <>
-          <motion.circle
+          <circle
             cx={cx}
             cy={cy}
             r={5}
             fill={C.chargeGreen}
-            animate={ambientFrames({ opacity: [0.45, 1, 0.45] })}
-            transition={ambientLoop({ duration: 1.2, repeat: Infinity, ease: 'easeInOut' })}
+            opacity={0.65}
           />
-          <motion.circle
-            cx={cx}
-            cy={cy}
-            r={10}
-            fill="none"
-            stroke={C.chargeGreen}
-            strokeWidth={1}
-            animate={ambientFrames({ opacity: [0.75, 0, 0.75], r: [8, 18, 8] })}
-            transition={ambientLoop({ duration: 1.5, repeat: Infinity, ease: 'easeInOut' })}
-          />
+          <circle cx={cx} cy={cy} r={10} fill="none" vectorEffect="non-scaling-stroke"
+            stroke={C.chargeGreen} strokeWidth={1} opacity={0.65} />
           <path
             d="M 532 129.5 L 526.5 138 L 532 138 L 529 144.5 L 538.5 134 L 533 134 Z"
             fill={C.chargeGreen}
@@ -1152,36 +1129,28 @@ function SecurityOverlay({
   sentryMode: boolean | null;
   interactive?: boolean;
 }) {
+  const { t } = useTranslation();
   const iconSize = 18;
   const cx = 320;
   const cy = 114;
   const sentryY = cy - 23;
+  const sentryIcon = <Shield className="w-4 h-4" fill={C.sentryRed} stroke={C.sentryRed} />;
 
   return (
     <g>
       {sentryMode && (
-        <motion.ellipse
-          cx={cx}
-          cy={sentryY}
-          rx={16}
-          ry={7}
-          fill="none"
-          stroke={C.sentryGlow}
-          strokeWidth={1.2}
-          animate={ambientFrames({ opacity: [0.65, 0.18, 0.65], rx: [13, 21, 13] })}
-          transition={ambientLoop({ duration: 2, repeat: Infinity })}
-        />
+        <ellipse cx={cx} cy={sentryY} rx={16} ry={7} fill="none" vectorEffect="non-scaling-stroke"
+          stroke={C.sentryGlow} strokeWidth={1.2} opacity={0.65} />
       )}
       {sentryMode && (
         <foreignObject x={cx - iconSize / 2} y={sentryY - iconSize / 2} width={iconSize} height={iconSize}>
           <Tooltip content="Sentry mode active" side="top">
-            <motion.span
-              className="flex items-center justify-center w-full h-full rounded-full bg-[var(--bg-app)]"
-              animate={ambientFrames({ opacity: [1, 0.45, 1] })}
-              transition={ambientLoop({ duration: 2, repeat: Infinity })}
-            >
-              <Shield className="w-4 h-4" fill={C.sentryRed} stroke={C.sentryRed} />
-            </motion.span>
+            {interactive ? (
+              <Button type="button" variant="ghost" aria-label={t('guard.sentryActive')}
+                className="w-full h-full rounded-full bg-[var(--bg-app)] p-0">{sentryIcon}</Button>
+            ) : (
+              <span className="flex items-center justify-center w-full h-full rounded-full bg-[var(--bg-app)]">{sentryIcon}</span>
+            )}
           </Tooltip>
         </foreignObject>
       )}
@@ -1189,12 +1158,12 @@ function SecurityOverlay({
         <foreignObject x={cx - iconSize / 2} y={cy - iconSize / 2} width={iconSize} height={iconSize}>
           {interactive ? (
             <Tooltip content={locked ? 'Locked' : 'Unlocked'} side="top">
-              <span className="flex items-center justify-center w-full h-full rounded-full bg-[var(--bg-app)]">
+              <Button type="button" variant="ghost" aria-label={t(locked ? 'common.locked' : 'common.unlocked')} className="w-full h-full rounded-full bg-[var(--bg-app)] p-0">
                 {locked
                   ? <Lock className="w-4 h-4" fill={C.lockedGreen} stroke={C.lockedGreen} />
                   : <Unlock className="w-4 h-4" fill={C.unlockedRed} stroke={C.unlockedRed} />
                 }
-              </span>
+              </Button>
             </Tooltip>
           ) : (
             <span className="flex items-center justify-center w-full h-full rounded-full bg-[var(--bg-app)]">
@@ -1214,7 +1183,7 @@ function DriverSeatIndicator({ occupied }: { occupied: boolean | null }) {
   if (!occupied) return null;
 
   return (
-    <ellipse cx={268} cy={122} rx={8.5} ry={11.5} fill={C.seatOccupied} stroke="rgba(34,211,238,0.35)" />
+    <ellipse cx={268} cy={122} rx={8.5} ry={11.5} fill={C.seatOccupied} stroke="var(--semantic-info)" />
   );
 }
 
@@ -1261,29 +1230,21 @@ function PhotoWheelSpinner({
     <div
       aria-hidden="true"
       data-wheel-spinner={wheel}
+      className="pointer-events-none absolute overflow-hidden rounded-full"
       style={{
-        position: 'absolute',
         left,
         top,
         width: size,
         height: size,
-        borderRadius: '50%',
-        overflow: 'hidden',
         maskImage: edgeMask,
         WebkitMaskImage: edgeMask,
         maskRepeat: 'no-repeat',
         WebkitMaskRepeat: 'no-repeat',
-        pointerEvents: 'none',
       }}
     >
       <motion.div
         data-wheel-rotor={wheel}
-        style={{
-          position: 'absolute',
-          inset: 0,
-          overflow: 'hidden',
-          transformOrigin: '50% 50%',
-        }}
+        className="absolute inset-0 origin-center overflow-hidden"
         initial={shouldSpin ? { rotate: 0 } : false}
         animate={{ rotate: shouldSpin ? (driving ? -360 : -1080) : 0 }}
         transition={
@@ -1293,15 +1254,15 @@ function PhotoWheelSpinner({
               repeat: driving ? Infinity : 0,
               ease: 'linear',
             }
-            : { duration: 0 }
+            : { duration: 0, repeat: 0 }
         }
       >
         <img
           src={photoUrl}
           alt=""
           draggable={false}
+          className="absolute"
           style={{
-            position: 'absolute',
             maxWidth: 'none',
             width: imgWidth,
             left: imgLeft - left,
@@ -1437,6 +1398,33 @@ export function VehicleTwin({
   paint: paintOverride,
   model,
 }: VehicleTwinProps) {
+  const { t } = useTranslation();
+  const summaryId = useId();
+  const opening = (value: boolean | null) => stateLabel(value, t('common.open'), t('common.closed'), t);
+  const toggle = (value: boolean | null) => stateLabel(value, t('common.on'), t('common.off'), t);
+  const inspection = [
+    [t('digitalTwin.doorDriverFront'), t('teslaOnly.door'), opening(doors.driverFront)],
+    [t('digitalTwin.doorDriverRear'), t('teslaOnly.door'), opening(doors.driverRear)],
+    [t('digitalTwin.doorPassengerFront'), t('teslaOnly.door'), opening(doors.passengerFront)],
+    [t('digitalTwin.doorPassengerRear'), t('teslaOnly.door'), opening(doors.passengerRear)],
+    [t('digitalTwin.frunk'), '', opening(frunkOpen)],
+    [t('digitalTwin.trunk'), '', opening(trunkOpen)],
+    [t('digitalTwin.windowFD'), t('teslaOnly.window'), windowLabel(windowFD, t)],
+    [t('digitalTwin.windowFP'), t('teslaOnly.window'), windowLabel(windowFP, t)],
+    [t('digitalTwin.windowRD'), t('teslaOnly.window'), windowLabel(windowRD, t)],
+    [t('digitalTwin.windowRP'), t('teslaOnly.window'), windowLabel(windowRP, t)],
+    [t('digitalTwin.chargePort'), '', opening(chargePortOpen)],
+    [t('common.charging'), '', stateLabel(isCharging, t('common.charging'), t('common.notCharging'), t)],
+    [t('common.locked'), '', stateLabel(locked, t('common.locked'), t('common.unlocked'), t)],
+    [t('digitalTwin.sentryMode'), '', toggle(sentryMode)],
+    [t('digitalTwin.headlights'), '', toggle(headlights)],
+    [t('digitalTwin.hazards'), '', toggle(hazards)],
+    [t('digitalTwin.turnSignal'), '', turnSignal === null ? t('common.unknown')
+      : ({ off: t('common.off'), left: t('digitalTwin.turnLeft'), right: t('digitalTwin.turnRight'), both: t('digitalTwin.turnBoth') })[turnSignal]],
+    [t('digitalTwin.driverSeat'), '', stateLabel(driverSeatOccupied, t('digitalTwin.occupied'), t('digitalTwin.empty'), t)],
+    [t('digitalTwin.driving'), '', toggle(isDriving)],
+  ].map(([name, kind, state]) => ({ name: [name, kind].filter(Boolean).join(' '), state }));
+  const summary = inspection.map(({ name, state }) => `${name}: ${state}`).join('. ');
   // A11Y-08 (WCAG 2.2.2). Every looping layer below is wrapped in
   // `ambientLoop` / `ambientFrames`, which read the preference
   // synchronously at render time. Subscribing to it once here is what
@@ -1444,9 +1432,26 @@ export function VehicleTwin({
   // subtree, and each helper re-evaluates on the way down. Without this
   // call the scene would keep animating until some unrelated state
   // change happened to repaint it.
-  useMotionPreference();
-  const width = SIZE_MAP[size];
+  const { reduce } = useMotionPreference();
+  const animateDriving = isDriving && !reduce;
+  const animateEntry = driveIn && !reduce;
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [measuredWidth, setMeasuredWidth] = useState<number | null>(null);
+  const width = Math.min(SIZE_MAP[size], measuredWidth ?? SIZE_MAP[size]);
   const height = Math.round(width * ASPECT_RATIO);
+  useEffect(() => {
+    const node = containerRef.current;
+    if (!node) return;
+    if (node.clientWidth > 0) setMeasuredWidth(node.clientWidth);
+    const observer = new ResizeObserver(entries => {
+      const nextWidth = entries[0]?.contentRect.width;
+      if (nextWidth != null && Number.isFinite(nextWidth) && nextWidth > 0) {
+        setMeasuredWidth(nextWidth);
+      }
+    });
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, []);
 
   // Resolve paint: explicit `paint` prop wins, else fall back to the
   // per-vehicle override + Tesla-inferred paint via the hook. The hook is
@@ -1487,7 +1492,7 @@ export function VehicleTwin({
     left: imgLeft,
     top: imgTop,
     opacity: photoOn ? 1 : 0,
-    transition: 'opacity 200ms ease',
+    transition: reduce ? 'none' : 'opacity 200ms ease',
   };
 
   // Per-instance gradient ids — prevents <defs> id collisions when two
@@ -1512,13 +1517,14 @@ export function VehicleTwin({
   return (
     <TwinContext.Provider value={ctxValue}>
       <motion.div
-        className={cn('relative inline-flex items-center justify-center overflow-hidden', className)}
-        style={{ width, height }}
-        role="img"
-        aria-label="Vehicle digital twin showing current physical state"
-        initial={driveIn ? { x: '115%', opacity: 0.18, scale: 0.96 } : false}
+        ref={containerRef}
+        className={cn('relative inline-flex max-w-full items-center justify-center overflow-hidden', className)}
+        style={{ width: SIZE_MAP[size], height }}
+        role={interactive ? 'group' : 'img'}
+        aria-label={t('digitalTwin.title')} aria-describedby={summaryId}
+        initial={animateEntry ? { x: '115%', opacity: 0.18, scale: 0.96 } : false}
         animate={driveIn ? { x: 0, opacity: 1, scale: 1 } : undefined}
-        transition={driveIn ? { duration: DRIVE_IN_DURATION, ease: 'easeOut' } : undefined}
+        transition={driveIn ? { duration: reduce ? 0 : DRIVE_IN_DURATION, ease: 'easeOut' } : undefined}
       >
         {photoState !== 'failed' && (
           <img
@@ -1543,8 +1549,8 @@ export function VehicleTwin({
               imgLeft={imgLeft}
               imgTop={imgTop}
               photoUrl={photoUrl}
-              driveIn={driveIn && entrySpinOk}
-              driving={isDriving}
+              driveIn={animateEntry && entrySpinOk}
+              driving={animateDriving}
             />
             <PhotoWheelSpinner
               wheel="rear"
@@ -1553,8 +1559,8 @@ export function VehicleTwin({
               imgLeft={imgLeft}
               imgTop={imgTop}
               photoUrl={photoUrl}
-              driveIn={driveIn && entrySpinOk}
-              driving={isDriving}
+              driveIn={animateEntry && entrySpinOk}
+              driving={animateDriving}
             />
           </>
         )}
@@ -1566,8 +1572,8 @@ export function VehicleTwin({
           className="select-none relative"
         >
           <SvgDefs paint={paint} ids={ids} />
-          <title>Tesla side view digital twin</title>
-          <desc>Vehicle side view with dynamic telemetry overlays for doors, windows, lights, lock, sentry mode, and charging status.</desc>
+          <title>{t('digitalTwin.title')}</title>
+          <desc>{summary}</desc>
           {!photoOn && <GroundShadow />}
           {isCharging && <ChargingUnderglow />}
           <g id="body">
@@ -1593,14 +1599,14 @@ export function VehicleTwin({
             <DoorOverlay
               kind="rear"
               open={doors.driverRear}
-              label="Driver Rear"
+              label="digitalTwin.doorDriverRear"
               interactive={interactive}
               photo={photoOn}
             />
             <DoorOverlay
               kind="front"
               open={doors.driverFront}
-              label="Driver Front"
+              label="digitalTwin.doorDriverFront"
               interactive={interactive}
               photo={photoOn}
             />
@@ -1613,18 +1619,33 @@ export function VehicleTwin({
               interactive={interactive}
               photo={photoOn}
             />
-            <HeadlightGlows on={headlights} hazards={hazards} turnSignal={turnSignal} driveIn={driveIn} photo={photoOn} />
-            <TaillightGlows hazards={hazards} turnSignal={turnSignal} driveIn={driveIn} photo={photoOn} />
+            <HeadlightGlows on={headlights} hazards={hazards} turnSignal={turnSignal} driveIn={animateEntry} photo={photoOn} />
+            <TaillightGlows hazards={hazards} turnSignal={turnSignal} driveIn={animateEntry} photo={photoOn} />
           </g>
           {!photoOn && (
             <g id="wheels">
-              <WheelSVG cx={FRONT_WHEEL_CX} cy={WHEEL_CY} driveIn={driveIn} driving={isDriving} />
-              <WheelSVG cx={REAR_WHEEL_CX} cy={WHEEL_CY} driveIn={driveIn} driving={isDriving} />
+              <WheelSVG cx={FRONT_WHEEL_CX} cy={WHEEL_CY} driveIn={animateEntry} driving={animateDriving} />
+              <WheelSVG cx={REAR_WHEEL_CX} cy={WHEEL_CY} driveIn={animateEntry} driving={animateDriving} />
             </g>
           )}
           <SecurityOverlay locked={locked} sentryMode={sentryMode} interactive={interactive} />
         </svg>
       </motion.div>
+      <VisuallyHidden id={summaryId}>{summary}</VisuallyHidden>
+      {interactive && (
+        <div role="group" aria-label={t('digitalTwin.brief.title')} className="flex min-w-0 max-w-full flex-wrap gap-2"
+          style={{ width: SIZE_MAP[size] }}>
+          {inspection.map(({ name, state }) => (
+            <Tooltip key={name} content={`${name}: ${state}`} multiline>
+              <Button type="button" variant="outline" wrapLabel
+                className="min-h-touch11 min-w-touch11"
+                onClick={event => event.currentTarget.focus()}>
+                <Text variant="bodySm">{name}: {state}</Text>
+              </Button>
+            </Tooltip>
+          ))}
+        </div>
+      )}
     </TwinContext.Provider>
   );
 }

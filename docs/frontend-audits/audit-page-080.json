@@ -1,0 +1,362 @@
+{
+  "item": "audit-page-080",
+  "page": "web\\src\\features\\charging\\pages\\ChargerResiliencePage.tsx",
+  "routes": ["/charger-resilience"],
+  "purpose": "Describe concentration of a selected vehicle's returned charging history by site and model removal of its top charging site.",
+  "primaryGoal": "Understand top-site dependency, demonstrated alternatives, and hypothetical loss exposure without mistaking a bounded observed history for lifetime coverage.",
+  "dataSources": [
+    {
+      "hook": "useChargingHistory(vehicleIdStr)",
+      "file": "web\\src\\api\\hooks\\useCharging.ts",
+      "line": 72,
+      "endpoint": "/api/v1/charging?vehicle_id=<encoded selected vehicle>&limit=1000",
+      "routeEvidence": "internal\\api\\router.go:3502-3503 mounts chargingHandler.ListByVehicle",
+      "sourceOwner": "internal\\api\\charging\\handler.go:123-159; charging repository GetByVehicle",
+      "behavior": "Enabled only with a selected vehicle; distinct charging-sessions/history/vehicle/limit key, moderate staleTime, AbortSignal forwarding and safeArray selection. No start/end or pagination traversal. Handler parses vehicle_id, pagination and date bounds and guarantees [] rather than null.",
+      "scope": "Observed returned rows, capped by the frontend to 1000, not an entire selected interval or lifetime guarantee. Backend pagination implementation, ordering, actual row completeness and live enrichment were not traced.",
+      "trust": "Page useDataState provenance historical; retained data survives refresh failure and paused refresh. Summary remains in Wh; energy display uses useUnits.",
+      "citations": ["web\\src\\features\\charging\\pages\\ChargerResiliencePage.tsx:40-46", "web\\src\\api\\hooks\\useCharging.ts:50-52,67-85", "web\\src\\features\\charging\\components\\ChargerResilienceStats.tsx:77-81"]
+    },
+    {
+      "hook": "useSelectedVehicle",
+      "file": "web\\src\\hooks\\useSelectedVehicle.ts",
+      "line": 48,
+      "endpoint": "Indirect vehicle-list dependency; not independently API-audited in this atomic scope",
+      "sourceOwner": "Existing selected-vehicle store and URL/workspace bridge",
+      "behavior": "Path/query vehicle identity precedes saved selection then first known vehicle. Page has no competing local selector. Null selection uses NoVehicleSelected with onboarding action.",
+      "citations": ["web\\src\\hooks\\useSelectedVehicle.ts:50-85", "web\\src\\features\\charging\\pages\\ChargerResiliencePage.tsx:40-44,66-68", "web\\src\\lib\\workspaceScope.ts:23-78,165-178"]
+    },
+    {
+      "hook": "useUnits and useNumberFormatting",
+      "file": "web\\src\\hooks\\useUnits.ts",
+      "line": 159,
+      "endpoint": "Existing preference/formatting infrastructure; not a page-specific measurement request",
+      "sourceOwner": "Existing unitConversion and numberFormat owners",
+      "behavior": "Wh formatted only on render; percentages and KPI values follow saved numeric precision/locale. What-if score values currently bypass this number-format bridge."
+    }
+  ],
+  "components": [
+    {"name": "PageLayout", "owner": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx", "line": 9, "role": "PageContainer adapter, full-width min-w-0 container-query stack; retains shell/header ownership"},
+    {"name": "LayoutCard and SourceContent", "owner": "web\\src\\components\\layout\\layout-reference\\SourceContent.tsx", "line": 9, "role": "Two persistent source panels, loading/error/empty/retained presentation and recovery. LayoutCard usage inspected at page:141,177; its implementation not inspected"},
+    {"name": "ChartContainer", "owner": "web\\src\\components\\charts\\ChartContainer.tsx", "line": 79, "role": "Chart states, bounded viewport, full scalar-row accessible/forced-colors table and PNG/SVG/clipboard/CSV export; no fullscreen/annotations/legend requested here"},
+    {"name": "ChargerResilienceStats", "owner": "web\\src\\features\\charging\\components\\ChargerResilienceStats.tsx", "line": 16, "role": "Four source-backed metrics and specialist explanations with missing-value suppression"},
+    {"name": "ChargingSummaryBrief", "owner": "web\\src\\features\\charging\\components\\operationalbrief-all\\ChargingSummaryBrief.tsx", "line": 13, "role": "Existing domain presentation bridge to OperationalBrief and useOperationalMetrics; retained/missing/partial/loading labels, unknown period and source limitations"},
+    {"name": "Text, Badge, HelpTooltip", "owner": "web\\src\\components\\ui\\HelpTooltip.tsx", "line": 49, "role": "Existing typography/status/help primitives. Help respects contextualHelp; Text/Badge implementation not independently inspected"},
+    {"name": "StaleRefreshWarning", "owner": "web\\src\\components\\feedback\\StaleRefreshWarning.tsx", "line": 47, "role": "Nonblocking source warning and refresh action, including retained offline data"},
+    {"name": "FadeIn", "owner": "web\\src\\components\\motion\\FadeIn.tsx", "line": 22, "role": "Three bounded entrance groups; useMotionPreference suppresses initial transition/delay for reduced motion"},
+    {"name": "NoVehicleSelected", "owner": "web\\src\\features\\onboarding\\components\\NoVehicleSelected.tsx", "line": 44, "role": "Existing prerequisite explanation and governed onboarding navigation"}
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\charging\\pages\\ChargerResiliencePage.tsx",
+      "line": 89,
+      "rule": "MDC-026 / mission 24",
+      "detail": "One failed retained charging source can produce the global StaleRefreshWarning plus retained SourceContent message/retry in both detail cards (150-153,178-181), while the brief also labels retained measurements. These are repeated notices for one query, not independent failed sources.",
+      "fix": "Reuse existing retainedMessage/errorRecovery and StaleRefreshWarning.hideRetry contracts to choose a clear primary recovery placement; keep all source labels and retained contents and preserve appropriate per-panel recovery. Do not add another retry component.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\charging\\pages\\ChargerResiliencePage.tsx",
+      "line": 155,
+      "rule": "MDC-002 / mission 4",
+      "detail": "Four label/value pairs use a manual grid. Site rows also use a page-local bordered list. Both are candidates for reuse only after checking existing display/list contracts; this single-page audit does not establish cross-page extraction evidence.",
+      "fix": "Prefer existing primitives for semantic label/value presentation without changing the four what-if fields or site detail. Keep specialist local rendering unless a proven existing owner preserves it.",
+      "owner": "page",
+      "confidence": "medium"
+    }
+  ],
+  "responsive": {
+    "verified": false,
+    "sourceEvidence": [
+      "PageLayout.tsx:12-13 supplies @container, w-full, min-w-0.",
+      "ChargerResiliencePage.tsx:140 stacks detail panels until @3xl; :155 stacks label/value pairs until @sm.",
+      "ChargerResiliencePage.tsx:184-191 wraps site rows, breaks site labels and retains both badges.",
+      "ChartContainer.tsx:665-689 bounds and contains its viewport; the page supplies ResponsiveContainer and 340px height."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\charging\\pages\\ChargerResiliencePage.tsx",
+        "line": 124,
+        "rule": "MDC-043 / mission 15,27",
+        "detail": "All returned sites are plotted on one vertical bar chart, with a fixed 64px x-axis, -30-degree labels truncated to 20 characters and 10px ticks. At narrow containers or many sites, readability and label separation are at risk; no actual overflow or viewport failure was exercised.",
+        "fix": "Review an adaptive presentation using existing chart primitives, larger shared tick sizing and accessible full labels. Preserve every site, order, percentage, session count and complete export/table scope; never trim data to improve the screenshot.",
+        "owner": "page",
+        "confidence": "medium"
+      }
+    ],
+    "requiredReview": ["320", "375", "390", "430", "768", "1024", "1280", "1440", "1920", "2560", "narrow allocated container", "long site names", "200% text", "RTL"]
+  },
+  "accessibility": {
+    "verified": false,
+    "sourceEvidence": [
+      "Page:100-103 names the chart; :113-119 provides complete site/share/sessions fallback rows.",
+      "ChartContainer.tsx:765-800 creates the hidden/forced-colors figcaption table; :686-692 hides SVG in forced colors and assigns image semantics.",
+      "Decorative icons are aria-hidden at page:142,177; what-if help has a contextual name at :147.",
+      "FadeIn.tsx:23-34 honors reduced motion in source; actual OS mode remains unverified."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\charging\\pages\\ChargerResiliencePage.tsx",
+        "line": 130,
+        "rule": "MDC-025,MDC-040 / mission 21,30",
+        "detail": "Top site is distinguished in the chart only by the Cell color. The accessible/export projection explicitly drops isTop at 61-63, and fallback columns do not identify the top site. The KPI names the top site elsewhere, but the chart's own accessible rows cannot communicate its highlighted marker.",
+        "fix": "Carry a localized textual top-site designation in the chart description or a scalar status column and visible site indicator. Retain site/share/sessions and ensure the CSV remains scalar; do not restore boolean cells.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\charging\\components\\ChargerResilienceStats.tsx",
+        "line": 28,
+        "rule": "MDC-016,MDC-040",
+        "detail": "Score and effective-site HelpTooltip calls (28,41) omit ariaLabel and therefore both use generic More info in HelpTooltip.tsx:72. They are meaningful explanations but have indistinguishable names outside surrounding text.",
+        "fix": "Pass contextual localized ariaLabel for resilience score and effective-site count using existing HelpTooltip API. Keep both complete specialist help texts and contextual-help preference.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\components\\ui\\HelpTooltip.tsx",
+        "line": 105,
+        "rule": "MDC-040",
+        "detail": "Shared trigger classes have no minimum hit area or padding and default sm icon is h-3.5 w-3.5 (line 45). Page uses this compact trigger three times. Source suggests a sub-24px target; actual composed target size and WCAG spacing exceptions are unmeasured.",
+        "fix": "Existing shared HelpTooltip owner should provide a stable target-size contract separate from icon size, preserve inline layout and focus/tooltip semantics, and verify documented spacing exceptions or 44px mobile targets. No local duplicate tooltip or page-owned shared edit.",
+        "owner": "shared",
+        "confidence": "medium"
+      },
+      {
+        "file": "web\\src\\features\\charging\\pages\\ChargerResiliencePage.tsx",
+        "line": 155,
+        "rule": "MDC-040 / mission 30",
+        "detail": "What-if facts are adjacent Text blocks, not explicit term/definition associations. The single-column mobile branch preserves reading order but has no semantic grouping per pair.",
+        "fix": "Use semantic dl/dt/dd via existing typography as overrides or a verified existing label/value owner; preserve all four pairs, score delta and responsive order.",
+        "owner": "page",
+        "confidence": "medium"
+      }
+    ],
+    "unverified": ["keyboard navigation", "tooltip open and Escape behavior", "screen-reader output", "focus visibility/restoration", "effective text/UI contrast", "touch target geometry", "forced colors", "reduced-motion runtime"]
+  },
+  "states": {
+    "loading": "Page:70 distinguishes initial loading from retained refresh; brief:67 and chart:106 show loading while persistent card shells use SourceContent.",
+    "empty": "Successful [] yields four missing KPI values (Stats:19,24-58), chart no locations, empty what-if and sites bodies; no loaded-history lifetime claim.",
+    "fatalError": "Page:71,107,153,181 uses fatalError only; Stats:69-70 provides QueryError recovery; all four section shells remain.",
+    "retained": "Page:73-75 retains query data, warning at :89, detail SourceContent retained state and brief retained at Stats:68.",
+    "offline": "StaleRefreshWarning.tsx:72-77 uses offline copy for paused retained data. Initial paused behavior depends on actual query isLoading and hasData; authored test uses a mock rather than exercising TanStack.",
+    "noVehicle": "Page:66-68 switches to NoVehicleSelected and governed onboarding CTA rather than requesting unscoped history.",
+    "unknownPartial": "Missing measurement issue below; analyzer currently cannot distinguish null energy from measured zero. No full-range completeness guaranteed.",
+    "issues": [
+      {
+        "file": "web\\src\\features\\charging\\lib\\chargerResilience.ts",
+        "line": 141,
+        "rule": "MDC-026,MDC-045 / mission 0.3",
+        "detail": "buildSites treats invalid/null/absent energy as zero using num(s.total_energy_added_wh) ?? 0. It reports zero energyShare when total is zero (158), then analyze uses a session-frequency dependency fallback (235-236). Stats considers any nonempty site list available (19), so missing-energy rows can become apparently measured resilience/energy-share values. This is a source-proved trust risk, not proof that the current backend returns null.",
+        "fix": "Integration/domain owner should establish measurement availability and a partial/unknown-energy contract, distinguish genuine measured zero from missing energy, and label existing session-frequency fallback. Preserve site membership, session counts, HHI/score formula, existing zero-session behavior and raw Wh; presentation modernization must not silently change calculations.",
+        "owner": "integration",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\charging\\pages\\ChargerResiliencePage.tsx",
+        "line": 150,
+        "rule": "MDC-026",
+        "detail": "Detail panels select empty only when sourceStatus is ready. If a successful empty [] is retained after a refresh failure or pause, retained SourceContent renders its notice but the what-if children are absent and the sites ul is empty (154,182-200), without their source-specific no-data explanation.",
+        "fix": "Keep the retained notice/retry and independently render the no-what-if/no-sites empty body inside retained content when no derived observations exist; do not replace retained sources with fatal errors.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ]
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\charging\\pages\\ChargerResiliencePage.tsx",
+      "line": 142,
+      "rule": "MDC-010,MDC-012,MDC-016 / mission 5-7",
+      "detail": "Decorative ShieldCheck and MapPin use fixed text-cyan-300 (142,177), while delta uses fixed rose/emerald-300 (165). These do not escalate to neon, but bypass theme-aware semantic text and give noninteractive header ornaments unnecessary accent emphasis.",
+      "fix": "Use existing subdued secondary/muted tokens for decorative icons and existing semantic success/danger tokens for meaningful signed delta. Preserve delta sign/text and all saved themes; measure actual composed contrast.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\charging\\pages\\ChargerResiliencePage.tsx",
+      "line": 195,
+      "rule": "MDC-025 / mission 7",
+      "detail": "Each site share is presented as an info or warning badge. At many sites this repeats colored chrome around every numeric measurement; source already uses neutral row surfaces/borders and neutral session badges.",
+      "fix": "Retain explicit warning semantics at the existing >=50% threshold but use quieter numeric treatment for ordinary shares and preserve readable labels/units. Keep existing Badge owner rather than new status registry.",
+      "owner": "page",
+      "confidence": "medium"
+    },
+    {
+      "file": "web\\src\\features\\charging\\pages\\ChargerResiliencePage.tsx",
+      "line": 125,
+      "rule": "MDC-013,MDC-034",
+      "detail": "Chart axis font sizes 10 and 11 are page-local overrides. Grid is already restrained at 0.4 opacity and the two colors reuse chartTokens rather than a local palette.",
+      "fix": "Reuse accepted chart typography/axis tokens and retain data meaning. Do not replace global palette or reset persisted chart/theme preferences to reduce noise.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\features\\charging\\lib\\chargerResilience.ts",
+      "line": 123,
+      "rule": "MDC-044",
+      "detail": "The synthetic unknown-location label is hardcoded English in a pure domain function. It flows directly into chart, KPI context and site list; translating groupedBy at page:188 does not translate this label.",
+      "fix": "Keep the stable type:unknown identity and localize only this synthetic fallback at the presentation boundary; never translate/recase actual place or charger-type source labels. Catalog ownership remains outside this page audit.",
+      "owner": "integration",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\charging\\pages\\ChargerResiliencePage.tsx",
+      "line": 161,
+      "rule": "MDC-044",
+      "detail": "What-if score before, after and delta interpolate raw numeric values (161,167-170) although the KPI score uses saved fmtNumber at Stats:25. These displays do not react consistently to precision/locale choices.",
+      "fix": "Use existing useNumberFormatting for score and signed delta display only; retain original numeric summary, source export values, sign and formula.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\charging\\pages\\ChargerResiliencePage.migration.test.tsx",
+      "line": 50,
+      "rule": "MDC-070 / evidence integrity",
+      "detail": "The test MemoryRouter path is /charging/resilience, while App.tsx:873 mounts /charger-resilience. It renders the imported page directly, mocks vehicle/history/FadeIn and does not prove routed workspace or real query behavior.",
+      "fix": "Future focused integration coverage should use the actual route and existing shell scope with real relevant adapters; keep existing tests and assertions. No test execution or acceptance claimed by this audit.",
+      "owner": "integration",
+      "confidence": "high"
+    }
+  ],
+  "priority": {
+    "level": "medium-high",
+    "first": "Resolve missing versus measured-zero energy trust before stylistic adoption changes; preserve current formulas until the integration owner establishes explicit semantics.",
+    "next": ["Textual top-site semantics", "Retained-empty explanations", "Contextual help names and shared target review", "Responsive chart density and calmer token styling", "Locale-consistent what-if values"],
+    "scopeNote": "No source changes are authorized by this audit. Existing observed-history scope is honest and should not be silently converted to a full-range/lifetime promise."
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "HelpTooltip hit-area contract review",
+      "existingOwnerFile": "web\\src\\components\\ui\\HelpTooltip.tsx",
+      "file": "web\\src\\components\\ui\\HelpTooltip.tsx",
+      "line": 105,
+      "rule": "MDC-040",
+      "detail": "Existing compact help trigger has no explicit target minimum; no new help implementation is needed.",
+      "fix": "Shared owner reviews hit-area sizing separately from icon size while retaining current public API, inline flow and contextual-help preference.",
+      "owner": "shared",
+      "confidence": "medium",
+      "props": {
+        "preserve": ["i18nKey", "defaultValue", "ariaLabel", "size", "className", "placement", "learnMore", "children"],
+        "candidateExtension": "Only if needed, an opt-in target-size treatment compatible with dense inline contexts; do not speculate a replacement API."
+      },
+      "variants": ["Existing xs/sm/md icon sizes; adequate touch area independent of glyph"],
+      "states": ["contextualHelp off", "hover", "focus", "touch", "Escape", "long localized help", "forced colors", "reduced motion"],
+      "usedBy": ["ChargerResilienceStats score help at :28", "ChargerResilienceStats effective-site help at :41", "ChargerResiliencePage what-if help at :143"],
+      "dependsOn": ["Existing Tooltip implementation and preference bridge", "Measured target/spacing evidence at narrow container widths", "Shared-owner regression and keyboard/touch review"],
+      "evidenceLimit": "Only this assigned page's consumers were inspected; no claim of independently audited cross-page demand or global accessibility failure."
+    }
+  ],
+  "competingImplementations": {
+    "confirmed": [],
+    "notes": [
+      "Page consumes existing category barrels, PageLayout, SourceContent, ChartContainer and ChargingSummaryBrief; no competing palette, query store, tooltip or surface component introduced.",
+      "Local site list and what-if grid are specialist presentation, not evidence justifying new shared components.",
+      "No local date or vehicle picker. getWorkspaceRouteScope('/charger-resilience') resolves range false and vehicle true from inspected source. Preserve this observed-window scope; a future date-scoping change requires explicit integration and both server bounds, not a second picker.",
+      "Required shared review is deduplicated to the existing HelpTooltip owner; all other proposals reuse current APIs or belong to page/domain integration."
+    ]
+  },
+  "preservation": {
+    "sourceHash": "C78331EDB8D577B64501FC86960183473FBA899680AF375E2967440F1843B84E",
+    "sourceHashAlgorithm": "SHA256",
+    "sourceFile": "web\\src\\features\\charging\\pages\\ChargerResiliencePage.tsx",
+    "currentLineCount": 208,
+    "pageSpecificPresentationLineCount": 364,
+    "presentationFiles": [
+      {"file": "web\\src\\features\\charging\\pages\\ChargerResiliencePage.tsx", "lines": 208},
+      {"file": "web\\src\\features\\charging\\components\\ChargerResilienceStats.tsx", "lines": 83},
+      {"file": "web\\src\\features\\charging\\components\\operationalbrief-all\\ChargingSummaryBrief.tsx", "lines": 73}
+    ],
+    "domainAnalysisLineCount": 317,
+    "sections": [
+      {"name": "Charger resilience metrics", "line": 92, "count": 1, "metrics": ["Resilience Score", "Effective Site Count", "Top-Site Dependency", "Fallback Coverage"], "metricCount": 4},
+      {"name": "Energy Share by Site", "line": 97, "count": 1, "columns": ["Site", "Energy share (%)", "Sessions"]},
+      {"name": "What If the Top Site Disappeared?", "line": 141, "count": 1, "fields": ["Energy at risk", "New top site", "Score before", "Score after loss including signed delta"], "fieldCount": 4},
+      {"name": "Sites", "line": 177, "count": 1, "fields": ["Full source label", "Grouping provenance", "Session count", "Energy share percentage"]}
+    ],
+    "sectionCount": 4,
+    "sourceTagCounts": {"PageLayout": 1, "ChartContainer": 1, "LayoutCard": 2, "SourceContent": 2, "ChargerResilienceStats": 1, "FadeIn": 3, "GlassPanel": 0},
+    "actions": [
+      {"name": "Refresh retained charging history", "citation": "ChargerResiliencePage.tsx:89 -> StaleRefreshWarning.tsx:103-123"},
+      {"name": "Retry failed or unavailable history", "citation": "ChargerResiliencePage.tsx:76,108,153,181; ChargerResilienceStats.tsx:69-74"},
+      {"name": "Open resilience score explanation", "citation": "ChargerResilienceStats.tsx:28-31"},
+      {"name": "Open effective-site-count explanation", "citation": "ChargerResilienceStats.tsx:41-44"},
+      {"name": "Open hypothetical top-site-loss explanation", "citation": "ChargerResiliencePage.tsx:143-148"},
+      {"name": "Chart PNG and SVG download, image clipboard and CSV export", "citation": "ChartContainer.tsx:625-634; page:61-63,113-119"},
+      {"name": "Navigate to governed onboarding when no vehicle is selected", "citation": "NoVehicleSelected.tsx:65-68"}
+    ],
+    "data": [
+      "Selected vehicle comes from the existing workspace URL/store bridge; hook disabled without vehicle identity.",
+      "Keep charging history's distinct cache key, 1000-row frontend cap, inherited query policy, AbortSignal and safeArray normalization.",
+      "Preserve honest returned-history limitation and unknown period; no lifetime/full-range inference.",
+      "Keep all sessions in site resolution: case-insensitive named place identity, rounded 0.01-degree geo cell, charger-type identity then type:unknown; source labels/casing preserved.",
+      "Keep Wh on wire/cache/model; format energy only with useUnits on display.",
+      "Retain energy-weighted HHI, reciprocal effective-site count, top energy site/session fallback, session-frequency fallback coverage, 40/30/30 score with diversification cap 5, rounding and site ordering.",
+      "Retain hypothetical top-site exclusion and energy-at-risk/new-top/before/after/signed-delta results; no prediction claim.",
+      "Keep all plotted sites and exact full labels in list, accessible table and CSV, with scalar site/share/sessions projection.",
+      "Keep initial/empty/fatal/retained/paused states, all four section shells, retry behavior, source freshness and preference-driven formatting.",
+      "Retain genuine zero scores and zero fallback coverage; distinguish missing energy only via an explicit integration decision, not an undocumented algorithm rewrite.",
+      "Preserve contextual help, reduced-motion source behavior, existing themes, exports and onboarding."
+    ],
+    "routeEvidence": ["web\\src\\App.tsx:103 lazy import", "web\\src\\App.tsx:873 SafeRoute mount /charger-resilience"],
+    "writesOwned": ["docs\\frontend-audits\\audit-page-080.json", ".agent-status\\audit-page-080.txt"]
+  },
+  "evidenceLimits": {
+    "mode": "Read-only source audit, except assigned JSON report and heartbeat.",
+    "runtime": "unverified",
+    "visual": "unverified",
+    "accessibility": "unverified",
+    "keyboard": "unverified",
+    "contrast": "unverified",
+    "viewport": "unverified",
+    "testExecution": "NOTRUN",
+    "typescript": "NOTRUN: concurrent Phase 0 assignment prohibits project-wide validation.",
+    "auditScript": "NOTRUN: inspected audit.sh but its mandatory project-wide npx tsc step conflicts with this scoped no-full-validation assignment. Equivalent bounded source pattern counts were collected; no all-checks-pass claim.",
+    "boundedSourceCounts": {
+      "scope": ["ChargerResiliencePage.tsx", "ChargerResilienceStats.tsx", "ChargingSummaryBrief.tsx"],
+      "method": "PowerShell Select-String patterns over exactly the three listed presentation files; completed exit 0",
+      "rawOutput": "staticInlineStyles=0\nrawControls=0\ndirectLibraries=0\noldApiImports=0\nneonOrFixedWhiteGray=0\nPageLayout=1\nChartContainer=1\nLayoutCard=2\nSourceContent=2\nChargerResilienceStats=1\nFadeIn=3\nGlassPanel=0",
+      "meaning": "Regex source counts only, not a complete semantic lint or runtime acceptance."
+    },
+    "backend": "Actual /charging route and handler inspected. Repository query/order/total availability, network/auth and server responses not exercised.",
+    "tests": "Existing migration and analyzer tests read as source only. Tests use fixtures and mocks, include a noncanonical MemoryRouter path, and do not establish actual mounted behavior.",
+    "shared": "Only dependency interfaces and relevant source ranges inspected; no whole-app foundations audit or other page inspection.",
+    "sourceDrift": "Root page hash captured before report and rechecked at release; concurrent changes to other source dependencies are possible.",
+    "prohibitedOperations": "No Git, source/config/catalog/shared edits, production mutations, builds, full lint or browser interaction performed."
+  },
+  "filesRead": [
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\charging\\pages\\ChargerResiliencePage.tsx",
+    "web\\src\\features\\charging\\components\\ChargerResilienceStats.tsx",
+    "web\\src\\features\\charging\\components\\operationalbrief-all\\ChargingSummaryBrief.tsx",
+    "web\\src\\features\\charging\\lib\\chargerResilience.ts",
+    "web\\src\\features\\charging\\lib\\chargerResilience.test.ts",
+    "web\\src\\features\\charging\\pages\\ChargerResiliencePage.migration.test.tsx",
+    "web\\src\\api\\hooks\\useCharging.ts",
+    "web\\src\\types\\charging.ts",
+    "web\\src\\hooks\\useSelectedVehicle.ts",
+    "web\\src\\hooks\\useDataState.ts",
+    "web\\src\\hooks\\useUnits.ts",
+    "web\\src\\hooks\\useNumberFormatting.ts",
+    "web\\src\\api\\dataState.ts",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\layout\\layout-reference\\SourceContent.tsx",
+    "web\\src\\components\\layout\\PageContainer.tsx",
+    "web\\src\\components\\charts\\ChartContainer.tsx",
+    "web\\src\\components\\ui\\HelpTooltip.tsx",
+    "web\\src\\components\\feedback\\StaleRefreshWarning.tsx",
+    "web\\src\\components\\motion\\FadeIn.tsx",
+    "web\\src\\features\\onboarding\\components\\NoVehicleSelected.tsx",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\lib\\tokens.ts",
+    "web\\src\\App.tsx",
+    "internal\\api\\router.go",
+    "internal\\api\\charging\\handler.go"
+  ]
+}

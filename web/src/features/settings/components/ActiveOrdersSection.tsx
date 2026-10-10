@@ -24,7 +24,7 @@ function formatOrderStatus(status: string | undefined | null): string {
   return status
     .replace(/_/g, ' ')
     .toLowerCase()
-    .replace(/\b\w/g, (c) => c.toUpperCase())
+    .replace(/^\w/, (c) => c.toUpperCase())
 }
 
 export function ActiveOrdersSection() {
@@ -45,7 +45,7 @@ export function ActiveOrdersSection() {
               <ShoppingCart className="h-5 w-5" />
             </IconBox>
             <div>
-              <h2 className="text-base font-semibold text-[var(--text-primary)]">{t('orders.title', 'Active Orders')}</h2>
+              <h2 className="text-base font-semibold text-[var(--text-primary)]">{t('orders.title', 'Active orders')}</h2>
               <p className="text-xs text-[var(--text-muted)]">{t('orders.subtitle', 'Vehicle orders and delivery tracking from Tesla')}</p>
             </div>
           </div>
@@ -108,7 +108,7 @@ export function ActiveOrdersSection() {
                   )}
                   {order.delivery_date && (
                     <div className="flex justify-between">
-                      <span className="text-[var(--text-muted)]">{t('orders.deliveryDate', 'Delivery Date')}</span>
+                      <span className="text-[var(--text-muted)]">{t('orders.deliveryDate', 'Delivery date')}</span>
                       <span className="flex items-center gap-1 text-[var(--text-primary)]">
                         <Calendar className="h-3 w-3" aria-hidden="true" />
                         {formatDeliveryDate(order.delivery_date)}

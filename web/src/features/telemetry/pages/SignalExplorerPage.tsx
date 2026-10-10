@@ -19,15 +19,17 @@
 import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { Activity, AlertCircle, Clock, Database, Radio } from 'lucide-react';
+import { Activity, AlertCircle, Database, Radio } from 'lucide-react';
 
-import { PageContainer } from '@/components/layout';
+import { PageLayout } from '@/components/layout';
 import { GlassPanel, Button, Badge, HelpTooltip, Select } from '@/components/ui';
-import { EmptyState, AlertBanner } from '@/components/feedback';
-import { MetricCard } from '@/components/data-display';
+import { EmptyState, AlertBanner, StaleRefreshWarning } from '@/components/feedback';
+import type { StatMetric } from '@/components/data-display';
+import { TelemetrySummaryBrief } from '../components/operationalbrief-all/TelemetrySummaryBrief';
 import { FadeIn } from '@/components/motion';
 
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useDataState } from '@/hooks/useDataState';
 import { useProductPreferences } from '@/hooks/useProductPreferences';
 import { useUrlArray, useUrlNumber, useUrlBatch, type UrlBatchUpdate } from '@/hooks/useUrlState';
 import { useRangeState } from '@/hooks/useRangeState';
@@ -36,7 +38,7 @@ import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useSignals } from '@/api/hooks/useTelemetry';
 import { request } from '@/api/client';
 import { getErrorMessage } from '@/lib/errorMessage';
-import { fmtInt } from '@/lib/numberFormat';
+
 import { adaptSignalHistoryResp, type SignalLogEntry } from '@/components/SignalQueryControls';
 import type { SignalHistoryResp } from '@/api/types';
 
@@ -48,7 +50,8 @@ import { useLiveSignalStream, type SignalStat } from '../hooks/useLiveSignalStre
 import {
   AISignalExplorerNlFilter,
   type SignalFilterDraft,
-} from '@/components/ai/AISignalExplorerNlFilter';
+} from '@/components/ai';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 const MAX_SIGNALS = 5;
 const DEFAULT_PER_PAGE = 25;
@@ -61,14 +64,17 @@ const PER_PAGE_OPTIONS = [
 ];
 
 export default function SignalExplorerPage() {
+  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
-  usePageTitle(t('signalExplorer.title', 'Signal Explorer'));
+  usePageTitle(t('signalExplorer.title', 'Signal explorer'));
   const { preferences } = useProductPreferences();
 
   const { vehicleId: storeVehicleId } = useSelectedVehicle();
   const vehicleId = storeVehicleId ?? 0;
 
-  const { data: availableSignals, error: signalsError } = useSignals(vehicleId);
+  const signalsQuery = useSignals(vehicleId);
+  const { data: availableSignals } = signalsQuery;
+  const catalogState = useDataState(signalsQuery);
   const [selectedSignals, setSelectedSignals] = useUrlArray('signals');
 
   const { start, end } = useRangeState({ defaultPresetId: preferences.defaultAnalysisRange });
@@ -105,7 +111,7 @@ export default function SignalExplorerPage() {
     setExploreKey(null);
   }, [vehicleId]);
 
-  const { data: historicalRows, isLoading: historicalLoading, isFetching, error: historicalError } = useQuery<SignalLogEntry[]>({
+  const historicalQuery = useQuery<SignalLogEntry[]>({
     queryKey: ['signal-explorer', vehicleId, exploreKey],
     queryFn: async () => {
       const results = await Promise.all(
@@ -121,6 +127,8 @@ export default function SignalExplorerPage() {
     },
     enabled: !isLive && exploreKey !== null,
   });
+  const { data: historicalRows, isLoading: historicalLoading, isFetching } = historicalQuery;
+  const historicalState = useDataState(historicalQuery, { provenance: 'historical' });
 
   const live = useLiveSignalStream({
     enabled: isLive,
@@ -169,7 +177,7 @@ export default function SignalExplorerPage() {
   const activeChart = isLive ? live.chartData : chartData;
   const activeStats = isLive ? live.chartStats : historicalStats;
   const hasHistorical = exploreKey !== null;
-  const anyError = (signalsError ?? historicalError) as Error | undefined;
+  const anyError = catalogState.fatalError ?? (!isLive && hasHistorical ? historicalState.fatalError : null);
 
   // Inclusive day span for the KPI band — mirrors the historical query window.
   const rangeDays = useMemo(() => {
@@ -182,6 +190,7 @@ export default function SignalExplorerPage() {
 
   // KPI-band derivations — null-safe scalars valid in both historical & live modes.
   const pointCount = isLive ? live.chartPointCount : totalRecords;
+  const historyUnavailable = !isLive && hasHistorical && !historicalState.hasData;
   const statSignalCount = activeStats.length;
   const statusLabel = isLive
     ? live.connected
@@ -230,12 +239,35 @@ export default function SignalExplorerPage() {
     },
     [setUrlBatch],
   );
+  const metrics: readonly StatMetric[] = [
+    { metricId: 'count', occurrenceId: 'signals', rawValue: selectedSignals.length,
+      label: t('signalExplorer.kpi.signals', 'Signals'),
+      description: t('signalExplorer.kpi.ofMax', 'of {{max}} max', { max: MAX_SIGNALS }) },
+    { metricId: 'count', occurrenceId: 'records', rawValue: isLive ? pointCount : hasHistorical && !historyUnavailable ? pointCount : null,
+      label: isLive ? t('signalExplorer.kpi.liveEvents', 'Live events') : t('signalExplorer.kpi.records', 'Records'),
+      display: { formatter: (raw) => ({ value: fmtInt(raw), unit: '' }) },
+      description: isLive ? t('signalExplorer.kpi.streaming', 'Streaming') : t('signalExplorer.kpi.loaded', 'Loaded'),
+      context: isLive ? t('telemetry.brief.liveEventCount', 'Selected-signal SSE points received since the last reset; the chart retains a separate rolling 5-minute window.')
+        : t('telemetry.brief.loadedRows', 'Returned rows only; not a server-wide total or proof of complete time-window coverage.') },
+    isLive
+      ? { metricId: 'status', occurrenceId: 'span', rawValue: t('signalExplorer.kpi.live', 'Live'),
+        label: t('signalExplorer.kpi.timeSpan', 'Time span'),
+        description: t('signalExplorer.kpi.rollingWindow', '5-min window') }
+      : { metricId: 'duration', occurrenceId: 'span', rawValue: rangeDays > 0 ? rangeDays * 86_400 : null,
+        label: t('signalExplorer.kpi.timeSpan', 'Time span'),
+        display: { formatter: (raw) => ({ value: t('signalExplorer.kpi.days', '{{count}}d', { count: raw / 86_400 }), unit: '' }) },
+        description: start && end ? `${start} → ${end}` : t('signalExplorer.kpi.noRange', 'No range set'),
+        context: t('telemetry.brief.configuredRange', 'Configured inclusive day range; loaded rows may belong to the previously executed query until Explore is pressed.') },
+    { metricId: 'status', occurrenceId: 'status', rawValue: statusLabel,
+      label: t('signalExplorer.kpi.status', 'Status'),
+      description: historyUnavailable ? '—' : t('signalExplorer.kpi.withStats', '{{count}} with stats', { count: statSignalCount }) },
+  ];
 
   return (
-    <PageContainer
-      title={t('signalExplorer.title', 'Signal Explorer')}
+    <PageLayout
+      title={t('signalExplorer.title', 'Signal explorer')}
       subtitle={t('signalExplorer.subtitle', 'Visualise signal history with chart and stats — or stream live')}
-      actions={
+      metadataActions={
         <div className="flex flex-wrap items-center justify-end gap-2">
           {isLive ? (
             <Badge variant={live.connected ? 'success' : 'danger'} dot>
@@ -250,6 +282,8 @@ export default function SignalExplorerPage() {
           {t('error.loadFailed', 'Failed to load data')}: {getErrorMessage(anyError)}
         </AlertBanner>
       ) : null}
+      <StaleRefreshWarning state={catalogState} label={t('dataSources.labels.signalCatalog', 'Signal catalog')} />
+      {!isLive && hasHistorical && <StaleRefreshWarning state={historicalState} label={t('signalHistory.title', 'Signal data')} />}
 
       {vehicleId === 0 ? (
         // no-action: vehicle picker is in the page header; no inline CTA needed.
@@ -264,51 +298,16 @@ export default function SignalExplorerPage() {
         <>
           {/* 1 — KPI band: full-width responsive summary of the current exploration */}
           <FadeIn>
-            <section
-              aria-label={t('signalExplorer.kpis', 'Exploration summary')}
-              className="grid grid-cols-2 gap-4 lg:grid-cols-4"
-            >
-              <MetricCard
-                label={t('signalExplorer.kpi.signals', 'Signals')}
-                value={selectedSignals.length}
-                subtitle={t('signalExplorer.kpi.ofMax', 'of {{max}} max', { max: MAX_SIGNALS })}
-                icon={<Activity className="h-5 w-5" aria-hidden="true" />}
-                color="cyan"
-              />
-              <MetricCard
-                label={isLive ? t('signalExplorer.kpi.liveEvents', 'Live Events') : t('signalExplorer.kpi.records', 'Records')}
-                value={fmtInt(pointCount)}
-                subtitle={isLive ? t('signalExplorer.kpi.streaming', 'Streaming') : t('signalExplorer.kpi.loaded', 'Loaded')}
-                icon={<Database className="h-5 w-5" aria-hidden="true" />}
-                color="purple"
-              />
-              <MetricCard
-                label={t('signalExplorer.kpi.timeSpan', 'Time Span')}
-                value={
-                  isLive
-                    ? t('signalExplorer.kpi.live', 'Live')
-                    : rangeDays > 0
-                      ? t('signalExplorer.kpi.days', '{{count}}d', { count: rangeDays })
-                      : '—'
-                }
-                subtitle={
-                  isLive
-                    ? t('signalExplorer.kpi.rollingWindow', '5-min window')
-                    : start && end
-                      ? `${start} → ${end}`
-                      : t('signalExplorer.kpi.noRange', 'No range set')
-                }
-                icon={<Clock className="h-5 w-5" aria-hidden="true" />}
-                color="amber"
-              />
-              <MetricCard
-                label={t('signalExplorer.kpi.status', 'Status')}
-                value={statusLabel}
-                subtitle={t('signalExplorer.kpi.withStats', '{{count}} with stats', { count: statSignalCount })}
-                icon={<Radio className="h-5 w-5" aria-hidden="true" />}
-                color={isLive ? (live.connected ? 'green' : 'red') : hasHistorical ? 'cyan' : 'amber'}
-              />
-            </section>
+            <TelemetrySummaryBrief title={t('signalExplorer.kpis', 'Exploration summary')}
+              metrics={metrics} testId="signal-explorer-summary"
+              unavailable={!isLive && hasHistorical && historicalState.fatalError != null}
+              unknown={!isLive && !hasHistorical} statusLabel={statusLabel} sourceStatus={!isLive && hasHistorical ? historicalState.status : undefined}
+              retained={!isLive && historicalState.hasData && (historicalState.isRefreshing || historicalState.status === 'stale' || historicalState.refreshError != null)}
+              scope={isLive ? t('signalExplorer.kpi.rollingWindow', '5-min window') : `${start || '—'} → ${end || '—'}`}
+              provenance={isLive ? t('telemetry.brief.chartProvenance', 'Selected-signal client SSE chart and accumulated numeric statistics')
+                : t('signalLog.subtitle', 'Query signal history from Postgres')}
+              description={isLive ? t('telemetry.brief.explorerLive', 'The chart retains five minutes; event counts and numeric statistics accumulate since reset. These are independent of the history query and tail buffer.')
+                : t('telemetry.brief.explorerDescription', 'Selected signals and configured dates are local controls; record and statistics counts cover only the bounded loaded result, not all history.')} />
           </FadeIn>
 
           {/* 2 — Controls: signal picker, per-page, explore / live */}
@@ -325,7 +324,7 @@ export default function SignalExplorerPage() {
                 <div className="flex flex-wrap items-end gap-2 sm:gap-3">
                   {!isLive ? (
                     <Select
-                      label={t('signalExplorer.perPage', 'Per Page')}
+                      label={t('signalExplorer.perPage', 'Per page')}
                       value={String(perPage)}
                       onChange={(e) => {
                         // Atomic update — resetting to page 1 alongside the new
@@ -386,14 +385,14 @@ export default function SignalExplorerPage() {
               <GlassPanel className="p-4 sm:p-5">
                 <EmptyState
                   icon={<Database className="h-10 w-10" aria-hidden="true" />}
-                  title={t('signalExplorer.start.title', 'Pick signals and click Explore')}
+                  title={t('signalExplorer.start.title', 'Pick signals and click explore')}
                   message={t(
                     'signalExplorer.start.message',
-                    'Choose up to 5 signals, set a date range, then hit Explore — or toggle Live to stream in real time.',
+                    'Choose up to 5 signals, set a date range, then hit explore — or toggle live to stream in real time.',
                   )}
                   description={t(
                     'signalExplorer.start.description',
-                    'Historical queries use the selected range; Live begins streaming new samples without changing it.',
+                    'Historical queries use the selected range; live begins streaming new samples without changing it.',
                   )}
                 />
               </GlassPanel>
@@ -404,24 +403,28 @@ export default function SignalExplorerPage() {
               className="grid grid-cols-1 gap-4 xl:grid-cols-3 xl:gap-5"
             >
               {/* Hero — the multi-signal chart spans two of three columns on wide screens. */}
-              <div className="xl:col-span-2">
+              <div className="min-w-0 max-w-full xl:col-span-2">
                 <SignalChartPanel
                   selectedSignals={selectedSignals}
                   data={activeChart}
                   stats={activeStats}
                   isLive={isLive}
                   loading={historicalLoading && !isLive}
+                  error={!isLive ? historicalState.fatalError : null}
+                  onRetry={historicalState.retry ?? undefined}
                   pointsLoaded={historicalRows?.length}
                   liveEventCount={live.chartPointCount}
                 />
               </div>
 
               {/* Context — per-signal min/max/avg/count summary beside the chart. */}
-              <div className="xl:col-span-1">
+              <div className="min-w-0 xl:col-span-1">
                 <SignalStatsPanel
                   stats={activeStats}
                   selectedSignals={selectedSignals}
                   loading={historicalLoading && !isLive}
+                  error={!isLive ? historicalState.fatalError : null}
+                  onRetry={historicalState.retry ?? undefined}
                 />
               </div>
 
@@ -436,6 +439,8 @@ export default function SignalExplorerPage() {
                     totalRows={totalRecords}
                     onPageChange={setPage}
                     loading={historicalLoading}
+                    error={historicalState.fatalError}
+                    onRetry={historicalState.retry ?? undefined}
                   />
                 </div>
               ) : null}
@@ -443,6 +448,6 @@ export default function SignalExplorerPage() {
           )}
         </>
       )}
-    </PageContainer>
+    </PageLayout>
   );
 }

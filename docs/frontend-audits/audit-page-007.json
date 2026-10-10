@@ -1,0 +1,236 @@
+{
+  "item": "audit-page-007",
+  "phase": 0,
+  "page": "web\\src\\features\\admin\\pages\\DataQualityPage.tsx",
+  "routes": ["/admin/data-quality"],
+  "purpose": "Fleet-wide operational signal quality and normalization provenance over the server-owned bounded scoring window.",
+  "primaryGoal": "Identify low-quality fields and distinguish measured normalization coverage from unknown evidence without altering source measurements.",
+  "dataSources": [
+    {
+      "hook": "useDataQuality",
+      "file": "web\\src\\api\\hooks\\useOperatorConfidence.ts",
+      "line": 226,
+      "endpoint": "GET /api/v1/admin/observability/data-quality",
+      "hookPath": "/admin/observability/data-quality",
+      "routeEvidence": {"file": "internal\\api\\router.go", "line": 4596},
+      "sourceOwner": "internal\\api\\dataquality\\handler.go:31 / internal\\dataquality\\scorer.go",
+      "behavior": "Flat snapshot, not an envelope; AbortSignal forwarded; key ['admin','observability','data-quality']; STANDARD stale time 60000 ms, SLOW polling 60000 ms, no background polling, retry 1. No parameters or mutations.",
+      "units": "Counts, dimensionless ratios/percentages, SI seconds, timestamps and normalization identifiers. No physical measurement conversion or wire/cache rewrite.",
+      "unsupported": "Handler lines 32-40 returns 503 when scorer missing or ErrNotConfigured. Other errors return 500; actual deployed behavior unverified.",
+      "workspace": "Server-owned fleet-wide window: no local/global date or vehicle filtering. workspaceScope.ts:22-75 does not enable range; /admin prefix disables vehicle at line 94. Preserve this, do not add selectors.",
+      "unrenderedPayload": "firmware_assignment and firmware_segments exist in scorer.go:96-97 and typed response but are not consumed by this mounted page. This is current source inventory, not permission to invent a new feature or delete wire fields."
+    }
+  ],
+  "components": [
+    {"name": "PageLayout", "owner": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx", "line": 9, "role": "Existing PageContainer adapter and min-width/container ownership."},
+    {"name": "PageContainer", "owner": "web\\src\\components\\layout\\PageContainer.tsx", "line": 253, "role": "Query freshness and independent DataSourceNotice; page children preserved unless explicit loading/error/empty props."},
+    {"name": "NormalizationCoverageKpis", "owner": "web\\src\\features\\admin\\components\\continuation-admin-2\\NormalizationCoverageKpis.tsx", "line": 24, "role": "Six numeric metrics via normalizationMetrics/useOperationalMetrics/OperationalBrief; source status, inclusive-window explanation and retained notice."},
+    {"name": "NormalizationVersionPanel", "owner": "web\\src\\features\\admin\\components\\continuation-admin-2\\NormalizationVersionPanel.tsx", "line": 11, "role": "LayoutCard, semantic Badge, MetricBar, number formatting and per-section loading/error/empty."},
+    {"name": "FieldQualityTable", "owner": "web\\src\\features\\admin\\components\\continuation-admin-2\\FieldQualityTable.tsx", "line": 16, "role": "LayoutCard, DataTable, SeverityBadge, trust badges, eight columns and value filters."},
+    {"name": "LayoutCard", "owner": "web\\src\\components\\layout\\layout-reference\\LayoutCard.tsx", "line": 17, "role": "Card/title association, wrapping header and localized focusable description tooltip; shared owner, no replacement."},
+    {"name": "MetricBar", "owner": "web\\src\\components\\data-display\\MetricBar.tsx", "line": 60, "role": "Named progressbar; unknown reading omits aria-valuenow; solid color accepts CSS variables; useMotionPreference."},
+    {"name": "DataTable", "owner": "web\\src\\components\\ui\\DataTable.tsx", "line": 248, "role": "Canonical table, persistence and mobile allow-list; expansion API at 323-330; do not fork."},
+    {"name": "DataStateNotice / deriveDataState / FadeIn", "owner": "web\\src\\features\\admin\\pages\\DataQualityPage.tsx", "line": 26, "role": "Category imports and trust/motion reuse. Internal implementations except deriveDataState were not inspected."}
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\admin\\components\\continuation-admin-2\\NormalizationVersionPanel.tsx",
+      "line": 19,
+      "rule": "MDC-002 / mission section 4",
+      "detail": "Mounted version/table implementations coexist with same-named older data-quality components. Both duplicate section state branches; older components were inspected only for overlap, not audited as another page.",
+      "fix": "Keep one mounted presentation owner and shared derivation helpers; reconcile actual callers before consolidating. Do not revive older GlassPanel rendering.",
+      "owner": "integration",
+      "confidence": "high",
+      "related": ["web\\src\\features\\admin\\components\\data-quality\\NormalizationVersionPanel.tsx:28", "web\\src\\features\\admin\\components\\data-quality\\FieldQualityTable.tsx:178"]
+    }
+  ],
+  "responsive": {
+    "status": "source inspected; all viewport behavior unverified",
+    "strengths": ["Version rows use min-w-0, flex-wrap and break-words at lines 29-32.", "PageLayout preserves full allocated width; all three sections remain mounted."],
+    "issues": [
+      {
+        "file": "web\\src\\features\\admin\\components\\continuation-admin-2\\FieldQualityTable.tsx",
+        "line": 61,
+        "rule": "MDC-023 / MDC-043 / no mobile data loss",
+        "detail": "mobileColumns allows field, severity and freshness only. Gap, duplicates, attested/unattested counts and coverage/trust are hidden below md by DataTable.tsx:724-725. This caller supplies no expansion or mobile detail renderer, so those five columns have no source-visible alternate mobile access.",
+        "fix": "Use existing DataTable expansion/mobile detail capability or a fully scrollable table with all columns. Preserve all five omitted measurements, filters, stable field keys and persistence ID; validate narrow widths and keyboard expansion.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ],
+    "requiredWidths": [320, 375, 390, 430, 768, 1024, 1280, 1440, 1920, 2560]
+  },
+  "accessibility": {
+    "status": "runtime keyboard, screen reader, contrast, forced colors and touch targets unverified",
+    "strengths": ["Version state has text badges, not color alone.", "MetricBar preserves label and unknown ARIA value semantics.", "LayoutCard labels itself with its title and exposes full descriptions through a focusable tooltip control."],
+    "issues": [
+      {
+        "file": "web\\src\\features\\admin\\components\\continuation-admin-2\\FieldQualityTable.tsx",
+        "line": 61,
+        "rule": "MDC-040 / accessible tables",
+        "detail": "Caller supplies no caption or name identifying this table. DataTable has a caption contract at lines 290-293; surrounding LayoutCard title association does not automatically name the nested table.",
+        "fix": "Pass a localized caption using the existing DataTable API and validate table naming, filter focus and mobile detail reachability in the actual DOM.",
+        "owner": "page",
+        "confidence": "medium"
+      }
+    ],
+    "motion": "FadeIn wrappers at page lines 87,104,115; MetricBar checks useMotionPreference at lines 51,89-91. FadeIn implementation and actual OS/low-bandwidth motion behavior not exercised."
+  },
+  "states": {
+    "initialLoading": "All three sections mounted; loading only with no retained snapshot (page:97,107,118). Version and fields render 180/240px skeletons; OperationalBrief receives loading.",
+    "empty": "Version/field independent explanatory empty states and Refresh actions (version:21-24, field:58-60). Six summary metrics retain no-measurement vs measured zero semantics through normalizationMetrics.",
+    "unsupported": "Initial fatal 503 renders unsupported notice and suppresses raw section errors (page:50-55,74-84). Summary retains Source unavailable text rather than fabricated success.",
+    "fatalFailure": "Non-503 fatal error forwarded to all three section QueryError branches; one refetch callback, page:56-58.",
+    "refreshFailure": "deriveDataState keeps payload and only fatalError reaches section replacement (page:49-55). Refresh failure produces stale and retained notice; source notice remains shell-owned.",
+    "offline": "deriveDataState distinguishes paused refresh with retained data (dataState.ts:169-177); actual shell notice and recovery not exercised.",
+    "unknown": "Null/unknown coverage never becomes zero: helpers.ts:50-53, normalizationMetrics.ts:16-18. Null version remains distinct from explicit v0.",
+    "issues": [
+      {
+        "file": "web\\src\\features\\admin\\components\\continuation-admin-2\\NormalizationCoverageKpis.tsx",
+        "line": 50,
+        "rule": "MDC-026 / preserve source-refresh state",
+        "detail": "sourceBriefStatus is called with isRefreshing:false even when page passes retained:true due to source.isRefreshing at page:95. On a healthy refresh, brief shows Source loaded plus retained text instead of Refreshing source. PageContainer separately receives the actual query, so this is a local summary inconsistency, not a claim that all freshness is lost.",
+        "fix": "Forward actual source.isRefreshing through a typed prop to the existing sourceBriefStatus helper; preserve stale/error distinction and retained payload.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ]
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\admin\\components\\continuation-admin-2\\NormalizationVersionPanel.tsx",
+      "line": 35,
+      "rule": "MDC-010 / MDC-011 / restrained palette",
+      "detail": "MetricBar uses fixed #34d399/#fbbf24 colors rather than the application's semantic/theme source. Saturation and composed contrast are not measured.",
+      "fix": "Supply existing semantic success/warning CSS colors to MetricBar's solid fill; retain attested labels, all buckets and user theme choices. No new palette or shared MetricBar API needed.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\admin\\components\\continuation-admin-2\\FieldQualityTable.tsx",
+      "line": 45,
+      "rule": "MDC-012 / MDC-025",
+      "detail": "Unattested count uses fixed text-amber-300 despite semantic warning context; this overrides cross-theme role typography rather than deriving emphasis from canonical warning tokens.",
+      "fix": "Use current semantic warning text treatment and keep the numeric count plus trust badge. Measure real light/dark/high-contrast backgrounds; do not force white or infer contrast from a token name.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\features\\admin\\components\\continuation-admin-2\\FieldQualityTable.tsx",
+      "line": 61,
+      "rule": "MDC-023 / composition ownership",
+      "detail": "DataTable is nested in LayoutCard without variant='embedded'; DataTable defaults to standalone at line 452, adding its frame inside the card. This is source-confirmed redundant surface ownership; visual impact not exercised.",
+      "fix": "Use the existing embedded variant where it preserves controls/scroll behavior; no new table wrapper or surface primitive.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "priority": {
+    "level": "high",
+    "reason": "Resolve mobile access to provenance and quality columns before cosmetic changes; then clarify refresh state, table naming and existing semantic palette adoption.",
+    "order": ["mobile detail preservation", "summary refresh honesty", "table semantics", "semantic color and embedded surface", "integration duplicate-owner reconciliation"]
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "DataTable preservation contract reuse",
+      "existingOwner": "web\\src\\components\\ui\\DataTable.tsx",
+      "propsVariantsStates": "Reuse expandable/renderExpanded (lines 323-330), caption (290-293), variant='embedded', stable tableId and eight-column payload. Loading/empty/error remain feature-owned. A shared extension is not established as necessary by this single page.",
+      "usedBy": ["web\\src\\features\\admin\\components\\continuation-admin-2\\FieldQualityTable.tsx"],
+      "dependsOn": ["typed row details containing all currently hidden fields", "centralized keyboard/viewport acceptance"],
+      "changeNeeded": "none proven; page adoption/integration validation only"
+    },
+    {
+      "name": "Semantic progress color reuse",
+      "existingOwner": "web\\src\\components\\data-display\\MetricBar.tsx",
+      "propsVariantsStates": "Existing color:string, fill:'solid', size:'slim', label and nullable value cover this page (lines 9-26). Preserve unknown aria-valuenow behavior and reduced motion.",
+      "usedBy": ["web\\src\\features\\admin\\components\\continuation-admin-2\\NormalizationVersionPanel.tsx"],
+      "dependsOn": ["existing semantic palette owner web\\src\\lib\\tokens.ts", "actual theme contrast review"],
+      "changeNeeded": "none; replace caller literals, not the component API"
+    }
+  ],
+  "competingImplementations": [
+    {
+      "name": "Data-quality presentation twins",
+      "mountedOwner": "web\\src\\features\\admin\\components\\continuation-admin-2\\dataQuality.ts",
+      "otherOwners": ["web\\src\\features\\admin\\components\\data-quality\\NormalizationVersionPanel.tsx", "web\\src\\features\\admin\\components\\data-quality\\FieldQualityTable.tsx"],
+      "evidence": "Page import lines 33-37 resolves continuation-admin-2 barrel. Older versions independently render GlassPanel/table at inspected lines 42-52 and 178-210.",
+      "decision": "Do not treat older components as mounted coverage. Keep data-quality/helpers.ts and coverageKpis.tsx as existing derivation dependencies. Other callers/deletion safety remain unverified."
+    }
+  ],
+  "preservation": {
+    "sourceHash": "7E09C68F084CF98FEC9E81316463810E56549F1B40AA89747E182BD37516DBB8",
+    "sourceHashAlgorithm": "SHA256",
+    "currentLineCount": 125,
+    "sourceInventory": [
+      {"file": "web\\src\\features\\admin\\pages\\DataQualityPage.tsx", "lines": 125, "sha256": "7E09C68F084CF98FEC9E81316463810E56549F1B40AA89747E182BD37516DBB8"},
+      {"file": "web\\src\\features\\admin\\components\\continuation-admin-2\\NormalizationCoverageKpis.tsx", "lines": 62, "sha256": "821012B53721F5104EB91B5263D320F06BE07AB1EE3F4ECC31083C1BB5F94B74"},
+      {"file": "web\\src\\features\\admin\\components\\continuation-admin-2\\NormalizationVersionPanel.tsx", "lines": 43, "sha256": "79A9194335D56D6DF3FCB78AE3E1F8B22411FD280575C52B354E8E8F08B3E552"},
+      {"file": "web\\src\\features\\admin\\components\\continuation-admin-2\\FieldQualityTable.tsx", "lines": 66, "sha256": "80E56A5C9492A6CA01C7BD8A28526F09FDE3FE3548C0DC6B5C625641793D3B72"}
+    ],
+    "pageAndMountedPresentationLines": 296,
+    "sections": [
+      {"name": "Normalization coverage totals", "file": "web\\src\\features\\admin\\pages\\DataQualityPage.tsx", "line": 88, "count": 1, "metrics": ["samples in window", "version-attested", "unattested", "attested coverage", "required version", "critical fields"]},
+      {"name": "Normalization version distribution", "file": "web\\src\\features\\admin\\pages\\DataQualityPage.tsx", "line": 105, "count": 1},
+      {"name": "Per-field quality and provenance", "file": "web\\src\\features\\admin\\pages\\DataQualityPage.tsx", "line": 116, "count": 1, "columns": ["field and sample count", "severity and composite score", "freshness", "max gap", "duplicate ratio", "attested count", "unattested count", "coverage and trust"]}
+    ],
+    "sectionCount": 3,
+    "sourceComponentCounts": {"OperationalBrief": 1, "LayoutCard": 2, "GlassPanel": 0, "ChartContainer": 0, "DataTable": 1, "FadeIn": 3},
+    "actions": ["Shared refetch retry in all three sections", "Refresh in version and field empty states", "DataTable value filters and stable field identity", "Inherited table persistence and shell query freshness", "LayoutCard full-description help"],
+    "dataBehavior": ["Keep every row/version bucket, legacy/null versus version zero, required-version comparison and sorting.", "Keep coverage unknown distinct from measured 0%, counts unknown before snapshot, critical fields derived from raw severity.", "Keep raw seconds, percentages, counts and normalization IDs in wire/cache; format only for display.", "Keep server scoring-window bounds and explicit inclusive-end explanation; never claim a half-open attested period.", "Keep independent mounted sections, flat response, query key/cancellation/polling/retry behavior and retained-data handling.", "Keep fleet-wide admin scope without duplicate date/vehicle controls.", "Keep all typed wire metadata even when currently unrendered; no fake data or new backend capability."]
+  },
+  "evidenceLimits": {
+    "mode": "Read-only source audit; only assigned JSON report and heartbeat written.",
+    "runtime": "unverified",
+    "visual": "unverified",
+    "accessibility": "unverified",
+    "keyboard": "unverified",
+    "contrast": "unverified",
+    "viewports": "unverified",
+    "tests": "Existing DataQualityPage.test.tsx:219-368 inspected, not executed. Stubbed section tests are not actual page acceptance.",
+    "notRun": ["Git", "TypeScript", "lint", "full builds", "test runners", "browser/production requests", "mutations"],
+    "auditScript": "Read audit.sh; not executed because it unconditionally runs project TypeScript. Bounded read-only regex counts used instead.",
+    "staticAuditCounts": {"scope": "root page and three mounted presentation files", "inlineStyleOccurrences": 0, "rawButtonInputTextareaSelectTableOccurrences": 0, "fixedHexColorOccurrences": 2, "fixedAmberTextOccurrences": 1},
+    "commandEvidence": [
+      {"command": "PowerShell Get-FileHash -Algorithm SHA256 and Get-Content counts for root and three mounted components; regex style/raw-control/fixed-palette counts", "exitCode": 0, "output": ["DataQualityPage.tsx | lines=125 | inlineStyles=0 | rawControls=0 | fixedPalette=0", "NormalizationCoverageKpis.tsx | lines=62 | inlineStyles=0 | rawControls=0 | fixedPalette=0", "NormalizationVersionPanel.tsx | lines=43 | inlineStyles=0 | rawControls=0 | fixedPalette=2", "FieldQualityTable.tsx | lines=66 | inlineStyles=0 | rawControls=0 | fixedPalette=1"]},
+      {"command": "Initial PowerShell regex/hash probe", "exitCode": 1, "output": "No output returned; replaced with successful simpler bounded probe. No result inferred from failed command."}
+    ],
+    "backendLimits": "Handler and router inspected; scorer snapshot fields and selected search lines inspected only. SQL execution, deployment wiring, actual freshness and full scoring semantics not verified.",
+    "sharedLimits": "Only directly relevant APIs/ranges inspected; no app-wide foundation audit, no shared API changes proposed without evidence.",
+    "ownedFiles": ["docs\\frontend-audits\\audit-page-007.json", ".agent-status\\audit-page-007.txt"]
+  },
+  "filesRead": [
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\admin\\pages\\DataQualityPage.tsx",
+    "web\\src\\features\\admin\\pages\\DataQualityPage.test.tsx",
+    "web\\src\\features\\admin\\components\\continuation-admin-2\\dataQuality.ts",
+    "web\\src\\features\\admin\\components\\continuation-admin-2\\NormalizationCoverageKpis.tsx",
+    "web\\src\\features\\admin\\components\\continuation-admin-2\\NormalizationVersionPanel.tsx",
+    "web\\src\\features\\admin\\components\\continuation-admin-2\\FieldQualityTable.tsx",
+    "web\\src\\features\\admin\\components\\data-quality\\helpers.ts",
+    "web\\src\\features\\admin\\components\\data-quality\\coverageKpis.tsx",
+    "web\\src\\features\\admin\\components\\data-quality\\NormalizationVersionPanel.tsx",
+    "web\\src\\features\\admin\\components\\data-quality\\FieldQualityTable.tsx",
+    "web\\src\\features\\admin\\components\\statstrip-api-quality\\normalizationMetrics.ts",
+    "web\\src\\features\\admin\\components\\statstrip-api-quality\\sourceBriefStatus.ts",
+    "web\\src\\api\\hooks\\useOperatorConfidence.ts",
+    "web\\src\\api\\dataState.ts",
+    "web\\src\\types\\admin-operator-confidence.ts",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\lib\\constants.ts",
+    "web\\src\\lib\\tokens.ts",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\layout\\layout-reference\\LayoutCard.tsx",
+    "web\\src\\components\\layout\\PageContainer.tsx",
+    "web\\src\\components\\ui\\DataTable.tsx",
+    "web\\src\\components\\data-display\\MetricBar.tsx",
+    "web\\src\\App.tsx",
+    "internal\\api\\router.go",
+    "internal\\api\\dataquality\\handler.go",
+    "internal\\dataquality\\scorer.go"
+  ]
+}

@@ -55,6 +55,7 @@ const (
 	ActionNotify         AutomationActionKind = "action_notify"
 	ActionSetSetting     AutomationActionKind = "action_set_setting"
 	ActionCallAutomation AutomationActionKind = "action_call_automation"
+	ActionWait           AutomationActionKind = "action_wait"
 )
 
 // Valid reports whether k is one of the closed action_* enum members.
@@ -64,6 +65,7 @@ func (k AutomationActionKind) Valid() bool {
 	case ActionCommand,
 		ActionNotify,
 		ActionSetSetting,
+		ActionWait,
 		ActionCallAutomation:
 		return true
 	default:

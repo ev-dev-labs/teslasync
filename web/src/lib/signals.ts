@@ -1,4 +1,6 @@
 import type { TFunction } from 'i18next'
+import type { SignalUnitKind } from '@/api/types'
+import { unitSymbol, type UnitKind, type UnitInputSettings } from './unitInput'
 
 export type SignalFieldType = 'numeric' | 'boolean' | 'string'
 
@@ -14,7 +16,7 @@ export interface SignalField {
    */
   labelKey: string
   type: SignalFieldType
-  /** Display-unit hint (e.g. '%', '°C'). Present for numeric signals only. */
+  /** Canonical unit; preferred display labels are derived at the UI boundary. */
   unit?: string
 }
 
@@ -29,7 +31,7 @@ export const SIGNAL_FIELDS: readonly SignalField[] = [
   { key: 'battery_level', label: 'Battery Level', labelKey: 'automations.builder.signals.batteryLevel', type: 'numeric', unit: '%' },
   { key: 'inside_temp', label: 'Inside Temperature', labelKey: 'automations.builder.signals.insideTemp', type: 'numeric', unit: '°C' },
   { key: 'outside_temp', label: 'Outside Temperature', labelKey: 'automations.builder.signals.outsideTemp', type: 'numeric', unit: '°C' },
-  { key: 'speed', label: 'Speed', labelKey: 'automations.builder.signals.speed', type: 'numeric', unit: 'mph' },
+  { key: 'speed', label: 'Speed', labelKey: 'automations.builder.signals.speed', type: 'numeric', unit: 'm/s' },
   { key: 'is_locked', label: 'Is Locked', labelKey: 'automations.builder.signals.isLocked', type: 'boolean' },
   { key: 'is_charging', label: 'Is Charging', labelKey: 'automations.builder.signals.isCharging', type: 'boolean' },
   { key: 'is_climate_on', label: 'Climate On', labelKey: 'automations.builder.signals.isClimateOn', type: 'boolean' },
@@ -61,6 +63,35 @@ export const SIGNAL_FIELD_OPTIONS: SignalFieldOption[] = SIGNAL_FIELDS.map(f => 
  * Option `value`s are always the raw signal keys; only the `label` is
  * translated (falling back to the English {@link SignalField.label}).
  */
-export function buildSignalFieldOptions(t: TFunction): SignalFieldOption[] {
-  return SIGNAL_FIELDS.map(f => ({ value: f.key, label: t(f.labelKey, f.label) }))
+export function unitKindForSignal(key: string): UnitKind {
+  switch (SIGNAL_FIELDS.find(field => field.key === key)?.unit) {
+    case 'm': return 'distance'
+    case 'm/s': return 'speed'
+    case '°C': return 'temperature'
+    case 'kPa': return 'pressure'
+    case 'Wh': return 'energy'
+    case '%': return 'percent'
+    default: return 'number'
+  }
+}
+
+const SIGNAL_INPUT_UNITS: Record<SignalUnitKind, UnitKind> = {
+  distance: 'distance',
+  temperature: 'temperature',
+  pressure: 'pressure',
+  speed: 'speed',
+  charge: 'percent',
+  none: 'number',
+}
+
+export function unitKindForSignalDescriptor(kind: SignalUnitKind | undefined): UnitKind {
+  return kind === undefined ? 'number' : SIGNAL_INPUT_UNITS[kind]
+}
+
+export function buildSignalFieldOptions(t: TFunction, settings?: UnitInputSettings): SignalFieldOption[] {
+  return SIGNAL_FIELDS.map(field => {
+    const label = t(field.labelKey, field.label)
+    const symbol = settings && field.type === 'numeric' ? unitSymbol(unitKindForSignal(field.key), settings) : ''
+    return { value: field.key, label: symbol ? `${label} (${symbol})` : label }
+  })
 }

@@ -1,7 +1,7 @@
 import { useCallback, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useTeslaFeatureConfig, useRefreshTeslaFeatureConfig } from '@/api/hooks/useUser'
-import { GlassPanel, Button, IconBox, Badge } from '@/components/ui'
+import { GlassPanel, Button, IconBox, Badge, DataTable, Text, type Column } from '@/components/ui'
 import { EmptyState, Skeleton } from '@/components/feedback'
 import { FadeIn } from '@/components/motion'
 import { cn } from '@/lib/cn'
@@ -27,9 +27,37 @@ export function FeatureToggles() {
       // An object carrying only `enabled` produces no detail pairs — fall back
       // to null so the cell renders the "—" placeholder instead of an empty
       // string (which the `?? '—'` guard in the render would not catch).
-      return { key, enabled: Boolean(enabled), details: detailPairs.length > 0 ? detailPairs.join(', ') : null }
+      const filterEnabled = typeof enabled === 'boolean' || typeof enabled === 'string' || typeof enabled === 'number'
+        ? enabled
+        : null
+      return { key, enabled: Boolean(enabled), filterEnabled, details: detailPairs.length > 0 ? detailPairs.join(', ') : null }
     })
   }, [featureConfig?.data])
+
+  const columns: Column<(typeof featureEntries)[number]>[] = [
+    {
+      key: 'key',
+      header: t('featureConfig.feature', 'Feature'),
+      filterValue: (entry) => entry.key,
+      render: (entry) => <Text data-testid={`feature-toggles-row-${entry.key}`}>{entry.key}</Text>,
+    },
+    {
+      key: 'enabled',
+      header: t('featureConfig.status', 'Status'),
+      filterValue: (entry) => entry.filterEnabled,
+      filterValueLabel: (value, entry) => value == null ? '—' : entry.enabled ? t('featureConfig.enabled', 'Enabled') : t('featureConfig.disabled', 'Disabled'),
+      render: (entry) => (
+        <Badge variant={entry.enabled ? 'success' : 'neutral'}>
+          {entry.enabled ? t('featureConfig.enabled', 'Enabled') : t('featureConfig.disabled', 'Disabled')}
+        </Badge>
+      ),
+    },
+    {
+      key: 'details',
+      header: t('featureConfig.details', 'Details'),
+      render: (entry) => <Text size="xs" color="muted" className="block max-w-xs truncate">{entry.details ?? '—'}</Text>,
+    },
+  ]
 
   const handleRefresh = useCallback(() => {
     // The shared refresh hook already owns the success/error toast via
@@ -52,14 +80,14 @@ export function FeatureToggles() {
 
   return (
     <FadeIn delay={0.03}>
-      <GlassPanel className="p-6 space-y-4" data-testid="feature-toggles">
+      <GlassPanel className="min-w-0 p-6 space-y-4" data-testid="feature-toggles">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <IconBox color="purple">
               <Flag className="h-5 w-5" />
             </IconBox>
             <div>
-              <h2 className="text-base font-semibold text-[var(--text-primary)]">{t('featureConfig.title', 'Feature Flags')}</h2>
+              <h2 className="text-base font-semibold text-[var(--text-primary)]">{t('featureConfig.title', 'Feature flags')}</h2>
               <p className="text-xs text-[var(--text-muted)]">{t('featureConfig.subtitle', 'Tesla account feature configuration')}</p>
             </div>
           </div>
@@ -96,26 +124,15 @@ export function FeatureToggles() {
             <Skeleton height={32} />
           </div>
         ) : hasEntries ? (
-          <div className="overflow-x-auto">
-            <div className="grid grid-cols-[1fr_auto_2fr] gap-x-4 text-sm">
-              <div className="contents border-b border-[var(--border-subtle)] text-left">
-                <div className="pb-2 text-xs font-medium uppercase tracking-wider text-[var(--text-muted)]">{t('featureConfig.feature', 'Feature')}</div>
-                <div className="pb-2 text-xs font-medium uppercase tracking-wider text-[var(--text-muted)]">{t('featureConfig.status', 'Status')}</div>
-                <div className="pb-2 text-xs font-medium uppercase tracking-wider text-[var(--text-muted)]">{t('featureConfig.details', 'Details')}</div>
-              </div>
-              {featureEntries.map((entry) => (
-                <div key={entry.key} className="contents" data-testid={`feature-toggles-row-${entry.key}`}>
-                  <div className="py-2.5 border-b border-white/[0.03] font-medium text-[var(--text-primary)]">{entry.key}</div>
-                  <div className="py-2.5 border-b border-white/[0.03]">
-                    <Badge variant={entry.enabled ? 'success' : 'neutral'}>
-                      {entry.enabled ? t('featureConfig.enabled', 'Enabled') : t('featureConfig.disabled', 'Disabled')}
-                    </Badge>
-                  </div>
-                  <div className="py-2.5 border-b border-white/[0.03] text-xs text-[var(--text-muted)] max-w-xs truncate">{entry.details ?? '—'}</div>
-                </div>
-              ))}
-            </div>
-          </div>
+          <DataTable
+            tableId="settings:feature-toggles"
+            columns={columns}
+            data={featureEntries}
+            keyExtractor={(entry) => entry.key}
+            enableValueFilters
+            pagination
+            emptyMessage={t('featureConfig.noMatch', 'No features match your filters.')}
+          />
         ) : (
           <EmptyState /* no-action: transient empty state — surfaces when source data is missing; the Refresh action already lives in the panel header */ icon={<Info className="h-10 w-10" />} message={t('featureConfig.noData', 'No feature config data yet. Click Refresh to fetch from Tesla.')} />
         )}

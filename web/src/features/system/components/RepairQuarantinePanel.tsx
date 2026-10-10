@@ -8,6 +8,7 @@ import {
   type RepairQuarantineFilters,
 } from '@/api/hooks/useDataRepair';
 import { ListSkeleton, QueryError } from '@/components/feedback';
+import { useDataState } from '@/hooks/useDataState';
 import {
   Badge,
   Button,
@@ -42,9 +43,10 @@ export function RepairQuarantinePanel({
   const [restoreTarget, setRestoreTarget] = useState<RepairQuarantine | null>(null);
   const [restoreReason, setRestoreReason] = useState('');
   const query = useRepairQuarantines(filters);
+  const state = useDataState(query, { provenance: 'historical' });
   const restore = useRestoreQuarantine();
   const records = query.data?.quarantines ?? [];
-  const hasData = query.data !== undefined;
+  const hasData = state.hasData;
   const busy = query.isFetching && !query.isLoading;
   const statusOptions = useMemo(() => [
     { value: '', label: t('dataRepair.quarantine.all', 'All records') },
@@ -124,9 +126,9 @@ export function RepairQuarantinePanel({
           />
         </div>
 
-        {query.error && !hasData ? (
+        {state.fatalError ? (
           <QueryError
-            error={query.error}
+            error={state.fatalError}
             resourceName={t('dataRepair.quarantine.resourceName', 'Quarantine records')}
             onRetry={() => query.refetch()}
           />
@@ -138,7 +140,7 @@ export function RepairQuarantinePanel({
           />
         ) : (
           <>
-            {query.error ? (
+            {state.refreshError ? (
               <RepairRefreshWarning
                 message={t(
                   'dataRepair.quarantine.refreshFailed',
@@ -150,6 +152,7 @@ export function RepairQuarantinePanel({
             ) : null}
             <DataTable
               tableId="data-repair:quarantine"
+              enableValueFilters={false}
               columns={columns}
               data={records}
               keyExtractor={(item) => item.id}

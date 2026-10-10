@@ -61,7 +61,7 @@ const mockClimate = useClimateLatest as unknown as ReturnType<typeof vi.fn>;
 const mockUnits = useUnits as unknown as ReturnType<typeof vi.fn>;
 
  
-function makeQuery(over: Record<string, unknown> = {}): any {
+function makeQuery(over: Record<string, unknown> = {}) {
   return {
     data: undefined,
     error: null,
@@ -94,9 +94,9 @@ const STANDARD = { cols: 2, rows: 3 };
 function setup(
   opts: {
      
-    vehicles?: any;
+    vehicles?: ReturnType<typeof makeQuery>;
      
-    climate?: any;
+    climate?: ReturnType<typeof makeQuery>;
     tempPref?: '°C' | '°F';
   } = {},
 ) {
@@ -110,6 +110,26 @@ beforeEach(() => {
 });
 
 describe('ClimateStatusWidget — rendering', () => {
+  it('keeps two raw temperature operands, measured zero and negative temperature with the independent HVAC status', () => {
+    setup({ climate: makeQuery({ data: makeClimate({ inside_temp: 0, outside_temp: -10 }) }) });
+    render(<ClimateStatusWidget size={STANDARD} />);
+    const brief = screen.getByTestId('dashboard-climate-temperatures-brief');
+    expect(brief.querySelectorAll('[data-operational-value]')).toHaveLength(2);
+    expect(brief).toHaveTextContent('0°C');
+    expect(brief).toHaveTextContent('-10°C');
+    expect(brief).toHaveTextContent('continuous recording coverage is not established');
+    expect(screen.getByText('HVAC')).toBeInTheDocument();
+    expect(screen.getByText('Defrost')).toBeInTheDocument();
+  });
+
+  it('retains temperatures and HVAC during a failed cached refresh', () => {
+    setup({ climate: makeQuery({ data: makeClimate(), isError: true, error: new Error('refresh failed') }) });
+    render(<ClimateStatusWidget size={STANDARD} />);
+    expect(screen.getByText('20°C')).toBeInTheDocument();
+    expect(screen.getByText('HVAC')).toBeInTheDocument();
+    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).toBeNull();
+  });
   it('renders both temperatures (°C), HVAC state, and both status chips', () => {
     setup({ climate: makeQuery({ data: makeClimate() }) });
     render(<ClimateStatusWidget size={STANDARD} />);
@@ -117,7 +137,7 @@ describe('ClimateStatusWidget — rendering', () => {
     expect(screen.getByText('Climate')).toBeInTheDocument();
     expect(screen.getByText('20°C')).toBeInTheDocument();
     expect(screen.getByText('10°C')).toBeInTheDocument();
-    expect(screen.getByText('On')).toBeInTheDocument();
+    expect(screen.getAllByText('On')).toHaveLength(2);
     expect(screen.getByText('Defrost')).toBeInTheDocument();
     expect(screen.getByText('Heater')).toBeInTheDocument();
   });
@@ -175,7 +195,7 @@ describe('ClimateStatusWidget — rendering', () => {
     render(<ClimateStatusWidget size={STANDARD} />);
 
     // Only the HVAC row is missing a value; both temps still render.
-    expect(screen.getByText('—')).toBeInTheDocument();
+    expect(screen.getByText('Unknown')).toBeInTheDocument();
   });
 
   it('hides both status chips when defrost is "Off" and the heater is inactive', () => {
@@ -206,8 +226,8 @@ describe('ClimateStatusWidget — rendering', () => {
     });
     render(<ClimateStatusWidget size={STANDARD} />);
 
-    // Cabin, Outside, and HVAC all collapse to the em-dash placeholder.
-    expect(screen.getAllByText('—')).toHaveLength(3);
+    expect(screen.getAllByText('—')).toHaveLength(2);
+    expect(screen.getByText('Unknown')).toBeInTheDocument();
     expect(screen.queryByText('Defrost')).not.toBeInTheDocument();
     expect(screen.queryByText('Heater')).not.toBeInTheDocument();
   });
@@ -227,8 +247,8 @@ describe('ClimateStatusWidget — rendering', () => {
     setup({ climate: makeQuery({ isLoading: true, data: undefined }) });
     const { container } = render(<ClimateStatusWidget size={STANDARD} />);
 
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
-    expect(screen.queryByText('Climate')).not.toBeInTheDocument();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).not.toBeNull();
+    expect(screen.queryByText('Climate')).toBeInTheDocument();
     expect(screen.queryByText('No climate data')).not.toBeInTheDocument();
   });
 

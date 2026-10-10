@@ -6,9 +6,15 @@ import {
   Loader2,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { Button, Popover, Text, Tooltip } from '@/components/ui/runtime';
+import { Button } from '@/components/ui/Button';
+import { Icon } from '@/components/ui/Icon';
+import { Popover } from '@/components/ui/Popover';
+import { Text } from '@/components/ui/Typography';
+import { Tooltip } from '@/components/ui/Tooltip';
 import type { UseBackgroundJobsResult } from '@/hooks/useBackgroundJobs';
+import { useMotionPreference } from '@/hooks/useMotionPreference';
 import { cn } from '@/lib/cn';
+import { neonColorMap, typography } from '@/lib/tokens';
 import { BackgroundWorkSegment } from './BackgroundWorkSegment';
 import { HelpSegment } from './HelpSegment';
 import { PresentationModeSegment } from './PresentationModeSegment';
@@ -27,6 +33,7 @@ export function MoreSegment({
   iconOnly = false,
 }: MoreSegmentProps) {
   const { t } = useTranslation();
+  const { reduce } = useMotionPreference();
   const { hasBuildNews } = useBuildNews();
   const { open, toggle, close } = useStatusBarPopover('more');
   const triggerRef = useRef<HTMLButtonElement | null>(null);
@@ -73,14 +80,14 @@ export function MoreSegment({
         ? CheckCircle2
         : Ellipsis;
   const triggerTone = hasError
-    ? 'text-rose-300'
+    ? neonColorMap.red.text
     : hasRunning
-      ? 'text-amber-300'
+      ? neonColorMap.amber.text
       : backgroundJobs.hasJobs
-        ? 'text-emerald-300'
+        ? neonColorMap.green.text
         : hasBuildNews
-          ? 'text-amber-300'
-          : 'text-[var(--text-muted)]';
+          ? neonColorMap.amber.text
+          : typography.color.muted;
 
   return (
     <>
@@ -96,6 +103,7 @@ export function MoreSegment({
           type="button"
           variant="ghost"
           size="sm"
+          wrapLabel
           aria-label={
             triggerSummary ? `${triggerLabel}. ${triggerSummary}` : triggerLabel
           }
@@ -103,16 +111,17 @@ export function MoreSegment({
           aria-expanded={open}
           onClick={toggle}
           className={cn(
-            'relative h-5 min-h-0 gap-1.5 rounded px-1.5 py-0',
+            'relative h-auto min-h-11 min-w-11 shrink-0 gap-1.5 rounded px-1.5 py-0 md:h-5 md:min-h-0 md:min-w-0',
             triggerTone,
           )}
           data-testid="status-bar-more-trigger"
           data-tour="keyboard-hint"
         >
-          <TriggerIcon
+          <Icon
+            icon={TriggerIcon}
+            size="sm"
             className={cn(
-              'h-3.5 w-3.5',
-              hasRunning && 'animate-spin',
+              hasRunning && !reduce && 'animate-spin motion-reduce:animate-none',
             )}
             aria-hidden
           />
@@ -123,7 +132,10 @@ export function MoreSegment({
           )}
           {hasBuildNews && (
             <span
-              className="absolute right-0.5 top-0.5 h-1.5 w-1.5 rounded-full bg-amber-400"
+              className={cn(
+                'absolute end-0.5 top-0.5 h-1.5 w-1.5 rounded-full',
+                neonColorMap.amber.dot,
+              )}
               aria-hidden
             />
           )}
@@ -137,7 +149,7 @@ export function MoreSegment({
         side="top"
         align="end"
         ariaLabel={label}
-        className="max-h-[min(70vh,520px)] w-[min(92vw,320px)] overflow-y-auto"
+        className="max-h-more-menu w-connection-diagnostics overflow-y-auto"
       >
         <BackgroundWorkSegment
           embedded

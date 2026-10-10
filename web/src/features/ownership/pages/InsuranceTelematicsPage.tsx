@@ -22,7 +22,7 @@ import {
 } from '@/components/charts';
 import { AlertBanner } from '@/components/feedback';
 
-import { PageContainer } from '@/components/layout';
+import { PageLayout } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
 import { Button, ConfirmDialog, DataTable, Input, Select, Text, Toggle } from '@/components/ui';
 import type { Column } from '@/components/ui';
@@ -31,16 +31,17 @@ import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useUnits } from '@/hooks/useUnits';
 import { formatDate } from '@/lib/dateFormat';
-import { fmtNumber } from '@/lib/numberFormat';
+
 import type { InsurancePolicy, RiskFactor, RiskLever, UpsertInsurancePolicyRequest } from '@/types/ownership';
 import {
   EvidencePanel,
   MoneyInput,
   MutationError,
   OwnershipPanel,
-  StatGrid,
   VerdictBadge,
 } from '../components';
+import { OwnershipBrief } from '../components/operationalbrief-all/OwnershipBrief';
+import { specialistDisplay } from '../components/operationalbrief-all/specialistDisplay';
 import {
   formatCurrencyMinor,
   formatPct,
@@ -48,6 +49,7 @@ import {
   fromDateInput,
   toDateInput,
 } from '../formatters';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 type PolicyForm = Omit<UpsertInsurancePolicyRequest, 'vehicle_id'>;
 
@@ -66,6 +68,7 @@ const EMPTY_POLICY: PolicyForm = {
 const WINDOW_OPTIONS = [30, 90, 180, 365];
 
 export default function InsuranceTelematicsPage() {
+  const { fmtScientificNumber, fmtNumber, fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const { vehicleId } = useSelectedVehicle();
   const units = useUnits();
@@ -73,9 +76,10 @@ export default function InsuranceTelematicsPage() {
   const [form, setForm] = useState<PolicyForm>(EMPTY_POLICY);
   const [formOpen, setFormOpen] = useState(false);
 
-  usePageTitle(t('ownership.insurance.title', 'Insurance Telematics Studio'));
+  usePageTitle(t('ownership.insurance.title', 'Insurance telematics studio'));
 
-  const { data, isLoading, error } = useInsuranceRiskProfile(vehicleId, windowDays);
+  const riskQuery = useInsuranceRiskProfile(vehicleId, windowDays);
+  const { data } = riskQuery;
   const upsert = useUpsertInsurancePolicy();
   const remove = useDeleteInsurancePolicy();
   const { confirm, dialogProps } = useConfirm();
@@ -153,38 +157,43 @@ export default function InsuranceTelematicsPage() {
     },
     {
       key: 'observed',
+      align: 'right',
       header: t('ownership.insurance.factor.observed', 'Observed'),
       render: (row) => (
         <span className="tabular-nums">
-          {fmtNumber(row.observed_rate, 3)}{' '}
+          {fmtScientificNumber(row.observed_rate, 3)}{' '}
           <span className="text-[var(--text-muted)]">{row.rate_unit}</span>
         </span>
       ),
     },
     {
       key: 'baseline',
+      align: 'right',
       header: t('ownership.insurance.factor.baseline', 'Baseline'),
-      render: (row) => <span className="tabular-nums">{fmtNumber(row.baseline_rate, 3)}</span>,
+      render: (row) => <span className="tabular-nums">{fmtScientificNumber(row.baseline_rate, 3)}</span>,
     },
     {
       key: 'score',
+      align: 'right',
       header: t('ownership.insurance.factor.score', 'Score'),
       render: (row) => (
         <span
           className={`tabular-nums ${row.score >= 60 ? 'text-rose-300' : row.score >= 35 ? 'text-amber-300' : 'text-emerald-300'}`}
         >
-          {fmtNumber(row.score, 1)}
+          {fmtNumber(row.score)}
         </span>
       ),
       sortable: true,
     },
     {
       key: 'weight',
+      align: 'right',
       header: t('ownership.insurance.factor.weight', 'Weight'),
-      render: (row) => <span className="tabular-nums">{formatPct(row.weight * 100, 0)}</span>,
+      render: (row) => <span className="tabular-nums">{formatPct(row.weight * 100)}</span>,
     },
     {
       key: 'contribution',
+      align: 'right',
       header: t('ownership.insurance.factor.contribution', 'Contribution'),
       render: (row) => (
         <div className="min-w-[7rem]">
@@ -214,14 +223,16 @@ export default function InsuranceTelematicsPage() {
     },
     {
       key: 'samples',
+      align: 'right',
       header: t('ownership.insurance.factor.samples', 'Samples'),
-      render: (row) => <span className="tabular-nums">{fmtNumber(row.sample_count, 0)}</span>,
+      render: (row) => <span className="tabular-nums">{fmtInt(row.sample_count)}</span>,
     },
   ];
 
   const leverColumns: Column<RiskLever>[] = [
     {
       key: 'rank',
+      align: 'right',
       header: t('ownership.insurance.lever.rank', 'Rank'),
       render: (row) => <span className="tabular-nums">#{row.payoff_rank}</span>,
     },
@@ -232,11 +243,13 @@ export default function InsuranceTelematicsPage() {
     },
     {
       key: 'target',
+      align: 'right',
       header: t('ownership.insurance.lever.target', 'Target reduction'),
       render: (row) => <span className="tabular-nums">{formatPct(row.target_reduction_pct)}</span>,
     },
     {
       key: 'delta',
+      align: 'right',
       header: t('ownership.insurance.lever.delta', 'Risk score delta'),
       render: (row) => (
         <span className="tabular-nums text-emerald-300">
@@ -246,6 +259,7 @@ export default function InsuranceTelematicsPage() {
     },
     {
       key: 'save',
+      align: 'right',
       header: t('ownership.insurance.lever.save', 'Projected saving'),
       render: (row) => (
         <span className="tabular-nums">{money(row.projected_premium_save_minor)}</span>
@@ -259,31 +273,32 @@ export default function InsuranceTelematicsPage() {
     },
     {
       key: 'effort',
+      align: 'right',
       header: t('ownership.insurance.lever.effort', 'Effort'),
       render: (row) =>
         row.effort_hours_per_week != null
           ? t('ownership.insurance.lever.hours', '{{value}} h/week', {
-              value: fmtNumber(row.effort_hours_per_week, 1),
+              value: fmtNumber(row.effort_hours_per_week),
             })
           : '—',
     },
     {
       key: 'confidence',
+      align: 'right',
       header: t('ownership.insurance.lever.confidence', 'Confidence'),
       render: (row) => <span className="tabular-nums">{formatPct(row.confidence)}</span>,
     },
   ];
 
   return (
-    <PageContainer
-      title={t('ownership.insurance.title', 'Insurance Telematics Studio')}
+    <PageLayout
+      title={t('ownership.insurance.title', 'Insurance telematics studio')}
       subtitle={t(
         'ownership.insurance.subtitle',
         'Actuarial frequency × severity underwriting built from your own measured driving, with a premium simulation and ranked improvement levers.',
       )}
-      loading={isLoading}
-      error={error as Error | null}
-      actions={
+      query={riskQuery}
+      contextActions={
         <div className="flex flex-wrap items-center gap-2">
           <Select
             aria-label={t('ownership.window.label', 'Analysis window')}
@@ -310,24 +325,33 @@ export default function InsuranceTelematicsPage() {
       <FadeIn>
         <OwnershipPanel
           title={t('ownership.insurance.summary.title', 'Underwriting position')}
+          source={riskQuery}
+          sourceEnabled={vehicleId != null}
           description={t(
             'ownership.insurance.summary.subtitle',
             'Exposure-normalised risk over the selected window.',
           )}
           empty={!data}
+          preserveSummary
           emptyMessage={t(
             'ownership.insurance.summary.empty',
             'Select a vehicle to build an underwriting profile.',
           )}
           actions={data ? <VerdictBadge value={data.risk_grade} /> : undefined}
         >
-          <StatGrid
-            stats={[
+          <OwnershipBrief
+            title={t('ownership.insurance.brief.title', 'Modelled underwriting indices')}
+            description={t('ownership.insurance.summary.subtitle', 'Exposure-normalised risk over the selected window.')}
+            scope={t('ownership.brief.window', 'Selected vehicle · {{count}}-day analysis window; coverage is described below', { count: windowDays })}
+            source={riskQuery} enabled={vehicleId != null}
+            window={data?.window}
+            metrics={[
               {
-                key: 'score',
+                occurrenceId: 'score', metricId: 'score',
                 label: t('ownership.insurance.stat.score', 'Risk score'),
-                value: fmtNumber(data?.risk_score ?? 0, 1),
-                hint: t('ownership.insurance.stat.scoreHint', '0 = best, 100 = worst'),
+                rawValue: data?.risk_score,
+                display: specialistDisplay(fmtNumber),
+                context: t('ownership.insurance.stat.scoreHint', '0 = best, 100 = worst'),
                 tone:
                   (data?.risk_score ?? 0) >= 60
                     ? 'critical'
@@ -336,22 +360,25 @@ export default function InsuranceTelematicsPage() {
                       : 'positive',
               },
               {
-                key: 'frequency',
+                occurrenceId: 'frequency', metricId: 'ratio',
                 label: t('ownership.insurance.stat.frequency', 'Frequency index'),
-                value: fmtNumber(data?.frequency_index ?? 0, 2),
-                hint: t('ownership.insurance.stat.frequencyHint', 'Expected claim count driver'),
+                rawValue: data?.frequency_index,
+                display: specialistDisplay(fmtNumber),
+                context: t('ownership.insurance.stat.frequencyHint', 'Expected claim count driver'),
               },
               {
-                key: 'severity',
+                occurrenceId: 'severity', metricId: 'ratio',
                 label: t('ownership.insurance.stat.severity', 'Severity index'),
-                value: fmtNumber(data?.severity_index ?? 0, 2),
-                hint: t('ownership.insurance.stat.severityHint', 'Expected claim size driver'),
+                rawValue: data?.severity_index,
+                display: specialistDisplay(fmtNumber),
+                context: t('ownership.insurance.stat.severityHint', 'Expected claim size driver'),
               },
               {
-                key: 'losscost',
+                occurrenceId: 'losscost', metricId: 'ratio',
                 label: t('ownership.insurance.stat.lossCost', 'Loss cost index'),
-                value: fmtNumber(data?.loss_cost_index ?? 0, 2),
-                hint: t(
+                rawValue: data?.loss_cost_index,
+                display: specialistDisplay(fmtNumber),
+                context: t(
                   'ownership.insurance.stat.lossCostHint',
                   'Frequency × severity, 1.0 = baseline',
                 ),
@@ -360,36 +387,44 @@ export default function InsuranceTelematicsPage() {
             ]}
           />
           <div className="mt-3">
-            <StatGrid
-              columns={4}
-              stats={[
+            <OwnershipBrief
+              title={t('ownership.insurance.exposureBrief.title', 'Recorded driving exposure')}
+              description={t('ownership.insurance.exposureBrief.description', 'Exposure distance and duration retain the selected observation window; peer percentile compares against your own history.')}
+              scope={t('ownership.brief.window', 'Selected vehicle · {{count}}-day analysis window; coverage is described below', { count: windowDays })}
+              source={riskQuery} enabled={vehicleId != null}
+              window={data?.window}
+              metrics={[
                 {
-                  key: 'exposure',
+                  occurrenceId: 'exposure', metricId: 'distance',
                   label: t('ownership.insurance.stat.exposure', 'Exposure distance'),
-                  value: units.formatDistance(data?.exposure_distance_m ?? 0),
-                  hint: t('ownership.insurance.stat.drives', '{{count}} drives', {
-                    count: data?.drive_count ?? 0,
+                  rawValue: data?.exposure_distance_m,
+                  display: specialistDisplay(units.formatDistance),
+                  context: data?.drive_count == null ? '—' : t('ownership.insurance.stat.drives', '{{count}} drives', {
+                    count: data.drive_count,
                   }),
                 },
                 {
-                  key: 'duration',
+                  occurrenceId: 'duration', metricId: 'duration',
                   label: t('ownership.insurance.stat.duration', 'Time behind the wheel'),
-                  value: units.formatDuration(data?.exposure_duration_s ?? 0),
+                  rawValue: data?.exposure_duration_s,
+                  display: specialistDisplay(units.formatDuration),
                 },
                 {
-                  key: 'night',
+                  occurrenceId: 'night', metricId: 'distance',
                   label: t('ownership.insurance.stat.night', 'Night distance'),
-                  value: units.formatDistance(data?.night_distance_m ?? 0),
-                  hint:
+                  rawValue: data?.night_distance_m,
+                  display: specialistDisplay(units.formatDistance),
+                  context:
                     data && data.exposure_distance_m > 0
                       ? formatPct((data.night_distance_m / data.exposure_distance_m) * 100)
                       : undefined,
                 },
                 {
-                  key: 'percentile',
+                  occurrenceId: 'percentile', metricId: 'percent',
                   label: t('ownership.insurance.stat.percentile', 'Peer percentile'),
-                  value: formatPct(data?.peer_percentile),
-                  hint: t(
+                  rawValue: data?.peer_percentile,
+                  display: specialistDisplay(formatPct),
+                  context: t(
                     'ownership.insurance.stat.percentileHint',
                     'Against your own history distribution',
                   ),
@@ -403,11 +438,14 @@ export default function InsuranceTelematicsPage() {
       <FadeIn delay={0.05}>
         <OwnershipPanel
           title={t('ownership.insurance.premium.title', 'Premium simulation')}
+          source={riskQuery}
+          sourceEnabled={vehicleId != null}
           description={t(
             'ownership.insurance.premium.subtitle',
             'What the stored policy would cost if the telematics discount tracked the measured loss cost.',
           )}
           empty={!data?.premium}
+          preserveSummary
           emptyMessage={t(
             'ownership.insurance.premium.empty',
             'Register a policy below to simulate a telematics-adjusted premium.',
@@ -420,32 +458,40 @@ export default function InsuranceTelematicsPage() {
             </Button>
           }
         >
-          <StatGrid
-            columns={4}
-            stats={[
+          <OwnershipBrief
+            title={t('ownership.insurance.premiumBrief.title', 'Policy-based premium model')}
+            description={t('ownership.insurance.notice.body', 'The premium simulation applies your policy’s own stated maximum telematics discount to a loss-cost index derived from measured exposure. It is an internal negotiation aid, never an insurer quote.')}
+            scope={t('ownership.insurance.premiumBrief.scope', 'Stored policy and selected risk window; annual amounts retain the recorded currency')}
+            source={riskQuery} enabled={vehicleId != null}
+            window={data?.window}
+            metrics={[
               {
-                key: 'baseline',
+                occurrenceId: 'baseline', metricId: 'currency',
                 label: t('ownership.insurance.premium.baseline', 'Baseline annual premium'),
-                value: money(data?.premium?.baseline_premium_minor),
+                rawValue: data?.premium?.baseline_premium_minor,
+                display: specialistDisplay(money),
               },
               {
-                key: 'modelled',
+                occurrenceId: 'modelled', metricId: 'currency',
                 label: t('ownership.insurance.premium.modelled', 'Modelled annual premium'),
-                value: money(data?.premium?.modelled_premium_minor),
+                rawValue: data?.premium?.modelled_premium_minor,
+                display: specialistDisplay(money),
                 tone: (data?.premium?.delta_minor ?? 0) <= 0 ? 'positive' : 'critical',
               },
               {
-                key: 'delta',
+                occurrenceId: 'delta', metricId: 'currency',
                 label: t('ownership.insurance.premium.delta', 'Difference'),
-                value: money(data?.premium?.delta_minor),
-                hint: formatSignedPct(data?.premium?.delta_pct),
+                rawValue: data?.premium?.delta_minor,
+                display: specialistDisplay(money),
+                context: formatSignedPct(data?.premium?.delta_pct),
                 tone: (data?.premium?.delta_minor ?? 0) <= 0 ? 'positive' : 'critical',
               },
               {
-                key: 'discount',
+                occurrenceId: 'discount', metricId: 'percent',
                 label: t('ownership.insurance.premium.discount', 'Applied discount'),
-                value: formatPct(data?.premium?.applied_discount_pct),
-                hint: t('ownership.insurance.premium.cap', 'Cap {{value}}', {
+                rawValue: data?.premium?.applied_discount_pct,
+                display: specialistDisplay(formatPct),
+                context: t('ownership.insurance.premium.cap', 'Cap {{value}}', {
                   value: formatPct(data?.premium?.max_discount_pct),
                 }),
                 tone: 'accent',
@@ -453,26 +499,30 @@ export default function InsuranceTelematicsPage() {
             ]}
           />
           <div className="mt-3">
-            <StatGrid
-              columns={3}
-              stats={[
+            <OwnershipBrief
+              title={t('ownership.insurance.costBrief.title', 'Policy loss and distance costs')}
+              description={t('ownership.insurance.costBrief.description', 'Expected loss is modelled; deductible and cost per 1000 m retain the policy denomination and fixed distance basis.')}
+              scope={t('ownership.insurance.premiumBrief.scope', 'Stored policy and selected risk window; annual amounts retain the recorded currency')}
+              source={riskQuery} enabled={vehicleId != null}
+              window={data?.window}
+              metrics={[
                 {
-                  key: 'expected',
+                  occurrenceId: 'expected', metricId: 'currency',
                   label: t('ownership.insurance.premium.expectedLoss', 'Expected annual loss'),
-                  value: money(data?.premium?.expected_loss_minor),
+                  rawValue: data?.premium?.expected_loss_minor,
+                  display: specialistDisplay(money),
                 },
                 {
-                  key: 'deductible',
+                  occurrenceId: 'deductible', metricId: 'currency',
                   label: t('ownership.insurance.premium.deductible', 'Deductible'),
-                  value: money(data?.premium?.deductible_minor),
+                  rawValue: data?.premium?.deductible_minor,
+                  display: specialistDisplay(money),
                 },
                 {
-                  key: 'perDistance',
+                  occurrenceId: 'perDistance', metricId: 'rate',
                   label: t('ownership.insurance.premium.perDistance', 'Cost per distance'),
-                  value:
-                    data?.premium?.cost_per_distance_minor_per_m != null
-                      ? `${money(data.premium.cost_per_distance_minor_per_m * 1000)} / 1000 m`
-                      : '—',
+                  rawValue: data?.premium?.cost_per_distance_minor_per_m,
+                  display: specialistDisplay((raw) => `${money(raw * 1000)} / 1000 m`),
                 },
               ]}
             />
@@ -638,6 +688,8 @@ export default function InsuranceTelematicsPage() {
       <FadeIn delay={0.1}>
         <OwnershipPanel
           title={t('ownership.insurance.trend.title', 'Risk trajectory')}
+          source={riskQuery}
+          sourceEnabled={vehicleId != null}
           description={t(
             'ownership.insurance.trend.subtitle',
             'Rolling risk score and loss cost across the window — a rising line means underwriting exposure is growing.',
@@ -661,7 +713,7 @@ export default function InsuranceTelematicsPage() {
               {
                 key: 'risk_score',
                 label: t('ownership.insurance.trend.score', 'Risk score'),
-                format: (v) => fmtNumber(v as number, 1),
+                format: (v) => fmtNumber(v as number),
               },
             ]}
           >
@@ -694,6 +746,8 @@ export default function InsuranceTelematicsPage() {
       <FadeIn delay={0.15}>
         <OwnershipPanel
           title={t('ownership.insurance.factors.title', 'Factor decomposition')}
+          source={riskQuery}
+          sourceEnabled={vehicleId != null}
           description={t(
             'ownership.insurance.factors.subtitle',
             'Every weighted signal behind the score, with the baseline it was measured against.',
@@ -718,6 +772,8 @@ export default function InsuranceTelematicsPage() {
       <FadeIn delay={0.2}>
         <OwnershipPanel
           title={t('ownership.insurance.levers.title', 'Ranked improvement levers')}
+          source={riskQuery}
+          sourceEnabled={vehicleId != null}
           description={t(
             'ownership.insurance.levers.subtitle',
             'What each behavioural change is worth, ordered by payoff per unit of effort.',
@@ -742,6 +798,8 @@ export default function InsuranceTelematicsPage() {
       <FadeIn delay={0.25}>
         <OwnershipPanel
           title={t('ownership.insurance.packet.title', 'Insurer evidence packet')}
+          source={riskQuery}
+          sourceEnabled={vehicleId != null}
           description={t(
             'ownership.insurance.packet.subtitle',
             'A stable content hash over the exposure, factors, and window. Quote it when disputing a rating so both sides know they are looking at the same dataset.',
@@ -765,6 +823,8 @@ export default function InsuranceTelematicsPage() {
 
       <FadeIn delay={0.3}>
         <EvidencePanel
+          source={riskQuery}
+          sourceEnabled={vehicleId != null}
           quality={data?.quality}
           evidence={data?.evidence}
           unsupported={[
@@ -780,6 +840,6 @@ export default function InsuranceTelematicsPage() {
         />
       </FadeIn>
       {dialogProps && <ConfirmDialog {...dialogProps} />}
-    </PageContainer>
+    </PageLayout>
   );
 }

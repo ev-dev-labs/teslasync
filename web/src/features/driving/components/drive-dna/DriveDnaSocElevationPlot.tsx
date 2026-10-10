@@ -14,8 +14,9 @@ import {
   axisTick,
   chartGrid,
 } from '@/components/charts';
-import { fmtNumber } from '@/lib/numberFormat';
+
 import type { DurationUnitPref } from '@/lib/unitConversion';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export interface DriveDnaSocElevationRow {
   elapsed: number;
@@ -48,6 +49,7 @@ export function DriveDnaSocElevationPlot({
   elevationHidden,
   ariaLabel,
 }: DriveDnaSocElevationPlotProps) {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
 
   const effectiveAriaLabel =
@@ -109,12 +111,12 @@ export function DriveDnaSocElevationPlot({
                 content={
                   <ChartTooltip
                     labelFormatter={(value) =>
-                      `${fmtNumber(value, 2)} ${durationUnit}`
+                      `${fmtNumber(value)} ${durationUnit}`
                     }
                     valueFormatter={(value, name) =>
                       name === socName
-                        ? `${fmtNumber(value, 1)}%`
-                        : `${fmtNumber(value, 0)} m`
+                        ? `${fmtNumber(value)}%`
+                        : `${fmtNumber(value)} m`
                     }
                   />
                 }

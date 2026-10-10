@@ -9,7 +9,7 @@ import {
   PanelTitle,
   Text,
 } from '@/components/ui';
-import { fmtInt } from '@/lib/numberFormat';
+
 import type { ArrivalReliabilityResult } from '../../lib/arrivalReliability';
 import { ArrivalReliabilitySectionBody } from './ArrivalReliabilitySectionBody';
 import {
@@ -20,6 +20,7 @@ import type {
   ArrivalReliabilityQueryState,
   DurationFormatter,
 } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface ArrivalReliabilityRouteDirectoryProps {
   analysis: ArrivalReliabilityResult;
@@ -43,6 +44,7 @@ export function ArrivalReliabilityRouteDirectory({
   locale,
   formatDuration,
 }: ArrivalReliabilityRouteDirectoryProps) {
+  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
 
   return (
@@ -112,33 +114,25 @@ export function ArrivalReliabilityRouteDirectory({
                   />
                   <RouteMetric
                     label={t('arrivalReliability.directory.p50', 'Observed p50')}
-                    value={formatDuration(route.p50DurationS, {
-                      precision: 1,
-                    })}
+                    value={formatDuration(route.p50DurationS)}
                   />
                   <RouteMetric
                     label={t('arrivalReliability.directory.p90', 'Observed p90')}
-                    value={formatDuration(route.p90DurationS, {
-                      precision: 1,
-                    })}
+                    value={formatDuration(route.p90DurationS)}
                   />
                   <RouteMetric
                     label={t(
                       'arrivalReliability.directory.spread',
                       'Scaled MAD',
                     )}
-                    value={formatDuration(route.robustSpreadS, {
-                      precision: 1,
-                    })}
+                    value={formatDuration(route.robustSpreadS)}
                   />
                   <RouteMetric
                     label={t(
                       'arrivalReliability.directory.buffer',
                       'Observed p90 buffer',
                     )}
-                    value={formatDuration(route.p90BufferS, {
-                      precision: 1,
-                    })}
+                    value={formatDuration(route.p90BufferS)}
                   />
                   <RouteMetric
                     label={t(

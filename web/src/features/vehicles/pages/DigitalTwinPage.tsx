@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  Activity, AppWindow, Car, DoorOpen, Info, Lightbulb, Lock, PlugZap, ShieldCheck, Unlock,
+  Activity, AppWindow, Car, DoorOpen, Info, Lightbulb, ShieldCheck,
 } from 'lucide-react';
 
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -10,10 +10,13 @@ import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import {
   useVehicles, useVehicleState, useSecurityLatest, useChargingTelemetryLatest,
 } from '@/api/hooks/useVehicles';
-import { PageContainer } from '@/components/layout';
-import { Badge, GlassPanel, PanelTitle, SectionTitle, Text } from '@/components/ui';
-import { MetricCard, StatusBadge } from '@/components/data-display';
-import { EmptyState } from '@/components/feedback';
+import { PageLayout, Section } from '@/components/layout';
+import { Badge, GlassPanel, PanelTitle, Text } from '@/components/ui';
+import { OperationalBrief, StatusBadge } from '@/components/data-display';
+import type { StatMetric } from '@/components/data-display/stat-reference/types';
+import { EmptyState, StaleRefreshWarning } from '@/components/feedback';
+import { useDataState } from '@/hooks/useDataState';
+import { useOperationalMetrics } from '@/hooks/useOperationalMetrics';
 import { FadeIn } from '@/components/motion';
 import { VehicleTwin, VehiclePaintPicker } from '@/components/vehicles';
 
@@ -51,7 +54,7 @@ export function capitalize(value: string): string {
 export default function DigitalTwinPage() {
   const { t } = useTranslation();
   const { formatTime } = useDateFormat();
-  usePageTitle(t('digitalTwin.title', 'Digital Twin'));
+  usePageTitle(t('digitalTwin.title', 'Digital twin'));
 
   const { vehicle } = useSelectedVehicle();
   const { isLoading: vehiclesLoading } = useVehicles();
@@ -60,6 +63,9 @@ export default function DigitalTwinPage() {
   const securityQ = useSecurityLatest(vehicleId, REFRESH_INTERVAL);
   const stateQ = useVehicleState(vehicleId, { refetchInterval: REFRESH_INTERVAL });
   const chargingQ = useChargingTelemetryLatest(vehicleId, REFRESH_INTERVAL);
+  const securityState = useDataState(securityQ, { provenance: 'live' });
+  const stateState = useDataState(stateQ, { provenance: 'live' });
+  const chargingState = useDataState(chargingQ, { provenance: 'live' });
 
   const securityData = securityQ.data ?? null;
   const chargingData = chargingQ.data ?? null;
@@ -145,8 +151,8 @@ export default function DigitalTwinPage() {
   const sentryChip: { variant: BadgeVariant; label: string } = twinState.sentryMode === null
     ? { variant: 'neutral', label: t('digitalTwin.sentryUnknown', 'Sentry unknown') }
     : twinState.sentryMode
-      ? { variant: 'info', label: t('digitalTwin.sentryOn', 'Sentry On') }
-      : { variant: 'neutral', label: t('digitalTwin.sentryOff', 'Sentry Off') };
+      ? { variant: 'info', label: t('digitalTwin.sentryOn', 'Sentry on') }
+      : { variant: 'neutral', label: t('digitalTwin.sentryOff', 'Sentry off') };
   const activityChip: { variant: BadgeVariant; label: string } = twinState.isCharging
     ? { variant: 'info', label: t('common.charging', 'Charging') }
     : twinState.isDriving
@@ -155,41 +161,41 @@ export default function DigitalTwinPage() {
 
   // ── Detail-panel row models ──────────────────────────────────────────
   const doorItems = [
-    { label: t('digitalTwin.doorDriverFront', 'Driver Front'), value: openClosed(twinState.doors.driverFront) },
-    { label: t('digitalTwin.doorPassengerFront', 'Passenger Front'), value: openClosed(twinState.doors.passengerFront) },
-    { label: t('digitalTwin.doorDriverRear', 'Driver Rear'), value: openClosed(twinState.doors.driverRear) },
-    { label: t('digitalTwin.doorPassengerRear', 'Passenger Rear'), value: openClosed(twinState.doors.passengerRear) },
+    { label: t('digitalTwin.doorDriverFront', 'Driver front'), value: openClosed(twinState.doors.driverFront) },
+    { label: t('digitalTwin.doorPassengerFront', 'Passenger front'), value: openClosed(twinState.doors.passengerFront) },
+    { label: t('digitalTwin.doorDriverRear', 'Driver rear'), value: openClosed(twinState.doors.driverRear) },
+    { label: t('digitalTwin.doorPassengerRear', 'Passenger rear'), value: openClosed(twinState.doors.passengerRear) },
     { label: t('digitalTwin.frunk', 'Frunk'), value: openClosed(twinState.frunkOpen) },
     { label: t('digitalTwin.trunk', 'Trunk'), value: openClosed(twinState.trunkOpen) },
   ];
 
   const windowItems = [
-    { label: t('digitalTwin.windowFD', 'Front Driver'), value: windowLabel(twinState.windowFD) },
-    { label: t('digitalTwin.windowFP', 'Front Passenger'), value: windowLabel(twinState.windowFP) },
-    { label: t('digitalTwin.windowRD', 'Rear Driver'), value: windowLabel(twinState.windowRD) },
-    { label: t('digitalTwin.windowRP', 'Rear Passenger'), value: windowLabel(twinState.windowRP) },
+    { label: t('digitalTwin.windowFD', 'Front driver'), value: windowLabel(twinState.windowFD) },
+    { label: t('digitalTwin.windowFP', 'Front passenger'), value: windowLabel(twinState.windowFP) },
+    { label: t('digitalTwin.windowRD', 'Rear driver'), value: windowLabel(twinState.windowRD) },
+    { label: t('digitalTwin.windowRP', 'Rear passenger'), value: windowLabel(twinState.windowRP) },
   ];
 
   const securityItems = [
     { label: t('digitalTwin.locked', 'Locked'), value: twinState.locked === null ? '—' : twinState.locked ? t('common.yes', 'Yes') : t('common.no', 'No') },
     { label: t('digitalTwin.driving', 'Driving'), value: twinState.isDriving ? t('common.yes', 'Yes') : t('common.no', 'No') },
     { label: t('digitalTwin.charging', 'Charging'), value: twinState.isCharging ? t('common.yes', 'Yes') : t('common.no', 'No') },
-    { label: t('digitalTwin.sentryMode', 'Sentry Mode'), value: twinState.sentryMode === null ? '—' : twinState.sentryMode ? t('common.active', 'Active') : t('common.inactive', 'Inactive') },
-    { label: t('digitalTwin.chargePort', 'Charge Port'), value: twinState.isCharging ? t('digitalTwin.charging', 'Charging') : twinState.chargePortOpen === null ? '—' : twinState.chargePortOpen ? t('common.open', 'Open') : t('common.closed', 'Closed') },
-    { label: t('digitalTwin.driverSeat', 'Driver Seat'), value: twinState.driverSeatOccupied === null ? '—' : twinState.driverSeatOccupied ? t('digitalTwin.occupied', 'Occupied') : t('digitalTwin.empty', 'Empty') },
+    { label: t('digitalTwin.sentryMode', 'Sentry mode'), value: twinState.sentryMode === null ? '—' : twinState.sentryMode ? t('common.active', 'Active') : t('common.inactive', 'Inactive') },
+    { label: t('digitalTwin.chargePort', 'Charge port'), value: twinState.isCharging ? t('digitalTwin.charging', 'Charging') : twinState.chargePortOpen === null ? '—' : twinState.chargePortOpen ? t('common.open', 'Open') : t('common.closed', 'Closed') },
+    { label: t('digitalTwin.driverSeat', 'Driver seat'), value: twinState.driverSeatOccupied === null ? '—' : twinState.driverSeatOccupied ? t('digitalTwin.occupied', 'Occupied') : t('digitalTwin.empty', 'Empty') },
   ];
 
   const lightItems = [
     { label: t('digitalTwin.headlights', 'Headlights'), value: twinState.headlights === null ? '—' : twinState.headlights ? t('common.on', 'On') : t('common.off', 'Off') },
     { label: t('digitalTwin.hazards', 'Hazards'), value: twinState.hazards === null ? '—' : twinState.hazards ? t('common.active', 'Active') : t('common.off', 'Off') },
-    { label: t('digitalTwin.turnSignal', 'Turn Signal'), value: turnSignalLabel(twinState.turnSignal) },
+    { label: t('digitalTwin.turnSignal', 'Turn signal'), value: turnSignalLabel(twinState.turnSignal) },
   ];
 
   // The Security panel merges three streams — treat it as ready when any of
   // them has arrived, loading only while all are still pending.
   const anyLiveData = Boolean(securityData || vehicleState || chargingData);
   const combinedLoading = !anyLiveData && (securityQ.isLoading || stateQ.isLoading || chargingQ.isLoading);
-  const combinedError = anyLiveData ? undefined : (securityQ.error ?? stateQ.error ?? chargingQ.error);
+  const combinedError = anyLiveData ? undefined : (securityState.fatalError ?? stateState.fatalError ?? chargingState.fatalError);
   const refetchAll = () => {
     void securityQ.refetch();
     void stateQ.refetch();
@@ -197,10 +203,50 @@ export default function DigitalTwinPage() {
   };
 
   const freshnessQueries = vehicleId > 0 ? [securityQ, stateQ, chargingQ] : undefined;
+  const knownOpenings = openings.filter((opening) => opening !== null).length;
+  const knownWindows = windowStates.filter((window) => window !== null).length;
+  const summaryMetrics: readonly StatMetric[] = [
+    { metricId: 'text', occurrenceId: 'twin-status', label: t('digitalTwin.kpiStatus', 'Status'),
+      rawValue: statusText,
+      description: t('digitalTwin.brief.statusBasis', 'Charging and driving take priority, then vehicle state and available streams; offline is the fallback when no source reports activity.') },
+    { metricId: 'text', occurrenceId: 'twin-lock', label: t('digitalTwin.kpiLock', 'Lock'),
+      rawValue: twinState.locked === null ? null : lockValue,
+      description: t('digitalTwin.brief.lockBasis', 'Latest reported lock state; an unknown state is not unlocked.') },
+    { metricId: 'count', occurrenceId: 'twin-doors', label: t('digitalTwin.kpiDoorsOpen', 'Doors open'),
+      rawValue: openingsKnown ? openCount : null,
+      description: t('digitalTwin.brief.doorsBasis', 'Reported open doors, frunk and trunk. Unreported openings are not assumed closed.'),
+      context: <><span>{t('digitalTwin.ofOpenings', 'of 6 openings')}</span> · <span>{t('digitalTwin.brief.openingsKnown', '{{count}} of 6 states known', { count: knownOpenings })}</span></> },
+    { metricId: 'count', occurrenceId: 'twin-windows', label: t('digitalTwin.kpiWindowsOpen', 'Windows open'),
+      rawValue: windowsKnown ? windowsOpenCount : null,
+      description: t('digitalTwin.brief.windowsBasis', 'Open and partially open windows are counted together; unreported windows remain unknown.'),
+      context: <><span>{t('digitalTwin.ofWindows', 'of 4 windows')}</span> · <span>{t('digitalTwin.brief.windowsKnown', '{{count}} of 4 states known', { count: knownWindows })}</span></> },
+    { metricId: 'text', occurrenceId: 'twin-sentry', label: t('digitalTwin.kpiSentry', 'Sentry mode'),
+      rawValue: twinState.sentryMode === null ? null : sentryValue,
+      description: t('digitalTwin.brief.sentryBasis', 'Latest reported sentry state; inactive differs from unknown.') },
+    { metricId: 'text', occurrenceId: 'twin-port', label: t('digitalTwin.kpiChargePort', 'Charge port'),
+      rawValue: !twinState.isCharging && twinState.chargePortOpen === null ? null : chargePortValue,
+      description: t('digitalTwin.brief.portBasis', 'Charging takes priority over the reported charge-port door state.') },
+  ];
+  const operationalMetrics = useOperationalMetrics(summaryMetrics);
+  const sourceStates = [securityState, stateState, chargingState];
+  const summaryStatus = combinedLoading ? 'loading'
+    : sourceStates.some((source) => source.status === 'stale') ? 'stale'
+    : !anyLiveData && combinedError ? 'failed'
+    : !anyLiveData ? 'unavailable'
+    : !securityData || !vehicleState || !chargingData ? 'partial'
+    : 'ready';
+  const summaryStatusLabels = {
+    loading: t('digitalTwin.brief.status.loading', 'Loading source snapshots'),
+    stale: t('digitalTwin.brief.status.stale', 'Retained source snapshots'),
+    failed: t('digitalTwin.brief.status.failed', 'Source request failed'),
+    unavailable: t('digitalTwin.brief.status.unavailable', 'No source snapshots'),
+    partial: t('digitalTwin.brief.status.partial', 'Mixed source availability'),
+    ready: t('digitalTwin.brief.status.ready', 'Source snapshots available'),
+  };
 
   return (
-    <PageContainer
-      title={t('digitalTwin.title', 'Digital Twin')}
+    <PageLayout
+      title={t('digitalTwin.title', 'Digital twin')}
       subtitle={t('digitalTwin.subtitle', 'Real-time vehicle physical state')}
       loading={vehiclesLoading}
       query={freshnessQueries}
@@ -215,59 +261,45 @@ export default function DigitalTwinPage() {
         </GlassPanel>
       ) : (
         <div className="space-y-6">
+          <StaleRefreshWarning state={securityState} label={t('digitalTwin.securityTitle', 'Security & status')} />
+          <StaleRefreshWarning state={stateState} label={t('digitalTwin.liveStatusTitle', 'Live status')} />
+          <StaleRefreshWarning state={chargingState} label={t('common.charging', 'Charging')} />
           {/* 1 — KPI band: full-width responsive metric grid */}
           <FadeIn>
             <section
               aria-label={t('digitalTwin.overview', 'Overview')}
-              className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 2xl:grid-cols-6"
             >
-              <MetricCard
-                label={t('digitalTwin.kpiStatus', 'Status')}
-                value={statusText}
-                icon={<Activity className="h-5 w-5" aria-hidden="true" />}
-                color={statusNeon(badgeStatus)}
-              />
-              <MetricCard
-                label={t('digitalTwin.kpiLock', 'Lock')}
-                value={lockValue}
-                icon={twinState.locked === false ? <Unlock className="h-5 w-5" aria-hidden="true" /> : <Lock className="h-5 w-5" aria-hidden="true" />}
-                color={twinState.locked === false ? 'amber' : 'green'}
-              />
-              <MetricCard
-                label={t('digitalTwin.kpiDoorsOpen', 'Doors Open')}
-                value={openingsKnown ? String(openCount) : '—'}
-                subtitle={t('digitalTwin.ofOpenings', 'of 6 openings')}
-                icon={<DoorOpen className="h-5 w-5" aria-hidden="true" />}
-                color={openCount > 0 ? 'amber' : 'green'}
-              />
-              <MetricCard
-                label={t('digitalTwin.kpiWindowsOpen', 'Windows Open')}
-                value={windowsKnown ? String(windowsOpenCount) : '—'}
-                subtitle={t('digitalTwin.ofWindows', 'of 4 windows')}
-                icon={<AppWindow className="h-5 w-5" aria-hidden="true" />}
-                color={windowsOpenCount > 0 ? 'amber' : 'green'}
-              />
-              <MetricCard
-                label={t('digitalTwin.kpiSentry', 'Sentry Mode')}
-                value={sentryValue}
-                icon={<ShieldCheck className="h-5 w-5" aria-hidden="true" />}
-                color={twinState.sentryMode ? 'cyan' : 'blue'}
-              />
-              <MetricCard
-                label={t('digitalTwin.kpiChargePort', 'Charge Port')}
-                value={chargePortValue}
-                icon={<PlugZap className="h-5 w-5" aria-hidden="true" />}
-                color={twinState.isCharging ? 'cyan' : 'blue'}
+              <OperationalBrief
+                compact
+                testId="digital-twin-summary"
+                eyebrow={t('digitalTwin.brief.eyebrow', 'Vehicle physical state')}
+                title={t('digitalTwin.brief.title', 'Physical-state summary')}
+                description={t('digitalTwin.brief.description', 'Latest polled security, vehicle-state and charging signals. Source snapshots may differ in time; unknown component states remain unknown.')}
+                statusLabel={summaryStatusLabels[summaryStatus]}
+                statusTone={summaryStatus === 'stale' || summaryStatus === 'partial' || summaryStatus === 'failed' ? 'warning' : 'neutral'}
+                loading={combinedLoading}
+                metrics={operationalMetrics}
+                scope={<Text as="span" variant="caption">{vehicle?.display_name ?? '—'} · {t('digitalTwin.snapshot', 'Latest vehicle signals')}</Text>}
+                freshness={<Text as="span" variant="caption">
+                  {typeof twinState.lastUpdated === 'string'
+                    ? t('digitalTwin.brief.timestamp', 'Signal timestamp: {{time}}', { time: formatTime(twinState.lastUpdated) })
+                    : t('digitalTwin.brief.timestampUnknown', 'Signal timestamp unknown')}
+                </Text>}
+                provenance={[
+                  t('digitalTwin.brief.provenance', 'Security, vehicle-state and charging snapshots; retained values remain visible after a refresh failure.'),
+                  vehicle?.display_name ?? '—',
+                  t('digitalTwin.snapshot', 'Latest vehicle signals'),
+                  typeof twinState.lastUpdated === 'string'
+                    ? twinState.lastUpdated
+                    : t('digitalTwin.brief.timestampUnknown', 'Signal timestamp unknown'),
+                ].join(' · ')}
               />
             </section>
           </FadeIn>
 
           {/* 2 — Hero: interactive twin + live status */}
           <FadeIn delay={0.1}>
-            <section aria-labelledby="twin-live-heading" className="space-y-3">
-              <SectionTitle id="twin-live-heading">
-                {t('digitalTwin.sectionLive', 'Live Overview')}
-              </SectionTitle>
+            <Section id="twin-live-heading" title={t('digitalTwin.sectionLive', 'Live overview')}>
               <div className="grid grid-cols-1 gap-4 xl:grid-cols-3 xl:gap-5">
                 <GlassPanel className="flex flex-col items-center justify-center p-6 sm:p-8 xl:col-span-2">
                   <VehicleTwin
@@ -289,7 +321,7 @@ export default function DigitalTwinPage() {
                 <GlassPanel className="flex flex-col p-4 sm:p-5">
                   <PanelTitle className="mb-3 flex items-center gap-2">
                     <Activity className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-                    <span>{t('digitalTwin.liveStatusTitle', 'Live Status')}</span>
+                    <span>{t('digitalTwin.liveStatusTitle', 'Live status')}</span>
                   </PanelTitle>
                   <div className="space-y-4">
                     <StatusBadge status={badgeStatus} />
@@ -309,22 +341,19 @@ export default function DigitalTwinPage() {
                   </div>
                 </GlassPanel>
               </div>
-            </section>
+            </Section>
           </FadeIn>
 
           {/* 3 — Component state: full-width detail bento */}
           <FadeIn delay={0.2}>
-            <section aria-labelledby="twin-components-heading" className="space-y-3">
-              <SectionTitle id="twin-components-heading">
-                {t('digitalTwin.sectionComponents', 'Component State')}
-              </SectionTitle>
+            <Section id="twin-components-heading" title={t('digitalTwin.sectionComponents', 'Component state')}>
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2 2xl:grid-cols-4 xl:gap-5">
                 <TwinDetailPanel
-                  title={t('digitalTwin.doorsTitle', 'Doors & Openings')}
+                  title={t('digitalTwin.doorsTitle', 'Doors & openings')}
                   icon={<DoorOpen className="h-4 w-4 text-cyan-300" aria-hidden="true" />}
                   items={doorItems}
                   isLoading={securityQ.isLoading}
-                  error={securityQ.error}
+                  error={securityState.fatalError}
                   isEmpty={!securityData}
                   emptyIcon={<Info className="h-6 w-6" aria-hidden="true" />}
                   emptyMessage={t('digitalTwin.noDoorData', 'No door data available')}
@@ -335,14 +364,14 @@ export default function DigitalTwinPage() {
                   icon={<AppWindow className="h-4 w-4 text-cyan-300" aria-hidden="true" />}
                   items={windowItems}
                   isLoading={securityQ.isLoading}
-                  error={securityQ.error}
+                  error={securityState.fatalError}
                   isEmpty={!securityData}
                   emptyIcon={<Info className="h-6 w-6" aria-hidden="true" />}
                   emptyMessage={t('digitalTwin.noWindowData', 'No window data available')}
                   onRetry={() => securityQ.refetch()}
                 />
                 <TwinDetailPanel
-                  title={t('digitalTwin.securityTitle', 'Security & Status')}
+                  title={t('digitalTwin.securityTitle', 'Security & status')}
                   icon={<ShieldCheck className="h-4 w-4 text-cyan-300" aria-hidden="true" />}
                   items={securityItems}
                   isLoading={combinedLoading}
@@ -354,21 +383,21 @@ export default function DigitalTwinPage() {
                   footer={<StatusBadge status={badgeStatus} />}
                 />
                 <TwinDetailPanel
-                  title={t('digitalTwin.lightsTitle', 'Lights & Signals')}
+                  title={t('digitalTwin.lightsTitle', 'Lights & signals')}
                   icon={<Lightbulb className="h-4 w-4 text-cyan-300" aria-hidden="true" />}
                   items={lightItems}
                   isLoading={securityQ.isLoading}
-                  error={securityQ.error}
+                  error={securityState.fatalError}
                   isEmpty={!securityData}
                   emptyIcon={<Info className="h-6 w-6" aria-hidden="true" />}
                   emptyMessage={t('digitalTwin.noLightData', 'No lights data available')}
                   onRetry={() => securityQ.refetch()}
                 />
               </div>
-            </section>
+            </Section>
           </FadeIn>
         </div>
       )}
-    </PageContainer>
+    </PageLayout>
   );
 }

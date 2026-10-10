@@ -1,0 +1,928 @@
+{
+  "item": "audit-page-086",
+  "phase": "Phase0",
+  "page": "web\\src\\features\\charging\\pages\\CostAnalysisPage.tsx",
+  "routes": [
+    "/cost-analysis",
+    "/charging/costs"
+  ],
+  "purpose": "Analyze charging economics, returned-session trends, bill reconciliation, gasoline comparisons, deterministic forecasts and optional AI narration.",
+  "primaryGoal": "Understand recorded electricity spending and modeled savings without confusing incomplete, independent, missing or differently denominated evidence.",
+  "identity": {
+    "component": "CostAnalysisPage",
+    "repositoryRoot": "F:\\github\\TeslaSync",
+    "routeEvidence": [
+      {
+        "file": "web\\src\\App.tsx",
+        "line": 57,
+        "detail": "Lazy import of the assigned page."
+      },
+      {
+        "file": "web\\src\\App.tsx",
+        "line": 802,
+        "detail": "Canonical /cost-analysis mount through SafeRoute."
+      },
+      {
+        "file": "web\\src\\App.tsx",
+        "line": 808,
+        "detail": "/charging/costs mounts the same page, not a separate implementation."
+      },
+      {
+        "file": "web\\src\\lib\\workspaceScope.ts",
+        "line": 32,
+        "detail": "Alias registered for header-owned date range."
+      },
+      {
+        "file": "web\\src\\lib\\workspaceScope.ts",
+        "line": 37,
+        "detail": "Canonical path registered for header-owned date range."
+      }
+    ]
+  },
+  "dataSources": [
+    {
+      "hook": "useChargingSessionsPaginated",
+      "owner": "web\\src\\api\\hooks\\useCharging.ts",
+      "line": 121,
+      "endpoint": "GET /api/v1/charging?vehicle_id=<id>&limit=<MAX_LIMIT>&offset=0&start=<calendar-date>&end=<calendar-date>",
+      "routeEvidence": {
+        "file": "internal\\api\\router.go",
+        "line": 3503
+      },
+      "consumers": [
+        "summary",
+        "monthly cost chart",
+        "rate chart",
+        "charger breakdown",
+        "calculator",
+        "monthly table",
+        "time-of-use",
+        "lifetime",
+        "environment"
+      ],
+      "behavior": "Selected workspace vehicle; bounded first page only; safeArray selection; abort signal forwarded; query key includes vehicle, bounds, limit and offset. Raw energy Wh, power W and distance m retained in API payload.",
+      "limit": "Server bounds, sorting, completeness and date inclusivity were not exercised or inferred."
+    },
+    {
+      "hook": "useCostForecast",
+      "owner": "web\\src\\api\\hooks\\useCharging.ts",
+      "line": 136,
+      "endpoint": "GET /api/v1/analytics/cost-forecast?vehicle_id=<id>&months=6",
+      "routeEvidence": {
+        "file": "internal\\api\\router.go",
+        "line": 3895
+      },
+      "consumers": [
+        "forecast chart",
+        "forecast breakdown",
+        "forecast savings",
+        "forecast insights",
+        "forecast rate chart"
+      ],
+      "behavior": "Independent of workspace date range; scoped vehicle/horizon query key; abort signal forwarded; slow stale time. Independent-period disclosure exists.",
+      "limit": "Forecast DTO contains kwh and avg_km_per_month; actual backend wire units, model assumptions and interval calibration unverified."
+    },
+    {
+      "hook": "useBillVariance",
+      "owner": "web\\src\\api\\hooks\\useCharging.ts",
+      "line": 608,
+      "endpoint": "GET /api/v1/charging/bill-variance?vehicle_id=<id>",
+      "routeEvidence": {
+        "file": "internal\\api\\router.go",
+        "line": 3504
+      },
+      "consumers": [
+        "stat-modernization\\BillVarianceCard"
+      ],
+      "behavior": "Independent enabled vehicle query with cancellation and its own retry. Does not inherit date scope; explicit independent-period notice exists.",
+      "limit": "Not included in page-level dataSources; own raw error/retained handling rather than DataState."
+    },
+    {
+      "hook": "useAiStream via AICostForecastNarration",
+      "owner": "web\\src\\components\\ai\\AICostForecastNarration.tsx",
+      "line": 129,
+      "endpoint": "POST /api/v1/ai/charging/costs/forecast/narrate",
+      "consumers": [
+        "opt-in narration"
+      ],
+      "behavior": "Feature-gated; absent when disabled; selected vehicle and optional months form stream identity; unresolved vehicle disables initiation; baseline deterministic content remains.",
+      "limit": "Endpoint is source-declared by component; backend registration and SSE implementation were not independently traced. No request or mutation executed."
+    }
+  ],
+  "components": [
+    {
+      "name": "PageLayout",
+      "owner": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+      "usage": "Category barrel; title/subtitle, overflowActions, query array, busy and two dataSources. Implementation not inspected."
+    },
+    {
+      "name": "SavedViewMenu / PrintButton",
+      "owner": "existing data-display / ui category barrels",
+      "usage": "Saved route /cost-analysis, URL apply, print-hidden actions; internals unverified."
+    },
+    {
+      "name": "StaleRefreshWarning / useDataState",
+      "owner": "web\\src\\components\\feedback\\StaleRefreshWarning.tsx",
+      "usage": "Separate sessions/forecast retained-data notices and retries."
+    },
+    {
+      "name": "ChargingSummaryBrief",
+      "owner": "web\\src\\features\\charging\\components\\operationalbrief-all\\ChargingSummaryBrief.tsx",
+      "usage": "Existing OperationalBrief plus useOperationalMetrics, explicit periods, partial/missing/retained labels; preserves metric raw values."
+    },
+    {
+      "name": "CostStatSection / CostSection",
+      "owner": "web\\src\\features\\charging\\components\\stat-modernization\\CostStatSection.tsx",
+      "usage": "Two local shells composed from GlassPanel, PanelTitle, Skeleton, QueryError and EmptyState."
+    },
+    {
+      "name": "ChartContainer / EmbeddedChart",
+      "owner": "existing components\\charts category",
+      "usage": "Shared frames, fallback data tables, chart export/fullscreen where configured, selected palette and annotation integration. Internals not inspected."
+    },
+    {
+      "name": "DataTable",
+      "owner": "existing components\\ui category",
+      "usage": "Monthly table; stable tableId charging:cost-monthly; sorting, pagination, compact, visibility/reorder; mobileColumns month/cost/savings."
+    },
+    {
+      "name": "Input / Button / Text / Badge",
+      "owner": "existing components\\ui category",
+      "usage": "Calculator assumptions, reset, status, localized labels and typography; no raw control replacement."
+    },
+    {
+      "name": "FadeIn",
+      "owner": "existing components\\motion category",
+      "usage": "Ten wrappers including delayed section entrances; shared reduced-motion implementation not independently reviewed."
+    }
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\charging\\components\\cost-analysis\\CostSection.tsx",
+      "line": 42,
+      "rule": "MDC-002 / mission 4",
+      "detail": "CostSection and CostStatSection repeat panel header, skeleton, error and empty orchestration; stat shell additionally owns period and retained handling. Both are consumed by this mounted page.",
+      "fix": "Reuse existing shared Section/SourceContent composition where equivalent, retaining period descriptions, icons, recovery and skeleton geometry; do not introduce a third shell.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "responsive": {
+    "status": "source inspected; runtime and all ten viewports unverified",
+    "evidence": [
+      {
+        "file": "web\\src\\features\\charging\\pages\\CostAnalysisPage.tsx",
+        "line": 146,
+        "detail": "Trends stack then split 2:1 at xl."
+      },
+      {
+        "file": "web\\src\\features\\charging\\pages\\CostAnalysisPage.tsx",
+        "line": 234,
+        "detail": "Lifetime/environment stack then two columns at xl."
+      },
+      {
+        "file": "web\\src\\features\\charging\\components\\stat-modernization\\SavingsCalculator.tsx",
+        "line": 46,
+        "detail": "Inputs/comparison stack and split at xl; inputs persist in every data state."
+      },
+      {
+        "file": "web\\src\\features\\charging\\components\\cost-analysis\\MonthlyCostTable.tsx",
+        "line": 139,
+        "detail": "Explicit mobile column priority; reachability of omitted metadata via shared table UI not exercised."
+      }
+    ],
+    "issues": [],
+    "requiredChecks": [
+      "320/375/390/430/768/1024/1280/1440/1920/2560",
+      "allocated container widths",
+      "no clipping with long currency values and labels",
+      "all table columns remain reachable",
+      "200% text and RTL"
+    ]
+  },
+  "accessibility": {
+    "status": "source inspected; keyboard, screen reader, focus, effective contrast and reduced motion unverified",
+    "evidence": [
+      {
+        "file": "web\\src\\features\\charging\\pages\\CostAnalysisPage.tsx",
+        "line": 125,
+        "detail": "Localized summary section aria-label and retained tour marker."
+      },
+      {
+        "file": "web\\src\\features\\charging\\components\\cost-analysis\\MonthlyCostChart.tsx",
+        "line": 84,
+        "detail": "Chart aria label, shared dataColumns and exportData use the same rows."
+      },
+      {
+        "file": "web\\src\\features\\charging\\components\\stat-modernization\\SavingsCalculator.tsx",
+        "line": 50,
+        "detail": "Shared labeled number inputs and native button type."
+      },
+      {
+        "file": "web\\src\\features\\charging\\components\\feedback\\StaleRefreshWarning.tsx",
+        "line": 87,
+        "detail": "Non-blocking role=status / polite live warning."
+      }
+    ],
+    "issues": []
+  },
+  "states": {
+    "initialLoading": "Per-source skeletons / metric loading; page never blanks every independent source.",
+    "empty": "Null/empty derived session models become source-specific empty content; calculator controls remain visible; reset-range recovery present.",
+    "fatalError": "Sessions/forecast use DataState.fatalError and individual refetch callbacks.",
+    "refreshError": "Sessions/forecast retain cached data and show StaleRefreshWarning; billing retains payload but lacks the equivalent trust adapter.",
+    "offline": "Shared warning distinguishes retained offline data; independent billing paused/offline treatment not established.",
+    "partial": "OperationalBrief can label missing metrics, but the derivation currently converts missing monetary/distance leaves to measured zero.",
+    "unresolvedVehicle": "Read queries disabled; page currently provides generic empty surfaces. AI generation disabled.",
+    "runtime": "unverified"
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\charging\\components\\stat-modernization\\CostForecastSection.tsx",
+      "line": 98,
+      "rule": "MDC-010 / MDC-034",
+      "detail": "Hardcoded saturated purple confidence fill and forecast stroke (line 107), plus fixed cyan rate stroke/dots (line 149), bypass selected chart palette.",
+      "fix": "Use existing palette/semantic chart tokens; preserve confidence band, dashed forecast distinction, legends, all series and saved palette choices.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\charging\\components\\stat-modernization\\ForecastDetails.tsx",
+      "line": 157,
+      "rule": "MDC-010 / MDC-011 / MDC-015",
+      "detail": "Insight tile explicitly uses white border/background overlays. Pie fills at lines 70-71 are fixed saturated colors.",
+      "fix": "Use existing theme surface/border tokens and restrained semantic palette while retaining every insight, category and accessible table.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\charging\\components\\stat-modernization\\CostStatSection.tsx",
+      "line": 38,
+      "rule": "MDC-010 / mission 7",
+      "detail": "Shell forwards explicit cyan/green glow requested by billing, calculator, lifetime and environment callers. Actual effective glow intensity was not measured.",
+      "fix": "Prefer neutral shared surface/default glow unless semantic emphasis is justified; do not reset user theme preferences.",
+      "owner": "page",
+      "confidence": "medium"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\features\\charging\\pages\\CostAnalysisPage.tsx",
+      "line": 58,
+      "rule": "MDC-032",
+      "detail": "Page consumes calendar start/end and forwards those at lines 72-73, not startInstant/endInstantExclusive. Shared hook exposes precise rolling 24h/live instants and timezone-aware exclusive calendar bounds at useRangeState.ts:656-682.",
+      "fix": "Thread typed instant bounds through the existing hook and server filtering after integration review; preserve both aliases, URL/preferences and rolling/timezone semantics. Do not add a second picker.",
+      "owner": "integration",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\charging\\components\\cost-analysis\\useCostAnalysisData.ts",
+      "line": 43,
+      "rule": "MDC-026 / unknown is not zero",
+      "detail": "Nullable cost_decimal is reduced with ?? 0 in headline/month/category/hour metrics (lines 43,78,119,144), so unpriced sessions contribute free-looking totals and blended rates. Missing distance is likewise zeroed at line 49. Rate series correctly filters unpriced sessions, while aggregates do not disclose coverage.",
+      "fix": "Keep priced/unpriced and known/unknown distance coverage distinct, preserving real zero-cost sessions. Represent unavailable rates/savings explicitly and retain existing calculation definitions unless separately authorized.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\charging\\components\\cost-analysis\\useCostAnalysisData.ts",
+      "line": 43,
+      "rule": "MDC-045 / source currency preservation",
+      "detail": "All cost_decimal values are summed without cost_currency grouping. ChargingSession exposes nullable cost_currency at api/types.ts:179; useFormatting.ts:45-56 prefixes a saved display symbol without FX. Raw source currency is lost from monthly/category/core view models.",
+      "fix": "Retain source denomination, show unsupported/mixed/unknown currency explicitly and avoid silently relabeling or summing unlike currencies. Do not invent FX/backend capabilities; preserve saved formatting preferences separately from source ownership.",
+      "owner": "integration",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\charging\\components\\stat-modernization\\CostSummaryCards.tsx",
+      "line": 31,
+      "rule": "MDC-045 / trust and unit identity",
+      "detail": "Summary labels the unchanged gasPrice per L when gas_unit=liter, but calculator suffix remains $/gal and derivation uses US gallons. Thus identical assumption can be presented with inconsistent volume identity.",
+      "fix": "Keep the gallon-based model explicit or use existing verified conversion at input/display boundary; preserve assumption values/defaults and avoid changing calculation semantics casually.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\charging\\components\\stat-modernization\\SavingsCalculator.tsx",
+      "line": 55,
+      "rule": "MDC-044 / source currency preservation",
+      "detail": "Fixed $/gal and $/kWh suffixes (line 69) conflict with preference-backed currency formatting elsewhere; this is distinct from source-currency aggregation.",
+      "fix": "Derive localized currency/rate labels from known source/assumption denomination using existing formatting; preserve gallon/MPG assumption basis until a verified conversion contract exists.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\charging\\components\\stat-modernization\\BillVarianceCard.tsx",
+      "line": 28,
+      "rule": "MDC-026 / MDC-046",
+      "detail": "Independent billing uses raw isLoading/error; retained payload remains visible via CostStatSection, but billing is absent from PageLayout.dataSources and lacks a shared offline/stale DataState warning. Forecast/session trust handling is stronger.",
+      "fix": "Adopt existing useDataState/StaleRefreshWarning for this query and expose source trust without merging its independent period into selected-session scope.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\types\\charging.ts",
+      "line": 73,
+      "rule": "MDC-045",
+      "detail": "Forecast wire contract declares kwh (also line 83) and avg_km_per_month (line 98). ForecastDetails.tsx:140 bridges km into canonical metrics. These are source-confirmed noncanonical unit names; actual server payload semantics were not inspected.",
+      "fix": "Escalate endpoint/DTO SI contract verification to integration owner before canonical conversion; do not guess units, add dual-shape adapters or multiply unverified fields.",
+      "owner": "integration",
+      "confidence": "high for declared fields; backend semantics unknown"
+    },
+    {
+      "file": "web\\src\\features\\charging\\components\\stat-modernization\\CostForecastSection.tsx",
+      "line": 105,
+      "rule": "MDC-026 / data trust",
+      "detail": "Legend calls interval '95% Confidence'; the AI narration's source description explicitly calls the same band APPROXIMATE and not a strict 95% confidence interval. Model calibration not independently verified.",
+      "fix": "Use source-verified interval terminology consistently while retaining cost_low/cost_high and all chart data; obtain integration confirmation rather than inventing calibration.",
+      "owner": "integration",
+      "confidence": "high for conflicting source descriptions"
+    },
+    {
+      "file": "web\\src\\features\\charging\\components\\cost-analysis\\useCostAnalysisData.ts",
+      "line": 76,
+      "rule": "MDC-032 / MDC-044",
+      "detail": "Monthly buckets use browser getFullYear/getMonth and hourly/off-peak grouping uses getHours (lines 141,166), without explicit workspace/vehicle timezone. This can differ from the intended selected time scope.",
+      "fix": "Align derived bucket timezone with existing scoped date mechanisms after identifying authoritative timezone; preserve bucket/session counts and clearly label TOU assumptions, which are currently fixed 14-19 and 22-06 rather than verified utility rates.",
+      "owner": "integration",
+      "confidence": "high"
+    }
+  ],
+  "priority": {
+    "level": "high",
+    "order": [
+      "currency and unknown-data trust",
+      "workspace exact bounds and timezone",
+      "forecast SI/interval contract",
+      "independent billing trust",
+      "palette/surface restraint and shell reuse"
+    ],
+    "reason": "The page already preserves substantial functionality and shared rendering, but money/coverage/range semantics can make otherwise polished output misleading."
+  },
+  "requiredSharedChanges": [],
+  "sharedContracts": [
+    {
+      "name": "SourceContent",
+      "owner": "web\\src\\components\\layout\\layout-reference\\SourceContent.tsx",
+      "action": "reuse; no new shared renderer",
+      "propsVariantsStates": [
+        "state ready/loading/error/empty/retained",
+        "label",
+        "emptyMessage/errorMessage",
+        "loadingContent",
+        "emptyContent",
+        "errorRecovery.onRetry",
+        "emptyRecovery",
+        "retainedMessage",
+        "children"
+      ],
+      "usedBy": [
+        "CostSection",
+        "CostStatSection"
+      ],
+      "dependsOn": [
+        "useDataState fatal-versus-refresh distinction",
+        "feature-owned period description",
+        "existing Skeleton/EmptyState/ErrorDisplay"
+      ],
+      "preserve": "Persistent section shell, specialized recovery, independent billing/forecast scopes and all content."
+    },
+    {
+      "name": "Section",
+      "owner": "web\\src\\components\\layout\\layout-reference\\Section.tsx",
+      "action": "reuse only when API fits; no speculative extension",
+      "propsVariantsStates": [
+        "id",
+        "title",
+        "description",
+        "children",
+        "semantic aria-labelledby",
+        "min-w-0"
+      ],
+      "usedBy": [
+        "page section composition"
+      ],
+      "dependsOn": [
+        "existing category export",
+        "caller-owned stable identity"
+      ],
+      "preserve": "Tour marker, localized headings and all current panel actions."
+    },
+    {
+      "name": "StaleRefreshWarning",
+      "owner": "web\\src\\components\\feedback\\StaleRefreshWarning.tsx",
+      "action": "reuse",
+      "propsVariantsStates": [
+        "state DataState",
+        "label",
+        "hideRetry",
+        "retained offline/stale/partial/unavailable",
+        "aria-live polite"
+      ],
+      "usedBy": [
+        "sessions",
+        "forecast",
+        "billing adoption"
+      ],
+      "dependsOn": [
+        "useDataState",
+        "query refetch"
+      ],
+      "preserve": "Cached rows and independent sources on failed refresh."
+    },
+    {
+      "name": "Existing chart/stat/table pipelines",
+      "owner": "existing components\\charts, components\\data-display and components\\ui owners",
+      "action": "reuse; implementations not comprehensively audited",
+      "propsVariantsStates": [
+        "ChartContainer data/exportData/dataColumns/annotations",
+        "EmbeddedChart chartKey/exportable/fullscreen",
+        "OperationalBrief metrics/status/scope/provenance",
+        "DataTable tableId/mobileColumns/sort/pagination/visibility/reorder"
+      ],
+      "usedBy": [
+        "all mounted analytical sections"
+      ],
+      "dependsOn": [
+        "typed source models",
+        "existing formatting preferences",
+        "source currency and scope clarification"
+      ],
+      "preserve": "Numeric raw values, exports, saved identities, all series and complete mobile details."
+    }
+  ],
+  "competingImplementations": [
+    {
+      "file": "web\\src\\features\\charging\\components\\cost-analysis\\index.ts",
+      "line": 2,
+      "detail": "Legacy-named cost-analysis barrel exports summary/breakdown/calculator/forecast/lifetime/environment alongside modernized variants. Assigned page imports only MonthlyCostChart, CostPerKwhChart and MonthlyCostTable from this barrel; corresponding stat sections come from stat-modernization.",
+      "risk": "Do not report unmounted variants as visible defects, or revert the active stat adoption. Other consumers and dead-code status were not searched."
+    }
+  ],
+  "preservation": {
+    "sourceSha256": "ca0b8f26a1a976b184fc1f1b3e9749bb54a24bbad1b428ec5c783992af7bd3a1",
+    "rootSha256": "ca0b8f26a1a976b184fc1f1b3e9749bb54a24bbad1b428ec5c783992af7bd3a1",
+    "currentLineCount": 257,
+    "sectionCount": 12,
+    "sectionCountBasis": "Twelve top-level feature component instances, including optional AI and separate lifetime/environment panels; forecast further expands into five subpanels. Source comments number bands 1,1b,2-9 (ten bands).",
+    "sections": [
+      "cost summary metrics",
+      "bill truth reconciliation",
+      "monthly cost trend",
+      "cost per kWh trend",
+      "charger type economics",
+      "gas vs EV calculator",
+      "monthly breakdown table",
+      "time-of-use",
+      "optional AI narration",
+      "deterministic forecast with five subpanels",
+      "lifetime summary",
+      "environmental impact"
+    ],
+    "topLevelComponentInstances": 12,
+    "rootSemanticSectionElements": 3,
+    "rootFadeInInstances": 10,
+    "rootDirectGlassPanelChartContainerInstances": 0,
+    "forecastSubpanels": [
+      "cost forecast with confidence band",
+      "home/Supercharger breakdown",
+      "gas savings",
+      "deterministic insights",
+      "monthly cost per kWh trend"
+    ],
+    "actions": [
+      "SavedViewMenu apply/current URL with canonical route",
+      "print",
+      "reset date range",
+      "independent sessions retry",
+      "independent forecast retry",
+      "billing retry",
+      "controlled gas-price/MPG/electricity-rate changes",
+      "reset assumptions",
+      "monthly table sorting/pagination/column visibility/reorder",
+      "shared chart accessible tables and configured export/fullscreen",
+      "monthly cost annotations",
+      "forecast legend persistence",
+      "opt-in AI narrate/stream"
+    ],
+    "dataBehavior": [
+      "selected header vehicle",
+      "shared header range/URL preferences",
+      "bounded returned-session scope warning",
+      "independent billing and forecast period warnings",
+      "retained sessions/forecast on failed refresh",
+      "all existing modeled savings and environmental assumptions",
+      "raw SI session payloads and display-boundary conversion",
+      "saved display unit/currency/locale/precision preferences",
+      "no invented FX",
+      "AI feature/privacy boundary",
+      "stable tableId, chartKey and annotation chartId"
+    ],
+    "sourceInventory": [
+      {
+        "file": "web\\src\\features\\charging\\pages\\CostAnalysisPage.tsx",
+        "sha256": "ca0b8f26a1a976b184fc1f1b3e9749bb54a24bbad1b428ec5c783992af7bd3a1",
+        "lineCount": 257,
+        "inspection": "full"
+      },
+      {
+        "file": "web\\src\\features\\charging\\components\\cost-analysis\\useCostAnalysisData.ts",
+        "sha256": "cf785f9662ffd89292dc15e691a8601a9f137ec6c26e1401a6afa8d461caae6a",
+        "lineCount": 234,
+        "inspection": "full"
+      },
+      {
+        "file": "web\\src\\features\\charging\\components\\cost-analysis\\MonthlyCostChart.tsx",
+        "sha256": "21d42e10b64c884731147e6290eb0302c1cf5d96610248890e031898082509c9",
+        "lineCount": 123,
+        "inspection": "full"
+      },
+      {
+        "file": "web\\src\\features\\charging\\components\\cost-analysis\\CostPerKwhChart.tsx",
+        "sha256": "193700b8a2261a1785d36f8c13e92ba69b3bf744d83af19717d249251c46f42b",
+        "lineCount": 97,
+        "inspection": "full"
+      },
+      {
+        "file": "web\\src\\features\\charging\\components\\cost-analysis\\MonthlyCostTable.tsx",
+        "sha256": "15dddeeed9983ed9b9f26e14ad1a1146ed0fa349b282e794e13da7781ae989f7",
+        "lineCount": 141,
+        "inspection": "full"
+      },
+      {
+        "file": "web\\src\\features\\charging\\components\\cost-analysis\\CostSection.tsx",
+        "sha256": "2145d62680bf21ae60484b64533dfdd72d78c6337fa4ea9cdcf066a317ae10a6",
+        "lineCount": 93,
+        "inspection": "full"
+      },
+      {
+        "file": "web\\src\\features\\charging\\components\\cost-analysis\\constants.ts",
+        "sha256": "8968328f051c59861ec6c807f4f4098c12337cb7a7579b7371867f6993689db8",
+        "lineCount": 30,
+        "inspection": "full"
+      },
+      {
+        "file": "web\\src\\features\\charging\\components\\cost-analysis\\helpers.ts",
+        "sha256": "6a204d3f86456f3baf6ee68cf2de946902c59bae185e34fe17ef99fdf2aabc4b",
+        "lineCount": 28,
+        "inspection": "full"
+      },
+      {
+        "file": "web\\src\\features\\charging\\components\\cost-analysis\\types.ts",
+        "sha256": "9822a8cafe1a073f2e4172485a9511a632a667cfe16a1270f735d9230693d4f2",
+        "lineCount": 143,
+        "inspection": "full"
+      },
+      {
+        "file": "web\\src\\features\\charging\\components\\cost-analysis\\index.ts",
+        "sha256": "60f0639b92fe284f44600f69fba71e888541d49e9a96c091a205c7cdcd12403e",
+        "lineCount": 13,
+        "inspection": "full"
+      },
+      {
+        "file": "web\\src\\features\\charging\\components\\stat-modernization\\index.ts",
+        "sha256": "7a40dd1a6d60649d9bfacdb8f7eef06322d16251039d9402b47d957ee70812cb",
+        "lineCount": 11,
+        "inspection": "full"
+      },
+      {
+        "file": "web\\src\\features\\charging\\components\\stat-modernization\\CostSummaryCards.tsx",
+        "sha256": "516a729ebc93064481f33c574316aa0c8cbf464f2cbd0f3c3ad371dcc4ff663d",
+        "lineCount": 83,
+        "inspection": "full"
+      },
+      {
+        "file": "web\\src\\features\\charging\\components\\stat-modernization\\SavingsCalculator.tsx",
+        "sha256": "7d574c1f6b50de58aec53731085ff328a10f14c674777e18c40f48585ca90738",
+        "lineCount": 111,
+        "inspection": "full"
+      },
+      {
+        "file": "web\\src\\features\\charging\\components\\stat-modernization\\BillVarianceCard.tsx",
+        "sha256": "b8b99a8822cb5ac7e384dc889e852638596e67a67c2922b569799d440625960f",
+        "lineCount": 75,
+        "inspection": "full"
+      },
+      {
+        "file": "web\\src\\features\\charging\\components\\stat-modernization\\ChargerTypeBreakdown.tsx",
+        "sha256": "6ce97403e764091f3796676cdaa149ea9a19235e68f5e8c5a7f76dcfc28dfc20",
+        "lineCount": 110,
+        "inspection": "full"
+      },
+      {
+        "file": "web\\src\\features\\charging\\components\\stat-modernization\\TimeOfUseAnalysis.tsx",
+        "sha256": "9547ba75e700ec214664a9132bc05485ca73e70631d625a9877526fd3f1e770f",
+        "lineCount": 111,
+        "inspection": "full"
+      },
+      {
+        "file": "web\\src\\features\\charging\\components\\stat-modernization\\CostForecastSection.tsx",
+        "sha256": "d8fccadcbdcd602aac7ec1f74f1d5dc25f44d5a42861f08d004f6a4a97dc1ace",
+        "lineCount": 156,
+        "inspection": "full"
+      },
+      {
+        "file": "web\\src\\features\\charging\\components\\stat-modernization\\ForecastDetails.tsx",
+        "sha256": "c4f3f9981aac2bb5f4b0c104fdb664411b7a1e8f775bf74c4abbc30bfd75b699",
+        "lineCount": 166,
+        "inspection": "full"
+      },
+      {
+        "file": "web\\src\\features\\charging\\components\\stat-modernization\\LifetimeSummary.tsx",
+        "sha256": "bc4ef0b7c082dc5c5549b8a18ad6946002cc21205d6fc01e82f5b2edd1aa5070",
+        "lineCount": 81,
+        "inspection": "full"
+      },
+      {
+        "file": "web\\src\\features\\charging\\components\\stat-modernization\\EnvironmentalImpact.tsx",
+        "sha256": "69384551831df31e9c950ae38422a41a180f7a51ba08287dd1c5c59a015d4a05",
+        "lineCount": 68,
+        "inspection": "full"
+      },
+      {
+        "file": "web\\src\\features\\charging\\components\\stat-modernization\\CostStatSection.tsx",
+        "sha256": "6d81e37f8703fa171f15b1e7f1b3e24ffd538a1b93d8725f246fa0b654e1e97b",
+        "lineCount": 74,
+        "inspection": "full"
+      },
+      {
+        "file": "web\\src\\features\\charging\\components\\stat-modernization\\useSourceStatPeriod.ts",
+        "sha256": "78df0e0c1ef739b98928b471390a7173d9089ded5421273d14fa19edbd0668b0",
+        "lineCount": 27,
+        "inspection": "full"
+      },
+      {
+        "file": "web\\src\\features\\charging\\components\\stat-modernization\\useStatFormatting.ts",
+        "sha256": "73169eb7b90f2975f4ec29d2f4d3987e82140d8fd6d7ede8d041c128ca7d2e1d",
+        "lineCount": 15,
+        "inspection": "full"
+      },
+      {
+        "file": "web\\src\\features\\charging\\components\\stat-modernization\\displayBoundary.ts",
+        "sha256": "f8fb05b81a35f29514ea5fa6a1a57232df39788de3ec0d26a932078b7c978640",
+        "lineCount": 21,
+        "inspection": "full"
+      },
+      {
+        "file": "web\\src\\features\\charging\\components\\operationalbrief-all\\ChargingSummaryBrief.tsx",
+        "sha256": "8eb6ea58446fceb6acfcb1915f3d537f7ef1e3b5fc2475f63b8380c60df87698",
+        "lineCount": 73,
+        "inspection": "full"
+      },
+      {
+        "file": "web\\src\\components\\ai\\AICostForecastNarration.tsx",
+        "sha256": "4aac95b09653be1a787ad3692955002529c2b4650d8008cfa57a4529cb487dd0",
+        "lineCount": 165,
+        "inspection": "full"
+      },
+      {
+        "file": "web\\src\\hooks\\useDataState.ts",
+        "sha256": "785bd47e706b066874bec8999d51093982e93b9680b8dec16bddc023dc57fb9b",
+        "lineCount": 65,
+        "inspection": "full"
+      },
+      {
+        "file": "web\\src\\components\\feedback\\StaleRefreshWarning.tsx",
+        "sha256": "6103ced7af551c52dd32499d8c62ab3ad479a8adf230d3c8059fa8b5199e87d0",
+        "lineCount": 115,
+        "inspection": "full"
+      },
+      {
+        "file": "web\\src\\components\\layout\\layout-reference\\Section.tsx",
+        "sha256": "759859ffb9536ffb6c2a231e4b133f807f3905144ea789d66c36b1edc82fa6e0",
+        "lineCount": 23,
+        "inspection": "full"
+      },
+      {
+        "file": "web\\src\\components\\layout\\layout-reference\\SourceContent.tsx",
+        "sha256": "283583e259342620cb0e24429e3f66fb6385f16498d869192f36cffcff9eec43",
+        "lineCount": 72,
+        "inspection": "full"
+      },
+      {
+        "file": "web\\src\\hooks\\useFormatting.ts",
+        "sha256": "76b8dcc6c2eb27ed9f2e8526bec7d77bb1e369ca6e71a7eb38cdba5897a5ec29",
+        "lineCount": 106,
+        "inspection": "full"
+      },
+      {
+        "file": "web\\src\\api\\hooks\\useCharging.ts",
+        "sha256": "ef25f85d86f4972051ad19d37c9a3112e4c4d6900ae9b8786ae021f41d9db330",
+        "lineCount": 643,
+        "inspection": "1-300,598-622; endpoint matches"
+      },
+      {
+        "file": "web\\src\\hooks\\useRangeState.ts",
+        "sha256": "bf267c5a8b69d0fff866ba9b9491b15f03e516fc8599424af881ba08579f2bea",
+        "lineCount": 694,
+        "inspection": "1-270,648-690; scope matches"
+      },
+      {
+        "file": "web\\src\\features\\charging\\components\\cost-analysis\\TimeOfUseAnalysis.tsx",
+        "sha256": "75a1e4d3c32b3d29686f8fd37bbdca7e7c03bca296b425bf72aa1a86e3326012",
+        "lineCount": 200,
+        "inspection": "1-75"
+      },
+      {
+        "file": "web\\src\\api\\types.ts",
+        "sha256": "11a6003464bc550e085b640fed3779705799a2474ce4f255d1dcaca202ceeb9b",
+        "lineCount": 4194,
+        "inspection": "159-198; currency matches"
+      },
+      {
+        "file": "web\\src\\types\\charging.ts",
+        "sha256": "225cbafafd597261abe9222b68f7578565280625602863ba10ade878268b0720",
+        "lineCount": 355,
+        "inspection": "62-108; currency matches"
+      },
+      {
+        "file": "web\\src\\App.tsx",
+        "sha256": "23a1ce852d2ce51df5a26a5c2a5669ffa788a992355a8bcfafb391c82b47def3",
+        "lineCount": 918,
+        "inspection": "matched lazy import and route lines only"
+      },
+      {
+        "file": "web\\src\\lib\\workspaceScope.ts",
+        "sha256": "aeb8c01d410f2377aa5fd713de1a678a0360acf647a9c882f03e46c80efdfcd7",
+        "lineCount": 168,
+        "inspection": "matched registration/scope lines only"
+      },
+      {
+        "file": "internal\\api\\router.go",
+        "sha256": "98b92853ebade3db74ad361d098bba4472039884a407d61ce901dc3bf1fe3750",
+        "lineCount": 5366,
+        "inspection": "3482-3510 and matched cost-forecast lines only"
+      },
+      {
+        "file": "web\\src\\components\\layout\\index.ts",
+        "sha256": "de1196b246ad1bfdf2e96dee54f398c921873c7ef8ed76964c09735dffbe7624",
+        "lineCount": 26,
+        "inspection": "matched PageLayout export only"
+      },
+      {
+        "file": "web\\src\\components\\feedback\\index.ts",
+        "sha256": "9b5476cf4a88198e3852a4fff7c05db65c90bbf8f2bf094d4ddcf2b2d32dd02f",
+        "lineCount": 93,
+        "inspection": "matched StaleRefreshWarning export only"
+      },
+      {
+        "file": "web\\src\\components\\ai\\index.ts",
+        "sha256": "36b249660198246e6c74e6239fd6cc63de73a1b9569567f04e857f01117f70eb",
+        "lineCount": 64,
+        "inspection": "matched narration export only"
+      }
+    ]
+  },
+  "evidenceLimits": {
+    "mode": "READ-ONLY SOURCE AUDIT; only report and heartbeat written",
+    "runtime": "unverified",
+    "visual": "unverified",
+    "keyboard": "unverified",
+    "contrast": "unverified",
+    "viewport": "unverified",
+    "backend": "Router snippets confirm three GET registrations only; actual payloads, filtering, currency, ordering, calibration and completeness unknown.",
+    "shared": "Direct contracts identified; broad shared implementation and catalog audit out of scope. Some dependency files inspected only in explicit ranges or matched lines.",
+    "checks": [
+      {
+        "command": "PowerShell source-only regex counts across assigned page plus both cost component directories, excluding test/fixture files",
+        "exitCode": 0,
+        "output": "raw-controls: 0; direct-libraries: 0; old-api-imports: 0; inline-style-occurrences: 6; fixed-hex-occurrences: 15",
+        "limit": "Counts include unmounted legacy variants and ChargingOverviewStats; occurrences are not automatically violations or mounted totals."
+      },
+      {
+        "command": "Get-FileHash web\\src\\features\\charging\\pages\\CostAnalysisPage.tsx -Algorithm SHA256; (Get-Content ...).Count",
+        "exitCode": 0,
+        "output": "ca0b8f26a1a976b184fc1f1b3e9749bb54a24bbad1b428ec5c783992af7bd3a1; 257"
+      },
+      {
+        "command": "audit.sh / npx tsc --noEmit / build / full lint / tests",
+        "exitCode": null,
+        "output": "NOT RUN: assignment prohibits full gates; skill script includes project-wide TypeScript. No runtime or compile acceptance claimed."
+      },
+      {
+        "command": "Python json.loads + required schema/identity/section-count/citation-line validation + root SHA256 readback",
+        "exitCode": 0,
+        "output": "PASS: schema, exact routes, section count, cited line bounds, source inventory and unchanged root SHA256"
+      }
+    ]
+  },
+  "filesRead": [
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\charging\\pages\\CostAnalysisPage.tsx",
+    "web\\src\\features\\charging\\components\\cost-analysis\\useCostAnalysisData.ts",
+    "web\\src\\features\\charging\\components\\cost-analysis\\MonthlyCostChart.tsx",
+    "web\\src\\features\\charging\\components\\cost-analysis\\CostPerKwhChart.tsx",
+    "web\\src\\features\\charging\\components\\cost-analysis\\MonthlyCostTable.tsx",
+    "web\\src\\features\\charging\\components\\cost-analysis\\CostSection.tsx",
+    "web\\src\\features\\charging\\components\\cost-analysis\\constants.ts",
+    "web\\src\\features\\charging\\components\\cost-analysis\\helpers.ts",
+    "web\\src\\features\\charging\\components\\cost-analysis\\types.ts",
+    "web\\src\\features\\charging\\components\\cost-analysis\\index.ts",
+    "web\\src\\features\\charging\\components\\stat-modernization\\index.ts",
+    "web\\src\\features\\charging\\components\\stat-modernization\\CostSummaryCards.tsx",
+    "web\\src\\features\\charging\\components\\stat-modernization\\SavingsCalculator.tsx",
+    "web\\src\\features\\charging\\components\\stat-modernization\\BillVarianceCard.tsx",
+    "web\\src\\features\\charging\\components\\stat-modernization\\ChargerTypeBreakdown.tsx",
+    "web\\src\\features\\charging\\components\\stat-modernization\\TimeOfUseAnalysis.tsx",
+    "web\\src\\features\\charging\\components\\stat-modernization\\CostForecastSection.tsx",
+    "web\\src\\features\\charging\\components\\stat-modernization\\ForecastDetails.tsx",
+    "web\\src\\features\\charging\\components\\stat-modernization\\LifetimeSummary.tsx",
+    "web\\src\\features\\charging\\components\\stat-modernization\\EnvironmentalImpact.tsx",
+    "web\\src\\features\\charging\\components\\stat-modernization\\CostStatSection.tsx",
+    "web\\src\\features\\charging\\components\\stat-modernization\\useSourceStatPeriod.ts",
+    "web\\src\\features\\charging\\components\\stat-modernization\\useStatFormatting.ts",
+    "web\\src\\features\\charging\\components\\stat-modernization\\displayBoundary.ts",
+    "web\\src\\features\\charging\\components\\operationalbrief-all\\ChargingSummaryBrief.tsx",
+    "web\\src\\components\\ai\\AICostForecastNarration.tsx",
+    "web\\src\\hooks\\useDataState.ts",
+    "web\\src\\components\\feedback\\StaleRefreshWarning.tsx",
+    "web\\src\\components\\layout\\layout-reference\\Section.tsx",
+    "web\\src\\components\\layout\\layout-reference\\SourceContent.tsx",
+    "web\\src\\hooks\\useFormatting.ts",
+    "web\\src\\api\\hooks\\useCharging.ts",
+    "web\\src\\hooks\\useRangeState.ts",
+    "web\\src\\features\\charging\\components\\cost-analysis\\TimeOfUseAnalysis.tsx",
+    "web\\src\\api\\types.ts",
+    "web\\src\\types\\charging.ts",
+    "web\\src\\App.tsx",
+    "web\\src\\lib\\workspaceScope.ts",
+    "internal\\api\\router.go",
+    "web\\src\\components\\layout\\index.ts",
+    "web\\src\\components\\feedback\\index.ts",
+    "web\\src\\components\\ai\\index.ts"
+  ],
+  "filesReadCoverage": {
+    "docs\\frontend-design-contract.md": "1-450",
+    "docs\\frontend-worker-conventions.md": "full",
+    "docs\\frontend-mission.md": "1-240,238-441,507-1000,1416-1486; section headings",
+    ".github\\skills\\audit-violations\\audit.sh": "full; execution forbidden because script runs full TypeScript",
+    "web\\src\\features\\charging\\pages\\CostAnalysisPage.tsx": "full",
+    "web\\src\\features\\charging\\components\\cost-analysis\\useCostAnalysisData.ts": "full",
+    "web\\src\\features\\charging\\components\\cost-analysis\\MonthlyCostChart.tsx": "full",
+    "web\\src\\features\\charging\\components\\cost-analysis\\CostPerKwhChart.tsx": "full",
+    "web\\src\\features\\charging\\components\\cost-analysis\\MonthlyCostTable.tsx": "full",
+    "web\\src\\features\\charging\\components\\cost-analysis\\CostSection.tsx": "full",
+    "web\\src\\features\\charging\\components\\cost-analysis\\constants.ts": "full",
+    "web\\src\\features\\charging\\components\\cost-analysis\\helpers.ts": "full",
+    "web\\src\\features\\charging\\components\\cost-analysis\\types.ts": "full",
+    "web\\src\\features\\charging\\components\\cost-analysis\\index.ts": "full",
+    "web\\src\\features\\charging\\components\\stat-modernization\\index.ts": "full",
+    "web\\src\\features\\charging\\components\\stat-modernization\\CostSummaryCards.tsx": "full",
+    "web\\src\\features\\charging\\components\\stat-modernization\\SavingsCalculator.tsx": "full",
+    "web\\src\\features\\charging\\components\\stat-modernization\\BillVarianceCard.tsx": "full",
+    "web\\src\\features\\charging\\components\\stat-modernization\\ChargerTypeBreakdown.tsx": "full",
+    "web\\src\\features\\charging\\components\\stat-modernization\\TimeOfUseAnalysis.tsx": "full",
+    "web\\src\\features\\charging\\components\\stat-modernization\\CostForecastSection.tsx": "full",
+    "web\\src\\features\\charging\\components\\stat-modernization\\ForecastDetails.tsx": "full",
+    "web\\src\\features\\charging\\components\\stat-modernization\\LifetimeSummary.tsx": "full",
+    "web\\src\\features\\charging\\components\\stat-modernization\\EnvironmentalImpact.tsx": "full",
+    "web\\src\\features\\charging\\components\\stat-modernization\\CostStatSection.tsx": "full",
+    "web\\src\\features\\charging\\components\\stat-modernization\\useSourceStatPeriod.ts": "full",
+    "web\\src\\features\\charging\\components\\stat-modernization\\useStatFormatting.ts": "full",
+    "web\\src\\features\\charging\\components\\stat-modernization\\displayBoundary.ts": "full",
+    "web\\src\\features\\charging\\components\\operationalbrief-all\\ChargingSummaryBrief.tsx": "full",
+    "web\\src\\components\\ai\\AICostForecastNarration.tsx": "full",
+    "web\\src\\hooks\\useDataState.ts": "full",
+    "web\\src\\components\\feedback\\StaleRefreshWarning.tsx": "full",
+    "web\\src\\components\\layout\\layout-reference\\Section.tsx": "full",
+    "web\\src\\components\\layout\\layout-reference\\SourceContent.tsx": "full",
+    "web\\src\\hooks\\useFormatting.ts": "full",
+    "web\\src\\api\\hooks\\useCharging.ts": "1-300,598-622; endpoint matches",
+    "web\\src\\hooks\\useRangeState.ts": "1-270,648-690; scope matches",
+    "web\\src\\features\\charging\\components\\cost-analysis\\TimeOfUseAnalysis.tsx": "1-75",
+    "web\\src\\api\\types.ts": "159-198; currency matches",
+    "web\\src\\types\\charging.ts": "62-108; currency matches",
+    "web\\src\\App.tsx": "matched lazy import and route lines only",
+    "web\\src\\lib\\workspaceScope.ts": "matched registration/scope lines only",
+    "internal\\api\\router.go": "3482-3510 and matched cost-forecast lines only",
+    "web\\src\\components\\layout\\index.ts": "matched PageLayout export only",
+    "web\\src\\components\\feedback\\index.ts": "matched StaleRefreshWarning export only",
+    "web\\src\\components\\ai\\index.ts": "matched narration export only"
+  },
+  "evidenceInputHashes": [
+    {
+      "file": "docs\\frontend-design-contract.md",
+      "sha256": "17b542389cd4e98a0dfb7b4d2f2c4e2727f221af0ac5acb738db5e987b282255"
+    },
+    {
+      "file": "docs\\frontend-worker-conventions.md",
+      "sha256": "6cf8194644a7820926082fc065e9cbf87c1e1e2d8258c4d092da8c962707adc3"
+    },
+    {
+      "file": "docs\\frontend-mission.md",
+      "sha256": "2bd35429e32d06abf109dd371c2dd011cb974ef6b8c1915b298d1a0c3d7fd98f"
+    },
+    {
+      "file": ".github\\skills\\audit-violations\\audit.sh",
+      "sha256": "3e5937ab2a4ea2f303a0152111794d5a3a45c24abfe7b11400079bc4ac3dfe46"
+    }
+  ],
+  "auditedAtUtc": "2026-10-07T10:30:16.685251+00:00",
+  "ownedFiles": [
+    "docs\\frontend-audits\\audit-page-086.json",
+    ".agent-status\\audit-page-086.txt"
+  ]
+}

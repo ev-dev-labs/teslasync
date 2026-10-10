@@ -2,11 +2,16 @@ import { useEffect, useMemo, useRef } from 'react';
 import { AlertTriangle, BellOff, BellRing, ChevronRight } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { usePriorityAlerts } from '@/api/hooks/useNotifications';
-import { Badge, Button, PanelTitle, Popover, Text, Tooltip } from '@/components/ui/runtime';
+import { Badge } from '@/components/ui/Badge';
+import { Button } from '@/components/ui/Button';
+import { Icon } from '@/components/ui/Icon';
+import { PanelTitle, Text } from '@/components/ui/Typography';
+import { Popover } from '@/components/ui/Popover';
+import { Tooltip } from '@/components/ui/Tooltip';
 import { PrefetchLink } from '../PrefetchLink';
 import { getAlertDrillthroughHref } from '@/lib/alertDrillthrough';
 import { cn } from '@/lib/cn';
-import { normalizeSeverity } from '@/lib/tokens';
+import { normalizeSeverity, severityTokens, typography } from '@/lib/tokens';
 import {
   useStatusBarAnnouncer,
   useStatusBarPopover,
@@ -156,17 +161,18 @@ export function AlertsSegment({ iconOnly = false }: AlertsSegmentProps) {
           aria-expanded={open}
           onClick={toggle}
           className={cn(
-            'h-5 min-h-0 gap-1.5 rounded px-1.5 py-0 text-xs leading-none',
-            isError || hasCritical ? 'text-rose-300' : 'text-amber-300',
+            'h-5 min-h-0 gap-1.5 rounded px-1.5 py-0 leading-none',
+            typography.size.xs,
+            isError || hasCritical ? severityTokens.critical.fg : severityTokens.warn.fg,
           )}
           data-testid="status-bar-alerts-trigger"
         >
           {isError ? (
-            <BellOff className="h-3 w-3 shrink-0" aria-hidden />
+            <Icon icon={BellOff} size="xs" />
           ) : hasCritical ? (
-            <AlertTriangle className="h-3 w-3 shrink-0" aria-hidden />
+            <Icon icon={AlertTriangle} size="xs" />
           ) : (
-            <BellRing className="h-3 w-3 shrink-0" aria-hidden />
+            <Icon icon={BellRing} size="xs" />
           )}
           {!iconOnly && (
             <Text as="span" size="xs" weight="medium">
@@ -179,7 +185,7 @@ export function AlertsSegment({ iconOnly = false }: AlertsSegmentProps) {
             <Badge
               variant={hasCritical ? 'danger' : 'warning'}
               size="sm"
-              className="h-4 min-w-4 justify-center px-1 py-0 text-2xs tabular-nums"
+              className="h-4 min-w-4 justify-center px-1 py-0 tabular-nums"
               aria-hidden
             >
               {countDisplay}
@@ -195,7 +201,7 @@ export function AlertsSegment({ iconOnly = false }: AlertsSegmentProps) {
         side="top"
         align="end"
         ariaLabel={title}
-        className="w-[min(92vw,380px)] p-2"
+        className="w-alerts-preview p-2"
       >
         <div className="flex items-center justify-between gap-3 border-b border-[var(--border-subtle)] px-2 pb-2 pt-1">
           <div>
@@ -205,13 +211,13 @@ export function AlertsSegment({ iconOnly = false }: AlertsSegmentProps) {
             </Text>
           </div>
           {isError ? (
-            <BellOff className="h-4 w-4 text-rose-300" aria-hidden />
+            <Icon icon={BellOff} className={severityTokens.critical.fg} />
           ) : (
-            <BellRing className="h-4 w-4 text-[var(--theme-primary)]" aria-hidden />
+            <Icon icon={BellRing} className={typography.color.secondary} />
           )}
         </div>
 
-        {isError ? (
+        {isError && (
           <div className="px-2 py-3">
             <Text as="p" size="sm" color="secondary">
               {t(
@@ -220,8 +226,9 @@ export function AlertsSegment({ iconOnly = false }: AlertsSegmentProps) {
               )}
             </Text>
           </div>
-        ) : (
-          <ul className="max-h-[320px] space-y-0.5 overflow-y-auto py-1">
+        )}
+        {preview.length > 0 && (
+          <ul className="max-h-alerts-preview space-y-0.5 overflow-y-auto py-1">
             {preview.map((alert) => {
               const critical = normalizeSeverity(alert.severity) === 'critical';
               const severityLabel = critical ? criticalLabel : warningLabel;
@@ -235,7 +242,7 @@ export function AlertsSegment({ iconOnly = false }: AlertsSegmentProps) {
                     <Badge
                       variant={critical ? 'danger' : 'warning'}
                       size="sm"
-                      className="mt-0.5 shrink-0 px-1.5 py-0 text-2xs"
+                      className="mt-0.5 shrink-0 px-1.5 py-0"
                     >
                       {severityLabel}
                     </Badge>
@@ -243,9 +250,9 @@ export function AlertsSegment({ iconOnly = false }: AlertsSegmentProps) {
                       <Text
                         as="span"
                         size="sm"
-                        weight="semibold"
+                        weight="medium"
                         color="primary"
-                        className="block truncate"
+                        className="block break-words"
                       >
                         {alert.title}
                       </Text>
@@ -253,14 +260,15 @@ export function AlertsSegment({ iconOnly = false }: AlertsSegmentProps) {
                         as="span"
                         size="xs"
                         color="muted"
-                        className="mt-0.5 block line-clamp-2"
+                        className="mt-0.5 block break-words"
                       >
                         {alert.message}
                       </Text>
                     </span>
-                    <ChevronRight
-                      className="mt-1 h-3.5 w-3.5 shrink-0 text-[var(--text-muted)]"
-                      aria-hidden
+                    <Icon
+                      icon={ChevronRight}
+                      size="sm"
+                      className={cn('mt-1 rtl:rotate-180', typography.color.muted)}
                     />
                   </PrefetchLink>
                 </li>
@@ -273,7 +281,12 @@ export function AlertsSegment({ iconOnly = false }: AlertsSegmentProps) {
           <PrefetchLink
             to="/notifications/inbox?read=unread"
             onClick={close}
-            className="text-xs font-medium text-[var(--theme-primary)] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
+            className={cn(
+              typography.size.xs,
+              typography.weight.medium,
+              typography.color.primary,
+              'hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface-1)]',
+            )}
           >
             {t('statusBar.alerts.viewAll', 'View all alerts')}
           </PrefetchLink>

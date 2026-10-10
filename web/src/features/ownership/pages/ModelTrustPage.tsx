@@ -23,7 +23,7 @@ import {
 } from '@/components/charts';
 import { AlertBanner } from '@/components/feedback';
 
-import { PageContainer } from '@/components/layout';
+import { PageLayout } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
 import { Badge, Button, DataTable, Input, Select, Text } from '@/components/ui';
 import type { Column } from '@/components/ui';
@@ -31,16 +31,18 @@ import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useHiddenSeries } from '@/hooks/useHiddenSeries';
 import { formatDateTime } from '@/lib/dateFormat';
-import { fmtNumber } from '@/lib/numberFormat';
+
 import type { ModelScorecard, Prediction } from '@/types/ownership';
 import {
   EvidencePanel,
   MutationError,
   OwnershipPanel,
-  StatGrid,
   VerdictBadge,
 } from '../components';
+import { OwnershipBrief } from '../components/operationalbrief-all/OwnershipBrief';
+import { specialistDisplay } from '../components/operationalbrief-all/specialistDisplay';
 import { daysToSeconds, formatPct, formatSignedPct, formatSpan } from '../formatters';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 const WINDOW_OPTIONS = [30, 60, 90, 180, 365];
 
@@ -84,6 +86,7 @@ function gradeTone(grade: string): 'positive' | 'warning' | 'critical' | 'defaul
 }
 
 export default function ModelTrustPage() {
+  const { fmtNumber, fmtScientificNumber, fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const { vehicleId } = useSelectedVehicle();
   const [windowDays, setWindowDays] = useState(90);
@@ -102,7 +105,7 @@ export default function ModelTrustPage() {
   });
   const [outcomeDraft, setOutcomeDraft] = useState({ observed_value: 0 });
 
-  usePageTitle(t('ownership.trust.navTitle', 'Prediction Accuracy Lab'));
+  usePageTitle(t('ownership.trust.navTitle', 'Prediction accuracy lab'));
 
   const calibrationHidden = useHiddenSeries('model-trust-calibration');
 
@@ -127,13 +130,13 @@ export default function ModelTrustPage() {
   const calibrationData = useMemo(
     () =>
       (selectedCard?.calibration ?? []).map((bin) => ({
-        name: `${fmtNumber(bin.lower_pct, 0)}–${fmtNumber(bin.upper_pct, 0)}%`,
+        name: `${fmtNumber(bin.lower_pct)}–${fmtNumber(bin.upper_pct)}%`,
         error: Number(bin.mean_abs_error.toFixed(3)),
         bias: Number(bin.mean_bias.toFixed(3)),
         coverage: bin.coverage_pct != null ? Number(bin.coverage_pct.toFixed(1)) : null,
         samples: bin.sample_count,
       })),
-    [selectedCard],
+    [selectedCard, fmtNumber],
   );
 
   const submitPrediction = (event: FormEvent) => {
@@ -186,13 +189,14 @@ export default function ModelTrustPage() {
     },
     {
       key: 'predicted',
+      align: 'right',
       header: t('ownership.trust.pred.predicted', 'Predicted'),
       render: (row) => (
         <div>
-          <span className="tabular-nums">{fmtNumber(row.predicted_value, 3)}</span>
+          <span className="tabular-nums">{fmtScientificNumber(row.predicted_value, 3)}</span>
           {row.predicted_low != null && row.predicted_high != null ? (
             <Text as="p" variant="caption">
-              [{fmtNumber(row.predicted_low, 3)}, {fmtNumber(row.predicted_high, 3)}]
+              [{fmtScientificNumber(row.predicted_low, 3)}, {fmtScientificNumber(row.predicted_high, 3)}]
             </Text>
           ) : null}
         </div>
@@ -200,16 +204,18 @@ export default function ModelTrustPage() {
     },
     {
       key: 'observed',
+      align: 'right',
       header: t('ownership.trust.pred.observed', 'Observed'),
       render: (row) =>
         row.observed_value != null ? (
-          <span className="tabular-nums">{fmtNumber(row.observed_value, 3)}</span>
+          <span className="tabular-nums">{fmtScientificNumber(row.observed_value, 3)}</span>
         ) : (
           <Badge variant="neutral">{t('ownership.trust.pred.pending', 'pending')}</Badge>
         ),
     },
     {
       key: 'error',
+      align: 'right',
       header: t('ownership.trust.pred.error', 'Error'),
       render: (row) =>
         row.abs_error_pct != null ? (
@@ -225,6 +231,7 @@ export default function ModelTrustPage() {
     },
     {
       key: 'interval',
+      align: 'right',
       header: t('ownership.trust.pred.interval', 'In interval'),
       render: (row) =>
         row.in_interval == null ? (
@@ -239,6 +246,7 @@ export default function ModelTrustPage() {
     },
     {
       key: 'horizon',
+      align: 'right',
       header: t('ownership.trust.pred.horizon', 'Horizon'),
       render: (row) => formatSpan(row.horizon_s),
     },
@@ -297,7 +305,7 @@ export default function ModelTrustPage() {
         <div className="flex items-center gap-2">
           <VerdictBadge value={row.trust_grade} />
           <span className="tabular-nums text-xs text-[var(--text-muted)]">
-            {fmtNumber(row.trust_score, 0)}/100
+            {fmtNumber(row.trust_score)}/100
           </span>
         </div>
       ),
@@ -305,34 +313,38 @@ export default function ModelTrustPage() {
     },
     {
       key: 'samples',
+      align: 'right',
       header: t('ownership.trust.card.samples', 'Scored / pending'),
       render: (row) => (
         <span className="tabular-nums">
-          {fmtNumber(row.scored_count, 0)} / {fmtNumber(row.pending_count, 0)}
+          {fmtInt(row.scored_count)} / {fmtInt(row.pending_count)}
         </span>
       ),
     },
     {
       key: 'mape',
+      align: 'right',
       header: t('ownership.trust.card.mape', 'MAPE'),
       render: (row) => (row.mean_abs_pct_error != null ? formatPct(row.mean_abs_pct_error) : '—'),
       sortable: true,
     },
     {
       key: 'median',
+      align: 'right',
       header: t('ownership.trust.card.median', 'Median APE'),
       render: (row) =>
         row.median_abs_pct_error != null ? formatPct(row.median_abs_pct_error) : '—',
     },
     {
       key: 'bias',
+      align: 'right',
       header: t('ownership.trust.card.bias', 'Bias'),
       render: (row) =>
         row.bias != null ? (
           <span
             className={`tabular-nums ${row.bias > 0 ? 'text-amber-300' : row.bias < 0 ? 'text-indigo-300' : ''}`}
           >
-            {fmtNumber(row.bias, 3)} {row.si_unit}
+            {fmtScientificNumber(row.bias, 3)} {row.si_unit}
           </span>
         ) : (
           '—'
@@ -340,19 +352,21 @@ export default function ModelTrustPage() {
     },
     {
       key: 'rmse',
+      align: 'right',
       header: t('ownership.trust.card.rmse', 'RMSE'),
       render: (row) =>
-        row.root_mean_square_error != null ? fmtNumber(row.root_mean_square_error, 3) : '—',
+        row.root_mean_square_error != null ? fmtScientificNumber(row.root_mean_square_error, 3) : '—',
     },
     {
       key: 'coverage',
+      align: 'right',
       header: t('ownership.trust.card.coverage', 'Interval coverage'),
       render: (row) =>
         row.interval_coverage_pct != null ? (
           <span
             className={`tabular-nums ${Math.abs(row.interval_coverage_pct - 80) > 15 ? 'text-amber-300' : 'text-emerald-300'}`}
           >
-            {formatPct(row.interval_coverage_pct, 0)}
+            {formatPct(row.interval_coverage_pct)}
           </span>
         ) : (
           '—'
@@ -360,6 +374,7 @@ export default function ModelTrustPage() {
     },
     {
       key: 'skill',
+      align: 'right',
       header: t('ownership.trust.card.skill', 'Skill vs naive'),
       render: (row) =>
         row.skill_vs_naive_pct != null ? (
@@ -374,6 +389,7 @@ export default function ModelTrustPage() {
     },
     {
       key: 'drift',
+      align: 'right',
       header: t('ownership.trust.card.drift', 'Drift'),
       render: (row) => (
         <div className="flex items-center gap-1">
@@ -385,7 +401,7 @@ export default function ModelTrustPage() {
             <Activity className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />
           )}
           <Text as="span" variant="caption">
-            {row.drift_ratio != null ? fmtNumber(row.drift_ratio, 2) : '—'}
+            {row.drift_ratio != null ? fmtNumber(row.drift_ratio) : '—'}
           </Text>
         </div>
       ),
@@ -408,15 +424,14 @@ export default function ModelTrustPage() {
   ];
 
   return (
-    <PageContainer
-      title={t('ownership.trust.title', 'Prediction Accuracy & Model Trust Lab')}
+    <PageLayout
+      title={t('ownership.trust.title', 'Prediction accuracy & model trust lab')}
       subtitle={t(
         'ownership.trust.subtitle',
         'Every forecast this platform makes is written down, then scored against what actually happened. Bias, calibration, skill against a naive baseline, and drift over time decide whether a model earns your trust.',
       )}
-      loading={trustQuery.isLoading}
-      error={trustQuery.error as Error | null}
-      actions={
+      query={trustQuery}
+      contextActions={
         <div className="flex items-center gap-2">
           <Select
             aria-label={t('ownership.window.label', 'Analysis window')}
@@ -441,16 +456,20 @@ export default function ModelTrustPage() {
       </AlertBanner>
 
       <FadeIn>
-        <OwnershipPanel title={t('ownership.trust.summary.title', 'Portfolio trust')}>
-          <StatGrid
-            stats={[
+        <OwnershipPanel title={t('ownership.trust.summary.title', 'Portfolio trust')}
+          source={trustQuery} sourceEnabled={vehicleId != null} empty={!report} preserveSummary>
+          <OwnershipBrief
+            title={t('ownership.trust.brief.title', 'Recorded model trust and scoring')}
+            description={t('ownership.trust.notice.body', 'A prediction only counts once its outcome is recorded. Skill is measured against a naive persistence baseline, so a model that merely repeats the last value scores zero — not high.')}
+            scope={t('ownership.brief.window', 'Selected vehicle · {{count}}-day analysis window; coverage is described below', { count: windowDays })}
+            source={trustQuery} enabled={vehicleId != null}
+            window={report?.window}
+            metrics={[
               {
-                key: 'portfolio',
+                occurrenceId: 'portfolio', metricId: 'score',
                 label: t('ownership.trust.stat.portfolio', 'Portfolio trust score'),
-                value:
-                  report?.portfolio_trust_score != null
-                    ? `${fmtNumber(report.portfolio_trust_score, 0)}/100`
-                    : '—',
+                rawValue: report?.portfolio_trust_score,
+                display: specialistDisplay((raw) => `${fmtNumber(raw)}/100`),
                 tone:
                   (report?.portfolio_trust_score ?? 0) >= 75
                     ? 'positive'
@@ -459,27 +478,32 @@ export default function ModelTrustPage() {
                       : 'default',
               },
               {
-                key: 'trusted',
+                occurrenceId: 'trusted', metricId: 'count',
                 label: t('ownership.trust.stat.trusted', 'Trusted models'),
-                value: fmtNumber(report?.trusted_count ?? 0, 0),
+                rawValue: report?.trusted_count,
+                display: specialistDisplay(fmtInt),
                 tone: 'positive',
               },
               {
-                key: 'watch',
+                occurrenceId: 'watch', metricId: 'count',
                 label: t('ownership.trust.stat.watch', 'On watch'),
-                value: fmtNumber(report?.watch_count ?? 0, 0),
+                rawValue: report?.watch_count,
+                display: specialistDisplay(fmtInt),
                 tone: (report?.watch_count ?? 0) > 0 ? 'warning' : 'default',
               },
               {
-                key: 'unreliable',
+                occurrenceId: 'unreliable', metricId: 'count',
                 label: t('ownership.trust.stat.unreliable', 'Unreliable'),
-                value: fmtNumber(report?.unreliable_count ?? 0, 0),
+                rawValue: report?.unreliable_count,
+                display: specialistDisplay(fmtInt),
                 tone: (report?.unreliable_count ?? 0) > 0 ? 'critical' : 'default',
               },
               {
-                key: 'scored',
+                occurrenceId: 'scored', metricId: 'count',
                 label: t('ownership.trust.stat.scored', 'Scored / recorded'),
-                value: `${fmtNumber(report?.total_scored ?? 0, 0)} / ${fmtNumber(report?.total_predictions ?? 0, 0)}`,
+                rawValue: report?.total_scored,
+                display: { countTotal: report?.total_predictions,
+                  formatter: (raw) => ({ value: `${fmtNumber(raw)} / ${report?.total_predictions == null ? '—' : fmtNumber(report.total_predictions)}`, unit: '' }) },
               },
             ]}
           />
@@ -489,6 +513,8 @@ export default function ModelTrustPage() {
       <FadeIn delay={0.05}>
         <OwnershipPanel
           title={t('ownership.trust.cards.title', 'Model scorecards')}
+          source={trustQuery}
+          sourceEnabled={vehicleId != null}
           description={t(
             'ownership.trust.cards.subtitle',
             'Drift ratio compares recent-half error against early-half error. Above 1.5 means the model is getting worse.',
@@ -512,6 +538,8 @@ export default function ModelTrustPage() {
       <FadeIn delay={0.1}>
         <OwnershipPanel
           title={t('ownership.trust.calibration.title', 'Calibration by prediction magnitude')}
+          source={trustQuery}
+          sourceEnabled={vehicleId != null}
           description={
             selectedCard
               ? t('ownership.trust.calibration.for', 'Showing {{model}} → {{target}}', {
@@ -539,17 +567,17 @@ export default function ModelTrustPage() {
               {
                 key: 'error',
                 label: t('ownership.trust.calibration.col.error', 'Mean absolute error'),
-                format: (v) => fmtNumber(v as number, 3),
+                format: (v) => fmtScientificNumber(v as number, 3),
               },
               {
                 key: 'bias',
                 label: t('ownership.trust.calibration.col.bias', 'Mean bias'),
-                format: (v) => fmtNumber(v as number, 3),
+                format: (v) => fmtScientificNumber(v as number, 3),
               },
               {
                 key: 'samples',
                 label: t('ownership.trust.calibration.col.samples', 'Samples'),
-                format: (v) => fmtNumber(v as number, 0),
+                format: (v) => fmtNumber(v as number),
               },
             ]}
             height={280}
@@ -609,6 +637,9 @@ export default function ModelTrustPage() {
       <FadeIn delay={0.15}>
         <OwnershipPanel
           title={t('ownership.trust.predictions.title', 'Prediction ledger')}
+          source={trustQuery}
+          sourceEnabled={vehicleId != null}
+          editing={predictOpen || outcomeFor != null}
           description={t(
             'ownership.trust.predictions.subtitle',
             'Record a forecast before the fact, then score it once the outcome is known. Nothing here can be edited after the fact.',
@@ -774,6 +805,8 @@ export default function ModelTrustPage() {
 
       <FadeIn delay={0.2}>
         <EvidencePanel
+          source={trustQuery}
+          sourceEnabled={vehicleId != null}
           quality={report?.quality}
           evidence={report?.evidence}
           unsupported={[
@@ -788,6 +821,6 @@ export default function ModelTrustPage() {
           ]}
         />
       </FadeIn>
-    </PageContainer>
+    </PageLayout>
   );
 }

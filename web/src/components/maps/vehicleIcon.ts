@@ -1,11 +1,10 @@
 import L from 'leaflet';
 
 /**
- * Default marker color — the app's neon-cyan accent (matches the PWA
- * `theme_color`). Used whenever no color is supplied or the supplied value is
- * missing / malformed.
+ * Trusted DOM theme role for omitted or rejected colors, intentionally replacing
+ * the old cyan default. Caller-supplied CSS references remain untrusted.
  */
-export const DEFAULT_VEHICLE_COLOR = '#00f0ff';
+export const DEFAULT_VEHICLE_COLOR = 'var(--semantic-info)';
 
 /**
  * Injection-safe CSS color grammar: `#rgb` / `#rgba` / `#rrggbb` / `#rrggbbaa`
@@ -31,7 +30,7 @@ export function sanitizeColor(color?: string | null): string {
 
 /**
  * Custom vehicle marker icon using CSS — replaces broken default Leaflet markers.
- * Renders as a pulsing dot with a theme-colored glow.
+ * Retains the caller's marker color; the static halo adds no implied live status.
  */
 export function vehicleIcon(color: string = DEFAULT_VEHICLE_COLOR): L.DivIcon {
   const safe = sanitizeColor(color);
@@ -45,20 +44,12 @@ export function vehicleIcon(color: string = DEFAULT_VEHICLE_COLOR): L.DivIcon {
         <div style="
           position:absolute;inset:0;border-radius:50%;
           background:${safe};opacity:0.25;
-          animation:vehicle-pulse 2s ease-in-out infinite;
         "></div>
         <div style="
           position:absolute;inset:5px;border-radius:50%;
-          background:${safe};border:2px solid white;
-          box-shadow:0 0 10px ${safe};
+          background:${safe};border:2px solid var(--surface-1);
         "></div>
       </div>
-      <style>
-        @keyframes vehicle-pulse {
-          0%, 100% { transform: scale(1); opacity: 0.25; }
-          50% { transform: scale(1.6); opacity: 0; }
-        }
-      </style>
     `,
   });
 }

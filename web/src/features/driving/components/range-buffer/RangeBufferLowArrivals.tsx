@@ -21,6 +21,7 @@ import type {
   RangeBufferDistanceFormatter,
   RangeBufferQueryState,
 } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface RangeBufferLowArrivalsProps {
   result: RangeBufferResult;
@@ -37,6 +38,7 @@ export function RangeBufferLowArrivals({
   timeZone,
   formatDistance,
 }: RangeBufferLowArrivalsProps) {
+  const { precision: displayPrecision, locale: displayLocale } = useNumberFormatting();
   const { t } = useTranslation();
   const columns = useMemo<Column<RangeBufferLowArrival>[]>(
     () => [
@@ -76,7 +78,7 @@ export function RangeBufferLowArrivals({
         align: 'right',
         render: (row) => (
           <Text variant="bodySm" className="font-mono tabular-nums">
-            {formatDistance(row.distanceM, { precision: 1 })}
+            {formatDistance(row.distanceM)}
           </Text>
         ),
       },
@@ -131,7 +133,7 @@ export function RangeBufferLowArrivals({
       locale,
       result.config.thresholdPct,
       t,
-      timeZone,
+      timeZone, displayPrecision, displayLocale,
     ],
   );
 

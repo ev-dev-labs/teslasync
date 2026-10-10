@@ -100,7 +100,7 @@ function bodyRowNames(): string[] {
 
 function getFilterInput(): HTMLInputElement {
   return screen.getByRole('textbox', {
-    name: /filter signals/i,
+    name: /Filter signals/i,
   }) as HTMLInputElement;
 }
 
@@ -236,10 +236,10 @@ describe('LiveSignalsTable — kind badge', () => {
       />,
     );
 
-    expect(screen.getByText('Numeric')).toHaveClass('bg-blue-100');
-    expect(screen.getByText('Boolean')).toHaveClass('bg-yellow-100');
-    expect(screen.getByText('Enum')).toHaveClass('bg-green-100');
-    expect(screen.getByText('Compound')).toHaveClass('bg-red-100');
+    expect(screen.getByText('Numeric')).toHaveClass('bg-[var(--semantic-info-bg)]');
+    expect(screen.getByText('Boolean')).toHaveClass('bg-[var(--semantic-warning-bg)]');
+    expect(screen.getByText('Enum')).toHaveClass('bg-[var(--semantic-success-bg)]');
+    expect(screen.getByText('Compound')).toHaveClass('bg-[var(--semantic-danger-bg)]');
   });
 });
 
@@ -297,8 +297,7 @@ describe('LiveSignalsTable — timestamp cell', () => {
     const row = getRow('no-ts');
     expect(within(row).queryByTestId('timestamp')).toBeNull();
     const cells = within(row).getAllByRole('cell');
-    // formatAge(1500) → "1.5s".
-    expect(cells[4]).toHaveTextContent('1.5s');
+    expect(cells[4]).toHaveTextContent('1.50s');
   });
 });
 

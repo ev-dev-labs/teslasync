@@ -93,6 +93,27 @@ afterEach(() => {
 });
 
 describe('BatteryComparison', () => {
+  it('compares every returned fleet member beyond the loading-skeleton limit without reordering the caller', async () => {
+    const vehicles = Array.from({ length: 28 }, (_, index) => makeVehicle(
+      28 - index, `Comparison member ${28 - index}`,
+    ));
+    const originalIds = vehicles.map(vehicle => vehicle.id);
+    resolvedFleet(Object.fromEntries(vehicles.map(vehicle => [
+      vehicle.id, makeState(vehicle.id, vehicle.id * 1000),
+    ])));
+    renderComparison(vehicles);
+    await waitFor(() => expect(screen.getAllByRole('progressbar')).toHaveLength(28));
+    const bars = screen.getAllByRole('progressbar');
+    expect(bars.map(bar => bar.getAttribute('aria-label'))).toEqual(
+      originalIds.map(id => `Comparison member ${id} battery level`),
+    );
+    expect(bars.map(bar => Number(bar.getAttribute('aria-valuenow')))).toEqual(originalIds);
+    expect(mockFetch.mock.calls.map(call => call[0])).toEqual(originalIds);
+    expect(vehicles.map(vehicle => vehicle.id)).toEqual(originalIds);
+    expect(screen.getByText('Comparison member 1')).toBeInTheDocument();
+    expect(screen.getByText('Comparison member 28')).toBeInTheDocument();
+  });
+
   it('renders an accessible battery bar per vehicle with clamped level and converted range', async () => {
     resolvedFleet({
       1: makeState(82, 300_000), // 300 km
@@ -102,7 +123,7 @@ describe('BatteryComparison', () => {
     renderComparison([makeVehicle(1, 'Model 3'), makeVehicle(2, 'Model Y')]);
 
     // Header is always present.
-    expect(screen.getByText('Fleet Battery Status')).toBeInTheDocument();
+    expect(screen.getByText('Fleet battery status')).toBeInTheDocument();
 
     // One progressbar per resolved vehicle, each with an accessible name.
     const bars = await screen.findAllByRole('progressbar');
@@ -150,7 +171,7 @@ describe('BatteryComparison', () => {
     renderComparison([makeVehicle(1), makeVehicle(2)]);
 
     // Header stays; the shared empty state (role=status) replaces the bars.
-    expect(screen.getByText('Fleet Battery Status')).toBeInTheDocument();
+    expect(screen.getByText('Fleet battery status')).toBeInTheDocument();
     expect(
       await screen.findByText('No battery data available for the current fleet.'),
     ).toBeInTheDocument();
@@ -184,11 +205,11 @@ describe('BatteryComparison', () => {
     expect(mockFetch).not.toHaveBeenCalled();
   });
 
-  it('clamps out-of-range and non-finite battery levels into 0–100', async () => {
+  it('clamps recorded percentages and keeps non-finite readings unknown', async () => {
     resolvedFleet({
       1: makeState(150), // over-range → 100
       2: makeState(-20), // under-range → 0
-      3: makeState(Number.NaN), // non-finite → 0
+      3: makeState(Number.NaN),
     });
 
     renderComparison([
@@ -199,11 +220,12 @@ describe('BatteryComparison', () => {
 
     const over = await screen.findByRole('progressbar', { name: /Over battery level/i });
     const under = screen.getByRole('progressbar', { name: /Under battery level/i });
-    const nan = screen.getByRole('progressbar', { name: /Nan battery level/i });
+    const nan = screen.getByRole('group', { name: /Nan battery level/i });
 
     expect(over).toHaveAttribute('aria-valuenow', '100');
     expect(under).toHaveAttribute('aria-valuenow', '0');
-    expect(nan).toHaveAttribute('aria-valuenow', '0');
+    expect(nan).not.toHaveAttribute('aria-valuenow');
+    expect(screen.queryByRole('progressbar', { name: /Nan battery level/i })).not.toBeInTheDocument();
     expect((over.firstElementChild as HTMLElement).style.width).toBe('100%');
     expect((under.firstElementChild as HTMLElement).style.width).toBe('0%');
   });

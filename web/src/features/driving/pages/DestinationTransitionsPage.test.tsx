@@ -216,6 +216,37 @@ beforeEach(() => {
 });
 
 describe('DestinationTransitionsPage', () => {
+  it('retains all four evidence populations and configuration readouts in real briefs', () => {
+    renderPage();
+    const expected = [
+      ['destination-row-accounting-brief', 11],
+      ['destination-continuity-accounting-brief', 10],
+      ['destination-coverage-recency-brief', 15],
+      ['destination-descriptive-support-brief', 11],
+    ] as const;
+    for (const [id, count] of expected) {
+      expect(screen.getByTestId(id).querySelectorAll('[data-operational-value]')).toHaveLength(count);
+    }
+    expect(screen.getByTestId('destination-continuity-accounting-brief')).toHaveTextContent('GPS continuity tolerance');
+    expect(screen.getByTestId('destination-descriptive-support-brief')).toHaveTextContent('Effective successor count');
+    expect(screen.getByTestId('destination-descriptive-support-brief')).toHaveTextContent('not a counted event population');
+    expectEverySection();
+  });
+
+  it('retains the transition matrix, directory and temporal evidence through a paused refresh', () => {
+    h.history = { ...query({ data: readyHistory() }), fetchStatus: 'paused' };
+    renderPage();
+    expectEverySection();
+    const notice = screen.getByTestId('stale-refresh-warning');
+    expect(notice).toHaveTextContent(
+      'The latest values are temporarily unavailable. Previously loaded data remains visible.',
+    );
+    expect(notice).toHaveAttribute('data-refresh-blocked', 'true');
+    expect(notice).not.toHaveTextContent(/offline|failed/i);
+    fireEvent.click(within(notice).getByRole('button', { name: 'Refresh' }));
+    expect(historyRefetch).toHaveBeenCalledTimes(1);
+  });
+
   it('renders all twelve shells with the capped hook and vehicle timezone', () => {
     renderPage();
 
@@ -237,7 +268,7 @@ describe('DestinationTransitionsPage', () => {
     );
     expect(
       quality.getByText('Visit recency (days)').parentElement,
-    ).toHaveTextContent('0.1');
+    ).toHaveTextContent('0.06');
 
     vi.mocked(Date.now).mockReturnValue(
       FROZEN_NOW + 10 * 86_400_000,
@@ -254,7 +285,7 @@ describe('DestinationTransitionsPage', () => {
       within(screen.getByTestId('destination-evidence-quality'))
         .getByText('Visit recency (days)')
         .parentElement,
-    ).toHaveTextContent('0.1');
+    ).toHaveTextContent('0.06');
   });
 
   it('keeps every shell visible with one live loading status', () => {
@@ -398,8 +429,7 @@ describe('DestinationTransitionsPage', () => {
       screen.getByTestId('destination-transitions-kpis'),
     );
     expect(
-      kpis.getByText('Supported origin states').parentElement
-        ?.parentElement?.parentElement,
+      kpis.getByText('Supported origin states').closest('[data-operational-metric="origins"]'),
     ).toHaveTextContent('0');
   });
 

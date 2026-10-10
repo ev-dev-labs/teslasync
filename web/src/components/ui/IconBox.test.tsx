@@ -7,20 +7,18 @@
  *   1. It renders a single <div> wrapper around its children and always carries
  *      the base layout classes (flex centering + ring + shrink-0).
  *   2. `color` (default 'cyan') maps to the exact bg/ring/text utilities from
- *      the single-source-of-truth `neonColorMap` for every NeonColor.
+ *      semantic single-source-of-truth `neonColorMap` for every NeonColor.
  *   3. `size` (default 'md') maps to the right height/width/radius utilities.
  *   4. A caller `className` is merged and wins tailwind-merge conflicts.
  *   5. Out-of-union `color`/`size` values (e.g. from untyped JSON cast to the
  *      prop type) degrade to the defaults instead of throwing — this is the
  *      "IconBox lookup contract" the incident-presentation suite also guards.
  *
- * `@testing-library/user-event` is not installed in this repo (see
- * Card.test.tsx) and IconBox is a purely presentational container with no
- * interactive behaviour, so there is nothing to drive with fireEvent/userEvent.
+ * IconBox adds no interaction semantics; native caller events are forwarded.
  */
 
-import { render, screen } from '@testing-library/react'
-import { describe, it, expect } from 'vitest'
+import { fireEvent, render, screen } from '@testing-library/react'
+import { describe, it, expect, vi } from 'vitest'
 import { IconBox } from './IconBox'
 import { neonColorMap, type NeonColor } from '../../lib/tokens'
 
@@ -63,10 +61,10 @@ describe('IconBox', () => {
     // ... and the md sizing utilities.
     expect(box.className).toContain('h-10')
     expect(box.className).toContain('w-10')
-    expect(box.className).toContain('rounded-xl')
+    expect(box.className).toContain('rounded-shape-sm')
   })
 
-  it.each(ALL_COLORS)('maps color="%s" to its neonColorMap bg/ring/text utilities', (color) => {
+  it.each(ALL_COLORS)('maps color="%s" to its semantic neonColorMap bg/ring/text utilities', (color) => {
     const box = renderBox(<IconBox color={color}>x</IconBox>)
     const { bg, ring, text } = neonColorMap[color]
     expect(box.className).toContain(bg)
@@ -75,9 +73,9 @@ describe('IconBox', () => {
   })
 
   it.each([
-    ['sm', ['h-8', 'w-8', 'rounded-lg']],
-    ['md', ['h-10', 'w-10', 'rounded-xl']],
-    ['lg', ['h-12', 'w-12', 'rounded-xl']],
+    ['sm', ['h-8', 'w-8', 'rounded-shape-sm']],
+    ['md', ['h-10', 'w-10', 'rounded-shape-sm']],
+    ['lg', ['h-12', 'w-12', 'rounded-shape-sm']],
   ] as const)('maps size="%s" to the right sizing utilities', (size, expected) => {
     const box = renderBox(<IconBox size={size}>x</IconBox>)
     for (const cls of expected) {
@@ -105,7 +103,7 @@ describe('IconBox', () => {
     expect(box.className).toContain('rounded-full')
     expect(box.className).not.toMatch(/\bh-10\b/)
     expect(box.className).not.toMatch(/\bw-10\b/)
-    expect(box.className).not.toMatch(/\brounded-xl\b/)
+    expect(box.className).not.toMatch(/\brounded-shape-sm\b/)
   })
 
   it('degrades to the cyan tint for an out-of-union color without throwing', () => {
@@ -128,6 +126,51 @@ describe('IconBox', () => {
     }).not.toThrow()
     expect(box?.className).toContain('h-10')
     expect(box?.className).toContain('w-10')
-    expect(box?.className).toContain('rounded-xl')
+    expect(box?.className).toContain('rounded-shape-sm')
+  })
+
+  it('forwards native identity, accessibility attributes and events', () => {
+    const onClick = vi.fn()
+    const box = renderBox(
+      <IconBox id="connection-glyph" role="img" aria-label="Connected" data-source="live" onClick={onClick}>
+        x
+      </IconBox>,
+    )
+    expect(box).toHaveAttribute('id', 'connection-glyph')
+    expect(box).toHaveAttribute('role', 'img')
+    expect(box).toHaveAccessibleName('Connected')
+    expect(box).toHaveAttribute('data-source', 'live')
+    fireEvent.click(box)
+    expect(onClick).toHaveBeenCalledTimes(1)
+  })
+
+  it.each(ALL_COLORS)('uses restrained role tokens without decorative effects for "%s"', (color) => {
+    const box = renderBox(<IconBox color={color}>x</IconBox>)
+    expect(box.className).toContain('var(--')
+    expect(box.className).not.toMatch(/(?:text|bg|ring)-neon-|(?:text|bg)-white|shadow-|animate-/)
+    // Ring shadows disappear in forced colors; keep a visible system-color boundary.
+    expect(box.className).toContain('forced-colors:outline-current')
+  })
+
+  it.each(['__proto__', 'constructor', 'toString'])('defaults inherited lookup key "%s"', (value) => {
+    const box = renderBox(
+      <IconBox color={value as NeonColor} size={value as 'md'}>x</IconBox>,
+    )
+    expect(box.className).toContain(neonColorMap.cyan.bg)
+    expect(box.className).toContain(neonColorMap.cyan.ring)
+    expect(box.className).toContain(neonColorMap.cyan.text)
+    expect(box.className).toContain('h-10')
+    expect(box.className).toContain('w-10')
+  })
+
+  it('preserves zero, missing and long child content through rerenders', () => {
+    const { container, rerender } = render(<IconBox>{0}</IconBox>)
+    expect(container.firstChild).toHaveTextContent('0')
+    rerender(<IconBox>{null}</IconBox>)
+    expect(container.firstChild).toBeEmptyDOMElement()
+    const label = 'A long localized glyph description without truncation '.repeat(8)
+    rerender(<IconBox><span>{label}</span></IconBox>)
+    expect(container.firstChild).toHaveTextContent(label.trim())
+    expect(container.firstChild).not.toHaveClass('truncate', 'overflow-hidden')
   })
 })

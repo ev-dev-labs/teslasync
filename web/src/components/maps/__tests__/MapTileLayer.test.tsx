@@ -34,6 +34,7 @@ type CapturedFsProps = {
   ariaLabelEnter?: string;
   ariaLabelExit?: string;
   className?: string;
+  size?: 'sm' | 'md' | 'lg';
   targetRef: React.RefObject<HTMLElement | null>;
 };
 
@@ -47,11 +48,12 @@ const H = vi.hoisted(() => ({
 // node that surfaces the resolved url/attribution as data-* attributes, and
 // `useMap` with the per-test fake map.
 vi.mock('react-leaflet', () => ({
-  TileLayer: ({ url, attribution }: { url: string; attribution: string }) =>
+  TileLayer: ({ url, attribution, className }: { url: string; attribution: string; className?: string }) =>
     React.createElement('div', {
       'data-testid': 'tile-layer',
       'data-url': url,
       'data-attribution': attribution,
+      className,
     }),
   useMap: () => H.map,
 }));
@@ -121,7 +123,7 @@ beforeEach(() => {
   H.map = null;
   H.getMapConfig.mockReset();
   H.fsProps.mockReset();
-  // Default provider: free (no key) → the CARTO/OSM/Esri/OpenTopo tiles.
+  // Default provider: free (no key) → OSM/Esri/OpenTopo tiles.
   H.getMapConfig.mockResolvedValue({ provider: 'free', api_key: '' } satisfies MapConfig);
 });
 
@@ -133,12 +135,13 @@ afterEach(() => {
 });
 
 describe('MapTileLayer — free provider tile selection', () => {
-  it('defaults to the dark CARTO basemap when no style is supplied', async () => {
+  it('defaults to the key-free OSM basemap when no style is supplied', async () => {
     renderTile();
     await settle();
     const el = tile();
-    expect(el.getAttribute('data-url')).toContain('basemaps.cartocdn.com/dark_all');
-    expect(el.getAttribute('data-attribution')).toContain('CARTO');
+    expect(el.getAttribute('data-url')).toBe('https://tile.openstreetmap.org/{z}/{x}/{y}.png');
+    expect(el.getAttribute('data-attribution')).toContain('OpenStreetMap');
+    expect(el).toHaveClass('[filter:invert(1)_hue-rotate(180deg)_brightness(0.85)]');
   });
 
   it('selects the Esri World Imagery layer for the satellite style', async () => {
@@ -154,6 +157,7 @@ describe('MapTileLayer — free provider tile selection', () => {
     renderTile('streets');
     await settle();
     expect(tile().getAttribute('data-url')).toContain('tile.openstreetmap.org');
+    expect(tile()).not.toHaveClass('[filter:invert(1)_hue-rotate(180deg)_brightness(0.85)]');
     expect(tile().getAttribute('data-attribution')).toContain('OpenStreetMap');
   });
 
@@ -168,7 +172,8 @@ describe('MapTileLayer — free provider tile selection', () => {
     // `tiles['aurora']` is undefined → the `|| tiles.dark` guard applies.
     renderTile('aurora' as MapStyle);
     await settle();
-    expect(tile().getAttribute('data-url')).toContain('dark_all');
+    expect(tile().getAttribute('data-url')).toContain('tile.openstreetmap.org');
+    expect(tile()).toHaveClass('[filter:invert(1)_hue-rotate(180deg)_brightness(0.85)]');
   });
 });
 
@@ -198,12 +203,48 @@ describe('MapTileLayer — provider overrides', () => {
     renderTile('dark');
     await settle();
     // The `&& mapConfig.api_key` guard is falsy → we stay on the free basemap.
-    expect(tile().getAttribute('data-url')).toContain('cartocdn.com');
+    expect(tile().getAttribute('data-url')).toContain('tile.openstreetmap.org');
     expect(tile().getAttribute('data-url')).not.toContain('atlas.microsoft.com');
   });
 });
 
 describe('MapInvalidator', () => {
+  it('observes container resizes and preserves the current map center without animation', () => {
+    vi.useFakeTimers();
+    const observe = vi.fn();
+    const disconnect = vi.fn();
+    let resize = () => {};
+    class Observer implements ResizeObserver {
+      constructor(callback: ResizeObserverCallback) {
+        resize = () => callback([], this);
+      }
+      observe = observe;
+      unobserve = vi.fn();
+      disconnect = disconnect;
+    }
+    vi.stubGlobal('ResizeObserver', Observer);
+    try {
+      const mapContainer = document.createElement('div');
+      const invalidateSize = vi.fn();
+      H.map = { getContainer: () => mapContainer, invalidateSize };
+      const { unmount } = render(<MapInvalidator />);
+
+      expect(observe).toHaveBeenCalledWith(mapContainer);
+      act(() => resize());
+      act(() => resize());
+      expect(invalidateSize).toHaveBeenCalledTimes(2);
+      expect(invalidateSize).toHaveBeenLastCalledWith({ animate: false });
+
+      unmount();
+      expect(disconnect).toHaveBeenCalledTimes(1);
+      act(() => vi.advanceTimersByTime(100));
+      expect(invalidateSize).toHaveBeenCalledTimes(2);
+    } finally {
+      vi.unstubAllGlobals();
+      vi.useRealTimers();
+    }
+  });
+
   it('invalidates the map size 100ms after mount and renders nothing', () => {
     vi.useFakeTimers();
     try {
@@ -273,14 +314,40 @@ describe('MapFullscreenControl', () => {
     render(<MapFullscreenControl ariaLabelEnter="Grow map" ariaLabelExit="Shrink map" />);
 
     expect(H.fsProps).toHaveBeenCalled();
-    const props = H.fsProps.mock.calls.at(-1)?.[0] as CapturedFsProps;
+    const props = H.fsProps.mock.calls[H.fsProps.mock.calls.length - 1]?.[0] as CapturedFsProps;
     expect(props.ariaLabelEnter).toBe('Grow map');
     expect(props.ariaLabelExit).toBe('Shrink map');
-    expect(props.className).toContain('bg-[var(--surface-1)]/90');
+    expect(props.className).toContain('bg-surface-2');
+    expect(props.className).toContain('border-[var(--control-border)]');
+    expect(props.className).toContain('text-[var(--text-secondary)]');
+    expect(props.className).toContain('shadow-e1');
+    expect(props.className).toContain('h-11 w-11 p-0 md:h-9 md:w-9');
+    expect(props.size).toBe('md');
     expect(props.targetRef.current).toBe(container);
     // The button surfaces the enter-label so screen readers get a name.
     expect(screen.getByRole('button', { name: 'Grow map' })).toBeInTheDocument();
   });
+
+  it.each(['topleft', 'topright', 'bottomleft', 'bottomright'] as const)(
+    'preserves the %s corner and explicit empty label overrides',
+    position => {
+      const { container, map } = makeMapWithContainer();
+      H.map = map;
+      render(<MapFullscreenControl position={position} ariaLabelEnter="" ariaLabelExit="" />);
+      const control = container.querySelector('.leaflet-control');
+      expect(control).toHaveClass(
+        position.startsWith('top') ? 'top-2' : 'bottom-2',
+        position.endsWith('left') ? 'left-2' : 'right-2',
+        'pointer-events-auto',
+        'z-map-tile-control',
+      );
+      expect(H.fsProps).toHaveBeenLastCalledWith(expect.objectContaining({
+        ariaLabelEnter: '',
+        ariaLabelExit: '',
+        targetRef: expect.objectContaining({ current: container }),
+      }));
+    },
+  );
 
   it('renders nothing when the map has no container yet', () => {
     const invalidateSize = vi.fn();

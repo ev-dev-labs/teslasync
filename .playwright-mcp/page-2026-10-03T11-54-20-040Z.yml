@@ -1,0 +1,797 @@
+- generic [active] [ref=f28e1]:
+  - generic [ref=f28e9]:
+    - status [ref=f28e10]
+    - link "Skip to main content" [ref=f28e11] [cursor=pointer]:
+      - /url: "#main-content"
+    - generic [ref=f28e12]:
+      - status [ref=f28e13]
+      - alert [ref=f28e14]
+      - banner "Site header" [ref=f28e15]:
+        - button "Open sidebar" [ref=f28e16] [cursor=pointer]
+        - generic [ref=f28e18]: TeslaSync
+        - button "Notifications" [ref=f28e25] [cursor=pointer]
+        - button "Open theme picker" [ref=f28e30] [cursor=pointer]
+      - generic [ref=f28e37]:
+        - status [ref=f28e175]:
+          - generic [ref=f28e176]:
+            - generic [ref=f28e177]:
+              - text: Sample data present
+              - generic [ref=f28e178]: · Not live
+            - button "Details" [ref=f28e179] [cursor=pointer]
+        - main [ref=f28e39]:
+          - generic [ref=f28e40]:
+            - navigation "Breadcrumb" [ref=f28e43]:
+              - link "Dashboard" [ref=f28e44] [cursor=pointer]:
+                - /url: /
+              - generic [ref=f28e50]: Driving
+              - generic [aria-hidden] [ref=f28e53]: …
+              - generic [ref=f28e56]: Demo Home → Demo Office
+            - status [ref=f28e181]:
+              - generic [ref=f28e186]:
+                - paragraph [ref=f28e187]: Install TeslaSync
+                - paragraph [ref=f28e188]: Add to home screen for native experience
+              - button "Install" [ref=f28e189] [cursor=pointer]
+              - button "Dismiss install prompt" [ref=f28e190] [cursor=pointer]
+            - generic [ref=f28e194]:
+              - generic [ref=f28e195]:
+                - heading "Demo Home → Demo Office" [level=1] [ref=f28e200]
+                - group "Actions" [ref=f28e201]:
+                  - generic "Historical" [ref=f28e204]
+                  - generic [ref=f28e209]:
+                    - link [ref=f28e211] [cursor=pointer]:
+                      - /url: /drives
+                      - button "Back to drives" [ref=f28e212]
+                    - generic [ref=f28e216]:
+                      - button "Share" [ref=f28e217] [cursor=pointer]
+                      - button "Print" [ref=f28e224] [cursor=pointer]
+                    - link [ref=f28e230] [cursor=pointer]:
+                      - /url: /drives/1/replay
+                      - button "Replay" [ref=f28e231]
+              - paragraph [ref=f28e234]: "Demo Model Y · Drive #1"
+              - navigation "Drive report sections" [ref=f28e235]:
+                - link "Overview" [ref=f28e236] [cursor=pointer]:
+                  - /url: "#overview"
+                - link "Journey details" [ref=f28e237] [cursor=pointer]:
+                  - /url: "#journey"
+                - link "Route" [ref=f28e238] [cursor=pointer]:
+                  - /url: "#route"
+                - link "Energy and cost" [ref=f28e239] [cursor=pointer]:
+                  - /url: "#energy"
+                - link "Telemetry" [ref=f28e240] [cursor=pointer]:
+                  - /url: "#telemetry"
+                - link "Supervised driving" [ref=f28e241] [cursor=pointer]:
+                  - /url: "#supervised"
+                - link "Post-drive physics" [ref=f28e242] [cursor=pointer]:
+                  - /url: "#physics"
+                - link "Diagnostics" [ref=f28e243] [cursor=pointer]:
+                  - /url: "#diagnostics"
+              - region "Overview" [ref=f28e244]:
+                - generic [ref=f28e246]:
+                  - generic [ref=f28e247]:
+                    - heading "Overview" [level=3] [ref=f28e248]
+                    - paragraph [ref=f28e249]: Recorded drive details · comparisons use this vehicle’s history
+                    - paragraph [ref=f28e250]: "Recorded score: —"
+                  - group "Drive summary" [ref=f28e251]:
+                    - generic [ref=f28e252]:
+                      - text: Drive cost
+                      - generic [ref=f28e253]: $0.4
+                      - paragraph [ref=f28e255]: Configured-rate estimate, not a charging invoice
+                    - generic [ref=f28e256]:
+                      - text: Distance
+                      - generic [ref=f28e257]:
+                        - generic [ref=f28e258]: "14.5"
+                        - generic [ref=f28e259]: km
+                      - generic "14.5 vs 20.6" [ref=f28e260]:
+                        - generic [ref=f28e263]: 29.6%
+                        - generic [ref=f28e264]: vs your average
+                    - generic [ref=f28e265]:
+                      - text: Duration
+                      - generic [ref=f28e266]:
+                        - generic [ref=f28e267]: "21.0"
+                        - generic [ref=f28e268]: min
+                      - generic "21.0 vs 25.5" [ref=f28e269]:
+                        - generic [ref=f28e272]: 17.6%
+                        - generic [ref=f28e273]: vs your average
+                    - generic [ref=f28e274]:
+                      - text: Battery change
+                      - generic [ref=f28e275]: 78.0% → 74.0%
+                    - generic [ref=f28e277]:
+                      - text: Start odometer
+                      - generic [ref=f28e278]:
+                        - generic [ref=f28e279]: 122,360.0
+                        - generic [ref=f28e280]: km
+                    - generic [ref=f28e281]:
+                      - text: End odometer
+                      - generic [ref=f28e282]:
+                        - generic [ref=f28e283]: 122,374.5
+                        - generic [ref=f28e284]: km
+                    - generic [ref=f28e285]:
+                      - text: Drive energy
+                      - generic [ref=f28e286]: 2.6 kWh
+                      - paragraph [ref=f28e288]: Persisted drive aggregate
+                    - generic [ref=f28e289]:
+                      - text: Consumption
+                      - generic [ref=f28e290]:
+                        - generic [ref=f28e291]: "180.0"
+                        - generic [ref=f28e292]: Wh/km
+                      - generic "180.0 vs 180.0" [ref=f28e293]:
+                        - generic [ref=f28e296]: 0.0%
+                        - generic [ref=f28e297]: vs your average
+                  - generic [ref=f28e298]:
+                    - paragraph [ref=f28e299]: Performance and comparisons
+                    - generic [ref=f28e300]:
+                      - generic [ref=f28e301]:
+                        - text: Avg speed
+                        - generic [ref=f28e302]:
+                          - generic [ref=f28e303]: "41.4"
+                          - generic [ref=f28e304]: km/h
+                      - generic [ref=f28e305]:
+                        - text: Max speed
+                        - generic [ref=f28e306]:
+                          - generic [ref=f28e307]: "58.0"
+                          - generic [ref=f28e308]: km/h
+                        - generic "58.0 vs 126.0" [ref=f28e309]:
+                          - generic [ref=f28e312]: 54.0%
+                          - generic [ref=f28e313]: vs your record
+                      - generic [ref=f28e314]:
+                        - text: Battery use per 100 km
+                        - generic [ref=f28e315]:
+                          - generic [ref=f28e316]: "27.6"
+                          - generic [ref=f28e317]: "%"
+              - generic [ref=f28e318]:
+                - region "Journey details" [ref=f28e319]:
+                  - generic [ref=f28e321]:
+                    - heading "Journey details" [level=3] [ref=f28e322]
+                    - table "Drive timeline" [ref=f28e327]:
+                      - rowgroup [ref=f28e328]:
+                        - row [ref=f28e329]:
+                          - columnheader "Start" [ref=f28e330]
+                          - columnheader "Destination" [ref=f28e335]
+                      - rowgroup [ref=f28e339]:
+                        - row [ref=f28e340]:
+                          - cell [ref=f28e341]:
+                            - paragraph [ref=f28e342]: Demo Home
+                            - paragraph [ref=f28e343]: Oct 2, 2026, 02:13 PM
+                            - paragraph [ref=f28e344]: 37.8°N, 122.4°W
+                            - paragraph [ref=f28e345]: "Battery: 78.0%"
+                          - cell [ref=f28e346]:
+                            - paragraph [ref=f28e347]: Demo Office
+                            - paragraph [ref=f28e348]: Oct 2, 2026, 02:34 PM
+                            - paragraph [ref=f28e349]: "Battery: 74.0%"
+                            - paragraph [ref=f28e350]: 37.8°N, 122.3°W
+                - region "Route" [ref=f28e351]:
+                  - generic [ref=f28e353]:
+                    - heading "Route" [level=3] [ref=f28e355]
+                    - region "Route map" [ref=f28e359]:
+                      - group "Map style" [ref=f28e360]:
+                        - button "Dark" [pressed] [ref=f28e361] [cursor=pointer]:
+                          - generic [aria-hidden] [ref=f28e362]: 🌑
+                        - button "Satellite" [ref=f28e363] [cursor=pointer]:
+                          - generic [aria-hidden] [ref=f28e364]: 🛰️
+                        - button "Streets" [ref=f28e365] [cursor=pointer]:
+                          - generic [aria-hidden] [ref=f28e366]: 🗺️
+                        - button "Terrain" [ref=f28e367] [cursor=pointer]:
+                          - generic [aria-hidden] [ref=f28e368]: ⛰️
+                      - generic [ref=f28e369]:
+                        - generic:
+                          - generic:
+                            - img:
+                              - generic:
+                                - generic [ref=f28e370] [cursor=pointer]
+                                - generic [ref=f28e371] [cursor=pointer]
+                                - generic [ref=f28e372] [cursor=pointer]
+                                - generic [ref=f28e373] [cursor=pointer]
+                                - generic [ref=f28e374] [cursor=pointer]
+                                - generic [ref=f28e375] [cursor=pointer]
+                                - generic [ref=f28e376] [cursor=pointer]
+                                - generic [ref=f28e377] [cursor=pointer]
+                                - generic [ref=f28e378] [cursor=pointer]
+                                - generic [ref=f28e379] [cursor=pointer]
+                                - generic [ref=f28e380] [cursor=pointer]
+                                - generic [ref=f28e381] [cursor=pointer]
+                                - generic [ref=f28e382] [cursor=pointer]
+                                - generic [ref=f28e383] [cursor=pointer]
+                                - generic [ref=f28e384] [cursor=pointer]
+                                - generic [ref=f28e385] [cursor=pointer]
+                                - generic [ref=f28e386] [cursor=pointer]
+                                - generic [ref=f28e387] [cursor=pointer]
+                                - generic [ref=f28e388] [cursor=pointer]
+                                - generic [ref=f28e389] [cursor=pointer]
+                                - generic [ref=f28e390] [cursor=pointer]
+                        - generic:
+                          - generic [ref=f28e391]:
+                            - button "Zoom in" [ref=f28e392] [cursor=pointer]: +
+                            - button "Zoom out" [ref=f28e393] [cursor=pointer]: −
+                          - generic [ref=f28e394]:
+                            - link "Leaflet" [ref=f28e395] [cursor=pointer]:
+                              - /url: https://leafletjs.com
+                            - text: "| ©"
+                            - link "CARTO" [ref=f28e400] [cursor=pointer]:
+                              - /url: https://carto.com/
+                    - generic [ref=f28e401]:
+                      - generic [ref=f28e402]:
+                        - generic [ref=f28e403]: <48.3
+                        - generic [ref=f28e405]: 48.3–96.6
+                        - generic [ref=f28e407]: 96.6–160.9
+                        - generic [ref=f28e409]: ">160.9"
+                        - generic [ref=f28e411]: km/h
+                      - link "Journey details" [ref=f28e412] [cursor=pointer]:
+                        - /url: "#journey"
+              - generic [ref=f28e413]:
+                - region "More details" [ref=f28e414]:
+                  - generic [ref=f28e416]:
+                    - heading "Energy and range evidence" [level=3] [ref=f28e417]
+                    - table "Energy and range evidence" [ref=f28e420]:
+                      - rowgroup [ref=f28e421]:
+                        - row [ref=f28e422]:
+                          - columnheader "Metric" [ref=f28e423]
+                          - columnheader "Value" [ref=f28e424]
+                          - columnheader "Source and method" [ref=f28e425]
+                      - rowgroup [ref=f28e426]:
+                        - row [ref=f28e427]:
+                          - rowheader "Energy consumed" [ref=f28e428]
+                          - cell "2.6 kWh" [ref=f28e429]
+                          - cell "Persisted drive aggregate" [ref=f28e430]
+                        - row [ref=f28e431]:
+                          - rowheader "Energy recovered" [ref=f28e432]
+                          - cell "0.3 kWh" [ref=f28e433]
+                          - cell "Persisted drive aggregate" [ref=f28e434]
+                        - row [ref=f28e435]:
+                          - rowheader "Odometer (from → To)" [ref=f28e436]
+                          - cell "122,360.0 → 122,374.5 km" [ref=f28e437]
+                          - cell "Persisted drive aggregate" [ref=f28e438]
+                        - row [ref=f28e439]:
+                          - rowheader "Range ideal" [ref=f28e440]
+                          - cell "—" [ref=f28e441]
+                          - cell "First/last recorded values of this range estimator; gaps are not zero" [ref=f28e442]
+                        - row [ref=f28e443]:
+                          - rowheader "Range (rated)" [ref=f28e444]
+                          - cell "—" [ref=f28e445]
+                          - cell "First/last recorded values of this range estimator; gaps are not zero" [ref=f28e446]
+                        - row [ref=f28e447]:
+                          - rowheader "Range est." [ref=f28e448]
+                          - cell "—" [ref=f28e449]
+                          - cell "First/last recorded values of this range estimator; gaps are not zero" [ref=f28e450]
+                        - row [ref=f28e451]:
+                          - rowheader "Range used" [ref=f28e452]
+                          - cell "—" [ref=f28e453]
+                          - cell "Unknown · Difference of available range estimates, not distance travelled" [ref=f28e454]
+                        - row [ref=f28e455]:
+                          - rowheader "Battery used" [ref=f28e456]
+                          - cell "4.0%" [ref=f28e457]
+                          - cell "Endpoint SOC difference, not a measured energy total" [ref=f28e458]
+                    - paragraph [ref=f28e459]: Consumed and recovered energy retain their original source semantics. No additional net-energy total is inferred.
+                - region "Cost & savings" [ref=f28e460]:
+                  - generic [ref=f28e462]:
+                    - heading "Cost & savings" [level=3] [ref=f28e463]
+                    - paragraph [ref=f28e464]: Estimate using configured rates, not a charging invoice. Energy source is listed in energy evidence.
+                    - table "Cost & savings" [ref=f28e467]:
+                      - rowgroup [ref=f28e468]:
+                        - row [ref=f28e469]:
+                          - columnheader "Metric" [ref=f28e470]
+                          - columnheader "Value" [ref=f28e471]
+                      - rowgroup [ref=f28e472]:
+                        - row [ref=f28e473]:
+                          - rowheader "Trip cost" [ref=f28e474]
+                          - cell "$0.4" [ref=f28e475]
+                        - row [ref=f28e476]:
+                          - rowheader "Cost / km" [ref=f28e477]
+                          - cell "$0.0" [ref=f28e478]
+                        - row [ref=f28e479]:
+                          - rowheader "Gas cost (equiv)" [ref=f28e480]
+                          - cell "$1.3" [ref=f28e481]
+                        - row [ref=f28e482]:
+                          - rowheader "vs gas savings" [ref=f28e483]
+                          - cell "$0.9" [ref=f28e484]
+                        - row [ref=f28e485]:
+                          - rowheader "Savings %" [ref=f28e486]
+                          - cell "69.0%" [ref=f28e487]
+                    - paragraph [ref=f28e488]: at $0.15/kWh · at 25 MPG
+              - generic [ref=f28e489]:
+                - region "Supervised driving" [ref=f28e490]:
+                  - region "Supervised driving" [ref=f28e491]:
+                    - generic [ref=f28e492]:
+                      - generic [ref=f28e493]:
+                        - generic [ref=f28e494]:
+                          - generic [ref=f28e495]:
+                            - heading "Supervised driving" [level=2] [ref=f28e499]
+                            - generic [ref=f28e500]: Unknown
+                          - paragraph [ref=f28e501]: Reported supervised-driving distance from synchronized cumulative counters.
+                        - link "Open FSD insights" [ref=f28e503] [cursor=pointer]:
+                          - /url: /fsd
+                      - table "Supervised driving" [ref=f28e510]:
+                        - rowgroup [ref=f28e511]:
+                          - row [ref=f28e512]:
+                            - rowheader "Reported distance" [ref=f28e513]
+                            - cell "—" [ref=f28e518]
+                          - row [ref=f28e519]:
+                            - rowheader "Share of drive" [ref=f28e520]
+                            - cell "—" [ref=f28e524]
+                          - row [ref=f28e525]:
+                            - rowheader "Evidence window" [ref=f28e526]
+                            - cell "No positive counter increase" [ref=f28e530]
+                      - paragraph [ref=f28e531]: There are not enough paired observations to distinguish zero FSD use from missing data.
+                - region "Counter silent while moving" [ref=f28e532]:
+                  - generic [ref=f28e533]:
+                    - heading "Counter silent while moving" [level=3] [ref=f28e534]
+                    - paragraph [ref=f28e537]: Gear=D/R, speed above walking pace, and the FSD trip meter not advancing is counter-silent. It is not a Tesla disengagement.
+                    - paragraph [ref=f28e538]: The FSD trip meter did not report on this drive. Absence is not a disengagement.
+                    - link "Open FSD insights" [ref=f28e539] [cursor=pointer]:
+                      - /url: /fsd
+              - generic [ref=f28e540]:
+                - region "Telemetry" [ref=f28e541]:
+                  - generic [ref=f28e542]:
+                    - figure [ref=f28e543]:
+                      - generic [ref=f28e544]:
+                        - heading "Drive overview" [level=3] [ref=f28e547]
+                        - button "Export chart" [ref=f28e550] [cursor=pointer]
+                      - group "Drive overview composed chart of speed, range, SOC and power over time" [ref=f28e554]:
+                        - generic [ref=f28e556]:
+                          - img [ref=f28e557]:
+                            - generic [ref=f28e562]:
+                              - generic [ref=f28e563]: 02:14 PM
+                              - generic [ref=f28e565]: 02:20 PM
+                              - generic [ref=f28e567]: 02:25 PM
+                              - generic [ref=f28e569]: 02:34 PM
+                          - list [ref=f28e580]:
+                            - listitem [ref=f28e581]:
+                              - button "Speed (km/h)" [ref=f28e585] [cursor=pointer]
+                            - listitem [ref=f28e586]:
+                              - button "SOC %" [ref=f28e590] [cursor=pointer]
+                            - listitem [ref=f28e591]:
+                              - button "Power kW" [ref=f28e595] [cursor=pointer]
+                      - paragraph [ref=f28e597]: "Chart: Drive overview"
+                    - generic [ref=f28e598]:
+                      - paragraph [ref=f28e599]: Sample statistics · arithmetic means, not time-weighted drive aggregates
+                      - table "Sample statistics · arithmetic means, not time-weighted drive aggregates" [ref=f28e602]:
+                        - rowgroup [ref=f28e603]:
+                          - row [ref=f28e604]:
+                            - columnheader "Signal" [ref=f28e605]
+                            - columnheader "Mean" [ref=f28e606]
+                            - columnheader "Max" [ref=f28e607]
+                            - columnheader "Min" [ref=f28e608]
+                        - rowgroup [ref=f28e609]:
+                          - row [ref=f28e610]:
+                            - rowheader "Speed" [ref=f28e611]
+                            - cell "39.4 km/h" [ref=f28e612]
+                            - cell "41.4 km/h" [ref=f28e613]
+                            - cell "0.0 km/h" [ref=f28e614]
+                          - row [ref=f28e615]:
+                            - rowheader "SOC" [ref=f28e616]
+                            - cell "76.1%" [ref=f28e617]
+                            - cell "77.8%" [ref=f28e618]
+                            - cell "74.4%" [ref=f28e619]
+                - generic [ref=f28e620]:
+                  - region "SOC" [ref=f28e621]:
+                    - figure [ref=f28e623]:
+                      - generic [ref=f28e624]:
+                        - heading "SOC % over time" [level=3] [ref=f28e627]
+                        - button "Export chart" [ref=f28e630] [cursor=pointer]
+                      - img "State of charge percent over time area chart" [ref=f28e634]:
+                        - img [ref=f28e637]:
+                          - generic [ref=f28e642]:
+                            - generic [ref=f28e643]: 02:14 PM
+                            - generic [ref=f28e645]: 02:19 PM
+                            - generic [ref=f28e647]: 02:24 PM
+                            - generic [ref=f28e649]: 02:34 PM
+                          - generic [ref=f28e652]:
+                            - generic [ref=f28e653]: "0"
+                            - generic [ref=f28e655]: "25"
+                            - generic [ref=f28e657]: "50"
+                            - generic [ref=f28e659]: "75"
+                            - generic [ref=f28e661]: "100"
+                      - paragraph [ref=f28e670]: "Chart: SOC % over time"
+                  - region "Speed histogram" [ref=f28e671]:
+                    - figure [ref=f28e673]:
+                      - generic [ref=f28e674]:
+                        - heading "Speed histogram" [level=3] [ref=f28e677]
+                        - button "Export chart" [ref=f28e680] [cursor=pointer]
+                      - img "Speed-bucket distribution histogram" [ref=f28e684]:
+                        - img [ref=f28e687]:
+                          - generic [ref=f28e692]:
+                            - generic [ref=f28e693]: 0.0–20.0
+                            - generic [ref=f28e695]: 40.0–60.0
+                          - generic [ref=f28e698]:
+                            - generic [ref=f28e699]: "0"
+                            - generic [ref=f28e701]: "25"
+                            - generic [ref=f28e703]: "50"
+                            - generic [ref=f28e705]: "75"
+                            - generic [ref=f28e707]: "100"
+                      - table [ref=f28e719]:
+                        - caption [ref=f28e720]: Speed histogram — data table
+                        - rowgroup [ref=f28e721]:
+                          - row [ref=f28e722]:
+                            - columnheader "Speed range" [ref=f28e723]
+                            - columnheader "% of speed samples" [ref=f28e724]
+                        - rowgroup [ref=f28e725]:
+                          - row [ref=f28e726]:
+                            - cell "0.0–20.0" [ref=f28e727]
+                            - cell "5" [ref=f28e728]
+                          - row [ref=f28e729]:
+                            - cell "40.0–60.0" [ref=f28e730]
+                            - cell "95" [ref=f28e731]
+                  - region "Power profile" [ref=f28e732]:
+                    - generic [ref=f28e733]:
+                      - figure [ref=f28e734]:
+                        - generic [ref=f28e735]:
+                          - heading "Power profile" [level=3] [ref=f28e738]
+                          - button "Export chart" [ref=f28e741] [cursor=pointer]
+                        - img "Drive power profile area chart over time" [ref=f28e745]:
+                          - paragraph [ref=f28e749]: No telemetry data available
+                        - paragraph [ref=f28e751]: "Chart: Power profile"
+                      - generic [ref=f28e752]:
+                        - paragraph [ref=f28e753]: "Power samples preserve sign: positive draw, negative regeneration. Peak values require observations."
+                        - table "Power profile" [ref=f28e756]:
+                          - rowgroup [ref=f28e757]:
+                            - row [ref=f28e758]:
+                              - rowheader "Max power" [ref=f28e759]
+                              - cell "—" [ref=f28e760]
+                            - row [ref=f28e761]:
+                              - rowheader "Max regen" [ref=f28e762]
+                              - cell "—" [ref=f28e763]
+                            - row [ref=f28e764]:
+                              - rowheader "Mean sampled power" [ref=f28e765]
+                              - cell "—" [ref=f28e766]
+                            - row [ref=f28e767]:
+                              - rowheader "Avg power" [ref=f28e768]
+                              - cell "7.5 kW" [ref=f28e769]
+                            - row [ref=f28e770]:
+                              - rowheader "Min speed" [ref=f28e771]
+                              - cell "41.4 km/h" [ref=f28e772]
+                  - region "Elevation profile" [ref=f28e773]:
+                    - generic [ref=f28e774]:
+                      - table "Elevation summary" [ref=f28e777]:
+                        - rowgroup [ref=f28e778]:
+                          - row [ref=f28e779]:
+                            - rowheader "gain" [ref=f28e780]
+                            - cell "—" [ref=f28e781]
+                          - row [ref=f28e782]:
+                            - rowheader "loss" [ref=f28e783]
+                            - cell "—" [ref=f28e784]
+                          - row [ref=f28e785]:
+                            - rowheader "Net" [ref=f28e786]
+                            - cell "—" [ref=f28e787]
+                      - figure [ref=f28e788]:
+                        - generic [ref=f28e789]:
+                          - heading "Elevation profile" [level=3] [ref=f28e792]
+                          - button "Export chart" [ref=f28e795] [cursor=pointer]
+                        - group "Elevation and speed area+line chart over the drive timeline" [ref=f28e799]:
+                          - status [ref=f28e800]:
+                            - paragraph [ref=f28e803]: No telemetry data available
+                        - paragraph [ref=f28e805]: "Chart: Elevation profile"
+                  - region "Temperatures" [ref=f28e806]:
+                    - generic [ref=f28e807]:
+                      - table "Temperatures" [ref=f28e810]:
+                        - rowgroup [ref=f28e811]:
+                          - row [ref=f28e812]:
+                            - rowheader "Outside temperature" [ref=f28e813]
+                            - cell "18.5°C" [ref=f28e814]
+                          - row [ref=f28e815]:
+                            - rowheader "Inside temperature" [ref=f28e816]
+                            - cell "21.5°C" [ref=f28e817]
+                          - row [ref=f28e818]:
+                            - rowheader "Driver temperature" [ref=f28e819]
+                            - cell "—" [ref=f28e820]
+                          - row [ref=f28e821]:
+                            - rowheader "Passenger temperature" [ref=f28e822]
+                            - cell "—" [ref=f28e823]
+                          - row [ref=f28e824]:
+                            - rowheader "Climate" [ref=f28e825]
+                            - cell "—" [ref=f28e826]
+                          - row [ref=f28e827]:
+                            - rowheader "Fan status" [ref=f28e828]
+                            - cell "—" [ref=f28e829]
+                      - figure [ref=f28e830]:
+                        - generic [ref=f28e831]:
+                          - heading "Temperatures" [level=3] [ref=f28e834]
+                          - button "Export chart" [ref=f28e837] [cursor=pointer]
+                        - group "Inside, outside, driver and passenger temperature lines over the drive timeline" [ref=f28e841]:
+                          - generic [ref=f28e843]:
+                            - img [ref=f28e844]:
+                              - generic [ref=f28e849]:
+                                - generic [ref=f28e850]: 02:14 PM
+                                - generic [ref=f28e852]: 02:19 PM
+                                - generic [ref=f28e854]: 02:24 PM
+                                - generic [ref=f28e856]: 02:34 PM
+                              - generic [ref=f28e859]:
+                                - generic [ref=f28e860]: "0"
+                                - generic [ref=f28e862]: "6"
+                                - generic [ref=f28e864]: "12"
+                                - generic [ref=f28e866]: "18"
+                                - generic [ref=f28e868]: "24"
+                            - list [ref=f28e871]:
+                              - listitem [ref=f28e872]:
+                                - button "Outside °C" [ref=f28e876] [cursor=pointer]
+                              - listitem [ref=f28e877]:
+                                - button "Inside °C" [ref=f28e881] [cursor=pointer]
+                        - paragraph [ref=f28e883]: "Chart: Temperatures"
+                  - region "Tire pressure during drive" [ref=f28e884]:
+                    - generic [ref=f28e885]:
+                      - table "Tire pressure during drive" [ref=f28e888]:
+                        - rowgroup [ref=f28e889]:
+                          - row [ref=f28e890]:
+                            - rowheader "Front left" [ref=f28e891]
+                            - cell "—" [ref=f28e892]
+                          - row [ref=f28e893]:
+                            - rowheader "Front right" [ref=f28e894]
+                            - cell "—" [ref=f28e895]
+                          - row [ref=f28e896]:
+                            - rowheader "Rear left" [ref=f28e897]
+                            - cell "—" [ref=f28e898]
+                          - row [ref=f28e899]:
+                            - rowheader "Rear right" [ref=f28e900]
+                            - cell "—" [ref=f28e901]
+                      - figure [ref=f28e902]:
+                        - generic [ref=f28e903]:
+                          - heading "Tire pressure during drive" [level=3] [ref=f28e906]
+                          - button "Export chart" [ref=f28e909] [cursor=pointer]
+                        - img "Front and rear tire pressure lines over the drive timeline" [ref=f28e913]:
+                          - paragraph [ref=f28e917]: No telemetry data available
+                        - paragraph [ref=f28e919]: "Chart: Tire pressure during drive"
+                - region "Helix speed-profile insights" [ref=f28e920]:
+                  - generic [ref=f28e924]:
+                    - generic [ref=f28e925]:
+                      - generic [ref=f28e926]:
+                        - heading "Speed-profile insights" [level=3] [ref=f28e927]
+                        - generic "Helix" [ref=f28e928]
+                      - paragraph [ref=f28e932]: Get a short plain-language interpretation of this drive’s speed regime distribution — city / suburban / highway buckets, outliers, and how the speed envelope compares to a typical drive — generated from the same per-drive aggregates shown in the chart.
+                    - button "Ask Helix · Generate insights" [ref=f28e933] [cursor=pointer]: Ask Helix
+              - generic [ref=f28e937]:
+                - region "Post-drive physics" [ref=f28e938]:
+                  - generic [ref=f28e939]:
+                    - generic [ref=f28e940]:
+                      - heading "Post-drive physics" [level=3] [ref=f28e941]
+                      - generic "Unknown source" [ref=f28e944]
+                    - paragraph [ref=f28e949]: "One story after the drive: launch vs regen vs pads vs thermal vs FSD km. Not more gauges."
+                    - generic [ref=f28e950]:
+                      - generic [ref=f28e951]: Estimated regen ratio 9.1%
+                      - generic [ref=f28e952]: FSD km unknown
+                    - paragraph [ref=f28e953]: Recovered / (consumed + recovered), using drive-summary energy sources. This ratio is not a metered braking-efficiency measurement.
+                    - list [ref=f28e954]:
+                      - listitem [ref=f28e955]:
+                        - paragraph [ref=f28e956]:
+                          - text: This drive has no power samples. The story would be fanfic.
+                          - generic [ref=f28e957]: (Missing)
+                      - listitem [ref=f28e958]:
+                        - paragraph [ref=f28e959]:
+                          - text: Friction-pad blend is not in this telemetry. Missing, not zero.
+                          - generic [ref=f28e960]: (Missing)
+                      - listitem [ref=f28e961]:
+                        - paragraph [ref=f28e962]:
+                          - text: Stator derate was not measured on this drive. Missing, not cool.
+                          - generic [ref=f28e963]: (Missing)
+                      - listitem [ref=f28e964]:
+                        - paragraph [ref=f28e965]:
+                          - text: Supervised-driving km come from the trip meter, not engagement segments.
+                          - generic [ref=f28e966]: (Missing)
+                    - paragraph [ref=f28e967]:
+                      - link "Power profile" [ref=f28e968] [cursor=pointer]:
+                        - /url: "#power-trace"
+                      - text: ·
+                      - link "Supervised driving" [ref=f28e969] [cursor=pointer]:
+                        - /url: "#fsd-evidence"
+                - region "Energy ledger" [ref=f28e970]:
+                  - generic [ref=f28e971]:
+                    - heading "Energy ledger" [level=3] [ref=f28e972]
+                    - generic [ref=f28e977]:
+                      - generic [ref=f28e978]: "Regen: Unknown"
+                      - generic [ref=f28e979]: "Friction brake: Unknown"
+                    - paragraph [ref=f28e980]: Drive energy from pack power integrated over recorded samples. Session EnergyUsedWh reconciles, never overwrites.
+                    - table "Drive energy ledger" [ref=f28e983]:
+                      - rowgroup [ref=f28e984]:
+                        - row [ref=f28e985]:
+                          - columnheader "Physics term" [ref=f28e986]
+                          - columnheader "Value" [ref=f28e987]
+                          - columnheader "Source and method" [ref=f28e988]
+                          - columnheader "missing" [ref=f28e989]
+                      - rowgroup [ref=f28e990]:
+                        - row [ref=f28e991]:
+                          - rowheader "Measured pack energy" [ref=f28e992]
+                          - cell "Unknown" [ref=f28e993]
+                          - cell "unknown" [ref=f28e994]
+                          - cell "PackVoltage, PackCurrent, EnergyRemaining" [ref=f28e995]
+                        - row [ref=f28e996]:
+                          - rowheader "Aero" [ref=f28e997]
+                          - cell "0.2 kWh" [ref=f28e998]
+                          - cell "half_rho_cda_v3" [ref=f28e999]
+                          - cell "—" [ref=f28e1000]
+                        - row [ref=f28e1001]:
+                          - rowheader "Rolling" [ref=f28e1002]
+                          - cell "Unknown" [ref=f28e1003]
+                          - cell "unknown" [ref=f28e1004]
+                          - cell "mass_kg, VehicleSpeed" [ref=f28e1005]
+                        - row [ref=f28e1006]:
+                          - rowheader "Grade" [ref=f28e1007]
+                          - cell "Unknown" [ref=f28e1008]
+                          - cell "unknown" [ref=f28e1009]
+                          - cell "elevation, mass_kg" [ref=f28e1010]
+                        - row [ref=f28e1011]:
+                          - rowheader "Inertial" [ref=f28e1012]
+                          - cell "Unknown" [ref=f28e1013]
+                          - cell "unknown" [ref=f28e1014]
+                          - cell "mass_kg, VehicleSpeed" [ref=f28e1015]
+                        - row [ref=f28e1016]:
+                          - rowheader "Accessory / HVAC" [ref=f28e1017]
+                          - cell "Unknown" [ref=f28e1018]
+                          - cell "unknown" [ref=f28e1019]
+                          - cell "HVAC power (W)" [ref=f28e1020]
+                        - row [ref=f28e1021]:
+                          - rowheader "Drivetrain loss (model)" [ref=f28e1022]
+                          - cell "0.0 kWh" [ref=f28e1023]
+                          - cell "model_drivetrain_eff" [ref=f28e1024]
+                          - cell "—" [ref=f28e1025]
+                    - table "Ledger reconciliation" [ref=f28e1028]:
+                      - rowgroup [ref=f28e1029]:
+                        - row [ref=f28e1030]:
+                          - rowheader "Predicted (known terms)" [ref=f28e1031]
+                          - cell "0.2 kWh" [ref=f28e1032]
+                        - row [ref=f28e1033]:
+                          - rowheader "Session" [ref=f28e1034]
+                          - cell "2.6 kWh" [ref=f28e1035]
+                        - row [ref=f28e1036]:
+                          - rowheader "reconcile" [ref=f28e1037]
+                          - cell "Unknown" [ref=f28e1038]
+                        - row [ref=f28e1039]:
+                          - rowheader "Unexplained residual" [ref=f28e1040]
+                          - cell "Unknown" [ref=f28e1041]
+                    - paragraph [ref=f28e1042]: Vehicle mass is not configured. Mass-dependent estimates require TESLASYNC_VEHICLE_MASS_KG, which applies to every vehicle in this installation.
+                    - paragraph [ref=f28e1043]: Grade and friction-brake estimates require recorded elevation; this telemetry source does not provide it.
+                    - paragraph [ref=f28e1044]: Tesla reports HVAC on/off state, not power in watts. Accessory energy and the complete unexplained residual cannot be calculated from that state.
+                    - paragraph [ref=f28e1045]:
+                      - link "Open the full physics ledger" [ref=f28e1046] [cursor=pointer]:
+                        - /url: /tesla-physics/ledger
+                - region "Helix drive coaching" [ref=f28e1047]:
+                  - generic [ref=f28e1051]:
+                    - generic [ref=f28e1052]:
+                      - generic [ref=f28e1053]:
+                        - heading "Drive coaching" [level=3] [ref=f28e1054]
+                        - generic "Helix" [ref=f28e1055]
+                      - paragraph [ref=f28e1059]: Get a 2-4 paragraph plain-language coaching summary of this drive — efficiency, regen use, and notable braking or acceleration moments — generated from the same per-drive metrics shown above.
+                    - button "Ask Helix · Generate coaching" [ref=f28e1060] [cursor=pointer]: Ask Helix
+              - generic [ref=f28e1064]:
+                - region "Gear theater" [ref=f28e1065]:
+                  - generic [ref=f28e1066]:
+                    - heading "Gear theater" [level=3] [ref=f28e1067]
+                    - paragraph [ref=f28e1071]: Gear theater is P/R/N/D plus charge-port latch language from the change feed, not a GPS trip.
+                    - paragraph [ref=f28e1072]: No P/R/N/D or charge-port changes were recorded for this drive.
+                - region "Possible road-surface anomalies" [ref=f28e1073]:
+                  - generic [ref=f28e1074]:
+                    - generic [ref=f28e1075]:
+                      - generic [ref=f28e1079]:
+                        - heading "Possible road-surface anomalies" [level=3] [ref=f28e1080]
+                        - paragraph [ref=f28e1081]: Historical telemetry review — not confirmed potholes
+                      - button "Hide analysis" [expanded] [ref=f28e1082] [cursor=pointer]
+                    - generic [ref=f28e1085]:
+                      - paragraph [ref=f28e1086]: Tesla does not report vertical impact or suspension motion. A candidate may be a road seam, speed bump, or maneuver; no candidate does not prove the road was smooth.
+                      - status [ref=f28e1087]:
+                        - heading "Not enough synchronized samples" [level=3] [ref=f28e1091]
+                        - paragraph [ref=f28e1092]: This drive did not record sufficiently close acceleration, speed, and GPS observations to screen for short jolts. Missing evidence is not a smooth-road result.
+                        - link "Review other drives" [ref=f28e1094] [cursor=pointer]:
+                          - /url: /drives
+                - region "Why did this drive end?" [ref=f28e1095]:
+                  - generic [ref=f28e1096]:
+                    - generic [ref=f28e1097]:
+                      - button [expanded] [ref=f28e1098] [cursor=pointer]:
+                        - heading "Why did this drive end?" [level=3] [ref=f28e1101]
+                      - combobox "Diagnostic window" [ref=f28e1104]:
+                        - option "30s"
+                        - option "60s" [selected]
+                        - option "5m"
+                        - option "15m"
+                    - generic [ref=f28e1105]:
+                      - generic [ref=f28e1106]:
+                        - heading "FSM transitions" [level=3] [ref=f28e1112]
+                        - status [ref=f28e1113]:
+                          - heading "No transitions in window" [level=3] [ref=f28e1114]
+                          - paragraph [ref=f28e1115]: No FSM state changes recorded near the drive end. Try a wider window.
+                      - generic [ref=f28e1116]:
+                        - heading "Signal window" [level=3] [ref=f28e1124]
+                        - generic [ref=f28e1125]:
+                          - generic [ref=f28e1126]:
+                            - searchbox "Search loaded rows" [ref=f28e1135]
+                            - generic [ref=f28e1136]:
+                              - radiogroup "List density" [ref=f28e1137]:
+                                - radio "Compact" [ref=f28e1138] [cursor=pointer]
+                                - radio "Comfortable" [checked] [ref=f28e1141] [cursor=pointer]
+                              - button "Export list" [ref=f28e1145] [cursor=pointer]
+                              - button "Reorder or hide columns" [ref=f28e1150] [cursor=pointer]:
+                                - generic [ref=f28e1153]: Columns
+                            - paragraph [ref=f28e1154]: Exports include only matching loaded rows, or selected loaded rows.
+                          - table "why-ended-signals" [ref=f28e1156]:
+                            - caption [ref=f28e1157]: why-ended-signals
+                            - rowgroup [ref=f28e1158]:
+                              - row [ref=f28e1159]:
+                                - columnheader "Timestamp" [ref=f28e1160]:
+                                  - generic [ref=f28e1161]:
+                                    - generic [ref=f28e1170]: Timestamp
+                                    - button "Timestamp filter" [ref=f28e1171] [cursor=pointer]
+                                  - separator "Resize column Timestamp" [ref=f28e1174]
+                                - columnheader "Field" [ref=f28e1175]:
+                                  - generic [ref=f28e1176]:
+                                    - generic [ref=f28e1185]: Field
+                                    - button "Field filter" [ref=f28e1186] [cursor=pointer]
+                                  - separator "Resize column Field" [ref=f28e1189]
+                                - columnheader "Value" [ref=f28e1190]:
+                                  - generic [ref=f28e1191]:
+                                    - generic [ref=f28e1200]: Value
+                                    - button "Value filter" [ref=f28e1201] [cursor=pointer]
+                                  - separator "Resize column Value" [ref=f28e1204]
+                            - rowgroup [ref=f28e1205]:
+                              - row [ref=f28e1206]:
+                                - cell "Oct 2, 2026, 02:34 PM 14h ago" [ref=f28e1207]:
+                                  - generic [ref=f28e1208]:
+                                    - generic [ref=f28e1209]: Oct 2, 2026, 02:34 PM
+                                    - tooltip "14h ago"
+                                - cell "BatteryLevel" [ref=f28e1210]
+                                - cell "74.375" [ref=f28e1211]
+                              - row [ref=f28e1212]:
+                                - cell "Oct 2, 2026, 02:34 PM 14h ago" [ref=f28e1213]:
+                                  - generic [ref=f28e1214]:
+                                    - generic [ref=f28e1215]: Oct 2, 2026, 02:34 PM
+                                    - tooltip "14h ago"
+                                - cell "VehicleSpeed" [ref=f28e1216]
+                                - cell "0" [ref=f28e1217]
+                          - navigation "Pagination" [ref=f28e1219]:
+                            - generic [ref=f28e1220]:
+                              - generic [ref=f28e1221]: Showing 1–2 of 2
+                              - generic [ref=f28e1222]:
+                                - generic [ref=f28e1223]: Rows
+                                - combobox "Rows per page" [ref=f28e1225]:
+                                  - option "25 / page" [selected]
+                                  - option "50 / page"
+                                  - option "100 / page"
+                            - generic [ref=f28e1226]:
+                              - generic [ref=f28e1227]:
+                                - generic [ref=f28e1228]:
+                                  - button "First page" [disabled]
+                                  - button "Previous page" [disabled]
+                                - button "Page 1 of 1" [ref=f28e1230] [cursor=pointer]: "1"
+                                - generic [ref=f28e1231]:
+                                  - button "Next page" [disabled]
+                                  - button "Last page" [disabled]
+                              - generic [ref=f28e1232]:
+                                - generic [ref=f28e1233]: Go to page
+                                - textbox "Go to page" [ref=f28e1237]: "1"
+                                - button "Go" [ref=f28e1238] [cursor=pointer]
+      - navigation "Quick navigation" [ref=f28e88]:
+        - link "Home" [ref=f28e89] [cursor=pointer]:
+          - /url: /
+        - link "Drives" [ref=f28e96] [cursor=pointer]:
+          - /url: /drives
+        - link "Charging" [ref=f28e103] [cursor=pointer]:
+          - /url: /charging
+        - link "Battery" [ref=f28e109] [cursor=pointer]:
+          - /url: /battery
+        - link "Map" [ref=f28e114] [cursor=pointer]:
+          - /url: /live
+        - link "More" [ref=f28e123] [cursor=pointer]:
+          - /url: /explore
+      - contentinfo "Application status" [ref=f28e128]:
+        - generic [ref=f28e129]:
+          - generic [ref=f28e130]:
+            - 'link "API connection status: Online (132ms)" [ref=f28e131] [cursor=pointer]':
+              - /url: /system-status
+            - tooltip "API connection · Online · 132ms"
+          - generic [ref=f28e136]:
+            - 'link "Live telemetry status: Live" [ref=f28e137] [cursor=pointer]':
+              - /url: /signal-diff
+            - tooltip "Live telemetry stream · Last message 0s ago"
+          - generic [ref=f28e143]:
+            - link "Telemetry honesty meter" [ref=f28e144] [cursor=pointer]:
+              - /url: /
+            - tooltip "Live 0 · Stale 0 · Guessed 2 · Missing 0 · Stream live"
+          - generic [ref=f28e148]:
+            - button "Current data with live actions available." [ref=f28e149] [cursor=pointer]
+            - tooltip "Current data with live actions available."
+        - generic [ref=f28e154]:
+          - generic [ref=f28e155]:
+            - button "Open recently viewed pages, 10 saved" [ref=f28e156] [cursor=pointer]
+            - tooltip "Recently viewed pages - 10 pages"
+          - generic [ref=f28e161]:
+            - button "Open more status options. Update or release notes available" [ref=f28e162] [cursor=pointer]
+            - tooltip "Update or release notes available"
+          - generic [ref=f28e169]:
+            - button "Open Helix chat" [ref=f28e170] [cursor=pointer]
+            - tooltip "Open Helix chat"
+      - status "Application status announcements" [ref=f28e174]: "Telemetry honesty: guessed"
+  - generic [aria-hidden] [ref=f28e1239]: "6"

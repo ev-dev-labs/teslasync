@@ -268,7 +268,7 @@ describe('NotificationRow', () => {
   it('hides the drill-through link and rule chip when there is no rule', () => {
     renderRow({ rule: undefined });
     expect(screen.queryByRole('link', { name: /view context/i })).not.toBeInTheDocument();
-    expect(screen.queryByText(/Tire Pressure Low/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Tire pressure Low/)).not.toBeInTheDocument();
     // The persisted severity remains visible even without a rule.
     expect(screen.getByText('warn')).toBeInTheDocument();
   });

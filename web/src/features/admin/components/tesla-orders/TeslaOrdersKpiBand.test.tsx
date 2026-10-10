@@ -111,12 +111,12 @@ function renderBand(over: Partial<OrderStats> = {}) {
 
 /** All six card labels, in render order. */
 const LABELS = [
-  'Total Orders',
+  'Total orders',
   'Delivered',
-  'In Progress',
-  'Ready · Transit',
+  'In progress',
+  'Ready · transit',
   'Upgradable',
-  'Next Delivery',
+  'Next delivery',
 ] as const;
 
 beforeEach(() => {

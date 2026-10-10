@@ -3,6 +3,7 @@ import type { TFunction } from 'i18next';
 import { formatDateTime } from '@/lib/dateFormat';
 import { fmtNumber } from '@/lib/numberFormat';
 import type { DestinationEvidenceBand } from '../../lib/destinationTransitions';
+import { getGlobalPrecision } from '@/lib/numberFormat';
 
 export function destinationEvidenceBandLabel(
   t: TFunction,
@@ -26,7 +27,7 @@ export function destinationEvidenceBandLabel(
 export function destinationPercent(
   value: number | null,
   locale: string,
-  digits = 0,
+  digits = getGlobalPrecision(),
 ): string {
   return value == null || !Number.isFinite(value)
     ? '—'
@@ -39,7 +40,7 @@ export function destinationIndex(
 ): string {
   return value == null || !Number.isFinite(value)
     ? '—'
-    : fmtNumber(value, 0, locale);
+    : fmtNumber(value, undefined, locale);
 }
 
 export function destinationBits(
@@ -48,7 +49,7 @@ export function destinationBits(
 ): string {
   return value == null || !Number.isFinite(value)
     ? '—'
-    : fmtNumber(value, 2, locale);
+    : fmtNumber(value, undefined, locale);
 }
 
 export function destinationLocalHour(

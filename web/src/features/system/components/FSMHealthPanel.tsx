@@ -3,8 +3,9 @@ import { useTranslation } from 'react-i18next';
 import { AlertTriangle, RotateCw, Timer } from 'lucide-react';
 import { GlassPanel } from '@/components/ui';
 import { Grid } from '@/components/layout';
-import { fmtInt } from '@/lib/numberFormat';
+
 import type { FSMTransition } from '@/types/fsm';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface FSMHealthPanelProps {
   transitions: FSMTransition[];
@@ -34,6 +35,7 @@ function parseTs(ts: string): number {
 }
 
 export function FSMHealthPanel({ transitions }: FSMHealthPanelProps) {
+  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
 
   const alerts = useMemo<HealthAlert[]>(() => {
@@ -111,8 +113,8 @@ export function FSMHealthPanel({ transitions }: FSMHealthPanelProps) {
 
   return (
     <GlassPanel className="p-4" data-testid="fsm-health-panel">
-      <h2 className="text-xs font-medium text-[var(--text-secondary)] uppercase tracking-wider mb-3">
-        {t('fsm.health.title', 'FSM Health')}
+      <h2 className="text-xs font-medium text-[var(--text-secondary)] tracking-wider mb-3">
+        {t('fsm.health.title', 'FSM health')}
       </h2>
       <Grid cols={{ default: 1, md: alerts.length }} gap={3}>
         {alerts.map((alert) => {
@@ -122,10 +124,10 @@ export function FSMHealthPanel({ transitions }: FSMHealthPanelProps) {
           const textColor = alert.severity === 'warning' ? 'text-amber-400' : 'text-blue-400';
           const title =
             alert.type === 'flap'
-              ? t('fsm.health.flapTitle', 'State Flapping')
+              ? t('fsm.health.flapTitle', 'State flapping')
               : alert.type === 'stuck'
-                ? t('fsm.health.stuckTitle', 'Stuck Sessions')
-                : t('fsm.health.recoveryTitle', 'Pod Recoveries');
+                ? t('fsm.health.stuckTitle', 'Stuck sessions')
+                : t('fsm.health.recoveryTitle', 'Pod recoveries');
           return (
             <div
               key={alert.type}

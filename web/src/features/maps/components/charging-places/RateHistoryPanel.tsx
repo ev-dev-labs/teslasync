@@ -2,7 +2,9 @@ import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { History, ListChecks, Trash2 } from 'lucide-react';
 
-import { GlassPanel, PanelTitle, Badge, Button, Text, DataTable, useSortToggle, ConfirmDialog, type Column } from '@/components/ui';
+import { Badge, Button, Text, DataTable, useSortToggle, ConfirmDialog, type Column } from '@/components/ui';
+import { LayoutCard, SourceContent } from '@/components/layout';
+import { deriveDataState } from '@/api/dataState';
 import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
 import { TimeStamp } from '@/components/data-display';
 import { useSettings } from '@/hooks/useSettings';
@@ -45,6 +47,7 @@ export function RateHistoryPanel({
   const { confirm, dialogProps } = useConfirm();
 
   const rows = rates ?? [];
+  const state = deriveDataState({ data: rates, isLoading, error });
 
   const sortedRows = useMemo(() => {
     const dir = sortDir === 'asc' ? 1 : -1;
@@ -71,7 +74,7 @@ export function RateHistoryPanel({
         'The previous rate will continue through this cancelled schedule. Effective rate history cannot be deleted.',
       ),
       variant: 'danger',
-      confirmLabel: t('chargingPlaces.rateHistory.cancel', 'Cancel Rate'),
+      confirmLabel: t('chargingPlaces.rateHistory.cancel', 'Cancel rate'),
     });
     if (ok) onDelete(rate);
   };
@@ -80,13 +83,16 @@ export function RateHistoryPanel({
     () => [
       {
         key: 'effective_from',
-        header: t('chargingPlaces.rateHistory.effectiveFrom', 'Effective From'),
+        header: t('chargingPlaces.rateHistory.effectiveFrom', 'Effective from'),
         sortable: true,
         render: (r) => <TimeStamp value={r.effective_from} format="absolute" />,
       },
       {
         key: 'rate_per_wh',
         header: t('chargingPlaces.rateHistory.rate', 'Rate / kWh'),
+        align: 'right',
+        filterValue: (r) => r.rate_per_wh == null ? null : `${r.currency}:${r.rate_per_wh}`,
+        filterValueLabel: (_value, r) => formatRatePerWh(r.rate_per_wh, r.currency, locale) || '—',
         sortable: true,
         render: (r) => (
           <Text variant="body" className="tabular-nums">
@@ -97,6 +103,7 @@ export function RateHistoryPanel({
       {
         key: 'currency',
         header: t('chargingPlaces.rateHistory.currency', 'Currency'),
+        filterValue: (r) => r.currency ?? null,
         sortable: false,
         render: (r) => (
           <Badge variant="neutral" size="sm">
@@ -106,7 +113,7 @@ export function RateHistoryPanel({
       },
       {
         key: 'effective_to',
-        header: t('chargingPlaces.rateHistory.effectiveTo', 'Effective To'),
+        header: t('chargingPlaces.rateHistory.effectiveTo', 'Effective to'),
         sortable: false,
         render: (r) =>
           isRateActiveAt(r) ? (
@@ -126,8 +133,9 @@ export function RateHistoryPanel({
         header: '',
         sortable: false,
         render: (r) => (
-          <div className="flex items-center gap-2">
+          <div className="flex min-w-0 flex-wrap items-center gap-2">
             <Button
+              wrapLabel
               size="sm"
               variant={selectedRateId === r.id ? 'primary' : 'secondary'}
               icon={<ListChecks className="h-3.5 w-3.5" aria-hidden="true" />}
@@ -154,11 +162,7 @@ export function RateHistoryPanel({
   );
 
   return (
-    <GlassPanel className="p-4 sm:p-5">
-      <PanelTitle className="mb-3 flex items-center gap-2">
-        <History className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-        {t('chargingPlaces.rateHistory.title', 'Rate History')}
-      </PanelTitle>
+    <LayoutCard title={t('chargingPlaces.rateHistory.title', 'Rate history')} actions={<History className="h-4 w-4 text-cyan-300" aria-hidden="true" />}>
       <Text as="p" size="sm" color="muted" className="mb-3">
         {t(
           'chargingPlaces.rateHistory.previewHelp',
@@ -166,23 +170,31 @@ export function RateHistoryPanel({
         )}
       </Text>
 
-      {error ? (
-        <QueryError error={error} onRetry={onRetry} resourceName={t('chargingPlaces.rateHistory.title', 'Rate History')} />
-      ) : isLoading && rows.length === 0 ? (
+      <SourceContent
+        state={state.refreshError ? 'retained' : 'ready'}
+        label={t('chargingPlaces.rateHistory.title', 'Rate history')}
+        errorMessage={t('chargingPlaces.detail.pricingLoadFailed', 'Rate setup data could not be loaded.')}
+        emptyMessage={t('chargingPlaces.rateHistory.empty', 'No rate configured yet — use the form above to start pricing sessions at this place.')}
+        errorRecovery={{ onRetry }}
+      >
+      {state.fatalError ? (
+        <QueryError error={state.fatalError} onRetry={onRetry} resourceName={t('chargingPlaces.rateHistory.title', 'Rate history')} />
+      ) : isLoading && !state.hasData ? (
         <Skeleton className="h-40 w-full" />
       ) : rows.length === 0 ? (
         <>
           {/* no-action: the adjacent rate form is the action for this empty state. */}
           <EmptyState
-            message={t(
+            message={state.hasData ? t(
               'chargingPlaces.rateHistory.empty',
               'No rate configured yet — use the form above to start pricing sessions at this place.',
-            )}
+            ) : t('chargingPlaces.rateHistory.unavailable', 'Rate history is unavailable.')}
           />
         </>
       ) : (
         <DataTable
           tableId="maps:charging-place-rate-history"
+          enableValueFilters
           columns={columns}
           mobileColumns={['effective_from', 'rate_per_wh', 'effective_to']}
           data={sortedRows}
@@ -197,7 +209,8 @@ export function RateHistoryPanel({
         />
       )}
 
+      </SourceContent>
       {dialogProps && <ConfirmDialog {...dialogProps} />}
-    </GlassPanel>
+    </LayoutCard>
   );
 }

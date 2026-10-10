@@ -2,7 +2,7 @@
  * SignalDiffPage — compare signal values between two snapshots in time.
  *
  * Modern-UI full-width redesign: a compare-controls filter bar, a responsive
- * MetricCard KPI band, an aggregate "change analysis" bento
+ * OperationalBrief KPI band, an aggregate "change analysis" bento
  * (`SignalDiffBreakdown`), a bulk-actions toolbar, and the row-level
  * `SignalDiffTable` as the full-width detail band.
  *
@@ -13,12 +13,13 @@
 import { useEffect, useMemo, useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
-import { GitCompare, Bell, Pin, PinOff, Filter, Layers, Clock, Sigma } from 'lucide-react';
+import { GitCompare, Bell, Pin, PinOff } from 'lucide-react';
 
-import { PageContainer } from '@/components/layout';
-import { GlassPanel, Select, CopyButton, PanelTitle, Text } from '@/components/ui';
-import { MetricCard, BulkActionsToolbar, SavedViewMenu, type BulkAction } from '@/components/data-display';
-import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
+import { PageLayout } from '@/components/layout';
+import { GlassPanel, Select, CopyButton, PanelTitle, Text, HelpTooltip } from '@/components/ui';
+import { BulkActionsToolbar, SavedViewMenu, type BulkAction, type StatMetric } from '@/components/data-display';
+import { TelemetrySummaryBrief } from '../components/operationalbrief-all/TelemetrySummaryBrief';
+import { Skeleton, EmptyState, QueryError, StaleRefreshWarning } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import {
   useSignals,
@@ -28,6 +29,7 @@ import {
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { usePinned, useTogglePin } from '@/api/hooks/usePinned';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useDataState } from '@/hooks/useDataState';
 import { useSavedViewUrl } from '@/hooks/useSavedViewUrl';
 import { useUrlNumber, useUrlString } from '@/hooks/useUrlState';
 import { downloadCSV, objectsToCSV } from '@/lib/csvExport';
@@ -69,7 +71,7 @@ export function formatSpan(totalSeconds: number): string {
 export default function SignalDiffPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  usePageTitle(t('signalDiff.title', 'Signal Diff'));
+  usePageTitle(t('signalDiff.title', 'Signal diff'));
   const { currentQuery, apply } = useSavedViewUrl();
 
   // Vehicle picker — kept page-local (not the global VehicleSelect) so
@@ -107,7 +109,9 @@ export default function SignalDiffPage() {
 
   // Pinned-signal state via pinned_items (item_type='widget')
   const pinContext = `signal-diff:vehicle:${vehicleId}`;
-  const { data: pinnedItems = [] } = usePinned('widget', pinContext);
+  const pinnedQuery = usePinned('widget', pinContext);
+  const { data: pinnedItems = [] } = pinnedQuery;
+  const pinnedState = useDataState(pinnedQuery);
   const pinnedSignals = useMemo(() => {
     const set = new Set<string>();
     for (const p of pinnedItems) {
@@ -136,7 +140,8 @@ export default function SignalDiffPage() {
     signalsCsv,
     { enabled: vehicleId > 0 && Boolean(atAIso) && Boolean(atBIso) },
   );
-  const { data: diffResp, isLoading, error, refetch } = diffQuery;
+  const { data: diffResp, isLoading, refetch } = diffQuery;
+  const diffState = useDataState(diffQuery, { provenance: 'historical' });
 
   const allRows: SignalDiffRow[] = diffResp?.data ?? [];
   const filteredRows = useMemo(() => {
@@ -156,11 +161,11 @@ export default function SignalDiffPage() {
   // A failed diff must not read as "0 changed / 0 numeric / 0 categories" in the
   // KPI band — that silently reports "nothing changed" for what is actually an
   // error, which is dangerous on an incident-response surface. When the diff is
-  // untrustworthy (initial load or error) the diff-derived metrics show "—",
+  // unavailable (initial load or fatal error) the diff-derived metrics show "—",
   // mirroring the table + breakdown, which both switch to their error/loading
-  // UI. Pinned count and window span come from independent sources (the pinned
+  // UI. Retained results survive refresh failures. Pinned count and window span come from independent sources (the pinned
   // query and the date inputs) so they stay visible regardless.
-  const metricsUnavailable = initialLoading || Boolean(error);
+  const metricsUnavailable = initialLoading || diffState.fatalError != null;
 
   // Derived KPI metrics (from the already-fetched rows — no extra hooks).
   const numericChanges = useMemo(
@@ -250,13 +255,40 @@ export default function SignalDiffPage() {
     () => (vehicles ?? []).map((v) => ({ value: String(v.id), label: v.display_name || v.vin })),
     [vehicles],
   );
+  const rawWindowSpan = atAIso && atBIso
+    ? Math.abs(Date.parse(atBIso) - Date.parse(atAIso)) / 1000 : null;
+  const metrics: readonly StatMetric[] = [
+    ...([
+      ['changed', 'signalDiff.totalChanged', 'Changed signals', allRows.length],
+      ['visible', 'signalDiff.visible', 'Visible after filter', filteredRows.length],
+      ['numeric', 'signalDiff.numericChanges', 'Numeric changes', numericChanges],
+      ['categories', 'signalDiff.categoriesAffected', 'Categories affected', categoriesAffected],
+    ] as const).map(([key, labelKey, label, raw]): StatMetric => ({
+      metricId: 'count', occurrenceId: key, rawValue: metricsUnavailable || diffResp == null ? null : raw,
+      label: t(labelKey, label),
+      description: key === 'changed'
+        ? t('telemetry.brief.diffAllRows', 'All returned changed rows before name and category filters.')
+        : t('telemetry.brief.diffFiltered', 'Returned changed rows after the current name and category filters; numeric changes retain the existing value coercion.'),
+    })),
+    { metricId: 'count', occurrenceId: 'pinned', rawValue: pinnedQuery.data == null ? null : pinnedSignals.size,
+      label: t('signalDiff.pinnedCount', 'Pinned'),
+      description: t('telemetry.brief.pinSource', 'Independent saved pins for this vehicle; not limited to visible diff rows.'),
+      context: pinnedState.refreshError || pinnedState.status === 'stale'
+        ? t('operationalSummary.retained', 'Retained source data')
+        : pinnedState.fatalError ? t('operationalSummary.unavailable', 'Source unavailable') : undefined },
+    { metricId: 'duration', occurrenceId: 'window-span', rawValue: rawWindowSpan,
+      label: t('signalDiff.windowSpan', 'Window span'),
+      display: { formatter: () => ({ value: windowSpanLabel, unit: '' }) },
+      description: t('telemetry.brief.diffWindow', 'Absolute time between the two snapshot inputs; not a sample coverage duration.'),
+      context: `${atAIso || '—'} → ${atBIso || '—'}` },
+  ];
 
   return (
-    <PageContainer
-      title={t('signalDiff.title', 'Signal Diff')}
+    <PageLayout
+      title={t('signalDiff.title', 'Signal diff')}
       subtitle={t('signalDiff.subtitle', 'Compare signal values between two snapshots in time')}
       query={diffQuery}
-      actions={
+      overflowActions={
         <div className="flex flex-wrap items-center justify-end gap-2">
           <SavedViewMenu route="/telemetry/signal-diff" currentQuery={currentQuery} onApply={apply} />
           {permalinkUrl ? (
@@ -293,55 +325,23 @@ export default function SignalDiffPage() {
 
       {/* 2 — KPI band: full-width responsive metric grid */}
       <FadeIn>
-        <section
-          aria-label={t('signalDiff.kpisLabel', 'Diff summary')}
-          className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 xl:grid-cols-6"
-        >
-          <MetricCard
-            label={t('signalDiff.totalChanged', 'Changed signals')}
-            value={metricsUnavailable ? '—' : allRows.length}
-            icon={<GitCompare className="h-5 w-5" />}
-            color="cyan"
-          />
-          <MetricCard
-            label={t('signalDiff.visible', 'Visible after filter')}
-            value={metricsUnavailable ? '—' : filteredRows.length}
-            icon={<Filter className="h-5 w-5" />}
-            color="blue"
-          />
-          <MetricCard
-            label={t('signalDiff.numericChanges', 'Numeric changes')}
-            value={metricsUnavailable ? '—' : numericChanges}
-            icon={<Sigma className="h-5 w-5" />}
-            color="green"
-          />
-          <MetricCard
-            label={t('signalDiff.categoriesAffected', 'Categories affected')}
-            value={metricsUnavailable ? '—' : categoriesAffected}
-            icon={<Layers className="h-5 w-5" />}
-            color="purple"
-          />
-          <MetricCard
-            label={t('signalDiff.pinnedCount', 'Pinned')}
-            value={pinnedSignals.size}
-            icon={<Pin className="h-5 w-5" />}
-            color="amber"
-          />
-          <MetricCard
-            label={t('signalDiff.windowSpan', 'Window span')}
-            value={windowSpanLabel}
-            icon={<Clock className="h-5 w-5" />}
-            color="cyan"
-          />
-        </section>
+        <TelemetrySummaryBrief title={t('signalDiff.kpisLabel', 'Diff summary')}
+          metrics={metrics} testId="signal-diff-page-summary"
+          unavailable={diffState.fatalError != null} unknown={diffResp == null && !initialLoading} sourceStatus={diffState.status}
+          retained={diffResp != null && (diffState.isRefreshing || diffState.status === 'stale' || diffState.refreshError != null)}
+          statusLabel={initialLoading ? t('operationalSummary.loading', 'Loading sources') : undefined}
+          scope={`${atAIso || '—'} → ${atBIso || '—'}`}
+          provenance={t('telemetry.brief.diffProvenance', 'Server snapshot diff; independent saved-pin query and local snapshot inputs')}
+          description={t('telemetry.brief.diffScope', 'Changed-row counts describe the returned comparison. Filtered counts, saved pins, and the snapshot input span have independent scopes.')} />
       </FadeIn>
 
       {/* 3 — Change analysis bento: category + source-layer + pinned breakdowns */}
+      <StaleRefreshWarning state={diffState} label={t('signalDiff.tableTitle', 'Signal differences')} />
       <FadeIn delay={0.1}>
         <SignalDiffBreakdown
           rows={filteredRows}
           loading={initialLoading}
-          error={error}
+          error={diffState.fatalError}
           onRetry={() => refetch()}
           filterActive={filterActive}
           onClearFilters={() => {
@@ -355,6 +355,7 @@ export default function SignalDiffPage() {
       {/* 4 — Bulk actions (sticky) for the current table selection */}
       <BulkActionsToolbar
         selectedIds={selectedSignals}
+        selectionScope="selected"
         total={filteredRows.length}
         onClear={() => setSelectedSignals([])}
         actions={bulkActions}
@@ -366,9 +367,14 @@ export default function SignalDiffPage() {
           <PanelTitle className="mb-3 flex items-center gap-2">
             <GitCompare className="h-4 w-4 text-cyan-300" aria-hidden="true" />
             {t('signalDiff.tableTitle', 'Signal differences')}
+            <HelpTooltip
+              i18nKey="help.signal.diff"
+              defaultValue="Server-side comparison between two snapshots. Unchanged signals are omitted from the result to reduce noise."
+              ariaLabel={t('signalDiff.tableTitle', 'Signal differences')}
+            />
           </PanelTitle>
-          {error ? (
-            <QueryError error={error} onRetry={() => refetch()} />
+          {diffState.fatalError ? (
+            <QueryError error={diffState.fatalError} onRetry={() => refetch()} />
           ) : initialLoading ? (
             <div className="space-y-2">
               {Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} height={36} />)}
@@ -392,6 +398,6 @@ export default function SignalDiffPage() {
           )}
         </GlassPanel>
       </FadeIn>
-    </PageContainer>
+    </PageLayout>
   );
 }

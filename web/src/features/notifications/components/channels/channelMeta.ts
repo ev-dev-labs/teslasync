@@ -93,15 +93,15 @@ export const CHANNEL_TYPES: readonly ChannelTypeMeta[] = [
     { key: 'webhook_url', i18nKey: 'notifications.channels.fields.webhookUrl', label: 'Webhook URL', placeholder: 'https://hooks.slack.com/services/...', type: 'url' },
   ] },
   { value: 'telegram', label: 'Telegram', icon: Send, color: '#0088cc', fields: [
-    { key: 'bot_token', i18nKey: 'notifications.channels.fields.botToken', label: 'Bot Token', placeholder: '123456:ABC-...', type: 'password' },
+    { key: 'bot_token', i18nKey: 'notifications.channels.fields.botToken', label: 'Bot token', placeholder: '123456:ABC-...', type: 'password' },
     { key: 'chat_id', i18nKey: 'notifications.channels.fields.chatId', label: 'Chat ID', placeholder: '-1001234567890', type: 'text' },
   ] },
   { value: 'email', label: 'Email', icon: Mail, color: '#EA4335', fields: [
-    { key: 'smtp_host', i18nKey: 'notifications.channels.fields.smtpHost', label: 'SMTP Host', placeholder: 'smtp.gmail.com', type: 'text' },
-    { key: 'smtp_port', i18nKey: 'notifications.channels.fields.smtpPort', label: 'SMTP Port', placeholder: '587', type: 'text' },
-    { key: 'smtp_username', i18nKey: 'notifications.channels.fields.smtpUsername', label: 'SMTP Username', placeholder: 'alerts@example.com', type: 'text' },
-    { key: 'smtp_password', i18nKey: 'notifications.channels.fields.smtpPassword', label: 'SMTP Password', placeholder: '••••••••', type: 'password' },
-    { key: 'from_address', i18nKey: 'notifications.channels.fields.fromAddress', label: 'From Address', placeholder: 'alerts@example.com', type: 'email' },
+    { key: 'smtp_host', i18nKey: 'notifications.channels.fields.smtpHost', label: 'SMTP host', placeholder: 'smtp.gmail.com', type: 'text' },
+    { key: 'smtp_port', i18nKey: 'notifications.channels.fields.smtpPort', label: 'SMTP port', placeholder: '587', type: 'text' },
+    { key: 'smtp_username', i18nKey: 'notifications.channels.fields.smtpUsername', label: 'SMTP username', placeholder: 'alerts@example.com', type: 'text' },
+    { key: 'smtp_password', i18nKey: 'notifications.channels.fields.smtpPassword', label: 'SMTP password', placeholder: '••••••••', type: 'password' },
+    { key: 'from_address', i18nKey: 'notifications.channels.fields.fromAddress', label: 'From address', placeholder: 'alerts@example.com', type: 'email' },
     { key: 'to_addresses', i18nKey: 'notifications.channels.fields.toAddresses', label: 'Recipients (comma-separated)', placeholder: 'you@example.com,ops@example.com', type: 'text' },
   ] },
   { value: 'webhook', label: 'Webhook', icon: Webhook, color: '#FF6B35', fields: [
@@ -113,8 +113,8 @@ export const CHANNEL_TYPES: readonly ChannelTypeMeta[] = [
     { key: 'topic', i18nKey: 'notifications.channels.fields.topic', label: 'Topic', placeholder: 'teslasync', type: 'text' },
   ] },
   { value: 'pushover', label: 'Pushover', icon: Smartphone, color: '#249DF1', fields: [
-    { key: 'user_key', i18nKey: 'notifications.channels.fields.userKey', label: 'User Key', placeholder: 'u1v2w3...', type: 'password' },
-    { key: 'app_token', i18nKey: 'notifications.channels.fields.appToken', label: 'App Token', placeholder: 'a1b2c3...', type: 'password' },
+    { key: 'user_key', i18nKey: 'notifications.channels.fields.userKey', label: 'User key', placeholder: 'u1v2w3...', type: 'password' },
+    { key: 'app_token', i18nKey: 'notifications.channels.fields.appToken', label: 'App token', placeholder: 'a1b2c3...', type: 'password' },
   ] },
 ];
 

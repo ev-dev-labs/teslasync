@@ -1,0 +1,360 @@
+{
+  "item": "audit-page-168",
+  "phase": 0,
+  "page": "web\\src\\features\\server\\ConnectPage.tsx",
+  "routes": [
+    {
+      "path": "/connect",
+      "evidence": "web\\src\\App.tsx:567",
+      "composition": "Standalone SafeRoute sibling of the Layout route at App.tsx:573; lazy page declaration at App.tsx:355.",
+      "entry": "ServerGate permits /connect and redirects to it when needsServerSetup() returns true.",
+      "entryEvidence": [
+        "web\\src\\features\\server\\ServerGate.tsx:19-23",
+        "web\\src\\lib\\serverConnection.ts:229-238"
+      ],
+      "runtimeMounted": "unverified"
+    }
+  ],
+  "purpose": "Standalone server-origin and optional personal access token setup for generic Capacitor/Electron shells, also reachable for manual server switching.",
+  "primaryGoal": "Validate the chosen TeslaSync origin and authentication requirement, retain the connection through existing storage policy, then fully reload onto that server without weakening authentication or certificate protections.",
+  "dataSources": [
+    {
+      "name": "Saved server origin",
+      "hook": "No query hook; useState(getServerBaseUrl) reads the existing connection owner once.",
+      "owner": "web\\src\\lib\\serverConnection.ts",
+      "endpoint": null,
+      "evidence": [
+        "web\\src\\features\\server\\ConnectPage.tsx:55",
+        "web\\src\\lib\\serverConnection.ts:87-95"
+      ],
+      "behavior": "Reads and normalizes localStorage origin; absent, invalid or unreadable value resolves to empty. Token field starts empty rather than revealing a stored token."
+    },
+    {
+      "name": "Candidate server authentication-mode probe",
+      "hook": "probeServer; imperative user-triggered connection operation, not normal cached page data.",
+      "owner": "web\\src\\lib\\serverConnection.ts",
+      "endpoint": "GET {normalized candidate origin}/api/v1/system/auth-mode",
+      "backendOwner": "systemAuthModeHandler via internal\\api\\router.go",
+      "evidence": [
+        "web\\src\\features\\server\\ConnectPage.tsx:74-92",
+        "web\\src\\lib\\serverConnection.ts:258-284",
+        "internal\\api\\router.go:3167",
+        "internal\\api\\router.go:4352",
+        "internal\\api\\router.go:4365-4375"
+      ],
+      "behavior": "Ten-second AbortController timeout; credentials omitted; supplied token is sent only as an authorization header. 401 becomes authenticationRequired; other HTTP failures, malformed response, timeout and transport failures become generic failure. Nonempty string mode is returned; the page specifically checks forward_auth.",
+      "limits": "Route registration matches the URL. Handler payload, reverse-proxy behavior, CORS, TLS trust, token validity and native transport are not exercised or fully traced. Do not infer that a successful mode discovery proves all authenticated API access."
+    },
+    {
+      "name": "Connection persistence and reboot",
+      "hook": "setServerConnection",
+      "owner": "web\\src\\lib\\serverConnection.ts",
+      "endpoint": null,
+      "evidence": [
+        "web\\src\\features\\server\\ConnectPage.tsx:93-100",
+        "web\\src\\lib\\serverConnection.ts:123-137",
+        "web\\src\\lib\\serverConnection.ts:229-238"
+      ],
+      "behavior": "Normalized origin and token-required marker use existing localStorage keys; trimmed token uses sessionStorage only; legacy localStorage token is removed. Successful save navigates to / for a complete reboot. A storage exception yields a recoverable page alert. Native restart without the required session token returns to setup while keeping the origin.",
+      "limits": "Storage transaction atomicity, browser policy and reload/provider behavior are unverified."
+    }
+  ],
+  "components": [
+    {
+      "name": "GlassPanel",
+      "owner": "web\\src\\components\\ui\\GlassPanel.tsx",
+      "kind": "surface primitive",
+      "contract": "w-full max-w-md p-6 caller; default glow=none and hover=false; shared panel tokens and forced-color surface.",
+      "evidence": ["web\\src\\features\\server\\ConnectPage.tsx:108-109", "web\\src\\components\\ui\\GlassPanel.tsx:47-77"]
+    },
+    {
+      "name": "PageHeader",
+      "owner": "web\\src\\components\\layout\\PageHeader.tsx",
+      "kind": "shared header composite",
+      "contract": "Localized title/subtitle, decorative server icon; compactHeader defaults true. Subtitle is accessible through the existing More info tooltip rather than permanently visible. h1 route-focus target and FadeIn remain.",
+      "evidence": ["web\\src\\features\\server\\ConnectPage.tsx:110-114", "web\\src\\components\\layout\\PageHeader.tsx:15", "web\\src\\components\\layout\\PageHeader.tsx:70-97"]
+    },
+    {
+      "name": "Input",
+      "owner": "web\\src\\components\\ui\\Input.tsx",
+      "kind": "field primitive",
+      "contract": "Controlled server and masked token fields, generated stable useId associations, labels, hint descriptions, native props and focus tokens. Default size md is min-h-10.",
+      "evidence": ["web\\src\\features\\server\\ConnectPage.tsx:116-135", "web\\src\\components\\ui\\Input.tsx:29-34", "web\\src\\components\\ui\\Input.tsx:51-61", "web\\src\\components\\ui\\Input.tsx:86-110"]
+    },
+    {
+      "name": "Button",
+      "owner": "web\\src\\components\\ui\\Button.tsx",
+      "kind": "action primitive",
+      "contract": "Primary submit, size md, full width; loading disables button and supplies aria-busy with decorative spinner. Existing wrapLabel and lg size support are available.",
+      "evidence": ["web\\src\\features\\server\\ConnectPage.tsx:146-150", "web\\src\\components\\ui\\Button.tsx:36-49", "web\\src\\components\\ui\\Button.tsx:61-87"]
+    },
+    {
+      "name": "Text and ErrorText",
+      "owner": "web\\src\\components\\ui\\Typography.tsx",
+      "kind": "typography primitives",
+      "contract": "Localized forward-auth caption and semantic role=alert error paragraph; preserve as overrides and shared typography roles.",
+      "evidence": ["web\\src\\features\\server\\ConnectPage.tsx:136-145", "web\\src\\components\\ui\\Typography.tsx:71-99", "web\\src\\components\\ui\\Typography.tsx:113-115"]
+    },
+    {
+      "name": "usePageTitle and Icons",
+      "owner": "web\\src\\hooks\\usePageTitle.ts; @/lib/icons registry",
+      "kind": "existing title and icon owners",
+      "contract": "Localized document title restores previous base title on unmount; server/key icons are decorative and aria-hidden.",
+      "evidence": ["web\\src\\hooks\\usePageTitle.ts:23-29", "web\\src\\features\\server\\ConnectPage.tsx:53", "web\\src\\features\\server\\ConnectPage.tsx:104-105", "web\\src\\features\\server\\ConnectPage.tsx:113", "web\\src\\features\\server\\ConnectPage.tsx:134"],
+      "limits": "Icon registry implementation not inspected."
+    }
+  ],
+  "duplicatedPatterns": {
+    "confirmed": [],
+    "assessment": "Two fields correctly reuse Input; header, surface, alert and submit reuse existing category barrels. No new duplicate component is justified by this single-page scope.",
+    "evidence": "web\\src\\features\\server\\ConnectPage.tsx:13-22,108-151",
+    "limits": "No application-wide duplication inventory was performed."
+  },
+  "responsive": {
+    "sourceStrategy": "One centered stacked form, min-h-dvh, outer p-4, w-full max-w-md panel with p-6. Constrained form width is appropriate for this standalone setup task, not an analytical full-width report.",
+    "evidence": "web\\src\\features\\server\\ConnectPage.tsx:108-115",
+    "requiredWidths": [320, 375, 390, 430, 768, 1024, 1280, 1440, 1920, 2560],
+    "verification": "All viewport, virtual-keyboard, orientation, safe-area, zoom and RTL behavior unverified.",
+    "issues": [
+      {
+        "file": "web\\src\\features\\server\\ConnectPage.tsx",
+        "line": 108,
+        "rule": "MDC-043; mission sections 15/16",
+        "detail": "Centered min-height layout and fixed nested padding need real short-height/mobile-keyboard and long-localized-copy review; no source-only proof of clipping or safe scrolling is available.",
+        "fix": "Validate all required widths plus short-height native keyboard states and 200% text. If overflow is observed, use existing spacing and scroll composition while preserving every field, hint, error and action.",
+        "owner": "page",
+        "confidence": "medium; verification risk, not reproduced defect"
+      }
+    ]
+  },
+  "accessibility": {
+    "sourcePositives": [
+      "Semantic form submission and shared h1 route-focus target.",
+      "Input provides label association and hint descriptions; password masking and URL keyboard hint are retained.",
+      "Decorative icons are aria-hidden; submit loading exposes aria-busy; ErrorText exposes role=alert.",
+      "PageHeader uses shared FadeIn, whose reduced-motion path sets initial=false and derives timing from useMotionPreference."
+    ],
+    "evidence": [
+      "web\\src\\features\\server\\ConnectPage.tsx:115-150",
+      "web\\src\\components\\ui\\Input.tsx:51-61,86-110",
+      "web\\src\\components\\layout\\PageHeader.tsx:70-95",
+      "web\\src\\components\\motion\\FadeIn.tsx:25-34"
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\server\\ConnectPage.tsx",
+        "line": 142,
+        "rule": "MDC-021/MDC-040; mission section 30",
+        "detail": "The page has only a general error string and alert. Neither Input receives error or an association to that alert, so invalid-origin and missing/rejected-token feedback does not mark its responsible field aria-invalid.",
+        "fix": "Track field ownership for existing failures and use Input.error or explicit described-by wiring without duplicate announcements. Retain a general alert for transport/storage failures and preserve all existing rejection messages.",
+        "owner": "page",
+        "confidence": "high; source-confirmed association gap"
+      },
+      {
+        "file": "web\\src\\features\\server\\ConnectPage.tsx",
+        "line": 146,
+        "rule": "MDC-040 stronger mobile target default",
+        "detail": "Submit size md maps to h-10 (40px); fields default to min-h-10. This is below the contract's 44px stronger mobile default, but actual hit rectangles and WCAG spacing exceptions were not measured.",
+        "fix": "Reuse existing Button/Input lg or scoped minimum-height classes for mobile reachability; do not change global density defaults or claim measured WCAG failure without browser evidence.",
+        "owner": "page",
+        "confidence": "high for declared sizing; runtime target compliance unverified"
+      },
+      {
+        "file": "web\\src\\features\\server\\ConnectPage.tsx",
+        "line": 124,
+        "rule": "MDC-040/MDC-043 keyboard and focus",
+        "detail": "Server autofocus may interact with the shared route-focus manager and native virtual keyboard; existing test source expects autofocus, but real focus order and keyboard behavior are unverified.",
+        "fix": "Exercise first-run and manual /connect entry with keyboard and native soft keyboard. Preserve intentional autofocus and route-focus semantics unless a verified conflict requires coordinated integration.",
+        "owner": "integration",
+        "confidence": "medium; source-confirmed interaction to validate"
+      }
+    ],
+    "runtimeStatus": "Keyboard, screen-reader announcements, tooltip visibility, composed contrast, touch targets and reduced-motion rendering NOTRUN."
+  },
+  "states": {
+    "initial": "Saved normalized origin or empty field, empty token, no mode hint/error, idle submit. Blank configuration is an actionable setup state, not an empty data panel.",
+    "loading": "busy blocks repeated submissions and disables/loading-labels submit; fields remain editable.",
+    "validation": "Six localized URL rejection categories return before probing.",
+    "authentication": "401 distinguishes missing from rejected token; successful forward_auth discovery without token shows mode hint and token-required alert.",
+    "error": "Generic unreachable alert for other probe failures; storage/save catch displays enabled-storage recovery guidance; same form permits retry.",
+    "success": "Persist through existing helper then navigate to /; no success screen is needed for a reboot flow.",
+    "offline": "Not separately identified from transport/HTTP/malformed-response failure.",
+    "stalePartial": "No historical dataset or refresh cache on this form; stale and partial data states are not applicable. Do not add fabricated status badges.",
+    "evidence": "web\\src\\features\\server\\ConnectPage.tsx:55-100,136-150; web\\src\\lib\\serverConnection.ts:258-284",
+    "issues": [
+      {
+        "file": "web\\src\\features\\server\\ConnectPage.tsx",
+        "line": 84,
+        "rule": "MDC-026/MDC-046; mission sections 24/25",
+        "detail": "Timeout, network/CORS/TLS failures, non-401 HTTP failures and invalid payload all produce the same unreachable message because the existing helper exposes no reason.",
+        "fix": "Coordinate an extension of the existing probe result contract for observable timeout/HTTP/invalid-response reasons and a truthful unknown transport fallback. Never claim JavaScript can always distinguish TLS from CORS or offline, and never offer certificate/auth bypass instructions.",
+        "owner": "integration",
+        "confidence": "high; source-confirmed information loss"
+      },
+      {
+        "file": "web\\src\\features\\server\\ConnectPage.tsx",
+        "line": 119,
+        "rule": "MDC-026 asynchronous trust",
+        "detail": "Fields stay editable during the probe, while the async submit closes over the server/token values from its starting render. Later edits can differ from the values saved on success.",
+        "fix": "Make the in-flight candidate unambiguous with existing disabled field states or an explicit attempt snapshot and cancel/retry policy. Preserve entered values on failure and do not publish token content in a status summary.",
+        "owner": "page",
+        "confidence": "high for source control flow; runtime interaction not exercised"
+      }
+    ]
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\server\\ConnectPage.tsx",
+      "line": 109,
+      "rule": "MDC-010/MDC-012/MDC-015; mission sections 5/7/43",
+      "detail": "No explicit neon classes, glow props, saturated gradients or fixed pure-white classes appear in this page. GlassPanel defaults to no hover/glow; header and primary action inherit theme accent. Effective brightness/saturation and white-on-accent contrast cannot be certified from source.",
+      "fix": "Retain neutral shared surface/text tokens and one restrained primary action. Flag actual excessive accent saturation/glow/pure-white noise during theme QA rather than adding a local palette or resetting saved theme choices.",
+      "owner": "page",
+      "confidence": "high for literal/default inspection; visual appearance unverified"
+    },
+    {
+      "file": "web\\src\\features\\server\\ConnectPage.tsx",
+      "line": 112,
+      "rule": "MDC-031/MDC-040; mission section 43 information hierarchy",
+      "detail": "Existing compact PageHeader moves introductory subtitle to its help tooltip. Guidance is not source-deleted, but visibility and discoverability for first-run users require real touch/keyboard review.",
+      "fix": "Preserve the entire introduction and help action. If it proves hard to discover, use existing compactHeader=false or an existing Text role for visible guidance, without inventing another header component.",
+      "owner": "page",
+      "confidence": "high for composition; usability impact unverified"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\features\\server\\ConnectPage.tsx",
+      "line": 19,
+      "rule": "MDC-002/MDC-046; mission section 33",
+      "detail": "Page orchestrates an imperative candidate-origin probe through the existing connection module, not request() or a query hook. This is a justified setup boundary: saved-origin clients cannot validate an unsaved candidate. No competing fetch/query implementation is introduced in the page.",
+      "fix": "Keep URL, transport, storage and auth policy in serverConnection; retain the full reload boundary and existing native gate. Do not mechanically replace this with a normal cached hook, duplicate server state store or hot-swapped provider.",
+      "owner": "integration",
+      "confidence": "high; source-confirmed architectural constraint, not a violation"
+    }
+  ],
+  "priority": {
+    "level": "medium",
+    "rationale": "Safety-sensitive first-run/native access form already reuses shared primitives and has little literal visual noise. Prioritize field-level feedback, in-flight input clarity and mobile reachability; coordinate truthful transport recovery without changing auth/storage safety.",
+    "order": ["Field feedback association", "In-flight candidate clarity", "Mobile target and focus review", "Shared probe failure classification", "Theme/compact-guidance visual review"]
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "Existing ServerProbeFailure reason contract extension",
+      "existingOwnerFile": "web\\src\\lib\\serverConnection.ts",
+      "propsVariantsStates": "Extend the existing discriminated ServerProbeResult rather than inventing another connection service: retain ok and authenticationRequired; optionally add observable timeout, HTTP-status and invalid-response reasons, with unknown transport fallback. Preserve the ten-second timeout, cookie omission, token-header privacy and current save guards.",
+      "usedBy": ["web\\src\\features\\server\\ConnectPage.tsx:76-90"],
+      "dependsOn": ["Existing probeServer contract at web\\src\\lib\\serverConnection.ts:240-284", "Existing connection tests at web\\src\\lib\\serverConnection.test.ts:227-273", "Page recovery/translation integration"],
+      "evidence": "web\\src\\lib\\serverConnection.ts:247-249,258-284; web\\src\\features\\server\\ConnectPage.tsx:77-90",
+      "owner": "integration",
+      "status": "Proposed existing-owner extension; not implemented. No evidence for a new shared presentation component or additional consumers in this scope."
+    }
+  ],
+  "competingImplementations": {
+    "confirmed": [],
+    "avoid": [
+      "Another server picker state store or normal request client for unsaved candidate origins.",
+      "New ModernCard/header/form/error system instead of category-barrel primitives.",
+      "A second auth/token persistence mechanism, localStorage token storage or certificate-warning bypass.",
+      "A workspace/date/vehicle selector on this standalone setup route."
+    ],
+    "limits": "Only the assigned page and its direct dependencies were reviewed; no app-wide equivalence claim."
+  },
+  "preservation": {
+    "sourceSha256": "93cadccd601af1c92dba851d1717a1f1b57d069e36546fd7aa6890c91719a56a",
+    "currentLineCount": 155,
+    "lineCountMethod": "PowerShell Get-Content array count; source identity from Get-FileHash -Algorithm SHA256.",
+    "sectionCount": 6,
+    "sectionCountDefinition": "Semantic presentation regions, including two conditional feedback regions; not a count of panels or charts.",
+    "sections": [
+      {"name": "Connection heading and introductory help", "file": "web\\src\\features\\server\\ConnectPage.tsx", "line": 110, "range": "110-114", "conditional": false},
+      {"name": "Server address field and local/LAN guidance", "file": "web\\src\\features\\server\\ConnectPage.tsx", "line": 116, "range": "116-125", "conditional": false},
+      {"name": "Masked optional access-token field and API Keys guidance", "file": "web\\src\\features\\server\\ConnectPage.tsx", "line": 126, "range": "126-135", "conditional": false},
+      {"name": "Forward-auth requirement explanation", "file": "web\\src\\features\\server\\ConnectPage.tsx", "line": 136, "range": "136-140", "conditional": true},
+      {"name": "Validation/auth/transport/storage alert", "file": "web\\src\\features\\server\\ConnectPage.tsx", "line": 141, "range": "141-145", "conditional": true},
+      {"name": "Connect action and connecting feedback", "file": "web\\src\\features\\server\\ConnectPage.tsx", "line": 146, "range": "146-150", "conditional": false}
+    ],
+    "componentCounts": {"GlassPanel": 1, "ChartContainer": 0, "PageHeader": 1, "Input": 2, "submitButton": 1},
+    "actions": [
+      {"name": "Edit server address", "evidence": "web\\src\\features\\server\\ConnectPage.tsx:118-124"},
+      {"name": "Enter or replace masked access token", "evidence": "web\\src\\features\\server\\ConnectPage.tsx:128-134"},
+      {"name": "Open introductory help by shared header button", "evidence": "web\\src\\components\\layout\\PageHeader.tsx:79-95"},
+      {"name": "Connect with form submission, URL validation and probe", "evidence": "web\\src\\features\\server\\ConnectPage.tsx:61-92,115,146-150"},
+      {"name": "Correct inputs and retry after failure without losing the form", "evidence": "web\\src\\features\\server\\ConnectPage.tsx:77-100,115-150"},
+      {"name": "Persist connection and reboot app at / after success", "evidence": "web\\src\\features\\server\\ConnectPage.tsx:93-96"}
+    ],
+    "dataBehavior": [
+      "Keep missing scheme defaulting to HTTPS, accepted HTTP/LAN origins, normalization and all six URL-rejection categories.",
+      "Reject credentials embedded in URL and unsupported subpaths; retain masked token entry and localized security guidance.",
+      "Keep auth-required/rejected distinction and fail-before-save checks; never bypass server authentication or browser/native certificate warnings.",
+      "Keep server origin separate from session-only token; never include tokens in report, logs, URLs, help, screenshot summaries or new persistence.",
+      "Keep existing connection/token-required storage keys and native re-entry policy, same-origin behavior and full-reload cache/provider boundary.",
+      "Retain existing theme, typography, motion, density and locale settings through shared components; do not reset settings for aesthetics.",
+      "No charts, metrics, dates, units, tables, exports or specialist analytics exist on this page; do not fabricate them."
+    ],
+    "testSourceContext": [
+      "web\\src\\features\\server\\ConnectPage.test.tsx:47-137 covers fields, h1 focus target/autofocus, compact-help focus, empty URL, open save/reload, forward-auth, unreachable server and rejected token with mocked transport/location.",
+      "web\\src\\lib\\serverConnection.test.ts:34-273 inspected by test-name search only; names cover normalization/storage/native gate and probe behavior."
+    ],
+    "verification": "Baseline source inventory only. No changes to page or dependencies; no runtime preservation acceptance asserted."
+  },
+  "verificationCommands": [
+    {
+      "command": "$p='web\\src\\features\\server\\ConnectPage.tsx'; $patterns=[ordered]@{inlineStyles='style=\\{'; rawControls='<(button|input|textarea|select|table)\\b'; directLibraries='from [''\\\"](recharts|react-leaflet|framer-motion)'; oldApi='from [''\\\"]\\.\\./(\\.\\./)?api[''\\\"]'; neonGlowWhite='text-neon|bg-neon|shadow-neon|text-white|bg-white|glow='}; foreach($k in $patterns.Keys){\"$k=$(@(Select-String -Path $p -Pattern $patterns[$k] -CaseSensitive).Count)\"}; \"lines=$(@(Get-Content $p).Count)\"; \"sha256=$((Get-FileHash $p -Algorithm SHA256).Hash.ToLowerInvariant())\"",
+      "exitCode": 0,
+      "output": "inlineStyles=0\nrawControls=0\ndirectLibraries=0\noldApi=0\nneonGlowWhite=0\nlines=155\nsha256=93cadccd601af1c92dba851d1717a1f1b57d069e36546fd7aa6890c91719a56a",
+      "scope": "Literal source checks on the exact page only, not semantic lint or runtime acceptance."
+    }
+  ],
+  "evidenceLimits": {
+    "basis": "Fresh scoped source reads and exact page SHA-256, not screenshots or historical runtime receipts.",
+    "runtime": "NOTRUN: no browser/native mount, real endpoint requests, connection saves, network mutation, auth/certificate interaction or deployment.",
+    "visual": "NOTRUN: no composed contrast, theme screenshots, glow/saturation appearance, forced colors, RTL or viewport acceptance.",
+    "keyboard": "NOTRUN: no keyboard, focus restoration, soft keyboard, tooltip visibility or assistive-technology acceptance.",
+    "tests": "NOTRUN: test source is evidence of authored assertions only. No TypeScript, lint, build or full-repository audit; Phase 0 assignment forbids those broad gates.",
+    "auditScript": "Read .github\\skills\\audit-violations\\audit.sh but did not execute: its mandatory final step runs project-wide npx tsc --noEmit, incompatible with this read-only scoped Phase 0 window. Used page-only pattern counts instead.",
+    "scopedPatternCounts": {
+      "staticInlineStyles": 0,
+      "rawButtonInputTextareaSelectTable": 0,
+      "directRechartsLeafletFramerImports": 0,
+      "oldRelativeApiImports": 0,
+      "explicitNeonGlowOrFixedWhitePatterns": 0,
+      "method": "PowerShell Select-String on the exact page. Raw-control count corrected with -CaseSensitive: initial case-insensitive count of 3 matched shared Input/Button, not raw HTML. Literal-pattern results do not establish full lint or visual quality.",
+      "sourceHashRecheck": "Same SHA-256 returned by the second source hash command."
+    },
+    "backend": "Only relevant router registration lines were read/searched. Auth-mode handler body, upstream access policy, native TLS handling, network recovery and all-endpoint auth acceptance remain unknown.",
+    "coverage": "No whole-repository inventory or sibling-page inspection. Shared implementations read only as direct page dependencies. Catalog contents, icon registry, titleStore, actual useMotionPreference implementation and global theme CSS were not traced.",
+    "ownership": "Only docs\\frontend-audits\\audit-page-168.json and .agent-status\\audit-page-168.txt written. No source/UI, Git operations, agents or broad validation.",
+    "contractReferences": [
+      "docs\\frontend-worker-conventions.md:46-84 Phase 0 schema and evidence rules",
+      "docs\\frontend-design-contract.md:11-48 preservation and architecture",
+      "docs\\frontend-design-contract.md:163-188 shared states/accessibility/responsive/privacy contracts",
+      "docs\\frontend-mission.md:19-105 sections 0/1",
+      "docs\\frontend-mission.md:340-363 visual intensity",
+      "docs\\frontend-mission.md:529-580 responsive/mobile",
+      "docs\\frontend-mission.md:599-786 forms/loading/error/offline",
+      "docs\\frontend-mission.md:919-997 accessibility/motion/data separation",
+      "docs\\frontend-mission.md:1416-1464 visual QA gate"
+    ]
+  },
+  "filesRead": [
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\server\\ConnectPage.tsx",
+    "web\\src\\features\\server\\ServerGate.tsx",
+    "web\\src\\features\\server\\ConnectPage.test.tsx",
+    "web\\src\\lib\\serverConnection.ts",
+    "web\\src\\lib\\serverConnection.test.ts",
+    "web\\src\\App.tsx",
+    "web\\src\\components\\ui\\Input.tsx",
+    "web\\src\\components\\ui\\Button.tsx",
+    "web\\src\\components\\ui\\GlassPanel.tsx",
+    "web\\src\\components\\ui\\Typography.tsx",
+    "web\\src\\components\\layout\\PageHeader.tsx",
+    "web\\src\\components\\motion\\FadeIn.tsx",
+    "web\\src\\hooks\\usePageTitle.ts",
+    "internal\\api\\router.go"
+  ]
+}

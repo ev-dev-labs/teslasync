@@ -105,7 +105,7 @@ export function VirtualizedVehicleGrid({
       role="list"
       aria-label={label}
       className={cn(
-        'relative h-[min(72vh,56rem)] min-h-[28rem] overflow-y-auto overscroll-contain pr-1 [scrollbar-gutter:stable]',
+        'relative h-vehicle-grid min-h-vehicle-grid overflow-y-auto overscroll-contain pe-1 [scrollbar-gutter:stable]',
         className,
       )}
     >
@@ -123,7 +123,7 @@ export function VirtualizedVehicleGrid({
               ref={virtualizer.measureElement}
               data-index={virtualRow.index}
               role="presentation"
-              className="absolute left-0 top-0 grid w-full gap-3 pb-3 sm:gap-4 sm:pb-4"
+              className="absolute start-0 top-0 grid w-full gap-3 pb-3 sm:gap-4 sm:pb-4"
               style={{
                 gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))`,
                 transform: `translateY(${virtualRow.start}px)`,

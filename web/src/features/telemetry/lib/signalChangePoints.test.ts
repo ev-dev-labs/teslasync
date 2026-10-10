@@ -33,8 +33,9 @@ function buildSamples(
   for (const { level, count } of levels) {
     for (let k = 0; k < count; k++) {
       samples.push({
-        timestamp: new Date(BASE + i * HOUR).toISOString(),
-        valueNum: level + jitter(i, noiseAmplitude),
+        ts: new Date(BASE + i * HOUR).toISOString(),
+        kind: 'ValueKindDouble',
+        value: level + jitter(i, noiseAmplitude),
       });
       i++;
     }
@@ -45,10 +46,10 @@ function buildSamples(
 describe('toNumericPoints', () => {
   it('drops null/undefined/non-numeric samples and sorts ascending', () => {
     const points = toNumericPoints([
-      { timestamp: new Date(BASE + 2 * HOUR).toISOString(), valueNum: 3 },
-      { timestamp: null, valueNum: 99 },
-      { timestamp: new Date(BASE).toISOString(), valueNum: 1 },
-      { timestamp: new Date(BASE + HOUR).toISOString(), valueNum: undefined },
+      { ts: new Date(BASE + 2 * HOUR).toISOString(), kind: 'ValueKindDouble', value: 3 },
+      { ts: '', kind: 'ValueKindDouble', value: 99 },
+      { ts: new Date(BASE).toISOString(), kind: 'ValueKindDouble', value: 1 },
+      { ts: new Date(BASE + HOUR).toISOString(), kind: 'ValueKindDouble', value: null },
     ]);
     expect(points).toEqual([
       { ms: BASE, value: 1 },
@@ -59,8 +60,8 @@ describe('toNumericPoints', () => {
   it('de-duplicates repeated timestamps, keeping the last value', () => {
     const ts = new Date(BASE).toISOString();
     const points = toNumericPoints([
-      { timestamp: ts, valueNum: 1 },
-      { timestamp: ts, valueNum: 2 },
+      { ts, kind: 'ValueKindDouble', value: 1 },
+      { ts, kind: 'ValueKindDouble', value: 2 },
     ]);
     expect(points).toEqual([{ ms: BASE, value: 2 }]);
   });
@@ -235,6 +236,18 @@ describe('detectChangePoints — empty and tiny inputs', () => {
 });
 
 describe('summarizeSignalChangePoints', () => {
+  it('retains a canonical zero regime without inventing a change point', () => {
+    const summary = summarizeSignalChangePoints(buildSamples([{ level: 0, count: 40 }], 0));
+    expect(summary.samples).toBe(40);
+    expect(summary.segments).toHaveLength(1);
+    expect(summary.segments[0]).toMatchObject({
+      startMs: BASE, endMs: BASE + 39 * HOUR, samples: 40, mean: 0, spread: 0,
+    });
+    expect(summary.changePoints).toEqual([]);
+    expect(summary.biggestChange).toBeNull();
+    expect(summary.minSegmentSamples).toBe(5);
+  });
+
   it('picks the largest change point as biggestChange', () => {
     const samples = buildSamples([
       { level: 0, count: 30 },

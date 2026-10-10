@@ -1,0 +1,617 @@
+{
+  "item": "audit-page-235",
+  "phase": 0,
+  "mode": "read-only source audit",
+  "page": "web\\src\\features\\vehicles\\pages\\TimeMachinePage.tsx",
+  "routes": [
+    "/time-machine"
+  ],
+  "identity": {
+    "component": "TimeMachinePage",
+    "routeEvidence": "web\\src\\App.tsx:46,585",
+    "mount": "lazy import inside SafeRoute",
+    "runtimeMountVerified": false,
+    "rootSha256": "6063BE9B1AB50ED90B0BD112A2A132C426EDB3641D8819ECD9217D7E5CA68BAF"
+  },
+  "purpose": "Reconstruct all recorded vehicle signals at a selected past instant and inspect their relative observation age.",
+  "primaryGoal": "Select a historical instant using the timeline or bounded presets and inspect complete categorized signal evidence without confusing unknown values with zero.",
+  "dataSources": [
+    {
+      "hook": "useSelectedVehicle / useVehicles",
+      "owner": "web\\src\\hooks\\useSelectedVehicle.ts",
+      "endpoint": "GET /api/v1/vehicles",
+      "hookEvidence": "web\\src\\api\\hooks\\useVehicles.ts:73-81",
+      "routeEvidence": "internal\\api\\router.go:3320",
+      "behavior": "URL vehicle_id, persisted selection, then first known vehicle; page derives id from resolved vehicle record. Vehicle query uses safeArray and AbortSignal.",
+      "scope": "Shared workspace vehicle; no competing local picker."
+    },
+    {
+      "hook": "useTimeMachineRange",
+      "owner": "web\\src\\api\\hooks\\useTimeMachine.ts",
+      "endpoint": "GET /api/v1/vehicles/{vehicleID}/time-machine/range",
+      "hookEvidence": "web\\src\\api\\hooks\\useTimeMachine.ts:65-74",
+      "routeEvidence": "internal\\api\\router.go:3327,3362",
+      "behavior": "Positive vehicle enablement, per-vehicle key, SLOW cache policy, AbortSignal. Supplies earliest/latest and distinct field_count.",
+      "sourceOwnership": "Historical signal_log per router comment; backend implementation, query coverage and units not audited."
+    },
+    {
+      "hook": "useTimeMachineState",
+      "owner": "web\\src\\api\\hooks\\useTimeMachine.ts",
+      "endpoint": "GET /api/v1/vehicles/{vehicleID}/time-machine?at={encoded RFC3339}",
+      "hookEvidence": "web\\src\\api\\hooks\\useTimeMachine.ts:82-98",
+      "routeEvidence": "internal\\api\\router.go:3361",
+      "behavior": "Vehicle plus instant query identity, disabled without both, STATIC cache, AbortSignal; 200ms page debounce. Field value is string/number/boolean/null; value_kind, ts and age_seconds are retained.",
+      "sourceOwnership": "Historical signal_log per router comment; backend semantics and completeness limits unverified."
+    }
+  ],
+  "components": [
+    {
+      "name": "PageLayout / PageContainer",
+      "owner": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+      "role": "Existing full-width container, header/freshness and shell integration; no new layout engine needed."
+    },
+    {
+      "name": "Section / LayoutCard / SourceContent",
+      "owner": "web\\src\\components\\layout\\index.ts",
+      "role": "Persistent section/card shells and source-local loading/error/empty states; canonical category imports."
+    },
+    {
+      "name": "VehicleEvidenceBrief",
+      "owner": "web\\src\\features\\vehicles\\components\\operationalbrief-n-z\\VehicleEvidenceBrief.tsx",
+      "role": "Domain adapter to useOperationalMetrics and OperationalBrief; four source metrics plus built-in review drawer."
+    },
+    {
+      "name": "OperationalBrief",
+      "owner": "web\\src\\components\\data-display\\OperationalBrief.tsx",
+      "role": "Canonical evidence summary and details interaction; preserve instead of replacing with a custom KPI grid."
+    },
+    {
+      "name": "Slider",
+      "owner": "web\\src\\components\\ui\\Slider.tsx",
+      "role": "Native range input, stable generated identity, localized accessible label and aria-valuetext."
+    },
+    {
+      "name": "DateTime / useDateFormat",
+      "owner": "web\\src\\components\\data-display\\format\\DateTime.tsx",
+      "role": "Existing datetime pipeline; caller must align explicit timezone mode."
+    },
+    {
+      "name": "useDataState / StaleRefreshWarning / DataProvenanceBadge",
+      "owner": "web\\src\\api\\dataState.ts",
+      "role": "Retained payload, fatal versus refresh failures, historical provenance and paused/offline trust."
+    },
+    {
+      "name": "Button / Badge / Text / GlassPanel / Skeleton / EmptyState / QueryError / FadeIn",
+      "owner": "Existing ui, feedback and motion category barrels",
+      "role": "Already reused; internal rendering and browser behavior not comprehensively reviewed."
+    }
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\vehicles\\pages\\TimeMachinePage.tsx",
+      "line": 202,
+      "rule": "MDC-002",
+      "detail": "Six category cards already reuse one local CategoryCard and FieldRow; these are legitimate domain presentation owners, not six independent implementations.",
+      "fix": "Keep the existing reuse. Do not introduce a new global signal-card system without independent consumer evidence.",
+      "owner": "page",
+      "confidence": "high",
+      "isIssue": false
+    }
+  ],
+  "responsive": {
+    "verified": false,
+    "sourceStrategy": "One/two/three signal columns at base/md/xl; wrapping action buttons and field values; min-w-0 and break-words/break-all preserve signal identities. OperationalBrief compact metrics reflow independently.",
+    "requiredWidths": [
+      320,
+      375,
+      390,
+      430,
+      768,
+      1024,
+      1280,
+      1440,
+      1920,
+      2560
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\vehicles\\pages\\TimeMachinePage.tsx",
+        "line": 438,
+        "rule": "MDC-043",
+        "detail": "Earliest/latest labels share a non-wrapping justify-between row; full instant also uses a single baseline flex row at line 420. Long localized labels and datetime strings have no explicit narrow-width stacking strategy.",
+        "fix": "Reflow these existing metadata rows at narrow allocated widths, retaining both endpoints and the full instant. Test 320px, RTL and 200% text before claiming overflow is resolved.",
+        "owner": "page",
+        "confidence": "medium"
+      }
+    ]
+  },
+  "accessibility": {
+    "keyboard": "unverified",
+    "contrast": "unverified",
+    "screenReader": "unverified",
+    "sourcePositives": [
+      "Decorative icons carry aria-hidden; list/heading semantics retained.",
+      "Slider label remains accessible with showLabel=false; shared native input exposes formatted aria-valuetext.",
+      "SourceContent loading status and StaleRefreshWarning polite live region exist."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\vehicles\\pages\\TimeMachinePage.tsx",
+        "line": 178,
+        "rule": "MDC-040 / MDC-025",
+        "detail": "Relative-age Badge uses success/warning/danger thresholds, but displayed text is only a duration and title only says changed ago. Fresh/stale/very-stale interpretation is not explicitly named.",
+        "fix": "Retain age and threshold semantics while adding localized textual/accessibility freshness meaning; do not conflate field observation age with query refresh freshness.",
+        "owner": "page",
+        "confidence": "medium"
+      },
+      {
+        "file": "web\\src\\components\\ui\\Slider.tsx",
+        "line": 119,
+        "rule": "MDC-040",
+        "detail": "Source uses h-9 track wrapper and h-2 native input. A 44px reachable touch target is not established by these declarations; actual browser hit area has not been measured.",
+        "fix": "Shared owner should validate hit area and extend existing Slider sizing if needed, preserving native range keyboard semantics and value text.",
+        "owner": "shared",
+        "confidence": "medium"
+      }
+    ]
+  },
+  "states": {
+    "loading": "Vehicle loading passed to PageLayout; timeline skeleton on range loading; reconstruction skeleton in all six category shells, including initial debounce.",
+    "empty": "No-vehicle prerequisite, no usable history, per-category empty signal messages; actual empty reconstruction count remains zero.",
+    "error": "Timeline fatal error has retry; reconstruction fatal error gets six independent retry surfaces; vehicle-list error is not consumed.",
+    "staleOffline": "Range and state each derive historical DataState and mount nonblocking warnings; retained category rows remain visible on refresh failure. Initial offline handling unverified.",
+    "unknown": "Null field values render dash; absent envelope count is null; actual zero and false preserved.",
+    "issues": [
+      {
+        "file": "web\\src\\features\\vehicles\\pages\\TimeMachinePage.tsx",
+        "line": 251,
+        "rule": "MDC-026",
+        "detail": "Page destructures only isLoading from useVehicles. With no retained vehicle data after an initial fleet-query failure, !vehicle && !vehiclesLoading enters the 'No vehicles found' branch at line 371 rather than a failure/retry state.",
+        "fix": "Use the existing fleet DataState contract and fatal-error recovery before the authoritative empty-vehicle branch; keep historical sections independent when a vehicle is retained.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\vehicles\\pages\\TimeMachinePage.tsx",
+        "line": 320,
+        "rule": "MDC-026",
+        "detail": "Without bounds, state hook remains disabled and reconstructing is false after range resolution. Category cards receive empty arrays and no fatal error, so unresolved reconstruction is labeled 'No category signals at this instant'. Summary still inherits stateState.status='initial' from an unfetched query, producing conflicting loading/no-data meaning.",
+        "fix": "Model unavailable history and unresolved instant explicitly using existing source states; distinguish range failure, malformed bounds and successful no-history, while retaining six category shells and independent range metrics.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\vehicles\\pages\\TimeMachinePage.tsx",
+        "line": 462,
+        "rule": "MDC-026",
+        "detail": "Summary combines sources only for stale. A fatal range source or authoritative empty range is not represented as partial/unavailable when reconstruction status differs; both useDataState calls omit explicit unavailable conditions.",
+        "fix": "Use the existing combineDataStates/useCombinedDataState and evidence-backed empty flags, preserving independent successful measurements and explicit unknowns.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ]
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\vehicles\\pages\\TimeMachinePage.tsx",
+      "line": 425,
+      "rule": "MDC-013",
+      "detail": "Instant overrides type scale with text-xl/font-semibold/sm:text-2xl; endpoint row and scalar spans also choose raw text sizes at lines 168 and 438 rather than existing role typography.",
+      "fix": "Compose existing Text/MetricValue/Caption roles without losing timestamp emphasis, tabular values or metadata.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\components\\ui\\Slider.tsx",
+      "line": 133,
+      "rule": "MDC-010 / MDC-011",
+      "detail": "Shared Slider hardcodes accent-cyan-500 and cyan focus ring instead of current theme accent tokens. Page category icons are toned-down 300 hues, not neon, but effective contrast is unmeasured.",
+      "fix": "Shared owner should reuse theme-primary/focus tokens while preserving saved theme IDs and user choices. Do not introduce a new palette or globally reset preferences.",
+      "owner": "shared",
+      "confidence": "high"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\features\\vehicles\\pages\\TimeMachinePage.tsx",
+      "line": 468,
+      "rule": "MDC-026 / MDC-045",
+      "detail": "Viewing-at metric uses immediate displayISO while signals/count/scope use the debounced resolved response. During the 200ms debounce or request gap, summary can show requested instant beside previous instant's measurements; resolved scope is present but awaiting/requested distinction is not explicit.",
+      "fix": "Clearly distinguish requested versus resolved instant and mark reconstruction pending until the response identity matches. Preserve responsive immediate scrub display, debounce, cache identity and retained evidence.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\vehicles\\pages\\TimeMachinePage.tsx",
+      "line": 422,
+      "rule": "MDC-032 / MDC-044",
+      "detail": "DateTime instances omit in/showTz, selecting the pure browser timezone path (DateTime.tsx:45-52). Slider aria-valuetext and viewing-at text use useDateFormat, which resolves saved timezone preferences (useDateFormat.ts:73-85). Same instant can be displayed differently across the page.",
+      "fix": "Use the existing explicit DateTime timezone API consistently with useDateFormat and retain canonical ISO. Preserve user's locale/timezone without a competing formatter.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\vehicles\\pages\\TimeMachinePage.tsx",
+      "line": 146,
+      "rule": "MDC-045",
+      "detail": "Generic numeric field renderer shows a raw scalar without unit metadata; hook exposes value_kind but no unit kind. It does not convert or mutate SI. Unit-aware display equivalence cannot be safely inferred from field names alone.",
+      "fix": "Keep all raw values/identities. Before any unit-aware modernization, confirm existing signal metadata ownership and backend contract; never guess conversion, relabel raw SI as user units or fabricate missing metadata.",
+      "owner": "integration",
+      "confidence": "high"
+    }
+  ],
+  "priority": {
+    "level": "high",
+    "reason": "Resolve vehicle-error/empty confusion, unresolved reconstruction trust and requested/resolved timestamp presentation before purely cosmetic work; page already adopts core layout/evidence owners."
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "Validate and, if necessary, extend existing Slider theme/target presentation",
+      "existingOwnerFile": "web\\src\\components\\ui\\Slider.tsx",
+      "contract": {
+        "props": [
+          "Preserve value/min/max/step/onChange",
+          "Preserve label/showLabel/formatValue/id/ref/disabled",
+          "Only add typed density or target-size option if measured consumer need requires it"
+        ],
+        "variants": [
+          "Existing slider with theme token accent/focus; no second slider library"
+        ],
+        "states": [
+          "default",
+          "focus-visible",
+          "disabled",
+          "touch/keyboard interaction",
+          "light/dark/custom theme",
+          "forced colors"
+        ]
+      },
+      "usedBy": [
+        "/time-machine"
+      ],
+      "dependsOn": [
+        "MDC-010",
+        "MDC-011",
+        "MDC-040",
+        "Shared owner browser hit-area and theme validation"
+      ],
+      "evidence": "Slider.tsx:119-135; TimeMachinePage.tsx:428-437",
+      "independentConsumersVerified": false,
+      "scopeNote": "Owner coordination proposal only; this audit does not authorize a speculative new composite or shared edit."
+    }
+  ],
+  "competingImplementations": [
+    {
+      "pattern": "Workspace selection",
+      "result": "No competing vehicle selector. /time-machine has vehicle=true/range=false under workspaceScope; point-in-time scrubber is independent reconstruction navigation, not a duplicate global date-range picker.",
+      "evidence": "web\\src\\lib\\workspaceScope.ts:22-80,104-148,186-201; TimeMachinePage.tsx:250,428"
+    },
+    {
+      "pattern": "Evidence summary",
+      "result": "Existing VehicleEvidenceBrief composes OperationalBrief; keep canonical drawer and formatter bridge.",
+      "evidence": "VehicleEvidenceBrief.tsx:19-47"
+    },
+    {
+      "pattern": "Signal formatting",
+      "result": "Local formatDuration encodes specialist compact age thresholds; preserve exact current rounding before considering shared duration formatter adoption.",
+      "evidence": "TimeMachinePage.tsx:119-129"
+    }
+  ],
+  "preservation": {
+    "sourceSha256": "6063BE9B1AB50ED90B0BD112A2A132C426EDB3641D8819ECD9217D7E5CA68BAF",
+    "currentLineCount": 505,
+    "sectionCount": 3,
+    "sections": [
+      {
+        "name": "Timeline",
+        "line": 385,
+        "capabilities": [
+          "Range error retry",
+          "No-history explanation",
+          "Full instant",
+          "Slider",
+          "Earliest/latest timestamps",
+          "Four clamped presets"
+        ]
+      },
+      {
+        "name": "Overview / Reconstruction summary",
+        "line": 456,
+        "capabilities": [
+          "Viewing at",
+          "Signals reconstructed",
+          "Fields tracked",
+          "History span",
+          "Resolved scope",
+          "Historical provenance",
+          "Review details drawer"
+        ]
+      },
+      {
+        "name": "Reconstructed signal state",
+        "line": 486,
+        "capabilities": [
+          "Battery",
+          "Climate",
+          "Motion",
+          "Tires",
+          "Security",
+          "Other"
+        ]
+      }
+    ],
+    "counts": {
+      "categoryCards": 6,
+      "summaryMetrics": 4,
+      "presetButtons": 4,
+      "pageSectionJsx": 2,
+      "nativeOverviewSectionJsx": 1,
+      "layoutCardJsx": 2,
+      "layoutCardInstancesWithVehicle": 7,
+      "glassPanelJsx": 1,
+      "chartContainerJsx": 0
+    },
+    "actions": [
+      "Scrub timeline",
+      "Jump latest minus hour/day/week, clamped to history",
+      "Jump to newest recorded instant (Now is not a live command)",
+      "Retry range",
+      "Retry reconstruction from each category",
+      "Refresh retained range/state",
+      "Open/close canonical review details"
+    ],
+    "dataBehavior": [
+      "Six categories always persist for vehicle content, including empty/error states; first matcher wins, unmatched fields go to Other.",
+      "All returned fields retained and alphabetically sorted within category; show humanized and exact raw names.",
+      "Null is dash, false is localized No, actual zero is a real value; preserve numeric formatting preferences and timestamp fields.",
+      "Field age is relative to reconstruction instant: fresh below 120s, warning below 3600s, danger thereafter.",
+      "Source raw values, query/cache payloads and SI remain unchanged; history span uses seconds only at metric/display boundary.",
+      "Range parsing rejects unparseable/inverted dates; zero-length history remains usable.",
+      "Immediate scrub versus 200ms debounced query, preset clamping and vehicle-scoped instant reset must survive.",
+      "Retained rows/bounds survive refresh error; only fatal errors replace source content.",
+      "Saved workspace vehicle and locale/timezone/number/theme preferences must survive."
+    ],
+    "testsInspectedNotExecuted": "TimeMachinePage.test.tsx covers categories/raw identities/null-zero-false, retained refresh failure, presets/vehicle reset, initial error/retry, empty count, review drawer and age boundaries.",
+    "finalSourceSha256": "6063BE9B1AB50ED90B0BD112A2A132C426EDB3641D8819ECD9217D7E5CA68BAF",
+    "rootUnchangedDuringAudit": true
+  },
+  "evidenceLimits": {
+    "runtime": "unverified",
+    "visual": "unverified",
+    "keyboard": "unverified",
+    "viewport": "unverified",
+    "contrast": "unverified",
+    "tests": "not run; source audit only",
+    "typescript": "not run; full gates explicitly prohibited",
+    "auditSkillScript": "Inspected audit.sh but not executed because its mandatory final step runs full-project TypeScript. Equivalent bounded source pattern counts executed instead; no gate bypass or script edit.",
+    "backend": "Only route declarations inspected for hook path confirmation; handler/query semantics, metadata units, completeness and late historical writes not verified.",
+    "sourcePatternCounts": {
+      "staticInlineStyle": 0,
+      "rawControlsOrTable": 0,
+      "directChartMapMotionImports": 0,
+      "oldApiImports": 0,
+      "neonGlowTokens": 0
+    },
+    "sourcePatternCommand": "PowerShell Get-Content of the one page, Select-String -CaseSensitive for style=, raw native controls/table, direct library imports, legacy API imports and neon/glow tokens; exit 0. Initial case-insensitive counts were corrected (Button is not raw button).",
+    "sourcePatternOutput": "style=: 0; <(button|input|textarea|select|table)\\b: 0; direct chart/map/motion imports: 0; old API imports: 0; text-neon-/shadow-neon/glow: 0; <GlassPanel: 1; <ChartContainer: 0; <Section: 2; <LayoutCard: 2; <CategoryCard: 1.",
+    "noZeroViolationClaim": "Pattern counts are not complete semantic acceptance; line-cited findings remain.",
+    "scope": "Page and direct presentation/data contract dependencies only; no unrelated routes reviewed.",
+    "ownedFiles": [
+      "docs\\frontend-audits\\audit-page-235.json",
+      ".agent-status\\audit-page-235.txt"
+    ],
+    "mutations": "Only assigned audit report and heartbeat written; no source/shared/queue/Git/build/runtime mutation.",
+    "assumptions": [
+      "Point-in-time scrubber remains an independent business instant, not shared date-range scope.",
+      "Generic raw signal values must remain raw until authoritative unit metadata is confirmed."
+    ]
+  },
+  "filesRead": [
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\vehicles\\pages\\TimeMachinePage.tsx",
+    "web\\src\\features\\vehicles\\pages\\TimeMachinePage.test.tsx",
+    "web\\src\\api\\hooks\\useTimeMachine.ts",
+    "web\\src\\api\\hooks\\useVehicles.ts",
+    "web\\src\\features\\vehicles\\components\\operationalbrief-n-z\\VehicleEvidenceBrief.tsx",
+    "web\\src\\hooks\\useSelectedVehicle.ts",
+    "web\\src\\hooks\\useDataState.ts",
+    "web\\src\\api\\dataState.ts",
+    "web\\src\\hooks\\useNumberFormatting.ts",
+    "web\\src\\hooks\\useDateFormat.ts",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\App.tsx",
+    "internal\\api\\router.go",
+    "web\\src\\components\\layout\\index.ts",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\layout\\layout-reference\\LayoutCard.tsx",
+    "web\\src\\components\\layout\\layout-reference\\SourceContent.tsx",
+    "web\\src\\components\\layout\\PageContainer.tsx",
+    "web\\src\\components\\ui\\Slider.tsx",
+    "web\\src\\components\\feedback\\StaleRefreshWarning.tsx",
+    "web\\src\\components\\data-display\\index.ts",
+    "web\\src\\components\\data-display\\format\\index.ts",
+    "web\\src\\components\\data-display\\format\\DateTime.tsx",
+    "web\\src\\components\\data-display\\OperationalBrief.tsx",
+    "web\\src\\components\\data-display\\DataProvenanceBadge.tsx"
+  ],
+  "sourceInventory": [
+    {
+      "path": "docs\\frontend-design-contract.md",
+      "sha256": "17B542389CD4E98A0DFB7B4D2F2C4E2727F221AF0AC5ACB738DB5E987B282255",
+      "lineCount": 394,
+      "inspection": "full relevant source read"
+    },
+    {
+      "path": "docs\\frontend-worker-conventions.md",
+      "sha256": "6CF8194644A7820926082FC065E9CBF87C1E1E2D8258C4D092DA8C962707ADC3",
+      "lineCount": 80,
+      "inspection": "full relevant source read"
+    },
+    {
+      "path": "docs\\frontend-mission.md",
+      "sha256": "2BD35429E32D06ABF109DD371C2DD011CB974EF6B8C1915B298D1A0C3D7FD98F",
+      "lineCount": 1593,
+      "inspection": "relevant bounded sections; not entire file"
+    },
+    {
+      "path": ".github\\skills\\audit-violations\\audit.sh",
+      "sha256": "3E5937AB2A4EA2F303A0152111794D5A3A45C24ABFE7B11400079BC4AC3DFE46",
+      "lineCount": 141,
+      "inspection": "full relevant source read"
+    },
+    {
+      "path": "web\\src\\features\\vehicles\\pages\\TimeMachinePage.tsx",
+      "sha256": "6063BE9B1AB50ED90B0BD112A2A132C426EDB3641D8819ECD9217D7E5CA68BAF",
+      "lineCount": 505,
+      "inspection": "full relevant source read"
+    },
+    {
+      "path": "web\\src\\features\\vehicles\\pages\\TimeMachinePage.test.tsx",
+      "sha256": "7850014D68955E7A3240DD5E69279E430C640A0919386D7B489615BD7B2C477C",
+      "lineCount": 169,
+      "inspection": "full relevant source read"
+    },
+    {
+      "path": "web\\src\\api\\hooks\\useTimeMachine.ts",
+      "sha256": "6B6CF09B04FF875FAF0BB85076F98CD7376FE8A15A5CF8C8A88DE863F8C3D925",
+      "lineCount": 88,
+      "inspection": "full relevant source read"
+    },
+    {
+      "path": "web\\src\\api\\hooks\\useVehicles.ts",
+      "sha256": "1D7AE8F07FD26C99622E84BE1E6E80B6E7C92E0FB6F17964D06DE4017D634D4B",
+      "lineCount": 1898,
+      "inspection": "relevant bounded sections; not entire file"
+    },
+    {
+      "path": "web\\src\\features\\vehicles\\components\\operationalbrief-n-z\\VehicleEvidenceBrief.tsx",
+      "sha256": "C4621D24D68FB62C8DCF6DBBE6EA13535487346D578CEB2A4091604EDF24D1D8",
+      "lineCount": 43,
+      "inspection": "full relevant source read"
+    },
+    {
+      "path": "web\\src\\hooks\\useSelectedVehicle.ts",
+      "sha256": "C52768EA42F3E8DD34399F1372A09EB3F70D6C6CB2DDDBC41790A6D30E7C4AE3",
+      "lineCount": 174,
+      "inspection": "full relevant source read"
+    },
+    {
+      "path": "web\\src\\hooks\\useDataState.ts",
+      "sha256": "785BD47E706B066874BEC8999D51093982E93B9680B8DEC16BDDC023DC57FB9B",
+      "lineCount": 65,
+      "inspection": "full relevant source read"
+    },
+    {
+      "path": "web\\src\\api\\dataState.ts",
+      "sha256": "21FB454B3C1F01608169F3F3887911DE97F7C754663CC001236EBFDE58211761",
+      "lineCount": 434,
+      "inspection": "relevant bounded sections; not entire file"
+    },
+    {
+      "path": "web\\src\\hooks\\useNumberFormatting.ts",
+      "sha256": "CA9C9CE0D895CF31F23A17405FA4D4132F99FD524F970ECC75922903DEC27DD9",
+      "lineCount": 47,
+      "inspection": "full relevant source read"
+    },
+    {
+      "path": "web\\src\\hooks\\useDateFormat.ts",
+      "sha256": "97B1B0EBD44436CD8274A4927D0DF4381B112DF1468A22EF6238029675D6A542",
+      "lineCount": 148,
+      "inspection": "relevant bounded sections; not entire file"
+    },
+    {
+      "path": "web\\src\\lib\\workspaceScope.ts",
+      "sha256": "AEB8C01D410F2377AA5FD713DE1A678A0360ACF647A9C882F03E46C80EFDFCD7",
+      "lineCount": 168,
+      "inspection": "full relevant source read"
+    },
+    {
+      "path": "web\\src\\App.tsx",
+      "sha256": "23A1CE852D2CE51DF5A26A5C2A5669FFA788A992355A8BCFAFB391C82B47DEF3",
+      "lineCount": 918,
+      "inspection": "bounded route/export excerpts"
+    },
+    {
+      "path": "internal\\api\\router.go",
+      "sha256": "98B92853EBADE3DB74AD361D098BBA4472039884A407D61CE901DC3BF1FE3750",
+      "lineCount": 5366,
+      "inspection": "bounded route/export excerpts"
+    },
+    {
+      "path": "web\\src\\components\\layout\\index.ts",
+      "sha256": "DE1196B246AD1BFDF2E96DEE54F398C921873C7EF8ED76964C09735DFFBE7624",
+      "lineCount": 26,
+      "inspection": "bounded route/export excerpts"
+    },
+    {
+      "path": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+      "sha256": "8DF73DE2D4B3FF7485019389F547D863FE8729AA0C95FA1F497487389D6B87F6",
+      "lineCount": 17,
+      "inspection": "full relevant source read"
+    },
+    {
+      "path": "web\\src\\components\\layout\\layout-reference\\LayoutCard.tsx",
+      "sha256": "1FEDEB6B5CF17436D31CB0F19DAC09EE1C6591D1866B09ED511387BD110E7D9A",
+      "lineCount": 64,
+      "inspection": "full relevant source read"
+    },
+    {
+      "path": "web\\src\\components\\layout\\layout-reference\\SourceContent.tsx",
+      "sha256": "283583E259342620CB0E24429E3F66FB6385F16498D869192F36CFFCFF9EEC43",
+      "lineCount": 72,
+      "inspection": "full relevant source read"
+    },
+    {
+      "path": "web\\src\\components\\layout\\PageContainer.tsx",
+      "sha256": "0E2E1842FCAC1FE5BD7C4C37299A76F9515D45EAFE43AD122A8E09A0BB817D55",
+      "lineCount": 259,
+      "inspection": "relevant bounded sections; not entire file"
+    },
+    {
+      "path": "web\\src\\components\\ui\\Slider.tsx",
+      "sha256": "FCCC6AFD3017D0A9763D722F7631DBEC89127335267238BF2D4388F1E33F234B",
+      "lineCount": 129,
+      "inspection": "full relevant source read"
+    },
+    {
+      "path": "web\\src\\components\\feedback\\StaleRefreshWarning.tsx",
+      "sha256": "6103CED7AF551C52DD32499D8C62AB3AD479A8ADF230D3C8059FA8B5199E87D0",
+      "lineCount": 115,
+      "inspection": "full relevant source read"
+    },
+    {
+      "path": "web\\src\\components\\data-display\\index.ts",
+      "sha256": "D87BB13547D186E5F199B0114BF139670747B8AFC5F4CA7D82CF18C5C122232A",
+      "lineCount": 177,
+      "inspection": "bounded route/export excerpts"
+    },
+    {
+      "path": "web\\src\\components\\data-display\\format\\index.ts",
+      "sha256": "4BB1C3A012590F59CCD6852A3AFBF69334E870C679B8BA7CA575318367A8C4BB",
+      "lineCount": 16,
+      "inspection": "bounded route/export excerpts"
+    },
+    {
+      "path": "web\\src\\components\\data-display\\format\\DateTime.tsx",
+      "sha256": "08B77196089A97BDF6F1FB37E17AF36FA717C1BD7BC8B0D3F603C765C47E04A8",
+      "lineCount": 146,
+      "inspection": "full relevant source read"
+    },
+    {
+      "path": "web\\src\\components\\data-display\\OperationalBrief.tsx",
+      "sha256": "B24B19024EFFEBB6D8457171BE61E6899672CD8F668B41BB3814AEB29ADA42E5",
+      "lineCount": 303,
+      "inspection": "relevant bounded sections; not entire file"
+    },
+    {
+      "path": "web\\src\\components\\data-display\\DataProvenanceBadge.tsx",
+      "sha256": "804547BCB6E9BE1D6210DC459EFEE9ED7A8CB76999322F98C5CF7D80EA242057",
+      "lineCount": 131,
+      "inspection": "full relevant source read"
+    }
+  ],
+  "completedAtUtc": "2026-10-07T10:32:17.0904214Z"
+}

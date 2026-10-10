@@ -89,7 +89,7 @@ const tire: TirePressureReading = {
   rearRight: 3.0,
   tpmsHardWarning: false,
   tpmsSoftWarning: false,
-  timestamp: '2025-06-01T00:00:00Z',
+  created_at: '2025-06-01T00:00:00Z',
 };
 
 const maintenanceItem: MaintenanceItem = {

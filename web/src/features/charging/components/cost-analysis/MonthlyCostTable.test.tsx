@@ -79,7 +79,7 @@ const MAR: MonthlyBucket = {
 /** Intentionally unsorted so the default month-desc sort has to reorder them. */
 const DATA: MonthlyBucket[] = [FEB, JAN, MAR];
 
-const HEADERS = ['Month', 'Sessions', 'Energy', 'Cost', 'Avg $/kWh', 'Gas Equiv', 'Savings'];
+const HEADERS = ['Month', 'Sessions', 'Energy', 'Cost', 'Avg $/kWh', 'Gas equiv', 'Savings'];
 
 function renderTable(props: Partial<Props> = {}) {
   return render(
@@ -135,15 +135,15 @@ describe('MonthlyCostTable — populated rendering & per-column formatting', () 
     // JAN: int sessions, kWh energy, $-prefixed cost / 3-dp avg / gas-equiv.
     const jan = rowCells(container, '2025-01');
     expect(jan[1].textContent).toBe('3');
-    expect(jan[2].textContent).toBe('40.0 kWh');
+    expect(jan[2].textContent).toBe('40.00 kWh');
     expect(jan[3].textContent).toBe('$10.50');
-    expect(jan[4].textContent).toBe('$0.262'); // precision=3 avg rate
+    expect(jan[4].textContent).toBe('$0.26'); // precision=3 avg rate
     expect(jan[5].textContent).toBe('$18.00');
 
     // FEB: locale-grouped nothing needed, but distinct energy + 3-dp avg.
     const feb = rowCells(container, '2025-02');
-    expect(feb[2].textContent).toBe('100.0 kWh');
-    expect(feb[4].textContent).toBe('$0.250');
+    expect(feb[2].textContent).toBe('100.00 kWh');
+    expect(feb[4].textContent).toBe('$0.25');
 
     // The cost column carries the toned-down cyan accent (not neon body text).
     expect(jan[3].querySelector('.text-cyan-300')).not.toBeNull();
@@ -212,17 +212,25 @@ describe('MonthlyCostTable — sorting', () => {
 
 describe('MonthlyCostTable — loading / error / empty chrome', () => {
   it('shows the skeleton (never rows) while loading, keeping the heading', () => {
-    const { container } = renderTable({ isLoading: true });
+    const { container } = renderTable({ isLoading: true, error: new Error('stale') });
 
     expect(
       screen.getByRole('heading', { name: /monthly cost breakdown/i }),
     ).toBeInTheDocument();
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
+    const skeleton = container.querySelector('[aria-hidden="true"][style]');
+    expect(skeleton).not.toBeNull();
+    expect(skeleton).toHaveClass('h-4', 'w-full', 'rounded', 'bg-[var(--skeleton-bg)]');
+    expect(skeleton).toHaveAttribute('aria-hidden', 'true');
+    expect(skeleton).toHaveStyle('height: 200px');
+    expect(container.querySelector('.animate-pulse')).toBeNull();
     // No table headers/rows and no empty/error chrome while loading.
     expect(screen.queryByRole('button', { name: 'Sessions' })).toBeNull();
     expect(container.querySelector('tbody tr')).toBeNull();
     expect(screen.queryByRole('status')).toBeNull();
     expect(screen.queryByRole('alert')).toBeNull();
+    expect(screen.queryByText('40.00 kWh')).toBeNull();
+    expect(screen.queryByText('$10.50')).toBeNull();
+    expect(screen.queryByText('No monthly data available')).toBeNull();
   });
 
   it('renders a labelled empty state instead of a blank panel for an empty dataset', () => {
@@ -235,7 +243,7 @@ describe('MonthlyCostTable — loading / error / empty chrome', () => {
     expect(screen.getByText('No monthly data available')).toBeInTheDocument();
     // Neither rows nor a loading skeleton render.
     expect(container.querySelector('tbody tr')).toBeNull();
-    expect(container.querySelector('.animate-pulse')).toBeNull();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).toBeNull();
   });
 
   it('renders an error with a working Retry that invokes onRetry', () => {
@@ -262,7 +270,7 @@ describe('MonthlyCostTable — loading / error / empty chrome', () => {
 
     expect(screen.getByRole('alert')).toBeInTheDocument();
     expect(document.querySelector('tbody tr')).toBeNull();
-    expect(screen.queryByText('40.0 kWh')).toBeNull();
+    expect(screen.queryByText('40.00 kWh')).toBeNull();
   });
 });
 

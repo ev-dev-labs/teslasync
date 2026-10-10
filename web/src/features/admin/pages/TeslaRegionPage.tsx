@@ -10,19 +10,20 @@
 
 import { useTranslation } from 'react-i18next'
 import { RefreshCw } from 'lucide-react'
-import { PageContainer } from '@/components/layout'
+import { PageLayout } from '@/components/layout'
 import { Button } from '@/components/ui'
 import { FadeIn } from '@/components/motion'
 import { usePageTitle } from '@/hooks/usePageTitle'
 import { cn } from '@/lib/cn'
+import { deriveDataState } from '@/api/dataState'
 import { useTeslaUserRegion, useRefreshTeslaRegion } from '@/api/hooks/useUser'
 import {
-  RegionKpiBand,
-  RegionEndpointPanel,
   RegionAboutPanel,
   parseEndpoint,
   REGION_ZONE_FALLBACK,
 } from '../components/tesla-region'
+import { RegionOperationalBrief } from '../components/statstrip-tesla-account-privacy/RegionOperationalBrief'
+import { RegionEndpointDetails } from '../components/continuation-admin-2/RegionEndpointDetails'
 
 export default function TeslaRegionPage() {
   const { t } = useTranslation('settings')
@@ -30,6 +31,7 @@ export default function TeslaRegionPage() {
   usePageTitle(title)
 
   const regionQuery = useTeslaUserRegion()
+  const source = deriveDataState(regionQuery)
   const regionRefresh = useRefreshTeslaRegion()
 
   // The hook already emits success/error toasts — call mutate() bare so a
@@ -71,21 +73,24 @@ export default function TeslaRegionPage() {
   )
 
   return (
-    <PageContainer
+    <PageLayout
       title={title}
       subtitle={t('region.subtitle', 'Tesla account region and Fleet API endpoint')}
-      actions={actions}
+      secondaryActions={actions}
       query={regionQuery}
+      dataSources={[{ id: 'tesla-region', label: title, query: regionQuery }]}
     >
       <FadeIn>
         <section aria-label={t('region.kpi.section', 'Region overview')}>
-          <RegionKpiBand
+          <RegionOperationalBrief
+            known={source.hasData}
+            sourceStatus={source.status}
             regionKey={regionKey}
             regionLabel={regionLabel}
             scheme={scheme}
             fetchedAt={fetchedAt}
             configured={configured}
-            isLoading={regionQuery.isLoading}
+            isLoading={regionQuery.isLoading && !source.hasData}
           />
         </section>
       </FadeIn>
@@ -93,7 +98,7 @@ export default function TeslaRegionPage() {
       <FadeIn delay={0.1}>
         <div className="grid grid-cols-1 gap-4 xl:grid-cols-3 xl:gap-5">
           <section className="xl:col-span-2" aria-label={t('region.endpoint.title', 'Fleet API endpoint')}>
-            <RegionEndpointPanel
+            <RegionEndpointDetails
               region={region}
               baseUrl={baseUrl}
               host={host}
@@ -101,9 +106,9 @@ export default function TeslaRegionPage() {
               regionKey={regionKey}
               regionLabel={regionLabel}
               fetchedAt={fetchedAt}
-              isLoading={regionQuery.isLoading}
-              isError={regionQuery.isError}
-              error={regionQuery.error}
+              isLoading={regionQuery.isLoading && !source.hasData}
+              isError={Boolean(source.fatalError)}
+              error={source.fatalError}
               onRetry={() => regionQuery.refetch()}
               onRefresh={refresh}
             />
@@ -113,6 +118,6 @@ export default function TeslaRegionPage() {
           </section>
         </div>
       </FadeIn>
-    </PageContainer>
+    </PageLayout>
   )
 }

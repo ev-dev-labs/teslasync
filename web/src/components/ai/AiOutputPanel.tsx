@@ -34,6 +34,7 @@ import { useTranslation } from 'react-i18next'
 import { HelixMark } from '@/components/branding/HelixMark'
 import { AIThinkingIndicator } from '@/components/ai/AIThinkingIndicator'
 import { HelixEvidenceTrail } from '@/components/ai/HelixEvidenceTrail'
+import { Text } from '@/components/ui/Typography'
 import type {
   AiStreamState,
   AiToolActivity,
@@ -78,36 +79,39 @@ export function AiOutputPanel({
   if (!hasAnything) return null
   return (
     <div
-      className="rounded-lg border border-[var(--border-subtle)] bg-white/[0.02] p-4"
+      className="min-w-0 rounded-shape-lg border border-[var(--border-subtle)] bg-[var(--surface-1)] p-4"
       data-testid="ai-output-panel"
     >
-      {state === 'error' ? (
-        <p role="alert" className="text-sm text-red-300 flex items-start gap-2">
+      {state === 'error' && (
+        <Text as="p" variant="body" role="alert" className="flex items-start gap-2 text-[var(--semantic-danger)]">
           <HelixMark
-            className="h-4 w-4 text-red-300 shrink-0 mt-0.5"
+            className="h-4 w-4 shrink-0 mt-0.5"
             aria-hidden="true"
           />
-          <span>
-            <span className="font-medium">{t('helix.errorLabel', 'Helix error:')}</span>{' '}
+          <span className="min-w-0 break-words">
+            <Text weight="medium">{t('helix.errorLabel', 'Helix error:')}</Text>{' '}
             {error ?? t('ai.common.errorUnknown', 'unknown')}
           </span>
-        </p>
-      ) : text.length === 0 && state === 'streaming' ? (
+        </Text>
+      )}
+      {/* Failed-stream deltas remain readable, not a completed or verified answer.
+          The error stays first; no success/freshness metadata is inferred. */}
+      {text.length > 0 ? (
+        <Text as="p" variant="body" className="whitespace-pre-wrap break-words leading-relaxed">{text}</Text>
+      ) : state === 'error' ? null : state === 'streaming' ? (
         pendingChild === undefined ? (
           <AIThinkingIndicator />
         ) : (
           pendingChild
         )
-      ) : text.length === 0 ? (
+      ) : (
         // Reachable only when state === 'done' with no accumulated text
         // (idle / paused-confirm without text return null above, streaming
         // and error are handled by the branches above). Show a placeholder
         // instead of an empty paragraph so the panel is never blank.
-        <p className="text-sm text-[var(--text-muted)]">
+        <Text as="p" variant="bodySm" className="break-words">
           {t('ai.common.noOutput', 'No output was generated.')}
-        </p>
-      ) : (
-        <p className="whitespace-pre-wrap text-sm leading-relaxed text-[var(--text-primary)]">{text}</p>
+        </Text>
       )}
       <HelixEvidenceTrail activity={activity} state={state} usage={usage} />
     </div>

@@ -10,11 +10,13 @@ import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 
-import { PageContainer } from '@/components/layout';
+import { PageLayout } from '@/components/layout';
+import { StaleRefreshWarning } from '@/components/feedback';
 import { Badge, Button } from '@/components/ui';
 import { FadeIn } from '@/components/motion';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useDataState } from '@/hooks/useDataState';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { Icons } from '@/lib/icons';
 import {
@@ -34,6 +36,7 @@ export default function CommandsPage() {
    * loading/error/refetch state needed for explicit route placeholders.
    */
   const vehiclesQuery = useVehicles();
+  const vehiclesState = useDataState(vehiclesQuery);
   const { vehicleId, vehicle: selectedFromStore } = useSelectedVehicle();
   const vehicles = vehiclesQuery.data ?? [];
 
@@ -62,38 +65,38 @@ export default function CommandsPage() {
 
   const fallbackStatus: CommandCenterFallbackStatus = vehiclesQuery.isLoading
     ? 'loading'
-    : vehiclesQuery.error
+    : vehiclesState.fatalError
       ? 'error'
       : 'empty';
 
   return (
-    <PageContainer
-      title={t('commands.pageTitle', 'Vehicle Command Center')}
+    <PageLayout
+      title={t('commands.pageTitle', 'Vehicle command center')}
       subtitle={t(
         'commands.subtitle',
         'Review vehicle readiness, send remote actions, and verify recent outcomes.',
       )}
-      actions={
+      metadataActions={
+        vehicles.length > 0 && (
+          <Badge
+            variant="neutral"
+            size="lg"
+            className="min-h-11"
+          >
+            <Icons.wifi className="h-3.5 w-3.5" aria-hidden="true" />
+            {t(
+              'commands.lastKnownActiveCount',
+              '{{active}}/{{total}} last reported active',
+              {
+                active: lastKnownActiveCount,
+                total: vehicles.length,
+              },
+            )}
+          </Badge>
+        )
+      }
+      secondaryActions={
         <div className="flex w-full flex-wrap items-end gap-2 sm:w-auto sm:justify-end">
-          {vehicles.length > 0 && (
-            <Badge
-              variant="neutral"
-              size="lg"
-              className="min-h-11"
-            >
-              <Icons.wifi className="h-3.5 w-3.5" aria-hidden="true" />
-              {t(
-                'commands.lastKnownActiveCount',
-                '{{active}}/{{total}} last reported active',
-                {
-                  active: lastKnownActiveCount,
-                  total: vehicles.length,
-                },
-              )}
-            </Badge>
-          )}
-
-
           <Button
             type="button"
             variant="ghost"
@@ -107,6 +110,7 @@ export default function CommandsPage() {
         </div>
       }
     >
+      <StaleRefreshWarning state={vehiclesState} />
       <FadeIn>
         <section
           aria-label={t(
@@ -122,12 +126,12 @@ export default function CommandsPage() {
           ) : (
             <CommandCenterFallback
               status={fallbackStatus}
-              error={vehiclesQuery.error}
+              error={vehiclesState.fatalError}
               onRetry={() => void vehiclesQuery.refetch()}
             />
           )}
         </section>
       </FadeIn>
-    </PageContainer>
+    </PageLayout>
   );
 }

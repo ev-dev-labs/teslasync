@@ -47,7 +47,6 @@ export function SidebarDriveBadge({ kind, vehicleId }: SidebarDriveBadgeProps) {
         value={rounded}
         label={t('nav.currentDriveScore', { score: rounded, defaultValue: 'Drive score {{score}}' })}
         uncapped
-        className="bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
       />
     </span>
   )

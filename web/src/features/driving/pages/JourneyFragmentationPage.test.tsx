@@ -1,10 +1,12 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { createElement, type ReactNode } from 'react';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { Drive } from '@/types/driving';
+import type { DataState } from '@/api/dataState';
+import type { OperationalBriefProps } from '@/components/data-display/OperationalBrief';
 
 const FROZEN_NOW = Date.parse('2026-08-08T12:00:00.000Z');
 const h = vi.hoisted(() => ({
@@ -22,6 +24,7 @@ interface QueryStub {
   isError: boolean;
   error: unknown;
   refetch: () => Promise<unknown>;
+  fetchStatus?: 'idle' | 'fetching' | 'paused';
 }
 
 vi.mock('react-i18next', () => ({
@@ -68,6 +71,10 @@ vi.mock('@/lib/timezone', () => ({
 
 vi.mock('@/hooks/usePageTitle', () => ({ usePageTitle: vi.fn() }));
 
+vi.mock('@/hooks/useFormatting', () => ({
+  useFormatting: () => ({ currencySymbol: '$' }),
+}));
+
 vi.mock('@/hooks/useUnits', () => ({
   useUnits: () => ({
     unitPrefs: { distance: 'km', energy: 'kWh' },
@@ -82,30 +89,25 @@ vi.mock('@/components/forms', () => ({
 }));
 
 vi.mock('@/components/layout', () => ({
-  PageContainer: ({
+  PageLayout: ({
     children,
-    actions,
+    contextActions,
     query,
   }: {
     children: ReactNode;
-    actions?: ReactNode;
+    contextActions?: ReactNode;
     query?: { refetch: () => Promise<unknown> };
   }) => (
     <main>
-      {query && (
-        <button
-          type="button"
-          data-testid="page-query-refresh"
-          onClick={() => void query.refetch()}
-        >
-          Page refresh
-        </button>
-      )}
-      {actions}
+      {query && <span data-testid="page-query-freshness">Freshness</span>}
+      {contextActions}
       {children}
     </main>
   ),
   Grid: ({ children }: { children: ReactNode }) => <div>{children}</div>,
+  LayoutCard: ({ title, children }: { title: string; children: ReactNode }) => (
+    <section data-testid="analytical-shell"><h2>{title}</h2>{children}</section>
+  ),
 }));
 
 vi.mock('@/components/motion', () => ({
@@ -141,13 +143,30 @@ vi.mock('@/components/ui', () => {
   return { GlassPanel, MetricValue, Select, Text };
 });
 
-vi.mock('@/components/data-display', () => ({
-  MetricCard: ({ label, value, subtitle }: { label: string; value: ReactNode; subtitle?: string }) => (
-    <div data-testid={`metric-${label}`}><span>{label}</span><strong>{value}</strong><small>{subtitle}</small></div>
-  ),
-}));
+vi.mock('@/components/data-display', async () => {
+  const { OperationalBrief } = await vi.importActual<typeof import('@/components/data-display/OperationalBrief')>(
+    '@/components/data-display/OperationalBrief',
+  );
+  return {
+    OperationalBrief: (props: OperationalBriefProps) => (
+      <div data-testid={props.title === 'Journey evidence and summary' ? 'analytical-shell' : undefined}>
+        <OperationalBrief {...props} />
+      </div>
+    ),
+    MetricCard: ({ label, value, subtitle }: { label: string; value: ReactNode; subtitle?: string }) => (
+      <div data-testid={`metric-${label}`}><span>{label}</span><strong>{value}</strong><small>{subtitle}</small></div>
+    ),
+  };
+});
 
 vi.mock('@/components/feedback', () => ({
+  StaleRefreshWarning: ({ state }: { state: DataState<Drive[]> }) =>
+    state.hasData && (state.refreshError || state.isRefreshBlocked) ? (
+      <div role="status" data-testid="stale-refresh-warning">
+        {state.isRefreshBlocked ? 'offline' : 'Refresh failed'}
+        <button type="button" onClick={() => state.retry?.()}>Refresh</button>
+      </div>
+    ) : null,
   EmptyState: ({ message }: { message: string }) => <div role="status">{message}</div>,
   QueryError: ({ onRetry }: { onRetry?: () => void }) => (
     <div role="alert"><button type="button" onClick={onRetry}>Retry</button></div>
@@ -264,8 +283,9 @@ function thresholdHistory(): Drive[] {
 
 function expectPersistentAnalyticalShells() {
   expect(screen.getAllByTestId('analytical-shell')).toHaveLength(14);
+  expect(within(screen.getByRole('region', { name: 'Journey evidence and summary' }))
+    .getByText('Observed history window')).toBeInTheDocument();
   [
-    'Observed history window',
     'Chain-length distribution',
     'Stopover-gap distribution',
     'Threshold sensitivity',
@@ -278,17 +298,19 @@ function expectPersistentAnalyticalShells() {
     'Ranked observed journey directory',
     'Evidence and continuity accounting',
     'Methodology and interpretation limits',
-  ].forEach((title) => expect(screen.getByText(title)).toBeInTheDocument());
+  ].forEach((title) => expect(screen.getByRole('heading', { name: title })).toBeInTheDocument());
   expect(screen.queryAllByTestId('page-query-refresh')).toHaveLength(0);
 }
 
 function expectOneRecoveryControl() {
-  expect(screen.getAllByRole('button')).toHaveLength(1);
+  expect(screen.getAllByRole('button', { name: /^(Retry|Refresh)$/ })).toHaveLength(1);
   expect(screen.getByRole('button', { name: 'Retry' })).toBeInTheDocument();
 }
 
 function metricValue(label: string): string | null {
-  return screen.getByTestId(`metric-${label}`).querySelector('strong')?.textContent ?? null;
+  return within(screen.getByRole('region', { name: 'Journey evidence and summary' }))
+    .getByText(label).closest('[data-operational-metric]')
+    ?.querySelector('[data-operational-value]')?.textContent ?? null;
 }
 
 function renderPage() {
@@ -408,19 +430,33 @@ describe('JourneyFragmentationPage', () => {
     renderPage();
     expectPersistentAnalyticalShells();
     expect(screen.getByText('Capped observed window')).toBeInTheDocument();
-    expect(screen.getByText(/history cap was reached/)).toBeInTheDocument();
-    expect(screen.getAllByText('0', { selector: 'strong' }).length).toBeGreaterThanOrEqual(2);
+    const summary = within(screen.getByRole('region', { name: 'Journey evidence and summary' }));
+    expect(summary.getByText(/history cap was reached/)).toBeInTheDocument();
+    expect(summary.getAllByText('0', { selector: '[data-operational-value]' }).length).toBeGreaterThanOrEqual(2);
   });
 
   it('preserves cached data and shows one retry on refresh error', () => {
     h.history = { data: readyHistory(), isLoading: false, isError: true, error: new Error('refresh'), refetch };
     renderPage();
     expectPersistentAnalyticalShells();
-    expect(screen.getAllByRole('alert')).toHaveLength(1);
+    expect(screen.queryAllByRole('alert')).toHaveLength(0);
+    expect(screen.getByTestId('stale-refresh-warning')).toHaveTextContent('Refresh failed');
     expect(screen.getByText('Observed journeys')).toBeInTheDocument();
-    expectOneRecoveryControl();
-    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    expect(screen.getAllByRole('button', { name: 'Refresh' })).toHaveLength(1);
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
     expect(refetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps every analytical shell and observed result when refresh is paused', () => {
+    h.history = {
+      data: readyHistory(), isLoading: false, isError: false,
+      error: null, refetch, fetchStatus: 'paused',
+    };
+    renderPage();
+    expectPersistentAnalyticalShells();
+    expect(screen.getByText('Observed journeys')).toBeInTheDocument();
+    expect(screen.getByTestId('stale-refresh-warning')).toHaveTextContent('offline');
+    expect(screen.queryAllByRole('alert')).toHaveLength(0);
   });
 
   it('changes the visible linked-pair and journey metrics at a 30-minute threshold', () => {

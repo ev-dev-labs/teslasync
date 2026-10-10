@@ -130,7 +130,7 @@ describe('SignalDiffBreakdown', () => {
     const panel = panelFor(SOURCE_TITLE);
 
     // l1(2) → l2(1) → unknown(1), in SOURCE_META reporting order.
-    expect(within(panel).getByText('L1 · In-process')).toBeInTheDocument();
+    expect(within(panel).getByText('L1 · in-process')).toBeInTheDocument();
     expect(within(panel).getByText('L2 · Redis')).toBeInTheDocument();
     // The row with no `source_b` is attributed to the Unknown bucket.
     expect(within(panel).getByText('Unknown')).toBeInTheDocument();
@@ -138,8 +138,8 @@ describe('SignalDiffBreakdown', () => {
     expect(within(panel).getByText('2 (50%)')).toBeInTheDocument();
 
     // Layers with zero rows never render (no LOG / STALE rows in the fixture).
-    expect(within(panel).queryByText('LOG · History')).toBeNull();
-    expect(within(panel).queryByText('STALE')).toBeNull();
+    expect(within(panel).queryByText('LOG · history')).toBeNull();
+    expect(within(panel).queryByText('Stale')).toBeNull();
   });
 
   it('lists pinned signals sorted alphabetically with a live count caption', () => {
@@ -169,11 +169,21 @@ describe('SignalDiffBreakdown', () => {
     renderBreakdown({ loading: true, rows: sampleRows() });
 
     const catPanel = panelFor(CATEGORY_TITLE);
-    expect(catPanel.querySelector('.animate-pulse')).not.toBeNull();
+    const skeletonSelector = '[aria-hidden="true"][class~="bg-[var(--skeleton-bg)]"]';
+    expect(catPanel.querySelector(skeletonSelector)).not.toBeNull();
+    expect(catPanel.querySelectorAll(skeletonSelector)).toHaveLength(1);
+    expect(catPanel.querySelector(skeletonSelector)).toHaveClass('w-full');
+    expect(catPanel.querySelector(skeletonSelector)).toHaveStyle({ height: '180px' });
     expect(within(catPanel).queryByText('Battery')).toBeNull();
     expect(within(catPanel).queryByText(CATEGORY_EMPTY)).toBeNull();
 
-    expect(panelFor(SOURCE_TITLE).querySelector('.animate-pulse')).not.toBeNull();
+    const sourcePanel = panelFor(SOURCE_TITLE);
+    expect(sourcePanel.querySelector(skeletonSelector)).not.toBeNull();
+    expect(sourcePanel.querySelectorAll(skeletonSelector)).toHaveLength(1);
+    expect(sourcePanel.querySelector(skeletonSelector)).toHaveClass('w-full');
+    expect(sourcePanel.querySelector(skeletonSelector)).toHaveStyle({ height: '180px' });
+    expect(within(sourcePanel).queryByText('L1 · in-process')).toBeNull();
+    expect(within(panelFor(PINNED_TITLE)).getByText(PINNED_EMPTY)).toBeInTheDocument();
   });
 
   it('surfaces a retryable error in the diff panels while keeping the pinned panel alive', () => {

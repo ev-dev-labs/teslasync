@@ -81,7 +81,7 @@
       "uncorrelated": "Deliveries without a linked trigger",
       "outboundCalls": "Outbound HTTP calls",
       "countNote": "Trigger totals do not estimate missing identifiers. Older deliveries without an event identifier appear only in delivery counts.",
-      "httpScope": "Counts use the View settings window. Outbound HTTP calls include retries and failures; they are not channel deliveries. Compare with Notifications under API Logs’ By Service for the same window.",
+      "httpScope": "Counts use the View settings window. Outbound HTTP calls include retries and failures; they are not channel deliveries. Compare with Notifications under API Logs’ By service for the same window.",
       "timeline": "Daily activity",
       "day": "Day",
       "period": "Period",
@@ -99,6 +99,17 @@
       "inbox": "Open inbox",
       "values": {
         "digest.fsd.weekly": "Weekly FSD digest",
+        "system.telemetry.outage": "System telemetry outage",
+        "system.telemetry.recovery": "System telemetry recovery",
+        "system.mqtt.outage": "System MQTT outage",
+        "system.mqtt.recovery": "System MQTT recovery",
+        "system.database.outage": "System database outage",
+        "system.redis.outage": "System Redis outage",
+        "system.redis.recovery": "System Redis recovery",
+        "system.tesla_api.outage": "System Tesla API outage",
+        "system.tesla_api.recovery": "System Tesla API recovery",
+        "system.worker.outage": "System worker outage",
+        "system.worker.recovery": "System worker recovery",
         "system.database.recovery": "Database recovery",
         "system": "System",
         "alert": "Alert rules",
@@ -107,6 +118,14 @@
         "test": "Tests",
         "other": "Other",
         "unknown": "Unattributed"
+      },
+      "category": "Category",
+      "count": "Count",
+      "brief": {
+        "scope": "{{from}} to {{to}} (exclusive) · {{timezone}}",
+        "title": "Triggers, linked deliveries, and outbound calls",
+        "available": "Report loaded",
+        "unavailable": "Report unavailable"
       }
     },
     "tab": {
@@ -144,7 +163,24 @@
       "pageNumber": "Page {{page}}",
       "summary": {
         "total": "Recent notifications",
-        "recentScope": "Latest 50 active entries · all time"
+        "recentScope": "Latest 50 active entries · all time",
+        "label": "Inbox summary",
+        "brief": {
+          "provenance": "Counts describe this bounded unfiltered sample, not the workspace period or the server total. Missing read timestamps count as unread.",
+          "title": "Backlog severity and read status",
+          "available": "Sample loaded",
+          "unknown": "Unknown severity"
+        },
+        "unread": "Unread",
+        "unreadOf": "{{unread}} of {{total}}",
+        "critical": "Critical",
+        "warnings": "Warnings",
+        "info": "Info",
+        "lastReceived": "Last received",
+        "resource": "notifications",
+        "empty": "No notifications yet",
+        "cta": "Manage alert rules",
+        "unknownSeverity": "{{count}} with unknown severity"
       },
       "selectAll": "Select all visible",
       "countLabel": "{{count}} notifications",
@@ -181,6 +217,9 @@
         "unarchive": "Restore"
       },
       "bulk": {
+        "memberSelection": "{{count}} selected notification members",
+        "loadedSelection": "{{count}} selected · {{loaded}} loaded notifications · {{total}} matching",
+        "unknownSelection": "{{count}} selected · {{loaded}} loaded notifications · total unavailable",
         "markRead": "Mark read",
         "archive": "Archive",
         "restore": "Restore",
@@ -201,7 +240,7 @@
       "empty": {
         "title": "No notifications",
         "message": "System events, alerts, automation, and scheduled notifications appear here when triggered.",
-        "ruleTriggers": "No rule-triggered notifications match these filters. Check the date range or configure a rule in Alert Studio.",
+        "ruleTriggers": "No rule-triggered notifications match these filters. Check the date range or configure a rule in Alert studio.",
         "archivedTitle": "No archived notifications",
         "archivedMessage": "Archived notifications will appear here.",
         "cta": "Configure alert rules"
@@ -212,7 +251,7 @@
       "aiCategorize": {
         "title": "Suggest inbox categories",
         "badge": "Helix",
-        "description": "Bucket recent alerts into categories from your inbox history. Descriptive replay only — review before applying.",
+        "description": "Suggest categories through a separate recent-history request using the vehicle, severity, and rule filters supplied to this panel. The inbox or archive view and exact workspace date bounds do not filter this request; it uses its own lookback window (7 days by default). Review the proposal before applying its rule IDs as an inbox filter; this does not save categories or archive notifications.",
         "suggestButton": "Suggest categories",
         "applyButton": "Apply categories as filter",
         "previewLabel": "Proposed categories (review before applying):"
@@ -226,6 +265,10 @@
       "success": "All notifications marked as read"
     },
     "bellPopover": {
+      "sentenceCritical": "critical",
+      "sentenceWarning": "warning",
+      "sentenceInfo": "info",
+      "viewAllSeverity": "See all {{severity}} unread",
       "title": "Notifications",
       "unreadCount": "{{count}} unread",
       "allRead": "All caught up",
@@ -271,29 +314,37 @@
       "emptyMessage": "Related notifications are grouped here when they occur repeatedly."
     },
     "stats": {
-      "sent": "Total Sent",
+      "sent": "Total sent",
       "failed": "Failed",
       "pending": "Pending",
-      "activeChannels": "Active Channels",
+      "activeChannels": "Active channels",
       "loading": "Loading notification statistics",
-      "resource": "notification statistics"
+      "resource": "notification statistics",
+      "period": "Delivery statistics and current channels",
+      "periodReason": "Delivery counts have no reported time bounds; active channels are the configured enabled/total count.",
+      "brief": {
+        "eyebrow": "Notification delivery",
+        "title": "Delivery channels and recorded outcomes",
+        "available": "Statistics available",
+        "unavailable": "No statistics supplied"
+      }
     },
     "channels": {
-      "add": "Add Channel",
+      "add": "Add channel",
       "fields": {
         "signingSecret": "Signing secret"
       },
-      "addTitle": "Add Channel",
-      "editTitle": "Edit Channel",
+      "addTitle": "Add channel",
+      "editTitle": "Edit channel",
       "active": "Active",
       "enabled": "Enabled",
       "disabled": "Disabled",
       "configLabel": "Configuration",
-      "typeLabel": "Channel Type",
-      "nameLabel": "Channel Name",
+      "typeLabel": "Channel type",
+      "nameLabel": "Channel name",
       "namePlaceholderPrefix": "My",
       "nameRequired": "Name is required",
-      "test": "Test Connection",
+      "test": "Test connection",
       "testShort": "Test",
       "testing": "Testing…",
       "testSuccess": "Test notification sent successfully!",
@@ -308,10 +359,10 @@
         "title": "No channels configured",
         "message": "Add a notification channel to start receiving alerts via Discord, Slack, Telegram, Email, and more."
       },
-      "testHint": "Save then click \"Send Test\" to verify the configuration."
+      "testHint": "Save then click \"Send test\" to verify the configuration."
     },
     "alertStudio": {
-      "title": "Alert Studio",
+      "title": "Alert studio",
       "subtitle": "Create rules for vehicle signals, computed metrics, system health, and places",
       "placeEvents": {
         "title": "Place arrival and departure alerts",
@@ -328,7 +379,7 @@
       },
       "aiBuilder": {
         "title": "Draft from natural language",
-        "description": "Describe the alert you want and get a typed AlertRule draft you can review and save below.",
+        "description": "Describe the alert you want to receive an advisory text proposal. Review it and manually enter the rule in the standard form before saving; this action does not fill the form, save, or enable an alert.",
         "badge": "Helix",
         "draftButton": "Draft alert"
       },
@@ -402,15 +453,15 @@
         },
         "noSignalTitle": "Choose a signal",
         "noSignalDescription": "Select a telemetry signal before entering a comparison value.",
-        "minValueLabel": "Minimum Value",
-        "maxValueLabel": "Maximum Value",
-        "textValueLabel": "Text Value",
+        "minValueLabel": "Minimum value",
+        "maxValueLabel": "Maximum value",
+        "textValueLabel": "Text value",
         "textValuePlaceholder": "Value to compare",
-        "booleanValueLabel": "Boolean Value",
+        "booleanValueLabel": "Boolean value",
         "anyChangeDescription": "This rule fires whenever the selected signal changes.",
-        "numericValueLabel": "Numeric Value",
-        "editTitle": "Edit Rule",
-        "newTitle": "New Rule",
+        "numericValueLabel": "Numeric value",
+        "editTitle": "Edit rule",
+        "newTitle": "New rule",
         "nameLabel": "Name",
         "namePlaceholder": "My alert rule",
         "enabledLabel": "Status",
@@ -421,7 +472,7 @@
         "vehiclesHelp": "Choose 'All vehicles' to apply this rule to your entire fleet, including any cars you add later.",
         "vehiclesAllOption": "All vehicles (current + future)",
         "vehiclesEmptyError": "Pick at least one vehicle, or select 'All vehicles'.",
-        "vehiclesEmptyFleetHelp": "Add a vehicle in Settings → Vehicles to use this rule.",
+        "vehiclesEmptyFleetHelp": "Add a vehicle in settings → Vehicles to use this rule.",
         "vehiclesSummaryAll": "All vehicles",
         "vehiclesSummaryNone": "No vehicles selected",
         "vehiclesSummaryOne": "{{name}}",
@@ -434,11 +485,11 @@
         "signalTypeHint": "{{type}} signal from {{category}}",
         "operatorLabel": "Operator",
         "severityLabel": "Severity",
-        "allowedOperatorsLabel": "Allowed Operators",
+        "allowedOperatorsLabel": "Allowed operators",
         "allowedOperatorsPlaceholder": "Select a signal to see its operators",
-        "typedValueLabel": "Typed Value",
+        "typedValueLabel": "Typed value",
         "cooldownLabel": "Cooldown (minutes)",
-        "alertBehaviorLabel": "Alert Behavior",
+        "alertBehaviorLabel": "Alert behavior",
         "alertBehaviorPlaceholder": "— Choose one —",
         "maxFiresLabel": "Max alerts before condition resolves",
         "maxFiresPlaceholder": "Leave blank for unlimited",
@@ -449,10 +500,12 @@
         "escalationSeverityLabel": "Escalated severity",
         "escalationSeverityPlaceholder": "Select severity…",
         "escalationHint": "Only repeat-mode rules can escalate. The escalated severity must be higher than the base severity.",
-        "testMessageLabel": "Test Message",
+        "testMessageLabel": "Test message",
         "signalHint": "Use {{SignalName}}",
         "testMessagePlaceholder": "Battery at {{BatteryLevel}}%",
-        "kindLabel": "Rule type"
+        "kindLabel": "Rule type",
+        "previewRetained": "The previous preview remains visible; it may not reflect the current draft.",
+        "presetTagFilter": "Filter message presets by tag"
       },
       "signalTypes": {
         "numeric": "Numeric",
@@ -464,27 +517,27 @@
       },
       "signals": {
         "optionLabel": "{{name}} - {{type}} - {{category}}",
-        "customOptionLabel": "{{name}} - {{type}} - Custom"
+        "customOptionLabel": "{{name}} - {{type}} - custom"
       },
       "boolean": {
         "true": "True",
         "false": "False"
       },
       "test": {
-        "defaultMessage": "Test notification from Alert Studio"
+        "defaultMessage": "Test notification from alert studio"
       },
       "actions": {
         "templates": "Templates",
-        "newRule": "New Rule",
+        "newRule": "New rule",
         "saving": "Saving...",
-        "updateRule": "Update Rule",
-        "createRule": "Create Rule",
+        "updateRule": "Update rule",
+        "createRule": "Create rule",
         "delete": "Delete",
         "test": "Test",
         "reset": "Reset"
       },
       "templates": {
-        "header": "Rule Templates - {{count}} pre-built rules",
+        "header": "Rule templates - {{count}} pre-built rules",
         "searchLabel": "Search templates",
         "searchPlaceholder": "Search templates...",
         "categoryFilter": "Filter templates by category",
@@ -506,7 +559,7 @@
         "cancel": "Cancel snooze"
       },
       "channels": {
-        "testTargetLabel": "Test Delivery Target",
+        "testTargetLabel": "Test delivery target",
         "browserToast": "Browser toast notification (real-time via SSE)",
         "alertHistory": "Alert history (saved to database)",
         "externalChannels": "External channels for test notifications:",
@@ -536,12 +589,12 @@
         "placeHint": "Notify when a vehicle arrives at or departs from a saved place."
       },
       "system": {
-        "telemetry": "TELEMETRY",
+        "telemetry": "Telemetry",
         "mqtt": "MQTT",
-        "database": "DATABASE",
-        "redis": "REDIS",
-        "tesla_api": "TESLA API",
-        "worker": "WORKER",
+        "database": "Database",
+        "redis": "Redis",
+        "tesla_api": "Tesla API",
+        "worker": "Worker",
         "scope": "System health rules monitor a service for the entire fleet.",
         "component": "Service",
         "choose": "Choose a service",
@@ -599,7 +652,17 @@
         "statusQuietSub": "{{count}} window active now",
         "statusActiveSub": "No window active now",
         "alwaysAllow": "Always allowed",
-        "alwaysAllowSub": "Severities that break through"
+        "alwaysAllowSub": "Severities that break through",
+        "noWindows": "No configured windows",
+        "noBypass": "No bypass severities configured",
+        "period": "Configured schedules · right now",
+        "periodContext": "Enabled schedules and their bypass severities; current status uses the local weekday and time.",
+        "brief": {
+          "eyebrow": "Quiet-hours policy",
+          "title": "Schedules, delivery status, and bypass policy",
+          "empty": "No schedules",
+          "available": "Schedules loaded"
+        }
       },
       "guide": {
         "title": "How quiet hours work",
@@ -637,7 +700,7 @@
         "subtitle": "Forward events to any HTTP receiver, signed and verifiable.",
         "stepSign": "Every payload is HMAC-SHA256 signed and sent in the X-TeslaSync-Signature header so receivers can verify authenticity.",
         "stepDeliver": "TeslaSync POSTs a compact JSON envelope on each event; failed deliveries are retried with backoff.",
-        "stepVerify": "Use Test on any endpoint to fire a sample event and preview the signature before you rely on it.",
+        "stepVerify": "Use test on any endpoint to fire a sample event and preview the signature before you rely on it.",
         "referenceTitle": "Delivery reference",
         "refHeader": "Signature header",
         "refAlgo": "Algorithm",
@@ -647,6 +710,20 @@
         "payloadMessage": "Long-form event body.",
         "payloadSource": "Always \"teslasync\".",
         "payloadTimestamp": "RFC3339 server time."
+      }
+    },
+    "device": {
+      "retainedVehicleIds": "Selected vehicle IDs remain saved while their details are unavailable: {{ids}}"
+    },
+    "archived": {
+      "summary": {
+        "label": "Archived summary",
+        "recentScope": "Latest 50 archived entries · all time",
+        "total": "Total archived",
+        "lastArchived": "Last archived",
+        "resource": "archived notifications",
+        "empty": "No archived notifications yet",
+        "cta": "Go to inbox"
       }
     }
   }

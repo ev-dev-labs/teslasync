@@ -1,0 +1,24 @@
+{
+  "session": "bba4960d-f516-4831-bda3-877640f907ce",
+  "design": "Shared OperationalBrief through useOperationalMetrics",
+  "sourceWriteRelease": true,
+  "files": [
+    "web\\src\\features\\diagnostics\\pages\\AnomalyDashboardPage.tsx",
+    "web\\src\\features\\diagnostics\\pages\\AnomalyDashboardPage.test.tsx",
+    "web\\src\\features\\diagnostics\\components\\statstrip-anomaly\\anomalySummary.ts",
+    "web\\src\\features\\diagnostics\\components\\statstrip-anomaly\\anomalySummary.test.ts",
+    "web\\src\\features\\telemetry\\pages\\SignalsWorkspacePage.tsx",
+    "web\\src\\features\\telemetry\\pages\\SignalsWorkspacePage.test.tsx",
+    "web\\src\\features\\telemetry\\pages\\MQTTInspectorPage.tsx",
+    "web\\src\\features\\telemetry\\pages\\MQTTInspectorPage.test.tsx",
+    "web\\src\\features\\telemetry\\components\\statstrip-signals-mqtt\\signalsSummary.ts",
+    "web\\src\\features\\telemetry\\components\\statstrip-signals-mqtt\\mqttSummary.ts",
+    "web\\src\\features\\telemetry\\components\\statstrip-signals-mqtt\\signalsMqttSummary.test.ts"
+  ],
+  "validation": "Not run; parent serialization required",
+  "pending": [
+    "Announced web\\src\\hooks\\useOperationalMetrics.ts absent on latest direct read; pages consume specified parent API",
+    "Parent synchronization of 23 exact translation fallbacks",
+    "Serialized parent validation"
+  ]
+}

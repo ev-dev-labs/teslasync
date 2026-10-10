@@ -27,9 +27,19 @@ import type { Vehicle } from '@/types/vehicle'
 import type { Alert, AlertDetail, SavedView, SearchResponse } from '@/api/types'
 import type { ReactNode } from 'react'
 import { StrictMode } from 'react'
+import userEvent from '@testing-library/user-event'
 
 const locale = vi.hoisted(() => ({
   translations: {} as Record<string, string>,
+}))
+
+const motionPreference = vi.hoisted(() => ({ reduce: false }))
+
+vi.mock('@/hooks/useMotionPreference', () => ({
+  useMotionPreference: () => ({
+    reduce: motionPreference.reduce,
+    durationMs: motionPreference.reduce ? 0 : 250,
+  }),
 }))
 
 vi.mock('react-i18next', () => ({
@@ -154,6 +164,7 @@ function openPaletteViaEvent() {
 }
 
 beforeEach(() => {
+  motionPreference.reduce = false
   locale.translations = {}
   localStorage.clear()
   sessionStorage.clear()
@@ -161,6 +172,236 @@ beforeEach(() => {
   _resetFrecency()
   requestMock.mockReset()
   requestMock.mockResolvedValue({})
+})
+
+describe('CommandPalette independent source trust', () => {
+  it('shows filtered no-match for a nonempty vehicle source without claiming an empty fleet', () => {
+    render(<CommandPalette initialOpen />, { wrapper: makeWrapper(makeVehicles()) })
+    fireEvent.change(screen.getByRole('combobox'), { target: { value: '@ zzzunmatchedvehicle' } })
+    expect(screen.getByText('No results for "zzzunmatchedvehicle"')).toBeInTheDocument()
+    expect(screen.queryByText('No vehicles available')).not.toBeInTheDocument()
+    expect(screen.queryByRole('option')).not.toBeInTheDocument()
+  })
+
+  it('shows filtered no-match with a nonempty open-alert source without claiming no open alerts', async () => {
+    const query = 'zzzunmatchedalert'
+    requestMock.mockImplementation((path: string) => path === `/search?q=${query}&limit=5`
+      ? Promise.resolve({ query, hits: [] } satisfies SearchResponse) : Promise.resolve({}))
+    render(<CommandPalette initialOpen />, { wrapper: makeWrapper(makeVehicles(), [], {}, [makeAlert()]) })
+    fireEvent.change(screen.getByRole('combobox'), { target: { value: query } })
+    expect(await screen.findByText(`No results for "${query}"`)).toBeInTheDocument()
+    expect(screen.queryByText('No open alerts to acknowledge')).not.toBeInTheDocument()
+    expect(screen.queryByRole('option')).not.toBeInTheDocument()
+  })
+
+  function mountSources(qc: QueryClient) {
+    render(
+      <QueryClientProvider client={qc}><CommandPalette initialOpen /><LocationProbe /></QueryClientProvider>,
+      { wrapper: makeWrapper(makeVehicles()) },
+    )
+  }
+
+  function sourceClient() {
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } })
+    qc.setQueryData(vehicleKeys.all, makeVehicles())
+    qc.setQueryData(alertKeys.alerts, [])
+    return qc
+  }
+
+  it('keeps navigation and vehicles usable when saved views fail and retries only that real source', async () => {
+    const qc = sourceClient()
+    requestMock.mockImplementation((path: string) => path === '/saved-views'
+      ? Promise.reject(new Error('Saved views unavailable')) : Promise.resolve({}))
+    mountSources(qc)
+    expect(await screen.findByRole('button', { name: 'Retry' })).toBeInTheDocument()
+    expect(screen.getByRole('option', { name: /Switch to Model Y/ })).toBeInTheDocument()
+    const before = requestMock.mock.calls.filter(([path]) => path === '/saved-views').length
+    requestMock.mockImplementation((path: string) => path === '/saved-views' ? Promise.resolve([]) : Promise.resolve({}))
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }))
+    await screen.findByText('No saved views yet')
+    expect(requestMock.mock.calls.filter(([path]) => path === '/saved-views')).toHaveLength(before + 1)
+    expect(requestMock.mock.calls.some(([path]) => path === '/vehicles' || path === '/alerts')).toBe(false)
+    fireEvent.change(screen.getByRole('combobox'), { target: { value: '/ drives' } })
+    fireEvent.click(screen.getByRole('option', { name: /^Drives/ }))
+    await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/drives'))
+  })
+
+  it('retains open alert actions on refresh failure and refreshes only the alert query', async () => {
+    const qc = sourceClient()
+    qc.setQueryData(savedViewsKeys.allList, [])
+    qc.setQueryData(alertKeys.alerts, [makeAlert()])
+    qc.setQueryData(searchKeys.global('acknowledge', undefined, 5), { query: 'acknowledge', hits: [] } satisfies SearchResponse)
+    mountSources(qc)
+    fireEvent.change(screen.getByRole('combobox'), { target: { value: 'acknowledge' } })
+    fireEvent.click(screen.getByRole('option', { name: /Acknowledge an alert/ }))
+    requestMock.mockRejectedValueOnce(new Error('Alert refresh unavailable'))
+    await act(async () => { await qc.invalidateQueries({ queryKey: alertKeys.alerts }) })
+    expect(await screen.findByTestId('stale-refresh-warning')).toHaveTextContent('Open alerts may be out of date')
+    expect(screen.getByRole('option', { name: /Battery critically low/ })).toBeInTheDocument()
+    const before = requestMock.mock.calls.filter(([path]) => path === '/alerts').length
+    requestMock.mockResolvedValue([makeAlert()])
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }))
+    await waitFor(() => expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument())
+    expect(requestMock.mock.calls.filter(([path]) => path === '/alerts')).toHaveLength(before + 1)
+    expect(screen.getByRole('option', { name: /Battery critically low/ })).toBeInTheDocument()
+  })
+
+  it('distinguishes vehicle initial loading from the authoritative empty fleet', async () => {
+    const qc = sourceClient()
+    qc.removeQueries({ queryKey: vehicleKeys.all })
+    qc.setQueryData(savedViewsKeys.allList, [])
+    let resolveVehicles!: (vehicles: Vehicle[]) => void
+    requestMock.mockImplementation((path: string) => path === '/vehicles'
+      ? new Promise<Vehicle[]>(resolve => { resolveVehicles = resolve }) : Promise.resolve({}))
+    mountSources(qc)
+    expect(screen.getByRole('status', { name: 'Loading Vehicles' })).toBeInTheDocument()
+    expect(screen.queryByText('No vehicles available')).not.toBeInTheDocument()
+    expect(screen.getByRole('option', { name: /^Drives/ })).toBeInTheDocument()
+    await act(async () => resolveVehicles([]))
+    expect(await screen.findByText('No vehicles available')).toBeInTheDocument()
+    expect(screen.queryByRole('status', { name: 'Loading Vehicles' })).not.toBeInTheDocument()
+  })
+})
+
+describe('CommandPalette remote search trust', () => {
+  it('keeps static rows during initial search and does not claim no matches until the response resolves', async () => {
+    let resolveSearch!: (response: SearchResponse) => void
+    requestMock.mockImplementation(() => new Promise<SearchResponse>(resolve => { resolveSearch = resolve }))
+    render(<CommandPalette initialOpen />, { wrapper: makeWrapper(makeVehicles()) })
+    const input = screen.getByRole('combobox')
+    fireEvent.change(input, { target: { value: 'drives' } })
+    expect(screen.getByRole('status')).toHaveTextContent('Loading...')
+    expect(screen.getByRole('option', { name: /^Drives/ })).toBeInTheDocument()
+    await waitFor(() => expect(requestMock).toHaveBeenCalledWith('/search?q=drives&limit=5', expect.anything()))
+    expect(screen.queryByText(/No results for/)).not.toBeInTheDocument()
+    await act(async () => resolveSearch({ query: 'drives', hits: [] }))
+    await waitFor(() => expect(screen.queryByRole('status')).not.toBeInTheDocument())
+    fireEvent.change(input, { target: { value: 'zzzzmissing' } })
+    expect(screen.queryByText(/No results for/)).not.toBeInTheDocument()
+    await waitFor(() => expect(requestMock).toHaveBeenCalledWith('/search?q=zzzzmissing&limit=5', expect.anything()))
+    await act(async () => resolveSearch({ query: 'zzzzmissing', hits: [] }))
+    expect(await screen.findByText('No results for "zzzzmissing"')).toBeInTheDocument()
+  })
+
+  it('discloses older-query hits throughout debounce and pending without retrying the previous query', async () => {
+    let resolveSearch!: (response: SearchResponse) => void
+    requestMock.mockImplementation(() => new Promise<SearchResponse>(resolve => { resolveSearch = resolve }))
+    const alpha: SearchResponse = {
+      query: 'alpha',
+      hits: [{ type: 'drive', id: 77, title: 'Alpha commute', subtitle: 'Drive', url: '/drives/77', score: 100 }],
+    }
+    render(<CommandPalette initialOpen />, { wrapper: makeWrapper(makeVehicles(), [], { alpha }) })
+    const input = screen.getByRole('combobox')
+    fireEvent.change(input, { target: { value: 'alpha' } })
+    await screen.findByRole('option', { name: /Alpha commute/ })
+    fireEvent.change(input, { target: { value: 'beta' } })
+    expect(screen.getByRole('status')).toHaveTextContent('Showing results for "alpha" while search for "beta" is pending.')
+    expect(screen.getByRole('option', { name: /Alpha commute/ })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Retry' })).not.toBeInTheDocument()
+    await waitFor(() => expect(requestMock).toHaveBeenCalledWith('/search?q=beta&limit=5', expect.anything()))
+    expect(screen.getByRole('status')).toHaveTextContent('Showing results for "alpha"')
+    await act(async () => resolveSearch({ query: 'beta', hits: [] }))
+    await waitFor(() => expect(screen.queryByText('Alpha commute')).not.toBeInTheDocument())
+    expect(screen.queryByRole('status')).not.toBeInTheDocument()
+  })
+
+  it('shows initial failure beside static rows and retries the actual current hook', async () => {
+    const searchRequest = vi.fn<() => Promise<SearchResponse>>()
+      .mockRejectedValueOnce(new Error('Search unavailable'))
+      .mockResolvedValue({ query: 'drives', hits: [] })
+    requestMock.mockImplementation((path: string) => {
+      if (path === '/search?q=drives&limit=5') return searchRequest()
+      if (path === '/system/auth-mode') return Promise.resolve({
+        mode: 'open', subject: null,
+        capabilities: { step_up_reauth: false, totp_enrollment: false, session_list: false, impersonation: false, rbac: false },
+      } satisfies import('@/api/types').AuthModeResponse)
+      return Promise.reject(new Error(`Unexpected request: ${path}`))
+    })
+    render(<CommandPalette initialOpen />, { wrapper: makeWrapper(makeVehicles()) })
+    fireEvent.change(screen.getByRole('combobox'), { target: { value: 'drives' } })
+    expect(await screen.findByRole('button', { name: 'Retry' })).toBeInTheDocument()
+    expect(screen.getByRole('status')).toHaveTextContent('The search service did not respond.')
+    expect(screen.getByRole('option', { name: /^Drives/ })).toBeInTheDocument()
+    expect(screen.queryByText(/No results for/)).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }))
+    await waitFor(() => expect(screen.queryByRole('status')).not.toBeInTheDocument())
+    expect(requestMock.mock.calls.filter(([path]) => path === '/search?q=drives&limit=5')).toHaveLength(2)
+  })
+
+  it('retains hits during refresh failure, reports stale data and retries without changing navigation', async () => {
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } })
+    qc.setQueryData(vehicleKeys.all, makeVehicles())
+    qc.setQueryData(savedViewsKeys.allList, [])
+    qc.setQueryData(alertKeys.alerts, [])
+    qc.setQueryData(searchKeys.global('alpha', undefined, 5), {
+      query: 'alpha',
+      hits: [{ type: 'drive', id: 77, title: 'Alpha commute', subtitle: 'Drive', url: '/drives/77', score: 100 }],
+    } satisfies SearchResponse)
+    const Wrapper = makeWrapper(makeVehicles())
+    render(<QueryClientProvider client={qc}><CommandPalette initialOpen /><LocationProbe /></QueryClientProvider>, { wrapper: Wrapper })
+    fireEvent.change(screen.getByRole('combobox'), { target: { value: 'alpha' } })
+    await screen.findByRole('option', { name: /Alpha commute/ })
+    requestMock.mockRejectedValueOnce(new Error('Refresh unavailable'))
+    await act(async () => { await qc.invalidateQueries({ queryKey: searchKeys.global('alpha', undefined, 5) }) })
+    expect(await screen.findByRole('button', { name: 'Retry' })).toBeInTheDocument()
+    expect(screen.getByRole('status')).toHaveTextContent('Previously loaded data remains visible.')
+    expect(screen.getByRole('option', { name: /Alpha commute/ })).toBeInTheDocument()
+    requestMock.mockResolvedValue(qc.getQueryData(searchKeys.global('alpha', undefined, 5)))
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }))
+    await waitFor(() => expect(screen.queryByRole('status')).not.toBeInTheDocument())
+    fireEvent.click(screen.getByRole('option', { name: /Alpha commute/ }))
+    await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/drives/77'))
+  })
+})
+
+describe('CommandPalette result presentation', () => {
+  it('keeps long result text reachable, logical alignment and actual selection/navigation', async () => {
+    const title = `Alpha ${'رحلةطويلة'.repeat(24)}`
+    const subtitle = 'Long source description '.repeat(16).trim()
+    render(<div dir="rtl"><CommandPalette initialOpen /><LocationProbe /></div>, {
+      wrapper: makeWrapper(makeVehicles(), [], {
+        alpha: { query: 'alpha', hits: [{ type: 'drive', id: 77, title, subtitle, url: '/drives/77', score: 100 }] },
+      }),
+    })
+    const input = screen.getByRole('combobox')
+    fireEvent.change(input, { target: { value: 'alpha' } })
+    const label = await screen.findByText(title)
+    const row = label.closest('[role="option"]')!
+    expect(label).toHaveClass('break-words', 'min-w-0')
+    expect(screen.getByText(subtitle)).toHaveClass('break-words')
+    expect(row).toHaveClass('text-start', 'min-h-11', 'h-auto', 'whitespace-normal')
+    expect(row).not.toHaveClass('text-left')
+    expect(row.querySelector('.truncate')).toBeNull()
+    expect(row).toHaveAttribute('tabindex', '-1')
+    fireEvent.mouseEnter(row)
+    expect(row).toHaveAttribute('aria-selected', 'true')
+    expect(input).toHaveAttribute('aria-activedescendant', row.id)
+    expect(row).toHaveClass('bg-[var(--surface-2)]')
+    expect(row.querySelector('.rtl\\:rotate-180')).toHaveAttribute('aria-hidden', 'true')
+    fireEvent.keyDown(input, { key: 'Enter' })
+    await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/drives/77'))
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+  })
+
+  it('keeps the wrapping view-all target focusable and navigates with its exact query', async () => {
+    const query = `alpha ${'extended query '.repeat(12)}`.trim()
+    render(<><CommandPalette initialOpen /><LocationProbe /></>, {
+      wrapper: makeWrapper(makeVehicles(), [], {
+        [query]: { query, hits: [{ type: 'drive', id: 77, title: 'Alpha commute', subtitle: 'Drive', url: '/drives/77', score: 100 }] },
+      }),
+    })
+    fireEvent.change(screen.getByRole('combobox'), { target: { value: query } })
+    const target = await screen.findByRole('button', { name: `View all results for "${query}"` })
+    expect(target).toHaveClass('min-h-11', 'h-auto', 'text-start', 'whitespace-normal', 'focus-visible:outline-2')
+    expect(target.querySelector('.break-words')).toHaveTextContent(query)
+    expect(target.querySelector('.rtl\\:rotate-180')).toHaveAttribute('aria-hidden', 'true')
+    expect(getShellFocusableElements(screen.getByRole('dialog'))).toContain(target)
+    act(() => target.focus())
+    expect(target).toHaveFocus()
+    fireEvent.click(target)
+    await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent(`/search?q=${encodeURIComponent(query)}`))
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+  })
 })
 
 afterEach(() => {
@@ -203,6 +444,33 @@ describe('CommandPalette recent storage', () => {
 })
 
 // ─── Cmd+K behavior ─────────────────────────────────────────────────────────
+
+describe('CommandPalette frame', () => {
+  it.each([false, true])('preserves overlay geometry with reduced motion %s', async (reduce) => {
+    motionPreference.reduce = reduce
+    render(<CommandPalette initialOpen />, { wrapper: makeWrapper(makeVehicles()) })
+    const dialog = screen.getByRole('dialog')
+    const panel = document.querySelector('[data-command-palette-panel]')
+    const backdrop = document.querySelector('[data-role="command-palette"]')
+    expect(dialog).toHaveClass('rounded-panel', 'shadow-e3', 'max-h-command-palette', 'bg-[var(--surface-1)]')
+    expect(dialog.className).not.toMatch(/backdrop-blur|shadow-2xl|rounded-2xl/)
+    expect(backdrop).toHaveClass('z-command-palette-backdrop', 'bg-[var(--surface-overlay)]')
+    expect(backdrop?.className).not.toContain('backdrop-blur')
+    expect(document.querySelector('[data-command-palette-positioner]')).toHaveClass(
+      'z-command-palette-positioner', 'py-command-palette-viewport',
+      'pointer-events-none', 'overflow-y-auto', 'px-4',
+    )
+    expect(panel).toHaveClass('w-full', 'max-w-lg', 'pointer-events-auto')
+    expect(panel?.getAttribute('style') ?? '').not.toMatch(/scale|translate/)
+    if (reduce) {
+      expect(panel).toHaveStyle({ opacity: '1' })
+      expect(backdrop).toHaveStyle({ opacity: '1' })
+    }
+    await waitFor(() => expect(screen.getByRole('combobox')).toHaveFocus())
+    fireEvent.keyDown(screen.getByRole('combobox'), { key: 'Escape' })
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+  })
+})
 
 describe('CommandPalette keyboard shortcut', () => {
   it('opens the deferred palette on its first invocation', async () => {
@@ -256,7 +524,7 @@ describe('CommandPalette keyboard shortcut', () => {
     })
 
     const dialog = screen.getByRole('dialog')
-    expect(dialog).toHaveClass('flex', 'flex-col', 'max-h-[84vh]')
+    expect(dialog).toHaveClass('flex', 'flex-col', 'max-h-command-palette')
     const listbox = screen.getByRole('listbox')
     expect(listbox).toHaveClass('max-h-80', 'min-h-0', 'overflow-y-auto')
   })
@@ -326,7 +594,7 @@ describe('CommandPalette search', () => {
     expect(await screen.findByRole('option', { name: /Asistente virtual/i })).toBeInTheDocument()
   })
 
-  it('matches "btr" → "Battery Health" via fuzzy subsequence', async () => {
+  it('matches "btr" → "Battery health" via fuzzy subsequence', async () => {
     const Wrapper = makeWrapper(makeVehicles())
     render(<CommandPalette />, { wrapper: Wrapper })
 
@@ -334,7 +602,8 @@ describe('CommandPalette search', () => {
     const input = await screen.findByPlaceholderText(/Search pages/i) as HTMLInputElement
     fireEvent.change(input, { target: { value: 'btr' } })
 
-    expect(await screen.findByText('Battery Health')).toBeInTheDocument()
+    const result = await screen.findByText('Battery health')
+    expect(result.closest('[role="option"]')).toBeInTheDocument()
   })
 
   it('surfaces vehicle-switch entries when fleet has 2+ vehicles', async () => {
@@ -2022,6 +2291,69 @@ describe('CommandPalette latest-callback commit semantics', () => {
     expect(second).toHaveBeenCalledTimes(1)
   })
 
+  describe('CommandPalette header focus handoff', () => {
+    it('uses the canonical localized search name and retains visible focus styles', async () => {
+      locale.translations['search.input.label'] = 'Consulta de búsqueda'
+      render(<CommandPalette initialOpen />, { wrapper: makeWrapper(makeVehicles()) })
+      const input = screen.getByRole('combobox', { name: 'Consulta de búsqueda' })
+      await waitFor(() => expect(input).toHaveFocus())
+      expect(input.className).toContain('focus-visible:ring-2')
+      expect(input.className).not.toContain('!ring-0')
+      expect(input.className).not.toContain('!shadow-none')
+      expect(input.className).toContain('min-h-11')
+    })
+
+    it('hands vehicle selection to the actual list for Arrow, Enter and Back', async () => {
+      requestMock.mockResolvedValue({ success: true, result: 'success' })
+      render(<CommandPalette initialOpen />, { wrapper: makeWrapper(makeVehicles()) })
+      let input = screen.getByRole('combobox')
+      await waitFor(() => expect(input).toHaveFocus())
+      fireEvent.change(input, { target: { value: 'wake' } })
+      fireEvent.click(await screen.findByRole('option', { name: /Wake Up Vehicle/i }))
+      let list = screen.getByRole('listbox')
+      expect(list).toHaveFocus()
+      fireEvent.keyDown(document.activeElement!, { key: 'ArrowDown' })
+      expect(screen.getByRole('option', { name: /Model Y/i })).toHaveAttribute('aria-selected', 'true')
+      expect(list).toHaveAttribute('aria-activedescendant', screen.getByRole('option', { name: /Model Y/i }).id)
+      fireEvent.click(screen.getByRole('button', { name: 'Back' }))
+      input = screen.getByRole('combobox')
+      expect(input).toHaveFocus()
+      fireEvent.change(input, { target: { value: 'wake' } })
+      fireEvent.click(await screen.findByRole('option', { name: /Wake Up Vehicle/i }))
+      list = screen.getByRole('listbox')
+      expect(list).toHaveFocus()
+      fireEvent.keyDown(document.activeElement!, { key: 'ArrowDown' })
+      fireEvent.keyDown(document.activeElement!, { key: 'Enter' })
+      await waitFor(() => expect(requestMock).toHaveBeenCalledWith(
+        '/vehicles/2/command', expect.objectContaining({ method: 'POST' }),
+      ))
+    })
+
+    it('hands alert selection to the actual list and restores search with Backspace', async () => {
+      const second = makeAlert({ id: 10, title: 'Second open alert' })
+      requestMock.mockResolvedValue({ ...second, acknowledged_at: '2026-08-24T17:00:00Z', events: [] })
+      render(<CommandPalette initialOpen />, {
+        wrapper: makeWrapper(makeVehicles(), [], { acknowledge: { query: 'acknowledge', hits: [] } }, [makeAlert(), second]),
+      })
+      const enterAlerts = async () => {
+        const input = screen.getByRole('combobox')
+        fireEvent.change(input, { target: { value: 'acknowledge' } })
+        fireEvent.click(await screen.findByRole('option', { name: /Acknowledge an alert/i }))
+        expect(screen.getByRole('listbox')).toHaveFocus()
+      }
+      await enterAlerts()
+      fireEvent.keyDown(document.activeElement!, { key: 'Backspace' })
+      expect(screen.getByRole('combobox')).toHaveFocus()
+      await enterAlerts()
+      fireEvent.keyDown(document.activeElement!, { key: 'ArrowDown' })
+      expect(screen.getByRole('option', { name: /Second open alert/i })).toHaveAttribute('aria-selected', 'true')
+      fireEvent.keyDown(document.activeElement!, { key: 'Enter' })
+      await waitFor(() => expect(requestMock).toHaveBeenCalledWith(
+        '/alerts/10/acknowledge', expect.objectContaining({ method: 'POST' }),
+      ))
+    })
+  })
+
   it('tolerates the callback being removed between commits', async () => {
     const onOpen = vi.fn()
     const Wrapper = makeWrapper(makeVehicles())
@@ -2033,4 +2365,83 @@ describe('CommandPalette latest-callback commit semantics', () => {
     expect(onOpen).not.toHaveBeenCalled()
   })
 
+})
+describe('CommandPalette footer hints adoption', () => {
+  it.each([
+    ['>', 'Commands', 'Search commands…'],
+    ['/', 'Pages', 'Search pages…'],
+    ['@', 'Vehicles', 'Switch vehicle…'],
+    [':', 'Settings', 'Search settings…'],
+  ])('keeps %s %s reachable by keyboard and click with focus and touch roles', async (prefix, label, placeholder) => {
+    const user = userEvent.setup()
+    render(<CommandPalette initialOpen />, { wrapper: makeWrapper(makeVehicles()) })
+    await waitFor(() => expect(screen.getByRole('combobox')).toHaveFocus())
+    for (const activation of ['{Enter}', ' ', 'click']) {
+      const chip = screen.getByRole('button', { name: `${prefix}${label}` })
+      expect(chip).toHaveClass('min-h-11', 'min-w-11', 'h-auto', 'focus-visible:outline-2', 'focus-visible:outline-offset-2')
+      expect(chip).toHaveClass('focus-visible:outline-[var(--focus-ring)]')
+      expect(getShellFocusableElements(screen.getByRole('dialog'))).toContain(chip)
+      for (let step = 0; step < 6 && document.activeElement !== chip; step++) await user.tab()
+      expect(chip).toHaveFocus()
+      if (activation === 'click') await user.click(chip)
+      else await user.keyboard(activation)
+      const input = screen.getByRole('combobox')
+      expect(input).toHaveAttribute('placeholder', placeholder)
+      expect(input).toHaveFocus()
+      expect(document.querySelector('[data-palette-scope-hints]')).toBeNull()
+      expect(screen.getByText('Clear filter')).toBeInTheDocument()
+      await user.keyboard('{Escape}')
+      expect(input).toHaveValue('')
+      expect(input).toHaveFocus()
+      expect(document.querySelector('[data-palette-scope-hints]')).not.toBeNull()
+      expect(screen.getByText('Close')).toBeInTheDocument()
+    }
+  })
+
+  it('retains actual Tab and Shift+Tab order through all footer chips and the modal boundary', async () => {
+    const user = userEvent.setup()
+    render(<CommandPalette initialOpen />, { wrapper: makeWrapper(makeVehicles()) })
+    const input = screen.getByRole('combobox')
+    await waitFor(() => expect(input).toHaveFocus())
+    const hints = document.querySelector('[data-palette-scope-hints]')!
+    const chips = Array.from(hints.querySelectorAll('button'))
+    const focusables = getShellFocusableElements(screen.getByRole('dialog'))
+    expect(focusables.slice(-4)).toEqual(chips)
+    for (const target of focusables.slice(1)) {
+      await user.tab()
+      expect(target).toHaveFocus()
+    }
+    await user.tab()
+    expect(input).toHaveFocus()
+    for (const target of [...focusables.slice(1)].reverse()) {
+      await user.tab({ shift: true })
+      expect(target).toHaveFocus()
+    }
+    await user.tab({ shift: true })
+    expect(input).toHaveFocus()
+  })
+
+  it('uses caption roles and logical wrapping for long RTL hints without hiding instructions or count', async () => {
+    const longLabel = 'إعداداتطويلة'.repeat(24)
+    locale.translations['palette.scope.registry'] = longLabel
+    render(<div dir="rtl"><CommandPalette initialOpen /></div>, { wrapper: makeWrapper(makeVehicles()) })
+    const hints = document.querySelector('[data-palette-scope-hints]')!
+    expect(hints.closest('[dir]')).toHaveAttribute('dir', 'rtl')
+    expect(hints).toHaveClass('flex-wrap', 'gap-3')
+    const footer = hints.parentElement!
+    expect(footer).toHaveClass('text-xs')
+    expect(footer.firstElementChild).toHaveClass('flex-wrap')
+    for (const instruction of ['Navigate', 'Select', 'Close', 'Filter']) {
+      expect(screen.getByText(instruction)).toBeInTheDocument()
+    }
+    expect(Array.from(hints.querySelectorAll('kbd'), node => node.textContent)).toEqual(['>', '/', '@', ':'])
+    const chip = screen.getByRole('button', { name: `:${longLabel}` })
+    expect(chip).toHaveClass('flex-wrap', 'max-w-full', 'whitespace-normal', 'text-start')
+    expect(screen.getByText(longLabel)).toHaveClass('break-words', 'min-w-0', 'text-xs')
+    const count = screen.getByText(/2 vehicles/)
+    expect(count).toHaveClass('ms-auto')
+    expect(count.className).not.toContain('--theme-primary')
+    expect(count.querySelector('svg')).toHaveAttribute('aria-hidden', 'true')
+    expect(footer.querySelector('.text-2xs')).toBeNull()
+  })
 })

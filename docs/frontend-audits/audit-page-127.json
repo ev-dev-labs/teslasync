@@ -1,0 +1,359 @@
+{
+  "item": "audit-page-127",
+  "page": "web\\src\\features\\driving\\pages\\TripLogbookPage.tsx",
+  "routes": ["/logbook"],
+  "purpose": "Vehicle drive classification and locally persisted reimbursement logbook for expense and tax review.",
+  "primaryGoal": "Review the selected vehicle and period, classify drives as business/commute/personal, edit reimbursement rates, apply learned corridor suggestions, and export the resulting drive records without losing source details.",
+  "dataSources": [
+    {
+      "hook": "useDrives(vehicleIdStr)",
+      "file": "web\\src\\features\\driving\\pages\\TripLogbookPage.tsx",
+      "line": 89,
+      "endpoint": "GET /api/v1/drives?vehicle_id=<selected vehicle>",
+      "owner": "web\\src\\api\\hooks\\useDriving.ts",
+      "ownerLine": 104,
+      "routeEvidence": "internal\\api\\router.go:3463-3464",
+      "behavior": "Typed Drive[] request forwards cancellation signal, uses drivingKeys.drives, safeArray, FAST stale time and selected-vehicle enablement. Page supplies no start/end/limit and filters returned drives locally. Hook documentation at lines 85-90 explicitly warns that unbounded calls see the API default 50-row page.",
+      "unknowns": "Actual mounted payload, API default enforcement, full-history completeness and pagination traversal were not exercised; backend handler/database implementation was not inspected."
+    },
+    {
+      "hook": "useTripLogbook",
+      "file": "web\\src\\features\\driving\\hooks\\useTripLogbook.ts",
+      "line": 27,
+      "endpoint": null,
+      "owner": "Feature external store and pure tripLogbook model",
+      "behavior": "LocalStorage teslasync:trip-logbook:v1 retains categories keyed by drive ID and global category rates per kilometre. useSyncExternalStore updates same-tab consumers and storage events update other tabs; storage-write failures retain in-memory edits. No classification or rate server endpoint is called.",
+      "modelEvidence": "web\\src\\features\\driving\\lib\\tripLogbook.ts:35-51,109-153,170-214,229-269"
+    },
+    {
+      "hook": "useRangeState; useSelectedVehicle",
+      "file": "web\\src\\features\\driving\\pages\\TripLogbookPage.tsx",
+      "line": 78,
+      "endpoint": null,
+      "owner": "Existing workspace hooks and shell selectors",
+      "behavior": "Consumes the shared vehicle and URL/preference range; no duplicate local vehicle/date picker. /logbook is range-enabled at web\\src\\lib\\workspaceScope.ts:49. Page reads start/end calendar dates but not the hook's precise instant bounds.",
+      "contractEvidence": "web\\src\\hooks\\useRangeState.ts:10-16,115-133"
+    },
+    {
+      "hook": "useUnits; useFormatting; useOperationalMetrics",
+      "file": "web\\src\\features\\driving\\pages\\TripLogbookPage.tsx",
+      "line": 81,
+      "endpoint": "No additional page-specific request established by this inspection",
+      "owner": "Existing formatting/preferences and operational-metric owners",
+      "behavior": "Distances remain metres until display; currency uses existing formatter; rates persist per km and per-mile editing uses shared SI conversion. DrivingSummaryBrief adapts raw metrics through useOperationalMetrics.",
+      "adapterEvidence": "web\\src\\features\\driving\\components\\operationalbrief-n-z\\DrivingSummaryBrief.tsx:24-48"
+    }
+  ],
+  "components": [
+    {
+      "name": "PageLayout / LayoutCard",
+      "owner": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+      "evidence": "web\\src\\components\\layout\\index.ts:8-11; layout-reference\\PageLayout.tsx:9-15; layout-reference\\LayoutCard.tsx:17-61",
+      "role": "Canonical PageContainer adapter and two labelled panel surfaces; existing container and header action wrapping retained.",
+      "decision": "reuse"
+    },
+    {
+      "name": "DrivingSummaryBrief / OperationalBrief",
+      "owner": "web\\src\\features\\driving\\components\\operationalbrief-n-z\\DrivingSummaryBrief.tsx",
+      "evidence": "DrivingSummaryBrief.tsx:24-50; TripLogbookPage.tsx:228-263,281-292",
+      "role": "Compact evidence summary, ten raw metrics, scope/provenance, unknown freshness and source-status language.",
+      "decision": "reuse; do not replace with a second KPI system"
+    },
+    {
+      "name": "DataTable",
+      "owner": "web\\src\\components\\ui\\DataTable.tsx",
+      "evidence": "DataTable.tsx:184-188,709-725,873-906; TripLogbookPage.tsx:399-417",
+      "role": "Five columns, sorting, loaded-row pagination, persisted column preferences, CSV/JSON export and potential canonical mobile adapter.",
+      "decision": "reuse existing mobilePresentation and embedded variant; page currently supplies neither"
+    },
+    {
+      "name": "Text / Button / Select / Input / HelpTooltip",
+      "owner": "Existing web\\src\\components\\ui category",
+      "evidence": "TripLogbookPage.tsx:8-11,178-188,298-306,329-345,355-367,382-384",
+      "role": "Typography, row category editing, category filter, rate inputs, explanatory help and suggestion action.",
+      "decision": "reuse; actual primitive internals not audited"
+    },
+    {
+      "name": "MetricBar",
+      "owner": "web\\src\\components\\data-display\\MetricBar.tsx",
+      "evidence": "MetricBar.tsx:23-27,45-64,80-86; TripLogbookPage.tsx:321-327",
+      "role": "Three category-distance shares with text alternatives, null reading support and reduced-motion integration.",
+      "decision": "reuse solid fill capability; no new visualizer"
+    },
+    {
+      "name": "StaleRefreshWarning / QueryError / Skeleton / EmptyState / NoVehicleSelected / FadeIn",
+      "owner": "Existing feedback, onboarding and motion owners",
+      "evidence": "TripLogbookPage.tsx:16-18,268-269,278-280,294-295,388-397",
+      "role": "Retained data warning, retry, loading, two empty cases, vehicle prerequisite and entrance composition.",
+      "decision": "reuse; mounted behavior unverified"
+    }
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\driving\\pages\\TripLogbookPage.tsx",
+      "line": 228,
+      "rule": "MDC-033 / mission 0.6",
+      "detail": "Category amounts and distances appear in the brief and reimbursement panel intentionally; this is summary-plus-editing context, not evidence for deleting either section. Ten metrics feed the existing operational owner.",
+      "fix": "Keep the distinct summary and editing roles; continue one operational formatting pipeline.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\driving\\pages\\TripLogbookPage.tsx",
+      "line": 399,
+      "rule": "MDC-015 / MDC-023",
+      "detail": "DataTable defaults to standalone surface inside LayoutCard, although an embedded variant already exists. Nested frames are avoidable.",
+      "fix": "Use the existing embedded presentation without replacing table controls or persistence.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "responsive": {
+    "verified": false,
+    "sourceStrategy": "Single-column stacking below xl; reimbursement uses one of three xl columns and the drives card uses two. min-w-0 is present for table allocation; card actions wrap in the canonical LayoutCard.",
+    "evidence": "TripLogbookPage.tsx:297,352; layout-reference\\LayoutCard.tsx:31-35,56",
+    "requiredWidths": [320,375,390,430,768,1024,1280,1440,1920,2560],
+    "issues": [
+      {
+        "file": "web\\src\\features\\driving\\pages\\TripLogbookPage.tsx",
+        "line": 402,
+        "rule": "MDC-023 / MDC-043 / NO DATA LOSS",
+        "detail": "mobileColumns includes only date, route and category. DataTable's current allow-list emits hidden md:table-cell for other columns; this page provides no mobilePresentation or expandable detail surface. Distance and reimbursement amount lose their row-level presentation below md.",
+        "fix": "Wire the existing DataTable mobile presentation to retain all five values and editable categories, or keep all columns reachable through the same table pipeline. Preserve 640-1023 behavior and export/column preferences.",
+        "owner": "page",
+        "confidence": "high",
+        "ownerEvidence": "web\\src\\components\\ui\\DataTable.tsx:184-188,715-725"
+      },
+      {
+        "file": "web\\src\\features\\driving\\pages\\TripLogbookPage.tsx",
+        "line": 162,
+        "rule": "MDC-040 / MDC-043",
+        "detail": "Route text is truncated at 16rem with native title as its only explicit full-text affordance. No page-owned touch or keyboard detail action exposes the full route; actual clipping and tooltip accessibility remain unverified.",
+        "fix": "Allow route wrapping or expose complete route text in the canonical mobile detail presentation without hover-only reliance.",
+        "owner": "page",
+        "confidence": "medium"
+      }
+    ],
+    "unknowns": ["Small-width filter/header fitting", "Long translated labels", "200% text and RTL", "Actual scroll ownership and xl balance"]
+  },
+  "accessibility": {
+    "verified": false,
+    "sourcePositives": [
+      "Category selects, category filter and rate inputs have localized aria-labels at lines 183,356,334.",
+      "Decorative reimbursement, table and suggestion icons are aria-hidden at lines 299,354,373.",
+      "Canonical LayoutCard labels its surface through its heading; MetricBar exposes named progressbar readings and unknown text.",
+      "Shared buttons/inputs/selects are used, not raw controls."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\driving\\pages\\TripLogbookPage.tsx",
+        "line": 183,
+        "rule": "MDC-040 / MDC-044",
+        "detail": "Row category names identify only a short month/day date. Multiple drives on the same day, or different years, produce identical control names. formatDateShort uses browser locale/timezone when options are absent.",
+        "fix": "Use existing configured date/time formatting and route context to give each editable row a meaningful distinct localized name; keep raw timestamp sorting and export.",
+        "owner": "page",
+        "confidence": "high",
+        "ownerEvidence": "web\\src\\lib\\dateFormat.ts:4-13,75-82"
+      },
+      {
+        "file": "web\\src\\features\\driving\\pages\\TripLogbookPage.tsx",
+        "line": 217,
+        "rule": "MDC-021 / MDC-026 / MDC-040",
+        "detail": "Blank, invalid and negative rate edits are silently ignored by the model update while the uncontrolled input may continue displaying the rejected text. No associated visible validation message explains which rate is actually being used.",
+        "fix": "Retain intermediate decimal typing, but reconcile rejected values on commit/blur and provide localized shared-input feedback without changing accepted rate calculations.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ],
+    "unverified": ["Keyboard traversal and focus", "Screen-reader behavior", "Composed contrast in all themes", "44px touch targets", "Forced colors", "FadeIn reduced motion", "Help open-state behavior"]
+  },
+  "states": {
+    "verified": false,
+    "initial": "useDataState status initial suppresses brief values, displays reimbursement placeholders and table Skeleton height 320 (lines 224,289,310,323,391).",
+    "empty": "Success-empty displays measured zero summary totals and No drives in this period with Browse drives. Filter-empty uses DataTable emptyMessage (lines 392-406).",
+    "error": "Only fatalError sets isError; brief and table each provide QueryError retry. Reimbursement rates remain editable (lines 225,291,388-389).",
+    "staleOffline": "StaleRefreshWarning and retained brief status are wired. Retained Drive[] remains in summaries/table because fatalError is used rather than any query error. Actual paused/offline rendering was not mounted (lines 90-91,278,290).",
+    "noVehicle": "NoVehicleSelected early return, with useDrives disabled without vehicle; lines 268-269 and useDriving.ts:124.",
+    "partial": "No complete-history flag is supplied; sourceAvailable is based on retained data or query success, not completeness (line 226). Provenance already honestly disclaims complete server-range coverage at line 287.",
+    "localPersistenceFailure": "Store catches storage write failure and retains in-memory edits without notifying the page; durable save status is not available.",
+    "issues": [
+      {
+        "file": "web\\src\\features\\driving\\hooks\\useTripLogbook.ts",
+        "line": 72,
+        "rule": "MDC-026 / MDC-046",
+        "detail": "Quota/privacy-mode localStorage failures silently fall back to memory while the page offers no saved-versus-session-only notice for classifications and rates. Durability is a financial-logbook trust concern.",
+        "fix": "Feature store owner should expose typed persistence outcome/recovery context so the page can present a localized session-only warning without disabling offline in-memory editing or replacing the existing store.",
+        "owner": "integration",
+        "confidence": "high"
+      }
+    ]
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\driving\\pages\\TripLogbookPage.tsx",
+      "line": 309,
+      "rule": "MDC-010 / MDC-012 / mission 43",
+      "detail": "Reimbursement total and each positive row amount use fixed text-emerald-300; header icons use text-cyan-300 and the suggestion icon uses text-amber-300. These are not neon/glow, but theme-independent hue creates repeated emphasis; positive reimbursement is not necessarily a success status. Real contrast remains unmeasured.",
+      "fix": "Prefer canonical primary/secondary text and subdued decorative icons; reserve existing semantic success/warning tokens for actual status meanings. Do not introduce a page palette.",
+      "owner": "page",
+      "confidence": "high",
+      "relatedLines": [197,299,354,373]
+    },
+    {
+      "file": "web\\src\\features\\driving\\pages\\TripLogbookPage.tsx",
+      "line": 321,
+      "rule": "MDC-010 / MDC-034 / mission 43",
+      "detail": "Three category tracks inherit MetricBar's gradient default. Existing categorical palette distinguishes shares, but gradient fill adds avoidable decoration to a financial editing panel.",
+      "fix": "Use existing fill=solid and restrained existing categorical colors, preserving category labels, distance shares and progressbar values. No shared default change is needed.",
+      "owner": "page",
+      "confidence": "high",
+      "ownerEvidence": "web\\src\\components\\data-display\\MetricBar.tsx:45,86"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\features\\driving\\pages\\TripLogbookPage.tsx",
+      "line": 89,
+      "rule": "MDC-032 / MDC-045 / mission 33",
+      "detail": "Header range is consumed but neither bound reaches useDrives. Calendar-only local filtering can return an empty older window or understated totals from a capped recent page; rolling 24h becomes whole-calendar-day filtering at lines 99-100. All metrics, suggestion candidates, rows and exports depend on this limited input.",
+      "fix": "Use shared startInstant/endInstantExclusive and existing typed request options, and resolve complete server-range retrieval using the canonical driving owner. Keep a separately explicit history source for corridor learning if needed; do not assume a single capped response covers all history. Preserve query cancellation and separate list/history cache identities.",
+      "owner": "integration",
+      "confidence": "high",
+      "ownerEvidence": "web\\src\\api\\hooks\\useDriving.ts:85-102,104-127; web\\src\\hooks\\useRangeState.ts:115-133"
+    },
+    {
+      "file": "web\\src\\features\\driving\\pages\\TripLogbookPage.tsx",
+      "line": 340,
+      "rule": "MDC-046 / preservation",
+      "detail": "Input uses defaultValue with key only category/display unit. Same-unit cross-tab store updates change the summary and store rate but do not update the mounted uncontrolled field; the displayed rate can disagree with the reimbursement calculation.",
+      "fix": "Keep intentional intermediate decimal editing, but reconcile external rate changes with a typed draft/commit strategy owned by this feature. Do not force-remount every keystroke or change localStorage identity.",
+      "owner": "page",
+      "confidence": "high",
+      "ownerEvidence": "web\\src\\features\\driving\\hooks\\useTripLogbook.ts:58-68"
+    }
+  ],
+  "priority": {
+    "level": "high",
+    "reason": "Full-range financial totals/export completeness, rolling-range semantics and mobile loss of row distance/amount need preservation-led integration before cosmetic changes.",
+    "order": ["Resolve range/completeness ownership", "Preserve all mobile row details and actions", "Reconcile rate editing and persistence trust", "Reduce redundant surface/color/gradient noise", "Centralized mounted acceptance"]
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "Complete bounded driving history and separate corridor history contract",
+      "existingOwnerFile": "web\\src\\api\\hooks\\useDriving.ts",
+      "concretePropsVariantsStates": "Retain vehicle_id/start/end, exact exclusive bounds, signal forwarding and existing query policies; establish complete paginated response handling and explicit completeness/error/retained states without inventing API support.",
+      "usedBy": ["web\\src\\features\\driving\\pages\\TripLogbookPage.tsx"],
+      "dependsOn": ["Shared useRangeState instant bounds", "Existing /drives route; backend paging/filter behavior needs owner verification"],
+      "changeType": "integration; assess existing history hooks before any shared implementation change",
+      "evidence": "useDriving.ts:85-134; TripLogbookPage.tsx:89-124"
+    },
+    {
+      "name": "Canonical DataTable mobile details and embedded framing adoption",
+      "existingOwnerFile": "web\\src\\components\\ui\\DataTable.tsx",
+      "concretePropsVariantsStates": "Existing mobilePresentation and variant=embedded; all date/route/distance/category/amount values, editable category controls, stable tableId, loaded/filter-empty rows, column preferences and loaded-result CSV/JSON exports.",
+      "usedBy": ["web\\src\\features\\driving\\pages\\TripLogbookPage.tsx"],
+      "dependsOn": ["Existing mobile adapter typed contract and accessibility/runtime validation"],
+      "changeType": "page adoption; no shared source change proven necessary",
+      "evidence": "DataTable.tsx:184-188,715-725,873-906; TripLogbookPage.tsx:399-417"
+    },
+    {
+      "name": "Feature persistence outcome exposure",
+      "existingOwnerFile": "web\\src\\features\\driving\\hooks\\useTripLogbook.ts",
+      "concretePropsVariantsStates": "Typed persisted/session-only status after storage failure; preserve categories/rates snapshot and same-tab/cross-tab synchronization, no new global preference store.",
+      "usedBy": ["web\\src\\features\\driving\\pages\\TripLogbookPage.tsx"],
+      "dependsOn": ["Existing feature-store commit path", "Existing localized feedback components"],
+      "changeType": "feature integration; outside audit write scope",
+      "evidence": "useTripLogbook.ts:72-85"
+    }
+  ],
+  "competingImplementations": [
+    {
+      "file": "web\\src\\features\\driving\\pages\\TripLogbookPage.tsx",
+      "line": 99,
+      "rule": "MDC-032",
+      "detail": "Manual inclusive calendar-midnight range interpretation competes with the existing shared hook's rolling/timezone-aware instant contract, despite correctly reusing the shell selector.",
+      "fix": "Reuse shared precise bounds; do not add another date picker, range store or conversion engine.",
+      "owner": "integration",
+      "confidence": "high"
+    }
+  ],
+  "preservation": {
+    "sourceHash": "F1E1A46382C00D0C5DB185ED2FD586E14FB03DC0830354AA32406574D0367894",
+    "sourceHashAlgorithm": "SHA-256",
+    "currentLineCount": 426,
+    "sectionCount": 3,
+    "sections": [
+      {"name": "Logbook summary metrics", "line": 281, "count": 1, "contents": "Three categories × distance/amount/count = nine metrics, plus unclassified count with total; category distance context includes amount and count. Selected scope, provenance, unknown observation time, source status, loading and retry remain."},
+      {"name": "Reimbursement", "line": 298, "count": 1, "contents": "Total reimbursable amount, period caption, explanatory help, three category distance-share bars and three editable rates with per-mi/per-km suffix."},
+      {"name": "Drives", "line": 353, "count": 1, "contents": "Category filter, conditional corridor suggestion explanation/action, five-column table, sorting, pagination, empty/error/loading recovery, CSV/JSON exports."}
+    ],
+    "componentCounts": {"PageLayout": 1, "DrivingSummaryBrief": 1, "LayoutCard": 2, "DataTable": 1, "MetricBarRenderedPerCategory": 3, "InputRenderedPerCategory": 3, "GlassPanel": 0, "ChartContainer": 0, "FadeIn": 2},
+    "actions": [
+      {"name": "Select shared vehicle and date range", "evidence": "TripLogbookPage.tsx:78-87; workspaceScope.ts:49", "owner": "workspace shell; no page duplicate"},
+      {"name": "Change category filter among all, unclassified and three categories", "evidence": "TripLogbookPage.tsx:355-367"},
+      {"name": "Classify/reclassify/unclassify one drive", "evidence": "TripLogbookPage.tsx:178-188"},
+      {"name": "Apply visible-range corridor suggestions in one local commit", "evidence": "TripLogbookPage.tsx:118-124,370-384"},
+      {"name": "Edit each category rate; convert per-mile input to stored per-km rate", "evidence": "TripLogbookPage.tsx:207-222,329-345"},
+      {"name": "Open reimbursement explanatory help", "evidence": "TripLogbookPage.tsx:300-305"},
+      {"name": "Retry failed source", "evidence": "TripLogbookPage.tsx:291,388-389"},
+      {"name": "Browse /drives from period-empty state", "evidence": "TripLogbookPage.tsx:392-397"},
+      {"name": "Sort date, SI distance or amount; paginate loaded filtered rows", "evidence": "TripLogbookPage.tsx:151-200,406; DataTable.tsx:854-864"},
+      {"name": "Use canonical table column/order preferences and CSV/JSON export", "evidence": "TripLogbookPage.tsx:400,407-417; DataTable.tsx:709-712,873-906"}
+    ],
+    "dataBehavior": [
+      "Keep Drive IDs, raw startTs timestamps, addresses and SI distanceM. Route string retains both endpoints with em-dash missing labels; sort date on ISO timestamp and distance on metres.",
+      "Summary is calculated over range drives BEFORE category filter. Category totals include distance, amount and count; unclassified contributes distance/count but no reimbursement. Keep zero distinct from an unavailable source.",
+      "All three categories and seed rates business 0.44, commute 0.3, personal 0 remain user-editable. Rates are business-domain currency/km, not an invitation to convert stored SI telemetry.",
+      "Keep distanceM/1000 × per-km-rate reimbursement, current finite/nonpositive guards and unrounded internal totals; formatting is display-only.",
+      "Persist teslasync:trip-logbook:v1 categories by drive ID and global rates; retain parser validation, same-tab subscription, cross-tab storage events and in-memory offline fallback.",
+      "Corridor identity remains direction-independent using rounded coordinates or normalized addresses. Preserve actual unique-highest-vote/no-tie algorithm; do not reinterpret its strict-majority comment as authorization to change the calculation.",
+      "Suggestion learning uses all returned vehicle drives, while application is restricted to selected-range drives. Table category filter does not constrain suggestion application; do not silently change this business behavior.",
+      "Keep tableId driving:trip-logbook, all five column keys, category edit controls and canonical table preferences. Export filename is trip-logbook.",
+      "Current export is loaded/category-filtered result, not guaranteed full-server result. Preserve exportRow date slice, full route, formatted distance, category slug/empty and amount rounded to two decimals/zero. Existing table exports only visible configured columns. Any scope expansion needs explicit verified integration, not a false all-history label.",
+      "Preserve specialized reimbursement explanation, raw numeric operational metrics, descriptions, source disclaimer and unknown freshness; unsupported summaries remain unavailable rather than invented values.",
+      "Retained-data refresh failure must not clear summary, reimbursement or table; no-vehicle prerequisite and each loading/empty/error case remain reachable."
+    ]
+  },
+  "evidenceLimits": {
+    "basis": "Bounded Phase 0 source inspection only; no source changes, Git operations, build, lint, TypeScript, browser, backend mutation or production request.",
+    "runtime": "unverified",
+    "visual": "unverified",
+    "keyboard": "unverified",
+    "contrast": "unverified",
+    "viewport": "unverified",
+    "sourceChecks": {
+      "command": "PowerShell Get-Content -Raw assigned page; [regex]::Matches counts for style={{, raw button/input/textarea/select/table, direct recharts/react-leaflet/framer-motion imports, and old relative API imports",
+      "exitCode": 0,
+      "output": "inlineStyles=0\nrawControls=0\ndirectChartMapMotionImports=0\nlegacyAPIImports=0",
+      "scope": "Assigned page only; these counts are not a whole-app or runtime acceptance claim."
+    },
+    "notRun": ["Full violations skill script (includes project TypeScript, outside Phase0 scope)", "TypeScript", "Tests", "Lint", "Build", "All ten viewport checks", "Mounted route/authentication verification"],
+    "unknowns": ["Backend handler/database paging and complete-range contract", "Saved preference formatting internals beyond inspected adapter/date helper", "Actual shared primitive contrast/focus", "Complete mobile adapter integration", "Actual currency context and exports in production"],
+    "readFailures": ["Neighbor audit-page-126.json did not exist; no report contents borrowed.", "Initial direct layout PageLayout.tsx/LayoutCard.tsx guesses did not exist; resolved actual implementations through the category barrel.", "Guessed drive_handler.go path did not exist; no handler content inferred.", "First narrow regex-count command had a PowerShell quoting error; corrected command ran successfully and only its output is used."],
+    "missionSectionsRead": ["0", "1", "15", "33", "43", "44"],
+    "writeScope": ["docs\\frontend-audits\\audit-page-127.json", ".agent-status\\audit-page-127.txt"]
+  },
+  "filesRead": [
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\driving\\pages\\TripLogbookPage.tsx",
+    "web\\src\\features\\driving\\hooks\\useTripLogbook.ts",
+    "web\\src\\features\\driving\\lib\\tripLogbook.ts",
+    "web\\src\\features\\driving\\components\\operationalbrief-n-z\\DrivingSummaryBrief.tsx",
+    "web\\src\\api\\hooks\\useDriving.ts",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\App.tsx",
+    "internal\\api\\router.go",
+    "web\\src\\components\\ui\\DataTable.tsx",
+    "web\\src\\components\\data-display\\MetricBar.tsx",
+    "web\\src\\hooks\\useDataState.ts",
+    "web\\src\\hooks\\useRangeState.ts",
+    "web\\src\\lib\\dateFormat.ts",
+    "web\\src\\components\\layout\\index.ts",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\layout\\layout-reference\\LayoutCard.tsx",
+    "web\\src\\components\\layout\\PageContainer.tsx"
+  ]
+}

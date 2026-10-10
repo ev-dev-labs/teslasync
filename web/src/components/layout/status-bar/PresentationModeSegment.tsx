@@ -1,7 +1,11 @@
 import { useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FileText, Link2, MonitorUp } from 'lucide-react';
-import { Button, PanelTitle, Popover, Text, Tooltip } from '@/components/ui/runtime';
+import { Button } from '@/components/ui/Button';
+import { Icon } from '@/components/ui/Icon';
+import { Popover } from '@/components/ui/Popover';
+import { PanelTitle, Text } from '@/components/ui/Typography';
+import { Tooltip } from '@/components/ui/Tooltip';
 import { useOptionalToast } from '@/components/feedback/Toast';
 import {
   copyPresentationLink,
@@ -53,15 +57,16 @@ export function PresentationModeSegment({
         type="button"
         variant="ghost"
         size="sm"
+        wrapLabel
         onClick={() => run(enterReport)}
-        icon={<FileText className="h-4 w-4" aria-hidden="true" />}
-        className="h-auto w-full justify-start px-2 py-2 text-left"
+        icon={<Icon icon={FileText} />}
+        className="min-h-11 w-full justify-start px-2 py-2 text-start md:min-h-9"
       >
         <span>
-          <Text as="span" size="sm" weight="medium" color="primary">
+          <Text as="span" variant="bodySm">
             {t('presentation.report.open', 'Open report view')}
           </Text>
-          <Text as="span" size="xs" color="muted" className="mt-0.5 block">
+          <Text as="span" variant="helper" className="mt-1 block">
             {t(
               'presentation.report.help',
               'Clean navigation-free layout for printing and review.',
@@ -73,15 +78,16 @@ export function PresentationModeSegment({
         type="button"
         variant="ghost"
         size="sm"
+        wrapLabel
         onClick={() => run(copyReportLink)}
-        icon={<Link2 className="h-4 w-4" aria-hidden="true" />}
-        className="h-auto w-full justify-start px-2 py-2 text-left"
+        icon={<Icon icon={Link2} />}
+        className="min-h-11 w-full justify-start px-2 py-2 text-start md:min-h-9"
       >
         <span>
-          <Text as="span" size="sm" weight="medium" color="primary">
+          <Text as="span" variant="bodySm">
             {t('presentation.report.copyLink', 'Copy report link')}
           </Text>
-          <Text as="span" size="xs" color="muted" className="mt-0.5 block">
+          <Text as="span" variant="helper" className="mt-1 block">
             {t(
               'presentation.report.copyHelp',
               'Preserves the current route and filter query.',
@@ -93,15 +99,16 @@ export function PresentationModeSegment({
         type="button"
         variant="ghost"
         size="sm"
+        wrapLabel
         onClick={() => run(enterKiosk)}
-        icon={<MonitorUp className="h-4 w-4" aria-hidden="true" />}
-        className="h-auto w-full justify-start px-2 py-2 text-left"
+        icon={<Icon icon={MonitorUp} />}
+        className="min-h-11 w-full justify-start px-2 py-2 text-start md:min-h-9"
       >
         <span>
-          <Text as="span" size="sm" weight="medium" color="primary">
+          <Text as="span" variant="bodySm">
             {t('presentation.kiosk.open', 'Open kiosk view')}
           </Text>
-          <Text as="span" size="xs" color="muted" className="mt-0.5 block">
+          <Text as="span" variant="helper" className="mt-1 block">
             {t(
               'presentation.kiosk.help',
               'Fullscreen monitoring with idle cursor and screen dimming.',
@@ -148,9 +155,9 @@ export function PresentationModeSegment({
           )}
           data-testid="status-bar-presentation-trigger"
         >
-          <MonitorUp className="h-3.5 w-3.5" aria-hidden="true" />
+          <Icon icon={MonitorUp} size="sm" />
           {!iconOnly && (
-            <Text as="span" size="xs" weight="medium" color="secondary">
+            <Text as="span" variant="caption">
               {t('statusBar.presentation.short', 'Present')}
             </Text>
           )}
@@ -163,11 +170,11 @@ export function PresentationModeSegment({
         side="top"
         align="end"
         ariaLabel={title}
-        className="w-[min(92vw,340px)] p-2"
+        className="w-presentation-menu p-2"
       >
         <div className="border-b border-[var(--border-subtle)] px-2 pb-2 pt-1">
           <PanelTitle>{title}</PanelTitle>
-          <Text as="p" size="xs" color="muted" className="mt-0.5">
+          <Text as="p" variant="helper" className="mt-1">
             {t(
               'statusBar.presentation.description',
               'Prepare the active view for review or unattended display.',

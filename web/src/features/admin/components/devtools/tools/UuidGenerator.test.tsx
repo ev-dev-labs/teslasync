@@ -64,7 +64,7 @@ const A = '0a1b2c3d-0001-4001-8001-0000000000a1'
 const B = '0a1b2c3d-0002-4002-8002-0000000000b2'
 const C = '0a1b2c3d-0003-4003-8003-0000000000c3'
 
-const IDLE_HINT = 'Click Generate to create a UUID'
+const IDLE_HINT = 'Click generate to create a UUID'
 
 const writeText = vi.fn(() => Promise.resolve())
 
@@ -91,8 +91,8 @@ describe('UuidGeneratorTool', () => {
   it('renders the tool chrome and an idle empty-state before anything is generated', () => {
     render(<UuidGeneratorTool />)
 
-    expect(screen.getByText('Uuid Generator')).toBeInTheDocument()
-    expect(screen.getByText('Uuid Generator Desc')).toBeInTheDocument()
+    expect(screen.getByText('UUID generator')).toBeInTheDocument()
+    expect(screen.getByText('UUID generator desc')).toBeInTheDocument()
     // The action is reachable by accessible name.
     expect(screen.getByRole('button', { name: 'Generate' })).toBeInTheDocument()
 

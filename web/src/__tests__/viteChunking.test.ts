@@ -1,10 +1,42 @@
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
+import { runInNewContext } from 'node:vm'
 import { describe, expect, it } from 'vitest'
+import ts from 'typescript'
 
 const webRoot = join(dirname(fileURLToPath(import.meta.url)), '..', '..')
 const viteConfig = readFileSync(join(webRoot, 'vite.config.ts'), 'utf8')
+
+function chunkFilenameRule() {
+  const source = ts.createSourceFile('vite.config.ts', viteConfig, ts.ScriptTarget.Latest, true)
+  let rule: ts.Expression | undefined
+  const visit = (node: ts.Node) => {
+    if (ts.isPropertyAssignment(node) && node.name.getText(source) === 'chunkFileNames') {
+      rule = node.initializer
+    }
+    ts.forEachChild(node, visit)
+  }
+  visit(source)
+  if (!rule) throw new Error('Missing production chunk filename rule')
+  const nameChunk: unknown = runInNewContext(`(${rule.getText(source)})`)
+  if (typeof nameChunk !== 'function') throw new Error('Chunk filename rule must be callable')
+  return (name: string): unknown => nameChunk({ name })
+}
+
+describe('production chunk filenames', () => {
+  const nameChunk = chunkFilenameRule()
+
+  it.each(['DashboardPage', 'ChartTooltip', 'routePrefetch'])(
+    'uses compact content hashes for ordinary chunk %s',
+    name => expect(nameChunk(name)).toBe('assets/[hash].js'),
+  )
+
+  it.each(['vendor-react', 'vendor-query', 'locale-shell', 'locale-battery', 'locale-bundle-map'])(
+    'preserves classification and attribution for %s',
+    name => expect(nameChunk(name)).toBe('assets/[name]-[hash].js'),
+  )
+})
 
 /**
  * Guards the cold-start cost of manual vendor chunking.

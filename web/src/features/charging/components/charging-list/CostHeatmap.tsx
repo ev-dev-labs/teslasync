@@ -7,6 +7,7 @@ import { EmptyState } from '@/components/feedback';
 import { DAYS } from '@/lib/constants';
 import { safeNumber } from '@/lib/numberFormat';
 import type { ChargingOptimizerData, OptimizerHeatmapEntry } from '@/types/charging';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface CostHeatmapProps {
   heatmap: ChargingOptimizerData['weekly_heatmap'];
@@ -40,6 +41,7 @@ export function heatFill(intensity: number, alpha: number): string {
 }
 
 export function CostHeatmap({ heatmap, peakCostPerKwh }: CostHeatmapProps) {
+  const { precision: displayPrecision, locale: displayLocale } = useNumberFormatting();
   const { t } = useTranslation();
   const { formatCurrency } = useFormatting();
 
@@ -55,7 +57,7 @@ export function CostHeatmap({ heatmap, peakCostPerKwh }: CostHeatmapProps) {
       map.set(safeNumber(entry.day) * 24 + safeNumber(entry.hour), entry);
     }
     return map;
-  }, [heatmap]);
+  }, [heatmap, displayPrecision, displayLocale]);
 
   const hasData = (heatmap ?? []).length > 0;
   const sessionsWord = t('charging.optimizer.sessionsWord', 'sessions');
@@ -103,7 +105,7 @@ export function CostHeatmap({ heatmap, peakCostPerKwh }: CostHeatmapProps) {
                             : 'rgba(255,255,255,0.02)',
                         }}
                         title={sessions > 0
-                          ? `${dayLabel} ${hourIdx}:00 — ${sessions} ${sessionsWord}, ${formatCurrency(cost, 3)}/kWh`
+                          ? `${dayLabel} ${hourIdx}:00 — ${sessions} ${sessionsWord}, ${formatCurrency(cost)}/kWh`
                           : `${dayLabel} ${hourIdx}:00`}
                       />
                     );

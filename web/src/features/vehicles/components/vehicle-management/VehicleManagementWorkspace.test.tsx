@@ -254,14 +254,18 @@ describe('VehicleManagementWorkspace', () => {
     expect(screen.getByText('Drive Unit Limited Warranty')).toBeInTheDocument()
     expect(screen.getByText('8 years')).toBeInTheDocument()
     expect(screen.getByText('120,000')).toBeInTheDocument()
-    expect(screen.getByText('Extended Warranty')).toBeInTheDocument()
+    expect(screen.getByText('Extended warranty')).toBeInTheDocument()
     expect(endpointCard('subscription-eligibility')).toHaveTextContent(
       '$60 / month',
     )
     expect(screen.queryByText('warrantyDisplayName')).not.toBeInTheDocument()
     expect(screen.queryByText('must-never-render')).not.toBeInTheDocument()
     expect(screen.getByText('4 specification fields returned')).toBeInTheDocument()
-    expect(screen.getByText('Fleet Manager')).toBeInTheDocument()
+    const specifications = screen.getByRole('table', { name: 'Vehicle specifications' })
+    expect(within(specifications).getAllByRole('rowheader')).toHaveLength(4)
+    expect(within(specifications).getByRole('rowheader', { name: 'Exterior color' })).toBeInTheDocument()
+    expect(specifications).toHaveTextContent('Midnight Silver Metallic')
+    expect(screen.getByText('Fleet manager')).toBeInTheDocument()
 
     fireEvent.click(
       within(endpointCard('vehicle-options')).getByRole('button', {
@@ -349,7 +353,7 @@ describe('VehicleManagementWorkspace', () => {
 
   it('refreshes cached enterprise roles only after the explicit action', async () => {
     renderWorkspace()
-    await screen.findByText('Fleet Manager')
+    await screen.findByText('Fleet manager')
     const card = endpointCard('enterprise-roles')
 
     fireEvent.click(

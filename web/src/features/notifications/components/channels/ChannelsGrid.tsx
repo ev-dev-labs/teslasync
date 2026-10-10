@@ -21,7 +21,7 @@ interface ChannelsGridProps {
   onAdd: () => void;
 }
 
-const AUTO_FIT = '[grid-template-columns:repeat(auto-fit,minmax(18rem,1fr))]';
+const AUTO_FIT = '[grid-template-columns:repeat(auto-fit,minmax(min(100%,18rem),1fr))]';
 const SKELETON_KEYS = [0, 1, 2] as const;
 
 export function ChannelsGrid({
@@ -65,8 +65,8 @@ export function ChannelsGrid({
       <EmptyState
         icon={<Bell className="h-8 w-8" aria-hidden="true" />}
         title={t('notifications.channels.empty.title', 'No channels configured')}
-        message={t('notifications.channels.empty.message', 'Add a notification channel to start receiving alerts via Discord, Slack, Telegram, Email, and more.')}
-        action={{ label: t('notifications.channels.add', 'Add Channel'), onClick: onAdd }}
+        message={t('notifications.channels.empty.message', 'Add a notification channel to start receiving alerts via Discord, Slack, Telegram, email, and more.')}
+        action={{ label: t('notifications.channels.add', 'Add channel'), onClick: onAdd }}
       />
     );
   }

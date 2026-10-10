@@ -13,6 +13,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, within, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import '../components/operationalbrief-all/metricPreferencesTestSetup';
 import type { ReactNode } from 'react';
 
 import type {
@@ -58,12 +59,12 @@ vi.mock('react-i18next', () => ({
 
 // ── framer-motion: render eagerly, strip animation-only props ───────────
 vi.mock('framer-motion', () => {
+  const cache = new Map<string, (props: { children?: ReactNode } & Record<string, unknown>) => ReactNode>();
   const motionProxy: Record<string, unknown> = new Proxy(
     {},
     {
-      get:
-        () =>
-        ({ children, ...rest }: { children?: ReactNode } & Record<string, unknown>) => {
+      get: (_target, key: string) => {
+        if (!cache.has(key)) cache.set(key, ({ children, ...rest }) => {
           const safe: Record<string, unknown> = {};
           for (const [k, v] of Object.entries(rest)) {
             if (['animate', 'initial', 'exit', 'transition', 'whileHover', 'whileTap', 'variants'].includes(k))
@@ -71,7 +72,9 @@ vi.mock('framer-motion', () => {
             safe[k] = v;
           }
           return <div {...safe}>{children}</div>;
-        },
+        });
+        return cache.get(key);
+      },
     },
   );
   return {
@@ -132,13 +135,22 @@ function entry(id: number, name: string, value: string, type: SignalEntry['type'
 
 function renderPage() {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(
+  const Wrapper = ({ children }: { children: ReactNode }) => (
     <QueryClientProvider client={client}>
       <MemoryRouter>
-        <LiveSignalMonitorPage />
+        {children}
       </MemoryRouter>
-    </QueryClientProvider>,
+    </QueryClientProvider>
   );
+  return render(<LiveSignalMonitorPage />, { wrapper: Wrapper });
+}
+
+function summaryMetric(label: string) {
+  const summary = screen.getByRole('region', { name: 'Live stream summary' });
+  const metric = within(summary).getAllByRole('listitem')
+    .find((item) => within(item).queryByText(label) !== null);
+  if (!metric) throw new Error(`Missing live stream summary metric: ${label}`);
+  return metric;
 }
 
 beforeEach(() => {
@@ -157,9 +169,9 @@ describe('LiveSignalMonitorPage', () => {
 
     // Page title (usePageTitle) + heading fall back to the same canonical
     // default that matches the i18n catalog value ("Live Monitor").
-    expect(document.title).toContain('Live Monitor');
+    expect(document.title).toContain('Live monitor');
     expect(document.title).toContain('TeslaSync');
-    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Live Monitor');
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Live monitor');
 
     // Named landmark regions for the summary + analytics bento.
     expect(screen.getByRole('region', { name: 'Live stream summary' })).toBeInTheDocument();
@@ -173,11 +185,20 @@ describe('LiveSignalMonitorPage', () => {
     expect(screen.getAllByText('No signals buffered yet')).toHaveLength(2);
     // Connected throughput waits for data rather than showing "offline".
     expect(screen.getByText('Waiting for live throughput…')).toBeInTheDocument();
+    expect(within(screen.getByRole('region', { name: 'Live analytics' }))
+      .getAllByRole('heading', { name: 'Signal throughput' })).toHaveLength(2);
+    expect(screen.getByRole('heading', { name: 'Value types' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Most active signals' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Live signal tail' })).toBeInTheDocument();
+    expect(screen.getByText('Waiting for signals…')).toBeInTheDocument();
 
     // Unique-signals KPI reads 0 (null-safe) rather than blank.
-    const uniqueCard = screen.getByText('Unique Signals').closest('div');
+    const uniqueCard = summaryMetric('Unique signals');
     expect(uniqueCard).not.toBeNull();
-    expect(within(uniqueCard as HTMLElement).getByText('0')).toBeInTheDocument();
+    expect(within(uniqueCard).getByText('0')).toBeInTheDocument();
+    expect(within(summaryMetric('Buffer size')).getByText('0')).toBeInTheDocument();
+    expect(within(summaryMetric('Numeric')).getByText('0')).toBeInTheDocument();
+    expect(within(summaryMetric('Categorical')).getByText('0')).toBeInTheDocument();
   });
 
   it('derives unique/typed counts and ranks the most active signals from the live buffer', () => {
@@ -197,22 +218,27 @@ describe('LiveSignalMonitorPage', () => {
     renderPage();
 
     // Value-type breakdown: numeric 3/5 = 60%, boolean & string 1/5 = 20% each.
-    expect(screen.getByText('3 · 60%')).toBeInTheDocument();
-    expect(screen.getAllByText('1 · 20%')).toHaveLength(2);
+    expect(screen.getByText('3 · 60.00%')).toBeInTheDocument();
+    expect(screen.getAllByText('1 · 20.00%')).toHaveLength(2);
 
     // Ranking: speed is the busiest signal (count 3), the two singletons tie.
-    expect(screen.getByText('3×')).toBeInTheDocument();
-    expect(screen.getAllByText('1×')).toHaveLength(2);
+    const ranking = screen.getByRole('list', { name: 'Most active signals ranked by arrival frequency' });
+    expect(within(ranking).getByText('3×')).toBeInTheDocument();
+    expect(within(ranking).getAllByText('1×')).toHaveLength(2);
 
     // Unique-signals KPI counts distinct names (3), not raw buffer entries (5).
-    const uniqueCard = screen.getByText('Unique Signals').closest('div');
-    expect(within(uniqueCard as HTMLElement).getByText('3')).toBeInTheDocument();
+    const uniqueCard = summaryMetric('Unique signals');
+    expect(within(uniqueCard).getByText('3')).toBeInTheDocument();
+    expect(within(summaryMetric('Buffer size')).getByText('5')).toBeInTheDocument();
+    expect(within(summaryMetric('Numeric')).getByText('3')).toBeInTheDocument();
+    expect(within(summaryMetric('Categorical')).getByText('2')).toBeInTheDocument();
+    expect(within(summaryMetric('Signals / sec')).getByText('7')).toBeInTheDocument();
 
     // The top-signal row carries the LATEST (newest-first) value, 55 not 40.
-    const topPanel = screen.getByText('Most Active Signals').closest('[data-print-card]');
+    const topPanel = within(ranking).getAllByRole('listitem')[0];
     expect(topPanel).not.toBeNull();
-    expect(within(topPanel as HTMLElement).getByText('speed')).toBeInTheDocument();
-    expect(within(topPanel as HTMLElement).getByText('55')).toBeInTheDocument();
+    expect(within(topPanel).getByText('speed')).toBeInTheDocument();
+    expect(within(topPanel).getByText('55')).toBeInTheDocument();
   });
 
   it('surfaces the disconnected banner and offline states when the stream drops', () => {
@@ -284,5 +310,52 @@ describe('LiveSignalMonitorPage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Clear' }));
 
     expect(clearTail).toHaveBeenCalledTimes(1);
+  });
+
+  it('retains all four body bands, the top-12 policy and filtered raw tail across disconnect and resume', () => {
+    const latest = '32.75 m/s; source=FleetTelemetry';
+    const entries = [
+      entry(20, 'VehicleSpeed', latest, 'number'),
+      entry(19, 'VehicleSpeed', '31 m/s', 'number'),
+      ...Array.from({ length: 13 }, (_, index) => entry(18 - index, `Signal${index}`, `state-${index}`, 'string')),
+    ];
+    h.stream = makeStream({ tailRate: 9, tailEntries: entries });
+    h.throughput = {
+      history: [
+        { ts: '2026-07-04T12:00:00Z', rate: 4 },
+        { ts: '2026-07-04T12:00:01Z', rate: 9 },
+      ],
+      peak: 9,
+      reset: vi.fn(),
+    };
+    const { rerender } = renderPage();
+    const ranking = screen.getByRole('list', { name: 'Most active signals ranked by arrival frequency' });
+    expect(within(ranking).getAllByRole('listitem')).toHaveLength(12);
+    const busiest = within(within(ranking).getAllByRole('listitem')[0]);
+    expect(busiest.getByText('VehicleSpeed')).toBeInTheDocument();
+    expect(busiest.getByText('2×')).toBeInTheDocument();
+    expect(busiest.getByText(latest)).toBeInTheDocument();
+    expect(within(ranking).queryByText('Signal11')).toBeNull();
+    fireEvent.change(screen.getByLabelText('Filter signals'), { target: { value: 'vehiclespeed' } });
+
+    h.stream = makeStream({ connected: false, tailRate: 0, tailEntries: entries, tailPaused: true });
+    rerender(<LiveSignalMonitorPage />);
+    expect(screen.getByText(/last buffered signals/)).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Live stream summary' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Live analytics' })).toBeInTheDocument();
+    const analytics = within(screen.getByRole('region', { name: 'Live analytics' }));
+    // The host panel and its embedded chart each retain an accessible title.
+    expect(analytics.getAllByRole('heading', { name: 'Signal throughput' })).toHaveLength(2);
+    expect(analytics.getByRole('img', {
+      name: 'Live signals per second over the recent window',
+    })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Value types' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Most active signals' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Live signal tail' })).toBeInTheDocument();
+    expect(screen.getByLabelText('Filter signals')).toHaveValue('vehiclespeed');
+    expect(screen.getByRole('button', { name: 'Resume' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getAllByText(latest)).toHaveLength(2);
+    expect(screen.queryByText('Stream disconnected — no live throughput')).toBeNull();
+    expect(h.streamOpts).toEqual({ enabled: true, vehicleId: 1, chartSignals: [], tailMax: 500 });
   });
 });

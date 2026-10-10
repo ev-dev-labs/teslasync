@@ -1,0 +1,129 @@
+- generic [active] [ref=e1]:
+  - generic:
+    - generic: TeslaSync
+    - generic: Fleet Intelligence Platform
+  - generic [ref=e2]:
+    - status [ref=e3]
+    - link "Skip to main content" [ref=e4] [cursor=pointer]:
+      - /url: "#main-content"
+    - generic [ref=e5]:
+      - status [ref=e6]
+      - alert [ref=e7]
+      - navigation "Primary" [ref=e8]:
+        - link "TeslaSync" [ref=e10] [cursor=pointer]:
+          - /url: /
+        - navigation "Sections and shortcuts" [ref=e19]:
+          - generic [ref=e20]:
+            - button "Suggested" [ref=e21] [cursor=pointer]:
+              - generic "4 suggestions" [ref=e26]: "4"
+            - button "Saved" [ref=e27] [cursor=pointer]:
+              - generic "5 pinned pages" [ref=e32]: "5"
+            - link "All pages" [ref=e33] [cursor=pointer]:
+              - /url: /explore
+            - button "Home, 9 pages" [pressed] [ref=e40] [cursor=pointer]:
+              - generic [ref=e46]: Home
+            - button "Vehicles, 11 pages" [ref=e47] [cursor=pointer]:
+              - generic [ref=e52]: Vehicles
+            - button "Driving, 32 pages" [ref=e53] [cursor=pointer]:
+              - generic [ref=e57]: Driving
+            - button "Charging, 15 pages" [ref=e58] [cursor=pointer]:
+              - generic [ref=e62]: Charging
+            - button "Battery, 11 pages" [ref=e63] [cursor=pointer]:
+              - generic [ref=e69]: Battery
+            - button "Energy, 5 pages" [ref=e70] [cursor=pointer]:
+              - generic [ref=e75]: Energy
+            - button "Cabin, 6 pages" [ref=e76] [cursor=pointer]:
+              - generic [ref=e81]: Cabin
+            - button "Reports, 11 pages" [ref=e82] [cursor=pointer]:
+              - generic [ref=e86]: Reports
+            - button "Service, 12 pages" [ref=e87] [cursor=pointer]:
+              - generic [ref=e91]: Service
+            - button "Commands, 3 pages" [ref=e92] [cursor=pointer]:
+              - generic [ref=e96]: Commands
+            - button "Automation, 5 pages" [ref=e97] [cursor=pointer]:
+              - generic [ref=e103]: Automation
+            - button "Notifications, 5 pages" [ref=e104] [cursor=pointer]:
+              - generic [ref=e109]: Notifications
+            - button "Security, 4 pages" [ref=e110] [cursor=pointer]:
+              - generic [ref=e115]: Security
+            - button "Advanced intelligence, 5 pages" [ref=e116] [cursor=pointer]:
+              - generic [ref=e120]: Advanced intelligence
+            - button "Ownership intelligence, 7 pages" [ref=e121] [cursor=pointer]:
+              - generic [ref=e128]: Ownership intelligence
+            - button "Tesla physics, 2 pages" [ref=e129] [cursor=pointer]:
+              - generic [ref=e135]: Tesla physics
+            - button "Data, 5 pages" [ref=e136] [cursor=pointer]:
+              - generic [ref=e142]: Data
+            - button "Diagnostics, 31 pages" [ref=e143] [cursor=pointer]:
+              - generic [ref=e149]: Diagnostics
+            - button "Account, 6 pages" [ref=e150] [cursor=pointer]:
+              - generic [ref=e155]: Account
+            - button "Settings, 8 pages" [ref=e156] [cursor=pointer]:
+              - generic [ref=e169]: Settings
+            - button "Integrations, 1 page" [ref=e170] [cursor=pointer]:
+              - generic [ref=e177]: Integrations
+            - button "About, 1 page" [ref=e178] [cursor=pointer]:
+              - generic [ref=e182]: About
+          - generic [ref=e183]:
+            - generic [ref=e184]:
+              - link "Alerts" [ref=e185] [cursor=pointer]:
+                - /url: /notifications/inbox
+              - link "Display" [ref=e192] [cursor=pointer]:
+                - /url: /settings#appearance
+            - button "Collapse sidebar" [expanded] [ref=e200] [cursor=pointer]:
+              - generic [ref=e204]: Collapse
+      - generic [ref=e205]:
+        - banner "Workspace command bar" [ref=e206]:
+          - generic [ref=e207]:
+            - generic [ref=e208]: Fleet operations
+            - navigation "Breadcrumb" [ref=e210]:
+              - link "Dashboard" [ref=e211] [cursor=pointer]:
+                - /url: /
+              - generic [ref=e217]: Dashboard
+          - button "Search pages, commands…" [ref=e219] [cursor=pointer]:
+            - generic [ref=e224]: K
+          - generic [ref=e227]:
+            - button "Notifications" [ref=e229] [cursor=pointer]
+            - button "Open theme picker" [ref=e234] [cursor=pointer]
+        - main [ref=e241]:
+          - status "Loading..." [ref=e244]
+      - contentinfo "Application status" [ref=e274]:
+        - generic [ref=e275]:
+          - generic [ref=e276]:
+            - 'link "API connection status: Online (180ms)" [ref=e277] [cursor=pointer]':
+              - /url: /system-status
+              - generic [ref=e281]: API
+              - generic [ref=e282]: · 180ms
+            - tooltip "API connection · Online · 180ms"
+          - generic [ref=e284]:
+            - 'link "Live telemetry status: Idle" [ref=e285] [cursor=pointer]':
+              - /url: /signal-diff
+              - generic [ref=e294]: Idle
+            - tooltip "Live telemetry stream · Idle"
+          - generic [ref=e295]:
+            - link "Telemetry honesty meter" [ref=e296] [cursor=pointer]:
+              - /url: /
+              - generic [ref=e300]: Missing
+            - tooltip "Live 0 · Stale 0 · Guessed 0 · Missing 0 · Stream missing"
+          - generic [ref=e301]:
+            - button "Current data with live actions available." [ref=e302] [cursor=pointer]:
+              - generic [ref=e307]: Now
+            - tooltip "Current data with live actions available."
+        - generic [ref=e308]:
+          - generic [ref=e309]:
+            - button "Open recently viewed pages, 0 saved" [ref=e310] [cursor=pointer]:
+              - generic [ref=e314]: Recent
+            - tooltip "Recently viewed pages - 0 pages"
+          - generic [ref=e316]:
+            - button "Open presentation options" [ref=e317] [cursor=pointer]:
+              - generic [ref=e321]: Present
+            - tooltip "Report and kiosk views"
+          - generic [ref=e322]:
+            - button "Open help and about. Update or release notes available" [ref=e323] [cursor=pointer]:
+              - generic [ref=e327]: Help
+            - tooltip "Help and about · Update or release notes available"
+          - generic [ref=e330]:
+            - button "Open Helix chat" [ref=e331] [cursor=pointer]
+            - tooltip "Open Helix chat"
+      - status "Application status announcements" [ref=e335]: "API connection status: Online"
+      - progressbar "Loading"

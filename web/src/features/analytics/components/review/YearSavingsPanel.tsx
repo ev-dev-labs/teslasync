@@ -57,14 +57,14 @@ export function YearSavingsPanel({ data }: Props) {
           max={barMax}
           color="#fb7185"
           label={t('yearReview.gasCost', 'Gas would cost')}
-          sublabel={formatCurrency(gasEquiv, 0)}
+          sublabel={formatCurrency(gasEquiv)}
         />
         <MetricBar
           value={electric}
           max={barMax}
           color="#34d399"
           label={t('yearReview.electricCost', 'Electric cost')}
-          sublabel={formatCurrency(electric, 0)}
+          sublabel={formatCurrency(electric)}
         />
       </div>
 

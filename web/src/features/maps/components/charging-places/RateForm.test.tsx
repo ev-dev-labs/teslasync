@@ -106,7 +106,7 @@ describe('RateForm — structure', () => {
   it('renders the currency select, rate field, and both effective-date fields', () => {
     render(<RateForm geofenceId={7} />);
 
-    expect(screen.getByText('Add a Rate')).toBeInTheDocument();
+    expect(screen.getByText('Add a rate')).toBeInTheDocument();
     expect(screen.getByLabelText('Currency')).toBeInTheDocument();
     expect(rateInput()).toBeInTheDocument();
     expect(screen.getByLabelText('Effective from')).toBeInTheDocument();
@@ -147,7 +147,7 @@ describe('RateForm — the SI conversion boundary', () => {
     render(<RateForm geofenceId={7} />);
 
     typeRate('0.12');
-    fireEvent.click(screen.getByRole('button', { name: 'Save Rate' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Save rate' }));
 
     expect(createMutate).toHaveBeenCalledTimes(1);
     const [payload] = createMutate.mock.calls[0];
@@ -161,7 +161,7 @@ describe('RateForm — the SI conversion boundary', () => {
   it('omits effective_to from the payload when left blank (open-ended rate)', () => {
     render(<RateForm geofenceId={7} />);
     typeRate('0.1');
-    fireEvent.click(screen.getByRole('button', { name: 'Save Rate' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Save rate' }));
 
     const [payload] = createMutate.mock.calls[0];
     expect(payload).not.toHaveProperty('effective_to');
@@ -172,7 +172,7 @@ describe('RateForm — the SI conversion boundary', () => {
     typeRate('0.1');
     fireEvent.change(screen.getByLabelText('Effective from'), { target: { value: '2026-01-01T00:00' } });
     fireEvent.change(screen.getByLabelText('Effective to (optional)'), { target: { value: '2026-08-27T00:00' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Save Rate' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Save rate' }));
 
     const [payload] = createMutate.mock.calls[0];
     expect(payload.effective_from).toBe(new Date('2026-01-01T00:00').toISOString());
@@ -183,16 +183,16 @@ describe('RateForm — the SI conversion boundary', () => {
 describe('RateForm — validation', () => {
   it('blocks submit and shows an inline error when no rate has been entered', () => {
     render(<RateForm geofenceId={7} />);
-    fireEvent.click(screen.getByRole('button', { name: 'Save Rate' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Save rate' }));
 
     expect(createMutate).not.toHaveBeenCalled();
   });
 
   it('the Save button stays disabled until a rate value is entered', () => {
     render(<RateForm geofenceId={7} />);
-    expect(screen.getByRole('button', { name: 'Save Rate' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Save rate' })).toBeDisabled();
     typeRate('0.1');
-    expect(screen.getByRole('button', { name: 'Save Rate' })).not.toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Save rate' })).not.toBeDisabled();
   });
 
   it('blocks submit and shows an error when effective_to is not after effective_from', () => {
@@ -200,7 +200,7 @@ describe('RateForm — validation', () => {
     typeRate('0.1');
     fireEvent.change(screen.getByLabelText('Effective from'), { target: { value: '2026-08-27T00:00' } });
     fireEvent.change(screen.getByLabelText('Effective to (optional)'), { target: { value: '2026-01-01T00:00' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Save Rate' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Save rate' }));
 
     expect(screen.getByText('Effective-to must be after effective-from.')).toBeInTheDocument();
     expect(createMutate).not.toHaveBeenCalled();
@@ -214,7 +214,7 @@ describe('RateForm — after a successful save', () => {
     render(<RateForm geofenceId={7} />);
     typeRate('0.15');
     fireEvent.change(screen.getByLabelText('Effective to (optional)'), { target: { value: '2027-01-01T00:00' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Save Rate' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Save rate' }));
 
     expect((screen.getByLabelText('Effective to (optional)') as HTMLInputElement).value).toBe('');
     // The rate field re-renders back to empty ("") once valueMicro resets to null.
@@ -227,7 +227,7 @@ describe('RateForm — loading state', () => {
     mockedCreate.mockReturnValue({ mutate: createMutate, isPending: true });
     render(<RateForm geofenceId={7} />);
 
-    const button = screen.getByRole('button', { name: 'Save Rate' });
+    const button = screen.getByRole('button', { name: 'Save rate' });
     expect(button).toHaveAttribute('aria-busy', 'true');
   });
 });

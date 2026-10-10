@@ -3,6 +3,9 @@ import { X } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/cn'
 import { tableTokens } from '@/lib/tokens'
+import { Button } from './Button'
+import { Icon } from './Icon'
+import { Text } from './Typography'
 
 interface DataTableBulkBarProps {
   count: number
@@ -30,26 +33,24 @@ export function DataTableBulkBar({ count, onClear, children, className }: DataTa
   const safeCount = Number.isFinite(count) ? Math.trunc(count) : 0
   if (safeCount <= 0) return null
   return (
-    <div role="region" aria-label={t('table.bulkActions.region', 'Bulk actions')} className={cn(tableTokens.bulkBar, className)}>
-      <span className="font-medium" aria-live="polite">
+    <div role="region" aria-label={t('table.bulkActions.region', 'Bulk actions')} className={cn(tableTokens.bulkBar, 'min-w-0 max-w-full', className)}>
+      <Text size="sm" weight="medium" color="primary" className="min-w-0 break-words" aria-live="polite">
         {t('table.bulkActions.selected', '{{count}} selected', { count: safeCount })}
-      </span>
-      <div className="ml-auto flex flex-wrap items-center gap-2">
+      </Text>
+      <div className="ms-auto flex min-w-0 max-w-full flex-wrap items-center gap-2">
         {children}
-        <button
+        <Button
           type="button"
+          variant="ghost"
+          size="sm"
+          wrapLabel
           onClick={onClear}
-          className={cn(
-            'inline-flex items-center gap-1 rounded px-2 py-1 text-xs',
-            'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-white/[0.06]',
-            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500',
-            'transition-colors',
-          )}
+          className="min-h-11 md:min-h-9 text-[var(--text-secondary)]"
+          icon={<Icon icon={X} size="xs" />}
           aria-label={t('table.bulkActions.clear', 'Clear selection')}
         >
-          <X className="h-3 w-3" aria-hidden="true" />
-          <span>{t('table.bulkActions.clear', 'Clear selection')}</span>
-        </button>
+          {t('table.bulkActions.clear', 'Clear selection')}
+        </Button>
       </div>
     </div>
   )

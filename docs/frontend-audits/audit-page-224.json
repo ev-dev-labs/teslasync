@@ -1,0 +1,345 @@
+{
+  "item": "audit-page-224",
+  "page": "web\\src\\features\\vehicle-systems\\pages\\PreconditioningEffectivenessPage.tsx",
+  "routes": ["/preconditioning-effectiveness"],
+  "phase": "Phase0",
+  "mode": "read-only source audit",
+  "purpose": "Explain observational pre-drive cabin readiness with explicit climate/drive coverage, exclusions, common support and uncertainty.",
+  "primaryGoal": "Compare qualified observed HVAC-active departures with explicitly HVAC-off controls without claiming causation, energy savings or complete source coverage.",
+  "identity": {
+    "root": "F:\\github\\TeslaSync",
+    "sourceSha256": "6dc6fda02c639d80db613bb864af3340a185624b573ec7dcd0a4e0c74add440f",
+    "routeEvidence": [
+      {"file": "web\\src\\App.tsx", "line": 109, "detail": "Lazy import of the exact assigned page."},
+      {"file": "web\\src\\App.tsx", "line": 879, "detail": "SafeRoute mounting at preconditioning-effectiveness; browser reachability unverified."}
+    ],
+    "ownedFiles": ["docs\\frontend-audits\\audit-page-224.json", ".agent-status\\audit-page-224.txt"]
+  },
+  "dataSources": [
+    {
+      "hook": "useClimateHistory",
+      "owner": "web\\src\\api\\hooks\\useVehicleSystems.ts",
+      "line": 37,
+      "endpoint": "GET /api/v1/climate?vehicle_id=<selected vehicle>",
+      "requestPath": "/climate?vehicle_id=<selected vehicle>",
+      "routeEvidence": {"file": "internal\\api\\router.go", "line": 4116},
+      "sourceOwner": "internal\\api\\climate\\handler.go:79-110",
+      "behavior": "Enabled only with a vehicle; cancellation signal forwarded; safeArray projection. Backend defaults to the preceding seven days and builds a signal.StateReader forward-folded timeline. Backend accepts explicit date bounds, but this hook does not pass them. No latest/snapshot API is used for historical comparisons."
+    },
+    {
+      "hook": "useDriveHistory",
+      "owner": "web\\src\\api\\hooks\\useDriving.ts",
+      "line": 140,
+      "endpoint": "GET /api/v1/drives?vehicle_id=<selected vehicle>&limit=1000",
+      "requestPath": "/drives?vehicle_id=<selected vehicle>&limit=1000",
+      "routeEvidence": {"file": "internal\\api\\router.go", "line": 3463},
+      "sourceOwner": "driveHandler.ListByVehicle",
+      "behavior": "Selected vehicle is required; limit clamped to 1-1000; cancellation forwarded; MODERATE staleTime and safeArray preserved. No pagination or date bounds at this call site. Drive repository ordering and full date-filter behavior were not inspected."
+    },
+    {
+      "hook": "summarizePreconditioningEffectiveness",
+      "owner": "web\\src\\features\\vehicle-systems\\lib\\preconditioningEffectiveness.ts",
+      "line": 777,
+      "endpoint": null,
+      "behavior": "Memoized local join of returned histories. Celsius and seconds retained; invalid/duplicate rows accounted explicitly. Distinct cabin transitions qualify thermal support. Unknown HVAC prevents control classification. Overall medians use only hot/cold strata containing both groups; directory newest-first with default cap 80."
+    },
+    {
+      "hook": "useSelectedVehicle / useUnits / useNumberFormatting",
+      "owner": "existing workspace and display hooks",
+      "line": 56,
+      "file": "web\\src\\features\\vehicle-systems\\pages\\PreconditioningEffectivenessPage.tsx",
+      "endpoint": null,
+      "behavior": "Workspace vehicle reused without a duplicate picker. Temperature differences converted by subtracting converted zero, preserving Fahrenheit delta semantics. Display precision/locale and duration preferences remain outside raw query data."
+    }
+  ],
+  "components": [
+    {"name": "PageLayout -> PageContainer", "owner": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx", "role": "Full-width min-w-0 container; existing header, copy-link and worst-query freshness pipeline."},
+    {"name": "LayoutCard / Grid", "owner": "@/components/layout", "role": "Fourteen section shells plus responsive arrangements; no second page container."},
+    {"name": "VehicleOperationalBrief -> OperationalBrief", "owner": "web\\src\\features\\vehicle-systems\\components\\operationalbrief-all\\VehicleOperationalBrief.tsx", "role": "Existing domain bridge for typed metrics, returned-only provenance, retained evidence and preference-aware formatting."},
+    {"name": "EmbeddedChart / ChartLegend / ChartTooltip / chart barrel", "owner": "@/components/charts", "role": "Four exportable charts with stable chart keys, explicit accessible labels, dataColumns and hidden-series wiring."},
+    {"name": "Button / Badge / Text / Heading / MetricLabel / MetricValue", "owner": "@/components/ui", "role": "Shared actions, localized status and semantic typography."},
+    {"name": "Skeleton / AlertBanner / QueryError / EmptyState", "owner": "@/components/feedback", "role": "Initial load, retry, offline, empty and retained-refresh-failure presentation."},
+    {"name": "FadeIn", "owner": "@/components/motion", "role": "Fifteen entrance wrappers; shared reduced-motion execution not exercised."},
+    {"name": "PreconditioningSectionBody / PreconditioningQueryStatus / labels", "owner": "web\\src\\features\\vehicle-systems\\components\\preconditioning-effectiveness", "role": "Feature-owned per-source requirements, non-disappearing shells, query notices and disposition vocabulary."}
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\vehicle-systems\\components\\preconditioning-effectiveness\\PreconditioningSourceCoverage.tsx",
+      "line": 43,
+      "rule": "MDC-002 / mission 4",
+      "detail": "Source-status precedence is implemented locally here and again in DataAvailability:38-64; coverage omits paused state while availability includes it.",
+      "fix": "Consolidate the domain status derivation within the existing preconditioning feature rather than introducing a new universal status registry. Preserve localized labels and source-specific diagnostics.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\vehicle-systems\\components\\preconditioning-effectiveness\\PreconditioningComparisonCards.tsx",
+      "line": 51,
+      "rule": "MDC-015 / mission 4",
+      "detail": "Border/surface/padding mini-card presentation repeats in departure cards, strata, thresholds and methodology. Existing surface primitives should be evaluated; source repetition alone does not justify a new shared component.",
+      "fix": "Reuse a suitable existing Card/LayoutCard presentation variant where it preserves article/list semantics, density and every diagnostic; retain local domain components if no exact match is proven.",
+      "owner": "page",
+      "confidence": "medium"
+    }
+  ],
+  "responsive": {
+    "observed": [
+      "PageLayout has @container, w-full and min-w-0.",
+      "Header refresh action wraps.",
+      "Coverage/availability sources stack before lg; methodology progresses to two and three columns.",
+      "Directory remains a semantic list with two diagnostic columns expanding to four/six.",
+      "Charts use ResponsiveContainer and fixed 300px plotting height."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\vehicle-systems\\components\\preconditioning-effectiveness\\PreconditioningThresholdConfidence.tsx",
+        "line": 65,
+        "rule": "MDC-043 / mission 15",
+        "detail": "Threshold matrix starts at two columns even at 320px and expands to seven at xl; long localized labels and duration values have no page-specific narrow-container fallback. Overflow is a risk, not a demonstrated runtime failure.",
+        "fix": "Verify allocated widths and 200% text; use existing Grid one-column narrow-container behavior if needed, keeping all seven gates and affected counts.",
+        "owner": "page",
+        "confidence": "medium"
+      },
+      {
+        "file": "web\\src\\features\\vehicle-systems\\components\\preconditioning-effectiveness\\PreconditioningDepartureDirectory.tsx",
+        "line": 61,
+        "rule": "MDC-040 / MDC-043",
+        "detail": "Directory has a nested max-height scrolling list without explicit region label or focus affordance. Keyboard/touch reachability of the final card needs verification; native browser scroll focus behavior cannot be certified by source.",
+        "fix": "Exercise keyboard and touch at narrow widths; reuse an existing scroll-region pattern with a localized accessible name and keyboard reachability only where required, without removing card diagnostics.",
+        "owner": "page",
+        "confidence": "medium"
+      }
+    ],
+    "viewportAcceptance": "UNVERIFIED: 320/375/390/430/768/1024/1280/1440/1920/2560."
+  },
+  "accessibility": {
+    "observed": [
+      "Meaningful localized refresh name; decorative icons aria-hidden.",
+      "Ledger has explicit accessible section name.",
+      "Query notices use status/alert and polite announcements where appropriate.",
+      "Four charts provide ariaLabel and dataColumns through the existing export/table-capable chart pipeline.",
+      "Badges provide textual dispositions; color is not the only domain signal."
+    ],
+    "issues": [],
+    "acceptance": "Keyboard, focus, screen-reader/chart-table open states, effective contrast, forced colors, target sizes and reduced motion are UNVERIFIED."
+  },
+  "states": {
+    "initialLoading": "QueryStatus announces loading; SectionBody uses source-specific skeletons; source summaries can resolve independently.",
+    "empty": "Both returned empty arrays produce a valid-empty explanation; no classified/comparable results receive distinct passive explanations while shells remain mounted.",
+    "error": "Initial fatal errors have independent climate/drive retry actions in the ledger. Climate-only disposition does not depend on drive success.",
+    "partial": "Separate coverage cards preserve successfully resolved source information; joined analysis correctly requires both sources.",
+    "refreshFailure": "deriveDataState fatalError/refreshError split retains cached measurements; query status warns and offers refresh retry.",
+    "unknown": "No vehicle, unresolved availability, missing temperatures and unavailable comparisons remain distinct from measured zero.",
+    "stale": "PageContainer receives both queries for worst-query freshness; feature query state carries neither source last-success timestamps nor isStale.",
+    "offline": "Initial paused requests explicitly show an offline notice; retained paused requests are not represented correctly by the local state adapter.",
+    "issues": [
+      {
+        "file": "web\\src\\features\\vehicle-systems\\pages\\PreconditioningEffectivenessPage.tsx",
+        "line": 100,
+        "rule": "MDC-026 / mission 25",
+        "detail": "climate.isPaused is set only when !climateHasData; drives repeats this at line 119. A paused refetch with retained data therefore becomes isPaused=false. Downstream ledger and coverage retained checks relying on resolved && isPaused cannot activate for this state.",
+        "fix": "Carry actual paused transport state independently of hasData; retain measurements and distinguish initial offline from offline-retained in notices/briefs. Verify against inherited query policy, not by changing retries or cache values.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\vehicle-systems\\components\\preconditioning-effectiveness\\PreconditioningSourceCoverage.tsx",
+        "line": 43,
+        "rule": "MDC-026",
+        "detail": "Coverage status has loading/error/refresh-error/fetching/resolved/pending branches but no paused branch. Initial offline can be labeled Pending in this section even while the evidence ledger says Paused offline.",
+        "fix": "Use the deduplicated domain source-status mapping with distinct paused and retained-paused labels.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ]
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\vehicle-systems\\components\\preconditioning-effectiveness\\PreconditioningEvidenceLedger.tsx",
+      "line": 73,
+      "rule": "MDC-010 / mission 7",
+      "detail": "Six adjacent KPI contexts use indigo, cyan, purple, emerald, amber and conditional severity icons. These are toned-down colors, not neon, but unrelated hues still compete with evidence severity.",
+      "fix": "Use neutral semantic icon tokens for non-status metrics; reserve subdued severity hues for actual confidence/availability meanings. Preserve explicit chart series identity and user chart palettes.",
+      "owner": "page",
+      "confidence": "medium"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\features\\vehicle-systems\\pages\\PreconditioningEffectivenessPage.tsx",
+      "line": 59,
+      "rule": "MDC-032",
+      "detail": "Historical analysis consumes only workspace vehicle. It does not use useRangeState, and /preconditioning-effectiveness is absent from RANGE_ENABLED_PATHS. Histories use an explicitly disclosed seven-day climate default and independent 1000-drive cap rather than the shared analysis window.",
+      "fix": "Integration owner should assess adopting the header-owned date window and extend typed history hooks/query keys to pass both bounds. Verify complete server filtering and bounded-source disclosures; retain overlap gates, drive cap semantics and all explanations. Do not add a second picker or simply filter loaded rows.",
+      "owner": "integration",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\vehicle-systems\\lib\\preconditioningEffectiveness.ts",
+      "line": 670,
+      "rule": "MDC-044 / MDC-032",
+      "detail": "Hourly aggregation deliberately uses browser-local getHours and its subtitle explicitly discloses browser-local time. This is not proof of a defect, but it differs from potentially saved workspace timezone semantics and must not be silently changed during date-scope modernization.",
+      "fix": "Keep current browser-local buckets unless the integration owner defines a tested timezone contract covering workspace preference, DST and export labels; report unknown equivalence rather than rebucketing cosmetically.",
+      "owner": "integration",
+      "confidence": "high"
+    }
+  ],
+  "priority": {
+    "overall": "medium",
+    "first": "Fix offline-retained source presentation and consolidate conflicting source labels.",
+    "next": "Coordinate historical workspace range integration; validate mobile diagnostics and chart/table accessibility.",
+    "last": "Reduce incidental KPI icon color variation without disturbing semantic/status or user palette choices."
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "Workspace range registration and typed bounded-history integration",
+      "owner": "web\\src\\lib\\workspaceScope.ts",
+      "additionalOwners": ["web\\src\\api\\hooks\\useVehicleSystems.ts", "web\\src\\api\\hooks\\useDriving.ts"],
+      "props": "Existing useRangeState startInstant/endInstantExclusive passed as typed optional history bounds; selected vehicle unchanged; query keys include bounds.",
+      "variants": "Existing header rolling/custom ranges; no competing local controls.",
+      "states": ["initial", "retained", "paused", "empty", "partial", "error", "scope cancellation"],
+      "usedBy": ["/preconditioning-effectiveness"],
+      "dependsOn": ["Verify drives backend date filtering and pagination contract", "Preserve climate qualification context and bounded-history disclosure", "Integration-owner timezone/DST decision"],
+      "evidence": "Page:59-60; useClimateHistory:37-43; useDriveHistory:140-151; workspaceScope:23-79; climate handler:86-93.",
+      "implementationStatus": "PROPOSED integration requirement; not authorized or applied by this audit."
+    }
+  ],
+  "competingImplementations": {
+    "confirmed": ["Two preconditioning-local source status derivations with differing paused handling."],
+    "notFoundInScopedSource": ["No second vehicle picker", "No local date picker", "No alternative fetch/server-state library", "No competing chart engine", "No new theme engine"],
+    "limit": "No whole-application competing implementation search; existing shared APIs were followed only as needed for this page."
+  },
+  "preservation": {
+    "sourceSha256": "6dc6fda02c639d80db613bb864af3340a185624b573ec7dcd0a4e0c74add440f",
+    "currentLineCount": 299,
+    "dedicatedDependencyLineCount": 2743,
+    "pagePlusDedicatedDependencyLineCount": 3042,
+    "modelLineCount": 1067,
+    "sectionCount": 15,
+    "layoutCardCount": 14,
+    "embeddedChartCount": 4,
+    "glassPanelCount": 0,
+    "chartContainerCount": 0,
+    "sections": [
+      "KPI and evidence ledger",
+      "Source and temporal coverage",
+      "Climate-row disposition",
+      "Departure disposition",
+      "Join-window support and overlap disclosure",
+      "Classification and hourly profile",
+      "Departure-readiness comparison",
+      "Cabin-improvement comparison",
+      "Hot and cold strata",
+      "Observed improvement distribution",
+      "Threshold and confidence matrix",
+      "Departure evidence directory",
+      "Exact accounting identities",
+      "Data availability and query state",
+      "Methodology and interpretation guardrails"
+    ],
+    "actions": [
+      "Refresh both sources for the selected vehicle",
+      "Retry climate independently",
+      "Retry drives independently",
+      "Retry retained refresh failure",
+      "Four EmbeddedChart toolbar/export/data-table/fullscreen capabilities inherited from shared owner",
+      "Four persistent chart keys and legend visibility wiring",
+      "Existing PageContainer copy-link/header capabilities"
+    ],
+    "dataBehavior": [
+      "Raw Celsius and SI seconds remain in hooks/cache/model; display delta conversion subtracts converted zero.",
+      "Null/NaN display as unavailable, not zero.",
+      "Returned climate row outcomes and drive outcomes remain exactly accounted.",
+      "Pre-drive window default 2700s; minimum initial gap 1C; minimum two distinct thermal states; minimum span 300s; maximum sample lead 900s; maximum target shift 2C.",
+      "Unknown HVAC prevents explicitly-off control; any active row identifies observed-active group.",
+      "Only strata with both groups enter headline comparisons; confidence is descriptive support, not significance.",
+      "Directory cap 80 (maximum option 200), newest-first; omitted count remains visible.",
+      "Repeated forward-folded cabin values are not independent observations; overlapping window row reuse disclosed.",
+      "No causal/energy-saving claims; retain all six methodology explanations and seven exact accounting identities.",
+      "No source, route, preference, catalog, queue, shared component or backend changes made."
+    ],
+    "sourceInventory": [
+      {"path":"web\\src\\features\\vehicle-systems\\pages\\PreconditioningEffectivenessPage.tsx","lines":299,"sha256":"6dc6fda02c639d80db613bb864af3340a185624b573ec7dcd0a4e0c74add440f"},
+      {"path":"web\\src\\features\\vehicle-systems\\lib\\preconditioningEffectiveness.ts","lines":1067,"sha256":"7024f566571252b3fc75cc3c63e2ac3b6bee34dbd6a8e86d7054f4cef61b5bc3"},
+      {"path":"web\\src\\features\\vehicle-systems\\components\\operationalbrief-all\\VehicleOperationalBrief.tsx","lines":73,"sha256":"563533fb54b38e658e80cbc494990fc9ea91f57db57cf4bdc1b96e08f9a5b0c4"},
+      {"path":"web\\src\\features\\vehicle-systems\\components\\preconditioning-effectiveness\\index.ts","lines":20,"sha256":"d284191527a098d4e32c28d25a94efcf2f0d26ba1bf0b21635d84d56fe6a9b23"},
+      {"path":"web\\src\\features\\vehicle-systems\\components\\preconditioning-effectiveness\\labels.ts","lines":124,"sha256":"c8114799008df899101b31f0316323714514456cc318232809f2506a4e261fd9"},
+      {"path":"web\\src\\features\\vehicle-systems\\components\\preconditioning-effectiveness\\types.ts","lines":38,"sha256":"79d634319a3ca7f14a4109bad11ad51fc0275b6ee90fbe95e20d9940455f48ad"},
+      {"path":"web\\src\\features\\vehicle-systems\\components\\preconditioning-effectiveness\\PreconditioningClimateDisposition.tsx","lines":75,"sha256":"075ff3ca0c598cd1c7df127b8765b806acd3db98358775ce8dd16ad24a8caf83"},
+      {"path":"web\\src\\features\\vehicle-systems\\components\\preconditioning-effectiveness\\PreconditioningComparisonCards.tsx","lines":131,"sha256":"94242f7f771eea4a3faed95191c517c059c171778db69210a14edc433294126c"},
+      {"path":"web\\src\\features\\vehicle-systems\\components\\preconditioning-effectiveness\\PreconditioningDataAvailability.tsx","lines":187,"sha256":"737c63cef17270f2c99b4c549a0ce00858625405b89377828fb7e8e066810059"},
+      {"path":"web\\src\\features\\vehicle-systems\\components\\preconditioning-effectiveness\\PreconditioningDepartureCard.tsx","lines":139,"sha256":"355bc3f3dc247d1917e3da1a7f40d28c48b4d187f8f52ed7878359f0c7c7ac90"},
+      {"path":"web\\src\\features\\vehicle-systems\\components\\preconditioning-effectiveness\\PreconditioningDepartureDirectory.tsx","lines":76,"sha256":"e1cd63758927943d84b362bbf32368276820c16c9b15b59c089cbfc23d204962"},
+      {"path":"web\\src\\features\\vehicle-systems\\components\\preconditioning-effectiveness\\PreconditioningDepartureDisposition.tsx","lines":113,"sha256":"a2f09ec607b285b8d9b4a1705615eb9035484e4ed993edca7459b48a8d095097"},
+      {"path":"web\\src\\features\\vehicle-systems\\components\\preconditioning-effectiveness\\PreconditioningEvidenceLedger.tsx","lines":146,"sha256":"eb01fa57a2f8ceac00bfa1abe33423e75853fc87239428420fc7a403ba9ca400"},
+      {"path":"web\\src\\features\\vehicle-systems\\components\\preconditioning-effectiveness\\PreconditioningExactAccounting.tsx","lines":175,"sha256":"64d64e6e35f1f644b77aacba55c82ddb1bc66d70db7fa6dbf5db718421a95e25"},
+      {"path":"web\\src\\features\\vehicle-systems\\components\\preconditioning-effectiveness\\PreconditioningHourlyProfile.tsx","lines":151,"sha256":"593d4a3f2a2e8f549c25f57092ec751766b56fcf26c7116af1c3f4c4b0516839"},
+      {"path":"web\\src\\features\\vehicle-systems\\components\\preconditioning-effectiveness\\PreconditioningImprovementComparison.tsx","lines":123,"sha256":"3f10fd28491b1919c818eec46ae7faffdc790649fe9ad68d9e8c3eebe32cb5b4"},
+      {"path":"web\\src\\features\\vehicle-systems\\components\\preconditioning-effectiveness\\PreconditioningImprovementDistribution.tsx","lines":127,"sha256":"07663296f7d1100d27241cf5df048035ff2c3854804fd8cab3ececf9f5e0915e"},
+      {"path":"web\\src\\features\\vehicle-systems\\components\\preconditioning-effectiveness\\PreconditioningJoinSupport.tsx","lines":86,"sha256":"e2b51692b4f97ac1f45595c09e437921357f6c27b7596a0e8d08beaeeb1dc629"},
+      {"path":"web\\src\\features\\vehicle-systems\\components\\preconditioning-effectiveness\\PreconditioningMethodology.tsx","lines":134,"sha256":"e220dd906b031ec1c89a53d30c2658438116e6b3ab4580998238de27c65b8702"},
+      {"path":"web\\src\\features\\vehicle-systems\\components\\preconditioning-effectiveness\\PreconditioningQueryStatus.tsx","lines":200,"sha256":"0a2102914173c4221db7955f31982690d05375da9c62fbf949851827f89c7cba"},
+      {"path":"web\\src\\features\\vehicle-systems\\components\\preconditioning-effectiveness\\PreconditioningReadinessComparison.tsx","lines":123,"sha256":"00898f59c7bcf6fadcc302b4b5dadac6e1300a0e8b4042bde640b482f17b1661"},
+      {"path":"web\\src\\features\\vehicle-systems\\components\\preconditioning-effectiveness\\PreconditioningSectionBody.tsx","lines":158,"sha256":"c1fba5f7e114170c08b384986fc78d39a0585636fe36d97495bf2216418e2e0e"},
+      {"path":"web\\src\\features\\vehicle-systems\\components\\preconditioning-effectiveness\\PreconditioningSourceCoverage.tsx","lines":182,"sha256":"3955da9dd3c7e9c8ff5563f20b31a91400a5491d68b7231fc2a6d6d749660bcd"},
+      {"path":"web\\src\\features\\vehicle-systems\\components\\preconditioning-effectiveness\\PreconditioningStrata.tsx","lines":119,"sha256":"8c3ca0b013cbf7e8878bf311af9d55e08ae467d9fefa4e3818c1502c92cf6cb0"},
+      {"path":"web\\src\\features\\vehicle-systems\\components\\preconditioning-effectiveness\\PreconditioningThresholdConfidence.tsx","lines":116,"sha256":"8b6a23c2d616a5a4397e653c8ffcf6bcdf0486db3d4661d854ab3d92eb8ee765"}
+    ]
+  },
+  "evidenceLimits": {
+    "runtime": "UNVERIFIED",
+    "visual": "UNVERIFIED",
+    "keyboard": "UNVERIFIED",
+    "contrast": "UNVERIFIED",
+    "viewport": "UNVERIFIED",
+    "sourceScope": "Exact page and page dependencies only, plus bounded route/workspace/backend contract confirmation. No Git, queue edit, production mutation, full gates or source writes.",
+    "inspectionDepth": "Root, state bodies, readiness/hourly chart, coverage, availability, ledger, directory/card, thresholds, methodology and domain brief read directly. All dedicated dependencies inspected with numbered structural/style/state extraction; large all-file output was truncated, so full semantic review of every line is not claimed. Model inspected at 1-240, 400-506, 650-708 and 777-1055 plus symbol/threshold scan. Hook/router/PageContainer evidence is bounded source search.",
+    "checks": [
+      {"command":"Get-FileHash <25 inventoried paths> -Algorithm SHA256; Get-Content <paths> for line counts","exitCode":0,"output":"Root 299 lines; dedicated dependency directory 2743 lines; root plus dedicated dependencies 3042 lines; model 1067 lines. Exact hashes captured in preservation.sourceInventory."},
+      {"command":"Scoped Select-String style=, raw-control tags, direct chart/map/motion imports, neon/glow, LayoutCard/EmbeddedChart/GlassPanel/ChartContainer","exitCode":0,"output":"style= : 0; case-sensitive raw HTML matches: 0; direct library imports: 0; text-neon|shadow-glow: 0; LayoutCard: 14; EmbeddedChart: 4; GlassPanel: 0; ChartContainer: 0. Initial case-insensitive raw-tag count 2 was a TypeScript generic-name false positive; corrected with -CaseSensitive and rg."},
+      {"command":"rg hook endpoints and internal/api/router.go route declarations","exitCode":0,"output":"Climate hook /climate -> router.go:4116-4118; drive hook /drives -> router.go:3463-3464; no doubled /api/v1 prefix or camelCase vehicle query parameter at these call sites."},
+      {"command":"bash .github\\skills\\audit-violations\\audit.sh <page>","exitCode":null,"output":"NOT RUN: inspected script includes project-wide npx tsc --noEmit; assignment explicitly prohibits full gates. Scoped source pattern checks used instead."},
+      {"command":"npx tsc --noEmit / lint / build / tests","exitCode":null,"output":"NOT RUN: Phase0 source-only assignment; no runtime/typecheck acceptance asserted."}
+    ]
+  },
+  "filesRead": [
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\vehicle-systems\\pages\\PreconditioningEffectivenessPage.tsx",
+    "web\\src\\features\\vehicle-systems\\components\\preconditioning-effectiveness\\index.ts",
+    "web\\src\\features\\vehicle-systems\\components\\preconditioning-effectiveness\\labels.ts",
+    "web\\src\\features\\vehicle-systems\\components\\preconditioning-effectiveness\\types.ts",
+    "web\\src\\features\\vehicle-systems\\components\\preconditioning-effectiveness\\PreconditioningClimateDisposition.tsx",
+    "web\\src\\features\\vehicle-systems\\components\\preconditioning-effectiveness\\PreconditioningComparisonCards.tsx",
+    "web\\src\\features\\vehicle-systems\\components\\preconditioning-effectiveness\\PreconditioningDataAvailability.tsx",
+    "web\\src\\features\\vehicle-systems\\components\\preconditioning-effectiveness\\PreconditioningDepartureCard.tsx",
+    "web\\src\\features\\vehicle-systems\\components\\preconditioning-effectiveness\\PreconditioningDepartureDirectory.tsx",
+    "web\\src\\features\\vehicle-systems\\components\\preconditioning-effectiveness\\PreconditioningDepartureDisposition.tsx",
+    "web\\src\\features\\vehicle-systems\\components\\preconditioning-effectiveness\\PreconditioningEvidenceLedger.tsx",
+    "web\\src\\features\\vehicle-systems\\components\\preconditioning-effectiveness\\PreconditioningExactAccounting.tsx",
+    "web\\src\\features\\vehicle-systems\\components\\preconditioning-effectiveness\\PreconditioningHourlyProfile.tsx",
+    "web\\src\\features\\vehicle-systems\\components\\preconditioning-effectiveness\\PreconditioningImprovementComparison.tsx",
+    "web\\src\\features\\vehicle-systems\\components\\preconditioning-effectiveness\\PreconditioningImprovementDistribution.tsx",
+    "web\\src\\features\\vehicle-systems\\components\\preconditioning-effectiveness\\PreconditioningJoinSupport.tsx",
+    "web\\src\\features\\vehicle-systems\\components\\preconditioning-effectiveness\\PreconditioningMethodology.tsx",
+    "web\\src\\features\\vehicle-systems\\components\\preconditioning-effectiveness\\PreconditioningQueryStatus.tsx",
+    "web\\src\\features\\vehicle-systems\\components\\preconditioning-effectiveness\\PreconditioningReadinessComparison.tsx",
+    "web\\src\\features\\vehicle-systems\\components\\preconditioning-effectiveness\\PreconditioningSectionBody.tsx",
+    "web\\src\\features\\vehicle-systems\\components\\preconditioning-effectiveness\\PreconditioningSourceCoverage.tsx",
+    "web\\src\\features\\vehicle-systems\\components\\preconditioning-effectiveness\\PreconditioningStrata.tsx",
+    "web\\src\\features\\vehicle-systems\\components\\preconditioning-effectiveness\\PreconditioningThresholdConfidence.tsx",
+    "web\\src\\features\\vehicle-systems\\components\\operationalbrief-all\\VehicleOperationalBrief.tsx",
+    "web\\src\\features\\vehicle-systems\\lib\\preconditioningEffectiveness.ts",
+    "web\\src\\features\\vehicle-systems\\lib\\hvacCycling.ts",
+    "web\\src\\api\\hooks\\useDriving.ts",
+    "web\\src\\api\\hooks\\useVehicleSystems.ts",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\App.tsx",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\layout\\PageContainer.tsx",
+    "internal\\api\\router.go",
+    "internal\\api\\climate\\handler.go"
+  ]
+}

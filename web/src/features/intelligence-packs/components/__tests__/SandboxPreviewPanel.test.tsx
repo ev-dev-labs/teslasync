@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { screen, fireEvent, waitFor } from '@testing-library/react';
+import { screen, fireEvent, waitFor, within } from '@testing-library/react';
 
 import { renderWithProviders } from './testUtils';
 import { SandboxPreviewPanel } from '../SandboxPreviewPanel';
@@ -28,7 +28,8 @@ describe('SandboxPreviewPanel', () => {
     renderWithProviders(<SandboxPreviewPanel />);
     expect(await screen.findByText('Efficiency Starter Dashboard')).toBeInTheDocument();
     expect(screen.getByText(/simulating full requested-capability grant/i)).toBeInTheDocument();
-    expect(await screen.findByText(/sample rows/i)).toBeInTheDocument();
+    const evaluation = await screen.findByRole('region', { name: 'Selected pack evaluation' });
+    expect(await within(evaluation).findByText(/^sample rows$/i)).toBeInTheDocument();
   });
 
   it('uses the installed capability grant (not the full request) once a pack is installed with partial trust', async () => {

@@ -3,11 +3,11 @@ import { useTranslation } from 'react-i18next';
 
 import { Badge, GlassPanel, PanelTitle, Text } from '@/components/ui';
 import { DataProvenanceBadge } from '@/components/data-display';
-import { fmtPercent } from '@/lib/numberFormat';
-import { useUnits } from '@/hooks/useUnits';
+
 import type { DriveFsdInsight } from '@/types/fsd';
 import type { ChartDataPoint, DriveStats } from './types';
 import { interpretDriveDebrief, type DebriefBeatId } from './drivePhysicsDebrief';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 const BEAT_COPY: Record<DebriefBeatId, { key: string; fallback: string }> = {
   launch: {
@@ -28,7 +28,7 @@ const BEAT_COPY: Record<DebriefBeatId, { key: string; fallback: string }> = {
   },
   fsd: {
     key: 'driveDetail.debrief.fsd',
-    fallback: 'Supervised-driving km come from the trip meter, not engagement segments.',
+    fallback: 'Supervised-driving distance comes from the trip meter, not engagement segments.',
   },
   gap: {
     key: 'driveDetail.debrief.gap',
@@ -45,8 +45,8 @@ export function DrivePhysicsDebriefPanel({
   chartData: ChartDataPoint[];
   fsdInsight: DriveFsdInsight | undefined;
 }) {
+  const { fmtPercent } = useNumberFormatting();
   const { t } = useTranslation();
-  const { formatPower } = useUnits();
   const debrief = interpretDriveDebrief(stats, chartData, fsdInsight);
   const provenance = debrief.beats.some((beat) => beat.honesty === 'missing' && beat.id === 'gap')
     ? 'unknown'
@@ -64,52 +64,48 @@ export function DrivePhysicsDebriefPanel({
       <Text as="p" variant="caption">
         {t(
           'driveDetail.debrief.subtitle',
-          'One story after the drive: launch vs regen vs pads vs thermal vs FSD km. Not more gauges.',
+          'Power, regen, brake, thermal and FSD evidence. Missing signals remain unknown.',
         )}
       </Text>
       <div className="flex flex-wrap gap-2">
-        {debrief.peakPowerKw != null && (
-          <Badge variant="info" size="sm">
-            {t('driveDetail.debrief.peak', 'Peak {{power}}', {
-              power: formatPower(debrief.peakPowerKw * 1000),
-            })}
-          </Badge>
-        )}
         {debrief.regenShare != null && (
           <Badge variant="success" size="sm">
-            {t('driveDetail.debrief.regenShare', 'Regen {{share}}', {
-              share: fmtPercent(debrief.regenShare * 100, 0),
+            {t('driveDetail.report.regenShareEstimate', 'Estimated regen ratio {{share}}', {
+              share: fmtPercent(debrief.regenShare * 100),
             })}
           </Badge>
         )}
-        {debrief.fsdSharePct != null ? (
-          <Badge variant="info" size="sm">
-            {t('driveDetail.debrief.fsdShare', 'FSD {{share}}', {
-              share: fmtPercent(debrief.fsdSharePct, 0),
-            })}
-          </Badge>
-        ) : (
+        {debrief.fsdSharePct == null ? (
           <Badge variant="neutral" size="sm">
             {t('driveDetail.debrief.fsdUnknown', 'FSD km unknown')}
           </Badge>
-        )}
+        ) : null}
         {debrief.resetAffected && (
           <Badge variant="warning" size="sm">
             {t('driveDetail.debrief.reset', 'Counter reset')}
           </Badge>
         )}
       </div>
+      {debrief.regenShare != null ? (
+        <Text as="p" variant="caption">{t('driveDetail.report.regenRatioMethod', 'Recovered / (consumed + recovered), using drive-summary energy sources. This ratio is not a metered braking-efficiency measurement.')}</Text>
+      ) : null}
       <ol className="space-y-2">
         {debrief.beats.map((beat) => (
           <li key={beat.id}>
             <Text as="p" variant="bodySm">
               {t(BEAT_COPY[beat.id].key, BEAT_COPY[beat.id].fallback)}
               {' '}
-              <span className="text-[var(--text-muted)]">({beat.honesty})</span>
+              <span className="text-[var(--text-muted)]">({t(`driveDetail.report.honesty.${beat.honesty}`, {
+                defaultValue: beat.honesty === 'live' ? 'Observed' : beat.honesty === 'stale' ? 'Limited evidence' : beat.honesty === 'guessed' ? 'Estimated' : 'Missing',
+              })})</span>
             </Text>
           </li>
         ))}
       </ol>
+      <Text as="p" variant="caption">
+        <a href="#power-trace" className="underline underline-offset-4">{t('driveDetail.powerProfile', 'Power profile')}</a>
+        {' · '}<a href="#fsd-evidence" className="underline underline-offset-4">{t('driveDetail.fsd.title', 'Supervised driving')}</a>
+      </Text>
     </GlassPanel>
   );
 }

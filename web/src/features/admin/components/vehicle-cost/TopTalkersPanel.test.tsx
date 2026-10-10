@@ -36,6 +36,7 @@ import { MemoryRouter } from 'react-router-dom';
 import type { ComponentProps, ReactNode } from 'react';
 
 import type { VehicleCostBar } from './helpers';
+import { chartTokens } from '@/lib/tokens';
 
 // ── i18n: resolve the English fallback (2nd arg) so assertions read on copy. ──
 vi.mock('react-i18next', () => {
@@ -83,7 +84,7 @@ import { TopTalkersPanel } from './TopTalkersPanel';
 
 // The colour-blind-safe series palette the component cycles through
 // (chartTokens.series). Kept here so the colour assertions are self-documenting.
-const SERIES = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#ec4899', '#84cc16'];
+const SERIES = chartTokens.series;
 
 // ── Fixtures ────────────────────────────────────────────────────────────────
 
@@ -143,7 +144,7 @@ describe('TopTalkersPanel — chrome', () => {
     for (const s of statuses) {
       const { unmount } = renderPanel(s);
 
-      const heading = screen.getByRole('heading', { name: /top talkers/i });
+      const heading = screen.getByRole('heading', { name: /Top talkers/i });
       expect(heading).toBeInTheDocument();
 
       // The Flame glyph is presentational — it must not pollute the accessible
@@ -168,8 +169,8 @@ describe('TopTalkersPanel — loading', () => {
     const status = screen.getByRole('status');
     expect(status).toHaveAttribute('aria-busy', 'true');
     expect(status).toHaveAccessibleName('Loading');
-    // One pulsing Skeleton per placeholder row, and no bars yet.
-    expect(container.querySelectorAll('.animate-pulse')).toHaveLength(5);
+    // Five static, decorative rows retain the source's placeholder geometry.
+    expect(container.querySelectorAll('[aria-hidden="true"][class~="bg-[var(--skeleton-bg)]"][style="height: 40px;"]')).toHaveLength(5);
     expect(screen.queryByTestId('metric-bar')).toBeNull();
   });
 
@@ -181,7 +182,7 @@ describe('TopTalkersPanel — loading', () => {
     });
 
     // items.length > 0 → the `loading && empty` skeleton guard is skipped.
-    expect(container.querySelector('.animate-pulse')).toBeNull();
+    expect(container.querySelector('[aria-hidden="true"][class~="bg-[var(--skeleton-bg)]"]')).toBeNull();
     expect(screen.getByTestId('metric-bar')).toBeInTheDocument();
     expect(screen.queryByRole('status')).toBeNull();
   });
@@ -213,7 +214,7 @@ describe('TopTalkersPanel — error', () => {
     });
 
     expect(screen.getByRole('alert')).toBeInTheDocument();
-    expect(container.querySelector('.animate-pulse')).toBeNull();
+    expect(container.querySelector('[aria-hidden="true"][class~="bg-[var(--skeleton-bg)]"]')).toBeNull();
     expect(screen.queryByTestId('metric-bar')).toBeNull();
   });
 });
@@ -252,11 +253,11 @@ describe('TopTalkersPanel — derivation', () => {
     expect(bars.map((b) => b.value)).toEqual(['6000', '3000', '1000']);
     // max is the fleet total for every bar so the widths are comparable.
     expect(bars.map((b) => b.max)).toEqual(['10000', '10000', '10000']);
-    // Integer counts (no spurious decimals) + one-decimal share of the total.
+    // Integer counts (no spurious decimals) + Settings precision for shares.
     expect(bars.map((b) => b.sublabel)).toEqual([
-      '6,000 · 60.0%',
-      '3,000 · 30.0%',
-      '1,000 · 10.0%',
+      '6,000 · 60.00%',
+      '3,000 · 30.00%',
+      '1,000 · 10.00%',
     ]);
   });
 
@@ -272,8 +273,8 @@ describe('TopTalkersPanel — derivation', () => {
     const bars = readBars();
     // max === biggest talker (400): the leader fills the bar at 100%.
     expect(bars.map((b) => b.max)).toEqual(['400', '400']);
-    expect(bars[0].sublabel).toBe('400 · 100.0%');
-    expect(bars[1].sublabel).toBe('100 · 25.0%');
+    expect(bars[0].sublabel).toBe('400 · 100.00%');
+    expect(bars[1].sublabel).toBe('100 · 25.00%');
   });
 
   it('cycles the colour palette and wraps back to the first colour after eight bars', () => {
@@ -285,6 +286,8 @@ describe('TopTalkersPanel — derivation', () => {
 
     const bars = readBars();
     expect(bars).toHaveLength(9);
+    expect(SERIES).toHaveLength(8);
+    expect(SERIES[0]).toBe('light-dark(#385e7e, #91b4d2)');
     expect(bars[0].color).toBe(SERIES[0]);
     expect(bars[1].color).toBe(SERIES[1]);
     // series[8 % 8] === series[0] — the palette wraps.
@@ -308,10 +311,10 @@ describe('TopTalkersPanel — hardening', () => {
     });
 
     const bars = readBars();
-    expect(bars[0].sublabel).toBe('5,000 · 100.0%'); // clamped, not 500%
+    expect(bars[0].sublabel).toBe('5,000 · 100.00%'); // clamped, not 500%
     expect(bars[1].value).toBe('0'); // rows ?? 0
     expect(bars[1].label).toBe('—'); // name ?? '—'
-    expect(bars[1].sublabel).toBe('0 · 0.0%');
+    expect(bars[1].sublabel).toBe('0 · 0.00%');
   });
 
   it('renders the empty state instead of crashing when talkers/totalRows are undefined', () => {
@@ -340,7 +343,7 @@ describe('TopTalkersPanel — accessibility', () => {
       ],
     });
 
-    const list = screen.getByRole('list', { name: /top talkers ranked by ingested rows/i });
+    const list = screen.getByRole('list', { name: /Top talkers ranked by ingested rows/i });
     expect(list).toBeInTheDocument();
     expect(screen.getAllByRole('listitem')).toHaveLength(2);
   });

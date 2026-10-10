@@ -59,6 +59,7 @@ import {
   AISuggestNewGeofences,
   parseGeofenceDraft,
 } from '@/components/ai/AISuggestNewGeofences'
+import type { AISuggestNewGeofencesProps, GeofenceDraft } from '@/components/ai/AISuggestNewGeofences'
 
 const mockUseSettings = useSettings as unknown as ReturnType<typeof vi.fn>
 
@@ -405,6 +406,63 @@ describe('AISuggestNewGeofences — enabled surface structure + a11y', () => {
 })
 
 describe('AISuggestNewGeofences — on-mode SSE wiring', () => {
+  it('keeps long proposal metadata readable and applies genuine coordinates only after explicit review', async () => {
+    mockUseSettings.mockReturnValue(enabled())
+
+    const proposal = {
+      location_id: 501,
+      vehicle_id: 7,
+      proposed_name: 'محطة طويلة '.repeat(30),
+      radius_m: 150.25,
+      centroid_lat: 47.6062,
+      centroid_lon: -122.3321,
+      status: 'ok',
+      validation_error: 'Review the original visited location before saving. '.repeat(12),
+    } satisfies GeofenceDraft
+    const { status, validation_error, ...draft } = proposal
+    const fetchMock = vi.fn<typeof fetch>(async () => new Response(
+      makeReadableStream([
+        sseFrame('tool_result', {
+          id: 'long-draft',
+          name: 'draft_geofence',
+          ok: true,
+          data: { draft, status, validation_error },
+        }) + sseFrame('done', { finish_reason: 'stop' }),
+      ]),
+      { status: 200, headers: { 'Content-Type': 'text/event-stream' } },
+    ))
+    globalThis.fetch = fetchMock
+    const onApplyDraft = vi.fn<AISuggestNewGeofencesProps['onApplyDraft']>()
+    const { rerender } = mountEnabled({
+      currentName: 'Original visited location '.repeat(20),
+      onApplyDraft,
+    })
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: SUGGEST_NAME }))
+    })
+    const card = await screen.findByRole('group', { name: /Proposed geofence/i })
+    expect(card).toHaveClass('min-w-0', 'bg-[var(--surface-2)]')
+    expect(screen.getByText(proposal.proposed_name.trim()).parentElement).toHaveClass('min-w-0', 'break-words')
+    expect(card).toHaveTextContent(proposal.validation_error.trim())
+    expect(onApplyDraft).not.toHaveBeenCalled()
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    const apply = screen.getByTestId(APPLY_TESTID)
+    expect(apply).toHaveClass('min-h-11', 'max-w-full', 'whitespace-normal')
+    fireEvent.click(apply)
+    expect(onApplyDraft).toHaveBeenCalledExactlyOnceWith({
+      name: proposal.proposed_name,
+      latitude: proposal.centroid_lat,
+      longitude: proposal.centroid_lon,
+      radius: proposal.radius_m,
+    })
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+
+    rerender(<AISuggestNewGeofences locationId={502} onApplyDraft={onApplyDraft} />)
+    expect(screen.queryByTestId(DRAFT_TESTID)).not.toBeInTheDocument()
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
+
   it('POSTs once to the registered route with a {location_id} body + SSE headers and renders the first delta', async () => {
     mockUseSettings.mockReturnValue(enabled())
 

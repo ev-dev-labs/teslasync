@@ -333,6 +333,30 @@ describe('AIVoiceMode — AI-off render gate', () => {
     expect(
       screen.getByRole('button', { name: SEND_BUTTON }),
     ).toBeInTheDocument()
+    const transcript = screen.getByTestId('ai-feature-voice-mode-transcript')
+    expect(transcript.tagName).toBe('DIV')
+    expect(transcript).toHaveAttribute('aria-live', 'polite')
+    expect(transcript).toHaveAttribute('aria-label', 'Voice transcript')
+    expect(transcript).toHaveClass(
+      'rounded-panel', 'bg-[var(--surface-1)]',
+      'border-[var(--border-default)]', 'min-h-14',
+      'whitespace-pre-wrap', 'break-words',
+    )
+    const mic = screen.getByRole('button', { name: 'Start listening' })
+    const toggle = screen.getByRole('button', { name: 'Mute spoken replies' })
+    expect(mic.parentElement).toHaveClass('flex-wrap', 'min-w-0')
+    for (const control of [mic, toggle]) {
+      expect(control).toHaveClass(
+        'min-h-11', 'min-w-11', 'md:min-h-9',
+        'h-auto', 'max-w-full', 'whitespace-normal',
+      )
+      const icon = control.querySelector('svg')
+      expect(icon).toHaveAttribute('aria-hidden', 'true')
+      expect(icon).toHaveAttribute('focusable', 'false')
+      expect(icon).toHaveClass('shrink-0')
+      expect(control.querySelector('span.break-words')).not.toBeNull()
+    }
+    expect(toggle).toHaveAttribute('aria-pressed', 'true')
   })
 })
 
@@ -345,6 +369,9 @@ describe('AIVoiceMode — speech-to-text transcript', () => {
     await act(async () => {
       fireEvent.click(micButton)
     })
+    const stopMic = screen.getByRole('button', { name: 'Stop listening' })
+    expect(stopMic).toHaveClass('min-h-11', 'min-w-11', 'whitespace-normal')
+    expect(stopMic.querySelector('svg')).toHaveAttribute('aria-hidden', 'true')
 
     // The engine re-fires the same index with a refined transcript until
     // it flips to isFinal. The old handler appended every fire, so this
@@ -543,6 +570,8 @@ describe('AIVoiceMode — text-to-speech playback', () => {
     // Muting cancels any in-flight utterance and flips the toggle state.
     expect(cancelMock).toHaveBeenCalled()
     expect(toggle).toHaveAttribute('aria-pressed', 'false')
+    expect(toggle).toHaveAccessibleName('Unmute spoken replies')
+    expect(toggle.querySelector('svg')).toHaveAttribute('aria-hidden', 'true')
 
     await dictate([{ transcript: 'say hello', isFinal: true }])
     const sendButton = screen.getByRole('button', { name: SEND_BUTTON })
@@ -578,6 +607,9 @@ describe('AIVoiceMode — error and unsupported states', () => {
 
     const errorEl = screen.getByTestId('ai-feature-voice-mode-stt-error')
     expect(errorEl).toHaveTextContent(/Voice input failed/i)
+    expect(errorEl).toHaveAttribute('role', 'status')
+    expect(errorEl).toHaveTextContent('no-speech')
+    expect(errorEl).toHaveClass('text-[var(--semantic-danger)]')
     // The mic reverts to the start control once the error resets listening.
     expect(
       screen.getByTestId('ai-feature-voice-mode-mic-start'),
@@ -618,6 +650,11 @@ describe('AIVoiceMode — stop, persistence, and lifecycle', () => {
     })
 
     const stopButton = await screen.findByTestId('ai-feature-voice-mode-stop')
+    expect(stopButton).toHaveAccessibleName('Stop Helix')
+    expect(stopButton).toHaveClass(
+      'min-h-11', 'min-w-11', 'md:min-h-9', 'whitespace-normal',
+    )
+    expect(stopButton.querySelector('svg')).toHaveAttribute('aria-hidden', 'true')
     const cancelsBefore = cancelMock.mock.calls.length
     await act(async () => {
       fireEvent.click(stopButton)

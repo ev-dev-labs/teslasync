@@ -1,0 +1,17 @@
+[
+  {
+    "file": "GeofencesPage.catalogCopy.test.tsx",
+    "sha256": "f3a6eab3f666c767c0880957ce9fd2448c07cf7208f16df1a45db20820089e07",
+    "length": 7879
+  },
+  {
+    "file": "GeofencesPage.test.tsx",
+    "sha256": "4a74d779b624633c8f3855916455c24a2f1761a37868d7627e53414d72793e88",
+    "length": 36858
+  },
+  {
+    "file": "GeofencesPage.tsx",
+    "sha256": "d1b4ad37462a1a4547861a49ae8f75de94b11c74ff0e38a59a8b062b83ea4d83",
+    "length": 34081
+  }
+]

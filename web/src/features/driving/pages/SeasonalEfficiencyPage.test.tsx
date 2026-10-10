@@ -261,6 +261,18 @@ beforeEach(() => {
 afterEach(() => vi.restoreAllMocks());
 
 describe('SeasonalEfficiencyPage', () => {
+  it('keeps every seasonal fit and accounting shell during a paused retained refresh', () => {
+    h.history = { ...query({ data: readyHistory() }), fetchStatus: 'paused' };
+    renderPage();
+    expectEveryShell();
+    const notice = screen.getByTestId('stale-refresh-warning');
+    expect(notice).toHaveTextContent('The latest values are temporarily unavailable. Previously loaded data remains visible.');
+    expect(notice).toHaveAttribute('data-refresh-blocked', 'true');
+    expect(notice).not.toHaveTextContent(/offline/i);
+    fireEvent.click(within(notice).getByRole('button', { name: 'Refresh' }));
+    expect(refetch).toHaveBeenCalledTimes(1);
+  });
+
   it('renders all persistent analytical shells and exact capped query inputs', () => {
     renderPage();
     expect(screen.getByRole('heading', { level: 1, name: 'Seasonal Efficiency' })).toBeInTheDocument();
@@ -271,11 +283,11 @@ describe('SeasonalEfficiencyPage', () => {
 
   it('freezes the injected analysis clock across query changes', () => {
     const view = renderPage();
-    expect(screen.getByText('Latest included: 16.5 days ago')).toBeInTheDocument();
+    expect(screen.getByTestId('seasonal-kpis')).toHaveTextContent('Latest included: 16.50 days ago');
     vi.mocked(Date.now).mockReturnValue(FROZEN_NOW + 10 * 86_400_000);
     h.history = query({ data: readyHistory() });
     view.rerenderPage();
-    expect(screen.getByText('Latest included: 16.5 days ago')).toBeInTheDocument();
+    expect(screen.getByTestId('seasonal-kpis')).toHaveTextContent('Latest included: 16.50 days ago');
   });
 
   it('keeps every shell visible during loading without a retry action', () => {
@@ -348,7 +360,7 @@ describe('SeasonalEfficiencyPage', () => {
     });
     renderPage();
     expectEveryShell();
-    expect(screen.getAllByText('Latest returned 1,000-row window reached').length).toBeGreaterThan(0);
+    expect(screen.getByTestId('seasonal-kpis')).toHaveTextContent('Latest returned 1,000-row window reached');
     expect(screen.getByText(/Exactly the latest 1,000-row return window/)).toBeInTheDocument();
   });
 

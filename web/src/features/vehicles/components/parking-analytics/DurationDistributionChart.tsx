@@ -18,12 +18,13 @@ import {
 } from '@/components/charts';
 import { EmptyState } from '@/components/feedback';
 import { useUnits } from '@/hooks/useUnits';
-import { fmtInt, fmtNumber } from '@/lib/numberFormat';
+
 import { convertDurationFromSI } from '@/lib/unitConversion';
 
 import type { ParkingDurationBandKey, ParkingSummary } from '../../lib/parkingDwell';
 import { ParkingSectionBody } from './ParkingSectionBody';
 import type { ParkingSectionState } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface DurationDistributionChartProps {
   summary: ParkingSummary;
@@ -37,6 +38,7 @@ export function DurationDistributionChart({
   state,
   className,
 }: DurationDistributionChartProps) {
+  const { fmtInt, fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const { unitPrefs } = useUnits();
   const durationUnit = unitPrefs.duration;
@@ -78,7 +80,7 @@ export function DurationDistributionChart({
         className="h-full"
         title={t(
           'parking.durationDistribution.title',
-          'Parking Duration Distribution',
+          'Parking duration distribution',
         )}
         subtitle={t(
           'parking.durationDistribution.subtitle',
@@ -108,7 +110,7 @@ export function DurationDistributionChart({
           {
             key: 'dwell',
             label: dwellName,
-            format: (value) => fmtNumber(value, 1),
+            format: (value) => fmtNumber(value),
           },
         ]}
       >
@@ -151,7 +153,7 @@ export function DurationDistributionChart({
                     tick={axisTick}
                     tickLine={false}
                     axisLine={false}
-                    tickFormatter={(value) => fmtNumber(value, 0)}
+                    tickFormatter={(value) => fmtNumber(value)}
                     width={42}
                   />
                   <Tooltip
@@ -160,7 +162,7 @@ export function DurationDistributionChart({
                         valueFormatter={(value, name) =>
                           name === countName
                             ? fmtInt(value)
-                            : `${fmtNumber(value, 1)} ${durationUnit}`
+                            : `${fmtNumber(value)} ${durationUnit}`
                         }
                       />
                     }

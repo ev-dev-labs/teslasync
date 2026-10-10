@@ -8,7 +8,7 @@
  *      (the inverted `off=false → enabled` rule), `scoreColor` /
  *      `scoreBadgeVariant` (the 80 / 50 threshold bands incl. boundaries),
  *      `boolFeatures` / `enabledCount` (the 9-feature bag + the AEB
- *      default-on edge), `toChartData` (ascending sort + bool→0/1 mapping)
+ *      explicit AEB/unknown distinction), `toChartData` (ascending sort + bool→0/1 mapping)
  *      and `buildFeatureCards` (the real safetyEnum prefix-stripping running
  *      through `cleanSafetyEnum` / `isSafetyEnumActive`).
  *
@@ -50,6 +50,9 @@ import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
 import type { SafetySnapshot } from '@/types/vehicle-systems';
 import type { SecurityEvent } from '@/api/types';
+import { formatDistance, type UnitPref } from '@/lib/unitConversion';
+import type { FormatOptions } from '@/hooks/useUnits';
+import { setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat';
 
 // jsdom lacks matchMedia; framer-motion (<FadeIn>) + PageContainer + the
 // DataFreshness chip's useMotionPreference read it at module load.
@@ -104,7 +107,7 @@ const {
     power: 'kW',
     locale: 'en-US',
     precision: undefined,
-  },
+  } satisfies UnitPref,
   UNIT_PREFS_MI: {
     distance: 'mi',
     speed: 'mph',
@@ -115,7 +118,7 @@ const {
     power: 'kW',
     locale: 'en-US',
     precision: undefined,
-  },
+  } satisfies UnitPref,
 }));
 
 // i18n → return the developer fallback string, interpolating `{{vars}}`.
@@ -322,15 +325,25 @@ function renderPage() {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={client}>
-      <MemoryRouter>
+      <MemoryRouter initialEntries={['/safety-settings']}>
         <SafetySettingsPage />
       </MemoryRouter>
     </QueryClientProvider>,
   );
 }
 
+function installUnits(unitPrefs: UnitPref) {
+  unitsMock.mockReturnValue({
+    unitPrefs,
+    formatDistance: (value: number | null | undefined, options?: FormatOptions) =>
+      formatDistance(value, unitPrefs, options),
+  });
+}
+
 beforeEach(() => {
   vi.clearAllMocks();
+  setGlobalLocale('en-US');
+  setGlobalPrecision(2);
   for (const key of Object.keys(captured)) delete captured[key];
 
   safetyMock.mockReturnValue(makeQuery<SafetySnapshot>({ data: SAFETY, refetch: latestRefetch }));
@@ -338,7 +351,7 @@ beforeEach(() => {
     makeQuery<SafetySnapshot[]>({ data: HISTORY, refetch: historyRefetch }),
   );
   securityMock.mockReturnValue(makeQuery<SecurityEvent>({ data: SECURITY, refetch: securityRefetch }));
-  unitsMock.mockReturnValue({ unitPrefs: UNIT_PREFS_KM });
+  installUnits(UNIT_PREFS_KM);
   selectedVehicleMock.mockReturnValue({ vehicleId: 42 });
 });
 
@@ -363,13 +376,16 @@ describe('SafetySettingsPage helpers', () => {
     expect(scoreBadgeVariant(49)).toBe('danger');
   });
 
-  it('boolFeatures / enabledCount count all nine features and honour the AEB default-on', () => {
+  it('boolFeatures / enabledCount count all nine features and distinguish reported AEB from unknown', () => {
     const flags = boolFeatures(SAFETY);
     expect(flags).toHaveLength(TOTAL_FEATURES);
     expect(flags.filter(Boolean)).toHaveLength(6);
     expect(enabledCount(SAFETY)).toBe(6);
-    // An all-missing snapshot still counts AEB as enabled (off defaults false).
-    expect(enabledCount({})).toBe(1);
+    // An absent flag is unknown; only an explicit off=false enables AEB.
+    expect(boolFeatures({})).toEqual(Array(TOTAL_FEATURES).fill(null));
+    expect(enabledCount({})).toBe(0);
+    expect(enabledCount({ automatic_emergency_braking_off: false })).toBe(1);
+    expect(enabledCount({ automatic_emergency_braking_off: true })).toBe(0);
   });
 
   it('toChartData sorts ascending by created_at and maps booleans to 0/1', () => {
@@ -400,7 +416,7 @@ describe('SafetySettingsPage', () => {
     renderPage();
 
     expect(
-      screen.getByRole('heading', { level: 1, name: 'Safety Settings' }),
+      screen.getByRole('heading', { level: 1, name: 'Safety settings' }),
     ).toBeInTheDocument();
     // Seven placeholder panels (KPI, gauge, live signals, ADAS, stats, chart, table).
     expect(
@@ -415,9 +431,11 @@ describe('SafetySettingsPage', () => {
     renderPage();
 
     const kpi = screen.getByRole('region', { name: 'Safety summary' });
-    expect(within(kpi).getByText('Safety Score')).toBeInTheDocument();
-    expect(within(kpi).getByText('67%')).toBeInTheDocument(); // 6/9 → 66.7 → 67
-    expect(within(kpi).getByText('Total Features')).toBeInTheDocument();
+    expect(within(kpi).getByText('Enabled feature share')).toBeInTheDocument();
+    const enabledShare = within(kpi).getByText('Enabled feature share').closest('[data-operational-metric]');
+    expect(enabledShare?.querySelector('[data-operational-value]'))
+      .toHaveTextContent(/^67%$/); // 6/9 → 66.7 → 67; scoped to the labelled operational metric
+    expect(within(kpi).getByText('Total features')).toBeInTheDocument();
     expect(within(kpi).getByText('9')).toBeInTheDocument();
     expect(within(kpi).getByText('Enabled')).toBeInTheDocument();
     expect(within(kpi).getByText('6')).toBeInTheDocument();
@@ -425,20 +443,21 @@ describe('SafetySettingsPage', () => {
     expect(within(kpi).getByText('3')).toBeInTheDocument();
 
     const overview = screen.getByRole('region', { name: 'Safety overview' });
+    expect(within(overview).getByText('Safety score')).toBeInTheDocument();
     // The ring counts enabled features against the total; the percentage is a
     // derived summary and belongs on the badge, not smuggled through the gauge's
     // `unit` slot (which rendered "6 67%" and captioned the scale as "0 – 967%").
     expect(within(overview).getByTestId('linear-gauge')).toHaveTextContent('6/9');
-    expect(within(overview).getByText('6/9 enabled · 67%')).toBeInTheDocument();
+    expect(within(overview).getByText('6/9 Enabled · 67%')).toBeInTheDocument();
   });
 
   it('renders live security signals and falls back to "—" for unknown values', () => {
     renderPage();
     const overview = screen.getByRole('region', { name: 'Safety overview' });
 
-    expect(within(overview).getByText('Driver Belt')).toBeInTheDocument();
+    expect(within(overview).getByText('Driver belt')).toBeInTheDocument();
     expect(within(overview).getByText('Buckled')).toBeInTheDocument();
-    expect(within(overview).getByText('Passenger Belt')).toBeInTheDocument();
+    expect(within(overview).getByText('Passenger belt')).toBeInTheDocument();
     expect(within(overview).getByText('Unbuckled')).toBeInTheDocument();
     expect(within(overview).getByText('Occupied')).toBeInTheDocument();
     expect(within(overview).getByText('Locked')).toBeInTheDocument();
@@ -457,26 +476,26 @@ describe('SafetySettingsPage', () => {
       name: 'ADAS features and driving statistics',
     });
 
-    expect(within(features).getByText('Auto Emergency Braking')).toBeInTheDocument();
-    expect(within(features).getByText('Forward Collision Warning')).toBeInTheDocument();
+    expect(within(features).getByText('Auto emergency braking')).toBeInTheDocument();
+    expect(within(features).getByText('Forward collision warning')).toBeInTheDocument();
     expect(within(features).getByText('High')).toBeInTheDocument(); // fcw value
 
-    expect(within(features).getByText('Distance Since Reset')).toBeInTheDocument();
-    expect(within(features).getByText('12.00')).toBeInTheDocument(); // 12000 m → 12 km
-    expect(within(features).getByText('Self-Driving Distance')).toBeInTheDocument();
-    expect(within(features).getByText('3.00')).toBeInTheDocument(); // 3000 m → 3 km
+    expect(within(features).getByText('Distance since reset')).toBeInTheDocument();
+    expect(within(features).getByText('12.00 km')).toBeInTheDocument(); // 12000 m → 12 km
+    expect(within(features).getByText('Self-driving distance')).toBeInTheDocument();
+    expect(within(features).getByText('3.00 km')).toBeInTheDocument(); // 3000 m → 3 km
   });
 
   it('re-converts driving-stat distances when unit prefs switch to mi', () => {
-    unitsMock.mockReturnValue({ unitPrefs: UNIT_PREFS_MI });
+    installUnits(UNIT_PREFS_MI);
     renderPage();
     const features = screen.getByRole('region', {
       name: 'ADAS features and driving statistics',
     });
 
-    expect(within(features).getByText('7.46')).toBeInTheDocument(); // 12000 m → 7.46 mi
-    expect(within(features).getByText('1.86')).toBeInTheDocument(); // 3000 m → 1.86 mi
-    expect(within(features).getByText('mi (autopilot)')).toBeInTheDocument(); // {{unit}} interp
+    expect(within(features).getByText('7.46 mi')).toBeInTheDocument(); // 12000 m → 7.46 mi
+    expect(within(features).getByText('1.86 mi')).toBeInTheDocument(); // 3000 m → 1.86 mi
+    expect(within(features).getByText('(autopilot)')).toBeInTheDocument(); // unit is already in value
   });
 
   it('feeds the ascending chart derivation to the LineChart + labels it for a11y', () => {
@@ -505,9 +524,9 @@ describe('SafetySettingsPage', () => {
     renderPage();
 
     expect(
-      screen.getByRole('heading', { level: 1, name: 'Safety Settings' }),
+      screen.getByRole('heading', { level: 1, name: 'Safety settings' }),
     ).toBeInTheDocument();
-    expect(screen.queryByText('Total Features')).not.toBeInTheDocument();
+    expect(screen.queryByText('Total features')).not.toBeInTheDocument();
     expect(screen.queryByTestId('linear-gauge')).not.toBeInTheDocument();
     expect(
       screen.queryByText('Select a vehicle to view its safety settings.'),
@@ -522,7 +541,7 @@ describe('SafetySettingsPage', () => {
     renderPage();
 
     expect(screen.getAllByText("Can't reach server").length).toBeGreaterThanOrEqual(1);
-    expect(screen.queryByText('Total Features')).not.toBeInTheDocument();
+    expect(screen.queryByText('Total features')).not.toBeInTheDocument();
 
     const retries = screen.getAllByRole('button', { name: 'Retry' });
     expect(retries.length).toBeGreaterThanOrEqual(1);
@@ -539,7 +558,7 @@ describe('SafetySettingsPage', () => {
       screen.getAllByText('No safety data available for this vehicle.'),
     ).toHaveLength(2);
     // The misleading "0% / 9 disabled" MetricCards are gone.
-    expect(screen.queryByText('Total Features')).not.toBeInTheDocument();
+    expect(screen.queryByText('Total features')).not.toBeInTheDocument();
     expect(screen.queryByText('67%')).not.toBeInTheDocument();
     // Dependent sections keep their own tailored placeholders.
     expect(

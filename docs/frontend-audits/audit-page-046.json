@@ -1,0 +1,277 @@
+{
+  "item": "audit-page-046",
+  "page": "web\\src\\features\\analytics\\pages\\LifetimeStatsPage.tsx",
+  "routes": ["/lifetime-stats"],
+  "purpose": "Vehicle-scoped, genuinely all-time driving and charging summary, personal records, environmental comparisons and achievements, with independently opt-in AI questions.",
+  "primaryGoal": "Understand lifetime progress and savings, review records and achievement progress, and optionally ask source-grounded questions without changing workspace lifetime scope.",
+  "dataSources": [
+    {
+      "hook": "useLifetimeStats",
+      "file": "web\\src\\api\\hooks\\useAnalytics.ts",
+      "line": 261,
+      "endpoint": "GET /api/v1/analytics/lifetime?vehicle_id={id}",
+      "routeEvidence": "internal\\api\\router.go:3898",
+      "sourceOwner": "internal\\api\\lifetime\\handler.go",
+      "behavior": "analyticsKeys.lifetime(vehicleId); optional snake_case vehicle_id; AbortSignal forwarded; STALE_TIMES.SLOW retained. With no selected vehicle the query requests fleet totals rather than being disabled. SQL aggregates completed drives and charging sessions, with optional vehicle filtering and no date window.",
+      "units": "Actual existing response is km, km/h, hours, kWh, Wh/km and kg, not entirely canonical SI wire values. SQL reads SI columns and converts before responding. Current frontend restores meters, m/s, Wh and Wh/m for selected display adapters. Preserve existing math until coordinated contract migration; do not relabel payload units.",
+      "sideEffects": "The GET handler re-evaluates achievements with persistence and SSE broadcast (handler.go:492-507). It was NOT invoked by this audit."
+    },
+    {
+      "hook": "useSelectedVehicle -> useVehicles",
+      "file": "web\\src\\hooks\\useSelectedVehicle.ts",
+      "line": 47,
+      "endpoint": "GET /api/v1/vehicles",
+      "routeEvidence": "Not independently traced to the vehicle route registration in this bounded audit.",
+      "sourceOwner": "web\\src\\api\\hooks\\useVehicles.ts:74-81",
+      "behavior": "URL vehicle_id, stored selection and first vehicle determine selection; existing header picker owns scope. The lifetime page renders no duplicate picker."
+    },
+    {
+      "hook": "useAiStream",
+      "file": "web\\src\\components\\ai\\AILifetimeStatsQA.tsx",
+      "line": 88,
+      "endpoint": "POST /api/v1/ai/analytics/lifetime/qa",
+      "routeEvidence": "internal\\api\\ai_routes.go:134,371",
+      "sourceOwner": "internal\\api\\ailifetime\\handler.go",
+      "behavior": "withAiFeature('lifetime-stats-qa') hides the AI component in off mode. Explicit Ask with positive vehicle_id and trimmed question of at most 1024 characters; vehicle scopeKey resets/aborts prior answers. No AI request exercised; generic stream/gate internals not audited."
+    }
+  ],
+  "components": [
+    {"owner": "@/components/layout", "names": ["PageLayout", "Section", "CardGrid", "LayoutCard", "Grid", "SourceContent"], "evidence": "LifetimeStatsPage.tsx:10,124-338; SourceContent.tsx:35-78", "assessment": "Existing layout and persistent source-shell owners already adopted; no replacement layout needed."},
+    {"owner": "@/components/ui", "names": ["GlassPanel", "Text", "Caption", "HelpTooltip", "Textarea"], "evidence": "LifetimeStatsPage.tsx:11-13; LifetimeContextBrief.tsx:6,78-81; AILifetimeStatsQA.tsx:151-165", "assessment": "Typography, help and native form semantics use current primitives."},
+    {"owner": "@/components/data-display", "names": ["OperationalBrief", "AnimatedNumber", "DataFreshnessAuto", "MetricBar", "Currency", "ProgressRing"], "evidence": "LifetimeBrief.tsx:4,51-63; LifetimeContextBrief.tsx:3-4,68-82; SavingsBar.tsx:3,21-41; LifetimeStatsPage.tsx:131", "assessment": "Existing stats and display pipelines; specialist formatting and raw metric adapters must survive."},
+    {"owner": "@/components/feedback and @/components/motion", "names": ["EmptyState", "Skeleton", "QueryError", "FadeIn", "StaggerContainer", "StaggerItem"], "evidence": "LifetimeStatsPage.tsx:17-18,143-155,313-335; LifetimeBrief.tsx:63", "assessment": "Existing feedback and entrance-animation composition. Underlying motion wrappers were not exercised."},
+    {"owner": "web\\src\\features\\analytics\\components", "names": ["LifetimeBrief", "LifetimeContextBrief", "SectionCard", "HeroChip", "SavingsBar", "RecordCard", "AchievementBadge", "lifetimeSectionState"], "evidence": "LifetimeStatsPage.tsx:30-35", "assessment": "Mounted feature adapters, not permission to inspect all analytics pages."},
+    {"owner": "@/components/ai", "names": ["AILifetimeStatsQA", "AIFeatureCard", "withAiFeature"], "evidence": "AILifetimeStatsQA.tsx:51-55,139-165,180-183", "assessment": "Preserve separate feature gate, explicit action and scoped stream."}
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\analytics\\components\\lifetime-modernization\\LifetimeKeyStats.tsx",
+      "line": 22,
+      "rule": "MDC-002 / mission section 4",
+      "detail": "A second lifetime key-stats renderer remains exported by the lifetime-modernization barrel, while this page aliases LifetimeBrief as LifetimeKeyStats. Both encode the same four headline metrics with different missing/trust presentation. Other consumers were not searched; this is not proof of dead code.",
+      "fix": "Clarify the mounted renderer name and have the integration owner reconcile consumers before any retirement. Do not delete the alternate renderer or its parity safeguards based on this audit.",
+      "owner": "integration",
+      "confidence": "high for overlap and this page's import; unknown for other consumers"
+    },
+    {
+      "file": "web\\src\\features\\analytics\\components\\operationalbrief-a-m\\LifetimeContextBrief.tsx",
+      "line": 74,
+      "rule": "MDC-026",
+      "detail": "ContextBrief and LifetimeBrief independently derive source labels from loading/data/error; page shells use deriveDataState. These are competing trust mappings, although all retain successful data on refresh failure.",
+      "fix": "Reuse the existing deriveDataState result in these page-specific adapters rather than adding another trust registry.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "responsive": {
+    "sourceEvidence": [
+      "LifetimeStatsPage.tsx:161-184: hero stacks before xl, wraps metrics/chips and uses min-w-0.",
+      "LifetimeStatsPage.tsx:225-256: existing CardGrid half/third allocations; shared layout implementation not exhaustively audited.",
+      "LifetimeStatsPage.tsx:271: records use existing Grid with standard minItemWidth.",
+      "LifetimeStatsPage.tsx:314: achievement gallery uses 2/3/4/6/8 columns.",
+      "RecordCard.tsx:10-15: min-w-0 and break-words preserve record value reflow.",
+      "HeroChip.tsx:7-9: inline-flex chip lacks explicit long-text breaking; possible localized overflow requires viewport testing, not a confirmed failure."
+    ],
+    "issues": [],
+    "verification": "UNVERIFIED: no mounted route or 320/375/390/430/768/1024/1280/1440/1920/2560 viewport exercised; container width, long names, RTL, 200% text and drawer scope controls untested."
+  },
+  "accessibility": {
+    "sourceEvidence": [
+      "LifetimeStatsPage.tsx:138,219,314: named sections and achievement gallery source structure.",
+      "LifetimeStatsPage.tsx:164,184-193,234,264,276-288: decorative icons marked aria-hidden.",
+      "AILifetimeStatsQA.tsx:151-165: shared Textarea has localized aria-label and input bound.",
+      "SourceContent.tsx:42-74: loading status, retained polite status and retry Button.",
+      "LifetimeStatsPage.tsx:104-106,327: deep-link scroll respects reduceMotion and target pulse is suppressed when reduced."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\analytics\\components\\AchievementBadge.tsx",
+        "line": 58,
+        "rule": "MDC-042 / mission section 31",
+        "detail": "Every locked achievement at >=80% progress receives unbounded animate-pulse independently of the page's motion-preference hook. Global CSS may suppress OS reduced-motion; this dependency does not itself honor the low-bandwidth motion preference. This is source evidence of decorative looping, not a measured accessibility failure.",
+        "fix": "Use static near-complete semantic emphasis; if temporary motion is retained, bound it and consume the existing useMotionPreference contract. Preserve the percentage and unlocked text.",
+        "owner": "page",
+        "confidence": "high for unconditional looping class; runtime reduction unverified"
+      }
+    ],
+    "verification": "UNVERIFIED: keyboard, focus, screen-reader reading order, actual contrast, forced colors, touch targets and motion rendering were not exercised."
+  },
+  "states": {
+    "sourceEvidence": [
+      "LifetimeStatsPage.tsx:61-76 and sourceState.ts:12-13 preserve successful data despite refresh failure.",
+      "Hero, savings, records and achievements have separate loading/error/empty shells; key and context briefs render missing measurements rather than gate the whole page.",
+      "LifetimeStatsPage.tsx:65: absent/null achievement list normalized to [].",
+      "LifetimeStatsPage.tsx:131: freshness metadata uses a six-hour threshold; derived source at line 62 has no maxAgeMs.",
+      "AI is independently gated and is not hidden by lifetime-query failure."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\analytics\\pages\\LifetimeStatsPage.tsx",
+        "line": 274,
+        "rule": "MDC-026 / unknown is not zero",
+        "detail": "Once stats exists, missing individual personal records become 0 distance/speed/energy at lines 274,280,286. Missing savings fields similarly become measured zeros at lines 244-247. Source shells only check overall stats or gasoline cost, not individual availability. The current server normally supplies typed records; the fallback is a partial-payload trust risk, not proof that today's response is null.",
+        "fix": "Keep genuine zero values, but pass null/unknown individual measurements to existing display primitives and show localized unavailable values without removing panels. Retain record dates, units and comparisons.",
+        "owner": "page",
+        "confidence": "high for fallback behavior; runtime incidence unknown"
+      },
+      {
+        "file": "web\\src\\features\\analytics\\components\\operationalbrief-a-m\\LifetimeContextBrief.tsx",
+        "line": 74,
+        "rule": "MDC-026 / mission section 25",
+        "detail": "Context status is Returned evidence whenever stats exists and error is null, including fetchStatus='paused'. LifetimeBrief.tsx:56-59 uses the same mapping. The page's deriveDataState detects paused retained data as stale, so neighboring summaries can disagree about trust. The six-hour freshness threshold is also only applied to metadata, not these source labels.",
+        "fix": "Pass existing DataState to each adapter; preserve retained data and distinguish paused/offline, refresh error and age-based freshness with localized status. Apply an agreed lifetime freshness threshold consistently without changing query policies.",
+        "owner": "page",
+        "confidence": "high from source branches; offline UI not exercised"
+      },
+      {
+        "file": "web\\src\\features\\analytics\\pages\\LifetimeStatsPage.tsx",
+        "line": 154,
+        "rule": "MDC-026",
+        "detail": "The no-stats hero empty body says driven across 0 drives, despite having no source payload. The positive-empty case from the current backend is a populated aggregate object, so this custom fallback conflates absent evidence with an actual zero.",
+        "fix": "Keep the explanatory empty/retry body but omit or mark the unknown drive count until the source provides a measured zero.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ],
+    "verification": "All state conclusions are source-only. No loading, empty fleet, partial payload, fatal failure, retained refresh failure or offline transition was mounted."
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\analytics\\components\\lifetime-modernization\\SavingsBar.tsx",
+      "line": 8,
+      "rule": "MDC-010 / MDC-012 / mission sections 5-7",
+      "detail": "Local fixed hex emerald/rose bars and emerald-300 savings text bypass semantic theme tokens (lines 8-9,25,32,36-38). Environmental ring uses another fixed green at LifetimeContextBrief.tsx:44. Existing labels retain non-color meaning, but theme/contrast acceptance is unknown.",
+      "fix": "Reuse restrained existing semantic comparison colors and theme-aware typography; preserve electric/gas labels, currency formatting, relative bar scale, savings and CO2 detail. Do not invent a palette or reset preferences.",
+      "owner": "page",
+      "confidence": "high for fixed palette; actual contrast unverified"
+    },
+    {
+      "file": "web\\src\\features\\analytics\\components\\AchievementBadge.tsx",
+      "line": 57,
+      "rule": "MDC-010 / MDC-012 / MDC-015",
+      "detail": "Locked badges use fixed white translucent surface/border; unlocked badges use fixed yellow surface/text and hardcoded ring colors (lines 56-69,93,104). This creates a separate badge palette whose light-theme behavior is not proven.",
+      "fix": "Use existing surface/border/text roles plus restrained semantic achievement accent. Preserve unlocked state, icon, description, progress and deep-link highlight without replacing this domain component.",
+      "owner": "page",
+      "confidence": "high for classes; rendered intensity/contrast unverified"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\features\\analytics\\pages\\LifetimeStatsPage.tsx",
+      "line": 116,
+      "rule": "MDC-032 / MDC-046 / preservation",
+      "detail": "Achievement timeout navigates to location.pathname, removing ALL query parameters and the hash rather than only achievement. A ?vehicle_id=... deep link loses explicit URL workspace identity after three seconds. The selected-vehicle store may retain the vehicle, but URL/bookmark state is still discarded.",
+      "fix": "Delete only achievement from a cloned URLSearchParams and replace while preserving other parameters and location.hash. Preserve the three-second cue, RAF cleanup and motion preference.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\api\\hooks\\useAnalytics.ts",
+      "line": 219,
+      "rule": "MDC-045 / SI canonical wire contract",
+      "detail": "Lifetime wire type remains kilometer/hour/kWh-based, matching the existing backend response. The page correctly compensates for known km and km/h values rather than treating them as m/m/s. This is an existing integration contract gap; presentation-only work must not silently rename fields or remove conversions.",
+      "fix": "Schedule a separately owned coordinated API/types/backend contract migration with real-value parity tests. Until then preserve exact payloads, query keys and display-boundary conversions. Backend algorithms and achievement thresholds are out of this page writer's scope.",
+      "owner": "integration",
+      "confidence": "high; handler.go:118-155,177-186,223-228,510-543"
+    }
+  ],
+  "priority": {
+    "level": "P1",
+    "reason": "Fix source-confirmed achievement URL preservation first, then reconcile trust labels and missing values. Palette/motion adjustments are bounded follow-ons; SI wire correction requires a distinct integration owner, not page-only mutation."
+  },
+  "requiredSharedChanges": [],
+  "competingImplementations": [
+    {
+      "name": "Lifetime key metrics",
+      "mountedOwner": "web\\src\\features\\analytics\\components\\operationalbrief-a-m\\LifetimeBrief.tsx",
+      "alternateOwner": "web\\src\\features\\analytics\\components\\lifetime-modernization\\LifetimeKeyStats.tsx",
+      "evidence": "LifetimeStatsPage.tsx:33 and lifetime-modernization\\index.ts:8",
+      "resolution": "Do not create a third renderer. Other usages and test dependencies are unverified; no removal authorized."
+    }
+  ],
+  "preservation": {
+    "sourceHash": "A547DF6BE8F42767D96A848C2E926E8078C4E16C6C638EC7B221F65C427CD575",
+    "sourceHashAlgorithm": "SHA256",
+    "sourceHashTarget": "web\\src\\features\\analytics\\pages\\LifetimeStatsPage.tsx",
+    "lineCount": 342,
+    "inspectedMountedFeatureLineCount": 741,
+    "lineCountScope": "Page plus LifetimeBrief, LifetimeContextBrief, SectionCard, sourceState, SavingsBar, HeroChip, RecordCard and AchievementBadge. Excludes shared components, barrel and alternate unmounted LifetimeKeyStats.",
+    "sectionCount": 9,
+    "sections": [
+      {"name": "Lifetime headline distance and ownership context", "line": 136, "count": 1},
+      {"name": "Key stats: drives, distance, energy and savings", "line": 207, "count": 1},
+      {"name": "Opt-in AI lifetime questions", "line": 219, "count": 1},
+      {"name": "Fun facts", "line": 226, "count": 1},
+      {"name": "Savings versus gasoline", "line": 231, "count": 1},
+      {"name": "Environmental impact", "line": 257, "count": 1},
+      {"name": "Personal records", "line": 262, "count": 1},
+      {"name": "Activity summary and efficiency help", "line": 293, "count": 1},
+      {"name": "Achievements gallery", "line": 302, "count": 1}
+    ],
+    "sectionCountingMethod": "Semantic source sections, not only wrapper tags. Two CardGrid bands contain five sections; AI section may be absent when disabled.",
+    "wrapperCounts": {"GlassPanel": 1, "ChartContainer": 0, "Section": 1, "CardGrid": 2, "SectionCard": 2, "LayoutCard": 1},
+    "actions": [
+      "Lifetime-query retry/refetch in source error/retained shells and hero empty state.",
+      "Achievement ?achievement={id} scroll, three-second highlight and replace-navigation cleanup.",
+      "Environmental/operational metric context and existing OperationalBrief interactions; shared drawer internals not exercised.",
+      "Average-efficiency contextual help.",
+      "AI textarea, explicit Ask, gated positive vehicle and question limits; shared stream controls are dependencies, not runtime verified."
+    ],
+    "dataBehavior": [
+      "All-time scope is intentional. /lifetime-stats is absent from RANGE_ENABLED_PATHS and not vehicle-disabled; workspaceScope.ts:23-76,154-179. Do NOT add useRangeState, date parameters or a second picker simply because this is analytics.",
+      "App.tsx:168,687 mounts this exact page; /analytics/lifetime redirects to /lifetime-stats at line 688. Only /lifetime-stats is this item's audited route.",
+      "Keep selected vehicle, optional fleet fallback before vehicle resolution, query identities, cancellation and cache policy.",
+      "Keep distance km -> meters -> preferred distance and speed km/h -> m/s -> preferred speed conversion; retain current energy kWh, currency and efficiency formatting until an owned wire migration.",
+      "Preserve all four key metrics; all fun-fact/environment/activity measures, labels and explanations; savings comparisons; three record values/dates; achievement names/descriptions/icons/progress/unlock state.",
+      "Preserve server calculations and achievement persistence/SSE behavior without exercising GET side effects in this audit.",
+      "Keep independent source shells and retained data during refresh failure; unknown never becomes a fabricated measurement."
+    ],
+    "baselineComparison": "Current snapshot only; no historical baseline requested or inspected. No deletion/parity percentage or runtime preservation claim."
+  },
+  "evidenceLimits": {
+    "mode": "Phase0 bounded source-only READ-ONLY audit",
+    "runtime": "UNVERIFIED; no browser, API call, app boot or AI action exercised.",
+    "visual": "UNVERIFIED; palette findings cite source, not screenshots or measured contrast.",
+    "keyboardAndViewport": "UNVERIFIED; no interactive accessibility/responsive acceptance.",
+    "checks": [
+      "Get-FileHash -Algorithm SHA256 web\\src\\features\\analytics\\pages\\LifetimeStatsPage.tsx: exit 0; A547DF6BE8F42767D96A848C2E926E8078C4E16C6C638EC7B221F65C427CD575.",
+      "Get-Content line counts: exit 0; page 342, mounted inspected feature aggregate 741.",
+      "Page-only regex scan: exit 0; inline style={{ 0; raw button/input/textarea/select/table 0; direct recharts/react-leaflet/framer-motion imports 0; old relative API imports 0; text-neon- 0; GlassPanel 1; ChartContainer 0. These are pattern counts, not comprehensive clean-code certification.",
+      "Targeted rg confirms lifetime GET in router.go:3898 and AI POST in ai_routes.go:371 under /ai:134. No malformed /api/v1 prefix or camelCase vehicle query in inspected lifetime hook.",
+      "No TypeScript, lint, build or tests run: explicit Phase0 restrictions and centralized validation contract. Skill audit.sh inspected but not run because it invokes project-wide TypeScript."
+    ],
+    "backendLimit": "Only directly relevant lifetime typed response, aggregate opening queries and canonical handler response inspected. Ancillary aggregate derivations, AI retrieval, gate and stream implementations not exhaustively traced. SQL presence is not database/runtime success.",
+    "writeScope": ["docs\\frontend-audits\\audit-page-046.json", ".agent-status\\audit-page-046.txt"],
+    "sharedDependencies": "Shared layout, trust, OperationalBrief, formatting, freshness, stream and motion owners remain read-only. Existing APIs suffice for proposed page fixes; no evidence-backed new shared component requested."
+  },
+  "filesRead": [
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\analytics\\pages\\LifetimeStatsPage.tsx",
+    "web\\src\\features\\analytics\\components\\operationalbrief-a-m\\LifetimeBrief.tsx",
+    "web\\src\\features\\analytics\\components\\operationalbrief-a-m\\LifetimeContextBrief.tsx",
+    "web\\src\\features\\analytics\\components\\lifetime-modernization\\index.ts",
+    "web\\src\\features\\analytics\\components\\lifetime-modernization\\sourceState.ts",
+    "web\\src\\features\\analytics\\components\\lifetime-modernization\\SectionCard.tsx",
+    "web\\src\\features\\analytics\\components\\lifetime-modernization\\SavingsBar.tsx",
+    "web\\src\\features\\analytics\\components\\lifetime-modernization\\HeroChip.tsx",
+    "web\\src\\features\\analytics\\components\\lifetime-modernization\\RecordCard.tsx",
+    "web\\src\\features\\analytics\\components\\lifetime-modernization\\LifetimeKeyStats.tsx",
+    "web\\src\\features\\analytics\\components\\AchievementBadge.tsx",
+    "web\\src\\components\\ai\\AILifetimeStatsQA.tsx",
+    "web\\src\\components\\layout\\layout-reference\\SourceContent.tsx",
+    "web\\src\\components\\data-display\\AnimatedNumber.tsx",
+    "web\\src\\api\\hooks\\useAnalytics.ts",
+    "web\\src\\api\\hooks\\useVehicles.ts",
+    "web\\src\\api\\dataState.ts",
+    "web\\src\\hooks\\useSelectedVehicle.ts",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\App.tsx",
+    "internal\\api\\router.go",
+    "internal\\api\\ai_routes.go",
+    "internal\\api\\lifetime\\handler.go",
+    "internal\\api\\ailifetime\\handler.go"
+  ]
+}

@@ -1,0 +1,32 @@
+{
+  "files": [
+    {
+      "name": "preimages.json",
+      "sha256": "f255da49312e71c7b525bd4a18afb992a31c65ea445247c239e39926613015e5"
+    },
+    {
+      "name": "SafetyPage.after.tsx",
+      "sha256": "bd318f9c5e36f8fcd652a0bad2028a92caf7b0f2dddcfbe0cdaac65fd4715049"
+    },
+    {
+      "name": "SafetyPage.before.tsx",
+      "sha256": "831ef11ef2a783df3f059040907b40e64bbabafdc524f4cd3752791341b29afd"
+    },
+    {
+      "name": "SafetyPage.catalogCopy.test.authored.tsx",
+      "sha256": "992f7b637c3f2356184774b28b46ab075585c2e5db14739faab6b1560b8df489"
+    },
+    {
+      "name": "SafetyPage.original-test.tsx",
+      "sha256": "bcbe326a0c09aca8082a999a98fc8e9308591e4ec0441a6e919fd9bd9464edcf"
+    },
+    {
+      "name": "SafetyPage.source.patch",
+      "sha256": "4cc7af5a70e9769c2e1d5dd37ebe917247387c31a8ccf97a1737ce66ea8a6625"
+    },
+    {
+      "name": "SafetySettingCard.reference.tsx",
+      "sha256": "f281943501bb4b4214ab9bdce8b9accdac99d3eb21c6e22a129fa35aed365a06"
+    }
+  ]
+}

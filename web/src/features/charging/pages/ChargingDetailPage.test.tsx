@@ -325,7 +325,7 @@ const formattingReturn = () => ({
   formatCurrency: (amount: number, decimals = 2) => `$${Number(amount).toFixed(decimals)}`,
 });
 
-const unitReturn = (distance: 'km' | 'mi' = 'km') => ({
+const unitReturn = (distance: 'km' | 'mi' | 'ft' = 'km') => ({
   unitPrefs: {
     distance,
     speed: distance === 'mi' ? 'mph' : 'km/h',
@@ -335,13 +335,13 @@ const unitReturn = (distance: 'km' | 'mi' = 'km') => ({
     duration: 'h',
     power: 'kW',
   },
-  formatEnergy: (wh: number | null | undefined) => `${(Number(wh ?? 0) / 1000).toFixed(1)} kWh`,
+  formatEnergy: (wh: number | null | undefined) => `${(Number(wh ?? 0) / 1000).toFixed(2)} kWh`,
   formatDistance: (v: number) => String(v),
   formatSpeed: (v: number) => String(v),
   formatTemperature: (v: number) => String(v),
   formatPressure: (v: number) => String(v),
   formatDuration: (v: number) => String(v),
-  formatPower: (w: number | null | undefined) => `${(Number(w ?? 0) / 1000).toFixed(1)} kW`,
+  formatPower: (w: number | null | undefined) => `${(Number(w ?? 0) / 1000).toFixed(2)} kW`,
 });
 
 function renderPage() {
@@ -355,11 +355,33 @@ function renderPage() {
   );
 }
 
-const kpiRegion = () => screen.getByRole('region', { name: 'Key metrics' });
+const kpiRegion = () => {
+  const container = document.getElementById('charging-detail-metrics');
+  if (!container) throw new Error('Charging detail metrics container is missing');
+  return within(container).getByRole('region', { name: 'Key metrics' });
+};
 
-/** Value <p> immediately following a MetricCard's label text. */
+/** Real OperationalBrief reading, selected by its retained source label. */
 function cardValue(scope: HTMLElement, label: string): string {
-  return within(scope).getByText(label).closest('p')?.nextElementSibling?.textContent ?? '';
+  const tile = within(scope).getByText(label).closest('[data-operational-metric]');
+  if (!tile) throw new Error(`Stat tile missing for ${label}`);
+  return tile.querySelector('[data-operational-value]')?.textContent ?? '';
+}
+
+/** The named card owns its complete content, not just the heading's header. */
+function namedCard(title: string): HTMLElement {
+  const card = screen.getByRole('heading', { name: title }).closest<HTMLElement>('[data-card]');
+  if (!card) throw new Error(`Named card missing for ${title}`);
+  return card;
+}
+
+/** Three distinct original session-distance presentations, not the live rate/total. */
+function assertSessionDistances(expected: string) {
+  expect(cardValue(kpiRegion(), 'Miles Added')).toBe(expected);
+  const progressLabel = within(namedCard('Battery Progress')).getByText('Range Gained');
+  expect(progressLabel.closest('p')?.nextElementSibling?.textContent).toBe(expected);
+  const summaryLabel = within(namedCard('Charge Summary')).getByText('Miles Added');
+  expect(summaryLabel.previousElementSibling?.textContent).toBe(expected);
 }
 
 /** The <dd> paired with a KVList <dt> label. */
@@ -395,9 +417,12 @@ describe('ChargingDetailPage — loading', () => {
     expect(
       screen.getByRole('heading', { name: 'Charge Session', level: 1 }),
     ).toBeInTheDocument();
-    // Populated-only affordances must be absent behind the skeleton.
+    // Populated-only readings stay absent; named source outlines remain visible.
     expect(screen.queryByRole('region', { name: 'Key metrics' })).toBeNull();
-    expect(screen.queryByText('Live Gauges')).toBeNull();
+    expect(screen.getByRole('heading', { name: 'Live Gauges' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Battery Progress' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Charge Curve' })).toBeInTheDocument();
+    expect(screen.queryAllByTestId('gauge')).toHaveLength(0);
   });
 });
 
@@ -432,7 +457,13 @@ describe('ChargingDetailPage — populated DC session', () => {
   it('renders the header status chips and the session title', () => {
     renderPage();
 
-    expect(screen.getByRole('heading', { name: 'Charge Session #42', level: 1 })).toBeInTheDocument();
+    const heading = screen.getByRole('heading', { name: 'Charge Session #42', level: 1 });
+    expect(heading).toHaveAttribute('data-route-focus-target', 'true');
+    const header = heading.closest('header');
+    if (!header) throw new Error('Charging session header is missing');
+    const identity = within(header).getByText(/My Model 3/);
+    expect(identity).toBeVisible();
+    expect(identity.closest('[data-action-group="metadata"]')).not.toBeNull();
     const summary = screen.getByRole('region', { name: 'Session summary' });
     // DC chip + live charging-state chip + charger-type chip + place chip.
     expect(within(summary).getAllByText('DC').length).toBeGreaterThanOrEqual(1);
@@ -447,9 +478,9 @@ describe('ChargingDetailPage — populated DC session', () => {
     const kpi = kpiRegion();
 
     expect(cardValue(kpi, 'Energy')).toBe('50.00 kWh');
-    expect(cardValue(kpi, 'Duration')).toBe('60 min');
+    expect(cardValue(kpi, 'Duration')).toBe('60.00 min');
     expect(cardValue(kpi, 'Peak Power')).toBe('150.00 kW');
-    expect(cardValue(kpi, 'SoC Range')).toBe('20–80%');
+    expect(cardValue(kpi, 'SoC Range')).toBe('20.00–80.00%');
     expect(cardValue(kpi, 'Total Cost')).toBe('$12.50');
     // 12.5 / (50000 Wh / 1000) = $0.25 per kWh.
     expect(cardValue(kpi, 'Per kWh')).toBe('$0.25/kWh');
@@ -481,7 +512,7 @@ describe('ChargingDetailPage — populated DC session', () => {
     expect(cardValue(kpi, 'Per kWh')).toBe('$0.49/kWh');
     expect(within(kpi).getByText('Vehicle measured 42.62 kWh')).toBeInTheDocument();
     // Charge-summary restates vehicle energy, not the Supercharger bill.
-    expect(screen.getByText('42.6 kWh')).toBeInTheDocument();
+    expect(within(namedCard('Battery Progress')).getByText('42.62 kWh')).toBeInTheDocument();
   });
 
   it('renders the five live gauges with SI-converted values and the DC 250 kW ceiling', () => {
@@ -503,7 +534,7 @@ describe('ChargingDetailPage — populated DC session', () => {
     expect(screen.getByText('20.00%')).toBeInTheDocument();
     expect(screen.getByText('80.00%')).toBeInTheDocument();
     // Energy Added restated via the injected energy formatter.
-    expect(screen.getByText('50.0 kWh')).toBeInTheDocument();
+    expect(within(namedCard('Battery Progress')).getByText('50.00 kWh')).toBeInTheDocument();
     // Charge-summary inline metrics.
     expect(screen.getByText('100.00 kW')).toBeInTheDocument(); // Avg Power
     expect(screen.getByText('Complete')).toBeInTheDocument(); // Status
@@ -514,26 +545,26 @@ describe('ChargingDetailPage — populated DC session', () => {
     renderPage();
 
     expect(kvValue('Charging State')).toBe('Charging');
-    expect(kvValue('Charger Voltage')).toBe('240 V');
-    expect(kvValue('Active Charge Current')).toBe('24.5 A');
-    expect(kvValue('Pilot Current')).toBe('32.0 A');
-    expect(kvValue('Charger Power')).toBe('11.0 kW');
-    expect(kvValue('Energy Added')).toBe('12.0 kWh');
+    expect(kvValue('Charger Voltage')).toBe('240.00 V');
+    expect(kvValue('Active Charge Current')).toBe('24.50 A');
+    expect(kvValue('Pilot Current')).toBe('32.00 A');
+    expect(kvValue('Charger Power')).toBe('11.00 kW');
+    expect(kvValue('Energy Added')).toBe('12.00 kWh');
     expect(kvValue('Phases')).toBe('3');
     // battery_range_mi is SI meters despite the suffix → 320 km.
-    expect(kvValue('Battery Range')).toBe('320 km');
+    expect(kvValue('Battery Range')).toBe('320.00 km');
   });
 
   it('shows the range TOTAL for "Range Added" and the per-hour RATE for "Charge Rate" (regression)', () => {
     renderPage();
 
     // Charge Rate reads range_added_meters_per_hour (30000 m/h → 30.0 km/h).
-    expect(kvValue('Charge Rate')).toBe('30.0 km/h');
+    expect(kvValue('Charge Rate')).toBe('30.00 km/h');
     // Range Added reads the SI TOTAL range_added_meters (45000 m → 45.0 km),
     // converted ONCE — not the per-hour field with a spurious /1000 that
     // would have collapsed this to "0.0 km".
-    expect(kvValue('Range Added')).toBe('45.0 km');
-    expect(kvValue('Range Added')).not.toBe('0.0 km');
+    expect(kvValue('Range Added')).toBe('45.00 km');
+    expect(kvValue('Range Added')).not.toBe('0.00 km');
   });
 
   it('renders session info and both timestamp slots', () => {
@@ -551,6 +582,54 @@ describe('ChargingDetailPage — populated DC session', () => {
     renderPage();
     expect(screen.getByRole('heading', { name: 'Charge Curve' })).toBeInTheDocument();
     expect(screen.queryByText('(estimated)')).toBeNull();
+  });
+
+  it('keeps exactly one child-owned heading for each of the four populated plots', () => {
+    renderPage();
+    for (const title of [
+      'Charge Curve', 'SoC, Energy & Range over Time', 'Temperature', 'Voltage & Current',
+    ]) {
+      // getByRole deliberately rejects duplicate outer/inner headings.
+      expect(screen.getByRole('heading', { name: title })).toBeInTheDocument();
+    }
+    expect(screen.getAllByRole('table')).toHaveLength(4);
+  });
+});
+
+describe('ChargingDetailPage — corrected SI session-distance display boundary', () => {
+  it.each([
+    { unit: 'km' as const, expected: '50.00 km' },
+    { unit: 'mi' as const, expected: '31.07 mi' },
+    { unit: 'ft' as const, expected: '164,041.99 ft' },
+  ])('converts the same positive 50000-meter delta once at all three $unit sites', ({ unit, expected }) => {
+    mockUnits.mockReturnValue(unitReturn(unit));
+    const source = makeSession({ start_odometer_m: 100000, end_odometer_m: 150000 });
+    mockSession.mockReturnValue(makeQuery({ data: source }));
+    renderPage();
+
+    assertSessionDistances(expected);
+    expect(source.start_odometer_m).toBe(100000);
+    expect(source.end_odometer_m).toBe(150000);
+    // This correction must not redefine the independent live total/rate sources.
+    expect(mockTelemetry).toHaveBeenCalledWith(42);
+    expect(mockLive).toHaveBeenCalledWith(7);
+  });
+
+  it.each([
+    { name: 'missing start', start: null, end: 150000 },
+    { name: 'missing end', start: 100000, end: null },
+    { name: 'both missing', start: null, end: null },
+    { name: 'zero delta', start: 100000, end: 100000 },
+    { name: 'negative delta', start: 150000, end: 100000 },
+  ])('retains the missing reading at all three sites for $name', ({ start, end }) => {
+    mockSession.mockReturnValue(makeQuery({
+      data: makeSession({ start_odometer_m: start, end_odometer_m: end }),
+    }));
+    renderPage();
+    assertSessionDistances('—');
+    // Existing live SI total/rate values remain independent of missing session delta.
+    expect(kvValue('Range Added')).toBe('45.00 km');
+    expect(kvValue('Charge Rate')).toBe('30.00 km/h');
   });
 });
 
@@ -660,10 +739,11 @@ describe('ChargingDetailPage — long-session fallback tables', () => {
     // prove the panels took the populated branch, not an empty state).
     expect(screen.queryByRole('table')).toBeNull();
     expect(screen.getByRole('heading', { name: 'Charge Curve' })).toBeInTheDocument();
-    // Each time-axis panel has a visible heading and the real chart frame's SR heading.
-    expect(screen.getAllByRole('heading', { name: 'SoC, Energy & Range over Time' })).toHaveLength(2);
-    expect(screen.getAllByRole('heading', { name: 'Temperature' })).toHaveLength(2);
-    expect(screen.getAllByRole('heading', { name: 'Voltage & Current' })).toHaveLength(2);
+    // Each real chart owns exactly one semantic heading; visible labels are not
+    // competing outer headings. These remain strict uniqueness assertions.
+    expect(screen.getByRole('heading', { name: 'SoC, Energy & Range over Time' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Temperature' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Voltage & Current' })).toBeInTheDocument();
     // Each chart announces the honest full-data summary instead.
     const summaries = screen.getAllByText(/Full-resolution data:/);
     expect(summaries).toHaveLength(4);
@@ -705,7 +785,7 @@ describe('ChargingDetailPage — ongoing session', () => {
     renderPage();
 
     // No ended_at → duration is 0 and the Ended slot is the em-dash.
-    expect(cardValue(kpiRegion(), 'Duration')).toBe('0 min');
+    expect(cardValue(kpiRegion(), 'Duration')).toBe('0.00 min');
     const endedValue = screen.getByText('Ended').closest('p')?.nextElementSibling?.textContent ?? '';
     expect(endedValue).toBe('—');
     // Absent vehicle → "ID <vehicle_id>" fallback.
@@ -733,7 +813,9 @@ describe('ChargingDetailPage — share dialog wiring', () => {
     renderWithId();
 
     expect(screen.queryByRole('dialog', { name: 'Share session' })).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Share' }));
+    const share = screen.getByRole('button', { name: 'Share' });
+    expect(share.closest('[data-action-group="overflow"]')).not.toBeNull();
+    fireEvent.click(share);
 
     const dialog = screen.getByRole('dialog', { name: 'Share session' });
     expect(dialog).toHaveAttribute('data-session-id', '42');

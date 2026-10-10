@@ -15,7 +15,7 @@
     "remediationLabel": "Remediation",
     "copyReport": "Copy report",
     "copyReportSuccess": "Diagnostic report copied to clipboard",
-    "copyReportError": "Could not copy to clipboard. Use Download instead.",
+    "copyReportError": "Could not copy to clipboard. Use download instead.",
     "downloadReport": "Download .txt",
     "filename": "teslasync-diagnostic-{{ts}}.txt",
     "overall": {

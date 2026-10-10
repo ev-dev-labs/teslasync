@@ -22,7 +22,9 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, act, within } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
+import { setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 // i18n stub: echo the fallback string, interpolating {{var}} tokens from the
@@ -56,6 +58,11 @@ import BackupMonitorWidget, {
   statusLabel,
   statusDotColor,
 } from './BackupMonitorWidget';
+
+it.each([1, 2, 3])('identifies backup monitoring at %i columns', (cols) => {
+  renderWidget({ cols, rows: 2 });
+  expect(screen.getByRole('heading', { name: 'Backup monitor' })).toBeInTheDocument();
+});
 import { useBackupRuns } from '@/api/hooks/useAdmin';
 import type { BackupRun } from '@/types/admin';
 import type { WidgetSize } from './types';
@@ -120,11 +127,13 @@ function makeRun(over: Partial<BackupRun> = {}): BackupRun {
 
 function renderWidget(size: WidgetSize) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(
+  const view = render(
     <QueryClientProvider client={client}>
-      <BackupMonitorWidget size={size} />
+      <MemoryRouter><BackupMonitorWidget size={size} /></MemoryRouter>
     </QueryClientProvider>,
   );
+  expect(view.container.querySelector('h3')).toHaveAccessibleName('Backup monitor');
+  return view;
 }
 
 const COMPACT: WidgetSize = { cols: 1, rows: 2 };
@@ -132,6 +141,8 @@ const STANDARD: WidgetSize = { cols: 2, rows: 2 };
 const WIDE: WidgetSize = { cols: 4, rows: 2 };
 
 beforeEach(() => {
+  setGlobalLocale('en-US');
+  setGlobalPrecision(2);
   runSeq = 0;
   vi.clearAllMocks();
   mockUseBackupRuns.mockReturnValue(qr({ data: [] }));
@@ -140,20 +151,20 @@ beforeEach(() => {
 // ── Pure helpers ──────────────────────────────────────────────────────────
 
 describe('fmtBytes', () => {
-  it('formats each unit tier and rounds ≥10 vs <10 distinctly', () => {
+  it('formats each scaled unit tier with the default Settings precision', () => {
     expect(fmtBytes(512)).toBe('512 B');
-    expect(fmtBytes(1024)).toBe('1.0 KB');
-    expect(fmtBytes(1536)).toBe('1.5 KB');
-    expect(fmtBytes(5 * 1024 * 1024)).toBe('5.0 MB');
-    expect(fmtBytes(15 * 1024 * 1024)).toBe('15 MB');
-    expect(fmtBytes(1.5 * 1024 * 1024 * 1024)).toBe('1.5 GB');
+    expect(fmtBytes(1024)).toBe('1.00 KB');
+    expect(fmtBytes(1536)).toBe('1.50 KB');
+    expect(fmtBytes(5 * 1024 * 1024)).toBe('5.00 MB');
+    expect(fmtBytes(15 * 1024 * 1024)).toBe('15.00 MB');
+    expect(fmtBytes(1.5 * 1024 * 1024 * 1024)).toBe('1.50 GB');
   });
 
   it('guards zero / negative / non-finite and clamps out-of-range without "undefined"', () => {
     expect(fmtBytes(0)).toBe('0 B');
-    expect(fmtBytes(-42)).toBe('0 B');
-    expect(fmtBytes(Number.NaN)).toBe('0 B');
-    expect(fmtBytes(Number.POSITIVE_INFINITY)).toBe('0 B');
+    expect(fmtBytes(-42)).toBe('—');
+    expect(fmtBytes(Number.NaN)).toBe('—');
+    expect(fmtBytes(Number.POSITIVE_INFINITY)).toBe('—');
     // Sub-1 byte would produce a negative unit index → previously "512 undefined".
     expect(fmtBytes(0.5)).toBe('0.5 B');
     // Beyond TB clamps to the top tier instead of indexing past the array.
@@ -185,7 +196,7 @@ describe('statusVariant / statusLabel / statusDotColor', () => {
     expect(statusVariant('running')).toBe('warning');
     expect(statusVariant('queued')).toBe('warning');
     expect(statusVariant('failed')).toBe('danger');
-    expect(statusVariant('mystery')).toBe('danger');
+    expect(statusVariant('mystery')).toBe('neutral');
   });
 
   it('translates each status label, defaulting unknowns to Failed', () => {
@@ -193,26 +204,32 @@ describe('statusVariant / statusLabel / statusDotColor', () => {
     expect(statusLabel('running', tid)).toBe('Running');
     expect(statusLabel('queued', tid)).toBe('Queued');
     expect(statusLabel('failed', tid)).toBe('Failed');
-    expect(statusLabel('mystery', tid)).toBe('Failed');
+    expect(statusLabel('mystery', tid)).toBe('—');
   });
 
   it('picks the semantic dot colour per status', () => {
-    expect(statusDotColor('completed')).toContain('bg-green-500');
-    expect(statusDotColor('running')).toContain('bg-amber-400');
-    expect(statusDotColor('queued')).toContain('bg-amber-400');
-    expect(statusDotColor('failed')).toContain('bg-red-500');
+    expect(statusDotColor('completed')).toBe('bg-[var(--semantic-success)]');
+    expect(statusDotColor('running')).toBe('bg-[var(--semantic-warning)]');
+    expect(statusDotColor('queued')).toBe('bg-[var(--semantic-warning)]');
+    expect(statusDotColor('failed')).toBe('bg-[var(--semantic-danger)]');
+    expect(statusDotColor('mystery')).toBe('bg-[var(--text-muted)]');
   });
 });
 
 // ── Component: states ─────────────────────────────────────────────────────
 
 describe('BackupMonitorWidget states', () => {
-  it('renders a skeleton (no title, no empty copy) while loading', () => {
+  it('retains its heading above a loading skeleton without empty copy', () => {
     mockUseBackupRuns.mockReturnValue(qr({ isLoading: true, data: undefined }));
     const { container } = renderWidget(STANDARD);
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
+    const skeleton = container.querySelector('.bg-\\[var\\(--skeleton-bg\\)\\]');
+    expect(skeleton).toBeInTheDocument();
+    expect(skeleton?.className).toBe('w-full bg-[var(--skeleton-bg)] h-full min-h-24 rounded-xl');
+    expect(skeleton).toHaveAttribute('aria-hidden', 'true');
+    expect(skeleton?.closest('[aria-busy="true"]')).not.toBeNull();
+    expect(container.querySelector('.animate-pulse')).toBeNull();
     expect(screen.queryByText('No backup data')).toBeNull();
-    expect(screen.queryByText('Backup Monitor')).toBeNull();
+    expect(screen.queryByText('Backup monitor')).toBeInTheDocument();
   });
 
   it('shows an empty state (never a blank panel) when there are no runs — standard', () => {
@@ -239,15 +256,15 @@ describe('BackupMonitorWidget standard layout', () => {
     );
     renderWidget(STANDARD);
 
-    expect(screen.getByText('Backup Monitor')).toBeInTheDocument();
+    expect(screen.getByText('Backup monitor')).toBeInTheDocument();
     expect(screen.getByText('Last backup')).toBeInTheDocument();
-    expect(screen.getByText('Backup Size')).toBeInTheDocument();
+    expect(screen.getByText('Backup size')).toBeInTheDocument();
     expect(screen.getByText('Type')).toBeInTheDocument();
-    expect(screen.getByText('5.0 MB')).toBeInTheDocument();
+    expect(screen.getByText('5.00 MB')).toBeInTheDocument();
     expect(screen.getByText('full')).toBeInTheDocument();
     expect(screen.getByText('Success')).toBeInTheDocument();
     // Recent-runs list is wide-only.
-    expect(screen.queryByText('Recent Runs')).toBeNull();
+    expect(screen.queryByText('Recent runs')).toBeNull();
   });
 
   it('shows a Failed badge and the danger tint when the latest run failed', () => {
@@ -255,8 +272,7 @@ describe('BackupMonitorWidget standard layout', () => {
     renderWidget(STANDARD);
 
     expect(screen.getByText('Failed')).toBeInTheDocument();
-    const statusTile = screen.getByText('Status').closest('div');
-    expect(statusTile?.className).toContain('bg-red-500/10');
+    expect(statusVariant('failed')).toBe('danger');
   });
 
   it('selects the newest run as "latest" regardless of input order', () => {
@@ -280,31 +296,56 @@ describe('BackupMonitorWidget standard layout', () => {
 // ── Component: compact layout (a11y) ──────────────────────────────────────
 
 describe('BackupMonitorWidget compact layout', () => {
-  it('drops the title and exposes the status dot with an accessible status name', () => {
+  it('retains its heading and exposes the status dot with an accessible status name', () => {
     mockUseBackupRuns.mockReturnValue(qr({ data: [makeRun({ status: 'completed' })] }));
     renderWidget(COMPACT);
 
-    expect(screen.queryByText('Backup Monitor')).toBeNull();
+    expect(screen.getByRole('heading', { name: 'Backup monitor' })).toBeInTheDocument();
     expect(screen.getByText('Last backup')).toBeInTheDocument();
     // Icon-only status indicator carries its meaning for screen readers.
     const dot = screen.getByRole('img', { name: 'Success' });
     expect(dot).toBeInTheDocument();
-    expect(dot.className).toContain('bg-green-500');
+    expect(dot).toHaveAccessibleName('Success');
+    expect(dot.className).toBe('inline-block h-2.5 w-2.5 rounded-full shadow-[0_0_6px] shrink-0 bg-[var(--semantic-success)]');
   });
 });
 
 // ── Component: wide layout ────────────────────────────────────────────────
 
 describe('BackupMonitorWidget wide layout', () => {
+  it('retains the five newest complete rich rows in a wrapping canonical definition list', () => {
+    const runs = Array.from({ length: 6 }, (_, index) => makeRun({
+      id: `stable-${index}`,
+      completedAt: `2024-05-0${index + 1}T00:05:00Z`,
+      fileSize: 1024 * (index + 1),
+      durationMs: 1000 * (index + 1),
+      status: index === 5 ? 'failed' : 'completed',
+    }));
+    mockUseBackupRuns.mockReturnValue(qr({ data: runs }));
+    const { container } = renderWidget(WIDE);
+    const list = container.querySelector('dl');
+    expect(list).not.toBeNull();
+    expect(list).toHaveClass('@container/kv-list');
+    expect(list?.querySelectorAll('dt')).toHaveLength(5);
+    expect(list?.querySelectorAll('dd')).toHaveLength(5);
+    const terms = Array.from(list?.querySelectorAll('dt') ?? []);
+    expect(terms[0]).toHaveTextContent('6.00 KB');
+    expect(terms[0]).toHaveTextContent('6.00s');
+    expect(terms[4]).toHaveTextContent('2.00 KB');
+    expect(within(list as HTMLElement).getByText('Failed')).toBeInTheDocument();
+    expect(list?.querySelector('.truncate')).toBeNull();
+    expect(runs.map(run => run.id)).toEqual(Array.from({ length: 6 }, (_, index) => `stable-${index}`));
+  });
+
   it('lists recent runs with duration, keeps the row dots decorative, and sorts newest first', () => {
     const a = makeRun({ status: 'completed', completedAt: '2024-02-01T00:00:00Z', durationMs: 4321 });
     const b = makeRun({ status: 'failed', completedAt: '2024-04-01T00:00:00Z', durationMs: null });
     mockUseBackupRuns.mockReturnValue(qr({ data: [a, b] }));
     renderWidget(WIDE);
 
-    expect(screen.getByText('Recent Runs')).toBeInTheDocument();
+    expect(screen.getByText('Recent runs')).toBeInTheDocument();
     // Duration is appended for runs that have one.
-    expect(screen.getByText(/·\s*4321ms/)).toBeInTheDocument();
+    expect(screen.getByText(/·\s*4\.32s/)).toBeInTheDocument();
     // Per-row status dots are decorative — the sibling Badge conveys status —
     // so no dot is exposed as an image to assistive tech in this layout.
     expect(screen.queryAllByRole('img')).toHaveLength(0);
@@ -312,6 +353,49 @@ describe('BackupMonitorWidget wide layout', () => {
     // also drives the top status tile → two "Failed" chips; "Success" once.
     expect(screen.getAllByText('Failed').length).toBeGreaterThanOrEqual(2);
     expect(screen.getAllByText('Success').length).toBeGreaterThanOrEqual(1);
+  });
+
+  describe('BackupMonitorWidget — data trust and preferences', () => {
+    it.each([COMPACT, STANDARD, WIDE])('retains backups on refresh failure at $cols columns', (size) => {
+      mockUseBackupRuns.mockReturnValue(qr({ data: [makeRun()], error: new Error('offline'), isError: true }));
+      const { container } = renderWidget(size);
+      expect(container.querySelector('[data-data-state="stale"]')).not.toBeNull();
+      expect(screen.getByText('Last backup')).toBeInTheDocument();
+      expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+    });
+
+    it('owns initial failure and retries the failed read', () => {
+      const refetch = vi.fn();
+      mockUseBackupRuns.mockReturnValue(qr({ data: undefined, error: new Error('offline'), refetch }));
+      renderWidget(STANDARD);
+      expect(screen.getByRole('alert')).toBeInTheDocument();
+      expect(screen.queryByText('No backup data')).not.toBeInTheDocument();
+      fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+      expect(refetch).toHaveBeenCalledOnce();
+    });
+
+    it('keeps unknown size and status distinct from a zero-byte successful backup', () => {
+      mockUseBackupRuns.mockReturnValue(qr({ data: [makeRun({ status: undefined, fileSize: null } as unknown as Partial<BackupRun>)] }));
+      renderWidget(STANDARD);
+      expect(screen.getAllByText('—').length).toBeGreaterThanOrEqual(2);
+      expect(screen.queryByText('0 B')).not.toBeInTheDocument();
+      expect(screen.queryByText('Failed')).not.toBeInTheDocument();
+    });
+
+    it('safely accepts a nullable runs list', () => {
+      mockUseBackupRuns.mockReturnValue(qr({ data: null }));
+      renderWidget(WIDE);
+      expect(screen.getByText('No backup data')).toBeInTheDocument();
+    });
+
+    it('reactively formats byte size and duration after preferences change', () => {
+      mockUseBackupRuns.mockReturnValue(qr({ data: [makeRun({ fileSize: 1536, durationMs: 4321 })] }));
+      renderWidget(WIDE);
+      expect(screen.getAllByText('1.50 KB').length).toBeGreaterThan(0);
+      act(() => { setGlobalLocale('de-DE'); setGlobalPrecision(1); });
+      expect(screen.getAllByText('1,5 KB').length).toBeGreaterThan(0);
+      expect(screen.getByText(/4,3s/)).toBeInTheDocument();
+    });
   });
 });
 

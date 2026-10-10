@@ -10,8 +10,9 @@ import { useTranslation } from 'react-i18next';
 
 import { AlertBanner } from '@/components/feedback';
 import { GlassPanel, Heading, PanelTitle, Text } from '@/components/ui';
-import { fmtInt, fmtNumber } from '@/lib/numberFormat';
+
 import type { DepartureForecast } from '../../lib/departureForecast';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface DepartureForecastMethodologyProps {
   forecast: DepartureForecast;
@@ -24,6 +25,7 @@ export function DepartureForecastMethodology({
   locale,
   timeZone,
 }: DepartureForecastMethodologyProps) {
+  const { fmtNumber, fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const items = [
     {
@@ -34,8 +36,8 @@ export function DepartureForecastMethodology({
         'departure.method.modelBody',
         'Each local weekday-hour is a Poisson event cell with a Gamma prior (α {{alpha}}, β {{beta}}). Outputs are modeled likelihood estimates, not calibrated probabilities.',
         {
-          alpha: fmtNumber(forecast.config.priorAlpha, 2, locale),
-          beta: fmtNumber(forecast.config.priorBeta, 0, locale),
+          alpha: fmtNumber(forecast.config.priorAlpha, undefined, locale),
+          beta: fmtNumber(forecast.config.priorBeta, undefined, locale),
         },
       ),
     },

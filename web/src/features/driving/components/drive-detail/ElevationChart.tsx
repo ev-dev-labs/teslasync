@@ -1,17 +1,20 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Activity, ArrowUpRight, ArrowDownRight } from 'lucide-react';
+import { Activity } from 'lucide-react';
 import {
-  ChartContainer, ChartLegend, ChartTooltip,
+  ChartLegend, ChartTooltip,
   ComposedChart, Area, Line, ReferenceLine,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   useSyncedCursor, useSyncedReferenceLineX,
 } from '@/components/charts';
 import { chartTokens } from '@/lib/tokens';
 import { FadeIn } from '@/components/motion';
+import { ChartCard } from '@/components/layout';
+import { Table, Text } from '@/components/ui';
 import { useUnits } from '@/hooks/useUnits';
-import { fmtNumber } from '@/lib/numberFormat';
+
 import type { ChartDataPoint, DriveStats } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface ElevationChartProps {
   chartData: ChartDataPoint[];
@@ -19,6 +22,7 @@ interface ElevationChartProps {
 }
 
 export function ElevationChart({ chartData, stats }: ElevationChartProps) {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const { unitPrefs } = useUnits();
   const speedUnit = unitPrefs.speed;
@@ -35,23 +39,27 @@ export function ElevationChart({ chartData, stats }: ElevationChartProps) {
   const elevNet = elevGain - elevLoss;
 
   return (
-    <FadeIn className="h-full">
+    <FadeIn className="space-y-3">
+      <Table variant="embedded" aria-label={t('driveDetail.elevSummary', 'Elevation summary')}>
+        <tbody>
+          <tr><th scope="row">{t('driveDetail.gain', 'Gain')}</th><td>{points.some((row) => row.elevation != null) ? `${fmtNumber(elevGain)} m` : '—'}</td></tr>
+          <tr><th scope="row">{t('driveDetail.loss', 'Loss')}</th><td>{points.some((row) => row.elevation != null) ? `${fmtNumber(elevLoss)} m` : '—'}</td></tr>
+          <tr><th scope="row">{t('driveDetail.net', 'Net')}</th><td>{points.some((row) => row.elevation != null) ? `${fmtNumber(elevNet)} m` : '—'}</td></tr>
+        </tbody>
+      </Table>
       {/* chart-a11y:no-table dense per-sample elevation+speed trace; gain/loss/net stats appear above the chart */}
-      <ChartContainer
-        title={t('driveDetail.elevProfile', 'Elevation Profile')}
+      <ChartCard
+        title={t('driveDetail.elevProfile', 'Elevation profile')}
         ariaLabel={t('driveDetail.elevProfile.aria', 'Elevation and speed area+line chart over the drive timeline')}
         chartKey="drive-detail-elevation"
         height={220}
-        className="h-full"
+        mobileHeight={220}
+        toolbar
+        exportable
       >
         {({ hiddenSeries }) => (
-          points.length > 1 ? (
+          points.filter((point) => point.elevation != null).length > 1 ? (
             <>
-            <div className="flex items-center gap-4 mb-2 text-xs">
-              <span className="flex items-center gap-1 text-green-400"><ArrowUpRight className="h-3 w-3" aria-hidden="true" />{fmtNumber(elevGain)} m {t('driveDetail.gain', 'gain')}</span>
-              <span className="flex items-center gap-1 text-red-400"><ArrowDownRight className="h-3 w-3" aria-hidden="true" />{fmtNumber(elevLoss)} m {t('driveDetail.loss', 'loss')}</span>
-              <span className="text-[var(--text-muted)]">{t('driveDetail.net', 'Net')}: {fmtNumber(elevNet)} m</span>
-            </div>
             <ResponsiveContainer width="100%" height="100%">
               <ComposedChart
                 data={points}
@@ -84,11 +92,11 @@ export function ElevationChart({ chartData, stats }: ElevationChartProps) {
           ) : (
             <div role="status" className="h-full flex flex-col items-center justify-center gap-2 text-[var(--text-muted)]">
               <Activity className="h-8 w-8 opacity-20" aria-hidden="true" />
-              <p className="text-xs">{t('driveDetail.noChartData', 'No telemetry data available')}</p>
+              <Text variant="caption">{t('driveDetail.noChartData', 'No telemetry data available')}</Text>
             </div>
           )
         )}
-      </ChartContainer>
+      </ChartCard>
     </FadeIn>
   );
 }

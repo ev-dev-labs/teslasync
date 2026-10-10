@@ -126,7 +126,7 @@ beforeEach(() => {
 describe('ActiveOrdersSection — header', () => {
   it('always renders the panel title, subtitle, and refresh control', () => {
     renderSection()
-    expect(screen.getByText('Active Orders')).toBeInTheDocument()
+    expect(screen.getByText('Active orders')).toBeInTheDocument()
     expect(
       screen.getByText('Vehicle orders and delivery tracking from Tesla'),
     ).toBeInTheDocument()
@@ -244,7 +244,7 @@ describe('ActiveOrdersSection — order cards', () => {
     expect(screen.getByText('5YJ3E1EA7KF000000')).toBeInTheDocument()
     expect(screen.getByText('Order ID')).toBeInTheDocument()
     expect(screen.getByText('VIN')).toBeInTheDocument()
-    expect(screen.getByText('Delivery Date')).toBeInTheDocument()
+    expect(screen.getByText('Delivery date')).toBeInTheDocument()
     expect(screen.getByText('Upgradable')).toBeInTheDocument()
     // Delivery date renders through the tz-aware formatter (UTC in tests).
     expect(screen.getByText('Mar 15, 2025')).toBeInTheDocument()
@@ -266,7 +266,7 @@ describe('ActiveOrdersSection — order cards', () => {
     expect(screen.getByText('Model X')).toBeInTheDocument()
     expect(screen.getByText('Order ID')).toBeInTheDocument()
     expect(screen.queryByText('VIN')).not.toBeInTheDocument()
-    expect(screen.queryByText('Delivery Date')).not.toBeInTheDocument()
+    expect(screen.queryByText('Delivery date')).not.toBeInTheDocument()
     expect(screen.queryByText('Upgradable')).not.toBeInTheDocument()
   })
 
@@ -318,27 +318,27 @@ describe('ActiveOrdersSection — status badge variants', () => {
   }
 
   it('maps a delivered status to the success (green) variant', () => {
-    renderWithStatus('DELIVERED')
+    renderWithStatus('Delivered')
     const badge = screen.getByText('Delivered')
-    expect(badge.className).toContain('bg-green-100')
+    expect(badge.className).toContain('bg-[var(--semantic-success-bg)]')
   })
 
   it('maps ready/transport statuses to the info (blue) variant', () => {
     renderWithStatus('READY_FOR_TRANSPORT')
-    const badge = screen.getByText('Ready For Transport')
-    expect(badge.className).toContain('bg-blue-100')
+    const badge = screen.getByText('Ready for transport')
+    expect(badge.className).toContain('bg-[var(--semantic-info-bg)]')
   })
 
   it('maps cancelled/rejected statuses to the danger (red) variant', () => {
     renderWithStatus('CANCELED')
     const badge = screen.getByText('Canceled')
-    expect(badge.className).toContain('bg-red-100')
+    expect(badge.className).toContain('bg-[var(--semantic-danger-bg)]')
   })
 
   it('maps pending/order statuses to the warning (yellow) variant', () => {
-    renderWithStatus('PENDING')
+    renderWithStatus('Pending')
     const badge = screen.getByText('Pending')
-    expect(badge.className).toContain('bg-yellow-100')
+    expect(badge.className).toContain('bg-[var(--semantic-warning-bg)]')
   })
 
   it('maps an unrecognized status to the neutral (gray) variant', () => {

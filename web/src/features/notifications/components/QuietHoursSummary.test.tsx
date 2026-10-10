@@ -80,12 +80,11 @@ function getRegion() {
   return screen.getByRole('region', { name: /quiet hours summary/i });
 }
 
-// Read a MetricCard's rendered value by its (unique) label text. The label
-// lives in a <span> inside <p class="metric-label">; the value is that
-// paragraph's immediate sibling <p>.
+// The real canonical tile owns its labelled value; do not depend on old card siblings.
 function cardValue(label: string): string {
-  const labelParagraph = screen.getByText(label).closest('p');
-  return labelParagraph?.nextElementSibling?.textContent ?? '';
+  const tile = screen.getByText(label).closest('[data-operational-metric]');
+  expect(tile).not.toBeNull();
+  return tile?.querySelector('[data-operational-value]')?.textContent ?? '';
 }
 
 // Freeze the wall clock to a fixed *local* instant (no trailing Z → parsed in
@@ -108,7 +107,14 @@ describe('QuietHoursSummary — loading & error states', () => {
     expect(getRegion()).toBeInTheDocument();
     const skeleton = screen.getByTestId('stat-grid-skeleton');
     expect(skeleton).toHaveAttribute('aria-busy', 'true');
-    expect(skeleton.querySelectorAll('.animate-pulse')).toHaveLength(4);
+    expect(skeleton).toHaveAttribute('role', 'status');
+    expect(skeleton).toHaveAttribute('aria-label', 'Loading stat cards');
+    expect(getRegion()).toContainElement(skeleton);
+    const cards = skeleton.querySelectorAll('[aria-hidden="true"][class~="bg-[var(--skeleton-bg)]"]');
+    expect(cards).toHaveLength(4);
+    for (const card of cards) {
+      expect(card).toHaveClass('h-24', 'w-full', 'rounded-xl');
+    }
     // No KPI cards while first-loading.
     expect(screen.queryByText('Windows')).not.toBeInTheDocument();
   });
@@ -127,6 +133,22 @@ describe('QuietHoursSummary — loading & error states', () => {
     expect(cardValue('Windows')).toBe('2');
     expect(cardValue('Enabled')).toBe('1/2');
     expect(screen.queryByTestId('stat-grid-skeleton')).not.toBeInTheDocument();
+  });
+
+  it('retains cached windows after a refresh failure, including an authoritative empty schedule', () => {
+    const refetch = vi.fn();
+    const { container } = renderSummary(makeQuery({
+      data: [], isError: true, error: new Error('refresh failed'), refetch,
+    }));
+    expect(container.querySelector('[data-operational-brief]')).toBeInTheDocument();
+    expect(screen.getByText('Data may be stale')).toBeInTheDocument();
+    expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(4);
+    expect(cardValue('Windows')).toBe('0');
+    expect(cardValue('Enabled')).toBe('—');
+    expect(cardValue('Right now')).toBe('Delivering');
+    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+    expect(refetch).toHaveBeenCalledOnce();
   });
 
   it('renders a QueryError alert and retries on demand when the query fails', () => {
@@ -154,6 +176,8 @@ describe('QuietHoursSummary — empty & idle (zeros, never blank)', () => {
     expect(cardValue('Right now')).toBe('Delivering');
     expect(screen.getByText('No window active now')).toBeInTheDocument();
     expect(cardValue('Always allowed')).toBe('—');
+    expect(screen.getByText('No configured windows')).toBeInTheDocument();
+    expect(screen.getByText('No bypass severities configured')).toBeInTheDocument();
     // Not loading → no skeleton either.
     expect(screen.queryByTestId('stat-grid-skeleton')).not.toBeInTheDocument();
   });
@@ -185,6 +209,9 @@ describe('QuietHoursSummary — active-now status (schedule evaluation)', () => 
 
     expect(cardValue('Windows')).toBe('3');
     expect(cardValue('Enabled')).toBe('2/3');
+    expect(screen.getByText('Configured schedules')).toBeInTheDocument();
+    expect(screen.getByText('Active on schedule')).toBeInTheDocument();
+    expect(screen.getByText('Severities that break through')).toBeInTheDocument();
     expect(cardValue('Right now')).toBe('Quiet');
     expect(screen.getByText('2 window active now')).toBeInTheDocument();
     // Deduped, enabled-only union — "emergency" (disabled) is absent.
@@ -264,10 +291,25 @@ describe('QuietHoursSummary — accessibility', () => {
     );
 
     expect(getRegion()).toHaveAttribute('aria-label', 'Quiet hours summary');
+    expect(container.querySelectorAll('[data-operational-brief]')).toHaveLength(1);
+    expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(4);
     // Card icons are purely decorative — hidden from the a11y tree so the
     // metric label + value carry the meaning.
     expect(container.querySelectorAll('svg[aria-hidden="true"]').length).toBeGreaterThan(0);
     // Status is legible without colour: it renders a word, not just a hue.
     expect(cardValue('Right now')).toMatch(/^(Quiet|Delivering)$/);
+  });
+
+  it('reviews configured schedule fractions and complete policy captions in the shared drawer', () => {
+    freeze('2026-03-04T14:30:00');
+    renderSummary(makeQuery({ data: [makeWindow({ bypass_severities: ['critical'] })], isSuccess: true }));
+    fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog');
+    expect(drawer).toHaveTextContent('1/1');
+    expect(drawer).toHaveTextContent('Configured schedules');
+    expect(drawer).toHaveTextContent('Active on schedule');
+    expect(drawer).toHaveTextContent('1 window active now');
+    expect(drawer).toHaveTextContent('Severities that break through');
+    expect(drawer).toHaveTextContent('critical');
   });
 });

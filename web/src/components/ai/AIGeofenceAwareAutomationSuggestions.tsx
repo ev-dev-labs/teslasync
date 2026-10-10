@@ -27,10 +27,16 @@ import { useTranslation } from 'react-i18next'
 
 import { AIFeatureCard } from '@/components/ai/AIFeatureCard'
 import { withAiFeature } from '@/components/ai/withAiFeature'
-import { Button, Textarea } from '@/components/ui'
+import { Button, Caption, Text, Textarea } from '@/components/ui'
 import type { AutomationFullInput } from '@/api/hooks/useAutomations'
 import type { AiStreamEvent } from '@/hooks/useAiStream'
 import { useAiStream } from '@/hooks/useAiStream'
+import {
+  isAutomationActionInput,
+  isAutomationConditionInput,
+  isAutomationDraftRecord,
+  isAutomationTriggerInput,
+} from './automationDraftInput'
 
 // AutomationDraft mirrors the typed envelope returned by the
 // draft_automation_graph tool
@@ -84,17 +90,20 @@ export interface AIGeofenceAwareAutomationSuggestionsProps {
  * `tool_result` handler below.
  */
 export function normalizeAutomationInput(value: unknown): AutomationFullInput | null {
-  if (typeof value !== 'object' || value === null) {
+  if (!isAutomationDraftRecord(value)) {
     return null
   }
-  const v = value as Record<string, unknown>
+  const v = value
   if (
     typeof v.name !== 'string' ||
     typeof v.vehicle_id !== 'number' ||
     typeof v.enabled !== 'boolean' ||
     !Array.isArray(v.triggers) ||
     !Array.isArray(v.conditions) ||
-    !Array.isArray(v.actions)
+    !Array.isArray(v.actions) ||
+    !v.triggers.every(isAutomationTriggerInput) ||
+    !v.conditions.every(isAutomationConditionInput) ||
+    !v.actions.every(isAutomationActionInput)
   ) {
     return null
   }
@@ -103,9 +112,9 @@ export function normalizeAutomationInput(value: unknown): AutomationFullInput | 
     description: typeof v.description === 'string' ? v.description : '',
     vehicle_id: v.vehicle_id,
     enabled: v.enabled,
-    triggers: v.triggers as AutomationFullInput['triggers'],
-    conditions: v.conditions as AutomationFullInput['conditions'],
-    actions: v.actions as AutomationFullInput['actions'],
+    triggers: v.triggers,
+    conditions: v.conditions,
+    actions: v.actions,
   }
 }
 
@@ -240,56 +249,59 @@ function InnerSection({
     >
       {draft && (
         <div
-          className="rounded-md border border-cyan-300/30 bg-cyan-300/5 p-3 text-sm"
+          className="min-w-0 rounded-shape-sm border border-[var(--border-default)] bg-[var(--surface-2)] p-3"
           data-testid="ai-feature-geofence-aware-automation-suggestions-draft"
         >
-          <div className="flex items-start justify-between gap-3">
-            <div className="space-y-1">
-              <div className="text-xs uppercase tracking-wide text-cyan-300">
+          <div className="flex min-w-0 flex-wrap items-start justify-between gap-3">
+            <div className="min-w-0 flex-1 space-y-1 break-words">
+              <Caption as="div">
                 {t(
                   'automations.builder.aiGeofenceAware.proposalLabel',
                   'Proposed automation',
                 )}
-              </div>
-              <div className="font-medium text-[var(--text-primary)]">
+              </Caption>
+              <Text as="div" size="sm" weight="medium" color="primary">
                 {draft.draft.name || t(
                   'automations.builder.aiGeofenceAware.unnamed',
                   '(unnamed)',
                 )}
-              </div>
+              </Text>
               {draft.draft.description && (
-                <div className="text-xs text-[var(--text-secondary)]">
+                <Caption as="div">
                   {draft.draft.description}
-                </div>
+                </Caption>
               )}
-              <div className="text-xs text-[var(--text-secondary)]">
+              <Caption as="div">
                 {t('automations.builder.aiGeofenceAware.triggersLabel', 'Triggers')}:{' '}
-                <span className="text-[var(--text-secondary)]">{draft.draft.triggers.length}</span>
+                <span>{draft.draft.triggers.length}</span>
                 {' · '}
                 {t('automations.builder.aiGeofenceAware.conditionsLabel', 'Conditions')}:{' '}
-                <span className="text-[var(--text-secondary)]">{draft.draft.conditions.length}</span>
+                <span>{draft.draft.conditions.length}</span>
                 {' · '}
                 {t('automations.builder.aiGeofenceAware.actionsLabel', 'Actions')}:{' '}
-                <span className="text-[var(--text-secondary)]">{draft.draft.actions.length}</span>
-              </div>
+                <span>{draft.draft.actions.length}</span>
+              </Caption>
               {draft.validation_error && (
-                <div className="text-xs text-[var(--text-secondary)]">
+                <Caption as="div">
                   {draft.validation_error}
-                </div>
+                </Caption>
               )}
               {draft.status !== 'ok' && (
-                <div className="text-xs text-rose-300">
+                <Text as="div" variant="error">
                   {t(
                     'automations.builder.aiGeofenceAware.rejectedLabel',
                     'Proposal rejected by validator',
                   )}
-                </div>
+                </Text>
               )}
             </div>
-            <div className="flex flex-shrink-0 flex-col gap-1.5">
+            <div className="flex min-w-0 max-w-full flex-col gap-2">
               <Button
+                type="button"
                 variant="outline"
                 size="sm"
+                wrapLabel
+                className="min-h-11 md:min-h-9"
                 disabled={draft.status !== 'ok'}
                 aria-disabled={draft.status !== 'ok' ? 'true' : 'false'}
                 onClick={handleApply}

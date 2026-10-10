@@ -28,6 +28,7 @@ import {
 } from '@/hooks/useBackgroundJobs';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { cn } from '@/lib/cn';
+import { typography } from '@/lib/tokens';
 import { Button, Tooltip } from '@/components/ui/runtime';
 import { HelixMark } from '@/components/branding/HelixMark';
 
@@ -39,7 +40,7 @@ const HelixSidePanel = lazy(async () => {
 /**
  * StatusBar.
  *
- * Always-on 28px footer pinned to the bottom of the viewport with prioritized
+ * Always-on footer pinned to the bottom of the viewport with prioritized
  * status segments:
  *
  *   API · Live telemetry · operational mode · alerts · recent pages · background jobs · help/about
@@ -52,7 +53,8 @@ const HelixSidePanel = lazy(async () => {
  *   - It stacks ABOVE `<BottomTabBar>` for every width the tab bar is
  *     visible (`xl:hidden`, i.e. < 1280px). Using `lg` here used to pin
  *     both bars to `bottom-0` on tablet widths (1024–1279) and overlap.
- *   - Shorter (24px) under `xl`; 28px on desktop once the tab bar hides.
+ *   - Two scrollable rows below `md`; 24px at `md`, 28px at `xl`.
+ *     Height and safe-area gutters come from the existing shell CSS owner.
  *   - The `compact` prop forces icon-only at any width.
  *   - User preference (`useStatusBarPrefs`) can hide the bar entirely or
  *     force icon-only at all widths.
@@ -126,16 +128,23 @@ function StatusBarContent({
         data-role="status-bar"
         data-print-hide
         className={cn(
-          'fixed left-0 right-0 z-[55] flex items-center justify-between gap-2',
-          'border-t border-[var(--glass-border)] bg-[var(--surface-1)]/95 backdrop-blur-xl',
-          'px-3 text-xs text-[var(--text-secondary)] lg:px-4',
+          'fixed left-0 right-0 z-shell-status-bar flex flex-col items-stretch justify-between md:flex-row md:items-center md:gap-2',
+          'border-t border-[var(--border-default)] bg-[var(--surface-1)]',
+          'px-3 lg:px-4',
+          typography.size.xs,
+          typography.color.secondary,
           'bottom-[var(--shell-tab-bar-height)] xl:bottom-0',
-          'h-6 xl:h-7',
+          'h-[var(--shell-status-bar-height)]',
           className,
         )}
         aria-label={t('statusBar.aria', 'Application status')}
       >
-        <div className="flex min-w-0 items-center gap-1">
+        <div
+          role="group"
+          aria-label={t('statusBar.aria', 'Application status')}
+          className="min-h-0 min-w-0 flex-1 overflow-x-auto overflow-y-hidden md:flex-initial md:overflow-visible"
+        >
+          <div className="flex h-full min-w-max items-center gap-2 p-1 md:min-w-0 md:gap-1 md:p-0">
           <ConnectionSegment
             iconOnly={iconOnly}
             enableAdminDiagnostics
@@ -145,8 +154,14 @@ function StatusBarContent({
           <HonestyMeterSegment iconOnly={iconOnly} />
           <OperationalModeSegment iconOnly={iconOnly} />
           <AlertsSegment iconOnly={iconOnly} />
+          </div>
         </div>
-        <div className="flex min-w-0 items-center gap-1">
+        <div
+          role="group"
+          aria-label={t('statusBar.aria', 'Application status')}
+          className="min-h-0 min-w-0 flex-1 overflow-x-auto overflow-y-hidden md:flex-initial md:overflow-visible"
+        >
+          <div className="flex h-full min-w-max items-center gap-2 p-1 md:min-w-0 md:gap-1 md:p-0">
           <RecentPagesSegment iconOnly={iconOnly} />
           <Divider />
           {showOverflow ? (
@@ -180,11 +195,12 @@ function StatusBarContent({
                 setHelixMounted(true);
                 setHelixOpen(value => !value);
               }}
-              className="h-5 min-h-0 rounded px-1.5 py-0 text-[var(--theme-primary)]"
+              className={cn('h-11 min-h-11 min-w-11 shrink-0 rounded px-1.5 py-0 md:h-5 md:min-h-0 md:min-w-0', typography.color.secondary)}
             >
               <HelixMark className="h-4 w-4" aria-hidden="true" />
             </Button>
           </Tooltip>
+          </div>
         </div>
       </footer>
       {aboutOpen && (
@@ -229,7 +245,7 @@ function useBackgroundFailureAnnouncements({
 function Divider() {
   return (
     <span
-      className="h-3 w-px shrink-0 bg-[var(--border-subtle)]"
+      className="hidden h-3 w-px shrink-0 bg-[var(--border-subtle)] md:block"
       aria-hidden
     />
   );

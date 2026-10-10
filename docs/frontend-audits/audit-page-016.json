@@ -1,0 +1,401 @@
+{
+  "item": "audit-page-016",
+  "page": "web\\src\\features\\admin\\pages\\GDPRExportPage.tsx",
+  "routes": ["/admin/gdpr-exports"],
+  "purpose": "Admin inspection of an individual GDPR export artifact, its metadata, lifecycle and browser-owned bundle download.",
+  "primaryGoal": "Look up an artifact by URL-backed ID, monitor its state, inspect evidence and download an available bundle.",
+  "dataSources": [
+    {
+      "name": "selected GDPR artifact",
+      "hook": "useGDPRExport(activeId)",
+      "owner": "web\\src\\api\\hooks\\useOperatorConfidence.ts",
+      "file": "web\\src\\features\\admin\\pages\\GDPRExportPage.tsx",
+      "line": 67,
+      "endpoint": "GET /api/v1/admin/gdpr/exports/{id}",
+      "routeEvidence": [
+        "internal\\api\\router.go:4586",
+        "internal\\handler\\v1\\gdpr_export_handler.go:39-42"
+      ],
+      "behavior": "Query key ['admin','gdpr','exports',id]; enabled only for a nonempty ID; forwards AbortSignal; unwraps data envelope; QUICK stale time; FAST periodic refetch, not in background; retry 1. Polling is unconditional while enabled, including terminal states.",
+      "sourceEvidence": [
+        "web\\src\\api\\hooks\\useOperatorConfidence.ts:48-59,91,339-350",
+        "web\\src\\api\\client.ts:284-288"
+      ],
+      "contractRisk": "The TypeScript artifact interface does not match the registered handler's manifest. Backend exposes byte_count and storage_kind, and no status or format. Neither envelope unwrapping nor camelCase aliasing supplies these missing fields."
+    },
+    {
+      "name": "bundle stream",
+      "hook": null,
+      "owner": "internal\\handler\\v1\\gdpr_export_handler.go",
+      "file": "web\\src\\features\\admin\\pages\\GDPRExportPage.tsx",
+      "line": 85,
+      "endpoint": "GET /api/v1/admin/gdpr/exports/{id}/download",
+      "routeEvidence": ["internal\\handler\\v1\\gdpr_export_handler.go:39-42,71-137"],
+      "behavior": "apiUrl builds the browser anchor URL from an encoded artifact ID only when frontend status is complete; no binary XHR. Handler streams local_fs gzip bundles, responds 501 for unsupported storage and 410 for deleted files, and records a download after successful streaming. Deployment availability and audit persistence were not exercised.",
+      "sourceEvidence": [
+        "web\\src\\api\\client.ts:90-94",
+        "web\\src\\features\\admin\\components\\gdpr-export\\GDPRDownloadPanel.tsx:32-57"
+      ]
+    }
+  ],
+  "components": [
+    {
+      "name": "PageLayout / PageContainer",
+      "owner": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+      "props": ["title", "subtitle", "secondaryActions", "query", "dataSources", "children"],
+      "role": "Existing full-width layout adapter; PageContainer owns header actions, query freshness and retained-source notice.",
+      "evidence": ["web\\src\\features\\admin\\pages\\GDPRExportPage.tsx:120-131", "web\\src\\components\\layout\\PageContainer.tsx:218-255"]
+    },
+    {
+      "name": "AdminSummary / OperationalBrief",
+      "owner": "web\\src\\features\\admin\\components\\operationalbrief-a-g\\AdminSummary.tsx",
+      "props": ["metrics", "eyebrow", "title", "description", "scope", "sourceStatus", "loading", "freshness", "testId"],
+      "role": "Existing admin adapter to useOperationalMetrics and canonical OperationalBrief. Six selected-artifact measurements; lifecycle timestamps are not workspace analysis dates.",
+      "evidence": ["web\\src\\features\\admin\\pages\\GDPRExportPage.tsx:94-105,186-192", "web\\src\\features\\admin\\components\\operationalbrief-a-g\\AdminSummary.tsx:18-43"]
+    },
+    {
+      "name": "GDPRLookupPanel",
+      "owner": "web\\src\\features\\admin\\components\\gdpr-export\\GDPRLookupPanel.tsx",
+      "props": ["idInput", "onIdChange", "onLookup"],
+      "role": "Controlled ID draft, localized labeled Input, trimmed nonempty Button/Enter activation, provenance and retention hints.",
+      "evidence": ["web\\src\\features\\admin\\components\\gdpr-export\\GDPRLookupPanel.tsx:18-74"]
+    },
+    {
+      "name": "GDPRArtifactDetails",
+      "owner": "web\\src\\features\\admin\\components\\gdpr-export\\GDPRArtifactDetails.tsx",
+      "props": ["artifact", "loading", "className"],
+      "role": "Definition list with ID/user/timestamps/checksum, shared CopyButton, local MetaRow and TimeValue; contextual skeleton and empty state.",
+      "evidence": ["web\\src\\features\\admin\\components\\gdpr-export\\GDPRArtifactDetails.tsx:18-127"]
+    },
+    {
+      "name": "GDPRDownloadPanel",
+      "owner": "web\\src\\features\\admin\\components\\gdpr-export\\GDPRDownloadPanel.tsx",
+      "props": ["artifact", "downloadUrl", "loading", "className"],
+      "role": "Native download anchor, stream/audit explanation and queued/running/expired/unavailable explanations.",
+      "evidence": ["web\\src\\features\\admin\\components\\gdpr-export\\GDPRDownloadPanel.tsx:18-70"]
+    },
+    {
+      "name": "GDPRLifecyclePanel / Timeline",
+      "owner": "web\\src\\features\\admin\\components\\gdpr-export\\GDPRLifecyclePanel.tsx",
+      "props": ["artifact", "loading", "className"],
+      "sharedOwner": "web\\src\\components\\data-display\\Timeline.tsx",
+      "sharedProps": ["items", "label", "chronology", "summaryBounds"],
+      "role": "Ordered created/completed-or-failed/expiry evidence; uses existing Timeline renderer, not a second timeline.",
+      "evidence": ["web\\src\\features\\admin\\components\\gdpr-export\\GDPRLifecyclePanel.tsx:34-109"]
+    },
+    {
+      "name": "Existing primitives and trust owners",
+      "owner": "category barrels @/components/ui, @/components/feedback, @/components/motion",
+      "props": ["Button variant/disabled/aria-label", "GlassPanel className", "Input label/value/onChange/onKeyDown", "CopyButton text/iconOnly/size/ariaLabel/onCopyError", "FadeIn delay", "QueryError error/onRetry/resourceName"],
+      "role": "Reuse GlassPanel, Button, Input, CopyButton, typography roles, Skeleton, EmptyState, AlertBanner, DataStateNotice, QueryError, SectionErrorBoundary and FadeIn; deriveDataState owns fatal versus refresh failures.",
+      "evidence": ["web\\src\\features\\admin\\pages\\GDPRExportPage.tsx:19-45,68-71,134-181", "web\\src\\api\\dataState.ts:178-270"]
+    }
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\admin\\components\\gdpr-export\\GDPRDownloadPanel.tsx",
+      "line": 43,
+      "rule": "MDC-020",
+      "detail": "Anchor manually recreates shared Button chrome, diverging in radius, timing, focus-ring/offset and forced-color styling.",
+      "fix": "Keep the single native anchor and download attribute; compose existing exported BUTTON_BASE and BUTTON_VARIANTS.primary with local width/target sizing. Do not nest a Button inside an anchor or create another link-button implementation.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\admin\\components\\gdpr-export\\GDPRArtifactDetails.tsx",
+      "line": 114,
+      "rule": "MDC-002",
+      "detail": "MetaRow and TimeValue are local presentation helpers, not proved cross-page duplication. All four panels reuse GlassPanel and typography; AdminSummary already centralizes brief rendering.",
+      "fix": "Retain these bounded helpers unless a separate inventory demonstrates equivalent consumers; no speculative shared metadata renderer is needed.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "responsive": {
+    "sourceStrategy": [
+      "Page detail area stacks then becomes xl:grid-cols-3; metadata spans two columns (page:206-219).",
+      "Supporting download/lifecycle panels use one column, sm two columns, xl one column (page:212).",
+      "Lookup controls stack then become sm:flex-row; hint splits at lg (GDPRLookupPanel.tsx:31-34).",
+      "Metadata is one/md two/2xl three columns, with ID and checksum full-span and break-all (GDPRArtifactDetails.tsx:36-43,75-81).",
+      "Download anchor is full-width on narrow screens and auto-width at sm, minimum 44px high (GDPRDownloadPanel.tsx:48)."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\admin\\components\\gdpr-export\\GDPRLookupPanel.tsx",
+        "line": 34,
+        "rule": "MDC-043 / mission 15",
+        "detail": "The flex-1 input wrapper lacks min-w-0; fixed-height lookup Button does not opt into shared wrapLabel. Long localized text and 200% text may pressure the sm horizontal row. Source risk, not observed clipping.",
+        "fix": "Use existing min-w-0/max-w-full and Button wrapLabel where needed; verify all labels, input and action remain reachable without losing hints.",
+        "owner": "page",
+        "confidence": "medium"
+      }
+    ],
+    "requiredWidths": [320, 375, 390, 430, 768, 1024, 1280, 1440, 1920, 2560],
+    "viewportTesting": "NOT RUN; no browser, mounted container or screenshots inspected."
+  },
+  "accessibility": {
+    "sourceStrengths": [
+      "Refresh has localized aria-label and min-h-11; decorative icon is hidden (page:108-116).",
+      "Lookup uses labeled shared Input; Enter and Button share trimmed-ID guard (GDPRLookupPanel.tsx:26,35-50).",
+      "Artifact details use dl and aria-busy; loading skeleton group is aria-hidden (GDPRArtifactDetails.tsx:23-36).",
+      "Download uses one native anchor rather than nested interactive elements (GDPRDownloadPanel.tsx:40-57).",
+      "Lifecycle state uses text and icons as well as color (GDPRLifecyclePanel.tsx:34-88).",
+      "FadeIn delegates to useMotionPreference and uses initial=false for reduction (FadeIn.tsx:23-35); OS-mode behavior remains unverified."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\admin\\components\\gdpr-export\\GDPRLifecyclePanel.tsx",
+        "line": 102,
+        "rule": "MDC-040",
+        "detail": "Caller supplies oldest-first created-to-terminal-to-expiry items but omits Timeline chronology, which defaults to newest-first; inferred accessible start/end bounds are reversed. Caller also leaves the list name generic.",
+        "fix": "Pass localized lifecycle label and chronology='oldest-first'; use existing summaryBounds when causal events should not imply measured chronological bounds. Preserve event ordering and timestamps.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\admin\\components\\gdpr-export\\GDPRArtifactDetails.tsx",
+        "line": 43,
+        "rule": "MDC-040",
+        "detail": "ID and checksum icon-only CopyButtons both use generic shared 'Copy' names and sm size. sm Button is h-9; 44px target compliance or a spacing exception is not established. Clipboard failures have no caller feedback because withToast and onCopyError are omitted.",
+        "fix": "Use existing ariaLabel/label props to distinguish copied fields, retain Copied feedback, provide existing toast or manual-copy error recovery, and verify target spacing or increase local target size. Apply equally at line 81.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ],
+    "verification": "Keyboard operation, focus visibility, screen readers, contrast, forced colors, touch geometry and reduced-motion rendering NOT RUN."
+  },
+  "states": {
+    "initial": "No active ID disables query and refresh; lookup stays present; explanatory No artifact selected state (page:58-67,108-113,149-162).",
+    "loading": "With active ID, summary and metadata/download/lifecycle skeletons render; existing artifact prevents skeleton replacement (page:92,192,209-218; panel showLoading guards).",
+    "empty": "No-selection prompt and child metadata/lifecycle EmptyStates exist. A resolved null payload is not validated by the hook; behavior remains unverified, not assumed supported.",
+    "notFound": "Fatal 404 renders Artifact not found guidance; lookup and refresh remain available (page:70,163-172).",
+    "unsupported": "Fatal 503 renders unsupported subsystem notice and suppresses artifact area (page:69,137-147,181).",
+    "fatalError": "Other initial errors render QueryError with retry (page:71,173-180).",
+    "failedArtifact": "artifact.error produces failure alert; lifecycle uses nonblank reason or fallback and suppresses contradictory completed entry for failed status.",
+    "staleOffline": "deriveDataState keeps retained payload on failed or paused refresh; summary labels stale, and PageLayout dataSources mounts DataSourceNotice only with retained data. PageContainer query prop adds freshness. No runtime offline/retry outcome claimed.",
+    "success": "Frontend complete status generates encoded browser-owned download URL. Current backend wire mismatch makes this source gate suspect, not a proved working download.",
+    "disabled": "Lookup disabled on trimmed blank input, refresh disabled without activeId. No busy disabling on an active refetch is declared.",
+    "issues": [
+      {
+        "file": "web\\src\\api\\hooks\\useOperatorConfidence.ts",
+        "line": 348,
+        "rule": "MDC-046 / source-copy fidelity",
+        "detail": "Hook polls every FAST interval regardless of status while enabled; comments at 336-337 and lookup hint claim queued/running-only polling. Page never disables the query after completion.",
+        "fix": "Reconcile documentation and desired polling lifecycle with the API/query owner after wire contract repair. Preserve the existing key, cancellation, retry and inherited behavior unless an explicitly authorized policy change is tested.",
+        "owner": "integration",
+        "confidence": "high"
+      }
+    ]
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\admin\\components\\gdpr-export\\constants.ts",
+      "line": 42,
+      "rule": "MDC-010 / MDC-025 / mission 43",
+      "detail": "Lifecycle dot palette hardcodes cyan #22d3ee, emerald, rose and amber hex colors outside semantic theme ownership. Dynamic Timeline props do not exempt a saturated fixed feature palette from visual-noise requirements.",
+      "fix": "Use existing subdued semantic token values through Timeline's current color prop or neutral defaults, keeping distinct labels/icons and all failure/expiry semantics. Do not reset saved theme choices.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\admin\\components\\gdpr-export\\GDPRLookupPanel.tsx",
+      "line": 64,
+      "rule": "MDC-010 / MDC-012",
+      "detail": "Hint background uses fixed white at 2% opacity and a fixed cyan decorative icon; lifecycle header also uses text-cyan-300 at GDPRLifecyclePanel.tsx:96. These are theme-independent accent/white traces, not an observed pure-white page or measured contrast failure.",
+      "fix": "Use existing neutral surface/border and muted text tokens for informational decoration; reserve semantic color for actual artifact state.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\types\\admin-operator-confidence.ts",
+      "line": 288,
+      "rule": "MDC-045 / MDC-046 / mission 33",
+      "detail": "Registered Get returns the service Artifact alias directly (handler:50-65; service:27,75-91). Backend Artifact has byte_count, storage_kind, export_job_id, vehicle_id, storage_path, downloaded_at and download_count but no status, format, bytes, storage, user_id, completed_at or error (artifact_repo.go:54-65). The frontend casts this response to GDPRExportArtifact. Consequently source logic expects a missing status to permit downloading and missing measurement fields for summary. This is a verified source contract mismatch, not an executed request failure.",
+      "fix": "API/type integration owner must establish the authoritative manifest/job contract and expose real status/format/lifecycle evidence or adapt callers to genuinely available fields. Preserve existing UI capabilities and all backend manifest data; never fabricate complete status, zero bytes, queue progress or new backend capabilities.",
+      "owner": "integration",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\api\\hooks\\useOperatorConfidence.ts",
+      "line": 344,
+      "rule": "MDC-046",
+      "detail": "Editable and URL-supplied IDs are interpolated directly into the metadata request path, unlike the encoded download ID. Slashes, question marks or hashes can alter path/query meaning.",
+      "fix": "Reuse encodeURIComponent for the path segment or validate the real artifact-ID contract; preserve URL-driven selection and query identity, and provide honest invalid-ID guidance without guessing UUID-only backend enforcement.",
+      "owner": "integration",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\admin\\components\\gdpr-export\\GDPRLookupPanel.tsx",
+      "line": 5,
+      "rule": "MDC-002 / category-barrel imports",
+      "detail": "All four feature panels import typography directly from @/components/ui/Typography, although other UI imports already use the category barrel.",
+      "fix": "Consolidate typography imports through @/components/ui in all four panels; do not change shared internal import policy.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\lib\\dateFormat.ts",
+      "line": 127,
+      "rule": "MDC-044 / lifecycle temporal fidelity",
+      "detail": "formatRelative emits literal English relative strings and returns 'just now' for all future instants because negative seconds satisfy seconds < 60. Selected expiry summary at page:103 and future lifecycle expiry time at GDPRLifecyclePanel.tsx:85 use this helper. Absolute expiry details remain present, but the relative label can misrepresent future expiry.",
+      "fix": "Shared date owner should use the existing localization/locale policy for past and future relative instants, retaining invalid/missing placeholders and absolute timestamp evidence. Callers must not create a separate per-feature relative-time formatter.",
+      "owner": "shared",
+      "confidence": "high"
+    }
+  ],
+  "priority": {
+    "level": "high",
+    "reason": "Source-proved API/type mismatch affects status, measurements and download eligibility; resolve integration ownership before accepting a cosmetic modernization.",
+    "order": [
+      "Reconcile real manifest/job evidence, metadata ID encoding and polling-copy ownership.",
+      "Reuse Button chrome, fix lifecycle accessible chronology and specific copy-action feedback.",
+      "Replace fixed feature palette/white decoration and typography deep imports.",
+      "Validate responsive labels and shared localized future-relative dates centrally."
+    ]
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "GDPR manifest/query integration contract",
+      "existingOwnerFile": "web\\src\\api\\hooks\\useOperatorConfidence.ts",
+      "owner": "integration",
+      "file": "web\\src\\api\\hooks\\useOperatorConfidence.ts",
+      "line": 339,
+      "rule": "MDC-045 / MDC-046",
+      "detail": "Typed response differs from directly returned backend manifest; metadata ID encoding and polling documentation also belong to this same owner.",
+      "fix": "Coordinate authoritative typed artifact/job data repair without a speculative second hook, fabricated lifecycle fields or policy changes.",
+      "confidence": "high",
+      "propsVariantsStates": {
+        "input": "id: string | null",
+        "wireFieldsConfirmed": ["id", "export_job_id", "vehicle_id", "storage_kind", "storage_path", "sha256", "byte_count", "created_at", "expires_at", "downloaded_at", "download_count"],
+        "callerStatesToPreserve": ["no selection", "initial loading", "fatal 404", "fatal 503", "retryable initial failure", "retained refresh failure", "paused/offline", "queued/running/complete/failed/expired where backed by real evidence"],
+        "policy": "existing key, AbortSignal, envelope, stale/refetch/retry semantics retained pending authorized integration"
+      },
+      "usedBy": ["web\\src\\features\\admin\\pages\\GDPRExportPage.tsx", "its four gdpr-export panels"],
+      "dependsOn": ["web\\src\\types\\admin-operator-confidence.ts", "internal\\handler\\v1\\gdpr_export_handler.go", "internal\\app\\gdprexportsvc\\service.go", "internal\\database\\gdpr\\artifact_repo.go"]
+    },
+    {
+      "name": "Localized past/future relative timestamps",
+      "existingOwnerFile": "web\\src\\lib\\dateFormat.ts",
+      "owner": "shared",
+      "file": "web\\src\\lib\\dateFormat.ts",
+      "line": 120,
+      "rule": "MDC-044",
+      "detail": "Existing helper is reused but future expiry and localized relative wording are unsupported by the inspected implementation.",
+      "fix": "Extend the canonical helper under its bounded owner, preserving past output semantics, absolute-date fallback and locale/timezone policy; verify affected consumers before adoption.",
+      "confidence": "high",
+      "propsVariantsStates": {
+        "existingSignature": "formatRelative(iso: string | Date | null | undefined, opts?: FormatOptions): string",
+        "states": ["missing", "invalid", "past", "current", "future expiry", "locale change"],
+        "preserve": ["absolute timestamps", "raw ISO values", "existing settings ownership"]
+      },
+      "usedBy": ["GDPRExportPage summary Created/Expires", "GDPRArtifactDetails TimeValue", "GDPRLifecyclePanel event times"],
+      "dependsOn": ["existing localization and date-format policy; no new formatter engine"]
+    }
+  ],
+  "competingImplementations": [
+    {
+      "file": "web\\src\\features\\admin\\components\\gdpr-export\\GDPRDownloadPanel.tsx",
+      "line": 43,
+      "rule": "MDC-002 / MDC-020",
+      "detail": "Manual download-link chrome competes with exported shared Button constants; the semantic anchor itself is appropriate.",
+      "fix": "Reuse BUTTON_BASE/BUTTON_VARIANTS.primary already exported at web\\src\\components\\ui\\index.ts:1.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "preservation": {
+    "sourceHash": "0FDF99D1744EFC671F71968D136B6C681C9DC9D3B74DED91A59353B7E3BC058F",
+    "hashAlgorithm": "SHA-256 of current page file bytes",
+    "currentLineCount": 228,
+    "pageAndFourPanelLineCount": 614,
+    "dependencyLineCounts": {
+      "GDPRLookupPanel.tsx": 76,
+      "GDPRArtifactDetails.tsx": 127,
+      "GDPRDownloadPanel.tsx": 70,
+      "GDPRLifecyclePanel.tsx": 113
+    },
+    "sectionCount": 5,
+    "sections": [
+      {"name": "Lookup artifact and source/retention hints", "file": "web\\src\\features\\admin\\pages\\GDPRExportPage.tsx", "line": 134, "count": 1},
+      {"name": "Artifact summary", "file": "web\\src\\features\\admin\\pages\\GDPRExportPage.tsx", "line": 187, "count": 1, "metricCount": 6, "metrics": ["status", "format", "bytes", "storage", "created", "expires"]},
+      {"name": "Artifact details", "file": "web\\src\\features\\admin\\pages\\GDPRExportPage.tsx", "line": 207, "count": 1, "fields": ["id", "user_id when present", "created_at", "completed_at when present", "expires_at when present", "sha256 when present"]},
+      {"name": "Download and eligibility explanation", "file": "web\\src\\features\\admin\\pages\\GDPRExportPage.tsx", "line": 213, "count": 1},
+      {"name": "Lifecycle events", "file": "web\\src\\features\\admin\\pages\\GDPRExportPage.tsx", "line": 218, "count": 1, "events": ["created", "completed except failed", "failed with meaningful error/fallback", "expires or expired"]}
+    ],
+    "conditionalSurfaces": ["no artifact selected", "subsystem unsupported", "artifact not found", "retryable QueryError", "artifact failure alert", "retained-source notice/freshness", "section error boundary"],
+    "sourceComponentCounts": {"pageGlassPanel": 2, "pageChartContainer": 0, "fourPanelsGlassPanel": 4, "pageAdminSummary": 1, "pageGDPRPanelCallSites": 4},
+    "actions": [
+      "Edit localized artifact ID draft.",
+      "Look up using nonblank trimmed Button or Enter activation.",
+      "Replace URL search params with selected id and synchronize draft on deep links/back-forward (page:52-65,77-80).",
+      "Manual refresh in header and QueryError retry.",
+      "Copy exact artifact ID and SHA-256.",
+      "Native browser-owned download with encoded ID and download attribute."
+    ],
+    "dataBehavior": [
+      "URL id is the authoritative selection, not duplicated server state.",
+      "Keep typed query key, cancellation, retry, interval/background policy and envelope handling; repair real contract rather than invent data.",
+      "Missing bytes/status/storage/format remain unknown, not measured zero or synthetic completion.",
+      "Raw byte count enters the numeric metric formatter; display uses existing formatBytes/settings bridge.",
+      "Keep exact timestamps, relative and absolute views, raw artifact error, checksum, copy payload and lifecycle ordering.",
+      "Fatal versus retained refresh errors must remain separate; stale/offline cannot erase the last useful artifact.",
+      "Retain all backend manifest evidence during contract repair; no implicit removal of storage, size, job/vehicle identity or download audit metadata.",
+      "Do not add duplicate workspace date or vehicle selectors; current scope is a single artifact and lifecycle business dates."
+    ],
+    "sourceModified": false
+  },
+  "evidenceLimits": {
+    "method": "Bounded Phase0 source inspection only; no source edits, Git commands, full lint, TypeScript, build, tests, network requests or production mutations.",
+    "route": "Assigned route retained exactly; registered API routes inspected. SPA mount, permissions and route reachability were not exercised.",
+    "runtime": "UNVERIFIED",
+    "visual": "UNVERIFIED",
+    "keyboard": "UNVERIFIED",
+    "contrast": "UNVERIFIED",
+    "viewport": "UNVERIFIED",
+    "dependencies": "Only page-specific component/data owners and relevant shared APIs were inspected. Shared rendering engines, global CSS/theme, routing inventory and unrelated hook domains were not audited.",
+    "scriptNotRun": "The audit-violations skill script was inspected but not executed because it unconditionally runs whole-package TypeScript; source-only assignment and concurrent-worker conventions prohibit that validation here.",
+    "sourceChecks": {
+      "command": "PowerShell regex counts against only GDPRExportPage.tsx; Get-FileHash -Algorithm SHA256; Get-Content line counts",
+      "exitCode": 0,
+      "output": ["page style= count=0", "page raw button/input/textarea/select/table count=0", "page direct recharts/react-leaflet/framer-motion import count=0", "page old relative api import count=0", "page text-white/bg-white/neon/glow count=0", "page=228", "page-plus-four-panels=614", "SHA256=0FDF99D1744EFC671F71968D136B6C681C9DC9D3B74DED91A59353B7E3BC058F"],
+      "scopeLimit": "These zero counts are lexical page-only results, not a clean dependency audit. Fixed-white/saturated palette and competing chrome findings in panels are separately cited."
+    },
+    "glowAssessment": "No explicit neon/glow token was found in the page or four inspected panels; no composed-theme absence or visual acceptance is claimed.",
+    "unknowns": ["Actual deployment subsystem configuration", "Manifest/job integration intent and real lifecycle source", "Auth/session download outcomes", "Real download audit persistence", "UI behavior at all requested widths/themes/RTL/200% text", "Date preference/timezone integration and exact rendered contrast"],
+    "ownedFiles": ["docs\\frontend-audits\\audit-page-016.json", ".agent-status\\audit-page-016.txt"]
+  },
+  "filesRead": [
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\admin\\pages\\GDPRExportPage.tsx",
+    "web\\src\\features\\admin\\components\\operationalbrief-a-g\\AdminSummary.tsx",
+    "web\\src\\features\\admin\\components\\gdpr-export\\index.ts",
+    "web\\src\\features\\admin\\components\\gdpr-export\\constants.ts",
+    "web\\src\\features\\admin\\components\\gdpr-export\\GDPRLookupPanel.tsx",
+    "web\\src\\features\\admin\\components\\gdpr-export\\GDPRArtifactDetails.tsx",
+    "web\\src\\features\\admin\\components\\gdpr-export\\GDPRDownloadPanel.tsx",
+    "web\\src\\features\\admin\\components\\gdpr-export\\GDPRLifecyclePanel.tsx",
+    "web\\src\\api\\hooks\\useOperatorConfidence.ts",
+    "web\\src\\types\\admin-operator-confidence.ts",
+    "web\\src\\api\\client.ts",
+    "web\\src\\api\\dataState.ts",
+    "web\\src\\hooks\\useNumberFormatting.ts",
+    "web\\src\\lib\\dateFormat.ts",
+    "web\\src\\components\\ui\\index.ts",
+    "web\\src\\components\\ui\\Button.tsx",
+    "web\\src\\components\\ui\\CopyButton.tsx",
+    "web\\src\\components\\layout\\index.ts",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\layout\\PageContainer.tsx",
+    "web\\src\\components\\data-display\\Timeline.tsx",
+    "web\\src\\components\\motion\\FadeIn.tsx",
+    "internal\\api\\router.go",
+    "internal\\handler\\v1\\gdpr_export_handler.go",
+    "internal\\app\\gdprexportsvc\\service.go",
+    "internal\\database\\gdpr\\artifact_repo.go"
+  ]
+}

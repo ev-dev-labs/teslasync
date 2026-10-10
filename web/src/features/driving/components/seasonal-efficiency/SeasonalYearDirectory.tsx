@@ -6,12 +6,14 @@ import type { SeasonalSectionProps } from './types';
 import { formatIntensityWhPerM } from './formatters';
 import { GlassPanel, PanelTitle, Text } from '@/components/ui';
 import { EmptyState } from '@/components/feedback';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export function SeasonalYearDirectory({
   analysis,
   state,
   units,
 }: SeasonalSectionProps) {
+  useNumberFormatting();
   const { t } = useTranslation();
   return (
     <section data-testid="seasonal-year-directory">
@@ -46,7 +48,7 @@ export function SeasonalYearDirectory({
                   </div>
                   <Text variant="caption" as="p" className="mt-2">
                     {t('seasonalEfficiency.yearDirectory.distance', '{{distance}} observed distance', {
-                      distance: units.formatDistance(year.distanceM, { precision: 0 }),
+                      distance: units.formatDistance(year.distanceM),
                     })}
                   </Text>
                   <Text variant="caption" as="p">

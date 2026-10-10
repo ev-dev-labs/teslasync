@@ -10,7 +10,7 @@
  *      useSettings stub reports metric units).
  *   3. Section-local loading / error / empty branches for EVERY panel (KPI band,
  *      % change chart, insights, comparison table) — no panel is gated away.
- *   4. Deterministic percent-change derivations (`fmtNumber(pct, 1)`) surfaced in
+ *   4. Settings-based percent-change presentation surfaced in
  *      the insight sentences, KPI pills, and table.
  *   5. The disambiguation banner: shown for multi-vehicle accounts, hidden for
  *      single-vehicle accounts, and hidden once dismissed (persisted to
@@ -25,7 +25,7 @@
  * reproduces the banner-suppression bug the fix addresses.
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+import { act, render, screen, waitFor, fireEvent, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
@@ -106,6 +106,9 @@ vi.mock('react-i18next', async () => {
 
 import PeriodComparePage from './PeriodComparePage';
 import { ApiError } from '@/lib/resilience';
+import { setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat';
+import { VehiclePicker } from '@/components/layout';
+import { SelectedVehicleProvider } from '@/store/selectedVehicle';
 
 const BANNER_KEY = 'phase40.compareBanner.dismissed.period';
 
@@ -171,6 +174,7 @@ function installRequest({ vehicles = TWO_VEHICLES, statsMode = 'resolve', statsE
       return Promise.resolve(STATS_BY_DAYS[days] ?? STATS_30);
     }
     if (u.includes('/vehicles')) return Promise.resolve(vehicles);
+    if (u.startsWith('/pinned?')) return Promise.resolve([]);
     return Promise.resolve({});
   });
 }
@@ -187,14 +191,23 @@ function renderPage() {
   });
   return render(
     <QueryClientProvider client={client}>
-      <MemoryRouter>
-        <PeriodComparePage />
+      <MemoryRouter initialEntries={['/period-compare']}>
+        <SelectedVehicleProvider>
+          <header aria-label="Workspace vehicle selection">
+            <VehiclePicker />
+          </header>
+          <main aria-label="Period comparison page">
+            <PeriodComparePage />
+          </main>
+        </SelectedVehicleProvider>
       </MemoryRouter>
     </QueryClientProvider>,
   );
 }
 
 beforeEach(() => {
+  setGlobalLocale('en-US');
+  setGlobalPrecision(2);
   mockRequest.mockReset();
   aiCapture.props = null;
   window.localStorage.clear();
@@ -205,55 +218,105 @@ afterEach(() => {
 });
 
 describe('PeriodComparePage — happy path', () => {
+  it('reviews both source windows and original baselines in the real OperationalBrief drawer', async () => {
+    installRequest();
+    renderPage();
+    await screen.findByText(/Distance traveled was -50\.00% less/);
+    const brief = screen.getByTestId('period-compare-summary');
+    expect(brief).toHaveAttribute('data-operational-brief');
+    expect(brief.querySelectorAll('[data-operational-metric]')).toHaveLength(6);
+    expect(brief.querySelectorAll('[data-value-state="value"]')).toHaveLength(6);
+    expect(within(brief).getByText('Period A: Last 30 days · Period B: Last 90 days')).toBeInTheDocument();
+    const calls = periodStatsCalls();
+    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+    const drawer = await screen.findByRole('dialog');
+    expect(within(drawer).getByText('Operational metrics')).toBeInTheDocument();
+    expect(within(drawer).getByText(/Period B: 2,000\.00 km/)).toBeInTheDocument();
+    expect(within(drawer).getAllByText(/-50\.00%/).length).toBeGreaterThan(0);
+    expect(periodStatsCalls()).toEqual(calls);
+  });
+
+  it('keeps drive counts integer while mounted measurements and percentages follow settings', async () => {
+    installRequest();
+    renderPage();
+    await screen.findByText(/Distance traveled was -50\.00% less/);
+    const calls = periodStatsCalls();
+    const counts = () => within(screen.getByRole('row', { name: /Total drives/ }));
+    expect(counts().getByText('50')).toBeInTheDocument();
+    expect(counts().getByText('90')).toBeInTheDocument();
+    expect(counts().getByText('↓ 40')).toBeInTheDocument();
+    expect(counts().getByText('-44.44%')).toBeInTheDocument();
+
+    act(() => setGlobalPrecision(0));
+    expect(screen.getByText(/Distance traveled was -50% less/)).toBeInTheDocument();
+    expect(counts().getByText('50')).toBeInTheDocument();
+    expect(counts().getByText('↓ 40')).toBeInTheDocument();
+    expect(counts().getByText('-44%')).toBeInTheDocument();
+
+    act(() => {
+      setGlobalPrecision(3);
+      setGlobalLocale('de-DE');
+    });
+    expect(screen.getByText(/Distance traveled was -50,000% less/)).toBeInTheDocument();
+    expect(counts().getByText('50')).toBeInTheDocument();
+    expect(counts().getByText('90')).toBeInTheDocument();
+    expect(counts().getByText('↓ 40')).toBeInTheDocument();
+    expect(counts().getByText('-44,444%')).toBeInTheDocument();
+    expect(periodStatsCalls()).toEqual(calls);
+  });
+
   it('renders the page shell, all six KPI metrics, and every analytics panel heading', async () => {
     installRequest();
     renderPage();
 
     // Insight sentence proves BOTH feeds resolved and derivations ran.
-    await screen.findByText(/Distance traveled was -50\.0% less/);
+    await screen.findByText(/Distance traveled was -50\.00% less/);
 
     expect(
-      screen.getByRole('heading', { level: 1, name: 'Period Comparison' }),
+      screen.getByRole('heading', { level: 1, name: 'Period comparison' }),
     ).toBeInTheDocument();
 
     // All six KPI labels are present — no section is gutted.
     for (const label of [
-      /Total Distance/,
-      /Total Drives/,
-      /Energy Used/,
-      /Avg Efficiency/,
-      /Total Cost/,
-      /Saved/,
+      /Total distance/,
+      /Total drives/,
+      /Energy used/,
+      /Avg efficiency/,
+      /Total cost/,
+      /saved/,
     ]) {
       expect(screen.getAllByText(label).length).toBeGreaterThan(0);
     }
 
     // The three lower panels each render their title (mounted, not hidden).
     expect(
-      screen.getByRole('heading', { level: 3, name: 'Change vs Period B (%)' }),
+      screen.getByRole('heading', { level: 3, name: 'Change vs period B (%)' }),
     ).toBeInTheDocument();
     expect(screen.getByRole('heading', { level: 3, name: 'Insights' })).toBeInTheDocument();
     expect(
-      screen.getByRole('heading', { level: 3, name: 'Comparison Details' }),
+      screen.getByRole('heading', { level: 3, name: 'Comparison details' }),
     ).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Reorder or hide columns' })).not.toBeInTheDocument();
+    const comparisonTable = screen.getByRole('table');
+    expect(comparisonTable.querySelectorAll('[role="separator"], [draggable="true"]')).toHaveLength(0);
   });
 
   it('derives deterministic percent-change insight sentences from both feeds', async () => {
     installRequest();
     renderPage();
 
-    // fmtNumber(pct, 1) → always one decimal, independent of the global precision.
+    // The fixture's selected precision is two decimals.
     expect(
-      await screen.findByText(/Distance traveled was -50\.0% less in Period A vs Period B\./),
+      await screen.findByText(/Distance traveled was -50\.00% less in period A vs period B\./),
     ).toBeInTheDocument();
     // Fixture: A=200 Wh/km beats B=210 Wh/km, so efficiency IMPROVED — lower
     // consumption is better (the old "declined by -4.8%" expectation had the
     // direction inverted). Magnitude is unsigned so the sentence reads naturally.
     expect(
-      screen.getByText(/Efficiency improved by 4\.8% compared to Period B\./),
+      screen.getByText(/Efficiency improved by 4\.76% compared to period B\./),
     ).toBeInTheDocument();
     expect(
-      screen.getByText(/Costs were -54\.5% lower in Period A\./),
+      screen.getByText(/Costs were -54\.55% lower in period A\./),
     ).toBeInTheDocument();
   });
 
@@ -261,7 +324,7 @@ describe('PeriodComparePage — happy path', () => {
     installRequest();
     renderPage();
 
-    await screen.findByText(/Distance traveled was -50\.0% less/);
+    await screen.findByText(/Distance traveled was -50\.00% less/);
 
     const calls = periodStatsCalls();
     // Active vehicle falls back to the first vehicle (id 10); both windows fetched.
@@ -275,7 +338,7 @@ describe('PeriodComparePage — happy path', () => {
     installRequest();
     renderPage();
 
-    await screen.findByText(/Distance traveled was -50\.0% less/);
+    await screen.findByText(/Distance traveled was -50\.00% less/);
     expect(screen.getByTestId('ai-narration-stub')).toBeInTheDocument();
     expect(aiCapture.props).toMatchObject({ vehicleId: '10', daysA: 30, daysB: 90 });
   });
@@ -294,14 +357,15 @@ describe('PeriodComparePage — loading / error / empty branches', () => {
       if (path.includes('period-stats')) {
         return Promise.resolve(path.includes('days=90') ? zeroBaseline : STATS_30);
       }
+      if (path.startsWith('/pinned?')) return Promise.resolve([]);
       return Promise.resolve({});
     });
     renderPage();
 
-    expect(await screen.findByText(/Percent change requires a nonzero Period B baseline/)).toBeInTheDocument();
-    expect(screen.getByText('Distance change is unavailable: Period B has no baseline.')).toBeInTheDocument();
-    expect(screen.getByText('Efficiency change is unavailable: Period B has no baseline.')).toBeInTheDocument();
-    expect(screen.getByText('Cost change is unavailable: Period B has no baseline.')).toBeInTheDocument();
+    expect(await screen.findByText(/Percent change requires a nonzero period B baseline/)).toBeInTheDocument();
+    expect(screen.getByText('Distance change is unavailable: period B has no baseline.')).toBeInTheDocument();
+    expect(screen.getByText('Efficiency change is unavailable: period B has no baseline.')).toBeInTheDocument();
+    expect(screen.getByText('Cost change is unavailable: period B has no baseline.')).toBeInTheDocument();
     expect(screen.queryByText(/Distance traveled was — more/)).not.toBeInTheDocument();
   });
 
@@ -313,13 +377,14 @@ describe('PeriodComparePage — loading / error / empty branches', () => {
       if (path.includes('period-stats')) {
         return Promise.resolve(path.includes('days=90') ? { ...STATS_90, total_distance: 0 } : STATS_30);
       }
+      if (path.startsWith('/pinned?')) return Promise.resolve([]);
       return Promise.resolve({});
     });
     renderPage();
 
-    expect(await screen.findByText('One metric with no Period B baseline is omitted from the chart.')).toBeInTheDocument();
-    expect(screen.getByText('Distance change is unavailable: Period B has no baseline.')).toBeInTheDocument();
-    expect(screen.queryByText(/Percent change requires a nonzero Period B baseline/)).not.toBeInTheDocument();
+    expect(await screen.findByText('One metric with no period B baseline is omitted from the chart.')).toBeInTheDocument();
+    expect(screen.getByText('Distance change is unavailable: period B has no baseline.')).toBeInTheDocument();
+    expect(screen.queryByText(/Percent change requires a nonzero period B baseline/)).not.toBeInTheDocument();
   });
 
   it('shows skeleton placeholders (never a blank panel) while the feeds are in flight', async () => {
@@ -328,14 +393,15 @@ describe('PeriodComparePage — loading / error / empty branches', () => {
 
     // Once the vehicle list resolves the (pending) stats queries turn loading.
     await waitFor(() =>
-      expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThan(0),
+      expect(container.querySelectorAll('[class~="bg-[var(--skeleton-bg)]"]').length).toBeGreaterThan(0),
     );
     // The chart panel is still mounted (title present) — only its body is a skeleton.
     expect(
-      screen.getByRole('heading', { level: 3, name: 'Change vs Period B (%)' }),
+      screen.getByRole('heading', { level: 3, name: 'Change vs period B (%)' }),
     ).toBeInTheDocument();
-    // No KPI card content leaks while loading.
-    expect(screen.queryByText(/Total Distance/)).toBeNull();
+    // Metric labels remain visible, but measured KPI values do not.
+    expect(within(screen.getByTestId('period-compare-summary')).getByText(/Total distance/)).toBeInTheDocument();
+    expect(screen.getByTestId('period-compare-summary').querySelector('[data-operational-value]')).toBeNull();
   });
 
   it('renders per-section error states with a working Retry that refetches both feeds', async () => {
@@ -382,23 +448,23 @@ describe('PeriodComparePage — disambiguation banner', () => {
     renderPage();
 
     // Wait until the vehicle list has resolved (KPI band populated).
-    await screen.findByText(/Distance traveled was -50\.0% less/);
+    await screen.findByText(/Distance traveled was -50\.00% less/);
 
     expect(
       screen.getByText(/Looking to compare two vehicles instead\?/),
     ).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /Open Fleet comparison/ })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /Open fleet comparison/ })).toBeInTheDocument();
   });
 
   it('hides the banner for a single-vehicle account (cross-navigation is pointless)', async () => {
     installRequest({ vehicles: ONE_VEHICLE });
     renderPage();
 
-    await screen.findByText(/Distance traveled was -50\.0% less/);
+    await screen.findByText(/Distance traveled was -50\.00% less/);
     await waitFor(() =>
       expect(screen.queryByText(/Looking to compare two vehicles instead\?/)).toBeNull(),
     );
-    expect(screen.queryByRole('link', { name: /Open Fleet comparison/ })).toBeNull();
+    expect(screen.queryByRole('link', { name: /Open fleet comparison/ })).toBeNull();
   });
 
   it('dismisses the banner on close and persists the choice to localStorage', async () => {
@@ -419,7 +485,7 @@ describe('PeriodComparePage — disambiguation banner', () => {
     installRequest({ vehicles: TWO_VEHICLES });
     renderPage();
 
-    await screen.findByText(/Distance traveled was -50\.0% less/);
+    await screen.findByText(/Distance traveled was -50\.00% less/);
     expect(screen.queryByText(/Looking to compare two vehicles instead\?/)).toBeNull();
   });
 });
@@ -429,11 +495,14 @@ describe('PeriodComparePage — toolbar interactions & a11y', () => {
     installRequest();
     renderPage();
 
-    await screen.findByText(/Distance traveled was -50\.0% less/);
+    await screen.findByText(/Distance traveled was -50\.00% less/);
 
-    expect(screen.getByRole('combobox', { name: 'Vehicle' })).toBeInTheDocument();
+    expect(within(screen.getByRole('banner', { name: 'Workspace vehicle selection' }))
+      .getByRole('combobox', { name: 'Select vehicle' })).toBeInTheDocument();
     expect(screen.getByRole('combobox', { name: 'Period A' })).toBeInTheDocument();
     expect(screen.getByRole('combobox', { name: 'Period B' })).toBeInTheDocument();
+    expect(within(screen.getByRole('main', { name: 'Period comparison page' }))
+      .queryByRole('combobox', { name: 'Select vehicle' })).toBeNull();
 
     // The toolbar refresh (rendered after PageContainer's freshness chip, which
     // also exposes a "Refresh" control) triggers a refetch of both feeds.
@@ -448,7 +517,7 @@ describe('PeriodComparePage — toolbar interactions & a11y', () => {
     installRequest();
     renderPage();
 
-    await screen.findByText(/Distance traveled was -50\.0% less/);
+    await screen.findByText(/Distance traveled was -50\.00% less/);
     expect(periodStatsCalls().some((u) => /days=7(?:&|$)/.test(u))).toBe(false);
 
     fireEvent.change(screen.getByRole('combobox', { name: 'Period A' }), {
@@ -466,14 +535,16 @@ describe('PeriodComparePage — toolbar interactions & a11y', () => {
     installRequest();
     renderPage();
 
-    await screen.findByText(/Distance traveled was -50\.0% less/);
+    await screen.findByText(/Distance traveled was -50\.00% less/);
 
-    fireEvent.change(screen.getByRole('combobox', { name: 'Vehicle' }), {
-      target: { value: '20' },
-    });
+    fireEvent.click(screen.getByRole('combobox', { name: 'Select vehicle' }));
+    fireEvent.click(await screen.findByRole('option', { name: 'Model Y' }));
 
     await waitFor(() =>
       expect(periodStatsCalls().some((u) => /vehicle_id=20\b/.test(u))).toBe(true),
     );
+    expect(periodStatsCalls().some((u) => /vehicle_id=20\b/.test(u) && /days=30(?:&|$)/.test(u))).toBe(true);
+    expect(periodStatsCalls().some((u) => /vehicle_id=20\b/.test(u) && /days=90(?:&|$)/.test(u))).toBe(true);
+    expect(aiCapture.props?.vehicleId).toBe('20');
   });
 });

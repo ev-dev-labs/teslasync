@@ -3,13 +3,13 @@
 // Replaces the old single intro paragraph with a richer, always-visible help
 // surface that fills the workspace sidebar on wide screens: a read-only
 // callout, a short tips list, and a copy-ready example query. Purely
-// presentational and self-contained — no props, no state, no data fetching.
+// presentational and self-contained — no data fetching or query execution.
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { FileCode, Info } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import { GlassPanel, PanelTitle, Text } from '@/components/ui';
+import { CodeBlock, CopyButton, GlassPanel, PanelTitle, Text } from '@/components/ui';
 import { InlineCallout } from '@/components/feedback';
 
 // A literal, copy-ready SQL example. This is code (not translatable prose), so
@@ -49,6 +49,7 @@ const TIP_DEFS = [
 
 export function QueryReferencePanel() {
   const { t } = useTranslation();
+  const [copyFailed, setCopyFailed] = useState(false);
 
   const tips = useMemo(
     () => TIP_DEFS.map(({ id, key, fallback }) => ({ id, text: t(key, fallback) })),
@@ -56,9 +57,9 @@ export function QueryReferencePanel() {
   );
 
   return (
-    <GlassPanel className="space-y-3 p-4 sm:p-5">
-      <PanelTitle className="flex items-center gap-2">
-        <FileCode className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+    <GlassPanel className="min-w-0 max-w-full space-y-3 p-4 sm:p-5">
+      <PanelTitle className="flex min-w-0 items-center gap-2 break-words">
+        <FileCode className="h-4 w-4 shrink-0 text-cyan-300" aria-hidden="true" />
         {t('powerSql.info.title', 'Working with queries')}
       </PanelTitle>
       <InlineCallout variant="info" icon={<Info className="h-4 w-4" />}>
@@ -80,19 +81,31 @@ export function QueryReferencePanel() {
           </li>
         ))}
       </ul>
-      <figure className="rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3">
+      <figure>
         <Text as="figcaption" variant="caption">
           {t('powerSql.info.exampleLabel', 'Example')}
         </Text>
-        <Text
-          mono
-          size="xs"
-          as="pre"
-          className="mt-1 whitespace-pre-wrap break-words text-[var(--text-secondary)]"
-        >
-          {EXAMPLE_QUERY}
-        </Text>
+        <CodeBlock
+          text={EXAMPLE_QUERY}
+          language="sql"
+          wrap
+          action={
+            <CopyButton
+              text={EXAMPLE_QUERY}
+              onCopy={() => setCopyFailed(false)}
+              onCopyError={() => setCopyFailed(true)}
+            />
+          }
+        />
       </figure>
+      {copyFailed && (
+        <InlineCallout variant="warning">
+          {t(
+            'powerSql.editor.copyFailed',
+            'Clipboard write failed. Select the text manually and copy with ctrl+C / cmd+C.',
+          )}
+        </InlineCallout>
+      )}
     </GlassPanel>
   );
 }

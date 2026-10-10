@@ -9,6 +9,7 @@ import { ChartTooltip } from './ChartTooltip';
 import { chartGrid, axisTick } from './chartUtils';
 import { AREA_DEFAULTS, areaGradient } from './chartDefaults';
 import { PillFilterBar, type PillItem } from '@/components/forms/PillFilterBar';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 /**
  * Definition of one switchable metric inside {@link MetricSwitcherChart}.
@@ -30,12 +31,14 @@ export interface MetricSwitcherMetric<P> {
   accent?: PillItem['accent'];
   /** Optional Y-axis unit suffix (e.g. " mi"). */
   unit?: string;
+  /** Numeric display semantics when no caller formatter is supplied. */
+  kind?: 'measurement' | 'count';
   /**
    * Per-metric value extractor. Receives the raw point and returns the
    * numeric Y value for that day. Defaults to `(p) => p.value` so the
    * canonical `{date, value}` shape is supported with zero config.
    */
-  getValue?: (point: P) => number;
+  getValue?: (point: P) => number | null;
   /** Optional tooltip value formatter. */
   formatValue?: (value: number) => string;
   /**
@@ -156,6 +159,7 @@ export function MetricSwitcherChart<P extends { date: string }>({
   testId,
 }: MetricSwitcherChartProps<P>) {
   const { t } = useTranslation();
+  const { fmtNumber, fmtInt } = useNumberFormatting();
   const active = metrics.find((m) => m.key === activeMetric) ?? metrics[0];
   const data = active ? (series[active.key] ?? []) : [];
   const valueKey = '__value';
@@ -180,7 +184,7 @@ export function MetricSwitcherChart<P extends { date: string }>({
 
   const tooltipFormatter = (value: number | string): [string, string] => {
     const n = typeof value === 'number' ? value : Number(value);
-    const formatted = active?.formatValue ? active.formatValue(n) : String(value);
+    const formatted = active?.formatValue ? active.formatValue(n) : formatReading(value);
     return [formatted, active?.label ?? ''];
   };
 
@@ -190,8 +194,17 @@ export function MetricSwitcherChart<P extends { date: string }>({
   const yTickFormatter = (value: number): string => {
     if (active?.formatTick) return active.formatTick(value);
     if (active?.formatValue) return active.formatValue(value);
-    return String(value);
+    return formatReading(value);
   };
+  function formatReading(value: unknown): string {
+    if (value == null || (typeof value === 'number' && !Number.isFinite(value))) return '—';
+    if (typeof value !== 'number') return String(value);
+    if (active?.kind === 'count') return fmtInt(value);
+    if (active?.kind === 'measurement' || active?.unit) return `${fmtNumber(value)}${active.unit ?? ''}`;
+    // An untyped unitless series may contain counts or IDs. Preserve its raw
+    // contract instead of inferring semantics from its translated label.
+    return String(value);
+  }
 
   const xTickFormatter = formatXTick
     ? (value: string): string => formatXTick(value)
@@ -200,10 +213,11 @@ export function MetricSwitcherChart<P extends { date: string }>({
   const chartType = active?.chart ?? 'bar';
   const color = active?.color ?? 'var(--theme-primary, #3b82f6)';
   const gradId = `metricSwitcherGrad-${active?.key ?? 'x'}`;
-  const yAxis = resolveYAxisProps(
-    projected.map((point) => (point as Record<string, unknown>)[valueKey] as number),
-    chartType,
-  );
+  const numericValues = projected.flatMap((point) => {
+    const value = point[valueKey];
+    return typeof value === 'number' && Number.isFinite(value) ? [value] : [];
+  });
+  const yAxis = resolveYAxisProps(numericValues, chartType);
 
   const switcher = (
     <PillFilterBar
@@ -233,7 +247,7 @@ export function MetricSwitcherChart<P extends { date: string }>({
       size="compact"
       height={height}
       action={combinedAction}
-      empty={projected.length === 0}
+      empty={numericValues.length === 0}
       emptyMessage={emptyMessage}
       data={projected}
       dataColumns={[
@@ -242,10 +256,11 @@ export function MetricSwitcherChart<P extends { date: string }>({
           key: valueKey,
           label: active?.label ?? t('chart.col.value', 'Value'),
           format: (value) => {
+            if (value == null) return formatReading(value);
             const numeric = typeof value === 'number' ? value : Number(value);
             return active?.formatValue && Number.isFinite(numeric)
               ? active.formatValue(numeric)
-              : String(value ?? '—');
+              : formatReading(value);
           },
         },
       ]}

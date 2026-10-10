@@ -92,9 +92,9 @@ AIThinkingIndicator.displayName = 'AIThinkingIndicator'
  */
 export function AIThinkingDots({ label }: { label: string }): JSX.Element {
   return (
-    <span className="inline-flex items-center gap-1.5">
-      <span>{label}</span>
-      <span className="inline-flex items-end gap-0.5" aria-hidden="true">
+    <span className="inline-flex min-w-0 max-w-full items-center gap-1.5">
+      <span className="min-w-0 break-words">{label}</span>
+      <span className="inline-flex shrink-0 items-end gap-0.5" aria-hidden="true">
         <span className="motion-safe:animate-bounce motion-safe:[animation-delay:-0.3s] inline-block h-1 w-1 rounded-full bg-current" />
         <span className="motion-safe:animate-bounce motion-safe:[animation-delay:-0.15s] inline-block h-1 w-1 rounded-full bg-current" />
         <span className="motion-safe:animate-bounce inline-block h-1 w-1 rounded-full bg-current" />

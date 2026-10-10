@@ -64,8 +64,8 @@ describe('SitePriceRadar', () => {
     render(<SitePriceRadar />);
     const items = screen.getAllByText(/SC/);
     expect(items[0].textContent).toContain('Cheap SC');
-    expect(screen.getByText('$0.300')).toBeTruthy();
-    expect(screen.getByText('$0.500')).toBeTruthy();
+    expect(screen.getByText('$0.30')).toBeTruthy();
+    expect(screen.getByText('$0.50')).toBeTruthy();
   });
 
   it('shows the spread and unpriced count', () => {

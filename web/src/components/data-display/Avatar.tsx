@@ -6,6 +6,7 @@ import { HelixMark } from '@/components/branding/HelixMark';
 import { Tooltip } from '@/components/ui/Tooltip';
 import { CHART_COLORS_CB_SAFE } from '@/lib/colors';
 import { cn } from '@/lib/cn';
+import { neonColorMap, typography } from '@/lib/tokens';
 
 /**
  * Shared Avatar primitive.
@@ -85,19 +86,19 @@ const SIZE_PX: Record<AvatarSize, number> = {
 };
 
 const SIZE_CLASSES: Record<AvatarSize, string> = {
-  xs: 'h-4 w-4 text-2xs',
-  sm: 'h-6 w-6 text-2xs',
-  md: 'h-8 w-8 text-xs',
-  lg: 'h-12 w-12 text-sm',
+  xs: cn('h-4 w-4', typography.size['2xs']),
+  sm: cn('h-6 w-6', typography.size['2xs']),
+  md: cn('h-8 w-8', typography.size.xs),
+  lg: cn('h-12 w-12', typography.size.sm),
 };
 
 const STATUS_CLASSES: Record<AvatarStatus, string> = {
   // Status uses the semantic palette (good/warn/muted) — the same hues
   // every other live indicator in the app uses, so colour-meaning stays
   // consistent across surfaces.
-  online: 'bg-emerald-400',
-  idle: 'bg-amber-400',
-  offline: 'bg-gray-500',
+  online: neonColorMap.green.dot,
+  idle: neonColorMap.amber.dot,
+  offline: neonColorMap.neutral.dot,
 };
 
 /**
@@ -153,7 +154,7 @@ export function Avatar({
   className,
 }: AvatarProps) {
   const { t } = useTranslation();
-  const [imageFailed, setImageFailed] = useState(false);
+  const [failedSrc, setFailedSrc] = useState<string | null>(null);
 
   const trimmedName = name?.trim() ?? '';
   const seed = (userId && userId.length > 0 ? userId : trimmedName) || '?';
@@ -161,7 +162,7 @@ export function Avatar({
   const backgroundColor = CHART_COLORS_CB_SAFE[colorIndex];
   const initials = avatarInitials(name);
   const hasNameInitials = initials !== '?';
-  const showImage = Boolean(src) && !imageFailed;
+  const showImage = Boolean(src) && src !== failedSrc;
 
   const radiusClass = shape === 'circle' ? 'rounded-full' : 'rounded-lg';
   const sizeClass = SIZE_CLASSES[size];
@@ -192,22 +193,21 @@ export function Avatar({
   const inner = (
     <span
       className={cn(
-        'relative inline-flex shrink-0 items-center justify-center overflow-hidden font-semibold text-[var(--text-secondary)] select-none',
+        'relative inline-flex shrink-0 items-center justify-center overflow-hidden select-none',
+        typography.weight.semibold,
+        isAttributed && !showImage ? 'text-slate-900' : typography.color.secondary,
         // Keep the avatar circle visible in Windows High
         // Contrast: a CanvasText border gives the chip a system-colour
         // outline since the bg-* colour is suppressed by forced-colors.
-        'forced-colors:border forced-colors:border-[CanvasText] forced-colors:bg-[Canvas]',
+        'forced-colors:border forced-colors:border-[CanvasText] forced-colors:bg-[Canvas] forced-colors:text-[CanvasText]',
         radiusClass,
         sizeClass,
         !isAttributed && !showImage && 'bg-[var(--surface-2)]',
         className,
       )}
-      // Attributed avatars sit on a saturated palette fill, so pair a light
-      // foreground with the dynamic background — initials stay legible on the
-      // colored circle in every theme. The unattributed fallback glyph has no
-      // inline colour and inherits the themed --text-secondary from className
-      // above, so it stays visible on --surface-2 in light *and* dark.
-      style={fallbackBg && !showImage ? { backgroundColor: fallbackBg, color: '#fff' } : undefined}
+      // This existing restrained palette uses light fills in every theme;
+      // a dark on-fill foreground keeps initials readable without white chrome.
+      style={fallbackBg && !showImage ? { backgroundColor: fallbackBg } : undefined}
       data-testid="avatar"
       data-avatar-kind={kind}
     >
@@ -215,19 +215,20 @@ export function Avatar({
         <img
           src={src ?? undefined}
           alt={trimmedName.length > 0 ? trimmedName : t('avatar.unknown', 'Unknown user')}
-          onError={() => setImageFailed(true)}
+          onError={() => setFailedSrc(src ?? null)}
           className={cn('h-full w-full object-cover', radiusClass)}
           data-testid="avatar-image"
         />
       ) : hasNameInitials ? (
-        <span aria-hidden="true" data-testid="avatar-initials">
+        <span role="img" aria-label={tooltipLabel} data-testid="avatar-initials">
           {initials}
         </span>
       ) : (
         <GenericIcon
           width={glyphSize}
           height={glyphSize}
-          aria-hidden="true"
+          role="img"
+          aria-label={tooltipLabel}
           data-testid="avatar-glyph"
         />
       )}

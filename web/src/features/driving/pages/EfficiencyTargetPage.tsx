@@ -3,7 +3,9 @@ import { useTranslation } from 'react-i18next';
 
 import { useDriveHistory } from '@/api/hooks/useDriving';
 
-import { Grid, PageContainer } from '@/components/layout';
+import { Grid, PageLayout } from '@/components/layout';
+import { StaleRefreshWarning } from '@/components/feedback';
+import { useDataState } from '@/hooks/useDataState';
 import { FadeIn } from '@/components/motion';
 import { Input } from '@/components/ui';
 import { NoVehicleSelected } from '@/features/onboarding/components/NoVehicleSelected';
@@ -14,7 +16,6 @@ import { useUnits } from '@/hooks/useUnits';
 import { convertDistanceToSI } from '@/lib/unitConversion';
 
 import {
-  EfficiencyTargetKpis,
   GoalPulse,
   RecentWeekScorecard,
   TargetConsistencyChart,
@@ -24,6 +25,7 @@ import {
   type EfficiencyTargetSectionState,
 } from '../components/efficiency-target';
 import { summarizeTarget } from '../lib/efficiencyTarget';
+import { EfficiencyTargetBrief } from '../components/operationalbrief-a-m/EfficiencyTargetBrief';
 
 const DRIVE_HISTORY_LIMIT = 1000;
 const SPLIT_COLUMNS = { default: 1, xl: 5 } as const;
@@ -42,6 +44,7 @@ export default function EfficiencyTargetPage() {
   const historyQuery = useDriveHistory(vehicleIdStr, DRIVE_HISTORY_LIMIT);
   const nowMs = useMemo(() => Date.now(), []);
   const drives = useMemo(() => historyQuery.data ?? [], [historyQuery.data]);
+  const sourceState = useDataState(historyQuery, { provenance: 'historical' });
   const summary = useMemo(
     () =>
       summarizeTarget(drives, targetWhPerKm, nowMs, {
@@ -74,22 +77,22 @@ export default function EfficiencyTargetPage() {
   }
 
   const sectionState: EfficiencyTargetSectionState = {
-    isLoading: historyQuery.isLoading,
-    error: historyQuery.isError ? historyQuery.error : null,
+    isLoading: sourceState.status === 'initial',
+    error: sourceState.fatalError,
     onRetry: () => {
       void historyQuery.refetch();
     },
   };
 
   return (
-    <PageContainer
+    <PageLayout
       title={t('effTarget.title', 'Efficiency Target')}
       subtitle={t(
         'effTarget.subtitle',
         'A completed-week goal workspace built from the observed history window',
       )}
       query={historyQuery}
-      actions={
+      contextActions={
         <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3">
           <Input
             key={`efficiency-target-${distanceUnit}`}
@@ -109,11 +112,13 @@ export default function EfficiencyTargetPage() {
         </div>
       }
     >
+      <StaleRefreshWarning state={sourceState} label={t('effTarget.title', 'Efficiency Target')} />
       <FadeIn>
-        <EfficiencyTargetKpis
+        <EfficiencyTargetBrief
           summary={summary}
           targetWhPerKm={targetWhPerKm}
           state={sectionState}
+          retained={sourceState.status === 'stale' || sourceState.refreshError != null}
         />
       </FadeIn>
 
@@ -163,6 +168,6 @@ export default function EfficiencyTargetPage() {
           state={sectionState}
         />
       </FadeIn>
-    </PageContainer>
+    </PageLayout>
   );
 }

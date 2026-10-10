@@ -46,7 +46,7 @@ export function SystemHealthCard({ category, status }: SystemHealthCardProps) {
         weight="medium"
         color="primary"
         title={categoryLabel}
-        className="flex-1 truncate capitalize"
+        className="flex-1 truncate"
       >
         {categoryLabel}
       </Text>

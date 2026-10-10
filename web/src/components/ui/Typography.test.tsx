@@ -105,6 +105,16 @@ describe('Heading', () => {
 })
 
 describe('Text', () => {
+  it.each([
+    ['Label', Label],
+    ['MetricLabel', MetricLabel],
+    ['Caption', Caption],
+  ] as const)('%s preserves supplied brand, acronym, and unit casing', (_name, Component) => {
+    render(<Component>Tesla API · kWh</Component>)
+    const label = screen.getByText('Tesla API · kWh')
+    expect(label).not.toHaveClass('uppercase', 'capitalize', 'lowercase')
+  })
+
   it('renders a <span> with its children by default (no classes)', () => {
     const { container } = render(<Text>hello</Text>)
     const el = container.firstElementChild as HTMLElement
@@ -208,6 +218,37 @@ describe('convenience heading wrappers', () => {
 })
 
 describe('convenience text wrappers', () => {
+  it.each([
+    [HelperText, 'helper'],
+    [ErrorText, 'error'],
+    [Label, 'label'],
+    [MetricValue, 'metricValue'],
+    [MetricLabel, 'metricLabel'],
+    [Code, 'code'],
+  ] as const)('preserves the %s wrapper role when overriding its semantic element', (Component, role) => {
+    render(<Component as="div" id="semantic-wrapper">Semantic readout</Component>)
+    const wrapper = screen.getByText('Semantic readout')
+    expect(wrapper.tagName).toBe('DIV')
+    expect(wrapper.id).toBe('semantic-wrapper')
+    expect(hasAllClasses(wrapper, typography.role[role])).toBe(true)
+    expect(wrapper).not.toHaveAttribute('as')
+  })
+
+  it.each(['p', 'div'] as const)('Caption supports <%s> without losing its role or attributes', (tag) => {
+    render(
+      <Caption as={tag} id="source-caption" className="mt-2" aria-live="polite">
+        Retained source details
+      </Caption>,
+    )
+    const caption = screen.getByText('Retained source details')
+    expect(caption.tagName).toBe(tag.toUpperCase())
+    expect(caption.id).toBe('source-caption')
+    expect(caption).toHaveAttribute('aria-live', 'polite')
+    expect(caption).toHaveClass('mt-2')
+    expect(hasAllClasses(caption, typography.role.caption)).toBe(true)
+    expect(caption).not.toHaveAttribute('as')
+  })
+
   const cases: Array<{ name: string; Comp: ComponentType<{ className?: string; children?: ReactNode }>; tag: string; role: string }> = [
     { name: 'Caption', Comp: Caption, tag: 'SPAN', role: typography.role.caption },
     { name: 'HelperText', Comp: HelperText, tag: 'P', role: typography.role.helper },

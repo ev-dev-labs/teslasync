@@ -15,15 +15,19 @@ import { GlassPanel, PanelTitle, Text } from '@/components/ui';
 import { MetricBar } from '@/components/data-display';
 import { Skeleton, EmptyState } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
-import { fmtInt, fmtPercent } from '@/lib/numberFormat';
+import { SourceContent } from '@/components/layout';
+
 import { useDateFormat } from '@/hooks/useDateFormat';
 import { cn } from '@/lib/cn';
 import type { SignalLogSummary } from './signalLogSummary';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export interface SignalLogBreakdownPanelProps {
   summary: SignalLogSummary;
   hasQueried: boolean;
   loading?: boolean;
+  error?: Error | null;
+  onRetry?: () => void;
   className?: string;
 }
 
@@ -37,8 +41,11 @@ export function SignalLogBreakdownPanel({
   summary,
   hasQueried,
   loading = false,
+  error,
+  onRetry,
   className,
 }: SignalLogBreakdownPanelProps) {
+  const { fmtInt, fmtPercent } = useNumberFormatting();
   const { t } = useTranslation();
   const { formatDateTime } = useDateFormat();
 
@@ -60,13 +67,21 @@ export function SignalLogBreakdownPanel({
   );
 
   return (
-    <FadeIn delay={0.1}>
-      <GlassPanel className={cn('p-4 sm:p-5', className)}>
+    <FadeIn delay={0.1} className="min-w-0 max-w-full">
+      <GlassPanel className={cn('min-w-0 max-w-full p-4 sm:p-5', className)}>
         <PanelTitle className="mb-3 flex items-center gap-2">
           <PieChart className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-          {t('signalLog.composition', 'Value Composition')}
+          {t('signalLog.composition', 'Value composition')}
         </PanelTitle>
 
+        <SourceContent
+          state={error ? 'error' : 'ready'}
+          label={t('signalLog.composition', 'Value composition')}
+          error={error}
+          errorMessage={t('error.loadFailed', 'Failed to load data')}
+          emptyMessage={t('signalLog.composition.noRecords', 'No records in the selected range.')}
+          errorRecovery={{ onRetry }}
+        >
         {loading ? (
           <div className="space-y-3">
             {[0, 1, 2].map((i) => <Skeleton key={i} className="h-9" />)}
@@ -93,7 +108,7 @@ export function SignalLogBreakdownPanel({
                   value={bar.value}
                   max={total}
                   color={bar.color}
-                  sublabel={`${fmtInt(bar.value)} · ${fmtPercent(total > 0 ? (bar.value / total) * 100 : 0, 0)}`}
+                  sublabel={`${fmtInt(bar.value)} · ${fmtPercent(total > 0 ? (bar.value / total) * 100 : 0)}`}
                 />
               ))}
             </div>
@@ -120,6 +135,7 @@ export function SignalLogBreakdownPanel({
             </dl>
           </div>
         )}
+        </SourceContent>
       </GlassPanel>
     </FadeIn>
   );

@@ -18,7 +18,8 @@ import {
   axisTick,
 } from '@/components/charts';
 import type { HiddenSeriesState } from '@/hooks/useHiddenSeries';
-import { fmtNumber } from '@/lib/numberFormat';
+
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export interface ArrivalReliabilityProfileRow
   extends Record<string, string | number | null> {
@@ -50,6 +51,7 @@ export function ArrivalReliabilityProfilePlot({
   hiddenSeries: externalHiddenSeries,
   ariaLabel,
 }: ArrivalReliabilityProfilePlotProps) {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
 
   const effectiveAriaLabel =
@@ -65,16 +67,16 @@ export function ArrivalReliabilityProfilePlot({
       {
         key: 'normalizedDurationIndex',
         label: normalizedName,
-        format: (v) => (v != null ? fmtNumber(v as number, 1, locale) : '—'),
+        format: (v) => (v != null ? fmtNumber(v as number, undefined, locale) : '—'),
       },
       {
         key: 'allowanceShare',
         label: allowanceName,
-        format: (v) => (v != null ? fmtNumber(v as number, 1, locale) : '—'),
+        format: (v) => (v != null ? fmtNumber(v as number, undefined, locale) : '—'),
       },
       { key: 'samples', label: samplesName, format: (v) => String(v ?? 0) },
     ],
-    [t, normalizedName, allowanceName, samplesName, locale],
+    [t, normalizedName, allowanceName, samplesName, locale, fmtNumber],
   );
 
   return (
@@ -120,7 +122,7 @@ export function ArrivalReliabilityProfilePlot({
               <Tooltip
                 content={
                   <ChartTooltip
-                    valueFormatter={(value) => fmtNumber(value, 1, locale)}
+                    valueFormatter={(value) => fmtNumber(value, undefined, locale)}
                   />
                 }
               />

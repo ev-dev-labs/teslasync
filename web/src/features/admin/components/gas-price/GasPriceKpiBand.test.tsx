@@ -118,7 +118,7 @@ function renderBand(query: UseQueryResult<GasPriceStatus, Error>) {
 }
 
 function getRegion() {
-  return screen.getByRole('region', { name: /gas price summary/i })
+  return screen.getByRole('region', { name: /Gas price summary/i })
 }
 
 beforeEach(() => {
@@ -131,9 +131,18 @@ describe('GasPriceKpiBand — loading & error states', () => {
       makeQuery({ isLoading: true, isPending: true, isFetching: true }),
     )
     expect(getRegion()).toHaveAttribute('aria-busy', 'true')
-    expect(container.querySelectorAll('.animate-pulse')).toHaveLength(4)
+    const placeholders = container.querySelectorAll('[aria-hidden="true"][class~="bg-[var(--skeleton-bg)]"]')
+    expect(placeholders).toHaveLength(4)
+    expect(getRegion().querySelectorAll('[aria-hidden="true"][class~="bg-[var(--skeleton-bg)]"]')).toHaveLength(4)
+    placeholders.forEach((placeholder) => {
+      expect(placeholder).toHaveStyle({ height: '92px' })
+      expect(placeholder).not.toHaveClass('animate-pulse')
+    })
     // No KPI cards while first-loading.
     expect(screen.queryByText('Status')).not.toBeInTheDocument()
+    expect(screen.queryByText('Current price')).not.toBeInTheDocument()
+    expect(screen.queryByText('kWh equivalent')).not.toBeInTheDocument()
+    expect(screen.queryByText('Last polled')).not.toBeInTheDocument()
   })
 
   it('keeps the KPI cards on screen during a background refetch that has data', () => {
@@ -146,7 +155,7 @@ describe('GasPriceKpiBand — loading & error states', () => {
     )
     // firstLoad is `isLoading && !data`, so cached data wins: cards, no skeleton.
     expect(screen.getByText('Running')).toBeInTheDocument()
-    expect(container.querySelectorAll('.animate-pulse')).toHaveLength(0)
+    expect(container.querySelectorAll('[aria-hidden="true"][class~="bg-[var(--skeleton-bg)]"]')).toHaveLength(0)
     expect(getRegion()).not.toHaveAttribute('aria-busy')
   })
 
@@ -156,7 +165,7 @@ describe('GasPriceKpiBand — loading & error states', () => {
       makeQuery({ isError: true, error: new Error('network down'), refetch }),
     )
     expect(screen.getByRole('alert')).toBeInTheDocument()
-    expect(container.querySelectorAll('.animate-pulse')).toHaveLength(0)
+    expect(container.querySelectorAll('[aria-hidden="true"][class~="bg-[var(--skeleton-bg)]"]')).toHaveLength(0)
     expect(screen.queryByText('Status')).not.toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('button', { name: /retry/i }))

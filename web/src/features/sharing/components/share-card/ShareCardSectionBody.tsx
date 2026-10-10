@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { CircleOff } from 'lucide-react';
 
 import { AlertBanner, Skeleton } from '@/components/feedback';
+import { SourceContent } from '@/components/layout';
 import { Button, Text } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import type { ShareCardQueryState } from './types';
@@ -43,35 +44,24 @@ export function ShareCardSectionBody({
 }: ShareCardSectionBodyProps) {
   const { t } = useTranslation();
 
-  if (!state.enabled) {
-    return passiveBody(
+  const label = t('shareCard.states.loadingLabel', 'Loading share card evidence');
+  const emptyContent = !state.enabled
+    ? passiveBody(
       t(
         'shareCard.states.noVehicle',
         'Select a vehicle to load this selected-window evidence.',
       ),
-      className,
-    );
-  }
-  if (!state.hasData && state.isInitialLoading) {
-    return (
-      <div
-        className={cn('min-h-28', className)}
-        role="status"
-        aria-label={t('shareCard.states.loadingLabel', 'Loading Share Card evidence')}
-      >
-        <Skeleton height={skeletonHeight} />
-      </div>
-    );
-  }
-  if (!state.hasData && state.isInitialPaused) {
-    return passiveBody(
+    )
+    : state.isInitialPaused
+      ? passiveBody(
       t(
         'shareCard.states.paused',
         'The initial query is paused while the network is unavailable; no empty response is inferred.',
       ),
-      className,
-    );
-  }
+      )
+      : passiveBody(
+        t('shareCard.states.pending', 'Source availability has not resolved yet.'),
+      );
   if (!state.hasData && state.initialError) {
     return (
       <div className={cn('flex min-h-28 flex-col items-center justify-center gap-3 py-5 text-center', className)}>
@@ -87,40 +77,48 @@ export function ShareCardSectionBody({
       </div>
     );
   }
-  if (!state.hasData && !state.isResolved) {
-    return passiveBody(
-      t('shareCard.states.pending', 'Source availability has not resolved yet.'),
-      className,
-    );
-  }
-
   return (
     <div className={className}>
-      {showCachedStatus && state.cachedRefreshError ? (
-        <AlertBanner variant="warning" className="mb-4">
-          {t(
-            'shareCard.states.cachedError',
-            'Cached evidence remains visible, but the refresh failed.',
-          )}
-        </AlertBanner>
-      ) : null}
-      {showCachedStatus && state.cachedRefreshPaused ? (
-        <AlertBanner variant="info" className="mb-4">
-          {t(
-            'shareCard.states.cachedPaused',
-            'Cached evidence remains visible while its refresh is paused.',
-          )}
-        </AlertBanner>
-      ) : null}
-      {showCachedStatus && state.isRefreshing && !state.cachedRefreshPaused ? (
-        <AlertBanner variant="info" className="mb-4">
-          {t(
-            'shareCard.states.refreshing',
-            'Cached evidence is visible while a refresh is in progress.',
-          )}
-        </AlertBanner>
-      ) : null}
-      {children}
+      <SourceContent
+        state={!state.enabled ? 'empty'
+          : !state.hasData && state.isInitialLoading ? 'loading'
+          : !state.hasData && !state.isResolved ? 'empty' : 'ready'}
+        label={label}
+        emptyMessage={t('shareCard.states.pending', 'Source availability has not resolved yet.')}
+        errorMessage={t('shareCard.states.error', 'Selected-window drive evidence is unavailable.')}
+        emptyContent={emptyContent}
+        loadingContent={(
+          <div className="min-h-28" role="status" aria-label={label}>
+            <Skeleton height={skeletonHeight} />
+          </div>
+        )}
+      >
+        {showCachedStatus && state.cachedRefreshError ? (
+          <AlertBanner variant="warning" className="mb-4">
+            {t(
+              'shareCard.states.cachedError',
+              'Cached evidence remains visible, but the refresh failed.',
+            )}
+          </AlertBanner>
+        ) : null}
+        {showCachedStatus && state.cachedRefreshPaused ? (
+          <AlertBanner variant="info" className="mb-4">
+            {t(
+              'shareCard.states.cachedPaused',
+              'Cached evidence remains visible while its refresh is paused.',
+            )}
+          </AlertBanner>
+        ) : null}
+        {showCachedStatus && state.isRefreshing && !state.cachedRefreshPaused ? (
+          <AlertBanner variant="info" className="mb-4">
+            {t(
+              'shareCard.states.refreshing',
+              'Cached evidence is visible while a refresh is in progress.',
+            )}
+          </AlertBanner>
+        ) : null}
+        {children}
+      </SourceContent>
     </div>
   );
 }

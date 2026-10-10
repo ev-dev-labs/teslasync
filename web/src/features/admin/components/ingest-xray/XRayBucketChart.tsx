@@ -27,9 +27,10 @@ import {
   chartMargin,
 } from '@/components/charts';
 import { useDateFormat } from '@/hooks/useDateFormat';
-import { fmtInt } from '@/lib/numberFormat';
+
 import { chartTokens } from '@/lib/tokens';
 import type { IngestXRayBucketPoint } from '@/types/admin-diagnostics';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface XRayBucketChartProps {
   buckets: IngestXRayBucketPoint[];
@@ -37,6 +38,7 @@ interface XRayBucketChartProps {
 }
 
 export function XRayBucketChart({ buckets, loading }: XRayBucketChartProps) {
+  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const { formatTime } = useDateFormat();
 
@@ -77,7 +79,7 @@ export function XRayBucketChart({ buckets, loading }: XRayBucketChartProps) {
         format: (v: unknown) => (typeof v === 'number' ? fmtInt(v) : '—'),
       },
     ],
-    [t, formatTime],
+    [t, formatTime, fmtInt],
   );
 
   const isEmpty = !loading && series.length === 0;

@@ -1,0 +1,22 @@
+{
+  "actualStartUtc": "2026-10-07T06:16:47.7503845Z",
+  "hardStopUtc": "2026-10-07T06:36:47.7503845Z",
+  "source": "web\\src\\features\\settings\\pages\\SafetyPage.tsx",
+  "newTest": "web\\src\\features\\settings\\pages\\SafetyPage.catalogCopy.test.tsx",
+  "newTestAbsentBefore": true,
+  "ownership": "Parent-approved exclusive exact source/new-test pair; canonical catalogs parent-only",
+  "files": [
+    {
+      "name": "SafetyPage.before.tsx",
+      "sha256": "831EF11EF2A783DF3F059040907B40E64BBABAFDC524F4CD3752791341B29AFD"
+    },
+    {
+      "name": "SafetyPage.original-test.tsx",
+      "sha256": "BCBE326A0C09ACA8082A999A98FC8E9308591E4EC0441A6E919FD9BD9464EDCF"
+    },
+    {
+      "name": "SafetySettingCard.reference.tsx",
+      "sha256": "F281943501BB4B4214AB9BDCE8B9ACCDAC99D3EB21C6E22A129FA35AED365A06"
+    }
+  ]
+}

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, act } from '@testing-library/react';
 import type { Vehicle } from '@/types/vehicle';
 import type { PinnedItem } from '@/api/types';
 
@@ -239,5 +239,55 @@ describe('VehiclePicker', () => {
     control?.querySelectorAll('svg').forEach((decoration) => {
       expect(decoration).toHaveAttribute('aria-hidden', 'true');
     });
+  });
+
+  it('uses restrained control and popup roles without reducing mobile targets', () => {
+    mockVehicles = [makeVehicle({ id: 1 }), makeVehicle({ id: 2 })];
+    mockVehicleId = 1;
+    render(<VehiclePicker />);
+    const input = screen.getByRole('combobox');
+    expect(input).toHaveClass('rounded-shape-sm', 'shadow-none', 'h-11', 'md:h-9');
+    expect(input).toHaveClass('focus:ring-0', 'focus-visible:outline-2', 'focus-visible:outline-offset-2', 'focus-visible:outline-[var(--focus-ring)]');
+    expect(input).toHaveClass('forced-colors:focus-visible:outline-[Highlight]', 'motion-reduce:transition-none');
+    fireEvent.focus(input);
+    expect(screen.getByRole('listbox')).toHaveClass('rounded-shape-lg', 'shadow-e2');
+    screen.getAllByRole('option').forEach((option) => {
+      expect(option).toHaveClass('rounded-shape-sm', 'min-h-11', 'md:min-h-9', 'motion-reduce:transition-none');
+    });
+  });
+
+  it('preserves unknown or all-vehicle context without inventing an option or writing a default', () => {
+    mockVehicles = [makeVehicle({ id: 11 }), makeVehicle({ id: 22 })];
+    mockVehicleId = null;
+    const { rerender } = render(<VehiclePicker />);
+    const input = screen.getByRole('combobox');
+    expect(input).toHaveValue('');
+    mockVehicleId = 99;
+    rerender(<VehiclePicker />);
+    expect(input).toHaveValue('');
+    fireEvent.focus(input);
+    expect(screen.getAllByRole('option')).toHaveLength(2);
+    expect(screen.getAllByRole('option').every((option) => option.getAttribute('aria-selected') === 'false')).toBe(true);
+    fireEvent.keyDown(input, { key: 'Tab' });
+    expect(setVehicleId).not.toHaveBeenCalled();
+    expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
+  });
+
+  it('retains complete long labels, opaque IDs and input focus on keyboard selection', () => {
+    const longLabel = 'A very long vehicle name with full context and an unbrokenidentifierthatmustremainavailable';
+    mockVehicles = [makeVehicle({ id: 11 }), makeVehicle({ id: 987654, display_name: longLabel })];
+    mockVehicleId = 11;
+    render(<VehiclePicker />);
+    const input = screen.getByRole('combobox');
+    act(() => input.focus());
+    expect(input).toHaveAttribute('readonly');
+    expect(input).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getByRole('option', { name: longLabel })).toHaveAttribute('title', longLabel);
+    fireEvent.keyDown(input, { key: 'End' });
+    fireEvent.keyDown(input, { key: ' ' });
+    expect(setVehicleId).toHaveBeenCalledTimes(1);
+    expect(setVehicleId).toHaveBeenCalledWith(987654);
+    expect(input).toHaveFocus();
+    expect(input).toHaveAttribute('aria-expanded', 'false');
   });
 });

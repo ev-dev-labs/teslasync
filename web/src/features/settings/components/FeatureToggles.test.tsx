@@ -105,7 +105,7 @@ describe('FeatureToggles — header + structure', () => {
 
     // Header chrome is rendered regardless of data state (it holds the action).
     expect(screen.getByTestId('feature-toggles')).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: 'Feature Flags' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Feature flags' })).toBeInTheDocument()
     expect(screen.getByText('Tesla account feature configuration')).toBeInTheDocument()
     const refresh = screen.getByRole('button', { name: 'Refresh' })
     expect(refresh).toBeInTheDocument()
@@ -121,7 +121,13 @@ describe('FeatureToggles — loading state', () => {
     const loading = screen.getByTestId('feature-toggles-loading')
     expect(loading).toBeInTheDocument()
     // Three skeleton bars, no misleading "no data" copy, no rows.
-    expect(loading.querySelectorAll('.animate-pulse')).toHaveLength(3)
+    const placeholders = loading.querySelectorAll('[aria-hidden="true"][class~="bg-[var(--skeleton-bg)]"]')
+    expect(placeholders).toHaveLength(3)
+    placeholders.forEach((placeholder) => {
+      expect(placeholder).toHaveClass('w-full', 'rounded')
+      expect(placeholder).toHaveStyle({ height: '32px' })
+      expect(placeholder).not.toHaveClass('animate-pulse', 'motion-safe:animate-pulse')
+    })
     expect(
       screen.queryByText('No feature config data yet. Click Refresh to fetch from Tesla.'),
     ).not.toBeInTheDocument()
@@ -154,6 +160,28 @@ describe('FeatureToggles — empty state', () => {
 })
 
 describe('FeatureToggles — populated table', () => {
+  it('filters the complete loaded features before pagination and distinguishes unknown status from false', async () => {
+    mockConfig({
+      ...Object.fromEntries(Array.from({ length: 30 }, (_, index) => [`feature_${index}`, true])),
+      disabled_flag: false,
+      unknown_flag: null,
+    }, null)
+    renderPanel()
+
+    await screen.findByTestId('feature-toggles-row-feature_0')
+    expect(screen.queryByTestId('feature-toggles-row-disabled_flag')).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Status filter' }))
+    const menu = screen.getByRole('dialog', { name: 'Status filter' })
+    expect(within(menu).getByRole('checkbox', { name: '—' })).toBeInTheDocument()
+    fireEvent.click(within(menu).getByRole('checkbox', { name: 'Select all shown values' }))
+    fireEvent.click(within(menu).getByRole('checkbox', { name: 'Disabled' }))
+    fireEvent.click(within(menu).getByRole('button', { name: 'Done' }))
+
+    expect(screen.getByTestId('feature-toggles-row-disabled_flag')).toBeInTheDocument()
+    expect(screen.queryByTestId('feature-toggles-row-unknown_flag')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('feature-toggles-row-feature_0')).not.toBeInTheDocument()
+  })
+
   it('renders a row per feature with enabled/disabled badges, details and the sync stamp', async () => {
     mockConfig({
       sentry_mode: { enabled: true, subscribe_connectivity: true, cellular_enabled: false },
@@ -168,19 +196,19 @@ describe('FeatureToggles — populated table', () => {
     expect(screen.getByText('Details')).toBeInTheDocument()
 
     // Nested object → enabled badge + compact detail summary of remaining keys.
-    const sentry = screen.getByTestId('feature-toggles-row-sentry_mode')
+    const sentry = screen.getByTestId('feature-toggles-row-sentry_mode').closest('tr')!
     expect(within(sentry).getByText('Enabled')).toBeInTheDocument()
     expect(
       within(sentry).getByText('subscribe_connectivity: true, cellular_enabled: false'),
     ).toBeInTheDocument()
 
     // Primitive true → enabled, no details.
-    const autopilot = screen.getByTestId('feature-toggles-row-autopilot')
+    const autopilot = screen.getByTestId('feature-toggles-row-autopilot').closest('tr')!
     expect(within(autopilot).getByText('Enabled')).toBeInTheDocument()
     expect(within(autopilot).getByText('—')).toBeInTheDocument()
 
     // Primitive false → disabled.
-    const valet = screen.getByTestId('feature-toggles-row-valet_mode')
+    const valet = screen.getByTestId('feature-toggles-row-valet_mode').closest('tr')!
     expect(within(valet).getByText('Disabled')).toBeInTheDocument()
 
     // fetched_at present → "Synced …" stamp rendered.
@@ -191,7 +219,7 @@ describe('FeatureToggles — populated table', () => {
     mockConfig({ plain_flag: { enabled: false } }, null)
     renderPanel()
 
-    const row = await screen.findByTestId('feature-toggles-row-plain_flag')
+    const row = (await screen.findByTestId('feature-toggles-row-plain_flag')).closest('tr')!
     expect(within(row).getByText('Disabled')).toBeInTheDocument()
     // Regression guard: the details join produced '' which the `?? '—'` fallback
     // did NOT catch, leaving a blank cell. It must now render the placeholder.

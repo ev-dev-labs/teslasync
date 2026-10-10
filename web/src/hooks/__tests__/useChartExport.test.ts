@@ -191,6 +191,70 @@ describe('useChartExport — exportSVG', () => {
     expect(clicked).toHaveLength(0);
     expect(warn).toHaveBeenCalled();
   });
+
+  it('excludes toolbar SVGs even when they precede the plotting surface', async () => {
+    const { result } = renderHook(() => useChartExport('toolbar'));
+    const chart = attachChartRef(result.current.chartRef);
+    const toolbar = document.createElement('div');
+    toolbar.setAttribute('data-html2canvas-ignore', 'true');
+    const icon = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    icon.setAttribute('data-export-icon', 'toolbar');
+    toolbar.appendChild(icon);
+    chart.insertBefore(toolbar, chart.firstChild);
+
+    await act(async () => {
+      await result.current.exportSVG();
+    });
+
+    const blob = vi.mocked(URL.createObjectURL).mock.calls[0][0];
+    if (!(blob instanceof Blob)) throw new Error('Expected an exported SVG blob');
+    const text = await blob.text();
+    expect(text).toContain('<rect');
+    expect(text).not.toContain('data-export-icon');
+    chart.remove();
+  });
+
+  it('prefers the Recharts surface over an unmarked title icon', async () => {
+    const { result } = renderHook(() => useChartExport('metadata'));
+    const chart = attachChartRef(result.current.chartRef);
+    const plot = chart.querySelector('svg');
+    if (!plot) throw new Error('Expected the chart fixture SVG');
+    plot.classList.add('recharts-surface');
+    const titleIcon = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    titleIcon.setAttribute('data-export-icon', 'title');
+    chart.insertBefore(titleIcon, plot);
+
+    await act(async () => {
+      await result.current.exportSVG();
+    });
+
+    const blob = vi.mocked(URL.createObjectURL).mock.calls[0][0];
+    if (!(blob instanceof Blob)) throw new Error('Expected an exported SVG blob');
+    const text = await blob.text();
+    expect(text).toContain('recharts-surface');
+    expect(text).toContain('<rect');
+    expect(text).not.toContain('data-export-icon');
+    chart.remove();
+  });
+
+  it('does not download an ignored control icon when there is no plotting SVG', async () => {
+    const { result } = renderHook(() => useChartExport('controls-only'));
+    const chart = attachChartRef(result.current.chartRef, false);
+    const toolbar = document.createElement('div');
+    toolbar.setAttribute('data-html2canvas-ignore', 'true');
+    toolbar.appendChild(document.createElementNS('http://www.w3.org/2000/svg', 'svg'));
+    chart.appendChild(toolbar);
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+
+    await act(async () => {
+      await result.current.exportSVG();
+    });
+
+    expect(URL.createObjectURL).not.toHaveBeenCalled();
+    expect(clicked).toHaveLength(0);
+    expect(warn).toHaveBeenCalled();
+    chart.remove();
+  });
 });
 
 describe('useChartExport — copyToClipboard', () => {

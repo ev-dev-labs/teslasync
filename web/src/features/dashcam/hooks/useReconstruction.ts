@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
-import { useSignalEvidenceBundle } from '@/api/hooks/useTelemetry';
-import { resolveClipEpochMs, alignSignalHistoryToClip, type ReconstructionResult } from '../lib/timelineAlignment';
+import { useSignalEvidenceBundle, type SignalEvidenceBundleSource } from '@/api/hooks/useTelemetry';
+import { resolveClipEpochMs, alignSignalHistoryToClip, type ReconstructionResult, type SignalPointLike } from '../lib/timelineAlignment';
 import type { ClipRecord, DashcamSettings } from '../lib/types';
 
 export interface UseReconstructionResult {
@@ -9,9 +9,14 @@ export interface UseReconstructionResult {
   /** Hours of telemetry lookback actually requested (bounded by the evidence-bundle hook, from-now only). */
   lookbackHours: number;
   reconstruction: ReconstructionResult | null;
+  /** Alignment is computed before requests resolve; a received signal response is the retained-source boundary. */
+  hasRetainedHistory: boolean;
+  /** Complete normalized identities and their original historical trust/recovery state. */
+  sources: SignalEvidenceBundleSource[];
   isLoading: boolean;
   isError: boolean;
   error: Error | null;
+  refetch: () => Promise<void>;
   /** True when the clip predates what a "last N hours from now" query can reach without server-side history retention. */
   possiblyOutOfLookbackRange: boolean;
 }
@@ -53,7 +58,15 @@ export function useReconstruction(
       clipDurationSeconds: clip.durationSeconds ?? 0,
       preRollSeconds: settings.reconstructionPreRollSeconds,
       postRollSeconds: settings.reconstructionPostRollSeconds,
-      seriesInput: bundle.data.map((s) => ({ signal: s.signal, points: s.response.data })),
+      seriesInput: bundle.data.map((s) => ({
+        signal: s.signal,
+        points: s.response.data.map((point): SignalPointLike => ({
+          timestamp: point.ts,
+          valueNum: typeof point.value === 'number' ? point.value : undefined,
+          valueStr: typeof point.value === 'string' ? point.value : undefined,
+          valueBool: typeof point.value === 'boolean' ? point.value : undefined,
+        })),
+      })),
     });
   }, [clip, clipEpochMs, settings.reconstructionPreRollSeconds, settings.reconstructionPostRollSeconds, bundle.data]);
 
@@ -63,9 +76,12 @@ export function useReconstruction(
     clipEpochMs,
     lookbackHours,
     reconstruction,
+    hasRetainedHistory: bundle.data.length > 0,
+    sources: bundle.sources,
     isLoading: bundle.isLoading,
     isError: bundle.isError,
     error: bundle.error,
+    refetch: bundle.refetch,
     possiblyOutOfLookbackRange,
   };
 }

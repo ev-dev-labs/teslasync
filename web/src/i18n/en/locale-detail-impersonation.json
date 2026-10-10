@@ -33,7 +33,7 @@
       "endFailed": "Failed to end impersonation"
     },
     "status": {
-      "title": "Session Status",
+      "title": "Session status",
       "loading": "Loading session status…",
       "error": "Session status is unavailable right now. Use the refresh control above to try again.",
       "open": "Forward-auth is disabled, so impersonation is unavailable on this install.",

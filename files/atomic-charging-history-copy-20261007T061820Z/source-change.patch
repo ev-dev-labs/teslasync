@@ -1,0 +1,28 @@
+--- preimages/TeslaChargingSessionsPage.tsx
++++ current/TeslaChargingSessionsPage.tsx
+@@ -687,13 +687,13 @@
+         loading={isLoading && !sessionsDataState.hasData}
+         testId="charging-operational-brief"
+         eyebrow={t('operations.charging.eyebrow', 'Charging posture')}
+-        title={t('operations.charging.title', 'Cost, energy, and session evidence in one operating view')}
+-        description={t('operations.charging.description', 'The selected vehicle and date range drive charging totals, location analysis, and the supporting session history.')}
++        title={t('operations.charging.returnedSessionsTitle', 'Cost, energy, and session evidence in one operating view')}
++        description={t('operations.charging.returnedSessionsDescription', 'The selected vehicle and date range drive charging totals, location analysis, and the supporting session history.')}
+         statusLabel={
+           error
+             ? t('operations.status.unavailable', 'Data unavailable')
+             : isLoading
+-              ? t('operations.status.loading', 'Updating')
++              ? t('operations.charging.sessionsLoading', 'Updating')
+               : is403
+                 ? t('operations.status.prerequisite', 'Prerequisite required')
+                 : sessions.length === 0
+@@ -730,7 +730,7 @@
+         metrics={scopedMetrics.map(metric => ({ ...metric, tone: metric.key === 'sessions' ? 'info'
+           : metric.key === 'energy' ? 'success' : metric.key === 'cost' && operationalTotals.totalFees > 0 ? 'warning' : 'neutral' }))}
+         attention={chargingAttention}
+-        provenance={t('operations.charging.provenance', 'Derived from Tesla Fleet Charging session history, reported costs, and SI energy values converted only for display.')}
++        provenance={t('operations.charging.returnedSessionsProvenance', 'Derived from Tesla Fleet Charging session history, reported costs, and SI energy values converted only for display.')}
+       />
+ 
+       {/* Business-account note + sync status */}

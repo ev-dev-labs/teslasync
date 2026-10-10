@@ -1,0 +1,320 @@
+{
+  "item": "audit-page-227",
+  "page": "web\\src\\features\\vehicle-systems\\pages\\TireDifferentialDriftPage.tsx",
+  "routes": ["/tire-differential-drift"],
+  "purpose": "Analyze four-corner TPMS history after removing common-mode pressure changes; distinguish inferred independent leak drift from persistent structural imbalance.",
+  "primaryGoal": "Identify the likely leaking corner, understand evidence quality and projected threshold time, compare each corner's residual and slope, and retain explicit inference caveats.",
+  "dataSources": [
+    {
+      "name": "TPMS analysis history",
+      "hook": "useTirePressureAnalysisHistory(vehicleIdStr)",
+      "owner": "web\\src\\api\\hooks\\useVehicleSystems.ts",
+      "file": "web\\src\\features\\vehicle-systems\\pages\\TireDifferentialDriftPage.tsx",
+      "line": 49,
+      "endpoint": "/tire-pressure?vehicle_id=<encoded id>&start=<encoded ISO instant>",
+      "routeEvidence": "internal\\api\\router.go:4098-4100 declares /tire-pressure with GET / and GET /latest; route source exists, HTTP execution and slash normalization unverified.",
+      "behavior": "Hook lines 65-80 defaults to 30 rolling days, clamps days to 1-365, computes start during query execution, enables only with a vehicle, forwards AbortSignal, selects safeArray, uses MODERATE staleTime, and keys vehicle and bounded days. No end bound or workspace range is passed.",
+      "units": "The inspected model expects Pa for pressure inputs; server response units, completeness, resampling and row limits were not independently verified.",
+      "ownership": "Hook owns acquisition/cache/cancellation; page owns orchestration; tireDifferentialDrift.ts owns pure inference."
+    },
+    {
+      "name": "Selected vehicle",
+      "hook": "useSelectedVehicle",
+      "owner": "web\\src\\hooks\\useSelectedVehicle.ts",
+      "file": "web\\src\\features\\vehicle-systems\\pages\\TireDifferentialDriftPage.tsx",
+      "line": 44,
+      "endpoint": "Indirect useVehicles endpoint not traced in this atomic audit.",
+      "behavior": "Inspected selection owner resolves URL vehicle_id, persisted selection and first available vehicle; no second local vehicle picker is rendered. Null selects the onboarding prerequisite surface."
+    },
+    {
+      "name": "Display preferences and chart visibility",
+      "hook": "useUnits, useNumberFormatting, useHiddenSeries",
+      "owner": ["web\\src\\hooks\\useUnits.ts", "web\\src\\hooks\\useNumberFormatting.ts", "web\\src\\hooks\\useHiddenSeries.ts"],
+      "file": "web\\src\\features\\vehicle-systems\\pages\\TireDifferentialDriftPage.tsx",
+      "line": 40,
+      "endpoint": "No independent page request; preference acquisition beyond direct owner APIs not traced.",
+      "behavior": "Pressure display preferences, numeric formatting, and hidden_tire-differential-drift-residuals URL state survive changes; no raw source/cache conversion is performed by this page."
+    }
+  ],
+  "components": [
+    {
+      "name": "PageLayout / LayoutCard / ChartCard",
+      "category": "layout",
+      "owner": ["web\\src\\components\\layout\\layout-reference\\PageLayout.tsx", "web\\src\\components\\layout\\layout-reference\\LayoutCard.tsx", "web\\src\\components\\layout\\layout-reference\\ChartCard.tsx"],
+      "evidence": "Page:5,98-105,108,154-200,206-239,244; layout\\index.ts:8,11-12 resolves existing owners. PageLayout/LayoutCard internals were not inspected.",
+      "props": "PageLayout title/subtitle/query; LayoutCard title/actions; ChartCard title/subtitle/ariaLabel/data/dataColumns/loading/error/onRetry/empty/footer/toolbar/exportable/height/size.",
+      "reuse": "Reuse canonical layout and chart pipeline, not a replacement page or chart wrapper."
+    },
+    {
+      "name": "VehicleOperationalBrief / OperationalBrief",
+      "category": "domain adapter and data-display composite",
+      "owner": "web\\src\\features\\vehicle-systems\\components\\operationalbrief-all\\VehicleOperationalBrief.tsx",
+      "evidence": "Page:110-147; adapter:24-73",
+      "props": "embedded/id/title/metrics/period/loading/available; existing retained/error props can represent retained evidence without a new component.",
+      "reuse": "Existing adapter uses useOperationalMetrics and canonical OperationalBrief; preserve four occurrences and specialist formatter semantics."
+    },
+    {
+      "name": "VehicleSourceContent / SourceContent",
+      "category": "domain trust adapter",
+      "owner": "web\\src\\features\\vehicle-systems\\components\\VehicleSourceContent.tsx",
+      "evidence": "Page:109,166-168,215-217,251; adapter:18-34",
+      "props": "source/label/enabled/children; translates fatal replacement versus retained warning and forwards source retry.",
+      "reuse": "One source owner supplies all four section states; retain independent section framing."
+    },
+    {
+      "name": "EmbeddedChart / ChartContainer",
+      "category": "shared chart frame",
+      "owner": ["web\\src\\components\\charts\\EmbeddedChart.tsx", "web\\src\\components\\charts\\ChartContainer.tsx"],
+      "evidence": "ChartCard:27-44 forwards children to EmbeddedChart; EmbeddedChart:19-41 forwards to ChartContainer. ChartContainer:327-328,417-428 exposes image/copy export and CSV only with exportData.",
+      "props": "Canonical chart frame, toolbar, accessible dataColumns, loading/error/empty states, explicit heights; no fullscreen opt-in or exportData supplied by this page.",
+      "reuse": "Preserve actual existing image/copy exports and data alternatives; do not claim this page currently offers CSV/fullscreen."
+    },
+    {
+      "name": "ChartLegend / ChartTooltip / Recharts barrel exports",
+      "category": "charts",
+      "owner": ["web\\src\\components\\charts\\ChartLegend.tsx", "web\\src\\components\\charts\\ChartTooltip.tsx", "web\\src\\components\\charts\\index.ts"],
+      "evidence": "Page:12-16,179-198,226-237; ChartLegend:101-135 supplies Button with aria-pressed and hide state.",
+      "props": "Residual ChartLegend state=residualHidden, four Line hide flags; bar categories distinguish a single slope series; canonical tooltip used twice.",
+      "reuse": "Preserve corner labels and series keys; tooltip implementation uninspected."
+    },
+    {
+      "name": "Text / Badge / HelpTooltip / Skeleton / EmptyState / FadeIn / NoVehicleSelected",
+      "category": "existing UI, feedback, motion and onboarding owners",
+      "owner": ["web\\src\\components\\ui", "web\\src\\components\\feedback", "web\\src\\components\\motion\\FadeIn.tsx", "web\\src\\features\\onboarding\\components\\NoVehicleSelected.tsx"],
+      "evidence": "Page:6,9-11,90-91,243-278; FadeIn:23-36 honors reduced-motion input; NoVehicleSelected:51-77 preserves onboarding CTA.",
+      "props": "Localized help and ariaLabel; Text caption/body roles; warning/info Badge labels; four entrance wrappers; shared onboarding action.",
+      "reuse": "Keep current primitives and prerequisite navigation. Directory owner entries indicate category APIs, not audited implementations."
+    }
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\vehicle-systems\\pages\\TireDifferentialDriftPage.tsx",
+      "line": 166,
+      "rule": "MDC-002/MDC-026 reuse source-local trust presentation",
+      "detail": "Both charts repeat a retained-history footer conditional at 166-168 and 215-217, but already reuse VehicleSourceContent; two instances in this page do not establish a need for a new shared wrapper.",
+      "fix": "Keep existing owner. If simplifying locally, retain each section label and refresh-error/paused semantics; do not add another data-state vocabulary.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "responsive": {
+    "sourceBehavior": [
+      "Page:260 uses one column below sm and two above sm for the four interpretation rows.",
+      "Page:263 allows badge/name wrapping; ChartCard:28 uses min-w-0; page charts:179,226 use width/height 100% containers.",
+      "Page supplies 340px and 280px desktop heights and size=standard, but no mobileHeight. Shared resolveChartHeights determines actual mobile geometry; its implementation was not inspected."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\vehicle-systems\\pages\\TireDifferentialDriftPage.tsx",
+        "line": 182,
+        "rule": "MDC-013/MDC-043 readable adaptive charts",
+        "detail": "Residual ticks use fixed fontSize 10/11 and a fixed minTickGap 40; slope chart uses 11px ticks at 229-230. Source does not prove legibility, long corner-label fit or scaling at narrow allocated widths.",
+        "fix": "Reuse existing chart typography and responsive policy, retain all four series and complete data alternatives, and exercise long labels, zoomed text and ten target widths before changing geometry.",
+        "owner": "page",
+        "confidence": "medium"
+      }
+    ],
+    "verification": "Unverified at 320/375/390/430/768/1024/1280/1440/1920/2560 and at allocated container widths; no viewport or mobile render was exercised."
+  },
+  "accessibility": {
+    "sourceBehavior": [
+      "Chart ariaLabel and five/three dataColumns are supplied at page:157,171-177,209,220-224.",
+      "HelpTooltip has a localized accessible name at page:249. KPI icons are aria-hidden at 121,129,138,144.",
+      "ChartLegend supplies semantic Button and aria-pressed; corner badges include textual Leak suspect/Most offset rather than color alone.",
+      "FadeIn source has reduced-motion initial=false and sanitized delay; actual OS/low-bandwidth behavior not exercised."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\components\\charts\\ChartLegend.tsx",
+        "line": 120,
+        "rule": "MDC-040 reachable touch targets",
+        "detail": "Interactive residual legend uses h-auto min-h-0 and p-0 on size=sm Button. This removes an explicit minimum touch target; computed dimensions and WCAG spacing exception are unknown.",
+        "fix": "Shared chart owner should preserve toggle/pressed semantics while establishing sufficient target size or documented spacing, with focused keyboard and narrow-chart review.",
+        "owner": "shared",
+        "confidence": "medium"
+      }
+    ],
+    "verification": "Keyboard, focus, screen reader, touch dimensions, effective contrast, forced colors and reduced-motion behavior remain unverified."
+  },
+  "states": {
+    "initialLoading": "Page:94,110,160,210,252-253 keeps card structures and delegates chart loading and interpretation Skeleton.",
+    "noVehicle": "Page:90-91 returns shared prerequisite surface, whose inspected implementation links to /onboarding with governed guidance.",
+    "fatalError": "Page:161-162,212-213 forwards fatalError/retry; VehicleSourceContent replaces only fatal section content.",
+    "retainedRefreshError": "deriveDataState:188-205 retains data; chart footers:166-168,215-217 and the KPI/interpretation adapters warn without blanking retained evidence.",
+    "offline": "Retained paused queries receive source warnings; initial paused query behavior and mounted shell messaging were not exercised.",
+    "success": "Four KPI occurrences, four residual lines, four slope bars, and four per-corner readings with badges and caveats.",
+    "empty": "Residual timeline checks residualSeries.length; interpretation checks usableSamples; slopeBars derives four entries even from empty history.",
+    "partial": "Normalizer rejects a whole sample when any corner is missing/implausible; page reports raw/usable counts but does not derive a partial DataState.",
+    "issues": [
+      {
+        "file": "web\\src\\features\\vehicle-systems\\pages\\TireDifferentialDriftPage.tsx",
+        "line": 214,
+        "rule": "MDC-026/MDC-045 unknown is not measured zero",
+        "detail": "summarizeTireDifferentialDrift always maps TIRE_CORNERS at lib:334, even when no usable rows exist, producing zero slopes/confidence/offset and a selected imbalance corner. Thus slopeBars.length stays four and the slope chart's empty condition never detects a resolved empty or fully unusable history. deriveDataState.hasData is true for [] (dataState:194-195), so KPI lines 119/126 can report None detected/zero imbalance despite absent usable evidence.",
+        "fix": "Gate inferred measurements and slope presentation on usable evidence, keeping genuine zero distinct from unavailable and insufficient evidence. Preserve raw-row/sample counts, all four sections and evidence thresholds; do not alter inference formulas during presentation work.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\vehicle-systems\\pages\\TireDifferentialDriftPage.tsx",
+        "line": 110,
+        "rule": "MDC-026 consistent retained-evidence labeling",
+        "detail": "VehicleOperationalBrief is not passed retained or error, so its adapter can label retained history Returned evidence even while surrounding VehicleSourceContent shows a stale warning. Adapter:30-37 already supports retained status.",
+        "fix": "Pass the source-derived retained condition to the existing brief; keep usable metrics and section warnings visible without promoting initial errors into retained data.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ],
+    "verification": "All state descriptions are source inspection, not mounted state tests."
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\vehicle-systems\\pages\\TireDifferentialDriftPage.tsx",
+      "line": 234,
+      "rule": "MDC-010/MDC-025/MDC-034 restrained meaningful color",
+      "detail": "Leak-corner bars are forced to chartTokens.series[3], which is saturated red (#ef4444 at tokens.ts:401) and also the ordinary rear-right color at page:36. A leak corner and a non-leaking rear-right bar can therefore share the same special-highlight color. No explicit chart text mark distinguishes the leak bar itself; interpretation badges elsewhere do.",
+      "fix": "Retain stable four-corner identities, but represent leak emphasis with a restrained semantic cue plus text/annotation rather than ambiguous saturated recoloring. Reuse existing chart tokens and annotations; do not replace the global palette or persisted user choices.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\features\\vehicle-systems\\pages\\TireDifferentialDriftPage.tsx",
+      "line": 49,
+      "rule": "MDC-032 workspace date scope",
+      "detail": "Page ignores useRangeState and always requests the hook's rolling 30-day start-only window. Assigned route is absent from inspected RANGE_ENABLED_PATHS (workspaceScope.ts:23-77). This dated analysis cannot follow the shared View settings range or a selected end bound.",
+      "fix": "Integrate the existing header-owned range through a typed acquisition contract and register this exact route; preserve a deliberate existing analysis default, rolling/custom/timezone semantics, robust fitting requirements and server-wide filtering. Confirm backend end-bound support before claiming it; do not add local selectors or client-only truncation.",
+      "owner": "integration",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\vehicle-systems\\pages\\TireDifferentialDriftPage.tsx",
+      "line": 66,
+      "rule": "MDC-044 locale/date policy and stable data identity",
+      "detail": "Residual time is converted immediately to a browser-default month/day/hour string, omitting year, minutes and explicit selected timezone/locale. This same abbreviated string is the exported accessible data column. Distinct observations can share labels and original ms identity is lost from residualSeries, though it remains in the pure summary.",
+      "fix": "Keep the original timestamp in presentation rows and use the existing date/time formatting owner for axis versus complete tooltip/data-table text, honoring saved preferences without changing source/cache timestamps or observations.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\vehicle-systems\\pages\\TireDifferentialDriftPage.tsx",
+      "line": 222,
+      "rule": "MDC-044 localized labels with runtime unit interpolation",
+      "detail": "Slope column embeds unitPrefs.pressure only in the translation fallback, unlike normal named interpolation. If a catalog value exists without equivalent interpolation, preference changes need not update this label. Catalog content was not inspected, so an actual translated mismatch is unverified.",
+      "fix": "Use the canonical translation key with a named unit parameter, coordinate catalog ownership only if the existing key lacks it, and verify all enabled locales while retaining pressure/day meaning.",
+      "owner": "page",
+      "confidence": "medium"
+    }
+  ],
+  "priority": {
+    "level": "high",
+    "reason": "First prevent unavailable TPMS evidence from becoming displayed zero/no-leak measurements; then reconcile workspace scope, retained status and complete timestamps. Visual polish must not change robust inference or discard charts/help.",
+    "order": ["usable-evidence state distinction", "workspace range integration", "retained brief labeling", "timestamp and unit localization", "chart emphasis and accessibility review"]
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "Workspace-bound TPMS analysis acquisition",
+      "owner": "integration",
+      "existingOwnerFile": "web\\src\\api\\hooks\\useVehicleSystems.ts",
+      "relatedOwnerFiles": ["web\\src\\lib\\workspaceScope.ts"],
+      "props": ["typed startInstant", "typed endInstantExclusive", "vehicle identity", "explicit analysis-default policy"],
+      "variants": ["rolling preset", "custom bounded range", "historical end instant"],
+      "states": ["disabled without vehicle", "initial", "retained refresh", "paused", "fatal retry", "resolved empty"],
+      "usedBy": ["/tire-differential-drift"],
+      "dependsOn": ["existing useRangeState/header owner", "confirmation of TPMS endpoint end-bound semantics and complete-range response", "preserved query-key and cancellation policy"],
+      "evidence": "Page:49; hook:65-80; workspaceScope.ts:23-77. This is an integration extension request, not a proposal for a second range picker."
+    },
+    {
+      "name": "Canonical chart-legend target reachability review",
+      "owner": "shared",
+      "existingOwnerFile": "web\\src\\components\\charts\\ChartLegend.tsx",
+      "props": ["existing state.toggle", "existing state.isHidden", "existing aria-pressed", "localized series label"],
+      "variants": ["interactive legend", "passive legend"],
+      "states": ["shown", "hidden but re-enableable", "keyboard focus", "narrow wrapping"],
+      "usedBy": ["/tire-differential-drift residual timeline"],
+      "dependsOn": ["existing Button density/focus contract", "measured target size or documented spacing exception"],
+      "evidence": "ChartLegend:115-135; page:185,195. Other production consumers were not inventoried; no new shared component is justified."
+    }
+  ],
+  "competingImplementations": {
+    "confirmed": [],
+    "reuseDecisions": [
+      "Existing LayoutCard -> ChartCard -> EmbeddedChart -> ChartContainer is one composition chain, not competing chart frames.",
+      "Existing VehicleSourceContent remains the section trust owner and VehicleOperationalBrief remains the metric adapter.",
+      "Pure tireDifferentialDrift.ts calculations belong to the feature model and must not move into a visual shared component.",
+      "Page-local interpretation cards are domain rendering; one mapped pattern is not evidence for a speculative new composite."
+    ],
+    "limits": "No sibling-page or application-wide duplication inventory was performed."
+  },
+  "preservation": {
+    "sourceHash": "BEF786D92FF4FE36B364C3E4B940CF90441C4BA64C9B2B8F4C1203041CF4F7F5",
+    "sourceHashAlgorithm": "SHA256",
+    "currentLineCount": 288,
+    "sectionCount": 4,
+    "sectionNames": ["Differential drift metrics", "Common-mode-removed residuals", "Per-corner drift rate", "Reading this inference"],
+    "sections": [
+      {"name": "Differential drift metrics", "line": 108, "metricCount": 4, "metrics": ["Likely leak corner and evidence score", "Structural imbalance and largest-offset corner", "Days to threshold and gated projection caveat", "Samples analyzed with day span and raw row count"]},
+      {"name": "Common-mode-removed residuals", "line": 154, "seriesCount": 4, "series": ["fl", "fr", "rl", "rr"], "dataColumnCount": 5},
+      {"name": "Per-corner drift rate", "line": 206, "barCount": 4, "dataColumnCount": 3, "data": ["corner", "slope", "confidence"]},
+      {"name": "Reading this inference", "line": 244, "cornerCount": 4, "data": ["corner identity", "leak/offset badges", "slope per day", "confidence", "mean offset"], "help": "Independent leak ranking and structural imbalance; inference is not manufacturer specification"}
+    ],
+    "componentCounts": {"PageLayout": 1, "LayoutCard": 2, "ChartCard": 2, "VehicleOperationalBrief": 1, "VehicleSourceContent": 4, "FadeIn": 4, "ChartLegend": 1, "HelpTooltip": 1},
+    "actions": [
+      {"name": "Toggle/re-enable residual series", "line": 47, "preserve": "fl/fr/rl/rr keys and hidden_tire-differential-drift-residuals URL persistence"},
+      {"name": "Chart image export and copy controls", "line": 159, "preserve": "Both chart toolbar exportable flags; actual export execution unverified. CSV is not claimed because exportData is not supplied."},
+      {"name": "Retry TPMS acquisition", "line": 162, "preserve": "Residual, slope and source-local fatal recovery refetch the existing query"},
+      {"name": "Inference help", "line": 245, "preserve": "Full explanatory text, localization key and accessible label"},
+      {"name": "Prerequisite onboarding navigation", "line": 91, "preserve": "Shared NoVehicleSelected CTA and governed guidance"}
+    ],
+    "dataBehavior": [
+      "Preserve source Pa assumptions as encoded by the pure model; verify actual backend units separately rather than inventing them.",
+      "Preserve timestamp aliases ts/timestamp/created_at, snake/camel pressure keys, finite/plausible four-corner filtering, chronological sort, duplicate-timestamp replacement and unchanged-tuple collapse.",
+      "Preserve common-mode median subtraction, Theil-Sen fitted slope and pairwise agreement, independent mean-residual imbalance and ranking.",
+      "Preserve defaults: minimum 8 usable samples, 2-day span, 0.65 confidence, 30000 Pa threshold, 50000-700000 Pa plausible range and 200 pairwise sample cap.",
+      "Preserve threshold projection null/evidence-gated behavior, rounding, diverging-versus-healing logic and horizon bound.",
+      "Preserve raw source/cache rows, encoded vehicle identity, query cancellation and retained-data recovery; pressure conversion occurs only at display boundary through existing kPa formatters.",
+      "Do not mistake zero-model fallbacks without usable rows for source-backed measurements; correcting that presentation must retain raw/usable counts and all four section frames.",
+      "Preserve all caveats, metric descriptions, chart subtitles, section names, help text, corner labels and specialist precision until equivalence is demonstrated."
+    ]
+  },
+  "evidenceLimits": {
+    "mode": "Atomic Phase0 source-only audit; no source modifications.",
+    "route": "Exact route array is assignment-provided; mounted route registry, authentication and browser reachability were not exercised.",
+    "notRun": ["runtime navigation", "screenshots/visual acceptance", "keyboard/focus/screen reader", "contrast/forced-colors", "viewport/theme/RTL matrix", "HTTP/backend execution", "TypeScript", "lint", "tests", "build", "git"],
+    "auditScript": "Read the audit-violations skill and its script but did not execute it: it unconditionally runs project-wide TypeScript, outside this source-only/concurrent audit authorization. Used explicit assigned-page source pattern counts instead.",
+    "sourcePatternCounts": {"staticInlineStyle": 0, "rawControls": 0, "directChartMapMotionImports": 0, "oldApiImports": 0, "neonGlowPureWhite": 0, "LayoutCardSections": 2, "ChartCardSections": 2},
+    "visualScope": "No explicit page neon/glow/pure-white classes were matched. Saturated red corner emphasis is source-confirmed; actual composed palette, noise level and contrast remain unverified. Shared token definitions not used by this page are not reported as page violations.",
+    "dependencies": "Only page imports, direct feature calculation/trust/brief dependencies and narrow owner API/route excerpts were inspected. Backend implementation, catalogs, settings acquisition, tooltip internals, shell and unrelated consumers were not reviewed.",
+    "validation": "Final owned JSON schema-field presence, exact identity/route, SHA256 readback and section count are validated separately before release; these are artifact/source checks, not runtime acceptance."
+  },
+  "filesRead": [
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\vehicle-systems\\pages\\TireDifferentialDriftPage.tsx",
+    "web\\src\\features\\vehicle-systems\\lib\\tireDifferentialDrift.ts",
+    "web\\src\\features\\vehicle-systems\\components\\VehicleSourceContent.tsx",
+    "web\\src\\features\\vehicle-systems\\components\\operationalbrief-all\\VehicleOperationalBrief.tsx",
+    "web\\src\\api\\hooks\\useVehicleSystems.ts",
+    "web\\src\\api\\dataState.ts",
+    "web\\src\\hooks\\useSelectedVehicle.ts",
+    "web\\src\\hooks\\useHiddenSeries.ts",
+    "web\\src\\hooks\\useUnits.ts",
+    "web\\src\\hooks\\useNumberFormatting.ts",
+    "web\\src\\lib\\unitConversion.ts",
+    "web\\src\\lib\\tokens.ts",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\components\\layout\\index.ts",
+    "web\\src\\components\\layout\\layout-reference\\ChartCard.tsx",
+    "web\\src\\components\\charts\\EmbeddedChart.tsx",
+    "web\\src\\components\\charts\\ChartContainer.tsx",
+    "web\\src\\components\\charts\\ChartLegend.tsx",
+    "web\\src\\components\\charts\\index.ts",
+    "web\\src\\components\\motion\\index.ts",
+    "web\\src\\components\\motion\\FadeIn.tsx",
+    "web\\src\\features\\onboarding\\components\\NoVehicleSelected.tsx",
+    "internal\\api\\router.go"
+  ]
+}

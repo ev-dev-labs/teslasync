@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { severityTokens } from '@/lib/tokens';
 
 const mocks = vi.hoisted(() => ({
   dispatchTourLauncherOpen: vi.fn(),
@@ -24,8 +25,8 @@ vi.mock('@/api/hooks/useSettings', () => ({
   }),
 }));
 
-vi.mock('@/hooks/useChangelog', () => ({
-  useChangelog: () => ({ hasUnseen: mocks.hasUnseen }),
+vi.mock('@/hooks/useChangelogStatus', () => ({
+  useChangelogStatus: () => ({ hasUnseen: mocks.hasUnseen }),
 }));
 
 vi.mock('./VersionSegment', async () => {
@@ -67,6 +68,15 @@ function openHelp() {
 }
 
 describe('HelpSegment', () => {
+  it('uses the exact named Help menu width without changing its popover geometry', () => {
+    render(<HelpSegment onOpenAbout={mocks.onOpenAbout} />);
+    openHelp();
+
+    const dialog = screen.getByRole('dialog', { name: 'Help & support' });
+    expect(dialog).toHaveClass('w-help-menu');
+    expect(dialog).not.toHaveClass('w-[min(92vw,260px)]');
+  });
+
   it('renders one coordinated Help/About trigger', () => {
     render(<HelpSegment onOpenAbout={mocks.onOpenAbout} />);
 
@@ -181,7 +191,11 @@ describe('HelpSegment', () => {
       <HelpSegment onOpenAbout={mocks.onOpenAbout} />,
     );
 
-    expect(container.querySelector('.bg-amber-400')).not.toBeNull();
+    expect(
+      Array.from(container.querySelectorAll('span')).some((span) =>
+        span.classList.contains(severityTokens.warn.dot),
+      ),
+    ).toBe(true);
     expect(
       screen.getByRole('button', {
         name: 'Open help and about. Update or release notes available',
@@ -199,5 +213,67 @@ describe('HelpSegment', () => {
     expect(
       screen.queryByRole('dialog', { name: 'Help & support' }),
     ).toBeNull();
+  });
+
+  it.each([false, true])('retains a mobile target with desktop density when iconOnly=%s', (iconOnly) => {
+    render(<HelpSegment iconOnly={iconOnly} onOpenAbout={mocks.onOpenAbout} />);
+
+    expect(screen.getByRole('button', { name: 'Open help and about' })).toHaveClass(
+      'h-11', 'min-h-11', 'min-w-11', 'shrink-0',
+      'md:h-5', 'md:min-h-0', 'md:min-w-0',
+      'focus-visible:outline-2', 'focus-visible:outline-offset-2',
+    );
+  });
+
+  it.each([false, true])('sizes each owned menu action for mobile and restores desktop when embedded=%s', (embedded) => {
+    render(<HelpSegment embedded={embedded} onOpenAbout={mocks.onOpenAbout} />);
+    if (!embedded) openHelp();
+
+    for (const name of [
+      'Open keyboard shortcuts',
+      'Open tour launcher',
+      'Open feedback / bug report form',
+    ]) {
+      expect(screen.getByRole('button', { name })).toHaveClass(
+        'h-auto', 'min-h-11', 'min-w-11', 'md:min-h-9', 'md:min-w-0',
+        'whitespace-normal', 'max-w-full',
+      );
+    }
+  });
+
+  it('announces unseen release notes without an update and retains its semantic dot', () => {
+    mocks.hasUnseen = true;
+    render(<HelpSegment onOpenAbout={mocks.onOpenAbout} />);
+
+    const trigger = screen.getByRole('button', {
+      name: 'Open help and about. Update or release notes available',
+    });
+    expect(trigger.querySelector('span[aria-hidden]')).toHaveClass(severityTokens.warn.dot);
+    fireEvent.click(trigger);
+    expect(screen.getByRole('dialog', { name: 'Help & support' })).toBeInTheDocument();
+  });
+
+  it('calls the embedded action owner before forwarding its native action', () => {
+    const order: string[] = [];
+    render(
+      <HelpSegment
+        embedded
+        onOpenAbout={() => order.push('about')}
+        onAction={() => order.push('owner')}
+      />,
+    );
+    fireEvent.click(screen.getByTestId('status-bar-about-trigger'));
+    expect(order).toEqual(['owner', 'about']);
+  });
+
+  it('closes on Escape and restores focus to the original trigger', () => {
+    render(<HelpSegment onOpenAbout={mocks.onOpenAbout} />);
+    const trigger = screen.getByRole('button', { name: 'Open help and about' });
+    trigger.focus();
+    openHelp();
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(screen.queryByRole('dialog', { name: 'Help & support' })).toBeNull();
+    expect(trigger).toHaveFocus();
+    expect(trigger).toHaveAttribute('aria-expanded', 'false');
   });
 });

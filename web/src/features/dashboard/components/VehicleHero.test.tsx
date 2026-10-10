@@ -51,8 +51,11 @@ function hexToRgb(hex: string): string {
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key: string, defaultValue?: string) =>
-      typeof defaultValue === 'string' ? defaultValue : key,
+    t: (key: string, defaultValue?: string, values?: Record<string, unknown>) => {
+      const text = typeof defaultValue === 'string' ? defaultValue : key;
+      return text.replace(/\{\{(\w+)\}\}/g, (match, name: string) =>
+        values?.[name] != null ? String(values[name]) : match);
+    },
   }),
 }));
 
@@ -143,6 +146,27 @@ function renderHero(overrides: Partial<Props> = {}) {
 afterEach(() => cleanup());
 
 describe('VehicleHero', () => {
+  it('preserves out-of-scale measurements without changing gauge scales or hiding identity and actions', () => {
+    const state = {
+      ...baseState,
+      battery_level: 125,
+      rated_range: 800,
+      inside_temp: 80,
+      outside_temp: -50,
+    };
+    renderHero({ state });
+    expect(screen.getByRole('group', { name: 'Battery' })).toHaveTextContent('125.00');
+    expect(screen.getByRole('group', { name: 'Range' })).toHaveTextContent('800.00');
+    expect(screen.getByRole('group', { name: 'Range' })).toHaveTextContent('600.00');
+    expect(screen.getByRole('group', { name: 'Inside' })).toHaveTextContent('80.00');
+    expect(screen.getByRole('group', { name: 'Outside' })).toHaveTextContent('-50.00');
+    expect(screen.queryByRole('meter')).toBeNull();
+    expect(screen.getByRole('heading', { name: 'My Model 3' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Details' })).toHaveAttribute('href', '/vehicles/7');
+    expect(screen.getByRole('link', { name: 'Commands' })).toHaveAttribute('href', '/commands');
+    expect(state.rated_range).toBe(800);
+  });
+
   it('renders the vehicle name heading, live status badge, and VIN subtitle', () => {
     renderHero({ state: { ...baseState, state: 'online' } });
 
@@ -160,16 +184,19 @@ describe('VehicleHero', () => {
     ).toBeInTheDocument();
   });
 
-  it('shows the asleep placeholder with a wake-up action and no live gauges', () => {
+  it('shows unavailable readings without inventing sleep, preserving access to wake commands', () => {
     renderHero({ state: null });
 
-    expect(screen.getByText(/Vehicle asleep/)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Wake Up' })).toBeInTheDocument();
+    expect(screen.getByText('No vehicle readings available')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Commands' })).toHaveAttribute('href', '/commands');
+    expect(screen.queryByText(/Vehicle asleep/)).not.toBeInTheDocument();
     // No reading is UNKNOWN, not offline. Reporting "offline" here is the
     // exact lie that made the hero and Fleet Posture disagree about a car.
     expect(screen.getByText('Unknown')).toBeInTheDocument();
     expect(screen.queryByText('offline')).not.toBeInTheDocument();
-    expect(screen.queryByText('Battery')).not.toBeInTheDocument();
+    expect(screen.getByRole('group', { name: 'Battery', exact: true })).toHaveAccessibleDescription(/unknown/i);
+    expect(screen.queryAllByRole('meter')).toHaveLength(0);
+    expect(screen.getAllByRole('link')).toHaveLength(4);
   });
 
   it('renders battery/range/temperature gauges but hides speed & charge gauges when idle', () => {
@@ -221,9 +248,9 @@ describe('VehicleHero', () => {
     expect(screen.getByText('charging')).toBeInTheDocument();
     expect(screen.getByText('Charging')).toBeInTheDocument();
     expect(screen.getByText(/^48(\.0+)? kW$/)).toBeInTheDocument();
-    expect(screen.getByText('Charge Rate')).toBeInTheDocument();
+    expect(screen.getByText('Charge rate')).toBeInTheDocument();
     // "1.5h" appears in the charge banner AND the Time-to-Full stat.
-    expect(screen.getAllByText('1.5h')).toHaveLength(2);
+    expect(screen.getAllByText('1.50h')).toHaveLength(2);
     expect(screen.getByText(/Done ~/)).toBeInTheDocument();
   });
 
@@ -257,13 +284,81 @@ describe('VehicleHero', () => {
       charger_power: null,
       charge_rate: null,
       time_to_full_charge: null,
-    } as unknown as VehicleState;
+      is_locked: null,
+      sentry_mode: null,
+    } satisfies NonNullable<Props['state']>;
 
     const { container } = renderHero({ state: nullState });
 
     expect(container.textContent).not.toContain('NaN');
     // Sections are never hidden — the battery gauge still renders its label.
     expect(screen.getByText('Battery')).toBeInTheDocument();
+    expect(screen.queryAllByRole('meter')).toHaveLength(0);
+    for (const name of ['Battery', 'Range', 'Inside', 'Outside']) {
+      expect(screen.getByRole('group', { name, exact: true })).toHaveAccessibleDescription(/unknown/i);
+    }
+    expect(screen.queryByText('Unlocked')).not.toBeInTheDocument();
+    expect(screen.queryByText('Off')).not.toBeInTheDocument();
+  });
+
+  it('does not convert missing temperatures into 32 degrees Fahrenheit', () => {
+    const converter = vi.fn((value: number) => value * 9 / 5 + 32);
+    renderHero({
+      state: { ...baseState, inside_temp: null, outside_temp: undefined },
+      tempUnit: '°F', toTemperatureDisplay: converter,
+    });
+    expect(screen.getByRole('group', { name: 'Inside', exact: true })).toHaveAccessibleDescription(/unknown/i);
+    expect(screen.getByRole('group', { name: 'Outside', exact: true })).toHaveAccessibleDescription(/unknown/i);
+    expect(screen.queryByText('32.0°F')).not.toBeInTheDocument();
+    expect(converter).not.toHaveBeenCalledWith(0);
+  });
+
+  it('preserves genuine zero readings and false security flags', () => {
+    renderHero({
+      state: {
+        ...baseState, battery_level: 0, rated_range: 0, inside_temp: 0,
+        outside_temp: 0, is_locked: false, sentry_mode: false,
+      },
+      tempUnit: '°F', toTemperatureDisplay: value => value * 9 / 5 + 32,
+    });
+    expect(screen.getByRole('meter', { name: 'Battery', exact: true })).toHaveAttribute('aria-valuenow', '0');
+    expect(screen.getByRole('meter', { name: 'Range', exact: true })).toHaveAttribute('aria-valuenow', '0');
+    for (const name of ['Inside', 'Outside']) {
+      expect(screen.getByRole('meter', { name, exact: true })).toHaveAttribute('aria-valuenow', '32');
+    }
+    expect(screen.getByText('Unlocked')).toBeInTheDocument();
+    expect(screen.getByText('Off')).toBeInTheDocument();
+    expect(screen.getByText(/^0(?:\.0+)?\s*kW$/)).toBeInTheDocument();
+  });
+
+  it('converts signed pack watts to the configured display power unit exactly once', () => {
+    renderHero({ state: { ...baseState, power: -4200, speed: 12 } });
+    expect(screen.getByText(/^-4\.20?\s*kW$/)).toBeInTheDocument();
+    expect(screen.getAllByText('Power')).toHaveLength(1);
+    expect(screen.queryByText(/^-4,?200.*kW$/)).not.toBeInTheDocument();
+  });
+
+  it('keeps a charging-power gauge unknown without fabricating zero', () => {
+    renderHero({
+      state: {
+        ...baseState, is_charging: true, charger_power: null,
+        charge_rate: null, time_to_full_charge: null, power: null,
+      },
+    });
+    expect(screen.getByRole('group', { name: 'Power', exact: true })).toHaveAccessibleDescription(/unknown/i);
+    expect(screen.queryByText(/^0(?:\.0+)?\s*kW$/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Done ~/)).not.toBeInTheDocument();
+  });
+
+  it('uses one keyboard target per responsive, touch-sized quick action', () => {
+    renderHero();
+    const links = screen.getAllByRole('link');
+    expect(links).toHaveLength(4);
+    for (const link of links) {
+      expect(link).toHaveClass('min-h-11');
+      expect(link.querySelector('button')).toBeNull();
+    }
+    expect(links[0].parentElement).toHaveClass('flex-wrap');
   });
 
   it('passes raw SI telemetry values straight to each unit converter', () => {
@@ -305,11 +400,11 @@ describe('VehicleHero', () => {
       'href',
       '/commands',
     );
-    expect(screen.getByRole('link', { name: /Live Map/i })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: /Live map/i })).toHaveAttribute(
       'href',
       '/live',
     );
-    expect(screen.getByRole('link', { name: /Digital Twin/i })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: /Digital twin/i })).toHaveAttribute(
       'href',
       '/digital-twin',
     );
@@ -327,12 +422,12 @@ describe('VehicleHero', () => {
   it('colours the battery gauge amber below 50% and green above it', () => {
     const low = renderHero({ state: { ...baseState, battery_level: 20 } });
     // Amber fill is unique to a low battery gauge.
-    expect(hasGaugeColor(low.container as HTMLElement, '#f59e0b')).toBe(true);
+    expect(hasGaugeColor(low.container as HTMLElement, gaugeTone.warning)).toBe(true);
     cleanup();
 
     const high = renderHero({ state: { ...baseState, battery_level: 90 } });
     // Green fill — only the battery gauge uses it when idle (not charging).
-    expect(hasGaugeColor(high.container as HTMLElement, '#10b981')).toBe(true);
+    expect(hasGaugeColor(high.container as HTMLElement, gaugeTone.success)).toBe(true);
   });
 });
 
@@ -408,7 +503,7 @@ describe('VehicleHero — trust-aware status', () => {
     expect(screen.getByText('Unknown')).toBeInTheDocument();
     expect(screen.queryByText('charging')).not.toBeInTheDocument();
     // Charge banner is gated on the trusted status, so it must not appear.
-    expect(screen.queryByText('Charge Rate')).not.toBeInTheDocument();
+    expect(screen.queryByText('Charge rate')).not.toBeInTheDocument();
   });
 
   it('reports Unknown when the field backing the claim was never verified', () => {

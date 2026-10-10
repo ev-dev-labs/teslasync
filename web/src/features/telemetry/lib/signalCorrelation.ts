@@ -31,30 +31,9 @@
  * Pure and React-free.
  */
 
-import type { SignalObservation } from '@/types/signals';
+import { toSignalHistoryMeasurements, type SignalHistorySample } from './signalHistorySamples';
 
-/**
- * The two signal shapes this app actually serves.
- *
- * `signal_log` rows arrive as `SignalObservation` (snake_case, `ts`), while
- * `/signals/{id}/{name}/history` returns `SignalPoint` (camelCase,
- * `timestamp`). Rather than force every caller through an adapter — and risk
- * one of them silently mapping the wrong key and correlating an empty series —
- * the module reads whichever pair is present.
- */
-export interface CorrelatableSample {
-  ts?: string;
-  timestamp?: string;
-  value_numeric?: number | null;
-  valueNum?: number | null;
-  value_bool?: boolean | null;
-  valueBool?: boolean | null;
-}
-
-/** Structural check that `SignalObservation` remains assignable to the input. */
-export type SignalObservationIsCorrelatable = SignalObservation extends CorrelatableSample
-  ? true
-  : never;
+export type CorrelatableSample = SignalHistorySample;
 
 export interface ResampledSeries {
   /** Grid timestamps, ms. */
@@ -120,39 +99,11 @@ const DEFAULTS = {
   minOverlap: 10,
 } as const;
 
-/** Numeric observations only, ascending, de-duplicated by timestamp. */
+/** Numeric and boolean history measurements, ascending and timestamp-deduplicated. */
 export function toNumericSeries(
   observations: readonly CorrelatableSample[],
 ): Array<{ ms: number; value: number }> {
-  const points: Array<{ ms: number; value: number }> = [];
-  for (const o of observations) {
-    const iso = o.ts ?? o.timestamp;
-    if (iso == null) continue;
-    const ms = new Date(iso).getTime();
-    if (!Number.isFinite(ms)) continue;
-
-    const numeric = o.value_numeric ?? o.valueNum;
-    const bool = o.value_bool ?? o.valueBool;
-    let value: number | null = null;
-    if (typeof numeric === 'number' && Number.isFinite(numeric)) {
-      value = numeric;
-    } else if (typeof bool === 'boolean') {
-      // Booleans are genuinely correlatable (HVAC on/off vs. cabin temp), so
-      // they are promoted rather than discarded.
-      value = bool ? 1 : 0;
-    }
-    if (value == null) continue;
-    points.push({ ms, value });
-  }
-  points.sort((a, b) => a.ms - b.ms);
-
-  const deduped: Array<{ ms: number; value: number }> = [];
-  for (const p of points) {
-    const last = deduped[deduped.length - 1];
-    if (last != null && last.ms === p.ms) last.value = p.value;
-    else deduped.push(p);
-  }
-  return deduped;
+  return toSignalHistoryMeasurements(observations, true);
 }
 
 /**

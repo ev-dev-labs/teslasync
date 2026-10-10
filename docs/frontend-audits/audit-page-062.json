@@ -1,0 +1,386 @@
+{
+  "item": "audit-page-062",
+  "page": "web\\src\\features\\battery\\pages\\BatteryDegradationPage.tsx",
+  "routes": ["/battery-degradation"],
+  "purpose": "Present selected-vehicle battery health estimates, historical snapshots, modeled forecasts and confidence bounds, charging-habit stress, risk factors and source-provided recommendations.",
+  "primaryGoal": "Understand the available telemetry-derived health evidence and its limits, inspect history and forecast uncertainty, and review guidance without issuing vehicle commands.",
+  "dataSources": [
+    {
+      "hook": "useBatteryHealthAnalytics",
+      "file": "web\\src\\api\\hooks\\useEnergy.ts",
+      "line": 76,
+      "endpoint": "GET /analytics/battery-health?vehicle_id=<selected vehicle>",
+      "knownApiPath": "/api/v1/analytics/battery-health",
+      "sourceOwner": "batteryDegradationHandler.Health",
+      "routeEvidence": "internal\\api\\router.go:3877; App.tsx:72,854 confirms lazy SafeRoute mount",
+      "consumerEvidence": "BatteryDegradationPage.tsx:98-108",
+      "queryContract": "['battery-health-analytics', vehicleId], enabled only when vehicleId !== null, STALE_TIMES.ANALYTICS, retry:false; queryFn forwards signal to typed request<BatteryHealthAnalytics>. No explicit date bounds, pagination or as-of parameter.",
+      "trustContract": "useDataState provenance=inferred and maxAgeMs=86400000; retained payload and fatal versus refresh errors preserved; independent DataFreshnessAuto forceStaleAfterMs=86400000.",
+      "limits": "Backend handler/repository/serialization and actual aggregate refresh schedule were not inspected. The page comment calls the source a daily cagg, but this audit does not establish that implementation or measured pack capacity. The /analytics/battery-degradation endpoint is not the mounted page's query."
+    },
+    {
+      "hook": "Page-local display derivations",
+      "file": "web\\src\\features\\battery\\pages\\BatteryDegradationPage.tsx",
+      "line": 123,
+      "endpoint": null,
+      "sourceOwner": "BatteryHealthAnalytics / BatteryHealthSnapshot / RiskFactorData in web\\src\\types\\energy.ts:144-182",
+      "consumerEvidence": "BatteryDegradationPage.tsx:123-172,175-234",
+      "contract": "First returned history row's range is the constant original-range comparison; current range converts only finite meters. Historical health plus returned projections are concatenated; first projected row receives the last history health to join series. Confidence band=max(0,high-low) stacked over the returned low bound. Fast-charge share uses fast+slow counts only when both exist and sum>0. Cycle-depth score=max(0,round(100-avg_DoD)).",
+      "unitEvidence": "BatteryDegradationPage.tsx:116-120,191-229,701-724; BatteryDegradationStats.tsx:73-80",
+      "limits": "Returned ordering, finite/nullable guarantees, forecasting calibration, meaning of the displayed 95% confidence label and the generic 80% warranty reference are not verified. Preserve source inputs and existing calculations; do not fabricate observations or infer degradation damage from absent history."
+    },
+    {
+      "hook": "useSelectedVehicle / useHiddenSeries / useUnits / useNumberFormatting",
+      "file": "web\\src\\features\\battery\\pages\\BatteryDegradationPage.tsx",
+      "line": 98,
+      "endpoint": null,
+      "sourceOwner": "Existing workspace, URL series visibility and user formatting owners",
+      "contract": "Header vehicle selector owns scope. getWorkspaceRouteScope('/battery-degradation') is vehicle:true, range:false from workspaceScope.ts:23-78,156-165; page supplies no duplicate scope selector. Stable hidden-series id battery-degradation-trend. Raw Wh and meters remain in query/types; useUnits formatEnergy and convertDistanceFromSI apply saved preferences at display boundary.",
+      "limits": "Hook internals, preference persistence and real navigation scope transitions are not runtime-tested. No new date control or backend filtering capability should be assumed."
+    }
+  ],
+  "components": [
+    {
+      "name": "PageLayout / LayoutCard / DegradationGrid / CardGrid",
+      "owner": "Existing components\\layout plus battery-degradation-modernization\\DegradationGrid.tsx",
+      "role": "Full allocated-width page, named cards and measured-container packing retaining child source order",
+      "contracts": "PageLayout forwards PageContainer props; LayoutCard title/description/actions/children/footer/size; DegradationGrid children/label/readonly sizes feeds CardGrid stable slot IDs and placement className.",
+      "evidence": ["PageLayout.tsx:5-16", "LayoutCard.tsx:8-60", "CardGrid.tsx:8-42", "DegradationGrid.tsx:1-30"]
+    },
+    {
+      "name": "BatteryDegradationStats / BatteryEvidenceBrief / OperationalBrief",
+      "owner": "web\\src\\features\\battery\\components\\battery-degradation-modernization\\BatteryDegradationStats.tsx",
+      "sharedOwner": "Existing data-display OperationalBrief and useOperationalMetrics",
+      "role": "Four summary metrics, four fit/stress/cycle/DoD metrics and real review-details pipeline",
+      "contracts": "data/loading/prediction; raw StatMetric energy/percent/number/status; specialist rate formatter, finite nonnegative ageLabel; BatteryEvidenceBrief id/title/metrics/period/loading/retained/secondary.",
+      "evidence": ["BatteryDegradationStats.tsx:8-105", "BatteryEvidenceBrief.tsx:8-57"],
+      "limits": "OperationalBrief drawer and formatter implementation not deeply inspected or exercised."
+    },
+    {
+      "name": "ChartCard / EmbeddedChart / ChartContainer / ChartLegend / ChartBrush",
+      "owner": "Existing layout and charts category owners",
+      "role": "Canonical chart chrome, annotation rendering, series visibility, brush zoom, opt-in image export and accessible fallback",
+      "contracts": "Trend chartKey=battery-degradation-trend, toolbar/exportable, fatal error/onRetry, annotation vehicleId/scope=battery/chartId; range EmbeddedChart data/dataColumns, chartKey=battery-degradation-range-loss, height=288/mobileHeight=224/fluid=false. EmbeddedChart defaults fullscreen=false/exportable=false.",
+      "evidence": ["BatteryDegradationPage.tsx:329-406,505-557", "ChartCard.tsx:7-48", "EmbeddedChart.tsx:6-43", "ChartContainer.tsx:447-454,750-858"],
+      "limits": "Export, annotation mutations, legend and brush execution unverified; do not describe range chart as export-enabled or either chart as fullscreen-enabled by this caller."
+    },
+    {
+      "name": "DataTable",
+      "owner": "web\\src\\components\\ui category",
+      "role": "Five-column degradation history with sortable/value-filtered columns, pagination and opt-in full-details mobile cards",
+      "contracts": "tableId=battery:degradation-history; key=date-odometer_m; enableValueFilters; mobileColumns date/soh_pct; mobilePresentation roles retain odometer/capacity/range as metadata; compact/pagination.",
+      "evidence": ["BatteryDegradationPage.tsx:175-234,704-736"],
+      "limits": "Shared table implementation, export defaults and persisted settings were not independently exercised."
+    },
+    {
+      "name": "LinearGauge / MetricBar / Badge / Text / Caption / GlassPanel",
+      "owner": "Existing charts, data-display and ui category primitives",
+      "role": "Named meter, scored tracks, semantic statuses, typography and nested evidence cards",
+      "contracts": "Gauge preserves caller value/max/label/unit; semantic tone already supported. MetricBar supports nullable/nonfinite values, ariaLabel, gradient or solid fill and reduced motion.",
+      "evidence": ["BatteryDegradationPage.tsx:298-316,575-592,645-695", "LinearGauge.tsx:11-88,129-152", "MetricBar.tsx:8-27,43-100"]
+    },
+    {
+      "name": "DataFreshnessAuto / useDataState / StaleRefreshWarning / QueryError / AlertBanner / EmptyState / ActionableEmptyState / FadeIn",
+      "owner": "Existing trust, feedback, data-display and motion owners",
+      "role": "Freshness, nonblocking retained-source notices, contextual skeletons/recovery, governed degradation prerequisites and reduced-motion entrance",
+      "contracts": "fatalError alone replaces data; stale warning has independent retry; initial paused notice remains explicit; guidanceId=battery.degradation; FadeIn honors useMotionPreference.",
+      "evidence": ["BatteryDegradationPage.tsx:102-108,239-267,739-761", "dataState.ts:126-154,187-237", "StaleRefreshWarning.tsx:61-129", "QueryError.tsx:1-15", "FadeIn.tsx:23-37"]
+    }
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\battery\\pages\\BatteryDegradationPage.tsx",
+      "line": 435,
+      "rule": "MDC-002 / mission 4 shared reuse",
+      "detail": "Loading/fatal-error/empty branches repeat across prediction, habits, range, risk, recommendations and history. Titles are deliberately retained. DegradationGrid and BatteryDegradationStats already extract reusable layout/metric behavior.",
+      "fix": "Only consolidate feature-level source-state presentation after preserving each distinct empty explanation, retry, chart chrome and specialist content. Do not invent a competing card/state library.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\battery\\pages\\BatteryDegradationPage.tsx",
+      "line": 192,
+      "rule": "MDC-033 / display-only SI / DRY",
+      "detail": "History cell labels and mobile displayValue repeat distance/SOH/capacity formatting, while range chart follows the same display boundary. Equivalent display logic must stay synchronized.",
+      "fix": "Reuse bounded feature formatting adapters if needed; retain raw column keys/filter values, displayed units and mobile metadata without converting query/cache values.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "responsive": {
+    "sourceConfirmed": [
+      "PageLayout supplies w-full/min-w-0 and container context; DegradationGrid uses measured CardGrid and placement rather than viewport-only fixed columns.",
+      "LayoutCard header wraps and headings break words; help action requests min-h-11/min-w-11.",
+      "Risk names break words and icons shrink-0; history mobile cards explicitly retain all five columns.",
+      "Range chart has explicit 224px mobile and 288px desktop heights, shared responsive container and distance-unit axis; projection chart requests height=300 and standard size."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\battery\\pages\\BatteryDegradationPage.tsx",
+        "line": 646,
+        "rule": "MDC-043 / long-content mobile reachability",
+        "detail": "Nested health-factor card headers and risk score headers use nowrap flex justify-between plus compact badges; long translations and API risk labels compete for narrow packed card width. MetricBar header also does not wrap. This is an overflow risk, not an observed browser defect.",
+        "fix": "Test narrow allocated cards at 320/375/390px and text zoom; allow wrapping without omitting label, numeric score, reason or denominator.",
+        "owner": "page",
+        "confidence": "medium"
+      }
+    ],
+    "verification": "All ten required widths, RTL, zoom, safe-area scroll, long localized labels, narrow desktop allocations and real table-card details remain unverified."
+  },
+  "accessibility": {
+    "sourceConfirmed": [
+      "Named section/card groups and shared heading semantics; typography uses Text/Caption rather than raw controls.",
+      "Risk and recommendation icons are marked aria-hidden; health gauge has a label, unit and meter implementation; risk tracks have progressbar semantics and visible score text.",
+      "Range chart supplies real data/dataColumns enabling shared screen-reader and forced-colors fallback table.",
+      "History uses semantic shared DataTable with named row labels and complete mobile roles.",
+      "FadeIn and MetricBar consult the existing reduced-motion policy."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\battery\\pages\\BatteryDegradationPage.tsx",
+        "line": 328,
+        "rule": "MDC-034 / MDC-040 / mission 30 accessible charts",
+        "detail": "Projection caller explicitly opts out with chart-a11y:no-table and supplies neither data/dataColumns nor ariaDescription. ChartContainer then gives only 'Chart: title'. Summary cards and historical table do not expose each future projected value or low/high confidence bound. The ariaLabel alone does not supply equivalent forecast evidence.",
+        "fix": "Provide a real accessible projection table or full equivalent description through the existing ChartCard contract. Include historical health, projected health and both source confidence bounds; keep null gaps, brush/legend/annotations/export behavior and do not invent forecasts.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\battery\\pages\\BatteryDegradationPage.tsx",
+        "line": 510,
+        "rule": "MDC-040 / MDC-045 / accessible unit context",
+        "detail": "Range fallback columns have generic range labels and no format functions; converted numeric rows therefore lack explicit distance units in the shared fallback cells. Visual Y-axis and tooltip do include units.",
+        "fix": "Include the effective saved distance unit in fallback column labels or format functions using existing formatting; preserve raw SI and converted display geometry.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ],
+    "acceptanceRequired": [
+      "Keyboard/visible focus for help, review-details drawer, retries, chart export, legend, brush and annotations.",
+      "Screen-reader source-trust context, projection alternatives, meter judgement, history filters/pagination and mobile cards.",
+      "Effective text/UI contrast in light/dark/custom/forced-colors modes and actual 44px target reachability."
+    ],
+    "verification": "No keyboard, browser, screen reader, contrast measurement or viewport session performed."
+  },
+  "states": {
+    "loading": "Initial !hasData && healthQuery.isLoading controls summary loading and contextual per-card skeletons; card titles remain. No whole-page data gate.",
+    "empty": "Empty history, range, risk and recommendations have distinct explanations; missing finite SOH gets refresh action. Prediction respects has_enough_data and explains minimum 3 snapshots. History adds governed actionable prerequisites.",
+    "error": "fatalError replaces summary and dependent bodies, while ChartCard receives onRetry=healthState.retry. Other QueryError instances do not receive onRetry.",
+    "stale": "useDataState retains payload across refresh failure/age; top StaleRefreshWarning preserves populated content and has retry. Header freshness requests 24h threshold.",
+    "offline": "Paused initial load shows explicit reconnect notice; retained paused data remains visible with stale notice. Initial paused query can also render unavailable/empty bodies because isLoading is false when not fetching.",
+    "partial": "Single aggregate response, no page-supplied partial/unavailable option. Missing nested values use dashes or individual EmptyStates; absence is not measured zero. Successful aggregate presence is not proof every measurement is available.",
+    "disabled": "No selected vehicle disables hook; page has no explicit no-vehicle branch and renders unavailable/empty sections plus history guidance. No source request or fake measurement should be invented.",
+    "success": "Displays only source-backed values/arrays and existing calculated indices; model estimates remain distinct from direct measurements in summary explanation.",
+    "issues": [
+      {
+        "file": "web\\src\\features\\battery\\pages\\BatteryDegradationPage.tsx",
+        "line": 265,
+        "rule": "MDC-026 / mission 24 recovery",
+        "detail": "Repeated QueryError calls pass error only; _StatusAwareError exposes retry only when onRetry exists. Shared hook also has retry:false. The projection chart is the only fatal body with explicit retry; other fatal cards omit local recovery.",
+        "fix": "Pass existing healthState.retry to each applicable QueryError or clearly expose one source-level retry beside all dependent sections. Keep classifier behavior and avoid repeated concurrent refetch controls.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\battery\\components\\battery-degradation-modernization\\BatteryDegradationStats.tsx",
+        "line": 90,
+        "rule": "MDC-026 / source trust",
+        "detail": "BatteryEvidenceBrief supports retained status, but BatteryDegradationStats forwards neither retained nor trust state. After a failed/paused background refresh, global warning is correct while summary and fit brief can still label retained readings 'Available source readings'.",
+        "fix": "Forward existing source trust to both briefs using the existing retained prop; keep all metric values and window limitations visible and preserve global warning/retry.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\battery\\pages\\BatteryDegradationPage.tsx",
+        "line": 254,
+        "rule": "MDC-026 / unknown versus unavailable",
+        "detail": "Initial offline pause has a correct explicit notice, but nonloading cards can simultaneously explain missing history/minimum snapshots before a response has established that fact. Disabled no-vehicle query follows similar empty explanations.",
+        "fix": "Differentiate no-vehicle, initial paused and resolved-empty body messages without hiding any section or simulating data. Reuse governed feedback and workspace scope.",
+        "owner": "page",
+        "confidence": "medium"
+      }
+    ]
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\battery\\pages\\BatteryDegradationPage.tsx",
+      "line": 430,
+      "rule": "MDC-010 / MDC-015 / mission 7 visual intensity",
+      "detail": "Prediction callout uses neon-purple tinted background/border, and recommendation rows use neon-amber tint at line 618. These are decorative panels rather than necessary measurement encoding.",
+      "fix": "Use existing neutral surface/border tokens with restrained semantic status cues. Keep 80% target, predicted date/years, recommendations and uncertainty explanations intact.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\battery\\pages\\BatteryDegradationPage.tsx",
+      "line": 347,
+      "rule": "MDC-010 / MDC-034 / mission 27 restrained charts",
+      "detail": "Forecast uses hardcoded saturated purple confidence gradient/projected line, green actual line and amber/red reference lines including bright warranty text. Risk bars use saturated hex fills with default gradient; SOH helper uses palette colors plus hardcoded red. Multiple hue systems compete.",
+      "fix": "Reuse existing chart palettes and semantic tone APIs, subdue reference decoration and select existing MetricBar fill=solid where appropriate. Retain distinct actual/projected/confidence identities, labels, source thresholds and saved chart color choices; do not replace uncertainty with decoration.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\battery\\pages\\BatteryDegradationPage.tsx",
+      "line": 565,
+      "rule": "MDC-015 / mission 8 surface hierarchy",
+      "detail": "Risk factors and three health factors nest GlassPanel inside LayoutCard; summary, gauge and history repeat SOH with multiple badges. Existing repeated evidence has distinct purpose but may make every subsection equally loud.",
+      "fix": "Evaluate rendered hierarchy and reduce nested border/elevation emphasis rather than deleting evidence, replacing the shared surface system or removing useful comparison context.",
+      "owner": "page",
+      "confidence": "medium"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\features\\battery\\components\\battery-degradation-modernization\\DegradationGrid.tsx",
+      "line": 2,
+      "rule": "MDC-002 / category imports",
+      "detail": "Feature imports CardGrid/useCardPlacement/CardSize directly from layout/layout-reference. BatteryDegradationStats imports StatMetric from data-display/stat-reference although data-display category already exports that type.",
+      "fix": "Use existing category exports; shared layout owner must verify/re-export existing useCardPlacement and CardSize if absent. Do not copy layout policy/context into feature code.",
+      "owner": "integration",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\battery\\pages\\BatteryDegradationPage.tsx",
+      "line": 123,
+      "rule": "MDC-045 / mission 33 separation and evidence",
+      "detail": "Page retains chart joins and domain score derivations within a 770-line orchestrator. The first history row is labeled original range; response type also exposes original_capacity_wh/capacity_source but mounted page does not consume them. Exact source completeness, baseline ordering and model confidence are unverified.",
+      "fix": "Extract only bounded typed feature transformations if needed, preserving existing ordering/score/joins. Make actual source/model limitations visible where available; never infer an original factory measurement, calibrated confidence or missing backend capability.",
+      "owner": "page",
+      "confidence": "medium"
+    }
+  ],
+  "priority": {
+    "level": "P1",
+    "rationale": "Already adopts shared layout, trust, SI display formatting and mobile history details. Highest risks are forecast evidence accessibility and inconsistent retained/fatal source messaging, then decorative intensity.",
+    "order": ["Projection evidence alternative", "Retained/paused/no-vehicle and retry clarity", "Restrained forecast/callout/risk decoration", "Narrow-card/long-label QA and category imports"],
+    "notClaimed": "Runtime acceptance, measured battery degradation, forecast calibration, warranty validity or completed modernization"
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "Expose existing layout placement contracts through category barrel if absent",
+      "existingOwnerFile": "web\\src\\components\\layout\\layout-reference\\CardPlacementContext.tsx",
+      "integrationFile": "web\\src\\components\\layout\\index.ts",
+      "propsVariantsStates": "Existing useCardPlacement and CardSize type; preserve context size/span/width/className, missing-context fallback and measured packing. No replacement component.",
+      "usedBy": ["web\\src\\features\\battery\\components\\battery-degradation-modernization\\DegradationGrid.tsx:2,6,17"],
+      "dependsOn": ["Shared layout owner verifies current export inventory and cycle-safe integration"],
+      "evidence": "Scoped layout category search returned no useCardPlacement; DegradationGrid imports it from layout-reference. CardSize category export presence not exhaustively verified.",
+      "limits": "Conditional export-only requirement; no new shared renderer is required for projection alternatives, retained briefs or solid metric bars."
+    }
+  ],
+  "competingImplementations": [
+    {
+      "name": "No new competing layout/chart/stats engine established in this mounted page",
+      "evidence": "DegradationGrid.tsx:19-27 delegates CardGrid; BatteryDegradationStats.tsx:90-104 delegates BatteryEvidenceBrief; ChartCard.tsx:29-46 delegates EmbeddedChart/ChartContainer.",
+      "decision": "Retain existing adapters and canonical owners; do not introduce a BatteryCard library, custom chart export controller, parallel stats formatter or replacement scope store.",
+      "limits": "Unmounted battery siblings and whole-repository alternatives were not audited."
+    }
+  ],
+  "preservation": {
+    "sourceHash": "053993D0307F5BD48457E8B81A63D96018788E2C51313A0FD397FA030A8BB101",
+    "hashAlgorithm": "SHA-256",
+    "hashCommand": "(Get-FileHash 'web\\src\\features\\battery\\pages\\BatteryDegradationPage.tsx' -Algorithm SHA256).Hash",
+    "currentLineCount": 770,
+    "pageAndInspectedPresentationLineCount": 962,
+    "lineCountScope": "Page 770 + BatteryDegradationStats 105 + DegradationGrid 30 + BatteryEvidenceBrief 57. Existing source baseline only, no source changes or historical comparison.",
+    "sectionCount": 10,
+    "topLevelGroupCount": 6,
+    "sectionNames": [
+      {"name": "Battery health summary", "evidence": "BatteryDegradationPage.tsx:260-270", "mustKeep": "SOH, estimated capacity Wh, annual degradation rate, age, evidence caveat and review details"},
+      {"name": "Battery health gauge", "evidence": "BatteryDegradationPage.tsx:281-324", "mustKeep": "Finite SOH, 0-100% gauge, exact >90/>=80 status thresholds, help and missing-value refresh"},
+      {"name": "Health trend and projection", "evidence": "BatteryDegradationPage.tsx:329-406", "mustKeep": "Actual/projected series, low/high confidence envelope, 80/70 references, annotations, persisted legend, brush and image export"},
+      {"name": "Prediction", "evidence": "BatteryDegradationPage.tsx:423-453", "mustKeep": "has_enough_data gate, 80% target, years/date, absolute fitted slope, stress, fractional cycles, average DoD and minimum-data explanation"},
+      {"name": "Charging habits impact", "evidence": "BatteryDegradationPage.tsx:457-484", "mustKeep": "Fast share/count denominator, deep-discharge count, exact Low/Medium/High stress semantics and guidance"},
+      {"name": "Range loss", "evidence": "BatteryDegradationPage.tsx:497-563", "mustKeep": "First-history original range comparison, current estimates, null gaps, display units, legend, tooltip and real accessible rows"},
+      {"name": "Risk factors", "evidence": "BatteryDegradationPage.tsx:566-604", "mustKeep": "Every returned identity, label, score, detail, <=25/<=50 severity thresholds and named tracks"},
+      {"name": "Recommendations", "evidence": "BatteryDegradationPage.tsx:609-630", "mustKeep": "Every returned recommendation and contextual empty explanation"},
+      {"name": "Battery health factors", "evidence": "BatteryDegradationPage.tsx:634-698", "mustKeep": "Charge score, fast/full percentages, nullable temperature score/reason, lower-better hint and derived cycle-depth/average DoD"},
+      {"name": "Degradation history", "evidence": "BatteryDegradationPage.tsx:704-763", "mustKeep": "All five columns, raw keys, sort/filter, stable tableId/key, mobile details, pagination and governed prerequisites"}
+    ],
+    "sourceSectionMarkers": "Bounded four-file scan: LayoutCard 8, GlassPanel 5 (includes nested cards/error shell), ChartCard 1, EmbeddedChart 1. Source-defined ten sections are not a mounted browser count.",
+    "actions": [
+      {"name": "Header vehicle selection", "evidence": "BatteryDegradationPage.tsx:98-101", "preserve": "Existing shell-owned scope, no duplicate selector"},
+      {"name": "Review evidence details", "evidence": "BatteryDegradationStats.tsx:90-104; BatteryEvidenceBrief.tsx:33-55", "preserve": "Shared OperationalBrief review pipeline and complete metric descriptions"},
+      {"name": "SOH help and refresh", "evidence": "BatteryDegradationPage.tsx:285-292,320", "preserve": "Localized help target and explicit refetch"},
+      {"name": "Retained source refresh / forecast retry", "evidence": "StaleRefreshWarning.tsx:114-126; BatteryDegradationPage.tsx:338", "preserve": "Existing refetch cancellation/query behavior and retained payload"},
+      {"name": "Forecast chart interactions", "evidence": "BatteryDegradationPage.tsx:330-340,355,400", "preserve": "Image export toolbar, legend URL state, annotations and brush zoom"},
+      {"name": "Range chart legend and tooltip", "evidence": "BatteryDegradationPage.tsx:522-555", "preserve": "Distinct series and selected-unit formatting"},
+      {"name": "History table pipeline", "evidence": "BatteryDegradationPage.tsx:704-736", "preserve": "Value filters/sort, mobile cards, pagination and table persistence; uninspected shared export defaults not claimed"},
+      {"name": "Governed empty recovery", "evidence": "BatteryDegradationPage.tsx:757-761", "preserve": "Existing battery.degradation guidance registry"}
+    ],
+    "dataBehavior": [
+      "Keep query identity, retry:false, ANALYTICS stale policy, signal cancellation, selected vehicle enablement and raw returned payload.",
+      "Keep inferred provenance, 24h age threshold, fatal versus refresh distinction, independent retained-source warning and initial reconnect notice.",
+      "No fake degradation evidence: absent/null/nonfinite inputs remain unknown or unavailable; no fixtures, invented confidence bounds or fabricated capacity.",
+      "Wh/meters remain SI on wire/cache. Existing preferences apply only in display formatters, chart coordinates and table labels.",
+      "Retain first-returned-history baseline and history/projection joining unless a separately verified source correction is authorized.",
+      "Retain exact confidence-low/high arithmetic and missing historical/projection gaps; future uncertainty must not be dropped during visual simplification.",
+      "Retain all risk/recommendation/source text, source thresholds and current specialist rate/age/cycle calculations.",
+      "Do not add unsupported backend date filtering, vehicle commands, full-history pagination or authentication behavior."
+    ],
+    "ownedFiles": ["docs\\frontend-audits\\audit-page-062.json", ".agent-status\\audit-page-062.txt"]
+  },
+  "evidenceLimits": {
+    "method": "Bounded read-only source inspection, scoped rg and PowerShell Get-FileHash/Get-Content/Select-String. Only assigned JSON and heartbeat written.",
+    "runtime": "UNVERIFIED: actual route mount, production payloads, battery measurements, backend calculations, forecast calibration, screenshots, theme/contrast, viewport/keyboard/assistive-tech/forced-colors behavior.",
+    "validation": "NOT RUN: Git, nested agents, TypeScript, tests, full-repository lint/build or production actions. Audit skill script was inspected but not executed because it unconditionally runs project TypeScript; bounded source scans used instead.",
+    "reportValidation": {
+      "command": "Get-Content docs\\frontend-audits\\audit-page-062.json -Raw | ConvertFrom-Json; assert all 19 required top-level fields, exact page string and routes; compare preservation.sourceHash with Get-FileHash root page -Algorithm SHA256",
+      "exitCode": 0,
+      "rawOutput": "PASS valid JSON; 19 required fields; exact page/routes; root source SHA-256 053993D0307F5BD48457E8B81A63D96018788E2C51313A0FD397FA030A8BB101",
+      "limits": "Report contract/source snapshot verification only; not UI validation."
+    },
+    "sourceScan": {
+      "scope": "Root page and three directly mounted presentation files counted above, not all shared descendants",
+      "command": "For each pattern: $m=@(Select-String -Path $files -Pattern $pattern); \"$pattern matched-lines=$($m.Count)\"",
+      "exitCode": 0,
+      "rawOutput": [
+        "style= matched-lines=0",
+        "<(button|input|textarea|select|table)\\b matched-lines=0",
+        "from ['\\\"](recharts|react-leaflet|framer-motion)['\\\"] matched-lines=0",
+        "text-white|bg-white|border-white matched-lines=0",
+        "neon|glow matched-lines=3",
+        "<LayoutCard\\b matched-lines=8",
+        "<GlassPanel\\b matched-lines=5",
+        "<ChartCard\\b matched-lines=1",
+        "<EmbeddedChart\\b matched-lines=1"
+      ],
+      "interpretation": "Three neon/glow matched lines include one comment plus two actual tinted decorative callouts. No direct pure-white classes or glow effects found in bounded files; inherited composition is not proven neutral or contrast-compliant. No claim of zero overall violations."
+    },
+    "unverifiedDependencies": "DataFreshnessAuto implementation, DataTable controls/export defaults, OperationalBrief drawer, useOperationalMetrics internals, selected-vehicle/hidden-series/settings internals, annotations API, locale catalogs, backend Health handler and repository.",
+    "lookupLimits": "Guessed DataFreshnessAuto.tsx and api policy/queryConfig paths did not exist; only known exports/policy names were used, no guessed implementation evidence.",
+    "concurrency": "Hash and citations describe current inspected source; shared owners may change concurrently. Source presence and previous receipts are not runtime acceptance."
+  },
+  "filesRead": [
+    "docs\\frontend-design-contract.md (initial contract/requirements excerpt and lines 190-430 continuation)",
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-mission.md (sections 0-4,6-8,14-17,22-25,27-33,43-44; section-heading search)",
+    "docs\\frontend-audits\\audit-page-060.json (schema example excerpts only)",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\battery\\pages\\BatteryDegradationPage.tsx",
+    "web\\src\\features\\battery\\components\\battery-degradation-modernization\\BatteryDegradationStats.tsx",
+    "web\\src\\features\\battery\\components\\battery-degradation-modernization\\DegradationGrid.tsx",
+    "web\\src\\features\\battery\\components\\operationalbrief-all\\BatteryEvidenceBrief.tsx",
+    "web\\src\\api\\hooks\\useEnergy.ts (lines 48-99)",
+    "web\\src\\types\\energy.ts (lines 108-201)",
+    "web\\src\\App.tsx (scoped lazy import/route search)",
+    "internal\\api\\router.go (scoped battery-health route search)",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\hooks\\useDataState.ts",
+    "web\\src\\api\\dataState.ts (lines 115-243)",
+    "web\\src\\components\\feedback\\StaleRefreshWarning.tsx",
+    "web\\src\\components\\feedback\\QueryError.tsx",
+    "web\\src\\components\\feedback\\_StatusAwareError.tsx (onRetry scoped search)",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\layout\\layout-reference\\LayoutCard.tsx",
+    "web\\src\\components\\layout\\layout-reference\\ChartCard.tsx",
+    "web\\src\\components\\layout\\layout-reference\\CardGrid.tsx",
+    "web\\src\\components\\layout\\index.ts (placement export scoped search)",
+    "web\\src\\components\\data-display\\index.ts (StatMetric/DataFreshnessAuto scoped search)",
+    "web\\src\\components\\data-display\\MetricBar.tsx",
+    "web\\src\\components\\charts\\EmbeddedChart.tsx",
+    "web\\src\\components\\charts\\ChartContainer.tsx (fallback/data/export scoped search and lines 440-466,748-866)",
+    "web\\src\\components\\charts\\LinearGauge.tsx (lines 1-165)",
+    "web\\src\\components\\motion\\FadeIn.tsx"
+  ]
+}

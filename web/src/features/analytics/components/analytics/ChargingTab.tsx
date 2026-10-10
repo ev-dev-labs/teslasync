@@ -1,24 +1,26 @@
 import { useTranslation } from 'react-i18next';
 import { useFormatting } from '@/hooks/useFormatting';
-import { Plug, Zap, DollarSign, Gauge, Timer, TrendingUp, PieChart as PieChartIcon, Battery, Clock } from 'lucide-react';
-import { MetricCard } from '@/components/data-display';
+import { PieChart as PieChartIcon, Battery, Clock } from 'lucide-react';
+import type { StatMetric } from '@/components/data-display';
 import {
   ChartTooltip,
   ChartLegend,
-  chartGrid, axisTick, axisTickSm, chartMarginLabeled, chartAnimation, safe, CHART_COLORS,
+  chartGrid, axisTick, axisTickSm, chartMarginLabeled, chartAnimation, CHART_COLORS,
   BarChart, Bar, ComposedChart, Line, PieChart, Pie, Cell,
   XAxis, YAxis, Tooltip, ResponsiveContainer,
   AREA_DEFAULTS,
 } from '@/components/charts';
 import { FadeIn } from '@/components/motion';
-import { fmtNumber, fmtInt } from '@/lib/numberFormat';
+
 import { AnalyticsChartPanel } from './AnalyticsChartPanel';
-import { MetricBandSkeleton } from './helpers';
+import { FleetSectionBrief } from '../operationalbrief-a-m/FleetSectionBrief';
 import { PIE_COLORS } from './constants';
 import { ChargingDetailSection } from './ChargingDetailSection';
 import type { FleetAnalyticsQuery } from './constants';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export function ChargingTab({ query }: { query: FleetAnalyticsQuery }) {
+  const { fmtInt, fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const { formatCurrency } = useFormatting();
 
@@ -32,57 +34,34 @@ export function ChargingTab({ query }: { query: FleetAnalyticsQuery }) {
   const powerStats = ca?.power_stats;
   const durStats = ca?.duration_stats;
   const effStats = ca?.efficiency_stats;
+  const metrics: StatMetric[] = [
+    { metricId: 'count', occurrenceId: 'charging-sessions', rawValue: data?.total_charging_sessions,
+      label: t('analytics.charging.sessions', 'Sessions'),
+      display: { formatter: raw => ({ value: fmtInt(raw), unit: '' }) } },
+    { metricId: 'energy', occurrenceId: 'charging-total-energy', rawValue: data?.total_energy_kwh != null ? data.total_energy_kwh * 1000 : null,
+      label: t('analytics.charging.totalEnergy', 'Total energy'),
+      display: { formatter: raw => ({ value: fmtNumber(raw / 1000), unit: 'kWh' }) } },
+    { metricId: 'currency', occurrenceId: 'charging-total-cost', rawValue: data?.total_cost,
+      label: t('analytics.charging.totalCost', 'Total cost'),
+      display: { formatter: raw => ({ value: formatCurrency(raw), unit: '' }) } },
+    { metricId: 'power', occurrenceId: 'charging-average-power', rawValue: powerStats?.avg != null ? powerStats.avg * 1000 : null,
+      label: t('analytics.charging.avgPower', 'Avg power'),
+      display: { formatter: raw => ({ value: fmtNumber(raw / 1000), unit: 'kW' }) } },
+    { metricId: 'duration', occurrenceId: 'charging-average-duration', rawValue: durStats?.avg != null ? durStats.avg * 60 : null,
+      label: t('analytics.charging.avgDuration', 'Avg duration'),
+      display: { formatter: raw => ({ value: fmtNumber(raw / 60), unit: t('analytics.charging.min', 'min') }) } },
+    { metricId: 'percent', occurrenceId: 'charging-efficiency', rawValue: effStats?.avg,
+      label: t('analytics.charging.chargeEff', 'Charge efficiency'),
+      display: { formatter: raw => ({ value: fmtNumber(raw), unit: '%' }) } },
+  ];
 
   return (
     <FadeIn className="mt-4 space-y-4 xl:space-y-5">
       {/* Summary Cards band */}
       <section aria-label={t('analytics.charging.summary', 'Charging summary metrics')}>
-        {isLoading ? (
-          <MetricBandSkeleton count={6} />
-        ) : (
-          <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6">
-            <MetricCard
-              label={t('analytics.charging.sessions', 'Sessions')}
-              value={data ? fmtInt(data.total_charging_sessions ?? 0) : '—'}
-              icon={<Plug className="h-4 w-4" />}
-              color="cyan"
-            />
-            <MetricCard
-              label={t('analytics.charging.totalEnergy', 'Total Energy')}
-              value={data ? fmtNumber(data.total_energy_kwh ?? 0, 1) : '—'}
-              subtitle="kWh"
-              icon={<Zap className="h-4 w-4" />}
-              color="green"
-            />
-            <MetricCard
-              label={t('analytics.charging.totalCost', 'Total Cost')}
-              value={data ? formatCurrency(data.total_cost ?? 0, 2) : '—'}
-              icon={<DollarSign className="h-4 w-4" />}
-              color="amber"
-            />
-            <MetricCard
-              label={t('analytics.charging.avgPower', 'Avg Power')}
-              value={powerStats ? fmtNumber(safe(powerStats.avg), 1) : '—'}
-              subtitle="kW"
-              icon={<Gauge className="h-4 w-4" />}
-              color="purple"
-            />
-            <MetricCard
-              label={t('analytics.charging.avgDuration', 'Avg Duration')}
-              value={durStats ? fmtNumber(safe(durStats.avg), 0) : '—'}
-              subtitle={t('analytics.charging.min', 'min')}
-              icon={<Timer className="h-4 w-4" />}
-              color="cyan"
-            />
-            <MetricCard
-              label={t('analytics.charging.chargeEff', 'Charge Efficiency')}
-              value={effStats ? fmtNumber(safe(effStats.avg), 1) : '—'}
-              subtitle="%"
-              icon={<TrendingUp className="h-4 w-4" />}
-              color="green"
-            />
-          </div>
-        )}
+        <FleetSectionBrief query={query} metrics={metrics}
+          title={t('analytics.brief.chargingTitle', 'Returned charging measurements')}
+          description={t('analytics.brief.chargingDescription', 'Returned fleet totals and charging statistics retain their source denominations and selected-range coverage.')} />
       </section>
 
       <section
@@ -91,7 +70,7 @@ export function ChargingTab({ query }: { query: FleetAnalyticsQuery }) {
       >
         {/* Charger Types Donut */}
         <AnalyticsChartPanel
-          title={t('analytics.charging.chargerTypes', 'Charger Types')}
+          title={t('analytics.charging.chargerTypes', 'Charger types')}
           icon={<PieChartIcon className="h-4 w-4" />}
           loading={isLoading}
           error={err}
@@ -130,7 +109,7 @@ export function ChargingTab({ query }: { query: FleetAnalyticsQuery }) {
 
         {/* Start Battery Distribution */}
         <AnalyticsChartPanel
-          title={t('analytics.charging.startBattery', 'Start Battery Distribution')}
+          title={t('analytics.charging.startBattery', 'Start battery distribution')}
           icon={<Battery className="h-4 w-4" />}
           loading={isLoading}
           error={err}
@@ -158,7 +137,7 @@ export function ChargingTab({ query }: { query: FleetAnalyticsQuery }) {
 
         {/* Hourly Charging Pattern */}
         <AnalyticsChartPanel
-          title={t('analytics.charging.hourlyPattern', 'Hourly Charging Pattern')}
+          title={t('analytics.charging.hourlyPattern', 'Hourly charging pattern')}
           icon={<Clock className="h-4 w-4" />}
           loading={isLoading}
           error={err}

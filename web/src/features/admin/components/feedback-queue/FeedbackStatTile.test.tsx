@@ -75,7 +75,7 @@ describe('FeedbackStatTile', () => {
 
     // MetricCard tints the icon's inner wrapper via neonColorMap[color].text.
     const iconEl = screen.getByTestId('tile-icon')
-    expect(iconEl.parentElement?.className).toContain('text-amber-300')
+    expect(iconEl.parentElement?.className).toContain('text-[var(--semantic-warning)]')
   })
 
   it('resolved: large counts keep grouping separators via fmtInt', () => {
@@ -87,15 +87,19 @@ describe('FeedbackStatTile', () => {
   })
 
   it('loading: shows a labelled status region with a skeleton and hides the value', () => {
-    const { container } = render(
+    render(
       <FeedbackStatTile label="Total feedback" icon={icon} color="cyan" value={999} loading />,
     )
 
-    const region = screen.getByRole('status')
+    const region = screen.getByRole('status', { name: 'Loading…' })
     expect(region.getAttribute('aria-busy')).toBe('true')
     expect(region).toHaveAccessibleName('Loading…')
-    // Skeleton primitive renders an animate-pulse bar inside the region.
-    expect(container.querySelector('.animate-pulse')).not.toBeNull()
+    // Loading keeps one static card-shaped placeholder inside the busy region.
+    const placeholders = region.querySelectorAll(':scope > div[aria-hidden="true"]')
+    expect(placeholders).toHaveLength(1)
+    expect(placeholders[0]).toHaveClass('h-4', 'w-full', 'rounded-xl', 'bg-[var(--skeleton-bg)]')
+    expect(placeholders[0]).toHaveStyle({ height: '74px' })
+    expect(placeholders[0]).not.toHaveClass('animate-pulse')
     // Loading precedence: the value is withheld even though it was provided.
     expect(screen.queryByText('999')).toBeNull()
     // The icon belongs to the resolved card only.
@@ -135,5 +139,17 @@ describe('FeedbackStatTile', () => {
 
     expect(screen.getByRole('status')).toBeInTheDocument()
     expect(screen.queryByText('0')).toBeNull()
+  })
+
+  it('explicit unknown: keeps the metric identity and em-dash without announcing an indefinite load', () => {
+    const { container } = render(
+      <FeedbackStatTile label="Total feedback" icon={icon} color="cyan" value={undefined} loading={false} unknown />,
+    )
+    expect(screen.getByText('Total feedback')).toBeInTheDocument()
+    expect(screen.getByText('—')).toBeInTheDocument()
+    expect(screen.queryByText('0')).toBeNull()
+    expect(screen.getByTestId('tile-icon')).toBeInTheDocument()
+    expect(screen.queryByRole('status')).toBeNull()
+    expect(container.querySelector('.animate-pulse')).toBeNull()
   })
 })

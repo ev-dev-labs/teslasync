@@ -13,7 +13,7 @@
  *      dollars before currency formatting (1 dollar = 1_000_000 micro-cents),
  *      staying at the em-dash while loading, on error, and when Helix is off.
  *   4. When Helix is off the usage fetch is skipped entirely.
- *   5. A non-finite feature count is guarded to 0.
+ *   5. A non-finite feature count is invalid, distinct from a measured zero.
  *
  * The shared `request` client is mocked so the real `useAiUsageToday` hook
  * runs end-to-end without a network. `react-i18next` is stubbed to fall back
@@ -21,7 +21,7 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
 
@@ -77,14 +77,12 @@ function renderStrip(props: StripProps) {
 }
 
 /**
- * Read the value rendered next to a MetricCard label. The label text lives in
- * a <span> inside the `.metric-label` <p>; the value is that <p>'s next
- * sibling. Resolving by label keeps the assertion robust against tile order.
+ * Resolve the actual Brief value by its labelled metric occurrence, not by
+ * assumptions about the shared renderer's typography elements.
  */
 function tileValue(label: string): string {
   const labelSpan = screen.getByText(label)
-  const labelParagraph = labelSpan.closest('p')
-  const valueEl = labelParagraph?.nextElementSibling as HTMLElement | null
+  const valueEl = labelSpan.closest('[data-operational-metric]')?.querySelector('[data-operational-value]')
   return (valueEl?.textContent ?? '').trim()
 }
 
@@ -94,6 +92,17 @@ beforeEach(() => {
 })
 
 describe('HelixStatusStrip', () => {
+  it('retains independent draft and daily usage context in the real Review drawer', async () => {
+    requestMock.mockResolvedValue(makeUsage({ cost_micro_cents: 12_500_000 }))
+    renderStrip({ mode: 'cloud', enabledCount: 3, providerName: 'openai' })
+    await waitFor(() => expect(tileValue('Spend today')).toBe('$12.50'))
+    fireEvent.click(screen.getByRole('button', { name: 'Review details' }))
+    const drawer = screen.getByRole('dialog')
+    expect(within(drawer).getByText('OpenAI')).toBeInTheDocument()
+    expect(within(drawer).getByText('$12.50')).toBeInTheDocument()
+    expect(within(drawer).getByText('Today · UTC')).toBeInTheDocument()
+  })
+
   it('renders all four tiles with live cloud usage', async () => {
     requestMock.mockResolvedValue(makeUsage({ call_count: 5, cost_micro_cents: 12_500_000 }))
 
@@ -158,7 +167,8 @@ describe('HelixStatusStrip', () => {
   it('guards a non-finite feature count so it never renders as "NaN"', () => {
     renderStrip({ mode: 'cloud', enabledCount: Number.NaN, providerName: 'openai' })
 
-    expect(tileValue('Features enabled')).toBe('0')
+    expect(tileValue('Features enabled')).toBe(EM_DASH)
+    expect(screen.getByText('Features enabled').closest('[data-operational-metric]')).toHaveAttribute('data-value-state', 'invalid')
     expect(tileValue('Features enabled')).not.toContain('NaN')
   })
 

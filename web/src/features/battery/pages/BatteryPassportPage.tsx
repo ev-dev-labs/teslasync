@@ -10,10 +10,11 @@ import {
   useVerifyPassport,
   type BatteryPassport,
 } from '@/api/hooks/useBatteryPassport';
-import { Grid, PageContainer } from '@/components/layout';
+import { CardGrid, PageLayout } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
+import { useDataState } from '@/hooks/useDataState';
 import { useTimezone } from '@/lib/timezone';
 
 import {
@@ -58,7 +59,7 @@ import {
  * - treat verification failure as status evidence rather than page failure.
  *
  * Section components own their panel shells and state-specific interiors.
- * Consequently, PageContainer must never receive a page-level loading,
+ * Consequently, PageLayout must never receive a page-level loading,
  * error, or empty gate: doing so would unmount all fourteen evidence shells.
  *
  * Persistent state matrix:
@@ -77,11 +78,6 @@ import {
  * the substantial rendering and deterministic evidence logic remain in the
  * extracted component and lib modules.
  */
-const TWO_COLUMNS = {
-  default: 1,
-  xl: 2,
-} as const;
-
 function downloadCertificate(passport: BatteryPassport): void {
   const certificate = toBatteryPassportCertificate(passport);
   const blob = new Blob(
@@ -128,6 +124,7 @@ export default function BatteryPassportPage() {
   const passportQuery = useBatteryPassport(
     vehicleIdString,
   );
+  const passportSource = useDataState(passportQuery, { provenance: 'historical' });
   const passport = passportQuery.data ?? null;
 
   /*
@@ -184,15 +181,11 @@ export default function BatteryPassportPage() {
     );
   const initialError =
     vehicleSelected
-    && !payloadResolved
-    && passportQuery.isError
-      ? passportQuery.error
+      ? passportSource.fatalError
       : null;
   const refreshError =
     vehicleSelected
-    && payloadResolved
-    && passportQuery.isError
-      ? passportQuery.error
+      ? passportSource.refreshError
       : null;
   const isResolved =
     vehicleSelected
@@ -293,7 +286,7 @@ export default function BatteryPassportPage() {
   );
 
   return (
-    <PageContainer
+    <PageLayout
       title={t(
         'batteryPassport.title',
         'Battery Passport',
@@ -356,20 +349,16 @@ export default function BatteryPassportPage() {
        * These sit together visually but retain independent panel shells.
        */}
       <FadeIn delay={0.12}>
-        <Grid
-          cols={TWO_COLUMNS}
-          gap={4}
-          className="items-stretch"
-        >
-          <BatteryPassportTrendDistribution
+        <CardGrid label={t('batteryPassport.capacityEvidence', 'Distribution and capacity context')} items={[
+          { id: 'passport-trend-distribution', size: 'half', content: <BatteryPassportTrendDistribution
             analysis={analysis}
             state={queryState}
-          />
-          <BatteryPassportCapacityContext
+          /> },
+          { id: 'passport-capacity-context', size: 'half', content: <BatteryPassportCapacityContext
             analysis={analysis}
             state={queryState}
-          />
-        </Grid>
+          /> },
+        ]} />
       </FadeIn>
 
       {/*
@@ -388,20 +377,16 @@ export default function BatteryPassportPage() {
        * Neutral rollups and exact thermal accounting share one dense row.
        */}
       <FadeIn delay={0.18}>
-        <Grid
-          cols={TWO_COLUMNS}
-          gap={4}
-          className="items-stretch"
-        >
-          <BatteryPassportUsageProfile
+        <CardGrid label={t('batteryPassport.profileEvidence', 'Usage and thermal profiles')} items={[
+          { id: 'passport-usage-profile', size: 'half', content: <BatteryPassportUsageProfile
             analysis={analysis}
             state={queryState}
-          />
-          <BatteryPassportThermalProfile
+          /> },
+          { id: 'passport-thermal-profile', size: 'half', content: <BatteryPassportThermalProfile
             analysis={analysis}
             state={queryState}
-          />
-        </Grid>
+          /> },
+        ]} />
       </FadeIn>
 
       {/*
@@ -454,6 +439,6 @@ export default function BatteryPassportPage() {
       <FadeIn delay={0.33}>
         <BatteryPassportMethodology />
       </FadeIn>
-    </PageContainer>
+    </PageLayout>
   );
 }

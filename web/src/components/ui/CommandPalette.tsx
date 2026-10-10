@@ -7,8 +7,15 @@ import {
   Bookmark, FileText, CalendarDays, X,
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
+import { useMotionPreference } from '@/hooks/useMotionPreference'
+import { useDataState } from '@/hooks/useDataState'
 import type { TFunction } from 'i18next'
 import { Input } from './Input'
+import { Button } from './Button'
+import { Text } from './Typography'
+import { SourceContent } from '@/components/layout/layout-reference/SourceContent'
+import { Skeleton } from '@/components/feedback/Skeleton'
+import { StaleRefreshWarning } from '@/components/feedback/StaleRefreshWarning'
 import { cn } from '@/lib/cn'
 import { navSections } from '@/components/layout/Layout'
 import { navSearchKeywords } from '@/components/layout/navSearchKeywords'
@@ -305,6 +312,7 @@ interface CommandPaletteProps {
 
 export function CommandPalette({ onOpen, initialOpen = false }: CommandPaletteProps) {
   const { t } = useTranslation()
+  const { reduce, durationMs } = useMotionPreference()
   const [open, setOpen] = useState(initialOpen)
   const [query, setQuery] = useState('')
   const [selectedIndex, setSelectedIndex] = useState(0)
@@ -368,11 +376,14 @@ export function CommandPalette({ onOpen, initialOpen = false }: CommandPalettePr
   const navigate = useNavigate()
   const location = useLocation()
 
-  const { data: vehicles } = useVehicles()
-  const vehicleList = vehicles ?? []
-  const { data: savedViews } = useAllSavedViews()
-  const savedViewList = savedViews ?? []
+  const vehiclesQuery = useVehicles()
+  const vehiclesState = useDataState(vehiclesQuery)
+  const vehicleList = vehiclesState.data ?? []
+  const savedViewsQuery = useAllSavedViews()
+  const savedViewsState = useDataState(savedViewsQuery)
+  const savedViewList = savedViewsState.data ?? []
   const alertsQuery = useAlerts()
+  const alertsState = useDataState(alertsQuery)
   const openAlertList = useMemo(
     () => (alertsQuery.data ?? []).filter((alert) => !alert.acknowledged_at),
     [alertsQuery.data],
@@ -851,12 +862,21 @@ export function CommandPalette({ onOpen, initialOpen = false }: CommandPalettePr
     return () => window.clearTimeout(handle)
   }, [scopedTerm])
 
-  const { data: searchData } = useGlobalSearch(debouncedQuery, {
+  const searchQuery = useGlobalSearch(debouncedQuery, {
     // When a scope is active the search hits are filtered out anyway —
     // skip the network round-trip entirely.
     disabled: mode !== 'search' || activeScope !== null,
     limit: 5,
   })
+  const searchState = useDataState(searchQuery)
+  const searchData = searchState.data
+  const remoteEnabled = mode === 'search' && activeScope === null && scopedTerm.trim().length >= 2
+  const debouncePending = scopedTerm.trim() !== debouncedQuery
+  const remotePending = remoteEnabled && (debouncePending || searchState.status === 'initial' || searchState.isRefreshing || searchQuery.isPlaceholderData)
+  const remoteFailed = remoteEnabled && !debouncePending && (searchState.fatalError !== null || searchState.refreshError !== null)
+  const remoteBlocked = remoteEnabled && !debouncePending && searchState.isRefreshBlocked
+  const retainedQuery = remotePending && (searchData?.hits?.length ?? 0) > 0 && searchData?.query !== scopedTerm.trim()
+  const remoteUnresolved = remotePending || remoteFailed || remoteBlocked
 
   const searchResultItems: PaletteItem[] = useMemo(() => {
     const hits = searchData?.hits ?? []
@@ -1129,6 +1149,16 @@ export function CommandPalette({ onOpen, initialOpen = false }: CommandPalettePr
     })
   }, [open])
 
+  // Only mode transitions transfer focus; opening retains its delayed timer.
+  const previousModeRef = useRef(mode)
+  useEffect(() => {
+    const previousMode = previousModeRef.current
+    previousModeRef.current = mode
+    if (!open || previousMode === mode) return
+    if (mode === 'search') inputRef.current?.focus()
+    else listRef.current?.focus()
+  }, [mode, open])
+
   // Keyboard nav within palette
   function handleInputKey(e: React.KeyboardEvent) {
     const maxIndex = displayItems.length - 1
@@ -1208,17 +1238,17 @@ export function CommandPalette({ onOpen, initialOpen = false }: CommandPalettePr
       {open && (
         <>
           <motion.div
-            initial={{ opacity: 0 }}
+            initial={reduce ? false : { opacity: 0 }}
             animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
+            exit={{ opacity: reduce ? 1 : 0 }}
+            transition={{ duration: durationMs / 1000, ease: [0.2, 0, 0, 1] }}
             data-role="command-palette"
             // Not migrated to <Modal>: the command palette is its own
             // keyboard-driven primitive
             // with custom search behavior, multi-mode navigation, and a
             // distinct visual treatment (top-anchored card, not centered
             // dialog). New interactive dialogs MUST use <Modal>.
-            // eslint-disable-next-line no-restricted-syntax
-            className="fixed inset-0 z-[200] bg-[var(--bg-app)] backdrop-blur-sm dark:bg-[var(--surface-overlay)]"
+            className="fixed inset-0 z-command-palette-backdrop bg-[var(--surface-overlay)]"
             onClick={close}
           />
           <div
@@ -1234,15 +1264,14 @@ export function CommandPalette({ onOpen, initialOpen = false }: CommandPalettePr
             // keyboard-driven system overlay with its own combobox/listbox
             // semantics and top-anchored geometry; <Modal> centres and traps
             // differently. The backdrop above is the click-out surface.
-            // eslint-disable-next-line no-restricted-syntax
-            className="pointer-events-none fixed inset-0 z-[201] flex items-start justify-center overflow-y-auto px-4 py-[max(2rem,8vh)]"
+            className="pointer-events-none fixed inset-0 z-command-palette-positioner flex items-start justify-center overflow-y-auto px-4 py-command-palette-viewport"
           >
             <motion.div
               ref={panelRef}
-              initial={{ opacity: 0, scale: 0.95, y: -20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: -20 }}
-              transition={{ type: 'spring', bounce: 0.15, duration: 0.3 }}
+              initial={reduce ? false : { opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: reduce ? 1 : 0 }}
+              transition={{ duration: durationMs / 1000, ease: [0.2, 0, 0, 1] }}
               data-role="command-palette"
               data-command-palette-panel
               className="pointer-events-auto w-full max-w-lg"
@@ -1251,55 +1280,59 @@ export function CommandPalette({ onOpen, initialOpen = false }: CommandPalettePr
                 role="dialog"
                 aria-modal="true"
                 aria-label={t('palette.dialogLabel', 'Command palette')}
-                className="flex max-h-[84vh] flex-col overflow-hidden rounded-2xl border border-[var(--glass-border)] bg-[var(--surface-1)] text-[var(--text-primary)] shadow-2xl backdrop-blur-xl"
+                className="flex max-h-command-palette flex-col overflow-hidden rounded-panel border border-[var(--border-default)] bg-[var(--surface-1)] text-[var(--text-primary)] shadow-e3"
               >
               {/* Search input / contextual selection header */}
-              <div className="flex shrink-0 items-center gap-3 border-b border-[var(--glass-border)] px-5 py-4">
+              <div className="flex min-w-0 shrink-0 flex-wrap items-center gap-3 border-b border-[var(--border-default)] px-4 py-4 sm:px-5">
                 {mode !== 'search' ? (
                   <>
-                    <button
+                    <Button
                       type="button"
+                      variant="ghost"
                       onClick={goBack}
                       aria-label={t('palette.back', 'Back')}
-                      className="flex-shrink-0 rounded-lg p-1.5 text-[var(--text-muted)] transition-colors hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)]"
+                      className="min-h-11 min-w-11 shrink-0 p-1.5 md:min-h-9 md:min-w-9"
                     >
                       <ChevronLeft className="h-5 w-5" aria-hidden="true" />
-                    </button>
-                    <div className="flex-1 flex items-center gap-2">
+                    </Button>
+                    <div className="flex min-w-0 flex-1 items-start gap-2">
                       {mode === 'vehicle-select'
                         ? <Zap className="h-4 w-4 text-[var(--theme-primary)]" aria-hidden="true" />
                         : <BellRing className="h-4 w-4 text-[var(--theme-primary)]" aria-hidden="true" />}
-                      <span className="text-sm text-[var(--text-secondary)]">
+                      <Text variant="bodySm" className="min-w-0 break-words">
                         {mode === 'vehicle-select'
                           ? t('palette.selectVehicleFor', { command: pendingCommandLabel, defaultValue: `Send "${pendingCommandLabel}" to…` })
                           : t('palette.acknowledgeAlert.select', 'Choose an open alert to acknowledge')}
-                      </span>
+                      </Text>
                     </div>
                   </>
                 ) : (
                   <>
                     <Search className="h-5 w-5 flex-shrink-0 text-[var(--text-muted)]" />
                     {activeScope !== null && (
-                      <button
+                      <Button
                         type="button"
+                        variant="ghost"
+                        wrapLabel
                         onClick={() => {
                           setQuery('')
                           setSelectedIndex(0)
                           inputRef.current?.focus()
                         }}
                         aria-label={t('palette.clearScope', { scope: getScopeMeta(activeScope).label, defaultValue: `Clear ${getScopeMeta(activeScope).label} filter` })}
-                        className="flex-shrink-0 inline-flex items-center gap-1.5 rounded-lg border border-[rgba(var(--theme-primary-rgb),0.25)] bg-[rgba(var(--theme-primary-rgb),0.10)] px-2 py-1 text-xs font-medium text-[var(--theme-primary)] hover:bg-[rgba(var(--theme-primary-rgb),0.18)] transition-colors"
+                        className="min-h-11 min-w-11 max-w-full gap-1.5 border border-[var(--border-default)] bg-[var(--surface-2)] px-2 py-1 md:min-h-9"
                         data-palette-scope-chip={activeScope}
                       >
                         <span className="font-mono">{getScopeMeta(activeScope).prefix}</span>
-                        <span>{t(`palette.scope.${activeScope}`, getScopeMeta(activeScope).label)}</span>
+                        <span className="min-w-0 break-words">{t(`palette.scope.${activeScope}`, getScopeMeta(activeScope).label)}</span>
                         <X className="h-3 w-3 opacity-70" aria-hidden />
-                      </button>
+                      </Button>
                     )}
-                    <div className="flex-1">
+                    <div className="min-w-0 flex-1 basis-40">
                       <Input
                         ref={inputRef}
                         role="combobox"
+                        aria-label={t('search.input.label', 'Search query')}
                         aria-expanded
                         aria-controls={PALETTE_LISTBOX_ID}
                         aria-autocomplete="list"
@@ -1325,7 +1358,7 @@ export function CommandPalette({ onOpen, initialOpen = false }: CommandPalettePr
                             ? t(`palette.placeholder.${activeScope}`, getScopeMeta(activeScope).placeholder)
                             : t('palette.placeholder', 'Search pages, commands…')
                         }
-                        className="!rounded-none !border-0 !bg-transparent !p-0 text-sm text-[var(--text-primary)] !shadow-none !ring-0 placeholder:text-[var(--text-muted)]"
+                        className="min-h-11 !rounded-none !border-0 !bg-transparent !p-0 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] md:min-h-10"
                       />
                     </div>
                     <kbd className="hidden items-center gap-1 rounded-lg border border-[var(--glass-border)] bg-[var(--surface-2)] px-2 py-1 font-mono text-2xs text-[var(--text-muted)] sm:flex">
@@ -1335,6 +1368,60 @@ export function CommandPalette({ onOpen, initialOpen = false }: CommandPalettePr
                 )}
               </div>
 
+              {remoteUnresolved && (
+                <div role="status" aria-live="polite" className="flex flex-wrap items-center gap-2 px-4 py-2">
+                  <Text variant="bodySm" className="min-w-0 break-words">
+                    {remoteFailed
+                      ? searchState.hasData
+                        ? t('dataState.stale.message', 'The latest values are temporarily unavailable. Previously loaded data remains visible.')
+                        : t('search.error.message', 'The search service did not respond. Try again or refine your query.')
+                      : remoteBlocked
+                        ? searchState.hasData
+                          ? t('dataState.refreshBlocked.message', 'The device is offline, so this section is showing the last values it received.')
+                          : t('dataState.offline.title', 'Offline')
+                        : retainedQuery
+                          ? t('search.palette.retainedQuery', {
+                              previousQuery: searchData?.query,
+                              query: scopedTerm.trim(),
+                              defaultValue: 'Showing results for "{{previousQuery}}" while search for "{{query}}" is pending.',
+                            })
+                          : t('common.loading', 'Loading...')}
+                  </Text>
+                  {remoteFailed && searchState.retry && (
+                    <Button variant="ghost" className="min-h-11 md:min-h-10" onClick={searchState.retry}>
+                      {t('common.retry', 'Retry')}
+                    </Button>
+                  )}
+                </div>
+              )}
+              {[
+                { id: 'vehicles', state: vehiclesState, count: vehicleList.length,
+                  visible: mode === 'vehicle-select' || (mode === 'search' && (activeScope === null || activeScope === 'vehicle-switch')),
+                  label: t('palette.section.vehicles', 'Vehicles'), empty: t('palette.noVehicles', 'No vehicles available') },
+                { id: 'saved-views', state: savedViewsState, count: savedViewList.length,
+                  visible: mode === 'search' && (activeScope === null || activeScope === 'navigate'),
+                  label: t('palette.section.savedViews', 'Saved views'), empty: t('savedViews.empty', 'No saved views yet') },
+                { id: 'alerts', state: alertsState, count: openAlertList.length, visible: mode === 'alert-select',
+                  label: t('palette.section.openAlerts', 'Open alerts'), empty: t('palette.acknowledgeAlert.empty', 'No open alerts to acknowledge') },
+              ].map(({ id, state, count, visible, label, empty }) => visible && (
+                state.status !== 'ok' || (count === 0 && (mode !== 'search' || !scopedTerm))
+              ) ? (
+                <section key={id} aria-label={label} className="min-w-0 px-4 py-2">
+                  <Text variant="label" color="secondary">{label}</Text>
+                  <SourceContent
+                    state={state.fatalError ? 'error' : !state.hasData ? 'loading' : count === 0 && state.status === 'ok' ? 'empty' : 'ready'}
+                    label={label} emptyMessage={empty}
+                    errorMessage={id === 'alerts'
+                      ? t('palette.acknowledgeAlert.error', 'Open alerts are unavailable right now')
+                      : t('dataState.unavailable.message', 'A required service is unavailable. This section will recover when the dependency returns.')}
+                    error={state.fatalError}
+                    errorRecovery={{ onRetry: state.retry ?? undefined }}
+                    loadingContent={<Skeleton className="h-11 w-full" />}
+                  >
+                    <StaleRefreshWarning state={state} label={label} />
+                  </SourceContent>
+                </section>
+              ) : null)}
               {/* Results */}
               <div
                 ref={listRef}
@@ -1342,38 +1429,34 @@ export function CommandPalette({ onOpen, initialOpen = false }: CommandPalettePr
                 role="listbox"
                 tabIndex={-1}
                 aria-label={t('palette.resultsLabel', 'Results')}
-                className="max-h-80 min-h-0 overflow-y-auto px-2 py-2"
+                aria-activedescendant={mode !== 'search' && displayItems.length > 0 ? paletteRowId(effectiveSelectedIndex) : undefined}
+                className="max-h-80 min-h-0 overflow-y-auto px-2 py-2 focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[var(--focus-ring)]"
                 onKeyDown={mode !== 'search' ? handleInputKey : undefined}
               >
-                {displayItems.length === 0 ? (
-                  <div className="py-8 text-center text-sm text-[var(--text-muted)]">
-                    {mode === 'vehicle-select'
-                      ? t('palette.noVehicles', 'No vehicles available')
-                      : mode === 'alert-select'
-                        ? alertsQuery.isLoading
-                          ? t('palette.acknowledgeAlert.loading', 'Loading open alerts…')
-                          : alertsQuery.isError
-                            ? t('palette.acknowledgeAlert.error', 'Open alerts are unavailable right now')
-                            : t('palette.acknowledgeAlert.empty', 'No open alerts to acknowledge')
-                      : activeScope !== null && !scopedTerm
+                {displayItems.length === 0 ? remoteUnresolved
+                  || (mode === 'vehicle-select' && (vehiclesState.status !== 'ok' || vehicleList.length === 0))
+                  || (mode === 'alert-select' && (alertsState.status !== 'ok' || openAlertList.length === 0)) ? null : (
+                  <Text as="div" variant="bodySm" className="break-words py-8 text-center text-[var(--text-muted)]">
+                    {activeScope !== null && !scopedTerm
                         ? t(`palette.scope.${activeScope}.empty`, {
                             scope: getScopeMeta(activeScope).label,
                             defaultValue: `No ${getScopeMeta(activeScope).label.toLowerCase()} available`,
                           })
                         : t('palette.noResults', { query: scopedTerm || query, defaultValue: `No results for "${scopedTerm || query}"` })
                     }
-                  </div>
+                  </Text>
                 ) : (
                   groupedItems.map((group, groupIndex) => (
                     <div key={`${group.section}-${groupIndex}`} role="group" aria-label={group.section}>
-                      <div className="px-4 pt-3 pb-1 text-2xs font-semibold uppercase tracking-wider text-[var(--text-secondary)]">
+                      <Text as="div" variant="label" className="break-words px-4 pt-3 pb-1">
                         {group.section}
-                      </div>
+                      </Text>
                       {group.items.map(({ item, globalIndex }) => {
                         const isCommand = item.type === 'command'
                         const isSelected = globalIndex === effectiveSelectedIndex
                         return (
-                          <button
+                          <Button
+                            variant="ghost"
                             key={item.id}
                             id={paletteRowId(globalIndex)}
                             role="option"
@@ -1391,77 +1474,74 @@ export function CommandPalette({ onOpen, initialOpen = false }: CommandPalettePr
                             onClick={item.action}
                             onMouseEnter={() => setSelectedIndex(globalIndex)}
                             className={cn(
-                              'flex w-full items-center gap-3 rounded-xl px-4 py-3 text-left text-sm transition-colors min-h-[44px]',
+                              'flex h-auto min-h-11 w-full items-center justify-start gap-3 whitespace-normal rounded-shape-sm px-4 py-3 text-start',
                               isSelected
-                                ? 'bg-[rgba(var(--theme-primary-rgb),0.10)] text-[var(--text-primary)] ring-1 ring-[rgba(var(--theme-primary-rgb),0.18)]'
+                                ? 'bg-[var(--surface-2)] text-[var(--text-primary)]'
                                 : 'text-[var(--text-secondary)] hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)]'
                             )}
                           >
-                            <span className={cn(
-                              'flex-shrink-0',
-                              isCommand
-                                ? isSelected ? 'text-[var(--theme-primary)]' : 'text-[var(--theme-primary)] opacity-70'
-                                : isSelected ? 'text-[var(--theme-primary)]' : 'text-[var(--text-muted)]'
-                            )}>
+                            <span className="shrink-0 text-[var(--text-muted)]" aria-hidden="true">
                               {item.icon}
                             </span>
                             <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2">
-                                <span className="font-medium truncate">{item.label}</span>
+                              <div className="flex min-w-0 items-start gap-2">
+                                <Text variant="bodySm" className="min-w-0 break-words font-medium">{item.label}</Text>
                                 {isCommand && (
-                                  <Zap className="h-3 w-3 flex-shrink-0 text-[var(--theme-primary)] opacity-70" />
+                                  <Zap className="h-3 w-3 shrink-0 text-[var(--text-muted)]" aria-hidden="true" />
                                 )}
                               </div>
                               {item.sublabel && (
-                                <span className="block truncate text-xs text-[var(--text-muted)]">
+                                <Text variant="caption" className="block break-words">
                                   {item.sublabel}
-                                </span>
+                                </Text>
                               )}
                             </div>
                             {item.shortcut && (
-                              <kbd
+                              <Text as="kbd" variant="caption" mono
                                 aria-label={t('palette.shortcut', { keys: item.shortcut, defaultValue: `Shortcut: ${item.shortcut}` })}
-                                className="hidden flex-shrink-0 rounded-md border border-[var(--glass-border)] bg-[var(--surface-2)] px-1.5 py-0.5 font-mono text-2xs text-[var(--text-muted)] sm:inline-flex"
+                                className="hidden shrink-0 rounded-shape-sm border border-[var(--border-default)] bg-[var(--surface-2)] px-1.5 py-0.5 sm:inline-flex"
                               >
                                 {item.shortcut}
-                              </kbd>
+                              </Text>
                             )}
                             {isSelected && (
-                              <ArrowRight className="h-3.5 w-3.5 flex-shrink-0 text-[var(--theme-primary)]" />
+                              <ArrowRight className="h-3.5 w-3.5 shrink-0 text-[var(--text-secondary)] rtl:rotate-180" aria-hidden="true" />
                             )}
-                          </button>
+                          </Button>
                         )
                       })}
                     </div>
                   ))
                 )}
                 {showViewAllResults && mode === 'search' && (
-                  <div className="border-t border-[var(--glass-border)] mt-1 pt-2">
-                    <button
+                  <div className="border-t border-[var(--border-default)] mt-1 pt-2">
+                    <Button
+                      type="button"
+                      variant="ghost"
                       onClick={() => go(`/search?q=${encodeURIComponent(debouncedQuery)}`)}
-                      className="flex w-full items-center justify-between gap-3 rounded-xl px-4 py-2 text-left text-xs text-[var(--text-secondary)] transition-colors hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)]"
+                      className="flex h-auto min-h-11 w-full items-center justify-between gap-3 whitespace-normal rounded-shape-sm px-4 py-2 text-start text-[var(--text-secondary)] hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)]"
                     >
-                      <span className="flex items-center gap-2">
-                        <Search className="h-3.5 w-3.5" />
-                        {t('search.palette.viewAll', { query: debouncedQuery, defaultValue: `View all results for "${debouncedQuery}"` })}
+                      <span className="flex min-w-0 items-center gap-2">
+                        <Search className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                        <Text variant="bodySm" className="min-w-0 break-words">{t('search.palette.viewAll', { query: debouncedQuery, defaultValue: `View all results for "${debouncedQuery}"` })}</Text>
                       </span>
-                      <ArrowRight className="h-3.5 w-3.5" />
-                    </button>
+                      <ArrowRight className="h-3.5 w-3.5 shrink-0 rtl:rotate-180" aria-hidden="true" />
+                    </Button>
                   </div>
                 )}
               </div>
 
               {/* Footer */}
-              <div className="shrink-0 border-t border-[var(--glass-border)] px-5 py-3 text-2xs text-[var(--text-muted)]">
+              <Text as="div" variant="caption" className="shrink-0 border-t border-[var(--glass-border)] px-4 py-3">
                 <div className="flex items-center gap-4 flex-wrap">
                   <span className="flex items-center gap-1">
-                    <kbd className="rounded bg-[var(--surface-2)] px-1.5 py-0.5 font-mono">↑↓</kbd> {t('palette.navigate', 'Navigate')}
+                    <Text as="kbd" variant="caption" mono className="rounded-shape-sm bg-[var(--surface-2)] px-1.5 py-0.5">↑↓</Text> {t('palette.navigate', 'Navigate')}
                   </span>
                   <span className="flex items-center gap-1">
-                    <kbd className="rounded bg-[var(--surface-2)] px-1.5 py-0.5 font-mono">↵</kbd> {t('palette.select', 'Select')}
+                    <Text as="kbd" variant="caption" mono className="rounded-shape-sm bg-[var(--surface-2)] px-1.5 py-0.5">↵</Text> {t('palette.select', 'Select')}
                   </span>
                   <span className="flex items-center gap-1">
-                    <kbd className="rounded bg-[var(--surface-2)] px-1.5 py-0.5 font-mono">ESC</kbd>{' '}
+                    <Text as="kbd" variant="caption" mono className="rounded-shape-sm bg-[var(--surface-2)] px-1.5 py-0.5">ESC</Text>{' '}
                     {mode !== 'search'
                       ? t('palette.back', 'Back')
                       : activeScope !== null
@@ -1469,8 +1549,8 @@ export function CommandPalette({ onOpen, initialOpen = false }: CommandPalettePr
                         : t('palette.close', 'Close')}
                   </span>
                   {mode === 'search' && vehicleList.length > 0 && (
-                    <span className="ml-auto flex items-center gap-1 text-[var(--theme-primary)]">
-                      <Zap className="h-3 w-3" /> {vehicleList.length} {vehicleList.length === 1 ? t('palette.vehicle', 'vehicle') : t('palette.vehicles', 'vehicles')}
+                    <span className="ms-auto flex items-center gap-1">
+                      <Zap className="h-3 w-3 shrink-0" aria-hidden="true" /> {vehicleList.length} {vehicleList.length === 1 ? t('palette.vehicle', 'vehicle') : t('palette.vehicles', 'vehicles')}
                     </span>
                   )}
                 </div>
@@ -1479,30 +1559,31 @@ export function CommandPalette({ onOpen, initialOpen = false }: CommandPalettePr
                     distracting from search results. */}
                 {mode === 'search' && activeScope === null && query === '' && (
                   <div
-                    className="mt-2 flex items-center gap-3 flex-wrap text-[var(--text-muted)]"
+                    className="mt-2 flex flex-wrap items-center gap-3"
                     data-palette-scope-hints
                   >
-                    <span className="text-2xs uppercase tracking-wider opacity-70">
+                    <Text variant="caption">
                       {t('palette.filterBy', 'Filter')}
-                    </span>
+                    </Text>
                     {PALETTE_SCOPE_HINTS.map(hint => (
-                      <button
+                      <Button
                         key={hint.scope}
                         type="button"
+                        variant="ghost"
                         onClick={() => {
                           setQuery(`${hint.prefix} `)
                           setSelectedIndex(0)
                           inputRef.current?.focus()
                         }}
-                        className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-2xs hover:bg-[var(--surface-2)] hover:text-[var(--text-secondary)] transition-colors"
+                        className="h-auto min-h-11 min-w-11 max-w-full flex-wrap justify-start gap-1 whitespace-normal px-2 py-2 text-start text-[var(--text-muted)] hover:bg-[var(--surface-2)] hover:text-[var(--text-secondary)]"
                       >
-                        <kbd className="rounded bg-[var(--surface-2)] px-1.5 py-0.5 font-mono text-2xs">{hint.prefix}</kbd>
-                        <span>{t(`palette.scope.${hint.scope}`, hint.label)}</span>
-                      </button>
+                        <Text as="kbd" variant="caption" mono className="shrink-0 rounded-shape-sm bg-[var(--surface-2)] px-1.5 py-0.5">{hint.prefix}</Text>
+                        <Text variant="caption" className="min-w-0 break-words">{t(`palette.scope.${hint.scope}`, hint.label)}</Text>
+                      </Button>
                     ))}
                   </div>
                 )}
-              </div>
+              </Text>
               </div>
             </motion.div>
           </div>

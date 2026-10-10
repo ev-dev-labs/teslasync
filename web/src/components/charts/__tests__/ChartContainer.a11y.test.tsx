@@ -6,12 +6,124 @@
  * Recharts SVG that would otherwise be opaque to them.
  */
 
-import { describe, it, expect, vi } from 'vitest';
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { afterEach, beforeEach, describe, it, expect, vi } from 'vitest';
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { getFormatterPreferences, setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { ChartContainer } from '../ChartContainer';
 import { EmbeddedChart } from '../EmbeddedChart';
+import { ChartCard } from '@/components/layout/layout-reference/ChartCard';
+import type { ApiRequestOptions } from '@/api/client';
+import type { ChartAnnotationRow } from '@/types/annotations';
+import { glassCardClasses, typography } from '@/lib/tokens';
+
+const { annotationRequest } = vi.hoisted(() => ({
+  annotationRequest: vi.fn<(path: string, options?: ApiRequestOptions) => Promise<ChartAnnotationRow | ChartAnnotationRow[]>>(),
+}));
+vi.mock('@/api/client', async (importOriginal) => ({
+  ...await importOriginal<typeof import('@/api/client')>(), request: annotationRequest,
+}));
+vi.mock('@/api/hooks/_toastHelpers', () => ({
+  useDeferredMutationToast: () => ({ success: vi.fn(), error: vi.fn() }),
+}));
+
+let previousPreferences: ReturnType<typeof getFormatterPreferences>;
+
+describe('ChartContainer canonical frame chrome', () => {
+  it('reuses neutral panel chrome without dropping descriptions, gaps, sampling or export controls', () => {
+    renderChart(
+      <ChartContainer title="Complete frame" ariaLabel="Original observations"
+        icon={<span data-testid="frame-icon" />} subtitle="Original context"
+        ariaDescription="Original source with missing observations"
+        metadata={{ sampling: { sampled: true, sourceCount: 20, renderedCount: 2, strategy: 'stride' } }}
+        data={[{ reading: 0 }, { reading: null }]}
+        dataColumns={[{ key: 'reading', label: 'Reading' }]}>
+        <span data-testid="original-series">Original series</span>
+      </ChartContainer>,
+    );
+    const figure = screen.getByRole('figure', { name: 'Complete frame' });
+    expect(figure).toHaveClass(...glassCardClasses.lg.split(' '));
+    expect(figure).toHaveClass('forced-colors:border-[CanvasText]', 'forced-colors:bg-[Canvas]');
+    expect(figure).not.toHaveClass('shadow-panel');
+    expect(screen.getByTestId('frame-icon').parentElement).toHaveClass(typography.color.muted);
+    expect(figure).toHaveAccessibleDescription(/Original source with missing observations/);
+    expect(screen.getByText('Showing 2 of 20 observations for display.')).toBeInTheDocument();
+    expect(screen.getByRole('cell', { name: '0' })).toBeInTheDocument();
+    expect(screen.getByRole('cell', { name: '—' })).toBeInTheDocument();
+    expect(figure).toContainElement(screen.getByTestId('original-series'));
+    expect(screen.getByRole('button', { name: 'Export chart' })).toHaveClass('h-11', 'w-11', 'md:h-7', 'md:w-7');
+    expect(figure.querySelector('[data-chart-toolbar]')).toHaveAttribute('data-html2canvas-ignore', 'true');
+  });
+});
+
+describe('managed annotation dialog focus and authority', () => {
+  it('retains focused editable rejection and restores the actual trigger only on idle cancellation', async () => {
+    annotationRequest.mockImplementation((_path, options) => options?.method === 'POST'
+      ? Promise.reject(new Error('Unavailable')) : Promise.resolve([]));
+    renderChart(<ChartContainer title="Tire chart" ariaLabel="Tire chart" exportable={false}
+      annotations={{ vehicleId: 7, scope: 'tire' }}><span>Observations</span></ChartContainer>);
+    const trigger = screen.getByRole('button', { name: 'Add annotation' });
+    fireEvent.click(trigger);
+    const label = screen.getByLabelText('Label');
+    fireEvent.change(label, { target: { value: '  retained label  ' } });
+    label.focus();
+    fireEvent.submit(screen.getByRole('dialog').querySelector('form')!);
+    await waitFor(() => expect(screen.getByText(/Failed to add annotation/)).toBeInTheDocument());
+    expect(label).toHaveFocus();
+    expect(label).toBeEnabled();
+    expect(label).toHaveValue('  retained label  ');
+    expect(trigger).not.toHaveFocus();
+    fireEvent.keyDown(label, { key: 'Escape' });
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    expect(trigger).toHaveFocus();
+  });
+
+  it('uses the existing safe focus fallback rather than a new scope trigger on stale saved dismissal', async () => {
+    let resolve!: (row: ChartAnnotationRow) => void;
+    const pending = new Promise<ChartAnnotationRow>((yes) => { resolve = yes; });
+    annotationRequest.mockImplementation((_path, options) =>
+      options?.method === 'POST' ? pending : Promise.resolve([]));
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
+    const view = (vehicleId: number) => <QueryClientProvider client={qc}><MemoryRouter>
+      <main id="main-content" tabIndex={-1}><ChartContainer title="Tire chart" ariaLabel="Tire chart" exportable={false}
+        annotations={{ vehicleId, scope: 'tire' }}><span>Observations</span></ChartContainer></main>
+    </MemoryRouter></QueryClientProvider>;
+    const rendered = render(view(7));
+    const oldTrigger = screen.getByRole('button', { name: 'Add annotation' });
+    fireEvent.click(oldTrigger);
+    fireEvent.change(screen.getByLabelText('Label'), { target: { value: 'Saved old target' } });
+    fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Add Annotation' }));
+    await waitFor(() => expect(annotationRequest.mock.calls.some(([, options]) => options?.method === 'POST')).toBe(true));
+    rendered.rerender(view(8));
+    await act(async () => { resolve({
+      id: 42, vehicle_id: 7, occurred_at: '2025-03-01T00:00:00Z', title: 'Saved old target',
+      category: 'milestone', scope: ['tire'], created_at: '2025-03-01T00:00:00Z', updated_at: '2025-03-01T00:00:00Z',
+    }); });
+    const dialog = screen.getByRole('dialog');
+    await waitFor(() => expect(within(dialog).getByRole('status')).toHaveTextContent(/vehicle 7/));
+    expect(dialog.querySelector('form')).not.toHaveAttribute('aria-busy', 'true');
+    expect(screen.getByLabelText('Label')).toBeDisabled();
+    expect(oldTrigger.isConnected).toBe(false);
+    fireEvent.keyDown(within(dialog).getAllByRole('button', { name: 'Close' })[0], { key: 'Escape' });
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    expect(screen.getByRole('main')).toHaveFocus();
+    expect(screen.getByRole('button', { name: 'Add annotation' })).not.toHaveFocus();
+  });
+});
+
+beforeEach(() => {
+  annotationRequest.mockReset().mockResolvedValue([]);
+  previousPreferences = getFormatterPreferences();
+  setGlobalPrecision(2);
+  setGlobalLocale('en-US');
+});
+
+afterEach(() => {
+  cleanup();
+  setGlobalPrecision(previousPreferences.precision);
+  setGlobalLocale(previousPreferences.locale);
+});
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -40,26 +152,100 @@ vi.mock('@/hooks/useChartExport', () => ({
   }),
 }));
 
-// Annotations would otherwise hit the API client. Stub the hooks the
-// container imports.
-vi.mock('@/api/hooks/useAnnotations', () => ({
-  useChartAnnotationsAsData: () => ({ annotations: [] }),
-  useCreateAnnotation: () => ({ mutate: vi.fn() }),
-  useDeleteAnnotation: () => ({ mutate: vi.fn() }),
-}));
+vi.unmock('@/api/hooks/useAnnotations');
 
 function renderChart(ui: React.ReactNode) {
   const qc = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
-  return render(
-    <QueryClientProvider client={qc}>
-      <MemoryRouter>{ui}</MemoryRouter>
-    </QueryClientProvider>,
-  );
+  function Wrapper({ children }: { children: React.ReactNode }) {
+    return (
+      <QueryClientProvider client={qc}>
+        <MemoryRouter>{children}</MemoryRouter>
+      </QueryClientProvider>
+    );
+  }
+  return render(ui, { wrapper: Wrapper });
 }
 
 describe('ChartContainer accessibility contract', () => {
+  it('keeps exactly one host heading and stable figure/table descriptions with an embedded toolbar opt-in', () => {
+    const description = 'Complete specialist chart description with source gaps.';
+    const { container } = renderChart(
+      <ChartCard title="Specialist source title" ariaLabel="Specialist source measurements"
+        ariaDescription={description} toolbar
+        action={<span data-testid="original-toolbar-action">Original toolbar detail</span>}
+        height={460} mobileHeight={300}
+        data={[{ reading: 0 }, { reading: null }]}
+        dataColumns={[{ key: 'reading', label: 'Original source reading' }]}>
+        <div data-testid="original-chart-tree">Original specialist plotted tree</div>
+      </ChartCard>,
+    );
+    expect(screen.getAllByRole('heading', { name: 'Specialist source title' })).toHaveLength(1);
+    const figure = screen.getByRole('figure', { name: 'Specialist source title' });
+    expect(figure).toHaveAccessibleDescription(/Complete specialist chart description with source gaps\./);
+    const titleId = figure.getAttribute('aria-labelledby');
+    expect(titleId ? document.getElementById(titleId)?.textContent : null).toBe('Specialist source title');
+    expect(figure.querySelector('[data-chart-toolbar]'))
+      .toContainElement(screen.getByTestId('original-toolbar-action'));
+    expect(figure).not.toHaveClass('rounded-panel', 'shadow-panel', 'p-5');
+    expect(container.querySelectorAll('[data-card]')).toHaveLength(1);
+    const viewport = screen.getByRole('img', { name: 'Specialist source measurements' });
+    expect(viewport).toContainElement(screen.getByTestId('original-chart-tree'));
+    expect(viewport).not.toContainElement(screen.getByTestId('original-toolbar-action'));
+    expect(viewport).toHaveStyle({
+      '--chart-height-desktop': '460px', '--chart-height-mobile': '300px',
+    });
+    const table = screen.getByRole('table', { name: 'Specialist source title — data table' });
+    expect(within(table).getByRole('cell', { name: '0' })).toBeInTheDocument();
+    expect(within(table).getByRole('cell', { name: '—' })).toBeInTheDocument();
+  });
+
+  it('retains figure descriptions and measured table cells through the shared card adapter', () => {
+    const description = 'One recorded energy measurement in the selected source window.';
+    renderChart(
+      <ChartCard title="Recorded energy" ariaLabel="Recorded energy in the selected source window"
+        ariaDescription={description}
+        data={[{ date: '2026-10-05', energy: '0.85 kWh' }]}
+        dataColumns={[{ key: 'date', label: 'Date' }, { key: 'energy', label: 'Measured energy' }]}>
+        <span>Original plotted content</span>
+      </ChartCard>,
+    );
+    expect(screen.getByRole('figure', { name: 'Recorded energy' }))
+      .toHaveAccessibleDescription(/One recorded energy measurement in the selected source window\./);
+    expect(screen.getByRole('img', {
+      name: 'Recorded energy in the selected source window',
+    })).toBeInTheDocument();
+    expect(screen.getByRole('table', { name: 'Recorded energy — data table' })).toBeInTheDocument();
+    expect(screen.getByRole('columnheader', { name: 'Measured energy' })).toBeInTheDocument();
+    expect(screen.getByRole('cell', { name: '0.85 kWh' })).toBeInTheDocument();
+    expect(screen.getByText('Original plotted content')).toBeInTheDocument();
+  });
+
+  it('reactively formats typed numeric table cells while preserving IDs, counts, strings and unknowns', () => {
+    setGlobalPrecision(2);
+    setGlobalLocale('en-US');
+    renderChart(
+      <ChartContainer title="Typed values" ariaLabel="Typed values"
+        data={[{ reading: 42, count: 1234, id: 987654, clock: '03:04', missing: null }]}
+        dataColumns={[
+          { key: 'reading', label: 'reading', kind: 'measurement' },
+          { key: 'count', label: 'count', kind: 'count' },
+          { key: 'id', label: 'id' },
+          { key: 'clock', label: 'clock' },
+          { key: 'missing', label: 'missing', kind: 'measurement' },
+        ]}
+      ><div>chart</div></ChartContainer>,
+    );
+    const table = screen.getByRole('table');
+    expect(within(table).getByText('42.00')).toBeInTheDocument();
+    act(() => setGlobalPrecision(3));
+    expect(within(table).getByText('42.000')).toBeInTheDocument();
+    expect(within(table).getByText('1,234')).toBeInTheDocument();
+    expect(within(table).getByText('987654')).toBeInTheDocument();
+    expect(within(table).getByText('03:04')).toBeInTheDocument();
+    expect(within(table).getByText('—')).toBeInTheDocument();
+  });
   it('keeps semantics without nested panel chrome in embedded mode', () => {
     renderChart(
       <EmbeddedChart
@@ -174,6 +360,11 @@ describe('ChartContainer accessibility contract', () => {
     // The table lives inside the figcaption — query by role.
     const table = screen.getByRole('table');
     expect(table).toBeInTheDocument();
+    expect(table).toHaveAccessibleName('Daily kWh — data table');
+    expect(table.closest('figcaption')).toHaveAttribute(
+      'id',
+      screen.getByRole('figure', { name: 'Daily kWh' }).getAttribute('aria-describedby'),
+    );
 
     // Two column headers in document order.
     const headers = within(table).getAllByRole('columnheader');
@@ -354,17 +545,18 @@ describe('ChartContainer accessibility contract', () => {
       '[contain:layout_size]',
     );
     expect(chart).not.toHaveClass('h-full');
+    expect(chart).not.toHaveClass('[&>.recharts-responsive-container]:flex-1');
   });
 
-  it('keeps fluid embedded sizing bounded by the shared fallback height', () => {
+  it.each([false, true])('fills the fluid plot inside a bounded=%s host without changing fallback heights', bounded => {
     renderChart(
-      <div className="h-72">
+      <div className={bounded ? 'h-72' : 'flex flex-col'}>
         <EmbeddedChart
           title="Fluid widget"
           ariaLabel="Fluid embedded chart"
           fluid
         >
-          <div>chart</div>
+          <div className="recharts-responsive-container h-full" data-testid="responsive-plot">chart</div>
         </EmbeddedChart>
       </div>,
     );
@@ -375,6 +567,10 @@ describe('ChartContainer accessibility contract', () => {
     expect(figure).toHaveAttribute('data-chart-fluid', 'true');
     expect(figure).toHaveClass('h-full', 'min-h-0', 'max-h-full');
     expect(chart).toHaveClass(
+      'flex',
+      'flex-col',
+      '[&>.recharts-responsive-container]:flex-1',
+      '[&>.recharts-responsive-container]:min-h-0',
       'h-full',
       'min-h-[var(--chart-height-mobile)]',
       'sm:min-h-[var(--chart-height-desktop)]',
@@ -385,6 +581,7 @@ describe('ChartContainer accessibility contract', () => {
       '--chart-height-mobile': '200px',
       '--chart-height-desktop': '240px',
     });
+    expect(screen.getByTestId('responsive-plot').parentElement).toBe(chart);
   });
 
   it('renders contextual empty copy without exposing an empty chart image', () => {

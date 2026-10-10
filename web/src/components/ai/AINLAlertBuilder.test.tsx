@@ -41,6 +41,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, act, waitFor, fireEvent } from '@testing-library/react'
 
 import type { AppSettings } from '@/api/types'
+import { deriveDataState } from '@/api/dataState'
 
 // File-level mock wins over the global useSettings stub registered in
 // src/test-setup.ts (which defaults ai_mode='off'). Each test drives
@@ -52,11 +53,13 @@ vi.mock('@/hooks/useSettings', () => ({
 import { useSettings } from '@/hooks/useSettings'
 import { AINLAlertBuilder } from '@/components/ai/AINLAlertBuilder'
 
-const mockUseSettings = useSettings as unknown as ReturnType<typeof vi.fn>
+const mockUseSettings = vi.mocked(useSettings)
 
 const FEATURE_ID = 'nl-alert-builder'
 const ROOT_TESTID = 'ai-feature-nl-alert-builder-root'
 const DRAFT_URL = '/api/v1/ai/alerts/rules/draft'
+const ADVISORY_DESCRIPTION =
+  'Describe the alert you want to receive an advisory text proposal. Review it and manually enter the rule in the standard form before saving; this action does not fill the form, save, or enable an alert.'
 
 // A complete AppSettings with realistic non-AI defaults. Individual
 // tests override ai_mode / ai_features to walk the gate branches.
@@ -82,8 +85,21 @@ const baseSettings: AppSettings = {
   alert_digest_mode: 'instant',
 }
 
-function settingsPayload(overrides: Partial<AppSettings>) {
-  return { settings: { ...baseSettings, ...overrides } }
+function settingsPayload(overrides: Partial<AppSettings>): ReturnType<typeof useSettings> {
+  const settings = { ...baseSettings, ...overrides }
+  return {
+    settings,
+    settingsState: deriveDataState({ data: settings, isSuccess: true }),
+    settingsUnavailable: false,
+    refetch: vi.fn<ReturnType<typeof useSettings>['refetch']>(),
+    isMiles: settings.unit_of_length === 'mi',
+    isFahrenheit: settings.unit_of_temp === 'F',
+    isPSI: settings.unit_of_pressure === 'psi',
+    decimals: settings.decimal_precision,
+    locale: 'en-US',
+    density: 'comfortable',
+    rangeType: settings.preferred_range === 'ideal' ? 'ideal' : 'rated',
+  }
 }
 
 // enableFeature flips the gate on (ai_mode='cloud' + the per-feature
@@ -211,11 +227,92 @@ describe('AINLAlertBuilder — render gate (ADR-015)', () => {
     expect(root).toBeInTheDocument()
     expect(root).toHaveAttribute('data-ai-feature', FEATURE_ID)
     // Title + description framing so the user understands the surface
-    // only drafts a rule they still review and save.
+    // only proposes text for manual entry in the standard form.
     expect(screen.getByText('Draft from natural language')).toBeInTheDocument()
-    expect(root).toHaveTextContent(/typed AlertRule draft you can review and save/)
+    expect(root).toHaveTextContent(ADVISORY_DESCRIPTION)
     // The Helix badge rides in the header.
     expect(root).toHaveTextContent(/Helix/)
+  })
+
+  describe('AINLAlertBuilder — advisory-only contract', () => {
+    it('keeps advisory text and structured tool results separate from native rule actions', async () => {
+      enableFeature()
+      const proposal = 'Review this proposed low-pressure alert before entering it in the standard form.'
+      const calls = installStreamingFetch(
+        sseFrame('tool_result', {
+          id: 'proposal-1',
+          name: 'draft_alert_rule',
+          ok: true,
+          data: { name: 'Low pressure', enabled: true, vehicle_id: 7 },
+        }) +
+          sseFrame('delta', { text: proposal }) +
+          sseFrame('done', { finish_reason: 'stop', usage: { in: 20, out: 10 } }),
+      )
+      const { promptText } = renderReady()
+
+      await act(async () => {
+        fireEvent.click(draftButton())
+      })
+
+      await waitFor(() => expect(screen.getByTestId('ai-output-panel')).toHaveTextContent(proposal))
+      expect(screen.getByTestId(ROOT_TESTID)).toHaveTextContent(ADVISORY_DESCRIPTION)
+      expect(promptInput()).toHaveValue(promptText)
+      expect(screen.queryByRole('button', { name: /save|apply|enable/i })).not.toBeInTheDocument()
+      expect(calls).toHaveLength(1)
+      expect(calls[0].url).toBe(DRAFT_URL)
+      expect(calls[0].init?.method).toBe('POST')
+    })
+
+    it('retains completed advisory text while the prompt is edited without issuing a request', async () => {
+      enableFeature()
+      const proposal = 'Retained advisory proposal for review.'
+      const calls = installStreamingFetch(
+        sseFrame('delta', { text: proposal }) +
+          sseFrame('done', { finish_reason: 'stop', usage: { in: 20, out: 10 } }),
+      )
+      renderReady()
+      await act(async () => {
+        fireEvent.click(draftButton())
+      })
+      await waitFor(() => expect(screen.getByTestId('ai-output-panel')).toHaveTextContent(proposal))
+
+      fireEvent.change(promptInput(), { target: { value: 'Revise the advisory proposal' } })
+
+      expect(promptInput()).toHaveValue('Revise the advisory proposal')
+      expect(screen.getByTestId('ai-output-panel')).toHaveTextContent(proposal)
+      expect(calls).toHaveLength(1)
+    })
+
+    it('aborts the old vehicle stream and clears its proposal when vehicle scope changes', async () => {
+      enableFeature()
+      const encoder = new TextEncoder()
+      const calls: RequestInit[] = []
+      globalThis.fetch = vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
+        if (init) calls.push(init)
+        return new Response(new ReadableStream<Uint8Array>({
+          start(controller) {
+            controller.enqueue(encoder.encode(sseFrame('delta', { text: 'Old vehicle proposal' })))
+          },
+        }), { status: 200, headers: { 'Content-Type': 'text/event-stream' } })
+      })
+      const { rerender, promptText } = renderReady(7)
+      await act(async () => {
+        fireEvent.click(draftButton())
+      })
+      await waitFor(() => expect(screen.getByTestId('ai-output-panel')).toHaveTextContent('Old vehicle proposal'))
+
+      rerender(<AINLAlertBuilder vehicleId={8} />)
+
+      await waitFor(() => expect(calls[0].signal?.aborted).toBe(true))
+      expect(screen.getByTestId(ROOT_TESTID)).not.toHaveTextContent('Old vehicle proposal')
+      expect(promptInput()).toHaveValue(promptText)
+      expect(calls).toHaveLength(1)
+      await act(async () => {
+        fireEvent.click(draftButton())
+      })
+      await waitFor(() => expect(calls).toHaveLength(2))
+      expect(JSON.parse(calls[1].body as string)).toEqual({ vehicle_id: 8, prompt: promptText })
+    })
   })
 })
 

@@ -150,7 +150,7 @@ describe('SchemaDriftPage', () => {
 
     renderPage();
 
-    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Schema Drift');
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Schema drift');
     // The KPI status label is always present; its verdict is not, because the
     // tile shows a skeleton until data arrives.
     expect(screen.getByText('Status')).toBeInTheDocument();
@@ -172,7 +172,7 @@ describe('SchemaDriftPage', () => {
 
     expect(screen.getByText('Feature not supported')).toBeInTheDocument();
     expect(
-      screen.getByText(/subsystem is not configured on this deployment/i),
+      screen.getByText(/subsystem is Not configured on this deployment/i),
     ).toBeInTheDocument();
     // Sections fall back to their empty state, never a crash.
     expect(screen.getByText('No fingerprint available')).toBeInTheDocument();
@@ -228,6 +228,13 @@ describe('SchemaDriftPage', () => {
     expect(screen.queryByText('42.00')).toBeNull();
     // The fingerprint hash is rendered for both the current and seed cards.
     expect(screen.getAllByText('a1b2c3d4e5f60011').length).toBe(2);
+    const strip = screen.getByTestId('schema-drift-summary');
+    expect(strip).toHaveAttribute('data-operational-brief');
+    expect([...strip.querySelectorAll('[data-operational-metric]')].map(tile => tile.getAttribute('data-operational-metric')))
+      .toEqual(['schema-status', 'schema-tables-delta', 'schema-columns-delta', 'schema-indexes-delta']);
+    expect([...strip.querySelectorAll('[data-operational-value]')].map(value => value.textContent))
+      .toEqual(['No drift', '0', '0', '0']);
+    expect(strip.querySelectorAll('[data-operational-metric]')).toHaveLength(4);
   });
 
   it('shows signed integer deltas + count-driven guidance when object counts drift', () => {
@@ -301,5 +308,67 @@ describe('SchemaDriftPage', () => {
 
     fireEvent.click(headerRefreshButton());
     expect(refetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps both exact hashes, signed counts and hash-only guidance on a failed refresh instead of replacing retained schema evidence', () => {
+    const drift = makeDrift({
+      has_drift: true,
+      current: makeFingerprint({ sha256: 'live-full-hash' }),
+      expected: makeFingerprint({ sha256: 'seed-full-hash' }),
+    });
+    mockedUseSchemaDrift.mockReturnValue(makeQuery({
+      data: { drift, is_different: true }, isError: true,
+      error: new ApiError('refresh service unavailable', 503),
+    }));
+    renderPage();
+    expect(screen.getByText('live-full-hash')).toBeInTheDocument();
+    expect(screen.getByText('seed-full-hash')).toBeInTheDocument();
+    expect(screen.getByText('Drift detected')).toBeInTheDocument();
+    expect(screen.getByText(/differs from the seed even though object counts match/i)).toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: 'Copy fingerprint hash' })).toHaveLength(2);
+    expect(screen.getByText(`42 ${ARROW} 42`)).toBeInTheDocument();
+    expect(screen.queryByText('Feature not supported')).toBeNull();
+    expect(screen.getByTestId('schema-drift-summary').closest('[data-retained]')).toHaveAttribute('data-retained', 'true');
+  });
+
+  it('does not infer a zero delta, measured count or Match badge for missing count evidence inside a partial payload', () => {
+    const drift = makeDrift();
+    Reflect.deleteProperty(drift, 'table_count_delta');
+    Reflect.deleteProperty(drift.current, 'table_count');
+    mockedUseSchemaDrift.mockReturnValue(makeQuery({ data: { drift, is_different: false } }));
+    renderPage();
+    expect(screen.getByText(`— ${ARROW} 42`)).toBeInTheDocument();
+    expect(screen.getByText(`— current ${MIDDOT} 42 expected`)).toBeInTheDocument();
+    expect(screen.getAllByText('Match')).toHaveLength(4);
+    expect(screen.getAllByText('a1b2c3d4e5f60011')).toHaveLength(2);
+  });
+
+  it('does not claim object counts match when fingerprint drift is known but the count comparisons are missing', () => {
+    const drift = makeDrift({ has_drift: true });
+    Reflect.deleteProperty(drift, 'table_count_delta');
+    Reflect.deleteProperty(drift, 'column_count_delta');
+    Reflect.deleteProperty(drift, 'index_count_delta');
+    mockedUseSchemaDrift.mockReturnValue(makeQuery({ data: { drift, is_different: true } }));
+    renderPage();
+    expect(screen.getByText('Drift detected')).toBeInTheDocument();
+    expect(screen.getByText(/Object-count comparisons are unavailable/i)).toBeInTheDocument();
+    expect(screen.queryByText(/even though object counts match/i)).toBeNull();
+    expect(screen.queryByText('Match')).toBeNull();
+    expect(screen.getByText(/Confirm migrations are applied/i)).toBeInTheDocument();
+  });
+
+  it('keeps signed negative deltas numeric, zero matched and absent comparisons missing in the canonical strip', () => {
+    const drift = makeDrift({ has_drift: true, table_count_delta: -3, column_count_delta: 0 });
+    Reflect.deleteProperty(drift, 'index_count_delta');
+    mockedUseSchemaDrift.mockReturnValue(makeQuery({ data: { drift, is_different: true } }));
+    renderPage();
+    const strip = screen.getByTestId('schema-drift-summary');
+    expect([...strip.querySelectorAll('[data-operational-value]')].map(value => value.textContent))
+      .toEqual(['Drift detected', '-3', '0', '—']);
+    expect([...strip.querySelectorAll('[data-operational-metric]')].map(tile => tile.getAttribute('data-value-state')))
+      .toEqual(['value', 'value', 'value', 'missing']);
+    expect(strip.querySelectorAll('[data-operational-metric]')).toHaveLength(4);
+    expect(strip).toHaveTextContent('Drift');
+    expect(strip).toHaveTextContent('Match');
   });
 });

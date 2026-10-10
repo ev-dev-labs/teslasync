@@ -17,7 +17,8 @@ import {
   YAxis,
   axisTick,
 } from '@/components/charts';
-import { fmtNumber } from '@/lib/numberFormat';
+
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export interface OriginConcentrationRow {
   [key: string]: string | number | null | undefined;
@@ -49,6 +50,7 @@ export function OriginConcentrationPlot({
   hiddenLeadingShare = false,
   ariaLabel,
 }: OriginConcentrationPlotProps) {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
 
   const effectiveAriaLabel =
@@ -64,15 +66,15 @@ export function OriginConcentrationPlot({
       {
         key: 'concentration',
         label: concentrationName,
-        format: (v) => fmtNumber(v as number, 1, locale),
+        format: (v) => fmtNumber(v as number, undefined, locale),
       },
       {
         key: 'leadingShare',
         label: leadingName,
-        format: (v) => fmtNumber(v as number, 1, locale),
+        format: (v) => fmtNumber(v as number, undefined, locale),
       },
     ],
-    [t, concentrationName, leadingName, locale],
+    [t, concentrationName, leadingName, locale, fmtNumber],
   );
 
   return (
@@ -107,7 +109,7 @@ export function OriginConcentrationPlot({
             <Tooltip
               content={
                 <ChartTooltip
-                  valueFormatter={(value) => fmtNumber(value, 1, locale)}
+                  valueFormatter={(value) => fmtNumber(value, undefined, locale)}
                 />
               }
             />

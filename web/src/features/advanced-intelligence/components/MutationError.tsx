@@ -11,6 +11,8 @@ export function MutationError({ error }: MutationErrorProps) {
   return (
     <AlertBanner
       variant="danger"
+      role="alert"
+      aria-atomic="true"
       title={t('advancedIntelligence.error.title', 'Request could not be completed')}
     >
       {error instanceof Error

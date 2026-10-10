@@ -3,13 +3,13 @@ import { BatteryCharging, TriangleAlert } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useCreateResiliencePlan } from '@/api/hooks/useAdvancedIntelligence';
 import {
-  CartesianGrid, ChartContainer, CHART_COLORS, Line, LineChart,
+  CartesianGrid, CHART_COLORS, Line, LineChart,
   ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from '@/components/charts';
-import { StatCard } from '@/components/data-display';
+import type { StatMetric } from '@/components/data-display/stat-reference/types';
 import { AlertBanner, EmptyState } from '@/components/feedback';
 
-import { Grid, PageContainer } from '@/components/layout';
+import { ChartCard, PageLayout } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
 import { Badge, Button, Input, Text } from '@/components/ui';
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -20,6 +20,8 @@ import {
 } from '@/lib/unitConversion';
 import type { ResiliencePlanRequest } from '@/types/advancedIntelligence';
 import { EvidencePanel, InsightPanel, MutationError, SiNumberInput, StormGuardPanel } from '../components';
+import { AnalysisBrief } from '../components/operationalbrief-all/AnalysisBrief';
+import { useRetainedMutation } from '@/hooks/useRetainedMutation';
 
 type ResilienceForm = Omit<ResiliencePlanRequest, 'vehicle_id' | 'confirmed'>;
 
@@ -28,6 +30,9 @@ export default function EmergencyResiliencePage() {
   const { vehicleId } = useSelectedVehicle();
   const units = useUnits();
   const mutation = useCreateResiliencePlan();
+  const publication = useRetainedMutation(mutation, vehicleId, {
+    data: (data) => data.vehicle_id, inputs: (inputs) => inputs.vehicle_id,
+  });
   const [form, setForm] = useState<ResilienceForm>({
     vehicle_energy_wh: 60000,
     stationary_storage_wh: 13500,
@@ -37,7 +42,7 @@ export default function EmergencyResiliencePage() {
     evacuation_reserve_wh: 15000,
     restoration_uncertainty_pct: 25,
   });
-  usePageTitle(t('advancedIntelligence.resilience.title', 'Emergency Resilience'));
+  usePageTitle(t('advancedIntelligence.resilience.title', 'Emergency resilience'));
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
@@ -45,7 +50,15 @@ export default function EmergencyResiliencePage() {
     mutation.mutate({ ...form, vehicle_id: vehicleId, confirmed: true });
   };
 
-  const result = mutation.data;
+  const result = publication.result;
+  const summaryMetrics: readonly StatMetric[] = [
+    { occurrenceId: 'survival-horizon', metricId: 'duration', rawValue: result?.survival_horizon_s,
+      label: t('advancedIntelligence.resilience.horizon', 'Modeled survival horizon'),
+      description: t('advancedIntelligence.resilience.brief.horizon', 'Energy survival duration from the submitted outage plan; not a weather forecast or guarantee.') },
+    { occurrenceId: 'risk-checkpoints', metricId: 'count', rawValue: result?.risk_timeline?.length,
+      label: t('advancedIntelligence.resilience.timelinePoints', 'Risk checkpoints'),
+      description: t('advancedIntelligence.resilience.brief.checkpoints', 'Number of checkpoints returned in this modeled outage timeline, not a count of observed storms.') },
+  ];
   const chartData = useMemo(() => (result?.risk_timeline ?? []).map((point) => ({
     time: convertDurationFromSI(point.time_s, units.unitPrefs.duration),
     energy: convertEnergyFromSI(point.remaining_energy_wh, units.unitPrefs.energy),
@@ -53,8 +66,8 @@ export default function EmergencyResiliencePage() {
   })), [result, units.unitPrefs.duration, units.unitPrefs.energy]);
 
   return (
-    <PageContainer
-      title={t('advancedIntelligence.resilience.title', 'Emergency Resilience')}
+    <PageLayout
+      title={t('advancedIntelligence.resilience.title', 'Emergency resilience')}
       subtitle={t(
         'advancedIntelligence.resilience.subtitle',
         'Plan energy survival, load priorities, and risk progression for a modeled outage.',
@@ -159,38 +172,42 @@ export default function EmergencyResiliencePage() {
             </div>
             <Button
               type="submit"
-              loading={mutation.isPending}
-              disabled={vehicleId == null || mutation.isPending}
+              loading={publication.pending}
+              disabled={vehicleId == null || publication.pending}
               icon={<BatteryCharging className="h-4 w-4" aria-hidden="true" />}
             >
               {t('advancedIntelligence.resilience.form.run', 'Create confirmed outage plan')}
             </Button>
           </form>
-          <MutationError error={mutation.error} />
+          <MutationError error={publication.error} />
         </InsightPanel>
       </FadeIn>
 
       <FadeIn delay={0.05}>
-        <InsightPanel
+        <AnalysisBrief
+          id="advanced-intelligence-resilience-brief"
           title={t('advancedIntelligence.resilience.summary.title', 'Survival horizon')}
-          empty={!result}
+          description={t('advancedIntelligence.resilience.brief.description', 'Modeled energy survival and timeline coverage remain separate from Storm guardian forecast and activity sources.')}
+          metrics={summaryMetrics}
+          vehicleId={result?.vehicle_id ?? vehicleId}
+          hasResult={result != null}
+          pending={publication.pending}
+          error={publication.error}
+          query={result ? publication.source : undefined}
+          quality={result?.data_quality}
+          evidence={result?.evidence}
+          limitations={result?.limitations}
+          generatedAt={result?.generated_at}
+          provenance={t('advancedIntelligence.resilience.brief.source', 'Modeled outage plan')}
           emptyMessage={t('advancedIntelligence.resilience.summary.empty', 'Submit an outage scenario to build a plan.')}
-        >
-          <Grid cols={{ default: 1, sm: 2 }} gap={4}>
-            <StatCard
-              label={t('advancedIntelligence.resilience.horizon', 'Modeled survival horizon')}
-              value={units.formatDuration(result?.survival_horizon_s)}
-            />
-            <StatCard
-              label={t('advancedIntelligence.resilience.timelinePoints', 'Risk checkpoints')}
-              value={result ? result.risk_timeline.length : null}
-            />
-          </Grid>
-        </InsightPanel>
+        />
       </FadeIn>
 
       <FadeIn delay={0.1}>
-        <ChartContainer
+        <ChartCard
+          size="standard"
+          toolbar
+          exportable
           title={t('advancedIntelligence.resilience.timeline.title', 'Outage risk timeline')}
           ariaLabel={t(
             'advancedIntelligence.resilience.timeline.aria',
@@ -221,7 +238,7 @@ export default function EmergencyResiliencePage() {
               'At least two supported timeline points are required.',
             )} />
           )}
-        </ChartContainer>
+        </ChartCard>
       </FadeIn>
 
       <FadeIn delay={0.15}>
@@ -262,6 +279,6 @@ export default function EmergencyResiliencePage() {
           ]}
         />
       </FadeIn>
-    </PageContainer>
+    </PageLayout>
   );
 }

@@ -1,0 +1,8 @@
+[
+  {
+    "key": "geofences.aiSuggest.selectHint",
+    "english": "Choose a visited location to propose a zone; review the draft before saving.",
+    "owner": "parent only",
+    "integration": "Not performed by this worker; focused test explicitly requires the real canonical leaf"
+  }
+]

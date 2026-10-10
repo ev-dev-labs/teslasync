@@ -56,6 +56,8 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, act, waitFor, fireEvent, within } from '@testing-library/react'
 
 import type { AppSettings } from '@/api/types'
+import type { AutomationFullInput } from '@/api/hooks/useAutomations'
+import { Button } from '@/components/ui/Button'
 
 vi.mock('@/hooks/useSettings', () => ({
   useSettings: vi.fn(),
@@ -155,22 +157,47 @@ function pendingStreamResponse(): Response {
 // A fully-valid wire-shaped automation graph. Exactly the seven keys
 // `normalizeAutomationInput` reconstructs, so a normalize round-trip
 // deep-equals it (used to assert the onApplyDraft payload).
-const validAutomation = {
+const validAutomation: AutomationFullInput = {
   name: 'Welcome Home',
   description: 'Turn on cabin overheat protection when arriving home',
   vehicle_id: 7,
   enabled: true,
   triggers: [
-    { kind: 'trigger_geofence', place_id: 1, on_event: 'enter' },
-    { kind: 'trigger_geofence', place_id: 2, on_event: 'exit' },
+    { kind: 'trigger_geofence', place_id: 1, event: 'enter' },
+    { kind: 'trigger_geofence', place_id: 2, event: 'exit' },
   ],
-  conditions: [{ kind: 'condition_day_of_week', days: ['mon', 'tue'] }],
+  conditions: [{
+    kind: 'condition_time_window', start_time: '00:00', end_time: '00:00',
+    timezone: 'UTC', days_of_week: [1, 2],
+  }],
   actions: [
-    { kind: 'action_command', command_name: 'cabin_overheat_protection_on', params: null },
-    { kind: 'action_command', command_name: 'hvac_on', params: null },
-    { kind: 'action_wait', seconds: 30 },
+    { kind: 'action_command', command_name: 'cabin_overheat_protection_on' },
+    { kind: 'action_command', command_name: 'hvac_on' },
+    { kind: 'action_wait', duration_s: 30 },
   ],
 }
+
+describe('canonical nested draft contract', () => {
+  it.each([
+    { kind: 'action_wait', seconds: 30 },
+    { kind: 'action_wait', duration_s: 0 },
+    { kind: 'action_wait', duration_s: 3601 },
+    { kind: 'action_wait', duration_s: 1.5 },
+    { kind: 'action_wait', duration_s: 30, seconds: 30 },
+    { kind: 'unknown', duration_s: 30 },
+  ])('rejects malformed wait %#', action => {
+    expect(normalizeAutomationInput({ ...validAutomation, actions: [action] })).toBeNull()
+  })
+
+  it('rejects legacy weekday and geofence aliases rather than asserting nested arrays', () => {
+    expect(normalizeAutomationInput({
+      ...validAutomation, conditions: [{ kind: 'condition_day_of_week', days: ['mon', 'tue'] }],
+    })).toBeNull()
+    expect(normalizeAutomationInput({
+      ...validAutomation, triggers: [{ kind: 'trigger_geofence', place_id: 1, on_event: 'enter' }],
+    })).toBeNull()
+  })
+})
 
 function draftSse(envelope: unknown, deltaText = 'Drafted an automation.') {
   return (
@@ -450,6 +477,54 @@ describe('AIGeofenceAwareAutomationSuggestions — surface structure + a11y', ()
 
 // ── 4. On-mode SSE wiring ─────────────────────────────────────────────────
 describe('AIGeofenceAwareAutomationSuggestions — on-mode SSE wiring', () => {
+  it('keeps Suggest and explicit Apply out of enclosing form submission while Save submits', async () => {
+    mockUseSettings.mockReturnValue(enabled())
+    const onApplyDraft = vi.fn()
+    const onSubmit = vi.fn()
+    const calls = stubStreamOnce(draftSse({ draft: validAutomation, status: 'ok' }))
+
+    render(
+      <form onSubmit={(event) => { event.preventDefault(); onSubmit() }}>
+        <AIGeofenceAwareAutomationSuggestions vehicleId={7} onApplyDraft={onApplyDraft} />
+        <Button type="submit">Save automation</Button>
+      </form>,
+    )
+    const suggest = await typePromptAndSuggest()
+    const apply = await screen.findByTestId(APPLY_TESTID)
+    expect(suggest).toHaveAttribute('type', 'button')
+    expect(apply).toHaveAttribute('type', 'button')
+    expect(onSubmit).not.toHaveBeenCalled()
+    expect(onApplyDraft).not.toHaveBeenCalled()
+    fireEvent.click(apply)
+    expect(onApplyDraft).toHaveBeenCalledExactlyOnceWith(validAutomation)
+    expect(onSubmit).not.toHaveBeenCalled()
+    expect(calls).toHaveLength(1)
+    fireEvent.click(screen.getByRole('button', { name: 'Save automation' }))
+    expect(onSubmit).toHaveBeenCalledTimes(1)
+    expect(calls).toHaveLength(1)
+  })
+
+  it('retains long proposal details in neutral wrapping presentation without changing geofence IDs', async () => {
+    mockUseSettings.mockReturnValue(enabled())
+    const onApplyDraft = vi.fn()
+    const proposal = {
+      ...validAutomation,
+      name: 'HomeAndWork'.repeat(35),
+      description: 'Review this complete geofence proposal. '.repeat(30),
+    }
+    stubStreamOnce(draftSse({ draft: proposal, status: 'ok' }))
+    render(<AIGeofenceAwareAutomationSuggestions vehicleId={7} onApplyDraft={onApplyDraft} />)
+    await typePromptAndSuggest()
+    const card = await screen.findByTestId(DRAFT_TESTID)
+    expect(card).toHaveClass('min-w-0', 'bg-[var(--surface-2)]', 'border-[var(--border-default)]')
+    expect(within(card).getByText(proposal.name)).toBeInTheDocument()
+    expect(within(card).getByText(proposal.description.trim())).toBeInTheDocument()
+    expect(within(card).getByText(proposal.name).parentElement).toHaveClass('break-words')
+    expect(onApplyDraft).not.toHaveBeenCalled()
+    fireEvent.click(screen.getByTestId(APPLY_TESTID))
+    expect(onApplyDraft).toHaveBeenCalledExactlyOnceWith(proposal)
+  })
+
   it('POSTs once to the registered route with the vehicle_id+prompt body + SSE headers and renders the first delta', async () => {
     mockUseSettings.mockReturnValue(enabled())
     const sseBody =

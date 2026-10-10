@@ -187,12 +187,12 @@ describe('VehicleCostTable — table rendering', () => {
 
     // Rows / bytes / rate / last-seen — computed with the exact helpers the
     // component uses, so the assertions stay locale/precision agnostic.
-    expect(screen.getByText(fmtNumber(9000))).toBeInTheDocument();
-    expect(screen.getByText(fmtNumber(15000))).toBeInTheDocument();
+    expect(screen.getByText(fmtInt(9000))).toBeInTheDocument();
+    expect(screen.getByText(fmtInt(15000))).toBeInTheDocument();
     expect(screen.getByText(formatBytes(2048))).toBeInTheDocument();
     expect(screen.getByText(formatBytes(1_048_576))).toBeInTheDocument();
-    expect(screen.getByText(fmtNumber(1.2, 1))).toBeInTheDocument();
-    expect(screen.getByText(fmtNumber(3.4, 1))).toBeInTheDocument();
+    expect(screen.getByText(fmtNumber(1.2))).toBeInTheDocument();
+    expect(screen.getByText(fmtNumber(3.4))).toBeInTheDocument();
     expect(screen.getByText(formatRelative('2020-06-15T12:00:00Z'))).toBeInTheDocument();
     expect(screen.getByText(formatRelative('2021-03-10T08:00:00Z'))).toBeInTheDocument();
   });
@@ -210,20 +210,20 @@ describe('VehicleCostTable — table rendering', () => {
 });
 
 describe('VehicleCostTable — DLQ failures column', () => {
-  // Row values are chosen so the failures string ("5.00" / "0.00") is unique in
+  // Row values are chosen so the failure count ("5" / "0") is unique in
   // the row, letting getByText resolve the exact <Text> cell it styles.
   const base = { signal_row_count: 100, ingest_rate_per_minute_24h: 2, signal_bytes_est: 4096 };
 
   it('tints a positive DLQ failure count amber', () => {
     renderTable({ vehicles: [makeRow({ ...base, dlq_failures_24h: 5 })] });
-    const cell = screen.getByText(fmtNumber(5)); // "5.00"
+    const cell = screen.getByText(fmtInt(5)); // discrete DLQ count
     expect(cell).toHaveClass('text-amber-300');
     expect(cell).toHaveClass('tabular-nums');
   });
 
   it('keeps a zero DLQ count in the muted secondary colour, never amber', () => {
     renderTable({ vehicles: [makeRow({ ...base, dlq_failures_24h: 0 })] });
-    const cell = screen.getByText(fmtNumber(0)); // "0.00"
+    const cell = screen.getByText(fmtInt(0)); // discrete DLQ count
     expect(cell).toHaveClass('text-[var(--text-secondary)]');
     expect(cell).not.toHaveClass('text-amber-300');
   });
@@ -232,7 +232,7 @@ describe('VehicleCostTable — DLQ failures column', () => {
     renderTable({
       vehicles: [makeRow({ ...base, dlq_failures_24h: undefined as unknown as number })],
     });
-    const cell = screen.getByText(fmtNumber(0)); // "0.00" via `?? 0`
+    const cell = screen.getByText(fmtInt(0)); // "0" via `?? 0`
     expect(cell).toBeInTheDocument();
     expect(cell).not.toHaveClass('text-amber-300');
   });
@@ -245,14 +245,14 @@ describe('VehicleCostTable — async states', () => {
     expect(screen.queryByText('No vehicle cost data')).not.toBeInTheDocument();
     // The title still anchors the section even mid-load.
     expect(screen.getByRole('heading', PANEL_TITLE)).toBeInTheDocument();
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
+    expect(container.querySelector('[aria-hidden="true"][class~="bg-[var(--skeleton-bg)]"][style="height: 240px;"]')).not.toBeNull();
   });
 
   it('keeps the table visible during a background refetch (loading with existing rows)', () => {
     const { container } = renderTable({ loading: true, vehicles: [makeRow()] });
     expect(screen.getByRole('table')).toBeInTheDocument();
     // Not the skeleton branch — data stays on screen so the panel never flickers.
-    expect(container.querySelector('.animate-pulse')).toBeNull();
+    expect(container.querySelector('[aria-hidden="true"][class~="bg-[var(--skeleton-bg)]"]')).toBeNull();
   });
 
   it('renders an EmptyState (not a skeleton) when settled with zero rows', () => {

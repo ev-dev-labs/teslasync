@@ -284,14 +284,14 @@ describe('TripDrivesChart — per-drive rows + 1-indexed labels', () => {
     });
 
     // Label is 1-indexed by array position, independent of the drive id.
-    expect(dataRowCells('Drive 1')).toEqual(['Drive 1', '5.0']);
-    expect(dataRowCells('Drive 2')).toEqual(['Drive 2', '12.3']);
+    expect(dataRowCells('Drive 1')).toEqual(['Drive 1', '5.00']);
+    expect(dataRowCells('Drive 2')).toEqual(['Drive 2', '12.35']);
   });
 
   it('formats a large distance with locale grouping separators', () => {
     // 1,234,500 m → 1234.5 km → "1,234.5" under en-US grouping.
     renderChart({ trip: makeTrip({ drives: [drive({ distance_m: 1234500 })] }) });
-    expect(dataRowCells('Drive 1')[1]).toBe('1,234.5');
+    expect(dataRowCells('Drive 1')[1]).toBe('1,234.50');
   });
 });
 
@@ -300,7 +300,7 @@ describe('TripDrivesChart — SI distance derivation (display boundary)', () => 
     // 1609.344 km input? No — 1609.344 METERS → 1.609344 km → "1.6".
     renderChart({ trip: makeTrip({ drives: [drive({ distance_m: 1609.344 })] }) });
 
-    expect(dataRowCells('Drive 1')[1]).toBe('1.6');
+    expect(dataRowCells('Drive 1')[1]).toBe('1.61');
     expect(within(fallbackTable()).getByText('Distance (km)')).toBeInTheDocument();
   });
 
@@ -309,7 +309,7 @@ describe('TripDrivesChart — SI distance derivation (display boundary)', () => 
     // 1609.344 m → exactly 1.0 mi (real conversion, not identity).
     renderChart({ trip: makeTrip({ drives: [drive({ distance_m: 1609.344 })] }) });
 
-    expect(dataRowCells('Drive 1')[1]).toBe('1.0');
+    expect(dataRowCells('Drive 1')[1]).toBe('1.00');
     expect(within(fallbackTable()).getByText('Distance (mi)')).toBeInTheDocument();
     // The km label must be gone — proves the unit pref threads through.
     expect(within(fallbackTable()).queryByText('Distance (km)')).toBeNull();
@@ -327,9 +327,9 @@ describe('TripDrivesChart — null safety', () => {
       }),
     });
 
-    expect(dataRowCells('Drive 1')).toEqual(['Drive 1', '0.0']);
+    expect(dataRowCells('Drive 1')).toEqual(['Drive 1', '0.00']);
     // The null drive must not collapse the finite sibling.
-    expect(dataRowCells('Drive 2')).toEqual(['Drive 2', '3.0']);
+    expect(dataRowCells('Drive 2')).toEqual(['Drive 2', '3.00']);
   });
 
   it('coerces a non-finite distance to 0.0 (safeNumber guard, not `?? 0`)', () => {
@@ -337,7 +337,7 @@ describe('TripDrivesChart — null safety', () => {
     expect(() =>
       renderChart({ trip: makeTrip({ drives: [drive({ distance_m: Number.NaN })] }) }),
     ).not.toThrow();
-    expect(dataRowCells('Drive 1')[1]).toBe('0.0');
+    expect(dataRowCells('Drive 1')[1]).toBe('0.00');
   });
 });
 
@@ -377,7 +377,7 @@ describe('TripDrivesChart — loading state', () => {
     renderChart({ trip: makeTrip({ drives: [drive({ distance_m: 8000 })] }), isLoading: true });
 
     expect(screen.queryByRole('status', { name: 'Loading' })).toBeNull();
-    expect(dataRowCells('Drive 1')).toEqual(['Drive 1', '8.0']);
+    expect(dataRowCells('Drive 1')).toEqual(['Drive 1', '8.00']);
   });
 });
 

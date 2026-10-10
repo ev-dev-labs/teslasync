@@ -3,8 +3,8 @@
  *
  * The shared `<Tooltip>` (web/src/components/ui/Tooltip.tsx) ships an
  * INVERTED surface for high contrast (light card in dark mode / dark card
- * in light mode) and cascades its own intrinsic `text-gray-100
- * dark:text-gray-900` pair through the JSX content. A child that hardcodes
+ * in light mode) and cascades its own intrinsic `--text-inverse`
+ * foreground through the JSX content. A child that hardcodes
  * `text-white/N` or `text-gray-{100..400}` will render invisibly in one of
  * the two themes — these tests pin the dev-time `console.warn` backstop
  * that catches the bug at run-time before it reaches production.
@@ -39,7 +39,7 @@ describe('Tooltip — text-colour contract', () => {
     // The intrinsic colour pair is on the tooltip body itself; no text-* class
     // should be inherited from the trigger or wrapper.
     expect(tip.className).toContain('text-[var(--text-inverse)]');
-    expect(tip.className).toContain('dark:bg-gray-100');
+    expect(tip.className).toContain('bg-[var(--text-primary)]');
     expect(warnSpy).not.toHaveBeenCalled();
   });
 

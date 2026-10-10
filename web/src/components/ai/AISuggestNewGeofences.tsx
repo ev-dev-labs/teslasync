@@ -28,6 +28,7 @@ import { useTranslation } from 'react-i18next'
 import { AIFeatureCard } from '@/components/ai/AIFeatureCard'
 import { withAiFeature } from '@/components/ai/withAiFeature'
 import { Button } from '@/components/ui'
+import { Caption, Text } from '@/components/ui/Typography'
 import type { AiStreamEvent } from '@/hooks/useAiStream'
 import { useAiStream } from '@/hooks/useAiStream'
 
@@ -236,54 +237,54 @@ function InnerSection({
       buttonTestId="ai-feature-suggest-new-geofences-suggest"
     >
       {currentName && (
-        <p className="text-xs text-[var(--text-muted)]">
+        <Caption as="p" className="min-w-0 break-words">
           {t('geofences.aiSuggest.currentLabel', 'Current label')}:{' '}
-          <span className="text-[var(--text-secondary)]">{currentName}</span>
-        </p>
+          <Text color="secondary">{currentName}</Text>
+        </Caption>
       )}
       {draft && (
         <div
-          className="rounded-md border border-cyan-300/30 bg-cyan-300/5 p-3 text-sm"
+          className="min-w-0 rounded-shape-sm border border-[var(--border-default)] bg-[var(--surface-2)] p-3"
           data-testid="ai-feature-suggest-new-geofences-draft"
           role="group"
           aria-labelledby={proposalLabelId}
         >
-          <div className="flex items-start justify-between gap-3">
-            <div className="space-y-1">
-              <div
+          <div className="flex min-w-0 flex-wrap items-start justify-between gap-3">
+            <div className="min-w-0 flex-1 space-y-1 break-words">
+              <Caption
+                as="div"
                 id={proposalLabelId}
-                className="text-xs uppercase tracking-wide text-cyan-300"
               >
                 {t('geofences.aiSuggest.proposalLabel', 'Proposed geofence')}
-              </div>
-              <div className="font-medium text-[var(--text-primary)]">
+              </Caption>
+              <Text as="div" size="sm" weight="medium" color="primary">
                 {draft.proposed_name ||
                   t('geofences.aiSuggest.unnamed', '(unnamed)')}
-              </div>
-              <div className="text-xs text-[var(--text-secondary)]">
+              </Text>
+              <Text as="div" variant="bodySm">
                 {t('geofences.aiSuggest.radiusLabel', 'Radius')}:{' '}
-                <span className="text-[var(--text-secondary)]">
-                  {Math.round(draft.radius_m)} m
-                </span>
-              </div>
+                {Math.round(draft.radius_m)} m
+              </Text>
               {draft.validation_error && (
-                <div className="text-xs text-[var(--text-secondary)]">
+                <Text as="div" variant="bodySm">
                   {draft.validation_error}
-                </div>
+                </Text>
               )}
               {draft.status !== 'ok' && (
-                <div className="text-xs text-rose-300">
+                <Text as="div" variant="error">
                   {t(
                     'geofences.aiSuggest.rejectedLabel',
                     'Proposal rejected by validator',
                   )}
-                </div>
+                </Text>
               )}
             </div>
-            <div className="flex flex-shrink-0 flex-col gap-1.5">
+            <div className="flex min-w-0 max-w-full flex-col gap-2">
               <Button
                 variant="outline"
                 size="sm"
+                wrapLabel
+                className="min-h-11 md:min-h-9"
                 disabled={draft.status !== 'ok'}
                 aria-disabled={draft.status !== 'ok' ? 'true' : 'false'}
                 onClick={handleApply}

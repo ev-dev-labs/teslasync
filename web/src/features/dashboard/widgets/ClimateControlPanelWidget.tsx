@@ -1,23 +1,30 @@
 import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  Thermometer, Fan, Armchair, CircleDot, Snowflake, Zap, Power,
+  Thermometer, Armchair, Snowflake, Zap, Power,
 } from 'lucide-react';
-import { Badge } from '@/components/ui';
+import { Badge, Text } from '@/components/ui';
+import type { StatMetric } from '@/components/data-display';
+import type { DataState } from '@/api/dataState';
+import { deriveDataState } from '@/api/dataState';
 import { EmptyState } from '@/components/feedback';
 import { useVehicles, useClimateLatest } from '@/api/hooks/useVehicles';
 import { useUnits } from '@/hooks/useUnits';
 import { resolveHvacActive } from '@/lib/climateState';
-import { fmtInt } from '@/lib/numberFormat';
+
 import { WidgetShell } from './WidgetShell';
+import { WidgetBigNumber } from './shared';
+import { DashboardSourceBrief } from '../components/operationalbrief-all/DashboardSourceBrief';
 import type { WidgetProps } from './types';
 import { convertTempFromSI } from '@/lib/unitConversion';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export default function ClimateControlPanelWidget({ vehicleId, size }: WidgetProps) {
+  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
-  const { data: vehicles } = useVehicles();
+  const { data: vehicles, isLoading: vehiclesLoading, error: vehiclesError } = useVehicles();
   const id = vehicleId ?? vehicles?.[0]?.id ?? 0;
-  const { data: climateData, isLoading, isFetching, isStale, isError, dataUpdatedAt, refetch } = useClimateLatest(id, 5_000);
+  const { data: climateData, error, isLoading, isFetching, isStale, isError, dataUpdatedAt, refetch } = useClimateLatest(id, 5_000);
   const { unitPrefs } = useUnits();
   const toTemperatureDisplay = useCallback(
     (value: number) => convertTempFromSI(value, unitPrefs.temperature),
@@ -34,7 +41,7 @@ export default function ClimateControlPanelWidget({ vehicleId, size }: WidgetPro
       inside: climateData.inside_temp != null ? fmtInt(toTemperatureDisplay(climateData.inside_temp)) : null,
       outside: climateData.outside_temp != null ? fmtInt(toTemperatureDisplay(climateData.outside_temp)) : null,
     };
-  }, [climateData, toTemperatureDisplay]);
+  }, [climateData, toTemperatureDisplay, fmtInt]);
 
   const seatHeaters = useMemo(() => {
     if (!climateData) return [];
@@ -52,13 +59,24 @@ export default function ClimateControlPanelWidget({ vehicleId, size }: WidgetPro
     return seats;
   }, [climateData, t]);
 
-  const steeringHeat = climateData?.hvac_steering_wheel_heat_level ?? 0;
+  const steeringHeat = climateData?.hvac_steering_wheel_heat_level ?? null;
+  const loading = isLoading || (vehiclesLoading && !id);
+  const queryError = error ?? (!id ? vehiclesError : null);
+  const dataState = deriveDataState({
+    data: climateData ?? (loading || queryError || isError ? undefined : null),
+    error: queryError,
+    isError,
+    isFetching,
+    dataUpdatedAt,
+    refetch,
+  });
 
   return (
     <WidgetShell
-      title={isCompact ? undefined : t('widget.climatePanel.title', 'Climate Control')}
+      title={isCompact ? undefined : t('widget.climatePanel.title', 'Climate control')}
       icon={isCompact ? undefined : <Thermometer className="h-3.5 w-3.5 text-neon-cyan" />}
-      loading={isLoading}
+      loading={loading}
+      dataState={dataState}
       updatedAt={dataUpdatedAt}
       isFetching={isFetching}
       isStale={isStale}
@@ -71,7 +89,9 @@ export default function ClimateControlPanelWidget({ vehicleId, size }: WidgetPro
         ) : (
           <FullView
             climateData={climateData}
-            temps={temps}
+            dataState={dataState}
+            sourceScope={t('widget.climatePanel.summaryScope', 'Vehicle {{id}} · returned climate snapshot; continuous recording coverage is not established.', { id })}
+            toTemperatureDisplay={toTemperatureDisplay}
             tempUnit={tempUnit}
             seatHeaters={seatHeaters}
             steeringHeat={steeringHeat}
@@ -92,111 +112,90 @@ export default function ClimateControlPanelWidget({ vehicleId, size }: WidgetPro
 /* ── Compact: single temperature display ── */
 function CompactView({ inside, tempUnit }: { inside: string | null; tempUnit: string }) {
   return (
-    <div className="h-full flex flex-col items-center justify-center gap-1">
-      <Thermometer className="h-5 w-5 text-neon-cyan" />
-      <span className="text-lg font-bold text-[var(--text-primary)]">
-        {inside != null ? `${inside}${tempUnit}` : '—'}
-      </span>
-    </div>
+    <WidgetBigNumber value={inside != null ? `${inside}${tempUnit}` : null} />
   );
 }
 
 /* ── Full 2x2 view ── */
 interface FullViewProps {
   climateData: NonNullable<ReturnType<typeof useClimateLatest>['data']>;
-  temps: { inside: string | null; outside: string | null } | null;
+  dataState: DataState<unknown>;
+  sourceScope: string;
+  toTemperatureDisplay: (value: number) => number;
   tempUnit: string;
   seatHeaters: { label: string; level: number }[];
-  steeringHeat: number;
+  steeringHeat: number | null;
   t: (k: string, f: string) => string;
 }
 
-function FullView({ climateData, temps, tempUnit, seatHeaters, steeringHeat, t }: FullViewProps) {
+function FullView({ climateData, dataState, sourceScope, toTemperatureDisplay, tempUnit, seatHeaters, steeringHeat, t }: FullViewProps) {
+  const { fmtInt } = useNumberFormatting();
   const hvacState = resolveHvacActive(climateData.hvac_power, climateData.is_ac_on);
+  const metrics: StatMetric[] = [
+    { metricId: 'temperature', occurrenceId: 'climate-panel-cabin', rawValue: climateData.inside_temp,
+      label: t('widget.climatePanel.cabin', 'Cabin'),
+      display: { formatter: raw => ({ value: fmtInt(toTemperatureDisplay(raw)), unit: tempUnit }) } },
+    { metricId: 'temperature', occurrenceId: 'climate-panel-outside', rawValue: climateData.outside_temp,
+      label: t('widget.climatePanel.outside', 'Outside'),
+      display: { formatter: raw => ({ value: fmtInt(toTemperatureDisplay(raw)), unit: tempUnit }) } },
+    { metricId: 'number', occurrenceId: 'climate-panel-fan-level', rawValue: climateData.fan_speed,
+      label: t('widget.climatePanel.fanSpeed', 'Fan speed'),
+      description: t('widget.climatePanel.fanLevelDescription', 'Reported fan level, not a velocity measurement.'),
+      display: { notation: 'source' } },
+    { metricId: 'number', occurrenceId: 'climate-panel-wheel-level', rawValue: steeringHeat,
+      label: t('widget.climatePanel.steeringHeat', 'Wheel heat'),
+      description: t('widget.climatePanel.wheelLevelDescription', 'Reported wheel-heater level on the 0–3 scale; zero means Off.'),
+      display: { formatter: raw => ({ value: raw > 0 ? `${raw}/3` : t('widget.climatePanel.off', 'Off'), unit: '' }) } },
+  ];
 
   return (
-    <div className="h-full flex flex-col justify-between gap-2.5">
+    <div className="flex min-w-0 flex-col gap-3">
       {/* HVAC status badge */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-1.5">
           <Power className="h-3.5 w-3.5 text-[var(--text-muted)]" />
           <Badge variant={hvacState === true ? 'success' : 'neutral'} size="sm">
             {hvacState === true
-              ? t('widget.climatePanel.hvacOn', 'HVAC On')
+              ? t('widget.climatePanel.hvacOn', 'HVAC on')
               : hvacState === false
-                ? t('widget.climatePanel.hvacOff', 'HVAC Off')
-                : t('widget.climatePanel.hvacUnknown', 'HVAC Unknown')}
+                ? t('widget.climatePanel.hvacOff', 'HVAC off')
+                : t('widget.climatePanel.hvacUnknown', 'HVAC unknown')}
           </Badge>
         </div>
       </div>
 
-      {/* Temperature row */}
-      <div className="grid grid-cols-2 gap-2">
-        <MetricCell
-          icon={<Thermometer className="h-3 w-3 text-neon-cyan" />}
-          label={t('widget.climatePanel.cabin', 'Cabin')}
-          value={temps?.inside != null ? `${temps.inside}${tempUnit}` : '—'}
-        />
-        <MetricCell
-          icon={<Thermometer className="h-3 w-3 text-blue-400" />}
-          label={t('widget.climatePanel.outside', 'Outside')}
-          value={temps?.outside != null ? `${temps.outside}${tempUnit}` : '—'}
-        />
-      </div>
-
-      {/* Fan speed */}
-      <div className="grid grid-cols-2 gap-2">
-        <MetricCell
-          icon={<Fan className="h-3 w-3 text-[var(--text-muted)]" />}
-          label={t('widget.climatePanel.fanSpeed', 'Fan Speed')}
-          value={climateData.fan_speed != null ? `${climateData.fan_speed}` : '—'}
-        />
-        <MetricCell
-          icon={<CircleDot className="h-3 w-3 text-[var(--text-muted)]" />}
-          label={t('widget.climatePanel.steeringHeat', 'Wheel Heat')}
-          value={steeringHeat > 0 ? `${steeringHeat}/3` : t('widget.climatePanel.off', 'Off')}
-        />
-      </div>
+      <DashboardSourceBrief metrics={metrics} state={dataState}
+        eyebrow={t('widget.summaryEyebrow', 'Dashboard source summary')}
+        title={t('widget.climatePanel.summaryTitle', 'Returned climate control readings')}
+        description={t('widget.climatePanel.summaryDescription', 'Cabin and outside temperatures are independent SI measurements converted only for display. Fan and wheel-heater levels are not speeds; HVAC and heater statuses remain separate.')}
+        scope={sourceScope}
+        testId="dashboard-climate-panel-brief" />
 
       {/* Seat heaters + status badges */}
       <div className="flex items-center gap-1.5 flex-wrap">
         {seatHeaters.length > 0 ? (
           seatHeaters.map((s) => (
-            <span
-              key={s.label}
-              className="inline-flex items-center gap-0.5 text-2xs px-1.5 py-0.5 rounded-full bg-orange-500/10 text-orange-400"
-            >
-              <Armchair className="h-2.5 w-2.5" /> {s.label} {s.level}/3
-            </span>
+            <Badge key={s.label} variant="warning" size="sm">
+              <Armchair className="size-3" aria-hidden="true" /> {s.label} {s.level}/3
+            </Badge>
           ))
         ) : (
-          <span className="text-2xs text-[var(--text-muted)]">
-            {t('widget.climatePanel.noSeatHeat', 'No seat heaters active')}
-          </span>
+          <Text variant="caption">
+            {[climateData.seat_heater_left, climateData.seat_heater_right, climateData.seat_heater_rear_left, climateData.seat_heater_rear_center, climateData.seat_heater_rear_right].some((level) => level == null)
+              ? t('hero.unknownStatus', 'Unknown')
+              : t('widget.climatePanel.noSeatHeat', 'No seat heaters active')}
+          </Text>
         )}
         {climateData.defrost_mode && climateData.defrost_mode !== 'Off' && (
-          <span className="inline-flex items-center gap-0.5 text-2xs px-1.5 py-0.5 rounded-full bg-blue-500/10 text-blue-400">
-            <Snowflake className="h-2.5 w-2.5" /> {t('widget.climatePanel.defrost', 'Defrost')}
-          </span>
+          <Badge variant="info" size="sm">
+            <Snowflake className="size-3" aria-hidden="true" /> {t('widget.climatePanel.defrost', 'Defrost')}
+          </Badge>
         )}
         {climateData.battery_heater && (
-          <span className="inline-flex items-center gap-0.5 text-2xs px-1.5 py-0.5 rounded-full bg-orange-500/10 text-orange-400">
-            <Zap className="h-2.5 w-2.5" /> {t('widget.climatePanel.batHeater', 'Bat Heater')}
-          </span>
+          <Badge variant="warning" size="sm">
+            <Zap className="size-3" aria-hidden="true" /> {t('widget.climatePanel.batHeater', 'Bat heater')}
+          </Badge>
         )}
-      </div>
-    </div>
-  );
-}
-
-/* ── Tiny metric cell (reused pattern) ── */
-function MetricCell({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
-  return (
-    <div className="flex items-start gap-1.5 min-w-0">
-      <span className="mt-0.5 shrink-0">{icon}</span>
-      <div className="min-w-0">
-        <p className="text-2xs text-[var(--text-muted)] truncate">{label}</p>
-        <p className="text-sm font-semibold text-[var(--text-primary)] truncate">{value}</p>
       </div>
     </div>
   );

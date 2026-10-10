@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 
 import type { UserActivityEntry } from '@/types/admin';
+import { chartTokens } from '@/lib/tokens';
 import { deriveMyActivityAnalytics, OTHER_CATEGORY } from './myActivityAnalytics';
 
 // ── Timezone-robust fixtures ────────────────────────────────────────────────
@@ -168,7 +169,7 @@ describe('deriveMyActivityAnalytics', () => {
     expect(top.key).toBe('vehicle.command.wake');
     expect(top.count).toBe(5);
     expect(top.percent).toBeCloseTo((5 / 14) * 100, 5); // 14 total entries
-    expect(top.color).toBe('#3b82f6'); // first series colour
+    expect(top.color).toBe(chartTokens.series[0]); // first series colour
     expect(top.label).toBe('Wake vehicle');
     expect(top.i18nKey).toBe('activity.action.vehicleCommandWake');
     expect(top.fallback).toBe('Wake vehicle');

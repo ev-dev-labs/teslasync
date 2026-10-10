@@ -1,16 +1,18 @@
 import { useTranslation } from 'react-i18next'
 
 import { MetricBar } from '@/components/data-display'
-import { fmtInt, fmtPercent } from '@/lib/numberFormat'
+
 import type { FeedbackCategory } from '@/api/types'
 
 import { CATEGORY_COLORS, type FeedbackCounts } from './constants'
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 /** Fixed display order — bug first (most actionable), then feature, then other. */
 const ORDER: readonly FeedbackCategory[] = ['bug', 'feature', 'other']
 
 /** Bug / feature / other proportion bars. */
 export function CategoryMix({ counts }: { counts: FeedbackCounts }) {
+  const { fmtInt, fmtPercent } = useNumberFormatting();
   const { t } = useTranslation()
   const label: Record<FeedbackCategory, string> = {
     bug: t('feedback.category.bug', 'Bug report'),
@@ -36,7 +38,7 @@ export function CategoryMix({ counts }: { counts: FeedbackCounts }) {
               value={count}
               max={catTotal || 1}
               color={CATEGORY_COLORS[key]}
-              sublabel={`${fmtInt(count)} · ${fmtPercent(pct, 0)}`}
+              sublabel={`${fmtInt(count)} · ${fmtPercent(pct)}`}
             />
           </div>
         )

@@ -20,8 +20,9 @@
  * (annotation / export wiring), so the tree is wrapped in QueryClientProvider +
  * MemoryRouter and those hooks are stubbed. Network is never touched.
  */
-import { describe, it, expect, vi, beforeAll, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { describe, it, expect, vi, beforeAll, beforeEach, afterEach } from 'vitest';
+import { act, cleanup, render, screen, fireEvent } from '@testing-library/react';
+import { getFormatterPreferences, setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
@@ -139,16 +140,27 @@ vi.mock('recharts', async () => {
   const ReferenceLine = (props: any) =>
     React.createElement('g', { 'data-testid': 'reference-line', 'data-x': String(props.x) });
   const Noop = () => null;
+  const XAxis = ({ tickFormatter }: { tickFormatter: (value: number, index: number) => string }) =>
+    React.createElement('text', { 'data-testid': 'x-tick' }, tickFormatter(1.23456, 7));
+  const YAxis = ({ tickFormatter }: { tickFormatter: (value: number, index: number) => string }) =>
+    React.createElement('text', { 'data-testid': 'y-tick' }, tickFormatter(123.4567, 7));
+  const Tooltip = ({ labelFormatter, formatter }: {
+    labelFormatter: (value: number) => string;
+    formatter: (value: number) => [string, string];
+  }) => React.createElement('g', null,
+    React.createElement('text', { 'data-testid': 'tooltip-label' }, labelFormatter(1.23456)),
+    React.createElement('text', { 'data-testid': 'tooltip-value' }, formatter(123.4567)[0]),
+  );
   return {
     ...actual,
     ResponsiveContainer,
     AreaChart,
     ReferenceLine,
     Area: Noop,
-    XAxis: Noop,
-    YAxis: Noop,
+    XAxis,
+    YAxis,
     CartesianGrid: Noop,
-    Tooltip: Noop,
+    Tooltip,
   };
 });
 
@@ -200,8 +212,19 @@ beforeAll(() => {
   vi.stubGlobal('ResizeObserver', MockResizeObserver);
 });
 
+let previousPreferences: ReturnType<typeof getFormatterPreferences>;
+
 beforeEach(() => {
+  previousPreferences = getFormatterPreferences();
+  setGlobalPrecision(2);
+  setGlobalLocale('en-US');
   vi.clearAllMocks();
+});
+
+afterEach(() => {
+  cleanup();
+  setGlobalPrecision(previousPreferences.precision);
+  setGlobalLocale(previousPreferences.locale);
 });
 
 describe('ElevationProfile — empty / null-safety branch', () => {
@@ -261,6 +284,17 @@ describe('ElevationProfile — populated chrome', () => {
 });
 
 describe('ElevationProfile — elevation gain/loss subtitle', () => {
+  it('refreshes mounted axis and tooltip callbacks without changing data or playhead', () => {
+    renderProfile({ data: [makePoint({ distance: 1.23456, elevation: 123.4567 })], currentIndex: 0 });
+    expect(screen.getByTestId('x-tick')).toHaveTextContent('1.23');
+    expect(screen.getByTestId('tooltip-value')).toHaveTextContent('123.46 m');
+    act(() => setGlobalPrecision(3));
+    expect(screen.getByTestId('x-tick')).toHaveTextContent('1.235');
+    expect(screen.getByTestId('y-tick')).toHaveTextContent('123.457');
+    expect(screen.getByTestId('tooltip-label')).toHaveTextContent('1.235 km');
+    expect(screen.getByTestId('tooltip-value')).toHaveTextContent('123.457 m');
+    expect(screen.getByTestId('reference-line')).toHaveAttribute('data-x', '1.23456');
+  });
   it('reduces the series into rounded total gain and loss shown in the subtitle', () => {
     // deltas: +50, -30, +10  → gain 60, loss 30
     renderProfile({
@@ -272,7 +306,7 @@ describe('ElevationProfile — elevation gain/loss subtitle', () => {
       ],
     });
 
-    expect(screen.getByText(/↑\s*60m\s*↓\s*30m/)).toBeInTheDocument();
+    expect(screen.getByText(/↑\s*60.00m\s*↓\s*30.00m/)).toBeInTheDocument();
   });
 
   it('coerces null elevation samples to 0 so the subtitle never renders NaN (regression)', () => {
@@ -287,8 +321,8 @@ describe('ElevationProfile — elevation gain/loss subtitle', () => {
     const subtitle = screen.getByText(/↑/);
     expect(subtitle.textContent).not.toContain('NaN');
     // (null→0): loss = |0-100| = 100, gain = 130-0 = 130.
-    expect(subtitle.textContent).toMatch(/↑\s*130m/);
-    expect(subtitle.textContent).toMatch(/↓\s*100m/);
+    expect(subtitle.textContent).toMatch(/↑\s*130.00m/);
+    expect(subtitle.textContent).toMatch(/↓\s*100.00m/);
   });
 });
 

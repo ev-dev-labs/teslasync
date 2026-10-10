@@ -159,7 +159,8 @@ describe('StateMachineDebuggerPage — query branches', () => {
 
     const kpis = screen.getByRole('region', { name: 'FSM summary metrics' });
     expect(container.querySelector('.animate-pulse')).not.toBeNull();
-    expect(within(kpis).queryByText('Transitions (Page)')).not.toBeInTheDocument();
+    expect(screen.getByTestId('fsm-summary')).toHaveAttribute('aria-busy', 'true');
+    expect(kpis.querySelectorAll('[data-operational-value]')).toHaveLength(0);
   });
 
   it('surfaces the transitions failure in every dependent section with working retries', () => {
@@ -241,7 +242,7 @@ describe('StateMachineDebuggerPage — query branches', () => {
     expect(
       within(screen.getByRole('region', { name: 'FSM summary metrics' })).queryByRole('button', { name: 'Retry' }),
     ).not.toBeInTheDocument();
-    expect(screen.getByText('Transition Log')).toBeInTheDocument();
+    expect(screen.getByText('Transition log')).toBeInTheDocument();
   });
 
   it('renders honest zeros and empty states (no retries) when the queries succeed empty', () => {

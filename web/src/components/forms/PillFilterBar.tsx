@@ -1,7 +1,8 @@
 import { useId, useRef, type KeyboardEvent, type ReactNode } from 'react';
-import { Button } from '@/components/ui';
+import { Button } from '@/components/ui/Button';
 import { cn } from '@/lib/cn';
-import { fmtInt } from '@/lib/numberFormat';
+
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 /**
  * Single pill descriptor for {@link PillFilterBar}.
@@ -33,6 +34,12 @@ export interface PillFilterBarProps {
    *   - `tabs`            — flat row with bottom-border underline
    */
   variant?: 'pills' | 'tabs';
+  /**
+   * Interaction semantics, independent of visual `variant`:
+   * `tabs` (default) uses roving tab activation; `filters` uses pressed
+   * buttons in a labelled group, each enabled button in the Tab order.
+   */
+  semanticMode?: 'tabs' | 'filters';
   /** Allow horizontal scroll on overflow (mobile). Default `true`. */
   scrollable?: boolean;
   /** Additional class names on the outer container. */
@@ -55,10 +62,15 @@ const ACCENT_TAB: Record<NonNullable<PillItem['accent']>, string> = {
  * metric switchers, list-page collections (All / Anomalies / Notable / …),
  * and similar "pick one" surfaces.
  *
- * Implements the WAI-ARIA Tabs pattern: the row is a `tablist`, each pill
+ * By default implements the WAI-ARIA Tabs pattern: the row is a `tablist`, each pill
  * is a `tab`, and Left/Right/Home/End move focus + activation. Selected
  * pill receives the only `tabIndex={0}` so the row consumes a single stop
  * in the document tab order.
+ *
+ * Opt into `semanticMode="filters"` for list/collection filters rather than
+ * document tabs: a labelled group of native pressed buttons, with normal
+ * Tab/Enter/Space interaction and no arrow-key activation. `variant` changes
+ * only visual chrome, never these semantics.
  *
  * The component does **not** own panels — consumers render whatever
  * content corresponds to the active key beneath the bar. For pages that
@@ -71,12 +83,15 @@ export function PillFilterBar({
   onChange,
   ariaLabel,
   variant = 'pills',
+  semanticMode = 'tabs',
   scrollable = true,
   className,
   testId,
 }: PillFilterBarProps) {
+  const { fmtInt } = useNumberFormatting();
   const tablistId = useId();
   const refs = useRef<Map<string, HTMLButtonElement>>(new Map());
+  const isTabs = semanticMode === 'tabs';
 
   const enabledKeys = items.filter((i) => !i.disabled).map((i) => i.key);
 
@@ -107,12 +122,12 @@ export function PillFilterBar({
 
   return (
     <div
-      role="tablist"
+      role={isTabs ? 'tablist' : 'group'}
       aria-label={ariaLabel}
       data-testid={testId}
       className={cn(
-        'flex items-center gap-1.5',
-        scrollable && 'overflow-x-auto scrollbar-thin -mx-1 px-1',
+        'flex min-w-0 max-w-full items-center gap-1.5',
+        scrollable && 'overflow-x-auto scrollbar-thin px-1',
         variant === 'tabs' && 'border-b border-white/[0.06]',
         className,
       )}
@@ -136,7 +151,7 @@ export function PillFilterBar({
         return (
           <Button
             key={item.key}
-            id={`${tablistId}-tab-${item.key}`}
+            id={isTabs ? `${tablistId}-tab-${item.key}` : undefined}
             ref={(el) => {
               if (el) refs.current.set(item.key, el);
               else refs.current.delete(item.key);
@@ -144,24 +159,25 @@ export function PillFilterBar({
             type="button"
             variant={variant === 'pills' ? (selected ? 'primary' : 'outline') : 'ghost'}
             size="sm"
-            role="tab"
-            aria-selected={selected}
-            tabIndex={selected ? 0 : -1}
+            role={isTabs ? 'tab' : undefined}
+            aria-selected={isTabs ? selected : undefined}
+            aria-pressed={isTabs ? undefined : selected}
+            tabIndex={isTabs ? (selected ? 0 : -1) : 0}
             disabled={item.disabled}
             onClick={() => onChange(item.key)}
-            onKeyDown={(e) => handleKeyDown(e, item.key)}
-            className={baseClass}
+            onKeyDown={isTabs ? (e) => handleKeyDown(e, item.key) : undefined}
+            className={cn(baseClass, !scrollable && 'h-auto min-h-9 max-w-full whitespace-normal')}
           >
             {item.icon && (
               <span className="inline-flex items-center [&>svg]:h-3.5 [&>svg]:w-3.5" aria-hidden>
                 {item.icon}
               </span>
             )}
-            <span>{item.label}</span>
+            <span className={!scrollable ? 'min-w-0 break-words' : undefined}>{item.label}</span>
             {typeof item.count === 'number' && (
               <span
                 className={cn(
-                  'ml-0.5 text-2xs tabular-nums',
+                  'ml-0.5 shrink-0 text-2xs tabular-nums',
                   selected ? 'opacity-80' : 'opacity-60',
                 )}
               >

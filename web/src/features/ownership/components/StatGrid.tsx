@@ -1,5 +1,6 @@
 import { type ReactNode } from 'react';
-import { Text } from '@/components/ui';
+import { Grid } from '@/components/layout';
+import { Card, MetricValue, Text } from '@/components/ui';
 
 export interface OwnershipStat {
   key: string;
@@ -22,11 +23,11 @@ interface StatGridProps {
   columns?: 2 | 3 | 4;
 }
 
-const columnClass: Record<2 | 3 | 4, string> = {
-  2: 'sm:grid-cols-2',
-  3: 'sm:grid-cols-2 lg:grid-cols-3',
-  4: 'sm:grid-cols-2 lg:grid-cols-4',
-};
+const gridColumns = {
+  2: { default: 1, sm: 2 },
+  3: { default: 1, sm: 2, lg: 3 },
+  4: { default: 1, sm: 2, lg: 4 },
+} as const;
 
 /**
  * Headline KPI row. Values are pre-formatted by the caller so this component
@@ -34,27 +35,27 @@ const columnClass: Record<2 | 3 | 4, string> = {
  */
 export function StatGrid({ stats, columns = 4 }: StatGridProps) {
   return (
-    <div className={`grid gap-3 ${columnClass[columns]}`}>
+    <Grid cols={gridColumns[columns]} gap={3}>
       {stats.map((stat) => (
-        <div
+        <Card
           key={stat.key}
-          className="rounded-xl border border-white/[0.08] bg-white/[0.025] p-4"
+          className="min-w-0 space-y-1"
         >
           <Text as="p" variant="caption">
             {stat.label}
           </Text>
-          <p
-            className={`mt-1 text-2xl font-semibold tabular-nums ${toneClass[stat.tone ?? 'default']}`}
+          <MetricValue
+            className={`break-words tabular-nums ${toneClass[stat.tone ?? 'default']}`}
           >
             {stat.value}
-          </p>
+          </MetricValue>
           {stat.hint ? (
             <Text as="p" variant="caption" className="mt-1">
               {stat.hint}
             </Text>
           ) : null}
-        </div>
+        </Card>
       ))}
-    </div>
+    </Grid>
   );
 }

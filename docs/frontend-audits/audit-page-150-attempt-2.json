@@ -1,0 +1,357 @@
+{
+  "item": "audit-page-150",
+  "page": "web\\src\\features\\notifications\\pages\\NotificationHealthPage.tsx",
+  "routes": ["/notifications/health"],
+  "purpose": "Combined notification-health workspace covering alert fatigue, delivery reliability and latency.",
+  "primaryGoal": "Identify noisy rules, understand the 99% delivery objective and inspect slow deliveries while preserving independent source results.",
+  "dataSources": [
+    {
+      "hook": "useNotificationAnalysisLogs",
+      "owner": "web\\src\\api\\hooks\\useNotifications.ts",
+      "line": 903,
+      "endpoint": "GET /api/v1/notifications/logs?view=inbox&archived=all&limit=1000",
+      "queryKey": ["notification-logs", "analysis-history"],
+      "queryKeyEvidenceLine": 105,
+      "consumers": ["AlertFatiguePanel"],
+      "behavior": "fetchAnalysisLogs at lines 867-891 accumulates cursor-paged history, forwards AbortSignal, rejects non-array responses and invalid/non-advancing cursors. Subsequent requests add before_created_at and before_id. Results publish only after completion. STALE_TIMES.MODERATE; no hook-specific polling.",
+      "sourceOwnership": "notificationHandler.GetLogs; fatigue derivation remains in features\\notifications\\lib\\alertFatigue.ts.",
+      "routeEvidence": {"file": "internal\\api\\router.go", "line": 4029},
+      "limits": "Route declaration inspected; handler filtering, authentication and actual complete-history behavior UNVERIFIED."
+    },
+    {
+      "hook": "useNotificationDeliveryLogs",
+      "owner": "web\\src\\api\\hooks\\useNotifications.ts",
+      "line": 894,
+      "endpoint": "GET /api/v1/notifications/logs?view=deliveries&archived=all&limit=1000",
+      "queryKey": ["notification-logs", "delivery-history"],
+      "queryKeyEvidenceLine": 104,
+      "consumers": ["NotificationBurnRatePanel", "NotificationLatencyPanel"],
+      "behavior": "Same cursor, cancellation and validation pipeline; both consumers intentionally share one delivery cache identity. Burn derives local rolling 1h/24h windows; latency analyzes usable measurements from the returned history.",
+      "sourceOwnership": "notificationHandler.GetLogs; NotificationLog at web\\src\\api\\types.ts:1104-1120; domain derivation in notificationBurnRate.ts and notificationLatency.ts.",
+      "routeEvidence": {"file": "internal\\api\\router.go", "line": 4029},
+      "limits": "Existing latency_ms is treated as milliseconds at notificationLatency.ts:87-100. Backend measurement semantics were not verified; no wire/cache rename or SI migration is proposed."
+    }
+  ],
+  "components": [
+    {
+      "name": "PageLayout",
+      "owner": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+      "line": 9,
+      "props": ["title", "subtitle", "children", "inherited PageContainer props"],
+      "usedBy": ["NotificationHealthPage"],
+      "dependsOn": ["existing PageContainer", "existing shell"],
+      "decision": "Reuse existing min-w-0 and w-full adapter; no new width engine."
+    },
+    {
+      "name": "Notification health domain panels",
+      "owners": [
+        {"file": "web\\src\\features\\notifications\\components\\AlertFatiguePanel.tsx", "line": 38},
+        {"file": "web\\src\\features\\notifications\\components\\NotificationBurnRatePanel.tsx", "line": 33},
+        {"file": "web\\src\\features\\notifications\\components\\NotificationLatencyPanel.tsx", "line": 23}
+      ],
+      "props": [],
+      "usedBy": ["NotificationHealthPage:83-89"],
+      "dependsOn": ["notification history hooks", "existing pure fatigue/burn/latency analyzers"],
+      "decision": "Retain domain components and independent source states."
+    },
+    {
+      "name": "OperationalBrief",
+      "owner": "web\\src\\components\\data-display\\OperationalBrief.tsx",
+      "line": 43,
+      "props": ["compact", "loading", "metrics", "eyebrow", "title", "description", "statusLabel", "statusTone", "scope", "freshness", "provenance", "testId"],
+      "usedBy": ["AlertFatiguePanel:142", "NotificationBurnRatePanel:115", "NotificationLatencyPanel:133"],
+      "dependsOn": ["useOperationalMetrics", "StatMetric", "DataProvenanceBadge", "existing Drawer"],
+      "decision": "Reuse existing summary and details action; preserve contexts/help, periods, measurements and provenance."
+    },
+    {
+      "name": "ChartContainer",
+      "owner": "web\\src\\components\\charts\\ChartContainer.tsx",
+      "line": 79,
+      "props": ["title", "subtitle", "ariaLabel", "loading", "error", "onRetry", "empty", "height", "mobileHeight", "data", "dataColumns", "chartKey", "children"],
+      "usedBy": ["AlertFatiguePanel:175,244", "NotificationBurnRatePanel:142", "NotificationLatencyPanel:157"],
+      "dependsOn": ["category chart renderers", "ChartTooltip", "chartTokens", "existing export menu", "existing hidden-series state", "accessible fallback Table"],
+      "decision": "Reuse. Current callers pass fallback data, not exportData; CSV is not enabled merely by data. Only burn supplies chartKey and hiddenSeries; no caller requests fullscreen or annotations."
+    },
+    {
+      "name": "DataTable and Table",
+      "owner": "web\\src\\components\\ui\\DataTable.tsx",
+      "line": 184,
+      "props": ["tableId=notifications:slow-deliveries", "caption", "columns", "data", "keyExtractor", "rowLabel"],
+      "usedBy": ["NotificationLatencyPanel:274-281", "Table in fatigue rule and latency cohort breakdowns"],
+      "dependsOn": ["existing loaded-row interaction/export pipeline", "analyzer slowest records"],
+      "decision": "Retain stable identity and all metadata. No mobilePresentation or mobileColumns is supplied by the slowest-record caller; all columns remain available via the existing table rather than being deleted. Table internals not inspected."
+    },
+    {
+      "name": "Trust, feedback, motion and primitives",
+      "owners": [
+        {"file": "web\\src\\hooks\\useDataState.ts", "line": 31},
+        {"file": "web\\src\\api\\dataState.ts", "line": 182},
+        {"file": "web\\src\\components\\feedback\\StaleRefreshWarning.tsx", "line": 48},
+        {"file": "web\\src\\components\\motion\\FadeIn.tsx", "line": 23}
+      ],
+      "props": ["useDataState(query)", "StaleRefreshWarning(state,label)", "FadeIn(children,delay)", "GlassPanel", "Text", "Badge", "QueryError(error,onRetry)", "EmptyState(message,actionTo)", "HelpTooltip(i18nKey,defaultValue,ariaLabel)"],
+      "usedBy": ["three panels", "overview GlassPanel/Text"],
+      "dependsOn": ["retained query payload", "source retry", "existing motion preferences", "category barrels"],
+      "decision": "Reuse existing owners. Primitive implementations not read are not certified by this audit."
+    }
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\notifications\\components\\AlertFatiguePanel.tsx",
+      "line": 129,
+      "rule": "MDC-002 / mission 33",
+      "detail": "All panels repeat trust/brief/chart/breakdown orchestration but already share OperationalBrief, ChartContainer and feedback. Domain metrics and sources differ; this is not evidence for another generic panel framework.",
+      "fix": "Keep the existing shared presentation owners and domain-specific derivation; do not introduce a competing implementation.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "responsive": {
+    "acceptance": "UNVERIFIED",
+    "sourceEvidence": [
+      {"file": "web\\src\\features\\notifications\\pages\\NotificationHealthPage.tsx", "line": 53, "detail": "min-w-0 wrappers, responsive overview padding and md three-column navigation; descriptions wrap."},
+      {"file": "web\\src\\features\\notifications\\components\\AlertFatiguePanel.tsx", "line": 311, "detail": "Full rule cards reflow to lg two columns; score chart has mobileHeight=360."},
+      {"file": "web\\src\\features\\notifications\\components\\NotificationBurnRatePanel.tsx", "line": 222, "detail": "Severity cards reflow at md; chart height override is 330."},
+      {"file": "web\\src\\features\\notifications\\components\\NotificationLatencyPanel.tsx", "line": 216, "detail": "Cohorts reflow at lg; histogram height override is 310; slowest records use the existing DataTable."}
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\notifications\\components\\AlertFatiguePanel.tsx",
+        "line": 212,
+        "rule": "MDC-043 / MDC-040",
+        "detail": "110px category axis, fixed chart margins and 10px tick text may constrain plotting/legibility at narrow allocated widths. No clipping was observed because no viewport was exercised.",
+        "fix": "Check narrow allocated widths, long translated labels and 200% text; adjust existing chart props if necessary while retaining all fallback columns and groups.",
+        "owner": "page",
+        "confidence": "medium"
+      }
+    ],
+    "requiredWidths": [320,375,390,430,768,1024,1280,1440,1920,2560],
+    "unexercised": ["all widths and container widths", "RTL", "long labels", "200% text", "light/dark/forced colors"]
+  },
+  "accessibility": {
+    "acceptance": "UNVERIFIED",
+    "sourceEvidence": [
+      {"file": "web\\src\\features\\notifications\\pages\\NotificationHealthPage.tsx", "line": 63, "detail": "Named native navigation links with href, aria-current and focus-ring classes."},
+      {"file": "web\\src\\features\\notifications\\components\\AlertFatiguePanel.tsx", "line": 119, "detail": "Named section, role typography, decorative aria-hidden icons, localized help names and scoped row headers."},
+      {"file": "web\\src\\components\\charts\\ChartContainer.tsx", "line": 766, "detail": "Source contains stable figcaption and supplied-column fallback table with forced-color reveal."},
+      {"file": "web\\src\\components\\motion\\FadeIn.tsx", "line": 31, "detail": "Reduced-motion path sets initial=false and uses existing preference duration."}
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\notifications\\pages\\NotificationHealthPage.tsx",
+        "line": 23,
+        "rule": "MDC-040",
+        "detail": "Hash effect scrolls but does not explicitly transfer focus; section targets are not focusable. Native browser/screen-reader target-following remains unverified.",
+        "fix": "Exercise hash activation/history and keyboard navigation first; if focus is stranded, use an existing semantic heading target without new focus or overlay machinery.",
+        "owner": "page",
+        "confidence": "medium"
+      }
+    ],
+    "unexercised": ["keyboard order/activation", "screen reader", "44px targets", "effective text/UI contrast", "OS motion/forced colors", "details drawer"]
+  },
+  "states": {
+    "acceptance": "Source-only; runtime UNVERIFIED",
+    "initialLoading": "Fatigue/burn show four 96px skeletons; latency passes loading to OperationalBrief; charts and breakdowns have loading presentation.",
+    "fatalError": "Only source.fatalError replaces source content, with query.refetch recovery. Panels remain mounted independently; one history failure does not gate the whole page.",
+    "empty": "All section headers and overview remain. Distinct rules/outcomes/latency/slow-record empty states exist; latency cohorts expose the channels action. Missing rates/latency remain null.",
+    "retainedRefreshFailure": "deriveDataState retains data and sets refreshError, not fatalError. Each panel mounts StaleRefreshWarning with retry above retained content.",
+    "offlineRetained": "Paused retained queries derive stale plus isRefreshBlocked; StaleRefreshWarning explains offline retention. Latency's status===offline comparison is not the usual deriveDataState paused path.",
+    "partial": "Histories publish atomically after all cursors; no partial page history is exposed. Inbox and delivery histories may resolve independently.",
+    "issues": [
+      {
+        "file": "web\\src\\features\\notifications\\components\\NotificationBurnRatePanel.tsx",
+        "line": 233,
+        "rule": "MDC-025 / MDC-026",
+        "detail": "Null severity burnRate is coerced to zero to choose success color. Deferred/pending-only cohorts have no eligible outcomes, yet receive success tone beside an em dash.",
+        "fix": "Use neutral tone for null burnRate; keep measured warning/success thresholds and all four outcome counts.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\notifications\\components\\NotificationLatencyPanel.tsx",
+        "line": 110,
+        "rule": "MDC-025 / MDC-026",
+        "detail": "Null Apdex is coerced to zero for tone selection, producing warning without a usable measurement.",
+        "fix": "Select neutral for missing Apdex before evaluating numeric thresholds; retain null and the existing calculation.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\notifications\\components\\AlertFatiguePanel.tsx",
+        "line": 81,
+        "rule": "MDC-026 / mission 25",
+        "detail": "No-data/no-fatalError is always treated as loading, including initial paused/offline queries. StaleRefreshWarning.tsx:61 returns null without retained data. Equivalent wiring exists at burn:56 and latency:84.",
+        "fix": "Distinguish isRefreshBlocked from active initial loading using existing trust/feedback composition and retry; preserve all source sections. No change to retained-warning semantics is required.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ]
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\notifications\\pages\\NotificationHealthPage.tsx",
+      "line": 56,
+      "rule": "MDC-010 / MDC-012 / mission 43",
+      "detail": "Overview eyebrow and ordinal labels use fixed cyan-400; navigation active/hover borders and fill at lines 71-75 also use fixed cyan rather than restrained canonical theme tokens.",
+      "fix": "Use existing secondary/muted typography and neutral surfaces; retain meaningful selected navigation and focus with canonical tokens, without deleting labels or changing saved preferences.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\notifications\\components\\AlertFatiguePanel.tsx",
+      "line": 292,
+      "rule": "MDC-010 / mission 43",
+      "detail": "Fixed cyan-300 decorative breakdown icons recur in burn:206 and latency:199,261. These are not explicit neon/glow, but remain theme-independent decorative accents.",
+      "fix": "Use token-backed muted/secondary icon styling while preserving icon identities, labels and semantic outcome colors.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\features\\notifications\\components\\AlertFatiguePanel.tsx",
+      "line": 297,
+      "rule": "MDC-044 / MDC-045 / preserve specialist explanations",
+      "detail": "Grouping help claims vehicle names are stripped. alertFatigue.ts:110-117 lowercases, replaces numeric substrings and normalizes whitespace only; grouping identity also includes alert_id/event_type at line 179.",
+      "fix": "Correct explanation to match existing grouping, coordinating the existing catalog integration owner. Do not alter grouping to fit inaccurate prose.",
+      "owner": "integration",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\notifications\\components\\NotificationBurnRatePanel.tsx",
+      "line": 38,
+      "rule": "MDC-026 / MDC-046",
+      "detail": "Summary memo depends only on logsQuery.data although notificationBurnRate.ts:159 uses Date.now. Outcomes do not age out solely with time when unchanged data remains cached; hook has no dedicated polling.",
+      "fix": "Disclose load-time snapshot or adopt an existing refresh/clock policy after establishing intended behavior. Retain windows, objective, denominator, thresholds and cache key.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\notifications\\components\\AlertFatiguePanel.tsx",
+      "line": 223,
+      "rule": "MDC-002 / source identity preservation",
+      "detail": "Chart Cell key uses truncated rule label; different groups can collide on the first 15 characters even though analyzer supplies stable g.key.",
+      "fix": "Carry g.key through chart data for cell identity, retaining visible labels and full-title fallback data.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "priority": {
+    "level": "P2",
+    "reason": "Existing canonical composition is strong. Address missing-value trust and initial offline handling first, then restrained decorative tokens, explanation accuracy and targeted responsive/focus validation.",
+    "runtimeAcceptance": "UNVERIFIED"
+  },
+  "requiredSharedChanges": [],
+  "competingImplementations": {
+    "confirmed": [],
+    "detail": "No competing implementation found in the bounded reconciled page graph; this is not a repository-wide absence claim. Delivery cache sharing is intentional.",
+    "reuseRatherThanCreate": ["PageLayout","OperationalBrief","ChartContainer","DataTable","useDataState","StaleRefreshWarning","FadeIn"],
+    "sharedProposal": "None: no shared public API gap established. Reuse current props and states; grouping-help correction belongs to existing catalog integration, not a new component."
+  },
+  "preservation": {
+    "sourceHash": "A029F9F0962B41EFC0D7FBF1690801F38EC4D2A6640CD4ADD03738C10C2B7447",
+    "hashAlgorithm": "SHA256 of CURRENT page bytes",
+    "currentLineCount": 94,
+    "pageAndPanelLineCount": 1027,
+    "lineCounts": [
+      {"file":"web\\src\\features\\notifications\\pages\\NotificationHealthPage.tsx","lines":94},
+      {"file":"web\\src\\features\\notifications\\components\\AlertFatiguePanel.tsx","lines":383},
+      {"file":"web\\src\\features\\notifications\\components\\NotificationBurnRatePanel.tsx","lines":263},
+      {"file":"web\\src\\features\\notifications\\components\\NotificationLatencyPanel.tsx","lines":287}
+    ],
+    "sectionCount": 4,
+    "analyticalSubviewCount": 11,
+    "sourceComponentCounts": {"GlassPanel":11,"ChartContainer":4,"OperationalBrief":3,"sectionElements":6,"DataTable":1},
+    "countMeaning": "JSX occurrences in page plus panels, including conditional error/empty branches; not simultaneous rendered counts. Page alone has one GlassPanel and three domain panels.",
+    "sections": [
+      {"name":"Delivery intelligence overview/navigation","file":"web\\src\\features\\notifications\\pages\\NotificationHealthPage.tsx","line":54,"preserve":["localized title/subtitle/page title","overview explanation","all three numbered descriptions","hash navigation and selected indication"]},
+      {"name":"Alert fatigue","file":"web\\src\\features\\notifications\\components\\AlertFatiguePanel.tsx","line":119,"subviews":["four-metric brief","top-12 score chart","24-hour arrival chart","all-rule breakdown"],"preserve":["fatiguing count/of total/scoring help","notifications per day and recorded span","ignored rate or Not tracked","burst rate","verdict meaning and threshold 70","full names in fallback data","all 24 hour counts/night distinction","all groups, titles, severity, verdict, firings, per-day rate, burst/max burst, ignored rate, sent/failed and grouping help"]},
+      {"name":"Notification burn rate","file":"web\\src\\features\\notifications\\components\\NotificationBurnRatePanel.tsx","line":93,"subviews":["four-metric brief","hourly outcomes","severity breakdown"],"preserve":["24h delivery percentage and 99% objective","1h/24h burn factors/counts","budget status and deferred DND","sent/failed/deferred stacked bars","pending/deliveryRate/burnRate fallback columns","all severity outcome counts","null no-outcome rates"]},
+      {"name":"Notification latency","file":"web\\src\\features\\notifications\\components\\NotificationLatencyPanel.tsx","line":115,"subviews":["four-metric brief","histogram","severity/status cohorts","slowest records"],"preserve":["p50/p95/p99 display milliseconds","trimmed mean/sample count/tail share","Apdex T=1s and 4s tolerance","histogram ranges/counts/shares","both cohort groups, count/tail/p95","top ten titles, severity, status, date, measured/derived identity and latency","channels recovery link","record IDs and stable table ID"]}
+    ],
+    "actions": [
+      {"file":"web\\src\\features\\notifications\\pages\\NotificationHealthPage.tsx","line":67,"action":"Native #fatigue/#burn-rate/#latency navigation, hash scroll and aria-current."},
+      {"file":"web\\src\\App.tsx","line":864,"action":"Preserve inbound legacy redirects; burn/latency aliases at 886-887; assigned route remains only /notifications/health."},
+      {"file":"web\\src\\components\\feedback\\StaleRefreshWarning.tsx","line":107,"action":"Retained-data retry; each panel also preserves fatal-error query.refetch."},
+      {"file":"web\\src\\features\\notifications\\components\\AlertFatiguePanel.tsx","line":92,"action":"Existing scoring/grouping contextual help and accessible labels."},
+      {"file":"web\\src\\components\\charts\\ChartContainer.tsx","line":629,"action":"Existing image export/copy controls when ready; do not claim chart CSV/fullscreen/annotations for these callers."},
+      {"file":"web\\src\\features\\notifications\\components\\NotificationBurnRatePanel.tsx","line":152,"action":"Legend toggles with stable notification-burn-rate-outcomes chartKey and sent/failed/deferred identities."},
+      {"file":"web\\src\\features\\notifications\\components\\NotificationLatencyPanel.tsx","line":213,"action":"Manage delivery channels link to /notifications/channels."},
+      {"file":"web\\src\\components\\ui\\DataTable.tsx","line":873,"action":"Retain existing table interaction/persistence and loaded-row CSV/JSON export. Caller supplies analyzer top ten, not all deliveries; no new full-result export is inferred."},
+      {"file":"web\\src\\components\\data-display\\OperationalBrief.tsx","line":154,"action":"Review details action and drawer; source at 234-265 keeps loading suppression in drawer metrics."}
+    ],
+    "dataBehavior": [
+      "No page-owned mutation. Retain two source identities, AbortSignal, cursor accumulation, inherited retry/moderate staleness and raw cache payloads.",
+      "Fatigue identity is alert_id/event_type/normalized title; volume uses recorded span clamped to one day. Preserve 30-minute bursts, minimum three firings, 25/45/70 verdicts and absent-versus-null read tracking. Preserve existing Date.getHours/getDay behavior, not an invented timezone conversion.",
+      "Burn denominator is sent+failed only. Keep deferred DND/pending visible but excluded from budget. Preserve 1h/24h windows, hourly buckets, 99% objective, warning 6/3 and critical 14.4/6; reject invalid/future timestamps and retain null rates without eligible outcomes.",
+      "Latency prefers finite nonnegative latency_ms, then nonnegative created-to-sent time. Keep unusable measurements excluded, R-7 percentiles, trimmed mean, 1s Apdex/4s tail, histogram bins, cohorts and top-ten ordering. Missing is not zero.",
+      "Milliseconds become seconds only for the existing shared latency metric bridge, then the specialist formatter returns milliseconds for display. Preserve raw wire/cache values and SI display-boundary architecture; do not introduce legacy converters.",
+      "Keep all i18n keys/fallbacks, number/date formatting, source disclosures, metadata, table/chart identities and existing actions. No local date/vehicle selector exists; no server workspace-range capability was inferred.",
+      "Preserve independent initial/fatal/empty/stale/retained-refresh/offline trust and all section content. No whole-page data gate or decorative simplification may remove information."
+    ]
+  },
+  "evidenceLimits": {
+    "auditType": "Phase0 read-only retry, attempt2; source-only citation reconciliation",
+    "startedAtUtc": "2026-10-07T14:43:04Z",
+    "sourceReconciliationCompletedAtUtc": "2026-10-07T14:46:29Z",
+    "timeBudget": "Source reconciliation and initial owned-report validation completed in approximately 3 minutes 25 seconds; within the target 8 minutes and hard stop before 20 minutes.",
+    "scope": "Immutable attempt1 evidence reconciled against current page and immediately cited dependencies only; no graph expansion.",
+    "priorEvidence": "C:\\Users\\AtulM\\.copilot\\session-state\\bba4960d-f516-4831-bda3-877640f907ce\\files\\audit-page-150-attempt1-preserved.json",
+    "priorActor": "bc6d98c6-7a23-4506-bfe0-8a8ca3892182 remains unresolved; original report/status were neither read as mutable inputs nor written.",
+    "reconciliation": "Current page SHA256 equals preserved attempt1 hash. All four line counts and component counts agree. Reported issue lines were rechecked in current files; findings remain source-supported. Prior overrun and old commands are historical context, not fresh acceptance. Shared owner reads were bounded to cited contracts/actions; no deeper dependencies were followed.",
+    "runtime": "UNVERIFIED",
+    "visual": "UNVERIFIED",
+    "keyboard": "UNVERIFIED",
+    "contrast": "UNVERIFIED",
+    "viewport": "UNVERIFIED",
+    "routeMount": "Current source route at App.tsx:888 matches /notifications/health. No browser mount exercised.",
+    "backend": "Current router declaration matched. Handler filtering, completeness, authentication, measurement provenance and actual endpoint behavior UNVERIFIED.",
+    "checks": [
+      {
+        "command": "Get-Date -AsUTC -Format o; $paths = @('web\\src\\features\\notifications\\pages\\NotificationHealthPage.tsx','web\\src\\features\\notifications\\components\\AlertFatiguePanel.tsx','web\\src\\features\\notifications\\components\\NotificationBurnRatePanel.tsx','web\\src\\features\\notifications\\components\\NotificationLatencyPanel.tsx'); foreach($p in $paths) { $s = Get-Content -LiteralPath $p -Raw; $lines = (Get-Content -LiteralPath $p).Count; '{0}: lines={1} GlassPanel={2} ChartContainer={3} OperationalBrief={4} sections={5} cyan={6}' -f $p,$lines,([regex]::Matches($s,'<GlassPanel\\b')).Count,([regex]::Matches($s,'<ChartContainer\\b')).Count,([regex]::Matches($s,'<OperationalBrief\\b')).Count,([regex]::Matches($s,'<section\\b')).Count,([regex]::Matches($s,'cyan-')).Count }; Get-FileHash -Algorithm SHA256 -LiteralPath $paths[0] | Select-Object Hash",
+        "exitCode": 0,
+        "output": "2026-10-07T14:43:54.1451329Z\nweb\\src\\features\\notifications\\pages\\NotificationHealthPage.tsx: lines=94 GlassPanel=1 ChartContainer=0 OperationalBrief=0 sections=0 cyan=5\nweb\\src\\features\\notifications\\components\\AlertFatiguePanel.tsx: lines=383 GlassPanel=3 ChartContainer=2 OperationalBrief=1 sections=2 cyan=1\nweb\\src\\features\\notifications\\components\\NotificationBurnRatePanel.tsx: lines=263 GlassPanel=3 ChartContainer=1 OperationalBrief=1 sections=2 cyan=1\nweb\\src\\features\\notifications\\components\\NotificationLatencyPanel.tsx: lines=287 GlassPanel=4 ChartContainer=1 OperationalBrief=1 sections=2 cyan=2\nHash\n----\nA029F9F0962B41EFC0D7FBF1690801F38EC4D2A6640CD4ADD03738C10C2B7447"
+      },
+      {
+        "command": "$paths=@('web\\src\\features\\notifications\\pages\\NotificationHealthPage.tsx','web\\src\\features\\notifications\\components\\AlertFatiguePanel.tsx','web\\src\\features\\notifications\\components\\NotificationBurnRatePanel.tsx','web\\src\\features\\notifications\\components\\NotificationLatencyPanel.tsx'); $s=($paths | ForEach-Object {Get-Content -Raw -LiteralPath $_}) -join \"`n\"; $patterns=[ordered]@{inline_style='style=\\{\\{';raw_controls='<(button|input|textarea|select|table)\\b';direct_libraries='from [''\"\\\"](recharts|react-leaflet|framer-motion)[''\"\\\"]';old_api='from [''\"\\\"]\\.\\./(\\.\\./)?api[''\"\\\"]';neon='neon';glow='glow';fixed_white='text-white|bg-white|#fff|#FFF'}; foreach($k in $patterns.Keys){'{0}={1}' -f $k,([regex]::Matches($s,$patterns[$k])).Count}; Get-Date -AsUTC -Format o",
+        "exitCode": 0,
+        "output": "inline_style=0\nraw_controls=0\ndirect_libraries=0\nold_api=0\nneon=0\nglow=0\nfixed_white=0\n2026-10-07T14:44:32.1799389Z"
+      }
+    ],
+    "notRun": ["full audit.sh because it unconditionally invokes TypeScript","TypeScript","lint/build/tests","Git","browser/runtime/visual QA","production mutations","dependency installs"],
+    "limitations": "Bounded regex counts do not establish zero design violations or shared palette acceptance. No runtime, visual, keyboard, contrast or viewport acceptance is claimed. Historical receipts were not reused as current validation.",
+    "reportValidation": {
+      "atUtc": "2026-10-07T14:46:29.2671578Z",
+      "method": "PowerShell ConvertFrom-Json; all mandatory properties; exact item/page/single route; current SHA256 equality; each issue/pattern required file/line/rule/detail/fix/owner/confidence properties",
+      "exitCode": 0,
+      "output": "JSON valid; required fields and exact identity valid; current page SHA256 matches; 11 issue/pattern records have required citation fields."
+    },
+    "ownedFiles": ["docs\\frontend-audits\\audit-page-150-attempt-2.json",".agent-status\\audit-page-150-attempt-2.txt"]
+  },
+  "filesRead": [
+    "C:\\Users\\AtulM\\.copilot\\session-state\\bba4960d-f516-4831-bda3-877640f907ce\\files\\audit-page-150-attempt1-preserved.json",
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\notifications\\pages\\NotificationHealthPage.tsx",
+    "web\\src\\features\\notifications\\components\\AlertFatiguePanel.tsx",
+    "web\\src\\features\\notifications\\components\\NotificationBurnRatePanel.tsx",
+    "web\\src\\features\\notifications\\components\\NotificationLatencyPanel.tsx",
+    "web\\src\\features\\notifications\\lib\\alertFatigue.ts",
+    "web\\src\\features\\notifications\\lib\\notificationBurnRate.ts",
+    "web\\src\\features\\notifications\\lib\\notificationLatency.ts",
+    "web\\src\\api\\hooks\\useNotifications.ts",
+    "web\\src\\api\\types.ts",
+    "internal\\api\\router.go",
+    "web\\src\\App.tsx",
+    "web\\src\\hooks\\useDataState.ts",
+    "web\\src\\api\\dataState.ts",
+    "web\\src\\components\\feedback\\StaleRefreshWarning.tsx",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\motion\\FadeIn.tsx",
+    "web\\src\\components\\data-display\\OperationalBrief.tsx",
+    "web\\src\\components\\charts\\ChartContainer.tsx",
+    "web\\src\\components\\ui\\DataTable.tsx"
+  ]
+}

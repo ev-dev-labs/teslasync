@@ -1,0 +1,379 @@
+{
+  "item": "audit-page-005",
+  "page": "web\\src\\features\\admin\\pages\\AuditLogPage.tsx",
+  "routes": ["/admin/audit-log"],
+  "purpose": "Read-only operator browser for the append-only audit ledger, filtered entries, payload evidence, exports and on-demand SHA-256 row-hash verification.",
+  "primaryGoal": "Find an audit event, inspect its actor/entity/outcome and before/after evidence, and understand exactly which bounded rows were verified without overstating ledger integrity.",
+  "dataSources": [
+    {
+      "hook": "useAuditLogPage -> useAuditLog",
+      "file": "web\\src\\api\\hooks\\useOperatorConfidence.ts",
+      "line": 247,
+      "endpoint": "GET /api/v1/admin/audit-log",
+      "sourceOwner": "internal\\handler\\v1\\admin_audit_handler.go -> internal\\app\\auditviewersvc\\service.go -> internal\\database\\audit\\log_query_repo.go",
+      "routeEvidence": ["internal\\api\\router.go:4585", "internal\\handler\\v1\\admin_audit_handler.go:32"],
+      "contract": "Envelope unwrapped by fetchEnvelope; snake_case query keys since/until/categories/actors/actions/entity_type/limit/offset. Repo filters ts >= since and ts < until, sorts ts DESC/id DESC, returns rows and limit, not total.",
+      "policy": "Params participate in the query key; AbortSignal forwarded; MODERATE stale time, STANDARD polling, no background interval, retry 1.",
+      "scope": "Instance-wide admin ledger; seven local controls; server paging. No selected vehicle. Counts are current loaded page only."
+    },
+    {
+      "hook": "useAuditCategories",
+      "file": "web\\src\\api\\hooks\\useOperatorConfidence.ts",
+      "line": 268,
+      "endpoint": "GET /api/v1/admin/audit-log/categories",
+      "sourceOwner": "internal\\database\\audit\\log_query_repo.go:152",
+      "routeEvidence": ["internal\\api\\router.go:4585", "internal\\handler\\v1\\admin_audit_handler.go:33"],
+      "contract": "Independent distinct non-null category catalog, sorted and capped at 100; not a full-ledger cardinality or filtered-page count.",
+      "policy": "EXTENDED stale time, RARE polling, no background interval, retry 1, AbortSignal forwarded."
+    },
+    {
+      "hook": "useAuditActions",
+      "file": "web\\src\\api\\hooks\\useOperatorConfidence.ts",
+      "line": 283,
+      "endpoint": "GET /api/v1/admin/audit-log/actions",
+      "sourceOwner": "internal\\database\\audit\\log_query_repo.go:168",
+      "routeEvidence": ["internal\\api\\router.go:4585", "internal\\handler\\v1\\admin_audit_handler.go:34"],
+      "contract": "Independent action catalog capped at 100, ordered by most recent occurrence; not a full-ledger cardinality.",
+      "policy": "EXTENDED stale time, RARE polling, no background interval, retry 1, AbortSignal forwarded."
+    },
+    {
+      "hook": "useAuditChainVerify(null, 1000, false)",
+      "file": "web\\src\\api\\hooks\\useOperatorConfidence.ts",
+      "line": 305,
+      "endpoint": "GET /api/v1/admin/audit-log/verify?limit=1000",
+      "sourceOwner": "internal\\handler\\v1\\admin_audit_handler.go:117 -> internal\\audit\\recorder.go:272",
+      "routeEvidence": ["internal\\api\\router.go:4585", "internal\\handler\\v1\\admin_audit_handler.go:35"],
+      "contract": "Explicit refetch only; backend defaults since to now minus 30 days. Checks up to 1000 rows with non-null row_hash in ascending ts/id order. Returns intact, first_bad_id, rows_checked, since, limit. Not tied to entry filters; not every ledger row or a proven chain-link continuity check.",
+      "policy": "Initially disabled, no interval, FAST stale time, retry 1, AbortSignal forwarded."
+    }
+  ],
+  "components": [
+    {"name": "AuditLogPage / useAuditLogPage", "kind": "page/controller", "owner": "web\\src\\features\\admin\\pages\\AuditLogPage.tsx", "dependencies": ["web\\src\\features\\admin\\hooks\\useAuditLogPage.ts"], "contract": "Orchestrates four independent sources; never gates all page content behind one query."},
+    {"name": "PageLayout -> PageContainer", "kind": "layout", "owner": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx", "contract": "Category-barrel adapter, full-width min-w-0 container; shared route heading, source notices, freshness, operational mode and page error boundary."},
+    {"name": "LayoutCard", "kind": "composite", "owner": "web\\src\\components\\layout\\layout-reference\\LayoutCard.tsx", "contract": "title/actions/children; labelled Card, wrapping header, neutral tokenized surface; three page panels."},
+    {"name": "OperationalBrief / useOperationalMetrics", "kind": "composite/formatter", "owner": "web\\src\\components\\data-display\\OperationalBrief.tsx", "dependencies": ["web\\src\\hooks\\useOperationalMetrics.tsx"], "contract": "Six numeric count metrics, missing-aware format pipeline, compact responsive grid, source context and Review details drawer. No replacement KPI component needed."},
+    {"name": "DataTable", "kind": "composite", "owner": "web\\src\\components\\ui\\DataTable.tsx", "contract": "Sole table/export/persistence owner; tableId admin:audit-log; nine columns; controlled expandedKeys; mobileColumns, optional mobilePresentation and onExport extension already exist."},
+    {"name": "Input / Select / Button / Badge / Caption / Text", "kind": "primitives", "owner": "web\\src\\components\\ui", "contract": "Existing category exports; localized labels, themed text/control surfaces, semantic outcome badges and focus styling. No raw controls in inspected feature source."},
+    {"name": "CodeBlock / CopyButton / KVList", "kind": "evidence primitives/composite", "owner": "web\\src\\components\\ui", "dependencies": ["web\\src\\features\\admin\\components\\continuation-admin-2\\AuditExpandedDetail.tsx", "web\\src\\components\\data-display"], "contract": "Retain complete payload text, trace/hash copy, IP/user-agent and wrapped/scrolled code."},
+    {"name": "DataStateNotice / DataSourceNotice / QueryError / EmptyState / Skeleton / SectionErrorBoundary", "kind": "feedback", "owner": "web\\src\\components\\feedback", "contract": "Unsupported/independent source/retained-data recovery; skeleton and filter-guided empty table; table-local error containment."},
+    {"name": "FadeIn", "kind": "motion", "owner": "web\\src\\components\\motion\\FadeIn.tsx", "contract": "Existing shared motion preference; reduced entrance initial=false; no ambient animation."}
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\admin\\components\\structural-closure\\audit-log\\auditLogColumns.tsx",
+      "line": 100,
+      "rule": "MDC-023 / single expansion owner",
+      "detail": "Custom Details/Hide column duplicates DataTable's built-in expansion control. The custom control has no aria-expanded; the built-in leading control does.",
+      "fix": "Use the existing DataTable expansion owner. Preserve a discoverable localized Details affordance and controlled expansion; remove redundancy only after desktop/mobile keyboard parity is demonstrated.",
+      "owner": "page",
+      "confidence": "high",
+      "relatedEvidence": ["web\\src\\components\\ui\\DataTable.tsx:1128-1149"]
+    },
+    {
+      "file": "web\\src\\features\\admin\\components\\statstrip-audit-vehicle-cost\\AuditLogStatStrip.tsx",
+      "line": 13,
+      "rule": "MDC-026 / independent recovery",
+      "detail": "Per-metric source context repeats alongside PageContainer's source notice. This is useful source attribution, not proof of a cross-page duplicate component need.",
+      "fix": "Retain metric scope and independent recovery; consider consolidating repeated text locally without removing failed-source retry or retained-data context. Do not invent a new source-status registry.",
+      "owner": "page",
+      "confidence": "medium"
+    }
+  ],
+  "responsive": {
+    "verification": "unverified: source inspection only",
+    "sourceStrategy": [
+      "Controls/integrity stack until xl, then use 2:1 width (AuditLogPage.tsx:61).",
+      "Filter inputs use one column, sm two and 3xl three; actions wrap (AuditLogFilters.tsx:15,79).",
+      "Compact brief uses one/sm two/md three/1920 six metrics (OperationalBrief.tsx:169-173).",
+      "Table retains action/success/ts under md; built-in expansion remains separate (AuditLogEntries.tsx:65; DataTable.tsx:724-725,1128).",
+      "Expanded metadata wraps; payloads stack then md two columns with max-height and wrapping (AuditExpandedDetail.tsx:16,35-37)."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\admin\\components\\structural-closure\\audit-log\\AuditLogEntries.tsx",
+        "line": 65,
+        "rule": "MDC-023 / MDC-043 / preserve mobile details",
+        "detail": "Actor/category/entity/detail/trace columns are hidden below md. Expansion exposes IP/user-agent/trace/hash/payloads, but not full actor/category/entity/detail. The page does not opt into the existing mobilePresentation adapter.",
+        "fix": "Reuse DataTable.mobilePresentation with stable row identity and full details covering every hidden field plus current expanded evidence; preserve ordering, paging, export and expansion state. Confirm column-menu behavior on the actual mounted page before asserting present accessibility.",
+        "owner": "page",
+        "confidence": "high",
+        "relatedEvidence": ["web\\src\\components\\ui\\DataTable.tsx:237-248,724-725", "web\\src\\features\\admin\\components\\continuation-admin-2\\AuditExpandedDetail.tsx:17-37"]
+      }
+    ],
+    "requiredQA": ["320", "375", "390", "430", "768", "1024", "1280", "1440", "1920", "2560", "allocated container widths", "long translated labels", "200% text", "RTL", "expanded payloads"]
+  },
+  "accessibility": {
+    "verification": "keyboard, screen reader, focus, touch geometry and contrast unverified",
+    "sourceStrengths": ["Localized Input/Select labels; decorative filter/status icons hidden; outcomes have explicit OK/Fail/Chain intact/Chain broken text.", "Built-in DataTable expansion has aria-expanded and localized accessible names.", "LayoutCard labelled by generated title ID; PageContainer retains route-focus heading; FadeIn consumes reduced-motion preference."],
+    "issues": [
+      {
+        "file": "web\\src\\features\\admin\\components\\structural-closure\\audit-log\\AuditLogEntries.tsx",
+        "line": 21,
+        "rule": "MDC-040 / stronger mobile target default",
+        "detail": "Previous/Next use size=sm without the min-h-11 already present on filter actions. Button.sm specifies h-9. Verify-chain and custom Details also use sm. This is a source-level 36px sizing risk, not measured WCAG failure.",
+        "fix": "Use existing Button sizing/className to provide mobile min-h-11 and wrapping labels while preserving disabled states. Assess spacing exceptions and actual target geometry before acceptance.",
+        "owner": "page",
+        "confidence": "high",
+        "relatedEvidence": ["web\\src\\components\\ui\\Button.tsx:40", "web\\src\\features\\admin\\components\\structural-closure\\audit-log\\AuditLogIntegrity.tsx:15-20", "web\\src\\features\\admin\\components\\structural-closure\\audit-log\\auditLogColumns.tsx:105"]
+      },
+      {
+        "file": "web\\src\\features\\admin\\components\\continuation-admin-2\\AuditExpandedDetail.tsx",
+        "line": 24,
+        "rule": "MDC-040 / meaningful action names",
+        "detail": "Trace and row-hash icon-only CopyButton calls omit contextual ariaLabel, so both default to generic Copy. Table trace copy also has the generic label.",
+        "fix": "Supply existing ariaLabel prop with localized Copy trace ID / Copy row hash plus safe row context; retain full copied text and copied-state feedback. No new clipboard primitive needed.",
+        "owner": "page",
+        "confidence": "high",
+        "relatedEvidence": ["web\\src\\features\\admin\\components\\continuation-admin-2\\AuditExpandedDetail.tsx:31", "web\\src\\features\\admin\\components\\structural-closure\\audit-log\\auditLogColumns.tsx:73", "web\\src\\components\\ui\\CopyButton.tsx:129-131"]
+      }
+    ]
+  },
+  "states": {
+    "verification": "unverified at runtime",
+    "inventory": {
+      "initialLoading": "Missing entry payload -> 320px skeleton; catalogs produce missing metrics and loading context. Verification skeleton only after explicit request.",
+      "empty": "Successful zero rows -> explanatory EmptyState inviting wider/cleared filters; zero loaded page counts remain legitimate measured counts.",
+      "fatalError": "Entry QueryError retries locally; catalog QueryError recovery in metric context; verifier QueryError retries independently.",
+      "retainedRefreshError": "deriveDataState keeps usable payload; table reads retained rows; brief labels retained counts; PageLayout source notice displays stale/partial independently.",
+      "offline": "Shared DataSourceNotice uses query fetchStatus and online status. No browser offline exercise performed.",
+      "unsupported": "Entry fatal 503 currently triggers unsupported notice and suppresses tableError.",
+      "verificationIdle": "Explicit read-only verification prompt; disabled query excluded from source notices until fetch/data/fatal error.",
+      "verificationSuccess": "Badge plus rows_checked and first_bad_id when broken; previous success remains during refetch.",
+      "disabled": "Previous disabled at offset zero; Next disabled when loaded rows < requested limit; Verify disabled while fetching."
+    },
+    "issues": [
+      {
+        "file": "web\\src\\features\\admin\\hooks\\useAuditLogPage.ts",
+        "line": 48,
+        "rule": "MDC-025 / MDC-026 / unsupported is not outage",
+        "detail": "Any initial HTTP 503 is interpreted as subsystem not configured; code SUBSYSTEM_NOT_CONFIGURED is not checked. A generic service outage would receive unsupported copy and lose the table retry.",
+        "fix": "Classify unsupported only from the explicit backend error code. Route other 503 errors through existing QueryError/data-unavailability recovery; keep all unaffected sources visible.",
+        "owner": "page",
+        "confidence": "high",
+        "relatedEvidence": ["internal\\handler\\v1\\admin_audit_handler.go:145-155", "web\\src\\features\\admin\\components\\structural-closure\\audit-log\\AuditLogEntries.tsx:46-61"]
+      },
+      {
+        "file": "web\\src\\features\\admin\\components\\structural-closure\\audit-log\\AuditLogIntegrity.tsx",
+        "line": 41,
+        "rule": "MDC-026 / MDC-045 / truthful verification scope",
+        "detail": "Chain intact and the idle promise to re-derive every row_hash overstate a bounded verification. Current call omits since and caps at 1000; backend uses last 30 days, excludes null hashes and checks per-row recomputation. Returned since/limit are not shown. Zero checked rows also gets Chain intact.",
+        "fix": "Describe bounded row-hash verification, show response since/limit/rows_checked, distinguish zero checked from positive verified evidence, and annotate retained result while refreshing/failed/offline. Preserve explicit refetch, first_bad_id and all integrity outcomes without inventing backend continuity guarantees.",
+        "owner": "page",
+        "confidence": "high",
+        "relatedEvidence": ["web\\src\\features\\admin\\hooks\\useAuditLogPage.ts:42", "web\\src\\features\\admin\\components\\structural-closure\\audit-log\\AuditLogIntegrity.tsx:49-68", "internal\\handler\\v1\\admin_audit_handler.go:118-139", "internal\\audit\\recorder.go:272-326"]
+      }
+    ]
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\components\\ui\\DataTable.tsx",
+      "line": 1141,
+      "rule": "MDC-010 / MDC-012 / MDC-040 / restrained themed controls",
+      "detail": "The page's built-in table expansion control inherits fixed white hover overlay and cyan-500 focus ring instead of current control-hover/focus tokens. No neon/glow/pure-white feature classes were found in the nine scoped feature files.",
+      "fix": "Shared owner should replace hover:bg-white/[0.06] with existing --control-bg-hover and focus:ring-cyan-500 with --focus-ring, retaining visible outlines and touch-target-overlay. Keep neutral metadata and semantic success/danger badges; do not add glow or replace saved themes.",
+      "owner": "shared",
+      "confidence": "high",
+      "relatedEvidence": ["web\\src\\components\\ui\\DataTable.tsx:1139-1144", "web\\src\\components\\ui\\Button.tsx:29-36"]
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\features\\admin\\components\\structural-closure\\audit-log\\AuditLogFilters.tsx",
+      "line": 16,
+      "rule": "MDC-032 / single workspace range owner",
+      "detail": "Dated list uses page-local Since/Until controls and local state; /admin/audit-log is absent from RANGE_ENABLED_PATHS. These are ledger scope, not independent business dates. Filter state is not URL-backed despite the page header comment claiming query URL reproduction.",
+      "fix": "Integrate existing header View settings/useRangeState and typed since/until parameters with both server bounds, no second date picker. Preserve initial unbounded ledger access and minute-level custom scopes during transition rather than silently imposing the hook's 7-day default. Preserve reset/search/non-date filters and explicitly decide URL persistence for them. Keep admin vehicle scope disabled.",
+      "owner": "integration",
+      "confidence": "high",
+      "relatedEvidence": ["web\\src\\features\\admin\\hooks\\useAuditLogPage.ts:16-37,85-93", "web\\src\\lib\\workspaceScope.ts:23-77,96-110,178-180", "web\\src\\hooks\\useRangeState.ts:114-123", "internal\\database\\audit\\log_query_repo.go:91-96"]
+    },
+    {
+      "file": "web\\src\\features\\admin\\components\\structural-closure\\audit-log\\AuditLogEntries.tsx",
+      "line": 76,
+      "rule": "MDC-023 / export preservation",
+      "detail": "exportRow supplies wire keys entity_type/entity_id/trace_id, while visible columns use entity/trace. DataTable projects exportRow through visible column keys, dropping ID/IP/user_agent/hash fields and exporting entity/trace as null. before/after are not supplied. Loaded-page scope must not be advertised as full-ledger export.",
+      "fix": "Use existing DataTable.onExport(format, rows, scope) for original scoped records or explicitly align exportValue keys and document visible-column scope. Preserve all currently intended export metadata, include payload evidence when full-record export is intended, retain table ID/file naming and truthful loaded/selected scope. No fabricated exportAll endpoint.",
+      "owner": "page",
+      "confidence": "high",
+      "relatedEvidence": ["web\\src\\features\\admin\\components\\structural-closure\\audit-log\\auditLogColumns.tsx:45,64", "web\\src\\components\\ui\\DataTable.tsx:372-375,870-905"]
+    },
+    {
+      "file": "internal\\handler\\v1\\admin_audit_handler.go",
+      "line": 42,
+      "rule": "MDC-045 / pagination contract preservation",
+      "detail": "Frontend increments zero-based offset by limit, serializer forwards offset unchanged, but handler subtracts one from each positive offset. Service passes it directly to SQL OFFSET. A request offset=100 therefore starts at offset=99, overlapping pages and disagreeing with Showing 101... text.",
+      "fix": "Integration owner should align the API zero-based offset contract and add focused boundary tests for offset 0/100/200; do not compensate with a presentation-only hidden offset or change this backend in the page audit.",
+      "owner": "integration",
+      "confidence": "high",
+      "relatedEvidence": ["web\\src\\features\\admin\\components\\structural-closure\\audit-log\\AuditLogEntries.tsx:30-40", "web\\src\\api\\hooks\\useOperatorConfidence.ts:384", "internal\\app\\auditviewersvc\\service.go:66-72", "internal\\database\\audit\\log_query_repo.go:116-125"]
+    },
+    {
+      "file": "internal\\database\\audit\\log_query_repo.go",
+      "line": 44,
+      "rule": "MDC-045 / actual wire evidence",
+      "detail": "Before/After are Go []byte with JSON tags, so standard JSON serialization produces base64 strings, while AuditExpandedDetail JSON.parse expects JSON text and otherwise displays the string. fetchEnvelope only unwraps; no payload conversion is shown in that hook. Actual HTTP serialization/client behavior was not exercised.",
+      "fix": "Integration owner must inspect/verify actual wire responses and choose one documented payload representation before changing rendering or types; preserve exact raw before/after evidence. Do not silently discard unparseable/base64 values or claim a JSON-tree feature.",
+      "owner": "integration",
+      "confidence": "medium",
+      "relatedEvidence": ["web\\src\\types\\admin-operator-confidence.ts:249-250", "web\\src\\features\\admin\\components\\continuation-admin-2\\AuditExpandedDetail.tsx:6-10,36-37", "web\\src\\api\\hooks\\useOperatorConfidence.ts:49-60"]
+    }
+  ],
+  "priority": {
+    "level": "high",
+    "first": ["Truthful bounded verification and zero-row semantics", "Export metadata/key projection", "Zero-based paging integration"],
+    "next": ["Workspace range ownership without narrowing the default ledger", "Full mobile record details", "Explicit unsupported classification", "Before/after wire contract verification"],
+    "polish": ["Contextual copy names and reachable mobile targets", "Shared table expansion tokens"],
+    "reason": "Already decomposed and restrained in feature source; prioritize audit evidence/trust and information preservation over cosmetic rewrites."
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "Tokenized DataTable expansion-control chrome",
+      "owner": "web\\src\\components\\ui\\DataTable.tsx",
+      "file": "web\\src\\components\\ui\\DataTable.tsx",
+      "line": 1141,
+      "rule": "MDC-010 / MDC-040",
+      "detail": "Existing shared expansion control has fixed white hover and cyan focus chrome.",
+      "fix": "Replace only expansion-control hover/focus classes with existing control-hover/focus tokens; keep API and expansion semantics.",
+      "confidence": "high",
+      "props": ["expandable", "expandedKeys", "onExpandedChange", "renderExpanded"],
+      "variants": ["standalone", "embedded"],
+      "states": ["collapsed", "expanded", "hover", "focus-visible", "forced colors"],
+      "usedBy": ["web\\src\\features\\admin\\components\\structural-closure\\audit-log\\AuditLogEntries.tsx"],
+      "dependsOn": ["Existing --control-bg-hover and --focus-ring token contract; shared owner validates composed themes/forced colors"],
+      "acceptance": "No page-specific color workaround; keyboard expansion and visible focus survive. No second independent production consumer was inspected; this is a bounded existing-owner correction, not authorization for a new composite."
+    },
+    {
+      "name": "Admin audit-log workspace range registration",
+      "owner": "web\\src\\lib\\workspaceScope.ts",
+      "file": "web\\src\\lib\\workspaceScope.ts",
+      "line": 23,
+      "rule": "MDC-032",
+      "detail": "Current route is not range-enabled; page owns duplicate temporal scope.",
+      "fix": "Integration owner registers the dated route atomically with page useRangeState adoption and default/custom-range preservation.",
+      "confidence": "high",
+      "props": ["useRangeState.startInstant", "useRangeState.endInstantExclusive", "useRangeState.timezone", "AuditLogQueryParams.since", "AuditLogQueryParams.until"],
+      "variants": ["rolling presets", "custom ranges", "unbounded initial ledger access compatibility"],
+      "states": ["URL-restored range", "header-applied range", "reset", "loading", "retained data"],
+      "usedBy": ["/admin/audit-log"],
+      "dependsOn": ["web\\src\\hooks\\useRangeState.ts", "web\\src\\features\\admin\\hooks\\useAuditLogPage.ts", "Current exclusive ts < until server contract", "Resolve initial unbounded and minute-level custom-range compatibility before deleting local date inputs"],
+      "acceptance": "Only one temporal scope owner; both server bounds honored; no admin vehicle picker; no hidden default-range data loss. No new picker/store/token engine."
+    }
+  ],
+  "competingImplementations": [
+    {"file": "web\\src\\features\\admin\\components\\structural-closure\\audit-log\\auditLogColumns.tsx", "line": 105, "pattern": "Custom row expansion versus DataTable leading expander", "decision": "Reuse DataTable control/state; retain equivalent labeled details reachability."},
+    {"file": "web\\src\\features\\admin\\components\\structural-closure\\audit-log\\AuditLogFilters.tsx", "line": 16, "pattern": "Page-local date scope versus existing shell/useRangeState", "decision": "Integration handoff, not another date picker."},
+    {"file": "web\\src\\features\\admin\\components\\statstrip-audit-vehicle-cost\\AuditLogStatStrip.tsx", "line": 52, "pattern": "File named StatStrip already renders accepted OperationalBrief", "decision": "Keep existing six-source metric pipeline; do not replace with a speculative summary/KPI library."}
+  ],
+  "preservation": {
+    "sourceHash": "9972403c539d1b29c7387bd963cca1623731bfc6b61600e13434c89f882e971c",
+    "sourceHashAlgorithm": "SHA-256",
+    "sourceHashScope": "Current repository-root web\\src\\features\\admin\\pages\\AuditLogPage.tsx bytes; not an archived baseline",
+    "lineCount": 69,
+    "featurePresentationLineCount": 563,
+    "pageSpecificSourceLineCount": 686,
+    "sectionCount": 4,
+    "sections": [
+      {"name": "Audit overview", "file": "web\\src\\features\\admin\\pages\\AuditLogPage.tsx", "line": 58, "count": 1, "contents": ["Entries shown", "OK in view", "Failed in view", "Distinct actors in view", "Queried categories", "Queried action types", "Scope/status/freshness/provenance", "Review details drawer"]},
+      {"name": "Filters", "file": "web\\src\\features\\admin\\pages\\AuditLogPage.tsx", "line": 62, "count": 1, "contents": ["Since", "Until", "Category", "Action", "Actor", "Entity type", "Rows per page", "Reset", "Search"]},
+      {"name": "Hash chain integrity", "file": "web\\src\\features\\admin\\pages\\AuditLogPage.tsx", "line": 63, "count": 1, "contents": ["Verify chain", "Idle read-only explanation", "Loading", "Independent retry", "Intact/broken", "Rows checked", "First bad row"]},
+      {"name": "Entries", "file": "web\\src\\features\\admin\\pages\\AuditLogPage.tsx", "line": 66, "count": 1, "contents": ["Previous/Next and ordinal range", "Timestamp absolute/relative", "Actor", "Category", "Action", "Entity type/ID", "Detail", "Trace", "Nullable outcome", "Expansion", "CSV/JSON export", "Persistent table settings", "IP/user-agent/trace/hash/before/after expanded evidence"]}
+    ],
+    "conditionalNotices": ["Deployment unsupported notice is additional to the four sections, not a replacement", "Per-source delayed/failed/retained notice"],
+    "sourceSectionMarkers": {"PageLayout": 1, "LayoutCard": 3, "OperationalBrief": 1, "DataTable": 1, "ChartContainer": 0, "GlassPanelFeatureCalls": 0},
+    "actions": ["Edit seven filters (limit choices 50/100/250/500)", "Reset dates/category/action/actor/entity type and offset but retain selected limit", "Search explicitly refetches; edits already update query params", "Previous/Next server page", "Verify/retry chain (read-only GET)", "Retry failed entries/catalog sources", "Expand/collapse through table and Details/Hide", "Copy complete trace ID and row hash", "Open OperationalBrief Review details", "Table column visibility/order/width preferences", "Export CSV/JSON of table-controlled scoped rows"],
+    "dataBehavior": [
+      "Default list is unbounded in time, limit 100, offset 0; all filter edits reset offset.",
+      "Four independent queries, source notices and recovery; retained payload is not erased by refresh failure.",
+      "No data means unknown metrics; successful empty rows produce measured zero page counts; null success is neither OK nor Fail.",
+      "Six summary metrics are page/catalog counts, never inferred full-ledger totals.",
+      "Catalog caps/order and list newest-first order must survive; no total exists in list response.",
+      "Verification is initially disabled and separate from list filters; explicit refetch only; no production writes.",
+      "Raw hash/trace/actor/category/entity/payload text is evidence: never recase, truncate copied values, fabricate missing metadata or replace unknown with zero.",
+      "tableId admin:audit-log and source row ID identity persist across modernization.",
+      "No physical-unit fields/conversions are introduced. Keep wire/cache values unchanged; counts remain numeric inputs to the existing display formatter.",
+      "Current /admin route intentionally has no global vehicle selection; do not add vehicle scope.",
+      "Keep existing localization, typography, user display preferences, source boundaries, reduced motion and section error containment.",
+      "Resolve documented defects intentionally; do not treat the existing incomplete export or overstated verification copy as features to preserve."
+    ],
+    "functions": ["AuditLogPage", "useAuditLogPage", "handleReset", "toggleExpanded", "AuditLogStatStrip and local source-context renderer", "AuditLogFilters", "AuditLogIntegrity", "AuditLogEntries", "useAuditLogColumns", "toIsoOrUndefined", "AuditExpandedDetail", "formatJSON"],
+    "dependencyInventory": [
+      {"file": "web\\src\\features\\admin\\hooks\\useAuditLogPage.ts", "lines": 105, "sha256": "9e127969f57a66c1d5442d5e95846647d8afdf222fdd277687261e85a5258795"},
+      {"file": "web\\src\\features\\admin\\components\\statstrip-audit-vehicle-cost\\AuditLogStatStrip.tsx", "lines": 65, "sha256": "83a1380dc9e703e1c4dcd79ce9d402d6b87254c74e3fc6b0e598bc3f9a806995"},
+      {"file": "web\\src\\features\\admin\\components\\structural-closure\\audit-log\\AuditLogFilters.tsx", "lines": 98, "sha256": "33abb60493842051a978e9871562e4f7ef642fdffdae420e16817b2b766b59d3"},
+      {"file": "web\\src\\features\\admin\\components\\structural-closure\\audit-log\\AuditLogIntegrity.tsx", "lines": 74, "sha256": "32458e93f758a1371f689559803abd24dc08b78e3ee1af0a913f1b86b755c774"},
+      {"file": "web\\src\\features\\admin\\components\\structural-closure\\audit-log\\AuditLogEntries.tsx", "lines": 98, "sha256": "5b0422ccae0ea6f2c65cdf26f71a77046da32481441d0beecf90c0eb82b22592"},
+      {"file": "web\\src\\features\\admin\\components\\structural-closure\\audit-log\\auditLogColumns.tsx", "lines": 117, "sha256": "1b158f1e701a7ddef754166b3c5bfbde680316e35cabae57863fae7fd4e6c931"},
+      {"file": "web\\src\\features\\admin\\components\\structural-closure\\audit-log\\helpers.ts", "lines": 18, "sha256": "68b8600a6ed7073b2204f59c24e9900cb7399f5938c644881e1ffae15f03e8ea"},
+      {"file": "web\\src\\features\\admin\\components\\continuation-admin-2\\AuditExpandedDetail.tsx", "lines": 42, "sha256": "8aeaf2155247356c63cedc6cdeab715963499a0db92f300c6be063e3824d7ff1"}
+    ]
+  },
+  "evidenceLimits": {
+    "mode": "Read-only Phase 0; only assigned report and heartbeat written",
+    "runtime": "unverified",
+    "visual": "unverified",
+    "keyboard": "unverified",
+    "contrast": "unverified; no contrast ratios claimed",
+    "viewports": "unverified; no responsive acceptance claimed",
+    "route": "Source-mounted via App.tsx lazy import at 284 and route at 719; no actual navigation performed",
+    "backend": "Bounded source inspection of exact audit handler/service/repo/verification path only; no server requests, live DB, auth or permissions exercise",
+    "sourceChecks": {
+      "method": "PowerShell Select-String over the nine listed feature source files, with case-sensitive raw-control correction",
+      "exitCode": 0,
+      "output": ["Case-sensitive scoped rawControls=0", "oldApiImports=0", "neonGlowWhite=0", "staticInlineStyle=0", "directLibraries=0"],
+      "caveat": "Initial case-insensitive rawControls=13 was a false-positive match on shared Input/Select/DataTable names; corrected case-sensitive count is 0. Regex counts are source-pattern evidence, not a complete correctness/a11y audit."
+    },
+    "notRun": [
+      "Audit skill audit.sh was inspected but not run: its mandatory project-wide TypeScript step exceeds this read-only scoped audit and concurrent-validation constraints.",
+      "npx tsc --noEmit, lint, build, tests and browser checks not run; no claims that they pass.",
+      "No Git operations, config/catalog/shared/source/queue changes, production mutations or third-party code sharing."
+    ],
+    "unknowns": ["Actual before/after wire encoding through the uninspected response/client serialization internals", "Actual mobile column-menu access and full details parity", "Effective composed theme contrast/forced colors", "Browser timezone versus saved display timezone behavior", "Clipboard failures and screen-reader announcements", "Concurrent source drift beyond final root-page hash check"],
+    "historicalEvidence": "No historical receipt substituted for current acceptance.",
+    "reportValidation": {
+      "command": "$r=Get-Content 'docs\\frontend-audits\\audit-page-005.json' -Raw | ConvertFrom-Json -ErrorAction Stop; 'JSON parse: valid'; if((Get-FileHash $r.page -Algorithm SHA256).Hash.ToLower() -ne $r.preservation.sourceHash){throw 'Source hash mismatch'}; 'Root SHA-256: matches report'",
+      "exitCode": 0,
+      "output": ["JSON parse: valid", "Root SHA-256: matches report"],
+      "additionalCheckOutput": ["JSON schema: 20 required fields present", "Identity: audit-page-005 | exact page | /admin/audit-log", "Issue objects: 12 with required citations/ownership/confidence", "Root and eight dependency hashes/line counts: unchanged"],
+      "acceptanceScope": "Owned report structure and current source fingerprint only; not frontend runtime or type validation."
+    }
+  },
+  "filesRead": [
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\admin\\pages\\AuditLogPage.tsx",
+    "web\\src\\features\\admin\\hooks\\useAuditLogPage.ts",
+    "web\\src\\features\\admin\\components\\statstrip-audit-vehicle-cost\\AuditLogStatStrip.tsx",
+    "web\\src\\features\\admin\\components\\structural-closure\\audit-log\\AuditLogFilters.tsx",
+    "web\\src\\features\\admin\\components\\structural-closure\\audit-log\\AuditLogIntegrity.tsx",
+    "web\\src\\features\\admin\\components\\structural-closure\\audit-log\\AuditLogEntries.tsx",
+    "web\\src\\features\\admin\\components\\structural-closure\\audit-log\\auditLogColumns.tsx",
+    "web\\src\\features\\admin\\components\\structural-closure\\audit-log\\helpers.ts",
+    "web\\src\\features\\admin\\components\\continuation-admin-2\\AuditExpandedDetail.tsx",
+    "web\\src\\api\\hooks\\useOperatorConfidence.ts",
+    "web\\src\\types\\admin-operator-confidence.ts",
+    "web\\src\\api\\dataState.ts",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\lib\\dateFormat.ts",
+    "web\\src\\hooks\\useRangeState.ts",
+    "web\\src\\hooks\\useOperationalMetrics.tsx",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\layout\\layout-reference\\LayoutCard.tsx",
+    "web\\src\\components\\layout\\PageContainer.tsx",
+    "web\\src\\components\\data-display\\OperationalBrief.tsx",
+    "web\\src\\components\\ui\\DataTable.tsx",
+    "web\\src\\components\\ui\\Button.tsx",
+    "web\\src\\components\\ui\\Badge.tsx",
+    "web\\src\\components\\ui\\CopyButton.tsx",
+    "web\\src\\components\\motion\\FadeIn.tsx",
+    "web\\src\\components\\feedback\\DataStateNotice.tsx",
+    "web\\src\\components\\feedback\\DataSourceNotice.tsx",
+    "web\\src\\App.tsx",
+    "internal\\api\\router.go",
+    "internal\\handler\\v1\\admin_audit_handler.go",
+    "internal\\app\\auditviewersvc\\service.go",
+    "internal\\database\\audit\\log_query_repo.go",
+    "internal\\audit\\recorder.go"
+  ]
+}

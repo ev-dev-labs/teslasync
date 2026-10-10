@@ -66,15 +66,15 @@ type Props = {
  *  in render order. */
 const LABELS = [
   'Hazards',
-  'High Beams',
-  'Turn Signal',
-  'Driver Seat',
-  'Paired Keys',
-  'Valet Mode',
-  'Service Mode',
-  'Speed Limit',
-  'HomeLink Devices',
-  'Center Display',
+  'High beams',
+  'Turn signal',
+  'Driver seat',
+  'Paired keys',
+  'Valet mode',
+  'Service mode',
+  'Speed limit',
+  'HomeLink devices',
+  'Center display',
 ] as const;
 
 /** A fully-null `SecurityEvent` (every signal field defaults to null) with
@@ -153,17 +153,31 @@ const ACTIVE_TONE = 'text-cyan-300';
 const MUTED_TONE = 'text-[var(--text-secondary)]';
 
 function title() {
-  return screen.getByRole('heading', { name: 'Live Vehicle State', level: 3 });
+  return screen.getByRole('heading', { name: 'Live vehicle state', level: 3 });
 }
 
 describe('LiveVehicleState', () => {
   it('renders a ten-cell skeleton grid while loading, with no tiles or live badge but an intact title', () => {
     const { container } = renderState({ isLoading: true });
 
-    expect(container.querySelectorAll('.animate-pulse')).toHaveLength(10);
+    const panel = title().closest('[data-print-card]');
+    const grid = panel?.querySelector('.grid.grid-cols-2');
+    expect(grid).toHaveClass('gap-3', 'sm:grid-cols-3', '2xl:grid-cols-4');
+    expect(grid?.children).toHaveLength(10);
+    const cells = grid?.querySelectorAll(':scope > [aria-hidden="true"].h-4.w-full');
+    expect(cells).toHaveLength(10);
+    for (const cell of cells ?? []) {
+      expect(cell).toHaveClass('rounded', 'bg-[var(--skeleton-bg)]');
+      expect(cell).toHaveStyle({ height: '92px' });
+    }
+    expect(container.querySelectorAll('.animate-pulse')).toHaveLength(0);
     // Loading must not leak the data grid or the "Live" indicator…
     expect(screen.queryByText('Hazards')).toBeNull();
+    for (const label of LABELS) {
+      expect(screen.queryByText(label)).toBeNull();
+    }
     expect(screen.queryByText('Live')).toBeNull();
+    expect(screen.queryByText('No live state data available')).toBeNull();
     // …but the section is never blank: its heading anchors the panel.
     expect(title()).toBeInTheDocument();
   });
@@ -178,6 +192,7 @@ describe('LiveVehicleState', () => {
     });
 
     expect(screen.getByRole('alert')).toBeInTheDocument();
+    expect(container.querySelectorAll('.grid.grid-cols-2 > [aria-hidden="true"].h-4.w-full')).toHaveLength(0);
     expect(container.querySelectorAll('.animate-pulse')).toHaveLength(0);
     expect(screen.queryByText('Hazards')).toBeNull();
 
@@ -221,28 +236,28 @@ describe('LiveVehicleState', () => {
     expect(tileValue('Hazards').textContent).toBe('On');
     expect(tileValue('Hazards').className).toContain(ACTIVE_TONE);
 
-    expect(tileValue('High Beams').textContent).toBe('Off');
-    expect(tileValue('High Beams').className).toContain(MUTED_TONE);
+    expect(tileValue('High beams').textContent).toBe('Off');
+    expect(tileValue('High beams').className).toContain(MUTED_TONE);
 
     // A null boolean is an unknown, not a false — it renders the em dash.
-    expect(tileValue('Valet Mode').textContent).toBe('—');
-    expect(tileValue('Valet Mode').className).toContain(MUTED_TONE);
+    expect(tileValue('Valet mode').textContent).toBe('—');
+    expect(tileValue('Valet mode').className).toContain(MUTED_TONE);
   });
 
   it('renders the turn-signal string enum, treating any "off" variant (and null) as inactive', () => {
     const { rerenderWith } = renderState({
       latest: makeEvent({ lightsTurnSignal: 'TurnSignalStateLeft' }),
     });
-    expect(tileValue('Turn Signal').textContent).toBe('TurnSignalStateLeft');
-    expect(tileValue('Turn Signal').className).toContain(ACTIVE_TONE);
+    expect(tileValue('Turn signal').textContent).toBe('TurnSignalStateLeft');
+    expect(tileValue('Turn signal').className).toContain(ACTIVE_TONE);
 
     rerenderWith({ latest: makeEvent({ lightsTurnSignal: 'TurnSignalStateOff' }) });
-    expect(tileValue('Turn Signal').textContent).toBe('TurnSignalStateOff');
-    expect(tileValue('Turn Signal').className).toContain(MUTED_TONE);
+    expect(tileValue('Turn signal').textContent).toBe('TurnSignalStateOff');
+    expect(tileValue('Turn signal').className).toContain(MUTED_TONE);
 
     rerenderWith({ latest: makeEvent({ lightsTurnSignal: null }) });
-    expect(tileValue('Turn Signal').textContent).toBe('—');
-    expect(tileValue('Turn Signal').className).toContain(MUTED_TONE);
+    expect(tileValue('Turn signal').textContent).toBe('—');
+    expect(tileValue('Turn signal').className).toContain(MUTED_TONE);
   });
 
   it('renders driver-seat occupancy and numeric counts, guarding null and treating 0 as shown-but-inactive', () => {
@@ -254,40 +269,40 @@ describe('LiveVehicleState', () => {
       }),
     });
 
-    expect(tileValue('Driver Seat').textContent).toBe('Occupied');
-    expect(tileValue('Driver Seat').className).toContain(ACTIVE_TONE);
+    expect(tileValue('Driver seat').textContent).toBe('Occupied');
+    expect(tileValue('Driver seat').className).toContain(ACTIVE_TONE);
 
-    expect(tileValue('Paired Keys').textContent).toBe('3');
-    expect(tileValue('Paired Keys').className).toContain(ACTIVE_TONE);
+    expect(tileValue('Paired keys').textContent).toBe('3');
+    expect(tileValue('Paired keys').className).toContain(ACTIVE_TONE);
 
     // A zero count is real data — shown as "0" and muted, never hidden.
-    expect(tileValue('HomeLink Devices').textContent).toBe('0');
-    expect(tileValue('HomeLink Devices').className).toContain(MUTED_TONE);
+    expect(tileValue('HomeLink devices').textContent).toBe('0');
+    expect(tileValue('HomeLink devices').className).toContain(MUTED_TONE);
 
     rerenderWith({
       latest: makeEvent({ driverSeatOccupied: false, pairedPhoneKeyCount: null }),
     });
-    expect(tileValue('Driver Seat').textContent).toBe('Empty');
-    expect(tileValue('Paired Keys').textContent).toBe('—');
+    expect(tileValue('Driver seat').textContent).toBe('Empty');
+    expect(tileValue('Paired keys').textContent).toBe('—');
   });
 
   it('handles speed-limit mode arriving as either a native boolean or a string enum', () => {
     const { rerenderWith } = renderState({
       latest: makeEvent({ speedLimitMode: true }),
     });
-    expect(tileValue('Speed Limit').textContent).toBe('On');
-    expect(tileValue('Speed Limit').className).toContain(ACTIVE_TONE);
+    expect(tileValue('Speed limit').textContent).toBe('On');
+    expect(tileValue('Speed limit').className).toContain(ACTIVE_TONE);
 
     rerenderWith({ latest: makeEvent({ speedLimitMode: false }) });
-    expect(tileValue('Speed Limit').textContent).toBe('Off');
-    expect(tileValue('Speed Limit').className).toContain(MUTED_TONE);
+    expect(tileValue('Speed limit').textContent).toBe('Off');
+    expect(tileValue('Speed limit').className).toContain(MUTED_TONE);
 
     rerenderWith({ latest: makeEvent({ speedLimitMode: 'SpeedLimitActive' }) });
-    expect(tileValue('Speed Limit').textContent).toBe('SpeedLimitActive');
-    expect(tileValue('Speed Limit').className).toContain(ACTIVE_TONE);
+    expect(tileValue('Speed limit').textContent).toBe('SpeedLimitActive');
+    expect(tileValue('Speed limit').className).toContain(ACTIVE_TONE);
 
     rerenderWith({ latest: makeEvent({ speedLimitMode: null }) });
-    expect(tileValue('Speed Limit').textContent).toBe('—');
+    expect(tileValue('Speed limit').textContent).toBe('—');
   });
 
   it('handles center-display state as boolean OR string — regression: a boolean must not degrade to "—"', () => {
@@ -296,22 +311,22 @@ describe('LiveVehicleState', () => {
     });
     // Regression pin: a boolean centerDisplay previously fell through
     // asNonEmptyString and rendered "—"; it must now mirror Speed Limit.
-    expect(tileValue('Center Display').textContent).toBe('On');
-    expect(tileValue('Center Display').className).toContain(ACTIVE_TONE);
+    expect(tileValue('Center display').textContent).toBe('On');
+    expect(tileValue('Center display').className).toContain(ACTIVE_TONE);
 
     rerenderWith({ latest: makeEvent({ centerDisplay: false }) });
-    expect(tileValue('Center Display').textContent).toBe('Off');
-    expect(tileValue('Center Display').className).toContain(MUTED_TONE);
+    expect(tileValue('Center display').textContent).toBe('Off');
+    expect(tileValue('Center display').className).toContain(MUTED_TONE);
 
     rerenderWith({ latest: makeEvent({ centerDisplay: 'CenterDisplayModeOn' }) });
-    expect(tileValue('Center Display').textContent).toBe('CenterDisplayModeOn');
-    expect(tileValue('Center Display').className).toContain(ACTIVE_TONE);
+    expect(tileValue('Center display').textContent).toBe('CenterDisplayModeOn');
+    expect(tileValue('Center display').className).toContain(ACTIVE_TONE);
 
     rerenderWith({ latest: makeEvent({ centerDisplay: 'CenterDisplayModeOff' }) });
-    expect(tileValue('Center Display').className).toContain(MUTED_TONE);
+    expect(tileValue('Center display').className).toContain(MUTED_TONE);
 
     rerenderWith({ latest: makeEvent({ centerDisplay: null }) });
-    expect(tileValue('Center Display').textContent).toBe('—');
+    expect(tileValue('Center display').textContent).toBe('—');
   });
 
   it('renders every tile as a muted "—" placeholder for an all-null snapshot (never hides a section)', () => {

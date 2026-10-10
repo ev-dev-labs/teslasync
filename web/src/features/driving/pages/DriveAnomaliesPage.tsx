@@ -1,16 +1,16 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Microscope, AlertTriangle, Sigma, Sparkles } from 'lucide-react';
+import { Microscope, AlertTriangle, Sparkles } from 'lucide-react';
 
-import { PageContainer } from '@/components/layout';
-import { GlassPanel, PanelTitle, Text, Badge, HelpTooltip } from '@/components/ui';
-import { RangePicker, VehicleSelect } from '@/components/forms';
-import { MetricCard } from '@/components/data-display';
-import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
+import { PageLayout, ChartCard, LayoutCard } from '@/components/layout';
+import { Text, Badge, HelpTooltip } from '@/components/ui';
+import { RangePicker } from '@/components/forms';
+import type { StatMetric } from '@/components/data-display/stat-reference';
+import { Skeleton, EmptyState, QueryError, StaleRefreshWarning } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { NoVehicleSelected } from '@/features/onboarding/components/NoVehicleSelected';
 import {
-  ChartContainer, ChartTooltip,
+  ChartTooltip,
   ComposedChart, Line, Scatter, Area,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from '@/components/charts';
@@ -20,12 +20,14 @@ import { useRangeState } from '@/hooks/useRangeState';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useUnits } from '@/hooks/useUnits';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useDataState } from '@/hooks/useDataState';
 import { formatDateShort } from '@/lib/dateFormat';
 import { convertDistanceToSI } from '@/lib/unitConversion';
 import { chartTokens } from '@/lib/tokens';
 import type { Drive } from '@/types/driving';
 
 import { summarizeAnomalies, type AnomalyReason } from '../lib/driveAnomalies';
+import { DrivingSummaryBrief } from '../components/operationalbrief-a-m/DrivingSummaryBrief';
 
 /** km per statute mile, derived from the shared conversion lib. */
 const KM_PER_MILE = convertDistanceToSI(1, 'mi') / 1000;
@@ -53,6 +55,7 @@ export default function DriveAnomaliesPage() {
   });
 
   const drivesQuery = useDrives(vehicleIdStr);
+  const drivesState = useDataState(drivesQuery, { provenance: 'historical' });
   const allDrives = useMemo<Drive[]>(() => drivesQuery.data ?? [], [drivesQuery.data]);
 
   const drives = useMemo<Drive[]>(() => {
@@ -97,22 +100,40 @@ export default function DriveAnomaliesPage() {
     () => [...curveData, ...pointData].sort((a, b) => a.speed - b.speed),
     [curveData, pointData],
   );
+  const available = drivesState.data != null;
+  const briefMetrics: readonly StatMetric[] = [
+    { metricId: 'count', occurrenceId: 'analyzed', rawValue: available ? summary.analyzed : null,
+      label: t('anomalies.analyzed', 'Drives Analyzed'),
+      description: t('anomalies.brief.analyzed', 'Returned drives with usable speed and energy data in this window.') },
+    { metricId: 'count', occurrenceId: 'outliers', rawValue: available ? summary.outliers.length : null,
+      label: t('anomalies.outlierCount', 'Outliers'),
+      description: t('anomalies.beyond2', 'beyond ±2σ of your baseline') },
+    { metricId: 'efficiency', occurrenceId: 'sigma',
+      rawValue: available && summary.sigma != null ? summary.sigma / 1000 : null,
+      label: t('anomalies.sigma', 'Your Spread (σ)'),
+      description: t('anomalies.sigmaHint', 'residual scatter around the fit'),
+      display: { formatter: (raw) => ({ value: String(toEff(raw * 1000)), unit: effUnit }) } },
+    { metricId: 'number', occurrenceId: 'best-surprise',
+      rawValue: available ? summary.outliers.find((outlier) => outlier.z <= -2)?.z : null,
+      label: t('anomalies.bestSurprise', 'Best Surprise'),
+      description: t('anomalies.bestSurpriseHint', 'most efficient outlier'),
+      display: { formatter: (raw) => ({ value: String(raw), unit: 'σ' }) } },
+  ];
 
   if (vehicleId == null) {
     return <NoVehicleSelected pageTitle={t('anomalies.title', 'Anomaly Detective')} />;
   }
 
-  const isLoading = drivesQuery.isLoading;
-  const isError = drivesQuery.isError;
+  const isLoading = drivesState.status === 'initial';
+  const isError = drivesState.fatalError != null;
 
   return (
-    <PageContainer
+    <PageLayout
       title={t('anomalies.title', 'Anomaly Detective')}
       subtitle={t('anomalies.subtitle', 'Drives that break your own consumption law, explained')}
       query={drivesQuery}
-      actions={
+      contextActions={
         <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3">
-          <VehicleSelect />
           <RangePicker
             value={{ start, end }}
             onChange={setRange}
@@ -122,76 +143,40 @@ export default function DriveAnomaliesPage() {
         </div>
       }
     >
+      <StaleRefreshWarning state={drivesState} label={t('anomalies.title', 'Anomaly Detective')} />
       {/* 1 — KPI band */}
       <FadeIn>
         <section
           aria-label={t('anomalies.kpis', 'Anomaly summary metrics')}
-          className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4"
         >
-          {isError ? (
-            <GlassPanel className="col-span-full p-4 sm:p-5">
-              <QueryError error={drivesQuery.error} onRetry={() => drivesQuery.refetch()} />
-            </GlassPanel>
-          ) : isLoading ? (
-            Array.from({ length: 4 }).map((_, i) => (
-              <Skeleton key={i} height={96} className="rounded-xl" />
-            ))
-          ) : (
-            <>
-              <MetricCard
-                label={t('anomalies.analyzed', 'Drives Analyzed')}
-                value={summary.analyzed}
-                icon={<Microscope className="h-5 w-5" />}
-                color="cyan"
-              />
-              <MetricCard
-                label={t('anomalies.outlierCount', 'Outliers')}
-                value={summary.outliers.length}
-                subtitle={t('anomalies.beyond2', 'beyond ±2σ of your baseline')}
-                icon={<AlertTriangle className="h-5 w-5" />}
-                color="amber"
-              />
-              <MetricCard
-                label={t('anomalies.sigma', 'Your Spread (σ)')}
-                value={summary.sigma != null ? `${toEff(summary.sigma)} ${effUnit}` : '—'}
-                subtitle={t('anomalies.sigmaHint', 'residual scatter around the fit')}
-                icon={<Sigma className="h-5 w-5" />}
-                color="purple"
-              />
-              <MetricCard
-                label={t('anomalies.bestSurprise', 'Best Surprise')}
-                value={
-                  summary.outliers.find((o) => o.z <= -2) != null
-                    ? `${summary.outliers.find((o) => o.z <= -2)!.z}σ`
-                    : '—'
-                }
-                subtitle={t('anomalies.bestSurpriseHint', 'most efficient outlier')}
-                icon={<Sparkles className="h-5 w-5" />}
-                color="green"
-              />
-            </>
-          )}
+          <DrivingSummaryBrief metrics={briefMetrics}
+            title={t('anomalies.kpis', 'Anomaly summary metrics')}
+            description={t('anomalies.brief.description', 'Speed-adjusted consumption outliers against your returned drive cohort; candidate explanations are not verified causes.')}
+            scope={t('driving.brief.window', '{{start}}–{{end}}; returned drive subset, not a server-wide aggregate', { start, end })}
+            provenance={t('anomalies.brief.source', 'Returned drive history; quadratic fit and ±2σ residual band.')}
+            loading={isLoading} error={drivesState.fatalError}
+            retained={drivesState.status === 'stale' || drivesState.refreshError != null}
+            onRetry={() => void drivesQuery.refetch()} />
         </section>
       </FadeIn>
 
       {/* 2 — Scatter + band */}
       <FadeIn delay={0.1}>
-        {!isLoading && !isError && summary.coefficients == null ? (
-          <GlassPanel className="p-4 sm:p-5">
-            <EmptyState /* no-action: the personal baseline needs 8+ drives with speed and energy; the range picker above is the recovery surface. */
-              icon={<Microscope className="h-8 w-8" />}
-              message={t('anomalies.noFit', 'Not enough drives (8+ with speed and energy data) to fit your personal baseline yet.')}
-            />
-          </GlassPanel>
-        ) : (
-          // chart-legend-audit:skip fitted baseline and two-sigma bounds form one analytical envelope and must remain visible together
-          <ChartContainer
+          {/* chart-legend-audit:skip fitted baseline and two-sigma bounds form one analytical envelope and must remain visible together */}
+          <ChartCard
             title={t('anomalies.chart', 'Your Consumption Law')}
             subtitle={t('anomalies.chartHint', 'Quadratic fit of consumption vs speed with a ±2σ band; red points break the law')}
             ariaLabel={t('anomalies.chart.aria', 'Scatter of drive consumption against speed with fitted curve and two-sigma band; outliers highlighted')}
             loading={isLoading}
-            empty={chartData.length === 0}
+            error={drivesState.fatalError}
+            onRetry={() => void drivesQuery.refetch()}
+            empty={summary.coefficients == null || chartData.length === 0}
+            emptyMessage={t('anomalies.noFit', 'Not enough drives (8+ with speed and energy data) to fit your personal baseline yet.')}
+            emptyIcon={<Microscope className="h-8 w-8" />}
             height={380}
+            mobileHeight={260}
+            toolbar
+            exportable
             data={summary.points.map((p) => ({
               speed: toSpeed(p.speedKph),
               consumption: toEff(p.whPerKm),
@@ -263,24 +248,26 @@ export default function DriveAnomaliesPage() {
                 />
               </ComposedChart>
             </ResponsiveContainer>
-          </ChartContainer>
-        )}
+          </ChartCard>
       </FadeIn>
 
       {/* 3 — Case files */}
       <FadeIn delay={0.2}>
-        <GlassPanel className="p-4 sm:p-5">
-          <PanelTitle className="mb-3 flex items-center gap-2">
+        <LayoutCard
+          title={t('anomalies.cases', 'Case Files')}
+          actions={<>
             <AlertTriangle className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-            {t('anomalies.cases', 'Case Files')}
             <HelpTooltip
               size="sm"
               i18nKey="help.driveAnomalies.body"
               defaultValue="Each drive is scored by how many standard deviations its consumption sits from your own speed-adjusted baseline. Outliers beyond ±2σ get candidate explanations by comparing their temperature and regen against your cohort medians."
               ariaLabel={t('help.driveAnomalies.iconLabel', 'More info about anomaly scoring')}
             />
-          </PanelTitle>
-          {isLoading ? (
+          </>}
+        >
+          {isError ? (
+            <QueryError error={drivesState.fatalError} onRetry={() => void drivesQuery.refetch()} />
+          ) : isLoading ? (
             <Skeleton height={140} />
           ) : summary.outliers.length === 0 ? (
             <EmptyState /* no-action: absence of outliers is the good outcome; the panel fills in as anomalous drives appear. */
@@ -312,8 +299,8 @@ export default function DriveAnomaliesPage() {
               ))}
             </ul>
           )}
-        </GlassPanel>
+        </LayoutCard>
       </FadeIn>
-    </PageContainer>
+    </PageLayout>
   );
 }

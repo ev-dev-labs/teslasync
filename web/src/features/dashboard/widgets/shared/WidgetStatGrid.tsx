@@ -3,18 +3,22 @@ import { useTranslation } from 'react-i18next';
 import { StatCard } from '@/components/data-display';
 import { EmptyState } from '@/components/feedback';
 import { cn } from '@/lib/cn';
+import { dashboardTokens } from '../../lib/dashboardTokens';
 
 export interface StatGridItem {
   label: string;
-  value: string | number;
+  value: string | number | null | undefined;
   unit?: string;
   icon?: ReactNode;
+  sublabel?: string;
   trend?: 'up' | 'down' | 'flat';
   trendValue?: string;
+  /** Direction is not desirability: a declining cost can be a positive result. */
+  trendPositive?: boolean;
   valueColor?: string;
 }
 
-interface WidgetStatGridProps {
+export interface WidgetStatGridProps {
   stats?: StatGridItem[];
   compact?: boolean;
   cols?: 2 | 3 | 4;
@@ -25,21 +29,6 @@ function autoCols(count: number): 2 | 3 | 4 {
   if (count % 4 === 0) return 4;
   return 2;
 }
-
-// Container-query class table. Each cell selects a column count based on
-// the *widget's own rendered width* (via `@container` on WidgetShell's
-// content area), not the viewport. This means a 4-up stat grid collapses
-// to 2-up on narrow widgets — whether they are narrow because the user is
-// on a phone or because the widget only spans 1 column on a wide desktop.
-const containerColsClass: Record<1 | 2 | 3 | 4, string> = {
-  1: 'grid-cols-1',
-  // 2-col baseline; never collapses below 2
-  2: 'grid-cols-2',
-  // 3-col target: 1 col under @xs (~16rem≈256px), 2 cols under @sm (~24rem≈384px), 3 above
-  3: 'grid-cols-1 @xs:grid-cols-2 @sm:grid-cols-3',
-  // 4-col target: 2 cols under @sm, 4 above
-  4: 'grid-cols-2 @sm:grid-cols-4',
-};
 
 export function WidgetStatGrid({ stats, compact, cols }: WidgetStatGridProps) {
   const { t } = useTranslation('dashboard');
@@ -56,7 +45,7 @@ export function WidgetStatGrid({ stats, compact, cols }: WidgetStatGridProps) {
   const resolvedCols = compact ? 1 : (cols ?? autoCols(items.length));
 
   return (
-    <div className={cn('grid', containerColsClass[resolvedCols], compact ? 'gap-2' : 'gap-3')}>
+    <div className={cn('grid min-w-0', dashboardTokens.columns[resolvedCols], compact ? 'gap-2' : 'gap-3')}>
       {items.map((stat, index) => (
         <StatCard
           key={`${stat.label}-${index}`}
@@ -64,16 +53,17 @@ export function WidgetStatGrid({ stats, compact, cols }: WidgetStatGridProps) {
           value={stat.value}
           unit={stat.unit}
           icon={stat.icon}
+          sublabel={stat.sublabel}
           trend={
             stat.trend && stat.trendValue
               ? {
                   direction: stat.trend,
                   value: stat.trendValue,
-                  positive: stat.trend === 'up',
+                  positive: stat.trendPositive ?? stat.trend === 'up',
                 }
               : undefined
           }
-          className={stat.valueColor}
+          className={cn(dashboardTokens.stat, 'min-w-0 [&_span]:break-words [&_.tabular-nums]:break-all', stat.valueColor)}
         />
       ))}
     </div>

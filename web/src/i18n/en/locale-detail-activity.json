@@ -2,12 +2,12 @@
   "activity": {
     "drive": "drive",
     "charged": "charged",
-    "title": "Recent Activity",
+    "title": "Recent activity",
     "viewAll": "Open full inbox",
     "viewAllSeverity": "See all {{severity}} unread",
     "empty": "No activity yet. Start driving!",
     "myActivity": {
-      "title": "My Activity",
+      "title": "My activity",
       "subtitle": "Recent actions you have taken in TeslaSync.",
       "empty": "No recent activity in this window.",
       "disabled": {
@@ -103,13 +103,13 @@
       "automationAutoDisabled": "Automation auto-disabled"
     },
     "timeline": {
-      "title": "Activity Timeline",
+      "title": "Activity timeline",
       "subtitle": "A unified timeline of drives, charging, alerts, software updates, and your annotations.",
       "empty": "No activity in this window.",
       "loadMore": "Older",
       "loadNewer": "Newer",
       "pagePosition": "Showing {{start}}–{{end}} of {{total}} events in the selected range",
-      "exportScope": "Exports include only the loaded page. Use Older or Newer to browse and export other pages.",
+      "exportScope": "Exports include only the loaded page. Use older or newer to browse and export other pages.",
       "overview": {
         "aria": "Activity overview",
         "total": "Events in selected range",
@@ -183,7 +183,7 @@
         "drive": "Drive",
         "charging": "Charging",
         "alert": "Alert",
-        "software_update": "Software Update",
+        "software_update": "Software update",
         "annotation": "Annotation"
       }
     }

@@ -53,26 +53,26 @@ describe('InlineCallout', () => {
 
   it('uses different background tints per variant', () => {
     const { rerender } = render(<InlineCallout variant="info">x</InlineCallout>);
-    expect(screen.getByRole('status').className).toMatch(/cyan/);
+    expect(screen.getByRole('status')).toHaveClass('bg-[var(--semantic-info-bg)]');
 
     rerender(<InlineCallout variant="success">x</InlineCallout>);
-    expect(screen.getByRole('status').className).toMatch(/emerald/);
+    expect(screen.getByRole('status')).toHaveClass('bg-[var(--semantic-success-bg)]');
 
     rerender(<InlineCallout variant="warning">x</InlineCallout>);
-    expect(screen.getByRole('status').className).toMatch(/amber/);
+    expect(screen.getByRole('status')).toHaveClass('bg-[var(--semantic-warning-bg)]');
 
     rerender(<InlineCallout variant="danger">x</InlineCallout>);
-    expect(screen.getByRole('status').className).toMatch(/rose/);
+    expect(screen.getByRole('status')).toHaveClass('bg-[var(--semantic-danger-bg)]');
   });
 
   it.each([
-    ['warning', 'text-amber-800', 'dark:text-amber-200'],
-    ['danger', 'text-rose-800', 'dark:text-rose-200'],
-  ] as const)('keeps %s body text readable in both themes', (variant, lightClass, darkClass) => {
+    ['warning'],
+    ['danger'],
+  ] as const)('keeps %s body text readable in both themes', (variant) => {
     render(<InlineCallout variant={variant}>Readable body</InlineCallout>);
     const body = screen.getByText('Readable body');
-    expect(body.className).toContain(lightClass);
-    expect(body.className).toContain(darkClass);
+    expect(body).toHaveClass('text-[var(--text-secondary)]');
+    expect(body.className).not.toMatch(/text-(amber|rose)-/);
   });
 
   it('exposes a testId on the outer node', () => {
@@ -82,5 +82,58 @@ describe('InlineCallout', () => {
       </InlineCallout>,
     );
     expect(screen.getByTestId('callout-foo')).toBeInTheDocument();
+  });
+
+  it('prefers native navigation when both action handlers are supplied', () => {
+    const onClick = vi.fn();
+    render(
+      <InlineCallout variant="info" action={{ label: 'View', href: '#details', onClick }}>
+        Retained details
+      </InlineCallout>,
+    );
+    const link = screen.getByRole('link');
+    expect(link).toHaveAttribute('href', '#details');
+    fireEvent.click(link);
+    expect(onClick).not.toHaveBeenCalled();
+    expect(screen.queryByRole('button')).not.toBeInTheDocument();
+  });
+
+  it('preserves rich long content and localized action labels without truncation', () => {
+    const label = 'عرض التفاصيل الكاملة '.repeat(20);
+    const body = 'UnbrokenIdentifier'.repeat(40);
+    render(
+      <div dir="rtl">
+        <InlineCallout
+          variant="danger"
+          className="custom-callout"
+          testId="long-callout"
+          action={{ label, onClick: vi.fn() }}
+        >
+          <strong>{body}</strong>
+        </InlineCallout>
+      </div>,
+    );
+    const button = screen.getByRole('button');
+    expect(button).toHaveAttribute('type', 'button');
+    expect(button).toHaveClass('custom-callout', 'flex-wrap', 'min-w-0', 'h-auto', 'min-h-11');
+    expect(screen.getByText(body).parentElement).toHaveClass('break-words');
+    expect(screen.getByText(label.trim())).toHaveClass('break-words');
+    expect(button.querySelector('svg')).toHaveClass('rtl:rotate-180');
+    expect(button.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
+    expect(button).toHaveClass('focus-visible:outline-2', 'focus-visible:outline-offset-2', 'motion-reduce:transition-none');
+    expect(button.className).not.toMatch(/truncate|line-clamp|text-size-inherit/);
+  });
+
+  it('keeps a label-only action noninteractive and caller classes last', () => {
+    render(
+      <InlineCallout variant="success" className="px-4" action={{ label: 'Complete' }}>
+        Saved
+      </InlineCallout>,
+    );
+    expect(screen.getByRole('status')).toHaveClass('px-4');
+    expect(screen.getByRole('status')).not.toHaveClass('px-3');
+    expect(screen.queryByRole('button')).not.toBeInTheDocument();
+    expect(screen.queryByRole('link')).not.toBeInTheDocument();
+    expect(screen.getByText('Complete')).toBeInTheDocument();
   });
 });

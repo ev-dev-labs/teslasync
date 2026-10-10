@@ -196,7 +196,7 @@ describe('LiveTelemetryPanels', () => {
   it('renders the Live Telemetry heading and hides the decorative pulse from assistive tech', () => {
     const { container } = renderPanels()
 
-    const heading = screen.getByRole('heading', { level: 2, name: 'Live Telemetry' })
+    const heading = screen.getByRole('heading', { level: 2, name: 'Live telemetry' })
     expect(heading).toBeInTheDocument()
     expect(heading.tagName).toBe('H2')
 

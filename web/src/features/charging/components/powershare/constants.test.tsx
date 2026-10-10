@@ -55,6 +55,7 @@ vi.mock('react-i18next', async () => {
 });
 
 const HEX6 = /^#[0-9a-f]{6}$/i;
+const LIGHT_DARK = /^light-dark\((#[0-9a-f]{6}),\s*(#[0-9a-f]{6})\)$/i;
 const BASE_TS = Date.parse('2026-05-05T12:00:00Z');
 
 /** Minimal-but-valid raw observation; overrides tweak the fields under test. */
@@ -174,14 +175,26 @@ describe('SERIES_LIMIT — trend-series window', () => {
 
 describe('chart accent colors — palette wiring', () => {
   it('are valid, distinct 6-digit hex colors', () => {
-    expect(POWER_COLOR).toMatch(HEX6);
-    expect(HOURS_COLOR).toMatch(HEX6);
+    // Each theme-aware token contains a valid light and dark six-digit color.
+    expect(POWER_COLOR).toMatch(LIGHT_DARK);
+    expect(HOURS_COLOR).toMatch(LIGHT_DARK);
     expect(POWER_COLOR).not.toBe(HOURS_COLOR);
+
+    const powerColors = LIGHT_DARK.exec(POWER_COLOR)?.slice(1) ?? [];
+    const hoursColors = LIGHT_DARK.exec(HOURS_COLOR)?.slice(1) ?? [];
+    for (const colors of [powerColors, hoursColors]) {
+      expect(colors).toHaveLength(2);
+      for (const color of colors) {
+        expect(color).toMatch(HEX6);
+      }
+      expect(colors[0]).not.toBe(colors[1]);
+    }
+    expect(powerColors[0]).not.toBe(hoursColors[0]);
+    expect(powerColors[1]).not.toBe(hoursColors[1]);
   });
 
   it('stay in sync with the shared chart-token palette (no drift)', () => {
-    // Kept as literals for direct chart-primitive consumption, but they MUST
-    // track chartTokens.series[2] (amber) / [5] (cyan) — pin the drift.
+    // Keep the complete light-dark tokens, not a flattened theme constituent.
     expect(POWER_COLOR).toBe(chartTokens.series[2]);
     expect(HOURS_COLOR).toBe(chartTokens.series[5]);
   });

@@ -1,0 +1,198 @@
+{
+  "item": "audit-page-238",
+  "page": "web\\src\\features\\vehicles\\pages\\VehicleDetailPage.tsx",
+  "routes": ["/vehicles/:id"],
+  "purpose": "Single-vehicle identity, live readings, independently sourced systems, recent activity, configuration, optional Helix paint proposal and per-vehicle settings.",
+  "primaryGoal": "Understand this vehicle's current condition and charging options, wake it, inspect recent driving/charging and maintain its overrides without losing independent source evidence.",
+  "dataSources": [
+    {"name": "vehicleQuery", "owner": "web\\src\\features\\vehicles\\pages\\VehicleDetailPage.tsx", "line": 58, "endpoint": "GET /vehicles/{vehicleId}", "queryKey": ["vehicles", "String(vehicleId)"], "behavior": "Enabled for positive finite id; initial vehicle loading selects page skeleton."},
+    {"name": "stateQuery", "owner": "web\\src\\features\\vehicles\\pages\\VehicleDetailPage.tsx", "line": 75, "endpoint": "GET /vehicles/{vehicleId}/state", "queryKey": ["vehicle-state", "vehicleId"], "pollMs": 30000, "behavior": "Direct StateResponse envelope; state supplies status, readings, software fallback and next-charge SoC. useDataState labels provenance live; server live flag is not consumed."},
+    {"name": "motorQuery", "owner": "web\\src\\features\\vehicles\\pages\\VehicleDetailPage.tsx", "line": 84, "endpoint": "GET /motor/latest?vehicle_id={vehicleId}", "pollMs": 15000},
+    {"name": "climateQuery", "owner": "web\\src\\features\\vehicles\\pages\\VehicleDetailPage.tsx", "line": 91, "endpoint": "GET /climate/latest?vehicle_id={vehicleId}", "pollMs": 15000},
+    {"name": "securityQuery", "owner": "web\\src\\features\\vehicles\\pages\\VehicleDetailPage.tsx", "line": 98, "endpoint": "GET /security/latest?vehicle_id={vehicleId}", "pollMs": 15000, "behavior": "Doors/windows use security snapshot; lock/sentry use independent live state."},
+    {"name": "tireQuery", "owner": "web\\src\\features\\vehicles\\pages\\VehicleDetailPage.tsx", "line": 105, "endpoint": "GET /tire-pressure/latest?vehicle_id={vehicleId}", "pollMs": 30000, "behavior": "Domain renderer classifies Pa, adapts to kPa and shared display preferences."},
+    {"name": "chargingTelemetryQuery", "owner": "web\\src\\features\\vehicles\\pages\\VehicleDetailPage.tsx", "line": 112, "endpoint": "GET /charging-telemetry/latest?vehicle_id={vehicleId}", "pollMs": 5000},
+    {"name": "drivesQuery", "owner": "web\\src\\features\\vehicles\\pages\\VehicleDetailPage.tsx", "line": 119, "endpoint": "GET /drives?vehicle_id={vehicleId}&limit=5", "behavior": "Same returned five-row source supplies table and reverse-ordered trend; not a full-range chart."},
+    {"name": "sessionsQuery", "owner": "web\\src\\features\\vehicles\\pages\\VehicleDetailPage.tsx", "line": 126, "endpoint": "GET /charging?vehicle_id={vehicleId}&limit=5"},
+    {"name": "vehicleConfigQuery", "owner": "web\\src\\features\\vehicles\\pages\\VehicleDetailPage.tsx", "line": 132, "endpoint": "GET /vehicle-config/latest?vehicle_id={vehicleId}", "pollMs": 30000},
+    {"name": "wakeMutation", "owner": "web\\src\\features\\vehicles\\pages\\VehicleDetailPage.tsx", "line": 141, "endpoint": "POST /vehicles/{vehicleId}/wake", "behavior": "Pending wake button, success/error toast; state refetch scheduled after five seconds."},
+    {"name": "useVehicleSettings/useUpsertVehicleSetting/useResetVehicleSetting", "owner": "web\\src\\api\\hooks\\useVehicleSettings.ts", "line": 50, "endpoints": ["GET /vehicles/{vehicleId}/settings", "PUT /vehicles/{vehicleId}/settings/{encodedKey}", "DELETE /vehicles/{vehicleId}/settings/{encodedKey}"], "behavior": "Read cancellation, 30-second staleTime, normalized settings array; mutations invalidate and broadcast settings and vehicle detail; nickname read shared with settings section."},
+    {"name": "useVehicleSilence", "owner": "web\\src\\api\\hooks\\useVehicles.ts", "line": 53, "endpoint": "GET /vehicles/{id}/silence", "behavior": "SilenceBanner absent on missing data or ok; explanation retained for quiet/silent/never."},
+    {"name": "useNextChargeDecision", "owner": "web\\src\\api\\hooks\\useCharging.ts", "line": 570, "endpoint": "GET /charge-autopilot/decision?vehicle_id={vehicleId}&current_soc={currentSoc}", "behavior": "Enabled only with id and finite current SoC; inferred trust; retained data, fatal retry and two empty cases."},
+    {"name": "AIVehiclePaintPreview/useAiStream", "owner": "web\\src\\components\\ai\\AIVehiclePaintPreview.tsx", "line": 93, "endpoint": "POST /ai/vehicles/{numericVehicleId}/paint-preview/draft", "behavior": "Feature gate, positive integer input requirement, scopeKey and optional style_hint; propose-only stream never replaces configuration."}
+  ],
+  "components": [
+    {"name": "PageLayout/Section", "owner": "@/components/layout", "usedBy": ["VehicleDetailPage", "VehicleDetailOverview", "VehicleDetailStats", "VehicleDetailSystems", "VehicleDetailHistory"], "contract": "Title/subtitle/breadcrumb/metadataActions/contextActions; section IDs and localized titles; preserve full allocated width."},
+    {"name": "VehiclePanelGrid/VehiclePanelCell", "owner": "web\\src\\features\\vehicles\\components\\modernization\\VehiclePanelGrid.tsx", "usedBy": ["overview", "systems", "charts", "history", "configuration", "skeleton"], "contract": "items: id,size,content; label; delegates to CardGrid/useCardPlacement without another successful-data surface."},
+    {"name": "VehicleSourcePanel", "owner": "web\\src\\features\\vehicles\\components\\modernization\\VehicleSourcePanel.tsx", "usedBy": ["overview", "stats", "systems", "charts", "history", "configuration"], "contract": "query,label,emptyMessage,errorMessage,resourceName,available,renderEmpty,children; SourceContent, useDataState, StaleRefreshWarning, QueryError."},
+    {"name": "OperationalBrief/useOperationalMetrics/useVehicleDetailSummary", "owner": "web\\src\\features\\vehicles\\components\\statstrip-vehicle-detail\\useVehicleDetailSummary.ts", "usedBy": ["BatteryRangePanel", "QuickStatsGrid", "MotorSection", "ClimateSection", "SecuritySection", "TirePressureSection", "NextChargeDecisionStrip"], "contract": "Source-specific trust/time/provenance; raw StatMetric inputs and specialist formatters; shared data-display renderer, no new KPI engine."},
+    {"name": "VehicleHeader/VehicleConfigSection/QuickLinksSection", "owner": "web\\src\\features\\vehicles\\components\\vehicle-detail", "usedBy": ["VehicleDetailPage"], "contract": "Identity/back/wake; twelve configuration rows and software fallback; six destination links."},
+    {"name": "VehicleBatteryChart/VehicleDriveChart", "owner": "web\\src\\features\\vehicles\\components\\modernization", "usedBy": ["VehicleDetailCharts"], "contract": "Existing EmbeddedChart/ChartCard, accessible data columns, current shared chart palette; gauge before battery bars; chartKey battery-drive-trend and series visibility."},
+    {"name": "DataTable", "owner": "@/components/ui", "usedBy": ["RecentDrivesSection", "RecentChargesSection"], "contract": "Stable tableId, row identity, compact pagination, mobileColumns; drive sort callback retained."},
+    {"name": "VehicleSettingsTab", "owner": "web\\src\\features\\vehicles\\components\\VehicleSettingsTab.tsx", "usedBy": ["VehicleDetailPage"], "contract": "Six supported keys, source pills, controlled drafts, parse/validate/save/reset; existing Input/Select/Button."},
+    {"name": "Feedback and motion", "owner": "@/components/feedback and @/components/motion", "usedBy": ["VehicleDetailPage and inspected domain sections"], "contract": "LiveStaleDataBanner, SectionErrorBoundary, QueryError, StaleRefreshWarning, EmptyState, Skeleton, useToast, FadeIn; no replacement overlay/motion provider."},
+    {"name": "AIVehiclePaintPreview", "owner": "web\\src\\components\\ai\\AIVehiclePaintPreview.tsx", "usedBy": ["VehicleDetailPage"], "contract": "vehicleId, optional styleHint, withAiFeature and AIFeatureCard; gated stream start and redacted/propose-only explanation."}
+  ],
+  "duplicatedPatterns": [
+    {"file": "web\\src\\features\\vehicles\\pages\\VehicleDetailPage.tsx", "line": 58, "rule": "MDC-002 / mission 33", "detail": "Ten direct query declarations and request calls sit in the page despite domain hook ownership. Existing useVehicle also reads this record with cancellation; inspected useVehicles state contracts include observed_at/freshness/verified_fields absent from local StateResponse.", "fix": "Use or extend typed domain hooks only after comparing exact mapping, keys, poll intervals, enabling and raw envelopes; do not silently substitute a different state contract.", "owner": "shared", "confidence": "high"},
+    {"file": "web\\src\\features\\vehicles\\components\\vehicle-detail\\QuickStatsGrid.tsx", "line": 22, "rule": "mission 0.6 / semantic consistency", "detail": "QuickStats battery accent thresholds (>50, >20) differ from gauge helper thresholds (>60, >25); missing readings cyan versus helper grey. These are two active domain policies, not proof one can be deleted.", "fix": "Reconcile meanings under the existing vehicle domain owner; preserve numeric measurements and record intended distinct thresholds if deliberate.", "owner": "shared", "confidence": "high"}
+  ],
+  "responsive": {
+    "verified": "source only; no viewport exercised",
+    "evidence": [
+      {"file": "web\\src\\features\\vehicles\\components\\modernization\\VehiclePanelGrid.tsx", "line": 29, "detail": "Shared CardGrid owns half/full placement; minimum-width containment in grid/cells."},
+      {"file": "web\\src\\features\\vehicles\\components\\vehicle-detail\\BatteryRangePanel.tsx", "line": 52, "detail": "Overview stacks then sm:flex-row; gauge and metric body retained."},
+      {"file": "web\\src\\features\\vehicles\\components\\vehicle-detail\\QuickLinksSection.tsx", "line": 35, "detail": "Two, three then six link columns."},
+      {"file": "web\\src\\features\\vehicles\\components\\VehicleSettingsTab.tsx", "line": 246, "detail": "Single-column rows become twelve-column layout at lg; actions remain present."}
+    ],
+    "issues": [
+      {"file": "web\\src\\features\\vehicles\\components\\vehicle-detail\\RecentDrivesSection.tsx", "line": 93, "rule": "MDC-023 / MDC-043", "detail": "mobileColumns omits duration; recent charges mobileColumns omits duration and cost. The shared DataTable detail/column-access implementation was not inspected, so complete mobile reachability is unresolved, not proven lost.", "fix": "Integration-test full row detail/column access at narrow widths; retain every omitted column through existing DataTable mobile presentation without a second table.", "owner": "integration", "confidence": "medium"},
+      {"file": "web\\src\\features\\vehicles\\components\\vehicle-detail\\VehicleHeader.tsx", "line": 61, "rule": "MDC-043 / preservation", "detail": "VIN text uses truncate; no local full-value affordance supplied. Actual truncation depends on allocated width.", "fix": "Verify full VIN is reachable on narrow/200%-text layouts; use existing text/detail affordance if clipping occurs.", "owner": "integration", "confidence": "medium"}
+    ],
+    "requiredWidths": [320,375,390,430,768,1024,1280,1440,1920,2560]
+  },
+  "accessibility": {
+    "verified": "source only; keyboard, focus, screen reader and effective contrast unverified",
+    "positiveEvidence": "Header Back link has localized aria-label and min-h-11/min-w-11; decorative header icons aria-hidden. Quick links use named nav/focus-visible ring. Chart frames receive ariaLabel and dataColumns.",
+    "issues": [
+      {"file": "web\\src\\features\\vehicles\\components\\VehicleSettingsTab.tsx", "line": 358, "rule": "MDC-021 / MDC-040", "detail": "renderInput creates Input/Select without label, id, aria-label or aria-labelledby. Visible key name is a separate Text at line 249. Validation Text at line 262 is not passed as error/described-by to the control. data-testid is not an accessible name.", "fix": "Supply stable key-derived control IDs and localized label/help/error association through current primitives; retain draft/value/name semantics and six row identities.", "owner": "shared", "confidence": "high"}
+    ]
+  },
+  "states": {
+    "initialLoading": "VehicleDetailPage:165-170 returns dedicated skeleton; source panels independently resolve loading/error/empty/ready after vehicle loading.",
+    "invalidId": "VehicleDetailPage:173-188 localized not-found branch with Back to vehicles action.",
+    "fatalRecordError": "VehicleDetailPage:224-230 record QueryError and retry; independent sections remain mounted.",
+    "retainedData": "VehicleSourcePanel:25-42 keeps available children and refresh warnings. NextChargeDecisionStrip retains data on refresh failure.",
+    "offlineStale": "Global LiveStaleDataBanner, per-query StaleRefreshWarning and silence watchdog present in source; actual behavior not exercised.",
+    "empty": "Domain placeholders and empty chart/table cards remain; AI intentionally feature-gated, not a missing-data replacement.",
+    "successDisabled": "Wake pending; per-setting save/reset pending/disabled/validation; positive integer AI canStart.",
+    "issues": [
+      {"file": "web\\src\\features\\vehicles\\components\\vehicle-detail\\LiveStateIndicators.tsx", "line": 29, "rule": "MDC-025 / MDC-026", "detail": "Nullable lock/sentry/climate/charging use truthiness to label unknown as Unlocked/Off/Not charging; SecuritySection already distinguishes null from known false.", "fix": "Retain all five indicators with explicit localized unknown branches and neutral semantic variants for missing booleans.", "owner": "shared", "confidence": "high"},
+      {"file": "web\\src\\features\\vehicles\\components\\modernization\\VehicleBatteryChart.tsx", "line": 30, "rule": "MDC-026 / unknown is not zero", "detail": "Missing battery becomes measured zero in gauge/bar data and remaining becomes 100%; raw metric summary remains unknown. Drive trend similarly coerces missing distance/duration to zero at lines 24-25.", "fix": "Keep gauge/bar/trend sections and all returned data, but distinguish unavailable chart operands from zero using existing chart states; do not fabricate measurements.", "owner": "shared", "confidence": "high"},
+      {"file": "web\\src\\features\\vehicles\\components\\VehicleSettingsTab.tsx", "line": 146, "rule": "MDC-026", "detail": "isError branch replaces settings rows even if query retains data on a refresh error, hiding editable values and source pills.", "fix": "Use existing data trust contract: only fatal error without usable data replaces rows; refresh warning keeps retained rows and drafts.", "owner": "shared", "confidence": "high"},
+      {"file": "web\\src\\features\\vehicles\\components\\SilenceBanner.tsx", "line": 18, "rule": "MDC-026", "detail": "Only data is destructured; failed watchdog read silently looks like no banner. Missing evidence cannot establish telemetry freshness.", "fix": "Distinguish failed/unavailable watchdog evidence with existing source feedback while preserving deliberate absence for an actual ok result.", "owner": "shared", "confidence": "high"}
+    ]
+  },
+  "visualIssues": [
+    {"file": "web\\src\\features\\vehicles\\components\\vehicle-detail\\QuickLinksSection.tsx", "line": 51, "rule": "MDC-010 / mission 43", "detail": "Six navigation tiles explicitly request glow=\"cyan\"; decorative repeated glow is a source-level noise risk. Actual emitted glow/intensity not visually measured.", "fix": "Remove decorative glow request; preserve hover, focus, icons, label and all six links with existing neutral surface tokens.", "owner": "shared", "confidence": "high"},
+    {"file": "web\\src\\features\\vehicles\\components\\vehicle-detail\\helpers.ts", "line": 17, "rule": "MDC-010 / MDC-011", "detail": "Gauge helper uses fixed grey/emerald/amber/red hex strings independently of current theme semantic tokens. Brightness/contrast is unmeasured; semantic battery warning meaning must remain.", "fix": "Map existing threshold semantics to canonical palette rather than adding local colors or resetting saved chart/theme preferences.", "owner": "shared", "confidence": "high"},
+    {"file": "web\\src\\features\\vehicles\\components\\VehicleSettingsTab.tsx", "line": 157, "rule": "MDC-010 / MDC-012", "detail": "divide-white/5 is fixed-white separator styling. No pure-white text, neon class or glow found in the page itself; this dependency does retain white-based decoration.", "fix": "Use existing neutral border token; preserve all rows and separators across light/dark/forced-color themes.", "owner": "shared", "confidence": "high"}
+  ],
+  "architectureIssues": [
+    {"file": "web\\src\\features\\vehicles\\pages\\VehicleDetailPage.tsx", "line": 60, "rule": "MDC-002 cancellation / mission 33", "detail": "All ten inline read queryFns ignore TanStack Query signal. Nearby useVehicleSettings and inspected useVehicles reads forward it.", "fix": "Forward signal through existing typed domain hooks without changing query keys, intervals, raw payload or enablement.", "owner": "shared", "confidence": "high"},
+    {"file": "web\\src\\features\\vehicles\\pages\\VehicleDetailPage.tsx", "line": 52, "rule": "valid source identity", "detail": "Finite positive fractional IDs satisfy hasValidId and trigger reads/wake, while AI preview explicitly requires integer ID. Backend rejection behavior was not inspected.", "fix": "Align page identity validation with positive safe integer route IDs; preserve existing localized invalid-id return and disabled requests.", "owner": "page", "confidence": "high"},
+    {"file": "web\\src\\features\\vehicles\\pages\\VehicleDetailPage.tsx", "line": 82, "rule": "MDC-026 source freshness / MDC-046", "detail": "Direct StateResponse read marks provenance live unconditionally, ignores stateData.live and uses a local envelope lacking the domain hook's observed_at/freshness/verified_fields contract. Network success alone cannot prove freshness of vehicle readings.", "fix": "Reconcile with typed state hook owner and expose server evidence in the current trust pipeline, preserving actual raw readings and unknown fields; do not invent backend freshness.", "owner": "shared", "confidence": "high"},
+    {"file": "web\\src\\features\\vehicles\\pages\\VehicleDetailPage.tsx", "line": 157, "rule": "MDC-025 unknown status", "detail": "Missing record and state falls back to offline; independent record failure is not proof of vehicle offline.", "fix": "Keep visible identity/header and state derivation for known state; represent unavailable status without asserting offline when evidence is absent.", "owner": "page", "confidence": "high"}
+  ],
+  "priority": {
+    "level": "high",
+    "rationale": "Operational trust and settings accessibility take precedence over decorative cleanup. Page already composes reviewed shared layout and independent boundaries; no page replacement is needed.",
+    "order": ["field names/error associations", "unknown and retained-source semantics", "typed query ownership/freshness/cancellation", "identity guard", "restrained decorative styling", "central responsive/accessibility/runtime acceptance"]
+  },
+  "requiredSharedChanges": [
+    {"name": "Vehicle-detail domain query ownership", "existingOwnerFile": "web\\src\\api\\hooks\\useVehicles.ts", "propsVariantsStates": ["positive integer vehicle ID", "read AbortSignal", "state envelope and observed_at/freshness/verified_fields", "preserve current keys/pollMs/enablement", "independent fatal/refresh/empty states"], "usedBy": ["VehicleDetailPage inline queries"], "dependsOn": ["useVehicleSettings.ts existing cancellation example", "exact raw API state contract reconciliation"], "scope": "Report only; other domain hook extensions need exclusive owner assignment."},
+    {"name": "Per-vehicle settings accessible retained rows", "existingOwnerFile": "web\\src\\features\\vehicles\\components\\VehicleSettingsTab.tsx", "propsVariantsStates": ["stable IDs per setting key", "localized accessible name/help/error", "initial loading", "fatal retry", "retained refresh warning", "six controlled save/reset rows"], "usedBy": ["VehicleDetailPage settings section"], "dependsOn": ["existing Input/Select label and description APIs", "useVehicleSettings", "useDataState"]},
+    {"name": "Known-versus-unknown vehicle presentation", "existingOwnerFile": "web\\src\\features\\vehicles\\components\\vehicle-detail\\LiveStateIndicators.tsx", "propsVariantsStates": ["known true", "known false", "null/undefined unknown", "five indicators"], "usedBy": ["VehicleDetailOverview"], "dependsOn": ["current Badge semantics", "source state evidence", "SecuritySection null-aware precedent"]},
+    {"name": "Chart missing-measurement semantics", "existingOwnerFile": "web\\src\\features\\vehicles\\components\\modernization\\VehicleBatteryChart.tsx", "propsVariantsStates": ["unknown battery versus 0%", "current/remaining bars", "retained gauge/readouts", "unknown distance/duration trend operands"], "usedBy": ["VehicleDetailCharts", "VehicleDriveChart"], "dependsOn": ["existing EmbeddedChart/ChartCard empty and data-table contracts"]},
+    {"name": "Vehicle detail visual restraint", "existingOwnerFile": "web\\src\\features\\vehicles\\components\\vehicle-detail\\QuickLinksSection.tsx", "propsVariantsStates": ["six neutral navigation tiles", "hover/focus without decorative glow", "theme-aware battery severity and row borders"], "usedBy": ["QuickLinksSection", "BatteryRangePanel", "VehicleBatteryChart", "VehicleSettingsTab"], "dependsOn": ["existing semantic tokens", "helpers.ts battery thresholds", "current persisted theme/chart settings"]},
+    {"name": "Watchdog read trust", "existingOwnerFile": "web\\src\\features\\vehicles\\components\\SilenceBanner.tsx", "propsVariantsStates": ["ok hidden", "quiet/silent/never explanation", "failed/unavailable evidence", "retained result on refresh failure"], "usedBy": ["VehicleDetailPage"], "dependsOn": ["useVehicleSilence", "existing feedback/dataState"]}
+  ],
+  "competingImplementations": [
+    {"file": "web\\src\\features\\vehicles\\pages\\VehicleDetailPage.tsx", "line": 58, "rule": "single query/domain owner", "detail": "Local record/state request pipeline coexists with domain hook contracts. Exact state equivalence is unresolved; do not swap by name only.", "fix": "Consolidate through current domain owner after source-contract comparison.", "owner": "shared", "confidence": "high"},
+    {"file": "web\\src\\features\\vehicles\\components\\vehicle-detail\\QuickStatsGrid.tsx", "line": 22, "rule": "single semantic policy", "detail": "Two active battery accent classifiers differ, while all metrics now use the existing OperationalBrief pipeline. No need for a new stats library.", "fix": "Resolve documented domain threshold meanings, not a new component or color engine.", "owner": "shared", "confidence": "high"}
+  ],
+  "preservation": {
+    "sourceHash": "BE68B05792C431B00F3E89AC7666A76627D3AE874830CFBBF73751435A00F138",
+    "hashAlgorithm": "SHA-256",
+    "currentLineCount": 294,
+    "sectionCounts": {"pageSectionElements": 2, "pageGlassPanelElements": 2, "loadedSemanticSections": 8, "systemSubpanels": 5, "chartPanels": 2, "historyTables": 2, "configurationFields": 12, "quickLinks": 6, "settingKeys": 6},
+    "sections": [
+      {"name": "Identity/header actions and provenance", "file": "web\\src\\features\\vehicles\\pages\\VehicleDetailPage.tsx", "line": 195, "content": "Effective nickname/title, model+trim subtitle, breadcrumb, status, VIN, back and wake, source badge."},
+      {"name": "Telemetry silence and next-charge decision", "file": "web\\src\\features\\vehicles\\pages\\VehicleDetailPage.tsx", "line": 232, "content": "Watchdog explanation; charge verdict/reason, SoC target/energy-needed, home-now/wait/Supercharger costs, start time/site, smart-charge action."},
+      {"name": "Live overview", "file": "web\\src\\features\\vehicles\\pages\\VehicleDetailPage.tsx", "line": 238, "content": "Battery gauge, rated/ideal range, charging state, range-added/hour and time-to-full; five live state badges."},
+      {"name": "Quick stats", "file": "web\\src\\features\\vehicles\\pages\\VehicleDetailPage.tsx", "line": 239, "content": "Eight metrics: battery, range, odometer, speed/motion context, cabin/outside temperature, power and status."},
+      {"name": "Vehicle systems", "file": "web\\src\\features\\vehicles\\pages\\VehicleDetailPage.tsx", "line": 240, "content": "Powertrain eight readings and specialist V/A/Nm/RPM formats; climate eight readings/fallbacks; charging telemetry eight readings, timestamp/source/session and range-rate explanation; security four states and mixed-source evidence; four tire pressures and directional threshold statuses."},
+      {"name": "Battery & range charts", "file": "web\\src\\features\\vehicles\\pages\\VehicleDetailPage.tsx", "line": 245, "content": "Gauge/readouts before current/remaining battery bars; recent five-drive distance/duration trend, axes, legend visibility, accessible data columns."},
+      {"name": "Recent activity", "file": "web\\src\\features\\vehicles\\pages\\VehicleDetailPage.tsx", "line": 252, "content": "Drive date/distance/duration/battery; charge date/energy/duration/cost/battery; table sorting/pagination/IDs and View all."},
+      {"name": "Vehicle configuration plus gated Helix proposal", "file": "web\\src\\features\\vehicles\\pages\\VehicleDetailPage.tsx", "line": 257, "content": "Twelve KV rows: car type, trim, exterior/wheel/roof color/type, charge port, RHD, Europe, offroad lightbar, rear seat heaters, sunroof, software fallback. Preserve separate feature gate, propose-only redaction explanation and scope-key stream."},
+      {"name": "Quick links", "file": "web\\src\\features\\vehicles\\pages\\VehicleDetailPage.tsx", "line": 279, "content": "Drives, Charging, Battery, Climate, Efficiency, Settings destinations."},
+      {"name": "Per-vehicle settings", "file": "web\\src\\features\\vehicles\\pages\\VehicleDetailPage.tsx", "line": 285, "content": "nickname, mute_until, charge_cost_tariff_id, units_distance, units_temperature, units_energy; source pills, local drafts, validation, Save/Reset and RFC3339 conversion."}
+    ],
+    "countDefinition": "Eight loaded semantic content sections = overview, stats, systems, charts, history, configuration, quick links, settings; header and advisory banners inventoried additionally, not counted as content sections. AI is an optional configuration sibling, not a mandatory empty tile.",
+    "actions": [
+      "Back to /vehicles from header and invalid-id branch",
+      "Wake POST with pending/toasts and delayed live-state refetch",
+      "Record and individual-source retries, settings retry",
+      "Open /smart-charge from decision body or empty decision action",
+      "Drive distance sort and existing DataTable pagination/column/mobile/detail capabilities",
+      "Chart/table inspection and existing ChartCard legend/frame capabilities; preserve any shared export/fullscreen behavior without claiming it was exercised",
+      "View all /drives and /charging",
+      "Six quick-link destinations",
+      "Six settings Save and Reset actions, validation and source pills",
+      "Optional Helix paint draft start/stream and current stream stop/retry capabilities delegated to AIFeatureCard; never auto-apply paint"
+    ],
+    "dataBehavior": [
+      "Preserve all independent sources, current query keys, positive-ID gates, polling intervals, source order, five-row recent scope and nickname fallback.",
+      "Preserve usable retained payload and independent neighbors on source failures, localized placeholders and retry actions.",
+      "Keep SI wire/cache/source operands and existing display-only useUnits/useOperationalMetrics/specialist formatters; no backend unit conclusions from examples.",
+      "Retain rear/front pack voltage fallback, known-temperature peak, climate fallback order, security split-source attribution and tire pressure threshold meaning.",
+      "Retain returned ordering before user drive sort and reversed order for chart; saved table IDs vehicles:detail-recent-drives and vehicles:detail-recent-charges; chartKey battery-drive-trend.",
+      "Settings draft edits/dirty/pending/reset behavior, unit preferences and business mute date must survive; do not add a duplicate workspace picker.",
+      "Do not preserve fabricated zero/false semantics as trusted measurements when resolving the explicitly reported trust defects; preserve sections and actual source data."
+    ]
+  },
+  "evidenceLimits": {
+    "mode": "Atomic Phase0 source audit only; no source edits, Git, runtime/browser, project TypeScript, tests, lint or build.",
+    "routeEvidence": "Assigned route /vehicles/:id and local breadcrumb string inspected; router reachability/mount not exercised.",
+    "endpointEvidence": "Request paths and methods are source-confirmed in bounded dependencies, not backend router/handler validation. Backend availability, shape, freshness, authorization and unit behavior remain unverified.",
+    "visual": "No screenshots, mounted rendering, theme, forced-color, effective contrast, keyboard, focus, screen-reader, reduced-motion or viewport acceptance claimed.",
+    "scope": "Shared foundations not audited globally. Existing layout/chart/DataTable/AI infrastructure referenced via actual consumer props; implementations outside page-specific trace not recursively inspected.",
+    "checks": [
+      {"command": "Get-FileHash 'web\\src\\features\\vehicles\\pages\\VehicleDetailPage.tsx' -Algorithm SHA256", "exitCode": 0, "output": "BE68B05792C431B00F3E89AC7666A76627D3AE874830CFBBF73751435A00F138"},
+      {"command": "Select-String on exact page for style={{, raw control tags, direct libraries, old API imports, neon/glow/white/hex; count Section/GlassPanel", "exitCode": 0, "output": "pageLineCount=294; staticInline=0; rawControls=0; directLibraries=0; oldApi=0; neonGlowWhite=0; pageSections=2; glassPanels=2", "qualification": "Lexical page-only counts, not clean dependencies or full audit certification."},
+      {"command": "bash .github\\skills\\audit-violations\\audit.sh [page]", "status": "NOTRUN", "reason": "Read script; it unconditionally runs project TypeScript, contrary to assigned source-only scope."}
+    ]
+  },
+  "filesRead": [
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\vehicles\\pages\\VehicleDetailPage.tsx",
+    "web\\src\\features\\vehicles\\components\\modernization\\index.ts",
+    "web\\src\\features\\vehicles\\components\\modernization\\VehicleDetailOverview.tsx",
+    "web\\src\\features\\vehicles\\components\\modernization\\VehicleDetailStats.tsx",
+    "web\\src\\features\\vehicles\\components\\modernization\\VehicleDetailSystems.tsx",
+    "web\\src\\features\\vehicles\\components\\modernization\\VehicleDetailCharts.tsx",
+    "web\\src\\features\\vehicles\\components\\modernization\\VehicleDetailHistory.tsx",
+    "web\\src\\features\\vehicles\\components\\modernization\\VehicleDetailSkeleton.tsx",
+    "web\\src\\features\\vehicles\\components\\modernization\\VehicleSourcePanel.tsx",
+    "web\\src\\features\\vehicles\\components\\modernization\\VehiclePanelGrid.tsx",
+    "web\\src\\features\\vehicles\\components\\modernization\\VehiclePanelCell.tsx",
+    "web\\src\\features\\vehicles\\components\\modernization\\VehicleBatteryChart.tsx",
+    "web\\src\\features\\vehicles\\components\\modernization\\VehicleDriveChart.tsx",
+    "web\\src\\features\\vehicles\\components\\modernization\\VehicleSecurityPanel.tsx",
+    "web\\src\\features\\vehicles\\components\\vehicle-detail\\VehicleHeader.tsx",
+    "web\\src\\features\\vehicles\\components\\vehicle-detail\\BatteryRangePanel.tsx",
+    "web\\src\\features\\vehicles\\components\\vehicle-detail\\QuickStatsGrid.tsx",
+    "web\\src\\features\\vehicles\\components\\vehicle-detail\\LiveStateIndicators.tsx",
+    "web\\src\\features\\vehicles\\components\\vehicle-detail\\MotorSection.tsx",
+    "web\\src\\features\\vehicles\\components\\vehicle-detail\\ClimateSection.tsx",
+    "web\\src\\features\\vehicles\\components\\vehicle-detail\\ChargingTelemetrySection.tsx",
+    "web\\src\\features\\vehicles\\components\\vehicle-detail\\TirePressureSection.tsx",
+    "web\\src\\features\\vehicles\\components\\vehicle-detail\\SecuritySection.tsx",
+    "web\\src\\features\\vehicles\\components\\vehicle-detail\\RecentDrivesSection.tsx",
+    "web\\src\\features\\vehicles\\components\\vehicle-detail\\RecentChargesSection.tsx",
+    "web\\src\\features\\vehicles\\components\\vehicle-detail\\VehicleConfigSection.tsx",
+    "web\\src\\features\\vehicles\\components\\vehicle-detail\\QuickLinksSection.tsx",
+    "web\\src\\features\\vehicles\\components\\vehicle-detail\\helpers.ts",
+    "web\\src\\features\\vehicles\\components\\VehicleSettingsTab.tsx",
+    "web\\src\\features\\vehicles\\components\\SilenceBanner.tsx",
+    "web\\src\\features\\vehicles\\components\\NextChargeDecisionStrip.tsx",
+    "web\\src\\features\\vehicles\\components\\statstrip-vehicle-detail\\useVehicleDetailSummary.ts",
+    "web\\src\\api\\hooks\\useVehicleSettings.ts",
+    "web\\src\\api\\hooks\\useVehicles.ts",
+    "web\\src\\api\\hooks\\useCharging.ts",
+    "web\\src\\components\\ai\\AIVehiclePaintPreview.tsx"
+  ]
+}

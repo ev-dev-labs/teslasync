@@ -1,31 +1,34 @@
-import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useQuery } from '@tanstack/react-query';
 import {
-  FileText, Clock, AlertTriangle, Activity,
-  Search, Filter, Layers, ChevronDown, ChevronUp, X,
+  FileText,
+  Layers, RefreshCw,
 } from 'lucide-react';
 
-import { PageContainer } from '@/components/layout';
+import { PageLayout } from '@/components/layout';
 import {
-  GlassPanel, Button, Select, Input, Badge, Pagination,
-  PanelTitle, Label, Caption, Text, CopyButton,
+  GlassPanel, Button, Badge,
+  PanelTitle, Caption, Text,
 } from '@/components/ui';
-import { StatCard, DateTime } from '@/components/data-display';
 import { FadeIn } from '@/components/motion';
-import { FrontendErrorsCard } from '@/components/status';
-import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
-import { ListExportMenu } from '@/components/forms';
+import { Skeleton, EmptyState, QueryError, StaleRefreshWarning } from '@/components/feedback';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useDataState } from '@/hooks/useDataState';
 import { useRangeState } from '@/hooks/useRangeState';
 import { useUrlNumber, useUrlString, useUrlBatch } from '@/hooks/useUrlState';
-import { fmtNumber, fmtInt } from '@/lib/numberFormat';
+
 import { cn } from '@/lib/cn';
-import { typography } from '@/lib/tokens';
 import { exportAsCSV, exportAsJSON } from '@/lib/export';
-import { getAPICallLogs, getAPICallLogStats, getErrorStats } from '@/api/devtools';
-import type { APICallLog, APICallLogStats, ErrorStats } from '@/api/types';
+import { useAPICallLogs, useAPICallLogStats, useSystemErrorStats } from '@/api/hooks/useAdmin';
+import type { APICallLog } from '@/api/types';
 import { deriveServiceOptions } from '../lib/serviceOptions';
+import {
+  ApiLogsEvidenceTable, type ApiLogsServerFilterKey, type ApiLogsServerFilters,
+} from '../components/ApiLogsEvidenceTable';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { ApiLogsBackendErrors } from '../components/ApiLogsBackendErrors';
+import { ApiLogsFrontendErrors } from '../components/ApiLogsFrontendErrors';
+import { ApiLogsSummary } from '../components/statstrip-api-quality/ApiLogsSummary';
 
 /* ------------------------------------------------------------------ */
 /*  Local helpers                                                      */
@@ -33,25 +36,17 @@ import { deriveServiceOptions } from '../lib/serviceOptions';
 
 type LogBadgeVariant = 'success' | 'info' | 'warning' | 'danger' | 'neutral';
 
-const METHOD_VARIANTS: Record<string, LogBadgeVariant> = {
-  GET: 'success',
-  POST: 'info',
-  PUT: 'warning',
-  PATCH: 'warning',
-  DELETE: 'danger',
-};
-
 const SERVICE_CONFIG: Record<string, { label: string; variant: LogBadgeVariant }> = {
   'teslasync-api':      { label: 'TeslaSync API',      variant: 'info'    },
   'tesla-api':          { label: 'Tesla API',          variant: 'info'    },
-  'tesla-auth':         { label: 'Tesla Auth',         variant: 'info'    },
+  'tesla-auth':         { label: 'Tesla auth',         variant: 'info'    },
   'geocoder-google':    { label: 'Geocoder (Google)',  variant: 'warning' },
   'geocoder-nominatim': { label: 'Geocoder (Nominatim)', variant: 'warning' },
   'geocoder-azure':     { label: 'Geocoder (Azure)',   variant: 'warning' },
-  'geocoder-search':    { label: 'Geocoder (Search)',  variant: 'warning' },
-  'github-releases':    { label: 'GitHub Releases',    variant: 'neutral' },
+  'geocoder-search':    { label: 'Geocoder (search)',  variant: 'warning' },
+  'github-releases':    { label: 'GitHub releases',    variant: 'neutral' },
   'notify-generic':     { label: 'Notifications',      variant: 'neutral' },
-  'system-dns-check':   { label: 'DNS Health Check',   variant: 'neutral' },
+  'system-dns-check':   { label: 'DNS health check',   variant: 'neutral' },
   'eia':                { label: 'EIA',                variant: 'neutral' },
 };
 
@@ -66,53 +61,8 @@ function appInstallation(headers: APICallLog['request_headers']): { id: string; 
   return match && id ? { id, platform: match[1], shortId: match[2] } : null;
 }
 
-function statusBadgeVariant(code: number | null): LogBadgeVariant {
-  if (!code) return 'neutral';
-  if (code < 300) return 'success';
-  if (code < 400) return 'info';
-  if (code < 500) return 'warning';
-  return 'danger';
-}
-
 function serviceBadgeConfig(service: string): { label: string; variant: LogBadgeVariant } {
   return SERVICE_CONFIG[service] ?? { label: service, variant: 'neutral' };
-}
-
-/** Pretty-prints a JSON payload inside a scrollable code surface, with a
- *  copy affordance. Falls back to the raw string when the body isn't JSON. */
-function JsonViewer({ data, label }: { data: string | null; label: string }) {
-  const { t } = useTranslation();
-
-  if (!data) {
-    return (
-      <div className="space-y-1">
-        <Label>{label}</Label>
-        <Text as="p" variant="caption" className="italic">
-          {t('apiLogs.noData', { label: label.toLowerCase(), defaultValue: `No ${label.toLowerCase()}` })}
-        </Text>
-      </div>
-    );
-  }
-
-  let formatted = data;
-  try { formatted = JSON.stringify(JSON.parse(data), null, 2); } catch { /* leave raw */ }
-
-  return (
-    <div className="space-y-1">
-      <div className="flex items-center justify-between gap-2">
-        <Label>{label}</Label>
-        <CopyButton
-          text={formatted}
-          iconOnly
-          size="sm"
-          ariaLabel={t('apiLogs.copyBody', 'Copy {{label}}', { label })}
-        />
-      </div>
-      <GlassPanel className={cn('max-h-60 overflow-x-auto whitespace-pre-wrap break-all !p-3', typography.role.code)}>
-        {formatted}
-      </GlassPanel>
-    </div>
-  );
 }
 
 /* ------------------------------------------------------------------ */
@@ -120,8 +70,15 @@ function JsonViewer({ data, label }: { data: string | null; label: string }) {
 /* ------------------------------------------------------------------ */
 
 export default function ApiLogsPage() {
+  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
-  usePageTitle(t('apiLogs.title', 'API Logs'));
+  usePageTitle(t('apiLogs.title', 'API logs'));
+  const serviceConfig = useCallback((svc: string) => {
+    const config = serviceBadgeConfig(svc);
+    return SERVICE_CONFIG[svc]
+      ? { ...config, label: t(`apiLogs.services.${svc}`, config.label) }
+      : config;
+  }, [t]);
 
   const [page, setPage] = useUrlNumber('page', 0);
   const [method] = useUrlString('method', '');
@@ -130,11 +87,11 @@ export default function ApiLogsPage() {
   const [service] = useUrlString('service', '');
   const [client] = useUrlString('client', '');
   const [key] = useUrlString('key', '');
-  const [expandedId, setExpandedId] = useState<number | null>(null);
-  const limit = 25;
+  const [requestedSize] = useUrlNumber('size', 25);
+  const limit = [25, 50, 100].includes(requestedSize) ? requestedSize : 25;
 
   // The header owns the `from`/`to` window for both KPIs and request rows.
-  const { startInstant, endInstantExclusive } = useRangeState({
+  const { startInstant, endInstantExclusive, timezone, presetId } = useRangeState({
     persistKey: 'api-logs.range',
     defaultPresetId: 'all',
   });
@@ -154,56 +111,48 @@ export default function ApiLogsPage() {
     if (page !== 0) setUrl({ page: null });
   }, [startInstant, endInstantExclusive, page, setUrl]);
 
-  type FilterKey = 'method' | 'status' | 'endpoint' | 'service' | 'client' | 'key';
   const setFilter = useCallback(
-    (key: FilterKey, value: string) => {
+    (key: ApiLogsServerFilterKey, value: string) => {
       setUrl({ [key]: value, page: '' });
     },
     [setUrl],
   );
 
+  const statsQuery = useAPICallLogStats(startInstant, endInstantExclusive);
   const {
     data: stats,
     isLoading: statsLoading,
-    error: statsError,
     refetch: refetchStats,
-  } = useQuery<APICallLogStats>({
-    queryKey: ['api-log-stats', startInstant, endInstantExclusive],
-    queryFn: () => getAPICallLogStats(startInstant, endInstantExclusive),
-    refetchInterval: 30_000,
-  });
+  } = statsQuery;
+  const statsState = useDataState(statsQuery);
 
-  const logsQuery = useQuery({
-    queryKey: ['api-logs', page, method, status, endpoint, service, client, key, startInstant, endInstantExclusive],
-    queryFn: () => getAPICallLogs({
-      limit,
-      offset: page * limit,
-      method: method || undefined,
-      status: status || undefined,
-      endpoint: endpoint || undefined,
-      service: service || undefined,
-      client: client || undefined,
-      key: key || undefined,
-      start: startInstant,
-      endExclusive: endInstantExclusive,
-    }),
-    refetchInterval: 10_000,
-  });
-  const { data, isLoading: logsLoading, error: logsError, refetch: refetchLogs } = logsQuery;
+  const logsQuery = useAPICallLogs(page, {
+    method: method || undefined,
+    status: status || undefined,
+    endpoint: endpoint || undefined,
+    service: service || undefined,
+    client: client || undefined,
+    key: key || undefined,
+    start: startInstant,
+    endExclusive: endInstantExclusive,
+  }, limit);
+  const { data, isLoading: logsLoading, refetch: refetchLogs } = logsQuery;
+  const logsState = useDataState(logsQuery);
+  const runtimeQuery = useSystemErrorStats();
   const {
     data: runtimeErrors,
     isLoading: runtimeLoading,
-    error: runtimeError,
     refetch: refetchRuntime,
-  } = useQuery<ErrorStats>({
-    queryKey: ['system-error-stats'],
-    queryFn: getErrorStats,
-    refetchInterval: 30_000,
-  });
+  } = runtimeQuery;
+  const runtimeState = useDataState(runtimeQuery);
 
   const logs = data?.data ?? [];
   const total = data?.total ?? 0;
   const hasFilters = !!(method || status || endpoint || service || client || key);
+  const serverFilters = useMemo<ApiLogsServerFilters>(
+    () => ({ method, status, endpoint, service, client, key }),
+    [method, status, endpoint, service, client, key],
+  );
 
   const clearFilters = useCallback(() => {
     setUrl({ method: '', status: '', endpoint: '', service: '', client: '', key: '', page: '' });
@@ -219,11 +168,11 @@ export default function ApiLogsPage() {
       deriveServiceOptions({
         byService: stats?.by_service,
         activeService: service,
-        labelFor: (svc) => serviceBadgeConfig(svc).label,
-        allLabel: t('apiLogs.allServices', 'All Services'),
+        labelFor: (svc) => serviceConfig(svc).label,
+        allLabel: t('apiLogs.allServices', 'All services'),
         knownServices: KNOWN_SERVICES,
       }),
-    [stats?.by_service, service, t],
+    [stats?.by_service, service, t, serviceConfig],
   );
 
   // Busiest-first list for the "By Service" rail — quick-pick filter chips
@@ -238,10 +187,11 @@ export default function ApiLogsPage() {
 
   const methodOptions = useMemo(
     () => [
-      { value: '', label: t('apiLogs.allMethods', 'All Methods') },
+      { value: '', label: t('apiLogs.allMethods', 'All methods') },
       { value: 'GET', label: 'GET' },
       { value: 'POST', label: 'POST' },
       { value: 'PUT', label: 'PUT' },
+      { value: 'PATCH', label: 'PATCH' },
       { value: 'DELETE', label: 'DELETE' },
     ],
     [t],
@@ -249,11 +199,11 @@ export default function ApiLogsPage() {
 
   const statusOptions = useMemo(
     () => [
-      { value: '', label: t('apiLogs.allStatus', 'All Status') },
-      { value: '2xx', label: '2xx Success' },
-      { value: '3xx', label: '3xx Redirect' },
-      { value: '4xx', label: '4xx Client Error' },
-      { value: '5xx', label: '5xx Server Error' },
+      { value: '', label: t('apiLogs.allStatus', 'All status') },
+      { value: '2xx', label: t('apiLogs.statusSuccess', '2xx success') },
+      { value: '3xx', label: t('apiLogs.statusRedirect', '3xx redirect') },
+      { value: '4xx', label: t('apiLogs.statusClientError', '4xx client error') },
+      { value: '5xx', label: t('apiLogs.statusServerError', '5xx server error') },
     ],
     [t],
   );
@@ -292,122 +242,56 @@ export default function ApiLogsPage() {
   }, [exportFilename, logs]);
 
   return (
-    <PageContainer
-      title={t('apiLogs.title', 'API Logs')}
+    <PageLayout
+      title={t('apiLogs.title', 'API logs')}
       subtitle={t('apiLogs.subtitle', 'Record of all API calls with request/response details')}
       query={logsQuery}
+      busy={logsQuery.isFetching}
+      secondaryActions={
+        <Button
+          variant="ghost"
+          size="sm"
+          icon={<RefreshCw className="h-4 w-4" aria-hidden="true" />}
+          disabled={logsQuery.isFetching || statsQuery.isFetching || runtimeQuery.isFetching}
+          onClick={() => { void refetchLogs(); void refetchStats(); void refetchRuntime(); }}
+        >
+          {t('common.refresh', 'Refresh')}
+        </Button>
+      }
     >
       {/* 1 — KPI band: full-width responsive metric grid */}
       <FadeIn>
-        <section
-          aria-label={t('apiLogs.title', 'API Logs')}
-          className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4"
-        >
-          <StatCard
-            loading={statsLoading && !stats}
-            icon={<FileText className="h-5 w-5" aria-hidden="true" />}
-            label={t('apiLogs.totalCalls', 'Total Calls')}
-            value={stats?.total_calls != null ? fmtInt(stats.total_calls) : '—'}
-          />
-          <StatCard
-            loading={statsLoading && !stats}
-            icon={<AlertTriangle className="h-5 w-5" aria-hidden="true" />}
-            label={t('apiLogs.errorRate', 'Error Rate')}
-            value={stats ? `${fmtNumber(stats.error_rate)}%` : '—'}
-            trend={stats && stats.error_rate > 5
-              ? { direction: 'up' as const, value: String(stats.error_count ?? 0), positive: false }
-              : undefined}
-          />
-          <StatCard
-            loading={statsLoading && !stats}
-            icon={<Clock className="h-5 w-5" aria-hidden="true" />}
-            label={t('apiLogs.avgDuration', 'Avg Duration')}
-            value={stats ? `${fmtInt(stats.avg_duration_ms ?? 0)}ms` : '—'}
-          />
-          <StatCard
-            loading={statsLoading && !stats}
-            icon={<Activity className="h-5 w-5" aria-hidden="true" />}
-            label={t('apiLogs.last24h', 'Last 24h')}
-            value={stats?.last_24h != null ? fmtInt(stats.last_24h) : '—'}
-          />
-        </section>
+        <ApiLogsSummary state={statsState} loading={statsLoading && !stats}
+          start={startInstant} endExclusive={endInstantExclusive} timezone={timezone} allTime={presetId === 'all'} />
       </FadeIn>
 
       <FadeIn delay={0.05}>
         <Caption className="block">
           {t('apiLogs.statsScope', 'API call totals and service counts use the View settings range. Service, method, status, endpoint, app key, and installation filters apply only to the request list.')}
         </Caption>
-        <section
-          aria-label={t('apiLogs.errorDiagnostics', 'Error diagnostics')}
-          className="mt-4 grid gap-4 lg:grid-cols-2"
-        >
-          <GlassPanel className="p-4 sm:p-5">
-            <PanelTitle>{t('apiLogs.backendErrors', 'Backend runtime errors')}</PanelTitle>
-            <Caption className="mt-1 block">
-              {t('apiLogs.backendScope', 'Since the current API process started; independent of API call filters.')}
-            </Caption>
-            {runtimeLoading && !runtimeErrors ? (
-              <Skeleton className="mt-4 h-16" />
-            ) : runtimeError ? (
-              <QueryError error={runtimeError} onRetry={() => refetchRuntime()} />
-            ) : runtimeErrors ? (
-              <>
-                <Text as="p" className="mt-3">
-                  {t('apiLogs.runtimeTotal', '{{count}} errors · uptime {{uptime}}', {
-                    count: runtimeErrors.total_errors ?? 0,
-                    uptime: runtimeErrors.uptime || '—',
-                  })}
-                </Text>
-                {Object.keys(runtimeErrors.by_code ?? {}).length ? (
-                  <ul className="mt-3 max-h-48 space-y-2 overflow-y-auto">
-                    {Object.entries(runtimeErrors.by_code ?? {})
-                      .sort((a, b) => b[1].count - a[1].count)
-                      .map(([code, entry]) => (
-                        <li key={code} className="flex items-start justify-between gap-3 border-t border-[var(--glass-border)] pt-2">
-                          <div className="min-w-0">
-                            <Text as="p" variant="bodySm" weight="medium">{code}</Text>
-                            <Caption className="block break-words">{entry.last_message || '—'}</Caption>
-                            {entry.last_seen && <Caption className="block"><DateTime value={entry.last_seen} in="utc" /></Caption>}
-                          </div>
-                          <Badge variant="warning" size="sm">{fmtInt(entry.count)}</Badge>
-                        </li>
-                      ))}
-                  </ul>
-                ) : (
-                  <Caption className="mt-3 block">{t('apiLogs.noRuntimeErrors', 'No backend runtime errors in this process.')}</Caption>
-                )}
-              </>
-            ) : (
-              <Caption className="mt-3 block">{t('apiLogs.runtimeUnavailable', 'Backend runtime error summary unavailable.')}</Caption>
-            )}
-          </GlassPanel>
-          <GlassPanel className="p-4 sm:p-5">
-            <FrontendErrorsCard />
-          </GlassPanel>
-        </section>
       </FadeIn>
 
-      {/* 2 — Bento: filter/service rail + hero log table. More width ⇒ more
-             room for the table, never a centered strip on wide monitors. */}
+      {/* Full-width evidence workspace; server predicates stay separate from column layout. */}
       <FadeIn delay={0.1}>
         <section
-          aria-label={t('apiLogs.logTitle', 'API Call Log')}
-          className="grid grid-cols-1 gap-4 xl:grid-cols-3 xl:gap-5 3xl:grid-cols-4"
+          aria-label={t('apiLogs.logTitle', 'API call log')}
+          className="min-w-0 space-y-3"
         >
-          {/* Left rail — service breakdown + filters (1 col at every width) */}
-          <div className="space-y-4 xl:space-y-5">
+          {/* Service quick-picks complement the server-owned column filters. */}
+          <div className="space-y-3">
             {/* By Service — quick-pick filter list with counts */}
-            <GlassPanel className="p-4 sm:p-5">
-              <div className="mb-3 flex items-center gap-2">
+            <GlassPanel className="p-3 sm:p-4">
+              <div className="mb-2 flex items-center gap-2">
                 <Layers className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-                <PanelTitle>{t('apiLogs.byService', 'By Service')}</PanelTitle>
+                <PanelTitle>{t('apiLogs.byService', 'By service')}</PanelTitle>
               </div>
+              <StaleRefreshWarning state={statsState} label={t('apiLogs.byService', 'By service')} hideRetry />
               {statsLoading && !stats ? (
                 <div className="space-y-2">
                   {Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} height={32} />)}
                 </div>
-              ) : statsError ? (
-                <QueryError error={statsError} onRetry={() => refetchStats()} />
+              ) : statsState.fatalError ? (
+                <QueryError error={statsState.fatalError} onRetry={() => refetchStats()} />
               ) : serviceRows.length === 0 ? (
                 // no-action: the header's View settings controls this window; no service rows exist yet.
                 <EmptyState
@@ -415,9 +299,9 @@ export default function ApiLogsPage() {
                   message={t('apiLogs.noServices', 'No service activity yet')}
                 />
               ) : (
-                <ul className="space-y-1">
+                <ul className="flex flex-wrap gap-1.5">
                   {serviceRows.map(({ svc, count }) => {
-                    const cfg = serviceBadgeConfig(svc);
+                    const cfg = serviceConfig(svc);
                     const active = service === svc;
                     return (
                       <li key={svc}>
@@ -427,7 +311,7 @@ export default function ApiLogsPage() {
                           aria-pressed={active}
                           onClick={() => selectService(active ? '' : svc)}
                           className={cn(
-                            'w-full !h-auto !justify-between gap-2 rounded-lg !px-2.5 !py-2 !font-normal',
+                            '!h-auto !justify-between gap-2 rounded-lg !px-2.5 !py-1.5 !font-normal',
                             active && 'bg-white/[0.06] ring-1 ring-inset ring-cyan-400/30',
                           )}
                         >
@@ -451,81 +335,14 @@ export default function ApiLogsPage() {
               )}
             </GlassPanel>
 
-            {/* Filters */}
-            <GlassPanel className="p-4 sm:p-5">
-              <div className="mb-3 flex items-center gap-2">
-                <Filter className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-                <PanelTitle>{t('apiLogs.filters', 'Filters')}</PanelTitle>
-                {hasFilters && (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    icon={<X className="h-3.5 w-3.5" aria-hidden="true" />}
-                    onClick={clearFilters}
-                    className="ml-auto"
-                  >
-                    {t('apiLogs.clear', 'Clear')}
-                  </Button>
-                )}
-              </div>
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-1">
-                <Select
-                  label={t('apiLogs.service', 'Service')}
-                  value={service}
-                  onChange={(e) => selectService(e.target.value)}
-                  options={serviceOptions}
-                  size="sm"
-                />
-                <Select
-                  label={t('apiLogs.method', 'Method')}
-                  value={method}
-                  onChange={(e) => setFilter('method', e.target.value)}
-                  options={methodOptions}
-                  size="sm"
-                />
-                <Select
-                  label={t('apiLogs.status', 'Status')}
-                  value={status}
-                  onChange={(e) => setFilter('status', e.target.value)}
-                  options={statusOptions}
-                  size="sm"
-                />
-                <Input
-                  label={t('apiLogs.endpoint', 'Endpoint')}
-                  type="text"
-                  icon={<Search className="h-4 w-4" aria-hidden="true" />}
-                  placeholder={t('apiLogs.filterEndpoint', 'Filter by endpoint...')}
-                  value={endpoint}
-                  onChange={(e) => setFilter('endpoint', e.target.value)}
-                  size="sm"
-                />
-                <Input
-                  label={t('apiLogs.client', 'App installation')}
-                  type="text"
-                  placeholder={t('apiLogs.filterClient', 'Platform or installation ID...')}
-                  value={client}
-                  onChange={(e) => setFilter('client', e.target.value)}
-                  size="sm"
-                />
-                <Input
-                  label={t('apiLogs.key', 'App key')}
-                  type="text"
-                  placeholder={t('apiLogs.filterKey', 'Key name or ID...')}
-                  value={key}
-                  onChange={(e) => setFilter('key', e.target.value)}
-                  size="sm"
-                />
-              </div>
-            </GlassPanel>
           </div>
 
           {/* Hero — API call log table (grows with the viewport) */}
-          <GlassPanel className="overflow-hidden xl:col-span-2 3xl:col-span-3">
+          <GlassPanel className="min-w-0">
             {/* Header with export */}
-            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--glass-border)] p-4">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--glass-border)] p-3">
               <div className="min-w-0">
-                <PanelTitle>{t('apiLogs.logTitle', 'API Call Log')}</PanelTitle>
+                <PanelTitle>{t('apiLogs.logTitle', 'API call log')}</PanelTitle>
                 <Caption className="mt-0.5 block">
                   {total > 0
                     ? t('apiLogs.showing', {
@@ -534,27 +351,61 @@ export default function ApiLogsPage() {
                         total: fmtInt(total),
                         defaultValue: `Showing ${page * limit + 1}–${Math.min((page + 1) * limit, total)} of ${fmtInt(total)}`,
                       })
-                    : t('apiLogs.totalCount', '{{count}} total', { count: 0 })}
+                    : data ? t('apiLogs.totalCount', '{{count}} total', { count: 0 }) : '—'}
+                </Caption>
+                <Caption className="mt-1 block">
+                  {t('apiLogs.loadedPageScope', 'Newest first. Filters query all matching requests; exports include only this loaded page.')}
                 </Caption>
               </div>
-              <ListExportMenu
-                onExportCsv={handleExportCsv}
-                onExportJson={handleExportJson}
-                visibleCount={logs.length}
-                disabled={logs.length === 0}
-                testId="api-logs-export"
-              />
             </div>
 
+            <StaleRefreshWarning state={logsState} label={t('apiLogs.logTitle', 'API call log')} hideRetry />
+            <ApiLogsEvidenceTable
+              logs={logs}
+              paginationControls={{
+                page: page + 1,
+                pageSize: limit,
+                total,
+                onPageChange: (next) => setPage(next - 1),
+                onPageSizeChange: (size) => setUrl({ size: String(size), page: null }),
+              }}
+              serviceConfig={serviceConfig}
+              installationFor={appInstallation}
+              filters={serverFilters}
+              onFilterChange={setFilter}
+              onFiltersClear={clearFilters}
+              methodOptions={methodOptions}
+              statusOptions={statusOptions}
+              serviceOptions={serviceOptions}
+              toolbarHeading={
+                <Caption>{t('apiLogs.inspectHint', 'Expand a request to inspect headers, bodies, and metadata.')}</Caption>
+              }
+              controls={{
+                search: {
+                  value: endpoint,
+                  onChange: (value) => setFilter('endpoint', value),
+                  ariaLabel: t('apiLogs.filterEndpoint', 'Filter by endpoint...'),
+                  placeholder: t('apiLogs.filterEndpoint', 'Filter by endpoint...'),
+                  historyScope: 'api-logs',
+                },
+                exports: {
+                  onExportCsv: handleExportCsv,
+                  onExportJson: handleExportJson,
+                  visibleCount: logs.length,
+                  disabled: logs.length === 0,
+                  testId: 'api-logs-export',
+                },
+              }}
+            />
             {logsLoading && logs.length === 0 ? (
               <div className="divide-y divide-[var(--glass-border)]">
                 {Array.from({ length: 8 }).map((_, i) => (
                   <div key={i} className="px-4 py-3"><Skeleton height={20} /></div>
                 ))}
               </div>
-            ) : logsError ? (
+            ) : logsState.fatalError ? (
               <div className="p-6">
-                <QueryError error={logsError} onRetry={() => refetchLogs()} />
+                <QueryError error={logsState.fatalError} onRetry={() => refetchLogs()} />
               </div>
             ) : logs.length === 0 ? (
               <EmptyState
@@ -565,155 +416,25 @@ export default function ApiLogsPage() {
                   : t('apiLogs.noLogsFound', 'No API call logs found')}
                 action={hasFilters ? { label: t('apiLogs.clear', 'Clear'), onClick: clearFilters } : undefined}
               />
-            ) : (
-              <ul aria-label={t('apiLogs.logTitle', 'API Call Log')} className="divide-y divide-[var(--glass-border)]">
-                {logs.map((log: APICallLog) => {
-                  const svc = serviceBadgeConfig(log.service);
-                  const installation = appInstallation(log.request_headers);
-                  const keyName = log.request_headers?.['App-Key-Name'];
-                  const keyId = log.request_headers?.['App-Key-ID'];
-                  const verifiedKey = keyName && /^\d+$/.test(keyId ?? '');
-                  const open = expandedId === log.id;
-                  const detailId = `api-log-${log.id}`;
-                  return (
-                    <li key={log.id}>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        onClick={() => setExpandedId(open ? null : log.id)}
-                        aria-expanded={open}
-                        aria-controls={detailId}
-                        className="w-full !h-auto !justify-start rounded-none !px-4 !py-3 text-left !font-normal hover:bg-white/[0.02]"
-                      >
-                        <Text as="span" size="xs" mono color="muted" className="hidden w-36 shrink-0 sm:block">
-                          <DateTime value={log.ts} in="utc" />
-                        </Text>
-                        <Badge variant={svc.variant} size="sm">{svc.label}</Badge>
-                        {verifiedKey && (
-                          <Badge variant="info" size="sm" title={`${keyName} (#${keyId})`}>
-                            {keyName} #{keyId}
-                          </Badge>
-                        )}
-                        {verifiedKey && installation && (
-                          <Badge variant="neutral" size="sm" title={installation.id}>
-                            {t(`apiLogs.platform.${installation.platform}`, installation.platform)} · {installation.shortId}
-                          </Badge>
-                        )}
-                        <Badge variant={METHOD_VARIANTS[log.http_method] ?? 'neutral'} size="sm">
-                          {log.http_method}
-                        </Badge>
-                        <Text
-                          as="span"
-                          size="xs"
-                          mono
-                          color="secondary"
-                          className="min-w-0 flex-1 truncate"
-                          title={log.endpoint ?? ''}
-                        >
-                          {log.endpoint ?? '—'}
-                        </Text>
-                        <Badge variant={statusBadgeVariant(log.status_code)} size="sm">
-                          {log.status_code ?? t('apiLogs.na', 'N/A')}
-                        </Badge>
-                        <Text as="span" size="xs" mono color="secondary" className="w-16 shrink-0 text-right tabular-nums">
-                          {fmtInt(log.duration_ms ?? 0)}ms
-                        </Text>
-                        <Text as="span" variant="error" className="hidden max-w-[240px] truncate lg:block">
-                          {log.error_message || '—'}
-                        </Text>
-                        {open
-                          ? <ChevronUp className="h-4 w-4 shrink-0 text-[var(--text-muted)]" aria-hidden="true" />
-                          : <ChevronDown className="h-4 w-4 shrink-0 text-[var(--text-muted)]" aria-hidden="true" />}
-                      </Button>
+            ) : null}
 
-                      {/* Mobile date + error (visible on small screens when collapsed) */}
-                      {!open && (
-                        <div className="px-4 pb-2 sm:hidden">
-                          <DateTime value={log.ts} in="utc" className="text-2xs text-[var(--text-muted)]" />
-                          {log.error_message && (
-                            <Text as="p" size="2xs" className="mt-0.5 truncate text-rose-300">{log.error_message}</Text>
-                          )}
-                        </div>
-                      )}
-
-                      {/* Expanded detail */}
-                      {open && (
-                        <div id={detailId} className="space-y-3 bg-[var(--surface-2)] p-4">
-                          <div className="sm:hidden">
-                            <DateTime value={log.ts} in="utc" className="text-2xs text-[var(--text-muted)]" />
-                            {log.error_message && (
-                              <Text as="p" variant="error" className="mt-1">{log.error_message}</Text>
-                            )}
-                          </div>
-                          <div className="space-y-1">
-                            <Label>{t('apiLogs.requestUrl', 'Request URL')}</Label>
-                            <GlassPanel className={cn('overflow-x-auto whitespace-pre-wrap break-all !p-3', typography.role.code)}>
-                              {log.http_method} {log.endpoint}
-                            </GlassPanel>
-                          </div>
-                          <div className="flex flex-wrap gap-x-6 gap-y-1">
-                            <Text as="span" variant="bodySm">{t('apiLogs.service', 'Service')}: {serviceBadgeConfig(log.service).label}</Text>
-                            <Text as="span" variant="bodySm">{t('apiLogs.status', 'Status')}: {log.status_code ?? t('apiLogs.na', 'N/A')}</Text>
-                            <Text as="span" variant="bodySm">{t('apiLogs.duration', 'Duration')}: {fmtInt(log.duration_ms ?? 0)}ms</Text>
-                            <Text as="span" variant="bodySm">{t('apiLogs.vehicleId', 'Vehicle ID')}: {log.vehicle_id ?? '—'}</Text>
-                            <Text as="span" variant="bodySm">{t('apiLogs.rateLimited', 'Rate limited')}: {log.rate_limited ? t('apiLogs.yes', 'Yes') : t('apiLogs.no', 'No')}</Text>
-                            {verifiedKey && (
-                              <Text as="span" variant="bodySm">{t('apiLogs.key', 'App key')}: {keyName} (#{keyId})</Text>
-                            )}
-                            {verifiedKey && installation && (
-                              <div className="flex items-center gap-2">
-                                <Text as="span" variant="bodySm">{t('apiLogs.client', 'App installation')}: {installation.id}</Text>
-                                <CopyButton text={installation.id} iconOnly size="sm" ariaLabel={t('apiLogs.copyClient', 'Copy app installation ID')} />
-                              </div>
-                            )}
-                          </div>
-                          {log.error_message && (
-                            <div className="space-y-1">
-                              <Text as="span" size="xs" weight="medium" className="uppercase tracking-wider text-rose-300">
-                                {t('apiLogs.error', 'Error')}
-                              </Text>
-                              <GlassPanel className={cn('overflow-x-auto whitespace-pre-wrap break-all !p-3', typography.role.error, typography.family.mono)}>
-                                {log.error_message}
-                              </GlassPanel>
-                            </div>
-                          )}
-                          <div className="grid grid-cols-1 gap-3 2xl:grid-cols-2">
-                            <JsonViewer
-                              data={log.request_headers ? JSON.stringify(log.request_headers) : null}
-                              label={t('apiLogs.requestHeaders', 'Request Headers')}
-                            />
-                            <JsonViewer
-                              data={log.response_headers ? JSON.stringify(log.response_headers) : null}
-                              label={t('apiLogs.responseHeaders', 'Response Headers')}
-                            />
-                            <JsonViewer data={log.request_body} label={t('apiLogs.requestBody', 'Request Body')} />
-                            <JsonViewer data={log.response_body} label={t('apiLogs.responseBody', 'Response Body')} />
-                          </div>
-                          <Caption className="block">
-                            {t('apiLogs.captureNote', 'Bodies are recorded only when API_LOG_CAPTURE_BODIES is enabled; payloads are capped at 10 KB. Header values are limited to safe diagnostic fields; credentials are redacted. Missing fields on older records cannot be recovered.')}
-                          </Caption>
-                        </div>
-                      )}
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
-
-            {/* Pagination */}
-            {total > limit && (
-              <div className="border-t border-[var(--glass-border)] px-4 pb-2">
-                <Pagination
-                  page={page + 1}
-                  pageSize={limit}
-                  total={total}
-                  onPageChange={(p) => setPage(p - 1)}
-                />
-              </div>
-            )}
           </GlassPanel>
         </section>
       </FadeIn>
-    </PageContainer>
+      <FadeIn delay={0.15}>
+        <section
+          aria-label={t('apiLogs.errorDiagnostics', 'Error diagnostics')}
+          className="grid gap-3 lg:grid-cols-2"
+        >
+          <ApiLogsBackendErrors
+            data={runtimeErrors}
+            state={runtimeState}
+            loading={runtimeLoading}
+            onRetry={() => refetchRuntime()}
+          />
+          <ApiLogsFrontendErrors />
+        </section>
+      </FadeIn>
+    </PageLayout>
   );
 }

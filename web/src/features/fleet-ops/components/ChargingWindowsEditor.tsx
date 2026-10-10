@@ -54,7 +54,7 @@ export function ChargingWindowsEditor({ value, onChange, error }: ChargingWindow
             onChange={(event) => update(window.key, { day_of_week: Number(event.target.value) })}
             options={dayKeys.map((key, index) => ({
               value: index.toString(),
-              label: t(`fleetOps.days.${key}`, key.toUpperCase()),
+              label: t(`fleetOps.days.${key}`, key.charAt(0).toUpperCase() + key.slice(1)),
             }))}
           />
           <Input

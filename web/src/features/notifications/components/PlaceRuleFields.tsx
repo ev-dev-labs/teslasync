@@ -1,8 +1,9 @@
 import { useTranslation } from 'react-i18next'
 import { useGeofencesFull } from '@/api/hooks/useLocations'
-import { EmptyState, QueryError } from '@/components/feedback'
+import { EmptyState, QueryError, Skeleton, StaleRefreshWarning } from '@/components/feedback'
 import { Select } from '@/components/ui'
 import { PLACE_TRANSITIONS } from '../schemas/alertRule'
+import { useDataState } from '@/hooks/useDataState'
 
 type Transition = typeof PLACE_TRANSITIONS[number]
 
@@ -15,6 +16,8 @@ interface Props {
 export function PlaceRuleFields({ placeId, transition, onChange }: Props) {
   const { t } = useTranslation()
   const places = useGeofencesFull()
+  const source = useDataState(places)
+  const isInitialLoading = places.isLoading && !source.hasData
   const options = (places.data ?? []).filter(place => place.enabled).map(place => ({
     value: String(place.id),
     label: place.name,
@@ -25,8 +28,10 @@ export function PlaceRuleFields({ placeId, transition, onChange }: Props) {
 
   return (
     <div className="mb-4 space-y-3">
-      {places.isError && <QueryError error={places.error} onRetry={() => void places.refetch()} />}
-      {!places.isLoading && !places.isError && options.length === 0 && (
+      <StaleRefreshWarning state={source} label={t('notifications.alertStudio.place.label', 'Place')} />
+      {source.fatalError && <QueryError error={source.fatalError} onRetry={() => void places.refetch()} />}
+      {isInitialLoading && <Skeleton className="h-12 w-full" />}
+      {!isInitialLoading && !source.fatalError && options.length === 0 && (
         <EmptyState
           title={t('notifications.alertStudio.place.emptyTitle', 'No places configured')}
           message={t('notifications.alertStudio.place.empty', 'Add a place before creating an arrival or departure rule.')}
@@ -40,7 +45,7 @@ export function PlaceRuleFields({ placeId, transition, onChange }: Props) {
           value={placeId}
           placeholder={t('notifications.alertStudio.place.choose', 'Choose a place')}
           options={options}
-          disabled={places.isLoading || places.isError || options.length === 0}
+          disabled={isInitialLoading || Boolean(source.fatalError) || options.length === 0}
           onChange={event => onChange(event.target.value, transition as Transition)}
         />
         <Select

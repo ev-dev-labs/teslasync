@@ -152,6 +152,12 @@ type automationActionCallAutomationDTO struct {
 	TargetAutomationID int64  `json:"target_automation_id"`
 }
 
+type automationActionWaitDTO struct {
+	Kind      string `json:"kind"`
+	StepOrder *int   `json:"step_order,omitempty"`
+	DurationS int    `json:"duration_s"`
+}
+
 // historyListResponse wraps paginated history items with summary statistics.
 type historyListResponse struct {
 	Items   []*automationmodel.AutomationHistory `json:"items"`

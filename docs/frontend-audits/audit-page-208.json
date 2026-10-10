@@ -1,0 +1,682 @@
+{
+  "item": "audit-page-208",
+  "phase": 0,
+  "mode": "read-only source audit; report and heartbeat writes only",
+  "page": "web\\src\\features\\telemetry\\pages\\SignalGapDetectorPage.tsx",
+  "routes": [
+    "/signal-gaps"
+  ],
+  "identity": {
+    "component": "SignalGapDetectorPage",
+    "lazyImport": "web\\src\\App.tsx:209",
+    "mountedRoute": "web\\src\\App.tsx:739",
+    "routeBoundary": "SafeRoute name=SignalGapDetector",
+    "sourceSha256": "ee3f395dd56c025906c5a7d060f7f6dd6e4fd1879df37c937adf7f3670e6f293",
+    "lineCount": 100
+  },
+  "purpose": "Inspect current selected-vehicle signal timestamp ages, freshness distribution, worst stale signals and searchable catalog.",
+  "primaryGoal": "Identify which observed signals have stopped arriving without mistaking sleeping vehicles, unknown timestamps or retained responses for vehicle health verdicts.",
+  "dataSources": [
+    {
+      "hook": "useSignalGapAnalysis -> useSignalGaps; SignalCatalogPanel -> useSignalGaps",
+      "file": "web\\src\\api\\hooks\\useTelemetry.ts",
+      "line": 403,
+      "endpoint": "GET /api/v1/signals/{vehicleID}/live",
+      "requestPath": "/signals/${vehicleId}/live",
+      "routeEvidence": "internal\\api\\router.go:4886,4908,4926",
+      "owner": "Existing signalHandler.LiveState; backend response/storage implementation not inspected",
+      "queryKey": [
+        "signal-gaps",
+        "vehicleId"
+      ],
+      "behavior": "Shared cache key, enabled for positive vehicle IDs, forwards AbortSignal, polls INTERVALS.REALTIME; response signals defaults to an empty map. Current UI labels cadence as 5s; constant value not independently inspected.",
+      "units": "Raw signal values preserved as source text; timestamp differences in seconds. No display conversion or wire/cache writes performed.",
+      "backendUnknowns": [
+        "actual response population/completeness",
+        "server freshness policy",
+        "legacy scalar payload availability",
+        "runtime route availability"
+      ]
+    },
+    {
+      "hook": "useSelectedVehicle -> useVehicles",
+      "file": "web\\src\\hooks\\useSelectedVehicle.ts",
+      "line": 49,
+      "endpoint": "GET /api/v1/vehicles",
+      "requestEvidence": "web\\src\\api\\hooks\\useVehicles.ts:73-76",
+      "owner": "Existing workspace selected vehicle hook/store",
+      "behavior": "URL vehicle_id precedes persisted selection and first fleet vehicle; page uses positive effective ID or 0. No competing local vehicle picker.",
+      "evidenceLimit": "Vehicle endpoint route registration not separately audited; incidental settings/formatting requests inside shared summary bridge not traced."
+    }
+  ],
+  "components": [
+    {
+      "name": "PageLayout",
+      "owner": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+      "contract": "PageContainer props forwarded; full-width min-w-0 container; query supplies page freshness, not a whole-page loading gate",
+      "evidence": "PageLayout.tsx:5-15; PageContainer.tsx:102,148-156,222"
+    },
+    {
+      "name": "SignalGapKpis / TelemetrySummaryBrief / OperationalBrief",
+      "owner": "web\\src\\features\\telemetry\\components\\SignalGapKpis.tsx",
+      "contract": "Six raw count/percentage metrics via useOperationalMetrics; existing shared details drawer and narrative preserved",
+      "evidence": "SignalGapKpis.tsx:40-67; TelemetrySummaryBrief.tsx:27-51; OperationalBrief.tsx:43-62,95-116"
+    },
+    {
+      "name": "SignalGapHealthPanel",
+      "owner": "web\\src\\features\\telemetry\\components\\SignalGapHealthPanel.tsx",
+      "contract": "Persistent GlassPanel with distribution strip, four-count legend and EmbeddedChart data table",
+      "evidence": "SignalGapHealthPanel.tsx:64-92,103-165"
+    },
+    {
+      "name": "SignalGapFreshnessPanel",
+      "owner": "web\\src\\features\\telemetry\\components\\SignalGapFreshnessPanel.tsx",
+      "contract": "ProgressRing, receiving denominator, six worst timestamped stale identities; separate never-reported warning",
+      "evidence": "SignalGapFreshnessPanel.tsx:64-129"
+    },
+    {
+      "name": "SignalCatalogPanel / DataTable",
+      "owner": "web\\src\\features\\telemetry\\components\\SignalCatalogPanel.tsx",
+      "contract": "Search, status pills, three sort modes, value filters, persistence ID telemetry:signal-catalog, pagination default 50, shared export pipeline; optional selection API is unused on this page",
+      "evidence": "SignalCatalogPanel.tsx:132-140,197-242,274-349"
+    },
+    {
+      "name": "SourceContent / useDataState / StaleRefreshWarning",
+      "owner": "web\\src\\components\\layout\\layout-reference\\SourceContent.tsx",
+      "contract": "Fatal error only without retained data; shared retry and retained/offline notices. SourceContent supports ready/loading/error/empty/retained plus caller skeleton and recovery",
+      "evidence": "SourceContent.tsx:9-34,43-78; api\\dataState.ts:158-177; StaleRefreshWarning.tsx:59-109"
+    },
+    {
+      "name": "FadeIn",
+      "owner": "web\\src\\components\\motion\\FadeIn.tsx",
+      "contract": "Existing motion preference adapter, reduced initial=false and zero delay; no independent animation system",
+      "evidence": "FadeIn.tsx:24-36"
+    }
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\telemetry\\components\\SignalCatalogPanel.tsx",
+      "line": 68,
+      "rule": "MDC-002 / mission 33 / DRY",
+      "detail": "Catalog duplicates formatStaleness and row/timestamp derivation already provided by signalGapUtils. Catalog computes age at render time whereas summary derives at dataUpdatedAt; thresholds and clocks can disagree.",
+      "fix": "Reuse the existing domain derivation/formatter with explicit rawValue preservation and a deliberate common reference clock; retain current catalog active-through-aging filter semantics pending a separately reviewed behavior correction.",
+      "owner": "page",
+      "confidence": "high",
+      "relatedEvidence": [
+        "SignalCatalogPanel.tsx:101-125",
+        "signalGapUtils.ts:44-80,109-121",
+        "hooks\\useSignalGapAnalysis.ts:43-46"
+      ]
+    }
+  ],
+  "responsive": {
+    "sourceBehavior": "Hero stacks below xl, chart spans two of three columns at xl; min-w-0 guards; catalog toolbar stacks below sm and wraps pills/sort buttons; chart category labels are always shown.",
+    "verifiedWidths": [],
+    "findings": [
+      {
+        "file": "web\\src\\features\\telemetry\\components\\SignalCatalogPanel.tsx",
+        "line": 219,
+        "rule": "MDC-023 / MDC-043 / preservation",
+        "detail": "Only signal name is visibleOnMobile. DataTable derives a mobile allow-list from flagged columns and hides all others below md. This caller supplies no mobilePresentation or detail expansion, so status, last value, timestamp and age lose their direct table presentation on phones.",
+        "fix": "Use the existing typed mobile presentation/detail contract to retain all five cells, or keep all columns in a contained horizontal-scroll strategy; preserve filters, sorting, paging and exports.",
+        "owner": "page",
+        "confidence": "high",
+        "relatedEvidence": [
+          "SignalCatalogPanel.tsx:338-348",
+          "web\\src\\components\\ui\\DataTable.tsx:715-725"
+        ]
+      }
+    ],
+    "unverified": [
+      "ten required viewport widths",
+      "allocated container widths",
+      "translated axis-label overlap at 320px",
+      "200% text",
+      "RTL",
+      "horizontal page overflow"
+    ]
+  },
+  "accessibility": {
+    "sourceStrengths": [
+      "Refresh action localized and named; decorative refresh icon hidden",
+      "Search aria-label and sort aria-pressed",
+      "Health section has localized accessible name",
+      "Distribution legend includes counts, not color alone",
+      "EmbeddedChart receives dataColumns and ariaLabel",
+      "Existing motion preference adapter reused"
+    ],
+    "findings": [
+      {
+        "file": "web\\src\\features\\telemetry\\components\\SignalGapFreshnessPanel.tsx",
+        "line": 66,
+        "rule": "MDC-040 / meaningful visualization name",
+        "detail": "ProgressRing has a domain ariaLabel prop, but freshness caller omits it. Shared fallback names the image generically as Progress: percent; center freshness text is aria-hidden.",
+        "fix": "Pass a localized signal-freshness ariaLabel including the percentage and retain the textual receiving/total context.",
+        "owner": "page",
+        "confidence": "high",
+        "relatedEvidence": [
+          "web\\src\\components\\data-display\\ProgressRing.tsx:13-17,65-69,76-80,103-105"
+        ]
+      },
+      {
+        "file": "web\\src\\features\\telemetry\\components\\SignalCatalogPanel.tsx",
+        "line": 325,
+        "rule": "MDC-026 / MDC-040 / loading announcement",
+        "detail": "SourceContent is always ready except fatal error; initial skeleton and empty body are implemented beneath ready instead of using existing loading/empty states. The wrapper's localized loading status is therefore bypassed.",
+        "fix": "Map trust and no-vehicle/initial/empty cases explicitly through SourceContent, using loadingContent to preserve the eight-row skeleton and specialist emptyContent/recovery where needed.",
+        "owner": "page",
+        "confidence": "high",
+        "relatedEvidence": [
+          "SignalCatalogPanel.tsx:332-356",
+          "SourceContent.tsx:43-57"
+        ]
+      }
+    ],
+    "unverified": [
+      "keyboard/focus behavior",
+      "screen readers",
+      "computed AA contrast",
+      "touch target geometry",
+      "forced colors",
+      "OS reduced motion"
+    ]
+  },
+  "states": {
+    "sourceCoverage": {
+      "noVehicle": "Page AlertBanner, unknown KPI values, panel manage-vehicles actions; catalog still displays generic no-data text.",
+      "loading": "KPI loading flag and panel 260px skeletons; catalog eight-row skeleton.",
+      "empty": "Hero panels use EmptyState; catalog distinguishes empty map from no filter matches; summary currently shows numerical zero buckets and zero freshness after successful empty response.",
+      "fatalError": "Persistent panel shells with QueryError/SourceContent retry; no global content gate.",
+      "refreshError": "useDataState fatal-vs-refresh distinction and StaleRefreshWarning preserve retained data in panels/catalog; summary retained label.",
+      "offline": "Shared DataState exposes paused state and StaleRefreshWarning names retained offline values; initial paused query is not handled as a separate prerequisite in KPI availability.",
+      "partial": "One shared live-map request; source completeness metadata is not inspected or inferred."
+    },
+    "findings": [
+      {
+        "file": "web\\src\\features\\telemetry\\pages\\SignalGapDetectorPage.tsx",
+        "line": 73,
+        "rule": "MDC-026 / unknown is not zero",
+        "detail": "KPI unavailability is fatalError or isLoading without data. A pending but paused initial query can have isLoading=false and no retained data, leaving available=true and emitting six derived zero values. A successful empty map also emits 0% freshness despite the hero panels correctly treating it as no signal data.",
+        "fix": "Base metric availability on sourceState.hasData plus explicit empty-denominator handling, not only isLoading; preserve legitimate zero counts while keeping an unmeasured percentage null. Distinguish initial offline/pending from empty success.",
+        "owner": "page",
+        "confidence": "high",
+        "relatedEvidence": [
+          "SignalGapKpis.tsx:36-52",
+          "signalGapUtils.ts:48,83,104",
+          "api\\dataState.ts:158-177"
+        ]
+      }
+    ]
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\telemetry\\signalGapUtils.ts",
+      "line": 21,
+      "rule": "MDC-010 / MDC-034 / mission 5,27",
+      "detail": "Distribution and gauge use local hardcoded green/amber/red/slate hex colors independent of canonical chart/semantic palette; catalog additionally uses fixed green-400/red-400 age text and purple-400 sort treatment. No neon classes found, but theme/semantic consistency remains source-level debt, not a measured contrast failure.",
+      "fix": "Reuse existing semantic/chart tokens without resetting saved palette preferences; preserve category meaning and text labels. Do not introduce a new palette registry.",
+      "owner": "page",
+      "confidence": "high",
+      "relatedEvidence": [
+        "SignalCatalogPanel.tsx:63-65,313",
+        "SignalGapHealthPanel.tsx:56-59",
+        "SignalGapFreshnessPanel.tsx:26-29"
+      ]
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\features\\telemetry\\components\\SignalCatalogPanel.tsx",
+      "line": 301,
+      "rule": "mission 34 / mounted-page render integrity",
+      "detail": "ArrowUpDown is rendered but not imported or declared in the inspected 368-line dependency. lucide-react import at line 16 includes only Filter, Plus, RefreshCw and X. This is a source-confirmed unresolved identifier in the always-mounted catalog.",
+      "fix": "Import ArrowUpDown from the existing icon library or use the canonical registry without altering sort actions.",
+      "owner": "page",
+      "confidence": "high",
+      "severity": "blocking-source-defect",
+      "evidenceLimit": "No TypeScript/build/browser run; runtime crash is not claimed as exercised."
+    },
+    {
+      "file": "web\\src\\features\\telemetry\\signalGapUtils.ts",
+      "line": 67,
+      "rule": "MDC-026 / consistent timestamp classification",
+      "detail": "Row category/catalog stale filter uses age >300 while bucket, badge and top-stale membership use >=300. At exactly 300 seconds, a stale-badged row counted by stale KPI can be included under active-only and excluded under stale-only. Catalog and summary use different reference clocks as well.",
+      "fix": "Resolve boundaries through existing domain constants/derivation in a narrowly tested logic correction; preserve the intentionally broader catalog active category and all existing filters rather than silently redefining it during styling.",
+      "owner": "page",
+      "confidence": "high",
+      "relatedEvidence": [
+        "SignalCatalogPanel.tsx:64-65,113,131-132",
+        "signalGapUtils.ts:87-92",
+        "hooks\\useSignalGapAnalysis.ts:54"
+      ]
+    },
+    {
+      "file": "web\\src\\features\\telemetry\\signalGapUtils.ts",
+      "line": 116,
+      "rule": "MDC-044 / shared locale/time formatting",
+      "detail": "Both local age formatters build English s/m/h ago strings directly. Localized labels wrap the display but do not localize this relative-age phrase.",
+      "fix": "Reuse existing locale-aware relative timestamp/duration formatting after proving floor/clamp precision parity; do not add another formatter or change raw seconds.",
+      "owner": "page",
+      "confidence": "high",
+      "relatedEvidence": [
+        "SignalCatalogPanel.tsx:74-78,240",
+        "SignalGapFreshnessPanel.tsx:122"
+      ]
+    }
+  ],
+  "priority": {
+    "level": "high",
+    "reason": "Resolve the undefined mounted catalog icon first; then prevent unknown-zero summaries and mobile detail loss before restrained presentation adoption.",
+    "runtimeAcceptance": "unverified"
+  },
+  "requiredSharedChanges": [],
+  "sharedContracts": [
+    {
+      "name": "DataTable mobile full-detail presentation",
+      "existingOwner": "web\\src\\components\\ui\\DataTable.tsx",
+      "propsVariantsStates": [
+        "mobilePresentation typed adapter",
+        "mobileColumns/visibleOnMobile",
+        "tableId persistence",
+        "loaded filtered rows and selection/export scope"
+      ],
+      "usedBy": [
+        "SignalCatalogPanel on /signal-gaps"
+      ],
+      "dependsOn": [
+        "existing caller-owned mobile adapter API"
+      ],
+      "decision": "Reuse existing contract; no shared edit justified by this audit"
+    },
+    {
+      "name": "SourceContent trust states",
+      "existingOwner": "web\\src\\components\\layout\\layout-reference\\SourceContent.tsx",
+      "propsVariantsStates": [
+        "ready",
+        "loading with loadingContent",
+        "error with errorRecovery",
+        "empty with emptyContent/emptyRecovery",
+        "retained"
+      ],
+      "usedBy": [
+        "SignalCatalogPanel"
+      ],
+      "dependsOn": [
+        "useDataState fatal-vs-refresh distinction"
+      ],
+      "decision": "Page adoption only"
+    },
+    {
+      "name": "ProgressRing accessible label",
+      "existingOwner": "web\\src\\components\\data-display\\ProgressRing.tsx",
+      "propsVariantsStates": [
+        "ariaLabel",
+        "value/max",
+        "centerLabel/centerSubLabel",
+        "unknown fallback"
+      ],
+      "usedBy": [
+        "SignalGapFreshnessPanel"
+      ],
+      "dependsOn": [
+        "localized domain label"
+      ],
+      "decision": "Existing prop suffices"
+    },
+    {
+      "name": "OperationalBrief metrics and narrative",
+      "existingOwner": "web\\src\\components\\data-display\\OperationalBrief.tsx",
+      "propsVariantsStates": [
+        "loading",
+        "statusLabel/statusTone",
+        "scope/freshness/provenance",
+        "raw measurements via useOperationalMetrics",
+        "details drawer"
+      ],
+      "usedBy": [
+        "SignalGapKpis via TelemetrySummaryBrief"
+      ],
+      "dependsOn": [
+        "numeric count/percent glossary",
+        "sourceState availability"
+      ],
+      "decision": "Keep current shared owner; do not replace summary with local KPI cards"
+    }
+  ],
+  "competingImplementations": [
+    {
+      "name": "Age normalization and relative-age formatter",
+      "existingOwner": "web\\src\\features\\telemetry\\signalGapUtils.ts",
+      "competitor": "web\\src\\features\\telemetry\\components\\SignalCatalogPanel.tsx:68-125",
+      "resolution": "Deduplicate existing feature helpers with explicit catalog raw value preservation; no new global engine"
+    }
+  ],
+  "preservation": {
+    "sourceSha256": "ee3f395dd56c025906c5a7d060f7f6dd6e4fd1879df37c937adf7f3670e6f293",
+    "currentLineCount": 100,
+    "pageAndFourPresentationDependenciesLineCount": 837,
+    "lineCountPolicy": "Frozen current source snapshot, not a historical pre-refactor baseline; no source changed and no historical >=70% parity claim.",
+    "sections": [
+      {
+        "name": "Signal health summary",
+        "line": 72,
+        "metrics": [
+          "total",
+          "active <30s",
+          "aging <300s",
+          "stale",
+          "never received",
+          "freshness percentage"
+        ]
+      },
+      {
+        "name": "Signal health distribution",
+        "line": 84,
+        "features": [
+          "proportional strip",
+          "four bucket legend/counts",
+          "bar chart",
+          "accessible data columns"
+        ]
+      },
+      {
+        "name": "Freshness and top stale signals",
+        "line": 86,
+        "features": [
+          "gauge",
+          "receiving denominator",
+          "six worst timestamped signals",
+          "never-reported versus all-fresh messages"
+        ]
+      },
+      {
+        "name": "Signal catalog",
+        "line": 92,
+        "features": [
+          "five columns",
+          "name search",
+          "all/stale/active filters",
+          "staleness/alphabetic/category sorts",
+          "value filters",
+          "pagination",
+          "shared table persistence/export",
+          "last refresh timestamp"
+        ]
+      }
+    ],
+    "sectionCount": 4,
+    "pageBands": 3,
+    "staticComponentCounts": {
+      "GlassPanel": 3,
+      "EmbeddedChart": 1,
+      "ChartContainerDirect": 0,
+      "TelemetrySummaryBriefReachableOnThisPage": 1
+    },
+    "actions": [
+      "global refresh",
+      "panel fatal retry",
+      "retained warning retry",
+      "manage vehicles links",
+      "search",
+      "status filtering",
+      "three sort modes",
+      "table value filters",
+      "table paging/visibility/export controls inherited from DataTable",
+      "OperationalBrief details drawer"
+    ],
+    "notActiveHere": [
+      "catalog optional signal selection",
+      "catalog optional second summary",
+      "chart fullscreen/export default disabled by EmbeddedChart"
+    ],
+    "dataBehavior": [
+      "positive selected vehicle enables polling",
+      "shared signal-gaps query key",
+      "AbortSignal forwarded",
+      "scalar/malformed timestamp normalization preserved",
+      "null value renders em dash",
+      "raw signal identity/value not recased",
+      "refresh failures keep retained rows",
+      "never signals stay in freshness denominator",
+      "never signals excluded from top-stale ranking",
+      "SI wire/cache unchanged"
+    ],
+    "workspace": "Current-state route, not a dated historical route. Header vehicle owner is enabled; /signal-gaps is absent from RANGE_ENABLED_PATHS and no redundant range picker is needed. Existing route policy evidence: workspaceScope.ts:23-106,110-135,156-167.",
+    "sourceInventory": [
+      {
+        "path": "docs\\frontend-design-contract.md",
+        "sha256": "17b542389cd4e98a0dfb7b4d2f2c4e2727f221af0ac5acb738db5e987b282255",
+        "lineCount": 394,
+        "inspection": "source read"
+      },
+      {
+        "path": "docs\\frontend-worker-conventions.md",
+        "sha256": "6cf8194644a7820926082fc065e9cbf87c1e1e2d8258c4d092da8c962707adc3",
+        "lineCount": 80,
+        "inspection": "source read"
+      },
+      {
+        "path": "docs\\frontend-mission.md",
+        "sha256": "2bd35429e32d06abf109dd371c2dd011cb974ef6b8c1915b298d1a0c3d7fd98f",
+        "lineCount": 1593,
+        "inspection": "bounded source ranges or searches; hash covers whole file"
+      },
+      {
+        "path": ".github\\skills\\audit-violations\\audit.sh",
+        "sha256": "3e5937ab2a4ea2f303a0152111794d5a3a45c24abfe7b11400079bc4ac3dfe46",
+        "lineCount": 141,
+        "inspection": "source read"
+      },
+      {
+        "path": "web\\src\\features\\telemetry\\pages\\SignalGapDetectorPage.tsx",
+        "sha256": "ee3f395dd56c025906c5a7d060f7f6dd6e4fd1879df37c937adf7f3670e6f293",
+        "lineCount": 100,
+        "inspection": "source read"
+      },
+      {
+        "path": "web\\src\\features\\telemetry\\components\\SignalGapKpis.tsx",
+        "sha256": "7e0878105834f0662ab8b8bb6885e6abedd433b1765cf1fdee9479d6804c8f5f",
+        "lineCount": 71,
+        "inspection": "source read"
+      },
+      {
+        "path": "web\\src\\features\\telemetry\\components\\SignalGapHealthPanel.tsx",
+        "sha256": "b3668d7f771e7e3663eb85c6d179a3104892ad058cc416e2dc41463ab60deb43",
+        "lineCount": 165,
+        "inspection": "source read"
+      },
+      {
+        "path": "web\\src\\features\\telemetry\\components\\SignalGapFreshnessPanel.tsx",
+        "sha256": "e15f9da735ccf114c3d56942274184928773c6c87dd8f885507fb9f7595302eb",
+        "lineCount": 133,
+        "inspection": "source read"
+      },
+      {
+        "path": "web\\src\\features\\telemetry\\components\\SignalCatalogPanel.tsx",
+        "sha256": "a6428cf0b0c2b6950872a43ac1f05190b11c2feb73fc117586b1339255afe22f",
+        "lineCount": 368,
+        "inspection": "source read"
+      },
+      {
+        "path": "web\\src\\features\\telemetry\\hooks\\useSignalGapAnalysis.ts",
+        "sha256": "7b5b692fbf6495f08e69577bc5b408777696bf08fe73bf32ec58ef0c8ba87496",
+        "lineCount": 69,
+        "inspection": "source read"
+      },
+      {
+        "path": "web\\src\\features\\telemetry\\signalGapUtils.ts",
+        "sha256": "0b95a1b7e83c61eb92f45f6ca60ddddd4aa09593dec6d486a0fe8a9d03a33308",
+        "lineCount": 121,
+        "inspection": "source read"
+      },
+      {
+        "path": "web\\src\\features\\telemetry\\components\\operationalbrief-all\\TelemetrySummaryBrief.tsx",
+        "sha256": "1654daf6a1f7d0f3810641b017213494725a9e4326f7e6095c3eba38158c134b",
+        "lineCount": 53,
+        "inspection": "source read"
+      },
+      {
+        "path": "web\\src\\api\\hooks\\useTelemetry.ts",
+        "sha256": "5d042611bb8cfccc88904d1acd2f29ed27b09cc29647e218809d88df29850e50",
+        "lineCount": 665,
+        "inspection": "bounded source ranges or searches; hash covers whole file"
+      },
+      {
+        "path": "web\\src\\api\\hooks\\useVehicles.ts",
+        "sha256": "1d7ae8f07fd26c99622e84be1e6e80b6e7c92e0fb6f17964d06de4017d634d4b",
+        "lineCount": 1898,
+        "inspection": "bounded source ranges or searches; hash covers whole file"
+      },
+      {
+        "path": "web\\src\\hooks\\useDataState.ts",
+        "sha256": "785bd47e706b066874bec8999d51093982e93b9680b8dec16bddc023dc57fb9b",
+        "lineCount": 65,
+        "inspection": "source read"
+      },
+      {
+        "path": "web\\src\\hooks\\useSelectedVehicle.ts",
+        "sha256": "c52768ea42f3e8dd34399f1372a09eb3f70d6c6cb2dddbc41790a6d30e7c4ae3",
+        "lineCount": 174,
+        "inspection": "source read"
+      },
+      {
+        "path": "web\\src\\api\\dataState.ts",
+        "sha256": "21fb454b3c1f01608169f3f3887911de97f7c754663cc001236ebfde58211761",
+        "lineCount": 434,
+        "inspection": "bounded source ranges or searches; hash covers whole file"
+      },
+      {
+        "path": "web\\src\\lib\\workspaceScope.ts",
+        "sha256": "aeb8c01d410f2377aa5fd713de1a678a0360acf647a9c882f03e46c80efdfcd7",
+        "lineCount": 168,
+        "inspection": "bounded source ranges or searches; hash covers whole file"
+      },
+      {
+        "path": "web\\src\\App.tsx",
+        "sha256": "23a1ce852d2ce51df5a26a5c2a5669ffa788a992355a8bcfafb391c82b47def3",
+        "lineCount": 918,
+        "inspection": "bounded source ranges or searches; hash covers whole file"
+      },
+      {
+        "path": "internal\\api\\router.go",
+        "sha256": "98b92853ebade3db74ad361d098bba4472039884a407d61ce901dc3bf1fe3750",
+        "lineCount": 5366,
+        "inspection": "bounded source ranges or searches; hash covers whole file"
+      },
+      {
+        "path": "web\\src\\components\\charts\\EmbeddedChart.tsx",
+        "sha256": "58c2c8279d0d050b9bd9b9df556bedd70713607a196488943d9425774f475721",
+        "lineCount": 42,
+        "inspection": "source read"
+      },
+      {
+        "path": "web\\src\\components\\data-display\\ProgressRing.tsx",
+        "sha256": "b00c58b842b4d64284f2fc202a464cb9360a72ca191591953fe8d3ab768da139",
+        "lineCount": 132,
+        "inspection": "source read"
+      },
+      {
+        "path": "web\\src\\components\\data-display\\OperationalBrief.tsx",
+        "sha256": "b24b19024effebb6d8457171be61e6899672cd8f668b41bb3814aeb29ada42e5",
+        "lineCount": 303,
+        "inspection": "bounded source ranges or searches; hash covers whole file"
+      },
+      {
+        "path": "web\\src\\components\\feedback\\StaleRefreshWarning.tsx",
+        "sha256": "6103ced7af551c52dd32499d8c62ab3ad479a8adf230d3c8059fa8b5199e87d0",
+        "lineCount": 115,
+        "inspection": "source read"
+      },
+      {
+        "path": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+        "sha256": "8df73de2d4b3ff7485019389f547d863fe8729aa0c95fa1f497487389d6b87f6",
+        "lineCount": 17,
+        "inspection": "source read"
+      },
+      {
+        "path": "web\\src\\components\\layout\\layout-reference\\SourceContent.tsx",
+        "sha256": "283583e259342620cb0e24429e3f66fb6385f16498d869192f36cffcff9eec43",
+        "lineCount": 72,
+        "inspection": "source read"
+      },
+      {
+        "path": "web\\src\\components\\layout\\PageContainer.tsx",
+        "sha256": "0e2e1842fcac1fe5bd7c4c37299a76f9515d45eafe43ad122a8e09a0bb817d55",
+        "lineCount": 259,
+        "inspection": "bounded source ranges or searches; hash covers whole file"
+      },
+      {
+        "path": "web\\src\\components\\motion\\FadeIn.tsx",
+        "sha256": "8624fff5c039500e35b04dd4a53d3697a7186a92bdc922bb2a8e1f69001da32f",
+        "lineCount": 39,
+        "inspection": "source read"
+      },
+      {
+        "path": "web\\src\\components\\ui\\DataTable.tsx",
+        "sha256": "92e3a46f15e401b57303823693aac8825693b4edc2b04cfe289663d8e1386438",
+        "lineCount": 1687,
+        "inspection": "bounded source ranges or searches; hash covers whole file"
+      }
+    ]
+  },
+  "evidenceLimits": {
+    "runtime": "unverified",
+    "visual": "unverified",
+    "keyboard": "unverified",
+    "contrast": "unverified",
+    "viewport": "unverified",
+    "tests": "NOTRUN",
+    "typescript": "NOTRUN: assignment explicitly prohibits full gates",
+    "auditSkillScript": "Inspected but NOTRUN because it unconditionally invokes project npx tsc --noEmit; bounded read-only static scans used instead.",
+    "sourceScans": {
+      "scope": "root page plus seven explicit feature dependencies",
+      "rawInteractiveHtml": 0,
+      "directRestrictedLibraries": 0,
+      "legacyApiImports": 0,
+      "neonText": 0,
+      "exitCode": 0,
+      "output": "rawInteractiveHtml=0\ndirectRestrictedLibraries=0\nlegacyApiImports=0\nneonText=0\nGlassPanelOpen=3\nEmbeddedChartOpen=1\nChartContainerOpen=0"
+    },
+    "sourceScanMethod": "PowerShell Get-Content over explicit eight paths; regex counts for <(button|input|textarea|select|table), direct recharts/react-leaflet/framer-motion imports, legacy API imports, text-neon-, GlassPanel/EmbeddedChart/ChartContainer openings. Dynamic inline width/color/maxHeight are present and not categorized as static CSS-variable violations.",
+    "inspectionScope": "Full root and seven explicit feature dependencies; shared owners and routing/workspace/hooks inspected in bounded ranges or line-cited searches only. No application-wide semantic inventory.",
+    "backend": "Router GET registration inspected only; no handler/query mutation or server validation.",
+    "missingSearchPath": "web\\src\\api\\queryConfig.ts does not exist; no contents inferred.",
+    "noAcceptanceBorrowed": true,
+    "mutations": "Only assigned audit JSON and heartbeat; no source/shared/queue edits, Git operations, network actions or full gates."
+  },
+  "filesRead": [
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\telemetry\\pages\\SignalGapDetectorPage.tsx",
+    "web\\src\\features\\telemetry\\components\\SignalGapKpis.tsx",
+    "web\\src\\features\\telemetry\\components\\SignalGapHealthPanel.tsx",
+    "web\\src\\features\\telemetry\\components\\SignalGapFreshnessPanel.tsx",
+    "web\\src\\features\\telemetry\\components\\SignalCatalogPanel.tsx",
+    "web\\src\\features\\telemetry\\hooks\\useSignalGapAnalysis.ts",
+    "web\\src\\features\\telemetry\\signalGapUtils.ts",
+    "web\\src\\features\\telemetry\\components\\operationalbrief-all\\TelemetrySummaryBrief.tsx",
+    "web\\src\\api\\hooks\\useTelemetry.ts",
+    "web\\src\\api\\hooks\\useVehicles.ts",
+    "web\\src\\hooks\\useDataState.ts",
+    "web\\src\\hooks\\useSelectedVehicle.ts",
+    "web\\src\\api\\dataState.ts",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\App.tsx",
+    "internal\\api\\router.go",
+    "web\\src\\components\\charts\\EmbeddedChart.tsx",
+    "web\\src\\components\\data-display\\ProgressRing.tsx",
+    "web\\src\\components\\data-display\\OperationalBrief.tsx",
+    "web\\src\\components\\feedback\\StaleRefreshWarning.tsx",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\layout\\layout-reference\\SourceContent.tsx",
+    "web\\src\\components\\layout\\PageContainer.tsx",
+    "web\\src\\components\\motion\\FadeIn.tsx",
+    "web\\src\\components\\ui\\DataTable.tsx"
+  ],
+  "ownedFiles": [
+    "docs\\frontend-audits\\audit-page-208.json",
+    ".agent-status\\audit-page-208.txt"
+  ]
+}

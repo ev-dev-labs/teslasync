@@ -14,6 +14,16 @@
 version: 1
 
 slos:
+  - name: guard_config_availability
+    description: "Saved guard policy reads and writes must report persistence and arming failures honestly."
+    sli:
+      good_events: "sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/vehicles/[{]vehicleID[}]/guard(/config)?\",status_class!=\"5xx\"}[5m]))"
+      valid_events: "sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/vehicles/[{]vehicleID[}]/guard(/config)?\"}[5m]))"
+    objective: 99.5
+    window: 30d
+    owner: platform
+    tags: [http, guard]
+
   - name: ai_spend_insights_availability
     description: "Subject-scoped AI spend pacing reads must not return server errors."
     sli:

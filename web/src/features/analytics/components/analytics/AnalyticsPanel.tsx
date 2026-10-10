@@ -1,12 +1,12 @@
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { GlassPanel, PanelTitle } from '@/components/ui';
-import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
+import { LayoutCard, SourceContent } from '@/components/layout';
+import { Skeleton, EmptyState } from '@/components/feedback';
 import { cn } from '@/lib/cn';
 
 interface AnalyticsPanelProps {
   /** Panel heading (rendered as an h3 via PanelTitle). */
-  title: ReactNode;
+  title: string;
   /** Optional leading icon — wrapped as decorative (aria-hidden). */
   icon?: ReactNode;
   /** True while the backing query loads its first payload. */
@@ -50,20 +50,23 @@ export function AnalyticsPanel({
 }: AnalyticsPanelProps) {
   const { t } = useTranslation();
   return (
-    <GlassPanel className={cn('p-4 sm:p-5', className)} aria-busy={loading ? true : undefined}>
-      <PanelTitle className="mb-3 flex items-center gap-2">
-        {icon && (
+    <div className={cn('min-w-0', className)} aria-busy={loading ? true : undefined}>
+      <LayoutCard title={title} actions={
+        icon && (
           <span className="inline-flex text-cyan-300" aria-hidden="true">
             {icon}
           </span>
-        )}
-        {title}
-      </PanelTitle>
-      {loading ? (
-        <Skeleton height={skeletonHeight} />
-      ) : error ? (
-        <QueryError error={error} onRetry={onRetry} />
-      ) : isEmpty ? (
+        )
+      }>
+      <SourceContent
+        state={loading ? 'loading' : error ? 'error' : isEmpty ? 'empty' : 'ready'}
+        label={title}
+        emptyMessage={emptyMessage ?? t('common.noAnalyticsRecords', 'No analytics records match the current selection.')}
+        errorMessage={t('error.loadFailed', 'Failed to load data')}
+        error={error}
+        errorRecovery={{ onRetry }}
+        loadingContent={<Skeleton height={skeletonHeight} />}
+        emptyContent={
         // no-action: recovery uses the page-level vehicle and period filters that remain visible.
         <EmptyState
           icon={emptyIcon}
@@ -76,9 +79,11 @@ export function AnalyticsPanel({
             'Adjust the current filters or return after more fleet activity is recorded.',
           )}
         />
-      ) : (
-        children
-      )}
-    </GlassPanel>
+        }
+      >
+        {children}
+      </SourceContent>
+      </LayoutCard>
+    </div>
   );
 }

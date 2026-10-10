@@ -1,0 +1,352 @@
+{
+  "item": "audit-page-218",
+  "page": "web\\src\\features\\vehicle-systems\\pages\\ClimateControlPage.tsx",
+  "routes": ["/climate-control", "/climate"],
+  "purpose": "Source-only Phase 0 audit of the mounted climate/HVAC dashboard and its opt-in propose-only preheat/precool recommender.",
+  "primaryGoal": "Inspect actual cabin/ambient/set-point readings, thermal comfort, HVAC and protection states, seat heating/cooling and historical evidence without confusing missing data, derived scores or AI proposals with measured live state or executed commands.",
+  "dataSources": [
+    {
+      "hook": "useClimate(activeId)",
+      "file": "web\\src\\api\\hooks\\useVehicleSystems.ts",
+      "line": 28,
+      "endpoint": "GET /api/v1/climate/latest?vehicle_id=<selected vehicle>",
+      "owner": "internal\\api\\climate\\handler.go",
+      "ownerLine": 128,
+      "routeEvidence": "internal\\api\\router.go:4116-4118",
+      "behavior": "Workspace vehicle -> string ID; disabled without ID; key ['climate', vehicleId]; STANDARD polling; forwards AbortSignal. Latest implementation calls LiveState and projects climateMappings; despite its historical-state comment, this is not a snapshot-table read. Returned object has mapped values but no observation timestamp added by this handler.",
+      "units": "ClimateState temperatures are Celsius; display-only convertTempFromSI/useUnits. HVAC power is a boolean/state, not a numeric watt measurement.",
+      "trust": "deriveDataState retains payload on refresh errors and paused refresh; page does not configure an age threshold or partial/unavailable flags."
+    },
+    {
+      "hook": "useClimateHistory(activeId)",
+      "file": "web\\src\\api\\hooks\\useVehicleSystems.ts",
+      "line": 37,
+      "endpoint": "GET /api/v1/climate?vehicle_id=<selected vehicle>",
+      "owner": "internal\\api\\climate\\handler.go",
+      "ownerLine": 78,
+      "routeEvidence": "internal\\api\\router.go:4116-4118",
+      "behavior": "Key ['climate','history',vehicleId]; enabled only with ID; AbortSignal and safeArray selection; StateReader.Timeline with forward-folded fields. Handler defaults to seven days and accepts start/end; adds timestamp/created_at aliases and row IDs. Page sends no date bounds, sorts chronology for charts and sorts a separate history array for the table.",
+      "trust": "Historical provenance; completeness and sample density unproven. AC percentage is percentage of returned forward-folded rows, not elapsed-duration duty cycle."
+    },
+    {
+      "hook": "useChargingTelemetryLatest(activeIdNum)",
+      "file": "web\\src\\api\\hooks\\useVehicles.ts",
+      "line": 473,
+      "endpoint": "GET /api/v1/charging-telemetry/latest?vehicle_id=<selected vehicle>",
+      "routeEvidence": "internal\\api\\router.go:4128-4130",
+      "owner": "chargingTelemetryHandler.Latest; handler internals not inspected",
+      "behavior": "Key ['charging-telemetry-latest',vehicleId]; ID > 0 enablement; forwards AbortSignal; optional refetchInterval omitted by page. Supplies not_enough_power_to_heat only; distinct source boundary prevents charging failure from replacing climate readings.",
+      "limits": "Underlying live reader, per-field freshness and null response behavior not verified."
+    },
+    {
+      "hook": "AIPreheatPrecoolRecommender -> useAiStream",
+      "file": "web\\src\\components\\ai\\AIPreheatPrecoolRecommender.tsx",
+      "line": 192,
+      "endpoint": "POST /api/v1/ai/climate/schedule/draft (declared stream URL; exact registered subroute not independently inspected)",
+      "owner": "Existing withAiFeature/useAiStream/AIFeatureCard and backend AI handler registration",
+      "routeEvidence": "internal\\api\\router.go:5076 registers PreheatPrecoolRecommender handler in AI integration",
+      "behavior": "AI mode/per-feature visibility gate; finite cabin/outside readings, positive vehicle and departure required. SI Celsius body; target defaults to 21 C and departure is stable mount-time now + eight hours. Vehicle/departure scopeKey clears obsolete draft scope. Propose-only stream, not a vehicle command or persistence operation.",
+      "limits": "No stream opened; authentication, consent/privacy, error/cancel UI and AI backend behavior not exercised. Exact subroute, guard implementation and useAiStream implementation not read."
+    },
+    {
+      "hook": "useSelectedVehicle/useUnits/useNumberFormatting/useTranslation",
+      "file": "web\\src\\features\\vehicle-systems\\pages\\ClimateControlPage.tsx",
+      "line": 420,
+      "owner": "Existing workspace selection, saved unit and locale infrastructure",
+      "behavior": "No duplicate vehicle picker, local query store or settings write. request client preserves snake_case and adds camelCase aliases (web\\src\\api\\client.ts:284-288). Temperature delta converts a difference by subtracting converted zero, preserving Fahrenheit offset semantics."
+    }
+  ],
+  "components": [
+    {
+      "names": ["PageLayout", "LayoutCard", "CardGrid", "ClimateRenderGrid", "ClimateRenderGroup"],
+      "owner": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+      "evidence": ["ClimateControlPage.tsx:642-678", "components\\climate-modernization\\ClimateRenderGrid.tsx:16-45"],
+      "contract": "Existing PageContainer adapter owns full-width/min-w-0 container; feature grid packs stable IDs in source order; placement consumed below provider; FadeIn and container queries retained."
+    },
+    {
+      "names": ["ClimateSourceBoundary", "SourceContent", "deriveDataState"],
+      "owner": "web\\src\\features\\vehicle-systems\\components\\climate-modernization\\ClimateSourceBoundary.tsx",
+      "evidence": ["ClimateSourceBoundary.tsx:15-34", "web\\src\\components\\layout\\layout-reference\\SourceContent.tsx:41-81"],
+      "contract": "Fatal-only replacement; retained refresh/offline message with per-source retry; persistent panel shell. Page children currently own loading/empty geometry."
+    },
+    {
+      "names": ["ClimateMetricGroup", "ClimateMetric", "VehicleOperationalBrief", "OperationalBrief"],
+      "owner": "web\\src\\features\\vehicle-systems\\components\\operationalbrief-all\\VehicleOperationalBrief.tsx",
+      "evidence": ["ClimateMetricGroup.tsx:15-62", "VehicleOperationalBrief.tsx:28-82"],
+      "contract": "Typed raw metric -> existing useOperationalMetrics; specialist formatter, period, provenance and retained context survive. Status derives from actual values; unknown not replaced by zero."
+    },
+    {
+      "names": ["GlassPanel", "Badge", "Button", "Text", "Caption", "Label", "Skeleton", "EmptyState", "DataTable", "useSortToggle"],
+      "owner": "Existing UI/feedback category barrels; web\\src\\components\\ui\\DataTable.tsx",
+      "contract": "Localized labels, semantic badges and canonical table persistence/filter/sort/pagination pipeline; no raw form/table markup in page."
+    },
+    {
+      "names": ["LinearGauge", "ambientTemperatureGaugeRange", "EmbeddedChart", "ChartLegend", "ChartTooltip"],
+      "owner": "web\\src\\components\\charts\\EmbeddedChart.tsx",
+      "evidence": ["ClimateControlPage.tsx:1387-1437", "ClimateControlPage.tsx:1465-1519"],
+      "contract": "Existing charts barrel, saved palette, chart keys/hidden series, localized accessible names, responsive chart heights and shared animation configuration. EmbeddedChart delegates ChartContainer; export/fullscreen default false here."
+    }
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\vehicle-systems\\pages\\ClimateControlPage.tsx",
+      "line": 368,
+      "rule": "MDC-002 reuse; mission section 4",
+      "detail": "SeatHeaterCard and SeatCoolingCard repeat level/label/icon/badge/unknown presentation; repeated comfort briefs also reproduce source scope/freshness metadata inside nested panels.",
+      "fix": "Consider one feature-local seat-level presenter with heat/cool tone, raw level, localized label and unknown state; consolidate source metadata without dropping individual readings. Existing ClimateMetricGroup is already the numeric/status-bank owner.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "responsive": {
+    "status": "source-inspected; viewport behavior unverified",
+    "evidence": [
+      "ClimateControlPage.tsx:744 uses container-aware one/three temperature columns.",
+      "ClimateControlPage.tsx:794 keeps thermal comfort at three columns even on narrow screens.",
+      "ClimateControlPage.tsx:1216-1271 uses viewport sm/lg seat grids inside a half-width container.",
+      "ClimateControlPage.tsx:1549 selects only timestamp/insideTemp/outsideTemp on mobile."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\vehicle-systems\\pages\\ClimateControlPage.tsx",
+        "line": 794,
+        "rule": "MDC-043 allocated-container responsiveness",
+        "detail": "Three comfort columns contain min-size glyphs/briefs and localized captions; five seat columns can activate from viewport lg despite a half-width parent. Crowding/overflow risk, not a measured viewport failure.",
+        "fix": "Use existing container-aware grid capability to stack/reflow at actual allocated width; test 320/375/390/430 and desktop side-by-side, long labels and large text without removing readings.",
+        "owner": "page",
+        "confidence": "medium"
+      },
+      {
+        "file": "web\\src\\features\\vehicle-systems\\pages\\ClimateControlPage.tsx",
+        "line": 1549,
+        "rule": "MDC-023/MDC-043 no mobile information loss",
+        "detail": "Mobile allow-list hides set-point, fan, HVAC and keeper columns. DataTable.tsx:238-248,725 confirms hidden md:table-cell; caller supplies no mobilePresentation/renderExpanded path for full details.",
+        "fix": "Adopt the canonical DataTable mobile presentation/full-detail contract, retaining all seven fields, source ordering, filters, pagination and stable tableId; do not add a second table engine.",
+        "owner": "integration",
+        "confidence": "high"
+      }
+    ]
+  },
+  "accessibility": {
+    "status": "source-inspected; keyboard, screen reader, focus, effective contrast, touch and forced-colors behavior unverified",
+    "positiveEvidence": [
+      "Localized visible Refresh button uses shared Button; many decorative glyphs explicitly aria-hidden.",
+      "Badges include textual states, numeric levels and unknown markers, not color alone.",
+      "EmbeddedChart callers provide localized title/ariaLabel and shared legend; table uses shared DataTable."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\vehicle-systems\\pages\\ClimateControlPage.tsx",
+        "line": 1386,
+        "rule": "MDC-034/MDC-040 accessible chart alternatives",
+        "detail": "Both charts opt out with no-table comments and pass neither fallback data nor ariaDescription. ChartContainer.tsx:750-798 only renders supplied prose/table. Existing history table covers temperature readings but not the complete fan series/textual time-series relationship; mobile hides operating-state fields.",
+        "fix": "Supply canonical chart fallback data/columns or a useful localized accessible summary while preserving all temperature/AC/fan series and legend persistence. Retain table access to exact readings; verify forced colors and keyboard legends.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\vehicle-systems\\components\\climate-modernization\\ClimateSourceBoundary.tsx",
+        "line": 25,
+        "rule": "MDC-026/MDC-040 loading announcement",
+        "detail": "Boundary maps all nonfatal/nonretained states to ready, including initial loading. Skeleton content bypasses SourceContent's existing role=status loading branch; repeated cards may have no source-local loading announcement.",
+        "fix": "Use SourceContent loading state/loadingContent for source-local geometry and labels without suppressing independent loaded neighbors.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ]
+  },
+  "states": {
+    "initialLoading": "Gauge, banner, system/seat/efficiency/table/chart skeletons exist; isLoading && !data avoids replacing retained readings (page:443-450,682-683,1368-1371). Boundary loading-announcement gap recorded above.",
+    "empty": "History charts and table give specific auto-telemetry explanations; missing gauge uses label EmptyState; other missing fields use dash/Unknown/N/A. Disabled no-vehicle source has no explicit page prerequisite message.",
+    "fatalError": "SourceContent shows source-specific error and retry, leaving other panels intact (ClimateSourceBoundary:23-32).",
+    "refreshError": "Retained body and retry, plus retained briefs; repeated source warnings may be noisy but preserve trust.",
+    "offline": "Paused refresh with retained data is described as retained/offline. Initial paused source/no vehicle can present unknown readings without explicit reason.",
+    "partial": "Individual scalar nulls largely preserved, but derived AC chart maps unknown isAcOn to measured zero.",
+    "stale": "AgeMs exists in DataState but boundary only checks refresh error/blocked refresh. Live handler does not return observation time; brief honestly says observation time unavailable.",
+    "issues": [
+      {
+        "file": "web\\src\\features\\vehicle-systems\\pages\\ClimateControlPage.tsx",
+        "line": 603,
+        "rule": "MDC-026/MDC-045 unknown is not zero",
+        "detail": "acActive: h.isAcOn ? 1 : 0 maps null/undefined to Off. efficiencyStats counts truthy AC rows over every returned row, including unknown AC, so missing states lower the percentage. Existing subtitle does say of samples, not elapsed time.",
+        "fix": "Keep raw nulls in chart and distinguish known/unknown sample coverage. Any adjustment to percentage denominator must be explicitly reviewed as a domain-calculation correction, not hidden in cosmetic migration.",
+        "owner": "integration",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\vehicle-systems\\pages\\ClimateControlPage.tsx",
+        "line": 445,
+        "rule": "MDC-026 freshness/unknown prerequisites",
+        "detail": "No freshness threshold configured; latest response lacks timestamp. Disabled vehicle queries and initial paused fetch are not given distinct prerequisite/offline explanation. Empty object can count as returned evidence.",
+        "fix": "Reuse shared data-state source context for disabled prerequisites, unknown observation time and paused initial load. Integrate a backend-owned observation/freshness contract only after verified support; never equate successful fetch time to signal observation time.",
+        "owner": "integration",
+        "confidence": "high"
+      }
+    ]
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\vehicle-systems\\pages\\ClimateControlPage.tsx",
+      "line": 312,
+      "rule": "MDC-015 surfaces; mission visual intensity",
+      "detail": "LayoutCard encloses repeated GlassPanel/OperationalBrief comfort cards, gauge tiles and seat cards. Repeated titles/source metadata and retained warnings across the same source can compete with the actual HVAC safety reading. No screenshot was assessed.",
+      "fix": "Use existing embedded/plain shared presentation and source hierarchy; reduce repeated framing/metadata while retaining all warnings, specialist context and details.",
+      "owner": "page",
+      "confidence": "medium"
+    },
+    {
+      "file": "web\\src\\features\\vehicle-systems\\pages\\ClimateControlPage.tsx",
+      "line": 112,
+      "rule": "MDC-010/MDC-012 restrained semantic hue",
+      "detail": "Page has no explicit neon/glow/pure-white/shadow classes, but fixed cyan/sky/blue/amber/red/green/purple 300/400 glyph accents recur across unrelated readings (27 matching lines). Level/safety semantics are legitimate; cumulative saturation and theme contrast still require review. Chart gradient at 1494 is inherited palette data presentation, not proof of decorative neon.",
+      "fix": "Subdue nonsemantic icons to current neutral tokens; preserve heat/cool/severity distinctions and saved chart palette choices. Measure composed contrast across themes rather than inventing a new palette or resetting preferences.",
+      "owner": "page",
+      "confidence": "medium"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\features\\vehicle-systems\\pages\\ClimateControlPage.tsx",
+      "line": 447,
+      "rule": "MDC-032 shared date scope",
+      "detail": "Historical charts/aggregate/table consume an unbounded hook call (server default seven days). Neither route appears in RANGE_ENABLED_PATHS (workspaceScope.ts:23-77); no useRangeState consumption.",
+      "fix": "Coordinate both aliases' range registration with typed history hook start/end/query keys and server filtering, preserving rolling/custom/timezone semantics. Do not add a local range picker or filter only loaded rows.",
+      "owner": "integration",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\components\\ai\\AIPreheatPrecoolRecommender.tsx",
+      "line": 209,
+      "rule": "MDC-046 propose-only trust and truthful action destinations",
+      "detail": "Visible AI description instructs Apply on climate controls below, but this page's inspected JSX has no Apply or actual climate mutation controls; seat/system cards are read-only. Do not infer missing controls from comments.",
+      "fix": "Resolve truthful navigation/copy with canonical command/schedule owner before adoption. Preserve propose-only stream and authentication/consent gates; do not invent Apply or wire a vehicle command as an audit fix.",
+      "owner": "integration",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\vehicle-systems\\pages\\ClimateControlPage.tsx",
+      "line": 459,
+      "rule": "MDC-026 independent source registry",
+      "detail": "Page query aggregation includes chargingQuery but named dataSources lists only climate latest/history. Heating-power warning is an independent source and must not become attributed to climate freshness.",
+      "fix": "Coordinate PageContainer data-source contract to include charging warning ownership/enablement; retain its separate boundary and do not duplicate polling or mutation state.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\vehicle-systems\\components\\climate-modernization\\ClimateRenderGrid.tsx",
+      "line": 4,
+      "rule": "MDC-002 category barrel contract",
+      "detail": "Feature adapter imports useCardPlacement directly from layout-reference while other layout consumers use category barrel. No competing layout engine exists, but this couples feature orchestration to shared internals.",
+      "fix": "Confirm/reuse canonical layout category export with shared owner; do not create a replacement placement context. Keep stable group IDs, order and allocated-width behavior.",
+      "owner": "shared",
+      "confidence": "high"
+    }
+  ],
+  "priority": {
+    "level": "high",
+    "reason": "Repair unknown-vs-Off and truthful AI action guidance first; then mobile full-detail access, chart alternatives and age/range/source ownership. Preserve all read-only telemetry and propose-only safeguards.",
+    "runtimeAcceptance": "not established"
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "Canonical DataTable mobile complete-detail adoption",
+      "owner": "web\\src\\components\\ui\\DataTable.tsx",
+      "propsVariantsStates": "Existing mobilePresentation/renderExpanded contract or reviewed equivalent; compact/pagination/sort/value filters and all seven fields; loading/empty/retained unaffected; stable vehicle-systems:climate-history ID.",
+      "usedBy": ["/climate-control", "/climate"],
+      "dependsOn": ["Existing MobileDataTableAdapter API acceptance", "Full-detail keyboard/touch validation"],
+      "changeType": "reuse/integration; missing primitive not established"
+    },
+    {
+      "name": "Climate historical workspace bounds",
+      "owner": "web\\src\\api\\hooks\\useVehicleSystems.ts; web\\src\\lib\\workspaceScope.ts",
+      "propsVariantsStates": "Typed startInstant/endInstantExclusive bounds; scope-aware query keys and AbortSignal; both aliases enabled in shared header; preserve default behavior and historical source-local trust.",
+      "usedBy": ["/climate-control", "/climate"],
+      "dependsOn": ["Server ClimateHandler.List date contract", "Existing range/timezone preference owner", "Other useClimateHistory consumers' compatibility"],
+      "changeType": "extend existing hook/integration, no new selector"
+    },
+    {
+      "name": "Observation freshness and source-local state presentation",
+      "owner": "web\\src\\api\\dataState.ts; web\\src\\components\\layout\\layout-reference\\SourceContent.tsx",
+      "propsVariantsStates": "Reuse loadingContent, errorRecovery, retainedMessage and independent boundaries; explicitly distinguish disabled/no vehicle, initial paused, missing observation timestamp and retained refresh errors. Missing backend observation timestamp owner must be resolved with climate live handler.",
+      "usedBy": ["/climate-control", "/climate"],
+      "dependsOn": ["Verified live response observation metadata", "PageContainer named-source registry contract"],
+      "changeType": "reuse existing state contract; no second trust engine"
+    },
+    {
+      "name": "Truthful propose-only climate AI handoff",
+      "owner": "web\\src\\components\\ai\\AIPreheatPrecoolRecommender.tsx",
+      "propsVariantsStates": "Existing AI gate, finite-input disabling, stream scope/cancel/error behavior and propose-only copy; reviewed destination for manual application rather than nonexistent below-page Apply.",
+      "usedBy": ["/climate-control", "/climate"],
+      "dependsOn": ["Canonical command/schedule owner and permission/consent contracts", "Exact registered AI subroute verification"],
+      "changeType": "shared copy/integration correction; no command execution authorized"
+    }
+  ],
+  "competingImplementations": [
+    {
+      "file": "web\\src\\api\\hooks\\useVehicles.ts",
+      "line": 434,
+      "detail": "A separate useClimateLatest symbol exists beside page's useClimate. Only symbol presence was inspected, not equivalence or consumer graph; do not merge query keys/polling on that evidence."
+    },
+    {
+      "file": "web\\src\\features\\vehicle-systems\\components\\climate-modernization\\ClimateMetricGroup.tsx",
+      "line": 37,
+      "detail": "Feature adapters reuse VehicleOperationalBrief and canonical metric pipeline, not a new shared stats engine. Standalone ClimateMetric ID is climate-single; current page uses groups, so no repeated standalone mounted ID bug is established."
+    }
+  ],
+  "preservation": {
+    "sourceHash": "3B9C8FC9E6F16CE5DDAC11B2142CD2F056824D402E6E5F09BAA9CE50EC07DA26",
+    "hashAlgorithm": "SHA-256",
+    "currentLineCount": 1564,
+    "sectionCount": 11,
+    "sections": ["Optional AI draft", "HVAC status and insufficient power warning", "Temperature gauges", "Thermal comfort", "Climate systems", "Protection and safety", "Seat heating/auto climate/cooling/level legend", "Climate efficiency and comfort score", "Temperature history", "AC state and fan history", "Climate history table"],
+    "counts": {"layoutCards": 10, "glassPanelRenderSites": 4, "embeddedCharts": 2, "metricCardRenderSites": 21, "tableColumns": 7, "temperatureGauges": 3, "heatedSeatPositions": 5, "cooledSeatPositions": 2},
+    "actions": ["Refresh latest climate source", "Per-source fatal/retained retry", "Optional Draft schedule (propose-only)", "Existing table sorting/value filtering/pagination and persistence controls", "Existing chart legend series visibility"],
+    "readings": ["Cabin/outside/driver/passenger temperatures", "Comfort score/delta/status", "HVAC AC/power/auto/keeper/fan speed/fan status", "Steering wheel heater/level/auto", "Defrost/preconditioning/rear defrost/wiper heat/rear display HVAC", "Overheat protection/mode limit/battery heater", "Charging not_enough_power_to_heat", "Five heater levels/two cooling levels/left-right auto-seat/ventilation", "Fan average/peak and AC sample percentage", "All returned history rows and three temperature plus AC/fan series"],
+    "dataBehavior": ["Raw Celsius/cache/wire unchanged; display-only conversion including temperature delta", "Enum/state values must not become fabricated watts", "Forward-folded historical context and returned-sample semantics", "Independent sources and retained payload/retry", "Workspace vehicle owner/no duplicate selector", "Existing query keys, enablement, polling/cancellation and inherited policies", "Stable table/chart/group IDs and localization/locale/preferences", "AI default target/departure remain explicitly defaults, not measured observations"],
+    "commandsAuthTrust": "No actual climate commands/Apply controls exist in inspected page. Do not invent them or execute any mutation. Preserve existing route SafeRoute wrappers, request/auth boundaries, AI mode/per-feature consent and propose-only separation; underlying authentication implementations were not audited."
+  },
+  "evidenceLimits": {
+    "mode": "read-only source inspection; only assigned JSON and heartbeat written",
+    "runtime": "unverified; no browser, server, network requests or real vehicle/AI commands",
+    "visual": "unverified; no screenshots, measured contrast or theme render",
+    "responsive": "unverified at all requested viewport/container sizes",
+    "accessibility": "unverified keyboard/focus/screen-reader/forced-colors/touch/reduced-motion execution",
+    "validation": "No TypeScript, full-repository lint/build or tests run. Skill audit.sh inspected but not executed because it includes project-wide TypeScript; scoped PowerShell source counts used instead. No claim of complete hook/backend/auth coverage.",
+    "commands": [
+      {"command": "Get-FileHash web\\src\\features\\vehicle-systems\\pages\\ClimateControlPage.tsx -Algorithm SHA256", "exitCode": 0, "output": "3B9C8FC9E6F16CE5DDAC11B2142CD2F056824D402E6E5F09BAA9CE50EC07DA26"},
+      {"command": "(Get-Content web\\src\\features\\vehicle-systems\\pages\\ClimateControlPage.tsx).Count", "exitCode": 0, "output": "1564"},
+      {"command": "Select-String page source -CaseSensitive: style=; <(button|input|textarea|select|table)\\b; neon|glow|text-white|bg-white|shadow-", "exitCode": 0, "output": "0; 0; 0"},
+      {"command": "Select-String page source: <LayoutCard\\b; <GlassPanel\\b; <EmbeddedChart\\b; <MetricCard\\b; text-[a-z]+-[34]00", "exitCode": 0, "output": "10; 4; 2; 21; 27 matching lines"},
+      {"command": "Initial powershell rg --files probe", "exitCode": 1, "output": "rg executable not recognized; subsequent glob/source inspection tools used"},
+      {"command": "Initial PowerShell count expression", "exitCode": 1, "output": "ParserError on quote escaping; corrected expression subsequently returned counts. Case-insensitive raw-element match was shared <Button>, corrected -CaseSensitive count is 0."}
+    ],
+    "scope": "Full root page inspected; selected immediate dependency files/ranges inspected. Charging handler, query-provider configuration, authentication guard internals, AI stream/card/HOC implementations, external command application destination and precise AI subroute were not fully traced. Shared snapshot can evolve under concurrent writers; root hash pins this audit."
+  },
+  "filesRead": [
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-mission.md",
+    "docs\\frontend-worker-conventions.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "docs\\frontend-audits\\audit-page-217.json",
+    "web\\src\\features\\vehicle-systems\\pages\\ClimateControlPage.tsx",
+    "web\\src\\features\\vehicle-systems\\components\\climate-modernization\\ClimateRenderGrid.tsx",
+    "web\\src\\features\\vehicle-systems\\components\\climate-modernization\\ClimateSourceBoundary.tsx",
+    "web\\src\\features\\vehicle-systems\\components\\climate-modernization\\ClimateMetricGroup.tsx",
+    "web\\src\\features\\vehicle-systems\\components\\operationalbrief-all\\VehicleOperationalBrief.tsx",
+    "web\\src\\api\\hooks\\useVehicleSystems.ts",
+    "web\\src\\api\\hooks\\useVehicles.ts",
+    "web\\src\\api\\client.ts",
+    "web\\src\\api\\dataState.ts",
+    "web\\src\\types\\vehicle-systems.ts",
+    "web\\src\\App.tsx",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\components\\ai\\AIPreheatPrecoolRecommender.tsx",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\layout\\layout-reference\\SourceContent.tsx",
+    "web\\src\\components\\charts\\EmbeddedChart.tsx",
+    "web\\src\\components\\charts\\ChartContainer.tsx",
+    "web\\src\\components\\ui\\DataTable.tsx",
+    "internal\\api\\router.go",
+    "internal\\api\\climate\\handler.go"
+  ]
+}

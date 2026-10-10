@@ -1,17 +1,21 @@
 import { AlertTriangle, Database, ShieldCheck } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { EmptyState } from '@/components/feedback';
-import { Badge, Text } from '@/components/ui';
+import { Table, Badge, Icon, Text } from '@/components/ui';
 import { formatDateTime } from '@/lib/dateFormat';
-import { fmtNumber } from '@/lib/numberFormat';
+
 import type { DataQuality, Evidence } from '@/types/ownership';
+import type { DataStateSource } from '@/api/dataState';
 import { OwnershipPanel } from './OwnershipPanel';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface EvidencePanelProps {
   quality?: DataQuality | null;
   evidence?: Evidence[] | null;
   limitations?: string[] | null;
   unsupported?: string[] | null;
+  source?: DataStateSource<unknown>;
+  sourceEnabled?: boolean;
 }
 
 function qualityVariant(status: DataQuality['status'] | undefined) {
@@ -31,7 +35,10 @@ export function EvidencePanel({
   evidence,
   limitations,
   unsupported,
+  source,
+  sourceEnabled,
 }: EvidencePanelProps) {
+  const { fmtInt, fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const evidenceItems = evidence ?? [];
   const limitationItems = limitations ?? [];
@@ -40,6 +47,8 @@ export function EvidencePanel({
 
   return (
     <OwnershipPanel
+      source={source}
+      sourceEnabled={sourceEnabled}
       title={t('ownership.evidence.title', 'Evidence, quality, and limitations')}
       description={t(
         'ownership.evidence.subtitle',
@@ -49,10 +58,10 @@ export function EvidencePanel({
       <div className="grid gap-5 lg:grid-cols-3">
         <section
           aria-label={t('ownership.quality.title', 'Data quality')}
-          className="space-y-3"
+          className="min-w-0 space-y-3 break-words"
         >
           <div className="flex items-center gap-2">
-            <ShieldCheck className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+            <Icon icon={ShieldCheck} size="md" className="text-[var(--text-muted)]" />
             <Text as="h3" variant="label">
               {t('ownership.quality.title', 'Data quality')}
             </Text>
@@ -62,34 +71,36 @@ export function EvidencePanel({
               <Badge variant={qualityVariant(quality.status)} dot>
                 {quality.status}
               </Badge>
-              <dl className="space-y-2 text-sm">
-                <div className="flex justify-between gap-3">
-                  <dt className="text-[var(--text-muted)]">
+              <Table aria-label={t('ownership.evidence.title', 'Evidence, quality, and limitations')}><tbody>
+                <tr>
+                  <th scope="row" className="text-[var(--text-muted)]">
                     {t('ownership.quality.samples', 'Samples')}
-                  </dt>
-                  <dd>{fmtNumber(quality.sample_count ?? 0, 0)}</dd>
-                </div>
-                <div className="flex justify-between gap-3">
-                  <dt className="text-[var(--text-muted)]">
+                  </th>
+                  <td className="text-right">
+                    {quality.sample_count != null ? fmtInt(quality.sample_count) : '—'}
+                  </td>
+                </tr>
+                <tr>
+                  <th scope="row" className="text-[var(--text-muted)]">
                     {t('ownership.quality.coverage', 'Coverage')}
-                  </dt>
-                  <dd>
+                  </th>
+                  <td className="text-right">
                     {quality.coverage_pct != null
-                      ? `${fmtNumber(quality.coverage_pct, 1)}%`
+                      ? `${fmtNumber(quality.coverage_pct)}%`
                       : '—'}
-                  </dd>
-                </div>
-                <div className="flex justify-between gap-3">
-                  <dt className="text-[var(--text-muted)]">
+                  </td>
+                </tr>
+                <tr>
+                  <th scope="row" className="text-[var(--text-muted)]">
                     {t('ownership.quality.window', 'Observation window')}
-                  </dt>
-                  <dd className="text-right">
+                  </th>
+                  <td className="text-right">
                     {quality.window_start || quality.window_end
                       ? `${formatDateTime(quality.window_start)} – ${formatDateTime(quality.window_end)}`
                       : '—'}
-                  </dd>
-                </div>
-              </dl>
+                  </td>
+                </tr>
+              </tbody></Table>
               {reasons.map((reason) => (
                 <Text as="p" variant="caption" key={reason}>
                   • {reason}
@@ -105,10 +116,10 @@ export function EvidencePanel({
 
         <section
           aria-label={t('ownership.evidence.sources', 'Evidence sources')}
-          className="space-y-3"
+          className="min-w-0 space-y-3 break-words"
         >
           <div className="flex items-center gap-2">
-            <Database className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+            <Icon icon={Database} size="md" className="text-[var(--text-muted)]" />
             <Text as="h3" variant="label">
               {t('ownership.evidence.sources', 'Evidence sources')}
             </Text>
@@ -117,7 +128,7 @@ export function EvidencePanel({
             evidenceItems.map((item, index) => (
               <div
                 key={`${item.source}-${index}`}
-                className="rounded-lg border border-white/[0.07] bg-white/[0.025] p-3"
+                className="min-w-0 rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3"
               >
                 <Text as="p" variant="label">
                   {item.source}
@@ -145,10 +156,10 @@ export function EvidencePanel({
 
         <section
           aria-label={t('ownership.limitations.title', 'Limitations')}
-          className="space-y-3"
+          className="min-w-0 space-y-3 break-words"
         >
           <div className="flex items-center gap-2">
-            <AlertTriangle className="h-4 w-4 text-amber-300" aria-hidden="true" />
+            <Icon icon={AlertTriangle} size="md" className="text-[var(--semantic-warning)]" />
             <Text as="h3" variant="label">
               {t('ownership.limitations.title', 'Limitations')}
             </Text>
@@ -165,7 +176,7 @@ export function EvidencePanel({
             </Text>
           )}
           {unsupportedItems.length > 0 ? (
-            <div className="rounded-lg border border-amber-400/20 bg-amber-400/[0.06] p-3">
+            <div className="min-w-0 rounded-lg border border-[var(--semantic-warning-border)] bg-[var(--semantic-warning-bg)] p-3">
               <Text as="p" variant="label">
                 {t('ownership.unsupported.title', 'Explicitly not computed')}
               </Text>

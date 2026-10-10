@@ -1,0 +1,318 @@
+{
+  "item": "audit-page-187",
+  "page": "web\\src\\features\\system\\pages\\DBHealthPage.tsx",
+  "routes": ["/db-health"],
+  "purpose": "Read-only operational dashboard for database size, table statistics, schema migration status and connection-pool utilization.",
+  "primaryGoal": "Inspect database storage and runtime health, identify large tables, review migration state and independently refresh the three diagnostic sources.",
+  "dataSources": [
+    {
+      "hook": "useDBStats",
+      "file": "web\\src\\api\\hooks\\useAdmin.ts",
+      "line": 314,
+      "endpoint": "/dev-tools/db-stats",
+      "mountedEndpoint": "/api/v1/dev-tools/db-stats",
+      "routeEvidence": "internal\\api\\router.go:4745,4753",
+      "owner": "internal\\api\\devtools\\database.go:15",
+      "queryKey": ["db-stats"],
+      "pollIntervalMs": 30000,
+      "behavior": "Forwards AbortSignal; retains inherited query policy. Backend returns public table schema/name/row_count, table_count and numeric database_size bytes. Does not currently return size_bytes, index_count or last_vacuum.",
+      "runtimeVerified": false
+    },
+    {
+      "hook": "useMigrations",
+      "file": "web\\src\\api\\hooks\\useAdmin.ts",
+      "line": 322,
+      "endpoint": "/dev-tools/migration-status",
+      "mountedEndpoint": "/api/v1/dev-tools/migration-status",
+      "routeEvidence": "internal\\api\\router.go:4745,4754",
+      "owner": "internal\\api\\devtools\\database.go:73",
+      "queryKey": ["migrations"],
+      "pollIntervalMs": 60000,
+      "behavior": "Forwards AbortSignal. Actual backend payload is version and dirty only; page preserves version/currentVersion compatibility and treats missing pending/history as unknown/empty.",
+      "runtimeVerified": false
+    },
+    {
+      "hook": "useConnectionPool",
+      "file": "web\\src\\api\\hooks\\useAdmin.ts",
+      "line": 330,
+      "endpoint": "/dev-tools/runtime-info",
+      "mountedEndpoint": "/api/v1/dev-tools/runtime-info",
+      "routeEvidence": "internal\\api\\router.go:4745,4758",
+      "owner": "internal\\api\\devtools\\handler.go:381",
+      "queryKey": ["connection-pool"],
+      "pollIntervalMs": 30000,
+      "behavior": "Forwards AbortSignal. Payload supplies max_open/open/in_use/idle/wait_count plus other runtime diagnostics, but no wait_duration_ms. Client exposes snake_case and camelCase keys without manufacturing missing fields.",
+      "runtimeVerified": false
+    }
+  ],
+  "components": [
+    {"name": "PageLayout", "category": "layout", "usage": "Title, subtitle, metadata, refresh action, three query sources; no competing shell or workspace controls."},
+    {"name": "DBHealthSummary", "owner": "web\\src\\features\\system\\components\\statstrip-db-health\\DBHealthSummary.tsx", "usage": "Three independent OperationalBrief source banks; six metrics; useOperationalMetrics, Badge, Text and source timestamps."},
+    {"name": "GlassPanel / PanelTitle / Caption / Label / Text / Button", "category": "ui", "usage": "Existing surfaces, typography, refresh and three pressed sort controls."},
+    {"name": "DataTable", "owner": "web\\src\\components\\ui\\DataTable.tsx", "usage": "Stable tableId, five column renderers, value filters, pagination, persistent layout and existing loaded-row export pipeline."},
+    {"name": "ChartContainer and chart barrel", "category": "charts", "usage": "Horizontal top-15 row-count series, tooltip, accessible data columns and inherited chart interactions."},
+    {"name": "MetricBar", "owner": "web\\src\\components\\data-display\\MetricBar.tsx", "usage": "Null-safe, named pool progressbar; solid fill; reduced-motion-aware animation."},
+    {"name": "TimeStamp / FadeIn / Skeleton / EmptyState / QueryError / StaleRefreshWarning / VisuallyHidden", "usage": "Existing date presentation, entry motion, independent source states, recovery and semantic section headings."},
+    {"name": "useDataState / useNumberFormatting", "usage": "Existing retained-payload trust and user precision/locale subscriptions."}
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\system\\pages\\DBHealthPage.tsx",
+      "line": 32,
+      "rule": "MDC-002/MDC-033: one formatter owner",
+      "detail": "Page-local binary byte formatter overlaps databaseSizeDisplay in DBHealthSummary.tsx:11 and existing numberFormat.ts:163/useNumberFormatting.ts:40. The local formatter also lacks the shared finite-value guard.",
+      "fix": "Reuse the existing preference-aware formatBytes bridge for table cells and the existing shared metric bytes formatting contract; preserve binary scaling, B/KB/MB/GB labels, rounding, locale and zero-versus-missing behavior.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "responsive": {
+    "verified": false,
+    "sourceBehavior": "Both detail grids stack below xl and use a 2:1 split at xl. Table toolbar wraps; chart has fixed 340px height and 140px category axis; migration history and table have bounded scroll regions.",
+    "findings": [
+      {
+        "file": "web\\src\\features\\system\\pages\\DBHealthPage.tsx",
+        "line": 464,
+        "rule": "MDC-023/MDC-043: mobile must preserve all details",
+        "detail": "mobileColumns contains only name/size/rows. DataTable.tsx:725 applies hidden md:table-cell to index and vacuum columns. Page supplies neither mobilePresentation nor expandable row details; these values cannot be inspected in the narrow table even if enabled in the column menu.",
+        "fix": "Opt into the existing mobilePresentation full-detail adapter or an existing accessible detail expansion, preserving index/vacuum information, all filters, ordering, pagination, saved tableId and export scope.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\system\\pages\\DBHealthPage.tsx",
+        "line": 304,
+        "rule": "MDC-043: narrow chart and long labels",
+        "detail": "A fixed 140px Y axis competes with plot width at 320px; names are truncated before reaching both plot and accessible data (line 115), so long table identities are lost from the chart's data alternative. Clipping/overflow itself is unverified.",
+        "fix": "Retain full names in source-backed chart data/table/export and apply truncation only to visible axis ticks; exercise existing chart sizing at required widths before changing geometry.",
+        "owner": "page",
+        "confidence": "medium"
+      }
+    ]
+  },
+  "accessibility": {
+    "verified": false,
+    "sourceStrengths": "Refresh has localized aria-label; sort controls expose aria-pressed and a named group; decorative icons are hidden; chart has ariaLabel and data columns; sections use hidden h2 labels; MetricBar names missing readings without aria-valuenow.",
+    "findings": [
+      {
+        "file": "web\\src\\features\\system\\pages\\DBHealthPage.tsx",
+        "line": 462,
+        "rule": "MDC-040: meaningful localized table name",
+        "detail": "No caption or name is supplied. DataTable.tsx:929 therefore uses persistence key system:db-health-tables as its native caption rather than the localized visible Tables title.",
+        "fix": "Pass a localized caption/name without changing tableId or existing persistence keys.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\system\\pages\\DBHealthPage.tsx",
+        "line": 446,
+        "rule": "MDC-040: mobile target reachability",
+        "detail": "Sort buttons and the refresh button at line 232 use size sm; Button.tsx:40 gives 36px height, below the contract's preferred 44px mobile target. Actual spacing exceptions, focus, long translations and hit areas were not exercised.",
+        "fix": "Use existing Button sizing or responsive target classes and wrapping support where needed; validate keyboard, translated labels and touch spacing instead of introducing another control primitive.",
+        "owner": "page",
+        "confidence": "medium"
+      }
+    ],
+    "unverified": ["Keyboard/focus behavior", "Screen reader output", "Effective contrast across themes", "Forced colors", "Touch target spacing", "Reduced motion in browser", "RTL and 200% text"]
+  },
+  "states": {
+    "runtimeVerified": false,
+    "initialLoading": "Summary suppresses measurements per source; chart/table/migration/pool have independent loading surfaces.",
+    "empty": "Chart and table handle no tables; migration history/source and pool have EmptyState fallbacks. Unsupported backend fields remain dashes rather than invented values.",
+    "fatalError": "useDataState.fatalError controls replacement per source; QueryError offers source-specific retry; summary exposes source error text.",
+    "retainedRefreshError": "Retained payload remains visible; StaleRefreshWarning appears for chart, migration and pool and source briefs show trust state.",
+    "offline": "Existing useDataState delegates paused refresh to stale retained-data semantics; no live browser/offline exercise was performed.",
+    "unknown": "Pool usage requires finite numerator and positive denominator; totals and large-table counts require complete fields. Missing migration dirty state is not clean.",
+    "findings": [
+      {
+        "file": "internal\\api\\devtools\\database.go",
+        "line": 54,
+        "rule": "MDC-026/MDC-045: unknown is not measured zero",
+        "detail": "Failed COUNT queries log and leave int64 RowCount at zero; failed pg_database_size at lines 60-62 similarly leaves dbSize zero. Successful HTTP payload then appears measured/complete to the page and its six summary metrics; frontend cannot distinguish genuine zero from failed measurement.",
+        "fix": "Integration owner must expose nullable failed measurements and partial-source evidence through the existing typed API/trust contract. Preserve genuine zero and retained independent sources; do not infer failures heuristically or change backend in this audit.",
+        "owner": "integration",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\system\\pages\\DBHealthPage.tsx",
+        "line": 251,
+        "rule": "MDC-026: truthful source freshness",
+        "detail": "Header says Auto-refresh 30s while migrations poll every 60s (useAdmin.ts:326); spinner reflects only statsFetching. Independent brief timestamps correctly preserve distinct source observations, but header implies a uniform refresh cadence.",
+        "fix": "Keep existing polling intervals/query keys; make header wording and aggregate refresh indication accurately reflect the three independently refreshing sources.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ]
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\system\\pages\\DBHealthPage.tsx",
+      "line": 517,
+      "rule": "MDC-010/MDC-012/MDC-025: restrained semantic palette",
+      "detail": "Pool fill explicitly selects neon-red/neon-cyan; decorative headings use fixed cyan-300 at lines 326/429/479 and migration divider uses border-white at line 376. Status/body text also uses fixed pastel colors rather than semantic theme roles. Actual brightness and contrast are not measured.",
+      "fix": "Reuse existing semantic success/warning/danger and neutral border/text tokens; keep pool 80% threshold, numeric readout, names and user chart palette preferences. Do not reset saved theme IDs or invent a palette.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\system\\pages\\DBHealthPage.tsx",
+      "line": 285,
+      "rule": "MDC-034/MDC-040: chart meaning must match data",
+      "detail": "Visible title and ariaLabel describe table sizes, while chartData sorts top fifteen by rowCount (lines 109-118), Bar uses rows (line 312), and accessible data column is Rows. Source does not provide per-table byte sizes.",
+      "fix": "Truthfully label the existing row-count chart, with canonical localization owner support if needed; preserve the series/top-15 ranking. A byte-size chart requires an explicitly integrated backend measurement, never a guessed conversion.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\features\\system\\pages\\DBHealthPage.tsx",
+      "line": 429,
+      "rule": "MDC-016: icon integration/compiler finding only",
+      "detail": "Table2 is rendered but absent from the lucide-react import at lines 3-6 and has no local declaration. Database is imported but unused. This is source evidence of an unresolved icon identifier; no compiler was run and no fix was applied.",
+      "fix": "Assigned implementation owner should resolve the icon through the established icon policy; retain Tables heading, action/state behavior and source ownership.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\types\\admin.ts",
+      "line": 226,
+      "rule": "MDC-045/MDC-046: typed contracts must describe real payloads",
+      "detail": "TableInfo requires sizeBytes/indexCount/lastVacuum absent from backend; DBStats.databaseSize is string but backend returns numeric bytes; MigrationStatus requires currentVersion/pending/migrations but backend emits version/dirty; ConnectionPool requires waitDurationMs absent from RuntimeInfo. Page currently tolerates several omissions, but rich mock fixtures do not prove real endpoint capability.",
+      "fix": "Integration owner should reconcile DTOs and optionality against actual JSON/camelCaseKeys, keeping bytes on wire/cache. Preserve all existing table, history, pending and wait-duration UI as unavailable when unsupported rather than deleting sections or inventing data.",
+      "owner": "integration",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\system\\pages\\DBHealthPage.tsx",
+      "line": 101,
+      "rule": "MDC-045: preserve dimensional meaning",
+      "detail": "Size sorting falls back to rowCount when sizeBytes is absent, silently comparing row counts with bytes for mixed payloads; with current backend it is actually row sorting under a Size button.",
+      "fix": "Sort known byte sizes as bytes and keep missing-size rows explicitly unknown, with stable documented ordering. Preserve the size/rows/name actions and their independent chart sort rather than fabricating size measurements.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\system\\components\\statstrip-db-health\\DBHealthSummary.tsx",
+      "line": 9,
+      "rule": "MDC-002: shared presentation ownership",
+      "detail": "System summary imports generic sourceBriefStatus from another feature's statstrip-api-quality directory. The helper contains generic trust-state presentation rather than system business logic.",
+      "fix": "Shared owner should review promotion of the existing helper into the established shared data-display/trust owner without duplicating it or changing status translation keys.",
+      "owner": "shared",
+      "confidence": "medium"
+    }
+  ],
+  "priority": {
+    "level": "high",
+    "order": ["Report unresolved Table2 identifier for assigned implementation owner", "Correct misleading chart/sort meaning and typed API capabilities", "Preserve unknown-versus-zero source trust", "Restore all mobile table details", "Adopt restrained theme-aware presentation and localized accessible naming"],
+    "runtimeAcceptance": "unverified"
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "Honest typed database diagnostic source contract",
+      "existingOwnerFile": "web\\src\\types\\admin.ts",
+      "owner": "integration",
+      "propsVariantsStates": "Optional unsupported table sizes/indexes/vacuum, migration pending/history and wait duration; actual version/dirty and numeric database_size; nullable failed measurements and partial trust metadata.",
+      "usedBy": ["web\\src\\features\\system\\pages\\DBHealthPage.tsx", "web\\src\\features\\system\\components\\statstrip-db-health\\DBHealthSummary.tsx", "web\\src\\api\\hooks\\useAdmin.ts"],
+      "dependsOn": ["internal\\api\\devtools\\database.go", "internal\\api\\devtools\\handler.go", "web\\src\\api\\dataState.ts"],
+      "scope": "Report only; no backend or shared write authorized."
+    },
+    {
+      "name": "Reuse existing formatter and mobile table capabilities",
+      "existingOwnerFile": "web\\src\\components\\ui\\DataTable.tsx",
+      "owner": "page",
+      "propsVariantsStates": "Existing mobilePresentation full-detail adapter or expandable/renderExpanded; localized caption; preserve tableId, columns, filters, pagination and loaded-result exports. Existing useNumberFormatting.formatBytes supplies locale/precision/null behavior.",
+      "usedBy": ["web\\src\\features\\system\\pages\\DBHealthPage.tsx"],
+      "dependsOn": ["web\\src\\hooks\\useNumberFormatting.ts", "web\\src\\lib\\numberFormat.ts"],
+      "scope": "Existing owners are sufficient by source inspection; no speculative new shared component requested."
+    },
+    {
+      "name": "Review canonical source-status presentation ownership",
+      "existingOwnerFile": "web\\src\\features\\admin\\components\\statstrip-api-quality\\sourceBriefStatus.ts",
+      "owner": "shared",
+      "propsVariantsStates": "DataState status/isRefreshing plus loading and translator -> existing localized statusLabel and OperationalTone; retain refreshing/loading/initialFailure/stale/partial/unavailable semantics.",
+      "usedBy": ["web\\src\\features\\system\\components\\statstrip-db-health\\DBHealthSummary.tsx"],
+      "dependsOn": ["web\\src\\api\\dataState.ts"],
+      "scope": "Only this assigned consumer and the imported owner were inspected; no claim of whole-app consumer inventory."
+    }
+  ],
+  "competingImplementations": [
+    {"pattern": "Byte display formatting", "implementations": ["DBHealthPage.tsx:32", "DBHealthSummary.tsx:11", "web\\src\\lib\\numberFormat.ts:163"], "recommendation": "Reuse canonical formatting rather than add another formatter."},
+    {"pattern": "Layout, tables, charts and source trust", "implementations": ["Existing shared PageLayout/DataTable/ChartContainer/useDataState"], "recommendation": "Keep existing owners; no competing engine or new library needed."}
+  ],
+  "preservation": {
+    "sourceHash": "353BE21184D5E1DE9203A02A02F79C240721589ECFDF100AB24760F08118CF52",
+    "hashAlgorithm": "SHA256",
+    "sourcePath": "web\\src\\features\\system\\pages\\DBHealthPage.tsx",
+    "currentLineCount": 534,
+    "pageSpecificComponentLineCount": 91,
+    "totalPageAndExtractedComponentLines": 625,
+    "sectionCount": 5,
+    "sections": [
+      {"name": "Summary metrics", "line": 262, "sourceBanks": 3, "metricCount": 6, "metrics": ["Total DB size", "Tables", "Total rows", "Large tables >100 MB", "Migration version/dirty status", "Pool usage"]},
+      {"name": "Top-15 table row-count chart (currently titled table sizes)", "line": 285, "count": 1},
+      {"name": "Migration status and recent migrations", "line": 324, "count": 1},
+      {"name": "Tables, value filters and size/rows/name sorting", "line": 426, "count": 1},
+      {"name": "Connection pool and usage bar", "line": 477, "count": 1}
+    ],
+    "sourceElementCounts": {"GlassPanel": 4, "ChartContainer": 1, "FadeIn": 3, "DBHealthSummary": 1, "summaryOperationalBriefRuntimeBanks": 3},
+    "actions": ["Refresh all three sources", "Retry each failed source", "Sort size", "Sort rows", "Sort name", "DataTable value filters", "DataTable pagination/persistent columns and widths", "Inherited matching-loaded-row CSV/JSON export pipeline", "Inherited ChartContainer data alternative and controls"],
+    "dataBehavior": [
+      "Three independent cancellable queries and existing query keys; 30s statistics/pool and 60s migration polling.",
+      "Retained data on refresh failures; fatal replacement only for the failed source; source-specific last-success timestamps.",
+      "Top-15 chart independently sorts by row count regardless of table sort.",
+      "Pool utilization is clamped 0-100 and requires finite values and positive maximum; >=80% condition preserved.",
+      "Large-table threshold remains 100*1024*1024 bytes; unknown sizes do not become large-table count zero.",
+      "All five table columns, schema/raw table identity, full names, migration dirty/version/pending and latest five migration entries, and six pool fields must survive.",
+      "Bytes remain raw bytes; milliseconds field is unsupported by inspected backend and must not be guessed or converted on wire/cache.",
+      "Locale/precision preferences, timestamp presentation, tableId system:db-health-tables, current workspace and theme persistence remain unchanged.",
+      "Route is an instantaneous global diagnostic: absent from RANGE_ENABLED_PATHS and present in VEHICLE_DISABLED_PATHS (workspaceScope.ts:117). Do not introduce date/vehicle filters or competing selectors."
+    ],
+    "sourceUnchangedAtReadback": true
+  },
+  "evidenceLimits": {
+    "method": "Read-only source inspection of the assigned mounted page and concrete page-specific presentation/data owners. No source/shared/queue/Git mutations.",
+    "protocol": "Assigned JSON report did not exist at start; schema and release protocol were read from docs\\frontend-worker-conventions.md.",
+    "runtime": "unverified",
+    "visual": "unverified",
+    "keyboard": "unverified",
+    "contrast": "unverified",
+    "viewports": "unverified at all required widths",
+    "tests": "NOT RUN. Existing DBHealthPage test source was inspected only; mocks and authored assertions are not execution evidence.",
+    "typeScript": "NOT RUN. Unresolved icon is recorded as a source/compiler-risk finding only.",
+    "fullAuditScript": "NOT RUN: inspected audit.sh invokes project-wide npx tsc --noEmit and was not used during this bounded source-only audit.",
+    "lintBuild": "NOT RUN; prohibited full gates and no validation baton.",
+    "routeVerification": "Source match confirmed for all three request paths in router.go; reachability/authentication/response behavior was not exercised.",
+    "sourceAuditOutput": ["staticInlineStyles: 0", "rawControls: 0", "directChartMapMotionImports: 0", "legacyApiImports: 0", "neonReferences: 2", "GlassPanelOpenings: 4", "ChartContainerOpenings: 1", "FadeInOpenings: 3", "SummaryOpenings: 1", "page lines: 534", "summary lines: 91"],
+    "sourceAuditExitCode": 0,
+    "sourceAuditScope": "Counts from Get-Content/[regex] scoped to DBHealthPage.tsx; not whole-app violations acceptance. Zero matches in limited patterns do not imply zero design/trust issues.",
+    "ownedFiles": ["docs\\frontend-audits\\audit-page-187.json", ".agent-status\\audit-page-187.txt"]
+  },
+  "filesRead": [
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\system\\pages\\DBHealthPage.tsx",
+    "web\\src\\features\\system\\pages\\DBHealthPage.test.tsx",
+    "web\\src\\features\\system\\components\\statstrip-db-health\\DBHealthSummary.tsx",
+    "web\\src\\features\\admin\\components\\statstrip-api-quality\\sourceBriefStatus.ts",
+    "web\\src\\api\\hooks\\useAdmin.ts",
+    "web\\src\\types\\admin.ts",
+    "web\\src\\api\\client.ts",
+    "web\\src\\api\\dataState.ts",
+    "web\\src\\hooks\\useDataState.ts",
+    "web\\src\\hooks\\useNumberFormatting.ts",
+    "web\\src\\lib\\numberFormat.ts",
+    "web\\src\\lib\\constants.ts",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\components\\ui\\DataTable.tsx",
+    "web\\src\\components\\ui\\Button.tsx",
+    "web\\src\\components\\data-display\\MetricBar.tsx",
+    "web\\src\\components\\motion\\FadeIn.tsx",
+    "web\\src\\App.tsx",
+    "internal\\api\\router.go",
+    "internal\\api\\devtools\\database.go",
+    "internal\\api\\devtools\\handler.go"
+  ]
+}

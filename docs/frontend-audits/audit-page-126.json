@@ -1,0 +1,321 @@
+{
+  "item": "audit-page-126",
+  "page": "web\\src\\features\\driving\\pages\\SpeedSweetSpotPage.tsx",
+  "routes": ["/speed-sweetspot"],
+  "purpose": "Describe distance-weighted consumption by whole-drive average-speed band, with explicit qualification, coverage, monthly context and sampled drive evidence.",
+  "primaryGoal": "Identify the lowest-consumption qualified observed band for the workspace vehicle and date window, understand evidence limits, and inspect/export the supporting data without mistaking association for a recommended road speed or causal savings.",
+  "dataSources": [
+    {
+      "hook": "useDrives",
+      "file": "web\\src\\api\\hooks\\useDriving.ts",
+      "line": 104,
+      "endpoint": "/api/v1/drives",
+      "requestPath": "/drives",
+      "parameters": ["vehicle_id", "start", "end", "limit=1000"],
+      "owner": "driveHandler.ListByVehicle; internal\\api\\router.go:3463-3464",
+      "pageEvidence": "web\\src\\features\\driving\\pages\\SpeedSweetSpotPage.tsx:41-51",
+      "behavior": "Vehicle/window participate in the query key; vehicle enables query; safeArray selects rows; FAST staleTime and inherited retry policy remain. AbortSignal reaches request. One bounded request, not full-history pagination.",
+      "limits": "Router and frontend request inspected; backend filtering, ordering, completeness, payload and runtime were not exercised."
+    },
+    {
+      "hook": "useSelectedVehicle / useRangeState",
+      "file": "web\\src\\features\\driving\\pages\\SpeedSweetSpotPage.tsx",
+      "line": 35,
+      "endpoint": null,
+      "owner": "Existing workspace scope hooks/header; web\\src\\lib\\workspaceScope.ts:67",
+      "behavior": "Vehicle selection is shared; range uses speed-sweetspot.range and all-time default. Page sends calendar start/end strings rather than the available precise instants. No competing page date or vehicle picker.",
+      "routeEvidence": "web\\src\\App.tsx:137,839",
+      "limits": "Mounted route is source-confirmed only. Scope behavior in the browser is unverified."
+    },
+    {
+      "hook": "useDataState",
+      "file": "web\\src\\hooks\\useDataState.ts",
+      "line": 31,
+      "endpoint": null,
+      "owner": "Existing shared data-trust adapter / api dataState",
+      "behavior": "Historical source provenance; initial loading and fatalError become section state. Page hasData/isSuccess guards brief resolution and isRefreshBlocked identifies retained content. Refresh warning remains beside evidence.",
+      "pageEvidence": "web\\src\\features\\driving\\pages\\SpeedSweetSpotPage.tsx:47,61-67,79-84",
+      "limits": "Underlying deriveDataState implementation was not read; source integration, not executed state acceptance."
+    },
+    {
+      "hook": "computeSweetSpot",
+      "file": "web\\src\\features\\driving\\lib\\speedSweetSpot.ts",
+      "line": 276,
+      "endpoint": null,
+      "owner": "Driving pure domain derivation",
+      "behavior": "Finite positive measured Wh and average m/s, >=2000m and >=300s define eligibility. Stable half-open 10km/h conceptual buckets require >=3 eligible drives to qualify. Consumption uses summed energy/distance; lowest qualified consumption wins with lower-speed tie-break. Overall gap is signed descriptive evidence. UTC calendar months use aggregate distance/duration speed; invalid dates remain in non-calendar aggregates. Deterministic chronological scatter sample caps at 300, including endpoints. All eligible returned drives still feed aggregates; 1000 returned rows mark possible history truncation.",
+      "evidence": ["speedSweetSpot.ts:11-15,169-205", "speedSweetSpot.ts:229-274", "speedSweetSpot.ts:315-438"]
+    },
+    {
+      "hook": "useSpeedSweetSpotDisplay / useNumberFormatting / useOperationalMetrics",
+      "file": "web\\src\\features\\driving\\components\\speed-sweet-spot\\useSpeedSweetSpotDisplay.ts",
+      "line": 15,
+      "endpoint": null,
+      "owner": "Existing useUnits, SI converters and number formatting; DrivingSummaryBrief metric adapter",
+      "behavior": "Raw Drive m, s, m/s and Wh remain unchanged. Model-local km/h bucket semantics and Wh/km ratios are explicit. Unit/locale/precision conversion happens in presentation; missing values use em dash. Month labels use UTC. Brief specialist formatters retain band bounds, signed percentage and weighted consumption.",
+      "evidence": ["useSpeedSweetSpotDisplay.ts:18-95", "operationalbrief-n-z\\DrivingSummaryBrief.tsx:23-51"]
+    }
+  ],
+  "components": [
+    {"name": "PageLayout / Grid", "owner": "Existing layout category; web\\src\\components\\layout\\Grid.tsx", "evidence": "SpeedSweetSpotPage.tsx:71-102; Grid.tsx:34-42,65-94", "usage": "One page layout and 1-column to xl 5-column evidence split (2/3 spans); no new layout owner."},
+    {"name": "SweetSpotSummaryBrief / SweetSpotEvidenceBrief / SweetSpotMethodBrief", "owner": "web\\src\\features\\driving\\components\\operationalbrief-n-z", "evidence": "SpeedSweetSpotPage.tsx:81-84,89-97,121-131", "usage": "Four summary metrics, five evidence metrics, three methodology metrics and all specialist text."},
+    {"name": "DrivingSummaryBrief / OperationalBrief", "owner": "web\\src\\features\\driving\\components\\operationalbrief-n-z\\DrivingSummaryBrief.tsx; web\\src\\components\\data-display\\OperationalBrief.tsx", "evidence": "DrivingSummaryBrief.tsx:23-51; OperationalBrief.tsx:119-168,234-300", "usage": "Typed metric bridge, localized trust/status/provenance, compact responsive grid, Review details drawers; no replacement KPI owner needed."},
+    {"name": "ChartContainer / EmbeddedChart", "owner": "web\\src\\components\\charts\\ChartContainer.tsx; EmbeddedChart.tsx", "evidence": "ConsumptionSpeedCurve.tsx:82-125; ConsumptionSpeedPlot.tsx:75-81; DriveEvidenceScatter.tsx:83-145; DriveEvidencePlot.tsx:56-60; EmbeddedChart.tsx:19-40", "usage": "Four outer chart frames, two nested embedded controllers, export/data alternatives, legend persistence, responsive dimensions and winning-band annotation."},
+    {"name": "SpeedBandCoverage / MonthlyOperatingContext", "owner": "web\\src\\features\\driving\\components\\speed-sweet-spot", "evidence": "SpeedBandCoverage.tsx:64-102,163-193; MonthlyOperatingContext.tsx:75-112,171-189", "usage": "Distance bars plus drive counts with qualified/winner semantics; monthly consumption and aggregate speed with sample counts and accessible export rows."},
+    {"name": "SpeedBandScorecard / DataTable / GlassPanel", "owner": "web\\src\\features\\driving\\components\\speed-sweet-spot\\SpeedBandScorecard.tsx; web\\src\\components\\ui\\DataTable.tsx", "evidence": "SpeedBandScorecard.tsx:71-136,141-197; DataTable.tsx:237-248,714-725", "usage": "Nine-column ranked/unranked band table; stable tableId, compact density, scroll limit, explicit nine-field CSV export."},
+    {"name": "SpeedSweetSpotSectionBody / StaleRefreshWarning / QueryError / EmptyState / Skeleton", "owner": "Feature source-state body and existing feedback category", "evidence": "SpeedSweetSpotSectionBody.tsx:24-47; SpeedSweetSpotPage.tsx:79; StaleRefreshWarning.tsx:68,92-93", "usage": "Section shells stay mounted; fatal retries, initial skeletons, localized empties and retained-refresh trust warning."},
+    {"name": "FadeIn / Badge / Text / PanelTitle / NoVehicleSelected", "owner": "Existing motion/UI categories and onboarding domain", "evidence": "SpeedSweetSpotPage.tsx:53-59,80-131; FadeIn.tsx:24-36; SpeedBandScorecard.tsx:118-159", "usage": "Shared reduced-motion entrance, semantic text/status and no-selection guidance. No ambient animation or custom surface engine."}
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\driving\\components\\operationalbrief-n-z\\SweetSpotMethodBrief.tsx",
+      "line": 62,
+      "rule": "MDC-031 / mission 43 restrained hierarchy",
+      "detail": "Three operational briefs repeat driving eyebrow, source status, freshness-unknown text, provenance and selected-window scope around only 4/5/3 metrics. Evidence and method bodies also append minimum-height state wrappers. Repetition is source-confirmed; perceived excess whitespace is not runtime-proven.",
+      "fix": "Reuse current OperationalBrief compact contract and consolidate identical page-level trust context where possible, retaining all 12 metric occurrences, independent review drawers, evidence limitations and full methodology.",
+      "owner": "page",
+      "confidence": "medium",
+      "evidence": ["SweetSpotSummaryBrief.tsx:61-74", "SweetSpotEvidenceBrief.tsx:45-71", "SweetSpotMethodBrief.tsx:62-84", "DrivingSummaryBrief.tsx:38-51", "SpeedSweetSpotSectionBody.tsx:22"]
+    }
+  ],
+  "responsive": {
+    "sourceStrategy": [
+      "SpeedSweetSpotPage.tsx:29,88-102 stacks evidence until xl then uses 2/5 and 3/5 spans.",
+      "OperationalBrief.tsx:167-168 reflows compact metrics 1/2/3/6 columns using viewport breakpoints.",
+      "Four chart frames use responsive plots and heights 330/390/390/360; dual axes consume part of narrow chart width.",
+      "SpeedBandScorecard.tsx:177 supplies only rank/band/consumption/qualification below md."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\driving\\components\\speed-sweet-spot\\SpeedBandScorecard.tsx",
+        "line": 177,
+        "rule": "MDC-023 / MDC-043 no lossy mobile simplification",
+        "detail": "Five of nine scorecard fields (distance, drives, distance share, gap to best, gap to overall) are hidden below md. Existing DataTable derives hidden md:table-cell classes at DataTable.tsx:724-725; this caller supplies neither mobilePresentation nor row expansion. Export retains values, but is not an on-page mobile detail equivalent.",
+        "fix": "Adopt existing DataTable mobilePresentation with all nine fields reachable in cards/details, preserving tableId, rank ordering, qualification, display formatters and full CSV scope.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\driving\\pages\\SpeedSweetSpotPage.tsx",
+        "line": 88,
+        "rule": "MDC-031 / MDC-043 allocated container width",
+        "detail": "Evidence placement is viewport-xl-driven rather than allocated-container-driven; brief metrics also respond to viewport. Narrow shell allocation can make the 2/5 brief cramped. Source risk only, not observed clipping.",
+        "fix": "Evaluate existing container-aware layout owners before adoption; preserve eight sections and the desktop evidence relationship. Do not invent another breakpoint engine.",
+        "owner": "integration",
+        "confidence": "medium"
+      }
+    ],
+    "unverified": ["320px", "375px", "390px", "430px", "768px", "1024px", "1280px", "1440px", "1920px", "2560px", "allocated container width", "RTL", "long translations", "200% text", "chart tick collisions", "drawer open states"]
+  },
+  "accessibility": {
+    "sourceEvidence": [
+      "Eight section/region labels are localized; scorecard uses role=region.",
+      "Four outer charts declare ariaLabel and complete domain dataColumns; ChartContainer.tsx:448-453,791-842 supplies semantic fallback tables when data exists.",
+      "Curve embedded alternative includes four columns whereas outer includes six; scatter embedded owner supplies a localized title/ariaLabel without tabular data or ariaDescription, while outer supplies six-column evidence data. Screen-reader behavior is unverified.",
+      "Decorative panel/empty-state icons inspected use aria-hidden; badges include text, qualification is not color-only.",
+      "OperationalBrief uses shared Button and Drawer; FadeIn uses shared reduced-motion preference; stale warning uses polite status."
+    ],
+    "issues": [],
+    "unverified": ["Keyboard order and legend reachability", "focus visibility and drawer focus restoration", "screen-reader experience of nested chart regions/tables", "44px touch targets", "actual composed contrast", "forced colors", "reduced-motion behavior", "mobile hidden-field recovery"],
+    "acceptance": "No accessibility, keyboard or contrast runtime acceptance claimed."
+  },
+  "states": {
+    "initialLoading": "useDataState.status===initial controls shared skeletons and chart frames; summary metric raw values remain null until resolved.",
+    "empty": "Zero returned rows and no qualifying band are separate explanatory empties. Chart and scorecard shells remain mounted; no valid dates produces a monthly-specific empty.",
+    "fatalError": "fatalError drives QueryError/refetch in each evidence body and chart; summary actions also expose retry.",
+    "retainedRefreshError": "fatal-only gating preserves derived content while StaleRefreshWarning remains beside it; brief retained flag maps source status. Executed behavior unverified.",
+    "offlineStale": "Existing historical data-trust and StaleRefreshWarning integration; exact offline timing and recovery unverified.",
+    "noVehicle": "Dedicated NoVehicleSelected replaces evidence page; vehicle-enabled hook remains disabled.",
+    "partialUnavailable": "Qualified sample floor, row cap and scatter cap remain explicit. Malformed dates stay in non-calendar aggregates; invalidDateCount is computed but not separately displayed.",
+    "issues": [
+      {
+        "file": "web\\src\\features\\driving\\components\\speed-sweet-spot\\DriveEvidenceScatter.tsx",
+        "line": 108,
+        "rule": "MDC-026 unknown is not successful measured zero",
+        "detail": "Scatter badge says All eligible points from empty provisional summary while query is initial/fatal; coverage badge shows 0 qualified and monthly badge 0 observed months similarly. These chart action badges are not gated by source resolution, unlike brief badges.",
+        "fix": "Pass resolved/source state to chart actions and suppress provisional result badges or use localized pending/unavailable state. Retain measured zero after successful resolution and the distinct sampled/complete label.",
+        "owner": "page",
+        "confidence": "high",
+        "evidence": ["SpeedBandCoverage.tsx:75-83", "MonthlyOperatingContext.tsx:85-93", "SpeedSweetSpotPage.tsx:61-67"]
+      }
+    ],
+    "runtime": "unverified"
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\driving\\components\\speed-sweet-spot\\SpeedBandScorecard.tsx",
+      "line": 151,
+      "rule": "MDC-010 / MDC-012 restrained semantic tokens",
+      "detail": "Decorative list icon uses fixed text-purple-300 rather than theme-neutral icon tokens. Chart colors come from existing shared palette with restrained reference-area opacity; no neon/glow or fixed-white page styling found by scoped source scan.",
+      "fix": "Use an existing neutral semantic icon token unless purple communicates a domain meaning. Preserve saved chart palette choices, winner annotation, dashed unqualified series and qualification opacity.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\features\\driving\\pages\\SpeedSweetSpotPage.tsx",
+      "line": 37,
+      "rule": "MDC-032 / shared workspace precise bounds",
+      "detail": "Page consumes start/end calendar keys and passes them to useDrives. useRangeState.ts:113-122,656-669 exposes precise rolling or timezone calendar instants; useDriving.ts:95-96 documents endInstantExclusive. Those precise bounds are not forwarded by this caller. Backend interpretation of the date strings and actual range correctness were not inspected or exercised.",
+      "fix": "Use startInstant/endInstantExclusive for data-hook bounds while retaining calendar start/end for display labels, shared persistKey/default and server filtering. Verify backend bounds before claiming full-range correctness; do not add a local picker.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\driving\\components\\speed-sweet-spot\\ConsumptionSpeedPlot.tsx",
+      "line": 75,
+      "rule": "MDC-002 / MDC-034 single shared chart controller",
+      "detail": "Curve nests EmbeddedChart chartKey=consumption-speed inside outer speed-sweet-spot-curve, and scatter nests drive-evidence inside speed-sweet-spot-drive-evidence. Each frame supplies its own hidden-series controller; plot combines both via OR. Curve also has overlapping four-column inner and six-column outer alternatives. Nested source ownership is confirmed; actual interaction failure is not.",
+      "fix": "Integrate through existing ChartContainer/EmbeddedChart contract with one deliberate controller per plot, retaining both historical saved legend identities until equivalence/migration is verified, all outer data columns, annotations and exports. Do not remove accessibility alternatives or series to reduce chrome.",
+      "owner": "integration",
+      "confidence": "high",
+      "evidence": ["ConsumptionSpeedCurve.tsx:95,136-150", "ConsumptionSpeedPlot.tsx:75-86", "DriveEvidenceScatter.tsx:118,154-169", "DriveEvidencePlot.tsx:56-65", "EmbeddedChart.tsx:19-40"]
+    }
+  ],
+  "priority": {
+    "overall": "P1",
+    "P1": ["Preserve all scorecard fields on mobile", "Forward precise shared workspace date bounds"],
+    "P2": ["Gate provisional source-result badges", "Reconcile nested chart state owners", "Reduce repeated trust chrome using existing compact briefs"],
+    "P3": ["Neutralize nonsemantic purple icon"],
+    "runtimeAcceptance": "Not established; Phase0 source audit only"
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "Canonical chart controller composition review",
+      "existingOwnerFile": "web\\src\\components\\charts\\ChartContainer.tsx",
+      "owner": "integration",
+      "propsVariantsStates": ["Existing variant=panel/embedded", "chartKey", "hiddenSeries render context", "data/dataColumns", "exportData/exportable", "loading/error", "EmbeddedChart fluid sizing"],
+      "usedBy": ["ConsumptionSpeedCurve + ConsumptionSpeedPlot", "DriveEvidenceScatter + DriveEvidencePlot"],
+      "dependsOn": ["Source-confirmed compatibility for both saved legend keys per plot", "Retain outer six-column fallback/CSV contracts", "Shared chart owner review before any changed API"],
+      "requirement": "Reuse existing owners first; no new shared component or API is authorized by this audit. If composition needs extension, shared owner must prove preservation before page adoption."
+    },
+    {
+      "name": "Existing mobile table adapter adoption",
+      "existingOwnerFile": "web\\src\\components\\ui\\DataTable.tsx",
+      "owner": "page",
+      "propsVariantsStates": ["mobilePresentation", "columns and formatters", "tableId", "keyExtractor", "exportRow", "loading/empty/error via existing section shell"],
+      "usedBy": ["SpeedBandScorecard"],
+      "dependsOn": ["Inspect MobileDataTableAdapter typed contract before implementation", "Provide all nine current field displays in mobile details"],
+      "requirement": "Proposal only: existing adapter is imported at DataTable.tsx:10-11 and opt-in at :186,505. Its typed contract was not inspected in this reconciliation. No shared source edit is currently proved necessary."
+    },
+    {
+      "name": "Reduced-noise brief composition using existing semantic owners",
+      "existingOwnerFile": "web\\src\\components\\data-display\\OperationalBrief.tsx",
+      "owner": "integration",
+      "propsVariantsStates": ["Existing compact", "eyebrow/title/description", "statusLabel/statusTone", "scope/freshness/provenance", "metrics", "loading", "actions", "Review details drawer"],
+      "usedBy": ["SweetSpotSummaryBrief", "SweetSpotEvidenceBrief", "SweetSpotMethodBrief"],
+      "dependsOn": ["DrivingSummaryBrief.tsx:23-51 remains the feature metric bridge", "Retain all 12 metric occurrences, seven methodology bullets, source uncertainty and three review drawers", "Measure actual layout/noise before changing composition", "Any shared extension requires evidence from independent production consumers and exclusive shared-owner assignment"],
+      "requirement": "Proposal/reuse only; do not introduce a competing surface, status registry, stats formatter or new brief API. Source repetition alone does not authorize shared implementation or prove visual failure."
+    }
+  ],
+  "competingImplementations": [
+    {
+      "file": "web\\src\\features\\driving\\components\\speed-sweet-spot\\index.ts",
+      "line": 6,
+      "rule": "MDC-002 / no competing presentation owners",
+      "detail": "Barrel still exports SpeedSweetSpotKpis, SweetSpotEvidence and SpeedSweetSpotMethodology alongside mounted summary/evidence/method briefs in operationalbrief-n-z. Export declarations and targeted prop/declaration excerpts establish similarly named presentation candidates only; equivalent content, other consumers and dead code are unverified.",
+      "fix": "Keep the currently mounted briefs as the page baseline; identify other consumers before any consolidation. Preserve all original metric and methodology capabilities; do not delete uninspected dependencies.",
+      "owner": "integration",
+      "confidence": "medium",
+      "evidence": ["SpeedSweetSpotPage.tsx:23-25", "speed-sweet-spot\\index.ts:6-9", "SpeedSweetSpotKpis.tsx:17-26", "SweetSpotEvidence.tsx:25-35", "SpeedSweetSpotMethodology.tsx:23-36"]
+    }
+  ],
+  "preservation": {
+    "sourceHash": "898070F257597100CDCA38297690F76B9E456DBEAAA8DA1F96440818EA250CE7",
+    "hashAlgorithm": "SHA256",
+    "currentLineCount": 133,
+    "sectionCount": 8,
+    "sections": [
+      {"name": "Sweet spot summary metrics", "component": "SweetSpotSummaryBrief", "pageLines": "81-84", "metricCount": 4, "data": ["Best qualified band with drives/distance", "Consumption in band", "Overall weighted consumption and window coverage", "Signed observed efficiency gap with no-savings disclaimer"]},
+      {"name": "Evidence and confidence", "component": "SweetSpotEvidenceBrief", "pageLines": "89-97", "metricCount": 5, "data": ["Eligible drives", "Winning drives", "Winning distance", "Eligible distance share", "Qualified bands", "Qualification badge", "Runner-up band and consumption/percentage contrast or one-band explanation"]},
+      {"name": "Speed-band distance and drive coverage", "component": "SpeedBandCoverage", "pageLines": "98-102", "data": ["Band", "Observed distance bars", "Eligible drive-count line", "Distance share", "Qualification", "Winner identity"]},
+      {"name": "Consumption by average-speed band", "component": "ConsumptionSpeedCurve", "pageLines": "107", "data": ["Qualified consumption", "Unqualified consumption", "Distance bars", "Drive counts", "Band labels", "Winning reference area", "No-connect-nulls qualification semantics"]},
+      {"name": "Drive-level speed and consumption evidence", "component": "DriveEvidenceScatter", "pageLines": "111", "data": ["Drive identity/date", "Average speed", "Consumption", "Marker-size distance", "Best-band versus other grouping", "Winning reference area", "Sample count/total/cap explanation"]},
+      {"name": "Monthly operating context", "component": "MonthlyOperatingContext", "pageLines": "115", "data": ["UTC month", "Drive counts", "Distance", "Weighted consumption", "Aggregate average speed", "Noncausal co-movement explanation"]},
+      {"name": "Detailed band scorecard", "component": "SpeedBandScorecard", "pageLines": "119", "data": ["Rank", "Speed band", "Consumption", "Distance", "Drives", "Distance share", "Qualification", "Gap to best", "Gap to overall"]},
+      {"name": "Coverage and methodology", "component": "SweetSpotMethodBrief", "pageLines": "123-131", "metricCount": 3, "data": ["Returned", "Eligible", "Excluded", "Selected-window labels", "API-cap badge/explanation", "Eligibility", "Half-open bands/sample floor", "Weighting", "Monthly/date handling", "Scatter sampling", "Whole-drive scope", "Confounders/no causal savings"]}
+    ],
+    "counts": {"briefs": 3, "metricOccurrences": 12, "outerChartContainerOccurrences": 4, "nestedEmbeddedChartOccurrences": 2, "mountedGlassPanelOccurrences": 4, "pageDirectGlassPanelOccurrences": 0, "scorecardColumns": 9, "methodologyBullets": 7, "fadeInWrappers": 7},
+    "countLimits": "Four source-composed GlassPanel occurrences comprise the scorecard plus three OperationalBrief instances (OperationalBrief.tsx:119). This is not a DOM count or an exhaustive count through uninspected layout/chart internals.",
+    "actions": [
+      "Workspace-owned vehicle/date changes and all-time/default range persistence; no local replacement selector.",
+      "Fatal-source retry calls drivesQuery.refetch; retained source recovery stays in shared warning.",
+      "Three shared Review details drawers retain full metric/source context and close/focus behavior.",
+      "Four outer chart frames retain exportable, exportFilename and supplied CSV payloads; ChartContainer exposes its existing export owner. Exact export menu options, clipboard/image behavior and generated files are unverified; ChartExportMenu implementation was not inspected.",
+      "Chart legends retain all qualified/unqualified/distance, best/other, monthly speed/consumption and coverage distance/drives toggles plus historical keys.",
+      "Shared chart controllers retain existing saved-series state and accessible data alternatives; no fullscreen opt-in is supplied by these page components. A separate collapse capability was not established and is not asserted.",
+      "Scorecard retains existing DataTable controls, tableId=speed-sweet-spot:bands, compact density, maxHeight=440 and nine-field exportFilename=speed-sweet-spot-bands.",
+      "No-selection onboarding guidance remains available; its internal action implementation was not inspected."
+    ],
+    "dataBehavior": [
+      "No fixture or invented measurement; typed useDrives only.",
+      "Wire/cache Drive fields remain SI. Display conversion and preferences remain solely at render boundary.",
+      "Eligibility and three-drive floor must not be weakened; excluded drives are counted, not converted to zero.",
+      "All eligible returned drives feed aggregate computations even when scatter visually samples 300.",
+      "1000-row history-cap uncertainty remains explicit; no claim that subset equals complete range.",
+      "Rank tie-break, signed gap, runner-up denominators, total-energy/total-distance weighting and UTC monthly semantics remain unchanged.",
+      "Invalid start dates remain in non-calendar aggregates and sort last in chronological sample; invalidDateCount remains available in model.",
+      "Retained payload survives background refresh error; independent shells and explanations remain reachable.",
+      "PersistKeys speed-sweetspot.range and all six chart keys plus stable table identity must survive modernization."
+    ],
+    "sourceEdits": "None; report and heartbeat only. Source hash was rechecked during the atomic second-attempt reconciliation."
+  },
+  "evidenceLimits": {
+    "runtime": "unverified",
+    "visual": "unverified",
+    "keyboard": "unverified",
+    "contrast": "unverified",
+    "viewport": "unverified",
+    "scope": "Atomic second attempt: reconcile the preserved report for the assigned source-mounted page using only cited immediate dependencies and bounded existing-owner excerpts. No broad audit, global inventory, source edits, Git, browser, backend query inspection, production mutation or full lint/build.",
+    "checks": [
+      {"command": "Get-FileHash web\\src\\features\\driving\\pages\\SpeedSweetSpotPage.tsx -Algorithm SHA256", "exitCode": 0, "output": "898070F257597100CDCA38297690F76B9E456DBEAAA8DA1F96440818EA250CE7"},
+      {"command": "@(Get-Content web\\src\\features\\driving\\pages\\SpeedSweetSpotPage.tsx).Count", "exitCode": 0, "output": "133"},
+      {"command": "$paths=@('web\\src\\features\\driving\\pages\\SpeedSweetSpotPage.tsx') + @(Get-ChildItem 'web\\src\\features\\driving\\components\\speed-sweet-spot' -File | Where-Object Extension -in '.ts','.tsx' | ForEach-Object FullName) + @(Get-ChildItem 'web\\src\\features\\driving\\components\\operationalbrief-n-z' -Filter 'SweetSpot*Brief.tsx' | ForEach-Object FullName); foreach($pattern in @('style=','<(button|input|textarea|select|table)\\b','text-(neon-|white)|from [''\"''](recharts|react-leaflet|framer-motion)[''\"'']')) { \"$pattern count=$(@(Select-String -Path $paths -Pattern $pattern).Count)\" }", "exitCode": 0, "output": "style= count=0\n<(button|input|textarea|select|table)\\b count=0\ntext-(neon-|white)|from ['\"'](recharts|react-leaflet|framer-motion)['\"'] count=0", "limits": "Repeated bounded pattern receipt only; not whole-app violations or runtime validation."}
+    ],
+    "notRun": ["TypeScript", "full lint", "build", "tests", "audit.sh (includes prohibited project TypeScript gate)", "visual/browser/keyboard/contrast QA"],
+    "readLimits": "Second attempt read conventions, design contract and mission fully; page and mounted feature bodies were read directly. Legacy siblings, DataTable, ChartContainer, OperationalBrief, route map, range hook and other shared owners were inspected only in bounded excerpts. Underlying deriveDataState, backend queries, MobileDataTableAdapter contract, ChartExportMenu and onboarding internals remain uninspected. Original report source findings were retained where supported; no historical receipt is current runtime proof.",
+    "reconciliation": "Inline Python JSON assertions exited 0: mandatory fields; exact item/page/routes; issue ownership/line bounds; shared proposal fields; citation range bounds. SHA256=898070F257597100CDCA38297690F76B9E456DBEAAA8DA1F96440818EA250CE7; pageLines=133; sections=8. Corrected citation end bounds, qualified legacy overlap claims, removed unproved collapse/clipboard claims, and distinguished four composed GlassPanel occurrences from an exhaustive mounted count. Shared proposals are not implementations or acceptance.",
+    "ownedFiles": ["docs\\frontend-audits\\audit-page-126.json", ".agent-status\\audit-page-126.txt"]
+  },
+  "filesRead": [
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-mission.md",
+    "docs\\frontend-audits\\audit-page-126.json",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\driving\\pages\\SpeedSweetSpotPage.tsx",
+    "web\\src\\features\\driving\\lib\\speedSweetSpot.ts",
+    "web\\src\\features\\driving\\components\\operationalbrief-n-z\\SweetSpotSummaryBrief.tsx",
+    "web\\src\\features\\driving\\components\\operationalbrief-n-z\\SweetSpotEvidenceBrief.tsx",
+    "web\\src\\features\\driving\\components\\operationalbrief-n-z\\SweetSpotMethodBrief.tsx",
+    "web\\src\\features\\driving\\components\\operationalbrief-n-z\\DrivingSummaryBrief.tsx",
+    "web\\src\\features\\driving\\components\\speed-sweet-spot\\ConsumptionSpeedCurve.tsx",
+    "web\\src\\features\\driving\\components\\speed-sweet-spot\\ConsumptionSpeedPlot.tsx",
+    "web\\src\\features\\driving\\components\\speed-sweet-spot\\DriveEvidenceScatter.tsx",
+    "web\\src\\features\\driving\\components\\speed-sweet-spot\\DriveEvidencePlot.tsx",
+    "web\\src\\features\\driving\\components\\speed-sweet-spot\\MonthlyOperatingContext.tsx",
+    "web\\src\\features\\driving\\components\\speed-sweet-spot\\SpeedBandCoverage.tsx",
+    "web\\src\\features\\driving\\components\\speed-sweet-spot\\SpeedBandScorecard.tsx",
+    "web\\src\\features\\driving\\components\\speed-sweet-spot\\SpeedSweetSpotSectionBody.tsx",
+    "web\\src\\features\\driving\\components\\speed-sweet-spot\\types.ts",
+    "web\\src\\features\\driving\\components\\speed-sweet-spot\\useSpeedSweetSpotDisplay.ts",
+    "web\\src\\features\\driving\\components\\speed-sweet-spot\\index.ts",
+    "web\\src\\features\\driving\\components\\speed-sweet-spot\\SpeedSweetSpotKpis.tsx",
+    "web\\src\\features\\driving\\components\\speed-sweet-spot\\SweetSpotEvidence.tsx",
+    "web\\src\\features\\driving\\components\\speed-sweet-spot\\SpeedSweetSpotMethodology.tsx",
+    "web\\src\\api\\hooks\\useDriving.ts",
+    "web\\src\\hooks\\useRangeState.ts",
+    "web\\src\\hooks\\useDataState.ts",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\App.tsx",
+    "internal\\api\\router.go",
+    "web\\src\\components\\charts\\EmbeddedChart.tsx",
+    "web\\src\\components\\charts\\ChartContainer.tsx",
+    "web\\src\\components\\layout\\Grid.tsx",
+    "web\\src\\components\\motion\\FadeIn.tsx",
+    "web\\src\\components\\ui\\DataTable.tsx",
+    "web\\src\\components\\data-display\\OperationalBrief.tsx",
+    "web\\src\\components\\feedback\\StaleRefreshWarning.tsx"
+  ]
+}

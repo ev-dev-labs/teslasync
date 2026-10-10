@@ -3,8 +3,9 @@ import { useTranslation } from 'react-i18next';
 
 import { useClimateHistory } from '@/api/hooks/useVehicleSystems';
 
-import { Grid, PageContainer } from '@/components/layout';
+import { PageLayout, type CardGridItem } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
+import { useDataState } from '@/hooks/useDataState';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useUnits } from '@/hooks/useUnits';
@@ -16,7 +17,6 @@ import {
   CabinThermalCandidateDirectory,
   CabinThermalCandidateDisposition,
   CabinThermalDirectionProfile,
-  CabinThermalEvidenceKpiBand,
   CabinThermalFitQuality,
   CabinThermalMethodology,
   CabinThermalPredictionScenario,
@@ -24,15 +24,17 @@ import {
   CabinThermalSegmentationDiagnostics,
   CabinThermalSourceCoverage,
   CabinThermalThresholdMatrix,
-  type CabinThermalQueryState,
 } from '../components/cabin-thermal';
+import {
+  CabinThermalEvidenceStats,
+  CabinThermalGrid,
+  cabinThermalSourceState,
+} from '../components/cabin-thermal-modernization';
 import { summarizeCabinThermal } from '../lib/cabinThermal';
-
-const TWO_COLUMNS = { default: 1, xl: 2 } as const;
 
 export default function CabinThermalPage() {
   const { t, i18n } = useTranslation();
-  usePageTitle(t('cabinThermal.title', 'Cabin Thermal Model'));
+  usePageTitle(t('cabinThermal.title', 'Cabin thermal model'));
 
   const { vehicleId } = useSelectedVehicle();
   const {
@@ -42,84 +44,75 @@ export default function CabinThermalPage() {
   } = useUnits();
   const vehicleIdStr = vehicleId != null ? String(vehicleId) : '';
   const climateQuery = useClimateHistory(vehicleIdStr);
-  const hasCachedData =
-    vehicleId != null && climateQuery.data !== undefined;
-  const isResolved =
-    vehicleId != null && (hasCachedData || climateQuery.isSuccess);
+  const climateState = useDataState(climateQuery, { provenance: 'historical' });
   const samples = useMemo(
-    () => (vehicleId != null ? climateQuery.data ?? [] : []),
-    [climateQuery.data, vehicleId],
+    () => (vehicleId != null ? climateState.data ?? [] : []),
+    [climateState.data, vehicleId],
   );
   const summary = useMemo(
     () => summarizeCabinThermal(samples),
     [samples],
   );
-  const state: CabinThermalQueryState = {
-    vehicleSelected: vehicleId != null,
-    isLoading:
-      vehicleId != null && !hasCachedData && climateQuery.isLoading,
-    isResolved,
-    error:
-      climateQuery.isError && !hasCachedData
-        ? climateQuery.error
-        : null,
-    refreshError:
-      climateQuery.isError && hasCachedData
-        ? climateQuery.error
-        : null,
-    onRetry: () => void climateQuery.refetch(),
-  };
+  const state = cabinThermalSourceState(
+    climateState,
+    climateQuery,
+    vehicleId != null,
+    () => void climateQuery.refetch(),
+  );
   const locale = i18n.language;
 
-  return (
-    <PageContainer
-      title={t('cabinThermal.title', 'Cabin Thermal Model')}
-      subtitle={t(
-        'cabinThermal.subtitle',
-        'A gate-by-gate audit of parked cabin relaxation, from returned climate rows to accepted Newton-cooling fits',
-      )}
-      query={climateQuery}
-    >
+  const items: CardGridItem[] = [
+    { id: 'evidence', size: 'full', content: (
       <FadeIn>
-        <CabinThermalEvidenceKpiBand
+        <CabinThermalEvidenceStats
           summary={summary}
           state={state}
           formatDuration={formatDuration}
         />
       </FadeIn>
-
+    ) },
+    { id: 'source-coverage', size: 'half', content: (
       <FadeIn delay={0.04}>
-        <Grid cols={TWO_COLUMNS} gap={4}>
-          <CabinThermalSourceCoverage
-            summary={summary}
-            state={state}
-            locale={locale}
-            formatDuration={formatDuration}
-          />
-          <CabinThermalSegmentationDiagnostics summary={summary} state={state} />
-        </Grid>
+        <CabinThermalSourceCoverage
+          summary={summary}
+          state={state}
+          locale={locale}
+          formatDuration={formatDuration}
+        />
       </FadeIn>
-
+    ) },
+    { id: 'segmentation', size: 'half', content: (
+      <FadeIn delay={0.04}>
+        <CabinThermalSegmentationDiagnostics summary={summary} state={state} />
+      </FadeIn>
+    ) },
+    { id: 'disposition', size: 'half', content: (
       <FadeIn delay={0.08}>
-        <Grid cols={TWO_COLUMNS} gap={4}>
-          <CabinThermalCandidateDisposition summary={summary} state={state} />
-          <CabinThermalRejectionReasons summary={summary} state={state} />
-        </Grid>
+        <CabinThermalCandidateDisposition summary={summary} state={state} />
       </FadeIn>
-
+    ) },
+    { id: 'rejections', size: 'half', content: (
+      <FadeIn delay={0.08}>
+        <CabinThermalRejectionReasons summary={summary} state={state} />
+      </FadeIn>
+    ) },
+    { id: 'funnel', size: 'half', content: (
       <FadeIn delay={0.12}>
-        <Grid cols={TWO_COLUMNS} gap={4}>
-          <CabinThermalAcceptanceFunnel summary={summary} state={state} />
-          <CabinThermalThresholdMatrix
-            summary={summary}
-            state={state}
-            locale={locale}
-            temperatureUnit={unitPrefs.temperature}
-            formatDuration={formatDuration}
-          />
-        </Grid>
+        <CabinThermalAcceptanceFunnel summary={summary} state={state} />
       </FadeIn>
-
+    ) },
+    { id: 'thresholds', size: 'half', content: (
+      <FadeIn delay={0.12}>
+        <CabinThermalThresholdMatrix
+          summary={summary}
+          state={state}
+          locale={locale}
+          temperatureUnit={unitPrefs.temperature}
+          formatDuration={formatDuration}
+        />
+      </FadeIn>
+    ) },
+    { id: 'candidate-directory', size: 'full', content: (
       <FadeIn delay={0.16}>
         <CabinThermalCandidateDirectory
           summary={summary}
@@ -130,24 +123,28 @@ export default function CabinThermalPage() {
           formatDuration={formatDuration}
         />
       </FadeIn>
-
+    ) },
+    { id: 'fit-quality', size: 'half', content: (
       <FadeIn delay={0.2}>
-        <Grid cols={TWO_COLUMNS} gap={4}>
-          <CabinThermalFitQuality
-            summary={summary}
-            state={state}
-            formatDuration={formatDuration}
-          />
-          <CabinThermalDirectionProfile
-            summary={summary}
-            state={state}
-            locale={locale}
-            temperatureUnit={unitPrefs.temperature}
-            formatDuration={formatDuration}
-          />
-        </Grid>
+        <CabinThermalFitQuality
+          summary={summary}
+          state={state}
+          formatDuration={formatDuration}
+        />
       </FadeIn>
-
+    ) },
+    { id: 'direction-profile', size: 'half', content: (
+      <FadeIn delay={0.2}>
+        <CabinThermalDirectionProfile
+          summary={summary}
+          state={state}
+          locale={locale}
+          temperatureUnit={unitPrefs.temperature}
+          formatDuration={formatDuration}
+        />
+      </FadeIn>
+    ) },
+    { id: 'accepted-directory', size: 'full', content: (
       <FadeIn delay={0.24}>
         <CabinThermalAcceptedDirectory
           summary={summary}
@@ -157,7 +154,8 @@ export default function CabinThermalPage() {
           formatDuration={formatDuration}
         />
       </FadeIn>
-
+    ) },
+    { id: 'prediction', size: 'full', content: (
       <FadeIn delay={0.28}>
         <CabinThermalPredictionScenario
           summary={summary}
@@ -168,14 +166,33 @@ export default function CabinThermalPage() {
           formatDuration={formatDuration}
         />
       </FadeIn>
-
+    ) },
+    { id: 'accounting', size: 'full', content: (
       <FadeIn delay={0.32}>
         <CabinThermalAccountingMatrix summary={summary} state={state} />
       </FadeIn>
-
+    ) },
+    { id: 'methodology', size: 'full', content: (
       <FadeIn delay={0.36}>
         <CabinThermalMethodology summary={summary} />
       </FadeIn>
-    </PageContainer>
+    ) },
+  ];
+
+  return (
+    <PageLayout
+      className="w-full min-w-0"
+      title={t('cabinThermal.title', 'Cabin thermal model')}
+      subtitle={t(
+        'cabinThermal.subtitle',
+        'A gate-by-gate audit of parked cabin relaxation, from returned climate rows to accepted Newton-cooling fits',
+      )}
+      query={climateQuery}
+    >
+      <CabinThermalGrid
+        items={items}
+        label={t('cabinThermal.title', 'Cabin thermal model')}
+      />
+    </PageLayout>
   );
 }

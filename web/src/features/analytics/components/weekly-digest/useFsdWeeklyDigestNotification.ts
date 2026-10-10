@@ -3,8 +3,9 @@ import { useTranslation } from 'react-i18next';
 
 import { useUnits } from '@/hooks/useUnits';
 import { useWebPush } from '@/hooks/useWebPush';
-import { fmtNumber } from '@/lib/numberFormat';
+
 import type { FsdInsights } from '@/types/fsd';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export const FSD_WEEKLY_DIGEST_NOTICE_PREFIX = 'teslasync.fsd.weeklyDigest.notified.';
 
@@ -40,6 +41,7 @@ export function useFsdWeeklyDigestNotification({
   insights,
   isReady,
 }: FsdWeeklyDigestNotificationArgs) {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const { formatDistance } = useUnits();
   const { permission, sendNotification, isSubscribed } = useWebPush();
@@ -67,12 +69,12 @@ export function useFsdWeeklyDigestNotification({
     const shareLabel = share == null
       ? ''
       : t('analytics.weeklyDigest.fsdNoticeShare', ' ({{value}}% of observed driving)', {
-          value: fmtNumber(share, 1),
+          value: fmtNumber(share),
         });
     const changeLabel = shareChange == null
       ? ''
       : t('analytics.weeklyDigest.fsdNoticeChange', ', {{delta}} pts vs last week', {
-          delta: `${shareChange >= 0 ? '+' : ''}${fmtNumber(shareChange, 1)}`,
+          delta: `${shareChange >= 0 ? '+' : ''}${fmtNumber(shareChange)}`,
         });
 
     sendNotification(
@@ -82,7 +84,7 @@ export function useFsdWeeklyDigestNotification({
           'analytics.weeklyDigest.fsdNotice',
           'Reported FSD {{distance}}{{share}}{{change}}.',
           {
-            distance: formatDistance(distanceM, { precision: 1 }),
+            distance: formatDistance(distanceM),
             share: shareLabel,
             change: changeLabel,
           },

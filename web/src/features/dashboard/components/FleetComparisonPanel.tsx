@@ -8,9 +8,10 @@ import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
 import { useUnits } from '@/hooks/useUnits';
 import { useChartPalette } from '@/hooks/useChartPalette';
 import { convertDistanceFromSI } from '@/lib/unitConversion';
-import { fmtInt, fmtNumber, safeNumber } from '@/lib/numberFormat';
+import { knownNumber } from '@/api/dataState';
 import { cn } from '@/lib/cn';
 import type { VehicleComparisonEntry } from '@/types/analytics';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 /** Backend `vehicle_comparison[].distance` is SI kilometres; efficiency is Wh/km. */
 const METERS_PER_KM = 1000;
@@ -38,6 +39,7 @@ export function FleetComparisonPanel({
   onRetry,
   className,
 }: FleetComparisonPanelProps) {
+  const { fmtInt, fmtNumber, precision: displayPrecision, locale: displayLocale } = useNumberFormatting();
   const { t } = useTranslation();
   const { unitPrefs } = useUnits();
   const palette = useChartPalette();
@@ -49,26 +51,32 @@ export function FleetComparisonPanel({
     const fromKm = (km: number) => convertDistanceFromSI(km * METERS_PER_KM, distanceUnit);
     const whPerKmToDisplay = (whPerKm: number) =>
       distanceUnit === 'mi' ? whPerKm * KM_PER_MILE : whPerKm;
-    // `safeNumber` coerces null/undefined/NaN/Infinity from the API to 0 so a
-    // single bad rollup can't produce NaN bar widths or scramble the sort.
     const mapped = (entries ?? [])
-      .map((e) => ({
-        id: e.id,
-        name: e.name?.trim() || t('quickStats.fleet.unnamed', 'Unnamed'),
-        distance: fromKm(safeNumber(e.distance)),
-        efficiency: whPerKmToDisplay(safeNumber(e.efficiency)),
-      }))
-      .sort((a, b) => b.distance - a.distance);
+      .map((e) => {
+        const distance = knownNumber(e.distance);
+        const efficiency = knownNumber(e.efficiency);
+        return {
+          id: e.id,
+          name: e.name?.trim() || t('quickStats.fleet.unnamed', 'Unnamed'),
+          distance: distance == null ? null : fromKm(distance),
+          efficiency: efficiency == null ? null : whPerKmToDisplay(efficiency),
+        };
+      })
+      .sort((a, b) => {
+        if (a.distance == null) return b.distance == null ? 0 : 1;
+        if (b.distance == null) return -1;
+        return b.distance - a.distance;
+      });
     // `|| 1` guards MetricBar's `value / max` when every vehicle is at 0 km.
-    const peak = mapped.reduce((m, r) => Math.max(m, r.distance), 0) || 1;
+    const peak = mapped.reduce((m, r) => r.distance == null ? m : Math.max(m, r.distance), 0) || 1;
     return { rows: mapped, maxDistance: peak };
-  }, [entries, distanceUnit, t]);
+  }, [entries, distanceUnit, t, displayPrecision, displayLocale]);
 
   return (
     <GlassPanel className={cn('p-4 sm:p-5', className)} aria-busy={loading || undefined}>
       <PanelTitle className="mb-3 flex items-center gap-2">
         <Car className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-        {t('quickStats.fleet.title', 'Fleet Comparison')}
+        {t('quickStats.fleet.title', 'Fleet comparison')}
       </PanelTitle>
 
       {loading ? (
@@ -82,7 +90,7 @@ export function FleetComparisonPanel({
           action={onRetry ? { label: t('common.retry', 'Retry'), onClick: onRetry } : undefined}
         />
       ) : (
-        <ul className="space-y-3" aria-label={t('quickStats.fleet.title', 'Fleet Comparison')}>
+        <ul className="space-y-3" aria-label={t('quickStats.fleet.title', 'Fleet comparison')}>
           {rows.map((r, i) => (
             <li key={r.id}>
               <MetricBar
@@ -90,7 +98,7 @@ export function FleetComparisonPanel({
                 value={r.distance}
                 max={maxDistance}
                 color={palette[i % palette.length] ?? '#22d3ee'}
-                sublabel={`${fmtInt(r.distance)} ${distanceUnit} · ${fmtNumber(r.efficiency)} ${efficiencyUnit}`}
+                sublabel={`${r.distance == null ? '—' : fmtInt(r.distance)} ${distanceUnit} · ${r.efficiency == null ? '—' : fmtNumber(r.efficiency)} ${efficiencyUnit}`}
               />
             </li>
           ))}

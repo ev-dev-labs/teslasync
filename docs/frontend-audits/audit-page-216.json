@@ -1,0 +1,319 @@
+{
+  "item": "audit-page-216",
+  "page": "web\\src\\features\\trips\\pages\\TripReplayPage.tsx",
+  "routes": ["/drives/:id/replay"],
+  "purpose": "Replay a stored drive's telemetry-enriched GPS trail with synchronized map, transport, current-position measurements and historical charts.",
+  "primaryGoal": "Understand what happened along a drive and seek precisely between its route, elapsed-time timeline and elevation profile without losing stored totals or source trust.",
+  "dataSources": [
+    {
+      "hook": "useDrive(id)",
+      "file": "web\\src\\api\\hooks\\useDriving.ts",
+      "line": 194,
+      "endpoint": "GET /api/v1/drives/{driveID}",
+      "hookPath": "/drives/${id}",
+      "routeEvidence": "internal\\api\\router.go:3463-3475",
+      "ownership": "Drive detail handler composes the stored drive record and signal.StateReader historical telemetry/position timelines.",
+      "sourceEvidence": "internal\\api\\drives\\detail.go:264-351",
+      "queryBehavior": "['drive', id]; enabled only with an ID; forwards AbortSignal; polls INTERVALS.FAST only when data.live === true; otherwise inherits query policy.",
+      "units": "Stored summary uses distanceM, durationS, energyUsedWh, avgSpeedMps and maxSpeedMps. Position speed is projected from VehicleSpeed without a display conversion. Per-row power is explicitly computed as pack_voltage * pack_current / 1000 in the inspected backend and is currently kW, despite the application-wide SI mandate. Do not blindly divide it again or normalize the cache in a page redesign.",
+      "limits": "No network request exercised; StateReader implementation, sampling/completeness and real server response not verified. Elevation is explicitly absent from the telemetry projection because no current Fleet Telemetry Elevation atomic is emitted."
+    },
+    {
+      "hook": "useTripReplay(positions)",
+      "file": "web\\src\\hooks\\useTripReplay.ts",
+      "line": 96,
+      "endpoint": null,
+      "ownership": "Existing client playback clock; currentIndex is the shared cursor for all page surfaces.",
+      "behavior": "20 fps virtual clock; speed slots 1/10/25/50/100; time-based seeking, relative seconds, frame stepping, play/pause/stop; timeline endpoint signature resets playback."
+    },
+    {
+      "hook": "useUnits / useNumberFormatting / useOperationalMetrics",
+      "file": "web\\src\\features\\trips\\components\\operationalbrief-all\\TripReplaySummaryBrief.tsx",
+      "line": 17,
+      "endpoint": "Transitive preference endpoints not traced in this bounded page audit",
+      "ownership": "Existing application formatting/settings and operational-metric owners.",
+      "behavior": "Preserve saved distance/speed/temperature, locale, raw SI summary values and numeric missing-state handling; conversions occur in display derivations, not wire/cache."
+    }
+  ],
+  "components": [
+    {"name": "PageLayout", "owner": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx", "line": 9, "contract": "Existing PageContainer prop adapter; metadataActions, secondaryActions, loading, error, query, breadcrumbs; full-width min-w-0 container."},
+    {"name": "TripReplaySummaryBrief / TripOperationalBrief", "owner": "web\\src\\features\\trips\\components\\operationalbrief-all\\TripReplaySummaryBrief.tsx", "line": 17, "contract": "Eight source-backed operational metrics; drive, DataState, elevation availability and specialist duration formatter; existing OperationalBrief, DataFreshness and DataProvenanceBadge pipeline."},
+    {"name": "TripReplayMap", "owner": "web\\src\\features\\trips\\components\\TripReplayMap.tsx", "line": 131, "contract": "positions/currentIndex/onSeekToIndex/reduceMotion/height/embedded; existing map barrel, style switcher, route/stationary branches, nearest route-click sample."},
+    {"name": "TripReplayReadout", "owner": "web\\src\\features\\trips\\components\\TripReplayReadout.tsx", "line": 15, "contract": "label/value/unit/icon/help/className; unframed MetricLabel/MetricValue; wraps long content, hides decorative icons."},
+    {"name": "PlaybackControls / TimelineScrubber", "owner": "web\\src\\components\\data-display\\PlaybackControls.tsx", "line": 18, "contract": "Caller-controlled transport, speed menu, progress, durationMs, markers, preview sampler, keyboard callbacks and framed=false embedding; existing slider and marker controls."},
+    {"name": "TripReplayElevation", "owner": "web\\src\\features\\trips\\components\\TripReplayElevation.tsx", "line": 27, "contract": "Indexed display-distance samples with nullable elevation; shared ChartCard; click-to-seek, gain/loss, null gaps and export controls."},
+    {"name": "TripReplayCharts", "owner": "web\\src\\features\\trips\\components\\TripReplayCharts.tsx", "line": 52, "contract": "Indexed display-speed/kW samples; shared ChartCard; dual axes, persistent legend key trip-replay-speed-power, shared cursor group trip-replay and bidirectional seeking."},
+    {"name": "ChartCard / EmbeddedChart / ChartContainer", "owner": "web\\src\\components\\layout\\layout-reference\\ChartCard.tsx", "line": 13, "contract": "Existing canonical frame accepts data/dataColumns, ariaLabel/ariaDescription, sizing, toolbar/export/fullscreen; forwards children through EmbeddedChart, not a competing chart wrapper."},
+    {"name": "GlassPanel / Button / Text / PanelTitle / FadeIn / EmptyState / Sparkline", "owner": "Existing category barrels", "line": 8, "file": "web\\src\\features\\trips\\pages\\TripReplayPage.tsx", "contract": "Retain canonical surfaces, native Link composed with BUTTON_BASE, localized names, motion policy and shared feedback/chart rendering."}
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\trips\\pages\\TripReplayPage.tsx",
+      "line": 389,
+      "rule": "MDC-002 / mission 33",
+      "detail": "Consecutive measured elevation gain/loss is derived here and again in TripReplayElevation.tsx:33-44.",
+      "fix": "Use one feature-owned pure derivation with identical missing-pair and rounding semantics; no speculative app-wide component.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "responsive": {
+    "verified": "Source only",
+    "existingStrategy": [
+      "TripReplayPage.tsx:474-488 stacks map/transport/readouts below lg; lg uses a 2fr/minmax(280px,1fr) map/readout stage.",
+      "TripReplayPage.tsx:475 fixes map heights at 320/380/440px by breakpoint.",
+      "TripReplayPage.tsx:488 uses two readout columns, three at sm, two at lg; timeline charts stack until xl at :591.",
+      "PlaybackControls.tsx:403-456 wraps transport and allocates a shrinkable scrubber; readouts and metadata explicitly wrap."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\components\\data-display\\PlaybackControls.tsx",
+        "line": 414,
+        "rule": "MDC-040 / MDC-043",
+        "detail": "Restart, play and stop explicitly use h-8 w-8; shortcut help at :474 uses h-7 w-7. These source sizes are below the contract's stronger 44px mobile default. Actual rendered sizes and any WCAG spacing exception are untested.",
+        "fix": "Existing shared transport owner should supply coarse-pointer/touch 44px targets while retaining compact visual glyphs, wrapping and transport behavior. Do not add a page-local transport.",
+        "owner": "shared",
+        "confidence": "high"
+      }
+    ],
+    "unverified": ["All ten prescribed widths", "Allocated narrow shell/container width", "320px toolbar/chart clipping", "200% text and long translations", "RTL", "Actual touch target geometry"]
+  },
+  "accessibility": {
+    "verified": "Source only, not keyboard or assistive-technology acceptance",
+    "existing": [
+      "Named page map/timeline regions and localized refresh/back controls; decorative readout icons are aria-hidden.",
+      "TimelineScrubber.tsx:428-459 handles Arrow/Home/End/PageUp/PageDown; :524-530 exposes a focusable slider.",
+      "PlaybackControls.tsx:149-168 avoids hijacking form controls, links, buttons and sliders; help lists keyboard shortcuts.",
+      "Charts disable series animation; map receives useMotionPreference.reduce and switches to snap markers and disabled Leaflet zoom animations."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\trips\\components\\TripReplayCharts.tsx",
+        "line": 104,
+        "rule": "MDC-034 / MDC-040 / MDC-041",
+        "detail": "The chart declares chart-a11y:no-table and does not pass data/dataColumns to ChartCard; TripReplayElevation.tsx:47 does the same. Stored totals/current readouts cannot convey the complete per-sample trends. Shared ChartContainer.tsx:171-186 already supports screen-reader/forced-colors fallback data.",
+        "fix": "Supply localized time/distance, speed, power and elevation columns via the existing ChartCard data/dataColumns contract, preserving nullable values and sample indices. Use existing scrubber keyboard seeking; do not invent another chart engine.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\trips\\components\\TripReplayMap.tsx",
+        "line": 249,
+        "rule": "MDC-025 / MDC-034 / MDC-040",
+        "detail": "Speed categories and start/end route pins use color alone in the inspected map renderer, with no textual speed-band legend or start/end labels in this component. Current readouts and keyboard transport exist but do not explain the route colors.",
+        "fix": "Add restrained localized textual route key/start-end context using existing map/UI composition, with explicit unknown-speed category; retain route-click seeking and keyboard transport. Verify real Leaflet semantics before claiming a complete accessibility failure/pass.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ],
+    "unverified": ["Screen reader output", "Tab/focus restoration", "Keyboard in open map/style/help/export controls", "Composed text/UI contrast", "Forced colors", "OS/low-bandwidth reduced-motion behavior"]
+  },
+  "states": {
+    "loading": "Page derives historical DataState and passes loading=status initial to PageLayout (:117-118,413-416); PageContainer.tsx:243-244 renders the canonical skeleton instead of children.",
+    "fatalError": "Only fatalError is forwarded as page error; header refresh/back remain configured. PageContainer.tsx:245-246 uses ErrorDisplay.",
+    "retainedErrorOffline": "deriveDataState.ts:158-177 retains payload for refresh errors/paused fetching. Page retains map/charts; TripOperationalBrief.tsx:25-31 exposes source freshness/provenance and status. PageContainer query prop also supplies DataFreshnessAuto.",
+    "emptyGps": "Page :451-460 shows an explanatory GPS-empty panel and retains stored summary totals. Playback/map/elevation/timeline are currently absent when no usable positions exist; retain this existing branch semantics unless explicit product/integration change is assigned.",
+    "missingMetrics": "SOC NaN is deliberately distinct from zero; other nullable readouts use em dash. Elevation preserves null gaps and has an unavailable EmptyState. Speed/power chart shows EmptyState only when both series lack observations.",
+    "stationaryGps": "TripReplayMap.tsx:145-159 and :317-331 keep anchor location and explain why no route can be drawn.",
+    "issues": [
+      {
+        "file": "web\\src\\features\\trips\\pages\\TripReplayPage.tsx",
+        "line": 355,
+        "rule": "MDC-026 / MDC-045",
+        "detail": "The speed sparkline converts null speed to 0 in both full and downsampled branches (:355,361), visually representing unknown speed as a measured stop.",
+        "fix": "Preserve missing samples as gaps using the existing chart owner if supported; otherwise omit only the decorative sparkline when incomplete while keeping primary nullable timeline series and every replay sample.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\trips\\pages\\TripReplayPage.tsx",
+        "line": 144,
+        "rule": "MDC-026 / MDC-045",
+        "detail": "nearestTelemetry always returns the nearest row without a maximum timestamp distance or per-measurement evidence. Widely separated observations can be presented as current SOC/power/range/temp at a GPS sample.",
+        "fix": "Define a typed feature join with explicit temporal provenance/availability, and validate permissible matching against source semantics before selecting a tolerance. Do not invent a two-minute rule for historical telemetry or silently interpolate.",
+        "owner": "integration",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\trips\\pages\\TripReplayPage.tsx",
+        "line": 180,
+        "rule": "MDC-026 / MDC-045",
+        "detail": "Missing latitude/longitude become 0 and only the pair (0,0) is filtered at :198. A row with one missing coordinate therefore survives as a fabricated point, affecting route, distance and nearest-sample seeking.",
+        "fix": "Validate each coordinate independently as finite and within geographic bounds before including a point; retain actual valid zero latitude/longitude and expose unavailable counts rather than inventing coordinates.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ]
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\trips\\pages\\TripReplayPage.tsx",
+      "line": 575,
+      "rule": "MDC-010 / MDC-034 / mission 7",
+      "detail": "Decorative scrubber sparkline pins cyan #22d3ee and active readout highlight at :376 pins a cyan ring. The map and elevation/cursor renderers also pin saturated hex colors independently of canonical palettes.",
+      "fix": "Use existing palette/semantic tokens and a subdued event outline; keep selected series/theme preferences, event meaning, route visibility and playhead position. Tone down decoration rather than removing measurement series.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\trips\\components\\TripReplayElevation.tsx",
+      "line": 69,
+      "rule": "MDC-034",
+      "detail": "Elevation uses a fixed emerald fill with explicit 0.4 gradient opacity and fixed stroke at :90; speed/power reference cursor pins #00b4d8 at TripReplayCharts.tsx:196. These bypass the otherwise shared chart palette.",
+      "fix": "Adopt existing chart palette/reference tokens with restrained area opacity while preserving measured/null samples, axis units, exports, cursor and legend state.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\features\\trips\\components\\TripReplayMap.tsx",
+      "line": 55,
+      "rule": "MDC-045 / MDC-034",
+      "detail": "speedColor(kmh) uses thresholds 30/60/100, but :178 passes raw curr.speed from the page's SI-normalized positions. The backend projects VehicleSpeed directly to speed. The map therefore compares m/s values with km/h thresholds.",
+      "fix": "Keep raw SI positions/cache and translate the existing documented physical category thresholds to SI inside the feature derivation (or convert only this classification input at its display boundary). Add boundary/null cases and avoid dependence on viewer speed units.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\trips\\pages\\TripReplayPage.tsx",
+      "line": 229,
+      "rule": "MDC-046",
+      "detail": "restoredRef is mount-scoped, not drive-ID-scoped; restoration effect depends only on positions.length (:248). A same-component route-ID transition can retain true and fail to restore the new drive's at/play parameters even though useTripReplay resets its timeline.",
+      "fix": "Key restoration and debounce lifecycle to the drive ID/query identity, preserving unrelated search params, valid 0..1 bounds, 300ms replace writes and requested autoplay. Test same-instance drive changes, including equal sample counts.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\driving\\lib\\replayMarkers.ts",
+      "line": 117,
+      "rule": "MDC-044",
+      "detail": "Marker labels ('Start', 'End', 'Fast segment', 'Regen peak', 'Battery <20%', clustered labels) are hardcoded in the pure helper and copied into the scrubber at TripReplayPage.tsx:218-223; surrounding page labels are localized.",
+      "fix": "Keep marker algorithms/ordering/counts intact and translate structured marker kind/count/threshold metadata at the existing presentation boundary; avoid importing i18n into a pure algorithm or adding a second catalog.",
+      "owner": "integration",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\driving\\lib\\replayMarkers.ts",
+      "line": 167,
+      "rule": "MDC-025 / MDC-045",
+      "detail": "A continuous negative battery-power interval is labeled Charge start/stop after 30 seconds, while the page's power help describes negative power as regenerative braking. Power sign alone does not establish an actual charge session.",
+      "fix": "Preserve existing event detection for modernization; separately have the domain owner confirm event semantics and supply authoritative charge evidence or accurate regen labels. Do not invent session data or delete marker families as a visual fix.",
+      "owner": "integration",
+      "confidence": "high"
+    }
+  ],
+  "priority": {
+    "level": "high",
+    "order": ["Resolve speed-band SI mismatch and missing coordinate/temporal evidence", "Retain URL replay identity and all synchronized interactions", "Use existing accessible chart fallback and shared mobile transport sizing", "Reduce palette/gradient/event-highlight noise and localize marker presentation"],
+    "scope": "Source audit completed; implementation and acceptance remain separate assigned work."
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "Extend existing PlaybackControls mobile target contract",
+      "existingOwnerFile": "web\\src\\components\\data-display\\PlaybackControls.tsx",
+      "propsVariantsStates": {
+        "retainProps": ["isPlaying", "speed", "progress", "elapsed", "total", "onPlay", "onPause", "onRestart", "onStop", "onSpeedChange", "onSeek", "markers", "getPreviewAt", "durationMs", "enableKeyboardShortcuts", "onSeekBy", "onSpeedRelative", "onStepFrame", "framed"],
+        "presentation": "Coarse-pointer controls at least 44px using existing density/target policy; no new page transport or global default persistence change.",
+        "states": ["play/pause", "restart/stop", "speed menu open", "help focus/hover", "narrow wrapping", "reduced motion", "forced colors"]
+      },
+      "usedBy": ["TripReplayPage.tsx:551-577; other consumers must be enumerated by the shared owner, not claimed as inspected here"],
+      "dependsOn": ["Existing Button density/focus behavior", "Existing PlaybackSpeedMenu and TimelineScrubber interaction contracts", "Shared owner focused acceptance plus mounted mobile geometry review"]
+    }
+  ],
+  "competingImplementations": [
+    {"pattern": "Charts", "decision": "Reuse", "detail": "Feature chart components already forward children through ChartCard -> EmbeddedChart -> ChartContainer. Missing accessible data is caller adoption, not a reason for a new chart/table pipeline."},
+    {"pattern": "Summary and readouts", "decision": "Reuse", "detail": "OperationalBrief owns eight stored/derived summary metrics; TripReplayReadout owns six cursor-local measurements. Different scopes; do not collapse either into a replacement KPI grid."},
+    {"pattern": "Playback", "decision": "Reuse/extend existing owner", "detail": "PlaybackControls/TimelineScrubber and useTripReplay already separate rendering from clock/state. Do not introduce a second replay controller or shortcut engine."},
+    {"pattern": "Workspace selectors", "decision": "Do not add local scope controls", "detail": "getWorkspaceRouteScope('/drives/123/replay') is range=false, vehicle=true by inspected rules (workspaceScope.ts:161-172). Page data is intentionally record-ID-bound, not range-filtered. Header vehicle selection does not change the replay ID; any shell ownership clarification is integration-owned, not a new page picker or forced range registration."}
+  ],
+  "preservation": {
+    "sourceHash": "06B4D74583363328E25B4E74580A2A1B7E9B60833F0FC81AD25779EFA1E2B6CF",
+    "sourceHashAlgorithm": "SHA256",
+    "currentLineCount": 613,
+    "sections": {
+      "commentedSectionCount": 4,
+      "renderedContentOwnersCount": 5,
+      "names": ["Drive Summary", "Route map and Current Position Stats", "Playback transport and scrubber", "Elevation Profile", "Speed & Power Timeline"],
+      "sourceRanges": ["TripReplayPage.tsx:442-449", "TripReplayPage.tsx:464-545", "TripReplayPage.tsx:547-579", "TripReplayPage.tsx:593-599", "TripReplayPage.tsx:600-607"],
+      "summaryMetricCount": 8,
+      "summaryMetrics": ["Distance", "Duration", "Avg Speed", "Max Speed", "Efficiency", "Battery start/end", "Elevation Gain", "Elevation Loss"],
+      "currentReadoutCount": 6,
+      "currentReadouts": ["Speed", "Power", "Battery", "Elevation", "Range", "Temperature"],
+      "pageGlassPanelOpeningTags": 2,
+      "pageChartContainerOpeningTags": 0,
+      "featureChartCardOwners": 2,
+      "note": "Two page GlassPanel branches are mutually exclusive. Zero direct ChartContainer tags is not absence of frames: two feature ChartCard owners use the canonical adapter."
+    },
+    "actions": [
+      "Refresh useDrive query", "Native Back to Drive link", "Existing breadcrumb navigation",
+      "Play/pause", "Restart at zero", "Stop and rewind", "Choose 1/10/25/50/100x speed",
+      "Click/drag/touch scrub", "Seek timeline marker", "Hover/drag measurement preview",
+      "Space/K toggle; arrows +/-5s (Shift +/-30s); J/L +/-10s; comma/period previous/next frame",
+      "Home/End; digits 0-9 percentage seek; +/- speed stepping; shortcut help",
+      "Route-polyline click nearest-sample seeking", "Map layer/style switching and map navigation",
+      "Elevation chart click seeking", "Speed/power chart click and hover cursor seeking",
+      "Persistent speed/power legend visibility under trip-replay-speed-power",
+      "Existing chart export controls", "URL at/play restore and debounced replace persistence with unrelated query params retained"
+    ],
+    "data": [
+      "Raw SI stored summary values and saved display/locale preferences remain unchanged; existing per-row kW backend exception must not be silently corrected by a page-only modernization.",
+      "Drive summary survives missing GPS; nearest-by-time telemetry enrichment and position-first field precedence are existing behavior requiring explicit trust review before algorithm changes.",
+      "Single replay.currentIndex synchronizes map, elevation cursor, speed/power cursor, current readouts and transport.",
+      "Null metric/elevation gaps remain distinct from measured zero; SOC NaN sentinel remains unavailable rather than 0%.",
+      "Cumulative route distance is haversine-derived; elevation totals count only consecutive measured pairs; efficiency remains energy/distance with positive-distance prerequisite.",
+      "Retained refresh-error/paused payloads remain visible; only initial fatal failures replace content.",
+      "Stationary GPS retains anchor location and explanatory banner; no invented elevation signal or route data.",
+      "Query key, AbortSignal forwarding, live-only polling, mutation/auth boundaries and workspace-owned selectors are unchanged."
+    ]
+  },
+  "evidenceLimits": {
+    "mode": "Read-only source inspection and scoped source-pattern counts; no source edits",
+    "runtime": "unverified",
+    "visual": "unverified",
+    "accessibility": "unverified at runtime",
+    "keyboard": "unverified",
+    "contrast": "unverified",
+    "viewports": "unverified",
+    "backend": "Known router and detail projection inspected; not invoked. StateReader internals, signal completeness, real record IDs and actual deployed units not exercised.",
+    "validation": [
+      "PowerShell Get-FileHash SHA256 + Get-Content line count: exit 0, hash recorded above, LINES=613.",
+      "Scoped PowerShell source counts: exit 0; raw controls=0; inline style attributes=0; direct chart/map/motion imports=0; GlassPanel opening tags=2; ChartContainer opening tags=0.",
+      "First count command failed with PowerShell ParserError (exit 1); corrected quoting and reran successfully. No clean claim based on failed command.",
+      "audit-violations skill script inspected but not executed because it unconditionally runs project TypeScript; assignment disallows full lint/build/validation. Targeted source counts are not the full script or full violations certification.",
+      "TypeScript, lint, builds, tests, browser requests, screenshots, production mutations and Git were not run."
+    ],
+    "scope": "Only assigned mounted page, its directly consumed presentation/data/route contracts and required governing documents; no unrelated page audit or global consumer enumeration."
+  },
+  "filesRead": [
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\trips\\pages\\TripReplayPage.tsx",
+    "web\\src\\features\\trips\\components\\TripReplayMap.tsx",
+    "web\\src\\features\\trips\\components\\TripReplayReadout.tsx",
+    "web\\src\\features\\trips\\components\\TripReplayElevation.tsx",
+    "web\\src\\features\\trips\\components\\TripReplayCharts.tsx",
+    "web\\src\\features\\trips\\components\\operationalbrief-all\\TripReplaySummaryBrief.tsx",
+    "web\\src\\features\\trips\\components\\operationalbrief-all\\TripOperationalBrief.tsx",
+    "web\\src\\features\\driving\\lib\\replayMarkers.ts",
+    "web\\src\\hooks\\useTripReplay.ts",
+    "web\\src\\api\\hooks\\useDriving.ts",
+    "web\\src\\api\\dataState.ts",
+    "web\\src\\api\\client.ts",
+    "web\\src\\types\\driving.ts",
+    "web\\src\\App.tsx",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\layout\\layout-reference\\ChartCard.tsx",
+    "web\\src\\components\\layout\\PageContainer.tsx",
+    "web\\src\\components\\charts\\EmbeddedChart.tsx",
+    "web\\src\\components\\charts\\ChartContainer.tsx",
+    "web\\src\\components\\data-display\\PlaybackControls.tsx",
+    "web\\src\\components\\data-display\\TimelineScrubber.tsx",
+    "internal\\api\\router.go",
+    "internal\\api\\drives\\detail.go"
+  ],
+  "ownedFiles": ["docs\\frontend-audits\\audit-page-216.json", ".agent-status\\audit-page-216.txt"]
+}

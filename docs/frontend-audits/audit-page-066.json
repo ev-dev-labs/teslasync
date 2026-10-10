@@ -1,0 +1,268 @@
+{
+  "item": "audit-page-066",
+  "page": "web\\src\\features\\battery\\pages\\CycleStressPage.tsx",
+  "routes": ["/cycle-stress"],
+  "purpose": "Inspect continuity-bounded rainflow reconstruction from the selected vehicle's returned drive and charging SoC endpoints, including sensitivity, source support, exclusions and interpretation limits.",
+  "primaryGoal": "Understand observed cycle ranges and the limits of independently capped source histories without interpreting illustrative stress as battery damage, health, warranty status or remaining life.",
+  "dataSources": [
+    {
+      "hook": "useChargingHistory",
+      "file": "web\\src\\api\\hooks\\useCharging.ts",
+      "line": 72,
+      "endpoint": "GET /api/v1/charging?vehicle_id=<encoded ID>&limit=1000",
+      "owner": "Charging history hook; chargingHandler.ListByVehicle, internal\\api\\router.go:3502-3503",
+      "behavior": "Independent history key includes ID and bounded limit; vehicle-gated; forwards AbortSignal; MODERATE staleTime; safeArray select; no date bounds or pagination loop.",
+      "limits": "Registration verified from source, not an HTTP response. Backend ordering, exact cap enforcement and returned payload correctness not exercised."
+    },
+    {
+      "hook": "useDriveHistory",
+      "file": "web\\src\\api\\hooks\\useDriving.ts",
+      "line": 140,
+      "endpoint": "GET /api/v1/drives?vehicle_id=<encoded ID>&limit=1000",
+      "owner": "Drive history hook; driveHandler.ListByVehicle, internal\\api\\router.go:3463-3464",
+      "behavior": "Separate history cache key; bounds limit to 1-1000; forwards AbortSignal; vehicle-gated; MODERATE staleTime; safeArray select.",
+      "limits": "Hook contract is an observed single-page window, not a full-history claim. Handler/repository behavior not independently audited."
+    },
+    {
+      "hook": "useSelectedVehicle / useTimezone('vehicle')",
+      "file": "web\\src\\features\\battery\\pages\\CycleStressPage.tsx",
+      "line": 48,
+      "endpoint": null,
+      "owner": "Existing workspace selection and timezone owners",
+      "behavior": "Shared selection resolves URL, persisted selection and first fleet vehicle; no duplicate local vehicle selector. workspaceScope.ts:23-77,98-131,165-176 gives /cycle-stress vehicle=true, range=false. This page explicitly analyzes returned history rather than a selected date window.",
+      "limits": "Vehicle hook inspected; nested fleet/settings/timezone requests and shell/mobile selection not exercised. Do not add range ownership without changing both source hooks and preserving current bounded-history semantics."
+    },
+    {
+      "hook": "analyzeCycleStress / cycleStressQueryState",
+      "file": "web\\src\\features\\battery\\pages\\CycleStressPage.tsx",
+      "line": 75,
+      "endpoint": null,
+      "owner": "Battery-domain pure model and presentation trust adapter",
+      "behavior": "Memoized model uses returned rows, vehicle timezone, frozen mount clock, selectable depth threshold/exponent and 1000-row limit. Trust adapter preserves independently available histories and per-source errors/offline state.",
+      "limits": "Inspected eligibility and final result assembly, not every intermediate calculation; no algorithm tests executed. Drive inputs use existing startTs/endTs/startBatteryPct/endBatteryPct; charging inputs use explicit ended_at and start/end_soc_pct."
+    }
+  ],
+  "components": [
+    {
+      "name": "PageLayout / Section / Grid",
+      "owner": "Existing @/components/layout",
+      "usage": "Root orchestrator; three named paired-chart sections; single column until allocated container reaches 1024px. No root loading/error gate.",
+      "contract": "Preserve root title/subtitle, section IDs, min-w-0, full width and container-based paired chart layout. Shared implementation was not audited."
+    },
+    {
+      "name": "CycleStressSummary / BatteryEvidenceBrief / OperationalBrief",
+      "owner": "web\\src\\features\\battery\\components\\cycle-stress-modernization\\CycleStressSummary.tsx:26; web\\src\\features\\battery\\components\\operationalbrief-all\\BatteryEvidenceBrief.tsx:19",
+      "usage": "Six numeric specialist metrics, bounded-period provenance and shared details drawer. Stable control IDs cycle-stress-threshold and cycle-stress-exponent.",
+      "contract": "Summary result/trust/locale/deepThresholdPct/exponent/change callbacks; brief metrics/period/loading/retained/context. Preserve numeric inputs and fractional cycles."
+    },
+    {
+      "name": "ChartContainer / chart category renderers",
+      "owner": "Existing @/components/charts",
+      "usage": "Seven chart shells with accessible names, dataColumns and exportData; retain chart series, interactive legend and raw derived rows.",
+      "contract": "title/subtitle/ariaLabel/height/loading/exportable/exportData/data/dataColumns; chartKey/hiddenSeries where currently supplied. Shared chart internals not inspected."
+    },
+    {
+      "name": "DataTable / MobileDataTableAdapter",
+      "owner": "web\\src\\components\\ui\\DataTable.tsx:186,1385-1397; web\\src\\components\\ui\\MobileDataTableAdapter.tsx:14-34,130-162",
+      "usage": "Directory and accounting use real processed-row mobile adapters; directory hidden card roles do NOT remove fields from Quick view. Accounting uses keyValue mode.",
+      "contract": "Preserve tableIds battery:cycle-stress-directory and battery:cycle-stress-accounting, ordering, keys, value filters, exports and full-detail fields. Adapter modal iterates allColumns; mobile detail access is source-supported, not runtime accepted."
+    },
+    {
+      "name": "CycleStressSectionBody / CycleStressSourceStatus",
+      "owner": "web\\src\\features\\battery\\components\\cycle-stress\\CycleStressSectionBody.tsx:48; web\\src\\features\\battery\\components\\cycle-stress-modernization\\CycleStressSourceStatus.tsx:9",
+      "usage": "Localized no-vehicle/loading/error/pending/empty/no-qualified/no-cycle interiors; requirements none/intervals/cycles/turningPoints; per-source recovery.",
+      "contract": "Keep source-independent shells and methodology mounted; refresh errors must not discard retained data."
+    },
+    {
+      "name": "MetricCard / GlassPanel / Text / Heading / PanelTitle / Select / Button / AlertBanner / FadeIn",
+      "owner": "Existing category components; MetricCard.tsx:49-131; FadeIn.tsx:23-36",
+      "usage": "Domain diagnostic cards, methodology, accessible shared controls and entrance transitions. FadeIn already honors reduced motion.",
+      "contract": "Reuse existing primitives; no competing card, status registry, formatter, table controller or motion system."
+    }
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\battery\\components\\cycle-stress\\index.ts",
+      "line": 4,
+      "rule": "MDC-002 / mission 4",
+      "detail": "Original barrel still exports CycleStressDirectory, CycleStressKpiBand and CycleStressAccounting while root uses modernization replacements for those concerns (root:29-35). These are competing source implementations, not proof of duplicate mounted UI.",
+      "fix": "During an authorized implementation, reconcile consumers before retiring duplicates; retain original capabilities and stable IDs. Do not delete based solely on this bounded audit.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "responsive": {
+    "sourceEvidence": [
+      "Root:43-44,126-162 uses allocated-container 1024px chart pairing, min-w-0 and a one-column fallback.",
+      "Summary:92-104 stacks controls and uses allocated-container 430/640px branches.",
+      "Directory:169-193,208-215 supplies mobile roles and displayValue. MobileDataTableAdapter:130-162 retains every allColumns value in Quick view, including EFC/index/segment.",
+      "Methodology:183 uses md two columns and xl five; Continuity:62 uses xl five metric columns; EvidenceSupport:62 uses xl six. Narrow cards/long labels require real allocated-width review."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\battery\\components\\cycle-stress\\CycleStressSourceCoverage.tsx",
+        "line": 97,
+        "rule": "MDC-031 / MDC-043 / preservation",
+        "detail": "Coverage MetricCards supply important source-span and cap explanations but omit wrapLabel/compact. Shared MetricCard.tsx:90-96 truncates labels by default and :115-116 always truncates noncompact subtitles. Long ranges and source cap-status text can be clipped without a caller-provided reveal path. Continuity, composition and support reuse the same pattern.",
+        "fix": "Reuse existing compact/wrapping metric presentation and keep complete source captions visible; verify long localized labels and source spans. Shared subtitle wrapping may require an owner change; do not shorten/delete evidence.",
+        "owner": "shared",
+        "confidence": "high"
+      }
+    ],
+    "verification": "Every prescribed viewport, allocated container width, mobile detail modal, long translation, RTL and 200%-text behavior unverified."
+  },
+  "accessibility": {
+    "sourceEvidence": [
+      "Summary:105-120 uses shared Select labels and stable explicit IDs; SourceStatus:57-61 uses localized per-source retry Buttons with min-h-11.",
+      "DepthDistribution:55-59,68-90 and TurningPointTimeline:61-65,75-96 supply chart names and tabular data columns.",
+      "SectionBody:71-80 gives loading aria-label but no explicit live-region role; summary status owns loading announcement.",
+      "FadeIn:23-36 skips initial transition under shared reduced-motion preference."
+    ],
+    "issues": [],
+    "verification": "Keyboard, focus restoration, chart/table interaction, screen reader, effective contrast, forced colors, touch targets and OS reduced-motion behavior unverified; ARIA/source tokens do not prove acceptance."
+  },
+  "states": {
+    "loading": "Queries enabled only for a selected vehicle. No available source gives initial loading; one resolved history can render while the other remains pending. All section shells and methodology survive.",
+    "empty": "Resolved empty arrays remain known returned zero; no accepted interval and no countable cycles have distinct explanations; missing SoC is classified out, not imputed.",
+    "error": "Fatal error only when neither source is available and both settle. Independent failures get per-source retry; retained data survives refresh error.",
+    "partial": "Model uses available evidence; failed/loading source names are surfaced. Coverage renders unavailable source values as em dash.",
+    "offline": "Summary marks retained evidence when a source has data and isRefreshBlocked. SourceStatus announces paused sources and offers independent retry.",
+    "issues": [
+      {
+        "file": "web\\src\\features\\battery\\components\\cycle-stress-modernization\\CycleStressAccounting.tsx",
+        "line": 176,
+        "rule": "MDC-026 / MDC-046 / mission 25",
+        "detail": "Accounting brief sets retained only from state.refreshError. The summary checks per-source isRefreshBlocked as well (Summary:124-126), but queryState.ts:32-34 does not turn offline pause into refreshError. Cached accounting can therefore say Available source readings while the summary correctly says Retained source evidence.",
+        "fix": "Pass the same per-source trust-derived retained/offline presentation into accounting without changing rows, counts, keys or request policy.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\battery\\components\\cycle-stress-modernization\\CycleStressSourceStatus.tsx",
+        "line": 18,
+        "rule": "MDC-026 / MDC-070 / source completeness",
+        "detail": "When any source is affected, the component replaces rather than composes CycleStressQueryStatus. Cap/qualification/thin-support summary notices in QueryStatus.tsx:149-218 are then not emitted here. Coverage and methodology retain cap disclosures elsewhere, so this is loss of co-located trust context, not complete page loss.",
+        "fix": "Compose independent source recovery and applicable bounded-evidence notices rather than treating them as exclusive. Deduplicate refresh warnings while retaining cap, qualification and support explanations beside summary readings.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ]
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\battery\\components\\cycle-stress\\CycleStressEvidenceSupport.tsx",
+      "line": 71,
+      "rule": "MDC-010 / MDC-012 / mission 5-8",
+      "detail": "Support assigns purple/cyan/green/blue/amber/red to ordinary diagnostic cards; Coverage:118-309, Continuity:76-233 and Composition:82-160 repeat multi-hue assignments. Fixed text-cyan-300 section icons and amber directory values bypass theme-adaptive semantic hierarchy. Shared MetricCard neutralizes surfaces/text but still applies color-map icon text; actual palette/contrast remains unmeasured.",
+      "fix": "Use neutral token-driven section icons and diagnostic emphasis; reserve subdued semantic color for actual warnings, boundaries or meaningful series. Preserve user-selected chart palettes and source distinctions rather than changing persistence or globally resetting colors.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "architectureIssues": [],
+  "priority": {
+    "level": "medium",
+    "reason": "Existing source decomposition and independent trust handling are strong. Align accounting offline trust, preserve co-located caveats, remove diagnostic rainbow emphasis and expose full metric captions before runtime acceptance."
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "MetricCard complete diagnostic captions",
+      "existingOwnerFile": "web\\src\\components\\data-display\\MetricCard.tsx",
+      "nameOfExistingContract": "MetricCard wrapLabel / compact / subtitle",
+      "propsVariantsStates": "Prefer existing compact and wrapLabel first. If normal cards must remain, add an opt-in wrapping subtitle capability instead of mandatory truncate; preserve missing, zero, retained and long source descriptions.",
+      "usedBy": ["CycleStressSourceCoverage", "CycleStressContinuity", "CycleStressComposition", "CycleStressEvidenceSupport"],
+      "dependsOn": ["Shared MetricCard owner acceptance", "Page-specific source caption preservation and narrow-width/translation verification"],
+      "status": "conditional extension; no shared source changed"
+    }
+  ],
+  "competingImplementations": [
+    {
+      "files": ["web\\src\\features\\battery\\components\\cycle-stress\\CycleStressDirectory.tsx", "web\\src\\features\\battery\\components\\cycle-stress-modernization\\CycleStressDirectory.tsx", "web\\src\\features\\battery\\components\\cycle-stress\\CycleStressAccounting.tsx", "web\\src\\features\\battery\\components\\cycle-stress-modernization\\CycleStressAccounting.tsx", "web\\src\\features\\battery\\components\\cycle-stress\\CycleStressKpiBand.tsx", "web\\src\\features\\battery\\components\\cycle-stress-modernization\\CycleStressSummary.tsx"],
+      "evidence": "Original barrel exports old variants; root imports modernization summary/directory/accounting. No whole-repository reference search or deletion recommendation."
+    }
+  ],
+  "preservation": {
+    "sourceHash": "7fd571f4f7727a7c2f0ee428b88826203dd305bde9fecb90f8420470667ff92a",
+    "hashAlgorithm": "SHA-256",
+    "sourceHashScope": "Exact root page bytes only, not a dependency aggregate",
+    "currentLineCount": 223,
+    "mountedRootAndCyclePresentationLineCount": 3552,
+    "lineCountScope": "Root plus fourteen original mounted cycle presentation dependencies and four modernization presentation components; excludes tests, unmounted legacy variants, model, barrels and shared BatteryEvidenceBrief.",
+    "sectionCount": 15,
+    "sectionNames": ["Reconstructed cycle evidence", "Cycle-depth distribution", "Monthly cycle closure trend", "Deep-cycle threshold sensitivity", "Depth exponent sensitivity", "Mean SoC profile", "Closure duration profile", "Cycle composition", "Retained SoC turning points", "Recent reconstructed-cycle directory", "Independent source coverage", "Continuity and segmentation diagnostics", "Evidence support", "Source-row accounting", "Methodology and interpretation limits"],
+    "counts": {"rootSectionWrappers": 3, "mountedDomainSections": 15, "chartShells": 7, "panelShells": 8, "dataTables": 2, "summaryMetrics": 6, "methodologyDisclosures": 10, "rootFadeInWrappers": 12},
+    "actions": ["Change depth threshold (40/50/60/70/80%; default 60%)", "Change illustrative exponent (1.3/1.5/1.7/2; default 1.7)", "Independent source retry", "Shared summary/accounting metric review", "Chart export and accessible data view", "Existing chart legend persistence where keyed", "Directory value filters and table interaction/export", "Mobile Quick view with every directory/accounting field", "Header-owned vehicle selection"],
+    "dataBehavior": [
+      "Separate capped drive and charging histories; no selected-date-range/lifetime equivalence claim.",
+      "Frozen mount clock; vehicle-local month/day/week calendar; explicit completion timestamps only.",
+      "Reject missing/invalid/future/direction-inconsistent SoC intervals; account every returned row; no missing SoC imputation.",
+      "Preserve conservative overlap/gap/jump segmentation, full and boundary-half cycle weights, EFC and illustrative exponent calculations.",
+      "Keep all raw result fields, chart export rows, capped recent cycles/timeline and omitted-count metadata.",
+      "Duration remains seconds in model; directory uses existing formatter with milliseconds conversion only at display boundary. SoC/depth/index/counts retain dimensionless semantics.",
+      "Retain all non-claims: no battery health, damage, degradation, safety, warranty, remaining-life or charging-prescription inference.",
+      "Do not replace unknown/unavailable source values with fabricated measured zeros; retain independent successful and cached histories."
+    ]
+  },
+  "evidenceLimits": {
+    "mode": "Phase 0 scoped READ-ONLY source audit",
+    "runtime": "unverified; no browser or HTTP request exercised",
+    "visualKeyboardContrastViewport": "unverified",
+    "checks": [
+      {"command": "Get-FileHash web\\src\\features\\battery\\pages\\CycleStressPage.tsx -Algorithm SHA256", "exitCode": 0, "output": "7fd571f4f7727a7c2f0ee428b88826203dd305bde9fecb90f8420470667ff92a"},
+      {"command": "Select-String root page for style=; raw control tags; direct renderer imports; old API imports; text-white/text-neon/shadow-neon", "exitCode": 0, "output": "style= = 0; raw controls = 0; direct renderer imports = 0; old API imports = 0; fixed-white/neon pattern = 0"},
+      {"command": "Initial PowerShell scoped pattern counter", "exitCode": 1, "output": "ParserError from quote escaping; corrected counter rerun successfully"},
+      {"command": "Scoped dependency rg/view inspection", "exitCode": 0, "output": "Confirmed route, hooks, owned presentation dependencies and selected shared contracts; one nonexistent guessed DataTableMobile.tsx search path skipped, resolved actual MobileDataTableAdapter.tsx"},
+      {"command": "audit.sh / npx tsc --noEmit / full lint/build/test", "exitCode": null, "output": "NOT RUN: read-only audit assignment prohibits full validation; audit.sh necessarily invokes project TypeScript"}
+    ],
+    "scopeLimits": [
+      "No source/shared/queue/Git mutations; only assigned report and heartbeat written.",
+      "Large combined dependency print exceeded tool display budget; findings use targeted actual source reads/searches, not truncated unseen output.",
+      "No backend payload, SI transport compatibility or algorithm runtime claim; only hook paths, eligibility/model output and display-boundary source checked.",
+      "No fresh original-version line-count comparison; preserve current root plus extracted mounted components. An exploratory 4364-line directory total includes unmounted legacy variants and is not mounted preservation proof.",
+      "Historical tests/receipts are not borrowed acceptance. Shared source may change concurrently; root hash must be rechecked before implementation."
+    ]
+  },
+  "filesRead": [
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-mission.md",
+    "docs\\frontend-audits\\audit-page-064.json",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\battery\\pages\\CycleStressPage.tsx",
+    "web\\src\\features\\battery\\components\\cycle-stress\\index.ts",
+    "web\\src\\features\\battery\\components\\cycle-stress\\labels.ts",
+    "web\\src\\features\\battery\\components\\cycle-stress\\CycleStressSectionBody.tsx",
+    "web\\src\\features\\battery\\components\\cycle-stress\\CycleStressQueryStatus.tsx",
+    "web\\src\\features\\battery\\components\\cycle-stress\\CycleStressDepthDistribution.tsx",
+    "web\\src\\features\\battery\\components\\cycle-stress\\CycleStressTurningPointTimeline.tsx",
+    "web\\src\\features\\battery\\components\\cycle-stress\\CycleStressSourceCoverage.tsx",
+    "web\\src\\features\\battery\\components\\cycle-stress\\CycleStressContinuity.tsx",
+    "web\\src\\features\\battery\\components\\cycle-stress\\CycleStressEvidenceSupport.tsx",
+    "web\\src\\features\\battery\\components\\cycle-stress\\CycleStressMethodology.tsx",
+    "web\\src\\features\\battery\\components\\cycle-stress\\CycleStressComposition.tsx",
+    "web\\src\\features\\battery\\components\\cycle-stress\\CycleStressDurationProfile.tsx",
+    "web\\src\\features\\battery\\components\\cycle-stress\\CycleStressExponentSensitivity.tsx",
+    "web\\src\\features\\battery\\components\\cycle-stress\\CycleStressMeanSocProfile.tsx",
+    "web\\src\\features\\battery\\components\\cycle-stress\\CycleStressMonthTrend.tsx",
+    "web\\src\\features\\battery\\components\\cycle-stress\\CycleStressThresholdSensitivity.tsx",
+    "web\\src\\features\\battery\\components\\cycle-stress-modernization\\index.ts",
+    "web\\src\\features\\battery\\components\\cycle-stress-modernization\\queryState.ts",
+    "web\\src\\features\\battery\\components\\cycle-stress-modernization\\CycleStressSummary.tsx",
+    "web\\src\\features\\battery\\components\\cycle-stress-modernization\\CycleStressSourceStatus.tsx",
+    "web\\src\\features\\battery\\components\\cycle-stress-modernization\\CycleStressDirectory.tsx",
+    "web\\src\\features\\battery\\components\\cycle-stress-modernization\\CycleStressAccounting.tsx",
+    "web\\src\\features\\battery\\components\\operationalbrief-all\\BatteryEvidenceBrief.tsx",
+    "web\\src\\features\\battery\\lib\\cycleStress.ts",
+    "web\\src\\api\\hooks\\useCharging.ts",
+    "web\\src\\api\\hooks\\useDriving.ts",
+    "web\\src\\hooks\\useSelectedVehicle.ts",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\components\\data-display\\MetricCard.tsx",
+    "web\\src\\components\\ui\\DataTable.tsx",
+    "web\\src\\components\\ui\\MobileDataTableAdapter.tsx",
+    "web\\src\\components\\motion\\FadeIn.tsx",
+    "web\\src\\App.tsx",
+    "internal\\api\\router.go"
+  ],
+  "ownedFiles": ["docs\\frontend-audits\\audit-page-066.json", ".agent-status\\audit-page-066.txt"]
+}

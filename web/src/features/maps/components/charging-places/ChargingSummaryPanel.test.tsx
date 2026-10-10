@@ -62,7 +62,7 @@ beforeEach(() => {
 describe('ChargingSummaryPanel — loading/error/empty', () => {
   it('shows a loading skeleton', () => {
     const { container } = renderPanel({ isLoading: true });
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).not.toBeNull();
   });
 
   it('surfaces a QueryError with a working retry on failure', () => {
@@ -81,6 +81,19 @@ describe('ChargingSummaryPanel — loading/error/empty', () => {
 });
 
 describe('ChargingSummaryPanel — currency grouping', () => {
+  it('retains every independent currency and measured zero when refresh fails', () => {
+    renderPanel({
+      error: new Error('refresh'),
+      summary: [
+        makeSummary({ currency: 'USD', total_cost_decimal: 0 }),
+        makeSummary({ currency: 'EUR', total_cost_decimal: 6 }),
+      ],
+    });
+    expect(screen.getByText('$0.00')).toBeInTheDocument();
+    expect(screen.getByText('€6.00')).toBeInTheDocument();
+    expect(screen.getAllByText('180.0 kWh')).toHaveLength(2);
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
   it('renders session count, energy, and spend for a single currency', () => {
     renderPanel({ summary: [makeSummary()] });
 

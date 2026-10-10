@@ -1,0 +1,299 @@
+{
+  "item": "audit-page-149",
+  "phase": 0,
+  "mode": "read-only source audit",
+  "page": "web\\src\\features\\notifications\\pages\\InboxPage.tsx",
+  "routes": ["/notifications", "/notifications/inbox"],
+  "identity": {
+    "export": "default function InboxPage",
+    "mounts": [
+      {"file": "web\\src\\App.tsx", "line": 622, "route": "/notifications", "wrapper": "SafeRoute NotificationsInbox"},
+      {"file": "web\\src\\App.tsx", "line": 623, "route": "/notifications/inbox", "wrapper": "SafeRoute NotificationsInbox"}
+    ],
+    "lazyImport": {"file": "web\\src\\App.tsx", "line": 197},
+    "rootSha256": "BC96164CB6AB8914E3377C7EBC7C454271CFA2313677C7AD66A738B36E7EE652",
+    "runtime": "unverified"
+  },
+  "purpose": "Unified notification trigger and delivery inbox with active-backlog context, filtered evidence, triage actions, optional threaded view and period reporting.",
+  "primaryGoal": "Inspect notification evidence, investigate its source, and manage read/archive/lifecycle status without confusing the recent sample with complete period totals.",
+  "dataSources": [
+    {
+      "hooks": ["useVehicles", "useAlertRules"],
+      "owner": "web\\src\\features\\notifications\\pages\\InboxPage.tsx:37-38",
+      "endpoints": ["GET /vehicles", "GET /alerts/rules"],
+      "hookEvidence": ["web\\src\\api\\hooks\\useVehicles.ts:74-81", "web\\src\\api\\hooks\\useNotifications.ts:507-512"],
+      "routeEvidence": ["internal\\api\\router.go:3319-3320", "internal\\api\\router.go:3769"],
+      "behavior": "safeArray selectors; metadata joins for rule and vehicle names; query status is discarded by the page."
+    },
+    {
+      "hooks": ["useNotificationLogs"],
+      "owner": "web\\src\\features\\notifications\\pages\\InboxPage.tsx:42-43",
+      "endpoints": ["GET /notifications/logs?archived=false"],
+      "hookEvidence": ["web\\src\\api\\hooks\\useNotifications.ts:834-848"],
+      "routeEvidence": ["internal\\api\\router.go:4029"],
+      "behavior": "Unfiltered active sample, intentionally independent of workspace date and evidence filters. Latest-50 wording is source UI intent; server default limit was not inspected."
+    },
+    {
+      "hooks": ["useNotificationLogs", "useNotificationLogCount", "useNotificationGroups", "useGroupMembers"],
+      "owner": "web\\src\\features\\notifications\\components\\InboxBody.tsx:181-258",
+      "endpoints": ["GET /notifications/logs", "GET /notifications/logs?count_only=true", "GET /notifications/logs?grouped=true", "GET /notifications/logs?group_key=<key>"],
+      "hookEvidence": ["web\\src\\api\\hooks\\useNotifications.ts:145-165", "web\\src\\api\\hooks\\useNotifications.ts:834-865", "web\\src\\api\\hooks\\useNotifications.ts:924-972"],
+      "routeEvidence": ["internal\\api\\router.go:4029"],
+      "behavior": "URL severity/vehicle_id/rule_id/source/q/read/view/size plus shared date instants; flat or grouped enabled exclusively; count removes pagination; grouped members lazy-load with parent filters. Reads forward AbortSignal and retain distinct query keys."
+    },
+    {
+      "hooks": ["useNotificationReport"],
+      "owner": "web\\src\\features\\notifications\\components\\NotificationReportPanel.tsx:17-35",
+      "endpoints": ["GET /notifications/report?from_instant=<instant>&to_exclusive=<instant>&timezone=<zone>"],
+      "hookEvidence": ["web\\src\\api\\hooks\\useNotifications.ts:1273-1280"],
+      "routeEvidence": ["internal\\api\\router.go:4031"],
+      "behavior": "Full-period report intent; five metrics, adaptive day/month/year timeline and five breakdowns; historical provenance. Backend filtering/aggregation execution is unverified."
+    },
+    {
+      "hooks": ["useMarkNotificationsRead", "useMarkNotificationsUnread", "useBulkMarkRead", "useArchiveNotifications", "useUnarchiveNotifications", "useDeleteNotifications"],
+      "owner": "web\\src\\features\\notifications\\components\\InboxBody.tsx:278-460",
+      "endpoints": ["POST /notifications/mark-read", "POST /notifications/mark-unread", "POST /notifications/archive", "POST /notifications/unarchive", "DELETE /notifications/logs"],
+      "hookEvidence": ["web\\src\\api\\hooks\\useNotifications.ts:1019-1254"],
+      "routeEvidence": ["internal\\api\\router.go:4033-4037"],
+      "inspection": "Hook declarations/request paths located by scoped search, not all mutation bodies semantically reviewed.",
+      "behavior": "Per-member and bulk actions, delete confirmation, undo read changes, local read-on-open/read-on-click preferences. Global mark-all uses {all:true}; visible-ID undo is narrower. Do not silently change this existing action scope."
+    },
+    {
+      "hooks": ["useAlertDetail", "useAcknowledgeAlert", "useReopenAlert"],
+      "owner": "web\\src\\features\\notifications\\components\\InboxBody.tsx:242-244,515-531,708-718",
+      "endpoints": ["GET /alerts/{id}", "POST /alerts/{id}/acknowledge", "POST /alerts/{id}/reopen"],
+      "hookEvidence": ["web\\src\\api\\hooks\\useNotifications.ts:370-378,401-407,476-481"],
+      "routeEvidence": ["internal\\api\\router.go:3797-3801"],
+      "behavior": "Notification id is used as alert-detail id while alert_id resolves a rule. Backend identifier equivalence was not inspected; preservation requires integration verification rather than an invented remapping."
+    },
+    {
+      "hooks": ["useAiStream"],
+      "owner": "web\\src\\components\\ai\\AIInboxAutoCategorization.tsx:173-184",
+      "endpoints": ["POST /ai/alerts/inbox/categorize"],
+      "routeEvidence": [],
+      "behavior": "Optional feature-gated propose-only stream; applying validated proposed rule IDs changes URL filters, not persisted business state. Endpoint registration was not established in inspected router ranges; no missing-route claim.",
+      "backendContract": "unverified"
+    }
+  ],
+  "components": [
+    {"name": "PageLayout / PageContainer", "owner": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx", "contract": "Pass-through PageContainerProps; full-width min-w-0 container; existing header/actions/copy-link/freshness and page error boundary. Root only supplies summaryQuery for freshness, not a global error gate."},
+    {"name": "OperationalBrief / useOperationalMetrics", "owner": "web\\src\\components\\data-display\\OperationalBrief.tsx", "contract": "compact, loading, metrics, scope, freshness, provenance, attention; source-native metric values and missing states. Used by InboxSummary and report."},
+    {"name": "DataTable", "owner": "web\\src\\features\\notifications\\components\\NotificationInboxTable.tsx", "contract": "Existing UI table consumer, stable notifications:inbox identity, controls, selection, expansion, mobileColumns, visibility/reorder/resize and pagination. Shared table implementation not inspected."},
+    {"name": "ChartContainer and chart barrel", "owner": "web\\src\\features\\notifications\\components\\NotificationReportPanel.tsx", "contract": "Canonical frame, notification-activity chartKey, hiddenSeries and accessible data/dataColumns; shared frame implementation not inspected."},
+    {"name": "Button / BUTTON_BASE / BUTTON_VARIANTS", "owner": "web\\src\\components\\ui\\Button.tsx", "contract": "Native button, semantic variants, theme control/focus tokens, loading/disabled/aria-busy; anchor chrome reuses exported constants without changing navigation semantics."},
+    {"name": "SourceContent / useDataState", "owner": "web\\src\\components\\layout\\layout-reference\\SourceContent.tsx", "contract": "loading/error/empty/retained/ready; fatal-only replacement and retained retry. Existing owner, no new state renderer needed."},
+    {"name": "FadeIn", "owner": "web\\src\\components\\motion\\FadeIn.tsx", "contract": "delay, children, className; reduced motion uses initial=false and zero safe delay; runtime motion unverified."},
+    {"name": "Domain evidence components", "owner": "web\\src\\features\\notifications\\components", "contract": "InboxBody, InboxSummary, NotificationReportPanel, table/details/delivery, grouped row/row, filter bar and AlertDetailDrawer; retain rule-specific remediation, audit timeline and context navigation."},
+    {"name": "Other existing shared consumers", "owner": "existing category barrels", "contract": "GlassPanel, typography, Select, Checkbox, Modal, ConfirmDialog, BulkActionsToolbar, ListExportMenu, PullToRefresh, EntityPreviewDrawer, AI card, QueryError, EmptyState, StaleRefreshWarning and provenance. Mentioned as inspected consumer imports, not independently accepted implementations."}
+  ],
+  "duplicatedPatterns": [
+    {"file": "web\\src\\features\\notifications\\components\\NotificationInboxDetails.tsx", "line": 17, "rule": "MDC-002 reuse", "detail": "Details renderer is correctly reused by inline expansion and dialog; flat and grouped presentations are distinct workflows, not permission to delete either.", "fix": "Keep shared domain details and delivery labels; consolidate only proven equivalent presentation helpers.", "owner": "page", "confidence": "high"},
+    {"file": "web\\src\\features\\notifications\\pages\\InboxPage.tsx", "line": 54, "rule": "MDC-020", "detail": "Archive navigation reconstructs button chrome even though BUTTON_BASE/BUTTON_VARIANTS already own it.", "fix": "Compose existing exported button chrome onto native Link; preserve destination and localized label.", "owner": "page", "confidence": "high"}
+  ],
+  "responsive": {
+    "verified": false,
+    "sourceStrategy": [
+      "PageLayout full-width min-w-0; wrapping toolbar and grouped filters.",
+      "Flat table detects max-width 767px and keeps mobile notification header filters; mobileColumns=['title']; full details stay expandable.",
+      "Details grid becomes two columns at sm and three at lg; report breakdown grid two at sm and three at xl.",
+      "No duplicate date picker. Notifications intentionally disable header vehicle scope, so local vehicle filtering must survive."
+    ],
+    "issues": [
+      {"file": "web\\src\\features\\notifications\\components\\NotificationRow.tsx", "line": 146, "rule": "MDC-040/MDC-043", "detail": "Grouped row quick actions default to opacity-0 and become visible only on hover or focus-within. Touch discoverability is not explicitly supported by a mobile visibility branch; controls still occupy layout width.", "fix": "Keep quick actions visible on touch/narrow layouts, with existing keyboard/context alternatives and no loss of metadata or actions.", "owner": "page", "confidence": "medium"}
+    ],
+    "pendingWidths": [320,375,390,430,768,1024,1280,1440,1920,2560]
+  },
+  "accessibility": {
+    "verified": false,
+    "sourcePositives": ["Localized action names, native buttons and links, aria-pressed view/severity toggles, grouped expansion controls/region IDs, shared dialogs and confirmation, list retry and bulk announcements, chart dataColumns and table details.", "Root FadeIn uses the existing reduced-motion owner."],
+    "issues": [
+      {"file": "web\\src\\features\\notifications\\pages\\InboxPage.tsx", "line": 55, "rule": "MDC-020/MDC-040", "detail": "Archive Link uses min-h-9 (36px) and custom cyan focus styling instead of canonical focus tokens. No mobile 44px sizing branch or measured spacing exception is evidenced.", "fix": "Reuse anchor button chrome and ensure mobile target/spacing acceptance without replacing Link with a mutation button.", "owner": "page", "confidence": "medium"},
+      {"file": "web\\src\\features\\notifications\\components\\NotificationGroupRow.tsx", "line": 239, "rule": "MDC-026/MDC-040", "detail": "Thread-member error has role=alert but no retry action; cached members also disappear on any query.error.", "fix": "Adapt query to useDataState; retain rows on refresh failure and expose refetch through existing feedback/state controls.", "owner": "page", "confidence": "high"}
+    ],
+    "pending": ["Keyboard/tab order", "Focus restoration and open menus/drawers", "Screen-reader output", "Measured effective contrast", "Forced colors", "200% text/RTL/long content", "Actual mobile target spacing"]
+  },
+  "states": {
+    "runtime": "unverified",
+    "summary": "Initial skeleton via OperationalBrief; fatal QueryError with retry; resolved empty CTA; retained rows plus stale warning/provenance.",
+    "evidence": "Flat/group source errors isolated; initial skeleton, distinct empty states and retry; count failure does not remove list; retained list and count warnings.",
+    "report": "Historical trust adapter, initial loading, fatal retry, retained warning, persistent metrics/chart/five breakdown shells; unavailable is not measured zero.",
+    "detail": "Alert summary remains when audit load fails; cached audit warning with retry; non-rule details in shared modal.",
+    "issues": [
+      {"file": "web\\src\\features\\notifications\\pages\\InboxPage.tsx", "line": 37, "rule": "MDC-026", "detail": "Vehicle and rule queries are destructured to data only and default to []. Initial, failed and successful-empty metadata become indistinguishable; rule/vehicle filters and joins have no independent trust/retry context.", "fix": "Retain query objects and display nonfatal source notices/retry beside metadata-dependent controls while preserving IDs and successfully loaded notifications.", "owner": "page", "confidence": "high"}
+    ]
+  },
+  "visualIssues": [
+    {"file": "web\\src\\features\\notifications\\components\\NotificationReportPanel.tsx", "line": 135, "rule": "MDC-010/MDC-011/MDC-034", "detail": "Triggered and delivery series use fixed #22d3ee/#a78bfa fills rather than current chart palette preferences.", "fix": "Use existing palette owner; retain both series, identity, hiddenSeries behavior, axis/data-table/export support and explicit saved chart choices.", "owner": "page", "confidence": "high"},
+    {"file": "web\\src\\features\\notifications\\components\\NotificationRow.tsx", "line": 85, "rule": "MDC-010/MDC-012/MDC-015", "detail": "Grouped row borders/hover/unread surfaces are fixed white alpha with fixed cyan unread accent; group expansion similarly uses cyan-200 at NotificationGroupRow:170. Root Link has white-alpha hover at InboxPage:59.", "fix": "Reuse surface/border/control/focus tokens and restrained semantic unread emphasis; preserve non-color read labels and theme settings.", "owner": "page", "confidence": "high"},
+    {"file": "web\\src\\features\\notifications\\components\\NotificationInboxDetails.tsx", "line": 44, "rule": "MDC-013", "detail": "Details dt/dd and many table/group metadata spans hand-author text-xs/text-sm typography instead of current roles. Tokens for text colors are mostly already used.", "fix": "Use existing typography as overrides to retain dt/dd semantics, tabular timestamps and every metadata field; do not introduce a page font scale.", "owner": "page", "confidence": "high"}
+  ],
+  "architectureIssues": [
+    {"file": "web\\src\\lib\\workspaceScope.ts", "line": 52, "rule": "MDC-032", "detail": "RANGE_ENABLED_PATHS includes /notifications/inbox but not mounted alias /notifications. Both render InboxPage with useRangeState; alias has no header-owned range control and does not receive the same header-owned default semantics.", "fix": "Integration owner should register the actual /notifications alias alongside /notifications/inbox, preserving all URL/preset/DST/timezone and local vehicle filtering behavior.", "owner": "integration", "confidence": "high"},
+    {"file": "web\\src\\api\\hooks\\useNotifications.ts", "line": 960, "rule": "MDC-032/MDC-046 preservation", "detail": "useGroupMembers merges all parent filters, including thread-list limit/offset. InboxBody:194 sets offset=(page-1)*pageSize. Expanded members on later thread pages inherit a thread-page offset, despite being a different result set; no independent member pagination is rendered.", "fix": "Integration owner must establish member pagination contract, separate thread offset from member offset and preserve complete filtered member reachability. Do not arbitrarily cap or fetch all without backend/scale evidence.", "owner": "integration", "confidence": "high"},
+    {"file": "web\\src\\features\\notifications\\components\\NotificationGroupRow.tsx", "line": 26, "rule": "MDC-002 category imports", "detail": "Feature component imports useToast from concrete feedback/Toast instead of existing feedback category barrel; InboxBody already uses the barrel.", "fix": "Use existing feedback barrel without changing toast behavior or moving shared internals to their own barrel.", "owner": "page", "confidence": "high"},
+    {"file": "web\\src\\features\\notifications\\components\\InboxBody.tsx", "line": 876, "rule": "MDC-032/MDC-046 scope trust", "detail": "AI categorization receives vehicle/severity/rule IDs but no workspace from/to. Shared AI contract uses optional windowDays with default-seven-days intent; stream scopeKey omits workspace instants. A date change does not clear/cancel categories through the currently passed scope.", "fix": "Expose truthful independent AI scope now; integration owner should verify backend bounds capability before extending existing typed AI request/scopeKey. Preserve propose-only review/apply and never invent support for arbitrary bounds.", "owner": "integration", "confidence": "high"}
+  ],
+  "priority": {
+    "level": "high",
+    "order": ["Workspace alias ownership", "Retained grouped-member evidence and retry", "Member pagination contract", "Metadata and AI scope trust", "Restrained palette/typography and touch discovery"],
+    "rationale": "Small root already uses canonical layout and operational briefs. Most remaining modernization risks live in reused domain components or integration contracts, not a need to rebuild the page."
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "Workspace range route alias parity",
+      "owner": "web\\src\\lib\\workspaceScope.ts",
+      "propsVariantsStates": "Existing getWorkspaceRouteScope(pathname).range: true for both assigned routes; vehicle:false remains intentional.",
+      "usedBy": ["/notifications", "/notifications/inbox", "WorkspaceHeader", "useRangeState"],
+      "dependsOn": ["App.tsx mounted route identity", "Existing saved rolling/custom date and timezone semantics"],
+      "change": "Add alias to existing owner; no new scope store or page picker."
+    },
+    {
+      "name": "Filtered thread-member pagination",
+      "owner": "web\\src\\api\\hooks\\useNotifications.ts",
+      "propsVariantsStates": "Existing useGroupMembers(groupKey, filters, {enabled}); separate thread-list limit/offset from member pagination, retain abort/query identity, retained data and explicit recovery.",
+      "usedBy": ["NotificationGroupRow", "InboxBody grouped view"],
+      "dependsOn": ["GET /notifications/logs group_key server pagination semantics", "NotificationFilters", "Member count/complete reachability acceptance"],
+      "change": "Bounded integration fix to existing API owner; missing independent member pagination UI is a domain requirement, not grounds for a second list system."
+    },
+    {
+      "name": "AI inbox scope disclosure / capability verification",
+      "owner": "web\\src\\components\\ai\\AIInboxAutoCategorization.tsx",
+      "propsVariantsStates": "Existing vehicleId/severities/ruleIds/windowDays/onApplyCategories; ready/streaming/paused-confirm/proposal states; preserve feature guard and cancel-on-scope-change. Exact instant bounds support is unknown.",
+      "usedBy": ["InboxBody"],
+      "dependsOn": ["Verified AI backend request contract", "Existing useAiStream scopeKey", "Workspace date range"],
+      "change": "Clarify independent request scope or extend existing owner only after backend capability proof; no new AI implementation."
+    }
+  ],
+  "competingImplementations": [
+    {"pattern": "Source state renderer", "decision": "Reuse useDataState/StaleRefreshWarning or SourceContent; do not create another error/loading/retention engine."},
+    {"pattern": "Button-like navigation", "decision": "Reuse BUTTON_BASE/BUTTON_VARIANTS for Link; no new LinkButton wrapper is required by one consumer."},
+    {"pattern": "Flat and grouped notifications", "decision": "Keep both business views. Reuse details, delivery labels, filter controls and canonical table; do not treat distinct workflows as removable duplication."},
+    {"pattern": "Metrics/report", "decision": "Keep existing OperationalBrief/useOperationalMetrics and ChartContainer/DataTable; no competing KPI or chart library."}
+  ],
+  "preservation": {
+    "sourceSha256": "BC96164CB6AB8914E3377C7EBC7C454271CFA2313677C7AD66A738B36E7EE652",
+    "currentLineCount": 79,
+    "rootPlusInspectedNotificationDependenciesLineCount": 2705,
+    "rootSectionCount": 3,
+    "sections": [
+      {"name": "Active backlog summary", "file": "web\\src\\features\\notifications\\pages\\InboxPage.tsx", "line": 67, "count": 1, "metrics": 6},
+      {"name": "Notification evidence and triage", "file": "web\\src\\features\\notifications\\pages\\InboxPage.tsx", "line": 71, "count": 1, "subsections": ["Flat table", "Grouped threads and members", "URL-backed filters", "Bulk toolbar", "Detail modal/alert drawer", "Optional AI categorization"]},
+      {"name": "Period report", "file": "web\\src\\features\\notifications\\pages\\InboxPage.tsx", "line": 74, "count": 1, "metrics": 5, "charts": 1, "breakdowns": ["Trigger sources", "Event types", "Severities", "Delivery channels", "Delivery outcomes"]}
+    ],
+    "renderCounts": {
+      "rootGlassPanelOccurrences": 0,
+      "rootChartContainerOccurrences": 0,
+      "reportChartContainerOccurrences": 1,
+      "reportBreakdownPanels": 5,
+      "note": "Root delegates sections; JSX branch occurrences are not mounted/runtime panel counts. No original-history comparison was run."
+    },
+    "actions": ["Copy current URL", "Navigate archived inbox", "Retry affected source", "Flat/grouped view toggle", "Filter severity/vehicle/rule/source/search/read", "Change list page/page size", "Select/clear notification members", "Read/unread", "Mark all read", "Undo visible read changes", "Archive/restore", "Confirmed permanent delete", "CSV/JSON visible or selected exports", "Table density/column visibility/reorder/resize/expansion", "Inspect full message and metadata", "Context drillthrough", "Alert acknowledge/reopen/investigate and related navigation", "Pull-to-refresh", "Expand thread and mark group read", "Feature-gated suggest/cancel/review/apply AI rule filters", "Chart legend visibility and existing frame capabilities"],
+    "dataBehavior": [
+      "Unfiltered active sample remains separate from filtered evidence and complete-period report.",
+      "Missing read_at is unread; unknown severity is attention, not silently recoded.",
+      "Preserve typed source counts, delivery/trigger distinction, uncorrelated delivery subtraction and fanout missing denominator.",
+      "Preserve all timestamps, errors, rule/vehicle/channel identity, raw exports and loaded/selected scope labels.",
+      "Preserve URL identity and existing query cancellation, cache, enablement and optimistic/broadcast behavior; mutation internals not fully inspected.",
+      "Retain nonfatal neighbors and cached data on background refresh failure.",
+      "No SI value, unit API or formatter migration was performed. Existing latency_ms notification metadata is retained verbatim; canonical backend unit contract was not verified and must not be guessed.",
+      "Preserve global mark-all scope and localStorage markOnOpen/markOnClick preferences; runtime audit would require fixtures because mounting can auto-mark real notifications.",
+      "Keep local vehicle filter because notifications intentionally hide the global vehicle picker; no duplicate date control.",
+      "Keep raw source/user text, localization, theme/chart preferences, mobile details and accessibility."
+    ],
+    "sourceInventory": [
+      {"file":"web\\src\\features\\notifications\\pages\\InboxPage.tsx","lines":79,"sha256":"BC96164CB6AB8914E3377C7EBC7C454271CFA2313677C7AD66A738B36E7EE652"},
+      {"file":"web\\src\\features\\notifications\\components\\InboxBody.tsx","lines":889,"sha256":"5E6AB221A751832E473457CF81A12571471198EB6D5AB92FB1E45E6DAE16427A"},
+      {"file":"web\\src\\features\\notifications\\components\\InboxSummary.tsx","lines":153,"sha256":"538C0CA0FA0209B69AC960A021629F359912FC9B4A13E64F20F2DDCD9363E9D7"},
+      {"file":"web\\src\\features\\notifications\\components\\NotificationReportPanel.tsx","lines":172,"sha256":"29C15175E0ADC3F3966FC17493F2E8003B05C826DBAF565B332C7B562496676B"},
+      {"file":"web\\src\\features\\notifications\\components\\NotificationInboxTable.tsx","lines":272,"sha256":"39435FABCA4953AE96D0003741797A1B0FC381A260B0685BD177AAD0A64F0201"},
+      {"file":"web\\src\\features\\notifications\\components\\NotificationInboxDetails.tsx","lines":64,"sha256":"6E1D075FE361A9267E39A598E5311E7BC7AF4EB0A4E970C435965CFDB21A50A8"},
+      {"file":"web\\src\\features\\notifications\\components\\NotificationInboxDelivery.tsx","lines":15,"sha256":"912FF1AD9C2B27F32AA5DDE7E789D5703268A1605394B72D1D6A3EE2244A8AE0"},
+      {"file":"web\\src\\features\\notifications\\components\\NotificationGroupRow.tsx","lines":276,"sha256":"5C81BB9D540F08169FDA7AC267BEB20D7916CC829885CED26293F53A3878EB5D"},
+      {"file":"web\\src\\features\\notifications\\components\\NotificationFilterBar.tsx","lines":283,"sha256":"32B4D0D1945F55C94747CE3A001A9DF150B779732CD089082EC132BDE2A782C7"},
+      {"file":"web\\src\\features\\notifications\\components\\NotificationRow.tsx","lines":196,"sha256":"B51CA6CE721D502B3E564EF15C3DCFCBF204AFAFEAF9F032BA92AFEC50768B02"},
+      {"file":"web\\src\\features\\notifications\\components\\AlertDetailDrawer.tsx","lines":306,"sha256":"842059D12208B1585C3DCD6137D9D4A1A09AB7D170C20C41B478103EEE2536BB"}
+    ],
+    "inventoryLimit": "Exact-byte SHA256 and Get-Content line counts captured by scoped PowerShell readback. Shared/API/docs files are listed in filesRead; partial read coverage below is explicit. Concurrent external changes are possible."
+  },
+  "evidenceLimits": {
+    "runtime": "unverified",
+    "visual": "unverified",
+    "keyboard": "unverified",
+    "contrast": "unverified",
+    "viewports": "unverified",
+    "backend": "Only registration/path alignment inspected; no handler, repository, network or aggregate execution proof. AI route registration unresolved.",
+    "sourceOnlyChecks": {
+      "rootStaticOrDynamicStyleAttributes": 0,
+      "rootRawButtonInputTextareaSelectTableMatches": 0,
+      "rootDirectRechartsReactLeafletFramerMotionImports": 0,
+      "rootLegacyRelativeApiImports": 0,
+      "rootGlassPanelOccurrences": 0,
+      "rootChartContainerOccurrences": 0,
+      "method": "Executed [regex]::Matches on Get-Content -Raw root only. Scoped searches and file/range reads support dependency findings; not a whole-feature zero-violation claim.",
+      "exitCode": 0
+    },
+    "verificationReceipts": [
+      {
+        "command": "Get-FileHash -Algorithm SHA256 'web\\src\\features\\notifications\\pages\\InboxPage.tsx'; (Get-Content 'web\\src\\features\\notifications\\pages\\InboxPage.tsx').Count",
+        "exitCode": 0,
+        "output": "SHA256 BC96164CB6AB8914E3377C7EBC7C454271CFA2313677C7AD66A738B36E7EE652\n79"
+      },
+      {
+        "command": "$report=Get-Content -Raw -LiteralPath 'docs\\frontend-audits\\audit-page-149.json' | ConvertFrom-Json",
+        "exitCode": 0,
+        "output": "JSON parse: PASS\nRequired conventions fields: 19/19\nIdentity: audit-page-149 | /notifications, /notifications/inbox\nSource inventory readback: 11 unchanged hashes\nRoot SHA256: BC96164CB6AB8914E3377C7EBC7C454271CFA2313677C7AD66A738B36E7EE652\nRoot/dependency lines: 79/2705\nRuntime/visual/keyboard/contrast/viewports: UNVERIFIED",
+        "note": "Exact parse command shown; output follows the same executed call's required-field and inventory hash assertions. No source or runtime gate."
+      }
+    ],
+    "notRun": ["TypeScript", "lint", "build", "tests", "Git", "browser", "production mutation", "audit.sh"],
+    "auditScriptReason": "Mandatory skill inspected, but script unconditionally runs full frontend npx tsc --noEmit; assignment explicitly forbids full gates. No script execution or runtime acceptance claimed.",
+    "partialReads": [
+      "frontend-mission: sections 0/1, visual 5-10, layout/responsive/table/forms/button/state/date 13-26, accessibility/motion/architecture 30-36 and visual QA/definition 43-44.",
+      "App.tsx: scoped InboxPage mount/import search only.",
+      "router.go: notification, relevant alerts and vehicles registration ranges plus scoped endpoint search only.",
+      "useNotifications.ts: filters/key definitions, list/count/group/member/report and alert-rule bodies; other assigned mutation/detail declarations and URLs by search.",
+      "useVehicles.ts: lines 1-83 only.",
+      "useRangeState.ts: lines 1-200 plus scoped headerOwned/default semantics search.",
+      "dataState.ts: lines 70-225 only.",
+      "OperationalBrief.tsx: lines 1-160 only; downstream drawer implementation not audited.",
+      "Shared table/chart/overlay/AI guard/stream/formatting/catalog internals and transitive utilities not exhaustively reviewed."
+    ],
+    "historicalAcceptance": "Not used as current proof.",
+    "ownedFiles": ["docs\\frontend-audits\\audit-page-149.json", ".agent-status\\audit-page-149.txt"],
+    "sourceEdits": [],
+    "sharedEdits": [],
+    "queueEdits": []
+  },
+  "filesRead": [
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\notifications\\pages\\InboxPage.tsx",
+    "web\\src\\features\\notifications\\components\\InboxBody.tsx",
+    "web\\src\\features\\notifications\\components\\InboxSummary.tsx",
+    "web\\src\\features\\notifications\\components\\NotificationReportPanel.tsx",
+    "web\\src\\features\\notifications\\components\\NotificationInboxTable.tsx",
+    "web\\src\\features\\notifications\\components\\NotificationInboxDetails.tsx",
+    "web\\src\\features\\notifications\\components\\NotificationInboxDelivery.tsx",
+    "web\\src\\features\\notifications\\components\\NotificationGroupRow.tsx",
+    "web\\src\\features\\notifications\\components\\NotificationFilterBar.tsx",
+    "web\\src\\features\\notifications\\components\\NotificationRow.tsx",
+    "web\\src\\features\\notifications\\components\\AlertDetailDrawer.tsx",
+    "web\\src\\components\\ai\\AIInboxAutoCategorization.tsx",
+    "web\\src\\api\\hooks\\useNotifications.ts",
+    "web\\src\\api\\hooks\\useVehicles.ts",
+    "web\\src\\api\\dataState.ts",
+    "web\\src\\hooks\\useDataState.ts",
+    "web\\src\\hooks\\useRangeState.ts",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\App.tsx",
+    "internal\\api\\router.go",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\layout\\PageContainer.tsx",
+    "web\\src\\components\\layout\\layout-reference\\SourceContent.tsx",
+    "web\\src\\components\\data-display\\OperationalBrief.tsx",
+    "web\\src\\components\\ui\\Button.tsx",
+    "web\\src\\components\\motion\\FadeIn.tsx"
+  ]
+}

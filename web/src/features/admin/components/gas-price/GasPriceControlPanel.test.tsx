@@ -157,11 +157,16 @@ describe('GasPriceControlPanel — loading', () => {
     );
 
     // Two skeleton placeholders, wrapped in an aria-hidden container so
-    // screen readers don't announce empty pulse boxes.
+    // screen readers don't announce the static placeholder boxes.
     expect(
-      container.querySelector('[aria-hidden="true"] .animate-pulse'),
+      container.querySelector('[aria-hidden="true"] > [aria-hidden="true"][class~="bg-[var(--skeleton-bg)]"]'),
     ).not.toBeNull();
-    expect(container.querySelectorAll('.animate-pulse')).toHaveLength(2);
+    const placeholders = container.querySelectorAll('[aria-hidden="true"][class~="bg-[var(--skeleton-bg)]"]');
+    expect(placeholders).toHaveLength(2);
+    placeholders.forEach((placeholder) => {
+      expect(placeholder).toHaveStyle({ height: '64px' });
+      expect(placeholder).not.toHaveClass('animate-pulse');
+    });
 
     // No interactive controls while there is no data.
     expect(screen.queryByRole('switch')).toBeNull();
@@ -181,7 +186,7 @@ describe('GasPriceControlPanel — loading', () => {
     // The `isLoading && !data` guard means non-empty data suppresses the
     // skeleton so the panel updates progressively instead of flashing empty.
     expect(
-      container.querySelector('[aria-hidden="true"] .animate-pulse'),
+      container.querySelector('[aria-hidden="true"][class~="bg-[var(--skeleton-bg)]"]'),
     ).toBeNull();
     expect(screen.getByRole('switch')).toBeInTheDocument();
     expect(screen.getByText('Running')).toBeInTheDocument();
@@ -300,10 +305,20 @@ describe('GasPriceControlPanel — accessibility', () => {
     renderPanel(makeQuery({ data: makeStatus() }));
 
     expect(
-      screen.getByRole('button', { name: /help for gas-auto-poll/i }),
+      screen.getByRole('button', { name: 'Help for gas-auto-poll' }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole('button', { name: /help for poll-interval/i }),
+      screen.getByRole('button', { name: 'Help for Poll interval' }),
     ).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Help for gas-auto-poll' })).toBeVisible();
+    expect(screen.getByRole('button', { name: 'Help for gas-auto-poll' })).toHaveAttribute(
+      'data-help-for',
+      'gas-auto-poll',
+    );
+    expect(screen.getByRole('button', { name: 'Help for Poll interval' })).toBeVisible();
+    expect(screen.getByRole('button', { name: 'Help for Poll interval' })).toHaveAttribute(
+      'data-help-for',
+      screen.getByRole('combobox', { name: 'Poll interval' }).id,
+    );
   });
 });

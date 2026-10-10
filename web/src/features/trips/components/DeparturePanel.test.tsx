@@ -102,7 +102,7 @@ describe('DeparturePanel', () => {
   it('recommends the calm slot with charge context and evidence', () => {
     renderPanel();
     expect(screen.getByText(/Leave /)).toBeInTheDocument();
-    expect(screen.getByText('Battery 82% now')).toBeInTheDocument();
+    expect(screen.getByText('Battery 82.00% now')).toBeInTheDocument();
     expect(screen.getByText(/6 slots scored, 2 warning, 1 watch/)).toBeInTheDocument();
   });
 
@@ -127,5 +127,30 @@ describe('DeparturePanel', () => {
     renderPanel();
     fireEvent.click(screen.getByText('Retry'));
     expect(refetch).toHaveBeenCalled();
+  });
+
+  it('retains every hourly slot, charge context and evidence after a failed refresh', () => {
+    mockDeparture.mockReturnValue(idle({
+      data: advice, error: new Error('forecast refresh failed'), isError: true, isFetching: true,
+    }));
+    renderPanel();
+    expect(screen.getByRole('heading', { name: 'When to leave' })).toBeInTheDocument();
+    expect(screen.getByRole('list', { name: 'Departure hours' }).children).toHaveLength(advice.slots.length);
+    expect(screen.getByText('Battery 82.00% now')).toBeInTheDocument();
+    expect(screen.getByText(/6 slots scored, 2 warning, 1 watch/)).toBeInTheDocument();
+    expect(screen.getByText(/Previously loaded data remains visible/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '12h' })).toHaveAttribute('aria-pressed', 'true');
+    fireEvent.click(screen.getByRole('button', { name: '48h' }));
+    expect(screen.getByRole('button', { name: '48h' })).toHaveAttribute('aria-pressed', 'true');
+    const [, from, to] = mockDeparture.mock.lastCall as [number, string, string];
+    expect(new Date(to).getTime() - new Date(from).getTime()).toBe(48 * 3600_000);
+  });
+
+  it('preserves the forecast shell and all business horizon controls when coverage is empty', () => {
+    mockDeparture.mockReturnValue(idle({ data: { ...advice, slots: [] } }));
+    renderPanel();
+    expect(screen.getByRole('heading', { name: 'When to leave' })).toBeInTheDocument();
+    expect(screen.getByText('The forecast covers none of this window.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '24h' })).toBeEnabled();
   });
 });

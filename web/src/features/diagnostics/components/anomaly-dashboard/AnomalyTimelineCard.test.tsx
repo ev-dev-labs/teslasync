@@ -86,11 +86,11 @@ describe('AnomalyTimelineCard', () => {
     expect(text).toContain('2.00'); // fmtNumber(2, 2)
   });
 
-  it('shows the z-score sigma chip at one decimal when z_score > 0', () => {
+  it('shows the z-score sigma chip at the selected precision when z_score > 0', () => {
     const { container } = renderCard(makeAnomaly({ z_score: 4.27 }));
     const text = container.textContent ?? '';
-    expect(text).toContain('4.3\u03c3'); // fmtNumber(4.27, 1) = '4.3'
-    expect(text).not.toContain('4.27\u03c3');
+    expect(text).toContain('4.27\u03c3');
+    expect(text).not.toContain('4.3\u03c3');
   });
 
   it('hides the sigma chip for a range violation (z_score === 0)', () => {
@@ -102,14 +102,14 @@ describe('AnomalyTimelineCard', () => {
 
   it('maps each severity to its list-item tone (incl. the warning->warn alias)', () => {
     const critical = renderCard(makeAnomaly({ severity: 'critical' })).container.querySelector('li');
-    expect(critical?.className).toContain('bg-red-500/10');
-    expect(critical?.className).toContain('border-red-500/30');
+    expect(critical?.className).toContain('bg-[var(--semantic-danger-bg)]');
+    expect(critical?.className).toContain('border-[var(--semantic-danger-border)]');
 
     const warning = renderCard(makeAnomaly({ severity: 'warning' })).container.querySelector('li');
-    expect(warning?.className).toContain('bg-amber-500/10');
+    expect(warning?.className).toContain('bg-[var(--semantic-warning-bg)]');
 
     const info = renderCard(makeAnomaly({ severity: 'info' })).container.querySelector('li');
-    expect(info?.className).toContain('bg-sky-500/10');
+    expect(info?.className).toContain('bg-[var(--semantic-info-bg)]');
   });
 
   it('conveys severity as text on the badge, not by colour alone (a11y)', () => {

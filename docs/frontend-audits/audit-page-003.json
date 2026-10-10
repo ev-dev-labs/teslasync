@@ -1,0 +1,440 @@
+{
+  "item": "audit-page-003",
+  "page": "web\\src\\features\\admin\\pages\\ApiLogsPage.tsx",
+  "routes": ["/api-logs"],
+  "purpose": "Inspect recorded API requests, range-scoped request activity, backend process errors, and independently windowed browser error reports.",
+  "primaryGoal": "Find a request using server filters, inspect complete captured evidence, and export the currently loaded page without confusing request-list scope with diagnostic or summary scope.",
+  "dataSources": [
+    {
+      "hook": "useAPICallLogs",
+      "file": "web\\src\\api\\hooks\\useAdmin.ts",
+      "line": 141,
+      "endpoint": "GET /api/v1/api-logs",
+      "sourceOwner": "apiCallLogHandler.List",
+      "routeEvidence": "internal\\api\\router.go:4609-4615",
+      "adapterEvidence": "web\\src\\api\\devtools.ts:104-132",
+      "consumerEvidence": "web\\src\\features\\admin\\pages\\ApiLogsPage.tsx:128-140",
+      "behavior": "Envelope data/total/limit/offset; zero-based page times validated size supplies offset; method, status, endpoint, service, client, key, start and end_exclusive are server parameters. AbortSignal is forwarded; polling is INTERVALS.FAST (10000ms). Existing inherited cache/retry policy is not overridden here.",
+      "types": "web\\src\\api\\types.ts:1838-1860",
+      "verification": "Frontend request construction and mounted router declarations inspected; HTTP execution, database ordering/filtering and authorization outcomes unverified."
+    },
+    {
+      "hook": "useAPICallLogStats",
+      "file": "web\\src\\api\\hooks\\useAdmin.ts",
+      "line": 153,
+      "endpoint": "GET /api/v1/api-logs/stats",
+      "sourceOwner": "apiCallLogHandler.Stats",
+      "routeEvidence": "internal\\api\\router.go:4610-4615",
+      "adapterEvidence": "web\\src\\api\\devtools.ts:134-142",
+      "consumerEvidence": "web\\src\\features\\admin\\pages\\ApiLogsPage.tsx:120-126",
+      "behavior": "Both exact range bounds are passed; incomplete bound pairs throw in adapter. Range summaries and service counts ignore request-list filters. last_24h remains an independent rolling measure with exact backend bounds absent from response. Polling is INTERVALS.STANDARD (30000ms); AbortSignal forwarded.",
+      "types": "web\\src\\api\\types.ts:1862-1870",
+      "verification": "Route and source contracts inspected; aggregate formulas, percent scale and last_24h backend bounds not independently verified."
+    },
+    {
+      "hook": "useSystemErrorStats",
+      "file": "web\\src\\api\\hooks\\useAdmin.ts",
+      "line": 161,
+      "endpoint": "GET /api/v1/system/errors/stats",
+      "sourceOwner": "ErrorStatsHandler(errorTracker)",
+      "routeEvidence": "internal\\api\\router.go:4384",
+      "adapterEvidence": "web\\src\\api\\devtools.ts:156-157",
+      "consumerEvidence": "web\\src\\features\\admin\\pages\\ApiLogsPage.tsx:141-147; web\\src\\features\\admin\\components\\ApiLogsBackendErrors.tsx:23-38",
+      "behavior": "Process-lifetime totals, uptime and categories, independent of selected request range/filters. Sort categories descending by count. Polling 30000ms; AbortSignal forwarded.",
+      "types": "web\\src\\api\\types.ts:1819-1829",
+      "verification": "Router declaration and frontend process-scope explanation inspected; tracker lifecycle and cross-pod behavior unverified."
+    },
+    {
+      "hook": "useWebErrorsSummary",
+      "file": "web\\src\\api\\hooks\\useAdmin.ts",
+      "line": 286,
+      "endpoint": "GET /api/v1/admin/web-errors/summary",
+      "sourceOwner": "webErrorHandler.Summary",
+      "routeEvidence": "internal\\api\\router.go:4641-4649",
+      "consumerEvidence": "web\\src\\features\\admin\\components\\ApiLogsFrontendErrors.tsx:15-24",
+      "behavior": "Independent component-owned query; total, top sources, window_seconds, as_of. Explicit one-hour/general/unknown-window text; categories sorted descending. Polling 30000ms; AbortSignal forwarded. Zero received reports never implies zero actual browser errors.",
+      "types": "web\\src\\types\\admin.ts:165-178",
+      "verification": "Router comments identify the shared ingest/summary handler instance; browser reporting delivery, disabled reporting and rolling-window accuracy unverified."
+    }
+  ],
+  "components": [
+    {
+      "name": "PageLayout / PageContainer",
+      "ownerFile": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+      "line": 9,
+      "category": "layout",
+      "contract": "Existing full-width min-w-0 container, title/help, semantic secondaryActions, logs-query freshness, busy announcement and error boundary. No page-wide loading/error/empty prop is supplied, so independent source sections remain mounted.",
+      "evidence": ["web\\src\\features\\admin\\pages\\ApiLogsPage.tsx:245-261", "web\\src\\components\\layout\\PageContainer.tsx:243-257"]
+    },
+    {
+      "name": "OperationalBrief / ApiLogsSummary",
+      "ownerFile": "web\\src\\features\\admin\\components\\statstrip-api-quality\\ApiLogsSummary.tsx",
+      "line": 19,
+      "category": "domain adapter over shared data-display",
+      "contract": "Two compact briefs, four metrics, source-state labels, scope/provenance, retained/error notices and shared Review details drawers. Latency adapter converts source milliseconds to formatter seconds, then displays milliseconds; never change wire/cache values.",
+      "evidence": ["web\\src\\features\\admin\\components\\statstrip-api-quality\\ApiLogsSummary.tsx:23-63", "web\\src\\components\\data-display\\OperationalBrief.tsx:117-173"]
+    },
+    {
+      "name": "DataTable / ApiLogsEvidenceTable",
+      "ownerFile": "web\\src\\features\\admin\\components\\ApiLogsEvidenceTable.tsx",
+      "line": 170,
+      "category": "domain adapter over shared ui",
+      "contract": "Stable tableId admin:api-logs; nine columns; server pagination/filters; column visibility, resize, reorder and density controls; controlled single-row expansion; loaded-page CSV/JSON controls. Do not replace with another table pipeline.",
+      "evidence": ["web\\src\\features\\admin\\components\\ApiLogsEvidenceTable.tsx:170-382", "web\\src\\features\\admin\\pages\\ApiLogsPage.tsx:363-399"]
+    },
+    {
+      "name": "GlassPanel, Button, Badge, Text/Caption/PanelTitle, Input/Select/Label, CodeBlock/CopyButton",
+      "ownerFile": "web\\src\\features\\admin\\components\\ApiLogsEvidenceTable.tsx",
+      "line": 3,
+      "category": "existing ui primitives",
+      "contract": "Category-barrel imports; semantic text and native named controls; pretty-printed JSON with raw fallback and copy; no new surface, control or code-view implementation.",
+      "evidence": ["web\\src\\features\\admin\\pages\\ApiLogsPage.tsx:8-14", "web\\src\\features\\admin\\components\\ApiLogsEvidenceTable.tsx:52-163"]
+    },
+    {
+      "name": "ApiLogsRuntimeCard / ApiLogsRuntimeList",
+      "ownerFile": "web\\src\\features\\admin\\components\\ApiLogsRuntimeCard.tsx",
+      "line": 16,
+      "category": "page-specific presentation owners",
+      "contract": "Shared by both error panels: generated title identity, labeled region, count/context/loading skeleton, independent children and keyboard-focusable scroll region.",
+      "evidence": ["web\\src\\features\\admin\\components\\ApiLogsRuntimeCard.tsx:19-44", "web\\src\\features\\admin\\components\\ApiLogsRuntimeList.tsx:3-10"]
+    },
+    {
+      "name": "DateTime / FormattedNumber / useNumberFormatting / useOperationalMetrics",
+      "ownerFile": "web\\src\\features\\admin\\components\\ApiLogsEvidenceTable.tsx",
+      "line": 7,
+      "category": "existing display/formatting contracts",
+      "contract": "Existing locale/precision preferences and UTC-input datetime rendering; preserve raw identifiers, payloads and source units. Formatter implementations not independently audited.",
+      "evidence": ["web\\src\\features\\admin\\components\\ApiLogsEvidenceTable.tsx:111-124", "web\\src\\features\\admin\\components\\ApiLogsEvidenceTable.tsx:286-293"]
+    },
+    {
+      "name": "useDataState, StaleRefreshWarning, QueryError, EmptyState, Skeleton, FadeIn",
+      "ownerFile": "web\\src\\hooks\\useDataState.ts",
+      "line": 30,
+      "category": "existing trust/feedback/motion",
+      "contract": "Retained payload is never blanked by refresh failure; fatal errors are source-specific; paused retained queries show offline warning. FadeIn consults existing motion preference rather than adding animation policy.",
+      "evidence": ["web\\src\\api\\dataState.ts:158-177", "web\\src\\components\\feedback\\StaleRefreshWarning.tsx:56-90", "web\\src\\components\\motion\\FadeIn.tsx:24-35"]
+    }
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\admin\\pages\\ApiLogsPage.tsx",
+      "line": 315,
+      "rule": "MDC-010/MDC-020: reuse theme-aware interactive chrome",
+      "detail": "Quick-pick Button overrides duplicate surface/selection treatment despite existing control tokens; special padding overrides also compete with density sizing.",
+      "fix": "Keep quick-pick behavior and aria-pressed, but use existing muted control/selected/focus tokens and reachable sizing rather than a new chip component.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\admin\\components\\ApiLogsRuntimeCard.tsx",
+      "line": 16,
+      "rule": "MDC-002: reuse existing domain presentation",
+      "detail": "Backend/browser error headings, count/context and scrolling evidence already share RuntimeCard/RuntimeList. The independent query branches are semantically different, not grounds to merge sources.",
+      "fix": "Retain these existing owners; no speculative shared error-dashboard composite is justified by this one-page audit.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "responsive": {
+    "sourceBehavior": [
+      {"file": "web\\src\\features\\admin\\pages\\ApiLogsPage.tsx", "line": 426, "detail": "Diagnostic cards stack below lg and become two columns at lg; service chips and table header wrap."},
+      {"file": "web\\src\\features\\admin\\components\\ApiLogsEvidenceTable.tsx", "line": 155, "detail": "Details headers/bodies stack then become two columns at lg; request URL and evidence text wrap/scroll locally."},
+      {"file": "web\\src\\features\\admin\\components\\ApiLogsEvidenceTable.tsx", "line": 233, "detail": "Mobile endpoint cell duplicates method/service/time/duration and truncated error, retaining full evidence in expansion."},
+      {"file": "web\\src\\components\\ui\\DataTable.tsx", "line": 234, "detail": "mobileColumns is an under-md visibility allow-list, not automatic card transformation. Caller supplies no mobilePresentation."}
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\admin\\components\\ApiLogsEvidenceTable.tsx",
+        "line": 344,
+        "rule": "MDC-043 / mission sections 15-17",
+        "detail": "Under-md allow-list retains method, endpoint, status, service, client and optional key, while endpoint content repeats method/service. Multiple minimum-width columns can make the phone table wide; this is a source-based overflow/redundancy risk, not a measured viewport failure.",
+        "fix": "Use the current DataTable mobile strategy to prioritize endpoint/status and preserve access to every filter, metadata field and full detail. Verify container scrolling rather than hiding capabilities.",
+        "owner": "page",
+        "confidence": "medium"
+      }
+    ],
+    "unverifiedWidths": [320, 375, 390, 430, 768, 1024, 1280, 1440, 1920, 2560],
+    "runtimeStatus": "UNVERIFIED: no route mounted, viewport capture or horizontal-scroll measurement."
+  },
+  "accessibility": {
+    "sourceStrengths": [
+      "Named API-log/error-diagnostics sections; decorative icons aria-hidden; service toggles expose aria-pressed (ApiLogsPage.tsx:276-286,309-310,425-428).",
+      "Labeled Input/Select filters and named CopyButtons; raw payloads are rendered as text rather than HTML (ApiLogsEvidenceTable.tsx:52-85,98-107,179-207).",
+      "Runtime cards use useId and aria-labelledby; lists are focusable scroll regions with visible focus styling (ApiLogsRuntimeCard.tsx:19-22; ApiLogsRuntimeList.tsx:5-8).",
+      "DataTable expansion uses native button and aria-expanded; shared touch-target-overlay expands pointer hit area to at least 44px (DataTable.tsx:1128-1147; index.css:1958-1970). Overlap still needs browser verification.",
+      "Shared FadeIn reduced-motion branch uses initial=false and ignored delay; actual OS/low-bandwidth behavior not exercised (FadeIn.tsx:24-35)."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\components\\ui\\DataTable.tsx",
+        "line": 1134,
+        "rule": "MDC-040: meaningful action names",
+        "detail": "Expand/collapse names are generic for every request. Caller provides rowLabel, but inspected renderer uses it for selectable-row names, not expansion. Requests cannot be distinguished by expansion-button name alone.",
+        "fix": "Extend existing expansion label calculation to reuse rowLabelFor with localized named expand/collapse fallbacks; preserve aria-expanded, keyboard operation and legacy fallback. No second table implementation.",
+        "owner": "shared",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\admin\\pages\\ApiLogsPage.tsx",
+        "line": 314,
+        "rule": "MDC-040: reachable non-overlapping mobile targets",
+        "detail": "Service quick-picks override Button height/padding. Other sm actions default to h-9. No page-specific 44px minimum is visible; effective spacing exceptions/target size have not been measured.",
+        "fix": "Use existing Button sizing/wrapLabel or touch-target utilities where appropriate; verify touch regions do not overlap and long translated labels fit.",
+        "owner": "page",
+        "confidence": "medium"
+      }
+    ],
+    "runtimeStatus": "UNVERIFIED: keyboard sequence, focus restoration, screen-reader output, contrast, forced colors, RTL and 200% text were not exercised."
+  },
+  "states": {
+    "loading": "Independent first-load skeletons: summary brief measurements; five service skeletons; eight request-row skeletons; backend/browser count and evidence skeletons. Evidence table itself remains mounted before request-state branch.",
+    "empty": "No service activity message; request no-logs explanation with filter-clear recovery only when list filters exist; explicit zero-runtime/no-browser-reports messages versus missing breakdown. Source sections remain mounted.",
+    "error": "Source-specific fatal QueryError and retries for services, requests, backend and browser errors. Summary exposes fatal/refresh error text and source-state label; global Refresh can retry stats.",
+    "staleOffline": "Retained rows/categories remain visible; shared warnings appear for list/services/runtime/browser. hideRetry on first three relies on global Refresh; browser keeps independent retry. DataState represents paused retained reads as stale/isRefreshBlocked.",
+    "partialUnknown": "Optional measurements remain undefined/null in summary formatting. Backend/browser unknown totals and context display dash. Null headers/bodies explain missing evidence; loaded request total is guarded in caption. No mocked data introduced.",
+    "issues": [
+      {
+        "file": "web\\src\\features\\admin\\pages\\ApiLogsPage.tsx",
+        "line": 256,
+        "rule": "MDC-026: accurate multi-source action scope",
+        "detail": "Global Refresh disables/refetches logs, stats and backend runtime only. Frontend errors own a fourth query in their child; global action neither refreshes it nor includes its busy state.",
+        "fix": "Either expose a narrowly typed frontend refresh/busy bridge and preserve that independent query, or make the global action's three-source scope explicit. Keep the existing frontend stale retry and polling.",
+        "owner": "integration",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\admin\\pages\\ApiLogsPage.tsx",
+        "line": 150,
+        "rule": "MDC-026: unknown is not measured zero",
+        "detail": "Missing request envelope defaults total to 0 and passes it into pagination while table is mounted before loading/fatal branches. Caption correctly uses dash when data is absent, but pager's first-load/offline appearance requires verification.",
+        "fix": "Keep a real empty total distinct from unavailable total and disable or appropriately label pagination until an envelope exists, using current DataTable/Pagination contracts.",
+        "owner": "page",
+        "confidence": "medium"
+      }
+    ],
+    "citations": [
+      "web\\src\\features\\admin\\pages\\ApiLogsPage.tsx:288-302,346-362,363-418",
+      "web\\src\\features\\admin\\components\\ApiLogsBackendErrors.tsx:40-74",
+      "web\\src\\features\\admin\\components\\ApiLogsFrontendErrors.tsx:42-75",
+      "web\\src\\features\\admin\\components\\statstrip-api-quality\\ApiLogsSummary.tsx:42-63",
+      "web\\src\\components\\feedback\\StaleRefreshWarning.tsx:56-119"
+    ]
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\admin\\pages\\ApiLogsPage.tsx",
+      "line": 315,
+      "rule": "MDC-010/MDC-012: no fixed-white or saturated decorative chrome",
+      "detail": "Selected service uses fixed bg-white/[0.06] and ring-cyan-400/30 instead of adaptive control/accent tokens. This is a fixed-white translucent surface, not pure-white body text or demonstrated glow.",
+      "fix": "Use current theme-aware muted control/selected-border tokens; keep pressed indication and service identity. Do not force-reset saved theme IDs.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\admin\\pages\\ApiLogsPage.tsx",
+      "line": 285,
+      "rule": "MDC-010 / mission sections 5-7: intensity budget",
+      "detail": "Decorative Layers icon is fixed cyan-300; service identity chips assign info/warning hue to vendors, repeated alongside already colored method and status badges. Geocoder service identity is warning-colored even without an actual error.",
+      "fix": "Make decoration and ordinary service identity neutral; reserve restrained semantic hue for actual request status/rate limiting/errors. Preserve all vendor labels and counts.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\admin\\components\\ApiLogsEvidenceTable.tsx",
+      "line": 336,
+      "rule": "MDC-015/MDC-023: avoid nested competing surface frames",
+      "detail": "DataTable defaults to standalone frame; caller already encloses it in GlassPanel with its own title/header. The shared frame adds another border/radius/shadow surface (tokens.ts:67), potentially making the evidence workspace visually box-heavy.",
+      "fix": "Use existing variant=\"embedded\" for the table within its panel after verifying toolbar, scroll and persistence behavior; retain panel header and all controls.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\components\\ui\\DataTable.tsx",
+      "line": 1141,
+      "rule": "MDC-010/MDC-040: theme-aware hover/focus",
+      "detail": "The active page's shared row expander retains fixed-white hover and cyan focus ring. These are source-confirmed fixed palette accents, not measured contrast failures.",
+      "fix": "Shared table owner should reuse control hover and focus-ring tokens without removing focus or touch-target overlay.",
+      "owner": "shared",
+      "confidence": "high"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\features\\admin\\pages\\ApiLogsPage.tsx",
+      "line": 82,
+      "rule": "MDC-046: valid URL state",
+      "detail": "Page URL value is not clamped to a non-negative integer. useUrlNumber accepts any finite number, while adapter computes offset=page*size. Negative/fractional manually entered page values can generate invalid offsets; backend rejection behavior was not inspected.",
+      "fix": "Normalize page locally through existing URL-state mechanism, retaining zero-based URL and one-based pagination display. Do not change shared numeric parsing for unrelated users.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\admin\\components\\statstrip-api-quality\\ApiLogsSummary.tsx",
+      "line": 35,
+      "rule": "MDC-044: preserve locale-aware numbers",
+      "detail": "Error-count comparison uses String(stats.error_count) while page counts otherwise use saved number formatting. The comparison also carries a trend/increased cue without a supplied previous-period comparison.",
+      "fix": "Use existing locale formatting for the count and keep source-backed error emphasis without implying an unverified temporal trend. Preserve >5 threshold and actual error count unless product meaning is separately resolved.",
+      "owner": "page",
+      "confidence": "medium"
+    }
+  ],
+  "priority": {
+    "level": "medium",
+    "rationale": "Page already uses shared layout, real typed queries, independent states and evidence preservation. Prioritize mobile/table discoverability, accessible row identities and data/action scope before decorative changes.",
+    "order": [
+      "Resolve shared row-expansion names/focus tokens and verify non-overlapping touch targets.",
+      "Confirm complete mobile access to server filters and request evidence.",
+      "Clarify Refresh scope, unavailable pagination and URL-page validity.",
+      "Subdue fixed cyan/white/vendor-warning decoration; reuse embedded table.",
+      "Verify localized summary comparison and source-backed semantics."
+    ]
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "Existing DataTable expansion accessibility and theme token closeout",
+      "ownerFile": "web\\src\\components\\ui\\DataTable.tsx",
+      "file": "web\\src\\components\\ui\\DataTable.tsx",
+      "line": 1134,
+      "rule": "MDC-010/MDC-040",
+      "detail": "Current expandable evidence rows have indistinguishable button names and fixed white/cyan hover/focus treatment.",
+      "fix": "Reuse existing rowLabel/rowLabelFor for localized named expansion actions; use existing control/focus tokens; keep generic fallback and touch hit-region behavior.",
+      "owner": "shared",
+      "confidence": "high",
+      "propsVariantsStates": {
+        "existingProps": ["rowLabel", "expandable", "expandedKeys", "onExpandedChange", "renderExpanded"],
+        "newProps": [],
+        "states": ["collapsed", "expanded", "keyboard focus", "hover", "forced colors", "compact density"],
+        "acceptance": "Unique request identity in expand/collapse accessible names; unchanged single-row control; visible adaptive focus; no overlapping 44px hit areas in compact rows."
+      },
+      "usedBy": ["web\\src\\features\\admin\\components\\ApiLogsEvidenceTable.tsx"],
+      "dependsOn": ["existing i18n table expansion keys or shared-owner catalog extension", "existing control hover/focus tokens", "shared-owner validation baton"],
+      "scopeLimit": "Only this production consumer was inspected; no claim of two-consumer inventory or authorization to create a new composite. Audit worker made no shared edits."
+    }
+  ],
+  "competingImplementations": [
+    {
+      "file": "web\\src\\api\\hooks\\useAdmin.ts",
+      "line": 124,
+      "rule": "MDC-002: retain authoritative source pipeline",
+      "detail": "Unused-by-this-page useApiLogs returns an array/page query, alongside actual envelope-based useAPICallLogs with offset/filter/range/size key. Similar capitalization hides distinct contracts; useApiLogStats also lacks selected range.",
+      "fix": "Preserve actual envelope/range hooks here. Shared API owner may assess other consumers before consolidation; no deletion or migration is authorized by this scoped audit.",
+      "owner": "integration",
+      "confidence": "high"
+    }
+  ],
+  "preservation": {
+    "sourceHash": "20779ced6adbedcaa956b5d434bb882eefc6bcc7981caf8fd9a38ee54485f6f8",
+    "sourceHashAlgorithm": "SHA-256",
+    "sourceFile": "web\\src\\features\\admin\\pages\\ApiLogsPage.tsx",
+    "currentLineCount": 440,
+    "pageSpecificDependencyLineCounts": {
+      "web\\src\\features\\admin\\components\\ApiLogsEvidenceTable.tsx": 382,
+      "web\\src\\features\\admin\\components\\ApiLogsBackendErrors.tsx": 87,
+      "web\\src\\features\\admin\\components\\ApiLogsFrontendErrors.tsx": 79,
+      "web\\src\\features\\admin\\components\\ApiLogsRuntimeCard.tsx": 45,
+      "web\\src\\features\\admin\\components\\ApiLogsRuntimeList.tsx": 11,
+      "web\\src\\features\\admin\\components\\statstrip-api-quality\\ApiLogsSummary.tsx": 64,
+      "web\\src\\features\\admin\\components\\statstrip-api-quality\\sourceBriefStatus.ts": 17,
+      "web\\src\\features\\admin\\lib\\serviceOptions.ts": 61
+    },
+    "totalInspectedPageSpecificLines": 1186,
+    "sectionCount": 6,
+    "sections": [
+      {"name": "Request activity range summary", "count": 1, "evidence": "web\\src\\features\\admin\\components\\statstrip-api-quality\\ApiLogsSummary.tsx:49-56", "preserve": ["Total calls", "Error rate", "Error count emphasis", "Average duration", "Range/scope/provenance", "Review details"]},
+      {"name": "Independent Last 24h summary", "count": 1, "evidence": "web\\src\\features\\admin\\components\\statstrip-api-quality\\ApiLogsSummary.tsx:57-62", "preserve": ["Rolling count", "Exact bounds unavailable explanation", "Review details"]},
+      {"name": "By service", "count": 1, "evidence": "web\\src\\features\\admin\\pages\\ApiLogsPage.tsx:283-336", "preserve": ["Descending counts", "Toggle filtering", "Tracked/known service counts", "Empty/loading/stale/retry"]},
+      {"name": "API call log evidence workspace", "count": 1, "evidence": "web\\src\\features\\admin\\pages\\ApiLogsPage.tsx:341-421", "preserve": ["Loaded range/count", "Filter/search/clear", "CSV/JSON", "Pagination", "Column layout/density preferences", "Expandable complete evidence"]},
+      {"name": "Backend runtime errors", "count": 1, "evidence": "web\\src\\features\\admin\\components\\ApiLogsBackendErrors.tsx:26-85", "preserve": ["Process scope", "Total/uptime", "Code/count/last message/last seen", "System health navigation", "Independent recovery"]},
+      {"name": "Frontend error reports", "count": 1, "evidence": "web\\src\\features\\admin\\components\\ApiLogsFrontendErrors.tsx:26-77", "preserve": ["Window/as-of", "Total/source/route/count", "Observability disclaimer", "Independent recovery"]}
+    ],
+    "sourceStructureCounts": {
+      "pageGlassPanelOpeningTags": 2,
+      "pageChartContainerOpeningTags": 0,
+      "pageSectionOpeningTags": 2,
+      "summaryOperationalBriefInstances": 2,
+      "evidenceColumns": 9,
+      "headerAndBodyEvidenceViewersPerExpandedRequest": 4
+    },
+    "actions": [
+      "Refresh logs, range stats and backend process summary; preserve documented independent frontend behavior until explicitly corrected.",
+      "Service quick-pick toggle and server method/status/endpoint/service/client/key filters; clear filters while retaining range and size.",
+      "Atomic filter-plus-page URL update via useUrlBatch; range change resets nonzero page.",
+      "Server pagination and sizes 25/50/100; zero-based page URL to one-based control conversion.",
+      "Persistent resize/reorder/visibility/density for tableId admin:api-logs; optional hidden App key column.",
+      "Expand/collapse at most one request; inspect/copy request URL, verified installation ID, request/response headers and bodies.",
+      "CSV/JSON loaded-page download with teslasync-api-logs-YYYY-MM-DD filename and existing privacy redaction.",
+      "Independent source retries and shared OperationalBrief Review details drawers.",
+      "Navigate to /system-status from backend error evidence."
+    ],
+    "dataBehavior": [
+      "Header owns range through useRangeState persistKey api-logs.range, default all; startInstant/endInstantExclusive/timezone/preset semantics survive. workspaceScope enables range and disables global vehicle selector for this fleet-wide route.",
+      "Logs query applies full-server predicates rather than loaded-page client filtering. Summary/service counts use only range; browser and process summaries have different scopes.",
+      "Service dropdown is union of 11 known service tags, actual by_service keys and active unknown selection, sorted by localized label with All services first; chips sort descending count.",
+      "Preserve nine columns: time, method, endpoint, status, service, duration, client, optional key, error; status null remains N/A and missing evidence stays dash/explanation.",
+      "Application identity derives from X-Teslasync-App using allowed platform plus UUIDv4 pattern; table installation metadata requires verified numeric App-Key-ID with name. Exports retain their current separate identity rules.",
+      "CSV fields retain id, timestamp, vehicle_id, service, app_installation, app_key_id, app_key_name, method, endpoint, status_code, duration_ms, rate_limited, error, request_body, response_body, request_headers, response_headers. JSON keeps original loaded records through privacy helper.",
+      "Evidence viewer pretty-prints valid JSON and copies exactly displayed text; invalid payload stays raw. Capture explanation retains API_LOG_CAPTURE_BODIES, 10KB cap, safe diagnostic headers/redaction and irrecoverable missing legacy fields. These statements were not backend-validated.",
+      "Preserve source duration_ms and API fields. ApiLogsSummary's milliseconds-to-seconds conversion is a formatter boundary, not a new wire migration.",
+      "Retain source rows on refresh failure/offline; do not gate every section on one successful request or replace unknown counts with fabricated zero."
+    ],
+    "routeEvidence": ["web\\src\\App.tsx:258", "web\\src\\App.tsx:721"],
+    "workspaceEvidence": ["web\\src\\lib\\workspaceScope.ts:27", "web\\src\\lib\\workspaceScope.ts:112"],
+    "sourceHashRechecked": true
+  },
+  "evidenceLimits": {
+    "mode": "Phase 0 read-only, one mounted-route source audit; no source/UI changes.",
+    "runtime": "UNVERIFIED: no server start, route navigation, live API read, fixture mount, screenshot or production action.",
+    "visual": "UNVERIFIED: no measured contrast, actual glow/saturation, theme screenshot, responsive overflow, open overlay, RTL or long-content rendering. Findings distinguish fixed-color source from observed appearance.",
+    "keyboardA11y": "UNVERIFIED: no keyboard, focus, screen reader, touch overlap, forced colors or OS reduced-motion exercise.",
+    "backend": "Only relevant router declarations/comments were inspected. Handler/database implementation, aggregate computations, sorting, retention, capture limits/redaction, authorization and multi-pod behavior were not validated.",
+    "sharedScope": "Shared owners were read only to resolve this page's actual contracts. No application-wide component audit, additional production-consumer inventory or query-provider/theme-provider audit.",
+    "validation": "No TypeScript, full lint/build, tests, Git, nested agents or production actions. The loaded audit-violations script was inspected but not executed because its unconditional project TypeScript phase conflicts with this assignment's bounded source-only audit.",
+    "staticEvidence": {
+      "scope": "Root page plus eight explicitly enumerated page-specific presentation/helper files in preservation.pageSpecificDependencyLineCounts.",
+      "method": "PowerShell Select-String -CaseSensitive on explicit paths; Get-Content line counts; Get-FileHash -Algorithm SHA256.",
+      "exitCode": 0,
+      "rawOutput": "style=\\{\\{ : 0\n<(button|input|textarea|select|table)\\b : 0\nfrom.*(recharts|react-leaflet|framer-motion) : 0\nneon|glow : 0\ntext-white : 0\nbg-white : 1\ntext-cyan|ring-cyan : 2",
+      "caveat": "Text-pattern counts are not semantic/runtime acceptance. An initial count omitted -CaseSensitive and falsely counted PascalCase shared controls; corrected output above supersedes it. Earlier malformed quoted command exited 1 and was corrected. No literal neon/glow or pure-white text was found in scoped feature files, but fixed-white/cyan decoration and repeated semantic badges are actively flagged."
+    },
+    "concurrency": "Root source SHA-256 matched at repeated reads. Dependencies were read from the live working tree, not an atomic frozen snapshot; parallel source drift remains possible."
+  },
+  "filesRead": [
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\admin\\pages\\ApiLogsPage.tsx",
+    "web\\src\\features\\admin\\components\\ApiLogsEvidenceTable.tsx",
+    "web\\src\\features\\admin\\components\\ApiLogsBackendErrors.tsx",
+    "web\\src\\features\\admin\\components\\ApiLogsFrontendErrors.tsx",
+    "web\\src\\features\\admin\\components\\ApiLogsRuntimeCard.tsx",
+    "web\\src\\features\\admin\\components\\ApiLogsRuntimeList.tsx",
+    "web\\src\\features\\admin\\components\\statstrip-api-quality\\ApiLogsSummary.tsx",
+    "web\\src\\features\\admin\\components\\statstrip-api-quality\\sourceBriefStatus.ts",
+    "web\\src\\features\\admin\\lib\\serviceOptions.ts",
+    "web\\src\\api\\hooks\\useAdmin.ts",
+    "web\\src\\api\\devtools.ts",
+    "web\\src\\api\\devtools.test.ts",
+    "web\\src\\api\\index.ts",
+    "web\\src\\api\\types.ts",
+    "web\\src\\types\\admin.ts",
+    "web\\src\\api\\dataState.ts",
+    "web\\src\\hooks\\useDataState.ts",
+    "web\\src\\hooks\\useUrlState.ts",
+    "web\\src\\lib\\constants.ts",
+    "web\\src\\lib\\export.ts",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\lib\\tokens.ts",
+    "web\\src\\App.tsx",
+    "internal\\api\\router.go",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\layout\\PageContainer.tsx",
+    "web\\src\\components\\data-display\\OperationalBrief.tsx",
+    "web\\src\\components\\ui\\DataTable.tsx",
+    "web\\src\\components\\ui\\Badge.tsx",
+    "web\\src\\components\\ui\\Button.tsx",
+    "web\\src\\components\\feedback\\StaleRefreshWarning.tsx",
+    "web\\src\\components\\motion\\FadeIn.tsx",
+    "web\\src\\index.css"
+  ]
+}

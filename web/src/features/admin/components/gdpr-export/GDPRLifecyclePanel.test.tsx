@@ -103,17 +103,34 @@ describe('GDPRLifecyclePanel', () => {
     expect(screen.getByText('No lifecycle events recorded yet.')).toBeInTheDocument();
     // No timeline entries and no loading skeleton in the empty branch.
     expect(screen.queryByText('Created')).toBeNull();
-    expect(container.querySelector('.animate-pulse')).toBeNull();
+    expect(container.querySelector(
+      '[data-print-card] [aria-hidden="true"][class*="bg-[var(--skeleton-bg)]"]',
+    )).toBeNull();
   });
 
   it('loading: with no artifact yet, shows a skeleton and neither the timeline nor the empty state', () => {
     const { container } = render(<GDPRLifecyclePanel loading />);
 
-    // Skeleton primitive renders an animate-pulse block.
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
+    // The lifecycle reserves its source-local height without ambient motion.
+    const placeholder = container.querySelector(
+      '[data-print-card] [aria-hidden="true"][class*="bg-[var(--skeleton-bg)]"]',
+    );
+    expect(placeholder).not.toBeNull();
+    expect(container.querySelectorAll(
+      '[data-print-card] [aria-hidden="true"][class*="bg-[var(--skeleton-bg)]"]',
+    )).toHaveLength(1);
+    expect(placeholder).toHaveAttribute('aria-hidden', 'true');
+    expect(placeholder).toHaveClass('h-4', 'w-full', 'rounded');
+    expect(placeholder).toHaveStyle({ height: '140px' });
+    expect(placeholder).toBeEmptyDOMElement();
+    expect(container.querySelectorAll('[data-print-card] .animate-pulse')).toHaveLength(0);
     // The empty-state live region and any timeline entries are withheld.
     expect(screen.queryByRole('status')).toBeNull();
     expect(screen.queryByText('Created')).toBeNull();
+    expect(screen.queryByText('Completed')).toBeNull();
+    expect(screen.queryByText('Failed')).toBeNull();
+    expect(screen.queryByText('Expires')).toBeNull();
+    expect(screen.queryByText('Expired')).toBeNull();
   });
 
   it('loading precedence: a present artifact wins over `loading` (no skeleton flash)', () => {
@@ -121,7 +138,9 @@ describe('GDPRLifecyclePanel', () => {
 
     // The real timeline paints; the skeleton must NOT override live data.
     expect(screen.getByText('Created')).toBeInTheDocument();
-    expect(container.querySelector('.animate-pulse')).toBeNull();
+    expect(container.querySelector(
+      '[data-print-card] [aria-hidden="true"][class*="bg-[var(--skeleton-bg)]"]',
+    )).toBeNull();
   });
 
   it('queued: renders only the "Created" step with its relative time', () => {

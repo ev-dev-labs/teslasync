@@ -3,8 +3,10 @@ import { EmptyState } from '@/components/feedback';
 import { useTranslation } from 'react-i18next';
 
 import { JourneyFragmentationSectionProps } from './_types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export function StopoverGapChart({ result, loading = false }: JourneyFragmentationSectionProps) {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const data = result.gapHistogram.map((point) => ({
     gap: point.upperBoundMin == null
@@ -16,8 +18,8 @@ export function StopoverGapChart({ result, loading = false }: JourneyFragmentati
     'journeyFragmentation.gap.summary',
     'Median {{median}} min; p90 {{p90}} min across {{count}} linked gaps.',
     {
-      median: result.linkedGapSummary.median == null ? '—' : result.linkedGapSummary.median.toFixed(1),
-      p90: result.linkedGapSummary.p90 == null ? '—' : result.linkedGapSummary.p90.toFixed(1),
+      median: result.linkedGapSummary.median == null ? '—' : fmtNumber(result.linkedGapSummary.median),
+      p90: result.linkedGapSummary.p90 == null ? '—' : fmtNumber(result.linkedGapSummary.p90),
       count: result.linkedGapSummary.count,
     },
   );

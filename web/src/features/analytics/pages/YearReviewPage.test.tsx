@@ -15,7 +15,7 @@
  *      still resolving or the auto-select is one frame away. The genuine
  *      empty prompt is reserved for a resolved-but-empty fleet.
  *   4. Year navigation (prev / next / next-disabled-at-current-year / close)
- *      and vehicle disambiguation (multi-vehicle select + URL auto-select).
+ *      and workspace vehicle selection (global picker + URL auto-select).
  *   5. The zero-activity info banner and the vehicle subtitle.
  *   6. Handing the correct data/props to each of the nine review sub-panels
  *      and the numeric vehicle id to the AI narration section.
@@ -23,16 +23,17 @@
  * Strategy mirrors the sibling PeriodComparePage.test.tsx: render the REAL
  * page + REAL shared subtree (PageContainer, MetricCard, QueryError, EmptyState,
  * FadeIn, Select, Button). The network `request` helper, `useNavigate`, the AI
- * narration section, and the nine chart/panel sub-components are the only
- * doubles — the sub-components are stubbed so the assertions stay focused on
- * the PAGE's orchestration (state gating + prop wiring) rather than each
- * panel's internals, which own their own suites.
+ * narration section are the only doubles. Transparent panel spies record
+ * orchestration operands but render the REAL current panels, charts, stats
+ * and error surfaces. No fixture renderer supplies expected measurements.
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import type { ReactNode } from 'react';
+import { Button } from '@/components/ui';
+import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 
 // jsdom lacks matchMedia; framer-motion (reached via <FadeIn>) reads it at
 // module load. Install before any import evaluates.
@@ -54,11 +55,12 @@ vi.hoisted(() => {
 });
 
 // Hoisted test doubles shared between the mock factories and the specs.
-const { mockRequest, navigateSpy, aiCapture, reviewCaptures } = vi.hoisted(() => ({
+const { mockRequest, navigateSpy, aiCapture, reviewCaptures, driveCaptures } = vi.hoisted(() => ({
   mockRequest: vi.fn(),
   navigateSpy: vi.fn(),
   aiCapture: { props: null as Record<string, unknown> | null },
-  reviewCaptures: {} as Record<string, Record<string, unknown>>,
+  reviewCaptures: {} as Record<string, { data?: YearReview; comparisons?: YearReview['comparisons'] | null }>,
+  driveCaptures: {} as Record<string, YearReview['longest_drive']>,
 }));
 
 // Only `request` is replaced; the real `isApiError` / `ApiError` exports stay so
@@ -109,39 +111,52 @@ vi.mock('react-i18next', async () => {
   };
 });
 
-// Stub the nine review sub-panels. Each echoes the props the page hands it so
-// the specs can assert both "the section resolved to content" (testid present)
-// and "the page wired the right data" (captured props / data attributes).
-vi.mock('../components/review', () => {
-  const stub = (testid: string) => (props: Record<string, unknown>) => {
-    reviewCaptures[testid] = props;
-    return <div data-testid={testid} />;
-  };
+vi.mock('../components/year-review-modernization', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../components/year-review-modernization')>();
   return {
-    YearMonthlyChart: stub('year-monthly-chart'),
-    YearChargingBreakdown: stub('year-charging-breakdown'),
-    YearSavingsPanel: stub('year-savings-panel'),
-    YearEnvironmentPanel: stub('year-environment-panel'),
-    YearPatternsPanel: stub('year-patterns-panel'),
-    YearExtremes: stub('year-extremes'),
-    YearSummaryCard: stub('year-summary-card'),
-    YearComparisons: (props: Record<string, unknown>) => {
-      reviewCaptures['year-comparisons'] = props;
-      const items = (props.comparisons as unknown[] | undefined) ?? [];
-      return <div data-testid="year-comparisons" data-count={items.length} />;
+    ...actual,
+    YearMonthlyActivity: (props: Parameters<typeof actual.YearMonthlyActivity>[0]) => {
+      reviewCaptures['year-monthly-chart'] = props;
+      return <actual.YearMonthlyActivity {...props} />;
     },
-    // Rendered four times — capture the wiring per instance via data attrs.
-    YearDriveHighlight: (props: Record<string, unknown>) => {
-      const drive = props.drive as { drive_id?: number } | null;
-      return (
-        <div
-          data-testid="year-drive-highlight"
-          data-label={String(props.label ?? '')}
-          data-drive={drive ? String(drive.drive_id) : 'none'}
-        />
-      );
+    YearChargingMix: (props: Parameters<typeof actual.YearChargingMix>[0]) => {
+      reviewCaptures['year-charging-breakdown'] = props;
+      return <actual.YearChargingMix {...props} />;
+    },
+    YearRecap: (props: Parameters<typeof actual.YearRecap>[0]) => {
+      reviewCaptures['year-summary-card'] = props;
+      return <actual.YearRecap {...props} />;
+    },
+    YearFunFacts: (props: Parameters<typeof actual.YearFunFacts>[0]) => {
+      reviewCaptures['year-comparisons'] = props;
+      return <actual.YearFunFacts {...props} />;
+    },
+    YearDriveRecord: (props: Parameters<typeof actual.YearDriveRecord>[0]) => {
+      driveCaptures[props.id] = props.drive;
+      return <actual.YearDriveRecord {...props} />;
     },
   };
+});
+vi.mock('../components/operationalbrief-n-z/YearSavingsBrief', async importOriginal => {
+  const actual = await importOriginal<typeof import('../components/operationalbrief-n-z/YearSavingsBrief')>();
+  return { ...actual, YearSavingsBrief: (props: Parameters<typeof actual.YearSavingsBrief>[0]) => {
+    reviewCaptures['year-savings-panel'] = props;
+    return <actual.YearSavingsBrief {...props} />;
+  } };
+});
+vi.mock('../components/operationalbrief-n-z/YearEnvironmentBrief', async importOriginal => {
+  const actual = await importOriginal<typeof import('../components/operationalbrief-n-z/YearEnvironmentBrief')>();
+  return { ...actual, YearEnvironmentBrief: (props: Parameters<typeof actual.YearEnvironmentBrief>[0]) => {
+    reviewCaptures['year-environment-panel'] = props;
+    return <actual.YearEnvironmentBrief {...props} />;
+  } };
+});
+vi.mock('../components/operationalbrief-n-z/YearPatternsBrief', async importOriginal => {
+  const actual = await importOriginal<typeof import('../components/operationalbrief-n-z/YearPatternsBrief')>();
+  return { ...actual, YearPatternsBrief: (props: Parameters<typeof actual.YearPatternsBrief>[0]) => {
+    reviewCaptures['year-patterns-panel'] = props;
+    return <actual.YearPatternsBrief {...props} />;
+  } };
 });
 
 // Capture the props the page hands the AI narration section (its own AI-off
@@ -266,13 +281,27 @@ function yearReviewCalls(): string[] {
     .filter((u) => u.includes('/analytics/year-review'));
 }
 
-function renderPage(path = '/year-review/2023?vehicle_id=10') {
+function highlights(): HTMLElement {
+  return screen.getByRole('region', { name: 'Year highlights' });
+}
+
+async function waitForReview() {
+  await waitFor(() => expect(within(highlights()).getByText('128')).toBeInTheDocument());
+}
+
+function WorkspaceVehicleControl() {
+  const { setVehicleId } = useSelectedVehicle();
+  return <Button onClick={() => setVehicleId(20)}>Switch workspace vehicle</Button>;
+}
+
+function renderPage(path = '/year-review/2023?vehicle_id=10', withWorkspaceControl = false) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false, retryDelay: 0 } },
   });
   return render(
     <QueryClientProvider client={client}>
       <MemoryRouter initialEntries={[path]}>
+        {withWorkspaceControl && <WorkspaceVehicleControl />}
         <Routes>
           <Route path="/year-review" element={<YearReviewPage />} />
           <Route path="/year-review/:year" element={<YearReviewPage />} />
@@ -287,6 +316,8 @@ beforeEach(() => {
   navigateSpy.mockReset();
   aiCapture.props = null;
   for (const k of Object.keys(reviewCaptures)) delete reviewCaptures[k];
+  for (const k of Object.keys(driveCaptures)) delete driveCaptures[k];
+  window.localStorage.clear();
 });
 
 afterEach(() => {
@@ -294,15 +325,32 @@ afterEach(() => {
 });
 
 describe('YearReviewPage — happy path', () => {
+  it('reviews the real numeric year evidence and calendar scope without changing navigation or sources', async () => {
+    installRequest();
+    renderPage();
+    await waitForReview();
+    const brief = screen.getByTestId('year-review-highlights-stats');
+    expect(brief).toHaveAttribute('data-operational-brief');
+    expect(brief.querySelectorAll('[data-operational-metric]')).toHaveLength(6);
+    expect(brief.querySelectorAll('[data-value-state="value"]')).toHaveLength(6);
+    expect(screen.getByRole('button', { name: 'Previous year' })).toBeInTheDocument();
+    const calls = mockRequest.mock.calls.length;
+    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+    const drawer = await screen.findByRole('dialog');
+    expect(within(drawer).getByText('Operational metrics')).toBeInTheDocument();
+    expect(within(drawer).getByText('CO₂ offset')).toBeInTheDocument();
+    expect(within(drawer).getAllByText('Year in review').length).toBeGreaterThan(0);
+    expect(mockRequest.mock.calls.length).toBe(calls);
+  });
+
   it('renders the page shell, all six section regions, the KPI band and every review panel', async () => {
     installRequest();
     renderPage();
 
-    // A resolved child panel proves the feed resolved + the gate reached content.
-    await screen.findByTestId('year-monthly-chart');
+    await waitForReview();
 
     expect(
-      screen.getByRole('heading', { level: 1, name: '2023 Year in Review' }),
+      screen.getByRole('heading', { level: 1, name: '2023 Year in review' }),
     ).toBeInTheDocument();
 
     for (const name of [
@@ -320,61 +368,64 @@ describe('YearReviewPage — happy path', () => {
       expect(screen.getAllByText(label).length).toBeGreaterThan(0);
     }
 
-    // Every review sub-panel is mounted (not gated away).
-    for (const testid of [
-      'year-charging-breakdown',
-      'year-savings-panel',
-      'year-environment-panel',
-      'year-patterns-panel',
-      'year-extremes',
-      'year-comparisons',
-      'year-summary-card',
-      'ai-year-narration',
+    // Every current panel renders its real content, not a test adapter.
+    for (const id of [
+      'year-review-savings', 'year-review-environment', 'year-review-patterns',
+      'year-review-recap',
     ]) {
-      expect(screen.getByTestId(testid)).toBeInTheDocument();
+      expect(document.getElementById(id)).toBeInTheDocument();
     }
+    expect(screen.getByTestId('year-review-extremes')).toHaveAttribute('data-operational-brief');
+    expect(screen.getByRole('group', { name: 'Bar and line chart of monthly drives and distance across the year' })).toBeInTheDocument();
+    expect(screen.getByRole('list', { name: 'Fun facts about your year' })).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: 'Donut chart of charging mix by connector type' })).toBeInTheDocument();
+    expect(screen.getByTestId('ai-year-narration')).toBeInTheDocument();
   });
 
   it('derives the KPI tiles from the SI feed (counts, savings, CO₂ offset)', async () => {
     installRequest();
     renderPage();
 
-    await screen.findByTestId('year-monthly-chart');
+    await waitForReview();
 
     // fmtInt integer counts — stable regardless of precision.
-    expect(screen.getByText('128')).toBeInTheDocument();
-    expect(screen.getByText('42')).toBeInTheDocument();
+    expect(within(highlights()).getByText('128')).toBeInTheDocument();
+    expect(within(highlights()).getByText('42')).toBeInTheDocument();
     // formatCurrency(gas_savings, 0) → whole-dollar string with the `$` symbol.
-    expect(screen.getByText('$1,875')).toBeInTheDocument();
+    expect(within(highlights()).getByText('$1,875.00')).toBeInTheDocument();
     // co2_offset_kg rendered with the `kg` unit suffix on its own tile.
-    expect(screen.getByText(/^640(\.\d+)? kg$/)).toBeInTheDocument();
+    expect(within(highlights()).getByText(/^640(\.\d+)? kg$/)).toBeInTheDocument();
   });
 
   it('wires the correct drive + comparison props into each sub-panel', async () => {
     installRequest();
     renderPage();
 
-    const highlights = await screen.findAllByTestId('year-drive-highlight');
-    expect(highlights).toHaveLength(4);
-
-    const byLabel = Object.fromEntries(
-      highlights.map((el) => [el.getAttribute('data-label'), el.getAttribute('data-drive')]),
-    );
-    expect(byLabel['Longest drive']).toBe('501');
-    expect(byLabel['Most efficient drive']).toBe('503');
-    expect(byLabel['Shortest drive']).toBe('502');
-    expect(byLabel['Least efficient drive']).toBe('504');
+    await waitForReview();
+    expect(Object.keys(driveCaptures)).toHaveLength(4);
+    expect(driveCaptures['year-review-longest']?.drive_id).toBe(501);
+    expect(driveCaptures['year-review-most-efficient']?.drive_id).toBe(503);
+    expect(driveCaptures['year-review-shortest']?.drive_id).toBe(502);
+    expect(driveCaptures['year-review-least-efficient']?.drive_id).toBe(504);
+    for (const label of ['Longest drive', 'Most efficient drive', 'Shortest drive', 'Least efficient drive']) {
+      expect(screen.getByRole('heading', { name: label })).toBeInTheDocument();
+    }
+    const longest = document.getElementById('year-review-longest')!;
+    expect(longest).toHaveTextContent('320');
+    expect(longest).toHaveTextContent('4h');
+    expect(longest).toHaveTextContent('150');
 
     // Fun-facts panel receives the full comparisons array; monthly chart the feed.
-    expect(screen.getByTestId('year-comparisons')).toHaveAttribute('data-count', '2');
-    expect((reviewCaptures['year-monthly-chart'].data as YearReview).total_drives).toBe(128);
+    expect(within(screen.getByRole('list', { name: 'Fun facts about your year' })).getAllByRole('listitem')).toHaveLength(2);
+    expect(reviewCaptures['year-comparisons'].comparisons).toEqual(YEAR_REVIEW.comparisons);
+    expect(reviewCaptures['year-monthly-chart'].data?.total_drives).toBe(128);
   });
 
   it('queries year-review for the URL vehicle with snake_case params and no /api/v1 prefix', async () => {
     installRequest();
     renderPage();
 
-    await screen.findByTestId('year-monthly-chart');
+    await waitForReview();
 
     const calls = yearReviewCalls();
     expect(calls.some((u) => /vehicle_id=10\b/.test(u) && /year=2023\b/.test(u))).toBe(true);
@@ -386,7 +437,7 @@ describe('YearReviewPage — happy path', () => {
     installRequest();
     renderPage();
 
-    await screen.findByTestId('year-monthly-chart');
+    await waitForReview();
 
     expect(screen.getByText('Model 3 · Model S')).toBeInTheDocument();
     expect(aiCapture.props).toMatchObject({ vehicleId: 10 });
@@ -399,12 +450,12 @@ describe('YearReviewPage — loading / error / empty branches', () => {
     const { container } = renderPage();
 
     await waitFor(() =>
-      expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThan(0),
+      expect(container.querySelectorAll('[class*="--skeleton-bg"]').length).toBeGreaterThan(0),
     );
     // Sections stay mounted (only their bodies are skeletons)…
     expect(screen.getByRole('region', { name: 'Activity' })).toBeInTheDocument();
     // …but no resolved content and no misleading "pick a vehicle" prompt leak.
-    expect(screen.queryByTestId('year-monthly-chart')).toBeNull();
+    expect(screen.queryByRole('group', { name: 'Bar and line chart of monthly drives and distance across the year' })).toBeNull();
     expect(screen.queryByText(/Select a vehicle to view/)).toBeNull();
   });
 
@@ -421,6 +472,34 @@ describe('YearReviewPage — loading / error / empty branches', () => {
     await waitFor(() => expect(yearReviewCalls().length).toBeGreaterThan(before));
   });
 
+  it('retains measured counts, savings, records and monthly evidence after a cached refresh fails', async () => {
+    installRequest();
+    renderPage();
+    await waitForReview();
+
+    installRequest({ reviewMode: 'reject', reviewError: new ApiError('refresh failed', 500) });
+    fireEvent.click(screen.getByRole('button', { name: /^Refresh data ·/ }));
+    await screen.findByText('Server error');
+
+    expect(within(highlights()).getByText('128')).toBeInTheDocument();
+    expect(within(highlights()).getByText('42')).toBeInTheDocument();
+    expect(within(highlights()).getByText('$1,875.00')).toBeInTheDocument();
+    expect(screen.getByTestId('year-review-highlights-stats')).toHaveAttribute('data-operational-brief');
+    expect(within(screen.getByTestId('year-review-highlights-stats')).getByText('Retained year evidence')).toBeInTheDocument();
+    expect(document.getElementById('year-review-longest')).toHaveTextContent('320');
+    const chart = screen.getByRole('group', { name: 'Bar and line chart of monthly drives and distance across the year' }).closest('figure')!;
+    expect(within(chart).getByRole('table')).toHaveTextContent('800');
+    expect(within(chart).getByRole('table')).toHaveTextContent('1100');
+    expect(screen.getByRole('button', { name: 'Previous year' })).toBeEnabled();
+
+    const before = yearReviewCalls().length;
+    installRequest();
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    await waitFor(() => expect(yearReviewCalls().length).toBeGreaterThan(before));
+    await waitFor(() => expect(screen.queryByText('Server error')).toBeNull());
+    expect(within(highlights()).getByText('128')).toBeInTheDocument();
+  });
+
   it('shows the "select a vehicle" empty prompt for a resolved-but-empty fleet and never fires the feed', async () => {
     installRequest({ vehicles: [] });
     renderPage('/year-review/2023');
@@ -430,7 +509,7 @@ describe('YearReviewPage — loading / error / empty branches', () => {
     );
     // No vehicle → the review query is disabled and must not run.
     expect(yearReviewCalls().length).toBe(0);
-    expect(screen.queryByTestId('year-monthly-chart')).toBeNull();
+    expect(screen.queryByRole('group', { name: 'Bar and line chart of monthly drives and distance across the year' })).toBeNull();
   });
 
   it('shows a skeleton — NOT the empty prompt — while the vehicle list is still loading', async () => {
@@ -441,7 +520,7 @@ describe('YearReviewPage — loading / error / empty branches', () => {
     const { container } = renderPage('/year-review/2023');
 
     await waitFor(() =>
-      expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThan(0),
+      expect(container.querySelectorAll('[class*="--skeleton-bg"]').length).toBeGreaterThan(0),
     );
     expect(screen.queryByText(/Select a vehicle to view/)).toBeNull();
     expect(yearReviewCalls().length).toBe(0);
@@ -464,7 +543,7 @@ describe('YearReviewPage — zero-activity banner', () => {
     installRequest();
     renderPage();
 
-    await screen.findByTestId('year-monthly-chart');
+    await waitForReview();
     expect(screen.queryByText(/No drives or charges were recorded/)).toBeNull();
   });
 });
@@ -474,12 +553,12 @@ describe('YearReviewPage — year navigation & a11y', () => {
     installRequest();
     renderPage('/year-review/2023?vehicle_id=10');
 
-    await screen.findByTestId('year-monthly-chart');
+    await waitForReview();
 
     expect(screen.getByRole('button', { name: 'Previous year' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Next year' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Close' })).toBeInTheDocument();
-    expect(screen.getByText('2023')).toBeInTheDocument();
+    expect(screen.getAllByText('2023').length).toBeGreaterThan(0);
 
     fireEvent.click(screen.getByRole('button', { name: 'Previous year' }));
     expect(navigateSpy).toHaveBeenCalledWith('/year-review/2022?vehicle_id=10');
@@ -489,7 +568,7 @@ describe('YearReviewPage — year navigation & a11y', () => {
     installRequest();
     renderPage(`/year-review/${CURRENT_YEAR - 1}?vehicle_id=10`);
 
-    await screen.findByTestId('year-monthly-chart');
+    await waitForReview();
 
     const next = screen.getByRole('button', { name: 'Next year' });
     expect(next).not.toBeDisabled();
@@ -501,7 +580,7 @@ describe('YearReviewPage — year navigation & a11y', () => {
     installRequest();
     renderPage(`/year-review/${CURRENT_YEAR}?vehicle_id=10`);
 
-    await screen.findByTestId('year-monthly-chart');
+    await waitForReview();
     expect(screen.getByRole('button', { name: 'Next year' })).toBeDisabled();
   });
 
@@ -509,21 +588,21 @@ describe('YearReviewPage — year navigation & a11y', () => {
     installRequest();
     renderPage();
 
-    await screen.findByTestId('year-monthly-chart');
+    await waitForReview();
     fireEvent.click(screen.getByRole('button', { name: 'Close' }));
     expect(navigateSpy).toHaveBeenCalledWith(-1);
   });
 });
 
 describe('YearReviewPage — vehicle selection & URL auto-select', () => {
-  it('renders a labelled select for multi-vehicle accounts and refetches + rewires AI on switch', async () => {
+  it('uses workspace vehicle changes without duplicating the picker and rewires the feed and AI', async () => {
     installRequest();
-    renderPage('/year-review/2023?vehicle_id=10');
+    renderPage('/year-review/2023?vehicle_id=10', true);
 
-    await screen.findByTestId('year-monthly-chart');
+    await waitForReview();
 
-    const select = screen.getByRole('combobox', { name: 'Select vehicle' });
-    fireEvent.change(select, { target: { value: '20' } });
+    expect(screen.queryByRole('combobox', { name: 'Select vehicle' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Switch workspace vehicle' }));
 
     await waitFor(() =>
       expect(yearReviewCalls().some((u) => /vehicle_id=20\b/.test(u))).toBe(true),
@@ -544,7 +623,7 @@ describe('YearReviewPage — vehicle selection & URL auto-select', () => {
     installRequest({ vehicles: ONE_VEHICLE });
     renderPage('/year-review/2023?vehicle_id=10');
 
-    await screen.findByTestId('year-monthly-chart');
+    await waitForReview();
     expect(screen.queryByRole('combobox', { name: 'Select vehicle' })).toBeNull();
   });
 });

@@ -1,10 +1,12 @@
 import { useTranslation } from 'react-i18next'
-import { PageContainer } from '@/components/layout'
+import { PageLayout } from '@/components/layout'
 import { GlassPanel, Heading, Text } from '@/components/ui'
 import { KVList } from '@/components/data-display'
 import { FadeIn } from '@/components/motion'
 import { usePageTitle } from '@/hooks/usePageTitle'
 import { useTeslaUsage } from '@/api/hooks/useTeslaUsage'
+import { useDataState } from '@/hooks/useDataState'
+import { StaleRefreshWarning } from '@/components/feedback'
 import { TeslaApiUsageCard, TeslaApiUsageHistory } from '../components/status'
 
 /**
@@ -15,13 +17,16 @@ export default function TeslaApiUsagePage() {
   const { t } = useTranslation()
   const title = t('teslaUsage.pageTitle', 'Tesla API usage')
   usePageTitle(title)
-  const { data, isLoading, error } = useTeslaUsage()
+  const query = useTeslaUsage()
+  const { data, isLoading } = query
+  const state = useDataState(query)
 
   return (
-    <PageContainer
+    <PageLayout
       title={title}
-      subtitle={t('teslaUsage.pageSubtitle', 'Observed Tesla Fleet traffic, estimated spend and historical trends')}
+      subtitle={t('teslaUsage.pageSubtitle', 'Observed Tesla fleet traffic, estimated spend and historical trends')}
     >
+      <StaleRefreshWarning state={state} />
       <div className="space-y-6">
         <FadeIn>
           <section aria-label={t('teslaUsage.cycleSection', 'Current cycle and prior periods')}>
@@ -29,7 +34,8 @@ export default function TeslaApiUsagePage() {
               {t('teslaUsage.cycleSection', 'Current cycle and prior periods')}
             </Heading>
             <GlassPanel className="p-4 sm:p-6">
-              <TeslaApiUsageCard apiUsage={data} now={Date.now()} loading={isLoading} error={error} />
+              <TeslaApiUsageCard apiUsage={data} now={Date.now()} loading={isLoading}
+                error={state.fatalError ?? (state.hasData ? query.error : null)} />
             </GlassPanel>
           </section>
         </FadeIn>
@@ -65,6 +71,6 @@ export default function TeslaApiUsagePage() {
           </GlassPanel>
         </FadeIn>
       </div>
-    </PageContainer>
+    </PageLayout>
   )
 }

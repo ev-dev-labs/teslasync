@@ -1,0 +1,383 @@
+{
+  "item": "audit-page-083",
+  "page": "web\\src\\features\\charging\\pages\\ChargingHeatmapPage.tsx",
+  "routes": ["/charging-heatmap"],
+  "purpose": "Explain when and where the selected vehicle charges through returned-session summaries, weekly density, insights and location/weekday breakdowns.",
+  "primaryGoal": "Understand charging habits in the shared workspace vehicle/date scope without mistaking missing measurements or a bounded response for complete history.",
+  "dataSources": [
+    {
+      "hook": "useChargingSessionsPaginated",
+      "file": "web\\src\\api\\hooks\\useCharging.ts",
+      "line": 122,
+      "endpoint": "GET /api/v1/charging?vehicle_id=<id>&limit=2000&offset=0&start=<start>&end=<end>",
+      "endpointEvidence": [
+        "web\\src\\api\\charging.ts:19-30",
+        "internal\\api\\router.go:3502-3503"
+      ],
+      "owner": "Charging API list source; chargingHandler.ListByVehicle",
+      "behavior": "Single bounded array, safeArray selection, enabled only with a non-null vehicle, FAST stale policy, query key includes vehicle, bounds, limit and offset; AbortSignal forwarded. No subsequent pages are requested here.",
+      "unknowns": "Server limit clamping, exact bound interpretation, ordering, currency normalization and complete-result availability were not inspected or exercised."
+    },
+    {
+      "hook": "useSelectedVehicle",
+      "file": "web\\src\\hooks\\useSelectedVehicle.ts",
+      "line": 48,
+      "owner": "Existing workspace vehicle store and useVehicles",
+      "endpoint": "Indirect vehicle-source endpoint not traced in this bounded page audit",
+      "behavior": "URL/path, persisted selection and first-vehicle fallback; no competing page vehicle picker."
+    },
+    {
+      "hook": "useRangeState",
+      "file": "web\\src\\hooks\\useRangeState.ts",
+      "line": 298,
+      "owner": "Shared workspace range preference and URL from/to/scope state",
+      "endpoint": null,
+      "behavior": "Route registered in RANGE_ENABLED_PATHS at workspaceScope.ts:31. Header-owned defaults override the page backup/default options at useRangeState.ts:312-318. Page forwards date labels, not the available instant boundaries."
+    },
+    {
+      "hook": "useDataState",
+      "file": "web\\src\\hooks\\useDataState.ts",
+      "line": 31,
+      "owner": "Existing historical trust adapter",
+      "endpoint": null,
+      "behavior": "Fatal initial failures are separated from refresh errors and paused retained content; an empty successful array still counts as a resolved source."
+    },
+    {
+      "hook": "useUnits / useNumberFormatting / useOperationalMetrics",
+      "owner": "Existing display-preference and operational-metric pipeline",
+      "endpoint": "Preference-source endpoints not traced",
+      "behavior": "Page keeps Wh and timestamp-derived seconds; summary delegates display formatting, and grid receives formatEnergy at the render boundary. Currency conversion is not evidenced."
+    }
+  ],
+  "components": [
+    {
+      "name": "PageLayout, CardGrid, LayoutCard",
+      "owner": "web\\src\\components\\layout\\index.ts",
+      "line": 8,
+      "role": "Canonical category exports; two allocated-container CardGrids and four persistent card shells."
+    },
+    {
+      "name": "Button, SectionTitle, Text, Caption",
+      "owner": "web\\src\\features\\charging\\pages\\ChargingHeatmapPage.tsx",
+      "line": 8,
+      "role": "Existing UI primitives and typography; localized 44px refresh target."
+    },
+    {
+      "name": "Skeleton, EmptyState, QueryError, StaleRefreshWarning, AlertBanner",
+      "owner": "web\\src\\features\\charging\\pages\\ChargingHeatmapPage.tsx",
+      "line": 10,
+      "role": "Independent card state surfaces and page-level retained-data/initial-pause notices."
+    },
+    {
+      "name": "EmbeddedChart",
+      "owner": "web\\src\\components\\charts\\EmbeddedChart.tsx",
+      "line": 19,
+      "role": "Existing ChartContainer adapter; both breakdowns supply tables, loaded-data exports and fullscreen."
+    },
+    {
+      "name": "HeatmapGrid and aggregation helpers",
+      "owner": "web\\src\\features\\charging\\components\\charging-heatmap\\HeatmapGrid.tsx",
+      "line": 21,
+      "role": "Domain owner for 168 cells, pointer details and density legend; pure helpers own bucketing and location selection."
+    },
+    {
+      "name": "ChargingHeatmapSummary / ChargingSummaryBrief / OperationalBrief",
+      "owner": "web\\src\\features\\charging\\components\\charging-heatmap-modernization\\ChargingHeatmapSummary.tsx",
+      "line": 27,
+      "role": "Four source measurements through existing operational brief; missing/partial operands and bounded-history limitation retained."
+    },
+    {
+      "name": "MetricBar and FadeIn",
+      "owner": "web\\src\\features\\charging\\pages\\ChargingHeatmapPage.tsx",
+      "line": 9,
+      "role": "Four insight bars and three entrance groups; shared implementations were not audited."
+    }
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\charging\\pages\\ChargingHeatmapPage.tsx",
+      "line": 157,
+      "rule": "MDC-002 / shared state composition",
+      "detail": "Four cards repeat loading/fatal/empty/content orchestration at lines 157, 177, 258 and 314. Their empty meanings differ and must not be collapsed.",
+      "fix": "Prefer existing source-state composition if it retains card shells and source-specific messages; a feature-local helper is optional, not grounds for another shared framework.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "responsive": {
+    "sourceEvidence": [
+      "CardGrid uses useContainerWidth and layoutPolicy rather than viewport-only columns: web\\src\\components\\layout\\layout-reference\\CardGrid.tsx:25-35.",
+      "Heatmap uses an internal overflow-x-auto region and minimum 640px grid: web\\src\\features\\charging\\components\\charging-heatmap\\HeatmapGrid.tsx:30-34.",
+      "Both bar charts retain mobileHeight=256 and height=288: ChargingHeatmapPage.tsx:286-288,342-344.",
+      "Refresh action uses h-11 w-11 and wrapping action chrome: ChargingHeatmapPage.tsx:107-116."
+    ],
+    "findings": [
+      {
+        "file": "web\\src\\features\\charging\\components\\charging-heatmap\\HeatmapGrid.tsx",
+        "line": 59,
+        "rule": "MDC-043 / mission 16",
+        "detail": "The extra slot energy information depends only on mouse enter/leave. No touch activation or keyboard equivalent exists in this component. Internal scrolling and the -top-14 absolute tooltip also need narrow-width/open-state clipping checks.",
+        "fix": "Retain all 168 slots and local scrolling, provide a touch/keyboard-accessible detail alternative through existing chart/table/tooltip owners, and test edge slots without hiding content.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ],
+    "verifiedViewports": [],
+    "runtimeStatus": "unverified"
+  },
+  "accessibility": {
+    "sourceEvidence": [
+      "Page summary region and named section headings remain: ChargingHeatmapPage.tsx:134-149,249-252.",
+      "Refresh button is localized and icon is decorative: ChargingHeatmapPage.tsx:108-118.",
+      "Both breakdown charts declare ariaLabel and dataColumns: ChargingHeatmapPage.tsx:273-284,329-340."
+    ],
+    "findings": [
+      {
+        "file": "web\\src\\features\\charging\\components\\charging-heatmap\\HeatmapGrid.tsx",
+        "line": 32,
+        "rule": "MDC-034 / MDC-040 / mission 30",
+        "detail": "A single role=img exposes only a generic name. The nonfocusable title-bearing cells are not an accessible numeric table; hover-only counts/energy and the color-only density scale lack an equivalent detailed nonvisual path.",
+        "fix": "Reuse EmbeddedChart/ChartContainer dataColumns and its accessible table for weekday/hour/count/known energy, retaining the visual grid and adding focus/touch details without creating 168 mandatory tab stops.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ],
+    "keyboard": "unverified; source shows no cell focus handlers",
+    "screenReader": "unverified",
+    "contrast": "unmeasured on composed themes",
+    "forcedColors": "unverified",
+    "reducedMotion": "Shared FadeIn is reused; runtime and grid transition behavior unverified"
+  },
+  "states": {
+    "loading": "Initial source loading suppresses values and shows four card skeletons; loading is !state.hasData && query.isLoading at page:55.",
+    "empty": "Successful [] shows zero returned-session count with missing energy/cost/duration and source-specific card empties. Repeat-location empty retains its distinct >=2 threshold.",
+    "fatalError": "state.fatalError provides QueryError retry in summary and each card; shells remain.",
+    "refreshError": "Retained data remains visible with StaleRefreshWarning; only fatal errors replace content.",
+    "offlinePaused": "Retained paused source becomes stale through deriveDataState; initial pause shows AlertBanner at page:127-131.",
+    "partial": "Summary carries recorded-value counts and partial explanations; heatmap energy aggregation loses missingness.",
+    "disabledVehicle": "Hook enabled=false for null vehicle; page shows history-not-loaded rather than claiming zero sessions. Distinction between empty fleet/loading vehicle source is not presented locally.",
+    "findings": [
+      {
+        "file": "web\\src\\features\\charging\\components\\charging-heatmap\\heatmapData.ts",
+        "line": 51,
+        "rule": "MDC-026 / MDC-045 / unknown is not zero",
+        "detail": "Missing energy is added as zero without an observation count; HeatmapGrid.tsx:68 formats every populated bucket's total as a measurement. All-missing energy therefore looks like measured zero, and mixed buckets lack the summary's partial-value qualification. Summary correctly distinguishes these cases at ChargingHeatmapSummary.tsx:48-50.",
+        "fix": "Keep recorded Wh totals and session counts, carry known/missing energy counts in HeatCell, and show unavailable/recorded-only qualification at the display boundary. Preserve valid measured zero and update coupled tests that currently pin missing-to-zero.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ],
+    "runtimeStatus": "All states source-inspected only; authored tests not executed"
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\charging\\components\\charging-heatmap\\heatmapData.ts",
+      "line": 67,
+      "rule": "MDC-010 / MDC-034 / mission 5 and 27",
+      "detail": "Density fills and duplicated legend stops hardcode electric cyan (0,240,255), green, amber and red RGBA across five bands. The multihue scale competes with semantic warning/error meaning and bypasses existing chart tokens/theme preferences.",
+      "fix": "Have the existing chart-palette owner supply a restrained sequential density scale with sufficient contrast and a distinct no-session treatment. Derive swatches from the same stops, preserve existing band thresholds/count normalization and explicit user chart preferences.",
+      "owner": "shared",
+      "confidence": "high"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\features\\charging\\pages\\ChargingHeatmapPage.tsx",
+      "line": 46,
+      "rule": "MDC-032 / workspace instant boundaries",
+      "detail": "Page forwards start/end calendar strings at line 51 although useRangeState exposes startInstant/endInstantExclusive at lines 117-124 and computes rolling instants at 656-669. Date-only labels cannot communicate exact rolling 24h or timezone-exclusive boundaries. Backend treatment is unknown, so actual returned-row error is not asserted.",
+      "fix": "Forward the existing instant bounds through the typed charging hook after verifying backend bound semantics; keep header ownership, URL/preset behavior, DST and independent business bucketing. Extend server filtering if necessary rather than filtering only this response.",
+      "owner": "integration",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\charging\\components\\charging-heatmap\\heatmapData.ts",
+      "line": 47,
+      "rule": "MDC-032 / business calendar preservation",
+      "detail": "Weekday/hour buckets use browser-local getDay/getHours, and no timezone context is passed. This is the current business-calendar behavior; equivalence to workspace/vehicle timezone has not been established. Tests deliberately use offsetless local timestamps rather than proving real offset/DST behavior.",
+      "fix": "Document and verify intended business timezone before any modernization changes. Preserve current buckets until an explicit integration decision and offset/DST tests establish equivalence; do not silently switch to UTC or add a second range control.",
+      "owner": "integration",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\charging\\pages\\ChargingHeatmapPage.tsx",
+      "line": 196,
+      "rule": "MDC-044 / shared locale formatting",
+      "detail": "Favorite/busiest weekday and chart/grid labels use the English DAYS constant (constants.ts:90); hours use a local zero-padded HH:00 helper. The fallback favorite phrase appends an English 's' to abbreviated weekdays. Counts in HeatmapGrid.tsx:56,68 also bypass the existing locale formatter.",
+      "fix": "Reuse established locale weekday/time/number formatting while retaining Sunday-first bucket identity and hour meaning; translate complete favorite phrases instead of pluralizing raw abbreviations.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\charging\\pages\\ChargingHeatmapPage.tsx",
+      "line": 51,
+      "rule": "MDC-026 / complete-result trust",
+      "detail": "All four analyses derive from one limit=2000 offset=0 response. The summary explicitly disclaims complete history at ChargingHeatmapSummary.tsx:94, but heatmap, favorite/busiest insights and breakdown frames do not carry their own loaded-scope limitation. No hasMore/total/full-range source is consumed.",
+      "fix": "Preserve the existing bounded-sample disclosure and make it visible alongside derived analyses/exports. Confirm backend capacity before proposing full-range aggregates; do not claim complete history or silently paginate during presentation-only work.",
+      "owner": "integration",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\charging\\pages\\ChargingHeatmapPage.tsx",
+      "line": 81,
+      "rule": "MDC-045 / source currency preservation",
+      "detail": "Cost totals sum cost_decimal without consulting per-session cost_currency (types.ts:178-179); summary supplies no source currency override at ChargingHeatmapSummary.tsx:59-62. Mixed-currency data or backend normalization is not established, so incorrect billing is a conditional risk, not a verified runtime defect.",
+      "fix": "Verify the source currency contract and retain currency identity. If the source can mix currencies, use explicit per-currency totals/limitations rather than inventing exchange conversion or relabeling raw amounts.",
+      "owner": "integration",
+      "confidence": "medium"
+    },
+    {
+      "file": "web\\src\\features\\charging\\components\\charging-heatmap-modernization\\ChargingHeatmapSummary.tsx",
+      "line": 3,
+      "rule": "MDC-002 / component-first category imports",
+      "detail": "Feature imports StatMetric directly from stat-reference instead of the data-display category barrel; other current component imports follow category ownership.",
+      "fix": "Use the existing category export if available; report a missing type export to the barrel owner rather than changing shared files in the page item.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "priority": {
+    "level": "high",
+    "reason": "Prioritize accessible slot details, missing-energy trust and exact range integration. Page already adopts canonical layout/brief/chart primitives, so wholesale rebuilding is unnecessary.",
+    "order": [
+      "Accessible keyboard/touch/table equivalent and energy missingness",
+      "Instant-bound/backend and business-timezone verification",
+      "Restrained canonical density palette",
+      "Locale labels and bounded-scope/currency qualification"
+    ]
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "Canonical restrained sequential heatmap palette",
+      "owner": "web\\src\\lib\\tokens.ts",
+      "existingOwner": true,
+      "concreteContract": "Existing chart palette owner should expose coordinated density stops/zero-state styling and legend values; respect explicit user palettes and themes, preserve 0.25/0.5/0.75 thresholds, and validate forced-colors/contrast without a new theme engine.",
+      "propsVariantsStates": ["zero/no-session", "four active density bands", "theme/preferences", "forced colors", "shared legend stops"],
+      "usedBy": [
+        "web\\src\\features\\charging\\components\\charging-heatmap\\heatmapData.ts:67-83",
+        "web\\src\\features\\charging\\components\\charging-heatmap\\HeatmapGrid.tsx:58,83-90"
+      ],
+      "dependsOn": ["Existing chartTokens/palette contract", "Palette-owner assignment and composed-theme validation"],
+      "limit": "Only this production consumer was inspected; no speculative new composite or claim of whole-app repeated need."
+    },
+    {
+      "name": "Charging bound/currency/complete-result contract verification",
+      "owner": "web\\src\\api\\charging.ts",
+      "existingOwner": true,
+      "concreteContract": "Confirm accepted start/end RFC3339 bounds and exclusive end behavior with chargingHandler.ListByVehicle; document limit/ordering/coverage and cost currency normalization. Preserve query keys, vehicle enablement, raw SI and cancellation.",
+      "propsVariantsStates": ["startInstant", "endInstantExclusive", "vehicle_id", "bounded returned array", "source currency", "rolling/custom/DST ranges"],
+      "usedBy": ["web\\src\\features\\charging\\pages\\ChargingHeatmapPage.tsx:46-51"],
+      "dependsOn": ["internal\\api\\router.go:3502-3503 handler contract", "Existing useRangeState instant contract"],
+      "limit": "Integration evidence needed; no backend change or unsupported new endpoint proposed by this audit."
+    }
+  ],
+  "competingImplementations": [
+    {
+      "file": "web\\src\\features\\charging\\components\\charging-heatmap\\HeatmapGrid.tsx",
+      "line": 62,
+      "detail": "Manual pointer-only absolute tooltip and raw heatmap frame bypass the existing chart-frame/table/tooltip presentation pipeline used by both neighboring charts.",
+      "existingOwner": "web\\src\\components\\charts\\EmbeddedChart.tsx",
+      "resolution": "Keep domain bucket logic and visual density grid; compose existing shared framing/detail primitives, not a new heatmap library."
+    },
+    {
+      "file": "web\\src\\features\\charging\\components\\charging-heatmap\\heatmapData.ts",
+      "line": 77,
+      "detail": "Feature-owned hardcoded legend repeats the feature-owned color scale rather than consuming one canonical chart-palette contract.",
+      "existingOwner": "web\\src\\lib\\tokens.ts",
+      "resolution": "One palette source, retaining meaning and thresholds."
+    }
+  ],
+  "preservation": {
+    "sourceHash": "BD0AAF7E83D2C579D9180D87FD005A826A2E33A033BBFF99C6CC8FBB11BCAB0E",
+    "hashAlgorithm": "SHA-256",
+    "sourceFile": "web\\src\\features\\charging\\pages\\ChargingHeatmapPage.tsx",
+    "currentLineCount": 369,
+    "sectionNames": [
+      "Charging summary",
+      "When You Charge: Weekly Charging Heatmap",
+      "When You Charge: Charging Insights",
+      "Charging Breakdowns: Top Charging Locations",
+      "Charging Breakdowns: Sessions by Day of Week"
+    ],
+    "sectionCounts": {
+      "semanticSections": 3,
+      "summaryMetricOccurrences": 4,
+      "layoutCards": 4,
+      "cardGrids": 2,
+      "embeddedCharts": 2,
+      "heatmapCells": 168,
+      "heatmapLegendStops": 5,
+      "insightMetricBars": 4,
+      "favoriteTimeBlock": 1,
+      "GlassPanel": 0,
+      "directChartContainer": 0
+    },
+    "actions": [
+      "Page refresh and fatal-source/card retries",
+      "Weekly cell pointer detail with count and energy",
+      "Both breakdown chart data-table, loaded-row export and fullscreen capabilities",
+      "Inherited shared header vehicle and date controls",
+      "Existing operational-summary detail behavior through ChargingSummaryBrief"
+    ],
+    "dataBehavior": [
+      "Keep raw total_energy_added_wh in Wh; seconds are calculated from valid positive completed timestamps only.",
+      "Keep known zero distinct from null, recorded-only summary totals and partial measurement explanations.",
+      "Keep bounded returned-session count, 2000 request limit and complete-history disclaimer.",
+      "Keep first-crossing busiest-slot tie behavior, Sunday-first ordering, browser-local weekday/hour bucketing pending explicit timezone decision, and invalid timestamp skipping.",
+      "Keep top locations trimmed/grouped, missing place labeled Unknown, repeat threshold >=2, descending counts and top-10 cap.",
+      "Keep all weekday counts, favorite/busiest slot/day/hour, weekday/weekend counts and five legend stops.",
+      "Keep retained content on refresh failure/pause; do not blank independent cards or claim initial unknowns are zero.",
+      "Keep shared selection/range preferences, route/lazy SafeRoute mount, raw query keys and cancellation.",
+      "No independent business-calendar selector exists on this page; do not add one or silently redefine current bucketing."
+    ],
+    "sourceUnchanged": true,
+    "originalHistoricalBaseline": "Not read or reconstructed; current source snapshot only"
+  },
+  "evidenceLimits": [
+    "READ-ONLY Phase 0. Only assigned report and heartbeat were written. No source/shared/queue/Git/deployment/production mutations.",
+    "Report did not exist at first read; schema/protocol was taken from docs\\frontend-worker-conventions.md.",
+    "No browser route was exercised. Runtime, visual, viewport, keyboard, screen-reader, contrast, forced-colors and motion acceptance remain unverified.",
+    "No tests, TypeScript, full lint or build were run. The loaded audit skill script was inspected but not executed because it invokes package-wide tsc; explicit bounded read-only assignment takes precedence.",
+    "Source-only page scan output: Page lines: 369; staticInline: 0; rawControls: 0; directLibraries: 0; oldApi: 0; fixedText: 0; anyType: 0. These are narrow regex counts, not a clean quality/runtime certificate.",
+    "The first PowerShell count command failed with parser error exit 1 before execution; corrected source-count command exited 0. No validation success is inferred from the failed command.",
+    "Existing tests were read only (HeatmapGrid.test.tsx, heatmapData.test.ts lines 1-200, ChargingHeatmapModernization.test.tsx lines 1-220); they are authored evidence, not passing execution receipts.",
+    "Only the list route registration was confirmed in backend router; handler/query filtering, paging and currency semantics were not inspected.",
+    "Shared files were read narrowly for contracts used by this page, not audited as application-wide foundations. No broad dependency inventory or cross-page equivalence claimed."
+  ],
+  "filesRead": [
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\charging\\pages\\ChargingHeatmapPage.tsx",
+    "web\\src\\features\\charging\\components\\charging-heatmap\\index.ts",
+    "web\\src\\features\\charging\\components\\charging-heatmap\\HeatmapGrid.tsx",
+    "web\\src\\features\\charging\\components\\charging-heatmap\\heatmapData.ts",
+    "web\\src\\features\\charging\\components\\charging-heatmap\\HeatmapGrid.test.tsx",
+    "web\\src\\features\\charging\\components\\charging-heatmap\\heatmapData.test.ts",
+    "web\\src\\features\\charging\\components\\charging-heatmap-modernization\\index.ts",
+    "web\\src\\features\\charging\\components\\charging-heatmap-modernization\\ChargingHeatmapSummary.tsx",
+    "web\\src\\features\\charging\\components\\charging-heatmap-modernization\\ChargingHeatmapModernization.test.tsx",
+    "web\\src\\features\\charging\\components\\operationalbrief-all\\ChargingSummaryBrief.tsx",
+    "web\\src\\api\\hooks\\useCharging.ts",
+    "web\\src\\api\\charging.ts",
+    "web\\src\\api\\types.ts",
+    "web\\src\\api\\dataState.ts",
+    "web\\src\\hooks\\useDataState.ts",
+    "web\\src\\hooks\\useSelectedVehicle.ts",
+    "web\\src\\hooks\\useRangeState.ts",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\lib\\constants.ts",
+    "web\\src\\lib\\tokens.ts",
+    "web\\src\\App.tsx",
+    "web\\src\\components\\charts\\index.ts",
+    "web\\src\\components\\charts\\EmbeddedChart.tsx",
+    "web\\src\\components\\layout\\index.ts",
+    "web\\src\\components\\layout\\layout-reference\\CardGrid.tsx",
+    "internal\\api\\router.go"
+  ],
+  "ownedFiles": [
+    "docs\\frontend-audits\\audit-page-083.json",
+    ".agent-status\\audit-page-083.txt"
+  ]
+}

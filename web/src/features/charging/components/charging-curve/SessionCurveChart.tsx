@@ -55,6 +55,7 @@ export default function SessionCurveChart({ curveData }: SessionCurveChartProps)
         'Charging power versus state-of-charge area chart for the selected session',
       )}
       data={rows}
+      exportData={rows}
       dataColumns={[
         { key: 'soc', label: t('charging.curve.col.soc', 'SOC %') },
         { key: 'power', label: t('charging.curve.col.power', 'Power (kW)') },

@@ -59,7 +59,7 @@ export function GasPriceKpiBand({ query }: GasPriceKpiBandProps) {
           <QueryError
             error={error}
             onRetry={() => void refetch()}
-            resourceName={t('gas.title', 'Gas Price Auto-Poll')}
+            resourceName={t('gas.title', 'Gas price auto-poll')}
           />
         </div>
       ) : (
@@ -78,14 +78,14 @@ export function GasPriceKpiBand({ query }: GasPriceKpiBandProps) {
             color={enabled ? 'green' : 'amber'}
           />
           <MetricCard
-            label={t('gas.currentPrice', 'Current Price')}
+            label={t('gas.currentPrice', 'Current price')}
             value={price > 0 ? formatCurrency(price) : '—'}
             subtitle={t('gas.perUnit', 'per {{unit}}', { unit: unitLabel })}
             icon={<Fuel className="h-5 w-5" aria-hidden="true" />}
             color="amber"
           />
           <MetricCard
-            label={t('gas.kwhEquivalent', 'kWh Equivalent')}
+            label={t('gas.kwhEquivalent', 'kWh equivalent')}
             value={priceKwh > 0 ? formatCurrency(priceKwh) : '—'}
             subtitle={t('gas.perKwh', 'per kWh')}
             icon={<Zap className="h-5 w-5" aria-hidden="true" />}
@@ -97,7 +97,7 @@ export function GasPriceKpiBand({ query }: GasPriceKpiBandProps) {
             }}
           />
           <MetricCard
-            label={t('gas.lastPolled', 'Last Polled')}
+            label={t('gas.lastPolled', 'Last polled')}
             value={hasPolled(lastPoll) ? formatRelative(lastPoll) : t('gas.never', 'Never')}
             subtitle={
               hasPolled(lastPoll)

@@ -6,8 +6,8 @@
  *   1. It exposes an accessible `region` landmark named by its section heading
  *      (the aria-labelledby wiring must resolve).
  *   2. It renders all three guarantee tiles (title + body) from i18n keys, in
- *      order, each with a decorative (aria-hidden) icon and its own neon-color
- *      accent.
+ *      order, each with a decorative (aria-hidden) icon and the semantic accent
+ *      mapped from its historical neon-color ID.
  *   3. Every string is requested from i18n with an English fallback.
  *   4. A missing/empty translation degrades to an em-dash placeholder rather
  *      than collapsing a tile to a blank line.
@@ -61,20 +61,20 @@ describe('PrivacyGuaranteesPanel', () => {
     render(<PrivacyGuaranteesPanel />)
 
     const region = screen.getByRole('region', {
-      name: /how teslasync handles this data/i,
+      name: /How TeslaSync handles this data/i,
     })
     expect(region).toBeInTheDocument()
 
     const heading = screen.getByRole('heading', {
       level: 2,
-      name: /how teslasync handles this data/i,
+      name: /How TeslaSync handles this data/i,
     })
     // The section is labelled *by* that heading — the aria-labelledby target
     // must exist and match the heading's id, or the landmark name breaks.
     expect(heading).toHaveAttribute('id', 'privacy-about-heading')
     expect(region).toHaveAttribute(
       'aria-labelledby',
-      heading.getAttribute('id'),
+      heading.getAttribute('ID'),
     )
   })
 
@@ -97,7 +97,7 @@ describe('PrivacyGuaranteesPanel', () => {
       screen.getByText(/never uploaded to the server/i),
     ).toBeInTheDocument()
     expect(
-      screen.getByText(/no effect on your other devices/i),
+      screen.getByText(/no effect on your Other devices/i),
     ).toBeInTheDocument()
     expect(
       screen.getByText(/take effect immediately and update every open tab/i),
@@ -137,9 +137,9 @@ describe('PrivacyGuaranteesPanel', () => {
       container.querySelectorAll('svg[aria-hidden="true"]'),
     ).map((svg) => svg.parentElement as HTMLElement)
 
-    expect(iconBoxes[0].className).toContain('bg-neon-cyan/10')
-    expect(iconBoxes[1].className).toContain('bg-neon-blue/10')
-    expect(iconBoxes[2].className).toContain('bg-neon-green/10')
+    expect(iconBoxes[0].className).toContain('bg-[var(--semantic-info-bg)]')
+    expect(iconBoxes[1].className).toContain('bg-[var(--semantic-info-bg)]')
+    expect(iconBoxes[2].className).toContain('bg-[var(--semantic-success-bg)]')
   })
 
   it('degrades an empty translation to an em-dash instead of a blank tile', () => {

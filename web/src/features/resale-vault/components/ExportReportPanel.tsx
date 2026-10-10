@@ -7,8 +7,9 @@
  */
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { GlassPanel, Badge, Button } from '@/components/ui';
-import { PanelTitle, HelperText } from '@/components/ui';
+import { getErrorMessage } from '@/lib/errorMessage';
+import { Badge, Button, HelperText } from '@/components/ui';
+import { LayoutCard } from '@/components/layout';
 import { InlineCallout } from '@/components/feedback';
 import { Download, FileSignature, ShieldAlert } from 'lucide-react';
 import { signReport } from '../lib/reportSigner';
@@ -28,10 +29,13 @@ function downloadJson(filename: string, data: unknown): void {
   const link = document.createElement('a');
   link.href = url;
   link.download = filename;
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  URL.revokeObjectURL(url);
+  try {
+    document.body.appendChild(link);
+    link.click();
+  } finally {
+    link.remove();
+    URL.revokeObjectURL(url);
+  }
 }
 
 export function ExportReportPanel({ report, onSigned }: ExportReportPanelProps) {
@@ -52,7 +56,7 @@ export function ExportReportPanel({ report, onSigned }: ExportReportPanelProps) 
       if (err instanceof CryptoUnavailableError) {
         setError(err.message);
       } else {
-        setError(err instanceof Error ? err.message : String(err));
+        setError(getErrorMessage(err, t('error.unexpected', 'An unexpected error occurred')));
       }
     } finally {
       setIsSigning(false);
@@ -61,16 +65,18 @@ export function ExportReportPanel({ report, onSigned }: ExportReportPanelProps) 
 
   const handleDownload = async () => {
     if (!signed) return;
-    downloadJson(`${report.report_id}.json`, signed);
-    await recordAuditEvent('report_exported', `Exported signed report ${report.report_id} as JSON.`);
+    setError(null);
+    try {
+      downloadJson(`${signed.report.report_id}.json`, signed);
+      await recordAuditEvent('report_exported', `Exported signed report ${signed.report.report_id} as JSON.`);
+    } catch (err) {
+      setError(getErrorMessage(err, t('error.unexpected', 'An unexpected error occurred')));
+    }
   };
 
   return (
-    <GlassPanel padding="lg" className="space-y-4">
-      <div className="flex items-center justify-between">
-        <PanelTitle>{t('resaleVault.export.title', 'Export Signed Report')}</PanelTitle>
-        <FileSignature className="h-4 w-4 text-[var(--text-muted)]" aria-hidden />
-      </div>
+    <LayoutCard title={t('resaleVault.export.title', 'Export signed report')}
+      actions={<FileSignature className="h-4 w-4 text-[var(--text-muted)]" aria-hidden />}>
 
       <HelperText>
         {t(
@@ -86,10 +92,10 @@ export function ExportReportPanel({ report, onSigned }: ExportReportPanelProps) 
       )}
 
       <div className="flex flex-wrap items-center gap-2">
-        <Button size="sm" onClick={() => void handleSign()} loading={isSigning}>
+        <Button wrapLabel size="sm" onClick={() => void handleSign()} loading={isSigning}>
           {t('resaleVault.export.sign', 'Sign report')}
         </Button>
-        <Button size="sm" variant="secondary" onClick={() => void handleDownload()} disabled={!signed} icon={<Download className="h-3.5 w-3.5" />}>
+        <Button wrapLabel size="sm" variant="secondary" onClick={() => void handleDownload()} disabled={!signed} icon={<Download className="h-3.5 w-3.5" />}>
           {t('resaleVault.export.download', 'Download JSON')}
         </Button>
       </div>
@@ -124,6 +130,6 @@ export function ExportReportPanel({ report, onSigned }: ExportReportPanelProps) 
       <InlineCallout variant="info" icon={<ShieldAlert />}>
         {DIGEST_IS_NOT_A_SIGNATURE_NOTE}
       </InlineCallout>
-    </GlassPanel>
+    </LayoutCard>
   );
 }

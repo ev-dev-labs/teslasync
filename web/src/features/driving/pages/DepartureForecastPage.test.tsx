@@ -220,6 +220,22 @@ beforeEach(() => {
 });
 
 describe('DepartureForecastPage', () => {
+  it('preserves every modeled window while a retained history refresh is paused offline', () => {
+    h.history = { ...query({ data: weekdayCommute(12) }), fetchStatus: 'paused' };
+    renderPage();
+    expectEverySection();
+    const notice = screen.getByTestId('stale-refresh-warning');
+    expect(notice).toHaveTextContent(
+      'The latest values are temporarily unavailable. Previously loaded data remains visible.',
+    );
+    expect(notice).toHaveAttribute('data-refresh-blocked', 'true');
+    expect(notice).toHaveAttribute('role', 'status');
+    expect(notice).not.toHaveTextContent(/offline|failed/i);
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    fireEvent.click(within(notice).getByRole('button', { name: 'Refresh' }));
+    expect(historyRefetch).toHaveBeenCalledTimes(1);
+  });
+
   it('renders the ready state with all persistent evidence sections', () => {
     renderPage();
 

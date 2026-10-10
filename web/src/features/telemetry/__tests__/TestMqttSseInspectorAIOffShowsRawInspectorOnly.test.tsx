@@ -69,7 +69,7 @@ vi.mock('@/api/hooks/useTelemetry', async () => {
 
 import { useSettings } from '@/hooks/useSettings';
 import { useMQTTStatus } from '@/api/hooks/useTelemetry';
-import { AIMqttSseInspectorExplanations } from '@/components/ai/AIMqttSseInspectorExplanations';
+import { AIMqttSseInspectorExplanations } from '@/components/ai';
 import MQTTInspectorPage from '@/features/telemetry/pages/MQTTInspectorPage';
 
 const mockUseSettings = useSettings as unknown as ReturnType<typeof vi.fn>;

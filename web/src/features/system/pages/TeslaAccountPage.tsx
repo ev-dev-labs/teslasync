@@ -1,18 +1,20 @@
 import { useTranslation } from 'react-i18next';
 import {
-  RefreshCw, User, Mail, Hash, CalendarClock, Clock, CheckCircle2,
+  RefreshCw, User, Mail, Hash, Clock, CheckCircle2,
   ContactRound, Activity, Link2,
 } from 'lucide-react';
 
-import { PageContainer } from '@/components/layout';
+import { PageLayout } from '@/components/layout';
 import { GlassPanel, Button, Badge, StatusPill, Heading, Text, Label, Caption, HelperText } from '@/components/ui';
-import { MetricCard, KVList, Avatar, Timeline } from '@/components/data-display';
-import { QueryError, EmptyState, Skeleton, StatGridSkeleton } from '@/components/feedback';
+import { KVList, Avatar, Timeline } from '@/components/data-display';
+import { QueryError, EmptyState, Skeleton, StaleRefreshWarning } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useDataState } from '@/hooks/useDataState';
 import { useTeslaUserProfile, useRefreshTeslaProfile } from '@/api/hooks/useUser';
-import { formatDate, formatDateTime, formatRelative } from '@/lib/dateFormat';
+import { formatDateTime, formatRelative } from '@/lib/dateFormat';
+import { TeslaAccountStatStrip } from '../components/statstrip-tesla-account/TeslaAccountStatStrip';
 
 /* Timeline dot hues — toned, CB-safe accents (cyan / purple / emerald). Kept as
  * module-scope data so the Timeline `color` prop receives a stable value. */
@@ -24,19 +26,29 @@ const ACTIVITY_COLORS = {
 
 export default function TeslaAccountPage() {
   const { t } = useTranslation();
-  usePageTitle(t('teslaAccount.title', 'Tesla Account'));
+  usePageTitle(t('teslaAccount.title', 'Tesla account'));
 
   const profileQuery = useTeslaUserProfile();
-  const { data, isLoading, isError, error, refetch } = profileQuery;
+  const { data, isLoading: queryLoading, refetch } = profileQuery;
+  const profileState = useDataState(profileQuery);
+  const isLoading = queryLoading && !profileState.hasData;
+  const error = profileState.fatalError;
+  const isError = !!error;
   const refreshMutation = useRefreshTeslaProfile();
 
   const profile = data?.profile ?? null;
   const hasProfile = profile != null;
   const fetchedAt = profile?.fetched_at ?? data?.fetched_at ?? null;
+  const activityTimes = [profile?.created_at, profile?.updated_at, fetchedAt].flatMap((iso) => {
+    const instant = iso ? Date.parse(iso) : NaN;
+    return Number.isFinite(instant) ? [instant] : [];
+  });
+  const activityBounds = {
+    start: activityTimes.length > 0 ? formatDateTime(new Date(Math.min(...activityTimes))) : null,
+    end: activityTimes.length > 0 ? formatDateTime(new Date(Math.max(...activityTimes))) : null,
+  };
 
   const accountId = profile?.id != null ? `#${profile.id}` : '—';
-  const memberSince = profile?.created_at ? formatDate(profile.created_at) : '—';
-  const lastUpdated = profile?.updated_at ? formatRelative(profile.updated_at) : '—';
 
   const refresh = () => refreshMutation.mutate();
 
@@ -55,57 +67,18 @@ export default function TeslaAccountPage() {
   );
 
   return (
-    <PageContainer
-      title={t('teslaAccount.title', 'Tesla Account')}
+    <PageLayout
+      title={t('teslaAccount.title', 'Tesla account')}
       subtitle={t('teslaAccount.subtitle', 'Your Tesla account profile synced from the Fleet API')}
-      actions={actions}
+      secondaryActions={actions}
       query={profileQuery}
     >
+      <StaleRefreshWarning state={profileState} />
       {/* 1 — KPI band */}
       <FadeIn>
-        <section
-          aria-label={t('teslaAccount.kpis', 'Account summary')}
-          className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4"
-        >
-          {isLoading ? (
-            <StatGridSkeleton cards={4} className="col-span-2 lg:col-span-4" />
-          ) : isError ? (
-            <GlassPanel className="col-span-2 p-4 sm:p-5 lg:col-span-4">
-              <QueryError error={error} onRetry={retry} resourceName={resourceName} />
-            </GlassPanel>
-          ) : (
-            <>
-              <MetricCard
-                label={t('teslaAccount.kpi.sync', 'Sync Status')}
-                value={fetchedAt ? t('teslaAccount.synced', 'Synced') : t('teslaAccount.never', 'Never synced')}
-                color={fetchedAt ? 'green' : 'amber'}
-                icon={<CheckCircle2 className="h-5 w-5" aria-hidden="true" />}
-                subtitle={fetchedAt ? formatRelative(fetchedAt) : t('teslaAccount.neverSyncedShort', 'Not synced yet')}
-              />
-              <MetricCard
-                label={t('teslaAccount.kpi.accountId', 'Account ID')}
-                value={accountId}
-                color="cyan"
-                icon={<Hash className="h-5 w-5" aria-hidden="true" />}
-                subtitle={t('teslaAccount.kpi.accountIdSub', 'Fleet API identity')}
-              />
-              <MetricCard
-                label={t('teslaAccount.kpi.memberSince', 'Member Since')}
-                value={memberSince}
-                color="purple"
-                icon={<CalendarClock className="h-5 w-5" aria-hidden="true" />}
-                subtitle={profile?.created_at ? formatRelative(profile.created_at) : '—'}
-              />
-              <MetricCard
-                label={t('teslaAccount.kpi.updated', 'Last Updated')}
-                value={lastUpdated}
-                color="blue"
-                icon={<Clock className="h-5 w-5" aria-hidden="true" />}
-                subtitle={profile?.updated_at ? formatDate(profile.updated_at) : '—'}
-              />
-            </>
-          )}
-        </section>
+        <TeslaAccountStatStrip profile={profile} fetchedAt={fetchedAt} hasData={profileState.hasData}
+          loading={isLoading} error={error} onRetry={retry}
+          retained={profileState.hasData && (profileState.isRefreshing || profileState.status === 'stale')} />
       </FadeIn>
 
       {/* 2 — Hero identity + Sync center */}
@@ -138,7 +111,7 @@ export default function TeslaAccountPage() {
                 />
                 <div className="min-w-0 space-y-2">
                   <Text as="p" size="xl" weight="bold" color="primary" className="truncate">
-                    {profile.full_name || t('teslaAccount.unnamed', 'Tesla Driver')}
+                    {profile.full_name || t('teslaAccount.unnamed', 'Tesla driver')}
                   </Text>
                   <div className="flex items-center gap-2 text-[var(--text-secondary)]">
                     <Mail className="h-4 w-4 shrink-0" aria-hidden="true" />
@@ -208,7 +181,7 @@ export default function TeslaAccountPage() {
           <GlassPanel className="p-4 sm:p-5">
             <Heading level="panel" as="h2" className="mb-4 flex items-center gap-2">
               <ContactRound className="h-4 w-4 text-indigo-300" aria-hidden="true" />
-              {t('teslaAccount.details.title', 'Account Details')}
+              {t('teslaAccount.details.title', 'Account details')}
             </Heading>
             {isLoading ? (
               <Skeleton height={180} />
@@ -224,12 +197,12 @@ export default function TeslaAccountPage() {
                     value: <Text as="span" mono>{accountId}</Text>,
                   },
                   {
-                    label: t('teslaAccount.image', 'Profile Image'),
+                    label: t('teslaAccount.image', 'Profile image'),
                     value: profile.profile_image_url
                       ? t('teslaAccount.imageAvailable', 'Available')
                       : t('teslaAccount.imageNone', 'Not set'),
                   },
-                  { label: t('teslaAccount.fetchedAt', 'Fetched At'), value: formatDateTime(profile.fetched_at) },
+                  { label: t('teslaAccount.fetchedAt', 'Fetched at'), value: formatDateTime(profile.fetched_at) },
                 ]}
               />
             ) : (
@@ -251,6 +224,9 @@ export default function TeslaAccountPage() {
               <QueryError error={error} onRetry={retry} resourceName={resourceName} />
             ) : hasProfile ? (
               <Timeline
+                label={t('teslaAccount.activity.title', 'Activity')}
+                chronology="oldest-first"
+                summaryBounds={activityBounds}
                 items={[
                   {
                     icon: <Link2 className="h-3 w-3" aria-hidden="true" />,
@@ -284,6 +260,6 @@ export default function TeslaAccountPage() {
           </GlassPanel>
         </section>
       </FadeIn>
-    </PageContainer>
+    </PageLayout>
   );
 }

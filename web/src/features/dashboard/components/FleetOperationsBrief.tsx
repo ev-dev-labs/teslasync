@@ -4,7 +4,9 @@ import { useTranslation } from 'react-i18next'
 import { type FleetServerSummary, type FleetStateEntry } from '@/api/hooks/useVehicles'
 import { statusVariant } from '@/api/types'
 import { Badge, Caption, Heading, Text } from '@/components/ui'
-import { DataProvenanceBadge } from '@/components/data-display'
+import { DataProvenanceBadge, OperationalBrief } from '@/components/data-display'
+import type { StatMetric } from '@/components/data-display/stat-reference/types'
+import { useOperationalMetrics } from '@/hooks/useOperationalMetrics'
 import { PrefetchLink } from '@/components/layout'
 import { VisuallyHidden } from '@/components/a11y'
 import { Icons } from '@/lib/icons'
@@ -120,11 +122,6 @@ export function FleetOperationsBrief({
           total: posture.total,
         })
 
-  const BadgeIcon = totalsPending
-    ? Icons.clock
-    : isError || posture.attentionCount > 0
-      ? Icons.warning
-      : Icons.success
   const hasRetainedState = (fleetStates ?? []).some((entry) => entry.state != null)
   const dataProvenance = totalsPending
     ? 'unknown'
@@ -132,6 +129,45 @@ export function FleetOperationsBrief({
       ? hasRetainedState ? 'cached' : 'unknown'
       : 'live'
   const dataStatus = totalsPending ? 'initial' : isError ? 'stale' : 'ok'
+  const metrics: readonly StatMetric[] = [
+    {
+      metricId: 'count', rawValue: posture.total,
+      label: t('dashboard.fleetPosture.metric.fleet', 'Fleet'),
+      description: t('dashboard.fleetPosture.metric.fleetHelp', 'registered'),
+    },
+    {
+      metricId: 'count', rawValue: totalsPending ? null : posture.verifiedCount,
+      label: t('dashboard.fleetPosture.metric.verified', 'Verified'),
+      description: totalsPending
+        ? t('dashboard.fleetPosture.metric.resolvingHelp', 'checking live state')
+        : t('dashboard.fleetPosture.metric.verifiedHelp', 'current telemetry'),
+      display: { countTotal: posture.total },
+    },
+    {
+      metricId: 'count', rawValue: totalsPending ? null : posture.attentionCount,
+      label: t('dashboard.fleetPosture.metric.attention', 'Attention'),
+      description: totalsPending
+        ? t('dashboard.fleetPosture.metric.resolvingHelp', 'checking live state')
+        : t('dashboard.fleetPosture.metric.attentionHelp', 'exceptions'),
+    },
+    {
+      metricId: 'duration',
+      rawValue: posture.oldestObservedAt == null ? null : Math.max(0, (Date.now() - posture.oldestObservedAt) / 1000),
+      label: t('dashboard.fleetPosture.metric.oldest', 'Oldest reading'),
+      description: oldestObservedLabel
+        ? t('dashboard.fleetPosture.metric.oldestHelp', 'observed, not fetched')
+        : t('dashboard.fleetPosture.metric.oldestNone', 'no verified observation'),
+      display: { formatter: () => ({ value: oldestObservedLabel ?? '—', unit: '' }) },
+    },
+  ]
+  const operationalMetrics = useOperationalMetrics(metrics)
+  const statusLabel = totalsPending
+    ? t('dashboard.fleetPosture.badge.resolving', 'Checking live state')
+    : isError
+      ? t('dashboard.fleetPosture.badge.unavailable', 'Live state unavailable')
+      : t('dashboard.fleetPosture.badge.verified', '{{verified}} of {{total}} verified', {
+        verified: posture.verifiedCount, total: posture.total,
+      })
 
   return (
     <section
@@ -139,35 +175,20 @@ export function FleetOperationsBrief({
       className="min-w-0"
       data-testid="fleet-operations-brief"
     >
-      <div className="flex flex-wrap items-center gap-2 border-b border-[var(--border-default)] pb-3">
-        <div className="flex flex-wrap items-center gap-2">
-          <DataProvenanceBadge
-            provenance={dataProvenance}
-            status={dataStatus}
-            updatedAt={posture.oldestObservedAt}
-          />
-          {/* Icon + text: the badge never signals by colour alone. */}
-          <Badge
-            variant={
-              totalsPending ? 'neutral' : isError || posture.attentionCount > 0 ? 'warning' : 'success'
-            }
-            size="lg"
-            className="inline-flex max-w-full items-center gap-1.5 self-start sm:self-auto"
-          >
-            <BadgeIcon className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-            <span className="truncate">
-              {totalsPending
-                ? t('dashboard.fleetPosture.badge.resolving', 'Checking live state')
-                : isError
-                  ? t('dashboard.fleetPosture.badge.unavailable', 'Live state unavailable')
-                  : t('dashboard.fleetPosture.badge.verified', '{{verified}} of {{total}} verified', {
-                    verified: posture.verifiedCount,
-                    total: posture.total,
-                  })}
-            </span>
-          </Badge>
-        </div>
-      </div>
+      <OperationalBrief
+        compact
+        testId="fleet-posture-operational-brief"
+        eyebrow={t('dashboard.fleetPosture.summary.eyebrow', 'Fleet evidence')}
+        title={t('dashboard.fleetPosture.summary.title', 'Fleet operating posture')}
+        description={headline}
+        statusLabel={statusLabel}
+        statusTone={totalsPending ? 'neutral' : isError || posture.attentionCount > 0 ? 'warning' : 'success'}
+        metrics={operationalMetrics}
+        loading={totalsPending}
+        scope={<Caption>{t('dashboard.fleetPosture.summary.scope', 'All registered vehicles; active vehicle shown below')}</Caption>}
+        freshness={<DataProvenanceBadge provenance={dataProvenance} status={dataStatus} updatedAt={posture.oldestObservedAt} />}
+        provenance={t('dashboard.fleetPosture.summary.provenance', 'Verified coverage comes from the same resolved fleet-state batch. Client classification takes over when evidence ages; the oldest reading is a real backend observation, never fetch completion.')}
+      />
 
       {/* Posture changes are announced, not just repainted. */}
       <VisuallyHidden as="p" liveRegion data-testid="fleet-posture-announcement">
@@ -220,43 +241,6 @@ export function FleetOperationsBrief({
               </PrefetchLink>
             )}
           </div>
-
-          <dl className="mt-6 grid grid-cols-2 overflow-hidden rounded-shape-lg border border-[var(--border-default)] bg-[var(--surface-2)] sm:grid-cols-4">
-            <BriefMetric
-              label={t('dashboard.fleetPosture.metric.fleet', 'Fleet')}
-              value={String(posture.total)}
-              hint={t('dashboard.fleetPosture.metric.fleetHelp', 'registered')}
-            />
-            <BriefMetric
-              label={t('dashboard.fleetPosture.metric.verified', 'Verified')}
-              value={totalsPending ? '—' : `${posture.verifiedCount}/${posture.total}`}
-              hint={
-                totalsPending
-                  ? t('dashboard.fleetPosture.metric.resolvingHelp', 'checking live state')
-                  : t('dashboard.fleetPosture.metric.verifiedHelp', 'current telemetry')
-              }
-              tone={totalsPending ? 'default' : posture.verifiedCount === posture.total ? 'positive' : 'warning'}
-            />
-            <BriefMetric
-              label={t('dashboard.fleetPosture.metric.attention', 'Attention')}
-              value={totalsPending ? '—' : String(posture.attentionCount)}
-              hint={
-                totalsPending
-                  ? t('dashboard.fleetPosture.metric.resolvingHelp', 'checking live state')
-                  : t('dashboard.fleetPosture.metric.attentionHelp', 'exceptions')
-              }
-              tone={totalsPending ? 'default' : posture.attentionCount > 0 ? 'warning' : 'positive'}
-            />
-            <BriefMetric
-              label={t('dashboard.fleetPosture.metric.oldest', 'Oldest reading')}
-              value={oldestObservedLabel ?? '—'}
-              hint={
-                oldestObservedLabel
-                  ? t('dashboard.fleetPosture.metric.oldestHelp', 'observed, not fetched')
-                  : t('dashboard.fleetPosture.metric.oldestNone', 'no verified observation')
-              }
-            />
-          </dl>
 
           <FleetHonestyMeter
             categories={posture.vehicles.map((row) => row.category)}
@@ -313,33 +297,4 @@ function scopeExplanation(
         'The live-state request failed. This is a fact about our pipeline, not about the vehicle.',
       )
   }
-}
-
-function BriefMetric({
-  label,
-  value,
-  hint,
-  tone = 'default',
-}: {
-  label: string
-  value: string
-  hint: string
-  tone?: 'default' | 'positive' | 'warning'
-}) {
-  return (
-    <div className="border-b border-e border-[var(--border-default)] p-3 last:border-e-0 sm:border-b-0 sm:p-4">
-      <dt className="text-xs font-medium text-[var(--text-muted)]">{label}</dt>
-      <dd
-        className={cn(
-          'mt-1 text-xl font-semibold tabular-nums tracking-tight sm:text-2xl',
-          tone === 'positive' && 'text-emerald-700 dark:text-emerald-300',
-          tone === 'warning' && 'text-amber-700 dark:text-amber-300',
-          tone === 'default' && 'text-[var(--text-primary)]',
-        )}
-      >
-        {value}
-        <Caption className="mt-1 block">{hint}</Caption>
-      </dd>
-    </div>
-  )
 }

@@ -202,7 +202,7 @@ describe('initial state resolution', () => {
     expect(screen.getByTestId('mode-bg')).toHaveTextContent('#0b0d12')
 
     const root = document.documentElement
-    expect(root.style.getPropertyValue('--theme-primary')).toBe('#3b82f6')
+    expect(root.style.getPropertyValue('--theme-primary')).toBe('#91b4d2')
     expect(root.style.getPropertyValue('--bg')).toBe('#0b0d12')
     expect(root.style.getPropertyValue('--bg-app')).toBe('#0b0d12')
     expect(
@@ -217,6 +217,59 @@ describe('initial state resolution', () => {
     }
     expect(root.classList.contains('dark')).toBe(true)
     expect(root.classList.contains('light-mode')).toBe(false)
+  })
+
+  describe('restrained presentation without preference migration', () => {
+    it('preserves raw custom colors while deriving accessible dark and light fills', async () => {
+      localStorage.setItem('teslasync-theme', 'custom')
+      localStorage.setItem('teslasync-custom-primary', '#00ff41')
+      localStorage.setItem('teslasync-custom-accent', '#ff00ff')
+      const { result } = renderHook(() => useTheme(), { wrapper: ThemeProvider })
+      await flush()
+      for (const modeId of ['dark', 'light', 'oled']) {
+        act(() => result.current.setMode(modeId))
+        expect(result.current.theme.primary).toBe('#00ff41')
+        expect(result.current.theme.accent).toBe('#ff00ff')
+        expect(localStorage.getItem('teslasync-custom-primary')).toBe('#00ff41')
+        expect(localStorage.getItem('teslasync-custom-accent')).toBe('#ff00ff')
+        const css = document.documentElement.style
+        expect(css.getPropertyValue('--theme-primary')).not.toBe('#00ff41')
+        expect(css.getPropertyValue('--text-primary')).not.toBe('#ffffff')
+        for (const fill of ['primary', 'accent']) {
+          expect(contrastRatio(css.getPropertyValue(`--theme-on-${fill}`), css.getPropertyValue(`--theme-${fill}`))).toBeGreaterThanOrEqual(4.5)
+        }
+      }
+    })
+
+    it('keeps every mode identity and accessible text across all presented surfaces', async () => {
+      const { result } = renderHook(() => useTheme(), { wrapper: ThemeProvider })
+      await flush()
+      const rawModes = JSON.stringify(result.current.modes)
+      for (const modeId of Object.keys(result.current.modes)) {
+        act(() => result.current.setMode(modeId))
+        expect(result.current.modeId).toBe(modeId)
+        expect(localStorage.getItem('teslasync-mode')).toBe(modeId)
+        const css = document.documentElement.style
+        for (const surface of ['--bg', '--surface-1', '--surface-2', '--surface-3']) {
+          for (const foreground of ['--text-primary', '--text-secondary', '--text-muted', '--theme-primary']) {
+            expect(contrastRatio(css.getPropertyValue(foreground), css.getPropertyValue(surface)), `${modeId}: ${foreground} / ${surface}`).toBeGreaterThanOrEqual(4.5)
+          }
+          const focus = result.current.mode.colorScheme === 'dark' ? '#91b4d2' : '#385e7e'
+          expect(contrastRatio(focus, css.getPropertyValue(surface)), `${modeId}: focus / ${surface}`).toBeGreaterThanOrEqual(3)
+          const statuses = result.current.mode.colorScheme === 'dark'
+            ? ['#91b4d2', '#91b9a5', '#cfb481', '#d6a0a5', '#b5a8c9']
+            : ['#385e7e', '#38614f', '#745829', '#83464e', '#625077']
+          for (const status of statuses) {
+            expect(contrastRatio(status, css.getPropertyValue(surface)), `${modeId}: semantic / ${surface}`).toBeGreaterThanOrEqual(4.5)
+          }
+        }
+        if (modeId === 'hc-dark' || modeId === 'hc-light') {
+          expect(css.getPropertyValue('--bg')).toBe(result.current.mode.bg)
+          expect(css.getPropertyValue('--text-primary')).toBe(result.current.mode.textPrimary)
+        }
+      }
+      expect(JSON.stringify(result.current.modes)).toBe(rawModes)
+    })
   })
 
   it('restores a valid persisted theme + mode from localStorage', async () => {
@@ -353,7 +406,7 @@ describe('setTheme / setMode / setCustomColors', () => {
     expect(localStorage.getItem('teslasync-custom-primary')).toBe('#123456')
     expect(localStorage.getItem('teslasync-custom-accent')).toBe('#abcdef')
     // hexToRGB('#123456') → "18, 52, 86" reaches the CSS custom property.
-    expect(document.documentElement.style.getPropertyValue('--theme-primary-rgb')).toBe('18, 52, 86')
+    expect(document.documentElement.style.getPropertyValue('--theme-primary-rgb')).not.toBe('18, 52, 86')
     expect(busMock.broadcast).toHaveBeenCalledWith({
       type: 'theme.customColors',
       primary: '#123456',

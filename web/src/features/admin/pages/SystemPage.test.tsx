@@ -23,6 +23,11 @@ import type { ReactNode } from 'react'
 vi.mock('@/api/client', () => ({
   request: vi.fn(),
 }))
+vi.mock('@/hooks/useUnits', () => ({ useUnits: () => ({
+  unitPrefs: { distance: 'km', speed: 'km/h', temperature: '°C', pressure: 'kPa',
+    energy: 'Wh', duration: 's', power: 'W', precision: 2, locale: 'en-US' },
+}) }))
+vi.mock('@/hooks/useFormatting', () => ({ useFormatting: () => ({ currencySymbol: '$' }) }))
 
 vi.mock('react-i18next', async () => {
   const actual =
@@ -172,6 +177,12 @@ function installRouter(
   const rate = opts.rate ?? (() => Promise.resolve(buildRateResponse()))
   const queue = opts.queue ?? (() => Promise.resolve(buildQueueResponse()))
   mockedRequest.mockImplementation((url: unknown) => {
+    if (typeof url === 'string' && /\/system\/queues\/[^/]+\/jobs/.test(url)) {
+      return Promise.resolve({ worker: 'notification', jobs: [{
+        id: 'job-retained', worker: 'notification', title: 'Complete retained notification job', status: 'sent',
+        started_at: '2026-07-03T11:59:00Z', duration_ms: 1500,
+      }] })
+    }
     if (typeof url === 'string' && url.startsWith(RATE_URL)) return rate()
     if (typeof url === 'string' && url.startsWith(QUEUE_URL)) return queue()
     return Promise.reject(new Error(`unexpected url: ${String(url)}`))
@@ -194,7 +205,7 @@ function renderPage() {
       mutations: { retry: false },
     },
   })
-  return render(
+  const rendered = render(
     <QueryClientProvider client={client}>
       <MemoryRouter>
         <ToastProvider>
@@ -203,6 +214,7 @@ function renderPage() {
       </MemoryRouter>
     </QueryClientProvider>,
   )
+  return { ...rendered, client }
 }
 
 beforeEach(() => {
@@ -211,6 +223,43 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.restoreAllMocks()
+})
+
+describe('SystemPage independent retained feeds', () => {
+  it('keeps budgets, workers, and drawer actions after both refreshes fail', async () => {
+    installRouter()
+    const { client } = renderPage()
+    await screen.findByTestId('rate-limit-rows')
+    await screen.findByTestId('queue-rows')
+    fireEvent.click(screen.getByTestId('queue-worker-card-notification'))
+    await screen.findByText('Complete retained notification job')
+    installRouter({ rate: () => Promise.reject(new Error('rate unavailable')), queue: () => Promise.reject(new Error('queue unavailable')) })
+    await client.invalidateQueries()
+    await waitFor(() => expect(client.getQueryCache().getAll().some((query) => query.state.error !== null)).toBe(true))
+    expect(screen.getByTestId('rate-limit-rows')).toBeInTheDocument()
+    expect(screen.getByTestId('queue-rows')).toBeInTheDocument()
+    expect(screen.getByTestId('queue-worker-card-notification')).toHaveAttribute('type', 'button')
+    expect(screen.getByTestId('queue-job-row-job-retained')).toBeInTheDocument()
+    expect(screen.getByTestId('system-refresh-all')).toBeEnabled()
+  })
+
+  it('reviews retained system measurements and mixed source periods in the real details drawer', async () => {
+    installRouter()
+    const { client } = renderPage()
+    await screen.findByTestId('rate-limit-rows')
+    await screen.findByTestId('queue-rows')
+    installRouter({ rate: () => Promise.reject(new Error('rate unavailable')), queue: () => Promise.reject(new Error('queue unavailable')) })
+    await client.invalidateQueries()
+    await waitFor(() => expect(screen.getByTestId('system-operational-brief')).toHaveTextContent('Retained evidence'))
+    expect(within(screen.getByTestId('system-operational-brief')).getByText('2 / 3')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Review details' }))
+    const drawer = screen.getByRole('dialog')
+    expect(within(drawer).getByText('Active workers')).toBeInTheDocument()
+    expect(within(drawer).getByText('49')).toBeInTheDocument()
+    expect(within(drawer).getAllByText(/terminally failed jobs cover the last 24 hours/).length).toBeGreaterThan(0)
+    expect(screen.getByTestId('rate-limit-rows')).toBeInTheDocument()
+    expect(screen.getByTestId('queue-rows')).toBeInTheDocument()
+  })
 })
 
 describe('SYSTEM_PAGE_PATH', () => {
@@ -285,10 +334,10 @@ describe('SystemPage', () => {
     expect(overview.getByText('Failed 24h')).toBeInTheDocument()
 
     // Computed roll-ups: 2 of 3 workers healthy, 49 (42+0+7) jobs succeeded,
-    // and 91.7% peak usage (110/120) rounded to the nearest whole percent.
+    // and peak usage (110/120) formatted with the selected two decimals.
     expect(overview.getByText('2 / 3')).toBeInTheDocument()
     expect(overview.getByText('49')).toBeInTheDocument()
-    expect(overview.getByText('92%')).toBeInTheDocument()
+    expect(overview.getByText('91.67%')).toBeInTheDocument()
   })
 
   it('holds the loading skeleton + panel spinners until data lands, then swaps to the live band', async () => {

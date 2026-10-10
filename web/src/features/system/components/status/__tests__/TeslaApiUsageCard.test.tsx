@@ -1,9 +1,13 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { describe, expect, it, vi } from 'vitest'
 import { TeslaApiUsageCard } from '../TeslaApiUsageCard'
 import type { APIUsage } from '@/api/types'
 import { TeslaUsageContractError } from '@/api/hooks/useTeslaUsage'
+vi.mock('@/hooks/useSettings', async importOriginal => ({
+  ...await importOriginal<typeof import('@/hooks/useSettings')>(),
+  useSettings: () => ({ settings: { locale: 'en-US', decimal_precision: 2, currency_symbol: '$' }, settingsUnavailable: false }),
+}));
 
 vi.mock('@/hooks/useFormatting', () => ({
   useFormatting: () => ({ formatCurrency: (value: number) => `$${value.toFixed(2)}` }),
@@ -42,14 +46,14 @@ describe('Tesla Fleet usage estimate', () => {
     expect(screen.getByText('Data requests · 500 / $1')).toBeInTheDocument()
     expect(screen.getByText('Wakes · 50 / $1')).toBeInTheDocument()
     expect(screen.getByText('$0.00')).toBeInTheDocument()
-    expect(screen.getByText(/not a Tesla invoice/)).toBeInTheDocument()
+    expect(within(screen.getByRole('region', { name: 'Cycle usage evidence' })).getAllByText(/not a Tesla invoice/).length).toBeGreaterThan(0)
     expect(screen.queryByText(/monthly credit/)).not.toBeInTheDocument()
   })
   it('keeps status concise and links to the dedicated page, including when usage is unavailable', () => {
     const { rerender } = render(<MemoryRouter><TeslaApiUsageCard apiUsage={usage} now={0} compact /></MemoryRouter>)
     expect(screen.getByRole('link', { name: 'Explore Tesla API usage' })).toHaveAttribute('href', '/tesla-api-usage')
     expect(screen.queryByText('Prior 30-day cycles')).not.toBeInTheDocument()
-    expect(screen.getByText(/not a Tesla invoice/)).toBeInTheDocument()
+    expect(within(screen.getByRole('region', { name: 'Cycle usage evidence' })).getAllByText(/not a Tesla invoice/).length).toBeGreaterThan(0)
     rerender(<MemoryRouter><TeslaApiUsageCard apiUsage={undefined} now={0} compact error={new Error('offline')} /></MemoryRouter>)
     expect(screen.getByRole('link', { name: 'Explore Tesla API usage' })).toHaveAttribute('href', '/tesla-api-usage')
     expect(screen.getByText(/could not be loaded/)).toBeInTheDocument()

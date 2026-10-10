@@ -26,10 +26,11 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, within, fireEvent } from '@testing-library/react';
+import { render, screen, within, fireEvent, act } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
+import { setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat';
 
 vi.mock('@/components/charts', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/components/charts')>();
@@ -271,23 +272,59 @@ function renderPage() {
   });
   return render(
     <QueryClientProvider client={qc}>
-      <MemoryRouter>
+      <MemoryRouter initialEntries={['/climate-control']}>
         <ClimateControlPage />
       </MemoryRouter>
     </QueryClientProvider>,
   );
 }
 
-/** Scope a MetricCard by its (unique) label. */
+const metricLabelSelector = '[data-operational-metric] > div:first-child > div:first-child';
+
+/** Scope the visible metric label, not its duplicate evidence description. */
 function card(label: string): HTMLElement {
-  const wrapper = screen.getByText(label).closest('[data-role="metric-card"]');
-  if (!wrapper) throw new Error(`MetricCard wrapper not found for "${label}"`);
-  return wrapper as HTMLElement;
+  const wrapper = screen.getByText(label, { selector: metricLabelSelector })
+    .closest<HTMLElement>('[data-operational-metric]');
+  if (!wrapper) throw new Error(`Canonical stat wrapper not found for "${label}"`);
+  return wrapper;
+}
+
+function group(id: string): HTMLElement {
+  const wrapper = document.querySelector<HTMLElement>(`[data-climate-group="${id}"]`);
+  if (!wrapper) throw new Error(`Climate group not found: ${id}`);
+  return wrapper;
 }
 
 beforeEach(() => {
   vi.clearAllMocks();
   unitState.temp = 'C';
+  setGlobalLocale('en-US');
+  setGlobalPrecision(2);
+});
+
+it('keeps temperature-delta classification raw while locale and precision change live', () => {
+  setGlobalLocale('en-US');
+  setGlobalPrecision(2);
+  const latest = climate({ insideTemp: 22.2345, driverTempSetting: 21 });
+  install({ latest, history: HISTORY });
+  const view = renderPage();
+  expect(within(card('Temp delta')).getByText('+1.23°C')).toBeInTheDocument();
+  expect(screen.getByText('Above target')).toBeInTheDocument();
+  try {
+    act(() => setGlobalLocale('de-DE'));
+    expect(within(card('Temp delta')).getByText('+1,23°C')).toBeInTheDocument();
+    expect(screen.getByText('Above target')).toBeInTheDocument();
+    act(() => setGlobalPrecision(0));
+    expect(within(card('Temp delta')).getByText('+1°C')).toBeInTheDocument();
+    expect(screen.getByText('Above target')).toBeInTheDocument();
+    expect(screen.queryByText('Near target')).not.toBeInTheDocument();
+    expect(latest.insideTemp).toBe(22.2345);
+    expect(latest.driverTempSetting).toBe(21);
+  } finally {
+    view.unmount();
+    setGlobalLocale('en-US');
+    setGlobalPrecision(2);
+  }
 });
 
 describe('ClimateControlPage — structure, wiring & a11y', () => {
@@ -296,12 +333,12 @@ describe('ClimateControlPage — structure, wiring & a11y', () => {
     renderPage();
 
     expect(
-      screen.getByRole('heading', { level: 1, name: 'Climate Control' }),
+      screen.getByRole('heading', { level: 1, name: 'Climate control' }),
     ).toBeInTheDocument();
     expect(
       screen.getByText('HVAC status, temperatures, and seat heaters'),
     ).toBeInTheDocument();
-    expect(document.title).toContain('Climate Control');
+    expect(document.title).toContain('Climate control');
 
     expect(screen.queryByRole('combobox', { name: 'Select vehicle' })).not.toBeInTheDocument();
 
@@ -336,66 +373,67 @@ describe('ClimateControlPage — active HVAC (happy path)', () => {
   it('shows the active HVAC banner with keeper / defrost / battery-heater / power chips', () => {
     renderPage();
 
-    expect(screen.getByText('HVAC System')).toBeInTheDocument();
+    expect(within(group('climate-status')).getByRole('heading', { name: 'HVAC system' }))
+      .toBeInTheDocument();
     // keeper appears in the banner chip AND the climate-systems card.
-    expect(screen.getAllByText('Dog Mode').length).toBeGreaterThanOrEqual(2);
+    expect(screen.getAllByText('Dog mode').length).toBeGreaterThanOrEqual(2);
     expect(screen.getByText('Defrost')).toBeInTheDocument();
     // battery-heater appears in the banner chip AND the protection card.
-    expect(screen.getAllByText('Battery Heater').length).toBeGreaterThanOrEqual(2);
-    expect(screen.getByText('Insufficient Power to Heat')).toBeInTheDocument();
+    expect(screen.getAllByText('Battery heater').length).toBeGreaterThanOrEqual(2);
+    expect(screen.getByText('Insufficient power to heat')).toBeInTheDocument();
   });
 
   it('renders climate-system + protection metrics from the latest state', () => {
     renderPage();
 
-    expect(within(card('HVAC Power')).getByText('On')).toBeInTheDocument();
-    expect(within(card('HVAC Power')).getByText('State: On')).toBeInTheDocument();
-    expect(within(card('Fan Speed')).getByText('5')).toBeInTheDocument();
+    expect(within(card('HVAC power')).getByText('On')).toBeInTheDocument();
+    expect(within(card('HVAC power')).getByText('State: On')).toBeInTheDocument();
+    expect(within(card('Fan speed')).getByText('5')).toBeInTheDocument();
     // heatStyle(2) → "Medium" for the steering-wheel heat level.
-    expect(within(card('Steering Wheel Heat Level')).getByText('Medium')).toBeInTheDocument();
-    expect(within(card('Overheat Protection')).getByText('On')).toBeInTheDocument();
+    expect(within(card('Steering wheel heat level')).getByText('Medium')).toBeInTheDocument();
+    expect(within(card('Overheat protection')).getByText('On')).toBeInTheDocument();
     // passenger set temp converts + carries the °C suffix.
-    expect(within(card('Passenger Setting')).getByText('20.0°C')).toBeInTheDocument();
+    expect(within(card('Passenger setting')).getByText('20.00°C')).toBeInTheDocument();
   });
 
   it('renders seat-heater levels, cooling ventilation and auto-climate chips', () => {
     renderPage();
-    const region = screen.getByRole('region', { name: 'Comfort & Efficiency' });
+    const region = group('climate-seats');
 
     // Front-left seat heater at level 3 → "High (3/3)".
     expect(within(region).getByText('High (3/3)')).toBeInTheDocument();
     expect(within(region).getByText(/Ventilation:\s*On/)).toBeInTheDocument();
 
     // Auto-climate: left is auto, right is manual.
-    const leftChip = within(region).getByText('Auto Climate (Left)').closest('div')!;
+    const leftChip = within(region).getByText('Auto climate (left)').closest('div')!;
     expect(within(leftChip).getByText('Auto')).toBeInTheDocument();
-    const rightChip = within(region).getByText('Auto Climate (Right)').closest('div')!;
+    const rightChip = within(region).getByText('Auto climate (right)').closest('div')!;
     expect(within(rightChip).getByText('Manual')).toBeInTheDocument();
   });
 
   it('derives comfort score/delta and history-driven efficiency stats', () => {
     renderPage();
-    const overview = screen.getByRole('region', { name: 'Climate Overview' });
-    const efficiency = screen.getByRole('region', { name: 'Comfort & Efficiency' });
+    const overview = group('climate-comfort');
+    const efficiency = group('climate-efficiency');
 
     // inside 22, set 21 → |Δ|=1 → score 90, delta +1, near target, excellent.
-    expect(within(overview).getByText('90')).toBeInTheDocument();
-    expect(within(overview).getByText('+1')).toBeInTheDocument();
-    expect(within(overview).getByText('Near Target')).toBeInTheDocument();
+    expect(within(overview).getByText('90.00')).toBeInTheDocument();
+    expect(within(overview).getByText('+1.00°C')).toBeInTheDocument();
+    expect(within(overview).getByText('Near target')).toBeInTheDocument();
     expect(within(overview).getByText('Excellent')).toBeInTheDocument();
 
     // efficiency: avg fan 5.0, peak 6.0, AC-on 50%, comfort 90%.
-    expect(within(efficiency).getByText('5.0')).toBeInTheDocument();
-    expect(within(efficiency).getByText('6.0')).toBeInTheDocument();
-    expect(within(efficiency).getByText('50%')).toBeInTheDocument();
-    expect(within(efficiency).getByText('90%')).toBeInTheDocument();
+    expect(within(efficiency).getByText('5.00')).toBeInTheDocument();
+    expect(within(efficiency).getByText('6.00')).toBeInTheDocument();
+    expect(within(efficiency).getByText('50.00%')).toBeInTheDocument();
+    expect(within(efficiency).getByText('90.00%')).toBeInTheDocument();
   });
 
   it('renders the history table with °C-converted cells', () => {
     renderPage();
     const table = screen.getByRole('table');
-    expect(within(table).getByText('18.0')).toBeInTheDocument(); // inside row (10:00)
-    expect(within(table).getByText('14.0')).toBeInTheDocument(); // outside row (11:00)
+    expect(within(table).getByText('18.00')).toBeInTheDocument(); // inside row (10:00)
+    expect(within(table).getByText('14.00')).toBeInTheDocument(); // outside row (11:00)
     expect(screen.getByRole('button', { name: 'Inside °C' })).toBeInTheDocument();
   });
 });
@@ -407,10 +445,10 @@ describe('ClimateControlPage — imperial (°F) unit boundary', () => {
     renderPage();
 
     // 20 °C → 68 °F on the passenger card (suffix flips with the preference).
-    expect(within(card('Passenger Setting')).getByText('68.0°F')).toBeInTheDocument();
+    expect(within(card('Passenger setting')).getByText('68.00°F')).toBeInTheDocument();
     // history: 18 °C → 64.4 °F cell; header unit flips to °F.
     const table = screen.getByRole('table');
-    expect(within(table).getByText('64.4')).toBeInTheDocument();
+    expect(within(table).getByText('64.40')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Inside °F' })).toBeInTheDocument();
     // The AI boundary still receives raw SI °C, regardless of display prefs.
     expect(screen.getByTestId('ai-recommender')).toHaveAttribute('data-cabin', '22');
@@ -423,24 +461,26 @@ describe('ClimateControlPage — loading, empty & error states', () => {
     const { container } = renderPage();
 
     // Shell still renders; the section heading stays put so layout doesn't jump.
-    expect(screen.getByRole('heading', { level: 1, name: 'Climate Control' })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Climate Systems' })).toBeInTheDocument();
-    // …but its metric cards are replaced by pulse skeletons.
-    expect(screen.queryByText('HVAC Power')).not.toBeInTheDocument();
-    expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThan(0);
+    expect(screen.getByRole('heading', { level: 1, name: 'Climate control' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Climate systems' })).toBeInTheDocument();
+    // …but its metric cards are replaced by static source-shaped skeletons.
+    expect(screen.queryByText('HVAC power')).not.toBeInTheDocument();
+    expect(container.querySelectorAll('[class*="--skeleton-bg"]').length).toBeGreaterThan(0);
   });
 
   it('renders placeholders (never a blank panel) when latest resolves empty', () => {
     install({ latest: undefined, history: [] });
     renderPage();
 
-    expect(screen.getByRole('heading', { name: 'Climate Systems' })).toBeInTheDocument();
-    // Nullish values collapse to explicit off/zero placeholders — no crash.
-    expect(within(card('HVAC Power')).getByText('Off')).toBeInTheDocument();
-    expect(within(card('Fan Speed')).getByText('0')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Climate systems' })).toBeInTheDocument();
+    // Missing measurements are unknown, not observed off/zero values.
+    expect(within(card('HVAC power')).getByText('—')).toBeInTheDocument();
+    expect(within(card('Fan speed')).getByText('—')).toBeInTheDocument();
+    expect(within(card('HVAC power')).queryByText('Off')).not.toBeInTheDocument();
+    expect(within(card('Fan speed')).queryByText('0')).not.toBeInTheDocument();
     // Gauges + charts + table show their own empty states.
-    const overview = screen.getByRole('region', { name: 'Climate Overview' });
-    expect(within(overview).getByText('Inside Temp')).toBeInTheDocument();
+    const overview = group('climate-temperature');
+    expect(within(overview).getByText('Inside temp')).toBeInTheDocument();
     expect(screen.getByText('No temperature history has been recorded.')).toBeInTheDocument();
     expect(screen.getByText(/Cabin, ambient, and set-point trends/)).toBeInTheDocument();
     expect(screen.getByText('No HVAC operating history has been recorded.')).toBeInTheDocument();
@@ -452,14 +492,38 @@ describe('ClimateControlPage — loading, empty & error states', () => {
   });
 
   it('surfaces a query-error banner without gating the rest of the page', () => {
-    install({ latest: undefined, latestOpts: { error: new Error('boom'), isError: true } });
+    const retry = vi.fn();
+    install({
+      latest: undefined,
+      latestOpts: { error: new Error('boom'), isError: true, refetch: retry },
+      history: HISTORY,
+    });
     renderPage();
 
-    const banner = screen.getByText(/Failed to load climate data/);
+    const systems = within(group('climate-systems'));
+    const banner = systems.getByText(/Failed to load climate data/);
     expect(banner).toBeInTheDocument();
-    expect(banner.textContent).toContain('boom');
-    // The deterministic bands still render beneath the error banner.
-    expect(within(card('HVAC Power')).getByText('Off')).toBeInTheDocument();
+    expect(systems.getByText("Can't reach server")).toBeInTheDocument();
+    fireEvent.click(systems.getByRole('button', { name: 'Retry' }));
+    expect(retry).toHaveBeenCalledTimes(1);
+    // Only the failed source is replaced; independent history remains visible.
+    expect(systems.queryByText('HVAC power', { selector: metricLabelSelector }))
+      .not.toBeInTheDocument();
+    expect(screen.getByRole('table')).toBeInTheDocument();
+    expect(within(card('Avg fan speed')).getByText('5.00')).toBeInTheDocument();
+  });
+
+  it('preserves measured zero and false values rather than replacing them with unknown', () => {
+    install({
+      latest: climate({ hvacPower: false, isAcOn: false, fanSpeed: 0, passengerTempSetting: 0 }),
+      history: HISTORY,
+    });
+    renderPage();
+
+    expect(within(card('HVAC power')).getByText('Off')).toBeInTheDocument();
+    expect(within(card('HVAC power')).getByText('State: Off')).toBeInTheDocument();
+    expect(within(card('Fan speed')).getByText('0')).toBeInTheDocument();
+    expect(within(card('Passenger setting')).getByText('0.00°C')).toBeInTheDocument();
   });
 });
 
@@ -488,11 +552,11 @@ describe('ClimateControlPage — interactions', () => {
       within(within(table).getAllByRole('row')[1]).getAllByRole('cell')[1];
 
     // Default sort = timestamp desc → 12:00 sample (inside 10) is first.
-    expect(firstInsideCell()).toHaveTextContent('10.0');
+    expect(firstInsideCell()).toHaveTextContent('10.00');
 
     // Sort by "Inside" → desc puts the hottest (30) on top.
     fireEvent.click(screen.getByRole('button', { name: 'Inside °C' }));
-    expect(firstInsideCell()).toHaveTextContent('30.0');
+    expect(firstInsideCell()).toHaveTextContent('30.00');
   });
 });
 
@@ -507,7 +571,7 @@ describe('ClimateControlPage — heatStyle rounding (regression)', () => {
     renderPage();
 
     // 2.6 → 3 → "High"; subtitle rounds too (Level 3).
-    const swCard = card('Steering Wheel Heat Level');
+    const swCard = card('Steering wheel heat level');
     expect(within(swCard).getByText('High')).toBeInTheDocument();
     expect(within(swCard).getByText('Level 3')).toBeInTheDocument();
     // Front-right seat heater 1.6 → 2 → "Medium (2/3)".

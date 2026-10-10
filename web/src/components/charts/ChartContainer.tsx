@@ -11,13 +11,18 @@ import {
 import { useTranslation } from 'react-i18next';
 import { Tag, Plus, Eye, EyeOff } from 'lucide-react';
 import { cn } from '@/lib/cn';
+import { glassCardClasses, neonColorMap, typography } from '@/lib/tokens';
 import { ChartSkeleton } from '@/components/feedback/ChartSkeleton';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { QueryError } from '@/components/feedback/QueryError';
 import { SectionErrorBoundary } from '@/components/feedback/SectionErrorBoundary';
-import { Button, FullscreenButton, Heading, Text } from '@/components/ui';
-import { VisuallyHidden } from '@/components/a11y';
+import { Button } from '../ui/Button';
+import { FullscreenButton } from '../ui/FullscreenButton';
+import { Heading, Text } from '../ui/Typography';
+import { Table } from '../ui/Table';
+import { VisuallyHidden } from '../a11y/VisuallyHidden';
 import { useChartExport } from '@/hooks/useChartExport';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { downloadCSV, objectsToCSV, defaultExportFilename, type CsvCellValue } from '@/lib/csvExport';
 import { getLangDir, textAnchorForDir, type Direction } from '@/lib/i18nDir';
 import { AnnotationList } from './AnnotationList';
@@ -77,9 +82,17 @@ export interface ChartContainerProps {
   /**
    * `embedded` removes panel chrome and the visible title bar while retaining
    * loading/error/empty states, chart semantics, and the fallback data table.
+   * Explicit capability props or `toolbar` mount the same canonical controls
+   * without introducing another visible heading or surface.
    * Use through `<EmbeddedChart>` inside an existing widget or panel shell.
    */
   variant?: 'panel' | 'embedded';
+  /** Opt into an embedded control strip, or explicitly suppress the toolbar.
+   * Embedded capability props also opt in; panel defaults remain unchanged. */
+  toolbar?: boolean;
+  /** Shared host adapters with their own heading use a hidden text label.
+   * Standalone embedded frames retain their original hidden heading. */
+  embeddedTitleHeading?: boolean;
   /** Optional decorative title icon. */
   icon?: React.ReactNode;
   subtitle?: string;
@@ -129,7 +142,8 @@ export interface ChartContainerProps {
   exportable?: boolean;
   exportFilename?: string;
   /** When set, exposes "Download data as CSV" in the
-   *  chart's overflow menu. The data is serialized via `objectsToCSV`. */
+   * chart's overflow menu. Serialized unchanged via `objectsToCSV`; callers
+   * supply the complete export scope independently of plotted/fallback `data`. */
   exportData?: ReadonlyArray<Record<string, CsvCellValue>>;
   /** When set, the container takes ownership of the
    *  full annotation flow (fetch, add, delete, hide). Children should be a
@@ -167,8 +181,8 @@ export interface ChartContainerProps {
   data?: ReadonlyArray<ChartDataRow>;
   /**
    * Column definitions for the fallback table. Required when `data`
-   * is set. `format` is unit-aware and runs once per cell; default
-   * stringifies the raw value.
+   * is set. `format` is unit-aware and runs once per cell; `kind` opts numeric
+   * cells into Settings/count formatting. Untyped cells keep raw IDs/strings.
    */
   dataColumns?: ReadonlyArray<ChartDataColumn>;
   /**
@@ -230,6 +244,8 @@ export interface ChartDataColumn {
   key: string;
   /** Visible column header. Pre-localized at the call site. */
   label: string;
+  /** Optional numeric semantics; omitted preserves raw counts/IDs/strings. */
+  kind?: 'measurement' | 'count';
   /**
    * Optional formatter — typically `(v) => formatKWh(v as number)` so
    * the table reads in the same units the visible chart axes use.
@@ -240,6 +256,7 @@ export interface ChartDataColumn {
 }
 
 const HIDDEN_STORAGE_PREFIX = 'teslasync-annotations-hidden:';
+const toolbarIconClassName = 'h-11 w-11 p-0 md:h-7 md:w-7';
 
 function readHiddenPref(key: string): boolean {
   if (typeof window === 'undefined') return false;
@@ -274,6 +291,8 @@ export const ChartContainer = forwardRef<HTMLDivElement, ChartContainerProps>(
     {
       title,
       variant = 'panel',
+      toolbar,
+      embeddedTitleHeading = true,
       icon,
       subtitle,
       metadata,
@@ -306,6 +325,7 @@ export const ChartContainer = forwardRef<HTMLDivElement, ChartContainerProps>(
     ref,
   ) {
     const { t } = useTranslation();
+    const { fmtNumber, fmtInt } = useNumberFormatting();
     const { chartRef, exportPNG, exportSVG, copyToClipboard, exporting } =
       useChartExport(exportFilename ?? title);
     // Separate ref for the figure node used
@@ -327,7 +347,42 @@ export const ChartContainer = forwardRef<HTMLDivElement, ChartContainerProps>(
     const annotationsEnabled = annotationsConfig != null;
     const annotationKey = annotationsConfig?.chartId ?? title;
     const [hidden, setHidden] = useState(() => readHiddenPref(annotationKey));
-    const [popoverOpen, setPopoverOpen] = useState(false);
+    const contextKey = JSON.stringify([
+      annotationsEnabled, annotationsConfig?.vehicleId ?? null,
+      annotationsConfig?.scope, annotationKey, chartKey ?? null, variant,
+    ]);
+    const liveContext = useRef({ key: contextKey, revision: 0, available: false });
+    if (liveContext.current.key !== contextKey) {
+      liveContext.current = { key: contextKey, revision: liveContext.current.revision + 1, available: false };
+    }
+    liveContext.current.available = annotationsEnabled && !(loading || error || empty) && toolbar !== false;
+    const instance = useRef(0);
+    const mounted = useRef(false);
+    const submittedRevision = useRef<number | null>(null);
+    type AnnotationReturnRecord = {
+      instance: number;
+      closingInstance: number | null;
+      getTarget: () => HTMLElement | null;
+    };
+    const annotationReturn = useRef<AnnotationReturnRecord | null>(null);
+    const [annotationTarget, setAnnotationTarget] = useState<{
+      instance: number;
+      key: string;
+      revision: number;
+      vehicleId: number | null;
+      scope: AnnotationScope;
+      timestamp: string;
+      label: string;
+    } | null>(null);
+
+    useEffect(() => {
+      mounted.current = true;
+      return () => {
+        mounted.current = false;
+        instance.current += 1;
+        annotationReturn.current = null;
+      };
+    }, []);
 
     useEffect(() => {
       if (annotationsEnabled) setHidden(readHiddenPref(annotationKey));
@@ -360,21 +415,39 @@ export const ChartContainer = forwardRef<HTMLDivElement, ChartContainerProps>(
     }, [annotationKey]);
 
     const handleAddAnnotation = useCallback(
-      (label: string, category: AnnotationCategory, description?: string, occurredAt?: string) => {
-        if (!annotationsEnabled || !annotationsConfig) return;
-        if (!occurredAt) return;
-        createMutation.mutate({
-          vehicle_id: annotationsConfig.vehicleId ?? null,
+      async (label: string, category: AnnotationCategory, description?: string, occurredAt?: string) => {
+        if (!annotationTarget || !mounted.current || instance.current !== annotationTarget.instance ||
+            !liveContext.current.available || liveContext.current.key !== annotationTarget.key ||
+            !occurredAt || !Number.isFinite(Date.parse(occurredAt))) {
+          throw new Error('Annotation target is unavailable');
+        }
+        submittedRevision.current = liveContext.current.revision;
+        await createMutation.mutateAsync({
+          vehicle_id: annotationTarget.vehicleId,
           occurred_at: occurredAt,
           category,
           title: label,
           description,
-          scope: [annotationsConfig.scope],
+          scope: [annotationTarget.scope],
         });
-        setPopoverOpen(false);
       },
-      [annotationsEnabled, annotationsConfig, createMutation],
+      [annotationTarget, createMutation],
     );
+
+    const getSettlementAuthority = useCallback((): 'current' | 'stale' =>
+      annotationTarget && mounted.current && instance.current === annotationTarget.instance &&
+      liveContext.current.available && liveContext.current.key === annotationTarget.key &&
+      liveContext.current.revision === submittedRevision.current ? 'current' : 'stale',
+    [annotationTarget]);
+
+    const closeAnnotation = useCallback(() => {
+      instance.current += 1;
+      if (annotationReturn.current?.instance === instance.current - 1) {
+        annotationReturn.current.closingInstance = instance.current;
+      }
+      submittedRevision.current = null;
+      setAnnotationTarget(null);
+    }, []);
 
     const handleRemoveAnnotation = useCallback(
       (id: string) => {
@@ -408,6 +481,12 @@ export const ChartContainer = forwardRef<HTMLDivElement, ChartContainerProps>(
     // DOM, but the image actions only make sense once the chart is
     // actually rendered with data.
     const showExportMenu = exportableResolved && !loading && !error && !empty;
+    const controlsUnavailable = !!(loading || error || empty);
+    const showToolbar = toolbar !== false && (
+      variant === 'panel' || toolbar === true || !!(
+        icon || action || annotationsEnabled || exportable === true || fullscreen
+      )
+    );
 
     // `childrenContent` is a function of the
     // resolved `hiddenSeries` state because the function-children
@@ -436,6 +515,23 @@ export const ChartContainer = forwardRef<HTMLDivElement, ChartContainerProps>(
     // wrapper is intentionally NOT used because the data must remain visible.
     const showMarkerRow =
       annotationsEnabled && !hidden && visibleAnnotations.length > 0;
+    const metadataContent = (
+      metadata?.rangeLabel || metadata?.sourceLabel || metadata?.freshnessLabel || metadata?.unitLabel
+    ) ? (
+      <Text
+        as="p"
+        variant="caption"
+        className="mt-1 flex flex-wrap gap-x-2 gap-y-0.5"
+        data-chart-metadata
+      >
+        {metadata.rangeLabel && <span data-chart-range>{metadata.rangeLabel}</span>}
+        {metadata.sourceLabel && <span data-chart-source>{metadata.sourceLabel}</span>}
+        {metadata.freshnessLabel && (
+          <span data-chart-freshness-label>{metadata.freshnessLabel}</span>
+        )}
+        {metadata.unitLabel && <span data-chart-unit>{metadata.unitLabel}</span>}
+      </Text>
+    ) : null;
 
     return (
       <figure
@@ -462,7 +558,7 @@ export const ChartContainer = forwardRef<HTMLDivElement, ChartContainerProps>(
                 'group m-0 border-0 bg-transparent p-0 shadow-none',
                 fluid && 'h-full min-h-0 max-h-full',
               )
-            : 'group rounded-panel border border-[var(--panel-border)] bg-[var(--panel-bg)] p-5 shadow-panel',
+            : cn('group', glassCardClasses.lg),
           // Tailwind preflight already removes default <figure> margins;
           // re-state `m-0` defensively so any consumer override of preflight
           // doesn't shift the chart vertical rhythm.
@@ -484,7 +580,7 @@ export const ChartContainer = forwardRef<HTMLDivElement, ChartContainerProps>(
       >
         {variant === 'embedded' ? (
           <>
-            <VisuallyHidden as="h3" id={titleId}>
+            <VisuallyHidden as={embeddedTitleHeading ? 'h3' : 'span'} id={titleId}>
               {title}
             </VisuallyHidden>
             {subtitle && (
@@ -493,12 +589,19 @@ export const ChartContainer = forwardRef<HTMLDivElement, ChartContainerProps>(
               </VisuallyHidden>
             )}
           </>
-        ) : (
-          <div className="mb-5 flex flex-col gap-3 border-b border-[var(--border-subtle)] pb-4 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+        ) : null}
+        {(variant === 'panel' || showToolbar) && (
+          <div className={cn(
+            'flex min-w-0 flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4',
+            variant === 'panel'
+              ? 'mb-5 border-b border-[var(--border-subtle)] pb-4'
+              : 'mb-3',
+          )}>
+          {variant === 'panel' ? (
           <div className="flex min-w-0 items-start gap-2.5">
             {icon && (
               <span
-                className="mt-0.5 inline-flex shrink-0 text-[var(--theme-primary)]"
+                className={cn('mt-0.5 inline-flex shrink-0', typography.color.muted)}
                 aria-hidden="true"
               >
                 {icon}
@@ -511,25 +614,23 @@ export const ChartContainer = forwardRef<HTMLDivElement, ChartContainerProps>(
               {subtitle && (
                 <Text as="p" variant="caption" className="mt-1 leading-relaxed">{subtitle}</Text>
               )}
-              {(metadata?.rangeLabel || metadata?.sourceLabel || metadata?.freshnessLabel || metadata?.unitLabel) && (
-                <Text
-                  as="p"
-                  variant="caption"
-                  className="mt-1 flex flex-wrap gap-x-2 gap-y-0.5"
-                  data-chart-metadata
-                >
-                  {metadata.rangeLabel && <span data-chart-range>{metadata.rangeLabel}</span>}
-                  {metadata.sourceLabel && <span data-chart-source>{metadata.sourceLabel}</span>}
-                  {metadata.freshnessLabel && (
-                    <span data-chart-freshness-label>{metadata.freshnessLabel}</span>
-                  )}
-                  {metadata.unitLabel && <span data-chart-unit>{metadata.unitLabel}</span>}
-                </Text>
-              )}
+              {metadataContent}
             </div>
           </div>
+          ) : (icon || metadataContent) ? (
+            <div className="flex min-w-0 items-start gap-2.5">
+              {icon && (
+                <span className={cn('inline-flex shrink-0', typography.color.muted)} aria-hidden="true">
+                  {icon}
+                </span>
+              )}
+              {metadataContent}
+            </div>
+          ) : null}
+          {showToolbar && (
           <div
             className="flex w-full flex-wrap items-center justify-end gap-1 sm:w-auto"
+            data-chart-toolbar
             // Exclude the title-bar action toolbar
             // (annotation buttons, export menu, page-supplied actions)
             // from the chart capture so the exported PNG/clipboard image
@@ -542,11 +643,51 @@ export const ChartContainer = forwardRef<HTMLDivElement, ChartContainerProps>(
             {annotationsEnabled && (
               <>
                 <Button
+                  key={liveContext.current.revision}
                   variant="ghost"
                   size="sm"
-                  className="!h-7 !w-7 !p-0 text-[var(--text-muted)] hover:text-[var(--text-secondary)]"
+                  className={cn(toolbarIconClassName, typography.color.muted, 'hover:text-[var(--text-secondary)]')}
                   icon={<Plus className="h-3.5 w-3.5" />}
-                  onClick={() => setPopoverOpen(true)}
+                  onClick={(event) => {
+                    if (annotationTarget || !annotationsConfig || !liveContext.current.available) return;
+                    event.currentTarget.focus();
+                    submittedRevision.current = null;
+                    const trigger = event.currentTarget;
+                    const targetInstance = ++instance.current;
+                    const targetKey = liveContext.current.key;
+                    const targetRevision = liveContext.current.revision;
+                    const returnRecord: AnnotationReturnRecord = {
+                      instance: targetInstance,
+                      closingInstance: null,
+                      getTarget: (): HTMLElement | null => {
+                        if (annotationReturn.current !== returnRecord) return null;
+                        annotationReturn.current = null;
+                        return mounted.current && liveContext.current.available &&
+                          liveContext.current.key === targetKey &&
+                          liveContext.current.revision === targetRevision &&
+                          (instance.current === targetInstance ||
+                            instance.current === returnRecord.closingInstance)
+                          ? trigger : null;
+                      },
+                    };
+                    annotationReturn.current = returnRecord;
+                    setAnnotationTarget({
+                      instance: targetInstance,
+                      key: liveContext.current.key,
+                      revision: liveContext.current.revision,
+                      vehicleId: annotationsConfig.vehicleId ?? null,
+                      scope: annotationsConfig.scope,
+                      timestamp: new Date().toISOString(),
+                      label: annotationsConfig.vehicleId == null
+                        ? t('annotation.targetFleet', '{{chart}} — fleet-wide — scope {{scope}}', {
+                            chart: title, scope: annotationsConfig.scope,
+                          })
+                        : t('annotation.targetVehicle', '{{chart}} — vehicle {{vehicleId}} — scope {{scope}}', {
+                            chart: title, vehicleId: annotationsConfig.vehicleId, scope: annotationsConfig.scope,
+                          }),
+                    });
+                  }}
+                  disabled={controlsUnavailable}
                   aria-label={t('annotations.add', 'Add annotation')}
                   title={t('annotations.add', 'Add annotation')}
                 />
@@ -554,13 +695,14 @@ export const ChartContainer = forwardRef<HTMLDivElement, ChartContainerProps>(
                   variant="ghost"
                   size="sm"
                   className={cn(
-                    '!h-7 !w-7 !p-0',
+                    toolbarIconClassName,
                     hidden
                       ? 'text-[var(--text-muted)] hover:text-[var(--text-secondary)]'
-                      : 'text-blue-400 hover:text-blue-300',
+                      : neonColorMap.blue.text,
                   )}
                   icon={hidden ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
                   onClick={toggleHidden}
+                  disabled={controlsUnavailable}
                   aria-pressed={hidden}
                   aria-label={
                     hidden
@@ -586,8 +728,12 @@ export const ChartContainer = forwardRef<HTMLDivElement, ChartContainerProps>(
               />
             )}
 
-            {fullscreen && <FullscreenButton targetRef={figureRef} />}
+            {fullscreen && !controlsUnavailable && <FullscreenButton
+              targetRef={figureRef}
+              className="!h-11 !w-11 md:!h-7 md:!w-7"
+            />}
           </div>
+          )}
           </div>
         )}
 
@@ -597,14 +743,16 @@ export const ChartContainer = forwardRef<HTMLDivElement, ChartContainerProps>(
             aria-label={t('annotations.markerRow', 'Annotations on this chart')}
           >
             {visibleAnnotations.map((ann) => (
-              <span
+              <Text
+                as="span"
+                variant="caption"
                 key={ann.id}
-                className="inline-flex items-center gap-1 rounded-full border border-[var(--border-subtle)] bg-[var(--surface-2)] px-2 py-0.5 text-2xs text-[var(--text-secondary)]"
+                className={cn('inline-flex items-center gap-1 rounded-full border border-[var(--border-subtle)] bg-[var(--surface-2)] px-2 py-0.5', typography.color.secondary)}
                 title={ann.description ?? ann.label}
               >
                 <Tag className="h-2.5 w-2.5" aria-hidden="true" />
                 {ann.label}
-              </span>
+              </Text>
             ))}
           </div>
         )}
@@ -619,6 +767,8 @@ export const ChartContainer = forwardRef<HTMLDivElement, ChartContainerProps>(
             'relative w-full min-w-0 max-w-full overflow-hidden [contain:layout_size]',
             fluid
               ? cn(
+                  // A minimum height is not a percentage-height basis for the plot.
+                  'flex flex-col [&>.recharts-responsive-container]:flex-1 [&>.recharts-responsive-container]:min-h-0',
                   'h-full min-h-[var(--chart-height-mobile)] max-h-full',
                   'sm:min-h-[var(--chart-height-desktop)]',
                 )
@@ -738,7 +888,8 @@ export const ChartContainer = forwardRef<HTMLDivElement, ChartContainerProps>(
             </p>
           )}
           {hasFallbackTable ? (
-            <table
+            <Table
+              variant="embedded"
               className={cn(
                 'w-full border-collapse text-xs',
                 'forced-colors:text-[CanvasText]',
@@ -775,7 +926,11 @@ export const ChartContainer = forwardRef<HTMLDivElement, ChartContainerProps>(
                           ? col.format(raw)
                           : raw == null
                             ? '—'
-                            : String(raw);
+                            : typeof raw === 'number' && col.kind != null
+                              ? Number.isFinite(raw)
+                                ? col.kind === 'count' ? fmtInt(raw) : fmtNumber(raw)
+                                : '—'
+                              : String(raw);
                       return (
                         <td
                           key={col.key}
@@ -791,7 +946,7 @@ export const ChartContainer = forwardRef<HTMLDivElement, ChartContainerProps>(
                   </tr>
                 ))}
               </tbody>
-            </table>
+            </Table>
           ) : !ariaDescription ? (
             // Neither a structured table nor a long description — fall
             // back to the bare summary so SR users still hear something
@@ -807,13 +962,20 @@ export const ChartContainer = forwardRef<HTMLDivElement, ChartContainerProps>(
           />
         )}
 
-        {annotationsEnabled && (
+        {(annotationsEnabled || annotationTarget) && (
           <AddAnnotationPopover
-            open={popoverOpen}
-            timestamp={new Date().toISOString()}
+            open={annotationTarget !== null}
+            getReturnFocusTarget={annotationReturn.current?.getTarget}
+            timestamp={annotationTarget?.timestamp ?? ''}
             editableDate
             onAdd={handleAddAnnotation}
-            onCancel={() => setPopoverOpen(false)}
+            onAdded={() => { if (getSettlementAuthority() === 'current') closeAnnotation(); }}
+            createAuthority={annotationTarget ? {
+              targetLabel: annotationTarget.label,
+              canSubmit: liveContext.current.available && liveContext.current.key === annotationTarget.key,
+              getSettlementAuthority,
+            } : undefined}
+            onCancel={closeAnnotation}
           />
         )}
       </figure>

@@ -1,5 +1,6 @@
-import { describe, expect, it } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { act, cleanup, render, screen } from '@testing-library/react'
+import { getFormatterPreferences, setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat'
 import { MemoryRouter } from 'react-router-dom'
 import type { ReactNode } from 'react'
 import {
@@ -9,11 +10,46 @@ import {
   type UsageCardTopList,
 } from '../UsageCard'
 
+let previousPreferences: ReturnType<typeof getFormatterPreferences>
+
+beforeEach(() => {
+  previousPreferences = getFormatterPreferences()
+  setGlobalPrecision(2)
+  setGlobalLocale('en-US')
+})
+
+afterEach(() => {
+  cleanup()
+  setGlobalPrecision(previousPreferences.precision)
+  setGlobalLocale(previousPreferences.locale)
+})
+
 function wrap(ui: ReactNode) {
   return render(<MemoryRouter>{ui}</MemoryRouter>)
 }
 
 describe('UsageCard', () => {
+  it('updates accessible budget percentages while preserving raw overflow and caller strings', () => {
+    setGlobalPrecision(2)
+    wrap(<UsageCard budget={{ headline: '$12.345 raw caller text', pct: 123.456, ariaLabel: 'Budget' }} />)
+    const bar = screen.getByRole('progressbar')
+    expect(bar).toHaveAttribute('aria-valuetext', '123.46%')
+    act(() => setGlobalPrecision(3))
+    expect(bar).toHaveAttribute('aria-valuetext', '123.456%')
+    expect(bar).toHaveAttribute('aria-valuenow', '123')
+    expect(screen.getByText('$12.345 raw caller text')).toBeInTheDocument()
+  })
+  it('preserves supplied band and top-list label casing', () => {
+    wrap(
+      <UsageCard
+        bands={[{ label: 'Tesla API', value: '12' }]}
+        topLists={[{ key: 'units', title: 'Energy (kWh)', items: [{ key: 'home', label: 'Home', value: '5' }] }]}
+      />,
+    )
+    expect(screen.getByText('Tesla API')).not.toHaveClass('uppercase', 'capitalize')
+    expect(screen.getByText('Energy (kWh)')).not.toHaveClass('uppercase', 'capitalize')
+  })
+
   it('renders the empty state when no sections are provided', () => {
     wrap(<UsageCard emptyMessage="Nothing here yet." />)
     expect(screen.getByText('Nothing here yet.')).toBeInTheDocument()
@@ -157,5 +193,51 @@ describe('UsageCard', () => {
     expect(screen.getByText('Top features')).toBeInTheDocument()
     expect(screen.getByText('Heads up')).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /go/i })).toBeInTheDocument()
+  })
+
+  it.each([0, -12, 72.5, 250])('retains source percentage %s with only visual clamping', (pct) => {
+    wrap(<UsageCard budget={{ headline: 'Source budget', pct, ariaLabel: 'Budget' }} />)
+    const bar = screen.getByRole('progressbar')
+    expect(bar).toHaveAttribute('aria-valuenow', String(Math.max(0, Math.round(pct))))
+    expect(bar.firstElementChild).toHaveStyle({ width: `${Math.max(0, Math.min(100, pct))}%` })
+  })
+
+  it.each([NaN, Infinity, -Infinity])('does not invent a measured percentage for %s', (pct) => {
+    wrap(<UsageCard budget={{ headline: 'Unknown source budget', pct, ariaLabel: 'Budget' }} />)
+    const bar = screen.getByRole('progressbar')
+    expect(bar).not.toHaveAttribute('aria-valuenow')
+    expect(bar).toHaveAttribute('aria-valuetext', '—')
+    expect(bar).toBeEmptyDOMElement()
+    expect(screen.getByText('Unknown source budget')).toBeInTheDocument()
+  })
+
+  it('retains zero, unknown, rich captions and long source labels without truncation', () => {
+    const label = 'https://example.com/' + 'long-source-limitation/'.repeat(12)
+    wrap(
+      <UsageCard
+        className="owned-card"
+        budget={{ headline: 'Known zero', rightLabel: 0, caption: <strong>Source scope</strong>, pct: 0, ariaLabel: 'Budget' }}
+        bands={[{ label: 'Calls', value: 0, sub: 0 }]}
+        details={[{ label: 'Unobserved', value: '—' }]}
+        topLists={[{ key: 'prior', title: 'Prior history', items: [{ key: 'source', label, value: 0 }] }]}
+      />,
+    )
+    expect(screen.getAllByText('0')).toHaveLength(4)
+    expect(screen.getByText('—')).toBeInTheDocument()
+    expect(screen.getByText('Source scope').tagName).toBe('STRONG')
+    expect(screen.getByText('Prior history')).toBeInTheDocument()
+    expect(screen.getByText(label)).not.toHaveClass('truncate')
+    expect(screen.getByText(label)).toHaveClass('break-all')
+    expect(screen.getByText('Known zero').closest('.owned-card')).toBeInTheDocument()
+  })
+
+  it('keeps native footer links reachable with shared focus and wrapping roles', () => {
+    wrap(<UsageCard footer={[{ key: 'route', to: '/prior', label: 'Prior history' }]} />)
+    const link = screen.getByRole('link', { name: 'Prior history' })
+    expect(link).toHaveAttribute('href', '/prior')
+    expect(link).toHaveClass('min-h-11', 'min-w-11', 'max-w-full', 'focus-visible:outline-2')
+    link.focus()
+    expect(link).toHaveFocus()
+    expect(screen.getByText('Prior history')).toHaveClass('break-all', 'text-start')
   })
 })

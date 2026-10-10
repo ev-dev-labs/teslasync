@@ -48,22 +48,31 @@ describe('BridgeStatus', () => {
   });
 
   it('loading: shows a skeleton, marks the live region busy, and hides resolved copy', () => {
-    const { container } = render(<BridgeStatus enabled={false} repo="" loading />);
+    render(<BridgeStatus enabled={false} repo="" loading />);
 
-    const region = screen.getByRole('status');
+    const region = screen.getByRole('status', { name: 'GitHub bridge' });
     expect(region).toHaveAttribute('aria-busy', 'true');
-    // Skeleton primitive renders an animate-pulse bar.
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
+    // The busy region owns one static decorative placeholder.
+    const placeholders = region.querySelectorAll(':scope > div[aria-hidden="true"]');
+    expect(placeholders).toHaveLength(1);
+    expect(placeholders[0]).toHaveClass('h-4', 'rounded', 'bg-[var(--skeleton-bg)]');
+    expect(placeholders[0]).toHaveStyle({ height: '16px', width: '60%' });
+    expect(placeholders[0]).not.toHaveClass('animate-pulse');
     // Neither resolved branch should be present while loading.
     expect(screen.queryByText(/Connected/)).toBeNull();
     expect(screen.queryByText('Not configured')).toBeNull();
   });
 
   it('loading precedence: stays in the skeleton even when enabled is true', () => {
-    const { container } = render(<BridgeStatus enabled repo={REPO} loading />);
+    render(<BridgeStatus enabled repo={REPO} loading />);
 
-    expect(screen.getByRole('status')).toHaveAttribute('aria-busy', 'true');
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
+    const region = screen.getByRole('status', { name: 'GitHub bridge' });
+    expect(region).toHaveAttribute('aria-busy', 'true');
+    const placeholders = region.querySelectorAll(':scope > div[aria-hidden="true"]');
+    expect(placeholders).toHaveLength(1);
+    expect(placeholders[0]).toHaveClass('h-4', 'rounded', 'bg-[var(--skeleton-bg)]');
+    expect(placeholders[0]).toHaveStyle({ height: '16px', width: '60%' });
+    expect(placeholders[0]).not.toHaveClass('animate-pulse');
     expect(screen.queryByText(/Connected/)).toBeNull();
     expect(screen.queryByText(REPO)).toBeNull();
   });
@@ -116,5 +125,14 @@ describe('BridgeStatus', () => {
     expect(region.getAttribute('aria-labelledby')).toBe(heading.id);
     expect(heading.id).not.toBe('');
     expect(region).toHaveAccessibleName('GitHub bridge');
+  });
+
+  it('unknown: does not claim the bridge is unconfigured when its source could not be read', () => {
+    const { container } = render(<BridgeStatus enabled={false} repo="" loading={false} unknown />);
+    expect(screen.getByRole('status', { name: 'GitHub bridge' })).toHaveTextContent('Unknown');
+    expect(screen.queryByText('Not configured')).toBeNull();
+    expect(screen.queryByText(/Set TESLASYNC_GITHUB_REPO/)).toBeNull();
+    expect(screen.queryByText(/Connected/)).toBeNull();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).toBeNull();
   });
 });

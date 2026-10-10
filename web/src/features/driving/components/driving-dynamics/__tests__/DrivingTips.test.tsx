@@ -1,78 +1,42 @@
 /**
- * DrivingTips — per-tip tone/icon regression + branch coverage.
- *
- * Pre-fix bug:
- *   Every tip row rendered a single icon chosen from ONE global signal
- *   (`throttleStyle === 'conservative' ? ShieldCheck : AlertTriangle`).
- *   Two consequences fell out of that:
- *     1. The "Drive your vehicle to start collecting dynamics data."
- *        informational prompt (shown when motorStats is null, and
- *        throttleStyle is therefore null) rendered a red-flag
- *        AlertTriangle — a warning glyph on a neutral onboarding hint.
- *     2. A genuinely *conservative* driver whose motor is running hot
- *        (maxMotorTemp > 120) got a reassuring green ShieldCheck on the
- *        "Motor temps are running high…" caution — the warning was
- *        visually disguised as an all-clear.
- *
- * Post-fix (this suite pins it):
- *   Each tip carries its own semantic `tone` ('info' | 'positive' |
- *   'caution'); the icon is derived from that tone, so the glyph always
- *   matches the message. The `throttleStyle` prop — the buggy global
- *   signal — is removed entirely; tone is a pure function of the tip.
- *
- * The component is presentational (no network, no interactive controls),
- * so these tests exercise every generation branch, the tone→icon
- * mapping, null-safety, and the list/heading accessibility contract.
- * i18n is stubbed to echo the English `defaultValue` (matches the
- * sibling SummaryStats / MotorEfficiencyInsights tests).
+ * Ride guidance must explain measurements, never manufacture a style score,
+ * guaranteed savings, braking quality, or an overheating diagnosis.
+ * The original global tone regression remains covered: each row owns its icon.
  */
+import { beforeEach, describe, it, expect, vi } from 'vitest';
+import { render, screen, within } from '@testing-library/react';
+import type { ReactNode } from 'react';
+import { MemoryRouter } from 'react-router-dom';
+import DrivingTips from '../DrivingTips';
+import type { MotorStats } from '../helpers';
 
-import { describe, it, expect, vi } from 'vitest'
-import { render, screen, within } from '@testing-library/react'
-import type { ReactNode } from 'react'
-
-import DrivingTips from '../DrivingTips'
-import type { MotorStats } from '../helpers'
-
-// The panel now owns its data via the shared useMotorStats hook rather than
-// receiving a page-computed prop, so the recommendations refresh with the
-// rolling history window. The hook is stubbed and driven by `renderTips`.
-let mockMotorStats: MotorStats | null = null
+let mockMotorStats: MotorStats | null = null;
+let loading = false;
+let error: Error | null = null;
+const retry = vi.fn();
 
 vi.mock('../useMotorStats', () => ({
   MOTOR_HISTORY_LIMIT: 200,
   useMotorStats: () => ({
     motorStats: mockMotorStats,
-    isLoading: false,
-    isError: false,
-    error: null,
-    refetch: () => {},
+    isLoading: loading,
+    isError: error != null,
+    error,
+    refetch: retry,
   }),
-}))
-
-function renderTips(motorStats: MotorStats | null) {
-  mockMotorStats = motorStats
-  return render(<DrivingTips vehicleId={1} />)
-}
+}));
 
 vi.mock('react-i18next', async () => {
-  const actual = await vi.importActual<typeof import('react-i18next')>('react-i18next')
+  const actual = await vi.importActual<typeof import('react-i18next')>('react-i18next');
   return {
     ...actual,
     useTranslation: () => ({
-      t: (key: string, fallbackOrOpts?: unknown) => {
-        if (typeof fallbackOrOpts === 'string') return fallbackOrOpts
-        if (fallbackOrOpts && typeof fallbackOrOpts === 'object') {
-          const o = fallbackOrOpts as Record<string, unknown>
-          if (typeof o.defaultValue === 'string') return o.defaultValue
-        }
-        return key
-      },
+      t: (key: string, fallback?: unknown) => typeof fallback === 'string' ? fallback : key,
       i18n: { language: 'en', changeLanguage: vi.fn() },
     }),
     Trans: ({ children }: { children?: ReactNode }) => <>{children}</>,
-  }
-})
+  };
+});
 
 function makeStats(overrides: Partial<MotorStats> = {}): MotorStats {
   return {
@@ -87,181 +51,142 @@ function makeStats(overrides: Partial<MotorStats> = {}): MotorStats {
     peakRegen: 0,
     highTorquePct: 10,
     ...overrides,
-  }
+  };
 }
 
-/** Expected lucide class per tone (createLucideIcon → `lucide-<kebab>`). */
-const TONE_ICON_CLASS: Record<string, string> = {
-  info: 'lucide-lightbulb',
-  positive: 'lucide-shield-check',
-  caution: 'lucide-triangle-alert',
+function renderTips(stats: MotorStats | null) {
+  mockMotorStats = stats;
+  return render(<MemoryRouter><DrivingTips vehicleId={1} historyQuery={{ start: '2026-10-01T10:00:00Z', end: '2026-10-01T11:00:00Z' }} /></MemoryRouter>);
 }
 
-function getTipItems(): HTMLElement[] {
-  const list = screen.getByRole('list')
-  return within(list).getAllByRole('listitem')
+function items() {
+  return within(screen.getByRole('list')).getAllByRole('listitem');
 }
 
-function toneOf(li: HTMLElement): string | null {
-  return li.getAttribute('data-tone')
-}
+beforeEach(() => {
+  loading = false;
+  error = null;
+  retry.mockClear();
+});
 
-function iconClassOf(li: HTMLElement): string {
-  const svg = li.querySelector('svg')
-  return svg?.getAttribute('class') ?? ''
-}
+describe('DrivingTips — persistent shell and semantics', () => {
+  it('renders the guidance heading when there is no historical data', () => {
+    renderTips(null);
+    expect(screen.getByRole('heading', { name: 'How to read this ride' })).toBeInTheDocument();
+  });
 
-describe('DrivingTips — panel + accessibility', () => {
-  it('always renders the panel heading, even with no data', () => {
-    renderTips(null)
-    const heading = screen.getByRole('heading', { name: /Driving Style Recommendations/i })
-    expect(heading).toBeInTheDocument()
-    expect(heading.tagName).toBe('H3')
-  })
+  it('exposes measured guidance as a semantic list', () => {
+    renderTips(makeStats());
+    expect(screen.getByRole('list').tagName).toBe('UL');
+    expect(items()).toHaveLength(4);
+  });
 
-  it('exposes the tips as a semantic list with one <li> per tip', () => {
-    renderTips(makeStats({ avgPower: 120 }))
-    const list = screen.getByRole('list')
-    expect(list.tagName).toBe('UL')
-    const items = within(list).getAllByRole('listitem')
-    expect(items).toHaveLength(2)
-  })
-
-  it('marks every tip icon decorative (aria-hidden) so screen readers rely on the text', () => {
-    renderTips(makeStats({ avgPower: 5 }))
-    const items = getTipItems()
-    for (const li of items) {
-      const svg = li.querySelector('svg')
-      expect(svg).not.toBeNull()
-      expect(svg?.getAttribute('aria-hidden')).toBe('true')
+  it('keeps every icon decorative so text carries the meaning', () => {
+    renderTips(makeStats());
+    for (const item of items()) {
+      expect(item.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
     }
-  })
-})
+  });
 
-describe('DrivingTips — no-data / info branch', () => {
-  it('renders exactly the onboarding hint when motorStats is null', () => {
-    renderTips(null)
-    expect(
-      screen.getByText('Drive your vehicle to start collecting dynamics data.'),
-    ).toBeInTheDocument()
-    const items = getTipItems()
-    expect(items).toHaveLength(1)
-  })
+  it('uses informational icons instead of praise or caution inferred from power', () => {
+    renderTips(makeStats({ avgPower: 95, maxMotorTemp: 135 }));
+    for (const item of items()) {
+      expect(item).toHaveAttribute('data-tone', 'info');
+      expect(item.querySelector('svg')).toHaveClass('lucide-lightbulb');
+    }
+    expect(screen.getByRole('list').querySelector('.lucide-triangle-alert')).toBeNull();
+    expect(screen.getByRole('list').querySelector('.lucide-shield-check')).toBeNull();
+  });
+});
 
-  it('shows the info (Lightbulb) icon — NOT a warning triangle — for the onboarding hint (regression)', () => {
-    renderTips(null)
-    const [li] = getTipItems()
-    expect(toneOf(li)).toBe('info')
-    expect(iconClassOf(li)).toContain(TONE_ICON_CLASS.info)
-    // Pre-fix this row rendered AlertTriangle because throttleStyle was null.
-    const list = screen.getByRole('list')
-    expect(list.querySelector('.lucide-triangle-alert')).toBeNull()
-  })
-})
+describe('DrivingTips — independent evidence availability', () => {
+  it('uses a historical empty state rather than asking to drive to backfill a past trip', () => {
+    renderTips(null);
+    expect(screen.getByText('No measured motor evidence available for trip-specific guidance.')).toBeInTheDocument();
+    expect(screen.queryByRole('list')).toBeNull();
+  });
 
-describe('DrivingTips — power branches', () => {
-  it('aggressive power (>80) → two caution tips about easing off', () => {
-    renderTips(makeStats({ avgPower: 95 }))
-    expect(
-      screen.getByText('Ease into the accelerator — gradual inputs save energy and tire wear.'),
-    ).toBeInTheDocument()
-    expect(
-      screen.getByText('Brake earlier and lighter to improve regen capture.'),
-    ).toBeInTheDocument()
-    const items = getTipItems()
-    expect(items).toHaveLength(2)
-    expect(items.map(toneOf)).toEqual(['caution', 'caution'])
-    expect(items.every((li) => iconClassOf(li).includes(TONE_ICON_CLASS.caution))).toBe(true)
-  })
+  it('does not classify an all-null sample as excellent driving', () => {
+    renderTips(makeStats({
+      avgPower: null, peakRegen: null, maxTorque: null, maxMotorTemp: null,
+    }));
+    expect(screen.queryByRole('list')).toBeNull();
+    expect(screen.queryByText(/Excellent/)).toBeNull();
+    expect(screen.getByText(/No measured motor evidence/)).toBeInTheDocument();
+  });
 
-  it('moderate power (>20, <=80) → two smooth-throttle caution tips', () => {
-    renderTips(makeStats({ avgPower: 45 }))
-    expect(
-      screen.getByText('Smooth throttle transitions can improve efficiency by 10–15%.'),
-    ).toBeInTheDocument()
-    expect(screen.getByText('Lift off the pedal earlier to let regen do the work.')).toBeInTheDocument()
-    expect(getTipItems().map(toneOf)).toEqual(['caution', 'caution'])
-  })
+  it('explains power only when power was reported', () => {
+    renderTips(makeStats({ peakRegen: null, maxTorque: null, maxMotorTemp: null }));
+    expect(items()).toHaveLength(1);
+    expect(screen.getByText(/Average motor power alone cannot tell/)).toBeInTheDocument();
+  });
 
-  it('economical power (<=20) → two positive tips with the green shield icon', () => {
-    renderTips(makeStats({ avgPower: 12 }))
-    expect(
-      screen.getByText('Excellent driving style! Maintaining this maximizes range and comfort.'),
-    ).toBeInTheDocument()
-    expect(screen.getByText('Keep monitoring your scores — consistency is key.')).toBeInTheDocument()
-    const items = getTipItems()
-    expect(items.map(toneOf)).toEqual(['positive', 'positive'])
-    expect(items.every((li) => iconClassOf(li).includes(TONE_ICON_CLASS.positive))).toBe(true)
-  })
-})
+  it('explains regeneration only when regen was reported', () => {
+    renderTips(makeStats({ avgPower: null, maxTorque: null, maxMotorTemp: null }));
+    expect(items()).toHaveLength(1);
+    expect(screen.getByText(/friction-brake use cannot be reconstructed/)).toBeInTheDocument();
+  });
 
-describe('DrivingTips — branch boundaries', () => {
-  it('avgPower === 80 is NOT aggressive → falls through to the moderate tips', () => {
-    renderTips(makeStats({ avgPower: 80 }))
-    expect(
-      screen.getByText('Smooth throttle transitions can improve efficiency by 10–15%.'),
-    ).toBeInTheDocument()
-    expect(
-      screen.queryByText('Ease into the accelerator — gradual inputs save energy and tire wear.'),
-    ).toBeNull()
-  })
+  it('explains missing axle evidence without declaring an axle inactive', () => {
+    renderTips(makeStats({ avgPower: null, peakRegen: null, maxMotorTemp: null }));
+    expect(items()).toHaveLength(1);
+    expect(screen.getByText(/Gaps are missing telemetry/)).toBeInTheDocument();
+  });
 
-  it('avgPower === 20 is NOT moderate → falls through to the positive tips', () => {
-    renderTips(makeStats({ avgPower: 20 }))
-    expect(
-      screen.getByText('Excellent driving style! Maintaining this maximizes range and comfort.'),
-    ).toBeInTheDocument()
-    // The praise row keeps a positive tone — pre-fix a moderate
-    // throttleStyle at this boundary painted it with a warning triangle.
-    expect(getTipItems().every((li) => toneOf(li) === 'positive')).toBe(true)
-  })
-})
+  it('explains thermal limits without guessing a safe or derating threshold', () => {
+    renderTips(makeStats({ avgPower: null, peakRegen: null, maxTorque: null }));
+    expect(items()).toHaveLength(1);
+    expect(screen.getByText(/do not prove overheating or reduced power/)).toBeInTheDocument();
+  });
 
-describe('DrivingTips — thermal caution', () => {
-  it('appends a caution thermal tip when maxMotorTemp > 120', () => {
-    renderTips(makeStats({ avgPower: 12, maxMotorTemp: 135 }))
-    const items = getTipItems()
-    expect(items).toHaveLength(3)
-    expect(
-      screen.getByText('Motor temps are running high — consider easing off sustained high power.'),
-    ).toBeInTheDocument()
-  })
+  it('retains real zero measurements instead of treating zero as absent', () => {
+    renderTips(makeStats({ avgPower: 0, peakRegen: 0, maxTorque: 0, maxMotorTemp: 0 }));
+    expect(items()).toHaveLength(4);
+  });
+});
 
-  it('keeps the praise rows positive while the thermal warning stays caution (regression)', () => {
-    renderTips(makeStats({ avgPower: 12, maxMotorTemp: 135 }))
-    const tones = getTipItems().map(toneOf)
-    // Pre-fix ALL three rows shared one icon (green shield for a
-    // conservative driver) — hiding the thermal warning. Now the
-    // warning row is independently a caution.
-    expect(tones).toEqual(['positive', 'positive', 'caution'])
-    const list = screen.getByRole('list')
-    expect(list.querySelector('.lucide-shield-check')).not.toBeNull()
-    expect(list.querySelector('.lucide-triangle-alert')).not.toBeNull()
-  })
+describe('DrivingTips — no arbitrary power boundaries', () => {
+  it.each([12, 20, 45, 80, 95])('does not manufacture a driver rating at %s kW', (avgPower) => {
+    renderTips(makeStats({ avgPower }));
+    expect(screen.getByText(/Average motor power alone cannot tell/)).toBeInTheDocument();
+    expect(screen.queryByText(/Excellent driving style/)).toBeNull();
+    expect(screen.queryByText(/efficiency by 10–15%/)).toBeNull();
+    expect(items().every((item) => item.dataset.tone === 'info')).toBe(true);
+  });
 
-  it('does NOT append the thermal tip when maxMotorTemp <= 120', () => {
-    renderTips(makeStats({ avgPower: 12, maxMotorTemp: 120 }))
-    expect(
-      screen.queryByText('Motor temps are running high — consider easing off sustained high power.'),
-    ).toBeNull()
-    expect(getTipItems()).toHaveLength(2)
-  })
-})
+  it.each([60, 120, 135])('does not manufacture a thermal diagnosis at %s degrees', (maxMotorTemp) => {
+    renderTips(makeStats({ maxMotorTemp }));
+    expect(screen.getByText(/Without the vehicle’s limiting signals/)).toBeInTheDocument();
+    expect(screen.queryByText(/running high/)).toBeNull();
+    expect(items()).toHaveLength(4);
+  });
+});
 
-describe('DrivingTips — null-safety', () => {
-  it('treats a missing avgPower/maxMotorTemp as 0 without throwing', () => {
-    // The MotorStats contract types these as numbers, but upstream JSON
-    // can lie; the component coalesces to 0 so a partial payload still
-    // lands in the positive branch instead of crashing on comparison.
-    const partial = {
+describe('DrivingTips — loading and failures', () => {
+  it('keeps the heading during loading and does not display advice before measurements', () => {
+    loading = true;
+    renderTips(null);
+    expect(screen.getByRole('heading', { name: 'How to read this ride' })).toBeInTheDocument();
+    expect(screen.queryByRole('list')).toBeNull();
+    expect(screen.queryByText(/No measured motor evidence/)).toBeNull();
+  });
+
+  it('renders a retry action for telemetry failure', () => {
+    error = new Error('Motor history unavailable');
+    renderTips(null);
+    expect(screen.getByRole('button', { name: /retry/i })).toBeInTheDocument();
+    expect(screen.queryByText(/Average motor power alone cannot tell/)).toBeNull();
+  });
+
+  it('tolerates a partial degraded payload without filling missing signals with zero', () => {
+    renderTips({
       ...makeStats(),
       avgPower: undefined,
       maxMotorTemp: undefined,
-    } as unknown as MotorStats
-    expect(() => renderTips(partial)).not.toThrow()
-    expect(
-      screen.getByText('Excellent driving style! Maintaining this maximizes range and comfort.'),
-    ).toBeInTheDocument()
-    expect(getTipItems().every((li) => toneOf(li) === 'positive')).toBe(true)
-  })
-})
+    } as unknown as MotorStats);
+    expect(items()).toHaveLength(2);
+    expect(screen.queryByText(/Average motor power alone cannot tell/)).toBeNull();
+    expect(screen.queryByText(/do not prove overheating/)).toBeNull();
+    expect(screen.queryByText(/Excellent/)).toBeNull();
+  });
+});

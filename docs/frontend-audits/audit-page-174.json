@@ -1,0 +1,189 @@
+{
+  "item": "audit-page-174",
+  "phase": 0,
+  "page": "web\\src\\features\\settings\\pages\\SafetyPage.tsx",
+  "routes": ["/settings/safety"],
+  "purpose": "Explain the install's notification safeguards and Fleet API kill-switch without changing settings; optionally request Helix narration.",
+  "primaryGoal": "Inspect current safety-related configuration, understand each setting, and follow its documentation while retaining a fully usable AI-off baseline.",
+  "dataSources": [
+    {
+      "name": "Install settings",
+      "hook": "useSettings",
+      "owner": "web\\src\\hooks\\useSettings.ts",
+      "line": 81,
+      "endpoint": "GET /api/v1/settings",
+      "requestPath": "/settings",
+      "requestOwner": "web\\src\\api\\settings.ts:24",
+      "routeEvidence": "internal\\api\\router.go:3659",
+      "behavior": "Query key ['settings']; five-minute staleTime; refetchOnMount always; retry 1; settings-changed broadcast refetch. Hook exposes fallback defaults separately from settingsUnavailable and settingsState. Page suppresses all seven values and four metrics when the source is unavailable, preserves retained data, and retries only this read.",
+      "sourceOwnership": "Installation settings, not selected vehicle or historical workspace range; backend implementation and live response not exercised."
+    },
+    {
+      "name": "Opt-in Helix safety explanation",
+      "hook": "useAiStream",
+      "owner": "web\\src\\components\\ai\\AISafetySettingExplainer.tsx",
+      "line": 78,
+      "endpoint": "POST /api/v1/ai/settings/safety/explain",
+      "requestPath": "/ai/settings/safety/explain",
+      "routeEvidence": "internal\\api\\router.go:5102 supplies SafetySettingExplainer; internal\\api\\ai_routes.go:638 registers the guarded safety explanation route; internal\\ai\\features\\spa_wiring.go:395 declares the complete endpoint.",
+      "behavior": "User-triggered empty-object body; accumulated plain-text narration; no form handoff or settings mutation. withAiFeature plus useAiEnabled requires non-off ai_mode and safety-setting-explainer exactly true. Streaming or paused-confirm blocks duplicate actions; cancel is called on unmount.",
+      "sourceOwnership": "Existing AI stream/auth infrastructure and backend narration source; PII exclusion, backend read-only behavior and server guard enforcement are source-described rather than runtime-proved."
+    },
+    {
+      "name": "Static setting metadata and docs",
+      "owner": "web\\src\\features\\settings\\pages\\SafetyPage.tsx",
+      "line": 95,
+      "endpoint": null,
+      "behavior": "Seven deterministic title/description/icon/docs rows; no extra query. Documentation destinations are literal links, not fetched during audit."
+    }
+  ],
+  "components": [
+    {"name": "PageLayout", "owner": "@/components/layout", "evidence": "SafetyPage.tsx:47,259", "contract": "Existing page/header owner; no competing local workspace/date/vehicle selector. Shared implementation was not audited."},
+    {"name": "SettingsSummaryBrief", "owner": "web\\src\\features\\settings\\components\\operationalbrief-all\\SettingsSummaryBrief.tsx", "line": 20, "contract": "Existing OperationalBrief plus useOperationalMetrics; four typed metrics, source/scope, loading, unavailable and retained labels. Optional freshness slot exists."},
+    {"name": "SafetySettingCard", "owner": "web\\src\\features\\settings\\components\\SafetySettingCard.tsx", "line": 41, "contract": "Semantic li; Heading/Text/Badge; value and row test IDs; descriptive external documentation link; responsive wrapped title/value."},
+    {"name": "AISafetySettingExplainer", "owner": "web\\src\\components\\ai\\AISafetySettingExplainer.tsx", "line": 142, "contract": "Existing feature gate, AIFeatureCard scaffold and useAiStream; retain opt-in and narrative-only behavior."},
+    {"name": "AIFeatureCard / AiOutputPanel", "owner": "web\\src\\components\\ai\\AIFeatureCard.tsx", "line": 281, "additionalOwner": "web\\src\\components\\ai\\AiOutputPanel.tsx:65", "contract": "Shared busy/disabled action, localized accessible name, streamed prose, pending and empty output, error alert and evidence trail; no replacement AI scaffold."},
+    {"name": "GlassPanel, Heading, Text, Button, Badge", "owner": "@/components/ui", "evidence": "SafetyPage.tsx:48; SafetySettingCard.tsx:5", "contract": "Current shared primitives and typography category imports; preserve test IDs and native external-link semantics."},
+    {"name": "FadeIn, QueryError, DataStateNotice", "owner": "Existing motion and feedback categories", "evidence": "SafetyPage.tsx:51-52,266-299", "contract": "Existing animation and recovery owners, not independent implementations; runtime reduced-motion and focus behavior unverified."}
+  ],
+  "duplicatedPatterns": [
+    {"file": "web\\src\\features\\settings\\pages\\SafetyPage.tsx", "line": 318, "rule": "MDC-002", "detail": "Seven setting tiles already reuse one domain renderer and one metadata list; summary already reuses SettingsSummaryBrief. No source-confirmed competing mounted renderer in this bounded trace.", "fix": "Keep these existing owners; do not replace them with per-row cards or another KPI system.", "owner": "page", "confidence": "high"}
+  ],
+  "responsive": {
+    "sourceEvidence": [
+      "SafetyPage.tsx:315 uses auto-fit columns with min(100%,17rem), min-w-0 and gap changes; all seven rows remain rendered.",
+      "SafetySettingCard.tsx:73-75 uses min-w-0, flex-wrap and break-words for heading/value.",
+      "AIFeatureCard.tsx:318-353 uses min-w-0, wrapping and below-header action placement; no secondary content is dropped."
+    ],
+    "issues": [
+      {"file": "web\\src\\features\\settings\\components\\SafetySettingCard.tsx", "line": 97, "rule": "MDC-040/MDC-043", "detail": "Docs anchor has no explicit minimum touch dimensions or padding; its xs text and 14px icon do not establish the stronger 44px mobile target. Page Retry and shared Helix action both request sm sizing.", "fix": "Use existing link/button token conventions to provide reachable mobile targets and verify target spacing and long translated labels at 320px; preserve all seven docs actions.", "owner": "page", "confidence": "medium"}
+    ],
+    "viewportAcceptance": "Unverified at all required widths; no browser or viewport exercise."
+  },
+  "accessibility": {
+    "sourceEvidence": [
+      "SafetyPage.tsx:278-279 labels Safety posture; :293 labels Helix assistant; :314 uses ul.",
+      "SafetySettingCard.tsx:58 uses li, :70 hides decorative icon, :75 supplies shared heading, :95 supplies localized contextual link name and :100 visible focus ring.",
+      "SafetyPage.tsx:275 uses role=status for initial loading; shared AI action supplies aria-disabled and aria-busy in AIFeatureCard.tsx:300-302; AiOutputPanel.tsx:85 supplies role=alert on stream error."
+    ],
+    "issues": [
+      {"file": "web\\src\\features\\settings\\pages\\SafetyPage.tsx", "line": 293, "rule": "MDC-040/MDC-046", "detail": "Page always mounts a named Helix section and FadeIn wrapper even when the inner withAiFeature returns null. AI controls/root are gated, but the source does not support its comment that the whole narrator section is absent; an empty named region can remain in AI-off mode.", "fix": "Use the existing feature gate to conditionally render the entire optional section without hiding the deterministic listing; retain all AI-off test IDs and opt-in semantics. Verify actual accessibility tree before calling this a runtime defect.", "owner": "page", "confidence": "high"}
+    ],
+    "acceptance": "Keyboard traversal, focus, screen readers, contrast, forced colors, reduced motion and real target sizes remain unverified."
+  },
+  "states": {
+    "initial": "Localized status text; summary loading; four unknown metrics and seven dash values instead of fallback measurements; docs and explanations remain.",
+    "emptyUnavailable": "Unavailable source uses dash values and neutral row badges. Complete-object empty versus malformed/partial payload is not validated at page boundary.",
+    "fatalError": "QueryError with read-only Retry; deterministic content remains mounted.",
+    "retained": "stale notice and Retry preserve settings values and summary with retained label.",
+    "offline": "Shared deriveDataState marks retained paused fetch stale; initially paused fetch stays initial. Page does not distinguish paused initial fetch from ongoing loading.",
+    "ai": "Off/toggle-off inner UI absent; on-mode idle action; streaming action disabled; done empty response has explanatory copy; error alerts; retry available by starting another request. Backend execution not exercised.",
+    "issues": [
+      {"file": "web\\src\\features\\settings\\pages\\SafetyPage.tsx", "line": 327, "rule": "MDC-025/MDC-026/MDC-045", "detail": "Whole-source unavailable is guarded, and count/API summary individually check boolean types, but row renderers use truthiness. With a retained object missing a boolean, rows can display Off or Active; missing digest becomes instant and missing quiet-hours-enabled yields an Off quiet-window summary. Partial unknowns are therefore not handled consistently with the already guarded count/API summary.", "fix": "Keep known false and true distinct from missing/null/nonboolean source values; qualify each row/summary field using typed source evidence and existing unknown display. Preserve established canonical digest values and legitimate backend defaults rather than inventing replacements.", "owner": "page", "confidence": "high"},
+      {"file": "web\\src\\features\\settings\\pages\\SafetyPage.tsx", "line": 269, "rule": "MDC-026", "detail": "stale notice receives only generic stale state; refreshError, isRefreshBlocked and updatedAt are not shown. SettingsSummaryBrief exposes freshness but this page does not pass it. A paused initial request remains Loading with no offline distinction.", "fix": "Reuse existing trust fields and the existing freshness slot to qualify retained configuration and offline/paused loading; keep current read-only retry and retain all neighboring content.", "owner": "page", "confidence": "high"}
+    ]
+  },
+  "visualIssues": [
+    {"file": "web\\src\\features\\settings\\components\\SafetySettingCard.tsx", "line": 60, "rule": "MDC-010/MDC-012/MDC-015", "detail": "Tile surface/hover use fixed white alpha while its border is semantic. Decorative topic icon and docs link inherit blue/cyan/amber/purple/green accents from neonColorMap (:56,:66-68,:101); tokens.ts:21-26 uses neon background/rings. No glow is applied here. These colors distinguish topics rather than safety severity.", "fix": "Use existing neutral surface/hover/text tokens for tile and docs chrome, subdue topic icons, and preserve Badge status meanings plus saved user themes. Do not introduce another palette or reset neon-cyan persisted theme IDs.", "owner": "page", "confidence": "high"}
+  ],
+  "architectureIssues": [
+    {"file": "web\\src\\api\\settings.ts", "line": 24, "rule": "MDC-002 query cancellation", "detail": "useSettings passes getSettings directly as queryFn (:84), but getSettings accepts no context and does not forward TanStack Query's AbortSignal to request. This settings read cannot implement the contract's obsolete-request cancellation through its adapter.", "fix": "Coordinate the existing shared settings API/hook owner to forward the read signal without changing ['settings'], cache/retry/refetch/broadcast policy or write endpoints. Page audit must not modify shared code.", "owner": "shared", "confidence": "high"},
+    {"file": "web\\src\\components\\ai\\AISafetySettingExplainer.tsx", "line": 118, "rule": "MDC-044 clear action guidance", "detail": "Fallback description says 'Use the controls below to update a value yourself', but this host page only renders read-only tiles/docs and explicitly directs changes to main Settings at SafetyPage.tsx:345. Actual catalog-resolved wording was not inspected.", "fix": "Have the feature/catalog owner qualify the narration guidance to the existing main Settings workflow; retain narrator guarantees and do not add mutation controls to this read-only page.", "owner": "integration", "confidence": "medium"}
+  ],
+  "priority": {
+    "overall": "medium",
+    "first": "Preserve unknown-field honesty and existing retained read-only recovery.",
+    "next": "Qualify source freshness/offline state, remove empty AI-off region, restrain decorative topic chrome and verify mobile documentation targets.",
+    "notNeeded": "No new vehicle/date selector, SI converter, table/chart system, state store, setting mutation or AI scaffold."
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "Settings read cancellation",
+      "existingOwnerFile": "web\\src\\api\\settings.ts",
+      "additionalOwnerFile": "web\\src\\hooks\\useSettings.ts",
+      "line": 24,
+      "propsVariantsStates": "Compatible getSettings read adapter with AbortSignal from the query function; retain existing query key, five-minute stale policy, retry, revalidation, defaults, trust state and broadcast behavior.",
+      "usedBy": ["SafetyPage useSettings", "withAiFeature/useAiEnabled useSettings", "SettingsSummaryBrief formatting bridge indirectly"],
+      "dependsOn": ["Existing request client signal support must be confirmed by shared owner", "MDC-002", "MDC-046"],
+      "owner": "shared",
+      "confidence": "high",
+      "implementationStatus": "Reported only; no shared source changed."
+    }
+  ],
+  "competingImplementations": [
+    {"name": "None confirmed in scoped mounted trace", "detail": "Existing SafetySettingCard, SettingsSummaryBrief and AIFeatureCard already own repeated presentation. This audit did not search unrelated routes for alternate implementations."}
+  ],
+  "preservation": {
+    "sourceHash": "4C6D158AAB0D5B126E702720462A880FFDE552CF17D609282DE0A065A26CAF14",
+    "sourceHashAlgorithm": "SHA256",
+    "currentLineCount": 353,
+    "presentationLineCountIncludingDirectComponents": 654,
+    "sourceInventory": [
+      {"file": "web\\src\\features\\settings\\pages\\SafetyPage.tsx", "lines": 353, "sha256": "4C6D158AAB0D5B126E702720462A880FFDE552CF17D609282DE0A065A26CAF14"},
+      {"file": "web\\src\\features\\settings\\components\\SafetySettingCard.tsx", "lines": 110, "sha256": "F281943501BB4B4214AB9BDCE8B9ACCDAC99D3EB21C6E22A129FA35AED365A06"},
+      {"file": "web\\src\\features\\settings\\components\\operationalbrief-all\\SettingsSummaryBrief.tsx", "lines": 45, "sha256": "3B6B6CB42FA731D7D353C6CD2B83270045F686E41D03E6F40A88E4ED661DC0A1"},
+      {"file": "web\\src\\components\\ai\\AISafetySettingExplainer.tsx", "lines": 146, "sha256": "CC4924B4D7C5FAE6D9A3045EA6AF0B80DD801A2DF0EED03F570568B65409D9F9"}
+    ],
+    "sections": [
+      {"name": "Safety posture / Safety configuration", "count": 1, "metrics": ["Active safeguards", "Quiet window", "Alert cadence", "Fleet API"]},
+      {"name": "Helix assistant / Explain my safety settings", "count": 1, "innerFeatureConditional": true},
+      {"name": "Your safety-related settings", "count": 1, "rows": ["Quiet hours", "Quiet-hours window start", "Quiet-hours window end", "Alert digest mode", "Critical-alert tab flash", "Unread tab badge", "API kill-switch"]}
+    ],
+    "sectionCount": 3,
+    "glassPanelSourceOccurrencesInPage": 1,
+    "chartContainerSourceOccurrencesInPage": 0,
+    "actions": ["Read-only settings Retry on fatal/stale read", "Opt-in Explain my settings action; no apply/change handoff", "Seven contextual docs links opened in a new tab with noreferrer"],
+    "docsDestinations": ["/docs/notifications/quiet-hours.md", "/docs/notifications/digest.md", "/docs/notifications/tab-signalling.md", "/docs/operations/api-suspended.md"],
+    "testIdentity": ["safety-settings-summary", "safety-settings-listing", "safety-settings-rows", "safety-settings-row-<unchanged titleKey>", "safety-settings-value-<unchanged titleKey>", "ai-feature-safety-setting-explainer-root", "ai-feature-safety-setting-explainer-suggest"],
+    "dataBehavior": [
+      "Seven deterministic explanations survive AI-off and settings load/failure; never fabricate current settings from hook defaults.",
+      "Count remains enabled quiet-hours/critical-flash/tab-badge booleans out of three, including real zero; not a safety score.",
+      "Quiet time strings stay HH:MM; raw canonical digest enum stays visible in listing with localized summary labels.",
+      "API suspended and active meanings, critical-alert exception copy and telemetry-continues explanation survive.",
+      "Raw wire/cache values, settings keys, query behavior, user preferences, opt-in gate and stream cancellation survive.",
+      "Install-wide latest configuration has no historical window or vehicle scope; do not introduce duplicate workspace controls or SI conversion.",
+      "No vehicle or setting mutation is authorized or performed."
+    ]
+  },
+  "evidenceLimits": {
+    "mode": "Read-only source inspection; only assigned JSON report and heartbeat written.",
+    "routeEvidence": "App.tsx:321 lazy-imports exact SafetyPage file; :635 mounts path settings/safety inside existing routing. Mounted runtime reachability unverified.",
+    "runtime": "NOT EXERCISED",
+    "visualKeyboardContrastViewports": "UNVERIFIED",
+    "backend": "Only matching route registrations and endpoint declarations inspected; source descriptions are not proof of backend semantics, authorization, PII filtering or docs reachability.",
+    "tests": "Existing AI-off and read-only recovery assertions inspected; no tests executed or prior receipts borrowed.",
+    "validation": "No TypeScript, lint, full build, Git, queue write, production request or mutation run. audit.sh inspected but not executed because it includes whole-frontend TypeScript; bounded source-only patterns were used instead.",
+    "boundedPatternOutput": ["inlineStyles matches=0", "rawControls case-sensitive=0", "directLibraries matches=0", "oldApiImports matches=0", "doublePrefix matches=0", "camelParams matches=0"],
+    "patternScope": ["SafetyPage.tsx", "SafetySettingCard.tsx", "SettingsSummaryBrief.tsx", "AISafetySettingExplainer.tsx"],
+    "patternCaveat": "Select-String first case-insensitive rawControls pass matched shared <Button>; corrected with -CaseSensitive to zero. Pattern counts do not establish absence of other guideline issues or shared-owner acceptance.",
+    "schema": "Assigned report did not previously exist; complete Phase 0 fields follow frontend-worker-conventions.md. No separate schema file was supplied."
+  },
+  "filesRead": [
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-mission.md",
+    "docs\\frontend-audits\\audit-page-173.json",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\settings\\pages\\SafetyPage.tsx",
+    "web\\src\\features\\settings\\components\\SafetySettingCard.tsx",
+    "web\\src\\features\\settings\\components\\operationalbrief-all\\SettingsSummaryBrief.tsx",
+    "web\\src\\hooks\\useSettings.ts",
+    "web\\src\\api\\settings.ts",
+    "web\\src\\components\\ai\\AISafetySettingExplainer.tsx",
+    "web\\src\\components\\ai\\withAiFeature.tsx",
+    "web\\src\\hooks\\useAiEnabled.ts",
+    "web\\src\\hooks\\useAiStream.ts",
+    "web\\src\\components\\ai\\AIFeatureCard.tsx",
+    "web\\src\\components\\ai\\AiOutputPanel.tsx",
+    "web\\src\\api\\dataState.ts",
+    "web\\src\\lib\\tokens.ts",
+    "web\\src\\features\\settings\\__tests__\\TestSafetySettingExplainerAIOffShowsStaticHelpOnly.test.tsx",
+    "web\\src\\features\\settings\\pages\\SafetyPage.test.tsx",
+    "web\\src\\App.tsx",
+    "internal\\api\\router.go",
+    "internal\\api\\ai_routes.go",
+    "internal\\ai\\features\\spa_wiring.go",
+    "internal\\ai\\features\\registry.go"
+  ],
+  "ownedFiles": ["docs\\frontend-audits\\audit-page-174.json", ".agent-status\\audit-page-174.txt"]
+}

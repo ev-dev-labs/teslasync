@@ -2,8 +2,11 @@ import { type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { cn } from '../../lib/cn'
 import { type NeonColor, neonColorMap } from '../../lib/tokens'
-import { Card, HelpTooltip, Text, type HelpTooltipProps } from '@/components/ui'
+import { Card } from '../ui/Card'
+import { HelpTooltip, type HelpTooltipProps } from '../ui/HelpTooltip'
+import { Text } from '../ui/Typography'
 import { Delta, type DeltaProps } from './Delta'
+import { useNumberFormatting } from '@/hooks/useNumberFormatting'
 
 /**
  * Slim wrapper around `<Delta>` for the `MetricCard` footer slot.
@@ -17,6 +20,8 @@ type MetricCardDelta = Omit<DeltaProps, 'current'> & {
 interface MetricCardProps {
   label: string
   value: string | number
+  /** Numeric semantics; omitted preserves caller-formatted/count/ID contracts. */
+  kind?: 'measurement' | 'count'
   icon?: ReactNode
   color?: NeonColor
   /**
@@ -33,6 +38,10 @@ interface MetricCardProps {
   className?: string
   /** Allow longer metric labels to wrap to two lines on narrow cards. */
   wrapLabel?: boolean
+  /** Keep the complete subtitle visible on normal cards without changing the default. */
+  wrapSubtitle?: boolean
+  /** Dense overview band with complete, wrapping labels and values. */
+  compact?: boolean
   /**
    * Optional contextual help. When provided, a small "?" tooltip is
    * rendered next to the label. Accepts the full `HelpTooltipProps` so
@@ -42,8 +51,12 @@ interface MetricCardProps {
 }
 
 /** Compact metric display card with icon, value, label, and optional trend. */
-export function MetricCard({ label, value, icon, color = 'cyan', change, delta, subtitle, className, help, wrapLabel = false }: MetricCardProps) {
+export function MetricCard({ label, value, kind, icon, color = 'cyan', change, delta, subtitle, className, help, wrapLabel = false, wrapSubtitle = false, compact = false }: MetricCardProps) {
   const { t } = useTranslation()
+  const { fmtNumber, fmtInt } = useNumberFormatting()
+  const displayValue = typeof value === 'number' && kind
+    ? Number.isFinite(value) ? kind === 'count' ? fmtInt(value) : fmtNumber(value) : '—'
+    : value
   // Fall back to cyan if a caller passes an unregistered colour (e.g. a
   // value driven from API data) so `c.bg`/`c.ring` never throw on undefined.
   const c = neonColorMap[color] ?? neonColorMap.cyan
@@ -53,10 +66,15 @@ export function MetricCard({ label, value, icon, color = 'cyan', change, delta, 
     <Card
       padding="none"
       data-role="metric-card"
-      className={cn('min-h-28 p-5', className)}
+      className={cn(
+        compact
+          ? '@container/metric min-h-0 rounded-none border-0 bg-[var(--surface-1)] p-3 shadow-none'
+          : 'min-h-28 p-5',
+        className,
+      )}
     >
-      <div className="flex items-start justify-between gap-4">
-        <div className="min-w-0 flex-1">
+      <div className={cn('flex items-start justify-between gap-4', compact && 'h-full @[26rem]/metric:items-center')}>
+        <div className={cn('min-w-0 flex-1', compact && '@[26rem]/metric:grid @[26rem]/metric:grid-cols-metric-compact @[26rem]/metric:items-center @[26rem]/metric:gap-x-3')}>
           <Text
             as="p"
             size="sm"
@@ -65,10 +83,10 @@ export function MetricCard({ label, value, icon, color = 'cyan', change, delta, 
             data-role="metric-label"
             className={cn(
               'flex items-start gap-1.5 leading-snug',
-              wrapLabel ? 'min-h-10' : 'truncate',
+              compact ? 'min-h-9 @[26rem]/metric:min-h-0 @[26rem]/metric:col-start-1 @[26rem]/metric:row-start-1' : wrapLabel ? 'min-h-10' : 'truncate',
             )}
           >
-            <span className={wrapLabel ? 'line-clamp-2' : 'truncate'}>{label}</span>
+            <span className={compact ? 'break-words' : wrapLabel ? 'line-clamp-2' : 'truncate'}>{label}</span>
             {help && (
               <HelpTooltip
                 size="xs"
@@ -79,26 +97,26 @@ export function MetricCard({ label, value, icon, color = 'cyan', change, delta, 
           </Text>
           <Text
             as="p"
-            size="3xl"
+            size={compact ? 'xl' : '3xl'}
             weight="semibold"
             color="primary"
             data-role="metric-value"
-            className="mt-3 leading-tight tracking-[-0.025em] tabular-nums"
+            className={cn('leading-tight tabular-nums', compact ? 'mt-1 break-words @[26rem]/metric:col-start-2 @[26rem]/metric:row-start-1 @[26rem]/metric:mt-0 @[26rem]/metric:text-center' : 'mt-3')}
           >
-            {value}
+            {displayValue}
           </Text>
           {subtitle && (
-            <Text as="p" variant="caption" data-role="metric-subtitle" className="mt-1.5 truncate">
+            <Text as="p" variant="caption" data-role="metric-subtitle" className={cn('mt-1.5', compact || wrapSubtitle ? 'whitespace-normal break-words' : 'truncate', compact && '@[26rem]/metric:col-span-3')}>
               {subtitle}
             </Text>
           )}
           {change && !delta && (
-            <Text as="p" size="xs" weight="medium" className={cn('mt-1.5', change.positive ? 'text-emerald-300' : 'text-rose-300')}>
+            <Text as="p" size="xs" weight="medium" className={cn('mt-1.5', compact && '@[26rem]/metric:col-start-3 @[26rem]/metric:row-start-1 @[26rem]/metric:mt-0 @[26rem]/metric:text-right', change.positive ? neonColorMap.green.text : neonColorMap.red.text)}>
               {change.positive ? '↑' : '↓'} {change.value}
             </Text>
           )}
           {delta && (
-            <div className="mt-1">
+            <div data-role="metric-comparison" className={cn('mt-1', compact && '@[26rem]/metric:col-start-3 @[26rem]/metric:row-start-1 @[26rem]/metric:mt-0 @[26rem]/metric:justify-self-end')}>
               <Delta {...delta} current={deltaCurrent} />
             </div>
           )}
@@ -107,7 +125,7 @@ export function MetricCard({ label, value, icon, color = 'cyan', change, delta, 
           <div
             data-role="metric-icon"
             data-color={color}
-            className="flex shrink-0 items-center justify-center rounded-shape-lg border border-[var(--border-default)] bg-[var(--surface-2)] p-2.5 shadow-e1"
+            className="flex shrink-0 items-center justify-center rounded-shape-lg border border-[var(--border-default)] bg-[var(--surface-2)] p-2.5"
           >
             <div className={c.text}>{icon}</div>
           </div>

@@ -44,6 +44,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, act, waitFor, fireEvent } from '@testing-library/react'
 
 import type { AppSettings } from '@/api/types'
+import type { AutomationFullInput } from '@/api/hooks/useAutomations'
 
 vi.mock('@/hooks/useSettings', () => ({
   useSettings: vi.fn(),
@@ -344,24 +345,23 @@ describe('TestGeofenceAwareAutomationSuggestionsAIOnWiredCallsRoute (geofence-aw
 
     const onApplyDraft = vi.fn()
 
-    const automationDraft = {
+    const automationDraft: AutomationFullInput = {
       name: 'Welcome Home',
       description: 'Turn on cabin overheat protection when arriving home',
       vehicle_id: 7,
       enabled: true,
       triggers: [
         {
-          kind: 'trigger_geofence' as const,
+          kind: 'trigger_geofence',
           place_id: 1,
-          on_event: 'enter' as const,
+          event: 'enter',
         },
       ],
       conditions: [],
       actions: [
         {
-          kind: 'action_command' as const,
+          kind: 'action_command',
           command_name: 'cabin_overheat_protection_on',
-          params: null,
         },
       ],
     }

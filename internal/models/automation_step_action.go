@@ -69,3 +69,9 @@ type AutomationStepActionCallAutomation struct {
 	StepID             int64 `db:"step_id"              json:"step_id"`
 	TargetAutomationID int64 `db:"target_automation_id" json:"target_automation_id"`
 }
+
+// AutomationStepActionWait is the typed CTI delay, in integer SI seconds.
+type AutomationStepActionWait struct {
+	StepID    int64 `db:"step_id" json:"step_id"`
+	DurationS int   `db:"duration_s" json:"duration_s"`
+}

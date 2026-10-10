@@ -48,29 +48,29 @@ function renderIndicator(props: ComponentProps<typeof FreshnessIndicator>) {
 }
 
 describe('FreshnessIndicator — status + colour', () => {
-  it('renders a fresh emerald pulsing dot for a just-sampled datum', () => {
+  it('renders a static semantic success dot for a just-sampled datum', () => {
     const { dot, container } = renderIndicator({ timestamp: ago(5) });
-    expect(dot.className).toContain('bg-emerald-400');
-    expect(dot.className).toContain('animate-pulse');
+    expect(dot.className).toContain('bg-[var(--semantic-success)]');
+    expect(dot.className).not.toContain('animate-');
     expect(container.textContent).toContain('just now');
   });
 
   it('shows a seconds-granularity label while still fresh', () => {
     const { dot, container } = renderIndicator({ timestamp: ago(30) });
-    expect(dot.className).toContain('bg-emerald-400');
+    expect(dot.className).toContain('bg-[var(--semantic-success)]');
     expect(container.textContent).toContain('30s ago');
   });
 
   it('turns amber (stale, no pulse) past the stale threshold', () => {
     const { dot, container } = renderIndicator({ timestamp: ago(300) });
-    expect(dot.className).toContain('bg-amber-400');
+    expect(dot.className).toContain('bg-[var(--semantic-warning)]');
     expect(dot.className).not.toContain('animate-pulse');
     expect(container.textContent).toContain('5m ago');
   });
 
-  it('turns red (offline) past the offline threshold, with an hours label', () => {
+  it('turns neutral (offline) past the offline threshold, with an hours label', () => {
     const { dot, container } = renderIndicator({ timestamp: ago(7200) });
-    expect(dot.className).toContain('bg-red-400');
+    expect(dot.className).toContain('bg-[var(--text-secondary)]');
     expect(container.textContent).toContain('2h ago');
   });
 });
@@ -79,28 +79,28 @@ describe('FreshnessIndicator — threshold overrides', () => {
   it('respects a custom staleThreshold', () => {
     // 30s ≥ 20s → stale even though it would be fresh under the default 120s.
     const { dot } = renderIndicator({ timestamp: ago(30), staleThreshold: 20 });
-    expect(dot.className).toContain('bg-amber-400');
-    expect(dot.className).not.toContain('bg-emerald-400');
+    expect(dot.className).toContain('bg-[var(--semantic-warning)]');
+    expect(dot.className).not.toContain('bg-[var(--semantic-success)]');
   });
 
   it('respects a custom offlineThreshold', () => {
     // 300s ≥ 200s → offline even though it would be stale under the default 600s.
     const { dot } = renderIndicator({ timestamp: ago(300), offlineThreshold: 200 });
-    expect(dot.className).toContain('bg-red-400');
-    expect(dot.className).not.toContain('bg-amber-400');
+    expect(dot.className).toContain('bg-[var(--text-secondary)]');
+    expect(dot.className).not.toContain('bg-[var(--semantic-warning)]');
   });
 });
 
 describe('FreshnessIndicator — missing / malformed timestamps', () => {
   it('renders an "unknown" grey dot and em-dash for a null timestamp', () => {
     const { dot, container } = renderIndicator({ timestamp: null });
-    expect(dot.className).toContain('bg-[var(--surface-2)]');
+    expect(dot.className).toContain('bg-[var(--text-secondary)]');
     expect(container.textContent).toBe('—');
   });
 
   it('treats undefined the same as null', () => {
     const { dot, container } = renderIndicator({ timestamp: undefined });
-    expect(dot.className).toContain('bg-[var(--surface-2)]');
+    expect(dot.className).toContain('bg-[var(--text-secondary)]');
     expect(container.textContent).toBe('—');
   });
 
@@ -109,7 +109,7 @@ describe('FreshnessIndicator — missing / malformed timestamps', () => {
     // every `age < threshold` check to a red "offline" dot plus a literal
     // "NaNh ago" label. It must collapse to the neutral "unknown" state.
     const { dot, container } = renderIndicator({ timestamp: 'not-a-real-date' });
-    expect(dot.className).toContain('bg-[var(--surface-2)]');
+    expect(dot.className).toContain('bg-[var(--text-secondary)]');
     expect(dot.className).not.toContain('bg-red-400');
     expect(container.textContent).toBe('—');
     expect(container.textContent).not.toContain('NaN');
@@ -117,7 +117,7 @@ describe('FreshnessIndicator — missing / malformed timestamps', () => {
 
   it('treats an empty-string timestamp as unknown', () => {
     const { dot, container } = renderIndicator({ timestamp: '' });
-    expect(dot.className).toContain('bg-[var(--surface-2)]');
+    expect(dot.className).toContain('bg-[var(--text-secondary)]');
     expect(container.textContent).toBe('—');
   });
 });
@@ -125,19 +125,20 @@ describe('FreshnessIndicator — missing / malformed timestamps', () => {
 describe('FreshnessIndicator — future timestamps', () => {
   it('clamps a future timestamp to "just now" (never a negative age)', () => {
     const { dot, container } = renderIndicator({ timestamp: ago(-100) });
-    expect(dot.className).toContain('bg-emerald-400');
+    expect(dot.className).toContain('bg-[var(--semantic-success)]');
     expect(container.textContent).toContain('just now');
     expect(container.textContent).not.toContain('-');
   });
 });
 
 describe('FreshnessIndicator — size + label variants', () => {
-  it('uses the small dot + 2xs label sizes by default (sm)', () => {
+  it('uses the small dot + caption typography by default (sm)', () => {
     const { root, dot } = renderIndicator({ timestamp: ago(300) });
     expect(dot.className).toContain('h-1.5');
     expect(dot.className).toContain('w-1.5');
     const label = root.children[1] as HTMLElement;
-    expect(label.className).toContain('text-2xs');
+    expect(label.className).toContain('text-xs');
+    expect(label.className).toContain('text-[var(--text-muted)]');
   });
 
   it('uses the larger dot + xs label sizes for size="md"', () => {
@@ -152,12 +153,28 @@ describe('FreshnessIndicator — size + label variants', () => {
     const { root, dot, container } = renderIndicator({ timestamp: ago(300), showLabel: false });
     expect(container.textContent).toBe('');
     expect(root.children).toHaveLength(1); // dot only, no label span
-    expect(dot.className).toContain('bg-amber-400');
+    expect(dot.className).toContain('bg-[var(--semantic-warning)]');
     expect(root.getAttribute('aria-label')).toContain('5m ago');
   });
 });
 
 describe('FreshnessIndicator — accessibility', () => {
+  it('keeps offline and unknown accessible names distinct despite neutral dots', () => {
+    const { root, rerender } = renderIndicator({ timestamp: ago(7200) });
+    expect(root).toHaveAttribute('aria-label', 'Offline · 2h ago');
+    rerender(<FreshnessIndicator timestamp={null} />);
+    expect(root).toHaveAttribute('aria-label', 'No recent data');
+  });
+
+  it('allows caption wrapping without truncating the status or age', () => {
+    const { root } = renderIndicator({ timestamp: ago(7200) });
+    expect(root.className).toContain('min-w-0');
+    expect(root.className).toContain('max-w-full');
+    expect(root.children[1]).toHaveClass('min-w-0', 'break-words');
+    expect(root.children[1]).toHaveAttribute('aria-hidden', 'true');
+    expect(root).toHaveAttribute('aria-label', 'Offline · 2h ago');
+  });
+
   it('exposes a single labelled role="img" carrying both status and age', () => {
     renderIndicator({ timestamp: ago(300) });
     const img = screen.getByRole('img');
@@ -189,6 +206,32 @@ describe('FreshnessIndicator — accessibility', () => {
 });
 
 describe('FreshnessIndicator — live tick', () => {
+  it('keeps the same retained sample title as its actual age crosses thresholds', () => {
+    const timestamp = ago(115);
+    const { root, dot } = renderIndicator({ timestamp });
+    expect(root).toHaveAttribute('aria-label', 'Up to date · 1m ago');
+    act(() => vi.advanceTimersByTime(10_000));
+    expect(dot).toHaveClass('bg-[var(--semantic-warning)]');
+    expect(root).toHaveAttribute('aria-label', 'Stale · 2m ago');
+    expect(root).toHaveAttribute('title', timestamp);
+    act(() => vi.advanceTimersByTime(480_000));
+    expect(root).toHaveAttribute('aria-label', 'Offline · 10m ago');
+    expect(root).toHaveAttribute('title', timestamp);
+  });
+
+  it('does not invent an update for missing data or leave a timer after unmount', () => {
+    const { root, rerender, unmount } = renderIndicator({ timestamp: null });
+    expect(vi.getTimerCount()).toBe(0);
+    rerender(<FreshnessIndicator timestamp={ago(30)} />);
+    expect(vi.getTimerCount()).toBe(1);
+    expect(root).toHaveAttribute('title', ago(30));
+    rerender(<FreshnessIndicator timestamp="invalid" />);
+    expect(vi.getTimerCount()).toBe(0);
+    expect(root).toHaveAttribute('aria-label', 'No recent data');
+    unmount();
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
   it('re-renders on its interval to keep the relative label honest', () => {
     const { container } = renderIndicator({ timestamp: ago(5) });
     expect(container.textContent).toContain('just now');

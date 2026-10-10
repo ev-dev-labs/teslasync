@@ -6,12 +6,14 @@ import { Waves } from 'lucide-react';
 import { SeasonalSectionBody } from './SeasonalSectionBody';
 import type { SeasonalSectionProps } from './types';
 import { formatDisplayIntensity, toDisplayIntensity } from './formatters';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export function SeasonalFittedCurve({
   analysis,
   state,
   units,
 }: SeasonalSectionProps) {
+  useNumberFormatting();
   const { t } = useTranslation();
   const chartData = analysis.curve.map((point) => ({
     day: point.dayOfYear,

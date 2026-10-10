@@ -3,7 +3,8 @@
  * screen-reader text, native required attribute, and accessible name.
  */
 
-import { render, screen } from '@testing-library/react';
+import { createRef } from 'react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 
 vi.mock('react-i18next', () => ({
@@ -12,14 +13,15 @@ vi.mock('react-i18next', () => ({
   }),
 }));
 
-import { Input } from '../Input';
+import { Input, type InputProps } from '../Input';
 
 describe('Input — required indicator', () => {
   it('renders a paired <label> when label= is provided', () => {
     render(<Input label="Email" />);
     const input = screen.getByRole('textbox');
-    expect(input.id).toBe('email');
-    const label = document.querySelector('label[for="email"]');
+    expect(input.id).toMatch(/^input-/);
+    const label = screen.getByText('Email').closest('label');
+    expect(label).toHaveAttribute('for', input.id);
     expect(label).not.toBeNull();
     expect(label?.textContent).toBe('Email');
   });
@@ -47,7 +49,7 @@ describe('Input — required indicator', () => {
     const star = screen.getByText('*');
     expect(star.getAttribute('aria-hidden')).toBe('true');
     // The asterisk must live inside the Label so it visually pairs.
-    const label = document.querySelector('label[for="email"]');
+    const label = screen.getByRole('textbox').closest('.space-y-1')?.querySelector('label');
     expect(label?.contains(star)).toBe(true);
   });
 
@@ -56,7 +58,7 @@ describe('Input — required indicator', () => {
     // Asserted via label textContent rather than the visually-hidden CSS
     // class — the audit:sr-only gate forbids spelling the class name
     // outside the VisuallyHidden implementation.
-    const label = document.querySelector('label[for="email"]');
+    const label = screen.getByRole('textbox').closest('.space-y-1')?.querySelector('label');
     expect(label?.textContent ?? '').toMatch(/required/i);
   });
 
@@ -78,13 +80,13 @@ describe('Input — required indicator', () => {
   it('does NOT render the asterisk or visually-hidden "required" when required is unset', () => {
     render(<Input label="Email" />);
     expect(screen.queryByText('*')).toBeNull();
-    const label = document.querySelector('label[for="email"]');
+    const label = screen.getByText('Email').closest('label');
     expect(label?.textContent ?? '').toBe('Email');
   });
 
   it('preserves the existing label styling via className passthrough', () => {
     render(<Input label="Email" required />);
-    const label = document.querySelector('label[for="email"]');
+    const label = screen.getByRole('textbox').closest('.space-y-1')?.querySelector('label');
     expect(label?.className).toMatch(/text-sm/);
     expect(label?.className).toMatch(/font-medium/);
   });
@@ -124,14 +126,199 @@ describe('Input — feedback association', () => {
         />
       </>,
     );
-    expect(screen.getByRole('textbox', { name: 'Threshold' })).toHaveAttribute(
+    const input = screen.getByRole('textbox', { name: 'Threshold' });
+    expect(input).toHaveAttribute(
       'aria-describedby',
-      'external-help threshold-hint',
+      `external-help ${input.id}-hint`,
     );
   });
 
   it('announces validation errors through an alert role', () => {
     render(<Input label="Threshold" error="Out of range" />);
     expect(screen.getByRole('alert')).toHaveTextContent('Out of range');
+  });
+});
+
+describe('Input — primitive contract', () => {
+  it('retains implicit identity and focused value across translated labels and feedback', () => {
+    const { rerender } = render(<Input label="Email" hint="Optional address" defaultValue="saved" />);
+    const input = screen.getByRole('textbox', { name: 'Email' });
+    const id = input.id;
+    input.focus();
+    rerender(<Input label="Adresse électronique" error="Adresse invalide" defaultValue="saved" />);
+    expect(screen.getByRole('textbox', { name: 'Adresse électronique' })).toBe(input);
+    expect(input.id).toBe(id);
+    expect(input).toHaveFocus();
+    expect(input).toHaveValue('saved');
+    expect(input).toHaveAttribute('aria-describedby', `${id}-error`);
+    expect(document.getElementById(`${id}-hint`)).toBeNull();
+  });
+
+  it('preserves explicit identity, descriptions and native ref/form/type/events', () => {
+    const ref = createRef<HTMLInputElement>();
+    const onChange = vi.fn();
+    render(
+      <>
+        <form id="settings-form" />
+        <span id="external-note">External instructions</span>
+        <Input ref={ref} id="saved-email" label="Email" name="email" type="email"
+          form="settings-form" required aria-describedby="external-note"
+          hint="Use your account address" onChange={onChange} />
+      </>,
+    );
+    const input = screen.getByRole('textbox', { name: /Email/ });
+    expect(ref.current).toBe(input);
+    expect(input).toHaveAttribute('id', 'saved-email');
+    expect(input).toHaveAttribute('type', 'email');
+    expect(input).toHaveAttribute('name', 'email');
+    expect(ref.current?.form?.id).toBe('settings-form');
+    expect(input).toBeRequired();
+    expect(input).toHaveAttribute('aria-describedby', 'external-note saved-email-hint');
+    fireEvent.change(input, { target: { value: 'driver@example.com' } });
+    expect(onChange).toHaveBeenCalledOnce();
+    expect(input).toHaveValue('driver@example.com');
+  });
+
+  it('uses restrained semantic validation and focus tokens without hiding error text', () => {
+    render(<Input label="Threshold" error="Out of range" hint="Hidden hint" aria-invalid={false} />);
+    const input = screen.getByRole('textbox', { name: 'Threshold' });
+    expect(input).toHaveAttribute('aria-invalid', 'true');
+    expect(input.className).toContain('border-[var(--semantic-danger)]');
+    expect(input.className).toContain('focus-visible:ring-[var(--focus-ring)]');
+    expect(input.className).toContain('focus-visible:ring-offset-2');
+    expect(input.className).not.toMatch(/rose-|theme-primary|neon|text-white/);
+    expect(screen.getByRole('alert').className).toContain('text-[var(--semantic-danger)]');
+    expect(screen.queryByText('Hidden hint')).toBeNull();
+  });
+
+  it('honors external invalid state even without generated error feedback', () => {
+    const { rerender } = render(<Input label="Value" aria-invalid="grammar" />);
+    const input = screen.getByRole('textbox', { name: 'Value' });
+    expect(input).toHaveAttribute('aria-invalid', 'grammar');
+    expect(input.className).toContain('border-[var(--semantic-danger)]');
+    expect(input).not.toHaveAttribute('aria-describedby');
+    rerender(<Input label="Value" aria-invalid={false} />);
+    expect(input).toHaveAttribute('aria-invalid', 'false');
+    expect(input.className).not.toContain('border-[var(--semantic-danger)]');
+    expect(input.className).toContain('enabled:hover:border-[var(--control-border-hover)]');
+  });
+
+  it.each([
+    ['sm', 'min-h-9 px-3 py-1.5 text-sm'],
+    ['md', 'min-h-10 px-3 py-2 text-sm'],
+    ['lg', 'min-h-12 px-4 py-2.5 text-base'],
+    ['auto', 'px-d-pad-x py-d-pad-y text-d-base min-h-d-row'],
+  ] as const)('preserves %s density and native focus with long wrapping labels', (size, sizing) => {
+    const label = 'A long translated account label '.repeat(12);
+    render(<Input label={label} size={size} />);
+    const input = screen.getByRole('textbox', { name: label.trim() });
+    expect(input.className).toContain(sizing);
+    expect(input.className).toContain('rounded-shape-sm');
+    const pairedLabel = screen.getByText(label.trim()).closest('label');
+    expect(pairedLabel).toHaveAttribute('for', input.id);
+    expect(pairedLabel?.className).toContain('break-words');
+    input.focus();
+    expect(input).toHaveFocus();
+    expect(input.className).toContain('motion-reduce:transition-none');
+    expect(input.className).toContain('duration-fast');
+  });
+
+  it('keeps zero values, unique field identities, adornments and caller classes', () => {
+    render(
+      <>
+        <Input label="Value" value={0} readOnly icon={<span>Icon</span>} suffix="W" className="custom-field" />
+        <Input label="Value" />
+      </>,
+    );
+    const fields = screen.getAllByRole('textbox', { name: 'Value' });
+    expect(fields[0]).toHaveValue('0');
+    expect(fields[0]?.id).not.toBe(fields[1]?.id);
+    expect(fields[0]?.className).toContain('ps-10');
+    expect(fields[0]?.className).toContain('pe-10');
+    expect(fields[0]?.className).toContain('custom-field');
+    expect(screen.getByText('Icon')).toBeVisible();
+    expect(screen.getByText('W')).toBeVisible();
+    expect(fields[1]).toHaveValue('');
+  });
+
+  describe('Input — logical adornment roles', () => {
+    const directions = ['ltr', 'rtl'] as const;
+    const sizes = ['sm', 'md', 'lg', 'auto'] as const satisfies ReadonlyArray<NonNullable<InputProps['size']>>;
+    const adornments = [
+      { name: 'none', icon: undefined, suffix: undefined },
+      { name: 'icon', icon: <span>Leading icon</span>, suffix: undefined },
+      { name: 'suffix', icon: undefined, suffix: 'W' },
+      { name: 'both', icon: <span>Leading icon</span>, suffix: 'W' },
+    ] satisfies ReadonlyArray<Pick<InputProps, 'icon' | 'suffix'> & { name: string }>;
+
+    it.each(directions)('uses start/end roles under inherited %s direction for every size and slot combination', (direction) => {
+      for (const size of sizes) {
+        for (const { icon, suffix } of adornments) {
+          const { unmount } = render(
+            <div dir={direction}>
+              <Input label="Power" size={size} icon={icon} suffix={suffix} />
+            </div>,
+          );
+          const input = screen.getByRole('textbox', { name: 'Power' });
+          expect(input.closest('[dir]')).toHaveAttribute('dir', direction);
+          expect(input.classList.contains('ps-10')).toBe(Boolean(icon));
+          expect(input.classList.contains('pe-10')).toBe(Boolean(suffix));
+          expect(input.className).not.toMatch(/\b(?:pl|pr)-10\b/);
+          if (icon) {
+            const slot = screen.getByText('Leading icon').parentElement;
+            expect(slot).toHaveClass('absolute', 'start-3', 'top-1/2', '-translate-y-1/2');
+            expect(slot).not.toHaveClass('left-3');
+          }
+          if (suffix) {
+            const slot = screen.getByText('W');
+            expect(slot).toHaveClass('absolute', 'end-3', 'top-1/2', '-translate-y-1/2');
+            expect(slot).not.toHaveClass('right-3');
+          }
+          unmount();
+        }
+      }
+    });
+
+    it('preserves RTL native/ref/events and error, disabled and caller busy state with adornments', () => {
+      const ref = createRef<HTMLInputElement>();
+      const onChange = vi.fn();
+      const { rerender } = render(
+        <div dir="rtl">
+          <Input ref={ref} label="Power" dir="rtl" name="power" defaultValue="0"
+            icon={<span>Leading icon</span>} suffix="W" error="Invalid power"
+            aria-busy="true" onChange={onChange} className="ps-12 pe-14" />
+        </div>,
+      );
+      const input = screen.getByRole('textbox', { name: 'Power' });
+      expect(ref.current).toBe(input);
+      expect(input).toHaveAttribute('dir', 'rtl');
+      expect(input).toHaveAttribute('name', 'power');
+      expect(input).toHaveAttribute('aria-busy', 'true');
+      expect(input).toHaveAttribute('aria-invalid', 'true');
+      expect(input).toHaveAttribute('aria-describedby', `${input.id}-error`);
+      expect(screen.getByRole('alert')).toHaveTextContent('Invalid power');
+      expect(input).toHaveClass('ps-12', 'pe-14');
+      expect(input).not.toHaveClass('ps-10', 'pe-10');
+      input.focus();
+      expect(input).toHaveFocus();
+      fireEvent.change(input, { target: { value: '42' } });
+      expect(onChange).toHaveBeenCalledOnce();
+      expect(input).toHaveValue('42');
+      rerender(
+        <div dir="rtl">
+          <Input ref={ref} label="Power" dir="rtl" name="power" defaultValue="0"
+            icon={<span>Leading icon</span>} suffix="W" disabled hint="Waiting"
+            aria-busy="false" onChange={onChange} />
+        </div>,
+      );
+      expect(ref.current).toBe(input);
+      expect(input).toHaveValue('42');
+      expect(input).toBeDisabled();
+      expect(input).toHaveAttribute('aria-busy', 'false');
+      expect(input).toHaveAttribute('aria-describedby', `${input.id}-hint`);
+      expect(screen.queryByRole('alert')).toBeNull();
+      expect(screen.getByText('Waiting')).toBeVisible();
+      expect(input).toHaveClass('ps-10', 'pe-10');
+    });
   });
 });

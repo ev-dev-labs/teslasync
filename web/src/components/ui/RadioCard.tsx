@@ -11,7 +11,7 @@ export interface RadioCardProps
   description?: ReactNode
   /** Optional leading icon. */
   icon?: ReactNode
-  /** Accent hue for the selected state. Defaults to the app cyan. */
+  /** Accent identity for the checked indicator. Defaults to the app cyan. */
   accent?: NeonColor
   /** Controlled selected state. */
   checked: boolean
@@ -41,18 +41,20 @@ export const RadioCard = forwardRef<HTMLInputElement, RadioCardProps>(
       disabled,
       value,
       id,
+      'aria-describedby': describedBy,
       ...inputProps
     },
     ref,
   ) => {
     const autoId = useId()
     const inputId = id ?? autoId
+    const descriptionId = description != null ? `${inputId}-description` : undefined
     // Fall back to the documented cyan default if an out-of-contract accent
     // reaches us from an untyped (JS) caller. A shared primitive must never
     // hard-crash the page on `neonColorMap[bad].border` — degrade instead.
     const c = neonColorMap[accent] ?? neonColorMap.cyan
     return (
-      <label htmlFor={inputId} className={cn('block', !disabled && 'cursor-pointer', className)}>
+      <label htmlFor={inputId} className={cn('block min-w-0', disabled ? 'cursor-not-allowed' : 'cursor-pointer', className)}>
         <input
           ref={ref}
           id={inputId}
@@ -61,6 +63,7 @@ export const RadioCard = forwardRef<HTMLInputElement, RadioCardProps>(
           value={value}
           checked={checked}
           disabled={disabled}
+          aria-describedby={[describedBy, descriptionId].filter(Boolean).join(' ') || undefined}
           onChange={(e) => {
             if (!disabled) onChange(e.target.value)
           }}
@@ -68,39 +71,41 @@ export const RadioCard = forwardRef<HTMLInputElement, RadioCardProps>(
         />
         <span
           className={cn(
-            'flex min-h-11 items-start gap-2.5 rounded-lg border p-3 transition-colors',
+            'flex min-h-11 min-w-0 items-start gap-3 rounded-panel border p-3 text-start transition-colors duration-fast motion-reduce:transition-none',
             checked
-              ? cn(c.border, c.bg)
-              : 'border-[var(--border-subtle)] hover:border-[var(--border-strong)]',
+              ? 'border-[var(--control-border-hover)] bg-[var(--control-bg)]'
+              : 'border-[var(--control-border)] bg-surface-1',
+            !disabled && 'hover:border-[var(--control-border-hover)] hover:bg-[var(--control-bg-hover)]',
             disabled && 'opacity-60',
-            'peer-focus-visible:ring-2 peer-focus-visible:ring-cyan-500 peer-focus-visible:ring-offset-1 peer-focus-visible:ring-offset-transparent',
-            'forced-colors:border-[ButtonBorder]',
+            'peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-[var(--focus-ring)]',
+            'forced-colors:border-[ButtonText] forced-colors:bg-[ButtonFace] forced-colors:peer-focus-visible:outline-[Highlight]',
           )}
         >
           <span
             aria-hidden="true"
             className={cn(
-              'mt-0.5 inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full border transition-colors',
-              checked ? cn(c.border, c.text) : 'border-[var(--border-strong)]',
+              'mt-0.5 inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full border transition-colors duration-fast motion-reduce:transition-none',
+              checked ? c.text : 'text-[var(--text-secondary)]',
+              'border-current forced-colors:text-[ButtonText]',
             )}
           >
             <span
               className={cn(
-                'h-1.5 w-1.5 rounded-full transition-transform',
-                checked ? c.dot : 'bg-transparent',
+                'h-1.5 w-1.5 rounded-full',
+                checked ? cn(c.dot, 'forced-colors:bg-[ButtonText]') : 'bg-transparent',
               )}
             />
           </span>
           {icon && (
-            <span className={cn('mt-0.5 shrink-0', checked ? c.text : 'text-[var(--text-muted)]')}>
+            <span className="mt-0.5 shrink-0 text-[var(--text-secondary)] forced-colors:text-[ButtonText]">
               {icon}
             </span>
           )}
           <span className="min-w-0 flex-1">
-            <Text as="span" size="sm" weight="medium" color="primary" className="block">
+            <Text as="span" size="sm" weight="medium" color="primary" className="block break-words">
               {label}
             </Text>
-            {description != null && <Caption className="mt-0.5 block">{description}</Caption>}
+            {description != null && <Caption id={descriptionId} className="mt-0.5 block break-words">{description}</Caption>}
           </span>
         </span>
       </label>

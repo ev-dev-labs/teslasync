@@ -74,7 +74,7 @@ export const Toggle = forwardRef<HTMLDivElement, ToggleProps>(
       <div
         ref={ref}
         className={cn(
-          'inline-flex items-center gap-2 select-none',
+          'inline-flex max-w-full items-center gap-2 select-none',
           disabled ? 'cursor-not-allowed opacity-60' : 'cursor-pointer',
           className,
         )}
@@ -100,35 +100,36 @@ export const Toggle = forwardRef<HTMLDivElement, ToggleProps>(
           disabled={disabled}
           onClick={() => onChange(!isChecked)}
           className={cn(
-            'relative inline-flex shrink-0 rounded-full transition-colors duration-normal',
-            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 focus-visible:ring-offset-1 focus-visible:ring-offset-transparent',
-            // Forced-colors mode flattens the
-            // track tint to a system colour, making on/off visually
-            // identical. Add a system-colour border on the track and
-            // (below) on the thumb so the off-state knob is visible
-            // and the switch boundary survives Windows High Contrast.
-            'forced-colors:border forced-colors:border-[ButtonBorder]',
-            trackSize[size],
-            isChecked
-              ? 'bg-cyan-500 dark:bg-cyan-600'
-              : 'bg-[var(--control-track-off)]',
+            'inline-flex h-11 min-w-11 shrink-0 items-center justify-center rounded-full md:h-6 md:min-w-0',
+            'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus-ring)]',
+            size === 'sm' ? 'md:w-9' : 'md:w-11',
           )}
         >
           <span
             className={cn(
-              'pointer-events-none inline-block rounded-full bg-[var(--control-thumb)] shadow-sm transition-transform duration-normal',
-              // Outline the thumb so it remains
-              // distinguishable from the (now system-coloured) track.
+              'relative inline-flex shrink-0 items-center rounded-full px-0.5 ring-1 ring-inset ring-[var(--control-border)] transition-colors duration-fast ease-standard motion-reduce:transition-none',
+              // Preserve track boundaries when forced colors flatten the tint.
               'forced-colors:border forced-colors:border-[ButtonBorder]',
-              thumbSize[size],
-              'translate-y-[3px] translate-x-[3px]',
-              isChecked && thumbTranslate[size],
+              trackSize[size],
+              isChecked
+                ? 'bg-[var(--semantic-info)]'
+                : 'bg-[var(--control-track-off)]',
             )}
-            aria-hidden="true"
-          />
+          >
+            <span
+              className={cn(
+                'pointer-events-none inline-block rounded-full bg-[var(--control-thumb)] transition-transform duration-fast ease-standard motion-reduce:transition-none',
+                'forced-colors:border forced-colors:border-[ButtonBorder]',
+                thumbSize[size],
+                'translate-x-0',
+                isChecked && thumbTranslate[size],
+              )}
+              aria-hidden="true"
+            />
+          </span>
         </button>
         {label && (
-          <span id={labelId} className="text-sm font-medium text-[var(--text-secondary)]">
+          <span id={labelId} className="min-w-0 break-words text-sm font-medium text-[var(--text-secondary)]">
             {label}
           </span>
         )}

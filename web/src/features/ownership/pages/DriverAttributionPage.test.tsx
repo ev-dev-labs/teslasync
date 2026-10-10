@@ -52,6 +52,7 @@ vi.mock('@/api/hooks/useOwnership', async () => {
     useAssignDrive: vi.fn(),
     useCreateDriverProfile: vi.fn(),
     useDeleteDriverProfile: vi.fn(),
+    useGhostDrives: vi.fn(),
   };
 });
 
@@ -62,9 +63,11 @@ import {
   useAssignDrive,
   useCreateDriverProfile,
   useDeleteDriverProfile,
+  useGhostDrives,
 } from '@/api/hooks/useOwnership';
 import DriverAttributionPage from './DriverAttributionPage';
-import type { DriverProfile } from '@/types/ownership';
+import { expectOperationalBand, summaryMetric } from '../components/operationalbrief-all/testAssertions';
+import type { DriverAttributionReport, DriverProfile } from '@/types/ownership';
 
 const mockSelected = useSelectedVehicle as unknown as ReturnType<typeof vi.fn>;
 const mockReport = useDriverAttribution as unknown as ReturnType<typeof vi.fn>;
@@ -72,6 +75,7 @@ const mockProfiles = useDriverProfiles as unknown as ReturnType<typeof vi.fn>;
 const mockAssign = useAssignDrive as unknown as ReturnType<typeof vi.fn>;
 const mockCreate = useCreateDriverProfile as unknown as ReturnType<typeof vi.fn>;
 const mockRemove = useDeleteDriverProfile as unknown as ReturnType<typeof vi.fn>;
+const mockGhosts = vi.mocked(useGhostDrives);
 
 function makeProfile(overrides: Partial<DriverProfile> = {}): DriverProfile {
   return {
@@ -100,6 +104,33 @@ function makeQuery(data: unknown) {
 
 function makeMutation(overrides: Record<string, unknown> = {}) {
   return { mutate: vi.fn(), isPending: false, variables: undefined, ...overrides };
+}
+
+function makeReport(cost: number | null = null): DriverAttributionReport {
+  return {
+    vehicle_id: 7,
+    window: { from: '2026-01-01T00:00:00Z', to: '2026-03-01T00:00:00Z', days: 60 },
+    profiles: [], fingerprints: [], total: 0, limit: 100, offset: 0,
+    clusters: [{
+      cluster_id: 0, driver_profile_id: null, driver_name: 'Inferred Cost Cluster',
+      accent: 'cyan', drive_count: 4, share_pct: 100, distance_m: 12000,
+      duration_s: 3600, energy_wh: 25000, efficiency_wh_per_m: null,
+      avg_speed_mps: null, peak_power_w: null, regen_share_pct: null,
+      night_share_pct: 0, aggression_score: 25, cost_share_minor: cost,
+      centroid: [], cohesion: 0.8, labelled_count: 0,
+    }],
+    separation_score: null, separation_verdict: 'unlabelled',
+    labelled_drive_count: 0, inferred_drive_count: 4, ambiguous_drive_count: 0,
+    currency: 'USD',
+    quality: { status: 'limited', sample_count: 4, coverage_pct: 100, window_start: null, window_end: null, reasons: [] },
+    evidence: [],
+  };
+}
+
+function card(title: string): HTMLElement {
+  const element = screen.getByRole('heading', { name: title }).closest('[data-card]');
+  if (!(element instanceof HTMLElement)) throw new Error(`Missing card: ${title}`);
+  return element;
 }
 
 function renderPage() {
@@ -134,9 +165,63 @@ beforeEach(() => {
   mockAssign.mockReturnValue(makeMutation());
   mockCreate.mockReturnValue(makeMutation());
   mockRemove.mockReturnValue(makeMutation());
+  mockGhosts.mockReturnValue(makeQuery({ vehicle_id: 7, scanned: 0, ghosts: [] }) as ReturnType<typeof useGhostDrives>);
 });
 
 describe('DriverAttributionPage — confirm-gated delete', () => {
+  it('retains every attribution quantity and ambiguity caption in the real brief without labelling a drive', () => {
+    mockReport.mockReturnValue(makeQuery(makeReport()));
+    renderPage();
+    expectOperationalBand('Separation quality', ['clusters', 'separation', 'labelled', 'inferred', 'ambiguous']);
+    for (const key of ['clusters', 'labelled', 'inferred', 'ambiguous']) {
+      expect(summaryMetric('Separation quality', key)).toHaveAttribute('data-value-state', 'value');
+    }
+    expect(summaryMetric('Separation quality', 'separation')).toHaveAttribute('data-value-state', 'missing');
+    expect(summaryMetric('Separation quality', 'ambiguous')).toHaveTextContent('Two clusters fit almost equally well');
+    expect(screen.getByRole('combobox', { name: 'Analysis window' })).toBeInTheDocument();
+    fireEvent.click(within(card('Separation quality')).getByRole('button', { name: 'Review details' }));
+    expect(screen.getByRole('dialog')).toHaveTextContent('Two clusters fit almost equally well');
+  });
+
+  it('keeps named driver records usable when inferred history has an initial failure', () => {
+    mockReport.mockReturnValue({ ...makeQuery(undefined), error: new Error('history failed') });
+    renderPage();
+    const profiles = card('Named drivers');
+    expect(within(profiles).getByText('Alex')).toBeInTheDocument();
+    expect(within(profiles).getByText('Sam')).toBeInTheDocument();
+    expect(within(profiles).queryByRole('button', { name: 'Retry' })).not.toBeInTheDocument();
+    expect(within(card('Cluster characteristics')).getByRole('button', { name: 'Retry' })).toBeInTheDocument();
+    expect(mockReport).toHaveBeenCalledWith(7, 90, 100, 0);
+    expect(mockAssign().mutate).not.toHaveBeenCalled();
+  });
+
+  it('retains measured cluster cost while an independent profile source is unavailable', () => {
+    const refetch = vi.fn();
+    mockReport.mockReturnValue({ ...makeQuery(makeReport(12345)), error: new Error('history refresh failed'), refetch });
+    mockProfiles.mockReturnValue({ ...makeQuery(undefined), error: new Error('profiles failed') });
+    renderPage();
+    const characteristics = card('Cluster characteristics');
+    expect(within(characteristics).getByText('Inferred Cost Cluster')).toBeInTheDocument();
+    expect(within(characteristics).getByText('$123.45')).toBeInTheDocument();
+    expect(within(characteristics).getByText(/Previously loaded data remains visible/)).toBeInTheDocument();
+    fireEvent.click(within(characteristics).getByRole('button', { name: 'Retry' }));
+    expect(refetch).toHaveBeenCalledOnce();
+    expect(mockAssign().mutate).not.toHaveBeenCalled();
+  });
+
+  it.each([null, 0])('does not confuse nullable cluster cost %s with a real zero', (cost) => {
+    mockReport.mockReturnValue(makeQuery(makeReport(cost)));
+    renderPage();
+    const row = within(card('Cluster characteristics')).getByText('Inferred Cost Cluster').closest('tr');
+    if (cost == null) {
+      expect(row).not.toHaveTextContent('$0.00');
+      expect(row?.textContent?.match(/—/g)).toHaveLength(4);
+    } else {
+      expect(row).toHaveTextContent('$0.00');
+      expect(row?.textContent?.match(/—/g)).toHaveLength(3);
+    }
+  });
+
   it('opens a danger confirm naming the profile instead of deleting on click', () => {
     const mutate = vi.fn();
     mockRemove.mockReturnValue(makeMutation({ mutate }));

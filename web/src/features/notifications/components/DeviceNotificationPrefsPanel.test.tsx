@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { MemoryRouter } from 'react-router-dom'
 
 /**
  * Per-device notification rules panel (PWA-05).
@@ -45,11 +46,17 @@ const vehicles = vi.hoisted(() => ({
   data: [
     { id: 1, display_name: 'Roadster' },
     { id: 2, display_name: 'Cybertruck' },
-  ] as Array<{ id: number; display_name: string }>,
+  ] as Array<{ id: number; display_name: string }> | undefined,
+  error: null as Error | null,
+  isLoading: false,
+  refetch: vi.fn(),
 }))
 
 vi.mock('@/api/hooks/useVehicles', () => ({
-  useVehicles: () => ({ data: vehicles.data, isLoading: false, isError: false }),
+  useVehicles: () => ({
+    data: vehicles.data, isLoading: vehicles.isLoading, isError: vehicles.error != null,
+    error: vehicles.error, refetch: vehicles.refetch,
+  }),
 }))
 
 const showNotification = vi.fn(async () => {})
@@ -62,6 +69,13 @@ beforeEach(() => {
   showNotification.mockClear()
   webPush.permission = 'granted'
   webPush.isSupported = true
+  vehicles.data = [
+    { id: 1, display_name: 'Roadster' },
+    { id: 2, display_name: 'Cybertruck' },
+  ]
+  vehicles.error = null
+  vehicles.isLoading = false
+  vehicles.refetch.mockClear()
   Object.defineProperty(navigator, 'serviceWorker', {
     configurable: true,
     writable: true,
@@ -82,6 +96,43 @@ afterEach(() => {
 })
 
 describe('DeviceNotificationPrefsPanel', () => {
+  it('retains scoped vehicle choices on refresh failure without sending a notification', () => {
+    const view = render(<DeviceNotificationPrefsPanel />)
+    fireEvent.change(screen.getByLabelText('Vehicle scope'), { target: { value: 'selected' } })
+    fireEvent.click(screen.getByRole('switch', { name: 'Roadster' }))
+    vehicles.error = new Error('vehicles refresh offline')
+    view.rerender(<DeviceNotificationPrefsPanel />)
+    expect(screen.getByRole('switch', { name: 'Roadster' })).toHaveAttribute('aria-checked', 'true')
+    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument()
+    expect(showNotification).not.toHaveBeenCalled()
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }))
+    expect(vehicles.refetch).toHaveBeenCalledOnce()
+    expect(showNotification).not.toHaveBeenCalled()
+  })
+
+  it('keeps selected IDs visible and saved when vehicle details disappear', () => {
+    const view = render(<DeviceNotificationPrefsPanel />)
+    fireEvent.change(screen.getByLabelText('Vehicle scope'), { target: { value: 'selected' } })
+    fireEvent.click(screen.getByRole('switch', { name: 'Roadster' }))
+    vehicles.data = []
+    view.rerender(<DeviceNotificationPrefsPanel />)
+    expect(screen.getByText(/Selected vehicle IDs remain saved.*1/)).toBeInTheDocument()
+    expect(showNotification).not.toHaveBeenCalled()
+    vehicles.data = [{ id: 1, display_name: 'Roadster' }]
+    view.rerender(<DeviceNotificationPrefsPanel />)
+    expect(screen.getByRole('switch', { name: 'Roadster' })).toHaveAttribute('aria-checked', 'true')
+  })
+
+  it('distinguishes an initial vehicle error from an empty fleet and retries only that source', () => {
+    vehicles.data = undefined
+    vehicles.error = new Error('vehicles unavailable')
+    render(<MemoryRouter><DeviceNotificationPrefsPanel /></MemoryRouter>)
+    fireEvent.change(screen.getByLabelText('Vehicle scope'), { target: { value: 'selected' } })
+    expect(screen.queryByText('No vehicles are available to scope to yet.')).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }))
+    expect(vehicles.refetch).toHaveBeenCalledOnce()
+    expect(showNotification).not.toHaveBeenCalled()
+  })
   it('starts in an unfiltered state and says so', () => {
     render(<DeviceNotificationPrefsPanel />)
     expect(screen.getByText('Everything delivered')).toBeInTheDocument()

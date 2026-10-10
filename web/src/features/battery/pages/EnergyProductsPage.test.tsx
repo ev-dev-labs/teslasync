@@ -133,6 +133,7 @@ interface SitesQueryStub {
   isFetching: boolean;
   isStale: boolean;
   dataUpdatedAt: number;
+  fetchStatus?: 'fetching' | 'paused' | 'idle';
 }
 
 function makeSitesQuery(overrides: Partial<SitesQueryStub> = {}): SitesQueryStub {
@@ -256,11 +257,11 @@ describe('EnergyProductsPage — ready dashboard', () => {
     expect(within(summary).getByText('Energy Sites')).toBeInTheDocument();
     expect(within(summary).getByText('With Solar')).toBeInTheDocument();
     expect(within(summary).getByText('Total Capacity')).toBeInTheDocument();
-    expect(within(summary).getByText('13.5 kWh')).toBeInTheDocument();
+    expect(within(summary).getByText('13.50 kWh')).toBeInTheDocument();
 
     // Site card header + stats.
     expect(screen.getByText('Home Powerwall')).toBeInTheDocument();
-    expect(screen.getByText('87.5%')).toBeInTheDocument(); // charge
+    expect(screen.getByText('87.50%')).toBeInTheDocument(); // charge
     expect(screen.getByText('Powerwall')).toBeInTheDocument(); // Type card (battery → Powerwall)
 
     // Site configuration section (own query) — deterministic SI values.
@@ -270,15 +271,15 @@ describe('EnergyProductsPage — ready dashboard', () => {
     // nodes, and the meter announces the reading with its range.
     const reserve = screen.getByRole('meter', { name: /backup reserve/i });
     expect(reserve).toHaveAttribute('aria-valuenow', '20');
-    expect(reserve).toHaveAttribute('aria-valuetext', '20%');
-    expect(screen.getByText('5.0 kW')).toBeInTheDocument(); // rated power (W → kW)
+    expect(reserve).toHaveAttribute('aria-valuetext', '20.00%');
+    expect(screen.getByText('5.00 kW')).toBeInTheDocument(); // rated power (W → kW)
     expect(screen.getByText(/Firmware: 23\.44\.0/)).toBeInTheDocument(); // firmware label + version
     expect(screen.getByText(/America\/Los_Angeles/)).toBeInTheDocument(); // timezone
     expect(screen.getByText('tou capable')).toBeInTheDocument(); // component chip (underscored → spaced)
     expect(screen.getByText('PG&E EV2-A')).toBeInTheDocument(); // TOU rate plan
 
     // "13.5 kWh" appears in KPI total + card capacity + rated energy.
-    expect(screen.getAllByText('13.5 kWh').length).toBe(3);
+    expect(screen.getAllByText('13.50 kWh').length).toBe(3);
 
     // Refresh affordances expose accessible names on icon-only controls.
     expect(screen.getByRole('button', { name: 'Refresh from Tesla' })).toBeInTheDocument();
@@ -328,7 +329,7 @@ describe('EnergyProductsPage — ready dashboard', () => {
 
     const summary = screen.getByRole('region', { name: 'Energy summary' });
     // 2 sites, 1 with solar, 1 storm-ready; 13500 + 13500 Wh → "27.0 kWh".
-    expect(within(summary).getByText('27.0 kWh')).toBeInTheDocument();
+    expect(within(summary).getByText('27.00 kWh')).toBeInTheDocument();
     // Both site cards rendered.
     expect(screen.getByText('Home Powerwall')).toBeInTheDocument();
     expect(screen.getByText('Cabin')).toBeInTheDocument();
@@ -342,9 +343,14 @@ describe('EnergyProductsPage — loading / error / empty', () => {
     const { container } = renderPage();
 
     expect(screen.getByRole('heading', { name: 'Energy Products', level: 1 })).toBeInTheDocument();
-    expect(screen.queryByText('Energy Sites')).not.toBeInTheDocument();
+    // Metric labels persist during loading; no ready measurement may leak.
+    const summary = screen.getByRole('region', { name: 'Energy summary' });
+    expect(summary).toHaveAttribute('aria-busy', 'true');
+    expect(within(summary).getByText('Energy Sites').closest('[data-operational-metric]'))
+      .toHaveAttribute('data-value-state', 'missing');
+    expect(summary.querySelector('[data-operational-value]')).not.toBeInTheDocument();
     expect(screen.queryByText('Home Powerwall')).not.toBeInTheDocument();
-    expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThan(0);
+    expect(container.querySelectorAll('[data-card-content] > [aria-hidden="true"][class~="bg-[var(--skeleton-bg)]"].h-72').length).toBeGreaterThan(0);
   });
 
   it('swaps the body for QueryError and wires Retry to the sites refetch', () => {
@@ -374,7 +380,7 @@ describe('EnergyProductsPage — loading / error / empty', () => {
     const summary = screen.getByRole('region', { name: 'Energy summary' });
     expect(within(summary).getByText('Energy Sites')).toBeInTheDocument();
     // Total capacity of an empty fleet is 0 Wh → "0 Wh".
-    expect(within(summary).getByText('0 Wh')).toBeInTheDocument();
+    expect(within(summary).getByText('0.00 Wh')).toBeInTheDocument();
   });
 
   it('invokes the refresh mutation when the header action is clicked', () => {
@@ -394,7 +400,7 @@ describe('EnergyProductsPage — SiteInfoSection states', () => {
     // The section header always renders; its body is a skeleton.
     expect(screen.getByText('Site Configuration')).toBeInTheDocument();
     expect(screen.queryByText('Time-Based Control')).not.toBeInTheDocument();
-    expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThan(0);
+    expect(container.querySelectorAll('section > [aria-hidden="true"][class~="bg-[var(--skeleton-bg)]"].h-40').length).toBeGreaterThan(0);
   });
 
   it('surfaces QueryError in the card and retries via the site-info mutation', () => {
@@ -447,16 +453,16 @@ describe('fmtEnergy / fmtPower', () => {
   });
 
   it('scales at the 1000 SI boundary (Wh↔kWh, W↔kW)', () => {
-    expect(fmtEnergy(999)).toBe('999 Wh');
-    expect(fmtEnergy(1000)).toBe('1.0 kWh');
-    expect(fmtEnergy(13500)).toBe('13.5 kWh');
-    expect(fmtPower(500)).toBe('500 W');
-    expect(fmtPower(5000)).toBe('5.0 kW');
+    expect(fmtEnergy(999)).toBe('999.00 Wh');
+    expect(fmtEnergy(1000)).toBe('1.00 kWh');
+    expect(fmtEnergy(13500)).toBe('13.50 kWh');
+    expect(fmtPower(500)).toBe('500.00 W');
+    expect(fmtPower(5000)).toBe('5.00 kW');
   });
 
   it('uses magnitude so negative (export) values still scale', () => {
-    expect(fmtPower(-2000)).toBe('-2.0 kW');
-    expect(fmtEnergy(0)).toBe('0 Wh');
+    expect(fmtPower(-2000)).toBe('-2.00 kW');
+    expect(fmtEnergy(0)).toBe('0.00 Wh');
   });
 });
 
@@ -496,5 +502,80 @@ describe('resourceIcon', () => {
     expect(resourceIcon('solar')).toBe(Sun);
     expect(resourceIcon('wall_connector')).toBe(Zap);
     expect(resourceIcon('')).toBe(Zap);
+  });
+
+  describe('EnergyProductsPage — modernization trust regressions', () => {
+    it('retains discovered sites, aggregate capacity, and site configuration after a refresh error', () => {
+      h.sites = makeSitesQuery({ data: [makeSite()], isError: true, error: new Error('refresh failed') });
+      renderPage();
+
+      expect(screen.getByText('Home Powerwall')).toBeInTheDocument();
+      expect(within(screen.getByRole('region', { name: 'Energy summary' })).getByText('13.50 kWh')).toBeInTheDocument();
+      expect(screen.getByText('Time-Based Control')).toBeInTheDocument();
+      expect(screen.getByText('PG&E EV2-A')).toBeInTheDocument();
+      expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+      expect(screen.queryByText(/Can't reach server/i)).not.toBeInTheDocument();
+      fireEvent.click(screen.getByRole('button', { name: 'Refresh from Tesla' }));
+      expect(refreshSitesMock).toHaveBeenCalledTimes(1);
+    });
+
+    it('retains configuration values and the rate-plan action after a site-info refresh error', () => {
+      h.siteInfo = makeSiteInfoQuery({ data: makeSiteInfo(), isError: true, error: new Error('config refresh failed') });
+      renderPage();
+
+      expect(screen.getByText('Time-Based Control')).toBeInTheDocument();
+      expect(screen.getByRole('meter', { name: /backup reserve/i })).toHaveAttribute('aria-valuenow', '20');
+      expect(screen.getByText('5.00 kW')).toBeInTheDocument();
+      expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+      fireEvent.click(screen.getByRole('button', { name: 'Update rate plan' }));
+      expect(screen.getByRole('dialog')).toBeInTheDocument();
+    });
+
+    it('shows offline trust alongside retained sites rather than an empty discovery state', () => {
+      h.sites = makeSitesQuery({ data: [makeSite()], fetchStatus: 'paused' });
+      renderPage();
+
+      const notice = screen.getByTestId('stale-refresh-warning');
+      expect(notice).toHaveAttribute('role', 'status');
+      expect(notice).toHaveAttribute('data-data-state', 'stale');
+      expect(notice).toHaveAttribute('data-refresh-blocked', 'true');
+      expect(notice).toHaveTextContent('The latest values are temporarily unavailable. Previously loaded data remains visible.');
+      expect(notice).not.toHaveTextContent(/offline|failed/i);
+      expect(within(screen.getByRole('region', { name: 'Energy summary' }))
+        .getByText('Retained source evidence')).toBeInTheDocument();
+      expect(screen.getByText('Time-Based Control')).toBeInTheDocument();
+      expect(screen.getByText('5.00 kW')).toBeInTheDocument();
+      expect(screen.getByText('Home Powerwall')).toBeInTheDocument();
+      expect(screen.getByText('87.50%')).toBeInTheDocument();
+      expect(screen.queryByText(/No energy products found/)).not.toBeInTheDocument();
+    });
+
+    it('does not fabricate a complete aggregate capacity when a site capacity is missing', () => {
+      h.sites = makeSitesQuery({ data: [
+        makeSite(),
+        makeSite({ id: 2, energy_site_id: 2, site_name: 'Cabin', total_pack_energy: null }),
+      ] });
+      renderPage();
+
+      const summary = screen.getByRole('region', { name: 'Energy summary' });
+      const capacity = within(summary).getByText('Total Capacity').closest('[data-operational-metric]');
+      expect(capacity).toHaveAttribute('data-value-state', 'missing');
+      expect(capacity?.querySelector('[data-operational-value]')).toHaveTextContent('—');
+      expect(within(summary).queryByText('13.50 kWh')).not.toBeInTheDocument();
+      expect(screen.getByText('Cabin')).toBeInTheDocument();
+      expect(screen.getByText('Home Powerwall')).toBeInTheDocument();
+    });
+
+    it('keeps an unreceived site snapshot distinct from a measured empty site list', () => {
+      h.sites = makeSitesQuery();
+      renderPage();
+
+      const summary = screen.getByRole('region', { name: 'Energy summary' });
+      const count = within(summary).getByText('Energy Sites').closest('[data-operational-metric]');
+      expect(count).toHaveAttribute('data-value-state', 'missing');
+      expect(count?.querySelector('[data-operational-value]')).toHaveTextContent('—');
+      expect(within(summary).queryByText('0.00 Wh')).not.toBeInTheDocument();
+      expect(screen.getByText('No energy-site snapshot has loaded. Refresh from Tesla to discover your installations.')).toBeInTheDocument();
+    });
   });
 });

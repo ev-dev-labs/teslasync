@@ -1,0 +1,266 @@
+{
+  "item": "audit-page-147",
+  "page": "web\\src\\features\\notifications\\pages\\BrowserNotificationsPage.tsx",
+  "routes": ["/notifications/browser"],
+  "purpose": "Browser/device notification control center: background push, in-tab delivery, tab indicators, device filtering, data usage and sound preferences.",
+  "primaryGoal": "Understand notification availability and configure this browser without confusing device rules with server-wide routing or quiet hours.",
+  "dataSources": [
+    {
+      "hook": "useWebPush / usePushPublicKey / usePushSubscriptions",
+      "owner": "web\\src\\hooks\\useWebPush.ts",
+      "endpoints": ["GET /api/v1/push/public-key", "GET /api/v1/push/subscribe", "POST /api/v1/push/subscribe", "DELETE /api/v1/push/subscribe"],
+      "evidence": ["web\\src\\api\\hooks\\usePush.ts:34-60", "web\\src\\api\\hooks\\usePush.ts:70-123", "internal\\api\\router.go:3744-3749"],
+      "behavior": "Public key 404 maps to unconfigured/null; query keys, cancellation, retry:false for public key, stale times and mutation invalidation/toasts are existing contracts. Browser permission, service-worker registration and PushManager subscription are separate local sources."
+    },
+    {
+      "hook": "useNotificationListener",
+      "owner": "web\\src\\hooks\\useNotificationListener.ts",
+      "endpoints": ["GET /api/v1/events"],
+      "evidence": ["web\\src\\hooks\\useNotificationListener.ts:15-58", "web\\src\\hooks\\useNotificationListener.ts:97-210", "internal\\api\\router.go:4345"],
+      "behavior": "Local key teslasync-web-push-prefs stores alert/export booleans. SSE alert/export_status listeners deliver hidden-tab OS notifications; alert sound listener is independent of visibility and permission. Quiet-suppressed/test alerts are excluded. SSE transport internals and server payload correctness were not exercised."
+    },
+    {
+      "hook": "useSettings / useSaveSettings",
+      "owner": "web\\src\\api\\hooks\\useSettings.ts",
+      "endpoints": ["GET /api/v1/settings", "PUT /api/v1/settings"],
+      "evidence": ["web\\src\\api\\hooks\\useSettings.ts:27-49", "internal\\api\\router.go:3659-3660"],
+      "behavior": "Shared settings query feeds tab KPI and independent panel. Missing tab booleans default on; saves preserve the full cached settings object. useDataState retains usable data and exposes refresh/fatal distinction."
+    },
+    {
+      "hook": "useVehicles / useDeviceNotificationPrefs",
+      "owner": "web\\src\\hooks\\useDeviceNotificationPrefs.ts",
+      "endpoints": ["GET /api/v1/vehicles"],
+      "evidence": ["web\\src\\api\\hooks\\useVehicles.ts:73-80", "internal\\api\\router.go:3319-3320", "web\\src\\hooks\\useDeviceNotificationPrefs.ts:32-55", "web\\src\\hooks\\useDeviceNotificationPrefs.ts:163-243"],
+      "behavior": "Vehicle list is for an independent notification-delivery policy, not a duplicate workspace selector. Device policy is persisted under teslasync:device-notification-prefs:v1, sanitized, mirrored across tabs and posted to the existing service worker. Policy implementation was not independently validated."
+    },
+    {
+      "hook": "useNotificationSoundPrefs",
+      "owner": "web\\src\\lib\\notificationSound.ts",
+      "endpoints": [],
+      "evidence": ["web\\src\\lib\\notificationSound.ts:87-151", "web\\src\\features\\notifications\\components\\NotificationSoundsPanel.tsx:38-70"],
+      "behavior": "Local external store and cross-tab storage synchronization; master, seven category toggles and normalized volume. Testing intentionally overrides master/category and raises zero volume to 0.5."
+    },
+    {
+      "hook": "LowBandwidthControl -> useLowBandwidthMode / useDataSaverPolicy",
+      "owner": "web\\src\\components\\feedback\\LowBandwidthControl.tsx",
+      "endpoints": [],
+      "evidence": ["web\\src\\components\\feedback\\LowBandwidthControl.tsx:25-91"],
+      "behavior": "Existing auto/on/off device control and source/effect explanations. Hook and service-worker enforcement internals were not inspected."
+    }
+  ],
+  "components": [
+    {"name": "PageLayout", "owner": "@/components/layout", "use": "Full page title/subtitle and copy-link action; page lines 34-41."},
+    {"name": "FadeIn", "owner": "@/components/motion", "use": "Five entrance groups; shared reduced-motion implementation not inspected."},
+    {"name": "OperationalBrief / DataProvenanceBadge / useOperationalMetrics", "owner": "@/components/data-display and @/hooks/useOperationalMetrics", "use": "Four configuration metrics, scope and provenance; existing owner reused, no competing KPI renderer."},
+    {"name": "GlassPanel / typography / Button / Toggle / Input / Select / Slider / Badge / IconBox", "owner": "@/components/ui", "use": "Existing primitives across six panel surfaces and the sound channel row."},
+    {"name": "useDataState / StaleRefreshWarning / QueryError / Skeleton / EmptyState / InlineCallout", "owner": "@/hooks/useDataState and @/components/feedback", "use": "Independent source states and recovery."},
+    {"name": "BrowserPushChannelCard, BrowserNotificationsKpis, BrowserPermissionPanel, BrowserTabSignalsPanel, DeviceNotificationPrefsPanel, DeviceDataUsagePanel, NotificationSoundsPanel, NotificationSoundChannelRow", "owner": "web\\src\\features\\notifications\\components", "use": "Existing domain presentation owners; preserve all."},
+    {"name": "LowBandwidthControl", "owner": "web\\src\\components\\feedback\\LowBandwidthControl.tsx", "use": "Shared device data usage owner; do not clone."}
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\notifications\\pages\\BrowserNotificationsPage.tsx",
+      "line": 31,
+      "rule": "MDC-002 / MDC-046 single side-effect owner",
+      "detail": "The mounted shell already invokes useNotificationListener at Layout.tsx:850. This page invokes it again, registering another alert sound callback (hook lines 192-210) and hidden-tab notification callbacks. Preferences are separate useState snapshots, so same-tab page toggles do not update the shell's closure. Duplicate sounds and contradictory delivery preferences are source-backed risks, not runtime-observed outcomes.",
+      "fix": "Keep one shell-owned delivery listener; expose the same persisted preference source to page controls through an existing context/external-store pattern without mounting another delivery listener. Preserve alert/export drillthrough and exclusions.",
+      "owner": "integration",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\notifications\\components\\BrowserPushChannelCard.tsx",
+      "line": 44,
+      "rule": "MDC-002 shared source ownership",
+      "detail": "Even when supplied the page's webPush object, the card unconditionally mounts another useWebPush. The listener and device panel also mount independent instances. Cached queries can deduplicate requests, but permission/subscription useState is not shared.",
+      "fix": "Reuse an existing centralized permission/subscription source; do not call hooks conditionally. A hook-owning wrapper can preserve standalone-card use while a presentation-only child accepts the already-owned source.",
+      "owner": "integration",
+      "confidence": "high"
+    }
+  ],
+  "responsive": {
+    "observedSource": [
+      "Page lines 67 and 87 stack panels by default and use three-column XL grids with two-column primary panels.",
+      "NotificationSoundsPanel.tsx:109 uses one/two/three/four columns at base/sm/xl/3xl.",
+      "NotificationSoundChannelRow.tsx:34-36 uses min-w-0, min-h-11 and wrapping.",
+      "Push device metadata uses break-words and min-w-0; labeled buttons commonly opt into wrapLabel."
+    ],
+    "issues": [],
+    "unverified": ["All required viewport widths from 320 to 2560", "Container-width overflow", "Long localized labels", "RTL", "200% text", "Real touch target dimensions"]
+  },
+  "accessibility": {
+    "observedSource": [
+      "Page sections have localized aria-labels; decorative feature icons commonly use aria-hidden.",
+      "Permission and push status include words, not only color.",
+      "Device test result uses role=status and aria-live=polite; tab saving state uses aria-busy and polite feedback.",
+      "Sound test buttons have category-specific accessible names."
+    ],
+    "issues": [],
+    "unverified": ["Keyboard order and focus visibility", "Screen-reader output", "Composed contrast in light/dark/custom themes", "Forced colors", "Reduced-motion runtime behavior", "Shared Toggle/Slider semantics"]
+  },
+  "states": {
+    "observedSource": [
+      "Push key checking, error/retry, unsupported/unconfigured, denied, subscribed and action failure have explicit UI.",
+      "Subscriptions have skeleton/fatal error/stale refresh feedback and retained rows.",
+      "Tab settings have independent skeleton/error/empty/retry and saving guards; retained data is not replaced on refresh failure.",
+      "Vehicle policy selection retains unavailable saved IDs and distinguishes loading/error/empty.",
+      "Sound preferences and device preferences are local and remain available without a page-wide network gate."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\hooks\\useWebPush.ts",
+        "line": 39,
+        "rule": "MDC-026 / MDC-046 permission truth synchronization",
+        "detail": "Permission is initialized separately in every hook instance and only updated by that instance's requestPermission (lines 78-82). The page's granted UI can therefore diverge from useNotificationListener's separate permission snapshot (listener lines 98,112), or the device test panel's snapshot (panel line 107), after an enable action. Browser site-settings changes also have no synchronization here.",
+        "fix": "Share observed permission across existing consumers and refresh browser truth at appropriate lifecycle points; retain explicit unsupported/denied/default meanings and user-gesture-only permission prompts.",
+        "owner": "shared",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\hooks\\useWebPush.ts",
+        "line": 42,
+        "rule": "MDC-026 unknown is not a negative measurement",
+        "detail": "Subscription begins false while getSubscription is unresolved. Lookup failures at lines 68-72 are swallowed. BrowserPushChannelCard.tsx:82-85 only defers availability for the public-key query, so it can show 'Not subscribed' when device subscription truth is checking or unavailable.",
+        "fix": "Expose existing subscription lookup as checking/known/unavailable with retry and only show definitive subscribed/not-subscribed labels after successful device lookup.",
+        "owner": "shared",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\hooks\\useWebPush.ts",
+        "line": 211,
+        "rule": "MDC-026 mutation outcome honesty",
+        "detail": "Server unsubscribe errors are caught and ignored; browser unsubscribe errors are also ignored (lines 217-224), and the function returns true at line 225. The boolean returned by PushSubscription.unsubscribe is not checked. The card's actionFailed state only catches false/rejection, so it may clear the device to not-subscribed without confirming either removal.",
+        "fix": "Preserve the deliberate best-effort browser cleanup, but expose separate server/browser outcomes and re-read subscription truth. Report partial failure and retry rather than treating user intent as confirmed success.",
+        "owner": "shared",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\notifications\\components\\BrowserPushChannelCard.tsx",
+        "line": 245,
+        "rule": "MDC-026 / mission section 23 explicit empty state",
+        "detail": "Successful zero-row subscription data hides the registered-device subsection entirely. There is no explicit empty-list explanation to distinguish an empty server registry from the adjacent device-local subscription verdict.",
+        "fix": "Retain the registered-device heading and add a localized settled-empty explanation using the existing EmptyState; keep source loading/error and retained-data behavior independent.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ]
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\components\\feedback\\LowBandwidthControl.tsx",
+      "line": 57,
+      "rule": "MDC-013 typography owner",
+      "detail": "The shared low-bandwidth status paragraph uses raw text-xs rather than the existing role renderer, while its neighboring caption/help already use shared typography.",
+      "fix": "Use Text as=p with the equivalent caption/body role and preserve data-testid, data-enabled, data-source and full explanatory text.",
+      "owner": "shared",
+      "confidence": "high"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\features\\notifications\\components\\NotificationSoundsPanel.tsx",
+      "line": 113,
+      "rule": "MDC-044 canonical extractable localization",
+      "detail": "Sound category labels use a computed translation key. The neighboring device policy component explicitly uses a static key map because the repository extractor cannot see computed keys (DeviceNotificationPrefsPanel.tsx:72-76). Catalog coverage and extraction failure were not executed or independently verified.",
+      "fix": "Use a typed static category-to-key map with the existing seven fallbacks; retain all category identities and canonical catalogs.",
+      "owner": "page",
+      "confidence": "medium"
+    }
+  ],
+  "priority": {
+    "level": "high",
+    "reason": "Resolve source-backed duplicate listener and independent permission truth before cosmetic migration. Page layout already reuses the current full-width composition and shared primitives."
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "Single delivery listener and shared in-tab notification preferences",
+      "owner": "web\\src\\hooks\\useNotificationListener.ts",
+      "existingOwnerFiles": ["web\\src\\components\\layout\\Layout.tsx", "web\\src\\hooks\\useNotificationListener.ts"],
+      "propsVariantsStates": ["Read/update alerts and exportStatus booleans without subscribing to delivery", "One shell listener", "Same-tab and cross-tab preference synchronization", "Existing persisted key and defaults", "Preserve suppression/test exclusions, sounds and drillthrough"],
+      "usedBy": ["web\\src\\components\\layout\\Layout.tsx", "web\\src\\features\\notifications\\pages\\BrowserNotificationsPage.tsx", "web\\src\\features\\notifications\\components\\BrowserPermissionPanel.tsx"],
+      "dependsOn": ["Existing notification preference persistence", "Existing SSE singleton; no second EventSource", "Shared permission truth"]
+    },
+    {
+      "name": "Observed browser permission and device subscription state",
+      "owner": "web\\src\\hooks\\useWebPush.ts",
+      "propsVariantsStates": ["Shared NotificationPermission/support", "checking/known/unavailable subscription state", "Local retry", "Separate server/browser unsubscribe outcome", "No automatic permission prompts or subscriptions"],
+      "usedBy": ["web\\src\\features\\notifications\\pages\\BrowserNotificationsPage.tsx", "web\\src\\features\\notifications\\components\\BrowserPushChannelCard.tsx", "web\\src\\features\\notifications\\components\\DeviceNotificationPrefsPanel.tsx", "web\\src\\hooks\\useNotificationListener.ts"],
+      "dependsOn": ["Existing usePush queries/mutations", "Browser Notification/PushManager/service-worker APIs", "Preserved server-first unsubscribe ordering and intentional best-effort cleanup"]
+    },
+    {
+      "name": "LowBandwidthControl typography adoption",
+      "owner": "web\\src\\components\\feedback\\LowBandwidthControl.tsx",
+      "propsVariantsStates": ["Existing Text semantic element override and text role", "Retain all status data attributes and translations"],
+      "usedBy": ["web\\src\\features\\notifications\\components\\DeviceDataUsagePanel.tsx"],
+      "dependsOn": ["Existing @/components/ui typography; no new component required"]
+    }
+  ],
+  "competingImplementations": [
+    {"pattern": "Notification delivery ownership", "evidence": ["web\\src\\components\\layout\\Layout.tsx:850", "web\\src\\features\\notifications\\pages\\BrowserNotificationsPage.tsx:31"], "recommendation": "Consolidate side-effect ownership rather than create a second store/library."},
+    {"pattern": "Permission/subscription truth", "evidence": ["web\\src\\hooks\\useWebPush.ts:39-43", "web\\src\\hooks\\useNotificationListener.ts:98", "web\\src\\features\\notifications\\components\\BrowserPushChannelCard.tsx:44", "web\\src\\features\\notifications\\components\\DeviceNotificationPrefsPanel.tsx:107"], "recommendation": "Share observed source state; preserve separately owned browser policy and server settings."}
+  ],
+  "preservation": {
+    "sourceHash": "99884A4531E4598AD7E9CB8C1D4DB7014BBA271FA5BEA0054F89C0379542F5C9",
+    "hashAlgorithm": "SHA256",
+    "sourceHashPath": "web\\src\\features\\notifications\\pages\\BrowserNotificationsPage.tsx",
+    "currentLineCount": 100,
+    "pageAndInspectedFeatureComponentsLineCount": 1441,
+    "sectionNames": ["Background browser push and registered devices", "Four-metric configuration summary", "While this tab is open: permission/events and tab signals", "Per-device notification/data rules", "Notification sounds"],
+    "sectionCounts": {"topLevelPresentationGroups": 5, "pageNativeSections": 3, "featureGlassPanels": 6, "featureChartContainers": 0, "summaryMetrics": 4, "soundCategories": 7},
+    "actions": ["Copy page link", "Enable/disable push on this device", "Retry public key and device-list reads", "Remove registered device", "Request browser notification permission", "Toggle alert/export in-tab events", "Save tab badge/critical flash preferences", "Enable device notifications", "Toggle eight device categories", "Choose severity floor", "Choose all/selected vehicles and selected IDs", "Configure device quiet times and severity bypasses", "Send local policy test notification", "Reset device rules", "Set low-bandwidth auto/on/off", "Toggle sound master/category", "Test each sound", "Adjust volume"],
+    "dataBehavior": [
+      "Preserve explicit distinction among background push, hidden-tab Notification API delivery, device-side policy and server-wide settings.",
+      "Device test is not an end-to-end server push test; preserve its policy evaluation and browser-only success/suppression/error messages.",
+      "Preserve all stored keys/defaults, settings full-object writes, query keys, cancellation, invalidation/broadcast, stale times and retry semantics.",
+      "No physical measurement conversion exists in this orchestration; booleans, counts, severity, IDs, local quiet times and normalized audio volume must not be treated as SI measurements.",
+      "Do not add a workspace date selector: this is a device settings route, absent from RANGE_ENABLED_PATHS.",
+      "Notifications are in VEHICLE_DISABLED_PREFIXES; preserve local notification-policy vehicle selection, which is not a duplicate global workspace selector.",
+      "Preserve server cost/silent-push caveat, iOS Home Screen requirements, browser-blocked guidance and low-bandwidth effect explanations.",
+      "Keep every independent section visible during unrelated source failure; preserve retained usable settings/device rows and saved unavailable vehicle IDs."
+    ],
+    "palette": "Current feature source uses restrained cyan-300/emerald/rose/amber accents and semantic UI variants, not direct neon text/glow. neonColorMap is used only for its text entry, which currently maps to subdued colors (tokens.ts:21-22); its name alone is not a violation. Prefer semantic tokens for any future accent changes; composed contrast remains unverified."
+  },
+  "evidenceLimits": {
+    "mode": "READ-ONLY Phase 0; only assigned report and heartbeat written.",
+    "runtime": "unverified",
+    "visual": "unverified",
+    "keyboard": "unverified",
+    "contrast": "unverified",
+    "viewports": "unverified",
+    "commands": [
+      {"command": "Get-FileHash -Algorithm SHA256 -LiteralPath 'web\\src\\features\\notifications\\pages\\BrowserNotificationsPage.tsx'", "exitCode": 0, "output": "99884A4531E4598AD7E9CB8C1D4DB7014BBA271FA5BEA0054F89C0379542F5C9; identical start and pre-report readback"},
+      {"command": "Select-String bounded page + eight explicitly named feature component files; case-sensitive raw-control and section counts", "exitCode": 0, "output": "caseSensitiveRawControls=0; glassPanels=6; chartContainers=0; pageSections=3"},
+      {"command": "Bounded source-pattern counts for the same nine files", "exitCode": 0, "output": "oldApi=0; inlineStyle=0; neon=0; directLibraries=0; fixedWhite=0. Initial case-insensitive rawControls=12 was an invalid raw-HTML count due to uppercase shared primitives; corrected case-sensitive count=0."}
+    ],
+    "notRun": ["Skill audit.sh because it unconditionally invokes project-wide TypeScript; bounded source checks used instead", "TypeScript", "Build", "Lint", "Tests", "Git", "Browser navigation", "Permission prompts", "Push subscriptions", "Notifications/audio tests", "Any API mutation"],
+    "unknowns": ["Backend handlers/database/tenant ownership beyond route registrations", "Service-worker policy enforcement", "SSE event delivery/replay behavior", "Shared primitive/layout/trust internals beyond explicitly inspected dependencies", "Canonical translation catalog presence", "Live browser/server subscription reconciliation"],
+    "ownedFiles": ["docs\\frontend-audits\\audit-page-147.json", ".agent-status\\audit-page-147.txt"]
+  },
+  "filesRead": [
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\notifications\\pages\\BrowserNotificationsPage.tsx",
+    "web\\src\\features\\notifications\\components\\BrowserNotificationsKpis.tsx",
+    "web\\src\\features\\notifications\\components\\BrowserPushChannelCard.tsx",
+    "web\\src\\features\\notifications\\components\\BrowserPermissionPanel.tsx",
+    "web\\src\\features\\notifications\\components\\BrowserTabSignalsPanel.tsx",
+    "web\\src\\features\\notifications\\components\\DeviceDataUsagePanel.tsx",
+    "web\\src\\features\\notifications\\components\\DeviceNotificationPrefsPanel.tsx",
+    "web\\src\\features\\notifications\\components\\NotificationSoundsPanel.tsx",
+    "web\\src\\features\\notifications\\components\\NotificationSoundChannelRow.tsx",
+    "web\\src\\hooks\\useWebPush.ts",
+    "web\\src\\hooks\\useNotificationListener.ts",
+    "web\\src\\hooks\\useDeviceNotificationPrefs.ts",
+    "web\\src\\api\\hooks\\usePush.ts",
+    "web\\src\\api\\hooks\\useSettings.ts",
+    "web\\src\\api\\hooks\\useVehicles.ts",
+    "web\\src\\components\\feedback\\LowBandwidthControl.tsx",
+    "web\\src\\components\\layout\\Layout.tsx",
+    "web\\src\\App.tsx",
+    "web\\src\\lib\\notificationSound.ts",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\lib\\tokens.ts",
+    "internal\\api\\router.go"
+  ]
+}

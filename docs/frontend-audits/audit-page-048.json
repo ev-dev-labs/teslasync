@@ -1,0 +1,610 @@
+{
+  "item": "audit-page-048",
+  "phase": "Phase0",
+  "mode": "READ-ONLY source audit",
+  "page": "web\\src\\features\\analytics\\pages\\MileagePage.tsx",
+  "routes": [
+    "/mileage"
+  ],
+  "purpose": "Review recorded vehicle distance, absolute odometer history, fixed trailing-window mileage and monthly drive detail.",
+  "primaryGoal": "Understand recorded mileage and its coverage, compare fixed periods, inspect daily/monthly trends and monthly distance per drive without confusing projections with measurements.",
+  "identity": {
+    "routeEvidence": {
+      "file": "web\\src\\App.tsx",
+      "line": 665,
+      "detail": "Mileage lazy page mounted under SafeRoute; lazy import at line 157. Source registration is not browser mount proof."
+    },
+    "rootSHA256": "4B91B2CA7E9329EDA3DA4759532CC97318DEF33E7D0250716A94D32722348461",
+    "rootLineCount": 461,
+    "ownedFiles": [
+      "docs\\frontend-audits\\audit-page-048.json",
+      ".agent-status\\audit-page-048.txt"
+    ],
+    "scope": "Only MileagePage and its relevant presentation/data dependencies; no sibling page audit."
+  },
+  "dataSources": [
+    {
+      "hook": "useMileageStats(activeId)",
+      "file": "web\\src\\api\\hooks\\useAnalytics.ts",
+      "line": 73,
+      "endpoint": "GET /api/v1/mileage/stats?vehicle_id=<encoded selected vehicle>",
+      "routeEvidence": {
+        "file": "internal\\api\\router.go",
+        "line": 4203
+      },
+      "owner": "internal\\api\\mileage\\handler.go",
+      "source": "Drive-derived recorded lifetime and fixed trailing 7/30/365-day rollups, first/last drive times and counts.",
+      "queryContract": "Vehicle-scoped key; enabled only for a nonempty vehicle ID; AbortSignal forwarded; no page-specific retry/stale override; raw km DTO retained in query cache.",
+      "trust": "historical; refresh failures retain data; missing summary has its own unavailable UI; recording completeness unknown"
+    },
+    {
+      "hook": "useDailyMileage(activeId, 90)",
+      "file": "web\\src\\api\\hooks\\useAnalytics.ts",
+      "line": 98,
+      "endpoint": "GET /api/v1/mileage/daily?vehicle_id=<encoded selected vehicle>&days=90",
+      "routeEvidence": {
+        "file": "internal\\api\\router.go",
+        "line": 4206
+      },
+      "owner": "internal\\api\\mileage\\handler.go",
+      "source": "Drive-derived daily response envelope selected through safeArray(resp.days); date-only buckets, total_km and nullable end_odometer_km.",
+      "queryContract": "Vehicle and days in key; enablement and cancellation preserved; selected rows are not workspace-range filtered.",
+      "trust": "historical; null odometer days omitted only from odometer chart, not daily distance chart; no inferred coverage"
+    },
+    {
+      "hook": "useMonthlyMileage(activeId)",
+      "file": "web\\src\\api\\hooks\\useAnalytics.ts",
+      "line": 85,
+      "endpoint": "GET /api/v1/mileage/monthly?vehicle_id=<encoded selected vehicle>",
+      "routeEvidence": {
+        "file": "internal\\api\\router.go",
+        "line": 4202
+      },
+      "owner": "internal\\api\\mileage\\handler.go",
+      "source": "Drive-derived UTC calendar-month buckets; server default 24-month window, not full-history rows; safeArray(resp.months).",
+      "queryContract": "Vehicle-scoped key; signal and enablement preserved; chart and table use the same rows; loaded-result table export does not promise full-history export.",
+      "trust": "historical; nullable energy/efficiency fields are not displayed or invented; monthly coverage unknown"
+    },
+    {
+      "hook": "useSelectedVehicle / useUnits / useNumberFormatting / useChartPalette",
+      "file": "web\\src\\features\\analytics\\pages\\MileagePage.tsx",
+      "line": 54,
+      "owner": "Existing workspace and settings hooks",
+      "source": "Workspace-selected vehicle; saved distance units, locale, precision and chart palette.",
+      "endpoint": "MileagePage does not directly request settings endpoints; only chart palette hook implementation was inspected.",
+      "queryContract": "No duplicate vehicle/date picker. /mileage has range=false and vehicle=true under workspaceScope source. Independent business-year navigation is absent in this inspected page; do not invent, remove or conflate another page's business-year control."
+    }
+  ],
+  "components": [
+    {
+      "name": "PageLayout / Section / CardGrid / LayoutCard",
+      "category": "@/components/layout",
+      "owner": "web\\src\\components\\layout\\layout-reference",
+      "contract": "One allocated-container canvas; six persistent cards, full/half placements; shared header, descriptive help and source notice integration."
+    },
+    {
+      "name": "OperationalBrief via MileageBrief",
+      "category": "@/components/data-display",
+      "owner": "web\\src\\features\\analytics\\components\\operationalbrief-a-m\\MileageBrief.tsx",
+      "contract": "Six raw numeric metrics with SI-meter presentation input, locale/precision, source descriptions, status, scope, provenance and unavailable View drives link."
+    },
+    {
+      "name": "MetricBar / KVList",
+      "category": "@/components/data-display",
+      "owner": "web\\src\\components\\data-display\\MetricBar.tsx",
+      "contract": "Three fixed-window comparisons and four activity facts; MetricBar already supports missing values, solid fill and reduced-motion preference."
+    },
+    {
+      "name": "EmbeddedChart / ChartContainer",
+      "category": "@/components/charts",
+      "owner": "web\\src\\components\\charts\\EmbeddedChart.tsx",
+      "contract": "Three named charts with stable chartKey, localized two-column accessible table data, 288px desktop/256px mobile sizing and canonical chart renderers. Embedded defaults opt out of export/fullscreen; do not invent existing page toolbar capabilities."
+    },
+    {
+      "name": "DataTable",
+      "category": "@/components/ui",
+      "owner": "web\\src\\components\\ui\\DataTable.tsx",
+      "contract": "analytics:mileage-monthly persistence ID; four sortable columns; value filters, compact rows, pagination and existing loaded-row export behavior; mobileColumns currently selects three fields."
+    },
+    {
+      "name": "MileageSourceNotice / QueryError / EmptyState / Skeleton",
+      "category": "Page-specific notice plus canonical feedback barrel",
+      "owner": "web\\src\\features\\analytics\\components\\mileage-modernization\\MileageSourceNotice.tsx",
+      "contract": "Additive refresh error, paused and refreshing messages; source-specific retry without hiding independent cards; contextual loading/empty states."
+    },
+    {
+      "name": "FadeIn / NoVehicleSelected",
+      "category": "Existing motion and onboarding owners",
+      "owner": "Existing shared motion / onboarding components",
+      "contract": "Retain entrance preference handling and no-vehicle onboarding branch; implementations not inspected, runtime unverified."
+    }
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\analytics\\pages\\MileagePage.tsx",
+      "line": 219,
+      "rule": "MDC-002 / mission section 4",
+      "detail": "Three charts repeat source notice, fatal/loading/empty branching and chart/table configuration. Existing EmbeddedChart is the correct presentation owner; do not add another chart engine.",
+      "fix": "Consider local feature decomposition only if necessary, keeping per-source messages and chart identities; no speculative shared component is required.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "responsive": {
+    "sourceEvidence": [
+      {
+        "file": "web\\src\\features\\analytics\\pages\\MileagePage.tsx",
+        "line": 456,
+        "detail": "Single CardGrid, no page-local maximum width or packing engine."
+      },
+      {
+        "file": "web\\src\\components\\layout\\layout-reference\\CardGrid.tsx",
+        "line": 25,
+        "detail": "Container-measured policy and packed rows; min-w-0 measurement boundary."
+      },
+      {
+        "file": "web\\src\\features\\analytics\\pages\\MileagePage.tsx",
+        "line": 241,
+        "detail": "Charts use fixed desktop/mobile heights and ResponsiveContainer."
+      }
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\analytics\\pages\\MileagePage.tsx",
+        "line": 430,
+        "rule": "MDC-023 / MDC-043 / preserve mobile information",
+        "detail": "mobileColumns omits dailyAvg, the Distance / drive field. DataTable documents omitted columns as hidden below md at lines 238-248. No mobilePresentation or expanded-detail renderer is supplied by this caller, so the metric is not visible in the mobile table. The ratio-method description does not expose each monthly value.",
+        "fix": "Use the existing opt-in DataTable mobilePresentation contract with a full-detail field, or retain all four columns with bounded table scrolling. Keep sorting, filters, pagination, persistence and export scope.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ],
+    "viewports": "320/375/390/430/768/1024/1280/1440/1920/2560: all unverified; no viewport exercised."
+  },
+  "accessibility": {
+    "sourceEvidence": [
+      {
+        "file": "web\\src\\features\\analytics\\pages\\MileagePage.tsx",
+        "line": 198,
+        "detail": "Localized summary section aria-label; source notices use role=status."
+      },
+      {
+        "file": "web\\src\\components\\charts\\ChartContainer.tsx",
+        "line": 760,
+        "detail": "Accessible fallback figcaption/table remains rendered and is exposed in forced colors; page supplies ariaLabel and dataColumns for all three charts."
+      },
+      {
+        "file": "web\\src\\components\\layout\\layout-reference\\LayoutCard.tsx",
+        "line": 39,
+        "detail": "Description help uses named shared Button, minimum height and Tooltip; Escape blurs trigger. Actual open-state accessibility not tested."
+      }
+    ],
+    "issues": [],
+    "limits": "Keyboard, focus order/restoration, screen-reader output, target geometry, reduced-motion behavior, tooltip visibility and effective contrast remain unverified. No clean accessibility claim."
+  },
+  "states": {
+    "loading": "Six cards retain headings; source-local skeletons; MileageBrief suppresses metric values without stats.",
+    "empty": "Separate odometer/daily/monthly empty messages; monthly table emptyMessage; summary unavailable link to /drives and windows unavailable retry action.",
+    "error": "fatalError replaces only the affected card content; independent sources remain; daily retry appears in both charts and monthly retry in chart/table.",
+    "refreshFailure": "deriveDataState retains payload and MileageSourceNotice adds retry/message; no global error prop passed to PageLayout.",
+    "offlinePaused": "Source-local paused feedback is wired. Initial paused queries may show paused text mentioning last successful data even when there is none.",
+    "partialUnknown": "Coverage explicitly unknown; no invented completeness. Summary missing metrics retain missingReason, but window/chart/table derivations include zero fallbacks.",
+    "issues": [
+      {
+        "file": "web\\src\\features\\analytics\\components\\mileage-modernization\\MileageSourceNotice.tsx",
+        "line": 29,
+        "rule": "MDC-026 / honest retained-data wording",
+        "detail": "Paused message always says last successful mileage data is shown. deriveDataState sets isRefreshBlocked for initial paused queries without retained data (dataState.ts:199-214), and the notice props do not include hasData. This can claim retained evidence before a first response.",
+        "fix": "Pass hasData to this feature notice and localize distinct initial-paused versus retained-paused messages; preserve usable data and independent retry.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\analytics\\pages\\MileagePage.tsx",
+        "line": 113,
+        "rule": "MDC-026 / unknown is not zero",
+        "detail": "Window values default absent fields to zero; daily/monthly distances and drive counts do likewise at lines 150,159-165. Current DTO declares these numeric fields required, so a valid payload is unaffected; malformed/partial responses could become measured-looking zeros, unlike MileageBrief missingReason handling.",
+        "fix": "Preserve documented genuine zero aggregates and zero-drive division guard. Validate malformed/partial payloads or retain nullable/nonfinite measurements through existing formatter and MetricBar missing-value contracts rather than silently fabricating zero.",
+        "owner": "integration",
+        "confidence": "medium"
+      }
+    ]
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\analytics\\pages\\MileagePage.tsx",
+      "line": 283,
+      "rule": "MDC-010 / MDC-034 / restrained visual intensity",
+      "detail": "Three window bars inherit MetricBar's default gradient fill (MetricBar.tsx:45,86); odometer uses an area gradient at page line 247. No fixed-white/neon text or inline styles were found in the root source. Palette is saved-user-preference driven; a deliberately selected neon palette is not itself a violation.",
+      "fix": "Prefer existing MetricBar fill=solid for passive comparisons when visually appropriate; assess whether a subdued existing area treatment improves clarity. Preserve semantic series distinctions and saved palette preference; do not reset explicit neon choices.",
+      "owner": "page",
+      "confidence": "medium"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\features\\analytics\\pages\\MileagePage.tsx",
+      "line": 145,
+      "rule": "MDC-032 / MDC-044 / date-only bucket identity",
+      "detail": "Daily bucket date strings use formatDate, which constructs new Date(iso) and renders in browser timezone (dateFormat.ts:65-71). YYYY-MM-DD parses as UTC midnight, so a negative-offset zone can label the preceding day. Both odometer and daily-distance plots and accessible tables inherit this derivation.",
+      "fix": "Reuse formatDayKey (web\\src\\lib\\dateFormat.ts:255) for date-only bucket labels rather than treating a bucket key as a timestamp. Keep first/last drive timestamp formatting separate and preserve server bucket ordering.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\api\\hooks\\useAnalytics.ts",
+      "line": 70,
+      "rule": "MDC-045 / canonical SI wire contract",
+      "detail": "Mileage hooks cache kilometre-shaped API DTOs (types/analytics.ts:49-102); backend handler emits lifetime_km/total_km (handler.go:152-177). Page explicitly multiplies km by 1000 at display boundary, so current display conversion must not be removed blindly. This existing wire shape does not satisfy the project's all-meters canonical wire aspiration.",
+      "fix": "Record for a coordinated backend/types/hooks/consumer SI contract migration, not a page-only rename or extra conversion. Preserve current raw query values and km-to-meter bridge until the endpoint contract is deliberately changed.",
+      "owner": "integration",
+      "confidence": "high"
+    }
+  ],
+  "priority": {
+    "overall": "medium",
+    "first": "Correct date-only identity and initial-paused wording; preserve mobile Distance / drive access.",
+    "integration": "Coordinate SI wire migration separately; no page-only source mutation in Phase0.",
+    "visual": "Low-priority restrained fill review after functional/trust issues; browser evidence required."
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "Reuse DataTable mobile detail contract; no new shared renderer required",
+      "existingOwnerFile": "web\\src\\components\\ui\\DataTable.tsx",
+      "propsVariantsStates": "Existing mobilePresentation opt-in plus canonical controls; expose month, distance, drives and Distance / drive; loading/empty/error/retained rows and sorted/filtered pagination/export parity.",
+      "usedBy": [
+        "web\\src\\features\\analytics\\pages\\MileagePage.tsx"
+      ],
+      "dependsOn": [
+        "Verify exact existing MobileDataTablePresentation type before implementation",
+        "Preserve analytics:mileage-monthly persistence identity"
+      ],
+      "sharedEditRequired": false
+    },
+    {
+      "name": "Coordinate canonical-meter mileage API contract",
+      "existingOwnerFile": "internal\\api\\mileage\\handler.go",
+      "propsVariantsStates": "Typed canonical-meter stats/daily/monthly DTOs coordinated with useAnalytics and analytics types; nullable odometer, actual zero aggregates, first/last timestamps, envelope selectors and retained cache semantics.",
+      "usedBy": [
+        "MileagePage",
+        "Other mileage consumers not enumerated within this assignment"
+      ],
+      "dependsOn": [
+        "Integration-owned backend and consumer inventory",
+        "Phase-48 methodology and risk review",
+        "Coordinated response/query-cache migration"
+      ],
+      "sharedEditRequired": true,
+      "scopeNote": "Reported only; no backend/source change authorized."
+    }
+  ],
+  "competingImplementations": [
+    {
+      "file": "web\\src\\features\\analytics\\components\\mileage-modernization\\MileageSummary.tsx",
+      "line": 16,
+      "rule": "MDC-002 / one existing stats presentation pipeline",
+      "detail": "A StatGroup-based MileageSummary duplicates the six metrics, periods and derivations now implemented by OperationalBrief-based MileageBrief. The barrel still exports it, but MileagePage imports MileageBrief as MileageSummary at root line 36. Whether other consumers still need the old export was not inspected.",
+      "fix": "Keep the page's current OperationalBrief owner; reconcile other callers before retiring or consolidating the duplicate. Do not replace the shared stats formatter or delete specialist metadata.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "preservation": {
+    "sourceSHA256": "4B91B2CA7E9329EDA3DA4759532CC97318DEF33E7D0250716A94D32722348461",
+    "currentLineCount": 461,
+    "pageSpecificRenderedDependencyLines": {
+      "MileageBrief.tsx": 56,
+      "MileageSourceNotice.tsx": 35,
+      "pagePlusTheseDependencies": 552
+    },
+    "sectionCount": 1,
+    "cardCount": 6,
+    "chartCount": 3,
+    "tableCount": 1,
+    "summaryMetricCount": 6,
+    "windowMetricCount": 3,
+    "activityFactCount": 4,
+    "sections": [
+      {
+        "name": "Recorded mileage",
+        "id": "mileage-analysis",
+        "line": 452
+      },
+      {
+        "name": "Mileage summary metrics",
+        "id": "mileage-summary-card",
+        "line": 194
+      },
+      {
+        "name": "Odometer over time",
+        "id": "mileage-odometer-card",
+        "line": 211
+      },
+      {
+        "name": "Distance by window",
+        "id": "mileage-windows-card",
+        "line": 267
+      },
+      {
+        "name": "Daily distance",
+        "id": "mileage-daily-card",
+        "line": 305
+      },
+      {
+        "name": "Monthly distance",
+        "id": "mileage-monthly-card",
+        "line": 359
+      },
+      {
+        "name": "Monthly summary",
+        "id": "mileage-monthly-table-card",
+        "line": 413
+      }
+    ],
+    "actions": [
+      "Independent stats/daily/monthly retry actions, including retained refresh failures",
+      "Unavailable summary View drives navigation to /drives",
+      "No-vehicle onboarding navigation from existing NoVehicleSelected",
+      "Monthly table sorting, value filters, pagination, saved column/size layout and existing loaded-row CSV/JSON export pipeline",
+      "Named chart accessible table alternatives and source tooltip behavior",
+      "Shared LayoutCard full-description help and shared PageContainer actions; inherited behavior not browser-verified"
+    ],
+    "stableIds": [
+      "mileage-summary",
+      "analytics:mileage-monthly",
+      "mileage-odometer-over-time",
+      "mileage-daily-distance",
+      "mileage-monthly-distance"
+    ],
+    "dataBehavior": [
+      "Exactly three mileage queries; disabled with no selected vehicle; encoded vehicle_id and 90-day daily argument",
+      "Workspace vehicle remains header-owned; /mileage does not claim workspace date-range ownership",
+      "Fixed trailing 7/30/365-day rollups, recorded lifetime facts, daily 90-day source and monthly default 24-month UTC source",
+      "Daily average last_30d_km / 30 and annual projection daily average * 365; projection stays explicitly inferred, not measured yearly total",
+      "Null end odometer rows omitted only from odometer series; preserve genuine measured zero",
+      "Monthly Distance / drive total_km / drive_count, existing zero-count result zero; same monthly rows in chart and table",
+      "SI-meter input to shared presentation formatter; existing kilometre wire/cache DTO must not be reinterpreted as meters",
+      "Units, locale, precision, chart palette choices, table/chart identities and source order preserved",
+      "Historical retained-data rendering, additive refresh/paused messages, independent failures and explicit unknown recording completeness",
+      "No business-year navigation exists in this inspected root or rendered mileage-specific components; independent business-year controls elsewhere remain out of scope"
+    ],
+    "baselineComparison": "Current snapshot only; no original-history/Git comparison performed. Source unchanged by this worker."
+  },
+  "evidenceLimits": {
+    "runtime": "unverified",
+    "visual": "unverified",
+    "keyboard": "unverified",
+    "contrast": "unverified",
+    "viewport": "unverified",
+    "backend": "Route registration and partial handler DTO/default validation inspected; repository SQL, live response behavior, DB freshness and end-to-end auth/network behavior not verified.",
+    "sharedCoverage": "Only relevant source implementations/ranges and grep excerpts inspected; not an application-wide foundations audit.",
+    "tests": "Existing page tests and source-contract assertions inspected, not executed; mocked i18n/charts/motion do not prove runtime, locale, viewport or accessibility acceptance.",
+    "fullGates": "NOT RUN: TypeScript, build, full tests, full violations script, Git and queue operations. Assignment forbids full gates; audit.sh includes TypeScript and was therefore read but not executed.",
+    "scopedChecks": {
+      "command": "PowerShell Select-String against MileagePage.tsx: style=\\{\\{; <(button|input|textarea|select|table)\\b; direct recharts/react-leaflet/framer-motion imports; old relative API imports; text-neon-/text-white//text-gray-; LayoutCard/EmbeddedChart/GlassPanel/ChartContainer counts",
+      "exitCode": 0,
+      "output": [
+        "inline style matches: 0",
+        "raw control/table matches: 0",
+        "direct prohibited library import matches: 0",
+        "old API import matches: 0",
+        "neon/fixed-white/fixed-gray text matches: 0",
+        "LayoutCard: 6",
+        "EmbeddedChart: 3",
+        "GlassPanel/ChartContainer direct root usages: 0"
+      ],
+      "interpretation": "Bounded pattern counts, not all-guidelines acceptance; inspected hook URL lines have one implicit /api/v1 prefix and snake_case vehicle_id."
+    }
+  },
+  "filesRead": [
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\analytics\\pages\\MileagePage.tsx",
+    "web\\src\\features\\analytics\\pages\\MileagePage.test.tsx",
+    "web\\src\\features\\analytics\\components\\operationalbrief-a-m\\MileageBrief.tsx",
+    "web\\src\\features\\analytics\\components\\mileage-modernization\\MileageSourceNotice.tsx",
+    "web\\src\\features\\analytics\\components\\mileage-modernization\\MileageSummary.tsx",
+    "web\\src\\features\\analytics\\components\\mileage-modernization\\MileageSourceContract.test.ts",
+    "web\\src\\features\\analytics\\components\\mileage-modernization\\index.ts",
+    "web\\src\\api\\hooks\\useAnalytics.ts",
+    "web\\src\\api\\dataState.ts",
+    "web\\src\\types\\analytics.ts",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\lib\\dateFormat.ts",
+    "web\\src\\hooks\\useChartPalette.ts",
+    "web\\src\\components\\charts\\EmbeddedChart.tsx",
+    "web\\src\\components\\charts\\ChartContainer.tsx",
+    "web\\src\\components\\data-display\\MetricBar.tsx",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\layout\\layout-reference\\CardGrid.tsx",
+    "web\\src\\components\\layout\\layout-reference\\LayoutCard.tsx",
+    "web\\src\\components\\layout\\PageContainer.tsx",
+    "web\\src\\components\\ui\\DataTable.tsx",
+    "web\\src\\App.tsx",
+    "internal\\api\\router.go",
+    "internal\\api\\mileage\\handler.go"
+  ],
+  "sourceInventory": [
+    {
+      "file": "docs\\frontend-design-contract.md",
+      "sha256": "17B542389CD4E98A0DFB7B4D2F2C4E2727F221AF0AC5ACB738DB5E987B282255",
+      "lineCount": 394,
+      "inspection": "Full source read"
+    },
+    {
+      "file": "docs\\frontend-worker-conventions.md",
+      "sha256": "6CF8194644A7820926082FC065E9CBF87C1E1E2D8258C4D092DA8C962707ADC3",
+      "lineCount": 80,
+      "inspection": "Full source read"
+    },
+    {
+      "file": "docs\\frontend-mission.md",
+      "sha256": "2BD35429E32D06ABF109DD371C2DD011CB974EF6B8C1915B298D1A0C3D7FD98F",
+      "lineCount": 1593,
+      "inspection": "Relevant ranges/search excerpts only; full-file hash is identity, not full semantic coverage"
+    },
+    {
+      "file": ".github\\skills\\audit-violations\\audit.sh",
+      "sha256": "3E5937AB2A4EA2F303A0152111794D5A3A45C24ABFE7B11400079BC4AC3DFE46",
+      "lineCount": 141,
+      "inspection": "Full source read"
+    },
+    {
+      "file": "web\\src\\features\\analytics\\pages\\MileagePage.tsx",
+      "sha256": "4B91B2CA7E9329EDA3DA4759532CC97318DEF33E7D0250716A94D32722348461",
+      "lineCount": 461,
+      "inspection": "Full source read"
+    },
+    {
+      "file": "web\\src\\features\\analytics\\pages\\MileagePage.test.tsx",
+      "sha256": "F80CC5106538DF369C80587F15710FA5A1F752B5C2A399967F8A2CDE9F458A66",
+      "lineCount": 427,
+      "inspection": "Relevant ranges/search excerpts only; full-file hash is identity, not full semantic coverage"
+    },
+    {
+      "file": "web\\src\\features\\analytics\\components\\operationalbrief-a-m\\MileageBrief.tsx",
+      "sha256": "1FFBEE61081C3E882E40A6AE7CFB1C5BEB4E0A13BBA752A83DC1063627973EBA",
+      "lineCount": 56,
+      "inspection": "Full source read"
+    },
+    {
+      "file": "web\\src\\features\\analytics\\components\\mileage-modernization\\MileageSourceNotice.tsx",
+      "sha256": "D3B85256A8D3D9FB9C6D58FCF36D44A41CC3E0A8681D0477785F890B889700E7",
+      "lineCount": 35,
+      "inspection": "Full source read"
+    },
+    {
+      "file": "web\\src\\features\\analytics\\components\\mileage-modernization\\MileageSummary.tsx",
+      "sha256": "1DD66FCAD332466A3F3B83597E516EA519FB055C43477CE1C7C09256D9F22B92",
+      "lineCount": 94,
+      "inspection": "Full source read"
+    },
+    {
+      "file": "web\\src\\features\\analytics\\components\\mileage-modernization\\MileageSourceContract.test.ts",
+      "sha256": "2B5065E0C7004F3C5CDDD4331CA1F425E0862D5AF007AC88C3AA4178362D5C57",
+      "lineCount": 88,
+      "inspection": "Full source read"
+    },
+    {
+      "file": "web\\src\\features\\analytics\\components\\mileage-modernization\\index.ts",
+      "sha256": "2F51D24EC149C12A50A2636422A144C2C09D11186851BFD52EC9CC6A65AB52A2",
+      "lineCount": 2,
+      "inspection": "Full source read"
+    },
+    {
+      "file": "web\\src\\api\\hooks\\useAnalytics.ts",
+      "sha256": "F775818AC815813432F0A576AB6E22DBDBBD5106D513AA81FB56B953C5DADB20",
+      "lineCount": 642,
+      "inspection": "Relevant ranges/search excerpts only; full-file hash is identity, not full semantic coverage"
+    },
+    {
+      "file": "web\\src\\api\\dataState.ts",
+      "sha256": "21FB454B3C1F01608169F3F3887911DE97F7C754663CC001236EBFDE58211761",
+      "lineCount": 434,
+      "inspection": "Relevant ranges/search excerpts only; full-file hash is identity, not full semantic coverage"
+    },
+    {
+      "file": "web\\src\\types\\analytics.ts",
+      "sha256": "91E89CFD927D2FC29B859B6B5828068EA37356B02ECCD84DC3FC3485D5245D6C",
+      "lineCount": 198,
+      "inspection": "Relevant ranges/search excerpts only; full-file hash is identity, not full semantic coverage"
+    },
+    {
+      "file": "web\\src\\lib\\workspaceScope.ts",
+      "sha256": "AEB8C01D410F2377AA5FD713DE1A678A0360ACF647A9C882F03E46C80EFDFCD7",
+      "lineCount": 168,
+      "inspection": "Full source read"
+    },
+    {
+      "file": "web\\src\\lib\\dateFormat.ts",
+      "sha256": "F86CBF7BA2D84CA11D93BF9A9253E96CFD44B907A275A7790EB174C632F5C53E",
+      "lineCount": 442,
+      "inspection": "Relevant ranges/search excerpts only; full-file hash is identity, not full semantic coverage"
+    },
+    {
+      "file": "web\\src\\hooks\\useChartPalette.ts",
+      "sha256": "8864DB77C1C8E1AA7214848A4267F6871C08FD2CEEDB54685F598675574F981B",
+      "lineCount": 42,
+      "inspection": "Full source read"
+    },
+    {
+      "file": "web\\src\\components\\charts\\EmbeddedChart.tsx",
+      "sha256": "58C2C8279D0D050B9BD9B9DF556BEDD70713607A196488943D9425774F475721",
+      "lineCount": 42,
+      "inspection": "Full source read"
+    },
+    {
+      "file": "web\\src\\components\\charts\\ChartContainer.tsx",
+      "sha256": "ED81C3FEE9CC5CE739EE7B13B8CB6D4D358DAFD205A01FBFCCA83947474C47C5",
+      "lineCount": 900,
+      "inspection": "Relevant ranges/search excerpts only; full-file hash is identity, not full semantic coverage"
+    },
+    {
+      "file": "web\\src\\components\\data-display\\MetricBar.tsx",
+      "sha256": "E3E0DA3087D96DB2FEC366EDB15FF2784A4787BEBF9F86C7C0C09364109AEA4A",
+      "lineCount": 92,
+      "inspection": "Full source read"
+    },
+    {
+      "file": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+      "sha256": "8DF73DE2D4B3FF7485019389F547D863FE8729AA0C95FA1F497487389D6B87F6",
+      "lineCount": 17,
+      "inspection": "Full source read"
+    },
+    {
+      "file": "web\\src\\components\\layout\\layout-reference\\CardGrid.tsx",
+      "sha256": "DD3123E4931E8D5B921F807D374DDE293B89E08A5F509D1B9E26E05AB76961B8",
+      "lineCount": 44,
+      "inspection": "Full source read"
+    },
+    {
+      "file": "web\\src\\components\\layout\\layout-reference\\LayoutCard.tsx",
+      "sha256": "1FEDEB6B5CF17436D31CB0F19DAC09EE1C6591D1866B09ED511387BD110E7D9A",
+      "lineCount": 64,
+      "inspection": "Full source read"
+    },
+    {
+      "file": "web\\src\\components\\layout\\PageContainer.tsx",
+      "sha256": "0E2E1842FCAC1FE5BD7C4C37299A76F9515D45EAFE43AD122A8E09A0BB817D55",
+      "lineCount": 259,
+      "inspection": "Relevant ranges/search excerpts only; full-file hash is identity, not full semantic coverage"
+    },
+    {
+      "file": "web\\src\\components\\ui\\DataTable.tsx",
+      "sha256": "92E3A46F15E401B57303823693AAC8825693B4EDC2B04CFE289663D8E1386438",
+      "lineCount": 1687,
+      "inspection": "Relevant ranges/search excerpts only; full-file hash is identity, not full semantic coverage"
+    },
+    {
+      "file": "web\\src\\App.tsx",
+      "sha256": "23A1CE852D2CE51DF5A26A5C2A5669FFA788A992355A8BCFAFB391C82B47DEF3",
+      "lineCount": 918,
+      "inspection": "Relevant ranges/search excerpts only; full-file hash is identity, not full semantic coverage"
+    },
+    {
+      "file": "internal\\api\\router.go",
+      "sha256": "98B92853EBADE3DB74AD361D098BBA4472039884A407D61CE901DC3BF1FE3750",
+      "lineCount": 5366,
+      "inspection": "Relevant ranges/search excerpts only; full-file hash is identity, not full semantic coverage"
+    },
+    {
+      "file": "internal\\api\\mileage\\handler.go",
+      "sha256": "6B2DC38CA2F16112115C1F98600DD1275259F7ED09E91643E093F8654BB2C797",
+      "lineCount": 419,
+      "inspection": "Relevant ranges/search excerpts only; full-file hash is identity, not full semantic coverage"
+    }
+  ],
+  "protocol": {
+    "startHeartbeatUTC": "2026-10-07T10:19:29.0754457Z",
+    "heartbeatCadence": "Start, within every three minutes during work, immediately before release",
+    "sourceEdits": false,
+    "gitOperations": false,
+    "queueEdits": false,
+    "productionMutations": false,
+    "historicalAcceptanceBorrowed": false,
+    "rootHashRecheckedAtRelease": true,
+    "releaseUTC": "2026-10-07T10:31:53.9709127Z"
+  }
+}

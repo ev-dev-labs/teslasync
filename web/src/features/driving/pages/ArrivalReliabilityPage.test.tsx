@@ -5,6 +5,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ToastProvider } from '@/components/feedback';
+import type { UnitPref } from '@/lib/unitConversion';
 import type { Drive } from '@/types/driving';
 
 const FROZEN_NOW = Date.parse('2026-08-08T12:00:00.000Z');
@@ -75,6 +76,17 @@ vi.mock('@/lib/timezone', async (importOriginal) => {
 
 vi.mock('@/hooks/useUnits', () => ({
   useUnits: () => ({
+    unitPrefs: {
+      distance: 'km',
+      speed: 'km/h',
+      temperature: '°C',
+      pressure: 'bar',
+      energy: 'kWh',
+      duration: 'min',
+      power: 'kW',
+      locale: 'en-US',
+      precision: 1,
+    } satisfies UnitPref,
     formatDuration: (
       value: number | null | undefined,
       options?: { precision?: number },
@@ -231,6 +243,33 @@ beforeEach(() => {
 });
 
 describe('ArrivalReliabilityPage', () => {
+  it('retains every row, coverage and support operand in the three real evidence briefs', () => {
+    renderPage();
+    const accounting = screen.getByTestId('arrival-row-accounting-brief');
+    const coverage = screen.getByTestId('arrival-coverage-recurrence-brief');
+    const support = screen.getByTestId('arrival-support-ingredients-brief');
+    expect(accounting.querySelectorAll('[data-operational-value]')).toHaveLength(9);
+    expect(coverage.querySelectorAll('[data-operational-value]')).toHaveLength(17);
+    expect(support.querySelectorAll('[data-operational-value]')).toHaveLength(6);
+    expect(accounting).toHaveTextContent('Rows returned');
+    expect(coverage).toHaveTextContent('First parseable returned start');
+    expect(coverage).toHaveTextContent('source timestamps and denominators are shown separately');
+    expect(support).toHaveTextContent('Support indices are not confidence scores');
+    expectEverySection();
+  });
+
+  it('keeps all timing evidence while a cached history refresh is paused offline', () => {
+    h.history = { ...query({ data: readyHistory() }), fetchStatus: 'paused' };
+    renderPage();
+    expectEverySection();
+    const notice = screen.getByTestId('stale-refresh-warning');
+    expect(notice).toHaveAttribute('data-refresh-blocked', 'true');
+    expect(notice).toHaveTextContent('Previously loaded data remains visible.');
+    expect(notice).not.toHaveTextContent(/offline/i);
+    fireEvent.click(within(notice).getByRole('button', { name: 'Refresh' }));
+    expect(historyRefetch).toHaveBeenCalledTimes(1);
+  });
+
   it('renders all ten persistent analytical shells with the capped hook and vehicle timezone', () => {
     renderPage();
 
@@ -248,7 +287,7 @@ describe('ArrivalReliabilityPage', () => {
   it('freezes the analysis clock across query changes', () => {
     const view = renderPage();
     const quality = within(screen.getByTestId('arrival-evidence-quality'));
-    expect(quality.getByText('Recency (days)').parentElement).toHaveTextContent(
+    expect(quality.getByText('Recency (days)').closest('[data-operational-metric]')).toHaveTextContent(
       '1.0',
     );
 
@@ -267,7 +306,7 @@ describe('ArrivalReliabilityPage', () => {
     expect(
       within(screen.getByTestId('arrival-evidence-quality'))
         .getByText('Recency (days)')
-        .parentElement,
+        .closest('[data-operational-metric]'),
     ).toHaveTextContent('1.0');
   });
 
@@ -445,7 +484,10 @@ describe('ArrivalReliabilityPage', () => {
       ),
     ).toBeInTheDocument();
     expect(
-      screen.getByText('Only supported route-window'),
+      within(screen.getByTestId('arrival-window-comparisons')).getByText(
+        'Only supported route-window',
+        { selector: 'article > p' },
+      ),
     ).toBeInTheDocument();
     expect(
       screen.queryByText('Lowest observed timing consistency'),

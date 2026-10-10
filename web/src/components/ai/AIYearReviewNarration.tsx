@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next'
 
 import { AIFeatureCard } from '@/components/ai/AIFeatureCard'
 import { withAiFeature } from '@/components/ai/withAiFeature'
+import { HelperText } from '@/components/ui/Typography'
 import { useAiStream } from '@/hooks/useAiStream'
 
 interface InnerSectionProps {
@@ -54,7 +55,11 @@ function InnerSection({ vehicleId }: InnerSectionProps) {
       }
       canStart={haveInputs}
       stream={stream}
-    />
+    >
+      <HelperText className="break-words">
+        {t('yearReview.pageTitle', '{{year}} Year in review', { year: defaultYear })}
+      </HelperText>
+    </AIFeatureCard>
   )
 }
 InnerSection.displayName = 'AIYearReviewNarrationInner'

@@ -252,16 +252,37 @@ beforeEach(() => {
 
 describe('OverviewVehicleComparison — loading', () => {
   it('renders skeletons in every panel and draws no chart', () => {
-    const { container } = renderCmp(makeQuery({ isLoading: true }));
+    renderCmp(makeQuery({ isLoading: true }));
 
     // Panel titles frame all four sections even while loading…
-    expect(screen.getByText('Fleet Usage')).toBeInTheDocument();
-    expect(screen.getByText('Efficiency Leaderboard')).toBeInTheDocument();
-    expect(screen.getByText('Vehicle Comparison')).toBeInTheDocument();
-    expect(screen.getByText('Energy & Activity')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Fleet usage' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Efficiency leaderboard' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Vehicle comparison' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Energy & activity' })).toBeInTheDocument();
 
-    // …pulsing skeletons are on screen…
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
+    // Every chart owns a busy static silhouette, with no real chart semantics.
+    ['Fleet usage', 'Vehicle comparison', 'Energy & activity'].forEach((title) => {
+      const panel = screen.getByRole('figure', { name: title });
+      expect(panel).toHaveAttribute('aria-busy', 'true');
+      expect(panel).toHaveAttribute('data-chart-state', 'loading');
+      const placeholder = within(panel).getByRole('status', { name: 'Loading chart…' });
+      expect(placeholder).toHaveAttribute('aria-busy', 'true');
+      expect(placeholder).toHaveClass('h-full');
+      const bars = placeholder.querySelectorAll<HTMLElement>('.flex-1.rounded-t');
+      expect(bars).toHaveLength(7);
+      expect(Array.from(bars, (bar) => bar.style.height)).toEqual(['50%', '45%', '63%', '64%', '37%', '8%', '33%']);
+      bars.forEach((bar) => expect(bar).toHaveAttribute('aria-hidden', 'true'));
+      expect(within(panel).queryAllByRole('img')).toHaveLength(0);
+      expect(panel.querySelector('[data-testid^="chart-"]:not([data-testid="chart-skeleton"])')).toBeNull();
+    });
+    const leaderboard = screen.getByRole('heading', { name: 'Efficiency leaderboard' }).closest('[aria-busy]');
+    expect(leaderboard).toHaveAttribute('aria-busy', 'true');
+    const placeholders = leaderboard?.querySelectorAll<HTMLElement>('.w-full.rounded[aria-hidden="true"]') ?? [];
+    expect(placeholders).toHaveLength(1);
+    expect(placeholders[0]).toHaveStyle({ height: '260px' });
+    expect(placeholders[0]).toHaveClass('h-4', 'w-full');
+    expect(leaderboard?.querySelector('[class*="animate-"]')).toBeNull();
+    expect(leaderboard?.querySelector('[data-testid="efficiency-leader-fill"]')).toBeNull();
 
     // …and no chart / leaderboard row has been drawn yet.
     expect(screen.queryByTestId('chart-pie')).toBeNull();
@@ -399,8 +420,8 @@ describe('OverviewVehicleComparison — efficiency leaderboard', () => {
   it('labels each row with its efficiency in the active unit', () => {
     renderCmp(makeQuery({ data: analytics(TWO) }));
 
-    expect(screen.getByText('150.0 Wh/km')).toBeInTheDocument();
-    expect(screen.getByText('300.0 Wh/km')).toBeInTheDocument();
+    expect(screen.getByText('150.00 Wh/km')).toBeInTheDocument();
+    expect(screen.getByText('300.00 Wh/km')).toBeInTheDocument();
   });
 });
 
@@ -418,7 +439,7 @@ describe('OverviewVehicleComparison — miles preference', () => {
     expect(rows[1].value).toBeCloseTo(186.41, 1);
 
     // Efficiency Wh/km → Wh/mi (× 1.609344): 150 → 241.4.
-    expect(screen.getByText('241.4 Wh/mi')).toBeInTheDocument();
+    expect(screen.getByText('241.40 Wh/mi')).toBeInTheDocument();
 
     // The donut's accessible label follows the active unit.
     expect(

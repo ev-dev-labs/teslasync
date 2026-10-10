@@ -43,7 +43,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, within, cleanup } from '@testing-library/react';
+import { render, screen, within, cleanup, fireEvent } from '@testing-library/react';
 import type { FleetAnalytics, StatsSummary } from '@/api/types';
 import type { FleetAnalyticsQuery } from './constants';
 
@@ -70,12 +70,12 @@ import { DrivingPerformanceCards } from './DrivingPerformanceCards';
 const EM_DASH = '\u2014';
 
 const LABELS = {
-  topSpeed: 'Top Speed',
-  avgSpeed: 'Avg Speed',
-  peakPower: 'Peak Power',
-  peakRegen: 'Peak Regen',
-  avgDriveDist: 'Avg Drive Distance',
-  longestDrive: 'Longest Drive',
+  topSpeed: 'Top speed',
+  avgSpeed: 'Avg speed',
+  peakPower: 'Peak power',
+  peakRegen: 'Peak regen',
+  avgDriveDist: 'Avg drive distance',
+  longestDrive: 'Longest drive',
 } as const;
 
 /** Minimal settings bag — `useUnits()` only reads these five fields. */
@@ -111,12 +111,13 @@ const FULL_STATS: Record<string, StatsSummary> = {
 /** Read the value + subtitle rendered inside the tile carrying `label`. */
 function readTile(label: string): { value: string; subtitle: string } {
   const labelNode = screen.getByText(label);
-  const column = labelNode.closest('div');
+  const column = labelNode.closest('[data-operational-metric]');
   if (!column) throw new Error(`no tile column for "${label}"`);
-  const paragraphs = Array.from(column.querySelectorAll('p'));
+  const text = column.querySelector('[data-operational-value]')?.textContent?.trim() ?? '';
+  const match = /^(.*?) (km\/h|mph|kW|km|mi)$/.exec(text);
   return {
-    value: paragraphs[1]?.textContent?.trim() ?? '',
-    subtitle: paragraphs[2]?.textContent?.trim() ?? '',
+    value: match?.[1] ?? text,
+    subtitle: match?.[2] ?? '',
   };
 }
 
@@ -130,30 +131,29 @@ afterEach(() => {
 });
 
 describe('DrivingPerformanceCards', () => {
-  it('renders a six-tile skeleton band while loading and withholds the metric group', () => {
+  it('keeps the six-metric group while loading without publishing values', () => {
     const query = { data: undefined, isLoading: true } as unknown as FleetAnalyticsQuery;
     const { container } = render(<DrivingPerformanceCards query={query} />);
 
-    // MetricBandSkeleton count={6} → 6 tiles × 2 skeleton bars each.
-    expect(container.querySelectorAll('.animate-pulse')).toHaveLength(12);
-    // No real tile content leaks while loading…
-    expect(screen.queryByText(LABELS.topSpeed)).not.toBeInTheDocument();
-    // …and the labelled data group only appears once data resolves.
-    expect(screen.queryByRole('group')).not.toBeInTheDocument();
+    expect(container.querySelector('[data-operational-brief]')).toHaveAttribute('aria-busy', 'true');
+    expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(6);
+    expect(container.querySelector('[data-operational-value]')).toBeNull();
+    expect(screen.getByText(LABELS.topSpeed)).toBeInTheDocument();
+    expect(screen.getByRole('group', { name: 'Driving performance metrics' })).toBeInTheDocument();
   });
 
   it('renders all six tiles with metric values and unit subtitles', () => {
     render(<DrivingPerformanceCards query={queryWith(FULL_STATS)} />);
 
     // Speed: km/h passes straight through the km/h→km/h conversion.
-    expect(readTile(LABELS.topSpeed)).toEqual({ value: '200', subtitle: 'km/h' });
-    expect(readTile(LABELS.avgSpeed)).toEqual({ value: '65', subtitle: 'km/h' });
+    expect(readTile(LABELS.topSpeed)).toEqual({ value: '200.00', subtitle: 'km/h' });
+    expect(readTile(LABELS.avgSpeed)).toEqual({ value: '65.00', subtitle: 'km/h' });
     // Power / regen are already kW and are not unit-converted.
-    expect(readTile(LABELS.peakPower)).toEqual({ value: '250', subtitle: 'kW' });
-    expect(readTile(LABELS.peakRegen)).toEqual({ value: '80', subtitle: 'kW' });
+    expect(readTile(LABELS.peakPower)).toEqual({ value: '250.00', subtitle: 'kW' });
+    expect(readTile(LABELS.peakRegen)).toEqual({ value: '80.00', subtitle: 'kW' });
     // Distance: km→km at one decimal.
-    expect(readTile(LABELS.avgDriveDist)).toEqual({ value: '42.5', subtitle: 'km' });
-    expect(readTile(LABELS.longestDrive)).toEqual({ value: '128.3', subtitle: 'km' });
+    expect(readTile(LABELS.avgDriveDist)).toEqual({ value: '42.50', subtitle: 'km' });
+    expect(readTile(LABELS.longestDrive)).toEqual({ value: '128.30', subtitle: 'km' });
   });
 
   it('converts speed to mph and distance to mi when the user prefers imperial units', () => {
@@ -161,14 +161,14 @@ describe('DrivingPerformanceCards', () => {
     render(<DrivingPerformanceCards query={queryWith(FULL_STATS)} />);
 
     // 200 km/h → 124.27 mph (0 dp); 65 km/h → 40.39 mph.
-    expect(readTile(LABELS.topSpeed)).toEqual({ value: '124', subtitle: 'mph' });
-    expect(readTile(LABELS.avgSpeed)).toEqual({ value: '40', subtitle: 'mph' });
+    expect(readTile(LABELS.topSpeed)).toEqual({ value: '124.27', subtitle: 'mph' });
+    expect(readTile(LABELS.avgSpeed)).toEqual({ value: '40.39', subtitle: 'mph' });
     // 42.5 km → 26.41 mi (1 dp); 128.3 km → 79.72 mi.
-    expect(readTile(LABELS.avgDriveDist)).toEqual({ value: '26.4', subtitle: 'mi' });
-    expect(readTile(LABELS.longestDrive)).toEqual({ value: '79.7', subtitle: 'mi' });
+    expect(readTile(LABELS.avgDriveDist)).toEqual({ value: '26.41', subtitle: 'mi' });
+    expect(readTile(LABELS.longestDrive)).toEqual({ value: '79.72', subtitle: 'mi' });
     // Power / regen are unit-agnostic — unchanged across unit systems.
-    expect(readTile(LABELS.peakPower)).toEqual({ value: '250', subtitle: 'kW' });
-    expect(readTile(LABELS.peakRegen)).toEqual({ value: '80', subtitle: 'kW' });
+    expect(readTile(LABELS.peakPower)).toEqual({ value: '250.00', subtitle: 'kW' });
+    expect(readTile(LABELS.peakRegen)).toEqual({ value: '80.00', subtitle: 'kW' });
   });
 
   it('degrades every tile to a placeholder (never a blank band) when the payload carries no stats', () => {
@@ -180,8 +180,8 @@ describe('DrivingPerformanceCards', () => {
       expect(screen.getByText(label)).toBeInTheDocument();
     });
     // The subtitles still describe the (metric) units under the placeholders.
-    expect(readTile(LABELS.topSpeed)).toEqual({ value: EM_DASH, subtitle: 'km/h' });
-    expect(readTile(LABELS.avgDriveDist)).toEqual({ value: EM_DASH, subtitle: 'km' });
+    expect(readTile(LABELS.topSpeed)).toEqual({ value: EM_DASH, subtitle: '' });
+    expect(readTile(LABELS.avgDriveDist)).toEqual({ value: EM_DASH, subtitle: '' });
   });
 
   it('degrades gracefully on an errored query with no data', () => {
@@ -203,8 +203,8 @@ describe('DrivingPerformanceCards', () => {
     render(<DrivingPerformanceCards query={queryWith({ speed_stats: stat({ max: 200, avg: 65 }) })} />);
 
     // Speed tiles have data…
-    expect(readTile(LABELS.topSpeed).value).toBe('200');
-    expect(readTile(LABELS.avgSpeed).value).toBe('65');
+    expect(readTile(LABELS.topSpeed).value).toBe('200.00');
+    expect(readTile(LABELS.avgSpeed).value).toBe('65.00');
     // …while the four tiles without a backing stat fall back.
     expect(readTile(LABELS.peakPower).value).toBe(EM_DASH);
     expect(readTile(LABELS.peakRegen).value).toBe(EM_DASH);
@@ -213,20 +213,31 @@ describe('DrivingPerformanceCards', () => {
     expect(screen.getAllByText(EM_DASH)).toHaveLength(4);
   });
 
-  it('clamps a non-finite stat value to 0 via safe() instead of rendering NaN', () => {
+  it('distinguishes a non-finite stat from measured zero without rendering NaN', () => {
     render(
       <DrivingPerformanceCards
         query={queryWith({ speed_stats: stat({ max: Number.NaN, avg: 50 }) })}
       />,
     );
 
-    // safe(NaN) → 0; the sibling finite value in the same stat still converts.
-    expect(readTile(LABELS.topSpeed).value).toBe('0');
+    expect(readTile(LABELS.topSpeed).value).toBe(EM_DASH);
+    expect(screen.getByText(LABELS.topSpeed).closest('[data-operational-metric]')).toHaveAttribute('data-value-state', 'invalid');
     expect(readTile(LABELS.topSpeed).value).not.toContain('NaN');
-    expect(readTile(LABELS.avgSpeed).value).toBe('50');
+    expect(readTile(LABELS.avgSpeed).value).toBe('50.00');
   });
 
-  it('exposes the band as a labelled group with one decorative icon per tile', () => {
+  it('retains measured zero and signed regeneration independently of unknown fields', () => {
+    render(<DrivingPerformanceCards query={queryWith({
+      speed_stats: stat({ max: 0, avg: 0 }),
+      regen_stats: stat({ max: -12.5 }),
+    })} />);
+    expect(readTile(LABELS.topSpeed)).toEqual({ value: '0.00', subtitle: 'km/h' });
+    expect(readTile(LABELS.peakRegen)).toEqual({ value: '-12.50', subtitle: 'kW' });
+    expect(readTile(LABELS.peakPower).value).toBe(EM_DASH);
+    expect(screen.getByText(LABELS.topSpeed).closest('[data-operational-metric]')).toHaveAttribute('data-value-state', 'value');
+  });
+
+  it('exposes all six source metrics in a labelled group with working detail review', () => {
     const { container } = render(<DrivingPerformanceCards query={queryWith(FULL_STATS)} />);
 
     const group = screen.getByRole('group', { name: /driving performance metrics/i });
@@ -235,7 +246,9 @@ describe('DrivingPerformanceCards', () => {
     Object.values(LABELS).forEach((label) => {
       expect(within(group).getByText(label)).toBeInTheDocument();
     });
-    // …and each tile carries exactly one (lucide) icon.
-    expect(container.querySelectorAll('svg')).toHaveLength(6);
+    expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(6);
+    fireEvent.click(within(group).getByRole('button', { name: 'Review details' }));
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    expect(within(screen.getByRole('dialog')).getByText('Returned speed and distance statistics; power and regeneration remain unknown when the response omits them.', { selector: `[id="${screen.getByRole('dialog').getAttribute('aria-describedby')}"]` })).toBeInTheDocument();
   });
 });

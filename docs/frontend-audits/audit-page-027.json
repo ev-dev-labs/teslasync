@@ -1,0 +1,421 @@
+{
+  "item": "audit-page-027",
+  "page": "web\\src\\features\\admin\\pages\\VehicleCostPage.tsx",
+  "routes": ["/admin/vehicle-cost"],
+  "purpose": "Read-only operational report of per-vehicle telemetry ingest volume, estimated storage, recent ingest rate and DLQ failures.",
+  "primaryGoal": "Identify disproportionate telemetry consumers and compare them with the returned-report baseline without confusing estimates, missing measurements or limited results with unbounded fleet totals.",
+  "dataSources": [
+    {
+      "hook": "useVehicleCost",
+      "file": "web\\src\\api\\hooks\\useOperatorConfidence.ts",
+      "line": 149,
+      "endpoint": "GET /api/v1/admin/observability/vehicle-cost?limit=100&since=<encoded ISO instant>",
+      "hookPath": "/admin/observability/vehicle-cost",
+      "sourceOwner": "internal\\database\\observability\\vehicle_cost_repo.go",
+      "ownershipChain": [
+        "internal\\api\\router.go:4563,4571,4584 constructs and registers the admin observability handler under the existing API group",
+        "internal\\handler\\v1\\admin_observability_handler.go:36,76-92 registers the GET route, parses since/limit and responds with an envelope",
+        "internal\\app\\adminobssvc\\service.go:175-183 handles missing configuration and a default trailing 30 days",
+        "internal\\database\\observability\\vehicle_cost_repo.go:50-129 queries signal_log, vehicles and signal_log_failures; totals sum returned rows"
+      ],
+      "behavior": "Page requests 100 vehicles. Hook query key includes since ISO and limit; forwards AbortSignal; unwraps data envelope; uses STANDARD stale time, SLOW polling, no background interval and retry 1 (hook lines 80-81,149-165). Router and registered handler agree with the relative hook path; there is no double /api/v1 prefix or camelCase query parameter.",
+      "sourceSemantics": [
+        "Rows use ts >= since with no explicit upper bound; ordered by row count descending before LIMIT.",
+        "Estimated bytes equal row_count * 96, not measured disk footprint.",
+        "Rate counts selected-window rows also within server now() minus 24 hours, divided by 1440; not instantaneous rate.",
+        "DLQ counts use first_seen in the last 24 hours and join only returned ingest vehicles.",
+        "Totals aggregate only returned vehicles; tracked count and arithmetic mean use this capped result, not the entire fleet.",
+        "Missing-relation fallback retries without the DLQ join and supplies zero failures without availability metadata (repository lines 98-100,128-173; zero literal at line 144).",
+        "Actual database availability, query execution, schema population, network envelope and authentication behavior remain unverified."
+      ],
+      "wireType": "web\\src\\types\\admin-operator-confidence.ts:78-98",
+      "units": "Operational counts, bytes and rows/minute; preserve raw wire/cache values and display-only byte/number formatting. No physical SI conversion is needed."
+    },
+    {
+      "hook": "useOperationalMetrics / useNumberFormatting",
+      "sourceOwner": "Existing shared formatting and saved-preference mechanisms, not a new page-specific formatter",
+      "file": "web\\src\\features\\admin\\components\\statstrip-audit-vehicle-cost\\VehicleCostStatStrip.tsx",
+      "line": 53,
+      "behavior": "OperationalBrief adapter receives six raw metrics and source explanations. Chart/table/talkers use existing number/byte formatters. Formatting hook internals and preference persistence were not inspected or executed in this bounded audit."
+    }
+  ],
+  "components": [
+    {
+      "name": "PageLayout / PageContainer",
+      "kind": "layout",
+      "owner": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+      "citation": "web\\src\\features\\admin\\pages\\VehicleCostPage.tsx:101-112",
+      "decision": "reuse",
+      "detail": "Thin min-w-0/full-width container adapter over existing PageContainer, source notices, header action slots and error boundary. No replacement page-width or header engine."
+    },
+    {
+      "name": "VehicleCostStatStrip / OperationalBrief",
+      "kind": "domain adapter / shared composite",
+      "owner": "web\\src\\features\\admin\\components\\statstrip-audit-vehicle-cost\\VehicleCostStatStrip.tsx",
+      "citation": "web\\src\\features\\admin\\components\\statstrip-audit-vehicle-cost\\VehicleCostStatStrip.tsx:24-66",
+      "decision": "reuse",
+      "detail": "Six source-backed metrics, returned-result qualifiers, missing denominator, retained-source state and actionable query error. Shared summary owner already exists; do not restore six decorative MetricCards."
+    },
+    {
+      "name": "CostByVehicleChart / EmbeddedChart",
+      "kind": "domain presentation / shared chart frame",
+      "owner": "web\\src\\features\\admin\\components\\vehicle-cost\\CostByVehicleChart.tsx",
+      "citation": "web\\src\\features\\admin\\components\\vehicle-cost\\CostByVehicleChart.tsx:61-118",
+      "decision": "reuse",
+      "detail": "Horizontal top-eight estimated-byte chart with shared data columns, tooltip, axes and state frame. EmbeddedChart forwards children to ChartContainer; exportable/fullscreen default false, so do not invent existing chart export/fullscreen actions."
+    },
+    {
+      "name": "VehicleCostTalkers / LayoutCard / MetricBar / KVList",
+      "kind": "domain presentation / shared composites",
+      "owner": "web\\src\\features\\admin\\components\\continuation-admin-1\\VehicleCostTalkers.tsx",
+      "citation": "web\\src\\features\\admin\\components\\continuation-admin-1\\VehicleCostTalkers.tsx:19-54",
+      "decision": "reuse",
+      "detail": "Top-eight ranked row shares, known-zero fallback scale and missing-total partial list. MetricBar already supports solid fill and missing readings; use those capabilities rather than introducing a custom progress renderer."
+    },
+    {
+      "name": "VehicleCostTable / DataTable",
+      "kind": "domain adapter / shared table pipeline",
+      "owner": "web\\src\\features\\admin\\components\\vehicle-cost\\VehicleCostTable.tsx",
+      "citation": "web\\src\\features\\admin\\components\\vehicle-cost\\VehicleCostTable.tsx:34-137",
+      "decision": "extend existing caller contract",
+      "detail": "Six columns, canonical raw value filters, stable tableId, keyExtractor and section boundary. Shared DataTable owns persistence, export, mobile presentation and expansion; page must supply a non-lossy mobile strategy."
+    },
+    {
+      "name": "VehicleCostToolbar / Select / Button / Caption",
+      "kind": "domain controls / primitives",
+      "owner": "web\\src\\features\\admin\\components\\vehicle-cost\\VehicleCostToolbar.tsx",
+      "citation": "web\\src\\features\\admin\\components\\vehicle-cost\\VehicleCostToolbar.tsx:45-67",
+      "decision": "reuse primitives; reconcile scope ownership",
+      "detail": "Localized window presets and named disabled/busy refresh control, currently bundled into contextActions."
+    },
+    {
+      "name": "DataStateNotice / QueryError / EmptyState / Skeleton / SectionErrorBoundary / FadeIn",
+      "kind": "feedback / motion",
+      "owner": "Existing feedback and motion category owners",
+      "citation": "web\\src\\features\\admin\\pages\\VehicleCostPage.tsx:114-170",
+      "decision": "reuse",
+      "detail": "No new source-state registry, skeleton system or overlay. FadeIn explicitly respects shared motion preference; chart animation is disabled."
+    }
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\admin\\components\\vehicle-cost\\index.ts",
+      "line": 10,
+      "rule": "MDC-002 / mission 33: one presentation owner",
+      "detail": "Barrel continues to export FleetCostKpis and TopTalkersPanel while mounted page imports VehicleCostStatStrip and VehicleCostTalkers from separate directories. Inspected alternatives duplicate the same six metrics and ranked-share panel with different missing-data behavior. Other consumers were not enumerated; unused status is not asserted.",
+      "fix": "Treat the mounted adapters as the current preservation baseline; reconcile callers/tests and barrel ownership before any consolidation. Do not transplant legacy zero defaults or delete alternatives without caller evidence.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "responsive": {
+    "runtime": "unverified",
+    "requiredWidths": [320,375,390,430,768,1024,1280,1440,1920,2560],
+    "sourceBehavior": [
+      "PageLayout has full-width min-w-0 composition; table host also has min-w-0.",
+      "Breakdown stacks in one column below xl, then chart spans two of three columns (page lines 142-151; chart line 61).",
+      "Toolbar flex-wrap with sm spacing (toolbar line 46).",
+      "OperationalBrief receives compact and metricColumns=3; actual breakpoint behavior was not inspected or mounted.",
+      "Chart category axis reserves 128px and shortens labels after 18 characters; full names survive chart data columns (chart lines 79-80,103-105)."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\admin\\components\\vehicle-cost\\VehicleCostTable.tsx",
+        "line": 130,
+        "rule": "MDC-023 / MDC-043 / mission 15: mobile must retain all information",
+        "detail": "mobileColumns includes only vehicle, failures and last. Shared DataTable applies hidden md:table-cell to all other columns (DataTable.tsx:714-725). Caller supplies neither mobilePresentation nor expandable details, so rows/bytes/rate are hidden in the narrow table. Other page panels do not expose these measurements for every returned vehicle.",
+        "fix": "Use existing DataTable mobilePresentation or expansion with all six source columns accessible per row; preserve desktop column settings, filters, export scope, ID and source ordering. Do not solve by dropping the mobile allow-list without an intentional overflow/reflow strategy.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\admin\\components\\vehicle-cost\\CostByVehicleChart.tsx",
+        "line": 104,
+        "rule": "MDC-043 / mission 15: allocated-width chart review",
+        "detail": "Fixed 128px category axis and 18-character truncation may leave a small plot at 320px. This is a source-identified review risk, not observed clipping.",
+        "fix": "Exercise the canonical frame/data alternative with long labels at all required widths and 200% text before changing axis geometry; retain every plotted row and full name.",
+        "owner": "page",
+        "confidence": "medium"
+      }
+    ]
+  },
+  "accessibility": {
+    "runtime": "unverified",
+    "keyboard": "unverified",
+    "focus": "unverified",
+    "contrast": "unverified",
+    "screenReader": "unverified",
+    "touchTargets": "unverified",
+    "sourceStrengths": [
+      "Named breakdown and summary sections; ranked talkers use ul/li semantics.",
+      "Refresh has localized aria-label, disabled state and aria-busy; label wraps the window Select (toolbar lines 47-65).",
+      "Chart provides localized ariaLabel and full-name/estimated-byte data columns (chart lines 66-85).",
+      "Talker loading uses role=status/aria-busy; missing total retains list content and partial notice (talkers lines 26-39).",
+      "Shared MetricBar supplies progressbar name/range and missing-reading aria-valuetext (MetricBar.tsx:51-64); actual composed announcement unverified.",
+      "FadeIn consumes useMotionPreference and suppresses reduced-motion entrance (FadeIn.tsx:25-34); bar chart isAnimationActive=false."
+    ],
+    "issues": [],
+    "followUp": [
+      "Review keyboard access to window, refresh, retries, chart data alternative and full table toolbar/filters on the mounted route.",
+      "Verify refresh spin is suppressed under OS reduced motion and low-bandwidth preference; toolbar directly uses animate-spin, while no local motion hook is used (toolbar line 64). Global CSS behavior was not inspected, so no confirmed motion failure is claimed.",
+      "Measure effective contrast in saved light/dark/custom/forced-color themes; text-cyan-300 and text-amber-300 are fixed feature accents, not measured theme-safe contrast."
+    ]
+  },
+  "states": {
+    "initialLoading": "deriveDataState initial drives six-metric loading, shared chart loading, five talker skeletons and table skeleton while keeping all four content blocks.",
+    "empty": "Successful empty arrays retain summary and distinct empty chart/talker/table states; tracked vehicles can be measured zero while mean has no denominator.",
+    "fatalError": "Fatal error passed to each section with refetch recovery; PageLayout remains composed. No global data gate drops all sections.",
+    "unsupported": "Any fatal ApiError status 503 renders unsupported notice and suppresses section errors (page lines 63-68,114-124). This assumes all 503 responses mean missing subsystem; error code is not checked.",
+    "refresh": "Query polling and manual refresh retain data; refresh disabled/busy while isFetching. Summary receives refreshError and retained flag; page source notice receives query except unsupported.",
+    "staleOffline": "deriveDataState differentiates retained refresh failure and paused refresh; summary shows retained state. Page/source trust presentation is inherited; no browser/offline acceptance.",
+    "partialUnknown": "Missing totals remain unknown in summary and top-talkers missing-total branch; rank helper and table failures still coerce missing source fields to zero.",
+    "issues": [
+      {
+        "file": "web\\src\\features\\admin\\components\\vehicle-cost\\helpers.ts",
+        "line": 59,
+        "rule": "MDC-026 / MDC-045: unknown is not zero",
+        "detail": "rankVehicles coerces missing bytes, rows, rate and failures to zero (lines 59-62), defeating shared MetricBar missing-reading support. Table similarly renders missing failures as 0 at VehicleCostTable.tsx:86 although its filter label preserves an em dash.",
+        "fix": "Preserve source unknown/null/nonfinite states in the domain adapter and present unavailable readings without numeric fabrication. Resolve ranking policy for unknown sort values explicitly while retaining all returned rows and measured zero.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\admin\\pages\\VehicleCostPage.tsx",
+        "line": 63,
+        "rule": "MDC-026: unsupported is not generic service failure",
+        "detail": "A generic fatal 503 is labeled unsupported without checking SUBSYSTEM_NOT_CONFIGURED. The inspected handler documents missing configuration, but other transient 503 paths were not traced.",
+        "fix": "Confirm structured error-code availability and discriminate missing configuration from transient service failure using existing ApiError contract; retain retry and source context.",
+        "owner": "integration",
+        "confidence": "medium"
+      },
+      {
+        "file": "internal\\database\\observability\\vehicle_cost_repo.go",
+        "line": 144,
+        "rule": "MDC-026: source availability metadata",
+        "detail": "Missing-DLQ-relation fallback emits a numeric 0 with no capability/availability flag. Frontend cannot distinguish measured no failures from unavailable failure storage using the current payload.",
+        "fix": "Integration owner must define and supply actual availability metadata before UI can label DLQ unavailable; do not invent a flag or reinterpret every legitimate zero locally.",
+        "owner": "integration",
+        "confidence": "high"
+      }
+    ]
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\admin\\components\\continuation-admin-1\\VehicleCostTalkers.tsx",
+      "line": 49,
+      "rule": "MDC-010 / MDC-034 / mission 43: restrained semantic accents",
+      "detail": "Eight ranked talkers rotate through chartTokens.series though color does not encode a distinct source category; MetricBar default fill is gradient (MetricBar.tsx:47,92). This is avoidable multi-hue/gradient emphasis for a single ranked measure, not a runtime screenshot finding.",
+      "fix": "Prefer one restrained semantic series token and existing fill=solid, preserving labels, values, proportions and user palette preferences. Keep stronger emphasis only for meaningful outliers; no new hex palette or custom progress component.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\admin\\components\\vehicle-cost\\CostByVehicleChart.tsx",
+      "line": 63,
+      "rule": "MDC-012 / MDC-016: theme-aware, low-noise decoration",
+      "detail": "Decorative chart icon uses fixed cyan-300; talker action icon uses fixed amber-300 and table failures use amber-300. Not neon classes, but unnecessary decorative hue can compete with data and fixed failure text needs actual theme contrast review.",
+      "fix": "Use existing muted semantic icon/text tokens for decoration and existing warning severity for real nonzero failures. Retain meaningful amber outlier highlight and saved chart palette semantics; verify themes rather than force-resetting preferences.",
+      "owner": "page",
+      "confidence": "medium"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\features\\admin\\pages\\VehicleCostPage.tsx",
+      "line": 55,
+      "rule": "MDC-032 / mission 33: one workspace range owner",
+      "detail": "Local windowDays/since drives a separate Window Select. Route is absent from RANGE_ENABLED_PATHS (workspaceScope.ts:23-77) and /admin disables global vehicle selection (workspaceScope.ts:96-108,154-166). Report is correctly fleet-wide, but dated range has a competing local owner. Backend accepts since only, not a bounded range.",
+      "fix": "Coordinate workspace/date and API integration owners: register actual route only when useRangeState and server filtering support both bounds with correct rolling/custom/timezone semantics. Preserve 1/7/30/90-day intent and default 30 days; do not merely hide the old control or add a header control that cannot affect the query. Keep fleet-wide vehicle scope.",
+      "owner": "integration",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\admin\\pages\\VehicleCostPage.tsx",
+      "line": 56,
+      "rule": "MDC-032 / MDC-046: explicit query period semantics",
+      "detail": "since is memoized only on windowDays, so SLOW polling/manual refetch reuses the initial lower bound; a selected trailing period becomes longer while page stays mounted. API response provides neither exact bounds nor an upper bound.",
+      "fix": "Preserve current request semantics as audit baseline, then explicitly reconcile rolling versus fixed period with existing range-state owner and source bounds metadata. Do not silently change period calculations during cosmetic modernization.",
+      "owner": "integration",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\admin\\components\\vehicle-cost\\VehicleCostTable.tsx",
+      "line": 34,
+      "rule": "mission 0 / MDC-023: source claims versus wired actions",
+      "detail": "Comment says six sortable columns, but columns have no sortable flag and DataTable caller supplies no onSort/sortKey/sortDir. Shared DataTable only renders sort controls with sortable and onSort (DataTable.tsx:1557). Actual source wires six value-filterable columns, not interactive sort.",
+      "fix": "Record existing server order and filters accurately; reconcile intended sorting with source/history and tests before implementing via existing DataTable/useSortToggle. Do not assert sorting is an existing working action or discard filters to add it.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "priority": {
+    "level": "high",
+    "rationale": "Mobile detail loss and unknown-as-zero risk outrank aesthetic changes. Resolve source availability and range ownership through integration; then reduce multi-hue/gradient noise using already implemented shared APIs.",
+    "order": ["non-lossy table mobile details", "unknown and DLQ availability semantics", "range/query-period integration", "single domain adapter ownership", "restrained visual refinements", "mounted responsive and accessibility acceptance"]
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "Workspace range / server-bound report integration",
+      "existingOwnerFile": "web\\src\\lib\\workspaceScope.ts",
+      "owner": "integration",
+      "propsVariantsStates": "Existing range owner startInstant/endInstantExclusive and route registration; typed useVehicleCost bounds and explicit report period metadata; retain rolling/custom/timezone semantics and fleet-wide vehicle scope.",
+      "usedBy": ["VehicleCostPage /admin/vehicle-cost"],
+      "dependsOn": [
+        "internal\\handler\\v1\\admin_observability_handler.go:76-84 currently parses only since/limit",
+        "internal\\database\\observability\\vehicle_cost_repo.go:69-94 currently filters lower bound only",
+        "web\\src\\api\\hooks\\useOperatorConfidence.ts:149-165 query contract"
+      ]
+    },
+    {
+      "name": "DLQ availability provenance",
+      "existingOwnerFile": "internal\\database\\observability\\vehicle_cost_repo.go",
+      "owner": "integration",
+      "propsVariantsStates": "Source capability/availability information for failure counters when fallback query is used; typed payload propagated through existing hook/data-state mechanisms; distinguish known zero from unavailable without inventing backend guarantees.",
+      "usedBy": ["VehicleCostStatStrip DLQ metric", "VehicleCostTable failures column"],
+      "dependsOn": ["Existing no-DLQ fallback source behavior", "Shared wire types and handler response contract"]
+    }
+  ],
+  "competingImplementations": [
+    {
+      "pattern": "Fleet ingest summary",
+      "currentOwner": "web\\src\\features\\admin\\components\\statstrip-audit-vehicle-cost\\VehicleCostStatStrip.tsx",
+      "alternative": "web\\src\\features\\admin\\components\\vehicle-cost\\FleetCostKpis.tsx",
+      "evidence": "Page imports mounted current owner at line 42; barrel exports alternative at line 10. Alternative uses six MetricCards and default-zero totals; current uses OperationalBrief and richer source qualifiers.",
+      "decision": "Do not revive alternative or create a third stats implementation. Reconcile consumers before removal; no global usage/dead-code claim."
+    },
+    {
+      "pattern": "Ranked row-share panel",
+      "currentOwner": "web\\src\\features\\admin\\components\\continuation-admin-1\\VehicleCostTalkers.tsx",
+      "alternative": "web\\src\\features\\admin\\components\\vehicle-cost\\TopTalkersPanel.tsx",
+      "evidence": "Page imports current at line 43; barrel exports alternative at line 12. Current preserves missing total with partial KVList; alternative treats missing total as zero and uses largest-talker scale.",
+      "decision": "Current null-total handling must survive consolidation; reuse LayoutCard/MetricBar/KVList rather than adding a new shared domain renderer."
+    },
+    {
+      "pattern": "Report range selection",
+      "currentOwner": "VehicleCostToolbar local Window Select",
+      "alternative": "Existing shell View settings / workspaceScope",
+      "evidence": "Page lines 55-61,91-98 versus workspaceScope route opt-in list and scope result.",
+      "decision": "Integration requirement above is the sole range-owner proposal; no second range picker, local bypass or speculative component."
+    }
+  ],
+  "preservation": {
+    "sourceHash": "E4C1958AF7B0502058A2487FEF538FD967833808B8A0EA5D8D7D710F36689BB9",
+    "sourceHashAlgorithm": "SHA256",
+    "currentLineCount": 174,
+    "mountedComponentLineCounts": {
+      "VehicleCostStatStrip": 67,
+      "CostByVehicleChart": 121,
+      "VehicleCostTalkers": 58,
+      "VehicleCostTable": 140,
+      "VehicleCostToolbar": 70
+    },
+    "pageAndMountedPresentationLineCount": 630,
+    "sectionCount": 4,
+    "majorBandCount": 3,
+    "sectionNames": ["Fleet ingest totals", "Ingest cost by vehicle", "Top talkers", "Per-vehicle breakdown"],
+    "sections": [
+      {"name": "Fleet ingest totals", "citation": "web\\src\\features\\admin\\pages\\VehicleCostPage.tsx:128-137", "count": 1, "metrics": ["Total rows", "Total bytes (est.)", "Rate (rows/min, 24h)", "DLQ failures (24h)", "Vehicles tracked", "Avg rows / vehicle"], "metricCount": 6},
+      {"name": "Ingest cost by vehicle", "citation": "web\\src\\features\\admin\\pages\\VehicleCostPage.tsx:146-151", "count": 1, "behavior": "Top eight estimated-byte consumers, descending; highest highlighted; byte axes/tooltip and full-name data alternative."},
+      {"name": "Top talkers", "citation": "web\\src\\features\\admin\\pages\\VehicleCostPage.tsx:152-158", "count": 1, "behavior": "Top eight row consumers, descending; rows and percent, capped 100%; known-total scale including known-zero fallback, missing total yields partial KVList."},
+      {"name": "Per-vehicle breakdown", "citation": "web\\src\\features\\admin\\pages\\VehicleCostPage.tsx:164-169", "count": 1, "columnCount": 6, "columns": ["Vehicle name and ID", "Rows", "Estimated bytes", "24-hour rows/minute", "24-hour DLQ failures", "Last seen relative timestamp"]}
+    ],
+    "structuralCounts": {
+      "pageGlassPanel": 0,
+      "pageChartContainer": 0,
+      "mountedGlassPanel": 2,
+      "mountedLayoutCard": 1,
+      "mountedEmbeddedChart": 1,
+      "mountedOperationalBrief": 1,
+      "mountedDataTable": 1,
+      "pageFadeIn": 3,
+      "note": "Shared adapters, not direct page GlassPanel count, establish section preservation. EmbeddedChart forwards to canonical ChartContainer. Source counts are not mounted runtime counts."
+    },
+    "actions": [
+      "Window presets 1/7/30/90 days; initial 30 days; changing preset changes since and query key.",
+      "Manual refetch with localized accessible name, disabled/busy during fetch.",
+      "Fatal/refresh error retry; top-talkers empty-state retry.",
+      "DataTable value filters for all six columns with canonical raw values and labels.",
+      "DataTable inherited column visibility/order/width persistence under tableId admin:vehicle-cost; keep vehicle_id row identity.",
+      "Shared DataTable default loaded/matching-row CSV and JSON export controls are source-wired for this non-paginated caller (DataTable.tsx:907-917); no exportAll server capability supplied.",
+      "OperationalBrief details/source explanations and EmbeddedChart data alternative must remain available through current shared contracts; actual interaction not exercised."
+    ],
+    "notWiredActions": ["No page mutation, vehicle command or write endpoint", "No table interactive sorting wired despite source comment", "No explicit chart export/fullscreen enablement", "No server full-result export handler or unbounded fleet query"],
+    "dataBehavior": [
+      "Read-only lazy route behind SafeRoute (App.tsx:280,715).",
+      "Preserve snake_case payload fields and raw operational values in query/cache; estimates stay labeled estimated.",
+      "Keep limit 100, inherited query caching/retry/abort/polling policy and query key identity until an explicit integration migration.",
+      "Preserve source order in full table and separate top-eight descending bytes/rows derives; trimming names falls back to localized Vehicle #id.",
+      "Retain four content blocks for empty, initial loading, failure, unsupported and refresh scenarios; retain data on refresh failure/paused state.",
+      "Keep selected-window versus last-24h explanations, 96 bytes/row estimate, returned-vehicle denominator and limited-total provenance.",
+      "Null total/missing denominator is not measured zero; explicit zero source values remain zero.",
+      "Fix current missing-as-zero and mobile hidden-detail risks intentionally without copying old adapter behavior.",
+      "Keep localization keys, saved formatter preferences, stable table ID, semantic source scope and fleet-wide admin vehicle behavior.",
+      "Source response does not expose exact report bounds or DLQ capability metadata; do not fabricate them."
+    ]
+  },
+  "evidenceLimits": {
+    "auditType": "Phase0 bounded source-only inspection",
+    "runtime": "unverified",
+    "visual": "unverified",
+    "keyboard": "unverified",
+    "contrast": "unverified",
+    "viewportBehavior": "unverified at every required width",
+    "themeRtlForcedColors": "unverified",
+    "testsTypeScriptLintBuild": "not run; Phase0 ownership and concurrent-worker conventions forbid project-wide validation. Skill audit.sh was read but not executed because it invokes project TypeScript.",
+    "scope": "Only assigned page and its direct presentation/data-owner slices inspected. No source files, Git, queue, other reports or production state modified.",
+    "documentationRead": ["docs\\frontend-worker-conventions.md fully", "docs\\frontend-design-contract.md fully", "docs\\frontend-mission.md fully including sections 0,1,15,33,43,44"],
+    "sourceScan": {
+      "command": "PowerShell Get-Content on the six mounted page/presentation files; [regex]::Matches for static var style, raw button/input/textarea/select/table tags and direct recharts/react-leaflet/framer-motion imports",
+      "exitCode": 0,
+      "rawOutput": [
+        "web\\src\\features\\admin\\pages\\VehicleCostPage.tsx | lines=174 | static-var-style=0 | raw-controls=0 | direct-prohibited-library=0",
+        "web\\src\\features\\admin\\components\\vehicle-cost\\CostByVehicleChart.tsx | lines=121 | static-var-style=0 | raw-controls=0 | direct-prohibited-library=0",
+        "web\\src\\features\\admin\\components\\vehicle-cost\\VehicleCostTable.tsx | lines=140 | static-var-style=0 | raw-controls=0 | direct-prohibited-library=0",
+        "web\\src\\features\\admin\\components\\vehicle-cost\\VehicleCostToolbar.tsx | lines=70 | static-var-style=0 | raw-controls=0 | direct-prohibited-library=0",
+        "web\\src\\features\\admin\\components\\continuation-admin-1\\VehicleCostTalkers.tsx | lines=58 | static-var-style=0 | raw-controls=0 | direct-prohibited-library=0",
+        "web\\src\\features\\admin\\components\\statstrip-audit-vehicle-cost\\VehicleCostStatStrip.tsx | lines=67 | static-var-style=0 | raw-controls=0 | direct-prohibited-library=0"
+      ],
+      "limitations": "Bounded regex source checks only, not AST/full audit or runtime correctness. Initial PowerShell scan command had quoting ParserError exit 1; corrected command executed successfully."
+    },
+    "unknowns": [
+      "App route source confirms declared mount, not authenticated reachability or live render.",
+      "OperationalBrief internal details interactions, ChartContainer data alternatives and actual table toolbar availability not exercised.",
+      "Shared global CSS reduced motion, formatter preference internals and custom theme contrast not inspected.",
+      "Alternative domain components' wider consumers/tests not traced; cannot declare them dead.",
+      "Concurrent source may drift; preservation hash must be validated against the current page before handoff."
+    ],
+    "ownedFiles": ["docs\\frontend-audits\\audit-page-027.json", ".agent-status\\audit-page-027.txt"]
+  },
+  "filesRead": [
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\admin\\pages\\VehicleCostPage.tsx",
+    "web\\src\\features\\admin\\components\\vehicle-cost\\index.ts",
+    "web\\src\\features\\admin\\components\\vehicle-cost\\constants.ts",
+    "web\\src\\features\\admin\\components\\vehicle-cost\\helpers.ts",
+    "web\\src\\features\\admin\\components\\vehicle-cost\\CostByVehicleChart.tsx",
+    "web\\src\\features\\admin\\components\\vehicle-cost\\VehicleCostTable.tsx",
+    "web\\src\\features\\admin\\components\\vehicle-cost\\VehicleCostToolbar.tsx",
+    "web\\src\\features\\admin\\components\\vehicle-cost\\FleetCostKpis.tsx",
+    "web\\src\\features\\admin\\components\\vehicle-cost\\TopTalkersPanel.tsx",
+    "web\\src\\features\\admin\\components\\statstrip-audit-vehicle-cost\\VehicleCostStatStrip.tsx",
+    "web\\src\\features\\admin\\components\\continuation-admin-1\\VehicleCostTalkers.tsx",
+    "web\\src\\api\\hooks\\useOperatorConfidence.ts",
+    "web\\src\\types\\admin-operator-confidence.ts",
+    "web\\src\\api\\dataState.ts",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\App.tsx",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\layout\\PageContainer.tsx",
+    "web\\src\\components\\charts\\EmbeddedChart.tsx",
+    "web\\src\\components\\ui\\DataTable.tsx",
+    "web\\src\\components\\data-display\\MetricBar.tsx",
+    "web\\src\\components\\motion\\FadeIn.tsx",
+    "internal\\api\\router.go",
+    "internal\\handler\\v1\\admin_observability_handler.go",
+    "internal\\app\\adminobssvc\\service.go",
+    "internal\\database\\observability\\vehicle_cost_repo.go"
+  ]
+}

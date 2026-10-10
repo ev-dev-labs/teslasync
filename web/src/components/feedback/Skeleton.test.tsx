@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest';
-import { render } from '@testing-library/react';
+import { describe, it, expect, vi } from 'vitest';
+import { fireEvent, render } from '@testing-library/react';
 import { Skeleton } from './Skeleton';
 
 /**
@@ -21,18 +21,21 @@ import { Skeleton } from './Skeleton';
  * role/name queries.
  */
 
-/** The animated placeholder bars, regardless of single/multi mode. */
+/** The neutral placeholder bars, regardless of single/multi mode. */
 function bars(container: HTMLElement): HTMLElement[] {
-  return Array.from(container.querySelectorAll<HTMLElement>('.animate-pulse'));
+  return Array.from(container.querySelectorAll<HTMLElement>('div')).filter(
+    (element) => element.classList.contains('bg-[var(--skeleton-bg)]'),
+  );
 }
 
 describe('Skeleton — single-bar mode', () => {
-  it('renders one pulsing bar with the default 100% × 16px sizing and the square (non-pill) radius', () => {
+  it('renders one static neutral bar with the default 100% × 16px sizing and the square (non-pill) radius', () => {
     const { container } = render(<Skeleton />);
     const el = bars(container);
 
     expect(el).toHaveLength(1);
-    expect(el[0]).toHaveClass('h-4', 'w-full', 'animate-pulse', 'bg-[var(--skeleton-bg)]', 'rounded');
+    expect(el[0]).toHaveClass('h-4', 'w-full', 'bg-[var(--skeleton-bg)]', 'rounded');
+    expect(el[0]).not.toHaveClass('animate-pulse');
     expect(el[0]).not.toHaveClass('rounded-full');
     expect(el[0].getAttribute('style')).toBeNull();
     // The single-bar root is the placeholder itself, not a stacking wrapper.
@@ -62,7 +65,7 @@ describe('Skeleton — single-bar mode', () => {
     const { container } = render(<Skeleton className="h-64 rounded-xl custom-token" />);
     const el = bars(container)[0];
 
-    expect(el).toHaveClass('animate-pulse', 'h-64', 'rounded-xl', 'custom-token');
+    expect(el).toHaveClass('h-64', 'rounded-xl', 'custom-token');
     expect(el).not.toHaveClass('h-4');
     // twMerge resolves the `rounded` vs `rounded-xl` conflict in favour of the caller.
     expect(el.classList.contains('rounded')).toBe(false);
@@ -134,7 +137,10 @@ describe('Skeleton — robustness of the `lines` count', () => {
   it('does not throw for a non-finite count and degrades to a single bar', () => {
     let container!: HTMLElement;
     expect(() => {
-      container = render(<Skeleton lines={Number.POSITIVE_INFINITY} />).container;
+      for (const lines of [Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY, Number.NaN]) {
+        container = render(<Skeleton lines={lines} />).container;
+        expect(bars(container)).toHaveLength(1);
+      }
     }).not.toThrow();
     expect(bars(container)).toHaveLength(1);
   });
@@ -147,5 +153,65 @@ describe('Skeleton — accessibility', () => {
 
     const { container: multi } = render(<Skeleton lines={4} />);
     expect(multi.firstElementChild).toHaveAttribute('aria-hidden', 'true');
+  });
+
+  it('keeps busy announcements on the caller region without decorative loops in either rendering mode', () => {
+    const { container, getByRole } = render(
+      <section role="status" aria-busy="true" aria-label="Loading vehicle details">
+        <Skeleton />
+        <Skeleton lines={3} />
+      </section>,
+    );
+
+    expect(getByRole('status')).toHaveAttribute('aria-busy', 'true');
+    expect(bars(container)).toHaveLength(4);
+    for (const bar of bars(container)) {
+      expect(bar).not.toHaveClass('animate-pulse', 'animate-spin', 'animate-bounce');
+      expect(bar).not.toHaveAttribute('role');
+      expect(bar).not.toHaveAttribute('aria-busy');
+      expect(bar).toBeEmptyDOMElement();
+    }
+  });
+});
+
+describe('Skeleton — native props and dynamic geometry', () => {
+  it('forwards native attributes and events to either root while keeping decoration hidden', () => {
+    for (const lines of [1, 3]) {
+      const onClick = vi.fn();
+      const { getByTestId } = render(
+        <Skeleton
+          lines={lines}
+          id={`placeholder-${lines}`}
+          data-testid={`placeholder-${lines}`}
+          title="A long caller-owned label that must remain unchanged across layouts"
+          aria-hidden={false}
+          onClick={onClick}
+          style={{ maxWidth: '75%' }}
+        />,
+      );
+      const root = getByTestId(`placeholder-${lines}`);
+
+      expect(root).toHaveAttribute('id', `placeholder-${lines}`);
+      expect(root).toHaveAttribute('title', 'A long caller-owned label that must remain unchanged across layouts');
+      expect(root).toHaveAttribute('aria-hidden', 'true');
+      expect(root).toHaveStyle({ maxWidth: '75%' });
+      fireEvent.click(root);
+      expect(onClick).toHaveBeenCalledTimes(1);
+    }
+  });
+
+  it('retains zero dimensions and updates dynamic source sizes without fixed utility substitutes', () => {
+    const { container, rerender } = render(<Skeleton width="0%" height={0} />);
+    expect(bars(container)[0]).toHaveStyle({ width: '0%', height: '0px' });
+
+    rerender(<Skeleton width="calc(100% - 2rem)" height="5vh" />);
+    expect(bars(container)[0].style.width).toBe('calc(100% - 2rem)');
+    expect(bars(container)[0].style.height).toBe('5vh');
+
+    rerender(<Skeleton lines={2} width="calc(100% - 2rem)" height="5vh" />);
+    expect(bars(container)[0].style.width).toBe('calc(100% - 2rem)');
+    expect(bars(container)[0].style.height).toBe('5vh');
+    expect(bars(container)[1].style.width).toBe('60%');
+    expect(bars(container)[1].style.height).toBe('5vh');
   });
 });

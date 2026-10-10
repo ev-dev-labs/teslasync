@@ -9,21 +9,23 @@
 import { useState, useMemo, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { PageContainer } from '@/components/layout';
+import { PageLayout } from '@/components/layout';
 import {
   GlassPanel, Button, Input, Select, Badge, SectionTitle, Text, Caption,
 } from '@/components/ui';
-import { MetricCard } from '@/components/data-display';
+import { AutomationRulesBrief } from '../components/operationalbrief-all/AutomationRulesBrief';
 import {
   AlertBanner,
   EmptyState,
   OperationalWriteNotice,
   QueryError,
   Skeleton,
+  StaleRefreshWarning,
 } from '@/components/feedback';
 import { EmptyStateGuidanceDetails } from '@/components/feedback/ActionableEmptyState';
 import { FadeIn, StaggerContainer, StaggerItem } from '@/components/motion';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useDataState } from '@/hooks/useDataState';
 import { useAutomationEvents } from '@/hooks/useAutomationEvents';
 import { useOperationalMode } from '@/hooks/useOperationalMode';
 import {
@@ -41,7 +43,7 @@ import { PresetGallery } from './PresetGallery';
 import { ComfortPanel } from '../components/ComfortPanel';
 import {
   Zap, Plus, Upload, ListFilter, AlertTriangle,
-  Pause, Power, ShieldOff, Sparkles, ChevronRight,
+  Sparkles, ChevronRight,
 } from 'lucide-react';
 import type { Automation } from '@/api/types';
 
@@ -59,7 +61,7 @@ const statusFilterOptions: { value: StatusFilter; key: string; fallback: string 
   { value: 'all', key: 'automations.filters.all', fallback: 'All' },
   { value: 'active', key: 'automations.filters.active', fallback: 'Active' },
   { value: 'disabled', key: 'automations.filters.disabled', fallback: 'Disabled' },
-  { value: 'auto-disabled', key: 'automations.filters.autoDisabled', fallback: 'Auto-Disabled' },
+  { value: 'auto-disabled', key: 'automations.filters.autoDisabled', fallback: 'Auto-disabled' },
 ];
 
 // ─── Stats computation ────────────────────────────────────────────────────────
@@ -118,13 +120,15 @@ export default function AutomationsListPage() {
   usePageTitle(t('automations.title', 'Automations'));
 
   // Data hooks — each section below owns its own loading / empty / error state.
+  const automationsQuery = useAutomations();
   const {
     data: automations,
-    isLoading,
-    isError,
-    error,
     refetch,
-  } = useAutomations();
+  } = automationsQuery;
+  const automationsState = useDataState(automationsQuery);
+  const isLoading = !automationsState.hasData && automationsQuery.isLoading;
+  const error = automationsState.fatalError;
+  const isError = error != null;
   const { data: vehicles } = useVehicles();
   const { firingNow } = useAutomationEvents({ maxEvents: 50 });
 
@@ -264,11 +268,17 @@ export default function AutomationsListPage() {
   );
 
   return (
-    <PageContainer
+    <PageLayout
       title={t('automations.title', 'Automations')}
       subtitle={t('automations.subtitle', 'Automate vehicle actions with typed triggers, conditions, and action chains')}
-      actions={
-        <div className="flex flex-wrap items-center justify-end gap-2">
+      secondaryActions={
+        <Button type="button" variant="secondary" size="sm" onClick={() => navigate('/automations/list')}>
+          <ListFilter className="mr-1.5 h-4 w-4" aria-hidden="true" />
+          {t('automations.manageRules', 'Manage rules')}
+        </Button>
+      }
+      overflowActions={
+        <>
           <Input
             ref={importInputRef}
             type="file"
@@ -290,22 +300,20 @@ export default function AutomationsListPage() {
             <Upload className="mr-1.5 h-4 w-4" aria-hidden="true" />
             {t('automations.import', 'Import')}
           </Button>
-          <Button type="button" variant="secondary" size="sm" onClick={() => navigate('/automations/list')}>
-            <ListFilter className="mr-1.5 h-4 w-4" aria-hidden="true" />
-            {t('automations.manageRules', 'Manage rules')}
-          </Button>
-          <Button
-            type="button"
-            variant="primary"
-            size="sm"
-            onClick={() => navigate('/automations/new')}
-            disabled={!operationalMode.canWrite}
-            title={operationalMode.writeBlockReason ?? undefined}
-          >
-            <Plus className="mr-1.5 h-4 w-4" aria-hidden="true" />
-            {t('automations.create', 'Create')}
-          </Button>
-        </div>
+        </>
+      }
+      primaryAction={
+        <Button
+          type="button"
+          variant="primary"
+          size="sm"
+          onClick={() => navigate('/automations/new')}
+          disabled={!operationalMode.canWrite}
+          title={operationalMode.writeBlockReason ?? undefined}
+        >
+          <Plus className="mr-1.5 h-4 w-4" aria-hidden="true" />
+          {t('automations.create', 'Create')}
+        </Button>
       }
     >
       <OperationalWriteNotice
@@ -314,37 +322,17 @@ export default function AutomationsListPage() {
           'Automation controls are read-only',
         )}
       />
+      <StaleRefreshWarning state={automationsState} label={t('automations.title', 'Automations')} />
 
-      {/* 1 — KPI band: full-width responsive metric grid */}
+      {/* 1 — Compact summary of the full loaded rule set */}
       <FadeIn>
         <section
           aria-label={t('automations.stats.aria', 'Automation summary')}
-          className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4"
         >
-          <MetricCard
-            label={t('automations.stats.total', 'Total')}
-            value={stats.total}
-            icon={<ListFilter className="h-5 w-5" />}
-            color="cyan"
-          />
-          <MetricCard
-            label={t('automations.stats.active', 'Active')}
-            value={stats.active}
-            icon={<Power className="h-5 w-5" />}
-            color="green"
-          />
-          <MetricCard
-            label={t('automations.stats.disabled', 'Disabled')}
-            value={stats.disabled}
-            icon={<Pause className="h-5 w-5" />}
-            color="blue"
-          />
-          <MetricCard
-            label={t('automations.stats.autoDisabled', 'Auto-Disabled')}
-            value={stats.autoDisabled}
-            icon={<ShieldOff className="h-5 w-5" />}
-            color="red"
-            className={stats.autoDisabled > 0 ? 'border-neon-red/30' : undefined}
+          <AutomationRulesBrief
+            stats={stats} hasData={automationsState.hasData}
+            loading={isLoading}
+            retained={Boolean(automationsState.refreshError || automationsState.isRefreshBlocked)}
           />
         </section>
       </FadeIn>
@@ -411,7 +399,7 @@ export default function AutomationsListPage() {
               />
               <Sparkles className="h-4 w-4 shrink-0 text-cyan-300" aria-hidden="true" />
               <Text variant="body" className="font-semibold">
-                {t('automations.presets.title', 'Quick Start Templates')}
+                {t('automations.presets.title', 'Quick start templates')}
               </Text>
               <Caption className="ml-1 hidden sm:inline">
                 {t('automations.presets.hint', 'One-click install')}
@@ -443,7 +431,7 @@ export default function AutomationsListPage() {
         <section>
           <div className="min-w-0 space-y-3">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <SectionTitle>{t('automations.yourAutomations', 'Your Automations')}</SectionTitle>
+              <SectionTitle>{t('automations.yourAutomations', 'Your automations')}</SectionTitle>
               <Caption>
                 {t('automations.showingCount', 'Showing {{count}}', { count: sortedItems.length })}
               </Caption>
@@ -484,7 +472,7 @@ export default function AutomationsListPage() {
                   message={t('automations.empty', 'No automations yet. Create a typed automation to get started!')}
                   actionTo={operationalMode.canWrite
                     ? {
-                        label: t('automations.empty.cta', 'Create automation'),
+                        label: t('automations.emptyCta', 'Create automation'),
                         to: '/automations/new',
                       }
                     : undefined}
@@ -503,7 +491,7 @@ export default function AutomationsListPage() {
                   icon={<Zap className="h-8 w-8" />}
                   message={t('automations.noMatch', 'No automations match your filters')}
                   action={{
-                    label: t('automations.noMatch.cta', 'Reset filters'),
+                    label: t('automations.noMatchCta', 'Reset filters'),
                     onClick: () => {
                       setSearch('');
                       setStatusFilter('all');
@@ -516,6 +504,6 @@ export default function AutomationsListPage() {
 
         </section>
       </FadeIn>
-    </PageContainer>
+    </PageLayout>
   );
 }

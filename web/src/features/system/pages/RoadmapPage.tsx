@@ -2,9 +2,10 @@ import { type ElementType, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Icons } from '@/lib/icons';
 
-import { PageContainer } from '@/components/layout';
+import { PageLayout } from '@/components/layout';
 import { GlassPanel, IconBox, SectionTitle, PanelTitle, Text } from '@/components/ui';
-import { MetricCard } from '@/components/data-display';
+import { CompositionRail } from '@/components/data-display';
+import { SystemSummaryBrief } from '../components/operationalbrief-all/SystemSummaryBrief';
 import { EmptyState } from '@/components/feedback';
 import { FadeIn, StaggerContainer, StaggerItem } from '@/components/motion';
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -16,7 +17,7 @@ const {
   sparkles: Rocket, success: CheckCircle, clock: Clock, star: Star, charging: Zap,
   notifications: Bell, monitor: Smartphone, cpu: Brain, charger: Plug,
   security: Shield, map: Map, analytics: BarChart3, leaf: Leaf,
-  maintenance: Wrench, users: Users, layoutGrid: Layers, lightbulb: Sparkles,
+  maintenance: Wrench, users: Users, layoutGrid: Layers,
 } = Icons;
 
 /* ------------------------------------------------------------------ */
@@ -62,7 +63,7 @@ const PHASE_META: Record<RoadmapPhase, PhaseMeta> = {
     icon: Zap,
     statusIcon: Zap,
     labelKey: 'roadmap.phase.current',
-    labelFallback: 'Active Focus',
+    labelFallback: 'Active focus',
     descKey: 'roadmap.phaseDesc.current',
     descFallback: 'Areas receiving attention; priorities may change.',
   },
@@ -71,7 +72,7 @@ const PHASE_META: Record<RoadmapPhase, PhaseMeta> = {
     icon: Star,
     statusIcon: Star,
     labelKey: 'roadmap.phase.next',
-    labelFallback: 'Up Next',
+    labelFallback: 'Up next',
     descKey: 'roadmap.phaseDesc.next',
     descFallback: 'Potential next priorities, not scheduled commitments.',
   },
@@ -422,7 +423,7 @@ function DeliveryProgress({
     <GlassPanel className="p-4 sm:p-5">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:gap-8">
         <div className="shrink-0 lg:w-56">
-          <SectionTitle>{t('roadmap.progress.title', 'Delivery Progress')}</SectionTitle>
+          <SectionTitle>{t('roadmap.progress.title', 'Delivery progress')}</SectionTitle>
           <div className="mt-1 flex items-baseline gap-2">
             <Text as="span" variant="metricValue">{shipped}</Text>
             <Text as="span" variant="caption">
@@ -436,34 +437,18 @@ function DeliveryProgress({
             // no-action: derived from the hardcoded roadmapItems array in this file — never empty without a source-code edit.
             <EmptyState message={t('roadmap.progress.empty', 'No roadmap items to display yet.')} />
           ) : (
-            <>
-              <div
-                className="flex h-3 w-full overflow-hidden rounded-full bg-white/[0.04] ring-1 ring-white/[0.06]"
-                role="img"
-                aria-label={t('roadmap.progress.barLabel', 'Roadmap initiatives by phase')}
-              >
-                {segments.map((s) => {
-                  const pct = total > 0 ? (s.count / total) * 100 : 0;
-                  if (pct <= 0) return null;
-                  return (
-                    <div
-                      key={s.phase}
-                      className={cn('h-full', neonColorMap[s.meta.neon].dot)}
-                      style={{ width: `${pct}%` }}
-                    />
-                  );
-                })}
-              </div>
-              <ul className="mt-3 flex flex-wrap gap-x-5 gap-y-2">
-                {segments.map((s) => (
-                  <li key={s.phase} className="flex items-center gap-2">
-                    <span className={cn('h-2 w-2 rounded-full', neonColorMap[s.meta.neon].dot)} aria-hidden="true" />
-                    <Text as="span" variant="bodySm">{t(s.meta.labelKey, s.meta.labelFallback)}</Text>
-                    <Text as="span" variant="caption" className="tabular-nums">{s.count}</Text>
-                  </li>
-                ))}
-              </ul>
-            </>
+            <CompositionRail
+              size="md"
+              summary={t('roadmap.progress.barLabel', 'Roadmap initiatives by phase')}
+              segments={segments.map((segment) => ({
+                id: segment.phase,
+                label: t(segment.meta.labelKey, segment.meta.labelFallback),
+                detail: segment.count,
+                widthPercent: (segment.count / total) * 100,
+                hideFromTrack: segment.count <= 0,
+                fillClassName: neonColorMap[segment.meta.neon].dot,
+              }))}
+            />
           )}
         </div>
       </div>
@@ -557,56 +542,26 @@ export default function RoadmapPage() {
   );
 
   return (
-    <PageContainer
+    <PageLayout
       title={t('roadmap.title', 'Roadmap')}
-      subtitle={t('roadmap.subtitle', "What's been built, what's in progress, and what's coming next")}
+      subtitle={t('roadmap.subtitle', "What's been built, What's in progress, and What's coming next")}
     >
-      <Text as="p" variant="bodySm">
-        {t('roadmap.note', 'This is a direction of travel, not a release schedule. Future work depends on operator needs and data correctness.')}
-      </Text>
       {/* 1 — KPI band: initiatives per phase + totals */}
       <FadeIn>
-        <section
-          aria-label={t('roadmap.overview', 'Roadmap overview')}
-          className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3 xl:grid-cols-6"
-        >
-          <MetricCard
-            label={t('roadmap.phase.done', 'Completed')}
-            value={counts.done}
-            color="green"
-            icon={<CheckCircle className="h-5 w-5" aria-hidden="true" />}
-          />
-          <MetricCard
-            label={t('roadmap.phase.current', 'Active Focus')}
-            value={counts.current}
-            color="cyan"
-            icon={<Zap className="h-5 w-5" aria-hidden="true" />}
-          />
-          <MetricCard
-            label={t('roadmap.phase.next', 'Up Next')}
-            value={counts.next}
-            color="purple"
-            icon={<Star className="h-5 w-5" aria-hidden="true" />}
-          />
-          <MetricCard
-            label={t('roadmap.phase.future', 'Future')}
-            value={counts.future}
-            color="amber"
-            icon={<Rocket className="h-5 w-5" aria-hidden="true" />}
-          />
-          <MetricCard
-            label={t('roadmap.metric.total', 'Total Initiatives')}
-            value={total}
-            color="blue"
-            icon={<Layers className="h-5 w-5" aria-hidden="true" />}
-          />
-          <MetricCard
-            label={t('roadmap.metric.featuresShipped', 'Features Shipped')}
-            value={featuresShipped}
-            color="green"
-            icon={<Sparkles className="h-5 w-5" aria-hidden="true" />}
-          />
-        </section>
+        <SystemSummaryBrief
+          title={t('roadmap.overview', 'Roadmap overview')}
+          description={t('roadmap.note', 'This is a direction of travel, not a release schedule. Future work depends on operator needs and data correctness.')}
+          scope={t('roadmap.brief.scope', 'Bundled roadmap entries, not live deployment or release telemetry.')}
+          available
+          metrics={[
+            { metricId: 'count', occurrenceId: 'done', rawValue: counts.done, label: t('roadmap.phase.done', 'Completed') },
+            { metricId: 'count', occurrenceId: 'current', rawValue: counts.current, label: t('roadmap.phase.current', 'Active focus') },
+            { metricId: 'count', occurrenceId: 'next', rawValue: counts.next, label: t('roadmap.phase.next', 'Up next') },
+            { metricId: 'count', occurrenceId: 'future', rawValue: counts.future, label: t('roadmap.phase.future', 'Future') },
+            { metricId: 'count', occurrenceId: 'total', rawValue: total, label: t('roadmap.metric.total', 'Total initiatives') },
+            { metricId: 'count', occurrenceId: 'features', rawValue: featuresShipped, label: t('roadmap.metric.featuresShipped', 'Features shipped') },
+          ]}
+        />
       </FadeIn>
 
       {/* 2 — Primary visual: delivery progress across phases */}
@@ -618,6 +573,6 @@ export default function RoadmapPage() {
       {PHASE_ORDER.map((phase, i) => (
         <PhaseSection key={phase} phase={phase} items={grouped[phase]} delay={0.15 + i * 0.05} />
       ))}
-    </PageContainer>
+    </PageLayout>
   );
 }

@@ -508,3 +508,17 @@ migrations:
     irreversible_justification: Dropping the subject column loses app-token identity bindings that cannot be reconstructed from hashed keys.
     reviewed_by: "@Copilot"
     reviewed_on: "2026-09-28"
+
+  - version: 255
+    name: automation_action_wait
+    forward_compatible: true
+    forward_compatibility_notes: Adds an enum label, empty typed child table and two descriptive automation command names backed by existing Tesla commands. Previous binaries support their existing graphs; do not enable new wait or descriptive-command graphs until every automation reader and worker is upgraded.
+    rollback_notes: Leave applied on binary rollback and disable wait or descriptive-command graphs before returning to an older worker. Explicit down requires exporting those graphs and removing descriptive-command steps first; old vocabulary validation fails closed if they remain. Down deletes wait steps and drops their definitions; the unused additive enum label is retained.
+    expected_duration: <1s
+    duration_basis: estimate
+    lock_risk: high
+    lock_details: Enum metadata lock and creation of a new empty child table; foreign key creation takes a brief lock on automation_steps. Command vocabulary CHECK replacement takes an ACCESS EXCLUSIVE metadata lock then validates existing automation_actions rows; schedule outside write-heavy periods.
+    reversible: false
+    irreversible_justification: Explicit down deletes wait steps and durations; export them first. PostgreSQL retains the unused enum label.
+    reviewed_by: "@Copilot"
+    reviewed_on: "2026-10-10"

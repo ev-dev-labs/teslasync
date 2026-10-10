@@ -11,7 +11,8 @@
  *     a rejected clipboard write surfaces an error toast (failure path)
  *   - the page title uses the shared typography role without decorative
  *     gradient treatment
- *   - the header uses the shared subtle divider for consistent hierarchy
+ *   - compact descriptions remain accessible through the info tooltip
+ *   - the compact header is unboxed, without a decorative gradient underline
  */
 
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
@@ -22,8 +23,10 @@ import {
   waitFor,
   cleanup,
 } from '@testing-library/react'
-import type { ReactNode } from 'react'
+import { createRef, type ReactNode } from 'react'
 import { ToastProvider } from '@/components/feedback/Toast'
+import { Button } from '../ui/Button'
+import userEvent from '@testing-library/user-event'
 
 // i18n stub — return the caller-supplied default string so CopyLinkButton's
 // labels/toasts resolve to their English fallbacks without booting i18next.
@@ -82,11 +85,15 @@ describe('PageHeader', () => {
     expect(heading.tagName).toBe('H1')
   })
 
-  it('renders the subtitle when provided and omits the paragraph when not', () => {
-    const { rerender } = renderHeader(
+  it('owns the compact description in an accessible info tooltip and omits it when unset', () => {
+    const { container, rerender } = renderHeader(
       <PageHeader title="Drives" subtitle="Last 30 days" />,
     )
-    expect(screen.getByText('Last 30 days')).toBeInTheDocument()
+    const info = screen.getByRole('button', { name: 'More info: Drives' })
+    const tooltip = screen.getByRole('tooltip')
+    expect(tooltip).toHaveTextContent('Last 30 days')
+    expect(info).toHaveAttribute('aria-describedby', tooltip.id)
+    expect(container.querySelector('p')).toBeNull()
 
     rerender(
       <ToastProvider>
@@ -94,6 +101,16 @@ describe('PageHeader', () => {
       </ToastProvider>,
     )
     expect(screen.queryByText('Last 30 days')).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'More info: Drives' })).toBeNull()
+    expect(screen.queryByRole('tooltip')).toBeNull()
+  })
+
+  it('keeps the explicit expanded subtitle readable without an info button', () => {
+    const { container } = renderHeader(
+      <PageHeader title="Drives" subtitle="Last 30 days" compactHeader={false} />,
+    )
+    expect(container.querySelector('p')).toHaveTextContent('Last 30 days')
+    expect(screen.queryByRole('button', { name: 'More info: Drives' })).toBeNull()
   })
 
   it('renders a leading icon only when the icon prop is set', () => {
@@ -114,7 +131,7 @@ describe('PageHeader', () => {
     renderHeader(
       <PageHeader
         title="Charging"
-        actions={<button type="button">Export CSV</button>}
+        actions={<Button type="button" variant="secondary">Export CSV</Button>}
       />,
     )
     expect(
@@ -124,8 +141,9 @@ describe('PageHeader', () => {
 
   it('does not render the actions rail when neither actions nor copyLink are set', () => {
     renderHeader(<PageHeader title="Analytics" subtitle="TCO" />)
-    // No copy-link button and no action buttons ⇒ the rail is absent entirely.
-    expect(screen.queryByRole('button')).toBeNull()
+    expect(screen.getByRole('button', { name: 'More info: Analytics' })).toBeInTheDocument()
+    expect(screen.queryByRole('group', { name: 'Actions' })).toBeNull()
+    expect(screen.queryByRole('button', { name: /copy link to this view/i })).toBeNull()
   })
 
   it('mounts the CopyLinkButton when copyLink is true', () => {
@@ -140,7 +158,7 @@ describe('PageHeader', () => {
       <PageHeader
         title="Notifications"
         copyLink
-        actions={<button type="button">New rule</button>}
+        actions={<Button type="button" variant="secondary">New rule</Button>}
       />,
     )
     expect(
@@ -154,11 +172,11 @@ describe('PageHeader', () => {
       <PageHeader
         title="Fleet"
         metadataActions={<span>Fresh</span>}
-        contextActions={<button type="button">Vehicle</button>}
-        secondaryActions={<button type="button">Compare</button>}
-        destructiveActions={<button type="button">Remove</button>}
-        overflowActions={<button type="button">More</button>}
-        primaryAction={<button type="button">Sync</button>}
+        contextActions={<Button type="button" variant="secondary">Vehicle</Button>}
+        secondaryActions={<Button type="button" variant="secondary">Compare</Button>}
+        destructiveActions={<Button type="button" variant="danger">Remove</Button>}
+        overflowActions={<Button type="button" variant="ghost">More</Button>}
+        primaryAction={<Button type="button">Sync</Button>}
       />,
     )
 
@@ -179,8 +197,8 @@ describe('PageHeader', () => {
     )
     expect(writeText).toHaveBeenCalledTimes(1)
     expect(await screen.findByText('Link copied to clipboard')).toBeInTheDocument()
-    // aria-label is stable; the *visible* label flips to "Copied".
-    expect(btn).toHaveTextContent('Copied')
+    expect(btn).toHaveAccessibleName('Copied')
+    expect(btn.textContent).toBe('')
   })
 
   it('surfaces an error toast when the clipboard write is rejected', async () => {
@@ -202,17 +220,81 @@ describe('PageHeader', () => {
     expect(heading.className).not.toContain('bg-clip-text')
   })
 
-  it('uses the shared subtle divider and omits the decorative underline', () => {
+  it('uses compact unboxed framing and omits the decorative gradient underline', () => {
     const { container } = renderHeader(<PageHeader title="Fleet Overview" />)
     expect(container.querySelector('header')).toHaveClass(
-      'rounded-panel',
-      'border-[var(--border-default)]',
-      'shadow-e1',
+      'rounded-none',
+      'border-0',
+      'bg-transparent',
+      'shadow-none',
     )
-    expect(container.querySelector('header span[aria-hidden="true"]')).toHaveClass(
-      'w-1',
-      'bg-[var(--theme-primary)]',
-    )
+    expect(container.querySelector('header')).not.toHaveClass('rounded-panel', 'shadow-e1')
     expect(container.querySelector('.from-neon-cyan')).toBeNull()
+  })
+
+  it('keeps expanded framing neutral and the optional icon subordinate to the title', () => {
+    const { container } = renderHeader(
+      <PageHeader title="Battery" compactHeader={false} icon={<svg data-testid="neutral-icon" />} />,
+    )
+    expect(container.querySelector('header')).toHaveClass('rounded-panel', 'shadow-e1')
+    expect(container.querySelector('header')).toHaveClass('p-4', 'sm:p-6', 'flex-col', 'xl:flex-row')
+    expect(screen.getByTestId('neutral-icon').parentElement).toHaveClass(
+      'text-[var(--text-secondary)]', 'bg-[var(--surface-2)]',
+    )
+    expect(screen.getByTestId('neutral-icon').parentElement).not.toHaveClass('shadow-e1')
+    expect(container.querySelector('[class*="theme-primary"]')).toBeNull()
+    expect(screen.getByRole('heading', { level: 1 }).className).not.toContain('tracking-[')
+  })
+
+  it('retains long RTL text, route focus and ref-backed legacy and semantic actions', async () => {
+    const user = userEvent.setup()
+    const ref = createRef<HTMLButtonElement>()
+    const onAction = vi.fn()
+    const title = 'تقرير المركبات '.repeat(20)
+    const subtitle = 'تفاصيل النطاق '.repeat(20)
+    const { container } = renderHeader(
+      <div dir="rtl">
+        <PageHeader
+          title={title}
+          subtitle={subtitle}
+          compactHeader={false}
+          actions={<Button ref={ref} onClick={onAction} variant="secondary">Legacy export</Button>}
+          secondaryActions={<Button variant="secondary">Compare</Button>}
+        />
+      </div>,
+    )
+    const heading = screen.getByRole('heading', { level: 1 })
+    expect(heading.textContent).toBe(title)
+    expect(heading).toHaveClass('min-w-0', 'break-words')
+    expect(heading).toHaveAttribute('data-route-focus-target', 'true')
+    expect(heading).toHaveAttribute('tabindex', '-1')
+    heading.focus()
+    expect(heading).toHaveFocus()
+    expect(container.querySelector('[dir="rtl"]')).toContainElement(heading)
+    expect(container.querySelector('p')?.textContent).toBe(subtitle)
+    expect(container.querySelector('p')).toHaveClass('break-words')
+    expect(ref.current).toBe(screen.getByRole('button', { name: 'Legacy export' }))
+    await user.tab()
+    expect(ref.current).toHaveFocus()
+    await user.keyboard('{Enter}')
+    expect(onAction).toHaveBeenCalledTimes(1)
+    await user.tab()
+    expect(screen.getByRole('button', { name: 'Compare' })).toHaveFocus()
+  })
+
+  it('keeps compact help keyboard reachable with shared focus and touch sizing', async () => {
+    const user = userEvent.setup()
+    renderHeader(<PageHeader title="Drives" subtitle="Last 30 days" />)
+    const info = screen.getByRole('button', { name: 'More info: Drives' })
+    await user.tab()
+    expect(info).toHaveFocus()
+    expect(info).toHaveClass(
+      'h-11', 'w-11', 'sm:h-9', 'sm:w-9',
+      'focus-visible:outline-[var(--focus-ring)]',
+    )
+    expect(screen.getByRole('tooltip')).toHaveTextContent('Last 30 days')
+    await user.keyboard('{Escape}')
+    expect(info).toHaveFocus()
+    expect(screen.getByRole('tooltip')).toHaveClass('!opacity-0')
   })
 })

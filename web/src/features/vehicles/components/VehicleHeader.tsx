@@ -114,7 +114,7 @@ export function VehicleHeader({ vehicle, state, onRefetchState }: VehicleHeaderP
           disabled={!canWake}
           icon={<Power className="h-4 w-4" aria-hidden="true" />}
         >
-          {t('common.wakeUp', 'Wake Up')}
+          {t('common.wakeUp', 'Wake up')}
         </Button>
       </div>
     </FadeIn>

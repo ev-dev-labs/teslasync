@@ -1,18 +1,19 @@
 import { useId, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
+import { Badge } from '../ui/Badge'
+import { Button } from '../ui/Button'
+import { Drawer } from '../ui/Drawer'
+import { GlassPanel } from '../ui/GlassPanel'
 import {
-  Badge,
-  Button,
-  Drawer,
-  GlassPanel,
   MetricLabel,
   MetricValue,
   PanelTitle,
   Text,
-} from '@/components/ui'
+} from '../ui/Typography'
 import { cn } from '@/lib/cn'
 import { Icons } from '@/lib/icons'
 import type { OperationalNarrative } from '@/types/operationalNarrative'
+import type { MetricRaw } from '@/lib/metric-reference'
 import { OperationalNarrativeDetails } from './OperationalNarrativeDetails'
 
 export type OperationalTone =
@@ -26,8 +27,10 @@ export interface OperationalBriefMetric {
   key: string
   label: string
   value: ReactNode
-  detail: string
+  detail: ReactNode
   tone?: OperationalTone
+  rawValue?: MetricRaw
+  valueState?: 'value' | 'missing' | 'invalid'
 }
 
 export interface OperationalAttention {
@@ -53,13 +56,16 @@ export interface OperationalBriefProps {
   className?: string
   testId?: string
   metricColumns?: 2 | 3 | 4
+  /** Dense layout for pages where the evidence grid follows a compact page header. */
+  compact?: boolean
+  loading?: boolean
 }
 
 const TONE_TEXT: Record<OperationalTone, string> = {
-  success: 'text-emerald-300',
-  info: 'text-cyan-300',
-  warning: 'text-amber-300',
-  danger: 'text-rose-300',
+  success: 'text-[var(--semantic-success)]',
+  info: 'text-[var(--semantic-info)]',
+  warning: 'text-[var(--semantic-warning)]',
+  danger: 'text-[var(--semantic-danger)]',
   neutral: 'text-[var(--text-primary)]',
 }
 
@@ -67,6 +73,12 @@ const METRIC_COLUMNS: Record<NonNullable<OperationalBriefProps['metricColumns']>
   2: 'md:grid-cols-2',
   3: 'md:grid-cols-3',
   4: 'md:grid-cols-4',
+}
+
+function renderMetadata(value: ReactNode): ReactNode {
+  return typeof value === 'number' || (typeof value === 'string' && value !== '')
+    ? <span>{value}</span>
+    : value
 }
 
 export function OperationalBrief({
@@ -85,6 +97,8 @@ export function OperationalBrief({
   className,
   testId,
   metricColumns = 4,
+  compact = false,
+  loading = false,
 }: OperationalBriefProps) {
   const { t } = useTranslation()
   const titleId = useId()
@@ -107,44 +121,45 @@ export function OperationalBrief({
 
   return (
     <>
-      <section aria-labelledby={titleId} data-testid={testId}>
+      <section aria-labelledby={titleId} data-testid={testId} data-operational-brief aria-busy={loading || undefined}>
         <GlassPanel
           className={cn(
             'overflow-hidden border-[var(--border-default)] bg-[var(--surface-1)] shadow-e1',
             className,
           )}
         >
-          <div className="border-s-2 border-[var(--theme-primary)] p-4 sm:p-5">
-            <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
-              <div className="min-w-0 max-w-3xl">
-                <div className="mb-2 flex flex-wrap items-center gap-2">
+          <div className={cn(compact ? 'p-3 sm:p-4' : 'p-4 sm:p-5')}>
+            <div className={cn('flex flex-col xl:flex-row xl:justify-between', compact ? 'gap-2 xl:items-start' : 'gap-4 xl:items-start')}>
+              <div className={cn('min-w-0', compact ? 'flex-1' : 'max-w-3xl')}>
+                <div className={cn('flex flex-wrap items-center gap-2', !compact && 'mb-2')}>
                   <Text
                     as="span"
-                    size="2xs"
-                    weight="semibold"
+                    size="xs"
+                    weight="medium"
                     color="muted"
-                    className="uppercase tracking-[0.12em]"
                   >
                     {eyebrow}
                   </Text>
                   <Badge variant={statusTone} size="sm" dot>
                     {statusLabel}
                   </Badge>
-                  {scope}
-                  {freshness}
+                  {renderMetadata(scope)}
+                  {renderMetadata(freshness)}
                 </div>
-                <PanelTitle id={titleId}>{title}</PanelTitle>
-                <Text as="p" variant="bodySm" className="mt-1 max-w-2xl">
+                <PanelTitle id={titleId} className={compact ? 'mt-1 text-base' : undefined}>{title}</PanelTitle>
+                <Text as="p" variant="bodySm" className={cn('mt-1', compact ? 'basis-full text-xs leading-snug' : 'max-w-2xl')}>
                   {description}
                 </Text>
               </div>
 
-              <div className="flex flex-wrap items-center gap-2">
+              <div className="flex min-w-0 flex-wrap items-center gap-2">
                 {actions}
                 <Button
                   type="button"
                   variant="outline"
                   size="sm"
+                  wrapLabel
+                  className="min-h-11 md:min-h-9"
                   icon={<Icons.activity className="h-4 w-4" aria-hidden="true" />}
                   onClick={() => setDetailsOpen(true)}
                 >
@@ -156,26 +171,33 @@ export function OperationalBrief({
             <div
               role="list"
               className={cn(
-                'mt-4 grid grid-cols-2 gap-px overflow-hidden rounded-shape-md border border-[var(--border-subtle)] bg-[var(--border-subtle)]',
-                METRIC_COLUMNS[metricColumns],
+                compact ? 'mt-2 grid grid-cols-1 gap-px overflow-hidden rounded-shape-md border border-[var(--border-subtle)] bg-[var(--border-subtle)] sm:grid-cols-2' : 'mt-4 grid grid-cols-2 gap-px overflow-hidden rounded-shape-md border border-[var(--border-subtle)] bg-[var(--border-subtle)]',
+                compact ? 'md:grid-cols-3 3xl:grid-cols-6' : METRIC_COLUMNS[metricColumns],
               )}
             >
               {metrics.map((metric) => (
                 <div
                   key={metric.key}
                   role="listitem"
-                  className="min-w-0 bg-[var(--surface-2)] p-3 sm:p-4"
+                  data-operational-metric={metric.key}
+                  data-value-state={metric.valueState}
+                  className={cn('min-w-0 bg-[var(--surface-2)]', compact ? 'p-2.5 sm:p-3' : 'p-3 sm:p-4')}
                 >
-                  <MetricLabel>{metric.label}</MetricLabel>
-                  <MetricValue
-                    className={cn(
-                      'mt-1 truncate text-xl sm:text-2xl',
-                      TONE_TEXT[metric.tone ?? 'neutral'],
-                    )}
-                  >
-                    {metric.value}
-                  </MetricValue>
-                  <Text as="p" size="2xs" color="muted" className="mt-1 line-clamp-2">
+                  <div className={cn(compact && 'flex items-baseline justify-between gap-3')}>
+                    <MetricLabel className={compact ? 'min-w-0 text-xs' : undefined}>{metric.label}</MetricLabel>
+                    <MetricValue
+                      data-operational-value={loading ? undefined : true}
+                      className={cn(
+                        compact ? 'min-w-0 break-words text-base sm:text-lg' : 'mt-1 break-words text-xl sm:text-2xl',
+                        TONE_TEXT[metric.tone ?? 'neutral'],
+                      )}
+                    >
+                      {loading ? (
+                        <span aria-hidden="true" className="block h-5 w-20 max-w-full rounded bg-[var(--surface-3)]" />
+                      ) : metric.value}
+                    </MetricValue>
+                  </div>
+                  <Text as="div" size="xs" color="muted" className="mt-1 break-words">
                     {metric.detail}
                   </Text>
                 </div>
@@ -183,7 +205,7 @@ export function OperationalBrief({
             </div>
 
             {primaryAttention && (
-              <div className="mt-4 flex flex-col gap-3 rounded-shape-md border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3 sm:flex-row sm:items-center">
+              <div className={cn('flex flex-col rounded-shape-md border border-[var(--border-subtle)] bg-[var(--surface-2)] sm:flex-row sm:items-center', compact ? 'mt-2 gap-2 p-2.5' : 'mt-4 gap-3 p-3')}>
                 <Icons.alertCircle
                   className={cn(
                     'h-4 w-4 shrink-0',
@@ -204,6 +226,8 @@ export function OperationalBrief({
                     type="button"
                     variant="ghost"
                     size="sm"
+                    wrapLabel
+                    className="min-h-11 md:min-h-9"
                     icon={<Icons.forward className="h-4 w-4" aria-hidden="true" />}
                     onClick={() => setDetailsOpen(true)}
                   >
@@ -221,7 +245,13 @@ export function OperationalBrief({
         onClose={() => setDetailsOpen(false)}
         title={t('operations.detailTitle', '{{title}} details', { title })}
         description={description}
-        headerMeta={<Badge variant={statusTone} dot>{statusLabel}</Badge>}
+        headerMeta={
+          <>
+            <Badge variant={statusTone} dot>{statusLabel}</Badge>
+            {renderMetadata(scope)}
+            {renderMetadata(freshness)}
+          </>
+        }
       >
         <div className="space-y-6">
           <OperationalNarrativeDetails narrative={resolvedNarrative} />
@@ -233,18 +263,21 @@ export function OperationalBrief({
                 key={metric.key}
                 className="rounded-shape-md border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3"
               >
-                <div className="flex items-baseline justify-between gap-3">
+                <div className="flex min-w-0 flex-wrap items-baseline justify-between gap-3">
                   <MetricLabel>{metric.label}</MetricLabel>
                   <Text
                     as="span"
                     size="sm"
                     weight="bold"
-                    className={cn('tabular-nums', TONE_TEXT[metric.tone ?? 'neutral'])}
+                    aria-busy={loading || undefined}
+                    className={cn('min-w-0 break-words tabular-nums', TONE_TEXT[metric.tone ?? 'neutral'])}
                   >
-                    {metric.value}
+                    {loading ? (
+                      <span aria-hidden="true" className="block h-5 w-20 max-w-full rounded bg-[var(--surface-3)]" />
+                    ) : metric.value}
                   </Text>
                 </div>
-                <Text as="p" size="xs" color="muted" className="mt-1">
+                <Text as="div" size="xs" color="muted" className="mt-1">
                   {metric.detail}
                 </Text>
               </div>

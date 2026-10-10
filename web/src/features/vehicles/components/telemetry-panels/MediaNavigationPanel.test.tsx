@@ -80,9 +80,9 @@ beforeEach(() => {
 describe('MediaNavigationPanel', () => {
   it('always renders the accessible section heading and both column labels', () => {
     render(<MediaNavigationPanel mediaData={null} locationData={null} />);
-    expect(screen.getByRole('heading', { name: 'Media & Navigation' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Media & navigation' })).toBeInTheDocument();
     // The sub-section labels render regardless of data so the panel is never blank.
-    expect(screen.getByText('Now Playing')).toBeInTheDocument();
+    expect(screen.getByText('Now playing')).toBeInTheDocument();
     expect(screen.getByText('Navigation')).toBeInTheDocument();
   });
 
@@ -139,7 +139,7 @@ describe('MediaNavigationPanel', () => {
     );
     const badge = screen.getByText('Playing');
     // Before the fix this badge fell through to the neutral default (bg-gray-100).
-    expect(badge).toHaveClass('bg-green-100');
+    expect(badge).toHaveClass('bg-[var(--semantic-success-bg)]');
     expect(badge).not.toHaveClass(BADGE_VARIANTS.neutral);
   });
 
@@ -150,7 +150,7 @@ describe('MediaNavigationPanel', () => {
         locationData={null}
       />,
     );
-    expect(screen.getByText('Paused')).toHaveClass('bg-yellow-100');
+    expect(screen.getByText('Paused')).toHaveClass('bg-[var(--semantic-warning-bg)]');
   });
 
   it('falls back to the neutral badge for any other status', () => {
@@ -162,7 +162,7 @@ describe('MediaNavigationPanel', () => {
     );
     const badge = screen.getByText('Stopped');
     expect(badge).toHaveClass(BADGE_VARIANTS.neutral);
-    expect(badge).not.toHaveClass('bg-green-100');
+    expect(badge).not.toHaveClass('bg-[var(--semantic-success-bg)]');
   });
 
   it('converts miles_to_arrival from SI metres to the km display unit', () => {
@@ -180,7 +180,7 @@ describe('MediaNavigationPanel', () => {
     // 5 000 m ÷ 1000 = 5.00 km — proves the value is treated as metres, not a raw scalar.
     expect(screen.getByText('5.00 km')).toBeInTheDocument();
     expect(screen.queryByText(/5,000/)).not.toBeInTheDocument();
-    expect(screen.getByText('15 min')).toBeInTheDocument();
+    expect(screen.getByText('15.00 min')).toBeInTheDocument();
   });
 
   it('honours the imperial display preference (metres → miles)', () => {

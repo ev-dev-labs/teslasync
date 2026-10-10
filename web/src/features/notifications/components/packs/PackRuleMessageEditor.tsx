@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import type { PackSelection, PackTemplate } from '@/api/hooks/useAlertPacks'
-import { AIAlertMessageTemplateButton } from '@/components/ai/AIAlertMessageTemplateButton'
+import { AIAlertMessageTemplateButton } from '@/components/ai'
 import { Textarea } from '@/components/ui'
 
 interface Props {

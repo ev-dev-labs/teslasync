@@ -1,15 +1,20 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Cpu } from 'lucide-react';
-import { StatCard } from '@/components/data-display';
-import { EmptyState } from '@/components/feedback';
 import { useBatteryCells } from '@/api/hooks/useEnergy';
 import { useVehicles } from '@/api/hooks/useVehicles';
-import { fmtNumber } from '@/lib/numberFormat';
+import { knownNumber } from '@/api/dataState';
+import { useDataState } from '@/hooks/useDataState';
+import { useUnits } from '@/hooks/useUnits';
+import type { StatMetric } from '@/components/data-display';
+import { DashboardSourceBrief } from '../components/operationalbrief-all/DashboardSourceBrief';
+
 import { WidgetShell } from './WidgetShell';
 import { WidgetStatusGrid } from './shared';
 import type { StatusCell } from './shared';
 import type { WidgetProps } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { getGlobalPrecision } from '@/lib/numberFormat';
 
 /**
  * Derive a status from how far a cell's voltage deviates from the average.
@@ -19,8 +24,8 @@ import type { WidgetProps } from './types';
  * to `unknown` rather than masquerading as a critical `error` — a non-finite
  * value is a dropped/garbled reading, not a genuine cell imbalance.
  */
-export function cellStatus(voltage: number | null, avg: number): StatusCell['status'] {
-  if (voltage == null || !Number.isFinite(voltage)) return 'unknown';
+export function cellStatus(voltage: number | null, avg: number | null): StatusCell['status'] {
+  if (voltage == null || avg == null || !Number.isFinite(voltage) || !Number.isFinite(avg)) return 'unknown';
   const deviationMv = Math.abs(voltage - avg) * 1000;
   if (deviationMv <= 5) return 'ok';
   if (deviationMv <= 15) return 'warning';
@@ -28,23 +33,26 @@ export function cellStatus(voltage: number | null, avg: number): StatusCell['sta
 }
 
 export default function BatteryCellsWidget({ vehicleId, size }: WidgetProps) {
+  const { fmtNumber, fmtScientificNumber } = useNumberFormatting();
   const { t } = useTranslation('dashboard');
   const { data: vehicles } = useVehicles();
   const vid = vehicleId ?? vehicles?.[0]?.id ?? null;
   const vidStr = vid != null ? String(vid) : null;
 
+  const query = useBatteryCells(vidStr);
   const {
     data, isLoading, error,
     isFetching, isStale, isError,
     dataUpdatedAt, refetch,
-  } = useBatteryCells(vidStr);
+  } = query;
+  const trust = useDataState(query, { provenance: 'historical' });
+  const { formatTemperature } = useUnits();
 
   const isCompact = size.cols <= 1;
   const isWide = size.cols >= 3;
 
   const cells = data?.cells ?? [];
-  const avgV = data?.avg_voltage ?? 0;
-
+  const avgV = knownNumber(data?.avg_voltage);
   // Map cells → StatusCell items for the shared grid
   const statusCells = useMemo<StatusCell[]>(() => {
     return cells.map((c) => {
@@ -53,95 +61,78 @@ export default function BatteryCellsWidget({ vehicleId, size }: WidgetProps) {
         ? `${t('widget.batteryCells.cell', 'Cell')} ${c.cell_id} · M${c.module}`
         : `C${c.cell_id}`;
       const value = isWide
-        ? `${fmtNumber(c.voltage, 3)} V / ${fmtNumber(c.temperature, 1)}°`
-        : `${fmtNumber(c.voltage, 3)} V`;
+        ? `${knownNumber(c.voltage) != null ? `${fmtScientificNumber(c.voltage, 3)} V` : '—'} / ${formatTemperature(knownNumber(c.temperature))}`
+        : knownNumber(c.voltage) != null ? `${fmtScientificNumber(c.voltage, 3)} V` : '—';
 
       return { id: String(c.cell_id), label, status, value };
     });
-  }, [cells, avgV, isWide, t]);
+  }, [cells, avgV, isWide, t, formatTemperature, fmtNumber, fmtScientificNumber]);
 
   // Summary stats
-  const minV = data?.min_voltage ?? 0;
-  const maxV = data?.max_voltage ?? 0;
-  const spread = data?.voltage_spread ?? 0;
+  const voltageMetrics: StatMetric[] = [
+    { metricId: 'number', occurrenceId: 'cells-min-voltage', rawValue: data?.min_voltage,
+      label: t('widget.batteryCells.minV', 'Min V'),
+      description: t('widget.batteryCells.voltageSource', 'Returned cell voltage in volts; no conversion is applied to the source measurement.'),
+      display: { formatter: raw => ({ value: fmtNumber(raw, Math.max(3, getGlobalPrecision())), unit: 'V' }) } },
+    { metricId: 'number', occurrenceId: 'cells-max-voltage', rawValue: data?.max_voltage,
+      label: t('widget.batteryCells.maxV', 'Max V'),
+      description: t('widget.batteryCells.voltageSource', 'Returned cell voltage in volts; no conversion is applied to the source measurement.'),
+      display: { formatter: raw => ({ value: fmtNumber(raw, Math.max(3, getGlobalPrecision())), unit: 'V' }) } },
+    { metricId: 'number', occurrenceId: 'cells-average-voltage', rawValue: data?.avg_voltage,
+      label: t('widget.batteryCells.avgV', 'Avg V'),
+      description: t('widget.batteryCells.voltageSource', 'Returned cell voltage in volts; no conversion is applied to the source measurement.'),
+      display: { formatter: raw => ({ value: fmtNumber(raw, Math.max(3, getGlobalPrecision())), unit: 'V' }) } },
+    { metricId: 'number', occurrenceId: 'cells-voltage-spread', rawValue: data?.voltage_spread,
+      label: t('widget.batteryCells.spread', 'Spread'),
+      description: t('widget.batteryCells.spreadSource', 'Returned voltage spread in volts, displayed in millivolts.'),
+      display: { formatter: raw => ({ value: fmtNumber(raw * 1000), unit: 'mV' }) } },
+  ];
+  const temperatureMetrics: StatMetric[] = [
+    { metricId: 'temperature', occurrenceId: 'cells-min-temperature', rawValue: data?.min_temperature, label: t('widget.batteryCells.minTemp', 'Min temp') },
+    { metricId: 'temperature', occurrenceId: 'cells-average-temperature', rawValue: data?.avg_temperature, label: t('widget.batteryCells.avgTemp', 'Avg temp') },
+    { metricId: 'temperature', occurrenceId: 'cells-max-temperature', rawValue: data?.max_temperature, label: t('widget.batteryCells.maxTemp', 'Max temp') },
+  ];
+  const metrics: StatMetric[] = [
+    ...voltageMetrics,
+    ...(isWide ? temperatureMetrics.map(metric => ({
+      ...metric,
+      display: { formatter: (raw: number) => ({ value: formatTemperature(raw), unit: '' }) },
+    })) : []),
+  ];
 
   return (
     <WidgetShell
-      title={isCompact ? undefined : t('widget.batteryCells.title', 'Battery Cells')}
-      icon={<Cpu className="h-3.5 w-3.5 text-neon-cyan" />}
+      title={t('widget.batteryCells.title', 'Battery cells')}
+      icon={<Cpu className="h-3.5 w-3.5" />}
       loading={isLoading}
-      error={error ? String(error) : null}
+      dataState={data != null || isLoading || isError || error ? trust : undefined}
       updatedAt={dataUpdatedAt}
       isFetching={isFetching}
       isStale={isStale}
       isError={isError}
       onRefresh={() => refetch()}
     >
-      {data ? (
-        <div className="flex flex-col gap-2 h-full">
+        <div className="flex min-w-0 flex-col gap-3">
           {/* Voltage heatmap grid */}
-          <div className="flex-1 min-h-0 overflow-y-auto">
+          <div className="min-w-0">
             <WidgetStatusGrid
               cells={statusCells}
               cols={isWide ? 4 : isCompact ? 2 : 3}
               compact={isCompact}
-              emptyMessage={t('widget.batteryCells.noCells', 'No cell data')}
+              emptyMessage={data ? t('widget.batteryCells.noCells', 'No cell data') : t('widget.batteryCells.noData', 'No battery cell data')}
               emptyIcon={<Cpu className="h-5 w-5" />}
             />
           </div>
 
           {/* Min / Max / Avg / Spread stats */}
-          <div className="flex-shrink-0 grid grid-cols-2 gap-2">
-            <StatCard
-              label={t('widget.batteryCells.minV', 'Min V')}
-              value={`${fmtNumber(minV, 3)} V`}
-              className="!p-2"
-            />
-            <StatCard
-              label={t('widget.batteryCells.maxV', 'Max V')}
-              value={`${fmtNumber(maxV, 3)} V`}
-              className="!p-2"
-            />
-            <StatCard
-              label={t('widget.batteryCells.avgV', 'Avg V')}
-              value={`${fmtNumber(avgV, 3)} V`}
-              className="!p-2"
-            />
-            <StatCard
-              label={t('widget.batteryCells.spread', 'Spread')}
-              value={`${fmtNumber(spread * 1000, 1)} mV`}
-              className="!p-2"
-            />
-          </div>
-
-          {/* Wide layout: temperature summary row */}
-          {isWide && (
-            <div className="flex-shrink-0 grid grid-cols-3 gap-2">
-              <StatCard
-                label={t('widget.batteryCells.minTemp', 'Min Temp')}
-                value={`${fmtNumber(data.min_temperature, 1)}°`}
-                className="!p-2"
-              />
-              <StatCard
-                label={t('widget.batteryCells.avgTemp', 'Avg Temp')}
-                value={`${fmtNumber(data.avg_temperature, 1)}°`}
-                className="!p-2"
-              />
-              <StatCard
-                label={t('widget.batteryCells.maxTemp', 'Max Temp')}
-                value={`${fmtNumber(data.max_temperature, 1)}°`}
-                className="!p-2"
-              />
-            </div>
-          )}
+          <DashboardSourceBrief metrics={metrics} state={trust}
+            eyebrow={t('widget.summaryEyebrow', 'Dashboard source summary')}
+            title={t('widget.batteryCells.summaryTitle', 'Returned cell measurements')}
+            description={t('widget.batteryCells.summaryDescription', 'Voltage extremes, average and spread summarize the returned cells; wide layouts also retain the temperature summary.')}
+            scope={t('widget.batteryCells.summaryScope', 'Vehicle {{id}} · returned cell snapshot; recording coverage is unknown.', { id: vid ?? '—' })}
+            loading={isLoading && !data}
+            testId="dashboard-battery-cells-brief" />
         </div>
-      ) : (
-        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
-          icon={<Cpu className="h-5 w-5" />}
-          message={t('widget.batteryCells.noData', 'No battery cell data')}
-          className="py-4"
-        />
-      )}
     </WidgetShell>
   );
 }

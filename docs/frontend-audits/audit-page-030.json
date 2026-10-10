@@ -1,0 +1,441 @@
+{
+  "item": "audit-page-030",
+  "page": "web\\src\\features\\advanced-intelligence\\pages\\ChargingForensicsPage.tsx",
+  "routes": ["/intelligence/charging-forensics"],
+  "purpose": "Vehicle-scoped historical charging-session reconciliation, with canonical energy, currency-aware recorded cost, explicitly unsupported meter/tariff/loss fields, page-specific evidence and full-result CSV/JSON download.",
+  "primaryGoal": "Review recorded charging energy and billing information without confusing missing independent meter or tariff evidence with measured zero; retain session identity, uncertainty fields and source limitations when reviewing or exporting.",
+  "dataSources": [
+    {
+      "name": "Paginated charging reconciliation",
+      "hook": "useChargingForensics(vehicleId, 15, (page - 1) * 15)",
+      "file": "web\\src\\api\\hooks\\useAdvancedIntelligence.ts",
+      "line": 107,
+      "endpoint": "GET /api/v1/advanced-intelligence/charging-forensics?vehicle_id=N&limit=15&offset=N",
+      "ownership": "useAdvancedList -> request -> advancedintelligence Handler.ChargingForensics -> advancedintelligencesvc.Service -> SourceRepository.ListChargingEvidence",
+      "routeEvidence": ["internal\\api\\router.go:3917", "internal\\handler\\v1\\advancedintelligence\\handler.go:69-77,178-193"],
+      "behavior": "Query enabled only for positive vehicle IDs. Vehicle, limit and offset are query-key members; AbortSignal is forwarded. No page-specific retry, stale-time or polling override. Read response retains snake_case canonical Wh and currency minor-unit fields.",
+      "backendEvidence": "internal\\database\\advancedintelligence\\source_repository.go:466-512",
+      "backendBehavior": "Historical charging_sessions filtered by vehicle_id only, sorted started_at DESC then id DESC. Reads started/ended time, total_energy_added_wh, delta_soc_pct, recorded cost and currency; no range filter or meter/tariff join. COUNT(*) OVER supplies total only when at least one row is returned; an out-of-range offset returns total 0."
+    },
+    {
+      "name": "Source limitations and quality",
+      "file": "internal\\app\\advancedintelligencesvc\\survival_security_charging.go",
+      "line": 324,
+      "ownership": "Server-derived page quality and per-session evidence",
+      "behavior": "The inspected service returns unsupported, incomplete or recorded_only, never a reconciled result on this path. An ended session with recorded cost or vehicle energy is recorded_only. Meter energy, loss/bounds, expected cost and discrepancy are left null. Each row cites charging_sessions with one sample and its started_at; two explicit limitations describe absent meter/tariff/tax/fee evidence. Quality is limited when at least one returned row has supported recorded data, otherwise insufficient; sample_count is current page row count. GeneratedAt is request time, not telemetry freshness.",
+      "sourceTrust": "Do not invent meter records, tariff calculation, measured loss, successful reconciliation or field-level availability beyond these inspected source statements. Quality is page-specific, not an aggregate of the entire vehicle history."
+    },
+    {
+      "name": "Full-result reconciliation download",
+      "hook": "fetchAllChargingForensics(vehicleId)",
+      "file": "web\\src\\api\\hooks\\useAdvancedIntelligence.ts",
+      "line": 126,
+      "endpoint": "GET /api/v1/advanced-intelligence/charging-forensics?vehicle_id=N&limit=100&offset=N",
+      "ownership": "Existing request client -> same historical endpoint -> chargingForensicsExportRow -> csvExport helpers -> browser download",
+      "behavior": "Sequential 100-row pages stop at a short page, reported total, or 10,000 rows. Helper accepts optional AbortSignal, but page does not pass one. Exports ignore visible columns and use canonical Wh/minor-unit fields; nullable optional export fields become empty strings. Export serializer does not include ended_at, evidence, limitations, data_quality or generated_at.",
+      "sourceEvidence": ["web\\src\\features\\advanced-intelligence\\pages\\ChargingForensicsPage.tsx:36-40", "web\\src\\features\\advanced-intelligence\\chargingForensicsExport.ts:4-22"],
+      "limits": "No download, HTTP request or dataset size was exercised. The bounded export must not be described as proved complete for all histories."
+    },
+    {
+      "name": "Workspace vehicle and display preferences",
+      "file": "web\\src\\hooks\\useSelectedVehicle.ts",
+      "line": 49,
+      "hooks": ["useSelectedVehicle", "useUnits", "usePageTitle"],
+      "ownership": "Existing workspace URL/store/fleet selection; saved unit preferences; localized page title",
+      "behavior": "useSelectedVehicle consumes useVehicles and resolves URL, stored selection, then first fleet vehicle. Page adds no local vehicle or date selector. workspaceScope does not register this route for shared date range and does not disable its vehicle selector. Energy formatting delegates to existing SI display helpers; money uses source currency and units.unitPrefs.locale. formatDateTime without explicit options uses browser locale/timezone.",
+      "sourceEvidence": ["web\\src\\lib\\workspaceScope.ts:23-75,97-142", "web\\src\\hooks\\useUnits.ts:159-162", "web\\src\\lib\\dateFormat.ts:55-65"],
+      "unverified": "Vehicle/settings endpoint internals, actual saved preferences and runtime shell composition were not traced or exercised."
+    }
+  ],
+  "components": [
+    {
+      "name": "PageLayout",
+      "owner": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+      "line": 9,
+      "contract": "Existing PageContainer adapter with full-width min-w-0 container and gap-6; shell owns navigation, scope and gutters."
+    },
+    {
+      "name": "InsightPanel / SourceContent / DataState",
+      "owner": "web\\src\\features\\advanced-intelligence\\components\\InsightPanel.tsx",
+      "line": 23,
+      "contract": "Domain wrapper of shared LayoutCard and SourceContent. query/sourceState/error/onRetry support initial skeleton, fatal error, resolved empty, retained stale data and retry. SourceContent supports loadingContent/emptyContent and source-specific retainedMessage; DataState distinguishes fatal/refresh errors and paused retention."
+    },
+    {
+      "name": "DataTable",
+      "owner": "web\\src\\components\\ui\\DataTable.tsx",
+      "line": 451,
+      "contract": "Sole shared table pipeline. Stable tableId retains column layout/width preferences. Page supplies nine typed columns, session_id row keys, mobile allow-list, explicit CSV/JSON handlers and full-result description. Existing mobilePresentation and expansion contracts can expose otherwise hidden detail; neither is supplied here."
+    },
+    {
+      "name": "TableToolbar / ListExportMenu",
+      "owner": "web\\src\\components\\forms\\TableToolbar.tsx",
+      "line": 25,
+      "additionalOwner": "web\\src\\components\\forms\\ListExportMenu.tsx",
+      "contract": "Caller-owned exports take precedence over DataTable default serialization. Description remains visible. ListExportMenu awaits promises, prevents duplicate exports, supplies loading/disabled trigger and catches failures with optional toast; Escape/outside click close menu."
+    },
+    {
+      "name": "Pagination",
+      "owner": "web\\src\\components\\ui\\Pagination.tsx",
+      "line": 20,
+      "contract": "Parent owns page/15-row size/server total. Responsive slots, previous/next/first/last/direct jump, labels, aria-current and invalid-jump alert exist. Internal safePage clamping does not repair the parent's query offset."
+    },
+    {
+      "name": "EvidencePanel",
+      "owner": "web\\src\\features\\advanced-intelligence\\components\\EvidencePanel.tsx",
+      "line": 25,
+      "contract": "Domain presentation of quality, evidence, limitations and unsupported lists via InsightPanel, Text, Badge, KVList and EmptyState. Three persistent labeled sections; nullable arrays normalized. Current API accepts no query/source trust/retry state."
+    },
+    {
+      "name": "AlertBanner / FadeIn / Badge",
+      "owners": ["web\\src\\components\\feedback", "web\\src\\components\\motion\\FadeIn.tsx", "web\\src\\components\\ui"],
+      "contract": "Page reuses localized informational disclosure, textual status badges and reduced-motion-aware entrance wrapper. Receipt icon is decorative and aria-hidden; no custom palette, motion library or overlay added."
+    },
+    {
+      "name": "Currency and energy formatting",
+      "owner": "web\\src\\features\\advanced-intelligence\\formatters.ts",
+      "line": 25,
+      "contract": "formatCurrencyMinor checks null/nonfinite, uses source ISO currency exponent and existing currency formatter. useUnits.formatEnergy delegates canonical Wh to display conversion. Preserve signed discrepancy/loss, uncertainty low/high and zero versus missing."
+    }
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\advanced-intelligence\\pages\\ChargingForensicsPage.tsx",
+      "line": 76,
+      "rule": "Mission shared reuse / MDC-033",
+      "detail": "Three monetary columns repeat null/currency guards and Unsupported fallback; meter and loss columns repeat availability display. This is a small local typed rendering pattern, not evidence for a new universal formatter.",
+      "fix": "Reuse the existing currency helper and optionally a local typed supported-value renderer without conflating the three amounts or losing per-field unknown semantics.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\advanced-intelligence\\pages\\ChargingForensicsPage.tsx",
+      "line": 171,
+      "rule": "MDC-026 / stable list identity",
+      "detail": "Flat-mapped per-row limitations repeat identical server strings. EvidencePanel keys limitations by string; multiple sessions from this inspected backend therefore create duplicate sibling keys and repeated limitation copy.",
+      "fix": "Retain every limitation's session association, with stable identity; if grouping equal copy, disclose affected sessions/count and keep full record-level detail. Do not silently discard evidence.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "responsive": {
+    "sourceBehavior": [
+      "PageLayout retains w-full/min-w-0; EvidencePanel stacks three sections until lg.",
+      "mobileColumns exposes session, started and status only. DataTable:725 applies hidden md:table-cell to the other six columns.",
+      "Page does not supply mobilePresentation, expandable rows or record-detail navigation; hidden energy, loss and cost cells lack a page-provided mobile alternative.",
+      "Pagination wraps, limits slots by container width, keeps direct jump and supplies 44px small-screen controls. Export toolbar wraps and description occupies full width."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\advanced-intelligence\\pages\\ChargingForensicsPage.tsx",
+        "line": 145,
+        "rule": "MDC-023 / MDC-043 no mobile data loss",
+        "detail": "At the table's below-md branch, all charging energy, loss bounds and billing amounts are hidden. Only session/time/status are visible; no row expansion, mobile detail adapter or linked record supplies the reconciliation values. Downloads are not equivalent to readable on-page detail.",
+        "fix": "Adopt existing DataTable mobilePresentation or an accessible expansion/detail contract that preserves all nine columns and uncertainty/currency meaning; retain desktop preferences and server paging.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\advanced-intelligence\\pages\\ChargingForensicsPage.tsx",
+        "line": 55,
+        "rule": "MDC-043 long-content reachability",
+        "detail": "Formatted local timestamp remains one of three mobile columns; the page supplies no short/full timestamp strategy. Long locale dates can pressure narrow rows. Actual overflow is unmeasured.",
+        "fix": "Use the shared table/detail layout to wrap or separate timestamp label/value while retaining full instant/timezone context; exercise long locales and text zoom.",
+        "owner": "page",
+        "confidence": "medium"
+      }
+    ],
+    "viewportAcceptance": "UNVERIFIED at 320/375/390/430/768/1024/1280/1440/1920/2560px and narrow allocated containers; no browser/screenshot exercise."
+  },
+  "accessibility": {
+    "sourceStrengths": [
+      "Shared native table and pagination pipeline; localized column headings and pagination action labels.",
+      "Evidence sections have localized aria-label and semantic h3 typography overrides.",
+      "SourceContent loading/retained states use status semantics; Pagination count uses polite live announcement and invalid jump uses alert.",
+      "Page decorative receipt icon and EvidencePanel icons are aria-hidden; statuses include text, not color alone.",
+      "FadeIn skips initial motion under reduced preference."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\advanced-intelligence\\pages\\ChargingForensicsPage.tsx",
+        "line": 140,
+        "rule": "MDC-040 accessible table identity",
+        "detail": "No caption or name is supplied. DataTable:930 falls back to the technical persisted ID advanced-intelligence:charging-forensics as accessible table name rather than localized reconciliation title.",
+        "fix": "Supply existing caption/name with localized session-reconciliation identity while keeping tableId unchanged.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\components\\forms\\ListExportMenu.tsx",
+        "line": 152,
+        "rule": "MDC-040 touch/keyboard menus",
+        "detail": "Export trigger explicitly uses !h-8 (32px), below stronger 44px mobile target; this page does not activate DataTable mobilePresentation sizing. Inspected role=menu open state has outside/Escape listeners but no focus transfer, restoration or arrow-navigation implementation in this component.",
+        "fix": "Shared owner should use existing menu/popover focus contracts and reviewed target/density policy; preserve CSV/JSON, pending guard, errors and localized names. Validate actual keyboard and spacing before declaring WCAG failure.",
+        "owner": "shared",
+        "confidence": "high"
+      }
+    ],
+    "acceptance": "Keyboard, menu focus/restoration, assistive-tech output, target geometry, contrast, forced colors and reduced-motion runtime are UNVERIFIED."
+  },
+  "states": {
+    "initialLoading": "Reconciliation query goes through InsightPanel skeleton. Separate evidence panel renders generic unsupported/returned-empty metadata immediately rather than participating in query trust.",
+    "noVehicle": "Reconciliation shows select-vehicle prompt; query disabled and table/export/pagination content suppressed. Evidence panel still renders missing metadata and explicit unsupported declarations.",
+    "resolvedEmpty": "InsightPanel shows localized no-sessions message and query refresh; table and Pagination are suppressed. Evidence quality, if returned, is separately rendered.",
+    "fatalError": "Only reconciliation source is replaced by ErrorDisplay with refetch. Evidence panel remains independent but has no error/trust context.",
+    "retainedRefreshFailureOrPaused": "InsightPanel preserves retained rows with SourceContent retained notice/retry. Query's retained metadata is passed to EvidencePanel but no stale/paused/retry indication accompanies it.",
+    "unsupportedOrPartial": "Nullable vehicle energy delegates missing handling to existing SI formatter; missing meter, loss and currency-qualified costs say Unsupported. Inspected backend currently only supplies recorded-only/incomplete/unsupported observations, not reconciled measurements.",
+    "export": "Shared ListExportMenu shows pending loading and blocks duplicate format requests; errors are caught and optionally toasted. Export helper uses fresh sequential requests, not retained query rows; page supplies no cancellation.",
+    "issues": [
+      {
+        "file": "web\\src\\features\\advanced-intelligence\\pages\\ChargingForensicsPage.tsx",
+        "line": 168,
+        "rule": "MDC-026 source trust and unresolved metadata",
+        "detail": "EvidencePanel lacks query/sourceState. While history is pending, failed or paused, missing quality is called unsupported and absent evidence/limitations are described as not returned. Retained metadata appears without its source's stale/error context.",
+        "fix": "Propagate existing source trust and recovery through domain EvidencePanel/InsightPanel; distinguish unresolved, resolved empty, fatal and retained metadata, while preserving always-visible explicit unsupported capabilities.",
+        "owner": "shared",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\advanced-intelligence\\pages\\ChargingForensicsPage.tsx",
+        "line": 26,
+        "rule": "MDC-032 scoped pagination / MDC-026 recovery",
+        "detail": "Page does not reset page on vehicle change. Old offset can exceed new history; source repository returns total=0 with no rows. InsightPanel empty then hides Pagination, leaving no in-page path to return to page 1.",
+        "fix": "Reset scoped pagination on vehicle change and recover out-of-range pages; keep query keys, server ordering and genuine empty distinction. Coordinate total semantics if backend repair is needed.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ]
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\advanced-intelligence\\components\\EvidencePanel.tsx",
+      "line": 82,
+      "rule": "MDC-010 / MDC-015 neutral surfaces",
+      "detail": "Evidence rows use fixed translucent-white backgrounds/borders and generic cyan icons; unsupported block is amber. Page itself has no white/neon/glow/style matches. Repeated per-session source cards and limitation text can outweigh the reconciliation table.",
+      "fix": "Use existing neutral surface/border tokens, subdue decorative icons and group recurring source/limitation presentation without dropping per-session identity, summary, observed time or samples. Preserve meaningful warning/status hue.",
+      "owner": "shared",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\components\\forms\\ListExportMenu.tsx",
+      "line": 181,
+      "rule": "MDC-010 / MDC-015",
+      "detail": "Shared export menu inherits white-opacity borders/hover surfaces and shadow-xl. Composed contrast and intensity were not measured.",
+      "fix": "Shared menu owner should use canonical neutral border/surface/elevation tokens while keeping menu positioning, focus and action hierarchy.",
+      "owner": "shared",
+      "confidence": "medium"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\api\\hooks\\useAdvancedIntelligence.ts",
+      "line": 119,
+      "rule": "MDC-023 export scope / no silent data loss",
+      "detail": "fetchAllChargingForensics silently stops after 10,000 rows while page export description promises the full result. Sequential offset requests also have no demonstrated snapshot consistency if underlying sessions change.",
+      "fix": "Preserve the safety stop but fail clearly or explicitly label bounded/partial export when total exceeds it; coordinate a proven complete-export contract with existing owners. Do not invent server export/snapshot capability.",
+      "owner": "integration",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\advanced-intelligence\\chargingForensicsExport.ts",
+      "line": 4,
+      "rule": "MDC-045 source and export preservation",
+      "detail": "CSV and JSON export currently retain SI/bounds/currency/status, but omit source evidence, limitations, ended_at and page quality/generated_at. Thus exported reconciliation numbers alone do not carry the source trust displayed separately on screen.",
+      "fix": "Preserve existing exported columns and raw fields; evaluate additive source/limitation metadata, especially for JSON, with an explicit reviewed export schema. Do not claim current packet already contains evidence.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "internal\\database\\advancedintelligence\\source_repository.go",
+      "line": 476,
+      "rule": "MDC-045 currency source correctness",
+      "detail": "Repository scales cost_decimal by 100 for every currency, while formatCurrencyMinor divides by the ISO currency-specific exponent. Non-two-decimal currencies can therefore display mismatched amounts. No affected production currency or runtime amount was demonstrated.",
+      "fix": "Integration owner must establish the authoritative stored cost/currency-unit contract and test zero-/two-/three-decimal currency boundaries. Do not patch page conversion or fabricate alternative currency evidence during presentation adoption.",
+      "owner": "integration",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\advanced-intelligence\\pages\\ChargingForensicsPage.tsx",
+      "line": 108,
+      "rule": "MDC-025 / MDC-044 status meaning",
+      "detail": "Status is raw backend text; every non-reconciled status gets the same warning variant. Current inspected backend emits recorded_only, incomplete and unsupported, while the success branch is unused on this source path.",
+      "fix": "Localize known statuses with safe raw fallback and distinguish recorded-only/incomplete/unsupported meaning using existing semantic badge vocabulary. Preserve raw source values; do not imply offline or reconciliation success.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\advanced-intelligence\\pages\\ChargingForensicsPage.tsx",
+      "line": 38,
+      "rule": "MDC-002 cancellation / MDC-046 scope",
+      "detail": "Query reads forward AbortSignal; export helper accepts one but page omits it, so a started export can continue across vehicle changes or unmount. It uses the originally captured vehicleId, but filenames do not identify that scope.",
+      "fix": "Preserve original export scope explicitly in feedback/download identity and use helper's existing signal contract for cancellation where appropriate; do not change query policies or cancel a user export silently.",
+      "owner": "page",
+      "confidence": "medium"
+    }
+  ],
+  "priority": {
+    "level": "high",
+    "first": "Mobile reconciliation detail, evidence trust propagation and scoped pagination recovery.",
+    "next": "Explicit bounded export semantics, evidence-preserving export schema, currency contract integration and localized status/table identity.",
+    "last": "Neutral evidence/menu surfaces and actual responsive/keyboard/theme acceptance.",
+    "rationale": "Source-confirmed information and trust risks dominate; this page already reuses shared layout/table/state/SI architecture and contains no direct neon or raw control violations."
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "EvidencePanel source trust propagation",
+      "existingOwnerFile": "web\\src\\features\\advanced-intelligence\\components\\EvidencePanel.tsx",
+      "propsVariantsStates": "Preserve quality/evidence/limitations/unsupported; accept explicit query or source state/error/retry via existing InsightPanel/SourceContent. Preserve pending, paused, fatal, empty, retained and supported partial metadata separately.",
+      "usedBy": ["ChargingForensicsPage evidence/quality/limitations panel"],
+      "dependsOn": ["InsightPanel query/sourceState contract", "DataState fatal versus refresh semantics", "SourceContent", "page-scoped evidence identity"],
+      "note": "Other production consumers were not audited; shared owner must consolidate before changing public API."
+    },
+    {
+      "name": "Complete mobile reconciliation through existing table contract",
+      "existingOwnerFile": "web\\src\\components\\ui\\DataTable.tsx",
+      "propsVariantsStates": "Reuse mobilePresentation or existing expandable row pipeline to expose all energy/cost/bounds/currency/status fields. Keep tableId, full-result controls, loaded/server scope and desktop persisted preferences.",
+      "usedBy": ["ChargingForensicsPage nine-column reconciliation"],
+      "dependsOn": ["MDC-023 mobile/table contract", "page-owned typed detail presentation", "focused narrow-container/keyboard acceptance"],
+      "note": "No new shared renderer is justified yet; existing API must be evaluated first."
+    },
+    {
+      "name": "Shared export menu keyboard/touch/token acceptance",
+      "existingOwnerFile": "web\\src\\components\\forms\\ListExportMenu.tsx",
+      "propsVariantsStates": "Retain CSV/JSON callbacks, selected/visible semantics, promise loading, error feedback, disabled state, labels and Escape/outside close. Use established focus/overlay and neutral token policies; validate 44px mobile target or documented exception.",
+      "usedBy": ["ChargingForensicsPage DataTable export controls"],
+      "dependsOn": ["existing shared menu/focus owner", "MDC-014 density preservation", "MDC-040 keyboard/touch", "MDC-010 neutral tokens"]
+    },
+    {
+      "name": "Neutral domain evidence and stable repeated-source identity",
+      "existingOwnerFile": "web\\src\\features\\advanced-intelligence\\components\\EvidencePanel.tsx",
+      "propsVariantsStates": "Preserve semantic quality/unsupported warnings and complete source summaries/timestamps/sample counts. Avoid string-only duplicate limitation keys; retain associations if grouping repeated content.",
+      "usedBy": ["ChargingForensicsPage flat-mapped per-session evidence and limitations"],
+      "dependsOn": ["page-scoped evidence identity", "MDC-010/MDC-015 surface tokens", "shared domain-owner acceptance"]
+    },
+    {
+      "name": "Bounded full-result export and currency integration contract",
+      "existingOwnerFile": "web\\src\\api\\hooks\\useAdvancedIntelligence.ts",
+      "additionalOwnerFiles": ["web\\src\\features\\advanced-intelligence\\chargingForensicsExport.ts", "internal\\database\\advancedintelligence\\source_repository.go"],
+      "propsVariantsStates": "Explicit complete/partial/error outcome at 10,000-row safety bound; optional cancellation and original vehicle scope. Preserve raw SI/minor values and define stored monetary exponent with source currency. Evidence metadata additions must be additive and reviewed.",
+      "usedBy": ["ChargingForensicsPage full-result CSV/JSON downloads and cost display"],
+      "dependsOn": ["actual endpoint total/order semantics", "existing export schema", "authoritative currency storage contract", "integration-owner tests"],
+      "note": "Integration findings only; no backend edit or new export capability authorized by this audit."
+    }
+  ],
+  "competingImplementations": {
+    "confirmed": [],
+    "notCompeting": [
+      "InsightPanel is a domain adapter over existing LayoutCard/SourceContent, not another query or layout engine.",
+      "Explicit full-result export handlers intentionally override loaded-visible-column DataTable export; retain that business distinction.",
+      "formatCurrencyMinor composes shared currency formatting, and useUnits owns SI display conversion.",
+      "No local workspace selector, new palette, chart renderer, overlay system or library is introduced."
+    ],
+    "risks": ["Do not solve mobile detail or evidence trust by adding a parallel table/evidence library; extend or adopt the existing owner contracts."]
+  },
+  "preservation": {
+    "sourceHash": "09A430C373F968BEDC3B82BD8516F0CEB7660EE1F62EE5994722F8214DB2CFFD",
+    "hashAlgorithm": "SHA-256",
+    "sourceHashScope": "Exact bytes of the assigned root-relative page file; not a dependency or rendered hash.",
+    "currentLineCount": 182,
+    "sections": [
+      {"name": "Page title and reconciliation subtitle", "count": 1},
+      {"name": "Null means unsupported, not zero disclosure", "count": 1},
+      {"name": "Session reconciliation InsightPanel", "count": 1},
+      {"name": "Reconciliation DataTable", "count": 1},
+      {"name": "Session / started / vehicle energy / meter energy / loss with low-high bounds / recorded cost / expected cost / discrepancy / status columns", "count": 9},
+      {"name": "Full-result CSV/JSON export controls and scope explanation", "count": 1},
+      {"name": "Server-result Pagination", "count": 1},
+      {"name": "EvidencePanel", "count": 1},
+      {"name": "Data quality / evidence sources / limitations subsections", "count": 3},
+      {"name": "Explicit meter and tariff/currency unsupported declarations", "count": 2}
+    ],
+    "sectionCounts": {
+      "pageInsightPanelCallsites": 1,
+      "pageEvidencePanelCallsites": 1,
+      "resolvedDomainPanelShells": 2,
+      "pageDataTableCallsites": 1,
+      "tableColumns": 9,
+      "evidenceSectionElements": 3,
+      "pageGlassPanelCallsites": 0,
+      "pageChartContainerCallsites": 0,
+      "chartSeries": 0
+    },
+    "actions": [
+      "Shell-owned vehicle selection and route navigation.",
+      "Source retry/refetch for fatal, empty and retained states via existing InsightPanel.",
+      "Pagination previous/next/first/last/numbered/direct jump with fixed 15-row page size.",
+      "Export entire fetched reconciliation result as CSV or JSON, independent of visible columns; keep filename charging-forensics.",
+      "Existing DataTable persisted column controls where exposed by its defaults; preserve tableId advanced-intelligence:charging-forensics.",
+      "Open/close export menu, pending duplicate prevention and caught export-error feedback."
+    ],
+    "defaults": "page=1, PAGE_SIZE=15; mobile session/started/status allow-list; no date filter; tableId and filenames unchanged.",
+    "dataBehavior": [
+      "Keep source vehicle filter, started_at/id descending order, server pagination, query keys, enablement, AbortSignal and inherited retry/cache policy.",
+      "Keep canonical Wh on wire/cache/export; display conversion only via useUnits. Unknown must not become measured zero.",
+      "Keep meter, loss, low/high uncertainty, recorded/expected/discrepancy amounts, source currency and signed values even though current backend leaves unsupported values null.",
+      "Keep all quality sample count/coverage/window/reasons and evidence source/summary/observed_at/sample_count; preserve limitations and explicit meter/tariff/currency unsupported explanations.",
+      "Preserve current full-result sequential export behavior and raw field names; do not regress to loaded-page or visible-column-only export.",
+      "Current export omits evidence/limitations/ended_at/quality/generated_at; document that gap rather than claiming metadata preservation already exists.",
+      "Quality/evidence panels derive from current loaded page, not all exported sessions; generated_at is not measured freshness.",
+      "No chart, session drillthrough, write action, meter import, tariff editor or successful reconciliation action exists in the inspected page; do not invent them.",
+      "Preserve localization and existing currency/energy/date display owners. Browser date defaults are the current behavior, not proof of explicit saved timezone adoption."
+    ]
+  },
+  "evidenceLimits": {
+    "mode": "Read-only one-page Phase 0 source audit; only assigned JSON and heartbeat written.",
+    "runtime": "UNVERIFIED. No browser, HTTP request, database execution, download, mutation, production action or screenshot.",
+    "visualKeyboardContrastViewport": "UNVERIFIED. Source-supported visibility/focus/size observations are not measured runtime acceptance.",
+    "testing": "No tests, TypeScript, lint or build run. audit-violations skill loaded and script inspected; it was not executed because its final step unconditionally invokes project-wide TypeScript, outside this bounded source-audit scope.",
+    "staticChecks": {
+      "command": "PowerShell Get-FileHash -Algorithm SHA256; Get-Content line count; case-sensitive Select-String on assigned page for raw interactive tags, style=, neon|glow|shadow, text-white, white and panel/chart callsites",
+      "exitCode": 0,
+      "output": [
+        "SHA256 09A430C373F968BEDC3B82BD8516F0CEB7660EE1F62EE5994722F8214DB2CFFD",
+        "lines: 182",
+        "<(button|input|textarea|select|table)\\b : 0",
+        "style= : 0",
+        "neon|glow|shadow : 0",
+        "text-white : 0",
+        "white : 0",
+        "<InsightPanel : 1",
+        "<EvidencePanel : 1",
+        "<ChartContainer : 0",
+        "<GlassPanel : 0"
+      ],
+      "scope": "Counts are assigned-page source lines only, not transitive shared components or mounted DOM. Category imports and typed hooks are source-inspected."
+    },
+    "backend": "Only the relevant route mount, handler, service and charging evidence query were read. No claim of backend-wide correctness, authorization execution, real dataset size, currency distribution or telemetry freshness.",
+    "shared": "Other consumers and complete shared implementations were not exhaustively audited; proposed shared changes require consolidated owner acceptance.",
+    "route": "App.tsx source confirms lazy ChargingForensics route under SafeRoute; mounting, auth and error-boundary behavior were not exercised."
+  },
+  "filesRead": [
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-mission.md",
+    "docs\\frontend-audits\\audit-page-029.json",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\advanced-intelligence\\pages\\ChargingForensicsPage.tsx",
+    "web\\src\\features\\advanced-intelligence\\components\\InsightPanel.tsx",
+    "web\\src\\features\\advanced-intelligence\\components\\EvidencePanel.tsx",
+    "web\\src\\features\\advanced-intelligence\\chargingForensicsExport.ts",
+    "web\\src\\features\\advanced-intelligence\\formatters.ts",
+    "web\\src\\api\\hooks\\useAdvancedIntelligence.ts",
+    "web\\src\\types\\advancedIntelligence.ts",
+    "web\\src\\hooks\\useSelectedVehicle.ts",
+    "web\\src\\hooks\\useUnits.ts",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\lib\\dateFormat.ts",
+    "web\\src\\api\\dataState.ts",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\layout\\layout-reference\\SourceContent.tsx",
+    "web\\src\\components\\ui\\DataTable.tsx",
+    "web\\src\\components\\ui\\Pagination.tsx",
+    "web\\src\\components\\forms\\ListExportMenu.tsx",
+    "web\\src\\components\\forms\\TableToolbar.tsx",
+    "web\\src\\components\\motion\\FadeIn.tsx",
+    "web\\src\\App.tsx",
+    "web\\src\\lib\\unitConversion.ts",
+    "internal\\api\\router.go",
+    "internal\\handler\\v1\\advancedintelligence\\handler.go",
+    "internal\\app\\advancedintelligencesvc\\survival_security_charging.go",
+    "internal\\database\\advancedintelligence\\source_repository.go"
+  ]
+}

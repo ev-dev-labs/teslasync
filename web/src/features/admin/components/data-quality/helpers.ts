@@ -17,6 +17,8 @@ import type {
   NormalizationCoverageState,
   NormalizationVersionCount,
 } from '@/types/admin-operator-confidence';
+import { getGlobalPrecision } from '@/lib/numberFormat';
+import { fmtNumber } from '@/lib/numberFormat';
 
 /**
  * Common async-state props shared by every data-bound section so each panel
@@ -61,11 +63,11 @@ export function coverageTrust(
 export function formatCoveragePct(
   pct: number | null | undefined,
   state?: NormalizationCoverageState,
-  decimals = 1,
+  decimals = getGlobalPrecision(),
 ): string | null {
   if (state === 'unknown') return null;
   if (pct == null || !Number.isFinite(pct)) return null;
-  return `${pct.toFixed(decimals)}%`;
+  return `${fmtNumber(pct, decimals)}%`;
 }
 
 /**
@@ -134,5 +136,5 @@ export function formatSeconds(seconds: number | null | undefined): string | null
 /** Duplicate ratio (0..1) rendered as a percentage string. */
 export function formatDuplicateRatio(ratio: number | null | undefined): string | null {
   if (ratio == null || !Number.isFinite(ratio)) return null;
-  return `${(ratio * 100).toFixed(1)}%`;
+  return `${fmtNumber((ratio * 100))}%`;
 }

@@ -1,0 +1,425 @@
+{
+  "item": "audit-page-139",
+  "page": "web\\src\\features\\maps\\pages\\TemperatureImpactPage.tsx",
+  "routes": ["/temperature-impact"],
+  "purpose": "Explain the relationship between outdoor temperature and driving consumption for the selected vehicle, with seasonal context, deterministic diagnosis, recent drives and optional AI narration.",
+  "primaryGoal": "Compare populated temperature ranges and drive consumption without confusing missing measurements, independent source periods or retained data with current evidence.",
+  "dataSources": [
+    {
+      "hook": "useTemperatureImpact",
+      "file": "web\\src\\api\\hooks\\useAnalytics.ts",
+      "line": 487,
+      "endpoint": "GET /api/v1/analytics/temperature-impact?vehicle_id={id}",
+      "routeEvidence": "internal\\api\\router.go:3881",
+      "owner": "analytics API hook and tempImpactHandler.Get",
+      "behavior": "Vehicle-keyed query, enabled only with a selected vehicle; forwards AbortSignal. Response types include points, efficiency, vampire_drain and monthly_trend. Page uses points and monthly_trend; recomputes populated buckets from points. No start/end parameters.",
+      "units": "Inspected frontend contract declares outside_temp/avg_temp Celsius, efficiency_wh_km Wh/km, distance_km kilometres. Actual backend serialization, SQL and source-window semantics were not inspected; do not infer canonical metres/Wh-per-metre merely from comments."
+    },
+    {
+      "hook": "useEfficiencyShift",
+      "file": "web\\src\\api\\hooks\\useAnalytics.ts",
+      "line": 520,
+      "endpoint": "GET /api/v1/analytics/temperature-impact/shift?vehicle_id={id}",
+      "routeEvidence": "internal\\api\\router.go:3882",
+      "owner": "analytics API hook and tempImpactHandler.Shift",
+      "behavior": "Independent vehicle-keyed query with AbortSignal; latest/prior month explanation, verdict, percentages and Celsius difference. No shared range parameters; page explicitly describes its independent period."
+    },
+    {
+      "hook": "useAiStream",
+      "file": "web\\src\\components\\ai\\AICabinTemperatureImpactNarrative.tsx",
+      "line": 69,
+      "endpoint": "POST /api/v1/ai/climate/temperature-impact/narrate",
+      "routeEvidence": "internal\\api\\ai_routes.go:887; router.go:5077 injects CabinTemperatureImpactNarrative handler",
+      "owner": "AI feature gate, shared stream hook and cabin-temperature-impact-narrative handler",
+      "behavior": "User-triggered narration only; positive vehicle_id required; vehicle scopeKey changes abort/clear prior narration by the documented hook contract. Feature gate removes the surface when disabled. No POST was exercised."
+    },
+    {
+      "hook": "useSelectedVehicle",
+      "file": "web\\src\\hooks\\useSelectedVehicle.ts",
+      "line": 48,
+      "endpoint": "useVehicles dependency; its request implementation was not inspected",
+      "owner": "workspace vehicle hook and persisted selectedVehicle store",
+      "behavior": "URL, persisted store and first-known-vehicle precedence. Page consumes this owner and does not introduce a local selector."
+    },
+    {
+      "hook": "useUnits / useNumberFormatting / useOperationalMetrics",
+      "file": "web\\src\\features\\maps\\pages\\TemperatureImpactPage.tsx",
+      "line": 111,
+      "endpoint": "Existing preferences/formatting dependencies, not independently traced",
+      "owner": "shared display-boundary formatting and stat pipeline",
+      "behavior": "Temperature and distance preferences affect display; raw query payload is retained. Brief efficiency rawValue uses Wh/m derived by dividing source Wh/km by 1000; custom formatter restores original captions."
+    }
+  ],
+  "components": [
+    {"name": "PageLayout", "owner": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx", "line": 9, "role": "Existing PageContainer adapter; w-full/min-w-0 container, existing shell/header ownership."},
+    {"name": "LayoutCard", "owner": "@/components/layout category barrel", "line": 8, "role": "Six page panel surfaces; implementation not separately inspected."},
+    {"name": "MapsOperationalBrief", "owner": "web\\src\\features\\maps\\components\\operationalbrief-all\\MapsOperationalBrief.tsx", "line": 19, "role": "Feature adapter over shared OperationalBrief/useOperationalMetrics; source statuses, receipt timestamps, provenance, optional retry."},
+    {"name": "EfficiencyDetectivePanel", "owner": "web\\src\\features\\maps\\components\\EfficiencyDetectivePanel.tsx", "line": 35, "role": "Independent diagnosis query, verdict, explanation, three metrics and SourceContent states."},
+    {"name": "AICabinTemperatureImpactNarrative", "owner": "web\\src\\components\\ai\\AICabinTemperatureImpactNarrative.tsx", "line": 118, "role": "Feature-gated shared narration; does not replace deterministic evidence."},
+    {"name": "EmbeddedChart / ChartContainer", "owner": "web\\src\\components\\charts\\EmbeddedChart.tsx", "line": 18, "role": "Three embedded charts; inherited semantic/resilience controller. Embedded defaults disable export/fullscreen; do not claim those are current enabled page actions."},
+    {"name": "DataTable", "owner": "web\\src\\components\\ui\\DataTable.tsx", "line": 450, "role": "Sortable paginated recent-drive rows, stable tableId, mobile column allow-list, inherited persisted controls and export behavior."},
+    {"name": "Badge / Text / Caption / HelperText / Skeleton / EmptyState / QueryError", "owner": "Existing UI and feedback category barrels", "line": 10, "role": "Typography, semantic statuses and independent source fallbacks."},
+    {"name": "FadeIn", "owner": "web\\src\\components\\motion\\FadeIn.tsx", "line": 23, "role": "Existing motion preference adapter; reduced initial=false and bounded delay, no page-level motion system."}
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\maps\\pages\\TemperatureImpactPage.tsx",
+      "line": 125,
+      "rule": "MDC-002 / MDC-045",
+      "detail": "Local KM_PER_MILE conversion and comments saying no efficiency helper exists compete with the existing convertEfficiencyFromSI helper.",
+      "fix": "Reuse convertEfficiencyFromSI at the display boundary, retaining current source Wh/km and exact preference-dependent output; update obsolete comments without changing cache/wire units.",
+      "owner": "page",
+      "confidence": "high",
+      "evidence": "Local factor at line 67; shared helper web\\src\\lib\\unitConversion.ts:257."
+    },
+    {
+      "file": "web\\src\\features\\maps\\pages\\TemperatureImpactPage.tsx",
+      "line": 307,
+      "rule": "MDC-026",
+      "detail": "sectionFallback already consolidates six panel states; do not create six bespoke competing fallback components during modernization.",
+      "fix": "Retain the existing local helper or compose the accepted SourceContent contract only after matching loading/error/empty/retained behavior.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "responsive": {
+    "status": "source-inspected; viewport behavior unverified",
+    "sourceBehavior": [
+      "PageLayout uses allocated-width w-full/min-w-0 at layout-reference\\PageLayout.tsx:12.",
+      "Three region grids stack by default and switch at xl; scatter and table have min-w-0 wrappers at page:387,614.",
+      "Charts have h-72/sm:h-80 and h-56/sm:h-64 bounded hosts at page:395,505,552.",
+      "Legend and bucket badges wrap at page:440,474."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\maps\\pages\\TemperatureImpactPage.tsx",
+        "line": 624,
+        "rule": "MDC-023 / MDC-043 preservation",
+        "detail": "Recent drives excludes distance_km from mobileColumns. DataTable documents that omitted keys become hidden below md; no mobilePresentation or renderExpanded is supplied by this page. This is a source-confirmed mobile detail-access gap, not measured clipping.",
+        "fix": "Keep distance reachable via existing DataTable mobile presentation/detail API or preserve all four columns with intentional horizontal access; do not drop it as mobile simplification.",
+        "owner": "page",
+        "confidence": "high",
+        "evidence": "DataTable.tsx:236-248,325-330; page distance column at 245."
+      },
+      {
+        "file": "web\\src\\features\\maps\\pages\\TemperatureImpactPage.tsx",
+        "line": 612,
+        "rule": "MDC-040 / MDC-043",
+        "detail": "Full recommendation sentences render inside small Badge components. Long translated text and 200% text may strain the single-column region; actual wrapping/overflow has not been exercised.",
+        "fix": "Prefer Text for explanatory prose with a short semantic badge/icon, retaining all recommendation content and localization. Validate 320px, long labels and 200% text.",
+        "owner": "page",
+        "confidence": "medium"
+      }
+    ],
+    "unverifiedWidths": [320,375,390,430,768,1024,1280,1440,1920,2560]
+  },
+  "accessibility": {
+    "status": "source evidence only; keyboard, screen reader, effective contrast and forced colors unverified",
+    "sourcePositives": [
+      "Localized region labels at page:384,497,599 and localized chart ariaLabel props at 399,509,557.",
+      "Decorative legend dots and recommendation icons use aria-hidden; page imports shared table and typography primitives.",
+      "FadeIn.tsx:24-34 consumes existing motion preferences rather than an independent animation policy."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\maps\\pages\\TemperatureImpactPage.tsx",
+        "line": 504,
+        "rule": "MDC-034 / MDC-040",
+        "detail": "All three charts opt out of accessible data tables using chart-a11y:no-table comments (394,504,551) and supply no data/dataColumns fallback. The recent-drive table covers raw scatter inputs but not aggregate bucket or dual-axis monthly rows. Aggregate and dual-axis data can be represented as rows; a chart name alone does not convey their measurements.",
+        "fix": "Use the existing ChartContainer data/dataColumns accessibility contract for populated bucket averages and monthly drive count/temperature, preserving numeric units and missing values; retain recent drive table as the scatter detail alternative.",
+        "owner": "page",
+        "confidence": "high",
+        "evidence": "web\\src\\components\\charts\\ChartContainer.tsx:152-175 describes the semantic name and fallback table contract."
+      }
+    ]
+  },
+  "states": {
+    "loading": "Initial query loading without retained data shows contextual panel skeletons via page:309; summary receives loading. Query disabled with no selected vehicle produces manage-vehicles guidance rather than a fabricated measurement.",
+    "empty": "Each page card independently falls back to localized EmptyState; monthly and point arrays are independent. Source.hasData can be true for an empty response object, so summary may say Source data available while charts are empty.",
+    "error": "Fatal error only replaces source-backed card content; each QueryError invokes refetch. Detective uses independent SourceContent recovery.",
+    "retained": "Page explicitly uses fatalError rather than all query errors; retained chart/table data survives failed refresh. Brief adapter recognizes refreshError/isRefreshBlocked/stale.",
+    "offline": "deriveDataState records paused refresh and retains payload; browser/offline recovery and page header trust rendering were not exercised or fully traced.",
+    "partial": "Point and monthly panels can render independently, but the page does not explicitly mark missing monthly/point slices as partial/unavailable in deriveDataState options.",
+    "issues": [
+      {
+        "file": "web\\src\\features\\maps\\pages\\TemperatureImpactPage.tsx",
+        "line": 164,
+        "rule": "MDC-026 / MDC-045 unknown is not zero",
+        "detail": "Missing efficiency and temperature become zero in averages/buckets/scatter (164,168,170,191-193), monthly missing temperature/count become zero (205-206), table missing efficiency/distance become zero (240,251). Although interfaces declare numeric fields, the explicit null fallbacks manufacture measured values if source fields are missing.",
+        "fix": "Validate finite source measurements, retain unknown markers, and exclude unavailable pairs from derived numeric calculations without discarding their source rows. Preserve true zero, source ownership, counts and diagnostics.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\maps\\pages\\TemperatureImpactPage.tsx",
+        "line": 176,
+        "rule": "MDC-026 / MDC-034",
+        "detail": "Empty temperature buckets receive avg=0 and remain in stats.bucketAvgs used by the line chart at 515, implying perfect measured efficiency and drawing connections through unobserved buckets. Best/worst correctly filters count>0; chart does not.",
+        "fix": "Keep bucket identity/count but represent empty averages as unavailable gaps, not zero. Preserve populated bucket calculations and all five range labels.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\maps\\pages\\TemperatureImpactPage.tsx",
+        "line": 154,
+        "rule": "MDC-026",
+        "detail": "deriveDataState receives only provenance, so a successful empty response or one missing a subseries is not explicitly annotated unavailable/partial. MapsOperationalBrief checks hasData but not unavailable/partial statuses and may label these payloads available.",
+        "fix": "Derive source-specific empty/partial evidence using real response semantics, and extend the existing brief adapter's status mapping rather than replacing retained data. Do not treat an empty object as proof of a measured zero.",
+        "owner": "integration",
+        "confidence": "high",
+        "evidence": "MapsOperationalBrief.tsx:23-32; deriveDataState.ts:178-213."
+      }
+    ]
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\maps\\pages\\TemperatureImpactPage.tsx",
+      "line": 69,
+      "rule": "MDC-010 / MDC-034",
+      "detail": "Five fixed saturated hex bucket colors bypass current chart palette/theme preferences and create a rainbow scatter plus manual dot legend. Semantic cold-to-hot distinctions are meaningful; the implementation should not erase them, but fixed saturation is not necessary.",
+      "fix": "Use existing theme-aware restrained chart/category token semantics, preserving deterministic cold-to-hot bucket identity and matching legend labels. Do not force-reset saved palette choices or add a new per-page palette.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\maps\\pages\\TemperatureImpactPage.tsx",
+      "line": 239,
+      "rule": "MDC-012",
+      "detail": "Every efficiency table value is fixed text-cyan-300 regardless of theme or semantic exception, giving ordinary numeric body cells unnecessary accent emphasis.",
+      "fix": "Use existing typography semantic primary/secondary tokens for ordinary values; retain meaningful best/worst badge signals and tabular number formatting.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\maps\\components\\EfficiencyDetectivePanel.tsx",
+      "line": 67,
+      "rule": "MDC-012 / MDC-016",
+      "detail": "Decorative lightbulb is fixed text-cyan-300 rather than a semantic muted icon token; no corresponding status requires that accent.",
+      "fix": "Reuse existing muted icon/text tokens; preserve verdict badge semantics and icon aria-hidden.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\maps\\pages\\TemperatureImpactPage.tsx",
+      "line": 414,
+      "rule": "MDC-013 / MDC-034",
+      "detail": "Chart axis tick font sizes are hard-coded 10/11 and legend 12 at multiple sites rather than inherited shared chart typography. This is a source consistency issue, not measured illegibility.",
+      "fix": "Reuse current chart typography tokens/preferences while preserving axis data keys, labels, dual scales and subtle grid/reference hierarchy.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\features\\maps\\pages\\TemperatureImpactPage.tsx",
+      "line": 266,
+      "rule": "Mission 34 TypeScript / functionality preservation",
+      "detail": "tips uses TrendingUp as a value but the import list at lines 3-6 omits it and this file declares no such binding. Populated best-range data reaches this reference. Source indicates an unresolved identifier and likely runtime failure; compiler/runtime confirmation is not claimed.",
+      "fix": "Import the existing icon from the current icon library/approved registry, retaining optimal/cold/hot recommendation behavior. Validate the populated-data path in the authorized implementation phase.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\maps\\pages\\TemperatureImpactPage.tsx",
+      "line": 151,
+      "rule": "MDC-032 workspace/date",
+      "detail": "Dated analytics and recent-drive table do not consume useRangeState; /temperature-impact is absent from RANGE_ENABLED_PATHS, and the hook accepts only vehicleId. The brief honestly calls the source window unspecified. This is an integration gap, not proof that backend supports arbitrary bounds.",
+      "fix": "If this dated route adopts workspace range, coordinate backend/query support for both bounds and full-result aggregates, then register the real route and consume the shared header owner. Keep independently defined detective/latest-prior month semantics explicit; never add a second local date picker or client-only page filter.",
+      "owner": "integration",
+      "confidence": "high",
+      "evidence": "web\\src\\lib\\workspaceScope.ts:23-77,156-166; useAnalytics.ts:487-496."
+    },
+    {
+      "file": "web\\src\\features\\maps\\pages\\TemperatureImpactPage.tsx",
+      "line": 212,
+      "rule": "MDC-023 / MDC-046",
+      "detail": "Drive table keys are source array indices, not persistent drive identities. After refetch/reordering the same index may refer to a different drive; the inspected point interface has no drive ID.",
+      "fix": "Do not invent a backend drive identity. Preserve source order and tableId; coordinate a real stable identity if persisted row interaction requires it, or document/validate nonidentity row-key behavior.",
+      "owner": "integration",
+      "confidence": "medium"
+    }
+  ],
+  "priority": {
+    "overall": "high",
+    "order": [
+      "Resolve missing TrendingUp binding without deleting recommendations.",
+      "Preserve unknown-versus-zero semantics and remove unobserved bucket zero points.",
+      "Preserve mobile distance access and supply aggregate chart text/data alternatives.",
+      "Coordinate source trust and workspace range support, without guessing backend behavior.",
+      "Adopt restrained palette/semantic text and existing efficiency conversion helper."
+    ]
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "MapsOperationalBrief trust mapping extension",
+      "existingOwnerFile": "web\\src\\features\\maps\\components\\operationalbrief-all\\MapsOperationalBrief.tsx",
+      "line": 23,
+      "propsVariantsStates": "Keep sources: readonly {label,state:DataState<unknown>}[], metrics, scope, loading and optional onRetry. Explicitly represent partial/unavailable states without collapsing retained errors or paused refresh. Preserve receipt timestamps and provenance.",
+      "usedBy": ["TemperatureImpactPage summary", "EfficiencyDetectivePanel diagnosis"],
+      "dependsOn": ["Page-specific authoritative empty/partial interpretation", "Existing DataState and OperationalBrief status contract"],
+      "owner": "shared",
+      "confidence": "high",
+      "note": "Existing feature-shared owner; report only, no shared write. Other consumers were not enumerated."
+    },
+    {
+      "name": "Workspace range endpoint integration",
+      "existingOwnerFile": "web\\src\\api\\hooks\\useAnalytics.ts",
+      "line": 487,
+      "propsVariantsStates": "Typed selected vehicle plus startInstant/endInstantExclusive forwarded as backend-supported snake_case parameters and included in query keys; retain AbortSignal and query policy. Register /temperature-impact only once server list and aggregate filtering supports both bounds.",
+      "usedBy": ["/temperature-impact"],
+      "dependsOn": ["tempImpactHandler.Get backend bounds/source-period capability review", "web\\src\\lib\\workspaceScope.ts", "Existing useRangeState timezone/rolling/custom semantics"],
+      "owner": "integration",
+      "confidence": "high",
+      "note": "No new range component or query-state owner; detective business months remain independent."
+    }
+  ],
+  "competingImplementations": [
+    {
+      "file": "web\\src\\features\\maps\\pages\\TemperatureImpactPage.tsx",
+      "line": 67,
+      "rule": "MDC-002 / MDC-045",
+      "detail": "Local efficiency conversion duplicates existing convertEfficiencyFromSI at unitConversion.ts:257.",
+      "fix": "Reuse the existing helper without changing source units.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\maps\\pages\\TemperatureImpactPage.tsx",
+      "line": 69,
+      "rule": "MDC-010 / MDC-034",
+      "detail": "Fixed bucket hex palette and hand-rendered dot legend coexist with current shared chart palette/legend pipeline. Category semantics are necessary; a second theme engine is not.",
+      "fix": "Use existing palette and label contracts while retaining range category identity, all points and current legend meaning.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "preservation": {
+    "sourceHash": "77074cc48e9fb6f7e9932f0d9e3e189984a6694ce5246886cce3b15a10e338a7",
+    "sourceHashAlgorithm": "SHA-256",
+    "sourceHashScope": "Live repository root file bytes, not Git or historical source",
+    "currentLineCount": 645,
+    "sectionNames": [
+      "Optional AI cabin-temperature impact narrative",
+      "Summary metrics",
+      "Efficiency detective",
+      "Temperature vs efficiency scatter",
+      "Optimal temperature analysis",
+      "Efficiency by temperature range",
+      "Monthly seasonal trend",
+      "Recommendations",
+      "Recent drives"
+    ],
+    "sectionCounts": {
+      "logicalSections": 9,
+      "pageLayoutCards": 6,
+      "pageEmbeddedCharts": 3,
+      "pageRegionSections": 3,
+      "pageDataTables": 1,
+      "pageOperationalBriefs": 1,
+      "summaryMetrics": 6,
+      "detectiveMetrics": 3,
+      "recentDriveColumns": 4,
+      "temperatureBuckets": 5,
+      "conditionalRecommendationKinds": 3
+    },
+    "actions": [
+      "Header-owned selected vehicle scope and persisted/URL selection",
+      "Fatal-source retry through QueryError",
+      "Independent detective retry",
+      "Manage vehicles navigation when no vehicle is scoped",
+      "Optional AI Narrate impact action and existing stream lifecycle",
+      "Recent-drive sorting/pagination and stable tableId maps:temperature-impact-drives",
+      "Inherited DataTable column/persistence/export controls as supported by current shared owner",
+      "Monthly chart legend visibility with chartKey temp-monthly-trend"
+    ],
+    "dataBehavior": [
+      "Keep raw hook/cache values unchanged; perform physical conversion only at display boundaries.",
+      "Keep the inspected Wh/km/kilometre API contract until authoritative backend review; do not silently reinterpret it as Wh/m/metres.",
+      "Keep scatter per-drive points, source drive dates, distance and consumption; preserve unknown and true zero distinctly.",
+      "Retain five Celsius bucket boundaries [-50,0),[0,10),[10,20),[20,30),[30,60) plus edge clamping and display-temperature labels.",
+      "Retain populated-only best/worst analysis, count captions, average reference line and observed delta explanation.",
+      "Retain separate monthly drive count left axis and temperature right axis and persisted series visibility.",
+      "Retain independent latest/prior month detective verdict/explanation and temperature-difference semantics, never absolute-temperature offset conversion.",
+      "Retain cold/hot/optimal recommendations and their localization.",
+      "Retain feature-gated narration above deterministic evidence; do not render fake narrative or remove deterministic sources.",
+      "Retain loading/error/empty/retained data behavior for independent panels and source receipt/provenance.",
+      "Keep unit, theme, typography, chart/table and workspace preferences; no forced resets.",
+      "Three EmbeddedChart sites currently do not opt into export/fullscreen; do not invent those as previously exposed features."
+    ],
+    "sourceInventory": [
+      {"file": "web\\src\\features\\maps\\pages\\TemperatureImpactPage.tsx", "ranges": ["1-645"], "role": "Owned audit page"},
+      {"file": "web\\src\\features\\maps\\components\\EfficiencyDetectivePanel.tsx", "ranges": ["entire file"], "role": "Page-specific independent diagnosis"},
+      {"file": "web\\src\\features\\maps\\components\\operationalbrief-all\\MapsOperationalBrief.tsx", "ranges": ["entire file"], "role": "Feature-shared trust/metric adapter"},
+      {"file": "web\\src\\components\\ai\\AICabinTemperatureImpactNarrative.tsx", "ranges": ["entire file"], "role": "Gated narration presentation and endpoint"},
+      {"file": "web\\src\\api\\hooks\\useAnalytics.ts", "ranges": ["temperatureImpact key and 438-529 matching excerpts"], "role": "Actual typed queries and response shape"},
+      {"file": "web\\src\\components\\charts\\EmbeddedChart.tsx", "ranges": ["entire file"], "role": "Existing chart adapter defaults"},
+      {"file": "web\\src\\components\\charts\\ChartContainer.tsx", "ranges": ["120-175 and matching semantic/query excerpts"], "role": "Accessibility/presentation contract"},
+      {"file": "web\\src\\components\\ui\\DataTable.tsx", "ranges": ["230-285 and mobile/expansion/export matching excerpts"], "role": "Existing mobile/detail/table contract"},
+      {"file": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx", "ranges": ["entire file"], "role": "Allocated-width layout adapter"},
+      {"file": "web\\src\\api\\dataState.ts", "ranges": ["110-250"], "role": "Trust derivation"},
+      {"file": "web\\src\\hooks\\useSelectedVehicle.ts", "ranges": ["1-140"], "role": "Workspace owner"},
+      {"file": "web\\src\\lib\\workspaceScope.ts", "ranges": ["20-77 and scope decision matching excerpts"], "role": "Actual route workspace eligibility"},
+      {"file": "web\\src\\lib\\unitConversion.ts", "ranges": ["245-270 and formatter matching excerpts"], "role": "Existing SI display helper"},
+      {"file": "web\\src\\hooks\\useUnits.ts", "ranges": ["formatter matching excerpts"], "role": "Existing display preference adapter"},
+      {"file": "web\\src\\components\\motion\\FadeIn.tsx", "ranges": ["entire file"], "role": "Existing motion contract"},
+      {"file": "web\\src\\App.tsx", "ranges": ["176 and 825-835 matching excerpts"], "role": "Lazy mount and SafeRoute route evidence"},
+      {"file": "internal\\api\\router.go", "ranges": ["temperature-impact/handler matching excerpts"], "role": "Known backend route registration only"},
+      {"file": "internal\\api\\ai_routes.go", "ranges": ["874-887 matching excerpts"], "role": "AI route registration only"}
+    ]
+  },
+  "evidenceLimits": {
+    "mode": "Phase 0 bounded read-only source audit; only assigned report and heartbeat written.",
+    "runtime": "unverified",
+    "visual": "unverified",
+    "accessibility": "unverified: keyboard, focus, screen reader, contrast, forced colors and actual reduced motion not exercised",
+    "responsive": "unverified at all required widths, themes, RTL, long labels and 200% text",
+    "backend": "Known route registrations and frontend contracts inspected; SQL, serialized payloads, full range filtering and period semantics unverified. No network request or production mutation.",
+    "validation": "No Git, source/shared/queue edits, full build, lint, TypeScript, tests or browser execution. Audit skill loaded/read but bundled script not executed because it unconditionally runs project TypeScript contrary to the concurrent Phase 0 validation boundary.",
+    "sourceCounts": {
+      "rawControls": 0,
+      "directRechartsLeafletFramerImports": 0,
+      "legacyRelativeApiImports": 0,
+      "neonClasses": 0,
+      "inlineStyleSites": 1,
+      "inlineStyleClassification": "Dynamic bucket legend backgroundColor at page:446; not a static CSS-var inline-style violation",
+      "fixedCyanTextSites": 1
+    },
+    "commandEvidence": [
+      {"command": "Get-FileHash web\\src\\features\\maps\\pages\\TemperatureImpactPage.tsx -Algorithm SHA256; ReadAllLines(...).Length", "exitCode": 0, "output": "Hash 77074CC48E9FB6F7E9932F0D9E3E189984A6694CE5246886CCE3B15A10E338A7; lineCount=645"},
+      {"command": "Bounded PowerShell regex counts over TemperatureImpactPage.tsx", "exitCode": 0, "output": "style==1; <LayoutCard=6; <EmbeddedChart=3; <section=3; <DataTable=1; text-cyan-300=1; TrendingUp=1; rawControls=0; directLibraries=0; legacyApiImports=0; neonClasses=0; sourceHash=77074CC48E9FB6F7E9932F0D9E3E189984A6694CE5246886CCE3B15A10E338A7"},
+      {"command": "First bounded regex-count/heartbeat command", "exitCode": 1, "output": "PowerShell ParserError: Missing ')' in method call. Corrected and rerun successfully; no command body executed."}
+    ],
+    "notClaimed": ["TypeScript passes", "Mounted route renders successfully", "No violations", "Runtime/visual/accessibility acceptance", "No feature loss proven by runtime"]
+  },
+  "filesRead": [
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\maps\\pages\\TemperatureImpactPage.tsx",
+    "web\\src\\features\\maps\\components\\EfficiencyDetectivePanel.tsx",
+    "web\\src\\features\\maps\\components\\operationalbrief-all\\MapsOperationalBrief.tsx",
+    "web\\src\\components\\ai\\AICabinTemperatureImpactNarrative.tsx",
+    "web\\src\\api\\hooks\\useAnalytics.ts",
+    "web\\src\\components\\charts\\EmbeddedChart.tsx",
+    "web\\src\\components\\charts\\ChartContainer.tsx",
+    "web\\src\\components\\ui\\DataTable.tsx",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\api\\dataState.ts",
+    "web\\src\\hooks\\useSelectedVehicle.ts",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\lib\\unitConversion.ts",
+    "web\\src\\hooks\\useUnits.ts",
+    "web\\src\\components\\motion\\FadeIn.tsx",
+    "web\\src\\App.tsx",
+    "internal\\api\\router.go",
+    "internal\\api\\ai_routes.go",
+    "internal\\api\\aitempimpact\\handler_test.go (endpoint search excerpts only)",
+    "internal\\api\\aitempimpact\\handler.go (endpoint search excerpt only)",
+    "internal\\api\\aitempimpact\\doc.go (endpoint search excerpt only)"
+  ],
+  "ownedFiles": [
+    "docs\\frontend-audits\\audit-page-139.json",
+    ".agent-status\\audit-page-139.txt"
+  ]
+}

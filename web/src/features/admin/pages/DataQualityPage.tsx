@@ -23,17 +23,18 @@
  */
 import { useTranslation } from 'react-i18next';
 
-import { PageContainer } from '@/components/layout';
+import { PageLayout } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
 import { DataStateNotice } from '@/components/feedback';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useDataQuality } from '@/api/hooks/useOperatorConfidence';
 import { isApiError } from '@/lib/resilience';
+import { deriveDataState } from '@/api/dataState';
 import {
   FieldQualityTable,
   NormalizationCoverageKpis,
   NormalizationVersionPanel,
-} from '../components/data-quality';
+} from '../components/continuation-admin-2/dataQuality';
 import type { DataQualityFieldScore } from '@/types/admin-operator-confidence';
 
 // Stable empty-array reference so the child sections' memoised derives are not
@@ -42,15 +43,16 @@ const EMPTY_FIELDS: DataQualityFieldScore[] = [];
 
 export default function DataQualityPage() {
   const { t } = useTranslation();
-  usePageTitle(t('admin.dataQuality.pageTitle', 'Data Quality'));
+  usePageTitle(t('admin.dataQuality.pageTitle', 'Data quality'));
 
   const query = useDataQuality();
-  const subsystemMissing = isApiError(query.error) && query.error.status === 503;
+  const source = deriveDataState(query);
+  const subsystemMissing = isApiError(source.fatalError) && source.fatalError.status === 503;
 
   // When the 503 notice already explains the empty page, suppress the raw
   // query error for the individual sections so they render calm empty states
   // instead of duplicating a "server error" panel three times.
-  const sectionError = subsystemMissing ? null : query.error;
+  const sectionError = subsystemMissing ? null : source.fatalError;
   const retry = () => {
     void query.refetch();
   };
@@ -59,13 +61,14 @@ export default function DataQualityPage() {
   const fields = snapshot?.fields ?? EMPTY_FIELDS;
 
   return (
-    <PageContainer
-      title={t('admin.dataQuality.pageTitle', 'Data Quality')}
+    <PageLayout
+      title={t('admin.dataQuality.pageTitle', 'Data quality')}
       subtitle={t(
         'admin.dataQuality.subtitle',
         'Per-field signal freshness, gaps and duplicates, with normalization-version provenance for the same bounded window.',
       )}
       query={query}
+      dataSources={[{ id: 'data-quality', label: t('admin.dataQuality.pageTitle', 'Data quality'), query }]}
     >
       <div className="space-y-6">
         {subsystemMissing && (
@@ -86,7 +89,12 @@ export default function DataQualityPage() {
             normalization={snapshot?.normalization}
             fields={fields}
             windowMins={snapshot?.window_mins}
-            loading={query.isLoading}
+            windowStart={snapshot?.window_start}
+            windowEnd={snapshot?.window_end}
+            hasSnapshot={source.hasData}
+            retained={source.hasData && (source.status === 'stale' || source.isRefreshing)}
+            sourceStatus={source.status}
+            loading={query.isLoading && !source.hasData}
             error={sectionError}
             onRetry={retry}
           />
@@ -96,7 +104,7 @@ export default function DataQualityPage() {
         <FadeIn delay={0.1}>
           <NormalizationVersionPanel
             normalization={snapshot?.normalization}
-            loading={query.isLoading}
+            loading={query.isLoading && !source.hasData}
             error={sectionError}
             onRetry={retry}
           />
@@ -106,12 +114,12 @@ export default function DataQualityPage() {
         <FadeIn delay={0.2}>
           <FieldQualityTable
             fields={fields}
-            loading={query.isLoading}
+            loading={query.isLoading && !source.hasData}
             error={sectionError}
             onRetry={retry}
           />
         </FadeIn>
       </div>
-    </PageContainer>
+    </PageLayout>
   );
 }

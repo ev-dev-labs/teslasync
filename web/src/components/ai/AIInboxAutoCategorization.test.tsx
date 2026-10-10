@@ -34,12 +34,12 @@
 //
 // Network is stubbed with a deterministic SSE byte stream — the same
 // pattern the sibling AIChargingDiagnosis / cross-rule tests use.
-// `@testing-library/user-event` is not a dependency of this codebase
-// (web/package.json), so interactions go through fireEvent, consistent
-// with the other AI SSE-wiring suites.
+// Existing SSE-wiring assertions use fireEvent; keyboard interactions
+// use userEvent to exercise the native controls.
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, act, waitFor, fireEvent } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 
 import type { AppSettings } from '@/api/types'
 
@@ -228,7 +228,9 @@ describe('AIInboxAutoCategorization — ADR-015 visibility gate', () => {
     expect(
       screen.getByRole('heading', { name: /Suggest inbox categories/i }),
     ).toBeInTheDocument()
-    expect(root).toHaveTextContent(/Bucket recent alerts into categories/i)
+    expect(root).toHaveTextContent(
+      'Suggest categories through a separate recent-history request using the vehicle, severity, and rule filters supplied to this panel. The inbox or archive view and exact workspace date bounds do not filter this request; it uses its own lookback window (7 days by default). Review the proposal before applying its rule IDs as an inbox filter; this does not save categories or archive notifications.',
+    )
     // Badge label passed as "Helix"; its visible text is exactly "Helix".
     expect(screen.getByText('Helix')).toBeInTheDocument()
 
@@ -336,7 +338,7 @@ describe('AIInboxAutoCategorization — typed proposal capture + Apply hand-off'
       { category: 'tire', count: 7, rule_ids: [5, 7] },
     ]
 
-    installSSEFetch(
+    const calls = installSSEFetch(
       categorizeStream(categories, {
         delta: 'Battery and tire dominate the 7-day window.',
       }),
@@ -357,6 +359,7 @@ describe('AIInboxAutoCategorization — typed proposal capture + Apply hand-off'
     // The chip surfaces both the category label and its descriptive count.
     expect(screen.getByTestId(bucketTestId('battery'))).toHaveTextContent('battery')
     expect(screen.getByTestId(bucketTestId('battery'))).toHaveTextContent('18')
+    expect(onApplyCategories).not.toHaveBeenCalled()
 
     const apply = screen.getByRole('button', { name: APPLY })
     await waitFor(() => expect(apply).toBeEnabled())
@@ -367,6 +370,61 @@ describe('AIInboxAutoCategorization — typed proposal capture + Apply hand-off'
 
     expect(onApplyCategories).toHaveBeenCalledTimes(1)
     expect(onApplyCategories).toHaveBeenCalledWith([3, 5, 7])
+    // Apply is a local filter hand-off, not another network write.
+    expect(calls).toHaveLength(1)
+  })
+
+  describe('AIInboxAutoCategorization — neutral preview and native actions', () => {
+    it('keeps a confirmed zero distinct from unknown counts without auto-applying', async () => {
+      enableFeature()
+      const onApply = vi.fn()
+      installSSEFetch(categorizeStream([
+        { category: 'zero', count: 0, rule_ids: [7] },
+        { category: 'unknown', count: null, rule_ids: [8] },
+        { category: 'missing', rule_ids: [9] },
+      ]))
+      render(<AIInboxAutoCategorization onApplyCategories={onApply} />)
+      await act(async () => {
+        fireEvent.click(screen.getByRole('button', { name: SUGGEST }))
+      })
+      await waitFor(() => {
+        expect(screen.getByTestId(bucketTestId('zero'))).toHaveTextContent('0')
+      })
+      expect(screen.queryByTestId(bucketTestId('unknown'))).not.toBeInTheDocument()
+      expect(screen.queryByTestId(bucketTestId('missing'))).not.toBeInTheDocument()
+      expect(onApply).not.toHaveBeenCalled()
+      expect(screen.getByRole('button', { name: APPLY })).toBeEnabled()
+    })
+
+    it('preserves full long RTL category text and keyboard filter application', async () => {
+      enableFeature()
+      const user = userEvent.setup()
+      const onApply = vi.fn()
+      const category = 'تنبيهات'.repeat(80)
+      const calls = installSSEFetch(categorizeStream([
+        { category, count: 0, rule_ids: [4] },
+      ]))
+      render(
+        <div dir="rtl">
+          <AIInboxAutoCategorization onApplyCategories={onApply} />
+        </div>,
+      )
+      const suggest = screen.getByRole('button', { name: SUGGEST })
+      suggest.focus()
+      await user.keyboard('{Enter}')
+      const bucket = await screen.findByTestId(bucketTestId(category))
+      expect(bucket).toHaveTextContent(category)
+      expect(bucket).toHaveClass('max-w-full', 'min-w-0')
+      expect(screen.getByText(category)).toHaveClass('[overflow-wrap:anywhere]')
+      expect(onApply).not.toHaveBeenCalled()
+      const apply = screen.getByRole('button', { name: APPLY })
+      await waitFor(() => expect(apply).toBeEnabled())
+      apply.focus()
+      expect(apply).toHaveFocus()
+      await user.keyboard(' ')
+      expect(onApply).toHaveBeenCalledExactlyOnceWith([4])
+      expect(calls).toHaveLength(1)
+    })
   })
 
   it('keeps Apply disabled and inert when no bucket carries rule_ids', async () => {

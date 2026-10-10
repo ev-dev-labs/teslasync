@@ -102,6 +102,14 @@ describe('WidgetChartSummary — stats + chart layout', () => {
 });
 
 describe('WidgetChartSummary — null safety (hardening)', () => {
+  it('shows unknown rather than a non-finite value or a misleading unit', () => {
+    render(<WidgetChartSummary stats={[{ label: 'Range', value: Infinity, unit: 'km' }]} chart={chartNode} />);
+    expect(screen.getByText('—')).toBeInTheDocument();
+    expect(screen.queryByText('Infinity')).not.toBeInTheDocument();
+    expect(screen.queryByText('km')).not.toBeInTheDocument();
+    expect(screen.getByTestId('chart')).toBeInTheDocument();
+  });
+
   it('renders an em-dash for a nullish value while preserving a real 0', () => {
     const stats: ChartSummaryStat[] = [
       { label: 'Missing', value: undefined as unknown as number },

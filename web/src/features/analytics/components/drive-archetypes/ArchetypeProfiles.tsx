@@ -2,20 +2,21 @@ import { Fingerprint } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { AlertBanner } from '@/components/feedback';
+import { LayoutCard } from '@/components/layout';
 import {
   Badge,
-  GlassPanel,
   MetricLabel,
-  PanelTitle,
+  Table,
   Text,
 } from '@/components/ui';
-import { fmtInt, fmtPercent } from '@/lib/numberFormat';
+
 import { ArchetypeSectionBody } from './ArchetypeSectionBody';
 import { archetypeIdentity, archetypeLabel } from './labels';
 import type {
   ArchetypeDisplay,
   ArchetypeSectionProps,
 } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface ArchetypeProfilesProps extends ArchetypeSectionProps {
   display: ArchetypeDisplay;
@@ -26,15 +27,15 @@ export function ArchetypeProfiles({
   state,
   display,
 }: ArchetypeProfilesProps) {
+  const { fmtPercent, fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
 
   return (
     <section data-testid="drive-archetypes-profiles">
-      <GlassPanel className="p-4 sm:p-5">
-        <PanelTitle className="flex items-center gap-2">
-          <Fingerprint className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />
-          {t('archetypes.profiles.title', 'Detailed archetype profiles')}
-        </PanelTitle>
+      <LayoutCard
+        title={t('archetypes.profiles.title', 'Detailed archetype profiles')}
+        actions={<Fingerprint className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />}
+      >
         <Text as="p" variant="caption" className="mb-4 mt-1">
           {t(
             'archetypes.profiles.subtitle',
@@ -80,7 +81,7 @@ export function ArchetypeProfiles({
                           '{{count}} drives · {{share}} membership',
                           {
                             count: cluster.size,
-                            share: fmtPercent(cluster.share * 100, 1),
+                            share: fmtPercent(cluster.share * 100),
                           },
                         )}
                       </Text>
@@ -89,14 +90,16 @@ export function ArchetypeProfiles({
                       {archetypeLabel(t, cluster.label)}
                     </Badge>
                   </div>
-                  <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+                  <Table className="mt-4" aria-label={archetypeIdentity(t, cluster.index, cluster.label)}>
+                    <tbody>
                     {metrics.map(([label, value]) => (
-                      <div key={label}>
-                        <MetricLabel>{label}</MetricLabel>
-                        <Text as="p" variant="bodySm" className="mt-1">{value}</Text>
-                      </div>
+                      <tr key={label}>
+                        <th scope="row"><MetricLabel>{label}</MetricLabel></th>
+                        <td className="text-right"><Text as="p" variant="bodySm">{value}</Text></td>
+                      </tr>
                     ))}
-                  </div>
+                    </tbody>
+                  </Table>
                   <div className="mt-4 border-t border-[var(--border-subtle)] pt-3">
                     <Text as="p" variant="caption">
                       {t(
@@ -121,7 +124,7 @@ export function ArchetypeProfiles({
             })}
           </ul>
         </ArchetypeSectionBody>
-      </GlassPanel>
+      </LayoutCard>
     </section>
   );
 }

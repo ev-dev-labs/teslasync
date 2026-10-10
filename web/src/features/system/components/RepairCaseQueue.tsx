@@ -110,6 +110,7 @@ export function RepairCaseQueue({
           ) : null}
           <DataTable
             tableId="data-repair:cases"
+            enableValueFilters={false}
             columns={columns}
             data={cases}
             keyExtractor={(item) => item.id}

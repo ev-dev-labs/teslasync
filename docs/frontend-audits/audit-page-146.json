@@ -1,0 +1,265 @@
+{
+  "item": "audit-page-146",
+  "page": "web\\src\\features\\notifications\\pages\\AuditLogPage.tsx",
+  "routes": ["/notifications/audit"],
+  "purpose": "Dedicated searchable view of recent system-wide audit entries, formerly presented on the admin page.",
+  "primaryGoal": "Inspect recent changes by time, action, resource and details; search loaded entries and export matching loaded rows.",
+  "dataSources": [
+    {
+      "hook": "useAuditLogs",
+      "file": "web\\src\\api\\hooks\\useAdmin.ts",
+      "line": 270,
+      "endpoints": [{"method": "GET", "path": "/system/audit", "wirePath": "/api/v1/system/audit", "router": "internal\\api\\router.go:4352,4383"}],
+      "ownership": "System audit backend; admin-wide, not per-user notifications. Query key ['audit-logs']; queryFn forwards AbortSignal; select safeArray. No page-supplied limit, offset, date or vehicle scope; inherited cache/retry policies were not inspected.",
+      "response": "internal\\api\\audit\\log_handler.go:26-50 reads id, ts, actor, action, entity_type, entity_id, detail, descending ts with a capped limit. internal\\models\\system\\system.go:326-334 defines exact JSON tags. Frontend AuditLogEntry instead expects createdAt/resource/details and a string id.",
+      "knownLimits": "Backend accepts limit capped at 200; this handler does not use offset or date bounds. UI pagination and search are local to fetched rows, not full audit history. Query failure returns HTTP 200 [] and scan failures skip rows."
+    },
+    {
+      "hook": "useFilteredList / SearchInput",
+      "file": "web\\src\\hooks\\useFilteredList.ts",
+      "line": 24,
+      "endpoints": [],
+      "ownership": "Client-side case-insensitive trimmed substring search over action/resource/details; nullish data becomes []. Search state is component-local. SearchInput buffers typing for 250ms and persists recent searches under historyScope='audit'."
+    },
+    {
+      "hook": "useDataState",
+      "file": "web\\src\\hooks\\useDataState.ts",
+      "line": 30,
+      "endpoints": [],
+      "ownership": "Shared trust adapter; fatalError only replaces no-data failures, retained refresh errors remain visible beside StaleRefreshWarning. Page does not provide a max-age or historical provenance override."
+    },
+    {
+      "hook": "formatDateTime",
+      "file": "web\\src\\lib\\dateFormat.ts",
+      "line": 55,
+      "endpoints": [],
+      "ownership": "Display-only central formatter. Current caller supplies no locale/timezone overrides, so browser locale/timezone applies; invalid or missing timestamps become an em dash. No physical SI values are present in the audited page."
+    }
+  ],
+  "components": [
+    {"name": "PageLayout", "owner": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx", "line": 9, "role": "Existing PageContainer adapter with full-width min-w-0 container; no replacement page-layout engine required."},
+    {"name": "GlassPanel / PanelTitle / Text / Button", "owner": "web\\src\\components\\ui (category barrel)", "role": "Surface, typography and retry primitives; page consumes category imports."},
+    {"name": "DataTable", "owner": "web\\src\\components\\ui\\DataTable.tsx", "line": 185, "role": "Canonical persistent table, local pagination, visible-column CSV/JSON export, mobile column allow-list and horizontal scrolling."},
+    {"name": "SearchInput / FilterBar / ActiveFilterChips", "owner": "web\\src\\components\\forms", "role": "Shared debounced search/history, wrapping filter cluster and announced filter removal; no new filter composite needed."},
+    {"name": "Skeleton / StaleRefreshWarning", "owner": "web\\src\\components\\feedback", "role": "Initial placeholder and retained-data warning/retry."},
+    {"name": "FadeIn", "owner": "web\\src\\components\\motion\\FadeIn.tsx", "line": 24, "role": "Existing motion-preference-aware entrance; reduced initial=false source present, runtime not exercised."}
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\notifications\\pages\\AuditLogPage.tsx",
+      "line": 104,
+      "rule": "MDC-026 / mission sections 23-24",
+      "detail": "Page hand-composes alert text/retry and plain-text empty/no-match states while shared feedback primitives already exist. This audit does not establish duplication with another production page.",
+      "fix": "Reuse existing QueryError/EmptyState where their contracts preserve error detail, retry, search-reset and current persistent section; do not add AuditErrorCard or another empty-state implementation.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "responsive": {
+    "status": "unverified; source inspection only",
+    "sourceEvidence": [
+      "AuditLogPage.tsx:93 uses fixed p-6 panel spacing; search at 125 is w-full then sm:w-72.",
+      "FilterBar.tsx:29-33 wraps controls; time/details render whitespace and break-word handling at AuditLogPage.tsx:58,77.",
+      "AuditLogPage.tsx:150 keeps all four columns in mobileColumns; DataTable.tsx:237-248 documents horizontal-scroll strategy, not a card transform.",
+      "DataTable.tsx:505 enables mobile adapter only when mobilePresentation is provided; this page supplies none. No information-loss column hiding is requested by the caller."
+    ],
+    "findings": [],
+    "requiredViewports": [320,375,390,430,768,1024,1280,1440,1920,2560],
+    "requiredAcceptance": ["Narrow allocated container", "Long unbroken resource/details strings", "RTL", "200% text", "Open history and table column/export menus", "Scrollable table without page-level overflow"],
+    "risk": "Four retained columns and p-6 reduce usable space at 320px. Do not declare overflow or target-size failure without mounted measurement; preserve every field through the existing table pipeline."
+  },
+  "accessibility": {
+    "status": "keyboard, focus, screen-reader, contrast and touch targets unverified",
+    "sourceEvidence": [
+      "AuditLogPage.tsx:95,107 hides decorative icons; fatal error Text has role=alert at 106.",
+      "SearchInput.tsx:244-270 supplies a persistent accessible name from ariaLabel/placeholder and a history combobox keyboard model; no unnamed-search finding.",
+      "ActiveFilterChips.tsx:141-162 supplies removal announcements and Backspace/Delete removal.",
+      "DataTable.tsx:923-930 falls back to stable tableId when no caption/name is supplied."
+    ],
+    "findings": [
+      {
+        "file": "web\\src\\features\\notifications\\pages\\AuditLogPage.tsx",
+        "line": 148,
+        "rule": "MDC-040 / MDC-044",
+        "detail": "The table supplies no localized caption/name, so its accessible name falls back to the machine persistence key 'audit-logs' (DataTable.tsx:929-930). It is named, but not with the localized visible context.",
+        "fix": "Provide a localized existing DataTable caption/name without changing tableId, exportFilename or persistence keys.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\components\\forms\\SearchInput.tsx",
+        "line": 318,
+        "rule": "MDC-040",
+        "detail": "History-entry selection buttons remove focus outlines and provide hover/active styling but no explicit focus-visible treatment in their own class list. The active index is changed by input arrow keys or mouse enter, not a button focus handler; actual composed focus visibility is unverified.",
+        "fix": "Shared owner should verify tab-focus visibility on history options and use the canonical focus token if needed, preserving combobox navigation, removal, selection and return-to-input behavior.",
+        "owner": "shared",
+        "confidence": "medium"
+      }
+    ]
+  },
+  "states": {
+    "initialLoading": "Five h-8 skeleton rows at page:99-103 while no retained data and query.isLoading.",
+    "empty": "Localized no-entries text at 162-165; panel/title remain mounted.",
+    "noMatches": "Localized no-match text at 156-159; search and clear chips remain available.",
+    "fatalError": "Localized error with technical message and retry at 104-116; no destructive action.",
+    "refreshError": "Retained data remains; StaleRefreshWarning at 91 supplies source-local retry and polite status. Empty retained arrays also count as data in shared trust derivation.",
+    "offline": "Retained paused queries are explained by StaleRefreshWarning; no-data paused queries have a source-confirmed misleading empty fallback risk.",
+    "findings": [
+      {
+        "file": "web\\src\\features\\notifications\\pages\\AuditLogPage.tsx",
+        "line": 37,
+        "rule": "MDC-026 / mission section 25",
+        "detail": "The initial branch tests query.isLoading, not trust status initial. A pending paused/offline query has no retained data, no fatalError and isLoading=false; StaleRefreshWarning returns null without data (StaleRefreshWarning.tsx:64), then page:162 says 'No audit entries found' although nothing has resolved.",
+        "fix": "Use existing trust/state presentation for initial unavailable/offline versus resolved-empty, preserve retained rows and retry, and do not convert unknown into an empty audit history.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "internal\\api\\audit\\log_handler.go",
+        "line": 35,
+        "rule": "MDC-026 / MDC-045",
+        "detail": "Database query failure is encoded as successful [] at 35-38; scan errors are silently skipped at 45-47. The page cannot distinguish unavailable or incomplete data from true empty/success through the current response contract.",
+        "fix": "Report to integration/backend owner for an explicit trustworthy unavailable/partial contract; preserve early-install graceful degradation and do not invent frontend recovery evidence or treat [] as proof of no events.",
+        "owner": "integration",
+        "confidence": "high"
+      }
+    ]
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\notifications\\pages\\AuditLogPage.tsx",
+      "line": 95,
+      "rule": "MDC-010 / MDC-012 / mission section 5",
+      "detail": "Decorative clock explicitly uses text-neon-cyan, making neutral historical section chrome a saturated accent with no state meaning.",
+      "fix": "Use existing muted/secondary theme-relative icon token; retain icon, aria-hidden, title and saved theme choices. Do not introduce a new palette.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\notifications\\pages\\AuditLogPage.tsx",
+      "line": 106,
+      "rule": "MDC-012 / MDC-025",
+      "detail": "Fatal-error text hardcodes text-rose-300 instead of current theme-relative error presentation. This is semantic error color but actual light/dark composed contrast is unmeasured.",
+      "fix": "Reuse current semantic error tokens/feedback primitive, keeping visible message, role=alert and retry.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\features\\notifications\\pages\\AuditLogPage.tsx",
+      "line": 59,
+      "rule": "MDC-002 / MDC-045 / API response type validation",
+      "detail": "Canonical backend JSON has ts/entity_type/detail (system.go:328,331,333), while page reads createdAt/resource/details at 59,71,78 and searches resource/details at 43. useAdmin.ts:273 merely types request as AuditLogEntry[]; safeArray does not map fields. camelCaseKeys in resilience.ts:26-40 aliases snake_case only, so it cannot manufacture these different names. Source predicts missing time/resource/details and search failures for actual endpoint rows; runtime not exercised. Backend id is int64, frontend interface types string.",
+      "fix": "Integration owner should align the existing shared AuditLogEntry and hook/page with canonical response fields, keep nullable detail and entity ID semantics, and retain all four display/search/export capabilities without adding legacy dual-shape adapters or changing raw cache/wire values.",
+      "owner": "integration",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\notifications\\pages\\AuditLogPage.tsx",
+      "line": 157,
+      "rule": "MDC-023 / MDC-046",
+      "detail": "DataTable is conditionally unmounted on no search matches. Its page-local controller state is destroyed while chips/search remain; preserved tableId storage does not necessarily preserve all transient pagination state. No-match feedback has no direct action, though clear chips/input already supply recovery.",
+      "fix": "Prefer existing table emptyMessage/empty presentation or shared source-local empty state with clear search; verify intended pagination reset before changing behavior. Retain visible search/chips, table persistence and loaded-row export scope.",
+      "owner": "page",
+      "confidence": "medium"
+    }
+  ],
+  "priority": {
+    "level": "P1",
+    "reason": "Canonical response mismatch can erase three of four audit fields and defeat search; unknown/offline and backend-error-as-empty semantics affect operator trust. Visual cleanup is secondary.",
+    "order": ["Canonical field/schema integration", "Initial offline versus true empty", "Backend unavailable/partial evidence", "Neutral decorative palette and semantic error presentation", "Localized table name", "Focused responsive/keyboard/runtime acceptance"]
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "Canonical audit-entry data contract",
+      "existingOwnerFile": "web\\src\\types\\admin.ts; web\\src\\api\\hooks\\useAdmin.ts",
+      "propsVariantsStates": "Typed numeric id, ts, actor, action, entity_type, optional entity_id/detail matching backend tags; cancellation, safeArray, query key and inherited policies unchanged. Explicit display/search/export mapping rather than alternate wire shape.",
+      "usedBy": ["Assigned AuditLogPage useAuditLogs consumer; other callers not inventoried"],
+      "dependsOn": ["internal\\models\\system\\system.go:326-334", "internal\\api\\audit\\log_handler.go:26-50", "Existing request/camelCaseKeys contract"],
+      "owner": "integration",
+      "confidence": "high"
+    },
+    {
+      "name": "Audit unavailable/partial response semantics",
+      "existingOwnerFile": "internal\\api\\audit\\log_handler.go",
+      "propsVariantsStates": "Distinguish valid empty, database unavailable and skipped/partial rows through an agreed existing error/trust protocol; do not fabricate full-history totals or filters.",
+      "usedBy": ["Assigned /notifications/audit system-wide list"],
+      "dependsOn": ["Early-install graceful degradation requirement", "Existing HTTP error and DataState contracts"],
+      "owner": "integration",
+      "confidence": "high"
+    },
+    {
+      "name": "SearchInput history option keyboard-focus verification",
+      "existingOwnerFile": "web\\src\\components\\forms\\SearchInput.tsx",
+      "propsVariantsStates": "Existing historyScope, controlled value/onChange and debounce APIs; tab-focused option, arrow-active option, remove/clear, Escape and returned input focus must retain canonical focus-visible treatment.",
+      "usedBy": ["Assigned AuditLogPage historyScope='audit'; other history consumers not inventoried"],
+      "dependsOn": ["Shared Input/focus tokens", "Existing combobox/history keyboard behavior"],
+      "owner": "shared",
+      "confidence": "medium"
+    }
+  ],
+  "competingImplementations": {
+    "found": ["Local fatal-error and empty/no-match composition overlaps existing feedback responsibilities; not evidence for a new composite."],
+    "reuse": ["PageLayout, DataTable, shared search/filter/chips, trust warning, date formatting and FadeIn are canonical existing owners."],
+    "notEstablished": "No application-wide duplicate inventory or comparison with the distinct admin AuditLogPage was performed."
+  },
+  "preservation": {
+    "sourceHash": "7D6A4DA7240E1BB2301317741E6EE028E04B675B2773F408FCAA8F97EEFF650D",
+    "sourceHashAlgorithm": "SHA256",
+    "sourceHashScope": "Exact root page bytes: web\\src\\features\\notifications\\pages\\AuditLogPage.tsx",
+    "currentLineCount": 174,
+    "sectionNames": ["Page title/subtitle", "Source trust warning", "Recent activity panel", "Search and active filters", "Four-column audit table and loaded-row export", "Loading/fatal/empty/no-match presentation"],
+    "sectionCount": 6,
+    "sectionCountMeaning": "Named capabilities, not six independent panels; one persistent GlassPanel.",
+    "rootGlassPanelCount": 1,
+    "rootChartContainerCount": 0,
+    "actions": ["Search action/resource/details", "Select/remove/clear recent searches", "Clear search chip/all chips", "Retry fatal load", "Retry retained refresh", "Table column/width/density controls from canonical table", "Local pagination default 50", "CSV/JSON export matching loaded rows and visible columns"],
+    "dataBehavior": ["System-wide recent descending-ts list, not notification deliveries or per-user activity", "Stable query key ['audit-logs'] and abort forwarding", "Retained-data warning must not replace usable rows", "Search is trimmed case-insensitive OR matching on three fields", "Table key String(log.id), tableId audit-logs and exportFilename audit-logs", "All four fields retained on mobile", "Optional text uses em dash, not zero", "Backend fields/raw metadata must not be discarded in schema correction", "No full-history export or server date filtering is currently claimed"],
+    "workspace": "App.tsx:255,632 mounts the exact assigned route. workspaceScope.ts:23-65 excludes this route from range; :95-107 disables vehicles for /notifications. Page consumes neither selector and creates no competing date/vehicle selector. Preserve fleet/system-wide recent-list scope; adding history bounds would require a separately owned backend integration, not cosmetic modernization.",
+    "si": "No physical measurements/converters here; opaque audit details remain source text and timestamps display through centralized formatter. Do not parse/rewrite detail units or raw cache values.",
+    "behaviorLimits": "Schema mismatch is a defect to correct with explicit preservation, not evidence that missing fields may be deleted. Source only; no mounted feature parity established."
+  },
+  "evidenceLimits": {
+    "runtime": "UNVERIFIED; no browser/API endpoint exercised.",
+    "visual": "UNVERIFIED; no screenshots, viewport, theme, contrast, forced-colors, RTL or text-zoom exercise.",
+    "keyboard": "UNVERIFIED; source wiring only.",
+    "validation": "No Git, source/shared/queue edits, production mutations, full build, lint, TypeScript or test runs. The audit skill script was read but not run because it includes project TypeScript and this assignment permits read-only source checks only.",
+    "sourceChecks": {"command": "Get-FileHash root page -Algorithm SHA256; Get-Content root page line count; regex counts over exact root source", "exitCode": 0, "output": ["SHA256: 7D6A4DA7240E1BB2301317741E6EE028E04B675B2773F408FCAA8F97EEFF650D", "Lines: 174", "style= : 0", "raw button/input/textarea/select/table : 0", "direct recharts/react-leaflet/framer-motion imports : 0", "text-neon- : 1", "GlassPanel : 1", "ChartContainer : 0"]},
+    "scope": "Only assigned mounted page and needed dependency excerpts inspected; shared implementation findings are reporting-only, not change authorization. Backend query policy/auth middleware and all other consumers were not exhaustively audited.",
+    "ownedFiles": ["docs\\frontend-audits\\audit-page-146.json", ".agent-status\\audit-page-146.txt"]
+  },
+  "filesRead": [
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-mission.md",
+    "docs\\frontend-audits\\audit-page-144.json",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\notifications\\pages\\AuditLogPage.tsx",
+    "web\\src\\App.tsx",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\api\\hooks\\useAdmin.ts",
+    "web\\src\\types\\admin.ts",
+    "web\\src\\hooks\\useFilteredList.ts",
+    "web\\src\\hooks\\useDataState.ts",
+    "web\\src\\api\\dataState.ts",
+    "web\\src\\components\\feedback\\StaleRefreshWarning.tsx",
+    "web\\src\\components\\forms\\SearchInput.tsx",
+    "web\\src\\components\\forms\\FilterBar.tsx",
+    "web\\src\\components\\forms\\ActiveFilterChips.tsx",
+    "web\\src\\components\\ui\\DataTable.tsx",
+    "web\\src\\components\\motion\\FadeIn.tsx",
+    "web\\src\\components\\layout\\index.ts",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\lib\\dateFormat.ts",
+    "web\\src\\lib\\safeArray.ts",
+    "web\\src\\lib\\searchHistory.ts",
+    "web\\src\\api\\client.ts",
+    "web\\src\\lib\\resilience.ts",
+    "internal\\api\\router.go",
+    "internal\\api\\audit.go",
+    "internal\\api\\datarepair\\audit.go",
+    "internal\\api\\audit\\log_handler.go",
+    "internal\\models\\system\\system.go"
+  ]
+}

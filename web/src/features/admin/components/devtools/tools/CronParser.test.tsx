@@ -58,10 +58,10 @@ const IDLE_HINT = 'Enter a cron expression or pick a preset to preview its sched
 const INVALID_MSG = 'Enter all 5 cron fields: minute, hour, day, month, weekday'
 const NO_RUNS_MSG = 'No upcoming runs in the next year'
 
-const PRESETS = ['Every Minute', 'Every Hour', 'Every Day', 'Every Week', 'Every Month']
+const PRESETS = ['Every minute', 'Every hour', 'Every day', 'Every week', 'Every month']
 
 function typeExpr(value: string) {
-  fireEvent.change(screen.getByLabelText('Cron Expression'), { target: { value } })
+  fireEvent.change(screen.getByLabelText('Cron expression'), { target: { value } })
 }
 
 beforeEach(() => {
@@ -77,10 +77,10 @@ describe('CronParserTool', () => {
   it('renders the tool chrome: title, description, labelled input, and every preset button', () => {
     render(<CronParserTool />)
 
-    expect(screen.getByText('Cron Parser')).toBeInTheDocument()
-    expect(screen.getByText('Cron Parser Desc')).toBeInTheDocument()
+    expect(screen.getByText('Cron parser')).toBeInTheDocument()
+    expect(screen.getByText('Cron parser desc')).toBeInTheDocument()
     // The input is wired to a real <label>, so it's reachable by accessible name.
-    expect(screen.getByLabelText('Cron Expression')).toBeInTheDocument()
+    expect(screen.getByLabelText('Cron expression')).toBeInTheDocument()
 
     for (const label of PRESETS) {
       expect(screen.getByRole('button', { name: label })).toBeInTheDocument()
@@ -93,7 +93,7 @@ describe('CronParserTool', () => {
     expect(screen.getByText(IDLE_HINT)).toBeInTheDocument()
     // None of the settled states leak into idle…
     expect(screen.queryByText('Description')).toBeNull()
-    expect(screen.queryByText('Next Runs')).toBeNull()
+    expect(screen.queryByText('Next runs')).toBeNull()
     expect(screen.queryByRole('alert')).toBeNull()
     // …and the 5-field guard keeps the pure helpers untouched on empty input.
     expect(mockedDescribe).not.toHaveBeenCalled()
@@ -109,7 +109,7 @@ describe('CronParserTool', () => {
     expect(alert).toHaveTextContent(INVALID_MSG)
     // Invalid input renders neither a description nor a run list…
     expect(screen.queryByText('Description')).toBeNull()
-    expect(screen.queryByText('Next Runs')).toBeNull()
+    expect(screen.queryByText('Next runs')).toBeNull()
     // …and the idle hint is replaced by the alert.
     expect(screen.queryByText(IDLE_HINT)).toBeNull()
     // The guard means the helpers stay untouched for a 3-field string.
@@ -123,13 +123,13 @@ describe('CronParserTool', () => {
 
     // Real describeCron renders the "Every minute" summary under its label.
     expect(screen.getByText('Description')).toBeInTheDocument()
-    expect(screen.getByText('Every minute')).toBeInTheDocument()
+    expect(screen.getAllByText('Every minute')).toHaveLength(2)
     // describeCron / getNextCronRuns were invoked with the parsed 5-field array.
     const fields = ['*', '*', '*', '*', '*']
     expect(mockedDescribe).toHaveBeenCalledWith(fields)
     expect(mockedNextRuns).toHaveBeenCalledWith(fields, 5)
     // Exactly five run rows, badge-numbered 1..5 (clock-independent count).
-    expect(screen.getByText('Next Runs')).toBeInTheDocument()
+    expect(screen.getByText('Next runs')).toBeInTheDocument()
     expect(screen.getAllByText(/^[1-5]$/)).toHaveLength(5)
     expect(screen.getByText('1')).toBeInTheDocument()
     expect(screen.getByText('5')).toBeInTheDocument()
@@ -139,10 +139,10 @@ describe('CronParserTool', () => {
   it('fills the input and drives the parsed output when a preset is clicked', () => {
     render(<CronParserTool />)
 
-    fireEvent.click(screen.getByRole('button', { name: 'Every Hour' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Every hour' }))
 
     // The controlled input reflects the preset's cron string…
-    expect(screen.getByLabelText('Cron Expression')).toHaveValue('0 * * * *')
+    expect(screen.getByLabelText('Cron expression')).toHaveValue('0 * * * *')
     // …and the real describeCron summary for "0 * * * *" is shown.
     expect(screen.getByText('At minute 0 of every hour')).toBeInTheDocument()
     expect(mockedNextRuns).toHaveBeenCalledWith(['0', '*', '*', '*', '*'], 5)

@@ -65,12 +65,14 @@ export function ChangesPanel({ rows, loading, scopedKey }: ChangesPanelProps) {
     () => [
       {
         key: 'changed_at',
+        filterValue: (row) => row.changed_at ?? null,
         header: t('admin.flags.audit.cols.changedAt', 'Changed at'),
         visibleOnMobile: true,
         render: (row) => <TimeStamp value={row.changed_at} format="absolute" />,
       },
       {
         key: 'actor',
+        filterValue: (row) => row.actor || null,
         header: t('admin.flags.audit.cols.actor', 'Actor'),
         visibleOnMobile: true,
         render: (row) => (
@@ -81,6 +83,7 @@ export function ChangesPanel({ rows, loading, scopedKey }: ChangesPanelProps) {
       },
       {
         key: 'flag_key',
+        filterValue: (row) => row.flag_key ?? null,
         header: t('admin.flags.audit.cols.flagKey', 'Key'),
         render: (row) => (
           <Text as="span" mono size="xs">{row.flag_key}</Text>
@@ -88,6 +91,7 @@ export function ChangesPanel({ rows, loading, scopedKey }: ChangesPanelProps) {
       },
       {
         key: 'operation',
+        filterValue: (row) => row.operation ?? null,
         header: t('admin.flags.audit.cols.operation', 'Op'),
         visibleOnMobile: true,
         render: (row) => (
@@ -116,6 +120,7 @@ export function ChangesPanel({ rows, loading, scopedKey }: ChangesPanelProps) {
       },
       {
         key: 'reason',
+        filterValue: (row) => row.reason || null,
         header: t('admin.flags.audit.cols.reason', 'Reason'),
         render: (row) => (
           <Text as="span" size="xs" color="muted">
@@ -154,6 +159,7 @@ export function ChangesPanel({ rows, loading, scopedKey }: ChangesPanelProps) {
       name="flag-changes"
       columns={columns}
       data={safeRows}
+      enableValueFilters
       keyExtractor={(row) => row.id}
       emptyMessage={
         loading

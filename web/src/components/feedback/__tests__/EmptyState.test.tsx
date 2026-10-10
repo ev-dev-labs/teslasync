@@ -114,4 +114,75 @@ describe('EmptyState', () => {
     fireEvent.click(screen.getByRole('button', { name: /other path/i }));
     expect(onSecondary).toHaveBeenCalledTimes(1);
   });
+
+  it('prefers secondary navigation without changing the primary imperative action', () => {
+    const onPrimary = vi.fn();
+    const onSecondary = vi.fn();
+    renderInRouter(
+      <EmptyState
+        message="Nothing yet"
+        action={{ label: 'Primary action', onClick: onPrimary }}
+        secondaryAction={{ label: 'Secondary action', onClick: onSecondary }}
+        secondaryActionTo={{ label: 'Secondary destination', to: '/target' }}
+      />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Primary action' }));
+    expect(onPrimary).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole('button', { name: 'Secondary action' })).not.toBeInTheDocument();
+    const link = screen.getByRole('link', { name: 'Secondary destination' });
+    expect(link).toHaveAttribute('href', '/target');
+    fireEvent.click(link);
+    expect(screen.getByTestId('target-page')).toBeInTheDocument();
+    expect(onSecondary).not.toHaveBeenCalled();
+  });
+
+  it('keeps imperative defaults enabled, not busy, and native form submission intact', () => {
+    const onClick = vi.fn();
+    const onSubmit = vi.fn((event: React.FormEvent<HTMLFormElement>) => event.preventDefault());
+    renderInRouter(
+      <form onSubmit={onSubmit}>
+        <EmptyState
+          message="Nothing yet"
+          action={{ label: 'Primary action', onClick }}
+          secondaryAction={{ label: 'Secondary action', onClick }}
+        />
+      </form>,
+    );
+    for (const name of ['Primary action', 'Secondary action']) {
+      const button = screen.getByRole('button', { name });
+      expect(button).toBeEnabled();
+      expect(button).not.toHaveAttribute('aria-busy');
+      expect(button).not.toHaveAttribute('type');
+      fireEvent.click(button);
+    }
+    expect(onClick).toHaveBeenCalledTimes(2);
+    expect(onSubmit).toHaveBeenCalledTimes(2);
+  });
+
+  it('retains long RTL content and action labels with bounded wrapping classes', () => {
+    const label = 'الإجراء الطويل '.repeat(12).trim();
+    const message = 'سجل_غير_متوفر'.repeat(30);
+    renderInRouter(
+      <div dir="rtl">
+        <EmptyState
+          title={label}
+          message={message}
+          description={message + ' المزيد'}
+          action={{ label, onClick: vi.fn() }}
+          secondaryActionTo={{ label: label + ' رابط', to: '/target' }}
+          className="owned-empty-state"
+        />
+      </div>,
+    );
+    expect(screen.getByRole('status')).toHaveClass('owned-empty-state', 'min-w-0');
+    expect(screen.getByRole('heading')).toHaveTextContent(label.trim());
+    expect(screen.getByText(message)).toHaveClass('break-words');
+    expect(screen.getByText(message + ' المزيد')).toHaveClass('break-words');
+    const button = screen.getByRole('button', { name: label.trim() });
+    expect(button).toHaveClass('max-w-full', 'whitespace-normal', 'min-h-11');
+    const link = screen.getByRole('link', { name: (label + ' رابط').trim() });
+    expect(link).toHaveClass('max-w-full', 'break-words', 'min-h-11');
+    expect(link).toHaveAttribute('href', '/target');
+    expect(button.parentElement).toHaveClass('flex-wrap', 'max-w-full');
+  });
 });

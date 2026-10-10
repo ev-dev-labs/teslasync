@@ -1,0 +1,279 @@
+{
+  "item": "audit-page-193",
+  "page": "web\\src\\features\\system\\pages\\RoadmapPage.tsx",
+  "routes": ["/roadmap"],
+  "purpose": "Read-only bundled product roadmap grouped into completed, active-focus, next and future initiatives.",
+  "primaryGoal": "Understand shipped capabilities and potential priorities without treating the roadmap as a release schedule or live deployment evidence.",
+  "dataSources": [
+    {
+      "name": "Bundled roadmapItems and phase metadata",
+      "hook": null,
+      "endpoints": [],
+      "owner": "web\\src\\features\\system\\pages\\RoadmapPage.tsx",
+      "lines": [49, 339],
+      "behavior": "17 static initiatives, 98 feature bullets, phases ordered done/current/next/future. useMemo groups entries and derives six count metrics; no roadmap query, mutation, export, workspace vehicle or date filter.",
+      "derivationLines": [521, 543]
+    },
+    {
+      "name": "Formatting preferences, not roadmap availability",
+      "hook": "SystemSummaryBrief -> useOperationalMetrics -> useUnits/useFormatting -> app-level useSettings",
+      "endpoints": [{"method": "GET", "path": "/settings", "file": "web\\src\\api\\settings.ts", "line": 24}],
+      "owner": "web\\src\\hooks\\useSettings.ts",
+      "lines": [81, 90],
+      "behavior": "Shared settings query ['settings'], five-minute staleTime, refetchOnMount always, retry 1. Summary counts use existing operational metric formatting; settings availability is independent of the static roadmap.",
+      "backendVerification": "Not inspected: no backend capability or runtime endpoint acceptance claimed."
+    },
+    {
+      "name": "Localized labels and document title",
+      "hook": "useTranslation; usePageTitle",
+      "endpoints": [],
+      "owner": "web\\src\\features\\system\\pages\\RoadmapPage.tsx",
+      "lines": [518, 519],
+      "behavior": "Phase labels, descriptions, overview and newer entry IDs use translation keys with fallbacks; the first five entries bypass translation. usePageTitle sets and restores the title through titleStore."
+    }
+  ],
+  "components": [
+    {"name": "PageLayout", "kind": "layout", "owner": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx", "line": 9, "usageLines": [546, 576], "props": ["title", "subtitle", "children"], "behavior": "Existing PageContainer adapter; full-width min-w-0 container, vertical gap-6; do not replace shell or introduce selectors."},
+    {"name": "SystemSummaryBrief / OperationalBrief", "kind": "feature composite / shared composite", "owner": "web\\src\\features\\system\\components\\operationalbrief-all\\SystemSummaryBrief.tsx", "line": 21, "sharedOwner": "web\\src\\components\\data-display\\OperationalBrief.tsx", "usageLines": [551, 565], "props": ["title", "description", "scope", "available", "metrics"], "behavior": "Six formatted source count metrics, source availability and observation-time caveat, description/provenance, Review details and shared Drawer."},
+    {"name": "CompositionRail", "kind": "shared composite", "owner": "web\\src\\components\\data-display\\CompositionRail.tsx", "line": 37, "usageLines": [440, 453], "props": ["size=md", "summary", "segments[].id", "segments[].label", "segments[].detail", "segments[].widthPercent", "segments[].hideFromTrack", "segments[].fillClassName"], "behavior": "Proportional track plus readable legend; caller owns denominator. Zero-count phases hide only fill, not legend."},
+    {"name": "GlassPanel, IconBox, SectionTitle, PanelTitle, Text", "kind": "UI primitives", "owner": "web\\src\\components\\ui", "usageLines": [370, 379, 382, 383, 423, 426, 481, 484, 488, 495], "inspectedOwners": ["web\\src\\components\\ui\\IconBox.tsx", "web\\src\\components\\ui\\Typography.tsx"], "behavior": "Existing surfaces, typography and icon boxes; headings resolve to h2/h3. IconBox uses neonColorMap bg/ring/text."},
+    {"name": "FadeIn, StaggerContainer, StaggerItem", "kind": "shared motion", "owner": "web\\src\\components\\motion", "usageLines": [478, 500, 502, 550, 568], "behavior": "Existing motion-preference integration; FadeIn suppresses delay and entrance under reduce, StaggerContainer collapses staggering, StaggerItem uses final hidden geometry when reduced."},
+    {"name": "EmptyState", "kind": "shared feedback", "owner": "web\\src\\components\\feedback", "usageLines": [438, 497], "behavior": "Localized empty-total and empty-phase explanations; no API recovery action is appropriate for bundled source entries."},
+    {"name": "PhaseChip, RoadmapCard, DeliveryProgress, PhaseSection", "kind": "local domain renderers", "owner": "web\\src\\features\\system\\pages\\RoadmapPage.tsx", "lines": [347, 361, 406, 463], "behavior": "One exported page with four private helpers; domain grouping is appropriate locally, chip chrome overlaps Badge."}
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\system\\pages\\RoadmapPage.tsx",
+      "line": 347,
+      "rule": "MDC-025 / mission 0.5-6",
+      "detail": "PhaseChip rebuilds rounded status-pill, decorative dot and text; the phase-count pill repeats similar bg/ring/text chrome at lines 485-486. Existing Badge provides semantic variants, dot, sizes and forced-colors border.",
+      "fix": "Reuse Badge with explicit phase-to-existing-variant mapping and localized label/count; keep phase semantics, icons and zero counts. No universal roadmap status registry.",
+      "owner": "page",
+      "confidence": "high",
+      "existingOwner": "web\\src\\components\\ui\\Badge.tsx:35-72"
+    }
+  ],
+  "responsive": {
+    "sourceBehavior": [
+      {"file": "web\\src\\features\\system\\pages\\RoadmapPage.tsx", "line": 500, "detail": "Cards reflow 1 column -> md 2 -> xl 3 -> 3xl 4; every phase and feature list remains rendered."},
+      {"file": "web\\src\\features\\system\\pages\\RoadmapPage.tsx", "line": 424, "detail": "Progress stacks below lg; lg introduces row layout and a fixed lg:w-56 label block; rail retains min-w-0."},
+      {"file": "web\\src\\features\\system\\pages\\RoadmapPage.tsx", "line": 480, "detail": "Phase header wraps; explanation uses w-full until sm."},
+      {"file": "web\\src\\components\\data-display\\OperationalBrief.tsx", "line": 172, "detail": "Compact metric grid uses 1 column, sm 2, md 3 and 1920px 6; Review details is retained."}
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\system\\pages\\RoadmapPage.tsx",
+        "line": 376,
+        "rule": "MDC-043 / mission 15",
+        "detail": "Card heading row has no wrap/stack breakpoint; a shrink-0 phase chip competes with a shrink-0 icon box and long translated title/description inside overflow-hidden. Narrow allocated containers may squeeze text; source risk, not observed clipping.",
+        "fix": "At compact container sizes stack/reflow chip and title while retaining full descriptions, feature bullets and phase identification; validate all ten specified widths and long translations.",
+        "owner": "page",
+        "confidence": "medium"
+      }
+    ],
+    "viewportAcceptance": "Unverified at 320/375/390/430/768/1024/1280/1440/1920/2560; no browser or screenshot exercised."
+  },
+  "accessibility": {
+    "sourceStrengths": [
+      "PhaseSection uses localized section aria-label at page line 479; SectionTitle and PanelTitle use h2/h3 in Typography.tsx:29-33,107-108.",
+      "Feature lists use ul/li at page lines 389-396; decorative phase dots, icons and blur are aria-hidden.",
+      "CompositionRail.tsx:59-61 supplies role=img and caller-localized summary; lines 81-105 retain a readable list legend and details for every phase.",
+      "OperationalBrief.tsx:127 and 155-166 supplies named overview section and native shared Review details button; Drawer open/onClose at lines 234-240.",
+      "Shared motion preference support exists in inspected motion files; runtime reduced-motion behavior is not claimed."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\system\\pages\\RoadmapPage.tsx",
+        "line": 352,
+        "rule": "MDC-012 / MDC-040",
+        "detail": "Phase/count text and repeated status icons use fixed toned color classes from neonColorMap rather than light/dark semantic variants. Contrast on actual surfaces is unknown; this is not a measured AA failure.",
+        "fix": "Use existing semantic Badge and theme-aware foreground tokens; measure effective text/UI contrast in light/dark/custom/forced-colors modes.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ],
+    "keyboardFocusScreenReaderContrastTouch": "Unverified; source inspection does not establish drawer focus trap/restoration, keyboard usability, target reachability or contrast."
+  },
+  "states": {
+    "dataKind": "Bundled editorial source, not remote roadmap state.",
+    "initialLoading": "No roadmap fetch. Summary renders available immediately; shared formatting preferences may fetch independently.",
+    "empty": "DeliveryProgress handles total===0 at lines 436-438; each PhaseSection handles empty list at lines 494-497 while retaining the phase heading. Current static source has entries in all phases.",
+    "error": "No roadmap network error/retry or mutation. Shared settings fallback/query states are not roadmap failure.",
+    "offlineStaleUnknown": "Bundled content remains source-renderable; summary explicitly says not live deployment/release telemetry at line 554. SystemSummaryBrief.tsx:27 defaults observation time to unknown; no roadmap freshness timestamp is invented.",
+    "partial": "Independent phase bands are not gated behind remote data.",
+    "disabled": "No page-owned disabled business action.",
+    "runtimeAcceptance": "All state render behavior unexercised; only branches and source wiring inspected.",
+    "issues": [
+      {
+        "file": "web\\src\\features\\system\\pages\\RoadmapPage.tsx",
+        "line": 59,
+        "rule": "MDC-026 / mission 0.3",
+        "detail": "Completed-phase description claims availability 'in your deployment today', although roadmap is bundled and summary correctly disclaims live deployment evidence. This text cannot be treated as verified deployment telemetry.",
+        "fix": "Preserve completed-phase content and shipped capabilities, but reconcile deployment wording with the existing static-source caveat; do not add fabricated deployment status or remove initiatives.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ]
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\system\\pages\\RoadmapPage.tsx",
+      "line": 372,
+      "rule": "MDC-010 / mission 43",
+      "detail": "Every RoadmapCard adds an absolute 128px neon-colored opacity-10 blur-3xl circle. One source decoration replicates across 17 cards; it carries no data and is explicitly aria-hidden.",
+      "fix": "Remove this ambient glow, retaining all card text, icons, phase labels and sections; use existing neutral GlassPanel surface/elevation.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\system\\pages\\RoadmapPage.tsx",
+      "line": 449,
+      "rule": "MDC-010 / MDC-034 / mission 43",
+      "detail": "Progress fill uses saturated neonColorMap dot utilities, as do chip dots and count/icon accents (lines 348-352,364,379,475-486). tokens.ts:21-25 confirms green/cyan/purple/amber neon backgrounds/rings and fixed toned text. The glow field from the token map is not consumed here.",
+      "fix": "Retain all four labelled phases and proportional data, but choose restrained existing semantic/theme tokens through current component props; avoid neon escalation or new palette/engine.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\features\\system\\pages\\RoadmapPage.tsx",
+      "line": 382,
+      "rule": "MDC-044",
+      "detail": "Titles/descriptions/features translate only when item.id exists. The first five entries at lines 95-175 have no id, so five titles, five descriptions and 43 feature bullets remain hardcoded English through lines 382-393.",
+      "fix": "Retain every original string and order; assign stable localization identities and coordinate canonical catalog additions with the catalog owner. Do not derive IDs from translated titles or duplicate catalogs.",
+      "owner": "integration",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\hooks\\useSettings.ts",
+      "line": 84,
+      "rule": "MDC-002 query cancellation",
+      "detail": "Indirect summary preference query uses queryFn:getSettings; api/settings.ts:24 has no signal parameter. The separate api/hooks/useSettings.ts:30 forwards signal, but it is not the hook used by this page's formatting bridge.",
+      "fix": "Shared settings owner should reconcile the existing preference bridge and cancellation without changing query key, retry/stale policy, raw settings, defaults or subscriptions. Do not migrate settings globally in this page task.",
+      "owner": "shared",
+      "confidence": "high"
+    }
+  ],
+  "priority": {
+    "level": "medium",
+    "rationale": "Preservation-friendly static page already uses shared layout, operational summary, composition rail and motion; confirmed glow/neon and localization gaps are bounded. Compact heading layout and actual accessibility need runtime review, not a claimed failure."
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "Canonical roadmap localization coverage",
+      "existingOwnerFile": "web\\src\\locales (canonical catalog owner; exact language files not inspected)",
+      "file": "web\\src\\features\\system\\pages\\RoadmapPage.tsx",
+      "line": 382,
+      "rule": "MDC-044",
+      "detail": "First five bundled entries bypass localization.",
+      "fix": "Coordinate canonical title/description/feature keys with stable page entry IDs; preserve all 43 existing bullets and fallback strings.",
+      "owner": "integration",
+      "confidence": "high",
+      "propsVariantsStates": ["roadmap.entries.<stable-id>.title", "roadmap.entries.<stable-id>.description", "roadmap.entries.<stable-id>.features.<index>", "English fallbacks; long-label/RTL coverage"],
+      "usedBy": ["web\\src\\features\\system\\pages\\RoadmapPage.tsx"],
+      "dependsOn": ["Catalog owner coordination", "Stable nonlocalized IDs for first five entries"]
+    },
+    {
+      "name": "Existing settings preference bridge cancellation",
+      "existingOwnerFile": "web\\src\\hooks\\useSettings.ts",
+      "file": "web\\src\\hooks\\useSettings.ts",
+      "line": 84,
+      "rule": "MDC-002",
+      "detail": "Formatting bridge uses a signal-less settings read, unlike the existing API hook.",
+      "fix": "Forward the QueryFunctionContext abort signal through existing getSettings/request contract; preserve all current preference behavior and policies.",
+      "owner": "shared",
+      "confidence": "high",
+      "propsVariantsStates": ["GET /settings AbortSignal", "queryKey=['settings']", "staleTime=300000", "refetchOnMount=always", "retry=1", "retained/default preference semantics"],
+      "usedBy": ["web\\src\\hooks\\useOperationalMetrics.tsx", "web\\src\\hooks\\useUnits.ts", "web\\src\\hooks\\useFormatting.ts"],
+      "dependsOn": ["web\\src\\api\\settings.ts", "Existing request cancellation contract; not inspected beyond call site"]
+    }
+  ],
+  "competingImplementations": [
+    {"name": "Phase status chrome", "local": "web\\src\\features\\system\\pages\\RoadmapPage.tsx:347-355,485-487", "existing": "web\\src\\components\\ui\\Badge.tsx:35-72", "decision": "Reuse Badge; keep domain phase mapping local. No shared new component required."},
+    {"name": "Settings reads", "active": "web\\src\\hooks\\useSettings.ts:81-88 -> web\\src\\api\\settings.ts:24", "comparison": "web\\src\\api\\hooks\\useSettings.ts:27-30", "decision": "Shared-owner reconciliation only; do not change the page's settings defaults/policies to obtain cancellation."},
+    {"name": "Progress/layout/summary", "decision": "Already existing CompositionRail, PageLayout and SystemSummaryBrief/OperationalBrief. Reuse their existing props; no competing rail, stats grid, overlay or layout proposal."}
+  ],
+  "preservation": {
+    "sourceHash": "A0D1CD7FA7B2170C303D03F93E35B0200CA96ADAE6199CC9DD35ACBAD75CF482",
+    "hashAlgorithm": "SHA-256",
+    "currentLineCount": 578,
+    "sectionCount": 6,
+    "sections": [
+      {"name": "Roadmap overview", "line": 551, "metricCount": 6},
+      {"name": "Delivery progress", "line": 426, "segmentCount": 4},
+      {"name": "Completed", "line": 52, "initiativeCount": 10, "featureCount": 70},
+      {"name": "Active focus", "line": 61, "initiativeCount": 1, "featureCount": 4},
+      {"name": "Up next", "line": 70, "initiativeCount": 2, "featureCount": 8},
+      {"name": "Future", "line": 79, "initiativeCount": 4, "featureCount": 16}
+    ],
+    "sourceComponentCounts": {"GlassPanelCallSites": 3, "ChartContainerCallSites": 0, "localPrivateRenderers": 4, "initiativeCards": 17},
+    "initiatives": [
+      {"title": "Core Platform", "line": 96, "phase": "done", "featureCount": 11},
+      {"title": "Smart Notifications", "line": 115, "phase": "done", "featureCount": 9},
+      {"title": "Intelligence & Observability", "line": 132, "phase": "done", "featureCount": 8},
+      {"title": "Fleet Telemetry", "line": 148, "phase": "done", "featureCount": 7},
+      {"title": "Premium UI & Design System", "line": 163, "phase": "done", "featureCount": 8},
+      {"title": "Vehicle History & Physics", "line": 180, "phase": "done", "featureCount": 6},
+      {"title": "Charging & Energy Intelligence", "line": 195, "phase": "done", "featureCount": 6},
+      {"title": "Journeys & Ownership", "line": 210, "phase": "done", "featureCount": 5},
+      {"title": "Helix & Alert Studio", "line": 224, "phase": "done", "featureCount": 5},
+      {"title": "Operator Experience", "line": 238, "phase": "done", "featureCount": 5},
+      {"title": "Reliability & Data Trust", "line": 252, "phase": "current", "featureCount": 4},
+      {"title": "Helix Quality & Cost Controls", "line": 265, "phase": "next", "featureCount": 4},
+      {"title": "Recovery & Documentation", "line": 278, "phase": "next", "featureCount": 4},
+      {"title": "Energy Ecosystem", "line": 291, "phase": "future", "featureCount": 4},
+      {"title": "Privacy-preserving Fleet Insights", "line": 304, "phase": "future", "featureCount": 4},
+      {"title": "Interoperability", "line": 317, "phase": "future", "featureCount": 4},
+      {"title": "Accessible Operator Workflows", "line": 330, "phase": "future", "featureCount": 4}
+    ],
+    "actions": [
+      {"name": "Review details", "file": "web\\src\\components\\data-display\\OperationalBrief.tsx", "line": 161, "behavior": "Open existing Drawer containing narrative, six metrics and Attention information; preserve source scope, observation caveat and provenance."},
+      {"name": "Close overview details", "file": "web\\src\\components\\data-display\\OperationalBrief.tsx", "line": 236, "behavior": "Existing Drawer onClose resets detailsOpen; shared focus/Escape behavior not exercised."}
+    ],
+    "dataBehavior": [
+      "Keep 17 initiative titles/descriptions/icons, all 98 feature strings and original within-phase ordering; listed capabilities are editorial content, not audited implementation claims.",
+      "Keep counts done=10,current=1,next=2,future=4,total=17,featuresShipped=70; counts are initiative-based, not feature completion percentages.",
+      "Keep progress widths count/total*100, every phase legend/detail, zero-fill omission and empty-total fallback.",
+      "Keep all four phase descriptions, roadmap subtitle, no-release-schedule note, bundled-source scope, unknown observation-time caveat and six raw count metrics.",
+      "Retain localized text/fallbacks, document-title cleanup, shared formatting preferences and reduced-motion integration; no physical SI measurements are transformed by this page.",
+      "No page mutation, navigation link, export, chart zoom, selection or persistence setting exists to remove; overview Drawer is a real inherited action."
+    ]
+  },
+  "evidenceLimits": {
+    "auditType": "Phase0 source-only; no source edits, Git, full-repository lint/build or runtime testing.",
+    "unverified": ["Mounted /roadmap routing (route supplied by assignment)", "Visual appearance and screenshots", "All viewport widths and allocated containers", "Keyboard/focus restoration/screen reader", "Contrast and forced-colors", "Offline/stale runtime behavior", "Reduced-motion runtime behavior", "Backend route implementation/response", "Actual deployment availability of bundled completed initiatives"],
+    "targetedSourceCounts": {"staticInlineStyle": 0, "rawControls": 0, "directLibraryImport": 0, "fixedWhite": 0, "glowDecoration": 1, "glassPanelCallSites": 3, "chartContainerCallSites": 0},
+    "countEvidence": "Executed inline Node fs.readFileSync plus matchAll against only the assigned page; exit 0. Extracted 17 entries / 98 bullets / 70 completed bullets. Counts are source occurrences, not rendered acceptance.",
+    "failedProbe": "Initial PowerShell regex-count command failed with ParserError (exit 1, unexpected token ']'); replaced by successful bounded inline Node source count.",
+    "notRun": "audit.sh was read but not executed because its mandatory project TypeScript step exceeds the assignment's source-only/no-full-validation scope. No tsc, lint, build or tests claimed.",
+    "dependencyReadLimits": "Only imported presentation/formatting owners and bounded directly related settings comparison inspected. GlassPanel/EmptyState/category-barrel internals, locale catalogs, shared overlay internals, settings backend and metric formatter internals remain uninspected.",
+    "ownedFiles": ["docs\\frontend-audits\\audit-page-193.json", ".agent-status\\audit-page-193.txt"]
+  },
+  "filesRead": [
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\system\\pages\\RoadmapPage.tsx",
+    "web\\src\\features\\system\\components\\operationalbrief-all\\SystemSummaryBrief.tsx",
+    "web\\src\\components\\data-display\\CompositionRail.tsx",
+    "web\\src\\components\\data-display\\OperationalBrief.tsx",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\ui\\IconBox.tsx",
+    "web\\src\\components\\ui\\Badge.tsx",
+    "web\\src\\components\\ui\\Typography.tsx",
+    "web\\src\\components\\motion\\FadeIn.tsx",
+    "web\\src\\components\\motion\\StaggerContainer.tsx",
+    "web\\src\\components\\motion\\StaggerItem.tsx",
+    "web\\src\\hooks\\usePageTitle.ts",
+    "web\\src\\hooks\\useOperationalMetrics.tsx",
+    "web\\src\\hooks\\useUnits.ts",
+    "web\\src\\hooks\\useFormatting.ts",
+    "web\\src\\hooks\\useSettings.ts",
+    "web\\src\\api\\settings.ts",
+    "web\\src\\api\\hooks\\useSettings.ts",
+    "web\\src\\lib\\tokens.ts",
+    "web\\src\\types\\admin.ts"
+  ]
+}

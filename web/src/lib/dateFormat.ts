@@ -21,7 +21,7 @@
  * like "NaN:NaN" or "Invalid Date". Callers should NOT pre-guard.
  */
 
-import { isFiniteNumber } from './numberFormat'
+import { fmtNumber, isFiniteNumber } from './numberFormat'
 
 /** Universal placeholder returned by every formatter for unrenderable input. */
 const FALLBACK = '—'
@@ -307,27 +307,27 @@ export function formatRelativeTime(iso: string | Date | null | undefined, opts?:
   return d.toLocaleDateString(intlLocale(opts), intlOpts({ month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }, opts))
 }
 
-/** Millisecond duration for short activity entries: "250ms", "1.5s", or "—" for nullish/non-finite values. */
+/** Measured duration uses selected precision; nullish/non-finite values remain unknown. */
 export function formatDurationMs(ms: number | null | undefined): string {
   if (!isFiniteNumber(ms)) return FALLBACK
-  if (ms < 1000) return `${ms}ms`
-  return `${(ms / 1000).toFixed(1)}s`
+  if (ms < 1000) return `${fmtNumber(ms)}ms`
+  return `${fmtNumber(ms / 1000)}s`
 }
 
-/** Millisecond duration with decimal minute rollover: "250ms", "1.5s", "2.5m". */
+/** Measured duration with decimal minute rollover and selected precision. */
 export function formatDurationMsCompact(ms: number | null | undefined): string {
   if (!isFiniteNumber(ms)) return FALLBACK
-  if (ms < 1000) return `${ms}ms`
-  if (ms < 60_000) return `${(ms / 1000).toFixed(1)}s`
-  return `${(ms / 60_000).toFixed(1)}m`
+  if (ms < 1000) return `${fmtNumber(ms)}ms`
+  if (ms < 60_000) return `${fmtNumber(ms / 1000)}s`
+  return `${fmtNumber(ms / 60_000)}m`
 }
 
 /** Millisecond duration with minute/second output for longer jobs: "1m 05s". */
 export function formatDurationMsLong(ms: number | null | undefined): string {
   if (!isFiniteNumber(ms) || ms <= 0) return FALLBACK
-  if (ms < 1000) return `${ms}ms`
+  if (ms < 1000) return `${fmtNumber(ms)}ms`
   const sec = ms / 1000
-  if (sec < 60) return `${sec.toFixed(1)}s`
+  if (sec < 60) return `${fmtNumber(sec)}s`
   const min = Math.floor(sec / 60)
   return `${min}m ${formatRoundedInt(sec % 60)}s`
 }

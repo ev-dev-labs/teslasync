@@ -19,6 +19,7 @@ import { civilDateInTimeZone } from '@/lib/dateRange'
 import { getWorkspaceQuickRangePresets, isWorkspaceRangePresetAvailable } from '@/lib/workspaceScope'
 import { formatDate, formatDateShort } from '@/lib/dateFormat'
 import { cn } from '@/lib/cn'
+import { typography } from '@/lib/tokens'
 import { Icons } from '@/lib/icons'
 import {
   WORKSPACE_DENSITY_EVENT,
@@ -156,6 +157,7 @@ export function WorkspaceContextControl({
       type="button"
       variant="ghost"
       size="sm"
+      wrapLabel
       aria-pressed={!showCustom && range.presetId === id}
       aria-label={id === '24h' ? t('date.preset.last24h', 'Last 24 hours') : undefined}
       onClick={() => {
@@ -163,9 +165,10 @@ export function WorkspaceContextControl({
         range.setPreset(id)
       }}
       className={cn(
-        'min-h-11 min-w-0 rounded-lg border px-2 text-xs transition-colors',
+        'min-h-11 min-w-0 rounded-shape-sm border px-2',
+        typography.role.label,
         !showCustom && range.presetId === id
-          ? 'border-[var(--theme-primary)] bg-[var(--surface-1)] font-semibold text-[var(--text-primary)] shadow-e1'
+          ? 'border-[var(--border-strong)] bg-[var(--surface-3)] text-[var(--text-primary)]'
           : 'border-[var(--border-default)] bg-[var(--surface-1)] text-[var(--text-secondary)] hover:bg-[var(--surface-3)]',
       )}
     >
@@ -206,20 +209,21 @@ export function WorkspaceContextControl({
         title={triggerLabel}
         onClick={toggle}
         className={cn(
-          'min-w-0 max-w-40 justify-start gap-1.5 text-[var(--text-secondary)] hover:text-[var(--text-primary)]',
+          'min-h-11 min-w-0 max-w-40 justify-start gap-1.5 text-[var(--text-secondary)] hover:text-[var(--text-primary)] md:min-h-9',
           variant === 'status' &&
             'h-5 min-h-0 gap-1.5 rounded px-1.5 py-0 text-xs',
+          variant === 'status' && 'md:min-h-0',
           className,
         )}
       >
         {!iconOnly && (
           <>
-            <span className="min-w-0 flex-1 truncate text-left">
+            <span className="min-w-0 flex-1 truncate text-start">
               {visibleContextLabel}
             </span>
             <Icons.expand
               className={cn(
-                'h-3.5 w-3.5 shrink-0 transition-transform',
+                'h-3.5 w-3.5 shrink-0 transition-transform duration-fast motion-reduce:transition-none',
                 open && 'rotate-180',
               )}
               aria-hidden="true"
@@ -236,11 +240,11 @@ export function WorkspaceContextControl({
         align="end"
         zIndex={70}
         ariaLabel={t('workspace.analysis.title', 'View settings')}
-        className="w-[min(92vw,27rem)] max-h-[min(80vh,38rem)] overflow-y-auto rounded-shape-xl border-[var(--panel-border)] bg-[var(--panel-bg)] p-0 shadow-e3"
+        className="w-workspace-context max-h-workspace-context overflow-y-auto rounded-shape-xl border-[var(--panel-border)] bg-[var(--panel-bg)] p-0 shadow-e3"
       >
         <div className="flex items-center justify-between gap-3 border-b border-[var(--border-default)] px-5 py-3">
-          <PanelTitle className="flex items-center gap-2 text-base">
-            <Icons.preferences className="h-4 w-4 text-[var(--theme-primary)]" aria-hidden="true" />
+          <PanelTitle className="flex min-w-0 items-center gap-2">
+            <Icons.preferences className="h-4 w-4 shrink-0 text-[var(--text-secondary)]" aria-hidden="true" />
             {t('workspace.analysis.title', 'View settings')}
           </PanelTitle>
           <div className="flex items-center gap-1">
@@ -248,6 +252,7 @@ export function WorkspaceContextControl({
               type="button"
               size="sm"
               variant="ghost"
+              wrapLabel
               disabled={!settings || saveSettings.isPending}
               onClick={() => {
                 range.setPreset(preferences.defaultAnalysisRange)
@@ -255,7 +260,7 @@ export function WorkspaceContextControl({
                 updateDensity('comfortable')
                 setShowCustom(false)
               }}
-              className="text-xs font-medium text-[var(--text-muted)]"
+              className={cn('min-h-11', typography.role.label)}
             >
               {t('workspace.analysis.reset', 'Reset')}
             </Button>
@@ -265,7 +270,7 @@ export function WorkspaceContextControl({
               variant="ghost"
               aria-label={t('workspace.analysis.close', 'Close view settings')}
               onClick={close}
-              className="min-h-9 min-w-9 p-0 text-[var(--text-muted)]"
+              className="min-h-11 min-w-11 shrink-0 p-0 text-[var(--text-muted)]"
             >
               <Icons.close className="h-4 w-4" aria-hidden />
             </Button>
@@ -275,10 +280,10 @@ export function WorkspaceContextControl({
         <div className="space-y-4 px-5 py-4">
           <div className="space-y-2.5">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <Caption className="font-semibold uppercase tracking-wide">
+              <Text variant="label">
                 {t('workspace.analysis.range', 'Date range')}
-              </Caption>
-              <Caption className="rounded-full border border-[var(--border-default)] px-2 py-1 text-[var(--text-secondary)]">
+              </Text>
+              <Caption className="min-w-0 break-words rounded-shape-sm border border-[var(--border-default)] px-2 py-1 text-[var(--text-secondary)]">
                 {t(
                   'workspace.analysis.activeRange',
                   '{{start}} to {{end}}',
@@ -298,9 +303,9 @@ export function WorkspaceContextControl({
               {calendarRoute && (
                 <div role="group" aria-label={t('workspace.analysis.fullYear', 'Full year {{year}}', { year: String(selectedYear) })}
                   className={cn(
-                    'flex min-w-0 items-center rounded-lg border bg-[var(--surface-1)]',
+                    'flex min-w-0 items-center rounded-shape-sm border bg-[var(--surface-1)]',
                     !showCustom && fullYear != null
-                      ? 'border-[var(--theme-primary)] shadow-e1'
+                      ? 'border-[var(--border-strong)] bg-[var(--surface-3)]'
                       : 'border-[var(--border-default)]',
                   )}
                 >
@@ -322,12 +327,12 @@ export function WorkspaceContextControl({
                     aria-label={t('workspace.analysis.fullYear', 'Full year {{year}}', { year: String(selectedYear) })}
                     aria-pressed={!showCustom && fullYear != null}
                     onClick={() => applyYear(selectedYear)}
-                    className="flex min-h-11 min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-none px-0.5 text-[var(--text-primary)]"
+                    className="flex h-auto min-h-11 min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-none px-1 py-2 text-[var(--text-primary)]"
                   >
-                    <span className="text-2xs leading-none text-[var(--text-muted)]">
+                    <Caption className="w-full break-words whitespace-normal">
                       {t('workspace.analysis.fullYearLabel', 'Full year')}
-                    </span>
-                    <span className="text-sm font-semibold leading-none">{selectedYear}</span>
+                    </Caption>
+                    <Text variant="body" className="tabular-nums">{selectedYear}</Text>
                   </Button>
                   <Button
                     type="button"
@@ -348,12 +353,14 @@ export function WorkspaceContextControl({
                   type="button"
                   variant="ghost"
                   size="sm"
+                  wrapLabel
                   aria-pressed={showCustom || (!range.presetId && fullYear == null)}
                   onClick={() => setShowCustom(true)}
                   className={cn(
-                    'min-h-11 min-w-0 rounded-lg border px-2 text-xs transition-colors',
+                    'min-h-11 min-w-0 rounded-shape-sm border px-2',
+                    typography.role.label,
                     showCustom || (!range.presetId && fullYear == null)
-                      ? 'border-[var(--theme-primary)] bg-[var(--surface-1)] font-semibold text-[var(--text-primary)] shadow-e1'
+                      ? 'border-[var(--border-strong)] bg-[var(--surface-3)] text-[var(--text-primary)]'
                       : 'border-[var(--border-default)] bg-[var(--surface-1)] text-[var(--text-secondary)] hover:bg-[var(--surface-3)]',
                   )}
                 >
@@ -392,6 +399,7 @@ export function WorkspaceContextControl({
                   type="button"
                   size="sm"
                   variant="primary"
+                  wrapLabel
                   disabled={!validDraft}
                   onClick={() => {
                     range.setRange({ start: draftStart, end: draftEnd }, 'custom')
@@ -419,9 +427,9 @@ export function WorkspaceContextControl({
           </div>
 
           <div className="space-y-2 border-t border-[var(--border-default)] pt-4">
-            <Caption className="block font-semibold uppercase tracking-wide">
+            <Text variant="label" className="block">
               {t('workspace.analysis.density', 'Display density')}
-            </Caption>
+            </Text>
             <div role="group" aria-label={t('workspace.analysis.density', 'Display density')} className="grid grid-cols-3 gap-2">
               {(['compact', 'comfortable', 'spacious'] as const).map(option => (
                 <Button
@@ -429,21 +437,23 @@ export function WorkspaceContextControl({
                   type="button"
                   size="sm"
                   variant="ghost"
+                  wrapLabel
                   aria-pressed={density === option}
                   disabled={!settings || saveSettings.isPending}
                   onClick={() => updateDensity(option)}
                   className={cn(
-                    'flex h-auto min-h-20 min-w-0 flex-col gap-2 rounded-shape-lg border px-1 py-2 text-xs',
+                    'flex h-auto min-h-20 min-w-0 flex-col gap-2 rounded-shape-sm border px-1 py-2',
+                    typography.role.label,
                     density === option
-                      ? 'border-[var(--theme-primary)] bg-[var(--surface-2)] text-[var(--text-primary)] shadow-e1'
+                      ? 'border-[var(--border-strong)] bg-[var(--surface-3)] text-[var(--text-primary)]'
                       : 'border-[var(--border-default)] bg-[var(--surface-1)] text-[var(--text-secondary)]',
                   )}
                 >
                   <span aria-hidden className="flex h-8 w-full max-w-24 flex-col justify-center gap-1 rounded-shape-sm bg-[var(--surface-3)] px-2">
-                    <span className={cn('h-1 rounded-full bg-[var(--theme-primary)]', option === 'spacious' ? 'w-1/2' : 'w-4/5')} />
+                    <span className={cn('h-1 rounded-full bg-[var(--text-secondary)]', option === 'spacious' ? 'w-1/2' : 'w-4/5')} />
                     <span className={cn('h-1 rounded-full bg-[var(--border-strong)]', option === 'compact' ? 'w-3/5' : 'w-2/5')} />
                   </span>
-                  {t(`density.${option}`, option.charAt(0).toUpperCase() + option.slice(1))}
+                  {t(`density.${option}`, { comfortable: 'Comfortable', compact: 'Compact', spacious: 'Spacious' }[option])}
                 </Button>
               ))}
             </div>
@@ -455,7 +465,7 @@ export function WorkspaceContextControl({
                     : t('workspace.analysis.unavailableDensity', 'Display settings unavailable. Retry to change density.')}
                 </Text>
                 {!settingsLoading && (
-                  <Button type="button" size="sm" variant="ghost" onClick={() => void refetchSettings()}>
+                  <Button type="button" size="sm" variant="ghost" wrapLabel className="min-h-11" onClick={() => void refetchSettings()}>
                     {t('workspace.analysis.retry', 'Retry')}
                   </Button>
                 )}
@@ -466,7 +476,7 @@ export function WorkspaceContextControl({
 
         {range.compare && (
           <div className="border-t border-[var(--border-default)] bg-[var(--surface-2)] px-5 py-3">
-            <Caption className="text-cyan-700 dark:text-cyan-300">
+            <Caption>
               {t('workspace.analysis.comparisonActive', 'Comparison active: previous matching period')}
             </Caption>
           </div>

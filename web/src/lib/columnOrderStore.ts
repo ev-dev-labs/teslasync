@@ -151,8 +151,8 @@ export function readLegacyVisibleLayout(
  *      * Place keys in `layout.order` first (in that order, ignoring keys
  *        no longer present).
  *      * Append any remaining columns in source order so a brand-new
- *        column shows up at the end of the table without a manual
- *        intervention.
+ *        default-visible column shows up at the end of the table without
+ *        manual intervention. New opt-in columns remain hidden.
  *  - If the result would be empty (e.g. user hid everything via stored
  *    layout that's now stale), fall back to the default-visible set so
  *    the table never renders zero columns.
@@ -166,6 +166,11 @@ export function applyColumnLayout<C extends { key: string; defaultVisible?: bool
   }
   const knownKeys = new Set(columns.map((c) => c.key))
   const hiddenSet = new Set(layout.hidden.filter((k) => knownKeys.has(k)))
+  for (const column of columns) {
+    if (column.defaultVisible === false && !layout.order.includes(column.key)) {
+      hiddenSet.add(column.key)
+    }
+  }
   const orderedKeys: string[] = []
   const seen = new Set<string>()
   for (const k of layout.order) {

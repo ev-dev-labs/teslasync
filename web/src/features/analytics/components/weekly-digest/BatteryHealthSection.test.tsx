@@ -131,7 +131,7 @@ function renderSection(metrics: DigestMetrics, over: RenderOverrides = {}) {
 }
 
 function title(): HTMLElement {
-  return screen.getByRole('heading', { level: 3, name: 'Battery Health' });
+  return screen.getByRole('heading', { level: 3, name: 'Battery health' });
 }
 
 describe('BatteryHealthSection — populated', () => {
@@ -142,7 +142,7 @@ describe('BatteryHealthSection — populated', () => {
     // exactly the copy, not "battery Battery Health".
     const heading = title();
     expect(heading.tagName).toBe('H3');
-    expect(heading).toHaveAccessibleName('Battery Health');
+    expect(heading).toHaveAccessibleName('Battery health');
   });
 
   it('renders both battery pills with their labels and rounded SoC values', () => {
@@ -150,8 +150,8 @@ describe('BatteryHealthSection — populated', () => {
       makeMetrics({ chargingSessionCount: 12, batteryStart: 20, batteryEnd: 80, chargeEnergyAddedWh: 40_000 }),
     );
 
-    expect(screen.getByText('Avg Battery at Charge Start')).toBeInTheDocument();
-    expect(screen.getByText('Avg Battery at Charge End')).toBeInTheDocument();
+    expect(screen.getByText('Avg battery at charge start')).toBeInTheDocument();
+    expect(screen.getByText('Avg battery at charge end')).toBeInTheDocument();
     // BatteryPill renders `${fmtInt(level)}%` — level is Math.round(metric).
     expect(screen.getByText('20%')).toBeInTheDocument();
     expect(screen.getByText('80%')).toBeInTheDocument();
@@ -163,16 +163,16 @@ describe('BatteryHealthSection — populated', () => {
     );
 
     // Avg Charge Gain: fmtNumber(80 - 20, 1) → "60.0%".
-    expect(screen.getByText('60.0%')).toBeInTheDocument();
+    expect(screen.getByText('60.00%')).toBeInTheDocument();
     // Charge Sessions: fmtInt(12) → "12".
     expect(screen.getByText('12')).toBeInTheDocument();
     // Est. Range Added: fmtNumber(40 * 5.5, 0) km → "220 km".
-    expect(screen.getByText('220 km')).toBeInTheDocument();
+    expect(screen.getByText('220.00 km')).toBeInTheDocument();
 
     // Every stat/pill label is present exactly once.
-    expect(screen.getByText('Avg Charge Gain')).toBeInTheDocument();
-    expect(screen.getByText('Charge Sessions')).toBeInTheDocument();
-    expect(screen.getByText('Est. Range Added')).toBeInTheDocument();
+    expect(screen.getByText('Avg charge gain')).toBeInTheDocument();
+    expect(screen.getByText('Charge sessions')).toBeInTheDocument();
+    expect(screen.getByText('Est. range added')).toBeInTheDocument();
   });
 
   it('does not render the loading / error / empty bodies when data is present', () => {
@@ -180,7 +180,7 @@ describe('BatteryHealthSection — populated', () => {
       makeMetrics({ chargingSessionCount: 3, batteryStart: 50, batteryEnd: 70, chargeEnergyAddedWh: 10_000 }),
     );
 
-    expect(container.querySelector('.animate-pulse')).toBeNull();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).toBeNull();
     expect(screen.queryByText('Server error')).toBeNull();
     expect(
       screen.queryByText('No battery data is available for this week.'),
@@ -198,7 +198,7 @@ describe('BatteryHealthSection — computation & rounding', () => {
     expect(screen.getByText('55%')).toBeInTheDocument();
     expect(screen.getByText('90%')).toBeInTheDocument();
     // fmtNumber(90.4 - 54.6, 1) === "35.8%", NOT the rounded 90 − 55 = 35.
-    expect(screen.getByText('35.8%')).toBeInTheDocument();
+    expect(screen.getByText('35.80%')).toBeInTheDocument();
   });
 
   it('scales estimated range linearly with charge energy (× 5.5 km per unit)', () => {
@@ -206,7 +206,7 @@ describe('BatteryHealthSection — computation & rounding', () => {
       makeMetrics({ chargingSessionCount: 1, batteryStart: 10, batteryEnd: 20, chargeEnergyAddedWh: 100_000 }),
     );
     // 100 × 5.5 = 550, rounded to 0 dp.
-    expect(screen.getByText('550 km')).toBeInTheDocument();
+    expect(screen.getByText('550.00 km')).toBeInTheDocument();
   });
 
   it('groups a large session count through fmtInt (locale thousands separator)', () => {
@@ -222,11 +222,17 @@ describe('BatteryHealthSection — loading', () => {
       { isLoading: true },
     );
 
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
+    const skeleton = container.querySelector('div[aria-hidden="true"][style]');
+    expect(skeleton).toHaveClass('h-4', 'w-full', 'rounded', 'bg-[var(--skeleton-bg)]');
+    expect(skeleton).toHaveAttribute('aria-hidden', 'true');
+    expect(skeleton).toHaveStyle({ height: '200px' });
+    expect(container.querySelector('.animate-pulse')).toBeNull();
+    expect(screen.queryByText('No battery data is available for this week.')).toBeNull();
+    expect(screen.queryByRole('status')).toBeNull();
     expect(title()).toBeInTheDocument();
     // No pill / stat values leak through the skeleton.
     expect(screen.queryByText('20%')).toBeNull();
-    expect(screen.queryByText('Avg Charge Gain')).toBeNull();
+    expect(screen.queryByText('Avg charge gain')).toBeNull();
   });
 
   it('gives loading precedence over an error (skeleton wins, no QueryError)', () => {
@@ -236,7 +242,16 @@ describe('BatteryHealthSection — loading', () => {
       error: new ApiError('boom', 500),
     });
 
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
+    const skeleton = container.querySelector('div[aria-hidden="true"][style]');
+    expect(skeleton).toHaveClass('h-4', 'w-full', 'rounded', 'bg-[var(--skeleton-bg)]');
+    expect(skeleton).toHaveAttribute('aria-hidden', 'true');
+    expect(skeleton).toHaveStyle({ height: '200px' });
+    expect(container.querySelector('.animate-pulse')).toBeNull();
+    expect(title()).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).toBeNull();
+    expect(screen.queryByRole('status')).toBeNull();
+    expect(screen.queryByText('No battery data is available for this week.')).toBeNull();
+    expect(screen.queryByText('Avg charge gain')).toBeNull();
     expect(screen.queryByText('Server error')).toBeNull();
   });
 });
@@ -253,7 +268,7 @@ describe('BatteryHealthSection — error + retry', () => {
     // QueryError branches on ApiError.status → the 5xx "Server error" copy.
     expect(screen.getByText('Server error')).toBeInTheDocument();
     // The populated body is replaced, never rendered alongside the error.
-    expect(screen.queryByText('Avg Charge Gain')).toBeNull();
+    expect(screen.queryByText('Avg charge gain')).toBeNull();
 
     const retry = screen.getByRole('button', { name: 'Retry' });
     fireEvent.click(retry);
@@ -280,8 +295,8 @@ describe('BatteryHealthSection — empty state', () => {
 
     // Title stays; the pills/stats that would otherwise render are absent.
     expect(title()).toBeInTheDocument();
-    expect(screen.queryByText('Avg Battery at Charge Start')).toBeNull();
-    expect(screen.queryByText('Est. Range Added')).toBeNull();
+    expect(screen.queryByText('Avg battery at charge start')).toBeNull();
+    expect(screen.queryByText('Est. range added')).toBeNull();
   });
 
   it('treats a nullish session count as empty via the `?? 0` guard', () => {
@@ -294,7 +309,7 @@ describe('BatteryHealthSection — empty state', () => {
     expect(
       screen.getByText('No battery data is available for this week.'),
     ).toBeInTheDocument();
-    expect(screen.queryByText('Avg Charge Gain')).toBeNull();
+    expect(screen.queryByText('Avg charge gain')).toBeNull();
   });
 });
 
@@ -312,8 +327,8 @@ describe('BatteryHealthSection — null safety', () => {
     // Both pills collapse to "0%" (Math.round(0)), so there are two of them.
     expect(screen.getAllByText('0%')).toHaveLength(2);
     // Gain fmtNumber(0 - 0, 1) → "0.0%"; range fmtNumber(0 * 5.5, 0) → "0 km".
-    expect(screen.getByText('0.0%')).toBeInTheDocument();
-    expect(screen.getByText('0 km')).toBeInTheDocument();
+    expect(screen.getByText('0.00%')).toBeInTheDocument();
+    expect(screen.getByText('0.00 km')).toBeInTheDocument();
     // Session count still renders from the present field.
     expect(screen.getByText('5')).toBeInTheDocument();
   });

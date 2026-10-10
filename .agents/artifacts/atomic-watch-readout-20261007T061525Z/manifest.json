@@ -1,0 +1,29 @@
+{
+  "actualStartUTC": "2026-10-07T06:12:01.0577855Z",
+  "hardStopUTC": "2026-10-07T06:30:00Z",
+  "preservedUTC": "2026-10-07T06:15:25.721821+00:00",
+  "files": [
+    {
+      "source": "web\\src\\features\\dashboard\\widgets\\WatchSummaryWidget.tsx",
+      "currentCopy": ".agents\\artifacts\\atomic-watch-readout-20261007T061525Z\\web__src__features__dashboard__widgets__WatchSummaryWidget.tsx",
+      "currentSHA256": "8ce3c97ab994d3b20887417f3c881959950e2312fa573b8aae98ccb0e84ee5ec",
+      "copySHA256": "8ce3c97ab994d3b20887417f3c881959950e2312fa573b8aae98ccb0e84ee5ec",
+      "preimage": "C:\\Users\\AtulM\\.copilot\\session-state\\bba4960d-f516-4831-bda3-877640f907ce\\files\\operationalbrief-atomic-dispatch-preimage-20261007T0611\\web__src__features__dashboard__widgets__WatchSummaryWidget.tsx",
+      "preimageSHA256": "4f37288d5ab7c9da77806c6fdd4e373957cd5e4bc2079930dec84bf37c87eda5",
+      "originalLines": 208,
+      "currentLines": 218
+    },
+    {
+      "source": "web\\src\\features\\dashboard\\widgets\\WatchSummaryWidget.test.tsx",
+      "currentCopy": ".agents\\artifacts\\atomic-watch-readout-20261007T061525Z\\web__src__features__dashboard__widgets__WatchSummaryWidget.test.tsx",
+      "currentSHA256": "341007e05fa57e020aac3dc58aac0af2268c459c3c30dc241f96805990e3bea2",
+      "copySHA256": "341007e05fa57e020aac3dc58aac0af2268c459c3c30dc241f96805990e3bea2",
+      "preimage": "C:\\Users\\AtulM\\.copilot\\session-state\\bba4960d-f516-4831-bda3-877640f907ce\\files\\operationalbrief-atomic-dispatch-preimage-20261007T0611\\web__src__features__dashboard__widgets__WatchSummaryWidget.test.tsx",
+      "preimageSHA256": "121d8b0c233ef46cf00573814b1da7e4b326c1ead8dedf20c74b0a0aab4a6f7e",
+      "originalLines": 519,
+      "currentLines": 629
+    }
+  ],
+  "copiesMatchSource": true,
+  "scope": "Exclusive released WatchSummaryWidget source/test pair; source-only, no validation execution"
+}

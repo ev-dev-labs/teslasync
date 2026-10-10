@@ -9,8 +9,9 @@ import { AnimatedNumber } from '@/components/data-display/AnimatedNumber'
 import { TimeStamp } from '@/components/data-display'
 import { useUnits } from '@/hooks/useUnits'
 import { convertDistanceFromSI, convertEnergyFromSI } from '@/lib/unitConversion'
-import { fmtInt } from '@/lib/numberFormat'
+
 import type { Drive, ChargingSession } from '@/api/types'
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface RecentActivityProps {
   drives: Drive[] | undefined
@@ -18,6 +19,7 @@ interface RecentActivityProps {
 }
 
 export function RecentActivity({ drives, sessions }: RecentActivityProps) {
+  const { fmtInt, fmtNumber, precision: displayPrecision } = useNumberFormatting();
   const { t } = useTranslation()
   const { unitPrefs } = useUnits()
   return (
@@ -28,7 +30,7 @@ export function RecentActivity({ drives, sessions }: RecentActivityProps) {
           <div className="flex items-center justify-between mb-4">
             <h3 className="section-title flex items-center gap-2">
               <Route className="h-4 w-4 text-cyan-300" aria-hidden="true" />{' '}
-              {t('common.recentDrives', 'Recent Drives')}
+              {t('common.recentDrives', 'Recent drives')}
             </h3>
             <Link
               to="/drives"
@@ -52,7 +54,7 @@ export function RecentActivity({ drives, sessions }: RecentActivityProps) {
                     <p className="text-[var(--text-primary)] font-medium group-hover:text-cyan-300 transition-colors">
                       <AnimatedNumber
                         value={convertDistanceFromSI(d.distance_m ?? 0, unitPrefs.distance)}
-                        decimals={1}
+                        decimals={displayPrecision}
                         suffix={` ${unitPrefs.distance}`}
                       />
                     </p>
@@ -67,7 +69,7 @@ export function RecentActivity({ drives, sessions }: RecentActivityProps) {
                     />
                     {d.start_soc_pct != null && d.end_soc_pct != null && (
                       <span className="text-2xs text-[var(--text-muted)]">
-                        {d.start_soc_pct}% → {d.end_soc_pct}%
+                        {fmtNumber(d.start_soc_pct)}% → {fmtNumber(d.end_soc_pct)}%
                       </span>
                     )}
                   </div>
@@ -88,7 +90,7 @@ export function RecentActivity({ drives, sessions }: RecentActivityProps) {
           <div className="flex items-center justify-between mb-4">
             <h3 className="section-title flex items-center gap-2">
               <BatteryCharging className="h-4 w-4 text-emerald-300" aria-hidden="true" />{' '}
-              {t('common.recentCharges', 'Recent Charges')}
+              {t('common.recentCharges', 'Recent charges')}
             </h3>
             <Link
               to="/charging"
@@ -112,7 +114,7 @@ export function RecentActivity({ drives, sessions }: RecentActivityProps) {
                     <p className="text-[var(--text-primary)] font-medium group-hover:text-emerald-300 transition-colors">
                       <AnimatedNumber
                         value={convertEnergyFromSI(s.total_energy_added_wh ?? 0, 'kWh')}
-                        decimals={1}
+                        decimals={displayPrecision}
                         suffix=" kWh"
                       />
                     </p>

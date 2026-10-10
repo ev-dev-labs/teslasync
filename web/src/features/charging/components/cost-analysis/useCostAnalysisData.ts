@@ -208,10 +208,10 @@ export function useCostAnalysisData({
     const avgDuration =
       coreStats.count > 0 ? coreStats.totalDuration / coreStats.count : 0;
     const freeCount = sessions.filter(
-      (s) => !s.cost_decimal || s.cost_decimal === 0,
+      (s) => s.cost_decimal === 0,
     ).length;
     const freeEnergyWh = sessions
-      .filter((s) => !s.cost_decimal || s.cost_decimal === 0)
+      .filter((s) => s.cost_decimal === 0)
       .reduce((sum, s) => sum + (s.total_energy_added_wh ?? 0), 0);
     // freeEnergy is rendered as kWh by LifetimeSummary (fmtWithUnit(_, 'kWh')),
     // so it must be converted from the SI Wh sum like every other energy

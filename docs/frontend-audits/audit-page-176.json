@@ -1,0 +1,324 @@
+{
+  "item": "audit-page-176",
+  "page": "web\\src\\features\\settings\\pages\\TwoFactorAuthPage.tsx",
+  "routes": ["/account/2fa"],
+  "purpose": "Account-level TOTP status, enrollment, verification, one-time recovery-code reveal, regeneration and disable confirmation, accompanied by setup and recovery guidance.",
+  "primaryGoal": "Enable or manage the current account's second factor and safely save recovery codes without changing authentication, step-up, impersonation or credential boundaries.",
+  "dataSources": [
+    {
+      "hook": "useTOTPStatus",
+      "file": "web\\src\\api\\hooks\\useTOTP.ts",
+      "line": 79,
+      "endpoints": ["GET /api/v1/auth/totp"],
+      "sourceOwnership": "Per-user backend TOTP handler; current-account source, not vehicle or date-window data.",
+      "behavior": "Shared ['totp','status'] query observed by page and enrollment flow; signal forwarded; staleTime 30000; window-focus refetch disabled; AUTH_MODE_OPEN maps to the explicit open-mode union.",
+      "routeEvidence": "internal\\api\\router.go:3240,3277-3284",
+      "runtime": "unverified"
+    },
+    {
+      "hook": "useTOTPEnroll / useTOTPVerify / useTOTPRegenerateBackupCodes / useTOTPRevoke",
+      "file": "web\\src\\api\\hooks\\useTOTP.ts",
+      "line": 109,
+      "endpoints": [
+        "POST /api/v1/auth/totp/enroll",
+        "POST /api/v1/auth/totp/verify",
+        "POST /api/v1/auth/totp/backup-codes/regenerate",
+        "DELETE /api/v1/auth/totp"
+      ],
+      "sourceOwnership": "Backend per-user credential lifecycle; local flow holds returned secret and codes in component state, not persistent browser storage.",
+      "behavior": "Successful mutations invalidate and broadcast the status key; verification errors distinguish wrong code, rate limiting and expired enrollment. Regeneration and revoke are RequireSudo-gated in router source; entire subtree blocks impersonation.",
+      "routeEvidence": "internal\\api\\router.go:3277-3284",
+      "runtime": "unverified; no mutation or credential action executed"
+    },
+    {
+      "hook": "useTOTPStepUp",
+      "file": "web\\src\\api\\hooks\\useTOTP.ts",
+      "line": 153,
+      "endpoints": ["POST /api/v1/auth/totp/sudo"],
+      "sourceOwnership": "Existing request interceptor / reauthentication integration, not directly invoked by this page.",
+      "behavior": "Hook source caches the sudo token in memory with expiry validation. Interceptor and reauthentication UI were not traced beyond the page-specific hook.",
+      "routeEvidence": "internal\\api\\router.go:3282",
+      "runtime": "unverified"
+    },
+    {
+      "hook": "Static localized guidance",
+      "file": "web\\src\\features\\settings\\components\\twofactor\\TotpSetupGuide.tsx",
+      "line": 24,
+      "endpoints": [],
+      "sourceOwnership": "Settings feature; four setup steps, six app brands and three recovery tips are authored guidance, not backend measurements."
+    }
+  ],
+  "components": [
+    {
+      "name": "PageLayout / PageContainer",
+      "owner": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+      "usage": "Existing full-width container-query adapter; delegates header, copy-link and freshness to PageContainer.",
+      "evidence": "TwoFactorAuthPage.tsx:44-52; PageLayout.tsx:9-14"
+    },
+    {
+      "name": "TotpKpiBand / SettingsSummaryBrief / OperationalBrief",
+      "owner": "web\\src\\features\\settings\\components\\operationalbrief-all\\SettingsSummaryBrief.tsx",
+      "usage": "Four status/date/count/method summaries reuse useOperationalMetrics and OperationalBrief. Retained and unavailable source labels remain visible.",
+      "evidence": "TotpKpiBand.tsx:103-120; SettingsSummaryBrief.tsx:25-43"
+    },
+    {
+      "name": "TOTPEnrollmentSection / useTotpEnrollmentFlow",
+      "owner": "web\\src\\features\\settings\\components\\TOTPEnrollmentSection.tsx",
+      "usage": "Interactive feature container, local flow state and presentation separation. Keep this business owner rather than introduce a second enrollment implementation.",
+      "evidence": "TOTPEnrollmentSection.tsx:38-142"
+    },
+    {
+      "name": "GlassPanel / IconBox / Badge / typography",
+      "owner": "web\\src\\components\\ui",
+      "usage": "Existing shared primitives used by status, open-mode and informational panels. IconBox was inspected; other surface/typography implementations were not comprehensively audited."
+    },
+    {
+      "name": "Modal / Input / ConfirmDialog / CopyButton / CodeBlock",
+      "owner": "web\\src\\components\\ui",
+      "usage": "Existing credential dialogs, associated field identity, typed DISABLE confirmation, copy and code surfaces. Modal and Input implementations inspected; other primitive internals not exercised.",
+      "evidence": "TotpEnrollModal.tsx:37-109; TotpBackupCodesModal.tsx:34-102; TOTPEnrollmentSection.tsx:122-138"
+    },
+    {
+      "name": "OrderedStepList",
+      "owner": "web\\src\\components\\data-display",
+      "usage": "Named four-step setup guide, no page-local replacement list engine.",
+      "evidence": "TotpSetupGuide.tsx:13,80"
+    },
+    {
+      "name": "FadeIn",
+      "owner": "web\\src\\components\\motion\\FadeIn.tsx",
+      "usage": "Existing preference-aware entrance animation; reduce=true sets initial=false and delay=0. Browser reduced-motion behavior unverified.",
+      "evidence": "FadeIn.tsx:24-33"
+    }
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\settings\\components\\twofactor\\TotpKpiBand.tsx",
+      "line": 39,
+      "rule": "MDC-002; mission section 33",
+      "detail": "Summary and hero independently derive last-used presentation. Hero trims blank timestamps, while summary only checks truthiness. A whitespace timestamp can produce inconsistent labels.",
+      "fix": "Keep both user-visible summary/detail occurrences; share a small feature-local timestamp normalization helper and current useDateFormat rather than duplicate formatters or remove a section.",
+      "owner": "page",
+      "confidence": "high",
+      "relatedEvidence": ["web\\src\\features\\settings\\components\\twofactor\\TotpKpiBand.tsx:68-72", "web\\src\\features\\settings\\components\\twofactor\\TotpStatusHero.tsx:42-45,78"]
+    }
+  ],
+  "responsive": {
+    "sourceStrategy": [
+      "TwoFactorAuthPage.tsx:64: enrollment/guide stacks in one column, becomes three-column grid at xl with enrollment spanning two.",
+      "TwoFactorAuthPage.tsx:80: context panels stack then reflow to two columns at md.",
+      "TotpCompatibleApps.tsx:45-54: app list stacks then uses two columns at sm; names allow wrapping.",
+      "TotpStatusHero.tsx:49-51,73,91: flex wrapping, min-w-0, responsive detail grid and wrapped actions.",
+      "TotpBackupCodesModal.tsx:51,61: two-column code list and wrapped action row.",
+      "Modal.tsx:125-127,168-172: viewport height cap and shared scrolling dialog body."
+    ],
+    "issues": [],
+    "unverified": "All prescribed viewports 320/375/390/430/768/1024/1280/1440/1920/2560, allocated narrow containers, long translations, secret/code overflow, modal scrolling and touch reachability. Source classes are not viewport acceptance."
+  },
+  "accessibility": {
+    "sourceStrengths": [
+      "Named page sections; decorative feature icons explicitly aria-hidden.",
+      "Setup/app lists have useId heading associations; recovery panel is a named region.",
+      "Shared Input supplies label/control association; numeric code sanitization and Enter submission retained.",
+      "Open-mode guidance is role=status; initial enrollment skeleton has role=status, aria-busy and hidden loading text.",
+      "Shared Modal source delegates focus handling to useDialogFocus; named dialogs and 44px close control present."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\settings\\components\\twofactor\\TotpEnrollModal.tsx",
+        "line": 73,
+        "rule": "MDC-021/MDC-040; mission section 30 form errors",
+        "detail": "Verification error renders as a separate ErrorText at line 92, but Input receives neither error nor aria-describedby/aria-invalid. Shared Input already creates associated error feedback when its error prop is used.",
+        "fix": "Use the existing Input error contract or an explicit stable error ID plus aria-describedby and aria-invalid, preserving localized error branches and existing test selectors without duplicate announcements.",
+        "owner": "page",
+        "confidence": "high",
+        "relatedEvidence": ["web\\src\\components\\ui\\Input.tsx:55-61,104-112"],
+        "runtime": "screen-reader announcement and keyboard behavior unverified"
+      }
+    ],
+    "unverified": "Keyboard traversal, focus placement/trapping/restoration, announcement timing, screen readers, actual contrast in themes/forced colors, target sizes and reduced motion."
+  },
+  "states": {
+    "initialLoading": "Page summary uses deriveDataState initial status; enrollment uses status.isLoading and a contextual skeleton. Static guide/apps/recovery remain mounted.",
+    "initialFailure": "Enrollment has a source-local QueryError with refetch; summary marks source unavailable. Page supplies query metadata but does not globally replace neighboring content.",
+    "openMode": "AUTH_MODE_OPEN explicitly maps to mode=open; enrollment actions are absent and forward-auth guidance is displayed.",
+    "notEnrolled": "Localized status and Enable TOTP action.",
+    "active": "Last-used timestamp, unknown-safe backup count, regenerate and disable actions.",
+    "retainedRefreshFailure": "Page renders DataStateNotice for stale status; summary labels retained source and enrollment retains status data.",
+    "mutations": "Loading controls, hook toasts, code-length validation, invalid/rate-limited/expired code messages, typed disable confirmation and backup-code empty recovery are present in source.",
+    "issues": [
+      {
+        "file": "web\\src\\features\\settings\\components\\TOTPEnrollmentSection.tsx",
+        "line": 44,
+        "rule": "MDC-026; mission section 25",
+        "detail": "Initial branch tests isLoading rather than derived initial status. A no-data paused query has isLoading=false and no fatalError, reaching the !status.data open-mode branch at line 75 and incorrectly instructing a reverse-proxy configuration change.",
+        "fix": "Render initial/paused/unknown source guidance distinctly; render TotpOpenModeNotice only for an explicit mode=open response. Keep retained data on refresh failures.",
+        "owner": "page",
+        "confidence": "high",
+        "relatedEvidence": ["web\\src\\api\\dataState.ts:158-167", "web\\src\\features\\settings\\components\\TOTPEnrollmentSection.tsx:64-80"],
+        "runtime": "offline/paused query scenario not exercised"
+      },
+      {
+        "file": "web\\src\\features\\settings\\components\\twofactor\\TotpEnrollModal.tsx",
+        "line": 39,
+        "rule": "MDC-024/MDC-046; preservation of one-time recovery reveal",
+        "detail": "Cancel button is disabled during verification, but Modal still receives unrestricted onClose. Shared title-close, backdrop and Escape paths can call closeDialog, which clears enrollment/codes while handleVerify remains pending. Its later success can reopen the backup dialog after dismissal. A subsequent enrollment before that result also risks old-flow presentation.",
+        "fix": "Guard all modal dismissal paths while verifying at the feature owner, or explicitly correlate pending completions with their flow generation. Preserve one-time code recovery and cleanup without changing credential endpoints or weakening sudo gates.",
+        "owner": "page",
+        "confidence": "high",
+        "relatedEvidence": [
+          "web\\src\\features\\settings\\components\\twofactor\\TotpEnrollModal.tsx:94",
+          "web\\src\\features\\settings\\components\\twofactor\\useTotpEnrollmentFlow.ts:53-59,74-84",
+          "web\\src\\components\\ui\\Modal.tsx:67,104,143-146"
+        ],
+        "runtime": "pending-verification dismissal race not exercised; no credential mutation performed"
+      }
+    ],
+    "runtime": "All scenarios unverified; source inspection only"
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\settings\\components\\twofactor\\TotpCompatibleApps.tsx",
+      "line": 37,
+      "rule": "MDC-010/MDC-012; mission section 43 restrained palette",
+      "detail": "Static companion panels use unrelated purple/cyan/amber IconBox tints and fixed cyan/emerald-300 list icons, adding decorative multi-hue emphasis. IconBox applies neonColorMap background/ring classes; contrast cannot be established from source.",
+      "fix": "Prefer existing neutral surface/text tokens for informational headers/list icons; reserve semantic hue for active/warning/destructive credential state. Existing IconBox className is an available composition point; do not introduce a new palette. Preserve the white QR backing for scanner contrast rather than mechanically tokenizing it.",
+      "owner": "page",
+      "confidence": "high",
+      "relatedEvidence": [
+        "web\\src\\features\\settings\\components\\twofactor\\TotpCompatibleApps.tsx:51",
+        "web\\src\\features\\settings\\components\\twofactor\\TotpSetupGuide.tsx:72",
+        "web\\src\\features\\settings\\components\\twofactor\\TotpRecoveryPanel.tsx:46,57",
+        "web\\src\\components\\ui\\IconBox.tsx:25-32",
+        "web\\src\\lib\\tokens.ts:21-25"
+      ],
+      "runtime": "visual intensity and effective theme contrast unverified"
+    }
+  ],
+  "architectureIssues": [],
+  "priority": {
+    "level": "medium",
+    "rationale": "Existing shared architecture and decomposed feature surfaces should be retained. Address associated verification feedback, initial-paused trust labeling and asynchronous dismissal behavior before cosmetic modernization.",
+    "order": ["paused-source distinction", "pending-verification dismissal", "associated verification feedback", "timestamp normalization", "restrained informational accents"]
+  },
+  "requiredSharedChanges": [],
+  "competingImplementations": {
+    "confirmed": [],
+    "notes": [
+      "No competing modal, query store, palette engine or enrollment renderer confirmed within inspected page-specific source.",
+      "Two status observers reuse the same query key; this is not evidence of duplicate independent backend sources.",
+      "Feature-local timestamp normalization is preferable to a new shared date-format engine.",
+      "Existing Input and feature-side guarded callbacks suffice for identified gaps; no shared API addition is required by this audit."
+    ]
+  },
+  "preservation": {
+    "sourceHash": "AE9C2308644888FCD408582FC672CF47291EE9CC3E8ABECFCE6FA717B9178A2C",
+    "sourceHashAlgorithm": "SHA-256",
+    "sourceHashScope": "Exact bytes of web\\src\\features\\settings\\pages\\TwoFactorAuthPage.tsx at repository root F:\\github\\TeslaSync; not a dependency or concatenated hash.",
+    "currentLineCount": 86,
+    "pageAndSpecificFeatureLineCount": 1185,
+    "lineCountScope": "Page, TOTPEnrollmentSection and all 11 non-test .ts/.tsx files under components\\twofactor; SettingsSummaryBrief is not included in this total.",
+    "sections": [
+      {"name": "Account page header, subtitle help, link copy and source freshness", "count": 1},
+      {"name": "Two-factor overview / four summary metrics", "count": 1, "metricCount": 4},
+      {"name": "Manage two-factor / enrollment status and actions", "count": 1},
+      {"name": "How setup works", "count": 1, "stepCount": 4},
+      {"name": "Compatible apps", "count": 1, "appCount": 6},
+      {"name": "Recovery & good habits", "count": 1, "tipCount": 3},
+      {"name": "Enrollment dialog with QR, manual secret, code input and verification", "count": 1},
+      {"name": "One-time backup-code reveal dialog with empty recovery", "count": 1},
+      {"name": "Typed disable confirmation", "count": 1}
+    ],
+    "pageContentBands": 3,
+    "persistentFeatureSections": 5,
+    "sourceElementCounts": {
+      "pageGlassPanel": 0,
+      "pageChartContainer": 0,
+      "pageSection": 2,
+      "pageAndSpecificFeatureGlassPanel": 7,
+      "pageAndSpecificFeatureChartContainer": 0,
+      "note": "Seven syntactic GlassPanel openings include mutually exclusive loading/error/open/hero branches; not seven simultaneous rendered sections."
+    },
+    "actions": [
+      "Copy current page URL",
+      "Retry failed status source",
+      "Enable TOTP",
+      "Scan QR or copy/manual-entry secret",
+      "Sanitized six-digit entry and Enter submission",
+      "Verify and activate",
+      "Cancel/dismiss enrollment with secret cleanup",
+      "Copy one-time backup codes with manual fallback",
+      "Download teslasync-totp-backup-codes.txt",
+      "Acknowledge saved codes / close empty-code recovery",
+      "Regenerate backup codes through sudo-gated endpoint",
+      "Disable with literal DISABLE typed confirmation and reauthentication",
+      "Cancel disable and retain active credential"
+    ],
+    "dataBehavior": [
+      "Preserve all union states, snake_case payload fields, known-number handling and query policies.",
+      "Preserve local secret/code cleanup, one-time reveal, error branches, status invalidation/broadcast and request cancellation.",
+      "Do not persist tokens, secrets or backup codes in browser storage, report contents or logs.",
+      "Preserve subject ownership, open-mode unavailability, impersonation block and RequireSudo route guards.",
+      "No physical measurements or unit conversion are present in this flow; keep count dimensionless and timestamps formatted through existing locale/time preferences.",
+      "Do not invent vehicle/date scoping: /account prefix disables workspace vehicle control; /account/2fa is absent from RANGE_ENABLED_PATHS. Last verification is a recorded account event, not a date-window aggregate.",
+      "Retain all guidance and account controls on mobile; no lossy simplification."
+    ]
+  },
+  "evidenceLimits": {
+    "method": "Read-only bounded source inspection, route-string cross-reference, SHA-256 and targeted regex/line counts.",
+    "runtime": "unverified",
+    "visual": "unverified",
+    "keyboard": "unverified",
+    "contrast": "unverified",
+    "viewport": "unverified",
+    "backend": "Router methods and guards inspected only; handler payload correctness, persistence, QR decoding, TTL/rate-limit enforcement and actual endpoint behavior not exercised.",
+    "tests": "NOTRUN; no test, TypeScript, lint or build acceptance claimed.",
+    "auditScript": "Skill audit.sh inspected but not executed because it unconditionally runs project-wide npx tsc --noEmit, incompatible with this Phase0 read-only bounded validation scope. Equivalent selected source-pattern counts ran without compilation.",
+    "commands": [
+      {"command": "Get-FileHash web\\src\\features\\settings\\pages\\TwoFactorAuthPage.tsx -Algorithm SHA256; (Get-Content web\\src\\features\\settings\\pages\\TwoFactorAuthPage.tsx).Count", "exitCode": 0, "output": "SHA256 AE9C2308644888FCD408582FC672CF47291EE9CC3E8ABECFCE6FA717B9178A2C; 86"},
+      {"command": "PowerShell scoped file-count pipeline (first attempt)", "exitCode": 1, "output": "No output; replaced by read-only Python counting command."},
+      {"command": "PowerShell here-string piped to python -; scoped regex counts for page, enrollment section and twofactor non-test files", "exitCode": 0, "output": "Totals: {\"lines\":1185,\"GlassPanel\":7,\"ChartContainer\":0,\"inlineStyles\":0,\"rawControls\":0,\"directLibraries\":0,\"oldApiImports\":0}", "note": "Counts prove only these selected source patterns, not absence of all design or behavior defects."},
+      {"command": "rg request/auth/totp and router totp route cross-reference", "exitCode": 0, "output": "All six hook endpoint methods have matching /auth /totp routes at router.go:3279-3284; no prefixed hook URL or camelCase URL query parameter in inspected hook."}
+    ],
+    "outOfScope": "Shared-system audit, other pages, source edits, queue edits, Git operations, full validation, production navigation, account mutations and credential changes.",
+    "failedRead": "web\\src\\components\\ui\\ErrorText.tsx does not exist; its implementation was not inspected and no announcement behavior was assumed."
+  },
+  "filesRead": [
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\settings\\pages\\TwoFactorAuthPage.tsx",
+    "web\\src\\features\\settings\\components\\TOTPEnrollmentSection.tsx",
+    "web\\src\\features\\settings\\components\\twofactor\\index.ts",
+    "web\\src\\features\\settings\\components\\twofactor\\TotpKpiBand.tsx",
+    "web\\src\\features\\settings\\components\\twofactor\\TotpStatusHero.tsx",
+    "web\\src\\features\\settings\\components\\twofactor\\TotpSetupGuide.tsx",
+    "web\\src\\features\\settings\\components\\twofactor\\TotpCompatibleApps.tsx",
+    "web\\src\\features\\settings\\components\\twofactor\\TotpRecoveryPanel.tsx",
+    "web\\src\\features\\settings\\components\\twofactor\\TotpOpenModeNotice.tsx",
+    "web\\src\\features\\settings\\components\\twofactor\\TotpEnrollModal.tsx",
+    "web\\src\\features\\settings\\components\\twofactor\\TotpBackupCodesModal.tsx",
+    "web\\src\\features\\settings\\components\\twofactor\\TotpCopyAction.tsx",
+    "web\\src\\features\\settings\\components\\twofactor\\useTotpEnrollmentFlow.ts",
+    "web\\src\\features\\settings\\components\\operationalbrief-all\\SettingsSummaryBrief.tsx",
+    "web\\src\\api\\hooks\\useTOTP.ts",
+    "web\\src\\api\\types.ts",
+    "web\\src\\api\\dataState.ts",
+    "internal\\api\\router.go",
+    "web\\src\\App.tsx",
+    "web\\src\\components\\layout\\index.ts",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\layout\\PageContainer.tsx",
+    "web\\src\\components\\ui\\Input.tsx",
+    "web\\src\\components\\ui\\Modal.tsx",
+    "web\\src\\components\\ui\\IconBox.tsx",
+    "web\\src\\components\\motion\\FadeIn.tsx",
+    "web\\src\\lib\\tokens.ts",
+    "web\\src\\lib\\workspaceScope.ts"
+  ],
+  "ownedFiles": [
+    "docs\\frontend-audits\\audit-page-176.json",
+    ".agent-status\\audit-page-176.txt"
+  ]
+}

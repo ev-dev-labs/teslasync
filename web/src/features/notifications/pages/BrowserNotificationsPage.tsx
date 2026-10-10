@@ -5,7 +5,7 @@
  */
 
 import { useTranslation } from 'react-i18next';
-import { PageContainer } from '@/components/layout';
+import { PageLayout } from '@/components/layout';
 import { SectionTitle, Text } from '@/components/ui';
 import { FadeIn } from '@/components/motion';
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -31,7 +31,7 @@ export default function BrowserNotificationsPage() {
   const { prefs: pushPrefs, setPrefs: setPushPrefs } = useNotificationListener();
 
   return (
-    <PageContainer
+    <PageLayout
       title={t('notifications.browser.title', 'Browser notifications')}
       subtitle={t(
         'notifications.browser.subtitle',
@@ -95,6 +95,6 @@ export default function BrowserNotificationsPage() {
           <NotificationSoundsPanel />
         </FadeIn>
       </div>
-    </PageContainer>
+    </PageLayout>
   );
 }

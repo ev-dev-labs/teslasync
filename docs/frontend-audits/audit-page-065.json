@@ -1,0 +1,318 @@
+{
+  "item": "audit-page-065",
+  "page": "web\\src\\features\\battery\\pages\\ChargeAdvisorPage.tsx",
+  "routes": ["/charge-advisor"],
+  "purpose": "Descriptive vehicle-local historical-use evidence for charge planning, with explicit provenance, evidence gates and limitations; not battery diagnosis or a promised outcome.",
+  "primaryGoal": "Compare tomorrow-first seven-day SoC scenarios against a selected planning reserve while understanding current-state trust and historical support.",
+  "dataSources": [
+    {
+      "hook": "useDriveHistory(vehicleIdStr, 1000)",
+      "file": "web\\src\\api\\hooks\\useDriving.ts",
+      "line": 140,
+      "endpoint": "/drives?vehicle_id={vehicleId}&limit=1000",
+      "sourceOwner": "driveHandler.ListByVehicle",
+      "routeEvidence": "internal\\api\\router.go:3463-3464",
+      "behavior": "Vehicle-scoped history key; enabled only with vehicle; inherited moderate stale policy; AbortSignal forwarded; safeArray selection. No start/end bounds supplied. Model qualifies returned rows into a frozen 180-day vehicle-local window.",
+      "limitations": "Backend ordering, complete coverage, actual payload and parameter handling were not exercised or traced beyond registration."
+    },
+    {
+      "hook": "useChargingHistory(vehicleIdStr, 1000)",
+      "file": "web\\src\\api\\hooks\\useCharging.ts",
+      "line": 72,
+      "endpoint": "/charging?vehicle_id={vehicleId}&limit=1000",
+      "sourceOwner": "chargingHandler.ListByVehicle",
+      "routeEvidence": "internal\\api\\router.go:3502-3503",
+      "behavior": "Independent vehicle-scoped history key, enablement, cancellation and moderate stale policy; safeArray selection. Charging energy remains Wh until useUnits().formatEnergy at rendering.",
+      "limitations": "Exactly 1000 rows signals a capped observed window, not lifetime completeness."
+    },
+    {
+      "hook": "useVehicleLive -> useVehicleLiveSignals / SSE recovery",
+      "file": "web\\src\\hooks\\useVehicleLive.ts",
+      "line": 447,
+      "endpoint": "/signals/{vehicleId}/live",
+      "sourceOwner": "signalHandler.LiveState",
+      "routeEvidence": "internal\\api\\router.go:4886,4908,4926",
+      "requestEvidence": "web\\src\\api\\hooks\\useTelemetry.ts:127-165",
+      "behavior": "REST initial read and reconnect invalidation plus realtime updates feed merged live state. Page supplies battery percentage, observed time, charging status, charge limit and connectivity to the pure model.",
+      "limitations": "SSE transport implementation and live backend freshness enforcement were not inspected. Shared hook currently exposes aggregate signal presence and browser receipt time rather than per-field observed provenance."
+    },
+    {
+      "hook": "useSelectedVehicle / useTimezone('vehicle') / useUnits / useDataState",
+      "file": "web\\src\\features\\battery\\pages\\ChargeAdvisorPage.tsx",
+      "line": 41,
+      "endpoint": null,
+      "sourceOwner": "Existing workspace, formatting and data-trust owners",
+      "behavior": "Shared header owns vehicle. /charge-advisor is not RANGE_ENABLED_PATHS and has no competing local vehicle/date picker. Reserve floor is a separate business planning control, initially 20%, with 10/20/30 choices.",
+      "limitations": "Underlying selected-vehicle, timezone and unit preference implementations not independently audited; preserve them rather than inventing replacement state."
+    }
+  ],
+  "components": [
+    {"name": "PageLayout / CardGrid / LayoutCard / SourceContent", "owner": "@/components/layout", "use": "Full-width orchestration, paired evidence grids and stable section shells; inspected page-specific caller implementations, not shared internals."},
+    {"name": "Select / Button / Badge / Text / Heading", "owner": "@/components/ui", "use": "Labeled reserve input, retry and semantic state text."},
+    {"name": "FadeIn", "owner": "@/components/motion", "use": "Ten staged entrances; shared reduced-motion implementation not exercised."},
+    {"name": "EmbeddedChart / ChartLegend / ChartTooltip and chart renderer exports", "owner": "@/components/charts", "use": "Two toolbar/exportable chart frames, declared data columns, scenario legend persistence and chartTokens series."},
+    {"name": "Skeleton / EmptyState / QueryError / AlertBanner", "owner": "@/components/feedback", "use": "Contextual loading, source unavailability, history failure/retry and row-cap notices."},
+    {"name": "BatteryEvidenceBrief", "owner": "web\\src\\features\\battery\\components\\operationalbrief-all\\BatteryEvidenceBrief.tsx", "use": "OperationalBrief and useOperationalMetrics bridge for KPI and accounting review details, retained-state labels and source-window limitations."},
+    {"name": "ChargeAdvisorSection and thirteen domain sections", "owner": "web\\src\\features\\battery\\components\\charge-advisor", "use": "Existing feature decomposition. Keep domain calculations in chargeAdvisor.ts rather than moving them into new presentation primitives."}
+  ],
+  "duplicatedPatterns": [
+    {
+      "file": "web\\src\\features\\battery\\components\\charge-advisor\\ChargeAdvisorBurnDistribution.tsx",
+      "line": 38,
+      "rule": "MDC-002/MDC-033; mission sections 4 and 9",
+      "detail": "Repeated label/value/detail metric tiles also occur in CurrentState:52, ChargingProfile:70 and FrequencySupport:30, with page-local typography overrides. KPI/accounting already use BatteryEvidenceBrief instead.",
+      "fix": "Reuse existing metric presentation/role wrappers only where they preserve all specialist captions and null semantics; keep provenance cards and weekday business structures local where not equivalent. Do not create another BatteryMetricCard.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\battery\\components\\charge-advisor\\ChargeAdvisorAccounting.tsx",
+      "line": 93,
+      "rule": "Mission section 4",
+      "detail": "Drive and charging accounting columns repeat the summary/category layout, with separate provenance and category labels.",
+      "fix": "If edited, use a feature-local typed renderer preserving both sources, all row categories, counts and independent source states.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "responsive": {
+    "verified": "source only",
+    "evidence": [
+      "ChargeAdvisorPage.tsx:138 uses flex-wrap for reserve action; :165-188 uses three CardGrid pairs.",
+      "ChargeAdvisorScenarioDirectory.tsx:38 reflows 1/2/4 columns.",
+      "ChargeAdvisorCurrentState.tsx:51 reflows 1/2/5 columns.",
+      "ChargeAdvisorWeekdayProfile.tsx:28 uses 2/4/7 columns; ChargingTiming.tsx:37 uses 4/7 weekday cells.",
+      "ScenarioChart.tsx:60 and DailyTrend.tsx:59 set chart heights 290/270 while ResponsiveContainer uses allocated width."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\battery\\components\\charge-advisor\\ChargeAdvisorWeekdayProfile.tsx",
+        "line": 28,
+        "rule": "MDC-043/MDC-044",
+        "detail": "Seven dense weekday cards at xl, and two at narrow widths, carry long captions/badges; clipping and minimum-content pressure are plausible but not demonstrated.",
+        "fix": "Exercise allocated-width layouts, long translations and 200% text at all ten widths; adjust wrapping/min-width or grid breakpoints without removing metadata.",
+        "owner": "page",
+        "confidence": "medium"
+      }
+    ],
+    "unverifiedWidths": [320, 375, 390, 430, 768, 1024, 1280, 1440, 1920, 2560]
+  },
+  "accessibility": {
+    "verified": "source only",
+    "evidence": [
+      "ChargeAdvisorPage.tsx:139-149 supplies explicit Select id, localized label and aria-label.",
+      "KpiBand.tsx:96 supplies section aria-label; :130 uses existing retry Button.",
+      "ScenarioChart.tsx:44-59 and DailyTrend.tsx:45-58 provide chart aria labels and explicit data-table columns.",
+      "Decorative domain icons carry aria-hidden; freshness, support and connectivity have text, not color alone."
+    ],
+    "issues": [
+      {
+        "file": "web\\src\\features\\battery\\pages\\ChargeAdvisorPage.tsx",
+        "line": 147,
+        "rule": "MDC-040",
+        "detail": "Reserve control requests small sizing; actual touch target, keyboard, focus, overflow and accessible Select association are unverified, not a confirmed failure.",
+        "fix": "Measure composed mobile target and test native selection, keyboard/focus and long labels before accepting; reuse existing Select sizing contract if inadequate.",
+        "owner": "page",
+        "confidence": "low"
+      }
+    ],
+    "unverified": ["keyboard", "focus restoration", "screen reader", "effective contrast", "forced colors", "touch targets", "reduced-motion execution"]
+  },
+  "states": {
+    "initialLoading": "Per-history availability/loading flags preserve independent drive/charging sections; SourceContent skeleton height 180 and KPI OperationalBrief loading suppression.",
+    "empty": "No vehicle retains all section shells with select-vehicle explanation. Scenario/trend have explicit no-qualified-evidence explanations; null statistics use em dash.",
+    "fatalError": "KPI QueryError and retry; dependency-specific section unavailability messaging. Successful neighboring drive-only/charging-only sections remain.",
+    "refreshError": "useDataState separates fatal from refresh; loaded arrays remain, warning/retry shown in KPI, BatteryEvidenceBrief marked retained.",
+    "stale": "Model derives current-state freshness and blocks actionable guidance when stale; historical fallback default maximum age two days. Aging/field provenance weaknesses listed below.",
+    "offline": "Connected/disconnected/unknown retrieval and connection text shown; paused/offline query state is not represented in page's simplified ChargeAdvisorQueryState.",
+    "partial": "Drive and charging availability tracked separately, but both-dependent sections currently hide available partial content.",
+    "issues": [
+      {
+        "file": "web\\src\\features\\battery\\components\\charge-advisor\\ChargeAdvisorSection.tsx",
+        "line": 46,
+        "rule": "MDC-026; preserve independent neighbors",
+        "detail": "Any missing required source replaces all children. Accounting and methodology both declare dependency='both'; a failed charging read removes loaded drive accounting and static methodology. Historical current fallback also requires both even when only one valid source supplied it.",
+        "fix": "Render accounting sources independently, keep static methodology reachable and gate current provenance by its actual selected source; retain explicit unavailable messages rather than infer missing counts.",
+        "owner": "page",
+        "confidence": "high"
+      },
+      {
+        "file": "web\\src\\features\\battery\\pages\\ChargeAdvisorPage.tsx",
+        "line": 112,
+        "rule": "MDC-026/MDC-046",
+        "detail": "Source DataStates are reduced to loading/available/error; paused/offline, stale age and last-success metadata are not forwarded to sections. Retained histories can appear ready without source-specific age.",
+        "fix": "Carry existing source trust evidence into the domain view and retain data while visibly distinguishing paused/offline, stale and refresh-failure states; do not create a second query-state engine.",
+        "owner": "page",
+        "confidence": "high"
+      }
+    ]
+  },
+  "visualIssues": [
+    {
+      "file": "web\\src\\features\\battery\\components\\charge-advisor\\ChargeAdvisorChargingProfile.tsx",
+      "line": 72,
+      "rule": "MDC-010/MDC-012; mission sections 5-7",
+      "detail": "Every profile value is fixed cyan-300; repeated informational icons and metrics throughout the page use fixed cyan. No neon/glow or pure-white text was found by scoped pattern checks, but muted fixed accents still override neutral/theme-aware hierarchy.",
+      "fix": "Use existing primary/secondary/metric semantic text tokens for ordinary values and neutral decorative icons. Reserve semantic warning/success hues for meaningful statuses, keep saved chart palette choices and existing series distinctions.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\battery\\components\\charge-advisor\\ChargeAdvisorCurrentState.tsx",
+      "line": 54,
+      "rule": "MDC-013/MDC-033",
+      "detail": "Text receives text-2xl/font-semibold; BurnDistribution:40 uses text-lg and FrequencySupport:32 uses text-xl. These override typography roles and spread metric emphasis across many panels.",
+      "fix": "Adopt existing MetricValue/MetricLabel/Caption or an equivalent accepted metric contract while preserving labels, source age, unknown states, precision and user typography preferences.",
+      "owner": "page",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\battery\\components\\charge-advisor\\ChargeAdvisorScenarioDirectory.tsx",
+      "line": 62,
+      "rule": "MDC-010/MDC-034",
+      "detail": "Mean/p75 text uses fixed cyan/amber rather than existing chart series tokens; consistency across chart palette preferences and light theme remains unverified.",
+      "fix": "Prefer neutral numeric text with explicit mean/p75 labels or restrained palette-derived markers; preserve dashed/solid chart differentiation and all scenario values.",
+      "owner": "page",
+      "confidence": "medium"
+    }
+  ],
+  "architectureIssues": [
+    {
+      "file": "web\\src\\features\\battery\\pages\\ChargeAdvisorPage.tsx",
+      "line": 68,
+      "rule": "MDC-026/MDC-045; unknown is not zero",
+      "detail": "Aggregate signalCount>0 marks battery, charge limit and charging status as known. useVehicleLive.ts:185 initializes batteryLevel to 0; :255 only sets it when BatteryLevel exists. A snapshot containing unrelated signals can therefore produce a valid-looking 0% live candidate. :474/:500 stamp browser receipt time and do not preserve per-field observation time.",
+      "fix": "Use the canonical signal evidence owner for field-level presence and observed timestamps; leave absent SoC/charge fields null and block guidance when freshness is unknown. Do not alter SI/cache values or substitute browser receipt time for measured freshness.",
+      "owner": "integration",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\hooks\\useVehicleLive.ts",
+      "line": 448,
+      "rule": "MDC-032/MDC-046",
+      "detail": "Inspected hook holds merged state across vehicleId changes and has no reset/vehicle-bound state identity in lines 447-506. Page immediately reuses it for the newly selected vehicle. Previous vehicle SoC may temporarily drive new vehicle planning until a new snapshot arrives.",
+      "fix": "Shared live owner must expose vehicle-bound signal evidence and suppress prior-vehicle payload on scope changes while preserving reconnect recovery, cancellation and known-value merging within one vehicle.",
+      "owner": "shared",
+      "confidence": "high"
+    },
+    {
+      "file": "web\\src\\features\\battery\\pages\\ChargeAdvisorPage.tsx",
+      "line": 49,
+      "rule": "MDC-026",
+      "detail": "currentStateNowMs advances only when liveUpdatedMs changes (:53-58). No elapsed-time invalidation exists here, so silent/disconnected state age and guidance can remain frozen. Model :1058-1066 also uses the same two-day fallback threshold for live candidates, despite current live trust needing independently established freshness.",
+      "fix": "Keep the intentionally frozen historical analysis/calendar clock, but derive current-state trust from canonical live age and advance only its aging clock independently. Preserve historical two-day fallback semantics and evidence gate; require integration agreement for live freshness rather than silently changing business calculations.",
+      "owner": "integration",
+      "confidence": "high"
+    }
+  ],
+  "priority": {
+    "level": "high",
+    "reason": "Resolve field-level live trust and vehicle isolation before cosmetic adoption; then preserve independently available evidence and restrained typography/palette.",
+    "recommendedOrder": ["canonical live evidence integration", "partial-source and offline/stale presentation", "neutral semantic typography and palette", "mounted responsive/accessibility QA"]
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "Vehicle-bound nullable live signal evidence",
+      "existingOwnerFile": "web\\src\\hooks\\useVehicleLive.ts",
+      "propsVariantsStates": "Expose vehicle identity, BatteryLevel/charge-limit/charging field presence, original per-field observed time and stale/unknown state; keep existing legacy-facing values if other consumers require them. Do not infer measurement availability from signalCount or receipt timestamp.",
+      "usedBy": ["web\\src\\features\\battery\\pages\\ChargeAdvisorPage.tsx"],
+      "dependsOn": ["Verify existing canonical live/evidence API and backend timestamp contract before choosing additive shared exposure", "Preserve SSE reconnect recovery and raw SI payloads"],
+      "owner": "integration",
+      "confidence": "high",
+      "limitation": "Only this assigned consumer was inspected; no claim of a multi-consumer new-composite requirement."
+    }
+  ],
+  "competingImplementations": [
+    {
+      "file": "web\\src\\features\\battery\\components\\charge-advisor\\ChargeAdvisorBurnDistribution.tsx",
+      "line": 38,
+      "rule": "MDC-033",
+      "detail": "Local metric tiles coexist with existing OperationalBrief metric pipeline; they are a presentation inconsistency, not evidence that every domain tile is safely replaceable.",
+      "fix": "Reuse accepted metric roles where equivalent and preserve specialist local structures where equivalence is unproved; no new stats engine.",
+      "owner": "page",
+      "confidence": "high"
+    }
+  ],
+  "preservation": {
+    "sourceHash": "A3C524270668F3FC0F0F3B41C3C80424ACDDFD80B2631F40FB6B785119B26B08",
+    "sourceHashAlgorithm": "SHA-256",
+    "sourceHashBasis": "Live root file bytes, not history or archived receipt",
+    "currentLineCount": 196,
+    "pagePlusChargeAdvisorComponentLineCount": 1507,
+    "lineCountScope": "Page plus 14 TSX files under components\\charge-advisor; excludes domain lib, type/barrel and BatteryEvidenceBrief.",
+    "sectionCount": 13,
+    "sections": ["Guidance and evidence KPI band", "Current-state provenance", "Seven-day use scenarios", "Day-by-day scenario directory", "Weekday use distribution", "Drive-day frequency and support", "Daily SoC-drop trend", "Burn distribution", "Reserve-floor sensitivity", "Charging start/end SoC profile", "Charging weekday/hour timing", "Evidence accounting", "Methodology and limitations"],
+    "sectionCountEvidence": "Page JSX lines 154-192: thirteen rendered ChargeAdvisor sections. A naive '<ChargeAdvisor[A-Z]' pattern returned 14 because it also matched the generic ChargeAdvisorLiveSnapshot type at line 66.",
+    "chartCount": 2,
+    "chartIds": ["charge-advisor-scenarios", "charge-advisor-daily-trend"],
+    "layoutCardDeclarations": 2,
+    "layoutCardExplanation": "One KpiBand and reusable ChargeAdvisorSection, instantiated for twelve other domain sections; declaration count is not section count.",
+    "actions": ["Reserve floor 10/20/30%, default 20%", "Retry errored history sources independently", "Existing workspace vehicle selection", "Existing chart toolbar/fullscreen/export capabilities exposed by EmbeddedChart", "Scenario mean/p75 legend visibility through stable chartKey", "OperationalBrief review details"],
+    "dataBehavior": [
+      "Keep 1000-row source caps and independent history-cap warnings; do not turn capped counts into lifetime totals.",
+      "Preserve 180-day vehicle-local calendar window and intentionally frozen analysis clock; seven complete days begin tomorrow.",
+      "Preserve valid 0% observations while never fabricating them from absent signals.",
+      "Preserve exclusive row-accounting categories, drive qualification, positive SoC-drop/gain requirements, local-day aggregation and calendar zero-driving denominators.",
+      "Keep all mean/median/p75/p90/min/max summaries, weekday support metadata, charging timing and valid energy-row counts.",
+      "Keep planning-reserve distinction, support gate of 28 observed calendar days / 8 active days / 4 active weeks, charging precedence and explicit methodological omissions.",
+      "Keep raw Wh and duration seconds; energy conversion remains useUnits display-only. Percentage points are not total energy.",
+      "Preserve localized strings, timezone, selected-vehicle owner, query keys/cancellation/cache policy, retained data and individual retry.",
+      "Do not automatically add a date picker or re-scope this fixed-methodology analysis to the shared range without an explicitly agreed behavior change."
+    ]
+  },
+  "evidenceLimits": {
+    "auditMode": "Phase 0 read-only source inspection; only assigned JSON and heartbeat written. No source, shared, queue, Git, production or configuration mutations.",
+    "runtime": "NOTRUN: no mounted browser, backend requests or production actions",
+    "visual": "NOTRUN: no screenshots, composed contrast, actual theme or viewport checks",
+    "keyboard": "NOTRUN",
+    "typeScript": "NOTRUN: no validation baton; assignment is source-only audit",
+    "lintBuildTests": "NOTRUN: no full builds/lint/tests. Skill audit.sh inspected but not executed because its unconditional TypeScript step exceeds this read-only audit protocol.",
+    "existingTests": "chargeAdvisor.test.ts test names inspected, including timezone/DST, clocks, accounting, caps, freshness and no-mutation cases; not run and not borrowed as current acceptance.",
+    "backend": "Route registration inspected only; list sorting/filter enforcement, actual live freshness and payload contracts remain unverified.",
+    "shared": "Shared component internals and unrelated consumers not audited; caller props establish intended capabilities, not runtime behavior.",
+    "sourcePatternCheck": {
+      "command": "$target=@('web\\src\\features\\battery\\pages\\ChargeAdvisorPage.tsx') + @(Get-ChildItem 'web\\src\\features\\battery\\components\\charge-advisor' -Filter '*.tsx' | ForEach-Object FullName); Select-String source-pattern counts and Get-Content line counts on $target",
+      "exitCode": 0,
+      "rawOutput": ["inlineStyle: 0 matching lines", "rawControls: 2 matching lines", "directLibrary: 0 matching lines", "oldApi: 0 matching lines", "neonOrWhite: 0 matching lines", "fixedAccent: 24 matching lines", "adHocType: 22 matching lines", "component lines: 1507"],
+      "interpretation": "PowerShell Select-String is case-insensitive by default: the two rawControls matches were shared <Select at page:139 and <Button at KpiBand:130, not prohibited lowercase controls. Counts describe line-pattern matches, not comprehensive AST findings or acceptance.",
+      "followupRawOutput": ["rendered section calls: 14", "chart frames: 2", "layout cards: 2"],
+      "followupInterpretation": "Rendered section calls includes one generic type match; actual JSX section inventory is thirteen."
+    },
+    "sourceDrift": "Parallel work may change dependencies. Page hash is live-byte evidence and rechecked before release; no assertion that this audit locks another worker's files."
+  },
+  "filesRead": [
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-mission.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    "web\\src\\features\\battery\\pages\\ChargeAdvisorPage.tsx",
+    "web\\src\\features\\battery\\components\\charge-advisor\\ChargeAdvisorSection.tsx",
+    "web\\src\\features\\battery\\components\\charge-advisor\\ChargeAdvisorKpiBand.tsx",
+    "web\\src\\features\\battery\\components\\charge-advisor\\ChargeAdvisorCurrentState.tsx",
+    "web\\src\\features\\battery\\components\\charge-advisor\\ChargeAdvisorScenarioChart.tsx",
+    "web\\src\\features\\battery\\components\\charge-advisor\\ChargeAdvisorScenarioDirectory.tsx",
+    "web\\src\\features\\battery\\components\\charge-advisor\\ChargeAdvisorWeekdayProfile.tsx",
+    "web\\src\\features\\battery\\components\\charge-advisor\\ChargeAdvisorFrequencySupport.tsx",
+    "web\\src\\features\\battery\\components\\charge-advisor\\ChargeAdvisorDailyTrend.tsx",
+    "web\\src\\features\\battery\\components\\charge-advisor\\ChargeAdvisorBurnDistribution.tsx",
+    "web\\src\\features\\battery\\components\\charge-advisor\\ChargeAdvisorReserveSensitivity.tsx",
+    "web\\src\\features\\battery\\components\\charge-advisor\\ChargeAdvisorChargingProfile.tsx",
+    "web\\src\\features\\battery\\components\\charge-advisor\\ChargeAdvisorChargingTiming.tsx",
+    "web\\src\\features\\battery\\components\\charge-advisor\\ChargeAdvisorAccounting.tsx",
+    "web\\src\\features\\battery\\components\\charge-advisor\\ChargeAdvisorMethodology.tsx",
+    "web\\src\\features\\battery\\components\\charge-advisor\\types.ts",
+    "web\\src\\features\\battery\\components\\charge-advisor\\index.ts",
+    "web\\src\\features\\battery\\components\\operationalbrief-all\\BatteryEvidenceBrief.tsx",
+    "web\\src\\features\\battery\\lib\\chargeAdvisor.ts",
+    "web\\src\\features\\battery\\lib\\chargeAdvisor.test.ts",
+    "web\\src\\api\\hooks\\useDriving.ts",
+    "web\\src\\api\\hooks\\useCharging.ts",
+    "web\\src\\api\\hooks\\useTelemetry.ts",
+    "web\\src\\hooks\\useVehicleLive.ts",
+    "web\\src\\hooks\\useDataState.ts",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\App.tsx",
+    "internal\\api\\router.go"
+  ],
+  "ownedFiles": ["docs\\frontend-audits\\audit-page-065.json", ".agent-status\\audit-page-065.txt"]
+}

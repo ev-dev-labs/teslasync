@@ -9,11 +9,12 @@ import {
   HistoryListRow, ScoreBadge, BatteryDelta, RouteDisplay,
 } from '@/components/data-display';
 import { formatDateTime, formatTime, formatDurationMinutes } from '@/lib/dateFormat';
-import { fmtNumber, fmtInt } from '@/lib/numberFormat';
+
 import { getEfficiency, gradeFromEfficiency } from '@/lib/drivesAggregation';
 import type { Drive } from '@/types/driving';
 import type { DriveFsdInsight } from '@/types/fsd';
 import { Icons } from '@/lib/icons';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export interface DriveCardProps {
   drive: Drive;
@@ -41,15 +42,16 @@ function DriveCardImpl({
   selected, onToggleSelect, onPreview, tz, isAnomaly,
   fsdInsight,
 }: DriveCardProps) {
+  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const actualDistance = drive.distanceM;
   const isCompleted = drive.endTs != null;
   const hasData = actualDistance > 0 || drive.durationS > 0;
   const avgSpeed =
     drive.avgSpeedMps != null
-      ? fmtInt(toSpeedDisplay(drive.avgSpeedMps))
+      ? fmtNumber(toSpeedDisplay(drive.avgSpeedMps))
       : drive.durationS > 0 && actualDistance > 0
-        ? fmtInt(toSpeedDisplay(actualDistance / drive.durationS))
+        ? fmtNumber(toSpeedDisplay(actualDistance / drive.durationS))
         : '—';
   const eff = getEfficiency(drive);
   const effConverted = eff != null ? toEfficiencyDisplay(eff) : null;
@@ -67,7 +69,7 @@ function DriveCardImpl({
     }
     const prefix = fsdInsight.confidence === 'high' ? '' : '~';
     const value = fsdInsight.fsd_share_pct != null
-      ? `${prefix}${fmtNumber(fsdInsight.fsd_share_pct, 0)}%`
+      ? `${prefix}${fmtNumber(fsdInsight.fsd_share_pct)}%`
       : `${prefix}${fmtNumber(toDistanceDisplay(fsdInsight.fsd_distance_m))} ${distanceUnit}`;
     const ambiguous = fsdInsight.confidence === 'ambiguous'
       ? ` · ${t('drives.fsdAmbiguous', 'ambiguous')}`
@@ -145,7 +147,7 @@ function DriveCardImpl({
       {drive.maxSpeedMps !== null && (
         <InlineMetric
           icon={<TrendingUp aria-hidden />}
-          value={`${t('drives.max', 'Max')} ${fmtInt(toSpeedDisplay(drive.maxSpeedMps))} ${speedUnit}`}
+          value={`${t('drives.max', 'Max')} ${fmtNumber(toSpeedDisplay(drive.maxSpeedMps))} ${speedUnit}`}
         />
       )}
       {hasBattery && (
@@ -156,7 +158,7 @@ function DriveCardImpl({
       )}
       {effConverted != null && (
         <span className="flex items-center gap-1" style={{ color: score.color }}>
-          <Zap className="h-3 w-3" aria-hidden /> {fmtInt(effConverted)} {efficiencyUnit}
+          <Zap className="h-3 w-3" aria-hidden /> {fmtNumber(effConverted)} {efficiencyUnit}
         </span>
       )}
       {formatEnergyCost && drive.energyUsedWh != null && drive.energyUsedWh > 0 && (

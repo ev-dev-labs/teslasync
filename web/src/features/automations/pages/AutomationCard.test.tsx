@@ -33,6 +33,15 @@ vi.mock('react-i18next', () => ({
     },
   }),
 }));
+vi.mock('@/hooks/useSettings', () => ({
+  useSettings: vi.fn(() => ({
+    locale: 'en-US',
+    settings: { locale: 'en-US', timezone_user: 'UTC', tz_display_default: 'user' },
+  })),
+}));
+vi.mock('@/hooks/useSelectedVehicle', () => ({
+  useSelectedVehicle: () => ({ vehicle: null }),
+}));
 
 // PinButton's data hooks — stub so the card mounts without real network / a
 // live QueryClient query. The card under test owns no query hooks itself.
@@ -159,7 +168,7 @@ describe('AutomationCard — status', () => {
         auto_disabled_reason: 'Exceeded failure threshold',
       }),
     );
-    expect(screen.getByText('Auto-Disabled')).toBeInTheDocument();
+    expect(screen.getByText('Auto-disabled')).toBeInTheDocument();
     // Auto-disabled must render the switch OFF regardless of the enabled flag.
     expect(screen.getByRole('switch')).toHaveAttribute('aria-checked', 'false');
     expect(screen.getByText('Exceeded failure threshold')).toBeInTheDocument();
@@ -249,7 +258,7 @@ describe('AutomationCard — actions menu', () => {
 
     fireEvent.click(trigger);
     expect(trigger).toHaveAttribute('aria-expanded', 'true');
-    expect(screen.getByRole('button', { name: 'Test Run' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Test run' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Duplicate' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Export' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Delete' })).toBeInTheDocument();
@@ -269,22 +278,22 @@ describe('AutomationCard — actions menu', () => {
   it('invokes onTestRun and closes the menu when Test Run is clicked', () => {
     const { handlers } = renderCard(makeAutomation({ id: 22 }));
     openMenu();
-    fireEvent.click(screen.getByRole('button', { name: 'Test Run' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Test run' }));
     expect(handlers.onTestRun).toHaveBeenCalledWith(22);
     // Menu collapses after the action fires.
     expect(screen.getByRole('button', { name: 'Actions menu' })).toHaveAttribute(
       'aria-expanded',
       'false',
     );
-    expect(screen.queryByRole('button', { name: 'Test Run' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Test run' })).not.toBeInTheDocument();
   });
 
   it('closes the menu on Escape', () => {
     renderCard(makeAutomation());
     openMenu();
-    expect(screen.getByRole('button', { name: 'Test Run' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Test run' })).toBeInTheDocument();
     fireEvent.keyDown(window, { key: 'Escape' });
-    expect(screen.queryByRole('button', { name: 'Test Run' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Test run' })).not.toBeInTheDocument();
   });
 });
 
@@ -299,7 +308,7 @@ describe('AutomationCard — delete flow', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
 
     const dialog = screen.getByRole('dialog');
-    expect(within(dialog).getByText('Delete Automation')).toBeInTheDocument();
+    expect(within(dialog).getByText('Delete automation')).toBeInTheDocument();
     // Interpolated confirmation copy carries the automation name.
     expect(dialog.textContent).toContain('Nightly report');
     expect(handlers.onDelete).not.toHaveBeenCalled();

@@ -1,0 +1,648 @@
+- generic [active] [ref=f21e1]:
+  - generic [ref=f21e9]:
+    - status [ref=f21e10]: Driving dynamics — TeslaSync
+    - link "Skip to main content" [ref=f21e11] [cursor=pointer]:
+      - /url: "#main-content"
+    - generic [ref=f21e12]:
+      - status [ref=f21e13]
+      - alert [ref=f21e14]
+      - banner "Site header" [ref=f21e15]:
+        - button "Open sidebar" [ref=f21e16] [cursor=pointer]
+        - generic [ref=f21e18]: TeslaSync
+        - button "Notifications" [ref=f21e25] [cursor=pointer]
+        - button "Open theme picker" [ref=f21e30] [cursor=pointer]
+      - generic [ref=f21e37]:
+        - status [ref=f21e175]:
+          - generic [ref=f21e176]:
+            - generic [ref=f21e177]:
+              - text: Sample data present
+              - generic [ref=f21e178]: · Not live
+            - button "Details" [ref=f21e179] [cursor=pointer]
+        - main [ref=f21e39]:
+          - generic [ref=f21e40]:
+            - navigation "Breadcrumb" [ref=f21e43]:
+              - link "Dashboard" [ref=f21e44] [cursor=pointer]:
+                - /url: /
+              - generic [ref=f21e50]: Driving
+              - generic [ref=f21e53]: Driving dynamics
+            - generic [ref=f21e180]:
+              - generic [ref=f21e181]:
+                - generic [ref=f21e185]:
+                  - heading "Driving dynamics" [level=1] [ref=f21e186]
+                  - generic [ref=f21e187]:
+                    - 'button "More info: Driving dynamics" [ref=f21e188] [cursor=pointer]'
+                    - 'tooltip "Understand one ride: energy outcome, powertrain evidence, and the signals behind it."'
+                - group "Actions" [ref=f21e191]:
+                  - button "Refresh data · Up to date · just now" [ref=f21e194] [cursor=pointer]:
+                    - generic [ref=f21e201]: just now
+              - generic [ref=f21e202]:
+                - region "Trip review" [ref=f21e203]:
+                  - generic [ref=f21e204]:
+                    - heading "Trip review" [level=3] [ref=f21e206]
+                    - paragraph [ref=f21e211]: Choose a ride to review its recorded outcome and motor samples. Current vehicle signals and multi-trip context are separated below. 2026-09-27 – 2026-10-03
+                    - generic [ref=f21e212]:
+                      - generic [ref=f21e213]: Drive
+                      - combobox "Drive" [ref=f21e215]:
+                        - option "No drives in this range"
+                        - option "Oct 2, 2026, 02:13 PM · 14.5 km" [selected]
+                        - option "Oct 2, 2026, 03:13 AM · 17.0 km"
+                        - option "Oct 1, 2026, 04:13 PM · 19.5 km"
+                        - option "Oct 1, 2026, 05:13 AM · 22.0 km"
+                        - option "Sep 30, 2026, 06:13 PM · 24.5 km"
+                        - option "Sep 30, 2026, 07:13 AM · 27.0 km"
+                        - option "Sep 29, 2026, 08:13 PM · 29.5 km"
+                        - option "Sep 29, 2026, 09:13 AM · 12.0 km"
+                        - option "Sep 28, 2026, 10:13 PM · 14.5 km"
+                        - option "Sep 28, 2026, 11:13 AM · 17.0 km"
+                        - option "Sep 28, 2026, 12:13 AM · 19.5 km"
+                        - option "Sep 27, 2026, 01:13 PM · 22.0 km"
+                        - option "Sep 27, 2026, 02:13 AM · 24.5 km"
+                  - generic [ref=f21e217]:
+                    - generic [ref=f21e218]:
+                      - heading "Selected ride" [level=3] [ref=f21e219]
+                      - generic [ref=f21e224]: Recorded trip
+                    - generic [ref=f21e225]:
+                      - generic [ref=f21e226]:
+                        - generic [ref=f21e227]:
+                          - paragraph [ref=f21e228]: Demo Home → Demo Office
+                          - paragraph [ref=f21e229]: Oct 2, 2026, 02:13 PM — Oct 2, 2026, 02:34 PM
+                        - link "Open trip details" [ref=f21e230] [cursor=pointer]:
+                          - /url: /drives/1
+                      - generic [ref=f21e234]:
+                        - generic [ref=f21e235]:
+                          - term [ref=f21e236]: Distance
+                          - definition [ref=f21e237]: 14.5 km
+                        - generic [ref=f21e238]:
+                          - term [ref=f21e239]: Duration
+                          - definition [ref=f21e240]: 0.4 h
+                        - generic [ref=f21e241]:
+                          - term [ref=f21e242]: Energy used
+                          - definition [ref=f21e243]: 2.6 kWh
+                        - generic [ref=f21e244]:
+                          - term [ref=f21e245]: Energy recovered
+                          - definition [ref=f21e246]: 0.3 kWh
+                      - generic [ref=f21e247]:
+                        - paragraph [ref=f21e248]: "Average / peak speed: 41.4 km/h / 58.0 km/h"
+                        - paragraph [ref=f21e249]: "Battery: 78.0% → 74.0%"
+                      - paragraph [ref=f21e250]: Energy recovered is recorded regeneration, not peak regen power. Missing measurements remain unknown; these totals do not rate driving style.
+                  - generic [ref=f21e252]:
+                    - generic [ref=f21e253]:
+                      - heading "Powertrain summary" [level=3] [ref=f21e254]
+                      - generic [ref=f21e257]: Selected-drive evidence
+                    - paragraph [ref=f21e258]: Up to 200 motor samples inside the selected drive. Averages describe reported samples, not a time-weighted or complete-trip assessment.
+                    - generic [ref=f21e259]:
+                      - generic [ref=f21e260]:
+                        - paragraph [ref=f21e261]: Power & regeneration
+                        - paragraph [ref=f21e262]: Peak sampled power 10.3 kW; peak sampled regen 4.5 kW. These are instantaneous readings, not trip energy totals.
+                      - generic [ref=f21e263]:
+                        - paragraph [ref=f21e264]: Motor load & temperature
+                        - paragraph [ref=f21e265]: Peak reported axle torque 257.6 Nm; hottest recorded motor 62.0°C. A missing axle or temperature signal limits the evidence.
+                      - generic [ref=f21e266]:
+                        - paragraph [ref=f21e267]: Driver inputs
+                        - paragraph [ref=f21e268]: Motor power does not establish pedal position or braking technique. Pedal, G-force, gear, and cruise panels below show current vehicle signals, not this trip’s historical inputs.
+                - region [ref=f21e269]:
+                  - generic [ref=f21e270]:
+                    - heading "Inside this ride" [level=2] [ref=f21e271]
+                    - paragraph [ref=f21e272]: Power delivery, recovered power, axle load, and temperature — sampled only within the selected trip window.
+                  - generic [ref=f21e274]:
+                    - generic [ref=f21e276]:
+                      - generic [ref=f21e277]: Total readings
+                      - generic [ref=f21e282]: "19"
+                    - generic [ref=f21e285]:
+                      - generic [ref=f21e286]: Avg torque
+                      - generic [ref=f21e291]: 141.8 Nm
+                    - generic [ref=f21e294]:
+                      - generic [ref=f21e295]: Peak power
+                      - generic [ref=f21e301]: 10.3 kW
+                    - generic [ref=f21e304]:
+                      - generic [ref=f21e305]: Peak regen
+                      - generic [ref=f21e311]: 4.5 kW
+                    - generic [ref=f21e314]:
+                      - generic [ref=f21e315]: Avg power
+                      - generic [ref=f21e321]: 6.4 kW
+                    - generic [ref=f21e324]:
+                      - generic [ref=f21e325]: Avg motor temp
+                      - generic [ref=f21e330]: 57.4°C
+                  - generic [ref=f21e333]:
+                    - generic [ref=f21e334]:
+                      - heading "Torque distribution" [level=3] [ref=f21e335]
+                      - generic [ref=f21e338]:
+                        - generic [ref=f21e339]:
+                          - generic [ref=f21e340]: Avg torque
+                          - generic [ref=f21e341]: 141.8 Nm
+                        - generic [ref=f21e342]:
+                          - generic [ref=f21e343]: Max torque
+                          - generic [ref=f21e344]: 257.6 Nm
+                        - generic [ref=f21e345]:
+                          - generic [ref=f21e346]: Torque samples above 200 Nm
+                          - generic [ref=f21e347]: 36.8%
+                        - paragraph [ref=f21e348]: Sum of reported axle torque. Sample share is not time spent under load or a driver rating.
+                    - generic [ref=f21e349]:
+                      - heading "Power demand" [level=3] [ref=f21e350]
+                      - generic [ref=f21e354]:
+                        - generic [ref=f21e355]:
+                          - generic [ref=f21e356]: Avg power
+                          - generic [ref=f21e357]: 6.4 kW
+                        - generic [ref=f21e358]:
+                          - generic [ref=f21e359]: Peak power
+                          - generic [ref=f21e360]: 10.3 kW
+                        - generic [ref=f21e361]:
+                          - generic [ref=f21e362]: Peak regen
+                          - generic [ref=f21e363]: 4.5 kW
+                        - paragraph [ref=f21e364]: Measured motor output, not pedal position. Power alone cannot classify driving style.
+                    - generic [ref=f21e365]:
+                      - heading "Motor thermal" [level=3] [ref=f21e366]
+                      - generic [ref=f21e369]:
+                        - generic [ref=f21e370]:
+                          - generic [ref=f21e371]: Avg motor temp
+                          - generic [ref=f21e372]: 57.4°C
+                        - generic [ref=f21e373]:
+                          - generic [ref=f21e374]: Max motor temp
+                          - generic [ref=f21e375]: 62.0°C
+                        - paragraph [ref=f21e376]: Average of the hotter reported motor in each sample. Temperature alone does not establish thermal limiting or powertrain health.
+                  - generic [ref=f21e377]:
+                    - figure [ref=f21e379]:
+                      - generic [ref=f21e380]:
+                        - generic [ref=f21e382]:
+                          - heading "Motor power over time" [level=3] [ref=f21e383]
+                          - paragraph [ref=f21e384]: Drive and regen power from motor telemetry
+                        - button "Export chart" [ref=f21e387] [cursor=pointer]
+                      - group "Motor power and regen over time area chart" [ref=f21e391]:
+                        - generic [ref=f21e393]:
+                          - img [ref=f21e394]:
+                            - generic [ref=f21e399]:
+                              - generic [ref=f21e400]: 02:17 PM
+                              - generic [ref=f21e402]: 02:21 PM
+                              - generic [ref=f21e404]: 02:26 PM
+                              - generic [ref=f21e406]: 02:32 PM
+                            - generic [ref=f21e409]:
+                              - generic [ref=f21e410]: 0 kW
+                              - generic [ref=f21e412]: 3 kW
+                              - generic [ref=f21e414]: 6 kW
+                              - generic [ref=f21e416]: 9 kW
+                              - generic [ref=f21e418]: 12 kW
+                          - list [ref=f21e433]:
+                            - listitem [ref=f21e434]:
+                              - button "Power" [ref=f21e438] [cursor=pointer]
+                            - listitem [ref=f21e439]:
+                              - button "Regen" [ref=f21e443] [cursor=pointer]
+                      - paragraph [ref=f21e445]: "Chart: Motor power over time"
+                    - figure [ref=f21e447]:
+                      - generic [ref=f21e448]:
+                        - generic [ref=f21e450]:
+                          - heading "Motor torque history" [level=3] [ref=f21e451]
+                          - paragraph [ref=f21e452]: Front and rear motor torque over time
+                        - button "Export chart" [ref=f21e455] [cursor=pointer]
+                      - group "Front and rear motor torque over time line chart" [ref=f21e459]:
+                        - generic [ref=f21e461]:
+                          - img [ref=f21e462]:
+                            - generic [ref=f21e467]:
+                              - generic [ref=f21e468]: 02:17 PM
+                              - generic [ref=f21e470]: 02:21 PM
+                              - generic [ref=f21e472]: 02:26 PM
+                              - generic [ref=f21e474]: 02:32 PM
+                            - generic [ref=f21e477]:
+                              - generic [ref=f21e478]: "-65 Nm"
+                              - generic [ref=f21e480]: 0 Nm
+                              - generic [ref=f21e482]: 65 Nm
+                              - generic [ref=f21e484]: 130 Nm
+                              - generic [ref=f21e486]: 195 Nm
+                          - list [ref=f21e493]:
+                            - listitem [ref=f21e494]:
+                              - button "Front torque" [ref=f21e498] [cursor=pointer]
+                            - listitem [ref=f21e499]:
+                              - button "Rear torque" [ref=f21e503] [cursor=pointer]
+                      - paragraph [ref=f21e505]: "Chart: Motor torque history"
+                    - figure [ref=f21e507]:
+                      - generic [ref=f21e508]:
+                        - generic [ref=f21e510]:
+                          - heading "Motor RPM history" [level=3] [ref=f21e511]
+                          - paragraph [ref=f21e512]: Front and rear motor RPM over time
+                        - button "Export chart" [ref=f21e515] [cursor=pointer]
+                      - group "Front and rear motor RPM over time line chart" [ref=f21e519]:
+                        - generic [ref=f21e521]:
+                          - img [ref=f21e522]:
+                            - generic [ref=f21e527]:
+                              - generic [ref=f21e528]: 02:17 PM
+                              - generic [ref=f21e530]: 02:21 PM
+                              - generic [ref=f21e532]: 02:26 PM
+                              - generic [ref=f21e534]: 02:32 PM
+                            - generic [ref=f21e537]:
+                              - generic [ref=f21e538]: 0 rpm
+                              - generic [ref=f21e540]: 90 rpm
+                              - generic [ref=f21e542]: 180 rpm
+                              - generic [ref=f21e544]: 270 rpm
+                              - generic [ref=f21e546]: 360 rpm
+                          - list [ref=f21e549]:
+                            - listitem [ref=f21e550]:
+                              - button "Front RPM" [ref=f21e554] [cursor=pointer]
+                            - listitem [ref=f21e555]:
+                              - button "Rear RPM" [ref=f21e559] [cursor=pointer]
+                      - paragraph [ref=f21e561]: "Chart: Motor RPM history"
+                  - generic [ref=f21e562]:
+                    - heading "How to read this ride" [level=3] [ref=f21e563]
+                    - list [ref=f21e566]:
+                      - listitem [ref=f21e567]:
+                        - generic [ref=f21e570]: Compare power peaks with the trip’s speed and road conditions. Average motor power alone cannot tell whether acceleration was smooth or efficient.
+                      - listitem [ref=f21e571]:
+                        - generic [ref=f21e574]: Review energy recovered alongside energy used. A peak regen reading is not a measure of braking quality, and friction-brake use cannot be reconstructed from motor power.
+                      - listitem [ref=f21e575]:
+                        - generic [ref=f21e578]: Use the front and rear torque traces to see which axle reported load. Gaps are missing telemetry, not evidence that an axle was inactive.
+                      - listitem [ref=f21e579]:
+                        - generic [ref=f21e582]: Temperature adds context to sustained motor load. Without the vehicle’s limiting signals, these samples do not prove overheating or reduced power.
+                - region [ref=f21e583]:
+                  - generic [ref=f21e584]:
+                    - generic [ref=f21e585]:
+                      - heading "Vehicle now" [level=2] [ref=f21e586]
+                      - generic [ref=f21e587]: Current signals · not trip history
+                    - paragraph [ref=f21e588]: Latest reported motor, pedal, G-force, gear, and cruise state for this vehicle. These readings may be parked or older than now and do not describe the selected ride.
+                  - generic [ref=f21e590]:
+                    - generic [ref=f21e591]:
+                      - heading "Live motor status" [level=3] [ref=f21e592]
+                      - generic [ref=f21e596]:
+                        - generic [ref=f21e597]:
+                          - generic [ref=f21e598]:
+                            - meter "Motor" [ref=f21e599]:
+                              - generic [ref=f21e600]: "Motor: 50.2°C. Scale 0.0°C to 150.0°C"
+                              - generic [ref=f21e601]:
+                                - generic [ref=f21e602]: "50.2"
+                                - generic [ref=f21e603]: °C
+                              - generic [ref=f21e606]:
+                                - generic [ref=f21e607]: Motor
+                                - generic [ref=f21e608]: 0.0 – 150.0°C
+                            - generic [ref=f21e609]: 50.2°C
+                          - generic [ref=f21e610]:
+                            - 'generic "Shift state: Unknown" [ref=f21e612]': Unknown
+                            - generic [ref=f21e624]: Shift state
+                        - generic [ref=f21e625]:
+                          - meter "Torque" [ref=f21e626]:
+                            - generic [ref=f21e627]:
+                              - generic [ref=f21e628]: Torque
+                              - generic [ref=f21e629]: 142.7 Nm
+                            - generic [ref=f21e633]:
+                              - generic [ref=f21e634]: Regen
+                              - generic [ref=f21e635]: Drive
+                          - meter "Front RPM" [ref=f21e636]:
+                            - generic [ref=f21e637]:
+                              - generic [ref=f21e638]: Front RPM
+                              - generic [ref=f21e639]: 343.4 RPM
+                            - generic [ref=f21e643]:
+                              - generic [ref=f21e644]: Reverse
+                              - generic [ref=f21e645]: Forward
+                          - meter "Rear RPM" [ref=f21e646]:
+                            - generic [ref=f21e647]:
+                              - generic [ref=f21e648]: Rear RPM
+                              - generic [ref=f21e649]: 343.4 RPM
+                            - generic [ref=f21e653]:
+                              - generic [ref=f21e654]: Reverse
+                              - generic [ref=f21e655]: Forward
+                    - generic [ref=f21e656]:
+                      - heading "Pedal usage" [level=3] [ref=f21e657]
+                      - status [ref=f21e661]:
+                        - paragraph [ref=f21e662]: No pedal telemetry received yet
+                  - generic [ref=f21e663]:
+                    - heading "Live powertrain interpretation" [level=3] [ref=f21e664]
+                    - paragraph [ref=f21e667]: Interpreted from live motor, pedal, and accelerometer signals. Not Autopilot, not the chassis controller, and not a 0–60 claim.
+                    - generic [ref=f21e668]:
+                      - generic [ref=f21e669]:
+                        - generic [ref=f21e670]: Latest vehicle signals
+                        - paragraph [ref=f21e671]: Observed values only — not a launch, grip, thermal-health, or selected-trip assessment.
+                      - generic [ref=f21e672]:
+                        - generic [ref=f21e675]:
+                          - paragraph [ref=f21e676]:
+                            - generic [ref=f21e677]: Drive power
+                          - paragraph [ref=f21e678]: 5.7 kW
+                        - generic [ref=f21e681]:
+                          - paragraph [ref=f21e682]:
+                            - generic [ref=f21e683]: Regen harvest
+                          - paragraph [ref=f21e684]: 0.0 kW
+                        - generic [ref=f21e687]:
+                          - paragraph [ref=f21e688]:
+                            - generic [ref=f21e689]: Axle torque
+                          - paragraph [ref=f21e690]: 142.7 Nm
+                        - generic [ref=f21e693]:
+                          - paragraph [ref=f21e694]:
+                            - generic [ref=f21e695]: Combined g
+                          - paragraph [ref=f21e696]: —
+                      - progressbar "Rear axle share" [ref=f21e697]:
+                        - generic [ref=f21e698]:
+                          - generic [ref=f21e699]: Rear axle share
+                          - generic [ref=f21e700]: 45.0% of |torque|
+                      - paragraph [ref=f21e703]: Hottest reported stator/inverter 50.2°C. Thermal limiting has not been established.
+                      - list [ref=f21e704]:
+                        - listitem [ref=f21e705]:
+                          - paragraph [ref=f21e708]: Axle torque is a reported motor measurement, not a driver rating or a claim about vehicle motion.
+                        - listitem [ref=f21e709]:
+                          - paragraph [ref=f21e712]: Rear axle accounts for 45.0% of reported absolute axle torque. This does not establish traction or grip.
+                      - link "Open Tesla physics cockpit" [ref=f21e713] [cursor=pointer]:
+                        - /url: /physics-cockpit
+                  - generic [ref=f21e715]:
+                    - generic [ref=f21e716]:
+                      - heading "Speed & gear" [level=3] [ref=f21e717]
+                      - paragraph [ref=f21e721]: "Gear and motor power: latest vehicle signals. Average and top speed: loaded trips in the date range, not just the selected ride."
+                      - generic [ref=f21e722]:
+                        - generic [ref=f21e723]:
+                          - generic [ref=f21e724]: —
+                          - generic [ref=f21e725]: Shift state
+                        - generic [ref=f21e726]:
+                          - generic [ref=f21e727]: Power
+                          - generic [ref=f21e728]: "5.7"
+                          - generic [ref=f21e729]: kW
+                        - generic [ref=f21e730]:
+                          - generic [ref=f21e731]: Avg drive speed
+                          - generic [ref=f21e732]: "51.2"
+                          - generic [ref=f21e733]: km/h
+                        - generic [ref=f21e734]:
+                          - generic [ref=f21e735]: Top drive speed
+                          - generic [ref=f21e736]: "126.0"
+                          - generic [ref=f21e737]: km/h
+                    - generic [ref=f21e738]:
+                      - heading "Acceleration G-force" [level=3] [ref=f21e739]
+                      - status [ref=f21e743]:
+                        - paragraph [ref=f21e744]: No G-force telemetry received yet
+                    - generic [ref=f21e745]:
+                      - heading "Autopilot & cruise" [level=3] [ref=f21e746]
+                      - status [ref=f21e749]:
+                        - paragraph [ref=f21e750]: No cruise / autopilot telemetry received yet
+                - region [ref=f21e751]:
+                  - generic [ref=f21e752]:
+                    - heading "Beyond this ride" [level=2] [ref=f21e753]
+                    - paragraph [ref=f21e754]: Vehicle coaching covers the last 30 days. Speed and power analytics cover loaded trips in the selected date range, plus any current drive. Neither is a score for this ride.
+                  - generic [ref=f21e755]:
+                    - generic [ref=f21e756]:
+                      - heading "Vehicle coaching · last 30 days" [level=2] [ref=f21e757]
+                      - paragraph [ref=f21e758]: All analyzed drives for this vehicle over the last 30 days, independent of the selected trip and date range.
+                    - generic [ref=f21e759]:
+                      - generic [ref=f21e761]:
+                        - meter "Driving score" [ref=f21e762]:
+                          - generic [ref=f21e763]: "Driving score: 100"
+                          - generic [ref=f21e764]: "100"
+                        - generic [ref=f21e770]: 60 drives analyzed
+                      - generic [ref=f21e772]:
+                        - heading "Style breakdown" [level=3] [ref=f21e773]
+                        - generic [ref=f21e774]:
+                          - 'generic "Efficient: 54 drives" [ref=f21e775]'
+                          - 'generic "Moderate: 6 drives" [ref=f21e776]'
+                        - generic [ref=f21e777]:
+                          - generic [ref=f21e778]:
+                            - generic [ref=f21e779]: Efficient
+                            - generic [ref=f21e782]: "54"
+                          - generic [ref=f21e783]:
+                            - generic [ref=f21e784]: Moderate
+                            - generic [ref=f21e787]: "6"
+                          - generic [ref=f21e788]:
+                            - generic [ref=f21e789]: Aggressive
+                            - generic [ref=f21e792]: "0"
+                      - generic [ref=f21e794]:
+                        - generic [ref=f21e795]:
+                          - generic [ref=f21e796]: Avg efficiency
+                          - generic [ref=f21e801]: 180.0 Wh/km
+                        - generic [ref=f21e803]:
+                          - generic [ref=f21e804]: Best efficiency
+                          - generic [ref=f21e810]: 180.0 Wh/km
+                    - generic [ref=f21e812]:
+                      - generic [ref=f21e814]:
+                        - heading "Weekly score trend" [level=3] [ref=f21e815]
+                        - figure [ref=f21e816]:
+                          - heading "Weekly score trend" [level=3] [ref=f21e817]
+                          - img "Line chart of weekly driving score over time" [ref=f21e818]:
+                            - img [ref=f21e821]:
+                              - generic [ref=f21e826]:
+                                - generic [ref=f21e827]: 2026-W36
+                                - generic [ref=f21e829]: 2026-W37
+                                - generic [ref=f21e831]: 2026-W38
+                                - generic [ref=f21e833]: 2026-W40
+                              - generic [ref=f21e836]:
+                                - generic [ref=f21e837]: "0"
+                                - generic [ref=f21e839]: "25"
+                                - generic [ref=f21e841]: "50"
+                                - generic [ref=f21e843]: "75"
+                                - generic [ref=f21e845]: "100"
+                          - paragraph [ref=f21e855]: "Chart: Weekly score trend"
+                      - generic [ref=f21e857]:
+                        - heading "Driving patterns" [level=3] [ref=f21e858]
+                        - generic [ref=f21e859]:
+                          - generic [ref=f21e861]:
+                            - generic [ref=f21e862]: Hard acceleration
+                            - generic [ref=f21e863]: 0.0%
+                          - generic [ref=f21e866]:
+                            - generic [ref=f21e867]: Hard braking
+                            - generic [ref=f21e868]: —
+                          - generic [ref=f21e870]:
+                            - generic [ref=f21e871]: Highway driving
+                            - generic [ref=f21e872]: 10.0%
+                          - generic [ref=f21e876]:
+                            - generic [ref=f21e877]: Short trips (<5 km)
+                            - generic [ref=f21e878]: 0.0%
+                          - generic [ref=f21e881]:
+                            - generic [ref=f21e882]: Cold starts
+                            - generic [ref=f21e883]: 0.0%
+                    - generic [ref=f21e887]:
+                      - heading "Recommendations" [level=3] [ref=f21e888]
+                      - generic [ref=f21e892]:
+                        - generic [ref=f21e893]: Low
+                        - paragraph [ref=f21e894]: Use recorded consumption as a reference; compare trips with similar routes, speeds, and weather.
+                  - generic [ref=f21e895]:
+                    - heading "Date-range trip context" [level=2] [ref=f21e896]
+                    - heading "Drive analytics" [level=2] [ref=f21e899]
+                    - generic [ref=f21e901]:
+                      - figure [ref=f21e902]:
+                        - generic [ref=f21e903]:
+                          - generic [ref=f21e905]:
+                            - heading "Speed distribution" [level=3] [ref=f21e906]
+                            - paragraph [ref=f21e907]: Drives grouped by average speed
+                          - button "Export chart" [ref=f21e910] [cursor=pointer]
+                        - img "Speed-bucket drive count distribution bar chart" [ref=f21e914]:
+                          - img [ref=f21e917]:
+                            - generic [ref=f21e922]:
+                              - generic [ref=f21e923]: 0–30 km/h
+                              - generic [ref=f21e925]: 60–90 km/h
+                              - generic [ref=f21e927]: 120+ km/h
+                            - generic [ref=f21e930]:
+                              - generic [ref=f21e931]: "0"
+                              - generic [ref=f21e933]: "3"
+                              - generic [ref=f21e935]: "6"
+                              - generic [ref=f21e937]: "9"
+                              - generic [ref=f21e939]: "12"
+                        - table [ref=f21e953]:
+                          - caption [ref=f21e954]: Speed distribution — data table
+                          - rowgroup [ref=f21e955]:
+                            - row [ref=f21e956]:
+                              - columnheader "Speed range" [ref=f21e957]
+                              - columnheader "Drives" [ref=f21e958]
+                          - rowgroup [ref=f21e959]:
+                            - row [ref=f21e960]:
+                              - cell "0–30 km/h" [ref=f21e961]
+                              - cell "0" [ref=f21e962]
+                            - row [ref=f21e963]:
+                              - cell "30–60 km/h" [ref=f21e964]
+                              - cell "9" [ref=f21e965]
+                            - row [ref=f21e966]:
+                              - cell "60–90 km/h" [ref=f21e967]
+                              - cell "3" [ref=f21e968]
+                            - row [ref=f21e969]:
+                              - cell "90–120 km/h" [ref=f21e970]
+                              - cell "1" [ref=f21e971]
+                            - row [ref=f21e972]:
+                              - cell "120+ km/h" [ref=f21e973]
+                              - cell "0" [ref=f21e974]
+                      - figure [ref=f21e975]:
+                        - generic [ref=f21e976]:
+                          - generic [ref=f21e978]:
+                            - heading "Trip load comparison" [level=3] [ref=f21e979]
+                            - paragraph [ref=f21e980]: Recorded average motor power versus trip distance — not peak power or acceleration
+                          - button "Export chart" [ref=f21e983] [cursor=pointer]
+                        - img "Per-drive scatter chart of average motor power versus trip distance" [ref=f21e987]:
+                          - img [ref=f21e990]:
+                            - generic [ref=f21e995]:
+                              - generic [ref=f21e996]: 0 km
+                              - generic [ref=f21e998]: 8 km
+                              - generic [ref=f21e1000]: 16 km
+                              - generic [ref=f21e1002]: 24 km
+                              - generic [ref=f21e1004]: 32 km
+                            - generic [ref=f21e1007]:
+                              - generic [ref=f21e1008]: 0 kW
+                              - generic [ref=f21e1010]: 5 kW
+                              - generic [ref=f21e1012]: 10 kW
+                              - generic [ref=f21e1014]: 15 kW
+                              - generic [ref=f21e1016]: 20 kW
+                            - generic [ref=f21e1047]: Avg
+                        - paragraph [ref=f21e1050]: "Chart: Trip load comparison"
+                    - figure [ref=f21e1052]:
+                      - generic [ref=f21e1053]:
+                        - generic [ref=f21e1055]:
+                          - heading "Power profile" [level=3] [ref=f21e1056]
+                          - paragraph [ref=f21e1057]: Average power (left, kW) and recovered energy (right, kWh) for the latest 20 loaded trips
+                        - button "Export chart" [ref=f21e1060] [cursor=pointer]
+                      - group "Recent-drives average motor power and recorded recovered energy on separate axes" [ref=f21e1064]:
+                        - generic [ref=f21e1066]:
+                          - img [ref=f21e1067]:
+                            - generic [ref=f21e1072]:
+                              - generic [ref=f21e1073]: Sep 27
+                              - generic [ref=f21e1075]: Sep 28
+                              - generic [ref=f21e1077]: Sep 29
+                              - generic [ref=f21e1079]: Oct 1
+                              - generic [ref=f21e1081]: Oct 2
+                            - generic [ref=f21e1084]:
+                              - generic [ref=f21e1085]: 0 kW
+                              - generic [ref=f21e1087]: 5 kW
+                              - generic [ref=f21e1089]: 10 kW
+                              - generic [ref=f21e1091]: 15 kW
+                              - generic [ref=f21e1093]: 20 kW
+                            - generic [ref=f21e1096]:
+                              - generic [ref=f21e1097]: 0 kWh
+                              - generic [ref=f21e1099]: 0.15 kWh
+                              - generic [ref=f21e1101]: 0.3 kWh
+                              - generic [ref=f21e1103]: 0.45 kWh
+                              - generic [ref=f21e1105]: 0.6 kWh
+                          - list [ref=f21e1120]:
+                            - listitem [ref=f21e1121]:
+                              - button "Average power (kW)" [ref=f21e1125] [cursor=pointer]
+                            - listitem [ref=f21e1126]:
+                              - button "Recovered energy (kWh)" [ref=f21e1130] [cursor=pointer]
+                      - table [ref=f21e1134]:
+                        - caption [ref=f21e1135]: Power profile — data table
+                        - rowgroup [ref=f21e1136]:
+                          - row [ref=f21e1137]:
+                            - columnheader "Drive" [ref=f21e1138]
+                            - columnheader "Average power (kW)" [ref=f21e1139]
+                            - columnheader "Recovered energy (kWh)" [ref=f21e1140]
+                        - rowgroup [ref=f21e1141]:
+                          - row [ref=f21e1142]:
+                            - cell "Sep 27" [ref=f21e1143]
+                            - cell "12.6" [ref=f21e1144]
+                            - cell "0.4" [ref=f21e1145]
+                          - row [ref=f21e1146]:
+                            - cell "Sep 27" [ref=f21e1147]
+                            - cell "13.2" [ref=f21e1148]
+                            - cell "0.4" [ref=f21e1149]
+                          - row [ref=f21e1150]:
+                            - cell "Sep 28" [ref=f21e1151]
+                            - cell "6.4" [ref=f21e1152]
+                            - cell "0.4" [ref=f21e1153]
+                          - row [ref=f21e1154]:
+                            - cell "Sep 28" [ref=f21e1155]
+                            - cell "6.1" [ref=f21e1156]
+                            - cell "0.3" [ref=f21e1157]
+                          - row [ref=f21e1158]:
+                            - cell "Sep 28" [ref=f21e1159]
+                            - cell "5.8" [ref=f21e1160]
+                            - cell "0.3" [ref=f21e1161]
+                          - row [ref=f21e1162]:
+                            - cell "Sep 29" [ref=f21e1163]
+                            - cell "5.4" [ref=f21e1164]
+                            - cell "0.2" [ref=f21e1165]
+                          - row [ref=f21e1166]:
+                            - cell "Sep 29" [ref=f21e1167]
+                            - cell "15.2" [ref=f21e1168]
+                            - cell "0.5" [ref=f21e1169]
+                          - row [ref=f21e1170]:
+                            - cell "Sep 30" [ref=f21e1171]
+                            - cell "16.2" [ref=f21e1172]
+                            - cell "0.5" [ref=f21e1173]
+                          - row [ref=f21e1174]:
+                            - cell "Sep 30" [ref=f21e1175]
+                            - cell "8.0" [ref=f21e1176]
+                            - cell "0.4" [ref=f21e1177]
+                          - row [ref=f21e1178]:
+                            - cell "Oct 1" [ref=f21e1179]
+                            - cell "7.9" [ref=f21e1180]
+                            - cell "0.4" [ref=f21e1181]
+                          - row [ref=f21e1182]:
+                            - cell "Oct 1" [ref=f21e1183]
+                            - cell "7.8" [ref=f21e1184]
+                            - cell "0.4" [ref=f21e1185]
+                          - row [ref=f21e1186]:
+                            - cell "Oct 2" [ref=f21e1187]
+                            - cell "7.7" [ref=f21e1188]
+                            - cell "0.3" [ref=f21e1189]
+                          - row [ref=f21e1190]:
+                            - cell "Oct 2" [ref=f21e1191]
+                            - cell "7.5" [ref=f21e1192]
+                            - cell "0.3" [ref=f21e1193]
+      - navigation "Quick navigation" [ref=f21e85]:
+        - link "Home" [ref=f21e86] [cursor=pointer]:
+          - /url: /
+        - link "Drives" [ref=f21e93] [cursor=pointer]:
+          - /url: /drives
+        - link "Charging" [ref=f21e99] [cursor=pointer]:
+          - /url: /charging
+        - link "Battery" [ref=f21e105] [cursor=pointer]:
+          - /url: /battery
+        - link "Map" [ref=f21e110] [cursor=pointer]:
+          - /url: /live
+        - link "More" [ref=f21e119] [cursor=pointer]:
+          - /url: /explore
+      - contentinfo "Application status" [ref=f21e124]:
+        - generic [ref=f21e125]:
+          - generic [ref=f21e126]:
+            - 'link "API connection status: Online (26ms)" [ref=f21e1194] [cursor=pointer]':
+              - /url: /system-status
+            - tooltip "API connection · Online · 26ms"
+          - generic [ref=f21e133]:
+            - 'link "Live telemetry status: Live" [ref=f21e1197] [cursor=pointer]':
+              - /url: /signal-diff
+            - tooltip "Live telemetry stream · Last message 20s ago"
+          - generic [ref=f21e143]:
+            - link "Telemetry honesty meter" [ref=f21e144] [cursor=pointer]:
+              - /url: /
+            - tooltip "Live 0 · Stale 0 · Guessed 2 · Missing 0 · Stream live"
+          - generic [ref=f21e148]:
+            - button "Current data with live actions available." [ref=f21e149] [cursor=pointer]
+            - tooltip "Current data with live actions available."
+        - generic [ref=f21e154]:
+          - generic [ref=f21e155]:
+            - button "Open recently viewed pages, 2 saved" [ref=f21e156] [cursor=pointer]
+            - tooltip "Recently viewed pages - 2 pages"
+          - generic [ref=f21e161]:
+            - button "Open more status options. Update or release notes available" [ref=f21e162] [cursor=pointer]
+            - tooltip "Update or release notes available"
+          - generic [ref=f21e169]:
+            - button "Open Helix chat" [ref=f21e170] [cursor=pointer]
+            - tooltip "Open Helix chat"
+      - status "Application status announcements" [ref=f21e174]: "Live telemetry status: Live"
+    - status [ref=f21e1281]:
+      - generic [ref=f21e1282]:
+        - paragraph [ref=f21e1287]: "Mode: Dark"
+        - button "Dismiss notification" [ref=f21e1288] [cursor=pointer]
+  - generic [aria-hidden] [ref=f21e1202]: "90"

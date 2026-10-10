@@ -40,7 +40,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ToastProvider } from '@/components/feedback';
@@ -283,15 +283,51 @@ beforeEach(() => {
 
 describe('DrivingTab — loading', () => {
   it('renders skeletons and withholds the performance cards and every chart', () => {
-    const { container } = renderTab(makeQuery({ isLoading: true }));
+    renderTab(makeQuery({ isLoading: true }));
 
     // Panel titles always render (they frame the section)…
-    expect(screen.getByText('Speed Distribution')).toBeInTheDocument();
-    expect(screen.getByText('Efficiency Trend')).toBeInTheDocument();
-    // …but the performance band is a skeleton — no card labels leak through…
-    expect(screen.queryByText('Top Speed')).toBeNull();
-    // …pulsing skeletons are on screen…
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
+    expect(screen.getByRole('heading', { name: 'Speed distribution' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Efficiency trend' })).toBeInTheDocument();
+    // The retained performance shell keeps its labels, but withholds all values.
+    const performance = screen.getByRole('group', { name: 'Driving performance metrics' });
+    const performanceRegion = within(performance).getByRole('region', { name: 'Driving performance metrics' });
+    expect(performanceRegion).toHaveAttribute('aria-busy', 'true');
+    expect(within(performance).getByText('Top speed')).toBeInTheDocument();
+    const performanceCells = within(performance).getAllByRole('listitem');
+    expect(performanceCells).toHaveLength(6);
+    performanceCells.forEach((cell) => {
+      const placeholders = cell.querySelectorAll('.h-5.w-20.max-w-full.rounded');
+      expect(placeholders).toHaveLength(1);
+      expect(placeholders[0]).toHaveAttribute('aria-hidden', 'true');
+      expect(cell.querySelector('[data-operational-value]')).toBeNull();
+      expect(cell.querySelector('[class*="animate-"]')).toBeNull();
+    });
+    // Each chart owns a busy, static silhouette, not a plotted series.
+    [
+      'Speed distribution', 'Trip distance distribution', 'Hourly driving pattern',
+      'Temperature vs efficiency', 'Daily driving trend', 'Drive duration distribution',
+      'Efficiency trend',
+    ].forEach((title) => {
+      const panel = screen.getByRole('figure', { name: title });
+      expect(panel).toHaveAttribute('aria-busy', 'true');
+      expect(panel).toHaveAttribute('data-chart-state', 'loading');
+      const placeholder = within(panel).getByRole('status', { name: 'Loading chart…' });
+      expect(placeholder).toHaveAttribute('aria-busy', 'true');
+      expect(placeholder).toHaveClass('h-full');
+      const bars = placeholder.querySelectorAll<HTMLElement>('.flex-1.rounded-t');
+      expect(bars).toHaveLength(7);
+      expect(Array.from(bars, (bar) => bar.style.height)).toEqual(['50%', '45%', '63%', '64%', '37%', '8%', '33%']);
+      bars.forEach((bar) => expect(bar).toHaveAttribute('aria-hidden', 'true'));
+      expect(within(panel).queryAllByRole('img')).toHaveLength(0);
+      expect(panel.querySelector('[data-testid^="chart-"]:not([data-testid="chart-skeleton"])')).toBeNull();
+    });
+    const temperature = screen.getByRole('heading', { name: 'Observed temperature measurements' }).closest('[aria-busy]');
+    expect(temperature).toHaveAttribute('aria-busy', 'true');
+    const temperaturePlaceholders = temperature?.querySelectorAll<HTMLElement>('.w-full.rounded[aria-hidden="true"]') ?? [];
+    expect(temperaturePlaceholders).toHaveLength(1);
+    expect(temperaturePlaceholders[0]).toHaveStyle({ height: '120px' });
+    expect(temperaturePlaceholders[0]).toHaveClass('h-4', 'w-full');
+    expect(screen.queryByText('Inside min')).toBeNull();
     // …and no chart has been drawn yet.
     expect(screen.queryByTestId('chart-bar')).toBeNull();
     expect(screen.queryAllByTestId('chart-composed')).toHaveLength(0);
@@ -356,13 +392,13 @@ describe('DrivingTab — populated', () => {
     renderTab(makeQuery({ data: populated() }));
 
     // Every panel title frames its section.
-    expect(screen.getByText('Speed Distribution')).toBeInTheDocument();
-    expect(screen.getByText('Trip Distance Distribution')).toBeInTheDocument();
-    expect(screen.getByText('Hourly Driving Pattern')).toBeInTheDocument();
-    expect(screen.getByText('Temperature vs Efficiency')).toBeInTheDocument();
-    expect(screen.getByText('Daily Driving Trend')).toBeInTheDocument();
-    expect(screen.getByText('Drive Duration Distribution')).toBeInTheDocument();
-    expect(screen.getByText('Efficiency Trend')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Speed distribution' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Trip distance distribution' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Hourly driving pattern' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Temperature vs efficiency' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Daily driving trend' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Drive duration distribution' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Efficiency trend' })).toBeInTheDocument();
 
     // Three bar charts, two composed, one scatter, one area = seven charts.
     expect(screen.getAllByTestId('chart-bar')).toHaveLength(3);
@@ -371,10 +407,10 @@ describe('DrivingTab — populated', () => {
     expect(screen.getByTestId('chart-area')).toBeInTheDocument();
 
     // Both sibling bands compose in (performance cards + temperature stats).
-    expect(screen.getByText('Top Speed')).toBeInTheDocument();
-    expect(screen.getByText('Longest Drive')).toBeInTheDocument();
-    expect(screen.getByText('Inside Min')).toBeInTheDocument();
-    expect(screen.getByText('Outside Max')).toBeInTheDocument();
+    expect(screen.getByText('Top speed')).toBeInTheDocument();
+    expect(screen.getByText('Longest drive')).toBeInTheDocument();
+    expect(screen.getByText('Inside min')).toBeInTheDocument();
+    expect(screen.getByText('Outside max')).toBeInTheDocument();
   });
 
   it('binds every chart series to its expected dataKey', () => {
@@ -469,8 +505,24 @@ describe('DrivingTab — Fahrenheit preference', () => {
     expect(scatterRows()[0].temp).toBe(68);
     // Distance/efficiency untouched by the temperature flip (still metric).
     expect(scatterRows()[0].distance).toBe(12);
-    // The temperature-stats band re-projects too: inside min 18 °C → 64.4 °F.
-    expect(screen.getByText('64.4')).toBeInTheDocument();
+    expect(scatterRows()[0].efficiency).toBe(150);
+    // Operational metrics now render the formatted value and unit together.
+    // Keep exact two-decimal Fahrenheit projections, scoped to each source cell.
+    const temperature = screen.getByRole('region', { name: 'Temperature stats' });
+    const cells = within(temperature).getAllByRole('listitem');
+    expect(cells).toHaveLength(6);
+    [
+      ['Inside min', '64.40°F'],
+      ['Inside avg', '69.80°F'],
+      ['Inside max', '75.20°F'],
+      ['Outside min', '41.00°F'],
+      ['Outside avg', '53.60°F'],
+      ['Outside max', '68.00°F'],
+    ].forEach(([label, value], index) => {
+      expect(within(cells[index]).getByText(label)).toBeInTheDocument();
+      expect(within(cells[index]).getByText(value)).toHaveAttribute('data-operational-value', 'true');
+      expect(cells[index]).toHaveAttribute('data-value-state', 'value');
+    });
   });
 });
 

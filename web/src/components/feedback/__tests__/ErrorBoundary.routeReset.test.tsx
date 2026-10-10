@@ -1,8 +1,9 @@
 import { render, screen } from '@testing-library/react'
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
+import '@/i18n'
 import { ErrorBoundary } from '../ErrorBoundary'
 
-function Throw({ msg }: { msg: string }) {
+function Throw({ msg }: { msg: string }): never {
   throw new Error(msg)
 }
 

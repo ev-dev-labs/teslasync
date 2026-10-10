@@ -11,16 +11,17 @@ import {
 } from '@/api/hooks/useOwnership';
 import { AlertBanner } from '@/components/feedback';
 
-import { PageContainer } from '@/components/layout';
+import { PageLayout } from '@/components/layout';
+import { KVList } from '@/components/data-display';
 import { FadeIn } from '@/components/motion';
-import { Badge, Button, ConfirmDialog, DataTable, Input, Select, Text, Textarea } from '@/components/ui';
+import { Accordion, Badge, Button, ConfirmDialog, DataTable, Input, Select, Text, Textarea } from '@/components/ui';
 import type { Column } from '@/components/ui';
 import { useConfirm } from '@/hooks/useConfirm';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useUnits } from '@/hooks/useUnits';
 import { formatDateTime } from '@/lib/dateFormat';
-import { fmtNumber } from '@/lib/numberFormat';
+
 import type {
   ConsumableCategory,
   ConsumableEventKind,
@@ -37,6 +38,8 @@ import {
   StatGrid,
   VerdictBadge,
 } from '../components';
+import { OwnershipBrief } from '../components/operationalbrief-all/OwnershipBrief';
+import { specialistDisplay } from '../components/operationalbrief-all/specialistDisplay';
 import {
   daysToSeconds,
   formatCurrencyMinor,
@@ -45,6 +48,7 @@ import {
   fromDateInput,
   toDateInput,
 } from '../formatters';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 const CATEGORIES: ConsumableCategory[] = [
   'tire',
@@ -77,6 +81,7 @@ function healthTone(pct: number): string {
 }
 
 export default function ConsumablesLifecyclePage() {
+  const { fmtNumber, fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const { vehicleId } = useSelectedVehicle();
   const units = useUnits();
@@ -101,7 +106,7 @@ export default function ConsumablesLifecyclePage() {
     note: '',
   });
 
-  usePageTitle(t('ownership.consumables.navTitle', 'Consumables Lifecycle'));
+  usePageTitle(t('ownership.consumables.navTitle', 'Consumables lifecycle'));
 
   const reportQuery = useConsumablesReport(vehicleId);
   const itemsQuery = useConsumableItems(vehicleId);
@@ -198,30 +203,33 @@ export default function ConsumablesLifecyclePage() {
     },
     {
       key: 'observed',
+      align: 'right',
       header: t('ownership.consumables.stress.observed', 'Your vehicle'),
       render: (row) => (
         <span className="tabular-nums">
-          {fmtNumber(row.observed_value, 2)} {row.si_unit}
+          {fmtNumber(row.observed_value)} {row.si_unit}
         </span>
       ),
     },
     {
       key: 'baseline',
+      align: 'right',
       header: t('ownership.consumables.stress.baseline', 'Reference'),
       render: (row) => (
         <span className="tabular-nums">
-          {fmtNumber(row.baseline_value, 2)} {row.si_unit}
+          {fmtNumber(row.baseline_value)} {row.si_unit}
         </span>
       ),
     },
     {
       key: 'multiplier',
+      align: 'right',
       header: t('ownership.consumables.stress.multiplier', 'Wear multiplier'),
       render: (row) => (
         <span
           className={`tabular-nums ${row.multiplier > 1.15 ? 'text-rose-300' : row.multiplier < 0.9 ? 'text-emerald-300' : ''}`}
         >
-          ×{fmtNumber(row.multiplier, 2)}
+          ×{fmtNumber(row.multiplier)}
         </span>
       ),
       sortable: true,
@@ -232,6 +240,8 @@ export default function ConsumablesLifecyclePage() {
     {
       key: 'label',
       header: t('ownership.consumables.item.label', 'Part'),
+      filterValue: (row) => row.id,
+      filterValueLabel: (_value, row) => row.label,
       render: (row) => (
         <div>
           <Text as="p" variant="label">
@@ -246,6 +256,8 @@ export default function ConsumablesLifecyclePage() {
     },
     {
       key: 'installed',
+      filterValue: (row) => row.installed_at,
+      filterValueLabel: (_value, row) => formatDateTime(row.installed_at),
       header: t('ownership.consumables.item.installed', 'Installed'),
       render: (row) => (
         <div>
@@ -261,6 +273,7 @@ export default function ConsumablesLifecyclePage() {
     },
     {
       key: 'rated',
+      align: 'right',
       header: t('ownership.consumables.item.rated', 'Rated life'),
       render: (row) => (
         <div>
@@ -275,6 +288,9 @@ export default function ConsumablesLifecyclePage() {
     },
     {
       key: 'cost',
+      align: 'right',
+      filterValue: (row) => `${row.currency}:${row.cost_minor}`,
+      filterValueLabel: (_value, row) => formatCurrencyMinor(row.cost_minor, row.currency, units.unitPrefs.locale),
       header: t('ownership.consumables.item.cost', 'Cost'),
       render: (row) => (
         <span className="tabular-nums">
@@ -284,6 +300,10 @@ export default function ConsumablesLifecyclePage() {
     },
     {
       key: 'retired',
+      filterValue: (row) => row.retired_at,
+      filterValueLabel: (_value, row) => row.retired_at
+        ? formatDateTime(row.retired_at)
+        : t('ownership.consumables.item.inService', 'in service'),
       header: t('ownership.consumables.item.retired', 'Retired'),
       render: (row) =>
         row.retired_at ? (
@@ -355,7 +375,7 @@ export default function ConsumablesLifecyclePage() {
                   : 'text-rose-300'
             }`}
           >
-            {formatPct(lifecycle.health_pct, 0)}
+            {formatPct(lifecycle.health_pct)}
           </p>
         </div>
       </div>
@@ -378,7 +398,7 @@ export default function ConsumablesLifecyclePage() {
           <Text as="p" variant="caption">
             {lifecycle.distance_life_used_pct != null
               ? t('ownership.consumables.card.ofRated', '{{value}} of rated life', {
-                  value: formatPct(lifecycle.distance_life_used_pct, 0),
+                  value: formatPct(lifecycle.distance_life_used_pct),
                 })
               : '—'}
           </Text>
@@ -394,7 +414,7 @@ export default function ConsumablesLifecyclePage() {
           </p>
           <Text as="p" variant="caption">
             {t('ownership.consumables.card.multiplier', 'Wear ×{{value}}', {
-              value: fmtNumber(lifecycle.stress_multiplier, 2),
+              value: fmtNumber(lifecycle.stress_multiplier),
             })}
           </Text>
         </div>
@@ -430,27 +450,84 @@ export default function ConsumablesLifecyclePage() {
         {lifecycle.narrative}
       </Text>
 
+      <div className="mt-3">
+        <StatGrid
+          columns={2}
+          stats={[
+            {
+              key: 'replacementCost',
+              label: t('ownership.consumables.form.cost', 'Replacement cost'),
+              value: formatCurrencyMinor(
+                lifecycle.replacement_cost_minor,
+                lifecycle.item.currency,
+                units.unitPrefs.locale,
+              ),
+            },
+            {
+              key: 'wearCost',
+              label: t('ownership.consumables.card.wearCost', 'Part wear cost'),
+              value: lifecycle.cost_per_m_minor != null
+                ? formatCurrencyMinor(
+                    Math.round(lifecycle.cost_per_m_minor * 1000),
+                    lifecycle.item.currency,
+                    units.unitPrefs.locale,
+                  )
+                : '—',
+              hint: t('ownership.consumables.econ.blendedHint', 'per 1 000 metres driven'),
+            },
+          ]}
+        />
+      </div>
+
       {(lifecycle.events ?? []).length > 0 ? (
-        <div className="mt-3 flex flex-wrap gap-1">
-          {(lifecycle.events ?? []).slice(0, 6).map((entry) => (
-            <Badge key={entry.id} variant="neutral">
-              {EVENT_KIND_LABELS[entry.kind](t)} · {formatDateTime(entry.occurred_at)}
-            </Badge>
-          ))}
+        <div className="mt-3 space-y-3">
+          <div className="flex flex-wrap gap-1">
+            {(lifecycle.events ?? []).slice(0, 6).map((entry) => (
+              <Badge key={entry.id} variant="neutral">
+                {EVENT_KIND_LABELS[entry.kind](t)} · {formatDateTime(entry.occurred_at)}
+              </Badge>
+            ))}
+          </div>
+          <Accordion title={t('ownership.consumables.card.history', 'Service history ({{count}} events)', {
+            count: (lifecycle.events ?? []).length,
+          })}>
+            <div className="space-y-4">
+              {(lifecycle.events ?? []).map((entry) => (
+                <div key={entry.id} className="min-w-0 space-y-2">
+                  <Text as="p" variant="label">
+                    {EVENT_KIND_LABELS[entry.kind](t)} · {formatDateTime(entry.occurred_at)}
+                  </Text>
+                  <KVList layout="responsive" items={[
+                    {
+                      label: t('ownership.consumables.event.odometer', 'Odometer'),
+                      value: entry.odometer_m != null ? units.formatDistance(entry.odometer_m) : '—',
+                    },
+                    {
+                      label: t('ownership.consumables.event.cost', 'Cost'),
+                      value: formatCurrencyMinor(entry.cost_minor, lifecycle.item.currency, units.unitPrefs.locale),
+                    },
+                    {
+                      label: t('ownership.consumables.event.note', 'Note'),
+                      value: entry.note || '—',
+                    },
+                  ]} />
+                </div>
+              ))}
+            </div>
+          </Accordion>
         </div>
       ) : null}
     </div>
   );
 
   return (
-    <PageContainer
-      title={t('ownership.consumables.title', 'Consumables & Wear-Parts Lifecycle')}
+    <PageLayout
+      title={t('ownership.consumables.title', 'Consumables & wear-parts lifecycle')}
       subtitle={t(
         'ownership.consumables.subtitle',
         'Rated life assumes an average car. Yours is not average — this projects each part against your measured speed profile, regen share, power draw and climate, then tells you which limit will actually retire it.',
       )}
-      loading={reportQuery.isLoading}
-      error={reportQuery.error as Error | null}
+      query={[reportQuery, itemsQuery]}
     >
       <AlertBanner
         variant="info"
@@ -463,50 +540,53 @@ export default function ConsumablesLifecyclePage() {
       </AlertBanner>
 
       <FadeIn>
-        <OwnershipPanel title={t('ownership.consumables.summary.title', 'Fleet wear posture')}>
-          <StatGrid
-            stats={[
+        <OwnershipPanel title={t('ownership.consumables.summary.title', 'Fleet wear posture')}
+          source={reportQuery} sourceEnabled={vehicleId != null} empty={!report} preserveSummary>
+          <OwnershipBrief
+            title={t('ownership.consumables.brief.title', 'Projected wear and replacement costs')}
+            description={t('ownership.consumables.notice.body', 'The wear multiplier is derived from your own drives, clamped to a defensible range. It is a projection, not a measurement of physical wear — always inspect before relying on it for a safety-critical part.')}
+            scope={t('ownership.consumables.brief.scope', 'Selected vehicle and recorded parts; costs and replacement dates are projections')}
+            source={reportQuery} enabled={vehicleId != null}
+            observedAt={report?.as_of}
+            metrics={[
               {
-                key: 'due',
+                occurrenceId: 'due', metricId: 'count',
                 label: t('ownership.consumables.stat.due', 'Due soon'),
-                value: fmtNumber(report?.due_soon_count ?? 0, 0),
+                rawValue: report?.due_soon_count,
+                display: specialistDisplay(fmtInt),
                 tone: (report?.due_soon_count ?? 0) > 0 ? 'warning' : 'default',
               },
               {
-                key: 'overdue',
+                occurrenceId: 'overdue', metricId: 'count',
                 label: t('ownership.consumables.stat.overdue', 'Overdue'),
-                value: fmtNumber(report?.overdue_count ?? 0, 0),
+                rawValue: report?.overdue_count,
+                display: specialistDisplay(fmtInt),
                 tone: (report?.overdue_count ?? 0) > 0 ? 'critical' : 'default',
               },
               {
-                key: 'next',
+                occurrenceId: 'next', metricId: 'text',
                 label: t('ownership.consumables.stat.next', 'Next replacement'),
-                value: report?.next_replace_at ? formatDateTime(report.next_replace_at) : '—',
+                rawValue: report?.next_replace_at ? formatDateTime(report.next_replace_at) : null,
               },
               {
-                key: 'twelve',
+                occurrenceId: 'twelve', metricId: 'currency',
                 label: t('ownership.consumables.stat.twelve', 'Next 12 months'),
-                value: formatCurrencyMinor(
-                  report?.twelve_month_cost_minor,
-                  currency,
-                  units.unitPrefs.locale,
-                ),
+                rawValue: report?.twelve_month_cost_minor,
+                display: specialistDisplay((raw) => formatCurrencyMinor(raw, currency, units.unitPrefs.locale)),
               },
               {
-                key: 'lifetime',
+                occurrenceId: 'lifetime', metricId: 'currency',
                 label: t('ownership.consumables.stat.lifetime', 'Spent to date'),
-                value: formatCurrencyMinor(
-                  report?.lifetime_spend_minor,
-                  currency,
-                  units.unitPrefs.locale,
-                ),
+                rawValue: report?.lifetime_spend_minor,
+                display: specialistDisplay((raw) => formatCurrencyMinor(raw, currency, units.unitPrefs.locale)),
               },
               {
-                key: 'stress',
+                occurrenceId: 'stress', metricId: 'multiplier',
                 label: t('ownership.consumables.stat.stress', 'Average duty stress'),
-                value: `×${fmtNumber(report?.fleet_stress_average ?? 1, 2)}`,
+                rawValue: report?.fleet_stress_average,
+                display: specialistDisplay((raw) => `×${fmtNumber(raw)}`),
                 tone: (report?.fleet_stress_average ?? 1) > 1.2 ? 'warning' : 'default',
-                hint: t('ownership.consumables.stat.stressHint', '1.00 is the reference profile'),
+                context: t('ownership.consumables.stat.stressHint', '1.00 is the reference profile'),
               },
             ]}
           />
@@ -516,6 +596,8 @@ export default function ConsumablesLifecyclePage() {
       <FadeIn delay={0.05}>
         <OwnershipPanel
           title={t('ownership.consumables.lifecycles.title', 'Part-by-part projection')}
+          source={reportQuery}
+          sourceEnabled={vehicleId != null}
           empty={lifecycles.length === 0}
           emptyMessage={t(
             'ownership.consumables.lifecycles.empty',
@@ -530,6 +612,8 @@ export default function ConsumablesLifecyclePage() {
       <FadeIn delay={0.1}>
         <OwnershipPanel
           title={t('ownership.consumables.stress.title', 'Why your wear rate differs')}
+          source={reportQuery}
+          sourceEnabled={vehicleId != null}
           description={t(
             'ownership.consumables.stress.subtitle',
             'Each factor compares a measured trait of your driving against a reference profile. Multipliers compound, then clamp.',
@@ -553,6 +637,9 @@ export default function ConsumablesLifecyclePage() {
       <FadeIn delay={0.15}>
         <OwnershipPanel
           title={t('ownership.consumables.items.title', 'Part register')}
+          source={itemsQuery}
+          sourceEnabled={vehicleId != null}
+          editing={formOpen || eventFor != null}
           empty={items.length === 0 && !formOpen}
           emptyMessage={t('ownership.consumables.items.empty', 'No parts recorded yet.')}
           actions={
@@ -750,6 +837,7 @@ export default function ConsumablesLifecyclePage() {
 
           <DataTable
             columns={itemColumns}
+            enableValueFilters
             mobileColumns={['label', 'installed', 'retired']}
             data={items}
             keyExtractor={(row) => row.id}
@@ -761,32 +849,33 @@ export default function ConsumablesLifecyclePage() {
       </FadeIn>
 
       <FadeIn delay={0.2}>
-        <OwnershipPanel title={t('ownership.consumables.economics.title', 'Wear economics')}>
-          <StatGrid
-            columns={3}
-            stats={[
+        <OwnershipPanel title={t('ownership.consumables.economics.title', 'Wear economics')}
+          source={reportQuery} sourceEnabled={vehicleId != null} empty={!report} preserveSummary>
+          <OwnershipBrief
+            title={t('ownership.consumables.economicsBrief.title', 'Blended wear cost and recorded distance')}
+            description={t('ownership.consumables.economicsBrief.description', 'Blended wear cost retains the recorded currency per 1 000 metres, independently of the odometer display unit.')}
+            scope={t('ownership.consumables.brief.scope', 'Selected vehicle and recorded parts; costs and replacement dates are projections')}
+            source={reportQuery} enabled={vehicleId != null}
+            observedAt={report?.as_of}
+            metrics={[
               {
-                key: 'blended',
+                occurrenceId: 'blended', metricId: 'rate',
                 label: t('ownership.consumables.econ.blended', 'Blended wear cost'),
-                value:
-                  report?.blended_cost_per_m_minor != null
-                    ? formatCurrencyMinor(
-                        Math.round(report.blended_cost_per_m_minor * 1000),
-                        currency,
-                        units.unitPrefs.locale,
-                      )
-                    : '—',
-                hint: t('ownership.consumables.econ.blendedHint', 'per 1 000 metres driven'),
+                rawValue: report?.blended_cost_per_m_minor,
+                display: specialistDisplay((raw) => formatCurrencyMinor(Math.round(raw * 1000), currency, units.unitPrefs.locale)),
+                context: t('ownership.consumables.econ.blendedHint', 'per 1 000 metres driven'),
               },
               {
-                key: 'odometer',
+                occurrenceId: 'odometer', metricId: 'distance',
                 label: t('ownership.consumables.econ.odometer', 'Odometer'),
-                value: report?.odometer_m != null ? units.formatDistance(report.odometer_m) : '—',
+                rawValue: report?.odometer_m,
+                display: specialistDisplay(units.formatDistance),
               },
               {
-                key: 'parts',
+                occurrenceId: 'parts', metricId: 'count',
                 label: t('ownership.consumables.econ.parts', 'Parts tracked'),
-                value: fmtNumber(lifecycles.length, 0),
+                rawValue: report ? lifecycles.length : null,
+                display: specialistDisplay(fmtInt),
               },
             ]}
           />
@@ -795,6 +884,8 @@ export default function ConsumablesLifecyclePage() {
 
       <FadeIn delay={0.25}>
         <EvidencePanel
+          source={reportQuery}
+          sourceEnabled={vehicleId != null}
           quality={report?.quality}
           evidence={report?.evidence}
           unsupported={[
@@ -810,6 +901,6 @@ export default function ConsumablesLifecyclePage() {
         />
       </FadeIn>
       {dialogProps && <ConfirmDialog {...dialogProps} />}
-    </PageContainer>
+    </PageLayout>
   );
 }

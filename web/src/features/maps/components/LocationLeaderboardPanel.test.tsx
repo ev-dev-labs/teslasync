@@ -310,7 +310,7 @@ describe('LocationLeaderboardPanel — loading state', () => {
   it('shows a skeleton (not the chart) while loading', () => {
     const { container } = renderPanel({ loading: true });
 
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).not.toBeNull();
     expect(screen.queryByTestId('bar-chart')).not.toBeInTheDocument();
     expect(screen.queryByRole('img')).not.toBeInTheDocument();
   });
@@ -322,7 +322,7 @@ describe('LocationLeaderboardPanel — loading state', () => {
       data: [datum()],
     });
 
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).not.toBeNull();
     expect(screen.queryByText("Can't reach server")).not.toBeInTheDocument();
     expect(screen.queryByTestId('bar-chart')).not.toBeInTheDocument();
   });

@@ -25,6 +25,7 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render, screen, fireEvent, cleanup, act, within } from '@testing-library/react';
 import { createRef, useState } from 'react';
+import userEvent from '@testing-library/user-event';
 
 // i18n stub so the Close button's `t('modal.close', 'Close')` resolves to its
 // fallback string without needing a provider. Returns the fallback (2nd arg)
@@ -39,6 +40,57 @@ import { Modal } from './Modal';
 
 afterEach(() => {
   cleanup();
+});
+
+describe('Modal — explicit return forwarding', () => {
+  it('forwards the latest getter to the real owner, keeps the exact ref, and never leaks it to DOM', async () => {
+    const user = userEvent.setup();
+    const ref = createRef<HTMLDivElement>();
+    const first = vi.fn(() => screen.getByText('Original modal trigger'));
+    const latest = vi.fn(() => screen.getByText('Latest modal trigger'));
+    const content = (open: boolean, getter: typeof first) => <>
+      <button>Original modal trigger</button><button>Latest modal trigger</button>
+      <Modal ref={ref} open={open} onClose={vi.fn()} ariaLabel="Explicit modal" getReturnFocusTarget={getter}>
+        <input autoFocus aria-label="Modal draft" />
+      </Modal>
+    </>;
+    const view = render(content(false, first));
+    await user.click(screen.getByText('Original modal trigger'));
+    view.rerender(content(true, first));
+    expect(screen.getByLabelText('Modal draft')).toHaveFocus();
+    expect(ref.current).toBe(screen.getByRole('dialog'));
+    expect(ref.current).not.toHaveAttribute('getReturnFocusTarget');
+    view.rerender(content(true, latest));
+    expect(screen.getByLabelText('Modal draft')).toHaveFocus();
+    expect(first).not.toHaveBeenCalled();
+    expect(latest).not.toHaveBeenCalled();
+    view.rerender(content(false, latest));
+    expect(first).not.toHaveBeenCalled();
+    expect(latest).toHaveBeenCalledTimes(1);
+    expect(screen.getByText('Latest modal trigger')).toHaveFocus();
+    expect(ref.current).toBeNull();
+    view.rerender(content(true, first));
+    view.rerender(content(false, first));
+    expect(first).toHaveBeenCalledTimes(1);
+    expect(screen.getByText('Original modal trigger')).toHaveFocus();
+  });
+
+  it('restores an external explicit target on actual modal unmount after real autoFocus', async () => {
+    const user = userEvent.setup();
+    const triggerView = render(<button>Surviving modal activation</button>);
+    const trigger = screen.getByText('Surviving modal activation');
+    await user.click(trigger);
+    const getter = vi.fn(() => trigger);
+    const view = render(<Modal open onClose={vi.fn()} ariaLabel="Unmounting" getReturnFocusTarget={getter}>
+      <input autoFocus aria-label="Unmount draft" />
+    </Modal>);
+    expect(screen.getByLabelText('Unmount draft')).toHaveFocus();
+    expect(getter).not.toHaveBeenCalled();
+    view.unmount();
+    expect(getter).toHaveBeenCalledTimes(1);
+    expect(trigger).toHaveFocus();
+    triggerView.unmount();
+  });
 });
 
 function getDialog(): HTMLElement {
@@ -141,7 +193,8 @@ describe('Modal — size presets', () => {
     ['sm', 'sm:max-w-sm'],
     ['md', 'sm:max-w-lg'],
     ['lg', 'sm:max-w-2xl'],
-    ['full', 'sm:max-w-[min(96vw,1100px)]'],
+    ['full', 'sm:max-w-modal-full'],
+    ['fullscreen', 'max-w-none'],
   ];
 
   it.each(cases)('size="%s" applies the %s width class', (size, cls) => {
@@ -160,6 +213,22 @@ describe('Modal — size presets', () => {
       </Modal>,
     );
     expect(getDialog().className).toContain('sm:max-w-lg');
+  });
+
+  it('keeps fullscreen content in a viewport-height portal without the ordinary dialog cap', () => {
+    const { container } = render(
+      <Modal open onClose={vi.fn()} ariaLabel="Fullscreen widget" size="fullscreen">
+        <button data-autofocus>Exit fullscreen</button>
+        <div>Measured content</div>
+      </Modal>,
+    );
+    const dialog = screen.getByRole('dialog', { name: 'Fullscreen widget' });
+    expect(container).not.toContainElement(dialog);
+    expect(document.body).toContainElement(dialog);
+    expect(dialog).toHaveClass('h-dvh', 'max-h-dvh', 'max-w-none');
+    expect(dialog).not.toHaveClass('sm:max-h-modal');
+    expect(dialog.querySelector('[data-modal-scroll-body]')).toHaveClass('flex', 'min-h-0', 'overflow-hidden');
+    expect(screen.getByRole('button', { name: 'Exit fullscreen' })).toHaveFocus();
   });
 });
 
@@ -227,6 +296,55 @@ describe('Modal — close affordances', () => {
     fireEvent.keyDown(getDialog(), { key: 'Escape' });
     expect(first).not.toHaveBeenCalled();
     expect(second).toHaveBeenCalledTimes(1);
+  });
+
+  it('Escape still closes after a successful form replaces its focused control', () => {
+    const onClose = vi.fn();
+    const { rerender } = render(
+      <Modal open onClose={onClose} title="Share">
+        <button key="generate" type="button">Generate link</button>
+      </Modal>,
+    );
+    screen.getByRole('button', { name: 'Generate link' }).focus();
+    rerender(
+      <Modal open onClose={onClose} title="Share">
+        <button key="copy" type="button">Copy link</button>
+      </Modal>,
+    );
+    expect(document.activeElement).toBe(document.body);
+    fireEvent.keyDown(document.body, { key: 'Escape' });
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([false, true])('recovers the Tab trap after replacing focused content (reverse=%s)', (reverse) => {
+    const { rerender } = render(
+      <Modal open onClose={vi.fn()} title="Share">
+        <button key="generate" type="button">Generate link</button>
+      </Modal>,
+    );
+    screen.getByRole('button', { name: 'Generate link' }).focus();
+    rerender(
+      <Modal open onClose={vi.fn()} title="Share">
+        <button key="copy" type="button">Copy link</button>
+      </Modal>,
+    );
+    expect(document.activeElement).toBe(document.body);
+    fireEvent.keyDown(document.body, { key: 'Tab', shiftKey: reverse });
+    expect(screen.getByRole('button', { name: reverse ? 'Copy link' : 'Close' })).toHaveFocus();
+  });
+
+  it('lost-focus Escape closes only the topmost dialog', () => {
+    const parentClose = vi.fn();
+    const childClose = vi.fn();
+    render(
+      <>
+        <Modal open onClose={parentClose} title="Parent">Parent content</Modal>
+        <Modal open onClose={childClose} title="Child">Child content</Modal>
+      </>,
+    );
+    fireEvent.keyDown(document.body, { key: 'Escape' });
+    expect(childClose).toHaveBeenCalledTimes(1);
+    expect(parentClose).not.toHaveBeenCalled();
   });
 });
 
@@ -344,6 +462,26 @@ describe('Modal — focus trap', () => {
 });
 
 describe('Modal — ref + prop passthrough', () => {
+  it('tracks the dialog ref across initially closed, open, closed and reopened states', () => {
+    const ref = createRef<HTMLDivElement>();
+    const { rerender } = render(<Modal ref={ref} open={false} onClose={vi.fn()} title="Lifecycle">Body</Modal>);
+    expect(ref.current).toBeNull();
+    rerender(<Modal ref={ref} open onClose={vi.fn()} title="Lifecycle">Body</Modal>);
+    expect(ref.current).toBe(getDialog());
+    rerender(<Modal ref={ref} open={false} onClose={vi.fn()} title="Lifecycle">Body</Modal>);
+    expect(ref.current).toBeNull();
+    rerender(<Modal ref={ref} open onClose={vi.fn()} title="Lifecycle">Body</Modal>);
+    expect(ref.current).toBe(getDialog());
+  });
+
+  it('notifies callback refs when the portaled dialog mounts and unmounts', () => {
+    const ref = vi.fn();
+    const { unmount } = render(<Modal ref={ref} open onClose={vi.fn()} title="Callback">Body</Modal>);
+    expect(ref).toHaveBeenLastCalledWith(getDialog());
+    unmount();
+    expect(ref).toHaveBeenLastCalledWith(null);
+  });
+
   it('forwards the ref to the dialog element', () => {
     const ref = createRef<HTMLDivElement>();
     render(
@@ -372,6 +510,44 @@ describe('Modal — ref + prop passthrough', () => {
     expect(dialog.className).toContain('custom-modal-class');
     expect(dialog).toHaveAttribute('data-testid', 'modal-root');
     expect(dialog).toHaveAttribute('aria-describedby', 'desc-node');
+  });
+});
+
+describe('Modal — restrained presentation and reachability', () => {
+  it('preserves a wrapping long title and its identity across translated-label rerenders', () => {
+    const title = 'A very long vehicle configuration title with every important detail retained';
+    const { rerender } = render(<Modal open onClose={vi.fn()} title={title}>Body</Modal>);
+    const heading = screen.getByRole('heading', { name: title });
+    const id = heading.id;
+    expect(heading).toHaveClass('min-w-0', 'break-words');
+    expect(heading).not.toHaveClass('truncate');
+    expect(getDialog()).toHaveAccessibleName(title);
+    rerender(<Modal open onClose={vi.fn()} title="Configuration du véhicule">Body</Modal>);
+    expect(screen.getByRole('heading', { name: 'Configuration du véhicule' })).toHaveAttribute('id', id);
+    expect(getDialog()).toHaveAttribute('aria-labelledby', id);
+  });
+
+  it('uses neutral theme roles and a reachable, reduced-motion-safe close control', () => {
+    render(<Modal open onClose={vi.fn()} title="Presentation">Body</Modal>);
+    expect(getDialog()).toHaveClass('shadow-e3', 'bg-[var(--surface-1)]', 'border-[var(--border-default)]');
+    expect(getDialog()).not.toHaveClass('shadow-xl');
+    const backdrop = document.querySelector('.fixed[aria-hidden="true"]');
+    expect(backdrop).toHaveClass('bg-[var(--surface-overlay)]', 'forced-colors:bg-[Canvas]');
+    expect(backdrop).not.toHaveClass('backdrop-blur-sm');
+    const close = screen.getByRole('button', { name: 'Close' });
+    expect(close).toHaveClass('h-11', 'w-11', 'focus-visible:outline-[var(--focus-ring)]', 'focus-visible:outline-offset-2', 'motion-reduce:transition-none');
+    expect(close).not.toHaveClass('active:scale-95');
+  });
+
+  it.each([false, true])('contains body scroll above shell chrome with persistent footer=%s', (withFooter) => {
+    render(<Modal open onClose={vi.fn()} title="Contained" footer={withFooter ? <button>Save</button> : undefined}>Body</Modal>);
+    expect(getDialog()).toHaveClass('max-h-[calc(100dvh-var(--shell-chrome-bottom,0px))]', 'sm:max-h-modal');
+    expect(getDialog().querySelector('[data-modal-scroll-body]')).toHaveClass('min-h-0', 'overflow-y-auto');
+    if (withFooter) {
+      const footer = getDialog().querySelector('[data-modal-footer]');
+      expect(footer).toHaveClass('shrink-0', 'safe-bottom');
+      expect(footer).toContainElement(screen.getByRole('button', { name: 'Save' }));
+    }
   });
 });
 

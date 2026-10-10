@@ -24,7 +24,7 @@ describe('DisclosureProfileBuilder', () => {
         onExactTimestampsChange={vi.fn()}
       />,
     );
-    expect(screen.getByText('Resale / Vehicle History').closest('label')).toBeTruthy();
+    expect(screen.getByText('Resale / vehicle history').closest('label')).toBeTruthy();
     const resaleRadio = screen.getByDisplayValue('resale') as HTMLInputElement;
     expect(resaleRadio.checked).toBe(true);
   });

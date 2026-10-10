@@ -102,7 +102,7 @@ describe('DeliveryOutlookPanel — state-invariant chrome', () => {
         error: status === 'error' ? new Error('boom') : null,
       });
 
-      const heading = screen.getByRole('heading', { name: /delivery outlook/i });
+      const heading = screen.getByRole('heading', { name: /Delivery outlook/i });
       expect(heading).toBeInTheDocument();
 
       // The CalendarClock glyph is presentational — it must not pollute the
@@ -120,9 +120,28 @@ describe('DeliveryOutlookPanel — loading', () => {
   it('renders a skeleton placeholder and withholds the outlook content', () => {
     const { container } = renderPanel({ status: 'loading' });
 
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
+    const panel = screen.getByRole('heading', { name: /Delivery outlook/i })
+      .closest('[data-print-card]');
+    expect(panel).not.toBeNull();
+    const placeholders = panel!.querySelectorAll(
+      ':scope > [aria-hidden="true"][class*="bg-[var(--skeleton-bg)]"]',
+    );
+    expect(placeholders).toHaveLength(1);
+    const [placeholder] = placeholders;
+    expect(placeholder).toHaveClass('h-4', 'w-full', 'rounded', 'bg-[var(--skeleton-bg)]');
+    expect(placeholder).toHaveAttribute('aria-hidden', 'true');
+    expect(placeholder).toHaveStyle({ height: '180px' });
+    expect(placeholder).toBeEmptyDOMElement();
+    expect(container.querySelectorAll('.animate-pulse')).toHaveLength(0);
     expect(screen.queryByText('Upgradable orders')).toBeNull();
     expect(screen.queryByText('Next delivery')).toBeNull();
+    expect(screen.queryByText('Distinct models')).toBeNull();
+    expect(screen.queryByText('VIN assigned')).toBeNull();
+    expect(screen.queryByText('Last synced')).toBeNull();
+    expect(screen.queryByText('day:2026-01-15T00:00:00Z')).toBeNull();
+    expect(screen.queryByText('4 / 5')).toBeNull();
+    expect(screen.queryByText('synced-relative')).toBeNull();
+    expect(panel!.querySelectorAll('dl')).toHaveLength(0);
   });
 });
 

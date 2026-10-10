@@ -5,7 +5,7 @@
  * The widget reads a legacy km / kWh / (Wh/km) digest envelope from
  * `useWeeklyDigest` and renders a `<WidgetComparisonCard>` of four
  * current-vs-previous metrics (Distance, Drives, Energy, Efficiency) inside a
- * `<WidgetShell>`. `size.cols <= 1` switches to a title-less compact layout
+ * `<WidgetShell>`. `size.cols <= 1` switches to a titled compact layout
  * that clamps to the first two rows.
  *
  * What this file pins:
@@ -16,13 +16,13 @@
  *   - the EFFICIENCY unit fix: `efficiency` (Wh/km) is scaled by the km-per-
  *     display-unit span exactly once — 250 Wh/km → 402 Wh/mi (miles) / 250
  *     Wh/km (km) — never the pre-fix double-converted ~647;
- *   - the LAYOUT switch (compact clamps to Distance + Drives and drops the
- *     title heading; full shows all four + the "This Week" heading);
+ *   - the LAYOUT switch (compact clamps to Distance + Drives; full shows all
+ *     four; both retain the "This week" identifying heading);
  *   - loading (skeleton only), the initial-load ERROR panel, and the
  *     background-refetch ERROR guard that keeps cached metrics on screen;
  *   - the empty branch (`<EmptyState>` when the digest is absent);
  *   - the vehicle-id resolution (`vehicleId` prop → `vehicles[0].id` fallback);
- *   - null-safety (missing numeric fields collapse to 0, no throw);
+ *   - null-safety (missing numeric fields remain unknown, no throw);
  *   - the accessible refresh control wiring (chip → `refetch`).
  *
  * Strategy: `useWeeklyDigest` / `useVehicles` / `useUnits` are mocked so the
@@ -36,7 +36,7 @@
  * A `<MemoryRouter>` wraps every render because the error panel navigates.
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 
 import type { WeeklyDigestData } from '@/types/analytics';
@@ -97,10 +97,16 @@ interface StubDeltaProps {
 // keeping the real <DataFreshness>/<DataFreshnessAuto> (WidgetShell needs them)
 // by importing their own lightweight module rather than the heavy barrel.
 vi.mock('@/components/data-display', async () => {
+  const actual = await vi.importActual<typeof import('@/components/data-display')>('@/components/data-display');
   const df = await vi.importActual<typeof import('@/components/data-display/DataFreshness')>(
     '@/components/data-display/DataFreshness',
   );
+  const { StatCard } = await vi.importActual<typeof import('@/components/data-display/StatCard')>(
+    '@/components/data-display/StatCard',
+  );
   return {
+    ...actual,
+    StatCard,
     DataFreshness: df.DataFreshness,
     DataFreshnessAuto: df.DataFreshnessAuto,
     Delta: ({ metric, current, previous, display }: StubDeltaProps) => (
@@ -142,6 +148,7 @@ function makeDigest(over: Partial<WeeklyDigestData> = {}): WeeklyDigestData {
 interface DigestOverrides {
   data?: WeeklyDigestData | undefined;
   isLoading?: boolean;
+  isPending?: boolean;
   error?: unknown;
   isFetching?: boolean;
   isStale?: boolean;
@@ -209,13 +216,41 @@ beforeEach(() => {
 
 // ── Distance + efficiency unit conversion (the bug fixes) ─────────────────────
 
+describe.each([1, 2, 3])('WeeklyDigestWidget — identifying heading at cols=%i', (cols) => {
+  it.each(['populated', 'loading', 'empty', 'initial failure', 'retained failure'] as const)(
+    'keeps exactly one visible shell heading when %s',
+    (state) => {
+      if (state === 'loading') setDigest({ data: undefined, isLoading: true });
+      if (state === 'empty') setDigest({ data: undefined });
+      if (state === 'initial failure') {
+        setDigest({ data: undefined, isError: true, error: new Error('offline') });
+      }
+      if (state === 'retained failure') {
+        setDigest({ isError: true, error: new Error('offline') });
+      }
+      const { container } = renderWidget({ cols, rows: 2 });
+      const headings = screen.getAllByRole('heading', { name: 'This week', level: 3 });
+      expect(headings).toHaveLength(1);
+      expect(headings[0]).toBeVisible();
+      if (state === 'populated' || state === 'retained failure') {
+        expect(screen.getByText('Distance')).toBeInTheDocument();
+        expect(deltas()).toHaveLength(cols === 1 ? 2 : 4);
+      }
+      if (state === 'loading') expect(container.querySelector('[class*="--skeleton-bg"]')).toBeInTheDocument();
+      if (state === 'empty') expect(screen.getByText('No weekly data yet')).toBeInTheDocument();
+      if (state === 'initial failure') expect(screen.getByRole('alert')).toBeInTheDocument();
+      if (state === 'retained failure') expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+    },
+  );
+});
+
 describe('WeeklyDigestWidget — unit conversion (miles)', () => {
   it('renders distance in miles by lifting km → SI → mi (100 km ⇒ 62.1 mi), not the pre-fix ~0.04', () => {
     renderWidget(FULL);
 
-    const distance = screen.getByText('62.1');
+    const distance = screen.getByText('62.14 mi');
     expect(distance).toBeInTheDocument();
-    expect(distance.querySelector('span')?.textContent).toBe('mi');
+    expect(distance).toHaveTextContent('mi');
     // Guard against the metres-vs-km regression that rendered ~0.0.
     expect(screen.queryByText('0.0')).toBeNull();
   });
@@ -223,9 +258,9 @@ describe('WeeklyDigestWidget — unit conversion (miles)', () => {
   it('renders efficiency scaled to Wh/mi exactly once (250 Wh/km ⇒ 402 Wh/mi), not the double-converted ~647', () => {
     renderWidget(FULL);
 
-    const efficiency = screen.getByText('402');
+    const efficiency = screen.getByText('402.34 Wh/mi');
     expect(efficiency).toBeInTheDocument();
-    expect(efficiency.querySelector('span')?.textContent).toBe('Wh/mi');
+    expect(efficiency).toHaveTextContent('Wh/mi');
     expect(screen.queryByText('647')).toBeNull();
     expect(screen.queryByText('648')).toBeNull();
   });
@@ -234,8 +269,8 @@ describe('WeeklyDigestWidget — unit conversion (miles)', () => {
     renderWidget(FULL);
 
     expect(screen.getByText('Drives')).toBeInTheDocument();
-    const energy = screen.getByText('25.0');
-    expect(energy.querySelector('span')?.textContent).toBe('kWh');
+    const energy = screen.getByText('25.00 kWh');
+    expect(energy).toHaveTextContent('kWh');
     // Drives delta carries the raw count with no unit label.
     expect(num(deltas()[1], 'data-current')).toBe(8);
   });
@@ -265,11 +300,11 @@ describe('WeeklyDigestWidget — unit conversion (kilometres)', () => {
   it('shows distance untouched in km (100.0 km) and efficiency as Wh/km (250), fixing the km branch too', () => {
     renderWidget(FULL);
 
-    const distance = screen.getByText('100.0');
-    expect(distance.querySelector('span')?.textContent).toBe('km');
+    const distance = screen.getByText('100.00 km');
+    expect(distance).toHaveTextContent('km');
 
-    const efficiency = screen.getByText('250');
-    expect(efficiency.querySelector('span')?.textContent).toBe('Wh/km');
+    const efficiency = screen.getByText('250.00 Wh/km');
+    expect(efficiency).toHaveTextContent('Wh/km');
   });
 
   it('passes km-native raw values to Delta (distance current 100, efficiency current 250)', () => {
@@ -279,6 +314,19 @@ describe('WeeklyDigestWidget — unit conversion (kilometres)', () => {
     expect(num(distance, 'data-current')).toBeCloseTo(100, 6);
     expect(num(efficiency, 'data-current')).toBeCloseTo(250, 6);
   });
+
+  it('reviews the actual current metrics and retained comparison operands with explicit boundary limitations', () => {
+    renderWidget(FULL);
+    const brief = screen.getByTestId('weekly-digest-operational-brief');
+    expect(brief.querySelectorAll('[data-value-state="value"]')).toHaveLength(4);
+    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog');
+    expect(within(drawer).getByText('100.00 km')).toBeInTheDocument();
+    expect(within(drawer).getAllByText(/Exact week boundaries, timezone and completeness are not supplied/).length).toBeGreaterThan(0);
+    const distanceDelta = within(drawer).getAllByTestId('delta')[0];
+    expect(distanceDelta).toHaveAttribute('data-current', '100');
+    expect(distanceDelta).toHaveAttribute('data-previous', '80');
+  });
 });
 
 // ── Layout switch ─────────────────────────────────────────────────────────────
@@ -287,16 +335,16 @@ describe('WeeklyDigestWidget — layout', () => {
   it('full layout shows the title heading and all four metrics', () => {
     renderWidget(FULL);
 
-    expect(screen.getByRole('heading', { name: 'This Week' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'This week' })).toBeInTheDocument();
     expect(deltas()).toHaveLength(4);
     expect(screen.getByText('Distance')).toBeInTheDocument();
     expect(screen.getByText('Efficiency')).toBeInTheDocument();
   });
 
-  it('compact layout drops the title and clamps to the first two metrics', () => {
+  it('compact layout retains the title and clamps to the first two metrics', () => {
     renderWidget(COMPACT);
 
-    expect(screen.queryByRole('heading', { name: 'This Week' })).toBeNull();
+    expect(screen.getByRole('heading', { name: 'This week', level: 3 })).toBeVisible();
     expect(deltas()).toHaveLength(2);
     expect(screen.getByText('Distance')).toBeInTheDocument();
     expect(screen.getByText('Drives')).toBeInTheDocument();
@@ -308,12 +356,19 @@ describe('WeeklyDigestWidget — layout', () => {
 // ── Loading / error / empty states ────────────────────────────────────────────
 
 describe('WeeklyDigestWidget — loading, error & empty states', () => {
-  it('renders only a skeleton (no heading, no metrics) while loading', () => {
+  it('makes retained-data trust explicit after a failed background refresh', () => {
+    setDigest({ isError: true, error: new Error('boom'), data: makeDigest() });
+    renderWidget(FULL);
+    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+    expect(deltas()).toHaveLength(4);
+    expect(screen.getByText('Distance')).toBeInTheDocument();
+  });
+  it('retains the heading and renders a skeleton without metrics while loading', () => {
     setDigest({ isLoading: true, data: undefined });
     const { container } = renderWidget(FULL);
 
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
-    expect(screen.queryByRole('heading')).toBeNull();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).not.toBeNull();
+    expect(screen.queryByRole('heading')).toBeInTheDocument();
     expect(screen.queryByTestId('delta')).toBeNull();
   });
 
@@ -357,17 +412,87 @@ describe('WeeklyDigestWidget — vehicle id resolution', () => {
     expect(weeklyDigestMock).toHaveBeenCalledWith('42');
   });
 
-  it('falls back to "0" when there are no vehicles at all', () => {
+  it('passes the disabled empty-string sentinel when no vehicle resolves', () => {
     vehiclesMock.mockReturnValue({ data: [] });
+    setDigest({ data: undefined, isPending: true });
     renderWidget(FULL, undefined);
-    expect(weeklyDigestMock).toHaveBeenCalledWith('0');
+    expect(weeklyDigestMock).toHaveBeenCalledWith('');
+    expect(screen.getByText('No weekly data yet')).toBeInTheDocument();
+    expect(screen.queryByTestId('delta')).toBeNull();
+    expect(document.querySelector('[class*="--skeleton-bg"]')).toBeNull();
+  });
+
+  it.each([0, -1, Number.NaN, Number.POSITIVE_INFINITY])('does not query an invalid explicit vehicle id (%s)', (id) => {
+    renderWidget(FULL, id);
+    expect(weeklyDigestMock).toHaveBeenCalledWith('');
+    expect(screen.queryByTestId('delta')).toBeNull();
+  });
+
+  it('refreshes vehicle discovery rather than the disabled digest when the fleet is empty', () => {
+    const discoverVehicles = vi.fn();
+    vehiclesMock.mockReturnValue({ data: [], dataUpdatedAt: 0, refetch: discoverVehicles });
+    const digest = setDigest({ data: undefined, isPending: true });
+    renderWidget(FULL);
+    fireEvent.click(screen.getByRole('button', { name: /^Refresh/i }));
+    expect(discoverVehicles).toHaveBeenCalledTimes(1);
+    expect(digest.refetch).not.toHaveBeenCalled();
+    expect(weeklyDigestMock).toHaveBeenCalledWith('');
+  });
+
+  it('shows vehicle-discovery loading rather than weekly empty data before discovery resolves', () => {
+    vehiclesMock.mockReturnValue({
+      data: undefined, isLoading: true, isPending: true, dataUpdatedAt: 0, refetch: vi.fn(),
+    });
+    const { container } = renderWidget(FULL);
+    expect(weeklyDigestMock).toHaveBeenCalledWith('');
+    expect(container.querySelector('[class*="--skeleton-bg"]')).toBeInTheDocument();
+    expect(screen.queryByText('No weekly data yet')).toBeNull();
+    expect(screen.queryByTestId('delta')).toBeNull();
+  });
+
+  it('retries failed vehicle discovery without manually refetching the disabled digest', () => {
+    const discoverVehicles = vi.fn();
+    vehiclesMock.mockReturnValue({
+      data: undefined,
+      isError: true,
+      error: new Error('vehicle discovery unavailable'),
+      dataUpdatedAt: 0,
+      refetch: discoverVehicles,
+    });
+    const digest = setDigest({ data: undefined, isPending: true });
+    const view = renderWidget(FULL);
+    expect(screen.getByRole('alert')).toBeInTheDocument();
+    expect(screen.queryByText('No weekly data yet')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: /^Retry$/i }));
+    expect(discoverVehicles).toHaveBeenCalledTimes(1);
+    expect(digest.refetch).not.toHaveBeenCalled();
+    expect(weeklyDigestMock).toHaveBeenCalledWith('');
+
+    vehiclesMock.mockReturnValue({ data: [{ id: 42 }] });
+    setDigest();
+    view.rerender(
+      <MemoryRouter>
+        <WeeklyDigestWidget size={FULL} />
+      </MemoryRouter>,
+    );
+    expect(weeklyDigestMock).toHaveBeenLastCalledWith('42');
+    expect(screen.queryByRole('alert')).toBeNull();
+    expect(deltas()).toHaveLength(4);
+  });
+
+  it('uses an explicit valid vehicle without being blocked by discovery failure', () => {
+    vehiclesMock.mockReturnValue({ data: undefined, isError: true, error: new Error('discovery unavailable') });
+    renderWidget(FULL, 3);
+    expect(weeklyDigestMock).toHaveBeenCalledWith('3');
+    expect(deltas()).toHaveLength(4);
+    expect(screen.queryByRole('alert')).toBeNull();
   });
 });
 
 // ── Null safety ───────────────────────────────────────────────────────────────
 
 describe('WeeklyDigestWidget — null safety', () => {
-  it('collapses missing numeric fields to 0 without throwing', () => {
+  it('preserves missing readings without fabricating zero measurements or deltas', () => {
     setDigest({
       data: makeDigest({
         distanceKm: undefined as unknown as number,
@@ -376,9 +501,10 @@ describe('WeeklyDigestWidget — null safety', () => {
     });
 
     expect(() => renderWidget(FULL)).not.toThrow();
-    const [distance, , , efficiency] = deltas();
-    expect(num(distance, 'data-current')).toBe(0);
-    expect(num(efficiency, 'data-current')).toBe(0);
+    expect(deltas()).toHaveLength(2);
+    expect(screen.getByText('Distance')).toBeInTheDocument();
+    expect(screen.getByText('Efficiency')).toBeInTheDocument();
+    expect(screen.getAllByText('—')).toHaveLength(2);
   });
 });
 

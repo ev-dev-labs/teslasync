@@ -1,23 +1,19 @@
 import { ListChecks } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
-import { Grid } from '@/components/layout';
-import {
-  Badge,
-  GlassPanel,
-  MetricLabel,
-  MetricValue,
-  PanelTitle,
-  Text,
-} from '@/components/ui';
-import { fmtInt } from '@/lib/numberFormat';
+import { StatStrip } from '@/components/data-display';
+import { LayoutCard } from '@/components/layout';
+import { Badge, Text } from '@/components/ui';
+
 import { ArchetypeSectionBody } from './ArchetypeSectionBody';
 import type { ArchetypeSectionProps } from './types';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export function ArchetypeSourceDisposition({
   summary,
   state,
 }: ArchetypeSectionProps) {
+  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const source = summary.source;
   const dispositions = [
@@ -38,47 +34,47 @@ export function ArchetypeSourceDisposition({
 
   return (
     <section data-testid="drive-archetypes-source">
-      <GlassPanel className="p-4 sm:p-5">
-        <div className="mb-4 flex flex-wrap items-start justify-between gap-2">
-          <div>
-            <PanelTitle className="flex items-center gap-2">
-              <ListChecks className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />
-              {t('archetypes.source.title', 'Source eligibility disposition')}
-            </PanelTitle>
-            <Text as="p" variant="caption" className="mt-1">
-              {t(
-                'archetypes.source.subtitle',
-                'Every returned row receives exactly one terminal disposition.',
-              )}
-            </Text>
-          </div>
-          <Badge variant="info">
-            {t('archetypes.source.returnedBadge', '{{count}} returned', {
-              count: source.returnedRows,
-            })}
-          </Badge>
-        </div>
+      <LayoutCard
+        title={t('archetypes.source.title', 'Source eligibility disposition')}
+        actions={(
+          <>
+            <ListChecks className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />
+            <Badge variant="info">
+              {state.isResolved && !state.error
+                ? t('archetypes.source.returnedBadge', '{{count}} returned', { count: source.returnedRows })
+                : t('archetypes.kpis.awaiting', 'Awaiting drive evidence')}
+            </Badge>
+          </>
+        )}
+      >
+        <Text as="p" variant="caption" className="mt-1">
+          {t('archetypes.source.subtitle', 'Every returned row receives exactly one terminal disposition.')}
+        </Text>
         <ArchetypeSectionBody summary={summary} state={state} requirement="resolved">
-          <Grid cols={{ default: 1, sm: 2, lg: 3, xl: 4 }} gap={3}>
-            {dispositions.map(([label, count], index) => (
-              <div
-                key={label}
-                className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3"
-              >
-                <MetricLabel>{label}</MetricLabel>
-                <div className="mt-1 flex items-end justify-between gap-2">
-                  <MetricValue>{fmtInt(count)}</MetricValue>
+          <StatStrip
+            id="archetype-source-disposition-metrics"
+            variant="embedded"
+            period={{
+              kind: 'unknown',
+              label: t('archetypes.coverage.sourcePeriod', 'Returned drive-history window'),
+            }}
+            metrics={dispositions.map(([label, count], index) => ({
+              metricId: 'text',
+              occurrenceId: `archetype-disposition-${index}`,
+              label,
+              rawValue: fmtInt(count),
+              description: t('archetypes.source.subtitle', 'Every returned row receives exactly one terminal disposition.'),
+              context: (
                   <Badge variant={index >= dispositions.length - 2 ? 'success' : 'neutral'}>
                     {index >= dispositions.length - 2
                       ? t('archetypes.source.eligible', 'Eligible')
                       : t('archetypes.source.excluded', 'Excluded')}
                   </Badge>
-                </div>
-              </div>
-            ))}
-          </Grid>
+              ),
+            }))}
+          />
         </ArchetypeSectionBody>
-      </GlassPanel>
+      </LayoutCard>
     </section>
   );
 }

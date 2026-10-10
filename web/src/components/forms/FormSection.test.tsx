@@ -109,7 +109,7 @@ describe('FormSection', () => {
       </FormSection>,
     )
     const group = screen.getByRole('group')
-    expect(group).toHaveClass('glass-panel', 'p-5', 'sm:p-6', 'space-y-4', 'ring-2')
+    expect(group).toHaveClass('glass-panel', 'p-4', 'sm:p-6', 'space-y-4', 'ring-2')
   })
 
   it('renders multiple children in document order', () => {
