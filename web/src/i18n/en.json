@@ -20188,6 +20188,7 @@
     }
   },
   "settings": {
+    "title": "Settings",
     "typography": {
       "title": "Typography",
       "subtitle": "Choose fonts and tune size, spacing, and weight — applied everywhere instantly.",

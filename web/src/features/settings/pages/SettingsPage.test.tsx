@@ -26,7 +26,8 @@
  *   - The heavy preference sections are stubbed; the REAL `SettingsActionCard`
  *     is kept (imported from its own module) so the quick-action assertions
  *     exercise the production card + its `<a href>` / `<button>` output.
- *   - `react-i18next` resolves the developer fallback string.
+ *   - Most tests resolve developer fallbacks; title regressions use the real
+ *     react-i18next hook with the canonical English resource.
  *   - `restartChecklist` and the tour-launcher event dispatch stay REAL so the
  *     action side-effects (localStorage + window CustomEvent + toast) are
  *     genuinely observed.
@@ -40,7 +41,11 @@ import { render, screen, fireEvent, waitFor, within } from '@testing-library/rea
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter, Routes, Route } from 'react-router-dom'
 import type { ReactNode } from 'react'
+import { createInstance, type i18n } from 'i18next'
+import { I18nextProvider, initReactI18next } from 'react-i18next'
 import { Input } from '@/components/ui'
+import canonicalEnglish from '@/i18n/en.json'
+import { getBaseTitle, setBaseTitle, setBasePrefix, __resetTitleStoreForTests } from '@/lib/titleStore'
 
 // jsdom lacks matchMedia; framer-motion (<FadeIn>) + the freshness chip read it
 // at render for the reduced-motion preference.
@@ -63,10 +68,11 @@ vi.hoisted(() => {
 
 // Hoisted test doubles so the mock factories below and the specs can both
 // reach them.
-const { useSettingsMock, useFontMock, useEditLeaseMock } = vi.hoisted(() => ({
+const { useSettingsMock, useFontMock, useEditLeaseMock, translationMode } = vi.hoisted(() => ({
   useSettingsMock: vi.fn(),
   useFontMock: vi.fn(),
   useEditLeaseMock: vi.fn(),
+  translationMode: { canonical: false },
 }))
 
 vi.mock('@/api/hooks/useSettings', () => ({
@@ -86,7 +92,9 @@ vi.mock('react-i18next', async () => {
   const actual = await vi.importActual<typeof import('react-i18next')>('react-i18next')
   return {
     ...actual,
-    useTranslation: () => ({
+    useTranslation: (...args: Parameters<typeof actual.useTranslation>) => {
+      if (translationMode.canonical) return actual.useTranslation(...args)
+      return {
       t: (key: string, fallbackOrOpts?: unknown, maybeOpts?: unknown) => {
         const fallback = typeof fallbackOrOpts === 'string' ? fallbackOrOpts : undefined
         const opts =
@@ -105,7 +113,8 @@ vi.mock('react-i18next', async () => {
         return key
       },
       i18n: { language: 'en', changeLanguage: vi.fn() },
-    }),
+      }
+    },
     Trans: ({ children }: { children?: ReactNode }) => <>{children}</>,
   }
 })
@@ -206,11 +215,11 @@ function setFont(overrides: Partial<FontPrefs> = {}) {
 
 let scrollSpy: ReturnType<typeof vi.fn>
 
-function renderPage(initialEntries: string[] = ['/settings']) {
+function renderPage(initialEntries: string[] = ['/settings'], translationInstance?: i18n) {
   const qc = new QueryClient({
     defaultOptions: { queries: { retry: false, gcTime: 0 } },
   })
-  return render(
+  const page = (
     <MemoryRouter initialEntries={initialEntries}>
       <QueryClientProvider client={qc}>
         <ToastProvider>
@@ -223,8 +232,11 @@ function renderPage(initialEntries: string[] = ['/settings']) {
           </Routes>
         </ToastProvider>
       </QueryClientProvider>
-    </MemoryRouter>,
+    </MemoryRouter>
   )
+  return render(translationInstance
+    ? <I18nextProvider i18n={translationInstance}>{page}</I18nextProvider>
+    : page)
 }
 
 /** Return the actual Brief metric occurrence containing the label. */
@@ -237,12 +249,68 @@ function statCard(label: string): HTMLElement {
 
 beforeEach(() => {
   vi.clearAllMocks()
+  translationMode.canonical = false
   localStorage.clear()
   useEditLeaseMock.mockReturnValue({ isOwner: false, otherTab: null, claim: vi.fn() })
   setFont()
   setSettings(makeSettings())
   scrollSpy = vi.fn()
   Element.prototype.scrollIntoView = scrollSpy
+})
+
+describe('SettingsPage — canonical English title', () => {
+  it('resolves the Settings-owned key through the real flat-resource fallback and preserves navigation', async () => {
+    const instance = createInstance()
+    await instance.use(initReactI18next).init({
+      resources: { en: { translation: canonicalEnglish } },
+      lng: 'en',
+      fallbackLng: 'en',
+      fallbackNS: 'translation',
+      interpolation: { escapeValue: false },
+    })
+    const settingsT = instance.getFixedT('en', 'settings')
+    expect(instance.hasResourceBundle('en', 'settings')).toBe(false)
+    expect(settingsT('title', 'Settings')).toBe('Command center')
+    expect(instance.exists('settings.title', { ns: 'settings' })).toBe(true)
+    expect(settingsT('settings.title', { defaultValue: 'MISSING SETTINGS TITLE', returnDetails: true })).toMatchObject({
+      res: 'Settings',
+      exactUsedKey: 'settings.title',
+      usedNS: 'translation',
+      usedLng: 'en',
+    })
+
+    translationMode.canonical = true
+    __resetTitleStoreForTests()
+    setBaseTitle('Command center — TeslaSync')
+    setBasePrefix('(3) ')
+    const { unmount } = renderPage(['/settings'], instance)
+    try {
+      expect(screen.getByRole('heading', { name: 'Settings', exact: true })).toBeVisible()
+      expect(screen.queryByRole('heading', { name: 'Command center', exact: true })).toBeNull()
+      expect(getBaseTitle()).toBe('Settings — TeslaSync')
+      expect(document.title).toBe('(3) Settings — TeslaSync')
+      await waitFor(() => expect(screen.getByLabelText('Current preferences overview')).toBeVisible())
+      for (const section of ['general', 'workspace', 'appearance', 'typography', 'advanced', 'server', 'reset']) {
+        expect(document.getElementById(`settings-category-${section}`)).toBeInTheDocument()
+      }
+      fireEvent.click(screen.getByRole('button', { name: /Units, language & costs/ }))
+      const draft = screen.getByRole('textbox', { name: 'Draft setting' })
+      fireEvent.change(draft, { target: { value: 'Unsaved preference' } })
+      fireEvent.click(screen.getByRole('button', { name: /Appearance & experience/ }))
+      expect(draft).not.toBeVisible()
+      fireEvent.click(screen.getByRole('button', { name: /Units, language & costs/ }))
+      expect(screen.getByRole('textbox', { name: 'Draft setting' })).toBe(draft)
+      expect(draft).toHaveValue('Unsaved preference')
+      expect(screen.getByRole('heading', { name: 'Settings', exact: true })).toBeVisible()
+      expect(document.title).toBe('(3) Settings — TeslaSync')
+      unmount()
+      expect(document.title).toBe('(3) Command center — TeslaSync')
+    } finally {
+      unmount()
+      translationMode.canonical = false
+      __resetTitleStoreForTests()
+    }
+  })
 })
 
 // ── KPI band — loaded metric derivation ─────────────────────────────────────

@@ -83,7 +83,7 @@ function orDash(value: string | null | undefined): string {
 export default function SettingsPage() {
   const { fmtNumber, precision: displayPrecision, locale: displayLocale } = useNumberFormatting();
   const { t } = useTranslation('settings')
-  usePageTitle(t('title', 'Settings'))
+  usePageTitle(t('settings.title', 'Settings'))
   const settingsQuery = useSettings()
   const settingsState = deriveDataState(settingsQuery)
   const { data: settings, isLoading } = settingsQuery
@@ -211,7 +211,7 @@ export default function SettingsPage() {
 
   return (
     <PageLayout
-      title={t('title', 'Settings')}
+      title={t('settings.title', 'Settings')}
       subtitle={t('settings.organization.subtitle', 'Find a category, adjust your preferences, and keep TeslaSync working your way.')}
       contextActions={<SettingsSearch className="w-full sm:w-72" />}
       query={settingsQuery}

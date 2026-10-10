@@ -2412,6 +2412,7 @@
       "noResults": "No matching settings.",
       "placeholder": "Search settings…"
     },
+    "title": "Settings",
     "totp": {
       "toasts": {
         "backupRegenerated": "Backup codes regenerated.",
