@@ -166,7 +166,7 @@ describe('AcDcStatsPanel — free-charging footer', () => {
   it('shows the free summary when there are free sessions', () => {
     render(<AcDcStatsPanel breakdown={mixedBreakdown()} />);
 
-    expect(screen.getByText(/Free charged/)).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /Free charged/ })).toBeInTheDocument();
     // Interpolated count from t('...','{{count}} sessions',{count}).
     expect(screen.getByText('1 sessions')).toBeInTheDocument();
     // Footer free-energy strong renders exactly "50.00 kWh".
