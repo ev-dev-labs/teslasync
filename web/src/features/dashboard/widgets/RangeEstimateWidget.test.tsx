@@ -339,7 +339,7 @@ describe('RangeEstimateWidget — lifecycle + empty states', () => {
       query: makeQuery({ isLoading: true, data: undefined }),
     });
 
-    expect(container.querySelector('.animate-pulse')).toBeTruthy();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).toBeTruthy();
     expect(screen.queryByText('Rated range')).toBeNull();
     expect(screen.queryByText('No range data')).toBeNull();
   });
