@@ -228,9 +228,9 @@ describe('complete maintenance presenters', () => {
     h.items = query(undefined, { isLoading: true, isFetching: true });
     h.records = query([]);
     const { container } = mount(<MaintenancePage />);
-    expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThan(10);
+    expect(container.querySelectorAll('[class*="--skeleton-bg"]').length).toBeGreaterThan(10);
     expect(screen.getByText('No service records logged yet.')).toBeInTheDocument();
-    expect(screen.queryByText('Total items')).not.toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Maintenance summary' }).querySelector('[data-operational-value]')).not.toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Maintenance by category' })).toBeInTheDocument();
   });
 
