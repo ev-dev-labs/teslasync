@@ -317,8 +317,8 @@ describe('LiveMotorStatus — shift state', () => {
     const badge = screen.getByLabelText('Shift State: D')
     expect(badge).toBeInTheDocument()
     expect(badge).toHaveTextContent('D')
-    // Drive is visually distinguished via the success (green) variant.
-    expect(badge.className).toContain('bg-green')
+    // Drive is visually distinguished via the shared, theme-aware success variant.
+    expect(badge.className).toContain(BADGE_VARIANTS.success)
     // The caption below the chip labels it for sighted users.
     expect(screen.getByText('Shift State')).toBeInTheDocument()
   })
@@ -333,6 +333,6 @@ describe('LiveMotorStatus — shift state', () => {
     // exported Badge palette so a re-skin of the neutral chip cannot silently
     // invalidate this check.
     expect(badge.className).toContain(BADGE_VARIANTS.neutral)
-    expect(badge.className).not.toContain('bg-green')
+    expect(badge.className).not.toContain(BADGE_VARIANTS.success)
   })
 })

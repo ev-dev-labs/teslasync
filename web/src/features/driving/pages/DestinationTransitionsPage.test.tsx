@@ -238,7 +238,11 @@ describe('DestinationTransitionsPage', () => {
     renderPage();
     expectEverySection();
     const notice = screen.getByTestId('stale-refresh-warning');
-    expect(notice).toHaveTextContent('offline');
+    expect(notice).toHaveTextContent(
+      'The latest values are temporarily unavailable. Previously loaded data remains visible.',
+    );
+    expect(notice).toHaveAttribute('data-refresh-blocked', 'true');
+    expect(notice).not.toHaveTextContent(/offline|failed/i);
     fireEvent.click(within(notice).getByRole('button', { name: 'Refresh' }));
     expect(historyRefetch).toHaveBeenCalledTimes(1);
   });

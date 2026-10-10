@@ -199,12 +199,13 @@ describe('VehicleCommandCenter — summary and readiness', () => {
   it('renders selected vehicle identity, converted telemetry, and all major sections', async () => {
     renderCenter();
 
-    expect(screen.getByText('My Tesla')).toBeInTheDocument();
+    expect(within(screen.getByTestId('command-center-hero')).getByRole('heading', { name: 'My Tesla' })).toBeInTheDocument();
     expect(screen.getByText(/Model 3/)).toBeInTheDocument();
     expect(screen.getByText(/5YJ3E1EA7KF000000/)).toBeInTheDocument();
-    expect(await screen.findByText('85.00')).toBeInTheDocument();
-    expect(screen.getByText('400')).toBeInTheDocument();
-    expect(screen.getByText('21')).toBeInTheDocument();
+    const vehicleState = within(screen.getByRole('region', { name: 'Vehicle state' }));
+    expect(await vehicleState.findByText('85.00%', { selector: '[data-operational-metric="battery"] [data-operational-value]' })).toBeInTheDocument();
+    expect(vehicleState.getByText('400 km', { selector: '[data-operational-metric="range"] [data-operational-value]' })).toBeInTheDocument();
+    expect(vehicleState.getByText('21°C', { selector: '[data-operational-metric="cabin"] [data-operational-value]' })).toBeInTheDocument();
     expect(screen.getByTestId('command-readiness')).toBeInTheDocument();
     expect(screen.getByTestId('command-workspace')).toBeInTheDocument();
     expect(screen.queryByTestId('command-safety')).not.toBeInTheDocument();
@@ -241,10 +242,10 @@ describe('VehicleCommandCenter — summary and readiness', () => {
     renderCenter(makeVehicle({ state: 'charging', updated_at: veryOld }));
 
     expect(await within(screen.getByTestId('command-center-hero')).findByText('Last known: Charging')).toBeInTheDocument();
-    expect(screen.getByText('No verified signal time')).toBeInTheDocument();
+    expect(within(screen.getByRole('region', { name: 'Vehicle state' })).getByText('No verified signal time')).toBeInTheDocument();
     expect(screen.queryByText('3653h ago')).not.toBeInTheDocument();
     expect(await screen.findByText('Delivery uncertain')).toBeInTheDocument();
-    expect(screen.getByText('Motion unknown')).toBeInTheDocument();
+    expect(within(screen.getByRole('region', { name: 'Command readiness' })).getByText('Motion unknown', { selector: '[data-operational-metric="motion"][data-value-state="missing"] [data-operational-value]' })).toBeInTheDocument();
     expect(screen.getByTestId('command-readiness')).toHaveTextContent('Unknown');
   });
 

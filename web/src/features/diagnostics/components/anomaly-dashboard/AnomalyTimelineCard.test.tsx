@@ -102,14 +102,14 @@ describe('AnomalyTimelineCard', () => {
 
   it('maps each severity to its list-item tone (incl. the warning->warn alias)', () => {
     const critical = renderCard(makeAnomaly({ severity: 'critical' })).container.querySelector('li');
-    expect(critical?.className).toContain('bg-red-500/10');
-    expect(critical?.className).toContain('border-red-500/30');
+    expect(critical?.className).toContain('bg-[var(--semantic-danger-bg)]');
+    expect(critical?.className).toContain('border-[var(--semantic-danger-border)]');
 
     const warning = renderCard(makeAnomaly({ severity: 'warning' })).container.querySelector('li');
-    expect(warning?.className).toContain('bg-amber-500/10');
+    expect(warning?.className).toContain('bg-[var(--semantic-warning-bg)]');
 
     const info = renderCard(makeAnomaly({ severity: 'info' })).container.querySelector('li');
-    expect(info?.className).toContain('bg-sky-500/10');
+    expect(info?.className).toContain('bg-[var(--semantic-info-bg)]');
   });
 
   it('conveys severity as text on the badge, not by colour alone (a11y)', () => {

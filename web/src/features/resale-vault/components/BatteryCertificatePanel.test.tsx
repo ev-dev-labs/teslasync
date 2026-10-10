@@ -78,7 +78,7 @@ describe('BatteryCertificatePanel', () => {
     expect(within(drawer).getByText('91.50%')).toBeInTheDocument();
     expect(within(drawer).getByText('88.00 / 100')).toBeInTheDocument();
     expect(within(drawer).getByText('Not scored')).toBeInTheDocument();
-    expect(within(drawer).getAllByText('Issued 2026-03-01T12:00:00Z; expires 2026-03-31T12:00:00Z')).toHaveLength(4);
+    expect(within(drawer).getAllByText('Issued 2026-03-01T12:00:00Z; expires 2026-03-31T12:00:00Z', { selector: 'div' })).toHaveLength(4);
     expect(screen.getByText('Copy certificate')).toBeInTheDocument();
     expect(screen.getByText('Copy signature')).toBeInTheDocument();
   });

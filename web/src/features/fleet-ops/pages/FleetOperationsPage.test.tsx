@@ -343,7 +343,7 @@ describe('FleetOperationsPage', () => {
     expect(drawer).toHaveTextContent('Forecast limitations: Moderate history.');
     expect(drawer).toHaveTextContent('Loaded counts are not server-wide totals.');
     expect(mutate).not.toHaveBeenCalled();
-    fireEvent.keyDown(document, { key: 'Escape' });
+    fireEvent.keyDown(drawer, { key: 'Escape' });
     expect(screen.queryByRole('dialog', { name: 'Operational record summary details' })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Edit Driver A' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'New reservation' })).toBeEnabled();

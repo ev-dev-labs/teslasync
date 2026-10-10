@@ -6,8 +6,8 @@
  *   1. It exposes an accessible `region` landmark named by its section heading
  *      (the aria-labelledby wiring must resolve).
  *   2. It renders all three guarantee tiles (title + body) from i18n keys, in
- *      order, each with a decorative (aria-hidden) icon and its own neon-color
- *      accent.
+ *      order, each with a decorative (aria-hidden) icon and the semantic accent
+ *      mapped from its historical neon-color ID.
  *   3. Every string is requested from i18n with an English fallback.
  *   4. A missing/empty translation degrades to an em-dash placeholder rather
  *      than collapsing a tile to a blank line.
@@ -137,9 +137,9 @@ describe('PrivacyGuaranteesPanel', () => {
       container.querySelectorAll('svg[aria-hidden="true"]'),
     ).map((svg) => svg.parentElement as HTMLElement)
 
-    expect(iconBoxes[0].className).toContain('bg-neon-cyan/10')
-    expect(iconBoxes[1].className).toContain('bg-neon-blue/10')
-    expect(iconBoxes[2].className).toContain('bg-neon-green/10')
+    expect(iconBoxes[0].className).toContain('bg-[var(--semantic-info-bg)]')
+    expect(iconBoxes[1].className).toContain('bg-[var(--semantic-info-bg)]')
+    expect(iconBoxes[2].className).toContain('bg-[var(--semantic-success-bg)]')
   })
 
   it('degrades an empty translation to an em-dash instead of a blank tile', () => {

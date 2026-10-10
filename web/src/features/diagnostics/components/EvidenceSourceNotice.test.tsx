@@ -51,7 +51,9 @@ describe('EvidenceSourceNotice', () => {
       label="Signal history"
       hasChosenSignal
     />);
-    expect(screen.getByText('The device is offline, so this section is showing the last values it received.')).toBeInTheDocument();
+    expect(screen.getByText('Previously loaded data remains visible while affected sources recover.')).toBeInTheDocument();
+    expect(screen.getByTestId('stale-refresh-warning')).toHaveAttribute('data-refresh-blocked', 'true');
+    expect(screen.queryByText('The device is offline, so this section is showing the last values it received.')).not.toBeInTheDocument();
     expect(screen.queryByText('Some signal histories could not be refreshed. Available evidence remains visible.')).not.toBeInTheDocument();
     expect(screen.getByRole('note')).toBeInTheDocument();
   });

@@ -92,19 +92,22 @@ describe('live battery pages: independent sources and preserved orchestration', 
     mocks.energy.mockReturnValue(pendingDrive);
     const { container } = mount(<EnergyPage />, '/energy');
     expect(screen.getByRole('heading', { level: 1, name: 'Energy intelligence' })).toBeVisible();
+    const overview = screen.getByRole('region', { name: 'Energy overview' });
+    const lifetime = overview.querySelector('[data-battery-panel="energy-lifetime"]');
+    if (!(lifetime instanceof HTMLElement)) throw new Error('The independent lifetime panel is missing');
+    const lifetimeHeader = lifetime.querySelector('[data-card] > header');
+    if (!(lifetimeHeader instanceof HTMLElement)) throw new Error('The lifetime card header is missing');
     for (const title of [
       'Efficiency driver investigation', 'Efficiency & cost overview', 'Lifetime metrics',
       'Energy & cost daily', 'Efficiency trend', 'Charging by time of day',
       'Charger type breakdown', 'Recent charging sessions',
-    ]) expect(screen.getByRole('heading', { name: title })).toBeInTheDocument();
-    const overview = screen.getByRole('region', { name: 'Energy overview' });
-    const lifetime = within(overview).getByRole('heading', { name: 'Lifetime metrics' }).closest('[data-battery-panel]');
-    if (!(lifetime instanceof HTMLElement)) throw new Error('The independent lifetime panel is missing');
+    ]) expect((title === 'Lifetime metrics' ? within(lifetimeHeader) : screen)
+      .getByRole('heading', { name: title })).toBeInTheDocument();
     expect(lifetime).toHaveAttribute('data-battery-panel', 'energy-lifetime');
     // FadeIn's real entrance begins at opacity 0 (50 ms delay + 400 ms
     // transition). Await visibility rather than accepting hidden source content.
     await waitFor(() => {
-      expect(within(lifetime).getByText('125.50')).toBeVisible();
+      expect(within(lifetime).getByText('125.50 kWh')).toBeVisible();
       expect(container.querySelector('a[href="/charging/101"]')).toBeVisible();
       expect(screen.getByRole('heading', { name: 'Recent charging sessions' })).toBeVisible();
     }, { timeout: 2_000 });

@@ -337,7 +337,7 @@ describe('CommandHistoryPage — loading / error / empty branches', () => {
     const { container } = renderPage();
 
     await waitFor(() =>
-      expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThan(0),
+      expect(container.querySelectorAll('[class*="--skeleton-bg"]').length).toBeGreaterThan(0),
     );
     // Panels stay mounted; the KPI band is present even while the feed loads.
     expect(screen.getAllByRole('heading', { level: 3, name: 'Daily activity' }).length).toBeGreaterThan(0);

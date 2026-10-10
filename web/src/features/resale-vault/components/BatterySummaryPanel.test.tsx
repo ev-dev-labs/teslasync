@@ -123,6 +123,8 @@ describe('BatterySummaryPanel', () => {
     const drawer = screen.getByRole('dialog');
     expect(within(drawer).getByText('94.20%')).toBeInTheDocument();
     expect(within(drawer).getByText('abc123')).toBeInTheDocument();
-    expect(within(drawer).getAllByText('Observed evidence: 2023-01-01 → 2024-06-01').length).toBe(6);
+    const metrics = within(drawer).getByRole('heading', { name: 'Operational metrics' }).parentElement;
+    if (!metrics) throw new Error('Missing operational metrics section');
+    expect(within(metrics).getAllByText('Observed evidence: 2023-01-01 → 2024-06-01').length).toBe(6);
   });
 });

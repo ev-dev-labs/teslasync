@@ -66,7 +66,7 @@ describe('Notification Health', () => {
       const band = screen.getByRole('region', { name });
       expect(band.querySelectorAll('[data-operational-brief]')).toHaveLength(1);
       expect(band.querySelectorAll('[data-operational-metric]')).toHaveLength(4);
-      expect(within(band).getByRole('list')).toHaveClass('sm:grid-cols-2', 'md:grid-cols-3', 'min-[1920px]:grid-cols-6');
+      expect(within(band).getByRole('list')).toHaveClass('sm:grid-cols-2', 'md:grid-cols-3', '3xl:grid-cols-6');
     }
     expect(screen.getByRole('link', { name: 'Manage delivery channels' }))
       .toHaveAttribute('href', '/notifications/channels');

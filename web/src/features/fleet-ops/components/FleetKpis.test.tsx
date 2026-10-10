@@ -259,7 +259,7 @@ describe('FleetKpis real OperationalBrief and raw metric bridge', () => {
     expect(drawer).toHaveTextContent(formatDateTime(input.forecastSource?.generated_at));
     expect(drawer).toHaveTextContent('Forecast limitations: Returned forecast limitation.');
     expect(drawer).toHaveTextContent('Loaded counts are not server-wide totals.');
-    fireEvent.keyDown(document, { key: 'Escape' });
+    fireEvent.keyDown(drawer, { key: 'Escape' });
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
     expect(screen.getByTestId('fleet-operations-summary')).toHaveAttribute('data-operational-brief');
   });

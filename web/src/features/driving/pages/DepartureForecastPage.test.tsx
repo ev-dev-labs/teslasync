@@ -225,7 +225,13 @@ describe('DepartureForecastPage', () => {
     renderPage();
     expectEverySection();
     const notice = screen.getByTestId('stale-refresh-warning');
-    expect(notice).toHaveTextContent('offline');
+    expect(notice).toHaveTextContent(
+      'The latest values are temporarily unavailable. Previously loaded data remains visible.',
+    );
+    expect(notice).toHaveAttribute('data-refresh-blocked', 'true');
+    expect(notice).toHaveAttribute('role', 'status');
+    expect(notice).not.toHaveTextContent(/offline|failed/i);
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
     fireEvent.click(within(notice).getByRole('button', { name: 'Refresh' }));
     expect(historyRefetch).toHaveBeenCalledTimes(1);
   });

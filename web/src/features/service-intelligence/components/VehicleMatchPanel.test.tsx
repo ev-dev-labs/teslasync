@@ -1,4 +1,5 @@
 import { fireEvent, render, screen, within } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 import { describe, expect, it, vi } from 'vitest';
 import { VehicleMatchPanel } from './VehicleMatchPanel';
 import { serviceReport } from '../pages/ServiceIntelligencePage.closure.fixtures';
@@ -70,7 +71,7 @@ describe('VehicleMatchPanel OperationalBrief source preservation', () => {
       selected={state !== 'unselected'}
       loading={state === 'loading'}
       error={state === 'failed' ? new Error('source unavailable') : null}
-    />);
+    />, { wrapper: MemoryRouter });
     expect(screen.getByRole('heading', { name: 'Vehicle match context' })).toBeInTheDocument();
     expect(screen.queryByTestId('service-intelligence-summary')).not.toBeInTheDocument();
     expect(screen.queryByText(serviceReport.vehicle_context.build_match_basis)).not.toBeInTheDocument();

@@ -6,8 +6,8 @@
  * how healthy is the credential".
  *
  * The contract pinned here exercises every branch of the band:
- *   • loading swaps the whole band for skeleton placeholders, mounts none
- *     of the metric labels, yet keeps the same labelled landmark region so
+ *   • loading retains metric labels with static value placeholders,
+ *     suppresses measured-value claims, and keeps the labelled landmark region so
  *     the summary never loses its accessible name mid-fetch;
  *   • open-mode (the install has no forward-auth header) and a missing
  *     `data` object both collapse the status card to "Unavailable" and the
@@ -125,12 +125,12 @@ describe('TotpKpiBand', () => {
   it('retains the Brief labels while loading and suppresses measured-value claims', () => {
     const { container } = render(<TotpKpiBand data={undefined} isLoading />)
 
-    // None of the metric cards are mounted during the loading branch.
+    // Metric labels remain visible while their values are loading.
     for (const label of LABELS) {
       expect(screen.getByText(label)).toBeInTheDocument()
     }
-    // Skeleton placeholders stand in for the cards (one pulse per skeleton bar).
-    expect(container.querySelectorAll('.motion-safe\\:animate-pulse').length).toBeGreaterThanOrEqual(4)
+    // The Brief uses static decorative value placeholders, not pulse animations.
+    expect(container.querySelectorAll('[data-operational-metric] span[aria-hidden="true"][class*="--surface-3"]').length).toBeGreaterThanOrEqual(4)
     expect(container.querySelector('[data-operational-brief]')).toHaveAttribute('aria-busy', 'true')
     expect(container.querySelectorAll('[data-operational-value]')).toHaveLength(0)
     // The formatter is never touched while there is no data.

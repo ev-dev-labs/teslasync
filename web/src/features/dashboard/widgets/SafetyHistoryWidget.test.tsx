@@ -354,7 +354,7 @@ describe('SafetyHistoryWidget — shell states', () => {
     mockSafety.mockReturnValue(qr({ isLoading: true, isFetching: true, data: undefined }));
     const { container } = renderWidget(STANDARD);
 
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).not.toBeNull();
     expect(screen.queryByText('Safety history')).toBeInTheDocument();
     expect(screen.queryByText('Automatic emergency braking disabled')).toBeNull();
   });

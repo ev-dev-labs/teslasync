@@ -146,11 +146,11 @@ describe('DataPipelineSection', () => {
     const { container } = renderSection()
 
     // Nothing renders in the collapsed body yet.
-    expect(container.querySelector('.animate-pulse')).toBeNull()
+    expect(container.querySelector('[class*="--skeleton-bg"]')).toBeNull()
 
     expand()
 
-    await waitFor(() => expect(container.querySelector('.animate-pulse')).not.toBeNull())
+    await waitFor(() => expect(container.querySelector('[class*="--skeleton-bg"]')).not.toBeNull())
     expect(screen.queryByText('Compression statistics')).not.toBeInTheDocument()
     expect(screen.queryByText('Export job queue')).not.toBeInTheDocument()
   })

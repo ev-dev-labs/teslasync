@@ -526,7 +526,7 @@ describe('SettingsPage — quick actions', () => {
     const handler = vi.fn()
     window.addEventListener(TOUR_OPEN_LAUNCHER_EVENT, handler)
     try {
-      fireEvent.click(screen.getByRole('button', { name: /Open tour launcher/i }))
+      fireEvent.click(screen.getByRole('button', { name: 'Show tours', exact: true }))
       expect(handler).toHaveBeenCalledTimes(1)
     } finally {
       window.removeEventListener(TOUR_OPEN_LAUNCHER_EVENT, handler)

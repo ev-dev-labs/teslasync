@@ -61,7 +61,8 @@ describe('FsdObservatoryPanel', () => {
 
     const panel = screen.getByTestId('fsd-observatory');
     expect(within(panel).getByText('FSD observatory')).toBeInTheDocument();
-    expect(within(panel).getByText(/reset-safe counter change/i)).toBeInTheDocument();
+    expect(within(within(panel).getByRole('region', { name: 'Reset-safe counter quantities' }))
+      .getByText(/reset-safe counter change/i)).toBeInTheDocument();
     expect(within(panel).getByText('14.0 km')).toBeInTheDocument();
     expect(within(panel).getByText('1.0 km')).toBeInTheDocument();
     expect(within(panel).getByText('5.0 km')).toBeInTheDocument();

@@ -78,7 +78,8 @@ describe('VaultSummaryBrief retained evidence and real drawer', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
     const drawer = screen.getByRole('dialog');
     expect(within(drawer).getByText('No measurement supplied')).toBeInTheDocument();
-    expect(within(drawer).getAllByText('Account-wide records; bounds unknown.')).toHaveLength(2);
+    expect(within(drawer).getByText('Account-wide records; bounds unknown.', { selector: '[data-drawer-header] span' })).toBeInTheDocument();
+    expect(within(drawer).getAllByText('Account-wide records; bounds unknown.', { selector: 'div' })).toHaveLength(2);
     expect(within(drawer).getByText('Existing evidence source')).toBeInTheDocument();
     expect(within(drawer).getByText('Not scored')).toBeInTheDocument();
     expect(within(drawer).getByText('0')).toBeInTheDocument();

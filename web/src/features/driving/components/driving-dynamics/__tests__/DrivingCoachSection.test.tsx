@@ -151,7 +151,7 @@ describe('DrivingCoachSection — empty / undefined data', () => {
     renderCoach(undefined)
 
     // Section + panel scaffolding always renders (never a blank panel).
-    expect(screen.getByText('Vehicle coaching · last 30 days')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Vehicle coaching · last 30 days', level: 2 })).toBeInTheDocument()
     expect(screen.getByText('Style Breakdown')).toBeInTheDocument()
 
     // Every data-backed panel falls back to its own empty state.

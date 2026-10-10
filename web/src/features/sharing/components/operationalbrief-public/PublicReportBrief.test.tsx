@@ -62,7 +62,7 @@ describe('PublicReportBrief — real query-free renderer', () => {
     expect(within(drawer).getAllByText(/Report event date: 2026-03-15/).length).toBeGreaterThan(0);
     expect(drawer).not.toHaveTextContent('12:00');
     expect(within(drawer).getByText('Not scored')).toBeInTheDocument();
-    expect(within(drawer).getByText('Only measurements included by the owner are shown. An omitted measurement is not a measured zero.')).toBeInTheDocument();
+    expect(within(drawer).getByText('Only measurements included by the owner are shown. An omitted measurement is not a measured zero.', { selector: 'p' })).toBeInTheDocument();
     expect(authenticated.settings).not.toHaveBeenCalled();
     expect(authenticated.units).not.toHaveBeenCalled();
     expect(authenticated.formatting).not.toHaveBeenCalled();

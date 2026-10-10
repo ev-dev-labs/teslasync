@@ -617,8 +617,8 @@ describe('TripPlannerPage — KPI derivation after a successful plan', () => {
     expect(screen.getByText('30m')).toBeInTheDocument(); // charging 1800s
     expect(screen.getByText('50.00 kWh')).toBeInTheDocument(); // 50_000 Wh
     expect(screen.getByText('$12.50')).toBeInTheDocument(); // estimated_cost
-    // Placeholders are gone now a plan exists.
-    expect(screen.queryByText('—')).not.toBeInTheDocument();
+    // Route KPIs are populated; the independent cost comparison may remain unknown.
+    expect(within(screen.getByRole('region', { name: 'Trip summary' })).queryByText('—')).not.toBeInTheDocument();
   });
 
   it('shows "Free" when the estimated cost is zero and a "—" charging tile with no charging', () => {

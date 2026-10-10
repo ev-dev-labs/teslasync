@@ -142,7 +142,16 @@ describe('AccordionSection', () => {
       'true',
     )
     // A visible focus indicator is present for keyboard users (WCAG 2.4.7).
-    expect(toggle.className).toContain('focus-visible:ring-2')
+    expect(toggle).toHaveClass(
+      'focus-visible:outline',
+      'focus-visible:outline-2',
+      'focus-visible:outline-[var(--focus-ring)]',
+      'focus-visible:-outline-offset-2',
+      'forced-colors:focus-visible:outline',
+      'forced-colors:focus-visible:outline-2',
+      'forced-colors:focus-visible:outline-[Highlight]',
+      'forced-colors:focus-visible:-outline-offset-2',
+    )
   })
 
   it('rotates the chevron indicator only while expanded', () => {
