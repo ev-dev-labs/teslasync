@@ -385,7 +385,7 @@ describe('FSMDistributionWidget', () => {
     transitionsMock.mockReturnValue(makeQuery({ isLoading: true, data: undefined, dataUpdatedAt: 0 }));
     const { container } = renderWidget();
 
-    expect(container.querySelector('.animate-pulse')).toBeInTheDocument();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).toBeInTheDocument();
     // No header/donut while loading.
     expect(screen.queryByText('State distribution')).toBeInTheDocument();
     expect(screen.queryByTestId('pie')).not.toBeInTheDocument();
@@ -400,7 +400,7 @@ describe('FSMDistributionWidget', () => {
     transitionsMock.mockReturnValue(makeQuery({ data: undefined, dataUpdatedAt: 0 }));
     const { container } = renderWidget();
 
-    expect(container.querySelector('.animate-pulse')).toBeInTheDocument();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).toBeInTheDocument();
     expect(screen.queryByText('No state data available')).not.toBeInTheDocument();
   });
 
