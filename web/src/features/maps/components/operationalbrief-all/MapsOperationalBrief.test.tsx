@@ -23,11 +23,11 @@ const metrics = [
   { metricId: 'count', occurrenceId: 'history-count', rawValue: 50, label: 'Loaded positions', description: scope, context: <a href="#/maps/navigation-route">Navigation route</a> },
 ] as const satisfies readonly StatMetric[];
 
-function renderBrief(loading = false, sources: readonly { label: string; state: DataState<unknown> }[] = [{ label: sourceLabel, state }], onRetry?: () => void) {
+function renderBrief(loading?: boolean, sources: readonly { label: string; state: DataState<unknown> }[] = [{ label: sourceLabel, state }], onRetry?: () => void, sourceMetrics: readonly StatMetric[] = metrics) {
   return render(
     <MemoryRouter>
       <MapsOperationalBrief title="Vehicle status" description="Independent position evidence"
-        scope={scope} metrics={metrics} sources={sources} loading={loading} onRetry={onRetry} />
+        scope={scope} metrics={sourceMetrics} sources={sources} loading={loading} onRetry={onRetry} />
     </MemoryRouter>,
   );
 }
@@ -94,7 +94,7 @@ describe('maps OperationalBrief source contract', () => {
 
   it('shows initial loading from source status while preserving labels, scope and retry', () => {
     const onRetry = vi.fn();
-    const { container } = renderBrief(false, [{ label: sourceLabel, state: deriveDataState({ isPending: true }) }], onRetry);
+    const { container } = renderBrief(true, [{ label: sourceLabel, state: deriveDataState({ isPending: true }) }], onRetry);
     expect(screen.getByText('Loading source data')).toBeInTheDocument();
     expect(screen.getByRole('region', { name: 'Vehicle status' })).toHaveAttribute('aria-busy', 'true');
     expect(screen.getByText('Measured speed')).toBeInTheDocument();
@@ -103,6 +103,37 @@ describe('maps OperationalBrief source contract', () => {
     expect(container.querySelector('[data-operational-value]')).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
     expect(onRetry).toHaveBeenCalledOnce();
+  });
+
+  it('renders unknown values rather than measured zero for an explicitly inactive initial source', () => {
+    const inactiveState = deriveDataState({ isPending: true, fetchStatus: 'idle' });
+    const unknownMetrics = metrics.map((metric) => ({ ...metric, rawValue: undefined }));
+    const { container } = renderBrief(false, [{ label: sourceLabel, state: inactiveState }], undefined, unknownMetrics);
+    const band = screen.getByRole('region', { name: 'Vehicle status' });
+    expect(band).not.toHaveAttribute('aria-busy');
+    expect(within(band).getByText('Source data unavailable')).toBeInTheDocument();
+    expect(within(band).getByText('Measured speed')).toBeInTheDocument();
+    expect(container.querySelectorAll('[data-operational-value]')).toHaveLength(3);
+    expect(container.querySelector('[data-operational-metric="speed"]')).toHaveAttribute('data-value-state', 'missing');
+    expect(container.querySelector('[data-operational-metric="speed"] [data-operational-value]')).toHaveTextContent('—');
+    expect(within(band).queryByText('0.00 km/h')).not.toBeInTheDocument();
+    expect(within(band).queryByText('Loading source data')).not.toBeInTheDocument();
+    fireEvent.click(within(band).getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog', { name: 'Vehicle status details' });
+    expect(within(drawer).queryByText('0.00 km/h')).not.toBeInTheDocument();
+    expect(within(drawer).getByText(`${sourceLabel}: unknown`)).toBeInTheDocument();
+  });
+
+  it('infers initial loading when the explicit activity flag is unspecified', () => {
+    const { container } = renderBrief(undefined, [{ label: sourceLabel, state: deriveDataState({ isPending: true }) }]);
+    const band = screen.getByRole('region', { name: 'Vehicle status' });
+    expect(band).toHaveAttribute('aria-busy', 'true');
+    expect(within(band).getByText('Loading source data')).toBeInTheDocument();
+    expect(within(band).getByText('Measured speed')).toBeInTheDocument();
+    expect(within(band).getAllByText(scope).length).toBeGreaterThan(0);
+    expect(container.querySelector('[data-operational-value]')).toBeNull();
+    expect(container.querySelector('[data-operational-metric="speed"] span[aria-hidden="true"][class~="bg-[var(--surface-3)]"]')).toBeTruthy();
+    expect(within(band).queryByText('0.00 km/h')).not.toBeInTheDocument();
   });
 
   it.each([

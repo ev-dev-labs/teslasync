@@ -301,7 +301,7 @@ describe('TemperatureImpactPage — loading', () => {
     mockTempImpact.mockReturnValue(makeQuery({ data: undefined, isLoading: true }));
     const { container } = renderPage();
 
-    expect(container.querySelector('.animate-pulse')).toBeTruthy();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).toBeTruthy();
     expect(screen.queryByText('No drive data available yet')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Retry' })).not.toBeInTheDocument();
     // Aggregates are withheld while the first load is in flight.

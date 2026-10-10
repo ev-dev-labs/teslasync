@@ -17,7 +17,7 @@ interface MapsOperationalBriefProps {
   onRetry?: () => void;
 }
 
-export function MapsOperationalBrief({ title, description, scope, metrics, sources, loading = false, onRetry }: MapsOperationalBriefProps) {
+export function MapsOperationalBrief({ title, description, scope, metrics, sources, loading, onRetry }: MapsOperationalBriefProps) {
   const { t } = useTranslation();
   const operationalMetrics = useOperationalMetrics(metrics);
   const states = sources.map(({ state }) => state);
@@ -31,7 +31,8 @@ export function MapsOperationalBrief({ title, description, scope, metrics, sourc
       : states.some((state) => state.refreshError || state.isRefreshBlocked || state.status === 'stale')
         ? 'retained'
         : 'available';
-  const isLoading = loading || initialLoading;
+  // Explicit query activity distinguishes a disabled source from its initial status.
+  const isLoading = loading ?? initialLoading;
   const labels = {
     retained: t('mapsBrief.status.retained', 'Retained source data'),
     unavailable: t('mapsBrief.status.unavailable', 'Source data unavailable'),
