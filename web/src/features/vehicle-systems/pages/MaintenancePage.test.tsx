@@ -447,10 +447,26 @@ describe('MaintenancePage', () => {
     const { container } = renderPage();
 
     expect(screen.getByRole('heading', { level: 1, name: 'Maintenance' })).toBeInTheDocument();
-    // KPI band collapses to its skeleton — the labels are absent while loading.
-    expect(screen.queryByText('Total items')).not.toBeInTheDocument();
+    // The brief retains metric labels while suppressing unresolved readings.
+    const summary = screen.getByRole('region', { name: 'Maintenance summary' });
+    expect(summary).toHaveAttribute('aria-busy', 'true');
+    expect(within(summary).getByText('Total items', {
+      selector: '[data-operational-metric] > div:first-child > :first-child',
+    })).toBeInTheDocument();
+    expect(within(summary).queryByText('Total items', {
+      selector: '[data-operational-value]',
+    })).not.toBeInTheDocument();
+    expect(summary.querySelector('[data-operational-value]')).not.toBeInTheDocument();
     // Skeletons render across the page (KPI + items + projections + cost + records).
-    expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThan(10);
+    expect(container.querySelectorAll('[class*="--skeleton-bg"]').length).toBeGreaterThan(10);
+    for (const title of [
+      'Maintenance items', 'Service projections', 'Estimated annual cost',
+      'Maintenance by category', 'Service records',
+    ]) {
+      const panel = screen.getByRole('heading', { name: title, exact: true }).closest('[data-card]');
+      expect(panel).not.toBeNull();
+      expect(panel?.querySelector('[class*="--skeleton-bg"]')).toBeInTheDocument();
+    }
     // No resolved item or error copy.
     expect(screen.queryByText('Tire Rotation')).not.toBeInTheDocument();
     expect(screen.queryByText(/Can't reach server/i)).not.toBeInTheDocument();

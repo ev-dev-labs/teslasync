@@ -106,9 +106,15 @@ vi.mock('@/components/layout', () => ({
   Grid: ({ children }: { children: ReactNode }) => <div>{children}</div>,
 }));
 
-vi.mock('@/components/motion', () => ({
-  FadeIn: ({ children }: { children: ReactNode }) => <>{children}</>,
-}));
+vi.mock('@/components/motion', async () => {
+  const actual = await vi.importActual<typeof import('@/components/motion')>(
+    '@/components/motion',
+  );
+  return {
+    ...actual,
+    FadeIn: ({ children }: { children: ReactNode }) => <>{children}</>,
+  };
+});
 
 vi.mock('@/features/onboarding/components/NoVehicleSelected', () => ({
   NoVehicleSelected: ({ pageTitle }: { pageTitle: string }) => (

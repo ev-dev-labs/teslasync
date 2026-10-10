@@ -141,7 +141,7 @@ describe('DrivingSummaryBrief — real OperationalBrief and numerical bridge', (
       render(<MemoryRouter><DrivetrainSummary {...props} healthState={staleHealth} /></MemoryRouter>);
       const temperature = screen.getByRole('region', { name: 'Temperature Details' });
       expect(within(temperature).getByText('Retained evidence')).toBeVisible();
-      expect(within(temperature).getByText('55.00 °C', { selector: '[data-operational-value]' })).toBeVisible();
+      expect(within(temperature).getByText('55.00°C', { selector: '[data-operational-value]' })).toBeVisible();
       expect(screen.getByText('75.00 kW', { selector: '[data-operational-value]' })).toBeVisible();
       expect(screen.getByText('500.00 km', { selector: '[data-operational-value]' })).toBeVisible();
     });

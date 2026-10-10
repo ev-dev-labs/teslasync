@@ -124,12 +124,12 @@ describe('VehicleHeader — status badge', () => {
 
   it('reflects the status→variant mapping in the badge colour', () => {
     const { unmount } = renderHeader({ status: 'online' })
-    // online → 'success' variant → green chip.
-    expect(screen.getByText('Online').className).toMatch(/bg-green/)
+    // online → 'success' variant → theme-aware semantic success chip.
+    expect(screen.getByText('Online').className).toMatch(/bg-\[var\(--semantic-success-bg\)\]/)
     unmount()
     renderHeader({ status: 'offline' })
-    // offline → 'danger' variant → red chip.
-    expect(screen.getByText('Offline').className).toMatch(/bg-red/)
+    // offline → 'danger' variant → theme-aware semantic danger chip.
+    expect(screen.getByText('Offline').className).toMatch(/bg-\[var\(--semantic-danger-bg\)\]/)
   })
 
   it('keeps an unexpected status readable (raw value, not the i18n key)', () => {

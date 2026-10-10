@@ -358,7 +358,7 @@ describe('GuardModePage — status surfaces', () => {
     expect(metric('Sensitivity')).toHaveAttribute('data-value-state', 'missing');
     expect(metric('Lock state')).toHaveTextContent('Locked');
     expect(metric('Total events')).toHaveTextContent('0');
-    expect(document.querySelector('[data-guard-section="settings"] .animate-pulse')).toBeInTheDocument();
+    expect(document.querySelector('[data-guard-section="settings"] [class*="--skeleton-bg"]')).toBeInTheDocument();
     expect(section('settings').getByRole('button', { name: 'Save settings' })).toBeDisabled();
     fireEvent.click(section('settings').getByRole('button', { name: 'Save settings' }));
     expect(H.setConfig.mutate).not.toHaveBeenCalled();

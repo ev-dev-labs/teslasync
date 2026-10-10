@@ -367,7 +367,7 @@ describe('TeslaAccountPage — populated', () => {
     setup(makeQuery({ data: envelope({ ...PROFILE, profile_image_url: null }) }));
 
     // No <img>; avatar renders deterministic initials instead.
-    expect(screen.queryByRole('img', { name: 'Ada Lovelace' })).not.toBeInTheDocument();
+    expect(screen.queryByAltText('Ada Lovelace')).not.toBeInTheDocument();
     expect(screen.getByTestId('avatar-initials')).toHaveTextContent('AL');
     expect(within(panel('Account details')).getByText('Not set')).toBeInTheDocument();
   });

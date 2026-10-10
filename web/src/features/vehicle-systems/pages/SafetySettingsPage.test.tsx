@@ -432,8 +432,9 @@ describe('SafetySettingsPage', () => {
 
     const kpi = screen.getByRole('region', { name: 'Safety summary' });
     expect(within(kpi).getByText('Enabled feature share')).toBeInTheDocument();
-    expect(within(kpi).getByLabelText('Enabled feature share: 67%'))
-      .toBeInTheDocument(); // 6/9 → 66.7 → 67; value and unit have separate spans
+    const enabledShare = within(kpi).getByText('Enabled feature share').closest('[data-operational-metric]');
+    expect(enabledShare?.querySelector('[data-operational-value]'))
+      .toHaveTextContent(/^67%$/); // 6/9 → 66.7 → 67; scoped to the labelled operational metric
     expect(within(kpi).getByText('Total features')).toBeInTheDocument();
     expect(within(kpi).getByText('9')).toBeInTheDocument();
     expect(within(kpi).getByText('Enabled')).toBeInTheDocument();

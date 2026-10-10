@@ -517,7 +517,7 @@ describe('TirePressurePage — loading / empty / error states', () => {
     setHistory([], 'pending');
     const { container } = renderPage();
 
-    await waitFor(() => expect(container.querySelector('.animate-pulse')).toBeTruthy());
+    await waitFor(() => expect(container.querySelector('[class*="--skeleton-bg"]')).toBeTruthy());
     // Loading must not masquerade as "no data".
     expect(screen.queryByText('No current readings available')).not.toBeInTheDocument();
     expect(screen.queryByText('Normal')).not.toBeInTheDocument();

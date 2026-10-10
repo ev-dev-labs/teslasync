@@ -41,6 +41,56 @@ vi.mock('@/hooks/useSettings', () => ({
   useSettings: vi.fn(),
 }));
 
+// Keep display preferences independent of the unresolved AI-gate settings.
+// Production useSettings supplies defaults even while its query is pending.
+vi.mock('@/hooks/useUnits', async () => {
+  const units = await vi.importActual<typeof import('@/lib/unitConversion')>(
+    '@/lib/unitConversion',
+  );
+  const unitPrefs: import('@/lib/unitConversion').UnitPref = {
+    distance: 'km',
+    speed: 'km/h',
+    temperature: '°C',
+    pressure: 'bar',
+    energy: 'kWh',
+    duration: 'h',
+    power: 'kW',
+    locale: 'en-US',
+    precision: 2,
+  };
+  const display: import('@/hooks/useUnits').UseUnitsResult = {
+    unitPrefs,
+    formatDistance: (value, options) => units.formatDistance(value, unitPrefs, options),
+    formatSpeed: (value, options) => units.formatSpeed(value, unitPrefs, options),
+    formatTemperature: (value, options) => units.formatTemperature(value, unitPrefs, options),
+    formatPressure: (value, options) => units.formatPressure(value, unitPrefs, options),
+    formatEnergy: (value, options) => units.formatEnergy(value, unitPrefs, options),
+    formatDuration: (value, options) => units.formatDuration(value, unitPrefs, options),
+    formatPower: (value, options) => units.formatPower(value, unitPrefs, options),
+  };
+  return { useUnits: () => display };
+});
+
+vi.mock('@/hooks/useFormatting', async () => {
+  const { deriveDataState } = await vi.importActual<typeof import('@/api/dataState')>(
+    '@/api/dataState',
+  );
+  const display: import('@/hooks/useFormatting').UseFormattingResult = {
+    currencySymbol: '$',
+    costPerKwh: null,
+    pricingState: deriveDataState<AppSettings>({ data: undefined, isPending: true }),
+    formatCurrency: (amount, decimals = 2) =>
+      `$${amount.toLocaleString('en-US', {
+        minimumFractionDigits: decimals,
+        maximumFractionDigits: decimals,
+      })}`,
+    formatEnergyCost: () => '—',
+    costPerDistanceUnit: () => null,
+    estimateGasCost: () => null,
+  };
+  return { useFormatting: () => display };
+});
+
 // usePageTitle is a side-effect hook; mock it so we can assert the
 // canonical-title write without depending on a real DOM <head>.
 vi.mock('@/hooks/usePageTitle', () => ({

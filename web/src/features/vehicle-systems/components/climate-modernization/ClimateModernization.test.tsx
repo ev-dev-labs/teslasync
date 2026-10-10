@@ -338,7 +338,9 @@ describe('Climate live modernization — no real API or vehicle commands', () =>
     expect(within(metric('Fan speed')).getByText('0')).toBeInTheDocument();
     expect(within(metric('HVAC power')).getByText('State: Off')).toBeInTheDocument();
     expect(within(group(view.container, 'climate-comfort')).getByText('100.00')).toBeInTheDocument();
-    expect(within(group(view.container, 'climate-systems')).getByText(/Showing retained measurements/))
+    expect(within(group(view.container, 'climate-systems')).getByText(/Showing retained measurements/, {
+      selector: '[role="status"][aria-live="polite"]',
+    }))
       .toHaveTextContent('The device is offline, so this section is showing the last values it received.');
 
     latest({

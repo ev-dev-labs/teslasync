@@ -26,7 +26,7 @@ const session: ChargingSession = {
   started_at: '2026-07-01T10:00:00Z', ended_at: '2026-07-01T11:00:00Z',
   start_ts: '2026-07-01T10:00:00Z', startedAt: '2026-07-01T10:00:00Z', duration_min: 60,
 };
-const result = analyzeCycleStress([session], [], now, 'UTC');
+const result = analyzeCycleStress([session], [], now, 'UTC', { exponent: 1.3 });
 const ready = cycleStressQueryState(true, { data: [session], isSuccess: true }, { data: [], isSuccess: true });
 const client = () => new QueryClient({ defaultOptions: { queries: { retry: false } } });
 function Provider({ children }: { children: ReactNode }) {
@@ -50,7 +50,9 @@ describe('cycle-stress source-preserving presentation', () => {
     const drawer = within(screen.getByRole('dialog'));
     expect(drawer.getByText('illustrative exponent 1.3')).toBeVisible();
     expect(drawer.getByText('sum of count x depth fraction')).toBeVisible();
-    expect(drawer.getByText(/not a selected-date-window or full-history total/)).toBeVisible();
+    const drawerHeader = screen.getByRole('dialog').querySelector('[data-drawer-header]');
+    if (!(drawerHeader instanceof HTMLElement)) throw new Error('Review drawer header is missing');
+    expect(within(drawerHeader).getByText(/not a selected-date-window or full-history total/)).toBeVisible();
     expect(JSON.stringify(result)).toBe(before);
   });
 

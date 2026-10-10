@@ -103,7 +103,8 @@ vi.mock('@/components/layout', () => ({
   Grid: ({ children }: { children: ReactNode }) => <div>{children}</div>,
 }));
 
-vi.mock('@/components/motion', () => ({
+vi.mock('@/components/motion', async (importOriginal) => ({
+  ...await importOriginal<typeof import('@/components/motion')>(),
   FadeIn: ({ children }: { children: ReactNode }) => <>{children}</>,
 }));
 

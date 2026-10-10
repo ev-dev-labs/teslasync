@@ -62,7 +62,11 @@ describe('independent production vehicle sources', () => {
     expect(screen.queryByText(/synthetic/i)).not.toBeInTheDocument();
     rerender(view({ data: retained, fetchStatus: 'paused' }));
     expect(screen.getByText('Observation 7')).toBeVisible();
-    expect(screen.getByText('The device is offline, so this section is showing the last values it received.')).toBeVisible();
+    expect(screen.getByText('The latest values are temporarily unavailable. Previously loaded data remains visible.')).toBeVisible();
+    expect(screen.getByTestId('stale-refresh-warning')).toHaveAttribute('data-refresh-blocked', 'true');
+    expect(screen.getByRole('button', { name: 'Inspect retained observation' })).toBe(control);
+    expect(control).toHaveFocus();
+    expect(screen.queryByText(/offline/i)).not.toBeInTheDocument();
   });
 
   it('does not treat a state response envelope without its state field as measured values', () => {
