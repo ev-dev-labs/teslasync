@@ -264,8 +264,8 @@ describe('ExplorePage — operational evidence', () => {
     expect(within(drawer).getByText('Operational metrics')).toBeInTheDocument();
     expect(within(drawer).getByText('matching filter')).toBeInTheDocument();
     expect(within(drawer).getByText('Search: powershare · Category: charging')).toBeInTheDocument();
-    expect(within(drawer).getByText('Visible catalog and returned fleet list · no date window')).toBeInTheDocument();
-    expect(within(drawer).getByText('Fleet last loaded: 2026-10-06T22:00:00.000Z')).toBeInTheDocument();
+    expect(within(drawer).getByText('Visible catalog and returned fleet list · no date window', { selector: '[data-drawer-header] span' })).toBeInTheDocument();
+    expect(within(drawer).getByText('Fleet last loaded: 2026-10-06T22:00:00.000Z', { selector: '[data-drawer-header] span' })).toBeInTheDocument();
     expect(within(drawer).getByText('Visible catalog entries after vehicle and authentication gates; unaffected by search or category filters.'))
       .toBeInTheDocument();
     expect(within(drawer).getByText('Distinct categories in the visible catalog before search and category filters.'))
