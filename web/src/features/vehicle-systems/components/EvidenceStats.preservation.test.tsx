@@ -112,7 +112,9 @@ describe.each(fixtures)('$name actual operational evidence brief', fixture => {
       if (label == null) throw new Error('Missing operational label');
       expect(within(drawer).getByText(label)).toBeInTheDocument();
     }
-    fireEvent.click(within(drawer).getByRole('button', { name: 'Close' }));
+    const drawerHeader = drawer.querySelector('[data-drawer-header]');
+    if (drawerHeader == null) throw new Error('Missing evidence drawer header');
+    fireEvent.click(within(drawerHeader).getByRole('button', { name: 'Close' }));
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 });

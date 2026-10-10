@@ -228,6 +228,12 @@ function renderPage() {
 
 const kpiRegion = () => screen.getByRole('region', { name: 'Export summary' });
 
+function drawerFooter(drawer: HTMLElement) {
+  const footer = drawer.querySelector('[data-drawer-footer]');
+  if (!footer) throw new Error('Export summary drawer footer is missing');
+  return within(footer);
+}
+
 /** Read the actual Brief value without relying on typography siblings. */
 function kpiValue(label: string): string {
   const span = within(kpiRegion()).getByText(label);
@@ -264,7 +270,7 @@ describe('ExportsPage — loading', () => {
     expect(screen.getByText('Total exports')).toBeInTheDocument();
     expect(kpiRegion()).toHaveAttribute('aria-busy', 'true');
     expect(kpiRegion().querySelector('[data-operational-value]')).toBeNull();
-    expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThan(0);
+    expect(container.querySelectorAll('[class*="--skeleton-bg"]').length).toBeGreaterThan(0);
   });
 });
 
@@ -316,7 +322,7 @@ describe('ExportsPage — populated', () => {
     expect(within(drawer).getByText('Queued and processing jobs combined; this is not a completion estimate.')).toBeInTheDocument();
     expect(within(drawer).getByText('Jobs marked failed in the returned list, not a failure rate or a date-bounded total.')).toBeInTheDocument();
     expect(within(drawer).getByText('5.00 MB')).toBeInTheDocument();
-    fireEvent.click(within(drawer).getByRole('button', { name: 'Close' }));
+    fireEvent.click(drawerFooter(drawer).getByRole('button', { name: 'Close' }));
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
     await waitFor(() => expect(trigger).toHaveFocus());
     expect(screen.getByText('1 selected')).toBeInTheDocument();
@@ -486,7 +492,7 @@ describe('ExportsPage — refresh', () => {
     const drawer = await screen.findByRole('dialog');
     expect(within(drawer).getByText('Retained jobs · refresh paused')).toBeInTheDocument();
     expect(within(drawer).getByText('5.00 MB')).toBeInTheDocument();
-    fireEvent.click(within(drawer).getByRole('button', { name: 'Close' }));
+    fireEvent.click(drawerFooter(drawer).getByRole('button', { name: 'Close' }));
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
     expect(screen.getByRole('link', { name: 'Download export job-ready-1' })).toBeInTheDocument();
     expect(mutateAsyncSpy).not.toHaveBeenCalled();
@@ -657,7 +663,7 @@ describe('ExportsPage — refresh', () => {
       fireEvent.click(checkboxes[0]);
       fireEvent.click(checkboxes[1]);
       fireEvent.click(screen.getByRole('button', { name: 'Export list' }));
-      expect(screen.getByRole('radio', { name: 'Selected (2)' })).toHaveAttribute('aria-checked', 'true');
+      expect(screen.getByRole('menuitemradio', { name: 'Selected (2)' })).toHaveAttribute('aria-checked', 'true');
       fireEvent.click(screen.getByRole('menuitem', { name: 'Download as JSON' }));
       await waitFor(() => expect(downloadJSON).toHaveBeenCalledTimes(2));
       expect(vi.mocked(downloadJSON).mock.calls[1][1]).toEqual([
@@ -667,7 +673,7 @@ describe('ExportsPage — refresh', () => {
 
       await waitFor(() => expect(screen.getByRole('button', { name: 'Export list' })).not.toBeDisabled());
       fireEvent.click(screen.getByRole('button', { name: 'Export list' }));
-      fireEvent.click(screen.getByRole('radio', { name: 'Visible (31)' }));
+      fireEvent.click(screen.getByRole('menuitemradio', { name: 'Visible (31)' }));
       fireEvent.click(screen.getByRole('menuitem', { name: 'Download as CSV' }));
       await waitFor(() => expect(downloadCSV).toHaveBeenCalledOnce());
       const csv = vi.mocked(downloadCSV).mock.calls[0][1];

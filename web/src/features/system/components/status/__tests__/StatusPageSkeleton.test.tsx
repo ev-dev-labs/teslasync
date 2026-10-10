@@ -39,7 +39,7 @@ vi.mock('react-i18next', () => ({
 
 import { StatusPageSkeleton } from '../StatusPageSkeleton'
 
-const PULSE = '.animate-pulse'
+const PLACEHOLDER = '[class*="--skeleton-bg"]'
 const PANEL = '[data-print-card]'
 
 beforeEach(() => {
@@ -95,13 +95,13 @@ describe('StatusPageSkeleton', () => {
 
     const [hero, health, actionItems, resources, ...accordions] = panels
     // Hero → avatar + title + subtitle + action button.
-    expect(hero.querySelectorAll(PULSE)).toHaveLength(4)
+    expect(hero.querySelectorAll(PLACEHOLDER)).toHaveLength(4)
     // Health → section title + six rows.
-    expect(health.querySelectorAll(PULSE)).toHaveLength(1 + 6)
+    expect(health.querySelectorAll(PLACEHOLDER)).toHaveLength(1 + 6)
     // Action items → title + two rows.
-    expect(actionItems.querySelectorAll(PULSE)).toHaveLength(1 + 2)
+    expect(actionItems.querySelectorAll(PLACEHOLDER)).toHaveLength(1 + 2)
     // Resources → title + five rows.
-    expect(resources.querySelectorAll(PULSE)).toHaveLength(1 + 5)
+    expect(resources.querySelectorAll(PLACEHOLDER)).toHaveLength(1 + 5)
     // The remaining panels are the four accordion stubs.
     expect(accordions).toHaveLength(4)
   })
@@ -114,7 +114,7 @@ describe('StatusPageSkeleton', () => {
     ).slice(4)
     expect(accordions).toHaveLength(4)
     for (const accordion of accordions) {
-      expect(accordion.querySelectorAll(PULSE)).toHaveLength(4)
+      expect(accordion.querySelectorAll(PLACEHOLDER)).toHaveLength(4)
     }
   })
 
@@ -129,7 +129,7 @@ describe('StatusPageSkeleton', () => {
     const chipBar = region.children[1] as HTMLElement
     expect(chipBar).not.toHaveAttribute('data-print-card')
 
-    const chips = Array.from(chipBar.querySelectorAll(PULSE)) as HTMLElement[]
+    const chips = Array.from(chipBar.querySelectorAll(PLACEHOLDER)) as HTMLElement[]
     expect(chips).toHaveLength(8)
     for (const chip of chips) {
       expect(chip.className).toContain('rounded-full')
@@ -142,7 +142,7 @@ describe('StatusPageSkeleton', () => {
     const region = screen.getByTestId('status-page-skeleton')
 
     // 4 hero + 8 chips + 7 health + 3 action + 6 resources + 16 accordions = 44.
-    expect(container.querySelectorAll(PULSE)).toHaveLength(44)
+    expect(container.querySelectorAll(PLACEHOLDER)).toHaveLength(44)
     // No readable text — assistive tech only hears the aria-label.
     expect(region.textContent).toBe('')
   })

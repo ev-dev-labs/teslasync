@@ -304,7 +304,7 @@ describe('VampireDrainPage', () => {
     // KPI band — SI %/day read straight from the stats contract.
     await waitFor(() => expect(metricValues('Avg drain / day')).toContain('2.34%'))
     await screen.findByRole('table', { name: 'Drain sessions' })
-    expect(screen.getByText('72.50')).toBeInTheDocument() // observed hours
+    expect(metricValues('Observed hours')).toContain('72.50 h')
     // median + p95 appear twice: once in the KPI band and once in the gauge side rail.
     expect(metricValues('Median drain / day').filter((value) => value === '1.81%').length).toBeGreaterThanOrEqual(2)
     expect(metricValues('P95 drain / day').filter((value) => value === '4.56%').length).toBeGreaterThanOrEqual(2)
@@ -396,13 +396,13 @@ describe('VampireDrainPage', () => {
     // Once the fleet resolves the vehicle is auto-selected, the queries enable,
     // and the panels short-circuit to their skeletons.
     await waitFor(() =>
-      expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThanOrEqual(4),
+      expect(container.querySelectorAll('[class*="--skeleton-bg"]').length).toBeGreaterThanOrEqual(4),
     )
     // The KPI cards / gauge value are withheld — no half-populated dashboard.
     expect(screen.getByRole('region', { name: 'Drain summary' }).querySelector('[data-operational-value]')).toBeNull()
     expect(screen.getByRole('region', { name: 'Drain summary' }).querySelectorAll('[data-operational-metric]')).toHaveLength(4)
     expect(screen.getByRole('region', { name: 'Drain summary' }).querySelector('[data-operational-brief]')).toHaveAttribute('aria-busy', 'true')
-    expect(screen.queryByText('72.50')).toBeNull()
+    expect(screen.queryByText('72.50 h')).toBeNull()
     // Panel chrome still renders so the layout doesn't collapse.
     expect(screen.getByText('Drain rate trend')).toBeInTheDocument()
   })
@@ -432,7 +432,7 @@ describe('VampireDrainPage', () => {
       name: 'Retry Vampire-drain statistics', exact: true,
     })).not.toBeInTheDocument())
     expect(eventsCallCount()).toBe(eventsBefore)
-    expect(within(screen.getByRole('region', { name: 'Drain summary' })).getByText('2.34')).toBeInTheDocument()
+    expect(within(screen.getByRole('region', { name: 'Drain summary' })).getByText('2.34%')).toBeInTheDocument()
     expect(table.getByText('8.00')).toBeInTheDocument()
     expect(table.getByText('90.00%')).toBeInTheDocument()
   })

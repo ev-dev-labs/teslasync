@@ -131,7 +131,7 @@ describe('OperationsSection — header success-rate badge', () => {
 
     const badge = await screen.findByText(/success rate/i)
     expect(badge).toHaveTextContent('95.00%')
-    expect(badge.className).toContain('bg-green-100')
+    expect(badge.className).toContain('bg-[var(--semantic-success-bg)]')
     // Header title/description are visible even while the accordion is collapsed.
     expect(screen.getByText('Operations')).toBeInTheDocument()
     expect(screen.getByText('Notification delivery and audit trail')).toBeInTheDocument()
@@ -143,7 +143,7 @@ describe('OperationsSection — header success-rate badge', () => {
     const { unmount } = renderSection()
     const warn = await screen.findByText(/success rate/i)
     expect(warn).toHaveTextContent('90.00%')
-    expect(warn.className).toContain('bg-yellow-100')
+    expect(warn.className).toContain('bg-[var(--semantic-warning-bg)]')
     unmount()
 
     // Danger band.
@@ -151,7 +151,7 @@ describe('OperationsSection — header success-rate badge', () => {
     renderSection()
     const danger = await screen.findByText(/success rate/i)
     expect(danger).toHaveTextContent('70.00%')
-    expect(danger.className).toContain('bg-red-100')
+    expect(danger.className).toContain('bg-[var(--semantic-danger-bg)]')
   })
 })
 
@@ -164,7 +164,7 @@ describe('OperationsSection — loading', () => {
     const { container } = renderSection()
     expand()
 
-    expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThanOrEqual(1)
+    expect(container.querySelectorAll('[class*="--skeleton-bg"]').length).toBeGreaterThanOrEqual(1)
     // Body content has not resolved yet.
     expect(screen.queryByText('Notification delivery')).toBeNull()
     expect(screen.getByRole('button', { name: /Operations/i })).toHaveAttribute(
@@ -308,7 +308,7 @@ describe('OperationsSection — null safety', () => {
     renderSection()
     const badge = await screen.findByText(/success rate/i)
     expect(badge).toHaveTextContent('100.00%')
-    expect(badge.className).toContain('bg-green-100')
+    expect(badge.className).toContain('bg-[var(--semantic-success-bg)]')
 
     expand()
     expect(await screen.findByText('0/0')).toBeInTheDocument()

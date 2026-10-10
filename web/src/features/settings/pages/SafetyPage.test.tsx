@@ -357,7 +357,7 @@ describe('SafetyPage — deterministic safety-settings listing', () => {
     // Colour is a secondary status signal: ON => success, OFF => neutral.
     expect(
       valueBadge('safetySettings.rows.quietHoursEnabled.title').className,
-    ).toContain('bg-green-100')
+    ).toContain(BADGE_VARIANTS.success)
     expect(
       valueBadge('safetySettings.rows.criticalFlashEnabled.title').className,
     ).toContain(BADGE_VARIANTS.neutral)
@@ -396,7 +396,7 @@ describe('SafetyPage — deterministic safety-settings listing', () => {
 
     const badge = valueBadge('safetySettings.rows.apiSuspended.title')
     expect(badge).toHaveTextContent('Suspended')
-    expect(badge.className).toContain('bg-yellow-100')
+    expect(badge.className).toContain(BADGE_VARIANTS.warning)
   })
 
   it('maps the API kill-switch to Active with a success colour when not suspended', () => {
@@ -404,7 +404,7 @@ describe('SafetyPage — deterministic safety-settings listing', () => {
 
     const badge = valueBadge('safetySettings.rows.apiSuspended.title')
     expect(badge).toHaveTextContent('Active')
-    expect(badge.className).toContain('bg-green-100')
+    expect(badge.className).toContain(BADGE_VARIANTS.success)
   })
 
   it('gives every row a safe docs deep-link with a descriptive accessible name', () => {
@@ -487,7 +487,14 @@ describe('SafetyPage — read-only recovery', () => {
     })
     const { rerender } = render(<SafetyPage />)
     expect(screen.getByText('Loading…')).toBeInTheDocument()
-    expect(within(kpiRegion()).getAllByText(EM_DASH)).toHaveLength(4)
+    expect(screen.getByTestId('safety-settings-summary')).toHaveAttribute('aria-busy', 'true')
+    const loadingMetrics = within(kpiRegion()).getAllByRole('listitem')
+    expect(loadingMetrics).toHaveLength(4)
+    for (const metric of loadingMetrics) {
+      expect(metric).toHaveAttribute('data-value-state', 'missing')
+      expect(metric.querySelector('[aria-hidden="true"][class*="--surface-3"]')).toBeInTheDocument()
+      expect(metric.querySelector('[data-operational-value]')).toBeNull()
+    }
     expect(screen.queryByRole('button', { name: 'Retry' })).toBeNull()
     expect(screen.queryByText('3 / 3')).toBeNull()
 
