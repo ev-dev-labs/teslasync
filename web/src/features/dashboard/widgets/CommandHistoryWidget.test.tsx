@@ -222,7 +222,7 @@ describe('CommandHistoryWidget states', () => {
   it('renders a skeleton (no title, no empty copy) while loading', () => {
     mockUseCommandHistory.mockReturnValue(qr({ isLoading: true, data: undefined }));
     const { container } = renderWidget(STANDARD);
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).not.toBeNull();
     expect(screen.queryByText('Command history')).toBeInTheDocument();
     expect(screen.queryByText('No commands sent')).toBeNull();
   });

@@ -347,7 +347,7 @@ describe('RecentlyUnlockedAchievementsWidget', () => {
     expect(
       screen.queryByText(/achievements will appear here as you unlock them/i),
     ).not.toBeInTheDocument();
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).not.toBeNull();
     expect(screen.queryByTestId('recently-unlocked-list')).not.toBeInTheDocument();
   });
 
@@ -356,7 +356,7 @@ describe('RecentlyUnlockedAchievementsWidget', () => {
 
     const { container } = renderWidget(<RecentlyUnlockedAchievementsWidget size={SIZE_NARROW} />);
 
-    expect(container.querySelector('.animate-pulse')).toBeTruthy();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).toBeTruthy();
     expect(screen.queryByTestId('recently-unlocked-list')).not.toBeInTheDocument();
     expect(
       screen.queryByText(/achievements will appear here/i),

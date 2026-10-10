@@ -346,7 +346,7 @@ describe('SentryEventLogWidget — states', () => {
   it('renders a loading skeleton while the query is pending', () => {
     useQueryMock.mockReturnValue(makeResult({ isLoading: true, data: undefined }));
     const { container } = renderWidget();
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).not.toBeNull();
     expect(screen.queryByText('No security events recorded')).toBeNull();
   });
 

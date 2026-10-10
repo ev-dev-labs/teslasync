@@ -546,7 +546,7 @@ describe('VehicleUpgradesWidget — states + interaction', () => {
 
     const { container } = renderWidget(<VehicleUpgradesWidget size={SIZE_STD} />);
 
-    expect(container.querySelector('.animate-pulse')).toBeTruthy();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).toBeTruthy();
     expect(screen.queryByText('Upgrades & sharing')).toBeInTheDocument();
     expect(screen.queryByText('Full Self-Driving')).not.toBeInTheDocument();
   });

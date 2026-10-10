@@ -338,7 +338,7 @@ describe('SecurityStatusWidget', () => {
     securityMock.mockReturnValue(makeQuery({ isLoading: true, data: undefined, dataUpdatedAt: 0 }));
     const { container } = renderWidget();
 
-    expect(container.querySelector('.animate-pulse')).toBeInTheDocument();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).toBeInTheDocument();
     // No header/cells while loading.
     expect(screen.queryByText('Security')).toBeInTheDocument();
     expect(screen.queryByText('Lock')).not.toBeInTheDocument();
@@ -378,7 +378,7 @@ describe('SecurityStatusWidget', () => {
     securityMock.mockReturnValue(makeQuery({ data: undefined, dataUpdatedAt: 0 }));
     const { container } = renderWidget();
 
-    expect(container.querySelector('.animate-pulse')).toBeInTheDocument();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).toBeInTheDocument();
     expect(screen.queryByText('No security data')).not.toBeInTheDocument();
   });
 

@@ -464,7 +464,7 @@ describe('SolarProductionWidget', () => {
     sitesMock.mockReturnValue(makeQuery({ isLoading: true, dataUpdatedAt: 0 }));
     const { container } = renderWidget();
 
-    expect(container.querySelector('.animate-pulse')).toBeInTheDocument();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).toBeInTheDocument();
     expect(screen.queryByText('Solar production')).toBeInTheDocument();
   });
 
@@ -473,7 +473,7 @@ describe('SolarProductionWidget', () => {
     historyMock.mockReturnValue(makeQuery({ isLoading: true, dataUpdatedAt: 0 }));
     const { container } = renderWidget();
 
-    expect(container.querySelector('.animate-pulse')).toBeInTheDocument();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).toBeInTheDocument();
     expect(screen.queryByText('Solar production')).toBeInTheDocument();
   });
 

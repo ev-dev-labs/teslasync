@@ -357,7 +357,7 @@ describe('DriveTelemetryWidget — shell states', () => {
     mockDrives.mockReturnValue(qr({ isLoading: true, isFetching: true, data: undefined }));
     const { container } = renderWidget(STANDARD);
 
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).not.toBeNull();
     expect(screen.queryByText('Drive telemetry')).toBeInTheDocument();
     expect(screen.queryByText('No recent drives')).toBeNull();
   });
@@ -540,7 +540,7 @@ describe('DriveTelemetryWidget — compact layout', () => {
     mockDrives.mockReturnValue(qr({ isLoading: true, data: undefined }));
     const { container } = renderWidget(COMPACT);
 
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).not.toBeNull();
   });
 });
 

@@ -349,7 +349,7 @@ describe('PowerFlowHistoryWidget — states', () => {
   it('renders a loading skeleton while the sites query is pending', () => {
     useSitesMock.mockReturnValue(makeQ<TeslaEnergySite[]>(undefined, { isLoading: true }));
     const { container } = renderWidget();
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).not.toBeNull();
     expect(screen.queryByTestId('area-chart')).toBeNull();
     expect(screen.queryByText('Avg solar')).toBeNull();
   });
@@ -357,7 +357,7 @@ describe('PowerFlowHistoryWidget — states', () => {
   it('also shows the skeleton while the history query is pending for a linked site', () => {
     useHistoryMock.mockReturnValue(makeQ<TeslaEnergyLiveStatus[]>(undefined, { isLoading: true }));
     const { container } = renderWidget();
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).not.toBeNull();
     expect(screen.queryByTestId('area-chart')).toBeNull();
   });
 
