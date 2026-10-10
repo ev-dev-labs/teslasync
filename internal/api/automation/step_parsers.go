@@ -122,6 +122,8 @@ func automationStepPayloadModel(step automationTypedStep) (any, error) {
 		return &models.AutomationStepActionCallAutomation{
 			TargetAutomationID: p.TargetAutomationID,
 		}, nil
+	case automationActionWaitDTO:
+		return &models.AutomationStepActionWait{DurationS: p.DurationS}, nil
 	default:
 		return nil, fmt.Errorf("unsupported step payload type %T", step.Payload)
 	}

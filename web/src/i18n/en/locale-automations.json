@@ -163,6 +163,7 @@
       "valueNumberPlaceholder": "80",
       "valueTextPlaceholder": "enabled",
       "targetAutomationId": "Target automation ID",
+      "waitDuration": "Wait duration (seconds)",
       "editTitle": "Edit automation",
       "presetTitle": "Install preset",
       "createTitle": "Create automation",

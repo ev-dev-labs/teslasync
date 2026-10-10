@@ -14,6 +14,8 @@ export function isCommandParams(value: unknown): value is CommandParams {
 
 export function createDefaultAction(kind: AutomationActionKind, channelId = 0): AutomationActionStepInput {
   switch (kind) {
+    case 'action_wait':
+      return { kind, duration_s: 30 };
     case 'action_command':
       return { kind, command_name: 'climate_on' };
     case 'action_notify':

@@ -45289,6 +45289,7 @@
       "automations.builder.valueType",
       "automations.builder.vehicle",
       "automations.builder.vehicleFallback",
+      "automations.builder.waitDuration",
       "automations.builder.when",
       "automations.builder.whenDesc",
       "automations.conflictWith",

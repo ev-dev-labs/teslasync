@@ -89,6 +89,107 @@ func TestAutomationDTOContract_AcceptsTypedCreateAndUpdateFields(t *testing.T) {
 	if err != nil {
 		t.Fatalf("decodeAutomationInputDTO() unexpected error: %v", err)
 	}
+
+	t.Run("CanonicalWaitStrictDecoderProjectionAndOrder", func(t *testing.T) {
+		const graph = `{
+			"name":"Welcome Home","vehicle_id":7,"enabled":true,
+			"triggers":[
+				{"kind":"trigger_geofence","place_id":1,"event":"enter"},
+				{"kind":"trigger_geofence","place_id":2,"event":"exit"}],
+			"conditions":[{"kind":"condition_time_window","start_time":"00:00","end_time":"00:00","days_of_week":[1,2]}],
+			"actions":[
+				{"kind":"action_command","command_name":"cabin_overheat_protection_on"},
+				{"kind":"action_command","command_name":"hvac_on"},
+				{"kind":"action_wait","duration_s":30}]}`
+		req, err := decodeAutomationInputDTO(strings.NewReader(graph))
+		if err != nil {
+			t.Fatal(err)
+		}
+		writes, err := automationStepWrites(req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(writes) != 6 || len(req.Triggers) != 2 || len(req.Conditions) != 1 || len(req.Actions) != 3 {
+			t.Fatalf("graph lanes changed: %#v", req)
+		}
+		c := writes[2].Payload.(*models.AutomationStepConditionTimeWindow)
+		if c.Timezone != "UTC" || len(c.DaysOfWeek) != 2 || c.DaysOfWeek[0] != 1 || c.DaysOfWeek[1] != 2 || !c.StartTime.Equal(c.EndTime) {
+			t.Fatalf("weekday semantics changed: %#v", c)
+		}
+		wait, ok := writes[5].Payload.(*models.AutomationStepActionWait)
+		if !ok || wait.DurationS != 30 || writes[5].Kind != models.AutomationStepKindActionWait {
+			t.Fatalf("third action = %#v", writes[5])
+		}
+		projected := make([]json.RawMessage, 0, len(writes))
+		for i, write := range writes {
+			if i > 0 && write.StepOrder <= writes[i-1].StepOrder {
+				t.Fatal("persistence order changed")
+			}
+			raw, err := automationStepRawMessage(models.AutomationStep{
+				ID: int64(i + 1), StepOrder: write.StepOrder, Kind: write.Kind,
+			}, write.Payload)
+			if err != nil {
+				t.Fatal(err)
+			}
+			projected = append(projected, raw)
+		}
+		portable := automationPortable{
+			Name: req.Name, VehicleID: req.VehicleID, Enabled: req.Enabled,
+			Triggers: projected[:2], Conditions: projected[2:3], Actions: projected[3:],
+		}
+		raw, err := json.Marshal(portable)
+		if err != nil {
+			t.Fatal(err)
+		}
+		imported, err := decodeAutomationInputDTO(bytes.NewReader(raw))
+		if err != nil {
+			t.Fatal(err)
+		}
+		again, err := automationStepWrites(imported)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(again) != 6 || again[5].Payload.(*models.AutomationStepActionWait).DurationS != 30 {
+			t.Fatalf("read/export/import lost wait: %#v", again)
+		}
+		for _, actionJSON := range []string{
+			`{"kind":"action_wait"}`, `{"kind":"action_wait","duration_s":0}`,
+			`{"kind":"action_wait","duration_s":-1}`, `{"kind":"action_wait","duration_s":3601}`,
+			`{"kind":"action_wait","duration_s":1.5}`, `{"kind":"action_wait","duration_s":"30"}`,
+			`{"kind":"action_wait","duration_s":30,"seconds":30}`,
+			`{"kind":"action_wait","duration_seconds":30}`,
+		} {
+			if _, err := decodeAutomationInputDTO(strings.NewReader(automationPayloadWithAction(actionJSON))); err == nil {
+				t.Fatalf("accepted malformed wait %s", actionJSON)
+			}
+		}
+		for _, duration := range []int{1, 30, 3600} {
+			if _, err := parseAutomationActionStep(json.RawMessage(fmt.Sprintf(`{"kind":"action_wait","duration_s":%d}`, duration))); err != nil {
+				t.Fatal(err)
+			}
+		}
+	})
+
+	t.Run("CanonicalWaitDryRunNeverSleeps", func(t *testing.T) {
+		h := &AutomationHandler{}
+		for _, payload := range []any{
+			models.AutomationStepActionWait{DurationS: 30},
+			&models.AutomationStepActionWait{DurationS: 30},
+		} {
+			af := &models.AutomationFull{Actions: []any{
+				&models.AutomationAction{CommandName: "cabin_overheat_protection_on"},
+				&models.AutomationAction{CommandName: "hvac_on"}, payload,
+			}}
+			results, valid := h.simulateActions(af, true)
+			if len(results) != 3 || valid != 3 || results[2].ActionType != "wait" || !results[2].Simulated || !results[2].Valid {
+				t.Fatalf("dry-run = %#v, valid=%d", results, valid)
+			}
+			results, valid = h.simulateActions(af, false)
+			if valid != 0 || !results[2].WouldSkip {
+				t.Fatalf("unmet day simulation = %#v", results)
+			}
+		}
+	})
 	if req.Name != "Typed Automation" {
 		t.Fatalf("Name = %q, want Typed Automation", req.Name)
 	}

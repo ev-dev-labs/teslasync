@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"testing"
 	"time"
 
@@ -45,6 +46,40 @@ func TestAutomationRuntimeDispatchesTypedTriggerConditionAndAction(t *testing.T)
 			&models.AutomationAction{StepID: 73, CommandName: "lock", CommandParams: json.RawMessage(`{}`)},
 		},
 	}
+
+	t.Run("CanonicalWaitConfigConstruction", func(t *testing.T) {
+		for _, payload := range []any{
+			models.AutomationStepActionWait{StepID: 5, DurationS: 30},
+			&models.AutomationStepActionWait{StepID: 5, DurationS: 30},
+		} {
+			configs, err := buildTypedActionConfigs([]any{
+				&models.AutomationAction{CommandName: "cabin_overheat_protection_on"},
+				&models.AutomationAction{CommandName: "hvac_on"},
+				payload,
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(configs) != 3 || configs[0].Type != "command" || configs[1].Type != "command" || configs[2].Type != "wait" {
+				t.Fatalf("configs = %#v", configs)
+			}
+			wait, ok := configs[2].Payload.(*models.AutomationStepActionWait)
+			if !ok || wait.DurationS != 30 || wait.StepID != 5 {
+				t.Fatalf("typed payload = %#v", configs[2].Payload)
+			}
+			if strings.Contains(string(configs[2].Raw), "duration_seconds") {
+				t.Fatal("legacy wait JSON bridge used")
+			}
+		}
+		for _, payload := range []any{
+			(*models.AutomationStepActionWait)(nil),
+			models.AutomationStepActionWait{DurationS: 3601},
+		} {
+			if _, err := buildTypedActionConfigs([]any{payload}); err == nil {
+				t.Fatal("invalid wait config accepted")
+			}
+		}
+	})
 
 	executor := &typedActionRecorder{}
 	chain := action.NewChainExecutor(nil)

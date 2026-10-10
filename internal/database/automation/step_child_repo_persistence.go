@@ -98,6 +98,20 @@ func (r *AutomationStepChildRepo) UpsertTx(ctx context.Context, exec database.DB
 		return r.upsertConditionOtherAutomation(ctx, exec, step.ID, c)
 
 	// Actions.
+	case string(models.ActionWait):
+		a, ok := payload.(*models.AutomationStepActionWait)
+		if !ok || a == nil {
+			return fmt.Errorf("automation-step-children-upsert-router: payload type %T does not match kind %q", payload, step.Kind)
+		}
+		if a.DurationS < 1 || a.DurationS > 3600 {
+			return fmt.Errorf("automation-step-children-upsert-wait: duration_s must be between 1 and 3600")
+		}
+		const q = `INSERT INTO automation_step_action_wait (step_id, duration_s)
+			VALUES ($1, $2) ON CONFLICT (step_id) DO UPDATE SET duration_s = EXCLUDED.duration_s`
+		if _, err := exec.Exec(ctx, q, step.ID, a.DurationS); err != nil {
+			return fmt.Errorf("automation-step-children-upsert-wait: %w", err)
+		}
+		return nil
 	case string(models.ActionCommand):
 		a, ok := payload.(*models.AutomationAction)
 		if !ok {

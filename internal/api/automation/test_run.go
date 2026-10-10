@@ -492,12 +492,30 @@ func testRunActionConfigs(af *models.AutomationFull) ([]action.ActionConfig, err
 
 func testRunActionConfigFrom(item any) ([]action.ActionConfig, error) {
 	switch a := item.(type) {
+	case *models.AutomationStepActionWait:
+		if a == nil {
+			return nil, fmt.Errorf("typed wait action is nil")
+		}
+		raw, err := json.Marshal(a)
+		if err != nil {
+			return nil, fmt.Errorf("marshal typed wait: %w", err)
+		}
+		return []action.ActionConfig{{Type: "wait", Raw: raw, Payload: a}}, nil
+	case models.AutomationStepActionWait:
+		return testRunActionConfigFrom(&a)
 	case json.RawMessage:
 		return parseTestRunActionRaw(a)
 	case []byte:
 		return parseTestRunActionRaw(json.RawMessage(a))
 	case *models.AutomationAction:
-		return parseTestRunActionRaw(testRunCommandActionRaw(a))
+		if a == nil {
+			return nil, fmt.Errorf("typed command action is nil")
+		}
+		raw, err := json.Marshal(a)
+		if err != nil {
+			return nil, fmt.Errorf("marshal typed command: %w", err)
+		}
+		return []action.ActionConfig{{Type: "command", Raw: raw, Payload: a}}, nil
 	case models.AutomationAction:
 		return testRunActionConfigFrom(&a)
 	case *models.AutomationStepActionNotify:
@@ -601,12 +619,22 @@ func testRunStopOnFailure(_ *models.AutomationFull) bool {
 func validateActionConfig(cfg action.ActionConfig) error {
 	switch cfg.Type {
 	case "command":
+		if a, ok := cfg.Payload.(*models.AutomationAction); ok {
+			_, err := action.DecodeTypedCommandSpec(a)
+			return err
+		}
 		_, err := action.ParseCommandConfig(cfg.Raw)
 		return err
 	case "notify":
 		_, err := action.ParseNotifyConfig(cfg.Raw)
 		return err
 	case "wait":
+		if a, ok := cfg.Payload.(*models.AutomationStepActionWait); ok {
+			if a == nil || a.DurationS < 1 || a.DurationS > action.MaxWaitSeconds {
+				return fmt.Errorf("duration_s must be between 1 and %d", action.MaxWaitSeconds)
+			}
+			return nil
+		}
 		_, err := action.ParseWaitConfig(cfg.Raw)
 		return err
 	case "set_variable":

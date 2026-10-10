@@ -27,6 +27,11 @@ export const ACTION_TYPES: ActionKindOption[] = [
     labelKey: 'automations.actions.callAutomation',
     fallback: 'Call automation',
   },
+  {
+    value: 'action_wait',
+    labelKey: 'automations.actions.wait',
+    fallback: 'Wait',
+  },
 ];
 
 export const COMMAND_GROUPS: {
@@ -62,6 +67,12 @@ export const COMMAND_GROUPS: {
       },
       { value: 'dog_mode', labelKey: 'automations.commands.dogMode', fallback: 'Dog mode' },
       { value: 'camp_mode', labelKey: 'automations.commands.campMode', fallback: 'Camp mode' },
+      {
+        value: 'cabin_overheat_protection_on',
+        labelKey: 'automations.commands.cabinOverheatProtectionOn',
+        fallback: 'Cabin overheat protection on',
+      },
+      { value: 'hvac_on', labelKey: 'automations.commands.hvacOn', fallback: 'HVAC on' },
     ],
   },
   {

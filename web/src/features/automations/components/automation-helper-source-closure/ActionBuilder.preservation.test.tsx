@@ -60,16 +60,35 @@ function mount(initial: AutomationActionStepInput[], channels: NotificationChann
 }
 
 describe('ActionBuilder extraction preservation (callbacks only)', () => {
+  it('offers typed integer-second wait editing without changing adjacent commands', () => {
+    expect(createDefaultAction('action_wait')).toEqual({ kind: 'action_wait', duration_s: 30 });
+    const { changed } = mount([
+      { kind: 'action_command', command_name: 'cabin_overheat_protection_on' },
+      { kind: 'action_command', command_name: 'hvac_on' },
+      { kind: 'action_wait', duration_s: 30 },
+    ]);
+    const duration = screen.getByRole('spinbutton', { name: 'Wait duration (seconds)' });
+    expect(duration).toHaveValue(30);
+    expect(duration).toHaveAttribute('min', '1');
+    expect(duration).toHaveAttribute('max', '3600');
+    expect(duration).toHaveAttribute('step', '1');
+    fireEvent.change(duration, { target: { value: '45' } });
+    expect(changed).toHaveBeenLastCalledWith([
+      { kind: 'action_command', command_name: 'cabin_overheat_protection_on' },
+      { kind: 'action_command', command_name: 'hvac_on' },
+      { kind: 'action_wait', duration_s: 45 },
+    ]);
+  });
   it('retains the public kinds and every exact Tesla command identity in source order', () => {
     expect(ACTION_TYPES.map(option => option.value)).toEqual([
-      'action_command', 'action_notify', 'action_set_setting', 'action_call_automation',
+      'action_command', 'action_notify', 'action_set_setting', 'action_call_automation', 'action_wait',
     ]);
     mount([{ kind: 'action_command', command_name: 'climate_on' }]);
     const command = screen.getByRole('combobox', { name: 'Command' });
     expect(within(command).getAllByRole('option').map(option => (option as HTMLOptionElement).value)).toEqual([
       '', 'lock', 'unlock', 'sentry_on', 'sentry_off', 'valet_on', 'valet_off',
       'climate_on', 'climate_off', 'set_temps', 'seat_heater', 'seat_cooler',
-      'steering_wheel_heat', 'dog_mode', 'camp_mode', 'charge_start', 'charge_stop',
+      'steering_wheel_heat', 'dog_mode', 'camp_mode', 'cabin_overheat_protection_on', 'hvac_on', 'charge_start', 'charge_stop',
       'set_charge_limit', 'set_charging_amps', 'open_charge_port', 'close_charge_port',
       'frunk_open', 'trunk_open', 'honk', 'flash', 'navigation_request',
       'navigation_gps_request', 'trigger_homelink', 'remote_start_drive', 'wake_up',

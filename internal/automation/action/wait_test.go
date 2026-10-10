@@ -7,7 +7,109 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/ev-dev-labs/teslasync/internal/models"
 )
+
+func TestCanonicalTypedWait(t *testing.T) {
+	for _, payload := range []any{
+		models.AutomationStepActionWait{DurationS: 30},
+		&models.AutomationStepActionWait{DurationS: 30},
+	} {
+		e := NewWaitExecutor()
+		e.sleepFunc = func(_ context.Context, duration time.Duration) error {
+			if duration != 30*time.Second {
+				t.Fatalf("duration = %s, want 30s", duration)
+			}
+			return nil
+		}
+		raw, err := e.ExecuteTyped(context.Background(), nil, payload)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var result WaitResult
+		if err := json.Unmarshal(raw, &result); err != nil {
+			t.Fatal(err)
+		}
+		if result.RequestedSeconds != 30 || result.Cancelled {
+			t.Fatalf("result = %#v", result)
+		}
+	}
+	for _, payload := range []any{
+		(*models.AutomationStepActionWait)(nil), "wait",
+		models.AutomationStepActionWait{DurationS: 0},
+		models.AutomationStepActionWait{DurationS: -1},
+		models.AutomationStepActionWait{DurationS: 3601},
+	} {
+		if _, err := NewWaitExecutor().ExecuteTyped(context.Background(), nil, payload); err == nil {
+			t.Fatalf("accepted invalid typed payload %#v", payload)
+		}
+	}
+}
+
+type canonicalCommandRecorder struct{ calls *[]string }
+
+func (r canonicalCommandRecorder) Execute(_ context.Context, _ *int64, _ json.RawMessage) (json.RawMessage, error) {
+	return nil, fmt.Errorf("typed command unexpectedly fell back to JSON")
+}
+
+func (r canonicalCommandRecorder) ExecuteTyped(_ context.Context, _ *int64, payload any) (json.RawMessage, error) {
+	a, ok := payload.(*models.AutomationAction)
+	if !ok {
+		return nil, fmt.Errorf("unexpected command payload %T", payload)
+	}
+	*r.calls = append(*r.calls, a.CommandName)
+	return json.RawMessage(`{"success":true}`), nil
+}
+
+func TestCanonicalWaitChainOrderAndCancellation(t *testing.T) {
+	for _, cancelled := range []bool{false, true} {
+		t.Run(fmt.Sprintf("cancelled=%t", cancelled), func(t *testing.T) {
+			calls := []string{}
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
+			e := NewWaitExecutor()
+			e.sleepFunc = func(ctx context.Context, duration time.Duration) error {
+				if duration != 30*time.Second {
+					t.Fatalf("duration = %s", duration)
+				}
+				if strings.Join(calls, ",") != "cabin_overheat_protection_on,hvac_on" {
+					t.Fatalf("commands before wait = %v", calls)
+				}
+				calls = append(calls, "wait")
+				if cancelled {
+					cancel()
+					return ctx.Err()
+				}
+				return nil
+			}
+			chain := NewChainExecutor(nil)
+			chain.Register("command", canonicalCommandRecorder{&calls})
+			chain.Register("wait", e)
+			actions := []ActionConfig{
+				{Type: "command", Payload: &models.AutomationAction{CommandName: "cabin_overheat_protection_on"}},
+				{Type: "command", Payload: &models.AutomationAction{CommandName: "hvac_on"}},
+				{Type: "wait", Payload: &models.AutomationStepActionWait{DurationS: 30}},
+				{Type: "command", Payload: &models.AutomationAction{CommandName: "lock"}},
+			}
+			results := chain.Execute(ctx, actions, nil, true)
+			if len(results) != 4 || !results[0].Success || !results[1].Success {
+				t.Fatalf("results = %#v", results)
+			}
+			if cancelled {
+				var result WaitResult
+				if err := json.Unmarshal(results[2].Output, &result); err != nil {
+					t.Fatal(err)
+				}
+				if !result.Cancelled || results[2].Success || !results[3].Skipped || len(calls) != 3 {
+					t.Fatalf("cancelled result = %#v; calls = %v", results, calls)
+				}
+			} else if !results[2].Success || !results[3].Success || strings.Join(calls, ",") != "cabin_overheat_protection_on,hvac_on,wait,lock" {
+				t.Fatalf("ordered results = %#v; calls = %v", results, calls)
+			}
+		})
+	}
+}
 
 // --- DecodeWaitSpec Tests ---
 

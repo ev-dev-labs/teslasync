@@ -186,6 +186,8 @@ export function normalizeActionInput(
   action: AutomationActionStepInput | AutomationActionStep,
 ): AutomationActionStepInput {
   switch (action.kind) {
+    case 'action_wait':
+      return { kind: 'action_wait', duration_s: action.duration_s };
     case 'action_command':
       return {
         kind: 'action_command',
@@ -247,9 +249,9 @@ export function applyDraftToForm(previous: FormState, proposedDraft: AutomationF
     description: proposedDraft.description ?? '',
     vehicle_id: proposedDraft.vehicle_id ?? null,
     enabled: proposedDraft.enabled ?? true,
-    triggers: (proposedDraft.triggers as unknown as AutomationTriggerStepInput[]).map(normalizeTriggerInput),
-    conditions: (proposedDraft.conditions as unknown as AutomationConditionStepInput[]).map(normalizeConditionInput),
-    actions: (proposedDraft.actions as unknown as AutomationActionStepInput[]).map(normalizeActionInput),
+    triggers: proposedDraft.triggers.map(normalizeTriggerInput),
+    conditions: proposedDraft.conditions.map(normalizeConditionInput),
+    actions: proposedDraft.actions.map(normalizeActionInput),
   };
 }
 
@@ -263,6 +265,8 @@ export function conditionNeedsPlace(condition: AutomationConditionStepInput): bo
 
 export function actionIsIncomplete(action: AutomationActionStepInput): boolean {
   switch (action.kind) {
+    case 'action_wait':
+      return !Number.isInteger(action.duration_s) || action.duration_s < 1 || action.duration_s > 3600;
     case 'action_command':
       if (!action.command_name.trim()) return true;
       if (action.command_name === 'set_charge_limit') {

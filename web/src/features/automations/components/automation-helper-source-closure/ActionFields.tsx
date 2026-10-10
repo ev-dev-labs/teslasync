@@ -3,6 +3,7 @@ import { ActionCommandFields } from './ActionCommandFields';
 import { ActionNotificationFields } from './ActionNotificationFields';
 import { ActionSettingFields } from './ActionSettingFields';
 import { ActionCallFields } from './ActionCallFields';
+import { ActionWaitFields } from './ActionWaitFields';
 
 interface ActionFieldsProps {
   action: AutomationActionStepInput;
@@ -12,6 +13,8 @@ interface ActionFieldsProps {
 
 export function ActionFields({ action, channelOptions, onChange }: ActionFieldsProps) {
   switch (action.kind) {
+    case 'action_wait':
+      return <ActionWaitFields action={action} onChange={onChange} />;
     case 'action_command':
       return <ActionCommandFields action={action} onChange={onChange} />;
     case 'action_notify':

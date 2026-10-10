@@ -168,6 +168,13 @@
         "testMessage": "Message body sent when the rule fires. Use {{SignalName}} placeholders to interpolate the current value into the notification."
       },
       "automations": {
+        "actions": {
+          "wait": "Wait"
+        },
+        "commands": {
+          "cabinOverheatProtectionOn": "Cabin overheat protection on",
+          "hvacOn": "HVAC on"
+        },
         "triggerType": "What kicks the automation off — a time schedule, a signal threshold crossing, a geofence enter/exit, or another automation completing.",
         "operator": "How the trigger or condition value is compared (=, !=, <, >, between, etc.). Numeric operators are only available for numeric signals.",
         "conditionLogic": "When multiple conditions are configured, ALL must pass (AND) or ANY must pass (OR) for the actions to run.",

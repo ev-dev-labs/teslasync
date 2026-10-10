@@ -118,13 +118,14 @@ function lastAction(onChange: ReturnType<typeof vi.fn>, index = 0): any {
 
 // ── ACTION_TYPES export ─────────────────────────────────────────────────────
 describe('ACTION_TYPES', () => {
-  it('exposes the four supported action kinds with i18n keys and fallbacks', () => {
-    expect(ACTION_TYPES).toHaveLength(4);
+  it('exposes the five supported action kinds with i18n keys and fallbacks', () => {
+    expect(ACTION_TYPES).toHaveLength(5);
     expect(ACTION_TYPES.map((a) => a.value)).toEqual([
       'action_command',
       'action_notify',
       'action_set_setting',
       'action_call_automation',
+      'action_wait',
     ]);
     expect(ACTION_TYPES[0]).toEqual({
       value: 'action_command',

@@ -28,6 +28,7 @@ import type {
   AutomationFull,
   AutomationTriggerStep,
 } from '@/api/types';
+import type { AutomationFullInput } from '@/api/hooks/useAutomations';
 
 // ── Shared, hoisted mock state (created before any vi.mock factory runs). ──
 const H = vi.hoisted(() => ({
@@ -41,7 +42,37 @@ const H = vi.hoisted(() => ({
   createMutateAsync: vi.fn(),
   updateMutateAsync: vi.fn(),
   testRunMutate: vi.fn(),
+  realAI: false,
 }));
+
+vi.mock('@/hooks/useSettings', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/hooks/useSettings')>();
+  return {
+    ...actual,
+    useSettings: () => {
+      const result = actual.useSettings();
+      return H.realAI ? {
+        ...result,
+        settings: {
+          ...result.settings,
+          ai_mode: 'cloud',
+          ai_features: { 'geofence-aware-automation-suggestions': true },
+        },
+      } : result;
+    },
+  };
+});
+
+vi.mock('@/hooks/useSelectedVehicle', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/hooks/useSelectedVehicle')>();
+  return {
+    ...actual,
+    useSelectedVehicle: () => {
+      const result = actual.useSelectedVehicle();
+      return H.realAI ? { ...result, vehicleId: 7 } : result;
+    },
+  };
+});
 
 // framer-motion — collapse animations to plain divs (matches the repo's
 // established page-test convention).
@@ -148,12 +179,18 @@ vi.mock('@/components/ai/AINLAutomationBuilder', () => ({
   AINLAutomationBuilder: () => <div data-testid="ai-nl-builder" />,
 }));
 
-vi.mock('@/components/ai/AIGeofenceAwareAutomationSuggestions', () => ({
+vi.mock('@/components/ai/AIGeofenceAwareAutomationSuggestions', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/components/ai/AIGeofenceAwareAutomationSuggestions')>();
+  return {
   AIGeofenceAwareAutomationSuggestions: ({
     onApplyDraft,
+    vehicleId,
   }: {
-    onApplyDraft: (draft: unknown) => void;
-  }) => (
+    onApplyDraft: (draft: AutomationFullInput) => void;
+    vehicleId?: number;
+  }) => H.realAI ? (
+    <actual.AIGeofenceAwareAutomationSuggestions vehicleId={vehicleId} onApplyDraft={onApplyDraft} />
+  ) : (
     <button
       type="button"
       onClick={() =>
@@ -177,7 +214,8 @@ vi.mock('@/components/ai/AIGeofenceAwareAutomationSuggestions', () => ({
       apply-ai-draft
     </button>
   ),
-}));
+  };
+});
 
 // API hooks — spread the real modules (preserve keys/types) and override the
 // hooks the page consumes with controllable stubs backed by hoisted state.
@@ -252,6 +290,7 @@ const EDIT_AUTOMATION: AutomationFull = {
 };
 
 beforeEach(() => {
+  H.realAI = false;
   H.createMutateAsync.mockReset();
   H.updateMutateAsync.mockReset();
   H.testRunMutate.mockReset();
@@ -260,6 +299,77 @@ beforeEach(() => {
   H.vehicles = [];
   window.localStorage.clear();
   __resetEditLeasesForTests();
+});
+
+describe('canonical geofence SSE draft through baseline save and readback', () => {
+  it('retains two triggers, one weekday condition, two commands then a 30-second wait', async () => {
+    H.realAI = true;
+    const draft: AutomationFullInput = {
+      name: 'Welcome Home', description: 'Typed geofence draft', vehicle_id: 7, enabled: true,
+      triggers: [
+        { kind: 'trigger_geofence', place_id: 1, event: 'enter' },
+        { kind: 'trigger_geofence', place_id: 2, event: 'exit' },
+      ],
+      conditions: [{
+        kind: 'condition_time_window', start_time: '00:00', end_time: '00:00',
+        timezone: 'UTC', days_of_week: [1, 2],
+      }],
+      actions: [
+        { kind: 'action_command', command_name: 'cabin_overheat_protection_on' },
+        { kind: 'action_command', command_name: 'hvac_on' },
+        { kind: 'action_wait', duration_s: 30 },
+      ],
+    };
+    const body = `event: tool_result\ndata: ${JSON.stringify({
+      id: 'draft1', name: 'draft_automation_graph', ok: true, data: { status: 'ok', draft },
+    })}\n\nevent: done\ndata: {"finish_reason":"stop"}\n\n`;
+    const fetchMock = vi.fn((input: RequestInfo | URL) => Promise.resolve(
+      String(input).includes('/ai/geofences/automations/draft')
+        ? new Response(body, { status: 200, headers: { 'Content-Type': 'text/event-stream' } })
+        : new Response('{}', { status: 200, headers: { 'Content-Type': 'application/json' } }),
+    ));
+    vi.stubGlobal('fetch', fetchMock);
+    H.createMutateAsync.mockResolvedValue({ id: 123 });
+    const { unmount } = renderPage('/automations/new');
+    try {
+      fireEvent.change(screen.getByTestId('ai-feature-geofence-aware-automation-suggestions-prompt'), {
+        target: { value: 'Run the two commands on Monday or Tuesday, then wait 30 seconds.' },
+      });
+      fireEvent.click(screen.getByRole('button', { name: /suggest automation/i }));
+      const apply = await screen.findByTestId('ai-feature-geofence-aware-automation-suggestions-apply');
+      expect(H.createMutateAsync).not.toHaveBeenCalled();
+      fireEvent.click(apply);
+      expect(H.createMutateAsync).not.toHaveBeenCalled();
+      expect(screen.getByDisplayValue('Welcome Home')).toBeInTheDocument();
+      expect(screen.getByText('conditions:1')).toBeInTheDocument();
+      expect(screen.getByText('actions:3')).toBeInTheDocument();
+      const create = screen.getByRole('button', { name: /^create$/i });
+      expect(create).toBeEnabled();
+      expect(create).toHaveAttribute('type', 'submit');
+      fireEvent.click(create);
+      await waitFor(() => expect(H.createMutateAsync).toHaveBeenCalledTimes(1));
+      expect(H.createMutateAsync).toHaveBeenCalledWith(draft);
+      expect(H.updateMutateAsync).not.toHaveBeenCalled();
+      expect(await screen.findByText('AUTOMATIONS_LIST')).toBeInTheDocument();
+      const draftCalls = fetchMock.mock.calls.filter(([url]) =>
+        String(url).includes('/ai/geofences/automations/draft'));
+      expect(draftCalls).toHaveLength(1);
+
+      const readback: AutomationFull = {
+        id: 123, name: draft.name, description: draft.description ?? null,
+        vehicle_id: 7, enabled: true, created_at: '2026-10-10T00:00:00Z', updated_at: '2026-10-10T00:00:00Z',
+        triggers: draft.triggers, conditions: draft.conditions, actions: draft.actions,
+      };
+      expect(formToPayload(automationToForm(readback))).toEqual(draft);
+      expect(actionIsIncomplete({ kind: 'action_wait', duration_s: 30 })).toBe(false);
+      for (const duration_s of [0, -1, 3601, 1.5, Number.NaN]) {
+        expect(actionIsIncomplete({ kind: 'action_wait', duration_s })).toBe(true);
+      }
+    } finally {
+      unmount();
+      vi.unstubAllGlobals();
+    }
+  });
 });
 
 // ───────────────────────────── Pure helpers ─────────────────────────────
