@@ -446,7 +446,7 @@ describe('BatteryPassportPage', () => {
     );
     const sohMetric = kpis
       .getByText('Certificate-reported SoH')
-      .closest('div');
+      .closest('[data-operational-metric]');
     expect(sohMetric).toHaveTextContent('—');
     expect(sohMetric).not.toHaveTextContent('0%');
 
