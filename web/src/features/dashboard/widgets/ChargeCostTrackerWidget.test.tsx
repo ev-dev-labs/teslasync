@@ -334,9 +334,18 @@ describe('ChargeCostTrackerWidget — loading & error states', () => {
     setQuery({ isLoading: true, data: undefined });
     const { container } = renderWidget(FULL);
 
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
+    const skeleton = container.querySelector('.h-full.min-h-24.rounded-xl[aria-hidden="true"]');
+    expect(skeleton).toBeInTheDocument();
+    expect(skeleton).toHaveClass('w-full', 'bg-[var(--skeleton-bg)]');
+    expect(skeleton?.closest('[aria-busy]')).toHaveAttribute('aria-busy', 'true');
+    expect(container.querySelectorAll('.h-full.min-h-24.rounded-xl[aria-hidden="true"]')).toHaveLength(1);
+    expect(container.querySelector('.animate-pulse')).toBeNull();
     expect(screen.queryByRole('heading')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Charge cost tracker', level: 3 })).toBeVisible();
     expect(screen.queryByText('Total energy')).toBeNull();
+    expect(screen.queryByText('No charge data')).toBeNull();
+    expect(screen.queryByTestId('charge-cost-operational-brief')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Review details' })).toBeNull();
   });
 
   it('shows an error panel (not the empty state) when the initial load fails with no data', () => {
@@ -461,7 +470,10 @@ describe('ChargeCostTrackerWidget — interactions & a11y', () => {
     expect(within(drawer).getByText('10.00 kWh')).toBeInTheDocument();
     expect(within(drawer).getByText('$5.00')).toBeInTheDocument();
     expect(within(drawer).getByText(/3.5 miles per kWh assumption/)).toBeInTheDocument();
-    expect(within(drawer).getByText(/Vehicle 42.*at most 100 returned sessions, no explicit end bound/)).toBeInTheDocument();
+    expect(within(drawer).getByText(/^Vehicle 42.*at most 100 returned sessions, no explicit end bound$/)).toBeInTheDocument();
+    const provenance = within(drawer).getByRole('region', { name: 'How this was calculated' });
+    expect(within(provenance).getByText(/Vehicle 42.*at most 100 returned sessions, no explicit end bound/)).toBeInTheDocument();
+    expect(within(provenance).getByText(/Recorded and inferred charging costs remain distinct from measured drive costs; configured gas and electricity assumptions are retained\./)).toBeInTheDocument();
   });
   it('preserves signed recorded costs and real zero energy without inventing unknown costs', () => {
     const metrics = computeMetrics([

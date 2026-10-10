@@ -57,13 +57,18 @@ vi.mock('../../analytics', () => {
     return <div data-testid={name}>{query.data?.total_drives ?? 'No measurements'}</div>;
   };
   return {
-    HeroGauges: child('hero'),
     OverviewTab: child('overview'),
     DrivingTab: child('driving'),
     ChargingTab: child('charging'),
     BatteryTab: child('battery'),
   };
 });
+vi.mock('../../operationalbrief-a-m/FleetOverviewBrief', () => ({
+  FleetOverviewBrief: ({ query }: { query: FleetAnalyticsQuery }) => {
+    h.children.hero = query;
+    return <div data-testid="hero">{query.data?.total_drives ?? 'No measurements'}</div>;
+  },
+}));
 
 beforeEach(() => {
   h.source = undefined;

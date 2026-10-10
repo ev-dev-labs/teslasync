@@ -147,12 +147,15 @@ describe('TimeMachinePage preservation', () => {
     const span = brief.querySelector('[data-operational-metric="history-span"]');
     if (!(span instanceof HTMLElement)) throw new Error('History span missing');
     expect(span).toHaveAttribute('data-value-state', 'value');
-    expect(within(span).getByText('1d')).toBeInTheDocument();
+    expect(within(span).getByText('1d', { selector: '[data-operational-value]' })).toBeInTheDocument();
     fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
     const drawer = screen.getByRole('dialog');
     expect(within(drawer).getByText('Signals reconstructed')).toBeInTheDocument();
-    expect(within(drawer).getByText('History span')).toBeInTheDocument();
-    expect(within(drawer).getByText('1d')).toBeInTheDocument();
+    const drawerSpanLabel = within(drawer).getByText('History span');
+    expect(drawerSpanLabel).toBeInTheDocument();
+    const drawerSpanRow = drawerSpanLabel.parentElement;
+    if (!(drawerSpanRow instanceof HTMLElement)) throw new Error('Drawer history span row missing');
+    expect(within(drawerSpanRow).getByText('1d', { selector: 'span' })).toBeInTheDocument();
     expect(within(drawer).getAllByText(/independent timeline source/).length).toBeGreaterThan(0);
   });
 

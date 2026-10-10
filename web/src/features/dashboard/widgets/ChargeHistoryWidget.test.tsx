@@ -280,10 +280,19 @@ describe('ChargeHistoryWidget — query lifecycle', () => {
     mockedRequest.mockReturnValue(new Promise(() => {})); // never resolves
     const { container } = renderWidget(FULL, 7);
 
-    expect(container.querySelector('.animate-pulse')).toBeTruthy();
+    const skeleton = container.querySelector('.h-full.min-h-24.rounded-xl[aria-hidden="true"]');
+    expect(skeleton).toBeInTheDocument();
+    expect(skeleton).toHaveClass('w-full', 'bg-[var(--skeleton-bg)]');
+    expect(skeleton?.closest('[aria-busy]')).toHaveAttribute('aria-busy', 'true');
+    expect(container.querySelectorAll('.h-full.min-h-24.rounded-xl[aria-hidden="true"]')).toHaveLength(1);
+    expect(container.querySelector('.animate-pulse')).toBeNull();
     expect(screen.queryByText('Charge history')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Charge history', level: 3 })).toBeVisible();
     expect(screen.queryByText('No charge sessions yet')).toBeNull();
     expect(screen.queryByTestId('area-chart')).toBeNull();
+    expect(chartCapture.props).toBeNull();
+    expect(screen.queryByText('Total')).toBeNull();
+    expect(screen.queryByText('Avg')).toBeNull();
   });
 
   it('disables the query and never hits the network when no vehicle exists', () => {
