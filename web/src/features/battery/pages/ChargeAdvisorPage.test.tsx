@@ -264,7 +264,7 @@ describe('ChargeAdvisorPage', () => {
     fireEvent.click(within(driveBrief).getByRole('button', { name: 'Review details' }));
     const drawer = screen.getByRole('dialog');
     expect(within(drawer).getByText('Returned rows')).toBeVisible();
-    expect(within(drawer).getByText('Returned histories; qualification uses the stated local-date analysis window. Counts are not lifetime totals.')).toBeVisible();
+    expect(within(drawer).getByText('Returned histories; qualification uses the stated local-date analysis window. Counts are not lifetime totals.', { selector: '[data-drawer-header] p' })).toBeVisible();
   });
 
   it('renders all thirteen persistent shells and both capped analytical hooks', () => {
