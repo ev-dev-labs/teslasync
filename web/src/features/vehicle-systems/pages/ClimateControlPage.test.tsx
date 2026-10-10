@@ -279,12 +279,14 @@ function renderPage() {
   );
 }
 
-/** Scope the visible canonical label, not its duplicate tooltip description. */
+const metricLabelSelector = '[data-operational-metric] > div:first-child > div:first-child';
+
+/** Scope the visible metric label, not its duplicate evidence description. */
 function card(label: string): HTMLElement {
-  const wrapper = screen.getByText(label, { selector: '[data-stat-label]' })
-    .closest('[data-stat]');
+  const wrapper = screen.getByText(label, { selector: metricLabelSelector })
+    .closest<HTMLElement>('[data-operational-metric]');
   if (!wrapper) throw new Error(`Canonical stat wrapper not found for "${label}"`);
-  return wrapper as HTMLElement;
+  return wrapper;
 }
 
 function group(id: string): HTMLElement {
@@ -461,9 +463,9 @@ describe('ClimateControlPage — loading, empty & error states', () => {
     // Shell still renders; the section heading stays put so layout doesn't jump.
     expect(screen.getByRole('heading', { level: 1, name: 'Climate control' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Climate systems' })).toBeInTheDocument();
-    // …but its metric cards are replaced by pulse skeletons.
+    // …but its metric cards are replaced by static source-shaped skeletons.
     expect(screen.queryByText('HVAC power')).not.toBeInTheDocument();
-    expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThan(0);
+    expect(container.querySelectorAll('[class*="--skeleton-bg"]').length).toBeGreaterThan(0);
   });
 
   it('renders placeholders (never a blank panel) when latest resolves empty', () => {
@@ -505,7 +507,7 @@ describe('ClimateControlPage — loading, empty & error states', () => {
     fireEvent.click(systems.getByRole('button', { name: 'Retry' }));
     expect(retry).toHaveBeenCalledTimes(1);
     // Only the failed source is replaced; independent history remains visible.
-    expect(systems.queryByText('HVAC power', { selector: '[data-stat-label]' }))
+    expect(systems.queryByText('HVAC power', { selector: metricLabelSelector }))
       .not.toBeInTheDocument();
     expect(screen.getByRole('table')).toBeInTheDocument();
     expect(within(card('Avg fan speed')).getByText('5.00')).toBeInTheDocument();

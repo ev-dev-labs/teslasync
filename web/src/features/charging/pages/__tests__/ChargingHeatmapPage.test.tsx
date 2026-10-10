@@ -220,13 +220,14 @@ function renderPage() {
   );
 }
 
-// StatTile keeps the numeric value and display unit in separate siblings.
+// OperationalBrief keeps the complete display value separate from trust details.
 function kpiValue(label: string): string {
-  const card = screen.getByText(label).closest('[data-stat]');
+  const card = within(screen.getByRole('region', { name: 'Charging summary' }))
+    .getByText(label).closest('[data-operational-metric]');
   expect(card).not.toBeNull();
-  const value = card!.querySelector('[data-stat-value]');
+  const value = card!.querySelector('[data-operational-value]');
   expect(value).not.toBeNull();
-  return value!.parentElement!.textContent ?? '';
+  return value!.textContent ?? '';
 }
 
 beforeEach(() => {
@@ -325,7 +326,7 @@ describe('ChargingHeatmapPage — average-duration derivation (regression)', () 
     const text = kpiValue('Avg Duration');
     expect(text).not.toContain('NaN');
     expect(text).toBe('—');
-    expect(screen.getByText('Avg Duration').closest('[data-stat]')).toHaveAttribute('data-state', 'missing');
+    expect(screen.getByText('Avg Duration').closest('[data-operational-metric]')).toHaveAttribute('data-value-state', 'missing');
     expect(kpiValue('Total Sessions')).toBe('2');
   });
 });
@@ -336,7 +337,7 @@ describe('ChargingHeatmapPage — loading / error / empty branches', () => {
     const { container } = renderPage();
 
     await waitFor(() =>
-      expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThan(0),
+      expect(container.querySelectorAll('[class*="--skeleton-bg"]').length).toBeGreaterThan(0),
     );
     // Panel chrome stays mounted — only the bodies are skeletons.
     expect(
@@ -345,8 +346,10 @@ describe('ChargingHeatmapPage — loading / error / empty branches', () => {
     expect(
       screen.getByRole('heading', { level: 3, name: 'Charging Insights' }),
     ).toBeInTheDocument();
-    // KPI values are replaced by skeletons, so no metric label leaks.
-    expect(screen.queryByText('Total Sessions')).toBeNull();
+    // Labels remain visible, but loading must not expose a measured KPI value.
+    expect(within(screen.getByRole('region', { name: 'Charging summary' }))
+      .getByText('Total Sessions').closest('[data-operational-metric]')
+      ?.querySelector('[data-operational-value]')).toBeNull();
     // The heatmap image is not rendered while loading.
     expect(screen.queryByRole('img', { name: GRID_ARIA })).toBeNull();
   });
@@ -355,14 +358,19 @@ describe('ChargingHeatmapPage — loading / error / empty branches', () => {
     installRequest({ chargingMode: 'reject', chargingError: new ApiError('kaboom', 500) });
     renderPage();
 
+    const when = screen.getByRole('region', { name: 'When You Charge' });
     await waitFor(() =>
-      expect(screen.getAllByRole('button', { name: 'Retry' }).length).toBeGreaterThan(0),
+      expect(within(when).getAllByText('Server error')).toHaveLength(2),
     );
+    expect(screen.getAllByRole('button', { name: 'Retry' }).length).toBeGreaterThan(0);
     // The error is surfaced in the data panels, not swallowed.
     expect(screen.getAllByText('Server error').length).toBeGreaterThan(0);
 
     const before = chargingCalls().length;
-    fireEvent.click(screen.getAllByRole('button', { name: 'Retry' })[0]);
+    const weekly = within(when).getByRole('heading', { level: 3, name: 'Weekly Charging Heatmap' })
+      .closest('[data-card]');
+    expect(weekly).not.toBeNull();
+    fireEvent.click(within(weekly!).getByRole('button', { name: 'Retry' }));
     await waitFor(() => expect(chargingCalls().length).toBeGreaterThan(before));
   });
 

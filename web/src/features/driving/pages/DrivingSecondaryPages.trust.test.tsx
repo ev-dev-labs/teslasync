@@ -124,7 +124,16 @@ describe.each(surfaces)('$title retained source trust', ({ Component, sections, 
     render(<MemoryRouter><Component /></MemoryRouter>);
     for (const name of sections) expect(screen.getByRole('heading', { name })).toBeInTheDocument();
     expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
-    expect(screen.queryByText(metric)).not.toBeInTheDocument();
+    if (metric === 'of 12 drives') {
+      expect(screen.queryByText(metric)).not.toBeInTheDocument();
+    } else {
+      const metricItem = screen.getByText(metric).closest('[role="listitem"]');
+      expect(metricItem).toHaveAttribute('data-value-state', 'missing');
+      expect(metricItem?.querySelector('[data-operational-value]')).toHaveTextContent(/^—$/);
+      expect(metricItem?.querySelector('[data-operational-value]')).not.toHaveTextContent(/^0(?:\s|$)/);
+    }
+    expect(screen.getByText('Source unavailable')).toBeInTheDocument();
+    expect(screen.queryByText('Returned evidence')).not.toBeInTheDocument();
     expect(screen.getAllByRole('button', { name: /Retry/ }).length).toBeGreaterThan(0);
   });
 
@@ -132,6 +141,9 @@ describe.each(surfaces)('$title retained source trust', ({ Component, sections, 
     h.source = { ...h.source, fetchStatus: 'paused' };
     render(<MemoryRouter><Component /></MemoryRouter>);
     expect(screen.getByText(metric)).toBeInTheDocument();
-    expect(screen.getByTestId('stale-refresh-warning')).toHaveTextContent('offline');
+    const warning = screen.getByTestId('stale-refresh-warning');
+    expect(warning).toHaveAttribute('data-refresh-blocked', 'true');
+    expect(warning).toHaveTextContent('The latest values are temporarily unavailable. Previously loaded data remains visible.');
+    expect(warning).not.toHaveTextContent(/offline/i);
   });
 });

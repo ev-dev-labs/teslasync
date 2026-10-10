@@ -31,7 +31,7 @@ import type { SecurityEvent } from '@/api/types';
 import type { Vehicle } from '@/types/vehicle';
 import type { WidgetProps } from './types';
 
-// ── i18n stub: return the fallback string, interpolating {{var}} options ──
+// ── i18n stub: canonical twin title plus interpolated fallback strings ──
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (_key: string, fallbackOrOpts?: unknown, opts?: Record<string, unknown>) => {
@@ -43,7 +43,7 @@ vi.mock('react-i18next', () => ({
         }
         return fallbackOrOpts;
       }
-      return _key;
+      return _key === 'digitalTwin.title' ? 'Digital twin' : _key;
     },
     i18n: { language: 'en', changeLanguage: vi.fn() },
   }),
@@ -73,8 +73,7 @@ const mockSecurity = useSecurityLatest as unknown as ReturnType<typeof vi.fn>;
 const mockState = useVehicleState as unknown as ReturnType<typeof vi.fn>;
 const mockCharging = useChargingTelemetryLatest as unknown as ReturnType<typeof vi.fn>;
 
- 
-function makeQuery(over: Record<string, unknown> = {}): any {
+function makeQuery(over: Record<string, unknown> = {}) {
   return {
     data: null,
     error: null,
@@ -196,7 +195,7 @@ describe('DigitalTwinMiniWidget — loading states', () => {
     mockVehicles.mockReturnValue({ data: undefined, isLoading: true });
     const { container } = renderWidget();
 
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).not.toBeNull();
     expect(screen.queryByText('No vehicle data')).not.toBeInTheDocument();
   });
 });
@@ -226,7 +225,7 @@ describe('DigitalTwinMiniWidget — lock status badge', () => {
 
     const badge = screen.getByText('Unlocked');
     expect(badge).toBeInTheDocument();
-    expect(badge.className).toContain('bg-red-100');
+    expect(badge.className).toContain('bg-[var(--semantic-danger-bg)]');
   });
 
   it('renders a "Locked" success badge when the vehicle is locked', () => {
@@ -235,7 +234,7 @@ describe('DigitalTwinMiniWidget — lock status badge', () => {
 
     const badge = screen.getByText('Locked');
     expect(badge).toBeInTheDocument();
-    expect(badge.className).toContain('bg-green-100');
+    expect(badge.className).toContain('bg-[var(--semantic-success-bg)]');
   });
 
   it('renders a neutral em-dash badge (never a green success chip) when lock state is unknown', () => {
@@ -247,8 +246,8 @@ describe('DigitalTwinMiniWidget — lock status badge', () => {
 
     const badge = screen.getByText('—');
     expect(badge.className).toContain(BADGE_VARIANTS.neutral);
-    expect(badge.className).not.toContain('bg-green-100');
-    expect(badge.className).not.toContain('bg-red-100');
+    expect(badge.className).not.toContain('bg-[var(--semantic-success-bg)]');
+    expect(badge.className).not.toContain('bg-[var(--semantic-danger-bg)]');
   });
 });
 
@@ -259,7 +258,7 @@ describe('DigitalTwinMiniWidget — sentry status badge', () => {
 
     const badge = screen.getByText('Sentry');
     expect(badge).toBeInTheDocument();
-    expect(badge.className).toContain('bg-blue-100');
+    expect(badge.className).toContain('bg-[var(--semantic-info-bg)]');
   });
 
   it('renders an "Off" neutral badge when sentry mode is explicitly off', () => {
@@ -370,7 +369,7 @@ describe('DigitalTwinMiniWidget — discovery trust regressions', () => {
   function expectRetainedScene() {
     const twin = screen.getByRole('img', { name: /digital twin/i });
     expect(twin.querySelector('svg')).not.toBeNull();
-    expect(twin.querySelector('svg.lucide-lock-open')).toHaveAttribute('stroke', 'rgba(239,68,68,0.9)');
+    expect(twin.querySelector('svg.lucide-lock-open')).toHaveAttribute('stroke', 'var(--semantic-info)');
     expect(twin.querySelector('svg.lucide-shield')).toBeInTheDocument();
     expect(screen.getByText('Unlocked')).toBeInTheDocument();
     expect(screen.getByText('Sentry')).toBeInTheDocument();

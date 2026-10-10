@@ -85,7 +85,8 @@ import NotificationStatsWidget from './NotificationStatsWidget';
 
 it.each([1, 2, 3])('identifies notification statistics at %i columns', (cols) => {
   renderWidget({ cols, rows: 4 });
-  expect(screen.getByRole('heading', { name: 'Notification stats' })).toBeInTheDocument();
+  const surface = cols <= 1 ? screen : within(screen.getByRole('region', { name: 'Notification stats' }));
+  expect(surface.getByRole('heading', { name: cols <= 1 ? 'Notification counters' : 'Notification stats' })).toBeInTheDocument();
 });
 import { useNotificationStats, useNotificationLogs } from '@/api/hooks/useNotifications';
 import { useDateFormat } from '@/hooks/useDateFormat';
@@ -172,7 +173,9 @@ function renderWidget(size: WidgetSize) {
       </MemoryRouter>
     </QueryClientProvider>,
   );
-  expect(view.container.querySelector('h3')).toHaveAccessibleName('Notification stats');
+  expect(view.container.querySelector('h3')).toHaveAccessibleName(
+    size.cols <= 1 ? 'Notification counters' : 'Notification stats',
+  );
   return view;
 }
 
@@ -194,7 +197,7 @@ describe('NotificationStatsWidget — compact layout', () => {
   it('renders a loading skeleton (no hero copy) while the stats query loads', () => {
     mockUseStats.mockReturnValue(qr({ isLoading: true, data: undefined }));
     const { container } = renderWidget(COMPACT);
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).not.toBeNull();
     expect(screen.queryByText('Delivery rate')).toBeNull();
   });
 
@@ -278,7 +281,7 @@ describe('NotificationStatsWidget — standard layout', () => {
     mockUseStats.mockReturnValue(qr({ data: STATS }));
     renderWidget(STANDARD);
 
-    expect(screen.getByText('Notification stats')).toBeInTheDocument();
+    expect(within(screen.getByRole('region', { name: 'Notification stats' })).getByRole('heading', { name: 'Notification stats' })).toBeInTheDocument();
     expect(screen.getByText('Total sent (7d)')).toBeInTheDocument();
     expect(screen.getByText('Delivery rate')).toBeInTheDocument();
     expect(screen.getByText('Failed')).toBeInTheDocument();
@@ -300,7 +303,7 @@ describe('NotificationStatsWidget — standard layout', () => {
     mockUseStats.mockReturnValue(qr({ data: STATS }));
     mockUseLogs.mockReturnValue(qr({ isLoading: true, data: undefined }));
     const { container } = renderWidget(STANDARD);
-    expect(container.querySelector('.animate-pulse')).toBeNull();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).toBeNull();
     expect(screen.getByText('Total sent (7d)')).toBeInTheDocument();
   });
 
@@ -371,7 +374,7 @@ describe('NotificationStatsWidget — standard layout', () => {
   it('shows the title, recovery and unknown source measurements when stats are absent', () => {
     mockUseLogs.mockReturnValue(qr({ data: [makeLog()] }));
     renderWidget(STANDARD);
-    expect(screen.getByText('Notification stats')).toBeInTheDocument();
+    expect(within(screen.getByRole('region', { name: 'Notification stats' })).getByRole('heading', { name: 'Notification stats' })).toBeInTheDocument();
     expect(screen.getByText('No notification data')).toBeInTheDocument();
     expect(screen.getByText('Active channels')).toBeInTheDocument();
     expect(document.querySelectorAll('[data-value-state="missing"]')).toHaveLength(4);
@@ -389,7 +392,7 @@ describe('NotificationStatsWidget — standard layout', () => {
     expect(within(drawer).getByText('98.33%')).toBeInTheDocument();
     expect(within(drawer).getByText('Healthy')).toBeInTheDocument();
     expect(within(drawer).getByText('Needs attention')).toBeInTheDocument();
-    expect(within(drawer).getByText(/separate latest log rows/)).toBeInTheDocument();
+    expect(within(drawer).getByText('System notifications; reported seven-day counters and separate latest log rows')).toBeInTheDocument();
   });
 
   it('does NOT render the recent-log table below the standard breakpoint', () => {

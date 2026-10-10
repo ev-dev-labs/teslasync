@@ -87,6 +87,12 @@ function band(id: string) {
   return summary;
 }
 
+function closeDrawer(dialog: HTMLElement) {
+  const header = dialog.querySelector<HTMLElement>('[data-drawer-header]');
+  if (!header) throw new Error('Missing actual shared drawer header');
+  fireEvent.click(within(header).getByRole('button', { name: 'Close' }));
+}
+
 function renderBands() {
   const stateQuery = source({ state: live, live: true }, 0);
   return render(<MemoryRouter>
@@ -247,7 +253,7 @@ describe('seven unique vehicle-detail production summary bands', () => {
     expect(detail.queryByText('On track')).not.toBeInTheDocument();
     expect(detail.queryByText('Historical')).not.toBeInTheDocument();
     expect(detail.getByText(new RegExp(`^${source} snapshot · .*2026`))).toBeInTheDocument();
-    fireEvent.click(detail.getByRole('button', { name: 'Close' }));
+    closeDrawer(drawer);
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     const retainedNodes = Array.from(band(id).querySelectorAll('[data-operational-metric]'));
     expect(retainedNodes).toHaveLength(fields.length);
@@ -279,11 +285,12 @@ describe('seven unique vehicle-detail production summary bands', () => {
     render(<MemoryRouter><BatteryRangePanel state={charging} sourceQuery={source({ state: charging }, 0)} /></MemoryRouter>);
     const gauge = screen.getByRole('meter', { name: 'Battery' });
     fireEvent.click(within(band('vehicle-live-overview-summary') as HTMLElement).getByRole('button', { name: 'Review details' }));
-    const drawer = within(screen.getByRole('dialog', { name: 'Range and charging details' }));
+    const dialog = screen.getByRole('dialog', { name: 'Range and charging details' });
+    const drawer = within(dialog);
     expect(drawer.getByText('48.00 km/h')).toBeInTheDocument();
     expect(drawer.getByText('Full in 1.50h')).toBeInTheDocument();
     expect(drawer.getAllByText('Charging').length).toBeGreaterThan(0);
-    fireEvent.click(drawer.getByRole('button', { name: 'Close' }));
+    closeDrawer(dialog);
     expect(screen.getByRole('meter', { name: 'Battery' })).toBe(gauge);
     expect(gauge).toHaveAttribute('aria-valuenow', '50');
   });
