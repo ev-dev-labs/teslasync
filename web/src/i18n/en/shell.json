@@ -1321,13 +1321,28 @@
     }
   },
   "pwa": {
-    "newVersion": "New version available",
-    "reloadingIn": "Reloading in {{seconds}}s...",
-    "reloadNow": "Reload now",
+    "cache": {
+      "cachedAt": "Showing data cached {{relative}} ({{absolute}}).",
+      "cachedRange": "Showing cached data captured between {{oldestRelative}} ({{oldestAbsolute}}) and {{newestRelative}}.",
+      "cachedUnknown": "Showing cached data. The capture time is unknown — treat it as stale.",
+      "offlineNoData": "You're offline and nothing is cached for this view.",
+      "regionLabel": "Cached data disclosure"
+    },
     "later": "Later",
     "offline": {
-      "title": "You're offline",
-      "banner": "Showing cached data. Operational changes stay disabled until you reconnect."
+      "banner": "Showing cached data. Operational changes stay disabled until you reconnect.",
+      "title": "You're offline"
+    },
+    "reloadNow": "Reload now",
+    "update": {
+      "applying": "Reloading…",
+      "availableBody": "A newer build has been downloaded and is ready to apply.",
+      "availableTitle": "New version available",
+      "requiredBody": "This tab is running an older app version than the server. Reload to stay in sync.",
+      "requiredTitle": "Update required",
+      "runningLabel": "Running",
+      "serverLabel": "Server",
+      "unsavedBlocked": "Reload cancelled — finish or discard your unsaved changes first."
     }
   },
   "ratelimit": {
