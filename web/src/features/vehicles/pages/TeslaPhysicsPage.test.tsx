@@ -118,7 +118,7 @@ describe('Tesla Physics consolidated workbench', () => {
     expect(brief.querySelector('[data-operational-metric="episodes"]')).toHaveAttribute('data-value-state', 'value');
     fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
     const drawer = screen.getByRole('dialog');
-    expect(within(drawer).getByText('Exclusive history is bounded to at most 14 days')).toBeInTheDocument();
+    expect(within(drawer).getByText('Exclusive history is bounded to at most 14 days', { selector: '[data-drawer-header] span' })).toBeInTheDocument();
     expect(within(drawer).getByText('Returned episodes')).toBeInTheDocument();
     expect(within(drawer).getAllByText(/not proof that nothing happened outside/).length).toBeGreaterThan(0);
   });
