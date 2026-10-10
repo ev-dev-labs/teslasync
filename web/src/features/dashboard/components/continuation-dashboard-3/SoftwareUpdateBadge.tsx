@@ -13,7 +13,7 @@ export type UpdateStatus =
 export function SoftwareUpdateBadge({ status }: { status: UpdateStatus }) {
   const { t } = useTranslation('dashboard');
   const config: Record<UpdateStatus, { variant: 'success' | 'info' | 'warning' | 'neutral'; label: string }> = {
-    unknown: { variant: 'neutral', label: t('common:unknown', 'Unknown') },
+    unknown: { variant: 'neutral', label: t('common.unknown', 'Unknown') },
     'up-to-date': { variant: 'success', label: t('widget.statusUpToDate', 'Up to date') },
     available: { variant: 'info', label: t('widget.statusAvailable', 'Available') },
     downloading: { variant: 'warning', label: t('widget.statusDownloading', 'Downloading') },
