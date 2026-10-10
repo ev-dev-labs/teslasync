@@ -38,7 +38,7 @@ describe('system source summaries use the real raw bridge and review drawer', ()
     const { container } = render(<MemoryRouter><SystemSummaryBrief {...props} /></MemoryRouter>);
     expect(container.querySelector('[data-operational-metric="count"]')).toHaveAttribute('data-value-state', 'value');
     expect(container.querySelector('[data-operational-metric="gap"]')).toHaveAttribute('data-value-state', 'missing');
-    expect(container.querySelector('[data-operational-metric="bytes"] [data-operational-value]')).toHaveTextContent('2.00 KiB');
+    expect(container.querySelector('[data-operational-metric="bytes"] [data-operational-value]')).toHaveTextContent('2.00 KB');
   });
 
   it('retains each measurement and textual context through a background source failure', () => {
@@ -49,7 +49,8 @@ describe('system source summaries use the real raw bridge and review drawer', ()
     expect(screen.getByText('By count')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
     const drawer = screen.getByRole('dialog');
-    expect(within(drawer).getByText('Different source windows remain explicit')).toBeInTheDocument();
+    expect(within(within(drawer).getByRole('region', { name: 'How this was calculated' }))
+      .getByText('Different source windows remain explicit')).toBeInTheDocument();
     expect(within(drawer).getByText('By count')).toBeInTheDocument();
     expect(within(drawer).getByText('Loaded rows only')).toBeInTheDocument();
   });

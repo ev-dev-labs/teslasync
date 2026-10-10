@@ -250,7 +250,7 @@ describe('ActionCenterPage', () => {
     expect(container.querySelector('[data-operational-metric="dismissed"] [data-operational-value]')).toHaveTextContent('0');
     const bridge = within(screen.getByLabelText('Action center summary')).getByRole('region', { name: 'Decision queue overview' });
     expect(bridge).toHaveTextContent('Orion · Before priority, source, state, and pagination filters');
-    expect(within(bridge).getByText(/^Orion · Before priority, source, state, and pagination filtersGenerated (?!recommendations)/)).toBeInTheDocument();
+    expect(within(bridge).getByText(/^Generated (?!recommendations)/)).toBeInTheDocument();
   });
 
   it('opens and closes the actual Review details drawer with count semantics and bounded source context', async () => {

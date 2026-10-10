@@ -268,10 +268,10 @@ describe('OptimizerSection — cost analysis', () => {
 
   it('flags a high peak-session share red and a low share emerald', () => {
     renderSection({ cost: { sessions_during_peak_pct: 45 } });
-    expect(screen.getByText('45.00%').className).toContain('dark:text-rose-300');
+    expect(screen.getByText('45.00%').className).toContain('text-[var(--semantic-danger)]');
 
     renderSection({ cost: { sessions_during_peak_pct: 10 } });
-    expect(screen.getByText('10.00%').className).toContain('dark:text-emerald-300');
+    expect(screen.getByText('10.00%').className).toContain('text-[var(--semantic-success)]');
   });
 
   it('shows "—" for empty peak / off-peak hour lists (never a blank cell)', () => {

@@ -13,9 +13,14 @@ import { summarizeUtilization } from '../../lib/utilization';
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key: string, fallback?: string, values?: Record<string, unknown>) =>
+    t: (
+      key: string,
+      fallback?: string | { defaultValue?: string },
+      values?: Record<string, unknown>,
+    ) =>
       Object.entries(values ?? {}).reduce((text, [name, value]) =>
-        text.replaceAll(`{{${name}}}`, String(value)), fallback ?? key),
+        text.replaceAll(`{{${name}}}`, String(value)),
+      (typeof fallback === 'string' ? fallback : fallback?.defaultValue) ?? key),
     i18n: { language: 'en' },
   }),
 }));

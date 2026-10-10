@@ -240,9 +240,9 @@ describe('pressure page live composition — authored, execution owned by parent
     H.unit = 'psi';
     view.rerender(view.tree());
     await screen.findAllByText('Front left (psi)');
-    expect(stat(view.container, 'pressure').getByText('41.70')).toBeInTheDocument();
+    expect(stat(view.container, 'pressure').getByText('41.70 psi')).toBeInTheDocument();
     act(() => setGlobalPrecision(3));
-    expect(stat(view.container, 'pressure').getByText('41.698')).toBeInTheDocument();
+    expect(stat(view.container, 'pressure').getByText('41.698 psi')).toBeInTheDocument();
     expect(H.calls.filter(url => url.startsWith('/tire-pressure'))).toHaveLength(requests);
     expect(view.client.getQueryData(['tire-pressure-latest', 42])).toMatchObject({ front_left: 280_000, rear_right: 295_000 });
   });
@@ -265,7 +265,7 @@ describe('pressure page live composition — authored, execution owned by parent
     H.failHistory = true;
     const { container } = mount();
     await waitFor(() => expect(screen.getAllByRole('meter')).toHaveLength(4));
-    expect(stat(container, 'pressure').getByText('2.88')).toBeInTheDocument();
+    expect(stat(container, 'pressure').getByText('2.88 bar')).toBeInTheDocument();
     expect(stat(container, 'text').getByText('—')).toBeInTheDocument();
     expect(screen.getAllByRole('button', { name: /^Retry$/ }).length).toBeGreaterThanOrEqual(2);
     expect(screen.getByRole('heading', { name: 'History table' })).toBeInTheDocument();

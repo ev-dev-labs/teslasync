@@ -46,8 +46,8 @@ describe('retained production summary contracts', () => {
     expect(container.querySelector('[data-operational-metric="page-events"] [data-operational-value]')).toHaveTextContent('1');
     expect(container.querySelector('[data-operational-metric="alert"] [data-operational-value]')).toHaveTextContent('1');
     expect(screen.getAllByText('Retained source')).toHaveLength(2);
-    fireEvent.click(screen.getAllByRole('button', { name: 'Review details' })[0]);
-    expect(within(screen.getByRole('dialog')).getByText('2026-01-01 – 2026-02-01')).toBeInTheDocument();
+    fireEvent.click(within(screen.getByRole('region', { name: 'Range and page counts' })).getByRole('button', { name: 'Review details' }));
+    expect(within(screen.getByRole('dialog', { name: 'Range and page counts details' })).getByText('2026-01-01 – 2026-02-01', { selector: '[data-drawer-header] span' })).toBeInTheDocument();
   });
 
   it('distinguishes unavailable personal activity from successful empty activity without hiding labels', () => {
@@ -87,7 +87,7 @@ describe('retained production summary contracts', () => {
     /></MemoryRouter>);
     expect(container.querySelector('[data-operational-metric="battery"] [data-operational-value]')).toHaveTextContent('0.00%');
     expect(container.querySelector('[data-operational-metric="range"] [data-operational-value]')).toHaveTextContent('400 km');
-    expect(container.querySelector('[data-operational-metric="cabin"] [data-operational-value]')).toHaveTextContent('21 °C');
+    expect(container.querySelector('[data-operational-metric="cabin"] [data-operational-value]')).toHaveTextContent('21°C');
     expect(container.querySelector('[data-operational-metric="access"]')).toHaveAttribute('data-value-state', 'value');
     expect(container.querySelector('[data-operational-metric="access"] [data-operational-value]')).toHaveTextContent('Unlocked');
     expect(screen.getByText(/Retained source/)).toBeInTheDocument();

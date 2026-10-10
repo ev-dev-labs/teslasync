@@ -447,14 +447,19 @@ describe('useCostAnalysisData → LifetimeMetrics', () => {
   });
 
   it('reports free-session count AND energy in kWh (regression: was raw Wh)', () => {
-    const { result } = render(SESSIONS);
+    // Retain #4's unknown cost; only explicitly zero-cost sessions are free.
+    const confirmedFreeSession = { ...SESSIONS[3], id: 5, cost_decimal: 0 };
+    const { result } = render([...SESSIONS, confirmedFreeSession]);
     const m = result.current.lifetimeMetrics as LifetimeMetrics;
-    // Free sessions = #3 (cost 0) + #4 (cost null): 10 kWh + 15 kWh = 25 kWh.
+    expect(SESSIONS[3].cost_decimal).toBeNull();
+    // Free sessions = #3 + #5 (both cost 0): 10 kWh + 15 kWh = 25 kWh.
     expect(m.freeCount).toBe(2);
     // The consumer renders this via fmtWithUnit(_, 'kWh'); it MUST be 25, not
     // 25000 — freeEnergy is converted from the SI Wh sum like every sibling
     // energy field, so the "Free Sessions" tile can't read 1000× too high.
     expect(m.freeEnergy).toBe(25);
+    expect(m.freeCount).not.toBe(3);
+    expect(m.freeEnergy).not.toBe(40);
   });
 });
 

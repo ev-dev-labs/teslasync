@@ -212,7 +212,11 @@ describe('live Battery Care mounted preservation', () => {
     mocks.charging.mockReturnValue(query(sessions, mocks.retryCharging, { fetchStatus: 'paused' }));
     view.rerender(<BatteryCarePage />);
     expect(screen.getByTestId('battery-care-energy')).toHaveTextContent('Measured energy returned');
-    expect(screen.getByTestId('battery-care-energy')).toHaveTextContent('offline');
+    const warning = within(screen.getByTestId('battery-care-energy')).getByTestId('stale-refresh-warning');
+    expect(warning).toHaveAttribute('data-refresh-blocked', 'true');
+    expect(warning).toHaveTextContent('The latest values are temporarily unavailable. Previously loaded data remains visible.');
+    expect(warning).not.toHaveTextContent('offline');
+    expect(within(screen.getByTestId('battery-care-energy')).queryByRole('alert')).not.toBeInTheDocument();
     expect(screen.getByTestId('battery-care-arrivals')).toHaveTextContent('Median drive-arrival SoC');
   });
 

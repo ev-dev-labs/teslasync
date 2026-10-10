@@ -212,7 +212,10 @@ describe('CabinThermalPage', () => {
     expect(screen.getByRole('img', {
       name: 'Line chart of the accepted-fit worked cabin scenario approaching ambient temperature',
     })).toBeInTheDocument();
-    expect(screen.getByLabelText(/^Accepted median τ: 90\.0 min$/)).toBeInTheDocument();
+    expect(within(screen.getByTestId('cabin-thermal-kpis'))
+      .getByText('Accepted median τ')
+      .closest('[role="listitem"]')
+      ?.querySelector('[data-operational-value]')).toHaveTextContent(/^90\.0 min$/);
   });
 
   it('keeps every shell visible without a vehicle or duplicate control', () => {
@@ -267,7 +270,10 @@ describe('CabinThermalPage', () => {
       'Climate history could not refresh. Showing the most recently loaded thermal evidence.',
     )).toBeInTheDocument();
     expect(screen.getByText('Passive-soak curve')).toBeInTheDocument();
-    expect(screen.getByLabelText(/^Accepted median τ: 90\.0 min$/)).toBeInTheDocument();
+    expect(within(screen.getByTestId('cabin-thermal-kpis'))
+      .getByText('Accepted median τ')
+      .closest('[role="listitem"]')
+      ?.querySelector('[data-operational-value]')).toHaveTextContent(/^90\.0 min$/);
     fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
     expect(refetch).toHaveBeenCalledTimes(1);
   });

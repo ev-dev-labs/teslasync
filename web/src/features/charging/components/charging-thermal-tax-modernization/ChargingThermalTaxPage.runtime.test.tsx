@@ -267,7 +267,10 @@ describe('ChargingThermalTaxPage live modernization (execution NOTRUN)', () => {
     chooseSession();
     sources.telemetry = { ...sources.telemetry, fetchStatus: 'paused' };
     result.rerender(<ChargingThermalTaxPage />);
-    expect(screen.getByText(/device is offline/)).toBeInTheDocument();
+    const retainedWarning = screen.getByTestId('stale-refresh-warning');
+    expect(within(retainedWarning).getByText('The latest values are temporarily unavailable. Previously loaded data remains visible.')).toBeInTheDocument();
+    expect(retainedWarning).toHaveAttribute('data-refresh-blocked', 'true');
+    expect(screen.queryByText(/device is offline/)).not.toBeInTheDocument();
     expect(metricTiles(result.container)[0]).toHaveAttribute('data-value-state', 'value');
     sources.telemetry = { fetchStatus: 'paused', isLoading: false, refetch: sources.telemetryRetry };
     result.rerender(<ChargingThermalTaxPage />);

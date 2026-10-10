@@ -33,7 +33,7 @@ beforeEach(() => {
   hooks.stats.mockReturnValue(queryResult({}));
   hooks.signals.mockReturnValue(queryResult(names));
   hooks.gaps.mockReturnValue(queryResult(Object.fromEntries(names.map(name => [name, { timestamp: null, value: 0 }]))));
-  hooks.history.mockReturnValue(queryResult({ data: [{ valueNum: 0 }, { valueNum: 10 }, { valueNum: 20 }, { valueNum: 30 }] }));
+  hooks.history.mockReturnValue(queryResult({ data: [{ value: 0 }, { value: 10 }, { value: 20 }, { value: 30 }] }));
 });
 
 describe('signal preservation in narrow-safe definitions and rows', () => {

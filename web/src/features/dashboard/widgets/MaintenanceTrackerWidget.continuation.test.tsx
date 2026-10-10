@@ -43,7 +43,9 @@ describe('maintenance independent source preservation', () => {
     expect(brief).toHaveTextContent('Forecast vehicle 7');
     expect(brief).toHaveTextContent('-2.50 km/day');
     expect(brief.querySelectorAll('[data-operational-value]')).toHaveLength(3);
-    expect(screen.getByText(items[1].name)).toBeVisible();
+    const configuredInterval = screen.getByRole('heading', { name: 'Shortest configured interval' }).parentElement?.parentElement;
+    if (!configuredInterval) throw new Error('Configured interval section is missing');
+    expect(within(configuredInterval).getByText(items[1].name)).toBeVisible();
     expect(screen.getByRole('list', { name: 'Recent service' })).toBeVisible();
   });
 

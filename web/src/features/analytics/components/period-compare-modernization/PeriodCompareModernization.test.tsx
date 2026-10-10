@@ -205,7 +205,7 @@ describe('period comparison live modernization regressions', () => {
     expect(container.querySelectorAll('[data-card-grid]')).toHaveLength(1);
     expect(container.querySelectorAll('[data-layout-reference]')).toHaveLength(1);
     expect(screen.queryByRole('combobox', { name: 'Vehicle' })).not.toBeInTheDocument();
-    expect(container.querySelectorAll('[data-card-title]')).toHaveLength(4);
+    expect(container.querySelectorAll('[data-card-grid] [data-card-title], [data-card-grid] [data-operational-brief] h3')).toHaveLength(4);
     expect(container.querySelector('[data-layout-reference]')).toHaveClass('w-full', 'min-w-0');
   });
 });

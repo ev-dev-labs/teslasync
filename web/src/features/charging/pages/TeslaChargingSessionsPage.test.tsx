@@ -538,10 +538,12 @@ describe('TeslaChargingSessionsPage', () => {
   })
 
   it('exposes labelled landmark regions and an accessible vehicle filter', async () => {
-    renderPage()
+    const { container } = renderPage()
     await screen.findByText('42')
 
-    expect(screen.getByRole('region', { name: 'Summary metrics' })).toBeInTheDocument()
+    const summary = container.querySelector('#tesla-fleet-charging-summary')
+    if (!summary) throw new Error('Missing Tesla lifetime charging summary container')
+    expect(within(summary).getByRole('region', { name: 'Summary metrics' })).toBeInTheDocument()
     expect(screen.getByRole('region', { name: 'Cost analysis' })).toBeInTheDocument()
     expect(screen.getByRole('region', { name: 'Session locations' })).toBeInTheDocument()
     expect(screen.getByRole('region', { name: 'Charging sessions table' })).toBeInTheDocument()

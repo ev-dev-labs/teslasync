@@ -134,9 +134,13 @@ vi.mock('@/components/layout', async () => {
   };
 });
 
-vi.mock('@/components/motion', () => ({
-  FadeIn: ({ children }: { children: ReactNode }) => <div>{children}</div>,
-}));
+vi.mock('@/components/motion', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/components/motion')>();
+  return {
+    ...actual,
+    FadeIn: ({ children }: { children: ReactNode }) => <div>{children}</div>,
+  };
+});
 
 vi.mock('@/components/charts', () => {
   const Wrapper = ({ children }: { children?: ReactNode }) => <div>{children}</div>;

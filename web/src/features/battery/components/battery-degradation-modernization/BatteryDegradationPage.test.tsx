@@ -202,7 +202,10 @@ describe('battery degradation trust and preservation', () => {
     const mounted = render(<BatteryDegradationPage />, { wrapper: Harness });
     source.fetchStatus = 'paused';
     mounted.rerender(<BatteryDegradationPage />);
-    expect(screen.getByTestId('stale-refresh-warning')).toHaveTextContent('offline');
+    const pausedWarning = screen.getByTestId('stale-refresh-warning');
+    expect(pausedWarning).toHaveTextContent('The latest values are temporarily unavailable. Previously loaded data remains visible.');
+    expect(pausedWarning).toHaveAttribute('data-refresh-blocked', 'true');
+    expect(pausedWarning).not.toHaveTextContent('offline');
     expect(screen.getAllByRole('button', { name: 'Quick view' })).toHaveLength(3);
     source.data = undefined;
     source.error = new Error('Battery history could not load');

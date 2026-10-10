@@ -117,7 +117,7 @@ describe('FleetPostureWidget', () => {
     state.vehicles.data = undefined;
     state.vehicles.isPending = true;
     const { container } = render(<MemoryRouter><FleetPostureWidget size={{ cols: 2, rows: 3 }} /></MemoryRouter>);
-    expect(container.querySelector('[data-data-state="initial"] .animate-pulse')).not.toBeNull();
+    expect(container.querySelector('[data-data-state="initial"] [class*="--skeleton-bg"]')).not.toBeNull();
   });
 
   it('does not leave disabled empty-fleet state in a permanent skeleton', () => {

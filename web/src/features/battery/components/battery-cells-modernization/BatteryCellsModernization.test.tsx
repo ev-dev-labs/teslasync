@@ -114,7 +114,7 @@ describe('Battery cells live modernization preservation', () => {
     fireEvent.click(within(overview as HTMLElement).getByRole('button', { name: 'Review details' }));
     const drawer = within(screen.getByRole('dialog'));
     expect(drawer.getByText('400.00 V')).toBeVisible();
-    expect(drawer.getByText(/#1 3\\.8900 V/)).toBeVisible();
+    expect(drawer.getByText(/#1 3\.8900 V/)).toBeVisible();
     expect(drawer.getAllByText(/synthesized from brick extrema/).length).toBeGreaterThan(0);
     expect(drawer.getAllByText(/reported values alone do not establish health/).length).toBeGreaterThan(0);
     expect(JSON.stringify(raw)).toBe(before);

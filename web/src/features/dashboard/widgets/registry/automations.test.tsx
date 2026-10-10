@@ -284,7 +284,7 @@ describe('automation-status — lazy component wiring', () => {
     mockUseAutomations.mockReturnValue(makeQuery({ data: undefined, isLoading: true }));
     const { container } = await renderWidget(statusDef, { cols: 2, rows: 2 });
 
-    expect(container.querySelector('.animate-pulse')).not.toBeNull();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).not.toBeNull();
     expect(screen.queryByText('Automation status')).toBeInTheDocument();
   });
 

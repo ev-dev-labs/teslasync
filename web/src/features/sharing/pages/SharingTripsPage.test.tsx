@@ -290,7 +290,7 @@ describe('SharingTripsPage — ready', () => {
     expect(brief.querySelectorAll('[data-operational-metric]')).toHaveLength(4);
     expect(brief.querySelector('[data-operational-metric="distance"]')).toHaveAttribute('data-value-state', 'value');
     expect(within(brief).getByText('70000m')).toBeInTheDocument();
-    expect(within(brief).getByText(/at most 20 trips/)).toBeInTheDocument();
+    expect(within(brief).getByText(/at most 20 trips/, { selector: 'p' })).toBeInTheDocument();
     fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
     const drawer = screen.getByRole('dialog');
     expect(within(drawer).getByText('70000m')).toBeInTheDocument();
@@ -346,7 +346,7 @@ describe('SharingTripsPage — loading', () => {
     expect(
       screen.getByRole('heading', { level: 1, name: 'Share a trip' }),
     ).toBeInTheDocument();
-    expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThan(0);
+    expect(container.querySelectorAll('[class*="--skeleton-bg"]').length).toBeGreaterThan(0);
     // No resolved KPI labels or list options leak while loading.
     expect(screen.queryByText('Shareable trips')).not.toBeInTheDocument();
     expect(screen.queryByRole('listbox', { name: 'Recent trips' })).not.toBeInTheDocument();

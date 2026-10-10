@@ -170,7 +170,9 @@ describe('Charging Patterns live modernization — parent runtime acceptance NOT
     expectPanels(container);
     setQuery({ data, fetchStatus: 'paused' });
     rerender(<ChargingHeatmapPage />);
-    expect(screen.getByTestId('stale-refresh-warning')).toHaveTextContent('offline');
+    expect(screen.getByTestId('stale-refresh-warning')).toHaveTextContent('The latest values are temporarily unavailable. Previously loaded data remains visible.');
+    expect(screen.getByTestId('stale-refresh-warning')).toHaveAttribute('data-refresh-blocked', 'true');
+    expect(screen.getByTestId('stale-refresh-warning')).not.toHaveTextContent(/offline/i);
     expect(grid.querySelectorAll('[title]')).toHaveLength(168);
     setQuery({ data });
     rerender(<ChargingHeatmapPage />);

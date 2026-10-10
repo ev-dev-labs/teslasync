@@ -81,7 +81,7 @@ describe('first real Fleet Charging mobile adoption', () => {
     expect(screen.getByTestId('charging-operational-brief')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Refresh from Tesla' })).toBeInTheDocument()
     for (const name of ['Fleet charging info', 'Summary metrics', 'Wait forecast', 'Cost analysis', 'Session locations']) {
-      expect(screen.getByRole('region', { name })).toBeInTheDocument()
+      expect(screen.getByLabelText(name, { selector: 'section[aria-label]' })).toBeInTheDocument()
     }
     expect(within(costRegion).getByRole('table', { name: 'Monthly charging cost — data table' })).toBe(chartTable)
     expect(within(costRegion).getByText('Energy by charger type')).toBeInTheDocument()

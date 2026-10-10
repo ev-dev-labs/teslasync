@@ -339,9 +339,8 @@ describe('SoftwareUpdatesPage — update timeline', () => {
     // Status badges: two installed, one available.
     expect(screen.getAllByText('Installed').length).toBeGreaterThanOrEqual(2);
     expect(screen.getByText('Available')).toBeInTheDocument();
-    // Vehicle name resolved from the fleet map, one per timeline card (the
-    // vehicle picker also lists it as an <option>, so scope to the list).
-    const timeline = screen.getByRole('list');
+    // Scope timeline cards separately from the operational summary's list.
+    const timeline = screen.getByRole('list', { name: 'Update timeline' });
     expect(within(timeline).getAllByText('Model 3')).toHaveLength(3);
     // Date branches: installed (×2), scheduled (available, ×1), detected (×3).
     expect(screen.getAllByText(/^Installed /)).toHaveLength(2);
@@ -376,7 +375,7 @@ describe('SoftwareUpdatesPage — resilience states', () => {
 
     expect(container.querySelectorAll('[data-chart-state="loading"]')).toHaveLength(1);
     // Breakdown plus four timeline card skeletons; chart and stats own loading.
-    expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThanOrEqual(5);
+    expect(container.querySelectorAll('[class*="--skeleton-bg"]').length).toBeGreaterThanOrEqual(5);
     // Data children are not shown while loading…
     expect(screen.queryByTestId('cadence-chart')).toBeNull();
     const band = kpiBand();

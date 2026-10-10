@@ -407,7 +407,9 @@ describe('TeslaOrdersPage — interactions', () => {
     }
     expect(within(kpiRegion()).getByText('4')).toBeInTheDocument()
     expect(screen.getAllByText('Cybertruck').length).toBeGreaterThanOrEqual(2)
-    expect(within(kpiRegion()).getByText('Retained account snapshot')).toBeInTheDocument()
+    await waitFor(() =>
+      expect(within(kpiRegion()).getByText('Retained account snapshot')).toBeInTheDocument(),
+    )
     expect(screen.queryByText("Can't reach server")).toBeNull()
     expect(screen.getByText('Data may be stale')).toBeInTheDocument()
     expect(mockedRequest).not.toHaveBeenCalledWith(REFRESH_PATH, expect.anything())

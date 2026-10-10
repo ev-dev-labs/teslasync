@@ -374,7 +374,7 @@ describe('ExportStatusWidget states', () => {
       mockUseExports.mockReturnValue(qr({ data: undefined, isLoading: true }));
       mockUseExportJobs.mockReturnValue(qr({ data: undefined, isLoading: true }));
       const { container } = renderWidget(STANDARD);
-      expect(container.querySelector('[data-data-state="initial"] .animate-pulse')).not.toBeNull();
+      expect(container.querySelector('[data-data-state="initial"] [class*="--skeleton-bg"]')).not.toBeNull();
     });
 
     it('does not pretend unknown status is queued or unknown size is zero', () => {
