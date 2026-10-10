@@ -431,7 +431,7 @@ describe('CostForecastWidget', () => {
     forecastMock.mockReturnValue(makeQuery({ isLoading: true, dataUpdatedAt: 0 }));
     const { container } = renderWidget();
 
-    expect(container.querySelector('.animate-pulse')).toBeInTheDocument();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).toBeInTheDocument();
     // No content while loading.
     expect(screen.queryByText('Cost forecast')).toBeInTheDocument();
     expect(screen.queryByText('Next month')).not.toBeInTheDocument();
