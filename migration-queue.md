@@ -1,6 +1,81 @@
 # Frontend modernization queue
 
-## Current phase: 3 - affected preservation suites pass; final frozen boundary required
+## Current phase: 4 - Phase3 verified; three preserved pilots ready to resume
+
+Phase3 genuinely closes on accepted shipping commit
+`0e263cc0e1c9539991835e59eb3f244e35b0d89a`, actual1035. Its fresh final
+fullsuite completed native0 at16:02:39Z; parent independent intake at16:03:03Z:
+
+```text
+Test Files  2430 passed (2430)
+Tests       44960 passed (44960)
+```
+
+Zero failed/pending/todo. All2428original physical files/44736original cases,
+all2429files/44801case identities from the failed1034run, all295current shell
+regressions and162preservation regressions are retained. Parent verifies all32
+raw streams and6748frozen inputs. Final report SHA256
+`dd8d164a6f04ed923bfcb6bfc084740eaae477f0497ceb9c7ae1c43050c19822`;
+independent intake SHA256
+`3e6838ad5d68913ef69c569be78c2559d17d0dbd2100c63db8d78ab07d87986f`.
+Receipts remain at session `phase3-post-shell-preservation1035-*`.
+All15preflight stages and fresh bounded native/visual acceptance below are
+current. Build/lint warnings, six contrast incompletes, transport/environment
+qualifications and whole-app/extreme-page/PWA lifecycle limitations remain
+explicit; this is not Phase6/7 or complete application acceptance.
+The failed1034run, repair attempt1 integration failure and all earlier failures
+remain immutable. Historical reservation/failure rows below do not override
+this new independently accepted Phase3 boundary.
+
+Resume the original Dashboard, Drives List and Settings owners, same atomic
+items/attempt1 with user-directed pause preserved, not relabeled new retries.
+Parent freshly verifies Dashboard6/Settings16parking artifacts and original
+before hashes; saved pilot work is replayed only by its original owner.
+Fresh exclusive baselines are in session
+`phase4-resume1035-parent-baseline/manifest.json`. No source writes occurred
+while preparing these baselines. Page workers own only their exact listed
+files; protected old tests, GeneralSettings, shared components, catalogs,
+configurations and API behavior stay unchanged. New additive pilot tests may
+be written only at prospectively reserved paths. Changed-test-only targeted
+commands and strict owned-path lint precede source intake; browser/current
+build gates remain parent-owned after all pilot writer leases release.
+These ready reservations are not live actors or completed pilots. Actual
+commit cadence includes this queue-only closure checkpoint; recount after
+commit. Last mandatory compiler1035native0, next1050. Schedule21continues.
+
+### Historical preflight and repair progress (superseded by verified closure)
+
+Fresh1035fullsuite run1 started15:11:48Z with real parentPID22836 and all6748
+inputs frozen at0e263cc0e1. Startup, live PID and actual native Vitest command
+output are verified. No shipping worker or source/validation lease is active.
+No fullsuite result exists yet; do not substitute the earlier targeted passes.
+Queue updates stay uncommitted while the exact source/HEAD boundary is frozen.
+
+All15fresh serialized stages on commit0e263cc0e1actual1035 exit0; parent
+independently verifies30raw streams and all6748frozen inputs. The unchanged
+violations audit reports0 in each of its six categories; TypeScript passes.
+Fresh exact-build readonly native run1 passes34scenarios/48captures/14axe,
+32brand target checks,12drawer entry/trap/restore cases and6selection probes.
+Parent verifies64artifacts and reviews all48captures via12sheets plus12direct
+desktop/custom originals. Selected UI/focus pair minima5.619286/5.547835>=3.
+All own native container/browser helpers stopped. No source/validation leases.
+
+This is bounded shell acceptance, not whole-app/Phase6/7 acceptance. Six axe
+contrast-incomplete run records remain qualified by10measured flat pairs,
+minimum5.281391>=4.5. At200%text the Settings page viewport remains constrained;
+drawer branding can heavily truncate while its full accessible name survives.
+Initial dark1440capture precedes asynchronous rail population; subsequent
+same-viewport captures contain the rail. These limitations stay explicit.
+One fresh1035fullsuite on unchanged source is next; Phase3remains open and
+Phase4pilots parked until its independently verified final result.
+
+Scoped commit0e263cc0e1c9539991835e59eb3f244e35b0d89a contains only the
+three verified test/fixture files and queue, actual1035. Mandatory compiler
+native0 is independently verified on all6748frozen source inputs, started
+14:56:24Z/completed14:57:30Z; raw stdout0bytes/stderr0bytes. Next mandatory
+commit-cadence compiler1050. The current serialized15stagepreflight continues
+on this exact committed source with no worker/source/validation leases.
+Current final fullsuite has NOTRUN. Phase3closure/Phase4remain gated.
 
 Attempt2 is independently intaken:68artifacts/6746original inputs, exact
 cumulative and incremental inverse bytes, all35existing assertions and
@@ -1702,9 +1777,10 @@ Phase2 intake health: all19 original primitive actors delivered idle DONE (not s
 | [x] | 3 | phase3-excluded92-authorized-attempt3 | original-source-owned-recovery | phase3-boundary-excluded-owned-contracts-92; phase3-catalog-attempt3-acceptance1021 | 3 | 2026-10-11T06:49:19Z | Original89collision+3errortitles+3deferred scalar sibling repairs retained. Knownmissing pruning exactly3titles, baseline[]. Frozen 526-artifact original handoff retained; current coherent integration closes tightly coupled source-hash assertions with exact reversible fragments and all original constants. Combined55 native0, 8572tests passed; original95 static fixture unchanged. Included in exact parent115-path cumulative integration stage; global boundary still pending, nextcompiler1035. |
 | [x] | 3 | phase3-final-four-localization-gaps | independent-source-only-reservation | phase3-coherent-final-integration | 1 | 2026-10-11T07:21:17Z | Four proven gaps: ai.limit.retryIn, palette.clearScope, RegexTester empty match, GeneralSettings temperature object call. Source-only151test result retained, not misrepresented as canonical acceptance. Current exclusive integrator installs exactly4real canonical pairs and normal generated outputs; actual production namespace-loader/runtime proofs pass in coherent55file8572test run. Four source fragments reverse byte-exactly; no caller incident plural or unrelated behavior changes. Global boundary pending. |
 | [x] | 3 | phase3-user-directed-closure | user-override-not-verified-pass | - | 0 | 2026-10-11T07:40:20Z | User expressly closed Phase3 and requested next phases. Supersedes unfinished Phase3 dispatch reservations without falsifying native exits; 11 combined failures and four absent canonical pairs retained as deferred debt. Fresh final fullsuite/build/visual acceptance NOTRUN. Preserve uncommitted implementation and unrelated inherited files. |
-| [b] | 4 | phase4-pilot-dashboard | page-migration | phase3-coherent-verified-boundary | 1 | 2026-10-11T07:40:20Z | Paused by latest user instruction. Own pilot delta parked with immutable forward patch/snapshots, only dispatch-before bytes restored by its original owner; inherited Phase3 work untouched. Resume exact saved pilot after verified Phase3 boundary, not from scratch. |
-| [b] | 4 | phase4-pilot-drives-list | page-migration | phase3-coherent-verified-boundary | 1 | 2026-10-11T07:40:20Z | Paused before any source/test writes; source lease released. Frozen preflight failure retained. Resume only after verified Phase3 boundary; no dirty Phase3 presentation path takeover. |
-| [b] | 4 | phase4-pilot-settings | page-migration | phase3-coherent-verified-boundary | 1 | 2026-10-11T07:40:20Z | Paused by latest user instruction. Own page delta and new pilot test parked in immutable session artifacts; original owner restores only own dispatch-before bytes/removes only its backed-up new test. GeneralSettings and inherited work untouched. Resume saved pilot after verified Phase3 boundary. |
+| [x] | 3 | phase3-shell-preservation1035-final-acceptance | parent-current-frozen-phase-boundary | phase3-coherent-final-integration; phase3-guarded-plural-scanner-contract; phase3-startup-budget-relief | 1 | 2026-10-11T16:03:03Z | Genuine final acceptance supersedes historical open boundary reservations, not failed history. All16native stages0,2430physicalfiles44960tests0failed/pending/todo; all44736original and44801previous case identities retained,295shell+162repaircases present.32rawstreams6748pins/current34scenario48capture14axe bounded native/visual accepted. Report/intake hashes recorded above. Whole-app acceptance remains Phase6/7. |
+| [ ] | 4 | phase4-pilot-dashboard | page-migration | phase3-shell-preservation1035-final-acceptance | 1 | 2026-10-11T16:05:04Z | Original owner1eb31c07 resumes exact saved pilot, same attempt after user pause. Own only DashboardPage.tsx and new DashboardPage.pilot.test.tsx; five protected old tests/widget paths unchanged.6parking artifacts/beforeSHA verified; fresh baseline manifest. No shared/catalog/config/API changes or old assertion edits. Scoped changed-test-only gates; parent intake and mounted acceptance still required. Reservation, not running or DONE. |
+| [ ] | 4 | phase4-pilot-drives-list | page-migration | phase3-shell-preservation1035-final-acceptance | 1 | 2026-10-11T16:05:04Z | Original owner45c54a94 resumes same no-write paused item. Exact seven paths: DrivesListPage.tsx; DrivesEvidenceHeading.tsx/its new .test.tsx; DrivesStickySummary.tsx/its new .test.tsx; DrivesSourceNotices.tsx/its new .test.tsx. Fresh before/absence pins; old DrivesListPage.test.tsx and DrivesEvidenceEmpty.tsx protected. Preserve filters/export/preview/workspace/query trust/SI; no shared/catalog/config/API edits. Reservation, not running or DONE. |
+| [ ] | 4 | phase4-pilot-settings | page-migration | phase3-shell-preservation1035-final-acceptance | 1 | 2026-10-11T16:05:04Z | Original ownere77804d5 resumes exact saved pilot, same attempt after user pause. Own only SettingsPage.tsx and new SettingsPage.pilot.test.tsx.16parking artifacts/beforeSHA/absentpilot verified; old SettingsPage.test.tsx/catalogCopy test and GeneralSettings protected. Preserve forms/preferences/navigation/motion; no shared/catalog/config/API edits. Reservation, not running or DONE. |
 | [x] | 3 | phase3-coherent-final-integration | explicit-user-authorized-final-recovery | phase4-writers-paused | 2 | 2026-10-11T07:45:00Z | Terminal delivery consumed; parent independently verifies272artifact records including manifest+5immutable pins, 205currentowned records, exact115-path cumulative stage. All31091oldstructural leaves preserved+exact4=31095; all784original hash constants retained, four exact source inverses verified. Combined55files8572tests0; generator/check/namespace/shadow/scopedlint/strictscanner native0. Prior failures and wrapper display encoding failure retained. Source/catalog/test leases released; global gates remain unrun. |
 | [x] | 3 | phase3-guarded-plural-scanner-contract | narrow-scanner-correctness | - | 1 | 2026-10-11T07:45:00Z | Terminal consumed; parent verifies50artifacts+2sourcehashes. Narrow numeric-origin and dominating >1 cardinal-count AST proof, 23focusedtests passed, inherited14tests preserved, syntax0/0, strict native0 missing0. Negative guards/unknown sources/ordinal/context/language/spreads remain strict. Incidents caller unchanged; actual0/1hidden2/3localized; no catalog/suppression edits. Exact two-file scanner stage; source lease released. |
 | [~] | 3 | phase3-coherent-verified-boundary | parent-frozen-phase-gate | phase3-coherent-final-integration; phase3-guarded-plural-scanner-contract; phase3-startup-budget-relief | 2 | 2026-10-11T08:50:40Z | Failed1024boundary preserved: first7gates0/strictbundle1/fullsuiteNOTRUN. New scoped startup repair intake accepted; exact11sourcepaths+queue commit then new frozen compiler/full lint/skillviolations/catalog/keys/SW/changelog/build/bundle/duplicates/private maps/PWA/fullbuiltcontract/shell/runtime/fullsuite. FullbuiltPWA uses official unchanged assertions with only private DIST_ROOT adapted in session, verifiedadapter0; oldpublicmap invocation1 retained and correctedprivatemaps0, no current-source acceptance inferred. Zero writer leases/emptyindex/frozenHEAD required. Browser QA still not implied. |
