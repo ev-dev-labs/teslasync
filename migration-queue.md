@@ -1,6 +1,45 @@
 # Frontend modernization queue
 
-## Current phase: 3 - mobile brand repair accepted; fresh native gates pending
+## Current phase: 3 - mobile target repair accepted; fresh final gates pending
+
+The mobile target owner is terminal DONE/idle, not stalled. Parent independently
+verified35artifacts/6746pins, final273passed cases across3physical files, strict
+two-path lint native0, all287original assertions and both byte-exact inverses.
+The mobile appbar instance alone sets max-md direct-button44px minimum sizing;
+shared bell/icon/badge/desktop behavior remains unchanged. The actual bell fixture
+retains unread labeling/inbox navigation. Initial272pass/1fixturefailure is
+preserved; the corrected media fixture adds no production lifecycle change.
+Parent intake's initial all-receipts-must-pass assumption failure is retained
+separately; final intake verifies failed and passing receipts explicitly.
+Source/validation leases are released. Commit only the two Layout paths and
+direct queue evidence, then freeze current source for15preflight stages, native
+target/reflow/focus/visual acceptance and one fresh fullsuite. Phase3 is open.
+
+The actual1032native matrix completed34scenarios/46captures/14axe. All32mobile
+brand/control bounds passed non-overlap/containment/focus-ring geometry, measured
+header spacer and content positioning. All12drawer entry/trap/restore and original
+palette/theme/Customize/6RTLtab/skip predicates passed;0axe/HTTP/pageerrors.
+New target checks found a real below-md Notifications button36x36 against the
+documented44x44mobile default. Existing owner now owns a narrow two-Layout-path
+mobile-appbar target correction; shared bell/helper/desktop behavior is read-only.
+Parent independently verified66artifacts/30preflight streams/6746input pins.
+The apparent immediate closed-appbar hit failures were separately attributed:
+native hit is the exiting backdrop atopacity0.786; every actual button becomes
+reachable after native backdrop removal279.5ms later, without sleep or bypass.
+Preserve the failed matrix. Correct the harness to wait actual input readiness
+and apply MDC-040's44pxbelow-md/24pxcompact exception rather than invent44px
+everywhere. Fresh native/fullsuite acceptance remains gated; Phase3 is open.
+
+Mobile-brand repair committed as ee80578c7abc831908426a24a124b07633225132,
+actual1032. The current6746input boundary is frozen. Compiler native0 at
+12:22:19Z, stdout/stderr0bytes; full lint native0 at12:25:09Z with raw warnings
+retained. All15preflight stages completed native0 and were independently intaken.
+The terminal parent gate is complete, not a stuck worker. Worker leases were
+released during that boundary; the new target-repair lease is recorded above.
+After its delivery and scoped commit, the next serialized native
+matrix adds both mobile-brand bounds/control/focus-ring checks at320/375,
+LTR/RTL200%, dark/light while preserving all prior focus/theme/tab checks.
+No duplicate gate or fullsuite and no Phase4 writer. Next cadencecompiler1035.
 
 The existing owner delivered the exact two-path mobile-brand repair. Parent
 independently verified20artifacts,6746input pins,268passed cases across3physical
@@ -8,8 +47,9 @@ files, strict two-path ESLint native0,258original assertions and byte-exact
 source inverses. Both drawer and closed appbar wordmarks are contained; the
 appbar can wrap and reserves its measured height. Current drawer focus,
 transition-none, full accessible branding and scaled control targets remain.
-Source/validation leases are released. Commit only Layout.tsx, Layout.test.tsx
-and this queue, then freeze the new source for15preflight stages and native
+Source/validation leases are released. The commit contains only Layout.tsx,
+Layout.test.tsx and the direct queue evidence. The new source is frozen for
+15preflight stages and native
 320/375LTR/RTL200% brand/control bounds, focus rings and hit tests in both modes.
 Native reflow acceptance and the current fullsuite are NOTRUN. Phase3 remains
 open; Phase4 pilots remain parked until genuine current-source acceptance.

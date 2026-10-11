@@ -1487,7 +1487,7 @@ export default function Layout() {
             <Logo size={26} showWordmark className={MOBILE_BRAND_CONTAINMENT} />
           </div>
           <div className="ms-auto flex shrink-0 items-center gap-2">
-            <NotificationBellPopover />
+            <NotificationBellPopover className="max-md:[&>button]:min-h-11 max-md:[&>button]:min-w-11" />
             <ThemeQuickSwitcher />
           </div>
         </header>

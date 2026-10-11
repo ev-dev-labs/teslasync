@@ -10,9 +10,9 @@
  * `navSearchKeywords` — that drive navigation and command-palette search.
  *
  * Because the shell wires in ~50 side-effecting children and hooks, we mock
- * every leaf/child module and every ambient hook so the tests exercise
- * *Layout's own* orchestration logic rather than its dependencies. Network
- * is mocked at the `@/api/client` boundary; nothing hits a real endpoint.
+ * most leaf/child modules and ambient hooks so the tests exercise Layout's
+ * orchestration. Logo and NotificationBellPopover retain their actual DOM.
+ * Network is mocked at the `@/api/client` boundary; nothing hits a real endpoint.
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
@@ -362,7 +362,14 @@ vi.mock('./WorkspaceContextControl', () => ({
   WorkspaceContextControl: ({ hidden = false }: { hidden?: boolean }) =>
     hidden ? null : <div data-testid="workspace-context-control" />,
 }))
-vi.mock('./NotificationBellPopover', () => ({ NotificationBellPopover: () => null }))
+vi.mock('@/hooks/useMediaQuery', async () => {
+  const actual = await vi.importActual<typeof import('@/hooks/useMediaQuery')>('@/hooks/useMediaQuery')
+  return {
+    ...actual,
+    // Keep the real bell DOM without adding a listener to the shell's aliased media fixture.
+    useIsMobile: () => window.matchMedia('(max-width: 640px)').matches,
+  }
+})
 vi.mock('./sidebar/NavSectionHeader', () => ({
   NavSectionHeader: ({ label, action, id }: { label: string; action?: React.ReactNode; id?: string }) => (
     <div>
@@ -1040,6 +1047,59 @@ describe('Layout — nav item visibility', () => {
 // ══════════════════════════════════════════════════════════════════════
 
 describe('Layout — mobile drawer', () => {
+  it.each([320, 375, 390, 430])('scopes the notification target minimum to the mobile appbar at %spx', async width => {
+    const previousWidth = window.innerWidth
+    const media = window.matchMedia('')
+    window.innerWidth = width
+    vi.mocked(window.matchMedia).mockImplementation(query => ({
+      ...media,
+      media: query,
+      matches: query === '(max-width: 640px)',
+    }))
+    H.request.mockImplementation((url: unknown) =>
+      url === '/notifications/unread-count'
+        ? Promise.resolve({ count: 7 })
+        : H.defaultReq(url),
+    )
+    try {
+      renderLayout('/')
+      const header = screen.getByRole('banner', { name: 'Site header' })
+      const bell = await within(header).findByRole('button', { name: '7 unread notifications' })
+      const wrapper = bell.parentElement!
+      // Verify actual descendant targeting; jsdom does not measure native hit areas.
+      expect(wrapper).toHaveAttribute('data-role', 'notification-bell-popover')
+      expect(wrapper).toHaveClass('max-md:[&>button]:min-h-11', 'max-md:[&>button]:min-w-11')
+      expect(wrapper.querySelector(':scope > button')).toBe(bell)
+      expect(bell).toHaveClass('h-9', 'w-9', 'p-0')
+      expect(bell).toHaveAttribute('aria-expanded', 'false')
+      expect(bell).toHaveTextContent('7')
+      expect(bell.querySelector('span')).toHaveAttribute('aria-hidden', 'true')
+      expect(bell.querySelector('svg')).toHaveClass('h-5', 'w-5')
+      expect(header.lastElementChild).toHaveClass('shrink-0', 'ms-auto')
+      fireEvent.click(bell)
+      await waitFor(() => expect(screen.getByTestId('loc')).toHaveTextContent('/notifications/inbox'))
+      expect(screen.queryByRole('dialog', { name: 'Notifications' })).not.toBeInTheDocument()
+    } finally {
+      window.innerWidth = previousWidth
+    }
+  })
+
+  it('keeps the workspace notification bell compact and outside the mobile target override', async () => {
+    const { container } = renderLayout('/')
+    await waitFor(() => expect(
+      container.querySelector('[data-role="workspace-header"] [data-role="notification-bell-popover"] > button'),
+    ).not.toBeNull())
+    const workspaceHeader = container.querySelector<HTMLElement>('[data-role="workspace-header"]')!
+    const bell = within(workspaceHeader).getByRole('button', { name: 'Notifications' })
+    expect(bell.parentElement).toHaveClass('relative', 'inline-block')
+    expect(bell.parentElement).not.toHaveClass('max-md:[&>button]:min-h-11', 'max-md:[&>button]:min-w-11')
+    expect(bell).toHaveClass('h-9', 'w-9', 'p-0')
+    expect(bell).not.toHaveClass('h-11', 'w-11', 'min-h-11', 'min-w-11')
+    expect(bell).toHaveAttribute('aria-expanded', 'false')
+    expect(bell.querySelector('span')).not.toBeInTheDocument()
+    expect(workspaceHeader).toHaveClass('hidden', 'xl:grid', 'gap-4')
+  })
+
   it.each([
     ['ltr', 1], ['rtl', 1], ['ltr', 2], ['rtl', 2],
   ])('contains both mobile wordmarks without shrinking controls (%s, scale %s)', (direction, scale) => {
