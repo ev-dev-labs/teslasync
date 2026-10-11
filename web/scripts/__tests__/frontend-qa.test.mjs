@@ -398,3 +398,208 @@ test('actual scan CLI retains review counts and exits nonzero for every negative
   const negative = scanFixtureCLI(classificationFixture([...forcedColorsClasses, 'text-[CanvasText]', 'forced-colors:p-[13px]']));
   console.log('NEGATIVE FIXTURE CLI RAW OUTPUT:\n' + negative.stdout + '\nSTDERR:\n' + negative.stderr + '\nEXIT ' + negative.status);
 });
+
+const canonicalThemeImport = "import { useTheme } from '@/components/ui/ThemeProvider';";
+const themeIdentityFixture = (body, imports = canonicalThemeImport, parameters = '') =>
+  `${imports}\nfunction ThemeFirstRunBanner(${parameters}) {\n${body}\n}`;
+
+test('canonical immutable themeId comparisons retain visible persisted identity review and exact source locations', () => {
+  for (const source of [
+    themeIdentityFixture("const { themeId } = useTheme();\nif (themeId !== 'neon-cyan') return null;"),
+    themeIdentityFixture("const { themeId } = useTheme();\nreturn themeId === 'neon-cyan';"),
+    themeIdentityFixture("const { themeId } = useTheme();\nreturn 'neon-cyan' !== themeId;"),
+    themeIdentityFixture("const { themeId: savedTheme } = readTheme();\nif ('neon-cyan' === savedTheme) return null;",
+      "import { useTheme as readTheme } from '@/components/ui/ThemeProvider';"),
+    `${canonicalThemeImport}\nconst Banner = () => {\nconst { themeId } = useTheme();\nif (themeId !== 'neon-cyan') return null;\n};`,
+    `${canonicalThemeImport}\nfunction Banner() {\n{ const { themeId } = useTheme();\nif (themeId !== 'neon-cyan') return null; }\n}`,
+  ]) {
+    const findings = scanSource(source, 'src/features/independent/page.tsx');
+    assert.equal(findings.length, 1, source);
+    const [finding] = findings;
+    assert.equal(finding.rule, 'glow-neon');
+    assert.equal(finding.match, 'neon-cyan');
+    assert.equal(finding.classification, 'persisted-theme-identity-review');
+    assert.match(finding.action, /canonical ThemeProvider useTheme/);
+    assert.match(finding.action, /Preserve the saved neon-cyan theme ID/);
+    assert.match(finding.action, /Not browser\/page acceptance/);
+    const lines = source.split('\n');
+    assert.equal(lines[finding.line - 1].slice(finding.column - 1, finding.column - 1 + finding.match.length), finding.match);
+  }
+});
+
+test('identity proof never permits decorative class, style, template or arbitrary neon literals', () => {
+  const sources = [
+    'const classes = "text-neon-cyan";',
+    'const styles = { color: "neon-cyan" };',
+    'const text = `neon-cyan`;',
+    'const arbitrary = "neon-cyan";',
+    '<div className="neon-cyan" style={{ color: "neon-cyan" }} />;',
+    themeIdentityFixture('const { themeId } = useTheme();\nreturn <div className={themeId === "neon-cyan"} />;'),
+    themeIdentityFixture('const { themeId } = useTheme();\nreturn <div style={{ color: themeId === "neon-cyan" }} />;'),
+    themeIdentityFixture('const { themeId } = useTheme();\nconst style = { color: themeId === "neon-cyan" };'),
+    themeIdentityFixture('const { themeId } = useTheme();\nreturn `${themeId === "neon-cyan"}`;'),
+    themeIdentityFixture('const { themeId } = useTheme();\nreturn themeId === `neon-cyan`;'),
+    themeIdentityFixture('const { themeId } = useTheme();\nreturn themeId === "text-neon-cyan";'),
+    themeIdentityFixture('const { themeId } = useTheme();\nreturn themeId === "glow-neon-cyan";'),
+    themeIdentityFixture('const { themeId } = useTheme();\nreturn themeId === "neon-cyan text-neon-cyan";'),
+    themeIdentityFixture('const { themeId } = useTheme();\nreturn themeId.includes("neon-cyan");'),
+    themeIdentityFixture('const { themeId } = useTheme();\nreturn themeId == "neon-cyan";'),
+    themeIdentityFixture('const { themeId } = useTheme();\nreturn themeId != "neon-cyan";'),
+    themeIdentityFixture('const { themeId } = useTheme();\nreturn themeId === ("neon-cyan");'),
+    themeIdentityFixture('const { themeId } = useTheme();\nreturn themeId === "neon-\\u0063yan";'),
+    'body { color: neon-cyan; }',
+  ];
+  for (const source of sources) {
+    const findings = scanSource(source, source.startsWith('body') ? 'src/example.css' : 'src/example.tsx');
+    assert.ok(findings.length > 0, source);
+    assert.ok(findings.every(({ classification }) => classification === 'candidate-violation'), source);
+  }
+  const mixed = scanSource(themeIdentityFixture(
+    'const { themeId } = useTheme();\nif (themeId !== "neon-cyan") return null;\nreturn <div className="text-neon-cyan" style={{ color: "neon-cyan" }}>neon-cyan</div>;'),
+  'src/example.tsx');
+  assert.equal(mixed.filter(({ classification }) => classification === 'persisted-theme-identity-review').length, 1);
+  assert.equal(mixed.filter(({ classification }) => classification === 'candidate-violation').length, 2);
+});
+
+test('foreign, type-only, default, namespace, wrapper and locally shadowed hooks never prove canonical provenance', () => {
+  const comparison = 'const { themeId } = useTheme();\nif (themeId !== "neon-cyan") return null;';
+  const sources = [
+    themeIdentityFixture(comparison, "import { useTheme } from '@/hooks/useTheme';"),
+    themeIdentityFixture(comparison, "import { useTheme } from '@/components/ui';"),
+    themeIdentityFixture(comparison, "import { useTheme } from 'foreign-theme';"),
+    themeIdentityFixture(comparison, "import useTheme from '@/components/ui/ThemeProvider';"),
+    themeIdentityFixture(comparison, "import type { useTheme } from '@/components/ui/ThemeProvider';"),
+    themeIdentityFixture(comparison, "import { type useTheme } from '@/components/ui/ThemeProvider';"),
+    themeIdentityFixture(comparison, ''),
+    themeIdentityFixture(comparison, 'function useTheme() { return externalTheme; }'),
+    themeIdentityFixture(comparison, canonicalThemeImport, 'useTheme'),
+    themeIdentityFixture(`const useTheme = foreignTheme;\n${comparison}`),
+    themeIdentityFixture(`function useTheme() { return externalTheme; }\n${comparison}`),
+    themeIdentityFixture(`${comparison}\nconst useTheme = foreignTheme;`),
+    themeIdentityFixture(`{ const useTheme = foreignTheme;\n${comparison}\n}`),
+    `${canonicalThemeImport}\nfunction outer(useTheme) { function inner() { ${comparison} } }`,
+    `${canonicalThemeImport}\nfunction outer() { const useTheme = foreignTheme; return () => { ${comparison} }; }`,
+    themeIdentityFixture('const { themeId } = Theme.useTheme();\nreturn themeId === "neon-cyan";',
+      "import * as Theme from '@/components/ui/ThemeProvider';"),
+    themeIdentityFixture('const readTheme = useTheme;\nconst { themeId } = readTheme();\nreturn themeId === "neon-cyan";'),
+    themeIdentityFixture('const { themeId } = useTheme(externalTheme);\nreturn themeId === "neon-cyan";'),
+    themeIdentityFixture('const { themeId } = useTheme?.();\nreturn themeId === "neon-cyan";'),
+    themeIdentityFixture('const { themeId } = useTheme<ForeignTheme>();\nreturn themeId === "neon-cyan";'),
+    `${canonicalThemeImport}\nimport { useTheme } from 'foreign-theme';\nfunction Banner() { ${comparison} }`,
+  ];
+  for (const source of sources) {
+    const findings = scanSource(source, 'src/example.tsx');
+    assert.equal(findings.length, 1, source);
+    assert.equal(findings[0].classification, 'candidate-violation', source);
+  }
+});
+
+test('shadowed identity parameters, nested scopes and unknown destructuring flows remain strict candidates', () => {
+  const sources = [
+    themeIdentityFixture('const { themeId: savedTheme } = useTheme();\nreturn themeId === "neon-cyan";', canonicalThemeImport, 'themeId'),
+    themeIdentityFixture('const { themeId } = useTheme();\nfunction inner(themeId) { return themeId === "neon-cyan"; }'),
+    themeIdentityFixture('const { themeId } = useTheme();\nconst inner = (themeId) => themeId === "neon-cyan";'),
+    themeIdentityFixture('const { themeId } = useTheme();\n{ const themeId = externalTheme;\nif (themeId !== "neon-cyan") return null; }'),
+    themeIdentityFixture('const { themeId } = useTheme();\nfunction inner() { return themeId === "neon-cyan"; }'),
+    themeIdentityFixture('const { themeId } = useTheme();\n{ if (themeId !== "neon-cyan") return null; }'),
+    `${canonicalThemeImport}\nconst { themeId } = useTheme();\nfunction Banner() { return themeId === "neon-cyan"; }`,
+    themeIdentityFixture('if (themeId !== "neon-cyan") return null;\nconst { themeId } = useTheme();'),
+    themeIdentityFixture('const themeId = externalTheme;\nreturn themeId === "neon-cyan";'),
+    themeIdentityFixture('const themeId = useTheme().themeId;\nreturn themeId === "neon-cyan";'),
+    themeIdentityFixture('const theme = useTheme();\nconst { themeId } = theme;\nreturn themeId === "neon-cyan";'),
+    themeIdentityFixture('const { themeId } = externalTheme;\nreturn themeId === "neon-cyan";'),
+    themeIdentityFixture('const { themeId } = fake(useTheme());\nreturn themeId === "neon-cyan";'),
+    themeIdentityFixture('const { themeId } = flag ? useTheme() : externalTheme;\nreturn themeId === "neon-cyan";'),
+    themeIdentityFixture('const { themeId } = useTheme() as ForeignTheme;\nreturn themeId === "neon-cyan";'),
+    themeIdentityFixture('const { themeId } = { ...useTheme() };\nreturn themeId === "neon-cyan";'),
+    themeIdentityFixture('const { themeId = externalTheme } = useTheme();\nreturn themeId === "neon-cyan";'),
+    themeIdentityFixture('const { "themeId": themeId } = useTheme();\nreturn themeId === "neon-cyan";'),
+    themeIdentityFixture('const { [field]: themeId } = useTheme();\nreturn themeId === "neon-cyan";'),
+    themeIdentityFixture('const { nested: { themeId } } = useTheme();\nreturn themeId === "neon-cyan";'),
+    themeIdentityFixture('const [themeId] = useTheme();\nreturn themeId === "neon-cyan";'),
+    themeIdentityFixture('const { themeId } = useTheme();\nconst savedTheme = themeId;\nreturn savedTheme === "neon-cyan";'),
+    themeIdentityFixture('const { themeId } = useTheme();\nconst { themeId } = externalTheme;\nreturn themeId === "neon-cyan";'),
+    themeIdentityFixture('const { themeId } = useTheme();\nreturn (themeId as string) === "neon-cyan";'),
+    themeIdentityFixture('const { themeId } = useTheme();\nreturn external.themeId === "neon-cyan";'),
+    themeIdentityFixture('const { themeId } = useTheme();\nreturn themeId === "neon-cyan";\nconst broken = ;'),
+  ];
+  for (const source of sources) {
+    const findings = scanSource(source, 'src/example.tsx');
+    assert.equal(findings.length, 1, source);
+    assert.equal(findings[0].classification, 'candidate-violation', source);
+  }
+});
+
+test('binding and hook reassignment before, after or inside closures invalidates persisted identity proof', () => {
+  const sources = [
+    themeIdentityFixture('let { themeId } = useTheme();\nreturn themeId === "neon-cyan";'),
+    themeIdentityFixture('var { themeId } = useTheme();\nreturn themeId === "neon-cyan";'),
+    themeIdentityFixture('let themeId;\n({ themeId } = useTheme());\nreturn themeId === "neon-cyan";'),
+    ...[
+      'themeId = externalTheme;', 'themeId += externalTheme;', 'themeId ??= externalTheme;',
+      'themeId ||= externalTheme;', 'themeId &&= externalTheme;', 'themeId++;', '--themeId;',
+      '({ themeId } = externalTheme);', '({ value: themeId } = externalTheme);',
+      '[themeId] = externalTheme;',
+      'function mutate() { themeId = externalTheme; }',
+      'for (themeId of externalThemes) {}', 'for (themeId in externalThemes) {}',
+      'useTheme = foreignTheme;',
+      'function replaceHook() { useTheme = foreignTheme; }',
+    ].flatMap((mutation) => [
+      themeIdentityFixture(`const { themeId } = useTheme();\n${mutation}\nreturn themeId === "neon-cyan";`),
+      themeIdentityFixture(`const { themeId } = useTheme();\nif (themeId !== "neon-cyan") return null;\n${mutation}`),
+    ]),
+    themeIdentityFixture('const { themeId: savedTheme } = readTheme();\nsavedTheme = externalTheme;\nreturn savedTheme === "neon-cyan";',
+      "import { useTheme as readTheme } from '@/components/ui/ThemeProvider';"),
+    themeIdentityFixture('const { themeId } = readTheme();\nreadTheme = foreignTheme;\nreturn themeId === "neon-cyan";',
+      "import { useTheme as readTheme } from '@/components/ui/ThemeProvider';"),
+  ];
+  for (const source of sources) {
+    const findings = scanSource(source, 'src/example.tsx');
+    assert.equal(findings.length, 1, source);
+    assert.equal(findings[0].classification, 'candidate-violation', source);
+  }
+  const independent = scanSource(themeIdentityFixture(
+    'const { themeId } = useTheme();\nfunction unrelated(themeId, useTheme) { themeId = externalTheme; useTheme = foreignTheme; }\nreturn themeId === "neon-cyan";'),
+  'src/example.tsx');
+  assert.equal(independent[0].classification, 'persisted-theme-identity-review');
+});
+
+test('persisted identity reviews keep token-owner precedence and all existing scan CLI count and exit semantics', () => {
+  const identity = themeIdentityFixture('const { themeId } = useTheme();\nif (themeId !== "neon-cyan") return null;');
+  const owner = scanSource(identity, 'src\\lib\\tokens.ts');
+  assert.equal(owner.length, 1);
+  assert.equal(owner[0].classification, 'token-owner-exemption');
+  const positive = scanFixtureCLI(identity);
+  assert.equal(positive.status, 0, positive.stderr);
+  const report = JSON.parse(positive.stdout);
+  assert.equal(report.findings.length, 1);
+  assert.equal(report.findings[0].classification, 'persisted-theme-identity-review');
+  assert.deepEqual(report.counts, {
+    'candidate-violation': 0, 'token-reference-review': 0,
+    'token-owner-exemption': 0, 'forced-colors-accessibility-review': 0,
+    'persisted-theme-identity-review': 1,
+  });
+  const negativeSources = [
+    'const decorativeClasses = "text-neon-cyan";',
+    'const style = { color: "neon-cyan" };',
+    'const label = `neon-cyan`;',
+    themeIdentityFixture('const { themeId } = fakeTheme();\nreturn themeId === "neon-cyan";',
+      "import { useTheme as fakeTheme } from 'foreign-theme';"),
+    themeIdentityFixture('const { themeId: savedTheme } = useTheme();\nreturn themeId === "neon-cyan";',
+      '', 'themeId'),
+    'const geometryClasses = "z-[9990] xl:grid-cols-[minmax(0,1.2fr)_minmax(22rem,0.8fr)]";',
+    "import { Car } from '@heroicons/react/24/outline';",
+  ];
+  for (const source of negativeSources) {
+    const negative = source.replace('ThemeFirstRunBanner', 'ForeignThemeBanner');
+    const result = scanFixtureCLI(`${identity}\n${negative}\n${classificationFixture(forcedColorsClasses)}\nconst tokens = "bg-[var(--surface-1)]";`);
+    assert.equal(result.status, 1, result.stderr);
+    const mixed = JSON.parse(result.stdout);
+    assert.ok(mixed.counts['candidate-violation'] > 0, source);
+    assert.equal(mixed.counts['persisted-theme-identity-review'], 1, source);
+    assert.equal(mixed.counts['forced-colors-accessibility-review'], 6, source);
+    assert.equal(mixed.counts['token-reference-review'], 1, source);
+    assert.equal(mixed.findings.length, Object.values(mixed.counts).reduce((sum, count) => sum + count, 0));
+  }
+  console.log('PERSISTED IDENTITY CLI RAW OUTPUT:\n' + positive.stdout + '\nSTDERR:\n' + positive.stderr + '\nEXIT ' + positive.status);
+});

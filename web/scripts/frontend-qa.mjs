@@ -35,7 +35,9 @@ Route map JSON: {"/drives/:id": "/drives/<real-authorized-id>"}.
 Unresolved parameter routes are BLOCKED, never invented IDs or silently skipped.
 Exit 0: bounded checks passed; 1: findings/failures; 2: blocked/invalid input.
 Scan is static candidate evidence, not visual/contrast/application acceptance.
-Token-owner exemptions remain visible; token references require owner review.`;
+Token-owner exemptions remain visible; token references require owner review.
+Proven canonical useTheme themeId comparisons remain visible as persisted-identity review.
+This source proof does not allow decorative neon classes/styles or imply browser acceptance.`;
 
 export function parseArgs(argv) {
   const [command = 'help', ...rest] = argv;
@@ -259,6 +261,91 @@ function isForcedColorsReview(text, index, match) {
     variants.includes('forced-colors') && ['', '!'].includes(text.slice(start, index));
 }
 
+function persistedThemeIdentityLiterals(tree) {
+  const canonicalImports = new Set();
+  for (const statement of tree.statements) {
+    if (!ts.isImportDeclaration(statement) || !ts.isStringLiteral(statement.moduleSpecifier) ||
+        statement.moduleSpecifier.text !== '@/components/ui/ThemeProvider' ||
+        !statement.importClause || statement.importClause.isTypeOnly ||
+        !statement.importClause.namedBindings || !ts.isNamedImports(statement.importClause.namedBindings)) continue;
+    for (const binding of statement.importClause.namedBindings.elements) {
+      if (!binding.isTypeOnly && (binding.propertyName ?? binding.name).text === 'useTheme') canonicalImports.add(binding);
+    }
+  }
+  const literals = new Set();
+  if (!canonicalImports.size || tree.parseDiagnostics.length) return literals;
+  // Bind just this AST, without resolving imports, reading other files or compiling the app.
+  const program = ts.createProgram([tree.fileName], { noResolve: true, noLib: true }, {
+    getSourceFile: (name) => name === tree.fileName ? tree : undefined,
+    getDefaultLibFileName: () => '', writeFile: () => {}, getCurrentDirectory: () => '',
+    getDirectories: () => [], fileExists: (name) => name === tree.fileName,
+    readFile: () => undefined, getCanonicalFileName: (name) => name,
+    useCaseSensitiveFileNames: () => true, getNewLine: () => '\n',
+  });
+  const checker = program.getTypeChecker();
+  if (tree.bindDiagnostics?.length) return literals;
+  const symbolAt = (node) => checker.getSymbolAtLocation(node);
+  const written = new Set();
+  function markWritten(node) {
+    if (ts.isShorthandPropertyAssignment(node)) written.add(checker.getShorthandAssignmentValueSymbol(node));
+    if (ts.isIdentifier(node)) written.add(symbolAt(node));
+    ts.forEachChild(node, markWritten);
+  }
+  function collectWrites(node) {
+    if (ts.isBinaryExpression(node) && node.operatorToken.kind >= ts.SyntaxKind.FirstAssignment &&
+        node.operatorToken.kind <= ts.SyntaxKind.LastAssignment) markWritten(node.left);
+    if ((ts.isPrefixUnaryExpression(node) || ts.isPostfixUnaryExpression(node)) &&
+        [ts.SyntaxKind.PlusPlusToken, ts.SyntaxKind.MinusMinusToken].includes(node.operator)) markWritten(node.operand);
+    if (ts.isForOfStatement(node) || ts.isForInStatement(node)) markWritten(node.initializer);
+    ts.forEachChild(node, collectWrites);
+  }
+  collectWrites(tree);
+  const enclosing = (node, predicate) => {
+    for (let parent = node.parent; parent; parent = parent.parent) if (predicate(parent)) return parent;
+    return undefined;
+  };
+  function proven(identifier, comparison) {
+    const symbol = symbolAt(identifier);
+    if (!symbol || written.has(symbol) || symbol.declarations?.length !== 1) return false;
+    const binding = symbol.declarations[0];
+    if (!ts.isBindingElement(binding) || !ts.isIdentifier(binding.name) ||
+        binding.initializer || binding.dotDotDotToken ||
+        !ts.isIdentifier(binding.propertyName ?? binding.name) ||
+        (binding.propertyName ?? binding.name).text !== 'themeId' ||
+        !ts.isObjectBindingPattern(binding.parent)) return false;
+    const declaration = binding.parent.parent;
+    if (!ts.isVariableDeclaration(declaration) || declaration.name !== binding.parent ||
+        !ts.isVariableDeclarationList(declaration.parent) ||
+        !(declaration.parent.flags & ts.NodeFlags.Const) ||
+        !ts.isVariableStatement(declaration.parent.parent)) return false;
+    const scope = declaration.parent.parent.parent;
+    const fn = enclosing(declaration, ts.isFunctionLike);
+    if (!ts.isBlock(scope) || !fn || enclosing(comparison, ts.isFunctionLike) !== fn ||
+        enclosing(comparison, ts.isBlock) !== scope || declaration.end >= comparison.getStart(tree)) return false;
+    // Presentation attributes and template substitutions are not identity-only contexts.
+    if (enclosing(comparison, (node) => ts.isJsxAttribute(node) ||
+        ts.isPropertyAssignment(node) || ts.isTemplateExpression(node))) return false;
+    const call = declaration.initializer;
+    if (!call || !ts.isCallExpression(call) || !ts.isIdentifier(call.expression) ||
+        call.arguments.length || call.typeArguments?.length || call.questionDotToken) return false;
+    const hook = symbolAt(call.expression);
+    return Boolean(hook && !written.has(hook) && hook.declarations?.length === 1 &&
+      canonicalImports.has(hook.declarations[0]));
+  }
+  function visit(node) {
+    if (ts.isBinaryExpression(node) &&
+        [ts.SyntaxKind.EqualsEqualsEqualsToken, ts.SyntaxKind.ExclamationEqualsEqualsToken].includes(node.operatorToken.kind)) {
+      for (const [literal, identifier] of [[node.left, node.right], [node.right, node.left]]) {
+        if (ts.isStringLiteral(literal) && literal.text === 'neon-cyan' &&
+            ts.isIdentifier(identifier) && proven(identifier, node)) literals.add(literal);
+      }
+    }
+    ts.forEachChild(node, visit);
+  }
+  visit(tree);
+  return literals;
+}
+
 export function scanSource(source, file) {
   const normalized = file.replaceAll('\\', '/');
   const findings = [];
@@ -267,24 +354,29 @@ export function scanSource(source, file) {
     ['arbitrary-tailwind', /\b(?:[a-z][\w-]*-)?[a-z][\w-]*-\[[^\]\r\n]+\]/gi, 'Use existing spacing/type/shape tokens; review genuine computed/container exceptions.'],
     ['glow-neon', /\b(?:[\w-]*(?:neon|glow)[\w-]*|drop-shadow-\[[^\]]+\])/gi, 'Remove decorative glow/neon; retain persisted IDs only at their owners.'],
   ];
-  function add(rule, match, offset, action, forcedColorsReview = false) {
+  function add(rule, match, offset, action, forcedColorsReview = false, persistedIdentityReview = false) {
     const before = source.slice(0, offset);
     const line = before.split('\n').length;
     const column = offset - before.lastIndexOf('\n');
     const tokenReference = rule === 'arbitrary-tailwind' && /(?:var\(--|--[\w-]+)/.test(match);
     const classification = owners.has(normalized) && rule !== 'nonstandard-icon-import'
       ? 'token-owner-exemption' : tokenReference ? 'token-reference-review'
-        : forcedColorsReview ? 'forced-colors-accessibility-review' : 'candidate-violation';
+        : forcedColorsReview ? 'forced-colors-accessibility-review'
+          : persistedIdentityReview ? 'persisted-theme-identity-review' : 'candidate-violation';
     if (classification === 'forced-colors-accessibility-review') {
       action = 'Retain standard forced-colors system color; review MDC-041 focus, borders and selected states in OS high contrast. Static evidence is not accessibility acceptance.';
     }
+    if (classification === 'persisted-theme-identity-review') {
+      action = 'Preserve the saved neon-cyan theme ID (MDC-010/044): canonical ThemeProvider useTheme, immutable themeId binding and strict comparison proven in the same lexical scope. Review identity only; decorative neon CSS remains prohibited. Not browser/page acceptance.';
+    }
     findings.push({ file, line, column, rule, match, classification, action });
   }
-  const inspect = (text, offset) => {
+  const inspect = (text, offset, persistedIdentityReview = false) => {
     for (const [rule, pattern, action] of patterns) {
       for (const match of text.matchAll(pattern)) {
         add(rule, match[0], offset + match.index, action,
-          rule === 'arbitrary-tailwind' && isForcedColorsReview(text, match.index, match[0]));
+          rule === 'arbitrary-tailwind' && isForcedColorsReview(text, match.index, match[0]),
+          rule === 'glow-neon' && match[0] === 'neon-cyan' && persistedIdentityReview);
       }
     }
   };
@@ -293,9 +385,10 @@ export function scanSource(source, file) {
     inspect(masked, 0);
   } else {
     const tree = ts.createSourceFile(file, source, ts.ScriptTarget.Latest, true, file.endsWith('x') ? ts.ScriptKind.TSX : ts.ScriptKind.TS);
+    const persistedIdentities = persistedThemeIdentityLiterals(tree);
     function visit(node) {
       if (ts.isStringLiteralLike(node) || ts.isTemplateHead(node) || ts.isTemplateMiddle(node) || ts.isTemplateTail(node)) {
-        inspect(node.getText(tree), node.getStart(tree));
+        inspect(node.getText(tree), node.getStart(tree), persistedIdentities.has(node));
       }
       if ((ts.isImportDeclaration(node) || ts.isExportDeclaration(node)) && node.moduleSpecifier && ts.isStringLiteral(node.moduleSpecifier)) {
         const module = node.moduleSpecifier.text;
@@ -496,6 +589,9 @@ export async function main(argv = process.argv.slice(2)) {
     const report = await scanTree(start);
     const counts = Object.fromEntries(['candidate-violation', 'token-reference-review', 'token-owner-exemption', 'forced-colors-accessibility-review'].map((key) =>
       [key, report.findings.filter((finding) => finding.classification === key).length]));
+    const identityReviews = report.findings.filter((finding) => finding.classification === 'persisted-theme-identity-review').length;
+    // Preserve the existing count shape for reports without this new review category.
+    if (identityReviews) counts['persisted-theme-identity-review'] = identityReviews;
     console.log(JSON.stringify({ evidence: 'static candidates only; no visual acceptance', counts, ...report }, null, 2));
     return counts['candidate-violation'] ? 1 : 0;
   }
