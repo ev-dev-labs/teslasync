@@ -249,14 +249,24 @@ describe('usePurgeRedisSignals', () => {
   });
 
   it('rejects (so the page can toast) when the purge request fails', async () => {
-    mockedRequest.mockRejectedValueOnce(new ApiError('boom', 500));
+    const error = new ApiError('boom', 500);
+    mockedRequest.mockRejectedValueOnce(error);
     const { wrapper } = makeWrapper();
     const { result } = renderHook(() => usePurgeRedisSignals(), { wrapper });
 
     await act(async () => {
       await expect(result.current.mutateAsync(7)).rejects.toThrow('boom');
     });
-    expect(result.current.isError).toBe(true);
+    // mutateAsync settles before the scheduled observer notification commits.
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(result.current.error).toBe(error);
+    expect(result.current.isPending).toBe(false);
+    expect(result.current.data).toBeUndefined();
+    expect(mockedRequest).toHaveBeenCalledTimes(1);
+    const [url, opts] = callArgs();
+    expect(url).toBe('/dev-tools/redis-signals?vehicle_id=7');
+    expect(opts.method).toBe('DELETE');
+    expect(opts.requiresLiveMode).toBe(true);
   });
 });
 
