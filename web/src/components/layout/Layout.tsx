@@ -623,10 +623,17 @@ function ThemeQuickSwitcher({
       const target = e.target as Node
       if (containerRef.current?.contains(target)) return
       if (popoverRef.current?.contains(target)) return
+      if (document.activeElement?.closest('[role="dialog"][aria-modal="true"], [role="alertdialog"][aria-modal="true"]')) return
       setOpen(false)
     }
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setOpen(false)
+      if (e.key !== 'Escape' || e.defaultPrevented) return
+      const owner = e.target instanceof Element
+        ? e.target.closest('[role="dialog"], [role="alertdialog"]')
+        : null
+      if (owner && owner !== popoverRef.current) return
+      e.stopPropagation()
+      setOpen(false)
     }
     document.addEventListener('mousedown', onClickOutside)
     document.addEventListener('keydown', onKey)
@@ -690,6 +697,7 @@ function ThemeQuickSwitcher({
           <ThemeQuickSwitcherPopover
             coords={coords}
             popoverRef={popoverRef}
+            triggerRef={triggerRef}
             onClose={() => setOpen(false)}
             onCustomize={() => {
               setOpen(false)
@@ -1300,7 +1308,7 @@ export default function Layout() {
             exit={{ opacity: 0 }}
             // Not migrated to <Modal>.
             // Rationale: drawer scrim — pure backdrop with no content. Pairs
-            // with the <aside> sidebar (drawer pattern), not a dialog. New
+            // with the <nav> sidebar (drawer pattern), not a dialog. New
             // interactive dialogs MUST use <Modal>.
             // eslint-disable-next-line no-restricted-syntax
             className="fixed inset-0 z-[65] bg-[var(--surface-overlay)] xl:hidden"
@@ -1310,7 +1318,7 @@ export default function Layout() {
       </AnimatePresence>
 
       {/* Sidebar */}
-      <aside
+      <nav
         ref={sidebarRef}
         role="navigation"
         aria-label={t('a11y.primaryNav', 'Primary')}
@@ -1435,7 +1443,7 @@ export default function Layout() {
             because their info is surfaced in the StatusBar (VersionSegment
             shows the update dot + uptime, ConnectionSegment shows API
             status, ActiveVehicleSegment shows the active vehicle). */}
-      </aside>
+      </nav>
 
       {/* Mobile top bar */}
       {presentation.mode === 'standard' && !sidebarOpen && (

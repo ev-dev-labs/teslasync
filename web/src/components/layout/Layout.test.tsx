@@ -911,7 +911,7 @@ describe('Layout — global page chrome', () => {
     )
     expect(document.querySelector('[data-role="workspace-header"]')).toBeNull()
     expect(screen.queryByTestId('status-bar')).toBeNull()
-    expect(container.querySelector('aside')).toHaveClass('hidden')
+    expect(container.querySelector('nav[data-role="sidebar"]')).toHaveClass('hidden')
     expect(container.querySelector('[data-role="page-viewport"]')).toHaveClass(
       'max-w-[1600px]',
     )
@@ -1210,6 +1210,94 @@ describe('Layout — ThemeQuickSwitcher', () => {
       expect(screen.getByTestId('loc').textContent).toBe('/settings#appearance'),
     )
     expect(screen.queryByRole('dialog')).toBeNull()
+  })
+
+  it('uses a native named navigation landmark without changing sidebar state', () => {
+    renderLayout('/')
+    const navigation = screen.getByRole('navigation', { name: 'Primary' })
+    expect(navigation.tagName).toBe('NAV')
+    expect(navigation).toHaveAttribute('data-role', 'sidebar')
+    expect(navigation).toHaveAttribute('data-sidebar-open', 'false')
+  })
+
+  it('moves keyboard focus into the mounted picker and restores its visible trigger on Escape', async () => {
+    renderLayout('/')
+    const trigger = screen.getAllByRole('button', { name: 'Open theme picker' })[0]
+    trigger.focus()
+    fireEvent.click(trigger)
+    const dialog = await screen.findByRole('dialog', { name: 'Open theme picker' })
+    await waitFor(() => expect(dialog.contains(document.activeElement)).toBe(true))
+
+    fireEvent.keyDown(document.activeElement ?? dialog, { key: 'Escape' })
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+    expect(trigger).toHaveFocus()
+    expect(trigger).toHaveAttribute('aria-expanded', 'false')
+  })
+
+  it('leaves the parent picker open when another dialog owns Escape or prevents it', async () => {
+    renderLayout('/')
+    fireEvent.click(screen.getAllByRole('button', { name: 'Open theme picker' })[0])
+    const dialog = await screen.findByRole('dialog', { name: 'Open theme picker' })
+    const child = document.createElement('div')
+    child.setAttribute('role', 'dialog')
+    child.setAttribute('aria-modal', 'true')
+    child.tabIndex = -1
+    document.body.append(child)
+    try {
+      child.focus()
+      fireEvent.keyDown(child, { key: 'Escape' })
+      expect(dialog).toBeInTheDocument()
+      fireEvent.mouseDown(child)
+      expect(dialog).toBeInTheDocument()
+    } finally {
+      child.remove()
+    }
+    dialog.focus()
+    const preventedEscape = new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true })
+    preventedEscape.preventDefault()
+    fireEvent(dialog, preventedEscape)
+    expect(dialog).toBeInTheDocument()
+    fireEvent.keyDown(dialog, { key: 'Escape' })
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+  })
+
+  it('closes on outside mousedown and keeps programmatic opening and resize/scroll placement', async () => {
+    renderLayout('/')
+    const trigger = screen.getAllByRole('button', { name: 'Open theme picker' })[0]
+    const bounds = vi.spyOn(trigger, 'getBoundingClientRect')
+    bounds.mockReturnValue({ top: 20, bottom: 56, left: 320, right: 356, width: 36, height: 36, x: 320, y: 20, toJSON: () => ({}) })
+    trigger.focus()
+    act(() => window.dispatchEvent(new Event('open-theme-popover')))
+    const dialogs = await screen.findAllByRole('dialog', { name: 'Open theme picker' })
+    expect(dialogs).toHaveLength(screen.getAllByRole('button', { name: 'Open theme picker' }).length)
+    const dialog = dialogs.find(candidate => candidate.style.top === '64px')
+    if (!dialog) throw new Error('Anchored trigger did not open its picker')
+    expect(dialog.style.top).toBe('64px')
+    bounds.mockReturnValue({ top: 36, bottom: 72, left: 300, right: 336, width: 36, height: 36, x: 300, y: 36, toJSON: () => ({}) })
+    fireEvent.resize(window)
+    expect(dialog.style.top).toBe('80px')
+    bounds.mockReturnValue({ top: 40, bottom: 76, left: 300, right: 336, width: 36, height: 36, x: 300, y: 40, toJSON: () => ({}) })
+    fireEvent.scroll(document)
+    expect(dialog.style.top).toBe('84px')
+    fireEvent.mouseDown(document.body)
+    await waitFor(() => expect(screen.queryAllByRole('dialog')).toHaveLength(0))
+    expect(screen.getAllByRole('button', { name: 'Open theme picker' })).toContain(document.activeElement)
+    bounds.mockRestore()
+  })
+
+  it('does not restore the theme trigger after intentional Customize navigation', async () => {
+    renderLayout('/')
+    const trigger = screen.getAllByRole('button', { name: 'Open theme picker' })[0]
+    trigger.focus()
+    fireEvent.click(trigger)
+    const dialog = await screen.findByRole('dialog', { name: 'Open theme picker' })
+    const customize = within(dialog).getByRole('button', { name: 'Customize…' })
+    customize.focus()
+    const focus = vi.spyOn(trigger, 'focus')
+    fireEvent.click(customize)
+    await waitFor(() => expect(screen.getByTestId('loc').textContent).toBe('/settings#appearance'))
+    expect(focus).not.toHaveBeenCalled()
+    focus.mockRestore()
   })
 })
 
