@@ -17,6 +17,7 @@
     "dataFreshness": "Data freshness: {{state}}",
     "chartFigure": "Chart: {{title}}",
     "helpFor": "Help for {{field}}",
+    "scrollToTop": "{{region}} — scroll to top",
     "summary": {
       "route": {
         "fromTo": "Route map from {{start}} to {{end}}",

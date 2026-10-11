@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback, type ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ArrowUp } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { typography } from '@/lib/tokens';
@@ -59,6 +60,7 @@ export function PageHeaderSticky({
   testId,
   className,
 }: PageHeaderStickyProps) {
+  const { t } = useTranslation();
   const [visible, setVisible] = useState(false);
   const { reduce } = useMotionPreference();
 
@@ -132,7 +134,7 @@ export function PageHeaderSticky({
           size="sm"
           onClick={handleScrollTop}
           className={cn(innerClass, 'h-auto w-full rounded-none text-start', typography.weight.regular)}
-          aria-label={`${ariaLabel} — scroll to top`}
+          aria-label={t('a11y.scrollToTop', '{{region}} — scroll to top', { region: ariaLabel })}
         >
           {content}
         </Button>
