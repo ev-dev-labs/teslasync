@@ -320,14 +320,14 @@ export default function CommandHistoryPage() {
   ];
 
   const analyticsEmptyMsg = noVehicle
-    ? t('commandHistory.selectVehiclePrompt', 'Select a vehicle to view command activity')
+    ? t('commandHistory.selectVehicleActivityPrompt', 'Select a vehicle to view command activity')
     : t('commandHistory.noRangeData', 'No commands in the selected range');
 
   const timelineEmptyMsg =
     searchQuery || statusFilter !== 'all'
       ? t('commandHistory.noFilterResults', 'No commands match the current filters')
       : noVehicle
-        ? t('commandHistory.selectVehiclePrompt', 'Select a vehicle to view command history')
+        ? t('commandHistory.selectVehicleHistoryPrompt', 'Select a vehicle to view command history')
         : t('commandHistory.noCommands', 'No commands have been sent yet');
   const operationalMetrics = useOperationalMetrics(commandHistoryMetrics(
     !noVehicle && commands != null ? stats : null,
@@ -374,7 +374,7 @@ export default function CommandHistoryPage() {
               scope={`${formatDateTime(startInstant, { tz: timeZone })} → ${formatDateTime(endInstantExclusive, { tz: timeZone })}`}
               provenance={t('commandHistory.summary.scope', 'Selected vehicle history; status and search filters apply only to the timeline.')}
               statusLabel={noVehicle
-                ? t('commandHistory.selectVehiclePrompt', 'Select a vehicle to view command history')
+                ? t('commandHistory.selectVehicleHistoryPrompt', 'Select a vehicle to view command history')
                 : isLoading ? t('commandHistory.brief.loading', 'Loading command history')
                   : state.status === 'stale' ? t('dataState.stale.title', 'Data may be stale')
                     : commands == null ? t('commandHistory.brief.unavailable', 'Command history unavailable')

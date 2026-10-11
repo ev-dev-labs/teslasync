@@ -135,7 +135,7 @@ export function DrivesEvidenceTable({
             aria-label={t('drives.collections.aria', 'Filter drives by collection')}
             className="text-xs"
             options={[
-              { value: 'all', label: t('drives.coll.all', 'All drives') },
+              { value: 'all', label: t('drives.coll.allOption', 'All drives') },
               { value: 'anomalies', label: t('drives.coll.anomalies', 'Anomalies') },
               { value: 'notable', label: t('drives.coll.notable', 'Notable') },
               { value: 'commutes', label: t('drives.coll.commutes', 'Commutes') },

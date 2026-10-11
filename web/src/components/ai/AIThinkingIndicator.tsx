@@ -47,7 +47,7 @@ export function AIThinkingIndicator({
   // Fall back to the default when no override is given OR the override is
   // empty/whitespace — a role="status" live region must never announce a
   // blank string, and an empty label would render a caption-less indicator.
-  const text = label?.trim() ? label : t('helix.thinking', 'Helix is thinking')
+  const text = label?.trim() ? label : t('helix.thinkingStatusLabel', 'Helix is thinking')
   return (
     <div
       className="flex flex-col gap-3"

@@ -11,6 +11,33 @@ import shell from './en/shell.json'
 
 type Json = Record<string, unknown>
 
+export const copyOwnerAdditions = [
+  ['helix.thinkingButtonLabel', 'Helix is thinking…'],
+  ['helix.thinkingStatusLabel', 'Helix is thinking'],
+  ['drives.coll.allOption', 'All drives'],
+  ['drives.coll.allPill', 'All'],
+  ['commandHistory.selectVehicleActivityPrompt', 'Select a vehicle to view command activity'],
+  ['commandHistory.selectVehicleHistoryPrompt', 'Select a vehicle to view command history'],
+  ['signalExplorer.liveHelpAria', 'More info about live signal streaming'],
+  ['signalsWorkspace.liveCompareHelpAria', 'More info about live and compare modes'],
+  ['fleet.batteryLevelAriaSuffix', 'battery level'],
+  ['fleet.batteryLevelAriaLabel', 'Battery level'],
+] as const
+
+// Exact accepted key-only changes; reverse only these calls for the frozen
+// producer fingerprint. Defaults, options, gates and all other bytes stay pinned.
+const copyOwnerSourceSplits = [
+  ['web/src/components/ai/AIFeatureCard.tsx', 'helix.thinkingButtonLabel', 'helix.thinking', 'Helix is thinking…', 1],
+  ['web/src/features/driving/components/DrivesEvidenceTable.tsx', 'drives.coll.allOption', 'drives.coll.all', 'All drives', 1],
+  ['web/src/features/driving/hooks/useDrivesListPageCollections.ts', 'drives.coll.allPill', 'drives.coll.all', 'All', 2],
+  ['web/src/features/system/pages/CommandHistoryPage.tsx', 'commandHistory.selectVehicleActivityPrompt', 'commandHistory.selectVehiclePrompt', 'Select a vehicle to view command activity', 1],
+  ['web/src/features/system/pages/CommandHistoryPage.tsx', 'commandHistory.selectVehicleHistoryPrompt', 'commandHistory.selectVehiclePrompt', 'Select a vehicle to view command history', 2],
+  ['web/src/features/telemetry/pages/SignalExplorerPage.tsx', 'signalExplorer.liveHelpAria', 'help.signal.live.aria', 'More info about live signal streaming', 1],
+  ['web/src/features/telemetry/pages/SignalsWorkspacePage.tsx', 'signalsWorkspace.liveCompareHelpAria', 'help.signal.live.aria', 'More info about live and compare modes', 1],
+  ['web/src/features/vehicles/components/BatteryComparison.tsx', 'fleet.batteryLevelAriaSuffix', 'fleet.batteryLevel', 'battery level', 1],
+  ['web/src/features/vehicles/components/VehicleCard.tsx', 'fleet.batteryLevelAriaLabel', 'fleet.batteryLevel', 'Battery level', 1],
+] as const
+
 // Frozen attempt-1 source defaults, count controls and actual producer namespaces.
 // Same-value keys owned by other features are deliberately not aliases.
 export const featureOwnedAdditions = [
@@ -1149,6 +1176,10 @@ beforeAll(async () => {
 })
 
 describe('excluded806 feature-owned actual producer canonical defaults', () => {
+  it.each(copyOwnerAdditions)('preserves the exact accepted copy split %s', (key, value) => {
+    expect(nested(catalog, key)).toBe(value)
+  })
+
   it.each(additions)('ships %s as its exact feature-owned string without caller fallback', (key, value, _count, namespaces) => {
     expect(nested(catalog, key)).toBe(value)
     expect(resources.some(resource => nested(resource, key) === value)).toBe(true)
@@ -1176,20 +1207,31 @@ describe('excluded806 feature-owned actual producer canonical defaults', () => {
 
   it('preserves all 28257 predecessor leaves and every previously accepted value', () => {
     expect(additions).toHaveLength(806)
-    const keys = new Set<string>(additions.map(([key]) => key))
-    expect(keys.size).toBe(806)
+    expect(copyOwnerAdditions).toHaveLength(10)
+    const keys = new Set<string>([...additions, ...copyOwnerAdditions].map(([key]) => key))
+    expect(keys.size).toBe(816)
     const oldEntries = leaves(catalog).filter(([key]) => !keys.has(key))
       .sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0)
     expect(oldEntries).toHaveLength(28257)
     expect(createHash('sha256').update(JSON.stringify(oldEntries)).digest('hex'))
       .toBe('890c0369385274774b8b670dbaa98036c4f0da7bec18213b6f78d35c372e90c6')
-    expect(leaves(catalog)).toHaveLength(29063)
+    expect(leaves(catalog)).toHaveLength(29073)
     expect(catalog.settings.title).toBe('Settings')
     expect(catalog.pwa).toMatchObject(shell.pwa)
   })
 
   it.each(sourceHashes)('keeps the frozen producer and input bytes unchanged: %s', (path, sha256) => {
-    const source = readFileSync(resolve(process.cwd(), '..', path))
+    let source = readFileSync(resolve(process.cwd(), '..', path))
+    for (const [file, key, oldKey, value, count] of copyOwnerSourceSplits) {
+      if (file !== path) continue
+      const args = key.endsWith('HelpAria')
+        ? `, { defaultValue: '${value}' })`
+        : `, '${value}')`
+      const call = `t('${key}'${args}`
+      const text = source.toString('utf8')
+      expect(text.split(call)).toHaveLength(count + 1)
+      source = Buffer.from(text.replaceAll(call, `t('${oldKey}'${args}`))
+    }
     expect(createHash('sha256').update(source).digest('hex')).toBe(sha256)
   })
 

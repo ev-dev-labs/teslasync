@@ -82,7 +82,7 @@ export function VehicleCard({ vehicle, onDelete }: VehicleCardProps) {
                 <div className="flex items-center gap-2">
                   <ProgressRing
                     value={batteryLevel ?? 0}
-                    ariaLabel={`${t('fleet.batteryLevel', 'Battery level')}: ${batteryLevel == null ? '—' : `${batteryLevel}%`}`}
+                    ariaLabel={`${t('fleet.batteryLevelAriaLabel', 'Battery level')}: ${batteryLevel == null ? '—' : `${batteryLevel}%`}`}
                     size={36}
                     strokeWidth={3}
                     color={batColor}

@@ -364,7 +364,7 @@ export default function SignalExplorerPage() {
                   <HelpTooltip
                     i18nKey="help.signal.live"
                     defaultValue="Live mode streams real-time signal values via SSE. Maintains a rolling 5-minute window throttled to 2 Hz updates."
-                    ariaLabel={t('help.signal.live.aria', { defaultValue: 'More info about live signal streaming' })}
+                    ariaLabel={t('signalExplorer.liveHelpAria', { defaultValue: 'More info about live signal streaming' })}
                     placement="left"
                   />
                 </div>

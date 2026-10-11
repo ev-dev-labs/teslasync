@@ -279,7 +279,7 @@ export function AIFeatureCard({
   // rewrite the existing `getByRole('button', { name: /<verb>/ })`
   // contracts).
   const askHelixLabel = t('helix.askHelix', 'Ask Helix')
-  const thinkingLabel = t('helix.thinking', 'Helix is thinking…')
+  const thinkingLabel = t('helix.thinkingButtonLabel', 'Helix is thinking…')
   const button = (
     <Button
       type="button"

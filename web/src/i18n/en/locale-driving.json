@@ -1020,6 +1020,8 @@
       "overviewScope": "Aggregated returned drives in the selected window; comparison uses the independent prior window. These are not server-wide totals."
     },
     "coll": {
+      "allOption": "All drives",
+      "allPill": "All",
       "anomalies": "Anomalies",
       "notable": "Notable",
       "tagged": "Tagged"
@@ -1327,6 +1329,8 @@
       "unavailable": "Unavailable",
       "used": "Used"
     },
+    "thinkingButtonLabel": "Helix is thinking…",
+    "thinkingStatusLabel": "Helix is thinking",
     "tooltip": "Helix grounds responses in redacted TeslaSync data, application knowledge, and explicit tool evidence."
   },
   "help": {

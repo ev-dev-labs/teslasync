@@ -6,7 +6,7 @@ import shell from './en/shell.json'
 import runtimeManifest from './en/runtime-manifest.json'
 import usageManifest from './en/usage-manifest.json'
 import i18n, { flushPendingEnglishResourcesForTest, loadEnglishNamespace } from './index'
-import { featureOwnedAdditions } from './excluded-feature-owned-producers.test'
+import { copyOwnerAdditions, featureOwnedAdditions } from './excluded-feature-owned-producers.test'
 
 type Json = Record<string, unknown>
 
@@ -143,6 +143,10 @@ afterEach(() => {
 })
 
 describe('resolved known-missing canonical producers', () => {
+  it.each(copyOwnerAdditions)('preserves the exact accepted copy split %s', (key, value) => {
+    expect(nested(catalog, key)).toBe(value)
+  })
+
   it.each(featureOwnedAdditions)('preserves the exact accepted feature-owned addition %s', (key, value) => {
     expect(nested(catalog, key)).toBe(value)
   })
@@ -161,8 +165,9 @@ describe('resolved known-missing canonical producers', () => {
   it('preserves every old English leaf, including Settings and critical PWA copy', () => {
     expect(laterAdditions).toHaveLength(81)
     expect(featureOwnedAdditions).toHaveLength(806)
-    const addedKeys = new Set<string>([...additions, ...laterAdditions, ...featureOwnedAdditions].map(([key]) => key))
-    expect(addedKeys.size).toBe(905)
+    expect(copyOwnerAdditions).toHaveLength(10)
+    const addedKeys = new Set<string>([...additions, ...laterAdditions, ...featureOwnedAdditions, ...copyOwnerAdditions].map(([key]) => key))
+    expect(addedKeys.size).toBe(915)
     const oldEntries = leaves(catalog)
       .filter(([key]) => !addedKeys.has(key))
       .sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0)
@@ -170,7 +175,7 @@ describe('resolved known-missing canonical producers', () => {
     // Frozen before-producer leaf/value fingerprint, not a regenerated baseline.
     expect(createHash('sha256').update(JSON.stringify(oldEntries)).digest('hex'))
       .toBe('d919112ce76ecf5875dc1641f99561a22871a3ca3c9ce9a58c70d308ce34a6ad')
-    expect(leaves(catalog)).toHaveLength(29063)
+    expect(leaves(catalog)).toHaveLength(29073)
     expect(catalog.settings.title).toBe('Settings')
     expect(catalog.pwa.offline.banner).toBe(
       'Showing cached data. Operational changes stay disabled until you reconnect.',

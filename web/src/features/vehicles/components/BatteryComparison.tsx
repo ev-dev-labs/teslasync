@@ -91,7 +91,7 @@ export function BatteryComparison({ vehicles }: BatteryComparisonProps) {
                   aria-valuenow={level ?? undefined}
                   aria-valuemin={level == null ? undefined : 0}
                   aria-valuemax={level == null ? undefined : 100}
-                  aria-label={`${label} ${t('fleet.batteryLevel', 'battery level')}`}
+                  aria-label={`${label} ${t('fleet.batteryLevelAriaSuffix', 'battery level')}`}
                 >
                   <div
                     className="h-full rounded-full transition-all duration-slow"

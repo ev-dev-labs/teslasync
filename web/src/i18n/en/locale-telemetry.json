@@ -375,7 +375,8 @@
       "status": "Status"
     },
     "live": "Live",
-    "results": "Results"
+    "results": "Results",
+    "liveHelpAria": "More info about live signal streaming"
   },
   "signalGap": {
     "status": "Status",
@@ -609,7 +610,8 @@
     "run": "Run",
     "explorer": "Signal explorer",
     "chartAuto": "Auto",
-    "chartGrid": "Grid"
+    "chartGrid": "Grid",
+    "liveCompareHelpAria": "More info about live and compare modes"
   },
   "telemetry": {
     "brief": {
@@ -1692,6 +1694,8 @@
       "unavailable": "Unavailable",
       "used": "Used"
     },
+    "thinkingButtonLabel": "Helix is thinking…",
+    "thinkingStatusLabel": "Helix is thinking",
     "tooltip": "Helix grounds responses in redacted TeslaSync data, application knowledge, and explicit tool evidence."
   },
   "help": {

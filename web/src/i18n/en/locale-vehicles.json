@@ -26,7 +26,9 @@
     "avgBattery": "Avg battery",
     "totalRange": "Total range",
     "chargingOnline": "Charging / online",
-    "unknownVehicle": "Unknown vehicle"
+    "unknownVehicle": "Unknown vehicle",
+    "batteryLevelAriaSuffix": "battery level",
+    "batteryLevelAriaLabel": "Battery level"
   },
   "parking": {
     "title": "Parking analytics",
@@ -2377,6 +2379,8 @@
       "unavailable": "Unavailable",
       "used": "Used"
     },
+    "thinkingButtonLabel": "Helix is thinking…",
+    "thinkingStatusLabel": "Helix is thinking",
     "tooltip": "Helix grounds responses in redacted TeslaSync data, application knowledge, and explicit tool evidence."
   },
   "help": {

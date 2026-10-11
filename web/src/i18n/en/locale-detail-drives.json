@@ -180,7 +180,9 @@
     "coll": {
       "anomalies": "Anomalies",
       "notable": "Notable",
-      "tagged": "Tagged"
+      "tagged": "Tagged",
+      "allOption": "All drives",
+      "allPill": "All"
     },
     "fsdFilter": {
       "reported": "FSD",

@@ -534,7 +534,7 @@ export default function SignalsWorkspacePage() {
                 <HelpTooltip
                   i18nKey="help.signal.live"
                   defaultValue="Live mode streams real-time signal values via SSE. Maintains a rolling 5-minute window throttled to 2 Hz updates. Compare mode swaps in two-snapshot diff."
-                  ariaLabel={t('help.signal.live.aria', { defaultValue: 'More info about live and compare modes' })}
+                  ariaLabel={t('signalsWorkspace.liveCompareHelpAria', { defaultValue: 'More info about live and compare modes' })}
                   placement="left"
                 />
               </div>

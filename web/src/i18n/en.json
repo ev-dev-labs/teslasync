@@ -15661,7 +15661,9 @@
     "avgBattery": "Avg battery",
     "totalRange": "Total range",
     "chargingOnline": "Charging / online",
-    "unknownVehicle": "Unknown vehicle"
+    "unknownVehicle": "Unknown vehicle",
+    "batteryLevelAriaSuffix": "battery level",
+    "batteryLevelAriaLabel": "Battery level"
   },
   "import": {
     "emptyInput": "No data to validate",
@@ -17883,7 +17885,8 @@
     "run": "Run",
     "explorer": "Signal explorer",
     "chartAuto": "Auto",
-    "chartGrid": "Grid"
+    "chartGrid": "Grid",
+    "liveCompareHelpAria": "More info about live and compare modes"
   },
   "anomaly": {
     "summary": {
@@ -19223,7 +19226,9 @@
     "coll": {
       "anomalies": "Anomalies",
       "notable": "Notable",
-      "tagged": "Tagged"
+      "tagged": "Tagged",
+      "allOption": "All drives",
+      "allPill": "All"
     },
     "fsdFilter": {
       "reported": "FSD",
@@ -22168,7 +22173,9 @@
     },
     "breadcrumb": {
       "integrations": "Integrations"
-    }
+    },
+    "thinkingButtonLabel": "Helix is thinking…",
+    "thinkingStatusLabel": "Helix is thinking"
   },
   "chatbot": {
     "title": "Helix",
@@ -22271,7 +22278,9 @@
     "success": "Success",
     "failedLabel": "Failed",
     "statusBreakdown": "Status breakdown",
-    "other": "Other"
+    "other": "Other",
+    "selectVehicleActivityPrompt": "Select a vehicle to view command activity",
+    "selectVehicleHistoryPrompt": "Select a vehicle to view command history"
   },
   "audit": {
     "title": "Audit log",
@@ -25295,7 +25304,8 @@
       "status": "Status"
     },
     "live": "Live",
-    "results": "Results"
+    "results": "Results",
+    "liveHelpAria": "More info about live signal streaming"
   },
   "signalQuery": {
     "from": "From",

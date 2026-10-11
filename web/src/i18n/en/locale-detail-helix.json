@@ -35,6 +35,8 @@
     },
     "breadcrumb": {
       "integrations": "Integrations"
-    }
+    },
+    "thinkingButtonLabel": "Helix is thinking…",
+    "thinkingStatusLabel": "Helix is thinking"
   }
 }

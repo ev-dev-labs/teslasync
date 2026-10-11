@@ -37,7 +37,9 @@
     "success": "Success",
     "failedLabel": "Failed",
     "statusBreakdown": "Status breakdown",
-    "other": "Other"
+    "other": "Other",
+    "selectVehicleActivityPrompt": "Select a vehicle to view command activity",
+    "selectVehicleHistoryPrompt": "Select a vehicle to view command history"
   },
   "commandReliability": {
     "summary": {
@@ -2646,6 +2648,8 @@
       "unavailable": "Unavailable",
       "used": "Used"
     },
+    "thinkingButtonLabel": "Helix is thinking…",
+    "thinkingStatusLabel": "Helix is thinking",
     "tooltip": "Helix grounds responses in redacted TeslaSync data, application knowledge, and explicit tool evidence."
   },
   "help": {
