@@ -49,6 +49,53 @@ describe('settings summaries use the real compact Brief and raw bridge', () => {
     expect(within(drawer).getByRole('link', { name: 'Edit comparison cost' })).toHaveAttribute('href', '/settings#general')
   })
 
+  describe('SettingsSummaryBrief independent metric loading', () => {
+    it('bridges local loading overrides without changing remote defaults, source metadata or rich captions', () => {
+      const { container } = render(<SettingsSummaryBrief title="Mixed settings" description="Independent source states"
+        source="Saved settings and browser font preferences" scope="Browser font is independently available"
+        freshness="Remote source not confirmed" loading
+        metrics={[
+          { metricId: 'rate', occurrenceId: 'remote', label: 'Remote cost', rawValue: null },
+          { metricId: 'text', occurrenceId: 'font', label: 'Browser typography', rawValue: 'Atkinson',
+            context: <strong>125% browser scale</strong>, loading: false },
+        ]} />)
+      expect(container.querySelectorAll('[data-operational-value]')).toHaveLength(1)
+      expect(container.querySelector('[data-operational-metric="remote"]')).toHaveAttribute('data-value-state', 'missing')
+      expect(container.querySelector('[data-operational-metric="font"]')).toHaveAttribute('data-value-state', 'value')
+      expect(screen.getByText('Atkinson')).toBeVisible()
+      expect(screen.getByText('Loading source')).toBeVisible()
+      fireEvent.click(screen.getByRole('button', { name: 'Review details' }))
+      const drawer = screen.getByRole('dialog')
+      expect(within(drawer).getByText('Atkinson')).toBeVisible()
+      expect(within(drawer).getByText('Atkinson')).not.toHaveAttribute('aria-busy')
+      expect(within(drawer).getByText('125% browser scale').tagName).toBe('STRONG')
+      expect(within(drawer).getByText('Remote source not confirmed')).toBeVisible()
+      expect(within(drawer).getByText('Browser font is independently available')).toBeVisible()
+      expect(drawer.querySelectorAll('[aria-busy="true"]')).toHaveLength(1)
+    })
+
+    it('does not convert resolved missing or invalid local inputs into a successful zero or bypass validation', () => {
+      const formatter = vi.fn((raw: number) => ({ value: String(raw), unit: '' }))
+      const { container } = render(<SettingsSummaryBrief title="Validated settings" description="Raw source validation"
+        source="Independent sources" scope="Local results resolved" loading
+        metrics={[
+          { metricId: 'count', occurrenceId: 'missing-local', label: 'Missing local', rawValue: null, loading: false,
+            display: { formatter } },
+          { metricId: 'count', occurrenceId: 'invalid-local', label: 'Invalid local', rawValue: Number.NaN, loading: false,
+            display: { formatter } },
+          { metricId: 'count', occurrenceId: 'zero-local', label: 'Measured local zero', rawValue: 0, loading: false },
+        ]} />)
+      expect(container.querySelector('[data-operational-metric="missing-local"]')).toHaveAttribute('data-value-state', 'missing')
+      expect(container.querySelector('[data-operational-metric="invalid-local"]')).toHaveAttribute('data-value-state', 'invalid')
+      expect(container.querySelector('[data-operational-metric="zero-local"] [data-operational-value]')).toHaveTextContent('0')
+      expect(formatter).not.toHaveBeenCalled()
+      fireEvent.click(screen.getByRole('button', { name: 'Review details' }))
+      const drawer = screen.getByRole('dialog')
+      expect(within(drawer).getByText('0', { exact: true })).toBeVisible()
+      expect(drawer.querySelector('[aria-busy="true"]')).toBeNull()
+    })
+  })
+
   it('distinguishes unavailable and invalid counts from measured zero while retaining source context', () => {
     const { container } = render(<SettingsSummaryBrief title="Reading" description="Latest source readings"
       source="Independent sources" scope="No common time range" retained

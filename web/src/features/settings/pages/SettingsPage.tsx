@@ -17,15 +17,16 @@ import {
 import { useSettings } from '@/api/hooks/useSettings'
 import { useFont } from '@/components/ui/FontProvider'
 import { PageLayout } from '@/components/layout'
-import { Button, SectionTitle, Text } from '@/components/ui'
+import { Button, Icon, SectionTitle, Text } from '@/components/ui'
 import type { StatMetric } from '@/components/data-display'
-import { SettingsSummaryBrief } from '../components/operationalbrief-all/SettingsSummaryBrief'
+import { SettingsSummaryBrief, type SettingsSummaryMetric } from '../components/operationalbrief-all/SettingsSummaryBrief'
 import { FadeIn } from '@/components/motion'
 import { DataStateNotice, EditConflictBanner, QueryError } from '@/components/feedback'
 import { deriveDataState } from '@/api/dataState'
 import { useToast } from '@/components/feedback/Toast'
 import { usePageTitle } from '@/hooks/usePageTitle'
 import { useEditLease } from '@/hooks/useEditLease'
+import { useMotionPreference } from '@/hooks/useMotionPreference'
 import { dispatchTourLauncherOpen } from '@/lib/tourRegistry'
 import { restartChecklist } from '@/features/onboarding/checklist'
 
@@ -68,6 +69,7 @@ interface OverviewCard {
   sublabel?: string
   metricId?: StatMetric['metricId']
   display?: StatMetric['display']
+  loading?: boolean
 }
 
 /**
@@ -91,6 +93,7 @@ export default function SettingsPage() {
   const toast = useToast()
   const location = useLocation()
   const navigate = useNavigate()
+  const { reduce: reduceMotion } = useMotionPreference()
   const sections: SettingsSection[] = [
     { id: 'overview', title: t('settings.organization.overview', 'Overview'), description: t('settings.organization.overviewDescription', 'Current preferences and useful shortcuts') },
     { id: 'general', title: t('settings.organization.general', 'Units, language & costs'), description: t('settings.organization.generalDescription', 'Measurements, regional formats and comparison costs') },
@@ -137,10 +140,10 @@ export default function SettingsPage() {
     // Small delay so lazy-loaded sections + i18n have a chance to mount.
     const timer = window.setTimeout(() => {
       const el = document.getElementById(id)
-      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      if (el) el.scrollIntoView({ behavior: reduceMotion ? 'instant' : 'smooth', block: 'start' })
     }, 250)
     return () => window.clearTimeout(timer)
-  }, [location.hash])
+  }, [location.hash, reduceMotion])
 
   // ── Derived "preferences at a glance" cards (null-safe, display only) ──
   // Memoised so the seven KPI cards + their icon nodes are only rebuilt when
@@ -158,34 +161,34 @@ export default function SettingsPage() {
 
     return [
       {
-        icon: <Ruler className="h-5 w-5" aria-hidden="true" />,
+        icon: <Icon icon={Ruler} size="lg" />,
         label: t('overview.distance', 'Distance'),
         value: orDash(settings?.unit_of_length),
         sublabel: rangeLabel,
       },
       {
-        icon: <Thermometer className="h-5 w-5" aria-hidden="true" />,
+        icon: <Icon icon={Thermometer} size="lg" />,
         label: t('overview.temperature', 'Temperature'),
         value: settings ? (settings.unit_of_temp === 'F' ? '°F' : '°C') : '—',
       },
       {
-        icon: <Gauge className="h-5 w-5" aria-hidden="true" />,
+        icon: <Icon icon={Gauge} size="lg" />,
         label: t('overview.pressure', 'Pressure'),
         value: orDash(settings?.unit_of_pressure),
       },
       {
-        icon: <Languages className="h-5 w-5" aria-hidden="true" />,
+        icon: <Icon icon={Languages} size="lg" />,
         label: t('overview.language', 'Language'),
         value: languageCode,
         sublabel: languageName,
       },
       {
-        icon: <CircleDollarSign className="h-5 w-5" aria-hidden="true" />,
+        icon: <Icon icon={CircleDollarSign} size="lg" />,
         label: t('overview.currency', 'Currency'),
         value: settings ? currencySymbol : '—',
       },
       {
-        icon: <Zap className="h-5 w-5" aria-hidden="true" />,
+        icon: <Icon icon={Zap} size="lg" />,
         label: t('overview.energyCost', 'Energy cost'),
         value: settings?.base_cost_per_kwh,
         metricId: 'rate',
@@ -193,20 +196,22 @@ export default function SettingsPage() {
         sublabel: t('overview.perKwh', 'per kWh'),
       },
       {
-        icon: <Type className="h-5 w-5" aria-hidden="true" />,
+        icon: <Icon icon={Type} size="lg" />,
         label: t('overview.typography', 'Typography'),
         value: SANS_LABELS[fontPrefs.sans] ?? fontPrefs.sans,
         sublabel: `${Math.round((fontPrefs.scale ?? 1) * 100)}%`,
+        loading: false,
       },
     ]
   }, [settings, fontPrefs, t, displayPrecision, displayLocale, fmtNumber])
-  const overviewMetrics: readonly StatMetric[] = overviewCards.map((card, index) => ({
+  const overviewMetrics: readonly SettingsSummaryMetric[] = overviewCards.map((card, index) => ({
     metricId: card.metricId ?? 'text',
     occurrenceId: `settings-preference-${index}`,
     label: card.label,
     rawValue: card.value === '—' ? null : card.value,
     display: card.display,
     context: <>{card.icon}{card.sublabel}</>,
+    loading: card.loading,
   }))
 
   return (
@@ -223,7 +228,7 @@ export default function SettingsPage() {
         resourceLabel={t('editConflict.resource.settings', 'Your settings')}
       />
 
-      <div className="grid min-w-0 gap-6 lg:grid-cols-[15rem_minmax(0,1fr)]">
+      <div className="grid min-w-0 gap-6 lg:grid-cols-settings-navigation">
         <SettingsNavigation sections={sections} activeSection={activeSection.id}
           onSelect={id => navigate({ pathname: location.pathname, search: location.search, hash: `#${id}` }, { replace: true })} />
         <div className="min-w-0 space-y-5">
@@ -251,11 +256,11 @@ export default function SettingsPage() {
               <FadeIn delay={0.1}>
                 <section aria-label={t('quickActions.aria', 'Settings shortcuts')} className="space-y-3">
                   <SectionTitle>{t('quickActions.title', 'Quick actions')}</SectionTitle>
-                  <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,18rem),1fr))] gap-4">
+                  <div className="grid grid-cols-settings-shortcuts gap-4">
                     <SettingsActionCard
                       href="/data-export"
                       iconColor="green"
-                      icon={<Download className="h-5 w-5" aria-hidden="true" />}
+                      icon={<Icon icon={Download} size="lg" />}
                       title={t('export.title', 'Data export')}
                       description={t(
                         'export.subtitle',
@@ -265,19 +270,19 @@ export default function SettingsPage() {
                     <SettingsActionCard
                       dataTour="settings-tour"
                       iconColor="cyan"
-                      icon={<PlayCircle className="h-5 w-5" aria-hidden="true" />}
+                      icon={<Icon icon={PlayCircle} size="lg" />}
                       title={t('tour.title', 'Onboarding tour')}
                       description={t('tour.description', 'Re-run the guided walkthrough of TeslaSync features')}
                       action={
                         <Button variant="ghost" wrapLabel className="h-auto min-h-11 w-full whitespace-normal" onClick={() => dispatchTourLauncherOpen()}>
-                          <PlayCircle className="mr-2 h-4 w-4" aria-hidden="true" />
+                          <Icon icon={PlayCircle} className="mr-2" />
                           {t('tour.openLauncher', 'Show tours')}
                         </Button>
                       }
                     />
                     <SettingsActionCard
                       iconColor="cyan"
-                      icon={<Rocket className="h-5 w-5" aria-hidden="true" />}
+                      icon={<Icon icon={Rocket} size="lg" />}
                       title={t('checklist.settings.title', 'Setup checklist')}
                       description={t(
                         'checklist.settings.description',
@@ -298,7 +303,7 @@ export default function SettingsPage() {
                             )
                           }}
                         >
-                          <Rocket className="mr-2 h-4 w-4" aria-hidden="true" />
+                          <Icon icon={Rocket} className="mr-2" />
                           {t('checklist.settings.restart', 'Restart checklist')}
                         </Button>
                       }

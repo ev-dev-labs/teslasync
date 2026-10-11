@@ -31,6 +31,8 @@ export interface OperationalBriefMetric {
   tone?: OperationalTone
   rawValue?: MetricRaw
   valueState?: 'value' | 'missing' | 'invalid'
+  /** An independent source can override the Brief's shared loading state. */
+  loading?: boolean
 }
 
 export interface OperationalAttention {
@@ -186,13 +188,14 @@ export function OperationalBrief({
                   <div className={cn(compact && 'flex items-baseline justify-between gap-3')}>
                     <MetricLabel className={compact ? 'min-w-0 text-xs' : undefined}>{metric.label}</MetricLabel>
                     <MetricValue
-                      data-operational-value={loading ? undefined : true}
+                      data-operational-value={(metric.loading ?? loading) ? undefined : true}
+                      aria-busy={(metric.loading ?? loading) || undefined}
                       className={cn(
                         compact ? 'min-w-0 break-words text-base sm:text-lg' : 'mt-1 break-words text-xl sm:text-2xl',
                         TONE_TEXT[metric.tone ?? 'neutral'],
                       )}
                     >
-                      {loading ? (
+                      {(metric.loading ?? loading) ? (
                         <span aria-hidden="true" className="block h-5 w-20 max-w-full rounded bg-[var(--surface-3)]" />
                       ) : metric.value}
                     </MetricValue>
@@ -269,10 +272,10 @@ export function OperationalBrief({
                     as="span"
                     size="sm"
                     weight="bold"
-                    aria-busy={loading || undefined}
+                    aria-busy={(metric.loading ?? loading) || undefined}
                     className={cn('min-w-0 break-words tabular-nums', TONE_TEXT[metric.tone ?? 'neutral'])}
                   >
-                    {loading ? (
+                    {(metric.loading ?? loading) ? (
                       <span aria-hidden="true" className="block h-5 w-20 max-w-full rounded bg-[var(--surface-3)]" />
                     ) : metric.value}
                   </Text>

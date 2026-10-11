@@ -1,6 +1,26 @@
 # Frontend modernization queue
 
-## Current phase: 4 - Shared deliveries released; rolling pilot follow-ups
+## Current phase: 4 - Pilot source intake accepted; coherent gates pending
+
+Latest17:21Z intake supersedes old runtime/scan observations below, not failure
+history. Both remaining workers delivered idle/DONE and released every writer.
+Settings independent intake080187d6 verifies132artifacts/six exact owned paths/
+eleven protected files, exact three production inverses, all original test-call
+blocks and earlier failed case identities retained;40tests/threephysicalfiles,
+strictlint/three current-source scans native0. Local font remains available in
+summary AND drawer during unrelated remote loading, with old default global
+loading behavior preserved. Geometry is exact named tokens; all data/sections/
+actions/trust/navigation retained. Settings source closure targets actual1042;
+last observedHEAD1354ff572a/count1041; exact Git receipt required after commit.
+Contract intakeb8c76777 verifies66artifacts/one owned test/twelve protected files,
+entire test byte inverse, all18case identities and every other assertion retained;
+18tests/strictlint0. Only prospectively authorized obsolete expected class changed
+plus negative legacy-class assertion. Dashboard historical attempts remainFAILED;
+cumulative source readiness is now accepted through separately queued contract
+repair and exact production token proof, not another page implementation retry.
+No current compiler/fullsuite/build/browser/phase acceptance. Parent helper
+newline-assumption failure is preserved separately; no shipping source failed.
+Zero actual current running workers at terminal intake; no zombies/reset.
 
 All four bounded repair terminal notifications were consumed by known ID;
 runtime confirms each idle and their exclusive source leases are released.
@@ -20,7 +40,7 @@ bytes/81assertions and all48failed-run case identities retained; production
 inverse restores six colors/comment exactly, no math/SI/threshold changes.
 Sticky parent helper failed on an
 incorrect release-schema assumption, not a source failure; receipt retained.
-No page/phase/browser acceptance or fresh full gate. HEAD/count1040,
+No page/phase/browser acceptance or fresh full gate. HEAD/count1041,
 index empty, last mandatory compiler1035; next1050.
 Geometry/scanner exact source commits are2999b599bb/ab719b3007,
 actual1038/1039 respectively; both indices verified empty after commit.
@@ -30,9 +50,31 @@ This is the same queued attempt2, not another implementation retry. Fresh
 current-candidate baseline869b284f retained; attempt1/pause/failures and ten
 protected files retained. Runtime launch is observed, not a permanent live count.
 Settings follows its own geometry/sticky intake, never an all-four barrier.
-Sticky accepted source commit21b74236cfactual1040. Settings attempt2 is ready
-and prospectively reserves its six exact files, including tightly coupled
-Brief per-source loading support; original tests remain additive/preserved.
+Sticky/grade accepted source commits21b74236cf/1354ff572aactual1040/1041.
+Settings attempt2 has been dispatched to replacement08b8a2cb after the original
+owner was unavailable following the crash; same queued attempt2, not a new retry.
+Fresh baseline6511c7c8 captures six exact owned/eleven protected paths,
+including tightly coupled Brief per-source loading support. Original tests
+remain additive/preserved. Baseline1040 predates unrelated grade-only1041;
+each relevant pin must verify before writes.
+Scheduled lifecycle reconciliation confirms Dashboardc00343f5 actually running
+at133seconds, fresh17:04:04Zheartbeat; no stuck predicate. Settings runtime launch
+returned08b8a2cb; start confirmation is separate from reservation.
+No reset/retry/full gate. All four shared owners are delivered idle/intaken,
+not stuck despite older heartbeat timestamps.
+Latest scheduled lifecycle observation: Dashboardc00343f5 delivered FAILED and
+is verified idle/released, not stuck. Source has the exact two token substitutions;
+newly authored pilot test still expects old z-[9990] class atL436 under the
+parent's assertion-freeze restriction:17passed/1failed/native1, lint/scanner0.
+Attempt2 is blocked; no third page implementation retry or accepted-source commit.
+Independent parent intake1a41f2a6 verifies36immutable artifacts/all18case identities,
+ten protected inputs, exact source inverse and raw native failure.
+Distinct tests-only contract worker3efa1fd8 is launched from prospective baseline
+a65e0db6(one owned/twelve protected), not a page implementation retry. Only the
+new pilot's obsolete class expectation may change; historical failures and all
+shipping tests/production source stay immutable. Launch is not a permanent live count.
+Settings08b8a2cb is actually running at244seconds with fresh17:07:52Zheartbeat;
+no stuck predicate. Coherent gates remain blocked.
 Rolling intake/dispatch continues without filling slots with stale queue items.
 
 Health check at16:34:44Z verifies all four known repair IDs actually running,
@@ -1848,8 +1890,13 @@ Phase2 intake health: all19 original primitive actors delivered idle DONE (not s
 | [x] | 4 | phase4-qa-persisted-theme-id-proof | scanner-false-positive-correctness | phase4-pilot-dashboard-parent-intake | 1 | 2026-10-11T16:44:41Z | Idle/released; parent independently verifies63artifacts/exact2paths/byte patches; entire original22724byte test prefix/22tests/105assertions retained.28tests/syntax0; all19Dashboard findings retained, exactly one canonical immutable theme-ID comparison becomes visible review. Dashboard native1 still two actual geometry candidates; shadow/foreign/write/style/template negatives strict. Three failed test trials retained; no exemptions/threshold/baseline changes. Scoped tool correctness only; receipt phase4-scanner-parent-intake1037.json. |
 | [x] | 4 | phase4-sticky-control-localization | shared-control-source-owned-copy | phase4-pilot-drives-parent-intake | 1 | 2026-10-11T17:00:52Z | Idle/released; parent independently verifies421artifacts/188owned before-current pins/7protected inputs; five exact changed paths and byte-reversible patches. Entire original source inverse exact; all31095old leaves/sibling order retained plus a11y.scrollToTop full English interpolation.14tests/one physical file, strictlint/normal generator/check native0; multilingual/native keyboard/observer/scroll fork evidence. Parent release-schema helper failure preserved/corrected; no browser/compiler/build/fullsuite acceptance. Receipt phase4-sticky-parent-intake1037.json. |
 | [x] | 4 | phase4-driving-grade-palette | domain-grade-display-role-repair | phase4-pilot-drives-parent-intake | 1 | 2026-10-11T17:03:17Z | Idle/released; parent independently verifies75artifacts/exact2paths/13actual consumer pins/reversible patches. Six color values plus accurate comment only; all math/SI/threshold/nonfinite behavior unchanged. Original16041test bytes/81assertions retained; 48passed/onephysicalfile/native0 and all48failed-run identities retained with multiplicity; strictlint/scans0. CSS/Text/SVGcurrentColor compatibility source-backed, no canvasgrade consumer. Prior2testfailures retained; live visual/contrast/browser NOTRUN. Receipt phase4-grade-parent-intake1037.json. |
-| [~] | 4 | phase4-pilot-settings-attempt2 | same-pilot-confirmed-gap-repair | phase4-pilot-geometry-token-owner; phase4-sticky-control-localization | 2 | - | Preserve original attempt1/pause/failures; bounded same pilot attempt2 after independently accepted/committed geometry2999b599bb/sticky21b74236cf. Fresh current before/protected pins prospectively reserved. Six exact owned files: current SettingsPage.tsx/additive pilot test, SettingsSummaryBrief.tsx/existing SummaryBrief test, OperationalBrief.tsx/existing Brief test. No current metric-specific loading API; tightly coupled optional support must preserve default global behavior and independent local typography in summary AND drawer. Exact named geometry adopted, old tests/assertions additive retained, no hook/type bridge/catalog/config/API edits. Native/mixed-source tests/scanner0 required; parent integration/browser pending. |
-| [~] | 4 | phase4-pilot-dashboard-attempt2 | same-pilot-confirmed-gap-repair | phase4-pilot-geometry-token-owner; phase4-qa-persisted-theme-id-proof | 2 | - | Original owner same failed pilot attempt2 after independently accepted/committed geometry2999b599bb and scannerab719b3007; actual1039. Fresh exact current-candidate before/protected pins prospectively reserved. Own only DashboardPage.tsx/current additive pilot test; replace two inherited geometry literals with exact named tokens and run additive test/lint/scanner0; persisted theme ID unchanged. Preserve all18attempt1 cases and original tests/assertions. No feature/catalog/shared scope expansion. Message reservation is not actual running proof; parent current integration/browser still required. |
+| [x] | 4 | phase4-pilot-settings-attempt2 | same-pilot-confirmed-gap-repair | phase4-pilot-geometry-token-owner; phase4-sticky-control-localization | 2 | 2026-10-11T17:21:10Z | Worker08b8a2cb idle/DONE/released; independent intake080187d6verifies132artifacts/sixowned/elevenprotected/exactproductioninverses/sixreversiblepatches. Original5/7/11test-callblocks byte-retained and allrun1/run2identities retained.40tests/threephysicalfiles/strictlint/threecurrentproduction scans0;20token reviews visible. Local typography source independently available in summary AND drawer while remote pending/error/retained/transitions; defaultglobal fallback retained. Same attempt2/pause/failedtrials preserved; no hook/globalbridge/catalog/API changes. Scopedsourceaccepted, exactsourceclosure targets1042; currentbrowser/coherentgate/phasepending. |
+| [b] | 4 | phase4-pilot-dashboard-attempt2 | same-pilot-confirmed-gap-repair | phase4-pilot-geometry-token-owner; phase4-qa-persisted-theme-id-proof | 2 | 2026-10-11T17:08:02Z | Replacementc00343f5 idle/FAILED/released. Exactly two token substitutions saved/inverse verified; test and ten protected files unchanged;17pass1fail on current newly-authored pilotL436expecting old z-[9990], strictlint/scanner0with16token+1identityreviews. Parent assertion-freeze causes obsolete representation contract; genuine z9990 semantics separately proven unchanged. Attempts1/2 preserved and page implementation scope exhausted/blocked, no hidden third retry. A distinct narrowly owned tests-only semantic reconciliation is queued below before accepted-source commit/current gates; original shipping tests/hashes remain protected. |
+| [x] | 4 | phase4-dashboard-pilot-token-test-contract | distinct-tests-only-coupled-representation-contract | phase4-pilot-geometry-token-owner | 1 | 2026-10-11T17:21:10Z | Worker3efa1fd8 idle/DONE/released; independentintakeb8c76777verifies66artifacts/oneowned/twelveprotected/exactentiretestinverse/all18identities/everyotherassertionretained. Prospective sole class expectation z-[9990]->z-dashboard-kiosk plus negativeoldclass assertion;18tests/stricttestlint0, unchangedproduction/currentoriginalshippingtests. Historicalpageattempt1/2FAILED retained. Distinctcoupledtestcontractaccepted, cumulativeDashboard sourcereadinessaccepted, never page/browser/phase acceptance. |
+| [ ] | 4 | phase4-dashboard-cumulative-source-readiness | parent-composed-closed-source-intake | phase4-dashboard-pilot-token-test-contract; phase4-pilot-geometry-token-owner; phase4-qa-persisted-theme-id-proof | 1 | 2026-10-11T17:21:10Z | Combine immutable originalpilot source/intake, attempt2exacttwo-tokenproductionproof1a41f2a6 and separatelyacceptedtestcontractb8c76777. HistoricalFAILEDattemptsremainunchanged; no newimplementation attempt. Exacttwofiles are now source-ready for scopedcommit; currentoriginalintegration/browser/phasepending. |
+| [ ] | 4 | phase4-pilot-coherent-preflight | parent-frozen-pilot-source-gate | phase4-dashboard-cumulative-source-readiness; phase4-pilot-settings-attempt2; phase4-driving-grade-palette; phase4-sticky-control-localization; phase4-pilot-drives-parent-intake | 1 | - | Parent only after every source lease releases and accepted exact commits/indexempty. Freeze current HEAD/source inputs; serialized compiler/full lint/unchanged violations skill/catalog strict keys/SW/changelog/private production build/strict startup budgets/duplicates/maps/PWA/shell/runtime and bounded original pilot integration checks. Preserve exact receipts and failures; confirm actual hook routes/sections/actions/source trust. No old Phase3 result substituted for current source. If a real coupled gate fails, queue bounded owner before repair; never baseline away. Next mandatory cadence1050 remains independent. |
+| [ ] | 4 | phase4-pilot-current-native-acceptance | parent-current-build-three-pilot-matrix | phase4-pilot-coherent-preflight | 1 | - | Current exact private dist/live authorized real routes, not mocks/auth redirects. Dashboard/Drives/Settings dark/light responsive mission widths320through2560, RTL200%, keyboard/focus/forcedcolors/motion, every section/action and loading/empty/error/offline/stale/extreme source qualification. Reuse read-only installed loopback Nginx transport with exact entry/SW/maps proof, no production mutations/rate bypass. Current source and native/visual evidence required for page acceptance. |
+| [ ] | 4 | phase4-pilot-current-fullsuite | parent-frozen-coherent-fullsuite | phase4-pilot-coherent-preflight; phase4-pilot-current-native-acceptance | 1 | - | Exactly one fresh serialized frozen current full suite after fixes/current mounted matrix acceptance; default+JSON forks/maxWorkers2, unique immutable receipts, all original44960case identities retained plus new regressions, physical files not nested-suite count, zero failures/pending/todo. Verify source pins before/after and raw hashes. Only then close pilots/Phase4; Phase5 stays gated. |
 | [x] | 3 | phase3-coherent-final-integration | explicit-user-authorized-final-recovery | phase4-writers-paused | 2 | 2026-10-11T07:45:00Z | Terminal delivery consumed; parent independently verifies272artifact records including manifest+5immutable pins, 205currentowned records, exact115-path cumulative stage. All31091oldstructural leaves preserved+exact4=31095; all784original hash constants retained, four exact source inverses verified. Combined55files8572tests0; generator/check/namespace/shadow/scopedlint/strictscanner native0. Prior failures and wrapper display encoding failure retained. Source/catalog/test leases released; global gates remain unrun. |
 | [x] | 3 | phase3-guarded-plural-scanner-contract | narrow-scanner-correctness | - | 1 | 2026-10-11T07:45:00Z | Terminal consumed; parent verifies50artifacts+2sourcehashes. Narrow numeric-origin and dominating >1 cardinal-count AST proof, 23focusedtests passed, inherited14tests preserved, syntax0/0, strict native0 missing0. Negative guards/unknown sources/ordinal/context/language/spreads remain strict. Incidents caller unchanged; actual0/1hidden2/3localized; no catalog/suppression edits. Exact two-file scanner stage; source lease released. |
 | [~] | 3 | phase3-coherent-verified-boundary | parent-frozen-phase-gate | phase3-coherent-final-integration; phase3-guarded-plural-scanner-contract; phase3-startup-budget-relief | 2 | 2026-10-11T08:50:40Z | Failed1024boundary preserved: first7gates0/strictbundle1/fullsuiteNOTRUN. New scoped startup repair intake accepted; exact11sourcepaths+queue commit then new frozen compiler/full lint/skillviolations/catalog/keys/SW/changelog/build/bundle/duplicates/private maps/PWA/fullbuiltcontract/shell/runtime/fullsuite. FullbuiltPWA uses official unchanged assertions with only private DIST_ROOT adapted in session, verifiedadapter0; oldpublicmap invocation1 retained and correctedprivatemaps0, no current-source acceptance inferred. Zero writer leases/emptyindex/frozenHEAD required. Browser QA still not implied. |

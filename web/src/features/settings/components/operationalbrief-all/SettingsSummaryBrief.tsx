@@ -4,12 +4,16 @@ import { OperationalBrief, type StatMetric } from '@/components/data-display'
 import { Text } from '@/components/ui'
 import { useOperationalMetrics } from '@/hooks/useOperationalMetrics'
 
+export interface SettingsSummaryMetric extends StatMetric {
+  loading?: boolean
+}
+
 interface Props {
   title: string
   description: string
   source: string
   scope: string
-  metrics: readonly StatMetric[]
+  metrics: readonly SettingsSummaryMetric[]
   loading?: boolean
   unavailable?: boolean
   retained?: boolean
@@ -38,7 +42,8 @@ export function SettingsSummaryBrief({
     <OperationalBrief compact title={title} description={description}
       eyebrow={source} statusLabel={statusLabel}
       statusTone={retained || unavailable ? 'warning' : 'neutral'}
-      metrics={bridged} loading={loading} testId={testId}
+      metrics={bridged.map((metric, index) => ({ ...metric, loading: metrics[index]?.loading }))}
+      loading={loading} testId={testId}
       scope={<Text as="span" variant="caption">{scope}</Text>}
       freshness={freshness} provenance={source} />
   )

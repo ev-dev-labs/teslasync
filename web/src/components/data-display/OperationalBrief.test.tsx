@@ -63,6 +63,42 @@ describe('OperationalBrief', () => {
     checkMetadata(header);
   });
 
+  describe('OperationalBrief optional per-metric loading', () => {
+    it.each([
+      { global: true, override: undefined, pending: true },
+      { global: false, override: undefined, pending: false },
+      { global: true, override: false, pending: false },
+      { global: false, override: true, pending: true },
+      { global: true, override: true, pending: true },
+    ])('matches summary and drawer for global=$global override=$override', ({ global, override, pending }) => {
+      render(<OperationalBrief eyebrow="Independent sources" title="Loading compatibility"
+        description="Actual source states" statusLabel="Remote pending" loading={global}
+        metrics={[{ key: 'source', label: 'Source reading', value: 'retained-value',
+          detail: 'Source caption remains visible', rawValue: 'retained-value', valueState: 'value', loading: override }]} />);
+      const summary = screen.getByRole('region', { name: 'Loading compatibility' });
+      expect(within(summary).getByText('Source caption remains visible')).toBeVisible();
+      expect(summary.querySelector('[data-operational-metric]')).toHaveAttribute('data-value-state', 'value');
+      expect(summary.querySelectorAll('[data-operational-value]')).toHaveLength(pending ? 0 : 1);
+      if (pending) {
+        expect(within(summary).queryByText('retained-value')).toBeNull();
+        expect(summary.querySelector('[aria-busy="true"]')).not.toBeNull();
+      } else {
+        expect(within(summary).getByText('retained-value')).toBeVisible();
+        expect(within(summary).getByText('retained-value')).not.toHaveAttribute('aria-busy');
+      }
+      fireEvent.click(within(summary).getByRole('button', { name: 'Review details' }));
+      const drawer = screen.getByRole('dialog', { name: 'Loading compatibility details' });
+      expect(within(drawer).getByText('Source caption remains visible')).toBeVisible();
+      if (pending) {
+        expect(within(drawer).queryByText('retained-value')).toBeNull();
+        expect(drawer.querySelectorAll('[aria-busy="true"]')).toHaveLength(1);
+      } else {
+        expect(within(drawer).getByText('retained-value')).toBeVisible();
+        expect(drawer.querySelector('[aria-busy="true"]')).toBeNull();
+      }
+    });
+  });
+
   it('retains exact rich source bounds and freshness in both the summary and real drawer', () => {
     render(
       <OperationalBrief
