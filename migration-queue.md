@@ -1,5 +1,26 @@
 # Frontend modernization queue
 
+## Current phase: 4 - pilot
+
+Phase 3 is **closed by explicit user override**, not a verified gate pass.
+Authority: "mark phase-3 completed . start the next phases" (2026-10-11).
+Preserve the latest 11 failed / 8407 passed combined-test result, four absent
+canonical strings, guarded plural scanner finding, and unrun fresh final gates.
+The original 95-pair handoff is installed but not fully accepted; its 526
+artifact hashes were independently verified. Four-gap source checks passed
+151 tests, but canonical/runtime integration remains deferred. All source
+changes and failed receipts are retained; none are reverted or labeled green.
+The crashed Phase-3 agents no longer exist and their leases are released.
+This exception advances dispatch only, not product/release readiness.
+
+Pilot selection follows the user's Phase0-7 workflow, overriding the older
+mission document's illustrative phase numbering: Dashboard, Drive History
+(list/table), and Settings (form). Read-only screenshots use the existing
+local application at http://localhost:3119; mounted revision and authentication
+must be verified before treating any capture as current-source acceptance.
+Page workers cannot edit shared components, hooks, catalogs, or frozen tests.
+No Phase-3 rerun or catalog transfer is authorized by this transition.
+
 ## Crash-recovery gate corrections
 
 | Status | Phase | Item | Type | Depends on | Attempts | Started | Note |
@@ -1260,3 +1281,8 @@ Phase2 intake health: all19 original primitive actors delivered idle DONE (not s
 | [x] | 3 | phase3-validator-attempt3-acceptance1020 | scanner-correctness-acceptance | phase3-boundary-i18n-validator-contract | 3 | 2026-10-11T06:29:25Z | Parent independently verified36artifacts3696stable noncatalog inputs2ownedhashes. Fourteen contract tests0; inherited negative control11pass3fail demonstrates shorthand forwarding/colon-namespace defects fixed. Realmissing strict1 remains visible, not scanner correctness failure; concurrent catalog excluded from immutable closure. Generator check timeout preserved, not passed. Two exact scanner paths accepted integrating inherited fixes. Mandatory compiler1020 immediately after this commit; catalog worker continues sameattempt3safe1921. |
 | [x] | 3 | phase3-catalog-attempt3-acceptance1021 | approved-canonical-subset-acceptance | phase3-boundary-canonical-literal-catalog | 3 | 2026-10-11T06:49:19Z | Parent independently verified13433artifacts6400inputs192ownedhashes127changedpaths; all29075oldstructuralleaves plus exact1921additions30996final. Approved1953 disposition1921added28resolved1migrated3deferred. Ninefocusedfiles7864pass; generator/check/strict/shadowlint0. Tiny256byte threshold unchanged, actual emptyState lazy fallback regression passes. Three scalar ancestor repairs remain visible share.curve.aria/signalLog.composition.noRecords/.empty; no fullscopecompletionclaim. Compiler1020passed0rawempty next1035. |
 | [~] | 3 | phase3-excluded92-authorized-attempt3 | original-source-owned-recovery | phase3-boundary-excluded-owned-contracts-92; phase3-catalog-attempt3-acceptance1021 | 3 | 2026-10-11T06:49:19Z | Reserve original89collision+3errortitles authorizedattempt3 after cataloglease release. Prospective normalgeneratedfiles explicitly allowed, including absent paths. Include three transparently deferred originalcatalog scalar repairs in same source-ownership transaction; preserve current30996leaves and exact source fallback/roles. Knownmissing pruning only3 resolvedtitles after canonical insertion; no suppressions. Coupled preservation tests prospectively owned with exactpairs asserted and originalhashes retained. Parent-only commits; scopedchecks duringbatch, finalsuite afterclosure. Nextcompiler1035. |
+| [~] | 3 | phase3-final-four-localization-gaps | independent-source-only-reservation | catalog-transfer-before-canonical-writes | 1 | 2026-10-11T07:21:17Z | Four proven gaps: ai.limit.retryIn, palette.clearScope, RegexTester empty match, GeneralSettings temperature object call. Parallel source-only work may proceed in four nonoverlapping files while original recovery validates its coupled tests. Catalog/generated outputs remain exclusively with original owner until explicit transfer; no suppression, unrelated refactor, or guarded incident plural change. Targeted coverage and canonical preservation required before acceptance. Parent-only commits; nextcompiler1035. |
+| [x] | 3 | phase3-user-directed-closure | user-override-not-verified-pass | - | 0 | 2026-10-11T07:40:20Z | User expressly closed Phase3 and requested next phases. Supersedes unfinished Phase3 dispatch reservations without falsifying native exits; 11 combined failures and four absent canonical pairs retained as deferred debt. Fresh final fullsuite/build/visual acceptance NOTRUN. Preserve uncommitted implementation and unrelated inherited files. |
+| [~] | 4 | phase4-pilot-dashboard | page-migration | phase3-user-directed-closure | 1 | 2026-10-11T07:40:20Z | DashboardPage.tsx plus its directly matching tests only. Preserve widgets/layout persistence/actions and all sources. Reuse contract APIs; no shared/catalog/hook writes. Capture current source and bounded page checks; report shared blockers. |
+| [~] | 4 | phase4-pilot-drives-list | page-migration | phase3-user-directed-closure | 1 | 2026-10-11T07:40:20Z | DrivesListPage.tsx and drives-orchestrator presentation components/tests only; exclude inherited dirty paths including DrivesEvidenceEmpty.tsx. Preserve every record field/action/filter/export/preview/range and source trust. No data hooks/catalog/shared writes. |
+| [~] | 4 | phase4-pilot-settings | page-migration | phase3-user-directed-closure | 1 | 2026-10-11T07:40:20Z | SettingsPage.tsx plus directly matching tests only. GeneralSettings.tsx and all inherited Phase3 deltas excluded. Preserve every panel, mutation/edit lease/navigation/preference. No shared/catalog/hook writes. |
