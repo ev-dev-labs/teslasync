@@ -28,7 +28,7 @@ export function FirmwareImpactChart({
   onRetry: () => void;
 }) {
   const { t } = useTranslation();
-  const title = t('firmwareImpact.chart', 'Consumption change per version');
+  const title = t('firmwareImpact.chart.title', 'Consumption change per version');
   return (
     // Keep the panel frame: embedded mode suppresses the existing export and
     // fullscreen toolbar. A second chart/overlay implementation is not needed.

@@ -15,8 +15,8 @@ export function EfficiencyScatter({ model, source, units, kind }: DrivesPresenta
   const title = isSpeed ? t('efficiency.speedVsEfficiency', 'Speed vs efficiency')
     : t('efficiency.tempVsEfficiency', 'Temperature vs efficiency');
   return <EfficiencyChart source={source} title={title}
-    ariaLabel={isSpeed ? t('efficiency.speedVsEfficiency.aria', 'Speed versus efficiency scatter plot')
-      : t('efficiency.tempVsEfficiency.aria', 'Temperature versus efficiency scatter plot')}
+    ariaLabel={isSpeed ? t('efficiency.speedVsEfficiencyAria', 'Speed versus efficiency scatter plot')
+      : t('efficiency.tempVsEfficiencyAria', 'Temperature versus efficiency scatter plot')}
     data={data}
     dataColumns={[
       isSpeed

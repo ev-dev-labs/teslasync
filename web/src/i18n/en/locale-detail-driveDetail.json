@@ -325,6 +325,13 @@
     "lastKnown": "Last known location",
     "stationaryRouteTitle": "Route can't be plotted",
     "stationaryRouteBody": "Only one GPS coordinate was recorded for this drive, so the route can't be drawn. The drive's distance, duration, and other stats below are unaffected.",
-    "notFound": "This drive could not be found. It may have been deleted, or the link is incorrect."
+    "notFound": "This drive could not be found. It may have been deleted, or the link is incorrect.",
+    "driveChartAria": "Drive overview composed chart of speed, range, SOC and power over time",
+    "elevProfileAria": "Elevation and speed area+line chart over the drive timeline",
+    "powerProfileAria": "Drive power profile area chart over time",
+    "socOverTimeAria": "State of charge percent over time area chart",
+    "speedHistogramAria": "Speed-bucket distribution histogram",
+    "temperaturesAria": "Inside, outside, driver and passenger temperature lines over the drive timeline",
+    "tirePressureAria": "Front and rear tire pressure lines over the drive timeline"
   }
 }

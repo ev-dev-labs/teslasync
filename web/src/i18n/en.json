@@ -709,7 +709,9 @@
     "kpis": "Query summary",
     "subtitle": "Query signal history from Postgres",
     "noVehicle": "Select a vehicle to begin",
-    "noVehicleDesc": "Pick a vehicle from the picker above to query its signal history."
+    "noVehicleDesc": "Pick a vehicle from the picker above to query its signal history.",
+    "compositionNoRecords": "No records in the selected range.",
+    "compositionEmpty": "Run a query to see the value-type breakdown."
   },
   "route": {
     "noLocationData": "No location data",
@@ -4448,11 +4450,16 @@
       "snapshot": "A snapshot is a point-in-time view of every signal value at a single timestamp. The diff falls back to signal_log within the last 30 days when the live layer doesn't have it.",
       "diff": "Server-side comparison between two snapshots. Unchanged signals are omitted from the result to reduce noise.",
       "sourceLayer": "The layer that supplied this value: L1 (in-process), L2 (Redis), Log (TimescaleDB history), or Stale (older than 2 minutes).",
-      "deltaCol": "Numeric difference (and percent change) between Window A and Window B for this signal. 'changed' is shown for non-numeric values that differ."
+      "deltaCol": "Numeric difference (and percent change) between Window A and Window B for this signal. 'changed' is shown for non-numeric values that differ.",
+      "snapshotAria": "More info about signal snapshots",
+      "diffAria": "More info about signal diffs",
+      "layersAria": "More info about signal layers (L1, L2, log)"
     },
     "fsm": {
       "type": "Finite-state machine. Tracks vehicle high-level state (driving, charging, parked, online, asleep, offline) and the transitions between them. Sub-FSMs cover drive, charge, command, and notification lifecycles.",
-      "liveState": "The current state the FSM resolved to from the most recent telemetry. The FSM stays in a terminal state until external evidence (telemetry or poll) triggers an explicit transition out."
+      "liveState": "The current state the FSM resolved to from the most recent telemetry. The FSM stays in a terminal state until external evidence (telemetry or poll) triggers an explicit transition out.",
+      "typeAria": "More info about FSM types",
+      "liveStateAria": "More info about FSM live state"
     },
     "replay": {
       "power": "Instantaneous battery power at this point on the trip. Negative values indicate regenerative braking (energy flowing back into the pack); positive values indicate motor draw.",
@@ -7014,7 +7021,26 @@
     "dashboardTools": "Dashboard tools",
     "dashboardToolsHelp": "Manage, present, or share this layout.",
     "widgetsRegion": "Dashboard widgets",
-    "loading": "Loading command center"
+    "loading": "Loading command center",
+    "widgetSettings": {
+      "allVehicles": "All vehicles (first)",
+      "vehicleName": "Vehicle {{id}}",
+      "title": "{{name}} Settings",
+      "vehicle": "Vehicle",
+      "refreshInterval": "Refresh interval",
+      "default": "Default",
+      "5s": "5 seconds",
+      "15s": "15 seconds",
+      "30s": "30 seconds",
+      "60s": "1 minute",
+      "timeRange": "Time range",
+      "24h": "Last 24 hours",
+      "7d": "Last 7 days",
+      "30d": "Last 30 days",
+      "90d": "Last 90 days",
+      "appearance": "Appearance",
+      "showTitle": "Show widget title"
+    }
   },
   "charging": {
     "list": {
@@ -7254,7 +7280,12 @@
       "summaryLoading": "Loading summary metrics",
       "yearlyTrendDesc": "Average time-to-charge and session count by year",
       "selectSessionHint": "Select a session above to view its charging curve",
-      "sessionInspector": "Session inspector"
+      "sessionInspector": "Session inspector",
+      "chargerTypeAria": "Composed bar/line chart of average power and energy per charger type",
+      "sessionComparisonAria": "Overlaid power-vs-SOC line chart comparing the last several charging sessions",
+      "powerVsSocAria": "Charging power versus state-of-charge area chart for the selected session",
+      "speedTrendAria": "Monthly average DC and AC charging speed line chart",
+      "yearlyTrendAria": "Yearly average charge-time and session-count composed chart"
     },
     "optimizer": {
       "heatmap": "Charging cost heatmap",
@@ -7705,7 +7736,11 @@
     "detail": "Version by version",
     "noDetail": "Nothing to compare yet — each update needs drives recorded both before and after it.",
     "whPerKmN": "{{v}} Wh/km · n={{n}}",
-    "stats": "p · d"
+    "stats": "p · d",
+    "chart": {
+      "title": "Consumption change per version",
+      "aria": "Bar chart of the change in energy consumption in watt-hours per kilometre after each firmware version"
+    }
   },
   "live": {
     "connected": "Live",
@@ -8599,6 +8634,7 @@
     },
     "resultsLabel": "Results",
     "clearFilter": "Clear filter",
+    "clearScope": "Clear {{scope}} filter",
     "related": {
       "parent": "Back to section",
       "sibling": "Same section"
@@ -9819,6 +9855,7 @@
     },
     "limit": {
       "retry": "Retry",
+      "retryIn": "Try again in {{seconds}}s",
       "useBaseline": "Use baseline",
       "title": {
         "costCap": "Daily cost cap reached",
@@ -10049,6 +10086,7 @@
       "regexNoFlags": "No flags",
       "regexLimitReached": "Result limit reached",
       "regexAtIndex": "At index",
+      "regexEmptyMatch": "(empty match)",
       "regexNoMatches": "No matches found",
       "regexInvalid": "Invalid regular expression",
       "regexTestStringPlaceholder": "Test string placeholder",
@@ -10278,17 +10316,20 @@
       "title": "Permission denied"
     },
     "request": {
-      "message": "Review the request and try again. No changes were applied."
+      "message": "Review the request and try again. No changes were applied.",
+      "title": "Request could not be completed"
     },
     "timeout": {
       "message": "The service did not respond in time. Existing data has not been changed.",
       "title": "Request timed out"
     },
     "unavailable": {
-      "message": "A required service is temporarily unavailable. Try again after it recovers."
+      "message": "A required service is temporarily unavailable. Try again after it recovers.",
+      "title": "Service unavailable"
     },
     "unsupported": {
-      "message": "This feature is not available with the current server or deployment configuration."
+      "message": "This feature is not available with the current server or deployment configuration.",
+      "title": "Feature not supported"
     },
     "unexpected": "An unexpected error occurred",
     "loadFailed": "Failed to load data",
@@ -13413,7 +13454,9 @@
       "costDenominator": "Recorded cost divided by source kilometres; not display-distance units.",
       "periodDescription": "Totals and averages from the period-statistics response; its observation bounds are not returned.",
       "periodScope": "Period-statistics source window; bounds unknown"
-    }
+    },
+    "stateDistributionAria": "Vehicle state distribution pie chart",
+    "vehicleComparisonAria": "Distance and energy bar chart comparing all vehicles in the fleet"
   },
   "fleetApi": {
     "subtitle": "Choose which Tesla Fleet API routes are available and which can be polled automatically",
@@ -14968,7 +15011,8 @@
       "chart": {
         "spreadTrend": "Voltage spread trend",
         "voltageSpread": "Voltage spread (mV)",
-        "noSpreadTrend": "Not enough history for spread trend"
+        "noSpreadTrend": "Not enough history for spread trend",
+        "spreadTrendAria": "Battery cell voltage spread trend area chart over time"
       },
       "temp": {
         "title": "Temperature summary",
@@ -15146,7 +15190,8 @@
       "noStress": "Charging impact will appear once charging history is available.",
       "rangeLossAria": "Original and current estimated driving range over time",
       "healthFactors": "Battery health factors",
-      "history": "Degradation history"
+      "history": "Degradation history",
+      "trendTitleAria": "Battery health trend and 95% confidence projection chart"
     },
     "health": {
       "excellent": "Excellent",
@@ -16040,7 +16085,9 @@
         "month": "Month",
         "cost": "Cost ($)",
         "date": "Date"
-      }
+      },
+      "costPerKwhAria": "Cost per kilowatt-hour trend line chart",
+      "monthlyCostAria": "Monthly charging cost trend area chart"
     },
     "forecast": {
       "title": "Cost forecast",
@@ -18993,7 +19040,9 @@
     "noDetails": "No details available",
     "statGrid": {
       "noStats": "No stats available"
-    }
+    },
+    "recentDrivesListDrive": "Drive",
+    "recentDrivesDurationUnit": "min"
   },
   "operationalSummary": {
     "retained": "Retained source data",
@@ -19445,7 +19494,14 @@
     "lastKnown": "Last known location",
     "stationaryRouteTitle": "Route can't be plotted",
     "stationaryRouteBody": "Only one GPS coordinate was recorded for this drive, so the route can't be drawn. The drive's distance, duration, and other stats below are unaffected.",
-    "notFound": "This drive could not be found. It may have been deleted, or the link is incorrect."
+    "notFound": "This drive could not be found. It may have been deleted, or the link is incorrect.",
+    "driveChartAria": "Drive overview composed chart of speed, range, SOC and power over time",
+    "elevProfileAria": "Elevation and speed area+line chart over the drive timeline",
+    "powerProfileAria": "Drive power profile area chart over time",
+    "socOverTimeAria": "State of charge percent over time area chart",
+    "speedHistogramAria": "Speed-bucket distribution histogram",
+    "temperaturesAria": "Inside, outside, driver and passenger temperature lines over the drive timeline",
+    "tirePressureAria": "Front and rear tire pressure lines over the drive timeline"
   },
   "drivetrain": {
     "temperatures": "Temperature details",
@@ -19618,7 +19674,11 @@
       "important": "Important recommendation:"
     },
     "frontMotor": "Front Motor",
-    "rearMotor": "Rear Motor"
+    "rearMotor": "Rear Motor",
+    "powerOutputAria": "Per-drive peak and regen motor power output history area chart",
+    "statorTempHistoryAria": "Front, rear-left and rear-right motor stator temperature history line chart",
+    "tempHistoryAria": "Outside temperature trend line chart per recent drive",
+    "torqueHistoryAria": "Motor inverter torque output history area chart"
   },
   "dynamics": {
     "modernization": {
@@ -19894,7 +19954,11 @@
     "reverse": "Reverse",
     "motorLoading": "Loading motor telemetry…",
     "forward": "Forward",
-    "motorResource": "Motor telemetry"
+    "motorResource": "Motor telemetry",
+    "speedDistributionAria": "Speed-bucket drive count distribution bar chart",
+    "powerOverTimeAria": "Motor power and regen over time area chart",
+    "torqueHistoryAria": "Front and rear motor torque over time line chart",
+    "rpmHistoryAria": "Front and rear motor RPM over time line chart"
   },
   "share": {
     "energyAdded": "Energy added",
@@ -19987,7 +20051,15 @@
     "loading": "Loading shared drive report…",
     "sessionHeader": "Shared charging report",
     "socTooltipLabel": "Battery (%)",
-    "noCurveData": "The charge curve was not included in this share."
+    "noCurveData": "The charge curve was not included in this share.",
+    "unavailable": {
+      "title": "Share link unavailable",
+      "description": "This shared drive link has expired or been revoked.",
+      "home": "Go to TeslaSync"
+    },
+    "elevationAria": "Shared drive elevation profile area chart by distance",
+    "speedAria": "Shared drive speed profile line chart by distance",
+    "curveAria": "Shared session power and battery chart by minute"
   },
   "sharing": {
     "trips": {
@@ -20329,7 +20401,10 @@
       "cruiseControl": "Use Autopilot or cruise control on highways for consistent speed.",
       "routePlanning": "Plan routes to avoid high-speed stretches when possible."
     },
-    "empty": "Not enough drives in the selected period to calculate a score."
+    "empty": "Not enough drives in the selected period to calculate a score.",
+    "categoryBreakdownAria": "Drive score category breakdown horizontal bar chart",
+    "scoreDistributionAria": "Drive score distribution histogram bar chart",
+    "scoreTrendAria": "Drive score trend line chart with category breakdowns"
   },
   "drives": {
     "analysis": "Trends and highlights",
@@ -20629,7 +20704,11 @@
       "co2": "Source aggregate CO₂ savings estimate, in kilograms.",
       "title": "Lifetime efficiency evidence",
       "description": "Vehicle driving aggregates retain their lifetime source period; they are independent of the range-filtered drive charts."
-    }
+    },
+    "speedVsEfficiencyAria": "Speed versus efficiency scatter plot",
+    "tempVsEfficiencyAria": "Temperature versus efficiency scatter plot",
+    "speedDistAria": "Efficiency by speed-range bar chart",
+    "dailyTrendAria": "Daily efficiency trend area chart"
   },
   "regen": {
     "title": "Regenerative braking",
@@ -22236,6 +22315,7 @@
     "kilometers": "Kilometers",
     "miles": "Miles",
     "temperatureUnit": "Temperature unit",
+    "temperatureLabel": "Temperature",
     "celsius": "Celsius",
     "fahrenheit": "Fahrenheit",
     "pressureUnit": "Pressure unit",
@@ -23543,7 +23623,9 @@
     "noObservedState": "No observed state",
     "kpis": "FSM summary metrics",
     "overview": "Vehicle state overview",
-    "analysis": "Transition analysis"
+    "analysis": "Transition analysis",
+    "timelineChartAria": "FSM transitions over time stacked area chart",
+    "distributionByStateAria": "FSM state distribution donut chart with per-state counts"
   },
   "changelog": {
     "title": "Changelog",
@@ -23965,7 +24047,8 @@
     "section": {
       "storage": "Storage and migrations",
       "runtime": "Tables and runtime"
-    }
+    },
+    "chartTitleAria": "Top fifteen database table sizes horizontal bar chart"
   },
   "roadmap": {
     "title": "Roadmap",
@@ -37797,7 +37880,11 @@
     "shiftLog": "Shift log",
     "stable": "No statistically significant shifts — your consumption regime has been stable.",
     "shiftLine": "Week of {{date}}: consumption moved {{delta}} {{unit}}",
-    "tempBadge": "avg temp {{delta}}°C"
+    "tempBadge": "avg temp {{delta}}°C",
+    "chart": {
+      "title": "Weekly consumption & detected regimes",
+      "aria": "Weekly consumption line with stepped regime means and changepoint markers"
+    }
   },
   "powerSql": {
     "editor": {
@@ -38088,7 +38175,11 @@
     "effort": "Attempts per intent",
     "effortValue": "{{n}} · {{retried}} retried",
     "topError": "Usual failure",
-    "topErrorValue": "{{msg}} (×{{n}})"
+    "topErrorValue": "{{msg}} (×{{n}})",
+    "chart": {
+      "title": "Confidence-weighted success",
+      "aria": "Bar chart of the wilson lower confidence bound for each command with the naive success rate overlaid"
+    }
   },
   "diagnostics": {
     "brief": {
@@ -38463,7 +38554,11 @@
     "regenShare": "{{pct}}% recovered",
     "subtitle": "Where a period of traction energy physically went",
     "kpis": "Energy anatomy summary metrics",
-    "noData": "No drives with energy data in this period."
+    "noData": "No drives with energy data in this period.",
+    "sankey": {
+      "aria": "Sankey diagram splitting {{total}} into aero drag, rolling resistance, climate, and other losses",
+      "title": "Energy Flow"
+    }
   },
   "anomalies": {
     "mph": "mph",
@@ -38500,7 +38595,11 @@
     "outlier": "Outlier",
     "cases": "Case Files",
     "noOutliers": "No drives beyond ±2σ — everything fits your usual pattern.",
-    "expected": "expected {{v}}"
+    "expected": "expected {{v}}",
+    "chart": {
+      "title": "Your Consumption Law",
+      "aria": "Scatter of drive consumption against speed with fitted curve and two-sigma band; outliers highlighted"
+    }
   },
   "landscape": {
     "mph": "mph",
@@ -38523,7 +38622,11 @@
     "analyzed": "Drives Mapped",
     "subtitle": "Your car’s real consumption across speed and temperature",
     "kpis": "Landscape summary metrics",
-    "noData": "No drives with speed, temperature, and energy data in this period."
+    "noData": "No drives with speed, temperature, and energy data in this period.",
+    "field": {
+      "title": "Consumption Field",
+      "aria": "Grid of consumption by speed band and temperature band; best {{best}}, worst {{worst}}"
+    }
   },
   "typography": {
     "familyHint": "Focus or hover to preview a font, then select it to use it everywhere.",
@@ -38676,7 +38779,15 @@
     "realText": "The peak clears the threshold adjusted for autocorrelation, so this relationship is unlikely to be an artefact of the two signals simply being smooth.",
     "noiseText": "The peak does not clear the autocorrelation-adjusted threshold. Smooth signals correlate with almost anything, so this is best treated as coincidence.",
     "zeroLagText": "The signals line up best with no shift at all, which points to a shared cause rather than one driving the other.",
-    "lagText": "The best alignment needs a {{lag}} second shift. Leading in time is not proof of causation, but a consistent lead is where causal explanations start."
+    "lagText": "The best alignment needs a {{lag}} second shift. Leading in time is not proof of causation, but a consistent lead is where causal explanations start.",
+    "correlogram": {
+      "title": "Lagged correlogram",
+      "aria": "Line chart of correlation coefficient against time lag between the two selected signals"
+    },
+    "overlay": {
+      "title": "Normalised overlay",
+      "aria": "Area chart of the two selected signals normalised onto a common scale over the overlapping window"
+    }
   },
   "sparkline": {
     "ariaLabel": "Trend sparkline"
@@ -38728,5 +38839,17 @@
   "signalCatalog": {
     "removeSignal": "Remove {{name}} from selection",
     "addSignal": "Add {{name}} to selection"
+  },
+  "vehicleVisualization": {
+    "status": {
+      "battery": "Battery",
+      "charging": "Charging",
+      "locked": "Locked",
+      "unlocked": "Unlocked",
+      "driving": "Driving",
+      "climate": "Climate",
+      "sentry": "Sentry",
+      "notCharging": "Not Charging"
+    }
   }
 }

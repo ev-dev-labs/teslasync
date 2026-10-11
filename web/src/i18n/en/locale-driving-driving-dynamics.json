@@ -454,6 +454,7 @@
     "pedalUsage": "Pedal usage",
     "power": "Power",
     "powerOverTime": "Motor power over time",
+    "powerOverTimeAria": "Motor power and regen over time area chart",
     "powerOverTimeDesc": "Drive and regen power from motor telemetry",
     "powerProfile": "Power profile",
     "powertrain": {
@@ -503,6 +504,7 @@
     },
     "rpmFront": "Front RPM",
     "rpmHistory": "Motor RPM history",
+    "rpmHistoryAria": "Front and rear motor RPM over time line chart",
     "rpmHistoryDesc": "Front and rear motor RPM over time",
     "rpmRear": "Rear RPM",
     "section": {
@@ -511,6 +513,7 @@
     "shiftState": "Shift state",
     "speedDistDesc": "Drives grouped by average speed",
     "speedDistribution": "Speed distribution",
+    "speedDistributionAria": "Speed-bucket drive count distribution bar chart",
     "speedGear": "Speed & gear",
     "throttle": "Throttle",
     "throttlePosition": "Throttle position",
@@ -520,6 +523,7 @@
     "torqueDistribution": "Torque distribution",
     "torqueFront": "Front torque",
     "torqueHistory": "Motor torque history",
+    "torqueHistoryAria": "Front and rear motor torque over time line chart",
     "torqueHistoryDesc": "Front and rear motor torque over time",
     "torqueRear": "Rear torque",
     "totalReadings": "Total readings",

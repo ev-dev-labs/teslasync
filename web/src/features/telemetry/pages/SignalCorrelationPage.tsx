@@ -249,7 +249,7 @@ export default function SignalCorrelationPage() {
           </GlassPanel>
         ) : (
           <ChartContainer
-            title={t('signalCorrelation.correlogram', 'Lagged correlogram')}
+            title={t('signalCorrelation.correlogram.title', 'Lagged correlogram')}
             subtitle={t(
               'signalCorrelation.correlogramHint',
               'Correlation at every time shift; the dashed lines are the significance threshold',
@@ -318,7 +318,7 @@ export default function SignalCorrelationPage() {
       {/* 4 — Normalised overlay */}
       <FadeIn delay={0.3}>
         <ChartContainer
-          title={t('signalCorrelation.overlay', 'Normalised overlay')}
+          title={t('signalCorrelation.overlay.title', 'Normalised overlay')}
           subtitle={t(
             'signalCorrelation.overlayHint',
             'Both signals rescaled to 0–1 so their shapes can be compared directly',

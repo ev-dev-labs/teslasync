@@ -51,7 +51,7 @@ export default function SessionCurveChart({ curveData }: SessionCurveChartProps)
         'Charging power curve for selected session',
       )}
       ariaLabel={t(
-        'charging.curve.powerVsSoc.aria',
+        'charging.curve.powerVsSocAria',
         'Charging power versus state-of-charge area chart for the selected session',
       )}
       data={rows}

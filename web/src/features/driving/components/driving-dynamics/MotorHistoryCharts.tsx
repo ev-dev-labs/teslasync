@@ -122,7 +122,7 @@ export default function MotorHistoryCharts({
         <ChartContainer
           title={t('dynamics.powerOverTime', 'Motor Power Over Time')}
           subtitle={t('dynamics.powerOverTimeDesc', 'Drive and regen power from motor telemetry')}
-          ariaLabel={t('dynamics.powerOverTime.aria', 'Motor power and regen over time area chart')}
+          ariaLabel={t('dynamics.powerOverTimeAria', 'Motor power and regen over time area chart')}
           height={280}
           loading={query.isLoading}
           error={query.isError ? query.error : null}
@@ -159,7 +159,7 @@ export default function MotorHistoryCharts({
         <ChartContainer
           title={t('dynamics.torqueHistory', 'Motor Torque History')}
           subtitle={t('dynamics.torqueHistoryDesc', 'Front and rear motor torque over time')}
-          ariaLabel={t('dynamics.torqueHistory.aria', 'Front and rear motor torque over time line chart')}
+          ariaLabel={t('dynamics.torqueHistoryAria', 'Front and rear motor torque over time line chart')}
           height={280}
           loading={query.isLoading}
           error={query.isError ? query.error : null}
@@ -192,7 +192,7 @@ export default function MotorHistoryCharts({
         <ChartContainer
           title={t('dynamics.rpmHistory', 'Motor RPM History')}
           subtitle={t('dynamics.rpmHistoryDesc', 'Front and rear motor RPM over time')}
-          ariaLabel={t('dynamics.rpmHistory.aria', 'Front and rear motor RPM over time line chart')}
+          ariaLabel={t('dynamics.rpmHistoryAria', 'Front and rear motor RPM over time line chart')}
           height={280}
           loading={query.isLoading}
           error={query.isError ? query.error : null}

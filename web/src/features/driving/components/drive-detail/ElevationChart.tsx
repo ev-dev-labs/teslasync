@@ -50,7 +50,7 @@ export function ElevationChart({ chartData, stats }: ElevationChartProps) {
       {/* chart-a11y:no-table dense per-sample elevation+speed trace; gain/loss/net stats appear above the chart */}
       <ChartCard
         title={t('driveDetail.elevProfile', 'Elevation profile')}
-        ariaLabel={t('driveDetail.elevProfile.aria', 'Elevation and speed area+line chart over the drive timeline')}
+        ariaLabel={t('driveDetail.elevProfileAria', 'Elevation and speed area+line chart over the drive timeline')}
         chartKey="drive-detail-elevation"
         height={220}
         mobileHeight={220}

@@ -79,7 +79,7 @@ export default function SpeedTrendChart({ sessions }: SpeedTrendChartProps) {
         'Monthly average DC vs AC charge rate',
       )}
       ariaLabel={t(
-        'charging.curve.speedTrend.aria',
+        'charging.curve.speedTrendAria',
         'Monthly average DC and AC charging speed line chart',
       )}
       data={tableData}

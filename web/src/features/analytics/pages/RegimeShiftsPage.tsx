@@ -146,7 +146,7 @@ export default function RegimeShiftsPage() {
       {/* 2 — Series with regime steps */}
       <FadeIn delay={0.1}>
           <ChartCard
-            title={t('regimes.chart', 'Weekly consumption & detected regimes')}
+            title={t('regimes.chart.title', 'Weekly consumption & detected regimes')}
             subtitle={t('regimes.chartHint', 'The stepped line is each regime’s mean; vertical lines mark detected shifts')}
             ariaLabel={t('regimes.chart.aria', 'Weekly consumption line with stepped regime means and changepoint markers')}
             chartKey="regime-shifts-weekly-consumption"

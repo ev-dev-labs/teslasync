@@ -185,7 +185,7 @@ export default function StatisticsPage() {
           <ChartCard
             size="standard"
             title={t('statistics.stateDistribution', 'State distribution')}
-            ariaLabel={t('statistics.stateDistribution.aria', 'Vehicle state distribution pie chart')}
+            ariaLabel={t('statistics.stateDistributionAria', 'Vehicle state distribution pie chart')}
             exportable
             exportFilename="state-distribution"
             height={280}
@@ -239,7 +239,7 @@ export default function StatisticsPage() {
           <ChartCard
             size="standard"
             title={t('statistics.vehicleComparison', 'Vehicle comparison')}
-            ariaLabel={t('statistics.vehicleComparison.aria', 'Distance and energy bar chart comparing all vehicles in the fleet')}
+            ariaLabel={t('statistics.vehicleComparisonAria', 'Distance and energy bar chart comparing all vehicles in the fleet')}
             chartKey="fleet-vehicle-comparison"
             exportable
             exportFilename="vehicle-comparison"

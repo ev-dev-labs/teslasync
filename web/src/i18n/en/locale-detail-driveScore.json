@@ -150,6 +150,9 @@
       "cruiseControl": "Use Autopilot or cruise control on highways for consistent speed.",
       "routePlanning": "Plan routes to avoid high-speed stretches when possible."
     },
-    "empty": "Not enough drives in the selected period to calculate a score."
+    "empty": "Not enough drives in the selected period to calculate a score.",
+    "categoryBreakdownAria": "Drive score category breakdown horizontal bar chart",
+    "scoreDistributionAria": "Drive score distribution histogram bar chart",
+    "scoreTrendAria": "Drive score trend line chart with category breakdowns"
   }
 }

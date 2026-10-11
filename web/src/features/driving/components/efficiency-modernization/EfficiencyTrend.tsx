@@ -12,7 +12,7 @@ export function EfficiencyTrend({ model, source, units, selectedVehicleId }: Dri
   const { dailyTrend } = model;
   return <EfficiencyChart source={source}
     title={t('efficiency.dailyTrend', { unit: efficiencyUnit, defaultValue: 'Daily Efficiency ({{unit}})' })}
-    ariaLabel={t('efficiency.dailyTrend.aria', 'Daily efficiency trend area chart')}
+    ariaLabel={t('efficiency.dailyTrendAria', 'Daily efficiency trend area chart')}
     data={dailyTrend}
     dataColumns={[
       { key: 'date', label: t('efficiency.col.date', 'Date') },

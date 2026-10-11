@@ -96,7 +96,7 @@ export function SharedSessionReport({ data }: { data: SharedSessionData }) {
               toolbar
               exportable
               title={t('share.curve', 'Charge curve')}
-              ariaLabel={t('share.curve.aria', 'Shared session power and battery chart by minute')}
+              ariaLabel={t('share.curveAria', 'Shared session power and battery chart by minute')}
               height={220}
             >
               <ResponsiveContainer width="100%" height={220}>

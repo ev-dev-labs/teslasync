@@ -80,15 +80,15 @@ function ExpiredShareView() {
         <div className="w-16 h-16 mx-auto rounded-full bg-white/[0.03] flex items-center justify-center">
           <MapPin className="h-8 w-8 text-[var(--text-muted)]" aria-hidden="true" />
         </div>
-        <PageHeader title={t('share.expired.title', 'Share link unavailable')} />
+        <PageHeader title={t('share.unavailable.title', 'Share link unavailable')} />
         <Text as="p" variant="bodySm" color="secondary">
-          {t('share.expired.description', 'This shared drive link has expired or been revoked.')}
+          {t('share.unavailable.description', 'This shared drive link has expired or been revoked.')}
         </Text>
         <a
           href="/"
           className="inline-block text-sm text-[var(--theme-primary)] hover:underline"
         >
-          {t('share.expired.home', 'Go to TeslaSync')}
+          {t('share.unavailable.home', 'Go to TeslaSync')}
         </a>
       </div>
     </div>
@@ -301,7 +301,7 @@ export default function SharedDrivePage() {
               toolbar
               exportable
               title={t('share.elevation', 'Elevation profile')}
-              ariaLabel={t('share.elevation.aria', 'Shared drive elevation profile area chart by distance')}
+              ariaLabel={t('share.elevationAria', 'Shared drive elevation profile area chart by distance')}
               height={200}
             >
               <ResponsiveContainer width="100%" height={200}>
@@ -342,7 +342,7 @@ export default function SharedDrivePage() {
               toolbar
               exportable
               title={t('share.speed', 'Speed profile')}
-              ariaLabel={t('share.speed.aria', 'Shared drive speed profile line chart by distance')}
+              ariaLabel={t('share.speedAria', 'Shared drive speed profile line chart by distance')}
               height={200}
             >
               <ResponsiveContainer width="100%" height={200}>

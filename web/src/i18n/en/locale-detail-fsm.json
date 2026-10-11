@@ -126,6 +126,8 @@
     "noObservedState": "No observed state",
     "kpis": "FSM summary metrics",
     "overview": "Vehicle state overview",
-    "analysis": "Transition analysis"
+    "analysis": "Transition analysis",
+    "timelineChartAria": "FSM transitions over time stacked area chart",
+    "distributionByStateAria": "FSM state distribution donut chart with per-state counts"
   }
 }

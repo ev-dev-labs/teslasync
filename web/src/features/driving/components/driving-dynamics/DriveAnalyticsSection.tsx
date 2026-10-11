@@ -148,7 +148,7 @@ export default function DriveAnalyticsSection({
           <ChartContainer
             title={t('dynamics.speedDistribution', 'Speed Distribution')}
             subtitle={t('dynamics.speedDistDesc', 'Drives grouped by average speed')}
-            ariaLabel={t('dynamics.speedDistribution.aria', 'Speed-bucket drive count distribution bar chart')}
+            ariaLabel={t('dynamics.speedDistributionAria', 'Speed-bucket drive count distribution bar chart')}
             data={speedDistribution.map((b) => ({ range: b.range, count: b.count }))}
             dataColumns={[
               { key: 'range', label: t('dynamics.col.range', 'Speed range') },

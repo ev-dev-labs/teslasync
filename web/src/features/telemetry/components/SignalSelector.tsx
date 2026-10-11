@@ -71,7 +71,7 @@ export function SignalSelector({
           <HelpTooltip
             i18nKey="help.signal.layers"
             defaultValue="TeslaSync exposes three live-state layers: L1 (in-process), L2 (Redis shared), and log (TimescaleDB history)."
-            ariaLabel={t('help.signal.layers.aria', { defaultValue: 'More info about signal layers (L1, L2, log)' })}
+            ariaLabel={t('help.signal.layersAria', { defaultValue: 'More info about signal layers (L1, L2, log)' })}
             placement="bottom"
           />
         ) : null}

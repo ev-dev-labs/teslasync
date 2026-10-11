@@ -59,7 +59,7 @@ export function TemperatureTrendChart({ data, loading = false }: TemperatureTren
       <ChartContainer
         title={t('drivetrain.tempHistory', 'Temperature Trend')}
         subtitle={t('drivetrain.tempHistorySub', 'Outside temperature recorded during recent drives')}
-        ariaLabel={t('drivetrain.tempHistory.aria', 'Outside temperature trend line chart per recent drive')}
+        ariaLabel={t('drivetrain.tempHistoryAria', 'Outside temperature trend line chart per recent drive')}
         loading={loading}
         empty={empty}
         data={chartData}

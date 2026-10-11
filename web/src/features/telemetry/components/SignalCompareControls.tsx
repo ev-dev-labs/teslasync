@@ -117,7 +117,7 @@ export function SignalCompareControls({
               <HelpTooltip
                 i18nKey="help.signal.snapshot"
                 defaultValue="A snapshot is a point-in-time view of every signal value at a single timestamp. Falls back to signal_log within the last 30 days when the live layer doesn't have it."
-                ariaLabel={t('help.signal.snapshot.aria', { defaultValue: 'More info about signal snapshots' })}
+                ariaLabel={t('help.signal.snapshotAria', { defaultValue: 'More info about signal snapshots' })}
               />
             </Label>
             <Input
@@ -133,7 +133,7 @@ export function SignalCompareControls({
               <HelpTooltip
                 i18nKey="help.signal.diff"
                 defaultValue="Server-side comparison between two snapshots. Unchanged signals are omitted from the result to reduce noise."
-                ariaLabel={t('help.signal.diff.aria', { defaultValue: 'More info about signal diffs' })}
+                ariaLabel={t('help.signal.diffAria', { defaultValue: 'More info about signal diffs' })}
               />
             </Label>
             <Input

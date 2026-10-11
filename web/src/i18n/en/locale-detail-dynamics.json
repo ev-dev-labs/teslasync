@@ -273,6 +273,10 @@
     "reverse": "Reverse",
     "motorLoading": "Loading motor telemetry…",
     "forward": "Forward",
-    "motorResource": "Motor telemetry"
+    "motorResource": "Motor telemetry",
+    "speedDistributionAria": "Speed-bucket drive count distribution bar chart",
+    "powerOverTimeAria": "Motor power and regen over time area chart",
+    "torqueHistoryAria": "Front and rear motor torque over time line chart",
+    "rpmHistoryAria": "Front and rear motor RPM over time line chart"
   }
 }

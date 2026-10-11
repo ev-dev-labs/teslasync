@@ -5,6 +5,7 @@ import { createInstance } from 'i18next'
 import { beforeAll, describe, expect, it } from 'vitest'
 import catalog from './en.json'
 import { authorizedCanonicalAdditions } from './authorized-canonical-recovery.test'
+import { finalFourAdditions, ownerRecoveryAdditions, restoreOwnerRecoverySource } from './authorized-owner-recovery.test'
 import baseline from './known-missing-keys.json'
 import runtimeManifest from './en/runtime-manifest.json'
 import usageManifest from './en/usage-manifest.json'
@@ -1218,7 +1219,7 @@ describe('excluded806 feature-owned actual producer canonical defaults', () => {
     const keys = new Set<string>([...additions, ...copyOwnerAdditions, drivesEmptyAddition].map(([key]) => key))
     expect(keys.size).toBe(817)
     keys.add('systemStatus.incidents.updateCount_other')
-    for (const [key, value] of authorizedCanonicalAdditions) {
+    for (const [key, value] of [...authorizedCanonicalAdditions, ...ownerRecoveryAdditions, ...finalFourAdditions]) {
       expect(nested(catalog, key)).toBe(value)
       keys.add(key)
     }
@@ -1227,13 +1228,14 @@ describe('excluded806 feature-owned actual producer canonical defaults', () => {
     expect(oldEntries).toHaveLength(28257)
     expect(createHash('sha256').update(JSON.stringify(oldEntries)).digest('hex'))
       .toBe('890c0369385274774b8b670dbaa98036c4f0da7bec18213b6f78d35c372e90c6')
-    expect(leaves(catalog)).toHaveLength(30996)
+    expect(leaves(catalog)).toHaveLength(31095)
     expect(catalog.settings.title).toBe('Settings')
     expect(catalog.pwa).toMatchObject(shell.pwa)
   })
 
   it.each(sourceHashes)('keeps the frozen producer and input bytes unchanged: %s', (path, sha256) => {
     let source = readFileSync(resolve(process.cwd(), '..', path))
+    source = Buffer.from(restoreOwnerRecoverySource(path, source.toString('utf8')))
     for (const [file, key, oldKey, value, count] of copyOwnerSourceSplits) {
       if (file !== path) continue
       const args = key.endsWith('HelpAria')
@@ -1247,16 +1249,21 @@ describe('excluded806 feature-owned actual producer canonical defaults', () => {
     expect(createHash('sha256').update(source).digest('hex')).toBe(sha256)
   })
 
-  it('retains only the exact three genuine error-title misses in every artifact', () => {
+  it('resolves only the exact three formerly missing titles without new suppressions', () => {
     expect(sourceHashes).toHaveLength(291)
-    expect(baseline).toEqual(remaining)
-    expect(runtimeManifest.missing).toEqual(remaining)
-    expect(usageManifest.knownMissingKeys).toEqual(remaining)
+    expect(baseline).toEqual([])
+    expect(runtimeManifest.missing).toEqual([])
+    expect(usageManifest.knownMissingKeys).toEqual([])
     for (const key of remaining) {
-      expect(english.exists(key)).toBe(false)
+      expect(english.exists(key)).toBe(true)
+      const value = ownerRecoveryAdditions.find(([candidate]) => candidate === key)?.[1]
+      expect(value).toBeDefined()
       for (const resource of [catalog, ...resources]) {
-        expect(nested(resource, key)).toBeUndefined()
+        if (nested(resource, key) !== undefined) expect(nested(resource, key)).toBe(value)
       }
+      expect(nested(catalog, key)).toBe(value)
+      expect(nested(shell, key)).toBe(value)
+      expect(resources.some(resource => nested(resource, key) === value)).toBe(true)
     }
   })
 })

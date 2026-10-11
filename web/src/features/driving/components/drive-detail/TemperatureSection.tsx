@@ -70,7 +70,7 @@ export function TemperatureSection({ chartData, stats }: TemperatureSectionProps
       {/* chart-a11y:no-table dense per-sample temperature trace; min/avg stats appear above the chart in the stat tiles */}
       <ChartCard
         title={t('driveDetail.temperatures', 'Temperatures')}
-        ariaLabel={t('driveDetail.temperatures.aria', 'Inside, outside, driver and passenger temperature lines over the drive timeline')}
+        ariaLabel={t('driveDetail.temperaturesAria', 'Inside, outside, driver and passenger temperature lines over the drive timeline')}
         height={310}
         size="standard"
         toolbar

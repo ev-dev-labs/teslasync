@@ -592,7 +592,8 @@
       "title": "{{thing}} not found"
     },
     "request": {
-      "message": "Review the request and try again. No changes were applied."
+      "message": "Review the request and try again. No changes were applied.",
+      "title": "Request could not be completed"
     },
     "retry": "Retry",
     "serverError": {
@@ -609,10 +610,12 @@
       "title": "Sign in required"
     },
     "unavailable": {
-      "message": "A required service is temporarily unavailable. Try again after it recovers."
+      "message": "A required service is temporarily unavailable. Try again after it recovers.",
+      "title": "Service unavailable"
     },
     "unsupported": {
-      "message": "This feature is not available with the current server or deployment configuration."
+      "message": "This feature is not available with the current server or deployment configuration.",
+      "title": "Feature not supported"
     },
     "waiting": {
       "message": "We're pausing requests briefly. Data will refresh automatically.",
@@ -2252,8 +2255,19 @@
   "transitionArrow": {
     "label": "{{from}} to {{to}}"
   },
-  "vehicle": "vehicle",
   "vehicleSelect": {
     "aria": "Select vehicle"
+  },
+  "vehicleVisualization": {
+    "status": {
+      "battery": "Battery",
+      "charging": "Charging",
+      "locked": "Locked",
+      "unlocked": "Unlocked",
+      "driving": "Driving",
+      "climate": "Climate",
+      "sentry": "Sentry",
+      "notCharging": "Not Charging"
+    }
   }
 }

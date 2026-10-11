@@ -452,6 +452,7 @@
   "vampire": {
     "title": "Vampire drain"
   },
+  "vehicle": "vehicle",
   "visits": "visits",
   "workspaceContext": {
     "ranges": {

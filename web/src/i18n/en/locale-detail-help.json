@@ -114,11 +114,16 @@
       "snapshot": "A snapshot is a point-in-time view of every signal value at a single timestamp. The diff falls back to signal_log within the last 30 days when the live layer doesn't have it.",
       "diff": "Server-side comparison between two snapshots. Unchanged signals are omitted from the result to reduce noise.",
       "sourceLayer": "The layer that supplied this value: L1 (in-process), L2 (Redis), Log (TimescaleDB history), or Stale (older than 2 minutes).",
-      "deltaCol": "Numeric difference (and percent change) between Window A and Window B for this signal. 'changed' is shown for non-numeric values that differ."
+      "deltaCol": "Numeric difference (and percent change) between Window A and Window B for this signal. 'changed' is shown for non-numeric values that differ.",
+      "snapshotAria": "More info about signal snapshots",
+      "diffAria": "More info about signal diffs",
+      "layersAria": "More info about signal layers (L1, L2, log)"
     },
     "fsm": {
       "type": "Finite-state machine. Tracks vehicle high-level state (driving, charging, parked, online, asleep, offline) and the transitions between them. Sub-FSMs cover drive, charge, command, and notification lifecycles.",
-      "liveState": "The current state the FSM resolved to from the most recent telemetry. The FSM stays in a terminal state until external evidence (telemetry or poll) triggers an explicit transition out."
+      "liveState": "The current state the FSM resolved to from the most recent telemetry. The FSM stays in a terminal state until external evidence (telemetry or poll) triggers an explicit transition out.",
+      "typeAria": "More info about FSM types",
+      "liveStateAria": "More info about FSM live state"
     },
     "replay": {
       "power": "Instantaneous battery power at this point on the trip. Negative values indicate regenerative braking (energy flowing back into the pack); positive values indicate motor draw.",

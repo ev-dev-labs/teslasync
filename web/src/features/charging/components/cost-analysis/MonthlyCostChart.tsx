@@ -83,7 +83,7 @@ export function MonthlyCostChart({ data, vehicleId, isLoading, error, onRetry }:
   return (
     <ChartContainer
       title={t('costAnalysis.charts.monthlyCost', 'Monthly Cost Trend')}
-      ariaLabel={t('costAnalysis.charts.monthlyCost.aria', 'Monthly charging cost trend area chart')}
+      ariaLabel={t('costAnalysis.charts.monthlyCostAria', 'Monthly charging cost trend area chart')}
       data={chartData}
       exportData={chartData}
       dataColumns={dataColumns}

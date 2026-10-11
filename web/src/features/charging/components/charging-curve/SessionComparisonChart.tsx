@@ -58,7 +58,7 @@ export default function SessionComparisonChart({ sessions }: SessionComparisonCh
           'Power curves overlaid from last 10 sessions',
         )}
         ariaLabel={t(
-          'charging.curve.sessionComparison.aria',
+          'charging.curve.sessionComparisonAria',
           'Overlaid power-vs-SOC line chart comparing the last several charging sessions',
         )}
         height={300}

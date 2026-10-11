@@ -164,7 +164,7 @@ export default function DriveAnomaliesPage() {
       <FadeIn delay={0.1}>
           {/* chart-legend-audit:skip fitted baseline and two-sigma bounds form one analytical envelope and must remain visible together */}
           <ChartCard
-            title={t('anomalies.chart', 'Your Consumption Law')}
+            title={t('anomalies.chart.title', 'Your Consumption Law')}
             subtitle={t('anomalies.chartHint', 'Quadratic fit of consumption vs speed with a ±2σ band; red points break the law')}
             ariaLabel={t('anomalies.chart.aria', 'Scatter of drive consumption against speed with fitted curve and two-sigma band; outliers highlighted')}
             loading={isLoading}

@@ -157,7 +157,7 @@ export default function EfficiencyLandscapePage() {
       {/* 2 — The field */}
       <FadeIn delay={0.1}>
         <LayoutCard
-          title={t('landscape.field', 'Consumption Field')}
+          title={t('landscape.field.title', 'Consumption Field')}
           actions={<>
             <Mountain className="h-4 w-4 text-cyan-300" aria-hidden="true" />
             <HelpTooltip
@@ -170,7 +170,7 @@ export default function EfficiencyLandscapePage() {
         >
           <SourceContent
             state={isError ? 'error' : isLoading ? 'loading' : landscape.analyzed === 0 ? 'empty' : 'ready'}
-            label={t('landscape.field', 'Consumption Field')}
+            label={t('landscape.field.title', 'Consumption Field')}
             error={drivesState.fatalError}
             errorMessage={t('drivingSecondary.states.historyError', 'Could not load drive history.')}
             errorRecovery={{ onRetry: () => void drivesQuery.refetch() }}

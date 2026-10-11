@@ -146,7 +146,7 @@ export function FSMTimelineChart({ transitions, hours, emptyMessage }: FSMTimeli
   return (
     <ChartContainer
       title={t('fsm.timelineChart', 'Transitions over time')}
-      ariaLabel={t('fsm.timelineChart.aria', 'FSM transitions over time stacked area chart')}
+      ariaLabel={t('fsm.timelineChartAria', 'FSM transitions over time stacked area chart')}
       height={260}
     >
       {buckets.length > 0 ? (

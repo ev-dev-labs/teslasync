@@ -90,7 +90,11 @@
     "effort": "Attempts per intent",
     "effortValue": "{{n}} · {{retried}} retried",
     "topError": "Usual failure",
-    "topErrorValue": "{{msg}} (×{{n}})"
+    "topErrorValue": "{{msg}} (×{{n}})",
+    "chart": {
+      "title": "Confidence-weighted success",
+      "aria": "Bar chart of the wilson lower confidence bound for each command with the naive success rate overlaid"
+    }
   },
   "dashboardPresets": {
     "title": "Dashboard presets",
@@ -696,7 +700,8 @@
     "section": {
       "storage": "Storage and migrations",
       "runtime": "Tables and runtime"
-    }
+    },
+    "chartTitleAria": "Top fifteen database table sizes horizontal bar chart"
   },
   "debugger": {
     "share": "Share permalink",
@@ -1469,6 +1474,7 @@
         "tokens": "Your Helix token quota for this minute is exhausted. Try a shorter prompt."
       },
       "retry": "Retry",
+      "retryIn": "Try again in {{seconds}}s",
       "title": {
         "burst": "Too many Helix requests at once",
         "costCap": "Daily cost cap reached",
@@ -2763,6 +2769,7 @@
     },
     "detailTitle": "Transition detail",
     "distributionByState": "State distribution",
+    "distributionByStateAria": "FSM state distribution donut chart with per-state counts",
     "flapCount": "Flap warnings",
     "from": "From",
     "fsmType": "FSM type",
@@ -2814,6 +2821,7 @@
     "subtitle": "Multi-FSM transition analysis — vehicle, drive, charge, command, notification",
     "time": "Time",
     "timelineChart": "Transitions over time",
+    "timelineChartAria": "FSM transitions over time stacked area chart",
     "timelineTitle": "Transition log",
     "title": "FSM debugger",
     "to": "To",
@@ -2938,7 +2946,9 @@
     "exploreTitle": "Explore the app",
     "fsm": {
       "liveState": "The current state the FSM resolved to from the most recent telemetry. The FSM stays in a terminal state until external evidence (telemetry or poll) triggers an explicit transition out.",
-      "type": "Finite-state machine. Tracks vehicle high-level state (driving, charging, parked, online, asleep, offline) and the transitions between them. Sub-FSMs cover drive, charge, command, and notification lifecycles."
+      "liveStateAria": "More info about FSM live state",
+      "type": "Finite-state machine. Tracks vehicle high-level state (driving, charging, parked, online, asleep, offline) and the transitions between them. Sub-FSMs cover drive, charge, command, and notification lifecycles.",
+      "typeAria": "More info about FSM types"
     },
     "guided": {
       "intro": "Replay the product introduction",

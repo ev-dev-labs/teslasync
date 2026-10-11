@@ -18,6 +18,10 @@
     "regenShare": "{{pct}}% recovered",
     "subtitle": "Where a period of traction energy physically went",
     "kpis": "Energy anatomy summary metrics",
-    "noData": "No drives with energy data in this period."
+    "noData": "No drives with energy data in this period.",
+    "sankey": {
+      "aria": "Sankey diagram splitting {{total}} into aero drag, rolling resistance, climate, and other losses",
+      "title": "Energy Flow"
+    }
   }
 }

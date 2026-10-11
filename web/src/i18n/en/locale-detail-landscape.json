@@ -20,6 +20,10 @@
     "analyzed": "Drives Mapped",
     "subtitle": "Your car’s real consumption across speed and temperature",
     "kpis": "Landscape summary metrics",
-    "noData": "No drives with speed, temperature, and energy data in this period."
+    "noData": "No drives with speed, temperature, and energy data in this period.",
+    "field": {
+      "title": "Consumption Field",
+      "aria": "Grid of consumption by speed band and temperature band; best {{best}}, worst {{worst}}"
+    }
   }
 }

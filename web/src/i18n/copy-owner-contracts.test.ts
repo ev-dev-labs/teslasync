@@ -9,6 +9,7 @@ import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
 import ts from 'typescript'
 import catalog from './en.json'
 import { authorizedCanonicalAdditions } from './authorized-canonical-recovery.test'
+import { finalFourAdditions, ownerRecoveryAdditions } from './authorized-owner-recovery.test'
 import { AIThinkingIndicator } from '@/components/ai/AIThinkingIndicator'
 import { AIFeatureCard } from '@/components/ai/AIFeatureCard'
 import { useDrivesListPageCollections } from '@/features/driving/hooks/useDrivesListPageCollections'
@@ -85,7 +86,7 @@ describe('five source-backed copy-owner contracts', () => {
       'systemStatus.incidents.updateCount_other',
     ])
     expect(approved.size).toBe(12)
-    for (const [key, value] of authorizedCanonicalAdditions) {
+    for (const [key, value] of [...authorizedCanonicalAdditions, ...ownerRecoveryAdditions, ...finalFourAdditions]) {
       expect(nested(catalog, key)).toBe(value)
       approved.add(key)
     }
@@ -98,7 +99,7 @@ describe('five source-backed copy-owner contracts', () => {
       })
     }
     const entries = leaves(catalog)
-    expect(entries).toHaveLength(30996)
+    expect(entries).toHaveLength(31095)
     const predecessor = entries.filter(([key]) => !approved.has(key))
       .sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0)
     expect(predecessor).toHaveLength(29063)

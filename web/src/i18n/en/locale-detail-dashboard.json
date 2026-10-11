@@ -301,6 +301,25 @@
     "dashboardTools": "Dashboard tools",
     "dashboardToolsHelp": "Manage, present, or share this layout.",
     "widgetsRegion": "Dashboard widgets",
-    "loading": "Loading command center"
+    "loading": "Loading command center",
+    "widgetSettings": {
+      "allVehicles": "All vehicles (first)",
+      "vehicleName": "Vehicle {{id}}",
+      "title": "{{name}} Settings",
+      "vehicle": "Vehicle",
+      "refreshInterval": "Refresh interval",
+      "default": "Default",
+      "5s": "5 seconds",
+      "15s": "15 seconds",
+      "30s": "30 seconds",
+      "60s": "1 minute",
+      "timeRange": "Time range",
+      "24h": "Last 24 hours",
+      "7d": "Last 7 days",
+      "30d": "Last 30 days",
+      "90d": "Last 90 days",
+      "appearance": "Appearance",
+      "showTitle": "Show widget title"
+    }
   }
 }

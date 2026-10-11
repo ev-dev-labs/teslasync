@@ -561,7 +561,12 @@
       "summaryLoading": "Loading summary metrics",
       "yearlyTrendDesc": "Average time-to-charge and session count by year",
       "selectSessionHint": "Select a session above to view its charging curve",
-      "sessionInspector": "Session inspector"
+      "sessionInspector": "Session inspector",
+      "chargerTypeAria": "Composed bar/line chart of average power and energy per charger type",
+      "sessionComparisonAria": "Overlaid power-vs-SOC line chart comparing the last several charging sessions",
+      "powerVsSocAria": "Charging power versus state-of-charge area chart for the selected session",
+      "speedTrendAria": "Monthly average DC and AC charging speed line chart",
+      "yearlyTrendAria": "Yearly average charge-time and session-count composed chart"
     },
     "optimizer": {
       "heatmap": "Charging cost heatmap",
@@ -996,7 +1001,9 @@
         "month": "Month",
         "cost": "Cost ($)",
         "date": "Date"
-      }
+      },
+      "costPerKwhAria": "Cost per kilowatt-hour trend line chart",
+      "monthlyCostAria": "Monthly charging cost trend area chart"
     },
     "forecast": {
       "title": "Cost forecast",
@@ -1445,6 +1452,7 @@
         "tokens": "Your Helix token quota for this minute is exhausted. Try a shorter prompt."
       },
       "retry": "Retry",
+      "retryIn": "Try again in {{seconds}}s",
       "title": {
         "burst": "Too many Helix requests at once",
         "costCap": "Daily cost cap reached",

@@ -87,7 +87,7 @@ export default function ChargerTypeChart({ sessions }: ChargerTypeChartProps) {
         'Average kW and kWh per charger category',
       )}
       ariaLabel={t(
-        'charging.curve.chargerType.aria',
+        'charging.curve.chargerTypeAria',
         'Composed bar/line chart of average power and energy per charger type',
       )}
       empty={isEmpty}

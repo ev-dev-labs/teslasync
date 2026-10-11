@@ -101,6 +101,7 @@
     },
     "resultsLabel": "Results",
     "clearFilter": "Clear filter",
+    "clearScope": "Clear {{scope}} filter",
     "related": {
       "parent": "Back to section",
       "sibling": "Same section"

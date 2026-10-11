@@ -159,7 +159,7 @@ export default function CommandReliabilityPage() {
           </GlassPanel>
         ) : (
           <ChartContainer
-            title={t('commandReliability.chart', 'Confidence-weighted success')}
+            title={t('commandReliability.chart.title', 'Confidence-weighted success')}
             subtitle={t(
               'commandReliability.chartHint',
               'Bars are the pessimistic lower bound; the dot is the raw success rate the log shows',

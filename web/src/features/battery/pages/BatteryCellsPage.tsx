@@ -685,7 +685,7 @@ export default function BatteryCellsPage() {
         <ChartCard
           toolbar exportable size="standard"
           title={t('battery.cells.chart.spreadTrend', 'Voltage spread trend')}
-          ariaLabel={t('battery.cells.chart.spreadTrend.aria', 'Battery cell voltage spread trend area chart over time')}
+          ariaLabel={t('battery.cells.chart.spreadTrendAria', 'Battery cell voltage spread trend area chart over time')}
           annotations={{ vehicleId, scope: 'battery', chartId: 'battery-cells-spread-trend' }}
           loading={isLoading}
           empty={!isLoading && !isError && voltageSpreadTrend.length === 0}

@@ -154,7 +154,7 @@ export default function EnergyAnatomyPage() {
       {/* 2 — Sankey */}
       <FadeIn delay={0.1}>
         <LayoutCard
-          title={t('energyAnatomy.sankey', 'Energy Flow')}
+          title={t('energyAnatomy.sankey.title', 'Energy Flow')}
           actions={<>
             <Waypoints className="h-4 w-4 text-cyan-300" aria-hidden="true" />
             <HelpTooltip
@@ -167,7 +167,7 @@ export default function EnergyAnatomyPage() {
         >
           <SourceContent
             state={isError ? 'error' : isLoading ? 'loading' : anatomy.totalWh === 0 ? 'empty' : 'ready'}
-            label={t('energyAnatomy.sankey', 'Energy Flow')}
+            label={t('energyAnatomy.sankey.title', 'Energy Flow')}
             error={drivesState.fatalError}
             errorMessage={t('drivingSecondary.states.historyError', 'Could not load drive history.')}
             errorRecovery={{ onRetry: () => void drivesQuery.refetch() }}

@@ -7,8 +7,69 @@ import i18n, {
 import englishShell from './en/shell.json'
 import runtimeManifest from './en/runtime-manifest.json'
 import usageManifest from './en/usage-manifest.json'
+import catalog from './en.json'
 
 const startupShell = structuredClone(englishShell)
+
+// Exercise the production suppression branch even when the generated baseline
+// has no missing keys. Only this isolated test instance receives the fixture;
+// the installed i18next implementation and production loader/handler stay real.
+async function withKnownMissingFixture(
+  assertion: (runtime: typeof import('./index'), key: string, probe: string[]) => void | Promise<void>,
+) {
+  const key = 'battery.testOnlyAbsentKnownMissing'
+  const control = 'battery.testOnlyUnsuppressedMissing'
+  expect(runtimeManifest.missing).toEqual([])
+  expect(runtimeManifest.detail).toContain('battery')
+  expect(runtimeManifest.complete).not.toContain('battery')
+  for (const absent of [key, `${key}_one`, `${key}_other`, control]) {
+    expect(catalog).not.toHaveProperty(absent)
+    expect(startupShell).not.toHaveProperty(absent)
+  }
+  const target = globalThis as typeof globalThis & { __TESLASYNC_I18N_PROBE_KEYS__?: string[] }
+  const previousProbe = target.__TESLASYNC_I18N_PROBE_KEYS__
+  const probe: string[] = []
+  target.__TESLASYNC_I18N_PROBE_KEYS__ = probe
+  vi.resetModules()
+  vi.doMock('./en/runtime-manifest.json', () => ({
+    default: { ...runtimeManifest, missing: [key] },
+  }))
+  vi.doMock('i18next', async () => {
+    const installed = await vi.importActual<typeof import('i18next')>('i18next')
+    return { ...installed, default: installed.createInstance() }
+  })
+  let runtime: typeof import('./index') | undefined
+  try {
+    runtime = await import('./index')
+    expect(runtime.default).not.toBe(i18n)
+    expect(runtime.default.exists(key)).toBe(false)
+    await assertion(runtime, key, probe)
+
+    // Positive control: the same real handler must request a deferred resource
+    // for an absent key that is NOT in this test-only missing-key fixture.
+    const added = vi.fn()
+    runtime.default.store.on('added', added)
+    try {
+      expect(runtime.default.t(control, { defaultValue: '__control__', saveMissing: true })).toBe('__control__')
+      expect(probe).toEqual([control])
+      await runtime.loadEnglishNamespace('battery')
+      expect(added).toHaveBeenCalledTimes(1)
+      expect(runtime.default.exists('battery.cells.title')).toBe(true)
+      expect(runtime.default.t('battery.cells.title')).toBe(catalog.battery.cells.title)
+      expect(runtime.default.exists(key)).toBe(false)
+    } finally {
+      runtime.default.store.off('added', added)
+    }
+  } finally {
+    runtime?.flushPendingEnglishResourcesForTest()
+    vi.doUnmock('./en/runtime-manifest.json')
+    vi.doUnmock('i18next')
+    vi.resetModules()
+    if (previousProbe === undefined) delete target.__TESLASYNC_I18N_PROBE_KEYS__
+    else target.__TESLASYNC_I18N_PROBE_KEYS__ = previousProbe
+    expect(runtimeManifest.missing).toEqual([])
+  }
+}
 
 const generatedCatalogs = import.meta.glob<{ default: Record<string, unknown> }>(
   './en/locale-*.json',
@@ -230,9 +291,13 @@ describe('deferred English resources', () => {
     target.__TESLASYNC_I18N_PROBE_KEYS__ = probe
     expect(runtimeManifest.complete).toContain('nav')
 
-    // `nav` ships complete, so an aria key that never made it into the catalog
-    // must fall back inline instead of triggering a cold-start chunk request.
-    expect(i18n.t('nav.sidebar', { defaultValue: 'Sidebar', saveMissing: true })).toBe('Sidebar')
+    // The accepted canonical key resolves, while a genuinely absent synthetic
+    // key in this complete namespace falls back without a cold-start request.
+    expect(catalog.nav.sidebar).toBe('Sidebar navigation')
+    expect(i18n.t('nav.sidebar', { defaultValue: 'Sidebar', saveMissing: true })).toBe('Sidebar navigation')
+    expect(catalog.nav).not.toHaveProperty('__testOnlyAbsentSidebar')
+    expect(i18n.exists('nav.__testOnlyAbsentSidebar')).toBe(false)
+    expect(i18n.t('nav.__testOnlyAbsentSidebar', { defaultValue: 'Sidebar', saveMissing: true })).toBe('Sidebar')
     expect(probe).toEqual([])
     await expect(loadEnglishNamespace('nav')).resolves.toBeUndefined()
 
@@ -241,35 +306,25 @@ describe('deferred English resources', () => {
 
   it('never requests a chunk for a key the build proved is absent from the catalog', async () => {
     const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined)
-    const probe: string[] = []
-    const target = globalThis as typeof globalThis & { __TESLASYNC_I18N_PROBE_KEYS__?: string[] }
-    target.__TESLASYNC_I18N_PROBE_KEYS__ = probe
-
-    const suppressed = runtimeManifest.missing
-    expect(suppressed.length).toBeGreaterThan(0)
-    for (const key of suppressed) {
-      expect(i18n.t(key, { defaultValue: '__inline__', saveMissing: true })).toBe('__inline__')
-    }
-
-    // Every one of these would otherwise have pulled a locale-detail chunk
-    // that provably cannot contain the key.
-    expect(probe).toEqual([])
-    await new Promise((resolve) => globalThis.setTimeout(resolve, 60))
+    await withKnownMissingFixture(async (runtime, key, probe) => {
+      expect(runtime.default.t(key, { defaultValue: '__inline__', saveMissing: true })).toBe('__inline__')
+      // This known deferred namespace would otherwise pull a locale-detail
+      // chunk that provably cannot contain the fixture's missing key.
+      expect(probe).toEqual([])
+      await new Promise((resolve) => globalThis.setTimeout(resolve, 60))
+      expect(probe).toEqual([])
+    })
     expect(consoleError).not.toHaveBeenCalled()
-    delete target.__TESLASYNC_I18N_PROBE_KEYS__
   })
 
-  it('suppresses the plural forms of a known-missing key too', () => {
-    const probe: string[] = []
-    const target = globalThis as typeof globalThis & { __TESLASYNC_I18N_PROBE_KEYS__?: string[] }
-    target.__TESLASYNC_I18N_PROBE_KEYS__ = probe
-
-    const [suppressed] = runtimeManifest.missing
-    expect(i18n.t(`${suppressed}_other`, { defaultValue: '__inline__', saveMissing: true })).toBe('__inline__')
-    expect(i18n.t(suppressed, { count: 2, defaultValue: '__inline__', saveMissing: true })).toBe('__inline__')
-
-    expect(probe).toEqual([])
-    delete target.__TESLASYNC_I18N_PROBE_KEYS__
+  it('suppresses the plural forms of a known-missing key too', async () => {
+    await withKnownMissingFixture((runtime, suppressed, probe) => {
+      expect(runtime.default.t(`${suppressed}_other`, { defaultValue: '__inline__', saveMissing: true })).toBe('__inline__')
+      expect(runtime.default.t(suppressed, { count: 2, defaultValue: '__inline__', saveMissing: true })).toBe('__inline__')
+      expect(runtime.default.t(`${suppressed}_one`, { defaultValue: '__inline__', saveMissing: true })).toBe('__inline__')
+      expect(runtime.default.t(suppressed, { count: 1, defaultValue: '__inline__', saveMissing: true })).toBe('__inline__')
+      expect(probe).toEqual([])
+    })
   })
 
   it('still fetches a key that is absent from the shell but present in the catalog', async () => {

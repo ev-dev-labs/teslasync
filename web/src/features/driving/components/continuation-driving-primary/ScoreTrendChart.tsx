@@ -27,7 +27,7 @@ export function ScoreTrendChart({ data, vehicleId, scoreColor, colors }: ScoreTr
   return (
     <ChartCard
       title={t('driveScore.scoreTrend', 'Score Trend')}
-      ariaLabel={t('driveScore.scoreTrend.aria', 'Drive score trend line chart with category breakdowns')}
+      ariaLabel={t('driveScore.scoreTrendAria', 'Drive score trend line chart with category breakdowns')}
       data={data.map(({ date, score, efficiency, smoothness, speed }) => ({
         date, score, efficiency, smoothness, speed,
       }))}

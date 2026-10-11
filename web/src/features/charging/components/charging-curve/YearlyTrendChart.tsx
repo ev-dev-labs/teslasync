@@ -48,7 +48,7 @@ export default function YearlyTrendChart({ yearlyTrend }: YearlyTrendChartProps)
         'Average time-to-charge and session count by year',
       )}
       ariaLabel={t(
-        'charging.curve.yearlyTrend.aria',
+        'charging.curve.yearlyTrendAria',
         'Yearly average charge-time and session-count composed chart',
       )}
       chartKey="charging-curve-yearly-trend"

@@ -16,7 +16,7 @@ export function ScoreDistributionChart({ data }: { data: ScoreDistributionDatum[
   return (
     <ChartCard
       title={t('driveScore.scoreDistribution', 'Score Distribution')}
-      ariaLabel={t('driveScore.scoreDistribution.aria', 'Drive score distribution histogram bar chart')}
+      ariaLabel={t('driveScore.scoreDistributionAria', 'Drive score distribution histogram bar chart')}
       data={data.map(({ range, count }) => ({ range, count }))}
       dataColumns={[
         { key: 'range', label: t('driveScore.col.range', 'Score range') },

@@ -33,7 +33,7 @@ export function SocChart({ chartData }: SocChartProps) {
       {/* chart-a11y:no-table dense per-sample SOC trace; start/end SOC visible in the drive summary tiles */}
       <ChartCard
         title={t('driveDetail.socOverTime', 'SOC % over time')}
-        ariaLabel={t('driveDetail.socOverTime.aria', 'State of charge percent over time area chart')}
+        ariaLabel={t('driveDetail.socOverTimeAria', 'State of charge percent over time area chart')}
         height={220}
         mobileHeight={220}
         toolbar

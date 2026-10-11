@@ -1319,7 +1319,7 @@ export function CommandPalette({ onOpen, initialOpen = false }: CommandPalettePr
                           setSelectedIndex(0)
                           inputRef.current?.focus()
                         }}
-                        aria-label={t('palette.clearScope', { scope: getScopeMeta(activeScope).label, defaultValue: `Clear ${getScopeMeta(activeScope).label} filter` })}
+                        aria-label={t('palette.clearScope', 'Clear {{scope}} filter', { scope: getScopeMeta(activeScope).label })}
                         className="min-h-11 min-w-11 max-w-full gap-1.5 border border-[var(--border-default)] bg-[var(--surface-2)] px-2 py-1 md:min-h-9"
                         data-palette-scope-chip={activeScope}
                       >

@@ -84,6 +84,7 @@
         "tokens": "Your Helix token quota for this minute is exhausted. Try a shorter prompt."
       },
       "retry": "Retry",
+      "retryIn": "Try again in {{seconds}}s",
       "title": {
         "burst": "Too many Helix requests at once",
         "costCap": "Daily cost cap reached",
@@ -836,6 +837,7 @@
     "destination": "Destination",
     "distance": "Distance",
     "driveChart": "Drive overview",
+    "driveChartAria": "Drive overview composed chart of speed, range, SOC and power over time",
     "driver": "Driver",
     "driverTemp": "Driver temperature",
     "duration": "Duration",
@@ -843,6 +845,7 @@
     "elevGain": "Elev. Gain",
     "elevLoss": "Elev. Loss",
     "elevProfile": "Elevation profile",
+    "elevProfileAria": "Elevation and speed area+line chart over the drive timeline",
     "elevSummary": "Elevation summary",
     "elevation": "Elevation",
     "end": "End",
@@ -920,6 +923,7 @@
     "passengerTemp": "Passenger temperature",
     "power": "Power",
     "powerProfile": "Power profile",
+    "powerProfileAria": "Drive power profile area chart over time",
     "rangeEst": "Range est.",
     "rangeIdeal": "Range ideal",
     "rangeStartEnd": "Range (start → End)",
@@ -1016,8 +1020,10 @@
     },
     "soc": "SOC",
     "socOverTime": "SOC % over time",
+    "socOverTimeAria": "State of charge percent over time area chart",
     "speed": "Speed",
     "speedHistogram": "Speed histogram",
+    "speedHistogramAria": "Speed-bucket distribution histogram",
     "start": "Start",
     "stat": {
       "max": "Max",
@@ -1027,6 +1033,7 @@
     "stationaryRouteBody": "Only one GPS coordinate was recorded for this drive, so the route can't be drawn. The drive's distance, duration, and other stats below are unaffected.",
     "stationaryRouteTitle": "Route can't be plotted",
     "temperatures": "Temperatures",
+    "temperaturesAria": "Inside, outside, driver and passenger temperature lines over the drive timeline",
     "theater": {
       "empty": "No P/R/N/D or charge-port changes were recorded for this drive.",
       "portClosed": "Port closed",
@@ -1041,6 +1048,7 @@
       "statusPrefix": "Status "
     },
     "tirePressure": "Tire pressure during drive",
+    "tirePressureAria": "Front and rear tire pressure lines over the drive timeline",
     "title": "Drive details",
     "tripCost": "Trip cost",
     "usableSoc": "Usable SOC",

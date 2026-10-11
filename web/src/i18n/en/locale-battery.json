@@ -2310,6 +2310,7 @@
         "tokens": "Your Helix token quota for this minute is exhausted. Try a shorter prompt."
       },
       "retry": "Retry",
+      "retryIn": "Try again in {{seconds}}s",
       "title": {
         "burst": "Too many Helix requests at once",
         "costCap": "Daily cost cap reached",
@@ -2708,6 +2709,7 @@
       "chart": {
         "noSpreadTrend": "Not enough history for spread trend",
         "spreadTrend": "Voltage spread trend",
+        "spreadTrendAria": "Battery cell voltage spread trend area chart over time",
         "voltageSpread": "Voltage spread (mV)"
       },
       "details": {
@@ -2924,6 +2926,7 @@
       "title": "Battery degradation",
       "totalCycles": "Total cycles",
       "trendTitle": "Health trend & projection",
+      "trendTitleAria": "Battery health trend and 95% confidence projection chart",
       "warranty": "80% Warranty",
       "years": "years",
       "yearsCount": "{{y}} years",

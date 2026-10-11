@@ -63,7 +63,7 @@ export function CostPerKwhChart({ data, isLoading, error, onRetry }: CostPerKwhC
   return (
     <ChartContainer
       title={t('costAnalysis.charts.costPerKwh', 'Cost per kWh Trend')}
-      ariaLabel={t('costAnalysis.charts.costPerKwh.aria', 'Cost per kilowatt-hour trend line chart')}
+      ariaLabel={t('costAnalysis.charts.costPerKwhAria', 'Cost per kilowatt-hour trend line chart')}
       data={rows}
       exportData={rows}
       dataColumns={[

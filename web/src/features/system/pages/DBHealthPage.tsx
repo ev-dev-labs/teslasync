@@ -283,7 +283,7 @@ export default function DBHealthPage() {
             ) : (
               <ChartContainer
                 title={t('dbHealth.chartTitle', 'Table sizes (top 15)')}
-                ariaLabel={t('dbHealth.chartTitle.aria', 'Top fifteen database table sizes horizontal bar chart')}
+                ariaLabel={t('dbHealth.chartTitleAria', 'Top fifteen database table sizes horizontal bar chart')}
                 data={chartData.map((r) => ({ name: r.name, rows: r.rows }))}
                 dataColumns={[
                   { key: 'name', label: t('dbHealth.col.table', 'Hypertable') },

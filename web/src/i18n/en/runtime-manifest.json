@@ -48,16 +48,12 @@
     "statCard",
     "transitionArrow",
     "upstream",
-    "vehicle",
     "vehiclePicker",
     "vehicleSelect",
+    "vehicleVisualization",
     "workspace"
   ],
-  "missing": [
-    "error.request.title",
-    "error.unavailable.title",
-    "error.unsupported.title"
-  ],
+  "missing": [],
   "detail": [
     "achievements",
     "activity",
@@ -483,6 +479,7 @@
       "units",
       "unread",
       "vampire",
+      "vehicle",
       "visits",
       "workspaceContext"
     ],

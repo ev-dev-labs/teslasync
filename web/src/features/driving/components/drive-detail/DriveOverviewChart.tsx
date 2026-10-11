@@ -53,7 +53,7 @@ export function DriveOverviewChart({ chartData }: DriveOverviewChartProps) {
       {/* chart-a11y:no-table dense per-sample drive trace; mean/max/min summary table follows below in the rich legend */}
       <ChartCard
         title={t('driveDetail.driveChart', 'Drive overview')}
-        ariaLabel={t('driveDetail.driveChart.aria', 'Drive overview composed chart of speed, range, SOC and power over time')}
+        ariaLabel={t('driveDetail.driveChartAria', 'Drive overview composed chart of speed, range, SOC and power over time')}
         chartKey="drive-detail-overview"
         height={360}
         size="standard"

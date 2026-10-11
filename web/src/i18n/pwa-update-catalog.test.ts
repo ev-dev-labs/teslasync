@@ -68,7 +68,7 @@ describe('canonical PWA update and cached-data disclosure closure', () => {
       .toBe('Showing cached data. Operational changes stay disabled until you reconnect.')
   })
 
-  it('retains exactly three genuine misses after the eighteen canonical producers resolve', () => {
+  it('retains the eighteen resolved producers and the exact three newly resolved titles', () => {
     const resolvedKeys = [
       'browserNotifications.toast.alertTitle',
       'browserNotifications.toast.exportFailedBody',
@@ -96,12 +96,17 @@ describe('canonical PWA update and cached-data disclosure closure', () => {
       expect(english.exists(key)).toBe(true)
       expect(knownMissing).not.toContain(key)
     }
-    expect(knownMissing).toEqual([
-      'error.request.title',
-      'error.unavailable.title',
-      'error.unsupported.title',
-    ])
-    expect(knownMissing).toHaveLength(3)
+    expect(knownMissing).toEqual([])
+    for (const [key, value] of [
+      ['error.request.title', 'Request could not be completed'],
+      ['error.unavailable.title', 'Service unavailable'],
+      ['error.unsupported.title', 'Feature not supported'],
+    ]) {
+      expect(nested(catalog, key)).toBe(value)
+      expect(nested(shell, key)).toBe(value)
+      expect(english.exists(key)).toBe(true)
+    }
+    expect(knownMissing).toHaveLength(0)
     expect(runtimeManifest.missing).toEqual(knownMissing)
   })
 })

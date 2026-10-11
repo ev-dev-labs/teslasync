@@ -18,7 +18,7 @@ export function ScoreCategoryChart({ data }: { data: ScoreCategoryDatum[] }) {
     // chart-legend-audit:skip maximum bars are fixed category-capacity backdrops, not independently meaningful series
     <ChartCard
       title={t('driveScore.categoryBreakdown', 'Category Breakdown')}
-      ariaLabel={t('driveScore.categoryBreakdown.aria', 'Drive score category breakdown horizontal bar chart')}
+      ariaLabel={t('driveScore.categoryBreakdownAria', 'Drive score category breakdown horizontal bar chart')}
       data={data.map(({ name, value, max }) => ({ name, value, max }))}
       dataColumns={[
         { key: 'name', label: t('driveScore.col.category', 'Category') },

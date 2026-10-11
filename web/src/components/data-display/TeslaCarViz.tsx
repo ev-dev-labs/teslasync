@@ -247,12 +247,12 @@ export function TeslaCarViz({
   // Accessible summary of the car's live state for screen readers — the SVG is
   // otherwise an unlabelled graphic. Mirrors the status chips rendered below.
   const statusLabel = [
-    `${t('vehicle.viz.battery', 'Battery')} ${level == null ? '—' : fmtPercent(level)}`,
-    isCharging ? t('vehicle.viz.charging', 'Charging') : null,
-    isLocked == null ? null : isLocked ? t('vehicle.viz.locked', 'Locked') : t('vehicle.viz.unlocked', 'Unlocked'),
-    driving ? t('vehicle.viz.driving', 'Driving') : null,
-    isClimateOn ? t('vehicle.viz.climate', 'Climate') : null,
-    sentryMode ? t('vehicle.viz.sentry', 'Sentry') : null,
+    `${t('vehicleVisualization.status.battery', 'Battery')} ${level == null ? '—' : fmtPercent(level)}`,
+    isCharging ? t('vehicleVisualization.status.charging', 'Charging') : null,
+    isLocked == null ? null : isLocked ? t('vehicleVisualization.status.locked', 'Locked') : t('vehicleVisualization.status.unlocked', 'Unlocked'),
+    driving ? t('vehicleVisualization.status.driving', 'Driving') : null,
+    isClimateOn ? t('vehicleVisualization.status.climate', 'Climate') : null,
+    sentryMode ? t('vehicleVisualization.status.sentry', 'Sentry') : null,
   ]
     .filter(Boolean)
     .join(', ')
@@ -599,17 +599,17 @@ export function TeslaCarViz({
         <StatusDot
           active={isCharging === true}
           color="#10b981"
-          label={isCharging == null ? '—' : isCharging ? t('vehicle.viz.charging', 'Charging') : t('vehicle.viz.notCharging', 'Not Charging')}
+          label={isCharging == null ? '—' : isCharging ? t('vehicleVisualization.status.charging', 'Charging') : t('vehicleVisualization.status.notCharging', 'Not Charging')}
           palette={palette}
         />
         <StatusDot
           active={isLocked === true}
           color={isLocked == null ? palette.statusInactive : boolColor(isLocked)}
-          label={isLocked == null ? '—' : isLocked ? t('vehicle.viz.locked', 'Locked') : t('vehicle.viz.unlocked', 'Unlocked')}
+          label={isLocked == null ? '—' : isLocked ? t('vehicleVisualization.status.locked', 'Locked') : t('vehicleVisualization.status.unlocked', 'Unlocked')}
           palette={palette}
         />
-        {isClimateOn && <StatusDot active color="#00f0ff" label={t('vehicle.viz.climate', 'Climate')} palette={palette} />}
-        {sentryMode && <StatusDot active color="#ef4444" label={t('vehicle.viz.sentry', 'Sentry')} palette={palette} />}
+        {isClimateOn && <StatusDot active color="#00f0ff" label={t('vehicleVisualization.status.climate', 'Climate')} palette={palette} />}
+        {sentryMode && <StatusDot active color="#ef4444" label={t('vehicleVisualization.status.sentry', 'Sentry')} palette={palette} />}
       </div>
     </div>
   )
@@ -649,8 +649,8 @@ export function TeslaCarMini({ batteryLevel, isCharging, model }: { batteryLevel
   const m: TeslaModel = model && model in MINI_PATHS ? model : 'model3'
   const displayLevel = Number.isFinite(batteryLevel) ? fmtPercent(level) : '—'
   const miniLabel = isCharging
-    ? `${t('vehicle.viz.battery', 'Battery')} ${displayLevel}, ${t('vehicle.viz.charging', 'Charging')}`
-    : `${t('vehicle.viz.battery', 'Battery')} ${displayLevel}`
+    ? `${t('vehicleVisualization.status.battery', 'Battery')} ${displayLevel}, ${t('vehicleVisualization.status.charging', 'Charging')}`
+    : `${t('vehicleVisualization.status.battery', 'Battery')} ${displayLevel}`
   return (
     <svg width="64" height={m === 'modelx' ? 34 : 32} viewBox={m === 'modelx' ? '0 0 64 34' : '0 0 64 32'} fill="none" role="img" aria-label={miniLabel}>
       <path

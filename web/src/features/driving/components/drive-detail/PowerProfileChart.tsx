@@ -46,7 +46,7 @@ export function PowerProfileChart({ chartData, drive }: PowerProfileChartProps) 
       {/* chart-a11y:no-table dense per-sample power trace; max/regen/avg stats appear below the chart */}
       <ChartCard
         title={t('driveDetail.powerProfile', 'Power profile')}
-        ariaLabel={t('driveDetail.powerProfile.aria', 'Drive power profile area chart over time')}
+        ariaLabel={t('driveDetail.powerProfileAria', 'Drive power profile area chart over time')}
         height={220}
         size="standard"
         toolbar

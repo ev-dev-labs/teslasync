@@ -432,6 +432,7 @@
     },
     "limit": {
       "retry": "Retry",
+      "retryIn": "Try again in {{seconds}}s",
       "useBaseline": "Use baseline",
       "title": {
         "costCap": "Daily cost cap reached",
@@ -1500,6 +1501,7 @@
     "subtitle": "Units, language, and cost preferences",
     "syncFromCar": "Sync from car",
     "syncHint": "Sync your app's units to match your vehicle's display settings",
+    "temperatureLabel": "Temperature",
     "temperatureUnit": "Temperature unit",
     "timezoneUser": "My time zone override",
     "timezoneUserHint": "IANA tz name. Useful when travelling but you'd rather see times in your home zone.",

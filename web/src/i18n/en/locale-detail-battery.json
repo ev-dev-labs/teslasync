@@ -39,7 +39,8 @@
       "chart": {
         "spreadTrend": "Voltage spread trend",
         "voltageSpread": "Voltage spread (mV)",
-        "noSpreadTrend": "Not enough history for spread trend"
+        "noSpreadTrend": "Not enough history for spread trend",
+        "spreadTrendAria": "Battery cell voltage spread trend area chart over time"
       },
       "temp": {
         "title": "Temperature summary",
@@ -217,7 +218,8 @@
       "noStress": "Charging impact will appear once charging history is available.",
       "rangeLossAria": "Original and current estimated driving range over time",
       "healthFactors": "Battery health factors",
-      "history": "Degradation history"
+      "history": "Degradation history",
+      "trendTitleAria": "Battery health trend and 95% confidence projection chart"
     },
     "health": {
       "excellent": "Excellent",

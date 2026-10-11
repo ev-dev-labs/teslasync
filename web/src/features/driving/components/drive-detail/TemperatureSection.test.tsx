@@ -245,7 +245,7 @@ describe('TemperatureSection — chart chrome + a11y', () => {
 
     expect(tSpy).toHaveBeenCalledWith('driveDetail.temperatures', 'Temperatures');
     expect(tSpy).toHaveBeenCalledWith(
-      'driveDetail.temperatures.aria',
+      'driveDetail.temperaturesAria',
       'Inside, outside, driver and passenger temperature lines over the drive timeline',
     );
   });

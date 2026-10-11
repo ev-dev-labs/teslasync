@@ -43,10 +43,10 @@ export function WidgetSettingsModal({
 
   const vehicleOptions = useMemo(
     () => [
-      { value: 'all', label: t('dashboard.settings.allVehicles', 'All vehicles (first)') },
+      { value: 'all', label: t('dashboard.widgetSettings.allVehicles', 'All vehicles (first)') },
       ...vehicleList.map((v) => ({
         value: v.id.toString(),
-        label: v.display_name || t('dashboard.settings.vehicleName', 'Vehicle {{id}}', { id: v.id }),
+        label: v.display_name || t('dashboard.widgetSettings.vehicleName', 'Vehicle {{id}}', { id: v.id }),
       })),
     ],
     [vehicleList, t],
@@ -65,15 +65,15 @@ export function WidgetSettingsModal({
     <Modal
       open={open}
       onClose={onClose}
-      title={t('dashboard.settings.title', '{{name}} Settings', { name: def.name })}
+      title={t('dashboard.widgetSettings.title', '{{name}} Settings', { name: def.name })}
       size="sm"
     >
       <div className="space-y-4 p-4">
         {/* Vehicle selector */}
         {isVehicleWidget && (
-          <FormSection title={t('dashboard.settings.vehicle', 'Vehicle')}>
+          <FormSection title={t('dashboard.widgetSettings.vehicle', 'Vehicle')}>
             <UiSelect
-              aria-label={t('dashboard.settings.vehicle', 'Vehicle')}
+              aria-label={t('dashboard.widgetSettings.vehicle', 'Vehicle')}
               value={config.vehicleId?.toString() ?? 'all'}
               options={vehicleOptions}
               onChange={(e) => {
@@ -88,16 +88,16 @@ export function WidgetSettingsModal({
         )}
 
         {/* Refresh rate */}
-        <FormSection title={t('dashboard.settings.refreshInterval', 'Refresh interval')}>
+        <FormSection title={t('dashboard.widgetSettings.refreshInterval', 'Refresh interval')}>
           <UiSelect
-            aria-label={t('dashboard.settings.refreshInterval', 'Refresh interval')}
+            aria-label={t('dashboard.widgetSettings.refreshInterval', 'Refresh interval')}
             value={config.refreshRate?.toString() ?? 'default'}
             options={[
-              { value: 'default', label: t('dashboard.settings.default', 'Default') },
-              { value: '5', label: t('dashboard.settings.5s', '5 seconds') },
-              { value: '15', label: t('dashboard.settings.15s', '15 seconds') },
-              { value: '30', label: t('dashboard.settings.30s', '30 seconds') },
-              { value: '60', label: t('dashboard.settings.60s', '1 minute') },
+              { value: 'default', label: t('dashboard.widgetSettings.default', 'Default') },
+              { value: '5', label: t('dashboard.widgetSettings.5s', '5 seconds') },
+              { value: '15', label: t('dashboard.widgetSettings.15s', '15 seconds') },
+              { value: '30', label: t('dashboard.widgetSettings.30s', '30 seconds') },
+              { value: '60', label: t('dashboard.widgetSettings.60s', '1 minute') },
             ]}
             onChange={(e) => {
               const val = e.target.value;
@@ -111,15 +111,15 @@ export function WidgetSettingsModal({
 
         {/* Time range (for chart widgets) */}
         {isChartWidget && (
-          <FormSection title={t('dashboard.settings.timeRange', 'Time range')}>
+          <FormSection title={t('dashboard.widgetSettings.timeRange', 'Time range')}>
             <UiSelect
-              aria-label={t('dashboard.settings.timeRange', 'Time range')}
+              aria-label={t('dashboard.widgetSettings.timeRange', 'Time range')}
               value={config.timeRange ?? '7d'}
               options={[
-                { value: '24h', label: t('dashboard.settings.24h', 'Last 24 hours') },
-                { value: '7d', label: t('dashboard.settings.7d', 'Last 7 days') },
-                { value: '30d', label: t('dashboard.settings.30d', 'Last 30 days') },
-                { value: '90d', label: t('dashboard.settings.90d', 'Last 90 days') },
+                { value: '24h', label: t('dashboard.widgetSettings.24h', 'Last 24 hours') },
+                { value: '7d', label: t('dashboard.widgetSettings.7d', 'Last 7 days') },
+                { value: '30d', label: t('dashboard.widgetSettings.30d', 'Last 30 days') },
+                { value: '90d', label: t('dashboard.widgetSettings.90d', 'Last 90 days') },
               ]}
               onChange={(e) => {
                 setConfig((prev) => ({ ...prev, timeRange: e.target.value }));
@@ -129,9 +129,9 @@ export function WidgetSettingsModal({
         )}
 
         {/* Show title toggle */}
-        <FormSection title={t('dashboard.settings.appearance', 'Appearance')}>
+        <FormSection title={t('dashboard.widgetSettings.appearance', 'Appearance')}>
           <Toggle
-            label={t('dashboard.settings.showTitle', 'Show widget title')}
+            label={t('dashboard.widgetSettings.showTitle', 'Show widget title')}
             checked={config.showTitle !== false}
             onChange={(checked) => {
               setConfig((prev) => ({ ...prev, showTitle: checked }));

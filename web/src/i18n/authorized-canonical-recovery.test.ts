@@ -7,6 +7,7 @@ import ts from 'typescript'
 import catalog from './en.json'
 import shell from './en/shell.json'
 import baseline from './known-missing-keys.json'
+import { finalFourAdditions, ownerRecoveryAdditions, restoreOwnerRecoverySource } from './authorized-owner-recovery.test'
 
 type Json = Record<string, unknown>
 // Static exact parent-disposition fixture. Never derive exclusions from the current catalog.
@@ -18901,11 +18902,15 @@ describe('authorized exact canonical catalog recovery attempt3', () => {
   })
   it('preserves the complete pre-insertion physical structure and original scalar values', () => {
     for (const [key, value] of authorizedCanonicalAdditions) expect(nested(catalog, key), key).toBe(value)
-    const exactAdded = new Set(authorizedCanonicalAdditions.map(([key]) => key))
-    const predecessor = physical(catalog).filter(([path]) => !exactAdded.has(path.join('.')))
+    for (const [key, value] of ownerRecoveryAdditions) expect(nested(catalog, key), key).toBe(value)
+    const exactAdded = new Set([...authorizedCanonicalAdditions, ...ownerRecoveryAdditions].map(([key]) => key))
+    for (const [key, value] of finalFourAdditions) expect(nested(catalog, key), key).toBe(value)
+    const finalPaths = new Set(finalFourAdditions.map(([key]) => JSON.stringify(key.split('.'))))
+    const predecessor = physical(catalog).filter(([path]) =>
+      !exactAdded.has(path.join('.')) && !finalPaths.has(JSON.stringify(path)))
     expect(predecessor).toHaveLength(29075)
     expect(createHash('sha256').update(JSON.stringify(predecessor)).digest('hex')).toBe('2dcf0644a71ee3aacd7265139043e00fdc1587eab0158fde377885ec2a1420b4')
-    expect(physical(catalog)).toHaveLength(30996)
+    expect(physical(catalog)).toHaveLength(31095)
     expect(preservedResolutions).toHaveLength(28)
     for (const [key, value] of preservedResolutions) expect(nested(catalog, key), key).toBe(value)
     expect(catalog.settings.title).toBe('Settings')
@@ -18913,12 +18918,12 @@ describe('authorized exact canonical catalog recovery attempt3', () => {
     expect(catalog.signalLog.composition).toBe('Value composition')
     expect(catalog.drives.emptyForCollection.title).toBe('No drives in this view')
     expect(catalog.systemStatus.incidents.updateCount_other).toBe('{{count}} updates')
-    expect(baseline).toEqual(['error.request.title', 'error.unavailable.title', 'error.unsupported.title'])
+    expect(baseline).toEqual([])
   })
   it('retains actual source calls, defaults, options, translator origins and full producer bytes', () => {
     const calls = new Map<string, Set<string>>()
     for (const [file, sha256] of producerHashes) {
-      const bytes = readFileSync(resolve(process.cwd(), '..', file))
+      const bytes = Buffer.from(restoreOwnerRecoverySource(file, readFileSync(resolve(process.cwd(), '..', file), 'utf8')))
       expect(createHash('sha256').update(bytes).digest('hex'), file).toBe(sha256)
       const tree = ts.createSourceFile(file, bytes.toString('utf8'), ts.ScriptTarget.Latest, true)
       const found = new Set<string>()
@@ -18934,11 +18939,16 @@ describe('authorized exact canonical catalog recovery attempt3', () => {
     expect(migrated).not.toContain("t('drives.emptyForCollection', 'No drives in this view')")
     expect(migrated).toContain("t('drives.emptyForCollection.title', 'No drives in this view')")
   })
-  it('keeps three original approved keys visible as deferred scalar-ancestor source repairs', () => {
+  it('closes three original approved scalar-ancestor repairs at explicit feature-owned siblings', () => {
     for (const key of ['share.curve.aria', 'signalLog.composition.noRecords', 'signalLog.composition.empty']) {
       expect(nested(catalog, key), key).toBeUndefined()
       expect(authorizedCanonicalAdditions.some(([added]) => added === key)).toBe(false)
     }
     expect(1921 + preservedResolutions.length + 1 + 3).toBe(1953)
+    for (const [key, value] of [
+      ['share.curveAria', 'Shared session power and battery chart by minute'],
+      ['signalLog.compositionNoRecords', 'No records in the selected range.'],
+      ['signalLog.compositionEmpty', 'Run a query to see the value-type breakdown.'],
+    ]) expect(nested(catalog, key), key).toBe(value)
   })
 })

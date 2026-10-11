@@ -195,7 +195,15 @@
     "realText": "The peak clears the threshold adjusted for autocorrelation, so this relationship is unlikely to be an artefact of the two signals simply being smooth.",
     "noiseText": "The peak does not clear the autocorrelation-adjusted threshold. Smooth signals correlate with almost anything, so this is best treated as coincidence.",
     "zeroLagText": "The signals line up best with no shift at all, which points to a shared cause rather than one driving the other.",
-    "lagText": "The best alignment needs a {{lag}} second shift. Leading in time is not proof of causation, but a consistent lead is where causal explanations start."
+    "lagText": "The best alignment needs a {{lag}} second shift. Leading in time is not proof of causation, but a consistent lead is where causal explanations start.",
+    "correlogram": {
+      "title": "Lagged correlogram",
+      "aria": "Line chart of correlation coefficient against time lag between the two selected signals"
+    },
+    "overlay": {
+      "title": "Normalised overlay",
+      "aria": "Area chart of the two selected signals normalised onto a common scale over the overlapping window"
+    }
   },
   "signalDeadband": {
     "title": "Signal deadband",
@@ -513,7 +521,9 @@
     "kpis": "Query summary",
     "subtitle": "Query signal history from Postgres",
     "noVehicle": "Select a vehicle to begin",
-    "noVehicleDesc": "Pick a vehicle from the picker above to query its signal history."
+    "noVehicleDesc": "Pick a vehicle from the picker above to query its signal history.",
+    "compositionNoRecords": "No records in the selected range.",
+    "compositionEmpty": "Run a query to see the value-type breakdown."
   },
   "signalMutualInformation": {
     "title": "Signal mutual information",
@@ -970,6 +980,7 @@
         "tokens": "Your Helix token quota for this minute is exhausted. Try a shorter prompt."
       },
       "retry": "Retry",
+      "retryIn": "Try again in {{seconds}}s",
       "title": {
         "burst": "Too many Helix requests at once",
         "costCap": "Daily cost cap reached",
@@ -1857,9 +1868,12 @@
     "signal": {
       "deltaCol": "Numeric difference (and percent change) between Window A and Window B for this signal. 'changed' is shown for non-numeric values that differ.",
       "diff": "Server-side comparison between two snapshots. Unchanged signals are omitted from the result to reduce noise.",
+      "diffAria": "More info about signal diffs",
       "layers": "TeslaSync exposes three live-state layers: L1 — in-process signal store on the API pod that ingested the telemetry (lowest latency, scope-limited to that pod). L2 — Redis-backed shared cache of latest values, visible to every pod, used for cross-pod live reads and SSE fanout. log — TimescaleDB signal_log history, authoritative for analytics, charts, and point-in-time reconstruction.",
+      "layersAria": "More info about signal layers (L1, L2, log)",
       "live": "Live mode streams real-time signal values via Server-Sent Events (SSE). The chart maintains a rolling 5-minute window throttled to 2 Hz updates.",
       "snapshot": "A snapshot is a point-in-time view of every signal value at a single timestamp. The diff falls back to signal_log within the last 30 days when the live layer doesn't have it.",
+      "snapshotAria": "More info about signal snapshots",
       "sourceLayer": "The layer that supplied this value: L1 (in-process), L2 (Redis), Log (TimescaleDB history), or Stale (older than 2 minutes)."
     },
     "signalChangePoints": {

@@ -13,7 +13,7 @@ export function EfficiencySpeedDistribution({ model, source, units }: DrivesPres
   const { speedDist } = model;
   return <EfficiencyChart source={source}
     title={t('efficiency.speedDist', 'Efficiency by speed range')}
-    ariaLabel={t('efficiency.speedDist.aria', 'Efficiency by speed-range bar chart')}
+    ariaLabel={t('efficiency.speedDistAria', 'Efficiency by speed-range bar chart')}
     data={speedDist}
     dataColumns={[
       { key: 'range', label: t('efficiency.col.range', 'Speed range') },

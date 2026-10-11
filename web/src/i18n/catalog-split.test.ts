@@ -653,7 +653,16 @@ describe('checked-in locale artifacts', () => {
   })
 
   it('suppresses only keys that no artifact can answer', () => {
-    expect(runtimeManifest.missing.length).toBeGreaterThan(0)
+    expect(runtimeManifest.missing).toEqual([])
+    for (const [key, value] of [
+      ['error.request.title', 'Request could not be completed'],
+      ['error.unavailable.title', 'Service unavailable'],
+      ['error.unsupported.title', 'Feature not supported'],
+    ]) {
+      expect(resolvableInCatalog(catalog, key), key).toBe(true)
+      expect(nested(shell, key), key).toBe(value)
+      expect(nested(emitted.get('detail-error'), key), key).toBe(value)
+    }
     for (const key of runtimeManifest.missing) {
       expect(resolvableInCatalog(catalog, key), key).toBe(false)
       expect(nested(shell, key), key).toBeUndefined()

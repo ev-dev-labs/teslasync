@@ -34,6 +34,10 @@
     "outlier": "Outlier",
     "cases": "Case Files",
     "noOutliers": "No drives beyond ±2σ — everything fits your usual pattern.",
-    "expected": "expected {{v}}"
+    "expected": "expected {{v}}",
+    "chart": {
+      "title": "Your Consumption Law",
+      "aria": "Scatter of drive consumption against speed with fitted curve and two-sigma band; outliers highlighted"
+    }
   }
 }

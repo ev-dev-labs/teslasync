@@ -2077,7 +2077,9 @@
     "noDetails": "No details available",
     "statGrid": {
       "noStats": "No stats available"
-    }
+    },
+    "recentDrivesListDrive": "Drive",
+    "recentDrivesDurationUnit": "min"
   },
   "widgets": {
     "gridFootprint": "{{cols}}×{{rows}} grid",
@@ -2206,6 +2208,7 @@
         "tokens": "Your Helix token quota for this minute is exhausted. Try a shorter prompt."
       },
       "retry": "Retry",
+      "retryIn": "Try again in {{seconds}}s",
       "title": {
         "burst": "Too many Helix requests at once",
         "costCap": "Daily cost cap reached",
@@ -2853,6 +2856,25 @@
       "noRecommendations": "No recommendations"
     },
     "undo": "Undo",
+    "widgetSettings": {
+      "15s": "15 seconds",
+      "24h": "Last 24 hours",
+      "30d": "Last 30 days",
+      "30s": "30 seconds",
+      "5s": "5 seconds",
+      "60s": "1 minute",
+      "7d": "Last 7 days",
+      "90d": "Last 90 days",
+      "allVehicles": "All vehicles (first)",
+      "appearance": "Appearance",
+      "default": "Default",
+      "refreshInterval": "Refresh interval",
+      "showTitle": "Show widget title",
+      "timeRange": "Time range",
+      "title": "{{name}} Settings",
+      "vehicle": "Vehicle",
+      "vehicleName": "Vehicle {{id}}"
+    },
     "widgetsRegion": "Dashboard widgets"
   },
   "dataRepair": {

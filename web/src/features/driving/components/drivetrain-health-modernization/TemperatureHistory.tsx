@@ -20,7 +20,7 @@ export function TemperatureHistory({ rows, state, loading }: DriveHistoryChartPr
       state={state}
       title={t('drivetrain.tempHistory', 'Temperature Trend')}
       subtitle={t('drivetrain.tempHistorySub', 'Outside temperature recorded during recent drives')}
-      ariaLabel={t('drivetrain.tempHistory.aria', 'Outside temperature trend line chart per recent drive')}
+      ariaLabel={t('drivetrain.tempHistoryAria', 'Outside temperature trend line chart per recent drive')}
       height={300}
       loading={loading && !state.hasData}
       empty={tempRows.length <= 1}

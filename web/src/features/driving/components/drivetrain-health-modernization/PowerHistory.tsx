@@ -22,7 +22,7 @@ export function PowerHistory({ rows, state, loading }: DriveHistoryChartProps) {
       state={state}
       title={t('drivetrain.powerOutput', 'Power Output History')}
       subtitle={t('drivetrain.powerOutputSub', 'Peak and regen power per drive over time')}
-      ariaLabel={t('drivetrain.powerOutput.aria', 'Per-drive peak and regen motor power output history area chart')}
+      ariaLabel={t('drivetrain.powerOutputAria', 'Per-drive peak and regen motor power output history area chart')}
       ariaDescription={t('drivetrain.modernization.powerMethodology', 'Peak-labelled power uses average drive power from up to 30 returned drives. Per-drive regen power is not supplied; gaps are unknown, not zero.')}
       chartKey="drivetrain-power-output"
       height={300}

@@ -391,6 +391,7 @@
     "powerMax": "Peak power (kW)",
     "powerMin": "Regen power (kW)",
     "powerOutput": "Power output history",
+    "powerOutputAria": "Per-drive peak and regen motor power output history area chart",
     "powerOutputSub": "Peak and regen power per drive over time",
     "powerSummary": "Power summary",
     "priority": {
@@ -416,6 +417,7 @@
     "subtitle": "Motor, inverter, and battery thermal status",
     "tempGauges": "Temperature gauges",
     "tempHistory": "Temperature trend",
+    "tempHistoryAria": "Outside temperature trend line chart per recent drive",
     "tempHistorySub": "Outside temperature recorded during recent drives",
     "temperatures": "Temperature details",
     "thermalMetrics": "Thermal load indicators",
@@ -435,6 +437,7 @@
     "torque": "Torque",
     "torqueFront": "Front torque",
     "torqueHistory": "Motor torque",
+    "torqueHistoryAria": "Motor inverter torque output history area chart",
     "torqueHistorySub": "Drive inverter torque output over time",
     "torqueRear": "Rear torque",
     "totalDistance": "Total distance",

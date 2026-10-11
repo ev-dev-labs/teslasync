@@ -170,6 +170,10 @@
       "important": "Important recommendation:"
     },
     "frontMotor": "Front Motor",
-    "rearMotor": "Rear Motor"
+    "rearMotor": "Rear Motor",
+    "powerOutputAria": "Per-drive peak and regen motor power output history area chart",
+    "statorTempHistoryAria": "Front, rear-left and rear-right motor stator temperature history line chart",
+    "tempHistoryAria": "Outside temperature trend line chart per recent drive",
+    "torqueHistoryAria": "Motor inverter torque output history area chart"
   }
 }

@@ -322,6 +322,7 @@
       "source": "Computed scored-drive cohort; the retained trend label comes from the independent score assessment."
     },
     "categoryBreakdown": "Category breakdown",
+    "categoryBreakdownAria": "Drive score category breakdown horizontal bar chart",
     "col": {
       "category": "Category",
       "date": "Date",
@@ -379,7 +380,9 @@
     "resource": "drive",
     "score": "Score",
     "scoreDistribution": "Score distribution",
+    "scoreDistributionAria": "Drive score distribution histogram bar chart",
     "scoreTrend": "Score trend",
+    "scoreTrendAria": "Drive score trend line chart with category breakdowns",
     "selectVehicle": "Select a vehicle in the header to load drive score evidence.",
     "serverSource": "Server drive score",
     "serverUnavailable": "Server drive score is unavailable; scored history remains visible",

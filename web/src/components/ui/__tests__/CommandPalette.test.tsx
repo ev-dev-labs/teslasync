@@ -1185,11 +1185,31 @@ describe('CommandPalette scope prefixes', () => {
     )
     expect(chip).not.toBeNull()
     expect(chip!.textContent).toMatch(/Commands/)
+    expect(chip).toHaveAccessibleName('Clear Commands filter')
 
     // Click the chip → scope clears, default placeholder returns
     fireEvent.click(chip!)
     await waitFor(() => {
       expect(document.querySelector('[data-palette-scope-chip]')).toBeNull()
+      expect(screen.getByPlaceholderText(/Search pages, commands/i)).toBeInTheDocument()
+    })
+  })
+
+  it('interpolates the existing scope into the localized clear label and preserves the localized chip', async () => {
+    locale.translations['palette.scope.command'] = 'Commandes'
+    locale.translations['palette.clearScope'] = 'Effacer le filtre {{scope}}'
+    render(<CommandPalette initialOpen />, { wrapper: makeWrapper(makeVehicles()) })
+    const input = screen.getByRole('combobox')
+    fireEvent.change(input, { target: { value: '>wake' } })
+
+    const chip = await screen.findByRole('button', { name: 'Effacer le filtre Commands' })
+    expect(chip).toHaveTextContent('Commandes')
+    fireEvent.click(chip)
+
+    await waitFor(() => {
+      expect(document.querySelector('[data-palette-scope-chip]')).toBeNull()
+      expect(input).toHaveValue('')
+      expect(input).toHaveFocus()
       expect(screen.getByPlaceholderText(/Search pages, commands/i)).toBeInTheDocument()
     })
   })

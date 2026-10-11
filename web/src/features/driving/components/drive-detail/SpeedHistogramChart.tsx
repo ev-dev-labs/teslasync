@@ -33,7 +33,7 @@ export function SpeedHistogramChart({ speedHistData }: SpeedHistogramChartProps)
     <FadeIn className="h-full">
       <ChartCard
         title={t('driveDetail.speedHistogram', 'Speed histogram')}
-        ariaLabel={t('driveDetail.speedHistogram.aria', 'Speed-bucket distribution histogram')}
+        ariaLabel={t('driveDetail.speedHistogramAria', 'Speed-bucket distribution histogram')}
         data={tableData}
         dataColumns={[
           { key: 'range', label: t('driveDetail.col.range', 'Speed range') },

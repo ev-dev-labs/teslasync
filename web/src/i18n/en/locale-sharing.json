@@ -90,7 +90,15 @@
     "loading": "Loading shared drive report…",
     "sessionHeader": "Shared charging report",
     "socTooltipLabel": "Battery (%)",
-    "noCurveData": "The charge curve was not included in this share."
+    "noCurveData": "The charge curve was not included in this share.",
+    "unavailable": {
+      "title": "Share link unavailable",
+      "description": "This shared drive link has expired or been revoked.",
+      "home": "Go to TeslaSync"
+    },
+    "elevationAria": "Shared drive elevation profile area chart by distance",
+    "speedAria": "Shared drive speed profile line chart by distance",
+    "curveAria": "Shared session power and battery chart by minute"
   },
   "shareCard": {
     "title": "Share card studio",
@@ -500,6 +508,7 @@
         "tokens": "Your Helix token quota for this minute is exhausted. Try a shorter prompt."
       },
       "retry": "Retry",
+      "retryIn": "Try again in {{seconds}}s",
       "title": {
         "burst": "Too many Helix requests at once",
         "costCap": "Daily cost cap reached",

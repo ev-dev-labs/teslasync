@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto'
 import { afterEach, describe, expect, it } from 'vitest'
 import catalog from './en.json'
 import { authorizedCanonicalAdditions } from './authorized-canonical-recovery.test'
+import { finalFourAdditions, ownerRecoveryAdditions } from './authorized-owner-recovery.test'
 import baseline from './known-missing-keys.json'
 import shell from './en/shell.json'
 import runtimeManifest from './en/runtime-manifest.json'
@@ -173,7 +174,7 @@ describe('resolved known-missing canonical producers', () => {
     const addedKeys = new Set<string>([...additions, ...laterAdditions, ...featureOwnedAdditions, ...copyOwnerAdditions, drivesEmptyAddition].map(([key]) => key))
     expect(addedKeys.size).toBe(916)
     addedKeys.add('systemStatus.incidents.updateCount_other')
-    for (const [key, value] of authorizedCanonicalAdditions) {
+    for (const [key, value] of [...authorizedCanonicalAdditions, ...ownerRecoveryAdditions, ...finalFourAdditions]) {
       expect(nested(catalog, key)).toBe(value)
       addedKeys.add(key)
     }
@@ -184,7 +185,7 @@ describe('resolved known-missing canonical producers', () => {
     // Frozen before-producer leaf/value fingerprint, not a regenerated baseline.
     expect(createHash('sha256').update(JSON.stringify(oldEntries)).digest('hex'))
       .toBe('d919112ce76ecf5875dc1641f99561a22871a3ca3c9ce9a58c70d308ce34a6ad')
-    expect(leaves(catalog)).toHaveLength(30996)
+    expect(leaves(catalog)).toHaveLength(31095)
     expect(catalog.settings.title).toBe('Settings')
     expect(catalog.pwa.offline.banner).toBe(
       'Showing cached data. Operational changes stay disabled until you reconnect.',
@@ -195,15 +196,17 @@ describe('resolved known-missing canonical producers', () => {
     expect(catalog.pwa).toMatchObject(shell.pwa)
   })
 
-  it('prunes exactly the eighteen resolved suppressions and retains only three genuine misses', () => {
+  it('retains the eighteen resolved producers and proves the exact three titles now resolve', () => {
     expect(additions).toHaveLength(18)
-    expect(baseline).toEqual(remaining)
-    expect(runtimeManifest.missing).toEqual(remaining)
-    expect(usageManifest.knownMissingKeys).toEqual(remaining)
+    expect(baseline).toEqual([])
+    expect(runtimeManifest.missing).toEqual([])
+    expect(usageManifest.knownMissingKeys).toEqual([])
     for (const key of remaining) {
-      expect(nested(catalog, key)).toBeUndefined()
-      expect(nested(shell, key)).toBeUndefined()
-      expect(nested(generated['./en/locale-detail-error.json'].default, key)).toBeUndefined()
+      const value = ownerRecoveryAdditions.find(([candidate]) => candidate === key)?.[1]
+      expect(value).toBeDefined()
+      expect(nested(catalog, key)).toBe(value)
+      expect(nested(shell, key)).toBe(value)
+      expect(nested(generated['./en/locale-detail-error.json'].default, key)).toBe(value)
     }
     expect(usageManifest.shellCriticalKeys).toEqual(expect.arrayContaining([
       ...remaining,
@@ -229,6 +232,6 @@ describe('resolved known-missing canonical producers', () => {
     for (const [key, value] of leaves(catalog.pwa, 'pwa')) {
       expect(i18n.t(key, { lng: 'en', skipInterpolation: true })).toBe(value)
     }
-    for (const key of remaining) expect(i18n.exists(key, { lng: 'en' })).toBe(false)
+    for (const key of remaining) expect(i18n.exists(key, { lng: 'en' })).toBe(true)
   })
 })

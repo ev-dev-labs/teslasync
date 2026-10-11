@@ -101,7 +101,7 @@ export function RegexTesterTool() {
                 {matches.map((m, i) => (
                   <div key={i} className="flex items-center gap-2 rounded bg-[var(--surface-overlay)] px-3 py-1">
                     <Badge variant="info" size="sm">{i + 1}</Badge>
-                    <code className="text-xs font-mono text-rose-300">{m.match || t('(empty match)')}</code>
+                    <code className="text-xs font-mono text-rose-300">{m.match || t('devtools.utils.regexEmptyMatch', '(empty match)')}</code>
                     <span className="text-xs text-[var(--text-muted)]">{t('devtools.utils.regexAtIndex', 'At index')} {m.index}</span>
                   </div>
                 ))}

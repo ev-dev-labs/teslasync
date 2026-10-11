@@ -79,7 +79,7 @@ export function SignalLogBreakdownPanel({
           label={t('signalLog.composition', 'Value composition')}
           error={error}
           errorMessage={t('error.loadFailed', 'Failed to load data')}
-          emptyMessage={t('signalLog.composition.noRecords', 'No records in the selected range.')}
+          emptyMessage={t('signalLog.compositionNoRecords', 'No records in the selected range.')}
           errorRecovery={{ onRetry }}
         >
         {loading ? (
@@ -90,13 +90,13 @@ export function SignalLogBreakdownPanel({
           <EmptyState
             /* no-action: results not yet requested — the query cockpit above drives this panel. */
             icon={<PieChart className="h-8 w-8" aria-hidden="true" />}
-            message={t('signalLog.composition.empty', 'Run a query to see the value-type breakdown.')}
+            message={t('signalLog.compositionEmpty', 'Run a query to see the value-type breakdown.')}
           />
         ) : total === 0 ? (
           <EmptyState
             /* no-action: the query returned no rows for this range — the cockpit above drives a re-query. */
             icon={<PieChart className="h-8 w-8" aria-hidden="true" />}
-            message={t('signalLog.composition.noRecords', 'No records in the selected range.')}
+            message={t('signalLog.compositionNoRecords', 'No records in the selected range.')}
           />
         ) : (
           <div className="space-y-4">

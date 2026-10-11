@@ -100,7 +100,7 @@ export default function RecentDrivesListWidget({ vehicleId, size }: WidgetProps)
               <li key={d.id}>
                 <Link
                   to={`/drives/${d.id}`}
-                  aria-label={`${t('widget.recentDrivesList.drive', 'Drive')}: ${distanceLabel}, ${dateLabel}`}
+                  aria-label={`${t('widget.recentDrivesListDrive', 'Drive')}: ${distanceLabel}, ${dateLabel}`}
                   className="block rounded-lg group focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--accent-primary)]"
                 >
                   <div className="grid grid-cols-1 @xs:flex @xs:flex-wrap items-start gap-2 p-2 rounded-lg hover:bg-[var(--surface-hover)] transition-colors">

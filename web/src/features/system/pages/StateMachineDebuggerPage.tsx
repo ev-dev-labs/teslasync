@@ -558,7 +558,7 @@ export default function StateMachineDebuggerPage() {
                     i18nKey: 'help.fsm.type',
                     content:
                       'Finite-state machine. Tracks vehicle high-level state (driving, charging, parked, online, asleep, offline) and the transitions between them. Sub-FSMs cover drive, charge, command, and notification lifecycles.',
-                    ariaLabel: t('help.fsm.type.aria', { defaultValue: 'More info about FSM types' }),
+                    ariaLabel: t('help.fsm.typeAria', { defaultValue: 'More info about FSM types' }),
                   }}
                   options={fsmTypeOptions}
                   value={fsmType}
@@ -634,7 +634,7 @@ export default function StateMachineDebuggerPage() {
                 size="xs"
                 i18nKey="help.fsm.liveState"
                 defaultValue="The current state the FSM resolved to from the most recent telemetry. The FSM stays in a terminal state until external evidence (telemetry or poll) triggers an explicit transition out."
-                ariaLabel={t('help.fsm.liveState.aria', { defaultValue: 'More info about FSM live state' })}
+                ariaLabel={t('help.fsm.liveStateAria', { defaultValue: 'More info about FSM live state' })}
               />
             </PanelTitle>
             {stateLoading ? (
@@ -777,7 +777,7 @@ export default function StateMachineDebuggerPage() {
         >
           <ChartContainer
             title={t('fsm.distributionByState', 'State distribution')}
-            ariaLabel={t('fsm.distributionByState.aria', 'FSM state distribution donut chart with per-state counts')}
+            ariaLabel={t('fsm.distributionByStateAria', 'FSM state distribution donut chart with per-state counts')}
             data={pieData.map((p) => ({ name: p.name, value: p.value }))}
             dataColumns={[
               { key: 'name', label: t('fsm.col.state', 'State') },

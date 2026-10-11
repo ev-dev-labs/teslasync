@@ -327,7 +327,7 @@ export default function BatteryDegradationPage() {
             <ChartCard
               toolbar exportable size="standard"
               title={t('battery.degradation.trendTitle', 'Health trend & projection')}
-              ariaLabel={t('battery.degradation.trendTitle.aria', 'Battery health trend and 95% confidence projection chart')}
+              ariaLabel={t('battery.degradation.trendTitleAria', 'Battery health trend and 95% confidence projection chart')}
               height={300}
               chartKey="battery-degradation-trend"
               loading={initialLoading}

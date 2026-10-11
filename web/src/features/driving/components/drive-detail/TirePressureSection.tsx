@@ -98,7 +98,7 @@ export function TirePressureSection({ chartData, stats }: TirePressureSectionPro
       {/* chart-a11y:no-table dense per-sample tire pressure trace; min/max stats appear above the chart in the per-wheel tiles */}
       <ChartCard
         title={t('driveDetail.tirePressure', 'Tire pressure during drive')}
-        ariaLabel={t('driveDetail.tirePressure.aria', 'Front and rear tire pressure lines over the drive timeline')}
+        ariaLabel={t('driveDetail.tirePressureAria', 'Front and rear tire pressure lines over the drive timeline')}
         height={310}
         size="standard"
         toolbar

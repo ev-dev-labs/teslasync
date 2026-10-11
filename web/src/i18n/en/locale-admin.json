@@ -1442,6 +1442,7 @@
       "regexNoFlags": "No flags",
       "regexLimitReached": "Result limit reached",
       "regexAtIndex": "At index",
+      "regexEmptyMatch": "(empty match)",
       "regexNoMatches": "No matches found",
       "regexInvalid": "Invalid regular expression",
       "regexTestStringPlaceholder": "Test string placeholder",
@@ -2343,6 +2344,7 @@
         "tokens": "Your Helix token quota for this minute is exhausted. Try a shorter prompt."
       },
       "retry": "Retry",
+      "retryIn": "Try again in {{seconds}}s",
       "title": {
         "burst": "Too many Helix requests at once",
         "costCap": "Daily cost cap reached",

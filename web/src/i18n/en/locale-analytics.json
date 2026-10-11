@@ -870,7 +870,11 @@
     "detail": "Version by version",
     "noDetail": "Nothing to compare yet — each update needs drives recorded both before and after it.",
     "whPerKmN": "{{v}} Wh/km · n={{n}}",
-    "stats": "p · d"
+    "stats": "p · d",
+    "chart": {
+      "title": "Consumption change per version",
+      "aria": "Bar chart of the change in energy consumption in watt-hours per kilometre after each firmware version"
+    }
   },
   "fleetCompare": {
     "singleVehicle": {
@@ -1244,7 +1248,11 @@
     "shiftLog": "Shift log",
     "stable": "No statistically significant shifts — your consumption regime has been stable.",
     "shiftLine": "Week of {{date}}: consumption moved {{delta}} {{unit}}",
-    "tempBadge": "avg temp {{delta}}°C"
+    "tempBadge": "avg temp {{delta}}°C",
+    "chart": {
+      "title": "Weekly consumption & detected regimes",
+      "aria": "Weekly consumption line with stepped regime means and changepoint markers"
+    }
   },
   "statistics": {
     "title": "Statistics",
@@ -1308,7 +1316,9 @@
       "costDenominator": "Recorded cost divided by source kilometres; not display-distance units.",
       "periodDescription": "Totals and averages from the period-statistics response; its observation bounds are not returned.",
       "periodScope": "Period-statistics source window; bounds unknown"
-    }
+    },
+    "stateDistributionAria": "Vehicle state distribution pie chart",
+    "vehicleComparisonAria": "Distance and energy bar chart comparing all vehicles in the fleet"
   },
   "tco": {
     "title": "Lifetime operating cost",
@@ -1835,6 +1845,7 @@
         "tokens": "Your Helix token quota for this minute is exhausted. Try a shorter prompt."
       },
       "retry": "Retry",
+      "retryIn": "Try again in {{seconds}}s",
       "title": {
         "burst": "Too many Helix requests at once",
         "costCap": "Daily cost cap reached",

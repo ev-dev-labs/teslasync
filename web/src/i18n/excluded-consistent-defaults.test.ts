@@ -3,6 +3,7 @@ import { createInstance } from 'i18next'
 import { beforeAll, describe, expect, it } from 'vitest'
 import catalog from './en.json'
 import { authorizedCanonicalAdditions } from './authorized-canonical-recovery.test'
+import { finalFourAdditions, ownerRecoveryAdditions } from './authorized-owner-recovery.test'
 import baseline from './known-missing-keys.json'
 import runtimeManifest from './en/runtime-manifest.json'
 import usageManifest from './en/usage-manifest.json'
@@ -173,7 +174,7 @@ describe('exact81 feature-owned consistent producer defaults', () => {
     const keys = new Set<string>([...additions, ...featureOwnedAdditions, ...copyOwnerAdditions, drivesEmptyAddition].map(([key]) => key))
     expect(keys.size).toBe(898)
     keys.add('systemStatus.incidents.updateCount_other')
-    for (const [key, value] of authorizedCanonicalAdditions) {
+    for (const [key, value] of [...authorizedCanonicalAdditions, ...ownerRecoveryAdditions, ...finalFourAdditions]) {
       expect(nested(catalog, key)).toBe(value)
       keys.add(key)
     }
@@ -182,7 +183,7 @@ describe('exact81 feature-owned consistent producer defaults', () => {
     expect(oldEntries).toHaveLength(28176)
     expect(createHash('sha256').update(JSON.stringify(oldEntries)).digest('hex'))
       .toBe('e04f0f9479fe65e8a0346bc7dd53d53f662cc66850c18440ceae702a43698966')
-    expect(leaves(catalog)).toHaveLength(30996)
+    expect(leaves(catalog)).toHaveLength(31095)
     expect(english.t('settings.title')).toBe('Settings')
     expect(catalog.pwa).toMatchObject(shell.pwa)
     expect(shell.pwa.offline).toEqual(catalog.pwa.offline)
@@ -190,15 +191,20 @@ describe('exact81 feature-owned consistent producer defaults', () => {
     expect(shell.pwa.cache).toEqual(catalog.pwa.cache)
   })
 
-  it('leaves exactly the three genuine error-title misses unsupplemented in every artifact', () => {
-    expect(baseline).toEqual(remaining)
-    expect(runtimeManifest.missing).toEqual(remaining)
-    expect(usageManifest.knownMissingKeys).toEqual(remaining)
+  it('proves the exact three formerly missing titles resolve before removing suppression', () => {
+    expect(baseline).toEqual([])
+    expect(runtimeManifest.missing).toEqual([])
+    expect(usageManifest.knownMissingKeys).toEqual([])
     for (const key of remaining) {
-      expect(english.exists(key)).toBe(false)
+      expect(english.exists(key)).toBe(true)
+      const value = ownerRecoveryAdditions.find(([candidate]) => candidate === key)?.[1]
+      expect(value).toBeDefined()
       for (const resource of [catalog, shell, ...Object.values(generated).map(module => module.default)]) {
-        expect(nested(resource, key)).toBeUndefined()
+        if (nested(resource, key) !== undefined) expect(nested(resource, key)).toBe(value)
       }
+      expect(nested(catalog, key)).toBe(value)
+      expect(nested(shell, key)).toBe(value)
+      expect(Object.values(generated).some(resource => nested(resource.default, key) === value)).toBe(true)
     }
   })
 })
