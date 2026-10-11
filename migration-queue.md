@@ -1,8 +1,88 @@
 # Frontend modernization queue
 
-## Current phase: 4 - Source repairs active; current pilot gates blocked
+## Current phase: 4 - Source repairs committed; current pilot gates blocked
 
-Current HEAD1046/b438ec9c62 containsacceptedGETversion-probe2sourcefix+queue.
+### Active source continuation
+
+Latest user direction is to keep working autonomously and make good decisions
+rather than mark an incomplete task done. ADR-007 explicitly requires API-only
+reader pods alongside a telemetry/FSM owner. That approved contract resolves
+the read-layer ownership question independently of unknown installed parity:
+constructing/injecting the real L1+optional-L2 boundary must not depend on
+starting the telemetry subscriber.
+
+One NEW source implementation item is prospectively authorized below. The
+prior two-attempt live-store runtime audit remains exhausted/BLOCKED; it is
+not reopened or relabeled as an implementation attempt. No source fix was
+attempted in that audit. The Dashboard statistics recovery remains blocked;
+no third statistics or browser attempt is authorized by this new item.
+The parent remains orchestrator-only. No container/configuration/permission/
+database mutation, deployment, or acceptance-gate waiver is authorized.
+
+| Status | Phase | Item | Owner | Dependency | Attempt | Acceptance |
+| --- | --- | --- | --- | --- | --- | --- |
+| [x] | 4 | phase4-live-read-owner-contract | parent-approved-ADR007-contract | none | 1 | ADR-007 requires API-only reader pods; separate live-read construction from subscriber/FSM ownership. Reuse one real L1+optional-L2 boundary, preserve freshness/merge/errors/local rollback, no no-op/fake200. Source contract only, not installed parity or phase acceptance. |
+| [x] | 4 | phase4-live-read-initialization | scoped-live-read-DI-source-owner | phase4-live-read-owner-contract | 2 FINAL | FINAL2idleDONE/released/independentlyaccepted2533cd10/260pins/exact9shippingpaths. One real shared App L1+optionalL2 is initialized before optional telemetry; explicit RouterOptions reader boundary serves API-only routes and is reused by enabled telemetry/FSM. All9protected sources and13original direct test files unchanged; all51attempt1artifacts/failed nil-DB fixture trial preserved. Worker targetedrace7top-level+8subtests/native0; parent coupled existing+new contracts63callbacks/native0 with stable source hashes. Scoped gofmt0/affected packages compile through race tests. Source-only acceptance; installed parity remainsunknown/no deployment/browser/phase acceptance. Exact9reported source/test/doc paths plus parentqueue are authorized for sequential scoped commit. Prior runtime audit2/statistics2/native2 remain exhausted, not retried. |
+
+### Independent inherited-readiness dispatch
+
+The legacy pending records describe delivered source awaiting acceptance, not
+152 verified new implementation tasks. Twelve disjoint read-only items are
+queued to classify current source pins against preserved delivery receipts
+and remaining acceptance obligations. This independent work may proceed while
+the App/router source owner writes. It does not start Phase5 implementation,
+rerun old audits/gates, waive the compiler baseline, revive failed attempts,
+or authorize source changes. Each worker owns only its exact Session JSON
+report and heartbeat; no Git, tests, browser, build, catalogs, shared sources,
+queue/ledger edits, or runtime changes. Target15min/hard25min; preserve original
+receipts, exact hash/byte/line citations, explicitly unknown evidence.
+
+All twelve readiness workers were launched; exact IDs, domain input baselines
+(3103 pins total), and launch qualifications are persisted in
+phase4-inherited-readiness-parent-launch.json and the actor ledger. Twelve
+running read-only actors were observed at their launches; the backend owner
+was separately observed running at its latest health check. These are not
+permanent live counts. No source or validation lease is held by these readers.
+The table's reservation markers below are historical; current lifecycle is
+the ledger and terminal notifications. Promptly intake deliveries before
+changing inherited todo dispositions or dispatching a real repair.
+
+All thirteen workers now delivered idle reports and released their leases;
+no delivered idle actor is stuck. Readiness FINAL parent intakec0fda4e5
+accepts all twelve bounded classifications with3103current source pins and
+3679artifact pin checks. Nine reports are DONE; analytics/system/vehicles
+retain BLOCKED original-handoff locator qualifications. Domain source/browser/
+phase acceptance remains false; historical source deltas are not current
+source drift. Parent intake trial860c2af0 preserved its three schema-path
+rejections; the correction permits only the exact named checkpoint332
+artifact, with no worker retry or widened source inspection.
+
+Nine stale Phase3 tracking records are now reconciled against the genuine
+1035/1036 closure, with original SQL statuses/descriptions archived first.
+Seven old blocked attempts are CLOSED_AS_SUPERSEDED, not retrospectively
+passed; the shell umbrella and final frozen-suite records are completed by
+the accepted closure. Receiptb5db482c independently rechecks intake3e6838ad,
+the immutable2430-file/44960-case raw report hash, and commit ancestry.
+Historical failed reports remain unchanged. No Phase4 acceptance or new
+test run is implied; current SQL150pending/14inprogress/18blocked.
+
+| Status | Phase | Item | Read-only scope | Attempt | Acceptance |
+| --- | --- | --- | --- | --- | --- |
+| [x] | 4 | phase4-inherited-readiness-admin | admin | 1 | DONE classification intakenc0fda4e5/481sourcepins;30pages/26audit-page hashes preserved. Original implementation locator unlocated; acceptance debt explicit. |
+| [!] | 4 | phase4-inherited-readiness-analytics | analytics, science, benchmarks | 1 | BLOCKED original whole-domain locator; classification evidence intakenc0fda4e5/386sourcepins. Narrow test receipts not whole-domain acceptance. |
+| [x] | 4 | phase4-inherited-readiness-battery | battery | 1 | DONE classification intakenc0fda4e5/267sourcepins;17delivered pages, two conditional shared-export/import residuals. No shared-body inspection or source acceptance. |
+| [x] | 4 | phase4-inherited-readiness-charging | charging, home-energy | 1 | DONE classification intakenc0fda4e5/273sourcepins; original delivery preserved, one retained chart flag text-alternative obligation. Acceptance debt explicit. |
+| [x] | 4 | phase4-inherited-readiness-intelligence | advanced-intelligence, intelligence-packs, exports, sharing, explore | 1 | DONE classification intakenc0fda4e5/165sourcepins;19delivered pages, no demonstrated first-time source gap. Acceptance debt remains. |
+| [x] | 4 | phase4-inherited-readiness-mobility | trips, dashcam, maps, watch | 1 | DONE classification intakenc0fda4e5/152sourcepins; original/continuation deliveries preserved. StopScore energy contract remains a question, not proven bug. |
+| [x] | 4 | phase4-inherited-readiness-ownership | ownership, resale-vault, service-intelligence | 1 | DONE classification intakenc0fda4e5/128sourcepins/290retained snapshots; specific retained warranty tab/disclosure obligations, not new page migrations. |
+| [!] | 4 | phase4-inherited-readiness-system | system, server, diagnostics | 1 | BLOCKED original migration envelope locator; classification intakenc0fda4e5/329sourcepins. Specific retained bulk-dismiss vehicle-scope reset omission; no source/gate acceptance. |
+| [x] | 4 | phase4-inherited-readiness-telemetry | telemetry, power-user | 1 | DONE classification intakenc0fda4e5/125sourcepins;16pages/original Live gap superseded by retained continuation. No first-time source gap or runtime retry. |
+| [x] | 4 | phase4-inherited-readiness-vehicle-systems | vehicle-systems | 1 | DONE classification intakenc0fda4e5/197sourcepins/52immutable artifacts. Specific retained maintenance identity/climate source-registry obligations;213sheartbeat gap explicitly retained. |
+| [!] | 4 | phase4-inherited-readiness-vehicles | vehicles, fleet-ops | 1 | BLOCKED original delivery locator; classification intakenc0fda4e5/280sourcepins/13audit-page matches. Source and browser acceptance remain open. |
+| [x] | 4 | phase4-inherited-readiness-workflows | action-center, automations, notifications, onboarding, developer-reference | 1 | DONE classification intakenc0fda4e5/320sourcepins/17immutable inputs. Three-domain original mapping preserved; onboarding/developer-reference mapping absent, not newly assigned implementation. |
+
+Current HEAD1047/a458403c50 contains the accepted Watch capability repair.
+The GET version-probe repair remains committed at1046/b438ec9c62.
 Historical authority1045/c31ffc0748: all16preflightstages independently accepted
 (ae9a5fdf); native runs1/2 are blocked with zero pilot captures, not browser
 acceptance. Readinessprobesexhausted; rootandDrivesREADYobserved, finalmounted
@@ -11,7 +91,12 @@ layoutowner2attemptsexhausted/noinvestigation/nochanges; observerSessionfix
 independentlyintaken2a4324ad/19fixtures0/runtimeNOTRUN. Versionowneridleaccepted
 77c2b02f/committed1046; WatchFINAL2idleDONE/independentlyintaken652c61ca,
 7038pins/all6748protectedinputs/74actualtests/61prioridentitiespreserved.
-Allknownsourceworkersidle/released; Watchsix-source+queuetargets1047.
+Live-read FINAL2 delivered idleDONE/released and is independently source-only
+accepted at2533cd10. Exact scoped commit is pending; zero active source leases.
+No installed-runtime/browser/phase acceptance follows from that source repair.
+Watch exact7path commit1047
+and the empty index are verified; the commit receipt is
+phase4-watch-source-commit1047.json.
 Backend5b219709secondFINALidleBLOCKED/intaken0760d803/nochanges; bothattempts
 exhausted, no thirdimplementationretry. Narrowpolicyintakefae60c11 findsparent
 per-principalprerequisitenotsubstantiatedbyexistingtrusted/fleetpeercontracts,
@@ -20,6 +105,59 @@ acceptance/blanketGetAllsubstitution. No frozenbrowser/fullgatesduringwrites;
 launchesarenotpermanentlivecounts. Fullsuite NOTSTARTED; Phase3 genuinely closed,
 Phase4 still open, Phase5-7 gated. Mandatory compiler1050 unchanged. Historical
 milestones below are retained, not current live worker/gate status.
+
+### Current health reconciliation:1047
+
+The three pilot-page records in SQL are blocked on current page acceptance,
+not running actors. Their retained source deliveries have no source or
+validation leases. Watch FINAL2 is independently accepted and committed;
+backend statistics FINAL2 remains blocked with both attempts exhausted.
+The fresh16stage preflight, native acceptance, and full suite remain blocked.
+Mandatory compiler1050 is not yet due;1045 evidence remains historical.
+
+The following independent read-only audit remains prospectively authorized.
+It neither reopens Dashboard statistics nor bypasses any implementation gate.
+Its reservation is not a running-worker count; record the actual runtime ID
+after launch. No source, configuration, database, permission, or deployment
+changes are authorized.
+
+Live-store audit attempt1 delivered idle/BLOCKED and was independently intaken
+atf398da53:161pin checks/19inspectedinputsunchanged/75immutableartifacts/
+16exactnativeinspectionreceipts/34losslessstreams; two failed inspections
+and the parent bootstrap-schema trial are preserved. Current enabled startup
+constructs/injects the store; the disabled-ingest branch mounts `/live` without
+it. This is conditional source evidence, not proof of the installed feature
+state or a required product behavior. Fresh container/image identity matches
+prior observations; containerCreated21:10:28 is distinct from imageCreated
+21:08:53 onOctober3. Both OCI revision labels are absent; parity remainsunknown.
+
+Attempt2 FINAL is now reserved for the SAME audit/retained worker, not a new
+backend implementation retry. Its narrower prerequisite scope permits reading
+only the two non-secret startup flag bindings (Fleet Telemetry enable and live
+read mode) and a Docker formatting projection that emits recognized values
+for those exact names only. No environment array/dump, credentials, other
+values, effective-default assumption, restart, deployment, or write is allowed.
+Unrecognized/absent flags and installed source parity remain explicitlyunknown.
+Preserve attempt1 report/intake/failures; stop if the projection cannot be safe.
+
+Final2 is now delivered idle/BLOCKED and independently intaken at1825829d:
+170pin checks/6currentinputsunchanged/47newimmutableartifacts/all75prior
+artifacts preserved/9exactnativeinspectionprocesses/18rawstreamhashes.
+One exact-name-only projection observed configured FLEET_TELEMETRY_ENABLED
+false and LIVE_SIGNAL_STORE_MODE hybrid, each present once with no unrecognized
+or duplicate assignments. The same container/image identity was verified
+before/after. These configured assignments corroborate the conditional source
+explanation, not effective installed settings or exact binary/source parity.
+No new HTTP/live-data request, shipping change, test, deployment, or acceptance
+gate followed. Both attribution attempts are exhausted; no third retry.
+Zero actual running actors at terminal intake; all source/validation leases
+released. The prepared19:50running-health helper was not executed after the
+idle notification. Backend statistics and fresh preflight/native/full-suite
+dependencies remain blocked; Phase5-7 stay gated. Current1047/next1050unchanged.
+
+| Status | Phase | Item | Owner | Dependency | Attempt | Acceptance |
+| --- | --- | --- | --- | --- | --- | --- |
+| [!] | 4 | phase4-live-signal-store-initialization-audit | bounded-readonly-source-and-installed-runtime-attribution | phase4-pilot-http-source-classification | 2 FINAL | Final2idleBLOCKED/released/intaken1825829d:170pins/6currentinputs/47newartifacts/75priorartifactsunchanged/9native0/18rawstreams. Exact single safe projection:configuredfalse/hybrid/no duplicates orunknownvalues/sameinstancebeforeafter. Effective installed settings/source parity remainunknown; no proven installed fix, source edit, newHTTP, tests, or gate acceptance. Both attempts exhausted/no third retry. Prior failed inspections/lookups and parent bootstrap-schema trial preserved. |
 
 Latestversionowner99cddea1idleDONE/released/independentlyintaken77c2b02f:
 73reportedsource/snapshot/artifact/commandpins verified, exactone-lineHEAD->GET
