@@ -1,6 +1,35 @@
 # Frontend modernization queue
 
-## Current phase: 3 - startup repair scoped acceptance; fresh boundary pending
+## Current phase: 3 - fresh global gates passed; mounted acceptance pending
+
+Fresh frozen boundary at `653dad352b6f` (actual1025) completed successfully.
+Parent independently verified all16native0 stage receipts,32raw streams and
+6745unchanged source inputs. The fresh full suite passed2428physicalfiles /
+44736tests, with0failed,0pending and0todo. Startup gzip is405669bytes against
+the unchanged409600byte limit:3931bytes headroom and4373bytes reduction from
+the failed1024build. Violations audit reports0in all six pattern categories;
+strict keys reports0missing. No writer ran during the boundary.
+Mounted shell/visual/accessibility acceptance is still pending, not inferred
+from these passing source gates. The existing3119worker does not match the
+frozen1025worker; it cannot establish current-source acceptance. A read-only
+parent probe may mount the exact private build on a loopback-only temporary
+preview, verify served bytes, deny maps and writes, then close its helpers.
+The host-qualified probe mounted the real Settings route (200, no auth redirect,
+nonempty main) and proved frozen SW/entry bytes plus exact original HTML after
+only the two observed AdGuard additions. It did not pass runtime acceptance:
+the real proxy emitted ECONNRESET and API500/404/501/405 responses; one
+automatic non-read request was blocked. All helpers closed and frozen inputs
+remained unchanged. Direct reads separately return200for settings/version/auth
+and503for systemhealth on8080and3119. Parent launcher/readiness failures remain
+preserved, not counted as product regressions or passing browser acceptance.
+The explicitIPv4 diagnostic also reproduces ECONNRESET and API500responses;
+changing the hostname did not fix transport. The initial short diagnostic
+returned0before any API request and is explicitly not acceptance. Its corrected
+real-settings-response diagnostic returns2with actual500and later200settings,
+501RBAC/impersonation and405HEADversion responses. Automatic web-vitals/errors
+POSTs were blocked, never sent. Preview/browser helpers are closed. Preserve
+all failed probes and launcher/readiness corrections. Phase4 remains paused
+until the required mounted acceptance is established.
 
 The user's latest instruction supersedes the prior override closure:
 "i am giving yopu one more chance to fix phase-3 propelry", then
@@ -1321,4 +1350,8 @@ Phase2 intake health: all19 original primitive actors delivered idle DONE (not s
 | [x] | 3 | phase3-coherent-final-integration | explicit-user-authorized-final-recovery | phase4-writers-paused | 2 | 2026-10-11T07:45:00Z | Terminal delivery consumed; parent independently verifies272artifact records including manifest+5immutable pins, 205currentowned records, exact115-path cumulative stage. All31091oldstructural leaves preserved+exact4=31095; all784original hash constants retained, four exact source inverses verified. Combined55files8572tests0; generator/check/namespace/shadow/scopedlint/strictscanner native0. Prior failures and wrapper display encoding failure retained. Source/catalog/test leases released; global gates remain unrun. |
 | [x] | 3 | phase3-guarded-plural-scanner-contract | narrow-scanner-correctness | - | 1 | 2026-10-11T07:45:00Z | Terminal consumed; parent verifies50artifacts+2sourcehashes. Narrow numeric-origin and dominating >1 cardinal-count AST proof, 23focusedtests passed, inherited14tests preserved, syntax0/0, strict native0 missing0. Negative guards/unknown sources/ordinal/context/language/spreads remain strict. Incidents caller unchanged; actual0/1hidden2/3localized; no catalog/suppression edits. Exact two-file scanner stage; source lease released. |
 | [~] | 3 | phase3-coherent-verified-boundary | parent-frozen-phase-gate | phase3-coherent-final-integration; phase3-guarded-plural-scanner-contract; phase3-startup-budget-relief | 2 | 2026-10-11T08:50:40Z | Failed1024boundary preserved: first7gates0/strictbundle1/fullsuiteNOTRUN. New scoped startup repair intake accepted; exact11sourcepaths+queue commit then new frozen compiler/full lint/skillviolations/catalog/keys/SW/changelog/build/bundle/duplicates/private maps/PWA/fullbuiltcontract/shell/runtime/fullsuite. FullbuiltPWA uses official unchanged assertions with only private DIST_ROOT adapted in session, verifiedadapter0; oldpublicmap invocation1 retained and correctedprivatemaps0, no current-source acceptance inferred. Zero writer leases/emptyindex/frozenHEAD required. Browser QA still not implied. |
-| [~] | 3 | phase3-startup-budget-relief | bounded-startup-weight-repair | phase3-coherent-final-integration; phase3-guarded-plural-scanner-contract | 2 | 2026-10-11T08:18:17Z | Attempt1 and initialattempt2 ownership/startup failures retained. Same-attempt coherent integration delivered; parent verifies56artifacts12source records237immutablepins, exactwholeApp/prefetch inverses126loaders143entries16Physicsaliases, allcatalog/generated bytes unchanged. Final6files377Vitesttests/31directregressions passed, strictlint/generatorcheck0. Exact11changedpaths only; source/test/generatorleasesreleased. UTCduration correction13.77minutes retains originalmisreported-406.23minute metadata. No actualgzipgain/globalacceptance before parentfreshbuild unchanged400KB. |
+| [x] | 3 | phase3-startup-budget-relief | bounded-startup-weight-repair | phase3-coherent-final-integration; phase3-guarded-plural-scanner-contract | 2 | 2026-10-11T08:18:17Z | Attempt1 and initialattempt2 failures retained. Same-attempt integration verified56artifacts12source records237immutablepins, exactApp/prefetch inverses126loaders143entries16Physicsaliases, unchangedcatalogs. Committed653dad352b. Fresh unchanged400KB gate native0:405669bytes,3931headroom,4373reduction. Final6files377Vitesttests/31directregressions passed; global16gates0 and2428files44736tests0 verified. Mounted acceptance remains separate. Original elapsed metadata and UTC correction retained. |
+| [x] | 3 | phase3-fresh-boundary1025-acceptance | immutable-global-gate-evidence | phase3-coherent-final-integration; phase3-guarded-plural-scanner-contract; phase3-startup-budget-relief | 1 | 2026-10-11T09:54:50Z | All16gates native0; parent verifies32rawstreams6745frozeninputs and fullsuiteJSON15977574bytes SHAf9c7a84235f1118ed38e1c67b8e5b2d7c733fe351884ceeaba77ead48a208c57. Actual2428physicalfiles44736tests allpassed0pending0todo. Source gates accepted, not overall Phase3 runtime acceptance. Failed1024/private-map diagnostics and all prior failures immutable. |
+| [!] | 3 | phase3-current-build-mounted-probe | parent-readonly-runtime-probe | phase3-fresh-boundary1025-acceptance | 1 | 2026-10-11T09:55:00Z | Original HTML identity assertion failed due2hostAdGuard additions; not olddist. Native2and closedhelpers preserved. No browser/runtime acceptance. Parent-only session runner; no shipping edits. |
+| [!] | 3 | phase3-current-build-mounted-probe-host-qualified-attempt2 | same-probe-environment-attribution | phase3-current-build-mounted-probe | 2 | 2026-10-11T09:58:53Z | Host additions attributed with exact frozenHTMLprojection and unchangedSW/entry hashes. No response/filter modification. LauncherVMimport failure and prematuremain check retained; readiness correction truly mounts nonemptySettings200withoutauth but native2 failedAPI500/404/501/405 andECONNRESET. Allhelpersclosed6745inputsunchanged. Scopeexhausted asprobe, no productregression or passingvisual/a11y claim. |
+| [!] | 3 | phase3-current-build-api-transport-diagnosis | parent-readonly-environment-diagnosis | phase3-fresh-boundary1025-acceptance | 1 | 2026-10-11T10:00:00Z | DirectGETsettings/version/auth200andhealth503; IPv4preview stillECONNRESET. Initialshortdiagnostic0with0APIobservations notacceptance. Correctedrequired-settingsGET diagnostic2records settings500later200, RBAC/impersonation501, HEADversion405 andother500. Web-vitals/errorsPOST blocked. Helpersclosed; no source/backend/hostfilter changes. Transportroot unresolved; exactpath evidence retained withoutquery/data values. |
