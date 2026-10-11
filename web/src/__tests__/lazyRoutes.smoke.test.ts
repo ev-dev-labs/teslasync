@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { LAZY_ROUTE_IMPORTS } from './lazyRoutes.list'
 import { lazyBindings } from './lazyRoutes.parse'
+import * as routeLoaders from '../lib/routeLoaders'
 
 /**
  * Lazy-route bundle smoke test.
@@ -22,6 +23,7 @@ import { lazyBindings } from './lazyRoutes.parse'
  * ceiling is fine.
  */
 const IMPORT_TIMEOUT_MS = 30_000
+const sharedLoaders = new Map(Object.entries(routeLoaders))
 
 describe('lazy route bundles boot without throwing', () => {
   for (const route of LAZY_ROUTE_IMPORTS) {
@@ -29,6 +31,10 @@ describe('lazy route bundles boot without throwing', () => {
       `${route.name} chunk imports without throwing`,
       async () => {
         await expect(route.load()).resolves.toBeDefined()
+        const sharedLoader = sharedLoaders.get(route.name)
+        if (sharedLoader) {
+          await expect(sharedLoader()).resolves.toHaveProperty('default', expect.any(Function))
+        }
       },
       IMPORT_TIMEOUT_MS,
     )
@@ -40,7 +46,8 @@ describe('lazy route bundles boot without throwing', () => {
     const { fileURLToPath } = await import('node:url')
     const here = dirname(fileURLToPath(import.meta.url))
     const src = readFileSync(resolve(here, '../App.tsx'), 'utf8')
-    const lazyCount = lazyBindings(src).length
+    const loaderSource = readFileSync(resolve(here, '../lib/routeLoaders.ts'), 'utf8')
+    const lazyCount = lazyBindings(src, { './lib/routeLoaders': loaderSource }).length
     expect(LAZY_ROUTE_IMPORTS.length).toBe(lazyCount)
   })
 })

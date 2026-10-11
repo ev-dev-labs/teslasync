@@ -96,23 +96,132 @@ function shellSourceClosure() {
   return new Set([...staticClosure(SOURCE_ROOT, roots)].filter((file) => /\.(?:ts|tsx)$/.test(file)))
 }
 
-function routeBundleSources(appSource, availableBundles) {
+export function routeBundleSources(appSource, availableBundles, sharedSources = {}) {
   const source = ts.createSourceFile('App.tsx', appSource, ts.ScriptTarget.Latest, true)
   const lazyFeatures = new Map()
-  const visit = (node) => {
-    if (ts.isVariableDeclaration(node) && ts.isIdentifier(node.name) && node.initializer
-      && ts.isCallExpression(node.initializer) && ts.isIdentifier(node.initializer.expression)
-      && node.initializer.expression.text === 'lazy') {
-      const findImport = (child) => {
-        if (ts.isCallExpression(child) && child.expression.kind === ts.SyntaxKind.ImportKeyword) {
-          const specifier = stringLiteralText(child.arguments[0])
-          const file = specifier && resolveSourceImport(SOURCE_ROOT, join(SOURCE_ROOT, 'App.tsx'), specifier)
-          const feature = file?.slice(SOURCE_ROOT.length + 1).replaceAll('\\', '/').match(/^features\/([^/]+)\//)?.[1]
-          if (feature) lazyFeatures.set(node.name.text, { feature, file })
-        }
-        ts.forEachChild(child, findImport)
+  const namespaces = new Map()
+  const sharedLoaders = new Map()
+  const appFile = join(SOURCE_ROOT, 'App.tsx')
+  const fail = (name, reason) => {
+    throw new Error(`[i18n-split] App.tsx lazy loader ${name}: ${reason}`)
+  }
+  const literalImport = (loader, name) => {
+    const imports = []
+    const visit = (node) => {
+      if (ts.isCallExpression(node) && node.expression.kind === ts.SyntaxKind.ImportKeyword) {
+        const specifier = stringLiteralText(node.arguments[0])
+        if (!specifier || node.arguments.length !== 1) fail(name, 'expected exactly one literal import specifier')
+        imports.push(specifier)
       }
-      findImport(node.initializer)
+      ts.forEachChild(node, visit)
+    }
+    visit(loader)
+    if (imports.length !== 1) fail(name, 'expected exactly one literal module import')
+    return imports[0]
+  }
+  for (const statement of source.statements) {
+    if (!ts.isImportDeclaration(statement) || !ts.isStringLiteral(statement.moduleSpecifier)) continue
+    const clause = statement.importClause
+    if (!clause?.namedBindings || !ts.isNamespaceImport(clause.namedBindings)) continue
+    const name = clause.namedBindings.name.text
+    if (namespaces.has(name)) fail(name, 'ambiguous namespace import')
+    namespaces.set(name, { module: statement.moduleSpecifier.text, typeOnly: clause.isTypeOnly })
+  }
+  for (const statement of source.statements) {
+    if (!ts.isImportDeclaration(statement)) continue
+    const clause = statement.importClause
+    const names = [
+      ...(clause?.name ? [clause.name.text] : []),
+      ...(clause?.namedBindings && ts.isNamedImports(clause.namedBindings)
+        ? clause.namedBindings.elements.map(element => element.name.text)
+        : []),
+    ]
+    for (const name of names) {
+      if (namespaces.has(name)) fail(name, 'ambiguous imported namespace binding')
+    }
+  }
+  const bindingNames = (name) => ts.isIdentifier(name)
+    ? [name.text]
+    : ts.isObjectBindingPattern(name) || ts.isArrayBindingPattern(name)
+    ? name.elements.flatMap(element => ts.isBindingElement(element) ? bindingNames(element.name) : [])
+    : []
+  const checkShadowing = (node) => {
+    if ((ts.isVariableDeclaration(node) || ts.isParameter(node)
+      || ts.isFunctionDeclaration(node) || ts.isClassDeclaration(node)
+      || ts.isFunctionExpression(node) || ts.isClassExpression(node)) && node.name) {
+      for (const name of bindingNames(node.name)) {
+        if (namespaces.has(name)) fail(name, 'ambiguous shadowed namespace')
+      }
+    }
+    ts.forEachChild(node, checkShadowing)
+  }
+  checkShadowing(source)
+  const sharedImport = (loader, name) => {
+    const namespace = namespaces.get(loader.expression.text)
+    if (!namespace || namespace.typeOnly) fail(name, 'unknown or type-only shared namespace')
+    const file = resolveSourceImport(SOURCE_ROOT, appFile, namespace.module)
+    if (!file) fail(name, `shared source does not resolve: ${namespace.module}`)
+    if (!sharedLoaders.has(file)) {
+      const text = Object.prototype.hasOwnProperty.call(sharedSources, namespace.module)
+        ? sharedSources[namespace.module]
+        : readFileSync(file, 'utf8')
+      const shared = ts.createSourceFile(file, text, ts.ScriptTarget.Latest, true)
+      if (shared.parseDiagnostics.length) fail(name, `shared source cannot be parsed: ${namespace.module}`)
+      const exports = new Map()
+      const modules = new Set()
+      for (const statement of shared.statements) {
+        if (!ts.isVariableStatement(statement)
+          || !statement.modifiers?.some(modifier => modifier.kind === ts.SyntaxKind.ExportKeyword)
+          || !(statement.declarationList.flags & ts.NodeFlags.Const)) {
+          fail(name, `shared source ${namespace.module} must export const literal-import functions`)
+        }
+        for (const declaration of statement.declarationList.declarations) {
+          const initializer = declaration.initializer
+          if (!ts.isIdentifier(declaration.name) || !initializer || !ts.isArrowFunction(initializer)
+            || initializer.parameters.length !== 0 || !ts.isCallExpression(initializer.body)
+            || initializer.body.expression.kind !== ts.SyntaxKind.ImportKeyword) {
+            fail(name, `shared source ${namespace.module} contains a nonliteral loader`)
+          }
+          const specifier = literalImport(initializer, name)
+          const target = resolveSourceImport(SOURCE_ROOT, file, specifier)
+          if (!target) fail(name, `shared module does not resolve: ${specifier}`)
+          if (exports.has(declaration.name.text) || modules.has(target)) {
+            fail(name, `ambiguous shared export or module in ${namespace.module}`)
+          }
+          exports.set(declaration.name.text, target)
+          modules.add(target)
+        }
+      }
+      if (!exports.size) fail(name, `shared source ${namespace.module} contains no loaders`)
+      sharedLoaders.set(file, exports)
+    }
+    const target = sharedLoaders.get(file).get(loader.name.text)
+    if (!target) fail(name, `unknown shared export ${loader.expression.text}.${loader.name.text}`)
+    return target
+  }
+  if (source.parseDiagnostics.length) fail('<source>', 'App.tsx cannot be parsed')
+  const visit = (node) => {
+    if (ts.isCallExpression(node) && ts.isIdentifier(node.expression) && node.expression.text === 'lazy') {
+      let binding = node
+      while (!ts.isVariableDeclaration(binding) && binding.parent) binding = binding.parent
+      if (!ts.isVariableDeclaration(binding) || !ts.isIdentifier(binding.name) || node.arguments.length !== 1) {
+        fail('<unbound>', 'every lazy call needs one loader and a named component binding')
+      }
+      const name = binding.name.text
+      if (lazyFeatures.has(name)) fail(name, 'ambiguous component binding')
+      const loader = node.arguments[0]
+      let file
+      if (ts.isPropertyAccessExpression(loader) && ts.isIdentifier(loader.expression)) {
+        file = sharedImport(loader, name)
+      } else if (ts.isArrowFunction(loader) || ts.isFunctionExpression(loader)) {
+        const specifier = literalImport(loader, name)
+        file = resolveSourceImport(SOURCE_ROOT, appFile, specifier)
+        if (!file) fail(name, `inline module does not resolve: ${specifier}`)
+      } else {
+        fail(name, 'expected an inline literal-import function or a namespace shared-loader reference')
+      }
+      const feature = file.slice(SOURCE_ROOT.length + 1).replaceAll('\\', '/').match(/^features\/([^/]+)\//)?.[1]
+      lazyFeatures.set(name, { feature, file })
     }
     ts.forEachChild(node, visit)
   }
@@ -127,8 +236,8 @@ function routeBundleSources(appSource, availableBundles) {
   })
 }
 
-export function routeBundlePaths(appSource, availableBundles) {
-  return Object.fromEntries(routeBundleSources(appSource, availableBundles)
+export function routeBundlePaths(appSource, availableBundles, sharedSources = {}) {
+  return Object.fromEntries(routeBundleSources(appSource, availableBundles, sharedSources)
     .map(({ path, bundle }) => [path, bundle]))
 }
 

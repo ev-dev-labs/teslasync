@@ -1,7 +1,9 @@
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { readFileSync } from 'node:fs';
+import ts from 'typescript';
 import { describe, expect, it, vi } from 'vitest';
+import { lazyBindings, sharedLoaderSpecifiers } from '@/__tests__/lazyRoutes.parse';
 import type { ExclusiveReport } from '@/types/teslaPhysics';
 import { features } from '../components/tesla-physics/PhysicsPageShell';
 import TeslaPhysicsPage from './TeslaPhysicsPage';
@@ -407,12 +409,44 @@ describe('Tesla Physics consolidated workbench', () => {
   it('routes all deep links through one lazy workbench and splits fifteen evidence sections', () => {
     const app = readFileSync('src/App.tsx', 'utf8');
     const prefetch = readFileSync('src/lib/routePrefetch.ts', 'utf8');
+    const loaderSource = readFileSync('src/lib/routeLoaders.ts', 'utf8');
     const sections = readFileSync('src/features/vehicles/components/tesla-physics/PhysicsInvestigation.tsx', 'utf8');
-    expect(app).toContain("const TeslaPhysics = lazy(() => import('./features/vehicles/pages/TeslaPhysicsPage'))");
-    expect(prefetch).toContain("'/tesla-physics': () => import('../features/vehicles/pages/TeslaPhysicsPage')");
+    expect(lazyBindings(app, { './lib/routeLoaders': loaderSource })).toContainEqual({
+      name: 'TeslaPhysics', specifier: './features/vehicles/pages/TeslaPhysicsPage',
+    });
+    expect(sharedLoaderSpecifiers(loaderSource).get('TeslaPhysics'))
+      .toBe('../features/vehicles/pages/TeslaPhysicsPage');
+    const aliases = new Set(['/tesla-physics', ...slugs.map(slug => `/tesla-physics/${slug}`)]);
+    expect(aliases.size).toBe(16);
+    const prefetchSource = ts.createSourceFile('routePrefetch.ts', prefetch, ts.ScriptTarget.Latest, true);
+    const prefetchBindings = new Map<string, string>();
+    let sharedNamespace = false;
+    for (const statement of prefetchSource.statements) {
+      if (ts.isImportDeclaration(statement) && ts.isStringLiteral(statement.moduleSpecifier)
+        && statement.moduleSpecifier.text === './routeLoaders') {
+        const clause = statement.importClause;
+        sharedNamespace = Boolean(clause && !clause.isTypeOnly && clause.namedBindings
+          && ts.isNamespaceImport(clause.namedBindings) && clause.namedBindings.name.text === 'routeLoaders');
+      }
+    }
+    expect(sharedNamespace).toBe(true);
+    const visit = (node: ts.Node) => {
+      if (ts.isPropertyAssignment(node) && ts.isStringLiteral(node.name) && aliases.has(node.name.text)) {
+        const loader = node.initializer;
+        if (!ts.isPropertyAccessExpression(loader) || !ts.isIdentifier(loader.expression)) {
+          throw new Error(`Physics prefetch alias ${node.name.text} is not a shared loader reference`);
+        }
+        expect(loader.expression.text).toBe('routeLoaders');
+        expect(prefetchBindings.has(node.name.text)).toBe(false);
+        prefetchBindings.set(node.name.text, loader.name.text);
+      }
+      ts.forEachChild(node, visit);
+    };
+    visit(prefetchSource);
+    expect(prefetchBindings.get('/tesla-physics')).toBe('TeslaPhysics');
     for (const slug of slugs) {
       expect(app).toMatch(new RegExp(`path="tesla-physics/${slug}" element=\\{<SafeRoute name="[^"]+"><TeslaPhysics />`));
-      expect(prefetch).toContain(`'/tesla-physics/${slug}': () => import('../features/vehicles/pages/TeslaPhysicsPage')`);
+      expect(prefetchBindings.get(`/tesla-physics/${slug}`)).toBe('TeslaPhysics');
     }
     expect(sections.match(/lazy\(\(\) => import\('\.\/Physics\w+Section'\)\)/g)).toHaveLength(slugs.length);
     expect(app).toContain('path="tesla-physics/ledger"');

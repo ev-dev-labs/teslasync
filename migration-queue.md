@@ -1,6 +1,6 @@
 # Frontend modernization queue
 
-## Current phase: 3 - scoped recovery accepted; fresh frozen boundary pending
+## Current phase: 3 - startup repair scoped acceptance; fresh boundary pending
 
 The user's latest instruction supersedes the prior override closure:
 "i am giving yopu one more chance to fix phase-3 propelry", then
@@ -15,6 +15,22 @@ all four production fragments reverse exactly to their immutable originals.
 These are scoped results, not Phase-3 completion. No page writers run during
 the fresh frozen boundary.
 Next phases resume only after Phase 3 has a verified passing boundary.
+
+Fresh frozen boundary at `8d9f3aa9cb` (actual1024): compiler, full lint,
+catalog freshness, strict keys, service-worker typing, changelog and private
+production build all exited0. Strict bundle gate exited1: measured cold-start
+gzip is410042bytes,442bytes over the unchanged409600byte ceiling (400KB).
+The full suite correctly did not start. Preserve this failed run and its
+private build. A bounded startup-weight repair may run; no threshold increase,
+catalog removal, hidden assertion drift or Phase-4 page writer is authorized.
+
+Startup repair scoped intake now verifies56artifacts,12installed source records,
+237immutable pins and exact whole-source App/prefetch inverses. The final
+affected Vitest run passed6files/377tests; direct graph regressions passed31,
+strict affected lint and normal generator--check exited0. Exactly126shared
+default-module loaders preserve143prefetch entries and16Physics aliases.
+Catalog/generated contents remain unchanged. Scoped delivery is accepted for
+commit; actual fresh gzip measurement and the full boundary remain pending.
 
 Historical transition, now superseded: Phase 3 was **closed by explicit user
 override**, not a verified gate pass.
@@ -1304,4 +1320,5 @@ Phase2 intake health: all19 original primitive actors delivered idle DONE (not s
 | [b] | 4 | phase4-pilot-settings | page-migration | phase3-coherent-verified-boundary | 1 | 2026-10-11T07:40:20Z | Paused by latest user instruction. Own page delta and new pilot test parked in immutable session artifacts; original owner restores only own dispatch-before bytes/removes only its backed-up new test. GeneralSettings and inherited work untouched. Resume saved pilot after verified Phase3 boundary. |
 | [x] | 3 | phase3-coherent-final-integration | explicit-user-authorized-final-recovery | phase4-writers-paused | 2 | 2026-10-11T07:45:00Z | Terminal delivery consumed; parent independently verifies272artifact records including manifest+5immutable pins, 205currentowned records, exact115-path cumulative stage. All31091oldstructural leaves preserved+exact4=31095; all784original hash constants retained, four exact source inverses verified. Combined55files8572tests0; generator/check/namespace/shadow/scopedlint/strictscanner native0. Prior failures and wrapper display encoding failure retained. Source/catalog/test leases released; global gates remain unrun. |
 | [x] | 3 | phase3-guarded-plural-scanner-contract | narrow-scanner-correctness | - | 1 | 2026-10-11T07:45:00Z | Terminal consumed; parent verifies50artifacts+2sourcehashes. Narrow numeric-origin and dominating >1 cardinal-count AST proof, 23focusedtests passed, inherited14tests preserved, syntax0/0, strict native0 missing0. Negative guards/unknown sources/ordinal/context/language/spreads remain strict. Incidents caller unchanged; actual0/1hidden2/3localized; no catalog/suppression edits. Exact two-file scanner stage; source lease released. |
-| [~] | 3 | phase3-coherent-verified-boundary | parent-frozen-phase-gate | phase3-coherent-final-integration; phase3-guarded-plural-scanner-contract | 1 | 2026-10-11T08:03:09Z | Scoped intake accepted; prepare exact sequential source commits then freeze all web/scripts inputs, empty index and zero writer leases. Fresh compiler/full lint/catalog/strict key checks/service-worker typing/private build/budgets/duplication/maps/PWA/shell/runtime then one full suite; no stale or cancelled run acceptance. PWAcontract stage source-only because existing tool hardcodes web/dist; private-output full built contract and mounted browser acceptance not implied. Pilot dispatch resumes only after verified boundary. |
+| [~] | 3 | phase3-coherent-verified-boundary | parent-frozen-phase-gate | phase3-coherent-final-integration; phase3-guarded-plural-scanner-contract; phase3-startup-budget-relief | 2 | 2026-10-11T08:50:40Z | Failed1024boundary preserved: first7gates0/strictbundle1/fullsuiteNOTRUN. New scoped startup repair intake accepted; exact11sourcepaths+queue commit then new frozen compiler/full lint/skillviolations/catalog/keys/SW/changelog/build/bundle/duplicates/private maps/PWA/fullbuiltcontract/shell/runtime/fullsuite. FullbuiltPWA uses official unchanged assertions with only private DIST_ROOT adapted in session, verifiedadapter0; oldpublicmap invocation1 retained and correctedprivatemaps0, no current-source acceptance inferred. Zero writer leases/emptyindex/frozenHEAD required. Browser QA still not implied. |
+| [~] | 3 | phase3-startup-budget-relief | bounded-startup-weight-repair | phase3-coherent-final-integration; phase3-guarded-plural-scanner-contract | 2 | 2026-10-11T08:18:17Z | Attempt1 and initialattempt2 ownership/startup failures retained. Same-attempt coherent integration delivered; parent verifies56artifacts12source records237immutablepins, exactwholeApp/prefetch inverses126loaders143entries16Physicsaliases, allcatalog/generated bytes unchanged. Final6files377Vitesttests/31directregressions passed, strictlint/generatorcheck0. Exact11changedpaths only; source/test/generatorleasesreleased. UTCduration correction13.77minutes retains originalmisreported-406.23minute metadata. No actualgzipgain/globalacceptance before parentfreshbuild unchanged400KB. |

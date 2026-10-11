@@ -3,11 +3,11 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, it, expect } from 'vitest'
 import { LAZY_ROUTE_IMPORTS } from './lazyRoutes.list'
-import { lazyBindings, manifestSpecifiers } from './lazyRoutes.parse'
+import { lazyBindings, manifestSpecifiers, sharedLoaderSpecifiers } from './lazyRoutes.parse'
 
 /**
  * `lazyRoutes.list.ts` is a hand-maintained manifest that MUST mirror every
- * `lazy(() => import('./…'))` in `App.tsx`. It is a pure data module — there is
+ * lazy binding in `App.tsx`, including strictly resolved shared loaders. It is a pure data module — there is
  * no component or hook to render — so this suite verifies the *invariants* that
  * make the manifest trustworthy rather than doing a DOM smoke render:
  *
@@ -31,6 +31,7 @@ import { lazyBindings, manifestSpecifiers } from './lazyRoutes.parse'
 const here = path.dirname(fileURLToPath(import.meta.url))
 const listSource = fs.readFileSync(path.join(here, 'lazyRoutes.list.ts'), 'utf8')
 const appSource = fs.readFileSync(path.join(here, '..', 'App.tsx'), 'utf8')
+const loaderSource = fs.readFileSync(path.join(here, '..', 'lib', 'routeLoaders.ts'), 'utf8')
 
 const toKey = (spec: string): string => spec.replace(/^(?:\.\.?\/|@\/)/, '')
 
@@ -41,7 +42,7 @@ const resolvesOnDisk = (spec: string): boolean => {
 }
 
 const listSpecifiers = manifestSpecifiers(listSource)
-const appBindings = lazyBindings(appSource)
+const appBindings = lazyBindings(appSource, { './lib/routeLoaders': loaderSource })
 const appSpecifiers = appBindings.map(({ specifier }) => specifier)
 
 /** `features/x/pages/YPage` → the `const Y` App.tsx binds it to. */
@@ -58,6 +59,15 @@ for (const entry of LAZY_ROUTE_IMPORTS) {
 }
 
 describe('LAZY_ROUTE_IMPORTS manifest', () => {
+  it('retains all 126 shared default-module bindings in the exhaustive manifest', () => {
+    const loaders = sharedLoaderSpecifiers(loaderSource)
+    expect(loaders.size).toBe(126)
+    for (const [name, specifier] of loaders) {
+      expect(appBindings).toContainEqual({ name, specifier: `./${toKey(specifier)}` })
+      expect(listNamesByKey.get(toKey(specifier))).toBe(name)
+    }
+  })
+
   it('exports a non-empty array of well-formed { name, load } entries', () => {
     expect(Array.isArray(LAZY_ROUTE_IMPORTS)).toBe(true)
     expect(LAZY_ROUTE_IMPORTS.length).toBeGreaterThan(100)
