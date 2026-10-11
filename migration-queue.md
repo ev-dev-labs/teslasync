@@ -1,6 +1,33 @@
 # Frontend modernization queue
 
-## Current phase: 4 - Pilot source intake verified; bounded shared repairs queued
+## Current phase: 4 - Shared deliveries released; rolling pilot follow-ups
+
+All four bounded repair terminal notifications were consumed by known ID;
+runtime confirms each idle and their exclusive source leases are released.
+Geometry and scanner independent intake is accepted at the scoped-source level:
+65/63 artifact hashes, exact before/current snapshots and reversible patches;
+11/28 tests native0. Original config bytes and all22scanner tests/105assertions
+are retained. Dashboard scan still native1 on two real geometry literals;
+its persisted theme identity remains a visible review, not suppressed.
+Geometry's negative elapsed metadata is invalid and excluded from runtime
+claims. Prior failed proofs/tests remain immutable.
+Sticky and grade parent intake is pending. Sticky parent helper failed on an
+incorrect release-schema assumption, not a source failure; receipt retained.
+No page/phase/browser acceptance or fresh full gate. HEAD/count1037,
+index empty, last mandatory compiler1035; next1050.
+Dashboard attempt2 becomes ready after exact geometry/scanner source commits;
+Settings follows its own geometry/sticky intake, never an all-four barrier.
+Rolling intake/dispatch continues without filling slots with stale queue items.
+
+Health check at16:34:44Z verifies all four known repair IDs actually running,
+each approximately337seconds at the runtime observation. Repository heartbeats
+are fresh at16:34:24/16:32:50/16:34:09/16:32:20Z. No stuck-worker predicate
+is met; no reset/retry/lease release is justified. Partial scoped command
+successes and scanner-test failures are progress evidence, not terminal
+deliveries or acceptance. Dashboard/Settings attempt2 remain blocked on their
+specific shared intakes. HEAD/count remain1037; index empty; next compiler1050.
+Exact lifecycle observations are retained in session
+`phase4-health1037-20261011T163444.json`.
 
 All three original pilot owners delivered closed reports and are verified idle.
 Their same attempt1 resumes preserve the original user-directed pause. All
@@ -14,8 +41,9 @@ five protected files. All6748Phase3inputs are reconciled:6743unchanged plus
 five exact pilot source deltas. Drives source-ready scoped checks are accepted;
 Settings/Dashboard scanner1 remains BLOCKED, not waived or committed as accepted.
 No pilot/page/phase acceptance. Failed and paused artifacts remain immutable.
-Actual checkpoint
-`01854be2936b2fb5e898f3e71edea71e5619d3be` is commit1036; next compiler1050.
+Verified Drives-only scoped source commit is
+`1c8a15b07c8392a5f7ec52408095378f2469bf83`, actual1037. Settings/Dashboard
+uncommitted work remains intact. Last mandatory compiler1035; next compiler1050.
 No pilot is accepted yet, and no full phase gate runs during writer leases.
 
 Phase3 genuinely closes on accepted shipping commit
@@ -1800,10 +1828,10 @@ Phase2 intake health: all19 original primitive actors delivered idle DONE (not s
 | [x] | 4 | phase4-pilot-settings-parent-intake | independent-closed-evidence-intake | phase4-pilot-settings | 1 | 2026-10-11T16:19:00Z | Parent verifies61artifact records, exact two owned paths/three protected files, source forward/reverse patches in memory, all six failed-run case identities retained, native tests/lint0/scanner1. One physical test file; worker suite counter2 corrected, not two files.325to327lines/all sections/actions/trust/wire retained. Source candidate BLOCKED on geometry/mixed-source loading, no commit or pilot acceptance. Helper schema failure preserved. |
 | [x] | 4 | phase4-pilot-dashboard-parent-intake | independent-failed-evidence-intake | phase4-pilot-dashboard | 1 | 2026-10-11T16:19:00Z | Parent verifies40closed artifacts/five protected files/two exact owned sources.18new case identities retained from failed run; tests/lint/preservation0 and scanner1 retained. Entire source diff and exact hook/event/translation signatures reviewed;1063to1080lines. FAILED pilot not accepted; token/QA correctness repairs precede same pilot attempt2. |
 | [x] | 4 | phase4-pilot-drives-parent-intake | independent-source-ready-evidence-intake | phase4-pilot-drives-list | 1 | 2026-10-11T16:19:00Z | Parent verifies63closed artifacts/six changed paths/page unchanged/two protected files,22tests in three physical files/native0, strict lint/four scans0 with three token reviews.286/289lines and exact hooks/event/translation signatures retained. Source-ready scoped commit only; sticky localization/domain grade palette queued; page/phase/browser acceptance NOTRUN. Parent ANSI matcher failure retained; final default reporter has no JSON identity multiset, not fabricated. |
-| [ ] | 4 | phase4-pilot-geometry-token-owner | exact-existing-geometry-token-ownership | phase4-pilot-settings-parent-intake; phase4-pilot-dashboard-parent-intake | 1 | - | Shared token owner only: web/tailwind.config.js plus new web/scripts/__tests__/pilot-geometry-tokens.test.mjs. Name existing dashboard kiosk z9990 and exact unchanged dashboard onboarding/settings navigation/settings shortcuts grid values; preserve all existing tokens/breakpoints/defaults. No page edits or scanner waiver. Exact value/ordering tests; original pilot owners adopt only after token intake. |
-| [ ] | 4 | phase4-qa-persisted-theme-id-proof | scanner-false-positive-correctness | phase4-pilot-dashboard-parent-intake | 1 | - | Exact QA-tool-only web/scripts/frontend-qa.mjs and additive frontend-qa.test.mjs coverage. Prove canonical ThemeProvider useTheme destructured themeId comparison by TS AST/import/binding context; retain a visible review finding rather than treating persisted neon-cyan ID as decorative CSS. Arbitrary strings/classes/foreign hook/shadowing/unknown flow remain strict candidate violations. No page-path exemption, regex blanket suppression, threshold changes or baseline pruning. |
-| [ ] | 4 | phase4-sticky-control-localization | shared-control-source-owned-copy | phase4-pilot-drives-parent-intake | 1 | - | Own PageHeaderSticky.tsx/new PageHeaderSticky.pilot.test.tsx plus canonical en.json and normal generated English outputs prospectively authorized. Replace hardcoded scroll-to-top accessible suffix with source-owned localized interpolation; preserve region label/keyboard/main-scroll/motion/observer/controls. Add-only canonical leaves, all31095oldleaves/old assertion hashes retained. No other catalog writer concurrently. |
-| [ ] | 4 | phase4-driving-grade-palette | domain-grade-display-role-repair | phase4-pilot-drives-parent-intake | 1 | - | Own drivesAggregation.ts and new lib/__tests__/drivesAggregation.palette.test.ts. Existing grade colors become existing restrained semantic CSS roles only; preserve A+/A/B/C/D/unknown identities, numeric weights, thresholds, SI math and all old tests. Trace consumers for CSS/chart compatibility; no duplicate grade engine or fixed-color fallback. |
+| [x] | 4 | phase4-pilot-geometry-token-owner | exact-existing-geometry-token-ownership | phase4-pilot-settings-parent-intake; phase4-pilot-dashboard-parent-intake | 1 | 2026-10-11T16:44:40Z | Idle/released; parent independently verifies65artifacts/exact2paths/current snapshots/forward-reverse patches/5protected inputs. Four exact named values only; original config bytes recovered exactly, all breakpoints/z-order retained.11tests/syntax native0; four failed trial receipts preserved. Negative elapsedSeconds invalid, excluded from lifecycle conclusions. Scoped source accepted; original owners adopt after commit; no pilot/browser acceptance. Receipt phase4-geometry-parent-intake1037.json. |
+| [x] | 4 | phase4-qa-persisted-theme-id-proof | scanner-false-positive-correctness | phase4-pilot-dashboard-parent-intake | 1 | 2026-10-11T16:44:41Z | Idle/released; parent independently verifies63artifacts/exact2paths/byte patches; entire original22724byte test prefix/22tests/105assertions retained.28tests/syntax0; all19Dashboard findings retained, exactly one canonical immutable theme-ID comparison becomes visible review. Dashboard native1 still two actual geometry candidates; shadow/foreign/write/style/template negatives strict. Three failed test trials retained; no exemptions/threshold/baseline changes. Scoped tool correctness only; receipt phase4-scanner-parent-intake1037.json. |
+| [~] | 4 | phase4-sticky-control-localization | shared-control-source-owned-copy | phase4-pilot-drives-parent-intake | 1 | - | Reserved for dispatch, not a running-count claim. Own PageHeaderSticky.tsx/new PageHeaderSticky.pilot.test.tsx plus canonical en.json and normal generated English outputs prospectively authorized. Replace hardcoded scroll-to-top accessible suffix with source-owned localized interpolation; preserve region label/keyboard/main-scroll/motion/observer/controls. Add-only canonical leaves, all31095oldleaves/old assertion hashes retained. No other catalog writer concurrently. |
+| [~] | 4 | phase4-driving-grade-palette | domain-grade-display-role-repair | phase4-pilot-drives-parent-intake | 1 | - | Reserved for dispatch, not a running-count claim. Own drivesAggregation.ts and new lib/__tests__/drivesAggregation.palette.test.ts. Existing grade colors become existing restrained semantic CSS roles only; preserve A+/A/B/C/D/unknown identities, numeric weights, thresholds, SI math and all old tests. Trace consumers for CSS/chart compatibility; no duplicate grade engine or fixed-color fallback. |
 | [ ] | 4 | phase4-pilot-settings-attempt2 | same-pilot-confirmed-gap-repair | phase4-pilot-geometry-token-owner; phase4-sticky-control-localization | 2 | - | Preserve original attempt1/pause/failures; bounded same pilot attempt2. Original owner adopts exact new named geometry tokens and fixes independent browser-font values being suppressed by remote settings loading using proper scoped source state. Own current SettingsPage.tsx/new pilot test; prospectively reserve SettingsSummaryBrief.tsx/existing SummaryBrief test and only tightly coupled OperationalBrief loading interface/test if existing API cannot express per-metric loading. No catalog write until exclusive catalog owner release; no original hash updates. Native/mixed-source tests and scanner0 required, then parent integration/browser. |
 | [ ] | 4 | phase4-pilot-dashboard-attempt2 | same-pilot-confirmed-gap-repair | phase4-pilot-geometry-token-owner; phase4-qa-persisted-theme-id-proof | 2 | - | Original owner same failed pilot attempt2 after exact shared prerequisite intake, preserving attempt1/paused evidence. Own only DashboardPage.tsx/new pilot test; replace two inherited geometry literals with exact named tokens and run additive test/lint/scanner0; persisted theme ID unchanged. No feature/catalog/shared scope expansion. Parent current integration/browser still required. |
 | [x] | 3 | phase3-coherent-final-integration | explicit-user-authorized-final-recovery | phase4-writers-paused | 2 | 2026-10-11T07:45:00Z | Terminal delivery consumed; parent independently verifies272artifact records including manifest+5immutable pins, 205currentowned records, exact115-path cumulative stage. All31091oldstructural leaves preserved+exact4=31095; all784original hash constants retained, four exact source inverses verified. Combined55files8572tests0; generator/check/namespace/shadow/scopedlint/strictscanner native0. Prior failures and wrapper display encoding failure retained. Source/catalog/test leases released; global gates remain unrun. |

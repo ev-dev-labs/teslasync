@@ -15,6 +15,7 @@ export default {
         'presentation-controls': '9999',
         'presentation-dimmer': '9998',
         'presentation-cursor': '9997',
+        'dashboard-kiosk': '9990',
         'map-tile-control': '800',
         'command-palette-backdrop': '200',
         'command-palette-positioner': '201',
@@ -61,6 +62,9 @@ export default {
         'replay-shortcuts': 'auto 1fr',
         'page-actions-scope': 'minmax(0,1fr) auto',
         'workspace-header': 'minmax(0,1fr) minmax(18rem,22rem) minmax(0,1fr)',
+        'dashboard-onboarding': 'minmax(0,1.2fr) minmax(22rem,0.8fr)',
+        'settings-navigation': '15rem minmax(0,1fr)',
+        'settings-shortcuts': 'repeat(auto-fit,minmax(min(100%,18rem),1fr))',
       },
       padding: {
         'command-palette-viewport': 'max(2rem,8vh)',
