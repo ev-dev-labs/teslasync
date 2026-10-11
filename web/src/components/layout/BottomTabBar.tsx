@@ -31,6 +31,13 @@ const TABS: Tab[] = [
   { path: '/explore',  icon: navRouteIcons['/explore'],  i18nKey: 'nav.mobileMore',     fallback: 'More' },
 ];
 
+const FOCUSED_TAB_SCROLL_OPTIONS = {
+  behavior: 'instant',
+  block: 'nearest',
+  inline: 'nearest',
+  container: 'nearest',
+} as const;
+
 /** Paths shown in the bottom tab bar — used to de-emphasize sidebar duplicates on mobile */
 export const BOTTOM_TAB_PATHS = new Set(TABS.map(t => t.path));
 
@@ -61,6 +68,7 @@ export function BottomTabBar() {
             to={tab.path}
             aria-label={label}
             aria-current={isActive ? 'page' : undefined}
+            onFocus={event => event.currentTarget.scrollIntoView?.(FOCUSED_TAB_SCROLL_OPTIONS)}
             className={cn(
               'relative flex min-h-11 min-w-12 flex-1 basis-auto shrink-0 flex-col items-center justify-center gap-1 rounded-shape-sm px-2 py-1',
               'transition-colors duration-fast motion-reduce:transition-none',

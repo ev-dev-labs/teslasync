@@ -37,6 +37,7 @@
 
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { render, screen, fireEvent, cleanup } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { navSections } from './Layout'
 import { navRouteIcons } from '@/lib/navRouteIcons'
@@ -294,6 +295,68 @@ describe('BottomTabBar', () => {
     expect(charging.className).toContain('focus-visible:ring-[var(--focus-ring)]')
     expect(charging.className).toContain('forced-colors:focus-visible:outline-[Highlight]')
     expect(charging.className).toContain('motion-reduce:transition-none')
+  })
+
+  it.each(['ltr', 'rtl'])(
+    'reveals every keyboard-focused tab in its nearest scroll container in %s without navigation',
+    async (direction) => {
+      const user = userEvent.setup()
+      const labels = TABS.map((tab) => `${tab.label} — Sehr lange übersetzte Navigationsbeschriftung`)
+      tSpy.mockImplementation((key: string, fallback?: string) => {
+        const index = TABS.findIndex((tab) => tab.key === key)
+        return index < 0 ? fallback ?? key : labels[index]
+      })
+      const { container } = renderBar('/settings')
+      container.setAttribute('dir', direction)
+      const nav = screen.getByRole('navigation', { name: 'Quick navigation' })
+      const links = screen.getAllByRole('link')
+      const scrolls = links.map((link) => {
+        const scrollIntoView = vi.fn()
+        Object.defineProperty(link, 'scrollIntoView', { value: scrollIntoView })
+        return scrollIntoView
+      })
+      const options = {
+        behavior: 'instant',
+        block: 'nearest',
+        inline: 'nearest',
+        container: 'nearest',
+      }
+
+      expect(nav).toHaveClass('overflow-x-auto')
+      expect(scrolls.every((scroll) => scroll.mock.calls.length === 0)).toBe(true)
+      expect(mockedPrefetch).not.toHaveBeenCalled()
+      for (const [index, tab] of TABS.entries()) {
+        await user.tab()
+        expect(links[index]).toHaveFocus()
+        expect(links[index]).toHaveAttribute('href', tab.path)
+        expect(links[index]).toHaveAccessibleName(labels[index])
+        expect(links[index]).toHaveTextContent(labels[index])
+        expect(scrolls[index]).toHaveBeenCalledExactlyOnceWith(options)
+        expect(scrolls[index].mock.contexts[0]).toBe(links[index])
+        expect(mockedPrefetch).toHaveBeenLastCalledWith(tab.path)
+        expect(mockedPrefetch).toHaveBeenCalledTimes(index + 1)
+        links.forEach((link) => expect(link).not.toHaveAttribute('aria-current'))
+      }
+      expect(scrolls.map((scroll) => scroll.mock.calls.length)).toEqual([1, 1, 1, 1, 1, 1])
+
+      await user.tab({ shift: true })
+      expect(links[4]).toHaveFocus()
+      expect(scrolls[4]).toHaveBeenNthCalledWith(2, options)
+      expect(scrolls[5]).toHaveBeenCalledTimes(1)
+      expect(mockedPrefetch).toHaveBeenLastCalledWith('/live')
+    },
+  )
+
+  it('keeps focus and prefetch working when scrollIntoView is unavailable', () => {
+    renderBar('/settings')
+    const more = screen.getByRole('link', { name: 'More' })
+    Object.defineProperty(more, 'scrollIntoView', { value: undefined })
+
+    expect(() => more.focus()).not.toThrow()
+    expect(more).toHaveFocus()
+    expect(more).toHaveAttribute('href', '/explore')
+    expect(more).not.toHaveAttribute('aria-current')
+    expect(mockedPrefetch).toHaveBeenCalledExactlyOnceWith('/explore')
   })
 })
 
