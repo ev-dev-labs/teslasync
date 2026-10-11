@@ -15,21 +15,21 @@ export function DrivesStickySummary({
       ariaLabel={t('drives.stickyBar.aria', 'Drive history summary')}
       testId="drives-sticky-summary"
     >
-      <Text as="span" color="secondary" className="truncate">
+      <Text as="span" size="xs" color="secondary" className="min-w-0 break-words">
         {t('drives.title', 'Drive History')}
       </Text>
-      <span className="opacity-50">·</span>
-      <span className="truncate">{periodLabel}</span>
-      <span className="opacity-50">·</span>
-      <Text as="span" color="primary" weight="medium">{collectionLabel}</Text>
-      <span className="opacity-50">·</span>
-      <Text as="span">{hasDrivePayload ? fmtCompact(filteredDrives.length) : '—'} {t('drives.results', 'results')}</Text>
+      <Text as="span" size="xs" color="muted" aria-hidden="true">·</Text>
+      <Text as="span" size="xs" color="secondary" className="min-w-0 break-words">{periodLabel}</Text>
+      <Text as="span" size="xs" color="muted" aria-hidden="true">·</Text>
+      <Text as="span" size="xs" color="primary" weight="medium" className="min-w-0 break-words">{collectionLabel}</Text>
+      <Text as="span" size="xs" color="muted" aria-hidden="true">·</Text>
+      <Text as="span" size="xs" color="secondary">{hasDrivePayload ? fmtCompact(filteredDrives.length) : '—'} {t('drives.results', 'results')}</Text>
       {avgGrade.label !== '—' && (
         <>
-          <span className="opacity-50">·</span>
-          <span>{t('drives.avgGrade', 'efficiency grade')}{' '}
-            <Text as="span" weight="semibold" style={{ color: avgGrade.color }}>{avgGrade.label}</Text>
-          </span>
+          <Text as="span" size="xs" color="muted" aria-hidden="true">·</Text>
+          <Text as="span" size="xs" color="secondary" className="min-w-0 break-words">{t('drives.avgGrade', 'efficiency grade')}{' '}
+            <Text as="span" size="xs" weight="semibold" style={{ color: avgGrade.color }}>{avgGrade.label}</Text>
+          </Text>
         </>
       )}
     </PageHeaderSticky>

@@ -33,8 +33,8 @@ export function DrivesSourceNotices({
           state="unavailable"
           title={t('drives.fsdUnavailable.title', 'FSD evidence could not be loaded')}
         >
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <Text>
+          <div className="flex min-w-0 flex-wrap items-center justify-between gap-3">
+            <Text as="p" variant="bodySm" className="min-w-0 flex-1 break-words">
               {t(
                 'drives.fsdUnavailable.message',
                 'Drive history remains available, but FSD badges, filters, and sorting are disabled until this data loads successfully.',
@@ -44,6 +44,8 @@ export function DrivesSourceNotices({
               type="button"
               variant="secondary"
               size="sm"
+              wrapLabel
+              className="min-h-11 min-w-11 md:min-h-9"
               onClick={() => { void refetchFsd(); }}
             >
               {t('common.retry', 'Retry')}
