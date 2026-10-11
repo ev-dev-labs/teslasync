@@ -2,11 +2,17 @@
 
 ## Current phase: 4 - Source repairs committed; current pilot gates blocked
 
-Latest source commit:16f6aba4b5/actual1048. Exact nine live-read source/test/doc
-files plus parentqueue are committed; native Git receipts verify staged and
-committed path sets and empty index. Source-only acceptance2533cd10 remains
-qualified: installed image unchanged, source parity unknown, browser and
-Phase4 acceptance false. Mandatory compiler1050 is not yet due.
+Latest source commit:6ae2dfb4b0/actual1049. The accepted warranty tab/panel
+repair is committed after live-read source commit16f6aba4b5/actual1048.
+Both latest API and web are now running locally from1049 with executable
+commit and served-bundle identity verified. Source-only acceptance does not
+imply whole-application acceptance: Dashboard stats500 and the mounted
+signal-catalog widget iterable exception remain. Phase4 remains open.
+This rollout-bookkeeping boundary targets actual1050. The mandatory
+compiler1050 runs immediately after that commit with source writers paused;
+its exact output/exit is recorded in the actor ledger. This queue update
+does not claim that prospective compiler result. Parent1049preflight is
+historical passing evidence, not a substitute for the cadence check.
 
 ### Explicit latest local Docker request
 
@@ -16,8 +22,12 @@ and container update, using the existing local-demo-compose.yml override
 and loopback ports8080/3119. It does not authorize cloud deployment, push,
 permission/configuration changes, database wipes, worker recreation or a
 Phase4 gate waiver. Existing PostgreSQL volume
-teslasync-local-demo_postgres_data remains untouched; database version254
-is clean and already matches the latest source migration.
+teslasync-local-demo_postgres_data remains attached to the same unchanged
+database container. Startup automatically applied existing tracked
+000255_automation_action_wait; database is now255clean. The initial glob
+inventory missed255, so the earlier "no migration expected" statement was
+incorrect. This migration adds an enum/table and updates a check constraint;
+no existing table/data wipe occurred.
 All five repair workers delivered terminal reports and released their
 source/validation leases; actual running actors0. Four source repairs
 remain execution-blocked; warranty source is independently source-only
@@ -25,12 +35,59 @@ accepted604facd1/73pins with32coupled tests, scopedESLint0 and scoped
 audit/typecheck0. Original page inverse and all8old test callbacks/fixtures
 remain byte-exact;3new tests added. Exact2reported shipping paths plus
 parentqueue are authorized for normal sequential scoped commit.
-Do not dispatch source writers while this local build's inputs
-are frozen. Schedule21 remains active; schedules19/20 remain stopped.
+Build and local update are finished; build input freeze is released.
+Both app containers arehealthy, web/health/readiness return200, and the
+configured live endpoint now returns real200empty rather than503.
+All six dependency/worker container IDs and named volumes were preserved.
+Old API rollback tag and web-rootfs export retained after pre-existing
+Docker image-cache corruption prevented tagging/committing the old web image.
+Schedule21 remains active; schedules19/20 remain stopped.
 
 | Status | Phase | Item | Owner | Acceptance |
 | --- | --- | --- | --- | --- |
-| [~] | 4 | phase4-latest-local-docker-rollout | parent exact existing local project | User-authorized API/web only. Preserve database/cache/MQTT/photo volumes and all other service IDs; verify current source/build identity, healthy readiness, web reachability and real configured live endpoint. Warranty source intake604facd1 accepted; build/update pending, no runtime or phase acceptance yet. |
+| [x] | 4 | phase4-latest-local-docker-rollout | parent exact existing local project | Latest1049API/web built and runninghealthy atlocalhost:3119/127.0.0.1:8080. Nativebuild0/up0; realhealth/readiness/web/live200, exact executable/bundlecommitverified,6othercontainersunchanged,255clean. Mounted Dashboard500/widgeterror observed and recorded, not whole-app/native/axe/phase acceptance. Session exact build/up/final verification receipts preserve warnings/failures. |
+| [ ] | 4 | phase4-local-signal-catalog-widget-shape | future bounded read-only mounted-widget consumer/hook shape trace | New concrete console error on latest1049Dashboard: widget:signal-catalog ErrorBoundary catches TypeError:v is not iterable in assets/C8QltDo2.js/useMemo. Exact console/main snapshot pinned. Not an exhausted statistics/native retry; no source lease or agent dispatched. Diagnose current shape before any surgical implementation authorization. |
+
+### Health21 continuation after the local rollout
+
+Canonical lifecycle reconciliation finds all five retained repair workers
+idle, delivered and released; none is a zombie or an available running slot.
+The four execution-profile failures remain blocked, with no automatic retry.
+Local rollout final receiptc6ef729d verifies the installed1049 source and
+preserves the prior HTTP-summary correction and image-cache backup failures.
+No new deployment, permission change, whole-app acceptance or Phase5 work
+is authorized by this continuation.
+
+The existing battery closure now has its seven-pin shared prerequisite and
+released prior validators. Prospectively pin its exact four shipping paths,
+existing VampireDrainPage test and one new absent BatteryPanelGrid.test.tsx;
+also protect the existing BatteryPanels.test.tsx. Parent preparation713
+failed before staging/commit/compiler because the prospective grid test was
+mistaken for an original; failure and partial snapshots are preserved.
+Correct only that baseline inventory, then authorize source attempt1 after
+compiler1050. No source implementation attempt was spent on that parent error.
+Use a compatible shared-worktree source-only worker, not a profile requiring
+clean origin/main, PR/Docker shipping or worker-owned full compiler gates.
+
+The bounded StopScore consumer read found a precise SI boundary defect:
+state starts at40 while real UnitInput consumes Wh, and submit multiplies
+the canonical onChange result by1000. The existing default40000Wh payload
+assertions therefore miss the incorrect initial display and edited-input
+request. Shared/backend receiptdf2eeb60 remains current. Authorize a NEW
+first source repair of only StopScorePanel.tsx and its exact test: initialize
+40000Wh, keep state canonical and send that same Wh value without another
+conversion. Preserve all eight original tests and all other page behavior;
+add real UnitInput display/edit/blank regression cases. No API/model/unit
+helper changes, new limits, adapters or backend migration. This is not an
+exhausted Dashboard/native attempt. Its source lease waits for the battery
+category-index validation release because this component imports layout.
+
+The new signal-catalog widget exception gets one read-only diagnostic worker:
+pin its source and two original test files plus the actual console/snapshot.
+Trace only that widget's directly used query/response contract, retain exact
+source and artifact hashes, and identify the failing iterable expression.
+No shipping edits or tests before independent diagnostic intake grants an
+exact repair scope. Read-only diagnosis may overlap the battery writer.
 
 ### Active source continuation
 
@@ -133,10 +190,11 @@ Full checks remain parent-owned and serialized. Reservations are not running.
 | [!] | 4 | phase4-climate-source-registry-repair | vehicle-systems/pages/ClimateControlPage.tsx and exact .test.tsx | 1 | Source defect remains unresolved. Worker idleBLOCKED/released; intakeef7d8e22 verifies unchanged originals. Same parent execution-profile routing mismatch; no Git/build/API/catalog widening. Original audit218 independent charging source registry obligation preserved; no automatic relaunch. |
 | [x] | 4 | phase4-warranty-tab-panel-identity | resale-vault/pages/WarrantyResaleVaultPage.tsx and exact .test.tsx | 1 | Worker idleDONE/released/report246759f6; parent intake604facd1/73pins/source-only accepted. Instance-safe useId consumes existing Tabs.idBase and connects active panel ID/label. All5tabs/14domainpanelcomponents/actions preserved,8original callbacks/fixtures exact,3new tests; parent32coupled tests/scopedESLint/audit+TypeScript native0. Worker launcher failures and out-of-cadence bundled compiler retained; parent independently serialized final validation. No certificate wording/schema/shared changes or browser/phase acceptance. |
 | [!] | 4 | phase4-alignment-chart-flag-alternative | charging/pages/ChargeDepartureAlignmentPage.tsx and charge-departure-alignment-modernization/ChargeDepartureAlignmentPage.runtime.test.tsx | 1 | Worker idleBLOCKED/released, report8e417aff unchanged across both terminal turns. Parent intakeb51b18aa/37pins verifies unchanged originals and14expanded cases authored,0executed. Same parent execution-profile mismatch; no Git/source/assertion/validation changes. Original audit077 obligation unresolved; no automatic relaunch. |
-| [ ] | 4 | phase4-battery-category-hook-closure | data-display/index.ts, layout/index.ts, battery/pages/VampireDrainPage.tsx and exact test, battery/components/modernization/BatteryPanelGrid.tsx and exact test | 1 | Battery readiness original remainingPaths[0,1]. Parent confirmed existing hook definitions/nested exports and absence from public category indices. Pending shared-contract receipt and release of current validators before changing their shared import inputs. Expose existing hooks through concrete-module re-exports, then close two retained consumer imports; no hook implementation/layout/preference rewrite. Not dispatched. |
+| [ ] | 4 | phase4-battery-category-hook-closure | data-display/index.ts, layout/index.ts, battery/pages/VampireDrainPage.tsx and exact test, battery/components/modernization/BatteryPanelGrid.tsx and exact test | 1 | Shared prerequisitee3bfc229 and prior validator release verified; prospective exact baseline/source-only attempt1 authorized after mandatory1050compiler. Expose existing hooks through concrete-module re-exports, then close the two retained consumer imports; preserve hook/context/preference identities, all other exports, original tests and page sections. Compatible worker not yet launched. |
 | [x] | 4 | phase4-category-hook-public-contract | exact shared hook definitions, nested/category indices and design contract | 1 | Parente3bfc229/7pins confirms existing hooks/nested exports and absent public category exports. No shipping source changes or validation/phase acceptance. Consumer closure waits remaining validator input release and its own prospective source baseline. |
 | [x] | 4 | phase4-stop-score-protected-energy-input-contract | UnitInput, unitInput, SI energy converter, journey handler/test/router | 1 | Parentdf2eeb60/6protected pins confirms canonical Wh input/onChange, kWh display conversion and direct score-stops energy_wh contract/range. Existing tests inspected, not run. Does not prove current StopScorePanel state-to-request magnitude. |
-| [ ] | 4 | phase4-mobility-stop-score-energy-contract-readiness | read-only trips/components/StopScorePanel.tsx and exact supplied protected input receipt | 1 | Newly available protected contracts satisfy original readiness prerequisites. Current consumer magnitude question remains unresolved; no source edits/tests/browser/new business policy authorized. Not dispatched and not classified as a proved bug. |
+| [x] | 4 | phase4-mobility-stop-score-energy-contract-readiness | parent read-only trips/components/StopScorePanel.tsx and exact supplied protected input receipt | 1 | Current protected six-pin receipt verified. Source state40 versus UnitInput canonicalWh and submit*1000 establish incorrect default display and double conversion of edited inputs. Existing eight tests assert default40000Wh payload but not initial display or edited energy. Read-only classification only; no source edits/tests/runtime/phase acceptance. |
+| [ ] | 4 | phase4-stop-score-canonical-energy-repair | trips/components/StopScorePanel.tsx and exact .test.tsx only | 1 | Newly confirmed exact SI input/payload defect; canonical state40000Wh and direct request value required. Keep UnitInput and eight original callbacks/fixtures byte-exact; add real default display, edited25000Wh payload and cleared-input disabled cases. No shared/hook/backend/catalog/limits or business policy changes. Prospective baseline required; wait compiler1050 and battery shared-input validation release before source dispatch. |
 
 Parent dispatch correction: bug-fixer's mandatory shipping workflow is not
 compatible with this mission's pinned shared-worktree source-only execution.
