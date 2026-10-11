@@ -1,6 +1,86 @@
 # Frontend modernization queue
 
-## Current phase: 3 - current preflight passed; mobile focus acceptance blocked
+## Current phase: 3 - close-row fix accepted; fresh1031 boundary next
+
+Parent independently accepted the exact2path delivery:20artifacts,263actual
+cases across3physicalfiles, strict2pathlintnative0,242originalassertions
+unchanged and byte-exact inverse of both source/test deltas. All6746original
+inputs verified with exactly2approved replacements. Correction is row-local
+transition-none; shared focus/helper/palette/theme/tab logic remains untouched.
+Worker is idle/released, not stuck. Commit only those2paths plus this queue,
+then freeze newHEAD for fresh15-stage preflight and real mounted acceptance.
+Old1030source gates/runtime failures remain immutable historical evidence.
+No current fullsuite until mounted passes; next cadencecompiler1035 unchanged.
+
+The CSS callsite root is now proved: Close's wrapper has transition-property
+all and an active inherited visibility transition from hidden to visible at
+currentTime0, while the nav itself is already visibilityvisible and correctly
+transitions only transform. Close inherits hidden from that row, so native
+visibility correctly refuses focus in both entry attempts. Under reduced
+motion the transition is0.01ms but still starts at0 in the same rendering step;
+a blind layout-frame retry is not a readiness contract.
+Parent hashes5style artifacts and freezes a new exact2path Layout baseline.
+The exhausted four-path speculative root item stays failed/blocked; dispatch
+only the narrower proved close-row transition repair, leaving helper/palette/
+theme/tab logic unchanged. Current1030shipping pins remain unchanged.
+
+The two-attempt drawer-root item is exhausted and blocked, not relaunched.
+Attempt2 delivered no shipping changes and released both leases; current
+visibility suppression is proved but actual display/visibility/content-
+visibility cause remains unresolved. Parent will execute its supplied single
+callsite style observer on exact1030, returning native results unchanged.
+No source writer or repeated matrix/fullsuite runs. Preserve both failed
+deliveries and investigate the concrete callsite before any narrower repair.
+
+Single dark375 execution-time probe proves the Close sidebar target's native
+checkVisibility result is false in both synchronous entry and the retry frame.
+Both runs reach that exact visibility gate with connected target, focusable
+selector match, disabledfalse, no hidden/inert/aria-hidden ancestor and no
+other modal. Therefore no native focus is called. The underlying CSS/readiness
+cause still needs source-qualified diagnosis, not a policy bypass.
+Parent intake verified5new artifacts,0unexpectedHTTP/pageerrors, exact6746pins
+and stopped own container. Existing owner may use the remaining distinct
+attempt with this proved guard evidence; preserve failedattempt1 and all tests.
+
+The same-owner follow-up is terminal FAILED with no shipping changes, not a
+stuck actor. Correct post-callback target state and an executed frame do not
+prove the guard values during entry. Worker supplied a pass-through DOM
+predicate observer and requested one dark375 opening on exact1030. Parent
+will capture those execution-time values, retain the failure and all original
+assertions, then permit at most the remaining distinct attempt on proved root.
+Source leases are released; no commit/build/fullsuite needed for unchanged code.
+
+Readiness attribution is terminal, not an active or stuck actor. All four
+drawer openings still have BODY focus after the real entry predicate times
+out at five seconds. The entry animation-frame callback executes at66-69ms,
+with zero native sidebar focus calls; correctly attached refs and usable
+targets were independently observed in the predecessor probe. This rules out
+merely late passive entry, without identifying an unproven guard/visibility
+root. Exact1030HEAD and6746inputs remain frozen; own helper stopped.
+The original mobile-palette restoration checks in this diagnostic adapter
+still compare against the hidden predecessor trigger, so their false results
+do not supersede current visible-fallback acceptance. Preserve both reports.
+Independent intake hashes66evidence artifacts and verifies30preflight raw
+streams, all4executed frames/timeouts and both helpers' terminal closure.
+Authorize the existing mobile-focus owner for one narrow drawer-entry
+follow-up, with new baseline snapshots and no changes to passing palette,
+theme, tab or background-isolation behavior. No current fullsuite started.
+
+Accepted repairs are committed separately: `3066f4534a` (bottom-tab focus)
+and `06f496e216` (mobile overlay focus). The fresh parent-owned preflight
+started2026-10-11T11:18:52Z with6746frozeninputs atactual1030, PID41888.
+All15stages exited0; parent mounted intake verifies30rawstreams/6746inputs.
+Current-build mounted palette entry/trap/visiblemobilefallback and all6RTLtabs
+now pass in dark/light, with unchanged main/root scroll. Theme entry/Tab/
+Customize scrolling/restoration still pass;0axeviolations/HTTP/pageerrors.
+Drawer entry remainsfalse in all4checks despite passing containment/restore.
+This is a retained real runtimefailure, not waived by scopedtests or a frame
+retry. Queue exact nativefocus/ref/visibility lifecycle attribution before
+another source fix; do not launch finalfullsuite. Both source workers
+are idle/released, not stuck; no writer/new commit runs during the boundary.
+Current1030production build passed; mounted acceptance and finalfullsuite remain
+pending. Passing1028preflight below is historical after these shipping edits.
+Nextmandatorycadencecompiler remains1035; this phase compiler is additional.
 
 Fresh actual1028 preflight at `e43d4c546a1c` completed all15stages native0.
 Mounted parent intake independently verified15receipts,30rawstreams,
@@ -1429,8 +1509,17 @@ Phase2 intake health: all19 original primitive actors delivered idle DONE (not s
 | [x] | 3 | phase3-mobile-shell-focus-attribution | parent-read-only-runtime-attribution | phase3-post-mounted-fix1028-shell-qa | 1 | 2026-10-11T11:01:32Z | Exactfourdrawerentries focusBODY with no focusin on visible/enabled/non-inert closebutton; genuineentry defect, not earlymeasurement. Palette hiddenoriginaltrigger stillBODY. Native0preflightreceipts/sourceclosure reverified; owncontainerstopped. BottomMore center partlyoffscreen before settledscroll needs separateattribution. Palettecontrast incomplete reasonnonBMPglyphs; desktoprail incomplete clippedscrolltarget, not automaticcontrastpass. Preserve results. |
 | [x] | 3 | phase3-mobile-shell-focus-root | observed-mobile-overlay-focus-lifecycle | phase3-mobile-shell-focus-attribution | 2 | 2026-10-11T11:19:00Z | Workeridle/released;parentverifies24artifacts,exact7finalpaths,688originalassertions unchanged,actual3files261tests0/strict7pathlint0;firsttargetedfailure preserved. Cancellablelayout-frame entry,sharedvisible-target policy and explicitlivefallback restoredafterisolationrelease preserve intent/navigation/nestedmodal ownership. ParentresultPath schema correction retained;6746inputclosurewith9approvedcombinedchangesverified. Scopedaccepted only,currentbuild/mounted/fullsuite pending. |
 | [x] | 3 | phase3-shell-runtime-attribution-followup | parent-read-only-remaining-qa-attribution | phase3-mobile-shell-focus-attribution | 2 | 2026-10-11T11:06:32Z | Historical1028diagnosticonly whileworkerwrites; actualmode-qualifieddark/light records saved/scheme/classmatch. Customizefocused/scrolled/reachable inbothmodes;11kbdpairs each mincontrast5.281dark/5.329light≥4.5. NonBMPaxe incomplete now has actualrenderedpair evidence, not erased. Earliermode-unqualifiedresults retained notdarkacceptance. SequentialTab+settledframes reproducesMorecenter<0 bothmodes:queuedtwo-pathfix. Bothowncontainersstopped; no current-sourceacceptance/globalclaim. |
-| [ ] | 3 | phase3-post-mobile-focus-preflight | serialized-fresh-frozen-preflight | phase3-mobile-shell-focus-root; phase3-bottom-tab-focus-root | 1 | 2026-10-11T11:09:00Z | Parent intake both exactsource/testdeliveries,scoped sequentialcommits,then one15stagecurrentpreflight onzero-writerfrozenHEAD. Do not reuse1028shippingbuild afterfocuschanges; immutableprefix/privateoutput. No fullsuite until currentmountedchecks pass. |
+| [x] | 3 | phase3-post-mobile-focus-preflight | serialized-fresh-frozen-preflight | phase3-mobile-shell-focus-root; phase3-bottom-tab-focus-root | 1 | 2026-10-11T11:38:51Z | Terminal all15native0; independently verified30rawstreams/6746inputs. PriorPID41888 is not live. Current1030build accepted; mounted drawer entry still fails. No fullsuite. |
 | [ ] | 3 | phase3-post-mobile-focus-mounted-acceptance | exact-current-build-shell-regressions | phase3-post-mobile-focus-preflight | 1 | 2026-10-11T11:09:00Z | Repeat26-scenario dark/light/custom/forcedcolors/reducedmotion/RTL200%matrix onactualnewbuild. Requiredrawerentry/trap/restore,palettevalidmobilefallback,themeentry/Tab/scroll/restore,all6focusedRTLtabsreachable/no mainscroll,native-navaxe and0unexpectedHTTP/pageerrors. Preservecontrastincompletes with measuredpair evidence; reviewcaptures. No mocks/auth bypass/rate-limitchanges;exactowncontainercleanup. |
 | [ ] | 3 | phase3-post-mobile-focus-fullsuite | final-current-frozen-fullsuite | phase3-post-mobile-focus-mounted-acceptance | 1 | 2026-10-11T11:09:00Z | Onlyaftercurrentpreflight/mountedaccepted,onefreshcompleteVitestforks/maxWorkers2 with default+JSON reporters,uniqueimmutableoutput/rawreceipts. Parentverifyphysicalfile/case results,allhistoricaltestfilesretained,newtestincluded,0failed/pending/todo andfrozeninputs before/after. No simultaneousshippingwriters/fullgates. Phase3closure onlyafteractualpass;resumePhase4 next. |
 | [x] | 3 | phase3-bottom-tab-focus-root | observed-rtl-reflow-focus-visibility | phase3-shell-runtime-attribution-followup | 1 | 2026-10-11T11:19:00Z | Workeridle/released;parentverifies13artifacts/exact2hashes/rawstreams,actual24tests0/strictlint0,every64originalassertion,fulloriginalsource/tests inverseexactexceptlineendings. Addedowner-localinstantnearestcontainerscroll onfocus,preserves6destinations/i18n/active/prefetch/scrolling/targets/styles. Parentoldit.each collision/1LFprojection failures preserved thenexactcorrection verified,not sourcefailure. Currentmounted proof pending. |
 | [x] | 3 | phase3-focus-delivery-parent-intake | immutable-scope-preservation-intake | phase3-mobile-shell-focus-root; phase3-bottom-tab-focus-root | 2 | 2026-10-11T11:19:00Z | Bothidle/releases consumed. Parenthash/schema/raw/assertion/sourceclosure accepted:37artifacts,6746inputs,9approvedpaths,752unchangedoriginalassertions,285actualselectedcasesallpassed. Failedparentchecker/schema corrections retained. Zero writers now; exactscopedcommits thenfreshpreflight only, no shipping/mounted/global acceptance inferred. |
+| [x] | 3 | phase3-post-mobile-focus1030-preflight-intake | exact-current-preflight-intake | phase3-post-mobile-focus-preflight | 1 | 2026-10-11T11:31:05Z | All15native0stages; mountedparent independentlyverifies30rawstreams/6746inputs/exact06fHEAD/index. Startup396.6KB≤unchanged400KB. Currentproductionbuild accepted, not fullphase/runtime/fullsuite. |
+| [!] | 3 | phase3-post-mobile-focus1030-mounted-findings | immutable-current-drawer-failure | phase3-post-mobile-focus1030-preflight-intake | 1 | 2026-10-11T11:31:05Z | Actualpalettevisiblemobilefallback nowpasses,all6RTL200%tabsfullyvisible/focused/reachable with0main/rootscroll,themeCustomize/focus/bounds/restorationpass;26scenarios/14axe/30captures,0axeviolations/HTTP/pageerrors. Drawerentrystillfalse4checks. Exactowncontainerstopped6746pinsretained. Do not callmountedaccepted orlaunchfullsuite. |
+| [x] | 3 | phase3-drawer-native-lifecycle-forensics | parent-read-only-remaining-root-attribution | phase3-post-mobile-focus1030-mounted-findings | 1 | 2026-10-11T11:38:51Z | Terminal native2/FINDINGS; all4entryBODY,zero nativefocuscalls,correctnative/forwardRefButton/Navrefs,usableclose,noothermodal. Exactsourceclosure/ownhelpercleanup verified; failedruntime evidence retained. |
+| [x] | 3 | phase3-drawer-entry-readiness-attribution | exact-focus-readiness-predicate | phase3-drawer-native-lifecycle-forensics | 2 | 2026-10-11T11:38:51Z | Terminal native2/FINDINGS. All4realentrypredicates timeout5s;BODY/zero focuscalls;entryRAF executes66-69ms,not cancelled. Merelylatepassiveentry ruledout; exactguardroot notyetclaimed. Owncontainerfb899eee62dd75cad358a1f9a081e4ada60ba385a8b85285f48ef1c7f789e665 stopped6746pinsretained. Diagnostic oldpalette-triggerfalse is not currentfallbackcheck. |
+| [b] | 3 | phase3-drawer-entry-root-followup | same-owner-observed-entry-guard-root | phase3-drawer-entry-readiness-attribution; phase3-drawer-entry-predicate-attribution; phase3-drawer-entry-style-attribution | 2 | 2026-10-11T11:48:47Z | TwoattemptsexhaustedFAILEDunchanged,allfourpathsoriginalassertionspreserved,leasesreleased. GuardknownbutCSScauseunproven. Blockimplementationdependencies;parentonecallsitecomputedstyleobservation,no sourcefixspeculation or thirdsameattempt. |
+| [x] | 3 | phase3-drawer-entry-predicate-attribution | parent-read-only-call-time-guard-values | phase3-drawer-entry-readiness-attribution | 1 | 2026-10-11T11:45:30Z | Terminalnative2/5artifactintake: exactcheckVisibilityfalse2calls;nohiddenancestor/othermodal,connected/focusable/enabledtarget;BODY/zero nativefocus.0unexpectedHTTP/pageerrors;6746pinsandhelperff88f685a11137317a150188403fa750626c4a731613b67e4476187ae0b6fcadcleanupverified. CSSreasonnotyetclaimed. |
+| [x] | 3 | phase3-drawer-entry-style-attribution | parent-read-only-exact-native-visibility-css | phase3-drawer-entry-predicate-attribution | 1 | 2026-10-11T11:50:17Z | Native2exactroot: rowtransitionall/visibilityhidden with activehidden->visibletransitiontime0;navvisibilityvisible/transform-only. Closeinheritshidden;nativecheckcorrect.5artifacts/pins6746/ownhelper0e536a90a7d8322a27d4143fe10ed399b546e1666bf88a98a5fc7654b572d65acleanupverified. Newexact2pathbaseline;no sourceacceptance. |
+| [x] | 3 | phase3-sidebar-close-visibility-transition | proved-close-row-css-transition-fix | phase3-drawer-entry-style-attribution | 1 | 2026-10-11T11:58:20Z | Parent verifies20artifacts263actualtests3files0,strict2pathlint0,242originalassertionsunchanged,bothbyteexactinverses,6746originalinputswith2approvedchanges. Rowtransition-nonefix;nohelper/policy/navigationanimationchanges. Workeridle/released;scopedacceptedonly. Exactcommitthennewpreflight/mounted/fullsuite. |
+| [ ] | 3 | phase3-post-drawer-entry1031-boundary | parent-frozen-current-shipping-boundary | phase3-sidebar-close-visibility-transition | 1 | 2026-10-11T11:58:20Z | Commitexact2paths+queue,freezeactual1031newHEAD/emptyindex/zero leases;15preflightstageswithnewprefix/privatebuild. Then26scenario/14axe currentmounted acceptance withstrictoriginalentrypredicate; fullsuiteonlyaftergenuinepass/review. No stale1030buildacceptance. |

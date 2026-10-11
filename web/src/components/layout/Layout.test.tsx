@@ -1039,6 +1039,48 @@ describe('Layout — nav item visibility', () => {
 // ══════════════════════════════════════════════════════════════════════
 
 describe('Layout — mobile drawer', () => {
+  it.each([false, true])('does not transition the close row inherited visibility (reduced motion: %s)', reduced => {
+    renderLayout('/')
+    const aside = screen.getByRole('navigation', { name: 'Primary' })
+    const close = screen.getByRole('button', { name: 'Close sidebar' })
+    const row = close.parentElement!
+    const trigger = screen.getByRole('button', { name: 'Open sidebar' })
+    const css = document.createElement('style')
+    // Model the CSS initial transition property and the existing utility /
+    // reduced-motion declarations; jsdom does not execute native transitions.
+    css.textContent = `
+      * { transition-property: all; transition-duration: ${reduced ? '0.01ms' : '0s'} !important; }
+      .transition-none { transition-property: none; }
+      [class~="transition-[transform,width]"] { transition-property: transform, width; }
+      .invisible { visibility: hidden; }
+      .visible { visibility: visible; }
+    `
+    document.head.append(css)
+    try {
+      expect(row).toHaveClass('transition-none', 'xl:hidden')
+      expect(row).not.toHaveClass('visible')
+      expect(row).not.toHaveClass('invisible')
+      expect(getComputedStyle(row).transitionProperty).toBe('none')
+      expect(getComputedStyle(row).transitionDuration).toBe(reduced ? '0.01ms' : '0s')
+      expect(getComputedStyle(close).visibility).toBe('hidden')
+      expect(aside).toHaveClass('transition-[transform,width]', 'motion-reduce:transition-transform', 'duration-normal')
+      expect(getComputedStyle(aside).transitionProperty).toBe('transform, width')
+
+      fireEvent.click(trigger)
+
+      expect(aside).toHaveAttribute('data-sidebar-open', 'true')
+      expect(aside).toHaveClass('visible', 'translate-x-0', 'transition-[transform,width]', 'motion-reduce:transition-transform')
+      expect(close.parentElement).toBe(row)
+      expect(getComputedStyle(row).transitionProperty).toBe('none')
+      expect(getComputedStyle(row).visibility).toBe('visible')
+      expect(getComputedStyle(close).visibility).toBe('visible')
+      expect(close).toHaveFocus()
+      expect(close).toHaveClass('h-11', 'w-11')
+    } finally {
+      css.remove()
+    }
+  })
+
   it('repairs a rejected native entry at the committed layout frame without a polling timer', async () => {
     renderLayout('/')
     const close = screen.getByRole('button', { name: 'Close sidebar' })

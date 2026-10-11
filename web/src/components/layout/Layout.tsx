@@ -1344,8 +1344,10 @@ export default function Layout() {
         )}
       >
         {/* Mobile sidebar brand. Build version intentionally not rendered
-            here; canonical provenance lives in the footer <VersionSegment>. */}
-        <div className="flex items-center gap-2 border-b border-[var(--border-default)] px-5 pb-4 pt-[calc(1rem+env(safe-area-inset-top,0px))] shrink-0 xl:hidden">
+            here; canonical provenance lives in the footer <VersionSegment>.
+            Keep inherited visibility synchronous despite the universal
+            reduced-motion transition duration. */}
+        <div className="flex items-center gap-2 border-b border-[var(--border-default)] px-5 pb-4 pt-[calc(1rem+env(safe-area-inset-top,0px))] shrink-0 transition-none xl:hidden">
           <PrefetchNavLink to="/" className="min-w-0 flex flex-1 items-center gap-3 rounded-shape-md transition-colors" onClick={() => setSidebarOpen(false)}>
             <Logo size={32} showWordmark />
           </PrefetchNavLink>
