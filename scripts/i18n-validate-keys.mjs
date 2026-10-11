@@ -240,6 +240,150 @@ export function scanTranslationCalls(text, file = 'fixture.tsx') {
     functionBindings.set(node, result);
     return result;
   };
+  const unwrap = (node) => {
+    while (node && ts.isParenthesizedExpression(node)) node = node.expression;
+    return node;
+  };
+  const constant = (decl) => decl && ts.isVariableDeclaration(decl)
+    && ts.isVariableDeclarationList(decl.parent)
+    && !!(decl.parent.flags & ts.NodeFlags.Const);
+  const uniqueDeclaration = (node) => {
+    const declarations = node && ts.isIdentifier(node)
+      ? checker.getSymbolAtLocation(node)?.declarations : null;
+    if (declarations?.length !== 1) return null;
+    const decl = declarations[0];
+    if (ts.isParameter(decl) && decl.parent.body && ts.isBlock(decl.parent.body)
+      && decl.parent.body.statements.some((statement) => ts.isVariableStatement(statement)
+        && statement.declarationList.declarations.some((local) =>
+          ts.isIdentifier(local.name) && local.name.text === node.text))) return null;
+    return decl;
+  };
+  const rootIdentifier = (node) => {
+    node = unwrap(node);
+    while (node && (ts.isPropertyAccessExpression(node) || ts.isElementAccessExpression(node))) node = unwrap(node.expression);
+    return node && ts.isIdentifier(node) ? node : null;
+  };
+  const writeCache = new WeakMap();
+  const written = (decl) => {
+    if (writeCache.has(decl)) return writeCache.get(decl);
+    let found = false;
+    const assigned = (node) => {
+      if (!node) return;
+      if (declaration(rootIdentifier(node)) === decl) found = true;
+      if (ts.isArrayLiteralExpression(node)) node.elements.forEach(assigned);
+      if (ts.isObjectLiteralExpression(node)) node.properties.forEach((member) =>
+        assigned(ts.isPropertyAssignment(member) ? member.initializer : member.name));
+    };
+    const inspect = (node) => {
+      const target = ts.isBinaryExpression(node)
+        && node.operatorToken.kind >= ts.SyntaxKind.FirstAssignment
+        && node.operatorToken.kind <= ts.SyntaxKind.LastAssignment ? node.left
+        : (ts.isPrefixUnaryExpression(node) || ts.isPostfixUnaryExpression(node))
+          && [ts.SyntaxKind.PlusPlusToken, ts.SyntaxKind.MinusMinusToken].includes(node.operator)
+          ? node.operand : ts.isDeleteExpression(node) ? node.expression : null;
+      assigned(target);
+      if (ts.isCallExpression(node) && ts.isPropertyAccessExpression(node.expression)
+        && node.expression.name.text !== 'map'
+        && declaration(rootIdentifier(node.expression)) === decl) found = true;
+      if (ts.isCallExpression(node) && node.arguments.some((arg) => declaration(unwrap(arg)) === decl)) found = true;
+      if (ts.isVariableDeclaration(node) && declaration(unwrap(node.initializer)) === decl) found = true;
+      if (target && ts.isBinaryExpression(node) && declaration(unwrap(node.right)) === decl) found = true;
+      ts.forEachChild(node, inspect);
+    };
+    inspect(source);
+    writeCache.set(decl, found);
+    return found;
+  };
+  // This is deliberately not general control-flow/type inference. Accept only
+  // a const numeric literal or proven array-length snapshot, in > 1 &&'s RHS.
+  // Imported interface members are read as syntax, never compiled or executed.
+  const interfaceMembers = (type) => {
+    if (!type) return null;
+    if (ts.isTypeLiteralNode(type)) return type.members;
+    if (!ts.isTypeReferenceNode(type) || type.typeArguments?.length) return null;
+    const decl = declaration(type.typeName);
+    if (decl && ts.isInterfaceDeclaration(decl) && !decl.heritageClauses) return decl.members;
+    if (!decl || !ts.isImportSpecifier(decl)) return null;
+    const specifier = decl.parent.parent.parent.moduleSpecifier.text;
+    const base = specifier.startsWith('@/') ? path.join(SRC_ROOT, specifier.slice(2))
+      : specifier.startsWith('.') && path.isAbsolute(file)
+        ? path.resolve(path.dirname(file), specifier) : null;
+    if (!base || !path.resolve(base).startsWith(`${SRC_ROOT}${path.sep}`)) return null;
+    const target = ['.ts', '.tsx'].map((extension) => `${base}${extension}`)
+      .find((candidate) => fs.existsSync(candidate));
+    if (!target) return null;
+    const importedSource = ts.createSourceFile(target, fs.readFileSync(target, 'utf8'), ts.ScriptTarget.Latest, true);
+    const name = (decl.propertyName ?? decl.name).text;
+    const matches = importedSource.statements.filter((statement) =>
+      ts.isInterfaceDeclaration(statement) && statement.name.text === name);
+    return matches.length === 1 && !matches[0].heritageClauses ? matches[0].members : null;
+  };
+  const arrayOrigin = (expression, seen = new Set()) => {
+    expression = unwrap(expression);
+    if (!expression || seen.has(expression)) return null;
+    seen.add(expression);
+    if (ts.isArrayLiteralExpression(expression)) return true;
+    if (ts.isBinaryExpression(expression) && expression.operatorToken.kind === ts.SyntaxKind.QuestionQuestionToken
+      && ts.isArrayLiteralExpression(unwrap(expression.right))) return arrayOrigin(expression.left, seen);
+    if (ts.isCallExpression(expression) && imported(expression.expression, 'react', 'useMemo')
+      && expression.typeArguments?.length === 1 && ts.isArrayTypeNode(expression.typeArguments[0])) {
+      return expression.typeArguments[0];
+    }
+    if (ts.isIdentifier(expression)) {
+      const decl = uniqueDeclaration(expression);
+      if (!decl || written(decl)) return null;
+      if (constant(decl)) return arrayOrigin(decl.initializer, seen);
+      return ts.isParameter(decl) && decl.type && ts.isArrayTypeNode(decl.type) ? decl.type : null;
+    }
+    if (ts.isPropertyAccessExpression(expression)) {
+      const root = rootIdentifier(expression.expression);
+      const decl = uniqueDeclaration(root);
+      if (!decl || written(decl)) return null;
+      let type = decl.type;
+      if (!type && ts.isParameter(decl) && ts.isArrowFunction(decl.parent)) {
+        const callback = decl.parent;
+        const map = callback.parent;
+        if (!ts.isCallExpression(map) || map.arguments[0] !== callback || callback.parameters[0] !== decl
+          || !ts.isPropertyAccessExpression(map.expression) || map.expression.name.text !== 'map') return null;
+        const array = arrayOrigin(map.expression.expression, seen);
+        if (!array || array === true) return null;
+        type = array.elementType;
+      }
+      // Nested property chains, casts and unknown collection types stay strict.
+      if (unwrap(expression.expression) !== root) return null;
+      const members = interfaceMembers(type);
+      const member = members?.find((entry) => ts.isPropertySignature(entry) && entry.name?.text === expression.name.text);
+      return member?.type && ts.isArrayTypeNode(member.type) ? member.type : null;
+    }
+    return null;
+  };
+  const guardedCounts = (call, value, options) => {
+    if (['ordinal', 'context', 'lng', 'lngs'].some((name) => property(options, name))
+      || options?.properties.filter((member) => member.name?.text === 'count').length !== 1
+      || options?.properties.some((member) => !(ts.isPropertyAssignment(member) || ts.isShorthandPropertyAssignment(member))
+        || ts.isComputedPropertyName(member.name))) return null;
+    value = unwrap(value);
+    const decl = value && ts.isIdentifier(value) && ts.isShorthandPropertyAssignment(value.parent)
+      ? declaration(value) : uniqueDeclaration(value);
+    if (!value || !ts.isIdentifier(value) || !constant(decl) || written(decl)) return null;
+    const origin = unwrap(decl.initializer);
+    const numeric = origin && (ts.isNumericLiteral(origin)
+      || (ts.isPropertyAccessExpression(origin) && origin.name.text === 'length'
+        && !origin.questionDotToken && !!arrayOrigin(origin.expression)));
+    if (!numeric) return null;
+    for (let child = call, parent = call.parent; parent; child = parent, parent = parent.parent) {
+      // A deferred callback is not dominated by a guard outside its body.
+      if (ts.isFunctionLike(parent)) break;
+      if (!ts.isBinaryExpression(parent) || parent.operatorToken.kind !== ts.SyntaxKind.AmpersandAmpersandToken
+        || parent.right !== child) continue;
+      const guard = unwrap(parent.left);
+      if (ts.isBinaryExpression(guard) && guard.operatorToken.kind === ts.SyntaxKind.GreaterThanToken
+        && declaration(unwrap(guard.left)) === decl
+        && ts.isNumericLiteral(unwrap(guard.right)) && Number(unwrap(guard.right).text) === 1
+        && decl.end < guard.pos) return { greaterThan: 1, numeric: true };
+    }
+    return null;
+  };
   const calls = [];
   const visit = (node) => {
     if (ts.isCallExpression(node)
@@ -256,8 +400,11 @@ export function scanTranslationCalls(text, file = 'fixture.tsx') {
         const options = effectiveArgs.find((arg, i) => i > 0 && arg && ts.isObjectLiteralExpression(arg));
         const fallback = literal(effectiveArgs[1]) ?? literal(property(options, 'defaultValue')?.initializer);
         const count = property(options, 'count');
-        const countValue = count?.initializer;
+        const countValue = count && ts.isShorthandPropertyAssignment(count) ? count.name : count?.initializer;
         const numericCount = countValue && ts.isNumericLiteral(countValue) ? Number(countValue.text) : null;
+        const countDomain = numericCount === null && kind === 'translation'
+          && effectiveArgs.filter(ts.isObjectLiteralExpression).length === 1
+          ? guardedCounts(node, countValue, options) : null;
         calls.push({
           key, fallback, binding: kind,
           line: source.getLineAndCharacterOfPosition(node.getStart(source)).line + 1,
@@ -267,6 +414,7 @@ export function scanTranslationCalls(text, file = 'fixture.tsx') {
           dynamicOptions: effectiveArgs.slice(1).some((arg) =>
             arg && literal(arg) === null && !ts.isObjectLiteralExpression(arg))
             || !!options?.properties.some(ts.isSpreadAssignment),
+          ...(countDomain ? { countDomain } : {}),
         });
       }
     }
@@ -312,8 +460,13 @@ export function resolvesCall(definedKeys, key, call) {
     && (definedKeys.has(`${key}_zero`) || (call.context && definedKeys.has(`${key}_${call.context}_zero`)))) return true;
   const type = call.ordinal ? 'ordinal' : 'cardinal';
   const rules = new Intl.PluralRules('en', { type });
+  // English cardinal "one" is exactly 1, including for fractional counts.
+  // All proven numbers > 1 select "other"; 2 represents that
+  // proven domain, not a claim that the runtime count is always exactly 2.
   const categories = call.count === 'dynamic'
-    ? rules.resolvedOptions().pluralCategories : [rules.select(call.count)];
+    ? call.countDomain?.greaterThan === 1 && call.countDomain.numeric && !call.ordinal && !call.context
+      ? [rules.select(2)]
+      : rules.resolvedOptions().pluralCategories : [rules.select(call.count)];
   const prefix = call.ordinal ? '_ordinal' : '';
   return categories.every((category) =>
     definedKeys.has(`${key}${call.context ? `_${call.context}` : ''}${prefix}_${category}`)
