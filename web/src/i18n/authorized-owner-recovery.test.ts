@@ -9,6 +9,7 @@ import shell from './en/shell.json'
 import baseline from './known-missing-keys.json'
 import runtimeManifest from './en/runtime-manifest.json'
 import usageManifest from './en/usage-manifest.json'
+import { restoreAcceptedShellSource } from './authorized-shell-preservation'
 
 type Json = Record<string, unknown>
 export const finalFourAdditions = [
@@ -285,6 +286,7 @@ function acceptedCalls(file: string, text: string): { tree: ts.SourceFile; calls
 // Reverse only static, accepted literal t-call keys in the exact frozen source set.
 // No prefix exclusions, dynamic-key masks, or catalog-derived subtraction.
 export function restoreOwnerRecoverySource(file: string, text: string): string {
+  text = restoreAcceptedShellSource(file, text)
   const fragments = [
     ['web/src/components/ai/AiLimitBanner.tsx',
       "t('ai.limit.retryIn', 'Try again in {{seconds}}s', {\n              seconds: secondsLeft,\n              defaultValue: 'Try again in {{seconds}}s',\n            })",

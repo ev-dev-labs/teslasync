@@ -1,6 +1,104 @@
 # Frontend modernization queue
 
-## Current phase: 3 - theme selection repair accepted; fresh boundary required
+## Current phase: 3 - affected preservation suites pass; final frozen boundary required
+
+Attempt2 is independently intaken:68artifacts/6746original inputs, exact
+cumulative and incremental inverse bytes, all35existing assertions and
+785original hash-literal occurrences unchanged. All140prior cases/31fragments
+remain, with35total exact static fragments over three authorized producers.
+Two owned selectors pass162tests native0; strict exact3path lint native0.
+Parent's fresh five formerly failing import suites now pass all7715cases
+native0,0failed/pending/todo, with every affected original case retained.
+The repair changes only the three test/fixture paths. No production UI, hook,
+catalog, configuration or native shell behavior changes. Failed fullsuite and
+attempt1 integration evidence stay immutable, not rewritten as passes.
+
+Scoped commit of these three verified files plus queue is next, actual1035.
+It immediately requires the mandatory1035compiler and serialized fresh phase
+preflight/fullsuite on frozen source. All worker leases are released. Phase3
+remains open and Phase4parked until actual current fullsuite acceptance.
+
+Attempt1 delivery is independently verified:30artifacts/6746original inputs,
+all35existing assertions and785original hash-literal occurrences retained,
+140focused tests and strict3path lint native0, exact forward/reverse bytes.
+The five affected import suites still fail5cases/7710pass: their original
+Layout/CommandPalette failures are fixed, revealing the next sequential
+fingerprint failure for ThemeQuickSwitcherPopover after its accepted keyboard
+repair. Attempt1 is scoped-correct but NOT complete integration acceptance.
+That native1result and all worker evidence are preserved; nothing committed.
+Parent enumerated every483canonical/291excluded producer row with both existing
+exact recovery and copy-owner inverses. Only ThemeQuickSwitcherPopover remains;
+the owner-only inventory's nine apparent copy-owner mismatches are explicitly
+superseded by complete existing normalization, not treated as product defects.
+
+Same atomic item attempt2, same3owned test paths. Extend only the static exact
+inverse/negative coverage for the pinned accepted ThemeQuickSwitcherPopover
+delta; retain attempt1's31fragments, all140case identities and original hash
+constants/assertions. No shipping source edit, broader normalization, extra
+worker, baseline update, fullsuite or Phase4 writer. After full scoped intake,
+the exact five affected suites must actually pass before commit1035compiler
+and final frozen boundary/fullsuite. Two-attempt history stays explicit.
+
+The1034fullsuite completed native1:2424passed/5failed physical files,
+44790passed/11failed tests,0pending/todo. Parent independently verifies all32
+raw streams/6746source pins and preservation of2428original files/44736cases;
+all295current focused shell cases pass. The11failures repeat two strict original
+producer fingerprints through five i18n import suites: Layout and CommandPalette
+changed in accepted shell repairs, but tests-only restoration still models only
+the earlier canonical translation changes. No runtime failure is established
+by these assertions, and this is NOT a passing fullsuite.
+
+Queued atomic item: `phase3-shell-producer-preservation`, attempt1. Own only
+`web/src/i18n/authorized-owner-recovery.test.ts`,
+`web/src/i18n/authorized-shell-preservation.ts` and
+`web/src/i18n/authorized-shell-preservation.test.ts`. Extend exact test-only
+restoration for the independently accepted Layout/CommandPalette source deltas;
+keep every original hash, translation/call/default fixture and assertion.
+Add mutation-rejection coverage; never update fingerprints, mask sources,
+change catalogs, production UI, runner/config, skip tests or broad-normalize.
+One exclusive repair worker only; no full gate/Phase4 writer. Preserve the
+failed report and all native/visual evidence. After scoped verification/commit,
+cadence1035compiler and a fresh boundary/fullsuite must precede Phase3closure.
+
+Current1034native run2 and independent parent intake pass34scenarios/48captures/
+14axe, all32brandtargets and12drawer focus cases. Six theme probes verify12
+selected paints with zero selection/swatch shadows, derived-role identity and
+minimum UIcontrast5.619286/focuspair5.547835>=3. All48captures were reviewed via
+12corrected sheets plus direct12original desktop/theme/full-custom captures.
+Parent verifies64artifacts/30preflight streams/6746source pins. Sixaxecontrast
+incomplete run records remain qualified by10measured pairs, min5.281391>=4.5.
+Final current native/visual approval is persistent at1ab71efd39actual1034.
+The ONE fresh fullsuite now runs on frozen source; no shipping writer, commit,
+duplicate suite or Phase4 replay. Phase3closure awaits its actual result and
+44736historical-case/295current-focused-case preservation intake. Next compiler
+cadence1035; parked pilots' beforehashes and saved deltas are already verified.
+
+Native1034run1 completed34scenarios/48captures with0axeviolations/HTTP/pageerrors;
+all32brandtargets and12drawerfocus cases passed. All four compact selected
+mode/preset paint probes prove no shadows and>=3:1selected UI/focus contrast.
+Two full-custom comparisons failed the parent's late-seed assumption: the
+already mounted builder correctly retained its initial real saved input values
+#84db1a/#eadcdd while the later QA-only cross-tab event changed global styling/
+storage to#496580/#60745a. Actual source initializes these local inputs at mount,
+and screenshots match their raw gradient. Run1/native receipt and exact observer
+source are preserved, not relabeled successful. The corrected run2 compares the
+full custom preview/inputs against the measured pre-seed initial snapshot.
+No shipping edits, hidden product retry or weakened no-glow/contrast predicate.
+Still no fullsuite/Phase4 writer until current native/visual intake.
+
+Fresh1034preflight completed all15stages native0, including compiler/full lint/
+unchanged violations script/catalog/keys/SW/build/private maps/PWA/runtime and
+strict bundle. Raw budget output: startup396.8KB<=400KB. Current native runner
+verifies30raw streams/6746source pins before launching the readonly exact-build
+helper. Matrix retains prior34scenarios/32brandtargets/12drawerfocus cases and
+adds selected mode/preset/custom paint, no-glow/3:1UI-focus contrast observations
+and full-custom preview captures. No suite or page writer before actual native
+results and visual intake. Source remains1ab71efd39actual1034.
+
+Scoped commit1ab71efd39ce9b7090e43bc31a230f8c3dbe37c2 installs only the two
+ThemePicker source/test paths plus queue evidence, actual1034. The serialized
+15-stage preflight now runs on those actual source bytes. Next mandatory cadence
+compiler remains1035. No fullsuite or page writer runs during the boundary.
 
 The exact two-path ThemePicker worker has delivered. Parent independently
 verified39artifacts,7native command receipts,6746source input pins,22passing
