@@ -168,8 +168,10 @@ describe('resolved known-missing canonical producers', () => {
     expect(laterAdditions).toHaveLength(81)
     expect(featureOwnedAdditions).toHaveLength(806)
     expect(copyOwnerAdditions).toHaveLength(10)
+    expect(catalog.systemStatus.incidents.updateCount_other).toBe('{{count}} updates')
     const addedKeys = new Set<string>([...additions, ...laterAdditions, ...featureOwnedAdditions, ...copyOwnerAdditions, drivesEmptyAddition].map(([key]) => key))
     expect(addedKeys.size).toBe(916)
+    addedKeys.add('systemStatus.incidents.updateCount_other')
     const oldEntries = leaves(catalog)
       .filter(([key]) => !addedKeys.has(key))
       .sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0)
@@ -177,7 +179,7 @@ describe('resolved known-missing canonical producers', () => {
     // Frozen before-producer leaf/value fingerprint, not a regenerated baseline.
     expect(createHash('sha256').update(JSON.stringify(oldEntries)).digest('hex'))
       .toBe('d919112ce76ecf5875dc1641f99561a22871a3ca3c9ce9a58c70d308ce34a6ad')
-    expect(leaves(catalog)).toHaveLength(29074)
+    expect(leaves(catalog)).toHaveLength(29075)
     expect(catalog.settings.title).toBe('Settings')
     expect(catalog.pwa.offline.banner).toBe(
       'Showing cached data. Operational changes stay disabled until you reconnect.',

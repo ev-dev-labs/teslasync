@@ -3263,7 +3263,8 @@
       "severity": "Severity",
       "started": "Started",
       "status": "Status",
-      "title": "Title"
+      "title": "Title",
+      "updateCount_other": "{{count}} updates"
     },
     "infrastructure": {
       "acquired": "Acquired",

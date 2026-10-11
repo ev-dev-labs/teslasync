@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto'
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { createElement } from 'react'
@@ -73,6 +74,53 @@ beforeAll(async () => {
 afterEach(cleanup)
 
 describe('five source-backed copy-owner contracts', () => {
+  it('preserves the frozen 29063 predecessor leaves before exact copy-owner additions', () => {
+    for (const [key, value] of pairs) expect(nested(catalog, key)).toBe(value)
+    expect(nested(catalog, 'drives.emptyForCollection.title')).toBe('No drives in this view')
+    expect(nested(catalog, 'systemStatus.incidents.updateCount_other')).toBe('{{count}} updates')
+    const approved = new Set<string>([
+      ...pairs.map(([key]) => key),
+      'drives.emptyForCollection.title',
+      'systemStatus.incidents.updateCount_other',
+    ])
+    expect(approved.size).toBe(12)
+    function leaves(resource: Record<string, unknown>, prefix = ''): [string, unknown][] {
+      return Object.entries(resource).flatMap(([key, value]) => {
+        const path = prefix ? `${prefix}.${key}` : key
+        return value && typeof value === 'object' && !Array.isArray(value)
+          ? leaves(value as Record<string, unknown>, path)
+          : [[path, value] as [string, unknown]]
+      })
+    }
+    const entries = leaves(catalog)
+    expect(entries).toHaveLength(29075)
+    const predecessor = entries.filter(([key]) => !approved.has(key))
+      .sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0)
+    expect(predecessor).toHaveLength(29063)
+    expect(createHash('sha256').update(JSON.stringify(predecessor)).digest('hex'))
+      .toBe('268e4c475cb756eefb02b0d49ee0213ade3ab360895cc5faae00e1950914f037')
+  })
+
+  it('executes the actual guarded incident count producer with English plurals', () => {
+    expect(catalog.systemStatus.incidents.updateCount_other).toBe('{{count}} updates')
+    const actualCalls = calls('features/system/components/status/IncidentsCard.tsx', 'systemStatus.incidents.updateCount')
+    expect(actualCalls).toHaveLength(1)
+    const call = actualCalls[0]
+    expect(call.arguments).toHaveLength(2)
+    expect(call.arguments[1].getText()).toBe("{ defaultValue: '{{count}} updates', count: updateCount }")
+    const evaluate = new Function('t', 'updateCount', `return ${call.getText()}`) as
+      (t: ReturnType<typeof english.getFixedT>, count: number) => unknown
+    for (const count of [2, 3]) {
+      expect(english.exists('systemStatus.incidents.updateCount', { count })).toBe(true)
+      expect(evaluate(english.getFixedT('en', 'translation'), count)).toBe(`${count} updates`)
+    }
+    expect(english.exists('systemStatus.incidents.updateCount_one')).toBe(false)
+    expect(Object.values(generated).some(resource =>
+      nested(resource.default, 'systemStatus.incidents.updateCount_other') === '{{count}} updates')).toBe(true)
+    expect(source('features/system/components/status/IncidentsCard.tsx'))
+      .toContain("{updateCount > 1 && ` · ${t('systemStatus.incidents.updateCount', { defaultValue: '{{count}} updates', count: updateCount })}`}")
+  })
+
   it.each(pairs)('ships exact scalar %s with installed i18next and generated resources', (key, value) => {
     expect(nested(catalog, key)).toBe(value)
     expect(english.exists(key)).toBe(true)

@@ -11090,7 +11090,8 @@
       "status": "Status",
       "title": "Title",
       "empty": "No active incidents recorded.",
-      "loadError": "Unable to load active incidents."
+      "loadError": "Unable to load active incidents.",
+      "updateCount_other": "{{count}} updates"
     },
     "maintenance": {
       "active": "Maintenance active",

@@ -131,7 +131,7 @@ export function IncidentsCard({ now }: IncidentsCardProps) {
                   )}
                   <Caption as="div" className="mt-0.5">
                     {t('systemStatus.incidents.started', 'Started')} {relativeFrom(now, inc.started_at)}
-                    {updateCount > 1 && ` · ${updateCount} ${t('updates')}`}
+                    {updateCount > 1 && ` · ${t('systemStatus.incidents.updateCount', { defaultValue: '{{count}} updates', count: updateCount })}`}
                   </Caption>
                 </div>
                 <ChevronRight className="h-4 w-4 text-[var(--text-muted)] shrink-0 mt-1" aria-hidden />

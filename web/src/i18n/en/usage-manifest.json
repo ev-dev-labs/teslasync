@@ -8786,6 +8786,7 @@
       "systemStatus.incidents.started",
       "systemStatus.incidents.status",
       "systemStatus.incidents.title",
+      "systemStatus.incidents.updateCount_other",
       "systemStatus.infrastructure.acquired",
       "systemStatus.infrastructure.checking",
       "systemStatus.infrastructure.connectionState",
