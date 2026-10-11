@@ -1039,6 +1039,39 @@ describe('Layout — nav item visibility', () => {
 // ══════════════════════════════════════════════════════════════════════
 
 describe('Layout — mobile drawer', () => {
+  it('repairs a rejected native entry at the committed layout frame without a polling timer', async () => {
+    renderLayout('/')
+    const close = screen.getByRole('button', { name: 'Close sidebar' })
+    const nativeFocus = close.focus.bind(close)
+    const focus = vi.spyOn(close, 'focus').mockImplementationOnce(() => {}).mockImplementation(nativeFocus)
+    let frame: FrameRequestCallback | undefined
+    window.requestAnimationFrame = vi.fn(callback => {
+      frame = callback
+      return 73
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Open sidebar' }))
+    expect(document.body).toHaveFocus()
+    expect(screen.getByRole('navigation', { name: 'Primary' })).toHaveAttribute('data-sidebar-open', 'true')
+    act(() => frame?.(0))
+    expect(close).toHaveFocus()
+    expect(focus).toHaveBeenCalledTimes(2)
+    expect(window.requestAnimationFrame).toHaveBeenCalledTimes(1)
+    focus.mockRestore()
+  })
+
+  it('cancels rejected-entry repair when the drawer closes before its layout frame', () => {
+    renderLayout('/')
+    const close = screen.getByRole('button', { name: 'Close sidebar' })
+    const focus = vi.spyOn(close, 'focus').mockImplementation(() => {})
+    window.requestAnimationFrame = vi.fn(() => 74)
+    window.cancelAnimationFrame = vi.fn()
+    fireEvent.click(screen.getByRole('button', { name: 'Open sidebar' }))
+    expect(focus).toHaveBeenCalledTimes(1)
+    fireEvent.click(close)
+    expect(window.cancelAnimationFrame).toHaveBeenCalledWith(74)
+    focus.mockRestore()
+  })
+
   it('contains keyboard focus and hides the background while keeping the backdrop usable', async () => {
     renderLayout('/')
     const aside = screen.getByRole('navigation', { name: 'Primary' })

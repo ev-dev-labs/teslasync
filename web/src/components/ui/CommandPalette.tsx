@@ -1,4 +1,4 @@
-import { useState, useEffect, useLayoutEffect, useMemo, useRef, useCallback } from 'react'
+import { useState, useEffect, useLayoutEffect, useMemo, useRef, useCallback, type RefObject } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
@@ -35,7 +35,7 @@ import {
 } from '@/lib/recentPages'
 import { getPinnedNavPaths, subscribeNavPins } from '@/lib/navPins'
 import { getRelatedRoutes, preserveWorkspaceScope } from '@/lib/contextNavigation'
-import { activateShellOverlayGuard } from '@/components/layout/shellFocusTrap'
+import { activateShellOverlayGuard, restoreShellFocus } from '@/components/layout/shellFocusTrap'
 import { useGlobalSearch } from '@/api/hooks/useSearch'
 import { useAllSavedViews } from '@/api/hooks/useSavedViews'
 import { useAcknowledgeAlert, useAlerts, useReopenAlert } from '@/api/hooks/useAlerts'
@@ -308,9 +308,11 @@ interface CommandPaletteProps {
   onOpen?: () => void
   /** Used by the lazy host so the invocation that loaded the chunk is not lost. */
   initialOpen?: boolean
+  /** Live visible shell control when opening intentionally hides the original invoker. */
+  returnFocusFallbackRef?: RefObject<HTMLElement>
 }
 
-export function CommandPalette({ onOpen, initialOpen = false }: CommandPaletteProps) {
+export function CommandPalette({ onOpen, initialOpen = false, returnFocusFallbackRef }: CommandPaletteProps) {
   const { t } = useTranslation()
   const { reduce, durationMs } = useMotionPreference()
   const [open, setOpen] = useState(initialOpen)
@@ -343,8 +345,10 @@ export function CommandPalette({ onOpen, initialOpen = false }: CommandPalettePr
   // committed work and, critically, runs BEFORE passive effects — so the
   // focus effect below always reads the committed callback.
   const onOpenRef = useRef(onOpen)
+  const fallbackRef = useRef(returnFocusFallbackRef)
   useIsomorphicLayoutEffect(() => {
     onOpenRef.current = onOpen
+    fallbackRef.current = returnFocusFallbackRef
   })
   // Element that had focus when the palette opened. Restored on close so
   // keyboard users land back on the control they invoked the palette from
@@ -373,6 +377,7 @@ export function CommandPalette({ onOpen, initialOpen = false }: CommandPalettePr
   }, [])
   // Panel node — the focus-containment boundary for the `aria-modal` dialog.
   const panelRef = useRef<HTMLDivElement>(null)
+  const returnFocusContainerRef = useRef<HTMLDivElement | null>(null)
   const navigate = useNavigate()
   const location = useLocation()
 
@@ -1104,6 +1109,12 @@ export function CommandPalette({ onOpen, initialOpen = false }: CommandPalettePr
         onOpenRef.current?.()
       }
       focusIntentRef.current = true
+      const panel = panelRef.current
+      returnFocusContainerRef.current = panel
+      const releaseGuard = activateShellOverlayGuard({
+        focusContainer: panel,
+        isOwnRoot: (element) => element.getAttribute('data-role') === 'command-palette',
+      })
       focusTimeoutRef.current = window.setTimeout(() => {
         focusTimeoutRef.current = null
         if (!focusIntentRef.current) return
@@ -1111,7 +1122,10 @@ export function CommandPalette({ onOpen, initialOpen = false }: CommandPalettePr
         if (!input || !input.isConnected) return
         input.focus()
       }, PALETTE_INPUT_FOCUS_DELAY_MS)
-      return clearPendingInputFocus
+      return () => {
+        clearPendingInputFocus()
+        releaseGuard()
+      }
     }
 
     // Committed close ends the epoch: the next open is a new one and must
@@ -1120,9 +1134,8 @@ export function CommandPalette({ onOpen, initialOpen = false }: CommandPalettePr
     focusIntentRef.current = false
     const target = returnFocusRef.current
     returnFocusRef.current = null
-    if (target && target.isConnected) {
-      target.focus({ preventScroll: true })
-    }
+    restoreShellFocus(returnFocusContainerRef.current, target, fallbackRef.current?.current ?? null)
+    returnFocusContainerRef.current = null
     return undefined
     // Keyed on `open` (plus a stable clearer) ONLY — see `onOpenRef` above for
     // why the callback must not be a dependency.
@@ -1133,22 +1146,11 @@ export function CommandPalette({ onOpen, initialOpen = false }: CommandPalettePr
   // shared shell guard: Tab / Shift+Tab wrap inside the panel, and every
   // ancestor-sibling outside the overlay is marked inert + aria-hidden while
   // it is open. The guard deliberately does NOT move or restore focus — the
-  // effect above owns both, so focus return happens exactly once.
+  // effect above owns both and releases the guard before restoring focus.
   //
   // The backdrop shares `data-role="command-palette"` with the positioner and
   // is exempted from inerting, otherwise `inert` would swallow the
   // click-outside-to-close gesture.
-  useEffect(() => {
-    if (!open) return
-    const panel = panelRef.current
-    if (!panel) return
-    return activateShellOverlayGuard({
-      focusContainer: panel,
-      backgroundAnchor: panel,
-      isOwnRoot: (element) => element.getAttribute('data-role') === 'command-palette',
-    })
-  }, [open])
-
   // Only mode transitions transfer focus; opening retains its delayed timer.
   const previousModeRef = useRef(mode)
   useEffect(() => {

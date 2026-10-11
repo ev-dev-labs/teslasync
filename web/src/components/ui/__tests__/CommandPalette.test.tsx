@@ -26,7 +26,7 @@ import { getShellFocusableElements } from '@/components/layout/shellFocusTrap'
 import type { Vehicle } from '@/types/vehicle'
 import type { Alert, AlertDetail, SavedView, SearchResponse } from '@/api/types'
 import type { ReactNode } from 'react'
-import { StrictMode } from 'react'
+import { StrictMode, useRef, useState } from 'react'
 import userEvent from '@testing-library/user-event'
 
 const locale = vi.hoisted(() => ({
@@ -1298,6 +1298,122 @@ describe('CommandPalette scope prefixes', () => {
 // ─── Focus management, a11y semantics, keyboard reach ───────────────────────
 
 describe('CommandPalette focus + listbox semantics', () => {
+  it('restores a lazily hosted drawer invocation to its live visible header after isolation releases', async () => {
+    function MobileHost() {
+      const [drawerOpen, setDrawerOpen] = useState(true)
+      const fallback = useRef<HTMLButtonElement>(null)
+      return (
+        <>
+          <nav hidden={!drawerOpen}>
+            <button data-testid="drawer-search">Search pages</button>
+          </nav>
+          <header>
+            {!drawerOpen && <button ref={fallback} data-testid="visible-header">Open sidebar</button>}
+          </header>
+          <CommandPaletteHost onOpen={() => setDrawerOpen(false)} returnFocusFallbackRef={fallback} />
+        </>
+      )
+    }
+    render(<StrictMode><MobileHost /></StrictMode>, { wrapper: makeWrapper(makeVehicles()) })
+    const trigger = screen.getByTestId('drawer-search')
+    act(() => trigger.focus())
+    openPaletteViaEvent()
+    const input = await screen.findByRole('combobox')
+    await waitFor(() => expect(input).toHaveFocus())
+    const fallback = screen.getByTestId('visible-header')
+    expect(trigger.isConnected).toBe(true)
+    expect(trigger.closest('[hidden]')).not.toBeNull()
+    expect(fallback.closest('[inert]')).not.toBeNull()
+    const hiddenFocus = vi.spyOn(trigger, 'focus')
+    const nativeFocus = fallback.focus.bind(fallback)
+    const releasedAtFocus: boolean[] = []
+    const visibleFocus = vi.spyOn(fallback, 'focus').mockImplementation(options => {
+      releasedAtFocus.push(fallback.closest('[inert], [aria-hidden="true"]') === null)
+      nativeFocus(options)
+    })
+    fireEvent.keyDown(window, { key: 'Escape' })
+    expect(fallback).toHaveFocus()
+    expect(hiddenFocus).not.toHaveBeenCalled()
+    expect(visibleFocus).toHaveBeenCalledTimes(1)
+    expect(releasedAtFocus).toEqual([true])
+    hiddenFocus.mockRestore()
+    visibleFocus.mockRestore()
+  })
+
+  it.each(['disabled', 'inert', 'hidden', 'detached'])(
+    'never calls focus on a %s original invoker',
+    async kind => {
+      const fallback = { current: document.createElement('button') }
+      document.body.append(fallback.current)
+      const trigger = document.createElement('button')
+      const triggerParent = document.createElement('div')
+      triggerParent.append(trigger)
+      document.body.append(triggerParent)
+      try {
+        render(<CommandPalette returnFocusFallbackRef={fallback} />, { wrapper: makeWrapper(makeVehicles()) })
+        act(() => trigger.focus())
+        openPaletteViaEvent()
+        await waitFor(() => expect(screen.getByRole('combobox')).toHaveFocus())
+        if (kind === 'detached') trigger.remove()
+        else trigger.setAttribute(kind, '')
+        const focus = vi.spyOn(trigger, 'focus')
+        fireEvent.keyDown(window, { key: 'Escape' })
+        expect(focus).not.toHaveBeenCalled()
+        expect(fallback.current).toHaveFocus()
+        focus.mockRestore()
+      } finally {
+        fallback.current.remove()
+        triggerParent.remove()
+      }
+    },
+  )
+
+  it('preserves an intentional outside destination on backdrop dismissal', async () => {
+    render(
+      <><button data-testid="search">Search</button><CommandPalette /></>,
+      { wrapper: makeWrapper(makeVehicles()) },
+    )
+    const trigger = screen.getByTestId('search')
+    act(() => trigger.focus())
+    openPaletteViaEvent()
+    await waitFor(() => expect(screen.getByRole('combobox')).toHaveFocus())
+    const destination = document.createElement('button')
+    document.body.append(destination)
+    try {
+      act(() => destination.focus())
+      const backdrop = document.querySelector('[data-role="command-palette"]')!
+      fireEvent.click(backdrop)
+      expect(destination).toHaveFocus()
+    } finally {
+      destination.remove()
+    }
+  })
+
+  it('does not return to a visible fallback when navigation explicitly relinquishes focus', async () => {
+    setPinnedNavPaths(['/drives'])
+    const fallback = { current: document.createElement('button') }
+    document.body.append(fallback.current)
+    const trigger = document.createElement('button')
+    document.body.append(trigger)
+    try {
+      render(<><LocationProbe /><CommandPalette returnFocusFallbackRef={fallback} /></>, {
+        wrapper: makeWrapper(makeVehicles()),
+      })
+      act(() => trigger.focus())
+      openPaletteViaEvent()
+      await waitFor(() => expect(screen.getByRole('combobox')).toHaveFocus())
+      const focus = vi.spyOn(fallback.current, 'focus')
+      const pinned = screen.getByRole('group', { name: 'Pinned' })
+      fireEvent.click(pinned.querySelector<HTMLElement>('[data-palette-row]')!)
+      expect(screen.getByTestId('location')).toHaveTextContent('/drives')
+      expect(focus).not.toHaveBeenCalled()
+      focus.mockRestore()
+    } finally {
+      trigger.remove()
+      fallback.current.remove()
+    }
+  })
+
   it('returns focus to the invoking trigger when the palette closes', async () => {
     const Wrapper = makeWrapper(makeVehicles())
     render(

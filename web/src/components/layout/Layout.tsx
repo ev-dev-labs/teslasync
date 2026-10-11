@@ -35,7 +35,7 @@ import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/cn'
 import { AnimatePresence, motion, RouteTransition } from '@/components/motion/runtime'
 import { BottomTabBar } from './BottomTabBar'
-import { activateShellOverlayGuard, getShellFocusableElements, isShellPortalActive } from './shellFocusTrap'
+import { activateShellOverlayGuard, focusShellOverlayEntry, getShellFocusableElements, isShellPortalActive } from './shellFocusTrap'
 import {
   findMostSpecificNavEntry,
   isExclusiveActivePath,
@@ -791,7 +791,7 @@ export default function Layout() {
       focusContainer: sidebarRef.current,
       isOwnRoot: (element) => element.hasAttribute('data-sidebar-backdrop'),
     })
-    sidebarCloseRef.current?.focus()
+    const cancelEntry = focusShellOverlayEntry(sidebarRef.current, () => sidebarCloseRef.current)
     const onViewportChange = () => {
       if (desktopMedia.matches) setSidebarOpen(false)
     }
@@ -803,6 +803,7 @@ export default function Layout() {
     document.addEventListener('keydown', onEscape)
     desktopMedia.addEventListener('change', onViewportChange)
     return () => {
+      cancelEntry()
       desktopMedia.removeEventListener('change', onViewportChange)
       document.removeEventListener('keydown', onEscape)
       releaseGuard()
@@ -1572,7 +1573,7 @@ export default function Layout() {
 
       {/* Command Palette */}
       {presentation.mode === 'standard' && (
-        <CommandPaletteHost onOpen={() => setSidebarOpen(false)} />
+        <CommandPaletteHost onOpen={() => setSidebarOpen(false)} returnFocusFallbackRef={sidebarTriggerRef} />
       )}
 
       {/* Route-change / mutation progress bar —
