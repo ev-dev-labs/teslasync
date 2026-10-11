@@ -23,17 +23,21 @@
  *                                                       # the fallback string
  *                                                       # from each t() call
  *
- * The script is intentionally pure-Node (no rg/grep dependency) so it works
- * the same on Windows, macOS, and Linux CI runners.
+ * Uses the frontend's installed TypeScript parser, as the catalog source
+ * graph does, without running compiler diagnostics. JSON reports include
+ * every missing reference and its fallback; dynamic keys remain unaudited.
  */
 import fs from 'node:fs';
 import path from 'node:path';
 import url from 'node:url';
+import { createRequire } from 'node:module';
 
 const __dirname = path.dirname(url.fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(__dirname, '..');
 const EN_PATH = path.join(REPO_ROOT, 'web', 'src', 'i18n', 'en.json');
 const SRC_ROOT = path.join(REPO_ROOT, 'web', 'src');
+const require = createRequire(path.join(REPO_ROOT, 'web', 'package.json'));
+const ts = require('typescript');
 
 const args = new Set(process.argv.slice(2));
 const STRICT = args.has('--strict');
@@ -48,80 +52,272 @@ function flatten(obj, prefix = '') {
   });
 }
 
+export function isProductionSource(file) {
+  const normalized = file.replace(/\\/g, '/');
+  return /\.(tsx?|jsx?|mjs)$/.test(normalized)
+    && !/(?:^|\/)(?:__tests__|__mocks__|__fixtures__|tests?|fixtures)(?:\/|$)/.test(normalized)
+    && !/\.(?:test|spec|stories|story)\.[^.]+$/.test(normalized)
+    && !/(?:^|\/)test-setup\.[^.]+$/.test(normalized)
+    && !/\.d\.ts$/.test(normalized);
+}
+
 function walk(dir, acc = []) {
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
     if (entry.name === 'node_modules' || entry.name.startsWith('.')) continue;
     const full = path.join(dir, entry.name);
     if (entry.isDirectory()) {
       walk(full, acc);
-    } else if (/\.(tsx?|jsx?|mjs)$/.test(entry.name)) {
+    } else if (isProductionSource(full)) {
       acc.push(full);
     }
   }
   return acc;
 }
 
-// Match t('key', 'Default') / t("key", "Default") / t(`key`, `Default`).
-// Captures the key (group 2) and the optional fallback string (group 4).
-//
-//   t('foo.bar')                         -> key=foo.bar, fallback=null
-//   t('foo.bar', 'Hello')                -> key=foo.bar, fallback=Hello
-//   t('foo.bar', 'Hello {{n}}', {n})     -> key=foo.bar, fallback=Hello {{n}}
-//
-// Dynamic keys (template literals with ${...}) are skipped — they cannot be
-// statically validated. The companion DEFAULT_VALUE_OPT regex below picks up
-// the i18next options-object form `t('key', { defaultValue: 'Hello' })`.
-const T_CALL =
-  /(?<![a-zA-Z0-9_$])t\(\s*(['"`])([a-zA-Z0-9_.\-]+)\1(?:\s*,\s*(['"`])((?:\\.|(?!\3).)*)\3)?/g;
+function literal(node) {
+  return node && (ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node))
+    ? node.text : null;
+}
 
-// Picks up `defaultValue: 'Hello'` (or `"Hello"` / `\`Hello\``) from the
-// options object form. Used as a secondary scan when T_CALL captured a key but
-// no positional fallback string (i.e. the second argument was an object).
-const DEFAULT_VALUE_OPT =
-  /(?<![a-zA-Z0-9_$])t\(\s*(['"`])([a-zA-Z0-9_.\-]+)\1\s*,\s*\{[^{}]*?defaultValue\s*:\s*(['"`])((?:\\.|(?!\3).)*)\3/g;
+function property(node, name) {
+  return node && ts.isObjectLiteralExpression(node)
+    ? node.properties.find((p) => p.name?.text === name) : undefined;
+}
 
-function collectUsedKeys(files) {
-  const used = new Map(); // key -> { refs: [{file, line}], fallback?: string }
-  for (const file of files) {
-    const text = fs.readFileSync(file, 'utf8');
-    const lines = text.split(/\r?\n/);
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i];
-      let m;
-      T_CALL.lastIndex = 0;
-      while ((m = T_CALL.exec(line)) !== null) {
-        const key = m[2];
-        const fallbackRaw = m[4];
-        const fallback =
-          typeof fallbackRaw === 'string'
-            ? fallbackRaw.replace(/\\(['"`\\])/g, '$1')
-            : null;
-        const rel = path.relative(REPO_ROOT, file).replace(/\\/g, '/');
-        if (!used.has(key)) used.set(key, { refs: [], fallback: null });
-        const entry = used.get(key);
-        entry.refs.push({ file: rel, line: i + 1 });
-        if (entry.fallback === null && fallback) entry.fallback = fallback;
+// Symbol binding distinguishes a shadowing local t from the hook's t. The
+// isolated host never resolves dependencies or runs semantic diagnostics.
+export function scanTranslationCalls(text, file = 'fixture.tsx') {
+  file = file.replace(/\\/g, '/');
+  const source = ts.createSourceFile(file, text, ts.ScriptTarget.Latest, true);
+  const host = {
+    getSourceFile: (name) => name === file ? source : undefined,
+    getDefaultLibFileName: () => '', writeFile: () => {},
+    getCurrentDirectory: () => '', getDirectories: () => [],
+    fileExists: (name) => name === file,
+    readFile: (name) => name === file ? text : undefined,
+    getCanonicalFileName: (name) => name, useCaseSensitiveFileNames: () => true,
+    getNewLine: () => '\n',
+  };
+  const checker = ts.createProgram([file], { noResolve: true, noLib: true, allowJs: true }, host).getTypeChecker();
+  const declaration = (node) => node && ts.isIdentifier(node)
+    ? (ts.isShorthandPropertyAssignment(node.parent)
+      ? checker.getShorthandAssignmentValueSymbol(node.parent)
+      : checker.getSymbolAtLocation(node))?.declarations?.[0] : undefined;
+  const imported = (node, module, name) => {
+    const decl = declaration(node);
+    if (!decl) return false;
+    const importedName = ts.isImportSpecifier(decl) ? (decl.propertyName ?? decl.name).text
+      : ts.isImportClause(decl) || ts.isNamespaceImport(decl) ? 'default' : null;
+    let parent = decl;
+    while (parent && !ts.isImportDeclaration(parent)) parent = parent.parent;
+    return parent?.moduleSpecifier.text === module && (!name || importedName === name);
+  };
+  const hook = (node) => node && ts.isCallExpression(node)
+    && (imported(node.expression, 'react-i18next', 'useTranslation')
+      || (ts.isPropertyAccessExpression(node.expression)
+        && node.expression.name.text === 'useTranslation'
+        && imported(node.expression.expression, 'react-i18next')));
+  const instance = (node) => {
+    if (!node) return false;
+    if (imported(node, 'i18next', 'default')) return true;
+    const decl = declaration(node);
+    if (decl && ts.isImportClause(decl)) {
+      const specifier = decl.parent.moduleSpecifier.text;
+      if (/(?:^|\/)i18n(?:\/index)?$/.test(specifier)) return true;
+    }
+    if (ts.isPropertyAccessExpression(node) && node.name.text === 'i18n' && hook(node.expression)) return true;
+    if (decl && ts.isBindingElement(decl) && (decl.propertyName ?? decl.name).text === 'i18n') {
+      return hook(decl.parent.parent.initializer);
+    }
+    return false;
+  };
+  const typedTranslator = (type) => type && ts.isTypeReferenceNode(type)
+    && imported(type.typeName, 'i18next', 'TFunction');
+  const binding = (node, seen = new Set()) => {
+    if (!node || seen.has(node)) return 'unresolved';
+    seen.add(node);
+    if (ts.isParenthesizedExpression(node) || ts.isAsExpression(node)) return binding(node.expression, seen);
+    if (ts.isArrowFunction(node) || ts.isFunctionExpression(node)) return functionBinding(node, seen);
+    if (ts.isPropertyAccessExpression(node)) {
+      if (node.name.text === 't' && (instance(node.expression) || hook(node.expression))) return 'translation';
+      const decl = declaration(node.expression);
+      if (node.name.text === 't' && decl?.initializer && hook(decl.initializer)) return 'translation';
+      if (decl?.initializer && ts.isObjectLiteralExpression(decl.initializer)) {
+        const member = property(decl.initializer, node.name.text);
+        if (member && ts.isPropertyAssignment(member)) return binding(member.initializer, seen);
+        if (member && ts.isShorthandPropertyAssignment(member)) return binding(member.name, seen);
+        if (member && ts.isMethodDeclaration(member)) return functionBinding(member, seen);
+        return 'non-translation';
       }
-      // Secondary scan: i18next options-object form with `defaultValue`.
-      DEFAULT_VALUE_OPT.lastIndex = 0;
-      while ((m = DEFAULT_VALUE_OPT.exec(line)) !== null) {
-        const key = m[2];
-        const fallbackRaw = m[4];
-        const fallback = fallbackRaw.replace(/\\(['"`\\])/g, '$1');
-        if (!used.has(key)) {
-          const rel = path.relative(REPO_ROOT, file).replace(/\\/g, '/');
-          used.set(key, {
-            refs: [{ file: rel, line: i + 1 }],
-            fallback,
-          });
-        } else {
-          const entry = used.get(key);
-          if (entry.fallback === null) entry.fallback = fallback;
+      return 'unresolved';
+    }
+    if (imported(node, 'i18next', 't')) return 'translation';
+    const decl = declaration(node);
+    if (!decl) return 'unresolved';
+    if (typedTranslator(decl.type)) return 'translation';
+    if (ts.isBindingElement(decl)) {
+      const owner = decl.parent.parent;
+      const name = (decl.propertyName ?? decl.name).text;
+      if (hook(owner.initializer)) {
+        const first = ts.isArrayBindingPattern(decl.parent) && decl.parent.elements[0] === decl;
+        return name === 't' || first ? 'translation' : 'non-translation';
+      }
+      if (owner.type && ts.isTypeLiteralNode(owner.type)) {
+        const member = owner.type.members.find((m) => m.name?.text === name);
+        if (typedTranslator(member?.type)) return 'translation';
+      }
+    }
+    if (ts.isVariableDeclaration(decl) && decl.initializer) {
+      if (ts.isArrowFunction(decl.initializer) || ts.isFunctionExpression(decl.initializer)) {
+        return functionBinding(decl.initializer, seen);
+      }
+      return binding(decl.initializer, seen);
+    }
+    if (ts.isFunctionDeclaration(decl)) return functionBinding(decl, seen);
+    return 'unresolved';
+  };
+  const functionBindings = new WeakMap();
+  const forwardingReturns = new WeakMap();
+  const functionOf = (node, seen = new Set()) => {
+    if (!node || seen.has(node)) return null;
+    seen.add(node);
+    if (ts.isArrowFunction(node) || ts.isFunctionExpression(node)) return node;
+    if (ts.isParenthesizedExpression(node) || ts.isAsExpression(node)) return functionOf(node.expression, seen);
+    if (ts.isPropertyAccessExpression(node)) {
+      const owner = declaration(node.expression);
+      const member = property(owner?.initializer, node.name.text);
+      return member && ts.isMethodDeclaration(member) ? member
+        : functionOf(member?.initializer ?? member?.name, seen);
+    }
+    const decl = declaration(node);
+    return decl && ts.isFunctionDeclaration(decl) ? decl
+      : decl && ts.isVariableDeclaration(decl) ? functionOf(decl.initializer, seen) : null;
+  };
+  const translationArguments = (expression, args, seen = new Set()) => {
+    const fn = functionOf(expression);
+    const returned = fn && forwardingReturns.get(fn);
+    if (!returned || seen.has(fn)) return args;
+    seen.add(fn);
+    const substitute = (node) => {
+      const parameter = node && ts.isIdentifier(node) ? declaration(node) : null;
+      const index = fn.parameters.indexOf(parameter);
+      if (index !== -1) return args[index] ?? parameter.initializer;
+      if (node && ts.isObjectLiteralExpression(node)) {
+        return ts.factory.updateObjectLiteralExpression(node, node.properties.map((member) =>
+          ts.isPropertyAssignment(member)
+            ? ts.factory.updatePropertyAssignment(member, member.name, substitute(member.initializer) ?? member.initializer)
+            : ts.isShorthandPropertyAssignment(member)
+              ? ts.factory.createPropertyAssignment(member.name, substitute(member.name) ?? member.name)
+            : member));
+      }
+      return node;
+    };
+    return translationArguments(returned.expression, returned.arguments.map(substitute), seen);
+  };
+  const functionBinding = (node, seen) => {
+    if (functionBindings.has(node)) return functionBindings.get(node);
+    functionBindings.set(node, 'unresolved');
+    let result = 'non-translation';
+    // A translation somewhere in the body does not make the caller's id a
+    // translation key. Only a direct, unchanged first-parameter return proves
+    // forwarding; the returned call also owns the fallback/options positions.
+    const returned = node.body && !ts.isBlock(node.body) ? node.body
+      : node.body?.statements.length === 1 && ts.isReturnStatement(node.body.statements[0])
+        ? node.body.statements[0].expression : null;
+    if (returned && ts.isCallExpression(returned)) {
+      const targetBinding = binding(returned.expression, new Set(seen));
+      const key = translationArguments(returned.expression, returned.arguments)[0];
+      if (node.parameters[0] && ts.isIdentifier(node.parameters[0].name)
+        && key && ts.isIdentifier(key) && declaration(key) === node.parameters[0]) {
+        if (targetBinding === 'translation') {
+          forwardingReturns.set(node, returned);
+          result = 'translation';
+        } else if (targetBinding === 'unresolved') {
+          result = 'unresolved';
         }
       }
     }
+    functionBindings.set(node, result);
+    return result;
+  };
+  const calls = [];
+  const visit = (node) => {
+    if (ts.isCallExpression(node)
+      && literal(node.arguments[0]) !== null
+      && (ts.isIdentifier(node.expression) || ts.isPropertyAccessExpression(node.expression))) {
+      const kind = binding(node.expression);
+      const name = ts.isIdentifier(node.expression) ? node.expression.text
+        : ts.isPropertyAccessExpression(node.expression) ? node.expression.name.text : '';
+      const key = literal(node.arguments[0]);
+      // Unproven helper parameters remain strict rather than silently being
+      // discarded. Reports identify them separately for binding follow-up.
+      if (key !== null && (kind === 'translation' || (kind === 'unresolved' && name === 't'))) {
+        const effectiveArgs = translationArguments(node.expression, node.arguments);
+        const options = effectiveArgs.find((arg, i) => i > 0 && arg && ts.isObjectLiteralExpression(arg));
+        const fallback = literal(effectiveArgs[1]) ?? literal(property(options, 'defaultValue')?.initializer);
+        const count = property(options, 'count');
+        const countValue = count?.initializer;
+        const numericCount = countValue && ts.isNumericLiteral(countValue) ? Number(countValue.text) : null;
+        calls.push({
+          key, fallback, binding: kind,
+          line: source.getLineAndCharacterOfPosition(node.getStart(source)).line + 1,
+          count: count ? numericCount ?? 'dynamic' : null,
+          ordinal: property(options, 'ordinal')?.initializer?.kind === ts.SyntaxKind.TrueKeyword,
+          context: literal(property(options, 'context')?.initializer),
+          dynamicOptions: effectiveArgs.slice(1).some((arg) =>
+            arg && literal(arg) === null && !ts.isObjectLiteralExpression(arg))
+            || !!options?.properties.some(ts.isSpreadAssignment),
+        });
+      }
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(source);
+  return calls;
+}
+
+export function collectUsedKeys(files) {
+  const used = new Map(); // key -> { refs: [{file, line}], fallback?: string }
+  for (const file of files) {
+    const text = fs.readFileSync(file, 'utf8');
+    let calls;
+    try {
+      calls = scanTranslationCalls(text, file);
+    } catch (cause) {
+      throw new Error(`Cannot scan translation bindings in ${file}`, { cause });
+    }
+    for (const call of calls) {
+      const { key, fallback, line, ...contract } = call;
+      const rel = path.relative(REPO_ROOT, file).replace(/\\/g, '/');
+      if (!used.has(key)) used.set(key, { refs: [], fallback: null });
+      const entry = used.get(key);
+      entry.refs.push({ file: rel, line, fallback, ...contract });
+      if (entry.fallback === null && fallback !== null) entry.fallback = fallback;
+    }
   }
   return used;
+}
+
+export function resolvesCall(definedKeys, key, call) {
+  // App resources live in translation with fallbackNS: translation. A hook
+  // namespace does not prepend a dotted path; an explicit colon selects a
+  // resource namespace and leaves only the suffix as the fallback lookup key.
+  // Keep the original literal in reports so genuine misses stay actionable.
+  const separator = key.indexOf(':');
+  if (separator !== -1) key = key.slice(separator + 1);
+  if (definedKeys.has(key)) return true;
+  if (call.context && definedKeys.has(`${key}_${call.context}`)) return true;
+  if (call.count === null || call.dynamicOptions) return false;
+  if (call.count === 0 && !call.ordinal
+    && (definedKeys.has(`${key}_zero`) || (call.context && definedKeys.has(`${key}_${call.context}_zero`)))) return true;
+  const type = call.ordinal ? 'ordinal' : 'cardinal';
+  const rules = new Intl.PluralRules('en', { type });
+  const categories = call.count === 'dynamic'
+    ? rules.resolvedOptions().pluralCategories : [rules.select(call.count)];
+  const prefix = call.ordinal ? '_ordinal' : '';
+  return categories.every((category) =>
+    definedKeys.has(`${key}${call.context ? `_${call.context}` : ''}${prefix}_${category}`)
+    || definedKeys.has(`${key}${prefix}_${category}`));
 }
 
 // Insert a flat dotted key into a nested object, e.g.
@@ -166,11 +362,11 @@ function main() {
   const files = walk(SRC_ROOT);
   const used = collectUsedKeys(files);
 
-  // A key is considered "defined" if the exact key exists. We use exact match
-  // because i18next does not auto-resolve prefixes.
+  // Every call must resolve: a plural-only base cannot answer a no-count call.
   const missing = [];
   for (const [key, info] of used) {
-    if (!definedKeys.has(key)) missing.push({ key, refs: info.refs, fallback: info.fallback });
+    const unresolvedRefs = info.refs.filter((ref) => !resolvesCall(definedKeys, key, ref));
+    if (unresolvedRefs.length) missing.push({ key, refs: info.refs, unresolvedRefs, fallback: info.fallback });
   }
 
   // Defined-but-unused leaf keys. We do not count parent objects.
@@ -229,10 +425,12 @@ function main() {
           usedCount: used.size,
           missingCount: missing.length,
           unusedCount: unused.length,
-          missing: missing.slice(0, 200).map(({ key, refs, fallback }) => ({
+          missing: missing.map(({ key, refs, unresolvedRefs, fallback }) => ({
             key,
             fallback,
             firstRef: refs[0],
+            refs,
+            unresolvedRefs,
           })),
           unused: unused.slice(0, 200),
         },
