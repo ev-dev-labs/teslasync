@@ -1,6 +1,36 @@
 # Frontend modernization queue
 
-## Current phase: 3 - close-row fix accepted; fresh1031 boundary next
+## Current phase: 3 - mobile brand repair accepted; fresh native gates pending
+
+The existing owner delivered the exact two-path mobile-brand repair. Parent
+independently verified20artifacts,6746input pins,268passed cases across3physical
+files, strict two-path ESLint native0,258original assertions and byte-exact
+source inverses. Both drawer and closed appbar wordmarks are contained; the
+appbar can wrap and reserves its measured height. Current drawer focus,
+transition-none, full accessible branding and scaled control targets remain.
+Source/validation leases are released. Commit only Layout.tsx, Layout.test.tsx
+and this queue, then freeze the new source for15preflight stages and native
+320/375LTR/RTL200% brand/control bounds, focus rings and hit tests in both modes.
+Native reflow acceptance and the current fullsuite are NOTRUN. Phase3 remains
+open; Phase4 pilots remain parked until genuine current-source acceptance.
+
+Fresh1031preflight completed all15native0; mounted parent verified30rawstreams
+and6746pins. All4drawerentry/trap/restore now genuinely pass; palette/theme/
+6RTLtabs/skip retainpassing behavior,0axeviolations/HTTP/pageerrors.
+Parent automated intake verified46mounted artifacts/30screenshots/14axe.
+Visual review exposed a realRTL200%drawer and closed-appbar issue: TeslaSync
+wordmark overlaps the close button/focus ring and adjacent header controls.
+Do not treat automated focus success as fullvisualacceptance or launchfullsuite.
+Authorize one narrow mobilebrand reflow item, preserve currentfocusfix and
+alloriginalassertions, then freeze newsource for affected/currentphase gates.
+Own1031QAcontainerstopped. No current fullsuite has started.
+
+Scoped commit4697f31bc2e43efc7e9262cfc7a7c2235908505e contains only the two
+accepted source/test files and queue. Actual count1031; cadencecompiler1035.
+Historical serialized preflight shellphase3-post-drawer-entry-preflight started
+11:59Z; compiler native0 at12:00:07Z with0stdout/0stderrbytes. Remaining
+preflight stages subsequently passed, as recorded above. No duplicate
+fullgate. Current private build and mounted acceptance precede the fullsuite.
 
 Parent independently accepted the exact2path delivery:20artifacts,263actual
 cases across3physicalfiles, strict2pathlintnative0,242originalassertions
@@ -1522,4 +1552,5 @@ Phase2 intake health: all19 original primitive actors delivered idle DONE (not s
 | [x] | 3 | phase3-drawer-entry-predicate-attribution | parent-read-only-call-time-guard-values | phase3-drawer-entry-readiness-attribution | 1 | 2026-10-11T11:45:30Z | Terminalnative2/5artifactintake: exactcheckVisibilityfalse2calls;nohiddenancestor/othermodal,connected/focusable/enabledtarget;BODY/zero nativefocus.0unexpectedHTTP/pageerrors;6746pinsandhelperff88f685a11137317a150188403fa750626c4a731613b67e4476187ae0b6fcadcleanupverified. CSSreasonnotyetclaimed. |
 | [x] | 3 | phase3-drawer-entry-style-attribution | parent-read-only-exact-native-visibility-css | phase3-drawer-entry-predicate-attribution | 1 | 2026-10-11T11:50:17Z | Native2exactroot: rowtransitionall/visibilityhidden with activehidden->visibletransitiontime0;navvisibilityvisible/transform-only. Closeinheritshidden;nativecheckcorrect.5artifacts/pins6746/ownhelper0e536a90a7d8322a27d4143fe10ed399b546e1666bf88a98a5fc7654b572d65acleanupverified. Newexact2pathbaseline;no sourceacceptance. |
 | [x] | 3 | phase3-sidebar-close-visibility-transition | proved-close-row-css-transition-fix | phase3-drawer-entry-style-attribution | 1 | 2026-10-11T11:58:20Z | Parent verifies20artifacts263actualtests3files0,strict2pathlint0,242originalassertionsunchanged,bothbyteexactinverses,6746originalinputswith2approvedchanges. Rowtransition-nonefix;nohelper/policy/navigationanimationchanges. Workeridle/released;scopedacceptedonly. Exactcommitthennewpreflight/mounted/fullsuite. |
-| [ ] | 3 | phase3-post-drawer-entry1031-boundary | parent-frozen-current-shipping-boundary | phase3-sidebar-close-visibility-transition | 1 | 2026-10-11T11:58:20Z | Commitexact2paths+queue,freezeactual1031newHEAD/emptyindex/zero leases;15preflightstageswithnewprefix/privatebuild. Then26scenario/14axe currentmounted acceptance withstrictoriginalentrypredicate; fullsuiteonlyaftergenuinepass/review. No stale1030buildacceptance. |
+| [b] | 3 | phase3-post-drawer-entry1031-boundary | parent-frozen-current-shipping-boundary | phase3-sidebar-close-visibility-transition; phase3-mobile-brand-rtl-reflow | 1 | 2026-10-11T12:11:29Z | All15preflightnative0;currentmounted4drawerentry/trap/restorepass,otherinteractionsstillpass. Parent46artifactintake/6746pins. Visualreviewdark/lightRTL200%showswordmarkoverclosefocusring;blocksvisualacceptance/fullsuite. Ownhelperstopped,newboundedreflowrepair. |
+| [~] | 3 | phase3-mobile-brand-rtl-reflow | screenshot-proven-mobile-brand-close-overlap | phase3-sidebar-close-visibility-transition | 1 | 2026-10-11T12:12:00Z | OnlyLayoutsource/testdefaultscope. At375RTL200%wordmarkoverclosefocusring inbothmodes;preservebrandingaccessiblelabel/44pxtarget/focusisolation/normalRTL/LTR/navanimations. Surgicalresponsivecontainment withactualcomputedbounds/hitproof aftercurrentbuild;do not reducefontscale/testthreshold/removebrandglobally. Parentbaseline/intake/commit/gates. |

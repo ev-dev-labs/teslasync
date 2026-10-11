@@ -710,6 +710,8 @@ function ThemeQuickSwitcher({
   )
 }
 
+const MOBILE_BRAND_CONTAINMENT = 'min-w-0 max-w-full [&>span]:min-w-0 [&>span]:truncate'
+
 export default function Layout() {
   const presentation = usePresentationMode()
   const { preferences: productPreferences } = useProductPreferences()
@@ -717,6 +719,24 @@ export default function Layout() {
   const sidebarRef = useRef<HTMLElement>(null)
   const sidebarTriggerRef = useRef<HTMLButtonElement>(null)
   const sidebarCloseRef = useRef<HTMLButtonElement>(null)
+  const mobileHeaderRef = useRef<HTMLElement>(null)
+  const mobileHeaderSpacerRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    const header = mobileHeaderRef.current
+    const spacer = mobileHeaderSpacerRef.current
+    if (!header || !spacer || typeof ResizeObserver === 'undefined') return
+    const reserveHeaderHeight = () => {
+      const height = header.getBoundingClientRect().height
+      if (height > 0) spacer.style.height = `${height}px`
+    }
+    reserveHeaderHeight()
+    const observer = new ResizeObserver(reserveHeaderHeight)
+    observer.observe(header)
+    return () => {
+      observer.disconnect()
+      spacer.style.removeProperty('height')
+    }
+  }, [sidebarOpen, presentation.mode])
   // Command Deck rail collapse. Host-owned (not deck-owned) because the
   // aside width derives from it. Persisted per browser.
   const [deckRailCollapsed, setDeckRailCollapsed] = useState(() => {
@@ -1349,7 +1369,7 @@ export default function Layout() {
             reduced-motion transition duration. */}
         <div className="flex items-center gap-2 border-b border-[var(--border-default)] px-5 pb-4 pt-[calc(1rem+env(safe-area-inset-top,0px))] shrink-0 transition-none xl:hidden">
           <PrefetchNavLink to="/" className="min-w-0 flex flex-1 items-center gap-3 rounded-shape-md transition-colors" onClick={() => setSidebarOpen(false)}>
-            <Logo size={32} showWordmark />
+            <Logo size={32} showWordmark className={cn(MOBILE_BRAND_CONTAINMENT, 'flex-1')} />
           </PrefetchNavLink>
           <Button
             ref={sidebarCloseRef}
@@ -1450,7 +1470,7 @@ export default function Layout() {
 
       {/* Mobile top bar */}
       {presentation.mode === 'standard' && !sidebarOpen && (
-        <header data-role="appbar" role="banner" aria-label={t('a11y.primaryHeader', 'Site header')} className="fixed inset-x-0 top-0 z-[60] flex items-center border-b border-[var(--border-default)] bg-[var(--surface-1)] px-4 pb-3 pt-[calc(0.75rem+env(safe-area-inset-top,0px))] xl:hidden [touch-action:manipulation]">
+        <header ref={mobileHeaderRef} data-role="appbar" role="banner" aria-label={t('a11y.primaryHeader', 'Site header')} className="fixed inset-x-0 top-0 z-[60] flex flex-wrap items-center gap-2 border-b border-[var(--border-default)] bg-[var(--surface-1)] px-4 pb-3 pt-[calc(0.75rem+env(safe-area-inset-top,0px))] xl:hidden [touch-action:manipulation]">
           <Button
             ref={sidebarTriggerRef}
             onClick={() => setSidebarOpen(true)}
@@ -1459,22 +1479,24 @@ export default function Layout() {
             size="sm"
             aria-label={t('nav.openSidebar', 'Open sidebar')}
             aria-expanded={false}
-            className="relative z-10 -ml-1 h-11 w-11 rounded-shape-md p-0 text-[var(--text-secondary)] hover:bg-[var(--control-bg)] hover:text-[var(--text-primary)] [-webkit-tap-highlight-color:transparent] [touch-action:manipulation]"
+            className="relative z-10 -ms-1 h-11 w-11 shrink-0 rounded-shape-md p-0 text-[var(--text-secondary)] hover:bg-[var(--control-bg)] hover:text-[var(--text-primary)] [-webkit-tap-highlight-color:transparent] [touch-action:manipulation]"
           >
             <Icons.menu className="h-6 w-6" />
           </Button>
-          <div className="flex-1 flex justify-center -ml-10">
-            <Logo size={26} showWordmark />
+          <div className="flex min-w-0 flex-1 basis-16 justify-center">
+            <Logo size={26} showWordmark className={MOBILE_BRAND_CONTAINMENT} />
           </div>
-          <NotificationBellPopover className="ms-auto" />
-          <ThemeQuickSwitcher />
+          <div className="ms-auto flex shrink-0 items-center gap-2">
+            <NotificationBellPopover />
+            <ThemeQuickSwitcher />
+          </div>
         </header>
       )}
 
       {/* Main content */}
       <div className="relative z-10 flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden supports-[overflow:clip]:overflow-clip">
         {/* Spacer for fixed mobile header */}
-        {presentation.mode === 'standard' && <div className="h-[calc(4.25rem+env(safe-area-inset-top,0px))] shrink-0 xl:hidden" />}
+        {presentation.mode === 'standard' && <div ref={mobileHeaderSpacerRef} data-role="appbar-spacer" className="h-[calc(4.25rem+env(safe-area-inset-top,0px))] shrink-0 xl:hidden" />}
         {presentation.mode === 'standard' && <Suspense fallback={<div className="hidden h-workspace-header shrink-0 xl:block" />}>
           <WorkspaceHeader
             notifications={<NotificationBellPopover />}

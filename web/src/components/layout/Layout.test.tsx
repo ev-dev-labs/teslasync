@@ -382,6 +382,7 @@ vi.mock('@/api/hooks/useNavigationPins', () => ({
 // ── @/components/ui: faithful Button + trivial ThemePicker ────────────
 vi.mock('@/components/ui/runtime', async () => {
   const { forwardRef } = await import('react')
+  const { default: Logo } = await import('@/components/ui/Logo')
   const Button = forwardRef<HTMLButtonElement, Record<string, unknown>>((props, ref) => {
     const { children, variant, size, loading, icon, ...rest } = props
     void variant
@@ -402,7 +403,7 @@ vi.mock('@/components/ui/runtime', async () => {
     ),
     CommandPalette: () => null,
     CommandPaletteTrigger: () => <div data-testid="cmd-trigger" />,
-    Logo: () => <div data-testid="logo" />,
+    Logo,
     ThemePicker: () => <div data-testid="theme-picker" />,
   }
 })
@@ -1039,6 +1040,86 @@ describe('Layout — nav item visibility', () => {
 // ══════════════════════════════════════════════════════════════════════
 
 describe('Layout — mobile drawer', () => {
+  it.each([
+    ['ltr', 1], ['rtl', 1], ['ltr', 2], ['rtl', 2],
+  ])('contains both mobile wordmarks without shrinking controls (%s, scale %s)', (direction, scale) => {
+    document.documentElement.setAttribute('dir', String(direction))
+    const previousFontSize = document.documentElement.style.fontSize
+    document.documentElement.style.fontSize = `${Number(scale) * 16}px`
+    try {
+      renderLayout('/')
+      const header = screen.getByRole('banner', { name: 'Site header' })
+      const menu = within(header).getByRole('button', { name: 'Open sidebar' })
+      const headerWordmark = within(header).getByText('TeslaSync')
+      const headerLogo = headerWordmark.parentElement!
+      expect(headerLogo).toHaveClass('min-w-0', 'max-w-full', '[&>span]:min-w-0', '[&>span]:truncate')
+      expect(headerWordmark).toBeVisible()
+      expect(headerWordmark).toHaveTextContent(/^TeslaSync$/)
+      expect(headerLogo.querySelector('svg')).toHaveAttribute('aria-hidden', 'true')
+      expect(headerLogo.parentElement).toHaveClass('min-w-0', 'flex-1', 'basis-16')
+      expect(headerLogo.parentElement).not.toHaveClass('-ml-10')
+      expect(header).toHaveClass('flex-wrap', 'gap-2')
+      expect(menu).toHaveClass('h-11', 'w-11', 'shrink-0', '-ms-1')
+      expect(header.lastElementChild).toHaveClass('shrink-0', 'ms-auto')
+      expect(header).not.toHaveClass('overflow-hidden')
+      expect(headerLogo).not.toHaveClass('overflow-hidden')
+
+      fireEvent.click(menu)
+
+      const aside = screen.getByRole('navigation', { name: 'Primary' })
+      const close = screen.getByRole('button', { name: 'Close sidebar' })
+      const row = close.parentElement!
+      const brand = within(row).getByRole('link', { name: 'TeslaSync' })
+      const drawerWordmark = within(brand).getByText('TeslaSync')
+      expect(drawerWordmark.parentElement).toHaveClass('min-w-0', 'max-w-full', 'flex-1', '[&>span]:min-w-0', '[&>span]:truncate')
+      expect(drawerWordmark).toHaveTextContent(/^TeslaSync$/)
+      expect(brand).toHaveClass('min-w-0', 'flex-1')
+      expect(brand).not.toHaveClass('overflow-hidden')
+      expect(row).toHaveClass('gap-2', 'transition-none', 'xl:hidden')
+      expect(row).not.toHaveClass('overflow-hidden')
+      expect(close).toHaveClass('h-11', 'w-11', 'shrink-0')
+      expect(close).toHaveFocus()
+      expect(aside).toHaveClass('transition-[transform,width]', 'motion-reduce:transition-transform')
+      const desktopBrand = row.nextElementSibling!
+      expect(within(desktopBrand as HTMLElement).getByRole('link', { name: 'TeslaSync' })).toBeInTheDocument()
+      expect(within(desktopBrand as HTMLElement).getByText('TeslaSync').parentElement).not.toHaveClass('[&>span]:truncate')
+    } finally {
+      document.documentElement.removeAttribute('dir')
+      document.documentElement.style.fontSize = previousFontSize
+    }
+  })
+
+  it('reserves the actual wrapped appbar height and disconnects on drawer entry', () => {
+    const callbacks: ResizeObserverCallback[] = []
+    const observe = vi.fn()
+    const disconnect = vi.fn()
+    vi.stubGlobal('ResizeObserver', class {
+      constructor(callback: ResizeObserverCallback) { callbacks.push(callback) }
+      observe = observe
+      disconnect = disconnect
+    })
+    try {
+      const { container } = renderLayout('/')
+      const header = screen.getByRole('banner', { name: 'Site header' })
+      const spacer = container.querySelector<HTMLElement>('[data-role="appbar-spacer"]')!
+      expect(observe).toHaveBeenCalledWith(header)
+      vi.spyOn(header, 'getBoundingClientRect').mockReturnValue({
+        height: 196, width: 375, x: 0, y: 0, top: 0, left: 0, right: 375, bottom: 196, toJSON: () => ({}),
+      })
+      act(() => callbacks[0]([], {} as ResizeObserver))
+      expect(spacer.style.height).toBe('196px')
+      expect(spacer).toHaveClass('shrink-0', 'xl:hidden')
+      fireEvent.click(screen.getByRole('button', { name: 'Open sidebar' }))
+      expect(disconnect).toHaveBeenCalledTimes(1)
+      expect(spacer.style.height).toBe('')
+      fireEvent.click(screen.getByRole('button', { name: 'Close sidebar' }))
+      expect(observe).toHaveBeenCalledTimes(2)
+      expect(observe).toHaveBeenLastCalledWith(screen.getByRole('banner', { name: 'Site header' }))
+    } finally {
+      vi.unstubAllGlobals()
+    }
+  })
+
   it.each([false, true])('does not transition the close row inherited visibility (reduced motion: %s)', reduced => {
     renderLayout('/')
     const aside = screen.getByRole('navigation', { name: 'Primary' })
