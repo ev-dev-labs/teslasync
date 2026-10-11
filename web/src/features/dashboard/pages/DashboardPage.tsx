@@ -848,7 +848,6 @@ export default function DashboardPage() {
           // dashboard grid in kiosk mode, not a dialog. It hosts the live
           // dashboard, not user-dismissable content. New interactive dialogs
           // MUST use <Modal>.
-          // eslint-disable-next-line no-restricted-syntax
           className="kiosk-root kiosk-surface fixed inset-0 z-dashboard-kiosk"
           style={kioskBackgroundStyle(kioskConfig.backgroundOpacity ?? 1)}
         >
