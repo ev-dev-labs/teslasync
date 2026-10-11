@@ -8,9 +8,52 @@ import {
   CAPTURE_WIDTHS, OVERFLOW_WIDTHS, parseArgs, parseRegistry, planRoutes,
   classifyPage, checkOverflow, scanSource,
   isPageBusy, seedApplicationMode, synchronizeApplicationMode, mountedApplicationMode,
-  applicationModeMatches, captureFullPage, sanitizedBrowserFailure,
+  applicationModeMatches, captureFullPage, sanitizedBrowserFailure, selectChromiumSmokeUse,
 } from '../frontend-qa.mjs';
 import { EXTREME_VALUES, EXTREME_TEXT, EXTREME_CASES, QA_READINESS_CASES, createExtremeRows } from '../../e2e/fixtures/frontend-modernization.ts';
+
+test('actual installed Playwright loader selects public chromium-smoke use and fails closed when unavailable', async () => {
+  const previousCache = process.env.PWTEST_CACHE_DIR;
+  process.env.PWTEST_CACHE_DIR = fileURLToPath(new URL('../../../qa-screenshots/.playwright-cache', import.meta.url));
+  try {
+    const common = await import('playwright/lib/common');
+    const { loadConfigFromFile } = common.configLoader;
+    const config = await loadConfigFromFile(fileURLToPath(new URL('../../playwright.config.ts', import.meta.url)));
+    assert.equal(Object.hasOwn(config, 'fullConfig'), false);
+    const publicConfig = config.config;
+    const projects = publicConfig.projects;
+    const smoke = projects.find((project) => project.name === 'chromium-smoke');
+    assert.ok(smoke);
+    const use = selectChromiumSmokeUse(config);
+    assert.strictEqual(use, smoke.use);
+    assert.equal(use.baseURL, process.env.E2E_BASE_URL ?? 'http://127.0.0.1:4173');
+    assert.equal(use.colorScheme, 'dark');
+    assert.equal(use.locale, 'en-US');
+    assert.equal(use.timezoneId, 'UTC');
+    assert.equal(use.actionTimeout, 8000);
+    assert.equal(use.navigationTimeout, 20000);
+    try {
+      config.config = undefined;
+      assert.throws(() => selectChromiumSmokeUse(config), /BLOCKED: installed Playwright public project configuration is unavailable/);
+      config.config = publicConfig;
+      publicConfig.projects = undefined;
+      assert.throws(() => selectChromiumSmokeUse(config), /BLOCKED: installed Playwright public project configuration is unavailable/);
+      publicConfig.projects = projects.filter((project) => project !== smoke);
+      assert.throws(() => selectChromiumSmokeUse(config), /BLOCKED: existing chromium-smoke project is unavailable/);
+      publicConfig.projects = projects;
+      smoke.use = undefined;
+      assert.throws(() => selectChromiumSmokeUse(config), /BLOCKED: existing chromium-smoke project is unavailable/);
+    } finally {
+      config.config = publicConfig;
+      publicConfig.projects = projects;
+      smoke.use = use;
+    }
+    assert.strictEqual(selectChromiumSmokeUse(config), use);
+  } finally {
+    if (previousCache === undefined) delete process.env.PWTEST_CACHE_DIR;
+    else process.env.PWTEST_CACHE_DIR = previousCache;
+  }
+});
 
 test('application preference seed is origin-isolated and root verification rejects media-only and backend overrides', () => {
   const saved = new Map([['teslasync-mode', 'oled'], ['teslasync-theme', 'matrix-green']]);

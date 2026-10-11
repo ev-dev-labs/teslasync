@@ -340,6 +340,15 @@ async function scanTree(start) {
   return { findings, excluded };
 }
 
+export function selectChromiumSmokeUse(config) {
+  if (!Array.isArray(config?.config?.projects)) {
+    throw new Error('BLOCKED: installed Playwright public project configuration is unavailable');
+  }
+  const use = config.config.projects.find((project) => project.name === 'chromium-smoke')?.use;
+  if (!use) throw new Error('BLOCKED: existing chromium-smoke project is unavailable');
+  return use;
+}
+
 async function browserChecks(command, options, plans) {
   if (Number(process.versions.node.split('.')[0]) < 26) throw new Error('BLOCKED: browser gates require package-supported Node >=26');
   if (!process.env.E2E_BASE_URL) throw new Error('BLOCKED: set E2E_BASE_URL for an already running authorized application');
@@ -352,8 +361,7 @@ async function browserChecks(command, options, plans) {
   const configLoader = common.configLoader ?? common.default?.configLoader;
   if (!configLoader?.loadConfigFromFile) throw new Error('BLOCKED: installed Playwright config loader adapter is unavailable');
   const config = await configLoader.loadConfigFromFile(resolve(webRoot, 'playwright.config.ts'));
-  const use = config.fullConfig.projects.find((project) => project.name === 'chromium-smoke')?.use;
-  if (!use) throw new Error('BLOCKED: existing chromium-smoke project is unavailable');
+  const use = selectChromiumSmokeUse(config);
   const { chromium } = await import('@playwright/test');
   const runDirectory = resolve(webRoot, '..', 'qa-screenshots', new Date().toISOString().replaceAll(':', '-') + `-${process.pid}`);
   const mode = options.theme ?? use.colorScheme;
