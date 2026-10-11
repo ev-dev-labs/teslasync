@@ -1,0 +1,14 @@
+{
+  "anomalies": {
+    "mph": "mph",
+    "kmh": "km/h",
+    "whPerMi": "Wh/mi",
+    "whPerKm": "Wh/km",
+    "col": {
+      "speed": "Speed",
+      "consumption": "Consumption",
+      "predicted": "Baseline"
+    },
+    "baseline": "Baseline"
+  }
+}

@@ -78,7 +78,26 @@
         "packVoltage": "Pack voltage"
       },
       "kpis": "Summary metrics",
-      "summary": "At a glance"
+      "summary": "At a glance",
+      "cell": "Cell",
+      "legend": {
+        "nominal": "Nominal",
+        "slight": "Slight deviation",
+        "significant": "Significant deviation"
+      },
+      "table": {
+        "status": "Status"
+      },
+      "voltage": "Voltage",
+      "ref": {
+        "avg": "Avg",
+        "min": "Min",
+        "max": "Max",
+        "warning": "Warning"
+      },
+      "overTime": {
+        "avg": "Avg voltage"
+      }
     },
     "degradation": {
       "title": "Battery degradation",
@@ -147,7 +166,9 @@
       "brief": {
         "prediction": "Degradation model evidence",
         "summary": "Battery degradation evidence"
-      }
+      },
+      "healthTitle": "Battery health",
+      "riskScore": "Risk score"
     },
     "health": {
       "excellent": "Excellent",
@@ -314,6 +335,7 @@
     },
     "bars": {
       "title": "Capacity & Wear"
-    }
+    },
+    "seriesLabel": "Battery %"
   }
 }

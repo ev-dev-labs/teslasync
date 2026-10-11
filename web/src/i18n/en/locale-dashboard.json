@@ -162,7 +162,10 @@
     "liveMap": "Live map",
     "digitalTwin": "Digital twin",
     "asleep": "Vehicle asleep — wake to see live data",
-    "wakeUp": "Wake up"
+    "wakeUp": "Wake up",
+    "odometer": "Odometer",
+    "idealRange": "Ideal range",
+    "firmware": "Firmware"
   },
   "import": {
     "emptyInput": "No data to validate",
@@ -210,7 +213,20 @@
     "pin": "Pin to current vehicle",
     "menuFooter": "Manage layouts in the tab strip below",
     "resetMessage": "This removes all customizations and restores the shipped default dashboard. Your other saved layouts are not affected.",
-    "editTitle": "Edit dashboard (E)"
+    "editTitle": "Edit dashboard (E)",
+    "renamePrompt": "New name for this layout:",
+    "deleteTitle": "Delete this layout?",
+    "deleteMessage": "This permanently removes \"{{name}}\" and its widget arrangement. This cannot be undone.",
+    "deleteConfirm": "Delete",
+    "discoveryHint": "Switch, create, or edit layouts here",
+    "newBlank": "New blank layout",
+    "newFromTemplate": "New from template…",
+    "editExitLabel": "Exit edit mode",
+    "rename": "Rename",
+    "moveEarlier": "Move earlier",
+    "moveLater": "Move later",
+    "delete": "Delete layout",
+    "layoutSettings": "Layout settings"
   },
   "nextCharge": {
     "title": "Next charge",
@@ -247,6 +263,9 @@
     "co2": "CO₂ saved",
     "mostEfficient": "Most efficient"
   },
+  "quickNav": {
+    "label": "Quick navigation"
+  },
   "quickStats": {
     "title": "Quick stats",
     "subtitle": "Fleet snapshot · last 30 days",
@@ -273,7 +292,8 @@
       "title": "Fleet comparison",
       "empty": "No fleet comparison data yet",
       "unnamed": "Unnamed"
-    }
+    },
+    "noVehicleCta": "Go to vehicles"
   },
   "templates": {
     "widgetCount": "{{count}} widgets",
@@ -393,12 +413,22 @@
       "energyConsumed": "Energy consumed",
       "costPerDist": "Cost / {{unit}}",
       "noData": "No analytics data",
-      "title": "Analytics summary"
+      "title": "Analytics summary",
+      "summary": {
+        "eyebrow": "Fleet analytics"
+      }
     },
     "anomalyDetector": {
       "activeCount": "{{count}} active",
       "noAnomalies": "No anomalies",
-      "title": "Anomaly detector"
+      "title": "Anomaly detector",
+      "relative": {
+        "unknown": "—",
+        "justNow": "Just now",
+        "minutes": "{{count}}m ago",
+        "hours": "{{count}}h ago",
+        "days": "{{count}}d ago"
+      }
     },
     "apiUsage": {
       "totalCalls": "Total calls (24h)",
@@ -453,7 +483,11 @@
       "size": "Backup size",
       "type": "Type",
       "status": "Status",
-      "recentRuns": "Recent runs"
+      "recentRuns": "Recent runs",
+      "relativeNow": "just now",
+      "relativeMinutes": "{{count}}m ago",
+      "relativeHours": "{{count}}h ago",
+      "relativeDays": "{{count}}d ago"
     },
     "batteryCells": {
       "cell": "Cell",
@@ -785,7 +819,8 @@
       "eta": "ETA",
       "title": "Destination ETA",
       "noNav": "No active navigation",
-      "remaining": "Remaining"
+      "remaining": "Remaining",
+      "progress": "Trip progress"
     },
     "digitalTwinMini": "Digital twin",
     "open": "Open",
@@ -964,7 +999,8 @@
       "energyKwh": "Energy (kWh)",
       "date": "Date",
       "summary": {
-        "scope": "Vehicle {{id}} · source period {{days}} days"
+        "scope": "Vehicle {{id}} · source period {{days}} days",
+        "eyebrow": "Vehicle energy"
       }
     },
     "exportActiveJobs": "Active exports",
@@ -980,7 +1016,10 @@
       "distance30d": "Distance (30d)",
       "energy30d": "Energy (30d)",
       "title": "Fleet stats",
-      "noData": "No fleet data available"
+      "noData": "No fleet data available",
+      "summary": {
+        "title": "Fleet summary"
+      }
     },
     "fsmDistribution": {
       "min": "m",
@@ -1173,7 +1212,10 @@
       "totalToday": "Total messages",
       "lastMessage": "Last message",
       "broker": "Broker",
-      "noData": "No MQTT status data"
+      "noData": "No MQTT status data",
+      "unknown": "Unknown",
+      "online": "Online",
+      "offline": "Offline"
     },
     "notificationStats": {
       "totalSent": "Total sent (7d)",
@@ -1188,7 +1230,10 @@
       "time": "Time",
       "failedLabel": "failed",
       "noData": "No notification data",
-      "title": "Notification stats"
+      "title": "Notification stats",
+      "justNow": "Just now",
+      "notificationTitle": "Title",
+      "notificationMessage": "Message"
     },
     "odometer": {
       "title": "Odometer",
@@ -1361,7 +1406,8 @@
       "resume": "Resume",
       "pause": "Pause",
       "title": "Signal log",
-      "noSignals": "No signal updates yet"
+      "noSignals": "No signal updates yet",
+      "unknownSource": "Unknown"
     },
     "sleepEfficiency": {
       "efficiency": "Efficiency",
@@ -1500,7 +1546,9 @@
       "vinsUnavailable": "Error VIN summary unavailable",
       "feedUnavailable": "Telemetry error sample unavailable",
       "vinsRetained": "Previously loaded error VIN summary remains visible while this source recovers.",
-      "feedRetained": "Previously loaded telemetry error sample remains visible while this source recovers."
+      "feedRetained": "Previously loaded telemetry error sample remains visible while this source recovers.",
+      "observed": "Observed",
+      "fetched": "Fetched"
     },
     "tirePressureHistory": {
       "fl": "FL",
@@ -1544,7 +1592,11 @@
       "tablesSource": "Database table count returned by the system-health snapshot; not a fleet-history record count.",
       "summaryTitle": "Database snapshot",
       "summaryDescription": "Database size and table count describe the returned system-health snapshot, separate from the four service-status records.",
-      "summaryScope": "Server-returned system-health snapshot · no vehicle or date-range filter; not complete fleet history."
+      "summaryScope": "Server-returned system-health snapshot · no vehicle or date-range filter; not complete fleet history.",
+      "statusOk": "OK",
+      "statusDegraded": "Degraded",
+      "statusUnknown": "Unknown",
+      "statusDown": "Down"
     },
     "vampireDrain": {
       "min": "m",
@@ -1758,8 +1810,46 @@
     "fsdWeekly": {
       "summary": {
         "scope": "Vehicle {{id}} · {{start}} to {{end}} exclusive · {{timezone}}"
-      }
-    }
+      },
+      "distance": "Reported FSD",
+      "share": "Share",
+      "vsLastWeek": "vs last week",
+      "noVehicle": "Select a vehicle",
+      "openFsd": "FSD insights",
+      "openDigest": "Weekly digest"
+    },
+    "severity": {
+      "info": "Info",
+      "warn": "Warning",
+      "critical": "Critical",
+      "success": "Success"
+    },
+    "securityLocked": "Vehicle locked",
+    "securityUnlocked": "Vehicle unlocked",
+    "securityOn": "On",
+    "securitySentry": "Sentry",
+    "securityDoorOpen": "Open",
+    "securityDoor": "Door",
+    "securityGuestOn": "Guest mode on",
+    "securityGuestOff": "Guest mode off",
+    "in": "in",
+    "lastRun": "Last run",
+    "nextRun": "Next run",
+    "playbackProgress": "Playback progress",
+    "volume": "Volume",
+    "sentryLog": {
+      "sentryOffChip": "Sentry off",
+      "vehicleLocked": "Vehicle locked",
+      "vehicleUnlocked": "Vehicle unlocked"
+    },
+    "eventFeed": {
+      "justNow": "Just now"
+    },
+    "mapView": {
+      "noData": "No location data available",
+      "label": "Map"
+    },
+    "chooseVehicle": "Choose vehicle"
   },
   "widgets": {
     "gridFootprint": "{{cols}}×{{rows}} grid",
@@ -1855,6 +1945,17 @@
     },
     "title": "Recent activity",
     "viewAll": "Open full inbox"
+  },
+  "ai": {
+    "common": {
+      "errorUnknown": "unknown"
+    },
+    "confirm": {
+      "cancel": "Cancel"
+    },
+    "limit": {
+      "retry": "Retry"
+    }
   },
   "alertPacks": {
     "aiDescription": "Describe your goal, from a focused group to comprehensive coverage. Helix selects supported rules; you review defaults and individual overrides before installing.",
@@ -2155,6 +2256,7 @@
         "badge": "Helix",
         "description": "Get a short, Helix-written recap of your week from the digest data above.",
         "generateButton": "Generate narration",
+        "noVehicleHint": "Pick a vehicle to enable Helix narration.",
         "title": "Helix narration"
       }
     }
@@ -2221,6 +2323,7 @@
       "title": "Explain the battery health forecast"
     },
     "empty": "No battery health data available yet.",
+    "seriesLabel": "Battery %",
     "title": "Battery health"
   },
   "bulk": {
@@ -2341,6 +2444,7 @@
     "customizeHint": "You can customize this dashboard. Tap the + to add widgets.",
     "customizeHintCta": "Add widgets",
     "done": "Done",
+    "export": "Export dashboard",
     "fleetPosture": {
       "activeScope": "Active vehicle scope",
       "badge": {
@@ -2432,9 +2536,14 @@
       "sizeHeading": "Size",
       "widgetFailed": "{{name}} failed to load"
     },
+    "import": "Import dashboard",
     "kiosk": "Kiosk",
+    "layoutsRegion": "Dashboard layouts",
+    "more": "More",
     "printSnapshot": "Print snapshot",
     "redo": "Redo",
+    "refresh": "Refresh data",
+    "refreshShort": "Refresh",
     "reset": "Reset",
     "shortcuts": {
       "exitEdit": "Exit edit mode",
@@ -2443,6 +2552,14 @@
       "switch": "Switch between dashboards",
       "toggleEdit": "Toggle edit mode",
       "undo": "Undo layout change"
+    },
+    "summary": {
+      "status": {
+        "initial": "Awaiting source",
+        "initialFailure": "Source unavailable",
+        "ok": "Source available",
+        "unavailable": "No source readings"
+      }
     },
     "tipCards": {
       "impact": {
@@ -2801,6 +2918,19 @@
       "loading": "Loading statistics"
     }
   },
+  "filters": {
+    "activeLabel": "Active filters",
+    "clearAll": "Clear all",
+    "clearedAll": "All filters cleared",
+    "moreCount": "+{{count}} more",
+    "moreLabel": "Additional active filters",
+    "removeAria": "Remove filter {{label}}",
+    "removed": "Filter removed",
+    "sheetActiveCount": "{{count}} active",
+    "sheetDone": "Done",
+    "sheetTitle": "Filters",
+    "sheetTrigger": "Filters"
+  },
   "fleet": {
     "alerts": "Alerts",
     "average": "fleet average",
@@ -2845,7 +2975,8 @@
       "radiusLabel": "Radius",
       "rejectedLabel": "Proposal rejected by validator",
       "suggestButton": "Suggest geofence",
-      "title": "Suggest a geofence for this location"
+      "title": "Suggest a geofence for this location",
+      "unnamed": "(unnamed)"
     }
   },
   "guard": {
@@ -2853,6 +2984,7 @@
   },
   "helix": {
     "ariaLabel": "Helix",
+    "askHelix": "Ask Helix",
     "badge": "Helix",
     "evidence": {
       "gathering": "Gathering",
@@ -2907,6 +3039,7 @@
     "dashboardsToRotate": "Dashboards to Rotate",
     "default": "Default",
     "dimAfter": "Dim screen after",
+    "dimNever": "Never",
     "display": "Display",
     "enter": "Enter kiosk mode",
     "exit": "Exit kiosk mode",
@@ -2915,6 +3048,7 @@
     "preview": "Preview — this is how widgets will look",
     "rotation": "Dashboard rotation",
     "rotationInterval": "Rotation interval",
+    "rotationOff": "Off",
     "rotationPosition": "Dashboard {{current}} of {{total}}",
     "settings": "Kiosk settings",
     "showClock": "Show clock",
@@ -3021,6 +3155,7 @@
           "redundant_duplicate": "Redundant duplicate"
         },
         "reviewButton": "Review rule",
+        "ruleLabel": "Rule",
         "title": "Detect cross-rule conflicts"
       },
       "aiTemplate": {
@@ -3088,6 +3223,7 @@
     "progress": {
       "label": "Setup progress"
     },
+    "stepAccount": "Connect Tesla account",
     "sync": "Sync vehicles",
     "syncDesc": "Your Tesla account is connected. Sync your vehicles to start tracking.",
     "syncTitle": "Sync your vehicles",
@@ -3103,6 +3239,7 @@
   "operations": {
     "attention": "Attention",
     "detailTitle": "{{title}} details",
+    "evidence": "Evidence",
     "metrics": "Operational metrics",
     "narrative": {
       "causeUnavailable": "Cause is not established by the available evidence.",
@@ -3142,6 +3279,24 @@
     "reset": "Reset to auto-detected",
     "solidBlack": "Solid Black"
   },
+  "powerDashboards": {
+    "aiDrafter": {
+      "applyButton": "Apply to editor",
+      "badge": "Helix"
+    }
+  },
+  "powerGrafana": {
+    "aiDrafter": {
+      "applyButton": "Apply to editor",
+      "badge": "Helix"
+    }
+  },
+  "powerSql": {
+    "aiDrafter": {
+      "applyButton": "Apply to editor",
+      "badge": "Helix"
+    }
+  },
   "presentation": {
     "exit": "Exit presentation mode",
     "exitShort": "Exit",
@@ -3170,6 +3325,11 @@
         "description": "Keep the most useful everyday vehicle information close at hand.",
         "label": "Owner"
       }
+    }
+  },
+  "pwa": {
+    "lowBandwidth": {
+      "on": "Always on"
     }
   },
   "range": {
@@ -3241,6 +3401,7 @@
     "aiSearch": {
       "badge": "Helix",
       "description": "Describe what you are looking for and the assistant will surface drives, charging sessions, and alerts that match — citing each entity by name.",
+      "inputLabel": "Search query",
       "searchButton": "Search with Helix",
       "title": "Search with natural language"
     }
@@ -3271,6 +3432,11 @@
     "gotoPrompt": "Go to…",
     "search": "Search shortcuts…",
     "title": "Keyboard shortcuts"
+  },
+  "signalExplorer": {
+    "aiFilter": {
+      "badge": "Helix"
+    }
   },
   "softwareUpdates": {
     "aiNarration": {
@@ -3396,11 +3562,15 @@
     "firstRunOpen": "Open theme picker",
     "firstRunTitle": "Personalize TeslaSync"
   },
+  "timeline": {
+    "label": "Timeline"
+  },
   "tirePressure": {
     "aiTrendReasoning": {
       "badge": "Helix",
       "description": "Ask Helix to explain the recent 30-day trend in this vehicle's four corner tire pressures — which tires are trending up, down, or stable, the most likely deterministic driver of any deviation (cold-weather correlation, all-tires-trending suggesting weather rather than puncture, single-corner slow-leak signature), and any actionable threshold crossing. The per-corner pressures and thresholds are the same the gauges below show; the narrator only explains them and is honest that the slope is a descriptive linear extrapolation, not a forecast.",
       "generateButton": "Narrate trend",
+      "noVehicleHint": "Pick a vehicle above to enable Helix.",
       "title": "Narrate the 30-day tire-pressure trend"
     }
   },
@@ -3669,6 +3839,7 @@
       "badge": "Helix",
       "description": "Ask Helix to explain the deterministic vampire-drain signal — the recent average / worst idle-drain rate, the most-correlated per-event driver (Sentry, climate, long park), and whether the recent rate is in line with the typical fleet. The numbers are the same the cards below show; the narrator only explains them and surfaces the inference's correlational nature honestly.",
       "generateButton": "Narrate drain",
+      "noVehicleHint": "Pick a vehicle above to enable Helix.",
       "title": "Explain the recent vampire drain"
     }
   },
@@ -3735,6 +3906,11 @@
     "title": "Voice mode",
     "transcriptLabel": "Voice transcript",
     "unsupportedHint": "Voice input is not available in this browser. You can still type your question into the chatbot below."
+  },
+  "watch": {
+    "command": {
+      "failed": "Command failed"
+    }
   },
   "watchFaceNL": {
     "badge": "Helix",

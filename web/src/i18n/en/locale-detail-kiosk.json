@@ -22,6 +22,8 @@
     "bgOpacity": "Background opacity",
     "preview": "Preview — this is how widgets will look",
     "enter": "Enter kiosk mode",
-    "rotationPosition": "Dashboard {{current}} of {{total}}"
+    "rotationPosition": "Dashboard {{current}} of {{total}}",
+    "rotationOff": "Off",
+    "dimNever": "Never"
   }
 }

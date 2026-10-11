@@ -32,7 +32,8 @@
       "timelineEmpty": "No completed drives in this period to journal.",
       "commute": "Commute stories",
       "commuteHint": "Repeated routes told across firmware. Unknown chapters stay unknown.",
-      "commuteEmpty": "Not enough repeated routes yet for a commute story."
+      "commuteEmpty": "Not enough repeated routes yet for a commute story.",
+      "resetBadge": "Counter reset"
     },
     "title": "FSD insights",
     "subtitle": "Reported supervised self-driving distance and its share of observed driving, with the counter evidence behind every metric.",
@@ -205,7 +206,8 @@
     "brief": {
       "observatoryMetrics": "Reset-safe counter quantities",
       "periodQuantities": "Current and previous period quantities",
-      "window": "{{start}}–{{end}} (exclusive end) · {{timezone}}"
+      "window": "{{start}}–{{end}} (exclusive end) · {{timezone}}",
+      "noVehicle": "Select a vehicle"
     },
     "drive": {
       "confidence": {

@@ -26,6 +26,9 @@
       "online": "online",
       "offline": "offline"
     },
-    "loading": "Loading watch summary…"
+    "loading": "Loading watch summary…",
+    "command": {
+      "failed": "Command failed"
+    }
   }
 }

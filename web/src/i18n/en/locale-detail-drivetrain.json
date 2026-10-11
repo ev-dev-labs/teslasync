@@ -149,6 +149,8 @@
     "brief": {
       "powerScope": "Loaded recent drives, not a complete selected-range power aggregate.",
       "liveReadings": "Returned motor readings"
-    }
+    },
+    "inverter": "Inverter",
+    "battery": "Battery"
   }
 }

@@ -229,7 +229,8 @@
       "cadenceScope": "Returned drive telemetry; valid timestamps define the observed span and adjacent-emission intervals.",
       "coverageDenominator": "Availability is measured against {{count}} valid timestamp rows, not expected emissions.",
       "signalCoverage": "Signal coverage",
-      "coverageScope": "Per-signal availability in returned telemetry; missing readings are not zero measurements."
+      "coverageScope": "Per-signal availability in returned telemetry; missing readings are not zero measurements.",
+      "open": "ongoing"
     }
   }
 }

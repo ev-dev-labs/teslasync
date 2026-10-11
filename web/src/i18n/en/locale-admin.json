@@ -19,7 +19,32 @@
         "retainedEntries": "Entries source refresh failed; retained page counts",
         "unavailableEntries": "Entries source unavailable; page counts unknown"
       },
-      "verifyError": "Verification failed"
+      "verifyError": "Verification failed",
+      "detailTrace": "Trace ID",
+      "detailBefore": "Before",
+      "detailAfter": "After",
+      "colTs": "Timestamp",
+      "colActor": "Actor",
+      "colCategory": "Category",
+      "colAction": "Action",
+      "colDetail": "Detail",
+      "colSuccess": "Status",
+      "statusFail": "Fail",
+      "statusOk": "OK",
+      "showDetails": "Details",
+      "prevPage": "Previous",
+      "pageInfo": "Showing {{from}}–{{to}}",
+      "nextPage": "Next",
+      "filtersTitle": "Filters",
+      "sinceLabel": "Since",
+      "categoryLabel": "Category",
+      "actionLabel": "Action",
+      "actorLabel": "Actor",
+      "limitLabel": "Rows per page",
+      "resetFilters": "Reset",
+      "applyFilters": "Search",
+      "verifying": "Verifying…",
+      "allCategories": "All categories"
     },
     "vehicleCost": {
       "avgRows": "Avg rows / vehicle",
@@ -44,7 +69,13 @@
       "totalScope": "Totals sum the returned vehicles only (query limit 100), not the unbounded fleet",
       "vehiclesSub": "Ingesting in window",
       "vehiclesTracked": "Vehicles tracked",
-      "windowSub": "Window: {{days}}d"
+      "windowSub": "Window: {{days}}d",
+      "colVehicle": "Vehicle",
+      "unnamed": "Vehicle #{{id}}",
+      "colRows": "Rows",
+      "colRate": "Rate (rows/min, 24h)",
+      "colLastSeen": "Last seen",
+      "windowLabel": "Window"
     },
     "systemStatus": {
       "clientPerformance": {
@@ -87,7 +118,8 @@
           "positive": "Doors closed",
           "negative": "Door opened"
         },
-        "noEvents": "No state changes detected in the history."
+        "noEvents": "No state changes detected in the history.",
+        "unknown": "State change"
       },
       "live": {
         "hazards": "Hazards",
@@ -202,7 +234,8 @@
       },
       "brief": {
         "scope": "Vehicle {{vehicle}} · History {{start}} to {{end}} (exclusive). Current status comes from a separate latest-state query."
-      }
+      },
+      "unknown": "Unknown"
     },
     "audit": {
       "searchPlaceholder": "Search by action, resource, or details…",
@@ -442,7 +475,8 @@
         "selectVehicle": "Select vehicle…",
         "vehicleAria": "Vehicle",
         "windowAria": "Window",
-        "bucketAria": "Bucket"
+        "bucketAria": "Bucket",
+        "vehicleFallback": "Vehicle {{id}}"
       },
       "fields": {
         "cols": {
@@ -460,7 +494,8 @@
         "fields": "Distinct fields",
         "fieldsSub": "unique signal names",
         "window": "Window",
-        "windowSub": "observation horizon"
+        "windowSub": "observation horizon",
+        "bucket": "Bucket"
       },
       "pageTitle": "Ingest X-Ray",
       "subtitle": "Per-vehicle telemetry sample counts — pick a vehicle to inspect what the ingest pipeline is receiving.",
@@ -514,7 +549,9 @@
       "cols": {
         "name": "Signal",
         "value": "Value",
-        "timestamp": "Last update"
+        "timestamp": "Last update",
+        "kind": "Kind",
+        "source": "Source"
       },
       "filterPlaceholder": "Filter signal names…",
       "filterAria": "Filter signals",
@@ -537,10 +574,12 @@
         "message": "Pick a vehicle from the dropdown above to start streaming its live signal cache."
       },
       "panels": {
-        "snapshot": "Live snapshot"
+        "snapshot": "Live snapshot",
+        "sources": "Source layers"
       },
       "kinds": {
-        "kindCol": "Kind"
+        "kindCol": "Kind",
+        "count": "Fields"
       }
     },
     "teslaOrders": {
@@ -627,7 +666,16 @@
         "count": "Count",
         "severity": "Severity"
       },
-      "tableCount": "{{count}} hypertables"
+      "tableCount": "{{count}} hypertables",
+      "fleetCompressed": "Compressed",
+      "noData": "No data",
+      "pageTitle": "Disk forecast",
+      "severityOk": "OK",
+      "severityWarn": "Warn",
+      "severityCritical": "Critical",
+      "colTotal": "Total",
+      "colSeverity": "Severity",
+      "compressed": "Compressed"
     },
     "secretRotation": {
       "col": {
@@ -650,11 +698,25 @@
         "period": "Rotation tracker snapshot",
         "provenance": "Returned credentials and server-computed per-kind thresholds; not a selected date-range aggregate.",
         "unknown": "{{count}} tracked credentials have unknown severity"
-      }
+      },
+      "noData": "No data",
+      "colKind": "Kind",
+      "colExpiry": "Expires",
+      "colSeverity": "Severity",
+      "okLabel": "Healthy",
+      "criticalLabel": "Overdue",
+      "pageTitle": "Secret rotation",
+      "severityOk": "OK",
+      "severityCritical": "Overdue"
     },
     "slowQueries": {
       "colQuery": "Query",
-      "kpiAnalyzedSub": "Top {{limit}} by {{metric}}"
+      "kpiAnalyzedSub": "Top {{limit}} by {{metric}}",
+      "kpiCalls": "Total calls",
+      "pageTitle": "Slow queries",
+      "colRows": "Rows",
+      "orderBy": "Order by",
+      "limit": "Limit"
     },
     "dataQuality": {
       "summary": {
@@ -710,7 +772,60 @@
       "fieldsEmptyTable": "No field scores"
     },
     "schemaDrift": {
-      "driftedBodyUnknownCounts": "The live schema fingerprint differs from the seed. Object-count comparisons are unavailable; inspect the available fingerprints and confirm migrations before making changes."
+      "driftedBodyUnknownCounts": "The live schema fingerprint differs from the seed. Object-count comparisons are unavailable; inspect the available fingerprints and confirm migrations before making changes.",
+      "tables": "Tables",
+      "columns": "Columns",
+      "indexes": "Indexes",
+      "match": "Match",
+      "drift": "Drift",
+      "fingerprintCurrent": "Current",
+      "statusLabel": "Status",
+      "pageTitle": "Schema drift"
+    },
+    "operationalBrief": {
+      "retained": "Retained evidence",
+      "snapshot": "Source snapshot",
+      "unmeasured": "Not measured",
+      "periodUnknown": "Observation time and complete analysis bounds are not supplied by this source."
+    },
+    "gdprExport": {
+      "metaId": "ID",
+      "metaCreated": "Created",
+      "metaCompleted": "Completed",
+      "metaExpires": "Expires",
+      "downloadTitle": "Download",
+      "lifecycle": {
+        "created": "Created",
+        "completed": "Completed",
+        "failed": "Failed",
+        "expired": "Expired",
+        "expires": "Expires"
+      },
+      "pageTitle": "GDPR export",
+      "statusLabel": "Status",
+      "formatLabel": "Format",
+      "bytesLabel": "Size",
+      "createdLabel": "Created",
+      "expiresLabel": "Expires",
+      "errorTitle": "Export failed"
+    },
+    "operationalSummary": {
+      "loading": "Loading sources",
+      "retained": "Retained measurements",
+      "unavailable": "Source unavailable"
+    },
+    "diagnostics": {
+      "brief": {
+        "selectVehicle": "No vehicle selected",
+        "retained": "Retained measurements",
+        "loading": "Loading measurements",
+        "failed": "Read failed",
+        "loaded": "Source loaded",
+        "missing": "No measurements supplied"
+      }
+    },
+    "subsystem": {
+      "unsupportedTitle": "Feature not supported"
     }
   },
   "apiKeys": {
@@ -863,7 +978,8 @@
       "successDetail": "Saved to your downloads folder.",
       "title": "Export settings",
       "busy": "Exporting…",
-      "cta": "Export JSON"
+      "cta": "Export JSON",
+      "help": "Includes general settings, alert rules, geofences, and your quiet-hours windows. Tesla credentials and notification-channel secrets are NEVER exported."
     },
     "import": {
       "errorTooLarge": "File is too large (max 1 MB).",
@@ -883,14 +999,18 @@
       "applyCount": "Apply {{count}} change(s)",
       "applyNoChanges": "Nothing to apply",
       "appliedHeader": "Import complete",
-      "done": "Done"
+      "done": "Done",
+      "help": "Drop or pick a previously exported bundle. Existing items with the same name are updated; nothing is deleted.",
+      "summary": "{{added}} added, {{updated}} updated, {{skipped}} unchanged"
     },
     "section": {
       "settings": "General settings",
       "alertRules": "Alert rules",
       "geofences": "Geofences",
       "quietHours": "Quiet hours"
-    }
+    },
+    "successRate": "Success rate",
+    "failedRuns": "Failed runs"
   },
   "coverage": {
     "destinations": {
@@ -912,7 +1032,16 @@
       "noSnapshot": "No routing snapshot supplied",
       "period": "Package configuration snapshot",
       "provenance": "routing.yaml and teslaconfig.Builder; not per-vehicle telemetry or a time-range aggregate."
-    }
+    },
+    "col": {
+      "field": "Field",
+      "destination": "Destination"
+    },
+    "subscribed": {
+      "no": "no"
+    },
+    "pageTitle": "Fleet Telemetry coverage",
+    "refresh": "Refresh"
   },
   "devtools": {
     "utils": {
@@ -1038,7 +1167,9 @@
       "invalidInput": "Invalid input",
       "unixPermMenuDesc": "Unix perm desc",
       "byteSizeMenuDesc": "Byte size desc",
-      "jsonMenuDesc": "JSON formatter desc"
+      "jsonMenuDesc": "JSON formatter desc",
+      "jsonFormatted": "Formatted",
+      "jsonInvalid": "Invalid JSON"
     },
     "searchTools": "Search tools...",
     "noToolsFound": "No tools match your search",
@@ -1151,6 +1282,29 @@
     },
     "teslaApiRef": {
       "noResults": "No endpoints match your search"
+    },
+    "backendTool": {
+      "requestFailed": "Request failed",
+      "run": "Run",
+      "failed": "Failed",
+      "success": "Success"
+    },
+    "overview": {
+      "telemetryErrors": "Telemetry errors",
+      "vehicles": "Vehicles"
+    },
+    "infra": {
+      "mqtt": "MQTT",
+      "topic": "Topic",
+      "message": "Message",
+      "migrations": "Migrations",
+      "runtime": "Runtime"
+    },
+    "tab": {
+      "fleetApi": "Fleet API",
+      "telemetry": "Telemetry",
+      "infrastructure": "Infrastructure",
+      "reference": "Reference"
     }
   },
   "featureConfig": {
@@ -1196,13 +1350,15 @@
     "brief": {
       "title": "Account feature configuration",
       "description": "Enabled and disabled features in the latest Tesla account configuration."
-    }
+    },
+    "retry": "Retry"
   },
   "fleetApi": {
     "subtitle": "Choose which Tesla Fleet API routes are available and which can be polled automatically",
     "status": {
       "polling": "Polling enabled",
-      "onDemand": "On demand only"
+      "onDemand": "On demand only",
+      "suspended": "Suspended"
     },
     "kpis": {
       "apiStatusHint": "Automatic Fleet API polling",
@@ -1264,8 +1420,11 @@
     "configured": {
       "emptyTitle": "Endpoint metadata unavailable",
       "emptyMessage": "This runtime did not publish any configured endpoint URLs.",
-      "emptyDescription": "Configure the public and Tesla Fleet API URLs in deployment settings; metadata appears after the service restarts."
-    }
+      "emptyDescription": "Configure the public and Tesla Fleet API URLs in deployment settings; metadata appears after the service restarts.",
+      "teslaApi": "Tesla Fleet API"
+    },
+    "pageTitle": "Fleet API settings",
+    "title": "Fleet API"
   },
   "gas": {
     "title": "Gas price auto-poll",
@@ -1361,7 +1520,14 @@
     "title": "API playground",
     "subtitle": "Explore and test TeslaSync API endpoints",
     "selectEndpoint": "Select an endpoint from the sidebar to start testing",
-    "endpointCount": "{{count}} endpoints available"
+    "endpointCount": "{{count}} endpoints available",
+    "responseBody": "Response body",
+    "requestFailed": "Request failed",
+    "kpi": {
+      "recent": "Recent requests",
+      "latency": "Avg latency"
+    },
+    "responseSection": "Response"
   },
   "queueStatus": {
     "title": "Background workers",
@@ -1530,7 +1696,21 @@
       "Driving": "Driving",
       "Climate": "Climate",
       "Other": "Other"
-    }
+    },
+    "l1Signals": "L1 signals",
+    "diag": {
+      "l1Seen": "L1 last seen",
+      "l2Seen": "L2 last seen",
+      "mode": "Live store mode",
+      "vin": "VIN",
+      "key": "Redis key",
+      "l1": "L1 signals",
+      "l2": "L2 fields (raw)"
+    },
+    "vehicleFallback": "Vehicle {{id}}",
+    "selectVehicleLabel": "Select vehicle",
+    "categoryLabel": "Filter by category",
+    "resourceName": "Redis signals"
   },
   "region": {
     "title": "Region & API",
@@ -1583,7 +1763,8 @@
       "eyebrow": "Tesla account",
       "title": "Region and endpoint",
       "description": "Your account region, Fleet API endpoint and latest synchronization."
-    }
+    },
+    "resourceName": "Region"
   },
   "teslaAccount": {
     "statstrip": {
@@ -1711,6 +1892,17 @@
     },
     "myActivity": {
       "empty": "No recent activity in this window."
+    }
+  },
+  "ai": {
+    "common": {
+      "errorUnknown": "unknown"
+    },
+    "confirm": {
+      "cancel": "Cancel"
+    },
+    "limit": {
+      "retry": "Retry"
     }
   },
   "alertPacks": {
@@ -2026,6 +2218,7 @@
         "badge": "Helix",
         "description": "Get a short, Helix-written recap of your week from the digest data above.",
         "generateButton": "Generate narration",
+        "noVehicleHint": "Pick a vehicle to enable Helix narration.",
         "title": "Helix narration"
       }
     }
@@ -2132,6 +2325,7 @@
       "selectedRange": "View settings range",
       "title": "Request activity"
     },
+    "time": "Time",
     "title": "API logs",
     "totalCalls": "Total calls",
     "totalCount": "{{count}} total",
@@ -2645,6 +2839,10 @@
         "githubUrl": "GitHub issue URL",
         "saveUrl": "Save URL"
       },
+      "bridge": {
+        "disabled": "Not configured",
+        "enabled": "Connected"
+      },
       "bridgeDisabled": "GitHub Issues bridge is not configured on this server (set TESLASYNC_GITHUB_REPO + TESLASYNC_GITHUB_TOKEN to enable forwarding).",
       "bulk": {
         "close": "Close selected",
@@ -2683,13 +2881,27 @@
       "status": {
         "closed": "Closed",
         "new": "New",
-        "triaged": "Triaged"
+        "triaged": "Triaged",
+        "unknown": "Unknown"
       },
       "title": "Feedback queue"
     },
     "statSkeleton": {
       "loading": "Loading statistics"
     }
+  },
+  "filters": {
+    "activeLabel": "Active filters",
+    "clearAll": "Clear all",
+    "clearedAll": "All filters cleared",
+    "moreCount": "+{{count}} more",
+    "moreLabel": "Additional active filters",
+    "removeAria": "Remove filter {{label}}",
+    "removed": "Filter removed",
+    "sheetActiveCount": "{{count}} active",
+    "sheetDone": "Done",
+    "sheetTitle": "Filters",
+    "sheetTrigger": "Filters"
   },
   "freshness": {
     "noData": "No recent data",
@@ -2719,7 +2931,8 @@
       "radiusLabel": "Radius",
       "rejectedLabel": "Proposal rejected by validator",
       "suggestButton": "Suggest geofence",
-      "title": "Suggest a geofence for this location"
+      "title": "Suggest a geofence for this location",
+      "unnamed": "(unnamed)"
     }
   },
   "guard": {
@@ -2727,6 +2940,7 @@
   },
   "helix": {
     "ariaLabel": "Helix",
+    "askHelix": "Ask Helix",
     "badge": "Helix",
     "evidence": {
       "gathering": "Gathering",
@@ -2787,9 +3001,22 @@
       "started": "Impersonation started"
     },
     "users": {
+      "actionColumn": "Action",
+      "available": "Available",
       "emptyMessage": "No other subjects have an active session right now. Sign someone else in to enable impersonation.",
       "emptyTitle": "No other subjects",
+      "kpi": {
+        "accessMode": "Access mode",
+        "active": "Active",
+        "idle": "Idle",
+        "modeOpen": "Open",
+        "session": "Session status"
+      },
       "openMode": "Impersonation requires forward-auth mode. This install is in open mode, so per-user identity is not available.",
+      "refresh": "Refresh",
+      "showing": "Showing {{shown}} of {{total}}",
+      "statusColumn": "Status",
+      "subjectColumn": "Subject",
       "subtitle": "Active subjects you can impersonate for support. Sessions are limited to 15 minutes and recorded in the audit log.",
       "title": "Subjects"
     }
@@ -2963,6 +3190,7 @@
           "redundant_duplicate": "Redundant duplicate"
         },
         "reviewButton": "Review rule",
+        "ruleLabel": "Rule",
         "title": "Detect cross-rule conflicts"
       },
       "aiTemplate": {
@@ -3030,6 +3258,7 @@
   "operations": {
     "attention": "Attention",
     "detailTitle": "{{title}} details",
+    "evidence": "Evidence",
     "metrics": "Operational metrics",
     "narrative": {
       "causeUnavailable": "Cause is not established by the available evidence.",
@@ -3079,6 +3308,24 @@
     "reset": "Reset to auto-detected",
     "solidBlack": "Solid Black"
   },
+  "powerDashboards": {
+    "aiDrafter": {
+      "applyButton": "Apply to editor",
+      "badge": "Helix"
+    }
+  },
+  "powerGrafana": {
+    "aiDrafter": {
+      "applyButton": "Apply to editor",
+      "badge": "Helix"
+    }
+  },
+  "powerSql": {
+    "aiDrafter": {
+      "applyButton": "Apply to editor",
+      "badge": "Helix"
+    }
+  },
   "productPreferences": {
     "persona": {
       "label": "Workspace profile"
@@ -3100,6 +3347,11 @@
         "description": "Keep the most useful everyday vehicle information close at hand.",
         "label": "Owner"
       }
+    }
+  },
+  "pwa": {
+    "lowBandwidth": {
+      "on": "Always on"
     }
   },
   "range": {
@@ -3243,6 +3495,7 @@
     "aiSearch": {
       "badge": "Helix",
       "description": "Describe what you are looking for and the assistant will surface drives, charging sessions, and alerts that match — citing each entity by name.",
+      "inputLabel": "Search query",
       "searchButton": "Search with Helix",
       "title": "Search with natural language"
     }
@@ -3267,6 +3520,11 @@
     "gotoPrompt": "Go to…",
     "search": "Search shortcuts…",
     "title": "Keyboard shortcuts"
+  },
+  "signalExplorer": {
+    "aiFilter": {
+      "badge": "Helix"
+    }
   },
   "softwareUpdates": {
     "aiNarration": {
@@ -3371,6 +3629,7 @@
     "window": "Window"
   },
   "timeline": {
+    "label": "Timeline",
     "selectVehicle": "Select vehicle"
   },
   "tirePressure": {
@@ -3378,6 +3637,7 @@
       "badge": "Helix",
       "description": "Ask Helix to explain the recent 30-day trend in this vehicle's four corner tire pressures — which tires are trending up, down, or stable, the most likely deterministic driver of any deviation (cold-weather correlation, all-tires-trending suggesting weather rather than puncture, single-corner slow-leak signature), and any actionable threshold crossing. The per-corner pressures and thresholds are the same the gauges below show; the narrator only explains them and is honest that the slope is a descriptive linear extrapolation, not a forecast.",
       "generateButton": "Narrate trend",
+      "noVehicleHint": "Pick a vehicle above to enable Helix.",
       "title": "Narrate the 30-day tire-pressure trend"
     }
   },
@@ -3623,6 +3883,7 @@
       "badge": "Helix",
       "description": "Ask Helix to explain the deterministic vampire-drain signal — the recent average / worst idle-drain rate, the most-correlated per-event driver (Sentry, climate, long park), and whether the recent rate is in line with the typical fleet. The numbers are the same the cards below show; the narrator only explains them and surfaces the inference's correlational nature honestly.",
       "generateButton": "Narrate drain",
+      "noVehicleHint": "Pick a vehicle above to enable Helix.",
       "title": "Explain the recent vampire drain"
     }
   },

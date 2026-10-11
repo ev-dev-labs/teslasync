@@ -69,6 +69,7 @@
       "loading": "Preparing CSV…",
       "csvButton": "Download CSV",
       "failed": "Could not prepare the table export."
-    }
+    },
+    "actions": "Actions"
   }
 }

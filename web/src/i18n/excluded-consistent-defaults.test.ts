@@ -6,6 +6,7 @@ import baseline from './known-missing-keys.json'
 import runtimeManifest from './en/runtime-manifest.json'
 import usageManifest from './en/usage-manifest.json'
 import shell from './en/shell.json'
+import { featureOwnedAdditions } from './excluded-feature-owned-producers.test'
 
 type Json = Record<string, unknown>
 
@@ -121,6 +122,10 @@ beforeAll(async () => {
 })
 
 describe('exact81 feature-owned consistent producer defaults', () => {
+  it.each(featureOwnedAdditions)('preserves the exact accepted feature-owned addition %s', (key, value) => {
+    expect(nested(catalog, key)).toBe(value)
+  })
+
   it.each(additions)('resolves %s as an exact canonical string, never an object or fallback', (key, value) => {
     expect(nested(catalog, key)).toBe(value)
     expect(english.exists(key)).toBe(true)
@@ -155,13 +160,15 @@ describe('exact81 feature-owned consistent producer defaults', () => {
 
   it('preserves the frozen fingerprint of all old leaves, including accepted18/PWA13/Settings', () => {
     expect(additions).toHaveLength(81)
-    const keys = new Set<string>(additions.map(([key]) => key))
+    expect(featureOwnedAdditions).toHaveLength(806)
+    const keys = new Set<string>([...additions, ...featureOwnedAdditions].map(([key]) => key))
+    expect(keys.size).toBe(887)
     const oldEntries = leaves(catalog).filter(([key]) => !keys.has(key))
       .sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0)
     expect(oldEntries).toHaveLength(28176)
     expect(createHash('sha256').update(JSON.stringify(oldEntries)).digest('hex'))
       .toBe('e04f0f9479fe65e8a0346bc7dd53d53f662cc66850c18440ceae702a43698966')
-    expect(leaves(catalog)).toHaveLength(28257)
+    expect(leaves(catalog)).toHaveLength(29063)
     expect(english.t('settings.title')).toBe('Settings')
     expect(catalog.pwa).toMatchObject(shell.pwa)
     expect(shell.pwa.offline).toEqual(catalog.pwa.offline)

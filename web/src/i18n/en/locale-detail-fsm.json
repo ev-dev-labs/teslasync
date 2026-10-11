@@ -113,6 +113,14 @@
       "provenance": "Page and flap counts cover the loaded server page; total covers matching transitions in the selected window. Current state comes from a separate live-state snapshot.",
       "alltimeProvenance": "All matching transition history; page and flap counts cover only loaded rows. Current state is a separate live snapshot.",
       "unknownPeriod": "Transition bounds were not supplied. Page and flap counts remain page-scoped; current state is a separate live snapshot."
-    }
+    },
+    "sessionLive": "Live",
+    "allTime": "All time",
+    "subFsms": "Active sub-FSMs",
+    "fsmTypeVehicle": "Vehicle",
+    "modeCharging": "Charging",
+    "modeDrive": "Drive",
+    "modeSleep": "Sleep",
+    "modeIdle": "Idle"
   }
 }

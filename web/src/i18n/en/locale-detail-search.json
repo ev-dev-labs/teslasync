@@ -12,7 +12,8 @@
       "title": "Search with natural language",
       "description": "Describe what you are looking for and the assistant will surface drives, charging sessions, and alerts that match — citing each entity by name.",
       "badge": "Helix",
-      "searchButton": "Search with Helix"
+      "searchButton": "Search with Helix",
+      "inputLabel": "Search query"
     },
     "tooShort": {
       "title": "Type at least 2 characters",
@@ -274,21 +275,26 @@
       },
       "fleet": {
         "setup": {
-          "desc": "Connect Tesla, keep the Fleet token fresh, subscribe telemetry on a vehicle, and confirm streaming."
+          "desc": "Connect Tesla, keep the Fleet token fresh, subscribe telemetry on a vehicle, and confirm streaming.",
+          "title": "Fleet setup"
         }
       },
       "workspace": {
         "persona": {
-          "desc": "Prioritize navigation for an owner, fleet operator, analyst, or administrator."
+          "desc": "Prioritize navigation for an owner, fleet operator, analyst, or administrator.",
+          "title": "Workspace profile"
         },
         "landing": {
-          "desc": "Choose the first page shown when TeslaSync opens."
+          "desc": "Choose the first page shown when TeslaSync opens.",
+          "title": "Preferred landing page"
         },
         "vehicle": {
-          "desc": "Choose the vehicle used for the global scope on a fresh app load."
+          "desc": "Choose the vehicle used for the global scope on a fresh app load.",
+          "title": "Default active vehicle"
         },
         "range": {
-          "desc": "Choose the default time range used by global analysis controls."
+          "desc": "Choose the default time range used by global analysis controls.",
+          "title": "Default analysis window"
         },
         "discovery": {
           "title": "Help and release highlights",
@@ -301,7 +307,8 @@
           "desc": "Wipe the local list of pages used by the status bar and the Recent section in the command palette."
         },
         "consentManage": {
-          "desc": "Re-grant, withdraw, or reset the cookie / analytics consent banner state for this browser."
+          "desc": "Re-grant, withdraw, or reset the cookie / analytics consent banner state for this browser.",
+          "title": "Cookies & analytics consent"
         }
       },
       "helix": {
@@ -310,6 +317,13 @@
           "desc": "Optional AI integration — provider, API key, cost cap, and per-feature opt-in toggles. Off by default."
         }
       }
+    },
+    "kpi": {
+      "categories": "Categories",
+      "activeFilters": "Active filters"
+    },
+    "results": {
+      "heading": "Results"
     }
   }
 }

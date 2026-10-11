@@ -126,14 +126,19 @@
       "loadFailed": "The departure nudge could not be loaded."
     },
     "live": {
-      "loadFailed": "The live trip could not be loaded."
+      "loadFailed": "The live trip could not be loaded.",
+      "progress": "Progress",
+      "range": "Range"
     },
     "replan": {
       "loadFailed": "The route assessment could not be loaded.",
       "rescoreFailed": "Stops could not be rescored. Try rescoring again."
     },
     "arrival": {
-      "loadFailed": "Arrival advice could not be loaded."
+      "loadFailed": "Arrival advice could not be loaded.",
+      "title": "Arrival",
+      "eta": "ETA",
+      "parked": "parked"
     },
     "report": {
       "loadFailed": "The trip report could not be loaded.",
@@ -358,6 +363,17 @@
     },
     "myActivity": {
       "empty": "No recent activity in this window."
+    }
+  },
+  "ai": {
+    "common": {
+      "errorUnknown": "unknown"
+    },
+    "confirm": {
+      "cancel": "Cancel"
+    },
+    "limit": {
+      "retry": "Retry"
     }
   },
   "alertPacks": {
@@ -659,6 +675,7 @@
         "badge": "Helix",
         "description": "Get a short, Helix-written recap of your week from the digest data above.",
         "generateButton": "Generate narration",
+        "noVehicleHint": "Pick a vehicle to enable Helix narration.",
         "title": "Helix narration"
       }
     }
@@ -1125,6 +1142,19 @@
       "loading": "Loading statistics"
     }
   },
+  "filters": {
+    "activeLabel": "Active filters",
+    "clearAll": "Clear all",
+    "clearedAll": "All filters cleared",
+    "moreCount": "+{{count}} more",
+    "moreLabel": "Additional active filters",
+    "removeAria": "Remove filter {{label}}",
+    "removed": "Filter removed",
+    "sheetActiveCount": "{{count}} active",
+    "sheetDone": "Done",
+    "sheetTitle": "Filters",
+    "sheetTrigger": "Filters"
+  },
   "freshness": {
     "noData": "No recent data",
     "offline": "Offline",
@@ -1153,11 +1183,13 @@
       "radiusLabel": "Radius",
       "rejectedLabel": "Proposal rejected by validator",
       "suggestButton": "Suggest geofence",
-      "title": "Suggest a geofence for this location"
+      "title": "Suggest a geofence for this location",
+      "unnamed": "(unnamed)"
     }
   },
   "helix": {
     "ariaLabel": "Helix",
+    "askHelix": "Ask Helix",
     "badge": "Helix",
     "evidence": {
       "gathering": "Gathering",
@@ -1300,6 +1332,7 @@
           "redundant_duplicate": "Redundant duplicate"
         },
         "reviewButton": "Review rule",
+        "ruleLabel": "Rule",
         "title": "Detect cross-rule conflicts"
       },
       "aiTemplate": {
@@ -1367,6 +1400,7 @@
   "operations": {
     "attention": "Attention",
     "detailTitle": "{{title}} details",
+    "evidence": "Evidence",
     "metrics": "Operational metrics",
     "narrative": {
       "causeUnavailable": "Cause is not established by the available evidence.",
@@ -1395,6 +1429,24 @@
     "reviewAll": "Review all",
     "reviewDetails": "Review details"
   },
+  "powerDashboards": {
+    "aiDrafter": {
+      "applyButton": "Apply to editor",
+      "badge": "Helix"
+    }
+  },
+  "powerGrafana": {
+    "aiDrafter": {
+      "applyButton": "Apply to editor",
+      "badge": "Helix"
+    }
+  },
+  "powerSql": {
+    "aiDrafter": {
+      "applyButton": "Apply to editor",
+      "badge": "Helix"
+    }
+  },
   "productPreferences": {
     "persona": {
       "label": "Workspace profile"
@@ -1416,6 +1468,11 @@
         "description": "Keep the most useful everyday vehicle information close at hand.",
         "label": "Owner"
       }
+    }
+  },
+  "pwa": {
+    "lowBandwidth": {
+      "on": "Always on"
     }
   },
   "range": {
@@ -1442,6 +1499,7 @@
       "title": "Elevation profile"
     },
     "map": {
+      "ariaLabel": "Trip route map",
       "noPositions": "No position data available for this drive",
       "section": "Route map and live position"
     },
@@ -1525,6 +1583,7 @@
     "aiSearch": {
       "badge": "Helix",
       "description": "Describe what you are looking for and the assistant will surface drives, charging sessions, and alerts that match — citing each entity by name.",
+      "inputLabel": "Search query",
       "searchButton": "Search with Helix",
       "title": "Search with natural language"
     }
@@ -1549,6 +1608,11 @@
     "gotoPrompt": "Go to…",
     "search": "Search shortcuts…",
     "title": "Keyboard shortcuts"
+  },
+  "signalExplorer": {
+    "aiFilter": {
+      "badge": "Helix"
+    }
   },
   "softwareUpdates": {
     "aiNarration": {
@@ -1622,11 +1686,15 @@
       "title": "Narrate the cabin-temperature impact"
     }
   },
+  "timeline": {
+    "label": "Timeline"
+  },
   "tirePressure": {
     "aiTrendReasoning": {
       "badge": "Helix",
       "description": "Ask Helix to explain the recent 30-day trend in this vehicle's four corner tire pressures — which tires are trending up, down, or stable, the most likely deterministic driver of any deviation (cold-weather correlation, all-tires-trending suggesting weather rather than puncture, single-corner slow-leak signature), and any actionable threshold crossing. The per-corner pressures and thresholds are the same the gauges below show; the narrator only explains them and is honest that the slope is a descriptive linear extrapolation, not a forecast.",
       "generateButton": "Narrate trend",
+      "noVehicleHint": "Pick a vehicle above to enable Helix.",
       "title": "Narrate the 30-day tire-pressure trend"
     }
   },
@@ -1868,6 +1936,7 @@
       "badge": "Helix",
       "description": "Ask Helix to explain the deterministic vampire-drain signal — the recent average / worst idle-drain rate, the most-correlated per-event driver (Sentry, climate, long park), and whether the recent rate is in line with the typical fleet. The numbers are the same the cards below show; the narrator only explains them and surfaces the inference's correlational nature honestly.",
       "generateButton": "Narrate drain",
+      "noVehicleHint": "Pick a vehicle above to enable Helix.",
       "title": "Explain the recent vampire drain"
     }
   },

@@ -49,7 +49,8 @@
       "clear": "Clear filters",
       "eventType": "Event type",
       "searchPlaceholder": "Search filename or notes…",
-      "source": "Source folder"
+      "source": "Source folder",
+      "searchLabel": "Search"
     },
     "import": {
       "cta": "Import {{count}} clip(s)",
@@ -495,6 +496,19 @@
       "loading": "Loading statistics"
     }
   },
+  "filters": {
+    "activeLabel": "Active filters",
+    "clearAll": "Clear all",
+    "clearedAll": "All filters cleared",
+    "moreCount": "+{{count}} more",
+    "moreLabel": "Additional active filters",
+    "removeAria": "Remove filter {{label}}",
+    "removed": "Filter removed",
+    "sheetActiveCount": "{{count}} active",
+    "sheetDone": "Done",
+    "sheetTitle": "Filters",
+    "sheetTrigger": "Filters"
+  },
   "freshness": {
     "noData": "No recent data",
     "offline": "Offline",
@@ -557,6 +571,7 @@
   "operations": {
     "attention": "Attention",
     "detailTitle": "{{title}} details",
+    "evidence": "Evidence",
     "metrics": "Operational metrics",
     "narrative": {
       "causeUnavailable": "Cause is not established by the available evidence.",
@@ -606,6 +621,11 @@
         "description": "Keep the most useful everyday vehicle information close at hand.",
         "label": "Owner"
       }
+    }
+  },
+  "pwa": {
+    "lowBandwidth": {
+      "on": "Always on"
     }
   },
   "rbac": {
@@ -684,6 +704,9 @@
     "removed": "Removed {{tag}}",
     "tagsList": "Tags: {{tags}}",
     "tagsNone": "No tags yet"
+  },
+  "timeline": {
+    "label": "Timeline"
   },
   "toast": {
     "admin": {

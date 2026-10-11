@@ -19,6 +19,7 @@
       "title": "Tesla account disconnected",
       "body": "Reconnect to resume live data and commands.",
       "cta": "Reconnect"
-    }
+    },
+    "statusUnavailable": "Tesla account status unavailable."
   }
 }

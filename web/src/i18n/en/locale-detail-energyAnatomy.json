@@ -1,0 +1,7 @@
+{
+  "energyAnatomy": {
+    "battery": "Battery",
+    "driveCount": "{{count}} drives",
+    "browseDrives": "Browse drives"
+  }
+}

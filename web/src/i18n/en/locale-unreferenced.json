@@ -277,6 +277,7 @@
   "events": "events",
   "fahrenheit": "Fahrenheit",
   "found": "found",
+  "free": "Free",
   "healthy": "healthy",
   "kW": "kW",
   "kWh": "kWh",
@@ -342,6 +343,7 @@
     "offlineDetail": "We'll retry automatically when your connection returns.",
     "retryWhenOnline": "Retry when online"
   },
+  "quickView": "Quick view charging session",
   "records": "records",
   "saved": "saved",
   "selectSession": "Select charging session",

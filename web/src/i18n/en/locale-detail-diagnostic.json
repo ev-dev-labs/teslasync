@@ -27,6 +27,11 @@
       "ok": "OK",
       "warn": "Warning",
       "fail": "Fail"
+    },
+    "summary": {
+      "warnings": "Warnings",
+      "failures": "Failures",
+      "totalTime": "Total time"
     }
   }
 }

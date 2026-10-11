@@ -59,7 +59,8 @@
     "noGps": "No GPS data available for this drive. Trip replay requires valid position coordinates from Fleet Telemetry.",
     "map": {
       "noPositions": "No position data available for this drive",
-      "section": "Route map and live position"
+      "section": "Route map and live position",
+      "ariaLabel": "Trip route map"
     },
     "currentStats": "Current position stats",
     "stat": {

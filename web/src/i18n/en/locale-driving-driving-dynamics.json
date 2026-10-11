@@ -367,6 +367,7 @@
     "cruiseSetSpeed": "Cruise set speed",
     "currentSpeed": "Current speed",
     "distance": "Distance",
+    "drive": "Drive",
     "driveAnalytics": "Drive analytics",
     "drives": "Drives",
     "evidence": {
@@ -459,6 +460,7 @@
       "title": "Powertrain summary"
     },
     "regen": "Regen",
+    "reverse": "Reverse",
     "review": {
       "context": "Beyond this ride",
       "contextDescription": "Vehicle coaching covers the last 30 days. Speed and power analytics cover loaded trips in the selected date range, plus any current drive. Neither is a score for this ride.",
@@ -493,6 +495,9 @@
     "rpmHistory": "Motor RPM history",
     "rpmHistoryDesc": "Front and rear motor RPM over time",
     "rpmRear": "Rear RPM",
+    "section": {
+      "trip": "Trip review"
+    },
     "shiftState": "Shift state",
     "speedDistDesc": "Drives grouped by average speed",
     "speedDistribution": "Speed distribution",
@@ -621,6 +626,7 @@
   "operations": {
     "attention": "Attention",
     "detailTitle": "{{title}} details",
+    "evidence": "Evidence",
     "metrics": "Operational metrics",
     "narrative": {
       "causeUnavailable": "Cause is not established by the available evidence.",
@@ -648,6 +654,11 @@
     "noAttention": "No current attention items.",
     "reviewAll": "Review all",
     "reviewDetails": "Review details"
+  },
+  "pwa": {
+    "lowBandwidth": {
+      "on": "Always on"
+    }
   },
   "rbac": {
     "toasts": {
@@ -720,6 +731,9 @@
     "unknown": {
       "desc": "Source layer unknown."
     }
+  },
+  "timeline": {
+    "label": "Timeline"
   },
   "toast": {
     "admin": {

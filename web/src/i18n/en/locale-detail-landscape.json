@@ -1,0 +1,9 @@
+{
+  "landscape": {
+    "mph": "mph",
+    "kmh": "km/h",
+    "whPerMi": "Wh/mi",
+    "whPerKm": "Wh/km",
+    "browseDrives": "Browse drives"
+  }
+}

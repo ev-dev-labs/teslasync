@@ -335,9 +335,11 @@
     "efficiency": "Efficiency",
     "gradeALine": "A",
     "gradeLabel": "Grade: {{grade}}",
+    "gradeTitle": "Grade",
     "highestSpeed": "Highest max speed",
     "historySource": "Drive history",
     "historyUnavailable": "Drive history is unavailable; the server drive score remains visible",
+    "kpis": "Key metrics",
     "noDrives": "No drives available",
     "noPeriodStats": "No weekly/monthly averages available yet",
     "ofDrives": "of drives",
@@ -350,6 +352,7 @@
     "periodStats": "Period statistics",
     "powerRange": "Power range",
     "ratedAPlus": "Rated A+/A",
+    "resource": "drive",
     "score": "Score",
     "scoreDistribution": "Score distribution",
     "scoreTrend": "Score trend",
@@ -504,6 +507,7 @@
   "operations": {
     "attention": "Attention",
     "detailTitle": "{{title}} details",
+    "evidence": "Evidence",
     "metrics": "Operational metrics",
     "narrative": {
       "causeUnavailable": "Cause is not established by the available evidence.",
@@ -531,6 +535,11 @@
     "noAttention": "No current attention items.",
     "reviewAll": "Review all",
     "reviewDetails": "Review details"
+  },
+  "pwa": {
+    "lowBandwidth": {
+      "on": "Always on"
+    }
   },
   "rbac": {
     "toasts": {
@@ -603,6 +612,9 @@
     "unknown": {
       "desc": "Source layer unknown."
     }
+  },
+  "timeline": {
+    "label": "Timeline"
   },
   "toast": {
     "admin": {

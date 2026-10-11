@@ -145,10 +145,14 @@
         "severity": "Severity",
         "status": "Status",
         "read": "Read",
-        "unread": "Unread"
+        "unread": "Unread",
+        "inspect": "Inspect"
       },
       "detail": {
-        "title": "Notification details"
+        "title": "Notification details",
+        "sent": "Sent",
+        "scheduled": "Scheduled",
+        "milliseconds": "{{value}} ms"
       },
       "legacyDelivery": "Legacy channel delivery (original source not recorded)",
       "countError": "Could not load the notification count: {{error}}",
@@ -255,6 +259,12 @@
         "suggestButton": "Suggest categories",
         "applyButton": "Apply categories as filter",
         "previewLabel": "Proposed categories (review before applying):"
+      },
+      "delivery": {
+        "triggered": "Triggered",
+        "pending": "Pending",
+        "sent": "Sent",
+        "failed": "Failed"
       }
     },
     "bulkRead": {
@@ -362,8 +372,13 @@
       "testHint": "Save then click \"Send test\" to verify the configuration.",
       "providers": {
         "subtitle": "{{inUse}} of {{total}} provider types in use",
-        "configured": "{{count}} configured"
-      }
+        "configured": "{{count}} configured",
+        "notConfigured": "Not configured"
+      },
+      "deleteAria": "Delete {{name}}",
+      "resource": "Channels",
+      "title": "Notification channels",
+      "listTitle": "Delivery channels"
     },
     "alertStudio": {
       "title": "Alert studio",
@@ -415,7 +430,8 @@
         "kind": {
           "redundant_duplicate": "Redundant duplicate",
           "overlapping_threshold": "Overlapping threshold"
-        }
+        },
+        "ruleLabel": "Rule"
       },
       "rules": {
         "untitled": "Untitled",
@@ -509,7 +525,10 @@
         "testMessagePlaceholder": "Battery at {{BatteryLevel}}%",
         "kindLabel": "Rule type",
         "previewRetained": "The previous preview remains visible; it may not reflect the current draft.",
-        "presetTagFilter": "Filter message presets by tag"
+        "presetTagFilter": "Filter message presets by tag",
+        "includeTitleLabel": "Include title in notifications",
+        "previewLabel": "Preview",
+        "presetAllTag": "All"
       },
       "signalTypes": {
         "numeric": "Numeric",
@@ -717,7 +736,13 @@
       }
     },
     "device": {
-      "retainedVehicleIds": "Selected vehicle IDs remain saved while their details are unavailable: {{ids}}"
+      "retainedVehicleIds": "Selected vehicle IDs remain saved while their details are unavailable: {{ids}}",
+      "scope": {
+        "all": "All vehicles"
+      },
+      "heading": "This device",
+      "categories": "Categories",
+      "quietStart": "From"
     },
     "archived": {
       "summary": {
@@ -727,7 +752,11 @@
         "lastArchived": "Last archived",
         "resource": "archived notifications",
         "empty": "No archived notifications yet",
-        "cta": "Go to inbox"
+        "cta": "Go to inbox",
+        "critical": "Critical",
+        "warnings": "Warnings",
+        "info": "Info",
+        "unread": "Unread"
       }
     }
   }

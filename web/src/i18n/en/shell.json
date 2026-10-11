@@ -48,7 +48,8 @@
       "streamConnected": "{{scope}} connected",
       "streamReconnecting": "{{scope}} reconnecting",
       "streamDisconnected": "{{scope}} disconnected",
-      "streamUpdated": "{{scope}} updated"
+      "streamUpdated": "{{scope}} updated",
+      "saved": "{{label}} saved"
     }
   },
   "alerts": {
@@ -331,7 +332,15 @@
     "timestamp": "Timestamp",
     "unavailable": "Unavailable",
     "noDataAvailable": "No data available",
-    "dash": "—"
+    "dash": "—",
+    "opensInNewTab": "(opens in a new tab)",
+    "error": "Error",
+    "allTime": "All time",
+    "units": {
+      "meterShort": "m"
+    },
+    "clearFilters": "Clear filters",
+    "notAvailable": "N/A"
   },
   "compat": {
     "banner": {
@@ -726,6 +735,9 @@
     "reveal": "Reveal value",
     "hide": "Hide value",
     "copy": "Copy value"
+  },
+  "modal": {
+    "close": "Close"
   },
   "nav": {
     "today": "today",
@@ -1261,7 +1273,14 @@
       "heading": "Cardinal direction and rounded degrees retain the reported heading.",
       "description": "Route distance, ETA and delay remain separate from history-derived speed and projected arrival energy.",
       "presenceDescription": "GPS, heading and reported home/work presence retain their own known and missing states."
-    }
+    },
+    "suggest": {
+      "charging": "Charging now",
+      "alerts": "{{count}} need attention"
+    },
+    "vehicleCount": "{{count}} vehicles",
+    "suggested": "Suggested",
+    "analyticsDesc": "Fleet insights"
   },
   "notFound": {
     "title": "Page not found",
@@ -1716,6 +1735,9 @@
     "wholeHomeEnergy": "Whole home energy",
     "yearReview": "Year review"
   },
+  "runtimeHealth": {
+    "systemStatus": "System status"
+  },
   "search": {
     "history": {
       "clear": "Clear history",
@@ -1736,6 +1758,9 @@
       "endsIn": "Ends in {{time}}",
       "maintenanceTitle": "Scheduled maintenance"
     }
+  },
+  "serviceStatus": {
+    "unknown": "unknown"
   },
   "session": {
     "appTokenExpired": {
@@ -2098,7 +2123,11 @@
       "compareHint": "Adds comparison variance to supported views.",
       "activeRange": "{{start}} to {{end}}",
       "rangeWithComparison": "{{range}} · Compare",
-      "comparisonActive": "Comparison active: previous matching period"
+      "comparisonActive": "Comparison active: previous matching period",
+      "close": "Close view settings",
+      "loadingDensity": "Loading display settings…",
+      "unavailableDensity": "Display settings unavailable. Retry to change density.",
+      "retry": "Retry"
     }
   },
   "avatar": {
@@ -2111,17 +2140,13 @@
     "threshold": {
       "defaultItem": "items",
       "message": "Need at least {{threshold}} {{noun}} to show meaningful patterns. You have {{current}} so far."
-    }
+    },
+    "generic": "No data available yet."
   },
-  "filters": {
-    "reset": "Reset filters",
-    "activeLabel": "Active filters",
-    "clearAll": "Clear all",
-    "clearedAll": "All filters cleared",
-    "moreCount": "+{{count}} more",
-    "moreLabel": "Additional active filters",
-    "removed": "Filter removed",
-    "removeAria": "Remove filter {{label}}"
+  "feedbackTriage": {
+    "aiAdvisor": {
+      "badge": "Helix"
+    }
   },
   "metricCard": {
     "moreInfoAbout": "More info about {{label}}"
@@ -2138,6 +2163,14 @@
       "delete": "Delete",
       "ack": "Acknowledge",
       "dismiss": "Dismiss"
+    }
+  },
+  "problemReport": {
+    "title": "Report a problem",
+    "context": {
+      "page": "Page",
+      "appVersion": "App version",
+      "browser": "Browser"
     }
   },
   "progressRing": {
@@ -2163,15 +2196,8 @@
     "selectCategory": "Select all {{category}} signals",
     "setCategoryInterval": "Set interval for all {{category}} signals"
   },
-  "signalQuery": {
-    "from": "From",
-    "to": "To",
-    "quickRange": "Quick range",
-    "query": "Query",
-    "rows": "Rows",
-    "preset": {
-      "aria": "{{label}} time range"
-    }
+  "smallMultiples": {
+    "noData": "No data"
   },
   "sortControl": {
     "ascending": "Ascending",
@@ -2186,6 +2212,9 @@
       "decreased": "decreased",
       "unchanged": "no change"
     }
+  },
+  "transitionArrow": {
+    "label": "{{from}} to {{to}}"
   },
   "vehicle": "vehicle",
   "vehicleSelect": {

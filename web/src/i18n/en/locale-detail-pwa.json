@@ -24,6 +24,9 @@
       "cachedUnknown": "Showing cached data. The capture time is unknown — treat it as stale.",
       "offlineNoData": "You're offline and nothing is cached for this view.",
       "regionLabel": "Cached data disclosure"
+    },
+    "lowBandwidth": {
+      "on": "Always on"
     }
   }
 }

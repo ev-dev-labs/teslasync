@@ -655,7 +655,8 @@
     },
     "filterLabel": {
       "search": "Search"
-    }
+    },
+    "searchPlaceholder": "Search by action, resource, or details…"
   },
   "notificationBurnRate": {
     "title": "Notification burn rate",
@@ -950,6 +951,17 @@
       "empty": "No recent activity in this window."
     }
   },
+  "ai": {
+    "common": {
+      "errorUnknown": "unknown"
+    },
+    "confirm": {
+      "cancel": "Cancel"
+    },
+    "limit": {
+      "retry": "Retry"
+    }
+  },
   "alerts": {
     "timeline": {
       "empty": "No events yet",
@@ -963,6 +975,7 @@
         "badge": "Helix",
         "description": "Get a short, Helix-written recap of your week from the digest data above.",
         "generateButton": "Generate narration",
+        "noVehicleHint": "Pick a vehicle to enable Helix narration.",
         "title": "Helix narration"
       }
     }
@@ -1480,6 +1493,19 @@
       "loading": "Loading statistics"
     }
   },
+  "filters": {
+    "activeLabel": "Active filters",
+    "clearAll": "Clear all",
+    "clearedAll": "All filters cleared",
+    "moreCount": "+{{count}} more",
+    "moreLabel": "Additional active filters",
+    "removeAria": "Remove filter {{label}}",
+    "removed": "Filter removed",
+    "sheetActiveCount": "{{count}} active",
+    "sheetDone": "Done",
+    "sheetTitle": "Filters",
+    "sheetTrigger": "Filters"
+  },
   "fleetOps": {
     "brief": {
       "refreshBlocked": "Refresh paused"
@@ -1517,11 +1543,13 @@
       "radiusLabel": "Radius",
       "rejectedLabel": "Proposal rejected by validator",
       "suggestButton": "Suggest geofence",
-      "title": "Suggest a geofence for this location"
+      "title": "Suggest a geofence for this location",
+      "unnamed": "(unnamed)"
     }
   },
   "helix": {
     "ariaLabel": "Helix",
+    "askHelix": "Ask Helix",
     "badge": "Helix",
     "evidence": {
       "gathering": "Gathering",
@@ -1680,6 +1708,7 @@
           "redundant_duplicate": "Redundant duplicate"
         },
         "reviewButton": "Review rule",
+        "ruleLabel": "Rule",
         "title": "Detect cross-rule conflicts"
       },
       "aiTemplate": {
@@ -1753,6 +1782,7 @@
         "escalationHint": "Only repeat-mode rules can escalate. The escalated severity must be higher than the base severity.",
         "escalationSeverityLabel": "Escalated severity",
         "escalationSeverityPlaceholder": "Select severity…",
+        "includeTitleLabel": "Include title in notifications",
         "kindLabel": "Rule type",
         "maxFiresHint": "Only applies to repeat-mode rules. Once-mode already caps at 1 per resolution.",
         "maxFiresLabel": "Max alerts before condition resolves",
@@ -1766,7 +1796,9 @@
         "noSignalTitle": "Choose a signal",
         "numericValueLabel": "Numeric value",
         "operatorLabel": "Operator",
+        "presetAllTag": "All",
         "presetTagFilter": "Filter message presets by tag",
+        "previewLabel": "Preview",
         "previewRetained": "The previous preview remains visible; it may not reflect the current draft.",
         "severityLabel": "Severity",
         "signalNameLabel": "Signal",
@@ -1871,13 +1903,17 @@
     },
     "archived": {
       "summary": {
+        "critical": "Critical",
         "cta": "Go to inbox",
         "empty": "No archived notifications yet",
+        "info": "Info",
         "label": "Archived summary",
         "lastArchived": "Last archived",
         "recentScope": "Latest 50 archived entries · all time",
         "resource": "archived notifications",
-        "total": "Total archived"
+        "total": "Total archived",
+        "unread": "Unread",
+        "warnings": "Warnings"
       }
     },
     "browser": {
@@ -1899,6 +1935,7 @@
       "add": "Add channel",
       "addTitle": "Add channel",
       "configLabel": "Configuration",
+      "deleteAria": "Delete {{name}}",
       "deleteFailed": "Failed to delete channel",
       "deleted": "Channel deleted",
       "disabled": "Disabled",
@@ -1911,13 +1948,16 @@
       "fields": {
         "signingSecret": "Signing secret"
       },
+      "listTitle": "Delivery channels",
       "nameLabel": "Channel name",
       "namePlaceholderPrefix": "My",
       "nameRequired": "Name is required",
       "providers": {
         "configured": "{{count}} configured",
+        "notConfigured": "Not configured",
         "subtitle": "{{inUse}} of {{total}} provider types in use"
       },
+      "resource": "Channels",
       "test": "Test connection",
       "testFailed": "Test failed",
       "testHint": "Save then click \"Send test\" to verify the configuration.",
@@ -1925,13 +1965,20 @@
       "testSuccess": "Test notification sent successfully!",
       "testSuccessShort": "Test sent!",
       "testing": "Testing…",
+      "title": "Notification channels",
       "toggleFailed": "Failed to toggle channel",
       "toggledOff": "Channel disabled",
       "toggledOn": "Channel enabled",
       "typeLabel": "Channel type"
     },
     "device": {
-      "retainedVehicleIds": "Selected vehicle IDs remain saved while their details are unavailable: {{ids}}"
+      "categories": "Categories",
+      "heading": "This device",
+      "quietStart": "From",
+      "retainedVehicleIds": "Selected vehicle IDs remain saved while their details are unavailable: {{ids}}",
+      "scope": {
+        "all": "All vehicles"
+      }
     },
     "group": {
       "collapse": "Hide similar",
@@ -2036,6 +2083,7 @@
         "unknownSelection": "{{count}} selected · {{loaded}} loaded notifications · total unavailable"
       },
       "columns": {
+        "inspect": "Inspect",
         "message": "Message",
         "read": "Read",
         "received": "Received",
@@ -2048,7 +2096,16 @@
       },
       "countError": "Could not load the notification count: {{error}}",
       "countLabel": "{{count}} notifications",
+      "delivery": {
+        "failed": "Failed",
+        "pending": "Pending",
+        "sent": "Sent",
+        "triggered": "Triggered"
+      },
       "detail": {
+        "milliseconds": "{{value}} ms",
+        "scheduled": "Scheduled",
+        "sent": "Sent",
         "title": "Notification details"
       },
       "empty": {
@@ -2295,6 +2352,7 @@
     },
     "attention": "Attention",
     "detailTitle": "{{title}} details",
+    "evidence": "Evidence",
     "metrics": "Operational metrics",
     "narrative": {
       "causeUnavailable": "Cause is not established by the available evidence.",
@@ -2323,6 +2381,24 @@
     "reviewAll": "Review all",
     "reviewDetails": "Review details"
   },
+  "powerDashboards": {
+    "aiDrafter": {
+      "applyButton": "Apply to editor",
+      "badge": "Helix"
+    }
+  },
+  "powerGrafana": {
+    "aiDrafter": {
+      "applyButton": "Apply to editor",
+      "badge": "Helix"
+    }
+  },
+  "powerSql": {
+    "aiDrafter": {
+      "applyButton": "Apply to editor",
+      "badge": "Helix"
+    }
+  },
   "productPreferences": {
     "persona": {
       "label": "Workspace profile"
@@ -2346,10 +2422,19 @@
       }
     }
   },
+  "pwa": {
+    "lowBandwidth": {
+      "on": "Always on"
+    }
+  },
   "quietHours": {
     "addWindow": "Add window",
     "bypassLabel": "Always allow:",
     "delete": "Delete",
+    "deleteConfirm": {
+      "message": "Notifications will no longer be deferred during this window. This cannot be undone.",
+      "title": "Delete this quiet-hours window?"
+    },
     "disabled": "Disabled",
     "edit": "Edit",
     "empty": "No quiet-hours windows yet. Add one to defer non-critical notifications during sleep or meetings.",
@@ -2370,6 +2455,7 @@
       "editTitle": "Edit window",
       "enabled": "Enabled",
       "end": "End",
+      "saving": "Saving…",
       "start": "Start",
       "timezone": "Timezone (IANA)",
       "update": "Update",
@@ -2383,6 +2469,7 @@
     },
     "subtitle": "Defer non-critical notifications during sleep, meetings, or other time-of-day windows.",
     "title": "Quiet hours / do-not-disturb",
+    "unavailable": "Quiet-hours windows unavailable.",
     "weekday": {
       "fri": "Fri",
       "mon": "Mon",
@@ -2462,6 +2549,7 @@
     "aiSearch": {
       "badge": "Helix",
       "description": "Describe what you are looking for and the assistant will surface drives, charging sessions, and alerts that match — citing each entity by name.",
+      "inputLabel": "Search query",
       "searchButton": "Search with Helix",
       "title": "Search with natural language"
     }
@@ -2471,7 +2559,8 @@
       "badge": "Show unread count in browser tab",
       "flash": "Flash tab title on critical alerts",
       "heading": "Browser tab signals",
-      "hint": "Adds a \"(N)\" prefix and favicon dot when there are unread notifications, and mirrors the count onto the installed app icon while the app is open where supported. Critical alerts briefly flash \"(!) ALERT\" when the tab is in the background."
+      "hint": "Adds a \"(N)\" prefix and favicon dot when there are unread notifications, and mirrors the count onto the installed app icon while the app is open where supported. Critical alerts briefly flash \"(!) ALERT\" when the tab is in the background.",
+      "saving": "Saving…"
     }
   },
   "sharing": {
@@ -2494,6 +2583,11 @@
     "gotoPrompt": "Go to…",
     "search": "Search shortcuts…",
     "title": "Keyboard shortcuts"
+  },
+  "signalExplorer": {
+    "aiFilter": {
+      "badge": "Helix"
+    }
   },
   "softwareUpdates": {
     "aiNarration": {
@@ -2564,11 +2658,15 @@
       "title": "Narrate the cabin-temperature impact"
     }
   },
+  "timeline": {
+    "label": "Timeline"
+  },
   "tirePressure": {
     "aiTrendReasoning": {
       "badge": "Helix",
       "description": "Ask Helix to explain the recent 30-day trend in this vehicle's four corner tire pressures — which tires are trending up, down, or stable, the most likely deterministic driver of any deviation (cold-weather correlation, all-tires-trending suggesting weather rather than puncture, single-corner slow-leak signature), and any actionable threshold crossing. The per-corner pressures and thresholds are the same the gauges below show; the narrator only explains them and is honest that the slope is a descriptive linear extrapolation, not a forecast.",
       "generateButton": "Narrate trend",
+      "noVehicleHint": "Pick a vehicle above to enable Helix.",
       "title": "Narrate the 30-day tire-pressure trend"
     }
   },
@@ -2851,6 +2949,7 @@
       "badge": "Helix",
       "description": "Ask Helix to explain the deterministic vampire-drain signal — the recent average / worst idle-drain rate, the most-correlated per-event driver (Sentry, climate, long park), and whether the recent rate is in line with the typical fleet. The numbers are the same the cards below show; the narrator only explains them and surfaces the inference's correlational nature honestly.",
       "generateButton": "Narrate drain",
+      "noVehicleHint": "Pick a vehicle above to enable Helix.",
       "title": "Explain the recent vampire drain"
     }
   },

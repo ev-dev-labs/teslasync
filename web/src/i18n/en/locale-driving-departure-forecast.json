@@ -488,6 +488,7 @@
       "loading": "Loading source",
       "retained": "Retained source",
       "returned": "Returned evidence",
+      "selectVehicle": "Select a vehicle",
       "unavailable": "Source unavailable"
     }
   },
@@ -593,6 +594,7 @@
   "operations": {
     "attention": "Attention",
     "detailTitle": "{{title}} details",
+    "evidence": "Evidence",
     "metrics": "Operational metrics",
     "narrative": {
       "causeUnavailable": "Cause is not established by the available evidence.",
@@ -620,6 +622,11 @@
     "noAttention": "No current attention items.",
     "reviewAll": "Review all",
     "reviewDetails": "Review details"
+  },
+  "pwa": {
+    "lowBandwidth": {
+      "on": "Always on"
+    }
   },
   "rbac": {
     "toasts": {
@@ -692,6 +699,9 @@
     "unknown": {
       "desc": "Source layer unknown."
     }
+  },
+  "timeline": {
+    "label": "Timeline"
   },
   "toast": {
     "admin": {

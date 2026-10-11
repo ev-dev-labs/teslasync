@@ -13,7 +13,14 @@
         "eyebrow": "Browser privacy",
         "title": "Browser-local privacy",
         "description": "Manage local page history and your consent choice alongside the deployment policy."
-      }
+      },
+      "kpi": {
+        "policyRequired": "Required",
+        "policyOptional": "Optional",
+        "scopeValue": "This browser"
+      },
+      "title": "Privacy",
+      "controlsAria": "Privacy controls"
     },
     "sessions": {
       "breakdownEmpty": "No sessions to summarize yet.",
@@ -49,7 +56,19 @@
       "subtitle": "Devices currently signed in to TeslaSync. Revoke individual sessions or sign out everywhere else.",
       "summaryAria": "Session summary",
       "title": "Active sessions",
-      "unknownDevice": "Unknown device"
+      "unknownDevice": "Unknown device",
+      "columns": {
+        "device": "Device",
+        "ip": "IP address",
+        "createdAt": "Signed in",
+        "lastSeenAt": "Last seen"
+      },
+      "current": "This device",
+      "row": {
+        "revokeAria": "Sign out {{device}}",
+        "revoke": "Sign out"
+      },
+      "empty": "No active sessions for this account."
     },
     "twoFactor": {
       "contextAria": "Two-factor apps and recovery",
@@ -62,7 +81,10 @@
     "restoreConfirms": {
       "title": "Confirmation prompts",
       "restoreAll": "Restore all",
-      "restore": "Restore"
+      "restore": "Restore",
+      "description": "Re-enable “Don’t ask again” prompts you previously silenced.",
+      "empty": "No silenced prompts. Tick “Don’t ask again” on a confirmation dialog to silence it.",
+      "restoreOne": "Restore {{name}}"
     }
   },
   "ai": {
@@ -365,7 +387,19 @@
         "sample": "Recent call: {{provider}} / {{model}}",
         "sampleLoading": "Loading recent call attribution…",
         "noSample": "No recent provider/model sample for this feature."
+      },
+      "costCap": {
+        "loading": "Loading…"
       }
+    },
+    "limit": {
+      "retry": "Retry"
+    },
+    "common": {
+      "errorUnknown": "unknown"
+    },
+    "confirm": {
+      "cancel": "Cancel"
     }
   },
   "fleetSetup": {
@@ -405,8 +439,110 @@
     "tokenUnavailable": "Fleet access-token status unavailable.",
     "progress": {
       "token": {
-        "title": "Keep the Fleet token fresh"
-      }
+        "title": "Keep the Fleet token fresh",
+        "body": "A valid access token is required for subscribe. TeslaSync refreshes it in the background.",
+        "cta": "Refresh token"
+      },
+      "connect": {
+        "title": "Connect Tesla account",
+        "body": "Authorize TeslaSync. The refresh token stays on the server and is renewed automatically.",
+        "cta": "Connect now"
+      },
+      "subscribe": {
+        "title": "Subscribe telemetry",
+        "body": "Tell Tesla which VIN should stream to this host. Empty host/CA uses FLEET_TELEMETRY_HOST and Let’s Encrypt.",
+        "cta": "Choose a vehicle"
+      },
+      "stream": {
+        "title": "Confirm streaming",
+        "body": "The car must be awake. First packets usually arrive on the next drive or charge session.",
+        "cta": "Check stream"
+      },
+      "title": "Setup progress",
+      "subtitle": "{{done}} / {{total}} complete"
+    },
+    "guide": {
+      "step1": {
+        "title": "Connect Tesla",
+        "body": "Sign in with Tesla OAuth. TeslaSync stores a refresh token and renews the access token automatically — you should not paste tokens by hand."
+      },
+      "step2": {
+        "title": "Point Tesla at this host",
+        "body": "Fleet Telemetry needs a public hostname with a TLS certificate Tesla trusts (Let’s Encrypt is the default CA). Partner registration also publishes your EC public key at /.well-known/appspecific/com.tesla.3p.public-key.pem."
+      },
+      "step3": {
+        "title": "Subscribe the vehicle",
+        "body": "Call Tesla’s fleet_telemetry_config for the selected VIN. That tells the car (via Tesla) where to stream, which signals to send, and which CA to trust for your server."
+      },
+      "step4": {
+        "title": "Wait for the car to wake",
+        "body": "Streaming starts when the vehicle is awake — usually the next drive or charge. Parked and asleep cars will not push telemetry. Virtual key pairing is for commands, not this stream."
+      },
+      "title": "How fleet setup works",
+      "subtitle": "Connect → domain TLS → subscribe VIN → stream on wake."
+    },
+    "readiness": {
+      "title": "Domain & certificates",
+      "subtitle": "Tesla verifies your telemetry host with TLS, and your partner key at a well-known URL.",
+      "unavailable": "Partner public-key status unavailable.",
+      "keyOn": "Public key stored",
+      "keyOff": "Public key not stored",
+      "wellKnown": "Well-known path",
+      "fingerprint": "Fingerprint",
+      "ca": "Default telemetry CA",
+      "body": "Subscribe leaves hostname and CA empty on purpose: TeslaSync sends FLEET_TELEMETRY_HOST (port 4443) and the Let’s Encrypt root. Override those only if your telemetry endpoint uses a different certificate.",
+      "advancedTitle": "Partner key vs virtual key",
+      "advancedBody": "The well-known PEM is for Tesla partner registration and virtual-key pairing. Telemetry streaming does not wait on a phone key pair. Pairing is only required if you want TeslaSync to send vehicle commands.",
+      "openDevTools": "Open Fleet API tools"
+    },
+    "stream": {
+      "healthy": "Healthy",
+      "stale": "Stale",
+      "unknown": "Waiting",
+      "title": "Streaming",
+      "subtitle": "Fleet Telemetry only flows while the vehicle is awake.",
+      "unavailable": "Telemetry status unavailable.",
+      "lastPacket": "Last telemetry",
+      "vehicles": "Vehicles seen",
+      "staleMessage": "Telemetry was seen before, but nothing arrived in the last 24 hours. Wake the car or start a drive.",
+      "waitingMessage": "No stream yet. After subscribe, Tesla delivers the first batch when the vehicle next wakes.",
+      "openSignals": "Open live signals",
+      "note": "Virtual key pairing is not part of this step. Use it later if you want TeslaSync to send commands."
+    },
+    "subscribe": {
+      "unnamed": "Vehicle",
+      "removeTitle": "Remove telemetry config?",
+      "removeBody": "Tesla will stop streaming this VIN to TeslaSync until you subscribe again.",
+      "removeConfirm": "Remove config",
+      "title": "Subscribe telemetry",
+      "subtitle": "Pick signals (or a preset), then tell Tesla which VIN should stream to this host.",
+      "vehicle": "Vehicle",
+      "vehiclesUnavailable": "Vehicle list unavailable.",
+      "needVehicle": "No vehicles yet. Sync vehicles after connecting Tesla.",
+      "placeholder": "Select a vehicle",
+      "currentHost": "Configured host",
+      "configEmpty": "No fleet_telemetry_config on this VIN yet.",
+      "configUnavailable": "Telemetry configuration unavailable.",
+      "currentPort": "Port",
+      "fields": "Fields",
+      "pickHint": "Pick a VIN to see whether Tesla already has a telemetry config for it.",
+      "configureSignals": "Configure signals",
+      "signalsHint": "Optional. Open the signal picker to choose fields and intervals. Leave empty to use TeslaSync’s default set.",
+      "wake": "Wake vehicle",
+      "ctaNamed": "Subscribe {{name}}",
+      "cta": "Subscribe selected vehicle",
+      "remove": "Remove config",
+      "wakeHint": "Wake the car so Tesla can apply the config. Asleep vehicles ignore fleet_telemetry_config until the next drive or charge.",
+      "errorsLabel": "Tesla telemetry errors",
+      "errorsEmpty": "No Tesla-side telemetry errors for this VIN.",
+      "errorsUnavailable": "Tesla telemetry error status unavailable.",
+      "errorUntitled": "Tesla telemetry error",
+      "errorNoDetail": "Tesla reported a telemetry error for this VIN.",
+      "advanced": "Override host, port, or CA",
+      "advancedHint": "Leave blank to use FLEET_TELEMETRY_HOST, port 4443, and the Let’s Encrypt root CA.",
+      "hostname": "Hostname",
+      "port": "Port",
+      "ca": "CA certificate (PEM)"
     }
   },
   "orders": {
@@ -468,7 +604,8 @@
       "bypass": "Always allow these severities through",
       "create": "Create",
       "update": "Update",
-      "cancel": "Cancel"
+      "cancel": "Cancel",
+      "saving": "Saving…"
     },
     "weekday": {
       "sun": "Sun",
@@ -491,7 +628,12 @@
       "timezoneRequired": "Timezone is required.",
       "weekdaysRequired": "Pick at least one weekday.",
       "bypassRequired": "Pick at least one severity."
-    }
+    },
+    "deleteConfirm": {
+      "title": "Delete this quiet-hours window?",
+      "message": "Notifications will no longer be deferred during this window. This cannot be undone."
+    },
+    "unavailable": "Quiet-hours windows unavailable."
   },
   "safetySettings": {
     "pageTitle": "Safety settings",
@@ -700,12 +842,15 @@
       "typedLabel": "Type DISABLE to confirm",
       "title": "Disable two-factor authentication?",
       "confirm": "Disable",
-      "cancel": "Keep TOTP enabled"
+      "cancel": "Keep TOTP enabled",
+      "message": "You will no longer be prompted for a TOTP code on the sudo step-up. Your backup codes will be invalidated."
     },
     "errors": {
       "codeLength": "Enter all 6 digits.",
       "invalidCode": "Code did not match. Try the next one.",
-      "verifyGeneric": "Verification failed."
+      "verifyGeneric": "Verification failed.",
+      "rateLimited": "Too many incorrect attempts. Try again in 15 minutes.",
+      "enrollmentExpired": "Enrollment expired. Close and start over."
     },
     "loading": "Loading two-factor settings…",
     "title": "Two-factor authentication",
@@ -723,7 +868,8 @@
     "actions": {
       "regenerate": "Regenerate backup codes",
       "disable": "Disable",
-      "enroll": "Enable TOTP"
+      "enroll": "Enable TOTP",
+      "enrollHint": "Compatible with Google Authenticator, 1Password, Bitwarden, Authy and other RFC 6238 clients."
     },
     "modal": {
       "enrollTitle": "Enable TOTP",
@@ -731,12 +877,16 @@
       "manualLabel": "Manual entry secret",
       "codeLabel": "Enter the 6-digit code from your app",
       "cancel": "Cancel",
-      "verify": "Verify and activate"
+      "verify": "Verify and activate",
+      "scanInstructions": "Scan the QR code with your authenticator app, or enter the secret manually."
     },
     "backupCodes": {
       "title": "Save your backup codes",
       "download": "Download .txt",
-      "done": "I saved them"
+      "done": "I saved them",
+      "warning": "These codes will not be shown again. Store them in a password manager. Each code can be used once if you lose access to your authenticator app.",
+      "close": "Close",
+      "fileHeader": "# TeslaSync TOTP backup codes — keep secret."
     },
     "brief": {
       "description": "Protection status, last verification and remaining recovery codes for this account. Enrollment and recovery controls remain unchanged.",
@@ -752,6 +902,74 @@
       "methodValue": "TOTP",
       "protection": "Protection",
       "unavailable": "Unavailable"
+    },
+    "copy": {
+      "manualHint": "Clipboard unavailable. Select the displayed text and copy it manually."
+    },
+    "openMode": {
+      "message": "Per-user TOTP requires forward-auth mode. Configure your reverse proxy to inject X-Forwarded-User then reload."
+    },
+    "subtitle": "TOTP codes from your authenticator app are required for the sudo step-up before destructive admin actions."
+  },
+  "typography": {
+    "familyHint": "Focus or hover to preview a font, then select it to use it everywhere.",
+    "searchFont": "Search {{kind}}",
+    "searchPlaceholder": "Search font families…",
+    "cardSample": "Aa 012345",
+    "noFonts": "No font families match your search.",
+    "leading": {
+      "label": "Line height",
+      "tight": "Tight",
+      "normal": "Normal",
+      "relaxed": "Relaxed"
+    },
+    "tracking": {
+      "label": "Letter spacing",
+      "tight": "Tight",
+      "normal": "Normal",
+      "wide": "Wide"
+    },
+    "weight": {
+      "label": "Heading weight",
+      "medium": "Medium",
+      "semibold": "Semibold",
+      "bold": "Bold"
+    },
+    "presets": {
+      "default": "Default",
+      "comfortable": "Comfortable",
+      "compact": "Compact",
+      "legible": "High legibility",
+      "label": "Reading presets"
+    },
+    "title": "Typography",
+    "subtitle": "Choose fonts and tune size, spacing, and weight — applied everywhere instantly.",
+    "uiFont": {
+      "label": "UI font",
+      "customAria": "Custom UI font stack",
+      "customPlaceholder": "e.g. 'Aptos', system-ui, sans-serif"
+    },
+    "monoFont": {
+      "label": "Monospace font",
+      "customAria": "Custom monospace font stack"
+    },
+    "webFontHelp": "Web fonts need an internet connection; system and installed custom fonts work offline.",
+    "scale": {
+      "label": "Text scale"
+    },
+    "reset": {
+      "help": "Restore the default font, size, and spacing.",
+      "action": "Reset to defaults"
+    },
+    "preview": {
+      "heading": "The quick brown fox jumps over the lazy dog",
+      "aria": "Typography preview",
+      "label": "Live preview",
+      "interface": "Interface & headings",
+      "body": "Sync your Tesla fleet, chart every drive, and read the numbers clearly in any theme.",
+      "data": "Data & code",
+      "tryText": "Try your own text",
+      "tryPlaceholder": "Type here to see your text in the preview"
     }
   },
   "achievements": {
@@ -1117,6 +1335,7 @@
         "badge": "Helix",
         "description": "Get a short, Helix-written recap of your week from the digest data above.",
         "generateButton": "Generate narration",
+        "noVehicleHint": "Pick a vehicle to enable Helix narration.",
         "title": "Helix narration"
       }
     }
@@ -1224,6 +1443,7 @@
     "export": {
       "busy": "Exporting…",
       "cta": "Export JSON",
+      "help": "Includes general settings, alert rules, geofences, and your quiet-hours windows. Tesla credentials and notification-channel secrets are NEVER exported.",
       "successDetail": "Saved to your downloads folder.",
       "successTitle": "Settings exported",
       "title": "Export settings"
@@ -1244,8 +1464,10 @@
       "errorPreview": "Failed to preview import.",
       "errorRead": "Failed to read the file.",
       "errorTooLarge": "File is too large (max 1 MB).",
+      "help": "Drop or pick a previously exported bundle. Existing items with the same name are updated; nothing is deleted.",
       "parsing": "Reading…",
       "previewHeader": "Previewing {{name}} ({{size}} bytes)",
+      "summary": "{{added}} added, {{updated}} updated, {{skipped}} unchanged",
       "title": "Import settings"
     },
     "section": {
@@ -1733,6 +1955,7 @@
     "noData": "No feature config data yet. Click refresh to fetch from Tesla.",
     "noMatch": "No features match your filters.",
     "refresh": "Refresh",
+    "retry": "Retry",
     "status": "Status",
     "subtitle": "Tesla account feature configuration",
     "title": "Feature flags"
@@ -1741,6 +1964,19 @@
     "statSkeleton": {
       "loading": "Loading statistics"
     }
+  },
+  "filters": {
+    "activeLabel": "Active filters",
+    "clearAll": "Clear all",
+    "clearedAll": "All filters cleared",
+    "moreCount": "+{{count}} more",
+    "moreLabel": "Additional active filters",
+    "removeAria": "Remove filter {{label}}",
+    "removed": "Filter removed",
+    "sheetActiveCount": "{{count}} active",
+    "sheetDone": "Done",
+    "sheetTitle": "Filters",
+    "sheetTrigger": "Filters"
   },
   "forms": {
     "unsavedSettings": "You have unsaved settings."
@@ -1773,12 +2009,17 @@
       "radiusLabel": "Radius",
       "rejectedLabel": "Proposal rejected by validator",
       "suggestButton": "Suggest geofence",
-      "title": "Suggest a geofence for this location"
+      "title": "Suggest a geofence for this location",
+      "unnamed": "(unnamed)"
     }
   },
   "helix": {
     "ariaLabel": "Helix",
+    "askHelix": "Ask Helix",
     "badge": "Helix",
+    "breadcrumb": {
+      "integrations": "Integrations"
+    },
     "brief": {
       "description": "Features and provider reflect the current draft; mode respects the saved off-mode guard. Spend is independently audited usage. Editing a draft does not save it.",
       "scope": "Current draft · spend today in UTC; these sources do not share a historical range",
@@ -1797,6 +2038,9 @@
       "tokens": "tokens",
       "unavailable": "Unavailable",
       "used": "Used"
+    },
+    "page": {
+      "title": "Helix"
     },
     "status": {
       "features": "Features enabled",
@@ -1920,6 +2164,7 @@
           "redundant_duplicate": "Redundant duplicate"
         },
         "reviewButton": "Review rule",
+        "ruleLabel": "Rule",
         "title": "Detect cross-rule conflicts"
       },
       "aiTemplate": {
@@ -1981,7 +2226,8 @@
   "onboarding": {
     "stepper": {
       "status": {
-        "current": "In progress"
+        "current": "In progress",
+        "done": "Completed"
       }
     }
   },
@@ -1994,6 +2240,7 @@
   "operations": {
     "attention": "Attention",
     "detailTitle": "{{title}} details",
+    "evidence": "Evidence",
     "metrics": "Operational metrics",
     "narrative": {
       "causeUnavailable": "Cause is not established by the available evidence.",
@@ -2021,6 +2268,24 @@
     "noAttention": "No current attention items.",
     "reviewAll": "Review all",
     "reviewDetails": "Review details"
+  },
+  "powerDashboards": {
+    "aiDrafter": {
+      "applyButton": "Apply to editor",
+      "badge": "Helix"
+    }
+  },
+  "powerGrafana": {
+    "aiDrafter": {
+      "applyButton": "Apply to editor",
+      "badge": "Helix"
+    }
+  },
+  "powerSql": {
+    "aiDrafter": {
+      "applyButton": "Apply to editor",
+      "badge": "Helix"
+    }
   },
   "productPreferences": {
     "contextualHelp": {
@@ -2084,6 +2349,11 @@
     },
     "title": "Workspace preferences"
   },
+  "pwa": {
+    "lowBandwidth": {
+      "on": "Always on"
+    }
+  },
   "range": {
     "aiPredict": {
       "badge": "Helix",
@@ -2116,6 +2386,7 @@
     "noData": "No region data yet. Click refresh to fetch from Tesla.",
     "refresh": "Refresh",
     "regionCode": "Region code",
+    "resourceName": "Region",
     "subtitle": "Tesla account region and Fleet API endpoint",
     "title": "Region & API"
   },
@@ -2159,6 +2430,7 @@
     "aiSearch": {
       "badge": "Helix",
       "description": "Describe what you are looking for and the assistant will surface drives, charging sessions, and alerts that match — citing each entity by name.",
+      "inputLabel": "Search query",
       "searchButton": "Search with Helix",
       "title": "Search with natural language"
     },
@@ -2211,7 +2483,8 @@
       },
       "fleet": {
         "setup": {
-          "desc": "Connect Tesla, keep the Fleet token fresh, subscribe telemetry on a vehicle, and confirm streaming."
+          "desc": "Connect Tesla, keep the Fleet token fresh, subscribe telemetry on a vehicle, and confirm streaming.",
+          "title": "Fleet setup"
         }
       },
       "gasPrice": {
@@ -2314,7 +2587,8 @@
       },
       "privacy": {
         "consentManage": {
-          "desc": "Re-grant, withdraw, or reset the cookie / analytics consent banner state for this browser."
+          "desc": "Re-grant, withdraw, or reset the cookie / analytics consent banner state for this browser.",
+          "title": "Cookies & analytics consent"
         },
         "recentPagesClear": {
           "desc": "Wipe the local list of pages used by the status bar and the Recent section in the command palette.",
@@ -2409,16 +2683,20 @@
           "title": "Help and release highlights"
         },
         "landing": {
-          "desc": "Choose the first page shown when TeslaSync opens."
+          "desc": "Choose the first page shown when TeslaSync opens.",
+          "title": "Preferred landing page"
         },
         "persona": {
-          "desc": "Prioritize navigation for an owner, fleet operator, analyst, or administrator."
+          "desc": "Prioritize navigation for an owner, fleet operator, analyst, or administrator.",
+          "title": "Workspace profile"
         },
         "range": {
-          "desc": "Choose the default time range used by global analysis controls."
+          "desc": "Choose the default time range used by global analysis controls.",
+          "title": "Default analysis window"
         },
         "vehicle": {
-          "desc": "Choose the vehicle used for the global scope on a fresh app load."
+          "desc": "Choose the vehicle used for the global scope on a fresh app load.",
+          "title": "Default active vehicle"
         }
       }
     }
@@ -2536,6 +2814,11 @@
     "search": "Search shortcuts…",
     "title": "Keyboard shortcuts"
   },
+  "signalExplorer": {
+    "aiFilter": {
+      "badge": "Helix"
+    }
+  },
   "softwareUpdates": {
     "aiNarration": {
       "badge": "Helix",
@@ -2616,6 +2899,7 @@
     "notConnected": "Not connected",
     "reauthorize": "Re-authorize",
     "refreshToken": "Refresh token",
+    "statusUnavailable": "Tesla account status unavailable.",
     "subtitle": "Connect your Tesla account to sync vehicles and data",
     "syncVehicles": "Sync vehicles",
     "synced": "Synced {{count}} vehicle(s).",
@@ -2664,11 +2948,15 @@
     },
     "title": "Appearance"
   },
+  "timeline": {
+    "label": "Timeline"
+  },
   "tirePressure": {
     "aiTrendReasoning": {
       "badge": "Helix",
       "description": "Ask Helix to explain the recent 30-day trend in this vehicle's four corner tire pressures — which tires are trending up, down, or stable, the most likely deterministic driver of any deviation (cold-weather correlation, all-tires-trending suggesting weather rather than puncture, single-corner slow-leak signature), and any actionable threshold crossing. The per-corner pressures and thresholds are the same the gauges below show; the narrator only explains them and is honest that the slope is a descriptive linear extrapolation, not a forecast.",
       "generateButton": "Narrate trend",
+      "noVehicleHint": "Pick a vehicle above to enable Helix.",
       "title": "Narrate the 30-day tire-pressure trend"
     }
   },
@@ -2938,6 +3226,7 @@
       "badge": "Helix",
       "description": "Ask Helix to explain the deterministic vampire-drain signal — the recent average / worst idle-drain rate, the most-correlated per-event driver (Sentry, climate, long park), and whether the recent rate is in line with the typical fleet. The numbers are the same the cards below show; the narrator only explains them and surfaces the inference's correlational nature honestly.",
       "generateButton": "Narrate drain",
+      "noVehicleHint": "Pick a vehicle above to enable Helix.",
       "title": "Explain the recent vampire drain"
     }
   },

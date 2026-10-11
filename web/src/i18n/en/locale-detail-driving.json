@@ -13,7 +13,9 @@
       "exclusiveBounds": "{{start}} to {{end}} (exclusive end)",
       "returned": "Returned evidence",
       "awaiting": "Awaiting evidence",
-      "window": "{{start}}–{{end}}; returned drive subset, not a server-wide aggregate"
+      "window": "{{start}}–{{end}}; returned drive subset, not a server-wide aggregate",
+      "selectVehicle": "Select a vehicle",
+      "noVehicle": "Choose a vehicle"
     }
   }
 }

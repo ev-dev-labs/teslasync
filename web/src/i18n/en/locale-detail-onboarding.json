@@ -121,8 +121,14 @@
     },
     "stepper": {
       "status": {
-        "current": "In progress"
+        "current": "In progress",
+        "done": "Completed"
       }
+    },
+    "next": "Next",
+    "stepAccount": "Connect Tesla account",
+    "runtimeHealth": {
+      "systemStatus": "View system status"
     }
   }
 }

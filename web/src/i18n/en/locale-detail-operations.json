@@ -457,6 +457,7 @@
         "signal": "Inspect the related signal around the trigger time and record the response when acknowledging.",
         "general": "Review the alert source, timestamp, and audit history before acknowledging the response."
       }
-    }
+    },
+    "evidence": "Evidence"
   }
 }

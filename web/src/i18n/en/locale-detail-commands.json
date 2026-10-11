@@ -15,7 +15,8 @@
       "noResults": "No commands match your search",
       "aria": "Search commands",
       "results": "Command search results",
-      "emptyTitle": "No matching commands"
+      "emptyTitle": "No matching commands",
+      "clear": "Clear search"
     },
     "toggleFavorite": "Toggle favorite",
     "cat": {

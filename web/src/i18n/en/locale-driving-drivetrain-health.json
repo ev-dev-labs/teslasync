@@ -279,6 +279,7 @@
     "avgPower": "Avg power",
     "avgPowerLabel": "Avg peak power",
     "avgSpeed": "Avg speed",
+    "battery": "Battery",
     "batteryTemp": "Battery temp",
     "brief": {
       "liveReadings": "Returned motor readings",
@@ -303,6 +304,7 @@
     "healthScoreDesc": "Overall drivetrain condition rating",
     "healthScoreLabel": "Health score",
     "healthWarn": "Drivetrain running warm",
+    "inverter": "Inverter",
     "inverterTemp": "Inverter temp",
     "isolationResistance": "HV Isolation",
     "liveMotor": "Live motor status",
@@ -536,6 +538,7 @@
   "operations": {
     "attention": "Attention",
     "detailTitle": "{{title}} details",
+    "evidence": "Evidence",
     "metrics": "Operational metrics",
     "narrative": {
       "causeUnavailable": "Cause is not established by the available evidence.",
@@ -563,6 +566,11 @@
     "noAttention": "No current attention items.",
     "reviewAll": "Review all",
     "reviewDetails": "Review details"
+  },
+  "pwa": {
+    "lowBandwidth": {
+      "on": "Always on"
+    }
   },
   "rbac": {
     "toasts": {
@@ -635,6 +643,9 @@
     "unknown": {
       "desc": "Source layer unknown."
     }
+  },
+  "timeline": {
+    "label": "Timeline"
   },
   "toast": {
     "admin": {

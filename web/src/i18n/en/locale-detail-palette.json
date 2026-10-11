@@ -28,7 +28,8 @@
       "actions": "Actions",
       "commands": "Vehicle commands",
       "selectVehicle": "Select vehicle",
-      "openAlerts": "Open alerts"
+      "openAlerts": "Open alerts",
+      "pinned": "Pinned"
     },
     "recent": {
       "justNow": "Just now",
@@ -96,6 +97,8 @@
     "toast": {
       "refreshed": "Data refreshed",
       "frecencyReset": "Command palette usage history cleared"
-    }
+    },
+    "resultsLabel": "Results",
+    "clearFilter": "Clear filter"
   }
 }

@@ -273,6 +273,20 @@
         "medium": "medium",
         "low": "low"
       }
-    }
+    },
+    "summary": {
+      "status": {
+        "initial": "Awaiting source",
+        "initialFailure": "Source unavailable",
+        "ok": "Source available",
+        "unavailable": "No source readings"
+      }
+    },
+    "more": "More",
+    "export": "Export dashboard",
+    "import": "Import dashboard",
+    "refresh": "Refresh data",
+    "refreshShort": "Refresh",
+    "layoutsRegion": "Dashboard layouts"
   }
 }

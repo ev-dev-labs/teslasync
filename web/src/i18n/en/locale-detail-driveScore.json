@@ -116,6 +116,9 @@
       "description": "Computed driving scores and consumption retain their source cohort; the overall score gauge uses its independent assessment source.",
       "scope": "Returned scored-drive subset in the selected period; independent score-assessment coverage may differ",
       "source": "Computed scored-drive cohort; the retained trend label comes from the independent score assessment."
-    }
+    },
+    "kpis": "Key metrics",
+    "gradeTitle": "Grade",
+    "resource": "drive"
   }
 }

@@ -1185,7 +1185,13 @@
       "backupCapable": "Backup capable",
       "stormReady": "Storm-Ready",
       "totalCapacity": "Total Capacity",
-      "summary": "Energy summary"
+      "summary": "Energy summary",
+      "capAvailable": "available",
+      "capUnavailable": "unavailable",
+      "siteId": "ID",
+      "resourceType": {
+        "solar": "Solar"
+      }
     },
     "chargerType": {
       "supercharger": "Supercharger",
@@ -2104,7 +2110,8 @@
       "title": "Explain the recent vampire drain",
       "badge": "Helix",
       "description": "Ask Helix to explain the deterministic vampire-drain signal — the recent average / worst idle-drain rate, the most-correlated per-event driver (Sentry, climate, long park), and whether the recent rate is in line with the typical fleet. The numbers are the same the cards below show; the narrator only explains them and surfaces the inference's correlational nature honestly.",
-      "generateButton": "Narrate drain"
+      "generateButton": "Narrate drain",
+      "noVehicleHint": "Pick a vehicle above to enable Helix."
     },
     "title": "Vampire drain",
     "subtitle": "Analyze phantom energy loss while your vehicle is parked",
@@ -2254,6 +2261,17 @@
     },
     "myActivity": {
       "empty": "No recent activity in this window."
+    }
+  },
+  "ai": {
+    "common": {
+      "errorUnknown": "unknown"
+    },
+    "confirm": {
+      "cancel": "Cancel"
+    },
+    "limit": {
+      "retry": "Retry"
     }
   },
   "alertPacks": {
@@ -2555,6 +2573,7 @@
         "badge": "Helix",
         "description": "Get a short, Helix-written recap of your week from the digest data above.",
         "generateButton": "Generate narration",
+        "noVehicleHint": "Pick a vehicle to enable Helix narration.",
         "title": "Helix narration"
       }
     }
@@ -2625,6 +2644,7 @@
       "unavailable": "Source readings unavailable"
     },
     "cells": {
+      "cell": "Cell",
       "chart": {
         "noSpreadTrend": "Not enough history for spread trend",
         "spreadTrend": "Voltage spread trend",
@@ -2660,6 +2680,11 @@
         "totalCells": "Total cells"
       },
       "kpis": "Summary metrics",
+      "legend": {
+        "nominal": "Nominal",
+        "significant": "Significant deviation",
+        "slight": "Slight deviation"
+      },
       "modernization": {
         "noCellSnapshot": "Cell voltage data is unavailable. Any pack and temperature values reported by the backend remain visible.",
         "signalAvailability": "Pack and temperature signal availability is not supplied by this endpoint; reported values alone do not establish health.",
@@ -2668,7 +2693,16 @@
         "unknown": "Measurement unavailable"
       },
       "noInsights": "Not enough data for recommendations",
+      "overTime": {
+        "avg": "Avg voltage"
+      },
       "recommendations": "Health recommendations",
+      "ref": {
+        "avg": "Avg",
+        "max": "Max",
+        "min": "Min",
+        "warning": "Warning"
+      },
       "stat": {
         "avgVoltage": "Avg cell V",
         "normalCells": "Normal cells",
@@ -2684,6 +2718,9 @@
         "unknown": "Unknown"
       },
       "summary": "At a glance",
+      "table": {
+        "status": "Status"
+      },
       "temp": {
         "avg": "Avg temperature",
         "empty": "No temperature data available",
@@ -2693,7 +2730,8 @@
         "title": "Temperature summary"
       },
       "time": "Time",
-      "title": "Battery cells"
+      "title": "Battery cells",
+      "voltage": "Voltage"
     },
     "chart": {
       "acdc": "AC / DC energy breakdown",
@@ -2744,6 +2782,7 @@
       "fastCharges": "fast charges",
       "fullCharge": "Full charge",
       "guidance": "Recommendations and health factors",
+      "healthTitle": "Battery health",
       "inApprox": "in approximately",
       "initialPaused": "Battery analytics loading is paused. Reconnect to load this vehicle’s history.",
       "lowerBetter": "Lower is better for longevity",
@@ -2767,6 +2806,7 @@
       "rate": "Degradation rate",
       "recommendations": "Recommendations",
       "riskFactors": "Risk factors",
+      "riskScore": "Risk score",
       "sampleWindow": "Available battery history",
       "sohPct": "SOH %",
       "stress": "Stress level",
@@ -3328,11 +3368,13 @@
       "radiusLabel": "Radius",
       "rejectedLabel": "Proposal rejected by validator",
       "suggestButton": "Suggest geofence",
-      "title": "Suggest a geofence for this location"
+      "title": "Suggest a geofence for this location",
+      "unnamed": "(unnamed)"
     }
   },
   "helix": {
     "ariaLabel": "Helix",
+    "askHelix": "Ask Helix",
     "badge": "Helix",
     "evidence": {
       "gathering": "Gathering",
@@ -3466,6 +3508,7 @@
           "redundant_duplicate": "Redundant duplicate"
         },
         "reviewButton": "Review rule",
+        "ruleLabel": "Rule",
         "title": "Detect cross-rule conflicts"
       },
       "aiTemplate": {
@@ -3629,6 +3672,7 @@
       "sessionCapTitle": "Charging history reached the analysis cap",
       "title": "Consumption, efficiency, and cost in one operating view"
     },
+    "evidence": "Evidence",
     "metrics": "Operational metrics",
     "narrative": {
       "causeUnavailable": "Cause is not established by the available evidence.",
@@ -3664,6 +3708,29 @@
       "awaitingData": "Awaiting data",
       "onTrack": "On track",
       "review": "Review recommended"
+    }
+  },
+  "powerDashboards": {
+    "aiDrafter": {
+      "applyButton": "Apply to editor",
+      "badge": "Helix"
+    }
+  },
+  "powerGrafana": {
+    "aiDrafter": {
+      "applyButton": "Apply to editor",
+      "badge": "Helix"
+    }
+  },
+  "powerSql": {
+    "aiDrafter": {
+      "applyButton": "Apply to editor",
+      "badge": "Helix"
+    }
+  },
+  "pwa": {
+    "lowBandwidth": {
+      "on": "Always on"
     }
   },
   "rbac": {
@@ -3727,6 +3794,7 @@
     "aiSearch": {
       "badge": "Helix",
       "description": "Describe what you are looking for and the assistant will surface drives, charging sessions, and alerts that match — citing each entity by name.",
+      "inputLabel": "Search query",
       "searchButton": "Search with Helix",
       "title": "Search with natural language"
     }
@@ -3751,6 +3819,11 @@
     "gotoPrompt": "Go to…",
     "search": "Search shortcuts…",
     "title": "Keyboard shortcuts"
+  },
+  "signalExplorer": {
+    "aiFilter": {
+      "badge": "Helix"
+    }
   },
   "softwareUpdates": {
     "aiNarration": {
@@ -3808,11 +3881,15 @@
       "title": "Narrate the cabin-temperature impact"
     }
   },
+  "timeline": {
+    "label": "Timeline"
+  },
   "tirePressure": {
     "aiTrendReasoning": {
       "badge": "Helix",
       "description": "Ask Helix to explain the recent 30-day trend in this vehicle's four corner tire pressures — which tires are trending up, down, or stable, the most likely deterministic driver of any deviation (cold-weather correlation, all-tires-trending suggesting weather rather than puncture, single-corner slow-leak signature), and any actionable threshold crossing. The per-corner pressures and thresholds are the same the gauges below show; the narrator only explains them and is honest that the slope is a descriptive linear extrapolation, not a forecast.",
       "generateButton": "Narrate trend",
+      "noVehicleHint": "Pick a vehicle above to enable Helix.",
       "title": "Narrate the 30-day tire-pressure trend"
     }
   },

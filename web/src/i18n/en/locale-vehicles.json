@@ -3,7 +3,11 @@
     "interior": "Interior",
     "charging": "Charging",
     "viewDetails": "View details",
-    "removeVehicle": "Remove vehicle"
+    "removeVehicle": "Remove vehicle",
+    "locked": "Locked",
+    "sentryOn": "Sentry mode on",
+    "stateError": "Live state unavailable",
+    "removeVehicleNamed": "Remove {{name}}"
   },
   "fleet": {
     "size": "Fleet size",
@@ -21,7 +25,8 @@
     "vehicles": "Vehicles",
     "avgBattery": "Avg battery",
     "totalRange": "Total range",
-    "chargingOnline": "Charging / online"
+    "chargingOnline": "Charging / online",
+    "unknownVehicle": "Unknown vehicle"
   },
   "parking": {
     "title": "Parking analytics",
@@ -281,7 +286,8 @@
     },
     "briefTitle": "Returned ledger evidence",
     "briefSource": "Bounded physics ledger",
-    "briefWindow": "{{start}} → {{end}}"
+    "briefWindow": "{{start}} → {{end}}",
+    "back": "Tesla physics"
   },
   "utilization": {
     "title": "Utilization",
@@ -554,7 +560,8 @@
       "emptyResult": "No matching data returned",
       "emptyResultDetail": "Tesla completed the request but returned no matching data for this vehicle.",
       "fetchedAt": "Cached {{time}}",
-      "notFetched": "Not cached"
+      "notFetched": "Not cached",
+      "prerequisiteRequired": "Prerequisite required"
     },
     "action": {
       "refresh": "Refresh from Tesla"
@@ -968,7 +975,8 @@
       "rangeAdded": "Range added",
       "chargingSnapshotTitle": "Returned charging measurements",
       "chargingSnapshotDescription": "Independent charging snapshot; source refresh warnings remain in the surrounding panel. Range-addition rate is not vehicle speed.",
-      "chargingSnapshotStatus": "Snapshot returned"
+      "chargingSnapshotStatus": "Snapshot returned",
+      "recentActivity": "Recent activity"
     },
     "syncToast": "Vehicles synced successfully",
     "syncFailed": "Failed to sync vehicles",
@@ -1139,6 +1147,17 @@
     },
     "myActivity": {
       "empty": "No recent activity in this window."
+    }
+  },
+  "ai": {
+    "common": {
+      "errorUnknown": "unknown"
+    },
+    "confirm": {
+      "cancel": "Cancel"
+    },
+    "limit": {
+      "retry": "Retry"
     }
   },
   "alertPacks": {
@@ -1440,6 +1459,7 @@
         "badge": "Helix",
         "description": "Get a short, Helix-written recap of your week from the digest data above.",
         "generateButton": "Generate narration",
+        "noVehicleHint": "Pick a vehicle to enable Helix narration.",
         "title": "Helix narration"
       }
     }
@@ -2296,6 +2316,9 @@
       "loading": "Loading statistics"
     }
   },
+  "filters": {
+    "clearAll": "Clear all"
+  },
   "freshness": {
     "age": {
       "days": "{{count}}d ago",
@@ -2330,7 +2353,8 @@
       "radiusLabel": "Radius",
       "rejectedLabel": "Proposal rejected by validator",
       "suggestButton": "Suggest geofence",
-      "title": "Suggest a geofence for this location"
+      "title": "Suggest a geofence for this location",
+      "unnamed": "(unnamed)"
     }
   },
   "guard": {
@@ -2338,6 +2362,7 @@
   },
   "helix": {
     "ariaLabel": "Helix",
+    "askHelix": "Ask Helix",
     "badge": "Helix",
     "evidence": {
       "gathering": "Gathering",
@@ -2510,6 +2535,7 @@
           "redundant_duplicate": "Redundant duplicate"
         },
         "reviewButton": "Review rule",
+        "ruleLabel": "Rule",
         "title": "Detect cross-rule conflicts"
       },
       "aiTemplate": {
@@ -2566,6 +2592,7 @@
   "operations": {
     "attention": "Attention",
     "detailTitle": "{{title}} details",
+    "evidence": "Evidence",
     "metrics": "Operational metrics",
     "narrative": {
       "causeUnavailable": "Cause is not established by the available evidence.",
@@ -2672,6 +2699,29 @@
     "reset": "Reset to auto-detected",
     "solidBlack": "Solid Black"
   },
+  "powerDashboards": {
+    "aiDrafter": {
+      "applyButton": "Apply to editor",
+      "badge": "Helix"
+    }
+  },
+  "powerGrafana": {
+    "aiDrafter": {
+      "applyButton": "Apply to editor",
+      "badge": "Helix"
+    }
+  },
+  "powerSql": {
+    "aiDrafter": {
+      "applyButton": "Apply to editor",
+      "badge": "Helix"
+    }
+  },
+  "pwa": {
+    "lowBandwidth": {
+      "on": "Always on"
+    }
+  },
   "range": {
     "aiPredict": {
       "badge": "Helix",
@@ -2741,6 +2791,7 @@
     "aiSearch": {
       "badge": "Helix",
       "description": "Describe what you are looking for and the assistant will surface drives, charging sessions, and alerts that match — citing each entity by name.",
+      "inputLabel": "Search query",
       "searchButton": "Search with Helix",
       "title": "Search with natural language"
     }
@@ -2765,6 +2816,11 @@
     "gotoPrompt": "Go to…",
     "search": "Search shortcuts…",
     "title": "Keyboard shortcuts"
+  },
+  "signalExplorer": {
+    "aiFilter": {
+      "badge": "Helix"
+    }
   },
   "softwareUpdates": {
     "aiNarration": {
@@ -2832,6 +2888,7 @@
     "energyAdded": "Energy added",
     "energyCharging": "Energy & charging",
     "fanSpeed": "Fan speed",
+    "gradeEstimate": "Grade",
     "hazards": "Hazards",
     "highBeams": "High beams",
     "homelinkDevices": "HomeLink Devices",
@@ -2849,6 +2906,7 @@
     "noMediaData": "No media data",
     "noMotorData": "No motor data available",
     "noSecurityData": "No security data available",
+    "noTirePressureData": "No tire pressure data available",
     "nothingPlaying": "Nothing playing",
     "nowPlaying": "Now playing",
     "pairedKeys": "Paired keys",
@@ -2860,6 +2918,7 @@
     "precondition": "Precondition",
     "regen": "Regen",
     "remoteStart": "Remote start",
+    "remoteStartActive": "Remote start active",
     "rpmFront": "Front RPM",
     "rpmRear": "Rear RPM",
     "seatEmpty": "Empty",
@@ -2867,11 +2926,22 @@
     "sentryMode": "Sentry Mode",
     "serviceMode": "Service Mode",
     "shiftState": "Shift state",
+    "softwareUpdateAvailable": "Software update",
     "speedLimit": "Speed limit",
+    "tireAllNormal": "All normal",
+    "tireAttentionNeeded": "Attention needed",
+    "tireCheckPressure": "Check pressure",
+    "tireFrontLeft": "Front left",
+    "tireFrontRight": "Front right",
+    "tireRearLeft": "Rear left",
+    "tireRearRight": "Rear right",
     "torqueFront": "Front torque",
     "torqueRear": "Rear torque",
     "turnSignal": "Turn signal",
     "unknownArtist": "Unknown artist",
+    "updateAvailable": "Available",
+    "updateCurrent": "Current",
+    "updateInstalling": "Installing",
     "userPresent": "User present",
     "valetMode": "Valet Mode",
     "vehicleState": "Vehicle state",
@@ -3417,11 +3487,15 @@
     "title": "Vehicle time machine",
     "viewingAt": "Viewing at"
   },
+  "timeline": {
+    "label": "Timeline"
+  },
   "tirePressure": {
     "aiTrendReasoning": {
       "badge": "Helix",
       "description": "Ask Helix to explain the recent 30-day trend in this vehicle's four corner tire pressures — which tires are trending up, down, or stable, the most likely deterministic driver of any deviation (cold-weather correlation, all-tires-trending suggesting weather rather than puncture, single-corner slow-leak signature), and any actionable threshold crossing. The per-corner pressures and thresholds are the same the gauges below show; the narrator only explains them and is honest that the slope is a descriptive linear extrapolation, not a forecast.",
       "generateButton": "Narrate trend",
+      "noVehicleHint": "Pick a vehicle above to enable Helix.",
       "title": "Narrate the 30-day tire-pressure trend"
     }
   },
@@ -3662,6 +3736,7 @@
       "badge": "Helix",
       "description": "Ask Helix to explain the deterministic vampire-drain signal — the recent average / worst idle-drain rate, the most-correlated per-event driver (Sentry, climate, long park), and whether the recent rate is in line with the typical fleet. The numbers are the same the cards below show; the narrator only explains them and surfaces the inference's correlational nature honestly.",
       "generateButton": "Narrate drain",
+      "noVehicleHint": "Pick a vehicle above to enable Helix.",
       "title": "Explain the recent vampire drain"
     }
   },

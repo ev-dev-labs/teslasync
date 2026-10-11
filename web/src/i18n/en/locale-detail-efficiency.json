@@ -68,6 +68,9 @@
       "driveDistance": "Drive distance ({{unit}})",
       "averageEfficiency": "Average drive energy consumption ({{unit}})",
       "driveCount": "Contributing drives"
+    },
+    "glossary": {
+      "lead": "Terms on this page:"
     }
   }
 }

@@ -143,7 +143,8 @@
     "filterLabel": {
       "search": "Search",
       "from": "From",
-      "to": "To"
+      "to": "To",
+      "collection": "View"
     },
     "col": {
       "date": "Date",
@@ -165,6 +166,28 @@
     },
     "driveTime": "Drive time",
     "overview": "Overview",
-    "noStatsRange": "No drives in this range"
+    "noStatsRange": "No drives in this range",
+    "fsdAmbiguous": "ambiguous",
+    "emptyForCollection": {
+      "msg": "Try switching to a different collection or clearing your filters."
+    },
+    "sortFsd": "FSD share",
+    "results": "results",
+    "viewAnomalies": "View anomalies",
+    "anomalyCount": "{{count}} {{noun}} in this range",
+    "anomaly_one": "anomaly",
+    "anomaly_other": "anomalies",
+    "coll": {
+      "anomalies": "Anomalies",
+      "notable": "Notable",
+      "tagged": "Tagged"
+    },
+    "fsdFilter": {
+      "reported": "FSD",
+      "high": "High confidence",
+      "estimated": "Estimated",
+      "ambiguous": "Ambiguous",
+      "unknown": "Unknown"
+    }
   }
 }

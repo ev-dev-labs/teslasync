@@ -24,7 +24,20 @@
       "subtitle": "Active subjects you can impersonate for support. Sessions are limited to 15 minutes and recorded in the audit log.",
       "openMode": "Impersonation requires forward-auth mode. This install is in open mode, so per-user identity is not available.",
       "emptyTitle": "No other subjects",
-      "emptyMessage": "No other subjects have an active session right now. Sign someone else in to enable impersonation."
+      "emptyMessage": "No other subjects have an active session right now. Sign someone else in to enable impersonation.",
+      "kpi": {
+        "accessMode": "Access mode",
+        "session": "Session status",
+        "modeOpen": "Open",
+        "active": "Active",
+        "idle": "Idle"
+      },
+      "subjectColumn": "Subject",
+      "available": "Available",
+      "statusColumn": "Status",
+      "actionColumn": "Action",
+      "showing": "Showing {{shown}} of {{total}}",
+      "refresh": "Refresh"
     },
     "toast": {
       "started": "Impersonation started",

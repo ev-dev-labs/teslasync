@@ -230,7 +230,8 @@
       "live": "Live cockpit",
       "inputs": "Driving inputs",
       "efficiency": "Motor efficiency",
-      "history": "Motor history"
+      "history": "Motor history",
+      "trip": "Trip review"
     },
     "col": {
       "range": "Speed range",
@@ -266,6 +267,8 @@
       "find": {
         "cornering": "Lateral accelerometer {{g}} g. That is chassis load, not a grip percentage."
       }
-    }
+    },
+    "drive": "Drive",
+    "reverse": "Reverse"
   }
 }

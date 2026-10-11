@@ -59,6 +59,7 @@
     },
     "dailyBreakdownAria": "Daily transition counts by vehicle state",
     "day": "Day",
-    "invalidComposition": "Proportional track unavailable for the returned dwell totals; individual state evidence remains visible."
+    "invalidComposition": "Proportional track unavailable for the returned dwell totals; individual state evidence remains visible.",
+    "label": "Timeline"
   }
 }

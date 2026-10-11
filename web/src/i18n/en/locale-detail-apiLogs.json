@@ -103,6 +103,7 @@
       "reportedBy": "reported by browser sessions",
       "noBreakdown": "No per-source breakdown available for the reported errors.",
       "noErrors": "No frontend errors reported in the last hour."
-    }
+    },
+    "time": "Time"
   }
 }

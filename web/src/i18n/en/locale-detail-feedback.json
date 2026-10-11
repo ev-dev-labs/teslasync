@@ -63,7 +63,8 @@
       "status": {
         "new": "New",
         "triaged": "Triaged",
-        "closed": "Closed"
+        "closed": "Closed",
+        "unknown": "Unknown"
       },
       "expand": {
         "body": "Report body",
@@ -85,7 +86,11 @@
         "close": "Close selected",
         "reopen": "Reopen selected"
       },
-      "maskedEmail": "Reporter email, click to reveal"
+      "maskedEmail": "Reporter email, click to reveal",
+      "bridge": {
+        "enabled": "Connected",
+        "disabled": "Not configured"
+      }
     }
   }
 }

@@ -361,6 +361,7 @@
       "unknown": "Drive distance unknown"
     },
     "brief": {
+      "noVehicle": "Select a vehicle",
       "observatoryMetrics": "Reset-safe counter quantities",
       "periodQuantities": "Current and previous period quantities",
       "window": "{{start}}–{{end}} (exclusive end) · {{timezone}}"
@@ -563,6 +564,7 @@
       "commuteEmpty": "Not enough repeated routes yet for a commute story.",
       "commuteHint": "Repeated routes told across firmware. Unknown chapters stay unknown.",
       "honesty": "Every kilometre here is a reset-safe counter change, not an FSD engagement segment. Unknown and ambiguous distance are shown instead of guessed.",
+      "resetBadge": "Counter reset",
       "resets": "Counter resets",
       "resetsHint": "Each reset is a break in the stitch, not travelled FSD",
       "section": "FSD observatory",
@@ -682,6 +684,7 @@
   "operations": {
     "attention": "Attention",
     "detailTitle": "{{title}} details",
+    "evidence": "Evidence",
     "metrics": "Operational metrics",
     "narrative": {
       "causeUnavailable": "Cause is not established by the available evidence.",
@@ -709,6 +712,11 @@
     "noAttention": "No current attention items.",
     "reviewAll": "Review all",
     "reviewDetails": "Review details"
+  },
+  "pwa": {
+    "lowBandwidth": {
+      "on": "Always on"
+    }
   },
   "rbac": {
     "toasts": {
@@ -781,6 +789,9 @@
     "unknown": {
       "desc": "Source layer unknown."
     }
+  },
+  "timeline": {
+    "label": "Timeline"
   },
   "toast": {
     "admin": {

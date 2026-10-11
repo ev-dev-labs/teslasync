@@ -28,6 +28,13 @@
       "mode": "Status",
       "provider": "Provider",
       "spendToday": "Spend today"
+    },
+    "askHelix": "Ask Helix",
+    "page": {
+      "title": "Helix"
+    },
+    "breadcrumb": {
+      "integrations": "Integrations"
     }
   }
 }

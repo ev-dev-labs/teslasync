@@ -285,6 +285,14 @@
       "endBattery": "Recorded end battery",
       "latestOdometer": "Latest observed odometer",
       "endOdometer": "Recorded end odometer"
-    }
+    },
+    "fsd": {
+      "highConfidence": "High confidence",
+      "estimated": "Estimated",
+      "ambiguous": "Ambiguous",
+      "unknown": "Unknown",
+      "openInsights": "Open FSD insights"
+    },
+    "breadcrumbFallback": "Drive #{{id}}"
   }
 }
