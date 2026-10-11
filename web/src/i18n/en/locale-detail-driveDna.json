@@ -230,7 +230,12 @@
       "coverageDenominator": "Availability is measured against {{count}} valid timestamp rows, not expected emissions.",
       "signalCoverage": "Signal coverage",
       "coverageScope": "Per-signal availability in returned telemetry; missing readings are not zero measurements.",
-      "open": "ongoing"
+      "open": "ongoing",
+      "description": "Aggregate drive totals and sampled telemetry are independent sources; regen emissions are sample share, not time share.",
+      "window": "Drive {{id}} · {{start}}–{{end}}; sampled coverage may be incomplete",
+      "noDrive": "No selected drive",
+      "source": "Selected drive metadata and returned telemetry emissions after the existing forward fold.",
+      "telemetryLoading": "Telemetry loading"
     }
   }
 }

@@ -4,7 +4,8 @@
       "title": "Elevation profile",
       "noData": "No elevation data available",
       "label": "Elevation",
-      "aria": "Elevation profile chart — no data available yet"
+      "aria": "Elevation profile chart — no data available yet",
+      "gainLoss": "↑ {{gain}}m  ↓ {{loss}}m"
     },
     "controls": {
       "reset": "Reset",
@@ -60,7 +61,9 @@
     "map": {
       "noPositions": "No position data available for this drive",
       "section": "Route map and live position",
-      "ariaLabel": "Trip route map"
+      "ariaLabel": "Trip route map",
+      "stationaryRouteTitle": "Route can't be plotted",
+      "stationaryRouteBody": "Only one GPS coordinate was recorded for this drive, so the route can't be drawn. The trip statistics, speed, and elevation timeline above the scrubber are unaffected."
     },
     "currentStats": "Current position stats",
     "stat": {

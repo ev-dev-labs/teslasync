@@ -131,7 +131,10 @@
     "brief": {
       "completedTitle": "Completed-week consumption",
       "completedScope": "Latest completed eligible week; target grading and streaks exclude the active week.",
-      "activeTitle": "Active-week observations"
+      "activeTitle": "Active-week observations",
+      "description": "Completed-week outcomes from the observed history window; current partial weeks do not extend the completed-week streak.",
+      "window": "Latest returned drive history, up to 1,000 rows; not lifetime coverage",
+      "source": "Returned drive energy and distance; saved target and completed local weeks."
     }
   }
 }

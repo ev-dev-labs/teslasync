@@ -26,7 +26,16 @@
       "regionLabel": "Cached data disclosure"
     },
     "lowBandwidth": {
-      "on": "Always on"
+      "on": "Always on",
+      "auto": "Automatic (follow the network)",
+      "off": "Always off",
+      "heading": "Low-bandwidth mode",
+      "label": "Data usage on this device",
+      "statusNetwork": "Active — your browser or network reported Data Saver / a 2G-class connection.",
+      "statusUser": "Active — enabled manually on this device.",
+      "statusOff": "Not active — the app is using full quality.",
+      "effectsOn": "While active: background polling slows to a quarter of its normal rate, entrance animations are disabled, charts render at most {{points}} points, satellite/terrain basemaps fall back to the lightest raster tiles, and the service worker stops storing new images and map tiles.",
+      "effectsOff": "When active: polling slows down, animations stop, charts render fewer points, heavy basemaps fall back to light tiles, and the service worker stops caching new images and map tiles."
     }
   }
 }

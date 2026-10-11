@@ -255,7 +255,8 @@
       "badge": "Show unread count in browser tab",
       "flash": "Flash tab title on critical alerts",
       "hint": "Adds a \"(N)\" prefix and favicon dot when there are unread notifications, and mirrors the count onto the installed app icon while the app is open where supported. Critical alerts briefly flash \"(!) ALERT\" when the tab is in the background.",
-      "saving": "Saving…"
+      "saving": "Saving…",
+      "empty": "Tab signal preferences are unavailable right now."
     },
     "search": {
       "placeholder": "Search settings…",

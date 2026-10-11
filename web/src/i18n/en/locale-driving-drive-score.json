@@ -54,6 +54,12 @@
       "empty": "No recent activity in this window."
     }
   },
+  "battery": {
+    "delta": {
+      "aria": "Battery {{from}}% to {{to}}%",
+      "unknown": "Battery delta unknown"
+    }
+  },
   "bulk": {
     "clear": "Clear selection",
     "itemDefault": "item",
@@ -275,18 +281,27 @@
     "aPlusCount": "A+ drives",
     "achievements": {
       "aPlusStreak": "A+ streak",
+      "aPlusStreakDesc": "Get A+ grade on 5 consecutive drives.",
       "efficiencyMaster": "Efficiency master",
+      "efficiencyMasterDesc": "Score 38+ in efficiency on 3 drives.",
       "fiftyDrives": "Highway hero",
+      "fiftyDrivesDesc": "Complete 50 scored drives.",
       "firstDrive": "First drive",
+      "firstDriveDesc": "Complete your first scored drive.",
       "perfectScore": "Perfect score",
+      "perfectScoreDesc": "Achieve a 100/100 on any drive.",
       "smoothOperator": "Smooth operator",
+      "smoothOperatorDesc": "Score 28+ in smoothness on 3 drives.",
       "speedSaint": "Speed saint",
+      "speedSaintDesc": "Score 28+ in speed discipline on 5 drives.",
       "tenDrives": "Road regular",
+      "tenDrivesDesc": "Complete 10 scored drives.",
       "title": "Achievements",
       "unlocked": "Unlocked"
     },
     "avgConsumption": "Avg consumption",
     "avgDistance": "Avg distance/drive",
+    "avgDuration": "Avg Duration/Drive",
     "avgEffLabel": "Avg efficiency",
     "avgMaxSpeed": "Avg max speed",
     "avgScore": "Avg score",
@@ -295,6 +310,7 @@
     "bestMonth": "Best month",
     "bestScore": "Best score",
     "bestWeek": "Best week",
+    "bestWorst": "Best and worst drives",
     "breakdown": "Score breakdown",
     "brief": {
       "average": "Average computed score for the returned scored-drive cohort, on a 0–100 scale.",
@@ -318,6 +334,7 @@
       "speed": "Speed",
       "value": "Value"
     },
+    "colBreakdown": "Eff / Smo / Spd",
     "colConsumption": "Consumption",
     "colDate": "Date",
     "colDistance": "Distance",
@@ -333,6 +350,8 @@
     "drivesScored": "drives scored",
     "durationLabel": "Duration",
     "efficiency": "Efficiency",
+    "efficiencyLabel": "Efficiency (Wh/km)",
+    "empty": "Not enough drives in the selected period to calculate a score.",
     "gradeALine": "A",
     "gradeLabel": "Grade: {{grade}}",
     "gradeTitle": "Grade",
@@ -340,8 +359,12 @@
     "historySource": "Drive history",
     "historyUnavailable": "Drive history is unavailable; the server drive score remains visible",
     "kpis": "Key metrics",
+    "noAchievements": "Achievements unlock as you complete scored drives",
+    "noDistribution": "No scored drives to chart yet",
     "noDrives": "No drives available",
     "noPeriodStats": "No weekly/monthly averages available yet",
+    "noTips": "Tips appear once drives are scored",
+    "noTrend": "No scored drives to chart yet",
     "ofDrives": "of drives",
     "overall": "Overall score",
     "partial": {
@@ -349,6 +372,7 @@
       "message_other": "{{count}} drives are excluded because measured energy, average power, or maximum speed is unavailable.",
       "title": "Score evidence is partial"
     },
+    "periodAverages": "Period averages",
     "periodStats": "Period statistics",
     "powerRange": "Power range",
     "ratedAPlus": "Rated A+/A",
@@ -361,6 +385,7 @@
     "serverUnavailable": "Server drive score is unavailable; scored history remains visible",
     "serverUnavailableOnly": "Server drive score is unavailable",
     "smoothness": "Smoothness",
+    "smoothnessLabel": "Smoothness (power range)",
     "sourceError": "Drive score evidence could not be loaded",
     "speedDiscipline": "Speed discipline",
     "speedLabel": "Speed discipline",
@@ -373,6 +398,17 @@
     "tipWorstEff": "High energy consumption — possibly high speeds or cold weather.",
     "tipWorstSmooth": "Aggressive acceleration and braking detected.",
     "tipWorstSpeed": "Excessive highway speed reduced the overall score.",
+    "tips": {
+      "coastMore": "Coast more by lifting your foot earlier before stops.",
+      "cruiseControl": "Use Autopilot or cruise control on highways for consistent speed.",
+      "followDistance": "Maintain a larger following distance to avoid sudden braking.",
+      "preCondition": "Pre-condition your cabin while plugged in to reduce HVAC battery drain.",
+      "regenBraking": "Use regenerative braking instead of the brake pedal when possible.",
+      "routePlanning": "Plan routes to avoid high-speed stretches when possible.",
+      "smoothAccel": "Accelerate gradually — aim for steady pedal pressure.",
+      "speedLimit": "Stay within the speed limit — aerodynamic drag rises exponentially above 90 km/h.",
+      "tirePressure": "Keep tire pressure at recommended levels for better efficiency."
+    },
     "tipsSubtitle": "Based on your weakest category: {{category}}",
     "tipsTitle": "Improvement tips",
     "title": "Drive score",
@@ -406,6 +442,13 @@
       "switchHint": "Or switch to your other tab to keep editing there.",
       "takeOver": "Take over editing",
       "title": "Another browser tab is editing this"
+    }
+  },
+  "emptyState": {
+    "generic": "No data available yet.",
+    "label": {
+      "likelyCause": "Most likely reason",
+      "prerequisite": "What has to happen first"
     }
   },
   "entityContext": {
@@ -492,6 +535,7 @@
     "connected": "Live",
     "disconnected": "Offline",
     "reconnecting": "Reconnecting…",
+    "scope": "Live data",
     "staleBanner": {
       "message": "The live data connection has been offline for more than 2 minutes. Values on this page may be stale until the connection is restored.",
       "title": "Live data unavailable"
@@ -520,6 +564,7 @@
         "unavailable": "No confidence basis was supplied."
       },
       "evidence": "Supporting evidence",
+      "evidenceCoverage": "{{count}} supporting records supplied.",
       "likelyCause": "Likely cause",
       "limitations": "Limitations",
       "noEvidence": "No supporting records were supplied.",
@@ -536,9 +581,49 @@
     "reviewAll": "Review all",
     "reviewDetails": "Review details"
   },
+  "problemReport": {
+    "context": {
+      "appVersion": "App version",
+      "browser": "Browser",
+      "page": "Page",
+      "pageNote": "(record ids are replaced with :id)",
+      "title": "What is sent with your report"
+    },
+    "form": {
+      "description": "What were you doing, and what did you expect?",
+      "descriptionPlaceholder": "Steps you took, what you saw, and what you expected to see instead.",
+      "descriptionTooShort": "Please add at least {{count}} characters.",
+      "hidePreview": "Hide exactly what is sent",
+      "includeDiagnostics": "Attach a redacted technical summary ({{count}} recent errors)",
+      "includeDiagnosticsHint": "Versions, browser capability, service health, error messages and trace IDs. Never VINs, locations, tokens, e-mail addresses or raw logs.",
+      "showPreview": "Show exactly what is sent",
+      "submit": "Send report",
+      "submitting": "Sending…",
+      "title": "What went wrong?",
+      "titlePlaceholder": "Short summary (e.g. \"Charging costs show as blank\")"
+    },
+    "intro": "Describe what happened in your own words. We attach a redacted technical summary only if you allow it.",
+    "policy": {
+      "consoleTail": "Console output",
+      "files": "File attachments",
+      "screenshots": "Screenshots",
+      "userEmail": "E-mail address"
+    },
+    "submitError": "Could not send the report. Please try again.",
+    "title": "Report a problem"
+  },
   "pwa": {
     "lowBandwidth": {
-      "on": "Always on"
+      "auto": "Automatic (follow the network)",
+      "effectsOff": "When active: polling slows down, animations stop, charts render fewer points, heavy basemaps fall back to light tiles, and the service worker stops caching new images and map tiles.",
+      "effectsOn": "While active: background polling slows to a quarter of its normal rate, entrance animations are disabled, charts render at most {{points}} points, satellite/terrain basemaps fall back to the lightest raster tiles, and the service worker stops storing new images and map tiles.",
+      "heading": "Low-bandwidth mode",
+      "label": "Data usage on this device",
+      "off": "Always off",
+      "on": "Always on",
+      "statusNetwork": "Active — your browser or network reported Data Saver / a 2G-class connection.",
+      "statusOff": "Not active — the app is using full quality.",
+      "statusUser": "Active — enabled manually on this device."
     }
   },
   "rbac": {
@@ -549,6 +634,7 @@
   "replay": {
     "elevation": {
       "aria": "Elevation profile chart — no data available yet",
+      "gainLoss": "↑ {{gain}}m  ↓ {{loss}}m",
       "label": "Elevation",
       "noData": "No elevation data available",
       "title": "Elevation profile"
@@ -614,6 +700,7 @@
     }
   },
   "timeline": {
+    "empty": "No timeline entries yet.",
     "label": "Timeline"
   },
   "toast": {

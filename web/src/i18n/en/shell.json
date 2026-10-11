@@ -21,14 +21,20 @@
       "route": {
         "fromTo": "Route map from {{start}} to {{end}}",
         "distance": "Distance {{distance}}",
-        "duration": "Duration {{duration}}"
+        "duration": "Duration {{duration}}",
+        "empty": "Route map. No location data recorded.",
+        "generic": "Route map",
+        "points": "{{count}} recorded points"
       },
       "gauge": {
         "value": "{{label}}: {{value}}",
         "range": "Scale {{min}} to {{max}}"
       },
       "state": {
-        "current": "{{label}}: {{state}}"
+        "current": "{{label}}: {{state}}",
+        "since": "For {{duration}}",
+        "previous": "Previously {{state}}",
+        "next": "Can move to {{states}}"
       },
       "timeline": {
         "empty": "{{label}}: no entries",
@@ -49,8 +55,16 @@
       "streamReconnecting": "{{scope}} reconnecting",
       "streamDisconnected": "{{scope}} disconnected",
       "streamUpdated": "{{scope}} updated",
-      "saved": "{{label}} saved"
+      "saved": "{{label}} saved",
+      "selectionCleared": "Selection cleared",
+      "sortAsc": "Sorted by {{column}}, ascending",
+      "sortDesc": "Sorted by {{column}}, descending",
+      "streamScope": "Live data"
     }
+  },
+  "accessGuidance": {
+    "grantedByLabel": "Who can grant this",
+    "stepsLabel": "How to request access"
   },
   "alerts": {
     "tabFlash": "(!) Alert — ",
@@ -109,7 +123,8 @@
   "carAnimation": {
     "tesla": "Tesla vehicle illustration",
     "charging": "Charging",
-    "loading": "Loading"
+    "loading": "Loading",
+    "battery": "Battery at {{level}} percent"
   },
   "changelog": {
     "title": "Changelog",
@@ -340,7 +355,9 @@
       "meterShort": "m"
     },
     "clearFilters": "Clear filters",
-    "notAvailable": "N/A"
+    "notAvailable": "N/A",
+    "panel": "Panel",
+    "unknownError": "unknown error"
   },
   "compat": {
     "banner": {
@@ -428,7 +445,8 @@
       "vehicleEnergyFlow": "Vehicle energy flow",
       "vehicleEnergySummary": "Vehicle energy summary",
       "vehicleRegistry": "Vehicle registry",
-      "workerQueues": "Worker queues"
+      "workerQueues": "Worker queues",
+      "fsdInsights": "Supervised driving"
     },
     "status": {
       "ready": "Ready",
@@ -457,6 +475,9 @@
       "message": "This feature is not enabled by the current deployment configuration.",
       "title": "Feature not supported"
     }
+  },
+  "dataUnavailable": {
+    "whatToDo": "What to do"
   },
   "date": {
     "preset": {
@@ -599,6 +620,9 @@
       "title": "Waiting for upstream"
     }
   },
+  "errorHelp": {
+    "title": "Where to look next"
+  },
   "errors": {
     "section": {
       "title": "This section failed to load",
@@ -612,7 +636,11 @@
     "pending": "Filtering…"
   },
   "form": {
-    "required": "required"
+    "required": "required",
+    "validation": {
+      "summaryTitleOne": "Fix 1 problem before continuing",
+      "summaryTitleMany": "Fix {{count}} problems before continuing"
+    }
   },
   "forms": {
     "discard": "Discard changes",
@@ -656,6 +684,9 @@
   },
   "global": {
     "loading": "Loading"
+  },
+  "glossary": {
+    "tooltipLabel": "What is {{term}}?"
   },
   "help": {
     "battery": {
@@ -702,11 +733,17 @@
     }
   },
   "installPrompt": {
-    "title": "Install TeslaSync",
-    "subtitle": "Add to home screen for native experience",
-    "install": "Install",
+    "dismiss": "Dismiss install prompt",
     "failed": "The install dialog could not open. In Chrome, open the menu and choose install app.",
-    "dismiss": "Dismiss install prompt"
+    "install": "Install",
+    "ios": {
+      "intro": "iOS installs web apps from the Safari share menu — there is no automatic install button.",
+      "step1": "Tap the Share button in Safari.",
+      "step2": "Choose Add to Home Screen.",
+      "step3": "Confirm with Add."
+    },
+    "subtitle": "Add to home screen for native experience",
+    "title": "Install TeslaSync"
   },
   "lightbox": {
     "counter": "{{current}} / {{total}}",
@@ -1276,11 +1313,22 @@
     },
     "suggest": {
       "charging": "Charging now",
-      "alerts": "{{count}} need attention"
+      "alerts": "{{count}} need attention",
+      "chargingVehicle": "{{vehicle}} is charging",
+      "drivingVehicle": "{{vehicle}} is on the move",
+      "driving": "On the move",
+      "related": "Related to {{page}}"
     },
     "vehicleCount": "{{count}} vehicles",
     "suggested": "Suggested",
-    "analyticsDesc": "Fleet insights"
+    "analyticsDesc": "Fleet insights",
+    "staleCount": "{{count}} stale rows",
+    "pinPage": "Pin {{page}} to favorites",
+    "empty": "No pages yet.",
+    "sidebar": "Sidebar navigation",
+    "drivesDesc": "Trip history",
+    "chargingDesc": "Sessions & costs",
+    "batteryDesc": "Health & degradation"
   },
   "notFound": {
     "title": "Page not found",
@@ -1736,7 +1784,12 @@
     "yearReview": "Year review"
   },
   "runtimeHealth": {
-    "systemStatus": "System status"
+    "affected": "Affected components: {{components}}.",
+    "configureAlerts": "Health alerts",
+    "historyAvailable": "The application and stored history remain available; live or dependent features may be stale.",
+    "systemStatus": "System status",
+    "telemetryLastSeen": "The last Fleet Telemetry signal arrived {{time}}. Stored history remains available while live values recover.",
+    "title": "TeslaSync is running in degraded mode"
   },
   "search": {
     "history": {
@@ -1760,7 +1813,9 @@
     }
   },
   "serviceStatus": {
-    "unknown": "unknown"
+    "unknown": "unknown",
+    "offline": "You are offline. Data may be stale. Reconnecting automatically…",
+    "systemHealth": "System: {{status}}"
   },
   "session": {
     "appTokenExpired": {
@@ -2136,18 +2191,6 @@
     "statusIdle": "Idle",
     "statusOffline": "Offline"
   },
-  "emptyState": {
-    "threshold": {
-      "defaultItem": "items",
-      "message": "Need at least {{threshold}} {{noun}} to show meaningful patterns. You have {{current}} so far."
-    },
-    "generic": "No data available yet."
-  },
-  "feedbackTriage": {
-    "aiAdvisor": {
-      "badge": "Helix"
-    }
-  },
   "metricCard": {
     "moreInfoAbout": "More info about {{label}}"
   },
@@ -2165,14 +2208,6 @@
       "dismiss": "Dismiss"
     }
   },
-  "problemReport": {
-    "title": "Report a problem",
-    "context": {
-      "page": "Page",
-      "appVersion": "App version",
-      "browser": "Browser"
-    }
-  },
   "progressRing": {
     "ariaLabel": "Progress: {{percent}}%"
   },
@@ -2186,15 +2221,13 @@
     "noLocationData": "No location data",
     "roundTrip": "round trip"
   },
+  "score": {
+    "aria": "Score {{grade}}"
+  },
   "severity": {
     "info": "Info",
     "warn": "Warning",
     "critical": "Critical"
-  },
-  "signalConfig": {
-    "deselectCategory": "Deselect all {{category}} signals",
-    "selectCategory": "Select all {{category}} signals",
-    "setCategoryInterval": "Set interval for all {{category}} signals"
   },
   "smallMultiples": {
     "noData": "No data"
@@ -2204,6 +2237,9 @@
     "descending": "Descending",
     "fieldLabel": "Sort by",
     "direction": "Sort direction"
+  },
+  "sparkline": {
+    "ariaLabel": "Trend sparkline"
   },
   "statCard": {
     "loading": "Loading",

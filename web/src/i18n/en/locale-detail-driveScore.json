@@ -10,7 +10,15 @@
       "smoothOperator": "Smooth operator",
       "speedSaint": "Speed saint",
       "title": "Achievements",
-      "unlocked": "Unlocked"
+      "unlocked": "Unlocked",
+      "firstDriveDesc": "Complete your first scored drive.",
+      "tenDrivesDesc": "Complete 10 scored drives.",
+      "fiftyDrivesDesc": "Complete 50 scored drives.",
+      "perfectScoreDesc": "Achieve a 100/100 on any drive.",
+      "aPlusStreakDesc": "Get A+ grade on 5 consecutive drives.",
+      "efficiencyMasterDesc": "Score 38+ in efficiency on 3 drives.",
+      "smoothOperatorDesc": "Score 28+ in smoothness on 3 drives.",
+      "speedSaintDesc": "Score 28+ in speed discipline on 5 drives."
     },
     "title": "Drive score",
     "efficiency": "Efficiency",
@@ -119,6 +127,29 @@
     },
     "kpis": "Key metrics",
     "gradeTitle": "Grade",
-    "resource": "drive"
+    "resource": "drive",
+    "gaugeLabel": "Drive score: {{score}} out of 100",
+    "noAchievements": "Achievements unlock as you complete scored drives",
+    "noTrend": "No scored drives to chart yet",
+    "noDistribution": "No scored drives to chart yet",
+    "noTips": "Tips appear once drives are scored",
+    "bestWorst": "Best and worst drives",
+    "efficiencyLabel": "Efficiency (Wh/km)",
+    "smoothnessLabel": "Smoothness (power range)",
+    "colBreakdown": "Eff / Smo / Spd",
+    "periodAverages": "Period averages",
+    "avgDuration": "Avg Duration/Drive",
+    "tips": {
+      "preCondition": "Pre-condition your cabin while plugged in to reduce HVAC battery drain.",
+      "coastMore": "Coast more by lifting your foot earlier before stops.",
+      "tirePressure": "Keep tire pressure at recommended levels for better efficiency.",
+      "smoothAccel": "Accelerate gradually — aim for steady pedal pressure.",
+      "regenBraking": "Use regenerative braking instead of the brake pedal when possible.",
+      "followDistance": "Maintain a larger following distance to avoid sudden braking.",
+      "speedLimit": "Stay within the speed limit — aerodynamic drag rises exponentially above 90 km/h.",
+      "cruiseControl": "Use Autopilot or cruise control on highways for consistent speed.",
+      "routePlanning": "Plan routes to avoid high-speed stretches when possible."
+    },
+    "empty": "Not enough drives in the selected period to calculate a score."
   }
 }

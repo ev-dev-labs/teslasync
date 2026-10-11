@@ -26,6 +26,7 @@
       "details": "Details",
       "commands": "Commands",
       "liveMap": "Live map"
-    }
+    },
+    "noState": "Live telemetry unavailable"
   }
 }

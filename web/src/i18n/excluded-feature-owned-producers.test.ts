@@ -4,6 +4,7 @@ import { resolve } from 'node:path'
 import { createInstance } from 'i18next'
 import { beforeAll, describe, expect, it } from 'vitest'
 import catalog from './en.json'
+import { authorizedCanonicalAdditions } from './authorized-canonical-recovery.test'
 import baseline from './known-missing-keys.json'
 import runtimeManifest from './en/runtime-manifest.json'
 import usageManifest from './en/usage-manifest.json'
@@ -1217,12 +1218,16 @@ describe('excluded806 feature-owned actual producer canonical defaults', () => {
     const keys = new Set<string>([...additions, ...copyOwnerAdditions, drivesEmptyAddition].map(([key]) => key))
     expect(keys.size).toBe(817)
     keys.add('systemStatus.incidents.updateCount_other')
+    for (const [key, value] of authorizedCanonicalAdditions) {
+      expect(nested(catalog, key)).toBe(value)
+      keys.add(key)
+    }
     const oldEntries = leaves(catalog).filter(([key]) => !keys.has(key))
       .sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0)
     expect(oldEntries).toHaveLength(28257)
     expect(createHash('sha256').update(JSON.stringify(oldEntries)).digest('hex'))
       .toBe('890c0369385274774b8b670dbaa98036c4f0da7bec18213b6f78d35c372e90c6')
-    expect(leaves(catalog)).toHaveLength(29075)
+    expect(leaves(catalog)).toHaveLength(30996)
     expect(catalog.settings.title).toBe('Settings')
     expect(catalog.pwa).toMatchObject(shell.pwa)
   })

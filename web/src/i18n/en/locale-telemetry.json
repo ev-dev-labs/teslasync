@@ -53,7 +53,10 @@
     "topSignals": "Most active signals",
     "latest": "Latest",
     "tailTitle": "Live signal tail",
-    "disconnectedBanner": "Live stream disconnected — attempting to reconnect. Figures below reflect the last buffered signals."
+    "disconnectedBanner": "Live stream disconnected — attempting to reconnect. Figures below reflect the last buffered signals.",
+    "streamConnected": "Live throughput stream connected",
+    "streamDisconnected": "Live throughput stream disconnected",
+    "topSignalsList": "Most active signals ranked by arrival frequency"
   },
   "mqtt": {
     "summary": {
@@ -94,7 +97,13 @@
     "noVehicles": "No vehicles currently streaming",
     "throughputAria": "MQTT signal throughput over time",
     "time": "Time",
-    "connectionInfo": "Connection"
+    "connectionInfo": "Connection",
+    "metrics": "Stream metrics",
+    "streamOverview": "Stream overview"
+  },
+  "signalCatalog": {
+    "removeSignal": "Remove {{name}} from selection",
+    "addSignal": "Add {{name}} to selection"
   },
   "signalChangePoints": {
     "title": "Signal change points",
@@ -156,8 +165,37 @@
     "choose": "Choose a signal",
     "col": {
       "n": "Samples",
-      "time": "Time"
-    }
+      "time": "Time",
+      "lag": "Lag (s)",
+      "r": "r"
+    },
+    "bestR": "Peak correlation",
+    "zeroLag": "at zero lag: {{r}}",
+    "bestLag": "Best lag",
+    "noise": "Noise",
+    "threshold": "needs |r| > {{v}}",
+    "effectiveN": "Effective samples",
+    "rawN": "from {{n}} raw points",
+    "kpis": "Correlation metrics",
+    "leadA": "{{a}} leads",
+    "leadB": "{{b}} leads",
+    "simultaneous": "Simultaneous",
+    "noLead": "No relationship",
+    "subtitle": "Sweep one telemetry signal against another across time shifts to find not just whether they move together, but which one moves first",
+    "pick": "Choose two signals",
+    "detrend": "Correlate changes, not levels",
+    "detrendHint": "Differencing removes shared drift, so two signals that merely both rise over the day stop looking related",
+    "noOverlap": "These two signals have no overlapping window of history in the last day, so there is nothing to compare.",
+    "pickTwo": "Choose two signals above to compute the correlogram.",
+    "correlogramHint": "Correlation at every time shift; the dashed lines are the significance threshold",
+    "overlayHint": "Both signals rescaled to 0–1 so their shapes can be compared directly",
+    "reading": "Reading the result",
+    "noReading": "Pick two signals to see how the result should be read.",
+    "coverage": "{{filled}} filled · {{gaps}} gaps",
+    "realText": "The peak clears the threshold adjusted for autocorrelation, so this relationship is unlikely to be an artefact of the two signals simply being smooth.",
+    "noiseText": "The peak does not clear the autocorrelation-adjusted threshold. Smooth signals correlate with almost anything, so this is best treated as coincidence.",
+    "zeroLagText": "The signals line up best with no shift at all, which points to a shared cause rather than one driving the other.",
+    "lagText": "The best alignment needs a {{lag}} second shift. Leading in time is not proof of causation, but a consistent lead is where causal explanations start."
   },
   "signalDeadband": {
     "title": "Signal deadband",
@@ -359,12 +397,20 @@
     "signals": "Signals",
     "searchSignals": "Search signals…",
     "aiFilter": {
-      "badge": "Helix"
+      "badge": "Helix",
+      "title": "Helix natural-language filter",
+      "description": "Describe the filter in plain English (e.g. \"battery level for yesterday\"). The LLM proposes a typed filter you can apply with one click; it never edits the form directly.",
+      "button": "Draft filter",
+      "promptPlaceholder": "e.g. show me battery level for yesterday",
+      "promptLabel": "Filter request",
+      "applyTooltip": "Copy the proposed filter into the form above. You can still edit it before clicking Explore.",
+      "applyButton": "Apply to filters"
     },
     "status": {
       "streaming": "Streaming",
       "disconnected": "Disconnected",
-      "idle": "Idle"
+      "idle": "Idle",
+      "historical": "Historical"
     },
     "kpi": {
       "signals": "Signals",
@@ -372,11 +418,22 @@
       "streaming": "Streaming",
       "loaded": "Loaded",
       "live": "Live",
-      "status": "Status"
+      "status": "Status",
+      "ofMax": "of {{max}} max",
+      "liveEvents": "Live events",
+      "timeSpan": "Time span",
+      "rollingWindow": "5-min window",
+      "days": "{{count}}d",
+      "noRange": "No range set",
+      "withStats": "{{count}} with stats"
     },
     "live": "Live",
     "results": "Results",
-    "liveHelpAria": "More info about live signal streaming"
+    "liveHelpAria": "More info about live signal streaming",
+    "noVehicle": "Select a vehicle to begin",
+    "noVehicleDesc": "Pick a vehicle from the picker above to explore its signals.",
+    "kpis": "Exploration summary",
+    "stopLive": "Stop live"
   },
   "signalGap": {
     "status": "Status",
@@ -444,12 +501,19 @@
     "earliest": "Earliest",
     "latest": "Latest",
     "kpi": {
-      "signals": "Signals"
+      "signals": "Signals",
+      "totalRecords": "Total records",
+      "signalsWithData": "{{count}} with data",
+      "timeSpan": "Time span"
     },
     "title": "Signal log viewer",
     "perPage": "Per page",
     "query": "Query",
-    "chart": "Signal chart"
+    "chart": "Signal chart",
+    "kpis": "Query summary",
+    "subtitle": "Query signal history from Postgres",
+    "noVehicle": "Select a vehicle to begin",
+    "noVehicleDesc": "Pick a vehicle from the picker above to query its signal history."
   },
   "signalMutualInformation": {
     "title": "Signal mutual information",
@@ -504,7 +568,9 @@
     "avg": "Avg",
     "count": "Count",
     "title": "Stats summary",
-    "noData": "No data"
+    "noData": "No data",
+    "noDataInRange": "No data in range",
+    "hideEmpty": "Hide empty ({{count}})"
   },
   "signalTransportAgreement": {
     "title": "HTTP / MQTT Agreement",
@@ -578,7 +644,9 @@
   "signals": {
     "catalog": {
       "aria": "Signal catalog",
-      "searchPlaceholder": "Search signals…"
+      "searchPlaceholder": "Search signals…",
+      "loadError": "Failed to load catalog: {{message}}",
+      "empty": "No signals available for this vehicle."
     }
   },
   "signalsWorkspace": {
@@ -611,7 +679,21 @@
     "explorer": "Signal explorer",
     "chartAuto": "Auto",
     "chartGrid": "Grid",
-    "liveCompareHelpAria": "More info about live and compare modes"
+    "liveCompareHelpAria": "More info about live and compare modes",
+    "historical": "Historical",
+    "liveRate": "Live rate",
+    "subtitle": "Browse the live catalog, inspect history, monitor live, or compare snapshots — all in one place.",
+    "noVehicle": "Select a vehicle to begin",
+    "noVehicleDesc": "Pick a vehicle from the picker above to see its signals.",
+    "kpis": "Workspace summary",
+    "addSignals": "Add signals",
+    "noneSelected": "None selected",
+    "stopLive": "Stop live",
+    "exitCompare": "Exit compare",
+    "chartMode": "Chart layout",
+    "chartOverlay": "Overlay",
+    "emptyTitle": "Pick signals and run a query",
+    "emptyDesc": "Pick signals from the catalog, choose a time range, then click run for historical data — or toggle live to stream in real time."
   },
   "telemetry": {
     "brief": {
@@ -780,7 +862,10 @@
     "homelinkDevices": "HomeLink Devices",
     "sparkline": {
       "retained": "Trend may be out of date",
-      "trend": "{{signal}} trend, {{count}} samples in the last hour"
+      "trend": "{{signal}} trend, {{count}} samples in the last hour",
+      "nonNumeric": "Non-numeric signal ({{kind}})",
+      "error": "Failed to load trend",
+      "empty": "No samples in last hour"
     },
     "remoteStartActive": "Remote start active",
     "noTirePressureData": "No tire pressure data available",
@@ -795,7 +880,10 @@
     "updateInstalling": "Installing",
     "updateAvailable": "Available",
     "updateCurrent": "Current",
-    "gradeEstimate": "Grade"
+    "gradeEstimate": "Grade",
+    "fullInHours": "Full in {{hours}}h",
+    "gpsAccuracy": "GPS accuracy",
+    "maxSpeedToDestination": "Max speed to destination"
   },
   "achievements": {
     "dismiss": "Dismiss achievement notification",
@@ -854,13 +942,47 @@
   },
   "ai": {
     "common": {
-      "errorUnknown": "unknown"
+      "errorUnknown": "unknown",
+      "noOutput": "No output was generated."
     },
     "confirm": {
-      "cancel": "Cancel"
+      "argsLabel": "Arguments",
+      "cancel": "Cancel",
+      "intro": {
+        "mutates": "The assistant wants to make a change to your data. Review what it will do, then approve or cancel.",
+        "read": "The assistant wants to run a tool. Review the inputs, then approve or cancel."
+      },
+      "run": "Approve",
+      "title": "Approve Helix action",
+      "toolLabel": "Tool"
     },
     "limit": {
-      "retry": "Retry"
+      "desc": {
+        "burst": "Too many Helix requests are in flight. The limiter is keeping the system responsive.",
+        "costCap": "You have reached your daily Helix cost limit. Helix features will resume tomorrow or after you raise the cap in Settings.",
+        "costCapUnavailable": "Could not read your Helix usage history. Failing closed for safety.",
+        "featureMisconfigured": "This page is missing a Helix feature registration. Please report this to your administrator.",
+        "generic": "Helix features are temporarily unavailable. The non-Helix baseline continues to work.",
+        "perDay": "You have used your daily Helix request budget. The budget resets at UTC midnight.",
+        "perMinute": "You have sent more Helix requests than allowed per minute. The window resets shortly.",
+        "providerUnavailable": "The Helix provider is not responding. The system will retry automatically.",
+        "settingsUnavailable": "Could not load your Helix settings. Helix is paused until settings are reachable.",
+        "tokens": "Your Helix token quota for this minute is exhausted. Try a shorter prompt."
+      },
+      "retry": "Retry",
+      "title": {
+        "burst": "Too many Helix requests at once",
+        "costCap": "Daily cost cap reached",
+        "costCapUnavailable": "Cost cap check unavailable",
+        "featureMisconfigured": "Helix feature misconfigured",
+        "generic": "Helix temporarily unavailable",
+        "perDay": "Daily Helix usage limit reached",
+        "perMinute": "Helix rate limit hit",
+        "providerUnavailable": "Helix provider unavailable",
+        "settingsUnavailable": "Helix settings unavailable",
+        "tokens": "Helix token quota exhausted"
+      },
+      "useBaseline": "Use baseline"
     }
   },
   "alertPacks": {
@@ -1201,6 +1323,7 @@
         "conditionsLabel": "Conditions",
         "description": "Describe an automation that uses one of your existing geofences. Helix proposes a typed graph anchored to a place_id you already have — review and apply to the form below before saving.",
         "placeholder": "e.g. when I arrive home on a weekday after sunset, turn on cabin overheat protection",
+        "promptAria": "Describe the geofence-aware automation to draft",
         "proposalLabel": "Proposed automation",
         "rejectedLabel": "Proposal rejected by validator",
         "suggestButton": "Suggest automation",
@@ -1227,6 +1350,10 @@
       "description": "Ask Helix to explain which charging habits and risk factors drive your deterministic battery-health forecast. The narrator never changes the forecast — it grounds every sentence in the same numbers the chart below renders.",
       "generateButton": "Narrate forecast",
       "title": "Explain the battery health forecast"
+    },
+    "delta": {
+      "aria": "Battery {{from}}% to {{to}}%",
+      "unknown": "Battery delta unknown"
     }
   },
   "bulk": {
@@ -1273,6 +1400,7 @@
       "badge": "Helix",
       "description": "Compute per-cluster (L1 overnight / L2 workplace / DC fast) learned charging envelope from this vehicle's recent sessions and walk through how each cluster compares to the deterministic rule-label baseline used by the Charging curve page today.",
       "generateButton": "Train charging-curve clusters",
+      "noVehicleHint": "Pick a vehicle to train its charging-curve clusters.",
       "title": "Learn per-vehicle charging-curve clusters"
     },
     "detail": {
@@ -1356,6 +1484,7 @@
       "cancel": "Cancel",
       "compare": "Compare to previous period",
       "end": "End date",
+      "loadingCalendar": "Loading calendar…",
       "newRange": "New range",
       "pickRange": "Custom range",
       "popoverLabel": "Date range picker",
@@ -1550,6 +1679,7 @@
     "aiSearch": {
       "badge": "Helix",
       "description": "Describe a drive (for example \"last Friday's trip to the coast\") and jump straight to its replay — the assistant only narrates your own drives.",
+      "inputLabel": "Describe the drive to find",
       "placeholder": "Describe a drive — for example \"last Friday's coast trip\" or \"the one with the lowest efficiency last week\"",
       "searchButton": "Search with Helix",
       "title": "Find a drive in natural language"
@@ -1562,6 +1692,13 @@
       "switchHint": "Or switch to your other tab to keep editing there.",
       "takeOver": "Take over editing",
       "title": "Another browser tab is editing this"
+    }
+  },
+  "emptyState": {
+    "generic": "No data available yet.",
+    "label": {
+      "likelyCause": "Most likely reason",
+      "prerequisite": "What has to happen first"
     }
   },
   "entityContext": {
@@ -1632,6 +1769,15 @@
       "loading": "Loading statistics"
     }
   },
+  "feedbackTriage": {
+    "aiAdvisor": {
+      "badge": "Helix",
+      "button": "Suggest triage",
+      "description": "Get a proposed status, category, and priority label for this feedback row. The advisor reads only the redacted envelope (id, category, title, body excerpt, page route, app version, status, created_at) — never the reporter email, IP, console tail, or recent errors. The proposal is informational; your existing manual controls above remain the only way to save changes.",
+      "emptyHint": "Select a feedback row to suggest triage labels.",
+      "title": "Helix triage advisor"
+    }
+  },
   "filters": {
     "activeLabel": "Active filters",
     "clearAll": "Clear all",
@@ -1681,6 +1827,7 @@
     "ariaLabel": "Helix",
     "askHelix": "Ask Helix",
     "badge": "Helix",
+    "errorLabel": "Helix error:",
     "evidence": {
       "gathering": "Gathering",
       "grounded": "Grounded in",
@@ -1714,6 +1861,23 @@
       "live": "Live mode streams real-time signal values via Server-Sent Events (SSE). The chart maintains a rolling 5-minute window throttled to 2 Hz updates.",
       "snapshot": "A snapshot is a point-in-time view of every signal value at a single timestamp. The diff falls back to signal_log within the last 30 days when the live layer doesn't have it.",
       "sourceLayer": "The layer that supplied this value: L1 (in-process), L2 (Redis), Log (TimescaleDB history), or Stale (older than 2 minutes)."
+    },
+    "signalChangePoints": {
+      "count": "A change point closes the current segment and starts a fresh one only once the cumulative statistic crosses its alarm threshold, and never before the fixed minimum segment length has elapsed.",
+      "iconLabel": "More info about signal selection"
+    },
+    "signalCorrelation": {
+      "bestR": "An ordinary overlay chart only ever shows the zero-lag correlation, which misses every relationship with a delay in it. Sweeping the lag finds the shift at which the two signals line up best, and the difference between the peak and the zero-lag value is exactly the information a static chart throws away.",
+      "iconLabel": "More info about signal selection"
+    },
+    "signalEntropy": {
+      "entropy": "How surprised you should be by the next sample given everything seen so far. Normalized entropy divides by the ceiling for however many bins were actually populated, so a signal using 2 of 8 requested bins is judged against a 2-state ceiling, not an 8-state one it never approached.",
+      "iconLabel": "More info about signal selection"
+    },
+    "signalTrend": {
+      "iconLabel": "More info about signal selection",
+      "significance": "Tie-aware Mann-Kendall tests whether the observed ordering of values is more consistent with a monotonic trend than chance — ties (repeated readings) are corrected for rather than treated as informationless.",
+      "slope": "Theil-Sen slope: the median of every pairwise slope between samples. A handful of outliers cannot swing this the way they can an ordinary least-squares fit."
     }
   },
   "impersonation": {
@@ -1748,6 +1912,7 @@
     "connected": "Live",
     "disconnected": "Offline",
     "reconnecting": "Reconnecting…",
+    "scope": "Live data",
     "staleBanner": {
       "message": "The live data connection has been offline for more than 2 minutes. Values on this page may be stale until the connection is restored.",
       "title": "Live data unavailable"
@@ -1799,6 +1964,9 @@
         "badge": "Helix",
         "description": "Describe the alert you want to receive an advisory text proposal. Review it and manually enter the rule in the standard form before saving; this action does not fill the form, save, or enable an alert.",
         "draftButton": "Draft alert",
+        "emptyHint": "Choose a vehicle and describe the alert you want Helix to draft.",
+        "inputLabel": "Alert description",
+        "placeholder": "e.g. alert me if battery cell voltage spread is over 50 mV",
         "title": "Draft from natural language"
       },
       "aiConflicts": {
@@ -1806,10 +1974,17 @@
         "description": "Surface structural overlaps between your alert rule definitions. Review only — Helix never edits, merges, or deletes rules.",
         "detectButton": "Detect conflicts",
         "emptyMessage": "No structural conflicts found in the current rule set.",
+        "flag": {
+          "cooldownMismatch": "cooldown mismatch",
+          "severityMismatch": "severity mismatch",
+          "subsumes": "subsumes",
+          "triggerModeMismatch": "trigger mode mismatch"
+        },
         "kind": {
           "overlapping_threshold": "Overlapping threshold",
           "redundant_duplicate": "Redundant duplicate"
         },
+        "listLabel": "Detected rule conflicts",
         "reviewButton": "Review rule",
         "ruleLabel": "Rule",
         "title": "Detect cross-rule conflicts"
@@ -1899,6 +2074,7 @@
         "unavailable": "No confidence basis was supplied."
       },
       "evidence": "Supporting evidence",
+      "evidenceCoverage": "{{count}} supporting records supplied.",
       "likelyCause": "Likely cause",
       "limitations": "Limitations",
       "noEvidence": "No supporting records were supplied.",
@@ -1918,20 +2094,75 @@
   "powerDashboards": {
     "aiDrafter": {
       "applyButton": "Apply to editor",
-      "badge": "Helix"
+      "applyTooltip": "Copy the proposed dashboard JSON into the editor above. You can still edit it before clicking Copy to clipboard.",
+      "badge": "Helix",
+      "button": "Draft dashboard",
+      "description": "Describe the dashboard you want in plain English (e.g. \"give me an overview dashboard with daily drives, current battery, and recent alerts\"). Helix proposes a typed dashboard JSON draft built from the in-scope curated panel catalog you can apply to the editor with one click; it never pushes the dashboard to Grafana directly.",
+      "promptLabel": "Dashboard request",
+      "promptPlaceholder": "e.g. give me an overview dashboard with daily drives, current battery, and recent alerts",
+      "title": "Helix natural-language dashboard composer"
     }
   },
   "powerGrafana": {
     "aiDrafter": {
       "applyButton": "Apply to editor",
-      "badge": "Helix"
+      "applyTooltip": "Copy the proposed panel JSON into the editor above. You can still edit it before clicking Copy to clipboard.",
+      "badge": "Helix",
+      "button": "Draft panel",
+      "description": "Describe the panel you want in plain English (e.g. \"show me a daily time series of how far I drove this month\"). Helix proposes a typed Grafana panel JSON draft you can apply to the editor with one click; it never pushes the panel to Grafana directly.",
+      "previewDatasource": "Datasource:",
+      "previewLabel": "Proposed Grafana panel (review before applying)",
+      "previewTables": "Referenced tables:",
+      "previewTargets": "Query targets:",
+      "previewType": "Panel type:",
+      "previewUntitled": "Untitled panel",
+      "promptLabel": "Grafana panel request",
+      "promptPlaceholder": "e.g. show me a daily time series of how far I drove this month",
+      "title": "Helix natural-language Grafana panel drafter"
     }
   },
   "powerSql": {
     "aiDrafter": {
       "applyButton": "Apply to editor",
-      "badge": "Helix"
+      "applyTooltip": "Copy the proposed SQL into the editor above. You can still edit it before clicking Run.",
+      "badge": "Helix",
+      "button": "Draft SQL",
+      "description": "Describe the question in plain English (e.g. \"how many drives last week\"). Helix proposes a typed read-only SQL draft you can apply to the editor with one click; it never executes the query directly.",
+      "promptLabel": "SQL request",
+      "promptPlaceholder": "e.g. how many drives did I take last week",
+      "title": "Helix natural-language SQL drafter"
     }
+  },
+  "problemReport": {
+    "context": {
+      "appVersion": "App version",
+      "browser": "Browser",
+      "page": "Page",
+      "pageNote": "(record ids are replaced with :id)",
+      "title": "What is sent with your report"
+    },
+    "form": {
+      "description": "What were you doing, and what did you expect?",
+      "descriptionPlaceholder": "Steps you took, what you saw, and what you expected to see instead.",
+      "descriptionTooShort": "Please add at least {{count}} characters.",
+      "hidePreview": "Hide exactly what is sent",
+      "includeDiagnostics": "Attach a redacted technical summary ({{count}} recent errors)",
+      "includeDiagnosticsHint": "Versions, browser capability, service health, error messages and trace IDs. Never VINs, locations, tokens, e-mail addresses or raw logs.",
+      "showPreview": "Show exactly what is sent",
+      "submit": "Send report",
+      "submitting": "Sending…",
+      "title": "What went wrong?",
+      "titlePlaceholder": "Short summary (e.g. \"Charging costs show as blank\")"
+    },
+    "intro": "Describe what happened in your own words. We attach a redacted technical summary only if you allow it.",
+    "policy": {
+      "consoleTail": "Console output",
+      "files": "File attachments",
+      "screenshots": "Screenshots",
+      "userEmail": "E-mail address"
+    },
+    "submitError": "Could not send the report. Please try again.",
+    "title": "Report a problem"
   },
   "productPreferences": {
     "persona": {
@@ -1958,7 +2189,16 @@
   },
   "pwa": {
     "lowBandwidth": {
-      "on": "Always on"
+      "auto": "Automatic (follow the network)",
+      "effectsOff": "When active: polling slows down, animations stop, charts render fewer points, heavy basemaps fall back to light tiles, and the service worker stops caching new images and map tiles.",
+      "effectsOn": "While active: background polling slows to a quarter of its normal rate, entrance animations are disabled, charts render at most {{points}} points, satellite/terrain basemaps fall back to the lightest raster tiles, and the service worker stops storing new images and map tiles.",
+      "heading": "Low-bandwidth mode",
+      "label": "Data usage on this device",
+      "off": "Always off",
+      "on": "Always on",
+      "statusNetwork": "Active — your browser or network reported Data Saver / a 2G-class connection.",
+      "statusOff": "Not active — the app is using full quality.",
+      "statusUser": "Active — enabled manually on this device."
     }
   },
   "range": {
@@ -1977,6 +2217,7 @@
   "replay": {
     "elevation": {
       "aria": "Elevation profile chart — no data available yet",
+      "gainLoss": "↑ {{gain}}m  ↓ {{loss}}m",
       "label": "Elevation",
       "noData": "No elevation data available",
       "title": "Elevation profile"
@@ -2030,7 +2271,9 @@
     "aiSearch": {
       "badge": "Helix",
       "description": "Describe what you are looking for and the assistant will surface drives, charging sessions, and alerts that match — citing each entity by name.",
+      "emptyHint": "Type a question above to search your drives, charging sessions, and alerts.",
       "inputLabel": "Search query",
+      "placeholder": "e.g. drives last weekend over 200 km with phantom drain",
       "searchButton": "Search with Helix",
       "title": "Search with natural language"
     }
@@ -2057,6 +2300,7 @@
     "title": "Keyboard shortcuts"
   },
   "signalQuery": {
+    "addMoreSignals": "Add more signals…",
     "col": {
       "signal": "Signal",
       "timestamp": "Timestamp",
@@ -2066,6 +2310,8 @@
     "firstPage": "First page",
     "from": "From",
     "lastPage": "Last page",
+    "loadingSignals": "Loading signals…",
+    "maxReached": "Maximum of {{count}} signals selected",
     "moreRefine": "{{count}} more — refine search",
     "nextPage": "Next page",
     "noMatchingSignals": "No matching signals",
@@ -2078,9 +2324,14 @@
     "prevPage": "Previous page",
     "query": "Query",
     "quickRange": "Quick range",
+    "records": "{{n}} records",
+    "removeSignal": "Remove {{signal}}",
     "rows": "Rows",
+    "searchSignals": "Search signals",
     "searchSignalsPlaceholder": "Search signals…",
     "signals": "Signals",
+    "signalsError": "Failed to load signals",
+    "signalsMax": "Signals (max {{count}})",
     "to": "To"
   },
   "softwareUpdates": {
@@ -2153,6 +2404,7 @@
     }
   },
   "timeline": {
+    "empty": "No timeline entries yet.",
     "label": "Timeline"
   },
   "tirePressure": {
@@ -2452,6 +2704,7 @@
     "aiNarration": {
       "badge": "Helix",
       "description": "Get a short, Helix-written recap of your year from the slide data above.",
+      "emptyHint": "Select a vehicle above to recap its year.",
       "generateButton": "Generate narration",
       "title": "Helix narration"
     },

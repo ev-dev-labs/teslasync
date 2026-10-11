@@ -174,7 +174,8 @@
       "elapsedTitle": "Linked journey timing",
       "intensityTitle": "Whole-journey intensity",
       "structureTitle": "Observed chain quantities",
-      "shortDistance": "{{distance}} · {{share}} of observed distance"
+      "shortDistance": "{{distance}} · {{share}} of observed distance",
+      "source": "Returned drive-history continuity at the selected parking-gap threshold, using local days and weeks."
     }
   }
 }

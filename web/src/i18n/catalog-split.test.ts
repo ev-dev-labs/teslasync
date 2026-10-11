@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 // @ts-expect-error - shared topology helpers authored as ESM JavaScript
 import {
   keysUnderPrefix,
@@ -679,13 +679,55 @@ describe('checked-in locale artifacts', () => {
   })
 
   it('inlines a fallback chunk that is cheaper to ship than to request', () => {
-    // `emptyState` keys are composed at render time
-    // (`emptyState.<scope>.<view>.hint`), so no static list can enumerate
-    // them. Shipping the whole 144-byte namespace removes that entire class
-    // of dead fetches.
-    expect(runtimeManifest.complete).toContain('emptyState')
+    // Use an actual existing shared namespace that still meets the generator's
+    // JSON.stringify(value).length <= 256 rule, not the enlarged emptyState.
+    expect(JSON.stringify(catalog.annotations).length).toBeLessThanOrEqual(256)
+    expect(usageManifest.detailNamespaces).toContain('annotations')
+    expect(runtimeManifest.complete).toContain('annotations')
+    expect(shell.annotations).toEqual(catalog.annotations)
+    expect(emitted.has('detail-annotations')).toBe(false)
+    expect(runtimeManifest.detail).not.toContain('annotations')
     for (const namespace of runtimeManifest.complete) {
       expect(runtimeManifest.missing.some((key: string) => key.startsWith(`${namespace}.`))).toBe(false)
+    }
+  })
+
+  it('keeps enlarged emptyState reachable through its real lazy namespace fallback', async () => {
+    expect(JSON.stringify(catalog.emptyState).length).toBeGreaterThan(256)
+    expect(usageManifest.detailNamespaces).toHaveLength(177)
+    expect(usageManifest.detailNamespaces).toContain('emptyState')
+    expect(usageManifest.namespaceFallbackBundles.emptyState).toBe('detail-emptyState')
+    expect(runtimeManifest.complete).not.toContain('emptyState')
+    expect(runtimeManifest.detail).toContain('emptyState')
+    expect(emitted.get('detail-emptyState')).toEqual({ emptyState: catalog.emptyState })
+
+    const previousPath = window.location.pathname + window.location.search + window.location.hash
+    window.history.replaceState(null, '', '/__locale-shell-probe__')
+    vi.resetModules()
+    const runtime = await import('./index')
+    try {
+      const before = structuredClone(runtime.default.getResourceBundle('en', 'translation'))
+      const key = 'emptyState.label.prerequisite'
+      expect(nested(shell, key)).toBeUndefined()
+      expect(runtime.default.exists(key)).toBe(false)
+      // The real missing-key handler starts the generated dynamic import;
+      // awaiting the public loader shares that request and waits for its flush.
+      expect(runtime.default.t(key, { defaultValue: '__deferred__', saveMissing: true })).toBe('__deferred__')
+      await runtime.loadEnglishNamespace('emptyState')
+      for (const leaf of leafKeys(catalog.emptyState, 'emptyState') as string[]) {
+        expect(runtime.default.t(leaf, { skipInterpolation: true }), leaf).toBe(nested(catalog, leaf))
+      }
+      expect(runtime.default.getResourceBundle('en', 'translation')).toEqual({
+        ...before, emptyState: catalog.emptyState,
+      })
+      // A repeated request stays idempotent without importing a foreign route.
+      await runtime.loadEnglishNamespace('emptyState')
+      expect(runtime.default.getResourceBundle('en', 'translation')).toEqual({
+        ...before, emptyState: catalog.emptyState,
+      })
+    } finally {
+      runtime.flushPendingEnglishResourcesForTest()
+      window.history.replaceState(null, '', previousPath)
     }
   })
 

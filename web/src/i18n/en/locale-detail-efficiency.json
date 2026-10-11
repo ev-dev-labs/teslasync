@@ -71,6 +71,12 @@
     },
     "glossary": {
       "lead": "Terms on this page:"
+    },
+    "brief": {
+      "economy": "Reciprocal economy, derived from the same measured consumption; not energy intensity.",
+      "co2": "Source aggregate CO₂ savings estimate, in kilograms.",
+      "title": "Lifetime efficiency evidence",
+      "description": "Vehicle driving aggregates retain their lifetime source period; they are independent of the range-filtered drive charts."
     }
   }
 }

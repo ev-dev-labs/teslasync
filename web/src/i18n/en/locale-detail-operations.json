@@ -39,7 +39,8 @@
       "noEvidence": "No supporting records were supplied.",
       "provenance": "How this was calculated",
       "noProvenance": "Calculation provenance was not supplied.",
-      "record": "Record"
+      "record": "Record",
+      "evidenceCoverage": "{{count}} supporting records supplied."
     },
     "scope": {
       "lifetime": "Lifetime model",

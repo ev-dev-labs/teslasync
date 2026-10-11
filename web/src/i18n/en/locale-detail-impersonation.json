@@ -30,14 +30,30 @@
         "session": "Session status",
         "modeOpen": "Open",
         "active": "Active",
-        "idle": "Idle"
+        "idle": "Idle",
+        "available": "Available subjects",
+        "limit": "Session limit",
+        "modeForwardAuth": "Forward-auth"
       },
       "subjectColumn": "Subject",
       "available": "Available",
       "statusColumn": "Status",
       "actionColumn": "Action",
       "showing": "Showing {{shown}} of {{total}}",
-      "refresh": "Refresh"
+      "refresh": "Refresh",
+      "brief": {
+        "scope": "Current impersonation status and available session subjects are independent sources. Open mode disables subject discovery.",
+        "limit": "Configured policy limit of 15 minutes, not the active session’s remaining time.",
+        "title": "Subject and session posture",
+        "provenance": "Authenticated-session telemetry and impersonation policy"
+      },
+      "currentTarget": "Current target",
+      "tableTitle": "Active subjects",
+      "searchPlaceholder": "Search subjects…",
+      "searchLabel": "Search subjects",
+      "noMatch": "No subjects match your search.",
+      "kpiLabel": "Impersonation summary",
+      "mainLabel": "Subjects and session status"
     },
     "toast": {
       "started": "Impersonation started",
@@ -55,6 +71,31 @@
       "target": "Target subject",
       "expires": "Expires",
       "inactive": "You are not impersonating anyone. Pick a subject from the table to start a support session."
+    },
+    "policy": {
+      "audit": {
+        "title": "Every session is audit-logged",
+        "body": "Starting and ending a session writes an immutable entry to the admin audit log with the actor and the target."
+      },
+      "ttl": {
+        "title": "15-minute time limit",
+        "body": "A session expires automatically after 15 minutes so a forgotten session cannot linger."
+      },
+      "sudo": {
+        "title": "Step-up auth to start",
+        "body": "Starting a session requires a fresh re-authentication prompt; ending one never does."
+      },
+      "forwardAuth": {
+        "title": "Forward-auth required",
+        "body": "Per-subject identity only exists when the proxy runs in forward-auth mode. Open-mode installs cannot impersonate."
+      },
+      "exit": {
+        "title": "End it any time",
+        "body": "The global banner at the top of the screen ends the active session immediately and restores your own view."
+      },
+      "title": "How impersonation works",
+      "intro": "Impersonation lets an admin view TeslaSync exactly as another subject to reproduce a support issue. It is deliberately constrained:",
+      "listLabel": "Impersonation guarantees"
     }
   }
 }

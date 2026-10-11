@@ -97,7 +97,16 @@
       "validation": "Enter a name, vehicle, valid period, and a driver assigned for the full reservation.",
       "editTitle": "Edit reservation",
       "purpose": "Purpose",
-      "status": "Status"
+      "status": "Status",
+      "unsaved": "You have unsaved reservation changes. Discard them?",
+      "nameRequired": "Enter a reservation name.",
+      "nameLimit": "Use 160 characters or fewer.",
+      "purposeLimit": "Use 500 characters or fewer.",
+      "vehicleRequired": "Choose a vehicle.",
+      "startRequired": "Enter a valid start time.",
+      "endRequired": "Enter a valid end time.",
+      "endAfterStart": "End time must be after the start time.",
+      "driverUnavailable": "Choose a driver assigned to this vehicle for the full reservation."
     },
     "reservations": {
       "driver": "Driver",
@@ -113,7 +122,8 @@
       "cancelAction": "Cancel reservation",
       "edit": "Edit {{name}}",
       "cancelNamed": "Cancel {{name}}",
-      "delete": "Delete {{name}}"
+      "delete": "Delete {{name}}",
+      "add": "Add reservation"
     },
     "status": {
       "cancelled": "Cancelled",
@@ -151,7 +161,14 @@
       "chooseVehicle": "Choose vehicle",
       "chooseDriver": "Choose driver",
       "ongoingHint": "Leave blank for an ongoing assignment.",
-      "notes": "Notes"
+      "notes": "Notes",
+      "unsaved": "You have unsaved assignment changes. Discard them?",
+      "vehicleRequired": "Choose a vehicle.",
+      "driverRequired": "Choose a driver.",
+      "startRequired": "Enter a valid start time.",
+      "endInvalid": "Enter a valid end time.",
+      "endAfterStart": "End time must be after the start time.",
+      "notesLimit": "Use 500 characters or fewer."
     },
     "delete": {
       "assignment": "assignment",
@@ -180,7 +197,18 @@
       "day": "Day",
       "windowStart": "Start",
       "windowEnd": "End",
-      "removeWindow": "Remove charging window"
+      "removeWindow": "Remove charging window",
+      "unsaved": "You have unsaved charging-policy changes. Discard them?",
+      "vehicleRequired": "Choose a vehicle.",
+      "nameRequired": "Enter a policy name.",
+      "nameLimit": "Use 120 characters or fewer.",
+      "targetInvalid": "Enter a whole-number target from 1% to 100%.",
+      "powerInvalid": "Enter a positive whole number of watts.",
+      "priorityInvalid": "Enter a whole-number priority from 0 to 1,000.",
+      "startRequired": "Enter a valid effective start.",
+      "endInvalid": "Enter a valid effective end.",
+      "endAfterStart": "Effective end must be after its start.",
+      "windowsInvalid": "Add valid, non-overlapping charging windows."
     },
     "costCenterDialog": {
       "validation": "Code and name are required and must fit their limits.",
@@ -188,7 +216,12 @@
       "createTitle": "Add cost center",
       "code": "Code",
       "name": "Name",
-      "active": "Available for new fleet activity"
+      "active": "Available for new fleet activity",
+      "unsaved": "You have unsaved cost-center changes. Discard them?",
+      "codeRequired": "Enter a cost-center code.",
+      "codeLimit": "Use 32 characters or fewer.",
+      "nameRequired": "Enter a cost-center name.",
+      "nameLimit": "Use 120 characters or fewer."
     },
     "driverDialog": {
       "validation": "Name and reference are required and must fit their limits.",
@@ -197,7 +230,19 @@
       "name": "Display name",
       "reference": "Non-sensitive reference code",
       "status": "Status",
-      "identity": "Driver identity"
+      "identity": "Driver identity",
+      "unsaved": "You have unsaved driver changes. Discard them?",
+      "nameRequired": "Enter a display name.",
+      "nameLimit": "Use 120 characters or fewer.",
+      "referenceRequired": "Enter a reference code.",
+      "referenceLimit": "Use 64 characters or fewer.",
+      "capRange": "Charge cap must be 20–100%.",
+      "curfewPair": "Set both curfew start and end, or neither.",
+      "curfewClock": "Curfew times must be HH:MM (24h).",
+      "chargeCap": "Charge cap (%)",
+      "chargeCapPlaceholder": "No cap",
+      "curfewStart": "Curfew start",
+      "curfewEnd": "Curfew end"
     },
     "drivers": {
       "active": "Active",
@@ -210,7 +255,8 @@
       "title": "Fleet drivers",
       "add": "Add driver",
       "resource": "Drivers",
-      "empty": "No fleet drivers are configured."
+      "empty": "No fleet drivers are configured.",
+      "guardrails": "Guardrails"
     },
     "mutation": {
       "versionTitle": "Record changed",
@@ -237,7 +283,22 @@
       "scheduledEnd": "Downtime ends",
       "costMinor": "Cost (minor units)",
       "currency": "Currency",
-      "description": "Description"
+      "description": "Description",
+      "unsaved": "You have unsaved work-order changes. Discard them?",
+      "vehicleRequired": "Choose a vehicle.",
+      "titleRequired": "Enter a work-order title.",
+      "titleLimit": "Use 160 characters or fewer.",
+      "descriptionLimit": "Use 2,000 characters or fewer.",
+      "distanceInvalid": "Enter a non-negative distance.",
+      "dueAtInvalid": "Enter a valid due date and time.",
+      "startInvalid": "Enter a valid downtime start.",
+      "endInvalid": "Enter a valid downtime end.",
+      "endAfterStart": "Downtime end must be after its start.",
+      "costInvalid": "Enter a non-negative whole number.",
+      "currencyRequired": "Enter the cost currency.",
+      "costRequired": "Enter the cost amount.",
+      "currencyInvalid": "Use a three-letter ISO currency code.",
+      "costMinorHint": "Enter the smallest currency unit; for USD, 12500 represents $125.00."
     },
     "brief": {
       "source": {
@@ -343,6 +404,12 @@
       }
     }
   },
+  "battery": {
+    "delta": {
+      "aria": "Battery {{from}}% to {{to}}%",
+      "unknown": "Battery delta unknown"
+    }
+  },
   "bulk": {
     "clear": "Clear selection",
     "itemDefault": "item",
@@ -403,6 +470,7 @@
       "cancel": "Cancel",
       "compare": "Compare to previous period",
       "end": "End date",
+      "loadingCalendar": "Loading calendar…",
       "newRange": "New range",
       "pickRange": "Custom range",
       "popoverLabel": "Date range picker",
@@ -588,6 +656,13 @@
       "title": "Another browser tab is editing this"
     }
   },
+  "emptyState": {
+    "generic": "No data available yet.",
+    "label": {
+      "likelyCause": "Most likely reason",
+      "prerequisite": "What has to happen first"
+    }
+  },
   "entityContext": {
     "title": "Related context"
   },
@@ -679,6 +754,7 @@
     "connected": "Live",
     "disconnected": "Offline",
     "reconnecting": "Reconnecting…",
+    "scope": "Live data",
     "staleBanner": {
       "message": "The live data connection has been offline for more than 2 minutes. Values on this page may be stale until the connection is restored.",
       "title": "Live data unavailable"
@@ -722,6 +798,7 @@
         "unavailable": "No confidence basis was supplied."
       },
       "evidence": "Supporting evidence",
+      "evidenceCoverage": "{{count}} supporting records supplied.",
       "likelyCause": "Likely cause",
       "limitations": "Limitations",
       "noEvidence": "No supporting records were supplied.",
@@ -737,6 +814,37 @@
     "noAttention": "No current attention items.",
     "reviewAll": "Review all",
     "reviewDetails": "Review details"
+  },
+  "problemReport": {
+    "context": {
+      "appVersion": "App version",
+      "browser": "Browser",
+      "page": "Page",
+      "pageNote": "(record ids are replaced with :id)",
+      "title": "What is sent with your report"
+    },
+    "form": {
+      "description": "What were you doing, and what did you expect?",
+      "descriptionPlaceholder": "Steps you took, what you saw, and what you expected to see instead.",
+      "descriptionTooShort": "Please add at least {{count}} characters.",
+      "hidePreview": "Hide exactly what is sent",
+      "includeDiagnostics": "Attach a redacted technical summary ({{count}} recent errors)",
+      "includeDiagnosticsHint": "Versions, browser capability, service health, error messages and trace IDs. Never VINs, locations, tokens, e-mail addresses or raw logs.",
+      "showPreview": "Show exactly what is sent",
+      "submit": "Send report",
+      "submitting": "Sending…",
+      "title": "What went wrong?",
+      "titlePlaceholder": "Short summary (e.g. \"Charging costs show as blank\")"
+    },
+    "intro": "Describe what happened in your own words. We attach a redacted technical summary only if you allow it.",
+    "policy": {
+      "consoleTail": "Console output",
+      "files": "File attachments",
+      "screenshots": "Screenshots",
+      "userEmail": "E-mail address"
+    },
+    "submitError": "Could not send the report. Please try again.",
+    "title": "Report a problem"
   },
   "productPreferences": {
     "persona": {
@@ -763,7 +871,16 @@
   },
   "pwa": {
     "lowBandwidth": {
-      "on": "Always on"
+      "auto": "Automatic (follow the network)",
+      "effectsOff": "When active: polling slows down, animations stop, charts render fewer points, heavy basemaps fall back to light tiles, and the service worker stops caching new images and map tiles.",
+      "effectsOn": "While active: background polling slows to a quarter of its normal rate, entrance animations are disabled, charts render at most {{points}} points, satellite/terrain basemaps fall back to the lightest raster tiles, and the service worker stops storing new images and map tiles.",
+      "heading": "Low-bandwidth mode",
+      "label": "Data usage on this device",
+      "off": "Always off",
+      "on": "Always on",
+      "statusNetwork": "Active — your browser or network reported Data Saver / a 2G-class connection.",
+      "statusOff": "Not active — the app is using full quality.",
+      "statusUser": "Active — enabled manually on this device."
     }
   },
   "rbac": {
@@ -774,6 +891,7 @@
   "replay": {
     "elevation": {
       "aria": "Elevation profile chart — no data available yet",
+      "gainLoss": "↑ {{gain}}m  ↓ {{loss}}m",
       "label": "Elevation",
       "noData": "No elevation data available",
       "title": "Elevation profile"
@@ -852,6 +970,7 @@
     "tagsNone": "No tags yet"
   },
   "timeline": {
+    "empty": "No timeline entries yet.",
     "label": "Timeline"
   },
   "toast": {

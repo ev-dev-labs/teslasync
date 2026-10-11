@@ -49,16 +49,22 @@
         "title": "By hour of day",
         "series": "Actions",
         "empty": "No activity to chart by hour yet.",
-        "colHour": "Hour"
+        "colHour": "Hour",
+        "chartAria": "Activity counts by hour of day"
       },
       "breakdowns": {
         "aria": "Activity breakdowns"
       },
       "feed": {
-        "title": "Activity feed"
+        "title": "Activity feed",
+        "error": "Failed to load activity feed",
+        "loading": "Loading activity feed"
       },
       "brief": {
-        "range": "Loaded activity for {{start}} – {{end}}; at most {{limit}} actions."
+        "range": "Loaded activity for {{start}} – {{end}}; at most {{limit}} actions.",
+        "description": "Actions, active days, action types, and entities derived from the loaded personal activity feed.",
+        "scope": "Loaded recent activity only; not a complete account lifetime total.",
+        "lastContext": "Most recent timestamp in the loaded feed."
       }
     },
     "action": {
@@ -189,6 +195,12 @@
         "alert": "Alert",
         "software_update": "Software update",
         "annotation": "Annotation"
+      },
+      "brief": {
+        "countTitle": "Range and page counts",
+        "description": "The server total covers the selected range; loaded events, days, and critical alerts describe this page only.",
+        "scope": "Selected range and current loaded page have different coverage.",
+        "mixDescription": "Counts by event type describe only the loaded page, not the entire selected range."
       }
     }
   }

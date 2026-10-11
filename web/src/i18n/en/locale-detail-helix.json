@@ -31,12 +31,14 @@
     },
     "askHelix": "Ask Helix",
     "page": {
-      "title": "Helix"
+      "title": "Helix",
+      "subtitle": "Optional AI integration. Off by default — nothing runs until you opt in here."
     },
     "breadcrumb": {
       "integrations": "Integrations"
     },
     "thinkingButtonLabel": "Helix is thinking…",
-    "thinkingStatusLabel": "Helix is thinking"
+    "thinkingStatusLabel": "Helix is thinking",
+    "errorLabel": "Helix error:"
   }
 }

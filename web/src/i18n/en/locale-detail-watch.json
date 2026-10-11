@@ -28,7 +28,9 @@
     },
     "loading": "Loading watch summary…",
     "command": {
-      "failed": "Command failed"
+      "failed": "Command failed",
+      "success": "Command sent",
+      "error": "Watch command failed: {{message}}"
     }
   }
 }

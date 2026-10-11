@@ -259,7 +259,8 @@
       },
       "trigger": "trigger: {{trigger}}",
       "signalTitle": "Signal window",
-      "signalEmpty": "No signals in this window for the default whitelist."
+      "signalEmpty": "No signals in this window for the default whitelist.",
+      "loading": "Loading drive diagnostic…"
     },
     "stat": {
       "mean": "Mean",
@@ -291,8 +292,39 @@
       "estimated": "Estimated",
       "ambiguous": "Ambiguous",
       "unknown": "Unknown",
-      "openInsights": "Open FSD insights"
+      "openInsights": "Open FSD insights",
+      "title": "Supervised driving",
+      "mapEvidence": "Approximate area where the FSD counter increased - not an exact FSD-active segment.",
+      "loadFailed": "Supervised-driving evidence could not be loaded",
+      "loadFailedBody": "The rest of this drive remains available. Retry the page to load the cumulative-counter evidence.",
+      "section": "Supervised driving",
+      "subtitle": "Reported supervised-driving distance from synchronized cumulative counters.",
+      "afterFirmware": "After firmware {{version}}",
+      "distance": "Reported distance",
+      "share": "Share of drive",
+      "evidenceWindow": "Evidence window",
+      "noPositiveEvidence": "No positive counter increase",
+      "resetTitle": "Counter reset affected this drive",
+      "resetBody": "Distance around the reset cannot be assigned exactly, so this value is not high confidence.",
+      "evidenceLimitedTitle": "Route evidence limited",
+      "evidenceLimitedBody": "This drive produced more counter evidence than can be shown safely. The dashed map overlay displays only the first 512 coalesced intervals.",
+      "unknownBody": "There are not enough paired observations to distinguish zero FSD use from missing data.",
+      "method": "Evidence times bound where the counter increased; they do not identify exact FSD-active road segments.",
+      "afterFirmwareHonesty": "This drive ran firmware {{version}}. The spotlight compares FSD share before vs after — correlation, not proof the update caused a change."
     },
-    "breadcrumbFallback": "Drive #{{id}}"
+    "breadcrumbFallback": "Drive #{{id}}",
+    "backToDrives": "Back to drives",
+    "timeline": {
+      "label": "Drive timeline",
+      "startedAt": "Started at ",
+      "durationPrefix": "Duration ",
+      "statusPrefix": "Status ",
+      "endedAt": "Ended at "
+    },
+    "routeMapLabel": "Route map",
+    "lastKnown": "Last known location",
+    "stationaryRouteTitle": "Route can't be plotted",
+    "stationaryRouteBody": "Only one GPS coordinate was recorded for this drive, so the route can't be drawn. The drive's distance, duration, and other stats below are unaffected.",
+    "notFound": "This drive could not be found. It may have been deleted, or the link is incorrect."
   }
 }

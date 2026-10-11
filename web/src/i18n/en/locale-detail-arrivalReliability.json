@@ -206,7 +206,10 @@
     "colLabel": "Category",
     "profileTitle": "Arrival reliability profile",
     "brief": {
-      "windowQuantities": "Route-window timing quantities"
-    }
+      "windowQuantities": "Route-window timing quantities",
+      "description": "Descriptive timing consistency for repeated directional routes; within-allowance shares are in-sample observations, not calibrated reliability promises.",
+      "source": "Returned drive history; repeated-route support, descriptive indices and sample-weighted p90 buffers."
+    },
+    "profileAria": "Arrival reliability profile combining sample counts, normalised duration index, and schedule allowance share"
   }
 }

@@ -1,6 +1,7 @@
 {
   "departureForecast": {
     "colSlot": "Time",
-    "next24Title": "Next-24h departure forecast"
+    "next24Title": "Next-24h departure forecast",
+    "next24Aria": "Departure likelihood and cumulative probability forecast for the next 24 hours"
   }
 }

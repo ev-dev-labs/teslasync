@@ -56,13 +56,47 @@
   },
   "ai": {
     "common": {
-      "errorUnknown": "unknown"
+      "errorUnknown": "unknown",
+      "noOutput": "No output was generated."
     },
     "confirm": {
-      "cancel": "Cancel"
+      "argsLabel": "Arguments",
+      "cancel": "Cancel",
+      "intro": {
+        "mutates": "The assistant wants to make a change to your data. Review what it will do, then approve or cancel.",
+        "read": "The assistant wants to run a tool. Review the inputs, then approve or cancel."
+      },
+      "run": "Approve",
+      "title": "Approve Helix action",
+      "toolLabel": "Tool"
     },
     "limit": {
-      "retry": "Retry"
+      "desc": {
+        "burst": "Too many Helix requests are in flight. The limiter is keeping the system responsive.",
+        "costCap": "You have reached your daily Helix cost limit. Helix features will resume tomorrow or after you raise the cap in Settings.",
+        "costCapUnavailable": "Could not read your Helix usage history. Failing closed for safety.",
+        "featureMisconfigured": "This page is missing a Helix feature registration. Please report this to your administrator.",
+        "generic": "Helix features are temporarily unavailable. The non-Helix baseline continues to work.",
+        "perDay": "You have used your daily Helix request budget. The budget resets at UTC midnight.",
+        "perMinute": "You have sent more Helix requests than allowed per minute. The window resets shortly.",
+        "providerUnavailable": "The Helix provider is not responding. The system will retry automatically.",
+        "settingsUnavailable": "Could not load your Helix settings. Helix is paused until settings are reachable.",
+        "tokens": "Your Helix token quota for this minute is exhausted. Try a shorter prompt."
+      },
+      "retry": "Retry",
+      "title": {
+        "burst": "Too many Helix requests at once",
+        "costCap": "Daily cost cap reached",
+        "costCapUnavailable": "Cost cap check unavailable",
+        "featureMisconfigured": "Helix feature misconfigured",
+        "generic": "Helix temporarily unavailable",
+        "perDay": "Daily Helix usage limit reached",
+        "perMinute": "Helix rate limit hit",
+        "providerUnavailable": "Helix provider unavailable",
+        "settingsUnavailable": "Helix settings unavailable",
+        "tokens": "Helix token quota exhausted"
+      },
+      "useBaseline": "Use baseline"
     }
   },
   "alertPacks": {
@@ -403,6 +437,7 @@
         "conditionsLabel": "Conditions",
         "description": "Describe an automation that uses one of your existing geofences. Helix proposes a typed graph anchored to a place_id you already have — review and apply to the form below before saving.",
         "placeholder": "e.g. when I arrive home on a weekday after sunset, turn on cabin overheat protection",
+        "promptAria": "Describe the geofence-aware automation to draft",
         "proposalLabel": "Proposed automation",
         "rejectedLabel": "Proposal rejected by validator",
         "suggestButton": "Suggest automation",
@@ -429,6 +464,10 @@
       "description": "Ask Helix to explain which charging habits and risk factors drive your deterministic battery-health forecast. The narrator never changes the forecast — it grounds every sentence in the same numbers the chart below renders.",
       "generateButton": "Narrate forecast",
       "title": "Explain the battery health forecast"
+    },
+    "delta": {
+      "aria": "Battery {{from}}% to {{to}}%",
+      "unknown": "Battery delta unknown"
     }
   },
   "bulk": {
@@ -484,6 +523,7 @@
       "badge": "Helix",
       "description": "Compute per-cluster (L1 overnight / L2 workplace / DC fast) learned charging envelope from this vehicle's recent sessions and walk through how each cluster compares to the deterministic rule-label baseline used by the Charging curve page today.",
       "generateButton": "Train charging-curve clusters",
+      "noVehicleHint": "Pick a vehicle to train its charging-curve clusters.",
       "title": "Learn per-vehicle charging-curve clusters"
     },
     "detail": {
@@ -567,6 +607,7 @@
       "cancel": "Cancel",
       "compare": "Compare to previous period",
       "end": "End date",
+      "loadingCalendar": "Loading calendar…",
       "newRange": "New range",
       "pickRange": "Custom range",
       "popoverLabel": "Date range picker",
@@ -761,6 +802,7 @@
     "avg": "Avg",
     "avgPower": "Avg power",
     "avgSpeed": "Avg speed",
+    "backToDrives": "Back to drives",
     "battery": "Battery",
     "batteryUsed": "Battery used",
     "breadcrumbFallback": "Drive #{{id}}",
@@ -811,11 +853,29 @@
     "frontLeft": "Front left",
     "frontRight": "Front right",
     "fsd": {
+      "afterFirmware": "After firmware {{version}}",
+      "afterFirmwareHonesty": "This drive ran firmware {{version}}. The spotlight compares FSD share before vs after — correlation, not proof the update caused a change.",
       "ambiguous": "Ambiguous",
+      "distance": "Reported distance",
       "estimated": "Estimated",
+      "evidenceLimitedBody": "This drive produced more counter evidence than can be shown safely. The dashed map overlay displays only the first 512 coalesced intervals.",
+      "evidenceLimitedTitle": "Route evidence limited",
+      "evidenceWindow": "Evidence window",
       "highConfidence": "High confidence",
+      "loadFailed": "Supervised-driving evidence could not be loaded",
+      "loadFailedBody": "The rest of this drive remains available. Retry the page to load the cumulative-counter evidence.",
+      "mapEvidence": "Approximate area where the FSD counter increased - not an exact FSD-active segment.",
+      "method": "Evidence times bound where the counter increased; they do not identify exact FSD-active road segments.",
+      "noPositiveEvidence": "No positive counter increase",
       "openInsights": "Open FSD insights",
-      "unknown": "Unknown"
+      "resetBody": "Distance around the reset cannot be assigned exactly, so this value is not high confidence.",
+      "resetTitle": "Counter reset affected this drive",
+      "section": "Supervised driving",
+      "share": "Share of drive",
+      "subtitle": "Reported supervised-driving distance from synchronized cumulative counters.",
+      "title": "Supervised driving",
+      "unknown": "Unknown",
+      "unknownBody": "There are not enough paired observations to distinguish zero FSD use from missing data."
     },
     "gain": "gain",
     "gasCostEquiv": "Gas cost (equiv)",
@@ -825,6 +885,7 @@
     "inside": "Inside",
     "insideTemp": "Inside temperature",
     "journeyDetails": "Journey details",
+    "lastKnown": "Last known location",
     "ledger": {
       "elevationMissing": "Grade and friction-brake estimates require recorded elevation; this telemetry source does not provide it.",
       "friction": "Friction brake",
@@ -851,6 +912,7 @@
     "noTelemetryBody": "Only the start/end timestamps and battery levels are available. Distance, speed, energy and route data require live telemetry samples — none were captured during this drive.",
     "noTelemetryTitle": "No telemetry recorded for this drive",
     "noTemperatureData": "No temperature telemetry is available for this drive.",
+    "notFound": "This drive could not be found. It may have been deleted, or the link is incorrect.",
     "odometer": "Odometer (from → to)",
     "outside": "Outside",
     "outsideTemp": "Outside temperature",
@@ -943,6 +1005,7 @@
       "title": "Possible road-surface anomalies"
     },
     "route": "Route",
+    "routeMapLabel": "Route map",
     "savingsPct": "Savings %",
     "share": "Share",
     "silent": {
@@ -961,12 +1024,21 @@
       "mean": "Mean",
       "min": "Min"
     },
+    "stationaryRouteBody": "Only one GPS coordinate was recorded for this drive, so the route can't be drawn. The drive's distance, duration, and other stats below are unaffected.",
+    "stationaryRouteTitle": "Route can't be plotted",
     "temperatures": "Temperatures",
     "theater": {
       "empty": "No P/R/N/D or charge-port changes were recorded for this drive.",
       "portClosed": "Port closed",
       "portOpen": "Port open",
       "title": "Gear theater"
+    },
+    "timeline": {
+      "durationPrefix": "Duration ",
+      "endedAt": "Ended at ",
+      "label": "Drive timeline",
+      "startedAt": "Started at ",
+      "statusPrefix": "Status "
     },
     "tirePressure": "Tire pressure during drive",
     "title": "Drive details",
@@ -985,6 +1057,7 @@
         "title": "No transitions in window"
       },
       "fsmTitle": "FSM transitions",
+      "loading": "Loading drive diagnostic…",
       "signal": {
         "cols": {
           "field": "Field",
@@ -1003,6 +1076,7 @@
     "aiSearch": {
       "badge": "Helix",
       "description": "Describe a drive (for example \"last Friday's trip to the coast\") and jump straight to its replay — the assistant only narrates your own drives.",
+      "inputLabel": "Describe the drive to find",
       "placeholder": "Describe a drive — for example \"last Friday's coast trip\" or \"the one with the lowest efficiency last week\"",
       "searchButton": "Search with Helix",
       "title": "Find a drive in natural language"
@@ -1014,6 +1088,7 @@
     "avg": "Avg",
     "avgDuration": "Avg duration",
     "avgGrade": "Efficiency grade",
+    "avgTrip": "Avg trip",
     "batteryChange": "Battery change",
     "brief": {
       "measuredEnergyScope": "{{measured}} of {{total}} returned drives supply energy; cost uses the configured rate, not invoices.",
@@ -1023,8 +1098,12 @@
       "allOption": "All drives",
       "allPill": "All",
       "anomalies": "Anomalies",
+      "commutes": "Commutes",
       "notable": "Notable",
       "tagged": "Tagged"
+    },
+    "collections": {
+      "aria": "Filter drives by collection"
     },
     "compareSelected": "Compare selected",
     "decision": {
@@ -1056,11 +1135,15 @@
     "exportScope": "Exports include every drive in the selected vehicle and date range, without list filters or selection.",
     "filterLabel": {
       "collection": "View",
+      "fsd": "FSD evidence",
       "search": "Search"
     },
     "fsdAmbiguous": "ambiguous",
+    "fsdEvidence": "FSD evidence",
     "fsdFilter": {
+      "all": "All FSD data",
       "ambiguous": "Ambiguous",
+      "aria": "Filter drives by FSD evidence",
       "estimated": "Estimated",
       "high": "High confidence",
       "reported": "FSD",
@@ -1069,6 +1152,16 @@
     "fsdMissing": {
       "message": "This response has no per-drive FSD attribution. Drive history remains available; FSD filters and sorting stay disabled.",
       "title": "Per-drive FSD evidence is unavailable"
+    },
+    "fsdRangeUnsupported": {
+      "message": "FSD attribution supports up to 366 days at a time. Drive history remains available, but FSD filters and sorting are disabled.",
+      "title": "FSD evidence is unavailable for this range"
+    },
+    "fsdReportedHelp": "Reported supervised-driving distance derived from cumulative counters.",
+    "fsdResetAffected": "A counter reset lowered confidence for this drive.",
+    "fsdUnavailable": {
+      "message": "Drive history remains available, but FSD badges, filters, and sorting are disabled until this data loads successfully.",
+      "title": "FSD evidence could not be loaded"
     },
     "grid": {
       "allGrades": "All grades",
@@ -1115,6 +1208,8 @@
     "highSpeed": "High speed",
     "highlights": "Highlights",
     "inProgress": "In progress",
+    "list": "Drive list",
+    "longest": "Longest",
     "max": "Max",
     "metric": {
       "cost": "Cost",
@@ -1149,6 +1244,7 @@
     "results": "results",
     "searchPlaceholder": "Search drives — try \"grade:D\", \"Office\", \"29.1\"",
     "selectDrive": "Select drive on {{date}}",
+    "sortByAria": "Sort by {{field}}",
     "sortDistance": "Distance",
     "sortEfficiency": "Efficiency",
     "sortFsd": "FSD share",
@@ -1156,6 +1252,9 @@
     "sourceError": "Drive history could not be loaded",
     "sourceUnavailable": "Drive history is unavailable",
     "speed": "Speed",
+    "stickyBar": {
+      "aria": "Drive history summary"
+    },
     "subtitle": "Measured energy intensity, route evidence, and comparable drive history",
     "title": "Drive history",
     "topSpeed": "Top speed",
@@ -1191,6 +1290,13 @@
       "switchHint": "Or switch to your other tab to keep editing there.",
       "takeOver": "Take over editing",
       "title": "Another browser tab is editing this"
+    }
+  },
+  "emptyState": {
+    "generic": "No data available yet.",
+    "label": {
+      "likelyCause": "Most likely reason",
+      "prerequisite": "What has to happen first"
     }
   },
   "entityContext": {
@@ -1265,6 +1371,15 @@
       "loading": "Loading statistics"
     }
   },
+  "feedbackTriage": {
+    "aiAdvisor": {
+      "badge": "Helix",
+      "button": "Suggest triage",
+      "description": "Get a proposed status, category, and priority label for this feedback row. The advisor reads only the redacted envelope (id, category, title, body excerpt, page route, app version, status, created_at) — never the reporter email, IP, console tail, or recent errors. The proposal is informational; your existing manual controls above remain the only way to save changes.",
+      "emptyHint": "Select a feedback row to suggest triage labels.",
+      "title": "Helix triage advisor"
+    }
+  },
   "filters": {
     "activeLabel": "Active filters",
     "clearAll": "Clear all",
@@ -1317,6 +1432,7 @@
     "ariaLabel": "Helix",
     "askHelix": "Ask Helix",
     "badge": "Helix",
+    "errorLabel": "Helix error:",
     "evidence": {
       "gathering": "Gathering",
       "grounded": "Grounded in",
@@ -1376,6 +1492,7 @@
     "connected": "Live",
     "disconnected": "Offline",
     "reconnecting": "Reconnecting…",
+    "scope": "Live data",
     "staleBanner": {
       "message": "The live data connection has been offline for more than 2 minutes. Values on this page may be stale until the connection is restored.",
       "title": "Live data unavailable"
@@ -1443,6 +1560,9 @@
         "badge": "Helix",
         "description": "Describe the alert you want to receive an advisory text proposal. Review it and manually enter the rule in the standard form before saving; this action does not fill the form, save, or enable an alert.",
         "draftButton": "Draft alert",
+        "emptyHint": "Choose a vehicle and describe the alert you want Helix to draft.",
+        "inputLabel": "Alert description",
+        "placeholder": "e.g. alert me if battery cell voltage spread is over 50 mV",
         "title": "Draft from natural language"
       },
       "aiConflicts": {
@@ -1450,10 +1570,17 @@
         "description": "Surface structural overlaps between your alert rule definitions. Review only — Helix never edits, merges, or deletes rules.",
         "detectButton": "Detect conflicts",
         "emptyMessage": "No structural conflicts found in the current rule set.",
+        "flag": {
+          "cooldownMismatch": "cooldown mismatch",
+          "severityMismatch": "severity mismatch",
+          "subsumes": "subsumes",
+          "triggerModeMismatch": "trigger mode mismatch"
+        },
         "kind": {
           "overlapping_threshold": "Overlapping threshold",
           "redundant_duplicate": "Redundant duplicate"
         },
+        "listLabel": "Detected rule conflicts",
         "reviewButton": "Review rule",
         "ruleLabel": "Rule",
         "title": "Detect cross-rule conflicts"
@@ -1574,6 +1701,7 @@
         "unavailable": "No confidence basis was supplied."
       },
       "evidence": "Supporting evidence",
+      "evidenceCoverage": "{{count}} supporting records supplied.",
       "likelyCause": "Likely cause",
       "limitations": "Limitations",
       "noEvidence": "No supporting records were supplied.",
@@ -1617,20 +1745,75 @@
   "powerDashboards": {
     "aiDrafter": {
       "applyButton": "Apply to editor",
-      "badge": "Helix"
+      "applyTooltip": "Copy the proposed dashboard JSON into the editor above. You can still edit it before clicking Copy to clipboard.",
+      "badge": "Helix",
+      "button": "Draft dashboard",
+      "description": "Describe the dashboard you want in plain English (e.g. \"give me an overview dashboard with daily drives, current battery, and recent alerts\"). Helix proposes a typed dashboard JSON draft built from the in-scope curated panel catalog you can apply to the editor with one click; it never pushes the dashboard to Grafana directly.",
+      "promptLabel": "Dashboard request",
+      "promptPlaceholder": "e.g. give me an overview dashboard with daily drives, current battery, and recent alerts",
+      "title": "Helix natural-language dashboard composer"
     }
   },
   "powerGrafana": {
     "aiDrafter": {
       "applyButton": "Apply to editor",
-      "badge": "Helix"
+      "applyTooltip": "Copy the proposed panel JSON into the editor above. You can still edit it before clicking Copy to clipboard.",
+      "badge": "Helix",
+      "button": "Draft panel",
+      "description": "Describe the panel you want in plain English (e.g. \"show me a daily time series of how far I drove this month\"). Helix proposes a typed Grafana panel JSON draft you can apply to the editor with one click; it never pushes the panel to Grafana directly.",
+      "previewDatasource": "Datasource:",
+      "previewLabel": "Proposed Grafana panel (review before applying)",
+      "previewTables": "Referenced tables:",
+      "previewTargets": "Query targets:",
+      "previewType": "Panel type:",
+      "previewUntitled": "Untitled panel",
+      "promptLabel": "Grafana panel request",
+      "promptPlaceholder": "e.g. show me a daily time series of how far I drove this month",
+      "title": "Helix natural-language Grafana panel drafter"
     }
   },
   "powerSql": {
     "aiDrafter": {
       "applyButton": "Apply to editor",
-      "badge": "Helix"
+      "applyTooltip": "Copy the proposed SQL into the editor above. You can still edit it before clicking Run.",
+      "badge": "Helix",
+      "button": "Draft SQL",
+      "description": "Describe the question in plain English (e.g. \"how many drives last week\"). Helix proposes a typed read-only SQL draft you can apply to the editor with one click; it never executes the query directly.",
+      "promptLabel": "SQL request",
+      "promptPlaceholder": "e.g. how many drives did I take last week",
+      "title": "Helix natural-language SQL drafter"
     }
+  },
+  "problemReport": {
+    "context": {
+      "appVersion": "App version",
+      "browser": "Browser",
+      "page": "Page",
+      "pageNote": "(record ids are replaced with :id)",
+      "title": "What is sent with your report"
+    },
+    "form": {
+      "description": "What were you doing, and what did you expect?",
+      "descriptionPlaceholder": "Steps you took, what you saw, and what you expected to see instead.",
+      "descriptionTooShort": "Please add at least {{count}} characters.",
+      "hidePreview": "Hide exactly what is sent",
+      "includeDiagnostics": "Attach a redacted technical summary ({{count}} recent errors)",
+      "includeDiagnosticsHint": "Versions, browser capability, service health, error messages and trace IDs. Never VINs, locations, tokens, e-mail addresses or raw logs.",
+      "showPreview": "Show exactly what is sent",
+      "submit": "Send report",
+      "submitting": "Sending…",
+      "title": "What went wrong?",
+      "titlePlaceholder": "Short summary (e.g. \"Charging costs show as blank\")"
+    },
+    "intro": "Describe what happened in your own words. We attach a redacted technical summary only if you allow it.",
+    "policy": {
+      "consoleTail": "Console output",
+      "files": "File attachments",
+      "screenshots": "Screenshots",
+      "userEmail": "E-mail address"
+    },
+    "submitError": "Could not send the report. Please try again.",
+    "title": "Report a problem"
   },
   "productPreferences": {
     "persona": {
@@ -1657,7 +1840,16 @@
   },
   "pwa": {
     "lowBandwidth": {
-      "on": "Always on"
+      "auto": "Automatic (follow the network)",
+      "effectsOff": "When active: polling slows down, animations stop, charts render fewer points, heavy basemaps fall back to light tiles, and the service worker stops caching new images and map tiles.",
+      "effectsOn": "While active: background polling slows to a quarter of its normal rate, entrance animations are disabled, charts render at most {{points}} points, satellite/terrain basemaps fall back to the lightest raster tiles, and the service worker stops storing new images and map tiles.",
+      "heading": "Low-bandwidth mode",
+      "label": "Data usage on this device",
+      "off": "Always off",
+      "on": "Always on",
+      "statusNetwork": "Active — your browser or network reported Data Saver / a 2G-class connection.",
+      "statusOff": "Not active — the app is using full quality.",
+      "statusUser": "Active — enabled manually on this device."
     }
   },
   "range": {
@@ -1676,6 +1868,7 @@
   "replay": {
     "elevation": {
       "aria": "Elevation profile chart — no data available yet",
+      "gainLoss": "↑ {{gain}}m  ↓ {{loss}}m",
       "label": "Elevation",
       "noData": "No elevation data available",
       "title": "Elevation profile"
@@ -1729,7 +1922,9 @@
     "aiSearch": {
       "badge": "Helix",
       "description": "Describe what you are looking for and the assistant will surface drives, charging sessions, and alerts that match — citing each entity by name.",
+      "emptyHint": "Type a question above to search your drives, charging sessions, and alerts.",
       "inputLabel": "Search query",
+      "placeholder": "e.g. drives last weekend over 200 km with phantom drain",
       "searchButton": "Search with Helix",
       "title": "Search with natural language"
     }
@@ -1751,9 +1946,15 @@
     "generate": "Generate link",
     "includeSpeed": "Include speed data",
     "includeTelemetry": "Include detailed telemetry (battery, power)",
+    "linkLabel": "Share link URL",
+    "loadError": "Could not load your existing share links. Please try again.",
+    "loadingLinks": "Loading active share links…",
     "noExpiry": "No expiry",
+    "none": "No active share links yet.",
+    "openLink": "Open link in a new tab",
     "revoke": "Revoke",
     "title": "Share drive",
+    "titleLabel": "Share title",
     "titlePlaceholder": "Optional title (e.g., \"SF to LA road trip\")",
     "toast": {
       "created": "Share link created",
@@ -1785,7 +1986,14 @@
   },
   "signalExplorer": {
     "aiFilter": {
-      "badge": "Helix"
+      "applyButton": "Apply to filters",
+      "applyTooltip": "Copy the proposed filter into the form above. You can still edit it before clicking Explore.",
+      "badge": "Helix",
+      "button": "Draft filter",
+      "description": "Describe the filter in plain English (e.g. \"battery level for yesterday\"). The LLM proposes a typed filter you can apply with one click; it never edits the form directly.",
+      "promptLabel": "Filter request",
+      "promptPlaceholder": "e.g. show me battery level for yesterday",
+      "title": "Helix natural-language filter"
     }
   },
   "softwareUpdates": {
@@ -1870,6 +2078,7 @@
     }
   },
   "timeline": {
+    "empty": "No timeline entries yet.",
     "label": "Timeline"
   },
   "tirePressure": {
@@ -2169,6 +2378,7 @@
     "aiNarration": {
       "badge": "Helix",
       "description": "Get a short, Helix-written recap of your year from the slide data above.",
+      "emptyHint": "Select a vehicle above to recap its year.",
       "generateButton": "Generate narration",
       "title": "Helix narration"
     },

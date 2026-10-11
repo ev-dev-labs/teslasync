@@ -79,7 +79,9 @@
     "topSpeed": "Top speed",
     "alert": {
       "criticalTitle": "Critical temperature warning",
-      "warningTitle": "Elevated temperatures detected"
+      "warningTitle": "Elevated temperatures detected",
+      "criticalMsg": "One or more drivetrain components are operating at critically high temperatures. Immediate attention is recommended.",
+      "warningMsg": "Drivetrain temperatures are above normal operating range. Monitor closely and consider reducing load."
     },
     "healthGood": "Drivetrain healthy",
     "healthWarn": "Drivetrain running warm",
@@ -151,6 +153,23 @@
       "liveReadings": "Returned motor readings"
     },
     "inverter": "Inverter",
-    "battery": "Battery"
+    "battery": "Battery",
+    "tips": {
+      "criticalStop": "Temperatures are critically high. Consider pulling over safely and letting the vehicle cool down.",
+      "serviceUrgent": "Schedule an urgent service appointment. Critical temperatures may indicate a coolant system issue.",
+      "reduceLoad": "Reduce driving intensity and avoid hard acceleration to allow components to cool.",
+      "checkCoolant": "Schedule a service appointment to inspect the coolant system and fluid levels.",
+      "avoidSupercharging": "Avoid Supercharging while temperatures are elevated. Use Level 2 charging instead.",
+      "regularService": "Keep up with regular service intervals for optimal drivetrain health and longevity.",
+      "gentleAccel": "Gentle acceleration helps maintain lower motor temperatures and extends component life.",
+      "precondition": "Precondition the battery in cold weather for better thermal performance and driving efficiency.",
+      "monitorTemps": "Monitor drivetrain temperatures after spirited driving sessions or long highway stretches."
+    },
+    "priority": {
+      "urgent": "Urgent recommendation:",
+      "important": "Important recommendation:"
+    },
+    "frontMotor": "Front Motor",
+    "rearMotor": "Rear Motor"
   }
 }

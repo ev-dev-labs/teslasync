@@ -10,7 +10,8 @@
     "category": {
       "bug": "Bug report",
       "feature": "Feature request",
-      "other": "Other / question"
+      "other": "Other / question",
+      "mixLabel": "Feedback category mix"
     },
     "form": {
       "category": {
@@ -89,8 +90,26 @@
       "maskedEmail": "Reporter email, click to reveal",
       "bridge": {
         "enabled": "Connected",
-        "disabled": "Not configured"
-      }
+        "disabled": "Not configured",
+        "title": "GitHub bridge"
+      },
+      "distAria": "Status distribution: {{new}} new, {{triaged}} triaged, {{closed}} closed",
+      "kpi": {
+        "total": "Total feedback"
+      },
+      "subtitle": "Triage user-submitted bug reports and feature requests",
+      "kpis": "Queue overview",
+      "summary": {
+        "source": "Whole-queue counts come from independent status and category queries, unaffected by the table filters. Total feedback sums new, triaged and closed counts only when all three are available.",
+        "scope": "Independent queue facet snapshots; no shared observation time or date bounds are reported."
+      },
+      "triageProgress": "Triage progress",
+      "noStatusData": "No feedback to triage yet.",
+      "categoryMix": "Category mix",
+      "noCategoryData": "No categories to show yet.",
+      "tableTitle": "Queue",
+      "rowLabel": "{{category}}: {{title}}",
+      "untitled": "Untitled feedback"
     }
   }
 }

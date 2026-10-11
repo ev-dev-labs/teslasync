@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto'
 import { afterEach, describe, expect, it } from 'vitest'
 import catalog from './en.json'
+import { authorizedCanonicalAdditions } from './authorized-canonical-recovery.test'
 import baseline from './known-missing-keys.json'
 import shell from './en/shell.json'
 import runtimeManifest from './en/runtime-manifest.json'
@@ -172,6 +173,10 @@ describe('resolved known-missing canonical producers', () => {
     const addedKeys = new Set<string>([...additions, ...laterAdditions, ...featureOwnedAdditions, ...copyOwnerAdditions, drivesEmptyAddition].map(([key]) => key))
     expect(addedKeys.size).toBe(916)
     addedKeys.add('systemStatus.incidents.updateCount_other')
+    for (const [key, value] of authorizedCanonicalAdditions) {
+      expect(nested(catalog, key)).toBe(value)
+      addedKeys.add(key)
+    }
     const oldEntries = leaves(catalog)
       .filter(([key]) => !addedKeys.has(key))
       .sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0)
@@ -179,7 +184,7 @@ describe('resolved known-missing canonical producers', () => {
     // Frozen before-producer leaf/value fingerprint, not a regenerated baseline.
     expect(createHash('sha256').update(JSON.stringify(oldEntries)).digest('hex'))
       .toBe('d919112ce76ecf5875dc1641f99561a22871a3ca3c9ce9a58c70d308ce34a6ad')
-    expect(leaves(catalog)).toHaveLength(29075)
+    expect(leaves(catalog)).toHaveLength(30996)
     expect(catalog.settings.title).toBe('Settings')
     expect(catalog.pwa.offline.banner).toBe(
       'Showing cached data. Operational changes stay disabled until you reconnect.',

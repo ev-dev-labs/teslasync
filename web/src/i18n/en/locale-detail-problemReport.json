@@ -1,0 +1,33 @@
+{
+  "problemReport": {
+    "title": "Report a problem",
+    "context": {
+      "page": "Page",
+      "appVersion": "App version",
+      "browser": "Browser",
+      "title": "What is sent with your report",
+      "pageNote": "(record ids are replaced with :id)"
+    },
+    "intro": "Describe what happened in your own words. We attach a redacted technical summary only if you allow it.",
+    "form": {
+      "title": "What went wrong?",
+      "titlePlaceholder": "Short summary (e.g. \"Charging costs show as blank\")",
+      "description": "What were you doing, and what did you expect?",
+      "descriptionPlaceholder": "Steps you took, what you saw, and what you expected to see instead.",
+      "descriptionTooShort": "Please add at least {{count}} characters.",
+      "includeDiagnostics": "Attach a redacted technical summary ({{count}} recent errors)",
+      "includeDiagnosticsHint": "Versions, browser capability, service health, error messages and trace IDs. Never VINs, locations, tokens, e-mail addresses or raw logs.",
+      "hidePreview": "Hide exactly what is sent",
+      "showPreview": "Show exactly what is sent",
+      "submitting": "Sending…",
+      "submit": "Send report"
+    },
+    "policy": {
+      "consoleTail": "Console output",
+      "files": "File attachments",
+      "screenshots": "Screenshots",
+      "userEmail": "E-mail address"
+    },
+    "submitError": "Could not send the report. Please try again."
+  }
+}

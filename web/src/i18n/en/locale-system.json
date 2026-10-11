@@ -39,7 +39,13 @@
     "statusBreakdown": "Status breakdown",
     "other": "Other",
     "selectVehicleActivityPrompt": "Select a vehicle to view command activity",
-    "selectVehicleHistoryPrompt": "Select a vehicle to view command history"
+    "selectVehicleHistoryPrompt": "Select a vehicle to view command history",
+    "total": "Total commands",
+    "noRangeData": "No commands in the selected range",
+    "kpis": "Command metrics",
+    "topCommands": "Top commands",
+    "totalInRange": "Total in range",
+    "errorPrefix": "Error: {{msg}}"
   },
   "commandReliability": {
     "summary": {
@@ -55,11 +61,51 @@
     "title": "Command reliability",
     "col": {
       "command": "Command",
-      "grade": "Grade"
+      "grade": "Grade",
+      "lower": "Lower bound (%)",
+      "naive": "Raw rate (%)",
+      "upper": "Upper bound (%)",
+      "attempts": "Attempts"
     },
     "lowerBound": "Lower bound",
     "outcome": "Outcome",
-    "lastUsed": "Last used"
+    "lastUsed": "Last used",
+    "overall": "Overall success",
+    "attempts": "{{n}} attempts",
+    "unreliable": "Unreliable commands",
+    "allFine": "Nothing failing",
+    "intents": "Distinct intents",
+    "intentsHint": "after collapsing retry storms",
+    "storms": "Retry storms",
+    "stormsHint": "you pressed it again, and again",
+    "subtitle": "Which remote commands you can actually trust, graded on wilson confidence bounds rather than a raw success percentage",
+    "kpis": "Command reliability metrics",
+    "noData": "No remote commands have been issued yet, so there is no reliability record to grade.",
+    "chartHint": "Bars are the pessimistic lower bound; the dot is the raw success rate the log shows",
+    "rawRate": "Raw rate",
+    "detail": "Command breakdown",
+    "noCommands": "No commands recorded yet.",
+    "outcomeValue": "{{ok}} ok · {{bad}} failed",
+    "interval": "95 % interval",
+    "effort": "Attempts per intent",
+    "effortValue": "{{n}} · {{retried}} retried",
+    "topError": "Usual failure",
+    "topErrorValue": "{{msg}} (×{{n}})"
+  },
+  "dashboardPresets": {
+    "title": "Dashboard presets",
+    "subtitle": "Curated widget sets for the four ways this app is used. Choosing one updates your existing dashboard in place — it does not create another one, and it never overwrites changes you make afterwards.",
+    "applyOnDashboard": "Open the dashboard to apply it",
+    "openDashboard": "Open the dashboard",
+    "selected": "Selected — tap to clear",
+    "pending": "Chosen — tap to clear",
+    "chosenDiverged": "Chosen — tap to clear",
+    "choose": "Use this preset",
+    "includes": "Includes",
+    "pendingNote": "Chosen — applies to your dashboard next time you open it.",
+    "divergedNote": "Your dashboard has changed since this preset was applied. Your changes are kept — re-apply only if you want the preset back.",
+    "activeUnchosenNote": "This is what your dashboard looks like right now, but a different preset is chosen.",
+    "reapply": "Re-apply to my dashboard"
   },
   "dataExport": {
     "csvPreview": "CSV preview",
@@ -103,7 +149,8 @@
       "startDate": "Start date (optional)",
       "endDate": "End date (optional)",
       "warning": "Large signal histories are capped per table to keep the ZIP under control. Track progress in the floating widget that appears once your export starts.",
-      "start": "Start full export"
+      "start": "Start full export",
+      "aria": "Full account export"
     },
     "scheduled": {
       "feature": "Scheduled exports",
@@ -179,6 +226,24 @@
     "resourceName": "Export jobs",
     "history": {
       "aria": "Export history"
+    },
+    "presets": {
+      "aria": "Date range presets"
+    },
+    "brief": {
+      "recordsDescription": "Record counts reported by drive and charging export jobs in the loaded history.",
+      "recordsScope": "Exported records may overlap between jobs; these are not unique database session totals.",
+      "description": "Export counts, recorded file bytes, most frequent export type, and latest creation time from the loaded job history.",
+      "scope": "Loaded export jobs; no server-wide total or reporting window is supplied.",
+      "bytesContext": "Sum of recorded file sizes; jobs without a file size contribute no recorded bytes.",
+      "lastContext": "Latest job creation time, not completion or download time."
+    },
+    "stats": {
+      "aria": "Export summary metrics"
+    },
+    "loadError": "Failed to load export jobs",
+    "create": {
+      "aria": "Create a new export"
     }
   },
   "dataRepair": {
@@ -467,7 +532,10 @@
         "reasonPlaceholder": "Explain why these findings are false positives"
       },
       "metricsRetained": "Retained metrics",
-      "readOnly": "Repair controls are read-only"
+      "readOnly": "Repair controls are read-only",
+      "rowLabel": "Case #{{id}}, {{rule}}",
+      "briefDescription": "Server-reported repair case workload; active cases are open plus in-review cases.",
+      "briefScope": "Repair case statistics response; separate from the filtered queue and diagnosis scan."
     },
     "quarantine": {
       "all": "All records",
@@ -557,6 +625,10 @@
       "formLabel": "Repair drive #{{id}}",
       "distanceMi": "Distance (mi)",
       "maxSpeedMph": "Max speed (mph)"
+    },
+    "brief": {
+      "description": "Suggested session boundary repairs and blocked cases from the durable-history diagnosis response.",
+      "scope": "Current diagnosis response; not a complete lifetime count."
     }
   },
   "dbHealth": {
@@ -671,7 +743,14 @@
     }
   },
   "helpIndex": {
-    "resultCount": "{{count}} results"
+    "resultCount": "{{count}} results",
+    "searchLabel": "Search help",
+    "searchPlaceholder": "Search terms, pages and troubleshooting — e.g. \"phantom drain\"",
+    "relevantHere": "Relevant to this page",
+    "resultsLabel": "Help results",
+    "noResults": "Nothing in the help index matches that. Try a shorter word, or send a problem report below.",
+    "title": "Search the help index",
+    "subtitle": "Definitions, pages and troubleshooting, indexed by term and route. Results are the same every time — no model, no network."
   },
   "incidentTimeline": {
     "aiSummary": {
@@ -747,13 +826,29 @@
       "major": "Major",
       "critical": "Critical"
     },
-    "updatesLabel": "Incident updates"
+    "updatesLabel": "Incident updates",
+    "unsavedUpdate": "You have an unsaved incident update.",
+    "formLabel": "Add incident update",
+    "brief": {
+      "description": "Incident status, elapsed duration, recorded updates, affected components, source, and start time.",
+      "unknownScope": "Incident window unavailable until the source resolves.",
+      "statusContext": "Recorded incident lifecycle state; resolution controls remain below.",
+      "sourceContext": "Incident source as reported, without inference."
+    },
+    "overview": "Incident overview and details",
+    "timelineRegion": "Incident timeline and updates"
   },
   "releaseNotes": {
     "badge": {
       "latest": "Latest"
     },
-    "affects": "Affects"
+    "affects": "Affects",
+    "title": "What's changed",
+    "subtitle": "Generated from the project changelog. \"Action needed\" is flagged conservatively — a false alarm costs a minute, a missed migration costs an outage.",
+    "empty": "No releases have been published yet.",
+    "actionNeeded": "Action needed",
+    "migration": "Migration",
+    "itemActionPrefix": "Action:"
   },
   "roadmap": {
     "title": "Roadmap",
@@ -911,6 +1006,9 @@
       "ofTotal": "of {{total}} initiatives shipped",
       "barLabel": "Roadmap initiatives by phase",
       "empty": "No roadmap items to display yet."
+    },
+    "brief": {
+      "scope": "Bundled roadmap entries, not live deployment or release telemetry."
     }
   },
   "statusApi": {
@@ -980,7 +1078,11 @@
       "note": "Need an additional endpoint or field? Open an issue on the project repo — the API surface is intentionally small, but additive changes are welcome."
     },
     "exampleEmpty": "No example response available.",
-    "exampleUnavailable": "Example response is unavailable."
+    "exampleUnavailable": "Example response is unavailable.",
+    "brief": {
+      "description": "Documented endpoint count, transport, payload, and compatibility policy.",
+      "scope": "Bundled documentation, not a runtime availability probe."
+    }
   },
   "supportBundle": {
     "download": "Download",
@@ -991,7 +1093,15 @@
       "version": "App version",
       "browser": "Browser",
       "health": "Health"
-    }
+    },
+    "title": "Support bundle",
+    "subtitle": "A redacted technical summary of this browser session. Copy or download it to attach to a support conversation.",
+    "copy": "Copy bundle",
+    "brief": {
+      "scope": "Current browser-session bundle; exact redacted contents remain available below.",
+      "metadata": "Redacted browser-session bundle metadata."
+    },
+    "showJson": "Show the exact bundle contents"
   },
   "system": {
     "outage": {
@@ -1014,7 +1124,10 @@
       "certificateReady": "The session certificate is available for download with its original evidence intact.",
       "brief": {
         "connection": "MQTT connection",
-        "lastTelemetry": "Last telemetry"
+        "lastTelemetry": "Last telemetry",
+        "scope": "Selected vehicle outage evidence; no fixed reporting window is supplied.",
+        "gapLabel": "Telemetry gap",
+        "timestampContext": "Original event time; a missing timestamp does not imply zero traffic."
       }
     },
     "page": {
@@ -1058,7 +1171,13 @@
       "loading": "Loading source",
       "retained": "Retained source",
       "available": "Source available",
-      "unavailable": "Source unavailable"
+      "unavailable": "Source unavailable",
+      "scope": "Budget usage spans each source throttle window. Worker heartbeat and backlog are snapshots; succeeded and terminally failed jobs cover the last 24 hours.",
+      "title": "Budgets and worker posture",
+      "freshness": "Budget snapshot: {{rate}} · Worker snapshot: {{queue}}",
+      "provenance": "Rate-limit budgets and background-worker queue reports",
+      "freshnessUnknown": "Source observation time not supplied",
+      "eyebrow": "System evidence"
     }
   },
   "teslaUsage": {
@@ -1119,7 +1238,10 @@
     "estimated": "Estimated",
     "rateSource": "Tesla Fleet API pricing reference",
     "logs": "Open API logs",
-    "summary": "{{cost}} estimated this 30-day cycle (not an invoice)"
+    "summary": "{{cost}} estimated this 30-day cycle (not an invoice)",
+    "brief": {
+      "cycleTitle": "Cycle usage evidence"
+    }
   },
   "achievements": {
     "dismiss": "Dismiss achievement notification",
@@ -1177,13 +1299,17 @@
         "aria": "Activity breakdowns"
       },
       "brief": {
-        "range": "Loaded activity for {{start}} – {{end}}; at most {{limit}} actions."
+        "description": "Actions, active days, action types, and entities derived from the loaded personal activity feed.",
+        "lastContext": "Most recent timestamp in the loaded feed.",
+        "range": "Loaded activity for {{start}} – {{end}}; at most {{limit}} actions.",
+        "scope": "Loaded recent activity only; not a complete account lifetime total."
       },
       "byCategory": {
         "empty": "No categories to break down yet.",
         "title": "By category"
       },
       "byHour": {
+        "chartAria": "Activity counts by hour of day",
         "colHour": "Hour",
         "empty": "No activity to chart by hour yet.",
         "series": "Actions",
@@ -1195,6 +1321,8 @@
       },
       "empty": "No recent activity in this window.",
       "feed": {
+        "error": "Failed to load activity feed",
+        "loading": "Loading activity feed",
         "title": "Activity feed"
       },
       "kpi": {
@@ -1220,6 +1348,12 @@
       }
     },
     "timeline": {
+      "brief": {
+        "countTitle": "Range and page counts",
+        "description": "The server total covers the selected range; loaded events, days, and critical alerts describe this page only.",
+        "mixDescription": "Counts by event type describe only the loaded page, not the entire selected range.",
+        "scope": "Selected range and current loaded page have different coverage."
+      },
       "empty": "No activity in this window.",
       "export": {
         "detail": "Detail path",
@@ -1307,13 +1441,47 @@
   },
   "ai": {
     "common": {
-      "errorUnknown": "unknown"
+      "errorUnknown": "unknown",
+      "noOutput": "No output was generated."
     },
     "confirm": {
-      "cancel": "Cancel"
+      "argsLabel": "Arguments",
+      "cancel": "Cancel",
+      "intro": {
+        "mutates": "The assistant wants to make a change to your data. Review what it will do, then approve or cancel.",
+        "read": "The assistant wants to run a tool. Review the inputs, then approve or cancel."
+      },
+      "run": "Approve",
+      "title": "Approve Helix action",
+      "toolLabel": "Tool"
     },
     "limit": {
-      "retry": "Retry"
+      "desc": {
+        "burst": "Too many Helix requests are in flight. The limiter is keeping the system responsive.",
+        "costCap": "You have reached your daily Helix cost limit. Helix features will resume tomorrow or after you raise the cap in Settings.",
+        "costCapUnavailable": "Could not read your Helix usage history. Failing closed for safety.",
+        "featureMisconfigured": "This page is missing a Helix feature registration. Please report this to your administrator.",
+        "generic": "Helix features are temporarily unavailable. The non-Helix baseline continues to work.",
+        "perDay": "You have used your daily Helix request budget. The budget resets at UTC midnight.",
+        "perMinute": "You have sent more Helix requests than allowed per minute. The window resets shortly.",
+        "providerUnavailable": "The Helix provider is not responding. The system will retry automatically.",
+        "settingsUnavailable": "Could not load your Helix settings. Helix is paused until settings are reachable.",
+        "tokens": "Your Helix token quota for this minute is exhausted. Try a shorter prompt."
+      },
+      "retry": "Retry",
+      "title": {
+        "burst": "Too many Helix requests at once",
+        "costCap": "Daily cost cap reached",
+        "costCapUnavailable": "Cost cap check unavailable",
+        "featureMisconfigured": "Helix feature misconfigured",
+        "generic": "Helix temporarily unavailable",
+        "perDay": "Daily Helix usage limit reached",
+        "perMinute": "Helix rate limit hit",
+        "providerUnavailable": "Helix provider unavailable",
+        "settingsUnavailable": "Helix settings unavailable",
+        "tokens": "Helix token quota exhausted"
+      },
+      "useBaseline": "Use baseline"
     }
   },
   "alertPacks": {
@@ -1664,6 +1832,7 @@
         "conditionsLabel": "Conditions",
         "description": "Describe an automation that uses one of your existing geofences. Helix proposes a typed graph anchored to a place_id you already have — review and apply to the form below before saving.",
         "placeholder": "e.g. when I arrive home on a weekday after sunset, turn on cabin overheat protection",
+        "promptAria": "Describe the geofence-aware automation to draft",
         "proposalLabel": "Proposed automation",
         "rejectedLabel": "Proposal rejected by validator",
         "suggestButton": "Suggest automation",
@@ -1690,6 +1859,10 @@
       "description": "Ask Helix to explain which charging habits and risk factors drive your deterministic battery-health forecast. The narrator never changes the forecast — it grounds every sentence in the same numbers the chart below renders.",
       "generateButton": "Narrate forecast",
       "title": "Explain the battery health forecast"
+    },
+    "delta": {
+      "aria": "Battery {{from}}% to {{to}}%",
+      "unknown": "Battery delta unknown"
     }
   },
   "bulk": {
@@ -1736,6 +1909,7 @@
       "badge": "Helix",
       "description": "Compute per-cluster (L1 overnight / L2 workplace / DC fast) learned charging envelope from this vehicle's recent sessions and walk through how each cluster compares to the deterministic rule-label baseline used by the Charging curve page today.",
       "generateButton": "Train charging-curve clusters",
+      "noVehicleHint": "Pick a vehicle to train its charging-curve clusters.",
       "title": "Learn per-vehicle charging-curve clusters"
     },
     "detail": {
@@ -1790,10 +1964,21 @@
     "history": "History",
     "howCanIHelp": "How can Helix help you?",
     "inputLabel": "Message",
+    "knowledge": {
+      "cited": "Cited in answer",
+      "freshness": "Bundled documentation from this deployment; publication dates are unavailable. Only sources named in the answer are marked cited.",
+      "inspect": "Inspect retrieved sources",
+      "part": "chunk",
+      "retrieved": "Retrieved, not cited",
+      "title": "Retrieved documentation"
+    },
     "newChat": "New chat",
     "noSessions": "No conversations yet",
     "placeholder": "Ask Helix to investigate, compare, or explain… (shift+enter for newline)",
     "planning": "Helix is planning the investigation…",
+    "rename": {
+      "placeholder": "Conversation name"
+    },
     "session": {
       "empty": "Empty",
       "messageCount": "{{count}} msgs",
@@ -1966,6 +2151,7 @@
     "hero": {
       "access": "Access state",
       "battery": "Battery",
+      "briefDescription": "Battery, estimated range, cabin temperature, and access state from the selected vehicle readings.",
       "cabin": "Cabin",
       "lastKnownStatus": "Last known: {{status}}",
       "lastSignal": "Last signal",
@@ -2189,6 +2375,7 @@
       "cancel": "Cancel",
       "compare": "Compare to previous period",
       "end": "End date",
+      "loadingCalendar": "Loading calendar…",
       "newRange": "New range",
       "pickRange": "Custom range",
       "popoverLabel": "Date range picker",
@@ -2359,10 +2546,16 @@
     }
   },
   "diagnostic": {
+    "brief": {
+      "description": "Probe outcomes and recorded timings from the displayed diagnostic report.",
+      "scope": "One diagnostic run; total time is the sum of probe durations."
+    },
     "checkCount": "{{count}} check",
     "checkCount_other": "{{count}} checks",
+    "checksTitle": "Dependency checks",
     "copyReport": "Copy report",
     "downloadReport": "Download .txt",
+    "downloadSuccess": "Diagnostic report downloaded",
     "duration": "{{ms}}ms",
     "errorBody": "The diagnostic endpoint returned an error. Check API logs and try again.",
     "errorTitle": "Diagnostic failed to run",
@@ -2374,6 +2567,7 @@
       "down": "One or more checks failed",
       "ok": "All systems healthy"
     },
+    "overallSection": "Overall result",
     "remediationLabel": "Remediation",
     "rerun": "Re-run diagnostic",
     "run": "Run diagnostic",
@@ -2386,6 +2580,10 @@
     "subtitle": "Run an aggregated self-test against the database, MQTT broker, Redis, Tesla API, and resilience monitors. Use this when telemetry is missing, charge sessions don't appear, or notifications stop firing.",
     "summary": {
       "failures": "Failures",
+      "passing": "Passing",
+      "slowest": "Slowest check",
+      "title": "Diagnostic summary",
+      "total": "Total checks",
       "totalTime": "Total time",
       "warnings": "Warnings"
     },
@@ -2416,6 +2614,7 @@
     "aiSearch": {
       "badge": "Helix",
       "description": "Describe a drive (for example \"last Friday's trip to the coast\") and jump straight to its replay — the assistant only narrates your own drives.",
+      "inputLabel": "Describe the drive to find",
       "placeholder": "Describe a drive — for example \"last Friday's coast trip\" or \"the one with the lowest efficiency last week\"",
       "searchButton": "Search with Helix",
       "title": "Find a drive in natural language"
@@ -2428,6 +2627,13 @@
       "switchHint": "Or switch to your other tab to keep editing there.",
       "takeOver": "Take over editing",
       "title": "Another browser tab is editing this"
+    }
+  },
+  "emptyState": {
+    "generic": "No data available yet.",
+    "label": {
+      "likelyCause": "Most likely reason",
+      "prerequisite": "What has to happen first"
     }
   },
   "entityContext": {
@@ -2495,6 +2701,15 @@
       "loading": "Loading statistics"
     }
   },
+  "feedbackTriage": {
+    "aiAdvisor": {
+      "badge": "Helix",
+      "button": "Suggest triage",
+      "description": "Get a proposed status, category, and priority label for this feedback row. The advisor reads only the redacted envelope (id, category, title, body excerpt, page route, app version, status, created_at) — never the reporter email, IP, console tail, or recent errors. The proposal is informational; your existing manual controls above remain the only way to save changes.",
+      "emptyHint": "Select a feedback row to suggest triage labels.",
+      "title": "Helix triage advisor"
+    }
+  },
   "filters": {
     "activeLabel": "Active filters",
     "clearAll": "Clear all",
@@ -2517,6 +2732,7 @@
     "activeCharge": "Charge session",
     "activeDrive": "Drive session",
     "allTime": "All time",
+    "analysis": "Transition analysis",
     "autoRefresh": "Live 10s",
     "avgInterval": "Avg interval",
     "brief": {
@@ -2539,6 +2755,7 @@
       "from": "From state",
       "guard": "Guard",
       "id": "Transition ID",
+      "name": "FSM name",
       "timestamp": "Timestamp",
       "to": "To state",
       "trigger": "Trigger",
@@ -2560,16 +2777,19 @@
       "stuckTitle": "Stuck sessions",
       "title": "FSM health"
     },
+    "kpis": "FSM summary metrics",
     "mode": "Mode",
     "modeCharging": "Charging",
     "modeDrive": "Drive",
     "modeIdle": "Idle",
     "modeSleep": "Sleep",
+    "noObservedState": "No observed state",
     "noState": "No state data available",
     "noSubFSMs": "No active drive or charge sessions",
     "noTimelineData": "No transition data for timeline",
     "noTransitionsInRange": "No transitions in {{range}}. Try expanding the time range.",
     "noVehicles": "No vehicles available",
+    "overview": "Vehicle state overview",
     "perPage": "Per page",
     "selectFsmType": "Select a specific FSM type to view its state diagram",
     "sessionLive": "Live",
@@ -2631,10 +2851,17 @@
       "unnamed": "(unnamed)"
     }
   },
+  "glossary": {
+    "howMeasured": "How we measure it",
+    "panelSubtitle": "Definitions for the terms that are easiest to misread, and where each number actually comes from.",
+    "panelTitle": "What the numbers mean",
+    "seeInContext": "See it in context"
+  },
   "helix": {
     "ariaLabel": "Helix",
     "askHelix": "Ask Helix",
     "badge": "Helix",
+    "errorLabel": "Helix error:",
     "evidence": {
       "gathering": "Gathering",
       "grounded": "Grounded in",
@@ -2701,6 +2928,7 @@
     },
     "channelsTitle": "Ways to get help",
     "commandReliability": {
+      "iconLabel": "More info about intents",
       "overall": "Three successes out of three is not the same evidence as ninety-seven out of a hundred, even though both read as a high percentage. The Wilson score interval accounts for how much evidence there actually is, so a command is only graded reliable once its pessimistic lower bound clears the bar — not merely its lucky average."
     },
     "explore": {
@@ -2711,6 +2939,12 @@
     "fsm": {
       "liveState": "The current state the FSM resolved to from the most recent telemetry. The FSM stays in a terminal state until external evidence (telemetry or poll) triggers an explicit transition out.",
       "type": "Finite-state machine. Tracks vehicle high-level state (driving, charging, parked, online, asleep, offline) and the transitions between them. Sub-FSMs cover drive, charge, command, and notification lifecycles."
+    },
+    "guided": {
+      "intro": "Replay the product introduction",
+      "subtitle": "Walkthroughs run only when you ask for them — nothing here starts on its own.",
+      "title": "Show me around",
+      "tours": "Browse guided tours"
     },
     "hero": {
       "aria": "Getting started"
@@ -2744,6 +2978,7 @@
     "connected": "Live",
     "disconnected": "Offline",
     "reconnecting": "Reconnecting…",
+    "scope": "Live data",
     "staleBanner": {
       "message": "The live data connection has been offline for more than 2 minutes. Values on this page may be stale until the connection is restored.",
       "title": "Live data unavailable"
@@ -2795,6 +3030,9 @@
         "badge": "Helix",
         "description": "Describe the alert you want to receive an advisory text proposal. Review it and manually enter the rule in the standard form before saving; this action does not fill the form, save, or enable an alert.",
         "draftButton": "Draft alert",
+        "emptyHint": "Choose a vehicle and describe the alert you want Helix to draft.",
+        "inputLabel": "Alert description",
+        "placeholder": "e.g. alert me if battery cell voltage spread is over 50 mV",
         "title": "Draft from natural language"
       },
       "aiConflicts": {
@@ -2802,10 +3040,17 @@
         "description": "Surface structural overlaps between your alert rule definitions. Review only — Helix never edits, merges, or deletes rules.",
         "detectButton": "Detect conflicts",
         "emptyMessage": "No structural conflicts found in the current rule set.",
+        "flag": {
+          "cooldownMismatch": "cooldown mismatch",
+          "severityMismatch": "severity mismatch",
+          "subsumes": "subsumes",
+          "triggerModeMismatch": "trigger mode mismatch"
+        },
         "kind": {
           "overlapping_threshold": "Overlapping threshold",
           "redundant_duplicate": "Redundant duplicate"
         },
+        "listLabel": "Detected rule conflicts",
         "reviewButton": "Review rule",
         "ruleLabel": "Rule",
         "title": "Detect cross-rule conflicts"
@@ -2867,6 +3112,8 @@
     }
   },
   "onboarding": {
+    "close": "Close and skip introduction",
+    "getStarted": "Get Started",
     "next": "Next",
     "progress": {
       "stepOf": "Step {{current}} of {{total}}"
@@ -2917,6 +3164,7 @@
         "unavailable": "No confidence basis was supplied."
       },
       "evidence": "Supporting evidence",
+      "evidenceCoverage": "{{count}} supporting records supplied.",
       "likelyCause": "Likely cause",
       "limitations": "Limitations",
       "noEvidence": "No supporting records were supplied.",
@@ -2946,20 +3194,75 @@
   "powerDashboards": {
     "aiDrafter": {
       "applyButton": "Apply to editor",
-      "badge": "Helix"
+      "applyTooltip": "Copy the proposed dashboard JSON into the editor above. You can still edit it before clicking Copy to clipboard.",
+      "badge": "Helix",
+      "button": "Draft dashboard",
+      "description": "Describe the dashboard you want in plain English (e.g. \"give me an overview dashboard with daily drives, current battery, and recent alerts\"). Helix proposes a typed dashboard JSON draft built from the in-scope curated panel catalog you can apply to the editor with one click; it never pushes the dashboard to Grafana directly.",
+      "promptLabel": "Dashboard request",
+      "promptPlaceholder": "e.g. give me an overview dashboard with daily drives, current battery, and recent alerts",
+      "title": "Helix natural-language dashboard composer"
     }
   },
   "powerGrafana": {
     "aiDrafter": {
       "applyButton": "Apply to editor",
-      "badge": "Helix"
+      "applyTooltip": "Copy the proposed panel JSON into the editor above. You can still edit it before clicking Copy to clipboard.",
+      "badge": "Helix",
+      "button": "Draft panel",
+      "description": "Describe the panel you want in plain English (e.g. \"show me a daily time series of how far I drove this month\"). Helix proposes a typed Grafana panel JSON draft you can apply to the editor with one click; it never pushes the panel to Grafana directly.",
+      "previewDatasource": "Datasource:",
+      "previewLabel": "Proposed Grafana panel (review before applying)",
+      "previewTables": "Referenced tables:",
+      "previewTargets": "Query targets:",
+      "previewType": "Panel type:",
+      "previewUntitled": "Untitled panel",
+      "promptLabel": "Grafana panel request",
+      "promptPlaceholder": "e.g. show me a daily time series of how far I drove this month",
+      "title": "Helix natural-language Grafana panel drafter"
     }
   },
   "powerSql": {
     "aiDrafter": {
       "applyButton": "Apply to editor",
-      "badge": "Helix"
+      "applyTooltip": "Copy the proposed SQL into the editor above. You can still edit it before clicking Run.",
+      "badge": "Helix",
+      "button": "Draft SQL",
+      "description": "Describe the question in plain English (e.g. \"how many drives last week\"). Helix proposes a typed read-only SQL draft you can apply to the editor with one click; it never executes the query directly.",
+      "promptLabel": "SQL request",
+      "promptPlaceholder": "e.g. how many drives did I take last week",
+      "title": "Helix natural-language SQL drafter"
     }
+  },
+  "problemReport": {
+    "context": {
+      "appVersion": "App version",
+      "browser": "Browser",
+      "page": "Page",
+      "pageNote": "(record ids are replaced with :id)",
+      "title": "What is sent with your report"
+    },
+    "form": {
+      "description": "What were you doing, and what did you expect?",
+      "descriptionPlaceholder": "Steps you took, what you saw, and what you expected to see instead.",
+      "descriptionTooShort": "Please add at least {{count}} characters.",
+      "hidePreview": "Hide exactly what is sent",
+      "includeDiagnostics": "Attach a redacted technical summary ({{count}} recent errors)",
+      "includeDiagnosticsHint": "Versions, browser capability, service health, error messages and trace IDs. Never VINs, locations, tokens, e-mail addresses or raw logs.",
+      "showPreview": "Show exactly what is sent",
+      "submit": "Send report",
+      "submitting": "Sending…",
+      "title": "What went wrong?",
+      "titlePlaceholder": "Short summary (e.g. \"Charging costs show as blank\")"
+    },
+    "intro": "Describe what happened in your own words. We attach a redacted technical summary only if you allow it.",
+    "policy": {
+      "consoleTail": "Console output",
+      "files": "File attachments",
+      "screenshots": "Screenshots",
+      "userEmail": "E-mail address"
+    },
+    "submitError": "Could not send the report. Please try again.",
+    "title": "Report a problem"
   },
   "productPreferences": {
     "persona": {
@@ -2986,7 +3289,16 @@
   },
   "pwa": {
     "lowBandwidth": {
-      "on": "Always on"
+      "auto": "Automatic (follow the network)",
+      "effectsOff": "When active: polling slows down, animations stop, charts render fewer points, heavy basemaps fall back to light tiles, and the service worker stops caching new images and map tiles.",
+      "effectsOn": "While active: background polling slows to a quarter of its normal rate, entrance animations are disabled, charts render at most {{points}} points, satellite/terrain basemaps fall back to the lightest raster tiles, and the service worker stops storing new images and map tiles.",
+      "heading": "Low-bandwidth mode",
+      "label": "Data usage on this device",
+      "off": "Always off",
+      "on": "Always on",
+      "statusNetwork": "Active — your browser or network reported Data Saver / a 2G-class connection.",
+      "statusOff": "Not active — the app is using full quality.",
+      "statusUser": "Active — enabled manually on this device."
     }
   },
   "range": {
@@ -3005,6 +3317,7 @@
   "replay": {
     "elevation": {
       "aria": "Elevation profile chart — no data available yet",
+      "gainLoss": "↑ {{gain}}m  ↓ {{loss}}m",
       "label": "Elevation",
       "noData": "No elevation data available",
       "title": "Elevation profile"
@@ -3058,28 +3371,49 @@
     "aiSearch": {
       "badge": "Helix",
       "description": "Describe what you are looking for and the assistant will surface drives, charging sessions, and alerts that match — citing each entity by name.",
+      "emptyHint": "Type a question above to search your drives, charging sessions, and alerts.",
       "inputLabel": "Search query",
+      "placeholder": "e.g. drives last weekend over 200 km with phantom drain",
       "searchButton": "Search with Helix",
       "title": "Search with natural language"
+    },
+    "brief": {
+      "description": "Result counts and category coverage for the current query and selected type filters.",
+      "scope": "Returned search hits, not an unbounded server total."
     },
     "empty": {
       "message": "Search across vehicles, drives, charging sessions, alerts, geofences, automations and more.",
       "title": "Start typing to search"
     },
     "filters": {
-      "clear": "Clear filters"
+      "clear": "Clear filters",
+      "label": "Filter results by type"
     },
     "kpi": {
       "activeFilters": "Active filters",
-      "categories": "Categories"
+      "allTypes": "All types shown",
+      "categories": "Categories",
+      "filtered": "of {{n}} types",
+      "forQuery": "for “{{query}}”",
+      "noMatches": "No matches",
+      "ofTypes": "of {{n}} searchable",
+      "topCount": "{{n}} results",
+      "topMatch": "Top match",
+      "totalResults": "Total results"
     },
+    "kpis": "Search summary",
     "noResults": {
       "message": "No matches for \"{{query}}\". Try fewer characters or open the command palette.",
       "title": "No results"
     },
     "placeholder": "Search vehicles, drives, charging…",
+    "refresh": "Refresh results",
+    "result": {
+      "open": "Open {{title}}"
+    },
     "results": {
-      "heading": "Results"
+      "heading": "Results",
+      "region": "Search results"
     },
     "section": {
       "alert": "Alerts",
@@ -3093,6 +3427,7 @@
       "trip": "Trips",
       "vehicle": "Vehicles"
     },
+    "subtitle": "Find vehicles, drives, charging, alerts and more across your fleet",
     "title": "Search",
     "tooShort": {
       "message": "Search across vehicles, drives, charging sessions, alerts, geofences, automations and more.",
@@ -3122,7 +3457,14 @@
   },
   "signalExplorer": {
     "aiFilter": {
-      "badge": "Helix"
+      "applyButton": "Apply to filters",
+      "applyTooltip": "Copy the proposed filter into the form above. You can still edit it before clicking Explore.",
+      "badge": "Helix",
+      "button": "Draft filter",
+      "description": "Describe the filter in plain English (e.g. \"battery level for yesterday\"). The LLM proposes a typed filter you can apply with one click; it never edits the form directly.",
+      "promptLabel": "Filter request",
+      "promptPlaceholder": "e.g. show me battery level for yesterday",
+      "title": "Helix natural-language filter"
     }
   },
   "softwareUpdates": {
@@ -3167,15 +3509,19 @@
     "actionItems": "Operator action items",
     "aiSpend": {
       "baseline": "Prior 7-day daily average: {{amount}}",
+      "baselineMetric": "Prior 7-day daily average",
+      "briefScope": "Audited today (UTC), prior seven-day daily average, and projected UTC midnight spend are different windows.",
       "capRisk": "At this pace you may reach the global daily cap ({{amount}}) before UTC midnight.",
       "caveat": "Based on recorded AI calls only. Delayed or missing audit records can undercount; projections assume today’s pace continues.",
       "driver": "Largest observed contributor: {{feature}} via {{provider}} / {{model}} ({{amount}} today; {{baseline}} prior daily average).",
       "insufficient": "Fewer than 3 active days in the prior week; there is not enough history for a pace comparison.",
       "newPaid": "Paid AI usage appeared today after a week of zero recorded spend. Check the contributing provider and model.",
       "projection": "At the current pace: approximately {{amount}} by UTC midnight.",
+      "projectionMetric": "Projected UTC midnight spend",
       "quiet": "No audited AI spend recorded today.",
       "title": "Helix spend watch",
       "today": "Audited today (UTC): {{amount}}",
+      "todayMetric": "Audited today (UTC)",
       "unusual": "Spend is pacing at least twice the prior-week daily average. This is an estimate, not a billing alert."
     },
     "authAria": "Tesla account authentication",
@@ -3243,6 +3589,7 @@
       "active": "Active incidents",
       "affects": "Affects",
       "components": "Affected components",
+      "componentsHint": "Optional. Separate multiple component names with commas.",
       "componentsPlaceholder": "e.g. tesla, telemetry",
       "critical": "Critical",
       "empty": "No active incidents recorded.",
@@ -3257,6 +3604,7 @@
       "logged": "Incident logged.",
       "logging": "Logging…",
       "major": "Major",
+      "messagePlaceholder": "What's the situation?",
       "minor": "Minor",
       "monitoring": "Monitoring",
       "resolved": "Resolved",
@@ -3264,6 +3612,9 @@
       "started": "Started",
       "status": "Status",
       "title": "Title",
+      "titleMin": "Title must be at least 3 characters.",
+      "titlePlaceholder": "e.g. Wall connector restart at 14:00",
+      "unsaved": "You have unsaved incident details. Discard them?",
       "updateCount_other": "{{count}} updates"
     },
     "infrastructure": {
@@ -3304,6 +3655,7 @@
       "durationRequired": "Enter a valid duration in minutes.",
       "message": "Operator message",
       "messageHint": "Optional context shown in the maintenance banner.",
+      "messagePlaceholder": "What's happening (optional)",
       "readOnly": "Maintenance controls are read-only",
       "schedule": "Schedule",
       "scheduleAction": "Schedule a window",
@@ -3395,6 +3747,14 @@
       "vehiclesUnavailable": "Vehicle telemetry is unavailable until the vehicle list loads.",
       "vinTail": "VIN ···{{tail}}"
     },
+    "pipelineBrief": {
+      "description": "Configured vehicles and recorded table counts; polling and stream liveness remain independent evidence below.",
+      "livenessDescription": "Configured vehicles classified by their most recent polling or Fleet Telemetry timestamp, using the existing liveness rules.",
+      "livenessFreshness": "Polling and stream timestamps remain independently visible on each vehicle row.",
+      "livenessScope": "Current client-clock age: sending under 5 minutes, slow from 5 to under 30 minutes, stale from 30 minutes; offline means no valid timestamp, not confirmed vehicle disconnection.",
+      "offlineMeaning": "No valid polling or stream timestamp was supplied; missing evidence is not a measured outage.",
+      "scope": "Vehicle response and database row-count snapshot; no shared historical window is supplied."
+    },
     "pipelineStates": {
       "asleep": "asleep",
       "charging": "charging",
@@ -3461,14 +3821,18 @@
     "setupBackups": "Set up backups",
     "skeletonLoading": "Loading system status",
     "slo": {
+      "briefDescription": "Historical uptime is shown only for a series-backed response; current component health is separate snapshot evidence.",
+      "componentsMetric": "Healthy components",
       "healthyComponents": "{{healthy}} / {{total}} components healthy",
       "loadFailed": "Failed to load uptime data.",
       "loading": "Loading uptime…",
+      "metricsTitle": "Uptime evidence",
       "snapshotNote": "Per-window historical uptime requires the heartbeat history backend (planned). This figure reflects the current snapshot.",
       "target": "Target",
       "targetAria": "Target uptime percentage",
       "targetValue": "Target {{target}}%",
       "title": "Uptime & SLO",
+      "uptimeMetric": "Historical uptime",
       "windowAria": "Uptime window selector",
       "windowLabel": "{{window}} · {{label}}",
       "windows": {
@@ -3556,6 +3920,10 @@
       "unknown": "unknown"
     },
     "workers": "Workers",
+    "workersBrief": {
+      "description": "Reported worker types, healthy replicas, and replicated types from the worker health response.",
+      "scope": "Reported instances only; this response does not prove unreported replicas are healthy."
+    },
     "workersCopy": {
       "apiLogs": "API logs",
       "empty": "No background workers reporting. Ensure the notification, export, and automation worker processes are running and reachable on their configured ports.",
@@ -3666,6 +4034,7 @@
     "unnamed": "Tesla driver"
   },
   "timeline": {
+    "empty": "No timeline entries yet.",
     "label": "Timeline"
   },
   "tirePressure": {
@@ -4026,6 +4395,7 @@
     "aiNarration": {
       "badge": "Helix",
       "description": "Get a short, Helix-written recap of your year from the slide data above.",
+      "emptyHint": "Select a vehicle above to recap its year.",
       "generateButton": "Generate narration",
       "title": "Helix narration"
     },

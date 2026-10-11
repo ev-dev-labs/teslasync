@@ -29,7 +29,8 @@
       "duration": "Duration",
       "energy": "Energy",
       "soc": "Battery",
-      "recommended": "Recommended stop point — actual charger locations may vary"
+      "recommended": "Recommended stop point — actual charger locations may vary",
+      "chargeStop": "Charging stop"
     },
     "map": {
       "origin": "Origin",
@@ -111,6 +112,17 @@
       "saved": "Saved",
       "title": "Trip Cost vs Gas",
       "empty": "Plan a trip to compare EV charging cost against gasoline."
+    },
+    "copilot": {
+      "comfortable": "You will make it",
+      "tight": "Tight — drive gently",
+      "chargeNow": "Charge first",
+      "title": "Trip Copilot",
+      "remainingKm": "Remaining (km)",
+      "check": "Will I make it?",
+      "error": "Confidence check failed",
+      "empty": "Enter remaining distance for a live arrival verdict.",
+      "detail": "Arrival ~{{soc}}% · {{margin}} kWh margin"
     }
   }
 }

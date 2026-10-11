@@ -29,7 +29,8 @@
       "commands": "Vehicle commands",
       "selectVehicle": "Select vehicle",
       "openAlerts": "Open alerts",
-      "pinned": "Pinned"
+      "pinned": "Pinned",
+      "related": "Related to this page"
     },
     "recent": {
       "justNow": "Just now",
@@ -99,6 +100,12 @@
       "frecencyReset": "Command palette usage history cleared"
     },
     "resultsLabel": "Results",
-    "clearFilter": "Clear filter"
+    "clearFilter": "Clear filter",
+    "related": {
+      "parent": "Back to section",
+      "sibling": "Same section"
+    },
+    "dialogLabel": "Command palette",
+    "filterBy": "Filter"
   }
 }

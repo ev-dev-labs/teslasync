@@ -61,7 +61,10 @@
       "cbSafe": "Color-blind safe",
       "neon": "Stylistic neon",
       "label": "Chart palette",
-      "help": "Defaults to the Okabe-Ito palette so series remain distinguishable for the ~8% of users with red-green colour vision deficiency."
-    }
+      "help": "Defaults to the Okabe-Ito palette so series remain distinguishable for the ~8% of users with red-green colour vision deficiency.",
+      "cbSafeHelp": "Okabe-Ito palette — distinguishable for all CVD types.",
+      "neonHelp": "Bright cyan/magenta — best when colour vision is unimpaired."
+    },
+    "loadingPicker": "Loading theme picker…"
   }
 }

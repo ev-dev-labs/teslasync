@@ -60,7 +60,11 @@
         "normalCells": "Normal cells"
       },
       "distribution": {
-        "range": "Voltage range"
+        "range": "Voltage range",
+        "title": "Voltage distribution",
+        "empty": "No distribution data available.",
+        "aria": "Distribution of battery cells by voltage range",
+        "count": "Cell count"
       },
       "time": "Time",
       "status": {
@@ -86,7 +90,10 @@
         "significant": "Significant deviation"
       },
       "table": {
-        "status": "Status"
+        "status": "Status",
+        "cell": "Cell #",
+        "voltage": "Voltage (V)",
+        "delta": "Delta (mV)"
       },
       "voltage": "Voltage",
       "ref": {
@@ -96,7 +103,43 @@
         "warning": "Warning"
       },
       "overTime": {
-        "avg": "Avg voltage"
+        "avg": "Avg voltage",
+        "title": "Cell voltage over time",
+        "empty": "Not enough history yet.",
+        "aria": "Minimum, average, and maximum battery cell voltage over time",
+        "min": "Min voltage",
+        "max": "Max voltage"
+      },
+      "subtitle": "Individual cell voltage monitoring and analysis",
+      "heatmap": {
+        "empty": "No cell readings available.",
+        "title": "Cell voltage heatmap",
+        "subtitle": "Cells colored by deviation from average"
+      },
+      "view": {
+        "bar": "Switch to bar view",
+        "grid": "Switch to grid view",
+        "barLabel": "Bar view",
+        "gridLabel": "Grid view"
+      },
+      "barView": {
+        "aria": "Voltage reading for each battery cell"
+      },
+      "bar": {
+        "title": "Cell voltage bar chart",
+        "empty": "No cell voltages available.",
+        "aria": "Battery cell voltage readings with pack minimum, average, and maximum references"
+      },
+      "imbalance": {
+        "title": "Imbalance trend",
+        "empty": "Not enough history yet.",
+        "aria": "Battery cell voltage imbalance over time with nominal and warning thresholds",
+        "series": "Imbalance (mV)"
+      },
+      "details": {
+        "title": "Cell details",
+        "count": "{{count}} cells",
+        "empty": "No cell details available."
       }
     },
     "degradation": {
@@ -168,7 +211,13 @@
         "summary": "Battery degradation evidence"
       },
       "healthTitle": "Battery health",
-      "riskScore": "Risk score"
+      "riskScore": "Risk score",
+      "subtitle": "Health trends, degradation predictions, and charging habit impact",
+      "summary": "Battery health summary",
+      "noStress": "Charging impact will appear once charging history is available.",
+      "rangeLossAria": "Original and current estimated driving range over time",
+      "healthFactors": "Battery health factors",
+      "history": "Degradation history"
     },
     "health": {
       "excellent": "Excellent",
@@ -336,6 +385,13 @@
     "bars": {
       "title": "Capacity & Wear"
     },
-    "seriesLabel": "Battery %"
+    "seriesLabel": "Battery %",
+    "delta": {
+      "unknown": "Battery delta unknown",
+      "aria": "Battery {{from}}% to {{to}}%"
+    },
+    "links": {
+      "title": "Explore More"
+    }
   }
 }

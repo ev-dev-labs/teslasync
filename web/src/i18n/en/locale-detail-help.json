@@ -292,18 +292,60 @@
     },
     "chargeDepartureAlignment": {
       "avgMargin": "The realized safety buffer: how much charge was still left when the paired drive finished. A low average does not itself mean anything went wrong — it only describes what happened, not what was intended.",
-      "misaligned": "Share of pairings that tripped at least one heuristic (a tight margin, a very long or already-full dwell, far more energy added than that trip used, or an inconsistent SoC reading). Each is circumstantial on its own."
+      "misaligned": "Share of pairings that tripped at least one heuristic (a tight margin, a very long or already-full dwell, far more energy added than that trip used, or an inconsistent SoC reading). Each is circumstantial on its own.",
+      "iconLabel": "More info about how pairs are formed"
     },
     "chargeInterruption": {
       "overallRisk": "A Beta-Bayesian estimate, not a count of confirmed failures. Every signal used (missing end SoC, a stalled charge rate, a power collapse, an early abort) is circumstantial — each has an innocent explanation too. This number is a probability, weighted by how much evidence exists, never a verdict.",
-      "highestRisk": "Ranked by the conservative (2.5th percentile) bound of the risk estimate, not the raw average — so a single unlucky session at a brand-new site can’t outrank a site with a real, well-evidenced pattern."
+      "highestRisk": "Ranked by the conservative (2.5th percentile) bound of the risk estimate, not the raw average — so a single unlucky session at a brand-new site can’t outrank a site with a real, well-evidenced pattern.",
+      "iconLabel": "More info about the site list"
     },
     "chargerResilience": {
       "score": "A composite of three things: how much energy is NOT concentrated in your top site (40%), how often an alternate site has actually been used rather than just being available on paper (30%), and how many effectively-equal sites your charging behaves like (30%).",
-      "effectiveSites": "The reciprocal of the energy-weighted Herfindahl-Hirschman Index (1/HHI) — the number of equally-sized sites this portfolio behaves like. Usually smaller than a raw count of distinct locations, because a handful of those were only visited once."
+      "effectiveSites": "The reciprocal of the energy-weighted Herfindahl-Hirschman Index (1/HHI) — the number of equally-sized sites this portfolio behaves like. Usually smaller than a raw count of distinct locations, because a handful of those were only visited once.",
+      "iconLabel": "More info about the what-if scenario"
     },
     "commandReliability": {
-      "overall": "Three successes out of three is not the same evidence as ninety-seven out of a hundred, even though both read as a high percentage. The Wilson score interval accounts for how much evidence there actually is, so a command is only graded reliable once its pessimistic lower bound clears the bar — not merely its lucky average."
+      "overall": "Three successes out of three is not the same evidence as ninety-seven out of a hundred, even though both read as a high percentage. The Wilson score interval accounts for how much evidence there actually is, so a command is only graded reliable once its pessimistic lower bound clears the bar — not merely its lucky average.",
+      "iconLabel": "More info about intents"
+    },
+    "firmwareImpact": {
+      "iconLabel": "More info about the verdicts"
+    },
+    "regimeShifts": {
+      "iconLabel": "More info about changepoint detection"
+    },
+    "driveAnomalies": {
+      "iconLabel": "More info about anomaly scoring"
+    },
+    "efficiencyLandscape": {
+      "iconLabel": "More info about the field map"
+    },
+    "energyAnatomy": {
+      "iconLabel": "More info about the anatomy model"
+    },
+    "guided": {
+      "title": "Show me around",
+      "subtitle": "Walkthroughs run only when you ask for them — nothing here starts on its own.",
+      "intro": "Replay the product introduction",
+      "tours": "Browse guided tours"
+    },
+    "signalCorrelation": {
+      "bestR": "An ordinary overlay chart only ever shows the zero-lag correlation, which misses every relationship with a delay in it. Sweeping the lag finds the shift at which the two signals line up best, and the difference between the peak and the zero-lag value is exactly the information a static chart throws away.",
+      "iconLabel": "More info about signal selection"
+    },
+    "signalChangePoints": {
+      "count": "A change point closes the current segment and starts a fresh one only once the cumulative statistic crosses its alarm threshold, and never before the fixed minimum segment length has elapsed.",
+      "iconLabel": "More info about signal selection"
+    },
+    "signalEntropy": {
+      "entropy": "How surprised you should be by the next sample given everything seen so far. Normalized entropy divides by the ceiling for however many bins were actually populated, so a signal using 2 of 8 requested bins is judged against a 2-state ceiling, not an 8-state one it never approached.",
+      "iconLabel": "More info about signal selection"
+    },
+    "signalTrend": {
+      "slope": "Theil-Sen slope: the median of every pairwise slope between samples. A handful of outliers cannot swing this the way they can an ordinary least-squares fit.",
+      "significance": "Tie-aware Mann-Kendall tests whether the observed ordering of values is more consistent with a monotonic trend than chance — ties (repeated readings) are corrected for rather than treated as informationless.",
+      "iconLabel": "More info about signal selection"
     }
   }
 }

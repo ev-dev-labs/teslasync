@@ -62,7 +62,8 @@
       "guard": "Guard",
       "duration": "Duration in state",
       "timestamp": "Timestamp",
-      "context": "Context snapshot"
+      "context": "Context snapshot",
+      "name": "FSM name"
     },
     "col": {
       "state": "State",
@@ -121,6 +122,10 @@
     "modeCharging": "Charging",
     "modeDrive": "Drive",
     "modeSleep": "Sleep",
-    "modeIdle": "Idle"
+    "modeIdle": "Idle",
+    "noObservedState": "No observed state",
+    "kpis": "FSM summary metrics",
+    "overview": "Vehicle state overview",
+    "analysis": "Transition analysis"
   }
 }

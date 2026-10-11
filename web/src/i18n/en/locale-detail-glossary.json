@@ -1,0 +1,9 @@
+{
+  "glossary": {
+    "tooltipLabel": "What is {{term}}?",
+    "panelTitle": "What the numbers mean",
+    "panelSubtitle": "Definitions for the terms that are easiest to misread, and where each number actually comes from.",
+    "howMeasured": "How we measure it",
+    "seeInContext": "See it in context"
+  }
+}

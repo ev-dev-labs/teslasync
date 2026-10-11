@@ -80,6 +80,9 @@
       "socUsed": "Battery used",
       "temp": "Outside temp",
       "score": "Drive score"
+    },
+    "brief": {
+      "scope": "Selected Drive A and Drive B; only fair, comparable measurements decide the verdict"
     }
   }
 }

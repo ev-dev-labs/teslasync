@@ -250,7 +250,8 @@
       "coachConsumption": "Vehicle coaching consumption",
       "liveQuantities": "Reported powertrain quantities",
       "rideTotals": "Recorded ride totals",
-      "accelerationAxes": "Reported acceleration axes"
+      "accelerationAxes": "Reported acceleration axes",
+      "source": "Returned motor-history samples inside the existing selected-drive query bounds."
     },
     "autopilotNoData": "No cruise / autopilot telemetry received yet",
     "grok": {
@@ -269,6 +270,9 @@
       }
     },
     "drive": "Drive",
-    "reverse": "Reverse"
+    "reverse": "Reverse",
+    "motorLoading": "Loading motor telemetry…",
+    "forward": "Forward",
+    "motorResource": "Motor telemetry"
   }
 }

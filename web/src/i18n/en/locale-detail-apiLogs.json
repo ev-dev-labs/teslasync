@@ -104,6 +104,15 @@
       "noBreakdown": "No per-source breakdown available for the reported errors.",
       "noErrors": "No frontend errors reported in the last hour."
     },
-    "time": "Time"
+    "time": "Time",
+    "copyRequestUrl": "Copy request URL",
+    "durationValue": "{{value}}ms",
+    "latency": "Latency (ms)",
+    "statusSuccess": "2xx success",
+    "statusRedirect": "3xx redirect",
+    "statusClientError": "4xx client error",
+    "statusServerError": "5xx server error",
+    "loadedPageScope": "Newest first. Filters query all matching requests; exports include only this loaded page.",
+    "inspectHint": "Expand a request to inspect headers, bodies, and metadata."
   }
 }

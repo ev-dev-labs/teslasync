@@ -8,6 +8,7 @@ import { cleanup, render, renderHook, screen } from '@testing-library/react'
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
 import ts from 'typescript'
 import catalog from './en.json'
+import { authorizedCanonicalAdditions } from './authorized-canonical-recovery.test'
 import { AIThinkingIndicator } from '@/components/ai/AIThinkingIndicator'
 import { AIFeatureCard } from '@/components/ai/AIFeatureCard'
 import { useDrivesListPageCollections } from '@/features/driving/hooks/useDrivesListPageCollections'
@@ -84,6 +85,10 @@ describe('five source-backed copy-owner contracts', () => {
       'systemStatus.incidents.updateCount_other',
     ])
     expect(approved.size).toBe(12)
+    for (const [key, value] of authorizedCanonicalAdditions) {
+      expect(nested(catalog, key)).toBe(value)
+      approved.add(key)
+    }
     function leaves(resource: Record<string, unknown>, prefix = ''): [string, unknown][] {
       return Object.entries(resource).flatMap(([key, value]) => {
         const path = prefix ? `${prefix}.${key}` : key
@@ -93,7 +98,7 @@ describe('five source-backed copy-owner contracts', () => {
       })
     }
     const entries = leaves(catalog)
-    expect(entries).toHaveLength(29075)
+    expect(entries).toHaveLength(30996)
     const predecessor = entries.filter(([key]) => !approved.has(key))
       .sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0)
     expect(predecessor).toHaveLength(29063)

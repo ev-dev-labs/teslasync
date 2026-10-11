@@ -24,6 +24,14 @@
     "prevPage": "Previous page",
     "pageOf": "Page {{page}} of {{total}}",
     "nextPage": "Next page",
-    "lastPage": "Last page"
+    "lastPage": "Last page",
+    "signalsMax": "Signals (max {{count}})",
+    "removeSignal": "Remove {{signal}}",
+    "searchSignals": "Search signals",
+    "addMoreSignals": "Add more signals…",
+    "loadingSignals": "Loading signals…",
+    "signalsError": "Failed to load signals",
+    "maxReached": "Maximum of {{count}} signals selected",
+    "records": "{{n}} records"
   }
 }

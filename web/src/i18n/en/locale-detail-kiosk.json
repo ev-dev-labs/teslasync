@@ -24,6 +24,26 @@
     "enter": "Enter kiosk mode",
     "rotationPosition": "Dashboard {{current}} of {{total}}",
     "rotationOff": "Off",
-    "dimNever": "Never"
+    "dimNever": "Never",
+    "rotation10s": "10s",
+    "rotation15s": "15s",
+    "rotation30s": "30s",
+    "rotation1min": "1 min",
+    "rotation2min": "2 min",
+    "rotation5min": "5 min",
+    "timeout3s": "3s",
+    "timeout5s": "5s",
+    "timeout10s": "10s",
+    "timeout15s": "15s",
+    "dim5min": "5 min",
+    "dim10min": "10 min",
+    "dim15min": "15 min",
+    "dim30min": "30 min",
+    "dim60min": "60 min",
+    "clockTopLeft": "Top left",
+    "clockTopRight": "Top right",
+    "clockBottomLeft": "Bottom left",
+    "clockBottomRight": "Bottom right",
+    "hint": "Kiosk mode enters fullscreen and hides all navigation. Move the mouse or touch the screen to reveal the exit button. Press Esc to exit."
   }
 }

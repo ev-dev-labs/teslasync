@@ -105,6 +105,12 @@
         "confirmMessage": "Send wake commands to {{count}} vehicle(s)? Waking vehicles may temporarily increase standby energy use.",
         "batchLimit": "{{remaining}} vehicle(s) will remain queued for a later batch to respect command limits.",
         "confirmWake": "Send wake commands"
+      },
+      "summary": {
+        "eyebrow": "Fleet evidence",
+        "title": "Fleet operating posture",
+        "scope": "All registered vehicles; active vehicle shown below",
+        "provenance": "Verified coverage comes from the same resolved fleet-state batch. Client classification takes over when evidence ages; the oldest reading is a real backend observation, never fetch completion."
       }
     },
     "title": "Fleet operations",
@@ -279,14 +285,22 @@
         "initial": "Awaiting source",
         "initialFailure": "Source unavailable",
         "ok": "Source available",
-        "unavailable": "No source readings"
-      }
+        "unavailable": "No source readings",
+        "stale": "Retained readings",
+        "partial": "Partial evidence"
+      },
+      "eyebrow": "Source summary"
     },
     "more": "More",
     "export": "Export dashboard",
     "import": "Import dashboard",
     "refresh": "Refresh data",
     "refreshShort": "Refresh",
-    "layoutsRegion": "Dashboard layouts"
+    "layoutsRegion": "Dashboard layouts",
+    "moreActions": "More dashboard actions",
+    "dashboardTools": "Dashboard tools",
+    "dashboardToolsHelp": "Manage, present, or share this layout.",
+    "widgetsRegion": "Dashboard widgets",
+    "loading": "Loading command center"
   }
 }

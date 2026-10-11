@@ -60,6 +60,15 @@
     "dailyBreakdownAria": "Daily transition counts by vehicle state",
     "day": "Day",
     "invalidComposition": "Proportional track unavailable for the returned dwell totals; individual state evidence remains visible.",
-    "label": "Timeline"
+    "label": "Timeline",
+    "empty": "No timeline entries yet.",
+    "brief": {
+      "retained": "Retained state summary",
+      "pausedRetained": "State summary refresh paused",
+      "available": "Returned state summary",
+      "paused": "State summary paused",
+      "loading": "Loading state summary",
+      "unavailable": "State summary unavailable"
+    }
   }
 }

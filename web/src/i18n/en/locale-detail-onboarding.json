@@ -122,13 +122,43 @@
     "stepper": {
       "status": {
         "current": "In progress",
-        "done": "Completed"
-      }
+        "done": "Completed",
+        "pending": "Not started"
+      },
+      "empty": "No setup steps to show right now.",
+      "label": "Onboarding steps"
     },
     "next": "Next",
     "stepAccount": "Connect Tesla account",
     "runtimeHealth": {
-      "systemStatus": "View system status"
+      "systemStatus": "View system status",
+      "telemetryLastSeen": "Fleet Telemetry is stale. The last signal arrived {{time}}.",
+      "telemetryStale": "Fleet Telemetry is stale and live values may be out of date.",
+      "title": "Setup is complete, but a live service needs attention",
+      "access": "You can keep using TeslaSync and viewing stored history while live services recover.",
+      "teslaAuth": "Your Tesla account authorization is unavailable and may need to be renewed.",
+      "reconnect": "Reconnect Tesla account",
+      "alerts": "Configure health alerts"
+    },
+    "close": "Close and skip introduction",
+    "getStarted": "Get Started",
+    "trackingHelp": "See current vehicle state and data freshness.",
+    "drivesHelp": "Review routes, efficiency, and driving patterns.",
+    "chargingHelp": "Understand charging cost and battery health.",
+    "controlHelp": "Manage alerts, automations, and vehicle actions.",
+    "stepAccountHelp": "Authorize TeslaSync through the account settings.",
+    "stepVehicles": "Sync vehicle inventory",
+    "stepVehiclesHelp": "Import the vehicles available to your account.",
+    "stepWorkspace": "Activate your workspace",
+    "stepWorkspaceHelp": "Live dashboards populate as telemetry arrives.",
+    "accountConnected": "Account connected",
+    "setupRequired": "Workspace setup",
+    "explore": "Explore capabilities",
+    "privateTitle": "Private by design",
+    "privateHelp": "Your fleet data stays in the infrastructure you control.",
+    "tasks": {
+      "optOut": "Stop showing setup tips",
+      "dismiss": "Dismiss this tip"
     }
   }
 }

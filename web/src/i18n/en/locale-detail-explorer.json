@@ -168,7 +168,13 @@
       "cadenceTitle": "Observed discovery intervals",
       "cadenceScope": "Intervals between first destination discoveries in returned history, not all vehicle travel.",
       "behaviorTitle": "Destination arrival counts",
-      "behaviorScope": "Non-base destination arrivals in returned history; first arrivals are excluded from return-arrival counts."
+      "behaviorScope": "Non-base destination arrivals in returned history; first arrivals are excluded from return-arrival counts.",
+      "pending": "Located-arrival evidence is not available yet.",
+      "farthestContext": "Distance from the inferred observed base.",
+      "description": "Located arrivals describe observed roaming, not complete travel history or a verified home.",
+      "capped": "Latest {{count}} returned drives; history cap reached",
+      "window": "Returned drive history; complete-history coverage is unknown",
+      "source": "Drive-history arrival clusters; visit-weighted P90 distance from the inferred base."
     }
   }
 }

@@ -44,7 +44,31 @@
       "resetFilters": "Reset",
       "applyFilters": "Search",
       "verifying": "Verifying…",
-      "allCategories": "All categories"
+      "allCategories": "All categories",
+      "detailIp": "IP",
+      "detailUa": "User-agent",
+      "detailHash": "Row hash",
+      "colEntity": "Entity",
+      "colTrace": "Trace",
+      "hideDetails": "Hide",
+      "tableTitle": "Entries",
+      "emptyTitle": "No audit entries",
+      "emptyMessage": "No rows match the current filter. Try widening the time range or clearing the filters.",
+      "emptyTable": "No entries",
+      "untilLabel": "Until",
+      "actorPlaceholder": "e.g. admin@local",
+      "entityTypeLabel": "Entity type",
+      "entityTypePlaceholder": "e.g. vehicle, alert_rule",
+      "integrityTitle": "Hash chain integrity",
+      "verifyButton": "Verify chain",
+      "chainIntact": "Chain intact",
+      "chainBroken": "Chain broken",
+      "rowsChecked": "{{count}} rows checked",
+      "firstBadId": "First bad row: #{{id}}",
+      "verifyHint": "Re-derive every row_hash server-side. No data is sent or written — this is read-only.",
+      "allActions": "All actions",
+      "subtitle": "Append-only audit ledger with SHA-256 hash chaining. Narrow the scope with the filter row and verify the chain to re-derive integrity on demand.",
+      "notConfigured": "The audit log subsystem is not configured on this deployment."
     },
     "vehicleCost": {
       "avgRows": "Avg rows / vehicle",
@@ -75,7 +99,25 @@
       "colRows": "Rows",
       "colRate": "Rate (rows/min, 24h)",
       "colLastSeen": "Last seen",
-      "windowLabel": "Window"
+      "windowLabel": "Window",
+      "topTalkersTitle": "Top talkers",
+      "topTalkersSubtitle": "Share of total rows ingested",
+      "topTalkersEmpty": "No vehicles have ingested signals yet.",
+      "topTalkersListLabel": "Top talkers ranked by ingested rows",
+      "chartTitle": "Ingest cost by vehicle",
+      "chartAria": "Horizontal bar chart of estimated ingest bytes per vehicle, largest consumer first.",
+      "chartEmpty": "No ingest volume recorded in this window yet.",
+      "colBytes": "Bytes (est.)",
+      "rowId": "ID {{id}}",
+      "colFailures": "DLQ (24h)",
+      "tableTitle": "Per-vehicle breakdown",
+      "emptyTitle": "No vehicle cost data",
+      "emptyMessage": "No vehicles have ingested signals during this window.",
+      "emptyTable": "No vehicle cost data",
+      "refresh": "Refresh vehicle cost data",
+      "subtitle": "Per-vehicle telemetry cost over the selected window. Use this to spot vehicles whose ingest volume is disproportionate to the fleet baseline.",
+      "notConfigured": "The ingest-x-ray subsystem is not configured on this deployment. Vehicle cost reporting requires the signal_log hypertable to be populated.",
+      "breakdownRegion": "Ingest cost breakdown"
     },
     "systemStatus": {
       "clientPerformance": {
@@ -119,7 +161,8 @@
           "negative": "Door opened"
         },
         "noEvents": "No state changes detected in the history.",
-        "unknown": "State change"
+        "unknown": "State change",
+        "unknownDesc": "Vehicle state updated"
       },
       "live": {
         "hazards": "Hazards",
@@ -233,7 +276,12 @@
         "daysAgo": "{{count}}d ago"
       },
       "brief": {
-        "scope": "Vehicle {{vehicle}} · History {{start}} to {{end}} (exclusive). Current status comes from a separate latest-state query."
+        "scope": "Vehicle {{vehicle}} · History {{start}} to {{end}} (exclusive). Current status comes from a separate latest-state query.",
+        "sentry": "Percentage of returned security-event samples with Sentry active; not time-weighted uptime or complete vehicle coverage.",
+        "lastLock": "Latest observed lock transition in the returned history, or the first event timestamp when no transition is found.",
+        "title": "Security observation summary",
+        "freshness": "Latest security observation: {{when}}",
+        "historyScope": "Returned security events for vehicle {{vehicle}}, {{start}} to {{end}} (exclusive); statistics describe event samples, not a complete time-weighted history."
       },
       "unknown": "Unknown"
     },
@@ -281,7 +329,8 @@
         "actions": "Actions"
       },
       "actions": {
-        "inspect": "Inspect"
+        "inspect": "Inspect",
+        "inspectRow": "Inspect DLQ entry {{id}}"
       },
       "table": {
         "loading": "Loading…",
@@ -305,7 +354,9 @@
         "parseError": "Parse error",
         "binaryPayload": "(non-UTF-8 binary, {{n}} bytes — use the copy button to download base64)",
         "binaryEnvelope": "(non-UTF-8 envelope, {{n}} bytes — use the copy button to download base64)",
-        "empty": "No DLQ entry selected."
+        "empty": "No DLQ entry selected.",
+        "payloadView": "Payload view",
+        "loading": "Loading payload details…"
       },
       "stats": {
         "total": "Total entries",
@@ -339,7 +390,8 @@
       },
       "reasons": {
         "unknown": "unknown",
-        "empty": "No failed ingests — nothing to break down."
+        "empty": "No failed ingests — nothing to break down.",
+        "listLabel": "Failure reasons breakdown"
       },
       "confirm": {
         "title": "Replay DLQ entry?",
@@ -388,7 +440,9 @@
       "actions": {
         "edit": "Edit",
         "delete": "Delete",
-        "add": "Add flag"
+        "add": "Add flag",
+        "editFlag": "Edit flag {{key}}",
+        "deleteFlag": "Delete flag {{key}}"
       },
       "table": {
         "loading": "Loading flags…",
@@ -426,7 +480,8 @@
         "array": "Array",
         "null": "Null",
         "sublabel": "{{count}} · {{pct}}%",
-        "empty": "No flags to summarize yet. Add a flag to see its value-type breakdown here."
+        "empty": "No flags to summarize yet. Add a flag to see its value-type breakdown here.",
+        "ariaLabel": "Flag value-type composition"
       },
       "brief": {
         "eyebrow": "Feature flag operations",
@@ -495,7 +550,12 @@
         "fieldsSub": "unique signal names",
         "window": "Window",
         "windowSub": "observation horizon",
-        "bucket": "Bucket"
+        "bucket": "Bucket",
+        "peak": "Peak / bucket",
+        "peakSub": "busiest interval",
+        "avg": "Avg / bucket",
+        "avgSub": "mean per interval",
+        "bucketSub": "aggregation interval"
       },
       "pageTitle": "Ingest X-Ray",
       "subtitle": "Per-vehicle telemetry sample counts — pick a vehicle to inspect what the ingest pipeline is receiving.",
@@ -505,7 +565,16 @@
       },
       "panels": {
         "fields": "Field statistics"
-      }
+      },
+      "kpis": "Ingest summary metrics",
+      "topFields": {
+        "title": "Top fields by volume",
+        "empty": "No field activity in this window yet."
+      },
+      "actions": {
+        "refresh": "Refresh ingest x-ray"
+      },
+      "hero": "Sample volume"
     },
     "liveSignals": {
       "refresh": "Refresh live snapshot",
@@ -575,11 +644,20 @@
       },
       "panels": {
         "snapshot": "Live snapshot",
-        "sources": "Source layers"
+        "sources": "Source layers",
+        "kinds": "Signal kinds"
       },
       "kinds": {
         "kindCol": "Kind",
-        "count": "Fields"
+        "count": "Fields",
+        "noVehicle": "Select a vehicle to break its signals down by value kind.",
+        "empty": "No live signals to categorise yet.",
+        "chartAria": "Bar chart of live signal counts grouped by value kind."
+      },
+      "sources": {
+        "barAria": "Signal source-layer distribution: {{l1}} live, {{stale}} stale, {{l2}} legacy, {{unknown}} unknown",
+        "noVehicle": "Select a vehicle to see how its signals are distributed across the L1 / L2 / stale layers.",
+        "empty": "No live signals to classify yet."
       }
     },
     "teslaOrders": {
@@ -675,7 +753,45 @@
       "severityCritical": "Critical",
       "colTotal": "Total",
       "colSeverity": "Severity",
-      "compressed": "Compressed"
+      "compressed": "Compressed",
+      "kpis": "Fleet disk summary",
+      "growthSub": "Sum across all hypertables",
+      "percentSub": "{{pct}} of total",
+      "fleetTotal": "Total disk",
+      "fleetUncompressed": "Uncompressed",
+      "fleetGrowth": "Growth (per day)",
+      "largest": "Largest table",
+      "soonestQuota": "Soonest quota",
+      "colDays": "Days to quota",
+      "noQuota": "No quota configured",
+      "colTable": "Hypertable",
+      "chunkCount": "{{count}} chunks",
+      "colSplit": "Uncompressed / compressed",
+      "compressedSuffix": "compressed",
+      "colGrowth": "Growth (per day)",
+      "subtitle": "Per-hypertable disk usage with compressed/uncompressed split and days-to-quota estimate. Severity reflects the configured quota threshold.",
+      "notConfigured": "TimescaleDB hypertable metrics are unavailable on this deployment. This page requires TimescaleDB to be installed and accessible.",
+      "criticalTitle": "Quota pressure",
+      "criticalMessage": "{{count}} hypertable(s) are in the critical tier for their configured quota. Review retention, compression, or the quota threshold.",
+      "composition": "Storage composition",
+      "compositionTitle": "Compressed vs uncompressed",
+      "compositionAria": "Stacked bar chart of the largest hypertables split by uncompressed and compressed bytes",
+      "noComposition": "No hypertable sizes to chart yet.",
+      "uncompressed": "Uncompressed",
+      "severityTitle": "Severity mix",
+      "severityAria": "Donut chart of hypertables grouped by quota severity tier",
+      "noSeverity": "No severity data available yet.",
+      "outlook": "Growth and quota outlook",
+      "growthTitle": "Fastest-growing hypertables",
+      "noGrowth": "No measurable daily growth yet.",
+      "quotaTitle": "Days to quota",
+      "noQuotaTitle": "No quota configured",
+      "noQuotaMessage": "Set HYPERTABLE_QUOTA_BYTES to surface a days-to-quota estimate for each hypertable.",
+      "daysValue": "{{days}} d",
+      "tableTitle": "Hypertables",
+      "emptyTitle": "No hypertables",
+      "emptyMessage": "No hypertables found in this database. The disk forecast surfaces TimescaleDB hypertables only.",
+      "emptyTable": "No hypertables"
     },
     "secretRotation": {
       "col": {
@@ -707,7 +823,44 @@
       "criticalLabel": "Overdue",
       "pageTitle": "Secret rotation",
       "severityOk": "OK",
-      "severityCritical": "Overdue"
+      "severityCritical": "Overdue",
+      "kindCount": "{{count}} kinds tracked",
+      "okSub": "{{pct}} of tracked",
+      "warnSub": "Approaching threshold",
+      "criticalSub": "Past critical threshold",
+      "oldestLabel": "Oldest secret",
+      "soonestExpiryLabel": "Soonest expiry",
+      "noExpiry": "No expiry tracked",
+      "kpis": "Rotation summary",
+      "ageSection": "Secret age and severity",
+      "ageTitle": "Secret age by kind",
+      "ageAria": "Horizontal bar chart of the oldest tracked secrets by age in days, colored by severity tier",
+      "noAgeData": "No rotation ages to chart yet.",
+      "colAge": "Age (days)",
+      "daysValue": "{{days}} d",
+      "severityTitle": "Severity mix",
+      "severityAria": "Donut chart of tracked secrets grouped by rotation severity tier",
+      "noSeverity": "No severity data available yet.",
+      "colRotated": "Last rotated",
+      "daysToExpiry": "{{days}}d remaining",
+      "colThresholds": "Warn / critical",
+      "tableTitle": "Rotation status",
+      "emptyTitle": "No tracked secrets",
+      "emptyMessage": "No rotation events have been recorded yet. The tracker captures observations on every credential rotation.",
+      "emptyTable": "No tracked secrets",
+      "outlook": "Rotation urgency and expiry outlook",
+      "urgencyTitle": "Rotation urgency",
+      "noUrgency": "No rotation ages to rank yet.",
+      "expiryTitle": "Expiry watch",
+      "noExpiryTitle": "No expiring credentials",
+      "noExpiryMessage": "None of the tracked secrets carry a hard expiry date. Rotation is driven by age thresholds instead.",
+      "totalLabel": "Tracked secrets",
+      "warnLabel": "Rotate soon",
+      "severityWarn": "Rotate soon",
+      "subtitle": "Status of every tracked credential. Severity reflects per-kind warn/critical thresholds; rotate anything in the critical tier as soon as possible.",
+      "notConfigured": "The rotation tracker is not configured on this deployment. Enable secret rotation tracking in config to populate this page.",
+      "criticalTitle": "Overdue rotations",
+      "criticalMessage": "{{count}} secrets are past their critical rotation threshold. These should be rotated immediately to reduce blast radius."
     },
     "slowQueries": {
       "colQuery": "Query",
@@ -716,7 +869,37 @@
       "pageTitle": "Slow queries",
       "colRows": "Rows",
       "orderBy": "Order by",
-      "limit": "Limit"
+      "limit": "Limit",
+      "chartTitle": "Top queries by {{metric}}",
+      "analysis": "Query analysis",
+      "chartAria": "Horizontal bar chart ranking the top queries by {{metric}}",
+      "noChart": "No queries to chart yet.",
+      "cacheTitle": "Cache efficiency",
+      "noCache": "No shared-buffer statistics available for these queries.",
+      "cacheHint": "Lowest hit ratios first — I/O-bound queries are the strongest indexing candidates.",
+      "kpis": "Query performance summary",
+      "kpiAnalyzed": "Queries analyzed",
+      "kpiCallsSub": "Across shown queries",
+      "kpiTotalTime": "Aggregate time",
+      "kpiTotalTimeSub": "Summed total_time",
+      "kpiSlowestMean": "Slowest mean",
+      "kpiSlowestMeanSub": "Worst per-call average",
+      "kpiPeak": "Peak max",
+      "kpiPeakSub": "Slowest single call",
+      "kpiCache": "Cache hit ratio",
+      "kpiCacheSub": "Shared-buffer hits",
+      "colFingerprint": "Query fingerprint",
+      "colCalls": "Calls",
+      "colMean": "Mean (ms)",
+      "colMax": "Max (ms)",
+      "colTotal": "Total (ms)",
+      "colCache": "Cache hit ratio",
+      "tableTitle": "Top queries",
+      "emptyTitle": "No slow queries",
+      "emptyMessage": "pg_stat_statements is empty or has been reset recently. Slow queries will accumulate here as the system processes load.",
+      "emptyTable": "No slow queries",
+      "subtitle": "Top queries from pg_stat_statements. Sort by mean time to surface the slowest individual calls, or total time to surface the costliest in aggregate.",
+      "notConfigured": "pg_stat_statements is not installed on this PostgreSQL instance. Run `CREATE EXTENSION pg_stat_statements;` and add it to shared_preload_libraries to enable this page."
     },
     "dataQuality": {
       "summary": {
@@ -780,7 +963,39 @@
       "drift": "Drift",
       "fingerprintCurrent": "Current",
       "statusLabel": "Status",
-      "pageTitle": "Schema drift"
+      "pageTitle": "Schema drift",
+      "breakdownTitle": "Drift breakdown",
+      "breakdownSub": "Per-object comparison of current vs seed",
+      "breakdownEmpty": "No comparison available yet.",
+      "seedCaptured": "Seed captured {{when}}",
+      "currentExpected": "{{current}} → {{expected}}",
+      "fingerprintTitle": "Schema fingerprints",
+      "fingerprintSub": "SHA-256 of the live schema versus the captured seed",
+      "emptyMessage": "The schema fingerprint has not been computed yet. Restart the API to capture a seed fingerprint.",
+      "emptyTitle": "No fingerprint available",
+      "fingerprintExpected": "Expected (seed)",
+      "copyHash": "Copy fingerprint hash",
+      "generatedAt": "Captured {{when}}",
+      "guidanceTitle": "What this means",
+      "guidanceEmpty": "Restart the API to capture a seed fingerprint, then drift interpretation appears here.",
+      "cleanBody": "The live schema matches the recorded seed fingerprint. Migrations and the seed are in sync — no action required.",
+      "changeTables": "Tables {{delta}}",
+      "changeColumns": "Columns {{delta}}",
+      "changeIndexes": "Indexes {{delta}}",
+      "driftedBodyCounts": "The live schema differs from the seed: {{changes}}.",
+      "driftedBodyHash": "The live schema fingerprint differs from the seed even though object counts match — inspect column definitions or index expressions.",
+      "remediateSeed": "Confirm migrations are applied, then restart the API to regenerate the seed fingerprint.",
+      "remediateDdl": "If migrations are already current, investigate raw DDL that bypassed the migration system.",
+      "kpis": "Schema drift summary",
+      "statusHint": "Current schema vs recorded seed",
+      "tableDelta": "Tables Δ",
+      "columnDelta": "Columns Δ",
+      "indexDelta": "Indexes Δ",
+      "statusDrifted": "Drift detected",
+      "statusClean": "No drift",
+      "deltaSub": "{{current}} current · {{expected}} expected",
+      "subtitle": "Current database schema fingerprint compared against the recorded seed. Drift indicates a migration ran without a seed refresh, or raw DDL bypassed the migration system.",
+      "notConfigured": "The schema-drift subsystem is not configured on this deployment. Enable schema fingerprinting in config to populate this page."
     },
     "operationalBrief": {
       "retained": "Retained evidence",
@@ -799,7 +1014,8 @@
         "completed": "Completed",
         "failed": "Failed",
         "expired": "Expired",
-        "expires": "Expires"
+        "expires": "Expires",
+        "failedGeneric": "Export did not finish"
       },
       "pageTitle": "GDPR export",
       "statusLabel": "Status",
@@ -807,12 +1023,48 @@
       "bytesLabel": "Size",
       "createdLabel": "Created",
       "expiresLabel": "Expires",
-      "errorTitle": "Export failed"
+      "errorTitle": "Export failed",
+      "metaTitle": "Artifact details",
+      "metaUser": "User",
+      "metaSha256": "SHA-256",
+      "metaEmpty": "Look up an export artifact to see its metadata here.",
+      "downloadHint": "The bundle streams from the backend through this browser. The download counter is logged to the audit ledger.",
+      "downloadButton": "Download bundle",
+      "downloadWait": "Download becomes available once the export completes.",
+      "downloadExpired": "This artifact has expired and is no longer downloadable.",
+      "downloadFailed": "No bundle available — see the error above.",
+      "lifecycleTitle": "Lifecycle",
+      "lifecycleEmpty": "No lifecycle events recorded yet.",
+      "lookupTitle": "Lookup artifact",
+      "idLabel": "Artifact ID",
+      "idPlaceholder": "e.g. 8f4c…",
+      "lookupButton": "Look up",
+      "lookupHint": "IDs come from the GDPR export queue email or the request response. The artifact polls while queued/running.",
+      "lookupBlurb": "Bundles are streamed straight from the backend and expire after the configured retention window. Look one up to track its status live.",
+      "storageLabel": "Storage",
+      "refresh": "Refresh artifact status",
+      "subtitle": "Look up the status of a GDPR data export by artifact id and download the bundle when it completes. Bundles expire after the configured retention window.",
+      "resourceName": "Export artifact",
+      "notConfigured": "GDPR export subsystem is not configured on this deployment.",
+      "emptyTitle": "No artifact selected",
+      "emptyMessage": "Enter an artifact ID above to look up its status. The page will keep refreshing until the export completes.",
+      "notFoundTitle": "Artifact not found",
+      "notFoundMessage": "No artifact with that id exists, or it has been purged. Check the id and try again.",
+      "kpis": "Artifact summary",
+      "summary": {
+        "source": "Status, format, size, storage and lifecycle timestamps describe only the selected export artifact.",
+        "scope": "Selected artifact snapshot; creation and expiry are lifecycle events, not a shared analysis range."
+      }
     },
     "operationalSummary": {
       "loading": "Loading sources",
       "retained": "Retained measurements",
-      "unavailable": "Source unavailable"
+      "unavailable": "Source unavailable",
+      "refreshing": "Refreshing sources",
+      "partial": "Independent source availability",
+      "empty": "Empty source",
+      "unknown": "Source not loaded",
+      "loaded": "Sources loaded"
     },
     "diagnostics": {
       "brief": {
@@ -892,7 +1144,11 @@
     "appTokenHint": "Signs in as you with full admin access. Treat this key like a password.",
     "appBadge": "App",
     "signedInAs": "Signed in as {{subject}}",
-    "details": "Key details"
+    "details": "Key details",
+    "summary": {
+      "source": "Counts are derived from the loaded API key inventory, including active, expired and administrator-access keys.",
+      "scope": "Loaded inventory snapshot; the response does not report an observation time."
+    }
   },
   "backup": {
     "title": "Backup & restore",
@@ -1010,11 +1266,28 @@
       "quietHours": "Quiet hours"
     },
     "successRate": "Success rate",
-    "failedRuns": "Failed runs"
+    "failedRuns": "Failed runs",
+    "overview": "Backup overview",
+    "summary": {
+      "source": "Configuration counts use the loaded configurations. Run counts, completion rate, last completed backup and storage size use the returned run list, not a server-wide total.",
+      "scope": "Independent configuration and run snapshots; run-list coverage and observation bounds are not supplied."
+    },
+    "manage": "Backup management",
+    "reliability": "Reliability & storage",
+    "noRunsReliability": "No backup runs to analyze yet.",
+    "completedVsTotal": "Completed vs total",
+    "storageByProvider": "Storage by provider",
+    "noStorage": "No stored backups yet.",
+    "noErrors": "No recent backup failures.",
+    "runN": "Run #{{id}}"
   },
   "coverage": {
     "destinations": {
-      "aria": "Horizontal bar chart showing routed field counts per destination"
+      "aria": "Horizontal bar chart showing routed field counts per destination",
+      "title": "Destination breakdown",
+      "help": "Counts how many routed fields land in each storage destination. Fields routed with also_signal_log:true are counted under both their primary destination and signal_log, matching the runtime fan-out — totals may exceed the unique routed-fields count.",
+      "empty": "No destinations reported.",
+      "routedFields": "Routed fields"
     },
     "brief": {
       "eyebrow": "Routing configuration",
@@ -1035,13 +1308,52 @@
     },
     "col": {
       "field": "Field",
-      "destination": "Destination"
+      "destination": "Destination",
+      "column": "Column",
+      "dualWrite": "Dual write",
+      "subscribed": "Subscribed"
     },
     "subscribed": {
-      "no": "no"
+      "no": "no",
+      "yes": "yes"
     },
     "pageTitle": "Fleet Telemetry coverage",
-    "refresh": "Refresh"
+    "refresh": "Refresh",
+    "dualWrite": {
+      "yes": "signal_log"
+    },
+    "category": {
+      "totalFields": "{{count}} routed fields",
+      "noMatch": "No fields match the current filter.",
+      "empty": "This category has no routed fields."
+    },
+    "stat": {
+      "subscriptionCoverage": "Subscription coverage"
+    },
+    "kpis": "Coverage summary",
+    "subtitle": "Package-derived snapshot of which Tesla proto fields the build routes and which the current subscription pushes. Sourced from routing.yaml and teslaconfig.Builder — no per-vehicle telemetry counts.",
+    "routing": "Destination routing",
+    "legend": {
+      "title": "Reading this page",
+      "intro": "Each row is one Tesla telemetry field declared in routing.yaml. The dashes below mean \"not applicable\" for that field — they are expected, not missing data.",
+      "columnLabel": "Column",
+      "columnHelp": "— the typed destination column. A dash means the field is stored in signal_log, a generic key/value table where the field name itself is the key — there is no per-field column.",
+      "dualWriteLabel": "Dual write",
+      "dualWriteHelp": "— marks fields written to both their primary table AND signal_log (for replay and historical reconstruction). A dash means single-write only, which is the normal case.",
+      "subscribedLabel": "Subscribed",
+      "subscribedHelp": "— whether Tesla Fleet Telemetry is currently pushing this field to us. \"No\" means the writer is wired but the subscription request omits the field."
+    },
+    "orphans": {
+      "title": "Orphan fields detected",
+      "help": "These routing.yaml entries reference Field names not present in protomodel.SignalsByName and not a strict prefix-extension of a compound parent. This is a deployment drift between the vendored Tesla proto and routing.yaml — investigate before relying on the affected destinations."
+    },
+    "filter": {
+      "placeholder": "Filter by field name, destination, or column…",
+      "results": "Showing {{shown}} of {{total}} categories"
+    },
+    "loading": "Loading routing snapshot…",
+    "empty": "No categories returned. The embedded routing.yaml may be empty or the loader failed silently.",
+    "filterEmpty": "No categories match the current filter."
   },
   "devtools": {
     "utils": {
@@ -1169,7 +1481,11 @@
       "byteSizeMenuDesc": "Byte size desc",
       "jsonMenuDesc": "JSON formatter desc",
       "jsonFormatted": "Formatted",
-      "jsonInvalid": "Invalid JSON"
+      "jsonInvalid": "Invalid JSON",
+      "base64PlaceholderEncode": "Hello World",
+      "base64Mode": "Conversion mode",
+      "jsonInput": "JSON input",
+      "jsonEmpty": "Paste JSON above to validate and pretty-print it."
     },
     "searchTools": "Search tools...",
     "noToolsFound": "No tools match your search",
@@ -1254,7 +1570,8 @@
     },
     "configIdle": "Fetch config to see results",
     "onboarding": {
-      "stepLabel": "Step {{step}}"
+      "stepLabel": "Step {{step}}",
+      "goToStep": "Go to step {{step}}: {{label}}"
     },
     "health": {
       "vin": "VIN",
@@ -1273,7 +1590,9 @@
       "errorLogTitle": "Error log",
       "errorLogDesc": "Detailed fleet telemetry error history",
       "refreshErrors": "Refresh from Tesla",
-      "noErrors": "No fleet telemetry errors recorded"
+      "noErrors": "No fleet telemetry errors recorded",
+      "errorVinsResource": "telemetry error VINs",
+      "errorLogResource": "telemetry error log"
     },
     "title": "Developer tools",
     "subtitle": "Fleet API, telemetry, infrastructure & utilities",
@@ -1291,21 +1610,60 @@
     },
     "overview": {
       "telemetryErrors": "Telemetry errors",
-      "vehicles": "Vehicles"
+      "vehicles": "Vehicles",
+      "title": "Developer tools overview",
+      "affectedVins": "affected VINs",
+      "inFleet": "in fleet",
+      "fleetEndpoints": "Fleet API endpoints",
+      "documented": "documented",
+      "telemetrySignals": "Telemetry signals",
+      "streamedFields": "streamed fields",
+      "referenceDocs": "Reference docs",
+      "externalLinks": "external links"
     },
     "infra": {
       "mqtt": "MQTT",
       "topic": "Topic",
       "message": "Message",
       "migrations": "Migrations",
-      "runtime": "Runtime"
+      "runtime": "Runtime",
+      "mqttDesc": "Publish a test message to the MQTT broker",
+      "sendTest": "Send test",
+      "dbStats": "DB stats",
+      "dbStatsDesc": "Inspect TimescaleDB table sizes and row counts",
+      "migrationsDesc": "View applied and pending database migrations",
+      "envCheck": "Env check",
+      "envCheckDesc": "Verify required environment variables are configured",
+      "runtimeDesc": "Inspect Go runtime, memory, and goroutine stats"
     },
     "tab": {
       "fleetApi": "Fleet API",
       "telemetry": "Telemetry",
       "infrastructure": "Infrastructure",
-      "reference": "Reference"
-    }
+      "reference": "Reference",
+      "utilities": "Utilities"
+    },
+    "errorsIdle": "Click View Errors to fetch recent Fleet Telemetry errors for this vehicle.",
+    "errorsEmpty": "No Fleet Telemetry errors reported for this vehicle.",
+    "errorsRaw": "Show raw Tesla response",
+    "vehicleDataIdle": "Choose a vehicle and an action to see results.",
+    "ref": {
+      "empty": "No reference links available"
+    },
+    "url": {
+      "modeGroup": "Encoding mode"
+    },
+    "summary": {
+      "source": "Telemetry errors and fleet size use independent live queries. Endpoint, signal and reference counts describe the local developer catalogs, not live coverage.",
+      "liveTitle": "Live fleet snapshot",
+      "liveSource": "Telemetry errors count affected VINs; fleet size comes from the independent vehicle inventory.",
+      "liveScope": "Independent live snapshots; observation bounds are not supplied.",
+      "catalogTitle": "Local developer catalog",
+      "catalogSource": "Counts use the same local endpoint, telemetry-field and reference-link definitions shown in the developer tabs.",
+      "catalogScope": "Static bundled reference definitions, not measured live coverage."
+    },
+    "refreshStatus": "Refresh developer tools status",
+    "tools": "Developer tool areas"
   },
   "featureConfig": {
     "title": "Feature flags",
@@ -1351,7 +1709,9 @@
       "title": "Account feature configuration",
       "description": "Enabled and disabled features in the latest Tesla account configuration."
     },
-    "retry": "Retry"
+    "retry": "Retry",
+    "errorTitle": "Couldn’t load feature config",
+    "errorMessage": "Something went wrong fetching your Tesla feature configuration. Check your connection and try again."
   },
   "fleetApi": {
     "subtitle": "Choose which Tesla Fleet API routes are available and which can be polled automatically",
@@ -1362,14 +1722,19 @@
     },
     "kpis": {
       "apiStatusHint": "Automatic Fleet API polling",
-      "endpointsHint": "{{count}} selected for polling"
+      "endpointsHint": "{{count}} selected for polling",
+      "apiStatus": "API status",
+      "endpointsEnabled": "Endpoints enabled",
+      "label": "Fleet API summary"
     },
     "polling": {
       "masterDesc": "Off by default. Turning this off stops scheduled Fleet API reads, not manual requests or token refresh.",
       "activeNote": "Only enabled routes selected for auto-polling participate. On-demand routes and commands remain independent.",
       "suspendedNote": "Automatic Fleet API polling is off. Enabled endpoints still work on demand; token refresh continues.",
       "emergencyNote": "API actions were suspended previously; supported live requests and commands are blocked. Token refresh continues.",
-      "resumeActions": "Resume API actions"
+      "resumeActions": "Resume API actions",
+      "title": "Tesla API polling",
+      "toggleAria": "Toggle Tesla API polling"
     },
     "controls": {
       "enabled": "Access",
@@ -1406,7 +1771,9 @@
       "outdatedRuntime": "This API server does not provide the Fleet route catalog. Update and restart the API service to manage routes; no settings can be changed here until it is available.",
       "retry": "Retry loading routes",
       "clearSearch": "Clear search",
-      "noMatches": "No API routes match that search."
+      "noMatches": "No API routes match that search.",
+      "title": "API endpoint controls",
+      "enabledCount": "{{enabled}}/{{total}} enabled"
     },
     "categories": {
       "vehicledata": "Vehicle data",
@@ -1421,10 +1788,20 @@
       "emptyTitle": "Endpoint metadata unavailable",
       "emptyMessage": "This runtime did not publish any configured endpoint URLs.",
       "emptyDescription": "Configure the public and Tesla Fleet API URLs in deployment settings; metadata appears after the service restarts.",
-      "teslaApi": "Tesla Fleet API"
+      "teslaApi": "Tesla Fleet API",
+      "title": "API endpoints",
+      "heading": "Configured endpoints",
+      "api": "API (internal)",
+      "web": "Web frontend",
+      "oauthCallback": "OAuth callback"
     },
     "pageTitle": "Fleet API settings",
-    "title": "Fleet API"
+    "title": "Fleet API",
+    "summary": {
+      "selected": "Selected for polling",
+      "source": "API status uses application settings and polling configuration. Enabled and selected-for-polling counts use the returned endpoint catalog, independent of the endpoint table filters.",
+      "scope": "Settings and polling snapshots; no shared observation time is reported."
+    }
   },
   "gas": {
     "title": "Gas price auto-poll",
@@ -1473,7 +1850,12 @@
     "effectiveTo": "Effective to",
     "current": "Current",
     "noHistoryRows": "No price history recorded yet.",
-    "priceTrendDateCol": "Date"
+    "priceTrendDateCol": "Date",
+    "summary": {
+      "title": "Polling status and price",
+      "source": "Auto-poll status, current prices and last poll time use the status response. Prices keep their source per-volume and per-kWh denominations; the history chart is a separate source.",
+      "scope": "Current polling-status snapshot; an exact observation time and price coverage window are not reported."
+    }
   },
   "operationalSource": {
     "status": {
@@ -1525,9 +1907,30 @@
     "requestFailed": "Request failed",
     "kpi": {
       "recent": "Recent requests",
-      "latency": "Avg latency"
+      "latency": "Avg latency",
+      "total": "Total endpoints",
+      "read": "Read (GET)",
+      "write": "Write ops",
+      "groups": "API groups"
     },
-    "responseSection": "Response"
+    "responseSection": "Response",
+    "codeSnippetContent": "Generated code snippet",
+    "networkError": "Network error",
+    "refresh": "Reload API spec",
+    "spec": "API spec",
+    "kpis": "API overview metrics",
+    "summary": {
+      "specTitle": "API specification",
+      "specSource": "Endpoint, read-operation, write-operation and group counts use the loaded API specification.",
+      "specScope": "Specification snapshot; no observation time is supplied.",
+      "historyTitle": "Recent local requests",
+      "historySource": "Request count and average latency use this browser’s saved request history, independently of specification availability.",
+      "historyScope": "Bounded local request history, not server-wide traffic or a fixed analysis window."
+    },
+    "explorer": "Endpoint explorer",
+    "noEndpoints": "No endpoints found in the API spec",
+    "workspace": "Request workspace",
+    "request": "Request"
   },
   "queueStatus": {
     "title": "Background workers",
@@ -1710,7 +2113,21 @@
     "vehicleFallback": "Vehicle {{id}}",
     "selectVehicleLabel": "Select vehicle",
     "categoryLabel": "Filter by category",
-    "resourceName": "Redis signals"
+    "resourceName": "Redis signals",
+    "cachedSignals": "Cached signals",
+    "l1Subtitle": "In-process store",
+    "l2Fields": "L2 fields",
+    "l2Subtitle": "Redis HSET",
+    "kpis": "Cache metrics",
+    "searchLabel": "Filter signals by name",
+    "cacheDiagnostics": "Cache diagnostics",
+    "diagSelect": "Select a vehicle to inspect its cache state",
+    "diagUnavailable": "Cache diagnostics are unavailable for this vehicle",
+    "categories": "Signal categories",
+    "catSelect": "Select a vehicle to see its signal category mix",
+    "catEmpty": "No categorized signals to summarize",
+    "cacheActions": "Cache actions",
+    "cacheActionsHint": "Purge deletes the Redis L2 HSET only. The in-process L1 cache on each pod is untouched and refills from new telemetry."
   },
   "region": {
     "title": "Region & API",
@@ -1764,7 +2181,9 @@
       "title": "Region and endpoint",
       "description": "Your account region, Fleet API endpoint and latest synchronization."
     },
-    "resourceName": "Region"
+    "resourceName": "Region",
+    "loading": "Loading region…",
+    "noRegion": "Tesla did not return a region for this account."
   },
   "teslaAccount": {
     "statstrip": {
@@ -1896,13 +2315,47 @@
   },
   "ai": {
     "common": {
-      "errorUnknown": "unknown"
+      "errorUnknown": "unknown",
+      "noOutput": "No output was generated."
     },
     "confirm": {
-      "cancel": "Cancel"
+      "argsLabel": "Arguments",
+      "cancel": "Cancel",
+      "intro": {
+        "mutates": "The assistant wants to make a change to your data. Review what it will do, then approve or cancel.",
+        "read": "The assistant wants to run a tool. Review the inputs, then approve or cancel."
+      },
+      "run": "Approve",
+      "title": "Approve Helix action",
+      "toolLabel": "Tool"
     },
     "limit": {
-      "retry": "Retry"
+      "desc": {
+        "burst": "Too many Helix requests are in flight. The limiter is keeping the system responsive.",
+        "costCap": "You have reached your daily Helix cost limit. Helix features will resume tomorrow or after you raise the cap in Settings.",
+        "costCapUnavailable": "Could not read your Helix usage history. Failing closed for safety.",
+        "featureMisconfigured": "This page is missing a Helix feature registration. Please report this to your administrator.",
+        "generic": "Helix features are temporarily unavailable. The non-Helix baseline continues to work.",
+        "perDay": "You have used your daily Helix request budget. The budget resets at UTC midnight.",
+        "perMinute": "You have sent more Helix requests than allowed per minute. The window resets shortly.",
+        "providerUnavailable": "The Helix provider is not responding. The system will retry automatically.",
+        "settingsUnavailable": "Could not load your Helix settings. Helix is paused until settings are reachable.",
+        "tokens": "Your Helix token quota for this minute is exhausted. Try a shorter prompt."
+      },
+      "retry": "Retry",
+      "title": {
+        "burst": "Too many Helix requests at once",
+        "costCap": "Daily cost cap reached",
+        "costCapUnavailable": "Cost cap check unavailable",
+        "featureMisconfigured": "Helix feature misconfigured",
+        "generic": "Helix temporarily unavailable",
+        "perDay": "Daily Helix usage limit reached",
+        "perMinute": "Helix rate limit hit",
+        "providerUnavailable": "Helix provider unavailable",
+        "settingsUnavailable": "Helix settings unavailable",
+        "tokens": "Helix token quota exhausted"
+      },
+      "useBaseline": "Use baseline"
     }
   },
   "alertPacks": {
@@ -2252,7 +2705,9 @@
     "client": "App installation",
     "copyBody": "Copy {{label}}",
     "copyClient": "Copy app installation ID",
+    "copyRequestUrl": "Copy request URL",
     "duration": "Duration",
+    "durationValue": "{{value}}ms",
     "endpoint": "Endpoint",
     "error": "Error",
     "errorDiagnostics": "Error diagnostics",
@@ -2266,8 +2721,11 @@
       "noBreakdown": "No per-source breakdown available for the reported errors.",
       "reportedBy": "reported by browser sessions"
     },
+    "inspectHint": "Expand a request to inspect headers, bodies, and metadata.",
     "key": "App key",
     "last24h": "Last 24h",
+    "latency": "Latency (ms)",
+    "loadedPageScope": "Newest first. Filters query all matching requests; exports include only this loaded page.",
     "logTitle": "API call log",
     "method": "Method",
     "na": "N/A",
@@ -2317,6 +2775,10 @@
     "showing": "Showing {{from}}–{{to}} of {{total}}",
     "statsScope": "API call totals and service counts use the View settings range. Service, method, status, endpoint, app key, and installation filters apply only to the request list.",
     "status": "Status",
+    "statusClientError": "4xx client error",
+    "statusRedirect": "3xx redirect",
+    "statusServerError": "5xx server error",
+    "statusSuccess": "2xx success",
     "subtitle": "Record of all API calls with request/response details",
     "summary": {
       "last24hScope": "Independent rolling 24-hour count, not the View settings range. The response does not record its exact bounds.",
@@ -2351,6 +2813,7 @@
         "conditionsLabel": "Conditions",
         "description": "Describe an automation that uses one of your existing geofences. Helix proposes a typed graph anchored to a place_id you already have — review and apply to the form below before saving.",
         "placeholder": "e.g. when I arrive home on a weekday after sunset, turn on cabin overheat protection",
+        "promptAria": "Describe the geofence-aware automation to draft",
         "proposalLabel": "Proposed automation",
         "rejectedLabel": "Proposal rejected by validator",
         "suggestButton": "Suggest automation",
@@ -2377,6 +2840,10 @@
       "description": "Ask Helix to explain which charging habits and risk factors drive your deterministic battery-health forecast. The narrator never changes the forecast — it grounds every sentence in the same numbers the chart below renders.",
       "generateButton": "Narrate forecast",
       "title": "Explain the battery health forecast"
+    },
+    "delta": {
+      "aria": "Battery {{from}}% to {{to}}%",
+      "unknown": "Battery delta unknown"
     }
   },
   "bulk": {
@@ -2430,6 +2897,7 @@
       "badge": "Helix",
       "description": "Compute per-cluster (L1 overnight / L2 workplace / DC fast) learned charging envelope from this vehicle's recent sessions and walk through how each cluster compares to the deterministic rule-label baseline used by the Charging curve page today.",
       "generateButton": "Train charging-curve clusters",
+      "noVehicleHint": "Pick a vehicle to train its charging-curve clusters.",
       "title": "Learn per-vehicle charging-curve clusters"
     },
     "detail": {
@@ -2522,6 +2990,7 @@
       "cancel": "Cancel",
       "compare": "Compare to previous period",
       "end": "End date",
+      "loadingCalendar": "Loading calendar…",
       "newRange": "New range",
       "pickRange": "Custom range",
       "popoverLabel": "Date range picker",
@@ -2749,6 +3218,7 @@
     "aiSearch": {
       "badge": "Helix",
       "description": "Describe a drive (for example \"last Friday's trip to the coast\") and jump straight to its replay — the assistant only narrates your own drives.",
+      "inputLabel": "Describe the drive to find",
       "placeholder": "Describe a drive — for example \"last Friday's coast trip\" or \"the one with the lowest efficiency last week\"",
       "searchButton": "Search with Helix",
       "title": "Find a drive in natural language"
@@ -2761,6 +3231,13 @@
       "switchHint": "Or switch to your other tab to keep editing there.",
       "takeOver": "Take over editing",
       "title": "Another browser tab is editing this"
+    }
+  },
+  "emptyState": {
+    "generic": "No data available yet.",
+    "label": {
+      "likelyCause": "Most likely reason",
+      "prerequisite": "What has to happen first"
     }
   },
   "entityContext": {
@@ -2830,6 +3307,7 @@
     "category": {
       "bug": "Bug report",
       "feature": "Feature request",
+      "mixLabel": "Feedback category mix",
       "other": "Other / question"
     },
     "queue": {
@@ -2841,7 +3319,8 @@
       },
       "bridge": {
         "disabled": "Not configured",
-        "enabled": "Connected"
+        "enabled": "Connected",
+        "title": "GitHub bridge"
       },
       "bridgeDisabled": "GitHub Issues bridge is not configured on this server (set TESLASYNC_GITHUB_REPO + TESLASYNC_GITHUB_TOKEN to enable forwarding).",
       "bulk": {
@@ -2849,6 +3328,7 @@
         "reopen": "Reopen selected",
         "triage": "Mark triaged"
       },
+      "categoryMix": "Category mix",
       "col": {
         "category": "Category",
         "created": "Created",
@@ -2858,6 +3338,7 @@
         "status": "Status",
         "title": "Title"
       },
+      "distAria": "Status distribution: {{new}} new, {{triaged}} triaged, {{closed}} closed",
       "empty": "No feedback yet",
       "emptyMessage": "User-submitted bug reports and feature requests will appear here.",
       "expand": {
@@ -2875,19 +3356,43 @@
         "category": "Category",
         "status": "Status"
       },
+      "kpi": {
+        "total": "Total feedback"
+      },
+      "kpis": "Queue overview",
       "maskedEmail": "Reporter email, click to reveal",
+      "noCategoryData": "No categories to show yet.",
+      "noStatusData": "No feedback to triage yet.",
       "openIssue": "Open issue",
       "pageOf": "Page {{page}} of {{total}} ({{count}} entries)",
+      "rowLabel": "{{category}}: {{title}}",
       "status": {
         "closed": "Closed",
         "new": "New",
         "triaged": "Triaged",
         "unknown": "Unknown"
       },
-      "title": "Feedback queue"
+      "subtitle": "Triage user-submitted bug reports and feature requests",
+      "summary": {
+        "scope": "Independent queue facet snapshots; no shared observation time or date bounds are reported.",
+        "source": "Whole-queue counts come from independent status and category queries, unaffected by the table filters. Total feedback sums new, triaged and closed counts only when all three are available."
+      },
+      "tableTitle": "Queue",
+      "title": "Feedback queue",
+      "triageProgress": "Triage progress",
+      "untitled": "Untitled feedback"
     },
     "statSkeleton": {
       "loading": "Loading statistics"
+    }
+  },
+  "feedbackTriage": {
+    "aiAdvisor": {
+      "badge": "Helix",
+      "button": "Suggest triage",
+      "description": "Get a proposed status, category, and priority label for this feedback row. The advisor reads only the redacted envelope (id, category, title, body excerpt, page route, app version, status, created_at) — never the reporter email, IP, console tail, or recent errors. The proposal is informational; your existing manual controls above remain the only way to save changes.",
+      "emptyHint": "Select a feedback row to suggest triage labels.",
+      "title": "Helix triage advisor"
     }
   },
   "filters": {
@@ -2942,6 +3447,7 @@
     "ariaLabel": "Helix",
     "askHelix": "Ask Helix",
     "badge": "Helix",
+    "errorLabel": "Helix error:",
     "evidence": {
       "gathering": "Gathering",
       "grounded": "Grounded in",
@@ -2987,6 +3493,31 @@
       "message": "You will see TeslaSync as {{subject}} for up to 15 minutes. The action is logged to the audit log. End the session from the banner when you are done.",
       "title": "Start impersonation session?"
     },
+    "policy": {
+      "audit": {
+        "body": "Starting and ending a session writes an immutable entry to the admin audit log with the actor and the target.",
+        "title": "Every session is audit-logged"
+      },
+      "exit": {
+        "body": "The global banner at the top of the screen ends the active session immediately and restores your own view.",
+        "title": "End it any time"
+      },
+      "forwardAuth": {
+        "body": "Per-subject identity only exists when the proxy runs in forward-auth mode. Open-mode installs cannot impersonate.",
+        "title": "Forward-auth required"
+      },
+      "intro": "Impersonation lets an admin view TeslaSync exactly as another subject to reproduce a support issue. It is deliberately constrained:",
+      "listLabel": "Impersonation guarantees",
+      "sudo": {
+        "body": "Starting a session requires a fresh re-authentication prompt; ending one never does.",
+        "title": "Step-up auth to start"
+      },
+      "title": "How impersonation works",
+      "ttl": {
+        "body": "A session expires automatically after 15 minutes so a forgotten session cannot linger.",
+        "title": "15-minute time limit"
+      }
+    },
     "status": {
       "activeCallout": "Impersonation is active. End it from the banner at the top of the screen.",
       "error": "Session status is unavailable right now. Use the refresh control above to try again.",
@@ -3005,21 +3536,37 @@
     "users": {
       "actionColumn": "Action",
       "available": "Available",
+      "brief": {
+        "limit": "Configured policy limit of 15 minutes, not the active session’s remaining time.",
+        "provenance": "Authenticated-session telemetry and impersonation policy",
+        "scope": "Current impersonation status and available session subjects are independent sources. Open mode disables subject discovery.",
+        "title": "Subject and session posture"
+      },
+      "currentTarget": "Current target",
       "emptyMessage": "No other subjects have an active session right now. Sign someone else in to enable impersonation.",
       "emptyTitle": "No other subjects",
       "kpi": {
         "accessMode": "Access mode",
         "active": "Active",
+        "available": "Available subjects",
         "idle": "Idle",
+        "limit": "Session limit",
+        "modeForwardAuth": "Forward-auth",
         "modeOpen": "Open",
         "session": "Session status"
       },
+      "kpiLabel": "Impersonation summary",
+      "mainLabel": "Subjects and session status",
+      "noMatch": "No subjects match your search.",
       "openMode": "Impersonation requires forward-auth mode. This install is in open mode, so per-user identity is not available.",
       "refresh": "Refresh",
+      "searchLabel": "Search subjects",
+      "searchPlaceholder": "Search subjects…",
       "showing": "Showing {{shown}} of {{total}}",
       "statusColumn": "Status",
       "subjectColumn": "Subject",
       "subtitle": "Active subjects you can impersonate for support. Sessions are limited to 15 minutes and recorded in the audit log.",
+      "tableTitle": "Active subjects",
       "title": "Subjects"
     }
   },
@@ -3049,6 +3596,7 @@
     "connected": "Live",
     "disconnected": "Offline",
     "reconnecting": "Reconnecting…",
+    "scope": "Live data",
     "staleBanner": {
       "message": "The live data connection has been offline for more than 2 minutes. Values on this page may be stale until the connection is restored.",
       "title": "Live data unavailable"
@@ -3180,6 +3728,9 @@
         "badge": "Helix",
         "description": "Describe the alert you want to receive an advisory text proposal. Review it and manually enter the rule in the standard form before saving; this action does not fill the form, save, or enable an alert.",
         "draftButton": "Draft alert",
+        "emptyHint": "Choose a vehicle and describe the alert you want Helix to draft.",
+        "inputLabel": "Alert description",
+        "placeholder": "e.g. alert me if battery cell voltage spread is over 50 mV",
         "title": "Draft from natural language"
       },
       "aiConflicts": {
@@ -3187,10 +3738,17 @@
         "description": "Surface structural overlaps between your alert rule definitions. Review only — Helix never edits, merges, or deletes rules.",
         "detectButton": "Detect conflicts",
         "emptyMessage": "No structural conflicts found in the current rule set.",
+        "flag": {
+          "cooldownMismatch": "cooldown mismatch",
+          "severityMismatch": "severity mismatch",
+          "subsumes": "subsumes",
+          "triggerModeMismatch": "trigger mode mismatch"
+        },
         "kind": {
           "overlapping_threshold": "Overlapping threshold",
           "redundant_duplicate": "Redundant duplicate"
         },
+        "listLabel": "Detected rule conflicts",
         "reviewButton": "Review rule",
         "ruleLabel": "Rule",
         "title": "Detect cross-rule conflicts"
@@ -3273,6 +3831,7 @@
         "unavailable": "No confidence basis was supplied."
       },
       "evidence": "Supporting evidence",
+      "evidenceCoverage": "{{count}} supporting records supplied.",
       "likelyCause": "Likely cause",
       "limitations": "Limitations",
       "noEvidence": "No supporting records were supplied.",
@@ -3313,20 +3872,75 @@
   "powerDashboards": {
     "aiDrafter": {
       "applyButton": "Apply to editor",
-      "badge": "Helix"
+      "applyTooltip": "Copy the proposed dashboard JSON into the editor above. You can still edit it before clicking Copy to clipboard.",
+      "badge": "Helix",
+      "button": "Draft dashboard",
+      "description": "Describe the dashboard you want in plain English (e.g. \"give me an overview dashboard with daily drives, current battery, and recent alerts\"). Helix proposes a typed dashboard JSON draft built from the in-scope curated panel catalog you can apply to the editor with one click; it never pushes the dashboard to Grafana directly.",
+      "promptLabel": "Dashboard request",
+      "promptPlaceholder": "e.g. give me an overview dashboard with daily drives, current battery, and recent alerts",
+      "title": "Helix natural-language dashboard composer"
     }
   },
   "powerGrafana": {
     "aiDrafter": {
       "applyButton": "Apply to editor",
-      "badge": "Helix"
+      "applyTooltip": "Copy the proposed panel JSON into the editor above. You can still edit it before clicking Copy to clipboard.",
+      "badge": "Helix",
+      "button": "Draft panel",
+      "description": "Describe the panel you want in plain English (e.g. \"show me a daily time series of how far I drove this month\"). Helix proposes a typed Grafana panel JSON draft you can apply to the editor with one click; it never pushes the panel to Grafana directly.",
+      "previewDatasource": "Datasource:",
+      "previewLabel": "Proposed Grafana panel (review before applying)",
+      "previewTables": "Referenced tables:",
+      "previewTargets": "Query targets:",
+      "previewType": "Panel type:",
+      "previewUntitled": "Untitled panel",
+      "promptLabel": "Grafana panel request",
+      "promptPlaceholder": "e.g. show me a daily time series of how far I drove this month",
+      "title": "Helix natural-language Grafana panel drafter"
     }
   },
   "powerSql": {
     "aiDrafter": {
       "applyButton": "Apply to editor",
-      "badge": "Helix"
+      "applyTooltip": "Copy the proposed SQL into the editor above. You can still edit it before clicking Run.",
+      "badge": "Helix",
+      "button": "Draft SQL",
+      "description": "Describe the question in plain English (e.g. \"how many drives last week\"). Helix proposes a typed read-only SQL draft you can apply to the editor with one click; it never executes the query directly.",
+      "promptLabel": "SQL request",
+      "promptPlaceholder": "e.g. how many drives did I take last week",
+      "title": "Helix natural-language SQL drafter"
     }
+  },
+  "problemReport": {
+    "context": {
+      "appVersion": "App version",
+      "browser": "Browser",
+      "page": "Page",
+      "pageNote": "(record ids are replaced with :id)",
+      "title": "What is sent with your report"
+    },
+    "form": {
+      "description": "What were you doing, and what did you expect?",
+      "descriptionPlaceholder": "Steps you took, what you saw, and what you expected to see instead.",
+      "descriptionTooShort": "Please add at least {{count}} characters.",
+      "hidePreview": "Hide exactly what is sent",
+      "includeDiagnostics": "Attach a redacted technical summary ({{count}} recent errors)",
+      "includeDiagnosticsHint": "Versions, browser capability, service health, error messages and trace IDs. Never VINs, locations, tokens, e-mail addresses or raw logs.",
+      "showPreview": "Show exactly what is sent",
+      "submit": "Send report",
+      "submitting": "Sending…",
+      "title": "What went wrong?",
+      "titlePlaceholder": "Short summary (e.g. \"Charging costs show as blank\")"
+    },
+    "intro": "Describe what happened in your own words. We attach a redacted technical summary only if you allow it.",
+    "policy": {
+      "consoleTail": "Console output",
+      "files": "File attachments",
+      "screenshots": "Screenshots",
+      "userEmail": "E-mail address"
+    },
+    "submitError": "Could not send the report. Please try again.",
+    "title": "Report a problem"
   },
   "productPreferences": {
     "persona": {
@@ -3353,7 +3967,16 @@
   },
   "pwa": {
     "lowBandwidth": {
-      "on": "Always on"
+      "auto": "Automatic (follow the network)",
+      "effectsOff": "When active: polling slows down, animations stop, charts render fewer points, heavy basemaps fall back to light tiles, and the service worker stops caching new images and map tiles.",
+      "effectsOn": "While active: background polling slows to a quarter of its normal rate, entrance animations are disabled, charts render at most {{points}} points, satellite/terrain basemaps fall back to the lightest raster tiles, and the service worker stops storing new images and map tiles.",
+      "heading": "Low-bandwidth mode",
+      "label": "Data usage on this device",
+      "off": "Always off",
+      "on": "Always on",
+      "statusNetwork": "Active — your browser or network reported Data Saver / a 2G-class connection.",
+      "statusOff": "Not active — the app is using full quality.",
+      "statusUser": "Active — enabled manually on this device."
     }
   },
   "range": {
@@ -3374,6 +3997,9 @@
       "refresh": "Refresh",
       "save": "Save ({{count}})",
       "saving": "Saving…"
+    },
+    "brief": {
+      "scope": "Saved provider bindings and permissions for your current authenticated roles; unsaved edits are not included."
     },
     "category": {
       "admin": "Admin",
@@ -3444,6 +4070,7 @@
   "replay": {
     "elevation": {
       "aria": "Elevation profile chart — no data available yet",
+      "gainLoss": "↑ {{gain}}m  ↓ {{loss}}m",
       "label": "Elevation",
       "noData": "No elevation data available",
       "title": "Elevation profile"
@@ -3497,7 +4124,9 @@
     "aiSearch": {
       "badge": "Helix",
       "description": "Describe what you are looking for and the assistant will surface drives, charging sessions, and alerts that match — citing each entity by name.",
+      "emptyHint": "Type a question above to search your drives, charging sessions, and alerts.",
       "inputLabel": "Search query",
+      "placeholder": "e.g. drives last weekend over 200 km with phantom drain",
       "searchButton": "Search with Helix",
       "title": "Search with natural language"
     }
@@ -3523,9 +4152,39 @@
     "search": "Search shortcuts…",
     "title": "Keyboard shortcuts"
   },
+  "signalConfig": {
+    "deselectAll": "Deselect All",
+    "deselectCategory": "Deselect all {{category}} signals",
+    "deselectSignal": "Deselect {{signal}}",
+    "footerAt10s": "{{n}} at 10s",
+    "footerAt500": "{{n}} at 500ms",
+    "footerSelected": "{{n}} signals selected",
+    "intervalForSignal": "Sampling interval for {{signal}}",
+    "masterInterval": "Master Interval:",
+    "masterIntervalLabel": "Master sampling interval for all signals",
+    "noMatches": "No signals match “{{query}}”.",
+    "noSignals": "No telemetry signals are available to configure.",
+    "searchLabel": "Search signals",
+    "searchPlaceholder": "Search signals...",
+    "selectAll": "Select All",
+    "selectCategory": "Select all {{category}} signals",
+    "selectSignal": "Select {{signal}}",
+    "selectedSummary": "{{selected}} / {{total}} signals selected",
+    "setAll": "Set all…",
+    "setCategoryInterval": "Set interval for all {{category}} signals",
+    "subscribeCount": "Subscribe {{n}} Signals",
+    "title": "Fleet Telemetry Signal Configuration"
+  },
   "signalExplorer": {
     "aiFilter": {
-      "badge": "Helix"
+      "applyButton": "Apply to filters",
+      "applyTooltip": "Copy the proposed filter into the form above. You can still edit it before clicking Explore.",
+      "badge": "Helix",
+      "button": "Draft filter",
+      "description": "Describe the filter in plain English (e.g. \"battery level for yesterday\"). The LLM proposes a typed filter you can apply with one click; it never edits the form directly.",
+      "promptLabel": "Filter request",
+      "promptPlaceholder": "e.g. show me battery level for yesterday",
+      "title": "Helix natural-language filter"
     }
   },
   "softwareUpdates": {
@@ -3567,6 +4226,12 @@
     }
   },
   "system": {
+    "brief": {
+      "freshness": "Budget snapshot: {{rate}} · Worker snapshot: {{queue}}",
+      "provenance": "Rate-limit budgets and background-worker queue reports",
+      "scope": "Budget usage spans each source throttle window. Worker heartbeat and backlog are snapshots; succeeded and terminally failed jobs cover the last 24 hours.",
+      "title": "Budgets and worker posture"
+    },
     "detail": {
       "title": "Throttles & workers"
     },
@@ -3631,6 +4296,7 @@
     "window": "Window"
   },
   "timeline": {
+    "empty": "No timeline entries yet.",
     "label": "Timeline",
     "selectVehicle": "Select vehicle"
   },
@@ -3902,6 +4568,7 @@
       "range": "Range"
     },
     "locked": "Locked",
+    "noState": "Live telemetry unavailable",
     "observationLimitation": "Telemetry stream observation does not verify individual reading timestamps or completeness.",
     "photo": {
       "alt": "{{name}} photo"
@@ -3965,6 +4632,7 @@
     "aiNarration": {
       "badge": "Helix",
       "description": "Get a short, Helix-written recap of your year from the slide data above.",
+      "emptyHint": "Select a vehicle above to recap its year.",
       "generateButton": "Generate narration",
       "title": "Helix narration"
     },

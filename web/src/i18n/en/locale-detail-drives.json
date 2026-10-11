@@ -85,7 +85,8 @@
       "description": "Describe a drive (for example \"last Friday's trip to the coast\") and jump straight to its replay — the assistant only narrates your own drives.",
       "badge": "Helix",
       "searchButton": "Search with Helix",
-      "placeholder": "Describe a drive — for example \"last Friday's coast trip\" or \"the one with the lowest efficiency last week\""
+      "placeholder": "Describe a drive — for example \"last Friday's coast trip\" or \"the one with the lowest efficiency last week\"",
+      "inputLabel": "Describe the drive to find"
     },
     "noPriorData": "No drives in prior period: {{start}} – {{end}}",
     "priorPeriod": "prior period: {{start}} – {{end}}",
@@ -144,7 +145,8 @@
       "search": "Search",
       "from": "From",
       "to": "To",
-      "collection": "View"
+      "collection": "View",
+      "fsd": "FSD evidence"
     },
     "col": {
       "date": "Date",
@@ -183,14 +185,38 @@
       "notable": "Notable",
       "tagged": "Tagged",
       "allOption": "All drives",
-      "allPill": "All"
+      "allPill": "All",
+      "commutes": "Commutes"
     },
     "fsdFilter": {
       "reported": "FSD",
       "high": "High confidence",
       "estimated": "Estimated",
       "ambiguous": "Ambiguous",
-      "unknown": "Unknown"
+      "unknown": "Unknown",
+      "aria": "Filter drives by FSD evidence",
+      "all": "All FSD data"
+    },
+    "fsdResetAffected": "A counter reset lowered confidence for this drive.",
+    "fsdReportedHelp": "Reported supervised-driving distance derived from cumulative counters.",
+    "collections": {
+      "aria": "Filter drives by collection"
+    },
+    "sortByAria": "Sort by {{field}}",
+    "list": "Drive list",
+    "longest": "Longest",
+    "avgTrip": "Avg trip",
+    "fsdRangeUnsupported": {
+      "title": "FSD evidence is unavailable for this range",
+      "message": "FSD attribution supports up to 366 days at a time. Drive history remains available, but FSD filters and sorting are disabled."
+    },
+    "fsdUnavailable": {
+      "title": "FSD evidence could not be loaded",
+      "message": "Drive history remains available, but FSD badges, filters, and sorting are disabled until this data loads successfully."
+    },
+    "fsdEvidence": "FSD evidence",
+    "stickyBar": {
+      "aria": "Drive history summary"
     }
   }
 }

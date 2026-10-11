@@ -33,7 +33,11 @@
       "commute": "Commute stories",
       "commuteHint": "Repeated routes told across firmware. Unknown chapters stay unknown.",
       "commuteEmpty": "Not enough repeated routes yet for a commute story.",
-      "resetBadge": "Counter reset"
+      "resetBadge": "Counter reset",
+      "unknownFirmware": "Unknown firmware",
+      "unlabelledRoute": "Unlabelled route",
+      "resetHint": "Break in the stitch — not travelled FSD{{field}}.",
+      "approximate": "Approximate counter increase"
     },
     "title": "FSD insights",
     "subtitle": "Reported supervised self-driving distance and its share of observed driving, with the counter evidence behind every metric.",
@@ -207,7 +211,9 @@
       "observatoryMetrics": "Reset-safe counter quantities",
       "periodQuantities": "Current and previous period quantities",
       "window": "{{start}}–{{end}} (exclusive end) · {{timezone}}",
-      "noVehicle": "Select a vehicle"
+      "noVehicle": "Select a vehicle",
+      "description": "Reported self-driving counter deltas, not estimated engagement time; a share requires aligned observed-driving spans.",
+      "source": "Reported supervised self-driving and observed-driving counters, grouped by the requested local calendar window."
     },
     "drive": {
       "confidence": {

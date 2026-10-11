@@ -17,10 +17,33 @@
       "kpi": {
         "policyRequired": "Required",
         "policyOptional": "Optional",
-        "scopeValue": "This browser"
+        "scopeValue": "This browser",
+        "loadError": "Failed to load privacy policy",
+        "aria": "Privacy summary",
+        "recent": "Recent pages stored",
+        "recentMax": "of {{max}} max",
+        "consent": "Consent status",
+        "policy": "Consent policy",
+        "policyRequiredSub": "Consent gate enabled",
+        "policyOptionalSub": "No consent gate",
+        "scope": "Data scope",
+        "scopeSub": "Local only — never synced"
       },
       "title": "Privacy",
-      "controlsAria": "Privacy controls"
+      "controlsAria": "Privacy controls",
+      "consent": {
+        "policyError": "Deployment consent policy unavailable — you can still manage your own choice below."
+      },
+      "about": {
+        "localTitle": "Stored on this device",
+        "localBody": "Recently viewed pages and your cookie choice live in this browser’s local storage — they are never uploaded to the server.",
+        "syncTitle": "No cross-device sync",
+        "syncBody": "Each browser keeps its own list and consent state. Clearing them here has no effect on your other devices or sessions.",
+        "controlTitle": "You stay in control",
+        "controlBody": "Wipe your history or change your consent at any time. Changes take effect immediately and update every open tab.",
+        "title": "How TeslaSync handles this data"
+      },
+      "subtitle": "Manage browser-local data: recently viewed pages and cookies / analytics consent."
     },
     "sessions": {
       "breakdownEmpty": "No sessions to summarize yet.",
@@ -68,7 +91,14 @@
         "revokeAria": "Sign out {{device}}",
         "revoke": "Sign out"
       },
-      "empty": "No active sessions for this account."
+      "empty": "No active sessions for this account.",
+      "breakdownError": "Failed to load sessions",
+      "openMode": {
+        "title": "Session tracking unavailable",
+        "message": "Active session tracking requires forward-auth mode. Configure your reverse proxy to inject X-Forwarded-User, then reload."
+      },
+      "tableAria": "Active devices",
+      "tableTitle": "Active devices"
     },
     "twoFactor": {
       "contextAria": "Two-factor apps and recovery",
@@ -340,7 +370,8 @@
         "nl-dashboard-composer": {
           "label": "Natural-language dashboard composer",
           "description": "Opt-in Helix translator on the Dashboard Composer page (/power/dashboards) that converts a natural-language dashboard request into a typed dashboard JSON DRAFT (a single dashboard envelope — title + ordered list of panel slots picking panels by name from the curated install-wide catalog and placing each on the Grafana 24-column grid) by routing through two propose-only tools (draft_dashboard_layout + validate_dashboard_layout). The translator NEVER pushes the dashboard to Grafana — there is no apply or push tool; the per-request scope binding refuses any panel_name outside the curated catalog; the layout contract refuses overlapping bounding boxes, more than 12 slots, or the same panel_name twice. The user reviews the typed proposal in the AI side panel, clicks Apply to editor to copy the draft into the manual JSON dashboard composer, and clicks the canonical Copy to clipboard button to paste it into their existing Grafana dashboard. The deterministic manual JSON composer and curated panel catalog viewer remain the canonical baseline when Helix is off."
-        }
+        },
+        "empty": "No AI features are available yet."
       },
       "archive": {
         "title": "Restore previous Helix selection?",
@@ -389,17 +420,58 @@
         "noSample": "No recent provider/model sample for this feature."
       },
       "costCap": {
-        "loading": "Loading…"
+        "loading": "Loading…",
+        "unavailable": "Spend unavailable",
+        "amount": "${{spent}} / ${{cap}}",
+        "todayTitle": "Today’s Helix spend",
+        "barLabel": "Helix cost cap usage",
+        "unavailableHint": "Could not load today’s spend. The cap is still enforced server-side.",
+        "criticalHint": "Cap reached — new Helix calls will be rejected until the cap resets at UTC midnight or you raise it.",
+        "warnHint": "You are nearing today’s cap. Calls will pause once you reach it."
       }
     },
     "limit": {
-      "retry": "Retry"
+      "retry": "Retry",
+      "useBaseline": "Use baseline",
+      "title": {
+        "costCap": "Daily cost cap reached",
+        "costCapUnavailable": "Cost cap check unavailable",
+        "settingsUnavailable": "Helix settings unavailable",
+        "burst": "Too many Helix requests at once",
+        "perMinute": "Helix rate limit hit",
+        "perDay": "Daily Helix usage limit reached",
+        "tokens": "Helix token quota exhausted",
+        "providerUnavailable": "Helix provider unavailable",
+        "featureMisconfigured": "Helix feature misconfigured",
+        "generic": "Helix temporarily unavailable"
+      },
+      "desc": {
+        "costCap": "You have reached your daily Helix cost limit. Helix features will resume tomorrow or after you raise the cap in Settings.",
+        "costCapUnavailable": "Could not read your Helix usage history. Failing closed for safety.",
+        "settingsUnavailable": "Could not load your Helix settings. Helix is paused until settings are reachable.",
+        "burst": "Too many Helix requests are in flight. The limiter is keeping the system responsive.",
+        "perMinute": "You have sent more Helix requests than allowed per minute. The window resets shortly.",
+        "perDay": "You have used your daily Helix request budget. The budget resets at UTC midnight.",
+        "tokens": "Your Helix token quota for this minute is exhausted. Try a shorter prompt.",
+        "providerUnavailable": "The Helix provider is not responding. The system will retry automatically.",
+        "featureMisconfigured": "This page is missing a Helix feature registration. Please report this to your administrator.",
+        "generic": "Helix features are temporarily unavailable. The non-Helix baseline continues to work."
+      }
     },
     "common": {
-      "errorUnknown": "unknown"
+      "errorUnknown": "unknown",
+      "noOutput": "No output was generated."
     },
     "confirm": {
-      "cancel": "Cancel"
+      "cancel": "Cancel",
+      "title": "Approve Helix action",
+      "intro": {
+        "mutates": "The assistant wants to make a change to your data. Review what it will do, then approve or cancel.",
+        "read": "The assistant wants to run a tool. Review the inputs, then approve or cancel."
+      },
+      "argsLabel": "Arguments",
+      "toolLabel": "Tool",
+      "run": "Approve"
     }
   },
   "fleetSetup": {
@@ -493,7 +565,8 @@
       "body": "Subscribe leaves hostname and CA empty on purpose: TeslaSync sends FLEET_TELEMETRY_HOST (port 4443) and the Let’s Encrypt root. Override those only if your telemetry endpoint uses a different certificate.",
       "advancedTitle": "Partner key vs virtual key",
       "advancedBody": "The well-known PEM is for Tesla partner registration and virtual-key pairing. Telemetry streaming does not wait on a phone key pair. Pairing is only required if you want TeslaSync to send vehicle commands.",
-      "openDevTools": "Open Fleet API tools"
+      "openDevTools": "Open Fleet API tools",
+      "caValue": "Let’s encrypt ISRG root X1"
     },
     "stream": {
       "healthy": "Healthy",
@@ -542,7 +615,9 @@
       "advancedHint": "Leave blank to use FLEET_TELEMETRY_HOST, port 4443, and the Let’s Encrypt root CA.",
       "hostname": "Hostname",
       "port": "Port",
-      "ca": "CA certificate (PEM)"
+      "ca": "CA certificate (PEM)",
+      "needAuth": "Connect Tesla first. Subscribe uses the stored Fleet token.",
+      "signalsPicked": "{{count}} signals selected. Presets (Balanced, Low Power, Track Mode, …) set intervals per category."
     }
   },
   "orders": {
@@ -605,7 +680,8 @@
       "create": "Create",
       "update": "Update",
       "cancel": "Cancel",
-      "saving": "Saving…"
+      "saving": "Saving…",
+      "unsaved": "You have unsaved quiet-hours changes. Discard them?"
     },
     "weekday": {
       "sun": "Sun",
@@ -627,7 +703,8 @@
       "endEqual": "End must differ from start.",
       "timezoneRequired": "Timezone is required.",
       "weekdaysRequired": "Pick at least one weekday.",
-      "bypassRequired": "Pick at least one severity."
+      "bypassRequired": "Pick at least one severity.",
+      "missingDraft": "The quiet-hours draft is unavailable. Reopen the editor."
     },
     "deleteConfirm": {
       "title": "Delete this quiet-hours window?",
@@ -886,7 +963,8 @@
       "done": "I saved them",
       "warning": "These codes will not be shown again. Store them in a password manager. Each code can be used once if you lose access to your authenticator app.",
       "close": "Close",
-      "fileHeader": "# TeslaSync TOTP backup codes — keep secret."
+      "fileHeader": "# TeslaSync TOTP backup codes — keep secret.",
+      "empty": "No backup codes were returned. Close this dialog and regenerate your codes from the two-factor settings."
     },
     "brief": {
       "description": "Protection status, last verification and remaining recovery codes for this account. Enrollment and recovery controls remain unchanged.",
@@ -909,7 +987,38 @@
     "openMode": {
       "message": "Per-user TOTP requires forward-auth mode. Configure your reverse proxy to inject X-Forwarded-User then reload."
     },
-    "subtitle": "TOTP codes from your authenticator app are required for the sudo step-up before destructive admin actions."
+    "subtitle": "TOTP codes from your authenticator app are required for the sudo step-up before destructive admin actions.",
+    "apps": {
+      "title": "Compatible apps",
+      "subtitle": "Any RFC 6238 TOTP client works."
+    },
+    "recovery": {
+      "tip1": "Each backup code works once — regenerate when you are running low.",
+      "tip2": "Store codes in your password manager, not next to your authenticator app.",
+      "tip3": "Codes rotate every 30 seconds; if one is rejected, wait for the next.",
+      "title": "Recovery & good habits",
+      "subtitle": "Keep a way back in if you lose your phone."
+    },
+    "guide": {
+      "step1": {
+        "title": "Install an authenticator app",
+        "body": "Use any RFC 6238 client — Google Authenticator, 1Password, Bitwarden or Authy."
+      },
+      "step2": {
+        "title": "Scan the QR code",
+        "body": "Choose Enable TOTP, then scan the QR or paste the manual secret into your app."
+      },
+      "step3": {
+        "title": "Verify a 6-digit code",
+        "body": "Enter the rotating code your app shows to confirm both devices are in sync."
+      },
+      "step4": {
+        "title": "Store your backup codes",
+        "body": "Save the one-time codes somewhere safe — they recover access if you lose your app."
+      },
+      "title": "How setup works",
+      "subtitle": "Four steps, about a minute."
+    }
   },
   "typography": {
     "familyHint": "Focus or hover to preview a font, then select it to use it everywhere.",
@@ -951,7 +1060,8 @@
     },
     "monoFont": {
       "label": "Monospace font",
-      "customAria": "Custom monospace font stack"
+      "customAria": "Custom monospace font stack",
+      "customPlaceholder": "e.g. 'Cascadia Code', ui-monospace, monospace"
     },
     "webFontHelp": "Web fonts need an internet connection; system and installed custom fonts work offline.",
     "scale": {
@@ -1419,6 +1529,7 @@
         "conditionsLabel": "Conditions",
         "description": "Describe an automation that uses one of your existing geofences. Helix proposes a typed graph anchored to a place_id you already have — review and apply to the form below before saving.",
         "placeholder": "e.g. when I arrive home on a weekday after sunset, turn on cabin overheat protection",
+        "promptAria": "Describe the geofence-aware automation to draft",
         "proposalLabel": "Proposed automation",
         "rejectedLabel": "Proposal rejected by validator",
         "suggestButton": "Suggest automation",
@@ -1485,6 +1596,10 @@
       "description": "Ask Helix to explain which charging habits and risk factors drive your deterministic battery-health forecast. The narrator never changes the forecast — it grounds every sentence in the same numbers the chart below renders.",
       "generateButton": "Narrate forecast",
       "title": "Explain the battery health forecast"
+    },
+    "delta": {
+      "aria": "Battery {{from}}% to {{to}}%",
+      "unknown": "Battery delta unknown"
     }
   },
   "bulk": {
@@ -1531,6 +1646,7 @@
       "badge": "Helix",
       "description": "Compute per-cluster (L1 overnight / L2 workplace / DC fast) learned charging envelope from this vehicle's recent sessions and walk through how each cluster compares to the deterministic rule-label baseline used by the Charging curve page today.",
       "generateButton": "Train charging-curve clusters",
+      "noVehicleHint": "Pick a vehicle to train its charging-curve clusters.",
       "title": "Learn per-vehicle charging-curve clusters"
     },
     "detail": {
@@ -1670,6 +1786,7 @@
       "cancel": "Cancel",
       "compare": "Compare to previous period",
       "end": "End date",
+      "loadingCalendar": "Loading calendar…",
       "newRange": "New range",
       "pickRange": "Custom range",
       "popoverLabel": "Date range picker",
@@ -1867,6 +1984,7 @@
     "aiSearch": {
       "badge": "Helix",
       "description": "Describe a drive (for example \"last Friday's trip to the coast\") and jump straight to its replay — the assistant only narrates your own drives.",
+      "inputLabel": "Describe the drive to find",
       "placeholder": "Describe a drive — for example \"last Friday's coast trip\" or \"the one with the lowest efficiency last week\"",
       "searchButton": "Search with Helix",
       "title": "Find a drive in natural language"
@@ -1882,6 +2000,13 @@
     },
     "resource": {
       "settings": "Your settings"
+    }
+  },
+  "emptyState": {
+    "generic": "No data available yet.",
+    "label": {
+      "likelyCause": "Most likely reason",
+      "prerequisite": "What has to happen first"
     }
   },
   "entityContext": {
@@ -1950,6 +2075,8 @@
     "details": "Details",
     "disabled": "Disabled",
     "enabled": "Enabled",
+    "errorMessage": "Something went wrong fetching your Tesla feature configuration. Check your connection and try again.",
+    "errorTitle": "Couldn’t load feature config",
     "feature": "Feature",
     "lastSynced": "Synced",
     "noData": "No feature config data yet. Click refresh to fetch from Tesla.",
@@ -1963,6 +2090,15 @@
   "feedback": {
     "statSkeleton": {
       "loading": "Loading statistics"
+    }
+  },
+  "feedbackTriage": {
+    "aiAdvisor": {
+      "badge": "Helix",
+      "button": "Suggest triage",
+      "description": "Get a proposed status, category, and priority label for this feedback row. The advisor reads only the redacted envelope (id, category, title, body excerpt, page route, app version, status, created_at) — never the reporter email, IP, console tail, or recent errors. The proposal is informational; your existing manual controls above remain the only way to save changes.",
+      "emptyHint": "Select a feedback row to suggest triage labels.",
+      "title": "Helix triage advisor"
     }
   },
   "filters": {
@@ -2026,6 +2162,7 @@
       "source": "Configuration draft and audited usage",
       "title": "Helix configuration and spend"
     },
+    "errorLabel": "Helix error:",
     "evidence": {
       "gathering": "Gathering",
       "grounded": "Grounded in",
@@ -2040,6 +2177,7 @@
       "used": "Used"
     },
     "page": {
+      "subtitle": "Optional AI integration. Off by default — nothing runs until you opt in here.",
       "title": "Helix"
     },
     "status": {
@@ -2103,6 +2241,7 @@
     "connected": "Live",
     "disconnected": "Offline",
     "reconnecting": "Reconnecting…",
+    "scope": "Live data",
     "staleBanner": {
       "message": "The live data connection has been offline for more than 2 minutes. Values on this page may be stale until the connection is restored.",
       "title": "Live data unavailable"
@@ -2154,6 +2293,9 @@
         "badge": "Helix",
         "description": "Describe the alert you want to receive an advisory text proposal. Review it and manually enter the rule in the standard form before saving; this action does not fill the form, save, or enable an alert.",
         "draftButton": "Draft alert",
+        "emptyHint": "Choose a vehicle and describe the alert you want Helix to draft.",
+        "inputLabel": "Alert description",
+        "placeholder": "e.g. alert me if battery cell voltage spread is over 50 mV",
         "title": "Draft from natural language"
       },
       "aiConflicts": {
@@ -2161,10 +2303,17 @@
         "description": "Surface structural overlaps between your alert rule definitions. Review only — Helix never edits, merges, or deletes rules.",
         "detectButton": "Detect conflicts",
         "emptyMessage": "No structural conflicts found in the current rule set.",
+        "flag": {
+          "cooldownMismatch": "cooldown mismatch",
+          "severityMismatch": "severity mismatch",
+          "subsumes": "subsumes",
+          "triggerModeMismatch": "trigger mode mismatch"
+        },
         "kind": {
           "overlapping_threshold": "Overlapping threshold",
           "redundant_duplicate": "Redundant duplicate"
         },
+        "listLabel": "Detected rule conflicts",
         "reviewButton": "Review rule",
         "ruleLabel": "Rule",
         "title": "Detect cross-rule conflicts"
@@ -2227,9 +2376,12 @@
   },
   "onboarding": {
     "stepper": {
+      "empty": "No setup steps to show right now.",
+      "label": "Onboarding steps",
       "status": {
         "current": "In progress",
-        "done": "Completed"
+        "done": "Completed",
+        "pending": "Not started"
       }
     }
   },
@@ -2255,6 +2407,7 @@
         "unavailable": "No confidence basis was supplied."
       },
       "evidence": "Supporting evidence",
+      "evidenceCoverage": "{{count}} supporting records supplied.",
       "likelyCause": "Likely cause",
       "limitations": "Limitations",
       "noEvidence": "No supporting records were supplied.",
@@ -2274,20 +2427,75 @@
   "powerDashboards": {
     "aiDrafter": {
       "applyButton": "Apply to editor",
-      "badge": "Helix"
+      "applyTooltip": "Copy the proposed dashboard JSON into the editor above. You can still edit it before clicking Copy to clipboard.",
+      "badge": "Helix",
+      "button": "Draft dashboard",
+      "description": "Describe the dashboard you want in plain English (e.g. \"give me an overview dashboard with daily drives, current battery, and recent alerts\"). Helix proposes a typed dashboard JSON draft built from the in-scope curated panel catalog you can apply to the editor with one click; it never pushes the dashboard to Grafana directly.",
+      "promptLabel": "Dashboard request",
+      "promptPlaceholder": "e.g. give me an overview dashboard with daily drives, current battery, and recent alerts",
+      "title": "Helix natural-language dashboard composer"
     }
   },
   "powerGrafana": {
     "aiDrafter": {
       "applyButton": "Apply to editor",
-      "badge": "Helix"
+      "applyTooltip": "Copy the proposed panel JSON into the editor above. You can still edit it before clicking Copy to clipboard.",
+      "badge": "Helix",
+      "button": "Draft panel",
+      "description": "Describe the panel you want in plain English (e.g. \"show me a daily time series of how far I drove this month\"). Helix proposes a typed Grafana panel JSON draft you can apply to the editor with one click; it never pushes the panel to Grafana directly.",
+      "previewDatasource": "Datasource:",
+      "previewLabel": "Proposed Grafana panel (review before applying)",
+      "previewTables": "Referenced tables:",
+      "previewTargets": "Query targets:",
+      "previewType": "Panel type:",
+      "previewUntitled": "Untitled panel",
+      "promptLabel": "Grafana panel request",
+      "promptPlaceholder": "e.g. show me a daily time series of how far I drove this month",
+      "title": "Helix natural-language Grafana panel drafter"
     }
   },
   "powerSql": {
     "aiDrafter": {
       "applyButton": "Apply to editor",
-      "badge": "Helix"
+      "applyTooltip": "Copy the proposed SQL into the editor above. You can still edit it before clicking Run.",
+      "badge": "Helix",
+      "button": "Draft SQL",
+      "description": "Describe the question in plain English (e.g. \"how many drives last week\"). Helix proposes a typed read-only SQL draft you can apply to the editor with one click; it never executes the query directly.",
+      "promptLabel": "SQL request",
+      "promptPlaceholder": "e.g. how many drives did I take last week",
+      "title": "Helix natural-language SQL drafter"
     }
+  },
+  "problemReport": {
+    "context": {
+      "appVersion": "App version",
+      "browser": "Browser",
+      "page": "Page",
+      "pageNote": "(record ids are replaced with :id)",
+      "title": "What is sent with your report"
+    },
+    "form": {
+      "description": "What were you doing, and what did you expect?",
+      "descriptionPlaceholder": "Steps you took, what you saw, and what you expected to see instead.",
+      "descriptionTooShort": "Please add at least {{count}} characters.",
+      "hidePreview": "Hide exactly what is sent",
+      "includeDiagnostics": "Attach a redacted technical summary ({{count}} recent errors)",
+      "includeDiagnosticsHint": "Versions, browser capability, service health, error messages and trace IDs. Never VINs, locations, tokens, e-mail addresses or raw logs.",
+      "showPreview": "Show exactly what is sent",
+      "submit": "Send report",
+      "submitting": "Sending…",
+      "title": "What went wrong?",
+      "titlePlaceholder": "Short summary (e.g. \"Charging costs show as blank\")"
+    },
+    "intro": "Describe what happened in your own words. We attach a redacted technical summary only if you allow it.",
+    "policy": {
+      "consoleTail": "Console output",
+      "files": "File attachments",
+      "screenshots": "Screenshots",
+      "userEmail": "E-mail address"
+    },
+    "submitError": "Could not send the report. Please try again.",
+    "title": "Report a problem"
   },
   "productPreferences": {
     "contextualHelp": {
@@ -2353,7 +2561,16 @@
   },
   "pwa": {
     "lowBandwidth": {
-      "on": "Always on"
+      "auto": "Automatic (follow the network)",
+      "effectsOff": "When active: polling slows down, animations stop, charts render fewer points, heavy basemaps fall back to light tiles, and the service worker stops caching new images and map tiles.",
+      "effectsOn": "While active: background polling slows to a quarter of its normal rate, entrance animations are disabled, charts render at most {{points}} points, satellite/terrain basemaps fall back to the lightest raster tiles, and the service worker stops storing new images and map tiles.",
+      "heading": "Low-bandwidth mode",
+      "label": "Data usage on this device",
+      "off": "Always off",
+      "on": "Always on",
+      "statusNetwork": "Active — your browser or network reported Data Saver / a 2G-class connection.",
+      "statusOff": "Not active — the app is using full quality.",
+      "statusUser": "Active — enabled manually on this device."
     }
   },
   "range": {
@@ -2385,7 +2602,9 @@
   "region": {
     "fleetApiUrl": "Fleet API base URL",
     "lastSynced": "Synced",
+    "loading": "Loading region…",
     "noData": "No region data yet. Click refresh to fetch from Tesla.",
+    "noRegion": "Tesla did not return a region for this account.",
     "refresh": "Refresh",
     "regionCode": "Region code",
     "resourceName": "Region",
@@ -2432,7 +2651,9 @@
     "aiSearch": {
       "badge": "Helix",
       "description": "Describe what you are looking for and the assistant will surface drives, charging sessions, and alerts that match — citing each entity by name.",
+      "emptyHint": "Type a question above to search your drives, charging sessions, and alerts.",
       "inputLabel": "Search query",
+      "placeholder": "e.g. drives last weekend over 200 km with phantom drain",
       "searchButton": "Search with Helix",
       "title": "Search with natural language"
     },
@@ -2816,9 +3037,39 @@
     "search": "Search shortcuts…",
     "title": "Keyboard shortcuts"
   },
+  "signalConfig": {
+    "deselectAll": "Deselect All",
+    "deselectCategory": "Deselect all {{category}} signals",
+    "deselectSignal": "Deselect {{signal}}",
+    "footerAt10s": "{{n}} at 10s",
+    "footerAt500": "{{n}} at 500ms",
+    "footerSelected": "{{n}} signals selected",
+    "intervalForSignal": "Sampling interval for {{signal}}",
+    "masterInterval": "Master Interval:",
+    "masterIntervalLabel": "Master sampling interval for all signals",
+    "noMatches": "No signals match “{{query}}”.",
+    "noSignals": "No telemetry signals are available to configure.",
+    "searchLabel": "Search signals",
+    "searchPlaceholder": "Search signals...",
+    "selectAll": "Select All",
+    "selectCategory": "Select all {{category}} signals",
+    "selectSignal": "Select {{signal}}",
+    "selectedSummary": "{{selected}} / {{total}} signals selected",
+    "setAll": "Set all…",
+    "setCategoryInterval": "Set interval for all {{category}} signals",
+    "subscribeCount": "Subscribe {{n}} Signals",
+    "title": "Fleet Telemetry Signal Configuration"
+  },
   "signalExplorer": {
     "aiFilter": {
-      "badge": "Helix"
+      "applyButton": "Apply to filters",
+      "applyTooltip": "Copy the proposed filter into the form above. You can still edit it before clicking Explore.",
+      "badge": "Helix",
+      "button": "Draft filter",
+      "description": "Describe the filter in plain English (e.g. \"battery level for yesterday\"). The LLM proposes a typed filter you can apply with one click; it never edits the form directly.",
+      "promptLabel": "Filter request",
+      "promptPlaceholder": "e.g. show me battery level for yesterday",
+      "title": "Helix natural-language filter"
     }
   },
   "softwareUpdates": {
@@ -2911,9 +3162,11 @@
   "theme": {
     "chartPalette": {
       "cbSafe": "Color-blind safe",
+      "cbSafeHelp": "Okabe-Ito palette — distinguishable for all CVD types.",
       "help": "Defaults to the Okabe-Ito palette so series remain distinguishable for the ~8% of users with red-green colour vision deficiency.",
       "label": "Chart palette",
-      "neon": "Stylistic neon"
+      "neon": "Stylistic neon",
+      "neonHelp": "Bright cyan/magenta — best when colour vision is unimpaired."
     },
     "density": {
       "comfortable": "Comfortable",
@@ -2951,6 +3204,7 @@
     "title": "Appearance"
   },
   "timeline": {
+    "empty": "No timeline entries yet.",
     "label": "Timeline"
   },
   "tirePressure": {
@@ -3291,6 +3545,7 @@
     "aiNarration": {
       "badge": "Helix",
       "description": "Get a short, Helix-written recap of your year from the slide data above.",
+      "emptyHint": "Select a vehicle above to recap its year.",
       "generateButton": "Generate narration",
       "title": "Helix narration"
     },

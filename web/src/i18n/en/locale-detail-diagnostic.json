@@ -31,7 +31,18 @@
     "summary": {
       "warnings": "Warnings",
       "failures": "Failures",
-      "totalTime": "Total time"
-    }
+      "totalTime": "Total time",
+      "passing": "Passing",
+      "title": "Diagnostic summary",
+      "total": "Total checks",
+      "slowest": "Slowest check"
+    },
+    "overallSection": "Overall result",
+    "brief": {
+      "description": "Probe outcomes and recorded timings from the displayed diagnostic report.",
+      "scope": "One diagnostic run; total time is the sum of probe durations."
+    },
+    "downloadSuccess": "Diagnostic report downloaded",
+    "checksTitle": "Dependency checks"
   }
 }

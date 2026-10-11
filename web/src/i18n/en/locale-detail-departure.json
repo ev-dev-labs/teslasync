@@ -219,6 +219,11 @@
       }
     },
     "title": "Departure forecast",
-    "subtitle": "Vehicle-timezone departure patterns from returned drive starts, expressed as modeled likelihood estimates"
+    "subtitle": "Vehicle-timezone departure patterns from returned drive starts, expressed as modeled likelihood estimates",
+    "brief": {
+      "description": "Next-24-hour modeled likelihood uses capped observed departure history; the support index is not a calibrated probability or confidence score.",
+      "window": "Next 24 hours · {{timezone}}; history coverage is limited to returned rows",
+      "source": "Returned drive starts; Poisson-derived likelihood and illustrative planning marker, with no vehicle command."
+    }
   }
 }

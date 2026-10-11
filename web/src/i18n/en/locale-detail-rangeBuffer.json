@@ -221,6 +221,7 @@
     "brief": {
       "arrivalsDescription": "Observed arrivals in returned drive history; the planning threshold is descriptive, not a guarantee.",
       "provenance": "Returned vehicle drives in the selected window, capped at 1,000 rows; vehicle-local time and frozen analysis clock."
-    }
+    },
+    "percentileAria": "Range buffer percentile distribution across driving profile categories"
   }
 }

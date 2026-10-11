@@ -1,6 +1,7 @@
 {
   "originConcentration": {
     "colOrigin": "Origin",
-    "title": "Origin concentration"
+    "title": "Origin concentration",
+    "aria": "Origin concentration and leading share by departure location"
   }
 }

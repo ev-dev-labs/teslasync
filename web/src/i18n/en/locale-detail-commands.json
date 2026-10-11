@@ -79,7 +79,8 @@
       "cabin": "Cabin",
       "access": "Access state",
       "noTelemetryTitle": "Live state unavailable",
-      "noTelemetry": "Commands remain available, but state-dependent controls may not reflect the vehicle yet."
+      "noTelemetry": "Commands remain available, but state-dependent controls may not reflect the vehicle yet.",
+      "briefDescription": "Battery, estimated range, cabin temperature, and access state from the selected vehicle readings."
     },
     "readiness": {
       "title": "Command readiness",

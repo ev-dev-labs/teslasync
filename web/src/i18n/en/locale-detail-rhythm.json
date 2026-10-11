@@ -131,7 +131,9 @@
       "coverage": "Observed-history coverage",
       "coverageScope": "Included non-future starts define the observed span; the selected date scope may be wider.",
       "calendarDenominator": "{{count}} selected local calendar days define the rate denominator.",
-      "window": "{{start}}–{{end}} · {{timezone}}"
+      "window": "{{start}}–{{end}} · {{timezone}}",
+      "description": "Departure timing in the selected local-time window; timestamp exclusions and evidence floors remain explicit.",
+      "source": "Returned calendar drive history; local departure timestamps."
     }
   }
 }

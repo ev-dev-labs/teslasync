@@ -109,7 +109,10 @@
     "brief": {
       "penalty": "Cold minus warm consumption",
       "cohortTitle": "Distance-weighted cohort consumption",
-      "window": "{{start}}–{{end}}; returned selected-window drives"
+      "window": "{{start}}–{{end}}; returned selected-window drives",
+      "energy": "Estimated extra energy from the observed cold-versus-warm consumption difference.",
+      "description": "Cold and warm starts compared within the returned selected window; this is observed cohort evidence, not a causal test.",
+      "source": "Returned drive energy and preceding parking gaps; up to 1,000 drives in the selected window."
     }
   }
 }

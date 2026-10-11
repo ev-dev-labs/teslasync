@@ -218,7 +218,11 @@
         "quarter": "Last 90 days",
         "week": "Last 7 days",
         "year": "Last year"
-      }
+      },
+      "metricsTitle": "Uptime evidence",
+      "briefDescription": "Historical uptime is shown only for a series-backed response; current component health is separate snapshot evidence.",
+      "uptimeMetric": "Historical uptime",
+      "componentsMetric": "Healthy components"
     },
     "incidents": {
       "active": "Active incidents",
@@ -245,7 +249,12 @@
       "title": "Title",
       "empty": "No active incidents recorded.",
       "loadError": "Unable to load active incidents.",
-      "updateCount_other": "{{count}} updates"
+      "updateCount_other": "{{count}} updates",
+      "unsaved": "You have unsaved incident details. Discard them?",
+      "titleMin": "Title must be at least 3 characters.",
+      "titlePlaceholder": "e.g. Wall connector restart at 14:00",
+      "componentsHint": "Optional. Separate multiple component names with commas.",
+      "messagePlaceholder": "What's the situation?"
     },
     "maintenance": {
       "active": "Maintenance active",
@@ -273,7 +282,8 @@
       "durationRequired": "Enter a valid duration in minutes.",
       "readOnly": "Maintenance controls are read-only",
       "unsaved": "You have unsaved maintenance-window details. Discard them?",
-      "within24h": "Within 24h"
+      "within24h": "Within 24h",
+      "messagePlaceholder": "What's happening (optional)"
     },
     "updateCheck": "Update check",
     "backupStatistics": "Backup statistics",
@@ -409,7 +419,23 @@
       "unusual": "Spend is pacing at least twice the prior-week daily average. This is an estimate, not a billing alert.",
       "newPaid": "Paid AI usage appeared today after a week of zero recorded spend. Check the contributing provider and model.",
       "capRisk": "At this pace you may reach the global daily cap ({{amount}}) before UTC midnight.",
-      "driver": "Largest observed contributor: {{feature}} via {{provider}} / {{model}} ({{amount}} today; {{baseline}} prior daily average)."
+      "driver": "Largest observed contributor: {{feature}} via {{provider}} / {{model}} ({{amount}} today; {{baseline}} prior daily average).",
+      "briefScope": "Audited today (UTC), prior seven-day daily average, and projected UTC midnight spend are different windows.",
+      "todayMetric": "Audited today (UTC)",
+      "baselineMetric": "Prior 7-day daily average",
+      "projectionMetric": "Projected UTC midnight spend"
+    },
+    "workersBrief": {
+      "description": "Reported worker types, healthy replicas, and replicated types from the worker health response.",
+      "scope": "Reported instances only; this response does not prove unreported replicas are healthy."
+    },
+    "pipelineBrief": {
+      "description": "Configured vehicles and recorded table counts; polling and stream liveness remain independent evidence below.",
+      "scope": "Vehicle response and database row-count snapshot; no shared historical window is supplied.",
+      "livenessDescription": "Configured vehicles classified by their most recent polling or Fleet Telemetry timestamp, using the existing liveness rules.",
+      "livenessScope": "Current client-clock age: sending under 5 minutes, slow from 5 to under 30 minutes, stale from 30 minutes; offline means no valid timestamp, not confirmed vehicle disconnection.",
+      "livenessFreshness": "Polling and stream timestamps remain independently visible on each vehicle row.",
+      "offlineMeaning": "No valid polling or stream timestamp was supplied; missing evidence is not a measured outage."
     }
   }
 }

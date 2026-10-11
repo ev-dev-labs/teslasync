@@ -280,6 +280,11 @@
       "title": "Vehicle-timezone weekday profile"
     },
     "colLabel": "Category",
-    "profileTitle": "Destination transition profile"
+    "profileTitle": "Destination transition profile",
+    "profileAria": "Destination transition profile showing sample count and concentration",
+    "brief": {
+      "description": "Accepted adjacent transitions retain chronology and continuity gates; historical successors describe past observations, not the next destination.",
+      "source": "Returned end-location states and accepted adjacent pairs; latest unusable rows are never replaced with older destinations."
+    }
   }
 }

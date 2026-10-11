@@ -346,6 +346,7 @@
   "quickView": "Quick view charging session",
   "records": "records",
   "saved": "saved",
+  "scoreAria": "Battery-friendly score: {{value}}",
   "selectSession": "Select charging session",
   "sessions": "sessions",
   "settingsBackup": {

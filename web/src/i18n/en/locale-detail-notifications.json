@@ -146,13 +146,19 @@
         "status": "Status",
         "read": "Read",
         "unread": "Unread",
-        "inspect": "Inspect"
+        "inspect": "Inspect",
+        "readState": "Read state"
       },
       "detail": {
         "title": "Notification details",
         "sent": "Sent",
         "scheduled": "Scheduled",
-        "milliseconds": "{{value}} ms"
+        "milliseconds": "{{value}} ms",
+        "empty": "Select a notification to inspect its details.",
+        "latency": "Delivery latency",
+        "channel": "Channel ID",
+        "error": "Delivery error",
+        "actions": "Notification actions"
       },
       "legacyDelivery": "Legacy channel delivery (original source not recorded)",
       "countError": "Could not load the notification count: {{error}}",
@@ -209,7 +215,9 @@
         "severity.critical": "Critical",
         "searchLabel": "Search",
         "from": "From",
-        "to": "To"
+        "to": "To",
+        "readState": "Filter by read state",
+        "allReadStates": "All read states"
       },
       "row": {
         "select": "Select notification",
@@ -218,7 +226,8 @@
         "markRead": "Mark as read",
         "markUnread": "Mark as unread",
         "archive": "Archive",
-        "unarchive": "Restore"
+        "unarchive": "Restore",
+        "inspect": "Inspect notification: {{title}}"
       },
       "bulk": {
         "memberSelection": "{{count}} selected notification members",
@@ -264,8 +273,15 @@
         "triggered": "Triggered",
         "pending": "Pending",
         "sent": "Sent",
-        "failed": "Failed"
-      }
+        "failed": "Failed",
+        "deferred_dnd": "Deferred by DND"
+      },
+      "evidence": {
+        "title": "Notification evidence",
+        "count": "Notification count"
+      },
+      "loadedCount": "{{count}} loaded · total unavailable",
+      "viewArchived": "View archived"
     },
     "bulkRead": {
       "success": "{{count}} marked as read"
@@ -373,12 +389,21 @@
       "providers": {
         "subtitle": "{{inUse}} of {{total}} provider types in use",
         "configured": "{{count}} configured",
-        "notConfigured": "Not configured"
+        "notConfigured": "Not configured",
+        "title": "Supported providers"
       },
       "deleteAria": "Delete {{name}}",
       "resource": "Channels",
       "title": "Notification channels",
-      "listTitle": "Delivery channels"
+      "listTitle": "Delivery channels",
+      "toggleAria": "Toggle {{name}}",
+      "unsaved": "You have unsaved notification-channel changes. Discard them?",
+      "loadFailed": "Failed to load channels",
+      "loading": "Loading channels…",
+      "listAria": "Configured channels",
+      "subtitle": "Where to send notifications: Discord, Slack, Telegram, email, ntfy, Pushover, or a custom webhook.",
+      "statsAria": "Notification delivery summary",
+      "devicesTitle": "Devices & providers"
     },
     "alertStudio": {
       "title": "Alert studio",
@@ -400,7 +425,10 @@
         "title": "Draft from natural language",
         "description": "Describe the alert you want to receive an advisory text proposal. Review it and manually enter the rule in the standard form before saving; this action does not fill the form, save, or enable an alert.",
         "badge": "Helix",
-        "draftButton": "Draft alert"
+        "draftButton": "Draft alert",
+        "emptyHint": "Choose a vehicle and describe the alert you want Helix to draft.",
+        "inputLabel": "Alert description",
+        "placeholder": "e.g. alert me if battery cell voltage spread is over 50 mV"
       },
       "aiTemplate": {
         "title": "Suggest a message template",
@@ -431,7 +459,14 @@
           "redundant_duplicate": "Redundant duplicate",
           "overlapping_threshold": "Overlapping threshold"
         },
-        "ruleLabel": "Rule"
+        "ruleLabel": "Rule",
+        "listLabel": "Detected rule conflicts",
+        "flag": {
+          "subsumes": "subsumes",
+          "severityMismatch": "severity mismatch",
+          "cooldownMismatch": "cooldown mismatch",
+          "triggerModeMismatch": "trigger mode mismatch"
+        }
       },
       "rules": {
         "untitled": "Untitled",
@@ -528,7 +563,30 @@
         "presetTagFilter": "Filter message presets by tag",
         "includeTitleLabel": "Include title in notifications",
         "previewLabel": "Preview",
-        "presetAllTag": "All"
+        "presetAllTag": "All",
+        "unsupportedKind": "This rule type cannot be edited by this version of the editor. No changes have been saved.",
+        "canonicalUnitNoVehicle": "Enter the canonical SI value emitted by Fleet Telemetry. Select a vehicle in the status line to load exact unit metadata.",
+        "canonicalUnitLoading": "Loading the canonical unit for this signal…",
+        "canonicalUnitDistance": "Canonical SI input: meters (m).",
+        "canonicalUnitTemperature": "Canonical input: degrees Celsius (°C).",
+        "canonicalUnitPressure": "Canonical SI input: pascals (Pa).",
+        "canonicalUnitCharge": "Canonical input: percent from 0 to 100.",
+        "canonicalUnitSpeed": "Canonical SI input: meters per second (m/s).",
+        "canonicalUnitFallback": "Enter the canonical numeric value emitted by Fleet Telemetry; this signal has no registered unit dimension.",
+        "canonicalUnitUnavailable": "Unit metadata is unavailable for this signal. Enter the canonical numeric value emitted by Fleet Telemetry.",
+        "includeTitleHelp": "When unchecked, Discord/Slack/Telegram/ntfy/webhook deliver only the body. WebPush, email, and Pushover always include a title.",
+        "messageTemplateLabel": "Message template",
+        "messageTemplateHint": "Type {{ to insert a placeholder",
+        "messageTemplateHelp": "Per-rule body template. Reference live signals with double-brace placeholders like {{BatteryLevel}}. Leave blank to use the op-aware default body.",
+        "presetButton": "Pick a preset",
+        "messageTemplatePlaceholder": "Battery at {{BatteryLevel}}% — leave blank for the smart default",
+        "autocompleteLabel": "Placeholder suggestions",
+        "autocompleteEmpty": "No matching placeholders",
+        "previewEmpty": "Start typing to see a preview",
+        "previewEmptyBody": "(no body — title carries the alert)",
+        "presetModalTitle": "Message presets",
+        "presetModalIntro": "Curated templates for common alert shapes. Click one to apply it; you can edit it afterwards.",
+        "presetEmpty": "No presets match this filter"
       },
       "signalTypes": {
         "numeric": "Numeric",
@@ -568,7 +626,8 @@
         "showing": "{{count}} of {{total}} templates",
         "use": "Use template",
         "noMatchesTitle": "No templates found",
-        "noMatches": "No templates match your search"
+        "noMatches": "No templates match your search",
+        "useTemplate": "Use template {{name}}"
       },
       "snooze": {
         "badge": "Snoozed until {{time}}",
@@ -587,7 +646,8 @@
         "alertHistory": "Alert history (saved to database)",
         "externalChannels": "External channels for test notifications:",
         "emptyTitle": "No external channels configured",
-        "emptyDescription": "Browser toasts and alert history are always enabled. Configure channels from Notifications to fan out alerts."
+        "emptyDescription": "Browser toasts and alert history are always enabled. Configure channels from Notifications to fan out alerts.",
+        "selectChannels": "Selected channels"
       },
       "computedMetric": {
         "metric": "Metric",
@@ -601,7 +661,10 @@
         "preview": "Live preview",
         "previewLoading": "Computing…",
         "wouldNot": "NOT",
-        "would": ""
+        "would": "",
+        "previewIdle": "Pick a metric, window, operator, and threshold to preview.",
+        "previewEmpty": "No preview available yet.",
+        "previewValue": "Right now this metric is {{value}}{{suffix}} — would {{verdict}} fire."
       },
       "kind": {
         "signal": "Signal threshold",
@@ -609,7 +672,9 @@
         "system": "System service",
         "place": "Place event",
         "systemHint": "Notify when a monitored system service fails or recovers.",
-        "placeHint": "Notify when a vehicle arrives at or departs from a saved place."
+        "placeHint": "Notify when a vehicle arrives at or departs from a saved place.",
+        "computedMetricHint": "Aggregate metric (cost, kWh, distance) over a time window.",
+        "signalHint": "Fires when a raw telemetry signal crosses a threshold."
       },
       "system": {
         "telemetry": "Telemetry",
@@ -738,11 +803,45 @@
     "device": {
       "retainedVehicleIds": "Selected vehicle IDs remain saved while their details are unavailable: {{ids}}",
       "scope": {
-        "all": "All vehicles"
+        "all": "All vehicles",
+        "selected": "Selected vehicles"
       },
       "heading": "This device",
       "categories": "Categories",
-      "quietStart": "From"
+      "quietStart": "From",
+      "dataUsageHeading": "Data usage on this device",
+      "severity": {
+        "info": "All (info and above)",
+        "warn": "Warnings and critical",
+        "critical": "Critical only"
+      },
+      "test": {
+        "suppressed": "Suppressed on this device by the \"{{reason}}\" rule.",
+        "noPermission": "Notification permission has not been granted in this browser.",
+        "noWorker": "No service worker is registered, so background delivery is unavailable.",
+        "body": "Test notification — your device policy allows this severity.",
+        "deliveredSilent": "Delivered silently — quiet hours are active.",
+        "delivered": "Test notification delivered.",
+        "failed": "The browser refused to show the notification.",
+        "action": "Send test notification"
+      },
+      "filtered": "Filters active",
+      "unfiltered": "Everything delivered",
+      "intro": "These rules apply only to this browser and are enforced by the service worker, so they also work when every tab is closed. Channel routing and install-wide quiet hours stay on the server.",
+      "enabled": "Show notifications on this device",
+      "minSeverity": "Minimum severity",
+      "minSeverityHint": "Anything below this level is dropped before it reaches the OS.",
+      "vehicleScopeSection": "Vehicle scope settings",
+      "vehicleScope": "Vehicle scope",
+      "vehicleScopeHint": "Fleet-wide notifications with no vehicle attached are always delivered.",
+      "noVehicles": "No vehicles are available to scope to yet.",
+      "quietHours": "Quiet hours on this device",
+      "quietEnabled": "Silence notifications overnight",
+      "quietEnd": "Until",
+      "quietHint": "Quiet hours silence the notification rather than dropping it, so nothing is lost. Critical alerts still ring.",
+      "reset": "Reset device rules",
+      "caveat": "A notification filtered here has still been delivered to the browser. Prefer server-side channel routing and quiet hours whenever they can express the same rule.",
+      "sectionAria": "Per-device notification and data rules"
     },
     "archived": {
       "summary": {
@@ -757,7 +856,10 @@
         "warnings": "Warnings",
         "info": "Info",
         "unread": "Unread"
-      }
+      },
+      "title": "Archived notifications",
+      "subtitle": "Notifications you previously archived. Restore to bring them back.",
+      "backToInbox": "Back to inbox"
     }
   }
 }
