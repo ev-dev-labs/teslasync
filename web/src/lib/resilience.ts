@@ -887,7 +887,7 @@ async function _doFetch<T>(
         let probeUnreachable = false
         try {
           const probe = await fetch(`${getApiBase()}/api/v1/system/version`, {
-            method: 'HEAD',
+            method: 'GET',
             redirect: 'manual',
           })
           if (probe.status === 401 || probe.status === 403 || probe.type === 'opaqueredirect'
