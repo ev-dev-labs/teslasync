@@ -8,9 +8,8 @@ import {
 
 import { PageLayout, Section, CardGrid, LayoutCard } from '@/components/layout';
 import { Badge, Button, DataTable, Caption, Text, type Column, useSortToggle } from '@/components/ui';
-import { StatGroup, type StatMetric } from '@/components/data-display';
+import { StatGroup, useMetricPreferences, type StatMetric } from '@/components/data-display';
 import { BatteryEvidenceBrief } from '../components/operationalbrief-all/BatteryEvidenceBrief';
-import { useMetricPreferences } from '@/components/data-display/stat-reference';
 import { formatMetric, type StatPeriod } from '@/lib/metric-reference';
 import { AIVampireDrainExplanation } from '@/components/ai';
 import {

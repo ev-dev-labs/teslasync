@@ -1,8 +1,7 @@
 import { Children, type ReactNode } from 'react';
 import {
-  CardGrid, type CardGridItem,
+  CardGrid, useCardPlacement, type CardGridItem,
 } from '@/components/layout';
-import { useCardPlacement } from '@/components/layout/layout-reference';
 import { cn } from '@/lib/cn';
 
 export interface BatteryPanelGridProps {

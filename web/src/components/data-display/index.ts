@@ -1,6 +1,7 @@
 export { StatCard } from './StatCard';
 export { StatStrip } from './stat-reference/StatStrip';
 export { StatGroup } from './stat-reference/StatGroup';
+export { useMetricPreferences } from './stat-reference/useMetricPreferences';
 export type { StatStripProps, StatGroupProps, StatMetric } from './stat-reference/types';
 export type { StatPeriod, MetricPreferences, MetricId } from '@/lib/metric-reference';
 export {

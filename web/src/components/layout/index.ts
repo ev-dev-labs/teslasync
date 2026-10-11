@@ -8,6 +8,7 @@ export { Grid } from './Grid';
 export { PageLayout, type PageLayoutProps } from './layout-reference/PageLayout';
 export { Section, type SectionProps } from './layout-reference/Section';
 export { CardGrid, type CardGridItem, type CardGridProps } from './layout-reference/CardGrid';
+export { useCardPlacement } from './layout-reference/CardPlacementContext';
 export { LayoutCard, type LayoutCardProps } from './layout-reference/LayoutCard';
 export { ChartCard, type ChartCardProps } from './layout-reference/ChartCard';
 export { LockedNotice, type LockedNoticeProps } from './layout-reference/LockedNotice';
