@@ -482,9 +482,50 @@ describe('SettingsPage — loading & empty placeholders', () => {
     expect(screen.getByText('Distance')).toBeInTheDocument()
     expect(screen.getByText('Currency')).toBeInTheDocument()
     expect(screen.getByTestId('settings-preferences-summary')).toHaveAttribute('aria-busy', 'true')
-    expect(screen.getByTestId('settings-preferences-summary').querySelectorAll('[data-operational-value]')).toHaveLength(0)
+    expect(screen.getByTestId('settings-preferences-summary').querySelectorAll('[data-operational-value]')).toHaveLength(1)
     // The rest of the page still renders (never a frozen/blank screen).
     expect(screen.getByRole('link', { name: /Data export/i })).toBeInTheDocument()
+    const summary = screen.getByTestId('settings-preferences-summary')
+    const metrics = within(summary).getAllByRole('listitem')
+    expect(metrics).toHaveLength(7)
+    expect(metrics.map(metric => metric.getAttribute('data-operational-metric'))).toEqual([
+      'settings-preference-0', 'settings-preference-1', 'settings-preference-2',
+      'settings-preference-3', 'settings-preference-4', 'settings-preference-5',
+      'settings-preference-6',
+    ])
+    for (const remote of metrics.slice(0, 6)) {
+      expect(remote).toHaveAttribute('data-value-state', 'missing')
+      expect(remote.querySelector('[data-operational-value]')).toBeNull()
+      expect(remote.querySelectorAll('[aria-busy="true"]')).toHaveLength(1)
+      expect(remote.querySelector('[aria-busy="true"] [aria-hidden="true"]')).toBeInTheDocument()
+    }
+    const typography = metrics[6]
+    expect(typography).toHaveAttribute('data-value-state', 'value')
+    expect(typography.querySelector('[data-operational-value]')).toHaveTextContent('Inter')
+    expect(typography.querySelector('[aria-busy="true"]')).toBeNull()
+    return waitFor(() => {
+      expect(within(typography).getByText('Inter')).toBeVisible()
+      expect(within(typography).getByText('100%')).toBeVisible()
+      expect(within(summary).getByText('Loading source')).toBeVisible()
+    }).then(() => {
+      fireEvent.click(within(summary).getByRole('button', { name: 'Review details' }))
+      const drawer = screen.getByRole('dialog')
+      return waitFor(() => {
+        expect(within(drawer).getByText('Inter')).toBeVisible()
+        expect(within(drawer).getByText('Inter')).not.toHaveAttribute('aria-busy')
+        expect(within(drawer).getByText('100%')).toBeVisible()
+        expect(within(drawer).getByText('100%').closest('[aria-busy="true"]')).toBeNull()
+        const pendingDrawerValues = drawer.querySelectorAll('[aria-busy="true"]')
+        expect(pendingDrawerValues).toHaveLength(6)
+        for (const pending of pendingDrawerValues) {
+          expect(pending.querySelector('[aria-hidden="true"]')).toBeVisible()
+          expect(pending.querySelector('[data-operational-value]')).toBeNull()
+          expect(pending.textContent).toBe('')
+        }
+        expect(within(drawer).getByText('Loading source')).toBeVisible()
+        expect(summary).toHaveAttribute('aria-busy', 'true')
+      })
+    })
   })
 
   it('renders em-dash placeholders — never blanks — when settings are unavailable', () => {
