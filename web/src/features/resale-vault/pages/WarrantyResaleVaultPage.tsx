@@ -16,7 +16,7 @@
  * step since `buildVaultReport()` is pure and cheap to recompute on every
  * toggle.
  */
-import { useMemo, useState } from 'react';
+import { useId, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { PageLayout, LayoutCard } from '@/components/layout';
 import { Tabs, HelperText, type TabItem } from '@/components/ui';
@@ -69,6 +69,7 @@ export default function WarrantyResaleVaultPage() {
   );
 
   const [activeTab, setActiveTab] = useState<VaultTabKey>('evidence');
+  const tabIdBase = useId();
 
   const tabs: TabItem[] = [
     { key: 'evidence', label: t('resaleVault.tabs.evidence', 'Evidence') },
@@ -103,6 +104,7 @@ export default function WarrantyResaleVaultPage() {
       </FadeIn>
 
       <Tabs
+        idBase={tabIdBase}
         tabs={tabs}
         activeTab={activeTab}
         onChange={(key) => setActiveTab(key as VaultTabKey)}
@@ -110,7 +112,12 @@ export default function WarrantyResaleVaultPage() {
         className="mt-4"
       />
 
-      <div role="tabpanel" className="mt-4 space-y-4">
+      <div
+        role="tabpanel"
+        id={`${tabIdBase}-panel-${activeTab}`}
+        aria-labelledby={`${tabIdBase}-tab-${activeTab}`}
+        className="mt-4 space-y-4"
+      >
         {activeTab === 'evidence' && (
           <FadeIn>
             <div className="space-y-4">

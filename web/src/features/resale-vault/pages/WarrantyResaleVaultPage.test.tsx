@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { act, render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { act, render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
@@ -208,5 +208,103 @@ describe('WarrantyResaleVaultPage', () => {
     expect(screen.getByRole('checkbox', { name: 'Battery health' })).not.toBeChecked();
     expect(screen.getByRole('combobox', { name: 'VIN disclosure' })).toHaveValue('full');
     expect(screen.getByRole('switch', { name: 'Use exact timestamps' })).toBeChecked();
+  });
+});
+
+describe('WarrantyResaleVaultPage tab/panel identity', () => {
+  afterEach(() => vi.restoreAllMocks());
+  beforeEach(() => {
+    selectedVehicleId = 1;
+    requestMock.mockReset();
+    requestMock.mockImplementation((path: string) => Promise.resolve(routeResponse(path)));
+    __resetKeyRepositoryForTests();
+    __resetAuditTrailForTests();
+  });
+
+  it('links each selected tab to its named active panel and preserves IDs when returning to Evidence', async () => {
+    renderPage();
+    expect(await screen.findByText('95.00%')).toBeInTheDocument();
+    const tabs = screen.getAllByRole('tab');
+    const originalIds = tabs.map((tab) => tab.id);
+    const evidencePanelId = screen.getByRole('tabpanel', { name: 'Evidence' }).id;
+
+    for (const tab of tabs) {
+      fireEvent.click(tab);
+      const panel = screen.getByRole('tabpanel', { name: tab.textContent ?? '' });
+      expect(screen.getAllByRole('tabpanel')).toHaveLength(1);
+      expect(tab).toHaveAttribute('aria-selected', 'true');
+      expect(tab).toHaveAttribute('tabindex', '0');
+      expect(tab).toHaveAttribute('aria-controls', panel.id);
+      expect(document.getElementById(tab.getAttribute('aria-controls') ?? '')).toBe(panel);
+      expect(panel).toHaveAttribute('aria-labelledby', tab.id);
+      expect(document.getElementById(panel.getAttribute('aria-labelledby') ?? '')).toBe(tab);
+      for (const inactive of tabs.filter((item) => item !== tab)) {
+        expect(inactive).toHaveAttribute('aria-selected', 'false');
+        expect(inactive).toHaveAttribute('tabindex', '-1');
+      }
+    }
+
+    fireEvent.click(tabs[0]);
+    expect(screen.getByRole('tabpanel', { name: 'Evidence' })).toHaveAttribute('id', evidencePanelId);
+    expect(screen.getAllByRole('tab').map((tab) => tab.id)).toEqual(originalIds);
+    expect(screen.getByText('95.00%')).toBeInTheDocument();
+    expect(screen.getByText('Passport provenance hash: abc')).toBeInTheDocument();
+    expect(screen.getByText('Basic')).toBeInTheDocument();
+  });
+
+  it('keeps keyboard automatic activation, focus and roving selection linked across arrows, Home and End', async () => {
+    renderPage();
+    await screen.findByText(/evidence inventory/i);
+    const tabs = screen.getAllByRole('tab');
+    tabs[0].focus();
+    const moves = [
+      { from: 0, key: 'ArrowRight', to: 1 },
+      { from: 1, key: 'End', to: 4 },
+      { from: 4, key: 'ArrowRight', to: 0 },
+      { from: 0, key: 'ArrowLeft', to: 4 },
+      { from: 4, key: 'Home', to: 0 },
+    ];
+
+    for (const { from, key, to } of moves) {
+      fireEvent.keyDown(tabs[from], { key });
+      const selected = tabs[to];
+      await waitFor(() => expect(selected).toHaveFocus());
+      const panel = screen.getByRole('tabpanel', { name: selected.textContent ?? '' });
+      expect(selected).toHaveAttribute('aria-selected', 'true');
+      expect(selected).toHaveAttribute('tabindex', '0');
+      expect(selected).toHaveAttribute('aria-controls', panel.id);
+      expect(panel).toHaveAttribute('aria-labelledby', selected.id);
+      expect(tabs.filter((tab) => tab.tabIndex === 0)).toEqual([selected]);
+    }
+    expect(screen.getByText(/evidence inventory/i)).toBeInTheDocument();
+  });
+
+  it('isolates tab and panel IDs between simultaneous page instances and retains identity on rerender', async () => {
+    const { container, rerender } = renderPage();
+    rerender(<><WarrantyResaleVaultPage /><WarrantyResaleVaultPage /></>);
+    const tablists = within(container).getAllByRole('tablist');
+    const first = within(tablists[0]);
+    const second = within(tablists[1]);
+    const firstEvidence = first.getByRole('tab', { name: 'Evidence' });
+    const secondEvidence = second.getByRole('tab', { name: 'Evidence' });
+    expect(firstEvidence.id).not.toBe(secondEvidence.id);
+    expect(firstEvidence.getAttribute('aria-controls')).not.toBe(secondEvidence.getAttribute('aria-controls'));
+    expect(new Set(within(container).getAllByRole('tab').map((tab) => tab.id)).size).toBe(10);
+    const originalIds = within(container).getAllByRole('tab').map((tab) => tab.id);
+
+    const firstDisclosure = first.getByRole('tab', { name: 'Disclosure profile' });
+    fireEvent.click(firstDisclosure);
+    const disclosurePanel = within(container).getByRole('tabpanel', { name: 'Disclosure profile' });
+    const evidencePanel = within(container).getByRole('tabpanel', { name: 'Evidence' });
+    expect(firstDisclosure).toHaveAttribute('aria-controls', disclosurePanel.id);
+    expect(disclosurePanel).toHaveAttribute('aria-labelledby', firstDisclosure.id);
+    expect(secondEvidence).toHaveAttribute('aria-controls', evidencePanel.id);
+    expect(evidencePanel).toHaveAttribute('aria-labelledby', secondEvidence.id);
+    expect(secondEvidence).toHaveAttribute('aria-selected', 'true');
+
+    rerender(<><WarrantyResaleVaultPage /><WarrantyResaleVaultPage /></>);
+    expect(within(container).getAllByRole('tab').map((tab) => tab.id)).toEqual(originalIds);
+    expect(within(container).getByRole('tabpanel', { name: 'Disclosure profile' })).toHaveAttribute('id', disclosurePanel.id);
+    expect(within(container).getByRole('tabpanel', { name: 'Evidence' })).toHaveAttribute('id', evidencePanel.id);
   });
 });

@@ -2,6 +2,36 @@
 
 ## Current phase: 4 - Source repairs committed; current pilot gates blocked
 
+Latest source commit:16f6aba4b5/actual1048. Exact nine live-read source/test/doc
+files plus parentqueue are committed; native Git receipts verify staged and
+committed path sets and empty index. Source-only acceptance2533cd10 remains
+qualified: installed image unchanged, source parity unknown, browser and
+Phase4 acceptance false. Mandatory compiler1050 is not yet due.
+
+### Explicit latest local Docker request
+
+The user requested: "run so far latest in local docker if possible".
+This authorizes only the current local teslasync-local-demo API/web build
+and container update, using the existing local-demo-compose.yml override
+and loopback ports8080/3119. It does not authorize cloud deployment, push,
+permission/configuration changes, database wipes, worker recreation or a
+Phase4 gate waiver. Existing PostgreSQL volume
+teslasync-local-demo_postgres_data remains untouched; database version254
+is clean and already matches the latest source migration.
+All five repair workers delivered terminal reports and released their
+source/validation leases; actual running actors0. Four source repairs
+remain execution-blocked; warranty source is independently source-only
+accepted604facd1/73pins with32coupled tests, scopedESLint0 and scoped
+audit/typecheck0. Original page inverse and all8old test callbacks/fixtures
+remain byte-exact;3new tests added. Exact2reported shipping paths plus
+parentqueue are authorized for normal sequential scoped commit.
+Do not dispatch source writers while this local build's inputs
+are frozen. Schedule21 remains active; schedules19/20 remain stopped.
+
+| Status | Phase | Item | Owner | Acceptance |
+| --- | --- | --- | --- | --- |
+| [~] | 4 | phase4-latest-local-docker-rollout | parent exact existing local project | User-authorized API/web only. Preserve database/cache/MQTT/photo volumes and all other service IDs; verify current source/build identity, healthy readiness, web reachability and real configured live endpoint. Warranty source intake604facd1 accepted; build/update pending, no runtime or phase acceptance yet. |
+
 ### Active source continuation
 
 Latest user direction is to keep working autonomously and make good decisions
@@ -81,7 +111,42 @@ test run is implied; current SQL150pending/14inprogress/18blocked.
 | [!] | 4 | phase4-inherited-readiness-vehicles | vehicles, fleet-ops | 1 | BLOCKED original delivery locator; classification intakenc0fda4e5/280sourcepins/13audit-page matches. Source and browser acceptance remain open. |
 | [x] | 4 | phase4-inherited-readiness-workflows | action-center, automations, notifications, onboarding, developer-reference | 1 | DONE classification intakenc0fda4e5/320sourcepins/17immutable inputs. Three-domain original mapping preserved; onboarding/developer-reference mapping absent, not newly assigned implementation. |
 
-Current HEAD1047/a458403c50 contains the accepted Watch capability repair.
+### Rolling first-time retained defect repairs
+
+The original user authorized needed fixes, and the latest rolling-dispatch
+direction requires useful independent work rather than duplicate migrations.
+Parent intakec0fda4e5 identifies four precise source-confirmed inherited
+defects with disjoint source/test owners. These NEW first implementation
+items are prospectively authorized below. They do not reopen the exhausted
+Dashboard/native/live-runtime/layout attempts, implement Phase5 migrations,
+or accept a phase/gate. Pending original-handoff locators do not change the
+independently pinned evidence for these exact defects. No shared/hook/backend/
+catalog edits or new user-visible wording are authorized. Preserve every
+existing section/action/test; selected tests and strict scoped lint only.
+Full checks remain parent-owned and serialized. Reservations are not running.
+
+| Status | Phase | Item | Exact source/test owner | Attempt | Dependency and acceptance |
+| --- | --- | --- | --- | --- | --- |
+| [x] | 4 | phase4-retained-defect-scope-contract | parent bounded source-evidence intake | 1 | Intakec0fda4e5 pins current sources and original audit obligations. Approve local workspace identity cleanup, existing independent query registration, and existing tab/panel identity only; not business/schema/permission changes. Source/gates remain unaccepted. |
+| [!] | 4 | phase4-repair-case-dismiss-scope-reset | system/components/RepairCaseWorkspace.tsx and its exact .test.tsx | 1 | Source defect remains unresolved. Worker idleBLOCKED/released; parent intakeef7d8e22 verifies unchanged originals. Parent selected incompatible bug-fixer shipping profile, which requires clean-origin/main/Git/Docker/PR. Not a product worktree defect; no source implementation/tests or automatic relaunch. Original audit186 obligation preserved. |
+| [!] | 4 | phase4-maintenance-preview-scope-reset | vehicle-systems/pages/MaintenancePage.tsx and exact .test.tsx | 1 | Source defect remains unresolved. Worker idleBLOCKED/released; intakeef7d8e22 verifies unchanged originals. Same parent execution-profile routing mismatch, not permission to reset/stash/rebranch or add Schedule capability. Original audit222 preview/category identity obligation preserved; no automatic relaunch. |
+| [!] | 4 | phase4-climate-source-registry-repair | vehicle-systems/pages/ClimateControlPage.tsx and exact .test.tsx | 1 | Source defect remains unresolved. Worker idleBLOCKED/released; intakeef7d8e22 verifies unchanged originals. Same parent execution-profile routing mismatch; no Git/build/API/catalog widening. Original audit218 independent charging source registry obligation preserved; no automatic relaunch. |
+| [x] | 4 | phase4-warranty-tab-panel-identity | resale-vault/pages/WarrantyResaleVaultPage.tsx and exact .test.tsx | 1 | Worker idleDONE/released/report246759f6; parent intake604facd1/73pins/source-only accepted. Instance-safe useId consumes existing Tabs.idBase and connects active panel ID/label. All5tabs/14domainpanelcomponents/actions preserved,8original callbacks/fixtures exact,3new tests; parent32coupled tests/scopedESLint/audit+TypeScript native0. Worker launcher failures and out-of-cadence bundled compiler retained; parent independently serialized final validation. No certificate wording/schema/shared changes or browser/phase acceptance. |
+| [!] | 4 | phase4-alignment-chart-flag-alternative | charging/pages/ChargeDepartureAlignmentPage.tsx and charge-departure-alignment-modernization/ChargeDepartureAlignmentPage.runtime.test.tsx | 1 | Worker idleBLOCKED/released, report8e417aff unchanged across both terminal turns. Parent intakeb51b18aa/37pins verifies unchanged originals and14expanded cases authored,0executed. Same parent execution-profile mismatch; no Git/source/assertion/validation changes. Original audit077 obligation unresolved; no automatic relaunch. |
+| [ ] | 4 | phase4-battery-category-hook-closure | data-display/index.ts, layout/index.ts, battery/pages/VampireDrainPage.tsx and exact test, battery/components/modernization/BatteryPanelGrid.tsx and exact test | 1 | Battery readiness original remainingPaths[0,1]. Parent confirmed existing hook definitions/nested exports and absence from public category indices. Pending shared-contract receipt and release of current validators before changing their shared import inputs. Expose existing hooks through concrete-module re-exports, then close two retained consumer imports; no hook implementation/layout/preference rewrite. Not dispatched. |
+| [x] | 4 | phase4-category-hook-public-contract | exact shared hook definitions, nested/category indices and design contract | 1 | Parente3bfc229/7pins confirms existing hooks/nested exports and absent public category exports. No shipping source changes or validation/phase acceptance. Consumer closure waits remaining validator input release and its own prospective source baseline. |
+| [x] | 4 | phase4-stop-score-protected-energy-input-contract | UnitInput, unitInput, SI energy converter, journey handler/test/router | 1 | Parentdf2eeb60/6protected pins confirms canonical Wh input/onChange, kWh display conversion and direct score-stops energy_wh contract/range. Existing tests inspected, not run. Does not prove current StopScorePanel state-to-request magnitude. |
+| [ ] | 4 | phase4-mobility-stop-score-energy-contract-readiness | read-only trips/components/StopScorePanel.tsx and exact supplied protected input receipt | 1 | Newly available protected contracts satisfy original readiness prerequisites. Current consumer magnitude question remains unresolved; no source edits/tests/browser/new business policy authorized. Not dispatched and not classified as a proved bug. |
+
+Parent dispatch correction: bug-fixer's mandatory shipping workflow is not
+compatible with this mission's pinned shared-worktree source-only execution.
+Four blocked reports are not source repairs, not stuck workers, and not new
+permission to clean the worktree, waive gates or deploy. Two disclosed Git
+fetches are retained as caller-contract violations. Future genuinely NEW
+source-only objectives must use a compatible profile; do not automatically
+relaunch these same failed objectives.
+
+Historical preceding source HEAD1047/a458403c50 contains the accepted Watch capability repair.
 The GET version-probe repair remains committed at1046/b438ec9c62.
 Historical authority1045/c31ffc0748: all16preflightstages independently accepted
 (ae9a5fdf); native runs1/2 are blocked with zero pilot captures, not browser
@@ -92,8 +157,10 @@ independentlyintaken2a4324ad/19fixtures0/runtimeNOTRUN. Versionowneridleaccepted
 77c2b02f/committed1046; WatchFINAL2idleDONE/independentlyintaken652c61ca,
 7038pins/all6748protectedinputs/74actualtests/61prioridentitiespreserved.
 Live-read FINAL2 delivered idleDONE/released and is independently source-only
-accepted at2533cd10. Exact scoped commit is pending; zero active source leases.
-No installed-runtime/browser/phase acceptance follows from that source repair.
+accepted at2533cd10, committed16f6aba4b5/actual1048. No source repair is pending
+for that item; the explicit local Docker request above is now in progress.
+No installed-runtime/browser/phase acceptance follows until real rollout
+verification. Zero active worker source leases; parent validation/build freeze.
 Watch exact7path commit1047
 and the empty index are verified; the commit receipt is
 phase4-watch-source-commit1047.json.
