@@ -11,6 +11,8 @@ import shell from './en/shell.json'
 
 type Json = Record<string, unknown>
 
+export const drivesEmptyAddition = ['drives.emptyForCollection.title', 'No drives in this view'] as const
+
 export const copyOwnerAdditions = [
   ['helix.thinkingButtonLabel', 'Helix is thinking…'],
   ['helix.thinkingStatusLabel', 'Helix is thinking'],
@@ -27,6 +29,7 @@ export const copyOwnerAdditions = [
 // Exact accepted key-only changes; reverse only these calls for the frozen
 // producer fingerprint. Defaults, options, gates and all other bytes stay pinned.
 const copyOwnerSourceSplits = [
+  ['web/src/features/driving/components/drives-orchestrator/DrivesEvidenceEmpty.tsx', 'drives.emptyForCollection.title', 'drives.emptyForCollection', 'No drives in this view', 1],
   ['web/src/components/ai/AIFeatureCard.tsx', 'helix.thinkingButtonLabel', 'helix.thinking', 'Helix is thinking…', 1],
   ['web/src/features/driving/components/DrivesEvidenceTable.tsx', 'drives.coll.allOption', 'drives.coll.all', 'All drives', 1],
   ['web/src/features/driving/hooks/useDrivesListPageCollections.ts', 'drives.coll.allPill', 'drives.coll.all', 'All', 2],
@@ -1206,16 +1209,18 @@ describe('excluded806 feature-owned actual producer canonical defaults', () => {
   })
 
   it('preserves all 28257 predecessor leaves and every previously accepted value', () => {
+    expect(drivesEmptyAddition).toEqual(['drives.emptyForCollection.title', 'No drives in this view'])
+    expect(nested(catalog, drivesEmptyAddition[0])).toBe(drivesEmptyAddition[1])
     expect(additions).toHaveLength(806)
     expect(copyOwnerAdditions).toHaveLength(10)
-    const keys = new Set<string>([...additions, ...copyOwnerAdditions].map(([key]) => key))
-    expect(keys.size).toBe(816)
+    const keys = new Set<string>([...additions, ...copyOwnerAdditions, drivesEmptyAddition].map(([key]) => key))
+    expect(keys.size).toBe(817)
     const oldEntries = leaves(catalog).filter(([key]) => !keys.has(key))
       .sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0)
     expect(oldEntries).toHaveLength(28257)
     expect(createHash('sha256').update(JSON.stringify(oldEntries)).digest('hex'))
       .toBe('890c0369385274774b8b670dbaa98036c4f0da7bec18213b6f78d35c372e90c6')
-    expect(leaves(catalog)).toHaveLength(29073)
+    expect(leaves(catalog)).toHaveLength(29074)
     expect(catalog.settings.title).toBe('Settings')
     expect(catalog.pwa).toMatchObject(shell.pwa)
   })

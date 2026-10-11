@@ -1046,7 +1046,8 @@
       "cta": "Reset filters"
     },
     "emptyForCollection": {
-      "msg": "Try switching to a different collection or clearing your filters."
+      "msg": "Try switching to a different collection or clearing your filters.",
+      "title": "No drives in this view"
     },
     "emptyMessage": "Drive data will appear here once your vehicle records trips.",
     "emptyTitle": "No drives recorded yet",

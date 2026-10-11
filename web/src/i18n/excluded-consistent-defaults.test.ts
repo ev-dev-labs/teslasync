@@ -6,7 +6,7 @@ import baseline from './known-missing-keys.json'
 import runtimeManifest from './en/runtime-manifest.json'
 import usageManifest from './en/usage-manifest.json'
 import shell from './en/shell.json'
-import { copyOwnerAdditions, featureOwnedAdditions } from './excluded-feature-owned-producers.test'
+import { copyOwnerAdditions, drivesEmptyAddition, featureOwnedAdditions } from './excluded-feature-owned-producers.test'
 
 type Json = Record<string, unknown>
 
@@ -163,17 +163,19 @@ describe('exact81 feature-owned consistent producer defaults', () => {
   })
 
   it('preserves the frozen fingerprint of all old leaves, including accepted18/PWA13/Settings', () => {
+    expect(drivesEmptyAddition).toEqual(['drives.emptyForCollection.title', 'No drives in this view'])
+    expect(nested(catalog, drivesEmptyAddition[0])).toBe(drivesEmptyAddition[1])
     expect(additions).toHaveLength(81)
     expect(featureOwnedAdditions).toHaveLength(806)
     expect(copyOwnerAdditions).toHaveLength(10)
-    const keys = new Set<string>([...additions, ...featureOwnedAdditions, ...copyOwnerAdditions].map(([key]) => key))
-    expect(keys.size).toBe(897)
+    const keys = new Set<string>([...additions, ...featureOwnedAdditions, ...copyOwnerAdditions, drivesEmptyAddition].map(([key]) => key))
+    expect(keys.size).toBe(898)
     const oldEntries = leaves(catalog).filter(([key]) => !keys.has(key))
       .sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0)
     expect(oldEntries).toHaveLength(28176)
     expect(createHash('sha256').update(JSON.stringify(oldEntries)).digest('hex'))
       .toBe('e04f0f9479fe65e8a0346bc7dd53d53f662cc66850c18440ceae702a43698966')
-    expect(leaves(catalog)).toHaveLength(29073)
+    expect(leaves(catalog)).toHaveLength(29074)
     expect(english.t('settings.title')).toBe('Settings')
     expect(catalog.pwa).toMatchObject(shell.pwa)
     expect(shell.pwa.offline).toEqual(catalog.pwa.offline)

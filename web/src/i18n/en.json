@@ -19215,7 +19215,8 @@
     "noStatsRange": "No drives in this range",
     "fsdAmbiguous": "ambiguous",
     "emptyForCollection": {
-      "msg": "Try switching to a different collection or clearing your filters."
+      "msg": "Try switching to a different collection or clearing your filters.",
+      "title": "No drives in this view"
     },
     "sortFsd": "FSD share",
     "results": "results",

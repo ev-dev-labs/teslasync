@@ -11,7 +11,7 @@ export function DrivesEvidenceEmpty({ collection, fsdFilter, hasValueFilters, t,
         icon={<Route className="h-8 w-8" />}
         title={
           collection !== 'all' || fsdFilter !== 'all' || hasValueFilters
-            ? t('drives.emptyForCollection', 'No drives in this view')
+            ? t('drives.emptyForCollection.title', 'No drives in this view')
             : t('drives.emptyTitle', 'No drives recorded yet')
         }
         message={
