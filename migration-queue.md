@@ -1,18 +1,22 @@
 # Frontend modernization queue
 
-## Current phase: 4 - Source/build gates accepted; mounted pilot gates blocked
+## Current phase: 4 - Source repairs active; current pilot gates blocked
 
-Current authority1045/c31ffc0748: all16preflightstages independently accepted
+Current HEAD1046/b438ec9c62 containsacceptedGETversion-probe2sourcefix+queue.
+Historical authority1045/c31ffc0748: all16preflightstages independently accepted
 (ae9a5fdf); native runs1/2 are blocked with zero pilot captures, not browser
 acceptance. Readinessprobesexhausted; rootandDrivesREADYobserved, finalmounted
 mode/capture/sourcefindingsremain. ReadonlyHTTPownerintaken01d9a8c9;
 layoutowner2attemptsexhausted/noinvestigation/nochanges; observerSessionfix
-independentlyintaken2a4324ad/19fixtures0/runtimeNOTRUN. Health19:04Zobserved
-twoactualrunningactors: GETversionprobe(99cddea1), watchqualification(c0b197e5).
-Backend5b219709attempt1idleBLOCKED/missingmethodology, intaken8543d442/nochanges;
-exactuser-locked66b5705cGitblobrecovered4616f525/67f4d347intoSessiononly.
-Secondfinalsame-taskbackendattemptprospectivelyqueuedwithrecoveredprerequisite.
-Exclusive2runningplus1resumablesourcelease, no frozenbrowser/fullgatesduringwrites;
+independentlyintaken2a4324ad/19fixtures0/runtimeNOTRUN. Versionowneridleaccepted
+77c2b02f/committed1046; WatchFINAL2idleDONE/independentlyintaken652c61ca,
+7038pins/all6748protectedinputs/74actualtests/61prioridentitiespreserved.
+Allknownsourceworkersidle/released; Watchsix-source+queuetargets1047.
+Backend5b219709secondFINALidleBLOCKED/intaken0760d803/nochanges; bothattempts
+exhausted, no thirdimplementationretry. Narrowpolicyintakefae60c11 findsparent
+per-principalprerequisitenotsubstantiatedbyexistingtrusted/fleetpeercontracts,
+notproofmissingglobalauthorizationcapabilityornewDashboardgrant. No source
+acceptance/blanketGetAllsubstitution. No frozenbrowser/fullgatesduringwrites;
 launchesarenotpermanentlivecounts. Fullsuite NOTSTARTED; Phase3 genuinely closed,
 Phase4 still open, Phase5-7 gated. Mandatory compiler1050 unchanged. Historical
 milestones below are retained, not current live worker/gate status.
@@ -27,6 +31,39 @@ Exacttwo-source+queuecommitnowtargets1046; older1045preflightstayshistorical,
 freshcoherentboundaryrequiredafterallsourceleasesrelease. Watchownerreported
 idleDONEawaitingindependentintake; backendsecondfinalattemptstillrunningat
 latestknownIDobservation/nozombie. Nextmandatorycompiler1050unchanged.
+Exactversionclosurecommittedb438ec9c62/actual1046: onlytwoacceptedreported
+sources+queue; staged/committedpathsetsandemptyindexverified. Watchdelivery
+review8190b397pinsall6currentfiles/31096originalEnglishleaves+3new/61actual
+tests2physicalfiles0, butNEWsilentcatchinuseWatch.ts29-35convertsstorage/URL
+accessfailureintofalse/notconfigured. DeliveryNOTACCEPTED/nocommitallowed.
+Secondfinalsame-taskcorrectionprospectivelyqueuedfromall6currentbytes/
+manifestb659dbaf; retain61caseidentities/oldcatalogleaves/failedtrials.
+Backend5b219709secondfinaldeliveryidleBLOCKED: requiredauthenticatedallowed
+vehiclemappingunresolved; noGetAllsubstitution/edits/tests. Twoattempts
+exhausted, pendingindependentblockedintake; no thirdimplementationretry.
+BackendFINALblockedintake0760d803 verifies16source/artifactpins/all5owned
+source/testbytesunchanged/staticnative0/twolosslessrawstreams; no Go tests/
+race/compile/installedAPIparity. Originalfailedinspections/historyretained.
+Narrowparentpolicyreceiptfae60c11 pins3existingcontracts: StateReadertrusted
+callerADR, explicitcompletefleetvehiclelist, tripdetailrouterauth/noownership.
+Parentrequiredprincipal-scopedDashboardrosterisnotestablishedbythosepeer
+contracts; distinguishassignment/policymismatchfrommissingproductcapability.
+PeerbehavioraloneisnotanewDashboard-specificgrant; no implementationretry.
+Currentbackendstatsremainunrepaired/currentmountedAPIstillOctober3. Fresh
+coherentgate/fullsuiteblocked; Watchfinalcorrectionisoneexistingrealitem,
+not32fillerworkersorPhase5implementationthroughfaileddependencies.
+WatchFINAL2idleDONE/released/intake652c61ca:7038source/artifactpins/all6748
+protected1045inputs unchanged excludingonly6watch+2acceptedversionfiles.
+All6currentinputs matchnativefinaltestrunbefore/after;74passed2physicalfiles,
+all61prioridentities/multiplicitiesand54oldassertioncallbackbytes/orderretained.
+31096originalEnglishleaves/31099firstdeliveryleaves preserved; exactly2
+furtherwatch-errorleaves(5total),184unownedgeneratedfilesunchanged. Original
+widget219lines/current256; bothshells/all5sections/brief/lock/charging/timestamp
+retained. Failedread/saveprerequisiteexplicitlocalizedalert+localretry;
+no-keyread/poll/retrygated, validrequests/invalid401s/querykeys/command/SIwire/
+headerblocksunchanged. Strictselectedlint/catalogcheck0; failedcatalogcandidate
+andhook-suiteregistrationtrialimmutable. Six-sources+queueclosuretargets1047;
+no currentcompiler/build/browser/fullsuite/Phase4acceptance. Next1050unchanged.
 
 Latest17:21Z intake supersedes old runtime/scan observations below, not failure
 history. Both remaining workers delivered idle/DONE and released every writer.
@@ -2110,9 +2147,11 @@ Phase2 intake health: all19 original primitive actors delivered idle DONE (not s
 | [!] | 4 | phase4-dashboard-layout-implicit-save | hook-only-bounded-bug-fixer | phase4-pilot-coherent-preflight | 2 | 2026-10-11T18:53:08Z | Bothattempts33cf6532idleBLOCKED/noinvestigation/nochanges; customcheckoutisolationrefusaldespitenoownedconflict. Attempt1forbiddenfetch/statusdisclosed; attempt2noGit. Fourbaselinefilesunchanged/exclusiveleasereleased; no acceptedfix/nothirdattempt. Parentdirectsourceattributionfindsintentionalautofit/pendingdraftretry, no normalhydrationwrite. ObservedPUTinitiatornotcapturedsohook-onlydefectNOTPROVEN; preserveintentionalautosave/autofit/recovery, qualifyfuturecausalread-onlydiagnosticsnotinventfix. |
 | [x] | 4 | phase4-pilot-observer-settlement-repair | Session-only-QA-specialist | phase4-pilot-coherent-preflight | 1 | 2026-10-11T18:58:52Z | Worker98726505idleDONE/released; independentintake2a4324ad verifies13source/artifactpins/sixrawstreams/19focusedactualfixturespassed0/twosyntaxchecks0. Sessionadapterfix4cff1e4a/actualsettingsGET/bodycompletionandpostREADYfullmodewait; classifier/writeguardblocksbyteidentical. Unchangedcapturehelperinstrumentedwithouttolerance/limit/restorechange; originalfailurecauseunknown. Noshipping/Git/runtimeQA/newattemptenablement/page/phaseacceptance. Mountafterfreshacceptedsourcegate. |
 | [x] | 4 | phase4-resilience-version-method | scoped-network-diagnostic-fix | phase4-pilot-http-source-classification | 1 | 2026-10-11T19:09:51Z | Worker99cddea1idleDONE/released; independentintake77c2b02f/73reportedsource-artifactpins, exactone-lineHEAD->GETproductioninverse andoriginal7951bytetestprefix/otherfulltestretained. 19actualtests/onephysicalfile/11original+8newcasespassed/strictselectedlint0. Startupfailureand18pass1failnewassertiontrialpreserved; currentownedsourcesmatchactualtestrunpins. No initiatingTypeErrorfix/runtime/browser/phaseacceptance/fulltransitivegate. Exact2sources+queuecommitclosuretargets1046; mandatory1050unchanged. |
-| [~] | 4 | phase4-watch-key-capability | scoped-hook-widget-auth-capability | phase4-pilot-http-source-classification | 1 | - | Workerc0b197e5actualrunning422seconds/44toolsat19:04Z; fresh19:03heartbeat, nostuckpredicate. OwnuseWatch.ts+test/WatchSummaryWidget.tsx+test andEnglishcatalog+onlygeneratedownedwatchlocaleifrequired. GateSummary/Complicationabsentkeyandrenderexplicitcapability/unconfiguredstatewithoutinfinitepending; preservevalidkeyrequests/invalidkeyerrors/skipAuthRefresh/useractions. Nevercreate/read/logsecretkeys/serverauthbypass. Existingnewkeysreuseorlocalizedgenerator; preserveallsections/tests/data. No Git/PR/build/fullchecks; affectedtests/strictlint/cataloggenerate/checkonlyifchanged. |
-| [~] | 4 | phase4-dashboard-stats-typed-query | bounded-canonical-backend-integration | phase4-pilot-http-source-classification; phase4-si-methodology-evidence-recovery | 2 | - | Attempt1idleBLOCKED/intake8543d442/all5filesunchanged/testsNOTRUN; missingmandatorySIprerequisiteexactlyrecovered4616f525/userlocked66b5705c/67f4d347. Secondfinalsame-taskworker5b219709mustreadarchival13488bytesbeforeedits; originalattempt1immutable. Concretecurrentdashboardserviceuseslegacyvehicleportqueryselect/filtervehicles.user_idmissingfromtypedbaseline; real500/filteredDBidentifierdiagnostic. Owndashboardsvc/**/dashboard_handler.go+test/routerdashboardwiringonly/newdatabase/dashboardstats/** ifneeded. Usecanonicalexistingtypedqueries/accessscope/SI, bigintIDs andparameterizedaggregate; preserveauth/fleet/count/outputsemantics andalloriginaltests. No legacycolumn/migration/samplefallback/globalvehiclerepoworkaround. CurrentADR/backend/data/observability/SIinstructionsremainauthoritative; nooutofscopeunitsrename/writepath/schema. TargetedGo-racetests/compileonly; no Git/PR/deploy/fullchecks, no runtimeDBmutations. Exactnewpathsreported/pinned. |
+| [x] | 4 | phase4-watch-key-capability | scoped-hook-widget-auth-capability | phase4-pilot-http-source-classification | 2 | 2026-10-11T19:30:19Z | FINAL2idleDONE/released/independentintake652c61ca:7038pins/6748protectedoldinputs unchanged,6ownedsource/test/catalogcurrentpinsmatchnativefinal74pass2physicalfiles/all61prioridentities+13new/54oldassertioncallbackbytes/orderretained. Explicitfailedread/savealert/localretry distinctfromabsentkey; retainedfields/trust/measurements/timestamp/invalid401s/keyrequest/command/SIwire/headersemantics preserved. 31096originalEnglishleaves/31099priorleaves retained+2errorleaves/184othergeneratedunchanged;widget219to256lines/bothshells/all5sectionsretained. Strictselectedlint/catalogcheck0; oldstartup/rejectedcatch/currentfailedcatalogandsuiteregistrationtrialsimmutable. Exact6sources+queueclosuretargets1047; no compiler/build/browser/deployedAPI/phaseacceptance. |
+| [!] | 4 | phase4-dashboard-stats-typed-query | bounded-canonical-backend-integration | phase4-pilot-http-source-classification; phase4-si-methodology-evidence-recovery | 2 | 2026-10-11T19:14:25Z | FINALidleBLOCKED/released/intake0760d803/16pins/all5ownedfilesandtestsunchanged/staticnative0/twolosslessrawstreams.Go/race/compile/installedparityNOTRUN. Mandatorymethodologyreadverified; parentrequiredper-principalDashboardrosterunresolved.NoGetAllsubstitution/fakescope/legacycolumns/authchanges; oldreal500unrepaired.Twoattemptsexhausted/nohidden3. Narrowpolicyintakefae60c11 independentlypins3peercontracts/existingtrustedfleetbehavior: parentprerequisitenotsubstantiated, notproofglobalauthcapabilitymissing/newDashboardgrant. Bothfailedreports/inspectionsimmutable. |
 | [x] | 4 | phase4-si-methodology-evidence-recovery | parent-historical-prerequisite-recovery | phase4-pilot-http-source-classification | 1 | 2026-10-11T19:05:51Z | Exactexistinguserlocked66b5705cdafdf895e46b5bd3c42d54443bb4142fGitblobd8ae2067copiedbyteidenticallyintoimmutableSessionevidence13488bytes/SHA67f4d347, all3readonlynativecommands0/sixrawstreams/objectreceipt4616f525. Parentreadall6slices/5risks/lockeddecisions. No worktreerestore/newpolicy/rollback/bypass; currentADR/schemaremainauthoritative. Originalbackendattempt1blockednochangesintaken8543d442; secondfinalattemptonlyafterworkerreadsarchive. |
+| [x] | 4 | phase4-dashboard-auth-scope-contract | parent-readonly-assignment-contract-check | phase4-pilot-http-source-classification | 1 | 2026-10-11T19:18:00Z | Parentintakefae60c11 pins3actualpeerfiles/ADR119-128trustedcaller/currentvehiclelist99-143completefleet/tripsdetail24-29routerauthwithoutownership. Parentper-principalDashboardprerequisitenotsubstantiatedbythesecontracts; assignment/policymismatch, notproofglobalauthorizationfeaturemissing. PeerbehavioralonecannotauthorizeanewDashboardgrant; noGetAllsubstitution/implementation/thirdattempt/newpolicy/deploy. |
+| [!] | 4 | phase4-pilot-repaired-source-preflight | parent-fresh-coherent-source-boundary | phase4-resilience-version-method; phase4-watch-key-capability; phase4-dashboard-stats-typed-query; phase4-pilot-observer-settlement-repair | 1 | - | Freshserializedcurrent16stageboundaryrequiresallacceptedrepairsandstableclosure; version1046accepted/watchfinalcorrectionactive/backendfinal2BLOCKED.Separateold1045historicalpassretained; no freshcompiler/lint/build/browser/fullsuitewhileactivesourcelease.No waiver/oldpassreclassification; mandatory1050cadenceindependentwhenreached. |
 | [ ] | 4 | phase4-pilot-current-fullsuite | parent-frozen-coherent-fullsuite | phase4-pilot-coherent-preflight; phase4-pilot-current-native-acceptance | 1 | - | Exactly one fresh serialized frozen current full suite after fixes/current mounted matrix acceptance; default+JSON forks/maxWorkers2, unique immutable receipts, all original44960case identities retained plus new regressions, physical files not nested-suite count, zero failures/pending/todo. Verify source pins before/after and raw hashes. Only then close pilots/Phase4; Phase5 stays gated. |
 | [x] | 3 | phase3-coherent-final-integration | explicit-user-authorized-final-recovery | phase4-writers-paused | 2 | 2026-10-11T07:45:00Z | Terminal delivery consumed; parent independently verifies272artifact records including manifest+5immutable pins, 205currentowned records, exact115-path cumulative stage. All31091oldstructural leaves preserved+exact4=31095; all784original hash constants retained, four exact source inverses verified. Combined55files8572tests0; generator/check/namespace/shadow/scopedlint/strictscanner native0. Prior failures and wrapper display encoding failure retained. Source/catalog/test leases released; global gates remain unrun. |
 | [x] | 3 | phase3-guarded-plural-scanner-contract | narrow-scanner-correctness | - | 1 | 2026-10-11T07:45:00Z | Terminal consumed; parent verifies50artifacts+2sourcehashes. Narrow numeric-origin and dominating >1 cardinal-count AST proof, 23focusedtests passed, inherited14tests preserved, syntax0/0, strict native0 missing0. Negative guards/unknown sources/ordinal/context/language/spreads remain strict. Incidents caller unchanged; actual0/1hidden2/3localized; no catalog/suppression edits. Exact two-file scanner stage; source lease released. |

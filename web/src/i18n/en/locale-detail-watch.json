@@ -1,5 +1,12 @@
 {
   "watch": {
+    "capability": {
+      "notConfigured": "Watch access is not configured",
+      "description": "Watch readings require a wearable API key in this session. Manage API keys and open your configured watch link to enable readings. Retained readings are not refreshed until access is configured.",
+      "configure": "Manage API keys",
+      "readError": "Watch access could not be checked",
+      "readErrorDescription": "Watch access is unknown because browser session storage could not be read or saved. Retry after storage becomes available. Retained readings remain visible."
+    },
     "noVehicle": "No vehicle found",
     "timeToFull": "{{minutes}}m to full",
     "sentryOn": "Sentry mode on",

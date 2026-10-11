@@ -44,7 +44,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { render, screen, fireEvent, cleanup, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import type { WatchSummary, WatchComplication } from '@/api/hooks/useWatch';
+import type { WatchSummary, WatchComplication, WatchAvailability } from '@/api/hooks/useWatch';
 import type { OperationalBriefProps } from '@/components/data-display/OperationalBrief';
 import WatchSummaryWidget, { getBatteryColor } from './WatchSummaryWidget';
 import { BADGE_VARIANTS } from '@/components/ui';
@@ -165,6 +165,9 @@ function makeComplication(overrides: Partial<WatchComplication> = {}): WatchComp
 }
 
 interface SummaryQuery {
+  availability: WatchAvailability;
+  availabilityError?: Error | null;
+  recheckAvailability?: ReturnType<typeof vi.fn>;
   data: WatchSummary | null | undefined;
   isLoading: boolean;
   isFetching: boolean;
@@ -176,6 +179,7 @@ interface SummaryQuery {
 
 function makeSummaryQuery(overrides: Partial<SummaryQuery> = {}): SummaryQuery {
   return {
+    availability: 'configured',
     data: undefined,
     isLoading: false,
     isFetching: false,
@@ -188,12 +192,16 @@ function makeSummaryQuery(overrides: Partial<SummaryQuery> = {}): SummaryQuery {
 }
 
 interface ComplicationQuery {
+  availability: WatchAvailability;
+  availabilityError?: Error | null;
+  recheckAvailability?: ReturnType<typeof vi.fn>;
   data: WatchComplication | null | undefined;
   isLoading: boolean;
 }
 
 function makeComplicationQuery(overrides: Partial<ComplicationQuery> = {}): ComplicationQuery {
   return {
+    availability: 'configured',
     data: undefined,
     isLoading: false,
     ...overrides,
@@ -219,6 +227,86 @@ beforeEach(() => {
   useUnitsMock.mockReturnValue(makeUnits('mi', '°C'));
   useWatchSummaryMock.mockReturnValue(makeSummaryQuery({ data: makeSummary() }));
   useWatchComplicationMock.mockReturnValue(makeComplicationQuery({ data: makeComplication() }));
+});
+
+describe('WatchSummaryWidget — failed local prerequisite', () => {
+  it.each([1, 2])('shows an explicit failed %s-column prerequisite with field shells and local retry, not setup success', cols => {
+    const recheckSummary = vi.fn();
+    const recheckComplication = vi.fn();
+    const refetchSummary = vi.fn();
+    const refetchComplication = vi.fn();
+    useWatchSummaryMock.mockReturnValue({
+      ...makeSummaryQuery({
+        availability: 'prerequisite-error',
+        availabilityError: new Error('Watch access could not be checked'),
+        recheckAvailability: recheckSummary,
+        refetch: refetchSummary,
+      }),
+      isPending: true, fetchStatus: 'idle',
+    });
+    useWatchComplicationMock.mockReturnValue({
+      ...makeComplicationQuery({
+        availability: 'prerequisite-error',
+        availabilityError: new Error('Watch access could not be checked'),
+        recheckAvailability: recheckComplication,
+      }),
+      isPending: true, fetchStatus: 'idle', refetch: refetchComplication,
+    });
+    const { container } = renderWidget({ cols, rows: 2 });
+    expect(screen.getByRole('heading', { name: 'Watch summary' })).toBeInTheDocument();
+    expect(within(screen.getByRole('alert')).getByText('Watch access could not be checked')).toBeInTheDocument();
+    expect(screen.queryByText('Watch access is not configured')).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Manage API keys' })).not.toBeInTheDocument();
+    expect(screen.queryByText("Can't reach server")).not.toBeInTheDocument();
+    expect(screen.queryByText('No watch data')).not.toBeInTheDocument();
+    expect(screen.getByText('Battery')).toBeInTheDocument();
+    expect(container.querySelector('[aria-busy="true"]')).toBeNull();
+    expect(container.querySelector('[data-data-state="initialFailure"]')).toBeTruthy();
+    if (cols === 2) {
+      expect(screen.getByTestId('dashboard-watch-measurements-brief')).toBeInTheDocument();
+      for (const label of ['Range', 'Cabin', 'Lock', 'Charging', 'Last seen']) {
+        expect(screen.getByText(label)).toBeInTheDocument();
+      }
+    }
+    fireEvent.click(screen.getByRole('button', { name: 'Retry', exact: true }));
+    expect(recheckSummary).toHaveBeenCalledOnce();
+    expect(recheckComplication).toHaveBeenCalledOnce();
+    expect(refetchSummary).not.toHaveBeenCalled();
+    expect(refetchComplication).not.toHaveBeenCalled();
+  });
+
+  it('retains source measurements, lock and charging fields and timestamps during read failure, then removes the failure on recovery', () => {
+    const summaryUpdatedAt = Date.now() - 60_000;
+    useWatchSummaryMock.mockReturnValue(makeSummaryQuery({
+      availability: 'prerequisite-error',
+      availabilityError: new Error('Watch access could not be checked'),
+      data: makeSummary(), dataUpdatedAt: summaryUpdatedAt,
+    }));
+    useWatchComplicationMock.mockReturnValue(makeComplicationQuery({
+      availability: 'prerequisite-error',
+      availabilityError: new Error('Watch access could not be checked'),
+      data: makeComplication(),
+    }));
+    const { container, rerender } = renderWidget();
+    expect(screen.getByRole('alert')).toHaveTextContent('Watch access could not be checked');
+    expect(container.querySelector('[data-data-state="stale"]')).toBeTruthy();
+    expect(screen.getByText('72.00')).toBeInTheDocument();
+    expect(screen.getByText('186.41 mi')).toBeInTheDocument();
+    expect(screen.getByText('21.00°C')).toBeInTheDocument();
+    expect(screen.getByText('Locked')).toBeInTheDocument();
+    expect(screen.getByText('Inactive')).toBeInTheDocument();
+    expect(screen.getByText('2h ago')).toBeInTheDocument();
+    expect(captured.metrics.map(metric => metric.rawValue)).toEqual([300000, 21]);
+    expect(screen.getByTestId('dashboard-watch-measurements-brief').querySelector('[data-data-status="stale"]')).toBeTruthy();
+    useWatchSummaryMock.mockReturnValue(makeSummaryQuery({ data: makeSummary(), dataUpdatedAt: summaryUpdatedAt }));
+    useWatchComplicationMock.mockReturnValue(makeComplicationQuery({ data: makeComplication() }));
+    rerender(<MemoryRouter><WatchSummaryWidget size={{ cols: 2, rows: 2 }} /></MemoryRouter>);
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(screen.queryByText('Watch access could not be checked')).not.toBeInTheDocument();
+    expect(screen.getByText('72.00')).toBeInTheDocument();
+    expect(screen.getByText('2h ago')).toBeInTheDocument();
+    expect(captured.metrics.map(metric => metric.rawValue)).toEqual([300000, 21]);
+  });
 });
 
 afterEach(() => {
@@ -617,6 +705,68 @@ describe('WatchSummaryWidget — prop wiring', () => {
 
     expect(useWatchSummaryMock).toHaveBeenCalledWith(7);
     expect(useWatchComplicationMock).toHaveBeenCalledWith(7);
+  });
+
+  describe('WatchSummaryWidget — local watch capability', () => {
+    it.each([1, 2])('keeps the %s-column shell useful without fetching, hiding its fields or spinning forever', cols => {
+      const refetch = vi.fn();
+      useWatchSummaryMock.mockReturnValue({
+        ...makeSummaryQuery({ availability: 'not-configured', refetch }),
+        isPending: true, fetchStatus: 'idle',
+      });
+      useWatchComplicationMock.mockReturnValue({
+        ...makeComplicationQuery({ availability: 'not-configured' }),
+        isPending: true, fetchStatus: 'idle', refetch,
+      });
+      const { container } = renderWidget({ cols, rows: 2 });
+      expect(screen.getByRole('heading', { name: 'Watch summary' })).toBeInTheDocument();
+      expect(screen.getByText('Watch access is not configured')).toBeInTheDocument();
+      expect(screen.getByRole('link', { name: 'Manage API keys' })).toHaveAttribute('href', '/api-keys');
+      expect(screen.getByText('Battery')).toBeInTheDocument();
+      expect(container.querySelector('[aria-busy="true"]')).toBeNull();
+      expect(container.querySelector('[class*="--skeleton-bg"]')).toBeNull();
+      expect(container.querySelector('[data-data-state="unavailable"]')).toBeTruthy();
+      expect(screen.queryByText("Can't reach server")).not.toBeInTheDocument();
+      expect(screen.queryByText('No watch data')).not.toBeInTheDocument();
+      if (cols === 2) {
+        expect(screen.getByTestId('dashboard-watch-measurements-brief')).toBeInTheDocument();
+        for (const label of ['Range', 'Cabin', 'Lock', 'Charging', 'Last seen']) {
+          expect(screen.getByText(label)).toBeInTheDocument();
+        }
+      }
+      expect(screen.queryByRole('button', { name: /refresh/i })).not.toBeInTheDocument();
+      expect(refetch).not.toHaveBeenCalled();
+    });
+
+    it('retains measurements and last-success time when the key is removed, and restores refresh after configuration', () => {
+      const refetch = vi.fn();
+      useWatchSummaryMock.mockReturnValue(makeSummaryQuery({ availability: 'not-configured', data: makeSummary(), refetch }));
+      useWatchComplicationMock.mockReturnValue(makeComplicationQuery({ availability: 'not-configured', data: makeComplication() }));
+      const { rerender } = renderWidget();
+      expect(screen.getByText('Watch access is not configured')).toBeInTheDocument();
+      expect(screen.getByText('72.00')).toBeInTheDocument();
+      expect(screen.getByText('186.41 mi')).toBeInTheDocument();
+      expect(screen.getByText('21.00°C')).toBeInTheDocument();
+      expect(screen.getByText('2h ago')).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /refresh/i })).not.toBeInTheDocument();
+      useWatchSummaryMock.mockReturnValue(makeSummaryQuery({ data: makeSummary(), refetch }));
+      useWatchComplicationMock.mockReturnValue(makeComplicationQuery({ data: makeComplication() }));
+      rerender(<MemoryRouter><WatchSummaryWidget size={{ cols: 2, rows: 2 }} /></MemoryRouter>);
+      expect(screen.queryByText('Watch access is not configured')).not.toBeInTheDocument();
+      fireEvent.click(screen.getByRole('button', { name: /refresh/i }));
+      expect(refetch).toHaveBeenCalledOnce();
+    });
+
+    it('does not reclassify a configured but rejected key as an unconfigured or successful source', () => {
+      useWatchSummaryMock.mockReturnValue({
+        ...makeSummaryQuery({ isError: true }),
+        error: Object.assign(new Error('Invalid or expired API key'), { status: 401 }),
+      });
+      renderWidget();
+      expect(screen.queryByText('Watch access is not configured')).not.toBeInTheDocument();
+      expect(screen.getByRole('alert')).toBeInTheDocument();
+      expect(screen.queryByText('72.00')).not.toBeInTheDocument();
+    });
   });
 
   it('passes undefined through to both hooks when no vehicleId prop is given', () => {

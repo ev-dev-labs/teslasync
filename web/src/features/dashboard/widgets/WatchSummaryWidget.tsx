@@ -4,7 +4,8 @@ import { Watch, Lock, Unlock } from 'lucide-react';
 import { LinearGauge } from '@/components/charts';
 import { StatusBadge, TimeStamp } from '@/components/data-display';
 import type { StatMetric } from '@/components/data-display';
-import { Skeleton } from '@/components/feedback';
+import { AlertBanner, EmptyState, Skeleton } from '@/components/feedback';
+import { Button, Text } from '@/components/ui';
 import { useWatchSummary, useWatchComplication } from '@/api/hooks/useWatch';
 import { useUnits } from '@/hooks/useUnits';
 import { useDataState } from '@/hooks/useDataState';
@@ -36,13 +37,21 @@ export default function WatchSummaryWidget({ vehicleId, size }: WidgetProps) {
   const complicationQuery = useWatchComplication(vehicleId);
   const {
     data: complication, isLoading: compLoading, } = complicationQuery;
+  const notConfigured = summaryQuery.availability === 'not-configured';
+  const capabilityFailure = summaryQuery.availability === 'prerequisite-error'
+    || complicationQuery.availability === 'prerequisite-error';
+  const readsBlocked = notConfigured || capabilityFailure;
+  const recheckAvailability = useCallback(() => {
+    summaryQuery.recheckAvailability?.();
+    complicationQuery.recheckAvailability?.();
+  }, [summaryQuery, complicationQuery]);
 
   const { unitPrefs } = useUnits();
   const distanceUnit = unitPrefs.distance;
   const tempUnit = unitPrefs.temperature;
 
   const isCompact = size.cols <= 1;
-  const isLoading = summaryLoading || compLoading;
+  const isLoading = !readsBlocked && (summaryLoading || compLoading);
 
   const batteryLevel = knownNumber(summary?.battery_level);
   const rangeKm = summary?.range_km ?? null;
@@ -55,16 +64,16 @@ export default function WatchSummaryWidget({ vehicleId, size }: WidgetProps) {
   const isLocked = summary?.is_locked ?? null;
   const insideTempC = summary?.inside_temp_c ?? null;
   const lastUpdated = summary?.last_updated ?? null;
-  const summaryTrust = useDataState({ ...summaryQuery, data: summary ?? (summaryLoading || summaryError ? undefined : null) }, { provenance: 'cached' });
-  const complicationTrust = useDataState({ ...complicationQuery, data: complication ?? (compLoading || complicationQuery.isError ? undefined : null) }, { provenance: 'cached' });
+  const summaryTrust = useDataState({ ...summaryQuery, error: summaryQuery.availabilityError ?? summaryQuery.error, isError: summaryError || summaryQuery.availabilityError != null, isPending: !readsBlocked && summaryQuery.isPending, data: summary ?? (!notConfigured && (summaryLoading || summaryError || summaryQuery.availabilityError) ? undefined : null) }, { provenance: 'cached', unavailable: notConfigured });
+  const complicationTrust = useDataState({ ...complicationQuery, error: complicationQuery.availabilityError ?? complicationQuery.error, isError: complicationQuery.isError || complicationQuery.availabilityError != null, isPending: !readsBlocked && complicationQuery.isPending, data: complication ?? (!notConfigured && (compLoading || complicationQuery.isError || complicationQuery.availabilityError) ? undefined : null) }, { provenance: 'cached', unavailable: notConfigured });
   const combined = combineDataStates([summaryTrust, complicationTrust]);
   const dataState = {
     ...combined,
     status: !summary && !complication && isLoading ? 'initial' : combined.status,
-    fatalError: !summary && summaryTrust.fatalError ? summaryTrust.fatalError : combined.fatalError,
+    fatalError: capabilityFailure ? null : !summary && summaryTrust.fatalError ? summaryTrust.fatalError : combined.fatalError,
     data: summary,
     hasData: summary != null,
-    retry: () => { void refetchSummary(); void complicationQuery.refetch?.(); },
+    retry: capabilityFailure ? recheckAvailability : notConfigured ? null : () => { void refetchSummary(); void complicationQuery.refetch?.(); },
   } satisfies Parameters<typeof WidgetShell>[0]['dataState'];
 
   const displayRange = useMemo(() => {
@@ -96,11 +105,37 @@ export default function WatchSummaryWidget({ vehicleId, size }: WidgetProps) {
   );
 
   const handleRefresh = useCallback(() => {
+    if (capabilityFailure) {
+      recheckAvailability();
+      return;
+    }
+    if (notConfigured) return;
     void refetchSummary();
     void complicationQuery.refetch?.();
-  }, [refetchSummary, complicationQuery]);
+  }, [capabilityFailure, recheckAvailability, notConfigured, refetchSummary, complicationQuery]);
 
   const hasData = summary != null;
+  const capabilityState = capabilityFailure ? (
+    <AlertBanner
+      variant="danger"
+      role="alert"
+      title={t('watch:capability.readError', 'Watch access could not be checked')}
+    >
+      <Text as="p" variant="bodySm" color="secondary">
+        {t('watch:capability.readErrorDescription', 'Watch access is unknown because browser session storage could not be read or saved. Retry after storage becomes available. Retained readings remain visible.')}
+      </Text>
+      <Button type="button" variant="secondary" size="sm" wrapLabel className="mt-2 min-h-11" onClick={recheckAvailability}>
+        {t('error:retry', 'Retry')}
+      </Button>
+    </AlertBanner>
+  ) : notConfigured ? (
+    <EmptyState
+      className="px-0 py-2"
+      message={t('watch:capability.notConfigured', 'Watch access is not configured')}
+      description={t('watch:capability.description', 'Watch readings require a wearable API key in this session. Manage API keys and open your configured watch link to enable readings. Retained readings are not refreshed until access is configured.')}
+      actionTo={{ to: '/api-keys', label: t('watch:capability.configure', 'Manage API keys') }}
+    />
+  ) : null;
 
   // Compact (1×2): Watch-face circular display
   if (isCompact) {
@@ -113,9 +148,10 @@ export default function WatchSummaryWidget({ vehicleId, size }: WidgetProps) {
         updatedAt={combined.updatedAt ?? summaryUpdatedAt}
         isFetching={combined.isRefreshing || summaryFetching}
         isStale={summaryStale}
-        isError={summaryError}
-        onRefresh={handleRefresh}
+        isError={summaryError || capabilityFailure}
+        onRefresh={notConfigured ? undefined : handleRefresh}
       >
+          {capabilityState}
           <div className="h-full flex flex-col items-center justify-center gap-1.5 py-1">
             <div className="w-full">
               {batteryLevel == null ? <WidgetBigNumber value={null} label={t('widget.battery', 'Battery')} /> : <LinearGauge
@@ -141,7 +177,7 @@ export default function WatchSummaryWidget({ vehicleId, size }: WidgetProps) {
                 ⚡ {t('widget.charging', 'Charging')}
               </span>
             )}
-            {!hasData && !summaryLoading && <p className={dashboardTokens.metricLabel}>{t('widget.noWatchData', 'No watch data')}</p>}
+            {!readsBlocked && !hasData && !summaryLoading && <p className={dashboardTokens.metricLabel}>{t('widget.noWatchData', 'No watch data')}</p>}
           </div>
       </WidgetShell>
     );
@@ -158,9 +194,10 @@ export default function WatchSummaryWidget({ vehicleId, size }: WidgetProps) {
       updatedAt={combined.updatedAt ?? summaryUpdatedAt}
       isFetching={combined.isRefreshing || summaryFetching}
       isStale={summaryStale}
-      isError={summaryError}
-      onRefresh={handleRefresh}
+      isError={summaryError || capabilityFailure}
+      onRefresh={notConfigured ? undefined : handleRefresh}
     >
+        {capabilityState}
         <div className="h-full flex flex-col gap-3">
           {/* Hero: Battery big number */}
           <WidgetBigNumber
@@ -211,7 +248,7 @@ export default function WatchSummaryWidget({ vehicleId, size }: WidgetProps) {
                 <TimeStamp value={lastUpdated} className={dashboardTokens.metricLabel} />
               </span>
             </div>
-          {!hasData && !summaryLoading && <p className={dashboardTokens.metricLabel}>{t('widget.noWatchData', 'No watch data')}</p>}
+          {!readsBlocked && !hasData && !summaryLoading && <p className={dashboardTokens.metricLabel}>{t('widget.noWatchData', 'No watch data')}</p>}
         </div>
     </WidgetShell>
   );
