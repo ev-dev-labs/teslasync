@@ -1,6 +1,54 @@
 # Frontend modernization queue
 
-## Current phase: 3 - mobile target repair accepted; fresh final gates pending
+## Current phase: 3 - theme selection repair accepted; fresh boundary required
+
+The exact two-path ThemePicker worker has delivered. Parent independently
+verified39artifacts,7native command receipts,6746source input pins,22passing
+tests with all16original cases and72original assertions unchanged, and byte-exact
+forward/reverse patches. All three decorative shadows are removed; selected
+preset/custom border and check now use existing derived --theme-primary. Raw
+gradient previews, mode previews, choices, saved colors/callbacks remain exact.
+Strict two-path lint exits0; raw scoped audit reports0violations, compiler
+stdout/stderr0bytes. This is scoped acceptance only: actual fresh build, native
+visual/focus/contrast checks and final fresh suite must precede Phase3 closure.
+
+Correction to the immediately preceding acceptance: original desktop captures
+show selected ThemePicker swatch bloom, and source confirms three decorative
+boxShadow declarations (selected mode plus preset/custom swatches). The design
+contract MDC-010/011/012 prohibits glow; this was omitted from the visual intake.
+That approval is withdrawn and retained as an immutable failed-review artifact.
+The exact owned fullsuite process was stopped before results; it is CANCELLED,
+not passed or a test failure. Original current1033automated/focus/target passes
+remain valid bounded evidence, but cannot establish overall visual acceptance.
+Queue one atomic `phase3-theme-picker-selection-decoration` worker on only
+ThemePicker.tsx and ThemePicker.test.tsx: remove decorative selection shadows,
+use existing derived theme roles for selected chrome, preserve raw preview
+colors and all persisted choices/callbacks. Fresh actual-build/native review
+then ONE fresh fullsuite. No Phase4 writer or false Phase3 closure.
+
+Current1033native acceptance passed34scenarios/46captures/14axe, all32brand/target
+bounds and12drawer entry/trap/restore cases. Mobile bell is44px at normal mobile
+sizes and88px at200%; compact>=md remains36px under the documented24px exception.
+Parent verifies62mounted artifacts/30preflight streams/6746frozen input pins.
+All46captures were reviewed using12contact sheets plus direct viewing of all
+10original desktop captures. First derivative-scaler integer-overload errors are
+retained; originals establish desktop visual review, not cropped derivatives.
+Sixaxecontrast incomplete run records remain with10current measured flat-color
+pairs, minimum5.281391>=4.5; this is attribution, not an automatic contrast pass.
+Final mounted/visual parent intake is persisted at currenteb7e17HEAD. The single
+fresh fullsuite started then was cancelled for the omitted glow finding. No new
+commits or duplicate suites. Phase3closure awaits repaired visual acceptance and
+fresh native result/preservation
+intake; Phase4pilots stay parked. Whole-app/extreme-page QA remains later phases.
+
+The verified repair is committed as eb7e17d7a8c9929800f30332b6e414d97bbbd096,
+actual1033. Current6746input source boundary is frozen. Compiler native0 at
+12:51:13Z with0stdout/0stderrbytes. All15current-source preflight stages completed
+native0; startup396.8KB is below the unchanged400KB ceiling. The serialized native
+matrix passed current mobile targets/reflow/focus with actual input readiness.
+Parent matrix intake verified all30raw streams and6746frozen input pins.
+No worker lease, duplicate gate or Phase4 writer.
+Next mandatory commit-cadence compiler remains1035.
 
 The mobile target owner is terminal DONE/idle, not stalled. Parent independently
 verified35artifacts/6746pins, final273passed cases across3physical files, strict
@@ -11,8 +59,8 @@ retains unread labeling/inbox navigation. Initial272pass/1fixturefailure is
 preserved; the corrected media fixture adds no production lifecycle change.
 Parent intake's initial all-receipts-must-pass assumption failure is retained
 separately; final intake verifies failed and passing receipts explicitly.
-Source/validation leases are released. Commit only the two Layout paths and
-direct queue evidence, then freeze current source for15preflight stages, native
+Source/validation leases are released. The commit contains only the two Layout
+paths and direct queue evidence. Current source is frozen for15preflight stages, native
 target/reflow/focus/visual acceptance and one fresh fullsuite. Phase3 is open.
 
 The actual1032native matrix completed34scenarios/46captures/14axe. All32mobile
