@@ -68,8 +68,40 @@ describe('canonical PWA update and cached-data disclosure closure', () => {
       .toBe('Showing cached data. Operational changes stay disabled until you reconnect.')
   })
 
-  it('keeps the existing known-missing baseline unchanged', () => {
-    expect(knownMissing).toHaveLength(21)
+  it('retains exactly three genuine misses after the eighteen canonical producers resolve', () => {
+    const resolvedKeys = [
+      'browserNotifications.toast.alertTitle',
+      'browserNotifications.toast.exportFailedBody',
+      'browserNotifications.toast.exportFailedTitle',
+      'browserNotifications.toast.exportReadyBody',
+      'browserNotifications.toast.exportReadyBodyGeneric',
+      'browserNotifications.toast.exportReadyTitle',
+      'error.forbidden.message',
+      'error.forbidden.title',
+      'error.request.message',
+      'error.timeout.message',
+      'error.timeout.title',
+      'error.unavailable.message',
+      'error.unsupported.message',
+      'replay.shortcuts.seekBack',
+      'replay.shortcuts.seekForward',
+      'table.genericName',
+      'table.selection.deselectRowNamed',
+      'table.selection.selectRowNamed',
+    ] as const
+    expect(resolvedKeys).toHaveLength(18)
+    for (const key of resolvedKeys) {
+      expect(typeof nested(catalog, key)).toBe('string')
+      expect(nested(shell, key)).toBe(nested(catalog, key))
+      expect(english.exists(key)).toBe(true)
+      expect(knownMissing).not.toContain(key)
+    }
+    expect(knownMissing).toEqual([
+      'error.request.title',
+      'error.unavailable.title',
+      'error.unsupported.title',
+    ])
+    expect(knownMissing).toHaveLength(3)
     expect(runtimeManifest.missing).toEqual(knownMissing)
   })
 })
