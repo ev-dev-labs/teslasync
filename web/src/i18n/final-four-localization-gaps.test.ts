@@ -60,12 +60,37 @@ describe('final four genuine localization gaps — production source contracts',
       [['devtools', 'utils', 'regexEmptyMatch'], '(empty match)'],
       [['app', 'temperatureLabel'], 'Temperature'],
     ] as const
+    // Accepted Phase-4 source-owned additions: sticky-control-localization (1),
+    // watch-key-capability (5), and signal-catalog-canonical-repair (6).
+    // Verify each exact structural path/value before projecting it out; the
+    // original four additions and frozen predecessor fingerprint stay intact.
+    const acceptedLaterAdditions = [
+      [['a11y', 'scrollToTop'], '{{region}} — scroll to top'],
+      [['watch', 'capability', 'notConfigured'], 'Watch access is not configured'],
+      [['watch', 'capability', 'description'], 'Watch readings require a wearable API key in this session. Manage API keys and open your configured watch link to enable readings. Retained readings are not refreshed until access is configured.'],
+      [['watch', 'capability', 'configure'], 'Manage API keys'],
+      [['watch', 'capability', 'readError'], 'Watch access could not be checked'],
+      [['watch', 'capability', 'readErrorDescription'], 'Watch access is unknown because browser session storage could not be read or saved. Retry after storage becomes available. Retained readings remain visible.'],
+      [['widget', 'signalCatalog', 'destination'], 'Destination: {{destination}}'],
+      [['widget', 'signalCatalog', 'valueKind'], 'Value kind'],
+      [['widget', 'signalCatalog', 'metadataUnavailable'], 'Unit and description are not provided by this catalog.'],
+      [['widget', 'signalCatalog', 'totalSamples'], 'Total observations: {{count}}'],
+      [['widget', 'signalCatalog', 'vehicleCount'], 'Vehicles observed: {{count}}'],
+      [['widget', 'signalCatalog', 'lastSeen'], 'Last seen: {{timestamp}}'],
+    ] as const
     function physical(value: unknown, parts: string[] = []): [string[], unknown][] {
       return value && typeof value === 'object' && !Array.isArray(value)
         ? Object.entries(value).flatMap(([key, child]) => physical(child, [...parts, key]))
         : [[parts, value]]
     }
-    const entries = physical(catalog)
+    const currentEntries = physical(catalog)
+    const acceptedLaterPaths = new Set(acceptedLaterAdditions.map(([parts]) => JSON.stringify(parts)))
+    expect(acceptedLaterAdditions).toHaveLength(12)
+    expect(acceptedLaterPaths.size).toBe(12)
+    for (const [parts, value] of acceptedLaterAdditions) {
+      expect(currentEntries.filter(([path]) => JSON.stringify(path) === JSON.stringify(parts))).toEqual([[parts, value]])
+    }
+    const entries = currentEntries.filter(([parts]) => !acceptedLaterPaths.has(JSON.stringify(parts)))
     const exact = new Set(additions.map(([parts]) => JSON.stringify(parts)))
     expect(entries).toHaveLength(31095)
     expect(exact.size).toBe(4)
