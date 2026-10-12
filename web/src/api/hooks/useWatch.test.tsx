@@ -325,6 +325,39 @@ describe('WatchSummary / WatchComplication shapes', () => {
 // useWatchSummary
 // ---------------------------------------------------------------------------
 
+describe('watch query cancellation', () => {
+  const hooks = [
+    { name: 'summary', hook: useWatchSummary, path: '/watch/summary' },
+    { name: 'complication', hook: useWatchComplication, path: '/watch/complication' },
+  ] as const;
+
+  it.each(hooks)('forwards and aborts scoped in-flight reads on vehicle changes and unmount: $name', async ({ hook, path }) => {
+    mockedRequest.mockImplementation(() => new Promise(() => {}));
+    const { rerender, unmount } = renderHook(({ vehicleId }) => hook(vehicleId), {
+      wrapper,
+      initialProps: { vehicleId: 7 },
+    });
+
+    await waitFor(() => expect(mockedRequest).toHaveBeenCalledTimes(1));
+    expect(callAt().path).toBe(`${path}?vehicle_id=7`);
+    const firstSignal = callAt().opts.signal;
+    expect(firstSignal).toBeInstanceOf(AbortSignal);
+    expect(firstSignal?.aborted).toBe(false);
+
+    rerender({ vehicleId: 9 });
+    await waitFor(() => expect(mockedRequest).toHaveBeenCalledTimes(2));
+    expect(firstSignal?.aborted).toBe(true);
+    expect(callAt(1).path).toBe(`${path}?vehicle_id=9`);
+    const nextSignal = callAt(1).opts.signal;
+    expect(nextSignal).toBeInstanceOf(AbortSignal);
+    expect(nextSignal).not.toBe(firstSignal);
+    expect(nextSignal?.aborted).toBe(false);
+
+    unmount();
+    expect(nextSignal?.aborted).toBe(true);
+  });
+});
+
 describe('useWatchSummary', () => {
   it('GETs /watch/summary with vehicle_id, skips the auth refresh, and threads the AbortSignal', async () => {
     mockedRequest.mockResolvedValueOnce(sampleSummary);

@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useSyncExternalStore } from 'react';
-import { useQuery, useMutation, useQueryClient, skipToken } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { request, type ApiRequestOptions } from '@/api/client';
 import { INTERVALS, STALE_TIMES } from '@/lib/constants';
@@ -188,7 +188,7 @@ export function useWatchSummary(vehicleId?: number) {
   const params = vehicleId ? `?vehicle_id=${vehicleId}` : '';
   const query = useQuery({
     queryKey: watchKeys.summary(vehicleId),
-    queryFn: configured ? ({ signal }) => watchRequest<WatchSummary>(`/watch/summary${params}`, { signal }, true) : skipToken,
+    queryFn: ({ signal }) => watchRequest<WatchSummary>(`/watch/summary${params}`, { signal }, true),
     enabled: configured,
     refetchInterval: query => configured && !(query.state.error instanceof WatchPrerequisiteError) ? INTERVALS.STANDARD : false,
     staleTime: STALE_TIMES.MODERATE,
@@ -207,7 +207,7 @@ export function useWatchComplication(vehicleId?: number) {
   const params = vehicleId ? `?vehicle_id=${vehicleId}` : '';
   const query = useQuery({
     queryKey: watchKeys.complication(vehicleId),
-    queryFn: configured ? ({ signal }) => watchRequest<WatchComplication>(`/watch/complication${params}`, { signal }, true) : skipToken,
+    queryFn: ({ signal }) => watchRequest<WatchComplication>(`/watch/complication${params}`, { signal }, true),
     enabled: configured,
     refetchInterval: query => configured && !(query.state.error instanceof WatchPrerequisiteError) ? INTERVALS.SLOW : false,
     staleTime: STALE_TIMES.FAST,
