@@ -4,7 +4,7 @@
  * remain SI metres until the existing display boundary. Records still have no
  * populated backend producer and Schedule remains an inherited no-op.
  */
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { CalendarPlus, RefreshCw } from 'lucide-react';
 import { PageLayout, CardGrid, type CardGridItem } from '@/components/layout';
@@ -45,6 +45,10 @@ export default function MaintenancePage() {
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [sortBy, setSortBy] = useState('status');
   const [previewRecord, setPreviewRecord] = useState<ServiceRecord | null>(null);
+
+  useEffect(() => {
+    setPreviewRecord(null);
+  }, [vehicleId]);
 
   const categories = useMemo(
     () => Array.from(new Set(items.map(item => item.category))).sort(),

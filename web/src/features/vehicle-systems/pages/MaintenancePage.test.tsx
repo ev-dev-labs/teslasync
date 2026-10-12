@@ -660,3 +660,160 @@ describe('MaintenancePage', () => {
     expect(scoped.getByText('25 km')).toBeInTheDocument();
   });
 });
+
+describe('MaintenancePage workspace preview scope', () => {
+  function renderScopedPage() {
+    const qc = new QueryClient({
+      defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+    });
+    const page = () => (
+      <QueryClientProvider client={qc}>
+        <MemoryRouter initialEntries={['/maintenance']}>
+          <MaintenancePage />
+        </MemoryRouter>
+      </QueryClientProvider>
+    );
+    const view = render(page());
+    return { rerenderPage: () => view.rerender(page()) };
+  }
+
+  it('closes the previous vehicle preview before inspecting the new vehicle records', () => {
+    const previousRecords = [
+      makeRecord({ id: 71, vehicle_id: 7, description: 'Previous vehicle inspection', notes: 'Previous vehicle notes' }),
+    ];
+    h.recordsQuery = makeQuery({ data: previousRecords });
+
+    const view = renderScopedPage();
+    fireEvent.click(screen.getByRole('button', { name: 'Inspect service record' }));
+    const previousDrawer = screen.getByRole('dialog', { name: 'Previous vehicle inspection' });
+    expect(within(previousDrawer).getByRole('link', { name: 'Vehicle' })).toHaveAttribute('href', '/vehicles/7');
+
+    h.selected.vehicleId = 8;
+    h.itemsQuery = makeQuery({ data: [makeItem({ id: 81, vehicle_id: 8, name: 'New vehicle tires' })] });
+    h.recordsQuery = makeQuery({
+      data: [makeRecord({ id: 82, vehicle_id: 8, description: 'New vehicle inspection', notes: 'New vehicle notes', cost: 0, mileage: 0 })],
+    });
+    view.rerenderPage();
+
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(screen.queryByText('Previous vehicle notes')).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Vehicle' })).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 4, name: 'New vehicle tires' })).toBeInTheDocument();
+    expect(screen.getByText('New vehicle inspection')).toBeInTheDocument();
+    expect(screen.getByTestId('ai-predictive-maintenance')).toHaveAttribute('data-vehicle-id', '8');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Inspect service record' }));
+    const newDrawer = screen.getByRole('dialog', { name: 'New vehicle inspection' });
+    expect(within(newDrawer).getByText('New vehicle notes')).toBeInTheDocument();
+    expect(within(newDrawer).getByRole('link', { name: 'Vehicle' })).toHaveAttribute('href', '/vehicles/8');
+    expect(within(newDrawer).getByText('0 km')).toBeInTheDocument();
+    expect(within(newDrawer).getByText('$0.00')).toBeInTheDocument();
+
+    h.selected.vehicleId = 7;
+    h.recordsQuery = makeQuery({ data: previousRecords });
+    view.rerenderPage();
+
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(screen.queryByText('New vehicle notes')).not.toBeInTheDocument();
+    expect(screen.getByText('Previous vehicle inspection')).toBeInTheDocument();
+  });
+
+  it('retains a same-vehicle preview during a refresh error but clears it and the old error on scope change', () => {
+    const previousRecords = [
+      makeRecord({ id: 71, vehicle_id: 7, description: 'Retained inspection', notes: 'Retained evidence' }),
+    ];
+    h.recordsQuery = makeQuery({ data: previousRecords });
+
+    const view = renderScopedPage();
+    fireEvent.click(screen.getByRole('button', { name: 'Inspect service record' }));
+    h.recordsQuery = makeQuery({
+      data: previousRecords,
+      isError: true,
+      error: new Error('Previous vehicle records refresh failed'),
+    });
+    view.rerenderPage();
+
+    const retainedDrawer = screen.getByRole('dialog', { name: 'Retained inspection' });
+    expect(within(retainedDrawer).getByText('Retained evidence')).toBeInTheDocument();
+    expect(within(retainedDrawer).getByRole('link', { name: 'Vehicle' })).toHaveAttribute('href', '/vehicles/7');
+    expect(screen.getAllByText('Showing retained measurements')).toHaveLength(2);
+
+    h.selected.vehicleId = 8;
+    h.recordsQuery = makeQuery({
+      data: [makeRecord({ id: 81, vehicle_id: 8, description: 'Recovered new vehicle inspection' })],
+    });
+    view.rerenderPage();
+
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(screen.queryByText('Retained evidence')).not.toBeInTheDocument();
+    expect(screen.queryByText('Showing retained measurements')).not.toBeInTheDocument();
+    expect(screen.queryByText(/Can't reach server/i)).not.toBeInTheDocument();
+    expect(screen.getByText('Recovered new vehicle inspection')).toBeInTheDocument();
+  });
+
+  it('clears an old preview when the new vehicle history fails and preserves independent recovery', () => {
+    h.recordsQuery = makeQuery({
+      data: [makeRecord({ id: 71, vehicle_id: 7, description: 'Old inspection', notes: 'Old private evidence' })],
+    });
+    const view = renderScopedPage();
+    fireEvent.click(screen.getByRole('button', { name: 'Inspect service record' }));
+    expect(screen.getByRole('dialog', { name: 'Old inspection' })).toBeInTheDocument();
+
+    const retryRecords = vi.fn();
+    h.selected.vehicleId = 8;
+    h.itemsQuery = makeQuery({ data: [makeItem({ id: 81, vehicle_id: 8, name: 'New vehicle maintenance' })] });
+    h.recordsQuery = makeQuery({
+      data: undefined, isError: true, error: new Error('New vehicle records unavailable'),
+      dataUpdatedAt: 0, refetch: retryRecords,
+    });
+    view.rerenderPage();
+
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(screen.queryByText('Old private evidence')).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 4, name: 'New vehicle maintenance' })).toBeInTheDocument();
+    expect(screen.getAllByText(/Can't reach server/i)).toHaveLength(2);
+    const recordsPanel = screen.getByRole('heading', { name: 'Service records', exact: true }).closest('[data-card]');
+    expect(recordsPanel).not.toBeNull();
+    fireEvent.click(within(recordsPanel as HTMLElement).getByRole('button', { name: /^Retry$/i }));
+    expect(retryRecords).toHaveBeenCalledTimes(1);
+
+    h.recordsQuery = makeQuery({
+      data: [makeRecord({ id: 82, vehicle_id: 8, description: 'Recovered inspection' })],
+    });
+    view.rerenderPage();
+
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(screen.queryByText(/Can't reach server/i)).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Inspect service record' }));
+    const recoveredDrawer = screen.getByRole('dialog', { name: 'Recovered inspection' });
+    expect(within(recoveredDrawer).getByRole('link', { name: 'Vehicle' })).toHaveAttribute('href', '/vehicles/8');
+  });
+
+  it('clears the preview on vehicle deselection without reopening it when the same vehicle returns', () => {
+    const previousRecords = [
+      makeRecord({ id: 71, vehicle_id: 7, description: 'Selected vehicle inspection', notes: 'Selected vehicle evidence' }),
+    ];
+    h.recordsQuery = makeQuery({ data: previousRecords });
+    const view = renderScopedPage();
+    fireEvent.click(screen.getByRole('button', { name: 'Inspect service record' }));
+    expect(screen.getByRole('dialog', { name: 'Selected vehicle inspection' })).toBeInTheDocument();
+
+    h.selected.vehicleId = null;
+    h.itemsQuery = makeQuery({ data: undefined, dataUpdatedAt: 0 });
+    h.recordsQuery = makeQuery({ data: undefined, dataUpdatedAt: 0 });
+    view.rerenderPage();
+
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(screen.queryByText('Selected vehicle evidence')).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Maintenance items', exact: true })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Service records', exact: true })).toBeInTheDocument();
+    expect(screen.getByTestId('ai-predictive-maintenance')).toHaveAttribute('data-vehicle-id', '');
+
+    h.selected.vehicleId = 7;
+    h.recordsQuery = makeQuery({ data: previousRecords });
+    view.rerenderPage();
+
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(screen.getByText('Selected vehicle inspection')).toBeInTheDocument();
+  });
+});
