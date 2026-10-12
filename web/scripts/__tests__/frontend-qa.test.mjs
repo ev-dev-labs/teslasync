@@ -173,6 +173,222 @@ function scrollCaptureFixture({ height = 900, total = 2500, original = 300,
   return { element, probe, page };
 }
 
+function anchoredScrollFixture({ bar = 35, spacing = 24, inaccessible = false, threshold = 900, occludedGap = 0,
+  onScreenshot = () => {}, onFrame = () => {} } = {}) {
+  let inserted = false;
+  const leaf = (start, height, text) => ({
+    children: [], childNodes: [], textContent: text,
+    contains(node) { return node === this; },
+    getBoundingClientRect: () => ({ left: 0, right: 1000, width: 1000, height,
+      top: start + (inserted ? bar + spacing : 0) - fixture.element.scrollTop,
+      bottom: start + (inserted ? bar + spacing : 0) - fixture.element.scrollTop + height }),
+  });
+  const nodes = [leaf(0, 500, 'first'), leaf(500, 500, 'second'),
+    leaf(1000, 400, 'third'), leaf(1400, 300, 'last')];
+  const stickyText = leaf(0, bar, 'summary');
+  stickyText.getBoundingClientRect = () => ({ left: 0, right: 1000, width: 1000, top: 0, bottom: bar, height: bar });
+  const sticky = { children: [stickyText], childNodes: [], textContent: 'summary',
+    contains: (node) => node === sticky || node === stickyText,
+    getBoundingClientRect: stickyText.getBoundingClientRect };
+  const fixedCover = { children: [], childNodes: [], textContent: 'overlay',
+    contains: (node) => node === fixedCover,
+    getBoundingClientRect: () => {
+      const top = nodes[0].getBoundingClientRect().top + 300;
+      return { left: 0, right: 1000, width: 1000, top, bottom: top + occludedGap, height: occludedGap };
+    } };
+  if (inaccessible) {
+    const hidden = leaf(0, 20, 'unreachable');
+    hidden.getBoundingClientRect = () => ({ left: 0, right: 1000, width: 1000, top: -40, bottom: -20, height: 20 });
+    nodes.push(hidden);
+  }
+  const fixture = scrollCaptureFixture({
+    height: 679, total: 1731, original: 0,
+    onFrame: (element, frame, probe) => {
+      if (frame % 2 === 0) {
+        const next = element.scrollTop > threshold;
+        if (next !== inserted) {
+          inserted = next;
+          element.scrollHeight = 1731 + (inserted ? bar + spacing : 0);
+          if (inserted) element.scrollTop += bar + spacing;
+        }
+      }
+      onFrame(element, frame, probe, nodes);
+    },
+    onScreenshot: (element, probe) => onScreenshot(element, probe, nodes),
+  });
+  fixture.element.clientTop = 0;
+  fixture.element.getBoundingClientRect = () => ({ top: 0, bottom: 679, left: 0, right: 1000, width: 1000, height: 679 });
+  fixture.element.querySelectorAll = () => [...nodes, ...(inserted ? [sticky, stickyText] : []),
+    ...(occludedGap ? [fixedCover] : [])];
+  const document = { querySelectorAll: () => fixture.element.querySelectorAll() };
+  const getComputedStyle = (node) => ({
+    position: node === sticky ? 'sticky' : node === fixedCover ? 'fixed' : 'static', display: 'block', visibility: 'visible',
+  });
+  const main = fixture.page.locator('main').first();
+  main.evaluateHandle = async (fn) => {
+    const state = fn(fixture.element);
+    return {
+      evaluate: async (fn, argument) => runInNewContext(`(${fn})(state, argument)`, {
+        state, argument, document, getComputedStyle,
+        requestAnimationFrame: (done) => {
+          if (++fixture.probe.frames % 2 === 0) {
+            const next = fixture.element.scrollTop > threshold;
+            if (next !== inserted) {
+              inserted = next;
+              fixture.element.scrollHeight = 1731 + (inserted ? bar + spacing : 0);
+              if (inserted) fixture.element.scrollTop += bar + spacing;
+            }
+          }
+          onFrame(fixture.element, fixture.probe.frames, fixture.probe, nodes);
+          done();
+        },
+      }),
+      dispose: async () => { fixture.probe.handleDisposed = true; },
+    };
+  };
+  return { ...fixture, nodes };
+}
+
+test('reversible native sticky insertion covers all persistent content and the settled 1790 terminal without restarting zero', async () => {
+  const { element, probe, page } = anchoredScrollFixture();
+  await captureFullPage(page, 'anchored.png');
+  assert.deepEqual(probe.screenshots.map(({ top, total }) => [top, total]), [
+    [0, 1731], [0, 1731], [679, 1731], [1111, 1790],
+  ]);
+  assert.deepEqual(probe.screenshots.map(({ path }) => path), [
+    'anchored.png', 'anchored-section-1.png', 'anchored-section-2.png', 'anchored-section-3.png',
+  ]);
+  assert.ok(probe.screenshots.every(({ fullPage }) => fullPage));
+  assert.equal(element.scrollTop, 0);
+  assert.equal(probe.handleDisposed, true);
+  // A new position is reversible, not globally unstable: zero removes the insertion.
+  await page.locator('main').first().evaluate(async (main) => {
+    await new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(done)));
+    return main.scrollHeight;
+  });
+  assert.equal(element.scrollHeight, 1731);
+});
+
+test('content anchored insertion reconciliation measures arbitrary inserted size rather than hardcoding the native delta', async () => {
+  const { element, probe, page } = anchoredScrollFixture({ bar: 43, spacing: 38 });
+  await captureFullPage(page, 'arbitrary.png');
+  assert.deepEqual(probe.screenshots.map(({ top, total }) => [top, total]), [
+    [0, 1731], [0, 1731], [679, 1731], [1133, 1812],
+  ]);
+  assert.equal(element.scrollTop, 0);
+  assert.equal(probe.handleDisposed, true);
+});
+
+test('content anchored coverage cannot pass with a persistent uncaptured gap and stops at three reconciliation attempts', async () => {
+  const { element, probe, page } = anchoredScrollFixture({ inaccessible: true });
+  await assert.rejects(captureFullPage(page, 'gap.png'), /coverage incomplete after bounded reconciliation/);
+  assert.equal(probe.screenshots.length, 8);
+  assert.deepEqual(probe.screenshots.map(({ top }) => top), [0, 0, 679, 1111, 1036, 1111, 1036, 1111]);
+  assert.equal(element.scrollTop, 0);
+  assert.equal(probe.handleDisposed, true);
+});
+
+test('content anchored coverage rejects a two-pixel internal visibility gap rather than treating endpoint captures as contiguous', async () => {
+  const { element, probe, page } = anchoredScrollFixture({ occludedGap: 2 });
+  await assert.rejects(captureFullPage(page, 'internal-gap.png'), /coverage incomplete after bounded reconciliation/);
+  assert.equal(probe.screenshots.filter(({ top }) => top === 1111).length, 3);
+  assert.equal(probe.screenshots.length, 10);
+  assert.deepEqual(probe.screenshots.map(({ top }) => top), [
+    0, 0, 679, 1111, 324, 1003, 1111, 324, 1003, 1111,
+  ]);
+  assert.equal(element.scrollTop, 0);
+  assert.equal(probe.handleDisposed, true);
+});
+
+test('content anchored late changed values invalidate old coverage and are actually recaptured before terminal verification', async () => {
+  let changed = false;
+  const capturedValues = [];
+  const { element, probe, page } = anchoredScrollFixture({
+    onFrame: (_main, _frame, state, nodes) => {
+      if (!changed && state.screenshots.length === 4) { changed = true; nodes[0].textContent = 'updated'; }
+    },
+    onScreenshot: (_main, _state, nodes) => { capturedValues.push(nodes[0].textContent); },
+  });
+  await captureFullPage(page, 'updated-content.png');
+  assert.deepEqual(probe.screenshots.map(({ top }) => top), [0, 0, 679, 1111, 0, 679, 1111]);
+  assert.deepEqual(capturedValues, ['first', 'first', 'first', 'first', 'updated', 'updated', 'updated']);
+  assert.equal(element.scrollTop, 0);
+  assert.equal(probe.handleDisposed, true);
+});
+
+test('content anchored capture retains the hundred-shot total budget including failed reconciliation after the last shot', async () => {
+  for (const changesAtCap of [false, true]) {
+    const fixture = anchoredScrollFixture({
+      threshold: Infinity,
+      onScreenshot: (_main, state, nodes) => {
+        if (changesAtCap && state.screenshots.length === 101) nodes[0].textContent = 'changed at cap';
+      },
+    });
+    fixture.element.clientHeight = 100;
+    fixture.element.scrollHeight = 10000;
+    fixture.element.getBoundingClientRect = () => ({ top: 0, bottom: 100, left: 0, right: 1000, width: 1000, height: 100 });
+    const longContent = { children: [], childNodes: [], textContent: 'long content',
+      contains: (node) => node === longContent,
+      getBoundingClientRect: () => ({ left: 0, right: 1000, width: 1000, height: 10000,
+        top: -fixture.element.scrollTop, bottom: 10000 - fixture.element.scrollTop }) };
+    fixture.nodes.splice(0, fixture.nodes.length, longContent);
+    if (changesAtCap) await assert.rejects(captureFullPage(fixture.page, 'anchor-cap.png'), /exceeds bounded capture limits/);
+    else await captureFullPage(fixture.page, 'anchor-cap.png');
+    assert.equal(fixture.probe.screenshots.length, 101);
+    assert.equal(fixture.probe.screenshots.at(-1).path, 'anchor-cap-section-100.png');
+    assert.equal(fixture.probe.screenshots.at(-1).top, 9900);
+    assert.equal(fixture.element.scrollTop, 0);
+    assert.equal(fixture.probe.handleDisposed, true);
+  }
+});
+
+test('content anchored screenshots reject continuous value changes without treating unchanged extent as covered data', async () => {
+  const { element, probe, page } = anchoredScrollFixture({
+    onScreenshot: (_main, state, nodes) => {
+      if (state.screenshots.length > 1) nodes[0].textContent += 'changed';
+    },
+  });
+  await assert.rejects(captureFullPage(page, 'changing-content.png'), /coverage incomplete after bounded reconciliation/);
+  assert.deepEqual(probe.screenshots.map(({ top }) => top), [0, 0, 0, 0]);
+  assert.equal(element.scrollTop, 0);
+  assert.equal(probe.handleDisposed, true);
+});
+
+test('content anchored permanent unsettled content stops after twelve turns and restores scroll while disposing its handle', async () => {
+  const { element, probe, page } = anchoredScrollFixture({
+    onFrame: (_main, frame, _state, nodes) => { if (frame % 2 === 0) nodes[0].textContent += 'changing'; },
+  });
+  await assert.rejects(captureFullPage(page, 'unsettled-content.png'), /geometry did not settle/);
+  assert.equal(probe.frames, 24);
+  assert.equal(probe.screenshots.length, 1);
+  assert.equal(element.scrollTop, 0);
+  assert.equal(probe.handleDisposed, true);
+});
+
+test('content anchored terminal PNG failures propagate instead of accepting the covered prefix', async () => {
+  const { element, probe, page } = anchoredScrollFixture({
+    onScreenshot: (_main, state) => {
+      if (state.screenshots.length === 4) throw new Error('Synthetic terminal PNG failure');
+    },
+  });
+  await assert.rejects(captureFullPage(page, 'terminal-failure.png'), /Synthetic terminal PNG failure/);
+  assert.deepEqual(probe.screenshots.map(({ top }) => top), [0, 0, 679, 1111]);
+  assert.equal(element.scrollTop, 0);
+  assert.equal(probe.handleDisposed, true);
+});
+
+test('content anchored per-position capture retains guards before the inserted terminal screenshot', async () => {
+  const { element, probe, page } = anchoredScrollFixture();
+  let guards = 0;
+  await assert.rejects(captureFullPage(page, 'guarded-anchor.png', async () => {
+    if (++guards === 4) throw new Error('Synthetic mounted-mode or busy failure');
+  }), /Synthetic mounted-mode or busy failure/);
+  assert.equal(guards, 4);
+  assert.deepEqual(probe.screenshots.map(({ top }) => top), [0, 0, 679]);
+  assert.equal(element.scrollTop, 0);
+  assert.equal(probe.handleDisposed, true);
+});
+
 test('measured Drive History growth and bottom anchoring restart all tiles and cover the settled 1878 pixels', async () => {
   let grew = false;
   const { element, probe, page } = scrollCaptureFixture({

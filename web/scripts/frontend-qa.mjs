@@ -7,6 +7,7 @@ import ts from 'typescript';
 export const CAPTURE_WIDTHS = Object.freeze([375, 768, 1440, 1920]);
 export const OVERFLOW_WIDTHS = Object.freeze([320, 375, 390, 430, 768, 1024, 1280, 1440, 1920, 2560]);
 const webRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+const captureProofs = new WeakMap();
 const owners = new Set([
   'src/index.css', 'tailwind.config.js', 'src/lib/tokens.ts', 'src/lib/colors.ts',
   'src/components/ui/ThemeProvider.tsx', 'src/components/ui/themePresets.ts',
@@ -31,6 +32,8 @@ Capture writes qa-screenshots/<run>/<route>-<width>-<theme>.png at the repositor
 Application mode is seeded and synchronized through existing browser preferences.
 Mounted root mode must match; captures include the full page, not only the viewport.
 Fixed-height main scroll regions also get numbered section captures; no server writes.
+Real DOM sections verify contiguous versioned content anchors and a settled terminal bottom.
+Scroll-position extent changes are reconciled within three attempts and 100 total section captures.
 Route map JSON: {"/drives/:id": "/drives/<real-authorized-id>"}.
 Unresolved parameter routes are BLOCKED, never invented IDs or silently skipped.
 Exit 0: bounded checks passed; 1: findings/failures; 2: blocked/invalid input.
@@ -188,7 +191,143 @@ export function applicationModeMatches(mode, actual) {
     actual.dark === (mode === 'dark') && actual.light === (mode === 'light');
 }
 
+async function captureAnchoredMain(page, handle, path, beforeCapture) {
+  const observe = (target) => handle.evaluate(async (state, target) => {
+    const element = state.root;
+    const snapshot = () => {
+      const bounds = element.getBoundingClientRect();
+      const top = bounds.top + element.clientTop;
+      const bottom = top + element.clientHeight;
+      const overlaps = (a, b) => a.left < b.right && a.right > b.left;
+      const occluders = [...document.querySelectorAll('*')].flatMap((node) => {
+        const style = getComputedStyle(node);
+        if (!['sticky', 'fixed'].includes(style.position) || style.visibility === 'hidden') return [];
+        const rect = node.getBoundingClientRect();
+        return rect.height > 0 && rect.width > 0 && overlaps(rect, bounds) && rect.bottom > top && rect.top < bottom
+          ? [{ node, rect }] : [];
+      });
+      let clipTop = top;
+      let clipBottom = bottom;
+      for (const { rect } of occluders) {
+        if (rect.top <= top + 1) clipTop = Math.max(clipTop, rect.bottom);
+        if (rect.bottom >= bottom - 1) clipBottom = Math.min(clipBottom, rect.top);
+      }
+      // Leaf-local intervals survive an in-flow insertion before the content.
+      // Identity/version changes instead invalidate that content's old evidence.
+      const nodes = [...element.querySelectorAll('*')].flatMap((node) => {
+        if (node.children.length && ![...node.childNodes].some((child) => child.nodeType === 3 && child.textContent.trim())) return [];
+        const rect = node.getBoundingClientRect();
+        const style = getComputedStyle(node);
+        if (rect.height <= 0 || rect.width <= 0 || !overlaps(rect, bounds) ||
+            style.visibility !== 'visible' || style.display === 'none') return [];
+        const value = node.textContent + ('value' in node ? node.value : '');
+        let identity = state.ids.get(node);
+        if (!identity) {
+          identity = { id: state.next++, version: 0, value, height: rect.height, width: rect.width };
+          state.ids.set(node, identity);
+        } else if (identity.value !== value || Math.abs(identity.height - rect.height) > 1 || Math.abs(identity.width - rect.width) > 1) {
+          Object.assign(identity, { version: identity.version + 1, value, height: rect.height, width: rect.width });
+        }
+        let visible = [[Math.max(0, top - rect.top), Math.min(rect.height, bottom - rect.top)]]
+          .filter(([start, end]) => end > start);
+        for (const { node: cover, rect: mask } of occluders) {
+          if (cover.contains(node) || !overlaps(mask, rect)) continue;
+          visible = visible.flatMap(([start, end]) => {
+            const a = Math.max(start, mask.top - rect.top);
+            const b = Math.min(end, mask.bottom - rect.top);
+            return b <= a ? [[start, end]] : [[start, a], [b, end]].filter(([a, b]) => b > a);
+          });
+        }
+        return [{ id: identity.id, version: identity.version, height: rect.height, width: rect.width,
+          y: rect.top - top + element.scrollTop, visible }];
+      });
+      return { height: element.clientHeight, total: element.scrollHeight, top: element.scrollTop,
+        usable: clipBottom - clipTop, inset: clipTop - top, nodes };
+    };
+    const same = (a, b) => a.height === b.height && a.total === b.total && Math.abs(a.top - b.top) <= 1 &&
+      JSON.stringify(a.nodes) === JSON.stringify(b.nodes);
+    if (target === null) return snapshot();
+    let previous;
+    let stable = 0;
+    for (let sample = 0; sample < 12; sample += 1) {
+      element.scrollTop = Math.min(target, Math.max(0, element.scrollHeight - element.clientHeight));
+      await new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(done)));
+      const current = snapshot();
+      if (current.height <= 0 || Math.ceil(current.total / current.height) > 100) {
+        throw new Error('Scroll-section coverage exceeds bounded capture limits');
+      }
+      const expected = Math.min(target, Math.max(0, current.total - current.height));
+      if (Math.abs(current.top - expected) > 1) stable = 0;
+      else stable = previous && same(previous, current) ? stable + 1 : 1;
+      if (stable === 3) return current;
+      previous = current;
+    }
+    throw new Error('Scroll-section geometry did not settle within bounded capture limits');
+  }, target);
+  const same = (a, b) => a.height === b.height && a.total === b.total && Math.abs(a.top - b.top) <= 1 &&
+    JSON.stringify(a.nodes) === JSON.stringify(b.nodes);
+  const coverage = new Map();
+  const key = (node) => `${node.id}:${node.version}`;
+  const record = (current) => {
+    for (const node of current.nodes) {
+      const intervals = [...(coverage.get(key(node)) ?? []), ...node.visible].sort((a, b) => a[0] - b[0]);
+      const merged = [];
+      for (const [start, end] of intervals) {
+        const last = merged.at(-1);
+        if (last && start <= last[1] + 1) last[1] = Math.max(last[1], end);
+        else merged.push([start, end]);
+      }
+      coverage.set(key(node), merged);
+    }
+  };
+  const gap = (current) => {
+    for (const node of current.nodes) {
+      let end = 0;
+      for (const [start, bottom] of coverage.get(key(node)) ?? []) {
+        if (start > end + 1) break;
+        end = Math.max(end, bottom);
+      }
+      if (end < node.height - 1) return { node, start: end };
+    }
+  };
+  const sections = [];
+  let target = 0;
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    while (sections.length < 100) {
+      const current = await observe(target);
+      if (!current.nodes.length || current.usable <= 0) throw new Error('Content-anchored scroll coverage incomplete');
+      await beforeCapture();
+      const expected = { ...current, top: Math.min(target, Math.max(0, current.total - current.height)) };
+      const before = await observe(null);
+      if (!same(before, expected)) { target = 0; break; }
+      const index = sections.length + 1;
+      sections.push({ index, height: current.height, total: current.total, top: current.top,
+        usable: current.usable, visibleAnchors: current.nodes.filter((node) => node.visible.length).length });
+      await page.screenshot({ path: path.replace(/\.png$/, `-section-${index}.png`), fullPage: true });
+      const after = await observe(null);
+      if (!same(before, after)) { target = 0; break; }
+      record(after);
+      // Extents can differ by scroll position; reconcile uncovered content,
+      // not the presence of a globally constant scrollHeight.
+      if (Math.abs(after.top - (after.total - after.height)) <= 1 || after.total <= after.height) {
+        const terminal = await observe(after.top);
+        if (!same(after, terminal)) { target = 0; break; }
+        const missing = gap(terminal);
+        if (!missing) return { method: 'content-anchored', attempts: attempt + 1, sections,
+          anchors: terminal.nodes.length, coveredAnchors: terminal.nodes.length,
+          terminal: { height: terminal.height, total: terminal.total, top: terminal.top } };
+        target = Math.max(0, missing.node.y + missing.start - terminal.inset);
+        break;
+      }
+      target = after.top + after.usable;
+    }
+    if (sections.length >= 100) throw new Error('Scroll-section coverage exceeds bounded capture limits');
+  }
+  throw new Error('Content-anchored scroll coverage incomplete after bounded reconciliation');
+}
+
 export async function captureFullPage(page, path, beforeCapture = async () => {}) {
+  captureProofs.delete(page);
   await beforeCapture();
   await page.screenshot({ path, fullPage: true });
   // The real Layout owns a fixed-height, independently scrolling main.
@@ -229,7 +368,13 @@ export async function captureFullPage(page, path, beforeCapture = async () => {}
   const matches = (actual, expected) => actual.height === expected.height && actual.total === expected.total &&
     Math.abs(actual.top - expected.top) <= 1;
   let captures = 0;
+  const anchors = typeof main.evaluateHandle === 'function'
+    ? await main.evaluateHandle((root) => ({ root, ids: new WeakMap(), next: 1 })) : undefined;
   try {
+    if (anchors) {
+      captureProofs.set(page, await captureAnchoredMain(page, anchors, path, beforeCapture));
+      return;
+    }
     // A changed extent invalidates earlier tiles, not just the bottom target.
     // Attempt at most three full passes, with at most 100 section captures.
     for (let attempt = 0; attempt < 3; attempt += 1) {
@@ -252,7 +397,8 @@ export async function captureFullPage(page, path, beforeCapture = async () => {}
     }
     throw new Error('Scroll-section extent remained unstable; all-sections coverage unverified');
   } finally {
-    await main.evaluate((element, original) => { element.scrollTop = original; }, geometry.original);
+    try { await main.evaluate((element, original) => { element.scrollTop = original; }, geometry.original); }
+    finally { await anchors?.dispose(); }
   }
 }
 
@@ -604,6 +750,7 @@ async function browserChecks(command, options, plans) {
                 throw new Error('Application became busy during section capture');
               }
             });
+            if (captureProofs.has(page)) result.captureProof = captureProofs.get(page);
           }
           result.status = 'PASSED';
         } catch (error) {
