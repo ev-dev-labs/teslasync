@@ -19,12 +19,13 @@
 import { useId, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { PageLayout, LayoutCard } from '@/components/layout';
-import { Tabs, HelperText, type TabItem } from '@/components/ui';
+import { Tabs, HelperText, Icon, type TabItem } from '@/components/ui';
 import { FadeIn } from '@/components/motion';
 import { InlineCallout } from '@/components/feedback';
 import { ShieldCheck } from 'lucide-react';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { typography } from '@/lib/tokens';
 import { NoVehicleSelected } from '@/features/onboarding/components/NoVehicleSelected';
 
 import { useVaultEvidence } from '../hooks/useVaultEvidence';
@@ -93,7 +94,7 @@ export default function WarrantyResaleVaultPage() {
     >
       <FadeIn>
         <LayoutCard title={t('resaleVault.intro.title', 'Local-first, selectively disclosed')}
-          actions={<ShieldCheck className="h-4 w-4 text-[var(--text-muted)]" aria-hidden />}>
+          actions={<Icon icon={ShieldCheck} className={typography.color.muted} />}>
           <HelperText>
             {t(
               'resaleVault.intro.body',
@@ -116,12 +117,13 @@ export default function WarrantyResaleVaultPage() {
         role="tabpanel"
         id={`${tabIdBase}-panel-${activeTab}`}
         aria-labelledby={`${tabIdBase}-tab-${activeTab}`}
-        className="mt-4 space-y-4"
+        tabIndex={0}
+        className="mt-4 min-w-0 space-y-4 rounded-shape-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus-ring)]"
       >
         {activeTab === 'evidence' && (
           <FadeIn>
             <div className="space-y-4">
-              <InlineCallout variant="info" icon={<ShieldCheck />}>
+              <InlineCallout variant="info" icon={<Icon icon={ShieldCheck} />}>
                 {t(
                   'resaleVault.evidence.scopeNote',
                   'This tab shows all evidence currently available for this vehicle, regardless of your disclosure selection. Use the disclosure profile tab to control what actually leaves your browser.',

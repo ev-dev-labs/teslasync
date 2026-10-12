@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { act, render, screen, fireEvent, waitFor, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
@@ -277,6 +278,30 @@ describe('WarrantyResaleVaultPage tab/panel identity', () => {
       expect(tabs.filter((tab) => tab.tabIndex === 0)).toEqual([selected]);
     }
     expect(screen.getByText(/evidence inventory/i)).toBeInTheDocument();
+  });
+
+  it('lets keyboard users enter every active named panel and return to its selected tab without invoking vault actions', async () => {
+    const user = userEvent.setup();
+    const sign = vi.spyOn(reportSigner, 'signReport');
+    renderPage();
+    await screen.findByText(/evidence inventory/i);
+    const tabs = screen.getAllByRole('tab');
+
+    for (const tab of tabs) {
+      await user.click(tab);
+      expect(tab).toHaveFocus();
+      const panel = screen.getByRole('tabpanel', { name: tab.textContent ?? '' });
+      expect(panel).toHaveAttribute('tabindex', '0');
+      expect(tab).toHaveAttribute('aria-controls', panel.id);
+      expect(panel).toHaveClass('min-w-0', 'focus-visible:outline-2', 'focus-visible:outline-offset-2');
+      await user.tab();
+      expect(panel).toHaveFocus();
+      await user.tab({ shift: true });
+      expect(tab).toHaveFocus();
+    }
+
+    expect(sign).not.toHaveBeenCalled();
+    expect(requestMock.mock.calls.every(([, options]) => !options?.method || options.method === 'GET')).toBe(true);
   });
 
   it('isolates tab and panel IDs between simultaneous page instances and retains identity on rerender', async () => {
