@@ -6,13 +6,13 @@ import {
 } from 'lucide-react';
 
 import { PageLayout } from '@/components/layout';
-import { GlassPanel, PanelTitle, Text, StatusPill, SelectableCard } from '@/components/ui';
+import { GlassPanel, PanelTitle, Text, StatusPill, SelectableCard, Icon } from '@/components/ui';
 
 import { MetricBar } from '@/components/data-display';
 import {
-  LinearGauge, ChartGradient, ChartTooltip, chartGrid, axisTick,
+  LinearGauge, ChartTooltip, chartGrid, axisTick,
   ComposedChart, Area, Line, XAxis, YAxis, Tooltip, ReferenceLine, ResponsiveContainer,
-  EmbeddedChart,
+  EmbeddedChart, type ChartDataColumn,
 } from '@/components/charts';
 import { Skeleton, EmptyState, QueryError, StaleRefreshWarning } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
@@ -22,36 +22,32 @@ import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useDataState } from '@/hooks/useDataState';
 import { useUnits } from '@/hooks/useUnits';
+import { useMotionPreference } from '@/hooks/useMotionPreference';
 
-import { cn } from '@/lib/cn';
+import { gaugeTone, neonColorMap, chartTokens, type GaugeTone } from '@/lib/tokens';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { NextServiceBrief } from '../components/operationalbrief-all/NextServiceBrief';
 
 const DASH = '—';
 
-/* Chart colours — dynamic hex handed to Recharts (graphics, not text, so the
-   brighter -400 shades are fine here; body text stays on toned -300 shades). */
-const COLOR_CONFIDENCE = '#22d3ee'; // cyan-400
-const COLOR_EOL = '#f43f5e'; // rose-500 — the end-of-life threshold marker
-
-/* Per-status presentation. `dot` is a background class for the StatusPill's
-   indicator; `text` is a toned-neon (-300) accent for the icon/label; `gauge`
-   is the LinearGauge arc colour. */
 interface StatusMeta {
   dot: string;
   text: string;
-  gauge: string;
+  tone: GaugeTone;
   key: string;
   fallback: string;
 }
 const STATUS_META: Record<RULStatus, StatusMeta> = {
-  healthy: { dot: 'bg-emerald-400', text: 'text-emerald-300', gauge: '#34d399', key: 'rul.status.healthy', fallback: 'Healthy' },
-  watch: { dot: 'bg-amber-400', text: 'text-amber-300', gauge: '#fbbf24', key: 'rul.status.watch', fallback: 'Watch' },
-  replace_soon: { dot: 'bg-rose-400', text: 'text-rose-300', gauge: '#fb7185', key: 'rul.status.replace_soon', fallback: 'Replace soon' },
-  overdue: { dot: 'bg-red-500', text: 'text-red-300', gauge: '#f87171', key: 'rul.status.overdue', fallback: 'Overdue' },
+  healthy: { ...neonColorMap.green, tone: 'success', key: 'rul.status.healthy', fallback: 'Healthy' },
+  watch: { ...neonColorMap.amber, tone: 'warning', key: 'rul.status.watch', fallback: 'Watch' },
+  replace_soon: { ...neonColorMap.red, tone: 'danger', key: 'rul.status.replace_soon', fallback: 'Replace soon' },
+  overdue: { ...neonColorMap.red, tone: 'danger', key: 'rul.status.overdue', fallback: 'Overdue' },
+};
+const UNKNOWN_STATUS_META: StatusMeta = {
+  ...neonColorMap.neutral, tone: 'neutral', key: 'common.unknown', fallback: 'Unknown',
 };
 function statusMeta(status: string): StatusMeta {
-  return STATUS_META[status as RULStatus] ?? STATUS_META.healthy;
+  return Object.prototype.hasOwnProperty.call(STATUS_META, status) ? STATUS_META[status as RULStatus] : UNKNOWN_STATUS_META;
 }
 
 /* Component → icon. Falls back to a generic gauge for an unrecognised key. */
@@ -66,6 +62,7 @@ const COMPONENT_ICON: Record<string, LucideIcon> = {
 export default function RemainingUsefulLifePage() {
   const { fmtNumber, fmtInt, precision: displayPrecision } = useNumberFormatting();
   const { formatDistance } = useUnits();
+  const { reduce, durationMs } = useMotionPreference();
   const { t } = useTranslation();
   usePageTitle(t('rul.title', 'Remaining useful life'));
 
@@ -137,9 +134,28 @@ export default function RemainingUsefulLifePage() {
     })),
     [detail],
   );
+  const forecastRows = useMemo(
+    () => (detail?.projection ?? []).map((p) => ({ ...p })),
+    [detail],
+  );
+  const forecastColumns = useMemo<readonly ChartDataColumn[]>(() => [
+    { key: 'date', label: t('common.date', 'Date') },
+    {
+      key: 'projected_health', label: t('rul.forecast.projected', 'Projected health'),
+      format: (value) => typeof value === 'number' ? `${fmtNumber(value)}%` : DASH,
+    },
+    {
+      key: 'confidence_low', label: t('costAnalysis.forecast.lowerBound', 'Lower bound'),
+      format: (value) => typeof value === 'number' ? `${fmtNumber(value)}%` : DASH,
+    },
+    {
+      key: 'confidence_high', label: t('costAnalysis.forecast.upperBound', 'Upper bound'),
+      format: (value) => typeof value === 'number' ? `${fmtNumber(value)}%` : DASH,
+    },
+  ], [t, fmtNumber]);
   const eol = detail?.eol_threshold ?? null;
   const yMin = eol != null && eol > 0 ? Math.max(0, Math.floor(eol) - 10) : 0;
-  const activeMeta = detail ? statusMeta(detail.status) : STATUS_META.healthy;
+  const activeMeta = detail ? statusMeta(detail.status) : UNKNOWN_STATUS_META;
 
   const selectVehicleMsg = t('rul.selectVehicle', 'Select a vehicle to view its component prognostics.');
 
@@ -163,9 +179,9 @@ export default function RemainingUsefulLifePage() {
 
       {/* ── 2. Component health board ──────────────────────────────────── */}
       <FadeIn delay={0.05}>
-        <section aria-label={t('rul.board.title', 'Component health')}>
+        <section aria-label={t('rul.board.title', 'Component health')} aria-busy={boardLoading && !board && !noVehicle}>
           <PanelTitle className="mb-3 flex items-center gap-2">
-            <HeartPulse className="h-4 w-4 text-emerald-300" aria-hidden="true" />
+            <Icon icon={HeartPulse} className={neonColorMap.neutral.text} />
             {t('rul.board.title', 'Component health')}
           </PanelTitle>
 
@@ -194,55 +210,54 @@ export default function RemainingUsefulLifePage() {
               />
             </GlassPanel>
           ) : (
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+            <div role="group" aria-label={t('rul.board.title', 'Component health')} className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
               {components.map((c) => {
                 const meta = statusMeta(c.status);
-                const Icon = COMPONENT_ICON[c.component] ?? Gauge;
+                const componentIcon = COMPONENT_ICON[c.component] ?? Gauge;
                 const confPct = Math.round(c.confidence * 100);
                 return (
                   <SelectableCard
                     key={c.component}
-                    role="option"
                     selected={activeComponent === c.component}
                     onClick={() => handleSelect(c.component)}
                     aria-label={t('rul.card.aria', 'Show forecast for {{label}}', { label: c.label })}
-                    className="flex flex-col gap-3"
+                    className="@container flex flex-col gap-3"
                   >
                     <div className="flex items-center justify-between gap-2">
                       <div className="flex min-w-0 items-center gap-2">
-                        <Icon className={cn('h-4 w-4 shrink-0', meta.text)} aria-hidden="true" />
+                        <Icon icon={componentIcon} className={neonColorMap.neutral.text} />
                         <Text as="span" variant="subhead" weight="semibold" className="break-words">
                           {c.label}
                         </Text>
                       </div>
-                      <StatusPill color={meta.dot} pulse={c.status === 'overdue'}>
+                      <StatusPill color={meta.dot}>
                         {t(meta.key, meta.fallback)}
                       </StatusPill>
                     </div>
 
-                    <div className="flex items-center gap-4">
+                    <div className="flex flex-col items-start gap-4 @sm:flex-row @sm:items-center">
                       <LinearGauge
                         value={c.health_pct}
                         max={100}
                         unit="%"
                         label={t('rul.card.health', 'Health')}
-                        color={meta.gauge}
+                        tone={meta.tone}
                         size={104}
                         decimals={displayPrecision}
                         className="w-32 shrink-0"
                       />
-                      <dl className="min-w-0 flex-1 space-y-1.5">
-                        <div className="flex items-center justify-between gap-2">
+                      <dl className="w-full min-w-0 flex-1 space-y-1.5">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
                           <Text as="dt" variant="caption">{t('rul.card.remaining', 'Remaining')}</Text>
                           <Text as="dd" variant="bodySm" weight="semibold" className="tabular-nums">
                             {remainingText(c)}
                           </Text>
                         </div>
-                        <div className="flex items-center justify-between gap-2">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
                           <Text as="dt" variant="caption">{t('rul.card.distanceLeft', 'Distance left')}</Text>
                           <Text as="dd" variant="bodySm" className="tabular-nums">{remainingDistanceText(c)}</Text>
                         </div>
-                        <div className="flex items-center justify-between gap-2">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
                           <Text as="dt" variant="caption">{t('rul.card.replaceBy', 'Replace by')}</Text>
                           <Text as="dd" variant="bodySm" className="tabular-nums">
                             {c.projected_eol_date ?? DASH}
@@ -254,10 +269,16 @@ export default function RemainingUsefulLifePage() {
                     <MetricBar
                       value={confPct}
                       max={100}
-                      color={COLOR_CONFIDENCE}
+                      color={gaugeTone.info}
+                      fill="solid"
                       label={t('rul.card.confidence', 'Confidence')}
                       sublabel={`${confPct}% · ${confLabel(c.confidence)}`}
                     />
+                    {c.basis ? (
+                      <Text as="p" variant="caption">
+                        {t('rul.forecast.basis', 'Basis')}: {c.basis}
+                      </Text>
+                    ) : null}
                   </SelectableCard>
                 );
               })}
@@ -268,11 +289,11 @@ export default function RemainingUsefulLifePage() {
 
       {/* ── 3. Forecast — selected component's decline to EOL ───────────── */}
       <FadeIn delay={0.1}>
-        <GlassPanel className="p-4 sm:p-5">
-          <PanelTitle className="mb-1 flex items-center gap-2">
-            <TrendingDown className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+        <GlassPanel className="p-4 sm:p-5" aria-busy={detailLoading && !detail && !noVehicle && !!activeComponent}>
+          <PanelTitle className="mb-1 flex flex-wrap items-center gap-2">
+            <Icon icon={TrendingDown} className={neonColorMap.neutral.text} />
             {t('rul.forecast.title', 'Health forecast')}
-            {detail ? <span className={cn('text-sm font-normal', activeMeta.text)}>· {detail.label}</span> : null}
+            {detail ? <Text as="span" variant="bodySm" className="break-words">· {detail.label}</Text> : null}
           </PanelTitle>
           <StaleRefreshWarning state={detailState} label={t('rul.forecast.title', 'Health forecast')} />
           <Text as="p" variant="caption" className="mb-3">
@@ -302,17 +323,16 @@ export default function RemainingUsefulLifePage() {
             <>
               <div className="h-72 sm:h-80">
                 {/* chart-legend-audit:skip confidence band is inseparable from projected health line */}
-                {/* chart-a11y:no-table projected health line + confidence band area — composite trace not tabular */}
                 <EmbeddedChart
                   title={t('rul.forecast.title', 'Health forecast')}
                   ariaLabel={t('rul.forecast.aria', 'Area chart of projected component health declining to its end-of-life threshold, with a shaded confidence band')}
+                  ariaDescription={t('rul.forecast.subtitle', 'Projected health decaying to the end-of-life threshold, with a confidence band.')}
+                  data={forecastRows}
+                  dataColumns={forecastColumns}
                   fluid
                 >
                   <ResponsiveContainer width="100%" height="100%">
                     <ComposedChart data={chartData} margin={{ top: 12, right: 16, bottom: 4, left: 4 }}>
-                      <defs>
-                        <ChartGradient id="rulBandGrad" color={activeMeta.gauge} opacity={0.25} />
-                      </defs>
                       {chartGrid}
                       <XAxis
                         dataKey="date"
@@ -342,14 +362,13 @@ export default function RemainingUsefulLifePage() {
                       {eol != null ? (
                         <ReferenceLine
                           y={eol}
-                          stroke={COLOR_EOL}
+                          stroke={chartTokens.axisStroke}
                           strokeDasharray="4 3"
                           strokeOpacity={0.8}
                           label={{
                             value: t('rul.forecast.eol', 'End of life'),
                             position: 'insideTopRight',
-                            fill: COLOR_EOL,
-                            fontSize: 10,
+                            fill: chartTokens.axisStroke,
                           }}
                         />
                       ) : null}
@@ -357,30 +376,35 @@ export default function RemainingUsefulLifePage() {
                         type="monotone"
                         dataKey="band"
                         stroke="none"
-                        fill="url(#rulBandGrad)"
+                        fill={gaugeTone[activeMeta.tone]}
+                        fillOpacity={0.08}
                         name={t('rul.forecast.band', 'Confidence band')}
                         isAnimationActive={false}
                       />
                       <Line
                         type="monotone"
                         dataKey="projected_health"
-                        stroke={activeMeta.gauge}
+                        stroke={gaugeTone[activeMeta.tone]}
                         strokeWidth={2}
                         dot={false}
                         name={t('rul.forecast.projected', 'Projected health')}
-                        animationDuration={700}
+                        isAnimationActive={!reduce}
+                        animationDuration={durationMs}
                       />
                     </ComposedChart>
                   </ResponsiveContainer>
                 </EmbeddedChart>
               </div>
-              {detail?.basis ? (
-                <Text as="p" variant="caption" className="mt-3">
-                  <span className="font-medium">{t('rul.forecast.basis', 'Basis')}:</span> {detail.basis}
-                </Text>
-              ) : null}
             </>
           )}
+          {detail?.basis ? (
+            <Text as="p" variant="caption" className="mt-3">
+              {t('rul.forecast.basis', 'Basis')}: {detail.basis}
+            </Text>
+          ) : null}
+          {detail?.notes ? (
+            <Text as="p" variant="caption" className="mt-2">{detail.notes}</Text>
+          ) : null}
         </GlassPanel>
       </FadeIn>
     </PageLayout>

@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { Children, isValidElement, type ComponentProps } from 'react';
 import type { ComponentRUL, ComponentDetailResponse } from '@/api/hooks/useRUL';
 import type { FormatOptions } from '@/hooks/useUnits';
 import { formatDistance, type DistanceUnitPref } from '@/lib/unitConversion';
@@ -9,6 +10,11 @@ import RemainingUsefulLifePage from './RemainingUsefulLifePage';
 
 const sources = vi.hoisted(() => ({ board: vi.fn(), detail: vi.fn() }));
 const units = vi.hoisted((): { distance: DistanceUnitPref } => ({ distance: 'km' }));
+const preferences = vi.hoisted(() => ({ reduce: false, vehicleId: 7 as number | null }));
+const chart = vi.hoisted(() => ({ line: vi.fn(), area: vi.fn() }));
+vi.mock('@/hooks/useMotionPreference', () => ({
+  useMotionPreference: () => ({ reduce: preferences.reduce, durationMs: preferences.reduce ? 0 : 250 }),
+}));
 vi.mock('@/hooks/useFormatting', () => ({ useFormatting: () => ({ currencySymbol: '$' }) }));
 vi.mock('@/hooks/useUnits', () => ({
   useUnits: () => ({
@@ -23,11 +29,11 @@ vi.mock('@/hooks/useUnits', () => ({
   }),
 }));
 vi.mock('@/api/hooks/useRUL', () => ({
-  useRUL: () => sources.board(),
-  useComponentRUL: () => sources.detail(),
+  useRUL: (vehicleId: number | null) => sources.board(vehicleId),
+  useComponentRUL: (vehicleId: number | null, component: string | null) => sources.detail(vehicleId, component),
 }));
 vi.mock('@/hooks/useSelectedVehicle', () => ({
-  useSelectedVehicle: () => ({ vehicleId: 7 }),
+  useSelectedVehicle: () => ({ vehicleId: preferences.vehicleId }),
 }));
 vi.mock('@/hooks/usePageTitle', () => ({ usePageTitle: vi.fn() }));
 vi.mock('react-i18next', async (importActual) => ({
@@ -42,7 +48,17 @@ vi.mock('react-i18next', async (importActual) => ({
 vi.mock('@/components/charts', async (importActual) => {
   const actual = await importActual<typeof import('@/components/charts')>();
   const { chartTestDoubles } = await import('@/test/chartTestDoubles');
-  return { ...actual, ...chartTestDoubles };
+  return {
+    ...actual, ...chartTestDoubles, EmbeddedChart: actual.EmbeddedChart,
+    ComposedChart: (props: ComponentProps<typeof actual.ComposedChart>) => {
+      Children.forEach(props.children, (child) => {
+        if (!isValidElement(child)) return;
+        if (child.type === actual.Line) chart.line(child.props);
+        if (child.type === actual.Area) chart.area(child.props);
+      });
+      return <actual.ComposedChart {...props} />;
+    },
+  };
 });
 
 const component: ComponentRUL = {
@@ -76,6 +92,10 @@ function renderPage() {
 
 beforeEach(() => {
   units.distance = 'km';
+  preferences.reduce = false;
+  preferences.vehicleId = 7;
+  chart.line.mockClear();
+  chart.area.mockClear();
   sources.board.mockReturnValue(query({
     vehicle_id: 7, components: [component], next_service: { component: 'tires', date: '2026-08-01' },
   }));
@@ -107,10 +127,10 @@ describe('RemainingUsefulLifePage independent sources', () => {
     expect(within(brief).getByText('Showing retained measurements')).toBeInTheDocument();
     expect(brief.querySelectorAll('[data-value-state="value"]')).toHaveLength(2);
     expect(screen.getAllByTestId('stale-refresh-warning')).toHaveLength(2);
-    expect(screen.getByRole('option', { name: 'Show forecast for Tires' })).toHaveAttribute('aria-selected', 'true');
-    expect(screen.getByText('Measured tread trend')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Show forecast for Tires' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getAllByText(/Measured tread trend/)).toHaveLength(2);
     expect(screen.getByText('75% · High')).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: /Health forecast/ })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /^Health forecast\s*·\s*Tires$/ })).toBeInTheDocument();
     expect(detail.projection[0]).toEqual({
       date: '2026-08-01', projected_health: 20, confidence_low: 15, confidence_high: 25,
     });
@@ -143,14 +163,14 @@ describe('RemainingUsefulLifePage independent sources', () => {
       vehicle_id: 7, components: [measured], next_service: null,
     }));
     renderPage();
-    const card = screen.getByRole('option', { name: 'Show forecast for Tires' });
+    const card = screen.getByRole('button', { name: 'Show forecast for Tires' });
     expect(within(card).getByText(expected)).toBeInTheDocument();
     expect(measured.remaining_km).toBe(remaining);
   });
 
   it('keeps missing wear distance unknown instead of formatting a measured zero', () => {
     renderPage();
-    const card = screen.getByRole('option', { name: 'Show forecast for Tires' });
+    const card = screen.getByRole('button', { name: 'Show forecast for Tires' });
     expect(within(card).getByText('—')).toBeInTheDocument();
     expect(within(card).queryByText(/^0\s+(km|mi)$/)).toBeNull();
   });
@@ -162,9 +182,9 @@ describe('RemainingUsefulLifePage independent sources', () => {
     sources.detail.mockReturnValue(query(detail, new Error('forecast refresh')));
     renderPage();
     expect(screen.getAllByTestId('stale-refresh-warning')).toHaveLength(2);
-    expect(screen.getByRole('option', { name: 'Show forecast for Tires' })).toHaveAttribute('aria-selected', 'true');
-    expect(screen.getByText('Measured tread trend')).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: /Health forecast/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Show forecast for Tires' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getAllByText(/Measured tread trend/)).toHaveLength(2);
+    expect(screen.getByRole('heading', { name: /^Health forecast\s*·\s*Tires$/ })).toBeInTheDocument();
     expect(screen.queryByText('Unable to load service projection.')).toBeNull();
   });
 
@@ -174,7 +194,82 @@ describe('RemainingUsefulLifePage independent sources', () => {
     expect(screen.getByText('Unable to load service projection.')).toBeInTheDocument();
     // No component can be selected from an absent board, so forecast remains a
     // labelled, recoverable prerequisite panel rather than disappearing.
-    expect(screen.getByRole('heading', { name: /Health forecast/ })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /^Health forecast\s*·\s*Tires$/ })).toBeInTheDocument();
     expect(screen.getByText('Select a component above to see its forecast.')).toBeInTheDocument();
+  });
+
+  it('exposes every actual forecast value and bound through the canonical chart table', () => {
+    sources.detail.mockReturnValue(query({
+      ...detail, projection: [...detail.projection, {
+        date: '2026-09-01', projected_health: 10, confidence_low: 5, confidence_high: 16,
+      }],
+    }));
+    renderPage();
+    const table = screen.getByRole('table');
+    expect(within(table).getAllByRole('columnheader').map((cell) => cell.textContent))
+      .toEqual(['Date', 'Projected health', 'Lower bound', 'Upper bound']);
+    expect(within(table).getAllByRole('row').slice(1).map((row) =>
+      within(row).getAllByRole('cell').map((cell) => cell.textContent),
+    )).toEqual([
+      ['2026-08-01', '20.00%', '15.00%', '25.00%'],
+      ['2026-09-01', '10.00%', '5.00%', '16.00%'],
+    ]);
+    expect(screen.getByText('Observed trend only')).toBeInTheDocument();
+    expect(detail.projection[0]).toEqual({
+      date: '2026-08-01', projected_health: 20, confidence_low: 15, confidence_high: 25,
+    });
+  });
+
+  it('keeps basis and configuration caveats visible without inventing an empty forecast', () => {
+    sources.detail.mockReturnValue(query({ ...detail, projection: [] }));
+    renderPage();
+    expect(screen.getByText('No forecast available for this component yet.')).toBeInTheDocument();
+    expect(screen.getAllByText(/Measured tread trend/)).toHaveLength(2);
+    expect(screen.getByText('Observed trend only')).toBeInTheDocument();
+    expect(screen.queryByRole('table')).toBeNull();
+  });
+
+  it('uses named native toggles and retains explicit selection ahead of the default', () => {
+    const brakes = { ...component, component: 'brakes', label: 'Brakes' };
+    sources.board.mockReturnValue(query({
+      vehicle_id: 7, components: [component, brakes], next_service: { component: 'tires', date: '2026-08-01' },
+    }));
+    renderPage();
+    const group = screen.getByRole('group', { name: 'Component health' });
+    const tiresCard = within(group).getByRole('button', { name: 'Show forecast for Tires' });
+    const brakesCard = within(group).getByRole('button', { name: 'Show forecast for Brakes' });
+    expect(tiresCard).toHaveAttribute('aria-pressed', 'true');
+    expect(brakesCard).toHaveAttribute('aria-pressed', 'false');
+    expect(screen.queryByRole('option')).toBeNull();
+    fireEvent.click(brakesCard);
+    expect(brakesCard).toHaveAttribute('aria-pressed', 'true');
+    expect(tiresCard).toHaveAttribute('aria-pressed', 'false');
+    expect(sources.detail).toHaveBeenLastCalledWith(7, 'brakes');
+  });
+
+  it.each([false, true])('preserves both series with shared motion reduction %s', (reduce) => {
+    preferences.reduce = reduce;
+    renderPage();
+    expect(chart.line).toHaveBeenLastCalledWith(expect.objectContaining({
+      dataKey: 'projected_health', strokeWidth: 2, dot: false,
+      isAnimationActive: !reduce, animationDuration: reduce ? 0 : 250,
+    }));
+    expect(chart.area).toHaveBeenLastCalledWith(expect.objectContaining({
+      dataKey: 'band', fillOpacity: 0.08, isAnimationActive: false,
+    }));
+    expect(screen.getByRole('table')).toHaveTextContent('2026-08-01');
+  });
+
+  it('retains all section shells when workspace vehicle selection is absent', () => {
+    preferences.vehicleId = null;
+    sources.board.mockReturnValue(query(undefined));
+    sources.detail.mockReturnValue(query(undefined));
+    renderPage();
+    expect(screen.getByTestId('rul-next-service-summary')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Component health' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Health forecast' })).toBeInTheDocument();
+    expect(screen.getAllByText('Select a vehicle to view its component prognostics.')).toHaveLength(3);
+    expect(sources.board).toHaveBeenLastCalledWith(null);
+    expect(sources.detail).toHaveBeenLastCalledWith(null, null);
   });
 });
