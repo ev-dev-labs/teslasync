@@ -18,6 +18,7 @@ import {
   ConfirmDialog,
   DataTable,
   HelperText,
+  Icon,
   Input,
   MaskedValue,
   Select,
@@ -44,6 +45,7 @@ import { usePageTitle } from '@/hooks/usePageTitle'
 import { useDateFormat } from '@/hooks/useDateFormat'
 
 import { isApiError } from '@/lib/resilience'
+import { gaugeTone } from '@/lib/tokens'
 import { RedisDiagnosticEmptyState, type DiagnosticErrorProps } from '../components/RedisDiagnosticEmptyState'
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { deriveDataState } from '@/api/dataState';
@@ -54,25 +56,6 @@ import { RedisOperationalBrief } from '../components/statstrip-ingest-dlq-redis/
 type SignalCategory = 'Battery' | 'Charging' | 'Driving' | 'Climate' | 'Other'
 
 const CATEGORY_ORDER: SignalCategory[] = ['Battery', 'Charging', 'Driving', 'Climate', 'Other']
-
-const CATEGORY_COLORS: Record<SignalCategory, 'success' | 'info' | 'warning' | 'neutral' | 'danger'> = {
-  Battery: 'success',
-  Charging: 'info',
-  Driving: 'warning',
-  Climate: 'danger',
-  Other: 'neutral',
-}
-
-// Toned-down hex per category for the breakdown bars. Passed as a dynamic
-// `color` prop to the shared <MetricBar>, never an inline static style, so
-// the bars stay on-palette with the category badges without neon body text.
-const CATEGORY_BAR_COLOR: Record<SignalCategory, string> = {
-  Battery: '#10b981',
-  Charging: '#06b6d4',
-  Driving: '#f59e0b',
-  Climate: '#f43f5e',
-  Other: '#64748b',
-}
 
 function categorizeSignal(name: string): SignalCategory {
   const n = name.toLowerCase()
@@ -112,7 +95,7 @@ function buildColumns(t: (key: string, fb: string) => string): Column<SignalRow>
       filterValue: (row) => row.name ?? null,
       header: t('redis.signalName', 'Signal name'),
       sortable: true,
-      render: (row) => <Text mono size="sm" color="primary">{row.name}</Text>,
+      render: (row) => <Text mono size="sm" color="primary" className="break-all">{row.name}</Text>,
     },
     {
       key: 'value',
@@ -133,17 +116,8 @@ function buildColumns(t: (key: string, fb: string) => string): Column<SignalRow>
             />
           )
         }
-        // Per-type toned-down syntax-highlight colors avoid neon tabular body text.
-        // Mirrors common dev-console conventions:
-        //   number  → cyan-300, string → amber-300, boolean → purple-300.
-        const colorClass =
-          typeof row.value === 'number'
-            ? 'text-cyan-300'
-            : typeof row.value === 'boolean'
-              ? 'text-purple-300'
-              : 'text-amber-300'
         return (
-          <Text mono size="sm" className={colorClass}>
+          <Text mono size="sm" color="primary" className="break-all">
             {String(row.value)}
           </Text>
         )
@@ -156,7 +130,7 @@ function buildColumns(t: (key: string, fb: string) => string): Column<SignalRow>
       sortable: true,
       render: (row) => (
         <Badge
-          variant={row.type === 'number' ? 'info' : row.type === 'boolean' ? 'warning' : 'neutral'}
+          variant="neutral"
           size="sm"
         >
           {row.type}
@@ -170,7 +144,7 @@ function buildColumns(t: (key: string, fb: string) => string): Column<SignalRow>
       header: t('redis.category', 'Category'),
       sortable: true,
       render: (row) => (
-        <Badge variant={CATEGORY_COLORS[row.category]} size="sm">
+        <Badge variant="neutral" size="sm">
           {t(`redis.categoryName.${row.category}`, row.category)}
         </Badge>
       ),
@@ -359,7 +333,7 @@ export default function RedisSignalViewerPage() {
     <div className="flex flex-wrap items-center gap-2 sm:gap-3">
       <Select
         aria-label={t('redis.selectVehicleLabel', 'Select vehicle')}
-        className="min-w-[11rem]"
+        className="min-w-44"
         value={selectedVehicleId !== null ? String(selectedVehicleId) : ''}
         onChange={(e) => {
           const val = e.target.value
@@ -380,7 +354,7 @@ export default function RedisSignalViewerPage() {
         onClick={() => refetch()}
         disabled={selectedVehicleId === null || isFetching}
       >
-        <RefreshCw className={`h-4 w-4 ${isFetching ? 'animate-spin' : ''}`} aria-hidden="true" />
+        <Icon icon={RefreshCw} className={isFetching ? 'animate-spin motion-reduce:animate-none' : undefined} />
         <span className="hidden sm:inline">{t('redis.refresh', 'Refresh')}</span>
       </Button>
     </div>
@@ -403,7 +377,7 @@ export default function RedisSignalViewerPage() {
         <RedisOperationalBrief
           data={selectedVehicleId === null ? undefined : signalData}
           loading={selectedVehicleId !== null && source.status === 'initial'}
-          retained={source.hasData && signalQuery.isError}
+          retained={source.hasData && source.status === 'stale'}
           enabled={selectedVehicleId !== null}
           error={fatalError}
         />
@@ -415,17 +389,19 @@ export default function RedisSignalViewerPage() {
         <FadeIn delay={0.05} className="xl:col-span-2 3xl:col-span-3">
           <LayoutCard title={t('redis.cachedSignals', 'Cached signals')}>
               <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
-                <div className="relative min-w-0">
-                  <Search className="pointer-events-none absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--text-muted)]" aria-hidden="true" />
+                <div className="min-w-0">
                   <Input
+                    label={t('redis.searchLabel', 'Filter signals by name')}
                     aria-label={t('redis.searchLabel', 'Filter signals by name')}
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
                     placeholder={t('redis.searchPlaceholder', 'Filter signals…')}
-                    className="ps-9 sm:w-56"
+                    icon={<Icon icon={Search} />}
+                    className="min-h-11 sm:w-56 md:min-h-10"
                   />
                 </div>
                 <Select
+                  label={t('redis.categoryLabel', 'Filter by category')}
                   aria-label={t('redis.categoryLabel', 'Filter by category')}
                   value={categoryFilter}
                   onChange={(e) => setCategoryFilter(e.target.value)}
@@ -473,7 +449,7 @@ export default function RedisSignalViewerPage() {
                   enableValueFilters
                   filterData={rows}
                   columns={columns}
-                  mobileColumns={['name', 'value', 'type']}
+                  mobileColumns={['name', 'value', 'type', 'category']}
                   keyExtractor={(row) => row.name}
                   sortKey={sortKey}
                   sortDir={sortDir}
@@ -567,7 +543,8 @@ export default function RedisSignalViewerPage() {
                         label={t(`redis.categoryName.${cat}`, cat)}
                         value={categoryCounts[cat] ?? 0}
                         max={Math.max(rows.length, 1)}
-                        color={CATEGORY_BAR_COLOR[cat]}
+                        color={gaugeTone.neutral}
+                        fill="solid"
                         sublabel={fmtInt(categoryCounts[cat] ?? 0)}
                       />
                     ))}
@@ -588,26 +565,26 @@ export default function RedisSignalViewerPage() {
               <div className="mt-3 flex flex-col gap-2">
                 <Button
                   type="button"
-                  variant="danger"
+                  variant="outline"
                   onClick={openPurgeOne}
                   disabled={selectedVehicleId === null || isPurging}
                   wrapLabel
                   className="justify-center"
                   title={t('redis.purgeButtonTitle', 'Delete this vehicle\u2019s cached signals from Redis (L2). The in-process L1 cache on each pod stays put and refills from new telemetry.')}
                 >
-                  <Trash2 className="h-4 w-4" aria-hidden="true" />
+                  <Icon icon={Trash2} />
                   {t('redis.purgeButton', 'Purge Redis (L2)')}
                 </Button>
                 <Button
                   type="button"
-                  variant="danger"
+                  variant="outline"
                   onClick={openPurgeAll}
                   disabled={isPurging}
                   wrapLabel
                   className="justify-center"
                   title={t('redis.purgeAllButtonTitle', 'Delete every vehicle:*:signals HSET in Redis (L2). Requires typed confirmation.')}
                 >
-                  <Trash2 className="h-4 w-4" aria-hidden="true" />
+                  <Icon icon={Trash2} />
                   {t('redis.purgeAllButton', 'Purge all Redis')}
                 </Button>
               </div>
