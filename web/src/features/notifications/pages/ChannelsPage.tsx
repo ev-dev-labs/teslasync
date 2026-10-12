@@ -12,7 +12,7 @@ import { Plus, RefreshCw } from 'lucide-react';
 
 import { PageLayout } from '@/components/layout';
 import { StaleRefreshWarning } from '@/components/feedback';
-import { Badge, Button, SectionTitle } from '@/components/ui';
+import { Badge, Button, Icon, SectionTitle } from '@/components/ui';
 import { FadeIn } from '@/components/motion';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useDataState } from '@/hooks/useDataState';
@@ -64,17 +64,22 @@ export default function ChannelsPage() {
       subtitle={t('notifications.channels.subtitle', 'Where to send notifications: Discord, Slack, Telegram, email, ntfy, Pushover, or a custom webhook.')}
       secondaryActions={
         <Button
+          type="button"
           variant="ghost"
+          className="min-h-11 min-w-11 md:min-h-10 md:min-w-0"
           onClick={handleRefresh}
           aria-label={t('common.refresh', 'Refresh')}
         >
-          <RefreshCw className="h-4 w-4" aria-hidden="true" />
+          <Icon icon={RefreshCw} />
         </Button>
       }
       primaryAction={
         <Button
+          type="button"
           variant="primary"
-          icon={<Plus className="h-4 w-4" aria-hidden="true" />}
+          className="min-h-11 md:min-h-10"
+          icon={<Icon icon={Plus} />}
+          wrapLabel
           onClick={openAdd}
         >
           {t('notifications.channels.add', 'Add channel')}
@@ -103,7 +108,7 @@ export default function ChannelsPage() {
       {/* 2 — Configured channels (hero): auto-fit bento, 1 col → many on wide */}
       <FadeIn delay={0.1}>
         <section aria-labelledby="channels-heading" className="space-y-3 sm:space-y-4">
-          <div className="flex items-center justify-between gap-3">
+          <div className="flex min-w-0 flex-wrap items-center justify-between gap-3">
             <SectionTitle id="channels-heading">
               {t('notifications.channels.listTitle', 'Delivery channels')}
             </SectionTitle>
@@ -129,11 +134,11 @@ export default function ChannelsPage() {
           <SectionTitle id="devices-heading">
             {t('notifications.channels.devicesTitle', 'Devices & providers')}
           </SectionTitle>
-          <div className="grid grid-cols-1 gap-3 sm:gap-4 xl:grid-cols-3 xl:gap-5">
-            <div className="xl:col-span-1">
+          <div className="grid min-w-0 grid-cols-1 gap-3 sm:gap-4 xl:grid-cols-3 xl:gap-5">
+            <div className="min-w-0 xl:col-span-1">
               <BrowserPushChannelCard className="h-full p-4 sm:p-5" />
             </div>
-            <div className="xl:col-span-2">
+            <div className="min-w-0 xl:col-span-2">
               <ChannelProvidersPanel channels={channels} />
             </div>
           </div>

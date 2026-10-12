@@ -34,7 +34,7 @@ import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
 
 import type { NotificationChannel, NotificationStats } from '@/api/types';
-import { ToastProvider } from '@/components/feedback/Toast';
+import { ToastProvider } from '@/components/feedback';
 import ChannelsPage from './ChannelsPage';
 
 // <FadeIn> → framer-motion's useReducedMotion reads matchMedia, which jsdom
@@ -70,6 +70,7 @@ const H = vi.hoisted(() => ({
   stats: { current: null as unknown as StatsQuery },
   channelsRefetch: vi.fn(),
   statsRefetch: vi.fn(),
+  addLabel: undefined as string | undefined,
 }));
 
 // i18n → return the developer fallback string, interpolating {{vars}}. Supports
@@ -87,6 +88,9 @@ vi.mock('react-i18next', async () => {
       if (typeof (second as { defaultValue?: unknown }).defaultValue === 'string') {
         template = (second as { defaultValue: string }).defaultValue;
       }
+    }
+    if (key === 'notifications.channels.add' && H.addLabel !== undefined) {
+      template = H.addLabel;
     }
     if (!vars) return template;
     return template.replace(/\{\{(\w+)\}\}/g, (_m, name: string) =>
@@ -306,7 +310,7 @@ function renderPage() {
 }
 
 function actionsCluster(): HTMLElement {
-  const cluster = screen.getByRole('button', { name: 'Add channel' })
+  const cluster = screen.getByRole('button', { name: H.addLabel ?? 'Add channel' })
     .closest('[data-role="page-actions"]')
     ?.querySelector<HTMLElement>('[data-action-group="secondary"]');
   if (!cluster) throw new Error('Channel header secondary actions are missing');
@@ -314,6 +318,7 @@ function actionsCluster(): HTMLElement {
 }
 
 beforeEach(() => {
+  H.addLabel = undefined;
   H.channelsRefetch.mockReset().mockResolvedValue(undefined);
   H.statsRefetch.mockReset().mockResolvedValue(undefined);
   setChannels({ data: [DISCORD, SLACK] });
@@ -465,6 +470,26 @@ describe('ChannelsPage — create/edit modal', () => {
 
 // ── 4. Header actions & accessibility ─────────────────────────────────────────
 describe('ChannelsPage — header actions & a11y', () => {
+  it('wraps long add labels while preserving mobile targets and decorative shared icons', () => {
+    const label = 'Add a notification delivery channel with a deliberately long localized label';
+    H.addLabel = label;
+    renderPage();
+
+    const add = screen.getByRole('button', { name: label });
+    const refresh = within(actionsCluster()).getByRole('button', { name: 'Refresh' });
+    expect(add).toHaveAttribute('type', 'button');
+    expect(add).toHaveClass('h-auto', 'min-h-11', 'md:min-h-10', 'max-w-full', 'whitespace-normal');
+    expect(within(add).getByText(label)).toHaveClass('min-w-0', 'break-words');
+    expect(refresh).toHaveAttribute('type', 'button');
+    expect(refresh).toHaveClass('min-h-11', 'min-w-11', 'md:min-h-10', 'md:min-w-0');
+    for (const button of [add, refresh]) {
+      const icon = button.querySelector('svg');
+      expect(icon).toHaveClass('h-4', 'w-4', 'shrink-0');
+      expect(icon).toHaveAttribute('aria-hidden', 'true');
+      expect(icon).toHaveAttribute('focusable', 'false');
+    }
+  });
+
   it('fans the refresh action out to both the channels and stats refetches', () => {
     renderPage();
     fireEvent.click(within(actionsCluster()).getByRole('button', { name: 'Refresh' }));
