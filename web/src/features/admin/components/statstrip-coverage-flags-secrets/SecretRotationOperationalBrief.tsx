@@ -76,7 +76,6 @@ export function SecretRotationOperationalBrief({ controller }: { controller: Ret
   const error = source.fatalError ?? source.refreshError;
   return <FadeIn><section aria-label={t('admin.secretRotation.kpis', 'Rotation summary')} data-retained={retained}>
     {retained && <Text role="status">{t('operationalSource.retained', 'Showing retained measurements')}</Text>}
-    {!subsystemMissing && error && <Text role="alert">{error.message}</Text>}
     <OperationalBrief testId="secret-rotation-summary" compact metrics={briefMetrics}
       loading={source.status === 'initial'}
       eyebrow={t('admin.secretRotation.brief.eyebrow', 'Credential observability')}
@@ -87,7 +86,6 @@ export function SecretRotationOperationalBrief({ controller }: { controller: Ret
       scope={<Text as="span" variant="caption">{t('admin.secretRotation.statstrip.period', 'Rotation tracker snapshot')}</Text>}
       freshness={<Text as="span" variant="caption">{sourceFreshness(source.updatedAt, t)}</Text>}
       provenance={t('admin.secretRotation.statstrip.provenance', 'Returned credentials and server-computed per-kind thresholds; not a selected date-range aggregate.')} />
-    <Text variant="caption">{t('admin.secretRotation.statstrip.provenance', 'Returned credentials and server-computed per-kind thresholds; not a selected date-range aggregate.')}</Text>
     {source.hasData && <Text variant="caption">{t('admin.secretRotation.statstrip.unknown', '{{count}} tracked credentials have unknown severity', {
         count: (query.data?.items ?? []).filter(row => row.severity === 'unknown').length,
       })}</Text>}
