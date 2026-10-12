@@ -238,7 +238,9 @@ function renderPage() {
   return render(
     <QueryClientProvider client={client}>
       <MemoryRouter>
-        <QuickStatsPage />
+        <main id="main-content">
+          <QuickStatsPage />
+        </main>
       </MemoryRouter>
     </QueryClientProvider>,
   );
@@ -602,5 +604,61 @@ describe('QuickStatsPage', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'View analytics' }));
     expect(navigateMock).toHaveBeenCalledWith('/statistics');
+  });
+
+  it('leaves the shell as the sole main landmark while keeping all three sections', () => {
+    renderPage();
+
+    const main = screen.getByRole('main');
+    expect(main).toHaveAttribute('id', 'main-content');
+    expect(main.querySelector('main')).toBeNull();
+    expect(within(main).getByRole('region', { name: 'Fleet metrics' })).toBeInTheDocument();
+    expect(within(main).getByRole('region', { name: 'Vehicle spotlight' })).toBeInTheDocument();
+    expect(within(main).getByRole('button', { name: 'Open dashboard' })).toBeInTheDocument();
+    expect(within(main).getByText('Powered by TeslaSync')).toBeInTheDocument();
+  });
+
+  it.each([
+    { caseId: 'no selection', vehicleId: null },
+    { caseId: 'zero identifier', vehicleId: 0 },
+    { caseId: 'negative identifier', vehicleId: -1 },
+  ])('refreshes only enabled sources with $caseId', ({ vehicleId }) => {
+    const analytics = makeQuery({ data: ANALYTICS });
+    const vehicles = makeQuery({ data: [] });
+    const disabledState = makeQuery({
+      error: new Error('Disabled state must not be a participating source'),
+      isError: true,
+      dataUpdatedAt: 0,
+    });
+    analyticsMock.mockReturnValue(analytics);
+    vehiclesMock.mockReturnValue(vehicles);
+    vehicleStateMock.mockReturnValue(disabledState);
+    selectedVehicleMock.mockReturnValue({ vehicleId, vehicle: null, vehicles: [] });
+    renderPage();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh quick stats' }));
+
+    expect(analytics.refetch).toHaveBeenCalledTimes(1);
+    expect(vehicles.refetch).toHaveBeenCalledTimes(1);
+    expect(disabledState.refetch).not.toHaveBeenCalled();
+    expect(vehicleStateMock).toHaveBeenCalledWith(vehicleId ?? 0);
+    expect(screen.queryByText('Disabled state must not be a participating source')).toBeNull();
+    expect(screen.getByText('12,345.00 km')).toBeInTheDocument();
+    expect(screen.getByText('No vehicle found')).toBeInTheDocument();
+    expect(screen.getByTestId('fleet-comparison')).toBeInTheDocument();
+  });
+
+  it('keeps mobile touch targets and wrapping labels without changing navigation', () => {
+    renderPage();
+
+    for (const name of ['Refresh quick stats', 'Open dashboard', 'Vehicle details', 'View analytics']) {
+      const action = screen.getByRole('button', { name });
+      expect(action).toHaveClass('min-h-11', 'min-w-11', 'md:min-h-9', 'md:min-w-0');
+      expect(action).toHaveClass('focus-visible:outline', 'focus-visible:outline-2');
+      if (name !== 'Refresh quick stats') {
+        expect(action).toHaveClass('h-auto', 'whitespace-normal', 'max-w-full');
+      }
+    }
+    expect(screen.getAllByRole('button', { name: 'Vehicle details' })).toHaveLength(1);
   });
 });

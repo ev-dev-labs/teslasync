@@ -91,6 +91,7 @@ export default function QuickStatsPage() {
   const vehiclesState = useDataState(vehiclesQuery);
   const stateQuery = useVehicleState(vehicleId ?? 0);
   const { data: stateData, refetch: refetchState } = stateQuery;
+  const hasSelectedVehicle = vehicleId != null && vehicleId > 0;
   const dataSources = useMemo(
     () => [
       {
@@ -107,10 +108,10 @@ export default function QuickStatsPage() {
         id: 'live-vehicle-state',
         label: t('dataSources.labels.liveVehicleState', 'Live vehicle state'),
         query: stateQuery,
-        enabled: vehicleId != null,
+        enabled: hasSelectedVehicle,
       },
     ],
-    [analyticsQuery, stateQuery, t, vehicleId, vehiclesQuery],
+    [analyticsQuery, hasSelectedVehicle, stateQuery, t, vehiclesQuery],
   );
 
   const actions = (
@@ -118,9 +119,10 @@ export default function QuickStatsPage() {
       <Button
         variant="ghost"
         size="sm"
+        className="min-h-11 min-w-11 md:min-h-9 md:min-w-0"
         onClick={() => {
           refetchAnalytics();
-          refetchState();
+          if (hasSelectedVehicle) refetchState();
           refetchVehicles();
         }}
         aria-label={t('quickStats.refresh', 'Refresh quick stats')}
@@ -131,12 +133,11 @@ export default function QuickStatsPage() {
   );
 
   return (
-    <main>
     <PageLayout
       title={t('quickStats.title', 'Quick stats')}
       subtitle={t('quickStats.subtitle', 'Fleet snapshot · last 30 days')}
       actions={actions}
-      query={[analyticsQuery, vehiclesQuery, stateQuery]}
+      query={hasSelectedVehicle ? [analyticsQuery, vehiclesQuery, stateQuery] : [analyticsQuery, vehiclesQuery]}
       dataSources={dataSources}
     >
       <StaleRefreshWarning state={analyticsState} label={t('dataSources.labels.fleetAnalytics', 'Fleet analytics')} />
@@ -223,6 +224,8 @@ export default function QuickStatsPage() {
               <Button
                 variant="primary"
                 size="sm"
+                wrapLabel
+                className="min-h-11 min-w-11 md:min-h-9 md:min-w-0"
                 icon={<LayoutDashboard className="h-4 w-4" aria-hidden="true" />}
                 onClick={() => navigate('/')}
               >
@@ -232,6 +235,8 @@ export default function QuickStatsPage() {
                 <Button
                   variant="secondary"
                   size="sm"
+                  wrapLabel
+                  className="min-h-11 min-w-11 md:min-h-9 md:min-w-0"
                   icon={<Car className="h-4 w-4" aria-hidden="true" />}
                   onClick={() => navigate(`/vehicles/${vehicle.id}`)}
                 >
@@ -241,6 +246,8 @@ export default function QuickStatsPage() {
               <Button
                 variant="secondary"
                 size="sm"
+                wrapLabel
+                className="min-h-11 min-w-11 md:min-h-9 md:min-w-0"
                 icon={<BarChart3 className="h-4 w-4" aria-hidden="true" />}
                 onClick={() => navigate('/statistics')}
               >
@@ -252,6 +259,5 @@ export default function QuickStatsPage() {
         </GlassPanel>
       </FadeIn>
     </PageLayout>
-    </main>
   );
 }
