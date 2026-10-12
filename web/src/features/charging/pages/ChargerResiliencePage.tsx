@@ -3,14 +3,14 @@ import { useTranslation } from 'react-i18next';
 import { ShieldCheck, MapPin } from 'lucide-react';
 
 import { PageLayout, LayoutCard, SourceContent } from '@/components/layout';
-import { Text, Badge, HelpTooltip } from '@/components/ui';
+import { Text, Badge, HelpTooltip, Icon } from '@/components/ui';
 
 import { StaleRefreshWarning } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { NoVehicleSelected } from '@/features/onboarding/components/NoVehicleSelected';
 import {
   ChartContainer, ChartTooltip,
-  BarChart, Bar, Cell,
+  BarChart, Bar, Cell, axisTick,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from '@/components/charts';
 
@@ -19,8 +19,7 @@ import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useUnits } from '@/hooks/useUnits';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useDataState } from '@/hooks/useDataState';
-import { chartTokens } from '@/lib/tokens';
-
+import { chartTokens, neonColorMap, typography } from '@/lib/tokens';
 
 import { analyzeChargerResilience, type SiteGroupedBy } from '../lib/chargerResilience';
 import { ChargerResilienceStats } from '../components/ChargerResilienceStats';
@@ -33,7 +32,7 @@ const GROUPED_BY_DEFAULTS: Record<SiteGroupedBy, string> = {
 };
 
 export default function ChargerResiliencePage() {
-  const { fmtPercent } = useNumberFormatting();
+  const { fmtPercent, fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   usePageTitle(t('chargerResilience.title', 'Charger Resilience'));
 
@@ -56,11 +55,13 @@ export default function ChargerResiliencePage() {
     [summary.sites, summary.topSite],
   );
 
-  // ChartContainer's CSV export only accepts scalar cells, so the boolean
-  // top-site marker (which only drives Cell colouring) is dropped here.
+  // Keep the highlighted site's meaning in the scalar table and CSV as well.
   const exportData = useMemo(
-    () => chartData.map(({ isTop: _isTop, ...rest }) => rest),
-    [chartData],
+    () => chartData.map(({ isTop, ...rest }) => ({
+      ...rest,
+      dependency: isTop ? t('chargerResilience.topDependency', 'Top-Site Dependency') : '—',
+    })),
+    [chartData, t],
   );
 
   if (vehicleId == null) {
@@ -75,6 +76,8 @@ export default function ChargerResiliencePage() {
       : sessionsState.refreshError != null || sessionsState.isRefreshBlocked ? 'retained' : 'ready';
   const recovery = { onRetry: () => { void sessionsQuery.refetch(); }, resourceName: sourceLabel };
   const unavailableMessage = t('chargerResilience.historyUnavailable', 'Charging history has not loaded. Retry this source or reconnect to continue.');
+  // One history query has one retained notice/retry above all its sections.
+  const detailStatus = sourceStatus === 'retained' ? 'ready' : sourceStatus;
 
   return (
     <PageLayout
@@ -116,14 +119,15 @@ export default function ChargerResiliencePage() {
               { key: 'site', label: t('chargerResilience.col.site', 'Site') },
               { key: 'share', label: t('chargerResilience.col.share', 'Energy share (%)') },
               { key: 'sessions', label: t('chargerResilience.col.sessions', 'Sessions') },
+              { key: 'dependency', label: t('chargerResilience.topDependency', 'Top-Site Dependency') },
             ]}
           >
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={chartData} margin={{ top: 16, right: 16, bottom: 42, left: 8 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
                 <XAxis dataKey="site" tickFormatter={(label: string) => label.length > 20 ? `${label.slice(0, 19)}…` : label}
-                  tick={{ fill: 'var(--text-muted)', fontSize: 10 }} angle={-30} textAnchor="end" height={64} />
-                <YAxis tick={{ fill: 'var(--text-muted)', fontSize: 11 }} domain={[0, 100]} unit="%" />
+                  tick={axisTick} angle={-30} textAnchor="end" height={64} />
+                <YAxis tick={axisTick} domain={[0, 100]} tickFormatter={value => fmtPercent(value)} />
                 <Tooltip content={<ChartTooltip />} />
                 <Bar dataKey="share" name={t('chargerResilience.col.share', 'Energy share (%)')} radius={[3, 3, 0, 0]}>
                   {chartData.map((d) => (
@@ -139,7 +143,7 @@ export default function ChargerResiliencePage() {
       <FadeIn delay={0.2}>
         <div className="grid min-w-0 gap-4 @3xl:grid-cols-2">
           <LayoutCard title={t('chargerResilience.whatIf', 'What If the Top Site Disappeared?')} actions={<div className="flex items-center gap-2">
-              <ShieldCheck className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+              <Icon icon={ShieldCheck} className={typography.color.muted} />
               <HelpTooltip
                 size="sm"
                 i18nKey="help.chargerResilience.whatIf"
@@ -147,35 +151,44 @@ export default function ChargerResiliencePage() {
                 ariaLabel={t('help.chargerResilience.iconLabel', 'More info about the what-if scenario')}
               />
             </div>}>
-            <SourceContent state={sourceStatus === 'ready' && summary.whatIfTopSiteLoss == null ? 'empty' : sourceStatus}
+            <SourceContent state={detailStatus === 'ready' && summary.whatIfTopSiteLoss == null ? 'empty' : detailStatus}
               label={sourceLabel}
               emptyMessage={!sessionsState.hasData ? unavailableMessage : t('chargerResilience.noWhatIf', 'Not enough data to model a loss scenario yet.')}
               errorMessage={unavailableMessage} error={fatalError} errorRecovery={recovery}>
             {summary.whatIfTopSiteLoss != null && (
-              <div className="grid min-w-0 grid-cols-1 gap-x-4 gap-y-2 break-words @sm:grid-cols-2">
-                <Text variant="caption">{t('chargerResilience.atRisk', 'Energy at risk')}</Text>
-                <Text variant="bodySm">{formatEnergy(summary.whatIfTopSiteLoss.energyAtRiskWh)}</Text>
-                <Text variant="caption">{t('chargerResilience.newTop', 'New top site')}</Text>
-                <Text variant="bodySm">{summary.whatIfTopSiteLoss.newTopSiteLabel ?? t('chargerResilience.none', 'None yet')}</Text>
-                <Text variant="caption">{t('chargerResilience.scoreBefore', 'Score before')}</Text>
-                <Text variant="bodySm">{summary.whatIfTopSiteLoss.resilienceScoreBefore}</Text>
-                <Text variant="caption">{t('chargerResilience.scoreAfter', 'Score after loss')}</Text>
-                <Text
-                  variant="bodySm"
-                  className={summary.whatIfTopSiteLoss.resilienceScoreDelta < 0 ? 'text-rose-300' : 'text-emerald-300'}
-                >
-                  {summary.whatIfTopSiteLoss.resilienceScoreAfter}
-                  {' '}
-                  ({summary.whatIfTopSiteLoss.resilienceScoreDelta >= 0 ? '+' : ''}
-                  {summary.whatIfTopSiteLoss.resilienceScoreDelta})
-                </Text>
-              </div>
+              <dl className="grid min-w-0 grid-cols-1 gap-4 break-words @sm:grid-cols-2">
+                <div className="min-w-0 space-y-1">
+                  <Text as="dt" variant="caption">{t('chargerResilience.atRisk', 'Energy at risk')}</Text>
+                  <Text as="dd" variant="bodySm">{formatEnergy(summary.whatIfTopSiteLoss.energyAtRiskWh)}</Text>
+                </div>
+                <div className="min-w-0 space-y-1">
+                  <Text as="dt" variant="caption">{t('chargerResilience.newTop', 'New top site')}</Text>
+                  <Text as="dd" variant="bodySm">{summary.whatIfTopSiteLoss.newTopSiteLabel ?? t('chargerResilience.none', 'None yet')}</Text>
+                </div>
+                <div className="min-w-0 space-y-1">
+                  <Text as="dt" variant="caption">{t('chargerResilience.scoreBefore', 'Score before')}</Text>
+                  <Text as="dd" variant="bodySm">{fmtNumber(summary.whatIfTopSiteLoss.resilienceScoreBefore)}</Text>
+                </div>
+                <div className="min-w-0 space-y-1">
+                  <Text as="dt" variant="caption">{t('chargerResilience.scoreAfter', 'Score after loss')}</Text>
+                  <Text
+                    as="dd"
+                    variant="bodySm"
+                    className={summary.whatIfTopSiteLoss.resilienceScoreDelta < 0 ? neonColorMap.red.text : neonColorMap.green.text}
+                  >
+                    {fmtNumber(summary.whatIfTopSiteLoss.resilienceScoreAfter)}
+                    {' '}
+                    ({summary.whatIfTopSiteLoss.resilienceScoreDelta >= 0 ? '+' : ''}
+                    {fmtNumber(summary.whatIfTopSiteLoss.resilienceScoreDelta)})
+                  </Text>
+                </div>
+              </dl>
             )}
             </SourceContent>
           </LayoutCard>
 
-          <LayoutCard title={t('chargerResilience.detail', 'Sites')} actions={<MapPin className="h-4 w-4 text-cyan-300" aria-hidden="true" />}>
-            <SourceContent state={sourceStatus === 'ready' && summary.sites.length === 0 ? 'empty' : sourceStatus}
+          <LayoutCard title={t('chargerResilience.detail', 'Sites')} actions={<Icon icon={MapPin} className={typography.color.muted} />}>
+            <SourceContent state={detailStatus === 'ready' && summary.sites.length === 0 ? 'empty' : detailStatus}
               label={sourceLabel}
               emptyMessage={!sessionsState.hasData ? unavailableMessage : t('chargerResilience.noSites', 'No charging locations recorded yet.')}
               errorMessage={unavailableMessage} error={fatalError} errorRecovery={recovery}>
@@ -187,12 +200,15 @@ export default function ChargerResiliencePage() {
                       <Text variant="caption">
                         {t(`chargerResilience.groupedBy.${s.groupedBy}`, GROUPED_BY_DEFAULTS[s.groupedBy])}
                       </Text>
+                      {s.key === summary.topSite?.key && (
+                        <Text variant="caption">{t('chargerResilience.topDependency', 'Top-Site Dependency')}</Text>
+                      )}
                     </div>
                     <div className="flex shrink-0 items-center gap-2">
                       <Badge variant="neutral" size="sm">
                         {t('chargerResilience.sessionsCount', '{{n}} sessions', { n: s.sessions })}
                       </Badge>
-                      <Badge variant={s.energyShare >= 0.5 ? 'warning' : 'info'}>
+                      <Badge variant={s.energyShare >= 0.5 ? 'warning' : 'neutral'}>
                         {fmtPercent(Math.round(s.energyShare * 1000) / 10)}
                       </Badge>
                     </div>
