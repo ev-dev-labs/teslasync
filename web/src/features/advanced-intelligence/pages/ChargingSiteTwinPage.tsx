@@ -7,7 +7,7 @@ import { AlertBanner } from '@/components/feedback';
 
 import { PageLayout } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
-import { Badge, Button, Input, Select, Text } from '@/components/ui';
+import { Badge, Button, Icon, Input, Select, Text } from '@/components/ui';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useUnits } from '@/hooks/useUnits';
@@ -20,6 +20,9 @@ import { AnalysisBrief } from '../components/operationalbrief-all/AnalysisBrief'
 import { useRetainedMutation } from '@/hooks/useRetainedMutation';
 
 type SiteForm = Omit<ChargingSiteTwinRequest, 'vehicle_id' | 'confirmed'>;
+type SiteDraft = {
+  [Field in keyof SiteForm]: SiteForm[Field] extends number ? number | null : SiteForm[Field];
+};
 
 export default function ChargingSiteTwinPage() {
   const { fmtNumber } = useNumberFormatting();
@@ -30,7 +33,7 @@ export default function ChargingSiteTwinPage() {
   const publication = useRetainedMutation(mutation, vehicleId, {
     data: (data) => data.vehicle_id, inputs: (inputs) => inputs.vehicle_id,
   });
-  const [form, setForm] = useState<SiteForm>({
+  const [form, setForm] = useState<SiteDraft>({
     charger_count: 8,
     charger_power_w: 11500,
     panel_limit_w: 100000,
@@ -44,12 +47,23 @@ export default function ChargingSiteTwinPage() {
   });
   usePageTitle(t('advancedIntelligence.site.title', 'Charging site twin'));
 
-  const submit = (event: FormEvent) => {
+  const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (vehicleId == null) return;
-    mutation.mutate({ ...form, vehicle_id: vehicleId, confirmed: true });
+    if (vehicleId == null || publication.pending) return;
+    const { charger_count, charger_power_w, panel_limit_w, arrival_rate_per_s,
+      mean_service_s, fleet_growth_pct } = form;
+    if (charger_count == null || charger_power_w == null || panel_limit_w == null
+      || arrival_rate_per_s == null || mean_service_s == null || fleet_growth_pct == null
+      || arrival_rate_per_s <= 0 || !event.currentTarget.reportValidity()) return;
+    mutation.mutate({
+      ...form, charger_count, charger_power_w, panel_limit_w, arrival_rate_per_s,
+      mean_service_s, fleet_growth_pct, vehicle_id: vehicleId, confirmed: true,
+    });
   };
   const result = publication.result;
+  const mitigations = result?.mitigations ?? [];
+  const assumptions = result?.assumptions ?? [];
+  const paused = publication.source.fetchStatus === 'paused';
   const summaryMetrics: readonly StatMetric[] = [
     { occurrenceId: 'utilization', metricId: 'percent', rawValue: result?.utilization_pct,
       label: t('advancedIntelligence.site.utilization', 'Utilization'),
@@ -102,22 +116,22 @@ export default function ChargingSiteTwinPage() {
           )}
         >
           <form className="space-y-5" onSubmit={submit}>
-            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            <div className="grid min-w-0 gap-4 @2xl:grid-cols-2 @5xl:grid-cols-3">
               <Input
                 type="number"
                 label={t('advancedIntelligence.site.form.chargers', 'Charger count')}
-                value={form.charger_count}
+                value={form.charger_count ?? ''}
                 min={1}
                 max={1000}
                 required
                 onChange={(event) => setForm((current) => ({
-                  ...current, charger_count: Number(event.target.value),
+                  ...current, charger_count: event.target.value === '' ? null : Number(event.target.value),
                 }))}
               />
               <SiNumberInput
                 label={t('advancedIntelligence.site.form.chargerPower', 'Per-charger power (canonical SI)')}
                 value={form.charger_power_w}
-                onChange={(value) => setForm((current) => ({ ...current, charger_power_w: value ?? 0 }))}
+                onChange={(value) => setForm((current) => ({ ...current, charger_power_w: value }))}
                 siUnit={SI.power}
                 displayHint={t('advancedIntelligence.form.displayEquivalent', 'Display equivalent: {{value}}', {
                   value: units.formatPower(form.charger_power_w),
@@ -129,47 +143,52 @@ export default function ChargingSiteTwinPage() {
               <SiNumberInput
                 label={t('advancedIntelligence.site.form.panel', 'Panel limit (canonical SI)')}
                 value={form.panel_limit_w}
-                onChange={(value) => setForm((current) => ({ ...current, panel_limit_w: value ?? 0 }))}
+                onChange={(value) => setForm((current) => ({ ...current, panel_limit_w: value }))}
                 siUnit={SI.power}
                 displayHint={t('advancedIntelligence.form.displayEquivalent', 'Display equivalent: {{value}}', {
                   value: units.formatPower(form.panel_limit_w),
                 })}
                 min={500}
+                max={1000000000}
                 required
               />
               <Input
                 type="number"
                 label={t('advancedIntelligence.site.form.arrivalRate', 'Arrival rate (vehicles/second)')}
-                value={form.arrival_rate_per_s}
-                min={0.000001}
+                value={form.arrival_rate_per_s ?? ''}
+                min={0}
                 max={1}
                 step="any"
                 required
-                onChange={(event) => setForm((current) => ({
-                  ...current, arrival_rate_per_s: Number(event.target.value),
-                }))}
+                onChange={(event) => {
+                  const value = event.target.value === '' ? null : Number(event.target.value);
+                  event.target.setCustomValidity(value != null && value <= 0
+                    ? t('advancedIntelligence.error.body', 'Review the scenario inputs and try again.') : '');
+                  setForm((current) => ({ ...current, arrival_rate_per_s: value }));
+                }}
               />
               <SiNumberInput
                 label={t('advancedIntelligence.site.form.service', 'Mean service time (canonical SI)')}
                 value={form.mean_service_s}
-                onChange={(value) => setForm((current) => ({ ...current, mean_service_s: value ?? 0 }))}
+                onChange={(value) => setForm((current) => ({ ...current, mean_service_s: value }))}
                 siUnit={SI.duration}
                 displayHint={t('advancedIntelligence.form.displayEquivalent', 'Display equivalent: {{value}}', {
                   value: units.formatDuration(form.mean_service_s),
                 })}
                 min={60}
+                max={604800}
                 required
               />
               <Input
                 type="number"
                 label={t('advancedIntelligence.site.form.growth', 'Fleet growth (%)')}
-                value={form.fleet_growth_pct}
+                value={form.fleet_growth_pct ?? ''}
                 min={-90}
                 max={1000}
-                step={1}
+                step="any"
                 required
                 onChange={(event) => setForm((current) => ({
-                  ...current, fleet_growth_pct: Number(event.target.value),
+                  ...current, fleet_growth_pct: event.target.value === '' ? null : Number(event.target.value),
                 }))}
               />
               <Select
@@ -205,6 +224,7 @@ export default function ChargingSiteTwinPage() {
                   value: units.formatPower(form.solar_power_w),
                 })}
                 min={0}
+                max={1000000000}
               />
               <SiNumberInput
                 label={t('advancedIntelligence.site.form.storage', 'Storage energy (canonical SI, optional)')}
@@ -215,13 +235,16 @@ export default function ChargingSiteTwinPage() {
                   value: units.formatEnergy(form.storage_energy_wh),
                 })}
                 min={0}
+                max={10000000000}
               />
             </div>
             <Button
               type="submit"
+              wrapLabel
+              className="min-h-11 w-full sm:w-auto md:min-h-10"
               loading={publication.pending}
               disabled={vehicleId == null || publication.pending}
-              icon={<Building2 className="h-4 w-4" aria-hidden="true" />}
+              icon={<Icon icon={Building2} size="md" />}
             >
               {t('advancedIntelligence.site.form.run', 'Run confirmed site simulation')}
             </Button>
@@ -240,7 +263,7 @@ export default function ChargingSiteTwinPage() {
           hasResult={result != null}
           pending={publication.pending}
           error={publication.error}
-          query={result ? publication.source : undefined}
+          query={result || publication.pending || publication.error ? publication.source : undefined}
           quality={result?.data_quality}
           evidence={result?.evidence}
           limitations={[...(result?.limitations ?? []), ...(result?.assumptions ?? [])]}
@@ -253,26 +276,34 @@ export default function ChargingSiteTwinPage() {
       <FadeIn delay={0.1}>
         <InsightPanel
           title={t('advancedIntelligence.site.mitigations.title', 'Ranked mitigations and assumptions')}
-          empty={!result || (result.mitigations.length === 0 && result.assumptions.length === 0)}
-          emptyMessage={t('advancedIntelligence.site.mitigations.empty', 'No supported mitigations were returned.')}
+          sourceState={!result ? paused ? 'ready' : publication.pending ? 'loading'
+            : publication.error ? 'error' : 'empty' : 'ready'}
+          error={!result ? publication.error : undefined}
+          empty={result != null && mitigations.length === 0 && assumptions.length === 0}
+          emptyMessage={result
+            ? t('advancedIntelligence.site.mitigations.empty', 'No supported mitigations were returned.')
+            : t('advancedIntelligence.site.constraints.empty', 'Submit a site scenario to see constraints.')}
         >
           <div className="space-y-3">
-            {(result?.mitigations ?? []).map((item) => (
-              <article key={`${item.rank}-${item.mitigation}`} className="rounded-lg border border-white/[0.07] p-4">
+            {!result && paused && <Text as="p" variant="bodySm" role="status">
+              {t('advancedIntelligence.panel.paused', 'The initial evidence query is paused; no empty result is inferred.')}
+            </Text>}
+            {mitigations.map((item) => (
+              <article key={`${item.rank}-${item.mitigation}`} className="min-w-0 break-words rounded-shape-lg border border-[var(--border-subtle)] bg-[var(--surface-2)] p-4">
                 <div className="flex items-center gap-3">
-                  <Badge variant="info">#{item.rank}</Badge>
+                  <Badge variant="neutral">#{item.rank}</Badge>
                   <Text as="h3" variant="label">{item.mitigation}</Text>
                 </div>
                 <Text as="p" variant="bodySm" className="mt-2">
                   {t('advancedIntelligence.site.mitigation.effect', 'Queue {{queue}}% · peak {{peak}}', {
-                    queue: fmtNumber(item.queue_delta_pct),
+                    queue: item.queue_delta_pct == null ? '—' : fmtNumber(item.queue_delta_pct),
                     peak: units.formatPower(item.peak_delta_w),
                   })}
                 </Text>
                 <Text as="p" variant="caption">{item.assumption}</Text>
               </article>
             ))}
-            {(result?.assumptions ?? []).map((assumption) => (
+            {assumptions.map((assumption) => (
               <Text as="p" variant="bodySm" key={assumption}>• {assumption}</Text>
             ))}
           </div>
