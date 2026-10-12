@@ -595,4 +595,64 @@ describe('DayLogPage', () => {
     expect(brief.querySelector('[data-operational-metric="drive-time"]')).toHaveAttribute('data-value-state', 'invalid');
     expect(brief.querySelector('[data-operational-metric="energy-used"]')).toHaveAttribute('data-value-state', 'value');
   });
+
+  it.each([
+    { caseName: 'recorded signal cap', truncated: true, sources: [], message: 'Some records may be missing — the day exceeded the signal read cap. What loaded is shown in full.' },
+    { caseName: 'unavailable source', truncated: false, sources: [{ source: 'user_presence', status: 'unavailable' as const, count: 0, reason: 'no signal' }], message: 'Some sources unavailable' },
+  ])('discloses $caseName without replacing recorded sections or SI totals', ({ truncated, sources, message }) => {
+    const refetch = vi.fn();
+    useDayLogMock.mockReturnValue(queryState({
+      data: dayLogResponse(mixedEvents, {
+        truncated,
+        sources,
+        summary: { drive_count: 1, charge_count: 0, drive_duration_s: 3600,
+          drive_distance_m: 25000, energy_added_wh: null, energy_used_wh: 5200 },
+      }),
+      refetch,
+    }));
+    renderPage();
+
+    const notice = screen.getByTestId('stale-refresh-warning');
+    expect(notice).toHaveAttribute('data-data-state', 'partial');
+    expect(within(notice).getByText('Partial data')).toBeInTheDocument();
+    expect(within(notice).getByText(message)).toBeInTheDocument();
+    expect(screen.getByTestId('daylog-summary')).toBeInTheDocument();
+    expect(screen.getByTestId('daylog-timeline')).toHaveTextContent('Drive started');
+    expect(screen.getByTestId('daylog-sources')).toBeInTheDocument();
+    expect(screen.getByTestId('day-log-summary').querySelector('[data-operational-metric="distance"]')).toHaveTextContent('25.0 km');
+    expect(screen.getByRole('link', { name: 'Drive started' })).toHaveAttribute('href', '/drives/7');
+    fireEvent.click(within(notice).getByRole('button', { name: 'Refresh' }));
+    expect(refetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps refresh failure recovery ahead of partial-history disclosure', () => {
+    useDayLogMock.mockReturnValue(queryState({
+      data: dayLogResponse(mixedEvents, { truncated: true }),
+      error: new Error('refresh failed'),
+      isError: true,
+      status: 'error',
+    }));
+    renderPage();
+
+    const notice = screen.getByTestId('stale-refresh-warning');
+    expect(notice).toHaveAttribute('data-data-state', 'stale');
+    expect(within(notice).getByText('Day log may be out of date')).toBeInTheDocument();
+    expect(within(notice).queryByText('Partial data')).not.toBeInTheDocument();
+    expect(screen.getByTestId('daylog-timeline')).toHaveTextContent('Some records may be missing');
+    expect(screen.getByTestId('daylog-search')).toBeInTheDocument();
+    expect(screen.getByTestId('daylog-sources')).toBeInTheDocument();
+  });
+
+  it('does not label a complete recorded day as partial', () => {
+    useDayLogMock.mockReturnValue(queryState({
+      data: dayLogResponse(mixedEvents, {
+        sources: [{ source: 'drives', status: 'ok', count: 2 }],
+      }),
+    }));
+    renderPage();
+
+    expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
+    expect(screen.getByTestId('daylog-count')).toHaveTextContent('5 events');
+    expect(screen.getByRole('table', { name: 'Sources' })).toHaveTextContent('2 rows');
+  });
 });

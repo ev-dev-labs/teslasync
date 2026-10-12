@@ -43,7 +43,11 @@ export default function DayLogPage() {
 
   // No layers param: the server defaults to the complete history.
   const dayLogQuery = useDayLog({ vehicleId, date, timezone });
-  const state = useDataState(dayLogQuery, { provenance: 'historical' });
+  const state = useDataState(dayLogQuery, {
+    provenance: 'historical',
+    partial: dayLogQuery.data?.truncated === true
+      || (dayLogQuery.data?.sources?.some((source) => source.status === 'unavailable') ?? false),
+  });
 
   const setDate = useCallback(
     (next: string) => {
@@ -80,7 +84,16 @@ export default function DayLogPage() {
       copyLink
       contextActions={<DayLogControls date={date} timezone={timezone} onDateChange={setDate} />}
     >
-      <StaleRefreshWarning state={state} label={title} />
+      <StaleRefreshWarning
+        state={state}
+        label={title}
+        title={state.status === 'partial' ? t('dataState.partial.title', 'Partial data') : undefined}
+        message={state.status === 'partial'
+          ? data?.truncated
+            ? t('dayLog.timeline.truncated', 'Some records may be missing — the day exceeded the signal read cap. What loaded is shown in full.')
+            : t('dayLog.brief.status.partial', 'Some sources unavailable')
+          : undefined}
+      />
       <FadeIn delay={0.05}>
         <DayLogOperationalSummary
           data={data}
