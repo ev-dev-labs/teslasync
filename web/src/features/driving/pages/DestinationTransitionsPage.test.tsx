@@ -524,3 +524,129 @@ describe('DestinationTransitionsPage', () => {
     }
   });
 });
+
+describe('DestinationTransitionsPage snapshot clock', () => {
+  it('includes newly completed visits after a successful history refresh', () => {
+    const initial = readyHistory();
+    h.history = { ...query({ data: initial }), dataUpdatedAt: FROZEN_NOW };
+    const view = renderPage();
+    const refreshedAt = FROZEN_NOW + 86_400_000;
+    vi.mocked(Date.now).mockReturnValue(refreshedAt + 2 * 86_400_000);
+    h.history = {
+      ...query({
+        data: [
+          ...initial,
+          driveAt('2026-08-09T10:00:00.000Z', 'C', 'Fixture destination'),
+        ],
+      }),
+      dataUpdatedAt: refreshedAt,
+    };
+    view.rerenderPage();
+
+    expectEverySection();
+    const summary = within(screen.getByTestId('destination-transitions-kpis'));
+    expect(summary.getByText('Included destination visits').closest('[data-operational-metric="visits"]')).toHaveTextContent('9');
+    expect(summary.getByText('Latest observed destination').closest('[data-operational-metric="latest"]')).toHaveTextContent('Fixture destination');
+    const quality = within(screen.getByTestId('destination-evidence-quality'));
+    expect(quality.getByText('Visit recency (days)').parentElement).toHaveTextContent('0.06');
+    expect(quality.getByText('Future rows').parentElement).toHaveTextContent('0');
+  });
+
+  it('advances recency when a successful snapshot retains the same drive array', () => {
+    const data = readyHistory();
+    h.history = { ...query({ data }), dataUpdatedAt: FROZEN_NOW };
+    const view = renderPage();
+    h.history = {
+      ...query({ data }),
+      dataUpdatedAt: FROZEN_NOW + 86_400_000,
+    };
+    view.rerenderPage();
+
+    const quality = within(screen.getByTestId('destination-evidence-quality'));
+    expect(quality.getByText('Visit recency (days)').parentElement).toHaveTextContent('1.06');
+    expectEverySection();
+  });
+
+  it.each([
+    { caseId: 'failed refresh', failed: true },
+    { caseId: 'paused refresh', failed: false },
+  ])('retains the successful analysis instant during $caseId', ({ failed }) => {
+    const data = readyHistory();
+    h.history = { ...query({ data }), dataUpdatedAt: FROZEN_NOW };
+    const view = renderPage();
+    vi.mocked(Date.now).mockReturnValue(FROZEN_NOW + 10 * 86_400_000);
+    h.history = {
+      ...query({
+        data,
+        isError: failed,
+        error: failed ? new Error('fixture refresh unavailable') : null,
+      }),
+      dataUpdatedAt: FROZEN_NOW,
+      fetchStatus: failed ? 'idle' : 'paused',
+    };
+    view.rerenderPage();
+
+    expectEverySection();
+    const quality = within(screen.getByTestId('destination-evidence-quality'));
+    expect(quality.getByText('Visit recency (days)').parentElement).toHaveTextContent('0.06');
+    expect(screen.getAllByText('A → B').length).toBeGreaterThan(0);
+    const retry = failed
+      ? screen.getByRole('button', { name: 'Retry' })
+      : within(screen.getByTestId('stale-refresh-warning')).getByRole('button', { name: 'Refresh' });
+    fireEvent.click(retry);
+    expect(historyRefetch).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([
+    { caseId: 'successful snapshot timestamp', withTimestamp: true },
+    { caseId: 'missing snapshot timestamp', withTimestamp: false },
+  ])('uses the new vehicle analysis scope with $caseId', ({ withTimestamp }) => {
+    h.history = { ...query({ data: readyHistory() }), dataUpdatedAt: FROZEN_NOW };
+    const view = renderPage();
+    const switchedAt = FROZEN_NOW + 2 * 86_400_000;
+    vi.mocked(Date.now).mockReturnValue(switchedAt);
+    h.vehicleId = 8;
+    h.history = {
+      ...query({
+        data: [
+          driveAt('2026-08-10T10:00:00.000Z', 'Fixture origin', 'Fixture destination', { vehicleId: 8 }),
+        ],
+      }),
+      ...(withTimestamp ? { dataUpdatedAt: switchedAt } : {}),
+    };
+    view.rerenderPage();
+
+    expectEverySection();
+    expect(h.historyHook).toHaveBeenLastCalledWith('8', 1_000);
+    const summary = within(screen.getByTestId('destination-transitions-kpis'));
+    expect(summary.getByText('Included destination visits').closest('[data-operational-metric="visits"]')).toHaveTextContent('1');
+    expect(summary.getByText('Latest observed destination').closest('[data-operational-metric="latest"]')).toHaveTextContent('Fixture destination');
+    expect(screen.queryByText('A → B')).toBeNull();
+    const quality = within(screen.getByTestId('destination-evidence-quality'));
+    expect(quality.getByText('Visit recency (days)').parentElement).toHaveTextContent('0.06');
+  });
+
+  it.each([
+    { caseId: 'nonfinite snapshot', updatedAt: Number.POSITIVE_INFINITY },
+    { caseId: 'invalid snapshot', updatedAt: Number.NaN },
+    { caseId: 'absent snapshot', updatedAt: 0 },
+  ])('keeps deterministic fallback classification for $caseId', ({ updatedAt }) => {
+    h.history = {
+      ...query({
+        data: [
+          driveAt('2026-08-08T10:00:00.000Z', 'Fixture origin', 'Fixture destination'),
+          driveAt('2026-08-09T10:00:00.000Z', 'Fixture destination', 'Future fixture'),
+        ],
+      }),
+      dataUpdatedAt: updatedAt,
+    };
+    renderPage();
+
+    expectEverySection();
+    const quality = within(screen.getByTestId('destination-evidence-quality'));
+    expect(quality.getByText('Future rows').parentElement).toHaveTextContent('1');
+    const summary = within(screen.getByTestId('destination-transitions-kpis'));
+    expect(summary.getByText('Included destination visits').closest('[data-operational-metric="visits"]')).toHaveTextContent('1');
+    expect(summary.getByText('Latest observed destination').closest('[data-operational-metric="latest"]')).not.toHaveTextContent('Future fixture');
+  });
+});

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { DestinationEvidenceBrief } from '../components/operationalbrief-a-m/DestinationEvidenceBrief';
 
@@ -41,7 +41,16 @@ export default function DestinationTransitionsPage() {
   const vehicleIdStr = vehicleId != null ? String(vehicleId) : undefined;
   const drivesQuery = useDriveHistory(vehicleIdStr, DRIVE_HISTORY_LIMIT);
   const drivesState = useDataState(drivesQuery, { provenance: 'historical' });
-  const [nowMs] = useState(() => Date.now());
+  const analysisScope = useMemo(
+    () => ({ vehicleId, initialNowMs: Date.now() }),
+    [vehicleId],
+  );
+  // A refresh failure keeps the last successful snapshot's classification clock.
+  const snapshotAt = drivesState.updatedAt;
+  const nowMs =
+    snapshotAt != null && Number.isFinite(snapshotAt)
+      ? snapshotAt
+      : analysisScope.initialNowMs;
   const hasCachedData =
     vehicleId != null && drivesState.hasData;
   const isResolved =
