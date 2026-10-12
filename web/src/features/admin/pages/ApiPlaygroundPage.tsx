@@ -3,9 +3,8 @@ import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import { BookOpen, RefreshCw } from 'lucide-react';
 import yaml from 'js-yaml';
-import { cn } from '@/lib/cn';
 import { PageLayout, LayoutCard } from '@/components/layout';
-import { Card, Button, Text } from '@/components/ui';
+import { Card, Button, Icon, Text } from '@/components/ui';
 import type { StatMetric } from '@/components/data-display';
 import { AdminSummary } from '../components/operationalbrief-a-g/AdminSummary';
 import { EmptyState, Skeleton, QueryError } from '@/components/feedback';
@@ -33,9 +32,9 @@ export default function ApiPlaygroundPage() {
 
   const specQuery = useQuery<ParsedEndpoint[]>({
     queryKey: ['openapi-spec'],
-    queryFn: async () => {
+    queryFn: async ({ signal }) => {
       const text = await request<string>('/system/openapi', {
-        responseType: 'text', credentials: 'same-origin', headers: { Accept: 'text/yaml' },
+        responseType: 'text', credentials: 'same-origin', headers: { Accept: 'text/yaml' }, signal,
       });
       return parseSpec(yaml.load(text) as OpenAPISpec);
     },
@@ -108,10 +107,9 @@ export default function ApiPlaygroundPage() {
     <PageLayout title={t('playground.title', 'API playground')}
       subtitle={t('playground.subtitle', 'Explore and test TeslaSync API endpoints')}
       secondaryActions={
-        <Button variant="ghost" onClick={() => refetchSpec()} disabled={specLoading}
-          aria-label={t('playground.refresh', 'Reload API spec')}>
-          <RefreshCw className={cn('h-4 w-4', specLoading && 'animate-spin')} aria-hidden />
-        </Button>
+        <Button variant="ghost" onClick={() => refetchSpec()} loading={specQuery.isFetching}
+          className="min-h-11 min-w-11 md:min-h-10 md:min-w-10"
+          aria-label={t('playground.refresh', 'Reload API spec')} icon={<Icon icon={RefreshCw} />} />
       }
       query={specQuery}
       dataSources={[{ id: 'openapi-spec', label: t('playground.spec', 'API spec'), query: specQuery }]}
@@ -140,7 +138,7 @@ export default function ApiPlaygroundPage() {
               ) : specState.fatalError ? (
                 <div className="p-4"><QueryError error={specState.fatalError} onRetry={() => refetchSpec()} resourceName={t('playground.spec', 'API spec')} /></div>
               ) : allEndpoints.length === 0 ? (
-                <EmptyState icon={<BookOpen className="h-8 w-8" aria-hidden />}
+                <EmptyState icon={<Icon icon={BookOpen} size="xl" />}
                   action={{ label: t('playground.refresh', 'Reload API spec'), onClick: () => { void refetchSpec(); } }}
                   message={t('playground.noEndpoints', 'No endpoints found in the API spec')} />
               ) : <EndpointSidebar endpoints={allEndpoints} selected={selected} onSelect={handleSelect} />}
@@ -150,7 +148,7 @@ export default function ApiPlaygroundPage() {
             {!selected ? (
               <LayoutCard title={t('playground.workspace', 'Request workspace')}>
                 {/* no-action: the adjacent endpoint explorer owns selection; do not auto-select or execute an arbitrary endpoint. */}
-                <EmptyState icon={<BookOpen className="h-8 w-8" aria-hidden />}
+                <EmptyState icon={<Icon icon={BookOpen} size="xl" />}
                   message={t('playground.selectEndpoint', 'Select an endpoint from the explorer to start testing')} />
                 {allEndpoints.length > 0 && <Text as="p" variant="caption" className="mt-2 text-center">
                   {t('playground.endpointCount', '{{count}} endpoints available', { count: allEndpoints.length })}
@@ -158,7 +156,7 @@ export default function ApiPlaygroundPage() {
               </LayoutCard>
             ) : (
               <div className="grid grid-cols-1 gap-4 2xl:grid-cols-2 2xl:gap-5">
-                <section aria-label={t('playground.request', 'Request')} className="min-w-0 space-y-4">
+                <section aria-label={t('playground.request', 'Request')} aria-busy={loading} className="min-w-0 space-y-4">
                   <RequestBuilder
                     endpoint={selected}
                     onSend={handleSend}
@@ -172,7 +170,7 @@ export default function ApiPlaygroundPage() {
                     />
                   )}
                 </section>
-                <section aria-label={t('playground.responseSection', 'Response')} className="min-w-0">
+                <section aria-label={t('playground.responseSection', 'Response')} aria-busy={loading} className="min-w-0">
                   <ResponseViewer
                     response={response}
                     loading={loading}

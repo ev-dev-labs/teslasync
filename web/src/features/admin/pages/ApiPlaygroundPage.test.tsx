@@ -452,4 +452,246 @@ describe('ApiPlaygroundPage', () => {
     expect(screen.queryByText('Server error')).toBeNull()
     expect(fetchMock).not.toHaveBeenCalled()
   })
+
+  it('forwards specification cancellation to the canonical text request and aborts on unmount', async () => {
+    mockedRequest.mockReturnValue(new Promise<string>(() => {}))
+    const page = renderPage()
+    await waitFor(() => expect(mockedRequest).toHaveBeenCalledTimes(1))
+    const [path, options] = mockedRequest.mock.calls[0] as [
+      string,
+      { signal: AbortSignal; responseType: string; credentials: string; headers: Record<string, string> },
+    ]
+    expect(path).toBe('/system/openapi')
+    expect(options).toEqual(expect.objectContaining({
+      responseType: 'text',
+      credentials: 'same-origin',
+      headers: { Accept: 'text/yaml' },
+      signal: expect.any(AbortSignal),
+    }))
+    expect(options.signal.aborted).toBe(false)
+    const reload = screen.getByRole('button', { name: 'Reload API spec' })
+    expect(reload).toBeDisabled()
+    expect(reload).toHaveAttribute('aria-busy', 'true')
+    expect(reload).toHaveClass('min-h-11', 'min-w-11', 'md:min-h-10', 'md:min-w-10')
+    page.unmount()
+    expect(options.signal.aborted).toBe(true)
+  })
+
+  it('announces a pending specification reload without hiding retained endpoints or local history', async () => {
+    mockedRequest.mockResolvedValueOnce(SPEC_YAML)
+    renderPage()
+    await screen.findByText('/vehicles')
+    let finishReload!: (spec: string) => void
+    mockedRequest.mockReturnValueOnce(new Promise<string>(resolve => { finishReload = resolve }))
+    const reload = screen.getByRole('button', { name: 'Reload API spec' })
+    fireEvent.click(reload)
+    await waitFor(() => expect(reload).toHaveAttribute('aria-busy', 'true'))
+    expect(reload).toBeDisabled()
+    expect(screen.getByText('/vehicles/{vehicleID}/state')).toBeInTheDocument()
+    expect(within(kpiRegion()).getByText('3')).toBeInTheDocument()
+    expect(screen.getByTestId('api-playground-history-summary')).not.toHaveAttribute('aria-busy', 'true')
+    finishReload(SPEC_YAML)
+    await waitFor(() => expect(reload).toBeEnabled())
+    expect(reload).not.toHaveAttribute('aria-busy', 'true')
+  })
+
+  it('keeps explorer search, disclosure and endpoint selection network-free', async () => {
+    mockedRequest.mockResolvedValueOnce(SPEC_YAML)
+    const fetchMock = vi.fn()
+    vi.stubGlobal('fetch', fetchMock)
+    renderPage()
+    const explorer = screen.getByRole('complementary', { name: 'Endpoint explorer' })
+    await within(explorer).findByText('/vehicles')
+    const search = within(explorer).getByRole('textbox', { name: 'Search endpoints...' })
+    for (const term of ['/vehicles/{vehicleID}', 'Get vehicle state', 'getVehicleState']) {
+      fireEvent.change(search, { target: { value: term } })
+      expect(within(explorer).getByText('/vehicles/{vehicleID}/state')).toBeInTheDocument()
+      expect(within(explorer).queryByText('/vehicles')).toBeNull()
+      expect(within(explorer).queryByText('/alerts')).toBeNull()
+    }
+    fireEvent.change(search, { target: { value: 'no-match' } })
+    expect(within(explorer).getByText('No matching endpoints')).toBeInTheDocument()
+    fireEvent.change(search, { target: { value: '' } })
+    const vehicles = within(explorer).getByRole('button', { name: /Vehicles/ })
+    fireEvent.click(vehicles)
+    expect(vehicles).toHaveAttribute('aria-expanded', 'false')
+    expect(within(explorer).queryByText('/vehicles')).toBeNull()
+    fireEvent.click(vehicles)
+    expect(vehicles).toHaveAttribute('aria-expanded', 'true')
+    fireEvent.click(within(explorer).getByText('/vehicles'))
+    expect(screen.getByText('/api/v1/vehicles')).toBeInTheDocument()
+    expect(screen.getByText('Send a request to see the response')).toBeInTheDocument()
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+
+  it('marks only request and response regions busy while retaining independent history and raw SI payloads', async () => {
+    mockedRequest.mockResolvedValueOnce(SPEC_YAML)
+    let finishRequest!: (response: Response) => void
+    vi.stubGlobal('fetch', vi.fn().mockReturnValue(new Promise<Response>(resolve => { finishRequest = resolve })))
+    renderPage()
+    fireEvent.click(await screen.findByText('/vehicles'))
+    const requestRegion = screen.getByRole('region', { name: 'Request' })
+    const responseRegion = screen.getByRole('region', { name: 'Response' })
+    expect(requestRegion).toHaveAttribute('aria-busy', 'false')
+    fireEvent.click(screen.getByRole('button', { name: 'Send' }))
+    expect(requestRegion).toHaveAttribute('aria-busy', 'true')
+    expect(responseRegion).toHaveAttribute('aria-busy', 'true')
+    expect(screen.getByRole('button', { name: 'Sending...' })).toBeDisabled()
+    expect(screen.getByTestId('api-playground-history-summary')).not.toHaveAttribute('aria-busy', 'true')
+    finishRequest(fakeResponse({ body: { distance_m: 1234.5, speed_mps: 0, energy_wh: null, active: false } }))
+    await screen.findByText('200 OK')
+    expect(requestRegion).toHaveAttribute('aria-busy', 'false')
+    expect(responseRegion).toHaveAttribute('aria-busy', 'false')
+    expect(screen.getByRole('region', { name: 'Response body' }).textContent).toBe(JSON.stringify({
+      distance_m: 1234.5, speed_mps: 0, energy_wh: null, active: false,
+    }, null, 2))
+  })
+
+  it.each([
+    { caseName: 'POST', method: 'POST' },
+    { caseName: 'PUT', method: 'PUT' },
+    { caseName: 'PATCH', method: 'PATCH' },
+    { caseName: 'DELETE', method: 'DELETE' },
+  ])('preserves deliberate $caseName confirmation, parameter defaults, body, optional auth and metadata-only history', async ({ method }) => {
+    mockedRequest.mockResolvedValueOnce(JSON.stringify({
+      openapi: '3.0.0',
+      components: {
+        parameters: {
+          vehicle: { name: 'vehicleID', in: 'path', required: true, schema: { type: 'string', default: '4' } },
+        },
+        schemas: { reading: { type: 'object', example: { energy_wh: 1000, speed_mps: 0 } } },
+      },
+      paths: {
+        '/vehicles/{vehicleID}/example': {
+          [method.toLowerCase()]: {
+            tags: ['Example', 'Secondary'],
+            summary: 'Example operation',
+            description: 'Distinct endpoint documentation',
+            parameters: [
+              { $ref: '#/components/parameters/vehicle' },
+              { name: 'search', in: 'query', schema: { type: 'string', default: 'default query' } },
+            ],
+            requestBody: { content: { 'application/json': { schema: { $ref: '#/components/schemas/reading' } } } },
+            responses: { '409': { description: 'Conflict' } },
+          },
+        },
+      },
+    }))
+    const fetchMock = vi.fn().mockResolvedValue(fakeResponse({
+      status: 409, statusText: 'Conflict', body: { error: 'example conflict' },
+    }))
+    vi.stubGlobal('fetch', fetchMock)
+    sessionStorage.setItem('teslasync-api-playground-history', JSON.stringify(
+      Array.from({ length: 20 }, (_, index) => mkEntry('GET', `/old/${index}`)),
+    ))
+    renderPage()
+    fireEvent.click(await screen.findByText('/vehicles/{vehicleID}/example'))
+    expect(screen.getByText('Example operation')).toBeInTheDocument()
+    expect(screen.getByText('Distinct endpoint documentation')).toBeInTheDocument()
+    expect(screen.queryByText('Secondary')).toBeNull()
+    const vehicle = screen.getByLabelText(/vehicleID/)
+    expect(vehicle).toHaveValue('4')
+    expect(screen.getByLabelText('search')).toHaveValue('default query')
+    const requestRegion = screen.getByRole('region', { name: 'Request' })
+    const body = within(requestRegion).getAllByRole('textbox').find(field => field.tagName === 'TEXTAREA')
+    expect(body).toHaveValue(JSON.stringify({ energy_wh: 1000, speed_mps: 0 }, null, 2))
+    fireEvent.change(vehicle, { target: { value: '$&' } })
+    fireEvent.change(screen.getByLabelText('search'), { target: { value: 'a & b' } })
+    fireEvent.change(body!, { target: { value: '{"energy_wh":2500,"active":false}' } })
+    fireEvent.change(screen.getByLabelText('X-API-Key'), { target: { value: ' test-only-key ' } })
+    expect(screen.getByText('/api/v1/vehicles/$&/example?search=a%20%26%20b')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Send' }))
+    expect(screen.getByRole('alert')).toHaveTextContent(`This is a ${method} request.`)
+    expect(fetchMock).not.toHaveBeenCalled()
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+    expect(screen.queryByRole('alert')).toBeNull()
+    expect(fetchMock).not.toHaveBeenCalled()
+    fireEvent.click(screen.getByRole('button', { name: 'Send' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Yes, send' }))
+    await screen.findByText('409 Conflict')
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    expect(fetchMock).toHaveBeenCalledWith('/api/v1/vehicles/$&/example?search=a%20%26%20b', {
+      method, credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json', 'X-API-Key': 'test-only-key' },
+      body: '{"energy_wh":2500,"active":false}',
+    })
+    expect(screen.getByRole('region', { name: 'Response body' })).toHaveTextContent('"error": "example conflict"')
+    const saved = JSON.parse(sessionStorage.getItem('teslasync-api-playground-history') ?? '[]') as HistoryEntry[]
+    expect(saved).toHaveLength(20)
+    expect(saved[0]).toEqual({
+      method, path: '/vehicles/$&/example', status: 409,
+      duration: expect.any(Number), timestamp: expect.any(String),
+    })
+    expect(saved[19].path).toBe('/old/18')
+    expect(JSON.stringify(saved)).not.toContain('test-only-key')
+    expect(JSON.stringify(saved)).not.toContain('energy_wh')
+    expect(JSON.stringify(saved)).not.toContain('search=')
+  })
+
+  it('retains malformed response text, all exposed headers and four copyable snippet formats without secrets', async () => {
+    mockedRequest.mockResolvedValueOnce(SPEC_YAML)
+    const fetchMock = vi.fn().mockResolvedValue(fakeResponse({
+      status: 502, statusText: 'Bad Gateway', contentType: 'application/json', body: '{ malformed response',
+    }))
+    vi.stubGlobal('fetch', fetchMock)
+    const copy = vi.fn().mockResolvedValue(undefined)
+    const clipboardDescriptor = Object.getOwnPropertyDescriptor(navigator, 'clipboard')
+    Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText: copy } })
+    try {
+      renderPage()
+      fireEvent.click(await screen.findByText('/vehicles'))
+      fireEvent.change(screen.getByLabelText('X-API-Key'), { target: { value: 'test-only-key' } })
+      fireEvent.click(screen.getByRole('button', { name: 'Send' }))
+      await screen.findByText('502 Bad Gateway')
+      expect(screen.getByRole('region', { name: 'Response body' }).textContent).toBe('{ malformed response')
+      const headers = screen.getByRole('button', { name: /Response headers/ })
+      fireEvent.click(headers)
+      expect(headers).toHaveAttribute('aria-expanded', 'true')
+      expect(screen.getByText('content-type:')).toBeInTheDocument()
+      expect(screen.getByText('application/json')).toBeInTheDocument()
+      fireEvent.click(headers)
+      expect(headers).toHaveAttribute('aria-expanded', 'false')
+      const snippetToggle = screen.getByRole('button', { name: 'Code snippet' })
+      expect(snippetToggle).toHaveAttribute('aria-expanded', 'false')
+      fireEvent.click(snippetToggle)
+      expect(snippetToggle).toHaveAttribute('aria-expanded', 'true')
+      for (const format of [
+        { label: 'cURL', marker: 'curl -X GET' },
+        { label: 'JavaScript', marker: 'const response = await fetch' },
+        { label: 'Python', marker: 'response = requests.get' },
+        { label: 'Go', marker: 'resp, err := http.Get' },
+      ]) {
+        const tab = screen.getByRole('button', { name: format.label })
+        fireEvent.click(tab)
+        expect(tab).toHaveAttribute('aria-pressed', 'true')
+        const snippet = screen.getByLabelText('Generated code snippet').textContent
+        expect(snippet).toContain(format.marker)
+        expect(snippet).toContain('/api/v1/vehicles')
+        expect(snippet).not.toContain('test-only-key')
+        fireEvent.click(screen.getByRole('button', { name: 'Copy' }))
+        await waitFor(() => expect(copy).toHaveBeenLastCalledWith(snippet))
+      }
+      fireEvent.click(snippetToggle)
+      expect(screen.queryByLabelText('Generated code snippet')).toBeNull()
+      expect(fetchMock).toHaveBeenCalledTimes(1)
+    } finally {
+      if (clipboardDescriptor) Object.defineProperty(navigator, 'clipboard', clipboardDescriptor)
+      else Reflect.deleteProperty(navigator, 'clipboard')
+    }
+  })
+
+  it('shows network rejection without recording a resolved HTTP request or losing independent specification counts', async () => {
+    mockedRequest.mockResolvedValueOnce(SPEC_YAML)
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('test-only connection failure')))
+    renderPage()
+    fireEvent.click(await screen.findByText('/vehicles'))
+    fireEvent.click(screen.getByRole('button', { name: 'Send' }))
+    await screen.findByText('0 Network error')
+    expect(screen.getByRole('region', { name: 'Response body' })).toHaveTextContent('test-only connection failure')
+    expect(screen.getByRole('region', { name: 'Response' })).toHaveAttribute('aria-busy', 'false')
+    expect(screen.getByRole('button', { name: 'Send' })).toBeEnabled()
+    expect(sessionStorage.getItem('teslasync-api-playground-history')).toBeNull()
+    expect(within(kpiRegion()).getByText('3')).toBeInTheDocument()
+    expect(screen.getByTestId('api-playground-history-summary')).toHaveTextContent('0')
+  })
 })
