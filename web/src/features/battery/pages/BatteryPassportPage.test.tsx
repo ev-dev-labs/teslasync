@@ -69,6 +69,143 @@ vi.mock('react-i18next', async () => {
   };
 });
 
+describe('BatteryPassportPage retained trust and raw export regressions', () => {
+  it('keeps every section and certificate action while a retained query is paused', () => {
+    h.passportQuery = {
+      ...passportQuery(),
+      fetchStatus: 'paused',
+      dataUpdatedAt: FROZEN_NOW - 60_000,
+    };
+
+    renderPage();
+
+    expectEverySection();
+    const warning = screen.getByTestId('stale-refresh-warning');
+    expect(warning).toHaveAttribute('data-refresh-blocked', 'true');
+    expect(warning).toHaveTextContent('Battery Passport may be out of date');
+    expect(warning).toHaveTextContent('Previously loaded data remains visible.');
+    expect(warning).not.toHaveTextContent(/device is offline/i);
+    expect(screen.getByRole('button', { name: 'Export certificate' })).toBeEnabled();
+    fireEvent.click(within(warning).getByRole('button', { name: 'Refresh' }));
+    expect(refetchPassport).toHaveBeenCalledTimes(1);
+  });
+
+  it('identifies a paused initial query without inventing an empty response or connectivity cause', () => {
+    h.passportQuery = {
+      ...passportQuery({ data: undefined, isSuccess: false }),
+      fetchStatus: 'paused',
+      isPending: true,
+    };
+    h.verifyQuery = verifyQuery({ data: undefined, isSuccess: false });
+
+    renderPage();
+
+    expectEverySection();
+    expect(screen.getByText('Paused')).toBeInTheDocument();
+    expect(screen.queryByText(/device is offline/i)).not.toBeInTheDocument();
+    expect(screen.queryByText('The endpoint returned no certificate for this vehicle.')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Export certificate' })).toBeDisabled();
+  });
+
+  it('preserves a resolved empty certificate while its refresh is paused', () => {
+    h.passportQuery = { ...passportQuery({ data: null }), fetchStatus: 'paused' };
+    h.verifyQuery = verifyQuery({ data: undefined, isSuccess: false });
+
+    renderPage();
+
+    expectEverySection();
+    expect(screen.getByText('Paused')).toBeInTheDocument();
+    expect(screen.getAllByText('The endpoint returned no certificate for this vehicle.').length).toBeGreaterThan(0);
+    expect(screen.queryByText('Certificate availability has not resolved.')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Export certificate' })).toBeDisabled();
+  });
+
+  it('removes the paused warning after source recovery without dropping certificate evidence', () => {
+    h.passportQuery = { ...passportQuery(), fetchStatus: 'paused' };
+    const view = renderPage();
+    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+
+    h.passportQuery = { ...passportQuery(), fetchStatus: 'idle' };
+    view.rerenderPage();
+
+    expectEverySection();
+    expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Export certificate' })).toBeEnabled();
+    expect(refetchPassport).not.toHaveBeenCalled();
+  });
+
+  it('exports ordered anomalous facts and unknown wire fields without client mirrors or display reinterpretation', () => {
+    const facts = {
+      ...certificate(),
+      vehicleId: 7,
+      provenanceHash: 'a'.repeat(64),
+      source_note: 'test-only raw evidence',
+      sourceNote: 'test-only raw evidence',
+      thermal_exposure: {
+        cold_pct: 0,
+        coldPct: 0,
+        nominal_pct: 115,
+        nominalPct: 115,
+        hot_pct: -15,
+        hotPct: -15,
+      },
+      degradation_trend: [
+        { date: '2026-08-01', soh_pct: 91.2, sohPct: 91.2 },
+        { date: 'invalid-date', soh_pct: 110, sohPct: 110, source_note: 'excluded', sourceNote: 'excluded' },
+        null,
+        'invalid-point',
+        { date: '2026-08-01', soh_pct: 0, sohPct: 0 },
+      ],
+      recommendations: ['first rule', 'second rule'],
+    };
+    // Deliberately malformed wire facts exercise export separately from diagnostics.
+    h.passportQuery = { ...passportQuery(), data: facts };
+    const createObjectURL = vi.fn(() => 'blob:passport-test');
+    const revokeObjectURL = vi.fn();
+    vi.stubGlobal('URL', class extends URL {
+      static createObjectURL = createObjectURL;
+      static revokeObjectURL = revokeObjectURL;
+    });
+    const blob = vi.spyOn(globalThis, 'Blob');
+    const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
+
+    try {
+      renderPage();
+      fireEvent.click(screen.getByRole('button', { name: 'Export certificate' }));
+
+      const payload = JSON.parse(String(blob.mock.calls[0]?.[0]?.[0])) as Record<string, unknown>;
+      expect(payload).toMatchObject({
+        vehicle_id: 7,
+        vin_masked: '5YJ**********1234',
+        source_note: 'test-only raw evidence',
+        capacity_kwh: 68.4,
+        original_capacity_kwh: 75,
+        provenance_hash: 'a'.repeat(64),
+        thermal_exposure: { cold_pct: 0, nominal_pct: 115, hot_pct: -15 },
+        recommendations: ['first rule', 'second rule'],
+      });
+      expect(payload.degradation_trend).toEqual([
+        { date: '2026-08-01', soh_pct: 91.2 },
+        { date: 'invalid-date', soh_pct: 110, source_note: 'excluded' },
+        null,
+        'invalid-point',
+        { date: '2026-08-01', soh_pct: 0 },
+      ]);
+      expect(payload).not.toHaveProperty('vehicleId');
+      expect(payload).not.toHaveProperty('provenanceHash');
+      expect(payload).not.toHaveProperty('sourceNote');
+      expect(blob).toHaveBeenCalledWith([expect.any(String)], { type: 'application/json' });
+      expect(click).toHaveBeenCalledTimes(1);
+      expect(click.mock.instances[0]?.download).toBe('battery-passport-7-aaaaaaaaaaaa.json');
+      expect(createObjectURL).toHaveBeenCalledTimes(1);
+      expect(revokeObjectURL).toHaveBeenCalledWith('blob:passport-test');
+      expect(facts.degradation_trend).toHaveLength(5);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+});
+
 vi.mock('@/api/hooks/useBatteryPassport', async (importOriginal) => {
   const actual = await importOriginal<
     typeof import('@/api/hooks/useBatteryPassport')

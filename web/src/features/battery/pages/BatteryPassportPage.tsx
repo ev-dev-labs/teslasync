@@ -11,6 +11,8 @@ import {
   type BatteryPassport,
 } from '@/api/hooks/useBatteryPassport';
 import { CardGrid, PageLayout } from '@/components/layout';
+import { AlertBanner, StaleRefreshWarning } from '@/components/feedback';
+import { Text } from '@/components/ui';
 import { FadeIn } from '@/components/motion';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
@@ -37,7 +39,6 @@ import {
 } from '../components/battery-passport';
 import {
   analyzeBatteryPassport,
-  toBatteryPassportCertificate,
 } from '../lib/batteryPassportAnalysis';
 
 /**
@@ -79,9 +80,23 @@ import {
  * extracted component and lib modules.
  */
 function downloadCertificate(passport: BatteryPassport): void {
-  const certificate = toBatteryPassportCertificate(passport);
+  // Strip only client-added camel mirrors, never diagnostically excluded facts.
+  const certificate = JSON.stringify(passport, function (
+    this: unknown,
+    key: string,
+    value: unknown,
+  ) {
+    if (this != null && typeof this === 'object' && !Array.isArray(this)) {
+      const isMirror = Object.keys(this).some((field) =>
+        field.includes('_')
+        && field.replace(/_([a-z0-9])/g, (_match, letter: string) => letter.toUpperCase()) === key,
+      );
+      if (isMirror) return undefined;
+    }
+    return value;
+  }, 2);
   const blob = new Blob(
-    [JSON.stringify(certificate, null, 2)],
+    [certificate],
     { type: 'application/json' },
   );
   const url = URL.createObjectURL(blob);
@@ -296,6 +311,25 @@ export default function BatteryPassportPage() {
         'Persistent certificate evidence, transparent reconstruction, provenance boundaries, and verification diagnostics',
       )}
     >
+      {vehicleSelected && passportSource.isRefreshBlocked && !refreshError && !initialError ? (
+        passport != null ? (
+          <StaleRefreshWarning
+            state={passportSource}
+            label={t('batteryPassport.title', 'Battery Passport')}
+          />
+        ) : (
+          <AlertBanner variant="info" role="status" data-refresh-blocked>
+            <Text as="p" variant="bodySm" color="secondary">
+              {t('Paused', 'Paused')}
+            </Text>
+            {!passportSource.hasData ? (
+              <Text as="p" variant="bodySm" color="secondary">
+                {t('batteryPassport.states.pending', 'Certificate availability has not resolved.')}
+              </Text>
+            ) : null}
+          </AlertBanner>
+        )
+      ) : null}
       {/*
        * 1 · Certificate identity, controls, export, and verification state.
        * This is the sole owner of the initial-query retry action.
