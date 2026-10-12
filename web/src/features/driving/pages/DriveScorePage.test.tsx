@@ -478,10 +478,60 @@ describe('DriveScorePage', () => {
       .getAllByRole('button', { name: 'Refresh' })
       .find((el) => el.tagName === 'BUTTON');
     expect(refreshButton).toBeDefined();
+    expect(refreshButton).toHaveClass('h-11', 'w-11', 'md:h-10', 'md:w-10');
+    expect(refreshButton).not.toBeDisabled();
+    expect(refreshButton?.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
+    expect(refreshButton?.querySelector('svg')).toHaveClass('h-4', 'w-4', 'shrink-0');
 
     fireEvent.click(refreshButton!);
 
     expect(refetchMock).toHaveBeenCalledTimes(1);
+    expect(scoreRefetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('retries both independent retained sources from the header refresh control', () => {
+    h.drives = makeQuery({
+      data: [driveGreat, driveBad, driveMid],
+      isError: true,
+      error: new Error('history refresh'),
+    });
+    h.score = makeQuery({
+      data: apiScore,
+      isError: true,
+      error: new Error('score refresh'),
+      refetch: scoreRefetchMock,
+    });
+    renderPage();
+
+    const refreshButton = screen.getAllByRole('button', { name: 'Refresh' })
+      .find((element) => element.tagName === 'BUTTON');
+    expect(refreshButton).toBeDefined();
+    fireEvent.click(refreshButton!);
+
+    expect(refetchMock).toHaveBeenCalledTimes(1);
+    expect(scoreRefetchMock).toHaveBeenCalledTimes(1);
+    expect(screen.getAllByTestId('stale-refresh-warning')).toHaveLength(2);
+    expect(screen.getByText('Grade: A')).toBeInTheDocument();
+    expect(screen.getByText('First Drive')).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Drive History' })).toBeInTheDocument();
+  });
+
+  it('does not refetch either disabled source without a selected vehicle', () => {
+    h.vehicleId = null;
+    h.drives = makeQuery({ data: undefined });
+    h.score = makeQuery({ data: undefined, refetch: scoreRefetchMock });
+    renderPage();
+
+    const refreshButton = screen.getAllByRole('button', { name: 'Refresh' })
+      .find((element) => element.tagName === 'BUTTON');
+    expect(refreshButton).toBeDefined();
+    expect(refreshButton).toBeDisabled();
+    fireEvent.click(refreshButton!);
+
+    expect(refetchMock).not.toHaveBeenCalled();
+    expect(scoreRefetchMock).not.toHaveBeenCalled();
+    expect(screen.getByText('No vehicle selected')).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Drive History' })).toBeInTheDocument();
   });
 
   it('retains every band, ranked drive and history row when both refreshes fail', () => {

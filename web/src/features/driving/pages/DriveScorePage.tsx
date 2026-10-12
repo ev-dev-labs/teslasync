@@ -1,8 +1,8 @@
 import type { ReactNode } from 'react';
+import { RefreshCw } from 'lucide-react';
 import { PageLayout, SourceContent } from '@/components/layout';
-import { Button } from '@/components/ui';
+import { Button, Icon } from '@/components/ui';
 import { EmptyState, Skeleton } from '@/components/feedback';
-import { Icons } from '@/lib/icons';
 import { useDriveScorePage } from '../hooks/useDriveScorePage';
 import { ScoreSourceNotices } from '../components/score-orchestrator/ScoreSourceNotices';
 import { ScoreEvidenceBrief } from '../components/operationalbrief-a-m/ScoreEvidenceBrief';
@@ -75,10 +75,16 @@ export default function DriveScorePage() {
     <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3">
       <Button
         variant="ghost"
-        onClick={() => refetch()}
+        className="h-11 w-11 p-0 md:h-10 md:w-10"
+        disabled={vehicleIdStr == null}
+        onClick={() => {
+          if (vehicleIdStr == null) return;
+          void refetch();
+          void scoreQuery.refetch();
+        }}
         aria-label={t('common.refresh', 'Refresh')}
       >
-        <Icons.refresh className="h-4 w-4" aria-hidden="true" />
+        <Icon icon={RefreshCw} />
       </Button>
     </div>
   );
