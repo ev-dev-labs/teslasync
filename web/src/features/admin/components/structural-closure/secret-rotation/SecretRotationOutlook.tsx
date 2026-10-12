@@ -1,13 +1,17 @@
 import { CalendarClock, Gauge } from 'lucide-react';
-import { LayoutCard } from '@/components/layout';
-import { Badge, Caption, Text } from '@/components/ui';
-import { MetricBar } from '@/components/data-display';
-import { FadeIn } from '@/components/motion';
-import { EmptyState, Skeleton, QueryError } from '@/components/feedback';
+import { LayoutCard } from '@/components/layout/layout-reference/LayoutCard';
+import { Badge } from '@/components/ui/Badge';
+import { Caption, Text } from '@/components/ui/Typography';
+import { MetricBar } from '@/components/data-display/MetricBar';
+import { FadeIn } from '@/components/motion/FadeIn';
+import { EmptyState } from '@/components/feedback/EmptyState';
+import { Skeleton } from '@/components/feedback/Skeleton';
+import { QueryError } from '@/components/feedback/QueryError';
 import { formatDateTime } from '@/lib/dateFormat';
 import { cn } from '@/lib/cn';
+import { gaugeTone, severityTokens } from '@/lib/tokens';
 import type { useSecretRotationPage } from '../../../hooks/useSecretRotationPage';
-import { SEVERITY_VARIANT, SEVERITY_HEX, rowKey } from './helpers';
+import { SEVERITY_VARIANT, rowKey } from './helpers';
 
 type Props = { controller: ReturnType<typeof useSecretRotationPage> };
 
@@ -32,16 +36,26 @@ export function SecretRotationOutlook({ controller }: Props) {
               />
             ) : (
               <div className="space-y-3">
-                {urgency.map(({ r }) => (
-                  <MetricBar
-                    key={rowKey(r)}
-                    label={rowLabel(r)}
-                    value={r.age_days}
-                    max={r.critical_days != null && r.critical_days > 0 ? r.critical_days : ((r.age_days ?? 0) || 1)}
-                    color={SEVERITY_HEX[r.severity] ?? SEVERITY_HEX.unknown}
-                    sublabel={`${r.age_days == null ? '—' : `${fmtNumber(r.age_days)}d`} / ${r.critical_days == null ? '—' : `${fmtNumber(r.critical_days)}d`}`}
-                  />
-                ))}
+                {urgency.map(({ r }) => {
+                  const hasAge = r.age_days != null && Number.isFinite(r.age_days) && r.age_days >= 0;
+                  const hasThreshold = r.critical_days != null && Number.isFinite(r.critical_days) && r.critical_days > 0;
+                  const hasRatio = hasAge && hasThreshold;
+                  const tone = hasRatio ? (SEVERITY_VARIANT[r.severity] ?? 'neutral') : 'neutral';
+                  return (
+                    <div key={rowKey(r)} className="min-w-0 space-y-1">
+                      <MetricBar
+                        label={rowLabel(r)}
+                        value={hasRatio ? r.age_days : null}
+                        max={hasThreshold ? r.critical_days : 0}
+                        color={gaugeTone[tone]}
+                        fill="solid"
+                        size="slim"
+                        sublabel={`${r.age_days == null || !Number.isFinite(r.age_days) ? '—' : `${fmtNumber(r.age_days)}d`} / ${r.critical_days == null || !Number.isFinite(r.critical_days) ? '—' : `${fmtNumber(r.critical_days)}d`}`}
+                      />
+                      {!hasRatio && <Caption>{t('common.unknown', 'Unknown')}</Caption>}
+                    </div>
+                  );
+                })}
               </div>
             )}
           </LayoutCard>
@@ -72,9 +86,12 @@ export function SecretRotationOutlook({ controller }: Props) {
                       <Text
                         size="sm"
                         weight="semibold"
-                        className={cn('tabular-nums', r.severity === 'critical' ? 'text-rose-300' : 'text-[var(--text-primary)]')}
+                        color="primary"
+                        className={cn('tabular-nums', r.days_to_expiry != null && Number.isFinite(r.days_to_expiry) && r.severity === 'critical' && severityTokens.critical.fg)}
                       >
-                        {t('admin.secretRotation.daysValue', '{{days}} d', { days: fmtNumber(r.days_to_expiry ?? 0) })}
+                        {r.days_to_expiry == null || !Number.isFinite(r.days_to_expiry)
+                          ? '—'
+                          : t('admin.secretRotation.daysValue', '{{days}} d', { days: fmtNumber(r.days_to_expiry) })}
                       </Text>
                       <Badge variant={SEVERITY_VARIANT[r.severity] ?? 'neutral'} size="sm">
                         {severityLabel[r.severity] ?? r.severity}
