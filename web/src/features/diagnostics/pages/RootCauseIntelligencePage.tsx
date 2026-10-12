@@ -1,7 +1,7 @@
 import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { PageLayout } from '@/components/layout';
-import type { StatMetric } from '@/components/data-display';
+import { DataFreshnessAuto, type StatMetric } from '@/components/data-display';
 import { HelpTooltip } from '@/components/ui';
 import { StaleRefreshWarning } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
@@ -10,8 +10,7 @@ import { NoVehicleSelected } from '@/features/onboarding/components/NoVehicleSel
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useDataState } from '@/hooks/useDataState';
-
-
+import { useLoadAnnouncement } from '@/hooks/useStatusAnnouncer';
 import { useRootCauseWorkspace } from '../hooks/useRootCauseWorkspace';
 import { EvidenceSourceNotice } from '../components/EvidenceSourceNotice';
 import { DiagnosticEvidenceBrief } from '../components/operationalbrief-all/DiagnosticEvidenceBrief';
@@ -56,10 +55,6 @@ export default function RootCauseIntelligencePage() {
     workspace.evidenceBundle.refetch();
   }, [workspace.signalsQuery, workspace.evidenceBundle]);
 
-  if (vehicleId == null) {
-    return <NoVehicleSelected pageTitle={t('rootCauseIntelligence.title', 'Root-cause intelligence')} />;
-  }
-
   const { analysis } = workspace;
   const isLoading = !evidenceState.hasData && (
     (workspace.signalsQuery.isLoading && !signalsState.hasData) ||
@@ -67,6 +62,16 @@ export default function RootCauseIntelligencePage() {
   );
   const error = evidenceState.fatalError ?? (!workspace.hasChosenSignal ? signalsState.fatalError : null);
   const isError = !!error;
+  useLoadAnnouncement({
+    label: t('rootCauseIntelligence.kpis.sectionLabel', 'Root-cause evidence metrics'),
+    isLoading,
+    isError,
+    enabled: vehicleId != null,
+  });
+
+  if (vehicleId == null) {
+    return <NoVehicleSelected pageTitle={t('rootCauseIntelligence.title', 'Root-cause intelligence')} />;
+  }
 
   const qualityLabel =
     analysis.quality.band === 'strong'
@@ -78,7 +83,13 @@ export default function RootCauseIntelligencePage() {
           : t('rootCauseIntelligence.quality.insufficient', 'Insufficient evidence');
 
   const available = workspace.hasChosenSignal && evidenceState.hasData;
-  const focalAvailable = available && hasSignalHistory(workspace.evidenceBundle.sources, workspace.focalSignal);
+  const focalHistoryAvailable = available && hasSignalHistory(workspace.evidenceBundle.sources, workspace.focalSignal);
+  // Recorded strings/booleans remain source evidence, but cannot support a numeric shift conclusion.
+  const focalAvailable = focalHistoryAvailable && analysis.quality.focalSampleCount > 0;
+  const interpretationSummary = focalAvailable ? analysis.summary
+    : focalHistoryAvailable
+      ? t('rootCauseIntelligence.timeline.notEnough', 'Not enough history yet for this signal and window.')
+      : t('diagnostics.brief.focalUnavailable', 'Focal history unavailable; no shift conclusion can be drawn.');
   const metrics: readonly StatMetric[] = [
     {
       metricId: 'status', occurrenceId: 'root-cause-quality',
@@ -107,7 +118,7 @@ export default function RootCauseIntelligencePage() {
       rawValue: focalAvailable ? analysis.focalShift?.effectSize : null,
       label: t('rootCauseIntelligence.kpis.effect', 'Focal shift effect size'),
       description: t('diagnostics.brief.effectBasis', 'Existing robust shift effect size; before and after medians retain their source scale.'),
-      context: !focalAvailable ? t('diagnostics.brief.focalUnavailable', 'Focal history unavailable; no shift conclusion can be drawn.')
+      context: !focalAvailable ? interpretationSummary
         : analysis.focalShift != null
         ? t('rootCauseIntelligence.kpis.effectSubtitle', '{{before}} → {{after}}', {
           before: fmtNumber(analysis.focalShift.before.median),
@@ -141,7 +152,12 @@ export default function RootCauseIntelligencePage() {
         'rootCauseIntelligence.subtitle',
         "Evidence-ranked hypotheses about which telemetry signals moved alongside a chosen signal's biggest shift \u2014 a statistical association, never a diagnosis or proof of causation.",
       )}
-      query={workspace.signalsQuery}
+      busy={workspace.signalsQuery.isFetching || workspace.evidenceBundle.isFetching || isLoading}
+      announce={false}
+      metadataActions={<DataFreshnessAuto
+        query={workspace.signalsQuery}
+        source={t('rootCauseIntelligence.picker.title', 'Choose a signal to investigate')}
+      />}
     >
       {/* 1 — Focal signal + analysis window */}
       <FadeIn>
@@ -220,7 +236,7 @@ export default function RootCauseIntelligencePage() {
       <FadeIn delay={0.4}>
         <RootCauseHypothesisList
           hypotheses={analysis.hypotheses}
-          focalHistoryAvailable={hasSignalHistory(workspace.evidenceBundle.sources, workspace.focalSignal)}
+          focalHistoryAvailable={focalAvailable}
           hasChosenSignal={workspace.hasChosenSignal}
           focalShiftFound={analysis.focalShift != null}
           isLoading={isLoading}
@@ -233,8 +249,8 @@ export default function RootCauseIntelligencePage() {
       {/* 6 — Interpretation & limits */}
       <FadeIn delay={0.5}>
         <RootCauseInterpretationPanel
-          summary={analysis.summary}
-          focalHistoryAvailable={hasSignalHistory(workspace.evidenceBundle.sources, workspace.focalSignal)}
+          summary={interpretationSummary}
+          focalHistoryAvailable={focalAvailable}
           limitations={analysis.limitations}
           quality={analysis.quality}
           hasChosenSignal={workspace.hasChosenSignal}
