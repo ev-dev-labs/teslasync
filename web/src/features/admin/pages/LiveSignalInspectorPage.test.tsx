@@ -70,12 +70,14 @@ vi.mock('framer-motion', () => {
 
 // ── live-connection: LiveIndicator renders a stable "connected" chip ──
 vi.mock('@/hooks/useLiveConnection', () => ({
-  useLiveConnection: () => ({
+  useLiveConnection: vi.fn(() => ({
     status: 'connected' as const,
     lastMessageAt: null,
     channels: { sse: 'open' as const },
-  }),
+  })),
 }));
+
+vi.mock('@/hooks/useMotionPreference', () => ({ useMotionPreference: vi.fn() }));
 
 // ── data hooks — driven per-test ──
 vi.mock('@/api/hooks/useVehicles', () => ({ useVehicles: vi.fn() }));
@@ -83,6 +85,9 @@ vi.mock('@/api/hooks/useTelemetry', () => ({ useVehicleLiveSignals: vi.fn() }));
 
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { useVehicleLiveSignals } from '@/api/hooks/useTelemetry';
+import { useLiveConnection } from '@/hooks/useLiveConnection';
+import { useMotionPreference } from '@/hooks/useMotionPreference';
+import { typography } from '@/lib/tokens';
 import LiveSignalInspectorPage from './LiveSignalInspectorPage';
 
 const mockedUseVehicles = useVehicles as unknown as ReturnType<typeof vi.fn>;
@@ -145,6 +150,12 @@ const NO_VEHICLE_TABLE_MSG =
 
 beforeEach(() => {
   refetch.mockClear();
+  vi.mocked(useMotionPreference).mockReturnValue({ reduce: false, durationMs: 250 });
+  vi.mocked(useLiveConnection).mockReturnValue({
+    status: 'connected',
+    lastMessageAt: null,
+    channels: { sse: 'open' },
+  });
   liveWhenEnabled = makeLive();
   mockedUseVehicles.mockReturnValue({
     data: [
@@ -435,5 +446,66 @@ describe('LiveSignalInspectorPage — accessibility landmarks', () => {
     expect(screen.getByRole('region', { name: 'Snapshot summary' })).toBeInTheDocument();
     expect(screen.getByRole('region', { name: 'Signal breakdowns' })).toBeInTheDocument();
     expect(screen.getByRole('combobox', { name: 'Vehicle' })).toBeInTheDocument();
+  });
+});
+
+describe('LiveSignalInspectorPage — restrained source presentation', () => {
+  it('labels global SSE separately and keeps the REST snapshot when the wire is disconnected', () => {
+    vi.mocked(useLiveConnection).mockReturnValue({
+      status: 'disconnected',
+      lastMessageAt: null,
+      channels: { sse: 'closed' },
+    });
+    setLive({ data: readyData(), dataUpdatedAt: Date.now() });
+    renderPage();
+
+    const connection = screen.getByRole('group', { name: 'SSE connection' });
+    expect(within(connection).getByRole('status', { name: 'Offline' })).toBeInTheDocument();
+    expect(connection).toHaveTextContent('SSE connection');
+    expect(screen.getAllByText('Live signal endpoint · layered L1 / L2 / stale state').length).toBeGreaterThan(0);
+    expect(screen.getByText('a1')).toBeInTheDocument();
+    expect(screen.getByText('hello')).toBeInTheDocument();
+    expect(screen.getByTestId('live-signals-operational-brief')).toHaveTextContent('Snapshot loaded');
+    expect(screen.getByRole('combobox', { name: 'Vehicle' })).toHaveValue('1');
+  });
+
+  it.each([
+    { case: 'ordinary motion', reduce: false },
+    { case: 'reduced motion or low bandwidth', reduce: true },
+  ])('preserves manual refresh with $case', ({ reduce }) => {
+    vi.mocked(useMotionPreference).mockReturnValue({ reduce, durationMs: reduce ? 0 : 250 });
+    setLive({ data: readyData(), isFetching: true, dataUpdatedAt: Date.now() });
+    renderPage();
+
+    const refresh = screen.getByRole('button', { name: 'Refresh live snapshot' });
+    expect(refresh).toHaveClass('h-11', 'min-w-11', 'md:h-9', 'md:min-w-0');
+    const icon = refresh.querySelector('svg');
+    expect(icon).toHaveAttribute('aria-hidden', 'true');
+    expect(icon).toHaveClass('motion-reduce:animate-none');
+    if (reduce) expect(icon).not.toHaveClass('animate-spin');
+    else expect(icon).toHaveClass('animate-spin');
+    fireEvent.click(refresh);
+    expect(refetch).toHaveBeenCalledTimes(1);
+    expect(screen.getByText('a1')).toBeInTheDocument();
+  });
+
+  it('keeps every diagnostic section and uses neutral snapshot icon ink', () => {
+    setLive({ data: readyData(), dataUpdatedAt: Date.now() });
+    renderPage();
+
+    expect(screen.getByRole('region', { name: 'Snapshot summary' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Signal breakdowns' })).toBeInTheDocument();
+    for (const name of ['Source layers', 'Signal kinds', 'Live snapshot']) {
+      expect(screen.getByRole('heading', { name })).toBeInTheDocument();
+    }
+    const title = screen.getByRole('heading', { name: 'Live snapshot' });
+    expect(title.querySelector('svg')).toHaveClass(typography.color.muted);
+    expect(title.querySelector('svg')).not.toHaveClass('text-cyan-300');
+    const table = screen.getByRole('table');
+    for (const name of ['Signal', 'Value', 'Kind', 'Source', 'Last update']) {
+      expect(within(table).getByRole('columnheader', { name })).toBeInTheDocument();
+    }
+    expect(screen.getByText('c1')).toBeInTheDocument();
+    expect(screen.getByText('hello')).toBeInTheDocument();
   });
 });

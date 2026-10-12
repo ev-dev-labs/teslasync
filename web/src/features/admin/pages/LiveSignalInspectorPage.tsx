@@ -2,8 +2,8 @@
  * Live Signal Inspector Page — realtime per-vehicle signal viewer.
  *
  * Polls `GET /api/v1/signals/{vehicleID}/live` every 1 s while the page is
- * visible and renders the Redis-cached snapshot as a full-width command
- * center: a KPI band, a source-layer + value-kind bento, and a filterable
+ * visible and renders the layered live snapshot as a full-width inspector:
+ * a metric summary, source-layer + value-kind breakdowns, and a filterable
  * snapshot table. The 1 s cadence is intentional — operators triaging a
  * stalled or noisy signal need near-realtime feedback.
  *
@@ -16,13 +16,15 @@ import { useTranslation } from 'react-i18next';
 import { Activity, RefreshCw, Radio } from 'lucide-react';
 
 import { PageLayout } from '@/components/layout';
-import { GlassPanel, Button, PanelTitle } from '@/components/ui';
+import { GlassPanel, Button, Caption, Icon, PanelTitle } from '@/components/ui';
 import { FadeIn } from '@/components/motion';
 import { SectionErrorBoundary } from '@/components/feedback';
 import { LiveIndicator } from '@/components/data-display';
 import { cn } from '@/lib/cn';
+import { typography } from '@/lib/tokens';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useDataState } from '@/hooks/useDataState';
+import { useMotionPreference } from '@/hooks/useMotionPreference';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useVehicleLiveSignals } from '@/api/hooks/useTelemetry';
 
@@ -40,6 +42,7 @@ import { LiveSignalsOperationalBrief } from '../components/operationalbrief-h-q/
 
 export default function LiveSignalInspectorPage() {
   const { t } = useTranslation();
+  const { reduce } = useMotionPreference();
   usePageTitle(t('admin.liveSignals.pageTitle', 'Live signal inspector'));
 
   const { vehicleId, vehicles, setVehicleId } = useSelectedVehicle();
@@ -69,7 +72,7 @@ export default function LiveSignalInspectorPage() {
     void live.refetch();
   };
 
-  const noVehicleIcon = <Radio className="h-10 w-10" aria-hidden="true" />;
+  const noVehicleIcon = <Icon icon={Radio} size="xl" className={typography.color.muted} />;
 
   const actions = (
     <div className="flex flex-wrap items-center gap-2">
@@ -78,17 +81,27 @@ export default function LiveSignalInspectorPage() {
         vehicleId={vehicleId}
         onChange={setVehicleId}
       />
-      {vehicleId !== null && <LiveIndicator variant="compact" />}
+      {vehicleId !== null && (
+        <div
+          role="group"
+          aria-label={t('systemStatus.infrastructure.sseTitle', 'SSE connection')}
+          className="flex flex-wrap items-center gap-2"
+        >
+          <Caption>{t('systemStatus.infrastructure.sseTitle', 'SSE connection')}</Caption>
+          <LiveIndicator variant="compact" />
+        </div>
+      )}
       <Button
         variant="ghost"
         size="sm"
+        className="h-11 min-w-11 md:h-9 md:min-w-0"
         onClick={onRetry}
         disabled={vehicleId === null}
         aria-label={t('admin.liveSignals.refresh', 'Refresh live snapshot')}
       >
-        <RefreshCw
-          className={cn('h-4 w-4', live.isFetching && 'animate-spin')}
-          aria-hidden="true"
+        <Icon
+          icon={RefreshCw}
+          className={cn('motion-reduce:animate-none', live.isFetching && !reduce && 'animate-spin')}
         />
       </Button>
     </div>
@@ -98,8 +111,8 @@ export default function LiveSignalInspectorPage() {
     <PageLayout
       title={t('admin.liveSignals.pageTitle', 'Live signal inspector')}
       subtitle={t(
-        'admin.liveSignals.subtitle',
-        'Realtime view of the Redis-cached live signal snapshot. Refreshes every second while this tab is in the foreground.',
+        'admin.liveSignals.brief.provenance',
+        'Live signal endpoint · layered L1 / L2 / stale state',
       )}
       contextActions={actions}
       query={live}
@@ -147,7 +160,7 @@ export default function LiveSignalInspectorPage() {
         <SectionErrorBoundary name="live-signals-table">
           <GlassPanel className="p-4 sm:p-5">
             <PanelTitle className="mb-3 flex items-center gap-2">
-              <Activity className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+              <Icon icon={Activity} className={typography.color.muted} />
               {t('admin.liveSignals.panels.snapshot', 'Live snapshot')}
             </PanelTitle>
             <LiveSectionState
