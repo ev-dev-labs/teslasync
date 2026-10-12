@@ -110,6 +110,7 @@ interface QueryStub {
   isError: boolean;
   error: unknown;
   isFetching: boolean;
+  fetchStatus: 'fetching' | 'paused' | 'idle';
   isStale: boolean;
   dataUpdatedAt: number;
   refetch: () => void;
@@ -125,6 +126,7 @@ function query(overrides: Partial<QueryStub> = {}): QueryStub {
     isError,
     error: null,
     isFetching: isLoading,
+    fetchStatus: isLoading ? 'fetching' : 'idle',
     isStale: false,
     dataUpdatedAt: BASE,
     refetch,
@@ -282,6 +284,83 @@ describe('ComfortConsistencyPage', () => {
       name: 'Loading comfort-consistency evidence',
     })).toHaveLength(1);
     expect(screen.queryByRole('button', { name: 'Retry' })).toBeNull();
+  });
+
+  it('keeps deferred history unresolved until a real empty response arrives', () => {
+    h.history = query({ isLoading: false, isSuccess: false });
+    const { rerender } = renderPage();
+
+    expectEverySection();
+    expect(screen.queryByText(
+      'The climate endpoint returned no rows, so no comfort claim is made.',
+    )).not.toBeInTheDocument();
+    expect(screen.getAllByText(
+      'Climate-history availability has not resolved.',
+    ).length).toBeGreaterThan(0);
+    expect(
+      within(screen.getByTestId('comfort-consistency-accounting'))
+        .queryAllByText('Balances'),
+    ).toHaveLength(0);
+
+    h.history = query({ data: [] });
+    rerender(
+      <MemoryRouter initialEntries={['/comfort-consistency']}>
+        <ComfortConsistencyPage />
+      </MemoryRouter>,
+    );
+
+    expectEverySection();
+    expect(screen.getByText(
+      'The climate endpoint returned no rows, so no comfort claim is made.',
+    )).toBeInTheDocument();
+    expect(
+      within(screen.getByTestId('comfort-consistency-accounting'))
+        .getAllByText('Balances'),
+    ).toHaveLength(7);
+  });
+
+  it('keeps paused initial history unresolved without an empty-response claim', () => {
+    h.history = query({
+      isSuccess: false,
+      fetchStatus: 'paused',
+    });
+    renderPage();
+
+    expectEverySection();
+    expect(screen.getByText(
+      'Climate history loading is paused while the network is unavailable; no empty response is inferred.',
+    )).toBeInTheDocument();
+    expect(screen.queryByText(
+      'The climate endpoint returned no rows, so no comfort claim is made.',
+    )).not.toBeInTheDocument();
+    expect(
+      within(screen.getByTestId('comfort-consistency-accounting'))
+        .queryAllByText('Balances'),
+    ).toHaveLength(0);
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    expect(refetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('retains observed comfort evidence while its refresh is paused', () => {
+    h.history = query({
+      data: completeEvidence(),
+      isSuccess: false,
+      fetchStatus: 'paused',
+    });
+    renderPage();
+
+    expectEverySection();
+    expect(screen.getByText(
+      'Previously loaded data remains visible while affected sources recover. Climate history loading is paused while the network is unavailable; no empty response is inferred.',
+    )).toBeInTheDocument();
+    expect(screen.getAllByText('Sustained band observed').length).toBeGreaterThan(0);
+    expect(
+      within(screen.getByTestId('comfort-consistency-accounting'))
+        .getAllByText('Balances'),
+    ).toHaveLength(7);
+    expect(screen.queryByText(
+      'The climate endpoint returned no rows, so no comfort claim is made.',
+    )).not.toBeInTheDocument();
   });
 
   it('shows one retry for an initial error while retaining all shells', () => {

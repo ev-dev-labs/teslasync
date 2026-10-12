@@ -61,16 +61,12 @@ export default function ComfortConsistencyPage() {
     },
     [unitPrefs.precision, unitPrefs.temperature, fmtNumber],
   );
-  const hasData = climateQuery.data !== undefined;
   const queryState = useMemo<ComfortConsistencyQueryState>(
     () => ({
       vehicleSelected: vehicleId != null,
       isLoading: climateQuery.isLoading && !climateSource.hasData,
       isPaused: climateSource.isRefreshBlocked,
-      isResolved:
-        hasData || (!climateSource.isRefreshBlocked && (
-          climateQuery.isSuccess || (!climateQuery.isLoading && !climateQuery.isError)
-        )),
+      isResolved: climateSource.hasData,
       error: climateSource.fatalError,
       refreshError: climateSource.refreshError,
       onRetry: () => {
@@ -78,16 +74,12 @@ export default function ComfortConsistencyPage() {
       },
     }),
     [
-      climateQuery.error,
-      climateQuery.isError,
       climateQuery.isLoading,
-      climateQuery.isSuccess,
       climateQuery.refetch,
       climateSource.fatalError,
       climateSource.refreshError,
       climateSource.hasData,
       climateSource.isRefreshBlocked,
-      hasData,
       vehicleId,
     ],
   );
