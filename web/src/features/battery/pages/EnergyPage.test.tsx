@@ -127,6 +127,7 @@ vi.mock('@/hooks/useSettings', async () => {
 
 import { request } from '@/api/client'
 import { ToastProvider } from '@/components/feedback/Toast'
+import { ThemeProvider } from '@/components/ui/ThemeProvider'
 import { SelectedVehicleProvider } from '@/store/selectedVehicle'
 import { setGlobalPrecision, setGlobalLocale } from '@/lib/numberFormat'
 import EnergyPage from './EnergyPage'
@@ -242,6 +243,7 @@ const defaultSessions: ChargingSession[] = [
 ]
 
 interface InstallOpts {
+  chartPalette?: 'cb_safe' | 'neon'
   vehicles?: Vehicle[]
   stats?: EnergyStats | null
   statsPending?: boolean
@@ -262,6 +264,7 @@ interface InstallOpts {
 
 function install(opts: InstallOpts = {}) {
   const {
+    chartPalette = 'cb_safe',
     vehicles = [makeVehicle()],
     stats = defaultStats,
     statsPending = false,
@@ -282,6 +285,7 @@ function install(opts: InstallOpts = {}) {
 
   mockedRequest.mockImplementation((path: string) => {
     if (path === '/vehicles') return Promise.resolve(vehicles)
+    if (path === '/settings') return Promise.resolve({ chart_palette: chartPalette })
     if (path.includes('/energy?start=')) {
       if (statsPending) return never()
       if (statsError) return Promise.reject(new Error('energy boom'))
@@ -321,9 +325,11 @@ function renderPage(initialEntries: string[] = ['/energy']) {
     <MemoryRouter initialEntries={initialEntries}>
       <QueryClientProvider client={client}>
         <ToastProvider>
-          <SelectedVehicleProvider>
-            <EnergyPage />
-          </SelectedVehicleProvider>
+          <ThemeProvider>
+            <SelectedVehicleProvider>
+              <EnergyPage />
+            </SelectedVehicleProvider>
+          </ThemeProvider>
         </ToastProvider>
       </QueryClientProvider>
     </MemoryRouter>,
@@ -542,5 +548,82 @@ describe('EnergyPage', () => {
     // Landmark regions expose their accessible names for screen-reader nav.
     expect(screen.getByRole('region', { name: 'Energy overview' })).toBeInTheDocument()
     expect(screen.getByRole('region', { name: 'Cost savings versus gas' })).toBeInTheDocument()
+  })
+
+  it('uses the saved chart palette while keeping thresholds semantic and charger types neutral', async () => {
+    install({ chartPalette: 'neon' })
+    renderPage()
+
+    const chargerHeading = await screen.findByRole('heading', { name: 'Charger type breakdown' })
+    const chargerCard = chargerHeading.closest('[data-card]')
+    if (!(chargerCard instanceof HTMLElement)) throw new Error('Missing charger breakdown card')
+
+    await waitFor(() => {
+      expect(within(chargerCard).getByText('Home/AC', { selector: 'span' }).previousElementSibling)
+        .toHaveStyle({ backgroundColor: '#91b9a5' })
+      expect(within(chargerCard).getByText('Supercharger', { selector: 'span' }).previousElementSibling)
+        .toHaveStyle({ backgroundColor: '#cfb481' })
+      expect(within(chargerCard).getByText('DC fast', { selector: 'span' }).previousElementSibling)
+        .toHaveStyle({ backgroundColor: '#a5aac9' })
+    })
+    expect(screen.getByText('CCS')).toHaveClass('text-[var(--text-secondary)]')
+    const meter = screen.getByRole('meter', { name: 'Efficiency' })
+    expect(meter).toHaveAttribute('aria-valuenow', '180')
+    expect(meter).toHaveAttribute('aria-valuemax', '300')
+    const bands = meter.querySelectorAll('[aria-hidden="true"][style*="background"]')
+    expect(Array.from(bands, band => (band as HTMLElement).style.background))
+      .toEqual([
+        'var(--semantic-success)', 'var(--semantic-info)',
+        'var(--semantic-warning)', 'var(--semantic-danger)',
+      ])
+  })
+
+  it.each([
+    { caseId: 'missing recorded price', cost: null, expected: '—' },
+    { caseId: 'measured free charging', cost: 0, expected: '$0.00' },
+  ])('distinguishes $caseId in the real decision narrative', async ({ cost, expected }) => {
+    install({ sessions: [makeSession({ cost_decimal: cost })] })
+    renderPage()
+
+    const brief = await screen.findByTestId('energy-operational-brief')
+    await screen.findByText('200 km')
+    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }))
+    const drawer = await screen.findByRole('dialog', {
+      name: 'Consumption, efficiency, and cost in one operating view details',
+    })
+    expect(within(drawer).getByText(
+      `36.00 kWh of measured drive energy across 3 daily records, with ${expected} in recorded charging cost.`,
+    )).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Recent charging sessions' })).toBeInTheDocument()
+  })
+
+  it('keeps native investigation links focusable and all charging fields available', async () => {
+    renderPage()
+    const firstLink = await screen.findByRole('link', { name: 'Review temperature impact' })
+    firstLink.focus()
+    expect(firstLink).toHaveFocus()
+    for (const name of ['Review temperature impact', 'Review speed profile', 'Review route efficiency']) {
+      expect(screen.getByRole('link', { name })).toHaveClass(
+        'min-h-11', 'focus-visible:outline-2', 'focus-visible:outline-offset-2',
+      )
+    }
+    for (const name of ['Date', 'Energy', 'Battery', 'Power', 'Type', 'Cost', '$/kWh']) {
+      expect(screen.getByRole('columnheader', { name })).toBeInTheDocument()
+    }
+    expect(screen.getByRole('link', { name: 'Jun 1' })).toHaveAttribute('href', '/charging/101')
+  })
+
+  it('retries failed idle evidence without dropping independent charging content', async () => {
+    install({ idleError: true })
+    renderPage()
+    expect(await screen.findByTestId('energy-partial-data')).toHaveTextContent('idle-drain history')
+    const before = mockedRequest.mock.calls.filter(call => String(call[0]).startsWith('/vampire-drain/stats')).length
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }))
+    await waitFor(() => expect(
+      mockedRequest.mock.calls.filter(call => String(call[0]).startsWith('/vampire-drain/stats')).length,
+    ).toBeGreaterThan(before))
+    expect(screen.getByText('CCS')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Charging by time of day' })).toBeInTheDocument()
+    expect(screen.getByText('Not measured')).toBeInTheDocument()
   })
 })

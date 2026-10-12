@@ -1,4 +1,4 @@
-import { useMemo, type ReactNode } from 'react';
+import { useCallback, useMemo, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import {
@@ -14,7 +14,7 @@ import {
 import type { BatterySummaryMetric } from '../components/modernization/BatterySpecialistSummary';
 import { BatteryEvidenceBrief } from '../components/operationalbrief-all/BatteryEvidenceBrief';
 import {
-  DataTable, Badge, Text, Caption,
+  DataTable, Badge, Text, Caption, Icon, BUTTON_BASE, BUTTON_VARIANTS,
   HelperText, type Column,
 } from '@/components/ui';
 import {
@@ -57,10 +57,12 @@ import { useSavedViewUrl } from '@/hooks/useSavedViewUrl';
 import { useRangeState } from '@/hooks/useRangeState';
 import { useHiddenSeries } from '@/hooks/useHiddenSeries';
 import { useDataState } from '@/hooks/useDataState';
+import { useChartPalette } from '@/hooks/useChartPalette';
+import { useMotionPreference } from '@/hooks/useMotionPreference';
 import { formatDateShort, formatDayKey, ymdInTz } from '@/lib/dateFormat';
 
-import { CHARGER_COLORS } from '@/lib/colors';
-import { chartTokens, type NeonColor } from '@/lib/tokens';
+import { chartTokens, gaugeTone, typography, type NeonColor } from '@/lib/tokens';
+import { cn } from '@/lib/cn';
 import type { ChargingSession } from '@/api/types';
 import type { OperationalNarrative } from '@/types/operationalNarrative';
 import { convertDistanceFromSI, convertEnergyFromSI, convertPowerFromSI } from '@/lib/unitConversion';
@@ -118,6 +120,8 @@ export default function EnergyPage() {
   const { t } = useTranslation();
   usePageTitle(t('energy.title', 'Energy'));
   const { unitPrefs, formatEnergy } = useUnits();
+  const palette = useChartPalette();
+  const { reduce, durationMs } = useMotionPreference();
   const { formatCurrency, currencySymbol, estimateGasCost } = useFormatting();
   const timezone = useTimezone();
   const sessionHourFormatter = useMemo(
@@ -134,7 +138,10 @@ export default function EnergyPage() {
   const distanceUnit = unitPrefs.distance;
   const energyUnit = unitPrefs.energy;
   const efficiencyUnit = unitPrefs.distance === 'mi' ? 'Wh/mi' : 'Wh/km';
-  const toEfficiencyDisplay = (whPerM: number) => unitPrefs.distance === 'mi' ? whPerM * 1609.344 : whPerM * 1000;
+  const toEfficiencyDisplay = useCallback(
+    (whPerM: number) => unitPrefs.distance === 'mi' ? whPerM * 1609.344 : whPerM * 1000,
+    [unitPrefs.distance],
+  );
   const savedView = useSavedViewUrl();
 
   /* ── Vehicle selector ─────────────────────────────────────────── */
@@ -252,29 +259,29 @@ export default function EnergyPage() {
       {
         from: 0,
         to: toEfficiencyDisplay(EFFICIENCY_EXCELLENT_WH_PER_M),
-        color: '#10b9818c',
+        color: gaugeTone.success,
         label: t('energy.gauge.band.excellent', 'Excellent'),
       },
       {
         from: toEfficiencyDisplay(EFFICIENCY_EXCELLENT_WH_PER_M),
         to: toEfficiencyDisplay(EFFICIENCY_GOOD_WH_PER_M),
-        color: '#38bdf88c',
+        color: gaugeTone.info,
         label: t('energy.gauge.band.good', 'Good'),
       },
       {
         from: toEfficiencyDisplay(EFFICIENCY_GOOD_WH_PER_M),
         to: toEfficiencyDisplay(EFFICIENCY_AVERAGE_WH_PER_M),
-        color: '#f59e0b8c',
+        color: gaugeTone.warning,
         label: t('energy.gauge.band.average', 'Average'),
       },
       {
         from: toEfficiencyDisplay(EFFICIENCY_AVERAGE_WH_PER_M),
         to: toEfficiencyDisplay(EFFICIENCY_MAX_WH_PER_M),
-        color: '#ef44448c',
+        color: gaugeTone.danger,
         label: t('energy.gauge.band.heavy', 'Heavy'),
       },
     ],
-    [unitPrefs.distance, t],
+    [toEfficiencyDisplay, t],
   );
   const costPerDistance =
     costCoverageComplete && totalDistance > 0
@@ -539,9 +546,10 @@ export default function EnergyPage() {
       name,
       label: chargerLabels[name] ?? name,
       ...data,
-      fill: CHARGER_COLORS[name] ?? '#00f0ff',
+      fill: name === 'Supercharger' ? palette[3]
+        : name === 'DC Fast' ? palette[4] : palette[1],
     }));
-  }, [sessions, t]);
+  }, [sessions, t, palette]);
 
   const chargerEvidence = useMemo(() => chargerBreakdown.map(b => ({
     charger: b.label, sessions: b.count, energy_wh: b.energy,
@@ -555,7 +563,10 @@ export default function EnergyPage() {
       key: 'date',
       header: t('energy.table.date', 'Date'),
       render: (s) => (
-        <Link to={`/charging/${s.id}`} className="text-[var(--text-secondary)] transition-colors hover:text-cyan-300">
+        <Link to={`/charging/${s.id}`} className={cn(
+          BUTTON_BASE, 'min-h-11 justify-start whitespace-normal text-start md:min-h-6',
+          typography.color.secondary,
+        )}>
           {formatDateShort(s.started_at)}
         </Link>
       ),
@@ -565,7 +576,7 @@ export default function EnergyPage() {
       align: 'right',
       header: t('energy.table.energy', 'Energy'),
       render: (s) => (
-        <Text weight="medium" className="text-cyan-300">
+        <Text weight="medium">
           {formatEnergy(s.total_energy_added_wh ?? 0)}
         </Text>
       ),
@@ -579,7 +590,7 @@ export default function EnergyPage() {
         <>
           <Text color="muted">{s.start_soc_pct}%</Text>
           <Text color="muted" className="mx-1">→</Text>
-          <Text className="text-emerald-300">{s.end_soc_pct ?? '—'}%</Text>
+          <Text>{s.end_soc_pct ?? '—'}%</Text>
         </>
       ),
     },
@@ -594,11 +605,10 @@ export default function EnergyPage() {
       header: t('energy.table.type', 'Type'),
       render: (s) => {
         const isTesla = s.charger_type?.toLowerCase().includes('tesla');
-        const variant = isTesla ? 'danger' : s.charger_type ? 'warning' : 'success';
         const label = isTesla
           ? t('energy.chargerType.supercharger', 'Supercharger')
           : s.charger_type || t('energy.chargerType.ac', 'AC');
-        return <Badge variant={variant} size="sm">{label}</Badge>;
+        return <Badge variant="neutral" size="sm">{label}</Badge>;
       },
     },
     {
@@ -632,14 +642,14 @@ export default function EnergyPage() {
       label: t('energy.metric.costPerDist', { unit: distanceUnit, defaultValue: 'Cost per {{unit}}' }),
       value: costPerDistance != null ? formatCurrency(costPerDistance) : '—',
       metricId: 'currency', rawValue: costPerDistance,
-      icon: <DollarSign className="h-4 w-4" />, color: 'cyan',
+      icon: <Icon icon={DollarSign} />, color: 'cyan',
     },
     {
       key: 'costPerKwh',
       label: t('energy.metric.costPerKwh', 'Cost per kWh'),
       value: costPerKwh != null ? formatCurrency(costPerKwh) : '—',
       metricId: 'currency', rawValue: costPerKwh,
-      icon: <Zap className="h-4 w-4" />, color: 'green',
+      icon: <Icon icon={Zap} />, color: 'green',
     },
     {
       key: 'totalDistance',
@@ -648,7 +658,7 @@ export default function EnergyPage() {
         ? '—'
         : `${fmtInt(toDistanceDisplay(totalDistance ?? 0))} ${distanceUnit}`,
       metricId: 'distance', rawValue: statsDataState.hasData ? totalDistance : null,
-      icon: <Route className="h-4 w-4" />, color: 'blue',
+      icon: <Icon icon={Route} />, color: 'blue',
     },
     {
       key: 'sessions',
@@ -657,21 +667,21 @@ export default function EnergyPage() {
         ? '—'
         : `${sessionCapReached ? '≥ ' : ''}${sessions.length}`,
       metricId: 'count', rawValue: sessionsDataState.hasData ? sessions.length : null,
-      icon: <BatteryCharging className="h-4 w-4" />, color: 'purple',
+      icon: <Icon icon={BatteryCharging} />, color: 'purple',
     },
     {
       key: 'monthlyEst',
       label: t('energy.metric.monthlyEst', 'Monthly est.'),
       value: monthlyProjectedCost != null ? formatCurrency(monthlyProjectedCost) : '—',
       metricId: 'currency', rawValue: monthlyProjectedCost,
-      icon: <CalendarDays className="h-4 w-4" />, color: 'amber',
+      icon: <Icon icon={CalendarDays} />, color: 'amber',
     },
     {
       key: 'yearlyEst',
       label: t('energy.metric.yearlyEst', 'Yearly est.'),
       value: yearlyProjectedCost != null ? formatCurrency(yearlyProjectedCost) : '—',
       metricId: 'currency', rawValue: yearlyProjectedCost,
-      icon: <TrendingUp className="h-4 w-4" />, color: 'red',
+      icon: <Icon icon={TrendingUp} />, color: 'red',
     },
   ];
   const narrativeEvidence: OperationalNarrative['evidence'] = [
@@ -733,7 +743,7 @@ export default function EnergyPage() {
       {
         energy: formatEnergy(Math.max(0, scopedDriveEnergyWh)),
         days: dailyEnergy.length,
-        cost: formatCurrency(totalCost),
+        cost: recordedCostValue,
       },
     ),
     whyItMatters: t(
@@ -842,12 +852,15 @@ export default function EnergyPage() {
       <StaleRefreshWarning state={sessionsDataState} />
       <StaleRefreshWarning state={liveChargingDataState} />
       <StaleRefreshWarning state={idleDrainDataState} />
+      {idleDrainDataState.fatalError && (
+        <QueryError error={idleDrainDataState.fatalError} onRetry={() => void idleDrainQuery.refetch()} />
+      )}
       {secondarySourceFailures.length > 0 && (
         <AlertBanner
           data-testid="energy-partial-data"
           variant="warning"
           title={t('energy.sources.partialTitle', 'Some energy sources are unavailable')}
-          icon={<CircleAlert className="h-4 w-4" aria-hidden="true" />}
+          icon={<Icon icon={CircleAlert} />}
         >
           {t(
             'energy.sources.partialDescription',
@@ -859,6 +872,7 @@ export default function EnergyPage() {
 
       <OperationalBrief
         compact
+        loading={isLoading && !statsDataState.hasData && !sessionsDataState.hasData && !idleDrainDataState.hasData}
         testId="energy-operational-brief"
         eyebrow={t('operations.energy.eyebrow', 'Energy posture')}
         title={t('operations.energy.title', 'Consumption, efficiency, and cost in one operating view')}
@@ -896,6 +910,7 @@ export default function EnergyPage() {
         metrics={[
           {
             key: 'consumption',
+            loading: isLoading && !statsDataState.hasData,
             rawValue: scopedDriveEnergyWh > 0 ? scopedDriveEnergyWh : null,
             valueState: scopedDriveEnergyWh > 0 ? 'value' : 'missing',
             label: t('operations.energy.consumption', 'Drive consumption'),
@@ -908,6 +923,7 @@ export default function EnergyPage() {
           },
           {
             key: 'efficiency',
+            loading: isLoading && !statsDataState.hasData,
             rawValue: avgEfficiency > 0 ? avgEfficiency : null,
             valueState: avgEfficiency > 0 ? 'value' : 'missing',
             label: t('energy.gauge.efficiency', 'Efficiency'),
@@ -922,6 +938,7 @@ export default function EnergyPage() {
           },
           {
             key: 'idle-drain',
+            loading: idleDrainQuery.isLoading && !idleDrainDataState.hasData,
             rawValue: idleDrainRate,
             valueState: idleDrainRate == null ? 'missing' : 'value',
             label: t('operations.energy.idleDrain', 'Idle drain'),
@@ -950,6 +967,7 @@ export default function EnergyPage() {
           },
           {
             key: 'cost',
+            loading: sessionsQuery.isLoading && !sessionsDataState.hasData,
             rawValue: costedSessions.length > 0 ? totalCost : null,
             valueState: costedSessions.length > 0 ? 'value' : 'missing',
             label: t('operations.energy.recordedCost', 'Recorded cost'),
@@ -963,6 +981,7 @@ export default function EnergyPage() {
           },
           {
             key: 'projection',
+            loading: isLoading && !statsDataState.hasData,
             rawValue: projectedMonthlyConsumptionWh,
             valueState: projectedMonthlyConsumptionWh == null ? 'missing' : 'value',
             label: t('operations.energy.projectedUsage', 'Projected 30-day use'),
@@ -1034,24 +1053,24 @@ export default function EnergyPage() {
               <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-3">
                 <Link
                   to="/temperature-impact"
-                  className="flex min-h-11 items-center gap-3 rounded-shape-md border border-[var(--border-subtle)] bg-[var(--surface-2)] px-3 py-2 transition-colors hover:border-[var(--border-default)] hover:bg-[var(--surface-3)]"
+                  className={cn(BUTTON_BASE, BUTTON_VARIANTS.secondary, 'min-h-11 min-w-0 justify-start px-3 py-2 text-start')}
                 >
-                  <Thermometer className="h-4 w-4 text-amber-300" aria-hidden="true" />
-                  <Text size="sm" weight="semibold">{t('energy.drivers.temperature', 'Review temperature impact')}</Text>
+                  <Icon icon={Thermometer} className={typography.color.secondary} />
+                  <Text size="sm" weight="medium">{t('energy.drivers.temperature', 'Review temperature impact')}</Text>
                 </Link>
                 <Link
                   to="/speed-profile"
-                  className="flex min-h-11 items-center gap-3 rounded-shape-md border border-[var(--border-subtle)] bg-[var(--surface-2)] px-3 py-2 transition-colors hover:border-[var(--border-default)] hover:bg-[var(--surface-3)]"
+                  className={cn(BUTTON_BASE, BUTTON_VARIANTS.secondary, 'min-h-11 min-w-0 justify-start px-3 py-2 text-start')}
                 >
-                  <Gauge className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-                  <Text size="sm" weight="semibold">{t('energy.drivers.speed', 'Review speed profile')}</Text>
+                  <Icon icon={Gauge} className={typography.color.secondary} />
+                  <Text size="sm" weight="medium">{t('energy.drivers.speed', 'Review speed profile')}</Text>
                 </Link>
                 <Link
                   to="/route-efficiency"
-                  className="flex min-h-11 items-center gap-3 rounded-shape-md border border-[var(--border-subtle)] bg-[var(--surface-2)] px-3 py-2 transition-colors hover:border-[var(--border-default)] hover:bg-[var(--surface-3)]"
+                  className={cn(BUTTON_BASE, BUTTON_VARIANTS.secondary, 'min-h-11 min-w-0 justify-start px-3 py-2 text-start')}
                 >
-                  <MapPinned className="h-4 w-4 text-purple-300" aria-hidden="true" />
-                  <Text size="sm" weight="semibold">{t('energy.drivers.route', 'Review route efficiency')}</Text>
+                  <Icon icon={MapPinned} className={typography.color.secondary} />
+                  <Text size="sm" weight="medium">{t('energy.drivers.route', 'Review route efficiency')}</Text>
                 </Link>
               </div>
               <HelperText className="mt-3">
@@ -1091,7 +1110,6 @@ export default function EnergyPage() {
                   value={statsDataState.hasData ? toEnergyDisplay(scopedDriveEnergyWh) : null}
                   label={t('energy.gauge.energyUsed', 'Energy used')}
                   unit={energyUnit}
-                  accentClass="text-cyan-300"
                 />
                 {statsDataState.hasData && totalDistance > 0 ? <ThresholdBar
                   value={toEfficiencyDisplay(avgEfficiency)}
@@ -1107,13 +1125,11 @@ export default function EnergyPage() {
                   value={statsDataState.hasData ? co2Saved : null}
                   label={t('energy.gauge.co2Saved', 'CO₂ saved')}
                   unit="kg"
-                  accentClass="text-purple-300"
                 />
                 <MetricTile
                   value={observedCost}
                   label={t('energy.gauge.totalCost', 'Total cost')}
                   unit={observedCost != null ? currencySymbol : undefined}
-                  accentClass="text-amber-300"
                 />
               </div>
             )}
@@ -1152,13 +1168,13 @@ export default function EnergyPage() {
             label={t('energy.cost.periodTotal', { days: periodDays, defaultValue: '{{days}}-Day Total' })}
             evCost={observedCost}
             gasCost={gasEquivalent}
-            icon={<Fuel className="h-4 w-4" />}
+            icon={<Icon icon={Fuel} />}
           />
           <CostComparisonCard
             label={t('energy.cost.projectedAnnual', 'Projected annual')}
             evCost={yearlyProjectedCost}
             gasCost={gasEquivalent != null ? (gasEquivalent / periodDays) * 365 : null}
-            icon={<Leaf className="h-4 w-4" />}
+            icon={<Icon icon={Leaf} />}
           />
         </BatteryPanelGrid>
       </FadeIn>
@@ -1205,7 +1221,7 @@ export default function EnergyPage() {
                             onMouseMove={sync.onMouseMove}
                           >
                             <defs>
-                              <ChartGradient id="energyBarGrad" color="#00f0ff" opacity={0.8} />
+                              <ChartGradient id="energyBarGrad" color={palette[0]} opacity={0.8} />
                             </defs>
                             {chartGrid}
                             <XAxis dataKey="date" tick={axisTickSm} tickLine={false} axisLine={false} />
@@ -1238,7 +1254,8 @@ export default function EnergyPage() {
                               fill="url(#energyBarGrad)"
                               fillOpacity={0.6}
                               radius={[3, 3, 0, 0]}
-                              animationDuration={800}
+                              isAnimationActive={!reduce}
+                              animationDuration={durationMs}
                               hide={energyCostHidden.isHidden('energy')}
                             />
                             <Line
@@ -1246,8 +1263,9 @@ export default function EnergyPage() {
                               yAxisId="right"
                               dataKey="cost"
                               name={costSeriesLabel}
-                              stroke="#10b981"
-                              animationDuration={800}
+                              stroke={palette[1]}
+                              isAnimationActive={!reduce}
+                              animationDuration={durationMs}
                               connectNulls={false}
                               hide={energyCostHidden.isHidden('cost')}
                             />
@@ -1266,8 +1284,8 @@ export default function EnergyPage() {
                               <Brush
                                 dataKey="date"
                                 height={20}
-                                stroke="#6b7280"
-                                fill="rgba(255,255,255,0.02)"
+                                stroke={chartTokens.brush.stroke}
+                                fill={chartTokens.brush.fill}
                                 travellerWidth={8}
                               />
                             )}
@@ -1313,36 +1331,42 @@ export default function EnergyPage() {
                           onMouseMove={sync.onMouseMove}
                         >
                           <defs>
-                            <ChartGradient id="effGrad" color="#10b981" opacity={0.3} />
-                            <ChartGradient id="distGrad2" color="#00f0ff" opacity={0.15} />
+                            <ChartGradient id="effGrad" color={palette[1]} opacity={0.08} />
+                            <ChartGradient id="distGrad2" color={palette[0]} opacity={0.08} />
                           </defs>
                           {chartGrid}
                           <XAxis dataKey="date" tick={axisTickSm} tickLine={false} axisLine={false} />
-                          <YAxis tick={axisTickSm} tickLine={false} axisLine={false} />
+                          <YAxis yAxisId="efficiency" unit={efficiencyUnit} tick={axisTickSm} tickLine={false} axisLine={false} />
+                          <YAxis yAxisId="distance" orientation="right" unit={distanceUnit} tick={axisTickSm} tickLine={false} axisLine={false} />
                           <Tooltip content={<ChartTooltip />} />
                           <ChartLegend state={efficiencyHidden} />
                           <Area
                             {...AREA_DEFAULTS}
+                            yAxisId="efficiency"
                             dataKey="efficiency"
                             name={efficiencyUnit}
-                            stroke="#10b981"
+                            stroke={palette[1]}
                             fill="url(#effGrad)"
-                            animationDuration={800}
+                            isAnimationActive={!reduce}
+                            animationDuration={durationMs}
                             hide={efficiencyHidden.isHidden('efficiency')}
                           />
                           <Area
                             {...AREA_DEFAULTS}
+                            yAxisId="distance"
                             dataKey="distance"
                             name={t('energy.chart.distance', { unit: distanceUnit, defaultValue: 'Distance ({{unit}})' })}
-                            stroke="#00f0ff"
+                            stroke={palette[0]}
                             fill="url(#distGrad2)"
                             strokeWidth={1}
                             strokeDasharray="4 4"
-                            animationDuration={800}
+                            isAnimationActive={!reduce}
+                            animationDuration={durationMs}
                             hide={efficiencyHidden.isHidden('distance')}
                           />
                           {syncedX != null && (
                             <ReferenceLine
+                              yAxisId="efficiency"
                               x={syncedX}
                               stroke={chartTokens.cursor.stroke}
                               strokeWidth={chartTokens.cursor.strokeWidth}
@@ -1403,25 +1427,34 @@ export default function EnergyPage() {
                     <BarChart data={timeOfDayData}>
                       {chartGrid}
                       <XAxis dataKey="name" tick={axisTickSm} tickLine={false} axisLine={false} />
-                      <YAxis tick={axisTickSm} tickLine={false} axisLine={false} />
-                      <Tooltip content={<ChartTooltip />} />
+                      <YAxis yAxisId="energy" unit={energyUnit} tick={axisTickSm} tickLine={false} axisLine={false} />
+                      <YAxis yAxisId="count" orientation="right" allowDecimals={false} tick={axisTickSm} tickLine={false} axisLine={false} />
+                      <Tooltip content={<ChartTooltip valueFormatter={(value, name) =>
+                        name === t('energy.chart.sessions', 'Sessions')
+                          ? fmtInt(Number(value))
+                          : `${fmtNumber(Number(value))} ${energyUnit}`
+                      } />} />
                       <ChartLegend state={timeOfDayHidden} />
                       <Bar
+                        yAxisId="energy"
                         dataKey="energy"
                         name={t('energy.chart.energyDisplay', { unit: energyUnit, defaultValue: 'Energy ({{unit}})' })}
-                        fill="#f59e0b"
+                        fill={palette[2]}
                         fillOpacity={0.7}
                         radius={[3, 3, 0, 0]}
-                        animationDuration={800}
+                        isAnimationActive={!reduce}
+                        animationDuration={durationMs}
                         hide={timeOfDayHidden.isHidden('energy')}
                       />
                       <Bar
+                        yAxisId="count"
                         dataKey="count"
                         name={t('energy.chart.sessions', 'Sessions')}
-                        fill="#a855f7"
+                        fill={palette[4]}
                         fillOpacity={0.5}
                         radius={[3, 3, 0, 0]}
-                        animationDuration={800}
+                        isAnimationActive={!reduce}
+                        animationDuration={durationMs}
                         hide={timeOfDayHidden.isHidden('count')}
                       />
                     </BarChart>
@@ -1429,11 +1462,11 @@ export default function EnergyPage() {
                 </div>
                 <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1">
                   <Caption className="flex items-center gap-1">
-                    <Moon className="h-3 w-3" aria-hidden="true" />
+                    <Icon icon={Moon} size="xs" />
                     {t('energy.tip.timezone', 'Buckets use {{timezone}} session start time.', { timezone })}
                   </Caption>
                   <Caption className="flex items-center gap-1">
-                    <Sun className="h-3 w-3" aria-hidden="true" />
+                    <Icon icon={Sun} size="xs" />
                     {t('energy.tip.noSavingsClaim', 'Timing alone does not prove tariff or solar savings.')}
                   </Caption>
                 </div>
@@ -1496,6 +1529,8 @@ export default function EnergyPage() {
                         paddingAngle={3}
                         dataKey="energy"
                         nameKey="label"
+                        isAnimationActive={!reduce}
+                        animationDuration={durationMs}
                       >
                         {chargerBreakdown.map((entry, i) => (
                           <Cell key={i} fill={entry.fill} stroke="transparent" />
@@ -1518,8 +1553,8 @@ export default function EnergyPage() {
                         </Caption>
                       </div>
                       <div className="flex items-center justify-between">
-                        <Text size="xs" className="text-cyan-300">{fmtNumber(toEnergyDisplay(b.energy ?? 0))} {energyUnit}</Text>
-                        <Text size="xs" className="text-emerald-300">
+                        <Text variant="bodySm">{fmtNumber(toEnergyDisplay(b.energy ?? 0))} {energyUnit}</Text>
+                        <Text variant="bodySm">
                           {b.pricedCount > 0 ? <Currency value={b.cost} /> : '—'}
                         </Text>
                         <Caption>
