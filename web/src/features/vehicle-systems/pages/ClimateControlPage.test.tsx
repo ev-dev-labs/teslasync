@@ -29,13 +29,41 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, within, fireEvent, act } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
-import type { ReactNode } from 'react';
+import type { ReactNode, ComponentProps } from 'react';
+import type { EmbeddedChartProps } from '@/components/charts';
+import type { DataTable } from '@/components/ui';
 import { setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat';
+import { formatDateTime } from '@/lib/dateFormat';
+import { neonColorMap, typography } from '@/lib/tokens';
+import { buildMobileTableRow } from '@/components/ui/MobileDataTableAdapter';
+
+const presentationSpies = vi.hoisted(() => ({
+  chart: vi.fn<(props: EmbeddedChartProps) => void>(),
+  table: vi.fn<(props: ComponentProps<typeof DataTable<ClimateState>>) => void>(),
+}));
 
 vi.mock('@/components/charts', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/components/charts')>();
   const { chartTestDoubles } = await import('@/test/chartTestDoubles');
-  return { ...actual, ...chartTestDoubles };
+  return {
+    ...actual,
+    ...chartTestDoubles,
+    EmbeddedChart: (props: ComponentProps<typeof actual.EmbeddedChart>) => {
+      presentationSpies.chart(props);
+      return <chartTestDoubles.EmbeddedChart {...props} />;
+    },
+  };
+});
+
+vi.mock('@/components/ui', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/components/ui')>();
+  return {
+    ...actual,
+    DataTable: (props: ComponentProps<typeof actual.DataTable<ClimateState>>) => {
+      presentationSpies.table(props);
+      return <actual.DataTable {...props} />;
+    },
+  };
 });
 
 // i18n stub: echo the fallback when present, else the key (the page's keys are
@@ -601,6 +629,141 @@ describe('ClimateControlPage — independent charging source registry', () => {
     expect(within(chargingSourceRow()).queryByRole('button')).not.toBeInTheDocument();
     expect(within(card('HVAC power')).getByText('On')).toBeInTheDocument();
     expect(screen.getByRole('table')).toBeInTheDocument();
+  });
+
+  describe('ClimateControlPage — restrained complete presentation', () => {
+    it('keeps all eleven sections and every read-only action through a retained refresh failure', () => {
+      const retry = vi.fn();
+      const latest = climate();
+      install({
+        latest,
+        latestOpts: { isError: true, error: new Error('refresh failed'), refetch: retry },
+        history: HISTORY,
+        historyOpts: { isError: true, error: new Error('history refresh failed') },
+      });
+      const { container } = renderPage();
+
+      expect(Array.from(container.querySelectorAll('[data-climate-group]'), node =>
+        node.getAttribute('data-climate-group'))).toEqual([
+        'climate-ai', 'climate-status', 'climate-temperature', 'climate-comfort',
+        'climate-systems', 'climate-protection', 'climate-seats', 'climate-efficiency',
+        'climate-temperature-history', 'climate-hvac-history', 'climate-history-table',
+      ]);
+      expect(within(card('HVAC power')).getByText('On')).toBeInTheDocument();
+      expect(within(card('Passenger setting')).getByText('20.00°C')).toBeInTheDocument();
+      expect(within(group('climate-seats')).getByText('High (3/3)')).toBeInTheDocument();
+      expect(screen.getByRole('table', { name: 'Climate history' })).toBeInTheDocument();
+      expect(screen.getAllByTestId('embedded-chart')).toHaveLength(2);
+      expect(within(group('climate-status')).getByText(/Showing retained measurements/)).toBeInTheDocument();
+      fireEvent.click(screen.getByText('Refresh').closest('button')!);
+      expect(retry).toHaveBeenCalledTimes(1);
+      expect(screen.queryByRole('button', { name: /apply|start climate|stop climate/i })).not.toBeInTheDocument();
+      expect(latest.insideTemp).toBe(22);
+      expect(latest.hvacPower).toBe(true);
+    });
+
+    it('uses container-aware comfort and seat grids without dropping positions or metadata', () => {
+      install({ latest: climate(), history: HISTORY });
+      renderPage();
+
+      const comfortGrid = group('climate-comfort').querySelector('.grid')!;
+      expect(comfortGrid).toHaveClass('grid-cols-1', '@2xl:grid-cols-3');
+      const seatGrids = group('climate-seats').querySelectorAll('.grid');
+      expect(seatGrids[0]).toHaveClass('grid-cols-1', '@sm:grid-cols-2', '@3xl:grid-cols-5');
+      expect(seatGrids[0].children).toHaveLength(5);
+      expect(seatGrids[1]).toHaveClass('grid-cols-1', '@lg:grid-cols-2');
+      expect(seatGrids[2]).toHaveClass('grid-cols-1', '@sm:grid-cols-2');
+      expect(seatGrids[2].children).toHaveLength(2);
+      expect(within(group('climate-seats')).getByText('Rear center')).toBeInTheDocument();
+      expect(within(group('climate-seats')).getByText('Auto climate (right)')).toBeInTheDocument();
+      expect(within(group('climate-seats')).getByText(/Ventilation:\s*On/)).toBeInTheDocument();
+      expect(within(group('climate-seats')).getByText('3 — High')).toBeInTheDocument();
+    });
+
+    it('uses neutral decorative icons and semantic heat levels instead of fixed saturated paint', () => {
+      install({ latest: climate(), history: HISTORY });
+      const { container } = renderPage();
+
+      expect(card('Fan speed').querySelector('svg')).toHaveClass(typography.color.secondary);
+      expect(card('Overheat protection').querySelector('svg')).toHaveClass(typography.color.secondary);
+      const hotSeat = within(group('climate-seats')).getByText('High (3/3)').parentElement!;
+      expect(hotSeat.querySelector('svg')).toHaveClass(neonColorMap.red.text);
+      expect(hotSeat.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
+      expect(container.querySelector('[class*="text-cyan-400"], [class*="text-amber-400"], [class*="text-red-400"]'))
+        .not.toBeInTheDocument();
+      expect(screen.getByText('Refresh').closest('button')).toHaveClass('min-h-11', 'min-w-11');
+      expect(within(card('HVAC power')).queryByText(/\d+\s*(W|kW)\b/)).not.toBeInTheDocument();
+    });
+
+    it('provides exact chronological temperature and HVAC alternatives with unknown AC gaps and measured zero', () => {
+      const rows = [
+        climate({ id: 33, timestamp: '2025-06-15T12:00:00Z', insideTemp: null, isAcOn: undefined, fanSpeed: 0 }),
+        ...HISTORY,
+      ];
+      install({ latest: climate(), history: rows });
+      renderPage();
+
+      const charts = presentationSpies.chart.mock.calls.map(([props]) => props);
+      const temperatures = charts.find(props => props.chartKey === 'climate-temp-history')!;
+      const hvac = charts.find(props => props.chartKey === 'climate-hvac-history')!;
+      expect(temperatures.dataColumns!.map(column => column.key))
+        .toEqual(['timestamp', 'insideTemp', 'outsideTemp', 'driverTempSetting']);
+      expect(hvac.dataColumns!.map(column => column.key))
+        .toEqual(['timestamp', 'acActive', 'fanSpeed']);
+      expect(temperatures.data!.map(row => row.insideTemp))
+        .toEqual([18, 20, null]);
+      expect(hvac.data!.map(row => row.acActive))
+        .toEqual([1, 0, null]);
+      expect(hvac.data!.map(row => row.fanSpeed)).toEqual([4, 6, 0]);
+      const acFormat = hvac.dataColumns![1].format!;
+      expect(acFormat(1)).toBe('On');
+      expect(acFormat(0)).toBe('Off');
+      expect(acFormat(null)).toBe('—');
+      expect(rows[0].isAcOn).toBeUndefined();
+      expect(rows[0].insideTemp).toBeNull();
+      expect(rows.map(row => row.id)).toEqual([33, 10, 11]);
+    });
+
+    it('converts chart alternatives and complete mobile details to Fahrenheit without changing SI rows', () => {
+      unitState.temp = 'F';
+      install({ latest: climate(), history: HISTORY });
+      renderPage();
+
+      const props = presentationSpies.table.mock.lastCall![0];
+      expect(props.tableId).toBe('vehicle-systems:climate-history');
+      expect(props.enableValueFilters).toBe(true);
+      expect(props.pagination).toBe(true);
+      const mobile = buildMobileTableRow(HISTORY[0], 10, props.columns, props.mobilePresentation!, 'Climate history');
+      expect(mobile.details).toEqual([
+        { key: 'timestamp', label: 'Time', value: formatDateTime(HISTORY[0].timestamp!) },
+        { key: 'insideTemp', label: 'Inside °F', value: '64.40 °F' },
+        { key: 'outsideTemp', label: 'Outside °F', value: '53.60 °F' },
+        { key: 'driverTempSetting', label: 'Set temp °F', value: '69.80 °F' },
+        { key: 'fanSpeed', label: 'Fan', value: '4' },
+        { key: 'isAcOn', label: 'HVAC', value: 'On' },
+        { key: 'climateKeeperMode', label: 'Climate keeper', value: '—' },
+      ]);
+      const chart = presentationSpies.chart.mock.calls.find(([chartProps]) =>
+        chartProps.chartKey === 'climate-temp-history')![0];
+      expect(chart.data![0].insideTemp).toBe(64.4);
+      expect(chart.dataColumns![1].label).toBe('Inside temp °F');
+      expect(HISTORY[0].insideTemp).toBe(18);
+      expect(screen.getByTestId('ai-recommender')).toHaveAttribute('data-cabin', '22');
+    });
+
+    it('keeps unknown mobile operating fields distinct from measured off and zero', () => {
+      const history = [
+        climate({ isAcOn: null, fanSpeed: null, driverTempSetting: null, climateKeeperMode: null }),
+        climate({ id: 2, isAcOn: false, fanSpeed: 0, driverTempSetting: 0, climateKeeperMode: 'Off' }),
+      ];
+      install({ history });
+      renderPage();
+      const props = presentationSpies.table.mock.lastCall![0];
+      const details = history.map(row => buildMobileTableRow(row, row.id!, props.columns,
+        props.mobilePresentation!, 'Climate history').details.slice(3).map(field => field.value));
+      expect(details[0]).toEqual(['—', '—', '—', '—']);
+      expect(details[1]).toEqual(['0.00 °C', '0', 'Off', 'Off']);
+    });
   });
 
   it('names an initial charging failure and retries only that source without replacing climate content', () => {
