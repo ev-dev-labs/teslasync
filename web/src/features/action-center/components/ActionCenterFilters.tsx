@@ -74,7 +74,14 @@ export function ActionCenterFilters({ filter, vehicles, onChange }: ActionCenter
     <GlassPanel padding="md">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <PanelTitle>{t('actionCenter.filters.title', 'Filter decisions')}</PanelTitle>
-        <Button type="button" variant="ghost" size="sm" onClick={clear}>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          wrapLabel
+          className="min-h-11 min-w-11 md:min-h-9 md:min-w-0"
+          onClick={clear}
+        >
           {t('actionCenter.filters.clear', 'Clear filters')}
         </Button>
       </div>
