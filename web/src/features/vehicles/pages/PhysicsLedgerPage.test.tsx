@@ -383,4 +383,70 @@ describe('PhysicsLedgerPage', () => {
     expect(svgs.length).toBeGreaterThanOrEqual(2);
     expect(container.querySelector('.recharts-area-curve')).not.toBeNull();
   });
+
+  it('keeps every shell on acquisition failure without claiming an empty measurement window', () => {
+    usePhysicsLedgerMock.mockReturnValue(queryState({
+      data: undefined, error: new Error('boom'), isError: true, isSuccess: false, status: 'error',
+    }));
+    const { container } = renderPage();
+    expect(container.querySelectorAll('[data-testid^="ledger-"]')).toHaveLength(12);
+    expect(screen.getAllByText('No requested source has returned usable data yet.')).toHaveLength(12);
+    expect(screen.queryByText(/No ledger samples/)).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Retry' })).toBeInTheDocument();
+  });
+
+  it('keeps paused initial evidence unresolved without a loading or offline claim', () => {
+    usePhysicsLedgerMock.mockReturnValue(queryState({
+      data: undefined, isPending: true, isSuccess: false, status: 'pending', fetchStatus: 'paused',
+    }));
+    const { container } = renderPage();
+    expect(container.querySelectorAll('[data-testid^="ledger-"]')).toHaveLength(12);
+    expect(container.querySelector('[aria-busy="true"]')).toBeNull();
+    expect(screen.queryByText(/No ledger samples|device is offline/i)).not.toBeInTheDocument();
+    expect(screen.getAllByText('No requested source has returned usable data yet.')).toHaveLength(12);
+  });
+
+  it('marks capped evidence partial while retaining all domain panels and raw energy terms', () => {
+    const ledger = ledgerResponse({ truncated: true });
+    usePhysicsLedgerMock.mockReturnValue(queryState({ data: ledger }));
+    const { container } = renderPage();
+    expect(container.querySelectorAll('[data-provenance="historical"][data-data-status="partial"]')).toHaveLength(2);
+    expect(screen.getByTestId('stale-refresh-warning')).toHaveTextContent('Partial data');
+    expect(screen.getByTestId('stale-refresh-warning')).toHaveTextContent('Sample cap hit — oldest prefix solved');
+    expect(container.querySelectorAll('[data-testid^="ledger-"]')).toHaveLength(12);
+    expect(ledger.drive.measured_wh.value_wh).toBe(1650);
+    expect(ledger.drive.unexplained_wh).toBe(-25);
+    expect(ledger.dynamics.points[1].power_pack_w).toBe(8100);
+  });
+
+  it('retains the complete ledger and retry after a failed refresh of capped evidence', () => {
+    const refetch = vi.fn();
+    usePhysicsLedgerMock.mockReturnValue(queryState({
+      data: ledgerResponse({ truncated: true }), error: new Error('refresh failed'),
+      isError: true, isSuccess: false, status: 'error', refetch,
+    }));
+    const { container } = renderPage();
+    expect(container.querySelectorAll('[data-testid^="ledger-"]')).toHaveLength(12);
+    const notice = screen.getByTestId('stale-refresh-warning');
+    expect(notice).toHaveTextContent('Previously loaded data remains visible while affected sources recover.');
+    expect(screen.queryByText('No requested source has returned usable data yet.')).not.toBeInTheDocument();
+    expect(screen.getByRole('table', { name: 'Drive energy ledger' })).toBeInTheDocument();
+    fireEvent.click(within(notice).getByRole('button', { name: 'Refresh' }));
+    expect(refetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('preserves both URL-backed investigation windows and the selected vehicle scope', () => {
+    renderPage();
+    expect(screen.getByRole('button', { name: 'Last 24h' })).toHaveAttribute('aria-pressed', 'true');
+    fireEvent.click(screen.getByRole('button', { name: 'Last 6h' }));
+    expect(screen.getByRole('button', { name: 'Last 6h' })).toHaveAttribute('aria-pressed', 'true');
+    const scope = usePhysicsLedgerMock.mock.lastCall?.[0] as {
+      vehicleId: string; start: string; end: string;
+    };
+    expect(scope.vehicleId).toBe('1');
+    expect(Date.parse(scope.end) - Date.parse(scope.start)).toBe(6 * 3600 * 1000);
+    fireEvent.click(screen.getByRole('button', { name: 'Last 24h' }));
+    const restoredScope = usePhysicsLedgerMock.mock.lastCall?.[0] as typeof scope;
+    expect(Date.parse(restoredScope.end) - Date.parse(restoredScope.start)).toBe(24 * 3600 * 1000);
+  });
 });
