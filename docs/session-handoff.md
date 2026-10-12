@@ -6,9 +6,11 @@
 migration, Phase 6 combined QA, and Phase 7 final gates have not started.
 Twelve real scoped repairs were dispatched: two Phase4 visual/capture dependencies
 and ten deferred Phase6 gate repairs pulled early, not a restart of completed
-phases. All twelve original source deliveries are accepted and pushed. One source
-claim remains: the second changing-extent correction for the now-measured reversible
-sticky-summary capture cycle. Accepted source counts are not a running-actor count.
+phases. All twelve original source deliveries are accepted and pushed. The second
+changing-extent correction is terminal FAILED, with partial source preserved as
+WIP `3a0c50f47`; no source claims or running workers remain. Its60 passing Node
+cases do not establish native coverage. Accepted source counts are not a
+running-actor count.
 Use the user's active seven-phase workflow, not the different feature-order
 numbering in `frontend-mission.md` section 38.
 
@@ -236,8 +238,24 @@ Raw log/JSON: `logs\phase4-nine-file-repair-integration-20261012T100756Z.*`.
 This is not the2438-file full gate. Production `npx tsc --noEmit` at cadence1466
 also exits0 on supported Node26; narrow Dashboard repository audit then runs all
 six prohibited-pattern checks with counts0 and its compiler exits0.
-Full lint/tests/build remain serialized and deferred while the native helper
-owner is active. Do not relabel historical full-gate failure as a pass.
+Full lint/tests/build may now run sequentially at the stable Phase4 gate:
+the final native helper owner is terminal and its claim is released. Do not
+relabel historical full-gate failure as a pass.
+
+The second changing-extent attempt is FAILED, preserved/pushed at `3a0c50f47`.
+All50 accepted Node cases remain, plus10 new cases:60/60, syntax0, scoped
+strict lint0. Actual dark native Drive375/768/1440/1920 remains BLOCKED/exit2.
+The implementation now accommodates the reversible insertion per position,
+but requires full leaf boxes instead of effective painted fragments: an8px
+upper-edge span portion is outside the minimum scrollport, and seven chart
+table descendants are clipped by their ancestor. All nine PNG operations
+succeeded in the precise1440 extraction; that is not complete coverage.
+Raw results, including earlier failing new assertions, are retained in
+`logs\phase4-qa-native-sticky-scroll-cycle*.log`. Contexts/handles are closed,
+the screenshot lock and exact heartbeat are released. Attempt2 is spent:
+no reset, further generic retry, application UI change, clipping allowlist
+or partial-coverage pass. Any original-plan blocker rescue must be explicit
+and retain this complete history.
 
 Actual mobile Dashboard review found a distinct interactive overlap, not root
 horizontal overflow: at375px the layout button and Refresh intersect by
@@ -306,22 +324,22 @@ completion does not mean the corresponding page was migrated.
 | 1 | 87 | 0 | 0 | 0 | 0 | 1 |
 | 2 | 27 | 0 | 0 | 0 | 0 | 0 |
 | 3 | 696 | 0 | 0 | 0 | 0 | 118 |
-| 4 | 32 | 0 | 1 | 2 | 4 | 34 |
+| 4 | 32 | 0 | 0 | 3 | 4 | 34 |
 | 5 | 0 | 0 | 0 | 0 | 1 | 1 |
 | 6 | 10 | 0 | 0 | 0 | 1 | 0 |
 | 7 | 0 | 0 | 0 | 0 | 1 | 0 |
-| Total | 1092 | 0 | 1 | 2 | 7 | 158 |
+| Total | 1092 | 0 | 0 | 3 | 7 | 158 |
 
 There are1,260 rows: the original1,243 plus seventeen narrow failures discovered
-by actual checks. One source claim remains after twelve accepted original
-deliveries; these claim counts are not a verified count of running actors.
-The accepted capture owner now has the precise second changing-extent correction
-claim after terminal evidence-only diagnosis. Lifecycle completion is intaken by exact ID before a claim
-is released. Remaining slots are not filled with fake/provenance work. No full
-gate may run while these workers are active. The combined Phase6 sweep has not
+by actual checks. No source claim or running worker remains after twelve accepted
+original deliveries and the terminal failed capture continuation. The failed
+partial source is committed, not accepted. Lifecycle completion was intaken by
+exact ID before its claim was released. Remaining slots are not filled with
+fake/provenance work. The serialized stable Phase4 technical gate is now eligible.
+The combined Phase6 sweep has not
 begun; only explicit gate repairs are pulled early. Original pilot acceptance
 gates the aggregate later-phase placeholders.
-Actual `git rev-list --count HEAD` is1467 at `45b86a29b`. The production compiler
+Actual `git rev-list --count HEAD` is1469 at `3a0c50f47`. The production compiler
 cadence1466 at `08a970bf8` exits0, with another production compiler pass in the
 exact Dashboard audit at1467. Next scheduled cadence1481. Old1065 prose was stale.
 Full lint/tests/build remain serialized and forbidden during live workers.
@@ -336,7 +354,7 @@ and log, never Git/queue/handoff. Source writes are limited to the stated claim.
 | --- | --- | --- | --- |
 | phase6-watch-query-signal-audit | `6dc9914c-5e0d-478f-b718-92296a64ccdf` | `web\src\api\hooks\useWatch.ts`; `useWatch.test.tsx` | Accepted `38291ea57`; released |
 | phase4-qa-scroll-extent-settlement | `8ae7d8ed-6f8b-4ef4-a577-ba4ca95eea09` | `web\scripts\frontend-qa.mjs`; `scripts\__tests__\frontend-qa.test.mjs` | Accepted `8265f5c83`; original claim released |
-| phase4-qa-native-sticky-scroll-cycle | `8ae7d8ed-6f8b-4ef4-a577-ba4ca95eea09` | Same released helper/test pair | Second changing-extent-chain correction claimed; diagnosis preserved |
+| phase4-qa-native-sticky-scroll-cycle | `8ae7d8ed-6f8b-4ef4-a577-ba4ca95eea09` | Same released helper/test pair | FAILED attempt2; WIP `3a0c50f47`; released; native BLOCKED/exit2 |
 | phase6-test-authorized-canonical-recovery | `5f6b869b-8be6-4bfd-977c-8ea23eb7f37c` | `web\src\i18n\authorized-canonical-recovery.test.ts` | Accepted `436dbb680`; released |
 | phase6-test-authorized-owner-recovery | `80eedd0e-51b6-497b-b880-27d61dae8e09` | `web\src\i18n\authorized-owner-recovery.test.ts` | Accepted `d5e1b7f8f`; released |
 | phase6-test-copy-owner-contracts | `6135ed89-85b6-4ca0-b657-72d4923d90b5` | `web\src\i18n\copy-owner-contracts.test.ts` | Accepted `45b86a29b`; same owner attempt2 complete/released; WIP retained |
@@ -491,8 +509,8 @@ contrast, performance, or accessibility acceptance.
 | Three-page pilot QA | Helper correction6bcbb5d2d preserves35 passing cases and real non-pass findings. Dark Settings has18 diagnostic PNGs, but the complete three-page visual/responsive/state/axe gate remains unaccepted. |
 | Current full lint | Actual gate exit1 at query-signal audit for two `useWatch.ts` queryFn factories; remaining chained audits were not reached. Do not infer runtime cancellation failure or claim full lint clean. |
 | Current full tests | Actual45179/44915/264/0, exit1. Nine nonpassing files contain historical whole-source/catalog/config projection contracts, repeated through imported suites. Each has one exclusive repair owner; no source/catalog rollback or blind hashes authorized. |
-| Native Drive History capture | Both themes BLOCKED at screenshot; real main extent/anchored scroll changes invalidate the fixed-extent coverage assertion. One narrow existing-tool repair queued; partial screenshots are not all-section acceptance. |
-| Dashboard mobile toolbar | Measured375px layout/Refresh overlap831.234375px2. One local existing-API page repair claimed; actual bounding intersection must become0, not merely root overflow0. |
+| Native Drive History capture | Second changing-extent attempt FAILED; partial helper/test WIP `3a0c50f47`,60/60 Node cases. Reversible insertion is accommodated but effective painted fragments are not; all four native dark widths remain BLOCKED/exit2. Partial PNGs are not all-section acceptance; claim released. |
+| Dashboard mobile toolbar | Accepted `e15758f41`: existing scope-first prop; all20 required dark/light view rows measure exact0px2 overlap with no root/body overflow. Optional edit probe/full-pilot acceptance remains incomplete. |
 | Dashboard layout writes | Three PUTs aborted during navigation without an explicit edit; exact initiator/root cause unknown. No source fix. Preserve legitimate autosave/autofit/draft recovery. |
 | Maintenance accepted continuation | `d770d4079`: corrected the new retained-source assertion, preserving production and original cases. Exact Maintenance18 + RepairCaseWorkspace12 cases pass30/30; strict four-file lint0 after locked dependency restoration. Historical failed assertion/tooling output and original attempt history remain preserved. |
 | Dismiss accepted continuation | Existing `41ebdd7b9a` production/test source remained unchanged. Its12 selected cases and strict lint pass in the combined30-case check. No active worker/lease or pending reset. |
@@ -634,12 +652,14 @@ historical machine and was preserved in its prior handoff, not re-created here:
 ## Next steps, in order
 
 1. Read this handoff, queue, current contract, relevant instructions, and
-   `git status`. The two known workers are idle; preserve original WIP and
-   untracked data, but do not resurrect finished reservations.
-2. Intake the twelve known claimed owners by exact ID on their completion
-   notifications; do not rediscover, relaunch or duplicate their source work.
-   Commit only each accepted owner's files, update its row and release claims.
-   Preserve gate budgets and do not weaken audits or assume an unproved UI defect.
+   `git status`. All known workers are terminal/released; preserve original WIP
+   and untracked data, but do not resurrect finished reservations.
+2. Run the now-eligible serialized Phase4 full lint/test/build gate, retaining
+   actual logs/JSON and original repair budgets. The nine-file8759-case scoped
+   integration is already complete; do not rerun it for provenance.
+   Roll the accepted shipping changes into an immutable committed full-root
+   Docker snapshot, verify both revision labels/service worker and exact
+   operational/history/independent monthly SQL contracts. Preserve test data.
 3. Keep accepted Maintenance, Dismiss, SignalCatalog, canonical vehicle,
    QA-helper and nullable stats fixes complete. Their
    scoped validation is done; do not redispatch them or replace original tests.
