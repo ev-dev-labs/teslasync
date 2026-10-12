@@ -626,6 +626,27 @@ describe('NavigationRoutePage — ready state', () => {
     expect(within(rowsDesc[1]).getByText('37.300000')).toBeInTheDocument();
   });
 
+  it('keeps history timestamps readable in the monospace caption role and original newest-first order', async () => {
+    const now = vi.spyOn(Date, 'now').mockReturnValue(Date.parse('2024-05-01T10:00:00Z'));
+    try {
+      renderPage();
+
+      const history = await screen.findByTestId('maps:navigation-location-history');
+      const timeCells = within(history).getAllByRole('row').slice(1).map((row) =>
+        within(row).getAllByRole('cell')[0],
+      );
+      const expectedTimes = ['just now', '30m ago', '1h ago'];
+      expect(timeCells.map((cell) => cell.querySelector('.whitespace-nowrap')?.textContent)).toEqual(expectedTimes);
+      timeCells.forEach((cell, index) => {
+        expect(cell.firstElementChild).toHaveClass('font-mono', 'text-xs', 'text-[var(--text-muted)]');
+        expect(cell.firstElementChild).not.toHaveAttribute('mono');
+        expect(within(cell).getByText(expectedTimes[index])).toHaveClass('whitespace-nowrap');
+      });
+    } finally {
+      now.mockRestore();
+    }
+  });
+
   it('refetches both the latest snapshot and the history on Refresh', async () => {
     renderPage();
 

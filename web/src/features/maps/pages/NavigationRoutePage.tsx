@@ -309,7 +309,7 @@ export default function NavigationRoutePage() {
         header: t('nav.col.time', 'Time'),
         sortable: true,
         render: (row: LocationSnapshot) => (
-          <Caption mono><TimeStamp value={row.created_at} className="whitespace-nowrap" /></Caption>
+          <Text variant="caption" mono><TimeStamp value={row.created_at} className="whitespace-nowrap" /></Text>
         ),
       },
       {
