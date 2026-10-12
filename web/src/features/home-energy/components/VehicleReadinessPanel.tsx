@@ -5,6 +5,7 @@ import { ProgressRing } from '@/components/data-display';
 import { Grid, LayoutCard } from '@/components/layout';
 import { EmptyState } from '@/components/feedback';
 import { useUnits } from '@/hooks/useUnits';
+import { gaugeTone, neonColorMap } from '@/lib/tokens';
 import type { VehiclePlanResult } from '../lib/types';
 
 interface VehicleReadinessPanelProps {
@@ -36,7 +37,7 @@ export function VehicleReadinessPanel({ vehicles }: VehicleReadinessPanelProps) 
                 max={100}
                 size={64}
                 strokeWidth={6}
-                color={v.readinessAchieved ? '#10b981' : '#f59e0b'}
+                color={v.readinessAchieved ? gaugeTone.success : gaugeTone.warning}
                 ariaLabel={t('homeEnergy.readiness.ringAria', '{{name}} projected state of charge', { name: v.name })}
                 centerLabel={`${Math.round(v.finalSocPct)}%`}
                 centerSubLabel={t('homeEnergy.readiness.ofTarget', 'of {{target}}%', { target: Math.round(v.targetSocPct) })}
@@ -62,7 +63,7 @@ export function VehicleReadinessPanel({ vehicles }: VehicleReadinessPanelProps) 
                   })}
                 </Text>
                 {v.unmetWh > 0 && (
-                  <Text as="p" variant="caption" weight="medium" className="text-amber-300">
+                  <Text as="p" variant="caption" weight="medium" className={neonColorMap.amber.text}>
                     {t('homeEnergy.readiness.unmet', 'Unmet: {{amount}}', { amount: formatEnergy(v.unmetWh) })}
                   </Text>
                 )}
