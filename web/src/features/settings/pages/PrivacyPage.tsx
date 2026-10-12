@@ -25,10 +25,9 @@ import { useTranslation } from 'react-i18next'
 
 import { PageLayout } from '@/components/layout'
 import { deriveDataState } from '@/api/dataState'
-import { ConfirmDialog } from '@/components/ui'
+import { Button, ConfirmDialog, Text } from '@/components/ui'
 import { FadeIn } from '@/components/motion'
-import { DataStateNotice } from '@/components/feedback'
-import { useToast } from '@/components/feedback/Toast'
+import { AlertBanner, StaleRefreshWarning, useToast } from '@/components/feedback'
 import { usePageTitle } from '@/hooks/usePageTitle'
 import { useVersionInfo } from '@/api/hooks/useSettings'
 import {
@@ -124,7 +123,34 @@ export default function PrivacyPage() {
       query={versionQuery}
       copyLink
     >
-      {policyState.status === 'stale' && <DataStateNotice state="stale" preserveSeverity />}
+      <StaleRefreshWarning
+        state={policyState}
+        title={tt('dataState.stale.title', 'Data may be stale')}
+        aria-label={t('account.privacy.stats.sources', 'Browser-local privacy and deployment policy')}
+      />
+      {!policyState.hasData && policyState.isRefreshBlocked && (
+        <AlertBanner
+          variant="info"
+          title={t('account.privacy.stats.policyLoading', 'Loading deployment consent policy')}
+          role="status"
+          aria-live="polite"
+          data-testid="privacy-policy-paused"
+        >
+          <div className="flex min-w-0 flex-wrap items-center gap-3">
+            <Text as="p" variant="bodySm" color="secondary">{tt('Paused', 'Paused')}</Text>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              wrapLabel
+              className="min-h-11 md:min-h-9"
+              onClick={handleRetry}
+            >
+              {tt('common.retry', 'Retry')}
+            </Button>
+          </div>
+        </AlertBanner>
+      )}
       <div className="space-y-6" data-testid="privacy-section">
         <FadeIn>
           <PrivacyOperationalBrief

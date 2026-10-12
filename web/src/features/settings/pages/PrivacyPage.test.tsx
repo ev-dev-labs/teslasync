@@ -435,3 +435,98 @@ describe('PrivacyPage — retained policy', () => {
     expect(getConsent()).toBe('accepted')
   })
 })
+
+describe('PrivacyPage policy recovery', () => {
+  it('retries a failed policy refresh without replacing retained policy or local controls', async () => {
+    seedRecentPages(2)
+    setConsent('accepted')
+    mockedRequest.mockResolvedValue(versionResponse({ require_cookie_consent: true }))
+    const { client } = renderPage()
+    await within(kpiRegion()).findByText('Required')
+
+    mockedRequest.mockRejectedValue(new ApiError('Refresh unavailable', 500, 'INTERNAL'))
+    await act(async () => {
+      await client.invalidateQueries({ queryKey: ['version'] })
+    })
+    const warning = await screen.findByTestId('stale-refresh-warning')
+    expect(warning).toHaveAccessibleName('Browser-local privacy and deployment policy')
+    expect(warning).toHaveTextContent('Previously loaded data remains visible while affected sources recover.')
+    expect(within(kpiRegion()).getByText('Required')).toBeInTheDocument()
+    expect(screen.getByTestId('privacy-recent-count')).toHaveTextContent('2 entries stored')
+    expect(screen.getByTestId('privacy-consent-state')).toHaveAttribute('data-consent-state', 'accepted')
+    expect(screen.getByTestId('privacy-consent-decline')).toBeEnabled()
+    expect(screen.getByRole('region', { name: /How TeslaSync handles this data/i })).toBeInTheDocument()
+
+    let resolveRefresh: (value: ReturnType<typeof versionResponse>) => void = () => {}
+    mockedRequest.mockImplementation(() => new Promise<ReturnType<typeof versionResponse>>((resolve) => {
+      resolveRefresh = resolve
+    }))
+    fireEvent.click(within(warning).getByRole('button', { name: 'Refresh' }))
+    expect(await within(warning).findByRole('button', { name: 'Updating…' })).toBeDisabled()
+    expect(within(kpiRegion()).getByText('Required')).toBeInTheDocument()
+    expect(getConsent()).toBe('accepted')
+    expect(getRecentPages()).toHaveLength(2)
+
+    await act(async () => {
+      resolveRefresh(versionResponse({ require_cookie_consent: true }))
+    })
+    await waitFor(() => expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument())
+    expect(within(kpiRegion()).getByText('Required')).toBeInTheDocument()
+    expect(mockedRequest).toHaveBeenLastCalledWith('/system/version', expect.objectContaining({ signal: expect.any(AbortSignal) }))
+  })
+
+  it('distinguishes a paused initial policy read from empty or optional policy', async () => {
+    let resolvePolicy: (value: ReturnType<typeof versionResponse>) => void = () => {}
+    mockedRequest.mockImplementation(() => new Promise<ReturnType<typeof versionResponse>>((resolve) => {
+      resolvePolicy = resolve
+    }))
+    seedRecentPages(1)
+    const { client } = renderPage()
+    act(() => {
+      client.getQueryCache().find({ queryKey: ['version'] })?.setState({ fetchStatus: 'paused' })
+    })
+
+    const notice = await screen.findByTestId('privacy-policy-paused')
+    expect(notice).toHaveTextContent('Loading deployment consent policy')
+    expect(within(notice).getByText('Paused')).toBeInTheDocument()
+    expect(within(notice).getByRole('button', { name: 'Retry' })).toBeEnabled()
+    expect(within(kpiRegion()).queryByText('Optional')).not.toBeInTheDocument()
+    expect(kpiRegion().querySelectorAll('[data-operational-metric][data-value-state="missing"]')).toHaveLength(1)
+    expect(screen.getByTestId('privacy-recent-count')).toHaveTextContent('1 entries stored')
+    expect(screen.getByTestId('privacy-consent-accept')).toBeEnabled()
+    expect(screen.getByRole('region', { name: /How TeslaSync handles this data/i })).toBeInTheDocument()
+    expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument()
+    expect(notice).not.toHaveTextContent(/offline|server error/i)
+
+    await act(async () => {
+      resolvePolicy(versionResponse({ require_cookie_consent: true }))
+    })
+    expect(await within(kpiRegion()).findByText('Required')).toBeInTheDocument()
+    expect(screen.queryByTestId('privacy-policy-paused')).not.toBeInTheDocument()
+    expect(getConsent()).toBe('unknown')
+    expect(getRecentPages()).toHaveLength(1)
+  })
+
+  it('offers policy-only recovery for a paused retained read without inventing an error', async () => {
+    mockedRequest.mockResolvedValue(versionResponse({ require_cookie_consent: true }))
+    const { client } = renderPage()
+    await within(kpiRegion()).findByText('Required')
+    act(() => {
+      client.getQueryCache().find({ queryKey: ['version'] })?.setState({ fetchStatus: 'paused' })
+    })
+
+    const warning = await screen.findByTestId('stale-refresh-warning')
+    expect(warning).toHaveAttribute('data-refresh-blocked', 'true')
+    expect(within(warning).getByRole('button', { name: 'Refresh' })).toBeEnabled()
+    expect(warning).not.toHaveTextContent(/offline|server error/i)
+    expect(client.getQueryState(['version'])?.error).toBeNull()
+    expect(within(kpiRegion()).getByText('Required')).toBeInTheDocument()
+    expect(screen.getByTestId('privacy-consent-accept')).toBeEnabled()
+    expect(screen.queryByTestId('privacy-policy-paused')).not.toBeInTheDocument()
+
+    fireEvent.click(within(warning).getByRole('button', { name: 'Refresh' }))
+    await waitFor(() => expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument())
+    expect(within(kpiRegion()).getByText('Required')).toBeInTheDocument()
+    expect(getConsent()).toBe('unknown')
+  })
+})
