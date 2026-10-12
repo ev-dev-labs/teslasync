@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { CheckCheck, Radio } from 'lucide-react';
 
@@ -11,7 +11,7 @@ import { FadeIn } from '@/components/motion';
 import { NoVehicleSelected } from '@/features/onboarding/components/NoVehicleSelected';
 import {
   ChartContainer, ChartTooltip,
-  ComposedChart, Bar, Cell, Scatter,
+  ComposedChart, Bar, Scatter,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, ReferenceLine,
 } from '@/components/charts';
 
@@ -21,7 +21,7 @@ import { usePageTitle } from '@/hooks/usePageTitle';
 import { useDataState } from '@/hooks/useDataState';
 import { useRangeState } from '@/hooks/useRangeState';
 import { useProductPreferences } from '@/hooks/useProductPreferences';
-import { chartTokens } from '@/lib/tokens';
+import { chartTokens, typography } from '@/lib/tokens';
 import { formatDateShort, formatDateTime } from '@/lib/dateFormat';
 import { useTimezone } from '@/lib/timezone';
 
@@ -44,16 +44,9 @@ const GRADE_DEFAULT: Record<ReliabilityGrade, string> = {
   unproven: 'Not enough attempts',
 };
 
-const GRADE_COLOR: Record<ReliabilityGrade, number> = {
-  excellent: 2,
-  good: 0,
-  flaky: 3,
-  unreliable: 5,
-  unproven: 7,
-};
-
 export default function CommandReliabilityPage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const [chartWidth, setChartWidth] = useState(0);
   usePageTitle(t('commandReliability.title', 'Command reliability'));
 
   const { vehicleId } = useSelectedVehicle();
@@ -77,10 +70,11 @@ export default function CommandReliabilityPage() {
   const chartData = useMemo(
     () =>
       summary.commands.map((c) => ({
-        command: c.label.length > 24 ? `${c.label.slice(0, 23)}…` : c.label,
-        lower: Math.round(c.interval.lower * 1000) / 10,
-        naive: Math.round(c.successRate * 1000) / 10,
-        upper: Math.round(c.interval.upper * 1000) / 10,
+        command: c.label,
+        command_id: c.command,
+        lower: c.success + c.failure > 0 ? Math.round(c.interval.lower * 1000) / 10 : null,
+        naive: c.success + c.failure > 0 ? Math.round(c.successRate * 1000) / 10 : null,
+        upper: c.success + c.failure > 0 ? Math.round(c.interval.upper * 1000) / 10 : null,
         attempts: c.total,
         grade: c.grade,
       })),
@@ -99,8 +93,12 @@ export default function CommandReliabilityPage() {
     return <NoVehicleSelected pageTitle={t('commandReliability.title', 'Command reliability')} />;
   }
 
-  const isLoading = historyQuery.isLoading;
+  const isLoading = historyQuery.isLoading || (state.status === 'initial' && !state.isRefreshBlocked);
   const isError = !!state.fatalError;
+  const unavailable = !state.hasData && state.isRefreshBlocked;
+  const dateOptions = { tz: timeZone, locale: i18n.language };
+  const chartHeight = Math.max(380, chartData.length * 32 + 64);
+  const mobileChartHeight = Math.max(320, chartData.length * 32 + 64);
 
   return (
     <PageLayout
@@ -130,7 +128,7 @@ export default function CommandReliabilityPage() {
               description={t('commandReliability.summary.scope', 'Selected vehicle command history, with existing success and retry-intent definitions.')}
               metrics={operationalMetrics}
               loading={isLoading}
-              scope={`${formatDateTime(startInstant, { tz: timeZone })} → ${formatDateTime(endInstantExclusive, { tz: timeZone })}`}
+              scope={`${formatDateTime(startInstant, dateOptions)} → ${formatDateTime(endInstantExclusive, dateOptions)}`}
               provenance={t('commandReliability.summary.scope', 'Selected vehicle command history, with existing success and retry-intent definitions.')}
               statusLabel={isLoading ? t('commandReliability.brief.loading', 'Loading command outcomes')
                 : state.status === 'stale' ? t('dataState.stale.title', 'Data may be stale')
@@ -139,7 +137,7 @@ export default function CommandReliabilityPage() {
                       : t('commandReliability.brief.recorded', 'Recorded command outcomes')}
               statusTone={state.status === 'stale' ? 'warning' : 'neutral'}
               freshness={state.updatedAt != null
-                ? formatDateTime(new Date(state.updatedAt).toISOString()) : undefined}
+                ? formatDateTime(new Date(state.updatedAt).toISOString(), dateOptions) : undefined}
             />
           )}
         </section>
@@ -147,17 +145,6 @@ export default function CommandReliabilityPage() {
 
       {/* 2 — Confidence chart */}
       <FadeIn delay={0.1}>
-        {!isLoading && !isError && summary.commands.length === 0 ? (
-          <GlassPanel className="p-4 sm:p-5">
-            <EmptyState /* no-action: grades appear as remote commands are issued and logged. */
-              icon={<Radio className="h-8 w-8" />}
-              message={t(
-                'commandReliability.noData',
-                'No remote commands have been issued yet, so there is no reliability record to grade.',
-              )}
-            />
-          </GlassPanel>
-        ) : (
           <ChartContainer
             title={t('commandReliability.chart.title', 'Confidence-weighted success')}
             subtitle={t(
@@ -169,9 +156,19 @@ export default function CommandReliabilityPage() {
               'Bar chart of the wilson lower confidence bound for each command with the naive success rate overlaid',
             )}
             loading={isLoading}
+            error={state.fatalError}
+            onRetry={state.retry ?? undefined}
             empty={chartData.length === 0}
-            height={380}
+            emptyIcon={<Radio className="h-8 w-8" aria-hidden="true" />}
+            emptyMessage={unavailable
+              ? t('commandReliability.brief.unavailable', 'Command outcomes unavailable')
+              : t('commandReliability.noData', 'No remote commands have been issued yet, so there is no reliability record to grade.')}
+            emptyDescription={unavailable
+              ? t('common.unknown', 'Unknown') : undefined}
+            height={chartHeight}
+            mobileHeight={mobileChartHeight}
             data={exportData}
+            exportData={exportData}
             dataColumns={[
               { key: 'command', label: t('commandReliability.col.command', 'Command') },
               { key: 'lower', label: t('commandReliability.col.lower', 'Lower bound (%)') },
@@ -181,53 +178,54 @@ export default function CommandReliabilityPage() {
               { key: 'grade', label: t('commandReliability.col.grade', 'Grade') },
             ]}
           >
-            <ResponsiveContainer width="100%" height="100%">
+            <ResponsiveContainer width="100%" height="100%" onResize={setChartWidth}>
               <ComposedChart
                 data={chartData}
                 layout="vertical"
                 margin={{ top: 8, right: 16, bottom: 8, left: 8 }}
               >
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
+                <CartesianGrid strokeDasharray="3 3" stroke={chartTokens.gridStroke} strokeOpacity={0.4} />
                 <XAxis
                   type="number"
                   domain={[0, 100]}
                   unit="%"
-                  tick={{ fill: 'var(--text-muted)', fontSize: 11 }}
+                  tick={{ fill: chartTokens.axisStroke, fontSize: 12 }}
                 />
                 <YAxis
                   type="category"
                   dataKey="command"
-                  width={150}
-                  tick={{ fill: 'var(--text-muted)', fontSize: 10 }}
+                  width={chartWidth >= 640 ? 150 : 80}
+                  interval={0}
+                  tickFormatter={(label: string) => {
+                    const limit = chartWidth >= 640 ? 24 : 10;
+                    return label.length > limit ? `${label.slice(0, limit - 1)}…` : label;
+                  }}
+                  tick={{ fill: chartTokens.axisStroke, fontSize: 12 }}
                 />
                 <Tooltip content={<ChartTooltip />} />
-                <Legend wrapperStyle={{ fontSize: 11 }} />
-                <ReferenceLine x={95} stroke={chartTokens.series[2]} strokeDasharray="4 4" />
+                <Legend wrapperStyle={{ fontSize: 12 }} />
+                <ReferenceLine x={95} stroke={chartTokens.axisStroke} strokeDasharray="4 4" />
                 <Bar
                   dataKey="lower"
                   name={t('commandReliability.lowerBound', 'Lower bound')}
                   radius={[0, 3, 3, 0]}
-                >
-                  {chartData.map((d) => (
-                    <Cell key={d.command} fill={chartTokens.series[GRADE_COLOR[d.grade]]} />
-                  ))}
-                </Bar>
+                  fill={chartTokens.axisStroke}
+                />
                 <Scatter
                   dataKey="naive"
                   name={t('commandReliability.rawRate', 'Raw rate')}
-                  fill={chartTokens.series[7]}
+                  fill={chartTokens.tooltipText}
                 />
               </ComposedChart>
             </ResponsiveContainer>
           </ChartContainer>
-        )}
       </FadeIn>
 
       {/* 3 — Command detail */}
       <FadeIn delay={0.2}>
         <GlassPanel className="p-4 sm:p-5">
           <PanelTitle className="mb-3 flex items-center gap-2">
-            <CheckCheck className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+            <CheckCheck className={`h-4 w-4 ${typography.color.muted}`} aria-hidden="true" />
             {t('commandReliability.detail', 'Command breakdown')}
             <HelpTooltip
               size="sm"
@@ -238,6 +236,13 @@ export default function CommandReliabilityPage() {
           </PanelTitle>
           {isLoading ? (
             <Skeleton height={180} />
+          ) : isError ? (
+            <QueryError error={state.fatalError} onRetry={state.retry ?? undefined} />
+          ) : unavailable ? (
+            <EmptyState /* no-action: a paused initial read is not an empty history. */
+              icon={<Radio className="h-8 w-8" aria-hidden="true" />}
+              message={t('commandReliability.brief.unavailable', 'Command outcomes unavailable')}
+            />
           ) : summary.commands.length === 0 ? (
             <EmptyState /* no-action: the breakdown is derived from command history. */
               icon={<CheckCheck className="h-8 w-8" />}
@@ -248,51 +253,53 @@ export default function CommandReliabilityPage() {
               {summary.commands.map((c) => (
                 <li
                   key={c.command}
-                  className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3"
+                  className="min-w-0 rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3"
                 >
                   <div className="mb-2 flex flex-wrap items-center gap-2">
-                    <Text variant="body" className="font-medium">{c.label}</Text>
+                    <Text variant="body" className={`min-w-0 break-words ${typography.weight.medium}`}>{c.label}</Text>
                     <Badge variant={GRADE_BADGE[c.grade]}>
                       {t(`commandReliability.grade.${c.grade}`, GRADE_DEFAULT[c.grade])}
                     </Badge>
                   </div>
-                  <div className="grid grid-cols-2 gap-x-4 gap-y-1 sm:grid-cols-4">
-                    <Text variant="caption">
+                  <dl className="grid grid-cols-2 gap-x-4 gap-y-1 sm:grid-cols-4">
+                    <Text as="dt" variant="caption">
                       {t('commandReliability.outcome', 'Outcome')}
                     </Text>
-                    <Text variant="bodySm">
+                    <Text as="dd" variant="bodySm" className="min-w-0 break-words">
                       {t('commandReliability.outcomeValue', '{{ok}} ok · {{bad}} failed', {
                         ok: c.success,
                         bad: c.failure,
                       })}
                     </Text>
-                    <Text variant="caption">
+                    <Text as="dt" variant="caption">
                       {t('commandReliability.interval', '95 % interval')}
                     </Text>
-                    <Text variant="bodySm">
-                      {`${Math.round(c.interval.lower * 100)}–${Math.round(c.interval.upper * 100)}%`}
+                    <Text as="dd" variant="bodySm" className="min-w-0 break-words">
+                      {c.success + c.failure > 0
+                        ? `${Math.round(c.interval.lower * 100)}–${Math.round(c.interval.upper * 100)}%`
+                        : t('common.unknown', 'Unknown')}
                     </Text>
-                    <Text variant="caption">
+                    <Text as="dt" variant="caption">
                       {t('commandReliability.effort', 'Attempts per intent')}
                     </Text>
-                    <Text variant="bodySm">
+                    <Text as="dd" variant="bodySm" className="min-w-0 break-words">
                       {t('commandReliability.effortValue', '{{n}} · {{retried}} retried', {
                         n: Math.round(c.attemptsPerIntent * 100) / 100,
                         retried: c.retriedIntents,
                       })}
                     </Text>
-                    <Text variant="caption">
+                    <Text as="dt" variant="caption">
                       {t('commandReliability.lastUsed', 'Last used')}
                     </Text>
-                    <Text variant="bodySm">
-                      {formatDateShort(new Date(c.lastMs).toISOString())}
+                    <Text as="dd" variant="bodySm" className="min-w-0 break-words">
+                      {formatDateShort(new Date(c.lastMs).toISOString(), dateOptions)}
                     </Text>
                     {c.topError != null ? (
                       <>
-                        <Text variant="caption">
+                        <Text as="dt" variant="caption">
                           {t('commandReliability.topError', 'Usual failure')}
                         </Text>
-                        <Text variant="bodySm" className="text-rose-300 sm:col-span-3">
+                        <Text as="dd" variant="bodySm" className="min-w-0 break-words text-[var(--semantic-danger)] sm:col-span-3">
                           {t('commandReliability.topErrorValue', '{{msg}} (×{{n}})', {
                             msg: c.topError,
                             n: c.topErrorCount,
@@ -300,7 +307,7 @@ export default function CommandReliabilityPage() {
                         </Text>
                       </>
                     ) : null}
-                  </div>
+                  </dl>
                 </li>
               ))}
             </ul>

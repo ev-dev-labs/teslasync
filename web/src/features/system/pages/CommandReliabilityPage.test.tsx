@@ -110,6 +110,116 @@ describe('CommandReliabilityPage — genuine summary OperationalBrief', () => {
     expect(within(screen.getByRole('dialog')).getByText('you pressed it again, and again')).toBeInTheDocument();
   });
 
+  describe('CommandReliabilityPage source trust and complete chart evidence', () => {
+    it('shows source failure and read retry in every section without empty-history claims', () => {
+      const refetch = vi.fn();
+      mockHistory.mockReturnValue(query(undefined, { error: new Error('History unavailable'), refetch }));
+      renderPage();
+      expect(screen.getByRole('heading', { name: 'Confidence-weighted success' })).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: 'Command breakdown' })).toBeInTheDocument();
+      expect(screen.queryByText('No commands recorded yet.')).not.toBeInTheDocument();
+      expect(screen.queryByText('No remote commands have been issued yet, so there is no reliability record to grade.')).not.toBeInTheDocument();
+      const retries = screen.getAllByRole('button', { name: 'Retry' });
+      expect(retries).toHaveLength(3);
+      retries.forEach((button) => fireEvent.click(button));
+      expect(refetch).toHaveBeenCalledTimes(3);
+    });
+
+    it('keeps an initially paused read unknown rather than claiming no records', () => {
+      mockHistory.mockReturnValue(query(undefined, { isPending: true, fetchStatus: 'paused' }));
+      renderPage();
+      expect(screen.getAllByText('Command outcomes unavailable')).toHaveLength(3);
+      expect(screen.queryByText('No attempts recorded')).not.toBeInTheDocument();
+      expect(screen.queryByText('No commands recorded yet.')).not.toBeInTheDocument();
+      expect(screen.queryByText('No remote commands have been issued yet, so there is no reliability record to grade.')).not.toBeInTheDocument();
+      expect(band().querySelectorAll('[data-operational-metric][data-value-state="missing"]')).toHaveLength(4);
+      expect(screen.queryByText('Nothing failing')).not.toBeInTheDocument();
+    });
+
+    it('retains paused history and every confidence row without replacing it with empty content', () => {
+      const data = commands();
+      const original = structuredClone(data);
+      mockHistory.mockReturnValue(query(data, { fetchStatus: 'paused', isPending: false }));
+      renderPage();
+      expect(stat('Overall success')).toHaveTextContent('40%');
+      expect(within(band()).getByText('Data may be stale')).toBeInTheDocument();
+      expect(within(screen.getByRole('table')).getByText('Lock')).toBeInTheDocument();
+      expect(within(screen.getByRole('table')).getByText('Honk horn')).toBeInTheDocument();
+      expect(screen.getByText('2 ok · 3 failed')).toBeInTheDocument();
+      expect(data).toEqual(original);
+    });
+
+    it('preserves full colliding command names in the fallback table and CSV action', () => {
+      mockHistory.mockReturnValue(query([
+        { id: 41, vehicle_id: 7, command: 'command_prefix_shares_twenty_four_chars_alpha', params: '', status: 'failed', error: '', created_at: '2026-01-15T12:00:00Z' },
+        { id: 42, vehicle_id: 7, command: 'command_prefix_shares_twenty_four_chars_beta', params: '', status: 'success', error: '', created_at: '2026-01-15T12:01:00Z' },
+      ]));
+      renderPage();
+      const table = screen.getByRole('table');
+      expect(within(table).getByText('Command prefix shares twenty four chars alpha')).toBeInTheDocument();
+      expect(within(table).getByText('Command prefix shares twenty four chars beta')).toBeInTheDocument();
+      expect(within(table).getAllByRole('row')).toHaveLength(3);
+      fireEvent.click(screen.getByRole('button', { name: 'Export chart' }));
+      expect(screen.getByRole('menuitem', { name: 'Download data as CSV' })).toBeInTheDocument();
+      expect(screen.getByRole('menuitem', { name: 'Save as PNG' })).toBeInTheDocument();
+      expect(screen.getByRole('menuitem', { name: 'Save as SVG' })).toBeInTheDocument();
+    });
+
+    it('distinguishes pending-only confidence from measured zero success in the chart and detail', () => {
+      mockHistory.mockReturnValue(query([
+        { id: 51, vehicle_id: 7, command: 'wake_up', params: '', status: 'pending', error: '', created_at: '2026-01-15T12:00:00Z' },
+        { id: 52, vehicle_id: 7, command: 'lock', params: '', status: 'failed', error: '', created_at: '2026-01-15T12:01:00Z' },
+      ]));
+      renderPage();
+      const table = screen.getByRole('table');
+      const pending = within(table).getByText('Wake up').closest('tr');
+      const failure = within(table).getByText('Lock').closest('tr');
+      if (!pending || !failure) throw new Error('Missing original command rows');
+      expect(within(pending).getAllByRole('cell').map((cell) => cell.textContent)).toEqual([
+        'Wake up', '—', '—', '—', '1', 'unproven',
+      ]);
+      expect(within(failure).getAllByRole('cell')[2]).toHaveTextContent('0');
+      const detail = screen.getAllByText('Wake up').find((node) => node.closest('li'))?.closest('li');
+      if (!detail) throw new Error('Missing pending command detail');
+      const interval = within(detail).getByText('95 % interval');
+      expect(interval.tagName).toBe('DT');
+      expect(interval.nextElementSibling).toHaveTextContent('Unknown');
+      expect(interval.nextElementSibling?.tagName).toBe('DD');
+    });
+
+    it('keeps full normalized failure evidence in semantic definition pairs', () => {
+      const error = 'FailureSignature'.repeat(8);
+      mockHistory.mockReturnValue(query([
+        { id: 61, vehicle_id: 7, command: 'lock', params: '', status: 'failed', error, created_at: '2026-01-15T12:00:00Z' },
+      ]));
+      renderPage();
+      const label = screen.getByText('Usual failure');
+      expect(label.tagName).toBe('DT');
+      expect(label.nextElementSibling?.tagName).toBe('DD');
+      expect(label.nextElementSibling).toHaveTextContent(`${error.slice(0, 120)} (×1)`);
+      expect(label.nextElementSibling).toHaveClass('min-w-0', 'break-words', 'text-[var(--semantic-danger)]');
+      expect(screen.getByText('0 ok · 1 failed')).toBeInTheDocument();
+    });
+
+    it('uses the vehicle timezone for range, last-used date and retained fetch time', async () => {
+      const timezone = await import('@/lib/timezone');
+      const zone = vi.spyOn(timezone, 'useTimezone').mockReturnValue('America/Los_Angeles');
+      try {
+        mockHistory.mockReturnValue(query([
+          { id: 71, vehicle_id: 7, command: 'lock', params: '', status: 'success', error: '', created_at: '2026-01-15T00:30:00Z' },
+        ], { dataUpdatedAt: Date.UTC(2026, 0, 15, 0, 30) }));
+        renderPage();
+        const date = screen.getByText('Last used').nextElementSibling;
+        expect(date).toHaveTextContent('Jan 14');
+        expect(band()).toHaveTextContent('Dec 31, 2025');
+        expect(band()).toHaveTextContent('Jan 14, 2026');
+        expect(mockHistory).toHaveBeenCalledWith(7, '2026-01-01T00:00:00Z', '2026-02-01T00:00:00Z');
+      } finally {
+        zone.mockRestore();
+      }
+    });
+  });
+
   it('preserves resolved-success rates, all attempts and collapsed retry-intent definitions', () => {
     mockHistory.mockReturnValue(query(commands()));
     renderPage();
