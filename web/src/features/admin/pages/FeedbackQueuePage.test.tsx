@@ -22,6 +22,8 @@ import { render, screen, fireEvent, waitFor, within } from '@testing-library/rea
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter } from 'react-router-dom'
 import type { ReactNode } from 'react'
+import type { FeedbackEntry } from '@/api/types'
+import type { FeedbackListParams } from '@/api/hooks/useFeedback'
 
 // ── Deterministic i18n: return the English fallback, interpolate {{vars}}. ─────
 vi.mock('react-i18next', async () => {
@@ -107,17 +109,23 @@ const baseSettings = {
 type FacetKey = 'new' | 'triaged' | 'closed' | 'bug' | 'feature' | 'other'
 const FACET_KEYS: FacetKey[] = ['new', 'triaged', 'closed', 'bug', 'feature', 'other']
 
- 
-type AnyRow = any
- 
-interface Scenario { main: any; counts: Record<FacetKey, any> }
+type FeedbackFixture = Omit<FeedbackEntry, 'user_email' | 'console_tail' | 'submitter_ip'> & {
+  user_email: string | null
+  console_tail: string | null
+  submitter_ip: string | null
+}
+
+interface Scenario {
+  main: Record<string, unknown>
+  counts: Record<FacetKey, Record<string, unknown>>
+}
 
 let refetches: Record<string, ReturnType<typeof vi.fn>>
 let mockMutate: ReturnType<typeof vi.fn>
 let mockBulkMutateAsync: ReturnType<typeof vi.fn>
 let scenario: Scenario
 
-function rowA(): AnyRow {
+function rowA(): FeedbackFixture {
   return {
     id: 101,
     created_at: '2024-01-15T12:00:00Z',
@@ -139,7 +147,7 @@ function rowA(): AnyRow {
   }
 }
 
-function rowB(): AnyRow {
+function rowB(): FeedbackFixture {
   return {
     id: 102,
     created_at: '2024-02-01T09:30:00Z',
@@ -192,7 +200,7 @@ function configure(
   over: { main?: Record<string, unknown>; counts?: Partial<Record<FacetKey, Record<string, unknown>>> } = {},
 ) {
   const d = defaults()
-  const counts = {} as Record<FacetKey, AnyRow>
+  const counts = {} as Scenario['counts']
   for (const k of FACET_KEYS) counts[k] = { ...d.counts[k], ...(over.counts?.[k] ?? {}) }
   scenario = { main: { ...d.main, ...(over.main ?? {}) }, counts }
 }
@@ -220,14 +228,14 @@ function mainResult() {
     isError: Boolean(m.isError),
     error: m.error ?? null,
     isFetching: Boolean(m.isFetching),
+    isPlaceholderData: Boolean(m.isPlaceholderData),
     refetch: refetches.main,
   }
 }
 
- 
-function feedbackListImpl(params: any = {}) {
+function feedbackListImpl(params: FeedbackListParams = {}) {
   if (params?.limit === 1) {
-    const facet: FacetKey | undefined = params.status ?? params.category
+    const facet = params.status || params.category
     if (facet) return countResult(facet)
   }
   return mainResult()
@@ -294,6 +302,56 @@ function drawerFor(title: string): HTMLElement {
 }
 
 describe('FeedbackQueuePage', () => {
+  it('uses restrained issue-link roles and retains every column in the contained mobile table', () => {
+    renderPage()
+    const link = screen.getByRole('link', { name: /Open issue/i })
+    expect(link).toHaveClass('text-[var(--semantic-info)]', 'min-h-11')
+    expect(link).not.toHaveClass('text-cyan-300', 'text-xs')
+    expect(link).toHaveAttribute('target', '_blank')
+    expect(link).toHaveAttribute('rel', 'noreferrer noopener')
+    for (const title of ['Category', 'Page', 'Reporter', 'GitHub']) {
+      const header = screen.getByRole('columnheader', { name: title })
+      expect(header).not.toHaveClass('hidden')
+      expect(header).not.toHaveClass('md:table-cell')
+    }
+    expect(screen.getByText('/drives')).toBeInTheDocument()
+  })
+
+  it('distinguishes filtered no-results from an empty queue and clears both filters', () => {
+    renderPage()
+    fireEvent.change(screen.getByRole('combobox', { name: 'Status' }), { target: { value: 'closed' } })
+    configure({ main: { data: { items: [], total: 0, limit: 25, offset: 0, github_bridge_enabled: false } } })
+    fireEvent.change(screen.getByRole('combobox', { name: 'Category' }), { target: { value: 'bug' } })
+    expect(screen.getByText('No results')).toBeInTheDocument()
+    expect(screen.queryByText('No feedback yet')).toBeNull()
+    expect(screen.getByRole('heading', { name: 'Triage progress' })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Clear filters' }))
+    expect(screen.getByRole('combobox', { name: 'Status' })).toHaveValue('')
+    expect(screen.getByRole('combobox', { name: 'Category' })).toHaveValue('')
+    expect(mockUseFeedbackList).toHaveBeenCalledWith({
+      status: undefined, category: undefined, limit: 25, offset: 0,
+    })
+  })
+
+  it('retains placeholder evidence and selected IDs while disabling prior-scope mutations', () => {
+    configure({ main: { isPlaceholderData: true, isFetching: true } })
+    renderPage()
+    expect(screen.getByText('Timeline cuts off early')).toBeInTheDocument()
+    expect(screen.getByText('Loading...')).toHaveAttribute('role', 'status')
+    fireEvent.click(screen.getAllByRole('checkbox', { name: /^Select (?!all)/ })[0])
+    for (const name of ['Mark triaged', 'Close selected', 'Reopen selected']) {
+      expect(screen.getByRole('button', { name })).toBeDisabled()
+    }
+    expandRow('Timeline cuts off early')
+    const region = drawerFor('Timeline cuts off early')
+    expect(within(region).getByRole('combobox')).toBeDisabled()
+    expect(within(region).getByRole('textbox')).toBeDisabled()
+    expect(within(region).getByRole('button', { name: 'Save URL' })).toBeDisabled()
+    expect(screen.getAllByRole('checkbox', { name: /^Deselect (?!all)/ })[0]).toBeChecked()
+    expect(mockMutate).not.toHaveBeenCalled()
+    expect(mockBulkMutateAsync).not.toHaveBeenCalled()
+  })
+
   it('keeps whole-queue scope and all six facet measurements in the actual reviewable brief', () => {
     renderPage()
     const summary = screen.getByTestId('feedback-queue-summary')

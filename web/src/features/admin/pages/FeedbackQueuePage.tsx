@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { Archive, Bug, CheckCircle, ExternalLink, PieChart, RefreshCw, RotateCcw, Workflow } from 'lucide-react'
 
 import {
   Button,
@@ -7,6 +8,7 @@ import {
   Code,
   DataTable,
   GlassPanel,
+  Icon,
   PanelTitle,
   Select,
   Text,
@@ -17,7 +19,8 @@ import { EmptyState, QueryError, Skeleton, StaleRefreshWarning } from '@/compone
 import { FadeIn } from '@/components/motion'
 import { UserCell, type StatMetric } from '@/components/data-display'
 import { AdminSummary } from '../components/operationalbrief-a-g/AdminSummary'
-import { Icons } from '@/lib/icons'
+import { cn } from '@/lib/cn'
+import { neonColorMap, typography } from '@/lib/tokens'
 import { isFiniteNumber } from '@/lib/numberFormat'
 import { usePageTitle } from '@/hooks/usePageTitle'
 import { useDateFormat } from '@/hooks/useDateFormat'
@@ -68,7 +71,7 @@ export default function FeedbackQueuePage() {
     limit: PAGE_SIZE,
     offset: page * PAGE_SIZE,
   })
-  const { data, isLoading, refetch, isFetching } = listQuery
+  const { data, isLoading, refetch, isFetching, isPlaceholderData } = listQuery
   const listState = useDataState(listQuery)
   const update = useUpdateFeedback()
   const bulkUpdate = useBulkUpdateFeedback()
@@ -232,9 +235,10 @@ export default function FeedbackQueuePage() {
               href={row.github_issue_url}
               target="_blank"
               rel="noreferrer noopener"
-              className="inline-flex items-center gap-1 text-xs text-cyan-300 underline underline-offset-2 hover:text-cyan-200"
+              className={cn(typography.role.caption, neonColorMap.cyan.text,
+                'inline-flex min-h-11 items-center gap-1 rounded-shape-sm underline underline-offset-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus-ring)] md:min-h-6')}
             >
-              <Icons.externalLink className="h-3 w-3" aria-hidden="true" />
+              <Icon icon={ExternalLink} size="xs" />
               {t('feedback.queue.openIssue', 'Open issue')}
             </a>
           ) : (
@@ -247,6 +251,7 @@ export default function FeedbackQueuePage() {
 
   const handleBulkStatus = useCallback(
     async (rows: FeedbackEntry[], status: FeedbackStatus) => {
+      if (isPlaceholderData) return
       setBulkTargetStatus(status)
       try {
         await bulkUpdate.mutateAsync({
@@ -261,7 +266,7 @@ export default function FeedbackQueuePage() {
         setBulkTargetStatus(null)
       }
     },
-    [bulkUpdate],
+    [bulkUpdate, isPlaceholderData],
   )
 
   const renderBulkActions = useCallback(
@@ -271,9 +276,9 @@ export default function FeedbackQueuePage() {
           type="button"
           variant="secondary"
           size="sm"
-          icon={<Icons.success className="h-4 w-4" aria-hidden="true" />}
+          icon={<Icon icon={CheckCircle} />}
           loading={bulkTargetStatus === 'triaged'}
-          disabled={bulkUpdate.isPending || rows.every((row) => row.status === 'triaged')}
+          disabled={isPlaceholderData || bulkUpdate.isPending || rows.every((row) => row.status === 'triaged')}
           onClick={() => void handleBulkStatus(rows, 'triaged')}
         >
           {t('feedback.queue.bulk.triage', 'Mark triaged')}
@@ -282,9 +287,9 @@ export default function FeedbackQueuePage() {
           type="button"
           variant="secondary"
           size="sm"
-          icon={<Icons.archive className="h-4 w-4" aria-hidden="true" />}
+          icon={<Icon icon={Archive} />}
           loading={bulkTargetStatus === 'closed'}
-          disabled={bulkUpdate.isPending || rows.every((row) => row.status === 'closed')}
+          disabled={isPlaceholderData || bulkUpdate.isPending || rows.every((row) => row.status === 'closed')}
           onClick={() => void handleBulkStatus(rows, 'closed')}
         >
           {t('feedback.queue.bulk.close', 'Close selected')}
@@ -293,16 +298,16 @@ export default function FeedbackQueuePage() {
           type="button"
           variant="ghost"
           size="sm"
-          icon={<Icons.undo className="h-4 w-4" aria-hidden="true" />}
+          icon={<Icon icon={RotateCcw} />}
           loading={bulkTargetStatus === 'new'}
-          disabled={bulkUpdate.isPending || rows.every((row) => row.status === 'new')}
+          disabled={isPlaceholderData || bulkUpdate.isPending || rows.every((row) => row.status === 'new')}
           onClick={() => void handleBulkStatus(rows, 'new')}
         >
           {t('feedback.queue.bulk.reopen', 'Reopen selected')}
         </Button>
       </>
     ),
-    [bulkTargetStatus, bulkUpdate.isPending, handleBulkStatus, t],
+    [bulkTargetStatus, bulkUpdate.isPending, handleBulkStatus, isPlaceholderData, t],
   )
 
   const actions = (
@@ -312,7 +317,7 @@ export default function FeedbackQueuePage() {
       onClick={handleRefreshAll}
       loading={isRefreshing}
       aria-label={t('common.refresh', 'Refresh')}
-      icon={<Icons.refresh className="h-4 w-4" aria-hidden="true" />}
+      icon={<Icon icon={RefreshCw} />}
     >
       {t('common.refresh', 'Refresh')}
     </Button>
@@ -343,8 +348,8 @@ export default function FeedbackQueuePage() {
           <div className="min-w-0 xl:col-span-2">
             <FeedbackFacetPanel
               title={t('feedback.queue.triageProgress', 'Triage progress')}
-              icon={<Icons.workflow className="h-4 w-4 text-cyan-300" aria-hidden="true" />}
-              emptyIcon={<Icons.workflow className="h-8 w-8" aria-hidden="true" />}
+              icon={<Icon icon={Workflow} className={typography.color.secondary} />}
+              emptyIcon={<Icon icon={Workflow} size="xl" />}
               counts={[
                 { id: 'new', label: t('feedback.queue.status.new', 'New'), value: counts.new },
                 { id: 'triaged', label: t('feedback.queue.status.triaged', 'Triaged'), value: counts.triaged },
@@ -360,8 +365,8 @@ export default function FeedbackQueuePage() {
           </div>
           <FeedbackFacetPanel
             title={t('feedback.queue.categoryMix', 'Category mix')}
-            icon={<Icons.pieChart className="h-4 w-4 text-cyan-300" aria-hidden="true" />}
-            emptyIcon={<Icons.pieChart className="h-8 w-8" aria-hidden="true" />}
+            icon={<Icon icon={PieChart} className={typography.color.secondary} />}
+            emptyIcon={<Icon icon={PieChart} size="xl" />}
             counts={[
               { id: 'bug', label: t('feedback.category.bug', 'Bug report'), value: counts.bug },
               { id: 'feature', label: t('feedback.category.feature', 'Feature request'), value: counts.feature },
@@ -387,7 +392,7 @@ export default function FeedbackQueuePage() {
 
       {/* 3 — Detail band: filterable + paged queue table (full width) */}
       <FadeIn delay={0.2}>
-        <GlassPanel className="p-4 sm:p-5">
+        <GlassPanel className="min-w-0 p-4 sm:p-5" aria-busy={isPlaceholderData || undefined}>
           <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
             <PanelTitle className="mr-auto self-center">
               {t('feedback.queue.tableTitle', 'Queue')}
@@ -417,6 +422,7 @@ export default function FeedbackQueuePage() {
           </div>
 
           <StaleRefreshWarning state={listState} label={t('feedback.queue.tableTitle', 'Queue')} hideRetry />
+          {isPlaceholderData && <Text as="p" variant="helper" role="status">{t('common.loading', 'Loading...')}</Text>}
           {isLoading && !listState.hasData ? (
             <Skeleton height={44} lines={6} />
           ) : listState.fatalError ? (
@@ -424,9 +430,21 @@ export default function FeedbackQueuePage() {
           ) : items.length === 0 ? (
             // no-action: feedback arrives by user submission, no admin CTA possible
             <EmptyState
-              icon={<Icons.bug className="h-10 w-10" aria-hidden="true" />}
-              title={t('feedback.queue.empty', 'No feedback yet')}
-              message={t('feedback.queue.emptyMessage', 'User-submitted bug reports and feature requests will appear here.')}
+              icon={<Icon icon={Bug} size="xl" />}
+              title={statusFilter || categoryFilter
+                ? t('search.noResults.title', 'No results')
+                : t('feedback.queue.empty', 'No feedback yet')}
+              message={statusFilter || categoryFilter
+                ? t('common.noData', 'No data available')
+                : t('feedback.queue.emptyMessage', 'User-submitted bug reports and feature requests will appear here.')}
+              action={statusFilter || categoryFilter ? {
+                label: t('common.clearFilters', 'Clear filters'),
+                onClick: () => {
+                  setStatusFilter('')
+                  setCategoryFilter('')
+                  setPage(0)
+                },
+              } : undefined}
             />
           ) : (
             <>
@@ -434,7 +452,6 @@ export default function FeedbackQueuePage() {
                 tableId="admin:feedback"
                 enableValueFilters={false}
                 columns={columns}
-                mobileColumns={['title', 'status', 'created_at']}
                 data={items}
                 keyExtractor={(r) => r.id}
                 selectable="multi"
@@ -459,7 +476,7 @@ export default function FeedbackQueuePage() {
                     row={row}
                     bridgeEnabled={bridgeEnabled}
                     onUpdate={update.mutate}
-                    updating={update.isPending}
+                    updating={update.isPending || isPlaceholderData}
                   />
                 )}
                 compact
