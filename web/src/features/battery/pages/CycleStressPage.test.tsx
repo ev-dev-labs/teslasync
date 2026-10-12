@@ -224,6 +224,7 @@ interface QueryStub {
   isSuccess: boolean;
   isError: boolean;
   error: unknown;
+  fetchStatus?: 'fetching' | 'paused' | 'idle';
   refetch: () => void;
 }
 
@@ -489,5 +490,86 @@ describe('CycleStressPage', () => {
         '0 known returned = 0 included + 0 excluded. Missing completion times are never synthesized from duration, and missing SoC is never imputed.',
       ),
     ).toBeInTheDocument();
+  });
+
+  it.each([
+    { name: 'retained refresh failure', partial: false },
+    { name: 'independent source failure', partial: true },
+  ])('keeps the history-cap caveat alongside $name', ({ partial }) => {
+    const history = readyHistory();
+    h.sessions = query(refetchCharging, {
+      data: Array.from({ length: 1_000 }, (_, index) => ({
+        ...history.sessions[0],
+        id: String(index + 1),
+      })),
+      isError: !partial,
+      error: partial ? null : new Error('refresh failed'),
+    });
+    if (partial) {
+      h.drives = query(refetchDrives, {
+        isError: true,
+        error: new Error('drives failed'),
+      });
+    }
+
+    renderPage();
+
+    expectEverySection();
+    expect(screen.getByTestId('cycle-stress-retained-caveat')).toHaveTextContent(
+      'At least one source returned exactly its 1,000-row cap. Older matching history may be omitted, and the two source spans may differ.',
+    );
+    expect(screen.getAllByRole('button', {
+      name: partial ? 'Retry Drive history' : 'Retry Charging history',
+    })).toHaveLength(1);
+    const unaffectedRetry = partial ? refetchCharging : refetchDrives;
+    fireEvent.click(screen.getByRole('button', {
+      name: partial ? 'Retry Drive history' : 'Retry Charging history',
+    }));
+    expect(unaffectedRetry).not.toHaveBeenCalled();
+  });
+
+  it('retains qualification limits alongside a paused source without inventing zero SoC', () => {
+    const history = readyHistory();
+    h.sessions = query(refetchCharging, {
+      data: [{ ...history.sessions[0], end_soc_pct: null }],
+      fetchStatus: 'paused',
+    });
+    h.drives = query(refetchDrives, { data: [] });
+
+    renderPage();
+
+    expectEverySection();
+    expect(screen.getByTestId('cycle-stress-retained-caveat')).toHaveTextContent(
+      'Returned rows contained no complete, valid, non-future interval with direction-consistent SoC endpoints.',
+    );
+    expect(screen.getByText(
+      'Charging history is paused while offline. Previously loaded evidence, if available, is retained.',
+    )).toBeInTheDocument();
+    const kpis = within(screen.getByTestId('cycle-stress-kpis'));
+    expect(kpis.getByText('Retained source evidence')).toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: 'Retry Charging history' })).toHaveLength(1);
+  });
+
+  it('keeps thin-support limits visible with retained history and avoids duplicate normal notices', () => {
+    const history = readyHistory();
+    h.sessions = query(refetchCharging, {
+      data: [history.sessions[0]],
+      fetchStatus: 'paused',
+    });
+    h.drives = query(refetchDrives, { data: [] });
+    const view = renderPage();
+
+    expectEverySection();
+    expect(screen.getByTestId('cycle-stress-retained-caveat')).toHaveTextContent(
+      'Thin support: interpret cycle summaries as limited reconstructed evidence.',
+    );
+
+    h.sessions = query(refetchCharging, { data: [history.sessions[0]] });
+    view.rerenderPage();
+
+    expect(screen.queryByTestId('cycle-stress-retained-caveat')).not.toBeInTheDocument();
+    expect(screen.getAllByText(
+      'Thin support: interpret cycle summaries as limited reconstructed evidence.',
+    )).toHaveLength(1);
   });
 });

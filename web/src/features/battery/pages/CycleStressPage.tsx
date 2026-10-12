@@ -4,8 +4,10 @@ import { useTranslation } from 'react-i18next';
 import { useChargingHistory } from '@/api/hooks/useCharging';
 import { useDriveHistory } from '@/api/hooks/useDriving';
 
+import { AlertBanner } from '@/components/feedback';
 import { Grid, PageLayout, Section } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
+import { Text } from '@/components/ui';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useTimezone } from '@/lib/timezone';
@@ -32,6 +34,7 @@ import {
   CycleStressSummary,
   cycleStressQueryState,
 } from '../components/cycle-stress-modernization';
+import { cycleStressBandLabel } from '../components/cycle-stress/labels';
 import {
   analyzeCycleStress,
   DEEP_CYCLE_THRESHOLD_PCT,
@@ -98,6 +101,26 @@ export default function CycleStressPage() {
   const trust = cycleStressQueryState(vehicleId != null, sessionsQuery, drivesQuery);
   const { state } = trust;
   const locale = i18n.language;
+  const needsEvidenceCaveat = state.vehicleSelected && state.isResolved && !state.error
+    && trust.sources.some(source => source.trust.fatalError
+      || source.trust.refreshError || source.trust.isRefreshBlocked);
+  const capReached = result.driveAccounting.historyCapReached
+    || result.chargingAccounting.historyCapReached;
+  const returnedRows = result.driveAccounting.returnedRows
+    + result.chargingAccounting.returnedRows;
+  // Source recovery replaces the summary's evidence notices, not their meaning.
+  const evidenceCaveat = !needsEvidenceCaveat ? null
+    : capReached
+      ? t('cycleStress.states.capReached',
+        'At least one source returned exactly its 1,000-row cap. Older matching history may be omitted, and the two source spans may differ.')
+      : returnedRows > 0 && result.continuity.acceptedIntervals === 0
+        ? t('cycleStress.states.noQualified',
+          'Returned rows contained no complete, valid, non-future interval with direction-consistent SoC endpoints.')
+        : returnedRows > 0 && result.coverage.support.band === 'thin'
+          ? t('cycleStress.states.thinSupport',
+            '{{band}} support: interpret cycle summaries as limited reconstructed evidence.',
+            { band: cycleStressBandLabel(t, result.coverage.support.band) })
+          : null;
 
   return (
     <PageLayout
@@ -117,6 +140,12 @@ export default function CycleStressPage() {
           onDeepThresholdChange={setDeepThresholdPct}
           onExponentChange={setExponent}
         />
+        {evidenceCaveat && (
+          <AlertBanner className="mt-3" variant={capReached ? 'warning' : 'info'}
+            data-testid="cycle-stress-retained-caveat">
+            <Text as="p" variant="caption">{evidenceCaveat}</Text>
+          </AlertBanner>
+        )}
       </FadeIn>
 
       <FadeIn delay={0.05}>
