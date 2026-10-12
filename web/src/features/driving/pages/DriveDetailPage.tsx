@@ -3,7 +3,7 @@ import { Link, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { ArrowLeft, Play, Share2 } from 'lucide-react';
 import { PageLayout } from '@/components/layout';
-import { Button, PrintButton, Text } from '@/components/ui';
+import { BUTTON_BASE, BUTTON_VARIANTS, Button, Icon, PrintButton, Text } from '@/components/ui';
 import { DataProvenanceBadge } from '@/components/data-display';
 import { AlertBanner, QueryError, StaleRefreshWarning } from '@/components/feedback';
 import { ShareDriveDialog } from '../components/ShareDriveDialog';
@@ -12,9 +12,12 @@ import { AISpeedProfileInsights } from '@/components/ai';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useDataState } from '@/hooks/useDataState';
 import { useTimezone } from '@/lib/timezone';
+import { cn } from '@/lib/cn';
 import { useFsdInsightsForDrive } from '@/api/hooks/useAnalytics';
 import { DriveReportContent } from '../components/layout-modernization';
 import { useDriveDetailData, DriveDetailSkeleton } from '../components/drive-detail';
+
+const actionTargetClassName = 'min-h-11 min-w-11 max-w-full px-3 py-2 md:min-h-9 md:py-1.5';
 
 /**
  * A drive report, not a second drives workspace.
@@ -84,25 +87,30 @@ export default function DriveDetailPage() {
         <DataProvenanceBadge provenance={driveState.provenance} status={driveState.status} updatedAt={driveState.updatedAt} />
       }
       secondaryActions={
-        <Link to="/drives">
-          <Button variant="ghost" size="sm" aria-label={t('driveDetail.backToDrives', 'Back to drives')} icon={<ArrowLeft className="h-4 w-4" aria-hidden="true" />} />
+        <Link to="/drives"
+          aria-label={t('driveDetail.backToDrives', 'Back to drives')}
+          className={cn(BUTTON_BASE, BUTTON_VARIANTS.ghost, actionTargetClassName)}>
+          <Icon icon={ArrowLeft} />
         </Link>
       }
       primaryAction={id ? (
-        <Link to={`/drives/${id}/replay`}>
-          <Button variant="secondary" size="sm" icon={<Play className="h-4 w-4" aria-hidden="true" />}>
+        <Link to={`/drives/${id}/replay`}
+          className={cn(BUTTON_BASE, BUTTON_VARIANTS.secondary, actionTargetClassName)}>
+          <Icon icon={Play} />
+          <Text as="span" variant="bodySm" className="min-w-0 break-words">
             {t('driveDetail.replay', 'Replay')}
-          </Button>
+          </Text>
         </Link>
       ) : undefined}
       overflowActions={
-        <div data-print-hide className="flex items-center gap-2">
+        <div data-print-hide className="flex flex-wrap items-center gap-2">
           {id ? (
-            <Button variant="ghost" size="sm" onClick={() => setShareDialogOpen(true)} icon={<Share2 className="h-4 w-4" aria-hidden="true" />}>
+            <Button variant="ghost" size="sm" wrapLabel className={actionTargetClassName}
+              onClick={() => setShareDialogOpen(true)} icon={<Icon icon={Share2} />}>
               {t('driveDetail.share', 'Share')}
             </Button>
           ) : null}
-          <PrintButton />
+          <PrintButton className={actionTargetClassName} />
         </div>
       }
     >

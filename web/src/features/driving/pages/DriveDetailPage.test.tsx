@@ -36,6 +36,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { MemoryRouter, Routes, Route } from 'react-router-dom'
 import type { ReactNode } from 'react'
+import { BUTTON_BASE, BUTTON_VARIANTS } from '@/components/ui'
 import type { DriveDetail } from '@/types/driving'
 import type { Vehicle } from '@/types/vehicle'
 import type { LatLngExpression } from '@/components/maps'
@@ -574,7 +575,7 @@ describe('DriveDetailPage', () => {
     renderPage()
 
     // Icon-only back button must carry an accessible name.
-    expect(screen.getByRole('button', { name: 'Back to drives' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Back to drives' })).toHaveAttribute('href', '/drives')
     expect(screen.getByRole('button', { name: 'Print' })).toBeInTheDocument()
     const replay = screen.getByRole('link', { name: /Replay/i })
     expect(replay).toHaveAttribute('href', '/drives/42/replay')
@@ -585,10 +586,72 @@ describe('DriveDetailPage', () => {
     renderPage('/drives', '/drives')
 
     // Back-to-drives is always available…
-    expect(screen.getByRole('button', { name: 'Back to drives' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Back to drives' })).toHaveAttribute('href', '/drives')
     // …but replay / share / why-ended are gated on the :id param.
     expect(screen.queryByRole('link', { name: /Replay/i })).toBeNull()
     expect(screen.queryByRole('button', { name: 'Share' })).toBeNull()
     expect(screen.queryByTestId('why-ended')).toBeNull()
+  })
+
+  it('renders back and replay as single native links with shared neutral chrome and decorative icons', () => {
+    hookState.current = loadedState()
+    renderPage()
+
+    const back = screen.getByRole('link', { name: 'Back to drives' })
+    const replay = screen.getByRole('link', { name: 'Replay' })
+    expect(back).toHaveClass(...BUTTON_BASE.split(' '), ...BUTTON_VARIANTS.ghost.split(' '))
+    expect(replay).toHaveClass(...BUTTON_BASE.split(' '), ...BUTTON_VARIANTS.secondary.split(' '))
+    for (const link of [back, replay]) {
+      expect(link.tagName).toBe('A')
+      expect(link.querySelector('button, a, [tabindex]')).toBeNull()
+      expect(link.querySelector('svg')).toHaveAttribute('aria-hidden', 'true')
+      expect(link.querySelector('svg')).toHaveAttribute('focusable', 'false')
+    }
+    expect(screen.queryByRole('button', { name: 'Back to drives' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Replay' })).toBeNull()
+  })
+
+  it('keeps every header action touch-sized below md without changing destinations or share ownership', () => {
+    hookState.current = loadedState()
+    renderPage()
+
+    for (const action of [
+      screen.getByRole('link', { name: 'Back to drives' }),
+      screen.getByRole('link', { name: 'Replay' }),
+      screen.getByRole('button', { name: 'Share' }),
+      screen.getByRole('button', { name: 'Print' }),
+    ]) {
+      expect(action).toHaveClass('min-h-11', 'min-w-11', 'md:min-h-9')
+    }
+    expect(screen.getByRole('link', { name: 'Replay' })).toHaveAttribute('href', '/drives/42/replay')
+    fireEvent.click(screen.getByRole('button', { name: 'Share' }))
+    expect(screen.getByRole('dialog', { name: 'Share drive' })).toHaveAttribute('data-drive-id', '42')
+  })
+
+  it.each([
+    { name: 'missing record', loaded: false },
+    { name: 'retained rich record', loaded: true },
+  ])('preserves all twenty-one report anchors and eight jump destinations for $name', ({ loaded }) => {
+    hookState.current = loaded ? loadedState() : emptyState()
+    const { container } = renderPage()
+
+    const sectionIds = [
+      'overview', 'journey', 'route', 'energy-evidence', 'cost-estimate',
+      'fsd-evidence', 'silent-counter', 'telemetry', 'battery-trace',
+      'speed-distribution', 'power-trace', 'elevation-trace', 'temperature-trace',
+      'tire-trace', 'speed-insights', 'physics-debrief', 'physics-ledger',
+      'coaching', 'gear-theater', 'road-analysis', 'why-ended',
+    ]
+    for (const id of sectionIds) {
+      expect(container.querySelector(`section#${id}`)).toBeInTheDocument()
+    }
+    expect(container.querySelectorAll('section[id][aria-label]')).toHaveLength(21)
+    const navigation = screen.getByRole('navigation', { name: 'Drive report sections' })
+    expect(Array.from(navigation.querySelectorAll('a'), link => link.getAttribute('href'))).toEqual([
+      '#overview', '#journey', '#route', '#energy', '#telemetry', '#supervised', '#physics', '#diagnostics',
+    ])
+    expect(screen.getByTestId('drive-ledger-compact')).toBeInTheDocument()
+    expect(screen.getByTestId('gear-theater')).toBeInTheDocument()
+    expect(screen.getByTestId('silent-counter')).toBeInTheDocument()
   })
 })
