@@ -147,4 +147,24 @@ describe('Notification Health', () => {
     const latency = screen.getByRole('region', { name: 'Notification latency' });
     expect(within(latency).getAllByText(title).some((element) => element.classList.contains('break-words'))).toBe(true);
   });
+
+  it('uses restrained overview roles while preserving selected native navigation and focus', () => {
+    render(<MemoryRouter initialEntries={['/notifications/health#latency']}><NotificationHealthPage /></MemoryRouter>);
+    const nav = screen.getByRole('navigation', { name: 'Notification health sections' });
+    const links = within(nav).getAllByRole('link');
+    expect(links.map(link => link.getAttribute('href'))).toEqual(['#fatigue', '#burn-rate', '#latency']);
+    expect(screen.getByText('Delivery intelligence')).toHaveClass('text-[var(--text-muted)]');
+    for (const link of links) {
+      expect(link).toHaveClass('rounded-lg', 'duration-fast', 'motion-reduce:transition-none',
+        'focus-visible:ring-[var(--focus-ring)]', 'focus-visible:ring-offset-2');
+      expect(within(link).getByText(/0[123] \/ 03/)).toHaveClass('text-[var(--text-muted)]', 'tabular-nums');
+      expect(link.className).not.toMatch(/cyan-|neon|glow/);
+    }
+    const selected = within(nav).getByRole('link', { name: 'Notification latency' });
+    expect(selected).toHaveAttribute('aria-current', 'location');
+    expect(selected).toHaveClass('border-[var(--border-strong)]', 'bg-[var(--surface-3)]');
+    expect(within(nav).getByRole('link', { name: 'Alert fatigue' })).not.toHaveAttribute('aria-current');
+    expect(screen.getByText('Explore three independent views of notification health. Select a view to jump to its metrics, charts, and detailed breakdowns.'))
+      .toHaveClass('text-[var(--text-secondary)]');
+  });
 });
