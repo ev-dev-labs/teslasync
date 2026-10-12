@@ -169,10 +169,11 @@ export default function DriveComparePage() {
       subtitle={t('driveCompare.subtitle', 'Compare context, efficiency, and telemetry from any two drives')}
       query={[drivesQuery, driveAQuery, driveBQuery]}
       contextActions={
-        <div className="flex max-w-full flex-wrap items-center justify-end gap-2 sm:gap-3">
+        <div className="grid w-full min-w-0 max-w-full grid-cols-1 gap-3 sm:grid-cols-2">
           {driveOptions.length > 0 ? (
             <>
               <Select
+                label={t('driveCompare.pickA', 'Choose drive A')}
                 aria-label={t('driveCompare.pickA', 'Choose drive A')}
                 value={activeA}
                 onChange={(event) => updateSelection('drive_a', event.target.value)}
@@ -180,6 +181,7 @@ export default function DriveComparePage() {
                 size="sm"
               />
               <Select
+                label={t('driveCompare.pickB', 'Choose drive B')}
                 aria-label={t('driveCompare.pickB', 'Choose drive B')}
                 value={activeB}
                 onChange={(event) => updateSelection('drive_b', event.target.value)}

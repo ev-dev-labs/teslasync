@@ -1,7 +1,7 @@
 import type { ChangeEvent, ReactNode } from 'react';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, useLocation } from 'react-router-dom';
 
 import type { DriveDetail } from '@/types/driving';
 
@@ -53,20 +53,27 @@ vi.mock('@/components/forms', () => ({
 vi.mock('@/components/ui', () => ({
   Select: ({
     'aria-label': ariaLabel,
+    label,
     value,
     onChange,
     options,
   }: {
     'aria-label': string;
+    label?: string;
     value: string;
     onChange: (event: ChangeEvent<HTMLSelectElement>) => void;
     options: Array<{ value: string; label: string }>;
   }) => (
-    <select aria-label={ariaLabel} value={value} onChange={onChange}>
-      {options.map((option) => (
-        <option key={option.value} value={option.value}>{option.label}</option>
-      ))}
-    </select>
+    <div>
+      <label>
+        {label}
+        <select aria-label={ariaLabel} value={value} onChange={onChange}>
+          {options.map((option) => (
+            <option key={option.value} value={option.value}>{option.label}</option>
+          ))}
+        </select>
+      </label>
+    </div>
   ),
 }));
 
@@ -134,10 +141,16 @@ vi.mock('../components/operationalbrief-a-m/CompareVerdictBrief', async () => ({
 
 import DriveComparePage from './DriveComparePage';
 
+function LocationEvidence() {
+  const location = useLocation();
+  return <output data-testid="location">{location.search}</output>;
+}
+
 function renderPage(initialEntry = '/drive-compare') {
   return render(
     <MemoryRouter initialEntries={[initialEntry]}>
       <DriveComparePage />
+      <LocationEvidence />
     </MemoryRouter>,
   );
 }
@@ -206,6 +219,37 @@ beforeEach(() => {
 });
 
 describe('DriveComparePage', () => {
+  it('shows distinct visible labels in a bounded stacked mobile selector layout', () => {
+    renderPage('/drive-compare?drive_a=2&drive_b=1');
+
+    const labelA = screen.getByText('Choose drive A', { selector: 'label' });
+    const labelB = screen.getByText('Choose drive B', { selector: 'label' });
+    expect(labelA).toContainElement(screen.getByRole('combobox', { name: 'Choose drive A' }));
+    expect(labelB).toContainElement(screen.getByRole('combobox', { name: 'Choose drive B' }));
+    expect(labelA.parentElement?.parentElement).toHaveClass(
+      'grid', 'w-full', 'min-w-0', 'max-w-full', 'grid-cols-1', 'sm:grid-cols-2',
+    );
+    expect(screen.getByLabelText('Choose drive A')).toHaveValue('2');
+    expect(screen.getByLabelText('Choose drive B')).toHaveValue('1');
+    expect(screen.queryByTestId('vehicle-select')).not.toBeInTheDocument();
+  });
+
+  it('keeps independent selections, unrelated deep-link state and raw SI option values', () => {
+    renderPage('/drive-compare?drive_a=2&drive_b=1&origin=history');
+
+    expect(screen.getAllByRole('option', { name: /20000 m$/ })).toHaveLength(2);
+    fireEvent.change(screen.getByLabelText('Choose drive A'), { target: { value: '1' } });
+    expect(screen.getByLabelText('Choose drive B')).toHaveValue('1');
+    expect(screen.getByTestId('location')).toHaveTextContent('?drive_a=1&drive_b=1&origin=history');
+    fireEvent.change(screen.getByLabelText('Choose drive B'), { target: { value: '2' } });
+    expect(screen.getByLabelText('Choose drive A')).toHaveValue('1');
+    expect(screen.getByTestId('location')).toHaveTextContent('?drive_a=1&drive_b=2&origin=history');
+    expect(useDrivesMock).toHaveBeenCalledWith('42', { limit: 1000 });
+    for (const id of SECTION_IDS) expect(screen.getByTestId(id)).toHaveTextContent('ready');
+    expect(driveA.distanceM).toBe(10_000);
+    expect(driveB.distanceM).toBe(20_000);
+  });
+
   it('retains both identities and the complete comparison when all three sources fail to refresh', () => {
     useDrivesMock.mockReturnValue(query({
       data: [driveA, driveB], isError: true, error: new Error('list refresh failed'),
