@@ -339,6 +339,38 @@ beforeEach(() => {
 });
 
 describe('DriveArchetypesPage', () => {
+  it('gives the wrapping refresh action a mobile target and a decorative shared icon', () => {
+    renderPage();
+
+    const refresh = screen.getByRole('button', { name: 'Refresh evidence' });
+    expect(refresh).toHaveClass('h-auto', 'min-h-11', 'min-w-11', 'md:min-h-9');
+    expect(refresh).not.toHaveClass('min-h-9');
+    const icon = refresh.querySelector('svg');
+    expect(icon).toHaveClass('h-4', 'w-4', 'shrink-0');
+    expect(icon).toHaveAttribute('aria-hidden', 'true');
+    expect(icon).toHaveAttribute('focusable', 'false');
+    expect(within(refresh).queryByRole('img')).not.toBeInTheDocument();
+  });
+
+  it('keeps evidence mounted and prevents duplicate refresh while fetching', () => {
+    h.query = query<Drive[]>({
+      data: clusteredDrives(),
+      isFetching: true,
+      fetchStatus: 'fetching',
+    });
+    renderPage();
+
+    expectEverySection();
+    const refresh = screen.getByRole('button', { name: 'Refresh evidence' });
+    expect(refresh).toBeDisabled();
+    expect(refresh).toHaveAttribute('aria-busy', 'true');
+    expect(refresh).toHaveClass('min-h-11', 'md:min-h-9');
+    expect(within(screen.getByTestId('drive-archetypes-candidates'))
+      .getAllByText('Selected')).toHaveLength(1);
+    fireEvent.click(refresh);
+    expect(h.refetch).not.toHaveBeenCalled();
+  });
+
   it('preserves scientific axes and numeric alignment in shared evidence tables', () => {
     renderPage();
 

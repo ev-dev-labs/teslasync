@@ -6,7 +6,7 @@ import { useDriveHistory } from '@/api/hooks/useDriving';
 
 import { PageLayout } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
-import { Button } from '@/components/ui';
+import { Button, Icon } from '@/components/ui';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useTimezone } from '@/lib/timezone';
@@ -106,10 +106,11 @@ export default function DriveArchetypesPage() {
             type="button"
             variant="secondary"
             size="sm"
+            className="min-h-11 min-w-11 md:min-h-9"
             onClick={refresh}
             disabled={vehicleId == null}
             loading={historyQuery.isFetching && vehicleId != null}
-            icon={<RefreshCw className="h-4 w-4" aria-hidden="true" />}
+            icon={<Icon icon={RefreshCw} />}
             wrapLabel
           >
             {t('archetypes.actions.refresh', 'Refresh evidence')}
