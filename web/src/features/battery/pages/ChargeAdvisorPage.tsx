@@ -5,6 +5,7 @@ import { useChargingHistory } from '@/api/hooks/useCharging';
 import { useDriveHistory } from '@/api/hooks/useDriving';
 
 import { CardGrid, PageLayout } from '@/components/layout';
+import { StaleRefreshWarning } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { Select } from '@/components/ui';
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -33,6 +34,7 @@ import {
 import { computeChargeAdvice } from '../lib/chargeAdvisor';
 
 const HISTORY_LIMIT = 1_000;
+const CURRENT_STATE_CLOCK_INTERVAL_MS = 60_000;
 
 export default function ChargeAdvisorPage() {
   const { t } = useTranslation();
@@ -56,6 +58,14 @@ export default function ChargeAdvisorPage() {
     previousLiveUpdatedMs.current = liveUpdatedMs;
     setCurrentStateNowMs((previous) => Math.max(previous, Date.now()));
   }, [liveUpdatedMs]);
+  useEffect(() => {
+    if (vehicleId == null) return;
+    // Age retained observations without shifting the historical analysis window.
+    const timer = window.setInterval(() => {
+      setCurrentStateNowMs((previous) => Math.max(previous, Date.now()));
+    }, CURRENT_STATE_CLOCK_INTERVAL_MS);
+    return () => window.clearInterval(timer);
+  }, [vehicleId]);
   const [reserveFloorPct, setReserveFloorPct] = useState(20);
 
   const drives = useMemo(() => drivesQuery.data ?? [], [drivesQuery.data]);
@@ -151,6 +161,20 @@ export default function ChargeAdvisorPage() {
       <FadeIn>
         <ChargeAdvisorKpiBand analysis={analysis} state={state} />
       </FadeIn>
+      {state.vehicleSelected && driveSource.isRefreshBlocked && !driveSource.refreshError && (
+        <StaleRefreshWarning
+          state={driveSource}
+          label={t('chargeAdvisor.accounting.drives', 'Drive rows')}
+          hideRetry={Boolean(state.initialError || state.refreshError)}
+        />
+      )}
+      {state.vehicleSelected && chargingSource.isRefreshBlocked && !chargingSource.refreshError && (
+        <StaleRefreshWarning
+          state={chargingSource}
+          label={t('chargeAdvisor.accounting.charging', 'Charging rows')}
+          hideRetry={Boolean(state.initialError || state.refreshError)}
+        />
+      )}
       <FadeIn delay={0.05}>
         <ChargeAdvisorCurrentState analysis={analysis} state={state} />
       </FadeIn>

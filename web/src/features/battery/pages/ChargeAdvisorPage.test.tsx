@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ToastProvider } from '@/components/feedback';
 import type { ChargingSession } from '@/types/charging';
@@ -110,6 +110,8 @@ interface QueryStub {
   isError: boolean;
   error: unknown;
   refetch: () => void;
+  fetchStatus?: 'fetching' | 'paused' | 'idle';
+  dataUpdatedAt?: number;
 }
 
 function query(
@@ -249,6 +251,10 @@ beforeEach(() => {
     connected: true,
   };
   vi.spyOn(Date, 'now').mockReturnValue(FROZEN_NOW);
+});
+
+afterEach(() => {
+  vi.useRealTimers();
 });
 
 describe('ChargeAdvisorPage', () => {
@@ -520,5 +526,59 @@ describe('ChargeAdvisorPage', () => {
     expectEveryShell();
     expect(screen.queryByText('Already charging')).not.toBeInTheDocument();
     expect(screen.queryByText('Charge limit 80.00%')).not.toBeInTheDocument();
+  });
+
+  it('ages silent disconnected current state without changing the historical calendar or scenario dates', () => {
+    vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'] });
+    h.live.connected = false;
+    const view = renderPage();
+    const current = within(screen.getByTestId('charge-advisor-current'));
+    expect(current.getByText('Fresh')).toBeInTheDocument();
+    expect(screen.queryByText('Current state is stale')).not.toBeInTheDocument();
+
+    vi.mocked(Date.now).mockReturnValue(FROZEN_NOW + 2 * 86_400_000 + 60_000);
+    act(() => vi.advanceTimersByTime(60_000));
+
+    expectEveryShell();
+    expect(current.getByText('Stale')).toBeInTheDocument();
+    expect(current.getByText('80.00%')).toBeInTheDocument();
+    expect(screen.getByText('Current state is stale')).toBeInTheDocument();
+    expect(screen.getByText(/through 2026-06-02/)).toBeInTheDocument();
+    const directory = within(screen.getByTestId('charge-advisor-directory'));
+    expect(directory.getByText('2026-06-03')).toBeInTheDocument();
+    expect(directory.getByText('2026-06-09')).toBeInTheDocument();
+    expect(h.driveRefetch).not.toHaveBeenCalled();
+    expect(h.chargingRefetch).not.toHaveBeenCalled();
+    view.unmount();
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it.each([
+    { source: 'drive', label: 'Drive rows' },
+    { source: 'charging', label: 'Charging rows' },
+  ] as const)('retains all evidence and offers only the paused $source source refresh without an offline claim', ({ source, label }) => {
+    if (source === 'drive') {
+      h.drives = query(readyDrives(), { fetchStatus: 'paused', dataUpdatedAt: FROZEN_NOW }, h.driveRefetch);
+    } else {
+      h.charging = query([chargingAt('2026-05-30')], { fetchStatus: 'paused', dataUpdatedAt: FROZEN_NOW }, h.chargingRefetch);
+    }
+    renderPage();
+
+    expectEveryShell();
+    const warning = screen.getByTestId('stale-refresh-warning');
+    expect(warning).toHaveAttribute('data-refresh-blocked', 'true');
+    expect(within(warning).getByText(`${label} may be out of date`)).toBeInTheDocument();
+    expect(within(warning).getByText('The latest values are temporarily unavailable. Previously loaded data remains visible.')).toBeInTheDocument();
+    expect(within(warning).queryByText(/offline|failed/i)).not.toBeInTheDocument();
+    expect(screen.queryByTestId('charge-advisor-initial-error')).not.toBeInTheDocument();
+    const trend = within(screen.getByTestId('charge-advisor-trend')).getByRole('table', { hidden: true });
+    expect(within(trend).getAllByRole('row', { hidden: true })).toHaveLength(9);
+    const scenarios = within(screen.getByTestId('charge-advisor-scenarios')).getByRole('table', { hidden: true });
+    expect(within(scenarios).getAllByRole('row', { hidden: true })).toHaveLength(8);
+    expect(within(screen.getByTestId('charge-advisor-charging-profile')).getByText('20.0 kWh')).toBeInTheDocument();
+
+    fireEvent.click(within(warning).getByRole('button', { name: 'Refresh', exact: true }));
+    expect(h.driveRefetch).toHaveBeenCalledTimes(source === 'drive' ? 1 : 0);
+    expect(h.chargingRefetch).toHaveBeenCalledTimes(source === 'charging' ? 1 : 0);
   });
 });
