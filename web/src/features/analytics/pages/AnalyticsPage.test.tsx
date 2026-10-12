@@ -286,6 +286,23 @@ describe('AnalyticsPage', () => {
     expect(screen.queryByTestId('analytics-range')).not.toBeInTheDocument();
   });
 
+  it('keeps decorative tab icons hidden and unfocusable without changing the named controls', () => {
+    installFleet();
+
+    renderPage();
+
+    const nav = screen.getByRole('navigation', { name: 'Analytics sections' });
+    for (const name of ['Overview', 'Driving', 'Charging', 'Battery']) {
+      const button = within(nav).getByRole('button', { name });
+      const icon = button.querySelector('svg');
+      expect(button).toHaveAccessibleName(name);
+      expect(icon).toHaveAttribute('aria-hidden', 'true');
+      expect(icon).toHaveAttribute('focusable', 'false');
+      expect(icon).toHaveClass('h-4', 'w-4', 'shrink-0');
+      expect(icon).toHaveAttribute('stroke-width', '2');
+    }
+  });
+
   it('scopes the fleet request to the URL range with snake_case calendar-date params (no /api/v1)', async () => {
     installFleet();
 

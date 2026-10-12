@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Car, Zap, BarChart3, Battery } from 'lucide-react';
 import { PageLayout } from '@/components/layout';
+import { Icon } from '@/components/ui';
 import { useRangeState } from '@/hooks/useRangeState';
 import { useFleetAnalytics } from '@/api/hooks/useAnalytics';
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -27,10 +28,10 @@ export default function AnalyticsPage() {
 
   const tabs = useMemo(
     () => [
-      { key: 'overview' as const, label: t('analytics.tabs.overview', 'Overview'), icon: <BarChart3 className="h-4 w-4" /> },
-      { key: 'driving' as const, label: t('analytics.tabs.driving', 'Driving'), icon: <Car className="h-4 w-4" /> },
-      { key: 'charging' as const, label: t('analytics.tabs.charging', 'Charging'), icon: <Zap className="h-4 w-4" /> },
-      { key: 'battery' as const, label: t('analytics.tabs.battery', 'Battery'), icon: <Battery className="h-4 w-4" /> },
+      { key: 'overview' as const, label: t('analytics.tabs.overview', 'Overview'), icon: <Icon icon={BarChart3} aria-hidden /> },
+      { key: 'driving' as const, label: t('analytics.tabs.driving', 'Driving'), icon: <Icon icon={Car} aria-hidden /> },
+      { key: 'charging' as const, label: t('analytics.tabs.charging', 'Charging'), icon: <Icon icon={Zap} aria-hidden /> },
+      { key: 'battery' as const, label: t('analytics.tabs.battery', 'Battery'), icon: <Icon icon={Battery} aria-hidden /> },
     ],
     [t],
   );
