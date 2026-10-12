@@ -428,6 +428,23 @@ describe('GeofencesPage — KPI band', () => {
     expect(kpiValue('Awaiting review')).toBe('—');
     await waitFor(() => expect(kpiValue('Visited candidates')).toBe('0'));
   });
+
+  it('retains saved counts and the independent directory after a summary refresh fails', async () => {
+    renderPage();
+    await zones().findByText('Home');
+    await waitFor(() => expect(kpiValue('Total geofences')).toBe('3'));
+    store.mode = 'reject';
+    store.error = new Error('refresh unavailable');
+
+    fireEvent.click(within(screen.getByRole('group', { name: 'Actions' })).getByRole('button', { name: 'Refresh' }));
+
+    await screen.findByText('Cached · refresh failed');
+    expect(kpiValue('Total geofences')).toBe('3');
+    expect(kpiValue('Reviewed places')).toBe('2');
+    expect(kpiValue('Awaiting review')).toBe('1');
+    expect(zones().getByText('Home')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Add geofence' })).toBeInTheDocument();
+  });
 });
 
 // ── Zones panel states ───────────────────────────────────────────────────────
@@ -585,6 +602,24 @@ describe('GeofencesPage — bulk selection', () => {
 
 // ── Create modal ─────────────────────────────────────────────────────────────
 describe('GeofencesPage — create modal', () => {
+  it('keeps create and cancel actions outside the scrolling form body', async () => {
+    renderPage();
+    await zones().findByText('Home');
+    const dialog = await openCreateModal();
+    const create = within(dialog).getByRole('button', { name: 'Create' });
+    const cancel = within(dialog).getByRole('button', { name: 'Cancel' });
+    const footer = create.closest('[data-modal-footer]');
+
+    expect(footer).not.toBeNull();
+    expect(cancel.closest('[data-modal-footer]')).toBe(footer);
+    expect(create.closest('[data-modal-scroll-body]')).toBeNull();
+    expect(cancel.closest('[data-modal-scroll-body]')).toBeNull();
+    expect(create).toHaveClass('min-h-11');
+    expect(cancel).toHaveClass('min-h-11');
+    expect(create).toBeDisabled();
+    expect(within(dialog).getByLabelText('Name').closest('[data-modal-scroll-body]')).not.toBeNull();
+  });
+
   it('blocks submit and surfaces field errors for an out-of-range latitude', async () => {
     renderPage();
     await zones().findByText('Home');
@@ -717,6 +752,39 @@ describe('GeofencesPage — create modal', () => {
     );
   });
 
+  it('links location tabs to their panels without requesting browser location before explicit capture', async () => {
+    const getCurrentPosition = vi.fn<Geolocation['getCurrentPosition']>();
+    installGeolocation(getCurrentPosition);
+    renderPage();
+    await zones().findByText('Home');
+    expect(getCurrentPosition).not.toHaveBeenCalled();
+    const dialog = await openCreateModal();
+    const tabs = within(dialog).getByRole('tablist', { name: 'Use current location' });
+    const vehicleTab = within(tabs).getByRole('tab', { name: 'Vehicle' });
+    const browserTab = within(tabs).getByRole('tab', { name: 'Browser' });
+    expect(within(dialog).getByRole('tabpanel', { name: 'Vehicle' }).id).toBe(
+      vehicleTab.getAttribute('aria-controls'),
+    );
+
+    fireEvent.click(browserTab);
+
+    const browserPanel = within(dialog).getByRole('tabpanel', { name: 'Browser' });
+    expect(browserPanel.id).toBe(browserTab.getAttribute('aria-controls'));
+    expect(browserPanel).toHaveAttribute('aria-labelledby', browserTab.id);
+    expect(browserTab).toHaveAttribute('aria-selected', 'true');
+    expect(getCurrentPosition).not.toHaveBeenCalled();
+    expect(callsMatching('GET', (url) => url.includes('/positions'))).toHaveLength(0);
+    expect(callsMatching('GET', (url) => url.startsWith('/geocode/reverse'))).toHaveLength(0);
+
+    fireEvent.click(within(browserPanel).getByRole('button', { name: 'Get location' }));
+
+    expect(getCurrentPosition).toHaveBeenCalledTimes(1);
+    expect(getCurrentPosition.mock.calls[0][2]).toEqual({
+      enableHighAccuracy: true,
+      timeout: 10000,
+    });
+  });
+
   it('copies a map-drawn circle into the latitude/longitude/radius fields', async () => {
     renderPage();
     await zones().findByText('Home');
@@ -730,6 +798,26 @@ describe('GeofencesPage — create modal', () => {
     );
     expect((within(dialog).getByLabelText('Longitude') as HTMLInputElement).value).toBe('2.5');
     expect((within(dialog).getByLabelText('Radius (meters)') as HTMLInputElement).value).toBe('123');
+  });
+
+  it('keeps the shared drawing map in a theme-aware frame with numeric geometry alternatives', async () => {
+    renderPage();
+    await zones().findByText('Home');
+    const dialog = await openCreateModal();
+    fireEvent.click(within(dialog).getByRole('tab', { name: 'Draw on map' }));
+    const panel = within(dialog).getByRole('tabpanel', { name: 'Draw on map' });
+    const map = within(panel).getByRole('application', { name: 'Geofence drawing map' });
+
+    expect(map).toHaveClass('h-64', 'rounded-panel', 'border-[var(--border-default)]');
+    expect(map).not.toHaveClass('border-white/[0.08]');
+    expect(within(map).getByTestId('map-container')).toBeInTheDocument();
+    expect(within(map).getByTestId('map-tile')).toBeInTheDocument();
+    expect(within(map).getByTestId('geofence-drawer-create')).toBeInTheDocument();
+    expect(within(dialog).getByLabelText('Latitude')).toBeInTheDocument();
+    expect(within(dialog).getByLabelText('Longitude')).toBeInTheDocument();
+    expect(within(dialog).getByLabelText('Radius (meters)')).toHaveValue(100);
+    expect(within(dialog).getByRole('button', { name: 'Create' })).toBeDisabled();
+    expect(callsMatching('POST', (url) => url === '/geofences')).toHaveLength(0);
   });
 });
 

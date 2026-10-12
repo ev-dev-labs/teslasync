@@ -8,7 +8,7 @@
  * location capture.
  */
 
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useId } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import {
@@ -21,11 +21,10 @@ import { FormSection } from '@/components/forms';
 import { deriveDataState } from '@/api/dataState';
 import {
   GlassPanel, Button, Input, Select, Modal, Toggle, ConfirmDialog,
-  Tabs, PanelTitle, Caption, HelperText,
+  Tabs, PanelTitle, Caption, HelperText, Icon,
 } from '@/components/ui';
-import { AlertBanner } from '@/components/feedback';
+import { AlertBanner, useToast } from '@/components/feedback';
 import { MapsOperationalBrief } from '../components/operationalbrief-all/MapsOperationalBrief';
-import { useToast } from '@/components/feedback/Toast';
 import { FadeIn } from '@/components/motion';
 import { useDirtyForm } from '@/hooks/useDirtyForm';
 import { useConfirm } from '@/hooks/useConfirm';
@@ -120,6 +119,7 @@ export default function GeofencesPage() {
   usePageTitle(t('geofences.title', 'Geofences'));
   const queryClient = useQueryClient();
   const toast = useToast();
+  const locationTabsId = useId();
 
   // The Helix draft assistant is an AI surface — gate the whole section
   // (input + card) on the feature flag so nothing leaks into the DOM in
@@ -535,15 +535,22 @@ export default function GeofencesPage() {
           variant="ghost"
           onClick={() => geofencesQuery.refetch()}
           aria-label={t('common.refresh', 'Refresh')}
+          className="min-h-11 min-w-11 md:min-h-0 md:min-w-0"
         >
-          <RefreshCw
-            className={cn('h-4 w-4', geofencesQuery.isFetching && 'animate-spin')}
-            aria-hidden="true"
+          <Icon
+            icon={RefreshCw}
+            className={cn(geofencesQuery.isFetching && 'animate-spin')}
           />
         </Button>
       }
       primaryAction={
-        <Button variant="primary" icon={<Plus className="h-4 w-4" aria-hidden="true" />} onClick={openCreate}>
+        <Button
+          variant="primary"
+          icon={<Icon icon={Plus} />}
+          onClick={openCreate}
+          className="min-h-11 md:min-h-0"
+          wrapLabel
+        >
           {t('geofences.addGeofence', 'Add geofence')}
         </Button>
       }
@@ -630,6 +637,30 @@ export default function GeofencesPage() {
         onClose={handleRequestClose}
         title={editingId ? t('geofences.editTitle', 'Edit geofence') : t('geofences.createTitle', 'Create geofence')}
         size="md"
+        footer={
+          <div className="flex flex-wrap justify-end gap-3">
+            <Button
+              variant="secondary"
+              onClick={handleRequestClose}
+              icon={<Icon icon={X} />}
+              className="min-h-11 md:min-h-0"
+              wrapLabel
+            >
+              {t('common.cancel', 'Cancel')}
+            </Button>
+            <Button
+              variant="primary"
+              onClick={handleSubmit}
+              disabled={!hasMinimalInput || isSaving}
+              loading={isSaving}
+              icon={<Icon icon={Check} />}
+              className="min-h-11 md:min-h-0"
+              wrapLabel
+            >
+              {editingId ? t('common.update', 'Update') : t('common.create', 'Create')}
+            </Button>
+          </div>
+        }
       >
         <div className="space-y-4">
           {formError && (
@@ -641,14 +672,22 @@ export default function GeofencesPage() {
 
               <Tabs
                 tabs={[
-                  { key: 'vehicle', label: `🚗 ${t('geofences.vehicle', 'Vehicle')}` },
-                  { key: 'browser', label: `📱 ${t('geofences.browser', 'Browser')}` },
-                  { key: 'map', label: `🗺️ ${t('geofences.drawOnMap', 'Draw on map')}` },
+                  { key: 'vehicle', label: t('geofences.vehicle', 'Vehicle') },
+                  { key: 'browser', label: t('geofences.browser', 'Browser') },
+                  { key: 'map', label: t('geofences.drawOnMap', 'Draw on map') },
                 ]}
                 activeTab={locationSource}
                 onChange={(key) => setLocationSource(key as LocationSource)}
+                idBase={locationTabsId}
+                ariaLabel={t('geofences.useCurrentLocation', 'Use current location')}
               />
 
+              <div
+                id={`${locationTabsId}-panel-${locationSource}`}
+                role="tabpanel"
+                aria-labelledby={`${locationTabsId}-tab-${locationSource}`}
+                className="min-w-0 space-y-3"
+              >
               {locationSource === 'vehicle' && (
                 <Select
                   label={t('geofences.selectVehicle', 'Select vehicle')}
@@ -681,7 +720,7 @@ export default function GeofencesPage() {
                     )}
                   </HelperText>
                   <div
-                    className="h-64 w-full overflow-hidden rounded-lg border border-white/[0.08]"
+                    className="h-64 w-full overflow-hidden rounded-panel border border-[var(--border-default)]"
                     role="application"
                     aria-label={t('geofences.drawerLabel', 'Geofence drawing map')}
                   >
@@ -705,16 +744,19 @@ export default function GeofencesPage() {
                 <Button
                   variant="secondary"
                   size="sm"
-                  icon={<Navigation className="h-4 w-4" aria-hidden="true" />}
+                  icon={<Icon icon={Navigation} />}
                   onClick={handleGetLocation}
                   disabled={locationLoading || (locationSource === 'vehicle' && selectedVehicleId <= 0)}
                   loading={locationLoading}
+                  className="min-h-11 md:min-h-0"
+                  wrapLabel
                 >
                   {locationLoading
                     ? t('geofences.gettingLocation', 'Getting location…')
                     : t('geofences.getLocation', 'Get location')}
                 </Button>
               )}
+              </div>
             </FormSection>
           )}
           <Input
@@ -745,7 +787,7 @@ export default function GeofencesPage() {
               value={form.latitude}
               onChange={(e) => setForm({ ...form, latitude: e.target.value })}
               placeholder="37.7749"
-              icon={<Globe className="h-4 w-4" aria-hidden="true" />}
+              icon={<Icon icon={Globe} />}
               error={fieldErrors.latitude}
             />
             <Input
@@ -755,7 +797,7 @@ export default function GeofencesPage() {
               value={form.longitude}
               onChange={(e) => setForm({ ...form, longitude: e.target.value })}
               placeholder="-122.4194"
-              icon={<Globe className="h-4 w-4" aria-hidden="true" />}
+              icon={<Icon icon={Globe} />}
               error={fieldErrors.longitude}
             />
           </div>
@@ -766,7 +808,7 @@ export default function GeofencesPage() {
             value={form.radius}
             onChange={(e) => setForm({ ...form, radius: e.target.value })}
             placeholder="100"
-            icon={<Ruler className="h-4 w-4" aria-hidden="true" />}
+            icon={<Icon icon={Ruler} />}
             hint={t('geofences.radiusHint', 'Minimum 10m, maximum 50000m')}
             error={fieldErrors.radius}
           />
@@ -798,20 +840,6 @@ export default function GeofencesPage() {
             />
           )}
 
-          <div className="flex justify-end gap-3 pt-2">
-            <Button variant="secondary" onClick={handleRequestClose} icon={<X className="h-4 w-4" aria-hidden="true" />}>
-              {t('common.cancel', 'Cancel')}
-            </Button>
-            <Button
-              variant="primary"
-              onClick={handleSubmit}
-              disabled={!hasMinimalInput || isSaving}
-              loading={isSaving}
-              icon={<Check className="h-4 w-4" aria-hidden="true" />}
-            >
-              {editingId ? t('common.update', 'Update') : t('common.create', 'Create')}
-            </Button>
-          </div>
         </div>
       </Modal>
 
