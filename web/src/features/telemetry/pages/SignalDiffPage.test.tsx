@@ -34,6 +34,7 @@ import english from '@/i18n/en.json';
 import { ToastProvider } from '@/components/feedback/Toast';
 import { downloadCSV, objectsToCSV } from '@/lib/csvExport';
 import type { SignalDiffRow, SignalDiffServerResponse } from '@/api/hooks/useTelemetry';
+import { typography } from '@/lib/tokens';
 
 // ── Hoisted, per-test controllable state ─────────────────────────────
 const h = vi.hoisted(() => ({
@@ -47,6 +48,7 @@ const mockNavigate = vi.fn();
 const mockRefetch = vi.fn();
 const mockToggleMutateAsync = vi.fn();
 const diffArgs = vi.fn();
+const diffTableRows = vi.fn();
 
 vi.mock('react-i18next', async () => {
   const actual = await vi.importActual<typeof import('react-i18next')>('react-i18next');
@@ -145,21 +147,24 @@ vi.mock('../components/SignalDiffTable', () => ({
     filterActive?: boolean;
     selectedSignals: string[];
     onSelectionChange: (s: string[]) => void;
-  }) => (
-    <div
-      data-testid="signal-diff-table"
-      data-rows={props.rows.length}
-      data-filter-active={String(Boolean(props.filterActive))}
-      data-selected={props.selectedSignals.join(',')}
-    >
-      <button type="button" onClick={() => props.onSelectionChange(['battery_level'])}>
-        stub-select-one
-      </button>
-      <button type="button" onClick={() => props.onSelectionChange(['battery_level', 'vehicle_speed'])}>
-        stub-select-two
-      </button>
-    </div>
-  ),
+  }) => {
+    diffTableRows(props.rows);
+    return (
+      <div
+        data-testid="signal-diff-table"
+        data-rows={props.rows.length}
+        data-filter-active={String(Boolean(props.filterActive))}
+        data-selected={props.selectedSignals.join(',')}
+      >
+        <button type="button" onClick={() => props.onSelectionChange(['battery_level'])}>
+          stub-select-one
+        </button>
+        <button type="button" onClick={() => props.onSelectionChange(['battery_level', 'vehicle_speed'])}>
+          stub-select-two
+        </button>
+      </div>
+    );
+  },
 }));
 
 vi.mock('../components/SignalDiffBreakdown', () => ({
@@ -281,6 +286,59 @@ afterEach(() => {
 /* ── Page render ─────────────────────────────────────────────────── */
 
 describe('SignalDiffPage', () => {
+  it('uses neutral shared decorative icons without changing comparison actions', () => {
+    renderPage();
+    const heading = screen.getByRole('heading', { name: /^Signal differences/ });
+    const icon = heading.querySelector('svg');
+    expect(icon).toHaveClass(typography.color.muted);
+    expect(icon).not.toHaveClass('text-cyan-300');
+    expect(icon).toHaveAttribute('aria-hidden', 'true');
+    expect(icon).toHaveAttribute('focusable', 'false');
+
+    fireEvent.click(screen.getByRole('button', { name: 'stub-select-two' }));
+    for (const action of ['Pin selected', 'Unpin selected', 'Add as alert rule']) {
+      expect(screen.getByRole('button', { name: action }).querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
+    }
+  });
+
+  it.each([
+    { caseName: 'unresolved response', route: ROUTE, noVehicles: false },
+    { caseName: 'missing vehicle', route: '/signal-diff?a=2024-01-01T00:00&b=2024-01-01T01:00', noVehicles: true },
+    { caseName: 'invalid snapshot', route: '/signal-diff?vehicle=7&a=invalid&b=2024-01-01T01:00', noVehicles: false },
+  ])('keeps $caseName unknown instead of asserting no changes', ({ route, noVehicles }) => {
+    h.diff = makeQuery();
+    if (noVehicles) h.vehicles = [];
+    renderPage(route);
+    expect(screen.getByText('Unknown')).toBeInTheDocument();
+    expect(screen.queryByText('No signals changed between the two snapshots')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('signal-diff-table')).not.toBeInTheDocument();
+    expect(kpiValueText('Changed signals')).toBe('—');
+    expect(kpiValueText('Pinned')).toBe('1');
+    expect(screen.getByTestId('signal-diff-breakdown')).toBeInTheDocument();
+    expect(screen.getByRole('combobox', { name: 'Vehicle' })).toBeInTheDocument();
+  });
+
+  it('forwards raw values, nulls, types and source ages unchanged to the detail table', () => {
+    const rawRows: SignalDiffRow[] = [
+      { name: 'vehicle_speed', value_a: 0, value_b: 13.75, source_a: 'log', source_b: 'stale', age_ms_a: 1500, age_ms_b: 180000, changed: true },
+      { name: 'battery_level', value_a: null, value_b: ' 0 ', source_a: undefined, source_b: 'l2', changed: true },
+      { name: 'climate_keeper_mode', value_a: false, value_b: { mode: 'On' }, source_a: 'l1', source_b: 'log', changed: true },
+    ];
+    h.diff = makeQuery({ data: diffResponse(rawRows) });
+    renderPage();
+    expect(diffTableRows.mock.calls.at(-1)?.[0]).toBe(rawRows);
+    expect(diffTableRows.mock.calls.at(-1)?.[0]).toEqual([
+      { name: 'vehicle_speed', value_a: 0, value_b: 13.75, source_a: 'log', source_b: 'stale', age_ms_a: 1500, age_ms_b: 180000, changed: true },
+      { name: 'battery_level', value_a: null, value_b: ' 0 ', source_a: undefined, source_b: 'l2', changed: true },
+      { name: 'climate_keeper_mode', value_a: false, value_b: { mode: 'On' }, source_a: 'l1', source_b: 'log', changed: true },
+    ]);
+    expect(diffArgs.mock.calls.at(-1)?.[0]).toMatchObject({
+      vehicleId: 7,
+      signalsCsv: 'battery_level,vehicle_speed,charge_state,climate_keeper_mode',
+      options: { enabled: true },
+    });
+  });
+
   it('keeps retained diff metrics, breakdown and rows through refresh failure', () => {
     h.diff = makeQuery({ data: diffResponse(ROWS), isError: true, error: new Error('refresh failed') });
     renderPage();

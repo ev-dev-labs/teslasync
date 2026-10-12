@@ -16,7 +16,7 @@ import { useNavigate } from 'react-router-dom';
 import { GitCompare, Bell, Pin, PinOff } from 'lucide-react';
 
 import { PageLayout } from '@/components/layout';
-import { GlassPanel, Select, CopyButton, PanelTitle, Text, HelpTooltip } from '@/components/ui';
+import { GlassPanel, Select, CopyButton, PanelTitle, Text, HelpTooltip, Icon } from '@/components/ui';
 import { BulkActionsToolbar, SavedViewMenu, type BulkAction, type StatMetric } from '@/components/data-display';
 import { TelemetrySummaryBrief } from '../components/operationalbrief-all/TelemetrySummaryBrief';
 import { Skeleton, EmptyState, QueryError, StaleRefreshWarning } from '@/components/feedback';
@@ -33,6 +33,7 @@ import { useDataState } from '@/hooks/useDataState';
 import { useSavedViewUrl } from '@/hooks/useSavedViewUrl';
 import { useUrlNumber, useUrlString } from '@/hooks/useUrlState';
 import { downloadCSV, objectsToCSV } from '@/lib/csvExport';
+import { typography } from '@/lib/tokens';
 
 import { SignalDiffTable } from '../components/SignalDiffTable';
 import { SignalDiffBreakdown } from '../components/SignalDiffBreakdown';
@@ -193,7 +194,7 @@ export default function SignalDiffPage() {
       {
         id: 'pin',
         label: t('signalDiff.bulk.pin', 'Pin selected'),
-        icon: <Pin className="h-3.5 w-3.5" />,
+        icon: <Icon icon={Pin} size="sm" />,
         onClick: async (ids) => {
           for (const id of ids) {
             const name = String(id);
@@ -205,7 +206,7 @@ export default function SignalDiffPage() {
       {
         id: 'unpin',
         label: t('signalDiff.bulk.unpin', 'Unpin selected'),
-        icon: <PinOff className="h-3.5 w-3.5" />,
+        icon: <Icon icon={PinOff} size="sm" />,
         onClick: async (ids) => {
           for (const id of ids) {
             const name = String(id);
@@ -235,7 +236,7 @@ export default function SignalDiffPage() {
       {
         id: 'alert',
         label: t('signalDiff.bulk.addAlert', 'Add as alert rule'),
-        icon: <Bell className="h-3.5 w-3.5" />,
+        icon: <Icon icon={Bell} size="sm" />,
         onClick: async (ids) => {
           const csv = ids.map(String).join(',');
           navigate(`/alert-studio?signals=${encodeURIComponent(csv)}&from=signal-diff`);
@@ -365,7 +366,7 @@ export default function SignalDiffPage() {
       <FadeIn delay={0.2}>
         <GlassPanel className="p-4 sm:p-5">
           <PanelTitle className="mb-3 flex items-center gap-2">
-            <GitCompare className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+            <Icon icon={GitCompare} className={typography.color.muted} />
             {t('signalDiff.tableTitle', 'Signal differences')}
             <HelpTooltip
               i18nKey="help.signal.diff"
@@ -379,10 +380,12 @@ export default function SignalDiffPage() {
             <div className="space-y-2">
               {Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} height={36} />)}
             </div>
-          ) : allRows.length === 0 && !filterActive && atAIso && atBIso ? (
+          ) : diffResp == null || vehicleId <= 0 || !atAIso || !atBIso ? (
+            <Text color="muted">{t('common.unknown', 'Unknown')}</Text>
+          ) : allRows.length === 0 && !filterActive ? (
             // no-action: this branch is explicitly gated on !filterActive — filters are confirmed off, so it is genuinely zero diffs, not a filtered-away result.
             <EmptyState
-              icon={<GitCompare className="h-10 w-10" aria-hidden="true" />}
+              icon={<Icon icon={GitCompare} className="h-10 w-10" />}
               message={t('signalDiff.noChanges', 'No signals changed between the two snapshots')}
             />
           ) : (
