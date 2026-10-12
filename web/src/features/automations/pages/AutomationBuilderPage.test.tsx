@@ -29,6 +29,8 @@ import type {
   AutomationTriggerStep,
 } from '@/api/types';
 import type { AutomationFullInput } from '@/api/hooks/useAutomations';
+import type { DataStateSource } from '@/api/dataState';
+import { neonColorMap, typography } from '@/lib/tokens';
 
 // ── Shared, hoisted mock state (created before any vi.mock factory runs). ──
 const H = vi.hoisted(() => ({
@@ -37,8 +39,10 @@ const H = vi.hoisted(() => ({
     isLoading: boolean;
     error: unknown;
   },
-  presetState: { data: undefined } as { data: unknown },
-  vehicles: [] as unknown[],
+  presetState: { data: undefined } as DataStateSource<unknown>,
+  vehicles: [] as unknown[] | undefined,
+  vehiclesQueryState: {} as Omit<DataStateSource<unknown[]>, 'data'>,
+  channelsState: { data: [], isLoading: false, error: null } as DataStateSource<unknown[]>,
   createMutateAsync: vi.fn(),
   updateMutateAsync: vi.fn(),
   testRunMutate: vi.fn(),
@@ -233,14 +237,14 @@ vi.mock('@/api/hooks/useAutomations', async (importOriginal) => {
 
 vi.mock('@/api/hooks/useVehicles', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/api/hooks/useVehicles')>();
-  return { ...actual, useVehicles: () => ({ data: H.vehicles }) };
+  return { ...actual, useVehicles: () => ({ data: H.vehicles, ...H.vehiclesQueryState }) };
 });
 
 vi.mock('@/api/hooks/useNotifications', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/api/hooks/useNotifications')>();
   return {
     ...actual,
-    useNotificationChannels: () => ({ data: [], isLoading: false, error: null }),
+    useNotificationChannels: () => H.channelsState,
   };
 });
 
@@ -297,6 +301,8 @@ beforeEach(() => {
   H.automationState = { data: undefined, isLoading: false, error: null };
   H.presetState = { data: undefined };
   H.vehicles = [];
+  H.vehiclesQueryState = {};
+  H.channelsState = { data: [], isLoading: false, error: null };
   window.localStorage.clear();
   __resetEditLeasesForTests();
 });
@@ -637,6 +643,51 @@ describe('AutomationBuilderPage — create mode', () => {
 
     expect(await screen.findByText('Name is required')).toBeInTheDocument();
     expect(H.createMutateAsync).not.toHaveBeenCalled();
+    const name = screen.getByRole('textbox', { name: 'Name required' });
+    expect(name).toHaveFocus();
+    expect(name).toHaveAttribute('aria-invalid', 'true');
+    const feedbackId = name.getAttribute('aria-describedby');
+    expect(feedbackId).toBeTruthy();
+    expect(document.getElementById(feedbackId!)).toHaveTextContent('Name is required');
+    expect(screen.getByRole('combobox', { name: 'Trigger type' }))
+      .not.toHaveAttribute('aria-describedby', feedbackId);
+  });
+
+  it('focuses the missing trigger control and associates its validation feedback', async () => {
+    const { container } = renderPage();
+    fireEvent.change(screen.getByRole('textbox', { name: 'Name required' }), {
+      target: { value: 'Named draft' },
+    });
+    fireEvent.submit(container.querySelector('form')!);
+    expect(await screen.findByText('Trigger type is required')).toBeInTheDocument();
+    const trigger = screen.getByRole('combobox', { name: 'Trigger type' });
+    expect(trigger).toHaveFocus();
+    expect(trigger).toHaveAttribute('aria-invalid', 'true');
+    expect(document.getElementById(trigger.getAttribute('aria-describedby')!))
+      .toHaveTextContent('Trigger type is required');
+    expect(H.createMutateAsync).not.toHaveBeenCalled();
+  });
+
+  it('uses semantic readiness roles and explains an incomplete geofence condition', async () => {
+    H.automationState = {
+      data: { ...EDIT_AUTOMATION, conditions: [{ kind: 'condition_geofence', place_id: 0, state: 'inside' }] },
+      isLoading: false,
+      error: null,
+    };
+    renderPage('/automations/5/edit');
+    await screen.findByDisplayValue('Existing One');
+    const assistant = screen.getByRole('complementary', { name: 'Builder assistant' });
+    const rows = within(assistant).getAllByRole('listitem');
+    expect(rows).toHaveLength(4);
+    expect(rows[0]).toHaveTextContent('Name addedcomplete');
+    expect(rows[1]).toHaveTextContent('Trigger configuredcomplete');
+    expect(rows[2]).toHaveTextContent('Conditionsincomplete');
+    expect(rows[3]).toHaveTextContent('At least one actioncomplete');
+    expect(rows[0].querySelector('svg')).toHaveClass(neonColorMap.green.text);
+    expect(rows[2].querySelector('svg')).toHaveClass(typography.color.muted);
+    expect(within(assistant).getByText('Select a geofence for each geofence condition')).toBeInTheDocument();
+    expect(screen.getAllByText('Not ready yet')).toHaveLength(2);
+    expect(H.updateMutateAsync).not.toHaveBeenCalled();
   });
 
   it('reviews the actual draft summary while retaining labelled editors and proposal-only behavior', () => {
@@ -659,6 +710,113 @@ describe('AutomationBuilderPage — create mode', () => {
     expect(H.createMutateAsync).not.toHaveBeenCalled();
     expect(H.updateMutateAsync).not.toHaveBeenCalled();
     expect(H.testRunMutate).not.toHaveBeenCalled();
+  });
+
+  describe('AutomationBuilderPage — independent source trust', () => {
+    it('shows unresolved auxiliary reads without claiming empty configuration or hiding editors', () => {
+      H.vehicles = undefined;
+      H.vehiclesQueryState = { isPending: true, isLoading: true };
+      H.channelsState = { data: undefined, isPending: true, isLoading: true };
+      renderPage();
+      expect(screen.getByRole('status', { name: 'Loading Vehicle registry' })).toBeInTheDocument();
+      expect(screen.getByRole('status', { name: 'Loading Notification channels' })).toBeInTheDocument();
+      expect(screen.queryByText('No vehicles yet')).not.toBeInTheDocument();
+      expect(screen.queryByText('No channels configured')).not.toBeInTheDocument();
+      expect(screen.getByRole('combobox', { name: 'Vehicle' })).toHaveValue('');
+      expect(screen.getByTestId('condition-builder')).toBeInTheDocument();
+      expect(screen.getByTestId('action-builder')).toHaveTextContent('actions:1');
+    });
+
+    it('keeps the saved business target and graph while auxiliary failures expose independent retries', async () => {
+      const retryVehicles = vi.fn();
+      const retryChannels = vi.fn();
+      H.automationState = { data: { ...EDIT_AUTOMATION, vehicle_id: 7 }, isLoading: false, error: null };
+      H.vehicles = undefined;
+      H.vehiclesQueryState = { error: new Error('Vehicle read failed'), refetch: retryVehicles };
+      H.channelsState = { data: undefined, error: new Error('Channel read failed'), refetch: retryChannels };
+      renderPage('/automations/5/edit');
+      await screen.findByDisplayValue('Existing One');
+      const target = screen.getByRole('combobox', { name: 'Vehicle' });
+      expect(target).toHaveValue('7');
+      expect(within(target).getByRole('option', { name: 'Vehicle 7' })).toBeInTheDocument();
+      expect(screen.getByTestId('trigger-configurator')).toHaveTextContent('tc:trigger_event');
+      expect(screen.getByTestId('action-builder')).toHaveTextContent('actions:1');
+      const retries = screen.getAllByRole('button', { name: /^retry$/i });
+      expect(retries).toHaveLength(2);
+      fireEvent.click(retries[0]);
+      expect(retryVehicles).toHaveBeenCalledOnce();
+      expect(retryChannels).not.toHaveBeenCalled();
+      fireEvent.click(retries[1]);
+      expect(retryChannels).toHaveBeenCalledOnce();
+      expect(H.updateMutateAsync).not.toHaveBeenCalled();
+    });
+
+    it('retains auxiliary options and local draft edits during paused or failed refreshes', () => {
+      H.vehicles = [{ id: 7, display_name: 'Test vehicle' }];
+      H.vehiclesQueryState = { fetchStatus: 'paused' };
+      H.channelsState = { data: [{ id: 2, name: 'Test channel' }], error: new Error('Refresh failed') };
+      renderPage();
+      fireEvent.change(screen.getByRole('textbox', { name: 'Name required' }), {
+        target: { value: 'Unpublished draft' },
+      });
+      expect(screen.getAllByTestId('stale-refresh-warning')).toHaveLength(2);
+      expect(screen.getByRole('option', { name: 'Test vehicle' })).toBeInTheDocument();
+      expect(screen.getByDisplayValue('Unpublished draft')).toBeInTheDocument();
+      expect(screen.getByTestId('action-builder')).toHaveTextContent('actions:1');
+      expect(H.createMutateAsync).not.toHaveBeenCalled();
+    });
+
+    it('distinguishes authoritatively empty auxiliary lists from failures', () => {
+      renderPage();
+      expect(screen.getByText('No vehicles yet')).toBeInTheDocument();
+      expect(screen.getByText('No channels configured')).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /^retry$/i })).not.toBeInTheDocument();
+      expect(screen.getByRole('combobox', { name: 'Vehicle' })).toHaveValue('');
+      expect(screen.getByTestId('action-builder')).toHaveTextContent('actions:1');
+    });
+
+    it.each([
+      { name: 'loading', query: { data: undefined, isPending: true, isLoading: true }, expected: 'Loading Automation presets' },
+      { name: 'failed', query: { data: undefined, error: new Error('Preset read failed') }, expected: 'Failed to load data' },
+      { name: 'empty', query: { data: undefined, isSuccess: true }, expected: 'No preset templates available' },
+    ])('keeps the editor visible and prevents blank preset publishing when $name', ({ query, expected }) => {
+      H.presetState = query;
+      const { container } = renderPage('/automations/new?preset=test-preset');
+      if ('isLoading' in query && query.isLoading) {
+        expect(screen.getByRole('status', { name: expected })).toBeInTheDocument();
+      } else {
+        expect(screen.getByText(expected)).toBeInTheDocument();
+      }
+      expect(screen.getByRole('textbox', { name: 'Name required' })).toBeInTheDocument();
+      expect(screen.getByTestId('condition-builder')).toBeInTheDocument();
+      expect(screen.getByTestId('action-builder')).toHaveTextContent('actions:1');
+      expect(screen.getByRole('button', { name: /^create$/i })).toBeDisabled();
+      fireEvent.submit(container.querySelector('form')!);
+      expect(H.createMutateAsync).not.toHaveBeenCalled();
+    });
+
+    it('hydrates the complete preset and retains unsaved edits through preset refresh failure', async () => {
+      const preset = {
+        name: 'Preset draft',
+        description: 'Typed preset',
+        triggers: [{ kind: 'trigger_event', event_type: 'online' }],
+        conditions: [{ kind: 'condition_time_window', start_time: '08:00', end_time: '09:00', timezone: 'UTC', days_of_week: [1] }],
+        actions: [{ kind: 'action_command', command_name: 'climate_on' }, { kind: 'action_wait', duration_s: 30 }],
+      };
+      H.presetState = { data: preset };
+      const { refresh } = renderPage('/automations/new?preset=test-preset');
+      const name = await screen.findByDisplayValue('Preset draft');
+      expect(screen.getByTestId('condition-builder')).toHaveTextContent('conditions:1');
+      expect(screen.getByTestId('action-builder')).toHaveTextContent('actions:2');
+      expect(screen.getByRole('button', { name: /^create$/i })).toBeEnabled();
+      fireEvent.change(name, { target: { value: 'Edited preset draft' } });
+      H.presetState = { data: preset, error: new Error('Refresh failed') };
+      refresh();
+      expect(screen.getByDisplayValue('Edited preset draft')).toBeInTheDocument();
+      expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /^create$/i })).toBeEnabled();
+      expect(H.createMutateAsync).not.toHaveBeenCalled();
+    });
   });
 
   it('creates the automation with a normalized payload and navigates to the list', async () => {

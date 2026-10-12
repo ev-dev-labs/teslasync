@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
@@ -12,10 +12,11 @@ import {
   X,
   Zap,
 } from 'lucide-react';
-import { PageLayout } from '@/components/layout';
+import { PageLayout, SourceContent } from '@/components/layout';
 import {
   Badge,
   GlassPanel,
+  Icon,
   Input as UiInput,
   PanelTitle,
   Select as UiSelect,
@@ -83,6 +84,7 @@ import type {
   AutomationTriggerStepInput,
 } from '../components/stepInputTypes';
 import { VisuallyHidden } from '@/components/a11y';
+import { neonColorMap, typography } from '@/lib/tokens';
 
 interface FormState {
   name: string;
@@ -333,9 +335,15 @@ export default function AutomationBuilderPage() {
     isLoading: isLoadingAutomation,
   } = automationQuery;
   const loadError = automationState.fatalError;
-  const { data: vehicles } = useVehicles();
-  const { data: channels } = useNotificationChannels();
-  const { data: preset } = useAutomationPreset(presetId);
+  const vehiclesQuery = useVehicles();
+  const vehiclesState = useDataState(vehiclesQuery);
+  const { data: vehicles } = vehiclesQuery;
+  const channelsQuery = useNotificationChannels();
+  const channelsState = useDataState(channelsQuery);
+  const { data: channels } = channelsQuery;
+  const presetQuery = useAutomationPreset(presetId);
+  const presetState = useDataState(presetQuery);
+  const { data: preset } = presetQuery;
 
   const breadcrumbLabels = {
     '/automations/:id/edit': existingAutomation?.name
@@ -367,6 +375,11 @@ export default function AutomationBuilderPage() {
   const [conflicts, setConflicts] = useState<AutomationConflict[]>([]);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [savedId, setSavedId] = useState<number | null>(null);
+  const [validationTarget, setValidationTarget] = useState<'name' | 'trigger' | 'conditions' | 'actions' | null>(null);
+  const saveErrorId = useId();
+  const formRef = useRef<HTMLFormElement>(null);
+  const nameRef = useRef<HTMLInputElement>(null);
+  const triggerTypeRef = useRef<HTMLSelectElement>(null);
 
   const createMutation_isPendingRef = useRef(createMutation.isPending);
   createMutation_isPendingRef.current = createMutation.isPending;
@@ -467,6 +480,7 @@ export default function AutomationBuilderPage() {
   const { confirm: confirmDiscard, dialogProps: discardDialogProps } = useConfirm();
 
   const isSaving = createMutation.isPending || updateMutation.isPending;
+  const presetUnavailable = !isEdit && Boolean(presetId) && (!preset || !hydrated);
 
   const vehicleOptions = useMemo(() => {
     const options = (vehicles ?? []).map((vehicle) => ({
@@ -475,11 +489,17 @@ export default function AutomationBuilderPage() {
         id: vehicle.id,
       }),
     }));
+    if (form.vehicle_id != null && !options.some((option) => option.value === String(form.vehicle_id))) {
+      options.push({
+        value: String(form.vehicle_id),
+        label: t('automations.builder.vehicleFallback', 'Vehicle {{id}}', { id: form.vehicle_id }),
+      });
+    }
     return [
       { value: '', label: t('automations.builder.allVehicles', 'All vehicles') },
       ...options,
     ];
-  }, [t, vehicles]);
+  }, [form.vehicle_id, t, vehicles]);
 
   const triggerOptions = useMemo(
     () => [
@@ -513,10 +533,12 @@ export default function AutomationBuilderPage() {
   const nameReady = form.name.trim() !== '';
   const triggerReady = form.triggers.length > 0 && !form.triggers.some(triggerNeedsPlace);
   const actionsReady = form.actions.length > 0 && !form.actions.some(actionIsIncomplete);
+  const conditionsReady = !form.conditions.some(conditionNeedsPlace);
   const allReady = nameReady
     && triggerReady
     && actionsReady
-    && !form.conditions.some(conditionNeedsPlace);
+    && conditionsReady
+    && !presetUnavailable;
   const draftContext = t('automations.builder.brief.context', 'Current editor draft only. Publishing still requires validation and an explicit save.');
   const rawMetrics: readonly StatMetric[] = [
     { metricId: 'text', occurrenceId: 'trigger', rawValue: selectedTriggerLabel, label: t('automations.builder.summaryTrigger', 'Trigger'), description: draftContext },
@@ -531,9 +553,10 @@ export default function AutomationBuilderPage() {
     () => [
       { key: 'name', ok: nameReady, label: t('automations.builder.readyName', 'Name added') },
       { key: 'trigger', ok: triggerReady, label: t('automations.builder.readyTrigger', 'Trigger configured') },
+      { key: 'conditions', ok: conditionsReady, label: t('automations.builder.summaryConditions', 'Conditions') },
       { key: 'actions', ok: actionsReady, label: t('automations.builder.readyActions', 'At least one action') },
     ],
-    [nameReady, triggerReady, actionsReady, t],
+    [nameReady, triggerReady, conditionsReady, actionsReady, t],
   );
 
   const update = useCallback(<K extends keyof FormState>(key: K, value: FormState[K]) => {
@@ -574,9 +597,28 @@ export default function AutomationBuilderPage() {
   }, [form, t]);
 
   const handleSave = useCallback(async () => {
+    if (presetUnavailable) return;
+    setValidationTarget(null);
     const error = validate();
     if (error) {
       setSaveError(error);
+      if (!nameReady) {
+        setValidationTarget('name');
+        nameRef.current?.focus();
+      } else if (form.triggers.length === 0) {
+        setValidationTarget('trigger');
+        triggerTypeRef.current?.focus();
+      } else {
+        setValidationTarget(!triggerReady ? 'trigger' : !conditionsReady ? 'conditions' : 'actions');
+        const section = !triggerReady
+          ? 'automation-builder'
+          : !conditionsReady
+            ? 'automation-conditions'
+            : 'automation-actions';
+        formRef.current?.querySelector<HTMLElement>(
+          `[data-tour="${section}"] :is(input, select, textarea, button):not(:disabled):not([type="hidden"])`,
+        )?.focus();
+      }
       return;
     }
     setSaveError(null);
@@ -603,7 +645,7 @@ export default function AutomationBuilderPage() {
     } catch (error) {
       setSaveError(error instanceof Error ? error.message : String(error));
     }
-  }, [automationId, createMutation, discardDraft, form, isEdit, navigate, updateMutation, validate]);
+  }, [automationId, conditionsReady, createMutation, discardDraft, form, isEdit, nameReady, navigate, presetUnavailable, triggerReady, updateMutation, validate]);
 
   /**
    * Cancel handler — if the form is dirty, prompt before navigating away.
@@ -671,7 +713,7 @@ export default function AutomationBuilderPage() {
         breadcrumbLabels={breadcrumbLabels}
       >
         <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
-          icon={<AlertTriangle className="h-8 w-8" />}
+          icon={<Icon icon={AlertTriangle} size="xl" />}
           message={t('automations.builder.notFound', 'Automation not found')}
         />
       </PageLayout>
@@ -693,9 +735,10 @@ export default function AutomationBuilderPage() {
           type="button"
           variant="ghost"
           size="sm"
+          wrapLabel
           onClick={handleBackToList}
-          className="min-h-11 text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
-          icon={<ArrowLeft className="h-4 w-4" />}
+          className="min-h-11 max-w-full"
+          icon={<Icon icon={ArrowLeft} />}
           aria-label={t('automations.builder.backToList', 'Back to automations')}
         >
           {t('automations.builder.backToList', 'Back to automations')}
@@ -704,6 +747,7 @@ export default function AutomationBuilderPage() {
     >
       <StaleRefreshWarning state={automationState} label={t('automations.builder.editTitle', 'Edit automation')} />
       <form
+        ref={formRef}
         onSubmit={(event) => {
           event.preventDefault();
           handleSave();
@@ -722,6 +766,23 @@ export default function AutomationBuilderPage() {
           resourceKey={leaseKey}
           resourceLabel={t('editConflict.resource.automation', 'This automation')}
         />
+
+        {!isEdit && presetId && (
+          <GlassPanel className="min-w-0 space-y-3 p-4">
+            <PanelTitle>{t('automations.builder.presetTitle', 'Install preset')}</PanelTitle>
+            <StaleRefreshWarning state={presetState} label={t('automations.presets.resource', 'Automation presets')} />
+            <SourceContent
+              state={presetState.hasData ? 'ready' : presetState.fatalError ? 'error' : presetQuery.isSuccess ? 'empty' : 'loading'}
+              label={t('automations.presets.resource', 'Automation presets')}
+              emptyMessage={t('automations.presets.empty', 'No preset templates available')}
+              errorMessage={t('error.loadFailed', 'Failed to load data')}
+              error={presetState.fatalError}
+              errorRecovery={{ onRetry: presetState.retry ?? undefined }}
+            >
+              <Text as="p" variant="bodySm" color="secondary">{preset?.name}</Text>
+            </SourceContent>
+          </GlassPanel>
+        )}
 
         {hasDraft && !isEdit && !presetId && (
           <DraftRecoveryBanner
@@ -757,17 +818,21 @@ export default function AutomationBuilderPage() {
         </FadeIn>
 
         {/* 2 — Two-pane bento: build canvas (hero) + assist rail */}
-        <div className="grid grid-cols-1 gap-4 xl:grid-cols-3 xl:gap-5">
+        <div className="grid min-w-0 grid-cols-1 gap-4 xl:grid-cols-3 xl:gap-5">
           {/* Build canvas — the When → Only If → Then flow */}
-          <div className="space-y-6 xl:col-span-2">
+          <div className="min-w-0 space-y-6 xl:col-span-2">
             <FadeIn>
               <FormSection title={t('automations.builder.general', 'General')}>
                 <UiInput
+                  ref={nameRef}
                   label={t('automations.builder.name', 'Name')}
                   value={form.name}
                   onChange={(event) => update('name', event.target.value)}
                   placeholder={t('automations.builder.namePlaceholder', 'Morning commute prep')}
                   required
+                  className="min-h-11"
+                  aria-invalid={validationTarget === 'name' && !nameReady ? 'true' : undefined}
+                  aria-describedby={validationTarget === 'name' && !nameReady && saveError ? saveErrorId : undefined}
                 />
                 <UiTextarea
                   label={t('automations.builder.description', 'Description')}
@@ -780,15 +845,29 @@ export default function AutomationBuilderPage() {
                   rows={2}
                 />
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:items-end">
-                  <UiSelect
-                    label={t('automations.builder.vehicle', 'Vehicle')}
-                    options={vehicleOptions}
-                    value={form.vehicle_id != null ? String(form.vehicle_id) : ''}
-                    onChange={(event) => update(
-                      'vehicle_id',
-                      event.target.value ? Number(event.target.value) : null,
-                    )}
-                  />
+                  <div className="min-w-0 space-y-3">
+                    <StaleRefreshWarning state={vehiclesState} label={t('dataSources.labels.vehicleRegistry', 'Vehicle registry')} />
+                    <SourceContent
+                      state={vehiclesState.hasData ? (vehicles?.length ? 'ready' : 'empty') : vehiclesState.fatalError ? 'error' : 'loading'}
+                      label={t('dataSources.labels.vehicleRegistry', 'Vehicle registry')}
+                      emptyMessage={t('vehicles.emptyTitle', 'No vehicles yet')}
+                      emptyContent={<Text as="p" variant="bodySm" color="secondary">{t('vehicles.emptyTitle', 'No vehicles yet')}</Text>}
+                      errorMessage={t('vehicles.loadError', 'Failed to load vehicles.')}
+                      error={vehiclesState.fatalError}
+                      errorRecovery={{ onRetry: vehiclesState.retry ?? undefined }}
+                      loadingContent={<Text as="p" variant="bodySm" color="secondary">{t('common.loading', 'Loading...')}</Text>}
+                    >{null}</SourceContent>
+                    <UiSelect
+                      label={t('automations.builder.vehicle', 'Vehicle')}
+                      options={vehicleOptions}
+                      value={form.vehicle_id != null ? String(form.vehicle_id) : ''}
+                      className="min-h-11"
+                      onChange={(event) => update(
+                        'vehicle_id',
+                        event.target.value ? Number(event.target.value) : null,
+                      )}
+                    />
+                  </div>
                   <Toggle
                     label={t('automations.builder.enabled', 'Enabled')}
                     checked={form.enabled}
@@ -808,6 +887,7 @@ export default function AutomationBuilderPage() {
                   )}
                 >
                   <UiSelect
+                    ref={triggerTypeRef}
                     label={t('automations.builder.triggerType', 'Trigger type')}
                     help={{
                       i18nKey: 'help.fields.automations.triggerType',
@@ -815,6 +895,9 @@ export default function AutomationBuilderPage() {
                     }}
                     options={triggerOptions}
                     value={selectedTrigger?.kind ?? ''}
+                    className="min-h-11"
+                    aria-invalid={validationTarget === 'trigger' && !triggerReady ? 'true' : undefined}
+                    aria-describedby={validationTarget === 'trigger' && !triggerReady && saveError ? saveErrorId : undefined}
                     onChange={(event) => handleTriggerKindChange(event.target.value)}
                   />
                   {selectedTrigger ? (
@@ -864,6 +947,17 @@ export default function AutomationBuilderPage() {
                     'Actions are executed in order.',
                   )}
                 >
+                  <StaleRefreshWarning state={channelsState} label={t('dataSources.labels.notificationChannels', 'Notification channels')} />
+                  <SourceContent
+                    state={channelsState.hasData ? (channels?.length ? 'ready' : 'empty') : channelsState.fatalError ? 'error' : 'loading'}
+                    label={t('dataSources.labels.notificationChannels', 'Notification channels')}
+                    emptyMessage={t('automations.builder.noChannels', 'No channels configured')}
+                    emptyContent={<Text as="p" variant="bodySm" color="secondary">{t('automations.builder.noChannels', 'No channels configured')}</Text>}
+                    errorMessage={t('error.loadFailed', 'Failed to load data')}
+                    error={channelsState.fatalError}
+                    errorRecovery={{ onRetry: channelsState.retry ?? undefined }}
+                    loadingContent={<Text as="p" variant="bodySm" color="secondary">{t('common.loading', 'Loading...')}</Text>}
+                  >{null}</SourceContent>
                   <ActionBuilder
                     actions={form.actions}
                     channels={notificationChannels}
@@ -877,26 +971,26 @@ export default function AutomationBuilderPage() {
           {/* Assist rail — readiness, AI helpers, preset hint */}
           <aside
             aria-label={t('automations.builder.assistant', 'Builder assistant')}
-            className="space-y-6 xl:col-span-1 xl:sticky xl:top-4 xl:self-start"
+            className="min-w-0 space-y-6 xl:col-span-1 xl:sticky xl:top-4 xl:self-start"
           >
             <FadeIn>
               <GlassPanel className="p-4 sm:p-5">
                 <PanelTitle className="mb-3 flex items-center gap-2">
-                  <ListChecks className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+                  <Icon icon={ListChecks} className={typography.color.secondary} />
                   {t('automations.builder.readiness', 'Readiness')}
                 </PanelTitle>
                 <ul className="space-y-2">
                   {readinessItems.map((item) => (
-                    <li key={item.key} className="flex items-center gap-2">
+                    <li key={item.key} className="flex min-w-0 items-start gap-2">
                       {item.ok ? (
-                        <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-300" aria-hidden="true" />
+                        <Icon icon={CheckCircle2} className={neonColorMap.green.text} />
                       ) : (
-                        <Circle className="h-4 w-4 shrink-0 text-[var(--text-muted)]" aria-hidden="true" />
+                        <Icon icon={Circle} className={typography.color.muted} />
                       )}
                       <Text
                         as="span"
                         variant="bodySm"
-                        className={item.ok ? 'text-[var(--text-primary)]' : undefined}
+                        className="min-w-0 break-words"
                       >
                         {item.label}
                       </Text>
@@ -908,6 +1002,11 @@ export default function AutomationBuilderPage() {
                     </li>
                   ))}
                 </ul>
+                {!conditionsReady && (
+                  <Text as="p" variant="bodySm" color="secondary" className="mt-3 break-words">
+                    {t('automations.builder.errorConditionPlace', 'Select a geofence for each geofence condition')}
+                  </Text>
+                )}
                 <div className="mt-4">
                   <Badge variant={allReady ? 'success' : 'neutral'} size="lg">
                     {allReady
@@ -968,8 +1067,9 @@ export default function AutomationBuilderPage() {
 
         {saveError && (
           <AlertBanner
+            id={saveErrorId}
             variant="danger"
-            icon={<AlertTriangle className="h-4 w-4" />}
+            icon={<Icon icon={AlertTriangle} />}
             title={t('automations.builder.saveError', 'Save error')}
           >
             {saveError}
@@ -982,12 +1082,13 @@ export default function AutomationBuilderPage() {
             <div className="flex flex-wrap items-center gap-3">
               <UiButton
                 type="submit"
+                wrapLabel
+                icon={<Icon icon={Save} />}
                 loading={isSaving}
-                disabled={isSaving || !operationalMode.canWrite}
+                disabled={isSaving || presetUnavailable || !operationalMode.canWrite}
                 title={operationalMode.writeBlockReason ?? undefined}
                 className="min-h-11"
               >
-                <Save className="mr-2 h-4 w-4" />
                 {isEdit
                   ? t('automations.builder.save', 'Save')
                   : t('automations.builder.create', 'Create')}
@@ -995,6 +1096,8 @@ export default function AutomationBuilderPage() {
               {(savedId ?? automationId) && (
                 <UiButton
                   type="button"
+                  wrapLabel
+                  icon={<Icon icon={PlayCircle} />}
                   variant="secondary"
                   onClick={handleTestRun}
                   loading={testRunMutation.isPending}
@@ -1002,23 +1105,23 @@ export default function AutomationBuilderPage() {
                   title={operationalMode.writeBlockReason ?? undefined}
                   className="min-h-11"
                 >
-                  <PlayCircle className="mr-2 h-4 w-4" />
                   {t('automations.builder.testRun', 'Test run')}
                 </UiButton>
               )}
               <UiButton
                 type="button"
+                wrapLabel
+                icon={<Icon icon={X} />}
                 variant="ghost"
                 onClick={handleBackToList}
                 className="min-h-11"
               >
-                <X className="mr-2 h-4 w-4" />
                 {t('automations.builder.cancel', 'Cancel')}
               </UiButton>
 
               {testRunMutation.isSuccess && (
                 <Badge variant="success" size="lg">
-                  <Zap className="h-3.5 w-3.5" aria-hidden="true" />
+                  <Icon icon={Zap} size="sm" />
                   {t('automations.builder.testRunStarted', 'Test run started!')}
                 </Badge>
               )}
