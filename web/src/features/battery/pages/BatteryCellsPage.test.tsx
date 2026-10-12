@@ -45,7 +45,16 @@ import type { BatteryCellData, CellReading } from '@/api/hooks/useAnalytics';
 vi.mock('@/components/charts', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/components/charts')>();
   const { chartTestDoubles } = await import('@/test/chartTestDoubles');
-  return { ...actual, ...chartTestDoubles };
+  return {
+    ...actual,
+    ...chartTestDoubles,
+    renderAnnotationLines: h.annotationLines.mockImplementation(actual.renderAnnotationLines),
+  };
+});
+
+vi.mock('@/components/layout', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/components/layout')>();
+  return { ...actual, ChartCard: h.chartCard.mockImplementation(actual.ChartCard) };
 });
 
 // ── Hoisted, per-test controllable state ─────────────────────────────
@@ -53,6 +62,8 @@ vi.mock('@/components/charts', async (importOriginal) => {
 // single test can flip °C→°F; `selected` feeds useSelectedVehicle.
 const h = vi.hoisted(() => ({
   query: undefined as unknown,
+  annotationLines: vi.fn<typeof import('@/components/charts')['renderAnnotationLines']>(),
+  chartCard: vi.fn<typeof import('@/components/layout')['ChartCard']>(),
   temp: '°C' as '°C' | '°F',
   selected: {
     vehicleId: 7 as number | null,
@@ -138,6 +149,18 @@ vi.mock('@/hooks/useUnits', () => ({
   }),
 }));
 
+vi.mock('@/hooks/useDateFormat', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/hooks/useDateFormat')>();
+  return {
+    ...actual,
+    useDateFormat: (mode?: Parameters<typeof actual.useDateFormat>[0]) => ({
+      ...actual.useDateFormat(mode),
+      formatDateTime: (value: string | Date | null | undefined) =>
+        value instanceof Date ? value.toISOString() : value ?? '—',
+    }),
+  };
+});
+
 // The spread-trend chart uses <ChartContainer annotations={…}>, which fires
 // a GET for saved annotations. Stub that read so the test stays network-free
 // while the create/delete mutation hooks (wired to <ToastProvider>) stay real.
@@ -170,6 +193,7 @@ interface QueryStub {
   error: unknown;
   isFetching: boolean;
   isStale: boolean;
+  fetchStatus?: 'fetching' | 'paused' | 'idle';
   dataUpdatedAt: number;
   refetch: () => void;
 }
@@ -431,22 +455,146 @@ describe('BatteryCellsPage', () => {
       'none',
     );
   });
+
+  it('keeps source status, voltage, signed delta and non-color cues in every heatmap cell', () => {
+    renderPage();
+
+    const normal = screen.getByRole('img', { name: 'Cell 1: 3.900 V (+5.00 mV), Normal' });
+    const slight = screen.getByRole('img', { name: 'Cell 2: 3.910 V (+15.00 mV), Slight deviation' });
+    const significant = screen.getByRole('img', { name: 'Cell 3: 3.850 V (-45.00 mV), Significant deviation' });
+    expect(normal).toHaveClass('bg-[var(--semantic-success-bg)]');
+    expect(slight).toHaveClass('bg-[var(--semantic-warning-bg)]');
+    expect(significant).toHaveClass('bg-[var(--semantic-danger-bg)]');
+    expect(normal.querySelector('svg')).toHaveClass('lucide-minus');
+    expect(slight.querySelector('svg')).toHaveClass('lucide-arrow-up-right');
+    expect(significant.querySelector('svg')).toHaveClass('lucide-triangle-alert');
+    expect(normal).not.toHaveAttribute('style');
+    expect(normal).not.toHaveClass('hover:scale-110');
+  });
+
+  it('exposes every hourly spread sample and aligns annotations to the timestamp domain', () => {
+    const timestamps = ['2024-06-01T12:00:00Z', '2024-06-01T13:00:00Z'];
+    h.query = makeQuery({
+      data: makeData({
+        history: timestamps.map((timestamp, index) => ({
+          timestamp, min_voltage: 3.8, max_voltage: index === 0 ? 3.9 : 4,
+          avg_voltage: 3.85, imbalance_mv: index === 0 ? 100 : 200,
+        })),
+      }),
+    });
+    renderPage();
+
+    const table = within(screen.getByRole('table', { name: 'Voltage spread trend — data table' }));
+    expect(table.getAllByRole('row')).toHaveLength(3);
+    expect(table.getByRole('cell', { name: timestamps[0] })).toBeInTheDocument();
+    expect(table.getByRole('cell', { name: timestamps[1] })).toBeInTheDocument();
+    expect(table.getByRole('cell', { name: '100.00' })).toBeInTheDocument();
+    expect(table.getByRole('cell', { name: '200.00' })).toBeInTheDocument();
+
+    const props = h.chartCard.mock.calls.at(-1)?.[0];
+    expect(props?.data?.map(row => row.time)).toEqual([
+      Date.parse(timestamps[0]), Date.parse(timestamps[1]),
+    ]);
+    expect(props?.annotations).toEqual({
+      vehicleId: 7, scope: 'battery', chartId: 'battery-cells-spread-trend',
+    });
+    expect(props?.exportable).toBe(true);
+    const toXValue = h.annotationLines.mock.calls.at(-1)?.[1];
+    expect(toXValue?.('2024-06-01T13:00:00.000Z')).toBe(Date.parse(timestamps[1]));
+  });
+
+  it('leaves missing spread samples and cell voltages unknown while preserving measured zero', () => {
+    h.query = makeQuery({
+      data: makeData({
+        cells: [
+          { cell_number: 1, voltage: 0, delta_from_avg: 0, status: 'normal' },
+          { cell_number: 2, voltage: Number.NaN, delta_from_avg: Number.NaN, status: 'normal' },
+        ],
+        history: [{
+          timestamp: '2024-06-01T12:00:00Z', min_voltage: Number.NaN,
+          max_voltage: 3.9, avg_voltage: 3.85, imbalance_mv: 0,
+        }],
+      }),
+    });
+    renderPage();
+
+    expect(screen.getByRole('img', { name: 'Cell 1: 0.000 V (+0.00 mV), Normal' }))
+      .toHaveClass('bg-[var(--semantic-success-bg)]');
+    expect(screen.getByRole('img', { name: 'Cell 2: — V (— mV), Unknown' }))
+      .toHaveClass('bg-[var(--surface-2)]');
+    const table = within(screen.getByRole('table', { name: 'Voltage spread trend — data table' }));
+    expect(table.getByRole('cell', { name: '—' })).toBeInTheDocument();
+    expect(table.queryByRole('cell', { name: '0.00' })).not.toBeInTheDocument();
+    expect(h.chartCard.mock.calls.at(-1)?.[0].data?.[0].spreadRaw).toBeNull();
+  });
+
+  it('retains reported pack and temperature values without certifying health when cells are unavailable', () => {
+    h.query = makeQuery({
+      data: makeData({ status: 'no_data', cells: [], history: [] }),
+    });
+    renderPage();
+
+    const metrics = within(screen.getByRole('region', { name: 'Summary metrics' }));
+    expect(metrics.getByText('398.50 V')).toBeInTheDocument();
+    expect(metrics.queryByText('3.9025 V')).not.toBeInTheDocument();
+    expect(screen.getByText('25.00°C')).toBeInTheDocument();
+    expect(screen.getByText('Not enough data for recommendations')).toBeInTheDocument();
+    expect(screen.queryByText('Thermal balance good')).not.toBeInTheDocument();
+    expect(screen.queryByText('All cells healthy')).not.toBeInTheDocument();
+    const heading = screen.getByRole('heading', { name: 'Health recommendations', exact: true });
+    const recommendations = within(heading.closest('[data-card]') as HTMLElement);
+    expect(recommendations.getByText(/cells are synthesized from brick extrema/)).toBeInTheDocument();
+    expect(recommendations.getByText(/reported values alone do not establish health/)).toBeInTheDocument();
+  });
+
+  it('keeps cells, charts and recommendations visible after a failed refresh and retries only on request', () => {
+    h.query = makeQuery({ data: makeData(), isError: true, error: new Error('refresh failed') });
+    renderPage();
+
+    const warning = within(screen.getByTestId('stale-refresh-warning'));
+    expect(warning.getByText('Previously loaded data remains visible while affected sources recover.'))
+      .toBeInTheDocument();
+    expect(screen.getByText('3.8500')).toBeInTheDocument();
+    expect(screen.getByRole('table', { name: 'Voltage spread trend — data table' })).toBeInTheDocument();
+    expect(screen.getByText('Critical cells detected')).toBeInTheDocument();
+    expect(screen.queryByText(/Can't reach server/i)).not.toBeInTheDocument();
+    expect(refetchMock).not.toHaveBeenCalled();
+    fireEvent.click(warning.getByRole('button', { name: 'Refresh' }));
+    expect(refetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('preserves readings during paused refresh without inventing an offline or failed measurement', () => {
+    h.query = makeQuery({ data: makeData(), fetchStatus: 'paused' });
+    renderPage();
+
+    const warning = screen.getByTestId('stale-refresh-warning');
+    expect(warning).toHaveAttribute('data-refresh-blocked', 'true');
+    expect(warning).not.toHaveTextContent(/offline|failed/i);
+    expect(screen.getByText('3.8500')).toBeInTheDocument();
+    expect(screen.getByText('25.00°C')).toBeInTheDocument();
+    expect(screen.getByRole('table', { name: 'Voltage spread trend — data table' })).toBeInTheDocument();
+  });
 });
 
 describe('cellColor', () => {
   it('maps deviation magnitude (mV) to the nominal/slight/significant palette', () => {
-    expect(cellColor(3.9, 3.9)).toBe('#10b981'); // 0 mV — nominal (emerald)
-    expect(cellColor(3.9, 3.91)).toBe('#f59e0b'); // 10 mV — slight (amber)
-    expect(cellColor(3.9, 3.93)).toBe('#ef4444'); // 30 mV — significant (rose)
+    expect(cellColor(3.9, 3.9)).toBe('var(--semantic-success)'); // 0 mV — nominal
+    expect(cellColor(3.9, 3.91)).toBe('var(--semantic-warning)'); // 10 mV — slight
+    expect(cellColor(3.9, 3.93)).toBe('var(--semantic-danger)'); // 30 mV — significant
   });
 
   it('crosses the 5 mV and 15 mV branch thresholds in the correct direction', () => {
     // Values are kept ~1 mV clear of the exact thresholds so IEEE-754
     // rounding of `(v - avg) * 1000` can't flip the branch under test.
-    expect(cellColor(0, 0.004)).toBe('#10b981'); // ~4 mV → still nominal
-    expect(cellColor(0, 0.006)).toBe('#f59e0b'); // ~6 mV → slight
-    expect(cellColor(0, 0.014)).toBe('#f59e0b'); // ~14 mV → slight
-    expect(cellColor(0, 0.016)).toBe('#ef4444'); // ~16 mV → significant
+    expect(cellColor(0, 0.004)).toBe('var(--semantic-success)'); // ~4 mV → still nominal
+    expect(cellColor(0, 0.006)).toBe('var(--semantic-warning)'); // ~6 mV → slight
+    expect(cellColor(0, 0.014)).toBe('var(--semantic-warning)'); // ~14 mV → slight
+    expect(cellColor(0, 0.016)).toBe('var(--semantic-danger)'); // ~16 mV → significant
+  });
+
+  it('keeps exact source deviation boundaries in their lower severity category', () => {
+    expect(cellColor(0, 0.005)).toBe('var(--semantic-success)');
+    expect(cellColor(0, 0.015)).toBe('var(--semantic-warning)');
   });
 });
 

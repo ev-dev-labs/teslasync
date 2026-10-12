@@ -27,10 +27,10 @@ import { NoVehicleSelected } from '@/features/onboarding/components/NoVehicleSel
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useBatteryCells, type CellReading, type CellStatus } from '@/api/hooks/useAnalytics';
-import { formatDateTime } from '@/lib/dateFormat';
+import { useDateFormat } from '@/hooks/useDateFormat';
 
 import { cn } from '@/lib/cn';
-import { typography } from '@/lib/tokens';
+import { neonColorMap, typography } from '@/lib/tokens';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { fmtScientificNumber } from '@/lib/numberFormat';
 import { knownNumber } from '@/api/dataState';
@@ -42,9 +42,9 @@ import { BatteryCellsStats } from '../components/battery-cells-modernization/Bat
 /** Color a cell by how far it deviates from the pack average (mV). */
 export function cellColor(voltage: number, avg: number): string {
   const delta = Math.abs(voltage - avg) * 1000;
-  if (delta < 5) return '#10b981';  // emerald – nominal
-  if (delta < 15) return '#f59e0b'; // amber – slight deviation
-  return '#ef4444';                 // rose  – significant deviation
+  if (delta <= 5) return 'var(--semantic-success)';
+  if (delta <= 15) return 'var(--semantic-warning)';
+  return 'var(--semantic-danger)';
 }
 
 /** Badge variant per backend deviation status. Color is paired with an icon
@@ -91,16 +91,16 @@ export function buildHistogram(cells: CellReading[]): { bucket: string; count: n
   }));
 }
 
-const insightPanelClass = {
-  good: 'border-neon-green/20 bg-neon-green/5',
-  warning: 'border-neon-amber/20 bg-neon-amber/5',
-  critical: 'border-neon-red/20 bg-neon-red/5',
+const insightIconClass = {
+  good: neonColorMap.green.text,
+  warning: neonColorMap.amber.text,
+  critical: neonColorMap.red.text,
 } as const;
 
-const insightIconClass = {
-  good: 'text-emerald-300',
-  warning: 'text-amber-300',
-  critical: 'text-rose-300',
+const CELL_TONE = {
+  normal: neonColorMap.green,
+  slight_deviation: neonColorMap.amber,
+  significant_deviation: neonColorMap.red,
 } as const;
 
 /* ── Cell voltage heatmap ──────────────────────────────────────── */
@@ -114,48 +114,51 @@ function HeatLegend({ className, label }: { className: string; label: string }) 
   );
 }
 
-function CellHeatmap({ cells, avg, label }: { cells: CellReading[]; avg: number | null; label: string }) {
+function CellHeatmap({ cells, label, statusLabel }: {
+  cells: CellReading[];
+  label: string;
+  statusLabel: (status: CellStatus) => string;
+}) {
   const { fmtScientificNumber, fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
-  const cols = Math.max(1, Math.ceil(Math.sqrt(cells.length || 1)));
 
   return (
-    <div>
+    <div className="@container">
       <Caption className="mb-3 block">{label}</Caption>
-      <div
-        className="grid gap-1"
-        style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}
-      >
+      <div className="grid grid-cols-3 gap-1 @xs:grid-cols-4 @md:grid-cols-6 @lg:grid-cols-8">
         {cells.map((cell) => {
           const voltage = knownNumber(cell.voltage);
-          const color = voltage != null && avg != null ? cellColor(voltage, avg) : 'var(--text-muted)';
+          const tone = voltage == null ? neonColorMap.neutral : CELL_TONE[cell.status] ?? neonColorMap.neutral;
           const delta = knownNumber(cell.delta_from_avg); // already mV
-          const isDeviation = delta != null && Math.abs(delta) > 5;
+          const description = `${t('battery.cells.cell', 'Cell')} ${cell.cell_number}: ${voltage == null ? '—' : fmtScientificNumber(voltage, 3)} V (${delta == null ? '—' : `${delta >= 0 ? '+' : ''}${fmtNumber(delta)}`} mV), ${voltage == null ? t('battery.cells.status.unknown', 'Unknown') : statusLabel(cell.status)}`;
           return (
             <div
               key={cell.cell_number}
               className={cn(
-                'flex flex-col items-center justify-center rounded-md p-1',
-                typography.size['2xs'],
+                'flex min-w-0 flex-col items-center justify-center rounded-md border p-1',
+                typography.size.xs,
                 typography.family.mono,
-                'transition-transform duration-normal hover:z-10 hover:scale-110',
-                isDeviation && 'ring-1 ring-inset ring-current',
+                tone.bg,
+                tone.border,
+                typography.color.primary,
               )}
-              style={{ backgroundColor: voltage != null && avg != null ? `${color}20` : undefined, color }}
               role="img"
-              aria-label={`${t('battery.cells.cell', 'Cell')} ${cell.cell_number}: ${voltage == null ? '—' : fmtScientificNumber(voltage, 3)} V (${delta == null ? '—' : `${delta >= 0 ? '+' : ''}${fmtNumber(delta)}`} mV)`}
-              title={`${t('battery.cells.cell', 'Cell')} ${cell.cell_number}: ${voltage == null ? '—' : fmtScientificNumber(voltage, 3)} V (${delta == null ? '—' : `${delta >= 0 ? '+' : ''}${fmtNumber(delta)}`} mV)`}
+              aria-label={description}
+              title={description}
             >
-              <span className={typography.weight.semibold}>{cell.cell_number}</span>
+              <span className="flex items-center gap-1">
+                <span className={tone.text}>{voltage == null ? <Info className="h-3 w-3" aria-hidden="true" /> : statusIcon(cell.status)}</span>
+                <span className={typography.weight.medium}>{cell.cell_number}</span>
+              </span>
               <span>{voltage == null ? '—' : fmtScientificNumber(voltage, 3)}</span>
             </div>
           );
         })}
       </div>
       <div className="mt-3 flex flex-wrap items-center justify-center gap-4">
-        <HeatLegend className="bg-emerald-500" label={t('battery.cells.legend.nominal', 'Nominal')} />
-        <HeatLegend className="bg-amber-500" label={t('battery.cells.legend.slight', 'Slight deviation')} />
-        <HeatLegend className="bg-rose-500" label={t('battery.cells.legend.significant', 'Significant deviation')} />
+        <HeatLegend className={neonColorMap.green.dot} label={t('battery.cells.legend.nominal', 'Nominal')} />
+        <HeatLegend className={neonColorMap.amber.dot} label={t('battery.cells.legend.slight', 'Slight deviation')} />
+        <HeatLegend className={neonColorMap.red.dot} label={t('battery.cells.legend.significant', 'Significant deviation')} />
       </div>
     </div>
   );
@@ -165,6 +168,7 @@ function CellHeatmap({ cells, avg, label }: { cells: CellReading[]; avg: number 
 
 export default function BatteryCellsPage() {
   const { fmtNumber, fmtScientificNumber, precision: displayPrecision, locale: displayLocale } = useNumberFormatting();
+  const { formatDateTime } = useDateFormat();
   const { t } = useTranslation();
   usePageTitle(t('battery.cells.title', 'Battery cells'));
 
@@ -208,7 +212,8 @@ export default function BatteryCellsPage() {
   const voltageSpreadTrend = useMemo(
     () =>
       history.map((h) => ({
-        time: formatDateTime(h.timestamp).split(',')[0],
+        timestamp: h.timestamp,
+        time: Date.parse(h.timestamp),
         spread: knownNumber(h.max_voltage) != null && knownNumber(h.min_voltage) != null
           ? fmtNumber((h.max_voltage - h.min_voltage) * 1000) : '—',
         spreadRaw: knownNumber(h.max_voltage) != null && knownNumber(h.min_voltage) != null
@@ -329,7 +334,7 @@ export default function BatteryCellsPage() {
       header: t('battery.cells.table.voltage', 'Voltage (V)'),
       sortable: true,
       render: (r) => (
-        <span className={typography.family.mono} style={{ color: knownNumber(r.voltage) != null && avgVoltage != null ? cellColor(r.voltage, avgVoltage) : undefined }}>
+        <span className={typography.family.mono}>
           {knownNumber(r.voltage) == null ? '—' : fmtScientificNumber(r.voltage, 4)}
         </span>
       ),
@@ -345,7 +350,7 @@ export default function BatteryCellsPage() {
         const mv = knownNumber(r.delta_from_avg);
         if (mv == null) return <span className={typography.family.mono}>—</span>;
         return (
-          <span className={cn(typography.family.mono, mv > 0 ? 'text-emerald-300' : mv < 0 ? 'text-rose-300' : 'text-[var(--text-muted)]')}>
+          <span className={typography.family.mono}>
             {mv >= 0 ? '+' : ''}{fmtNumber(mv)}
           </span>
         );
@@ -364,7 +369,7 @@ export default function BatteryCellsPage() {
         </Badge>
       ),
     },
-  ], [t, avgVoltage, statusLabel, fmtNumber, fmtScientificNumber]);
+  ], [t, statusLabel, fmtNumber, fmtScientificNumber]);
 
   /* ── Guards ─── */
 
@@ -397,6 +402,9 @@ export default function BatteryCellsPage() {
         />
         {isError && <QueryError error={error} onRetry={refetch} />}
       </FadeIn>
+      <Caption as="p">
+        {t('battery.cells.modernization.snapshotSource', 'Vehicle-scoped backend snapshot; cells are synthesized from brick extrema. Request time is not measurement time.')}
+      </Caption>
 
       {/* 2 — Hero bento: heatmap/bar toggle (span 2) + voltage distribution */}
       <FadeIn delay={0.05}>
@@ -429,7 +437,7 @@ export default function BatteryCellsPage() {
             ) : showHeatmap ? (
               <CellHeatmap
                 cells={cells}
-                avg={avgVoltage}
+                statusLabel={statusLabel}
                 label={t('battery.cells.heatmap.subtitle', 'Cells colored by deviation from average')}
               />
             ) : (
@@ -613,7 +621,7 @@ export default function BatteryCellsPage() {
                   <ResponsiveContainer width="100%" height="100%">
                     <LineChart data={history} margin={chartMarginLabeled}>
                     <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
-                    <XAxis dataKey="timestamp" tick={axisTick} tickFormatter={(v: string) => formatDateTime(v).split(',')[0]} />
+                    <XAxis dataKey="timestamp" tick={axisTick} tickFormatter={(value: string) => formatDateTime(value)} />
                     <YAxis
                       tick={axisTick}
                       domain={['dataMin - 0.002', 'dataMax + 0.002']}
@@ -664,7 +672,7 @@ export default function BatteryCellsPage() {
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={history} margin={chartMargin}>
                     <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
-                    <XAxis dataKey="timestamp" tick={axisTick} tickFormatter={(v: string) => formatDateTime(v).split(',')[0]} />
+                    <XAxis dataKey="timestamp" tick={axisTick} tickFormatter={(value: string) => formatDateTime(value)} />
                     <YAxis tick={axisTick} unit=" mV" width={55} />
                     <Tooltip content={<ChartTooltip />} labelFormatter={(v: string) => formatDateTime(v)} />
                     <Line {...AREA_DEFAULTS} dataKey="imbalance_mv" name={t('battery.cells.imbalance.series', 'Imbalance (mV)')} stroke={CHART_COLORS[3]} activeDot={{ r: 4 }} />
@@ -681,11 +689,15 @@ export default function BatteryCellsPage() {
 
       {/* 5 — Voltage spread trend (annotated area chart) */}
       <FadeIn delay={0.2}>
-        {/* chart-a11y:no-table dense per-sample voltage trace; SR users get the latest spread via the cell summary above */}
         <ChartCard
           toolbar exportable size="standard"
           title={t('battery.cells.chart.spreadTrend', 'Voltage spread trend')}
           ariaLabel={t('battery.cells.chart.spreadTrendAria', 'Battery cell voltage spread trend area chart over time')}
+          data={voltageSpreadTrend}
+          dataColumns={[
+            { key: 'timestamp', label: t('battery.cells.time', 'Time'), format: value => formatDateTime(String(value)) },
+            { key: 'spreadRaw', label: t('battery.cells.chart.voltageSpread', 'Voltage spread (mV)'), format: value => knownNumber(value) == null ? '—' : fmtNumber(Number(value)) },
+          ]}
           annotations={{ vehicleId, scope: 'battery', chartId: 'battery-cells-spread-trend' }}
           loading={isLoading}
           empty={!isLoading && !isError && voltageSpreadTrend.length === 0}
@@ -703,20 +715,20 @@ export default function BatteryCellsPage() {
                 <ResponsiveContainer width="100%" height="100%">
                   <AreaChart data={voltageSpreadTrend}>
                     <defs>
-                      <ChartGradient id="spreadGrad" color="#a855f7" opacity={0.3} />
+                      <ChartGradient id="spreadGrad" color={CHART_COLORS[4]} opacity={0.08} />
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
-                    <XAxis dataKey="time" tick={axisTickSm} tickLine={false} axisLine={false} />
+                    <XAxis dataKey="time" type="number" domain={['dataMin', 'dataMax']} tick={axisTickSm} tickLine={false} axisLine={false} tickFormatter={(value: number) => formatDateTime(new Date(value))} />
                     <YAxis tick={axisTickSm} tickLine={false} axisLine={false} unit=" mV" />
-                    <Tooltip content={<ChartTooltip />} />
+                    <Tooltip content={<ChartTooltip />} labelFormatter={(value: number) => formatDateTime(new Date(value))} />
                     <ReferenceLine y={5} stroke={CHART_COLORS[1]} strokeDasharray="4 4" />
                     <ReferenceLine y={15} stroke={CHART_COLORS[5]} strokeDasharray="4 4" />
-                    {!hidden && renderAnnotationLines(chartAnnotations, (ts) => ts)}
+                    {!hidden && renderAnnotationLines(chartAnnotations, Date.parse)}
                     <Area
                       {...AREA_DEFAULTS}
                       dataKey="spreadRaw"
                       name={t('battery.cells.chart.voltageSpread', 'Voltage spread (mV)')}
-                      stroke="#a855f7"
+                      stroke={CHART_COLORS[4]}
                       fill="url(#spreadGrad)"
                     />
                   </AreaChart>
@@ -816,6 +828,12 @@ export default function BatteryCellsPage() {
           ) },
           { id: 'cell-recommendations', size: 'half', content: (
           <LayoutCard title={t('battery.cells.recommendations', 'Health recommendations')}>
+            <Caption as="p" className="mb-3">
+              {t('battery.cells.modernization.snapshotSource', 'Vehicle-scoped backend snapshot; cells are synthesized from brick extrema. Request time is not measurement time.')}
+            </Caption>
+            <Caption as="p" className="mb-3">
+              {t('battery.cells.modernization.signalAvailability', 'Pack and temperature signal availability is not supplied by this endpoint; reported values alone do not establish health.')}
+            </Caption>
             {isLoading ? (
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} height={72} />)}
@@ -825,7 +843,7 @@ export default function BatteryCellsPage() {
             ) : insights.length > 0 ? (
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 {insights.map((ins, i) => (
-                  <GlassPanel key={i} className={cn('border p-4 transition-all duration-normal', insightPanelClass[ins.status])}>
+                  <GlassPanel key={i} className="p-4 shadow-none">
                     <div className="flex items-start gap-3">
                       <div className={cn('mt-0.5', insightIconClass[ins.status])}>{ins.icon}</div>
                       <div className="min-w-0">
