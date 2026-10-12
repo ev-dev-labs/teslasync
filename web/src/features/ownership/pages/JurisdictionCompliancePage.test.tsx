@@ -220,7 +220,9 @@ describe('JurisdictionCompliancePage — confirm-gated delete', () => {
       }
       expect(within(summary).getByText('Unknown')).toBeInTheDocument();
       expect(within(summary).queryByText('Recorded apportionment')).not.toBeInTheDocument();
-      expect(within(summary).getByText('No recorded apportionment window is available.')).toBeInTheDocument();
+      // Provenance is disclosed by the genuine OperationalBrief details drawer.
+      fireEvent.click(within(summary).getByRole('button', { name: 'Review details' }));
+      expect(within(screen.getByRole('dialog')).getByText('No recorded apportionment window is available.')).toBeInTheDocument();
       expect(screen.getByText('A worksheet, not a tax return')).toBeInTheDocument();
       expect(screen.getByRole('heading', { name: 'Period digest' })).toBeInTheDocument();
       expect(within(card('Jurisdiction rate table')).getByText('California')).toBeInTheDocument();
@@ -237,25 +239,33 @@ describe('JurisdictionCompliancePage — confirm-gated delete', () => {
       expect(rateToggle.getAttribute('aria-controls')).not.toBe(filingToggle.getAttribute('aria-controls'));
 
       fireEvent.click(rateToggle);
-      const rateForm = screen.getByLabelText('Jurisdiction code').closest('form');
+      const codeInput = screen.getByRole('textbox', { name: 'Jurisdiction code required' });
+      const rateInput = screen.getByRole('spinbutton', { name: 'Road-usage rate (minor / m) required' });
+      const rateForm = codeInput.closest('form');
       expect(rateForm).toHaveAttribute('id', rateToggle.getAttribute('aria-controls'));
       expect(rateToggle).toHaveAttribute('aria-expanded', 'true');
-      fireEvent.change(screen.getByLabelText('Jurisdiction code'), { target: { value: 'qa-only' } });
-      fireEvent.change(screen.getByLabelText('Road-usage rate (minor / m)'), { target: { value: '0.003' } });
+      expect(codeInput).toBeRequired();
+      expect(rateInput).toBeRequired();
+      fireEvent.change(codeInput, { target: { value: 'qa-only' } });
+      fireEvent.change(rateInput, { target: { value: '0.003' } });
       fireEvent.click(rateToggle);
       expect(rateToggle).toHaveAttribute('aria-expanded', 'false');
       fireEvent.click(rateToggle);
-      expect(screen.getByLabelText('Jurisdiction code')).toHaveValue('QA-ONLY');
-      expect(screen.getByLabelText('Road-usage rate (minor / m)')).toHaveValue(0.003);
+      expect(screen.getByRole('textbox', { name: 'Jurisdiction code required' })).toHaveValue('QA-ONLY');
+      expect(screen.getByRole('spinbutton', { name: 'Road-usage rate (minor / m) required' })).toHaveValue(0.003);
 
       fireEvent.click(filingToggle);
-      const filingForm = screen.getByLabelText('Period start').closest('form');
+      // Date inputs have no implicit role; Label includes both required markers.
+      const periodStart = screen.getByLabelText(/^Period start\s*\*?\s*required$/);
+      const filingForm = periodStart.closest('form');
       expect(filingForm).toHaveAttribute('id', filingToggle.getAttribute('aria-controls'));
       expect(filingToggle).toHaveAttribute('aria-expanded', 'true');
-      fireEvent.change(screen.getByLabelText('Period start'), { target: { value: '2026-01-15' } });
+      expect(periodStart).toHaveAccessibleName('Period start required');
+      expect(periodStart).toBeRequired();
+      fireEvent.change(periodStart, { target: { value: '2026-01-15' } });
       fireEvent.click(filingToggle);
       fireEvent.click(filingToggle);
-      expect(screen.getByLabelText('Period start')).toHaveValue('2026-01-15');
+      expect(screen.getByLabelText(/^Period start\s*\*?\s*required$/)).toHaveValue('2026-01-15');
       expect(mockCreate().mutate).not.toHaveBeenCalled();
       expect(mockFiling().mutate).not.toHaveBeenCalled();
     });
