@@ -296,6 +296,22 @@ beforeEach(() => {
 });
 
 describe('DriveDNAPage', () => {
+  it('associates a visible drive label and history hint with the native selector', () => {
+    renderPage();
+
+    const picker = screen.getByRole('combobox', { name: 'Choose a drive' });
+    const label = screen.getByText('Choose a drive', { selector: 'label' });
+    expect(label).toHaveAttribute('for', picker.id);
+    expect(screen.getByLabelText('Choose a drive')).toBe(picker);
+    expect(picker).toHaveAccessibleDescription(
+      'Selection history is capped at 1,000 recent drives.',
+    );
+    picker.focus();
+    expect(picker).toHaveFocus();
+    expect(picker).toHaveValue('1');
+    expectEverySection();
+  });
+
   it('keeps the selected fingerprint during a paused list refresh without retrying telemetry', () => {
     h.history = { ...query({ data: [drive()] }), fetchStatus: 'paused' };
     renderPage();

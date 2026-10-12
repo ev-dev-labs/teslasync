@@ -150,6 +150,7 @@ export default function DriveDNAPage() {
       contextActions={
         <div className="flex flex-wrap items-start justify-end gap-2 sm:gap-3">
           <Select
+            label={t('driveDna.selector.aria', 'Choose a drive')}
             aria-label={t('driveDna.selector.aria', 'Choose a drive')}
             value={activeId}
             onChange={(event) => setSelectedId(event.target.value)}
