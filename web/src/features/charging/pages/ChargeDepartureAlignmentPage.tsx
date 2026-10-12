@@ -79,12 +79,15 @@ export default function ChargeDepartureAlignmentPage() {
         dwellMin: Math.round(p.dwellS / 60),
         margin: p.readinessMarginPct,
         misaligned: p.flags.length > 0,
+        flags: p.flags.length > 0
+          ? t('chargeDepartureAlignment.modernization.heuristic', 'Heuristic flags, not confirmed faults')
+          : t('chargeDepartureAlignment.wellMatched', 'Well matched'),
       })),
-    [summary.pairs, i18n.language],
+    [summary.pairs, i18n.language, t],
   );
 
-  // ChartContainer's CSV export only accepts scalar cells, so the boolean
-  // misalignment marker (which only drives Cell colouring) is dropped here.
+  // Keep the color-only boolean out of scalar alternatives; the localized
+  // pairing status stays in both accessible rows and CSV.
   const exportData = useMemo(
     () => chartData.map(({ misaligned: _misaligned, ...rest }) => rest),
     [chartData],
@@ -189,10 +192,17 @@ export default function ChargeDepartureAlignmentPage() {
       <FadeIn delay={0.1}>
           <ChartContainer
             title={t('chargeDepartureAlignment.chart', 'Dwell Time vs. Readiness Margin')}
-            subtitle={t('chargeDepartureAlignment.chartHint', 'Bars are minutes parked after charging; the line is SoC left after that drive')}
+            subtitle={[
+              t('chargeDepartureAlignment.chartHint', 'Bars are minutes parked after charging; the line is SoC left after that drive'),
+              t('chargeDepartureAlignment.modernization.heuristic', 'Heuristic flags, not confirmed faults'),
+            ].join(' · ')}
             ariaLabel={t(
               'chargeDepartureAlignment.chartAria',
               'Bar chart of post-charge dwell minutes with a line showing the readiness margin left after the paired drive',
+            )}
+            ariaDescription={t(
+              'help.chargeDepartureAlignment.misaligned',
+              'Share of pairings that tripped at least one heuristic (a tight margin, a very long or already-full dwell, far more energy added than that trip used, or an inconsistent SoC reading). Each is circumstantial on its own.',
             )}
             chartKey={CHART_KEY}
             loading={isLoading}
@@ -215,6 +225,7 @@ export default function ChargeDepartureAlignmentPage() {
               { key: 'date', label: t('chargeDepartureAlignment.col.date', 'Date') },
               { key: 'dwellMin', label: t('chargeDepartureAlignment.col.dwell', 'Dwell (min)') },
               { key: 'margin', label: t('chargeDepartureAlignment.col.margin', 'Readiness margin (%)') },
+              { key: 'flags', label: t('chargeDepartureAlignment.modernization.flags', 'Pairing signals') },
             ]}
           >
             <ResponsiveContainer width="100%" height="100%">

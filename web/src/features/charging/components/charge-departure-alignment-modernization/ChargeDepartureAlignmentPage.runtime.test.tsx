@@ -387,3 +387,141 @@ describe('Charge departure modernization (AUTHORED_NOTRUN)', () => {
     expect(screen.queryByRole('table', { name: 'Recent Pairs' })).not.toBeInTheDocument();
   });
 });
+
+describe('Charge departure chart flag alternatives (AUTHORED_NOTRUN)', () => {
+  it('maps every existing heuristic and combined flags to scalar row status without changing date, dwell or margin', () => {
+    source.sessions.data = [
+      session(0),
+      session(1),
+      session(2),
+      session(3, { start_soc_pct: 80, end_soc_pct: 95 }),
+      session(4, { start_soc_pct: 70 }),
+      session(5, { start_soc_pct: 70 }),
+      session(6, { end_soc_pct: 95 }),
+    ];
+    source.drives.data = [
+      drive(0, { endBatteryPct: 45 }),
+      drive(1, { endBatteryPct: 10 }),
+      drive(2),
+      drive(3, { startBatteryPct: 94, endBatteryPct: 60 }),
+      drive(4, { startTs: '2026-09-05T14:00:00.000Z', endBatteryPct: 45 }),
+      drive(5, { startBatteryPct: 84, endBatteryPct: 45 }),
+      drive(6, { startBatteryPct: 99, endBatteryPct: 65 }),
+    ];
+    const pairs = analyzeChargeDepartureAlignment(source.sessions.data, source.drives.data).pairs;
+    expect(pairs.map(pair => pair.flags)).toEqual([
+      [],
+      ['tight_margin'],
+      ['excess_buffer'],
+      ['early_full_dwell'],
+      ['long_dwell'],
+      ['soc_mismatch'],
+      ['excess_buffer', 'early_full_dwell', 'soc_mismatch'],
+    ]);
+    mountPage();
+    const chart = figure();
+    const table = within(chart).getByRole('table');
+    const rows = within(table).getAllByRole('row');
+    expect(within(rows[0]!).getAllByRole('columnheader').map(cell => cell.textContent)).toEqual([
+      'Date', 'Dwell (min)', 'Readiness margin (%)', 'Pairing signals',
+    ]);
+    expect(rows).toHaveLength(8);
+    expect(rows.slice(1).map(row => within(row).getAllByRole('cell').map(cell => cell.textContent))).toEqual(
+      pairs.map((pair, index) => [
+        new Date(pair.chargeEndedMs).toLocaleDateString('en', { month: 'short', day: 'numeric' }),
+        String(Math.round(pair.dwellS / 60)),
+        String(pair.readinessMarginPct),
+        index === 0 ? 'Well matched' : 'Heuristic flags, not confirmed faults',
+      ]),
+    );
+    expect(chart).toHaveTextContent('Bars are minutes parked after charging; the line is SoC left after that drive');
+    expect(chart).toHaveTextContent('Heuristic flags, not confirmed faults');
+    expect(chart).toHaveAccessibleDescription(/Share of pairings that tripped at least one heuristic/);
+    expect(within(chart).getByText(/Each is circumstantial on its own/)).toBeInTheDocument();
+    const details = screen.getByRole('table', { name: 'Recent Pairs' });
+    for (const label of [
+      'Cut it close on departure', 'Added far more than that trip used',
+      'Sat at full charge before leaving', 'Long gap before departure',
+      'SoC reading looks inconsistent', 'Well matched',
+    ]) {
+      expect(within(details).getAllByText(label, { exact: true }).length).toBeGreaterThan(0);
+    }
+  });
+
+  it('downloads all fifteen scalar chart rows with exact flag status and the three original CSV columns first', async () => {
+    source.drives.data = drives.map((row, index) => index === 0 ? { ...row, endBatteryPct: 45 } : row);
+    const pairs = analyzeChargeDepartureAlignment(charges, source.drives.data).pairs;
+    const createObjectURL = vi.fn((_blob: Blob) => 'blob:alignment-chart-csv');
+    const revokeObjectURL = vi.fn();
+    const NativeURL = URL;
+    class DownloadURL extends NativeURL {
+      static createObjectURL = createObjectURL;
+      static revokeObjectURL = revokeObjectURL;
+    }
+    vi.stubGlobal('URL', DownloadURL);
+    const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
+    try {
+      mountPage();
+      const chart = figure();
+      fireEvent.click(within(chart).getByRole('button', { name: 'Export chart', exact: true }));
+      fireEvent.click(within(chart).getByRole('menuitem', { name: 'Download data as CSV', exact: true }));
+      expect(createObjectURL).toHaveBeenCalledTimes(1);
+      expect(click).toHaveBeenCalledTimes(1);
+      const blob = createObjectURL.mock.calls[0]![0];
+      expect(blob.type).toBe('text/csv;charset=utf-8;');
+      const csv = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(String(reader.result));
+        reader.onerror = () => reject(reader.error);
+        reader.readAsText(blob);
+      });
+      const lines = csv.replace(/^\ufeff/, '').split('\r\n');
+      expect(lines[0]).toBe('date,dwellMin,margin,flags');
+      expect(lines).toHaveLength(16);
+      expect(lines.slice(1)).toEqual(pairs.map(pair => [
+        new Date(pair.chargeEndedMs).toLocaleDateString('en', { month: 'short', day: 'numeric' }),
+        Math.round(pair.dwellS / 60),
+        pair.readinessMarginPct,
+        pair.flags.length > 0 ? '"Heuristic flags, not confirmed faults"' : 'Well matched',
+      ].join(',')));
+      expect(lines.join('\n')).not.toContain('misaligned');
+      expect(within(within(chart).getByRole('table')).getAllByRole('row')).toHaveLength(16);
+    } finally {
+      click.mockRestore();
+    }
+  });
+
+  it('refreshes localized flag status and header on the same mounted chart without changing pair order', async () => {
+    source.drives.data = drives.map((row, index) => index === 0 ? { ...row, endBatteryPct: 45 } : row);
+    const view = mountPage();
+    const originalRows = within(within(figure()).getByRole('table')).getAllByRole('row').slice(1);
+    const originalValues = originalRows.map(row => within(row).getAllByRole('cell').slice(0, 3).map(cell => cell.textContent));
+    expect(within(originalRows[0]!).getByRole('cell', { name: 'Well matched', exact: true })).toBeInTheDocument();
+    const translation = await import('react-i18next');
+    const original = translation.useTranslation();
+    const labels: Record<string, string> = {
+      'chargeDepartureAlignment.modernization.heuristic': 'Heuristische Hinweise, keine bestätigten Fehler',
+      'chargeDepartureAlignment.wellMatched': 'Gut abgestimmt',
+      'chargeDepartureAlignment.modernization.flags': 'Zuordnungshinweise',
+    };
+    const t = ((key: string, ...args: unknown[]) => labels[key]
+      ?? (original.t as (...values: unknown[]) => string)(key, ...args)) as typeof original.t;
+    const localized = vi.spyOn(translation, 'useTranslation').mockReturnValue({
+      ...original, t,
+    } as ReturnType<typeof translation.useTranslation>);
+    try {
+      view.rerender(<ChargeDepartureAlignmentPage />);
+      const table = within(figure()).getByRole('table');
+      expect(within(table).getByRole('columnheader', { name: 'Zuordnungshinweise', exact: true })).toBeInTheDocument();
+      const rows = within(table).getAllByRole('row').slice(1);
+      expect(rows.map(row => within(row).getAllByRole('cell').slice(0, 3).map(cell => cell.textContent))).toEqual(originalValues);
+      expect(within(rows[0]!).getByRole('cell', { name: 'Gut abgestimmt', exact: true })).toBeInTheDocument();
+      for (const row of rows.slice(1)) {
+        expect(within(row).getByRole('cell', { name: 'Heuristische Hinweise, keine bestätigten Fehler', exact: true }))
+          .toBeInTheDocument();
+      }
+    } finally {
+      localized.mockRestore();
+    }
+  });
+});
