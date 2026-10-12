@@ -3,6 +3,7 @@ import { Badge, Text } from '@/components/ui';
 import { FadeIn } from '@/components/motion';
 import { ChartTooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from '@/components/charts';
 import { chartTokens } from '@/lib/tokens';
+import { getChartFontFamily, getChartFontSize } from '@/lib/chartTypography';
 import type { useSecretRotationPage } from '../../../hooks/useSecretRotationPage';
 import { SEVERITY_ORDER, SEVERITY_VARIANT, SEVERITY_HEX, rowKey, truncate } from './helpers';
 
@@ -10,6 +11,11 @@ type Props = { controller: ReturnType<typeof useSecretRotationPage> };
 
 export function SecretRotationCharts({ controller }: Props) {
   const { fmtNumber, t, source, showError, isLoading, severityLabel, counts, topByAge, severitySlices, retry } = controller;
+  const axisTick = {
+    fill: chartTokens.axisStroke,
+    fontFamily: getChartFontFamily(),
+    fontSize: getChartFontSize(),
+  };
 
   return (
 <FadeIn delay={0.1}>
@@ -37,14 +43,14 @@ export function SecretRotationCharts({ controller }: Props) {
                   <CartesianGrid strokeDasharray="3 3" stroke={chartTokens.gridStroke} strokeOpacity={0.4} horizontal={false} />
                   <XAxis
                     type="number"
-                    tick={{ fill: 'var(--text-muted)', fontSize: 10 }}
+                    tick={axisTick}
                     tickFormatter={(v) => `${fmtNumber(Number(v))}d`}
                   />
                   <YAxis
                     type="category"
                     dataKey="label"
                     width={148}
-                    tick={{ fill: 'var(--text-muted)', fontSize: 10 }}
+                    tick={axisTick}
                     tickFormatter={(v) => truncate(String(v))}
                   />
                   <Tooltip
