@@ -54,6 +54,7 @@ import type {
 const h = vi.hoisted(() => ({
   sites: undefined as unknown,
   siteInfo: undefined as unknown,
+  refreshPending: false,
 }));
 
 const refetchSitesMock = vi.fn();
@@ -94,7 +95,7 @@ vi.mock('@/api/hooks/useEnergy', async (importOriginal) => {
   return {
     ...actual,
     useTeslaEnergySites: () => h.sites,
-    useRefreshTeslaEnergySites: () => ({ mutate: refreshSitesMock, isPending: false }),
+    useRefreshTeslaEnergySites: () => ({ mutate: refreshSitesMock, isPending: h.refreshPending }),
     useTeslaEnergySiteInfo: (_siteId?: number) => h.siteInfo,
     useRefreshTeslaEnergySiteInfo: () => ({ mutate: refreshSiteInfoMock, isPending: false }),
     useUpdateTOUSettings: () => ({ mutate: updateTouMock, isPending: false }),
@@ -235,6 +236,7 @@ function renderPage() {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  h.refreshPending = false;
   h.sites = makeSitesQuery({ data: [makeSite()] });
   h.siteInfo = makeSiteInfoQuery({ data: makeSiteInfo() });
 });
@@ -244,6 +246,38 @@ afterEach(() => {
 });
 
 describe('EnergyProductsPage — ready dashboard', () => {
+  it('keeps the discovery action wrapping and mobile-sized with a decorative shared icon', () => {
+    renderPage();
+
+    const refresh = screen.getByRole('button', { name: 'Refresh from Tesla' });
+    expect(refresh).toHaveClass('h-auto', 'min-h-11', 'min-w-11', 'md:min-h-10', 'max-w-full');
+    expect(refresh).not.toHaveClass('h-10');
+    expect(within(refresh).getByText('Refresh from Tesla')).toHaveClass('min-w-0', 'break-words');
+    expect(refresh.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
+    expect(refresh.querySelector('svg')).toHaveAttribute('focusable', 'false');
+    expect(refresh.querySelector('svg')).toHaveClass('shrink-0');
+    expect(refresh.querySelector('svg')).not.toHaveClass('mr-2');
+  });
+
+  it('prevents repeated discovery while pending without hiding cached products or configuration', () => {
+    h.refreshPending = true;
+    renderPage();
+
+    const refresh = screen.getByRole('button', { name: 'Refresh from Tesla' });
+    expect(refresh).toBeDisabled();
+    expect(refresh).toHaveAttribute('aria-busy', 'true');
+    expect(refresh.querySelectorAll('svg')).toHaveLength(1);
+    expect(refresh.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
+    fireEvent.click(refresh);
+    expect(refreshSitesMock).not.toHaveBeenCalled();
+    expect(within(screen.getByRole('region', { name: 'Energy summary' })).getByText('13.50 kWh'))
+      .toBeInTheDocument();
+    expect(screen.getByText('Home Powerwall')).toBeInTheDocument();
+    expect(screen.getByText('Time-Based Control')).toBeInTheDocument();
+    expect(screen.getByText('PG&E EV2-A')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Update rate plan' })).toBeEnabled();
+  });
+
   it('renders the KPI band, site card, and on-demand site configuration', () => {
     renderPage();
 

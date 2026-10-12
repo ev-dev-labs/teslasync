@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { Zap, RefreshCw } from 'lucide-react';
 import { CardGrid, LayoutCard, PageLayout } from '@/components/layout';
-import { Button } from '@/components/ui';
+import { Button, Icon } from '@/components/ui';
 import { EmptyState, Skeleton, QueryError } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -31,8 +31,9 @@ export default function EnergyProductsPage() {
       query={sitesQuery}
       primaryAction={<Button onClick={() => refreshMutation.mutate()}
         loading={refreshMutation.isPending} disabled={refreshMutation.isPending}
+        wrapLabel className="min-h-11 min-w-11 md:min-h-10"
+        icon={<Icon icon={RefreshCw} />}
         aria-label={t('energy.products.refresh', 'Refresh from Tesla')}>
-        <RefreshCw className="mr-2 h-4 w-4" aria-hidden="true" />
         {t('energy.products.refresh', 'Refresh from Tesla')}
       </Button>}
     >
@@ -60,7 +61,7 @@ export default function EnergyProductsPage() {
         ) : (
           <LayoutCard title={t('energy.products.title', 'Energy Products')}>
             {/* no-action: The page's Refresh from Tesla action above owns site discovery. */}
-            <EmptyState icon={<Zap className="h-8 w-8" />}
+            <EmptyState icon={<Icon icon={Zap} className="h-8 w-8" />}
               message={source.fatalError
                 ? t('energy.products.modernization.unavailable', 'Energy site discovery is unavailable. Retry above or refresh from Tesla.')
                 : !source.hasData
