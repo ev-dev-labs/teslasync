@@ -3,7 +3,11 @@ package postgres
 import (
 	"context"
 	"errors"
+	"os"
+	"path/filepath"
 	"reflect"
+	"regexp"
+	"sort"
 	"strings"
 	"testing"
 	"time"
@@ -16,6 +20,81 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/domain/vehicle"
 	"github.com/ev-dev-labs/teslasync/internal/port/repository"
 )
+
+// Read the applied schema sources, not vehicleCols or the domain db tags:
+// those two fixtures can agree with each other while referencing absent columns.
+func TestVehicleReadQueries_CanonicalSchema(t *testing.T) {
+	t.Parallel()
+
+	baseline, err := os.ReadFile(filepath.Join("..", "..", "..", "migrations", "000142_baseline_typed.up.sql"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	table := regexp.MustCompile(`(?is)\bCREATE TABLE vehicles\s*\((.*?)\n\);`).FindStringSubmatch(string(baseline))
+	if len(table) != 2 {
+		t.Fatal("canonical migration has no vehicles table definition")
+	}
+	columns := make(map[string]bool)
+	columnDefinition := regexp.MustCompile(`(?m)^\s*([a-z_][a-z0-9_]*)\s+(?:bigint|text|timestamptz)\b`)
+	for _, match := range columnDefinition.FindAllStringSubmatch(table[1], -1) {
+		columns[match[1]] = true
+	}
+	timezone, err := os.ReadFile(filepath.Join("..", "..", "..", "migrations", "000154_vehicles_add_timezone.up.sql"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, match := range regexp.MustCompile(`(?is)\bALTER TABLE vehicles\s+ADD COLUMN IF NOT EXISTS ([a-z_][a-z0-9_]*)\s+text\b`).FindAllStringSubmatch(string(timezone), -1) {
+		columns[match[1]] = true
+	}
+	if len(columns) != 13 || !columns["id"] || !columns["tesla_id"] || !columns["timezone"] {
+		t.Fatalf("unexpected canonical vehicles schema: %v", columns)
+	}
+
+	cases := []struct {
+		name string
+		sql  string
+	}{
+		{"GetVehicleByID", queries.GetVehicleByID},
+		{"GetVehicleByVIN", queries.GetVehicleByVIN},
+		{"GetVehiclesByUserID", queries.GetVehiclesByUserID},
+		{"GetVehicleByIDForUpdate", queries.GetVehicleByIDForUpdate},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			projection := regexp.MustCompile(`(?is)^\s*SELECT\s+(.*?)\s+FROM\s+vehicles\b`).FindStringSubmatch(c.sql)
+			if len(projection) != 2 {
+				t.Fatal("expected a static vehicles SELECT")
+			}
+			missing := make(map[string]bool)
+			for _, name := range strings.Split(projection[1], ",") {
+				name = strings.TrimSpace(name)
+				if !columns[name] {
+					missing[name] = true
+				}
+			}
+			var missingColumns []string
+			for name := range missing {
+				missingColumns = append(missingColumns, name)
+			}
+			sort.Strings(missingColumns)
+			if len(missingColumns) > 0 {
+				t.Errorf("SELECT references columns absent from canonical vehicles schema: %v", missingColumns)
+			}
+			// The missing ownership predicate is independently invalid even
+			// if every projected column is corrected or the userID is empty.
+			predicates := regexp.MustCompile(`(?i)\b([a-z_][a-z0-9_]*)\s*(?:=|IS\s+(?:NOT\s+)?NULL\b)`)
+			for _, match := range predicates.FindAllStringSubmatch(c.sql, -1) {
+				if !columns[match[1]] {
+					t.Errorf("predicate references column absent from canonical vehicles schema: %s", match[1])
+				}
+			}
+			order := regexp.MustCompile(`(?i)\bORDER\s+BY\s+([a-z_][a-z0-9_]*)`).FindStringSubmatch(c.sql)
+			if len(order) == 2 && !columns[order[1]] {
+				t.Errorf("ORDER BY references column absent from canonical vehicles schema: %s", order[1])
+			}
+		})
+	}
+}
 
 // vehicleCols is the projected column order shared by every vehicle SELECT and
 // by the hand-written GetByID scan. RowToStructByName maps these to the
