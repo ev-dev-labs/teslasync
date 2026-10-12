@@ -1,4 +1,4 @@
-import { type FormEvent, useState } from 'react';
+import { type FormEvent, useId, useState } from 'react';
 import { LockKeyhole } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -31,23 +31,31 @@ interface RoundForm {
   expected_version: number;
 }
 
+const initialForm = (): RoundForm => ({
+  model_name: '', model_version: 'v1', task: 'efficiency',
+  epsilon: 0.1, epsilon_budget: 2, expected_version: 0,
+});
+
 export default function FederatedLearningStudioPage() {
   const { fmtNumber, fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const { vehicleId } = useSelectedVehicle();
   const units = useUnits();
+  const cardId = useId();
+  const [scope, setScope] = useState(vehicleId);
   const [page, setPage] = useState(1);
-  const [confirmOpen, setConfirmOpen] = useState(false);
-  const [form, setForm] = useState<RoundForm>({
-    model_name: '',
-    model_version: 'v1',
-    task: 'efficiency',
-    epsilon: 0.1,
-    epsilon_budget: 2,
-    expected_version: 0,
-  });
-  const query = useFederatedModelCards(vehicleId, PAGE_SIZE, (page - 1) * PAGE_SIZE);
+  const [review, setReview] = useState<(RoundForm & { vehicle_id: number }) | null>(null);
+  const [form, setForm] = useState<RoundForm>(initialForm);
+  if (scope !== vehicleId) {
+    setScope(vehicleId);
+    setPage(1);
+    setForm(initialForm());
+    setReview(null);
+  }
+  const query = useFederatedModelCards(vehicleId, PAGE_SIZE, (scope === vehicleId ? page - 1 : 0) * PAGE_SIZE);
   const mutation = useStartFederatedRound();
+  const mutationError = mutation.variables?.vehicle_id === vehicleId ? mutation.error : null;
+  const roundResult = mutation.data?.model_card.vehicle_id === vehicleId ? mutation.data : undefined;
   const cards = query.data?.items ?? [];
   const summaryMetrics: readonly StatMetric[] = [
     { occurrenceId: 'epsilon-budget', metricId: 'ratio', rawValue: query.data?.total_epsilon_budget,
@@ -65,14 +73,14 @@ export default function FederatedLearningStudioPage() {
 
   const requestConfirmation = (event: FormEvent) => {
     event.preventDefault();
-    if (vehicleId != null) setConfirmOpen(true);
+    if (vehicleId != null && !mutation.isPending) setReview({ ...form, vehicle_id: vehicleId });
   };
 
   const confirmRound = () => {
-    if (vehicleId == null || mutation.isPending) return;
+    if (!review || review.vehicle_id !== vehicleId || mutation.isPending) return;
     mutation.mutate(
-      { ...form, vehicle_id: vehicleId, confirmed: true },
-      { onSuccess: () => setConfirmOpen(false) },
+      { ...review, confirmed: true },
+      { onSuccess: () => setReview((current) => current === review ? null : current) },
     );
   };
 
@@ -85,7 +93,7 @@ export default function FederatedLearningStudioPage() {
       )}
     >
       <AlertBanner
-        variant="success"
+        variant="info"
         icon={<LockKeyhole className="h-5 w-5" aria-hidden="true" />}
         title={t('advancedIntelligence.federated.privacy.title', 'Raw vehicle data never leaves this instance')}
       >
@@ -120,54 +128,56 @@ export default function FederatedLearningStudioPage() {
           title={t('advancedIntelligence.federated.cards.title', 'Subject-scoped model cards')}
           query={vehicleId != null ? query : undefined}
           empty={cards.length === 0}
-          emptyMessage={t(
+          emptyMessage={vehicleId == null ? t('advancedIntelligence.vehicle.empty', 'Select a vehicle to load intelligence.') : t(
             'advancedIntelligence.federated.cards.empty',
             'No local model cards exist for this vehicle and subject.',
           )}
         >
           <div className="grid gap-4 lg:grid-cols-2">
             {cards.map((card) => (
-              <article key={card.id} className="rounded-xl border border-white/[0.08] bg-white/[0.025] p-5">
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <Text as="h3" variant="subhead">{card.model_name}</Text>
+              <article key={card.id} className="min-w-0 rounded-lg border border-[var(--border-default)] bg-[var(--surface-2)] p-4 break-words">
+                <div className="flex min-w-0 flex-wrap items-start justify-between gap-3">
+                  <div className="min-w-0 flex-1">
+                    <Text as="h3" variant="subhead" id={`${cardId}-${card.id}-name`}>{card.model_name}</Text>
                     <Text as="p" variant="caption">{card.model_version} · {card.task}</Text>
                   </div>
-                  <Badge variant={card.latest_status === 'completed' ? 'success' : 'warning'}>
+                  <Badge variant={card.latest_status === 'completed' ? 'success' : card.latest_status === 'insufficient' ? 'warning' : 'neutral'}>
                     {card.latest_status ?? t('advancedIntelligence.federated.status.none', 'No round')}
                   </Badge>
                 </div>
-                <Table aria-label={t('advancedIntelligence.federated.title', 'Federated learning studio')}><tbody>
+                <Table variant="embedded" aria-labelledby={`${cardId}-${card.id}-name`}><tbody>
                   <tr>
                     <th scope="row" className="text-[var(--text-muted)]">
                       {t('advancedIntelligence.federated.card.epsilon', 'Epsilon')}
                     </th>
-                    <td className="text-right">{fmtNumber(card.epsilon_spent)} / {fmtNumber(card.epsilon_budget)}</td>
+                    <td className="text-end">{fmtNumber(card.epsilon_spent)} / {fmtNumber(card.epsilon_budget)}</td>
                   </tr>
                   <tr>
                     <th scope="row" className="text-[var(--text-muted)]">
                       {t('advancedIntelligence.federated.card.rounds', 'Rounds')}
                     </th>
-                    <td className="text-right">{fmtInt(card.round_count)}</td>
+                    <td className="text-end">{fmtInt(card.round_count)}</td>
                   </tr>
                   <tr>
                     <th scope="row" className="text-[var(--text-muted)]">
                       {t('advancedIntelligence.federated.card.samples', 'Latest local samples')}
                     </th>
-                    <td className="text-right">{card.latest_sample_count != null ? fmtInt(card.latest_sample_count) : '—'}</td>
+                    <td className="text-end">{card.latest_sample_count != null ? fmtInt(card.latest_sample_count) : '—'}</td>
                   </tr>
                   <tr>
                     <th scope="row" className="text-[var(--text-muted)]">
                       {t('advancedIntelligence.federated.card.aggregate', 'Local aggregate')}
                     </th>
-                    <td className="text-right">{formatEfficiencyFromSI(card.latest_metric_wh_per_m, units.unitPrefs)}</td>
+                    <td className="text-end">{formatEfficiencyFromSI(card.latest_metric_wh_per_m, units.unitPrefs)}</td>
                   </tr>
                 </tbody></Table>
                 <Button
                   type="button"
                   variant="secondary"
                   size="sm"
-                  className="mt-4"
+                  className="mt-4 min-h-11 md:min-h-9"
+                  wrapLabel
+                  aria-labelledby={`${cardId}-${card.id}-use ${cardId}-${card.id}-name`}
                   onClick={() => setForm({
                     model_name: card.model_name,
                     model_version: card.model_version,
@@ -177,7 +187,7 @@ export default function FederatedLearningStudioPage() {
                     expected_version: card.version,
                   })}
                 >
-                  {t('advancedIntelligence.federated.card.use', 'Use for next local round')}
+                  <span id={`${cardId}-${card.id}-use`}>{t('advancedIntelligence.federated.card.use', 'Use for next local round')}</span>
                 </Button>
               </article>
             ))}
@@ -246,18 +256,18 @@ export default function FederatedLearningStudioPage() {
                 onChange={(event) => setForm((current) => ({ ...current, expected_version: Number(event.target.value) }))}
               />
             </div>
-            <Button type="submit" disabled={vehicleId == null || mutation.isPending || !form.model_name.trim()}>
+            <Button type="submit" wrapLabel className="min-h-11 md:min-h-10" disabled={vehicleId == null || mutation.isPending || !form.model_name.trim()}>
               {t('advancedIntelligence.federated.form.review', 'Review privacy spend')}
             </Button>
           </form>
-          <MutationError error={mutation.error} />
+          <MutationError error={mutationError} />
         </InsightPanel>
       </FadeIn>
 
       <FadeIn delay={0.15}>
         <EvidencePanel
-          quality={mutation.data?.data_quality ?? query.data?.data_quality}
-          evidence={mutation.data?.evidence ?? query.data?.evidence}
+          quality={roundResult?.data_quality ?? query.data?.data_quality}
+          evidence={roundResult?.evidence ?? query.data?.evidence}
           limitations={cards.flatMap((card) => card.limitations ?? [])}
           unsupported={[
             t('advancedIntelligence.federated.unsupported.upload', 'Raw-data or gradient upload'),
@@ -267,19 +277,21 @@ export default function FederatedLearningStudioPage() {
       </FadeIn>
 
       <ConfirmDialog
-        open={confirmOpen}
+        open={review != null && review.vehicle_id === vehicleId}
         variant="warning"
         loading={mutation.isPending}
         title={t('advancedIntelligence.federated.confirm.title', 'Confirm local privacy spend')}
         message={t(
           'advancedIntelligence.federated.confirm.body',
           'This local round may spend {{epsilon}} epsilon. It never uploads raw vehicle data.',
-          { epsilon: form.epsilon },
+          { epsilon: review?.epsilon ?? form.epsilon },
         )}
+        details={<MutationError error={mutationError} />}
+        confirmDisabled={review == null || review.vehicle_id !== vehicleId}
         confirmLabel={t('advancedIntelligence.federated.confirm.action', 'Start local round')}
         cancelLabel={t('common.cancel', 'Cancel')}
         onConfirm={confirmRound}
-        onCancel={() => setConfirmOpen(false)}
+        onCancel={() => setReview(null)}
       />
     </PageLayout>
   );
