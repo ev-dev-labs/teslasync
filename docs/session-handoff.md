@@ -8,9 +8,12 @@ Twelve real scoped repairs were dispatched: two Phase4 visual/capture dependenci
 and ten deferred Phase6 gate repairs pulled early, not a restart of completed
 phases. All twelve original source deliveries are accepted and pushed. The second
 changing-extent correction is terminal FAILED, with partial source preserved as
-WIP `3a0c50f47`; no source claims or running workers remain. Its60 passing Node
-cases do not establish native coverage. Accepted source counts are not a
-running-actor count.
+WIP `3a0c50f47`. Its60 passing Node cases do not establish native coverage.
+The user's ONE original-plan blocker-rescue exception is now also spent,
+terminal FAILED, with partial source preserved/pushed as WIP `a80831de8`.
+Original2 attempts remain spent. No live source claim or running worker remains;
+do not grant another automatic helper retry/rescue. Accepted source counts are
+not a running-actor count.
 Use the user's active seven-phase workflow, not the different feature-order
 numbering in `frontend-mission.md` section 38.
 
@@ -48,12 +51,13 @@ and `47a8ef13e`, followed by final-four `a2ee93ab9`, owner-recovery `d5e1b7f8f`,
 canonical-recovery `436dbb680`, resolved-baseline `b66f63037` and feature-producer
 `1184a05f2`, plus shipping Dashboard toolbar `e15758f41`. Copy projection
 work is preserved as WIP `4b8e12057`, then completed narrowly at `45b86a29b`.
-The deployed application
-snapshot remains `55e519031df03109436a2cb71ef555285809e52d`; the later commits
-mostly change QA tooling, tests and erased TypeScript types/documentation. Watch
-does change shipping hook source while preserving existing runtime cancellation.
-Do not claim those later hashes identify the running images. Roll out an immutable
-accepted root snapshot after current workers settle; do not build during live work.
+The deployed application snapshot is now
+`a61cb003f335beceadf546accc43ab0697a57843`, including the accepted Watch and
+Dashboard toolbar shipping changes. Both image revision labels and the served
+service worker identify that frozen full-root snapshot. Later orchestration
+metadata `cb591381a` is not the running image identity. The snapshot also
+preserves the incomplete QA-helper WIP, which does not ship application UI;
+do not mistake its presence for native capture acceptance.
 Production `npx tsc --noEmit` exited0 after the shared type edit; its narrow
 repository audit also ran the compiler successfully. Both sequential Docker
 builds of the deployed snapshot passed. The earlier full lint exited1 at the
@@ -82,7 +86,7 @@ entries, zero FAIL/SKIP, exit0; actual API binary compilation exits0.
 ## Latest local Docker rollout and test data
 
 API and web were built from an immutable full-repository archive of
-`55e519031df03109436a2cb71ef555285809e52d`, excluding uncommitted files and
+`a61cb003f335beceadf546accc43ab0697a57843`, excluding uncommitted files and
 `.env`. Runtime Compose still uses the existing local environment; no secrets
 were printed. Both running image revision labels match the snapshot.
 API, web, PostgreSQL, Redis, and Mosquitto are running and healthy.
@@ -148,11 +152,15 @@ vitals remain enabled; the read-only QA helper blocks their POST and reports it.
 An immutable full-root candidate for `a61cb003f` is now prepared in the existing
 session deployment area. It excludes the local `.env`; Watch, Dashboard,
 package lock and both Dockerfiles match their committed Git objects. This is
-not a running-image claim. The stable technical gate passed and the session
-snapshot state now targets this candidate; the existing deployment helper is
-actually building API then web and will check readiness/revisions/service worker
-before reporting the rollout complete. Until that verification succeeds,
-the previous running55e519031 evidence remains the last completed rollout.
+now the verified running snapshot. After the stable technical gate, the existing
+deployment helper built API then web sequentially, both exit0, and started both
+with healthy wait, exit0. API/web/PostgreSQL/Redis/Mosquitto are healthy;
+health/readiness/UI return200. Both running image labels and actual served
+service worker match `a61cb003f`. The independent runtime verifier exits0:
+all seven exact calendar-month SQL stats match with zero boundary records;
+the complete2/4/3 fixture and four vehicle-scoped history endpoints remain200.
+Existing totals3vehicles/186drives/63charges and migration255/dirtyfalse are
+unchanged. No destructive reseed was performed.
 Its fixed-name build/start/runtime receipts and snapshot JSON were preserved
 under `S\local-docker-55e519031-before-a61cb003f` before log reuse.
 
@@ -280,6 +288,48 @@ no reset, further generic retry, application UI change, clipping allowlist
 or partial-coverage pass. Any original-plan blocker rescue must be explicit
 and retain this complete history.
 
+That ONE original-plan rescue is now terminal FAILED and preserved/pushed at
+`a80831de8`. Original50 names/data/assertions remain; prior10 names remain, with
+one NEW WIP gap fixture corrected from wholly unpainted geometry to a genuinely
+required covered fragment. Seven new geometric regressions give67/67 Node cases,
+syntax0 and strict scoped lint0. One actual dark four-width native matrix exits2:
+375 has only the base PNG;768 has four partial sections and no complete proof.
+Both remain BLOCKED, with sanitized screenshot-stage errors whose underlying
+cause is not established.1440/1920 now have complete actual painted-fragment
+proof:190/190 and208/208 anchors/fragments, three measured sections, verified
+terminal bottom, restored0/0 and handle disposal. Those rows still FAILED for
+resource/write findings; not fresh-data/full-pilot acceptance. All14 PNGs are
+validated. The helper's contexts/browser and screenshot lock are closed/released;
+the exact heartbeat is removed after parent intake. Full receipt and exact
+test-name matrix: `logs\phase4-qa-native-sticky-scroll-cycle-rescue.log`;
+machine proof: corresponding `-rescue-evidence.json`; captures:
+`qa-screenshots\2026-10-12T11-42-23.772Z-33160`. No further native retries or
+private failure-extraction sessions followed. Source budgets are exhausted,
+not reset; mobile capture remains the real blocker for original pilot acceptance.
+
+Parent separately exercised five read-only mounted Docker smoke flows at1440:
+Drive History, Fleet operations and its Charging link, charging quick-view/Escape,
+and Settings category navigation. Synthetic vehicle4 history and session evidence
+render; Settings unknown saved fields remain dashes. Main root width1440/1440.
+Non-read requests were guarded before navigation and no save/command was clicked.
+Real501/503/404 and blocked web-vitals findings remain. The initial Dashboard
+selector wrongly expected "Dashboard" rather than the actual "Fleet operations";
+its timeout is a probe error, not a product defect. Raw MCP artifacts were moved
+from the parent's newly generated untracked `web\.playwright-mcp` into ignored
+`logs\phase4-local-docker-a61-browser-native`; summary:
+`logs\phase4-local-docker-a61-browser-smoke.log`. No open browser tabs or parent
+slot remains. This smoke is not mobile/contrast/screen-reader/state/extreme-data
+or complete screenshot acceptance. Do not infer fresh measurement provenance
+from the DRILL hero's zero gauges.
+
+One genuine non-blocking copy finding is queued for the original Phase6 sweep:
+`phase6-driving-efficiency-excluded-plural`. Docker Drive History renders
+"1 drives excluded from efficiency"; hook140-144 passes numeric count, but
+English catalog5099 lacks a singular pair. Preserve the existing base/calls and
+delegate the narrow future catalog integration, including exact generated and
+projection-owner wiring. It is deferred polish, not a new translation campaign,
+current/next-phase-ready worker, or reason to reopen completed phases.
+
 Actual mobile Dashboard review found a distinct interactive overlap, not root
 horizontal overflow: at375px the layout button and Refresh intersect by
 831.234375 square pixels. Real read-only DOM boxes were layout
@@ -349,27 +399,31 @@ completion does not mean the corresponding page was migrated.
 | 3 | 696 | 0 | 0 | 0 | 0 | 118 |
 | 4 | 33 | 0 | 0 | 2 | 4 | 34 |
 | 5 | 0 | 0 | 0 | 0 | 1 | 1 |
-| 6 | 10 | 0 | 0 | 0 | 1 | 0 |
+| 6 | 10 | 1 | 0 | 0 | 1 | 0 |
 | 7 | 0 | 0 | 0 | 0 | 1 | 0 |
-| Total | 1093 | 0 | 0 | 2 | 7 | 158 |
+| Total | 1093 | 1 | 0 | 2 | 7 | 158 |
 
-There are1,260 rows: the original1,243 plus seventeen narrow failures discovered
-by actual checks. No source claim or running worker remains after twelve accepted
-original deliveries and the terminal failed capture continuation. The failed
-partial source is committed, not accepted. Lifecycle completion was intaken by
-exact ID before its claim was released. Remaining slots are not filled with
-fake/provenance work. The serialized stable Phase4 technical gate is now eligible.
+There are1,261 rows: the original1,243 plus eighteen narrow failures discovered
+by actual checks. Twelve original deliveries are accepted and the failed
+partial capture source is committed, not accepted. Its original claim was
+released after terminal intake. Its ONE narrowly bounded rescue is also terminal
+FAILED; partial source is committed and claim released, not accepted as DONE.
+There are0/32 running workers: no ready current/next-phase item, because mobile
+native coverage still blocks the original pilot gate. One future Phase6
+non-blocking copy fix is pending, not pulled into another early repair campaign.
+The stable Phase4 technical gate is accepted; no full runner or Docker build
+remains active. Do not repeat the accepted application gate for provenance.
 The combined Phase6 sweep has not
 begun; only explicit gate repairs are pulled early. Original pilot acceptance gates the aggregate later-phase placeholders.
 The native gate's real capture dependency is now recorded explicitly as
 `phase4-qa-native-sticky-scroll-cycle`; the three pilot acceptance rows need
 that native gate and the technical gate, not source re-migration. The failed
 capture dependency transitively blocks all three original pilots. The user's
-ONE blocker-rescue exception is therefore eligible only for the precise
-measured painted-fragment inventory defect, after the stable technical gate
-and latest Docker rollout; it does not reset attempt2 or authorize another
-generic changing-extent retry.
-Actual `git rev-list --count HEAD` is1469 at `3a0c50f47`. The production compiler
+ONE blocker-rescue exception was used after the stable technical gate and latest
+Docker rollout for that precise measured painted-fragment defect. It is spent;
+it does not reset attempt2 or authorize another generic changing-extent retry.
+Actual `git rev-list --count HEAD` is1472 at source `a80831de8`, before committing
+this metadata-only handoff. The production compiler
 cadence1466 at `08a970bf8` exits0, with another production compiler pass in the
 exact Dashboard audit at1467. Next scheduled cadence1481. Old1065 prose was stale.
 Full lint/tests/build remain serialized and forbidden during live workers.
@@ -384,7 +438,7 @@ and log, never Git/queue/handoff. Source writes are limited to the stated claim.
 | --- | --- | --- | --- |
 | phase6-watch-query-signal-audit | `6dc9914c-5e0d-478f-b718-92296a64ccdf` | `web\src\api\hooks\useWatch.ts`; `useWatch.test.tsx` | Accepted `38291ea57`; released |
 | phase4-qa-scroll-extent-settlement | `8ae7d8ed-6f8b-4ef4-a577-ba4ca95eea09` | `web\scripts\frontend-qa.mjs`; `scripts\__tests__\frontend-qa.test.mjs` | Accepted `8265f5c83`; original claim released |
-| phase4-qa-native-sticky-scroll-cycle | `8ae7d8ed-6f8b-4ef4-a577-ba4ca95eea09` | Same released helper/test pair | FAILED attempt2; WIP `3a0c50f47`; released; native BLOCKED/exit2 |
+| phase4-qa-native-sticky-scroll-cycle | `8ae7d8ed-6f8b-4ef4-a577-ba4ca95eea09` | Same released helper/test pair | Original2 spent; ONE rescue FAILED/WIP `a80831de8`; released; mobile BLOCKED, desktop measured coverage only |
 | phase6-test-authorized-canonical-recovery | `5f6b869b-8be6-4bfd-977c-8ea23eb7f37c` | `web\src\i18n\authorized-canonical-recovery.test.ts` | Accepted `436dbb680`; released |
 | phase6-test-authorized-owner-recovery | `80eedd0e-51b6-497b-b880-27d61dae8e09` | `web\src\i18n\authorized-owner-recovery.test.ts` | Accepted `d5e1b7f8f`; released |
 | phase6-test-copy-owner-contracts | `6135ed89-85b6-4ca0-b657-72d4923d90b5` | `web\src\i18n\copy-owner-contracts.test.ts` | Accepted `45b86a29b`; same owner attempt2 complete/released; WIP retained |
@@ -484,7 +538,8 @@ theme, query, overlay, formatter, or component library.
 ## Conventions learned in Phases 1-4
 
 - Parent orchestrates and commits; workers implement only explicit owned files.
-  Max32 is a ceiling for actual running workers, not reservations or idle reports.
+  Target32 counts actual running workers, not reservations or idle reports.
+  Fill ready current/next-phase work without inventing tasks to fill slots.
 - Preserve sections, actions, public props, original tests/fixtures, exports,
   preference IDs, and data behavior. Whole-test byte prefixes were retained.
 - Features use category barrels; shared components use concrete internal imports
@@ -539,7 +594,8 @@ contrast, performance, or accessibility acceptance.
 | Three-page pilot QA | Helper correction6bcbb5d2d preserves35 passing cases and real non-pass findings. Dark Settings has18 diagnostic PNGs, but the complete three-page visual/responsive/state/axe gate remains unaccepted. |
 | Current full lint | Stable actual `npm run lint` at `a61cb003f` exits0, reaching all chained audits. Earlier exit1 is retained. Help adoption remains8/9 at its unchanged floor8; no zero-finding claim. |
 | Current full tests | Stable full rerun at `a61cb003f` passes45187/45187,0failed/pending,2438/2438 physical files, exit0. Earlier45179/44915/264/0 exit1 is retained; no native acceptance follows. |
-| Native Drive History capture | Second changing-extent attempt FAILED; partial helper/test WIP `3a0c50f47`,60/60 Node cases. Reversible insertion is accommodated but effective painted fragments are not; all four native dark widths remain BLOCKED/exit2. Partial PNGs are not all-section acceptance; claim released. |
+| Native Drive History capture | Original2 attempts and ONE rescue spent/FAILED; latest WIP `a80831de8`,67/67 Node cases.1440/1920 have complete measured fragment/terminal/restoration proof but retain resource FAILED;375/768 remain screenshot-stage BLOCKED/exit2, underlying cause unproved. Claim released; no automatic retry/reset. |
+| Deferred drive copy singular | Actual Docker DRILL vehicle4 shows "1 drives excluded from efficiency"; one Phase6 catalog-only plural integration pending. Non-blocking; not a broad localization campaign. |
 | Dashboard mobile toolbar | Accepted `e15758f41`: existing scope-first prop; all20 required dark/light view rows measure exact0px2 overlap with no root/body overflow. Optional edit probe/full-pilot acceptance remains incomplete. |
 | Dashboard layout writes | Three PUTs aborted during navigation without an explicit edit; exact initiator/root cause unknown. No source fix. Preserve legitimate autosave/autofit/draft recovery. |
 | Maintenance accepted continuation | `d770d4079`: corrected the new retained-source assertion, preserving production and original cases. Exact Maintenance18 + RepairCaseWorkspace12 cases pass30/30; strict four-file lint0 after locked dependency restoration. Historical failed assertion/tooling output and original attempt history remain preserved. |
@@ -600,8 +656,8 @@ historical evidence; its retained canonical cases now pass through production fi
 | No major duplicated UI patterns remain | Not established across the application |
 | TypeScript passes | Actual prior production npx checks0; stable checkout build at1470 passes production/SW compilers |
 | Lint passes | Stable full `npm run lint` at `a61cb003f` exits0; earlier query-audit failure preserved |
-| Tests pass | Stable full45187/45187,2438/2438 files,0fail/pending, exit0 at `a61cb003f`; partial QA helper60/60 Node cases but native fails; selected eight-package Go race282 RUN/PASS entries with0 FAIL/SKIP, exit0. Earlier red evidence retained |
-| Production build passes | Stable checkout npm build at `a61cb003f` exits0 with bundle/PWA/source-map checks. Latest Docker candidate build/rollout in progress;55e519031 remains the last completed runtime verification until newer revisions/readiness are checked |
+| Tests pass | Stable full45187/45187,2438/2438 files,0fail/pending, exit0 at `a61cb003f`; later partial QA helper67/67 Node cases but mobile native fails; selected eight-package Go race282 RUN/PASS entries with0 FAIL/SKIP, exit0. Earlier red evidence retained |
+| Production build passes | Stable checkout npm build at `a61cb003f` exits0 with bundle/PWA/source-map checks. Latest API/web Docker sequential build/start0, both running revisions/servedSWa61/readiness200 and operational verifier0; native QA still incomplete |
 
 ## What slowed this session down / avoid repeating
 
@@ -682,24 +738,29 @@ historical machine and was preserved in its prior handoff, not re-created here:
 ## Next steps, in order
 
 1. Read this handoff, queue, current contract, relevant instructions, and
-   `git status`. All known workers are terminal/released; preserve original WIP
-   and untracked data, but do not resurrect finished reservations.
+   `git status`. No worker has a live claim. Preserve both original attempts
+   and the spent ONE rescue/WIP; do not resurrect reservations or reset budgets.
 2. The stable Phase4 full lint/test/checkout build gate is accepted at
    `a61cb003f`; do not repeat it or the8759-case integration for provenance.
-   Finish rolling the accepted shipping changes into the immutable committed full-root
-   Docker snapshot, verify both revision labels/service worker and exact
-   operational/history/independent monthly SQL contracts. Preserve test data.
+   The accepted shipping changes now run in immutable full-root Dockera61,
+   with both revision labels/service worker and exact operational/history/
+   independent monthly SQL contracts verified. Preserve test data.
+   The ONE precise helper rescue is already intaken and FAILED/WIP `a80831de8`.
+   375/768 screenshot errors still block complete native acceptance; existing
+   sanitized output does not prove their underlying cause. No further automatic
+   source/native retries or rescue are authorized. Reuse actual desktop proof,
+   preserve mobile failure and remaining original QA requirements.
 3. Keep accepted Maintenance, Dismiss, SignalCatalog, canonical vehicle,
    QA-helper and nullable stats fixes complete. Their
    scoped validation is done; do not redispatch them or replace original tests.
 4. Preserve the exhausted Dashboard implicit-layout-save issue and legitimate
    autosave/autofit/draft recovery; do not reopen it through the accepted toolbar
    change or speculate about a mount defect.
-5. Reuse the accepted helper and real dark Settings captures; complete the
-   remaining coherent original-plan
-   three-page pilot technical and mounted QA pass. Preserve real resource findings
-   and review actual rendered evidence; do not turn diagnostic captures into a
-   false native acceptance or bypass unresolved contract/shared issues.
+5. Original three-page mounted QA remains blocked on complete mobile native
+   evidence. Preserve the accepted helper history and real dark Settings captures.
+   Do not dispatch another exhausted helper attempt or mark pilot acceptance,
+   and do not count desktop-only proof or this Docker smoke as full visual,
+   responsive, accessibility, state or extreme-data acceptance.
 6. Record pilot acceptance/checkpoint and worker-convention lessons; then expand
    Phase5 page assignments from the inventory. Never repeat completed foundations.
 7. Follow the original Phase6 combined sweep and Phase7 final gates. Count every
@@ -709,4 +770,5 @@ Feature-producer contract at `1184a05f2` passes1923/1923 expanded cases
 (1916owned), strict lint and scoped typing0. The original291 path cases,1200
 production calls, fixtures/exports and28257 predecessor digest are retained.
 One added targeted case rejects eight semantic producer mutations. This repairs
-the previously repeated imported root; integration has not yet run.
+the previously repeated imported root; the accepted8759-case integration and
+full45187-case gate at `a61cb003f` now cover this repair.
