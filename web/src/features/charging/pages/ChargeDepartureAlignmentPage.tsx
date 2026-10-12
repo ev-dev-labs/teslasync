@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Link2 } from 'lucide-react';
 
 import { PageLayout } from '@/components/layout';
-import { Text, Button } from '@/components/ui';
+import { Text, Button, Label, Caption, Icon } from '@/components/ui';
 
 import { QueryError, StaleRefreshWarning, DataStateNotice } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
@@ -20,6 +20,7 @@ import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useHiddenSeries } from '@/hooks/useHiddenSeries';
 import { chartTokens } from '@/lib/tokens';
+import { getChartFontFamily, getChartFontSize } from '@/lib/chartTypography';
 
 import { deriveDataState } from '@/api/dataState';
 import { analyzeChargeDepartureAlignment } from '../lib/chargeDepartureAlignment';
@@ -38,6 +39,11 @@ export default function ChargeDepartureAlignmentPage() {
   const { vehicleId } = useSelectedVehicle();
   const vehicleIdStr = vehicleId != null ? String(vehicleId) : undefined;
   const hiddenSeries = useHiddenSeries(CHART_KEY);
+  const axisTick = {
+    fill: chartTokens.axisStroke,
+    fontSize: getChartFontSize(),
+    fontFamily: getChartFontFamily(),
+  };
 
   const sessionsQuery = useChargingHistory(vehicleIdStr);
   const drivesQuery = useDriveHistory(vehicleIdStr);
@@ -169,18 +175,17 @@ export default function ChargeDepartureAlignmentPage() {
             <dl className="grid min-w-0 gap-3 @xl:grid-cols-2">
               {sourceEntries.map(({ id, label, count, bounds, boundsLabel }) => (
                 <div key={id} className="min-w-0 space-y-1 break-words" data-alignment-bounds={id}>
-                  <dt>{label}</dt>
-                  <dd>{t('chargeDepartureAlignment.modernization.loaded', '{{count}} records loaded', {
-                    count: count ?? undefined,
-                    replace: { count: count ?? '—' },
-                  })}</dd>
-                  <dd>{boundsLabel}: {bounds != null
+                  <Label as="dt">{label}</Label>
+                  <Caption as="dd">{t('chargeDepartureAlignment.modernization.loaded', '{{count}} records loaded',
+                    count == null ? { replace: { count: '—' } } : { count },
+                  )}</Caption>
+                  <Caption as="dd">{boundsLabel}: {bounds != null
                     ? t('chargeDepartureAlignment.modernization.bounds', '{{first}} → {{last}} ({{count}} valid timestamps)', {
                       first: new Date(bounds.first).toLocaleString(i18n.language),
                       last: new Date(bounds.last).toLocaleString(i18n.language),
                       count: bounds.count,
                     })
-                    : t('chargeDepartureAlignment.modernization.noBounds', 'No valid observed timestamps available.')}</dd>
+                    : t('chargeDepartureAlignment.modernization.noBounds', 'No valid observed timestamps available.')}</Caption>
                 </div>
               ))}
             </dl>
@@ -216,7 +221,7 @@ export default function ChargeDepartureAlignmentPage() {
               'chargeDepartureAlignment.noData',
               'No charge could be paired with a following drive within 24 hours yet.',
             )}
-            emptyIcon={<Link2 className="h-8 w-8" />}
+            emptyIcon={<Icon icon={Link2} size="xl" />}
             className="w-full min-w-0"
             height={340}
             data={exportData}
@@ -230,10 +235,10 @@ export default function ChargeDepartureAlignmentPage() {
           >
             <ResponsiveContainer width="100%" height="100%">
               <ComposedChart data={chartData} margin={{ top: 16, right: 16, bottom: 8, left: 8 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
-                <XAxis dataKey="date" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} />
-                <YAxis yAxisId="dwell" tick={{ fill: 'var(--text-muted)', fontSize: 11 }} />
-                <YAxis yAxisId="margin" orientation="right" tick={{ fill: 'var(--text-muted)', fontSize: 11 }} domain={[0, 100]} unit="%" />
+                <CartesianGrid strokeDasharray="3 3" stroke={chartTokens.gridStroke} strokeOpacity={0.4} />
+                <XAxis dataKey="date" tick={axisTick} />
+                <YAxis yAxisId="dwell" tick={axisTick} />
+                <YAxis yAxisId="margin" orientation="right" tick={axisTick} domain={[0, 100]} unit="%" />
                 <Tooltip content={<ChartTooltip />} />
                 <ChartLegend state={hiddenSeries} />
                 <Bar
