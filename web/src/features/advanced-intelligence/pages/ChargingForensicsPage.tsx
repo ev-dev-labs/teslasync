@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ReceiptText } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useChargingForensics, fetchAllChargingForensics } from '@/api/hooks/useAdvancedIntelligence';
@@ -6,11 +6,11 @@ import { AlertBanner } from '@/components/feedback';
 
 import { PageLayout } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
-import { Badge, DataTable, Pagination, type Column } from '@/components/ui';
+import { Badge, DataTable, Icon, Pagination, Text, type Column, type MobileDataTablePresentation } from '@/components/ui';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useUnits } from '@/hooks/useUnits';
-import { formatDateTime } from '@/lib/dateFormat';
 import { downloadCSV, downloadJSON, objectsToCSV } from '@/lib/csvExport';
 import type { ChargingForensicsItem } from '@/types/advancedIntelligence';
 import { EvidencePanel, InsightPanel } from '../components';
@@ -23,15 +23,26 @@ export default function ChargingForensicsPage() {
   const { t } = useTranslation();
   const { vehicleId } = useSelectedVehicle();
   const units = useUnits();
-  const [page, setPage] = useState(1);
+  const { formatDateTime } = useDateFormat();
+  const [pagination, setPagination] = useState({ vehicleId, page: 1 });
+  const page = pagination.vehicleId === vehicleId ? pagination.page : 1;
+  if (pagination.vehicleId !== vehicleId) setPagination({ vehicleId, page: 1 });
   const query = useChargingForensics(vehicleId, PAGE_SIZE, (page - 1) * PAGE_SIZE);
   const items = query.data?.items ?? [];
+  const total = query.data?.total;
+  const hasTotal = typeof total === 'number' && Number.isSafeInteger(total) && total >= 0;
+  useEffect(() => {
+    if (!query.isSuccess || query.isPlaceholderData || !hasTotal ||
+      query.data?.offset !== (page - 1) * PAGE_SIZE) return;
+    const lastPage = Math.max(1, Math.ceil(total / PAGE_SIZE));
+    if (page > lastPage) setPagination({ vehicleId, page: lastPage });
+  }, [query.isSuccess, query.isPlaceholderData, query.data?.offset, hasTotal, total, page, vehicleId]);
   usePageTitle(t('advancedIntelligence.forensics.title', 'Charging forensics'));
 
-  const money = (minor: number | null, currency: string | null) => {
+  const money = useCallback((minor: number | null, currency: string | null) => {
     if (minor == null || !currency) return '—';
     return formatCurrencyMinor(minor, currency, units.unitPrefs.locale);
-  };
+  }, [units.unitPrefs.locale]);
 
   const exportReconciliation = async (format: 'csv' | 'json') => {
     if (vehicleId == null) return;
@@ -106,7 +117,41 @@ export default function ChargingForensicsPage() {
       visibleOnMobile: true,
       render: (row) => <Badge variant={row.status === 'reconciled' ? 'success' : 'warning'}>{row.status}</Badge>,
     },
-  ], [t, units]);
+  ], [t, units, money, formatDateTime]);
+
+  const mobilePresentation = useMemo<MobileDataTablePresentation<ChargingForensicsItem>>(() => ({
+    roles: { session: 'title', vehicle_energy: 'primary', started: 'meta', status: 'badge' },
+    displayValue: (row, key) => {
+      if (key === 'status') return row.status;
+      const value = columns.find((column) => column.key === key)?.render(row);
+      return typeof value === 'string' || typeof value === 'number' ? value : null;
+    },
+    allDetails: (row) => [
+      { key: 'ended_at', label: t('charging.detail.ended', 'Ended'), value: formatDateTime(row.ended_at) },
+      { key: 'currency', label: t('charging.detail.currency', 'Currency'), value: row.currency },
+      ...(row.evidence ?? []).map((evidence, index) => ({
+        key: `evidence-${index}`,
+        label: t('advancedIntelligence.evidence.sources', 'Evidence sources'),
+        value: <div className="min-w-0 space-y-1 break-words">
+          <Text as="p" variant="label">{evidence.source}</Text>
+          <Text as="p" variant="bodySm">{evidence.summary}</Text>
+          <Text as="p" variant="caption">{evidence.sample_count != null
+            ? t('advancedIntelligence.evidence.sampleLine', '{{count}} samples · {{date}}', {
+              count: evidence.sample_count, date: formatDateTime(evidence.observed_at),
+            })
+            : formatDateTime(evidence.observed_at)}</Text>
+        </div>,
+      })),
+      {
+        key: 'limitations',
+        label: t('advancedIntelligence.limitations.title', 'Limitations'),
+        value: (row.limitations ?? []).length > 0
+          ? <ul className="list-disc space-y-2 ps-4">{row.limitations.map((limitation, index) =>
+            <Text as="li" variant="bodySm" key={index}>{limitation}</Text>)}</ul>
+          : t('advancedIntelligence.limitations.empty', 'No additional limitations were returned.'),
+      },
+    ],
+  }), [columns, formatDateTime, t]);
 
   return (
     <PageLayout
@@ -118,7 +163,7 @@ export default function ChargingForensicsPage() {
     >
       <AlertBanner
         variant="info"
-        icon={<ReceiptText className="h-5 w-5" aria-hidden="true" />}
+        icon={<Icon icon={ReceiptText} size="lg" aria-hidden={true} />}
         title={t('advancedIntelligence.forensics.notice.title', 'Null means unsupported, not zero')}
       >
         {t(
@@ -138,10 +183,13 @@ export default function ChargingForensicsPage() {
         >
           <DataTable
             tableId="advanced-intelligence:charging-forensics"
+            caption={t('advancedIntelligence.forensics.reconciliation.title', 'Session reconciliation')}
             columns={columns}
             data={items}
             keyExtractor={(row) => row.session_id}
             mobileColumns={['session', 'started', 'status']}
+            mobilePresentation={mobilePresentation}
+            rowLabel={(row) => `${t('advancedIntelligence.forensics.session', 'Session')} #${row.session_id}`}
             exportable
             exportFilename="charging-forensics"
             controls={{
@@ -157,13 +205,17 @@ export default function ChargingForensicsPage() {
             }}
             emptyMessage={t('advancedIntelligence.forensics.empty', 'No charging sessions are available for reconciliation.')}
           />
-          <Pagination
-            page={page}
-            pageSize={PAGE_SIZE}
-            total={query.data?.total ?? 0}
-            onPageChange={setPage}
-          />
         </InsightPanel>
+        {vehicleId != null && (page > 1 || (hasTotal && total > PAGE_SIZE)) && (
+          <div className="mt-4">
+            <Pagination
+              page={page}
+              pageSize={PAGE_SIZE}
+              total={Math.max(hasTotal ? total : 0, (page - 1) * PAGE_SIZE + 1)}
+              onPageChange={(nextPage) => setPagination({ vehicleId, page: nextPage })}
+            />
+          </div>
+        )}
       </FadeIn>
 
       <FadeIn delay={0.05}>
