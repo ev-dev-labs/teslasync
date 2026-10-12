@@ -282,3 +282,54 @@ describe('ArchivedPage', () => {
     );
   });
 });
+
+describe('ArchivedPage restrained navigation', () => {
+  it('keeps a native named back link with theme focus, mobile targets, and wrapping text', async () => {
+    renderPage();
+
+    const back = screen.getByRole('link', { name: 'Back to inbox' });
+    expect(back.tagName).toBe('A');
+    expect(back).toHaveAttribute('href', '/notifications/inbox');
+    expect(back).toHaveClass(
+      'min-h-11',
+      'min-w-11',
+      'md:min-h-9',
+      'max-w-full',
+      'hover:bg-[var(--control-bg)]',
+      'focus-visible:outline-[var(--focus-ring)]',
+      'forced-colors:focus-visible:outline-[Highlight]',
+      'motion-reduce:transition-none',
+    );
+    expect(back).not.toHaveClass('focus-visible:ring-cyan-400/60', 'hover:bg-white/[0.04]');
+    expect(within(back).getByText('Back to inbox')).toHaveClass('min-w-0', 'break-words');
+    expect(back.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
+    expect(back.querySelector('svg')).toHaveClass('shrink-0', 'rtl:rotate-180');
+    back.focus();
+    expect(back).toHaveFocus();
+
+    await waitFor(() => expect(captured.inbox?.rules).toEqual(RULES));
+  });
+
+  it('preserves the independent archived sample and performs only catalog and summary reads on mount', async () => {
+    renderPage();
+
+    await waitFor(() => expect(captured.inbox?.vehicles).toEqual(VEHICLES));
+    await waitFor(() =>
+      expect(screen.getByTestId('notification-backlog-brief')).not.toHaveAttribute('aria-busy', 'true'),
+    );
+
+    const calls = mockedRequest.mock.calls;
+    expect(calls.map(([path]) => path)).toEqual(expect.arrayContaining([
+      '/vehicles',
+      '/alerts/rules',
+      '/notifications/logs?archived=true',
+    ]));
+    expect(calls.every(([path]) => [
+      '/vehicles',
+      '/alerts/rules',
+      '/notifications/logs?archived=true',
+    ].includes(String(path)))).toBe(true);
+    expect(calls.every(([, options]) => options?.method == null || options.method === 'GET')).toBe(true);
+    expect(captured.inbox).toEqual({ archived: true, vehicles: VEHICLES, rules: RULES });
+  });
+});

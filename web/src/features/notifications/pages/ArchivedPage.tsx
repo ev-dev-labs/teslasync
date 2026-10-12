@@ -13,8 +13,8 @@ import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import { cn } from '@/lib/cn';
-import { typography } from '@/lib/tokens';
 import { PageLayout } from '@/components/layout';
+import { BUTTON_BASE, BUTTON_VARIANTS, Icon, Text } from '@/components/ui';
 import { FadeIn } from '@/components/motion';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useVehicles } from '@/api/hooks/useVehicles';
@@ -51,14 +51,15 @@ export default function ArchivedPage() {
         <Link
           to="/notifications/inbox"
           className={cn(
-            'inline-flex min-h-9 items-center gap-1.5 rounded-md px-3 py-2 transition-colors hover:bg-white/[0.04] hover:text-[var(--text-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/60',
-            typography.size.xs,
-            typography.weight.medium,
-            typography.color.secondary,
+            BUTTON_BASE,
+            BUTTON_VARIANTS.ghost,
+            'min-h-11 min-w-11 max-w-full px-3 py-2 md:min-h-9',
           )}
         >
-          <ArrowLeft className="h-3.5 w-3.5" aria-hidden="true" />
-          {t('notifications.archived.backToInbox', 'Back to inbox')}
+          <Icon icon={ArrowLeft} size="sm" className="rtl:rotate-180" />
+          <Text as="span" variant="bodySm" className="min-w-0 break-words">
+            {t('notifications.archived.backToInbox', 'Back to inbox')}
+          </Text>
         </Link>
       }
     >
