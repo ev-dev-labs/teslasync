@@ -25,6 +25,7 @@ vi.mock('@/components/forms', () => ({ VehicleSelect: () => <div data-testid="ve
 
 const start = '2026-03-01T11:00:00Z';
 const end = '2026-03-01T12:00:00Z';
+const queryState = vi.hoisted(() => ({ error: null as Error | null }));
 const report: ExclusiveReport = {
   vehicle_id: 7,
   evidence: {
@@ -88,7 +89,7 @@ const report: ExclusiveReport = {
 
 vi.mock('@/api/hooks/useTeslaPhysics', () => ({
   useTeslaExclusive: () => ({
-    data: report, error: null, isError: false, isPending: false, isLoading: false,
+    data: report, error: queryState.error, isError: queryState.error != null, isPending: false, isLoading: false,
     isFetching: false, isSuccess: true, fetchStatus: 'idle', dataUpdatedAt: Date.now(), refetch: vi.fn(),
   }),
 }));
@@ -113,6 +114,74 @@ async function renderAt(path = '/tesla-physics') {
 }
 
 describe('Tesla Physics consolidated workbench', () => {
+  it.each([
+    ['history-unavailable', 'history_available', false],
+    ['black-box-unavailable', 'black_box_available', false],
+    ['history-capped', 'history_truncated', true],
+    ['black-box-capped', 'black_box_truncated', true],
+    ['drives-capped', 'drive_sessions_truncated', true],
+    ['charges-capped', 'charge_sessions_truncated', true],
+  ] as const)('qualifies returned overview evidence as partial for %s', async (_case, flag, value) => {
+    const saved = report.evidence;
+    if (!saved) throw new Error('Evidence fixture must be present');
+    report.evidence = {
+      ...saved,
+      history_available: true, black_box_available: true,
+      history_truncated: false, black_box_truncated: false,
+      drive_sessions_truncated: false, charge_sessions_truncated: false,
+      [flag]: value,
+    };
+    try {
+      await renderAt();
+      const brief = screen.getByTestId('tesla-physics-evidence-summary');
+      expect(within(brief).getByText('Partial source coverage')).toBeInTheDocument();
+      expect(within(brief).queryByText('Source returned')).toBeNull();
+      expect(brief.querySelector('[data-operational-metric="episodes"]')).toHaveAttribute('data-value-state', 'value');
+      expect(screen.getByRole('link', { name: 'Three clocks' })).toHaveAttribute('href', '/tesla-physics/clocks');
+    } finally { report.evidence = saved; }
+  });
+
+  it('keeps overview coverage partial when evidence metadata is absent', async () => {
+    const saved = report.evidence;
+    report.evidence = undefined;
+    try {
+      await renderAt();
+      const brief = screen.getByTestId('tesla-physics-evidence-summary');
+      expect(within(brief).getByText('Partial source coverage')).toBeInTheDocument();
+      expect(brief.querySelector('[data-operational-metric="coverage"]')).toHaveAttribute('data-value-state', 'missing');
+      expect(brief.querySelector('[data-operational-metric="episodes"]')).toHaveAttribute('data-value-state', 'value');
+    } finally { report.evidence = saved; }
+  });
+
+  it('keeps the returned-source label when all evidence sources are available and uncapped', async () => {
+    const saved = report.evidence;
+    if (!saved) throw new Error('Evidence fixture must be present');
+    report.evidence = {
+      ...saved,
+      history_available: true, black_box_available: true,
+      history_truncated: false, black_box_truncated: false,
+      drive_sessions_truncated: false, charge_sessions_truncated: false,
+    };
+    try {
+      await renderAt();
+      const brief = screen.getByTestId('tesla-physics-evidence-summary');
+      expect(within(brief).getByText('Source returned')).toBeInTheDocument();
+      expect(within(brief).queryByText('Partial source coverage')).toBeNull();
+    } finally { report.evidence = saved; }
+  });
+
+  it('retains refresh-failure trust and readings instead of replacing them with partial coverage', async () => {
+    queryState.error = new Error('Read-only fixture refresh failed');
+    try {
+      await renderAt();
+      const brief = screen.getByTestId('tesla-physics-evidence-summary');
+      expect(within(brief).getByText('Retained after refresh failure')).toBeInTheDocument();
+      expect(within(brief).queryByText('Partial source coverage')).toBeNull();
+      expect(brief.querySelector('[data-operational-metric="episodes"]')).toHaveAttribute('data-value-state', 'value');
+      expect(screen.getByText('History row cap reached')).toBeInTheDocument();
+    } finally { queryState.error = null; }
+  });
+
   it('reviews the actual returned-evidence brief while keeping absent coverage separate from real zero findings', async () => {
     await renderAt();
     const brief = screen.getByTestId('tesla-physics-evidence-summary');

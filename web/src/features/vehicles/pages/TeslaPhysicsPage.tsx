@@ -14,6 +14,11 @@ export default function TeslaPhysicsPage() {
   const slug = features.find((item) => pathname === `/tesla-physics/${item.slug}`)?.slug;
   const physics = usePhysicsPage(slug);
   const { report, t } = physics;
+  const evidence = report?.evidence;
+  const limited = !evidence || !evidence.history_available || !evidence.black_box_available ||
+    evidence.history_truncated || evidence.black_box_truncated ||
+    evidence.drive_sessions_truncated || evidence.charge_sessions_truncated;
+  const summaryStatus = physics.state.status === 'ok' && limited ? 'partial' : physics.state.status;
   const coverage = report?.unknown_os;
   const percentage = coverage?.window_hours && coverage.sample_hours != null
     ? Math.min(100, Math.max(0, 100 * coverage.sample_hours / coverage.window_hours)) : null;
@@ -26,7 +31,7 @@ export default function TeslaPhysicsPage() {
       <VehicleEvidenceBrief id="tesla-physics-evidence-summary"
         title={t('teslaOnly.returnedEvidence', 'Returned evidence')}
         description={t('teslaOnly.zeroScope', 'A zero means no finding in the returned evidence, not proof that nothing happened outside the observed window.')}
-        status={physics.state.status}
+        status={summaryStatus}
         scope={t('teslaOnly.hubWindow', 'Exclusive history is bounded to at most 14 days')}
         provenance={t('teslaOnly.briefSource', 'Bounded exclusive physics report')}
         metrics={[
