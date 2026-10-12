@@ -77,7 +77,8 @@ web/coverage/
 *.test.log
 .agent-status/
 qa-screenshots/
-/logs/
+logs/
+report.*.json
 
 PROMPT_COMMANDS.txt
 

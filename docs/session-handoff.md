@@ -7,10 +7,19 @@ migration, Phase 6 combined QA, and Phase 7 final gates have not started.
 Use the user's active seven-phase workflow, not the different feature-order
 numbering in `frontend-mission.md` section 38.
 
-Session is stopped: no running workers or source/validation leases;
-schedule 21 stopped, 19/20 remain off. No new dispatch during wrap-up.
-All 14 visible children were idle at the final lifecycle observation.
-The last running Alignment worker finished within its five-minute allowance.
+Session resumed on 2026-10-11 from the existing queue, without repeating
+Phases 0-3. Historical workers and schedules belong to the prior session.
+Startup worktree was clean; all prior WIP remains committed and preserved.
+The queue's ten-column format retains all 1,243 statuses and historical notes.
+Discord updates are skipped because `DISCORD_WEBHOOK_URL` is not configured.
+The supported Node 26.11.1 runtime was provisioned in this session's artifact
+directory and verified against the official SHA256; dependencies were not installed.
+The one shared development server uses `http://127.0.0.1:5173`.
+No local Compose services were running at startup, so the previous machine's
+Dashboard500 and installed Docker observations are historical, not current runtime.
+Resume the queued statistics blocker and Maintenance validation failure with one
+explicit rescue each, plus the unfinished Dismiss validation. Preserve exhausted
+source attempts; do not silently reset budgets or remake provenance campaigns.
 
 Pilot pages are Dashboard, Drive History, and Settings. Their migrated source
 is preserved, but complete current screenshots, visual/responsive/accessibility
