@@ -5,7 +5,7 @@ import {
 } from 'lucide-react';
 
 import { PageLayout, CardGrid, LayoutCard } from '@/components/layout';
-import { Button, SectionTitle, Text, Caption } from '@/components/ui';
+import { Accordion, Button, SectionTitle, Table, Text, Caption } from '@/components/ui';
 import { MetricBar } from '@/components/data-display';
 import { Skeleton, EmptyState, QueryError, StaleRefreshWarning, AlertBanner } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
@@ -67,6 +67,44 @@ export default function ChargingHeatmapPage() {
     () => aggregateLocations(sessions, t('charging.heatmap.unknownPlace', 'Unknown')),
     [sessions, t],
   );
+  const loadedScope = t('charging.heatmap.loadedScope', 'Summary of the returned sessions for the shared vehicle and date scope (request limit: 2,000). This is not a complete-history total.');
+  const slotData = useMemo(() => {
+    // Match the existing browser-local buckets without treating missing Wh as
+    // a measured zero in the keyboard/touch/export alternative.
+    const recorded = Array.from({ length: 7 }, () => new Array<number>(24).fill(0));
+    for (const session of sessions) {
+      const started = new Date(session.started_at);
+      if (Number.isNaN(started.getTime())) continue;
+      if (session.total_energy_added_wh != null && Number.isFinite(session.total_energy_added_wh)) {
+        recorded[started.getDay()][started.getHours()] += 1;
+      }
+    }
+    return model.grid.flatMap((row, day) => row.map((cell, hour) => ({
+      day: DAYS[day],
+      hour: formatHourLabel(hour),
+      count: cell.count,
+      energy_wh: recorded[day][hour] > 0 ? cell.totalEnergyWh : null,
+      recorded_energy_count: recorded[day][hour],
+      energyStatus: cell.count === 0
+        ? t('common.noReading', 'No reading')
+        : recorded[day][hour] === 0
+          ? t('charging.heatmap.noMeasurements', 'No recorded measurements in the returned sessions')
+          : recorded[day][hour] < cell.count
+            ? t('charging.heatmap.partialMeasurements', 'Some returned sessions have no recorded value; the total includes recorded values only.')
+            : '',
+    })));
+  }, [model, sessions, t]);
+  const slotColumns = [
+    { key: 'day', label: t('charging.heatmap.day', 'Day') },
+    { key: 'hour', label: t('chart.col.time', 'Time') },
+    { key: 'count', label: t('charging.heatmap.sessionsWord', 'sessions'), kind: 'count' as const },
+    {
+      key: 'energy_wh', label: t('charging.heatmap.totalEnergy', 'Total Energy'),
+      format: (value: string | number | null | undefined) =>
+        typeof value === 'number' ? formatEnergy(value) : '—',
+    },
+    { key: 'energyStatus', label: t('common.status', 'Status') },
+  ];
 
   const stats = useMemo(() => {
     if (sessions.length === 0) return null;
@@ -129,6 +167,9 @@ export default function ChargingHeatmapPage() {
           {t('charging.heatmap.loadPaused', 'Loading is paused. Charging history will appear when the connection resumes.')}
         </AlertBanner>
       )}
+      <Text variant="bodySm" className="min-w-0 break-words">
+        {loadedScope}
+      </Text>
       {/* ── KPI band ── */}
       <FadeIn>
         <section
@@ -167,7 +208,62 @@ export default function ChargingHeatmapPage() {
                     : t('charging.heatmap.historyNotLoaded', 'Charging history has not loaded')}
                 />
               ) : (
-                <HeatmapGrid model={model} formatEnergy={formatEnergy} />
+                <>
+                  <EmbeddedChart
+                    title={t('charging.heatmap.gridTitle', 'Weekly Charging Heatmap')}
+                    ariaLabel={t('charging.heatmap.gridAria', 'Charging sessions by weekday and hour of day')}
+                    ariaDescription={loadedScope}
+                    data={slotData}
+                    dataColumns={slotColumns}
+                    exportData={slotData}
+                    exportable
+                    fullscreen
+                    fluid={false}
+                    height={300}
+                    mobileHeight={300}
+                  >
+                    <HeatmapGrid model={model} formatEnergy={formatEnergy} />
+                  </EmbeddedChart>
+                  <Accordion
+                    title={t('chart.a11y.fallbackTableLabel', '{{title}} — data table', {
+                      title: t('charging.heatmap.gridTitle', 'Weekly Charging Heatmap'),
+                    })}
+                    description={loadedScope}
+                    className="mt-4"
+                    headerClassName="min-h-11 px-3 py-3"
+                    bodyClassName="p-3"
+                  >
+                    <div
+                      role="region"
+                      aria-label={t('charging.heatmap.gridAria', 'Charging sessions by weekday and hour of day')}
+                      className="max-h-96 min-w-0 overflow-auto rounded-panel"
+                    >
+                      <Table
+                        variant="embedded"
+                        tabIndex={0}
+                        aria-label={t('charging.heatmap.gridAria', 'Charging sessions by weekday and hour of day')}
+                        className="focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[var(--focus-ring)]"
+                      >
+                        <thead>
+                          <tr>
+                            {slotColumns.map((column) => <th key={column.key} scope="col">{column.label}</th>)}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {slotData.map((slot) => (
+                            <tr key={`${slot.day}-${slot.hour}`}>
+                              <th scope="row">{slot.day} {slot.hour}</th>
+                              <td>{slot.hour}</td>
+                              <td>{fmtInt(slot.count)}</td>
+                              <td>{slot.energy_wh != null ? formatEnergy(slot.energy_wh) : '—'}</td>
+                              <td><Text variant="bodySm">{slot.energyStatus}</Text></td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </Table>
+                    </div>
+                  </Accordion>
+                </>
               )}
             </LayoutCard>
               ) },

@@ -12,9 +12,11 @@
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, within, fireEvent } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
+import type { ChargingSession } from '@/api/types';
 
 // jsdom lacks matchMedia; chart containers read it on mount.
 vi.hoisted(() => {
@@ -118,6 +120,101 @@ describe('ChargingHeatmapPage — KPI band branches', () => {
     expect(kpiRegion()).toBeInTheDocument();
     expect(kpiRegion().querySelector('[data-operational-brief][aria-busy="true"] [data-operational-metric] [aria-hidden="true"][class*="bg-[var(--surface-3)]"]')).not.toBeNull();
     expect(kpiRegion().querySelector('[data-operational-value]')).not.toBeInTheDocument();
+  });
+
+  type HeatmapSession = Pick<ChargingSession,
+    'id' | 'vehicle_id' | 'started_at' | 'ended_at' | 'cost_decimal' | 'start_place'
+  > & { total_energy_added_wh: number | null };
+
+  function session(id: number, hour: number, energyWh: number | null): HeatmapSession {
+    return {
+      id,
+      vehicle_id: 7,
+      started_at: `2026-01-05T${String(hour).padStart(2, '0')}:15:00`,
+      ended_at: `2026-01-05T${String(hour + 1).padStart(2, '0')}:15:00`,
+      total_energy_added_wh: energyWh,
+      cost_decimal: id === 1 ? 1.25 : null,
+      start_place: 'Home',
+    };
+  }
+
+  describe('ChargingHeatmapPage — complete returned-session alternatives', () => {
+    it('keeps all heatmap cells, five legend stops, source charts and raw scoped query', () => {
+      mockSessions.mockReturnValue(makeQuery({ data: [session(1, 8, 1000), session(2, 8, null)] }));
+      renderPage();
+
+      expect(mockSessions).toHaveBeenCalledWith(7, {
+        limit: 2000, start: '2026-01-01', end: '2026-03-01',
+      });
+      const grid = screen.getByRole('img', { name: 'Charging sessions by weekday and hour of day' });
+      expect(grid.querySelectorAll('[title]')).toHaveLength(168);
+      expect(grid.parentElement?.parentElement?.querySelectorAll('span[aria-hidden="true"]')).toHaveLength(5);
+      const figure = screen.getByRole('figure', { name: 'Charging sessions by weekday and hour of day' });
+      expect(within(figure).getAllByRole('row')).toHaveLength(169);
+      expect(within(figure).getByRole('button', { name: 'Export chart' })).toBeEnabled();
+      expect(screen.getByRole('figure', { name: 'Charging session counts at the most frequently used locations' })).toBeInTheDocument();
+      expect(screen.getByRole('figure', { name: 'Charging session counts for each day of the week' })).toBeInTheDocument();
+      expect(screen.getAllByText(/This is not a complete-history total/).length).toBeGreaterThan(0);
+    });
+
+    it('opens a keyboard-reachable table with every slot and distinguishes absent, partial and measured-zero energy', async () => {
+      const user = userEvent.setup();
+      mockSessions.mockReturnValue(makeQuery({
+        data: [session(1, 8, 1000), session(2, 8, null), session(3, 9, null), session(4, 10, 0)],
+      }));
+      renderPage();
+
+      const disclosure = screen.getByRole('button', { name: /data table/ });
+      disclosure.focus();
+      await user.keyboard('{Enter}');
+      expect(disclosure).toHaveAttribute('aria-expanded', 'true');
+      const region = screen.getByRole('region', { name: 'Charging sessions by weekday and hour of day' });
+      expect(within(region).getByRole('table')).toHaveAttribute('tabindex', '0');
+      const rows = within(region).getAllByRole('row');
+      expect(rows).toHaveLength(169);
+      const partial = within(region).getByRole('rowheader', { name: 'Mon 08:00' }).closest('tr')!;
+      expect(within(partial).getByRole('cell', { name: '2' })).toBeInTheDocument();
+      expect(within(partial).getByText(/recorded values only/)).toBeInTheDocument();
+      const absent = within(region).getByRole('rowheader', { name: 'Mon 09:00' }).closest('tr')!;
+      expect(within(absent).getByRole('cell', { name: '—' })).toBeInTheDocument();
+      expect(within(absent).getByText('No recorded measurements in the returned sessions')).toBeInTheDocument();
+      const zero = within(region).getByRole('rowheader', { name: 'Mon 10:00' }).closest('tr')!;
+      expect(within(zero).queryByRole('cell', { name: '—' })).not.toBeInTheDocument();
+      expect(within(zero).getByText(/0[.,]00 kWh/)).toBeInTheDocument();
+      const empty = within(region).getByRole('rowheader', { name: 'Sun 00:00' }).closest('tr')!;
+      expect(within(empty).getByRole('cell', { name: '0' })).toBeInTheDocument();
+      expect(within(empty).getByText('No reading')).toBeInTheDocument();
+    });
+
+    it('retains the grid, loaded-scope disclosure and measurement alternative after refresh failure', () => {
+      mockSessions.mockReturnValue(makeQuery({
+        data: [session(1, 8, 1000)],
+        error: new Error('refresh failed'),
+        isError: true,
+        status: 'error',
+        isStale: true,
+      }));
+      renderPage();
+
+      expect(screen.getByRole('img', { name: 'Charging sessions by weekday and hour of day' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /data table/ })).toBeEnabled();
+      expect(within(kpiRegion()).getByText('Total Energy')).toBeInTheDocument();
+      expect(screen.getAllByText(/This is not a complete-history total/).length).toBeGreaterThan(0);
+    });
+
+    it('keeps every analysis shell and honest unknowns when initial loading is paused', () => {
+      mockSessions.mockReturnValue(makeQuery({
+        data: undefined, status: 'pending', fetchStatus: 'paused',
+      }));
+      renderPage();
+
+      for (const title of ['Weekly Charging Heatmap', 'Charging Insights', 'Top Charging Locations', 'Sessions by Day of Week']) {
+        expect(screen.getByRole('heading', { name: title })).toBeInTheDocument();
+      }
+      expect(screen.getByText('Loading is paused. Charging history will appear when the connection resumes.')).toBeInTheDocument();
+      expect(screen.queryByRole('img', { name: 'Charging sessions by weekday and hour of day' })).not.toBeInTheDocument();
+      expect(within(kpiRegion()).getByText('Total Sessions')).toBeInTheDocument();
+    });
   });
 
   it('shows a retryable error (never fabricated zeros) when the sessions query fails', () => {
