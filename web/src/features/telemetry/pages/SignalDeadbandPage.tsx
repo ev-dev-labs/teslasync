@@ -13,13 +13,14 @@ import { EmptyState, QueryError, Skeleton } from '@/components/feedback';
 
 import { PageLayout } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
-import { GlassPanel, PanelTitle, Select, Text } from '@/components/ui';
+import { GlassPanel, Icon, PanelTitle, Select } from '@/components/ui';
 import { NoVehicleSelected } from '@/features/onboarding/components/NoVehicleSelected';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useDataState } from '@/hooks/useDataState';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 
-import { chartTokens } from '@/lib/tokens';
+import { chartTokens, typography } from '@/lib/tokens';
+import { getChartFontFamily, getChartFontSize } from '@/lib/chartTypography';
 
 import { analyzeSignalDeadband } from '../lib/signalDeadband';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
@@ -36,7 +37,10 @@ export default function SignalDeadbandPage() {
   const signalsQuery = useSignals(id);
   const historyQuery = useSignalHistory(id, signal, HISTORY_HOURS);
   const catalogState = useDataState(signalsQuery);
-  const historyState = useDataState(historyQuery, { provenance: 'historical' });
+  const historyState = useDataState(historyQuery, {
+    provenance: 'historical',
+    unavailable: signal !== '' && historyQuery.data !== undefined && (historyQuery.data.data ?? []).length === 0,
+  });
   const signalChosen = signal !== '';
   const dataSources = useMemo(
     () => [
@@ -77,6 +81,16 @@ export default function SignalDeadbandPage() {
   const historyHasData = historyQuery.data !== undefined;
   const historyLoading = signalChosen && !historyHasData && historyQuery.isLoading;
   const historyError = signalChosen && historyState.fatalError != null;
+  const emptyMessage = !signalChosen
+    ? t('signalDeadband.recommendation.empty', 'Choose a signal to audit candidate deadbands.')
+    : !historyHasData
+      ? t('operationalSummary.unknown', 'Source values unknown')
+      : (historyQuery.data?.data ?? []).length === 0
+        ? t('signalHistory.emptyTitle', 'No signal samples')
+        : t('signalDeadband.recommendation.noNumeric', 'This signal needs at least three numeric history points.');
+  const axisTick = {
+    fill: 'var(--text-muted)', fontFamily: getChartFontFamily(), fontSize: getChartFontSize(12),
+  };
   const recommended = analysis?.recommended;
   const metrics: readonly StatMetric[] = [
     { metricId: 'number', occurrenceId: 'noise', rawValue: analysis?.noiseThreshold,
@@ -136,36 +150,32 @@ export default function SignalDeadbandPage() {
       <FadeIn>
         <GlassPanel className="p-4 sm:p-5">
           <PanelTitle className="mb-3 flex items-center gap-2">
-            <RadioTower className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+            <Icon icon={RadioTower} size="md" className={typography.color.muted} />
             {t('signalDeadband.selection.title', 'Signal under test')}
           </PanelTitle>
           {catalogState.fatalError ? (
             <QueryError error={catalogState.fatalError} onRetry={() => signalsQuery.refetch()} />
-          ) : signalsQuery.isLoading ? (
+          ) : !catalogState.hasData ? (
             <Skeleton height={96} />
           ) : options.length === 0 ? (
-            <EmptyState /* no-action: the signal catalog populates automatically from ingested telemetry. */
-              icon={<RadioTower className="h-8 w-8" />}
-              message={t(
-                'signalDeadband.selection.empty',
-                'No telemetry signals have been recorded for this vehicle yet.',
-              )}
+            <EmptyState /* no-action: catalog availability is independent of recorded history. */
+              icon={<Icon icon={RadioTower} size="xl" />}
+              message={t('signalQuery.noSignals', 'No signals available')}
             />
           ) : (
             <div className="max-w-xl">
               <Select
+                id="signal-deadband-signal"
                 label={t('signalDeadband.selection.label', 'Numeric signal')}
                 value={signal}
                 options={options}
                 onChange={(event) => setSignal(event.target.value)}
                 placeholder={t('signalDeadband.selection.placeholder', 'Choose a signal')}
-              />
-              <Text as="p" variant="caption" className="mt-2">
-                {t(
+                hint={t(
                   'signalDeadband.selection.hint',
                   'Thresholds are analyzed in canonical SI signal units; conversion belongs only at the display boundary.',
                 )}
-              </Text>
+              />
             </div>
           )}
         </GlassPanel>
@@ -180,15 +190,9 @@ export default function SignalDeadbandPage() {
           sourceBounds={signal ? [{ signal, from: historyQuery.data?.from, to: historyQuery.data?.to }] : []}
           provenance={t('telemetry.brief.historyProvenance', 'Selected signal history; numeric samples only')}
           description={t('telemetry.brief.analysisBounds', 'Analysis covers returned numeric samples, not guaranteed full-window coverage. Exact bounds remain unknown when not supplied by the source.')} />
-        {historyError && <QueryError error={historyState.fatalError} onRetry={() => historyQuery.refetch()} />}
       </FadeIn>
 
       <FadeIn delay={0.2}>
-        {historyError ? (
-          <GlassPanel className="p-4 sm:p-5">
-            <QueryError error={historyState.fatalError} onRetry={() => historyQuery.refetch()} />
-          </GlassPanel>
-        ) : (
           <ChartContainer
             title={t('signalDeadband.curve.title', 'Cumulative retained updates')}
             subtitle={t(
@@ -200,24 +204,27 @@ export default function SignalDeadbandPage() {
               'Line chart of retained telemetry updates across candidate deadband thresholds',
             )}
             loading={historyLoading}
+            error={signalChosen ? historyState.fatalError : null}
             empty={candidateData.length === 0}
+            emptyMessage={emptyMessage}
+            emptyDescription={t('telemetry.brief.analysisBounds', 'Analysis covers returned numeric samples, not guaranteed full-window coverage. Exact bounds remain unknown when not supplied by the source.')}
             height={320}
             data={candidateData}
             dataColumns={[
-              { key: 'threshold', label: t('signalDeadband.columns.threshold', 'Deadband (SI)') },
-              { key: 'retained', label: t('signalDeadband.columns.retained', 'Retained updates') },
-              { key: 'reduction', label: t('signalDeadband.columns.reduction', 'Reduction (%)') },
-              { key: 'noiseSuppression', label: t('signalDeadband.columns.noise', 'Noise suppressed (%)') },
-              { key: 'materialRetention', label: t('signalDeadband.columns.material', 'Material retained (%)') },
-              { key: 'fidelity', label: t('signalDeadband.columns.fidelity', 'Fidelity (%)') },
+              { key: 'threshold', label: t('signalDeadband.columns.threshold', 'Deadband (SI)'), format: (value) => fmtScientificNumber(value, 4) },
+              { key: 'retained', label: t('signalDeadband.columns.retained', 'Retained updates'), kind: 'count', format: fmtInt },
+              { key: 'reduction', label: t('signalDeadband.columns.reduction', 'Reduction (%)'), format: fmtPercent },
+              { key: 'noiseSuppression', label: t('signalDeadband.columns.noise', 'Noise suppressed (%)'), format: fmtPercent },
+              { key: 'materialRetention', label: t('signalDeadband.columns.material', 'Material retained (%)'), format: fmtPercent },
+              { key: 'fidelity', label: t('signalDeadband.columns.fidelity', 'Fidelity (%)'), format: fmtPercent },
             ]}
           >
             {/* Single retained-update series; quality dimensions remain available in the data table. */}
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={candidateData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
-                <XAxis dataKey="threshold" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} />
-                <YAxis tick={{ fill: 'var(--text-muted)', fontSize: 11 }} allowDecimals={false} />
+                <XAxis dataKey="threshold" tick={axisTick} tickFormatter={(value) => fmtScientificNumber(value, 4)} />
+                <YAxis tick={axisTick} tickFormatter={fmtInt} allowDecimals={false} />
                 <Tooltip content={<ChartTooltip />} />
                 <Line
                   dataKey="retained"
@@ -230,25 +237,22 @@ export default function SignalDeadbandPage() {
               </LineChart>
             </ResponsiveContainer>
           </ChartContainer>
-        )}
       </FadeIn>
 
       <FadeIn delay={0.3}>
         <GlassPanel className="p-4 sm:p-5">
-          <PanelTitle className="mb-3 flex items-center gap-2">
-            <Gauge className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+          {analysis == null && <PanelTitle className="mb-3 flex items-center gap-2">
+            <Icon icon={Gauge} size="md" className={typography.color.muted} />
             {t('signalDeadband.recommendation.title', 'Retention audit')}
-          </PanelTitle>
+          </PanelTitle>}
           {historyLoading ? (
             <Skeleton height={80} />
-          ) : historyState.fatalError ? (
-            <QueryError error={historyState.fatalError} onRetry={() => historyQuery.refetch()} />
           ) : analysis == null ? (
             <EmptyState /* no-action: the signal selector above is the relevant next action. */
-              icon={<Filter className="h-8 w-8" />}
-              message={signal
-                ? t('signalDeadband.recommendation.noNumeric', 'This signal needs at least three numeric history points.')
-                : t('signalDeadband.recommendation.empty', 'Choose a signal to audit candidate deadbands.')}
+              icon={<Icon icon={Filter} size="xl" />}
+              message={historyError
+                ? t('operationalSummary.unavailable', 'Source unavailable')
+                : emptyMessage}
             />
           ) : (
             <TelemetrySummaryBrief title={t('signalDeadband.recommendation.title', 'Retention audit')}
