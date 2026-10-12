@@ -16,15 +16,18 @@ import {
   ChartTooltip, CHART_COLORS, AREA_DEFAULTS,
   ScatterChart, Scatter, Cell, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, LineChart, Line, ChartLegend, ReferenceLine,
-  ComposedChart, Bar, EmbeddedChart,
+  ComposedChart, Bar, EmbeddedChart, type ChartDataColumn,
 } from '@/components/charts';
 
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useUnits } from '@/hooks/useUnits';
+import { useChartPalette } from '@/hooks/useChartPalette';
 
-import { convertTempFromSI } from '@/lib/unitConversion';
+import { convertTempFromSI, convertEfficiencyFromSI } from '@/lib/unitConversion';
+import { getChartFontFamily, getChartFontSize } from '@/lib/chartTypography';
 import { formatDate } from '@/lib/dateFormat';
+import { typography } from '@/lib/tokens';
 import {
   useTemperatureImpact,
   type TemperatureImpactPoint,
@@ -46,10 +49,15 @@ interface BucketDef {
 
 interface BucketAvg {
   label: string;
-  avg: number;
-  avgWhM: number;
+  avg: number | null;
+  avgWhM: number | null;
   count: number;
   color: string;
+}
+
+interface PopulatedBucketAvg extends BucketAvg {
+  avg: number;
+  avgWhM: number;
 }
 
 interface DriveRow extends TemperatureImpactPoint {
@@ -60,18 +68,17 @@ interface DriveRow extends TemperatureImpactPoint {
 /*  Constants */
 /* ----------------------------------------------------------------*/
 
-/* Wh/km -> Wh/mi and km -> mi conversion factor. No efficiency helper
-   exists in lib/unitConversion.ts, so we keep the km-per-mile factor here.
-   Temperature and distance still round-trip through the SI-floor helpers. */
-const KM_PER_MILE = 1.609344;
-
 const TEMP_BUCKETS_C = [
-  { min: -50, max: 0, color: '#3b82f6' },
-  { min: 0, max: 10, color: '#06b6d4' },
-  { min: 10, max: 20, color: '#10b981' },
-  { min: 20, max: 30, color: '#f59e0b' },
-  { min: 30, max: 60, color: '#ef4444' },
+  { min: -50, max: 0 },
+  { min: 0, max: 10 },
+  { min: 10, max: 20 },
+  { min: 20, max: 30 },
+  { min: 30, max: 60 },
 ] as const;
+
+function isMeasurement(value: unknown): value is number {
+  return typeof value === 'number' && Number.isFinite(value);
+}
 
 function getTempBucketIndex(temp: number): number {
   const idx = TEMP_BUCKETS_C.findIndex((b) => temp >= b.min && temp < b.max);
@@ -103,12 +110,11 @@ export default function TemperatureImpactPage() {
   const { t } = useTranslation();
   usePageTitle(t('tempImpact.title', 'Temperature impact'));
 
-  /* --- unit conversion (SI display) ---
-     Backend `/analytics/temperature-impact` emits SI: outside_temp °C,
-     efficiency_wh_km Wh/km, distance_km km, avg_temp °C. We convert at the
-     render boundary via useUnits()/convertTempFromSI and the inline
-     KM_PER_MILE factor (no efficiency formatter exists yet). */
+  // Preserve the endpoint's derived Wh/km and km fields; only display values
+  // are converted. Operational metrics consume canonical Wh/m.
   const { unitPrefs, formatTemperature, formatDistance } = useUnits();
+  const chartColors = useChartPalette();
+  const chartTick = { fill: 'var(--text-muted)', fontSize: getChartFontSize(), fontFamily: getChartFontFamily() };
   const tempUnit = unitPrefs.temperature;
   const isMiles = unitPrefs.distance === 'mi';
   const effLabel = isMiles ? t('tempImpact.whPerMi', 'Wh/mi') : t('tempImpact.whPerKm', 'Wh/km');
@@ -120,8 +126,8 @@ export default function TemperatureImpactPage() {
 
   /* Efficiency: API returns Wh/km — convert to Wh/mi if the user prefers miles. */
   const toDispEff = useCallback(
-    (whKm: number): number => (isMiles ? whKm * KM_PER_MILE : whKm),
-    [isMiles],
+    (whKm: number): number => convertEfficiencyFromSI(whKm, unitPrefs.distance),
+    [unitPrefs.distance],
   );
 
   /* Build display bucket labels. */
@@ -130,9 +136,9 @@ export default function TemperatureImpactPage() {
       label: bucketLabel(b, toTemperatureDisplay, tempUnit, i),
       min: b.min,
       max: b.max,
-      color: b.color,
+      color: chartColors[i % chartColors.length] ?? CHART_COLORS[i],
     })),
-    [toTemperatureDisplay, tempUnit],
+    [toTemperatureDisplay, tempUnit, chartColors],
   );
 
   /* --- vehicle scope --- */
@@ -143,37 +149,48 @@ export default function TemperatureImpactPage() {
   /* --- data --- */
   const query = useTemperatureImpact(vehicleId);
   const { data } = query;
-  const source = deriveDataState(query, { provenance: 'historical' });
-  const isLoading = query.isLoading && !source.hasData;
   const points = useMemo<TemperatureImpactPoint[]>(() => data?.points ?? [], [data]);
   const monthlyTrend = useMemo(() => data?.monthly_trend ?? [], [data]);
+  const source = deriveDataState(query, {
+    provenance: 'historical',
+    unavailable: Array.isArray(data?.points) && Array.isArray(data?.monthly_trend) &&
+      points.length === 0 && monthlyTrend.length === 0,
+    partial: !Array.isArray(data?.points) || !Array.isArray(data?.monthly_trend) ||
+      (points.length === 0) !== (monthlyTrend.length === 0) ||
+      points.some((p) => !isMeasurement(p.outside_temp) || !isMeasurement(p.efficiency_wh_km) || !isMeasurement(p.distance_km)) ||
+      monthlyTrend.some((m) => !isMeasurement(m.avg_temp) || !Number.isSafeInteger(m.drive_count) || m.drive_count < 0),
+  });
+  const isLoading = query.isLoading && !source.hasData;
 
   /* --- derived stats (client-side buckets over the efficiency_wh_km points) --- */
   const stats = useMemo(() => {
     if (points.length === 0) return null;
 
-    const avgEff =
-      points.reduce((s, p) => s + (p.efficiency_wh_km ?? 0), 0) / points.length;
+    const efficiencies = points.map((p) => p.efficiency_wh_km).filter(isMeasurement);
+    const avgEff = efficiencies.length
+      ? efficiencies.reduce((s, value) => s + value, 0) / efficiencies.length
+      : null;
 
     const bucketCounts = new Map<number, number[]>();
     for (const p of points) {
-      const idx = getTempBucketIndex(p.outside_temp ?? 0);
+      if (!isMeasurement(p.outside_temp) || !isMeasurement(p.efficiency_wh_km)) continue;
+      const idx = getTempBucketIndex(p.outside_temp);
       const arr = bucketCounts.get(idx) ?? [];
-      arr.push(p.efficiency_wh_km ?? 0);
+      arr.push(p.efficiency_wh_km);
       bucketCounts.set(idx, arr);
     }
 
     const bucketAvgs: BucketAvg[] = tempBuckets.map((b, i) => {
       const vals = bucketCounts.get(i) ?? [];
-      const avg = vals.length ? vals.reduce((s, v) => s + v, 0) / vals.length : 0;
-      return { label: b.label, avg: toDispEff(avg), avgWhM: avg / 1000, count: vals.length, color: b.color };
+      const avg = vals.length ? vals.reduce((s, v) => s + v, 0) / vals.length : null;
+      return { label: b.label, avg: avg == null ? null : toDispEff(avg), avgWhM: avg == null ? null : avg / 1000, count: vals.length, color: b.color };
     });
 
-    const withData = bucketAvgs.filter((b) => b.count > 0);
+    const withData = bucketAvgs.filter((b): b is PopulatedBucketAvg => b.avg != null && b.avgWhM != null);
     const best = withData.reduce((a, b) => (b.avg < a.avg ? b : a), withData[0]);
     const worst = withData.reduce((a, b) => (b.avg > a.avg ? b : a), withData[0]);
 
-    return { avgEff: toDispEff(avgEff), avgEffWhM: avgEff / 1000, bucketAvgs, best, worst, total: points.length };
+    return { avgEff: avgEff == null ? null : toDispEff(avgEff), avgEffWhM: avgEff == null ? null : avgEff / 1000, bucketAvgs, best, worst, total: points.length };
   }, [points, tempBuckets, toDispEff]);
 
   const bestLabel = stats?.best?.label;
@@ -181,13 +198,13 @@ export default function TemperatureImpactPage() {
   /* --- scatter data with colour per point --- */
   const scatterData = useMemo(
     () =>
-      points.map((p) => ({
+      points.filter((p) => isMeasurement(p.outside_temp) && isMeasurement(p.efficiency_wh_km)).map((p) => ({
         ...p,
-        outside_temp: toTemperatureDisplay(p.outside_temp ?? 0),
-        efficiency_wh_km: toDispEff(p.efficiency_wh_km ?? 0),
-        fill: TEMP_BUCKETS_C[getTempBucketIndex(p.outside_temp ?? 0)].color,
+        outside_temp: toTemperatureDisplay(p.outside_temp),
+        efficiency_wh_km: toDispEff(p.efficiency_wh_km),
+        fill: tempBuckets[getTempBucketIndex(p.outside_temp)].color,
       })),
-    [points, toTemperatureDisplay, toDispEff],
+    [points, toTemperatureDisplay, toDispEff, tempBuckets],
   );
 
   /* --- monthly seasonal trend: drive count (bars) + avg temp (line) --- */
@@ -195,8 +212,8 @@ export default function TemperatureImpactPage() {
     () =>
       monthlyTrend.map((m) => ({
         month: m.month ?? '—',
-        drives: m.drive_count ?? 0,
-        temp: Math.round(toTemperatureDisplay(m.avg_temp ?? 0) * 10) / 10,
+        drives: Number.isSafeInteger(m.drive_count) && m.drive_count >= 0 ? m.drive_count : null,
+        temp: isMeasurement(m.avg_temp) ? Math.round(toTemperatureDisplay(m.avg_temp) * 10) / 10 : null,
       })),
     [monthlyTrend, toTemperatureDisplay],
   );
@@ -226,7 +243,7 @@ export default function TemperatureImpactPage() {
         sortable: true,
         render: (row) => (
           <Text size="sm" color="secondary" className="tabular-nums">
-            {formatTemperature(row.outside_temp)}
+            {isMeasurement(row.outside_temp) ? formatTemperature(row.outside_temp) : '—'}
           </Text>
         ),
       },
@@ -236,8 +253,8 @@ export default function TemperatureImpactPage() {
         header: t('tempImpact.efficiency', 'Efficiency'),
         sortable: true,
         render: (row) => (
-          <Text as="span" size="sm" className="tabular-nums text-cyan-300">
-            {fmtNumber(toDispEff(row.efficiency_wh_km ?? 0))} {effLabel}
+          <Text as="span" size="sm" className="tabular-nums">
+            {isMeasurement(row.efficiency_wh_km) ? `${fmtNumber(toDispEff(row.efficiency_wh_km))} ${effLabel}` : '—'}
           </Text>
         ),
       },
@@ -248,13 +265,30 @@ export default function TemperatureImpactPage() {
         sortable: true,
         render: (row) => (
           <Text size="sm" color="secondary" className="tabular-nums">
-            {formatDistance((row.distance_km ?? 0) * 1000)}
+            {isMeasurement(row.distance_km) ? formatDistance(row.distance_km * 1000) : '—'}
           </Text>
         ),
       },
     ],
     [t, formatTemperature, formatDistance, toDispEff, effLabel, fmtNumber],
   );
+
+  const scatterColumns: ChartDataColumn[] = [
+    { key: 'drive_date', label: t('tempImpact.driveDate', 'Date'), format: (value) => typeof value === 'string' && value ? formatDate(value) : '—' },
+    { key: 'outside_temp', label: t('tempImpact.temperature', 'Temperature'), format: (value) => isMeasurement(value) ? formatTemperature(value) : '—' },
+    { key: 'efficiency_wh_km', label: t('tempImpact.efficiency', 'Efficiency'), format: (value) => isMeasurement(value) ? `${fmtNumber(toDispEff(value))} ${effLabel}` : '—' },
+    { key: 'distance_km', label: t('tempImpact.distance', 'Distance'), format: (value) => isMeasurement(value) ? formatDistance(value * 1000) : '—' },
+  ];
+  const bucketColumns: ChartDataColumn[] = [
+    { key: 'label', label: t('tempImpact.temperature', 'Temperature') },
+    { key: 'avg', label: t('tempImpact.avgEff', 'Avg efficiency'), format: (value) => isMeasurement(value) ? `${fmtNumber(value)} ${effLabel}` : '—' },
+    { key: 'count', label: t('tempImpact.driveCount', 'Drives'), kind: 'count' },
+  ];
+  const monthlyColumns: ChartDataColumn[] = [
+    { key: 'month', label: t('tempImpact.driveDate', 'Date') },
+    { key: 'drives', label: t('tempImpact.driveCount', 'Drives'), kind: 'count' },
+    { key: 'temp', label: t('tempImpact.avgTemp', 'Avg temp'), format: (value) => isMeasurement(value) ? `${fmtNumber(value)}${tempUnit}` : '—' },
+  ];
 
   /* --- contextual tips --- */
   const tips = useMemo(() => {
@@ -332,7 +366,7 @@ export default function TemperatureImpactPage() {
     { metricId: 'efficiency', occurrenceId: 'temperature-average', rawValue: stats?.avgEffWhM, label: t('tempImpact.avgEfficiency', 'Avg efficiency'), description: briefScope, display: { formatter: (raw: number) => ({ value: fmtNumber(toDispEff(raw * 1000)), unit: effLabel }) } },
     { metricId: 'text', occurrenceId: 'temperature-best', rawValue: stats?.best?.label, label: t('tempImpact.bestRange', 'Best temp range'), description: t('tempImpact.brief.best', 'Lowest average consumption among populated temperature buckets.'), context: stats?.best ? `${fmtNumber(stats.best.avg)} ${effLabel}` : undefined },
     { metricId: 'text', occurrenceId: 'temperature-worst', rawValue: stats?.worst?.label, label: t('tempImpact.worstRange', 'Worst temp range'), description: t('tempImpact.brief.worst', 'Highest average consumption among populated temperature buckets.'), context: stats?.worst ? `${fmtNumber(stats.worst.avg)} ${effLabel}` : undefined },
-    { metricId: 'count', occurrenceId: 'temperature-points', rawValue: stats?.total ?? (source.hasData ? 0 : null), label: t('tempImpact.totalPoints', 'Total data points'), description: briefScope },
+    { metricId: 'count', occurrenceId: 'temperature-points', rawValue: Array.isArray(data?.points) ? points.length : null, label: t('tempImpact.totalPoints', 'Total data points'), description: briefScope },
     { metricId: 'efficiency', occurrenceId: 'temperature-best-efficiency', rawValue: stats?.best?.avgWhM, label: t('tempImpact.brief.bestEfficiency', 'Best-range efficiency'), description: t('tempImpact.brief.best', 'Lowest average consumption among populated temperature buckets.'), display: { formatter: (raw: number) => ({ value: fmtNumber(toDispEff(raw * 1000)), unit: effLabel }) } },
     { metricId: 'efficiency', occurrenceId: 'temperature-worst-efficiency', rawValue: stats?.worst?.avgWhM, label: t('tempImpact.brief.worstEfficiency', 'Worst-range efficiency'), description: t('tempImpact.brief.worst', 'Highest average consumption among populated temperature buckets.'), display: { formatter: (raw: number) => ({ value: fmtNumber(toDispEff(raw * 1000)), unit: effLabel }) } },
   ] as const;
@@ -381,16 +415,17 @@ export default function TemperatureImpactPage() {
         >
           <div className="min-w-0 xl:col-span-2">
           <LayoutCard title={t('tempImpact.scatterTitle', 'Temperature vs efficiency')}>
-            {sectionFallback(!hasPoints, {
+            {sectionFallback(scatterData.length === 0, {
               skeletonHeight: 288,
               icon: <Thermometer className="h-8 w-8" aria-hidden="true" />,
             }) ?? (
               <>
-                {/* chart-a11y:no-table per-drive scatter cloud — each point is one drive, not meaningful as a table */}
                 <div className="h-72 sm:h-80">
                   <EmbeddedChart
                     title={t('tempImpact.scatterTitle', 'Temperature vs efficiency')}
                     ariaLabel={t('tempImpact.scatterAria', 'Scatter plot of energy efficiency against outdoor temperature per drive')}
+                    data={points.map((p) => ({ ...p }))}
+                    dataColumns={scatterColumns}
                     fluid
                   >
                     <ResponsiveContainer width="100%" height="100%">
@@ -400,20 +435,20 @@ export default function TemperatureImpactPage() {
                           dataKey="outside_temp"
                           type="number"
                           name={`${t('tempImpact.temperature', 'Temperature')} (${tempUnit})`}
-                          tick={{ fill: 'var(--text-muted)', fontSize: 11 }}
+                          tick={chartTick}
                         />
                         <YAxis
                           dataKey="efficiency_wh_km"
                           type="number"
                           name={`${t('tempImpact.efficiency', 'Efficiency')} (${effLabel})`}
-                          tick={{ fill: 'var(--text-muted)', fontSize: 11 }}
+                          tick={chartTick}
                           width={44}
                         />
                         <Tooltip content={<ChartTooltip />} />
-                        {stats && (
+                        {stats?.avgEff != null && (
                           <ReferenceLine
                             y={stats.avgEff}
-                            stroke={CHART_COLORS[1]}
+                            stroke="var(--text-muted)"
                             strokeDasharray="4 4"
                             strokeOpacity={0.6}
                           />
@@ -473,7 +508,7 @@ export default function TemperatureImpactPage() {
                 )}
                 <div className="flex flex-wrap gap-2">
                   {stats.bucketAvgs
-                    .filter((b) => b.count > 0)
+                    .filter((b): b is PopulatedBucketAvg => b.avg != null && b.avgWhM != null)
                     .map((b) => (
                       <Badge
                         key={b.label}
@@ -497,15 +532,16 @@ export default function TemperatureImpactPage() {
           className="grid grid-cols-1 gap-4 xl:grid-cols-2"
         >
           <LayoutCard title={t('tempImpact.bucketTitle', 'Efficiency by temperature range')}>
-            {sectionFallback(!hasPoints, {
+            {sectionFallback(!stats?.best, {
               skeletonHeight: 240,
               icon: <BarChart3 className="h-8 w-8" aria-hidden="true" />,
             }) ?? (
               <div className="h-56 sm:h-64">
-                {/* chart-a11y:no-table efficiency-by-temp buckets — aggregate metric per range, not row-oriented */}
                 <EmbeddedChart
                   title={t('tempImpact.bucketTitle', 'Efficiency by temperature range')}
                   ariaLabel={t('tempImpact.bucketAria', 'Average efficiency line chart by temperature range bucket')}
+                  data={stats?.bucketAvgs.map((b) => ({ ...b })) ?? []}
+                  dataColumns={bucketColumns}
                   fluid
                 >
                   <ResponsiveContainer width="100%" height="100%">
@@ -514,17 +550,19 @@ export default function TemperatureImpactPage() {
                       margin={{ top: 10, right: 16, bottom: 8, left: 0 }}
                     >
                       <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
-                      <XAxis dataKey="label" tick={{ fill: 'var(--text-muted)', fontSize: 11 }} />
-                      <YAxis tick={{ fill: 'var(--text-muted)', fontSize: 11 }} width={44} />
+                      <XAxis dataKey="label" tick={chartTick} />
+                      <YAxis tick={chartTick} width={44} />
                       <Tooltip content={<ChartTooltip />} />
-                      <ChartLegend wrapperStyle={{ fontSize: 12 }} />
+                      <ChartLegend />
                       <Line
                         {...AREA_DEFAULTS}
                         dataKey="avg"
                         name={`${t('tempImpact.avgEff', 'Avg efficiency')} (${effLabel})`}
-                        stroke={CHART_COLORS[0]}
-                        dot={{ r: 5, fill: CHART_COLORS[0] }}
-                        activeDot={{ r: 7 }}
+                        stroke={chartColors[0]}
+                        strokeWidth={2}
+                        connectNulls={false}
+                        dot={{ r: 3, fill: chartColors[0] }}
+                        activeDot={{ r: 4 }}
                       />
                     </LineChart>
                   </ResponsiveContainer>
@@ -539,37 +577,38 @@ export default function TemperatureImpactPage() {
               icon: <CalendarRange className="h-8 w-8" aria-hidden="true" />,
             }) ?? (
               <div className="h-56 sm:h-64">
-                {/* chart-a11y:no-table dual-axis monthly composite (bars + line) — dual-scale not representable as single table */}
                 <EmbeddedChart
                   chartKey="temp-monthly-trend"
                   title={t('tempImpact.monthlyTitle', 'Monthly seasonal trend')}
                   ariaLabel={t('tempImpact.monthlyAria', 'Monthly drive count bars and average temperature line')}
+                  data={monthlyData}
+                  dataColumns={monthlyColumns}
                   fluid
                 >
                   {({ hiddenSeries }) => (
                     <ResponsiveContainer width="100%" height="100%">
                       <ComposedChart data={monthlyData} margin={{ top: 10, right: 8, bottom: 8, left: 0 }}>
                         <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
-                        <XAxis dataKey="month" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} />
+                        <XAxis dataKey="month" tick={chartTick} />
                         <YAxis
                           yAxisId="left"
-                          tick={{ fill: 'var(--text-muted)', fontSize: 10 }}
+                          tick={chartTick}
                           allowDecimals={false}
                           width={36}
                         />
                         <YAxis
                           yAxisId="right"
                           orientation="right"
-                          tick={{ fill: 'var(--text-muted)', fontSize: 10 }}
+                          tick={chartTick}
                           width={40}
                         />
                         <Tooltip content={<ChartTooltip />} />
-                        <ChartLegend wrapperStyle={{ fontSize: 12 }} />
+                        <ChartLegend />
                         <Bar
                           yAxisId="left"
                           dataKey="drives"
                           name={t('tempImpact.driveCount', 'Drives')}
-                          fill={CHART_COLORS[0]}
+                          fill={chartColors[0]}
                           fillOpacity={0.75}
                           radius={[4, 4, 0, 0]}
                           hide={hiddenSeries?.isHidden('drives') ?? false}
@@ -579,7 +618,9 @@ export default function TemperatureImpactPage() {
                           {...AREA_DEFAULTS}
                           dataKey="temp"
                           name={`${t('tempImpact.avgTemp', 'Avg temp')} (${tempUnit})`}
-                          stroke={CHART_COLORS[3] ?? CHART_COLORS[1]}
+                          stroke={chartColors[3] ?? chartColors[1]}
+                          strokeWidth={2}
+                          connectNulls={false}
                           dot={false}
                           hide={hiddenSeries?.isHidden('temp') ?? false}
                         />
@@ -609,10 +650,10 @@ export default function TemperatureImpactPage() {
                   const Icon = tip.icon;
                   return (
                     <li key={tip.text} className="flex items-start gap-3">
-                      <Icon className="mt-0.5 h-4 w-4 shrink-0 text-[var(--text-muted)]" aria-hidden="true" />
-                      <Badge variant={tip.variant} size="sm" dot>
+                      <Icon className={`mt-0.5 h-4 w-4 shrink-0 ${typography.color.muted}`} aria-hidden="true" />
+                      <Text variant="bodySm" className="min-w-0 break-words">
                         {tip.text}
-                      </Badge>
+                      </Text>
                     </li>
                   );
                 })}
@@ -629,7 +670,7 @@ export default function TemperatureImpactPage() {
               <DataTable
                 tableId="maps:temperature-impact-drives"
                 columns={driveColumns}
-                mobileColumns={['drive_date', 'outside_temp', 'efficiency_wh_km']}
+                mobileColumns={['drive_date', 'outside_temp', 'efficiency_wh_km', 'distance_km']}
                 data={driveRows}
                 keyExtractor={(row) => row.id}
                 emptyMessage={t('tempImpact.noData', 'No drive data available yet')}

@@ -41,6 +41,13 @@ import {
   type UnitPref,
 } from '@/lib/unitConversion';
 import type { TemperatureImpactResponse, TemperatureImpactPoint } from '@/api/hooks/useAnalytics';
+import type { ChartDataColumn, ChartDataRow, EmbeddedChartProps } from '@/components/charts';
+
+const chartFrames = vi.hoisted(() => [] as {
+  title: string;
+  data?: ReadonlyArray<ChartDataRow>;
+  columns?: ReadonlyArray<ChartDataColumn>;
+}[]);
 
 // ── i18n stub: resolve a string fallback (or the options-bag defaultValue) and
 //    interpolate {{var}} placeholders so assertions read on human copy. ────────
@@ -111,7 +118,10 @@ vi.mock('@/components/charts', async () => {
     ComposedChart: Null,
     Bar: Null,
     ChartLegend: Null,
-    EmbeddedChart: ({ children }: { children?: ReactNode }) => <>{children}</>,
+    EmbeddedChart: ({ children, title, data, dataColumns }: EmbeddedChartProps) => {
+      chartFrames.push({ title, data, columns: dataColumns });
+      return <>{typeof children === 'function' ? children({ annotations: [], hidden: false, hiddenSeries: null }) : children}</>;
+    },
   };
 });
 
@@ -137,6 +147,9 @@ vi.mock('@/hooks/usePageTitle', () => ({ usePageTitle: vi.fn() }));
 vi.mock('@/api/hooks/useAnalytics', () => ({ useTemperatureImpact: vi.fn() }));
 vi.mock('@/hooks/useSelectedVehicle', () => ({ useSelectedVehicle: vi.fn() }));
 vi.mock('@/hooks/useUnits', () => ({ useUnits: vi.fn() }));
+vi.mock('@/hooks/useChartPalette', () => ({
+  useChartPalette: () => ['var(--series-cold)', 'var(--series-cool)', 'var(--series-mild)', 'var(--series-warm)', 'var(--series-hot)'],
+}));
 
 import { useTemperatureImpact } from '@/api/hooks/useAnalytics';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
@@ -161,7 +174,7 @@ const B_HOT = '> 30°C';
 const KM_PER_MILE = 1.609344;
 
  
-function makeQuery(over: Record<string, unknown> = {}): any {
+function makeQuery(over: Record<string, unknown> = {}) {
   return {
     data: undefined,
     error: null,
@@ -207,7 +220,7 @@ function fullData(over: Partial<TemperatureImpactResponse> = {}): TemperatureImp
 }
 
  
-function selected(vehicleId: number | null): any {
+function selected(vehicleId: number | null) {
   return {
     vehicleId,
     vehicle: null,
@@ -269,6 +282,7 @@ function kpiValue(label: string): string {
 }
 
 beforeEach(() => {
+  chartFrames.length = 0;
   mockTempImpact.mockReset();
   mockSelected.mockReset();
   mockUnits.mockReset();
@@ -276,6 +290,119 @@ beforeEach(() => {
   mockSelected.mockReturnValue(selected(7));
   mockUnits.mockReturnValue(units('km', '°C'));
   mockTempImpact.mockReturnValue(makeQuery({ data: fullData() }));
+});
+
+describe('TemperatureImpactPage — measured values and preserved alternatives', () => {
+  it('retains incomplete drive rows without inventing zero measurements or diluting valid averages', () => {
+    const missing = point();
+    Object.assign(missing, {
+      outside_temp: null, efficiency_wh_km: null, distance_km: null,
+      drive_date: '2026-01-02T12:00:00Z',
+    });
+    mockTempImpact.mockReturnValue(makeQuery({
+      data: fullData({ points: [
+        point({ outside_temp: 0, efficiency_wh_km: 0, distance_km: 0, drive_date: '2026-01-01T12:00:00Z' }),
+        missing,
+        point({ outside_temp: 25, efficiency_wh_km: 200, drive_date: '2026-01-03T12:00:00Z' }),
+      ] }),
+    }));
+    renderPage();
+
+    expect(kpiValue('Avg efficiency')).toBe('100.00 Wh/km');
+    expect(kpiValue('Total data points')).toBe('3');
+    expect(kpiValue('Best temp range')).toBe(B0to10);
+    const rows = within(screen.getByRole('table')).getAllByRole('row');
+    expect(rows).toHaveLength(4);
+    expect(within(rows[1]).getByText('0.00°C')).toBeInTheDocument();
+    expect(within(rows[1]).getByText('0.00 Wh/km')).toBeInTheDocument();
+    expect(within(rows[1]).getByText('0.00 km')).toBeInTheDocument();
+    expect(within(rows[2]).getAllByText('—')).toHaveLength(3);
+    expect(screen.getByText('Independent sources incomplete')).toBeInTheDocument();
+    expect(missing.efficiency_wh_km).toBeNull();
+  });
+
+  it('keeps empty temperature buckets as gaps with cohort counts and unit-aware chart alternatives', () => {
+    mockTempImpact.mockReturnValue(makeQuery({
+      data: fullData({ points: [point({ outside_temp: -5, efficiency_wh_km: 210 }), point({ outside_temp: 35, efficiency_wh_km: 220 })] }),
+    }));
+    renderPage();
+    const buckets = chartFrames.find((frame) => frame.title === 'Efficiency by temperature range');
+    expect(buckets?.data?.map((row) => row.avg)).toEqual([210, null, null, null, 220]);
+    expect(buckets?.data?.map((row) => row.count)).toEqual([1, 0, 0, 0, 1]);
+    expect(buckets?.data?.map((row) => row.label)).toEqual([B_COLD, B0to10, B10to20, B20to30, B_HOT]);
+    const efficiency = buckets?.columns?.find((column) => column.key === 'avg');
+    expect(efficiency?.format?.(null)).toBe('—');
+    expect(efficiency?.format?.(0)).toBe('0.00 Wh/km');
+    expect(chartFrames.find((frame) => frame.title === 'Temperature vs efficiency')?.columns?.map((column) => column.key))
+      .toEqual(['drive_date', 'outside_temp', 'efficiency_wh_km', 'distance_km']);
+  });
+
+  it('preserves independent monthly series and measured zero without manufacturing missing temperature or counts', () => {
+    mockUnits.mockReturnValue(units('mi', '°F'));
+    const missingMonth = { ...MONTHLY[0] };
+    Object.assign(missingMonth, { avg_temp: null, drive_count: null });
+    mockTempImpact.mockReturnValue(makeQuery({
+      data: fullData({ monthly_trend: [
+        missingMonth,
+        { ...MONTHLY[0], month: '2026-02', avg_temp: 0, drive_count: 0 },
+      ] }),
+    }));
+    renderPage();
+    const monthly = chartFrames.find((frame) => frame.title === 'Monthly seasonal trend');
+    expect(monthly?.data).toEqual([
+      { month: '2026-01', drives: null, temp: null },
+      { month: '2026-02', drives: 0, temp: 32 },
+    ]);
+    expect(monthly?.columns?.map((column) => column.key)).toEqual(['month', 'drives', 'temp']);
+    const temperature = monthly?.columns?.find((column) => column.key === 'temp');
+    expect(temperature?.format?.(32)).toBe('32.00°F');
+    expect(temperature?.format?.(null)).toBe('—');
+    expect(kpiValue('Total data points')).toBe('5');
+  });
+
+  it('keeps distance reachable in mobile rows and recommendations as readable prose', () => {
+    const { container } = renderPage();
+    const distance = within(screen.getByRole('table')).getByText('30.00 km');
+    expect(distance.closest('td')).not.toHaveClass('hidden');
+    const recommendation = screen.getByText(`Best efficiency observed in the ${B10to20} range`);
+    expect(recommendation.tagName).toBe('P');
+    expect(recommendation).toHaveClass('break-words');
+    const legendDot = Array.from(container.querySelectorAll('[aria-hidden="true"]'))
+      .find((element) => element instanceof HTMLElement && element.style.backgroundColor === 'var(--series-cold)');
+    expect(legendDot).toBeDefined();
+  });
+
+  it('distinguishes authoritative empty points from an absent point series and retains paused source data', () => {
+    const query = makeQuery({ data: fullData({ points: [], monthly_trend: [] }) });
+    mockTempImpact.mockReturnValue(query);
+    const view = renderPage();
+    expect(kpiValue('Total data points')).toBe('0');
+    expect(screen.getByText('Source data unavailable')).toBeInTheDocument();
+    expect(screen.getAllByText('No drive data available yet')).toHaveLength(6);
+
+    mockTempImpact.mockReturnValue(makeQuery({ data: Object.assign(fullData(), { points: null }) }));
+    view.rerender(
+      <MemoryRouter>
+        <QueryClientProvider client={new QueryClient()}>
+          <TemperatureImpactPage />
+        </QueryClientProvider>
+      </MemoryRouter>,
+    );
+    expect(kpiValue('Total data points')).toBe('—');
+    expect(screen.getByText('Monthly seasonal trend')).toBeInTheDocument();
+
+    mockTempImpact.mockReturnValue(makeQuery({ data: fullData(), fetchStatus: 'paused' }));
+    view.rerender(
+      <MemoryRouter>
+        <QueryClientProvider client={new QueryClient()}>
+          <TemperatureImpactPage />
+        </QueryClientProvider>
+      </MemoryRouter>,
+    );
+    expect(kpiValue('Avg efficiency')).toBe('192.00 Wh/km');
+    expect(screen.getByText('Retained source data')).toBeInTheDocument();
+    expect(within(screen.getByRole('table')).getByText('30.00 km')).toBeInTheDocument();
+  });
 });
 
 describe('TemperatureImpactPage — no vehicle selected', () => {
