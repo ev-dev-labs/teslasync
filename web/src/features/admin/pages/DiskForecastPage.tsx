@@ -13,14 +13,14 @@
  * Backed by GET /api/v1/admin/observability/disk-forecast
  * (internal/handler/v1/admin_observability_handler.go).
  */
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Database, TrendingUp, Gauge,
 } from 'lucide-react';
 
 import { PageLayout, LayoutCard } from '@/components/layout';
-import { Badge, DataTable, type Column } from '@/components/ui';
+import { Badge, DataTable, Icon, type Column } from '@/components/ui';
 import { Caption, Text } from '@/components/ui';
 import { MetricBar } from '@/components/data-display';
 import { FadeIn } from '@/components/motion';
@@ -31,12 +31,13 @@ import {
   ChartTooltip,
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ChartLegend, ResponsiveContainer,
   PieChart, Pie, Cell,
-  EmbeddedChart,
+  EmbeddedChart, axisTick,
 } from '@/components/charts';
 import { usePageTitle } from '@/hooks/usePageTitle';
 
-import { chartTokens } from '@/lib/tokens';
+import { chartTokens, gaugeTone, severityTokens, typography } from '@/lib/tokens';
 import { cn } from '@/lib/cn';
+import { getChartFontFamily, getChartFontSize } from '@/lib/chartTypography';
 import { useDiskForecast } from '@/api/hooks/useOperatorConfidence';
 import { isApiError } from '@/lib/resilience';
 import type {
@@ -46,6 +47,7 @@ import type {
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { fmtNumber } from '@/lib/numberFormat';
 import { deriveDataState } from '@/api/dataState';
+import { useChartPalette } from '@/hooks/useChartPalette';
 import { DiskForecastSummary } from '../components/statstrip-performance-storage/DiskForecastSummary';
 
 const SEVERITY_VARIANT: Record<DiskForecastSeverity, 'success' | 'warning' | 'danger' | 'neutral'> = {
@@ -55,17 +57,19 @@ const SEVERITY_VARIANT: Record<DiskForecastSeverity, 'success' | 'warning' | 'da
   unknown: 'neutral',
 };
 
-// Chart-only hex — dynamic fill values, not static CSS vars. `unknown`
-// borrows the muted slate used across the app's neutral chips.
-const SEVERITY_HEX: Record<DiskForecastSeverity, string> = {
-  ok: '#10b981',
-  warn: '#f59e0b',
-  critical: '#ef4444',
-  unknown: '#64748b',
+const SEVERITY_COLOR: Record<DiskForecastSeverity, string> = {
+  ok: gaugeTone.success,
+  warn: gaugeTone.warning,
+  critical: gaugeTone.danger,
+  unknown: gaugeTone.neutral,
+};
+const SEVERITY_DOT: Record<DiskForecastSeverity, string> = {
+  ok: severityTokens.success.dot,
+  warn: severityTokens.warn.dot,
+  critical: severityTokens.critical.dot,
+  unknown: 'bg-[var(--text-secondary)]',
 };
 
-const UNCOMPRESSED_HEX = '#f59e0b';
-const COMPRESSED_HEX = '#10b981';
 const SEVERITY_ORDER: DiskForecastSeverity[] = ['critical', 'warn', 'ok', 'unknown'];
 
 /** Percentage of `part` within `whole`, or an em-dash when `whole` is zero. */
@@ -81,6 +85,8 @@ function truncate(value: string, max = 18): string {
 export default function DiskForecastPage() {
   const { formatBytes, fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
+  const palette = useChartPalette();
+  const [expandedKeys, setExpandedKeys] = useState<Array<string | number>>([]);
   usePageTitle(t('admin.diskForecast.pageTitle', 'Disk forecast'));
 
   const query = useDiskForecast();
@@ -97,7 +103,7 @@ export default function DiskForecastPage() {
       ok: t('admin.diskForecast.severityOk', 'OK'),
       warn: t('admin.diskForecast.severityWarn', 'Warn'),
       critical: t('admin.diskForecast.severityCritical', 'Critical'),
-      unknown: '—',
+      unknown: t('common.unknown', 'Unknown'),
     }),
     [t],
   );
@@ -318,14 +324,14 @@ export default function DiskForecastPage() {
                     <CartesianGrid strokeDasharray="3 3" stroke={chartTokens.gridStroke} strokeOpacity={0.4} horizontal={false} />
                     <XAxis
                       type="number"
-                      tick={{ fill: 'var(--text-muted)', fontSize: 10 }}
+                      tick={{ ...axisTick, fontSize: getChartFontSize(12), fontFamily: getChartFontFamily() }}
                       tickFormatter={(v) => formatBytes(Number(v))}
                     />
                     <YAxis
                       type="category"
                       dataKey="hypertable_name"
                       width={132}
-                      tick={{ fill: 'var(--text-muted)', fontSize: 10 }}
+                      tick={{ ...axisTick, fontSize: getChartFontSize(12), fontFamily: getChartFontFamily() }}
                       tickFormatter={(v) => truncate(String(v))}
                     />
                     <Tooltip content={<ChartTooltip />} formatter={(v) => formatBytes(Number(v))} />
@@ -334,7 +340,7 @@ export default function DiskForecastPage() {
                       dataKey="uncompressed_bytes"
                       name={t('admin.diskForecast.uncompressed', 'Uncompressed')}
                       stackId="a"
-                      fill={UNCOMPRESSED_HEX}
+                      fill={palette[0]}
                       fillOpacity={0.85}
                       hide={hiddenSeries?.isHidden('uncompressed_bytes') ?? false}
                     />
@@ -342,7 +348,7 @@ export default function DiskForecastPage() {
                       dataKey="compressed_bytes"
                       name={t('admin.diskForecast.compressed', 'Compressed')}
                       stackId="a"
-                      fill={COMPRESSED_HEX}
+                      fill={palette[1]}
                       fillOpacity={0.85}
                       radius={[0, 4, 4, 0]}
                       hide={hiddenSeries?.isHidden('compressed_bytes') ?? false}
@@ -382,7 +388,7 @@ export default function DiskForecastPage() {
                       strokeWidth={0}
                     >
                       {severitySlices.map((s) => (
-                        <Cell key={s.key} fill={SEVERITY_HEX[s.key]} />
+                        <Cell key={s.key} fill={SEVERITY_COLOR[s.key]} />
                       ))}
                     </Pie>
                     <Tooltip content={<ChartTooltip />} />
@@ -395,8 +401,7 @@ export default function DiskForecastPage() {
                     <li key={key} className="flex items-center justify-between gap-2">
                       <span className="flex items-center gap-2">
                         <span
-                          className="inline-block h-2.5 w-2.5 rounded-full"
-                          style={{ backgroundColor: SEVERITY_HEX[key] }}
+                          className={cn('inline-block h-2.5 w-2.5 rounded-full', SEVERITY_DOT[key])}
                           aria-hidden="true"
                         />
                         <Text variant="bodySm">{severityLabel[key]}</Text>
@@ -426,7 +431,7 @@ export default function DiskForecastPage() {
               <QueryError error={query.error} onRetry={retry} />
             ) : growthLeaders.length === 0 ? (
               <EmptyState /* no-action: growth appears once tables accrue daily deltas */
-                icon={<TrendingUp className="h-8 w-8" />}
+                icon={<Icon icon={TrendingUp} size="xl" />}
                 message={t('admin.diskForecast.noGrowth', 'No measurable daily growth yet.')}
               />
             ) : (
@@ -437,7 +442,7 @@ export default function DiskForecastPage() {
                     label={r.hypertable_name}
                     value={r.growth_bytes_per_day ?? 0}
                     max={maxGrowth || (r.growth_bytes_per_day ?? 1)}
-                    color={SEVERITY_HEX[r.severity] ?? SEVERITY_HEX.unknown}
+                    color={SEVERITY_COLOR[r.severity] ?? SEVERITY_COLOR.unknown}
                     sublabel={`${formatBytes(r.growth_bytes_per_day ?? 0)}/d`}
                   />
                 ))}
@@ -452,7 +457,7 @@ export default function DiskForecastPage() {
               <QueryError error={query.error} onRetry={retry} />
             ) : quotaWatch.length === 0 ? (
               <EmptyState /* no-action: quota watch requires HYPERTABLE_QUOTA_BYTES to be configured */
-                icon={<Gauge className="h-8 w-8" />}
+                icon={<Icon icon={Gauge} size="xl" />}
                 title={t('admin.diskForecast.noQuotaTitle', 'No quota configured')}
                 message={t(
                   'admin.diskForecast.noQuotaMessage',
@@ -468,7 +473,7 @@ export default function DiskForecastPage() {
                       <Caption>{formatBytes(r.total_bytes ?? 0)} · {formatBytes(r.growth_bytes_per_day ?? 0)}/d</Caption>
                     </div>
                     <div className="flex shrink-0 items-center gap-2">
-                      <Text size="sm" weight="semibold" className={cn('tabular-nums', r.severity === 'critical' ? 'text-rose-300' : 'text-[var(--text-primary)]')}>
+                      <Text size="sm" weight="semibold" className={cn('tabular-nums', r.severity === 'critical' ? severityTokens.critical.fg : typography.color.primary)}>
                         {t('admin.diskForecast.daysValue', '{{days}} d', { days: fmtNumber(r.est_days_to_quota ?? 0) })}
                       </Text>
                       <Badge variant={SEVERITY_VARIANT[r.severity] ?? 'neutral'} size="sm">
@@ -494,7 +499,7 @@ export default function DiskForecastPage() {
                 <QueryError error={query.error} onRetry={retry} />
               ) : rows.length === 0 && !subsystemMissing ? (
                 <EmptyState /* no-action: hypertable inventory is TimescaleDB system state; not user-creatable */
-                  icon={<Database className="h-8 w-8" />}
+                  icon={<Icon icon={Database} size="xl" />}
                   title={t('admin.diskForecast.emptyTitle', 'No hypertables')}
                   message={t(
                     'admin.diskForecast.emptyMessage',
@@ -504,8 +509,23 @@ export default function DiskForecastPage() {
               ) : (
                 <DataTable
                   tableId="admin:disk-forecast"
+                  caption={t('admin.diskForecast.tableTitle', 'Hypertables')}
+                  variant="embedded"
                   columns={columns}
                   mobileColumns={['hypertable', 'severity', 'days']}
+                  expandable
+                  expandedKeys={expandedKeys}
+                  onExpandedChange={setExpandedKeys}
+                  renderExpanded={(row) => (
+                    <dl className="grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2">
+                      {columns.map((column) => (
+                        <div key={column.key} className="min-w-0 break-words">
+                          <Caption as="dt">{column.header}</Caption>
+                          <dd className={typography.role.body}>{column.render(row)}</dd>
+                        </div>
+                      ))}
+                    </dl>
+                  )}
                   data={rows}
                   enableValueFilters
                   keyExtractor={(r) => r.hypertable_name}

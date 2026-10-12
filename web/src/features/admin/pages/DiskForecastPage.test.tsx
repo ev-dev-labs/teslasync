@@ -29,6 +29,11 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter } from 'react-router-dom'
 import type { ReactNode } from 'react'
 
+vi.mock('@/hooks/useChartPalette', async () => {
+  const { CHART_COLORS } = await vi.importActual<typeof import('@/lib/colors')>('@/lib/colors')
+  return { useChartPalette: () => CHART_COLORS }
+})
+
 vi.mock('@/api/client', () => ({
   request: vi.fn(),
   // <QueryError> imports isApiError from @/api/client; stub it to false so a
@@ -64,6 +69,63 @@ vi.mock('react-i18next', async () => {
     }),
     Trans: ({ children }: { children?: ReactNode }) => <>{children}</>,
   }
+})
+
+describe('DiskForecastPage semantic and mobile adoption', () => {
+  it('names the embedded table and keeps every measurement reachable through row expansion', async () => {
+    mockedRequest.mockResolvedValueOnce(makeResponse())
+    renderPage()
+
+    const table = await screen.findByRole('table', { name: 'Hypertables' })
+    expect(table.closest('[data-grid-frame]')).toHaveAttribute('data-grid-variant', 'embedded')
+    const row = within(table).getByText(LONG_NAME).closest('tr')
+    expect(row).not.toBeNull()
+    fireEvent.click(within(row!).getByRole('button', { name: 'Expand row' }))
+
+    const details = table.querySelector('dl')
+    expect(details).not.toBeNull()
+    const detail = within(details!)
+    expect([...details!.querySelectorAll('dt')].map(node => node.textContent)).toEqual([
+      'Hypertable', 'Total', 'Uncompressed / compressed', 'Growth (per day)', 'Days to quota', 'Severity',
+    ])
+    expect(detail.getByText(LONG_NAME)).toBeInTheDocument()
+    expect(detail.getByText('10 chunks')).toBeInTheDocument()
+    expect(detail.getByText('3.00 GB')).toBeInTheDocument()
+    expect(detail.getByText('2.00 GB')).toBeInTheDocument()
+    expect(detail.getByText('1.00 GB compressed')).toBeInTheDocument()
+    expect(detail.getByText('100.00 MB/d')).toBeInTheDocument()
+    expect(detail.getByText('5.00')).toBeInTheDocument()
+    expect(detail.getByText('Critical')).toBeInTheDocument()
+    fireEvent.click(within(row!).getByRole('button', { name: 'Collapse row' }))
+    expect(table.querySelector('dl')).toBeNull()
+  })
+
+  it('labels unknown server severity without changing its classification or missing estimate', async () => {
+    mockedRequest.mockResolvedValueOnce(makeResponse([makeRow({
+      hypertable_name: 'unknown_table', severity: 'unknown', est_days_to_quota: null,
+    })]))
+    renderPage()
+
+    const table = await screen.findByRole('table', { name: 'Hypertables' })
+    expect(within(table).getByText('Unknown')).toBeInTheDocument()
+    expect(within(table).queryByText('OK')).not.toBeInTheDocument()
+    expect(within(table).getByText('—')).toBeInTheDocument()
+    expect(screen.queryByText('Quota pressure')).not.toBeInTheDocument()
+  })
+
+  it('retains measured zero quota days and source severity with semantic presentation', async () => {
+    mockedRequest.mockResolvedValueOnce(makeResponse([makeRow({
+      hypertable_name: 'quota_reached', severity: 'critical', est_days_to_quota: 0,
+    })]))
+    renderPage()
+
+    const table = await screen.findByRole('table', { name: 'Hypertables' })
+    expect(within(table).getByText('0.00')).toBeInTheDocument()
+    expect(within(table).getByText('Critical')).toBeInTheDocument()
+    const outlook = screen.getByRole('region', { name: 'Growth and quota outlook' })
+    expect(within(outlook).getByText('0.00 d')).toHaveClass('text-[var(--semantic-danger)]')
+    expect(screen.getByText('Quota pressure')).toBeInTheDocument()
+  })
 })
 
 import { request } from '@/api/client'
