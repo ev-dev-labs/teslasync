@@ -8,6 +8,47 @@ import resolveConfig from 'tailwindcss/resolveConfig';
 import { beforeAll, describe, it, expect } from 'vitest';
 import { motion, neonColorMap, semanticToNeon, severityTokens, gaugeTone, glassCardClasses, chartTokens, typography } from '../tokens';
 
+// Independently accepted by phase4-pilot-geometry-token-owner after these
+// historical predecessors. Project exactly these additions, never new hashes
+// or a blanket removal of later config changes.
+const acceptedPilotGeometry = [
+  ['zIndex', 'dashboard-kiosk', '9990'],
+  ['gridTemplateColumns', 'dashboard-onboarding', 'minmax(0,1.2fr) minmax(22rem,0.8fr)'],
+  ['gridTemplateColumns', 'settings-navigation', '15rem minmax(0,1fr)'],
+  ['gridTemplateColumns', 'settings-shortcuts', 'repeat(auto-fit,minmax(min(100%,18rem),1fr))'],
+] as const;
+
+function acceptedPilotSourceProjection(source: string): string {
+  let projected = source;
+  for (const [, name, value] of acceptedPilotGeometry) {
+    const addition = `        '${name}': '${value}',\n`;
+    expect(projected.split(addition), name).toHaveLength(2);
+    projected = projected.replace(addition, '');
+  }
+  return projected;
+}
+
+function acceptedPilotConfigProjection<T extends {
+  theme: {
+    zIndex?: Record<string, string>;
+    gridTemplateColumns?: Record<string, string>;
+  };
+}>(config: T) {
+  const projected = {
+    ...config,
+    theme: {
+      ...config.theme,
+      zIndex: { ...config.theme.zIndex },
+      gridTemplateColumns: { ...config.theme.gridTemplateColumns },
+    },
+  };
+  for (const [group, name, value] of acceptedPilotGeometry) {
+    expect(config.theme[group]).toHaveProperty(name, value);
+    Reflect.deleteProperty(projected.theme[group], name);
+  }
+  return projected;
+}
+
 function finalShellPredecessor(): ReturnType<typeof loadConfig> {
   const current = moreMenuPredecessor();
   const additions = [
@@ -41,11 +82,31 @@ function moreMenuPredecessorSource(): string {
   expect(source.split(addition)).toHaveLength(2);
   expect(loadConfig(resolve('tailwind.config.js')).theme?.extend?.maxHeight)
     .toHaveProperty('more-menu', 'min(70vh,520px)');
-  return source.replace(addition, '');
+  return acceptedPilotSourceProjection(source.replace(addition, ''));
 }
 
 describe('More menu exact single additive geometry role', () => {
   it('preserves the immutable immediate source with only the approved key/value', () => {
+    const currentConfig = loadConfig(resolve('tailwind.config.js'));
+    const extend = {
+      ...currentConfig.theme?.extend,
+      zIndex: { ...currentConfig.theme?.extend?.zIndex },
+      gridTemplateColumns: { ...currentConfig.theme?.extend?.gridTemplateColumns },
+    };
+    expect(acceptedPilotGeometry).toHaveLength(4);
+    for (const [group, name, value] of acceptedPilotGeometry) {
+      expect(extend[group]).toHaveProperty(name, value);
+      Reflect.deleteProperty(extend[group], name);
+    }
+    const pilotPredecessor = resolveConfig({
+      ...currentConfig, theme: { ...currentConfig.theme, extend },
+    });
+    for (const [group, name] of acceptedPilotGeometry) {
+      expect(pilotPredecessor.theme[group]).not.toHaveProperty(name);
+    }
+    // Resolving the raw config without the four roles must equal the exact
+    // resolved projection; this also preserves plugins, defaults and options.
+    expect(acceptedPilotConfigProjection(resolveConfig(currentConfig))).toEqual(pilotPredecessor);
     expect(createHash('sha256').update(moreMenuPredecessorSource()).digest('hex'))
       .toBe('18cfebdf6b3e70e0414f9c74cf4b766c2d0eff6a39f0453a6636d08827782b97');
     const prior = resolveConfig(moreMenuPredecessor());
@@ -85,7 +146,7 @@ describe('exact two final shell additions', () => {
         zIndex: { ...prior.theme.zIndex, 'shell-status-bar': '55' },
       },
     });
-    const canonical = JSON.stringify(prior, (_, value: unknown) => {
+    const canonical = JSON.stringify(acceptedPilotConfigProjection(prior), (_, value: unknown) => {
       if (typeof value === 'function') return value.toString();
       if (value && typeof value === 'object' && !Array.isArray(value)) {
         const entries = value as Record<string, unknown>;
@@ -195,7 +256,8 @@ describe('restrained foundation presentation', () => {
         extend: historicalExtensions,
       },
     };
-    // Exclude only explicitly verified additive roles from the frozen fingerprints.
+    // Exclude only explicitly verified additive roles from the historical view;
+    // the four accepted pilot roles stay live and are projected at each hash.
     for (const [group, name, value] of [...shellGeometry, ...remainingGeometry, ...resourceGeometry]) {
       expect(currentConfig.theme?.extend?.[group]).toHaveProperty(name, value);
       Reflect.deleteProperty(historicalExtensions[group], name);
@@ -218,6 +280,9 @@ describe('restrained foundation presentation', () => {
         `${variant}text-size-inherit`, `${variant}text-[length:inherit]`,
         `${variant}text-inherit`,
       ]),
+      ...acceptedPilotGeometry.map(([group, name]) => (
+        `${group === 'zIndex' ? 'z' : 'grid-cols'}-${name}`
+      )),
     ];
     let css: Root;
 
@@ -277,7 +342,17 @@ describe('restrained foundation presentation', () => {
         Reflect.set(expected.theme[group], name, value);
       }
       expect(current).toEqual(expected);
-      const canonical = JSON.stringify(resolved, (_, value: unknown) => {
+      // These later roles remain usable, not just excluded from a predecessor
+      // fingerprint. Assert concrete CSS values independently of the config.
+      for (const [group, name, value] of acceptedPilotGeometry) {
+        const className = `${group === 'zIndex' ? 'z' : 'grid-cols'}-${name}`;
+        const rule = ruleFor(className);
+        expect(declarations(rule)).toEqual({
+          [group === 'zIndex' ? 'z-index' : 'grid-template-columns']: value,
+        });
+        expect(rule.parent?.type).toBe('root');
+      }
+      const canonical = JSON.stringify(acceptedPilotConfigProjection(resolved), (_, value: unknown) => {
         if (typeof value === 'function') return value.toString();
         if (value && typeof value === 'object' && !Array.isArray(value)) {
           const entries = value as Record<string, unknown>;
@@ -306,7 +381,7 @@ describe('restrained foundation presentation', () => {
         expect(current.theme[group]).toHaveProperty(name, value);
         Reflect.deleteProperty(predecessor.theme[group], name);
       }
-      const canonical = JSON.stringify(predecessor, (_, value: unknown) => {
+      const canonical = JSON.stringify(acceptedPilotConfigProjection(predecessor), (_, value: unknown) => {
         if (typeof value === 'function') return value.toString();
         if (value && typeof value === 'object' && !Array.isArray(value)) {
           const entries = value as Record<string, unknown>;
@@ -340,7 +415,7 @@ describe('restrained foundation presentation', () => {
         Reflect.set(expected.theme[group], name, value);
       }
       expect(current).toEqual(expected);
-      const canonical = JSON.stringify(prior, (_, value: unknown) => {
+      const canonical = JSON.stringify(acceptedPilotConfigProjection(prior), (_, value: unknown) => {
         if (typeof value === 'function') return value.toString();
         if (value && typeof value === 'object' && !Array.isArray(value)) {
           const entries = value as Record<string, unknown>;
@@ -381,7 +456,7 @@ describe('restrained foundation presentation', () => {
       Reflect.deleteProperty(previous.theme.fontSize, 'size-inherit');
 
       // Captured before this additive change: includes plugins, screens and all tokens.
-      const canonical = JSON.stringify(previous, (_, value: unknown) => {
+      const canonical = JSON.stringify(acceptedPilotConfigProjection(previous), (_, value: unknown) => {
         if (typeof value === 'function') return value.toString();
         if (value && typeof value === 'object' && !Array.isArray(value)) {
           const entries = value as Record<string, unknown>;
@@ -425,7 +500,7 @@ describe('restrained foundation presentation', () => {
           fontSize: { ...prior.theme.fontSize, 'size-inherit': 'inherit' },
         },
       });
-      const canonical = JSON.stringify(prior, (_, value: unknown) => {
+      const canonical = JSON.stringify(acceptedPilotConfigProjection(prior), (_, value: unknown) => {
         if (typeof value === 'function') return value.toString();
         if (value && typeof value === 'object' && !Array.isArray(value)) {
           const entries = value as Record<string, unknown>;
@@ -459,7 +534,7 @@ describe('restrained foundation presentation', () => {
           fontSize: { ...prior.theme.fontSize, 'size-inherit': 'inherit' },
         },
       });
-      const canonical = JSON.stringify(prior, (_, value: unknown) => {
+      const canonical = JSON.stringify(acceptedPilotConfigProjection(prior), (_, value: unknown) => {
         if (typeof value === 'function') return value.toString();
         if (value && typeof value === 'object' && !Array.isArray(value)) {
           const entries = value as Record<string, unknown>;
