@@ -29,7 +29,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import type { ReactNode } from 'react';
+import type { ComponentProps, ReactNode } from 'react';
 import { ApiError } from '@/lib/resilience';
 import type {
   MileageStats,
@@ -39,10 +39,19 @@ import type {
 import type { Vehicle } from '@/types/vehicle';
 import { setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat';
 
+const chartEvidence = vi.hoisted(() => vi.fn());
+
 vi.mock('@/components/charts', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/components/charts')>();
   const { chartTestDoubles } = await import('@/test/chartTestDoubles');
-  return { ...actual, ...chartTestDoubles };
+  return {
+    ...actual,
+    ...chartTestDoubles,
+    EmbeddedChart: (props: ComponentProps<typeof chartTestDoubles.EmbeddedChart>) => {
+      chartEvidence(props);
+      return <chartTestDoubles.EmbeddedChart {...props} />;
+    },
+  };
 });
 
 // ── i18n stub: return the fallback string, interpolating {{var}} options ──
@@ -216,6 +225,7 @@ beforeEach(() => {
   mockSelected.mockReset();
   mockPalette.mockReset();
   mockUnits.mockReset();
+  chartEvidence.mockClear();
 
   mockPalette.mockReturnValue(PALETTE);
   mockUnits.mockReturnValue({ unitPrefs: { distance: 'km' } });
@@ -424,5 +434,124 @@ describe('MileagePage — null safety + a11y', () => {
     expect(panel('Monthly summary')).toHaveAccessibleName('Monthly summary');
 
     expect(screen.queryByRole('combobox', { name: 'Select vehicle' })).not.toBeInTheDocument();
+  });
+});
+
+describe('MileagePage — scoped modernization', () => {
+  it('preserves calendar bucket dates in both daily charts without shifting them into the prior day', () => {
+    renderPage();
+
+    expect(chartEvidence).toHaveBeenCalledWith(expect.objectContaining({
+      chartKey: 'mileage-odometer-over-time',
+      data: [
+        { date: 'May 30, 2024', odometer: 11970 },
+        { date: 'May 31, 2024', odometer: 11990 },
+        { date: 'Jun 1, 2024', odometer: 12000 },
+      ],
+    }));
+    expect(chartEvidence).toHaveBeenCalledWith(expect.objectContaining({
+      chartKey: 'mileage-daily-distance',
+      data: [
+        { date: 'May 30, 2024', distance: 30 },
+        { date: 'May 31, 2024', distance: 20 },
+        { date: 'Jun 1, 2024', distance: 40 },
+      ],
+    }));
+  });
+
+  it('keeps every monthly field reachable on mobile within the named shared table scroll', () => {
+    renderPage();
+
+    const table = screen.getByRole('table', { name: 'Monthly summary' });
+    const ratioHeader = within(table).getByRole('columnheader', { name: /Distance \/ drive \(km\)/ });
+    const may = within(table).getByText('2024-05').closest('tr');
+    expect(ratioHeader).not.toHaveClass('hidden');
+    if (!(may instanceof HTMLElement)) throw new Error('Missing monthly row');
+    const cells = within(may).getAllByRole('cell');
+    expect(cells.map((cell) => cell.textContent)).toEqual(['2024-05', '400.00', '20', '20.00']);
+    expect(cells[3]).not.toHaveClass('hidden');
+    expect(table.closest('[data-grid-viewport]')).toHaveClass('max-w-full', 'overscroll-x-contain', 'overflow-auto');
+  });
+
+  it('uses solid same-quantity window bars while retaining the saved palette and measured values', () => {
+    mockPalette.mockReturnValue(['var(--semantic-info)', 'var(--semantic-success)', 'var(--semantic-warning)']);
+    renderPage();
+
+    const windows = windowsRegion();
+    for (const [label, value] of [['Last 7 days', 210], ['Last 30 days', 930], ['Last 365 days', 9500]] as const) {
+      const bar = within(windows).getByRole('progressbar', { name: label });
+      expect(bar).toHaveAttribute('aria-valuenow', String(value));
+      const fill = bar.querySelector<HTMLElement>('[data-metric-fill]');
+      expect(fill).not.toBeNull();
+      expect(fill?.style.background).toBe('var(--semantic-info)');
+    }
+    expect(mockPalette).toHaveBeenCalled();
+  });
+
+  it('keeps missing and nonfinite windows unknown without replacing a real zero or neighboring chart', () => {
+    mockStats.mockReturnValue(makeQuery({
+      data: { ...STATS, last_7d_km: undefined, last_30d_km: Number.NaN, last_365d_km: 0 },
+    }));
+    renderPage();
+
+    const windows = windowsRegion();
+    for (const label of ['Last 7 days', 'Last 30 days']) {
+      const bar = within(windows).getByRole('progressbar', { name: label });
+      expect(bar).not.toHaveAttribute('aria-valuenow');
+      expect(bar).toHaveAttribute('aria-valuetext', 'No reading');
+      expect(siblingText(windows, label)).toBe('—');
+    }
+    expect(within(windows).getByRole('progressbar', { name: 'Last 365 days' })).toHaveAttribute('aria-valuenow', '0');
+    expect(siblingText(windows, 'Last 365 days')).toBe('0.00 km');
+    expect(within(dailyRegion()).getByRole('img', { name: 'Daily distance traveled over time' })).toBeInTheDocument();
+  });
+
+  it('retains missing monthly measurements and daily gaps without manufacturing zero distances', () => {
+    mockDaily.mockReturnValue(makeQuery({
+      data: [{ date: '2024-06-01', drive_count: 1, total_km: Number.NaN, end_odometer_km: 0 }],
+    }));
+    mockMonthly.mockReturnValue(makeQuery({
+      data: [
+        { ...MONTHLY[0], total_km: Number.NaN },
+        { ...MONTHLY[1], drive_count: undefined },
+        { ...MONTHLY[1], year_month: '2024-07', total_km: 0, drive_count: 0 },
+      ],
+    }));
+    renderPage();
+
+    expect(chartEvidence).toHaveBeenCalledWith(expect.objectContaining({
+      chartKey: 'mileage-daily-distance',
+      data: [{ date: 'Jun 1, 2024', distance: null }],
+    }));
+    expect(chartEvidence).toHaveBeenCalledWith(expect.objectContaining({
+      chartKey: 'mileage-odometer-over-time',
+      data: [{ date: 'Jun 1, 2024', odometer: 0 }],
+    }));
+    const table = screen.getByRole('table', { name: 'Monthly summary' });
+    const rows = within(table).getAllByRole('row').slice(1);
+    expect(rows.map((row) => within(row).getAllByRole('cell').map((cell) => cell.textContent))).toEqual([
+      ['2024-05', '—', '20', '—'],
+      ['2024-06', '930.00', '—', '—'],
+      ['2024-07', '0.00', '0', '0.00'],
+    ]);
+  });
+
+  it('keeps all six cards, readings and series through retained errors and paused refreshes with independent retry', () => {
+    const stats = makeQuery({ data: STATS, error: new ApiError('refresh failed', 500), isError: true });
+    mockStats.mockReturnValue(stats);
+    mockDaily.mockReturnValue(makeQuery({ data: DAILY, fetchStatus: 'paused' }));
+    mockMonthly.mockReturnValue(makeQuery({ data: MONTHLY, isFetching: true }));
+    renderPage();
+
+    expect(screen.getAllByText('Refresh failed. Showing the last successful mileage data.')).toHaveLength(2);
+    expect(screen.getAllByText('Refresh is paused. Showing the last successful mileage data.')).toHaveLength(2);
+    expect(screen.getAllByText('Refreshing mileage data. Previously loaded content remains available.')).toHaveLength(2);
+    expect(cardValue(kpiRegion(), 'Total distance')).toBe('12,000 km');
+    for (const title of ['Mileage summary metrics', 'Odometer over time', 'Distance by window', 'Daily distance', 'Monthly distance', 'Monthly summary']) {
+      expect(panel(title)).toHaveAccessibleName(title);
+    }
+    expect(screen.getAllByTestId('embedded-chart')).toHaveLength(3);
+    fireEvent.click(within(kpiRegion()).getByRole('button', { name: 'Retry' }));
+    expect(stats.refetch).toHaveBeenCalledTimes(1);
   });
 });

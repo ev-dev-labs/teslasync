@@ -14,7 +14,7 @@ import {
   ChartTooltip, EmbeddedChart,
   AreaChart, Area, BarChart, Bar, XAxis, YAxis,
   CartesianGrid, Tooltip, ResponsiveContainer,
-  AREA_DEFAULTS, areaGradient, axisTickSm,
+  AREA_DEFAULTS, axisTickSm,
 } from '@/components/charts';
 
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -23,7 +23,7 @@ import { NoVehicleSelected } from '@/features/onboarding/components/NoVehicleSel
 import { useUnits } from '@/hooks/useUnits';
 import { convertDistanceFromSI } from '@/lib/unitConversion';
 import { useChartPalette } from '@/hooks/useChartPalette';
-import { formatDate } from '@/lib/dateFormat';
+import { formatDate, formatDayKey } from '@/lib/dateFormat';
 
 import {
   useMileageStats,
@@ -31,7 +31,7 @@ import {
   useDailyMileage,
 } from '@/api/hooks/useAnalytics';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
-import { deriveDataState } from '@/api/dataState';
+import { deriveDataState, knownNumber } from '@/api/dataState';
 import { MileageSourceNotice } from '../components/mileage-modernization';
 import { MileageBrief as MileageSummary } from '../components/operationalbrief-a-m/MileageBrief';
 
@@ -41,9 +41,9 @@ import { MileageBrief as MileageSummary } from '../components/operationalbrief-a
 
 interface MonthRow {
   month: string;
-  distance: number;
-  drives: number;
-  dailyAvg: number;
+  distance: number | null;
+  drives: number | null;
+  dailyAvg: number | null;
 }
 
 /* ------------------------------------------------------------------ */
@@ -51,7 +51,7 @@ interface MonthRow {
 /* ------------------------------------------------------------------ */
 
 export default function MileagePage() {
-  const { fmtInt, fmtNumber } = useNumberFormatting();
+  const { fmtInt, fmtNumber, locale } = useNumberFormatting();
   const { t } = useTranslation();
   usePageTitle(t('mileage.title', 'Mileage'));
 
@@ -61,7 +61,10 @@ export default function MileagePage() {
   // SI-floor converter expects meters — scale km → m before converting to
   // the user's display unit at the render boundary.
   const fromKm = useCallback(
-    (km: number) => convertDistanceFromSI((km ?? 0) * 1000, distanceUnit),
+    (km: number | null | undefined) => {
+      const reading = knownNumber(km);
+      return reading == null ? null : convertDistanceFromSI(reading * 1000, distanceUnit);
+    },
     [distanceUnit],
   );
 
@@ -108,19 +111,19 @@ export default function MileagePage() {
 
   /* Window derivations remain on the existing display boundary. Summary
      average/projection operands are preserved in MileageSummary. */
-  const totalDistance = fromKm(stats?.lifetime_km ?? 0);
-  const totalDrives = stats?.drive_count_lifetime ?? 0;
-  const last7d = fromKm(stats?.last_7d_km ?? 0);
-  const last30d = fromKm(stats?.last_30d_km ?? 0);
-  const last365d = fromKm(stats?.last_365d_km ?? 0);
+  const totalDistance = fromKm(stats?.lifetime_km);
+  const totalDrives = knownNumber(stats?.drive_count_lifetime);
+  const last7d = fromKm(stats?.last_7d_km);
+  const last30d = fromKm(stats?.last_30d_km);
+  const last365d = fromKm(stats?.last_365d_km);
 
   // Windowed distances vs lifetime, for the "Distance by Window" bento panel.
-  const lifetimeMax = totalDistance > 0 ? totalDistance : 1;
+  const lifetimeMax = totalDistance == null ? 0 : totalDistance > 0 ? totalDistance : 1;
   const windowRows = useMemo(
     () => [
       { key: '7d', label: t('mileage.last7Days', 'Last 7 days'), value: last7d, color: palette[0] },
-      { key: '30d', label: t('mileage.last30Days', 'Last 30 days'), value: last30d, color: palette[1] },
-      { key: '365d', label: t('mileage.last365Days', 'Last 365 days'), value: last365d, color: palette[2] },
+      { key: '30d', label: t('mileage.last30Days', 'Last 30 days'), value: last30d, color: palette[0] },
+      { key: '365d', label: t('mileage.last365Days', 'Last 365 days'), value: last365d, color: palette[0] },
     ],
     [t, last7d, last30d, last365d, palette],
   );
@@ -129,8 +132,8 @@ export default function MileagePage() {
     () => [
       { label: t('mileage.firstDrive', 'First drive'), value: stats?.first_drive_at ? formatDate(stats.first_drive_at) : '—' },
       { label: t('mileage.lastDrive', 'Last drive'), value: stats?.last_drive_at ? formatDate(stats.last_drive_at) : '—' },
-      { label: t('mileage.lifetimeDrives', 'Lifetime drives'), value: stats?.drive_count_lifetime != null ? fmtInt(totalDrives) : '—' },
-      { label: t('mileage.drives30d', 'Drives (30d)'), value: stats?.drive_count_30d != null ? fmtInt(stats.drive_count_30d) : '—' },
+      { label: t('mileage.lifetimeDrives', 'Lifetime drives'), value: totalDrives != null ? fmtInt(totalDrives) : '—' },
+      { label: t('mileage.drives30d', 'Drives (30d)'), value: knownNumber(stats?.drive_count_30d) != null ? fmtInt(stats?.drive_count_30d) : '—' },
     ],
     [t, stats?.first_drive_at, stats?.last_drive_at, stats?.drive_count_30d, totalDrives, fmtInt],
   );
@@ -141,14 +144,14 @@ export default function MileagePage() {
   const odometerData = useMemo(
     () =>
       dailyRows
-        .filter((d) => d.end_odometer_km != null)
-        .map((d) => ({ date: formatDate(d.date), odometer: fromKm(d.end_odometer_km ?? 0) })),
-    [dailyRows, fromKm],
+        .filter((d) => knownNumber(d.end_odometer_km) != null)
+        .map((d) => ({ date: formatDayKey(d.date, { locale }), odometer: fromKm(d.end_odometer_km) })),
+    [dailyRows, fromKm, locale],
   );
 
   const dailyData = useMemo(
-    () => dailyRows.map((d) => ({ date: formatDate(d.date), distance: fromKm(d.total_km ?? 0) })),
-    [dailyRows, fromKm],
+    () => dailyRows.map((d) => ({ date: formatDayKey(d.date, { locale }), distance: fromKm(d.total_km) })),
+    [dailyRows, fromKm, locale],
   );
 
   /* Monthly summary rows derive from /mileage/monthly which already groups
@@ -156,13 +159,13 @@ export default function MileagePage() {
   const monthlyRows: MonthRow[] = useMemo(
     () =>
       monthlyData.map((m) => {
-        const km = m.total_km ?? 0;
-        const drives = m.drive_count ?? 0;
+        const km = knownNumber(m.total_km);
+        const drives = knownNumber(m.drive_count);
         return {
           month: m.year_month ?? '',
           distance: fromKm(km),
           drives,
-          dailyAvg: drives > 0 ? fromKm(km / drives) : 0,
+          dailyAvg: km == null || drives == null ? null : drives > 0 ? fromKm(km / drives) : 0,
         };
       }),
     [monthlyData, fromKm],
@@ -175,9 +178,9 @@ export default function MileagePage() {
   const monthColumns: Column<MonthRow>[] = useMemo(
     () => [
       { key: 'month', header: t('mileage.month', 'Month'), render: (r) => r.month, sortable: true, filterValue: (r) => r.month },
-      { key: 'distance', header: `${t('mileage.distance', 'Distance')} (${distanceUnit})`, render: (r) => fmtNumber(r.distance), sortable: true, align: 'right' },
-      { key: 'drives', header: t('mileage.drives', 'Drives'), render: (r) => fmtInt(r.drives), sortable: true, align: 'right', filterValue: (r) => r.drives, filterValueLabel: (_value, r) => fmtInt(r.drives) },
-      { key: 'dailyAvg', header: `${t('mileage.distancePerDrive', 'Distance / drive')} (${distanceUnit})`, render: (r) => fmtNumber(r.dailyAvg), sortable: true, align: 'right' },
+      { key: 'distance', header: `${t('mileage.distance', 'Distance')} (${distanceUnit})`, render: (r) => r.distance == null ? '—' : fmtNumber(r.distance), sortable: true, align: 'right' },
+      { key: 'drives', header: t('mileage.drives', 'Drives'), render: (r) => r.drives == null ? '—' : fmtInt(r.drives), sortable: true, align: 'right', filterValue: (r) => r.drives, filterValueLabel: (_value, r) => r.drives == null ? '—' : fmtInt(r.drives) },
+      { key: 'dailyAvg', header: `${t('mileage.distancePerDrive', 'Distance / drive')} (${distanceUnit})`, render: (r) => r.dailyAvg == null ? '—' : fmtNumber(r.dailyAvg), sortable: true, align: 'right' },
     ],
     [t, distanceUnit, fmtNumber, fmtInt],
   );
@@ -235,7 +238,7 @@ export default function MileagePage() {
                   {
                     key: 'odometer',
                     label: `${t('mileage.odometer', 'Odometer')} (${distanceUnit})`,
-                    format: (value) => fmtNumber(Number(value ?? 0)),
+                    format: (value) => knownNumber(value) == null ? '—' : fmtNumber(Number(value)),
                   },
                 ]}
                 height={288}
@@ -244,7 +247,6 @@ export default function MileagePage() {
               >
                 <ResponsiveContainer width="100%" height="100%">
                   <AreaChart data={odometerData}>
-                    {areaGradient('odoGrad', palette[2])}
                     <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
                     <XAxis dataKey="date" tick={axisTickSm} minTickGap={24} />
                     <YAxis tick={axisTickSm} domain={['auto', 'auto']} width={48} />
@@ -253,7 +255,8 @@ export default function MileagePage() {
                       {...AREA_DEFAULTS}
                       dataKey="odometer"
                       stroke={palette[2]}
-                      fill="url(#odoGrad)"
+                      fill={palette[2]}
+                      fillOpacity={0.08}
                       name={`${t('mileage.odometer', 'Odometer')} (${distanceUnit})`}
                     />
                   </AreaChart>
@@ -286,7 +289,8 @@ export default function MileagePage() {
                       value={row.value}
                       max={lifetimeMax}
                       color={row.color}
-                      sublabel={`${fmtNumber(row.value)} ${distanceUnit}`}
+                      fill="solid"
+                      sublabel={row.value == null ? '—' : `${fmtNumber(row.value)} ${distanceUnit}`}
                     />
                   ))}
                 </div>
@@ -329,7 +333,7 @@ export default function MileagePage() {
                   {
                     key: 'distance',
                     label: `${t('mileage.distance', 'Distance')} (${distanceUnit})`,
-                    format: (value) => fmtNumber(Number(value ?? 0)),
+                    format: (value) => knownNumber(value) == null ? '—' : fmtNumber(Number(value)),
                   },
                 ]}
                 height={288}
@@ -383,7 +387,7 @@ export default function MileagePage() {
                   {
                     key: 'distance',
                     label: `${t('mileage.distance', 'Distance')} (${distanceUnit})`,
-                    format: (value) => fmtNumber(Number(value ?? 0)),
+                    format: (value) => knownNumber(value) == null ? '—' : fmtNumber(Number(value)),
                   },
                 ]}
                 height={288}
@@ -426,8 +430,8 @@ export default function MileagePage() {
             <DataTable<MonthRow>
               enableValueFilters
               tableId="analytics:mileage-monthly"
+              caption={t('mileage.monthlySummary', 'Monthly summary')}
               columns={monthColumns}
-              mobileColumns={['month', 'distance', 'drives']}
               data={monthlyRows}
               keyExtractor={(r) => r.month}
               emptyMessage={t('mileage.noMonthly', 'No monthly distance yet')}
