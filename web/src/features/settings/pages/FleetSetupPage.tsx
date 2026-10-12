@@ -9,6 +9,7 @@
  */
 import { useTranslation } from 'react-i18next'
 import { PageLayout, SourceContent } from '@/components/layout'
+import { StaleRefreshWarning } from '@/components/feedback'
 import { deriveDataState } from '@/api/dataState'
 import { FadeIn } from '@/components/motion'
 import { usePageTitle } from '@/hooks/usePageTitle'
@@ -49,7 +50,7 @@ export default function FleetSetupPage() {
         'Connect Tesla, keep the token fresh, subscribe a vehicle, then wait for telemetry.',
       )}
       copyLink
-      query={[apiInfo, publicKey, onboarding]}
+      query={[auth, apiInfo, publicKey, onboarding]}
     >
       <FadeIn>
         <FleetSetupKpiBand
@@ -67,9 +68,9 @@ export default function FleetSetupPage() {
           }}
         />
       </FadeIn>
-      {(apiState.fatalError || apiState.status === 'stale') && (
+      {apiState.fatalError && (
         <SourceContent
-          state={apiState.fatalError ? 'error' : 'retained'}
+          state="error"
           label={t('fleetSetup.kpi.token', 'Access token')}
           emptyMessage={t('fleetSetup.tokenUnavailable', 'Fleet access-token status unavailable.')}
           errorMessage={t('fleetSetup.tokenUnavailable', 'Fleet access-token status unavailable.')}
@@ -79,6 +80,10 @@ export default function FleetSetupPage() {
           {null}
         </SourceContent>
       )}
+      <StaleRefreshWarning
+        state={apiState}
+        label={t('fleetSetup.kpi.token', 'Access token')}
+      />
 
       <FadeIn delay={0.1}>
         <section

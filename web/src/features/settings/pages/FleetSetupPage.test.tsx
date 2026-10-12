@@ -7,7 +7,7 @@
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { onlineManager, QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter } from 'react-router-dom'
 import type { ReactNode } from 'react'
 
@@ -141,6 +141,7 @@ describe('FleetSetupPage', () => {
     await waitFor(() => {
       expect(screen.getByText('Auto-refresh on')).toBeInTheDocument()
     })
+
     expect(screen.getByText('Refresh token')).toBeInTheDocument()
     expect(screen.getAllByText('Subscribe telemetry').length).toBeGreaterThan(0)
     expect(screen.getByText('How fleet setup works')).toBeInTheDocument()
@@ -282,5 +283,69 @@ describe('FleetSetupPage', () => {
     ).toBeInTheDocument()
     expect(screen.getByText('How fleet setup works')).toBeInTheDocument()
     expect(screen.getByText('Domain & certificates')).toBeInTheDocument()
+  })
+})
+
+describe('FleetSetupPage source recovery', () => {
+  it('includes an independently failed account read in header freshness without hiding setup sections', async () => {
+    const original = mockedRequest.getMockImplementation()!
+    mockedRequest.mockImplementation((...args: unknown[]) => {
+      if (pathOf(args).startsWith('/auth/status')) return Promise.reject(new Error('Account read unavailable'))
+      return original(...args)
+    })
+    renderPage()
+    expect(await screen.findByRole('button', { name: 'Refresh data · Error' })).toBeInTheDocument()
+    expect(await screen.findByText('Auto-refresh on')).toBeInTheDocument()
+    expect(screen.getByText('How fleet setup works')).toBeInTheDocument()
+    expect(screen.getByText('Domain & certificates')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Configure signals/i })).toBeEnabled()
+    expect(mockedRequest.mock.calls.every(call =>
+      ((call[1] as RequestInit | undefined)?.method ?? 'GET') === 'GET',
+    )).toBe(true)
+  })
+
+  it('keeps the retained token check and retries only its failed read', async () => {
+    const { client } = renderPage()
+    await screen.findByText('Auto-refresh on')
+    const original = mockedRequest.getMockImplementation()!
+    mockedRequest.mockImplementation((...args: unknown[]) => {
+      if (pathOf(args).startsWith('/dev-tools/fleet-api-info')) return Promise.reject(new Error('Token refresh unavailable'))
+      return original(...args)
+    })
+    await act(async () => { await client.refetchQueries({ queryKey: ['fleet-setup', 'fleet-api-info'] }) })
+    const warning = await screen.findByTestId('stale-refresh-warning')
+    expect(within(warning).getByText('Access token may be out of date')).toBeInTheDocument()
+    expect(within(warning).getByText('Previously loaded data remains visible while affected sources recover.')).toBeInTheDocument()
+    expect(screen.getByText('Auto-refresh on')).toBeInTheDocument()
+    expect(screen.queryByText('Fleet access-token status unavailable.')).toBeNull()
+    mockedRequest.mockImplementation(original)
+    mockedRequest.mockClear()
+    fireEvent.click(within(warning).getByRole('button', { name: 'Refresh' }))
+    await waitFor(() => expect(screen.queryByTestId('stale-refresh-warning')).toBeNull())
+    expect(mockedRequest.mock.calls.map(call => pathOf(call))).toEqual(['/dev-tools/fleet-api-info'])
+    expect(screen.getByText('Auto-refresh on')).toBeInTheDocument()
+  })
+
+  it('distinguishes paused token refresh from a failed read without claiming the device is offline', async () => {
+    const { client } = renderPage()
+    await screen.findByText('Auto-refresh on')
+    try {
+      act(() => {
+        onlineManager.setOnline(false)
+        void client.refetchQueries({ queryKey: ['fleet-setup', 'fleet-api-info'] })
+      })
+      const warning = await screen.findByTestId('stale-refresh-warning')
+      expect(warning).toHaveAttribute('data-refresh-blocked', 'true')
+      expect(within(warning).getByText('The latest values are temporarily unavailable. Previously loaded data remains visible.')).toBeInTheDocument()
+      expect(within(warning).queryByText('Previously loaded data remains visible while affected sources recover.')).toBeNull()
+      expect(within(warning).queryByText(/device is offline/i)).toBeNull()
+      expect(screen.getByText('Auto-refresh on')).toBeInTheDocument()
+      expect(screen.getByText('How fleet setup works')).toBeInTheDocument()
+    } finally {
+      await act(async () => {
+        onlineManager.setOnline(true)
+        await client.resumePausedMutations()
+      })
+    }
   })
 })
