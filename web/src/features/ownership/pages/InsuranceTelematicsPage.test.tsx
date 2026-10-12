@@ -9,7 +9,7 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, within, fireEvent, waitFor } from '@testing-library/react';
+import { act, render, screen, within, fireEvent, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
@@ -61,7 +61,7 @@ import {
 } from '@/api/hooks/useOwnership';
 import InsuranceTelematicsPage from './InsuranceTelematicsPage';
 import { expectOperationalBand, summaryMetric } from '../components/operationalbrief-all/testAssertions';
-import type { InsurancePolicy, InsuranceRiskProfile } from '@/types/ownership';
+import type { InsurancePolicy, InsuranceRiskProfile, RiskFactor, RiskLever, UpsertInsurancePolicyRequest } from '@/types/ownership';
 
 const mockSelected = useSelectedVehicle as unknown as ReturnType<typeof vi.fn>;
 const mockProfile = useInsuranceRiskProfile as unknown as ReturnType<typeof vi.fn>;
@@ -195,6 +195,160 @@ describe('InsuranceTelematicsPage — confirm-gated delete', () => {
     expect(screen.getByRole('dialog')).toHaveTextContent('never an insurer quote');
     expect(screen.getByRole('dialog')).toHaveTextContent(/Cap 20(?:\.0+)?%/);
     expect(mockUpsert().mutate).not.toHaveBeenCalled();
+  });
+
+  function renderScopePage() {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    return render(<InsuranceTelematicsPage />, {
+      wrapper: ({ children }: { children: ReactNode }) => (
+        <MemoryRouter><QueryClientProvider client={client}>{children}</QueryClientProvider></MemoryRouter>
+      ),
+    });
+  }
+
+  function selectScope(id: number, profile = makeProfile({ vehicle_id: id, policy: null, premium: null })) {
+    mockSelected.mockReturnValue({ vehicleId: id, vehicle: null, vehicles: [], setVehicleId: vi.fn() });
+    mockProfile.mockReturnValue(makeQuery(profile));
+  }
+
+  describe('InsuranceTelematicsPage — preserved scope and complete tables', () => {
+    it('retains the original vehicle draft but blocks a cross-vehicle save', () => {
+      const mutate = vi.fn();
+      mockUpsert.mockReturnValue(makeMutation({ mutate }));
+      const view = renderScopePage();
+      fireEvent.click(screen.getByRole('button', { name: 'Edit policy' }));
+      const insurer = screen.getByRole('textbox', { name: 'Insurer required' });
+      expect(insurer).toHaveFocus();
+      fireEvent.change(insurer, { target: { value: 'Synthetic draft' } });
+      selectScope(8);
+      view.rerender(<InsuranceTelematicsPage />);
+      expect(insurer).toHaveValue('Synthetic draft');
+      expect(screen.getByText(/This form belongs to Vehicle 7/)).toBeInTheDocument();
+      const save = screen.getByRole('button', { name: 'Save policy baseline' });
+      expect(save).toBeDisabled();
+      const form = save.closest('form');
+      if (!form) throw new Error('Missing policy form');
+      fireEvent.submit(form);
+      expect(mutate).not.toHaveBeenCalled();
+    });
+
+    it('initializes a new policy after cancel and restores the invoking action focus', () => {
+      const view = renderScopePage();
+      const edit = screen.getByRole('button', { name: 'Edit policy' });
+      fireEvent.click(edit);
+      fireEvent.change(screen.getByRole('textbox', { name: 'Insurer required' }), { target: { value: 'Discarded draft' } });
+      fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+      expect(edit).toHaveFocus();
+      selectScope(8);
+      view.rerender(<InsuranceTelematicsPage />);
+      fireEvent.click(screen.getByRole('button', { name: 'Add policy' }));
+      expect(screen.getByRole('textbox', { name: 'Insurer required' })).toHaveValue('');
+      expect(screen.getByRole('textbox', { name: 'Policy reference required' })).toHaveValue('');
+      expect(screen.getByRole('spinbutton', { name: 'Annual premium required' })).toHaveValue(120000);
+      expect(mockUpsert().mutate).not.toHaveBeenCalled();
+    });
+
+    it('pins submitted policy values and prevents duplicate submission while retaining a rejected draft', () => {
+      const mutate = vi.fn((_request: UpsertInsurancePolicyRequest, _callbacks?: { onSettled?: () => void }) => undefined);
+      mockUpsert.mockReturnValue(makeMutation({ mutate }));
+      const view = renderScopePage();
+      fireEvent.click(screen.getByRole('button', { name: 'Edit policy' }));
+      fireEvent.change(screen.getByRole('textbox', { name: 'Insurer required' }), { target: { value: '  Synthetic edited  ' } });
+      const form = screen.getByRole('button', { name: 'Save policy baseline' }).closest('form');
+      if (!form) throw new Error('Missing policy form');
+      fireEvent.submit(form);
+      fireEvent.submit(form);
+      expect(mutate).toHaveBeenCalledTimes(1);
+      expect(mutate.mock.calls[0][0]).toMatchObject({
+        vehicle_id: 7, insurer: '  Synthetic edited  ', policy_ref: 'POL-001',
+        annual_premium_minor: 120000, deductible_minor: 50000, telematics_program: true,
+      });
+      mockUpsert.mockReturnValue(makeMutation({ mutate, error: new Error('Synthetic request rejected') }));
+      act(() => mutate.mock.calls[0][1]?.onSettled?.());
+      view.rerender(<InsuranceTelematicsPage />);
+      expect(screen.getByRole('textbox', { name: 'Insurer required' })).toHaveValue('  Synthetic edited  ');
+      expect(screen.getByText('Synthetic request rejected')).toBeInTheDocument();
+      fireEvent.change(screen.getByRole('textbox', { name: 'Insurer required' }), { target: { value: 'Synthetic retry' } });
+      fireEvent.submit(form);
+      expect(mutate).toHaveBeenCalledTimes(2);
+      expect(mutate.mock.calls[1][0]).toMatchObject({ vehicle_id: 7, insurer: 'Synthetic retry' });
+    });
+
+    it('retains a confirmed original-target save after scope change without allowing another submission', () => {
+      const mutate = vi.fn((_request: UpsertInsurancePolicyRequest, _callbacks?: { onSuccess?: () => void; onSettled?: () => void }) => undefined);
+      mockUpsert.mockReturnValue(makeMutation({ mutate }));
+      const view = renderScopePage();
+      fireEvent.click(screen.getByRole('button', { name: 'Edit policy' }));
+      const form = screen.getByRole('button', { name: 'Save policy baseline' }).closest('form');
+      if (!form) throw new Error('Missing policy form');
+      fireEvent.submit(form);
+      selectScope(8);
+      view.rerender(<InsuranceTelematicsPage />);
+      act(() => {
+        mutate.mock.calls[0][1]?.onSuccess?.();
+        mutate.mock.calls[0][1]?.onSettled?.();
+      });
+      expect(screen.getByRole('textbox', { name: 'Insurer required' })).toHaveValue('SafeDrive');
+      expect(screen.getByText('Changes saved')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Save policy baseline' })).toBeDisabled();
+      selectScope(7);
+      view.rerender(<InsuranceTelematicsPage />);
+      fireEvent.submit(form);
+      expect(mutate).toHaveBeenCalledTimes(1);
+      expect(screen.getByRole('button', { name: 'Close' })).toBeEnabled();
+    });
+
+    it('does not delete a confirmed policy after the selected vehicle changes', async () => {
+      const mutate = vi.fn();
+      mockRemove.mockReturnValue(makeMutation({ mutate }));
+      const view = renderScopePage();
+      fireEvent.click(screen.getByRole('button', { name: 'Remove' }));
+      selectScope(8);
+      view.rerender(<InsuranceTelematicsPage />);
+      fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Delete' }));
+      await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+      expect(mutate).not.toHaveBeenCalled();
+    });
+
+    it('keeps all factor and lever fields reachable and sorts by raw values without changing source order', () => {
+      const factor = (code: string, score: number, contribution: number): RiskFactor => ({
+        code, label: `Synthetic ${code}`, narrative: 'Fixture evidence only', observed_rate: 3,
+        baseline_rate: 2, rate_unit: 'events/m', score, weight: 0.4, contribution_pct: contribution,
+        direction: 'higher_is_worse', sample_count: 19, percentile: null,
+      });
+      const lever = (factor_code: string, saving: number | null): RiskLever => ({
+        factor_code, label: `Synthetic ${factor_code}`, payoff_rank: 1, target_reduction_pct: 10,
+        projected_score_delta: 4, projected_premium_save_minor: saving, difficulty: 'moderate',
+        effort_hours_per_week: 2, confidence: 70,
+      });
+      const factors = [factor('first', 12, 70), factor('second', 85, 20)];
+      const levers = [lever('first', 100), lever('second', 900), lever('unknown', null)];
+      mockProfile.mockReturnValue(makeQuery(makeProfile({ factors, levers })));
+      renderPage();
+      const factorTable = within(card('Factor decomposition')).getByRole('table');
+      const leverTable = within(card('Ranked improvement levers')).getByRole('table');
+      for (const name of ['Observed', 'Baseline', 'Weight', 'Direction', 'Samples']) {
+        expect(within(factorTable).getByRole('columnheader', { name })).not.toHaveClass('hidden');
+      }
+      for (const name of ['Rank', 'Target reduction', 'Risk score delta', 'Effort', 'Confidence']) {
+        expect(within(leverTable).getByRole('columnheader', { name })).not.toHaveClass('hidden');
+      }
+      const labels = (table: HTMLElement) => within(table).getAllByRole('row').slice(1).map(row => row.textContent);
+      expect(labels(factorTable)[0]).toContain('Synthetic first');
+      fireEvent.click(within(factorTable).getByRole('button', { name: /Score/ }));
+      expect(labels(factorTable)[0]).toContain('Synthetic second');
+      fireEvent.click(within(factorTable).getByRole('button', { name: /Contribution/ }));
+      expect(labels(factorTable)[0]).toContain('Synthetic first');
+      fireEvent.click(within(leverTable).getByRole('button', { name: /Projected saving/ }));
+      expect(labels(leverTable)[0]).toContain('Synthetic second');
+      expect(labels(leverTable).at(-1)).toContain('Synthetic unknown');
+      expect(labels(leverTable).at(-1)).toContain('—');
+      fireEvent.click(within(leverTable).getByRole('button', { name: /Projected saving/ }));
+      expect(labels(leverTable)[0]).toContain('Synthetic first');
+      expect(labels(leverTable).at(-1)).toContain('Synthetic unknown');
+      expect(factors.map(row => row.code)).toEqual(['first', 'second']);
+      expect(levers.map(row => row.factor_code)).toEqual(['first', 'second', 'unknown']);
+    });
   });
 
   it('keeps every modelled premium amount, cap and full digest during a refresh failure', () => {
