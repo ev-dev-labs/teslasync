@@ -13,10 +13,12 @@ import {
 
 import { PageLayout } from '@/components/layout';
 import { PersonaSelect } from '@/components/forms';
-import { GlassPanel, Button, IconBox, SectionTitle, Text } from '@/components/ui';
+import { GlassPanel, Button, BUTTON_BASE, BUTTON_VARIANTS, IconBox, SectionTitle, Text } from '@/components/ui';
+import { VisuallyHidden } from '@/components/a11y';
 import { FadeIn } from '@/components/motion';
-import { DataStateNotice } from '@/components/feedback';
+import { AlertBanner, StaleRefreshWarning } from '@/components/feedback';
 import { deriveDataState } from '@/api/dataState';
+import { useMotionPreference } from '@/hooks/useMotionPreference';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useProductPreferences } from '@/hooks/useProductPreferences';
 import { useOnboardingStatus } from '@/api/hooks/useOnboarding';
@@ -56,6 +58,11 @@ export default function OnboardingPage() {
   const onboardingState = deriveDataState(onboardingQuery);
   const { skip } = useOnboardingSkip();
   const { preferences, updatePreferences } = useProductPreferences();
+  const { reduce } = useMotionPreference();
+  const refreshIconClassName = cn(
+    'h-4 w-4 motion-reduce:animate-none',
+    isFetching && !reduce && 'animate-spin',
+  );
 
   const teslaConnected = data?.tesla_connected ?? false;
   const vehicleCount = data?.vehicle_count ?? 0;
@@ -122,8 +129,9 @@ export default function OnboardingPage() {
           variant="primary"
           wrapLabel
           size="sm"
+          className="min-h-11 md:min-h-9"
           onClick={() => navigate(step.cta!.to!)}
-          icon={<ArrowRight className="h-4 w-4" />}
+          icon={<ArrowRight className="h-4 w-4" aria-hidden="true" />}
         >
           {step.cta.label}
         </Button>
@@ -135,20 +143,29 @@ export default function OnboardingPage() {
           href={step.cta.href}
           target="_blank"
           rel="noreferrer noopener"
-          className="block w-full sm:inline-block sm:w-auto"
+          aria-labelledby={`onboarding-step-${step.key}-cta-label onboarding-step-${step.key}-cta-new-tab`}
+          className={cn(
+            BUTTON_BASE,
+            BUTTON_VARIANTS.outline,
+            'h-auto min-h-11 w-full min-w-0 max-w-full whitespace-normal px-3 py-1.5 md:min-h-9 sm:w-auto',
+            reduce && 'transition-none',
+          )}
         >
-          <Button
-            variant="outline"
-            wrapLabel
+          <BookOpen className="h-4 w-4 shrink-0" aria-hidden="true" />
+          <Text
+            id={`onboarding-step-${step.key}-cta-label`}
+            as="span"
             size="sm"
-            className="w-full sm:w-auto"
-            icon={<BookOpen className="h-4 w-4" />}
+            weight="medium"
+            color="primary"
+            className="min-w-0 break-words"
           >
-            <span className="inline-flex items-center gap-1.5">
-              {step.cta.label}
-              <ExternalLink className="h-3 w-3" aria-hidden="true" />
-            </span>
-          </Button>
+            {step.cta.label}
+          </Text>
+          <ExternalLink className="h-3 w-3 shrink-0" aria-hidden="true" />
+          <VisuallyHidden id={`onboarding-step-${step.key}-cta-new-tab`}>
+            {t('onboarding.resources.newTab', '(opens in a new tab)')}
+          </VisuallyHidden>
         </a>
       );
     }
@@ -157,10 +174,10 @@ export default function OnboardingPage() {
         variant="outline"
         wrapLabel
         size="sm"
-        className="w-full sm:w-auto"
+        className="min-h-11 w-full md:min-h-9 sm:w-auto"
         onClick={step.cta.onClick}
         disabled={step.cta.disabled}
-        icon={<RefreshCw className={cn('h-4 w-4', isFetching && 'animate-spin')} />}
+        icon={<RefreshCw className={refreshIconClassName} aria-hidden="true" />}
       >
         {step.cta.label}
       </Button>
@@ -183,8 +200,9 @@ export default function OnboardingPage() {
             : t('onboarding.subtitle', 'Three quick steps before your dashboard is ready.')
         }
         className="w-full min-w-0 pb-8 sm:pb-10"
+        busy={isLoading || isFetching}
       >
-        {onboardingState.status === 'stale' && <DataStateNotice state="stale" preserveSeverity />}
+        <StaleRefreshWarning state={onboardingState} hideRetry />
         {/* 1 — Existing setup-status summary; the checklist remains interactive below. */}
         <FadeIn>
           <OnboardingSetupStatusBand
@@ -212,7 +230,7 @@ export default function OnboardingPage() {
           <GlassPanel className="p-4 sm:p-5">
             <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(280px,420px)] lg:items-center">
               <div className="flex min-w-0 items-start gap-3">
-                <IconBox color="cyan" size="md">
+                <IconBox color="neutral" size="md">
                   <SlidersHorizontal className="h-5 w-5" aria-hidden />
                 </IconBox>
                 <div className="min-w-0">
@@ -248,8 +266,8 @@ export default function OnboardingPage() {
           <section className="grid grid-cols-1 gap-4 xl:grid-cols-3">
             <GlassPanel className="p-4 sm:p-6 xl:col-span-2">
               <div className="mb-5 flex items-start gap-3">
-                <IconBox color="cyan" size="md">
-                  <Sparkles className="h-5 w-5" />
+                <IconBox color="neutral" size="md">
+                  <Sparkles className="h-5 w-5" aria-hidden="true" />
                 </IconBox>
                 <div className="min-w-0">
                   <SectionTitle>{t('onboarding.intro.title', 'Setup checklist')}</SectionTitle>
@@ -262,6 +280,20 @@ export default function OnboardingPage() {
                 </div>
               </div>
 
+              {!onboardingState.hasData && (
+                <AlertBanner
+                  variant="info"
+                  title={t('onboarding.brief.notReceived', 'Setup status not yet received')}
+                  className="mb-5"
+                  data-testid="onboarding-status-pending"
+                  data-refresh-blocked={onboardingState.isRefreshBlocked || undefined}
+                >
+                  {t(
+                    'onboarding.brief.missing',
+                    'Setup status has not been received; no completed-step or vehicle count is known.',
+                  )}
+                </AlertBanner>
+              )}
               <Stepper steps={steps} renderCta={renderCta} />
             </GlassPanel>
 
@@ -290,12 +322,12 @@ export default function OnboardingPage() {
                 <Button
                   variant="ghost"
                   wrapLabel
-                  className="w-full sm:w-auto"
+                  className="min-h-11 w-full md:min-h-10 sm:w-auto"
                   onClick={() => {
                     void refetch();
                   }}
                   disabled={isFetching}
-                  icon={<RefreshCw className={cn('h-4 w-4', isFetching && 'animate-spin')} />}
+                  icon={<RefreshCw className={refreshIconClassName} aria-hidden="true" />}
                 >
                   {t('onboarding.checkAgain', 'Check again')}
                 </Button>
@@ -303,7 +335,7 @@ export default function OnboardingPage() {
                   <Button
                     variant="outline"
                     wrapLabel
-                    className="w-full sm:w-auto"
+                    className="min-h-11 w-full md:min-h-10 sm:w-auto"
                     onClick={() => {
                       skip();
                       navigate('/');
@@ -312,7 +344,7 @@ export default function OnboardingPage() {
                       'onboarding.skipHint',
                       'Explore the app — you can finish setup later from this page.',
                     )}
-                    icon={<SkipForward className="h-4 w-4" />}
+                    icon={<SkipForward className="h-4 w-4" aria-hidden="true" />}
                   >
                     {t('onboarding.skip', 'Skip for now')}
                   </Button>
@@ -321,9 +353,9 @@ export default function OnboardingPage() {
                   <Button
                     variant="primary"
                     wrapLabel
-                    className="w-full sm:w-auto"
+                    className="min-h-11 w-full md:min-h-10 sm:w-auto"
                     onClick={() => navigate('/')}
-                    icon={<ArrowRight className="h-4 w-4" />}
+                    icon={<ArrowRight className="h-4 w-4" aria-hidden="true" />}
                   >
                     {t('onboarding.continue', 'Continue to dashboard')}
                   </Button>

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
@@ -70,10 +70,12 @@ function status(overrides: Partial<OnboardingStatus> = {}): OnboardingStatus {
   };
 }
 
-let mockStatus: OnboardingStatus = status();
+let mockStatus: OnboardingStatus | undefined = status();
 let mockIsLoading = false;
 let mockIsFetching = false;
 let mockError: Error | null = null;
+let mockFetchStatus: 'idle' | 'fetching' | 'paused' = 'idle';
+let mockReduce = false;
 
 vi.mock('@/api/hooks/useOnboarding', () => ({
   useOnboardingStatus: () => ({
@@ -83,6 +85,14 @@ vi.mock('@/api/hooks/useOnboarding', () => ({
     refetch: refetchSpy,
     isError: mockError != null,
     error: mockError,
+    fetchStatus: mockFetchStatus,
+  }),
+}));
+
+vi.mock('@/hooks/useMotionPreference', () => ({
+  useMotionPreference: () => ({
+    reduce: mockReduce,
+    durationMs: mockReduce ? 0 : 250,
   }),
 }));
 
@@ -136,6 +146,8 @@ describe('OnboardingPage', () => {
     mockIsLoading = false;
     mockIsFetching = false;
     mockError = null;
+    mockFetchStatus = 'idle';
+    mockReduce = false;
     mockStatus = status();
     try {
       window.localStorage.removeItem('teslasync:onboarding:skipped:v1');
@@ -285,5 +297,116 @@ describe('OnboardingPage', () => {
     expect(screen.getByRole('button', { name: 'Connect Tesla account' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Skip for now' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Check again' })).toBeInTheDocument();
+  });
+
+  it('renders the telemetry guide as one named native link without a nested button', () => {
+    mockStatus = status({ tesla_connected: true, vehicle_count: 1 });
+    renderPage();
+
+    const steps = screen.getByRole('list', { name: 'Onboarding steps' });
+    const guide = within(steps).getByRole('link', { name: 'Setup guide (opens in a new tab)' });
+    expect(guide).toHaveAccessibleName('Setup guide (opens in a new tab)');
+    expect(within(guide).getByText('(opens in a new tab)')).toHaveClass('sr-only');
+    expect(guide.closest('li')).toHaveAttribute('id', 'onboarding-step-telemetry');
+    expect(guide.closest('li')).toHaveAttribute('aria-current', 'step');
+    expect(guide).toHaveAttribute('href', '/docs/fleet-telemetry-setup');
+    expect(guide).toHaveAttribute('target', '_blank');
+    expect(guide).toHaveAttribute('rel', 'noreferrer noopener');
+    expect(guide.querySelector('button')).toBeNull();
+    expect(guide).toHaveClass('min-h-11', 'md:min-h-9', 'whitespace-normal');
+    expect(screen.queryByRole('button', { name: 'Setup guide' })).toBeNull();
+    expect(within(steps).getAllByRole('listitem')).toHaveLength(3);
+  });
+
+  it('uses neutral decorative icons and reachable mobile setup and footer actions', () => {
+    renderPage();
+
+    for (const name of ['Connect Tesla account', 'Check again', 'Skip for now']) {
+      const action = screen.getByRole('button', { name });
+      expect(action).toHaveClass('min-h-11');
+      expect(action.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
+    }
+    for (const heading of ['Tailor your workspace', 'Setup checklist']) {
+      const icon = screen.getByText(heading).parentElement?.parentElement?.querySelector('svg');
+      expect(icon).toHaveAttribute('aria-hidden');
+      expect(icon?.parentElement).toHaveClass(
+        'bg-[var(--surface-2)]',
+        'text-[var(--text-secondary)]',
+      );
+    }
+    expect(screen.getByRole('combobox', { name: 'Primary use' })).toHaveAttribute(
+      'id',
+      'onboarding-workspace-profile',
+    );
+  });
+
+  it('keeps refresh controls disabled and preserves sections while reduced-motion refresh is busy', () => {
+    mockStatus = status({ tesla_connected: true });
+    mockIsFetching = true;
+    mockFetchStatus = 'fetching';
+    mockReduce = true;
+    const { container } = renderPage();
+
+    expect(container.querySelector('[data-role="page-container"]')).toHaveAttribute('aria-busy', 'true');
+    for (const name of ['Checking…', 'Check again']) {
+      const action = screen.getByRole('button', { name });
+      expect(action).toBeDisabled();
+      expect(action).toHaveClass('min-h-11');
+      expect(action.querySelector('svg')).not.toHaveClass('animate-spin');
+      fireEvent.click(action);
+    }
+    expect(refetchSpy).not.toHaveBeenCalled();
+    expect(screen.getByRole('navigation', { name: 'Resources & help' })).toBeInTheDocument();
+    expect(screen.getByRole('list', { name: "What you'll unlock" }).children).toHaveLength(4);
+    expect(screen.getByRole('button', { name: 'Skip for now' })).toBeEnabled();
+  });
+
+  it('explains unresolved initial setup without hiding any steps or exploration controls', () => {
+    mockStatus = undefined;
+    mockIsLoading = true;
+    mockIsFetching = true;
+    mockFetchStatus = 'fetching';
+    renderPage();
+
+    expect(within(screen.getByTestId('onboarding-status-pending')).getByText(
+      'Setup status has not been received; no completed-step or vehicle count is known.',
+    )).toBeInTheDocument();
+    expect(screen.getByText('Setup status not yet received')).toBeInTheDocument();
+    expect(within(screen.getByRole('list', { name: 'Onboarding steps' })).getAllByRole('listitem')).toHaveLength(3);
+    expect(screen.getByRole('combobox', { name: 'Primary use' })).toBeInTheDocument();
+    expect(screen.getByRole('navigation', { name: 'Resources & help' })).toBeInTheDocument();
+    expect(screen.getByRole('list', { name: "What you'll unlock" }).children).toHaveLength(4);
+    expect(screen.getByRole('button', { name: 'Connect Tesla account' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Skip for now' })).toBeEnabled();
+    expect(screen.queryByRole('button', { name: 'Continue to dashboard' })).toBeNull();
+  });
+
+  it('retains paused setup status and current-step refresh without claiming a device outage', () => {
+    mockStatus = status({ tesla_connected: true });
+    mockFetchStatus = 'paused';
+    renderPage();
+
+    expect(screen.getByTestId('stale-refresh-warning')).toHaveAttribute('data-refresh-blocked', 'true');
+    expect(screen.getByText('Retained setup status')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Refresh' })).toBeEnabled();
+    expect(screen.queryByRole('button', { name: 'Connect Tesla account' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Skip for now' })).toBeEnabled();
+    expect(screen.queryByText(/device is offline/i)).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Continue to dashboard' })).toBeNull();
+  });
+
+  it('keeps failed initial setup explainable and recoverable without removing neighboring sections', () => {
+    mockStatus = undefined;
+    mockError = new Error('Setup status read unavailable');
+    renderPage();
+
+    expect(screen.getByText('Setup status unavailable')).toBeInTheDocument();
+    expect(screen.getByText('Setup status not yet received')).toBeInTheDocument();
+    expect(screen.getByRole('list', { name: 'Onboarding steps' })).toBeInTheDocument();
+    expect(screen.getByRole('navigation', { name: 'Resources & help' })).toBeInTheDocument();
+    expect(screen.getByRole('list', { name: "What you'll unlock" }).children).toHaveLength(4);
+    fireEvent.click(screen.getByRole('button', { name: 'Check again' }));
+    expect(refetchSpy).toHaveBeenCalledTimes(1);
+    expect(screen.queryByTestId('stale-refresh-warning')).toBeNull();
   });
 });
