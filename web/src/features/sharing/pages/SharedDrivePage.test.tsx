@@ -37,7 +37,9 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { render, screen, act, fireEvent, within } from '@testing-library/react'
 import { MemoryRouter, Routes, Route } from 'react-router-dom'
-import type { ReactNode } from 'react'
+import { isValidElement, type ReactNode } from 'react'
+import { ChartTooltip } from '@/components/charts'
+import { chartTokens } from '@/lib/tokens'
 import type { SharedDriveData, SharedDriveDataV1, SharedSessionData } from '@/types/sharing'
 import { setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat'
 import { ApiError } from '@/lib/resilience'
@@ -58,6 +60,17 @@ const h = vi.hoisted(() => ({
     tileStyles: [] as string[],
   },
   charts: {
+    areaPresentation: [] as Array<{ stroke?: string; fill?: string; fillOpacity?: number }>,
+    lineStrokes: [] as Array<string | undefined>,
+    tooltips: [] as ReactNode[],
+    frames: [] as Array<{
+      title?: string
+      data?: ReadonlyArray<Record<string, string | number | null | undefined>>
+      dataColumns?: ReadonlyArray<{ key: string; label: string; format?: (value: unknown) => string }>
+      exportData?: ReadonlyArray<Record<string, unknown>>
+      toolbar?: boolean
+      exportable?: boolean
+    }>,
     areaData: [] as Array<Record<string, number>>,
     lineData: [] as Array<Record<string, number>>,
     composedData: [] as Array<Record<string, number>>,
@@ -193,43 +206,57 @@ vi.mock('@/components/maps', () => ({
 }))
 
 /* ── Inert recharts barrel — capture the derived chart data, render nothing ─ */
-vi.mock('@/components/charts', () => ({
+vi.mock('@/components/charts', async () => ({
+  ...(await vi.importActual<typeof import('@/components/charts')>('@/components/charts')),
   ChartContainer: ({
     title,
     ariaLabel,
     children,
+    ...props
   }: {
     title?: string
     ariaLabel?: string
     children?: ReactNode
-  }) => (
+  } & (typeof h.charts.frames)[number]) => {
+    h.charts.frames.push({ title, ...props })
+    return (
     <section aria-label={ariaLabel}>
       <h3>{title}</h3>
       {children}
     </section>
-  ),
+    )
+  },
   ChartGradient: () => null,
   chartGrid: {},
   axisTick: {},
   AREA_DEFAULTS: {},
-  AreaChart: ({ data }: { data: Array<Record<string, number>> }) => {
+  AreaChart: ({ data, children }: { data: Array<Record<string, number>>; children?: ReactNode }) => {
     h.charts.areaData = data
-    return <div data-testid="area-chart" data-count={data.length} />
+    return <div data-testid="area-chart" data-count={data.length}>{children}</div>
   },
-  LineChart: ({ data }: { data: Array<Record<string, number>> }) => {
+  LineChart: ({ data, children }: { data: Array<Record<string, number>>; children?: ReactNode }) => {
     h.charts.lineData = data
-    return <div data-testid="line-chart" data-count={data.length} />
+    return <div data-testid="line-chart" data-count={data.length}>{children}</div>
   },
   ComposedChart: ({ data }: { data: Array<Record<string, number>> }) => {
     h.charts.composedData = data
     return <div data-testid="composed-chart" data-count={data.length} />
   },
-  Area: () => null,
-  Line: () => null,
+  Area: (props: { stroke?: string; fill?: string; fillOpacity?: number }) => {
+    h.charts.areaPresentation.push(props)
+    return null
+  },
+  Line: ({ stroke }: { stroke?: string }) => {
+    h.charts.lineStrokes.push(stroke)
+    return null
+  },
   XAxis: () => null,
   YAxis: () => null,
   CartesianGrid: () => null,
-  Tooltip: () => null,
+  Tooltip: ({ content }: { content?: ReactNode }) => {
+    h.charts.tooltips.push(content)
+    return null
+  },
   ResponsiveContainer: ({ children }: { children?: ReactNode }) => <div>{children}</div>,
 }))
 
@@ -364,11 +391,35 @@ beforeEach(() => {
   h.charts.areaData = []
   h.charts.lineData = []
   h.charts.composedData = []
+  h.charts.frames = []
+  h.charts.areaPresentation = []
+  h.charts.lineStrokes = []
+  h.charts.tooltips = []
   h.sharedHook.mockClear()
 })
 
 /* ── Tests ───────────────────────────────────────────────────────────────── */
 describe('SharedDrivePage — loading / error / empty branches', () => {
+  it('keeps a main landmark and safe public title across loading, ready and revoked states', () => {
+    setData(undefined, { isLoading: true })
+    const view = renderPage('test-only-public-title')
+    expect(screen.getAllByRole('main')).toHaveLength(1)
+    expect(document.title).toBe('Shared drive report — TeslaSync')
+    setData(makeV2())
+    view.rerenderPage()
+    expect(screen.getAllByRole('main')).toHaveLength(1)
+    expect(document.title).toBe('Shared drive report — TeslaSync')
+    expect(document.title).not.toContain('Morning Commute')
+    expect(document.title).not.toContain('test-only-public-title')
+    setData(makeV2(), { error: new ApiError('revoked', 403) })
+    view.rerenderPage()
+    expect(screen.getAllByRole('main')).toHaveLength(1)
+    expect(document.title).toBe('Share link unavailable — TeslaSync')
+    expect(screen.queryByTestId('map-container')).not.toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Go to TeslaSync' }))
+      .toHaveClass('min-h-11', 'min-w-11', 'focus-visible:outline-2')
+  })
+
   it('renders the report-shaped loading skeleton while the share is loading', () => {
     setData(undefined, { isLoading: true })
     renderPage()
@@ -412,6 +463,31 @@ describe('SharedDrivePage — loading / error / empty branches', () => {
 })
 
 describe('SharedDrivePage — rich v2 payload (metric)', () => {
+  it('uses shared neutral tooltips and restrained chart ink without changing converted values', () => {
+    setData(makeV2())
+    renderPage()
+    expect(h.charts.lineStrokes).toEqual([chartTokens.series[0]])
+    expect(h.charts.areaPresentation[0]).toMatchObject({
+      stroke: chartTokens.series[0], fill: chartTokens.series[0], fillOpacity: 0.08,
+    })
+    expect(h.charts.tooltips).toHaveLength(2)
+    const [elevation, speed] = h.charts.tooltips
+    type DisplayTooltip = {
+      labelFormatter: (value: unknown) => string
+      valueFormatter: (value: unknown) => string
+    }
+    if (!isValidElement<DisplayTooltip>(elevation) || !isValidElement<DisplayTooltip>(speed)) {
+      throw new Error('Both disclosed profiles must use shared tooltip content')
+    }
+    expect(elevation.type).toBe(ChartTooltip)
+    expect(speed.type).toBe(ChartTooltip)
+    expect(elevation.props.labelFormatter(1)).toBe('1.00 km')
+    expect(elevation.props.valueFormatter(150)).toBe('150.00 m')
+    expect(speed.props.valueFormatter(72)).toBe('72.00 km/h')
+    expect(speed.props.valueFormatter(null)).toBe('—')
+    expect(h.charts.lineData).toEqual([{ distance: 0, speed: 36 }, { distance: 1, speed: 72 }])
+  })
+
   it('renders the branded header, title, description and route meta line', () => {
     setData(makeV2())
     renderPage()
@@ -570,6 +646,49 @@ describe('SharedDrivePage — rich v2 payload (metric)', () => {
 })
 
 describe('SharedDrivePage — imperial boundary', () => {
+  it('exposes complete display-unit chart alternatives and raw SI exports without private metadata', () => {
+    h.unit.current = 'mi'
+    const payload = makeV2()
+    const snapshot = structuredClone(payload)
+    setData(payload)
+    renderPage('test-only-disclosed-profiles')
+    const [elevation, speed] = h.charts.frames
+    expect(elevation.title).toBe('Elevation profile')
+    expect(speed.title).toBe('Speed profile')
+    expect(elevation.toolbar).toBe(true)
+    expect(speed.exportable).toBe(true)
+    expect(elevation.data).toHaveLength(2)
+    expect(speed.data).toHaveLength(2)
+    expect(elevation.dataColumns?.map(column => [column.key, column.label]))
+      .toEqual([['distance', 'Distance'], ['elevation', 'Elevation']])
+    expect(speed.dataColumns?.map(column => [column.key, column.label]))
+      .toEqual([['distance', 'Distance'], ['speed', 'Speed']])
+    expect(elevation.dataColumns?.[0].format?.(1)).toBe('1.00 mi')
+    expect(elevation.dataColumns?.[1].format?.(328.0839895013123)).toBe('328.08 ft')
+    expect(speed.dataColumns?.[1].format?.(44.738725841088)).toBe('44.74 mph')
+    expect(speed.dataColumns?.[1].format?.(null)).toBe('—')
+    expect(elevation.exportData).toEqual([
+      { distance_m: 0, elevation_m: 100 }, { distance_m: 1000, elevation_m: 150 },
+    ])
+    expect(speed.exportData).toEqual([
+      { distance_m: 0, speed_mps: 10 }, { distance_m: 1000, speed_mps: 20 },
+    ])
+    expect(JSON.stringify([elevation.exportData, speed.exportData])).not.toContain('Seattle')
+    expect(JSON.stringify([elevation.exportData, speed.exportData])).not.toContain('test-only-disclosed-profiles')
+    expect(payload).toEqual(snapshot)
+    expect(screen.getByRole('link', { name: 'Learn more →' }))
+      .toHaveClass('min-h-11', 'min-w-11', 'focus-visible:outline-2')
+  })
+
+  it('does not create chart alternatives or exports for owner-withheld profiles', () => {
+    setData(makeV2({ elevation_profile: null, speed_profile: null, map_points: null }))
+    renderPage()
+    expect(h.charts.frames).toEqual([])
+    expect(screen.getByText('Route data is not available for this shared drive.')).toBeInTheDocument()
+    expect(screen.queryByTestId('map-container')).not.toBeInTheDocument()
+    expect(screen.getByText('5.00 km')).toBeInTheDocument()
+  })
+
   it('flips every value + unit label to imperial when the preference is miles', () => {
     h.unit.current = 'mi'
     setData(makeV2())
