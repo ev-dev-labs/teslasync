@@ -587,6 +587,7 @@ export default function DashboardPage() {
 
   return (
     <PageLayout
+      actionLayout="scope-first"
       title={t('title', 'Fleet operations')}
       subtitle={t(
         'subtitle',

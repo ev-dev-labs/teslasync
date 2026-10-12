@@ -224,6 +224,61 @@ describe('Dashboard pilot — additive shared-presentation and preservation proo
     expect(screen.queryByRole('combobox')).toBeNull();
   });
 
+  it.each([
+    { mode: 'view', editMode: false },
+    { mode: 'edit', editMode: true },
+  ])('separates layout context from command hitboxes with the shared scope-first composition in $mode mode', ({ editMode }) => {
+    h.layout.editMode = editMode;
+    const { container } = mount();
+    const actions = screen.getByRole('group', { name: 'Actions' });
+    expect(actions).toHaveAttribute('data-action-order', 'context-secondary-destructive-overflow-primary');
+    // Exercise the real PageLayout -> PageContainer -> PageActions API, not mocked geometry.
+    expect(actions).toHaveClass('grid', 'grid-cols-1', 'sm:grid-cols-page-actions-scope', 'xl:flex');
+    const layouts = screen.getByRole('region', { name: 'Dashboard layouts' });
+    const context = layouts.closest('[data-action-group="context"]');
+    expect(context).toHaveClass('order-1', 'sm:col-span-2', 'xl:order-2');
+    expect(actions.querySelector('[data-action-zone="context"]')).toHaveClass('contents');
+    const commands = actions.querySelector('[data-action-zone="commands"]');
+    expect(commands).toHaveClass('order-3');
+    expect(commands).not.toContainElement(layouts);
+    expect(commands?.querySelector('[data-action-group="secondary"]')).toContainElement(
+      screen.getByRole('button', { name: editMode ? 'Auto arrange' : 'Refresh data' }),
+    );
+    expect(commands?.querySelector('[data-action-group="primary"]')).toContainElement(
+      screen.getByRole('button', { name: editMode ? 'Done' : 'Customize' }),
+    );
+    expect(Array.from(commands?.children ?? []).map((group) => group.getAttribute('data-action-group')))
+      .toEqual(editMode ? ['secondary', 'primary'] : ['secondary', 'overflow', 'primary']);
+    expect(actions).toContainElement(screen.getByTestId('pilot-switcher'));
+    expect(screen.getByRole('region', { name: 'Dashboard widgets' })).toContainElement(screen.getByTestId('pilot-grid'));
+    expect(container.querySelector('[data-layout-reference]')).toBeInTheDocument();
+    expect(screen.queryByRole('combobox')).toBeNull();
+    expect(h.layout.updateLayouts).not.toHaveBeenCalled();
+    expect(h.layout.switchDashboard).not.toHaveBeenCalled();
+  });
+
+  it('keeps dashboard tools Escape dismissal and trigger focus without changing the saved layout', async () => {
+    mount();
+    const trigger = screen.getByRole('button', { name: 'More dashboard actions' });
+    trigger.focus();
+    expect(trigger).toHaveFocus();
+    fireEvent.click(trigger);
+    const dialog = await screen.findByRole('dialog', { name: 'More dashboard actions' });
+    expect(within(dialog).getAllByRole('button').map((button) => button.textContent?.trim()))
+      .toEqual(['Export dashboard', 'Import dashboard', 'Kiosk mode', 'Print snapshot']);
+    const exportAction = within(dialog).getByRole('button', { name: 'Export dashboard' });
+    exportAction.focus();
+    expect(exportAction).toHaveFocus();
+    fireEvent.keyDown(dialog, { key: 'Escape' });
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'More dashboard actions' })).toBeNull());
+    expect(trigger).toHaveAttribute('aria-expanded', 'false');
+    expect(trigger).toHaveFocus();
+    expect(h.layout.updateLayouts).not.toHaveBeenCalled();
+    expect(h.layout.setEditMode).not.toHaveBeenCalled();
+    expect(h.layout.exportDashboard).not.toHaveBeenCalled();
+    expect(h.layout.importDashboardFromData).not.toHaveBeenCalled();
+  });
+
   it('keeps vehicle-pinned layout selection ahead of the workspace selection', () => {
     h.layout.activeDashboard.settings = { vehicleId: 19 };
     mount();
