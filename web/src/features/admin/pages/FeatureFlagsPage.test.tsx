@@ -27,7 +27,7 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
+import { act, render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
@@ -193,13 +193,15 @@ function renderPage() {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
-  return render(
+  const page = () => (
     <MemoryRouter>
       <QueryClientProvider client={client}>
         <FeatureFlagsPage />
       </QueryClientProvider>
-    </MemoryRouter>,
+    </MemoryRouter>
   );
+  const result = render(page());
+  return { ...result, rerenderPage: () => result.rerender(page()) };
 }
 
 /** Read a MetricCard's rendered value by its visible label. */
@@ -343,6 +345,71 @@ describe('FeatureFlagsPage', () => {
     // Drawer stays mounted so the operator can retry without retyping.
     expect(screen.getByText('Create flag')).toBeInTheDocument();
   });
+
+  it.each(['header Close', 'backdrop', 'Escape'] as const)(
+    'retains the draft through %s during a pending save and allows dismissal after rejection',
+    async (dismissal) => {
+      let rejectSave!: (error: Error) => void;
+      const saveAttempt = new Promise<void>((_resolve, reject) => {
+        rejectSave = reject;
+      });
+      hoisted.setFlagMutateAsync.mockImplementationOnce(() => {
+        hoisted.state.setFlagPending = true;
+        return saveAttempt;
+      });
+      const view = renderPage();
+      fireEvent.click(screen.getByRole('button', { name: 'Add flag' }));
+      fireEvent.change(screen.getByRole('textbox', { name: /^Flag key\b/i }), {
+        target: { value: 'feature.pending' },
+      });
+      fireEvent.change(screen.getByLabelText(/value \(json\)/i), {
+        target: { value: '  false  ' },
+      });
+      fireEvent.change(screen.getByRole('textbox', { name: /^Reason\b/i }), {
+        target: { value: '  preserve this draft  ' },
+      });
+      fireEvent.click(screen.getByRole('button', { name: /Save flag/i }));
+      view.rerenderPage();
+
+      const dialog = screen.getByRole('dialog', { name: 'Create flag' });
+      expect(within(dialog).getByRole('button', { name: 'Cancel' })).toBeDisabled();
+      if (dismissal === 'header Close') {
+        fireEvent.click(within(dialog).getByRole('button', { name: 'Close' }));
+      } else if (dismissal === 'backdrop') {
+        const backdrop = dialog.firstElementChild;
+        if (!backdrop) throw new Error('Drawer backdrop is missing');
+        expect(backdrop).toHaveAttribute('aria-hidden', 'true');
+        fireEvent.click(backdrop);
+      } else {
+        const editor = within(dialog).getByLabelText(/value \(json\)/i);
+        editor.focus();
+        fireEvent.keyDown(editor, { key: 'Escape' });
+      }
+      expect(screen.getByRole('dialog', { name: 'Create flag' })).toBe(dialog);
+      expect(within(dialog).getByLabelText(/value \(json\)/i)).toHaveValue('  false  ');
+      expect(within(dialog).getByRole('textbox', { name: /^Reason\b/i })).toHaveValue('  preserve this draft  ');
+      expect(hoisted.setFlagMutateAsync).toHaveBeenCalledExactlyOnceWith({
+        key: 'feature.pending',
+        value: false,
+        reason: 'preserve this draft',
+      });
+
+      await act(async () => {
+        hoisted.state.setFlagPending = false;
+        rejectSave(new Error('Sudo challenge canceled'));
+        await saveAttempt.catch(() => undefined);
+      });
+      view.rerenderPage();
+      expect(screen.getByRole('dialog', { name: 'Create flag' })).toBe(dialog);
+      expect(within(dialog).getByLabelText(/value \(json\)/i)).toHaveValue('  false  ');
+      expect(within(dialog).getByRole('textbox', { name: /^Reason\b/i })).toHaveValue('  preserve this draft  ');
+      expect(within(dialog).getByRole('button', { name: /Save flag/i })).not.toBeDisabled();
+      fireEvent.click(within(dialog).getByRole('button', { name: 'Close' }));
+      expect(screen.queryByRole('dialog', { name: 'Create flag' })).not.toBeInTheDocument();
+      expect(hoisted.setFlagMutateAsync).toHaveBeenCalledTimes(1);
+      expect(hoisted.deleteFlagMutateAsync).not.toHaveBeenCalled();
+    },
+  );
 
   it('opens the edit drawer in edit mode with a disabled, pre-filled key', () => {
     renderPage();

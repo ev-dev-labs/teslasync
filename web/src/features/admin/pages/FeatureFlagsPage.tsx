@@ -30,7 +30,7 @@ import { useTranslation } from 'react-i18next';
 import { Flag, History, Layers, Plus } from 'lucide-react';
 
 import { PageLayout, LayoutCard } from '@/components/layout';
-import { Button, Input, Modal, Text } from '@/components/ui';
+import { Button, Icon, Input, Modal, Text } from '@/components/ui';
 import { FadeIn } from '@/components/motion';
 import { QueryError, SectionErrorBoundary } from '@/components/feedback';
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -45,6 +45,7 @@ import type {
   FeatureFlagValue,
 } from '@/types/admin-diagnostics';
 import { deriveDataState } from '@/api/dataState';
+import { typography } from '@/lib/tokens';
 import { FeatureFlagsOperationalBrief } from '../components/statstrip-coverage-flags-secrets/FeatureFlagsOperationalBrief';
 
 import {
@@ -127,7 +128,7 @@ export default function FeatureFlagsPage() {
       primaryAction={
         <Button
           variant="primary"
-          icon={<Plus className="h-4 w-4" />}
+          icon={<Icon icon={Plus} />}
           onClick={handleCreate}
           wrapLabel
         >
@@ -151,7 +152,7 @@ export default function FeatureFlagsPage() {
           <SectionErrorBoundary name="flags-table">
             <div className="min-w-0 xl:col-span-2">
             <LayoutCard title={t('admin.flags.panels.registry', 'Registry')}
-              actions={<Flag className="h-4 w-4 text-cyan-300" aria-hidden="true" />}>
+              actions={<Icon icon={Flag} className={typography.color.muted} />}>
               {flagsState.fatalError ? (
                 <QueryError
                   error={flagsState.fatalError}
@@ -172,7 +173,7 @@ export default function FeatureFlagsPage() {
 
           <SectionErrorBoundary name="flags-composition">
             <LayoutCard title={t('admin.flags.panels.composition', 'Value composition')}
-              actions={<Layers className="h-4 w-4 text-cyan-300" aria-hidden="true" />}>
+              actions={<Icon icon={Layers} className={typography.color.muted} />}>
               <FlagCompositionPanel
                 flags={flagRows}
                 loading={flagsState.status === 'initial'}
@@ -188,7 +189,7 @@ export default function FeatureFlagsPage() {
       <FadeIn delay={0.2}>
         <SectionErrorBoundary name="flags-changes">
           <LayoutCard title={t('admin.flags.panels.changes', 'Recent changes')}
-            actions={<History className="h-4 w-4 text-cyan-300" aria-hidden="true" />}>
+            actions={<Icon icon={History} className={typography.color.muted} />}>
             {changesState.fatalError ? (
               <QueryError
                 error={changesState.fatalError}
@@ -207,6 +208,7 @@ export default function FeatureFlagsPage() {
         initial={editing}
         saving={setFlag.isPending}
         onClose={() => {
+          if (setFlag.isPending) return;
           setEditorOpen(false);
           setEditing(null);
         }}
