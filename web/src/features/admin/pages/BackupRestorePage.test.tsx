@@ -34,7 +34,7 @@
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { render, screen, fireEvent, waitFor, within, act } from '@testing-library/react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClient, QueryClientProvider, onlineManager } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
 
@@ -705,5 +705,123 @@ describe('BackupRestorePage — restore preview', () => {
     expect(await screen.findByText('Failed to load preview')).toBeInTheDocument();
     // The restore-preview modal never opened.
     expect(screen.queryByText('Restore preview')).not.toBeInTheDocument();
+  });
+});
+
+describe('BackupRestorePage — phase five preservation', () => {
+  it('keeps unobserved paused sources unknown rather than announcing empty backups', async () => {
+    onlineManager.setOnline(false);
+    const view = renderPage();
+    try {
+      await waitFor(() => expect(screen.getAllByText('Unknown')).toHaveLength(3));
+      expect(screen.queryByText('No backup configurations')).not.toBeInTheDocument();
+      expect(screen.queryByText('No backup runs yet')).not.toBeInTheDocument();
+      expect(screen.queryByText('No backup runs to analyze yet.')).not.toBeInTheDocument();
+      expect(screen.getByText('Backup history')).toBeInTheDocument();
+      expect(screen.getByTestId('settings-export-import')).toBeInTheDocument();
+      expect(mockedRequest).not.toHaveBeenCalled();
+    } finally {
+      view.unmount();
+      onlineManager.setOnline(true);
+    }
+  });
+
+  it('locks destructive confirmation while pending and retains it after failure', async () => {
+    const router = mockedRequest.getMockImplementation()!;
+    let rejectDelete: (reason: Error) => void = () => {};
+    const pendingDelete = new Promise<never>((_resolve, reject) => { rejectDelete = reject; });
+    mockedRequest.mockImplementation((path, options) =>
+      options?.method === 'DELETE' ? pendingDelete : router(path, options));
+    renderPage();
+    await waitForLoaded();
+    fireEvent.click(screen.getAllByRole('button', { name: 'Delete' })[0]);
+    const dialog = await screen.findByRole('dialog');
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Delete' }));
+    await waitFor(() => expect(within(dialog).getByRole('button', { name: 'Cancel' })).toBeDisabled());
+    expect(within(dialog).getByRole('button', { name: 'Delete' })).toBeDisabled();
+    fireEvent.keyDown(dialog, { key: 'Escape' });
+    expect(dialog).toBeInTheDocument();
+    await act(async () => rejectDelete(new Error('mock deletion failed')));
+    expect(await screen.findByText('Failed to delete config')).toBeInTheDocument();
+    expect(dialog).toBeInTheDocument();
+    expect(within(dialog).getByRole('button', { name: 'Cancel' })).not.toBeDisabled();
+    expect(mockedRequest.mock.calls.filter(([, options]) => options?.method === 'DELETE')).toHaveLength(1);
+  });
+
+  it('keeps selective table configuration and retention in an edit payload', async () => {
+    const selective = { ...makeConfig({ provider: 'local', provider_config: { path: '/mock-only-backups' }, max_retention: 19 }), include_tables: ['vehicles', 'drives'] };
+    configureRoutes({ configs: [selective] });
+    renderPage();
+    await waitForLoaded();
+    fireEvent.click(screen.getByRole('button', { name: 'Edit' }));
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByLabelText('Max retention')).toHaveValue(19);
+    expect(within(dialog).getByLabelText('Name')).toHaveAttribute('required');
+    expect(within(dialog).getByLabelText(/Path/)).toHaveAttribute('id', 'backup-provider-path');
+    expect(within(dialog).getByLabelText(/Path/)).toHaveAttribute('required');
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Save changes' }));
+    await waitFor(() => expect(mockedRequest).toHaveBeenCalledWith('/backup/configs/1', expect.objectContaining({
+      method: 'PUT',
+      body: expect.stringContaining('"include_tables":["vehicles","drives"]'),
+    })));
+    const saved = mockedRequest.mock.calls.find(([path, options]) => path === '/backup/configs/1' && options?.method === 'PUT');
+    expect(JSON.parse(String(saved?.[1]?.body)).max_retention).toBe(19);
+  });
+
+  it('ignores obsolete preview responses and keeps the most recently selected manifest', async () => {
+    const router = mockedRequest.getMockImplementation()!;
+    let resolveFirst: (preview: RestorePreview) => void = () => {};
+    const first = new Promise<RestorePreview>((resolve) => { resolveFirst = resolve; });
+    mockedRequest.mockImplementation((path, options) =>
+      path === '/backup/runs/101/preview' ? first as Promise<never> : router(path, options));
+    renderPage();
+    await waitForLoaded();
+    fireEvent.click(screen.getAllByRole('button', { name: 'Preview' })[0]);
+    await waitFor(() => expect(screen.getAllByRole('button', { name: 'Preview' })[0]).toBeDisabled());
+    fireEvent.click(screen.getAllByRole('button', { name: 'Preview' })[1]);
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByText('vehicles')).toBeInTheDocument();
+    await act(async () => resolveFirst({ tables: [{ name: 'obsolete_manifest', rows: 9 }], metadata: null, checksum_verified: false }));
+    expect(within(dialog).queryByText('obsolete_manifest')).not.toBeInTheDocument();
+    expect(within(dialog).getByText('vehicles')).toBeInTheDocument();
+    expect(within(dialog).getByText('Checksum verified')).toBeInTheDocument();
+  });
+
+  it('exposes all configuration and completed-run actions plus full details in narrow tables', async () => {
+    vi.stubGlobal('ResizeObserver', class {
+      constructor(private callback: ResizeObserverCallback) {}
+      observe(target: Element) {
+        this.callback([{ target, contentRect: { width: 375 } } as ResizeObserverEntry], this as unknown as ResizeObserver);
+      }
+      unobserve() {}
+      disconnect() {}
+    });
+    try {
+      renderPage();
+      await waitForLoaded();
+      expect(screen.getAllByRole('button', { name: 'Edit' })).toHaveLength(2);
+      expect(screen.getAllByRole('button', { name: 'Delete' })).toHaveLength(2);
+      expect(screen.getAllByRole('button', { name: 'Trigger now' })).toHaveLength(2);
+      expect(screen.getAllByRole('button', { name: 'Download' })).toHaveLength(3);
+      expect(screen.getAllByRole('button', { name: 'Verify' })).toHaveLength(3);
+      expect(screen.getAllByRole('button', { name: 'Preview' })).toHaveLength(3);
+      fireEvent.click(screen.getAllByRole('button', { name: 'Quick view' })[0]);
+      const configDetail = await screen.findByRole('dialog');
+      for (const field of ['Name', 'Type', 'Provider', 'Frequency', 'Schedule', 'Options', 'Max retention']) {
+        expect(within(configDetail).getByText(field)).toBeInTheDocument();
+      }
+      expect(within(configDetail).getByRole('button', { name: 'Edit' })).toBeInTheDocument();
+      fireEvent.click(within(configDetail).getAllByRole('button', { name: 'Close', exact: true })[0]);
+      await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+      fireEvent.click(screen.getAllByRole('button', { name: 'Quick view' })[2]);
+      const runDetail = await screen.findByRole('dialog');
+      for (const field of ['Time', 'Run type', 'Status', 'Provider', 'File', 'Size', 'Records', 'Duration']) {
+        expect(within(runDetail).getByText(field)).toBeInTheDocument();
+      }
+      expect(within(runDetail).getByText('backup-101.sql.gz')).toBeInTheDocument();
+      expect(within(runDetail).getByRole('button', { name: 'Download' })).toBeInTheDocument();
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 });

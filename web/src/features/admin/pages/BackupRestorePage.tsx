@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { PageLayout, LayoutCard, SourceContent } from '@/components/layout';
@@ -32,7 +32,7 @@ import { usePageTitle } from '@/hooks/usePageTitle';
 import { formatRelative } from '@/lib/dateFormat';
 
 import { cn } from '@/lib/cn';
-import { chartTokens } from '@/lib/tokens';
+import { chartTokens, neonColorMap, typography } from '@/lib/tokens';
 import { request, apiUrl } from '@/api/client';
 import { Icons } from '@/lib/icons';
 // Settings JSON bundle export/import — reused from features/settings to
@@ -43,6 +43,7 @@ import { SettingsExportImport } from '@/features/settings/components/SettingsExp
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { FormSection } from '@/components/forms';
 import { deriveDataState } from '@/api/dataState';
+import { useMotionPreference } from '@/hooks/useMotionPreference';
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -112,13 +113,6 @@ const PROVIDERS: { value: string; label: string }[] = [
   { value: 'gcs', label: 'Google Cloud' },
 ];
 
-const PROVIDER_BADGE_VARIANT: Record<string, 'neutral' | 'warning' | 'info' | 'success'> = {
-  local: 'neutral',
-  s3: 'warning',
-  azure: 'info',
-  gcs: 'success',
-};
-
 const PROVIDER_ICON: Record<string, typeof Icons.folderOpen> = {
   local: Icons.folderOpen,
   s3: Icons.cloud,
@@ -135,17 +129,15 @@ const PROVIDER_COLOR: Record<string, string> = {
   gcs: chartTokens.series[1],
 };
 
-// Status glyph + toned-down (300-level) foreground colour + badge variant.
-// Neon hues are intentionally avoided for the icon foreground — status is
-// still colour-independent because it is paired with the labelled Badge.
+// Status ink follows the shared theme roles; labels convey meaning without color.
 const STATUS_CONFIG: Record<
   string,
   { color: string; icon: typeof Icons.successFilled; variant: 'success' | 'danger' | 'info' | 'neutral' }
 > = {
-  completed: { color: 'text-emerald-300', icon: Icons.successFilled, variant: 'success' },
-  failed: { color: 'text-rose-300', icon: Icons.error, variant: 'danger' },
-  running: { color: 'text-cyan-300', icon: Icons.loading, variant: 'info' },
-  queued: { color: 'text-[var(--text-muted)]', icon: Icons.timer, variant: 'neutral' },
+  completed: { color: neonColorMap.green.text, icon: Icons.successFilled, variant: 'success' },
+  failed: { color: neonColorMap.red.text, icon: Icons.error, variant: 'danger' },
+  running: { color: neonColorMap.blue.text, icon: Icons.loading, variant: 'info' },
+  queued: { color: typography.color.muted, icon: Icons.timer, variant: 'neutral' },
 };
 
 const EMPTY_FORM: ConfigFormData = {
@@ -198,6 +190,7 @@ export default function BackupRestorePage() {
   const { t } = useTranslation();
   const toast = useToast();
   const qc = useQueryClient();
+  const { reduce } = useMotionPreference();
   usePageTitle(t('backup.title', 'Backup & restore'));
 
   /* ---- state ---- */
@@ -207,16 +200,19 @@ export default function BackupRestorePage() {
   const [deleteTarget, setDeleteTarget] = useState<BackupConfig | null>(null);
   const [previewData, setPreviewData] = useState<RestorePreview | null>(null);
   const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewPendingId, setPreviewPendingId] = useState<number | null>(null);
+  const previewGeneration = useRef(0);
+  useEffect(() => () => { previewGeneration.current += 1; }, []);
 
   /* ---- queries ---- */
   const configsQuery = useQuery<BackupConfig[]>({
     queryKey: ['backup-configs'],
-    queryFn: () => request<BackupConfig[]>('/backup/configs'),
+    queryFn: ({ signal }) => request<BackupConfig[]>('/backup/configs', { signal }),
   });
 
   const runsQuery = useQuery<BackupRun[]>({
     queryKey: ['backup-runs'],
-    queryFn: () => request<BackupRun[]>('/backup/runs'),
+    queryFn: ({ signal }) => request<BackupRun[]>('/backup/runs', { signal }),
     refetchInterval: (query) => {
       const data = query.state.data;
       if (data?.some((r) => r.status === 'queued' || r.status === 'running')) return 5000;
@@ -247,6 +243,9 @@ export default function BackupRestorePage() {
   const runsState = deriveDataState(runsQuery);
   const configsError = configsState.fatalError;
   const runsError = runsState.fatalError;
+  const configsUnobserved = !configsState.hasData && !configsError && !loadingConfigs;
+  const runsUnobserved = !runsState.hasData && !runsError && !loadingRuns;
+  const sourceUnknown = <Text as="p" color="muted" role="status">{t('common.unknown', 'Unknown')}</Text>;
 
   /* ---- derived stats ---- */
   const stats = useMemo(() => {
@@ -420,6 +419,7 @@ export default function BackupRestorePage() {
       max_retention: cfg.max_retention,
       provider: cfg.provider,
       provider_config: { ...cfg.provider_config },
+      include_tables: cfg.include_tables ? [...cfg.include_tables] : undefined,
       compress: cfg.compress,
       encrypt: cfg.encrypt,
     });
@@ -443,12 +443,17 @@ export default function BackupRestorePage() {
   }, []);
 
   const handlePreview = useCallback(async (runId: number) => {
+    const generation = ++previewGeneration.current;
+    setPreviewPendingId(runId);
     try {
       const data = await request<RestorePreview>(`/backup/runs/${runId}/preview`);
+      if (generation !== previewGeneration.current) return;
       setPreviewData(data);
       setPreviewOpen(true);
     } catch {
-      toast.error(t('backup.previewFailed', 'Failed to load preview'));
+      if (generation === previewGeneration.current) toast.error(t('backup.previewFailed', 'Failed to load preview'));
+    } finally {
+      if (generation === previewGeneration.current) setPreviewPendingId(null);
     }
   }, [t, toast]);
 
@@ -484,7 +489,7 @@ export default function BackupRestorePage() {
       filterValueLabel: (_value, row) => row.backup_type === 'full' ? t('backup.full', 'Full') : t('backup.incremental', 'Incremental'),
       header: t('backup.type', 'Type'),
       render: (row) => (
-        <Badge variant={row.backup_type === 'full' ? 'info' : 'warning'} size="sm">
+        <Badge variant="neutral" size="sm">
           {row.backup_type === 'full' ? t('backup.full', 'Full') : t('backup.incremental', 'Incremental')}
         </Badge>
       ),
@@ -497,7 +502,7 @@ export default function BackupRestorePage() {
       render: (row) => {
         const ProvIcon = PROVIDER_ICON[row.provider] ?? Icons.cloud;
         return (
-          <Badge variant={PROVIDER_BADGE_VARIANT[row.provider] ?? 'neutral'} size="sm">
+          <Badge variant="neutral" size="sm">
             <ProvIcon className="mr-1 h-3 w-3" aria-hidden="true" />
             {providerLabel(row.provider)}
           </Badge>
@@ -559,7 +564,7 @@ export default function BackupRestorePage() {
           <Button
             size="sm"
             variant="ghost"
-            icon={<Icons.delete className="h-3.5 w-3.5 text-rose-300" />}
+            icon={<Icons.delete className={cn('h-3.5 w-3.5', neonColorMap.red.text)} />}
             onClick={() => setDeleteTarget(row)}
             aria-label={t('backup.delete', 'Delete')}
           />
@@ -586,7 +591,7 @@ export default function BackupRestorePage() {
       header: t('backup.runType', 'Run type'),
       render: (row) => (
         <Badge
-          variant={({ backup: 'info', restore: 'success', quick: 'warning' } as Record<string, 'info' | 'success' | 'warning'>)[row.run_type] ?? 'neutral'}
+          variant="neutral"
           size="sm"
         >
           {t(`backup.runType.${row.run_type}`, row.run_type)}
@@ -603,7 +608,7 @@ export default function BackupRestorePage() {
         const Icon = s.icon;
         return (
           <div className="flex items-center gap-1.5">
-            <Icon className={cn('h-4 w-4', s.color, row.status === 'running' && 'animate-spin')} aria-hidden="true" />
+            <Icon className={cn('h-4 w-4', s.color, row.status === 'running' && !reduce && 'animate-spin')} aria-hidden="true" />
             <Badge variant={s.variant} size="sm">{t(`backup.status.${row.status}`, row.status)}</Badge>
           </div>
         );
@@ -615,7 +620,7 @@ export default function BackupRestorePage() {
       filterValueLabel: (_value, row) => providerLabel(row.provider),
       header: t('backup.provider', 'Provider'),
       render: (row) => (
-        <Badge variant={PROVIDER_BADGE_VARIANT[row.provider] ?? 'neutral'} size="sm">
+        <Badge variant="neutral" size="sm">
           {providerLabel(row.provider)}
         </Badge>
       ),
@@ -693,6 +698,7 @@ export default function BackupRestorePage() {
               variant="ghost"
               icon={<Icons.show className="h-3.5 w-3.5" />}
               onClick={() => handlePreview(row.id)}
+              loading={previewPendingId === row.id}
               aria-label={t('backup.preview', 'Preview')}
             />
           </div>
@@ -787,7 +793,7 @@ export default function BackupRestorePage() {
           >
             {configsError ? (
               <QueryError error={configsError} onRetry={() => configsQuery.refetch()} />
-            ) : (
+            ) : configsUnobserved ? sourceUnknown : (
               <SourceContent
                 state={loadingConfigs ? 'loading' : configsState.status === 'stale' ? 'retained' : configs.length === 0 ? 'empty' : 'ready'}
                 label={t('backup.configurations', 'Backup configurations')}
@@ -801,6 +807,21 @@ export default function BackupRestorePage() {
                 tableId="admin:backup-configs"
                 columns={configColumns}
                 mobileColumns={['name', 'provider', 'schedule']}
+                mobilePresentation={{
+                  roles: { name: 'title', provider: 'primary', backup_type: 'meta', frequency: 'meta', schedule: 'meta' },
+                  displayValue: (row, key) => {
+                    const values: Record<string, string> = {
+                      name: row.name,
+                      provider: providerLabel(row.provider),
+                      backup_type: row.backup_type === 'full' ? t('backup.full', 'Full') : t('backup.incremental', 'Incremental'),
+                      frequency: row.frequency_days === 1 ? t('backup.daily', 'Daily') : t('backup.everyNDays', { days: row.frequency_days, defaultValue: 'Every {{days}}d' }),
+                      schedule: row.next_run_at ? formatRelative(row.next_run_at) : '—',
+                    };
+                    return values[key];
+                  },
+                  inlineActions: (row) => configColumns[configColumns.length - 1].render(row),
+                  allDetails: (row) => [{ key: 'max_retention', label: t('backup.maxRetention', 'Max retention'), value: fmtInt(row.max_retention) }],
+                }}
                 data={configs}
                 enableValueFilters
                 keyExtractor={(r) => r.id}
@@ -821,7 +842,7 @@ export default function BackupRestorePage() {
               <Skeleton height={260} />
             ) : runsError ? (
               <QueryError error={runsError} onRetry={() => runsQuery.refetch()} />
-            ) : runs.length === 0 ? (
+            ) : runsUnobserved ? sourceUnknown : runs.length === 0 ? (
               // no-action: the Backup History panel below owns the "Quick
               // Backup" CTA for this same runs===0 condition — avoid duplicating it here.
               <EmptyState
@@ -843,6 +864,8 @@ export default function BackupRestorePage() {
                     value={stats.completedCount}
                     max={Math.max(1, stats.totalBackups)}
                     color={chartTokens.series[1]}
+                    fill="solid"
+                    size="slim"
                     sublabel={`${fmtInt(stats.completedCount)} / ${fmtInt(stats.totalBackups)}`}
                   />
                 </div>
@@ -861,6 +884,8 @@ export default function BackupRestorePage() {
                           value={p.size}
                           max={maxProviderSize}
                           color={PROVIDER_COLOR[p.provider] ?? chartTokens.series[i % chartTokens.series.length]}
+                          fill="solid"
+                          size="slim"
                           sublabel={`${formatBytes(p.size)} · ${fmtInt(p.count)}`}
                         />
                       ))}
@@ -916,7 +941,7 @@ export default function BackupRestorePage() {
         >
           {runsError ? (
             <QueryError error={runsError} onRetry={() => runsQuery.refetch()} />
-          ) : (
+          ) : runsUnobserved ? sourceUnknown : (
             <SourceContent
               state={loadingRuns ? 'loading' : runsState.status === 'stale' ? 'retained' : runs.length === 0 ? 'empty' : 'ready'}
               label={t('backup.history', 'Backup history')}
@@ -930,6 +955,21 @@ export default function BackupRestorePage() {
               tableId="admin:backup-runs"
               columns={runColumns}
               mobileColumns={['file_name', 'status', 'created_at']}
+              mobilePresentation={{
+                roles: { file_name: 'title', file_size: 'primary', status: 'badge', created_at: 'meta', provider: 'meta', run_type: 'meta' },
+                displayValue: (row, key) => {
+                  const values: Record<string, string> = {
+                    file_name: row.file_name ?? t('backup.runN', 'Run #{{id}}', { id: row.id }),
+                    file_size: row.file_size == null ? '—' : formatBytes(row.file_size),
+                    status: t(`backup.status.${row.status}`, row.status),
+                    created_at: formatRelative(row.created_at),
+                    provider: providerLabel(row.provider),
+                    run_type: t(`backup.runType.${row.run_type}`, row.run_type),
+                  };
+                  return values[key];
+                },
+                inlineActions: (row) => runColumns[runColumns.length - 1].render(row),
+              }}
               data={runs}
               enableValueFilters
               keyExtractor={(r) => r.id}
@@ -962,6 +1002,9 @@ export default function BackupRestorePage() {
       >
         <div className="flex flex-col gap-5 p-1">
           <Input
+            id="backup-config-name"
+            required
+            aria-label={t('backup.configName', 'Name')}
             label={t('backup.configName', 'Name')}
             value={form.name}
             onChange={(e) => setField('name', e.target.value)}
@@ -1011,11 +1054,13 @@ export default function BackupRestorePage() {
           <FormSection title={t('backup.providerSettings', 'Provider settings')}>
             <div className="grid gap-3">
               {(PROVIDER_FIELDS[form.provider] ?? []).map((field) => {
-                const fieldLabel = t(`backup.field.${field.key}`, field.label) + (field.required ? ' *' : '');
+                const fieldLabel = t(`backup.field.${field.key}`, field.label);
                 return (
                   <div key={field.key}>
                     {field.type === 'textarea' ? (
                       <Textarea
+                        id={`backup-provider-${field.key}`}
+                        required={field.required}
                         label={fieldLabel}
                         value={form.provider_config[field.key] ?? ''}
                         onChange={(e) => setProviderField(field.key, e.target.value)}
@@ -1024,6 +1069,8 @@ export default function BackupRestorePage() {
                       />
                     ) : (
                       <Input
+                        id={`backup-provider-${field.key}`}
+                        required={field.required}
                         label={fieldLabel}
                         type={field.type ?? 'text'}
                         value={form.provider_config[field.key] ?? ''}
@@ -1074,6 +1121,7 @@ export default function BackupRestorePage() {
           name: deleteTarget?.name,
         })}
         variant="danger"
+        loading={deleteMutation.isPending}
         confirmLabel={t('backup.delete', 'Delete')}
         cancelLabel={t('common.cancel', 'Cancel')}
         onConfirm={() => deleteTarget && deleteMutation.mutate(deleteTarget.id)}
@@ -1084,6 +1132,8 @@ export default function BackupRestorePage() {
       <Modal
         open={previewOpen}
         onClose={() => {
+          previewGeneration.current += 1;
+          setPreviewPendingId(null);
           setPreviewOpen(false);
           setPreviewData(null);
         }}
@@ -1096,11 +1146,11 @@ export default function BackupRestorePage() {
               <Icons.securityCheck
                 className={cn(
                   'h-4 w-4',
-                  previewData.checksum_verified ? 'text-emerald-300' : 'text-rose-300',
+                  previewData.checksum_verified ? neonColorMap.green.text : neonColorMap.red.text,
                 )}
                 aria-hidden="true"
               />
-              <Text as="span" size="sm" className={previewData.checksum_verified ? 'text-emerald-300' : 'text-rose-300'}>
+              <Text as="span" size="sm" className={previewData.checksum_verified ? neonColorMap.green.text : neonColorMap.red.text}>
                 {previewData.checksum_verified
                   ? t('backup.checksumVerified', 'Checksum verified')
                   : t('backup.checksumFailed', 'Checksum verification failed')}
@@ -1132,6 +1182,8 @@ export default function BackupRestorePage() {
               <Button
                 variant="outline"
                 onClick={() => {
+                  previewGeneration.current += 1;
+                  setPreviewPendingId(null);
                   setPreviewOpen(false);
                   setPreviewData(null);
                 }}
