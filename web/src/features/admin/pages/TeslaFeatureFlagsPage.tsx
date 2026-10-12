@@ -18,10 +18,9 @@ import { useTranslation } from 'react-i18next';
 import { RefreshCw } from 'lucide-react';
 
 import { PageLayout } from '@/components/layout';
-import { Button } from '@/components/ui';
+import { Button, Icon } from '@/components/ui';
 import { FadeIn } from '@/components/motion';
 import { usePageTitle } from '@/hooks/usePageTitle';
-import { cn } from '@/lib/cn';
 import { useTeslaFeatureConfig, useRefreshTeslaFeatureConfig } from '@/api/hooks/useUser';
 import { deriveDataState } from '@/api/dataState';
 
@@ -60,7 +59,10 @@ export default function TeslaFeatureFlagsPage() {
     <Button
       variant="secondary"
       size="sm"
-      icon={<RefreshCw className={cn('h-4 w-4', refresh.isPending && 'animate-spin')} aria-hidden="true" />}
+      wrapLabel
+      className="min-h-11 min-w-11 md:min-h-9 md:min-w-0"
+      icon={<Icon icon={RefreshCw} />}
+      loading={refresh.isPending}
       onClick={() => refresh.mutate()}
       disabled={refresh.isPending}
     >

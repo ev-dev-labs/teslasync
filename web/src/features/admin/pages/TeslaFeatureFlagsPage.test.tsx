@@ -371,6 +371,7 @@ describe('TeslaFeatureFlagsPage', () => {
 
     const refresh = getRefreshButton();
     expect(refresh).not.toBeDisabled();
+    expect(refresh).not.toHaveAttribute('aria-busy');
 
     fireEvent.click(refresh);
 
@@ -382,6 +383,15 @@ describe('TeslaFeatureFlagsPage', () => {
     );
     // The still-pending mutation keeps the button disabled.
     await waitFor(() => expect(getRefreshButton()).toBeDisabled());
+    expect(getRefreshButton()).toHaveAttribute('aria-busy', 'true');
+    expect(getRefreshButton()).toHaveAccessibleName('Refresh');
+    expect(getRefreshButton().querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
+    expect(getRefreshButton().querySelector('svg')).toHaveClass('motion-reduce:animate-none');
+    expect(
+      mockedRequest.mock.calls.filter(([path, opts]) =>
+        path === REFRESH_PATH && (opts as ReqOpts)?.method === 'POST',
+      ),
+    ).toHaveLength(1);
   });
 
   it('keeps the last-good rows visible when a background refetch errors', async () => {
@@ -423,6 +433,9 @@ describe('TeslaFeatureFlagsPage', () => {
     expect(screen.getByRole('searchbox', { name: 'Search features' })).toBeInTheDocument();
     expect(screen.getByRole('combobox', { name: 'Filter by status' })).toBeInTheDocument();
     expect(getRefreshButton()).toBeInTheDocument();
+    expect(getRefreshButton()).toHaveClass('min-h-11', 'min-w-11', 'md:min-h-9', 'md:min-w-0');
+    expect(getRefreshButton().querySelector('svg')).toHaveAttribute('focusable', 'false');
+    expect(getRefreshButton().querySelector('span')).toHaveClass('shrink-0');
   });
 
   it('retains an authoritative empty feature snapshot after a failed refresh', async () => {
