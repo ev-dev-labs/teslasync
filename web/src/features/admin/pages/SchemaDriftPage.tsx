@@ -5,7 +5,7 @@
 import { useTranslation } from 'react-i18next';
 import { RefreshCw } from 'lucide-react';
 import { PageLayout } from '@/components/layout';
-import { Button } from '@/components/ui';
+import { Button, Icon } from '@/components/ui';
 import { FadeIn } from '@/components/motion';
 import { DataStateNotice, SectionErrorBoundary } from '@/components/feedback';
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -26,7 +26,9 @@ export default function SchemaDriftPage() {
   const source = deriveDataState(query);
   const drift = query.data?.drift ?? null;
   const isDrifted = query.data ? (query.data.is_different ?? drift?.has_drift ?? false) : false;
-  const subsystemMissing = isApiError(source.fatalError) && source.fatalError.status === 503;
+  const subsystemMissing = isApiError(source.fatalError)
+    && source.fatalError.status === 503
+    && source.fatalError.code === 'SUBSYSTEM_NOT_CONFIGURED';
   const state: SchemaSectionState = {
     drift,
     isLoading: source.status === 'initial',
@@ -40,11 +42,13 @@ export default function SchemaDriftPage() {
       subtitle={t('admin.schemaDrift.subtitle', 'Current database schema fingerprint compared against the recorded seed. Drift indicates a migration ran without a seed refresh, or raw DDL bypassed the migration system.')}
       secondaryActions={
         <Button variant="ghost" onClick={state.onRetry}
+          className="min-h-11 min-w-11 md:min-h-10 md:min-w-10"
+          aria-busy={query.isFetching}
           aria-label={t('common.refresh', 'Refresh')} title={t('common.refresh', 'Refresh')}>
-          <RefreshCw className={cn('h-4 w-4', query.isFetching && 'animate-spin')} aria-hidden />
+          <Icon icon={RefreshCw} className={cn(query.isFetching && 'animate-spin motion-reduce:animate-none')} />
         </Button>
       }
-      query={query}
+      query={subsystemMissing ? undefined : query}
       dataSources={!subsystemMissing
         ? [{ id: 'schema-drift', label: t('admin.schemaDrift.pageTitle', 'Schema drift'), query }]
         : undefined}

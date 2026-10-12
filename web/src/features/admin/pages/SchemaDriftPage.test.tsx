@@ -2,13 +2,13 @@
  * SchemaDriftPage contract + hardening tests.
  *
  * The page has a single export (the default `SchemaDriftPage`) composed of
- * several module-private sub-components (KpiBand, FingerprintPanel,
- * BreakdownPanel, GuidancePanel, …). We exercise every branch of the page
+ * existing SchemaKpis, SchemaFingerprints, SchemaBreakdown and SchemaGuidance
+ * components. We exercise every branch of the page
  * through its public surface by driving the `useSchemaDrift` hook return:
  *
  *   1. Loading — skeletons show, no drift verdict yet.
- *   2. 503 "subsystem not configured" — AlertBanner + per-section empty
- *      states, and crucially NOT a per-section QueryError (the 503 is an
+ *   2. 503 + SUBSYSTEM_NOT_CONFIGURED — notice + per-section empty
+ *      states, and crucially NOT a per-section QueryError (the typed code is an
  *      expected state, surfaced once via the banner).
  *   3. Generic (non-503) error — every section renders <QueryError> with a
  *      working Retry that calls refetch().
@@ -370,5 +370,84 @@ describe('SchemaDriftPage', () => {
     expect(strip.querySelectorAll('[data-operational-metric]')).toHaveLength(4);
     expect(strip).toHaveTextContent('Drift');
     expect(strip).toHaveTextContent('Match');
+  });
+
+  it.each([
+    { caseId: 'unclassified outage', status: 503, code: undefined },
+    { caseId: 'dependency outage', status: 503, code: 'DEPENDENCY_UNAVAILABLE' },
+    { caseId: 'unexpected subsystem status', status: 500, code: 'SUBSYSTEM_NOT_CONFIGURED' },
+  ])('preserves section recovery for $caseId rather than claiming missing configuration', ({ status, code }) => {
+    const refetch = vi.fn();
+    mockedUseSchemaDrift.mockReturnValue(makeQuery({
+      error: new ApiError('schema evidence unavailable', status, code),
+      isError: true,
+      refetch: refetch as unknown as DriftQuery['refetch'],
+    }));
+    renderPage();
+
+    expect(screen.queryByText('Feature not supported')).toBeNull();
+    expect(screen.queryByText(/subsystem is not configured on this deployment/i)).toBeNull();
+    for (const title of ['Schema drift summary', 'Schema fingerprints', 'Drift breakdown', 'What this means']) {
+      expect(screen.getByRole('heading', { name: title })).toBeInTheDocument();
+    }
+    const retries = screen.getAllByRole('button', { name: 'Retry' });
+    expect(retries.length).toBeGreaterThanOrEqual(4);
+    for (const retry of retries) fireEvent.click(retry);
+    expect(refetch).toHaveBeenCalledTimes(retries.length);
+  });
+
+  it('shows one unsupported explanation without a contradictory error freshness label', () => {
+    mockedUseSchemaDrift.mockReturnValue(makeQuery({
+      error: new ApiError('not configured', 503, 'SUBSYSTEM_NOT_CONFIGURED'),
+      isError: true,
+    }));
+    renderPage();
+
+    expect(screen.getAllByText('Feature not supported')).toHaveLength(1);
+    expect(screen.queryByText('Error')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Retry' })).toBeNull();
+    expect(screen.getByText('No fingerprint available')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'What this means' })).toBeInTheDocument();
+  });
+
+  it('keeps the refresh action reachable and exposes fetching without decorative reduced-motion spinning', () => {
+    const refetch = vi.fn();
+    mockedUseSchemaDrift.mockReturnValue(makeQuery({
+      data: { drift: makeDrift(), is_different: false },
+      isFetching: true,
+      refetch: refetch as unknown as DriftQuery['refetch'],
+    }));
+    renderPage();
+
+    const refresh = headerRefreshButton();
+    expect(refresh).toHaveAttribute('aria-busy', 'true');
+    expect(refresh).toHaveClass('min-h-11', 'min-w-11', 'md:min-h-10', 'md:min-w-10');
+    expect(refresh).not.toBeDisabled();
+    expect(refresh.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
+    expect(refresh.querySelector('svg')).toHaveClass('animate-spin', 'motion-reduce:animate-none');
+    fireEvent.click(refresh);
+    expect(refetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('preserves paused schema evidence and every section without inventing an outage or unsupported subsystem', () => {
+    const drift = makeDrift({
+      has_drift: true,
+      current: makeFingerprint({ sha256: 'paused-live-hash' }),
+      expected: makeFingerprint({ sha256: 'paused-seed-hash' }),
+    });
+    mockedUseSchemaDrift.mockReturnValue(makeQuery({
+      data: { drift, is_different: true }, fetchStatus: 'paused',
+    }));
+    renderPage();
+
+    expect(screen.getByText('paused-live-hash')).toBeInTheDocument();
+    expect(screen.getByText('paused-seed-hash')).toBeInTheDocument();
+    expect(screen.getByText(`42 ${ARROW} 42`)).toBeInTheDocument();
+    expect(screen.getByText(/differs from the seed even though object counts match/i)).toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: 'Copy fingerprint hash' })).toHaveLength(2);
+    expect(screen.getByTestId('schema-drift-summary').closest('[data-retained]')).toHaveAttribute('data-retained', 'true');
+    expect(screen.queryByText('Feature not supported')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Retry' })).toBeNull();
+    expect(screen.queryByText("Can't reach server")).toBeNull();
   });
 });
