@@ -62,6 +62,12 @@ vi.mock('react-i18next', () => ({
 // factory can close over it.
 const unitState = vi.hoisted(() => ({ length: 'km' as 'km' | 'mi' }));
 const mediaState = vi.hoisted(() => ({ desktop: false }));
+const chartPreference = vi.hoisted(() => ({ palette: 'cb_safe' as 'cb_safe' | 'neon' }));
+
+vi.mock('@/hooks/useChartPalette', async (importActual) => {
+  const actual = await importActual<typeof import('@/hooks/useChartPalette')>();
+  return { ...actual, useChartPalette: () => actual.resolveChartPalette(chartPreference.palette) };
+});
 
 vi.mock('@/hooks/useMediaQuery', async (importActual) => {
   const actual = await importActual<typeof import('@/hooks/useMediaQuery')>();
@@ -158,7 +164,19 @@ vi.mock('@/hooks/useSelectedVehicle', async (importActual) => {
 const captured = vi.hoisted(() => ({
   toDistanceDisplay: null as null | ((meters: number) => number),
   distanceUnit: '' as string,
+  trendMetrics: [] as Array<{ key: string; color?: string }>,
 }));
+
+vi.mock('@/components/charts', async (importActual) => {
+  const actual = await importActual<typeof import('@/components/charts')>();
+  return {
+    ...actual,
+    MetricSwitcherChart: (props: ComponentProps<typeof actual.MetricSwitcherChart>) => {
+      captured.trendMetrics = props.metrics.map(({ key, color }) => ({ key, color }));
+      return <actual.MetricSwitcherChart {...props} />;
+    },
+  };
+});
 
 vi.mock('../components/ChargingSessionCard', async (importActual) => {
   const actual = await importActual<typeof import('../components/ChargingSessionCard')>();
@@ -308,7 +326,10 @@ function installHappyPath() {
     setVehicleId: vi.fn(),
   });
   mockSessions.mockReturnValue(qr({ data: SESSIONS }));
-  mockVehicleState.mockReturnValue(qr({ data: { state: LIVE_STATE, live: true } }));
+  mockVehicleState.mockReturnValue(qr({ data: {
+    state: LIVE_STATE, live: true, freshness: 'fresh', observedAt: Date.now(),
+    verifiedFields: ['is_charging', 'battery_level', 'time_to_full_charge'],
+  } }));
   // No optimizer response is available in this list fixture. An empty object
   // is not a ChargingOptimizerData payload and crashes once count reaches 10.
   mockOptimizer.mockReturnValue(qr());
@@ -371,6 +392,7 @@ beforeEach(() => {
   localStorage.clear();
   mediaState.desktop = false;
   unitState.length = 'km';
+  chartPreference.palette = 'cb_safe';
   captured.toDistanceDisplay = null;
   captured.distanceUnit = '';
   installHappyPath();
@@ -592,6 +614,9 @@ describe('ChargingListPage — happy path', () => {
         data: {
           state: { ...LIVE_STATE, is_charging: false, battery_level: 12 },
           live: true,
+          freshness: 'fresh',
+          observedAt: Date.now(),
+          verifiedFields: ['is_charging', 'battery_level'],
         },
       }),
     );
@@ -599,6 +624,110 @@ describe('ChargingListPage — happy path', () => {
 
     expect(await screen.findByText('Departure charge is below 20%')).toBeInTheDocument();
     expect(within(briefMetric('Departure readiness')).getByText('12%')).toBeInTheDocument();
+  });
+
+  describe('ChargingListPage phase5 source trust and preservation', () => {
+    it('keeps never-resolved paused history pending rather than asserting an empty window', () => {
+      mockSessions.mockReturnValue(qr({ fetchStatus: 'paused', isLoading: false, isFetching: false }));
+      renderPage();
+      expect(screen.getByTestId('charging-overview')).toHaveAttribute('aria-busy', 'true');
+      expect(screen.queryByText('No charging sessions yet')).not.toBeInTheDocument();
+      expect(screen.queryByText('No charging activity in this window')).not.toBeInTheDocument();
+      expect(within(briefMetric('Departure readiness')).getByText('64%')).toBeInTheDocument();
+    });
+
+    it('keeps independent live readings without claiming empty history while history is pending', async () => {
+      mockSessions.mockReturnValue(qr({ isLoading: true, isFetching: true }));
+      renderPage();
+      const brief = screen.getByTestId('charging-operational-brief');
+      expect(within(briefMetric('Current posture')).getByText('Charging')).toBeInTheDocument();
+      expect(within(briefMetric('Departure readiness')).getByText('64%')).toBeInTheDocument();
+      expect(within(brief).queryByText('No charging activity in this window')).not.toBeInTheDocument();
+      expect(within(briefMetric('Potential interruptions')).queryByText('0')).not.toBeInTheDocument();
+      fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+      const details = await screen.findByRole('dialog', { name: 'Cost, reliability, and battery-friendly behavior details' });
+      expect(within(details).queryByText(/0 sessions delivered/)).not.toBeInTheDocument();
+      expect(within(details).queryByText('0 sessions were evaluated in the active period.')).not.toBeInTheDocument();
+    });
+
+    it('keeps failed history distinct from an empty list and preserves every source section', () => {
+      mockSessions.mockReturnValue(qr({ isError: true, error: new Error('History failed') }));
+      renderPage();
+      for (const [name, count] of [['Overview', 2], ['Charging over time', 1], ['All charging sessions', 1], ['Charging insights', 1]] as const) {
+        expect(screen.getAllByRole('region', { name })).toHaveLength(count);
+      }
+      expect(screen.queryByText('No charging sessions yet')).not.toBeInTheDocument();
+      expect(screen.queryByText('No charging activity in this window')).not.toBeInTheDocument();
+      expect(screen.queryByText('Charging insights need completed sessions in the selected range.')).not.toBeInTheDocument();
+      expect(within(briefMetric('Departure readiness')).getByText('64%')).toBeInTheDocument();
+      expect(within(briefMetric('Potential interruptions')).getByText('—')).toBeInTheDocument();
+    });
+
+    it.each([
+      { caseId: 'stale-stream', freshness: 'stale' as const, observedAt: Date.now() - 600_000, verifiedFields: ['is_charging', 'battery_level'] },
+      { caseId: 'missing-field-trust', freshness: 'fresh' as const, observedAt: Date.now(), verifiedFields: [] },
+      { caseId: 'missing-observation', freshness: 'fresh' as const, observedAt: null, verifiedFields: ['is_charging', 'battery_level'] },
+    ])('retains readings without a current readiness claim for $caseId', ({ freshness, observedAt, verifiedFields }) => {
+      mockVehicleState.mockReturnValue(qr({ data: { state: LIVE_STATE, live: true, freshness, observedAt, verifiedFields } }));
+      renderPage();
+      const brief = screen.getByTestId('charging-operational-brief');
+      expect(within(briefMetric('Departure readiness')).getByText('64%')).toBeInTheDocument();
+      expect(within(briefMetric('Current posture')).getByText('Charging')).toBeInTheDocument();
+      expect(within(brief).queryByText('Charging now')).not.toBeInTheDocument();
+      expect(within(briefMetric('Departure readiness')).queryByText(/supports near-term departure/)).not.toBeInTheDocument();
+      expect(within(briefMetric('Current posture')).queryByText(/with 1h 30m to target/)).not.toBeInTheDocument();
+    });
+
+    it('does not treat a time-machine snapshot as current even with otherwise fresh metadata', () => {
+      renderPage(['/charging?from=2000-01-01&to=2100-01-01&as_of=2024-06-15T10:00:00Z']);
+      const brief = screen.getByTestId('charging-operational-brief');
+      expect(within(briefMetric('Departure readiness')).getByText('64%')).toBeInTheDocument();
+      expect(within(brief).queryByText('Charging now')).not.toBeInTheDocument();
+      expect(within(briefMetric('Departure readiness')).queryByText(/supports near-term departure/)).not.toBeInTheDocument();
+    });
+
+    it('preserves the global non-date sort on mobile across interleaved dates', async () => {
+      mockSessions.mockReturnValue(qr({ data: [
+        makeSession({ id: 31, started_at: '2024-06-15T08:00:00Z', total_energy_added_wh: 10_000 }),
+        makeSession({ id: 32, started_at: '2024-06-14T08:00:00Z', total_energy_added_wh: 30_000 }),
+        makeSession({ id: 33, started_at: '2024-06-15T09:00:00Z', total_energy_added_wh: 20_000 }),
+      ] }));
+      renderPage(['/charging?from=2000-01-01&to=2100-01-01&sort=energy&sort_desc=true']);
+      await findSessionCard(32);
+      const sessionRegion = screen.getByRole('region', { name: 'All charging sessions' });
+      expect(Array.from(sessionRegion.querySelectorAll<HTMLAnchorElement>('a[href^="/charging/"]'))
+        .map((link) => link.getAttribute('href'))).toEqual(['/charging/32', '/charging/33', '/charging/31']);
+      expect(within(sessionRegion).getByText('Search, collections, and exports cover up to 500 loaded sessions in this range.')).toBeInTheDocument();
+    });
+
+    it.each(['cb_safe', 'neon'] as const)('uses the saved %s chart palette while preserving all four metric identities', async (palette) => {
+      chartPreference.palette = palette;
+      renderPage();
+      await findSessionCard(1);
+      const { CHART_COLORS_CB_SAFE, CHART_COLORS_NEON } = await import('@/lib/colors');
+      const colors = palette === 'neon' ? CHART_COLORS_NEON : CHART_COLORS_CB_SAFE;
+      expect(captured.trendMetrics).toEqual([
+        { key: 'sessions', color: colors[0] },
+        { key: 'energy', color: colors[1] },
+        { key: 'cost', color: colors[2] },
+        { key: 'power', color: colors[4] },
+      ]);
+    });
+
+    it('retains failed bulk selections and clears only confirmed deleted sessions', async () => {
+      const mutateAsync = vi.fn().mockResolvedValue({ deleted: 1, failed: [{ id: 2, reason: 'conflict' }] });
+      mockBulkDelete.mockReturnValue({ mutateAsync, isPending: false } as ReturnType<typeof useBulkDeleteCharging>);
+      renderPage();
+      await findSessionCard(1);
+      fireEvent.click(sessionCheckbox(1));
+      fireEvent.click(sessionCheckbox(2));
+      fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
+      const dialog = await screen.findByRole('dialog');
+      fireEvent.click(within(dialog).getByRole('button', { name: 'Delete' }));
+      await waitFor(() => expect(mutateAsync).toHaveBeenCalledWith([1, 2]));
+      await waitFor(() => expect(sessionCheckbox(1)).not.toBeChecked());
+      expect(sessionCheckbox(2)).toBeChecked();
+    });
   });
 
   it('preserves the session vehicle, place, and time window in related links', async () => {

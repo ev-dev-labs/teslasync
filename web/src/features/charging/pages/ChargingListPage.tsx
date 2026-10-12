@@ -7,13 +7,12 @@ import {
   Activity, Bell, Car, MapPin, Route, Wrench,
 } from 'lucide-react';
 import { PageLayout, PageHeaderSticky } from '@/components/layout';
-import { Badge, Caption, GlassPanel, Pagination, SectionTitle, Text, compactTableValueSelection, matchesTableValueSelection, tableValueKey } from '@/components/ui';
+import { Badge, Caption, GlassPanel, Icon, Pagination, SectionTitle, Text, compactTableValueSelection, matchesTableValueSelection, tableValueKey } from '@/components/ui';
 import { FadeIn, StaggerContainer, StaggerItem } from '@/components/motion';
 import {
   DataStateNotice, QueryError, StaleRefreshWarning,
-  EmptyState, InlineCallout, Skeleton,
+  EmptyState, EmptyStateGuidanceDetails, InlineCallout, Skeleton,
 } from '@/components/feedback';
-import { EmptyStateGuidanceDetails } from '@/components/feedback/ActionableEmptyState';
 import {
   FilterBar, ActiveFilterChips, type FilterChipDescriptor, ListExportMenu,
 } from '@/components/forms';
@@ -31,12 +30,14 @@ import { useUrlBatch, useUrlBoolean, useUrlEnum, useUrlNumber, useUrlString } fr
 import { useRangeState } from '@/hooks/useRangeState';
 import { parseSearchQuery, matchesTokens, compareNumeric, parseDurationToken, matchesYmdPrefix } from '@/lib/searchQuery';
 import { useChargingSessionsPaginated, useChargingOptimizer, useBulkDeleteCharging } from '@/api/hooks/useCharging';
-import { useVehicleState } from '@/api/hooks/useVehicles';
+import { isVehicleStateFieldCurrent, useVehicleState } from '@/api/hooks/useVehicles';
 import { useUnits } from '@/hooks/useUnits';
 import { useFormatting } from '@/hooks/useFormatting';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { useDataState } from '@/hooks/useDataState';
+import { useAsOfDate } from '@/hooks/useAsOfDate';
+import { useChartPalette } from '@/hooks/useChartPalette';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useTimezone } from '@/lib/timezone';
 import { NoVehicleSelected } from '@/features/onboarding/components/NoVehicleSelected';
@@ -99,6 +100,8 @@ export default function ChargingListPage() {
     [unitPrefs.distance],
   );
   const { formatCurrency, currencySymbol } = useFormatting();
+  const chartPalette = useChartPalette();
+  const { asOf } = useAsOfDate();
 
   /* ── URL state ───────────────────────────────────────────────── */
   const { start: startDate, end: endDate, startInstant, endInstantExclusive } = useRangeState({
@@ -132,12 +135,15 @@ export default function ChargingListPage() {
     start: startInstant,
     end: endInstantExclusive,
   });
-  const { data: sessions, isLoading, refetch } = chargingQuery;
+  const { data: sessions, isLoading: sourceLoading, refetch } = chargingQuery;
   /* Retained sessions survive a failed background refresh: only an initial
    * failure (nothing cached) is allowed to replace the list with an error. */
   const chargingState = useDataState(chargingQuery, { provenance: 'historical' });
+  const historyAvailable = chargingState.hasData && Array.isArray(sessions);
+  const historyPending = !historyAvailable && chargingState.fatalError == null;
+  const isLoading = sourceLoading || historyPending;
   const vehicleStateQuery = useVehicleState(vehicleId ?? 0);
-  const vehicleStateDataState = useDataState(vehicleStateQuery, { provenance: 'live' });
+  const vehicleStateDataState = useDataState(vehicleStateQuery, { provenance: asOf ? 'historical' : 'live' });
   const liveState = vehicleStateQuery.data?.state;
   const [previewSession, setPreviewSession] = useState<ChargingSession | null>(null);
   const vehicleIdStr = vehicleId != null ? String(vehicleId) : null;
@@ -357,15 +363,15 @@ export default function ChargingListPage() {
   } satisfies Record<ChargingTrendMetric, ReturnType<typeof dailyChargingTrend>>), [dateFilteredSessions, tz]);
 
   const trendMetricsConfig: MetricSwitcherMetric<{ date: string; value: number }>[] = useMemo(() => [
-    { key: 'sessions', label: t('charging.metric.sessions', 'Sessions'), chart: 'bar', color: '#10b981', accent: 'green',
+    { key: 'sessions', label: t('charging.metric.sessions', 'Sessions'), chart: 'bar', color: chartPalette[0], accent: 'cyan',
       formatValue: (v) => fmtInt(v), formatTick: (v) => fmtInt(v) },
-    { key: 'energy', label: t('charging.metric.energy', 'Energy'), chart: 'bar', color: '#06b6d4', accent: 'cyan',
+    { key: 'energy', label: t('charging.metric.energy', 'Energy'), chart: 'bar', color: chartPalette[1], accent: 'cyan',
       formatValue: (v) => `${fmtNumber(v)} kWh`, formatTick: (v) => fmtNumber(v) },
-    { key: 'cost', label: t('charging.metric.cost', 'Cost'), chart: 'bar', color: '#ef4444', accent: 'red',
+    { key: 'cost', label: t('charging.metric.cost', 'Cost'), chart: 'bar', color: chartPalette[2], accent: 'cyan',
       formatValue: (v) => formatCurrency(v), formatTick: (v) => formatCurrency(v) },
-    { key: 'power', label: t('charging.metric.power', 'Avg power'), chart: 'line', color: '#a855f7', accent: 'purple',
+    { key: 'power', label: t('charging.metric.power', 'Avg power'), chart: 'line', color: chartPalette[4], accent: 'cyan',
       formatValue: (v) => `${fmtNumber(v)} kW`, formatTick: (v) => fmtNumber(v) },
-  ], [t, formatCurrency, fmtInt, fmtNumber]);
+  ], [t, chartPalette, formatCurrency, fmtInt, fmtNumber]);
 
   const formatChartXTick = useCallback(
     (key: string) => formatDayKey(key, { style: 'short' }),
@@ -391,6 +397,10 @@ export default function ChargingListPage() {
     });
   }, []);
   const clearBulk = useCallback(() => setBulkSelected(new Set()), []);
+  useEffect(() => {
+    setPreviewSession(null);
+    clearBulk();
+  }, [vehicleId, clearBulk]);
   const bulkDeleteMut = useBulkDeleteCharging();
   const bulkActions = useMemo<BulkAction[]>(() => [
     {
@@ -409,11 +419,16 @@ export default function ChargingListPage() {
         confirmLabel: t('common.delete', 'Delete'),
       },
       onClick: async (ids) => {
-        await bulkDeleteMut.mutateAsync(ids.map(Number));
-        clearBulk();
+        const submitted = ids.map(Number);
+        const result = await bulkDeleteMut.mutateAsync(submitted);
+        const failed = new Set((result.failed ?? []).map(({ id }) => id));
+        const successful = result.deleted === submitted.length - failed.size;
+        setBulkSelected((previous) => new Set(
+          Array.from(previous).filter((id) => !submitted.includes(id) || failed.has(id) || !successful),
+        ));
       },
     },
-  ], [t, bulkSelected.size, bulkDeleteMut, clearBulk]);
+  ], [t, bulkSelected.size, bulkDeleteMut]);
 
   /* ── Export ──────────────────────────────────────────────────── */
   const exportRows = useCallback((scope: 'visible' | 'selected'): ChargingSession[] => {
@@ -517,7 +532,7 @@ export default function ChargingListPage() {
           <span className="opacity-50">·</span>
           <span>
             {t('charging.batteryScore', 'Battery score')}{' '}
-            <Text as="span" weight="semibold" style={{ color: currentStats.batteryFriendlyGrade.color }}>
+            <Text as="span" weight="semibold" color="secondary">
               {currentStats.batteryFriendlyGrade.label}
             </Text>
           </span>
@@ -564,7 +579,7 @@ export default function ChargingListPage() {
         <>
           <span className="opacity-50">·</span>
           <span>{t('charging.avgScore', 'avg')}{' '}
-            <Text as="span" weight="semibold" style={{ color: currentStats.batteryFriendlyGrade.color }}>
+            <Text as="span" weight="semibold" color="secondary">
               {currentStats.batteryFriendlyGrade.label}
             </Text>
           </span>
@@ -608,7 +623,9 @@ export default function ChargingListPage() {
   const hasRecordedCosts = dateFilteredSessions.some(
     (session) => session.cost_decimal != null && Number.isFinite(session.cost_decimal),
   );
-  const isChargingNow = liveState?.is_charging === true;
+  const postureCurrent = !asOf && isVehicleStateFieldCurrent(vehicleStateQuery.data, 'is_charging');
+  const batteryCurrent = !asOf && isVehicleStateFieldCurrent(vehicleStateQuery.data, 'battery_level');
+  const isChargingNow = postureCurrent && liveState?.is_charging === true;
   const hasChargingPosture = typeof liveState?.is_charging === 'boolean';
   const departureBatteryPct = liveState?.battery_level;
   const numericBriefMetrics = useOperationalMetrics([
@@ -619,15 +636,16 @@ export default function ChargingListPage() {
     { metricId: 'count', occurrenceId: 'interruptions',
       rawValue: chargingState.hasData ? interruptionAnomalies.length : null,
       display: { formatter: raw => ({ value: String(raw), unit: '' }) } },
-    { metricId: 'percent', occurrenceId: 'reliability', rawValue: reliabilityPct,
+    { metricId: 'percent', occurrenceId: 'reliability', rawValue: historyAvailable ? reliabilityPct : null,
       display: { formatter: raw => ({ value: t('operations.charging.reliabilityValue',
         '{{value}}% clear', { value: fmtInt(raw) }), unit: '' }) } },
   ]);
-  const timeToTarget = isChargingNow && (liveState?.time_to_full_charge ?? 0) > 0
+  const timeToTarget = isChargingNow && isVehicleStateFieldCurrent(vehicleStateQuery.data, 'time_to_full_charge')
+    && (liveState?.time_to_full_charge ?? 0) > 0
     ? formatDurationMinutes((liveState?.time_to_full_charge ?? 0) * 60)
     : null;
   const chargingAttention: OperationalAttention[] = [
-    ...(liveState?.is_charging === false && liveState.battery_level != null && liveState.battery_level < 20
+    ...(postureCurrent && batteryCurrent && liveState?.is_charging === false && liveState.battery_level != null && liveState.battery_level < 20
       ? [{
           key: 'departure-readiness',
           title: t(
@@ -652,7 +670,7 @@ export default function ChargingListPage() {
           ? 'danger'
           : 'warning',
       })),
-    ...(currentStats.count === 0
+    ...(historyAvailable && currentStats.count === 0
       ? [{
           key: 'charging-empty',
           title: t('operations.charging.noDataTitle', 'No charging activity in this window'),
@@ -702,7 +720,9 @@ export default function ChargingListPage() {
       };
     });
   const narrative: OperationalNarrative = {
-    whatChanged: t(
+    whatChanged: !historyAvailable
+      ? historyPending ? t('common.loading', 'Loading...') : t('common.unavailable', 'Unavailable')
+      : t(
       'operations.charging.narrative.whatChanged',
       '{{sessions}} sessions delivered {{energy}} in the selected window; {{exceptions}} require review.',
       {
@@ -717,24 +737,24 @@ export default function ChargingListPage() {
     ),
     confidence: {
       label:
-        currentStats.count > 0 && !vehicleStateQuery.isError
+        currentStats.count > 0 && chargingState.status === 'ok' && postureCurrent && batteryCurrent && !vehicleStateQuery.isError
           ? 'high'
           : currentStats.count > 0 || liveState != null
             ? 'medium'
             : 'low',
       score: null,
       basis: [
-        t(
+        historyAvailable ? t(
           'operations.charging.narrative.sessionBasis',
           '{{count}} sessions were evaluated in the active period.',
           { count: currentStats.count },
-        ),
+        ) : historyPending ? t('common.loading', 'Loading...') : t('common.unavailable', 'Unavailable'),
         vehicleStateDataState.refreshError != null
           ? t(
               'operations.charging.narrative.liveRetainedBasis',
               'Charging and battery state is retained from the last successful vehicle-state read; its refresh has not recovered.',
             )
-          : vehicleStateDataState.fatalError != null
+          : vehicleStateDataState.fatalError != null || !postureCurrent || !batteryCurrent
           ? t(
               'operations.charging.narrative.liveLimitedBasis',
               'Live charging and battery state could not be resolved.',
@@ -768,7 +788,7 @@ export default function ChargingListPage() {
               'Departure readiness uses retained battery state until the live vehicle-state refresh recovers.',
             ),
           ]
-        : vehicleStateDataState.fatalError != null
+        : vehicleStateDataState.fatalError != null || !postureCurrent || !batteryCurrent
         ? [
             t(
               'operations.charging.narrative.liveLimitation',
@@ -810,6 +830,20 @@ export default function ChargingListPage() {
     previewSession?.ended_at ?? previewSession?.started_at,
     tz,
   ) ?? previewFrom;
+  const renderSession = (session: ChargingSession) => (
+    <StaggerItem key={session.id}>
+      <ChargingSessionCard
+        session={session}
+        toDistanceDisplay={toDistanceDisplay}
+        distanceUnit={distanceUnit}
+        selected={bulkSelected.has(session.id)}
+        onToggleSelect={toggleSessionSelected}
+        anomaly={anomalyById.get(session.id)}
+        density={density === 'compact' ? 'compact' : 'comfortable'}
+        onPreview={setPreviewSession}
+      />
+    </StaggerItem>
+  );
 
   return (
     <PageLayout
@@ -935,10 +969,16 @@ export default function ChargingListPage() {
         {/* Trend chart */}
           <FadeIn>
             <section aria-label={t('charging.section.trend', 'Charging over time')}>
+            <Caption>{t('charging.grid.loadedWindow', 'Search, collections, and exports cover up to {{count}} loaded sessions in this range.', { count: 500 })}</Caption>
             {isLoading ? (
               <GlassPanel className="p-4">
                 <SectionTitle>{t('charging.overTime', 'Charging over time')}</SectionTitle>
                 <Skeleton className="mt-3 h-52" />
+              </GlassPanel>
+            ) : chargingState.fatalError != null ? (
+              <GlassPanel className="p-4">
+                <SectionTitle>{t('charging.overTime', 'Charging over time')}</SectionTitle>
+                <QueryError error={chargingState.fatalError} onRetry={refetch} />
               </GlassPanel>
             ) : <MetricSwitcherChart
               title={t('charging.overTime', 'Charging over time')}
@@ -975,7 +1015,7 @@ export default function ChargingListPage() {
             {!isDesktopEvidence && sortedSessions.length > 0 && (
               <div className="flex flex-col items-start justify-between gap-2 sm:flex-row sm:items-center">
                 <SectionTitle className="flex items-center gap-2">
-                  <Plug className="h-4 w-4 text-emerald-400" aria-hidden="true" />
+                  <Icon icon={Plug} size="md" className="text-[var(--text-secondary)]" />
                   {t('charging.allSessions', 'All sessions')}
                   <Text as="span" size="xs" weight="regular" color="muted">
                     ({fmtCompact(sortedSessions.length)})
@@ -1008,6 +1048,9 @@ export default function ChargingListPage() {
                 </div>
               </div>
             )}
+            {!isDesktopEvidence && (
+              <Caption>{t('charging.grid.loadedWindow', 'Search, collections, and exports cover up to {{count}} loaded sessions in this range.', { count: 500 })}</Caption>
+            )}
 
             <BulkActionsToolbar
               selectedIds={Array.from(bulkSelected)}
@@ -1020,7 +1063,7 @@ export default function ChargingListPage() {
                 other: t('bulk.noun.session_other', 'sessions'),
               }}
             />
-            {isDesktopEvidence && !isLoading && (
+            {isDesktopEvidence && !isLoading && historyAvailable && (
               <ChargingEvidenceTable
                 sessions={paginatedSessions}
                 availableSessions={dateFilteredSessions}
@@ -1079,24 +1122,11 @@ export default function ChargingListPage() {
             ) : paginatedSessions.length > 0 ? (
               <>
                 {!isDesktopEvidence && <StaggerContainer>
-                  <DateGroupedList
+                  {sortBy === 'date' ? <DateGroupedList
                     groups={groupedSessions}
                     itemKey={(s) => s.id}
-                    renderItem={(s) => (
-                      <StaggerItem>
-                        <ChargingSessionCard
-                          session={s}
-                          toDistanceDisplay={toDistanceDisplay}
-                          distanceUnit={distanceUnit}
-                          selected={bulkSelected.has(s.id)}
-                          onToggleSelect={toggleSessionSelected}
-                          anomaly={anomalyById.get(s.id)}
-                          density={density === 'compact' ? 'compact' : 'comfortable'}
-                          onPreview={setPreviewSession}
-                        />
-                      </StaggerItem>
-                    )}
-                  />
+                    renderItem={renderSession}
+                  /> : <div className="space-y-3">{paginatedSessions.map(renderSession)}</div>}
                 </StaggerContainer>}
                 {!isDesktopEvidence && <Pagination
                   page={page}
@@ -1106,7 +1136,11 @@ export default function ChargingListPage() {
                   onPageSizeChange={(s) => { setUrlBatch({ size: String(s), page: null }); }}
                 />}
               </>
-            ) : !isLoading && (
+            ) : chargingState.fatalError != null ? (
+              <QueryError error={chargingState.fatalError} onRetry={refetch} />
+            ) : historyPending ? (
+              <Text color="secondary">{t('common.loading', 'Loading...')}</Text>
+            ) : (
               <>
                 <EmptyState
                   icon={<Battery className="h-8 w-8" />}
@@ -1150,18 +1184,18 @@ export default function ChargingListPage() {
           statusLabel={
             isChargingNow
               ? t('operations.charging.statusCharging', 'Charging now')
-              : currentStats.count === 0
+              : !historyAvailable || currentStats.count === 0
               ? t('operations.status.awaitingData', 'Awaiting data')
-              : anomalies.length > 0 || vehicleStateQuery.isError
+              : anomalies.length > 0 || vehicleStateQuery.isError || chargingState.status !== 'ok' || !postureCurrent || !batteryCurrent
                 ? t('operations.status.review', 'Review recommended')
                 : t('charging.brief.available', 'Source measurements available')
           }
           statusTone={
             isChargingNow
               ? 'info'
-              : currentStats.count === 0
+              : !historyAvailable || currentStats.count === 0
               ? 'neutral'
-              : anomalies.length > 0 || vehicleStateQuery.isError
+              : anomalies.length > 0 || vehicleStateQuery.isError || chargingState.status !== 'ok' || !postureCurrent || !batteryCurrent
                 ? 'warning'
                 : 'success'
           }
@@ -1190,10 +1224,10 @@ export default function ChargingListPage() {
                 ? t('operations.charging.checkingLiveState', 'Checking')
                 : vehicleStateDataState.fatalError != null || !liveState || !hasChargingPosture
                   ? t('common.unavailable', 'Unavailable')
-                  : isChargingNow
+                  : liveState.is_charging === true
                     ? t('operations.charging.chargingNow', 'Charging')
                     : t('operations.charging.notCharging', 'Not charging'),
-              detail: vehicleStateDataState.fatalError != null || !hasChargingPosture
+              detail: vehicleStateDataState.fatalError != null || !hasChargingPosture || !postureCurrent
                 ? t(
                     'operations.charging.currentPostureUnavailable',
                     'Live state could not be resolved; session history remains available.',
@@ -1228,7 +1262,7 @@ export default function ChargingListPage() {
                         'operations.charging.currentPostureMissing',
                         'Live state has not arrived; session history remains available.',
                       ),
-              tone: vehicleStateQuery.isLoading || vehicleStateDataState.fatalError != null || !liveState || !hasChargingPosture
+              tone: vehicleStateQuery.isLoading || vehicleStateDataState.fatalError != null || !liveState || !hasChargingPosture || !postureCurrent
                 ? 'neutral'
                 : isChargingNow
                   ? 'info'
@@ -1239,7 +1273,7 @@ export default function ChargingListPage() {
               key: 'departure',
               label: t('operations.charging.departureReadiness', 'Departure readiness'),
               value: numericBriefMetrics[0].value,
-              detail: departureBatteryPct == null
+              detail: departureBatteryPct == null || !batteryCurrent
                 ? t(
                     'operations.charging.departureUnavailable',
                     'Current battery state is required to assess near-term departure readiness.',
@@ -1259,7 +1293,7 @@ export default function ChargingListPage() {
                         'operations.charging.departureLow',
                         'Additional charging is recommended before the next departure.',
                       ),
-              tone: departureBatteryPct == null
+              tone: departureBatteryPct == null || !batteryCurrent
                 ? 'neutral'
                 : departureBatteryPct < 20
                   ? 'danger'
@@ -1270,6 +1304,7 @@ export default function ChargingListPage() {
             {
               ...numericBriefMetrics[1],
               key: 'cost',
+              loading: historyPending,
               label: t('operations.charging.costExposure', 'Cost exposure'),
               value: numericBriefMetrics[1].value,
               detail: blendedCostPerKwh != null
@@ -1297,17 +1332,19 @@ export default function ChargingListPage() {
             {
               ...numericBriefMetrics[2],
               key: 'interruptions',
+              loading: historyPending,
               label: t('operations.charging.interruptions', 'Potential interruptions'),
               value: numericBriefMetrics[2].value,
               detail: t(
                 'operations.charging.interruptionsDetail',
                 'Sessions with a telemetry gap or sustained unexpectedly low DC power.',
               ),
-              tone: interruptionAnomalies.length > 0 ? 'danger' : 'success',
+              tone: !historyAvailable ? 'neutral' : interruptionAnomalies.length > 0 ? 'danger' : 'success',
             },
             {
               ...numericBriefMetrics[3],
               key: 'reliability',
+              loading: historyPending,
               label: t('operations.charging.reliability', 'Charger reliability'),
               value: numericBriefMetrics[3].value,
               detail: t(
@@ -1336,15 +1373,20 @@ export default function ChargingListPage() {
         </FadeIn>
 
         <FadeIn delay={0.15}>
-          <ChargingInsights
+          {chargingState.fatalError != null ? (
+            <section aria-label={t('charging.section.insights', 'Charging insights')} className="space-y-4">
+              <SectionTitle>{t('charging.insights.title', 'Charging insights')}</SectionTitle>
+              <QueryError error={chargingState.fatalError} onRetry={refetch} />
+            </section>
+          ) : <ChargingInsights
             sessions={sessions}
-            loading={isLoading}
+            loading={isLoading || historyPending}
             optimizer={optimizer}
             acDcBreakdown={acDcBreakdown}
             startLevelDist={startLevelDist}
             chargeRateStats={chargeRateStats}
             chargerSpecs={chargerSpecs}
-          />
+          />}
         </FadeIn>
 
         <EntityPreviewDrawer
