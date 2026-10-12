@@ -20,7 +20,7 @@ import { useTranslation } from 'react-i18next';
 import { AlertOctagon, BarChart3, History } from 'lucide-react';
 
 import { PageLayout, LayoutCard } from '@/components/layout';
-import { ConfirmDialog } from '@/components/ui';
+import { ConfirmDialog, Icon } from '@/components/ui';
 import { FadeIn } from '@/components/motion';
 import { AlertBanner, QueryError, SectionErrorBoundary } from '@/components/feedback';
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -32,6 +32,7 @@ import {
 } from '@/api/hooks/useDLQ';
 import type { DLQEntrySummary } from '@/types/admin-diagnostics';
 import { deriveDataState } from '@/api/dataState';
+import { typography } from '@/lib/tokens';
 
 import {
   AuditPanel,
@@ -146,7 +147,7 @@ export default function DLQInspectorPage() {
               <div className="min-w-0 xl:col-span-2">
                 <LayoutCard
                   title={t('admin.dlq.panels.entries', 'Dead-letter entries')}
-                  actions={<AlertOctagon className="h-4 w-4 text-cyan-300" aria-hidden />}
+                  actions={<Icon icon={AlertOctagon} className={typography.color.muted} />}
                 >
                   {listState.fatalError ? (
                     <QueryError error={listState.fatalError} onRetry={() => list.refetch()} />
@@ -162,7 +163,7 @@ export default function DLQInspectorPage() {
 
               <LayoutCard
                 title={t('admin.dlq.panels.reasons', 'Failure reasons')}
-                actions={<BarChart3 className="h-4 w-4 text-cyan-300" aria-hidden />}
+                actions={<Icon icon={BarChart3} className={typography.color.muted} />}
               >
                 <ReasonBreakdown
                   rows={list.data?.entries ?? []}
@@ -180,7 +181,7 @@ export default function DLQInspectorPage() {
           <SectionErrorBoundary name="dlq-audit">
             <LayoutCard
               title={t('admin.dlq.panels.audit', 'Recent replay activity')}
-              actions={<History className="h-4 w-4 text-cyan-300" aria-hidden />}
+              actions={<Icon icon={History} className={typography.color.muted} />}
             >
               {auditState.fatalError ? (
                 <QueryError error={auditState.fatalError} onRetry={() => audit.refetch()} />

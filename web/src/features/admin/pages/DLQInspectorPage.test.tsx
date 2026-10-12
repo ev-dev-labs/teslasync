@@ -488,3 +488,39 @@ describe('DLQInspectorPage — list error handling', () => {
     expect(mockedRequest.mock.calls.some(call => String(call[0]).endsWith('/replay'))).toBe(false);
   });
 });
+
+describe('DLQInspectorPage — restrained panel hierarchy', () => {
+  it.each([
+    { name: 'loaded snapshot', empty: false },
+    { name: 'empty snapshot', empty: true },
+  ])('keeps every panel and neutral decorative glyph in the $name', async ({ empty }) => {
+    wire({
+      list: () => Promise.resolve(listResponse(empty ? { count: 0, entries: [] } : {})),
+    });
+    renderPage();
+    await screen.findByText('admin@example.com');
+    if (empty) {
+      expect(await screen.findByText('No DLQ entries — the pipeline is clean.')).toBeInTheDocument();
+    } else {
+      expect(await screen.findByText(ENTRY_A_VIN)).toBeInTheDocument();
+    }
+
+    expect(screen.getByTestId('dlq-operational-brief')
+      .querySelectorAll('[data-operational-metric]')).toHaveLength(6);
+    for (const [title, glyph] of [
+      ['Dead-letter entries', 'lucide-octagon-alert'],
+      ['Failure reasons', 'lucide-bar-chart3'],
+      ['Recent replay activity', 'lucide-history'],
+    ]) {
+      const heading = screen.getByRole('heading', { name: title });
+      const card = heading.closest('[data-card]');
+      expect(card).not.toBeNull();
+      const icon = card?.querySelector(`header svg.${glyph}`);
+      expect(icon).toHaveClass('h-4', 'w-4', 'shrink-0', 'text-[var(--text-muted)]');
+      expect(icon).not.toHaveClass('text-cyan-300');
+      expect(icon).toHaveAttribute('aria-hidden', 'true');
+      expect(icon).toHaveAttribute('focusable', 'false');
+    }
+    expect(mockedRequest.mock.calls.some(call => String(call[0]).endsWith('/replay'))).toBe(false);
+  });
+});
