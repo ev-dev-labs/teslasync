@@ -325,6 +325,8 @@ export default function LocationsPage() {
             <EmptyState
               icon={<Icon icon={MapPin} size="xl" />}
               title={t('common.noVehicleSelected.title', 'No vehicle selected')}
+              message={t('common.noVehicleSelected.desc', 'Add a vehicle to your fleet to see data on this page.')}
+              actionTo={{ label: t('common.noVehicleSelected.action', 'Set up TeslaSync'), to: '/onboarding' }}
             />
           ) : !hasLocations ? (
             <EmptyState

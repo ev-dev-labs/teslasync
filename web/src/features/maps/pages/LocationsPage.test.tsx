@@ -527,6 +527,8 @@ describe('LocationsPage — header vehicle scope', () => {
     renderPage();
 
     expect(screen.getByRole('heading', { name: 'No vehicle selected' })).toBeInTheDocument();
+    expect(screen.getByText('Add a vehicle to your fleet to see data on this page.')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Set up TeslaSync' })).toHaveAttribute('href', '/onboarding');
     expect(screen.getByTestId('lb-empty-Visits')).toHaveTextContent('No vehicle selected');
     expect(screen.getByTestId('lb-empty-Hours')).toHaveTextContent('No vehicle selected');
     expect(screen.queryByText('No visited locations recorded yet')).not.toBeInTheDocument();
