@@ -56,6 +56,8 @@ export function RepairCaseWorkspace({
     setHistory([]);
     setSelectedCaseIds([]);
     setActiveCaseId(null);
+    setDismissIds([]);
+    setDismissReason('');
   }, [vehicleId]);
 
   const updateFilters = (next: RepairCaseFilters) => {
