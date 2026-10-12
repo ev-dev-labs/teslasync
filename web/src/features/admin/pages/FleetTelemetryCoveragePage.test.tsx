@@ -260,6 +260,47 @@ describe('FleetTelemetryCoveragePage', () => {
     )
   })
 
+  it('keeps all category fields for a trimmed case-insensitive category match and announces the result', async () => {
+    mockedRequest.mockResolvedValueOnce(makeResponse())
+    renderPage()
+    await screen.findByTestId('coverage-category-driving')
+
+    fireEvent.change(screen.getByTestId('coverage-filter-input'), { target: { value: '  DRIVING  ' } })
+
+    const category = screen.getByTestId('coverage-category-driving')
+    expect(within(category).getByText('VehicleSpeed')).toBeInTheDocument()
+    expect(within(category).getByText('BrakePedal')).toBeInTheDocument()
+    expect(within(category).getByText('brake_pedal')).toBeInTheDocument()
+    expect(within(category).queryByText('No fields match the current filter.')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('coverage-category-climate')).not.toBeInTheDocument()
+    const results = screen.getByText('Showing 1 of 2 categories')
+    expect(results).toHaveAttribute('role', 'status')
+    expect(results).toHaveAttribute('aria-live', 'polite')
+    expect(results).toHaveAttribute('aria-atomic', 'true')
+    expect(screen.getByTestId('coverage-dest-signal_log')).toHaveTextContent('signal_log: 3')
+
+    fireEvent.change(screen.getByTestId('coverage-filter-input'), { target: { value: '' } })
+    expect(screen.getByTestId('coverage-category-climate')).toBeInTheDocument()
+    expect(results).toHaveTextContent('Showing 2 of 2 categories')
+  })
+
+  it('preserves field destination and column search without narrowing the snapshot summary', async () => {
+    mockedRequest.mockResolvedValueOnce(makeResponse())
+    renderPage()
+    await screen.findByTestId('coverage-category-driving')
+
+    for (const value of [' BRAKEPEDAL ', ' DRIVE_TELEMETRY ', ' BRAKE_PEDAL ']) {
+      fireEvent.change(screen.getByTestId('coverage-filter-input'), { target: { value } })
+      const category = screen.getByTestId('coverage-category-driving')
+      expect(within(category).getByText('BrakePedal')).toBeInTheDocument()
+      expect(within(category).getByText('brake_pedal')).toBeInTheDocument()
+      expect(within(category).queryByText('VehicleSpeed')).not.toBeInTheDocument()
+      expect(screen.queryByTestId('coverage-category-climate')).not.toBeInTheDocument()
+      expect(screen.getByTestId('coverage-dest-signal_log')).toHaveTextContent('signal_log: 3')
+      expect(screen.getByTestId('coverage-summary').querySelectorAll('[data-operational-metric]')).toHaveLength(6)
+    }
+  })
+
   it('refresh button triggers a refetch', async () => {
     mockedRequest.mockResolvedValue(makeResponse())
 

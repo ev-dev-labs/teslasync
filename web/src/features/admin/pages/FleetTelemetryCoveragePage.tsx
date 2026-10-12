@@ -59,7 +59,6 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
-  Cell,
   ResponsiveContainer,
   ChartTooltip,
   axisTick,
@@ -109,9 +108,10 @@ export default function FleetTelemetryCoveragePage({
   const destChartHeight = Math.max(200, destChartData.length * 44)
   const orphans = data?.orphan_fields ?? []
   const categories = data?.categories ?? []
+  const normalizedFilter = filter.trim().toLowerCase()
 
   const filteredCategories = useMemo(() => {
-    const q = filter.trim().toLowerCase()
+    const q = normalizedFilter
     if (!q) return categories
     return categories.filter((cat) => {
       if (cat.category.toLowerCase().includes(q)) return true
@@ -122,7 +122,7 @@ export default function FleetTelemetryCoveragePage({
           (f.column ?? '').toLowerCase().includes(q),
       )
     })
-  }, [categories, filter])
+  }, [categories, normalizedFilter])
 
   // Only the first paint (no data yet) shows skeletons; background refetches
   // keep the last snapshot on screen so the layout never jumps.
@@ -214,21 +214,15 @@ export default function FleetTelemetryCoveragePage({
                         tick={axisTick}
                       />
                       <Tooltip
-                        cursor={{ fill: 'rgba(255,255,255,0.04)' }}
+                        cursor={{ fill: chartTokens.brush.fill }}
                         content={<ChartTooltip />}
                       />
                       <Bar
                         dataKey="count"
                         name={t('coverage.destinations.routedFields', 'Routed fields')}
+                        fill={chartTokens.series[0]}
                         radius={[0, 4, 4, 0]}
-                      >
-                        {destChartData.map((entry, i) => (
-                          <Cell
-                            key={entry.dest}
-                            fill={chartTokens.series[i % chartTokens.series.length]}
-                          />
-                        ))}
-                      </Bar>
+                      />
                     </BarChart>
                   </ResponsiveContainer>
                 </EmbeddedChart>
@@ -353,7 +347,7 @@ export default function FleetTelemetryCoveragePage({
                 data-testid="coverage-filter-input"
               />
             </div>
-            <Caption className="shrink-0">
+            <Caption className="shrink-0" role="status" aria-live="polite" aria-atomic="true">
               {t('coverage.filter.results', 'Showing {{shown}} of {{total}} categories', {
                 shown: filteredCategories.length,
                 total: categories.length,
@@ -403,7 +397,11 @@ export default function FleetTelemetryCoveragePage({
             data-testid="coverage-categories"
           >
             {filteredCategories.map((cat) => (
-              <CoverageCategory key={cat.category} category={cat} filter={filter} />
+              <CoverageCategory
+                key={cat.category}
+                category={cat}
+                filter={cat.category.toLowerCase().includes(normalizedFilter) ? '' : filter}
+              />
             ))}
           </Masonry>
         </FadeIn>
