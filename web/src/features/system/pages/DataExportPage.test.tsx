@@ -29,7 +29,7 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi, type Mock } from 'vitest';
-import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within, act } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
@@ -227,7 +227,7 @@ function renderPage() {
       mutations: { retry: false },
     },
   });
-  return render(
+  const result = render(
     <QueryClientProvider client={qc}>
       <MemoryRouter initialEntries={['/data-export']}>
         <ToastProvider>
@@ -236,6 +236,7 @@ function renderPage() {
       </MemoryRouter>
     </QueryClientProvider>,
   );
+  return { ...result, queryClient: qc };
 }
 
 beforeEach(() => {
@@ -507,5 +508,93 @@ describe('DataExportPage — Project Apex elevation', () => {
     expect(
       mockedRequest.mock.calls.some((c) => c[0] === '/scheduled-exports'),
     ).toBe(false);
+  });
+
+  it('names the wizard vehicle selector and preserves all seven export choices', async () => {
+    renderPage();
+    const selector = await screen.findByRole('combobox', { name: 'STEP 3 — select vehicle' });
+    expect(within(selector).getAllByRole('option').map(option => option.getAttribute('value'))).toEqual(['', '1']);
+    expect(within(selector).getByRole('option', { name: 'All vehicles' })).toBeInTheDocument();
+    expect(within(selector).getByRole('option', { name: 'Model 3' })).toBeInTheDocument();
+    const group = screen.getByRole('radiogroup', { name: 'STEP 1 — select data type' });
+    expect(within(group).getAllByRole('radio').map(choice => choice.getAttribute('aria-label')))
+      .toEqual(['Drives', 'Charging', 'Trips', 'Analytics', 'Full backup', 'Maintenance', 'Energy']);
+  });
+
+  it('keeps every history field and download action reachable without mobile hiding', async () => {
+    jobsData[0].file_size = 0;
+    const fullFailure = 'Export failed because the destination disk is full; free capacity before retrying this job.';
+    jobsData[1].error_message = fullFailure;
+    renderPage();
+    const table = await screen.findByRole('table');
+    const readyRow = within(table).getByRole('row', { name: /Drives CSV Ready/ });
+    expect(within(readyRow).getByText('Model 3')).toBeInTheDocument();
+    expect(within(readyRow).getByText('1,200')).toBeInTheDocument();
+    expect(within(readyRow).getByText('0 B')).toBeInTheDocument();
+    expect(within(readyRow).getByRole('button', { name: 'Download' })).toBeEnabled();
+    expect(table.querySelectorAll('td.hidden, th.hidden')).toHaveLength(0);
+    const failure = within(table).getByText(fullFailure);
+    expect(failure).toHaveClass('whitespace-normal', 'break-words');
+    expect(failure).not.toHaveClass('truncate');
+    const missingSize = within(table).getByRole('row', { name: /Charging JSON Failed/ });
+    expect(within(missingSize).getAllByText('—').length).toBeGreaterThan(0);
+    expect(screen.getByRole('region', { name: 'Export jobs' })).toContainElement(table);
+  });
+
+  it('shows a failed column catalog independently and recovers with its own retry', async () => {
+    const availableColumns = columnsData;
+    columnsData = new Error('Column catalog unavailable');
+    renderPage();
+    expect(await screen.findByText("Can't reach server")).toBeInTheDocument();
+    expect(screen.getByText('STEP 2½ — columns')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Start export' })).toBeEnabled();
+    expect(screen.getByText('Download my data')).toBeInTheDocument();
+    columnsData = availableColumns;
+    fireEvent.click(screen.getByRole('button', { name: /retry|try again/i }));
+    expect(await screen.findByTestId('export-column-picker')).toBeInTheDocument();
+    expect(screen.getByTestId('export-column-checkbox-started_at')).toBeChecked();
+    expect(screen.getByTestId('export-column-checkbox-started_at')).toBeDisabled();
+  });
+
+  it('retains catalog selections through a failed refresh and submits the same ordered allowlist', async () => {
+    const { queryClient } = renderPage();
+    await screen.findByTestId('export-column-picker');
+    fireEvent.click(screen.getByTestId('export-column-checkbox-distance_m'));
+    columnsData = new Error('Column catalog refresh failed');
+    await act(async () => {
+      await queryClient.invalidateQueries({ queryKey: ['export-columns', 'drives'] });
+    });
+    expect(await screen.findByTestId('stale-refresh-warning')).toBeInTheDocument();
+    expect(screen.getByTestId('export-column-checkbox-distance_m')).not.toBeChecked();
+    expect(screen.getByTestId('export-column-checkbox-started_at')).toBeChecked();
+    expect(screen.getByTestId('export-column-checkbox-started_at')).toBeDisabled();
+    fireEvent.click(screen.getByRole('button', { name: 'Start export' }));
+    await waitFor(() => expect(lastPostBody('/export/jobs').columns).toEqual(['started_at', 'duration_s']));
+  });
+
+  it('uses neutral preview surfaces and a theme-aware account separator without dropping content', async () => {
+    renderPage();
+    const csv = await screen.findByText('CSV preview');
+    const json = screen.getByText('JSON preview');
+    expect(csv.parentElement?.querySelector('svg')).toHaveClass('text-[var(--text-secondary)]');
+    expect(json.parentElement?.querySelector('svg')).toHaveClass('text-[var(--text-secondary)]');
+    expect(screen.getByText('date,distance_m,efficiency_wh_per_m')).toBeInTheDocument();
+    expect(screen.getByText('2025-01-15,45200,0.152')).toBeInTheDocument();
+    const account = screen.getByRole('region', { name: 'Full account export' });
+    const start = within(account).getByRole('button', { name: 'Start full export' });
+    expect(start.parentElement).toHaveClass('border-[var(--border-subtle)]');
+    expect(start.parentElement).not.toHaveClass('border-white/[0.06]');
+    expect(within(account).getByLabelText('Start date (optional)')).toBeInTheDocument();
+    expect(within(account).getByLabelText('End date (optional)')).toBeInTheDocument();
+  });
+
+  it('forwards cancellation to the jobs and vehicle reads', async () => {
+    renderPage();
+    await screen.findByRole('table');
+    for (const url of ['/export/jobs', '/vehicles']) {
+      const call = mockedRequest.mock.calls.find(([path, options]) =>
+        path === url && !(options as ReqOpts | undefined)?.method);
+      expect(call?.[1]?.signal).toBeInstanceOf(AbortSignal);
+    }
   });
 });
