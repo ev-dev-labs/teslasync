@@ -18476,7 +18476,13 @@
       "observationsUnavailable": "Signal observations unavailable",
       "observationsRetained": "Previously loaded signal observations remain visible while this source recovers.",
       "searchLabel": "Search signals",
-      "sampleCount": "Observations in fetched sample"
+      "sampleCount": "Observations in fetched sample",
+      "destination": "Destination: {{destination}}",
+      "valueKind": "Value kind",
+      "metadataUnavailable": "Unit and description are not provided by this catalog.",
+      "totalSamples": "Total observations: {{count}}",
+      "vehicleCount": "Vehicles observed: {{count}}",
+      "lastSeen": "Last seen: {{timestamp}}"
     },
     "signalHealth": {
       "secAgo": "{{count}}s ago",

@@ -7,7 +7,7 @@ import { deriveDataState, type DataState } from '../dataState';
 import { useToast } from '@/components/feedback/Toast';
 import type { SignalHistoryResponse, SignalStats, TelemetryStatus, VehicleTelemetry } from '@/types/telemetry';
 import { telemetryUptimeSeconds, telemetryVehicleList } from '@/types/telemetry';
-import type { SignalCatalogEntry, SignalObservation } from '@/types/signals';
+import type { SignalsCatalogResponse, SignalObservation } from '@/types/signals';
 
 export const telemetryKeys = {
   signals: (vehicleId: number) => ['signals', vehicleId] as const,
@@ -433,22 +433,40 @@ export function useMQTTStatus() {
 
 // ─── Typed Signal Hooks ──────────────────────────────────────────────────────
 
-/**
- * DEPRECATED. The backend `/signals/catalog` route was deleted alongside
- * `signal_catalog_handler.go`; the typed
- * `signal_log` pipeline (migrations 000167+) plus
- * `internal/api/signal_handler.go`'s `/signals/{vehicleID}/available`
- * endpoint are now the authoritative catalog surface. This hook will
- * reliably 404 in production. Kept (not removed) because the
- * `features/dashboard` SignalCatalogWidget still imports it; its UI
- * surfaces the resulting query error gracefully. A future replacement
- * should source the catalog from `useSignals()` (via `/available`) or
- * from `protomodel.Signals` exposed through a new endpoint.
- */
+function validateSignalCatalog(payload: unknown): SignalsCatalogResponse {
+  const isRecord = (value: unknown): value is Record<string, unknown> =>
+    value != null && typeof value === 'object' && !Array.isArray(value);
+  const isIdentity = (value: unknown) =>
+    typeof value === 'string' && value.trim().length > 0;
+  const isTimestamp = (value: unknown) =>
+    typeof value === 'string'
+    && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/.test(value)
+    && Number.isFinite(Date.parse(value));
+  const isCount = (value: unknown) =>
+    value === null || (typeof value === 'number' && Number.isFinite(value) && value >= 0);
+
+  if (!isRecord(payload) || !Array.isArray(payload.signals) || !isTimestamp(payload.generated_at)) {
+    throw new Error('Invalid signal catalog envelope');
+  }
+  for (const [index, row] of payload.signals.entries()) {
+    if (!isRecord(row)
+      || !isIdentity(row.field)
+      || !isIdentity(row.destination)
+      || !isIdentity(row.value_kind)
+      || !(row.last_seen_at === null || isTimestamp(row.last_seen_at))
+      || !isCount(row.sample_count_total)
+      || !isCount(row.vehicle_count)) {
+      throw new Error(`Invalid signal catalog row at index ${index}`);
+    }
+  }
+  return payload as unknown as SignalsCatalogResponse;
+}
+
 export function useSignalCatalog() {
   return useQuery({
     queryKey: ['signal-catalog'],
-    queryFn: ({ signal }) => request<SignalCatalogEntry[]>('/signals/catalog', { signal }),
+    queryFn: async ({ signal }) =>
+      validateSignalCatalog(await request<unknown>('/signals/catalog', { signal })),
     staleTime: STALE_TIMES.SLOW,
   });
 }

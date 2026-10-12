@@ -50,7 +50,7 @@ export default function SignalCatalogWidget({ vehicleId, size }: WidgetProps) {
   const [search, setSearch] = useState('');
   const isCompact = size.cols <= 1;
 
-  const entries = catalog ?? [];
+  const entries = useMemo(() => catalog?.signals ?? [], [catalog]);
 
   const observationCounts = useMemo(() => {
     const counts = new Map<string, number>();
@@ -65,23 +65,23 @@ export default function SignalCatalogWidget({ vehicleId, size }: WidgetProps) {
     const q = search.toLowerCase();
     return entries.filter(
       (s) =>
-        (s.name ?? '').toLowerCase().includes(q) ||
-        (s.description ?? '').toLowerCase().includes(q) ||
-        (s.source_module ?? '').toLowerCase().includes(q),
+        s.field.toLowerCase().includes(q) ||
+        s.destination.toLowerCase().includes(q) ||
+        s.value_kind.toLowerCase().includes(q),
     );
   }, [entries, search]);
 
   const grouped = useMemo(() => {
     const map = new Map<string, typeof filtered>();
     for (const entry of filtered) {
-      const cat = entry.source_module || t('widget.signalCatalog.uncategorized', 'Uncategorized');
+      const cat = entry.destination;
       const list = map.get(cat) ?? [];
       list.push(entry);
       map.set(cat, list);
     }
     // Sort categories alphabetically
     return Array.from(map.entries()).sort(([a], [b]) => a.localeCompare(b));
-  }, [filtered, t]);
+  }, [filtered]);
 
   return (
     <WidgetShell
@@ -115,6 +115,9 @@ export default function SignalCatalogWidget({ vehicleId, size }: WidgetProps) {
             onChange={(e) => setSearch(e.target.value)}
             className="min-h-[44px]"
           />
+          <Text variant="caption">
+            {t('widget.signalCatalog.metadataUnavailable', 'Unit and description are not provided by this catalog.')}
+          </Text>
           {observations == null || observationState.refreshError || observationState.isRefreshBlocked ? (
             <SourceContent
               state={sourceBoundaryState(observationState, observations != null)}
@@ -142,29 +145,38 @@ export default function SignalCatalogWidget({ vehicleId, size }: WidgetProps) {
               {grouped.map(([category, signals]) => (
                 <div key={category}>
                   <Subhead className="mb-1 sticky top-0 bg-[var(--surface-2)] py-1 px-1 rounded-shape-sm">
-                    {category}
-                    <span className="ms-1 text-[var(--text-muted)]">({signals.length})</span>
+                    {t('widget.signalCatalog.destination', 'Destination: {{destination}}', { destination: category })}
+                    <span className="ms-1 text-[var(--text-muted)]">({fmtInt(signals.length)})</span>
                   </Subhead>
                   <div className="space-y-0.5">
-                    {signals.map((sig, i) => {
-                      const name = sig.name ?? '';
+                    {signals.map((sig) => {
+                      const name = sig.field;
                       return (
                         <div
-                          key={name || `${category}-${i}`}
+                          key={name}
                           className="flex min-w-0 flex-wrap items-start gap-2 min-h-11 px-1 rounded-shape-sm hover:bg-[var(--surface-2)] transition-colors"
-                          title={sig.description ?? undefined}
                         >
                           <div className="flex-1 min-w-0">
-                          <Text variant="bodySm" mono className="block [overflow-wrap:anywhere]">
-                            {name || '—'}
-                          </Text>
-                          {sig.description && <Text as="p" variant="caption" className="[overflow-wrap:anywhere]">{sig.description}</Text>}
+                            <Text variant="bodySm" mono className="block [overflow-wrap:anywhere]">
+                              {name}
+                            </Text>
+                            <Text as="p" variant="caption" className="[overflow-wrap:anywhere]">
+                              {t('widget.signalCatalog.totalSamples', 'Total observations: {{count}}', {
+                                count: sig.sample_count_total == null ? '—' : fmtInt(sig.sample_count_total),
+                              })}
+                              {' · '}
+                              {t('widget.signalCatalog.vehicleCount', 'Vehicles observed: {{count}}', {
+                                count: sig.vehicle_count == null ? '—' : fmtInt(sig.vehicle_count),
+                              })}
+                              {' · '}
+                              {t('widget.signalCatalog.lastSeen', 'Last seen: {{timestamp}}', {
+                                timestamp: sig.last_seen_at ?? '—',
+                              })}
+                            </Text>
                           </div>
-                          {sig.unit && (
-                            <Badge variant="neutral" className="text-2xs shrink-0">
-                              {sig.unit}
-                            </Badge>
-                          )}
+                          <Badge variant="neutral" className="text-2xs shrink-0 [overflow-wrap:anywhere]" title={t('widget.signalCatalog.valueKind', 'Value kind')}>
+                            {sig.value_kind}
+                          </Badge>
                           <Caption className="tabular-nums shrink-0 min-w-9 text-end" title={t('widget.signalCatalog.sampleCount', 'Observations in fetched sample')}>
                             {observations == null ? '—' : fmtInt(observationCounts.get(name) ?? 0)}
                           </Caption>

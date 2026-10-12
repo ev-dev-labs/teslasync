@@ -690,21 +690,97 @@ describe('useMQTTStatus', () => {
   })
 })
 
-// ─── useSignalCatalog (deprecated 404 endpoint) ───────────────────────────────
+// ─── useSignalCatalog (validated canonical envelope) ─────────────────────────
 
 describe('useSignalCatalog', () => {
-  it('requests the deprecated /signals/catalog route', async () => {
-    mockedRequest.mockResolvedValueOnce([{ name: 'X' }])
+  const timestamp = '2026-10-11T12:00:00Z'
+  const unobserved = {
+    field: 'X', destination: 'signal_log', value_kind: 'ValueKindFloat',
+    last_seen_at: null, sample_count_total: null, vehicle_count: null,
+  }
+  const canonical = {
+    signals: [
+      unobserved,
+      { ...unobserved, field: 'Y', last_seen_at: timestamp, sample_count_total: 250, vehicle_count: 2 },
+      { ...unobserved, field: 'Zero', sample_count_total: 0, vehicle_count: 0 },
+    ],
+    generated_at: timestamp,
+  } satisfies import('@/types/signals').SignalsCatalogResponse
+
+  it('requests /signals/catalog and preserves canonical observed, unobserved and zero metadata', async () => {
+    mockedRequest.mockResolvedValueOnce(canonical)
     const { result } = renderHook(() => useSignalCatalog(), { wrapper: makeWrapper() })
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
     expect(mockedRequest.mock.calls[0][0]).toBe('/signals/catalog')
+    expect(mockedRequest.mock.calls[0][1].signal).toBeInstanceOf(AbortSignal)
+    expect(result.current.data).toEqual(canonical)
+    expect(result.current.data!.signals[0].sample_count_total).toBeNull()
+    expect(result.current.data!.signals[2].sample_count_total).toBe(0)
   })
 
-  it('surfaces the 404 the deprecated endpoint reliably returns as isError', async () => {
-    mockedRequest.mockRejectedValueOnce(new Error('404 not found'))
+  it('propagates the actual request error without success-shaped fallback data', async () => {
+    const error = new Error('catalog source unavailable')
+    mockedRequest.mockRejectedValueOnce(error)
     const { result } = renderHook(() => useSignalCatalog(), { wrapper: makeWrapper() })
     await waitFor(() => expect(result.current.isError).toBe(true))
-    expect(result.current.error).toBeInstanceOf(Error)
+    expect(result.current.error).toBe(error)
+    expect(result.current.data).toBeUndefined()
+  })
+
+  it('accepts an authoritative successful empty catalog envelope', async () => {
+    const empty = { signals: [], generated_at: timestamp }
+    mockedRequest.mockResolvedValueOnce(empty)
+    const { result } = renderHook(() => useSignalCatalog(), { wrapper: makeWrapper() })
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+    expect(result.current.data).toEqual(empty)
+  })
+
+  const malformed: Array<[string, unknown]> = [
+    ['legacy bare array', [unobserved]],
+    ['null envelope', null],
+    ['missing signals', { generated_at: timestamp }],
+    ['null signals', { signals: null, generated_at: timestamp }],
+    ['missing generated timestamp', { signals: [] }],
+    ['invalid generated timestamp', { signals: [], generated_at: 'not a date' }],
+    ['null generated timestamp', { signals: [], generated_at: null }],
+    ['invalid row', { signals: [null], generated_at: timestamp }],
+    ...[
+      { field: undefined }, { field: '' }, { field: 12 },
+      { destination: null }, { destination: ' ' },
+      { value_kind: null }, { value_kind: 1 }, { value_kind: '' },
+      { last_seen_at: undefined }, { last_seen_at: 42 }, { last_seen_at: 'invalid' },
+      { sample_count_total: undefined }, { sample_count_total: -1 },
+      { sample_count_total: Number.NaN }, { sample_count_total: Infinity },
+      { sample_count_total: '1' }, { vehicle_count: undefined },
+      { vehicle_count: -1 }, { vehicle_count: Infinity }, { vehicle_count: '0' },
+    ].map((override, index): [string, unknown] => [
+      `invalid required row metadata ${index}`,
+      { signals: [unobserved, { ...unobserved, ...override }], generated_at: timestamp },
+    ]),
+  ]
+
+  it.each(malformed)('rejects %s rather than succeeding or silently dropping rows', async (_label, payload) => {
+    mockedRequest.mockResolvedValueOnce(payload)
+    const { result } = renderHook(() => useSignalCatalog(), { wrapper: makeWrapper() })
+    await waitFor(() => expect(result.current.isError).toBe(true))
+    expect(result.current.error?.message).toMatch(/^Invalid signal catalog/)
+    expect(result.current.isSuccess).toBe(false)
+    expect(result.current.data).toBeUndefined()
+  })
+
+  it('retains the last valid canonical cache when a malformed refresh fails validation', async () => {
+    const client = makeClient()
+    mockedRequest.mockResolvedValueOnce(canonical)
+    const { result } = renderHook(() => useSignalCatalog(), { wrapper: makeWrapper(client) })
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+    mockedRequest.mockResolvedValueOnce({
+      signals: [{ ...unobserved, field: undefined }], generated_at: timestamp,
+    })
+    await act(async () => { await result.current.refetch() })
+    await waitFor(() => expect(result.current.isError).toBe(true))
+    expect(result.current.error?.message).toMatch(/^Invalid signal catalog row/)
+    expect(result.current.data).toEqual(canonical)
+    expect(client.getQueryData(['signal-catalog'])).toEqual(canonical)
   })
 })
 

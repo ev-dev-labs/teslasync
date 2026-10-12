@@ -25,18 +25,48 @@ original callbacks/3fixtures/entire test prefix and3additive real UnitInput
 cases. Physical171lines and2LayoutCards remain. Selected11tests native0
 and strict2pathlint native0/empty streams are verified; raw i18n warnings
 and parent evidence-helper matcher/count failures are retained.
-Only its two reported shipping paths plus this queue are accepted for a
-normal scoped source commit. This is not full compiler/browser/Phase4
-acceptance. Signal source-ready cc7c6c9c has delivered idle with its exact
-source lease held and no validation lease; independently intake that
-unvalidated preparation before explicit generator/validation handoff.
+Only its two reported shipping paths plus this queue were normally
+committed85e7bcd2/actual1052, with exact paths/index/inherited preservation
+verified3e47ba74/5e40fd87. This is not full compiler/browser/Phase4 acceptance.
+Signal source-readycc7c6c9c has been independently intaken050e9fbf/660checks:
+seven prepared files,203protectedcurrent/185generated,50noncatalog
+callbacks and all local contracts preserved; six English additions only.
+Its idle source-ready delivery retained the exact source lease, not a
+validation lease or repair acceptance. StopScore's release and commit
+allowed explicit same-task serial generation/selected-validation handoff,
+registered7a833a98. Only deterministic changed outputs on the185existing
+allowlisted paths may be generated; normal splittercheck, coupled4file
+Vitest and strict6pathlint were pending at handoff. No new running count inferred
+from message delivery. Parent context/snapshot-schema helper failures and
+their raw streams are retained without spending/resetting source trials.
 
-Latest source commit:d61e949844/actual1051, accepted battery category-hook
-closure. Warranty tab/panel source6ae2dfb4b0/actual1049 follows live-read
+Canonical signal repair has now delivered idleDONE/released, report6223351d.
+Independent terminal intakea60726dc verifies7244pins: nine shipping paths,
+185deterministic generated outputs/183original byteexact,201unchanged
+original inputs and6145declared TS/TSX current sourcegraph hashes. All
+prepared sources remain unchanged except the exact single new-test selector
+inverse; original local types,50unrelated hook callbacks and six English
+additions remain preserved by independently accepted preparation pins.
+Normal splittercheck native0; final coupled4files/130tests native0;
+strict6pathESLint native0 with empty streams. Trial1Vitest native1 from
+ambiguous Refresh controls is retained; trial2 narrows only its new selector
+to Refresh data, with production/request/retention assertions unchanged.
+Source/selected-validation trials2of2 are spent; no third trial or reset.
+Both leases are released; actualrunning0/pendingintakes0. Parent numeric
+count/aftergraph schema helper failures and raw streams remain preserved.
+This is source-only acceptance awaiting exact9path-plus-queue normal commit,
+not full compiler/browser/Phase4/whole-application acceptance.
+
+Latest source commit:85e7bcd2e9/actual1052, accepted canonical StopScore
+input/submission repair. Exact two shipping paths and this queue were
+normally committed; receipt3e47ba74/verification5e40fd87 proves exact3paths,
+empty index and preserved unrelated statuses/untracked bytes. Prior battery
+category-hook closure:d61e949844/actual1051. Warranty source6ae2dfb4b0/1049 follows live-read
 source16f6aba4b5/actual1048. Installed local API/web remain1049 with executable
 commit and served-bundle identity verified. Source-only acceptance does not
-imply whole-application acceptance: Dashboard stats500 and the mounted
-signal-catalog widget iterable exception remain. Phase4 remains open.
+imply whole-application acceptance: Dashboard stats500 remains unresolved;
+the mounted1049 signal-catalog iterable exception has a source-only accepted
+repair not yet installed or runtime-proved. Phase4 remains open.
 Rollout-bookkeeping commit28fa2a76f8 is actual1050. The explicit mandatory
 compiler1050 passed afterward: native0, stdout0bytes/stderr0bytes, with
 6707 source inputs unchanged and no source actors. Parent receipt1b9ce366
@@ -89,7 +119,7 @@ Schedule21 remains active; schedules19/20 remain stopped.
 | [x] | 4 | phase4-latest-local-docker-rollout | parent exact existing local project | Latest1049API/web built and runninghealthy atlocalhost:3119/127.0.0.1:8080. Nativebuild0/up0; realhealth/readiness/web/live200, exact executable/bundlecommitverified,6othercontainersunchanged,255clean. Mounted Dashboard500/widgeterror observed and recorded, not whole-app/native/axe/phase acceptance. Session exact build/up/final verification receipts preserve warnings/failures. |
 | [x] | 4 | phase4-local-signal-catalog-widget-shape | read-only actor509374e0-3bdc-4429-bf8c-2b155c60f16e | Attempt1idleDONE/released, diagnostic-only intake366ffc37/56checks. Actual API catalog envelope and canonical field/destination/value_kind rows contradict declared array/legacy row fields; widget line76 iterates the envelope. Four bounded GETs200/projection correction preserved. Exact minified-frame attribution remains inferred; no shipping edits/tests/runtime acceptance. Shared-hook consumer scope needs a separate pinned read-only amendment before source repair. |
 | [x] | 4 | phase4-signal-catalog-consumer-scope | retained diagnostic actor509374e0; read-only amendment independently intaken | Report0d4c23b5/intake64756659 verifies8matched source/snapshotpins and22exact reference lines, one named runtime hook consumer. SignalCatalogEntry also types the tested local narrowSignal discriminator; preserve that contract and add separate canonical API row/envelope types. Existing catalog block in __tests__/useTelemetry.test.tsx must join the repair scope. Original report12435652/intake366ffc37 unchanged. No source/test/runtime acceptance. |
-| [~] | 4 | phase4-signal-catalog-canonical-repair | recoveryactora43c7ce3; cleared509374e0 history preserved | Crashreceiptacc16ae1 confirms no source edits/trials, exact211input baselinee2914e8d current. Launch5843c6df continues first source-preparation attempt: six source/test paths, English widget keys and185exact future generated-only artifacts. Preserve local narrowSignal/SignalCatalogEntry, unrelated hooks/test callbacks and known-missing. Canonical envelope/field/destination/value_kind, nullable unknown metadata and independent sample trust; no invented units/descriptions or invalid-data success fallback. ALL generator/test/lint runners withheld until explicit parenthandoff after StopScore release; unique crash-source-ready report first. |
+| [x] | 4 | phase4-signal-catalog-canonical-repair | deliveredidleDONE/released; independently source-only accepteda60726dc | Finalreport6223351d/intakea60726dc verifies7244pins, exact9shippingpaths,185deterministic generated matches/183unchanged,201protected original inputs and6145declared TS/TSX final hashes. Earlier preparation050e9fbf preserves local types/unrelatedhookfunctions/50noncatalogcallbacks and6Englishadditionsonly. Exact new-test Refresh data selector inverse is the only prepared-source delta. Splittercheck native0; final4files130tests/native0; strict6pathlint native0/empty streams. Trial1Vitest failure and parent schema-helper failures retained. Source/validation2of2 spent/no reset/thirdtrial; sourcelease[]/validationleasenull/processes0. Await exact9paths-plus-queue normal commit; no browser/Phase4/fullcompiler/whole-app acceptance. Protectedratchets/artifactallowlist unchanged. |
 
 ### Health21 continuation after the local rollout
 
