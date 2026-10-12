@@ -56,13 +56,25 @@ Do not claim those later hashes identify the running images. Roll out an immutab
 accepted root snapshot after current workers settle; do not build during live work.
 Production `npx tsc --noEmit` exited0 after the shared type edit; its narrow
 repository audit also ran the compiler successfully. Both sequential Docker
-builds of the deployed snapshot passed. Current full lint was actually run and
-exited1 at the query-signal audit: `useWatch.ts:191,210` uses queryFn factories
-that the audit cannot statically verify. This is not yet proof of a runtime
-cancellation defect. The serialized full frontend test gate finished exit1:
+builds of the deployed snapshot passed. The earlier full lint exited1 at the
+query-signal audit: `useWatch.ts:191,210` used queryFn factories that the audit
+could not statically verify. This was not proof of a runtime cancellation defect.
+After the accepted Watch repair, the actual stable full `npm run lint` at
+`a61cb003f` exits0, reaching every later chained audit. Raw log:
+`logs\full-suite-phase4-lint-20261012T102241Z.log`; the thresholded8/9 help
+adoption finding remains reported, not falsely described as zero findings.
+The earlier serialized full frontend test gate finished exit1:
 45179 expanded tests,44915 passed,264 failed,0 pending,2438 file records and9
 nonpassing files. The33 failed suite records include describe blocks, not33
-files. No full-test pass or pilot browser acceptance is claimed.
+files. The justified stable full Vitest rerun at `a61cb003f` completed exit0:
+45187/45187 passed, zero failed/pending, all2438 physical files passed.
+Raw/JSON evidence: `logs\full-suite-phase4-tests-20261012T102523Z.*`;
+duration2636.50s. It ran with two forks, sequentially after lint. The following
+checkout `npm run build` also exits0, including production/SW typechecks,
+Vite, bundle/PWA and checkout source-map serving checks. Raw log:
+`logs\full-suite-phase4-build-20261012T111221Z.log`. Startup JS396.9KB
+passes the unchanged400KB budget; locality attribution is explicitly N/A
+without private source maps. This accepts the technical gate, not native QA.
 The original four canonical-schema regression cases are preserved
 and now pass. Latest selected eight-package Go race run has282 RUN/PASS
 entries, zero FAIL/SKIP, exit0; actual API binary compilation exits0.
@@ -132,6 +144,17 @@ empty `VITE_OTLP_HTTP_ENDPOINT`: the optional tracing collector is not running.
 This removes the observed localhost4318 CSP-export spam without changing `.env`,
 CSP, backend configuration, or source observability behavior. Same-origin web
 vitals remain enabled; the read-only QA helper blocks their POST and reports it.
+
+An immutable full-root candidate for `a61cb003f` is now prepared in the existing
+session deployment area. It excludes the local `.env`; Watch, Dashboard,
+package lock and both Dockerfiles match their committed Git objects. This is
+not a running-image claim. The stable technical gate passed and the session
+snapshot state now targets this candidate; the existing deployment helper is
+actually building API then web and will check readiness/revisions/service worker
+before reporting the rollout complete. Until that verification succeeds,
+the previous running55e519031 evidence remains the last completed rollout.
+Its fixed-name build/start/runtime receipts and snapshot JSON were preserved
+under `S\local-docker-55e519031-before-a61cb003f` before log reuse.
 
 Official Playwright browser installs failed twice on Node download timeouts.
 Restored the exact official Headless Chrome153.0.8010.12/rev1243 archive through
@@ -324,11 +347,11 @@ completion does not mean the corresponding page was migrated.
 | 1 | 87 | 0 | 0 | 0 | 0 | 1 |
 | 2 | 27 | 0 | 0 | 0 | 0 | 0 |
 | 3 | 696 | 0 | 0 | 0 | 0 | 118 |
-| 4 | 32 | 0 | 0 | 3 | 4 | 34 |
+| 4 | 33 | 0 | 0 | 2 | 4 | 34 |
 | 5 | 0 | 0 | 0 | 0 | 1 | 1 |
 | 6 | 10 | 0 | 0 | 0 | 1 | 0 |
 | 7 | 0 | 0 | 0 | 0 | 1 | 0 |
-| Total | 1092 | 0 | 0 | 3 | 7 | 158 |
+| Total | 1093 | 0 | 0 | 2 | 7 | 158 |
 
 There are1,260 rows: the original1,243 plus seventeen narrow failures discovered
 by actual checks. No source claim or running worker remains after twelve accepted
@@ -337,8 +360,15 @@ partial source is committed, not accepted. Lifecycle completion was intaken by
 exact ID before its claim was released. Remaining slots are not filled with
 fake/provenance work. The serialized stable Phase4 technical gate is now eligible.
 The combined Phase6 sweep has not
-begun; only explicit gate repairs are pulled early. Original pilot acceptance
-gates the aggregate later-phase placeholders.
+begun; only explicit gate repairs are pulled early. Original pilot acceptance gates the aggregate later-phase placeholders.
+The native gate's real capture dependency is now recorded explicitly as
+`phase4-qa-native-sticky-scroll-cycle`; the three pilot acceptance rows need
+that native gate and the technical gate, not source re-migration. The failed
+capture dependency transitively blocks all three original pilots. The user's
+ONE blocker-rescue exception is therefore eligible only for the precise
+measured painted-fragment inventory defect, after the stable technical gate
+and latest Docker rollout; it does not reset attempt2 or authorize another
+generic changing-extent retry.
 Actual `git rev-list --count HEAD` is1469 at `3a0c50f47`. The production compiler
 cadence1466 at `08a970bf8` exits0, with another production compiler pass in the
 exact Dashboard audit at1467. Next scheduled cadence1481. Old1065 prose was stale.
@@ -507,8 +537,8 @@ contrast, performance, or accessibility acceptance.
 | --- | --- |
 | Dashboard statistics | Original500 fixed and deployed at55e519031. Canonical schema/auth/nullable metadata regressions pass; stats200, scoped fixtures and all seven exact calendar-month independent SQL aggregates verified with zero boundary records. Historical all-time proxy was invalid. Nullable query contract accepted atb60b34fcb; no remaining stats500 blocker. |
 | Three-page pilot QA | Helper correction6bcbb5d2d preserves35 passing cases and real non-pass findings. Dark Settings has18 diagnostic PNGs, but the complete three-page visual/responsive/state/axe gate remains unaccepted. |
-| Current full lint | Actual gate exit1 at query-signal audit for two `useWatch.ts` queryFn factories; remaining chained audits were not reached. Do not infer runtime cancellation failure or claim full lint clean. |
-| Current full tests | Actual45179/44915/264/0, exit1. Nine nonpassing files contain historical whole-source/catalog/config projection contracts, repeated through imported suites. Each has one exclusive repair owner; no source/catalog rollback or blind hashes authorized. |
+| Current full lint | Stable actual `npm run lint` at `a61cb003f` exits0, reaching all chained audits. Earlier exit1 is retained. Help adoption remains8/9 at its unchanged floor8; no zero-finding claim. |
+| Current full tests | Stable full rerun at `a61cb003f` passes45187/45187,0failed/pending,2438/2438 physical files, exit0. Earlier45179/44915/264/0 exit1 is retained; no native acceptance follows. |
 | Native Drive History capture | Second changing-extent attempt FAILED; partial helper/test WIP `3a0c50f47`,60/60 Node cases. Reversible insertion is accommodated but effective painted fragments are not; all four native dark widths remain BLOCKED/exit2. Partial PNGs are not all-section acceptance; claim released. |
 | Dashboard mobile toolbar | Accepted `e15758f41`: existing scope-first prop; all20 required dark/light view rows measure exact0px2 overlap with no root/body overflow. Optional edit probe/full-pilot acceptance remains incomplete. |
 | Dashboard layout writes | Three PUTs aborted during navigation without an explicit edit; exact initiator/root cause unknown. No source fix. Preserve legitimate autosave/autofit/draft recovery. |
@@ -568,10 +598,10 @@ historical evidence; its retained canonical cases now pass through production fi
 | Performance sweep completed | Not complete |
 | Visual consistency sweep completed | Not complete |
 | No major duplicated UI patterns remain | Not established across the application |
-| TypeScript passes | Current production check0; both Docker build compilers passed |
-| Lint passes | Changed scopes passed; current full gate exit1 at query-signal audit, later chained audits not run |
-| Tests pass | Scoped frontend65 and DashboardStatsWidget63 cases passed; QA Node35 passed; selected eight-package Go race282 RUN/PASS entries with0 FAIL/SKIP, exit0; complete current frontend gate45179 total/44915 pass/264 fail/0 pending, exit1 |
-| Production build passes | Deployed55e519031 sequential API/web Docker builds0; not pilot visual acceptance or a later-HEAD build claim |
+| TypeScript passes | Actual prior production npx checks0; stable checkout build at1470 passes production/SW compilers |
+| Lint passes | Stable full `npm run lint` at `a61cb003f` exits0; earlier query-audit failure preserved |
+| Tests pass | Stable full45187/45187,2438/2438 files,0fail/pending, exit0 at `a61cb003f`; partial QA helper60/60 Node cases but native fails; selected eight-package Go race282 RUN/PASS entries with0 FAIL/SKIP, exit0. Earlier red evidence retained |
+| Production build passes | Stable checkout npm build at `a61cb003f` exits0 with bundle/PWA/source-map checks. Latest Docker candidate build/rollout in progress;55e519031 remains the last completed runtime verification until newer revisions/readiness are checked |
 
 ## What slowed this session down / avoid repeating
 
@@ -654,16 +684,17 @@ historical machine and was preserved in its prior handoff, not re-created here:
 1. Read this handoff, queue, current contract, relevant instructions, and
    `git status`. All known workers are terminal/released; preserve original WIP
    and untracked data, but do not resurrect finished reservations.
-2. Run the now-eligible serialized Phase4 full lint/test/build gate, retaining
-   actual logs/JSON and original repair budgets. The nine-file8759-case scoped
-   integration is already complete; do not rerun it for provenance.
-   Roll the accepted shipping changes into an immutable committed full-root
+2. The stable Phase4 full lint/test/checkout build gate is accepted at
+   `a61cb003f`; do not repeat it or the8759-case integration for provenance.
+   Finish rolling the accepted shipping changes into the immutable committed full-root
    Docker snapshot, verify both revision labels/service worker and exact
    operational/history/independent monthly SQL contracts. Preserve test data.
 3. Keep accepted Maintenance, Dismiss, SignalCatalog, canonical vehicle,
    QA-helper and nullable stats fixes complete. Their
    scoped validation is done; do not redispatch them or replace original tests.
-4. Review actual Dashboard layout PUT provenance before changing autosave behavior.
+4. Preserve the exhausted Dashboard implicit-layout-save issue and legitimate
+   autosave/autofit/draft recovery; do not reopen it through the accepted toolbar
+   change or speculate about a mount defect.
 5. Reuse the accepted helper and real dark Settings captures; complete the
    remaining coherent original-plan
    three-page pilot technical and mounted QA pass. Preserve real resource findings
