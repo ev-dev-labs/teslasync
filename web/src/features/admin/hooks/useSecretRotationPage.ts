@@ -56,10 +56,10 @@ export function useSecretRotationPage() {
   const okPct = total > 0 ? `${Math.round((counts.ok / total) * 100)}%` : '—';
 
   const oldest = useMemo(
-    () => items.reduce<SecretRotationStatus | null>(
-      (best, r) => (best === null || (r.age_days ?? 0) > (best.age_days ?? 0) ? r : best),
-      null,
-    ),
+    () => items.reduce<SecretRotationStatus | null>((best, r) => {
+      if (r.age_days == null) return best;
+      return best === null || r.age_days > best.age_days ? r : best;
+    }, null),
     [items],
   );
 
