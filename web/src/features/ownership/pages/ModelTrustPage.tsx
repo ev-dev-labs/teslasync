@@ -1,4 +1,4 @@
-import { type FormEvent, useMemo, useState } from 'react';
+import { type FormEvent, useMemo, useRef, useState } from 'react';
 import { Activity, Crosshair, TrendingDown, TrendingUp } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -25,7 +25,7 @@ import { AlertBanner } from '@/components/feedback';
 
 import { PageLayout } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
-import { Badge, Button, DataTable, Input, Select, Text } from '@/components/ui';
+import { Badge, Button, DataTable, Icon, Input, Select, Text } from '@/components/ui';
 import type { Column } from '@/components/ui';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
@@ -43,6 +43,9 @@ import { OwnershipBrief } from '../components/operationalbrief-all/OwnershipBrie
 import { specialistDisplay } from '../components/operationalbrief-all/specialistDisplay';
 import { daysToSeconds, formatPct, formatSignedPct, formatSpan } from '../formatters';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { useChartPalette } from '@/hooks/useChartPalette';
+import { cn } from '@/lib/cn';
+import { glassCardClasses, neonColorMap } from '@/lib/tokens';
 
 const WINDOW_OPTIONS = [30, 60, 90, 180, 365];
 
@@ -78,13 +81,6 @@ type PredictionTarget = keyof typeof PREDICTION_TARGET_UNITS;
 
 const PREDICTION_TARGETS = Object.keys(PREDICTION_TARGET_UNITS) as PredictionTarget[];
 
-function gradeTone(grade: string): 'positive' | 'warning' | 'critical' | 'default' {
-  if (grade === 'trusted') return 'positive';
-  if (grade === 'watch') return 'warning';
-  if (grade === 'unreliable') return 'critical';
-  return 'default';
-}
-
 export default function ModelTrustPage() {
   const { fmtNumber, fmtScientificNumber, fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
@@ -92,7 +88,11 @@ export default function ModelTrustPage() {
   const [windowDays, setWindowDays] = useState(90);
   const [activeModel, setActiveModel] = useState<string | null>(null);
   const [predictOpen, setPredictOpen] = useState(false);
+  const [predictVehicleId, setPredictVehicleId] = useState<number | null>(null);
   const [outcomeFor, setOutcomeFor] = useState<number | null>(null);
+  const [outcomeVehicleId, setOutcomeVehicleId] = useState<number | null>(null);
+  const predictInstance = useRef(0);
+  const outcomeInstance = useRef(0);
   const [predictDraft, setPredictDraft] = useState({
     model_name: '',
     target: 'range_m' as PredictionTarget,
@@ -108,6 +108,9 @@ export default function ModelTrustPage() {
   usePageTitle(t('ownership.trust.navTitle', 'Prediction accuracy lab'));
 
   const calibrationHidden = useHiddenSeries('model-trust-calibration');
+  const chartPalette = useChartPalette();
+  const predictScopeMatches = predictVehicleId != null && predictVehicleId === vehicleId;
+  const outcomeScopeMatches = outcomeVehicleId != null && outcomeVehicleId === vehicleId;
 
   const trustQuery = useModelTrust(vehicleId, windowDays);
   const recordPrediction = useRecordPrediction();
@@ -131,9 +134,9 @@ export default function ModelTrustPage() {
     () =>
       (selectedCard?.calibration ?? []).map((bin) => ({
         name: `${fmtNumber(bin.lower_pct)}–${fmtNumber(bin.upper_pct)}%`,
-        error: Number(bin.mean_abs_error.toFixed(3)),
-        bias: Number(bin.mean_bias.toFixed(3)),
-        coverage: bin.coverage_pct != null ? Number(bin.coverage_pct.toFixed(1)) : null,
+        error: bin.mean_abs_error,
+        bias: bin.mean_bias,
+        coverage: bin.coverage_pct,
         samples: bin.sample_count,
       })),
     [selectedCard, fmtNumber],
@@ -141,10 +144,11 @@ export default function ModelTrustPage() {
 
   const submitPrediction = (event: FormEvent) => {
     event.preventDefault();
-    if (vehicleId == null) return;
+    if (predictVehicleId == null || !predictScopeMatches || recordPrediction.isPending) return;
+    const instance = predictInstance.current;
     recordPrediction.mutate(
       {
-        vehicle_id: vehicleId,
+        vehicle_id: predictVehicleId,
         model_name: predictDraft.model_name,
         target: predictDraft.target,
         si_unit: predictDraft.si_unit,
@@ -155,20 +159,25 @@ export default function ModelTrustPage() {
         predicted_high: predictDraft.predicted_high,
         reference: predictDraft.reference,
       },
-      { onSuccess: () => setPredictOpen(false) },
+      { onSuccess: () => {
+        if (predictInstance.current === instance) setPredictOpen(false);
+      } },
     );
   };
 
   const submitOutcome = (event: FormEvent) => {
     event.preventDefault();
-    if (outcomeFor == null) return;
+    if (outcomeFor == null || !outcomeScopeMatches || recordOutcome.isPending) return;
+    const instance = outcomeInstance.current;
     recordOutcome.mutate(
       {
         prediction_id: outcomeFor,
         observed_value: outcomeDraft.observed_value,
         observed_at: new Date().toISOString(),
       },
-      { onSuccess: () => setOutcomeFor(null) },
+      { onSuccess: () => {
+        if (outcomeInstance.current === instance) setOutcomeFor(null);
+      } },
     );
   };
 
@@ -220,14 +229,13 @@ export default function ModelTrustPage() {
       render: (row) =>
         row.abs_error_pct != null ? (
           <span
-            className={`tabular-nums ${row.abs_error_pct > 25 ? 'text-rose-300' : row.abs_error_pct > 10 ? 'text-amber-300' : 'text-emerald-300'}`}
+            className={cn('tabular-nums', row.abs_error_pct > 25 ? neonColorMap.red.text : row.abs_error_pct > 10 ? neonColorMap.amber.text : neonColorMap.green.text)}
           >
             {formatPct(row.abs_error_pct)}
           </span>
         ) : (
           '—'
         ),
-      sortable: true,
     },
     {
       key: 'interval',
@@ -258,7 +266,6 @@ export default function ModelTrustPage() {
           {formatDateTime(row.predicted_at)}
         </Text>
       ),
-      sortable: true,
     },
     {
       key: 'actions',
@@ -268,7 +275,12 @@ export default function ModelTrustPage() {
           <Button
             variant="ghost"
             size="sm"
+            className="min-h-11 md:min-h-9"
+            wrapLabel
+            disabled={recordOutcome.isPending}
             onClick={() => {
+              outcomeInstance.current += 1;
+              setOutcomeVehicleId(row.vehicle_id);
               setOutcomeDraft({ observed_value: row.predicted_value });
               setOutcomeFor(row.id);
             }}
@@ -302,14 +314,13 @@ export default function ModelTrustPage() {
       key: 'grade',
       header: t('ownership.trust.card.grade', 'Trust'),
       render: (row) => (
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <VerdictBadge value={row.trust_grade} />
-          <span className="tabular-nums text-xs text-[var(--text-muted)]">
+          <Text as="span" variant="caption" className="tabular-nums">
             {fmtNumber(row.trust_score)}/100
-          </span>
+          </Text>
         </div>
       ),
-      sortable: true,
     },
     {
       key: 'samples',
@@ -326,7 +337,6 @@ export default function ModelTrustPage() {
       align: 'right',
       header: t('ownership.trust.card.mape', 'MAPE'),
       render: (row) => (row.mean_abs_pct_error != null ? formatPct(row.mean_abs_pct_error) : '—'),
-      sortable: true,
     },
     {
       key: 'median',
@@ -342,7 +352,7 @@ export default function ModelTrustPage() {
       render: (row) =>
         row.bias != null ? (
           <span
-            className={`tabular-nums ${row.bias > 0 ? 'text-amber-300' : row.bias < 0 ? 'text-indigo-300' : ''}`}
+            className={cn('tabular-nums', row.bias > 0 ? neonColorMap.amber.text : row.bias < 0 ? neonColorMap.blue.text : undefined)}
           >
             {fmtScientificNumber(row.bias, 3)} {row.si_unit}
           </span>
@@ -355,7 +365,7 @@ export default function ModelTrustPage() {
       align: 'right',
       header: t('ownership.trust.card.rmse', 'RMSE'),
       render: (row) =>
-        row.root_mean_square_error != null ? fmtScientificNumber(row.root_mean_square_error, 3) : '—',
+        row.root_mean_square_error != null ? `${fmtScientificNumber(row.root_mean_square_error, 3)} ${row.si_unit}` : '—',
     },
     {
       key: 'coverage',
@@ -364,7 +374,7 @@ export default function ModelTrustPage() {
       render: (row) =>
         row.interval_coverage_pct != null ? (
           <span
-            className={`tabular-nums ${Math.abs(row.interval_coverage_pct - 80) > 15 ? 'text-amber-300' : 'text-emerald-300'}`}
+            className={cn('tabular-nums', Math.abs(row.interval_coverage_pct - 80) > 15 ? neonColorMap.amber.text : neonColorMap.green.text)}
           >
             {formatPct(row.interval_coverage_pct)}
           </span>
@@ -379,7 +389,7 @@ export default function ModelTrustPage() {
       render: (row) =>
         row.skill_vs_naive_pct != null ? (
           <span
-            className={`tabular-nums ${row.skill_vs_naive_pct > 0 ? 'text-emerald-300' : 'text-rose-300'}`}
+            className={cn('tabular-nums', row.skill_vs_naive_pct > 0 ? neonColorMap.green.text : neonColorMap.red.text)}
           >
             {formatSignedPct(row.skill_vs_naive_pct)}
           </span>
@@ -392,14 +402,15 @@ export default function ModelTrustPage() {
       align: 'right',
       header: t('ownership.trust.card.drift', 'Drift'),
       render: (row) => (
-        <div className="flex items-center gap-1">
+        <div className="flex flex-wrap items-center gap-2">
           {row.drift_status === 'degrading' ? (
-            <TrendingDown className="h-4 w-4 text-rose-300" aria-hidden="true" />
+            <Icon icon={TrendingDown} size="md" className={neonColorMap.red.text} />
           ) : row.drift_status === 'improving' ? (
-            <TrendingUp className="h-4 w-4 text-emerald-300" aria-hidden="true" />
+            <Icon icon={TrendingUp} size="md" className={neonColorMap.green.text} />
           ) : (
-            <Activity className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />
+            <Icon icon={Activity} size="md" />
           )}
+          <VerdictBadge value={row.drift_status} dot={false} />
           <Text as="span" variant="caption">
             {row.drift_ratio != null ? fmtNumber(row.drift_ratio) : '—'}
           </Text>
@@ -415,6 +426,8 @@ export default function ModelTrustPage() {
             `${row.model_name}::${row.target}` === activeModel ? 'primary' : 'ghost'
           }
           size="sm"
+          className="min-h-11 md:min-h-9"
+          wrapLabel
           onClick={() => setActiveModel(`${row.model_name}::${row.target}`)}
         >
           {t('ownership.trust.card.inspect', 'Calibration')}
@@ -471,9 +484,9 @@ export default function ModelTrustPage() {
                 rawValue: report?.portfolio_trust_score,
                 display: specialistDisplay((raw) => `${fmtNumber(raw)}/100`),
                 tone:
-                  (report?.portfolio_trust_score ?? 0) >= 75
+                  report?.portfolio_trust_score != null && report.portfolio_trust_score >= 75
                     ? 'positive'
-                    : (report?.portfolio_trust_score ?? 0) >= 50
+                    : report?.portfolio_trust_score != null && report.portfolio_trust_score >= 50
                       ? 'warning'
                       : 'default',
               },
@@ -489,14 +502,14 @@ export default function ModelTrustPage() {
                 label: t('ownership.trust.stat.watch', 'On watch'),
                 rawValue: report?.watch_count,
                 display: specialistDisplay(fmtInt),
-                tone: (report?.watch_count ?? 0) > 0 ? 'warning' : 'default',
+                tone: report?.watch_count != null && report.watch_count > 0 ? 'warning' : 'default',
               },
               {
                 occurrenceId: 'unreliable', metricId: 'count',
                 label: t('ownership.trust.stat.unreliable', 'Unreliable'),
                 rawValue: report?.unreliable_count,
                 display: specialistDisplay(fmtInt),
-                tone: (report?.unreliable_count ?? 0) > 0 ? 'critical' : 'default',
+                tone: report?.unreliable_count != null && report.unreliable_count > 0 ? 'critical' : 'default',
               },
               {
                 occurrenceId: 'scored', metricId: 'count',
@@ -527,10 +540,19 @@ export default function ModelTrustPage() {
         >
           <DataTable
             columns={scorecardColumns}
-            mobileColumns={['model', 'grade', 'mape']}
+            mobilePresentation={{
+              roles: { model: 'title', grade: 'badge', mape: 'primary', samples: 'meta', drift: 'meta' },
+              displayValue: (row, key) => key === 'model' ? row.model_name
+                : key === 'grade' ? `${fmtNumber(row.trust_score)}/100`
+                : key === 'mape' ? row.mean_abs_pct_error == null ? '—' : formatPct(row.mean_abs_pct_error)
+                : key === 'samples' ? `${fmtInt(row.scored_count)} / ${fmtInt(row.pending_count)}`
+                : key === 'drift' ? row.drift_ratio == null ? '—' : fmtNumber(row.drift_ratio) : null,
+              inlineActions: (row) => scorecardColumns.find(column => column.key === 'inspect')?.render(row),
+            }}
             data={scorecards}
             keyExtractor={(row) => `${row.model_name}::${row.target}`}
             tableId="ownership-trust-scorecards"
+            caption={t('ownership.trust.cards.title', 'Model scorecards')}
           />
         </OwnershipPanel>
       </FadeIn>
@@ -553,25 +575,25 @@ export default function ModelTrustPage() {
             'ownership.trust.calibration.empty',
             'Select a scorecard with enough scored samples to plot its calibration.',
           )}
-          actions={<Crosshair className="h-4 w-4 text-cyan-300" aria-hidden="true" />}
+          actions={<Icon icon={Crosshair} size="md" />}
         >
           <ChartContainer
-            title={t('ownership.trust.calibration.chart', 'Mean absolute error and bias per bin')}
-            ariaLabel={t(
+            title={`${t('ownership.trust.calibration.chart', 'Mean absolute error and bias per bin')} (${selectedCard?.si_unit ?? '—'})`}
+            ariaLabel={`${t(
               'ownership.trust.calibration.aria',
               'Bar chart of mean absolute error and mean bias grouped by prediction magnitude bin',
-            )}
+            )} (${selectedCard?.si_unit ?? '—'})`}
             data={calibrationData}
             dataColumns={[
               { key: 'name', label: t('ownership.trust.calibration.col.bin', 'Prediction bin') },
               {
                 key: 'error',
-                label: t('ownership.trust.calibration.col.error', 'Mean absolute error'),
+                label: `${t('ownership.trust.calibration.col.error', 'Mean absolute error')} (${selectedCard?.si_unit ?? '—'})`,
                 format: (v) => fmtScientificNumber(v as number, 3),
               },
               {
                 key: 'bias',
-                label: t('ownership.trust.calibration.col.bias', 'Mean bias'),
+                label: `${t('ownership.trust.calibration.col.bias', 'Mean bias')} (${selectedCard?.si_unit ?? '—'})`,
                 format: (v) => fmtScientificNumber(v as number, 3),
               },
               {
@@ -587,20 +609,20 @@ export default function ModelTrustPage() {
               <BarChart data={calibrationData} margin={chartMargin}>
                 <CartesianGrid {...chartGrid} />
                 <XAxis dataKey="name" tick={axisTick} />
-                <YAxis tick={axisTick} />
-                <Tooltip content={<ChartTooltip />} />
+                <YAxis tick={axisTick} tickFormatter={(value: number) => fmtScientificNumber(value, 3)} unit={selectedCard?.si_unit} />
+                <Tooltip content={<ChartTooltip valueFormatter={(value) => typeof value === 'number' ? `${fmtScientificNumber(value, 3)} ${selectedCard?.si_unit ?? '—'}` : '—'} />} />
                 <ChartLegend state={calibrationHidden} />
                 <Bar
                   dataKey="error"
                   name={t('ownership.trust.calibration.col.error', 'Mean absolute error')}
-                  fill="rgba(34,211,238,0.65)"
+                  fill={chartPalette[0]}
                   radius={[4, 4, 0, 0]}
                   hide={calibrationHidden.isHidden('error')}
                 />
                 <Bar
                   dataKey="bias"
                   name={t('ownership.trust.calibration.col.bias', 'Mean bias')}
-                  fill="rgba(251,191,36,0.5)"
+                  fill={chartPalette[1]}
                   radius={[4, 4, 0, 0]}
                   hide={calibrationHidden.isHidden('bias')}
                 />
@@ -614,7 +636,7 @@ export default function ModelTrustPage() {
                 {selectedCard.narrative}
               </Text>
               <div className="flex flex-wrap gap-2">
-                <Badge variant={gradeTone(selectedCard.trust_grade) === 'positive' ? 'success' : 'warning'}>
+                <Badge variant="neutral">
                   {t('ownership.trust.calibration.first', 'First scored {{when}}', {
                     when: selectedCard.first_scored_at
                       ? formatDateTime(selectedCard.first_scored_at)
@@ -644,19 +666,33 @@ export default function ModelTrustPage() {
             'ownership.trust.predictions.subtitle',
             'Record a forecast before the fact, then score it once the outcome is known. Nothing here can be edited after the fact.',
           )}
-          empty={predictions.length === 0 && !predictOpen}
+          empty={predictions.length === 0 && !predictOpen && outcomeFor == null}
           emptyMessage={t(
             'ownership.trust.predictions.empty',
             'No predictions recorded for this vehicle yet.',
           )}
           actions={
-            <Button variant="secondary" size="sm" onClick={() => setPredictOpen((open) => !open)}>
+            <Button variant="secondary" size="sm" className="min-h-11 md:min-h-9" wrapLabel disabled={recordPrediction.isPending} onClick={() => {
+              predictInstance.current += 1;
+              if (!predictOpen) setPredictVehicleId(vehicleId);
+              setPredictOpen((open) => !open);
+            }}>
               {predictOpen
                 ? t('ownership.action.cancel', 'Cancel')
                 : t('ownership.trust.predictions.add', 'Record prediction')}
             </Button>
           }
         >
+          <Text as="p" variant="caption" className="md:col-span-2 xl:col-span-4">
+            {t('common.vehicle', 'Vehicle')}: {predictVehicleId ?? '—'}
+          </Text>
+          {!predictScopeMatches && predictVehicleId != null ? (
+            <div className="md:col-span-2 xl:col-span-4">
+              <AlertBanner variant="warning">
+                {t('annotation.contextChanged', 'This form belongs to {{target}}. Return to that context to save, or cancel and open a new form.', { target: String(predictVehicleId) })}
+              </AlertBanner>
+            </div>
+          ) : null}
           {predictOpen ? (
             <form
               className="mb-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4"
@@ -756,7 +792,7 @@ export default function ModelTrustPage() {
                 }
               />
               <div className="md:col-span-2 xl:col-span-4">
-                <Button type="submit" loading={recordPrediction.isPending} disabled={vehicleId == null}>
+                <Button type="submit" className="min-h-11 md:min-h-10" wrapLabel loading={recordPrediction.isPending} disabled={!predictScopeMatches}>
                   {t('ownership.trust.form.submit', 'Record forecast')}
                 </Button>
                 <MutationError error={recordPrediction.error} />
@@ -766,9 +802,19 @@ export default function ModelTrustPage() {
 
           {outcomeFor != null ? (
             <form
-              className="mb-6 grid gap-4 rounded-lg border border-white/[0.07] bg-white/[0.02] p-4 md:grid-cols-3"
+              className={cn('mb-6 grid gap-4 md:grid-cols-3', glassCardClasses.md)}
               onSubmit={submitOutcome}
             >
+              <Text as="p" variant="caption" className="md:col-span-3">
+                {t('common.vehicle', 'Vehicle')}: {outcomeVehicleId ?? '—'}
+              </Text>
+              {!outcomeScopeMatches && outcomeVehicleId != null ? (
+                <div className="md:col-span-3">
+                  <AlertBanner variant="warning">
+                    {t('annotation.contextChanged', 'This form belongs to {{target}}. Return to that context to save, or cancel and open a new form.', { target: String(outcomeVehicleId) })}
+                  </AlertBanner>
+                </div>
+              ) : null}
               <Input
                 type="number"
                 label={t('ownership.trust.outcome.value', 'Observed value')}
@@ -779,11 +825,14 @@ export default function ModelTrustPage() {
                   setOutcomeDraft({ observed_value: Number(event.target.value) })
                 }
               />
-              <div className="flex items-end gap-2 md:col-span-2">
-                <Button type="submit" loading={recordOutcome.isPending}>
+              <div className="flex flex-wrap items-end gap-2 md:col-span-2">
+                <Button type="submit" className="min-h-11 md:min-h-10" wrapLabel loading={recordOutcome.isPending} disabled={!outcomeScopeMatches}>
                   {t('ownership.trust.outcome.submit', 'Score prediction')}
                 </Button>
-                <Button type="button" variant="ghost" onClick={() => setOutcomeFor(null)}>
+                <Button type="button" variant="ghost" className="min-h-11 md:min-h-10" wrapLabel disabled={recordOutcome.isPending} onClick={() => {
+                  outcomeInstance.current += 1;
+                  setOutcomeFor(null);
+                }}>
                   {t('ownership.action.cancel', 'Cancel')}
                 </Button>
               </div>
@@ -795,10 +844,18 @@ export default function ModelTrustPage() {
 
           <DataTable
             columns={predictionColumns}
-            mobileColumns={['model', 'error', 'when']}
+            mobilePresentation={{
+              roles: { model: 'title', predicted: 'primary', observed: 'meta', when: 'meta' },
+              displayValue: (row, key) => key === 'model' ? row.model_name
+                : key === 'predicted' ? `${fmtScientificNumber(row.predicted_value, 3)} ${row.si_unit}`
+                : key === 'observed' ? row.observed_value == null ? t('ownership.trust.pred.pending', 'pending') : `${fmtScientificNumber(row.observed_value, 3)} ${row.si_unit}`
+                : key === 'when' ? formatDateTime(row.predicted_at) : null,
+              inlineActions: (row) => predictionColumns.find(column => column.key === 'actions')?.render(row),
+            }}
             data={predictions}
             keyExtractor={(row) => row.id}
             tableId="ownership-trust-predictions"
+            caption={t('ownership.trust.predictions.title', 'Prediction ledger')}
           />
         </OwnershipPanel>
       </FadeIn>

@@ -2,7 +2,22 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
-import type { ReactNode } from 'react';
+import type { ComponentProps, ReactNode } from 'react';
+import { Children, isValidElement } from 'react';
+
+const chartProbe = vi.hoisted(() => vi.fn());
+vi.mock('@/hooks/useChartPalette', () => ({ useChartPalette: () => ['series-primary', 'series-secondary'] }));
+vi.mock('@/components/charts', async () => {
+  const actual = await vi.importActual<typeof import('@/components/charts')>('@/components/charts');
+  return {
+    ...actual,
+    ResponsiveContainer: ({ children }: { children?: ReactNode }) => <div>{children}</div>,
+    BarChart: (props: ComponentProps<typeof actual.BarChart>) => {
+      chartProbe(props);
+      return <actual.BarChart {...props} width={600} height={280} />;
+    },
+  };
+});
 
 vi.mock('react-i18next', () => {
   const t = (key: string, second?: unknown, third?: unknown) => {
@@ -33,7 +48,7 @@ vi.mock('@/api/hooks/useOwnership', async () => ({
 
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useModelTrust, useRecordOutcome, useRecordPrediction } from '@/api/hooks/useOwnership';
-import type { ModelTrustReport, Prediction } from '@/types/ownership';
+import type { ModelScorecard, ModelTrustReport, Prediction } from '@/types/ownership';
 import ModelTrustPage from './ModelTrustPage';
 import { expectOperationalBand, summaryMetric } from '../components/operationalbrief-all/testAssertions';
 
@@ -71,6 +86,24 @@ function report(): ModelTrustReport {
     ],
     quality: { status: 'limited', sample_count: 2, coverage_pct: 50, window_start: null, window_end: null, reasons: [] },
     evidence: [],
+  };
+}
+
+function scorecard(): ModelScorecard {
+  return {
+    model_name: 'Tiny SI forecast', target: 'energy_wh', si_unit: 'Wh',
+    sample_count: 5, scored_count: 4, pending_count: 1, bias: -0.0000123,
+    mean_abs_error: 0.0000456, root_mean_square_error: 0.0000789,
+    mean_abs_pct_error: 12, median_abs_pct_error: 10, interval_coverage_pct: 65,
+    skill_vs_naive_pct: -5, drift_ratio: 1.6, drift_status: 'degrading',
+    trust_grade: 'watch', trust_score: 55,
+    calibration: [{
+      lower_pct: 0, upper_pct: 25, sample_count: 4,
+      mean_abs_error: 0.0000456, mean_bias: -0.0000123, coverage_pct: 65.123456,
+    }],
+    narrative: 'Recorded calibration evidence, not a fresh guarantee.',
+    first_scored_at: '2026-01-02T00:00:00Z', last_scored_at: '2026-02-02T00:00:00Z',
+    quality: { status: 'limited', sample_count: 4, coverage_pct: 65, window_start: null, window_end: null, reasons: [] },
   };
 }
 
@@ -172,5 +205,136 @@ describe('ModelTrustPage financial history preservation', () => {
     expect(screen.getByRole('textbox', { name: 'Model name required' })).toHaveValue('Draft model');
     expect(screen.getByRole('button', { name: 'Record forecast' })).toBeEnabled();
     expect(mockPrediction().mutate).not.toHaveBeenCalled();
+  });
+});
+
+describe('ModelTrustPage scoped modernization', () => {
+  it('preserves raw tiny signed calibration values and source units with the saved palette boundary', () => {
+    mockTrust.mockReturnValue(query({ ...report(), scorecards: [scorecard()] }));
+    renderPage();
+    expect(chartProbe).toHaveBeenCalled();
+    const props = chartProbe.mock.calls.at(-1)![0] as {
+      data: { error: number; bias: number; coverage: number; samples: number }[];
+      children: ReactNode[];
+    };
+    expect(props.data[0]).toMatchObject({
+      error: 0.0000456, bias: -0.0000123, coverage: 65.123456, samples: 4,
+    });
+    expect(screen.getByText('Mean absolute error and bias per bin (Wh)')).toBeInTheDocument();
+    const cards = card('Model scorecards');
+    expect(within(cards).getByText('degrading')).toBeInTheDocument();
+    expect(within(cards).getByText(/7\.89.*Wh/)).toBeInTheDocument();
+    expect(screen.getByText('Recorded calibration evidence, not a fresh guarantee.')).toBeInTheDocument();
+    const series = Children.toArray(props.children).filter(
+      (child) => isValidElement<{ dataKey?: string; fill?: string }>(child) && child.props.fill != null,
+    ).map((child) => isValidElement<{ dataKey?: string; fill?: string }>(child) ? {
+      key: child.props.dataKey, fill: child.props.fill,
+    } : null);
+    expect(series).toEqual([
+      { key: 'error', fill: 'series-primary' }, { key: 'bias', fill: 'series-secondary' },
+    ]);
+    expect(screen.getByText('Retraining or auto-correcting a model — this lab measures, it does not tune')).toBeInTheDocument();
+    expect(screen.getByText('Explaining why a model drifted; it reports that it did')).toBeInTheDocument();
+  });
+
+  it('retains a forecast under its original vehicle and blocks a changed workspace until that vehicle returns', () => {
+    const mutate = vi.fn();
+    mockPrediction.mockReturnValue({ mutate, isPending: false });
+    const view = renderPage();
+    fireEvent.click(screen.getByRole('button', { name: 'Record prediction' }));
+    fireEvent.change(screen.getByRole('textbox', { name: 'Model name required' }), { target: { value: 'Original vehicle forecast' } });
+    fireEvent.change(screen.getByRole('spinbutton', { name: 'Predicted value required' }), { target: { value: '0' } });
+    mockSelected.mockReturnValue({ vehicleId: 8 });
+    mockTrust.mockReturnValue(query({ ...report(), vehicle_id: 8, recent_predictions: [] }));
+    view.rerenderPage();
+    expect(screen.getByRole('textbox', { name: 'Model name required' })).toHaveValue('Original vehicle forecast');
+    const submit = screen.getByRole('button', { name: 'Record forecast' });
+    expect(submit).toBeDisabled();
+    expect(screen.getByText('This form belongs to 7. Return to that context to save, or cancel and open a new form.')).toBeInTheDocument();
+    fireEvent.submit(submit.closest('form')!);
+    expect(mutate).not.toHaveBeenCalled();
+    mockSelected.mockReturnValue({ vehicleId: 7 });
+    view.rerenderPage();
+    expect(screen.getByRole('button', { name: 'Record forecast' })).toBeEnabled();
+    fireEvent.submit(submit.closest('form')!);
+    expect(mutate).toHaveBeenCalledWith(expect.objectContaining({
+      vehicle_id: 7, model_name: 'Original vehicle forecast', target: 'range_m',
+      si_unit: 'm', predicted_value: 0, horizon_s: 604800,
+    }), expect.objectContaining({ onSuccess: expect.any(Function) }));
+  });
+
+  it('retains a scoring draft and prediction identity across workspace changes and permits a measured zero', () => {
+    const mutate = vi.fn();
+    mockOutcome.mockReturnValue({ mutate, isPending: false });
+    const view = renderPage();
+    fireEvent.click(screen.getByRole('button', { name: 'Score it' }));
+    fireEvent.change(screen.getByRole('spinbutton', { name: 'Observed value required' }), { target: { value: '0' } });
+    mockSelected.mockReturnValue({ vehicleId: 8 });
+    mockTrust.mockReturnValue(query({ ...report(), vehicle_id: 8, recent_predictions: [] }));
+    view.rerenderPage();
+    const submit = screen.getByRole('button', { name: 'Score prediction' });
+    expect(screen.getByRole('spinbutton', { name: 'Observed value required' })).toHaveValue(0);
+    expect(submit).toBeDisabled();
+    fireEvent.submit(submit.closest('form')!);
+    expect(mutate).not.toHaveBeenCalled();
+    mockSelected.mockReturnValue({ vehicleId: 7 });
+    view.rerenderPage();
+    fireEvent.submit(submit.closest('form')!);
+    expect(mutate).toHaveBeenCalledWith(expect.objectContaining({
+      prediction_id: 1, observed_value: 0, observed_at: expect.any(String),
+    }), expect.objectContaining({ onSuccess: expect.any(Function) }));
+  });
+
+  it('keeps mutation failures and pending drafts visible without claiming a successful save', () => {
+    mockPrediction.mockReturnValue({ mutate: vi.fn(), isPending: false, error: new Error('forecast rejected') });
+    const view = renderPage();
+    fireEvent.click(screen.getByRole('button', { name: 'Record prediction' }));
+    fireEvent.change(screen.getByRole('textbox', { name: 'Model name required' }), { target: { value: 'Retained forecast' } });
+    expect(card('Prediction ledger')).toHaveTextContent('forecast rejected');
+    expect(screen.getByRole('textbox', { name: 'Model name required' })).toHaveValue('Retained forecast');
+    mockPrediction.mockReturnValue({ mutate: vi.fn(), isPending: true });
+    view.rerenderPage();
+    const submit = screen.getByRole('button', { name: 'Record forecast' });
+    expect(submit).toBeDisabled();
+    expect(within(card('Prediction ledger')).getByRole('button', { name: 'Cancel' })).toBeDisabled();
+    fireEvent.submit(submit.closest('form')!);
+    expect(mockPrediction().mutate).not.toHaveBeenCalled();
+  });
+
+  it('exposes every original mobile field and both calibration and scoring actions through shared details', () => {
+    const dimensions = vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({
+      width: 375, height: 300, top: 0, left: 0, right: 375, bottom: 300, x: 0, y: 0,
+      toJSON: () => ({}),
+    });
+    try {
+      mockTrust.mockReturnValue(query({ ...report(), scorecards: [scorecard()] }));
+      renderPage();
+      const cards = card('Model scorecards');
+      expect(within(cards).getByRole('button', { name: 'Calibration' })).toBeEnabled();
+      fireEvent.click(within(cards).getByRole('button', { name: 'Quick view' }));
+      const details = screen.getByRole('dialog');
+      for (const label of ['Model / target', 'Trust', 'Scored / pending', 'MAPE', 'Median APE', 'Bias', 'RMSE', 'Interval coverage', 'Skill vs naive', 'Drift', 'Actions']) {
+        expect(within(details).getByText(label)).toBeInTheDocument();
+      }
+      expect(details).toHaveTextContent('energy_wh · Wh');
+      expect(details).toHaveTextContent('degrading');
+      expect(within(details).getByRole('button', { name: 'Calibration' })).toBeEnabled();
+      fireEvent.click(within(details).getByRole('button', { name: 'Close' }));
+      const ledger = card('Prediction ledger');
+      expect(within(ledger).getByRole('button', { name: 'Score it' })).toBeEnabled();
+      fireEvent.click(within(ledger).getAllByRole('button', { name: 'Quick view' })[0]);
+      const predictionDetails = screen.getByRole('dialog');
+      for (const label of ['Model', 'Predicted', 'Observed', 'Error', 'In interval', 'Horizon', 'Predicted at', 'Actions']) {
+        expect(within(predictionDetails).getByText(label)).toBeInTheDocument();
+      }
+      expect(predictionDetails).toHaveTextContent(/12,345(?:\.0+)?/);
+      expect(predictionDetails).toHaveTextContent(/10,000(?:\.0+)?/);
+      expect(predictionDetails).toHaveTextContent(/15,000(?:\.0+)?/);
+      expect(predictionDetails).toHaveTextContent('pending');
+      expect(within(predictionDetails).getByRole('button', { name: 'Score it' })).toBeEnabled();
+      expect(mockOutcome().mutate).not.toHaveBeenCalled();
+    } finally {
+      dimensions.mockRestore();
+    }
   });
 });
