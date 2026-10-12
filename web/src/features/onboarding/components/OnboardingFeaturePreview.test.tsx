@@ -43,6 +43,52 @@ describe('OnboardingFeaturePreview', () => {
     tSpy.mockClear();
   });
 
+  describe('OnboardingFeaturePreview neutral decoration', () => {
+    it('keeps all four decorative feature glyphs neutral and non-focusable', () => {
+      render(<OnboardingFeaturePreview />);
+
+      const cards = screen.getAllByRole('listitem');
+      const glyphs = ['lucide-map-pin', 'lucide-route', 'lucide-battery-charging', 'lucide-car'];
+      expect(cards).toHaveLength(4);
+
+      cards.forEach((card, index) => {
+        const icon = card.querySelector('svg');
+        expect(icon).toHaveClass(glyphs[index], 'h-5', 'w-5', 'shrink-0');
+        expect(icon).toHaveAttribute('aria-hidden', 'true');
+        expect(icon).toHaveAttribute('focusable', 'false');
+        expect(icon).toHaveAttribute('stroke-width', '2');
+        expect(icon).not.toHaveAttribute('role', 'img');
+
+        const iconBox = icon?.parentElement;
+        expect(iconBox).toHaveClass(
+          'h-10', 'w-10', 'shrink-0',
+          'text-[var(--text-secondary)]',
+          'bg-[var(--surface-2)]',
+          'ring-[var(--border-default)]',
+        );
+        expect(iconBox?.className).not.toContain('--semantic-');
+        expect(icon?.getAttribute('class')).not.toContain('--semantic-');
+      });
+    });
+
+    it('uses only neutral hover borders without adding interactive preview actions', () => {
+      render(<OnboardingFeaturePreview />);
+
+      for (const card of screen.getAllByRole('listitem')) {
+        expect(card).toHaveClass(
+          'hover:border-[var(--panel-border-hover)]',
+          'forced-colors:hover:border-[CanvasText]',
+        );
+        expect(card.className).not.toContain('--semantic-');
+        expect(card).toHaveClass('shadow-panel');
+        expect(card).not.toHaveAttribute('tabindex');
+      }
+
+      expect(screen.queryAllByRole('link')).toHaveLength(0);
+      expect(screen.queryAllByRole('button')).toHaveLength(0);
+    });
+  });
+
   it('renders every feature card with its title and description', () => {
     render(<OnboardingFeaturePreview />);
 
