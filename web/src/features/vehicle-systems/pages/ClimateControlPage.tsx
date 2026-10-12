@@ -456,6 +456,12 @@ export default function ClimateControlPage() {
     observedAt: latest?.timestamp ?? latest?.created_at ?? null,
     provenance: latest?.timestamp ? formatDateTime(latest.timestamp) : latestLabel,
   };
+
+  /* ─── Charging telemetry (for NotEnoughPowerToHeat alert) ─── */
+  const chargingQuery = useChargingTelemetryLatest(activeIdNum);
+  const { data: chargingLatest } = chargingQuery;
+  const chargingState = deriveDataState(chargingQuery);
+
   const dataSources = useMemo(
     () => [
       {
@@ -470,14 +476,15 @@ export default function ClimateControlPage() {
         query: historyQuery,
         enabled: activeId !== '',
       },
+      {
+        id: 'charging-telemetry',
+        label: t('widget.chargingTelemetry.title', 'Charging telemetry'),
+        query: chargingQuery,
+        enabled: activeIdNum > 0,
+      },
     ],
-    [activeId, climateQuery, historyQuery, t],
+    [activeId, activeIdNum, climateQuery, historyQuery, chargingQuery, t],
   );
-
-  /* ─── Charging telemetry (for NotEnoughPowerToHeat alert) ─── */
-  const chargingQuery = useChargingTelemetryLatest(activeIdNum);
-  const { data: chargingLatest } = chargingQuery;
-  const chargingState = deriveDataState(chargingQuery);
 
   /* ─── AI preheat/precool default departure (8 hours from now, RFC3339) ─── */
   // Stable for the component instance so the AI panel's stream body identity

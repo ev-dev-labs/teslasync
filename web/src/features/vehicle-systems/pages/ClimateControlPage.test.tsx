@@ -578,3 +578,167 @@ describe('ClimateControlPage — heatStyle rounding (regression)', () => {
     expect(screen.getByText('Medium (2/3)')).toBeInTheDocument();
   });
 });
+
+describe('ClimateControlPage — independent charging source registry', () => {
+  function chargingSourceRow(): HTMLElement {
+    const row = screen.getByText('Charging telemetry', { selector: 'li > span' }).closest('li');
+    if (!row) throw new Error('Charging telemetry source row not found');
+    return row;
+  }
+
+  it('reports charging loading independently while climate readings and history stay visible', () => {
+    install({ latest: climate(), history: HISTORY });
+    mockCharging.mockReturnValue(qr({
+      isLoading: true,
+      isPending: true,
+      isFetching: true,
+      fetchStatus: 'fetching',
+    }));
+    const { container } = renderPage();
+
+    expect(container.querySelector('[data-data-state="partial"]')).toBeInTheDocument();
+    expect(within(chargingSourceRow()).getByText('Loading')).toBeInTheDocument();
+    expect(within(chargingSourceRow()).queryByRole('button')).not.toBeInTheDocument();
+    expect(within(card('HVAC power')).getByText('On')).toBeInTheDocument();
+    expect(screen.getByRole('table')).toBeInTheDocument();
+  });
+
+  it('names an initial charging failure and retries only that source without replacing climate content', () => {
+    const chargingRetry = vi.fn();
+    const climateRetry = vi.fn();
+    const historyRetry = vi.fn();
+    install({
+      latest: climate(),
+      latestOpts: { refetch: climateRetry },
+      history: HISTORY,
+      historyOpts: { refetch: historyRetry },
+    });
+    mockCharging.mockReturnValue(qr({
+      error: new Error('charging unavailable'),
+      isError: true,
+      refetch: chargingRetry,
+    }));
+    const { container } = renderPage();
+
+    expect(container.querySelector('[data-data-state="partial"]')).toBeInTheDocument();
+    expect(within(chargingSourceRow()).getByText('Failed')).toBeInTheDocument();
+    expect(screen.getByText('Latest climate state', { selector: 'li > span' }).closest('li'))
+      .toHaveTextContent('Ready');
+    expect(screen.getByText('Climate history', { selector: 'li > span' }).closest('li'))
+      .toHaveTextContent('Ready');
+    expect(within(card('HVAC power')).getByText('On')).toBeInTheDocument();
+    expect(screen.getByRole('table')).toBeInTheDocument();
+    fireEvent.click(within(chargingSourceRow()).getByRole('button', {
+      name: 'Retry unavailable sources: Charging telemetry',
+    }));
+    expect(chargingRetry).toHaveBeenCalledTimes(1);
+    fireEvent.click(screen.getByRole('button', { name: 'Retry unavailable sources', exact: true }));
+    expect(chargingRetry).toHaveBeenCalledTimes(2);
+    expect(climateRetry).not.toHaveBeenCalled();
+    expect(historyRetry).not.toHaveBeenCalled();
+  });
+
+  it('retains the heating-power warning and reports cached charging data when its refresh fails', () => {
+    const chargingRetry = vi.fn();
+    const climateRetry = vi.fn();
+    const historyRetry = vi.fn();
+    const retained = { not_enough_power_to_heat: true };
+    install({
+      latest: climate(),
+      latestOpts: { refetch: climateRetry },
+      history: HISTORY,
+      historyOpts: { refetch: historyRetry },
+    });
+    mockCharging.mockReturnValue(qr({
+      data: retained,
+      dataUpdatedAt: Date.parse('2025-06-15T12:00:00Z'),
+      error: new Error('charging refresh failed'),
+      isError: true,
+      refetch: chargingRetry,
+    }));
+    const { container } = renderPage();
+
+    expect(container.querySelector('[data-data-state="stale"]')).toBeInTheDocument();
+    expect(within(chargingSourceRow()).getByText('Cached · refresh failed')).toBeInTheDocument();
+    expect(within(group('climate-status')).getByText('Insufficient power to heat')).toBeInTheDocument();
+    expect(within(card('HVAC power')).getByText('On')).toBeInTheDocument();
+    expect(screen.getByRole('table')).toBeInTheDocument();
+    fireEvent.click(within(chargingSourceRow()).getByRole('button', {
+      name: 'Retry unavailable sources: Charging telemetry',
+    }));
+    expect(chargingRetry).toHaveBeenCalledTimes(1);
+    expect(climateRetry).not.toHaveBeenCalled();
+    expect(historyRetry).not.toHaveBeenCalled();
+    expect(retained).toEqual({ not_enough_power_to_heat: true });
+  });
+
+  it('reports a retained charging refresh in flight separately from delayed climate history', () => {
+    install({
+      latest: climate(),
+      historyOpts: { isLoading: true, isFetching: true, fetchStatus: 'fetching' },
+    });
+    mockCharging.mockReturnValue(qr({
+      data: { not_enough_power_to_heat: true },
+      isFetching: true,
+      fetchStatus: 'fetching',
+    }));
+    renderPage();
+
+    expect(within(chargingSourceRow()).getByText('Refreshing')).toBeInTheDocument();
+    expect(within(chargingSourceRow()).queryByRole('button')).not.toBeInTheDocument();
+    expect(screen.getByText('Climate history', { selector: 'li > span' }).closest('li'))
+      .toHaveTextContent('Loading');
+    expect(within(group('climate-status')).getByText('Insufficient power to heat')).toBeInTheDocument();
+    expect(within(card('HVAC power')).getByText('On')).toBeInTheDocument();
+  });
+
+  it('identifies paused charging refreshes while keeping the retained heating-power warning', () => {
+    const chargingRetry = vi.fn();
+    install({ latest: climate(), history: HISTORY });
+    mockCharging.mockReturnValue(qr({
+      data: { not_enough_power_to_heat: true },
+      fetchStatus: 'paused',
+      refetch: chargingRetry,
+    }));
+    const { container } = renderPage();
+
+    expect(container.querySelector('[data-data-state="stale"]')).toBeInTheDocument();
+    expect(within(chargingSourceRow()).getByText('Paused offline')).toBeInTheDocument();
+    expect(within(group('climate-status')).getByText('Insufficient power to heat')).toBeInTheDocument();
+    expect(screen.getByRole('table')).toBeInTheDocument();
+    fireEvent.click(within(chargingSourceRow()).getByRole('button', {
+      name: 'Retry unavailable sources: Charging telemetry',
+    }));
+    expect(chargingRetry).toHaveBeenCalledTimes(1);
+  });
+
+  it('omits the disabled charging source for a nonpositive vehicle without retrying it', () => {
+    const chargingRetry = vi.fn();
+    const climateRetry = vi.fn();
+    install({
+      latestOpts: { isError: true, error: new Error('climate unavailable'), refetch: climateRetry },
+      history: HISTORY,
+    });
+    mockSelectedVehicle.mockReturnValue({
+      vehicleId: 0,
+      vehicle: null,
+      vehicles: [],
+      setVehicleId: vi.fn(),
+    });
+    mockCharging.mockReturnValue(qr({
+      isError: true,
+      error: new Error('disabled charging query'),
+      refetch: chargingRetry,
+    }));
+    renderPage();
+
+    expect(mockCharging).toHaveBeenCalledWith(0);
+    expect(screen.queryByText('Charging telemetry')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', {
+      name: 'Retry unavailable sources: Charging telemetry',
+    })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Retry unavailable sources', exact: true }));
+    expect(climateRetry).toHaveBeenCalledTimes(1);
+    expect(chargingRetry).not.toHaveBeenCalled();
+  });
+});

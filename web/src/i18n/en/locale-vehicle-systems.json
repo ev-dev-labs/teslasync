@@ -3439,6 +3439,9 @@
     "title": "Ask Helix about your watch face"
   },
   "widget": {
+    "chargingTelemetry": {
+      "title": "Charging telemetry"
+    },
     "climateHistory": {
       "time": "Time",
       "title": "Climate history"
