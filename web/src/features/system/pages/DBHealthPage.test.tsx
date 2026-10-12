@@ -6,7 +6,7 @@
  * `useConnectionPool`) per test. Facets covered:
  *
  *   1. Populated view — honest KPI band derived from the tables + migration +
- *      pool payloads, the top-15 table-size chart, the migration-status panel
+ *      pool payloads, the top-15 table-row chart, the migration-status panel
  *      (version, clean/dirty, recent-migrations list), the per-table detail
  *      grid, and the connection-pool panel (stats + usage progressbar).
  *   2. Interactions — the Size/Rows/Name sort control re-orders the grid and
@@ -225,7 +225,7 @@ describe('DBHealthPage — populated view', () => {
     // The bar chart exposes its accessible name via role="img".
     expect(
       screen.getByRole('img', {
-        name: /database Table sizes/i,
+        name: 'Rows',
       }),
     ).toBeInTheDocument();
 
@@ -457,7 +457,7 @@ describe('DBHealthPage — hardening', () => {
 
     const bar = screen.getByRole('progressbar', { name: 'Pool usage' });
     expect(bar).toHaveAttribute('aria-valuenow', '88');
-    expect(bar.querySelector('[data-metric-fill]')).toHaveStyle({ background: 'var(--neon-red)' });
+    expect(bar.querySelector('[data-metric-fill]')).toHaveStyle({ background: 'var(--semantic-danger)' });
     expect(metricValue('Pool usage')).toBe('88.00%');
   });
 
@@ -549,5 +549,69 @@ describe('DBHealthPage — hardening', () => {
     // A 0-byte table renders the "—" placeholder in the Size column.
     const zeroRow = within(grid).getByText('zero_table').closest('tr')!;
     expect(within(zeroRow).getAllByText('—').length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('keeps missing byte sizes after measured sizes without treating row counts as bytes', () => {
+    mockUseDBStats.mockReturnValue(makeQuery({
+      data: dbStats({ tables: [
+        { ...TABLES[0], sizeBytes: undefined as unknown as number, rowCount: 10_000_000 },
+        { ...TABLES[1], sizeBytes: 0 },
+        { ...TABLES[2], sizeBytes: 50 * MB },
+      ] }),
+    }));
+    renderPage();
+    const names = within(tablesGrid()).getAllByRole('row').slice(1)
+      .map((row) => within(row).getByText(/^(zebra_events|alpha_drives|mid_charging)$/).textContent);
+    expect(names).toEqual(['mid_charging', 'alpha_drives', 'zebra_events']);
+    fireEvent.click(screen.getByRole('button', { name: 'Rows' }));
+    expect(firstBodyRowName()).toBe('zebra_events');
+    expect(metricValue('Large tables')).toBe('—');
+  });
+
+  it('retains full table identities in chart alternatives and names the persistent detail table', () => {
+    const name = 'database_table_with_a_complete_long_identity';
+    mockUseDBStats.mockReturnValue(makeQuery({
+      data: dbStats({ tables: [{ ...TABLES[0], name }] }),
+    }));
+    renderPage();
+    const tables = screen.getAllByRole('table');
+    const chartTable = tables.find((table) => !within(table).queryByText('Indexes'));
+    expect(chartTable).toBeDefined();
+    expect(within(chartTable!).getByText(name)).toBeInTheDocument();
+    expect(tablesGrid()).toHaveAccessibleName('Tables');
+    expect(within(tablesGrid()).getByText(name)).toBeInTheDocument();
+  });
+
+  it('reflects an independently refreshing pool source and preserves mobile-sized refresh and sort actions', () => {
+    mockUseConnectionPool.mockReturnValue(makeQuery({ data: pool(), isFetching: true }));
+    renderPage();
+    const refresh = screen.getByRole('button', { name: 'Refresh now' });
+    expect(refresh).toHaveAttribute('aria-busy', 'true');
+    expect(refresh).toHaveClass('min-h-11', 'min-w-11', 'md:min-h-9');
+    expect(screen.queryByText('Auto-refresh 30s')).toBeNull();
+    for (const label of ['Size', 'Rows', 'Name']) {
+      expect(screen.getByRole('button', { name: label })).toHaveClass('min-h-11', 'min-w-11');
+    }
+    expect(metricValue('Pool usage')).toBe('20.00%');
+  });
+
+  it('keeps indexes and vacuum evidence reachable through the narrow table detail action', () => {
+    const bounds = vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect')
+      .mockReturnValue(new DOMRect(0, 0, 375, 400));
+    try {
+      const { container } = renderPage();
+      expect(container.querySelector('[data-mobile-table]')).toHaveAccessibleName('Tables');
+      fireEvent.click(screen.getAllByRole('button', { name: 'Quick view' })[0]);
+      const details = within(screen.getByRole('dialog', { name: 'Tables' }));
+      expect(details.getByText('zebra_events')).toBeInTheDocument();
+      expect(details.getByText('Indexes')).toBeInTheDocument();
+      expect(details.getByText('2')).toBeInTheDocument();
+      expect(details.getByText('Last vacuum')).toBeInTheDocument();
+      expect(details.getByText('300.00 MB')).toBeInTheDocument();
+      fireEvent.click(details.getByRole('button', { name: 'Close', exact: true }));
+      expect(screen.queryByRole('dialog', { name: 'Tables' })).toBeNull();
+    } finally {
+      bounds.mockRestore();
+    }
   });
 });
