@@ -68,8 +68,14 @@ vi.mock('../components/drive-calendar', () => {
   const status = (props: { isLoading: boolean; error: unknown }) =>
     props.isLoading ? 'loading' : props.error ? 'error' : 'ready';
   return {
-    CalendarSummaryCards: (props: { isLoading: boolean; error: unknown; calendar: { totalDrives: number } }) => (
-      <section data-testid="calendar-summary" data-drives={props.calendar.totalDrives}>{status(props)}</section>
+    CalendarSummaryCards: (props: {
+      isLoading: boolean;
+      error: unknown;
+      calendar: { totalDrives: number; totalDistanceM: number; currentStreak: number; days: unknown[] };
+    }) => (
+      <section data-testid="calendar-summary" data-drives={props.calendar.totalDrives}
+        data-distance-m={props.calendar.totalDistanceM} data-streak={props.calendar.currentStreak}
+        data-days={props.calendar.days.length}>{status(props)}</section>
     ),
     DriveCalendarHeatmap: (props: { isLoading: boolean; error: unknown; className?: string }) => (
       <section className={props.className} data-testid="calendar-heatmap">{status(props)}</section>
@@ -239,6 +245,45 @@ describe('DriveCalendarPage', () => {
     }));
     renderCalendar('/drive-calendar?from=2024-01-01&to=2024-12-31');
     expect(screen.getByTestId('calendar-summary')).toHaveAttribute('data-drives', '1001');
+  });
+
+  it('refreshes day bounds and streaks after midnight without changing custom range or raw SI totals', () => {
+    vi.useFakeTimers();
+    let view: ReturnType<typeof render> | undefined;
+    try {
+      vi.setSystemTime(new Date(2024, 0, 2, 23, 59));
+      useHistoryMock.mockReturnValue(query({
+        data: [
+          { id: 1, startTs: new Date(2024, 0, 1, 9).toISOString(), distanceM: 1000 },
+          { id: 2, startTs: new Date(2024, 0, 2, 9).toISOString(), distanceM: 2000 },
+        ],
+      }));
+      const path = '/drive-calendar?from=2024-01-01&to=2024-12-31&time_scope=custom';
+      view = renderCalendar(path);
+      expect(screen.getByTestId('calendar-summary')).toHaveAttribute('data-days', '3');
+      expect(screen.getByTestId('calendar-summary')).toHaveAttribute('data-streak', '2');
+
+      for (const [day, days, streak] of [[3, 4, 2], [4, 5, 0]]) {
+        vi.setSystemTime(new Date(2024, 0, day!, 0, 1));
+        view.rerender(<MemoryRouter initialEntries={[path]}>
+          <DriveCalendarPage />
+          <LocationProbe />
+          <HeaderRangeProbe />
+        </MemoryRouter>);
+        expect(screen.getByTestId('calendar-summary')).toHaveAttribute('data-days', String(days));
+        expect(screen.getByTestId('calendar-summary')).toHaveAttribute('data-streak', String(streak));
+        expect(screen.getByTestId('calendar-summary')).toHaveAttribute('data-distance-m', '3000');
+        expect(screen.getByTestId('calendar-summary')).toHaveAttribute('data-drives', '2');
+        expect(screen.getByTestId('location')).toHaveTextContent('time_scope=custom');
+        expect(useHistoryMock).toHaveBeenLastCalledWith(
+          '42', new Date(2024, 0, 1).toISOString(), new Date(2025, 0, 1).toISOString(),
+        );
+        for (const id of SECTION_IDS) expect(screen.getByTestId(id)).toHaveTextContent('ready');
+      }
+    } finally {
+      view?.unmount();
+      vi.useRealTimers();
+    }
   });
 
   it('rejects invalid bookmarked years instead of requesting a misleading calendar', () => {

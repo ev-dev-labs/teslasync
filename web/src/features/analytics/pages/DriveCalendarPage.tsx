@@ -35,10 +35,13 @@ function DriveCalendarContent() {
   const vehicleIdStr = vehicleId != null ? String(vehicleId) : undefined;
   const drivesQuery = useDriveCalendarHistory(vehicleIdStr, startInstant, endInstantExclusive);
   const source = deriveDataState(drivesQuery, { provenance: 'historical' });
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const todayMs = today.getTime();
 
   const calendar = useMemo(
-    () => buildDriveCalendar(drivesQuery.data ?? [], Date.now(), { start, end }),
-    [drivesQuery.data, start, end],
+    () => buildDriveCalendar(drivesQuery.data ?? [], todayMs, { start, end }),
+    [drivesQuery.data, start, end, todayMs],
   );
   const compactHeatmap = calendar.weeks.length <= COMPACT_HEATMAP_MAX_WEEKS;
 
