@@ -19,6 +19,7 @@ import {
 import { ChartCard } from '@/components/layout';
 import { useUnits } from '@/hooks/useUnits';
 import { formatTime } from '@/lib/dateFormat';
+import { chartTokens } from '@/lib/tokens';
 import type { SlotResult } from '../lib/types';
 
 interface EnergyFlowChartProps {
@@ -79,14 +80,14 @@ export function EnergyFlowChart({ slots, slotMinutes }: EnergyFlowChartProps) {
             name={t('homeEnergy.flow.solar', 'Solar')}
             stroke={CHART_COLORS[2]}
             fill={CHART_COLORS[2]}
-            fillOpacity={0.25}
+            fillOpacity={0.08}
             hide={hiddenSeries?.isHidden('solarW')}
           />
           <Line type="monotone" dataKey="loadW" name={t('homeEnergy.flow.load', 'Household load')} stroke={CHART_COLORS[0]} dot={false} strokeWidth={2} hide={hiddenSeries?.isHidden('loadW')} />
           <Line type="monotone" dataKey="vehicleChargeW" name={t('homeEnergy.flow.vehicles', 'Vehicle charging')} stroke={CHART_COLORS[1]} dot={false} strokeWidth={2} hide={hiddenSeries?.isHidden('vehicleChargeW')} />
           <Line type="monotone" dataKey="batteryPowerW" name={t('homeEnergy.flow.battery', 'Powerwall (+charge/-discharge)')} stroke={CHART_COLORS[3]} dot={false} strokeWidth={2} strokeDasharray="4 2" hide={hiddenSeries?.isHidden('batteryPowerW')} />
-          <Line type="monotone" dataKey="gridImportW" name={t('homeEnergy.flow.gridImport', 'Grid import')} stroke={CHART_COLORS[4]} dot={false} strokeWidth={1.5} hide={hiddenSeries?.isHidden('gridImportW')} />
-          <Line type="monotone" dataKey="gridExportW" name={t('homeEnergy.flow.gridExport', 'Grid export (shown negative)')} stroke={CHART_COLORS[5]} dot={false} strokeWidth={1.5} hide={hiddenSeries?.isHidden('gridExportW')} />
+          <Line type="monotone" dataKey="gridImportW" name={t('homeEnergy.flow.gridImport', 'Grid import')} stroke={CHART_COLORS[4]} dot={false} strokeWidth={chartTokens.cursor.strokeWidth} hide={hiddenSeries?.isHidden('gridImportW')} />
+          <Line type="monotone" dataKey="gridExportW" name={t('homeEnergy.flow.gridExport', 'Grid export (shown negative)')} stroke={CHART_COLORS[5]} dot={false} strokeWidth={chartTokens.cursor.strokeWidth} hide={hiddenSeries?.isHidden('gridExportW')} />
           <ChartLegend />
           </ComposedChart>
         </ResponsiveContainer>
