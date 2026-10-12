@@ -355,4 +355,40 @@ describe('MilestonesPage', () => {
       screen.getByTestId('milestone-kpis').getAttribute('data-as-of'),
     ).toBe(firstAsOf);
   });
+
+  it.each([
+    { name: 'kilometre ladder limit', distance: 'km', rejected: '1000000000', expectedKm: 12_345 },
+    { name: 'mile ladder limit', distance: 'mi', rejected: '1000000000', expectedKm: 19_867.35168 },
+    { name: 'mile conversion overflow', distance: 'mi', rejected: String(Number.MAX_VALUE), expectedKm: 19_867.35168 },
+  ])('rejects $name before saving and recovers after a valid edit', ({ distance, rejected, expectedKm }) => {
+    unitsMock.mockReturnValue({ unitPrefs: { distance } });
+    render(<MilestonesPage />);
+
+    const input = screen.getByLabelText(
+      'Odometer immediately before the chronologically first eligible returned drive',
+    );
+    const initialThreshold = screen.getByTestId('milestone-progress')
+      .getAttribute('data-next-km');
+    const initialAsOf = screen.getByTestId('milestone-progress')
+      .getAttribute('data-as-of');
+
+    fireEvent.change(input, { target: { value: rejected } });
+
+    expect(setStoredNumberMock).not.toHaveBeenCalled();
+    expect(storedNumberMock).toHaveBeenCalledWith('teslasync:milestones-base-km:v1', 0);
+    expect(screen.getByRole('alert')).toHaveTextContent('Enter a valid number');
+    expect(screen.getByRole('group', { name: 'Window-start odometer' })).toContainElement(input);
+    for (const id of SECTION_IDS) {
+      expect(screen.getByTestId(id)).toHaveTextContent('ready');
+      expect(screen.getByTestId(id)).toHaveAttribute('data-next-km', initialThreshold);
+      expect(screen.getByTestId(id)).toHaveAttribute('data-as-of', initialAsOf);
+    }
+
+    fireEvent.change(input, { target: { value: '12345' } });
+
+    expect(setStoredNumberMock).toHaveBeenCalledOnce();
+    expect(setStoredNumberMock.mock.calls[0]?.[0]).toBeCloseTo(expectedKm, 8);
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(historyMock).toHaveBeenCalledWith('42', 1_000);
+  });
 });

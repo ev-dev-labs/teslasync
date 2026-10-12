@@ -6,6 +6,7 @@ import { deriveDataState } from '@/api/dataState';
 import { Grid, PageLayout } from '@/components/layout';
 import { StaleRefreshWarning } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
+import { ErrorText } from '@/components/ui';
 import { NoVehicleSelected } from '@/features/onboarding/components/NoVehicleSelected';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
@@ -44,6 +45,7 @@ export default function MilestonesPage() {
     vehicleId != null ? String(vehicleId) : undefined;
   const { unitPrefs } = useUnits();
   const [nowMs] = useState(() => Date.now());
+  const [baseValidationError, setBaseValidationError] = useState(false);
   const [storedBaseKm, setStoredBaseKm] = useStoredNumber(
     'teslasync:milestones-base-km:v1',
     0,
@@ -82,9 +84,23 @@ export default function MilestonesPage() {
     if (value.trim() === '') return;
     const displayValue = Number(value);
     if (!Number.isFinite(displayValue) || displayValue < 0) return;
-    setStoredBaseKm(
-      convertDistanceToSI(displayValue, unitPrefs.distance) / 1_000,
-    );
+    const candidateBaseKm =
+      convertDistanceToSI(displayValue, unitPrefs.distance) / 1_000;
+    try {
+      // Validate the complete observed total with the model's existing guardrails.
+      buildOdometerMilestones(drives, {
+        baseOdometerKm: candidateBaseKm,
+        nowMs,
+        milestoneUnitKm,
+        historyLimit: DEFAULT_HISTORY_LIMIT,
+      });
+    } catch (error) {
+      if (!(error instanceof RangeError)) throw error;
+      setBaseValidationError(true);
+      return;
+    }
+    setBaseValidationError(false);
+    setStoredBaseKm(candidateBaseKm);
   }
 
   if (vehicleId == null) {
@@ -112,11 +128,22 @@ export default function MilestonesPage() {
       )}
       query={drivesQuery}
       contextActions={
-        <MilestoneControls
-          baseDisplay={baseDisplay}
-          distanceUnit={unitPrefs.distance}
-          onBaseChange={handleBaseChange}
-        />
+        <div
+          role="group"
+          aria-label={t('milestones.controls.baseLabel', 'Window-start odometer')}
+          className="flex min-w-0 flex-col items-end gap-2"
+        >
+          <MilestoneControls
+            baseDisplay={baseDisplay}
+            distanceUnit={unitPrefs.distance}
+            onBaseChange={handleBaseChange}
+          />
+          {baseValidationError && (
+            <ErrorText role="alert">
+              {t('common.invalidNumber', 'Enter a valid number')}
+            </ErrorText>
+          )}
+        </div>
       }
     >
       <StaleRefreshWarning state={source} />
