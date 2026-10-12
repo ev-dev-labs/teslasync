@@ -1,9 +1,15 @@
 import { useMemo } from 'react';
 import { ShieldCheck } from 'lucide-react';
-import { LayoutCard } from '@/components/layout';
-import { Badge, DataTable, Caption, Text, type Column } from '@/components/ui';
-import { FadeIn } from '@/components/motion';
-import { EmptyState, SectionErrorBoundary, Skeleton, QueryError } from '@/components/feedback';
+import { LayoutCard } from '@/components/layout/layout-reference/LayoutCard';
+import { Badge } from '@/components/ui/Badge';
+import { DataTable, type Column } from '@/components/ui/DataTable';
+import { Caption, Text } from '@/components/ui/Typography';
+import type { MobileDataTablePresentation } from '@/components/ui/MobileDataTableAdapter.types';
+import { FadeIn } from '@/components/motion/FadeIn';
+import { EmptyState } from '@/components/feedback/EmptyState';
+import { SectionErrorBoundary } from '@/components/feedback/SectionErrorBoundary';
+import { Skeleton } from '@/components/feedback/Skeleton';
+import { QueryError } from '@/components/feedback/QueryError';
 import { formatDateTime, formatRelative } from '@/lib/dateFormat';
 import type { SecretRotationStatus } from '@/types/admin-operator-confidence';
 import type { useSecretRotationPage } from '../../../hooks/useSecretRotationPage';
@@ -91,6 +97,23 @@ export function SecretRotationDetails({ controller }: Props) {
     ],
     [t, severityLabel, kindLabel, fmtNumber],
   );
+  const mobilePresentation = useMemo<MobileDataTablePresentation<SecretRotationStatus>>(
+    () => ({
+      roles: { kind: 'title', age: 'primary', severity: 'badge', rotated: 'meta', expiry: 'meta', thresholds: 'meta' },
+      displayValue: (r, key) => {
+        switch (key) {
+          case 'kind': return controller.rowLabel(r);
+          case 'rotated': return formatDateTime(r.last_rotated);
+          case 'age': return r.age_days == null ? '—' : fmtNumber(r.age_days);
+          case 'expiry': return formatDateTime(r.expires_at);
+          case 'thresholds': return `${r.warn_days == null ? '—' : `${fmtNumber(r.warn_days)}d`} / ${r.critical_days == null ? '—' : `${fmtNumber(r.critical_days)}d`}`;
+          case 'severity': return severityLabel[r.severity] ?? r.severity;
+          default: return null;
+        }
+      },
+    }),
+    [controller.rowLabel, fmtNumber, severityLabel],
+  );
 
   return (
 <FadeIn delay={0.3}>
@@ -116,9 +139,11 @@ export function SecretRotationDetails({ controller }: Props) {
                   tableId="admin:secret-rotation"
                   columns={columns}
                   mobileColumns={['kind', 'age', 'severity']}
+                  mobilePresentation={mobilePresentation}
                   data={items}
                   enableValueFilters
                   keyExtractor={rowKey}
+                  rowLabel={controller.rowLabel}
                   emptyMessage={t('admin.secretRotation.emptyTable', 'No tracked secrets')}
                   pagination
                 />
