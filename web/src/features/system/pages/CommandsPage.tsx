@@ -9,16 +9,16 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
+import { History, Wifi } from 'lucide-react';
 
 import { PageLayout } from '@/components/layout';
 import { StaleRefreshWarning } from '@/components/feedback';
-import { Badge, Button } from '@/components/ui';
+import { Badge, Button, Icon } from '@/components/ui';
 import { FadeIn } from '@/components/motion';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useDataState } from '@/hooks/useDataState';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
-import { Icons } from '@/lib/icons';
 import {
   CommandCenterFallback,
   VehicleCommandCenter,
@@ -83,7 +83,7 @@ export default function CommandsPage() {
             size="lg"
             className="min-h-11"
           >
-            <Icons.wifi className="h-3.5 w-3.5" aria-hidden="true" />
+            <Icon icon={Wifi} size="sm" />
             {t(
               'commands.lastKnownActiveCount',
               '{{active}}/{{total}} last reported active',
@@ -102,7 +102,7 @@ export default function CommandsPage() {
             variant="ghost"
             size="lg"
             className="min-h-11"
-            icon={<Icons.history className="h-4 w-4" aria-hidden="true" />}
+            icon={<Icon icon={History} />}
             onClick={() => navigate('/command-history')}
           >
             {t('commands.viewHistory', 'View history')}
