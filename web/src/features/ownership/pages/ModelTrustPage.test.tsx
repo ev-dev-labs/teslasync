@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { ComponentProps, ReactNode } from 'react';
@@ -49,6 +49,8 @@ vi.mock('@/api/hooks/useOwnership', async () => ({
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useModelTrust, useRecordOutcome, useRecordPrediction } from '@/api/hooks/useOwnership';
 import type { ModelScorecard, ModelTrustReport, Prediction } from '@/types/ownership';
+import { getFormatterPreferences, setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat';
+import { MockResizeObserver } from '@/test/setup';
 import ModelTrustPage from './ModelTrustPage';
 import { expectOperationalBand, summaryMetric } from '../components/operationalbrief-all/testAssertions';
 
@@ -210,31 +212,43 @@ describe('ModelTrustPage financial history preservation', () => {
 
 describe('ModelTrustPage scoped modernization', () => {
   it('preserves raw tiny signed calibration values and source units with the saved palette boundary', () => {
-    mockTrust.mockReturnValue(query({ ...report(), scorecards: [scorecard()] }));
-    renderPage();
-    expect(chartProbe).toHaveBeenCalled();
-    const props = chartProbe.mock.calls.at(-1)![0] as {
-      data: { error: number; bias: number; coverage: number; samples: number }[];
-      children: ReactNode[];
-    };
-    expect(props.data[0]).toMatchObject({
-      error: 0.0000456, bias: -0.0000123, coverage: 65.123456, samples: 4,
-    });
-    expect(screen.getByText('Mean absolute error and bias per bin (Wh)')).toBeInTheDocument();
-    const cards = card('Model scorecards');
-    expect(within(cards).getByText('degrading')).toBeInTheDocument();
-    expect(within(cards).getByText(/7\.89.*Wh/)).toBeInTheDocument();
-    expect(screen.getByText('Recorded calibration evidence, not a fresh guarantee.')).toBeInTheDocument();
-    const series = Children.toArray(props.children).filter(
-      (child) => isValidElement<{ dataKey?: string; fill?: string }>(child) && child.props.fill != null,
-    ).map((child) => isValidElement<{ dataKey?: string; fill?: string }>(child) ? {
-      key: child.props.dataKey, fill: child.props.fill,
-    } : null);
-    expect(series).toEqual([
-      { key: 'error', fill: 'series-primary' }, { key: 'bias', fill: 'series-secondary' },
-    ]);
-    expect(screen.getByText('Retraining or auto-correcting a model — this lab measures, it does not tune')).toBeInTheDocument();
-    expect(screen.getByText('Explaining why a model drifted; it reports that it did')).toBeInTheDocument();
+    const preferences = getFormatterPreferences();
+    // The supported formatter uses saved fixed-decimal precision, not exponent notation.
+    setGlobalLocale('en-US');
+    setGlobalPrecision(7);
+    try {
+      mockTrust.mockReturnValue(query({ ...report(), scorecards: [scorecard()] }));
+      renderPage();
+      expect(chartProbe).toHaveBeenCalled();
+      const props = chartProbe.mock.calls.at(-1)![0] as {
+        data: { error: number; bias: number; coverage: number; samples: number }[];
+        children: ReactNode[];
+      };
+      expect(props.data[0]).toMatchObject({
+        error: 0.0000456, bias: -0.0000123, coverage: 65.123456, samples: 4,
+      });
+      expect(screen.getByText('Mean absolute error and bias per bin (Wh)')).toBeInTheDocument();
+      const cards = card('Model scorecards');
+      expect(within(cards).getByText('degrading')).toBeInTheDocument();
+      expect(within(cards).getByText('0.0000789 Wh')).toBeInTheDocument();
+      expect(within(cards).getByText('-0.0000123 Wh')).toBeInTheDocument();
+      expect(screen.getByText('Recorded calibration evidence, not a fresh guarantee.')).toBeInTheDocument();
+      const series = Children.toArray(props.children).filter(
+        (child) => isValidElement<{ dataKey?: string; fill?: string }>(child) && child.props.fill != null,
+      ).map((child) => isValidElement<{ dataKey?: string; fill?: string }>(child) ? {
+        key: child.props.dataKey, fill: child.props.fill,
+      } : null);
+      expect(series).toEqual([
+        { key: 'error', fill: 'series-primary' }, { key: 'bias', fill: 'series-secondary' },
+      ]);
+      expect(screen.getByText('• Retraining or auto-correcting a model — this lab measures, it does not tune')).toBeInTheDocument();
+      expect(screen.getByText('• Explaining why a model drifted; it reports that it did')).toBeInTheDocument();
+    } finally {
+      act(() => {
+        setGlobalPrecision(preferences.precision);
+        setGlobalLocale(preferences.locale);
+      });
+    }
   });
 
   it('retains a forecast under its original vehicle and blocks a changed workspace until that vehicle returns', () => {
@@ -306,12 +320,28 @@ describe('ModelTrustPage scoped modernization', () => {
       width: 375, height: 300, top: 0, left: 0, right: 375, bottom: 300, x: 0, y: 0,
       toJSON: () => ({}),
     });
+    const resizeObserver = globalThis.ResizeObserver;
+    // Exercise the real table's allocated-width observer, not only jsdom's rectangle.
+    vi.stubGlobal('ResizeObserver', class extends MockResizeObserver {
+      override observe(target: Element) {
+        super.observe(target);
+        this.trigger(target);
+      }
+    });
     try {
-      mockTrust.mockReturnValue(query({ ...report(), scorecards: [scorecard()] }));
+      const defaultCard = {
+        ...scorecard(),
+        model_name: 'Default calibration forecast',
+        calibration: [{
+          ...scorecard().calibration[0], mean_abs_error: 0.5, mean_bias: 0.25,
+        }],
+      };
+      mockTrust.mockReturnValue(query({ ...report(), scorecards: [defaultCard, scorecard()] }));
       renderPage();
       const cards = card('Model scorecards');
-      expect(within(cards).getByRole('button', { name: 'Calibration' })).toBeEnabled();
-      fireEvent.click(within(cards).getByRole('button', { name: 'Quick view' }));
+      expect(chartProbe.mock.calls.at(-1)![0].data[0]).toMatchObject({ error: 0.5, bias: 0.25 });
+      expect(within(cards).getAllByRole('button', { name: 'Calibration' })[1]).toBeEnabled();
+      fireEvent.click(within(cards).getAllByRole('button', { name: 'Quick view' })[1]);
       const details = screen.getByRole('dialog');
       for (const label of ['Model / target', 'Trust', 'Scored / pending', 'MAPE', 'Median APE', 'Bias', 'RMSE', 'Interval coverage', 'Skill vs naive', 'Drift', 'Actions']) {
         expect(within(details).getByText(label)).toBeInTheDocument();
@@ -319,6 +349,10 @@ describe('ModelTrustPage scoped modernization', () => {
       expect(details).toHaveTextContent('energy_wh · Wh');
       expect(details).toHaveTextContent('degrading');
       expect(within(details).getByRole('button', { name: 'Calibration' })).toBeEnabled();
+      fireEvent.click(within(details).getByRole('button', { name: 'Calibration' }));
+      expect(chartProbe.mock.calls.at(-1)![0].data[0]).toMatchObject({
+        error: 0.0000456, bias: -0.0000123, coverage: 65.123456, samples: 4,
+      });
       fireEvent.click(within(details).getByRole('button', { name: 'Close' }));
       const ledger = card('Prediction ledger');
       expect(within(ledger).getByRole('button', { name: 'Score it' })).toBeEnabled();
@@ -332,9 +366,14 @@ describe('ModelTrustPage scoped modernization', () => {
       expect(predictionDetails).toHaveTextContent(/15,000(?:\.0+)?/);
       expect(predictionDetails).toHaveTextContent('pending');
       expect(within(predictionDetails).getByRole('button', { name: 'Score it' })).toBeEnabled();
+      fireEvent.click(within(predictionDetails).getByRole('button', { name: 'Score it' }));
+      fireEvent.click(within(predictionDetails).getByRole('button', { name: 'Close' }));
+      expect(screen.getByRole('spinbutton', { name: 'Observed value required' })).toHaveValue(12345);
+      expect(screen.getByRole('button', { name: 'Score prediction' })).toBeEnabled();
       expect(mockOutcome().mutate).not.toHaveBeenCalled();
     } finally {
       dimensions.mockRestore();
+      vi.stubGlobal('ResizeObserver', resizeObserver);
     }
   });
 });
