@@ -46,7 +46,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { render, screen, within, fireEvent, waitFor, cleanup } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
-import type { ReactNode } from 'react';
+import type { ComponentProps, ReactNode } from 'react';
 import type { LocationSnapshot } from '@/api/types';
 
 // ── Hoisted, per-test controllable state ─────────────────────────────
@@ -61,9 +61,12 @@ const h = vi.hoisted(() => ({
   latestLoading: false,
   latestError: null as unknown,
   charging: null as { expected_energy_pct_at_arrival?: number | null } | null,
+  chargingError: null as Error | null,
+  realChartFrames: false,
   history: [] as LocationSnapshot[],
   historyMode: 'resolve' as 'resolve' | 'reject' | 'pending',
   refetchLatest: vi.fn(),
+  refetchCharging: vi.fn(),
   requestSpy: vi.fn(),
 }));
 
@@ -164,9 +167,9 @@ vi.mock('@/api/hooks/useVehicles', async (importOriginal) => {
     useChargingTelemetryLatest: () => ({
       data: h.charging,
       isLoading: false,
-      error: null,
-      isError: false,
-      refetch: vi.fn(),
+      error: h.chargingError,
+      isError: h.chargingError != null,
+      refetch: h.refetchCharging,
     }),
   };
 });
@@ -200,6 +203,9 @@ vi.mock('@/components/charts', async (importOriginal) => {
   return {
     ...actual,
     ...chartTestDoubles,
+    EmbeddedChart: (props: ComponentProps<typeof actual.EmbeddedChart>) => h.realChartFrames
+      ? <actual.EmbeddedChart {...props} />
+      : <chartTestDoubles.EmbeddedChart {...props} />,
     ResponsiveContainer: ({ children }: { children?: ReactNode }) => (
       <div data-testid="responsive-container">{children}</div>
     ),
@@ -225,6 +231,7 @@ vi.mock('@/components/ui', async (importOriginal) => {
     sortKey,
     sortDir,
     onSort,
+    mobilePresentation,
   }: {
     data: readonly T[];
     columns: ReadonlyArray<{
@@ -238,9 +245,16 @@ vi.mock('@/components/ui', async (importOriginal) => {
     sortKey?: string;
     sortDir?: 'asc' | 'desc';
     onSort?: (key: string) => void;
+    mobilePresentation?: {
+      roles: Readonly<Record<string, string>>;
+      displayValue: (row: T, key: string) => string | number | null | undefined;
+    };
   }) {
     return (
-      <table data-testid={tableId} data-sort-key={sortKey ?? ''} data-sort-dir={sortDir ?? ''}>
+      <table data-testid={tableId} data-sort-key={sortKey ?? ''} data-sort-dir={sortDir ?? ''}
+        data-mobile-fields={mobilePresentation ? JSON.stringify(Object.keys(mobilePresentation.roles)) : undefined}
+        data-mobile-values={mobilePresentation ? JSON.stringify(data.map((row) =>
+          Object.fromEntries(Object.keys(mobilePresentation.roles).map((key) => [key, mobilePresentation.displayValue(row, key)])))) : undefined}>
         <thead>
           <tr>
             {columns.map((c) =>
@@ -394,9 +408,12 @@ beforeEach(() => {
   h.latestLoading = false;
   h.latestError = null;
   h.charging = { expected_energy_pct_at_arrival: 85 };
+  h.chargingError = null;
+  h.realChartFrames = false;
   h.history = baseHistory();
   h.historyMode = 'resolve';
   h.refetchLatest.mockReset();
+  h.refetchCharging.mockReset();
   h.requestSpy.mockReset();
 });
 
@@ -742,5 +759,109 @@ describe('NavigationRoutePage — heading cardinal (edge hardening)', () => {
     h.latest = { ...baseLatest(), heading: undefined };
     rerender(buildTree(qc));
     expect(screen.getByText('Unknown')).toBeInTheDocument();
+  });
+
+  describe('NavigationRoutePage — modernization preservation', () => {
+    it('keeps time, coordinates and work available through the existing mobile table contract', async () => {
+      renderPage();
+      const history = await screen.findByTestId('maps:navigation-location-history');
+      expect(JSON.parse(history.getAttribute('data-mobile-fields')!)).toEqual([
+        'destination_name', 'time', 'latitude', 'longitude', 'located_at_home', 'located_at_work',
+      ]);
+      const values = JSON.parse(history.getAttribute('data-mobile-values')!) as Record<string, string>[];
+      expect(values[0]).toMatchObject({
+        latitude: '37.300000', longitude: '-122.300000', located_at_home: 'No', located_at_work: 'No',
+      });
+      const destinations = screen.getByTestId('maps:navigation-recent-destinations');
+      expect(JSON.parse(destinations.getAttribute('data-mobile-fields')!)).toEqual(['destination', 'distance', 'eta', 'time']);
+      const recent = JSON.parse(destinations.getAttribute('data-mobile-values')!) as Record<string, string>[];
+      expect(recent[0].time).toBeTruthy();
+      expect(recent[0]).toMatchObject({ destination: 'Supercharger LA', distance: '9.00 km', eta: '20.00 min' });
+    });
+
+    it('renders real chart alternatives with every speed, distance and presence gap', async () => {
+      h.realChartFrames = true;
+      h.history = [
+        { ...baseHistory()[0], speed_mph: undefined, miles_to_arrival: undefined, located_at_home: undefined },
+        { ...baseHistory()[1], speed_mph: 0, miles_to_arrival: 0, homelink_nearby: false },
+      ];
+      renderPage();
+      const speed = await screen.findByRole('table', { name: 'Speed & distance history — data table' });
+      expect(within(speed).getAllByRole('columnheader').map((cell) => cell.textContent)).toEqual([
+        'Time', 'Speed (km/h)', 'Distance to arrival (km)',
+      ]);
+      expect(within(speed).getAllByRole('row')).toHaveLength(3);
+      expect(within(speed).getAllByText('—')).toHaveLength(2);
+      expect(within(speed).getByText('0.00 km/h')).toBeInTheDocument();
+      expect(within(speed).getByText('0.00 km')).toBeInTheDocument();
+      const presence = screen.getByRole('table', { name: 'Home / work presence — data table' });
+      expect(within(presence).getAllByRole('columnheader').map((cell) => cell.textContent)).toEqual([
+        'Time', 'At home', 'At work', 'HomeLink',
+      ]);
+      expect(within(presence).getAllByRole('row')).toHaveLength(3);
+      expect(within(presence).getAllByText('—')).toHaveLength(2);
+      expect(within(presence).getAllByText('No')).toHaveLength(3);
+      expect(within(presence).getByText('Yes')).toBeInTheDocument();
+    });
+
+    it.each([
+      { case: 'missing snapshot', loading: false, error: null, label: 'Unknown' },
+      { case: 'pending snapshot', loading: true, error: null, label: 'Loading...' },
+      { case: 'failed snapshot', loading: false, error: new Error('latest failed'), label: 'Error' },
+    ])('does not label $case as an observed inactive route', ({ loading, error, label }) => {
+      h.latest = null;
+      h.latestLoading = loading;
+      h.latestError = error;
+      h.historyMode = 'pending';
+      renderPage();
+      const nav = screen.getByRole('region', { name: 'Navigation status' });
+      expect(within(nav).getByText(label)).toBeInTheDocument();
+      expect(within(nav).queryByText('Inactive')).not.toBeInTheDocument();
+      expect(within(nav).queryByText(/No active navigation/)).not.toBeInTheDocument();
+      expect(screen.getByText('85.00%')).toBeInTheDocument();
+    });
+
+    it('refreshes independent arrival energy and offers its own failed-source recovery without erasing navigation', async () => {
+      h.charging = null;
+      h.chargingError = new Error('arrival unavailable');
+      renderPage();
+      await waitFor(() => expect(h.requestSpy).toHaveBeenCalledTimes(1));
+      const brief = screen.getByRole('region', { name: 'Route metrics' });
+      fireEvent.click(within(brief).getByRole('button', { name: 'Retry' }));
+      expect(h.refetchCharging).toHaveBeenCalledTimes(1);
+      expect(h.refetchLatest).not.toHaveBeenCalled();
+      expect(h.requestSpy).toHaveBeenCalledTimes(1);
+      expect(within(screen.getByRole('region', { name: 'Navigation status' })).getByText('Downtown Office')).toBeInTheDocument();
+      fireEvent.click(getHeaderRefresh());
+      expect(h.refetchCharging).toHaveBeenCalledTimes(2);
+      expect(h.refetchLatest).toHaveBeenCalledTimes(1);
+      await waitFor(() => expect(h.requestSpy).toHaveBeenCalledTimes(2));
+    });
+
+    it('reports empty independent history and arrival evidence as incomplete rather than available', async () => {
+      h.history = [];
+      h.charging = null;
+      renderPage();
+      await screen.findByText('No location snapshots recorded yet.');
+      const brief = screen.getByRole('region', { name: 'Route metrics' });
+      expect(within(brief).getByText('Independent sources incomplete')).toBeInTheDocument();
+      expect(within(brief).queryByText('Source data available')).not.toBeInTheDocument();
+      expect(within(brief).getByText('5.00 km')).toBeInTheDocument();
+    });
+
+    it.each([
+      { case: 'measured zero', seconds: 0, tone: 'success' },
+      { case: 'below warning', seconds: 299, tone: 'success' },
+      { case: 'warning boundary', seconds: 300, tone: 'warning' },
+      { case: 'last warning', seconds: 900, tone: 'warning' },
+      { case: 'danger boundary', seconds: 901, tone: 'danger' },
+    ])('keeps $case traffic duration and badge on the same existing semantic role', ({ seconds, tone }) => {
+      h.latest = { ...baseLatest(), route_traffic_delay_s: seconds };
+      h.historyMode = 'pending';
+      renderPage();
+      const details = screen.getByRole('region', { name: 'Route details' });
+      expect(within(details).getByText(`${seconds}s`)).toHaveClass(`text-[var(--semantic-${tone})]`);
+      expect(within(details).getByText(`${seconds}s delay`)).toHaveClass(`text-[var(--semantic-${tone})]`);
+    });
   });
 });
