@@ -65,7 +65,7 @@ vi.mock('@/components/data-display', () => ({
 }));
 vi.mock('@/components/feedback', () => ({
   AlertBanner: ({ title, children }: { title: string; children: ReactNode }) =>
-    <aside>{title}{children}</aside>,
+    <aside><p>{title}</p>{children}</aside>,
   StaleRefreshWarning: ({ state }: { state: DataState<Drive[]> }) =>
     state.refreshError || state.isRefreshBlocked ? <aside>Retained history</aside> : null,
 }));
@@ -163,7 +163,9 @@ describe('MileageBudgetPage scoped modernization', () => {
     expect(mocks.update).toHaveBeenLastCalledWith({ annualAllowanceKm: 16093.44 });
     expect(screen.getByLabelText('Allowance per year')).toHaveValue(10000);
     fireEvent.change(screen.getByLabelText('Overage fee'), { target: { value: '0.1609344' } });
-    expect(mocks.update).toHaveBeenLastCalledWith({ overagePerKm: 0.1 });
+    // Preserve the unrounded IEEE-754 division; the saved rate is not display-rounded.
+    expect(mocks.update).toHaveBeenLastCalledWith({ overagePerKm: 0.09999999999999999 });
+    expect(config.overagePerKm).toBeCloseTo(0.1, 15);
     expect(screen.getByLabelText('Overage fee')).toHaveValue(0.1609344);
     fireEvent.change(screen.getByLabelText('Overage fee'), { target: { value: '0' } });
     expect(mocks.update).toHaveBeenLastCalledWith({ overagePerKm: 0 });
@@ -252,6 +254,9 @@ describe('MileageBudgetPage scoped modernization', () => {
     render(<MileageBudgetPage />);
     expect(screen.getByText('Retained history')).toBeInTheDocument();
     expect(screen.getByText('History window reached its row cap')).toBeInTheDocument();
+    expect(screen.getByText('History window reached its row cap').parentElement).toHaveTextContent(
+      'The request returned 1000 drives. Older term drives may be absent, so pace, term-total, and overage projections are withheld until the selected history is complete.',
+    );
     expect(latestChart().title).toBe('Observed distance vs allowance');
     expect(latestChart().dataColumns?.[1].label).toBe('Observed driven (km)');
     expect(latestSummary().budget.historyCapReached).toBe(true);
