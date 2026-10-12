@@ -9,10 +9,10 @@ import {
 
 import { Grid, PageLayout, Section, CardGrid, LayoutCard, SourceContent } from '@/components/layout';
 import {
-  GlassPanel, Text, Caption, HelpTooltip,
+  GlassPanel, Text, Caption, HelpTooltip, Icon,
 } from '@/components/ui';
 import {
-  AnimatedNumber, DataFreshnessAuto,
+  AnimatedNumber, DataFreshnessAuto, Currency, KVList,
 } from '@/components/data-display';
 import { EmptyState, Skeleton } from '@/components/feedback';
 import { FadeIn, StaggerContainer, StaggerItem } from '@/components/motion';
@@ -26,6 +26,7 @@ import { useUnits } from '@/hooks/useUnits';
 import { convertDistanceFromSI, convertSpeedFromSI } from '@/lib/unitConversion';
 
 import { cn } from '@/lib/cn';
+import { neonColorMap, typography } from '@/lib/tokens';
 
 import {
   SectionCard, HeroChip, SavingsBar, RecordCard, lifetimeSectionState,
@@ -40,6 +41,10 @@ import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 const SECONDS_PER_HOUR = 3600;
 const METERS_PER_KM = 1000;
+const LIFETIME_MAX_AGE_MS = 6 * 60 * 60 * 1000;
+
+const hasReading = (value: number | null | undefined): value is number =>
+  value != null && Number.isFinite(value);
 
 /* ── Page ─────────────────────────────────────────────────────────── */
 
@@ -59,7 +64,9 @@ export default function LifetimeStatsPage() {
   const { vehicleId } = useSelectedVehicle();
   const lifetimeQuery = useLifetimeStats(vehicleId != null ? String(vehicleId) : undefined);
   const { data: stats, isLoading, error } = lifetimeQuery;
-  const source = deriveDataState({ ...lifetimeQuery, data: stats ?? undefined }, { provenance: 'historical' });
+  const source = deriveDataState({ ...lifetimeQuery, data: stats ?? undefined }, {
+    provenance: 'historical', maxAgeMs: LIFETIME_MAX_AGE_MS,
+  });
   const retry = () => { void lifetimeQuery.refetch(); };
 
   const achievements = stats?.achievements ?? [];
@@ -75,12 +82,15 @@ export default function LifetimeStatsPage() {
     isError: fatalError || source.status === 'stale', empty,
   });
 
-  const heroDistance = stats ? fromKm(stats.total_distance_km) : 0;
+  const heroDistance = hasReading(stats?.total_distance_km) ? fromKm(stats.total_distance_km) : null;
+  const hasSavingsComparison = hasReading(stats?.total_charging_cost)
+    && hasReading(stats?.gas_equivalent_cost) && hasReading(stats?.total_savings)
+    && hasReading(stats?.co2_offset_kg);
 
   // Deep-link `?achievement={id}`.
   // When the lifetime page mounts (or the query param changes) with a target
   // achievement id, scroll the matching badge into view and apply a 3-second
-  // pulse highlight. After the pulse, strip the query param via `replace`
+  // static highlight. After the cue, strip only that query param via `replace`
   // navigation so refreshes don't re-pulse and so the address bar matches the
   // user's mental model ("I'm just looking at the page now").
   const [searchParams] = useSearchParams();
@@ -109,18 +119,21 @@ export default function LifetimeStatsPage() {
       setPulsedId(targetAchievementId);
     });
 
-    // Strip the query param + clear the pulse after 3 seconds. We do BOTH in
+    // Strip the query param + clear the cue after 3 seconds. We do BOTH in
     // the same timeout so the URL bar and the visual cue stay in sync.
     const timeout = window.setTimeout(() => {
       setPulsedId(null);
-      navigate(location.pathname, { replace: true });
+      const remainingParams = new URLSearchParams(location.search);
+      remainingParams.delete('achievement');
+      const search = remainingParams.toString();
+      navigate({ pathname: location.pathname, search: search ? `?${search}` : '', hash: location.hash }, { replace: true });
     }, 3000);
 
     return () => {
       cancelAnimationFrame(raf);
       window.clearTimeout(timeout);
     };
-  }, [targetAchievementId, achievements.length, navigate, location.pathname, reduceMotion]);
+  }, [targetAchievementId, achievements.length, navigate, location.pathname, location.search, location.hash, reduceMotion]);
 
   return (
     <PageLayout
@@ -129,7 +142,7 @@ export default function LifetimeStatsPage() {
       metadataActions={
         <div className="flex flex-wrap items-center justify-end gap-3">
           {/* Lifetime stats are cagg-driven; force amber after 6h. */}
-          <DataFreshnessAuto query={lifetimeQuery} forceStaleAfterMs={6 * 60 * 60 * 1000} />
+          <DataFreshnessAuto query={lifetimeQuery} forceStaleAfterMs={LIFETIME_MAX_AGE_MS} />
           <HelpTooltip
             i18nKey="lifetime.brief.description"
             defaultValue="Server lifetime aggregates with recorded driving hours, charging sessions, and savings versus gasoline."
@@ -156,45 +169,44 @@ export default function LifetimeStatsPage() {
                   />
                   <Text as="p" size="lg" color="muted">
                     {t('lifetime.heroSubtitle', 'driven across {{drives}} drives', {
-                      drives: fmtInt(0),
+                      drives: '—',
                     })}
                   </Text>
                 </div>
               }
             >
-              <div className="flex flex-col items-center gap-6 text-center xl:flex-row xl:justify-between xl:text-left">
+              <div className="flex flex-col items-center gap-6 text-center xl:flex-row xl:justify-between xl:text-start">
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center justify-center gap-3 xl:justify-start">
-                    <Car className="h-8 w-8 shrink-0 text-cyan-300" aria-hidden="true" />
+                    <Icon icon={Car} size="xl" className={neonColorMap.cyan.text} />
                     <span className="flex min-w-0 flex-wrap items-baseline justify-center gap-2 xl:justify-start">
                       <Text
                         as="span"
-                        size="3xl"
-                        weight="bold"
-                        color="primary"
-                        className="tabular-nums sm:text-4xl xl:text-5xl"
+                        variant="metricValue"
                       >
-                        <AnimatedNumber value={heroDistance} duration={1.5} decimals={displayPrecision} />
+                        {heroDistance != null
+                          ? <AnimatedNumber value={heroDistance} duration={1.5} decimals={displayPrecision} />
+                          : '—'}
                       </Text>
                       <Text as="span" size="lg" color="secondary">{distanceUnit}</Text>
                     </span>
                   </div>
                   <Text as="p" size="lg" color="muted" className="mt-2">
                     {t('lifetime.heroSubtitle', 'driven across {{drives}} drives', {
-                      drives: fmtInt(stats?.total_drives ?? 0),
+                      drives: hasReading(stats?.total_drives) ? fmtInt(stats.total_drives) : '—',
                     })}
                   </Text>
                 </div>
                 <div className="flex flex-wrap items-center justify-center gap-2 xl:justify-end">
                   {stats && stats.earth_circumferences > 0 && (
-                    <HeroChip icon={<Globe className="h-3.5 w-3.5" aria-hidden="true" />}>
+                    <HeroChip icon={<Icon icon={Globe} size="sm" />}>
                       {t('lifetime.earthCompare', "That's {{x}}x around the Earth!", {
                         x: fmtNumber(stats.earth_circumferences),
                       })}
                     </HeroChip>
                   )}
                   {stats && stats.ownership_days > 0 && (
-                    <HeroChip icon={<Clock className="h-3.5 w-3.5" aria-hidden="true" />}>
+                    <HeroChip icon={<Icon icon={Clock} size="sm" />}>
                       {t('lifetime.since', 'Tracking since {{date}} ({{days}} days)', {
                         date: fmtDate(stats.first_drive_date),
                         days: fmtInt(stats.ownership_days),
@@ -238,19 +250,28 @@ export default function LifetimeStatsPage() {
           { id: 'lifetime-savings-comparison', size: 'half', content: (
           <SectionCard
             title={t('lifetime.savingsComparison', 'Savings vs gasoline')}
-            icon={<DollarSign className="h-5 w-5 text-emerald-300" aria-hidden="true" />}
-            state={sectionState(!stats || (stats.gas_equivalent_cost ?? 0) <= 0)}
+            icon={<Icon icon={DollarSign} size="lg" className={typography.color.secondary} />}
+            state={sectionState(!stats || (hasReading(stats.gas_equivalent_cost) && stats.gas_equivalent_cost <= 0))}
             error={error}
             onRetry={retry}
             emptyMessage={t('lifetime.noSavingsData', 'Complete some drives to see savings')}
             skeletonHeight={160}
           >
-            <SavingsBar
-              evCost={stats?.total_charging_cost ?? 0}
-              gasCost={stats?.gas_equivalent_cost ?? 0}
-              savings={stats?.total_savings ?? 0}
-              co2Kg={stats?.co2_offset_kg ?? 0}
-            />
+            {hasSavingsComparison && stats ? (
+              <SavingsBar
+                evCost={stats.total_charging_cost}
+                gasCost={stats.gas_equivalent_cost}
+                savings={stats.total_savings}
+                co2Kg={stats.co2_offset_kg}
+              />
+            ) : (
+              <KVList layout="responsive" items={[
+                { id: 'electric-cost', label: t('lifetime.electricCost', 'Electric cost'), value: <Currency value={stats?.total_charging_cost} precision={displayPrecision} /> },
+                { id: 'gas-cost', label: t('lifetime.gasCost', 'Gasoline equivalent'), value: <Currency value={stats?.gas_equivalent_cost} precision={displayPrecision} /> },
+                { id: 'savings', label: t('lifetime.youSaved', 'You saved'), value: <Currency value={stats?.total_savings} precision={displayPrecision} /> },
+                { id: 'co2', label: t('lifetime.co2Offset', 'CO₂ offset'), value: hasReading(stats?.co2_offset_kg) ? `${fmtNumber(stats.co2_offset_kg)} kg` : '—' },
+              ]} />
+            )}
           </SectionCard>
           ) },
         ]} />
@@ -266,7 +287,7 @@ export default function LifetimeStatsPage() {
           { id: 'lifetime-personal-records', size: 'third', content: (
           <SectionCard
             title={t('lifetime.personalRecords', 'Personal records')}
-            icon={<Award className="h-5 w-5 text-amber-300" aria-hidden="true" />}
+            icon={<Icon icon={Award} size="lg" className={typography.color.secondary} />}
             state={sectionState(!stats)}
             error={error}
             onRetry={retry}
@@ -276,21 +297,21 @@ export default function LifetimeStatsPage() {
             <Grid minItemWidth="standard" gap={3}>
               <RecordCard
                 title={t('lifetime.longestDrive', 'Longest drive')}
-                value={`${fmtNumber(fromKm(stats?.longest_drive_record?.value ?? 0))} ${distanceUnit}`}
+                value={hasReading(stats?.longest_drive_record?.value) ? `${fmtNumber(fromKm(stats.longest_drive_record.value))} ${distanceUnit}` : '—'}
                 date={stats?.longest_drive_record?.date}
-                icon={<Car className="h-5 w-5 shrink-0 text-cyan-300" aria-hidden="true" />}
+                icon={<Icon icon={Car} size="lg" className={typography.color.secondary} />}
               />
               <RecordCard
                 title={t('lifetime.highestSpeed', 'Highest speed')}
-                value={`${fmtNumber(fromKmh(stats?.highest_speed_record?.value ?? 0))} ${speedUnit}`}
+                value={hasReading(stats?.highest_speed_record?.value) ? `${fmtNumber(fromKmh(stats.highest_speed_record.value))} ${speedUnit}` : '—'}
                 date={stats?.highest_speed_record?.date}
-                icon={<Gauge className="h-5 w-5 shrink-0 text-rose-300" aria-hidden="true" />}
+                icon={<Icon icon={Gauge} size="lg" className={typography.color.secondary} />}
               />
               <RecordCard
                 title={t('lifetime.biggestCharge', 'Biggest charge')}
-                value={`${fmtNumber(stats?.max_charge_record?.value ?? 0)} kWh`}
+                value={hasReading(stats?.max_charge_record?.value) ? `${fmtNumber(stats.max_charge_record.value)} kWh` : '—'}
                 date={stats?.max_charge_record?.date}
-                icon={<BatteryCharging className="h-5 w-5 shrink-0 text-emerald-300" aria-hidden="true" />}
+                icon={<Icon icon={BatteryCharging} size="lg" className={typography.color.secondary} />}
               />
             </Grid>
           </SectionCard>
@@ -306,7 +327,7 @@ export default function LifetimeStatsPage() {
       <FadeIn delay={0.25}>
         <LayoutCard title={t('lifetime.achievements', 'Achievements')}
           actions={<Caption>
-            {hasData ? `${unlockedCount}/${achievements.length}` : '—/—'} {t('lifetime.unlocked', 'unlocked')}
+            {stats?.achievements != null ? `${unlockedCount}/${achievements.length}` : '—/—'} {t('lifetime.unlocked', 'unlocked')}
           </Caption>}
         >
           <SourceContent state={sectionState(achievements.length === 0)}
@@ -328,8 +349,7 @@ export default function LifetimeStatsPage() {
                       }}
                       className={cn(
                         'rounded-xl',
-                        isPulsing && 'ring-2 ring-yellow-400/80',
-                        isPulsing && !reduceMotion && 'animate-pulse',
+                        isPulsing && cn('ring-2', neonColorMap.cyan.ring),
                       )}
                       data-achievement-id={a.id}
                     >

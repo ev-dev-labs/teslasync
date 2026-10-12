@@ -1,10 +1,8 @@
 /**
  * LifetimeStatsPage — behaviour + hardening coverage.
  *
- * The page has a single default export (`LifetimeStatsPage`); its sub-
- * components (SectionCard, HeroChip, FunFactCard, SavingsBar, EnvStat,
- * RecordCard, MiniStat) are file-local and are exercised transitively
- * through the page render.
+ * The page's existing feature adapters are exercised transitively through
+ * its single default export.
  *
  * What is covered:
  *   1. READY  — hero, KPI band, fun facts, savings bar, environmental,
@@ -18,7 +16,7 @@
  *   5. ERROR  — every panel surfaces QueryError and the Retry action is
  *      wired to the query's refetch (failure/interaction path).
  *   6. DEEP-LINK — `?achievement=<id>` scrolls the badge into view and
- *      applies the pulse ring (user-journey + a11y).
+ *       applies the bounded static cue (user-journey + a11y).
  *
  * Network is never hit: the data hook is stubbed and the peripheral
  * vehicle picker / AI Q&A surfaces are isolated so the assertions focus
@@ -27,9 +25,9 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { act, render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, useLocation } from 'react-router-dom';
 import type { ReactNode } from 'react';
 import english from '@/i18n/en.json';
 
@@ -42,6 +40,7 @@ import type { LifetimeStats, LifetimeAchievement } from '@/api/hooks/useAnalytic
 const h = vi.hoisted(() => ({
   query: undefined as unknown,
   unit: { distance: 'km', speed: 'km/h' } as { distance: string; speed: string },
+  lifetimeHook: vi.fn(),
 }));
 
 const refetchMock = vi.fn();
@@ -76,7 +75,10 @@ vi.mock('react-i18next', async () => {
 
 vi.mock('@/api/hooks/useAnalytics', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/api/hooks/useAnalytics')>();
-  return { ...actual, useLifetimeStats: () => h.query };
+  return { ...actual, useLifetimeStats: (vehicleId?: string) => {
+    h.lifetimeHook(vehicleId);
+    return h.query;
+  } };
 });
 
 vi.mock('@/hooks/useSelectedVehicle', () => ({
@@ -211,7 +213,12 @@ function makeStats(overrides: Partial<LifetimeStats> = {}): LifetimeStats {
   };
 }
 
-function renderPage(path = '/lifetime') {
+function LocationProbe() {
+  const location = useLocation();
+  return <output data-testid="route-location">{location.pathname}{location.search}{location.hash}</output>;
+}
+
+function renderPage(path = '/lifetime-stats') {
   const qc = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
@@ -219,6 +226,7 @@ function renderPage(path = '/lifetime') {
     <QueryClientProvider client={qc}>
       <MemoryRouter initialEntries={[path]}>
         <LifetimeStatsPage />
+        <LocationProbe />
       </MemoryRouter>
     </QueryClientProvider>,
   );
@@ -237,6 +245,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  vi.useRealTimers();
   vi.restoreAllMocks();
 });
 
@@ -326,8 +335,9 @@ describe('LifetimeStatsPage', () => {
     expect(screen.getAllByText(/No driving data yet/i).length).toBeGreaterThanOrEqual(3);
     // Achievements gallery has its own empty message.
     expect(screen.getByText(/Start driving to unlock achievements/i)).toBeInTheDocument();
-    // Hero degrades gracefully to a zero drive count rather than crashing.
-    expect(screen.getByText(/driven across 0 drives/i)).toBeInTheDocument();
+    // An absent payload is not a measured zero-drive history.
+    expect(screen.getByText(/driven across — drives/i)).toBeInTheDocument();
+    expect(screen.queryByText(/driven across 0 drives/i)).not.toBeInTheDocument();
     expect(container.querySelectorAll('[aria-hidden="true"][class*="bg-[var(--skeleton-bg)]"]')).toHaveLength(0);
     fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
     expect(refetchMock).toHaveBeenCalledTimes(1);
@@ -348,19 +358,112 @@ describe('LifetimeStatsPage', () => {
     expect(refetchMock).toHaveBeenCalledTimes(1);
   });
 
-  it('scrolls to and pulses the deep-linked achievement badge', async () => {
+  it('scrolls to and highlights the deep-linked achievement badge without decorative looping', async () => {
     h.query = makeQuery({ data: makeStats() });
 
-    const { container } = renderPage('/lifetime?achievement=ach-1');
+    const { container } = renderPage('/lifetime-stats?achievement=ach-1');
 
     await waitFor(() => {
       expect(scrollSpy).toHaveBeenCalled();
       const wrapper = container.querySelector('[data-achievement-id="ach-1"]');
-      expect(wrapper?.className).toContain('ring-yellow-400');
+      expect(wrapper?.className).toContain('ring-[var(--semantic-info-border)]');
+      expect(wrapper?.className).not.toContain('animate-pulse');
     });
 
     expect(scrollSpy).toHaveBeenCalledWith(
       expect.objectContaining({ block: 'center' }),
     );
+  });
+
+  it('removes only the achievement cue after three seconds and preserves workspace query identity and hash', async () => {
+    vi.useFakeTimers();
+    renderPage('/lifetime-stats?vehicle_id=7&achievement=ach-1&from=2024-01-01&tag=a&tag=b#records');
+
+    await act(async () => { await vi.advanceTimersByTimeAsync(2999); });
+    expect(screen.getByTestId('route-location')).toHaveTextContent('achievement=ach-1');
+    expect(scrollSpy).toHaveBeenCalledWith(expect.objectContaining({ block: 'center' }));
+
+    await act(async () => { await vi.advanceTimersByTimeAsync(1); });
+    expect(screen.getByTestId('route-location')).toHaveTextContent(
+      '/lifetime-stats?vehicle_id=7&from=2024-01-01&tag=a&tag=b#records',
+    );
+    expect(h.lifetimeHook).toHaveBeenCalledWith('7');
+  });
+
+  it('keeps missing hero counts, achievement counts and individual records unknown without removing sections', () => {
+    const stats = makeStats();
+    for (const key of ['total_drives', 'total_distance_km', 'achievements'] as const) {
+      Reflect.deleteProperty(stats, key);
+    }
+    Reflect.deleteProperty(stats.longest_drive_record, 'value');
+    stats.highest_speed_record.value = Number.NaN;
+    stats.max_charge_record.value = Number.POSITIVE_INFINITY;
+    h.query = makeQuery({ data: stats });
+    renderPage();
+
+    expect(screen.getByText('driven across — drives')).toBeInTheDocument();
+    expect(screen.getByText(/—\/—\s+unlocked/)).toBeInTheDocument();
+    for (const title of ['Longest drive', 'Highest speed', 'Biggest charge']) {
+      const record = screen.getByText(title).parentElement;
+      expect(record).not.toBeNull();
+      expect(within(record!).getByText('—')).toBeInTheDocument();
+    }
+    expect(screen.queryByText('0.00 km')).not.toBeInTheDocument();
+    expect(screen.queryByText('0.00 km/h')).not.toBeInTheDocument();
+    expect(screen.queryByText('0.00 kWh')).not.toBeInTheDocument();
+    for (const title of ['Fun facts', 'Savings vs gasoline', 'Environmental impact', 'Personal records', 'Activity summary', 'Achievements']) {
+      expect(screen.getAllByText(title).length).toBeGreaterThan(0);
+    }
+    expect(screen.getByTestId('ai-lifetime-qa')).toBeInTheDocument();
+  });
+
+  it('retains known savings values and marks missing comparison readings unknown instead of fabricating zero', () => {
+    const stats = makeStats();
+    Reflect.deleteProperty(stats, 'total_charging_cost');
+    Reflect.deleteProperty(stats, 'co2_offset_kg');
+    h.query = makeQuery({ data: stats });
+    renderPage();
+
+    const electric = screen.getByText('Electric cost').closest('div');
+    const gas = screen.getByText('Gasoline equivalent').closest('div');
+    expect(electric).not.toBeNull();
+    expect(gas).not.toBeNull();
+    expect(within(electric!).getByText('—')).toBeInTheDocument();
+    expect(within(gas!).getByText('$1,500.00')).toBeInTheDocument();
+    expect(screen.getAllByText('$956.79').length).toBeGreaterThan(0);
+    expect(screen.queryByText('$0.00')).not.toBeInTheDocument();
+    expect(screen.queryByText(/0\.00 kg CO₂/)).not.toBeInTheDocument();
+    expect(screen.getByText('456.70 km')).toBeInTheDocument();
+  });
+
+  it('preserves genuine zero hero, record and savings readings', () => {
+    h.query = makeQuery({ data: makeStats({
+      total_drives: 0, total_distance_km: 0, total_charging_cost: 0,
+      total_savings: 0, co2_offset_kg: 0, achievements: [],
+      longest_drive_record: { value: 0, date: '2024-03-10T00:00:00Z' },
+      highest_speed_record: { value: 0, date: '2024-05-20T00:00:00Z' },
+      max_charge_record: { value: 0, date: '2024-06-01T00:00:00Z' },
+    }) });
+    renderPage();
+
+    expect(screen.getByText('driven across 0 drives')).toBeInTheDocument();
+    expect(screen.getByText(/0\/0\s+unlocked/)).toBeInTheDocument();
+    expect(screen.getByText('0.00 km/h')).toBeInTheDocument();
+    expect(screen.getByText('0.00 kWh')).toBeInTheDocument();
+    expect(screen.getAllByText('0.00 km').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('$0.00').length).toBeGreaterThanOrEqual(2);
+    expect(screen.getByText(/0\.00 kg CO₂ avoided/)).toBeInTheDocument();
+  });
+
+  it('retains all-time metrics and individual record values through a refresh failure with a working retry', () => {
+    h.query = makeQuery({ data: makeStats(), isError: true, error: new Error('refresh failed') });
+    renderPage();
+
+    expect(screen.getByText('12,345.00 km')).toBeInTheDocument();
+    expect(screen.getByText('456.70 km')).toBeInTheDocument();
+    expect(screen.getByText('$543.21')).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: 'Road Warrior' })).toBeInTheDocument();
+    fireEvent.click(screen.getAllByRole('button', { name: /Retry/i })[0]);
+    expect(refetchMock).toHaveBeenCalledTimes(1);
   });
 });
