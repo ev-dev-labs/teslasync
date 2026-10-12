@@ -33,7 +33,7 @@ import { useFormatting } from '@/hooks/useFormatting';
 
 import { toLocalDatetimeStr } from '@/lib/dateFormat';
 import { cn } from '@/lib/cn';
-import { typography } from '@/lib/tokens';
+import { neonColorMap, typography } from '@/lib/tokens';
 import {
   useOptimizeCharge,
   useApplySchedule,
@@ -129,11 +129,16 @@ export default function SmartChargePage() {
   const ratePlansState = useDataState(ratePlansQuery);
   const optimizeMutation = useOptimizeCharge();
   const applyMutation = useApplySchedule();
+  const { reset: resetOptimize } = optimizeMutation;
+  const { reset: resetApply } = applyMutation;
 
   // Form state — vehicleId comes from the global selection.
   const vehicleIdNum = selectedId ?? undefined;
-  const currentVehicleId = useRef(vehicleIdNum);
-  currentVehicleId.current = vehicleIdNum;
+  const currentVehicleScope = useRef({ vehicleId: vehicleIdNum });
+  if (currentVehicleScope.current.vehicleId !== vehicleIdNum) {
+    currentVehicleScope.current = { vehicleId: vehicleIdNum };
+  }
+  const previousVehicleId = useRef(vehicleIdNum);
   const [targetSoc, setTargetSoc] = useState(80);
   const [departBy, setDepartBy] = useState(defaultDepartBy);
   // No hardcoded plan: the effect below defaults to the first available plan
@@ -154,7 +159,12 @@ export default function SmartChargePage() {
   useEffect(() => {
     setResult(null);
     setApplied(false);
-  }, [vehicleIdNum]);
+    if (previousVehicleId.current !== vehicleIdNum) {
+      previousVehicleId.current = vehicleIdNum;
+      resetOptimize();
+      resetApply();
+    }
+  }, [vehicleIdNum, resetOptimize, resetApply]);
 
   // Plan-history query — also drives the page-level freshness chip.
   const plansQuery = useChargePlans(vehicleIdNum);
@@ -228,6 +238,7 @@ export default function SmartChargePage() {
     if (nextDepartByError || nextMaxAmpsError || nextCapacityError) return;
     setApplied(false);
     setResult(null);
+    const submittedScope = currentVehicleScope.current;
     optimizeMutation.mutate(
       {
         vehicle_id: vehicleIdNum,
@@ -239,7 +250,7 @@ export default function SmartChargePage() {
       },
       {
         onSuccess: (data) => {
-          if (currentVehicleId.current === vehicleIdNum) setResult(data);
+          if (currentVehicleScope.current === submittedScope) setResult(data);
         },
       },
     );
@@ -247,11 +258,12 @@ export default function SmartChargePage() {
 
   const handleApply = () => {
     if (!result) return;
+    const submittedScope = currentVehicleScope.current;
     applyMutation.mutate(
       { plan_id: result.plan_id },
       {
         onSuccess: () => {
-          if (currentVehicleId.current === vehicleIdNum) setApplied(true);
+          if (currentVehicleScope.current === submittedScope) setApplied(true);
         },
       },
     );
@@ -351,15 +363,16 @@ export default function SmartChargePage() {
         render: (p) => {
           const positive = p.savings != null && p.savings > 0;
           return (
-            <span
+            <Text
+              as="span"
+              variant="caption"
               className={cn(
-                typography.size.xs,
                 'tabular-nums',
-                positive ? 'text-emerald-300' : 'text-[var(--text-muted)]',
+                positive ? neonColorMap.green.text : typography.color.muted,
               )}
             >
               {positive ? formatCurrency(p.savings ?? 0) : '—'}
-            </span>
+            </Text>
           );
         },
       },
@@ -405,6 +418,7 @@ export default function SmartChargePage() {
             <ChargingSummaryBrief
               id="smart-charge-cost-comparison"
               metrics={costMetrics}
+              description={t('chargePlanner.modernization.estimateContext', 'Optimizer estimates for the selected departure and rate plan; not measured charging costs.')}
               period={{
                 kind: 'unknown',
                 label: t('chargePlanner.costComparison', 'Cost comparison'),
@@ -663,7 +677,6 @@ export default function SmartChargePage() {
                 sortKey={sortKey}
                 sortDir={sortDir}
                 onSort={onSort}
-                mobileColumns={['created_at', 'savings', 'status']}
                 data={historyItems}
                 keyExtractor={(p) => p.id}
                 emptyMessage={t(

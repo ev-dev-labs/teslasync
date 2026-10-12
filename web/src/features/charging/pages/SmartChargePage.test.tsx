@@ -39,6 +39,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 import { BADGE_VARIANTS } from '@/components/ui';
+import { neonColorMap } from '@/lib/tokens';
 
 import type { ChargePlan, OptimizeChargeResponse, RatePlanInfo, AutopilotProfile, AutopilotSavings } from '@/types/charging';
 import type { OcppChargePoint, OcppSession } from '@/api/hooks/useOcpp';
@@ -209,11 +210,11 @@ function makeQuery(over: Record<string, unknown> = {}) {
 
  
 function optimizeState(over: Record<string, unknown> = {}) {
-  return { mutate: vi.fn(), isPending: false, isError: false, error: null, ...over };
+  return { mutate: vi.fn(), reset: vi.fn(), isPending: false, isError: false, error: null, ...over };
 }
  
 function applyState(over: Record<string, unknown> = {}) {
-  return { mutate: vi.fn(), isPending: false, isError: false, error: null, ...over };
+  return { mutate: vi.fn(), reset: vi.fn(), isPending: false, isError: false, error: null, ...over };
 }
 
  
@@ -381,6 +382,17 @@ describe('SmartChargePage — before an optimization runs', () => {
   it('threads the selected vehicle into the AI suggestion card', () => {
     renderPage();
     expect(screen.getByTestId('ai-suggestion').getAttribute('data-vehicle-id')).toBe('7');
+  });
+
+  it('labels the comparison as optimizer estimates rather than recorded measurements', () => {
+    renderPage();
+    const comparison = within(document.getElementById('smart-charge-cost-comparison') as HTMLElement);
+    expect(comparison.getAllByText(
+      'Optimizer estimates for the selected departure and rate plan; not measured charging costs.',
+    ).length).toBeGreaterThan(0);
+    expect(comparison.queryByText(
+      'Recorded measurements from the stated charging source and scope.',
+    )).not.toBeInTheDocument();
   });
 });
 
@@ -571,6 +583,57 @@ describe('SmartChargePage — optimize interaction', () => {
     expect(screen.getByText('Enter a battery capacity greater than 0.')).toBeInTheDocument();
     expect(mutate).not.toHaveBeenCalled();
   });
+
+  it.each(['pending', 'failed'] as const)(
+    'resets previous-vehicle mutation feedback after a %s optimization without resetting form choices',
+    (state) => {
+      const optimize = optimizeState({
+        isPending: state === 'pending',
+        isError: state === 'failed',
+        error: state === 'failed' ? new Error('previous vehicle optimization failed') : null,
+      });
+      optimize.reset.mockImplementation(() => {
+        Object.assign(optimize, { isPending: false, isError: false, error: null });
+      });
+      const apply = applyState({ isError: true, error: new Error('previous vehicle apply failed') });
+      apply.reset.mockImplementation(() => {
+        Object.assign(apply, { isPending: false, isError: false, error: null });
+      });
+      mockOptimize.mockReturnValue(optimize);
+      mockApply.mockReturnValue(apply);
+      renderPage();
+      fireEvent.change(screen.getByLabelText('Rate plan', { selector: '#smart-charge-rate-plan' }), {
+        target: { value: 'sce-tou-d' },
+      });
+      fireEvent.change(document.getElementById('smart-charge-max-amps') as HTMLInputElement, {
+        target: { value: '40' },
+      });
+      expect(optimize.reset).not.toHaveBeenCalled();
+      expect(apply.reset).not.toHaveBeenCalled();
+      if (state === 'pending') expect(optimizeButton()).toBeDisabled();
+      else expect(screen.getAllByText('previous vehicle optimization failed').length).toBeGreaterThan(0);
+
+      mockSelected.mockReturnValue(selected(8));
+      fireEvent.change(screen.getByLabelText('Depart by'), {
+        target: { value: '2026-01-17T07:30' },
+      });
+      expect(optimize.reset).toHaveBeenCalledTimes(1);
+      expect(apply.reset).toHaveBeenCalledTimes(1);
+      // The real observer reset rerenders; this deterministic mock needs a form render.
+      fireEvent.change(document.getElementById('smart-charge-max-amps') as HTMLInputElement, {
+        target: { value: '41' },
+      });
+      expect(optimizeButton()).toBeEnabled();
+      expect(screen.queryByText('previous vehicle optimization failed')).not.toBeInTheDocument();
+      expect(screen.getByLabelText('Rate plan', { selector: '#smart-charge-rate-plan' })).toHaveValue('sce-tou-d');
+      expect(screen.getByLabelText('Depart by')).toHaveValue('2026-01-17T07:30');
+      fireEvent.click(optimizeButton());
+      expect(optimize.mutate).toHaveBeenCalledWith(expect.objectContaining({
+        vehicle_id: 8, target_soc: 80, rate_plan_id: 'sce-tou-d',
+        max_amps: 41, battery_capacity_kwh: 75,
+      }), expect.objectContaining({ onSuccess: expect.any(Function) }));
+    },
+  );
 });
 
 // ─────────────────────────── page: populated result ───────────────────────
@@ -693,6 +756,53 @@ describe('SmartChargePage — after a successful optimization', () => {
     const kpi = within(within(costComparison).getByRole('region', { name: 'Cost comparison' }));
     expect(kpi.getAllByText('—')).toHaveLength(4);
   });
+
+  it('rejects a stale result even when vehicle selection changes away and back', () => {
+    let finish: ((result: OptimizeChargeResponse) => void) | undefined;
+    mockOptimize.mockReturnValue(optimizeState({
+      mutate: vi.fn((_vars: unknown, opts?: { onSuccess?: (result: OptimizeChargeResponse) => void }) => {
+        finish = opts?.onSuccess;
+      }),
+    }));
+    renderPage();
+    fireEvent.click(optimizeButton());
+    mockSelected.mockReturnValue(selected(8));
+    fireEvent.change(screen.getByLabelText('Depart by'), { target: { value: '2026-01-17T07:30' } });
+    mockSelected.mockReturnValue(selected(7));
+    fireEvent.change(screen.getByLabelText('Depart by'), { target: { value: '2026-01-18T07:30' } });
+    act(() => finish?.(RESULT));
+    expect(screen.queryByRole('button', { name: /Apply Schedule/i })).not.toBeInTheDocument();
+    const comparison = within(document.getElementById('smart-charge-cost-comparison') as HTMLElement);
+    expect(comparison.getAllByText('—')).toHaveLength(4);
+    expect(comparison.queryByText('$3.25')).not.toBeInTheDocument();
+  });
+
+  it('does not mark a new schedule applied when an old vehicle-scope apply finishes', () => {
+    let finishApply: (() => void) | undefined;
+    mockOptimize.mockReturnValue(optimizeState({
+      mutate: vi.fn((_vars: unknown, opts?: { onSuccess?: (result: OptimizeChargeResponse) => void }) =>
+        opts?.onSuccess?.(RESULT)),
+    }));
+    const mutate = vi.fn((_vars: unknown, opts?: { onSuccess?: () => void }) => {
+      finishApply = opts?.onSuccess;
+    });
+    mockApply.mockReturnValue(applyState({ mutate }));
+    renderPage();
+    fireEvent.click(optimizeButton());
+    fireEvent.click(screen.getByRole('button', { name: /Apply Schedule/i }));
+    expect(mutate).toHaveBeenCalledWith({ plan_id: 555 }, expect.objectContaining({
+      onSuccess: expect.any(Function),
+    }));
+    mockSelected.mockReturnValue(selected(8));
+    fireEvent.change(screen.getByLabelText('Depart by'), { target: { value: '2026-01-17T07:30' } });
+    mockSelected.mockReturnValue(selected(7));
+    fireEvent.change(screen.getByLabelText('Depart by'), { target: { value: '2026-01-18T07:30' } });
+    fireEvent.click(optimizeButton());
+    act(() => finishApply?.());
+    expect(screen.getByRole('button', { name: /Apply Schedule/i })).toBeEnabled();
+    expect(screen.queryByText('Schedule applied!')).not.toBeInTheDocument();
+    expect(mutate).toHaveBeenCalledTimes(1);
+  });
 });
 
 // ─────────────────────────── page: plan history ───────────────────────────
@@ -749,6 +859,24 @@ describe('SmartChargePage — plan history', () => {
     expect(
       screen.getByText('No charge plans yet. Optimize a schedule above to get started.'),
     ).toBeInTheDocument();
+  });
+
+  it('keeps every history field reachable on phones through the existing scrollable table', () => {
+    mockPlans.mockReturnValue(makeQuery({ data: [makePlan()] }));
+    renderPage();
+    const tableElement = screen.getByRole('table', { name: 'charging:smart-charge-history' });
+    const table = within(tableElement);
+    expect(table.getAllByRole('columnheader')).toHaveLength(6);
+    for (const cell of table.getAllByRole('columnheader').concat(table.getAllByRole('cell'))) {
+      expect(cell).not.toHaveClass('hidden');
+    }
+    expect(table.getByText('02:00 — 05:00')).toBeInTheDocument();
+    expect(table.getByText('PG&E EV2-A')).toBeInTheDocument();
+    expect(table.getByText('$3.25')).toBeInTheDocument();
+    expect(table.getByText('$5.25')).toHaveClass(neonColorMap.green.text);
+    expect(table.getByText('completed')).toHaveClass(...BADGE_VARIANTS.success.split(' '));
+    expect(tableElement.closest('.overflow-auto')).toHaveClass('max-w-full', 'overscroll-x-contain');
+    expect(tableElement).toHaveAttribute('tabindex', '0');
   });
 
   it('retains history rows and shows an honest warning after a failed background refresh', () => {
