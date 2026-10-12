@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Zap, RefreshCw } from 'lucide-react';
 
 import { Grid, PageLayout } from '@/components/layout';
-import { Button } from '@/components/ui';
+import { Button, Caption } from '@/components/ui';
 import { type StatMetric } from '@/components/data-display';
 import { ChargingSummaryBrief } from '../components/operationalbrief-all/ChargingSummaryBrief';
 import { FadeIn } from '@/components/motion';
@@ -31,13 +31,7 @@ import { SnapshotCard } from '../components/powershare-modernization/SnapshotCar
 const outputColumns = { default: 1, xl: 3 };
 const detailColumns = { default: 1, xl: 2 };
 
-/**
- * Powershare — bidirectional power-sharing cockpit. Five cold signals
- * (PowershareStatus/Type/StopReason/HoursLeft/InstantaneousPowerKW) are read
- * from `/signals/observations` (router.go:4170); the numeric pair is pulled as
- * a short series to drive the trend charts. All display formatting happens at
- * this render boundary — the API returns raw values.
- */
+/** Powershare recorded observations, formatted only at the render boundary. */
 export default function PowersharePage() {
   const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
@@ -104,6 +98,18 @@ export default function PowersharePage() {
     && [statusQ, typeQ, stopQ, hoursQ, powerQ].some((q) => q.isLoading);
   const runtimeLoading = [statusState, typeState, hoursState, powerState].every((state) => !state.hasData)
     && [statusQ, typeQ, hoursQ, powerQ].some((q) => q.isLoading);
+  const summaryRetained = runtimeState.status === 'stale'
+    || runtimeState.refreshError != null || runtimeState.isRefreshBlocked;
+  const summaryStatus = runtimeLoading
+    ? t('charging.brief.loading', 'Loading source measurements')
+    : summaryRetained
+      ? t('charging.brief.retained', 'Retained source measurements')
+      : runtimeState.status === 'partial'
+        ? t('charging.brief.partial', 'Some measurements unavailable')
+        : undefined;
+  const snapshotEmpty = [statusState, typeState, stopState, hoursState, powerState]
+    .every(state => state.hasData && !state.fatalError && !state.refreshError
+      && !state.isRefreshBlocked && safeArray(state.data).length === 0);
   const metrics: StatMetric[] = [
     {
       metricId: 'status', occurrenceId: 'status',
@@ -145,6 +151,7 @@ export default function PowersharePage() {
     <div className="flex items-center gap-2">
       <Button
         variant="ghost"
+        className="h-11 min-h-11 min-w-11 md:h-10 md:min-h-0 md:min-w-0"
         onClick={refetchAll}
         aria-label={t('powershare.refresh', 'Refresh Powershare data')}
       >
@@ -188,11 +195,13 @@ export default function PowersharePage() {
       <FadeIn>
         <section
           aria-label={t('powershare.kpi.sectionLabel', 'Powershare metrics')}
+          aria-busy={runtimeLoading || undefined}
         >
           <ChargingSummaryBrief
             id="powershare-metrics"
             metrics={metrics}
-            retained={snapshotState.status === 'stale'}
+            retained={summaryRetained}
+            sourceStatus={summaryStatus}
             period={{
               kind: 'snapshot',
               label: t('powershare.snapshot.subtitle', 'Latest raw Powershare telemetry'),
@@ -267,14 +276,21 @@ export default function PowersharePage() {
 
       {/* 4 — Raw signal snapshot */}
       <FadeIn delay={0.3}>
+        <section aria-label={t('powershare.snapshot.title', 'Signal Snapshot')}>
         <StaleRefreshWarning state={statusState} />
         <StaleRefreshWarning state={typeState} />
+        {snapshotEmpty && (
+          <Caption as="p" className="mb-3">
+            {t('powershare.snapshot.noData', 'No Powershare signals received yet.')}
+          </Caption>
+        )}
         <SnapshotCard
           rows={snapshotRows}
           isLoading={snapshotLoading}
           error={snapshotState.fatalError}
           onRetry={refetchAll}
         />
+        </section>
       </FadeIn>
     </PageLayout>
   );

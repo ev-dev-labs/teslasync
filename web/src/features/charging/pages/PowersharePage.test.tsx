@@ -159,6 +159,7 @@ interface QueryStub {
   isFetching: boolean;
   isStale: boolean;
   dataUpdatedAt: number;
+  fetchStatus?: 'fetching' | 'paused' | 'idle';
   refetch: () => void;
 }
 
@@ -478,6 +479,113 @@ describe('PowersharePage', () => {
     expect(kpi.getByText('—')).toBeInTheDocument();
     expect(kpi.queryByText('0.00 kW')).not.toBeInTheDocument();
     expect(screen.getByText(/No power readings yet/i)).toBeInTheDocument();
+  });
+
+  it('identifies initial summary loading while keeping unknown readings and every panel', () => {
+    setAll(() => makeQuery({
+      isLoading: true, isFetching: true, dataUpdatedAt: 0,
+    }));
+
+    renderPage();
+
+    const region = screen.getByRole('region', { name: 'Powershare metrics' });
+    const kpi = within(region);
+    expect(region).toHaveAttribute('aria-busy', 'true');
+    expect(kpi.getByText('Loading source measurements')).toBeInTheDocument();
+    expect(kpi.queryByText('No source measurements')).not.toBeInTheDocument();
+    expect(kpi.getAllByText('—')).toHaveLength(4);
+    expect(screen.getByRole('heading', { name: 'Live Session' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Signal Snapshot' })).toBeInTheDocument();
+  });
+
+  it('keeps partial retained summary readings and the failed source retry independent', () => {
+    h.queries[POWERSHARE_SIGNALS.power].error = new Error('power refresh failed');
+    h.queries[POWERSHARE_SIGNALS.power].isError = true;
+    h.queries[POWERSHARE_SIGNALS.stopReason] = makeQuery({
+      error: new Error('stop unavailable'), isError: true, dataUpdatedAt: 0,
+    });
+
+    renderPage();
+
+    const kpi = within(screen.getByRole('region', { name: 'Powershare metrics' }));
+    expect(kpi.getByText('Retained source measurements')).toBeInTheDocument();
+    expect(kpi.getByText('3.25 kW')).toBeInTheDocument();
+    expect(kpi.queryByText('Source measurements available')).not.toBeInTheDocument();
+    const snapshot = within(screen.getByRole('table', { name: 'charging:powershare-signals' }));
+    expect(snapshot.getByText('3.25 kW')).toBeInTheDocument();
+    expect(snapshot.getByText('5.50 h')).toBeInTheDocument();
+    const stop = screen.getByRole('heading', { name: 'Stop Reason' }).closest('[data-card]');
+    expect(stop).not.toBeNull();
+    fireEvent.click(within(stop as HTMLElement).getByRole('button', { name: 'Retry' }));
+    expect(h.queries[POWERSHARE_SIGNALS.stopReason].refetch).toHaveBeenCalledTimes(1);
+    expect(h.queries[POWERSHARE_SIGNALS.power].refetch).not.toHaveBeenCalled();
+  });
+
+  it('identifies independently pending summary evidence without suppressing resolved neighbors', () => {
+    h.queries[POWERSHARE_SIGNALS.power] = makeQuery({
+      isLoading: true, isFetching: true, dataUpdatedAt: 0,
+    });
+
+    renderPage();
+
+    const region = screen.getByRole('region', { name: 'Powershare metrics' });
+    const kpi = within(region);
+    expect(region).not.toHaveAttribute('aria-busy');
+    expect(kpi.getByText('Some measurements unavailable')).toBeInTheDocument();
+    expect(kpi.getByText('Active')).toBeInTheDocument();
+    expect(kpi.getByText('5.50 h')).toBeInTheDocument();
+    expect(kpi.getByText('—')).toBeInTheDocument();
+    expect(screen.getByRole('table', { name: 'charging:powershare-signals' })).toBeInTheDocument();
+  });
+
+  it('retains paused recorded evidence without presenting it as fully available', () => {
+    h.queries[POWERSHARE_SIGNALS.hoursLeft].fetchStatus = 'paused';
+
+    renderPage();
+
+    const kpi = within(screen.getByRole('region', { name: 'Powershare metrics' }));
+    expect(kpi.getByText('Retained source measurements')).toBeInTheDocument();
+    expect(kpi.getByText('5.50 h')).toBeInTheDocument();
+    expect(kpi.getByText('3.25 kW')).toBeInTheDocument();
+    expect(kpi.queryByText('Source measurements available')).not.toBeInTheDocument();
+    expect(screen.queryByText(/Can't reach server/i)).not.toBeInTheDocument();
+  });
+
+  it('explains authoritative empty snapshots while retaining all five signal identities', () => {
+    setAll(() => makeQuery({ data: [] }));
+
+    renderPage();
+
+    const snapshot = within(screen.getByRole('region', { name: 'Signal Snapshot' }));
+    expect(snapshot.getByText('No Powershare signals received yet.')).toBeInTheDocument();
+    const table = snapshot.getByRole('table', { name: 'charging:powershare-signals' });
+    const rows = within(table).getAllByRole('row').slice(1);
+    expect(rows).toHaveLength(5);
+    for (const label of ['Status', 'Type', 'Output Power', 'Hours Remaining', 'Stop Reason']) {
+      expect(within(table).getByText(label)).toBeInTheDocument();
+    }
+    expect(within(table).getAllByText('—')).toHaveLength(10);
+  });
+
+  it('does not classify initially unresolved snapshots as authoritative empty', () => {
+    setAll(() => makeQuery({ isLoading: true, isFetching: true, dataUpdatedAt: 0 }));
+
+    renderPage();
+
+    const snapshot = within(screen.getByRole('region', { name: 'Signal Snapshot' }));
+    expect(snapshot.queryByText('No Powershare signals received yet.')).not.toBeInTheDocument();
+    expect(snapshot.getByRole('heading', { name: 'Signal Snapshot' })).toBeInTheDocument();
+  });
+
+  it('keeps the refresh control mobile-sized and every original source refresh action', () => {
+    renderPage();
+
+    const refresh = screen.getByRole('button', { name: 'Refresh Powershare data' });
+    expect(refresh).toHaveClass('h-11', 'min-h-11', 'min-w-11', 'md:h-10');
+    fireEvent.click(refresh);
+    for (const name of Object.values(POWERSHARE_SIGNALS)) {
+      expect(h.queries[name].refetch).toHaveBeenCalledTimes(1);
+    }
   });
 });
 
