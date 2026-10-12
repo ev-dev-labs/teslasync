@@ -4,6 +4,8 @@
 
 **Phases 0-3 complete; Phase 4 (pilot) in progress.** Phase 5 feature
 migration, Phase 6 combined QA, and Phase 7 final gates have not started.
+Eleven real scoped repairs are now active: the Phase4 capture dependency and
+ten deferred Phase6 gate repairs pulled early, not a restart of completed phases.
 Use the user's active seven-phase workflow, not the different feature-order
 numbering in `frontend-mission.md` section 38.
 
@@ -44,8 +46,10 @@ repository audit also ran the compiler successfully. Both sequential Docker
 builds of the deployed snapshot passed. Current full lint was actually run and
 exited1 at the query-signal audit: `useWatch.ts:191,210` uses queryFn factories
 that the audit cannot statically verify. This is not yet proof of a runtime
-cancellation defect. The serialized full frontend test gate is in progress;
-no full-test pass or pilot browser acceptance is claimed.
+cancellation defect. The serialized full frontend test gate finished exit1:
+45179 expanded tests,44915 passed,264 failed,0 pending,2438 file records and9
+nonpassing files. The33 failed suite records include describe blocks, not33
+files. No full-test pass or pilot browser acceptance is claimed.
 The original four canonical-schema regression cases are preserved
 and now pass. Latest selected eight-package Go race run has282 RUN/PASS
 entries, zero FAIL/SKIP, exit0; actual API binary compilation exits0.
@@ -152,6 +156,8 @@ One narrow `phase4-qa-scroll-extent-settlement` item is queued. It must preserve
 the35 accepted cases and failure/safety bounds; no rework of mounted settlement.
 The MCP browser is closed. Light Settings ten-width overflow retains geometry
 but exits1 for real resource/write findings; it is not native acceptance.
+The scroll-capture repair now has an exclusive live worker; the accepted
+mounted-readiness correction remains complete.
 
 A pre-rollout custom-format database archive is retained in the current
 session artifacts. `pg_restore --list` could read it; the Timescale circular-FK
@@ -196,20 +202,49 @@ completion does not mean the corresponding page was migrated.
 | 1 | 87 | 0 | 0 | 0 | 0 | 1 |
 | 2 | 27 | 0 | 0 | 0 | 0 | 0 |
 | 3 | 696 | 0 | 0 | 0 | 0 | 118 |
-| 4 | 30 | 1 | 0 | 1 | 5 | 34 |
+| 4 | 30 | 0 | 1 | 2 | 4 | 34 |
 | 5 | 0 | 0 | 0 | 0 | 1 | 1 |
-| 6 | 0 | 1 | 0 | 0 | 1 | 0 |
+| 6 | 0 | 0 | 10 | 0 | 1 | 0 |
 | 7 | 0 | 0 | 0 | 0 | 1 | 0 |
-| Total | 1080 | 2 | 0 | 1 | 8 | 158 |
+| Total | 1080 | 0 | 11 | 2 | 7 | 158 |
 
-There are1,249 rows: the original1,243 plus six narrow failures discovered
-by actual checks. Running0/32: no implementation worker is active; the current
-serialized parent test gate is not a worker. Queued repairs cannot run during
-that full gate. The query-signal finding is deferred to Phase6 and may be pulled
-early; the combined Phase6 sweep has not begun. Original pilot acceptance gates
-the aggregate later-phase placeholders. No fake work was created to fill slots.
+There are1,258 rows: the original1,243 plus fifteen narrow failures discovered
+by actual checks. Running11/32: only eleven real disjoint claimed repairs are
+ready; the remaining slots are not filled with fake/provenance work. No full
+gate may run while these workers are active. The combined Phase6 sweep has not
+begun; only explicit gate repairs are pulled early. Original pilot acceptance
+gates the aggregate later-phase placeholders.
 Actual `git rev-list --count HEAD` at `b60b34fcb` is1451; old1065 cadence prose
 was stale. The latest compiler covered the shared type before its commit.
+
+## Active exclusive workers
+
+All use the focused instructions in current session artifacts
+`focused-gate-worker-instructions.txt`. Each updates its own ignored heartbeat
+and log, never Git/queue/handoff. Source writes are limited to the stated claim.
+
+| Item | Agent ID | Exclusive write claim |
+| --- | --- | --- |
+| phase6-watch-query-signal-audit | `6dc9914c-5e0d-478f-b718-92296a64ccdf` | `web\src\api\hooks\useWatch.ts`; `useWatch.test.tsx` |
+| phase4-qa-scroll-extent-settlement | `8ae7d8ed-6f8b-4ef4-a577-ba4ca95eea09` | `web\scripts\frontend-qa.mjs`; `scripts\__tests__\frontend-qa.test.mjs` |
+| phase6-test-authorized-canonical-recovery | `5f6b869b-8be6-4bfd-977c-8ea23eb7f37c` | `web\src\i18n\authorized-canonical-recovery.test.ts` |
+| phase6-test-authorized-owner-recovery | `80eedd0e-51b6-497b-b880-27d61dae8e09` | `web\src\i18n\authorized-owner-recovery.test.ts` |
+| phase6-test-copy-owner-contracts | `6135ed89-85b6-4ca0-b657-72d4923d90b5` | `web\src\i18n\copy-owner-contracts.test.ts` |
+| phase6-test-excluded-consistent-defaults | `acfa8083-f948-4ad9-b6da-b6d8fd1c7748` | `web\src\i18n\excluded-consistent-defaults.test.ts` |
+| phase6-test-excluded-feature-owned-producers | `b4ddb90a-1267-4b0a-8f32-199a50a6babc` | `web\src\i18n\excluded-feature-owned-producers.test.ts` |
+| phase6-test-final-four-localization-gaps | `af5bf88a-0d47-49e6-904c-77aee1271542` | `web\src\i18n\final-four-localization-gaps.test.ts` |
+| phase6-test-resolved-baseline-producer | `f9f0136d-85e5-4f50-bd8b-d6f7b63c639f` | `web\src\i18n\resolved-baseline-producer.test.ts` |
+| phase6-test-cn | `69f0e107-8f20-4e9e-bc43-546be767741a` | `web\src\lib\cn.test.ts` |
+| phase6-test-tokens | `829d7ead-6c0a-44b2-9ba6-8b7d9efceb3b` | `web\src\lib\__tests__\tokens.test.ts` |
+
+Imported i18n test modules repeat the same assertion families. Root observations:
+225 failing entries at excluded-feature-owned-producers:1249; six each at
+authorized-owner-recovery:333,383; five each at
+authorized-canonical-recovery:18911,18927; plus each claimed file's own roots.
+Workers preserve exports and only repair their owned assertions; external
+imported failures must be reported, not used to seize another file. After intake,
+run one combined scoped selector covering these nine files; do not repeat the
+2438-file full suite until accepted repairs justify the phase gate.
 
 The session SQL todos are historical operational records, not the authoritative
 plan. The queue supersedes stale reservations, pending briefs, and repair-loop
@@ -344,6 +379,7 @@ contrast, performance, or accessibility acceptance.
 | Dashboard statistics | Original500 fixed and deployed at55e519031. Canonical schema/auth/nullable metadata regressions pass; stats200, scoped fixtures and all seven exact calendar-month independent SQL aggregates verified with zero boundary records. Historical all-time proxy was invalid. Nullable query contract accepted atb60b34fcb; no remaining stats500 blocker. |
 | Three-page pilot QA | Helper correction6bcbb5d2d preserves35 passing cases and real non-pass findings. Dark Settings has18 diagnostic PNGs, but the complete three-page visual/responsive/state/axe gate remains unaccepted. |
 | Current full lint | Actual gate exit1 at query-signal audit for two `useWatch.ts` queryFn factories; remaining chained audits were not reached. Do not infer runtime cancellation failure or claim full lint clean. |
+| Current full tests | Actual45179/44915/264/0, exit1. Nine nonpassing files contain historical whole-source/catalog/config projection contracts, repeated through imported suites. Each has one exclusive repair owner; no source/catalog rollback or blind hashes authorized. |
 | Native Drive History capture | Both themes BLOCKED at screenshot; real main extent/anchored scroll changes invalidate the fixed-extent coverage assertion. One narrow existing-tool repair queued; partial screenshots are not all-section acceptance. |
 | Dashboard layout writes | Three PUTs aborted during navigation without an explicit edit; exact initiator/root cause unknown. No source fix. Preserve legitimate autosave/autofit/draft recovery. |
 | Maintenance accepted continuation | `d770d4079`: corrected the new retained-source assertion, preserving production and original cases. Exact Maintenance18 + RepairCaseWorkspace12 cases pass30/30; strict four-file lint0 after locked dependency restoration. Historical failed assertion/tooling output and original attempt history remain preserved. |
@@ -404,7 +440,7 @@ historical evidence; its retained canonical cases now pass through production fi
 | No major duplicated UI patterns remain | Not established across the application |
 | TypeScript passes | Current production check0; both Docker build compilers passed |
 | Lint passes | Changed scopes passed; current full gate exit1 at query-signal audit, later chained audits not run |
-| Tests pass | Scoped frontend65 and DashboardStatsWidget63 cases passed; QA Node35 passed; selected eight-package Go race282 RUN/PASS entries with0 FAIL/SKIP, exit0; current full frontend gate in progress |
+| Tests pass | Scoped frontend65 and DashboardStatsWidget63 cases passed; QA Node35 passed; selected eight-package Go race282 RUN/PASS entries with0 FAIL/SKIP, exit0; complete current frontend gate45179 total/44915 pass/264 fail/0 pending, exit1 |
 | Production build passes | Deployed55e519031 sequential API/web Docker builds0; not pilot visual acceptance or a later-HEAD build claim |
 
 ## What slowed this session down / avoid repeating
@@ -452,6 +488,7 @@ problems, and perform required pilot QA; do not recreate those campaigns.
 | `55e519031` | fix(api): align canonical vehicle fleet reads; current deployed application |
 | `6bcbb5d2d` | fix(qa): capture settled diagnostics without hiding failures |
 | `b60b34fcb` | fix(web): reflect nullable shared fleet statistics; parent type/docs only |
+| `8b73d148c` | docs(frontend): record verified stats and real pilot findings |
 
 No Phase4-complete checkpoint exists. Metadata commits record progress, not
 pilot acceptance or runtime image identity. Obtain their hashes from actual
@@ -487,10 +524,10 @@ historical machine and was preserved in its prior handoff, not re-created here:
 1. Read this handoff, queue, current contract, relevant instructions, and
    `git status`. The two known workers are idle; preserve original WIP and
    untracked data, but do not resurrect finished reservations.
-2. Collect the running serialized frontend gate result once notified. Handle the
-   real query-signal lint failure and measured scroll-extent capture blocker
-   through their separate narrow queued items after that gate finishes; preserve
-   gate budgets and do not weaken audits or assume an unproved UI defect.
+2. Intake the eleven known live owners by exact ID on their completion
+   notifications; do not rediscover, relaunch or duplicate their source work.
+   Commit only each accepted owner's files, update its row and release claims.
+   Preserve gate budgets and do not weaken audits or assume an unproved UI defect.
 3. Keep accepted Maintenance, Dismiss, SignalCatalog, canonical vehicle,
    QA-helper and nullable stats fixes complete. Their
    scoped validation is done; do not redispatch them or replace original tests.
