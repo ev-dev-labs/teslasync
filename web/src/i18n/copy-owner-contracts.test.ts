@@ -13,6 +13,7 @@ import { finalFourAdditions, ownerRecoveryAdditions } from './authorized-owner-r
 import { AIThinkingIndicator } from '@/components/ai/AIThinkingIndicator'
 import { AIFeatureCard } from '@/components/ai/AIFeatureCard'
 import { useDrivesListPageCollections } from '@/features/driving/hooks/useDrivesListPageCollections'
+import type { DriveFsdInsight } from '@/types/fsd'
 
 vi.unmock('react-i18next')
 
@@ -203,13 +204,24 @@ describe('five source-backed copy-owner contracts', () => {
     expect(text).toContain("? t('commandHistory.selectVehicleHistoryPrompt', 'Select a vehicle to view command history')")
   })
 
-  it.each(['all', 'unrecognized'])('keeps the compact all pill and selected-label fallback for %s', collection => {
+  it.each(['all', 'unrecognized'] as const)('keeps the compact all pill and selected-label fallback for %s', collection => {
+    // The production hook reads only these fields, not the rest of the two
+    // page-context return types intersected by its declared CollectionsInput.
+    // Admit only the existing unknown-key regression alongside production keys;
+    // the actual hook handles it with the selected-label and active-key fallback.
+    type HookInput = Parameters<typeof useDrivesListPageCollections>[0]
+    type CopyInput = Pick<HookInput,
+      't' | 'fsdFilter' | 'hasDrivePayload' | 'fsdDataAvailable'
+      | 'fsdByDriveID' | 'dateFilteredDrives' | 'anomalyDrives' | 'notableDrives'
+      | 'commuteDrives' | 'filteredDrives'> & { collection: HookInput['collection'] | 'unrecognized' }
+    const useCopyCollections = useDrivesListPageCollections as
+      (input: CopyInput) => ReturnType<typeof useDrivesListPageCollections>
     const input = {
       t: english.getFixedT('en'), collection, fsdFilter: 'all',
-      hasDrivePayload: false, fsdDataAvailable: false, fsdByDriveID: new Map(),
+      hasDrivePayload: false, fsdDataAvailable: false, fsdByDriveID: new Map<number, DriveFsdInsight>(),
       dateFilteredDrives: [], anomalyDrives: [], notableDrives: [], commuteDrives: [], filteredDrives: [],
-    } as Parameters<typeof useDrivesListPageCollections>[0]
-    const { result } = renderHook(() => useDrivesListPageCollections(input))
+    } satisfies CopyInput
+    const { result } = renderHook(() => useCopyCollections(input))
     expect(result.current.collectionLabel).toBe('All')
     expect(result.current.filterPills[0]).toMatchObject({ key: 'all', label: 'All', count: undefined })
     expect(result.current.activeFilterKey).toBe(collection === 'all' ? 'all' : 'coll:unrecognized')
