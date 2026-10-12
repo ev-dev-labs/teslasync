@@ -13,9 +13,9 @@ import { BatteryEvidenceBrief } from '../components/operationalbrief-all/Battery
 
 import {
   GlassPanel, Badge,
-  SectionTitle, PanelTitle, Text, MetricLabel, GlossaryTerm,
+  SectionTitle, PanelTitle, Text, MetricValue, MetricLabel, Caption, Subhead, Icon, GlossaryTerm,
 } from '@/components/ui';
-import { gaugeTone, severityTokens, type GaugeTone, type Severity } from '@/lib/tokens';
+import { gaugeTone, severityTokens, typography, type GaugeTone, type Severity } from '@/lib/tokens';
 import { LinearGauge } from '@/components/charts';
 import {
   DataFreshnessAuto,
@@ -71,11 +71,8 @@ const BatteryChargingCharts = lazy(
 /**
  * Insight status → canonical severity.
  *
- * The page used to carry its own neon panel/icon maps (`border-neon-green/20
- * bg-neon-green/5`), which meant a "critical" battery insight looked nothing
- * like a critical alert anywhere else in the app and its neon fill did not
- * survive the light themes. Routing through `severityTokens` makes the three
- * insight states the same three states the rest of the app already speaks.
+ * Severity stays on the source identity and bounded icon cue, not the entire
+ * card surface. Routine advice does not compete with the primary assessment.
  */
 const insightSeverity: Record<'good' | 'warning' | 'critical', Severity> = {
   good: 'success',
@@ -128,7 +125,11 @@ export default function BatteryHealthPage() {
   const healthDataState = useDataState(healthQuery, { provenance: 'inferred' });
   const chargingLiveQuery = useChargingTelemetryLatest(vehicleId ?? 0);
   const { data: chargingLive } = chargingLiveQuery;
-  const chargingLiveState = useDataState(chargingLiveQuery, { provenance: 'live' });
+  const chargingLiveState = useDataState(chargingLiveQuery, {
+    provenance: 'live',
+    unavailable: chargingLiveQuery.isSuccess && chargingLive === null,
+  });
+  const fullChargeMeasured = chargingLive?.bms_fullcharge_complete != null;
 
   /* ── Derived: insights & recommendations ───────────────────────── */
   const insights = useMemo(
@@ -170,6 +171,29 @@ export default function BatteryHealthPage() {
       tempUnit={tempUnit}
     />
   );
+  const chargingSummaryEvidence = (
+    <div
+      className="mt-3 flex min-w-0 flex-wrap items-center gap-2"
+      data-testid="battery-full-charge-source"
+      data-refresh-blocked={chargingLiveState.isRefreshBlocked || undefined}
+    >
+      <Caption>{t('battery.metric.fullChargeComplete', 'Full Charge Complete')}</Caption>
+      <Badge variant={chargingLiveState.status === 'stale' ? 'warning' : 'neutral'}>
+        {chargingLiveState.status === 'initial'
+          ? t('battery.brief.loading', 'Loading source evidence')
+          : !fullChargeMeasured
+            ? t('battery.brief.unavailable', 'Source readings unavailable')
+            : chargingLiveState.status === 'stale'
+              ? t('battery.brief.retained', 'Retained source evidence')
+              : t('battery.brief.available', 'Available source readings')}
+      </Badge>
+      <DataProvenanceBadge
+        provenance={fullChargeMeasured ? 'cached' : 'unknown'}
+        status={!fullChargeMeasured && chargingLiveState.status === 'ok' ? 'unavailable' : chargingLiveState.status}
+        updatedAt={chargingLiveState.updatedAt}
+      />
+    </div>
+  );
 
   /* ── Empty / error ─────────────────────────────────────────────── */
   if (!health) {
@@ -190,7 +214,7 @@ export default function BatteryHealthPage() {
           loading={healthLoading}
           thermal={thermalPanel}
           links={<HealthQuickLinksPanel />}
-          summary={<HealthSummary
+          summary={<><HealthSummary
             chargingLive={chargingLive}
             healthMeasured={false}
             healthValue="—"
@@ -198,7 +222,7 @@ export default function BatteryHealthPage() {
             originalCapacityMeasured={false}
             formatEnergy={formatEnergy}
             formatNumber={fmtNumber}
-          />}
+          />{chargingSummaryEvidence}</>}
         />
         </Stack>
       </PageLayout>
@@ -215,6 +239,14 @@ export default function BatteryHealthPage() {
   // access so the "New vs Now" range cells degrade to a placeholder instead
   // of throwing on `.length` / `[0]`.
   const history = health.history ?? [];
+  const rangeChange = history.length >= 2
+    && Number.isFinite(history[0].range_m)
+    && Number.isFinite(history[history.length - 1].range_m)
+    ? history[history.length - 1].range_m - history[0].range_m
+    : null;
+  const capacityChange = capacityMeasured && originalCapacityMeasured
+    ? health.estimated_capacity_wh - health.original_capacity_wh
+    : null;
   const rangeSnapshotCount = history.filter(
     (point) => Number.isFinite(point.range_m) && point.range_m > 0,
   ).length;
@@ -596,6 +628,7 @@ export default function BatteryHealthPage() {
             formatNumber={fmtNumber}
             retained={healthDataState.status === 'stale'}
           />
+          {chargingSummaryEvidence}
         </FadeIn>
       </SectionErrorBoundary>
 
@@ -609,7 +642,7 @@ export default function BatteryHealthPage() {
           <SectionErrorBoundary name="battery:health-hero" fallbackTitle={t('battery.section.heroFailed', 'Health score panel failed to load')}>
             <GlassPanel className={BATTERY_PANEL_CLASS}>
               <PanelTitle className={BATTERY_PANEL_HEADER_CLASS}>
-                <Heart className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+                <Icon icon={Heart} className={typography.color.muted} />
                 {t('battery.hero.title', 'Health Overview')}
               </PanelTitle>
               <div className="grid min-w-0 grid-cols-2 items-center gap-4 sm:grid-cols-3 2xl:grid-cols-5">
@@ -646,12 +679,12 @@ export default function BatteryHealthPage() {
                   max={1500}
                   label={t('battery.gauge.cycles', 'Cycles')}
                   unit=""
-                  tone="purple"
+                  tone="neutral"
                 />
                 <div className="flex flex-col items-center justify-center text-center">
-                  <Text as="p" size="3xl" weight="bold" color="primary" className="tabular-nums">{yearsTo80}</Text>
+                  <MetricValue as="p">{yearsTo80}</MetricValue>
                   <MetricLabel className="mt-1">{t('battery.yearsTo80', 'Years to 80%')}</MetricLabel>
-                  <Text as="span" size="2xs" color="muted">{t('battery.warrantyNote', 'warranty threshold')}</Text>
+                  <Caption as="span">{t('battery.warrantyNote', 'warranty threshold')}</Caption>
                 </div>
               </div>
             </GlassPanel>
@@ -660,7 +693,7 @@ export default function BatteryHealthPage() {
           <SectionErrorBoundary name="battery:metric-bars" fallbackTitle={t('battery.section.metricBarsFailed', 'Metric bars failed to load')}>
             <GlassPanel className={BATTERY_PANEL_CLASS}>
               <PanelTitle className={BATTERY_PANEL_HEADER_CLASS}>
-                <Gauge className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+                <Icon icon={Gauge} className={typography.color.muted} />
                 {t('battery.bars.title', 'Capacity & Wear')}
               </PanelTitle>
               <Stack gap={4}>
@@ -671,9 +704,9 @@ export default function BatteryHealthPage() {
                     max={100}
                     color={gaugeTone.info}
                   /> : <Text variant="bodySm">{t('battery.bar.capacity', 'Current Capacity')}: —</Text>}
-                  <Text as="p" size="2xs" color="muted" className="mt-1">
+                  <Caption as="p" className="mt-1">
                     {capacityMeasured ? formatEnergy(health.estimated_capacity_wh) : '—'} / {originalCapacityMeasured ? formatEnergy(health.original_capacity_wh) : '—'}
-                  </Text>
+                  </Caption>
                 </div>
                 <div>
                   {healthMeasured ? <MetricBar
@@ -682,20 +715,20 @@ export default function BatteryHealthPage() {
                     max={10}
                     color={gaugeTone[degradationTone(health.degradation_rate_pct_per_year)]}
                   /> : <Text variant="bodySm">{t('battery.bar.degradation', 'Degradation')}: —</Text>}
-                  <Text as="p" size="2xs" color="muted" className="mt-1">
+                  <Caption as="p" className="mt-1">
                     {healthMeasured ? `${fmtNumber(health.degradation_rate_pct_per_year)}% ${t('battery.perYear', 'per year')}` : '—'}
-                  </Text>
+                  </Caption>
                 </div>
                 <div>
                   <MetricBar
                     label={t('battery.bar.cycles', 'Charge Cycles')}
                     value={health.total_cycles}
                     max={1500}
-                    color={gaugeTone.purple}
+                    color={gaugeTone.neutral}
                   />
-                  <Text as="p" size="2xs" color="muted" className="mt-1">
+                  <Caption as="p" className="mt-1">
                     {t('battery.warrantyLimit', 'Tesla warranty: 1,500 cycles / 70%')}
-                  </Text>
+                  </Caption>
                 </div>
               </Stack>
             </GlassPanel>
@@ -729,7 +762,7 @@ export default function BatteryHealthPage() {
           <SectionErrorBoundary name="battery:capacity-range" fallbackTitle={t('battery.section.capacityRangeFailed', 'Capacity & range comparison failed to load')}>
             <GlassPanel className={BATTERY_PANEL_CLASS}>
               <PanelTitle className={BATTERY_PANEL_HEADER_CLASS}>
-                <Activity className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+                <Icon icon={Activity} className={typography.color.muted} />
                 {t('battery.newVsNow.title', 'Capacity & Range: New vs Now')}
               </PanelTitle>
               <BatteryEvidenceBrief
@@ -744,16 +777,16 @@ export default function BatteryHealthPage() {
                   { metricId: 'energy', occurrenceId: 'capacity-now', rawValue: capacityMeasured ? health.estimated_capacity_wh : null,
                     label: t('battery.newVsNow.capNow', 'Capacity Now'),
                     display: { formatter: raw => ({ value: formatEnergy(raw), unit: '' }) },
-                    context: capacityMeasured && originalCapacityMeasured
-                      ? `-${formatEnergy(Math.max(0, health.original_capacity_wh - health.estimated_capacity_wh))}` : undefined },
+                    context: capacityChange != null
+                      ? `Δ ${capacityChange > 0 ? '+' : ''}${formatEnergy(capacityChange)}` : undefined },
                   { metricId: 'distance', occurrenceId: 'range-new', rawValue: history.length > 0 ? history[0].range_m : null,
                     label: t('battery.newVsNow.rangeNew', 'Range When New'),
                     display: { formatter: raw => ({ value: fmtInt(fromMeters(raw)), unit: unitPrefs.distance }) } },
                   { metricId: 'distance', occurrenceId: 'range-now', rawValue: history.length > 0 ? history[history.length - 1].range_m : null,
                     label: t('battery.newVsNow.rangeNow', 'Range Now'),
                     display: { formatter: raw => ({ value: fmtInt(fromMeters(raw)), unit: unitPrefs.distance }) },
-                    context: history.length >= 2
-                      ? `-${fmtInt(fromMeters(history[0].range_m - history[history.length - 1].range_m))} ${unitPrefs.distance} ${t('battery.newVsNow.lost', 'lost')}` : undefined },
+                    context: rangeChange != null
+                      ? `Δ ${rangeChange > 0 ? '+' : ''}${fmtInt(fromMeters(rangeChange))} ${unitPrefs.distance}` : undefined },
                 ]}
               />
             </GlassPanel>
@@ -766,7 +799,7 @@ export default function BatteryHealthPage() {
         <FadeIn delay={0.2} className="min-w-0 w-full">
           <section aria-label={t('battery.insights.title', 'Smart Insights')} className="min-w-0 w-full space-y-4">
             <SectionTitle className="flex min-w-0 items-center gap-2">
-              <Heart className="h-4 w-4 text-rose-300" aria-hidden="true" />
+              <Icon icon={Heart} className={typography.color.muted} />
               {t('battery.insights.title', 'Smart Insights')}
             </SectionTitle>
             {insights.length > 0 ? (
@@ -777,12 +810,12 @@ export default function BatteryHealthPage() {
                     <GlassPanel
                       key={i}
                       data-severity={insightSeverity[ins.status]}
-                      className={cn(BATTERY_PANEL_CLASS, 'border transition-all duration-normal', sev.border, sev.bg)}
+                      className={BATTERY_PANEL_CLASS}
                     >
                       <div className="flex items-start gap-3">
-                        <div className={cn('mt-0.5 shrink-0', sev.fg)}>{ins.icon}</div>
+                        <div className={cn('mt-0.5 shrink-0', ins.status === 'good' ? typography.color.muted : sev.fg)}>{ins.icon}</div>
                         <div className="min-w-0">
-                          <Text as="p" size="sm" weight="medium" color="primary">{ins.title}</Text>
+                          <Subhead as="p">{ins.title}</Subhead>
                           <Text as="p" variant="bodySm" className="mt-2">{ins.description}</Text>
                         </div>
                       </div>
@@ -831,16 +864,14 @@ export default function BatteryHealthPage() {
 
           <SectionErrorBoundary name="battery:recommendations" fallbackTitle={t('battery.section.recommendationsFailed', 'Recommendations failed to load')}>
             <GlassPanel className={BATTERY_PANEL_CLASS}>
-              <div className={BATTERY_PANEL_HEADER_CLASS}>
-              <Badge variant="success">
-                <Lightbulb className="mr-1 inline h-4 w-4" aria-hidden="true" />
+              <PanelTitle className={BATTERY_PANEL_HEADER_CLASS}>
+                <Icon icon={Lightbulb} className={typography.color.muted} />
                 {t('battery.recommendations.title', 'Recommendations')}
-              </Badge>
-              </div>
+              </PanelTitle>
               <ul className="space-y-4">
                 {recommendations.map((tip, idx) => (
                   <li key={idx} className="flex items-start gap-2">
-                    <Lightbulb className="mt-0.5 h-4 w-4 shrink-0 text-emerald-300" aria-hidden="true" />
+                    <Icon icon={Lightbulb} className={cn('mt-0.5', typography.color.muted)} />
                     <Text variant="body">{tip}</Text>
                   </li>
                 ))}

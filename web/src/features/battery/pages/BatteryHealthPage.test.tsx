@@ -149,7 +149,7 @@ import BatteryHealthPage, {
 } from './BatteryHealthPage';
 import { hasHealthMeasurement } from '../components/battery-health/helpers';
 import { CHART_COLORS } from '@/components/charts';
-import { gaugeTone, severityTokens } from '@/lib/tokens';
+import { gaugeTone, severityTokens, typography } from '@/lib/tokens';
 import type { BatteryChargingAnalysis, BatteryHealthAnalytics } from '@/types/energy';
 
 const t = tImpl as unknown as TFunction;
@@ -814,11 +814,168 @@ describe('BatteryHealthPage · design-system consistency', () => {
     // Excellent health + healthy habits ⇒ a success-severity insight.
     const good = insightCard('Excellent Health');
     expect(good).toHaveAttribute('data-severity', 'success');
-    expect(good.className).toContain(severityTokens.success.bg);
-    expect(good.className).toContain(severityTokens.success.border);
+    expect(good.className).not.toContain(severityTokens.success.bg);
+    expect(good.className).not.toContain(severityTokens.success.border);
+    expect(good.querySelector('svg')?.parentElement).toHaveClass(typography.color.muted);
+    expect(good).toHaveTextContent('Excellent Health');
 
     // The neon surface fills the insights used to carry are gone for good.
     expect(container.querySelector('[class*="bg-neon-"]')).toBeNull();
+  });
+
+  describe('BatteryHealthPage scoped modernization', () => {
+    it('does not claim full-charge evidence from a resolved telemetry object that lacks the BMS flag', () => {
+      chargingLiveMock.mockReturnValue({
+        ...makeQuery({ data: { module_temp_max: 0, bms_fullcharge_complete: null } }),
+        isSuccess: true,
+      });
+      renderPage();
+
+      const source = screen.getByTestId('battery-full-charge-source');
+      expect(within(source).getByText('Source readings unavailable')).toBeVisible();
+      expect(within(source).queryByText('Available source readings')).not.toBeInTheDocument();
+      expect(within(source).getByLabelText('Unknown source')).toHaveAttribute('data-data-status', 'unavailable');
+      expect(summaryMetricValue('Full Charge Complete')).toBe('—');
+      expect(thermalMetricValue('Module Temp (Max)')).toContain('0');
+      expect(summaryMetricValue('State of Health')).toContain('96');
+    });
+
+    it('marks a successfully empty BMS source unavailable without manufacturing health or a false full-charge flag', () => {
+      chargingLiveMock.mockReturnValue({ ...makeQuery({ data: null }), isSuccess: true });
+      renderPage();
+
+      const source = screen.getByTestId('battery-full-charge-source');
+      expect(within(source).getByText('Source readings unavailable')).toBeVisible();
+      expect(within(source).getByLabelText('Unknown source')).toHaveAttribute('data-data-status', 'unavailable');
+      expect(within(source).queryByText('Live')).not.toBeInTheDocument();
+      expect(summaryMetricValue('Full Charge Complete')).toBe('—');
+      expect(summaryMetricValue('State of Health')).toContain('96');
+      expect(thermalMetricValue('Battery Heater')).toBe('—');
+    });
+
+    it('keeps a pending BMS source distinct from resolved absence while modeled neighbors remain visible', () => {
+      chargingLiveMock.mockReturnValue({ ...makeQuery({ isLoading: true }), isSuccess: false });
+      renderPage();
+
+      const source = screen.getByTestId('battery-full-charge-source');
+      expect(within(source).getByText('Loading source evidence')).toBeVisible();
+      expect(within(source).getByLabelText('Unknown source')).toHaveAttribute('data-data-status', 'initial');
+      expect(within(source).queryByText('Source readings unavailable')).not.toBeInTheDocument();
+      expect(summaryMetricValue('Full Charge Complete')).toBe('—');
+      expect(summaryMetricValue('Current Capacity')).toContain('72.50');
+    });
+
+    it('retains the full-charge value and its source timestamp through BMS refresh failure without marking model neighbors stale', () => {
+      const query = {
+        ...makeQuery({
+          data: { bms_fullcharge_complete: true, module_temp_max: 32, module_temp_min: 28 },
+          error: new Error('BMS refresh failed'),
+        }),
+        dataUpdatedAt: Date.parse('2026-10-11T12:00:00Z'),
+        isSuccess: false,
+      };
+      chargingLiveMock.mockReturnValue(query);
+      renderPage();
+
+      const source = screen.getByTestId('battery-full-charge-source');
+      expect(within(source).getByText('Retained source evidence')).toBeVisible();
+      expect(within(source).getByLabelText('Cached')).toHaveAttribute('data-data-status', 'stale');
+      expect(within(source).getByLabelText('Cached')).toHaveAttribute(
+        'title', expect.stringContaining(new Date(query.dataUpdatedAt).toLocaleString()),
+      );
+      expect(summaryMetricValue('Full Charge Complete')).toBe('Yes');
+      expect(summaryMetricValue('State of Health')).toContain('96');
+      const summary = screen.getByRole('region', { name: 'Battery health summary metrics' });
+      expect(within(summary).queryByText('Retained source evidence')).not.toBeInTheDocument();
+      expect(thermalMetricValue('Module Temp (Max)')).toContain('32');
+      const thermal = screen.getByRole('region', { name: 'Thermal monitoring and capacity comparison' });
+      fireEvent.click(within(thermal).getByRole('button', { name: 'Refresh' }));
+      expect(query.refetch).toHaveBeenCalledTimes(1);
+    });
+
+    it('retains measured false when BMS refresh is paused without presenting it as fresh or offline', () => {
+      chargingLiveMock.mockReturnValue({
+        ...makeQuery({ data: { bms_fullcharge_complete: false, battery_heater_on: false } }),
+        fetchStatus: 'paused',
+      });
+      renderPage();
+
+      const source = screen.getByTestId('battery-full-charge-source');
+      expect(source).toHaveAttribute('data-refresh-blocked', 'true');
+      expect(within(source).getByText('Retained source evidence')).toBeVisible();
+      expect(within(source).getByLabelText('Cached')).toHaveAttribute('data-data-status', 'stale');
+      expect(source).not.toHaveTextContent(/up to date|offline/i);
+      expect(summaryMetricValue('Full Charge Complete')).toBe('No');
+      expect(thermalMetricValue('Battery Heater')).toBe('Off');
+      expect(summaryMetricValue('State of Health')).toContain('96');
+    });
+
+    it('keeps independent BMS evidence beside the summary when the health model fails initially', () => {
+      healthMock.mockReturnValue(makeQuery({ error: new Error('Model unavailable') }));
+      chargingLiveMock.mockReturnValue({
+        ...makeQuery({ data: { bms_fullcharge_complete: false, module_temp_max: 0 } }),
+        isSuccess: true,
+      });
+      renderPage();
+
+      expect(screen.getByTestId('battery-health-unavailable-outline')).toBeVisible();
+      expect(summaryMetricValue('State of Health')).toBe('—');
+      expect(summaryMetricValue('Full Charge Complete')).toBe('No');
+      expect(thermalMetricValue('Module Temp (Max)')).toContain('0');
+      const source = screen.getByTestId('battery-full-charge-source');
+      expect(within(source).getByText('Available source readings')).toBeVisible();
+      expect(within(source).getByLabelText('Cached')).toHaveAttribute('data-data-status', 'ok');
+    });
+
+    it('preserves positive capacity and range changes as signed SI-derived evidence rather than double negatives or clamped loss', () => {
+      const health = makeHealth({
+        estimated_capacity_wh: 78_000,
+        history: [
+          HEALTH_DEFAULTS.history[0],
+          { ...HEALTH_DEFAULTS.history[2], range_m: 550_000 },
+        ],
+      });
+      healthMock.mockReturnValue(makeQuery({ data: health }));
+      renderPage();
+
+      const comparison = screen.getByRole('region', { name: 'Capacity and range evidence' });
+      expect(within(comparison).getByText(/^Δ \+3(?:\.0+)? kWh$/)).toBeVisible();
+      expect(within(comparison).getByText('Δ +50 km')).toBeVisible();
+      expect(comparison).not.toHaveTextContent('--');
+      expect(health.estimated_capacity_wh).toBe(78_000);
+      expect(health.history[1].range_m).toBe(550_000);
+    });
+
+    it('preserves declining capacity and range evidence with one signed delta and the original source-scope caveat', () => {
+      renderPage();
+      const comparison = screen.getByRole('region', { name: 'Capacity and range evidence' });
+      expect(within(comparison).getByText(/^Δ -2\.50? kWh$/)).toBeVisible();
+      expect(within(comparison).getByText('Δ -30 km')).toBeVisible();
+      expect(comparison).toHaveTextContent('not a controlled capacity test');
+      expect(comparison).not.toHaveTextContent('--');
+    });
+
+    it('keeps warning and critical insight meaning on bounded cues while recommendations and section identity stay neutral', () => {
+      healthMock.mockReturnValue(makeQuery({
+        data: makeHealth({ current_soh: 60, fast_charge_pct: 60 }),
+      }));
+      renderPage();
+
+      for (const [title, severity] of [
+        ['Health Concern', 'critical'], ['High Fast-Charge Usage', 'warn'],
+      ] as const) {
+        const card = screen.getByText(title).closest('[data-severity]');
+        expect(card).toHaveAttribute('data-severity', severity);
+        expect(card).not.toHaveClass(severityTokens[severity].bg);
+        expect(card).not.toHaveClass(severityTokens[severity].border);
+        expect(card?.querySelector('svg')?.parentElement).toHaveClass(severityTokens[severity].fg);
+      }
+      for (const title of ['Health Overview', 'Capacity & Wear', 'Capacity & Range: New vs Now', 'Smart Insights', 'Recommendations']) {
+        const heading = screen.getByRole('heading', { name: title });
+        expect(heading.querySelector('svg')).toHaveClass(typography.color.muted);
+        expect(heading.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
+      }
+    });
   });
 
   it('escalates the insight severity with the battery condition', () => {
