@@ -1,9 +1,9 @@
-import { useMemo, useState } from 'react';
+import { useId, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ArrowLeftRight, GitCompareArrows, Timer, Waypoints } from 'lucide-react';
 
 import { PageLayout } from '@/components/layout';
-import { GlassPanel, PanelTitle, Text, Badge, Select, Toggle, HelpTooltip } from '@/components/ui';
+import { Card, GlassPanel, Icon, PanelTitle, Text, Badge, Select, Toggle, HelpTooltip } from '@/components/ui';
 
 import { CorrelationStatStrip } from '../components/statstrip-correlation/CorrelationStatStrip';
 import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
@@ -20,6 +20,8 @@ import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useDataState } from '@/hooks/useDataState';
 import { useHiddenSeries } from '@/hooks/useHiddenSeries';
+import { useDateFormat } from '@/hooks/useDateFormat';
+import { getChartFontFamily, getChartFontSize } from '@/lib/chartTypography';
 import { chartTokens } from '@/lib/tokens';
 
 import { crossCorrelate } from '../lib/signalCorrelation';
@@ -28,7 +30,14 @@ const HOURS = 24;
 
 export default function SignalCorrelationPage() {
   const { t } = useTranslation();
+  const { formatDateTime, formatTime, tz } = useDateFormat();
+  const detrendHintId = useId();
   usePageTitle(t('signalCorrelation.title', 'Signal correlation'));
+  const axisTick = {
+    fill: chartTokens.axisStroke,
+    fontFamily: getChartFontFamily(),
+    fontSize: getChartFontSize(),
+  };
 
   const { vehicleId } = useSelectedVehicle();
   const id = vehicleId ?? 0;
@@ -115,11 +124,12 @@ export default function SignalCorrelationPage() {
     const na = norm(seriesA.v);
     const nb = norm(seriesB.v);
     return seriesA.t.map((ms, i) => ({
-      time: new Date(ms).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' }),
+      timestamp: ms,
+      time: `${formatDateTime(new Date(ms))} (${tz})`,
       a: na(seriesA.v[i] ?? null),
       b: nb(seriesB.v[i] ?? null),
     }));
-  }, [result]);
+  }, [formatDateTime, result, tz]);
 
   if (vehicleId == null) {
     return <NoVehicleSelected pageTitle={t('signalCorrelation.title', 'Signal correlation')} />;
@@ -137,6 +147,10 @@ export default function SignalCorrelationPage() {
   );
   const error =
     historyAState.fatalError ?? historyBState.fatalError;
+  const retryBothFailed = () => {
+    if (historyAState.fatalError) historyAState.retry?.();
+    if (historyBState.fatalError) historyBState.retry?.();
+  };
 
   const leadLabel =
     result == null
@@ -163,7 +177,7 @@ export default function SignalCorrelationPage() {
       <FadeIn>
         <GlassPanel className="p-4 sm:p-5">
           <PanelTitle className="mb-3 flex items-center gap-2">
-            <GitCompareArrows className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+            <Icon icon={GitCompareArrows} className="text-[var(--text-secondary)]" />
             {t('signalCorrelation.pick', 'Choose two signals')}
             <HelpTooltip
               size="sm"
@@ -205,8 +219,9 @@ export default function SignalCorrelationPage() {
                   checked={detrend}
                   onChange={setDetrend}
                   label={t('signalCorrelation.detrend', 'Correlate changes, not levels')}
+                  aria-describedby={detrendHintId}
                 />
-                <Text variant="caption">
+                <Text id={detrendHintId} variant="caption">
                   {t(
                     'signalCorrelation.detrendHint',
                     'Differencing removes shared drift, so two signals that merely both rise over the day stop looking related',
@@ -232,6 +247,9 @@ export default function SignalCorrelationPage() {
       <FadeIn delay={0.2}>
         {!isLoading && !isError && result == null ? (
           <GlassPanel className="p-4 sm:p-5">
+            <PanelTitle className="mb-3">
+              {t('signalCorrelation.correlogram.title', 'Lagged correlogram')}
+            </PanelTitle>
             <EmptyState /* no-action: the correlogram is computed as soon as two signals with overlapping history are chosen. */
               icon={<GitCompareArrows className="h-8 w-8" />}
               message={
@@ -260,10 +278,7 @@ export default function SignalCorrelationPage() {
             )}
             loading={isLoading}
             error={isError ? error : null}
-            onRetry={() => {
-              if (historyAState.fatalError) historyAState.retry?.();
-              if (historyBState.fatalError) historyBState.retry?.();
-            }}
+            onRetry={retryBothFailed}
             empty={correlogram.length === 0}
             height={340}
             data={correlogram}
@@ -276,8 +291,8 @@ export default function SignalCorrelationPage() {
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={correlogram}>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
-                <XAxis dataKey="lag" tick={{ fill: 'var(--text-muted)', fontSize: 11 }} unit=" s" />
-                <YAxis tick={{ fill: 'var(--text-muted)', fontSize: 11 }} domain={[-1, 1]} />
+                <XAxis dataKey="lag" tick={axisTick} unit=" s" />
+                <YAxis tick={axisTick} domain={[-1, 1]} />
                 <Tooltip content={<ChartTooltip />} />
                 <ReferenceLine y={0} stroke="var(--text-muted)" />
                 {result != null ? (
@@ -330,10 +345,7 @@ export default function SignalCorrelationPage() {
           chartKey="signal-correlation-overlay"
           loading={isLoading}
           error={isError ? error : null}
-          onRetry={() => {
-            if (historyAState.fatalError) historyAState.retry?.();
-            if (historyBState.fatalError) historyBState.retry?.();
-          }}
+          onRetry={retryBothFailed}
           empty={overlay.length === 0}
           height={300}
           data={overlay}
@@ -346,9 +358,16 @@ export default function SignalCorrelationPage() {
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={overlay}>
               <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
-              <XAxis dataKey="time" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} minTickGap={40} />
-              <YAxis tick={{ fill: 'var(--text-muted)', fontSize: 11 }} domain={[0, 1]} />
-              <Tooltip content={<ChartTooltip />} />
+              <XAxis
+                dataKey="timestamp"
+                tick={axisTick}
+                tickFormatter={(ms: number) => formatTime(new Date(ms))}
+                minTickGap={40}
+              />
+              <YAxis tick={axisTick} domain={[0, 1]} />
+              <Tooltip content={<ChartTooltip labelFormatter={(ms) =>
+                typeof ms === 'number' ? `${formatDateTime(new Date(ms))} (${tz})` : '—'
+              } />} />
               <ChartLegend state={overlayHidden} />
               <Area
                 type="monotone"
@@ -356,7 +375,7 @@ export default function SignalCorrelationPage() {
                 name={signalA || t('signalCorrelation.signalA', 'Signal A')}
                 stroke={chartTokens.series[0]}
                 fill={chartTokens.series[0]}
-                fillOpacity={0.18}
+                fillOpacity={0.08}
                 strokeWidth={2}
                 connectNulls={false}
                 dot={false}
@@ -368,7 +387,7 @@ export default function SignalCorrelationPage() {
                 name={signalB || t('signalCorrelation.signalB', 'Signal B')}
                 stroke={chartTokens.series[4]}
                 fill={chartTokens.series[4]}
-                fillOpacity={0.18}
+                fillOpacity={0.08}
                 strokeWidth={2}
                 connectNulls={false}
                 dot={false}
@@ -383,16 +402,13 @@ export default function SignalCorrelationPage() {
       <FadeIn delay={0.4}>
         <GlassPanel className="p-4 sm:p-5">
           <PanelTitle className="mb-3 flex items-center gap-2">
-            <Timer className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+            <Icon icon={Timer} className="text-[var(--text-secondary)]" />
             {t('signalCorrelation.reading', 'Reading the result')}
           </PanelTitle>
           {isLoading ? (
             <Skeleton height={80} />
           ) : isError ? (
-            <QueryError error={error} onRetry={() => {
-              if (historyAState.fatalError) historyAState.retry?.();
-              if (historyBState.fatalError) historyBState.retry?.();
-            }} />
+            <QueryError error={error} onRetry={retryBothFailed} />
           ) : result == null ? (
             <EmptyState /* no-action: the interpretation follows from the correlogram above. */
               icon={<ArrowLeftRight className="h-8 w-8" />}
@@ -403,7 +419,7 @@ export default function SignalCorrelationPage() {
             />
           ) : (
             <div className="grid gap-3 sm:grid-cols-2">
-              <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3">
+              <Card padding="sm" className="shadow-e0">
                 <div className="mb-1 flex flex-wrap items-center gap-2">
                   <Badge variant={result.significant ? 'success' : 'warning'}>
                     {result.significant
@@ -428,8 +444,8 @@ export default function SignalCorrelationPage() {
                         'The peak does not clear the autocorrelation-adjusted threshold. Smooth signals correlate with almost anything, so this is best treated as coincidence.',
                       )}
                 </Text>
-              </div>
-              <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3">
+              </Card>
+              <Card padding="sm" className="shadow-e0">
                 <div className="mb-1 flex flex-wrap items-center gap-2">
                   <Badge variant="info">{leadLabel}</Badge>
                 </div>
@@ -445,7 +461,7 @@ export default function SignalCorrelationPage() {
                         { lag: Math.abs(result.bestLagS) },
                       )}
                 </Text>
-              </div>
+              </Card>
             </div>
           )}
         </GlassPanel>

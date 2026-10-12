@@ -2,11 +2,32 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
+import type { ChartContainerProps } from '@/components/charts';
 import type { CorrelationResult } from '../lib/signalCorrelation';
 import SignalCorrelationPage from './SignalCorrelationPage';
 
 const mocks = vi.hoisted(() => ({
   signals: vi.fn(), history: vi.fn(), correlate: vi.fn(), vehicle: 42 as number | null,
+  charts: vi.fn(),
+  formatDateTime: vi.fn((value: Date) => `saved-date:${value.toISOString()}`),
+  formatTime: vi.fn((value: Date) => `saved-time:${value.toISOString()}`),
+}));
+vi.mock('@/components/charts', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/components/charts')>();
+  return {
+    ...actual,
+    ChartContainer: (props: ChartContainerProps) => {
+      mocks.charts(props);
+      return <actual.ChartContainer {...props} />;
+    },
+  };
+});
+vi.mock('@/hooks/useDateFormat', () => ({
+  useDateFormat: () => ({
+    formatDateTime: mocks.formatDateTime,
+    formatTime: mocks.formatTime,
+    tz: 'America/Los_Angeles',
+  }),
 }));
 vi.mock('@/api/hooks/useTelemetry', () => ({
   useSignals: () => mocks.signals(),
@@ -47,6 +68,9 @@ beforeEach(() => {
   mocks.signals.mockReset();
   mocks.history.mockReset();
   mocks.correlate.mockReset();
+  mocks.charts.mockClear();
+  mocks.formatDateTime.mockClear();
+  mocks.formatTime.mockClear();
   mocks.vehicle = 42;
   mocks.signals.mockReturnValue(query(['BatteryLevel', 'CabinTemperature']));
   mocks.history.mockImplementation((_id: number, name: string) =>
@@ -93,5 +117,77 @@ describe('SignalCorrelationPage canonical summary and unchanged controls', () =>
     setup();
     expect(screen.queryByTestId('signal-correlation-summary')).not.toBeInTheDocument();
     expect(mocks.correlate).not.toHaveBeenCalled();
+  });
+
+  it('associates the changes switch with its full explanation without changing selection', () => {
+    setup();
+    const control = screen.getByRole('switch', { name: 'Correlate changes, not levels' });
+    const description = control.getAttribute('aria-describedby');
+    expect(description).toBeTruthy();
+    expect(document.getElementById(description!)).toHaveTextContent(
+      'Differencing removes shared drift, so two signals that merely both rise over the day stop looking related',
+    );
+    expect(control).toHaveAttribute('aria-checked', 'false');
+    expect(screen.getByLabelText('Signal A')).toHaveValue('');
+    expect(screen.getByLabelText('Signal B')).toHaveValue('');
+    expect(screen.getByText('Lagged correlogram')).toBeInTheDocument();
+    expect(screen.getByText('Normalised overlay')).toBeInTheDocument();
+    expect(screen.getByText('Reading the result')).toBeInTheDocument();
+  });
+
+  it('retains epoch identities and saved date labels with normalized zeros and gaps', () => {
+    const times = [
+      Date.parse('2026-11-01T08:30:00Z'),
+      Date.parse('2026-11-01T09:30:00Z'),
+      Date.parse('2026-11-02T09:30:00Z'),
+    ];
+    mocks.correlate.mockReturnValue({
+      ...RESULT,
+      seriesA: { ...RESULT.seriesA, t: times, v: [-2, null, 2], filled: 2, gaps: 1 },
+      seriesB: { ...RESULT.seriesB, t: times, v: [5, 0, null], filled: 2, gaps: 1 },
+    });
+    setup();
+    fireEvent.change(screen.getByLabelText('Signal A'), { target: { value: 'BatteryLevel' } });
+    fireEvent.change(screen.getByLabelText('Signal B'), { target: { value: 'CabinTemperature' } });
+    const overlayProps = mocks.charts.mock.calls.map(([props]) => props as ChartContainerProps)
+      .filter(props => props.chartKey === 'signal-correlation-overlay').at(-1)!;
+    expect(overlayProps.data).toEqual([
+      { timestamp: times[0], time: 'saved-date:2026-11-01T08:30:00.000Z (America/Los_Angeles)', a: 0, b: 1 },
+      { timestamp: times[1], time: 'saved-date:2026-11-01T09:30:00.000Z (America/Los_Angeles)', a: null, b: 0 },
+      { timestamp: times[2], time: 'saved-date:2026-11-02T09:30:00.000Z (America/Los_Angeles)', a: 1, b: null },
+    ]);
+    expect(overlayProps.dataColumns).toEqual([
+      { key: 'time', label: 'Time' },
+      { key: 'a', label: 'BatteryLevel' },
+      { key: 'b', label: 'CabinTemperature' },
+    ]);
+    expect(mocks.formatDateTime).toHaveBeenCalledWith(new Date('2026-11-01T08:30:00Z'));
+    expect(mocks.formatDateTime).toHaveBeenCalledWith(new Date('2026-11-01T09:30:00Z'));
+    expect(mocks.correlate).toHaveBeenLastCalledWith(SERIES, SERIES, { detrend: false });
+  });
+
+  it('retains the constant-series midpoint and measured summary during refresh errors', () => {
+    const retryA = vi.fn();
+    const retryB = vi.fn();
+    mocks.history.mockImplementation((_id: number, name: string) => ({
+      ...query(name ? { data: SERIES } : undefined, name ? new Error('refresh unavailable') : null),
+      refetch: name === 'BatteryLevel' ? retryA : retryB,
+    }));
+    setup();
+    fireEvent.change(screen.getByLabelText('Signal A'), { target: { value: 'BatteryLevel' } });
+    fireEvent.change(screen.getByLabelText('Signal B'), { target: { value: 'CabinTemperature' } });
+    const strip = screen.getByTestId('signal-correlation-summary');
+    expect(strip).toHaveTextContent('Retained source data');
+    expect(strip).toHaveTextContent('CabinTemperature leads');
+    expect(strip).toHaveTextContent('from 12 raw points');
+    const overlayProps = mocks.charts.mock.calls.map(([props]) => props as ChartContainerProps)
+      .filter(props => props.chartKey === 'signal-correlation-overlay').at(-1)!;
+    expect(overlayProps.error).toBeNull();
+    expect(overlayProps.data).toEqual([
+      { timestamp: 1791162060000, time: 'saved-date:2026-10-05T01:01:00.000Z (America/Los_Angeles)', a: 0.5, b: 0.5 },
+    ]);
+    expect(screen.getByText('Reading the result')).toBeInTheDocument();
+    expect(retryA).not.toHaveBeenCalled();
+    expect(retryB).not.toHaveBeenCalled();
   });
 });
