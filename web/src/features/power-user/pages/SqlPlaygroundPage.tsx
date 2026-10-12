@@ -50,6 +50,7 @@ import {
   Button,
   CopyButton,
   GlassPanel,
+  Icon,
   PanelTitle,
   SectionTitle,
   Text,
@@ -166,6 +167,7 @@ export default function SqlPlaygroundPage() {
   );
 
   const canRun = sql.trim().length > 0;
+  const canClear = sql.length > 0;
 
   return (
     <PageLayout
@@ -193,10 +195,11 @@ export default function SqlPlaygroundPage() {
             <Grid cols={WORKSPACE_COLUMNS} gap={4} className="min-w-0">
             <GlassPanel className="min-w-0 max-w-full space-y-3 p-4 sm:p-5 xl:col-span-2">
               <PanelTitle className="flex min-w-0 items-center gap-2 break-words">
-                <TerminalSquare className="h-4 w-4 shrink-0 text-cyan-300" aria-hidden="true" />
+                <Icon icon={TerminalSquare} size="md" className="text-[var(--text-secondary)]" />
                 {t('powerSql.editor.title', 'Manual SQL editor')}
               </PanelTitle>
               <Textarea
+                label={t('powerSql.editor.label', 'SQL query editor')}
                 value={sql}
                 onChange={handleSqlChange}
                 placeholder={t(
@@ -212,19 +215,21 @@ export default function SqlPlaygroundPage() {
                 <Button
                   variant="primary"
                   wrapLabel
+                  className="min-h-11 min-w-11 md:min-h-10 md:min-w-0"
                   onClick={handleRun}
                   disabled={!canRun}
                   aria-disabled={!canRun ? 'true' : 'false'}
-                  icon={<Play className="h-4 w-4" aria-hidden="true" />}
+                  icon={<Icon icon={Play} size="md" />}
                 >
                   {t('powerSql.editor.run', 'Run')}
                 </Button>
                 <Button
                   variant="secondary"
                   wrapLabel
+                  className="min-h-11 min-w-11 md:min-h-10 md:min-w-0"
                   onClick={handleClear}
-                  disabled={!canRun}
-                  icon={<Trash2 className="h-4 w-4" aria-hidden="true" />}
+                  disabled={!canClear}
+                  icon={<Icon icon={Trash2} size="md" />}
                 >
                   {t('powerSql.editor.clear', 'Clear')}
                 </Button>
@@ -232,6 +237,7 @@ export default function SqlPlaygroundPage() {
                   text={sql}
                   variant="outline"
                   size="md"
+                  className="min-h-11 min-w-11 md:min-h-10 md:min-w-0"
                   disabled={!canRun}
                   label={t('powerSql.editor.copy', 'Copy query')}
                   onCopy={() => setCopyFailed(false)}
@@ -245,7 +251,7 @@ export default function SqlPlaygroundPage() {
               {runMessage && (
                 <InlineCallout
                   variant="warning"
-                  icon={<Info className="h-4 w-4" />}
+                  icon={<Icon icon={Info} size="md" />}
                   testId="power-sql-run-message"
                 >
                   {runMessage}
@@ -270,7 +276,7 @@ export default function SqlPlaygroundPage() {
         <FadeIn delay={0.2} className="min-w-0 max-w-full">
           <section className="min-w-0" aria-label={t('powerSql.catalog.title', 'Curated schema catalog')}>
             <div className="mb-1 flex items-center gap-2">
-              <Database className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+              <Icon icon={Database} size="md" className="text-[var(--text-secondary)]" />
               <SectionTitle>
                 {t('powerSql.catalog.title', 'Curated schema catalog')}
               </SectionTitle>

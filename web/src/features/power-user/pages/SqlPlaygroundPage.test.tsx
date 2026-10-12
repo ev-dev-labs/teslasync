@@ -407,3 +407,78 @@ describe('SqlPlaygroundPage', () => {
     );
   });
 });
+
+describe('SqlPlaygroundPage page-owned modernization', () => {
+  it('clears a restored whitespace-only draft while Run and Copy remain disabled', () => {
+    const whitespace = '   \n\t  ';
+    window.localStorage.setItem(DRAFT_KEY, whitespace);
+    renderPage();
+
+    expect(getEditor()).toHaveValue(whitespace);
+    expect(screen.getByRole('button', { name: 'Run' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Copy query' })).toBeDisabled();
+    const clear = screen.getByRole('button', { name: 'Clear' });
+    expect(clear).toBeEnabled();
+
+    fireEvent.click(clear);
+
+    expect(getEditor()).toHaveValue('');
+    expect(window.localStorage.getItem(DRAFT_KEY)).toBeNull();
+    expect(clear).toBeDisabled();
+    expect(writeText).not.toHaveBeenCalled();
+    expect(screen.queryByTestId('power-sql-run-message')).not.toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Query workspace' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Curated schema catalog' })).toBeInTheDocument();
+  });
+
+  it('keeps Clear available after editing to whitespace without enabling execution or clipboard', () => {
+    renderPage();
+    fireEvent.change(getEditor(), { target: { value: 'SELECT distance_m FROM drives;' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Run' }));
+    expect(screen.getByTestId('power-sql-run-message')).toBeInTheDocument();
+
+    const whitespace = ' \t\n ';
+    fireEvent.change(getEditor(), { target: { value: whitespace } });
+
+    expect(getEditor()).toHaveValue(whitespace);
+    expect(window.localStorage.getItem(DRAFT_KEY)).toBe(whitespace);
+    expect(screen.getByRole('button', { name: 'Run' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Copy query' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Clear' })).toBeEnabled();
+    expect(screen.queryByTestId('power-sql-run-message')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Clear' }));
+    expect(getEditor()).toHaveValue('');
+    expect(window.localStorage.getItem(DRAFT_KEY)).toBeNull();
+    expect(writeText).not.toHaveBeenCalled();
+  });
+
+  it('associates a visible editor label and preserves responsive manual action targets', () => {
+    renderPage();
+
+    expect(screen.getByLabelText(EDITOR_NAME)).toBe(getEditor());
+    expect(screen.getByText(EDITOR_NAME, { selector: 'label' })).toHaveAttribute(
+      'for',
+      getEditor().id,
+    );
+    for (const name of ['Run', 'Clear', 'Copy query']) {
+      const action = screen.getByRole('button', { name });
+      expect(action).toHaveClass('min-h-11', 'min-w-11', 'md:min-h-10', 'md:min-w-0');
+    }
+  });
+
+  it('announces successful exact query copying with the custom action label', async () => {
+    renderPage();
+    const sql = '  SELECT energy_added_wh FROM charging_sessions;\n';
+    fireEvent.change(getEditor(), { target: { value: sql } });
+    fireEvent.click(screen.getByRole('button', { name: 'Copy query' }));
+
+    await waitFor(() => expect(screen.getByText('Copied')).toBeInTheDocument());
+    expect(screen.getByText('Copied').closest('[aria-live="polite"]')).not.toBeNull();
+    expect(screen.getByRole('button', { name: 'Copy query' })).toBeInTheDocument();
+    expect(writeText).toHaveBeenCalledExactlyOnceWith(sql);
+    expect(getEditor()).toHaveValue(sql);
+    expect(window.localStorage.getItem(DRAFT_KEY)).toBe(sql);
+    expect(screen.queryByTestId('power-sql-run-message')).not.toBeInTheDocument();
+  });
+});
