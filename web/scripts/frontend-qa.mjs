@@ -455,7 +455,7 @@ async function browserChecks(command, options, plans) {
   if (!configLoader?.loadConfigFromFile) throw new Error('BLOCKED: installed Playwright config loader adapter is unavailable');
   const config = await configLoader.loadConfigFromFile(resolve(webRoot, 'playwright.config.ts'));
   const use = selectChromiumSmokeUse(config);
-  const { chromium } = await import('@playwright/test');
+  const { chromium, expect } = await import('@playwright/test');
   const runDirectory = resolve(webRoot, '..', 'qa-screenshots', new Date().toISOString().replaceAll(':', '-') + `-${process.pid}`);
   const mode = options.theme ?? use.colorScheme;
   if (!['dark', 'light'].includes(mode)) throw new Error('BLOCKED: browser application mode must be dark or light');
@@ -474,6 +474,7 @@ async function browserChecks(command, options, plans) {
       for (const width of command === 'capture' ? CAPTURE_WIDTHS : OVERFLOW_WIDTHS) {
         const page = await context.newPage();
         const failures = [];
+        const result = { route: plan.template, width, theme: mode, status: 'BLOCKED' };
         let step = 'setup';
         page.on('pageerror', () => failures.push('uncaught page error'));
         page.on('response', (response) => {
@@ -504,7 +505,7 @@ async function browserChecks(command, options, plans) {
           await ready.waitFor({ state: 'visible', timeout: use.actionTimeout ?? 8000 });
           step = 'theme-settings';
           if (!await settings) {
-            results.push({ route: plan.template, width, theme: mode, status: 'BLOCKED', reason: 'Application theme settings did not settle; mode unverified' });
+            result.reason = 'Application theme settings did not settle; mode unverified';
             continue;
           }
           await page.evaluate(async () => {
@@ -521,9 +522,13 @@ async function browserChecks(command, options, plans) {
               root.classList.contains('light-mode') === (savedMode === 'light');
           }, { savedMode: mode }, { timeout: use.actionTimeout ?? 8000 });
           if (!applicationModeMatches(mode, await page.evaluate(mountedApplicationMode))) {
-            results.push({ route: plan.template, width, theme: mode, status: 'BLOCKED', reason: 'Mounted application mode mismatch; no capture or overflow pass' });
+            result.reason = 'Mounted application mode mismatch; no capture or overflow pass';
             continue;
           }
+          step = 'readiness';
+          await expect.poll(async () => isPageBusy(await page
+            .locator('[aria-busy="true"], [role="status"], [role="progressbar"]')
+            .evaluateAll(inspectIndicators)), { timeout: use.navigationTimeout ?? 20000 }).toBe(false);
           step = 'classification';
           const indicators = await page.locator('[aria-busy="true"], [role="status"], [role="progressbar"]').evaluateAll(inspectIndicators);
           const state = classifyPage({
@@ -541,21 +546,20 @@ async function browserChecks(command, options, plans) {
               return !clone.textContent?.trim();
             }),
           });
-          if (state.status !== 'READY') { results.push({ route: plan.template, width, ...state }); continue; }
-          if (failures.length) { results.push({ route: plan.template, width, status: 'FAILED', reasons: [...new Set(failures)] }); continue; }
+          if (state.status !== 'READY') { Object.assign(result, state); continue; }
           step = 'geometry';
-          const geometry = await page.evaluate(() => Object.fromEntries(['root', 'body'].map((key) => {
+          result.geometry = await page.evaluate(() => Object.fromEntries(['root', 'body'].map((key) => {
             const element = key === 'root' ? document.documentElement : document.body;
             return [key, { clientWidth: element.clientWidth, scrollWidth: element.scrollWidth }];
           })));
-          if (checkOverflow(geometry)) { results.push({ route: plan.template, width, status: 'FAILED', geometry }); continue; }
+          if (checkOverflow(result.geometry)) failures.push('horizontal overflow');
           if (command === 'capture') {
             step = 'screenshot';
             await mkdir(runDirectory, { recursive: true });
             const name = plan.template === '/' ? 'dashboard' : plan.template.slice(1).replace(/[^a-zA-Z0-9_-]/g, '-');
             const destination = resolve(runDirectory, `${name}-${width}-${options.theme ?? use.colorScheme}.png`);
             if (!applicationModeMatches(mode, await page.evaluate(mountedApplicationMode))) {
-              results.push({ route: plan.template, width, theme: mode, status: 'BLOCKED', reason: 'Mounted application mode changed before capture' });
+              result.reason = 'Mounted application mode changed before capture';
               continue;
             }
             await captureFullPage(page, destination, async () => {
@@ -567,12 +571,19 @@ async function browserChecks(command, options, plans) {
               }
             });
           }
-          results.push({ route: plan.template, width, theme: mode, status: 'PASSED', geometry });
+          result.status = 'PASSED';
         } catch (error) {
-          results.push({ route: plan.template, width, theme: mode, status: 'BLOCKED',
+          Object.assign(result, { status: 'BLOCKED',
             reason: step === 'theme-sync' ? 'Mounted application mode mismatch or synchronization failure' : 'Navigation/readiness/browser failure; no screenshot or overflow pass',
             failure: sanitizedBrowserFailure(error, step) });
-        } finally { await page.close(); }
+        } finally {
+          await page.close();
+          if (failures.length) {
+            result.reasons = [...new Set(failures)];
+            if (result.status === 'PASSED') result.status = 'FAILED';
+          }
+          results.push(result);
+        }
       }
     }
   } finally { try { await context?.close(); } finally { await browser.close(); } }

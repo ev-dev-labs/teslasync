@@ -272,6 +272,270 @@ test('browser CLI retains sensitive, unmocked and explicit-runtime guards withou
   }
 });
 
+function browserFixtureCLI(command, fixture = {}) {
+  // Replace browser transport only; real public polling, classification, scroll
+  // coverage, request blocking and CLI exit reporting stay in the actual helper.
+  const browserModule = `
+    import { expect } from ${JSON.stringify(import.meta.resolve('@playwright/test'))};
+    import { runInNewContext } from 'node:vm';
+    export { expect };
+    const fixture = ${JSON.stringify(fixture)};
+    const probe = { pages: [], writesBlocked: 0, readsContinued: 0, contextClosed: false, browserClosed: false };
+    function newPage() {
+      const info = { busyReads: 0, geometryReads: 0, screenshots: [], closed: false };
+      probe.pages.push(info);
+      const handlers = {};
+      const saved = new Map();
+      const classes = new Set();
+      const root = { style: {}, classList: { contains: (name) => classes.has(name) } };
+      const main = { clientHeight: 900, scrollHeight: 2500, scrollTop: 100 };
+      const sandbox = {
+        document: { documentElement: root, body: {}, fonts: { ready: Promise.resolve() } },
+        localStorage: { getItem: (key) => saved.get(key) ?? null, setItem: (key, value) => saved.set(key, value) },
+        requestAnimationFrame: (done) => done(), Date,
+        StorageEvent: class { constructor(type, options) { Object.assign(this, options); } },
+        window: { dispatchEvent: (event) => {
+          const mode = JSON.parse(event.newValue).msg.modeId;
+          root.style.colorScheme = mode;
+          classes.clear();
+          classes.add(mode === 'dark' ? 'dark' : 'light-mode');
+        } },
+      };
+      const run = (fn, argument, element) => runInNewContext(
+        '(' + fn.toString() + ')(argument)', { ...sandbox, argument, element });
+      let routeHandler;
+      let modeReads = 0;
+      const ready = {
+        first() { return this; }, count: async () => 1,
+        waitFor: async () => {}, isVisible: async () => true,
+        innerText: async () => fixture.emptyText ? ' ' : 'Application settings',
+        evaluate: async (fn, argument) => run(fn, argument ?? {
+          ...main, querySelectorAll: () => fixture.emptyView ? [{
+            getClientRects: () => [{}], closest: () => null,
+          }] : [],
+          cloneNode: () => ({ textContent: '', querySelectorAll: () => [] }),
+        }),
+      };
+      const scroll = {
+        first() { return this; }, count: async () => 1,
+        evaluate: async (fn, argument) => runInNewContext(
+          '(' + fn.toString() + ')(element, argument)', { ...sandbox, element: main, argument }),
+      };
+      return {
+        on: (name, handler) => { handlers[name] = handler; },
+        route: async (_pattern, handler) => { routeHandler = handler; },
+        setViewportSize: async ({ width, height }) => {
+          info.width = width;
+          main.clientHeight = height;
+          for (const element of [root, sandbox.document.body]) {
+            element.clientWidth = width;
+            element.scrollWidth = width + (fixture.overflow ? 2 : 0);
+          }
+        },
+        waitForResponse: async () => ({ finished: async () => {} }),
+        goto: async () => {
+          for (const method of fixture.write ? ['GET', 'POST'] : ['GET']) {
+            await routeHandler({
+              request: () => ({ method: () => method }),
+              abort: async () => { probe.writesBlocked += 1; },
+              continue: async () => { probe.readsContinued += 1; },
+            });
+          }
+          for (const status of fixture.resources ?? []) handlers.response({
+            status: () => status, request: () => ({ resourceType: () => 'fetch' }),
+          });
+          if (fixture.pageError) handlers.pageerror(new Error('Synthetic page error'));
+          return { status: () => 200 };
+        },
+        url: () => fixture.auth ? 'http://127.0.0.1:4173/login'
+          : fixture.redirect ? 'http://127.0.0.1:4173/' : 'http://127.0.0.1:4173/settings',
+        locator: (selector) => selector.startsWith('[aria-busy') ? {
+          evaluateAll: async (inspect) => {
+            info.busyReads += 1;
+            const busy = fixture.permanentBusy || info.busyReads <= (fixture.transientReads ?? 0) ||
+              (fixture.busyDuringCapture && info.busyReads >= 3);
+            return inspect([{
+              getClientRects: () => [{}], closest: () => null, querySelector: () => null,
+              getAttribute: (name) => ({
+                role: 'status', 'aria-label': busy ? 'Loading' : 'Live data',
+                'aria-busy': busy ? 'true' : 'false',
+              })[name] ?? null,
+            }]);
+          },
+        } : selector.startsWith('input') ? { count: async () => fixture.authVisible ? 1 : 0 }
+          : selector === 'main' ? { ...ready, first: () => scroll } : ready,
+        getByText: () => ({ count: async () => fixture.failedView ? 1 : 0 }),
+        evaluate: async (fn, argument) => {
+          if (fn.name === 'mountedApplicationMode' && ++modeReads >= 2 && fixture.themeBeforeCapture) {
+            root.style.colorScheme = 'light';
+          }
+          if (fn.toString().includes('Object.fromEntries')) info.geometryReads += 1;
+          return run(fn, argument);
+        },
+        waitForFunction: async (fn, argument) => {
+          if (fixture.themeMismatch || !run(fn, argument)) {
+            throw Object.assign(new Error('Synthetic theme timeout'), { name: 'TimeoutError' });
+          }
+        },
+        screenshot: async ({ path, fullPage }) => {
+          if (fixture.captureError && info.screenshots.length === 1) throw new Error('Synthetic capture failure');
+          info.screenshots.push({ path, fullPage, top: main.scrollTop });
+        },
+        close: async () => { info.closed = true; info.restoredTop = main.scrollTop; },
+      };
+    }
+    export const chromium = { launch: async () => ({
+      newContext: async () => ({
+        addInitScript: async () => {}, newPage: async () => newPage(),
+        close: async () => { probe.contextClosed = true; },
+      }),
+      close: async () => {
+        probe.browserClosed = true;
+        console.error('BROWSER_FIXTURE_PROBE ' + JSON.stringify(probe));
+      },
+    }) };
+  `;
+  const commonModule = `export const configLoader = { loadConfigFromFile: async () => ({
+    config: { projects: [{ name: 'chromium-smoke', use: {
+      baseURL: 'http://127.0.0.1:4173', colorScheme: 'dark',
+      actionTimeout: 80, navigationTimeout: 250,
+    } }] },
+  }) };`;
+  const preload = `
+    import { registerHooks, syncBuiltinESMExports } from 'node:module';
+    const modules = ${JSON.stringify({ '@playwright/test': browserModule, 'playwright/lib/common': commonModule })};
+    registerHooks({
+      resolve(specifier, context, next) {
+        return Object.hasOwn(modules, specifier)
+          ? { url: 'data:text/javascript,' + encodeURIComponent(modules[specifier]), shortCircuit: true }
+          : next(specifier, context);
+      },
+    });
+    const fs = process.getBuiltinModule('fs/promises');
+    const mkdir = fs.mkdir;
+    fs.mkdir = async (path, ...args) => String(path).includes('qa-screenshots') ? undefined : mkdir(path, ...args);
+    syncBuiltinESMExports();
+  `;
+  const result = spawnSync(process.execPath, [
+    '--import', `data:text/javascript,${encodeURIComponent(preload)}`,
+    fileURLToPath(new URL('../frontend-qa.mjs', import.meta.url)),
+    command, '--route', '/settings', '--theme', 'dark', '--ready', '[data-qa-ready]',
+  ], {
+    encoding: 'utf8', timeout: 10000,
+    env: { ...process.env, E2E_BASE_URL: 'http://127.0.0.1:4173', E2E_MOCKS: '0', E2E_SENSITIVE: '0' },
+  });
+  assert.equal(result.error, undefined, result.error?.message);
+  const marker = result.stderr.split('\n').find((line) => line.startsWith('BROWSER_FIXTURE_PROBE '));
+  assert.ok(marker, result.stderr);
+  return { ...result, report: JSON.parse(result.stdout), probe: JSON.parse(marker.slice('BROWSER_FIXTURE_PROBE '.length)) };
+}
+
+test('transient mounted loading settles through public polling before readiness and geometry can pass', () => {
+  const { status, report, probe } = browserFixtureCLI('overflow', { transientReads: 1 });
+  assert.equal(status, 0);
+  assert.deepEqual(report.results.map(({ width }) => width), OVERFLOW_WIDTHS);
+  assert.ok(report.results.every((result) => result.status === 'PASSED' && !result.reasons && result.geometry));
+  assert.ok(probe.pages.every((page) => page.busyReads >= 3 && page.geometryReads === 1 && page.closed));
+  assert.equal(probe.readsContinued, OVERFLOW_WIDTHS.length);
+  assert.equal(probe.contextClosed, true);
+  assert.equal(probe.browserClosed, true);
+});
+
+test('permanent mounted loading times out BLOCKED with retained findings and no geometry or captures', () => {
+  const { status, report, probe } = browserFixtureCLI('capture', { permanentBusy: true, resources: [503], write: true });
+  assert.equal(status, 2);
+  assert.deepEqual(report.results.map(({ width }) => width), CAPTURE_WIDTHS);
+  for (const result of report.results) {
+    assert.equal(result.status, 'BLOCKED');
+    assert.equal(result.failure.step, 'readiness');
+    assert.equal(result.failure.detail, 'timeout');
+    assert.deepEqual(result.reasons, ['non-read request blocked', 'failed resource 503']);
+    assert.equal(result.geometry, undefined);
+  }
+  assert.ok(probe.pages.every((page) => page.busyReads >= 2 && !page.geometryReads && !page.screenshots.length && page.closed));
+  assert.equal(probe.writesBlocked, CAPTURE_WIDTHS.length);
+  assert.equal(probe.browserClosed, true);
+});
+
+test('settled capture retains FAILED resource write page-error and overflow findings alongside all-scroll evidence', () => {
+  const { status, report, probe } = browserFixtureCLI('capture', {
+    resources: [501, 503, 404, 501], write: true, pageError: true, overflow: true,
+  });
+  assert.equal(status, 1);
+  assert.deepEqual(report.results.map(({ width }) => width), CAPTURE_WIDTHS);
+  for (const result of report.results) {
+    assert.equal(result.status, 'FAILED');
+    assert.deepEqual(result.reasons, [
+      'non-read request blocked', 'failed resource 501', 'failed resource 503',
+      'failed resource 404', 'uncaught page error', 'horizontal overflow',
+    ]);
+    assert.deepEqual(result.geometry, {
+      root: { clientWidth: result.width, scrollWidth: result.width + 2 },
+      body: { clientWidth: result.width, scrollWidth: result.width + 2 },
+    });
+  }
+  for (const page of probe.pages) {
+    assert.equal(page.screenshots.length, 4);
+    assert.ok(page.screenshots.every(({ fullPage }) => fullPage));
+    assert.match(page.screenshots.at(-1).path, /settings-\d+-dark-section-3\.png$/);
+    assert.deepEqual(page.screenshots.map(({ top }) => top), [
+      100, 0, page.width < 768 ? 844 : 900, page.width < 768 ? 1656 : 1600,
+    ]);
+    assert.equal(page.restoredTop, 100);
+    assert.equal(page.closed, true);
+  }
+  assert.equal(probe.writesBlocked, CAPTURE_WIDTHS.length);
+  assert.equal(probe.readsContinued, CAPTURE_WIDTHS.length);
+});
+
+test('settled overflow records real geometry despite resource findings and never falsely passes', () => {
+  for (const fixture of [{ resources: [501, 503, 404], write: true }, { overflow: true }]) {
+    const { status, report, probe } = browserFixtureCLI('overflow', fixture);
+    assert.equal(status, 1);
+    assert.deepEqual(report.results.map(({ width }) => width), OVERFLOW_WIDTHS);
+    assert.ok(report.results.every((result) => result.status === 'FAILED' && result.geometry));
+    assert.ok(probe.pages.every((page) => page.geometryReads === 1 && !page.screenshots.length));
+    if (fixture.overflow) assert.ok(report.results.every(({ reasons }) => reasons.includes('horizontal overflow')));
+    else assert.ok(report.results.every(({ reasons }) => reasons.includes('failed resource 404') && reasons.includes('non-read request blocked')));
+  }
+});
+
+test('blocked auth redirect theme empty and failed views never receive diagnostic geometry or captures', () => {
+  for (const fixture of [
+    { auth: true }, { authVisible: true }, { redirect: true }, { themeMismatch: true },
+    { emptyText: true }, { emptyView: true }, { failedView: true },
+  ]) {
+    const { status, report, probe } = browserFixtureCLI('capture', { ...fixture, resources: [501] });
+    assert.equal(status, 2);
+    assert.equal(report.results.length, CAPTURE_WIDTHS.length);
+    assert.ok(report.results.every((result) => result.status === 'BLOCKED' &&
+      result.reasons.includes('failed resource 501') && !result.geometry));
+    assert.ok(probe.pages.every((page) => !page.geometryReads && !page.screenshots.length && page.closed));
+  }
+});
+
+test('capture failures retain geometry and findings without claiming complete evidence or losing scroll restoration', () => {
+  const { status, report, probe } = browserFixtureCLI('capture', { resources: [503], captureError: true, overflow: true });
+  assert.equal(status, 2);
+  for (const result of report.results) {
+    assert.equal(result.status, 'BLOCKED');
+    assert.equal(result.failure.step, 'screenshot');
+    assert.deepEqual(result.reasons, ['failed resource 503', 'horizontal overflow']);
+    assert.ok(result.geometry);
+  }
+  assert.ok(probe.pages.every((page) => page.screenshots.length === 1 && page.restoredTop === 100 && page.closed));
+});
+
+test('mounted theme and busy guards still block capture after settled classification with resource findings', () => {
+  for (const fixture of [{ themeBeforeCapture: true }, { busyDuringCapture: true }]) {
+    const { status, report, probe } = browserFixtureCLI('capture', { ...fixture, resources: [404] });
+    assert.equal(status, 2);
+    assert.ok(report.results.every((result) => result.status === 'BLOCKED' &&
+      result.geometry && result.reasons.includes('failed resource 404')));
+    assert.ok(probe.pages.every((page) => !page.screenshots.length && page.restoredTop === 100 && page.closed));
+  }
+});
+
 const forcedColorsClasses = [
   'forced-colors:border-[CanvasText]', 'forced-colors:bg-[Canvas]',
   'forced-colors:text-[CanvasText]', 'forced-colors:border-[ButtonBorder]',
