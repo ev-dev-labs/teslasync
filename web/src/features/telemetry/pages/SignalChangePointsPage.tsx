@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { GitCommitHorizontal, ArrowUpDown, Waypoints } from 'lucide-react';
 
 import { PageLayout } from '@/components/layout';
-import { GlassPanel, PanelTitle, Text, Badge, Select, HelpTooltip } from '@/components/ui';
+import { GlassPanel, PanelTitle, Text, Badge, Select, HelpTooltip, Icon } from '@/components/ui';
 
 import type { StatMetric } from '@/components/data-display';
 import { TelemetrySummaryBrief } from '../components/operationalbrief-all/TelemetrySummaryBrief';
@@ -20,8 +20,10 @@ import { useSignals, useSignalAnalysisHistory } from '@/api/hooks/useTelemetry';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useDataState } from '@/hooks/useDataState';
+import { useDateFormat } from '@/hooks/useDateFormat';
 
 import { chartTokens } from '@/lib/tokens';
+import { getChartFontFamily, getChartFontSize } from '@/lib/chartTypography';
 
 import { summarizeSignalChangePoints, toNumericPoints } from '../lib/signalChangePoints';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
@@ -30,6 +32,7 @@ const HOURS = 72;
 
 export default function SignalChangePointsPage() {
   const { fmtScientificNumber, fmtNumber } = useNumberFormatting();
+  const { formatDateTime } = useDateFormat();
   const { t } = useTranslation();
   usePageTitle(t('signalChangePoints.title', 'Signal change points'));
 
@@ -69,35 +72,43 @@ export default function SignalChangePointsPage() {
     [historyQuery.data],
   );
 
-  const fmtTime = (ms: number) =>
-    new Date(ms).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
-
   const timeline = useMemo(() => {
     const points = toNumericPoints(historyQuery.data?.data ?? []);
     return points.map((p, i) => {
       const seg = summary.segments.find((s) => i >= s.startIndex && i <= s.endIndex);
+      const change = summary.changePoints.find((cp) => cp.index === i);
       return {
         ms: p.ms,
-        time: fmtTime(p.ms),
-        value: Math.round(p.value * 1000) / 1000,
-        level: seg != null ? Math.round(seg.mean * 1000) / 1000 : null,
+        time: new Date(p.ms).toISOString(),
+        value: p.value,
+        level: seg?.mean ?? null,
+        magnitude: change?.magnitude ?? null,
+        changePoint: change ? t('signalChangePoints.biggestHint', '{{dir}} · confidence {{conf}}', {
+          dir: change.direction === 'up' ? t('signalChangePoints.up', 'up') : t('signalChangePoints.down', 'down'),
+          conf: fmtNumber(change.confidence),
+        }) : null,
       };
     });
-  }, [historyQuery.data, summary.segments]);
+  }, [fmtNumber, historyQuery.data, summary.changePoints, summary.segments, t]);
 
-  const markerTimes = useMemo(
-    () => summary.changePoints.map((cp) => timeline[cp.index]?.time).filter((v): v is string => v != null),
-    [summary.changePoints, timeline],
-  );
-
-  const historyHasData = historyQuery.data !== undefined;
-  const isLoading = chosen && !historyHasData && historyQuery.isLoading;
+  const historyHasData = historyState.hasData;
+  const isLoading = chosen && historyState.status === 'initial' && !historyState.isRefreshBlocked;
   const isError = chosen && historyState.fatalError != null;
   const error = historyState.fatalError;
   const hasData = chosen && summary.samples > 0;
+  const sufficientEvidence = hasData && summary.samples >= summary.minSegmentSamples;
+  const waiting = chosen && !historyHasData && !isError;
+  const evidenceMessage = !chosen
+    ? t('signalChangePoints.pickOne', 'Choose a signal above to detect its change points.')
+    : waiting
+      ? t('operationalSummary.unknown', 'Source values unknown')
+      : t('signalChangePoints.notEnough', 'Not enough history yet for this signal.');
+  const formatMeasurement = (value: unknown) =>
+    typeof value === 'number' && Number.isFinite(value) ? fmtScientificNumber(value, 6) : '—';
+  const axisTick = { fill: chartTokens.axisStroke, fontFamily: getChartFontFamily(), fontSize: getChartFontSize(12) };
   const biggest = summary.biggestChange;
   const metrics: readonly StatMetric[] = [
-    { metricId: 'count', occurrenceId: 'change-points', rawValue: hasData ? summary.changePoints.length : null,
+    { metricId: 'count', occurrenceId: 'change-points', rawValue: sufficientEvidence ? summary.changePoints.length : null,
       label: t('signalChangePoints.count', 'Change points'),
       description: t('help.signalChangePoints.count', 'A change point closes the current segment and starts a fresh one only once the cumulative statistic crosses its alarm threshold, and never before the fixed minimum segment length has elapsed.'),
       context: t('signalChangePoints.minSegment', 'min segment {{n}} samples', { n: summary.minSegmentSamples }) },
@@ -107,13 +118,15 @@ export default function SignalChangePointsPage() {
       description: biggest != null ? t('signalChangePoints.biggestHint', '{{dir}} · confidence {{conf}}', {
         dir: biggest.direction === 'up' ? t('signalChangePoints.up', 'up') : t('signalChangePoints.down', 'down'),
         conf: fmtNumber(biggest.confidence),
-      }) : t('signalChangePoints.noShift', 'no shift detected') },
+      }) : sufficientEvidence ? t('signalChangePoints.noShift', 'no shift detected') : evidenceMessage },
     { metricId: 'count', occurrenceId: 'segments', rawValue: hasData ? summary.segments.length : null,
       label: t('signalChangePoints.segments', 'Segments'),
       description: t('signalChangePoints.segmentsHint', 'stable stretches between shifts') },
     { metricId: 'count', occurrenceId: 'samples', rawValue: chosen && historyHasData ? summary.samples : null,
       label: t('signalChangePoints.samples', 'Samples analyzed'),
-      description: t('signalChangePoints.noiseScale', 'noise scale {{n}}', { n: fmtScientificNumber(summary.globalSpread, 3) }) },
+      description: sufficientEvidence
+        ? t('signalChangePoints.noiseScale', 'noise scale {{n}}', { n: fmtScientificNumber(summary.globalSpread, 3) })
+        : evidenceMessage },
   ];
 
   if (vehicleId == null) {
@@ -133,9 +146,9 @@ export default function SignalChangePointsPage() {
       {/* 1 — Signal picker */}
       <FadeIn>
         <GlassPanel className="p-4 sm:p-5">
-          <PanelTitle className="mb-3 flex items-center gap-2">
-            <GitCommitHorizontal className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-            {t('signalChangePoints.pick', 'Choose a signal')}
+          <PanelTitle className="mb-3 flex flex-wrap items-center gap-2">
+            <Icon icon={GitCommitHorizontal} size="md" className="shrink-0" />
+            <span className="min-w-0 break-words">{t('signalChangePoints.pick', 'Choose a signal')}</span>
             <HelpTooltip
               size="sm"
               i18nKey="help.signalChangePoints.pick"
@@ -144,9 +157,11 @@ export default function SignalChangePointsPage() {
             />
           </PanelTitle>
           {catalogState.fatalError ? (
-            <QueryError error={catalogState.fatalError} onRetry={() => signalsQuery.refetch()} />
-          ) : signalsQuery.isLoading ? (
+            <QueryError error={catalogState.fatalError} />
+          ) : catalogState.status === 'initial' && !catalogState.isRefreshBlocked ? (
             <Skeleton height={80} />
+          ) : !catalogState.hasData ? (
+            <Text color="secondary">{t('operationalSummary.unknown', 'Source values unknown')}</Text>
           ) : options.length === 0 ? (
             <EmptyState /* no-action: signals appear as the telemetry stream reports them. */
               icon={<Waypoints className="h-8 w-8" />}
@@ -154,6 +169,7 @@ export default function SignalChangePointsPage() {
             />
           ) : (
             <Select
+              className="min-h-11 md:min-h-10"
               label={t('signalChangePoints.signal', 'Signal')}
               options={options}
               value={signalName}
@@ -168,74 +184,68 @@ export default function SignalChangePointsPage() {
       <FadeIn delay={0.1}>
         <TelemetrySummaryBrief title={t('signalChangePoints.kpis', 'Change-point metrics')}
           metrics={metrics} testId="signal-change-points-summary" loading={isLoading}
-          unavailable={isError} unknown={!hasData} sourceStatus={historyState.status}
+          unavailable={isError} unknown={!sufficientEvidence} sourceStatus={historyState.status}
           retained={historyHasData && (historyState.isRefreshing || historyState.status === 'stale' || historyState.refreshError != null)}
           scope={t('telemetry.brief.historyWindow', '{{hours}}h requested · {{signal}}', { hours: HOURS, signal: signalName || '—' })}
           sourceBounds={signalName ? [{ signal: signalName, from: historyQuery.data?.from, to: historyQuery.data?.to }] : []}
           provenance={t('telemetry.brief.historyProvenance', 'Selected signal history; numeric samples only')}
           description={t('telemetry.brief.analysisBounds', 'Analysis covers returned numeric samples, not guaranteed full-window coverage. Exact bounds remain unknown when not supplied by the source.')} />
-        {isError && <QueryError error={error} onRetry={() => historyQuery.refetch()} />}
       </FadeIn>
 
       {/* 3 — Timeline with segment levels and change-point markers */}
       <FadeIn delay={0.2}>
-        {!isLoading && !isError && timeline.length === 0 ? (
-          <GlassPanel className="p-4 sm:p-5">
-            <EmptyState /* no-action: the timeline appears once a signal with history is chosen. */
-              icon={<GitCommitHorizontal className="h-8 w-8" />}
-              message={chosen ? t('signalChangePoints.notEnough', 'Not enough history yet for this signal.') : t('signalChangePoints.pickOne', 'Choose a signal above to detect its change points.')}
-            />
-          </GlassPanel>
-        ) : (
-          // chart-legend-audit:skip two named series (actual + segment level) kept always visible together so the step-level context is never accidentally hidden
+        {/* chart-legend-audit:skip two named series (actual + segment level) kept always visible together so the step-level context is never accidentally hidden */}
           <ChartContainer
             title={t('signalChangePoints.timeline', 'Regime timeline')}
             subtitle={t('signalChangePoints.timelineHint', 'Raw values against each segment\u2019s mean; dashed markers are detected change points')}
             ariaLabel={t('signalChangePoints.timelineAria', 'Line chart of raw signal values overlaid with segment mean levels and detected abrupt change points')}
             loading={isLoading}
             error={isError ? error : null}
-            onRetry={() => historyQuery.refetch()}
             empty={timeline.length === 0}
+            emptyMessage={evidenceMessage}
             height={340}
             data={timeline}
             dataColumns={[
-              { key: 'time', label: t('signalChangePoints.col.time', 'Time') },
-              { key: 'value', label: t('signalChangePoints.col.value', 'Value') },
-              { key: 'level', label: t('signalChangePoints.col.level', 'Segment mean') },
+              { key: 'time', label: t('signalChangePoints.col.time', 'Time'),
+                format: (value) => typeof value === 'string' ? `${formatDateTime(value)} · ${value}` : '—' },
+              { key: 'value', label: t('signalChangePoints.col.value', 'Value'), kind: 'measurement', format: formatMeasurement },
+              { key: 'level', label: t('signalChangePoints.col.level', 'Segment mean'), kind: 'measurement', format: formatMeasurement },
+              { key: 'changePoint', label: t('signalChangePoints.count', 'Change points') },
             ]}
           >
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={timeline}>
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
-                <XAxis dataKey="time" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} minTickGap={40} />
-                <YAxis tick={{ fill: 'var(--text-muted)', fontSize: 11 }} domain={['auto', 'auto']} />
-                <Tooltip content={<ChartTooltip />} />
-                {markerTimes.map((time) => (
-                  <ReferenceLine key={time} x={time} stroke={chartTokens.series[3]} strokeDasharray="4 4" />
+                <CartesianGrid strokeDasharray="3 3" stroke={chartTokens.gridStroke} strokeOpacity={0.4} />
+                <XAxis dataKey="ms" type="number" scale="time" domain={['dataMin', 'dataMax']}
+                  tick={axisTick} tickFormatter={(ms: number) => formatDateTime(new Date(ms))} minTickGap={40} />
+                <YAxis tick={axisTick} tickFormatter={formatMeasurement} domain={['auto', 'auto']} />
+                <Tooltip content={<ChartTooltip valueFormatter={formatMeasurement}
+                  labelFormatter={(ms) => typeof ms === 'number' ? `${formatDateTime(new Date(ms))} · ${new Date(ms).toISOString()}` : '—'} />} />
+                {summary.changePoints.map((cp) => (
+                  <ReferenceLine key={cp.ms} x={cp.ms} stroke={chartTokens.series[3]} strokeDasharray="4 4" />
                 ))}
-                <Line type="monotone" dataKey="value" name={t('signalChangePoints.col.value', 'Value')} stroke={chartTokens.series[0]} strokeWidth={1.5} dot={false} />
-                <Line type="stepAfter" dataKey="level" name={t('signalChangePoints.col.level', 'Segment mean')} stroke={chartTokens.series[3]} strokeWidth={2} dot={false} connectNulls={false} />
+                <Line type="monotone" dataKey="value" name={t('signalChangePoints.col.value', 'Value')} stroke={chartTokens.series[0]} strokeWidth={2} dot={false} />
+                <Line type="stepAfter" dataKey="level" name={t('signalChangePoints.col.level', 'Segment mean')} stroke={chartTokens.series[3]} strokeWidth={1} strokeDasharray="4 4" dot={false} connectNulls={false} />
               </LineChart>
             </ResponsiveContainer>
           </ChartContainer>
-        )}
       </FadeIn>
 
       {/* 4 — Reading the result */}
       <FadeIn delay={0.3}>
         <GlassPanel className="p-4 sm:p-5">
           <PanelTitle className="mb-3 flex items-center gap-2">
-            <ArrowUpDown className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+            <Icon icon={ArrowUpDown} size="md" className="shrink-0" />
             {t('signalChangePoints.reading', 'Reading the result')}
           </PanelTitle>
           {isLoading ? (
             <Skeleton height={80} />
           ) : isError ? (
-            <QueryError error={error} onRetry={() => historyQuery.refetch()} />
-          ) : !hasData ? (
+            <QueryError error={error} />
+          ) : !sufficientEvidence ? (
             <EmptyState /* no-action: the interpretation follows from the detected segments above. */
               icon={<GitCommitHorizontal className="h-8 w-8" />}
-              message={t('signalChangePoints.noReading', 'Pick a signal to see how its change points should be read.')}
+              message={chosen ? evidenceMessage : t('signalChangePoints.noReading', 'Pick a signal to see how its change points should be read.')}
             />
           ) : (
             <div className="grid gap-3 sm:grid-cols-2">
