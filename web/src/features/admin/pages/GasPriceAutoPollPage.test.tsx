@@ -430,3 +430,60 @@ describe('GasPriceAutoPollPage — history table', () => {
     expect(within(table).getAllByText('gal').length).toBeGreaterThanOrEqual(2)
   })
 })
+
+describe('GasPriceAutoPollPage semantic adoption', () => {
+  it('keeps the poll action mobile-sized with a wrapping label and decorative icon', async () => {
+    install()
+    renderPage()
+
+    await within(kpiRegion()).findByText('Running')
+    const poll = screen.getByRole('button', { name: 'Poll now' })
+    expect(poll).toHaveClass('min-h-11', 'min-w-11', 'md:min-h-9', 'md:min-w-0', 'h-auto')
+    expect(poll).toBeEnabled()
+    const icon = poll.querySelector('svg')
+    expect(icon).toHaveAttribute('aria-hidden', 'true')
+    expect(icon).toHaveAttribute('focusable', 'false')
+    expect(icon).toHaveClass('h-4', 'w-4', 'shrink-0')
+    expect(within(poll).getByText('Poll now')).toHaveClass('break-words')
+    expect(mockedRequest.mock.calls.filter(([, init]) =>
+      (init as RequestInit | undefined)?.method === 'POST' ||
+      (init as RequestInit | undefined)?.method === 'PUT',
+    )).toHaveLength(0)
+  })
+
+  it('keeps the retained trend visible with its own refresh warning and recovery', async () => {
+    install()
+    const { qc } = renderPage()
+
+    await within(kpiRegion()).findByText('Running')
+    await screen.findByRole('img', { name: /line chart of historical Gas prices/i })
+    expect(screen.queryByText('Price trend may be out of date')).not.toBeInTheDocument()
+
+    install({ historyError: true })
+    await qc.invalidateQueries({ queryKey: ['gas-price-history'] })
+
+    const warningTitle = await screen.findByText('Price trend may be out of date')
+    const warning = warningTitle.closest('[data-testid="stale-refresh-warning"]')
+    expect(warning).not.toBeNull()
+    const trendSection = (warning as HTMLElement).parentElement as HTMLElement
+    expect(within(trendSection).getByRole('img', {
+      name: /line chart of historical Gas prices/i,
+    })).toBeInTheDocument()
+    expect(warning).toHaveTextContent('Previously loaded data remains visible while affected sources recover.')
+    expect(within(kpiRegion()).getByText('Running')).toBeInTheDocument()
+    expect(screen.getByRole('switch', { name: 'Auto-poll' })).toBeEnabled()
+    expect(screen.getByRole('heading', { name: 'Price history' })).toBeInTheDocument()
+
+    const historyCalls = mockedRequest.mock.calls.filter(([path]) => path === '/gas-price/history').length
+    const statusCalls = statusCallCount()
+    install()
+    fireEvent.click(within(warning as HTMLElement).getByRole('button', { name: 'Refresh' }))
+
+    await waitFor(() => expect(screen.queryByText('Price trend may be out of date')).not.toBeInTheDocument())
+    expect(mockedRequest.mock.calls.filter(([path]) => path === '/gas-price/history')).toHaveLength(historyCalls + 1)
+    expect(statusCallCount()).toBe(statusCalls)
+    expect(within(trendSection).getByRole('img', {
+      name: /line chart of historical Gas prices/i,
+    })).toBeInTheDocument()
+  })
+})

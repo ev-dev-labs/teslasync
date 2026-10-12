@@ -1,19 +1,18 @@
 /**
  * GasPriceAutoPollPage — first-class page for the EIA gas-price auto-poll
- * surface (Integrations sidebar group). Redesigned to the modern-ui gold
- * standard: a full-width responsive bento of a KPI band, a hero price-trend
- * chart alongside the configuration panel, and a full-width history table.
+ * surface (Integrations sidebar group): summary, price trend, configuration
+ * and history.
  *
- * The page is a thin orchestrator; every section lives in a dedicated,
- * self-sufficient sub-component under `../components/gas-price` that owns its
- * own loading / empty / error state.
+ * Status and history queries are shared with their dedicated section adapters,
+ * which retain independent loading, empty and error states.
  */
 
 import { useTranslation } from 'react-i18next';
 import { Zap } from 'lucide-react';
 
 import { PageLayout } from '@/components/layout';
-import { Button } from '@/components/ui';
+import { Button, Icon } from '@/components/ui';
+import { StaleRefreshWarning } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import {
@@ -42,7 +41,9 @@ export default function GasPriceAutoPollPage() {
     <Button
       variant="primary"
       size="sm"
-      icon={<Zap className="h-4 w-4" aria-hidden="true" />}
+      wrapLabel
+      className="min-h-11 min-w-11 md:min-h-9 md:min-w-0"
+      icon={<Icon icon={Zap} />}
       loading={pollMut.isPending}
       onClick={() => pollMut.mutate()}
     >
@@ -67,7 +68,8 @@ export default function GasPriceAutoPollPage() {
 
       <FadeIn delay={0.1}>
         <section className="grid grid-cols-1 gap-4 xl:grid-cols-3 xl:gap-5">
-          <div className="xl:col-span-2">
+          <div className="min-w-0 space-y-3 xl:col-span-2">
+            <StaleRefreshWarning state={historySource} label={t('gas.priceTrend', 'Price trend')} />
             <GasTrendChart source={historySource} />
           </div>
           <GasConfiguration source={statusSource} />
