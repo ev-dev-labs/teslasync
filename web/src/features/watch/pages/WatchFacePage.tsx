@@ -61,9 +61,10 @@ export default function WatchFacePage() {
     ?? (summaryQuery.availability === 'prerequisite-error'
       ? t('watch:capability.readError', 'Watch access could not be checked')
       : accessUnavailable ? t('watch:capability.notConfigured', 'Watch access is not configured') : undefined);
+  const accessOwnsDescription = accessUnavailable && operationalMode.writeBlockReason == null;
   const accessNotice = accessUnavailable ? (
     <div className="min-w-0 space-y-2 text-center">
-      <Text as="p" variant="bodySm" className="break-words text-[var(--text-on-accent)]">
+      <Text as="p" id={accessOwnsDescription ? readOnlyDescriptionId : undefined} variant="bodySm" className="break-words text-[var(--text-on-accent)]">
         {summaryQuery.availability === 'prerequisite-error'
           ? t('watch:capability.readError', 'Watch access could not be checked')
           : t('watch:capability.notConfigured', 'Watch access is not configured')}
@@ -246,7 +247,7 @@ export default function WatchFacePage() {
             }
           />
         </div>
-        {disabledReason ? (
+        {disabledReason && !accessOwnsDescription ? (
           <Text as="p" id={readOnlyDescriptionId} variant="caption" className="break-words text-center text-[var(--text-on-accent)]">
             {disabledReason}
           </Text>
@@ -331,7 +332,7 @@ export interface StatusIconProps {
   color?: 'emerald' | 'red' | 'amber';
   label?: string;
   /**
-   * Accessible name for the control. Icon-only buttons (lock, sentry) carry no
+   * Accessible name for the action or status. Icon-only lock/sentry icons carry no
    * visible text, so an explicit label is required for screen readers; when
    * omitted we fall back to the visible `label`.
    */
