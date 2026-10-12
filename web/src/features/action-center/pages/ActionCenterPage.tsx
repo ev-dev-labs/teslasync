@@ -162,6 +162,8 @@ export default function ActionCenterPage() {
 
   const pageSize = filter.limit ?? 50;
   const page = Math.floor((filter.offset ?? 0) / pageSize) + 1;
+  const total = query.data?.total;
+  const hasKnownTotal = total != null && Number.isSafeInteger(total) && total >= 0;
   const RefreshIcon = Icons.refresh;
   const refreshAction = (
     <div className="flex flex-wrap items-center gap-2">
@@ -173,6 +175,8 @@ export default function ActionCenterPage() {
       <Button
         type="button"
         variant="secondary"
+        wrapLabel
+        className="min-h-11 md:min-h-10"
         icon={<RefreshIcon className="h-4 w-4" aria-hidden="true" />}
         onClick={() => void query.refetch()}
         loading={query.isFetching}
@@ -235,7 +239,8 @@ export default function ActionCenterPage() {
         <Pagination
           page={page}
           pageSize={pageSize}
-          total={query.data?.total ?? 0}
+          total={total ?? 0}
+          totalKind={hasKnownTotal ? 'exact' : 'unknown'}
           onPageChange={(nextPage) =>
             setFilter((current) => ({
               ...current,

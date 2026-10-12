@@ -44,6 +44,7 @@ vi.mock('@/components/feedback', async () => {
     useToast: () => ({ toast: toastMock, success: toastSuccess, error: toastError }),
   };
 });
+
 vi.mock('@/hooks/useUnits', () => ({
   useUnits: () => ({
     formatEnergy: (value: number) => `${value} Wh`,
@@ -441,5 +442,85 @@ describe('ActionCenterPage', () => {
     renderPage();
     expect(screen.getByRole('button', { name: 'Retry' })).toBeInTheDocument();
     expect(screen.getByText('Source coverage')).toBeInTheDocument();
+  });
+});
+
+describe('ActionCenterPage result-count trust', () => {
+  it.each([
+    {
+      name: 'initial loading',
+      query: { data: undefined, isLoading: true, isFetching: true },
+    },
+    {
+      name: 'initial failure',
+      query: { data: undefined, isError: true, error: new Error('Source unavailable') },
+    },
+    { name: 'unresolved response', query: { data: undefined } },
+    { name: 'non-finite total', query: { data: { ...data, total: Number.NaN } } },
+    { name: 'negative total', query: { data: { ...data, total: -1 } } },
+  ])('keeps pagination total unknown for $name', ({ query }) => {
+    useActionCenterMock.mockReturnValue(queryResult(query));
+    renderPage();
+
+    const pagination = screen.getByRole('navigation', { name: 'Pagination' });
+    expect(within(pagination).getByText('Page 1 of Unknown')).toBeInTheDocument();
+    expect(within(pagination).queryByText(/Showing/)).not.toBeInTheDocument();
+    expect(within(pagination).getByRole('button', { name: 'Next page' })).toBeDisabled();
+    expect(within(pagination).getByLabelText('Rows per page')).toHaveValue('50');
+    expect(screen.getByLabelText('Action center summary')).toBeInTheDocument();
+    expect(screen.getByText('Filter decisions')).toBeInTheDocument();
+    expect(screen.getByText('Source coverage')).toBeInTheDocument();
+    expect(mutateAsyncMock).not.toHaveBeenCalled();
+  });
+
+  it('keeps an authoritative empty response distinct from an unknown count', () => {
+    useActionCenterMock.mockReturnValue(queryResult({
+      data: { ...data, items: [], total: 0, summary: { ...data.summary, open: 0 } },
+    }));
+    renderPage();
+
+    const pagination = screen.getByRole('navigation', { name: 'Pagination' });
+    expect(within(pagination).getByText('Showing 0–0 of 0')).toBeInTheDocument();
+    expect(within(pagination).queryByText('Page 1 of Unknown')).not.toBeInTheDocument();
+    expect(screen.getByText('Inbox clear')).toBeInTheDocument();
+    expect(screen.getByText('Source coverage')).toBeInTheDocument();
+  });
+
+  it('retains the full-result total through refresh failure and preserves page-size actions', async () => {
+    useActionCenterMock.mockReturnValue(queryResult({
+      data: { ...data, total: 120 },
+      isError: true,
+      error: new Error('Refresh unavailable'),
+    }));
+    renderPage();
+
+    const pagination = screen.getByRole('navigation', { name: 'Pagination' });
+    expect(within(pagination).getByText('Showing 1–50 of 120')).toBeInTheDocument();
+    expect(screen.getByText('Review active alert')).toBeInTheDocument();
+    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+    fireEvent.click(within(pagination).getByRole('button', { name: 'Next page' }));
+    await waitFor(() => expect(useActionCenterMock).toHaveBeenLastCalledWith(
+      expect.objectContaining({ vehicle_id: 7, state: 'open', limit: 50, offset: 50 }),
+    ));
+    fireEvent.change(within(pagination).getByLabelText('Rows per page'), {
+      target: { value: '25' },
+    });
+    await waitFor(() => expect(useActionCenterMock).toHaveBeenLastCalledWith(
+      expect.objectContaining({ vehicle_id: 7, state: 'open', limit: 25, offset: 0 }),
+    ));
+    expect(mutateAsyncMock).not.toHaveBeenCalled();
+  });
+
+  it('refreshes evidence without changing inbox state and retains a wrapping mobile target', () => {
+    const refetch = vi.fn();
+    useActionCenterMock.mockReturnValue(queryResult({ refetch }));
+    renderPage();
+
+    const refresh = screen.getByRole('button', { name: 'Refresh evidence' });
+    expect(refresh).toHaveClass('min-h-11', 'md:min-h-10', 'whitespace-normal');
+    fireEvent.click(refresh);
+    expect(refetch).toHaveBeenCalledTimes(1);
+    expect(mutateAsyncMock).not.toHaveBeenCalled();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 });
