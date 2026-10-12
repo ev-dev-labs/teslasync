@@ -12,9 +12,9 @@ import {
   type FleetReservation,
 } from '@/api/hooks/useFleetOps';
 import { useVehicles } from '@/api/hooks/useVehicles';
-import { Button } from '@/components/ui';
-import { Grid, PageLayout } from '@/components/layout';
-import { OperationalWriteNotice, StaleRefreshWarning } from '@/components/feedback';
+import { Button, Icon, Text } from '@/components/ui';
+import { Grid, LayoutCard, PageLayout } from '@/components/layout';
+import { EmptyState, OperationalWriteNotice, QueryError, Skeleton, StaleRefreshWarning } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useOperationalMode } from '@/hooks/useOperationalMode';
@@ -112,7 +112,9 @@ export default function FleetOperationsPage() {
       primaryAction={(
         <Button
           type="button"
-          icon={<CalendarPlus className="h-4 w-4" />}
+          icon={<Icon icon={CalendarPlus} />}
+          wrapLabel
+          className="max-w-full min-h-11 md:min-h-10"
           onClick={() => setEditor({ kind: 'reservation', item: null })}
           disabled={
             !operationalMode.canWrite
@@ -125,6 +127,7 @@ export default function FleetOperationsPage() {
         </Button>
       )}
       query={[
+        vehiclesQuery,
         driversQuery,
         assignmentsQuery,
         reservationsQuery,
@@ -137,6 +140,37 @@ export default function FleetOperationsPage() {
       <OperationalWriteNotice
         title={t('fleetOps.readOnly.title', 'Fleet operations is read-only')}
       />
+      {(!vehiclesState.hasData || vehicles.length === 0) && (
+        <LayoutCard title={t('nav.vehicles', 'Fleet')}>
+          {vehiclesState.fatalError ? (
+            <QueryError
+              compact
+              error={vehiclesState.fatalError}
+              resourceName={t('nav.vehicles', 'Fleet')}
+              message={t('vehicles.loadError', 'Failed to load vehicles.')}
+              onRetry={() => void vehiclesQuery.refetch()}
+            />
+          ) : !vehiclesState.hasData ? (
+            <div role="status" aria-label={vehiclesState.isRefreshBlocked
+              ? t('fleetOps.brief.refreshBlocked', 'Refresh paused')
+              : vehiclesQuery.isLoading
+                ? t('common.loading', 'Loading...')
+                : t('fleetOps.brief.source.initial', 'Awaiting source')}>
+              <Text as="p" variant="bodySm" color="muted">
+                {vehiclesState.isRefreshBlocked
+                  ? t('fleetOps.brief.refreshBlocked', 'Refresh paused')
+                  : t('fleetOps.brief.source.initial', 'Awaiting source')}
+              </Text>
+              <Skeleton lines={2} />
+            </div>
+          ) : (
+            <EmptyState
+              title={t('vehicles.emptyTitle', 'No vehicles yet')}
+              message={t('vehicles.emptyMessage', 'Connect your Tesla account and sync your vehicles to get started with fleet tracking, battery monitoring, and trip analysis.')}
+            />
+          )}
+        </LayoutCard>
+      )}
       <StaleRefreshWarning state={vehiclesState} label={t('nav.vehicles', 'Fleet')} />
       <StaleRefreshWarning state={driversState} label={t('fleetOps.drivers.title', 'Fleet drivers')} />
       <StaleRefreshWarning state={assignmentsState} label={t('fleetOps.assignments.title', 'Assignment roster')} />

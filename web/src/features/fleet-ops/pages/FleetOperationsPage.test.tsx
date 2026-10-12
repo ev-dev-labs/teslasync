@@ -14,6 +14,11 @@ const fleetPageState = vi.hoisted(() => ({
   driversError: null as Error | null,
   driversUnavailable: false,
   forecastError: null as Error | null,
+  vehiclesError: null as Error | null,
+  vehiclesUnavailable: false,
+  vehiclesLoading: false,
+  vehiclesEmpty: false,
+  vehiclesPaused: false,
 }));
 
 vi.mock('@/hooks/useOperationalMode', () => ({
@@ -51,8 +56,19 @@ function query<T>(data: T, source?: 'drivers' | 'forecast') {
   };
 }
 
+const vehiclesRefetch = vi.fn();
+
 vi.mock('@/api/hooks/useVehicles', () => ({
-  useVehicles: () => query([{ id: 7, display_name: 'Pool Y', vin: 'VIN7' }]),
+  useVehicles: () => ({
+    ...query(fleetPageState.vehiclesEmpty ? [] : [{ id: 7, display_name: 'Pool Y', vin: 'VIN7' }]),
+    data: fleetPageState.vehiclesUnavailable ? undefined
+      : fleetPageState.vehiclesEmpty ? [] : [{ id: 7, display_name: 'Pool Y', vin: 'VIN7' }],
+    error: fleetPageState.vehiclesError,
+    isError: fleetPageState.vehiclesError != null,
+    isLoading: fleetPageState.vehiclesLoading,
+    fetchStatus: fleetPageState.vehiclesPaused ? 'paused' : 'idle',
+    refetch: vehiclesRefetch,
+  }),
 }));
 
 vi.mock('@/hooks/useUnits', () => ({
@@ -210,6 +226,12 @@ beforeEach(() => {
   fleetPageState.driversError = null;
   fleetPageState.driversUnavailable = false;
   fleetPageState.forecastError = null;
+  fleetPageState.vehiclesError = null;
+  fleetPageState.vehiclesUnavailable = false;
+  fleetPageState.vehiclesLoading = false;
+  fleetPageState.vehiclesEmpty = false;
+  fleetPageState.vehiclesPaused = false;
+  vehiclesRefetch.mockReset();
   operationalMode.writeBlockReason = null;
 });
 
@@ -238,6 +260,82 @@ describe('FleetOperationsPage', () => {
       </MemoryRouter>,
     ) };
   }
+
+  it('exposes initial vehicle failure and retries only that source without removing fleet panels', () => {
+    fleetPageState.vehiclesUnavailable = true;
+    fleetPageState.vehiclesError = new Error('Vehicle choices unavailable');
+    const { rerenderPage } = renderPage();
+    expect(screen.getByText('Failed to load vehicles.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'New reservation' })).toBeDisabled();
+    expect(screen.queryByText('No vehicles yet')).not.toBeInTheDocument();
+    for (const title of ['Reservation calendar', 'Fleet drivers', 'Assignment roster',
+      'Cost-center allocation', 'Charging policy matrix', 'Maintenance work-order board',
+      'Utilization forecast']) {
+      expect(screen.getByRole('heading', { name: title })).toBeInTheDocument();
+    }
+    expect(screen.getByRole('button', { name: 'Edit Driver A' })).toBeEnabled();
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    expect(vehiclesRefetch).toHaveBeenCalledTimes(1);
+    expect(refetch).not.toHaveBeenCalled();
+    fleetPageState.vehiclesUnavailable = false;
+    fleetPageState.vehiclesError = null;
+    rerenderPage();
+    expect(screen.queryByText('Failed to load vehicles.')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'New reservation' })).toBeEnabled();
+    expect(mutate).not.toHaveBeenCalled();
+  });
+
+  it('shows initial vehicle loading rather than an empty fleet while independent records remain usable', () => {
+    fleetPageState.vehiclesUnavailable = true;
+    fleetPageState.vehiclesLoading = true;
+    renderPage();
+    expect(screen.getByRole('status', { name: 'Loading...' })).toBeInTheDocument();
+    expect(screen.queryByText('No vehicles yet')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'New reservation' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Edit Driver A' })).toBeEnabled();
+    expect(screen.getByTestId('fleet-operations-summary')).toHaveTextContent('Fleet-wide');
+    expect(mutate).not.toHaveBeenCalled();
+  });
+
+  it('explains an authoritative empty fleet without hiding loaded operational records', () => {
+    fleetPageState.vehiclesEmpty = true;
+    renderPage();
+    expect(screen.getByText('No vehicles yet')).toBeInTheDocument();
+    expect(screen.getByText(/Connect your Tesla account and sync your vehicles/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'New reservation' })).toBeDisabled();
+    expect(screen.queryByText('Failed to load vehicles.')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Edit Driver A' })).toBeEnabled();
+    expect(screen.getByRole('heading', { name: 'Utilization forecast' })).toBeInTheDocument();
+    expect(mutate).not.toHaveBeenCalled();
+  });
+
+  it('describes paused initial vehicle discovery without inventing an offline or empty fleet', () => {
+    fleetPageState.vehiclesUnavailable = true;
+    fleetPageState.vehiclesPaused = true;
+    renderPage();
+    expect(screen.getByRole('status', { name: 'Refresh paused' })).toHaveTextContent('Refresh paused');
+    expect(screen.queryByRole('status', { name: 'Loading...' })).not.toBeInTheDocument();
+    expect(screen.queryByText('No vehicles yet')).not.toBeInTheDocument();
+    expect(screen.queryByText("You're offline")).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'New reservation' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Edit Driver A' })).toBeEnabled();
+    expect(mutate).not.toHaveBeenCalled();
+  });
+
+  it('retains usable vehicle choices after refresh failure and preserves the accessible reservation action', () => {
+    fleetPageState.vehiclesError = new Error('Vehicle refresh failed');
+    renderPage();
+    expect(screen.getByText('Fleet may be out of date')).toBeInTheDocument();
+    expect(screen.queryByText('Failed to load vehicles.')).not.toBeInTheDocument();
+    const reserve = screen.getByRole('button', { name: 'New reservation' });
+    expect(reserve).toBeEnabled();
+    expect(reserve).toHaveClass('min-h-11', 'md:min-h-10');
+    expect(reserve.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
+    fireEvent.click(reserve);
+    const dialog = screen.getByRole('dialog', { name: 'Create reservation' });
+    expect(within(dialog).getByRole('option', { name: 'Pool Y' })).toHaveValue('7');
+    expect(mutate).not.toHaveBeenCalled();
+  });
 
   it('retains an intentionally empty driver value selection through failed refresh and recovery', () => {
     const { rerenderPage } = renderPage();
