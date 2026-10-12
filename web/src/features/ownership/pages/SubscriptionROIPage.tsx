@@ -1,4 +1,4 @@
-import { type FormEvent, useMemo, useState } from 'react';
+import { type FormEvent, useId, useMemo, useState } from 'react';
 import { CreditCard, Scale, Trash2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
@@ -27,19 +27,22 @@ import { AlertBanner } from '@/components/feedback';
 
 import { PageLayout } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
-import { Badge, Button, ConfirmDialog, DataTable, Input, Select, Text } from '@/components/ui';
+import { Badge, Button, ConfirmDialog, DataTable, Icon, Input, Select, Text } from '@/components/ui';
 import type { Column } from '@/components/ui';
 import { useConfirm } from '@/hooks/useConfirm';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useUnits } from '@/hooks/useUnits';
 import { formatDateTime } from '@/lib/dateFormat';
+import { cn } from '@/lib/cn';
+import { gaugeTone, neonColorMap, typography } from '@/lib/tokens';
 
 import type {
   BillingPeriod,
   Subscription,
   SubscriptionKind,
   SubscriptionROI,
+  SubscriptionVerdict,
   UsageMetric,
 } from '@/types/ownership';
 import {
@@ -90,12 +93,12 @@ const SUBSCRIPTION_KIND_LABELS: Record<SubscriptionKind, (t: TFunction) => strin
   one_time: (t) => t('ownership.subscription.kind.oneTime', 'One-time purchase'),
 };
 
-const VERDICT_FILL: Record<string, string> = {
-  keep: 'rgba(52,211,153,0.7)',
-  review: 'rgba(251,191,36,0.7)',
-  cancel: 'rgba(251,113,133,0.7)',
-  too_early: 'rgba(129,140,248,0.6)',
-  unknown: 'rgba(148,163,184,0.5)',
+const VERDICT_FILL: Record<SubscriptionVerdict, string> = {
+  keep: gaugeTone.success,
+  review: gaugeTone.warning,
+  cancel: gaugeTone.danger,
+  too_early: gaugeTone.info,
+  unknown: gaugeTone.neutral,
 };
 
 export default function SubscriptionROIPage() {
@@ -105,6 +108,8 @@ export default function SubscriptionROIPage() {
   const units = useUnits();
   const [windowDays, setWindowDays] = useState(180);
   const [formOpen, setFormOpen] = useState(false);
+  const editorId = useId();
+  const [draftVehicleId, setDraftVehicleId] = useState<number | null>(null);
   const [draft, setDraft] = useState({
     name: '',
     kind: 'subscription' as SubscriptionKind,
@@ -145,6 +150,28 @@ export default function SubscriptionROIPage() {
   const currency = report?.currency ?? draft.currency;
   const money = (minor: number | null | undefined) =>
     formatCurrencyMinor(minor, currency, units.unitPrefs.locale);
+  const usage = (quantity: number | null | undefined, unit: string) => {
+    if (quantity == null || !Number.isFinite(quantity)) return '—';
+    if (unit === 'm') return units.formatDistance(quantity);
+    if (unit === 'Wh') return units.formatEnergy(quantity);
+    if (unit === 's') return units.formatDuration(quantity);
+    return `${fmtNumber(quantity)} ${unit}`.trim();
+  };
+  const benchmark = (row: Subscription) => formatCurrencyMinor(
+    Math.round(row.benchmark_minor_per_unit * 100) / 100,
+    row.currency,
+    units.unitPrefs.locale,
+  );
+  const verdictLabel = (verdict: SubscriptionVerdict) => {
+    switch (verdict) {
+      case 'keep': return t('ownership.verdict.keep', 'keep');
+      case 'review': return t('ownership.verdict.review', 'review');
+      case 'cancel': return t('ownership.verdict.cancel', 'cancel');
+      case 'too_early': return t('ownership.verdict.too_early', 'too early');
+      case 'unknown': return t('ownership.verdict.unknown', 'unknown');
+      default: return String(verdict).replace(/_/g, ' ');
+    }
+  };
 
   const roiChartData = useMemo(
     () =>
@@ -160,9 +187,9 @@ export default function SubscriptionROIPage() {
 
   const submitSubscription = (event: FormEvent) => {
     event.preventDefault();
-    if (vehicleId == null) return;
+    if (draftVehicleId == null || vehicleId !== draftVehicleId) return;
     create.mutate(
-      { ...draft, vehicle_id: vehicleId },
+      { ...draft, vehicle_id: draftVehicleId },
       { onSuccess: () => setFormOpen(false) },
     );
   };
@@ -178,7 +205,7 @@ export default function SubscriptionROIPage() {
           </Text>
           <Text as="p" variant="caption">
             {SUBSCRIPTION_KIND_LABELS[row.subscription.kind](t)} ·{' '}
-                    {BILLING_PERIOD_LABELS[row.subscription.billing_period](t)}
+            {BILLING_PERIOD_LABELS[row.subscription.billing_period](t)}
           </Text>
         </div>
       ),
@@ -189,9 +216,9 @@ export default function SubscriptionROIPage() {
       render: (row) => (
         <div className="flex items-center gap-2">
           <VerdictBadge value={row.verdict} />
-          <span className="tabular-nums text-xs text-[var(--text-muted)]">
+          <Text as="span" variant="caption" className="tabular-nums">
             {formatPct(row.confidence * 100)}
-          </span>
+          </Text>
         </div>
       ),
       sortable: true,
@@ -225,12 +252,14 @@ export default function SubscriptionROIPage() {
       render: (row) => (
         <div>
           <span className="tabular-nums">
-            {row.usage_quantity != null ? fmtNumber(row.usage_quantity) : '—'} {row.usage_unit}
+            {row.usage_quantity == null ? `— ${row.usage_unit}`.trim() : usage(row.usage_quantity, row.usage_unit)}
           </span>
           <Text as="p" variant="caption">
             {row.usage_per_month != null
               ? t('ownership.subscription.row.perMonth', '{{value}} / month', {
-                  value: fmtNumber(row.usage_per_month),
+                  value: row.usage_unit === 'm' || row.usage_unit === 'Wh' || row.usage_unit === 's'
+                    ? usage(row.usage_per_month, row.usage_unit)
+                    : fmtNumber(row.usage_per_month),
                 })
               : '—'}
           </Text>
@@ -249,7 +278,9 @@ export default function SubscriptionROIPage() {
       header: t('ownership.subscription.row.net', 'Net'),
       render: (row) => (
         <span
-          className={`tabular-nums ${(row.net_value_minor ?? 0) > 0 ? 'text-emerald-300' : (row.net_value_minor ?? 0) < 0 ? 'text-rose-300' : ''}`}
+          className={cn('tabular-nums', (row.net_value_minor ?? 0) > 0
+            ? neonColorMap.green.text : (row.net_value_minor ?? 0) < 0
+              ? neonColorMap.red.text : typography.color.primary)}
         >
           {money(row.net_value_minor)}
         </span>
@@ -263,7 +294,8 @@ export default function SubscriptionROIPage() {
       render: (row) =>
         row.roi_pct != null ? (
           <span
-            className={`tabular-nums ${row.roi_pct > 0 ? 'text-emerald-300' : 'text-rose-300'}`}
+            className={cn('tabular-nums', row.roi_pct > 0 ? neonColorMap.green.text
+              : row.roi_pct < 0 ? neonColorMap.red.text : typography.color.primary)}
           >
             {formatSignedPct(row.roi_pct)}
           </span>
@@ -280,7 +312,7 @@ export default function SubscriptionROIPage() {
         <div>
           <span className="tabular-nums">
             {row.break_even_usage_per_month != null
-              ? `${fmtNumber(row.break_even_usage_per_month)} ${row.usage_unit}`
+              ? usage(row.break_even_usage_per_month, row.usage_unit)
               : '—'}
           </span>
           <Text as="p" variant="caption">
@@ -349,19 +381,11 @@ export default function SubscriptionROIPage() {
       key: 'benchmark',
       align: 'right',
       filterValue: (row) => `${row.currency}:${row.benchmark_minor_per_unit}`,
-      filterValueLabel: (_value, row) => formatCurrencyMinor(
-        Math.round(row.benchmark_minor_per_unit * 100) / 100,
-        row.currency,
-        units.unitPrefs.locale,
-      ),
+      filterValueLabel: (_value, row) => benchmark(row),
       header: t('ownership.subscription.list.benchmark', 'Benchmark rate'),
       render: (row) => (
         <span className="tabular-nums">
-          {formatCurrencyMinor(
-            Math.round(row.benchmark_minor_per_unit * 100) / 100,
-            row.currency,
-            units.unitPrefs.locale,
-          )}
+          {benchmark(row)}
         </span>
       ),
     },
@@ -384,7 +408,8 @@ export default function SubscriptionROIPage() {
         <Button
           variant="ghost"
           size="sm"
-          icon={<Trash2 className="h-4 w-4" aria-hidden="true" />}
+          icon={<Icon icon={Trash2} size="md" />}
+          className="min-h-11 min-w-11 md:min-h-9 md:min-w-0"
           loading={remove.isPending && remove.variables === row.id}
           onClick={() => void handleRemove(row)}
         >
@@ -485,7 +510,7 @@ export default function SubscriptionROIPage() {
             'ownership.subscription.chart.empty',
             'No subscription has enough measured usage to compute a return yet.',
           )}
-          actions={<Scale className="h-4 w-4 text-cyan-300" aria-hidden="true" />}
+          actions={<Icon icon={Scale} size="md" className={typography.color.muted} />}
         >
           <ChartContainer
             title={t('ownership.subscription.chart.inner', 'Return on spend, per subscription')}
@@ -542,7 +567,16 @@ export default function SubscriptionROIPage() {
         >
           <DataTable
             columns={roiColumns}
-            mobileColumns={['name', 'verdict', 'roi']}
+            mobilePresentation={{
+              roles: { name: 'title', verdict: 'badge', roi: 'primary' },
+              displayValue: (row, key) => {
+                if (key === 'name') return row.subscription.name;
+                if (key === 'verdict') return verdictLabel(row.verdict);
+                if (key === 'roi') return formatSignedPct(row.roi_pct);
+                return undefined;
+              },
+            }}
+            rowLabel={(row) => row.subscription.name}
             data={items}
             keyExtractor={(row) => row.subscription.id}
             tableId="ownership-subscription-roi"
@@ -565,8 +599,14 @@ export default function SubscriptionROIPage() {
             <Button
               variant="secondary"
               size="sm"
-              icon={<CreditCard className="h-4 w-4" aria-hidden="true" />}
-              onClick={() => setFormOpen((open) => !open)}
+              icon={<Icon icon={CreditCard} size="md" />}
+              className="min-h-11 min-w-11 md:min-h-9 md:min-w-0"
+              aria-expanded={formOpen}
+              aria-controls={editorId}
+              onClick={() => {
+                if (draftVehicleId == null) setDraftVehicleId(vehicleId);
+                setFormOpen((open) => !open);
+              }}
             >
               {formOpen
                 ? t('ownership.action.cancel', 'Cancel')
@@ -576,9 +616,14 @@ export default function SubscriptionROIPage() {
         >
           {formOpen ? (
             <form
+              id={editorId}
+              aria-label={t('ownership.subscription.list.add', 'Add subscription')}
               className="mb-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3"
               onSubmit={submitSubscription}
             >
+              <Text as="p" variant="caption" className="md:col-span-2 xl:col-span-3">
+                {t('common.vehicle', 'Vehicle')} {draftVehicleId ?? '—'}
+              </Text>
               <Input
                 label={t('ownership.subscription.form.name', 'Name')}
                 value={draft.name}
@@ -692,7 +737,9 @@ export default function SubscriptionROIPage() {
                 }
               />
               <div className="md:col-span-2 xl:col-span-3">
-                <Button type="submit" loading={create.isPending} disabled={vehicleId == null}>
+                <Button type="submit" loading={create.isPending}
+                  className="min-h-11 min-w-11 md:min-h-10"
+                  disabled={draftVehicleId == null || vehicleId !== draftVehicleId}>
                   {t('ownership.subscription.form.save', 'Save subscription')}
                 </Button>
                 <MutationError error={create.error} />
@@ -703,7 +750,18 @@ export default function SubscriptionROIPage() {
           <DataTable
             columns={subscriptionColumns}
             enableValueFilters
-            mobileColumns={['name', 'price', 'period']}
+            mobilePresentation={{
+              roles: { name: 'title', price: 'primary', period: 'meta' },
+              displayValue: (row, key) => {
+                if (key === 'name') return row.name;
+                if (key === 'price') return formatCurrencyMinor(row.price_minor, row.currency, units.unitPrefs.locale);
+                if (key === 'period') return `${formatDateTime(row.started_at)} → ${
+                  row.ended_at ? formatDateTime(row.ended_at)
+                    : t('ownership.subscription.list.ongoing', 'ongoing')}`;
+                return undefined;
+              },
+            }}
+            rowLabel={(row) => row.name}
             data={subscriptions}
             keyExtractor={(row) => row.id}
             tableId="ownership-subscription-list"

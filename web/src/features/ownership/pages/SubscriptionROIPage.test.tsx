@@ -8,7 +8,7 @@
  * dialog render for real.
  */
 
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { render, screen, within, fireEvent, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
@@ -64,6 +64,7 @@ import {
 import SubscriptionROIPage from './SubscriptionROIPage';
 import { expectOperationalBand, summaryMetric } from '../components/operationalbrief-all/testAssertions';
 import type { Subscription, SubscriptionROI, SubscriptionROIReport } from '@/types/ownership';
+import { neonColorMap, typography } from '@/lib/tokens';
 
 const mockSelected = useSelectedVehicle as unknown as ReturnType<typeof vi.fn>;
 const mockROI = useSubscriptionROI as unknown as ReturnType<typeof vi.fn>;
@@ -191,6 +192,10 @@ beforeEach(() => {
   );
   mockCreate.mockReturnValue(makeMutation());
   mockRemove.mockReturnValue(makeMutation());
+});
+
+afterEach(() => {
+  vi.restoreAllMocks();
 });
 
 describe('SubscriptionROIPage — confirm-gated delete', () => {
@@ -352,5 +357,135 @@ describe('SubscriptionROIPage — confirm-gated delete', () => {
 
     expect(removeButton('FSD Subscription')).toBeDisabled();
     expect(removeButton('Premium Connectivity')).not.toBeDisabled();
+  });
+
+  it('links the editor disclosure and retains the original vehicle draft through selection changes', () => {
+    const mutate = vi.fn();
+    mockCreate.mockReturnValue(makeMutation({ mutate }));
+    const view = renderPage();
+    const toggle = screen.getByRole('button', { name: 'Add subscription' });
+    expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    fireEvent.click(toggle);
+    const editor = screen.getByRole('form', { name: 'Add subscription' });
+    expect(toggle).toHaveAttribute('aria-expanded', 'true');
+    expect(toggle).toHaveAttribute('aria-controls', editor.id);
+    expect(editor).toHaveTextContent('Vehicle 7');
+    fireEvent.change(within(editor).getByRole('textbox', { name: 'Name required' }), {
+      target: { value: 'Original scope draft' },
+    });
+
+    mockSelected.mockReturnValue({ vehicleId: 8, vehicle: null, vehicles: [], setVehicleId: vi.fn() });
+    view.rerenderPage();
+    expect(screen.getByRole('textbox', { name: 'Name required' })).toHaveValue('Original scope draft');
+    expect(screen.getByRole('button', { name: 'Save subscription' })).toBeDisabled();
+    fireEvent.submit(screen.getByRole('form', { name: 'Add subscription' }));
+    expect(mutate).not.toHaveBeenCalled();
+
+    mockSelected.mockReturnValue({ vehicleId: 7, vehicle: null, vehicles: [], setVehicleId: vi.fn() });
+    view.rerenderPage();
+    expect(screen.getByRole('button', { name: 'Save subscription' })).toBeEnabled();
+    fireEvent.submit(screen.getByRole('form', { name: 'Add subscription' }));
+    expect(mutate).toHaveBeenCalledOnce();
+    expect(mutate).toHaveBeenCalledWith(expect.objectContaining({
+      vehicle_id: 7, name: 'Original scope draft', kind: 'subscription',
+      billing_period: 'monthly', price_minor: 0, currency: 'USD',
+      usage_metric: 'driving_distance', benchmark_minor_per_unit: 0, ended_at: null,
+    }), expect.objectContaining({ onSuccess: expect.any(Function) }));
+  });
+
+  it('keeps every verdict field reachable in the mobile quick view with measured utilization and reasoning', () => {
+    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect')
+      .mockImplementation(() => new DOMRect(0, 0, 375, 100));
+    mockROI.mockReturnValue(makeQuery(makeReport()));
+    renderPage();
+    const verdict = card('Per-subscription verdict');
+    expect(verdict.querySelector('[data-mobile-table]')).not.toBeNull();
+    expect(within(verdict).getByText('Measured Connectivity')).toBeInTheDocument();
+    fireEvent.click(within(verdict).getByRole('button', { name: 'Quick view' }));
+    const dialog = screen.getByRole('dialog', { name: 'Measured Connectivity' });
+    for (const label of [
+      'Subscription', 'Verdict', 'Monthly cost', 'Spent to date', 'Measured usage',
+      'Realised value', 'Net', 'ROI', 'Break-even usage', 'Reasoning',
+    ]) {
+      expect(within(dialog).getByText(label, { selector: 'dt' })).toBeInTheDocument();
+    }
+    expect(dialog).toHaveTextContent('Recurring subscription');
+    expect(dialog).toHaveTextContent('Monthly');
+    expect(dialog).toHaveTextContent('80');
+    expect(dialog).toHaveTextContent('$12.34');
+    expect(dialog).toHaveTextContent('$24.68');
+    expect(dialog).toHaveTextContent('60 active days');
+    expect(dialog).toHaveTextContent(/42(?:\.0+)? sessions/);
+    expect(dialog).toHaveTextContent(/21(?:\.0+)? \/ month/);
+    expect(dialog).toHaveTextContent('$50.00');
+    expect(dialog).toHaveTextContent('$25.32');
+    expect(dialog).toHaveTextContent('+102.6');
+    expect(dialog).toHaveTextContent(/10(?:\.0+)? sessions/);
+    expect(dialog).toHaveTextContent('210');
+    expect(dialog).toHaveTextContent('Measured usage exceeds the stored benchmark.');
+    expect(mockRemove().mutate).not.toHaveBeenCalled();
+  });
+
+  it('keeps register currency, term, benchmark and confirmed removal reachable in mobile details', async () => {
+    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect')
+      .mockImplementation(() => new DOMRect(0, 0, 375, 100));
+    mockSubs.mockReturnValue(makeQuery({ items: [makeSubscription({
+      kind: 'one_time', billing_period: 'once', currency: 'JPY', price_minor: 1000,
+      benchmark_minor_per_unit: 3.25, ended_at: '2026-03-01T00:00:00Z',
+    })] }));
+    const mutate = vi.fn();
+    mockRemove.mockReturnValue(makeMutation({ mutate }));
+    renderPage();
+    const register = card('Subscription register');
+    expect(register.querySelector('[data-mobile-table]')).not.toBeNull();
+    fireEvent.click(within(register).getByRole('button', { name: 'Quick view' }));
+    const detail = screen.getByRole('dialog', { name: 'Premium Connectivity' });
+    for (const label of ['Subscription', 'Price', 'Value metric', 'Benchmark rate', 'Active', 'Actions']) {
+      expect(within(detail).getByText(label, { selector: 'dt' })).toBeInTheDocument();
+    }
+    expect(detail).toHaveTextContent('One-time purchase');
+    expect(detail).toHaveTextContent('One-time');
+    expect(detail).toHaveTextContent('¥1,000');
+    expect(detail).toHaveTextContent('connectivity time');
+    expect(detail).toHaveTextContent('¥3');
+    expect(detail).not.toHaveTextContent('ongoing');
+    fireEvent.click(within(detail).getByRole('button', { name: 'Remove' }));
+    const confirmation = screen.getByRole('dialog', { name: 'Delete this subscription?' });
+    expect(confirmation).toHaveTextContent('Premium Connectivity');
+    expect(mutate).not.toHaveBeenCalled();
+    fireEvent.click(within(confirmation).getByRole('button', { name: 'Delete' }));
+    await waitFor(() => expect(mutate).toHaveBeenCalledWith(1));
+  });
+
+  it.each([
+    { case: 'positive', roi: 25, net: 2500, tone: neonColorMap.green.text },
+    { case: 'negative', roi: -25, net: -2500, tone: neonColorMap.red.text },
+    { case: 'measured zero', roi: 0, net: 0, tone: typography.color.primary },
+  ])('uses restrained financial roles for $case without changing the signed source', ({ roi, net, tone }) => {
+    mockROI.mockReturnValue(makeQuery(makeReport([makeROI({ roi_pct: roi, net_value_minor: net })])));
+    renderPage();
+    const row = within(card('Per-subscription verdict')).getByText('Measured Connectivity').closest('tr');
+    if (!row) throw new Error('Missing verdict row');
+    const cells = within(row).getAllByRole('cell');
+    expect(cells[6].querySelector('span')).toHaveClass(tone);
+    expect(cells[7].querySelector('span')).toHaveClass(tone);
+    expect(cells[7]).toHaveTextContent(roi > 0 ? '+25' : roi < 0 ? '-25' : '0');
+  });
+
+  it('converts confirmed SI distance only for display while leaving source quantities unchanged', () => {
+    const measured = makeROI({
+      usage_unit: 'm', usage_quantity: 2500, usage_per_month: 1250,
+      break_even_usage_per_month: 1000,
+    });
+    mockROI.mockReturnValue(makeQuery(makeReport([measured])));
+    renderPage();
+    const row = within(card('Per-subscription verdict')).getByText('Measured Connectivity').closest('tr');
+    expect(row).toHaveTextContent(/2\.5(?:0)? km/);
+    expect(row).toHaveTextContent(/1\.25 km \/ month/);
+    expect(row).toHaveTextContent(/1(?:\.0+)? km/);
+    expect(measured.usage_quantity).toBe(2500);
+    expect(measured.usage_per_month).toBe(1250);
+    expect(measured.break_even_usage_per_month).toBe(1000);
+    expect(measured.usage_unit).toBe('m');
   });
 });
