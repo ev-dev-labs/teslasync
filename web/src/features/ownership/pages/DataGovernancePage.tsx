@@ -1,4 +1,4 @@
-import { type FormEvent, useMemo, useState } from 'react';
+import { type FormEvent, useEffect, useId, useMemo, useRef, useState } from 'react';
 import { Database, Lock, PlayCircle, Trash2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -11,12 +11,13 @@ import {
 import { AlertBanner } from '@/components/feedback';
 import { PageLayout } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
-import { Badge, Button, ConfirmDialog, DataTable, Input, Select, Text, Toggle } from '@/components/ui';
-import type { Column } from '@/components/ui';
+import { Badge, Button, ConfirmDialog, DataTable, Icon, Input, Select, Text, Toggle } from '@/components/ui';
+import type { Column, MobileDataTablePresentation } from '@/components/ui';
 import { useConfirm } from '@/hooks/useConfirm';
 import { usePageTitle } from '@/hooks/usePageTitle';
 
 import { formatDateTime } from '@/lib/dateFormat';
+import { typography } from '@/lib/tokens';
 import type {
   DatasetInventory,
   RetentionImpact,
@@ -33,6 +34,12 @@ export default function DataGovernancePage() {
   const { fmtInt, fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const [formOpen, setFormOpen] = useState(false);
+  const [runPage, setRunPage] = useState(1);
+  const formId = useId();
+  const prerequisiteId = useId();
+  const editorRef = useRef<HTMLFormElement>(null);
+  const editorTriggerRef = useRef<HTMLButtonElement | null>(null);
+  const previouslyOpen = useRef(false);
   const [selected, setSelected] = useState<string[]>([]);
   const [draft, setDraft] = useState({
     dataset: '',
@@ -46,7 +53,7 @@ export default function DataGovernancePage() {
   usePageTitle(t('ownership.governance.navTitle', 'Data retention governance'));
 
   const overviewQuery = useGovernanceOverview();
-  const runsQuery = useRetentionRuns(50, 0);
+  const runsQuery = useRetentionRuns(50, (runPage - 1) * 50);
   const upsert = useUpsertRetentionPolicy();
   const remove = useDeleteRetentionPolicy();
   const { confirm, dialogProps } = useConfirm();
@@ -71,6 +78,18 @@ export default function DataGovernancePage() {
   const policies = useMemo(() => overview?.policies ?? [], [overview?.policies]);
   const runs = useMemo(() => runsQuery.data?.items ?? [], [runsQuery.data?.items]);
   const impacts = useMemo(() => simulate.data?.impacts ?? [], [simulate.data?.impacts]);
+  const canSimulate = selected.length > 0 || policies.length > 0;
+  const runTotal = runsQuery.data?.total;
+  const hasRunTotal = runTotal != null && Number.isSafeInteger(runTotal) && runTotal >= 0;
+
+  useEffect(() => {
+    if (formOpen) {
+      editorRef.current?.querySelector<HTMLElement>('select, input')?.focus();
+    } else if (previouslyOpen.current && editorTriggerRef.current?.isConnected) {
+      editorTriggerRef.current.focus();
+    }
+    previouslyOpen.current = formOpen;
+  }, [formOpen]);
 
   const datasetOptions = useMemo(
     () => inventory.map((row) => ({ value: row.dataset, label: row.label })),
@@ -116,6 +135,9 @@ export default function DataGovernancePage() {
         <Button
           variant={selected.includes(row.dataset) ? 'primary' : 'secondary'}
           size="sm"
+          className="min-h-11 min-w-11 md:min-h-9 md:min-w-9"
+          wrapLabel
+          aria-pressed={selected.includes(row.dataset)}
           disabled={!row.governed}
           onClick={() => toggleDataset(row.dataset)}
         >
@@ -253,11 +275,16 @@ export default function DataGovernancePage() {
       key: 'actions',
       header: t('ownership.action.header', 'Actions'),
       render: (row) => (
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2" role="group" aria-label={row.dataset}>
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => {
+            className="min-h-11 min-w-11 md:min-h-9 md:min-w-9"
+            wrapLabel
+            aria-expanded={formOpen && draft.dataset === row.dataset}
+            aria-controls={formOpen ? formId : undefined}
+            onClick={(event) => {
+              editorTriggerRef.current = event.currentTarget;
               setDraft({
                 dataset: row.dataset,
                 retention_days: secondsToDays(row.retention_s) ?? 365,
@@ -272,9 +299,11 @@ export default function DataGovernancePage() {
             {t('ownership.action.edit', 'Edit')}
           </Button>
           <Button
-            variant="ghost"
+            variant="danger"
             size="sm"
-            icon={<Trash2 className="h-4 w-4" aria-hidden="true" />}
+            className="min-h-11 min-w-11 md:min-h-9 md:min-w-9"
+            wrapLabel
+            icon={<Icon icon={Trash2} size="md" />}
             loading={remove.isPending && remove.variables === row.id}
             onClick={() => void handleRemove(row)}
           >
@@ -330,7 +359,7 @@ export default function DataGovernancePage() {
       align: 'right',
       render: (row) => (
         <div>
-          <span className="tabular-nums text-emerald-300">{formatBytes(row.bytes_reclaimable)}</span>
+          <Text as="span" variant="bodySm" className="tabular-nums">{formatBytes(row.bytes_reclaimable)}</Text>
           <Text as="p" variant="caption">
             {formatPct(row.reclaim_share_pct)}
           </Text>
@@ -343,11 +372,9 @@ export default function DataGovernancePage() {
       header: t('ownership.governance.impact.fidelity', 'Fidelity lost'),
       align: 'right',
       render: (row) => (
-        <span
-          className={`tabular-nums ${row.fidelity_loss_pct > 25 ? 'text-rose-300' : row.fidelity_loss_pct > 5 ? 'text-amber-300' : ''}`}
-        >
+        <Badge variant={row.fidelity_loss_pct > 25 ? 'danger' : row.fidelity_loss_pct > 5 ? 'warning' : 'neutral'}>
           {formatPct(row.fidelity_loss_pct)}
-        </span>
+        </Badge>
       ),
     },
     {
@@ -436,6 +463,50 @@ export default function DataGovernancePage() {
     },
   ];
 
+  const inventoryMobile: MobileDataTablePresentation<DatasetInventory> = {
+    roles: { dataset: 'title', bytes: 'primary', rows: 'meta', span: 'meta' },
+    displayValue: (row, key) => {
+      const values: Record<string, string> = {
+        dataset: row.label, bytes: formatBytes(row.total_bytes), rows: fmtInt(row.row_count),
+        span: row.span_s != null ? formatSpan(row.span_s) : '—',
+      };
+      return values[key];
+    },
+    inlineActions: (row) => inventoryColumns[0].render(row),
+  };
+  const policyMobile: MobileDataTablePresentation<RetentionPolicy> = {
+    roles: { dataset: 'title', retention: 'primary', downsample: 'meta', bucket: 'meta' },
+    displayValue: (row, key) => {
+      const values: Record<string, string> = {
+        dataset: row.dataset, retention: formatSpan(row.retention_s),
+        downsample: row.downsample_after_s != null ? formatSpan(row.downsample_after_s) : '—',
+        bucket: row.downsample_bucket_s != null ? formatSpan(row.downsample_bucket_s) : '—',
+      };
+      return values[key];
+    },
+    inlineActions: (row) => policyColumns[4].render(row),
+  };
+  const impactMobile: MobileDataTablePresentation<RetentionImpact> = {
+    roles: { dataset: 'title', reclaim: 'primary', expiring: 'meta', fidelity: 'meta' },
+    displayValue: (row, key) => {
+      const values: Record<string, string> = {
+        dataset: row.label, reclaim: formatBytes(row.bytes_reclaimable),
+        expiring: fmtInt(row.rows_expiring), fidelity: formatPct(row.fidelity_loss_pct),
+      };
+      return values[key];
+    },
+  };
+  const runsMobile: MobileDataTablePresentation<RetentionRun> = {
+    roles: { dataset: 'title', bytes: 'primary', executed: 'meta', mode: 'meta' },
+    displayValue: (row, key) => {
+      const values: Record<string, string> = {
+        dataset: row.dataset, bytes: formatBytes(row.bytes_reclaimable),
+        executed: formatDateTime(row.executed_at), mode: row.mode.replace(/_/g, ' '),
+      };
+      return values[key];
+    },
+  };
+
   return (
     <PageLayout
       title={t('ownership.governance.title', 'Data retention & lifecycle governance')}
@@ -448,8 +519,12 @@ export default function DataGovernancePage() {
         <Button
           variant="primary"
           size="sm"
-          icon={<PlayCircle className="h-4 w-4" aria-hidden="true" />}
+          className="min-h-11 min-w-11 md:min-h-9 md:min-w-9"
+          wrapLabel
+          icon={<Icon icon={PlayCircle} size="md" />}
           loading={simulate.isPending}
+          disabled={!canSimulate}
+          aria-describedby={!canSimulate ? prerequisiteId : undefined}
           onClick={runSimulation}
         >
           {t('ownership.governance.simulate', 'Run dry-run plan')}
@@ -465,6 +540,11 @@ export default function DataGovernancePage() {
           'Every run on this page is a read-only dry run. TeslaSync computes what a policy would remove and records the plan in the ledger; it never issues a delete. Enforcement remains a deliberate, separate operator action outside this screen.',
         )}
       </AlertBanner>
+      {!canSimulate && (
+        <Text as="p" variant="helper" id={prerequisiteId}>
+          {t('ownership.governance.policies.empty', 'No retention policies defined.')}
+        </Text>
+      )}
 
       <FadeIn>
         <OwnershipPanel title={t('ownership.governance.summary.title', 'Storage posture')}
@@ -531,12 +611,14 @@ export default function DataGovernancePage() {
             'ownership.governance.inventory.empty',
             'No governable datasets were found.',
           )}
-          actions={<Database className="h-4 w-4 text-cyan-300" aria-hidden="true" />}
+          actions={<Icon icon={Database} size="md" className={typography.color.muted} />}
         >
           <DataTable
             columns={inventoryColumns}
+            variant="embedded"
+            mobilePresentation={inventoryMobile}
+            rowLabel={(row) => row.label}
             enableValueFilters
-            mobileColumns={['dataset', 'bytes', 'span']}
             data={inventory}
             keyExtractor={(row) => row.dataset}
             tableId="ownership-governance-inventory"
@@ -556,7 +638,13 @@ export default function DataGovernancePage() {
           empty={policies.length === 0 && !formOpen}
           emptyMessage={t('ownership.governance.policies.empty', 'No retention policies defined.')}
           actions={
-            <Button variant="secondary" size="sm" onClick={() => setFormOpen((open) => !open)}>
+            <Button variant="secondary" size="sm"
+              className="min-h-11 min-w-11 md:min-h-9 md:min-w-9" wrapLabel
+              aria-expanded={formOpen} aria-controls={formOpen ? formId : undefined}
+              onClick={(event) => {
+                editorTriggerRef.current = event.currentTarget;
+                setFormOpen((open) => !open);
+              }}>
               {formOpen
                 ? t('ownership.action.cancel', 'Cancel')
                 : t('ownership.governance.policies.add', 'Define policy')}
@@ -564,7 +652,9 @@ export default function DataGovernancePage() {
           }
         >
           {formOpen ? (
-            <form className="mb-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3" onSubmit={submitPolicy}>
+            <form id={formId} ref={editorRef}
+              aria-label={t('ownership.governance.policies.title', 'Retention policies')}
+              className="mb-6 grid min-w-0 gap-4 md:grid-cols-2 xl:grid-cols-3" onSubmit={submitPolicy}>
               <Select
                 label={t('ownership.governance.form.dataset', 'Dataset')}
                 value={draft.dataset}
@@ -614,7 +704,7 @@ export default function DataGovernancePage() {
                   }))
                 }
               />
-              <div className="flex items-end gap-6">
+              <div className="flex flex-wrap items-end gap-6">
                 <Toggle
                   label={t('ownership.governance.form.hold', 'Legal hold')}
                   checked={draft.legal_hold}
@@ -629,7 +719,8 @@ export default function DataGovernancePage() {
                 />
               </div>
               <div className="md:col-span-2 xl:col-span-3">
-                <Button type="submit" loading={upsert.isPending} disabled={!draft.dataset}>
+                <Button type="submit" className="min-h-11 min-w-11" wrapLabel
+                  loading={upsert.isPending} disabled={!draft.dataset}>
                   {t('ownership.governance.form.save', 'Save policy')}
                 </Button>
                 <MutationError error={upsert.error} />
@@ -639,8 +730,10 @@ export default function DataGovernancePage() {
 
           <DataTable
             columns={policyColumns}
+            variant="embedded"
+            mobilePresentation={policyMobile}
+            rowLabel={(row) => row.dataset}
             enableValueFilters
-            mobileColumns={['dataset', 'retention', 'downsample']}
             data={policies}
             keyExtractor={(row) => row.id}
             tableId="ownership-governance-policies"
@@ -653,6 +746,8 @@ export default function DataGovernancePage() {
       <FadeIn delay={0.15}>
         <OwnershipPanel
           title={t('ownership.governance.impact.title', 'Dry-run impact')}
+          source={simulate}
+          sourceEnabled={simulate.isPending || simulate.data != null || simulate.error != null}
           description={t(
             'ownership.governance.impact.subtitle',
             'Fidelity loss is the share of analytical resolution the plan would remove — not the share of rows.',
@@ -701,7 +796,9 @@ export default function DataGovernancePage() {
           <div className="mt-4">
             <DataTable
               columns={impactColumns}
-              mobileColumns={['dataset', 'reclaim', 'flags']}
+              variant="embedded"
+              mobilePresentation={impactMobile}
+              rowLabel={(row) => row.label}
               data={impacts}
               keyExtractor={(row) => row.dataset}
               tableId="ownership-governance-impact"
@@ -721,11 +818,20 @@ export default function DataGovernancePage() {
           )}
           empty={runs.length === 0}
           emptyMessage={t('ownership.governance.runs.empty', 'No plans recorded yet.')}
-          actions={<Lock className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />}
+          actions={<Icon icon={Lock} size="md" className={typography.color.muted} />}
         >
           <DataTable
             columns={runColumns}
-            mobileColumns={['executed', 'dataset', 'mode']}
+            variant="embedded"
+            mobilePresentation={runsMobile}
+            rowLabel={(row) => row.dataset}
+            paginationControls={{
+              page: runPage, pageSize: 50,
+              total: hasRunTotal ? runTotal : runs.length,
+              totalKind: hasRunTotal ? 'exact' : 'loaded',
+              onPageChange: setRunPage,
+            }}
+            exportable
             data={runs}
             keyExtractor={(row) => row.id}
             tableId="ownership-governance-runs"
