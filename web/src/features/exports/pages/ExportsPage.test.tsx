@@ -40,6 +40,7 @@ import type { ReactNode } from 'react';
 import { ApiError } from '@/lib/resilience';
 import type { ExportBulkResult, ExportJobSummary } from '@/api/hooks/useExports';
 import { downloadCSV, downloadJSON } from '@/lib/csvExport';
+import { BUTTON_BASE, BUTTON_VARIANTS } from '@/components/ui';
 
 vi.mock('@/hooks/useSettings', () => ({
   useSettings: () => ({
@@ -78,6 +79,97 @@ vi.mock('react-i18next', () => {
     Trans: ({ children }: { children?: ReactNode }) => <>{children}</>,
     initReactI18next: { type: '3rdParty', init: () => undefined },
   };
+});
+
+describe('ExportsPage — phase-five contract adoption', () => {
+  it('retains native ready downloads with shared semantic focus chrome and mobile action targets', () => {
+    renderPage();
+    const link = screen.getByRole('link', { name: 'Download export job-ready-1' });
+    expect(link).toHaveAttribute('href', '/api/v1/export/jobs/job-ready-1/download');
+    expect(link).toHaveAttribute('download');
+    expect(link).toHaveClass(...BUTTON_BASE.split(' '), ...BUTTON_VARIANTS.ghost.split(' '));
+    expect(link).toHaveClass('min-h-11', 'min-w-11');
+    expect(link.className).not.toMatch(/cyan-|white\/|text-sm/);
+    expect(screen.getAllByRole('button', { name: 'Refresh' }).at(-1)).toHaveClass('min-h-11', 'min-w-11');
+    expect(mutateAsyncSpy).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    { case: 'partial deletion', deleted: 1, failed: [{ id: 'job-ready-2', reason: 'not_found' }] },
+    { case: 'no deleted jobs', deleted: 0, failed: [
+      { id: 'job-ready-1', reason: 'not_found' },
+      { id: 'job-ready-2', reason: 'not_found' },
+    ] },
+  ])('retains failed members and reported reasons after $case', async ({ deleted, failed }) => {
+    mutateAsyncSpy.mockResolvedValueOnce({ deleted, failed });
+    renderPage();
+    const checkboxes = within(screen.getByRole('table')).getAllByRole('checkbox', { name: /export,/ });
+    fireEvent.click(checkboxes[0]);
+    fireEvent.click(checkboxes[1]);
+    fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
+    fireEvent.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Delete' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    expect(mutateAsyncSpy).toHaveBeenCalledWith(['job-ready-1', 'job-ready-2']);
+    expect(screen.getByText(`${failed.length} selected`)).toBeInTheDocument();
+    expect(checkboxes[0]).toHaveProperty('checked', deleted === 0);
+    expect(checkboxes[1]).toBeChecked();
+    expect(screen.getByText('Failed to delete exports')).toBeInTheDocument();
+    failed.forEach(({ id, reason }) => expect(screen.getByText(`${id}: ${reason}`)).toBeInTheDocument());
+    expect(kpiValue('Total exports')).toBe('6');
+    expect(screen.getByText('Status breakdown')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
+    fireEvent.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Cancel' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    expect(mutateAsyncSpy).toHaveBeenCalledOnce();
+    expect(screen.getByText(`${failed.length} selected`)).toBeInTheDocument();
+  });
+
+  it('keeps complete mobile job details, ready downloads, selection and selected-loaded export scope', async () => {
+    const bounds = vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({
+      width: 375, height: 200, x: 0, y: 0, top: 0, right: 375, bottom: 200, left: 0,
+      toJSON: () => ({}),
+    });
+    try {
+      renderPage();
+      const mobile = screen.getByRole('group', { name: 'exports:jobs' });
+      expect(screen.queryByRole('table')).not.toBeInTheDocument();
+      expect(within(mobile).getAllByRole('link', { name: /Download export/ })).toHaveLength(2);
+      expect(within(mobile).getByRole('link', { name: 'Download export job-ready-1' }))
+        .toHaveAttribute('download');
+      fireEvent.click(within(mobile).getAllByRole('button', { name: 'Quick view' })[0]);
+      const details = await screen.findByRole('dialog');
+      for (const label of ['Type', 'Format', 'Size', 'Created', 'Status', 'Actions']) {
+        expect(within(details).getByText(label)).toBeInTheDocument();
+      }
+      expect(within(details).getByText('drives')).toBeInTheDocument();
+      expect(within(details).getByText('csv')).toBeInTheDocument();
+      expect(within(details).getByText('2.00 MB')).toBeInTheDocument();
+      expect(within(details).getByText('ready')).toBeInTheDocument();
+      expect(within(details).getByRole('link', { name: 'Download export job-ready-1' }))
+        .toHaveAttribute('href', '/api/v1/export/jobs/job-ready-1/download');
+      const footer = details.querySelector('[data-modal-footer]');
+      if (!footer) throw new Error('Export job detail modal footer is missing');
+      fireEvent.click(within(footer).getByRole('button', { name: 'Close' }));
+      await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+      fireEvent.click(within(mobile).getByRole('button', { name: 'Select' }));
+      fireEvent.click(within(mobile).getAllByRole('checkbox', { name: /export,/ })[0]);
+      expect(screen.getByText('1 selected')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Delete' })).toHaveClass('min-h-11', 'min-w-11');
+      fireEvent.click(screen.getByRole('button', { name: 'Export list' }));
+      expect(screen.getByRole('menuitemradio', { name: 'Selected (1)' })).toHaveAttribute('aria-checked', 'true');
+      fireEvent.click(screen.getByRole('menuitem', { name: 'Download as JSON' }));
+      await waitFor(() => expect(downloadJSON).toHaveBeenCalledOnce());
+      expect(vi.mocked(downloadJSON).mock.calls[0][1]).toEqual([{
+        type: 'drives', format: 'csv', file_size: 2 * MB,
+        created_at: JOBS[0].created_at, status: 'ready', actions: 'Download',
+      }]);
+      expect(kpiValue('Total exports')).toBe('6');
+      expect(screen.getByText('Status breakdown')).toBeInTheDocument();
+      expect(mutateAsyncSpy).not.toHaveBeenCalled();
+    } finally {
+      bounds.mockRestore();
+    }
+  });
 });
 
 // ── framer-motion: strip animation props, keep motion.* + useReducedMotion. ──

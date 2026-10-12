@@ -5,13 +5,16 @@ import { LayoutCard, PageLayout } from '@/components/layout';
 import {
   Badge,
   Button,
+  BUTTON_BASE,
+  BUTTON_VARIANTS,
   DataTable,
   Text,
   ConfirmDialog,
   type Column,
+  type MobileDataTablePresentation,
 } from '@/components/ui';
 import { FadeIn } from '@/components/motion';
-import { EmptyState, Skeleton, QueryError } from '@/components/feedback';
+import { AlertBanner, EmptyState, Skeleton, QueryError } from '@/components/feedback';
 import { AIPiiRedactionSharedExports } from '@/components/ai';
 
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -23,11 +26,12 @@ import {
   useExportJobs,
   useBulkExportsDelete,
   exportDownloadUrl,
+  type ExportBulkResult,
   type ExportJobSummary,
 } from '@/api/hooks/useExports';
 import { Icons } from '@/lib/icons';
 import { formatDateTime } from '@/lib/dateFormat';
-
+import { cn } from '@/lib/cn';
 
 import { ExportKpiBand } from '../components/ExportKpiBand';
 import { ExportStatusBreakdown } from '../components/ExportStatusBreakdown';
@@ -62,6 +66,7 @@ export default function ExportsPage() {
   const stats = useMemo(() => deriveExportStats(jobs), [jobs]);
 
   const [selectedKeys, setSelectedKeys] = useState<(string | number)[]>([]);
+  const [deleteFailures, setDeleteFailures] = useState<ExportBulkResult['failed']>([]);
   const bulkDelete = useBulkExportsDelete();
   const { confirm, dialogProps } = useConfirm();
 
@@ -83,8 +88,13 @@ export default function ExportsPage() {
       });
       if (!ok) return;
       try {
-        await bulkDelete.mutateAsync(ids.map((i) => String(i)));
-        setSelectedKeys([]);
+        const submitted = new Set(ids.map(String));
+        const result = await bulkDelete.mutateAsync([...submitted]);
+        const failed = result.failed ?? [];
+        setDeleteFailures(failed);
+        const failedIds = new Set(failed.map(({ id }) => id));
+        setSelectedKeys((current) => current.filter((id) =>
+          !submitted.has(String(id)) || failedIds.has(String(id))));
       } catch {
         // The mutation's onError handler surfaces a toast; keep the current
         // selection intact so the user can retry the failed bulk deletion
@@ -115,7 +125,7 @@ export default function ExportsPage() {
         header: t('exportsList.col.format', 'Format'),
         sortable: true,
         render: (j) => (
-          <Text color="secondary" className="">
+          <Text color="secondary">
             {j.format || '—'}
           </Text>
         ),
@@ -170,10 +180,10 @@ export default function ExportsPage() {
               aria-label={t('exportsList.downloadAria', 'Download export {{id}}', {
                 id: j.id,
               })}
-              className="inline-flex min-h-11 items-center gap-1.5 rounded-md px-2 text-sm text-cyan-300 transition-colors hover:bg-white/[0.04] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500"
+              className={cn(BUTTON_BASE, BUTTON_VARIANTS.ghost, 'min-h-11 min-w-11 px-2')}
             >
               <Icons.download className="h-4 w-4" aria-hidden="true" />
-              {t('exportsList.download', 'Download')}
+              <Text size="sm">{t('exportsList.download', 'Download')}</Text>
             </a>
           ) : (
             <Text color="muted">—</Text>
@@ -183,11 +193,30 @@ export default function ExportsPage() {
     [t, formatBytes],
   );
 
+  const mobilePresentation = useMemo<MobileDataTablePresentation<ExportJobSummary>>(
+    () => ({
+      roles: { type: 'title', status: 'badge', format: 'meta', file_size: 'meta', created_at: 'meta' },
+      displayValue: (job, key) => {
+        switch (key) {
+          case 'type': return job.type || '—';
+          case 'format': return job.format || '—';
+          case 'file_size': return job.file_size == null ? '—' : formatBytes(job.file_size);
+          case 'created_at': return formatDateTime(job.created_at);
+          case 'status': return t(`exportsList.status.${job.status}`, job.status);
+          default: return null;
+        }
+      },
+      inlineActions: (job) => columns.find((column) => column.key === 'actions')?.render(job),
+    }),
+    [columns, formatBytes, t],
+  );
+
   const actions = (
     <Button
       variant="ghost"
       onClick={onRetry}
       aria-label={t('common.refresh', 'Refresh')}
+      className="min-h-11 min-w-11"
     >
       <Icons.refresh className="h-4 w-4" aria-hidden="true" />
     </Button>
@@ -218,7 +247,16 @@ export default function ExportsPage() {
         <section className="grid grid-cols-1 gap-4 xl:grid-cols-3 xl:gap-5">
           <FadeIn delay={0.1} className="min-w-0 xl:col-span-2">
             <LayoutCard title={t('exportsList.jobs.title', 'Export jobs')}>
-
+              {deleteFailures.length > 0 && (
+                <AlertBanner variant="warning" role="status"
+                  title={t('toast.export.bulkDelete.error', 'Failed to delete exports')}>
+                  <ul className="space-y-1">
+                    {deleteFailures.map(({ id, reason }) => (
+                      <li key={id}><Text variant="bodySm" className="break-words">{id}: {reason}</Text></li>
+                    ))}
+                  </ul>
+                </AlertBanner>
+              )}
               {isLoading ? (
                 <div className="space-y-2">
                   <Skeleton className="h-11 w-full" />
@@ -250,6 +288,7 @@ export default function ExportsPage() {
                   enableValueFilters
                   keyExtractor={(j) => j.id}
                   mobileColumns={['type', 'status', 'actions']}
+                  mobilePresentation={mobilePresentation}
                   pagination={{ defaultPageSize: 25, pageSizeOptions: [25, 50, 100] }}
                   stickyHeader
                   maxHeight={640}
@@ -269,6 +308,7 @@ export default function ExportsPage() {
                     <Button
                       size="sm"
                       variant="danger"
+                      className="min-h-11 min-w-11"
                       icon={<Icons.delete className="h-3.5 w-3.5" aria-hidden="true" />}
                       loading={bulkDelete.isPending}
                       onClick={() => void handleBulkDelete(rows.map((r) => r.id))}
