@@ -479,4 +479,46 @@ describe('CostAnalysisPage', () => {
       screen.queryByTestId('ai-feature-cost-forecast-narration-root'),
     ).not.toBeInTheDocument()
   })
+
+  it('uses shrink-safe shared grids without staged section entrances', async () => {
+    renderPage()
+    await screen.findByText('$0.10')
+
+    const trends = screen.getByRole('region', { name: 'Cost trends' })
+    const impact = screen.getByRole('region', { name: 'Lifetime and environmental impact' })
+    const trendGrid = trends.querySelector(':scope > [data-layout="responsive-columns"]')
+    const impactGrid = impact.querySelector(':scope > [data-layout="responsive-columns"]')
+    expect(trendGrid).toHaveClass('min-w-0', 'grid-cols-1', 'xl:grid-cols-3', 'gap-4')
+    expect(impactGrid).toHaveClass('min-w-0', 'grid-cols-1', 'xl:grid-cols-2', 'gap-4')
+    expect(trendGrid?.firstElementChild).toHaveClass('min-w-0', 'xl:col-span-2')
+    expect(within(trends).getByText('Monthly Cost Trend')).toBeInTheDocument()
+    expect(within(impact).getByText('Lifetime Summary')).toBeInTheDocument()
+    expect(within(impact).getByText('Environmental Impact')).toBeInTheDocument()
+
+    for (const section of [summaryRegion(), trends, impact]) {
+      expect(section.parentElement).toHaveClass('min-w-0')
+      expect(section.parentElement).not.toHaveAttribute('style')
+    }
+  })
+
+  it.each([
+    { caseId: 'canonical', route: '/cost-analysis' },
+    { caseId: 'alias', route: '/charging/costs' },
+  ])('retains header scope and modeled costs on the $caseId route', async ({ route }) => {
+    renderPage([`${route}?from=2025-04-01&to=2025-06-30`])
+    expect(await screen.findByText('$0.10')).toBeInTheDocument()
+    expect(screen.getByText('$7.25')).toBeInTheDocument()
+    const paths = mockedRequest.mock.calls.map(([path]) => String(path))
+    const sessionPath = paths.find(path => path.startsWith('/charging?'))
+    expect(sessionPath).toBeDefined()
+    const params = new URLSearchParams(sessionPath?.split('?')[1])
+    expect(params.get('vehicle_id')).toBe('7')
+    expect(params.get('start')).toBe('2025-04-01')
+    expect(params.get('end')).toBe('2025-06-30')
+    expect(params.get('limit')).toBe('1000')
+    expect(paths).toContain('/analytics/cost-forecast?vehicle_id=7&months=6')
+    expect(screen.queryByRole('combobox', { name: /vehicle/i })).not.toBeInTheDocument()
+    expect(screen.queryByLabelText(/^start date$|^end date$/i)).not.toBeInTheDocument()
+    expect(screen.getByRole('spinbutton', { name: 'Gas Price ($/gal)' })).toHaveValue(3.5)
+  })
 })
