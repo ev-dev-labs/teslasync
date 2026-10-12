@@ -40,6 +40,7 @@
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { render, screen, fireEvent, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
@@ -567,6 +568,7 @@ describe('SharingTripsPage — selected scope recovery', () => {
     h.tripsQuery = makeQuery({
       data: [tripA, tripB, tripC], error: new Error('refresh failed'), isError: true,
     });
+
     view.rerenderPage();
     assertSelection();
     expect(screen.queryByText(/Can't reach server/i)).not.toBeInTheDocument();
@@ -620,5 +622,81 @@ describe('SharingTripsPage — selected scope recovery', () => {
     expect(screen.getByTestId('ai-card')).toHaveAttribute('data-trip-id', '901');
     expect(within(previewRow('Distance')).getByText('1000m')).toBeInTheDocument();
     expect(screen.getByRole('option', { name: 'Other vehicle trip' })).toHaveAttribute('aria-selected', 'true');
+  });
+});
+
+describe('SharingTripsPage — keyboard listbox and reachable refresh', () => {
+  it('has one tab stop and selects matching preview and draft identity with arrows, Home and End', async () => {
+    renderPage();
+    const user = userEvent.setup();
+    const options = within(screen.getByRole('listbox', { name: 'Recent trips' })).getAllByRole('option');
+    expect(options.map((option) => option.tabIndex)).toEqual([0, -1, -1]);
+    expect(options.map((option) => option.parentElement?.getAttribute('role'))).toEqual([
+      'presentation', 'presentation', 'presentation',
+    ]);
+    expect(screen.getByTestId('ai-card')).toHaveAttribute('data-trip-id', '');
+    options[0]?.focus();
+    for (const [key, index, id] of [
+      ['{ArrowDown}', 1, '102'], ['{End}', 2, '103'], ['{ArrowDown}', 0, '101'],
+      ['{ArrowUp}', 2, '103'], ['{Home}', 0, '101'],
+    ] as const) {
+      await user.keyboard(key);
+      expect(options[index]).toHaveFocus();
+      expect(options[index]).toHaveAttribute('aria-selected', 'true');
+      expect(options.map((option) => option.tabIndex)).toEqual(options.map((_, i) => i === index ? 0 : -1));
+      expect(screen.getByTestId('ai-card')).toHaveAttribute('data-trip-id', id);
+      expect(screen.getByText('Distance')).toBeInTheDocument();
+    }
+    await user.tab();
+    expect(options).not.toContain(document.activeElement);
+  });
+
+  it('supports named typeahead while preserving native Enter and Space activation and modified shortcuts', async () => {
+    renderPage();
+    const user = userEvent.setup();
+    const morning = screen.getByRole('option', { name: 'Morning commute' });
+    const weekend = screen.getByRole('option', { name: 'Weekend trip' });
+    morning.focus();
+    await user.keyboard('We');
+    expect(weekend).toHaveFocus();
+    expect(weekend).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByTestId('ai-card')).toHaveAttribute('data-trip-id', '102');
+    await user.keyboard('{Control>}{Home}{/Control}');
+    expect(weekend).toHaveFocus();
+    morning.focus();
+    await user.keyboard('{Enter}');
+    expect(morning).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByTestId('ai-card')).toHaveAttribute('data-trip-id', '101');
+    weekend.focus();
+    await user.keyboard(' ');
+    expect(weekend).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByTestId('ai-card')).toHaveAttribute('data-trip-id', '102');
+  });
+
+  it('restores the remaining list tab stop without sharing a removed selection', () => {
+    const view = renderPage();
+    fireEvent.click(screen.getByRole('option', { name: 'Weekend trip' }));
+    h.tripsQuery = makeQuery({ data: [tripC] });
+    view.rerenderPage();
+    const remaining = screen.getByRole('option', { name: 'Trip #103' });
+    expect(remaining).toHaveAttribute('tabindex', '0');
+    expect(remaining).toHaveAttribute('aria-selected', 'false');
+    expect(screen.getByTestId('ai-card')).toHaveAttribute('data-trip-id', '');
+    remaining.focus();
+    fireEvent.keyDown(remaining, { key: 'ArrowDown' });
+    expect(remaining).toHaveFocus();
+    expect(remaining).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByTestId('ai-card')).toHaveAttribute('data-trip-id', '103');
+  });
+
+  it('keeps static guidance and retained SI values mounted while announcing busy and retaining a mobile refresh target', () => {
+    h.tripsQuery = makeQuery({ data: [tripA, tripB, tripC], isFetching: true, fetchStatus: 'fetching' });
+    const { container } = renderPage();
+    expect(container.querySelector('[data-role="page-container"]')).toHaveAttribute('aria-busy', 'true');
+    expect(screen.getByRole('heading', { name: 'Static share cards' })).toBeInTheDocument();
+    expect(within(screen.getByRole('region', { name: 'Trip totals' })).getByText('70000m')).toBeInTheDocument();
+    expect(pageRefreshButton()).toHaveClass('min-h-11', 'min-w-11');
+    fireEvent.click(pageRefreshButton());
+    expect(refetchMock).toHaveBeenCalledOnce();
   });
 });

@@ -27,7 +27,7 @@
 //     surface drafts an image prompt; the user still uses the existing
 //     per-drive Share workflow to publish a static share card.
 
-import { useMemo, useState } from 'react'
+import { useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Route as RouteIcon, RefreshCw } from 'lucide-react'
 
@@ -73,6 +73,48 @@ export default function SharingTripsPage() {
     () => allTrips.find((trip) => trip.id === selectedTripId) ?? null,
     [allTrips, selectedTripId],
   )
+  const listRef = useRef<HTMLUListElement>(null)
+  const searchRef = useRef({ value: '', at: 0 })
+
+  // The page owns listbox navigation; rows retain their native activation.
+  useLayoutEffect(() => {
+    const options = listRef.current?.querySelectorAll<HTMLButtonElement>('[role="option"]')
+    const activeIndex = allTrips.findIndex((trip) => trip.id === selectedTripId)
+    options?.forEach((option, index) => {
+      option.tabIndex = index === Math.max(0, activeIndex) ? 0 : -1
+      option.parentElement?.setAttribute('role', 'presentation')
+    })
+  }, [allTrips, selectedTripId])
+
+  const navigateTrips = (event: KeyboardEvent<HTMLUListElement>) => {
+    if (event.altKey || event.ctrlKey || event.metaKey || event.nativeEvent.isComposing) return
+    const options = Array.from(event.currentTarget.querySelectorAll<HTMLButtonElement>('[role="option"]'))
+    const index = options.findIndex((option) => option === event.target)
+    if (index < 0) return
+    let next = index
+    if (event.key === 'ArrowDown') next = (index + 1) % options.length
+    else if (event.key === 'ArrowUp') next = (index + options.length - 1) % options.length
+    else if (event.key === 'Home') next = 0
+    else if (event.key === 'End') next = options.length - 1
+    else if (event.key.length === 1 && event.key !== ' ') {
+      const now = Date.now()
+      const search = searchRef.current
+      search.value = now - search.at < 700 ? search.value + event.key : event.key
+      search.at = now
+      const prefix = search.value.toLocaleLowerCase(displayLocale)
+      const match = options.findIndex((_, offset) => {
+        const candidate = options[(index + offset + 1) % options.length]
+        return candidate?.getAttribute('aria-label')?.toLocaleLowerCase(displayLocale).startsWith(prefix)
+      })
+      if (match < 0) return
+      next = (index + match + 1) % options.length
+    } else return
+    event.preventDefault()
+    const trip = allTrips[next]
+    if (!trip) return
+    setSelectedTripId(trip.id)
+    options[next]?.focus()
+  }
 
   const kpis = useMemo(() => aggregateTripKpis(allTrips), [allTrips, displayPrecision, displayLocale])
   const coldLoading = tripsQuery.isLoading && !sourceState.hasData
@@ -92,6 +134,7 @@ export default function SharingTripsPage() {
     <div className="flex flex-wrap items-center gap-2">
       <Button
         variant="ghost"
+        className="min-h-11 min-w-11"
         onClick={() => refetch()}
         aria-label={t('common.refresh', 'Refresh')}
       >
@@ -109,6 +152,7 @@ export default function SharingTripsPage() {
       )}
       secondaryActions={actions}
       query={tripsQuery}
+      busy={tripsQuery.isFetching}
     >
       {/* 1 — KPI band: full-width responsive metric grid. On a hard error
           (nothing cached) the band degrades to a QueryError panel instead of
@@ -172,8 +216,15 @@ export default function SharingTripsPage() {
               />
             ) : (
               <ul
+                ref={listRef}
                 className="space-y-2"
                 role="listbox"
+                onKeyDown={navigateTrips}
+                onFocus={(event) => {
+                  listRef.current?.querySelectorAll<HTMLButtonElement>('[role="option"]').forEach((option) => {
+                    option.tabIndex = option === event.target ? 0 : -1
+                  })
+                }}
                 aria-label={t('sharing.trips.recent.heading', 'Recent trips')}
                 data-testid="sharing-trips-recent-list"
               >
