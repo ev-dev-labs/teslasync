@@ -595,3 +595,158 @@ describe('AutomationsListPage — navigation & activity', () => {
     expect(m.useAutomationHistory).not.toHaveBeenCalled();
   });
 });
+
+describe('AutomationsListPage reserved phase5 presentation and source trust', () => {
+  it('keeps all header actions reachable with mobile targets and wrapping labels', () => {
+    renderPage();
+    for (const name of ['Manage rules', 'Import', 'Create']) {
+      expect(screen.getByRole('button', { name })).toHaveClass('min-h-11', 'min-w-11', 'md:min-h-9');
+    }
+    expect(screen.getByLabelText('Filter by status')).toHaveClass('min-h-11');
+    expect(screen.getByLabelText('Search automations...')).toHaveClass('min-h-11');
+  });
+
+  it('preserves preset disclosure with neutral decoration and visible theme-aware focus', () => {
+    renderPage();
+    const summary = screen.getByLabelText('Show or hide quick start templates');
+    expect(summary).toHaveClass(
+      'min-h-11', 'flex-wrap', 'hover:bg-[var(--control-bg-hover)]',
+      'focus-visible:outline-[var(--focus-ring)]', 'motion-reduce:transition-none',
+    );
+    expect(summary.className).not.toMatch(/cyan|white|glow/);
+    expect(summary.querySelectorAll('svg')).toHaveLength(2);
+    for (const icon of summary.querySelectorAll('svg')) {
+      expect(icon).toHaveClass('text-[var(--text-muted)]');
+      expect(icon).toHaveAttribute('aria-hidden', 'true');
+    }
+    expect(summary.closest('details')).not.toHaveAttribute('open');
+    fireEvent.click(summary);
+    expect(summary.closest('details')).toHaveAttribute('open');
+    expect(screen.getByTestId('preset-gallery')).toBeInTheDocument();
+  });
+
+  it.each([
+    ['missing lookup', []],
+    ['blank name', [{ id: 7, display_name: '' }]],
+    ['whitespace name', [{ id: 7, display_name: '   ' }]],
+  ])('marks a scoped vehicle unknown for %s instead of fleet-wide', (_name, vehicles) => {
+    setAutomations([makeAutomation({ id: 91, vehicle_id: 7 })]);
+    m.useVehicles.mockReturnValue({ data: vehicles });
+    renderPage();
+    expect(screen.getByText('veh:Unknown')).toBeInTheDocument();
+    expect(screen.queryByText('veh:All vehicles')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'toggle:91' })).toBeInTheDocument();
+  });
+
+  it('leaves fleet-wide scope unset and preserves the exact resolved vehicle name', () => {
+    setAutomations([
+      makeAutomation({ id: 1, name: 'Fleet rule', vehicle_id: null }),
+      makeAutomation({ id: 2, name: 'Scoped rule', vehicle_id: 7 }),
+    ]);
+    m.useVehicles.mockReturnValue({ data: [{ id: 7, display_name: '  Source Name  ' }] });
+    renderPage();
+    const cards = screen.getAllByTestId('automation-card');
+    expect(within(cards[0]).queryByText(/^veh:/)).not.toBeInTheDocument();
+    expect(within(cards[1]).getByText(/^veh:/).textContent).toBe('veh:  Source Name  ');
+  });
+
+  it('keeps rules and presets visible while independent auxiliary sources load', () => {
+    setAutomations([active]);
+    m.useVehicles.mockReturnValue({ data: undefined, isLoading: true });
+    m.usePinned.mockReturnValue({ data: undefined, isLoading: true });
+    renderPage();
+    expect(within(screen.getByRole('region', { name: 'Vehicle' })).getByText('Loading...')).toBeInTheDocument();
+    expect(within(screen.getByRole('region', { name: 'Pinned' })).getByText('Loading...')).toBeInTheDocument();
+    expect(screen.getByText('Active One')).toBeInTheDocument();
+    expect(screen.getByTestId('preset-gallery')).toBeInTheDocument();
+    expect(metricValue('Total')).toBe('1');
+  });
+
+  it('provides separate vehicle and pin retries without replacing the rule inventory', () => {
+    const retryVehicles = vi.fn();
+    const retryPins = vi.fn();
+    setAutomations([makeAutomation({ vehicle_id: 7 })]);
+    m.useVehicles.mockReturnValue({ data: undefined, error: new ApiError('vehicle failed', 500), refetch: retryVehicles });
+    m.usePinned.mockReturnValue({ data: undefined, error: new ApiError('pin failed', 500), refetch: retryPins });
+    renderPage();
+    fireEvent.click(within(screen.getByRole('region', { name: 'Vehicle' })).getByRole('button', { name: 'Retry' }));
+    expect(retryVehicles).toHaveBeenCalledTimes(1);
+    expect(retryPins).not.toHaveBeenCalled();
+    fireEvent.click(within(screen.getByRole('region', { name: 'Pinned' })).getByRole('button', { name: 'Retry' }));
+    expect(retryPins).toHaveBeenCalledTimes(1);
+    expect(screen.getByText('veh:Unknown')).toBeInTheDocument();
+    expect(screen.getAllByTestId('automation-card')).toHaveLength(1);
+    expect(screen.getByTestId('preset-gallery')).toBeInTheDocument();
+  });
+
+  it('retains vehicle identity and pin ordering through independent refresh failures', () => {
+    const retryVehicles = vi.fn();
+    const retryPins = vi.fn();
+    setAutomations([
+      makeAutomation({ id: 1, name: 'Source first' }),
+      makeAutomation({ id: 2, name: 'Retained pin', vehicle_id: 7 }),
+    ]);
+    m.useVehicles.mockReturnValue({
+      data: [{ id: 7, display_name: 'Retained name' }],
+      error: new ApiError('vehicle refresh failed', 500), refetch: retryVehicles,
+    });
+    m.usePinned.mockReturnValue({
+      data: [{ item_id: '2', position: 0 }],
+      error: new ApiError('pin refresh failed', 500), refetch: retryPins,
+    });
+    renderPage();
+    const cards = screen.getAllByTestId('automation-card');
+    expect(within(cards[0]).getByText('Retained pin')).toBeInTheDocument();
+    expect(within(cards[0]).getByText('veh:Retained name')).toBeInTheDocument();
+    expect(within(cards[1]).getByText('Source first')).toBeInTheDocument();
+    const warnings = screen.getAllByTestId('stale-refresh-warning');
+    expect(warnings).toHaveLength(2);
+    fireEvent.click(within(warnings[0]).getByRole('button', { name: 'Refresh' }));
+    expect(retryVehicles).toHaveBeenCalledTimes(1);
+    expect(retryPins).not.toHaveBeenCalled();
+    fireEvent.click(within(warnings[1]).getByRole('button', { name: 'Refresh' }));
+    expect(retryPins).toHaveBeenCalledTimes(1);
+  });
+
+  it('retains paused sources without claiming the vehicle is offline', () => {
+    setAutomations([makeAutomation({ vehicle_id: 7 })]);
+    m.useVehicles.mockReturnValue({ data: [{ id: 7, display_name: 'Paused name' }], fetchStatus: 'paused' });
+    m.usePinned.mockReturnValue({ data: [], fetchStatus: 'paused' });
+    renderPage();
+    expect(screen.getByText('veh:Paused name')).toBeInTheDocument();
+    expect(screen.getAllByTestId('stale-refresh-warning')).toHaveLength(2);
+    for (const warning of screen.getAllByTestId('stale-refresh-warning')) {
+      expect(warning).toHaveAttribute('data-refresh-blocked', 'true');
+      expect(warning.textContent).not.toMatch(/offline/i);
+    }
+  });
+
+  it('shows stream reconnection without inventing rule activity or triggering mutations', () => {
+    setAutomations([active]);
+    m.useAutomationEvents.mockReturnValue({
+      events: [], connectionState: 'reconnecting', firingNow: new Set<number>(), clearEvents: vi.fn(),
+    });
+    renderPage();
+    expect(screen.getByText('Reconnecting…')).toBeInTheDocument();
+    expect(screen.getByText('Active One')).toBeInTheDocument();
+    expect(screen.queryByText('firing:1')).not.toBeInTheDocument();
+    expect(m.toggleMutate).not.toHaveBeenCalled();
+    expect(m.reEnableMutate).not.toHaveBeenCalled();
+    expect(m.testRunMutate).not.toHaveBeenCalled();
+    expect(m.deleteMutate).not.toHaveBeenCalled();
+    expect(m.importMutate).not.toHaveBeenCalled();
+  });
+
+  it('keeps retained rules, summary, presets and filters after an inventory refresh failure', () => {
+    setAutomations([active, disabled], { error: new ApiError('inventory refresh failed', 500) });
+    renderPage();
+    expect(screen.getAllByTestId('automation-card')).toHaveLength(2);
+    expect(metricValue('Total')).toBe('2');
+    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+    expect(screen.getByTestId('preset-gallery')).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('Filter by status'), { target: { value: 'disabled' } });
+    expect(screen.getByText('Disabled One')).toBeInTheDocument();
+    expect(screen.queryByText('Active One')).not.toBeInTheDocument();
+    expect(metricValue('Total')).toBe('2');
+  });
+});
