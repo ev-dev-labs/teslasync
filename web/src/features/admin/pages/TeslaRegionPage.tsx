@@ -11,10 +11,9 @@
 import { useTranslation } from 'react-i18next'
 import { RefreshCw } from 'lucide-react'
 import { PageLayout } from '@/components/layout'
-import { Button } from '@/components/ui'
+import { Button, Icon } from '@/components/ui'
 import { FadeIn } from '@/components/motion'
 import { usePageTitle } from '@/hooks/usePageTitle'
-import { cn } from '@/lib/cn'
 import { deriveDataState } from '@/api/dataState'
 import { useTeslaUserRegion, useRefreshTeslaRegion } from '@/api/hooks/useUser'
 import {
@@ -31,7 +30,6 @@ export default function TeslaRegionPage() {
   usePageTitle(title)
 
   const regionQuery = useTeslaUserRegion()
-  const source = deriveDataState(regionQuery)
   const regionRefresh = useRefreshTeslaRegion()
 
   // The hook already emits success/error toasts — call mutate() bare so a
@@ -44,6 +42,10 @@ export default function TeslaRegionPage() {
   const fetchedAt = envelope?.fetched_at ?? null
   const { host, scheme, regionKey } = parseEndpoint(baseUrl)
   const configured = Boolean(region || baseUrl)
+  const source = deriveDataState(regionQuery, {
+    unavailable: !configured,
+    partial: configured && (!region || !baseUrl || !host || !scheme),
+  })
 
   const regionLabel =
     regionKey === 'na'
@@ -58,12 +60,10 @@ export default function TeslaRegionPage() {
     <Button
       variant="secondary"
       size="sm"
-      icon={
-        <RefreshCw
-          className={cn('h-3.5 w-3.5', regionRefresh.isPending && 'animate-spin')}
-          aria-hidden="true"
-        />
-      }
+      wrapLabel
+      className="min-h-11 min-w-11 md:min-h-9 md:min-w-0"
+      icon={<Icon icon={RefreshCw} size="sm" />}
+      loading={regionRefresh.isPending}
       onClick={refresh}
       disabled={regionRefresh.isPending}
       aria-busy={regionRefresh.isPending || undefined}

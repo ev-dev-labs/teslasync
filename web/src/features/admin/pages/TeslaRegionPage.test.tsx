@@ -69,7 +69,7 @@ vi.mock('react-i18next', async () => {
 })
 
 import { request } from '@/api/client'
-import { ToastProvider } from '@/components/feedback/Toast'
+import { ToastProvider } from '@/components/feedback'
 import TeslaRegionPage from './TeslaRegionPage'
 
 const mockedRequest = request as unknown as ReturnType<typeof vi.fn>
@@ -102,6 +102,7 @@ function renderPage() {
       mutations: { retry: false },
     },
   })
+
   const rendered = render(
     <QueryClientProvider client={qc}>
       <MemoryRouter initialEntries={['/admin/tesla-region']}>
@@ -382,5 +383,63 @@ describe('TeslaRegionPage', () => {
     expect(within(about).getByText(NA_ZONE)).toBeInTheDocument()
     expect(within(about).getByText(EU_ZONE)).toBeInTheDocument()
     expect(within(about).getByText(CN_ZONE)).toBeInTheDocument()
+  })
+})
+
+describe('TeslaRegionPage source and action presentation', () => {
+  it('keeps a wrapping mobile refresh target and restores compact desktop sizing', async () => {
+    mockedRequest.mockResolvedValue(envelope('North America', NA_URL))
+    renderPage()
+    await screen.findByText(NA_URL)
+
+    const refresh = headerRefreshButton()
+    expect(refresh).toHaveClass('h-auto', 'min-h-11', 'min-w-11', 'md:min-h-9', 'md:min-w-0')
+    expect(refresh).not.toHaveClass('h-9')
+    expect(refresh.querySelector('svg')).toHaveAttribute('aria-hidden', 'true')
+    expect(refresh.querySelector('svg')).toHaveAttribute('focusable', 'false')
+  })
+
+  it('marks a resolved empty account as unavailable without dropping its recovery or reference', async () => {
+    mockedRequest.mockResolvedValue({ data: null, fetched_at: null })
+    renderPage()
+    await within(endpointRegion()).findByText('No region on record')
+
+    expect(within(overviewRegion()).getByText('No account data returned')).toBeInTheDocument()
+    expect(within(overviewRegion()).queryByText('Account snapshot available')).toBeNull()
+    expect(within(overviewRegion()).getByText('Not configured')).toBeInTheDocument()
+    expect(within(endpointRegion()).getByRole('button', { name: 'Refresh' })).toBeEnabled()
+    expect(within(aboutRegion()).getByText(CN_ZONE)).toBeInTheDocument()
+  })
+
+  it.each([
+    { name: 'region-only snapshot', region: 'North America', url: '', value: 'North America' },
+    { name: 'endpoint-only snapshot', region: '', url: NA_URL, value: NA_URL },
+    { name: 'unparseable endpoint', region: 'North America', url: 'not-an-endpoint', value: 'not-an-endpoint' },
+  ])('marks $name partial and keeps its available endpoint fields', async ({ region, url, value }) => {
+    mockedRequest.mockResolvedValue(envelope(region, url))
+    renderPage()
+    await waitFor(() => expect(within(endpointRegion()).getAllByText(value).length).toBeGreaterThan(0))
+
+    expect(within(overviewRegion()).getByText('Partial account snapshot')).toBeInTheDocument()
+    expect(within(overviewRegion()).queryByText('Account snapshot available')).toBeNull()
+    expect(within(overviewRegion()).getByText('Configured')).toBeInTheDocument()
+    expect(within(endpointRegion()).getAllByText(value).length).toBeGreaterThan(0)
+    expect(within(aboutRegion()).getByText(EU_ZONE)).toBeInTheDocument()
+    if (url) {
+      expect(within(endpointRegion()).getByRole('button', { name: 'Copy Fleet API base URL' })).toBeInTheDocument()
+    }
+  })
+
+  it('keeps partial endpoint data as a retained snapshot after a refresh failure', async () => {
+    mockedRequest.mockResolvedValue(envelope('North America', ''))
+    const { qc } = renderPage()
+    await within(overviewRegion()).findByText('Partial account snapshot')
+    mockedRequest.mockRejectedValue(new Error('refresh unavailable'))
+    await qc.invalidateQueries()
+
+    await within(overviewRegion()).findByText('Retained account snapshot')
+    expect(within(endpointRegion()).getAllByText('North America')).toHaveLength(2)
+    expect(within(endpointRegion()).queryByText("Can't reach server")).toBeNull()
+    expect(within(aboutRegion()).getByText(NA_ZONE)).toBeInTheDocument()
   })
 })
