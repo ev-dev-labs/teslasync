@@ -29,6 +29,7 @@ import { render, screen, fireEvent, cleanup } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter } from 'react-router-dom'
 import { Shield, Thermometer } from 'lucide-react'
+import { gaugeTone, severityTokens } from '@/lib/tokens'
 
 // framer-motion's useReducedMotion (via <Spinner>) probes matchMedia, which
 // jsdom omits. Provide an inert stub so the loading branch renders cleanly.
@@ -51,6 +52,9 @@ const hooks = vi.hoisted(() => ({
     isLoading: boolean
     error: unknown
     refetch?: () => unknown
+    availability?: 'configured' | 'not-configured' | 'prerequisite-error'
+    recheckAvailability?: () => void
+    fetchStatus?: 'idle' | 'paused' | 'fetching'
   },
   command: { mutate: vi.fn(), isPending: false },
   operational: {
@@ -211,7 +215,8 @@ describe('WatchFacePage', () => {
     expect(screen.getByRole('button', { name: 'Unlock vehicle' })).toBeInTheDocument()
     const climate = screen.getByRole('button', { name: 'Turn climate on' })
     expect(climate).toHaveTextContent('21°')
-    expect(screen.getByRole('button', { name: 'Sentry mode off' })).toBeInTheDocument()
+    expect(screen.getByRole('img', { name: 'Sentry mode off' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Sentry mode off' })).not.toBeInTheDocument()
   })
 
   it('dispatches the correct commands with the vehicle_id parsed from the URL', () => {
@@ -275,6 +280,7 @@ describe('WatchFacePage', () => {
 
     expect(screen.getByRole('button', { name: 'Lock vehicle' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Turn climate off' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Lock vehicle' })).toHaveAttribute('aria-busy', 'true')
   })
 
   it('keeps the wearable surface chrome-less: the opt-in Helix panel stays hidden when AI is off', () => {
@@ -362,6 +368,52 @@ describe('WatchFacePage', () => {
     renderPage()
     expect(screen.getByText('0m to full')).toBeInTheDocument()
   })
+
+  it('offers configuration rather than inventing an empty vehicle when watch access is absent', () => {
+    hooks.summary = { data: undefined, isLoading: false, error: null, availability: 'not-configured' }
+    renderPage()
+    expect(screen.getByText('Watch access is not configured')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Manage API keys' })).toHaveAttribute('href', '/api-keys')
+    expect(screen.queryByText('No vehicle found')).not.toBeInTheDocument()
+    expect(hooks.command.mutate).not.toHaveBeenCalled()
+  })
+
+  it('retains the face and disables commands while prerequisite recovery rechecks access', () => {
+    const recheckAvailability = vi.fn()
+    hooks.summary = {
+      data: makeSummary(), isLoading: false, error: null,
+      availability: 'prerequisite-error', recheckAvailability,
+    }
+    renderPage()
+    expect(screen.getByText('Watch access could not be checked')).toBeInTheDocument()
+    expect(screen.getByRole('img', { name: 'Battery 72%; range 300 km' })).toBeInTheDocument()
+    const unlock = screen.getByRole('button', { name: 'Unlock vehicle' })
+    expect(unlock).toBeDisabled()
+    expect(unlock).toHaveAccessibleDescription('Watch access could not be checked')
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }))
+    expect(recheckAvailability).toHaveBeenCalledTimes(1)
+    expect(hooks.command.mutate).not.toHaveBeenCalled()
+  })
+
+  it('exposes retained refresh recovery without replacing the face or issuing a command', () => {
+    const refetch = vi.fn()
+    hooks.summary = { data: makeSummary(), isLoading: false, error: new Error('refresh failed'), refetch }
+    renderPage()
+    expect(screen.getByText('72%')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }))
+    expect(refetch).toHaveBeenCalledTimes(1)
+    expect(hooks.command.mutate).not.toHaveBeenCalled()
+  })
+
+  it('keeps paused readings and a named scrollable main without claiming a fresh result', () => {
+    hooks.summary = { data: makeSummary(), isLoading: false, error: null, fetchStatus: 'paused' }
+    renderPage()
+    expect(screen.getByText('Cached')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 1, name: 'Watch face' })).toBeInTheDocument()
+    expect(screen.getByRole('main')).toHaveClass('overflow-y-auto')
+    expect(screen.getByRole('img', { name: 'Battery 72%; range 300 km' })).toBeInTheDocument()
+    expect(document.title).toBe('Watch face — TeslaSync')
+  })
 })
 
 describe('BatteryGauge', () => {
@@ -375,7 +427,7 @@ describe('BatteryGauge', () => {
 
     const arcs = container.querySelectorAll('circle')
     expect(arcs).toHaveLength(2)
-    expect(arcs[1]).toHaveAttribute('stroke', '#22c55e')
+    expect(arcs[1]).toHaveAttribute('stroke', gaugeTone.success)
     const circumference = 2 * Math.PI * 59
     expect(Number(arcs[1].getAttribute('stroke-dasharray'))).toBeCloseTo(circumference)
     expect(Number(arcs[1].getAttribute('stroke-dashoffset'))).toBeCloseTo(circumference * 0.28)
@@ -387,7 +439,7 @@ describe('BatteryGauge', () => {
       <BatteryGauge level={10} rangeDisplay={0} distanceUnit="mi" />,
     )
     const arcs = container.querySelectorAll('circle')
-    expect(arcs[1]).toHaveAttribute('stroke', '#ef4444')
+    expect(arcs[1]).toHaveAttribute('stroke', gaugeTone.danger)
     expect(Number(arcs[1].getAttribute('stroke-dashoffset'))).toBeCloseTo(2 * Math.PI * 59 * 0.9)
     expect(screen.getByText('0 mi')).toBeInTheDocument()
   })
@@ -429,15 +481,15 @@ describe('StatusIcon', () => {
       <StatusIcon icon={Thermometer} active color="emerald" label="21°" ariaLabel="Turn climate off" />,
     )
 
-    const btn = screen.getByRole('button', { name: 'Turn climate off' })
+    const btn = screen.getByRole('img', { name: 'Turn climate off' })
     expect(btn).toHaveTextContent('21°')
-    expect(btn.className).toContain('text-emerald-400')
+    expect(btn.className).toContain(severityTokens.success.fg)
     expect(screen.getByText('21°')).toHaveAttribute('aria-hidden', 'true')
   })
 
   it('falls back to the visible label as the accessible name when no ariaLabel is given', () => {
     render(<StatusIcon icon={Thermometer} active={false} label="21°" />)
-    expect(screen.getByRole('button', { name: '21°' })).toBeInTheDocument()
+    expect(screen.getByRole('img', { name: '21°' })).toBeInTheDocument()
   })
 })
 
@@ -472,14 +524,14 @@ describe('WatchPWAMeta', () => {
 
 describe('getBatteryColor', () => {
   it('maps battery level to the correct threshold colour', () => {
-    expect(getBatteryColor(100)).toBe('#22c55e')
-    expect(getBatteryColor(41)).toBe('#22c55e')
+    expect(getBatteryColor(100)).toBe(gaugeTone.success)
+    expect(getBatteryColor(41)).toBe(gaugeTone.success)
     // Boundary: 40 is NOT > 40, so it falls into the amber band.
-    expect(getBatteryColor(40)).toBe('#f59e0b')
-    expect(getBatteryColor(21)).toBe('#f59e0b')
+    expect(getBatteryColor(40)).toBe(gaugeTone.warning)
+    expect(getBatteryColor(21)).toBe(gaugeTone.warning)
     // Boundary: 20 is NOT > 20, so it falls into the red band.
-    expect(getBatteryColor(20)).toBe('#ef4444')
-    expect(getBatteryColor(0)).toBe('#ef4444')
+    expect(getBatteryColor(20)).toBe(gaugeTone.danger)
+    expect(getBatteryColor(0)).toBe(gaugeTone.danger)
   })
 })
 
@@ -495,8 +547,8 @@ describe('watchStateVariant', () => {
 
 describe('watchStateClassName', () => {
   it('returns state-specific classes and an empty string for unknown states', () => {
-    expect(watchStateClassName('driving')).toContain('text-blue-400')
-    expect(watchStateClassName('charging')).toContain('text-emerald-400')
+    expect(watchStateClassName('driving')).toContain(severityTokens.info.fg)
+    expect(watchStateClassName('charging')).toContain(severityTokens.success.fg)
     expect(watchStateClassName('asleep')).toContain('text-[var(--text-muted)]')
     expect(watchStateClassName('online')).toContain('text-[var(--text-secondary)]')
     expect(watchStateClassName('offline')).toBe('')
