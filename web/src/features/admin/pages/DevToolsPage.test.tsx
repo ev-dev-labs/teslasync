@@ -441,3 +441,28 @@ describe('DevToolsPage', () => {
     expect(screen.getByTestId('section-fleet-api')).toBeInTheDocument()
   })
 })
+
+describe('DevToolsPage design contract', () => {
+  it('names the tool group and preserves pressed-state navigation with decorative shared icons', async () => {
+    renderPage()
+
+    const group = within(toolsRegion()).getByRole('group', { name: 'Developer tool areas' })
+    const names = ['Fleet API', 'Telemetry', 'Infrastructure', 'Utilities', 'Reference']
+    expect(within(group).getAllByRole('button')).toHaveLength(names.length)
+    for (const name of names) {
+      const button = within(group).getByRole('button', { name })
+      expect(button).toHaveAttribute('aria-pressed', String(name === 'Fleet API'))
+      expect(button.querySelector('svg')).toHaveAttribute('aria-hidden', 'true')
+      expect(button.querySelector('svg')).toHaveAttribute('focusable', 'false')
+      expect(button.querySelector('svg')).toHaveClass('shrink-0')
+    }
+    expect(refreshButton().querySelector('svg')).toHaveAttribute('aria-hidden', 'true')
+    expect(refreshButton().querySelector('svg')).toHaveAttribute('focusable', 'false')
+
+    fireEvent.click(within(group).getByRole('button', { name: 'Telemetry' }))
+    expect(await screen.findByTestId('section-telemetry')).toBeInTheDocument()
+    expect(within(group).getByRole('button', { name: 'Telemetry' })).toHaveAttribute('aria-pressed', 'true')
+    expect(within(group).getByRole('button', { name: 'Fleet API' })).toHaveAttribute('aria-pressed', 'false')
+    expect(locSearch()).toBe('?tab=telemetry')
+  })
+})

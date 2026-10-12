@@ -4,7 +4,7 @@ import {
   Globe, Radio, Server, Wrench, BookOpen, RefreshCw, AlertCircle,
 } from 'lucide-react'
 import { PageLayout } from '@/components/layout'
-import { TabNav, Button } from '@/components/ui'
+import { TabNav, Button, Icon } from '@/components/ui'
 import { AlertBanner, StaleRefreshWarning } from '@/components/feedback'
 import { FadeIn } from '@/components/motion'
 import { usePageTitle } from '@/hooks/usePageTitle'
@@ -60,11 +60,11 @@ export default function DevToolsPage() {
 
   const tabs = useMemo(
     () => [
-      { key: 'fleet-api', label: t('devtools.tab.fleetApi', 'Fleet API'), icon: <Globe className="h-4 w-4" aria-hidden="true" /> },
-      { key: 'telemetry', label: t('devtools.tab.telemetry', 'Telemetry'), icon: <Radio className="h-4 w-4" aria-hidden="true" /> },
-      { key: 'infrastructure', label: t('devtools.tab.infrastructure', 'Infrastructure'), icon: <Server className="h-4 w-4" aria-hidden="true" /> },
-      { key: 'utilities', label: t('devtools.tab.utilities', 'Utilities'), icon: <Wrench className="h-4 w-4" aria-hidden="true" /> },
-      { key: 'reference', label: t('devtools.tab.reference', 'Reference'), icon: <BookOpen className="h-4 w-4" aria-hidden="true" /> },
+      { key: 'fleet-api', label: t('devtools.tab.fleetApi', 'Fleet API'), icon: <Icon icon={Globe} /> },
+      { key: 'telemetry', label: t('devtools.tab.telemetry', 'Telemetry'), icon: <Icon icon={Radio} /> },
+      { key: 'infrastructure', label: t('devtools.tab.infrastructure', 'Infrastructure'), icon: <Icon icon={Server} /> },
+      { key: 'utilities', label: t('devtools.tab.utilities', 'Utilities'), icon: <Icon icon={Wrench} /> },
+      { key: 'reference', label: t('devtools.tab.reference', 'Reference'), icon: <Icon icon={BookOpen} /> },
     ],
     [t],
   )
@@ -75,7 +75,7 @@ export default function DevToolsPage() {
       onClick={refreshOverview}
       loading={overviewFetching}
       aria-label={t('devtools.refreshStatus', 'Refresh developer tools status')}
-      icon={<RefreshCw className="h-4 w-4" aria-hidden="true" />}
+      icon={<Icon icon={RefreshCw} />}
     >
       {t('common.refresh', 'Refresh')}
     </Button>
@@ -88,9 +88,9 @@ export default function DevToolsPage() {
       secondaryActions={actions}
       query={telemetryQuery}
     >
-      <div className="space-y-6">
+      <div className="min-w-0 space-y-6">
         {overviewError && (
-          <AlertBanner variant="danger" icon={<AlertCircle className="h-5 w-5" />}>
+          <AlertBanner variant="danger" icon={<Icon icon={AlertCircle} size="lg" />}>
             {t('error.loadFailed', 'Failed to load data')}: {getErrorMessage(overviewError)}
           </AlertBanner>
         )}
@@ -126,8 +126,13 @@ export default function DevToolsPage() {
 
         {/* 2 — Tabbed deep-dive: full-width tool areas, each owns its state */}
         <FadeIn delay={0.1}>
-          <section aria-label={t('devtools.tools', 'Developer tool areas')} className="space-y-4">
-            <TabNav tabs={tabs} active={tab} onChange={(k) => setTab(k as TabKey)} />
+          <section aria-label={t('devtools.tools', 'Developer tool areas')} className="min-w-0 space-y-4">
+            <TabNav
+              tabs={tabs}
+              active={tab}
+              onChange={(k) => setTab(k as TabKey)}
+              ariaLabel={t('devtools.tools', 'Developer tool areas')}
+            />
 
             <FadeIn key={tab}>
               {tab === 'fleet-api' && <FleetApiSection />}
