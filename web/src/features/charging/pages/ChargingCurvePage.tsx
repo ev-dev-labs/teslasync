@@ -41,12 +41,16 @@ export default function ChargingCurvePage() {
   const activeVehicleId = vehicleId ?? null;
   const [selectedSessionId, setSelectedSessionId] = useState<number | null>(null);
 
-  const { start, end, reset } = useRangeState({
+  const { start, end, startInstant, endInstantExclusive, presetId, reset } = useRangeState({
     persistKey: 'charging-curve.range',
     defaultPresetId: 'all',
   });
 
-  const sessionsQuery = useChargingSessionsPaginated(activeVehicleId, { limit: 200, start, end });
+  const sessionsQuery = useChargingSessionsPaginated(activeVehicleId, {
+    limit: 200,
+    start: startInstant,
+    end: endInstantExclusive,
+  });
   const { data, refetch } = sessionsQuery;
   const sessions = data ?? [];
   const hasSessions = sessions.length > 0;
@@ -72,11 +76,13 @@ export default function ChargingCurvePage() {
     void refetch();
   }, [refetch]);
 
-  // A vehicle or workspace-range change invalidates the selected session.
-  // Reset so the inspector never points at an option outside the new result set.
+  // Rolling clock updates refresh the query, not the user's inspection.
+  const rollingRange = presetId === 'live' || presetId === '24h';
+  const inspectionStart = rollingRange ? presetId : start;
+  const inspectionEnd = rollingRange ? presetId : end;
   useEffect(() => {
     setSelectedSessionId(null);
-  }, [activeVehicleId, end, start]);
+  }, [activeVehicleId, inspectionEnd, inspectionStart, presetId]);
 
   /* ── Derived data ────────────────────────────────────────────────────── */
 

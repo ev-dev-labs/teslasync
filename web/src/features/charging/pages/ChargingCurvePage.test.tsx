@@ -41,7 +41,7 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { cleanup, render, screen, within, fireEvent } from '@testing-library/react';
+import { act, cleanup, render, screen, within, fireEvent } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { SHARED_RANGE_STORAGE_KEY, useRangeState } from '@/hooks/useRangeState';
@@ -60,9 +60,20 @@ const h = vi.hoisted(() => ({
   query: undefined as unknown,
   selected: { vehicleId: 7 as number | null },
   queryCall: vi.fn(),
+  route: '/charging/curves?from=2024-05-01&to=2024-05-31',
+  timezone: 'UTC',
 }));
 
 const refetchMock = vi.fn();
+
+vi.mock('@/hooks/useRangeState', async importOriginal => {
+  const actual = await importOriginal<typeof import('@/hooks/useRangeState')>();
+  return {
+    ...actual,
+    useRangeState: (options?: Parameters<typeof actual.useRangeState>[0]) =>
+      actual.useRangeState({ ...options, timezone: h.timezone }),
+  };
+});
 
 vi.mock('react-i18next', async () => {
   const actual = await vi.importActual<typeof import('react-i18next')>('react-i18next');
@@ -243,7 +254,7 @@ const acSession = makeSession({
 function buildTree(qc: QueryClient): ReactNode {
   return (
     <QueryClientProvider client={qc}>
-      <MemoryRouter initialEntries={['/charging/curves?from=2024-05-01&to=2024-05-31']}>
+      <MemoryRouter initialEntries={[h.route]}>
         <ToastProvider>
           <HeaderRangeChange />
           <ChargingCurvePage />
@@ -291,6 +302,8 @@ beforeEach(() => {
   setGlobalPrecision(2);
   setGlobalLocale('en-US');
   h.selected.vehicleId = 7;
+  h.route = '/charging/curves?from=2024-05-01&to=2024-05-31';
+  h.timezone = 'UTC';
   h.query = makeQuery({ data: [dcSession, acSession] });
 });
 
@@ -301,6 +314,7 @@ afterEach(() => {
   else localStorage.setItem(SHARED_RANGE_STORAGE_KEY, storedRange);
   setGlobalPrecision(preferences.precision);
   setGlobalLocale(preferences.locale);
+  vi.useRealTimers();
   vi.restoreAllMocks();
 });
 
@@ -326,7 +340,7 @@ describe('ChargingCurvePage', () => {
       expect(tiles[index].querySelector('[data-operational-value]')).toHaveTextContent(value);
     });
     expect(h.queryCall).toHaveBeenLastCalledWith(7, {
-      limit: 200, start: '2024-05-01', end: '2024-05-31',
+      limit: 200, start: '2024-05-01T00:00:00.000Z', end: '2024-06-01T00:00:00.000Z',
     });
 
     // Every downstream section renders with the full session list.
@@ -393,7 +407,7 @@ describe('ChargingCurvePage', () => {
       screen.getAllByText('Select a session above to view its charging curve'),
     ).toHaveLength(2);
     expect(h.queryCall).toHaveBeenLastCalledWith(7, {
-      limit: 200, start: '2099-01-01', end: '2099-01-31',
+      limit: 200, start: '2099-01-01T00:00:00.000Z', end: '2099-02-01T00:00:00.000Z',
     });
     expect(JSON.parse(localStorage.getItem(SHARED_RANGE_STORAGE_KEY)!)).toMatchObject({
       start: '2099-01-01', end: '2099-01-31',
@@ -420,7 +434,7 @@ describe('ChargingCurvePage', () => {
       screen.getAllByText('Select a session above to view its charging curve'),
     ).toHaveLength(2);
     expect(h.queryCall).toHaveBeenLastCalledWith(8, {
-      limit: 200, start: '2024-05-01', end: '2024-05-31',
+      limit: 200, start: '2024-05-01T00:00:00.000Z', end: '2024-06-01T00:00:00.000Z',
     });
   });
 
@@ -513,5 +527,85 @@ describe('ChargingCurvePage', () => {
     expect(screen.getByTestId('ai-mlcluster')).toHaveAttribute('data-vehicle-id', '');
     // The page shell still renders rather than crashing on a null vehicle.
     expect(screen.getByRole('heading', { level: 1, name: /Charging Curve/i })).toBeInTheDocument();
+  });
+
+  it.each([
+    { name: 'primary route', route: '/charging-curve' },
+    { name: 'nested alias', route: '/charging/curves' },
+  ])('passes timezone-aware exclusive bounds through the header scope on $name', ({ route }) => {
+    h.route = `${route}?from=2024-03-10&to=2024-03-10`;
+    h.timezone = 'America/Los_Angeles';
+    renderPage();
+
+    expect(h.queryCall).toHaveBeenLastCalledWith(7, {
+      limit: 200, start: '2024-03-10T08:00:00.000Z', end: '2024-03-11T07:00:00.000Z',
+    });
+    expect(screen.getAllByRole('combobox')).toHaveLength(1);
+    expect(screen.getByRole('combobox', { name: 'Inspect session' })).toBeEnabled();
+  });
+
+  it.each([
+    { name: 'live', scope: 'live', start: '2024-05-01T23:56:00.000Z' },
+    { name: '24-hour', scope: '24h', start: '2024-05-01T00:01:00.000Z' },
+  ])('refreshes exact rolling bounds across midnight without clearing the $name inspector', ({ scope, start }) => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2024-05-01T23:59:00.000Z'));
+    h.route = `/charging-curve?time_scope=${scope}`;
+    renderPage();
+    fireEvent.change(screen.getByRole('combobox', { name: 'Inspect session' }), {
+      target: { value: '101' },
+    });
+    expect(screen.getByTestId('session-detail')).toHaveAttribute('data-session-id', '101');
+
+    act(() => vi.advanceTimersByTime(120_000));
+
+    expect(h.queryCall).toHaveBeenLastCalledWith(7, {
+      limit: 200, start, end: '2024-05-02T00:01:00.000Z',
+    });
+    expect(screen.getByRole('combobox', { name: 'Inspect session' })).toHaveValue('101');
+    expect(screen.getByTestId('session-curve')).toHaveAttribute('data-points', '61');
+    expect(screen.getByTestId('session-detail')).toHaveAttribute('data-session-id', '101');
+  });
+
+  it('retains the inspected session and all analyses through a failed refresh with individual retry', () => {
+    const { rerender, qc } = renderPage();
+    fireEvent.change(screen.getByRole('combobox', { name: 'Inspect session' }), {
+      target: { value: '101' },
+    });
+    h.query = makeQuery({
+      data: [dcSession, acSession], isError: true, error: new Error('refresh unavailable'), isStale: true,
+    });
+    rerender(buildTree(qc));
+
+    expect(screen.getByRole('combobox', { name: 'Inspect session' })).toHaveValue('101');
+    expect(screen.getByTestId('session-detail')).toHaveAttribute('data-session-id', '101');
+    expect(screen.getByTestId('session-curve')).toHaveAttribute('data-points', '61');
+    for (const id of ['comparison-chart', 'charger-type-chart', 'speed-trend-chart', 'ttc-section']) {
+      expect(screen.getByTestId(id)).toHaveAttribute('data-count', '2');
+    }
+    expect(screen.getByTestId('charging-curve-summary').querySelectorAll('[data-operational-value]')).toHaveLength(6);
+    expect(screen.queryByText(/Can't reach server/i)).not.toBeInTheDocument();
+    fireEvent.click(within(screen.getByTestId('stale-refresh-warning')).getByRole('button', { name: 'Refresh' }));
+    expect(refetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps missing measurements distinct from zero while forwarding unchanged sessions to every analysis', () => {
+    const incompleteSession = makeSession({
+      id: 103, total_energy_added_wh: null, peak_power_w: null,
+      avg_power_w: null, cost_decimal: null, ended_at: null,
+      start_soc_pct: null, end_soc_pct: null,
+    });
+    h.query = makeQuery({ data: [incompleteSession] });
+    renderPage();
+
+    const stats = screen.getByTestId('charging-curve-summary');
+    expect(stats.querySelector('[data-operational-metric="totalSessions"] [data-operational-value]'))
+      .toHaveTextContent('1');
+    expect(stats.querySelectorAll('[data-value-state="missing"]')).toHaveLength(5);
+    expect(screen.getByText('Some session measurements are incomplete')).toBeInTheDocument();
+    for (const id of ['comparison-chart', 'charger-type-chart', 'speed-trend-chart', 'ttc-section']) {
+      expect(screen.getByTestId(id)).toHaveAttribute('data-count', '1');
+    }
+    expect(screen.getByRole('combobox', { name: 'Inspect session' })).toBeEnabled();
   });
 });
