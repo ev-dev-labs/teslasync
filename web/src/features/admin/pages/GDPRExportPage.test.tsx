@@ -452,3 +452,38 @@ describe('GDPRExportPage — url + refresh wiring', () => {
     );
   });
 });
+
+describe('GDPRExportPage — restrained caller presentation', () => {
+  it('keeps the named refresh target reachable and decorative icons out of the accessibility tree', () => {
+    wire({});
+    const { container } = renderPage();
+    const refresh = screen.getByRole('button', { name: 'Refresh artifact status' });
+    expect(refresh).toHaveClass('min-h-11', 'min-w-11', 'shrink-0');
+    expect(refresh).toBeDisabled();
+    expect(refresh.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
+    expect(refresh.querySelector('svg')).toHaveAttribute('focusable', 'false');
+    expect(container.querySelector('.lucide-hard-drive-download')).toHaveClass('h-6', 'w-6', 'shrink-0');
+    expect(container.querySelector('.lucide-hard-drive-download')).toHaveAttribute('aria-hidden', 'true');
+    expect(mockedRequest).not.toHaveBeenCalled();
+  });
+
+  it('contains the complete artifact panels in shrinkable responsive grids without losing metadata or download semantics', async () => {
+    wire({ [ART_A]: () => Promise.resolve(completeArtifact) });
+    renderPage([`/admin/gdpr-exports?id=${ART_A}`]);
+    const download = await screen.findByRole('link', { name: 'Download bundle' });
+    const details = screen.getByText('Artifact details').closest('[data-print-card]');
+    const lifecycle = screen.getByText('Lifecycle').closest('[data-print-card]');
+    const downloadPanel = screen.getByText('Download', { exact: true }).closest('[data-print-card]');
+
+    expect(details).toHaveClass('min-w-0', 'xl:col-span-2');
+    expect(details?.parentElement).toHaveClass('min-w-0', 'grid-cols-1', 'xl:grid-cols-3');
+    expect(downloadPanel).toHaveClass('min-w-0');
+    expect(lifecycle).toHaveClass('min-w-0');
+    expect(lifecycle?.parentElement).toHaveClass('min-w-0', 'grid-cols-1', 'sm:grid-cols-2', 'xl:grid-cols-1');
+    expect(screen.getByTestId('gdpr-export-summary').querySelectorAll('[data-operational-metric]')).toHaveLength(6);
+    expect(screen.getByText(ART_A)).toBeInTheDocument();
+    expect(screen.getByText('f'.repeat(64))).toBeInTheDocument();
+    expect(download).toHaveAttribute('download');
+    expect(download).toHaveAttribute('href', expect.stringContaining(`/api/v1/admin/gdpr/exports/${ART_A}/download`));
+  });
+});

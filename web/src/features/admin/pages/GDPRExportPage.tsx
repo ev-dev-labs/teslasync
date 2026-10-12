@@ -17,7 +17,7 @@ import { useSearchParams } from 'react-router-dom';
 import { HardDriveDownload, RefreshCw } from 'lucide-react';
 
 import { PageLayout } from '@/components/layout';
-import { GlassPanel, Button } from '@/components/ui';
+import { GlassPanel, Button, Icon } from '@/components/ui';
 import type { StatMetric } from '@/components/data-display';
 import { AdminSummary } from '../components/operationalbrief-a-g/AdminSummary';
 import { FadeIn } from '@/components/motion';
@@ -110,9 +110,9 @@ export default function GDPRExportPage() {
       onClick={handleRefresh}
       disabled={!activeId}
       aria-label={t('admin.gdprExport.refresh', 'Refresh artifact status')}
-      className="min-h-11"
+      className="min-h-11 min-w-11 shrink-0"
     >
-      <RefreshCw className="h-4 w-4" aria-hidden="true" />
+      <Icon icon={RefreshCw} />
     </Button>
   );
 
@@ -129,7 +129,7 @@ export default function GDPRExportPage() {
         ? [{ id: 'gdpr-artifact', label: t('admin.gdprExport.resourceName', 'Export artifact'), query }]
         : undefined}
     >
-      <div className="space-y-6">
+      <div className="min-w-0 space-y-6">
         <FadeIn>
           <GDPRLookupPanel idInput={idInput} onIdChange={setIdInput} onLookup={handleLookup} />
         </FadeIn>
@@ -151,7 +151,7 @@ export default function GDPRExportPage() {
             <GlassPanel className="p-4 sm:p-5">
               {/* no-action: the artifact-ID lookup input is immediately above; this empty state only renders before submission */}
               <EmptyState
-                icon={<HardDriveDownload className="h-8 w-8" />}
+                icon={<Icon icon={HardDriveDownload} size="xl" />}
                 title={t('admin.gdprExport.emptyTitle', 'No artifact selected')}
                 message={t(
                   'admin.gdprExport.emptyMessage',
@@ -180,7 +180,7 @@ export default function GDPRExportPage() {
           </GlassPanel>
         ) : subsystemMissing ? null : (
           <SectionErrorBoundary name="gdpr-export-artifact">
-            <div className="space-y-6">
+            <div className="min-w-0 space-y-6">
               {/* KPI band — full-width responsive summary, more columns on wide screens */}
               <FadeIn delay={0.05}>
                 <AdminSummary metrics={summaryMetrics} testId="gdpr-export-summary"
@@ -203,19 +203,20 @@ export default function GDPRExportPage() {
 
               {/* Detail bento — hero details span two columns, supporting panels fill the third */}
               <FadeIn delay={0.1}>
-                <section className="grid grid-cols-1 gap-4 xl:grid-cols-3">
+                <section className="grid min-w-0 grid-cols-1 gap-4 xl:grid-cols-3">
                   <GDPRArtifactDetails
                     artifact={artifact}
                     loading={query.isLoading}
-                    className="xl:col-span-2"
+                    className="min-w-0 xl:col-span-2"
                   />
-                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-1">
+                  <div className="grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-1">
                     <GDPRDownloadPanel
                       artifact={artifact}
                       downloadUrl={downloadUrl}
                       loading={query.isLoading}
+                      className="min-w-0"
                     />
-                    <GDPRLifecyclePanel artifact={artifact} loading={query.isLoading} />
+                    <GDPRLifecyclePanel artifact={artifact} loading={query.isLoading} className="min-w-0" />
                   </div>
                 </section>
               </FadeIn>
