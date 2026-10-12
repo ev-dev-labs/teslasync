@@ -7,6 +7,7 @@ import { useDrives } from '@/api/hooks/useDriving';
 import { useSoftwareUpdates } from '@/api/hooks/useVehicleSystems';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useLoadAnnouncement } from '@/hooks/useStatusAnnouncer';
 import { analyzeFirmwareImpact } from '../lib/firmwareImpact';
 import {
   FirmwareImpactSlot,
@@ -85,6 +86,13 @@ export default function FirmwareImpactPage() {
     void drivesQuery.refetch();
     void updatesQuery.refetch();
   };
+  useLoadAnnouncement({
+    label: t('firmwareImpact.title', 'Firmware impact'),
+    isLoading: state.loading,
+    isError: Boolean(state.fatalError || state.drives.refreshError || state.updates.refreshError),
+    count: state.hasInputs ? summary.impacts.length : undefined,
+    enabled: vehicleId != null,
+  });
 
   if (vehicleId == null) {
     return <NoVehicleSelected pageTitle={t('firmwareImpact.title', 'Firmware impact')} />;
@@ -137,6 +145,7 @@ export default function FirmwareImpactPage() {
       query={[drivesQuery, updatesQuery]}
       dataSources={dataSources}
       busy={drivesQuery.isFetching || updatesQuery.isFetching}
+      announce={false}
     >
       <Text as="p" variant="bodySm">
         {t(
