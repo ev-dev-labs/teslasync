@@ -20,6 +20,38 @@ function tokens(value: string): Set<string> {
   return new Set(value.split(/\s+/).filter(Boolean))
 }
 
+/**
+ * Phase 4 accepted these four naming-only pilot additions after the Phase 3
+ * fingerprints were captured. Prove their exact resolved values and default
+ * name collision safety before projecting them out of that historical scope.
+ * All other entries, defaults and plugin implementations remain fingerprinted.
+ */
+function acceptedPhase3Projection<
+  T extends { theme: { zIndex: Record<string, string>; gridTemplateColumns: Record<string, string> } },
+>(current: T) {
+  const defaults = resolveConfig({ content: [] })
+  const projected = {
+    ...current,
+    theme: {
+      ...current.theme,
+      zIndex: { ...current.theme.zIndex },
+      gridTemplateColumns: { ...current.theme.gridTemplateColumns },
+    },
+  }
+  const acceptedPilotGeometry = [
+    ['zIndex', 'dashboard-kiosk', '9990'],
+    ['gridTemplateColumns', 'dashboard-onboarding', 'minmax(0,1.2fr) minmax(22rem,0.8fr)'],
+    ['gridTemplateColumns', 'settings-navigation', '15rem minmax(0,1fr)'],
+    ['gridTemplateColumns', 'settings-shortcuts', 'repeat(auto-fit,minmax(min(100%,18rem),1fr))'],
+  ] as const
+  for (const [group, name, value] of acceptedPilotGeometry) {
+    expect(defaults.theme[group]).not.toHaveProperty(name)
+    expect(current.theme[group]).toHaveProperty(name, value)
+    Reflect.deleteProperty(projected.theme[group], name)
+  }
+  return projected
+}
+
 const newGeometry = [
   ['height', 'workspace-header', 'h', '4.5rem', 'h-[4.5rem]', 'h-16', 'h-[5rem]'],
   ['gridTemplateColumns', 'workspace-header', 'grid-cols', 'minmax(0,1fr) minmax(18rem,22rem) minmax(0,1fr)', 'grid-cols-[minmax(0,1fr)_minmax(18rem,22rem)_minmax(0,1fr)]', 'grid-cols-3', 'grid-cols-[1fr_2fr]'],
@@ -561,7 +593,7 @@ describe('cn — remaining nineteen geometry roles (MDC-043)', () => {
     for (const [group, name] of remainingGeometry) Reflect.deleteProperty(prior.theme.extend[group], name)
     const previous = resolveConfig(prior)
     const current = resolveConfig(config)
-    const canonical = JSON.stringify(previous, (_, value: unknown) => {
+    const canonical = JSON.stringify(acceptedPhase3Projection(previous), (_, value: unknown) => {
       if (typeof value === 'function') return value.toString()
       if (value && typeof value === 'object' && !Array.isArray(value)) {
         const entries = value as Record<string, unknown>
@@ -736,7 +768,7 @@ describe('cn — approved shell overlay geometry (MDC-043)', () => {
     }
     const previous = resolveConfig(prior)
     const current = resolveConfig(config)
-    const canonical = JSON.stringify(previous, (_, value: unknown) => {
+    const canonical = JSON.stringify(acceptedPhase3Projection(previous), (_, value: unknown) => {
       if (typeof value === 'function') return value.toString()
       if (value && typeof value === 'object' && !Array.isArray(value)) {
         const entries = value as Record<string, unknown>
