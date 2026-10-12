@@ -153,13 +153,15 @@ describe('SafetyPage — page chrome & accessibility', () => {
   })
 
   it('labels the KPI and Helix landmark regions and mounts the listing containers', () => {
-    mountWith()
+    mountWith({
+      ai_mode: 'cloud',
+      ai_features: { 'safety-setting-explainer': true },
+    })
 
     expect(
       screen.getByRole('region', { name: 'Safety posture' }),
     ).toBeInTheDocument()
-    // The Helix section wrapper is always present; only its inner AI card is
-    // conditionally rendered by the withAiFeature gate.
+    // The named landmark belongs to the opted-in narrator, not the AI-off baseline.
     expect(
       screen.getByRole('region', { name: 'Helix assistant' }),
     ).toBeInTheDocument()
@@ -318,6 +320,67 @@ describe('SafetyPage — safety-posture KPI band', () => {
 })
 
 describe('SafetyPage — deterministic safety-settings listing', () => {
+  it.each([
+    { name: 'missing', value: undefined },
+    { name: 'null', value: null },
+    { name: 'nonboolean text', value: 'false' },
+    { name: 'numeric zero', value: 0 },
+  ])('keeps $name safety flags unknown without losing explanations or docs', ({ value }) => {
+    const settings = Object.assign({}, baseSettings, {
+      quiet_hours_enabled: value,
+      critical_flash_enabled: value,
+      tab_badge_enabled: value,
+      api_suspended: value,
+      quiet_hours_start: value,
+      quiet_hours_end: value,
+      alert_digest_mode: typeof value === 'string' ? undefined : value,
+    })
+    mockUseSettings.mockReturnValue({
+      settings,
+      settingsState: deriveDataState({ data: settings }),
+      settingsUnavailable: false,
+      refetch: refetchSettings,
+    })
+    render(<SafetyPage />)
+
+    const list = screen.getByTestId('safety-settings-rows')
+    for (const key of ['quietHoursEnabled', 'criticalFlashEnabled', 'tabBadgeEnabled', 'apiSuspended']) {
+      const badge = valueBadge(`safetySettings.rows.${key}.title`)
+      expect(badge).toHaveTextContent(EM_DASH)
+      expect(badge).toHaveClass(BADGE_VARIANTS.neutral)
+    }
+    expect(valueBadge('safetySettings.rows.alertDigestMode.title')).toHaveTextContent(EM_DASH)
+    expect(within(kpiRegion()).getAllByText(EM_DASH)).toHaveLength(4)
+    expect(within(kpiRegion()).queryByText('Always delivering')).toBeNull()
+    expect(within(list).getAllByRole('listitem')).toHaveLength(7)
+    expect(within(list).getAllByRole('link')).toHaveLength(7)
+    expect(screen.getByText(/Critical alerts are always delivered/)).toBeInTheDocument()
+    expect(screen.getByText(/existing telemetry streams continue/)).toBeInTheDocument()
+    expect(refetchSettings).not.toHaveBeenCalled()
+  })
+
+  it('keeps known false values and valid times when neighboring fields are missing', () => {
+    mountWith({ quiet_hours_enabled: undefined, critical_flash_enabled: false, api_suspended: false })
+    expect(valueBadge('safetySettings.rows.quietHoursEnabled.title')).toHaveTextContent(EM_DASH)
+    expect(valueBadge('safetySettings.rows.criticalFlashEnabled.title')).toHaveTextContent('Off')
+    expect(valueBadge('safetySettings.rows.apiSuspended.title')).toHaveTextContent('Active')
+    expect(valueBadge('safetySettings.rows.quietHoursStart.title')).toHaveTextContent('22:00')
+    expect(valueBadge('safetySettings.rows.quietHoursEnd.title')).toHaveTextContent('07:00')
+    expect(within(kpiRegion()).getAllByText(EM_DASH)).toHaveLength(2)
+    expect(within(kpiRegion()).getByText('Active')).toBeInTheDocument()
+  })
+
+  it('uses neutral topic chrome without changing confirmed safety status badges', () => {
+    mountWith({ api_suspended: true })
+    const rows = within(screen.getByTestId('safety-settings-rows')).getAllByRole('listitem')
+    for (const row of rows) {
+      expect(row.querySelector('span[aria-hidden="true"]')).toHaveClass('bg-[var(--surface-2)]')
+      expect(within(row).getByRole('link')).toHaveClass('text-[var(--text-secondary)]')
+    }
+    expect(valueBadge('safetySettings.rows.quietHoursEnabled.title')).toHaveClass(BADGE_VARIANTS.success)
+    expect(valueBadge('safetySettings.rows.apiSuspended.title')).toHaveClass(BADGE_VARIANTS.warning)
+  })
+
   it('renders every safety setting row title exactly once', () => {
     mountWith()
 
@@ -430,6 +493,47 @@ describe('SafetyPage — deterministic safety-settings listing', () => {
 })
 
 describe('SafetyPage — read-only recovery', () => {
+  it('qualifies a paused initial read without inventing loaded settings or an offline cause', () => {
+    mockUseSettings.mockReturnValue({
+      settings: baseSettings,
+      settingsState: deriveDataState({ fetchStatus: 'paused', isPending: true }),
+      settingsUnavailable: true,
+      refetch: refetchSettings,
+    })
+    render(<SafetyPage />)
+    expect(screen.getByText('Refresh paused')).toHaveAttribute('role', 'status')
+    expect(screen.getByTestId('safety-settings-summary')).toHaveAttribute('aria-busy', 'true')
+    expect(within(screen.getByTestId('safety-settings-rows')).getAllByText(EM_DASH)).toHaveLength(7)
+    expect(screen.queryByText('3 / 3')).toBeNull()
+    expect(screen.queryByText(/offline/i)).toBeNull()
+    expect(screen.queryByRole('alert')).toBeNull()
+    expect(refetchSettings).not.toHaveBeenCalled()
+  })
+
+  it('keeps paused retained values and reports their last successful fetch with one read-only Retry', () => {
+    mockUseSettings.mockReturnValue({
+      settings: baseSettings,
+      settingsState: deriveDataState({
+        data: baseSettings,
+        fetchStatus: 'paused',
+        dataUpdatedAt: Date.now() - 120_000,
+      }),
+      settingsUnavailable: false,
+      refetch: refetchSettings,
+    })
+    render(<SafetyPage />)
+    expect(screen.getByText('Refresh paused')).toBeInTheDocument()
+    expect(screen.getByText('Data may be stale')).toBeInTheDocument()
+    expect(screen.getByLabelText(/Data freshness: Stale.*Source: Install settings/)).toHaveAttribute('title', expect.stringContaining('Last updated:'))
+    expect(within(kpiRegion()).getByText('3 / 3')).toBeInTheDocument()
+    expect(valueBadge('safetySettings.rows.apiSuspended.title')).toHaveTextContent('Active')
+    const retry = screen.getByRole('button', { name: 'Retry' })
+    expect(retry).toHaveClass('min-h-11', 'md:min-h-9')
+    fireEvent.click(retry)
+    expect(refetchSettings).toHaveBeenCalledTimes(1)
+    expect(screen.queryByRole('alert')).toBeNull()
+  })
+
   it('retries the existing read without promoting fallback settings into current values', () => {
     const fetch = vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('Unexpected request'))
     mockUseSettings.mockReturnValue({
@@ -545,6 +649,7 @@ describe('SafetyPage — Helix narrator gating (AI-off contract)', () => {
     expect(
       screen.queryByRole('button', { name: /Explain my settings/i }),
     ).not.toBeInTheDocument()
+    expect(screen.queryByRole('region', { name: 'Helix assistant' })).not.toBeInTheDocument()
     // The deterministic listing is always available as the static fallback.
     expect(screen.getByText('Quiet hours')).toBeInTheDocument()
   })
@@ -558,6 +663,7 @@ describe('SafetyPage — Helix narrator gating (AI-off contract)', () => {
     expect(
       screen.queryByTestId('ai-feature-safety-setting-explainer-root'),
     ).not.toBeInTheDocument()
+    expect(screen.queryByRole('region', { name: 'Helix assistant' })).not.toBeInTheDocument()
     expect(screen.getByText('API kill-switch')).toBeInTheDocument()
   })
 
@@ -568,6 +674,7 @@ describe('SafetyPage — Helix narrator gating (AI-off contract)', () => {
     })
 
     const root = screen.getByTestId('ai-feature-safety-setting-explainer-root')
+    expect(screen.getByRole('region', { name: 'Helix assistant' })).toContainElement(root)
     expect(root).toBeInTheDocument()
     expect(root).toHaveAttribute('data-ai-feature', 'safety-setting-explainer')
     expect(
