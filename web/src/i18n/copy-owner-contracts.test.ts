@@ -90,6 +90,30 @@ describe('five source-backed copy-owner contracts', () => {
       expect(nested(catalog, key)).toBe(value)
       approved.add(key)
     }
+    // Accepted Phase-4 source/catalog additions: sticky-control localization,
+    // watch-key capability, and signal-catalog canonical repair (1 + 5 + 6).
+    // Pin their exact copy before projecting them out; retain the original
+    // predecessor count and digest rather than accepting arbitrary catalog drift.
+    const interveningAdditions = [
+      ['a11y.scrollToTop', '{{region}} — scroll to top'],
+      ['watch.capability.notConfigured', 'Watch access is not configured'],
+      ['watch.capability.description', 'Watch readings require a wearable API key in this session. Manage API keys and open your configured watch link to enable readings. Retained readings are not refreshed until access is configured.'],
+      ['watch.capability.configure', 'Manage API keys'],
+      ['watch.capability.readError', 'Watch access could not be checked'],
+      ['watch.capability.readErrorDescription', 'Watch access is unknown because browser session storage could not be read or saved. Retry after storage becomes available. Retained readings remain visible.'],
+      ['widget.signalCatalog.destination', 'Destination: {{destination}}'],
+      ['widget.signalCatalog.valueKind', 'Value kind'],
+      ['widget.signalCatalog.metadataUnavailable', 'Unit and description are not provided by this catalog.'],
+      ['widget.signalCatalog.totalSamples', 'Total observations: {{count}}'],
+      ['widget.signalCatalog.vehicleCount', 'Vehicles observed: {{count}}'],
+      ['widget.signalCatalog.lastSeen', 'Last seen: {{timestamp}}'],
+    ] as const
+    expect(interveningAdditions).toHaveLength(12)
+    for (const [key, value] of interveningAdditions) {
+      expect(approved.has(key), key).toBe(false)
+      expect(nested(catalog, key), key).toBe(value)
+      approved.add(key)
+    }
     function leaves(resource: Record<string, unknown>, prefix = ''): [string, unknown][] {
       return Object.entries(resource).flatMap(([key, value]) => {
         const path = prefix ? `${prefix}.${key}` : key
@@ -99,7 +123,7 @@ describe('five source-backed copy-owner contracts', () => {
       })
     }
     const entries = leaves(catalog)
-    expect(entries).toHaveLength(31095)
+    expect(entries).toHaveLength(31095 + interveningAdditions.length)
     const predecessor = entries.filter(([key]) => !approved.has(key))
       .sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0)
     expect(predecessor).toHaveLength(29063)
