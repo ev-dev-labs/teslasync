@@ -38,13 +38,19 @@ import type { ReactNode } from 'react'
 /* ── Hoisted mutable state shared with the (hoisted) vi.mock factories ─── */
 const h = vi.hoisted(() => ({
   unit: { current: 'km' as 'km' | 'mi' },
+  motion: { reduce: false },
   maps: {
     polylines: [] as Array<Array<[number, number]>>,
     tileStyles: [] as string[],
     layerCurrents: [] as string[],
     playbackCounts: [] as number[],
     playbackLabels: [] as string[],
+    trailColors: [] as string[],
   },
+}))
+
+vi.mock('@/hooks/useMotionPreference', () => ({
+  useMotionPreference: () => ({ reduce: h.motion.reduce, durationMs: h.motion.reduce ? 0 : 250 }),
 }))
 
 /* ── Network boundary ─────────────────────────────────────────────────── */
@@ -134,15 +140,19 @@ vi.mock('@/hooks/useSettings', async () => {
 
 /* ── Inert leaflet barrel — capture props, never touch canvas/leaflet ──── */
 vi.mock('@/components/maps', () => ({
-  MapContainer: ({ children }: { children?: ReactNode }) => (
-    <div data-testid="map-container">{children}</div>
+  MapContainer: ({ children, zoomAnimation, fadeAnimation, markerZoomAnimation }: {
+    children?: ReactNode; zoomAnimation?: boolean; fadeAnimation?: boolean; markerZoomAnimation?: boolean
+  }) => (
+    <div data-testid="map-container" data-zoom-animation={String(zoomAnimation)}
+      data-fade-animation={String(fadeAnimation)} data-marker-animation={String(markerZoomAnimation)}>{children}</div>
   ),
   Marker: ({ children }: { children?: ReactNode }) => (
     <div data-testid="map-marker">{children}</div>
   ),
   Popup: ({ children }: { children?: ReactNode }) => <div data-testid="map-popup">{children}</div>,
-  Polyline: ({ positions }: { positions: Array<[number, number]> }) => {
+  Polyline: ({ positions, color }: { positions: Array<[number, number]>; color: string }) => {
     h.maps.polylines.push(positions)
+    h.maps.trailColors.push(color)
     return <div data-testid="map-polyline" data-count={positions.length} />
   },
   MapTileLayer: ({ style }: { style: string }) => {
@@ -299,7 +309,7 @@ function renderPage() {
       mutations: { retry: false },
     },
   })
-  return render(
+  const result = render(
     <MemoryRouter initialEntries={['/maps']}>
       <QueryClientProvider client={client}>
         <SelectedVehicleProvider>
@@ -308,6 +318,7 @@ function renderPage() {
       </QueryClientProvider>
     </MemoryRouter>,
   )
+  return { ...result, client }
 }
 
 const latestCalls = () =>
@@ -318,11 +329,13 @@ beforeEach(() => {
   window.localStorage.clear()
   window.location.hash = ''
   h.unit.current = 'km'
+  h.motion.reduce = false
   h.maps.polylines.length = 0
   h.maps.tileStyles.length = 0
   h.maps.layerCurrents.length = 0
   h.maps.playbackCounts.length = 0
   h.maps.playbackLabels.length = 0
+  h.maps.trailColors.length = 0
   // fmtNumber reads module-global precision/locale that useSettings seeds in
   // production; pin them so lat/lon/heading assertions are stable.
   setGlobalPrecision(2)
@@ -579,5 +592,109 @@ describe('MapOverviewPage — accessibility', () => {
     expect(await within(map).findByTestId('map-container')).toBeInTheDocument()
 
     expect(screen.queryByRole('combobox', { name: 'Select vehicle' })).not.toBeInTheDocument()
+  })
+})
+
+describe('MapOverviewPage modernization preservation', () => {
+  it.each([
+    { name: 'missing', value: undefined, expected: 'Unknown' },
+    { name: 'null', value: null, expected: 'Unknown' },
+    { name: 'measured false', value: false, expected: 'No' },
+    { name: 'measured true', value: true, expected: 'Yes' },
+  ])('preserves HomeLink tri-state for $name evidence', async ({ value, expected }) => {
+    install({ location: makeLocation({ homelink_nearby: value }) })
+    renderPage()
+    const label = await screen.findByText('HomeLink nearby')
+    expect(within(label.parentElement!).getByText(expected)).toBeInTheDocument()
+    expect(screen.getByTestId('map-marker')).toBeInTheDocument()
+  })
+
+  it('labels durable GPS history as historical and resolved emptiness as unavailable', async () => {
+    install({ latest: null, history: [] })
+    renderPage()
+    const band = await screen.findByRole('region', { name: 'Vehicle status' })
+    await waitFor(() => expect(within(band).getByText('Source data unavailable')).toBeInTheDocument())
+    fireEvent.click(within(band).getByRole('button', { name: 'Review details' }))
+    const dialog = screen.getByRole('dialog', { name: 'Vehicle status details' })
+    expect(within(dialog).getByText(/Live location map: historical/)).toBeInTheDocument()
+    expect(screen.getByText('Recent route playback')).toBeInTheDocument()
+    expect(screen.getByText('Recent location history')).toBeInTheDocument()
+    expect(screen.getByText('HomeLink nearby')).toBeInTheDocument()
+  })
+
+  it('keeps genuine position and history after a latest-position refresh failure', async () => {
+    const { client } = renderPage()
+    await screen.findByTestId('map-marker')
+    await screen.findByTestId('route-playback')
+    install({ latestError: true })
+    await client.refetchQueries({ queryKey: ['position-latest', '7'] })
+    const band = screen.getByRole('region', { name: 'Vehicle status' })
+    await waitFor(() => expect(within(band).getByText('Retained source data')).toBeInTheDocument())
+    expect(screen.getByTestId('map-marker')).toBeInTheDocument()
+    expect(screen.getByTestId('route-playback')).toHaveAttribute('data-count', '3')
+    expect(within(band).getByText('37.5000, -121.9000')).toBeInTheDocument()
+    expect(within(band).getByText('90.00 km/h')).toBeInTheDocument()
+  })
+
+  it.each([
+    { name: 'normal', reduce: false, animation: 'true' },
+    { name: 'reduced or low-bandwidth', reduce: true, animation: 'false' },
+  ])('preserves map evidence with $name motion', async ({ reduce, animation }) => {
+    h.motion.reduce = reduce
+    renderPage()
+    const map = await screen.findByTestId('map-container')
+    await screen.findByTestId('route-playback')
+    expect(map).toHaveAttribute('data-zoom-animation', animation)
+    expect(map).toHaveAttribute('data-fade-animation', animation)
+    expect(map).toHaveAttribute('data-marker-animation', animation)
+    expect(h.maps.trailColors.at(-1)).toBe('var(--semantic-info)')
+    expect(h.maps.polylines.at(-1)).toEqual(defaultHistory.map(row => [row.latitude, row.longitude]))
+    expect(screen.getByTestId('route-playback')).toHaveAttribute('data-count', '3')
+  })
+
+  it('forwards cancellable signals to all three independent reads without aliasing limits', async () => {
+    install({ latestPending: true, historyPending: true })
+    const installed = mockedRequest.getMockImplementation()!
+    mockedRequest.mockImplementation((path: string, options?: unknown) =>
+      path.startsWith('/location-snapshots/latest') ? never() : installed(path, options))
+    const { unmount } = renderPage()
+    const paths = [
+      '/vehicles/7/positions?limit=1',
+      '/vehicles/7/positions?limit=50',
+      '/location-snapshots/latest?vehicle_id=7',
+    ]
+    await waitFor(() => expect(paths.every(path =>
+      mockedRequest.mock.calls.some(args => args[0] === path))).toBe(true))
+    const signals = paths.map(path => {
+      const call = mockedRequest.mock.calls.find(args => args[0] === path)
+      expect(call).toBeDefined()
+      const options = call?.[1] as { signal?: AbortSignal } | undefined
+      expect(options?.signal).toBeInstanceOf(AbortSignal)
+      return options!.signal!
+    })
+    unmount()
+    expect(signals.every(signal => signal.aborted)).toBe(true)
+  })
+
+  it('keeps all five precise history fields reachable in narrow-container quick view', async () => {
+    const bounds = vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({
+      width: 375, height: 100, top: 0, left: 0, right: 375, bottom: 100, x: 0, y: 0,
+      toJSON: () => ({}),
+    })
+    try {
+      renderPage()
+      const quickViews = await screen.findAllByRole('button', { name: 'Quick view' })
+      fireEvent.click(quickViews[0])
+      const dialog = screen.getByRole('dialog')
+      for (const label of ['Time', 'Lat', 'Lon', 'Speed', 'Heading']) {
+        expect(within(dialog).getByText(label)).toBeInTheDocument()
+      }
+      expect(within(dialog).getByText('37.52000')).toBeInTheDocument()
+      expect(within(dialog).getByText('-121.92000')).toBeInTheDocument()
+      expect(within(dialog).getByText('64.80 km/h')).toBeInTheDocument()
+      expect(within(dialog).getByText('80.00°')).toBeInTheDocument()
+    } finally {
+      bounds.mockRestore()
+    }
   })
 })

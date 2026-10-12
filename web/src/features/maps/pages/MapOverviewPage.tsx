@@ -10,7 +10,7 @@ import { PageLayout, LayoutCard } from '@/components/layout';
 import { deriveDataState } from '@/api/dataState';
 
 import {
-  GlassPanel, Badge, Button, DataTable, Text, type Column,
+  GlassPanel, Badge, Button, DataTable, Text, type Column, type MobileDataTablePresentation,
 } from '@/components/ui';
 import { TimeStamp } from '@/components/data-display';
 import { MapsOperationalBrief } from '../components/operationalbrief-all/MapsOperationalBrief';
@@ -37,22 +37,18 @@ import { cn } from '@/lib/cn';
 import { typography } from '@/lib/tokens';
 import { request } from '@/api/client';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { useMotionPreference } from '@/hooks/useMotionPreference';
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
 /* ------------------------------------------------------------------ */
 
 interface LocationSnapshot {
-  id: number;
-  vehicle_id: number;
-  located_at_home: boolean;
-  located_at_work: boolean;
-  locatedAtHome?: boolean;
-  locatedAtWork?: boolean;
-  homelink_nearby: boolean;
-  active_route: boolean;
-  destination_name: string;
-  created_at: string;
+  located_at_home?: boolean | null;
+  located_at_work?: boolean | null;
+  locatedAtHome?: boolean | null;
+  locatedAtWork?: boolean | null;
+  homelink_nearby?: boolean | null;
 }
 
 /**
@@ -62,8 +58,8 @@ interface LocationSnapshot {
  * Telemetry signal mappings, so they are optional and read null-safe.
  */
 interface PositionRecord {
-  id: number;
-  vehicle_id: number;
+  id: string;
+  vehicle_id?: number;
   latitude: number;
   longitude: number;
   speed: number | null;
@@ -101,6 +97,7 @@ export default function MapOverviewPage() {
 
   /* ---- unit prefs: format at the display boundary from SI ---- */
   const { formatSpeed, formatDistance } = useUnits();
+  const { reduce } = useMotionPreference();
 
   /* ---- vehicle selector: header VehiclePicker is the source of truth ---- */
   const { vehicleId } = useSelectedVehicle();
@@ -124,41 +121,53 @@ export default function MapOverviewPage() {
 
   const latestQuery = useQuery<PositionRecord | null>({
     queryKey: ['position-latest', selectedId],
-    queryFn: () =>
+    queryFn: ({ signal }) =>
       request<PositionRecord[]>(
         `/vehicles/${selectedId}/positions?limit=1`,
+        { signal },
       ).then((arr) => arr?.[0] ?? null),
     enabled: selectedId !== '',
     refetchInterval: 15_000,
   });
   const { data: latest } = latestQuery;
-  const latestState = deriveDataState({ ...latestQuery, data: latest ?? undefined }, { provenance: 'live' });
+  const latestState = deriveDataState(latestQuery, {
+    provenance: 'historical',
+    unavailable: latestQuery.isSuccess && latest == null,
+  });
   const latestLoading = latestQuery.isLoading && !latestState.hasData;
   const latestError = latestState.fatalError;
 
   const historyQuery = useQuery<PositionRecord[]>({
     queryKey: ['position-history', selectedId],
-    queryFn: () =>
+    queryFn: ({ signal }) =>
       request<PositionRecord[]>(
         `/vehicles/${selectedId}/positions?limit=50`,
+        { signal },
       ),
     enabled: selectedId !== '',
   });
   const { data: history } = historyQuery;
-  const historyState = deriveDataState(historyQuery, { provenance: 'historical' });
+  const historyState = deriveDataState(historyQuery, {
+    provenance: 'historical',
+    unavailable: historyQuery.isSuccess && (history?.length ?? 0) === 0,
+  });
   const historyLoading = historyQuery.isLoading && !historyState.hasData;
   const historyError = historyState.fatalError;
 
-  const locationQuery = useQuery<LocationSnapshot>({
+  const locationQuery = useQuery<LocationSnapshot | null>({
     queryKey: ['location-latest', selectedId],
-    queryFn: () =>
-      request<LocationSnapshot>(
+    queryFn: ({ signal }) =>
+      request<LocationSnapshot | null>(
         `/location-snapshots/latest?vehicle_id=${selectedId}`,
+        { signal },
       ),
     enabled: selectedId !== '',
   });
   const { data: locationDetails } = locationQuery;
-  const locationState = deriveDataState({ ...locationQuery, data: locationDetails ?? undefined }, { provenance: 'live' });
+  const locationState = deriveDataState(locationQuery, {
+    provenance: 'unknown',
+    unavailable: locationQuery.isSuccess && locationDetails == null,
+  });
   const locationLoading = locationQuery.isLoading && !locationState.hasData;
   const locationError = locationState.fatalError;
 
@@ -204,7 +213,7 @@ export default function MapOverviewPage() {
   /* ---- location details (tri-state, null-safe) ---- */
   const atHome = locationDetails?.located_at_home ?? locationDetails?.locatedAtHome;
   const atWork = locationDetails?.located_at_work ?? locationDetails?.locatedAtWork;
-  const homelinkNearby = locationDetails?.homelink_nearby ?? false;
+  const homelinkNearby = locationDetails?.homelink_nearby;
   const briefScope = t('mapOverview.brief.scope', 'Selected vehicle · latest position only. Map trail and playback use a separate latest-50-position history request.');
   const briefMetrics = [
     { metricId: 'speed', occurrenceId: 'overview-speed', rawValue: latest?.speed, label: t('mapOverview.currentSpeed', 'Current speed'), description: briefScope, display: { formatter: (raw: number) => ({ value: formatSpeed(raw), unit: '' }) } },
@@ -214,7 +223,7 @@ export default function MapOverviewPage() {
     { metricId: 'text', occurrenceId: 'overview-updated', rawValue: latest?.created_at ? formatDateTime(latest.created_at) : null, label: t('mapOverview.lastUpdated', 'Last updated'), description: t('mapOverview.autoRefresh', 'Auto-refreshes every 15 s') },
   ] as const;
 
-  const triLabel = (v: boolean | undefined): string =>
+  const triLabel = (v: boolean | null | undefined): string =>
     v === true ? t('mapOverview.yes', 'Yes')
       : v === false ? t('mapOverview.no', 'No')
         : t('mapOverview.unknown', 'Unknown');
@@ -267,6 +276,24 @@ export default function MapOverviewPage() {
       },
     ],
     [t, formatSpeed, fmtNumber, fmtScientificNumber],
+  );
+
+  const historyMobilePresentation = useMemo<MobileDataTablePresentation<PositionRecord>>(
+    () => ({
+      variant: 'keyValue',
+      roles: { time: 'title', speed: 'primary', heading: 'meta', latitude: 'hidden', longitude: 'hidden' },
+      displayValue: (row, key) => {
+        switch (key) {
+          case 'time': return formatDateTime(row.created_at);
+          case 'speed': return formatSpeed(row.speed ?? null);
+          case 'heading': return row.heading != null ? `${fmtNumber(row.heading)}°` : '—';
+          case 'latitude': return row.latitude !== 0 || row.longitude !== 0 ? fmtScientificNumber(row.latitude, 5) : null;
+          case 'longitude': return row.latitude !== 0 || row.longitude !== 0 ? fmtScientificNumber(row.longitude, 5) : null;
+          default: return null;
+        }
+      },
+    }),
+    [formatSpeed, fmtNumber, fmtScientificNumber],
   );
 
   // Defensive guard: only surface the "no vehicle" empty state once the fleet
@@ -339,6 +366,9 @@ export default function MapOverviewPage() {
                   center={[latest.latitude, latest.longitude]}
                   zoom={15}
                   scrollWheelZoom
+                  zoomAnimation={!reduce}
+                  fadeAnimation={!reduce}
+                  markerZoomAnimation={!reduce}
                   className="h-full w-full"
                 >
                   <MapTileLayer style={mapStyle} />
@@ -347,7 +377,7 @@ export default function MapOverviewPage() {
                     <Popup>{vehicle?.display_name ?? t('mapOverview.vehicle', 'Vehicle')}</Popup>
                   </Marker>
                   {trailPositions.length > 1 && (
-                    <Polyline positions={trailPositions} color="#00f0ff" weight={3} opacity={0.7} />
+                    <Polyline positions={trailPositions} color="var(--semantic-info)" weight={3} opacity={0.7} />
                   )}
                 </MapContainer>
               </>
@@ -375,7 +405,7 @@ export default function MapOverviewPage() {
                 <div className="space-y-3">
                   {/* Home */}
                   <StatusRow
-                    icon={<Home className={cn('h-5 w-5', atHome ? 'text-emerald-400' : 'text-[var(--text-muted)]')} />}
+                    icon={<Home className={cn('h-5 w-5', typography.color.muted)} />}
                     label={t('mapOverview.atHome', 'At home')}
                   >
                     <Badge variant={atHome === true ? 'success' : 'neutral'} size="sm" dot>
@@ -385,7 +415,7 @@ export default function MapOverviewPage() {
 
                   {/* Work */}
                   <StatusRow
-                    icon={<Briefcase className={cn('h-5 w-5', atWork ? 'text-emerald-400' : 'text-[var(--text-muted)]')} />}
+                    icon={<Briefcase className={cn('h-5 w-5', typography.color.muted)} />}
                     label={t('mapOverview.atWork', 'At work')}
                   >
                     <Badge variant={atWork === true ? 'success' : 'neutral'} size="sm" dot>
@@ -395,17 +425,17 @@ export default function MapOverviewPage() {
 
                   {/* HomeLink nearby */}
                   <StatusRow
-                    icon={<Link2 className={cn('h-5 w-5', homelinkNearby ? 'text-cyan-400' : 'text-[var(--text-muted)]')} />}
+                    icon={<Link2 className={cn('h-5 w-5', typography.color.muted)} />}
                     label={t('mapOverview.homelinkNearby', 'HomeLink nearby')}
                   >
-                    <Badge variant={homelinkNearby ? 'info' : 'neutral'} size="sm" dot>
-                      {homelinkNearby ? t('mapOverview.yes', 'Yes') : t('mapOverview.no', 'No')}
+                    <Badge variant={homelinkNearby === true ? 'info' : 'neutral'} size="sm" dot>
+                      {triLabel(homelinkNearby)}
                     </Badge>
                   </StatusRow>
 
                   {/* Odometer */}
                   <StatusRow
-                    icon={<Navigation className="h-5 w-5 text-purple-400" />}
+                    icon={<Navigation className={cn('h-5 w-5', typography.color.muted)} />}
                     label={t('mapOverview.odometer', 'Odometer')}
                   >
                     <Text size="sm" weight="semibold" color="primary" className="tabular-nums">
@@ -487,8 +517,10 @@ export default function MapOverviewPage() {
           ) : historyRows.length > 0 ? (
             <DataTable<PositionRecord>
               tableId="maps:overview-history"
+              variant="embedded"
               columns={historyColumns}
-              mobileColumns={['time', 'speed', 'heading']}
+              mobileColumns={['time', 'latitude', 'longitude', 'speed', 'heading']}
+              mobilePresentation={historyMobilePresentation}
               data={historyRows}
               keyExtractor={(r) => r.id}
               emptyMessage={t('mapOverview.noHistory', 'No location history found.')}
