@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 import { PageLayout } from '@/components/layout';
 import { StaleRefreshWarning } from '@/components/feedback';
-import { Button, Text } from '@/components/ui';
+import { Button, Icon, Text } from '@/components/ui';
 import { FadeIn } from '@/components/motion';
 
-import { Icons } from '@/lib/icons';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useDataState } from '@/hooks/useDataState';
 import { useRangeState } from '@/hooks/useRangeState';
@@ -101,8 +101,9 @@ export default function ActivityTimelinePage() {
     offset,
     enabled: vehicles.length > 0,
   });
-  const { data, isLoading, refetch } = query;
+  const { data, refetch } = query;
   const state = useDataState(query, { provenance: 'historical' });
+  const isLoading = state.status === 'initial';
   const error = state.fatalError;
   const isError = !!error;
   const items = data?.items ?? [];
@@ -160,7 +161,7 @@ export default function ActivityTimelinePage() {
           loading={isLoading && !state.hasData}
           error={isError}
           available={state.hasData}
-          retained={state.hasData && query.isError}
+          retained={state.hasData && state.status === 'stale'}
           scope={`${activityWindow.start} – ${activityWindow.end}`}
           timezone={tz}
         />
@@ -197,7 +198,9 @@ export default function ActivityTimelinePage() {
               type="button"
               variant="secondary"
               size="sm"
-              icon={<Icons.previous className="h-4 w-4" aria-hidden="true" />}
+              wrapLabel
+              className="min-h-11 min-w-11 md:min-h-9 md:min-w-0"
+              icon={<Icon icon={ChevronLeft} className="rtl:rotate-180" />}
               onClick={() => setOffset((o) => Math.max(0, o - PAGE_LIMIT))}
             >
               {t('activity.timeline.loadNewer', 'Newer')}
@@ -208,10 +211,12 @@ export default function ActivityTimelinePage() {
               type="button"
               variant="secondary"
               size="sm"
+              wrapLabel
+              className="min-h-11 min-w-11 md:min-h-9 md:min-w-0"
               onClick={() => setOffset((o) => o + PAGE_LIMIT)}
             >
               {t('activity.timeline.loadMore', 'Older')}
-              <Icons.next className="ml-1 h-4 w-4" aria-hidden="true" />
+              <Icon icon={ChevronRight} className="ms-1 rtl:rotate-180" />
             </Button>
           )}
           </>

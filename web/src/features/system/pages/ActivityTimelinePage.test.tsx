@@ -23,7 +23,7 @@
  * internals.
  */
 
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ActivityItem } from '@/types/activity';
@@ -153,6 +153,9 @@ function baseQueryResult() {
   return {
     data: { items: [] as ActivityItem[], total: 0, limit: 50, offset: 0, generated_at: '' },
     isLoading: false,
+    isPending: false,
+    isFetching: false,
+    fetchStatus: 'idle' as 'fetching' | 'paused' | 'idle',
     isError: false,
     error: null as unknown,
     refetch: h.refetch,
@@ -356,5 +359,81 @@ describe('ActivityTimelinePage', () => {
       'activity-2026-01-01-2026-01-31-page-1',
       [item],
     );
+  });
+
+  it('keeps initial and paused first loads distinct from a successful empty timeline', () => {
+    h.useActivityMock.mockReturnValue(mockQueryResult({
+      data: undefined,
+      isLoading: true,
+      isPending: true,
+      fetchStatus: 'fetching',
+    }));
+    const view = renderPage();
+    expect(within(screen.getByRole('region', { name: 'Activity overview' }))
+      .getAllByText('Loading source')).toHaveLength(2);
+    expect(screen.queryByText(/no activity in this window/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/showing 0–0 of 0 events/i)).not.toBeInTheDocument();
+    expect(screen.getByTestId('activity-export-trigger')).toBeDisabled();
+    expect(screen.getByRole('group', { name: 'Filter by activity kind' })).toBeInTheDocument();
+
+    h.useActivityMock.mockReturnValue(mockQueryResult({
+      data: undefined,
+      isPending: true,
+      fetchStatus: 'paused',
+    }));
+    view.rerender(<MemoryRouter><ActivityTimelinePage /></MemoryRouter>);
+    expect(within(screen.getByRole('region', { name: 'Activity overview' }))
+      .getAllByText('Loading source')).toHaveLength(2);
+    expect(screen.queryByText(/no activity in this window/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/showing 0–0 of 0 events/i)).not.toBeInTheDocument();
+    expect(screen.getByTestId('activity-export-trigger')).toBeDisabled();
+    expect(screen.getByText(/dated service records will join this timeline/i)).toBeInTheDocument();
+  });
+
+  it('labels paused cached history as retained while preserving records exports and recovery', () => {
+    const item = makeItem({ duration_s: 120, energy_added_wh: 2500 });
+    h.useActivityMock.mockReturnValue(mockQueryResult({
+      fetchStatus: 'paused',
+      data: { items: [item], total: 75, limit: 50, offset: 0, generated_at: '' },
+    }));
+    const view = renderPage();
+    const overview = screen.getByRole('region', { name: 'Activity overview' });
+    expect(within(overview).getAllByText('Retained source')).toHaveLength(2);
+    expect(within(overview).queryByText('Source available')).not.toBeInTheDocument();
+    expect(overview).toHaveTextContent('Events in selected range75');
+    expect(screen.getByRole('link', { name: /0\.0 h · 2\.5 kWh · 12 min/ }))
+      .toHaveAttribute('href', '/drives/1');
+    expect(screen.getByTestId('activity-export-trigger')).toBeEnabled();
+    expect(screen.getByRole('button', { name: /older/i })).toBeEnabled();
+    fireEvent.click(screen.getByTestId('activity-export-json'));
+    expect(h.downloadJson).toHaveBeenCalledWith(
+      'activity-2026-01-01-2026-01-31-page-1', [item],
+    );
+
+    h.useActivityMock.mockReturnValue(mockQueryResult({
+      data: { items: [item], total: 75, limit: 50, offset: 0, generated_at: '' },
+    }));
+    view.rerender(<MemoryRouter><ActivityTimelinePage /></MemoryRouter>);
+    expect(within(overview).getAllByText('Source available')).toHaveLength(2);
+    expect(within(overview).queryByText('Retained source')).not.toBeInTheDocument();
+  });
+
+  it('keeps mobile pagination wrapping and both directions reachable with desktop density restored', () => {
+    h.useActivityMock.mockReturnValue(mockQueryResult({
+      data: { items: [makeItem()], total: 100, limit: 50, offset: 0, generated_at: '' },
+    }));
+    renderPage();
+    const older = screen.getByRole('button', { name: /older/i });
+    expect(older).toHaveClass('h-auto', 'min-h-11', 'min-w-11', 'md:min-h-9', 'md:min-w-0', 'whitespace-normal');
+    expect(older.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
+    expect(older.querySelector('svg')).toHaveClass('rtl:rotate-180');
+    fireEvent.click(older);
+    expect(h.useActivityMock).toHaveBeenLastCalledWith(expect.objectContaining({ offset: 50 }));
+    const newer = screen.getByRole('button', { name: /newer/i });
+    expect(newer).toHaveClass('h-auto', 'min-h-11', 'min-w-11', 'md:min-h-9', 'md:min-w-0', 'whitespace-normal');
+    expect(newer.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
+    expect(newer.querySelector('svg')).toHaveClass('rtl:rotate-180');
+    fireEvent.click(newer);
+    expect(h.useActivityMock).toHaveBeenLastCalledWith(expect.objectContaining({ offset: 0 }));
   });
 });
