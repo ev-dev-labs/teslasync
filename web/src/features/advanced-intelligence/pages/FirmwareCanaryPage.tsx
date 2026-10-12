@@ -7,10 +7,11 @@ import { AlertBanner } from '@/components/feedback';
 
 import { Grid, PageLayout } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
-import { Badge, Pagination, Text } from '@/components/ui';
+import { Badge, Card, Icon, Pagination, Text } from '@/components/ui';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { formatDateTime } from '@/lib/dateFormat';
+import { typography } from '@/lib/tokens';
 
 import { EvidencePanel, InsightPanel } from '../components';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
@@ -44,7 +45,7 @@ export default function FirmwareCanaryPage() {
     >
       <AlertBanner
         variant="warning"
-        icon={<ShieldAlert className="h-5 w-5" aria-hidden="true" />}
+        icon={<Icon icon={ShieldAlert} size="lg" />}
         title={t('advancedIntelligence.firmware.notice.title', 'Decision support, not deployment control')}
       >
         {t(
@@ -68,53 +69,55 @@ export default function FirmwareCanaryPage() {
         >
           <div className="space-y-4">
             {items.map((item, index) => (
-              <article key={`${item.generated_at}-${index}`} className="rounded-xl border border-white/[0.08] bg-white/[0.025] p-4">
-                <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-                  <div className="flex items-center gap-2">
-                    <GitCompareArrows className="h-5 w-5 text-cyan-300" aria-hidden="true" />
-                    <Text as="h3" variant="subhead">
-                      {item.version ?? t('advancedIntelligence.firmware.version.unsupported', 'Version unsupported')}
+              <article key={`${item.generated_at}-${index}`} className="min-w-0 break-words">
+                <Card>
+                  <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                    <div className="flex min-w-0 items-center gap-2">
+                      <Icon icon={GitCompareArrows} size="lg" className={typography.color.secondary} />
+                      <Text as="h3" variant="subhead">
+                        {item.version ?? t('advancedIntelligence.firmware.version.unsupported', 'Version unsupported')}
+                      </Text>
+                    </div>
+                    <Badge variant={decisionVariant(item.decision)} dot>{item.decision}</Badge>
+                  </div>
+                  <Grid cols={{ default: 1, sm: 2, lg: 4 }} gap={3}>
+                    <StatCard
+                      label={t('advancedIntelligence.firmware.targetDelta', 'Target regression')}
+                      value={item.vehicle_regression_pct != null
+                        ? `${fmtNumber(item.vehicle_regression_pct)}%` : null}
+                    />
+                    <StatCard
+                      label={t('advancedIntelligence.firmware.peerDelta', 'Peer regression')}
+                      value={item.peer_regression_pct != null
+                        ? `${fmtNumber(item.peer_regression_pct)}%` : null}
+                    />
+                    <StatCard
+                      label={t('advancedIntelligence.firmware.excessDelta', 'Matched excess')}
+                      value={item.matched_excess_pct != null
+                        ? `${fmtNumber(item.matched_excess_pct)}%` : null}
+                    />
+                    <StatCard
+                      label={t('advancedIntelligence.firmware.generated', 'Decision generated')}
+                      value={formatDateTime(item.generated_at)}
+                    />
+                  </Grid>
+                  <div className="mt-4 rounded-lg border border-[var(--border-default)] bg-[var(--surface-2)] p-3 forced-colors:border-[CanvasText] forced-colors:bg-[Canvas]">
+                    <Text as="p" variant="label">
+                      {t('advancedIntelligence.firmware.rationale.title', 'Decision rationale')}
+                    </Text>
+                    <Text as="p" variant="bodySm">
+                      {item.decision === 'insufficient'
+                        ? t(
+                          'advancedIntelligence.firmware.rationale.insufficient',
+                          'The matched windows do not contain enough supported observations for a rollout decision.',
+                        )
+                        : t(
+                          'advancedIntelligence.firmware.rationale.supported',
+                          'The decision reflects target regression relative to the matched peer change and window quality.',
+                        )}
                     </Text>
                   </div>
-                  <Badge variant={decisionVariant(item.decision)} dot>{item.decision}</Badge>
-                </div>
-                <Grid cols={{ default: 1, sm: 2, lg: 4 }} gap={3}>
-                  <StatCard
-                    label={t('advancedIntelligence.firmware.targetDelta', 'Target regression')}
-                    value={item.vehicle_regression_pct != null
-                      ? `${fmtNumber(item.vehicle_regression_pct)}%` : null}
-                  />
-                  <StatCard
-                    label={t('advancedIntelligence.firmware.peerDelta', 'Peer regression')}
-                    value={item.peer_regression_pct != null
-                      ? `${fmtNumber(item.peer_regression_pct)}%` : null}
-                  />
-                  <StatCard
-                    label={t('advancedIntelligence.firmware.excessDelta', 'Matched excess')}
-                    value={item.matched_excess_pct != null
-                      ? `${fmtNumber(item.matched_excess_pct)}%` : null}
-                  />
-                  <StatCard
-                    label={t('advancedIntelligence.firmware.generated', 'Decision generated')}
-                    value={formatDateTime(item.generated_at)}
-                  />
-                </Grid>
-                <div className="mt-4 rounded-lg border border-white/[0.06] p-3">
-                  <Text as="p" variant="label">
-                    {t('advancedIntelligence.firmware.rationale.title', 'Decision rationale')}
-                  </Text>
-                  <Text as="p" variant="bodySm">
-                    {item.decision === 'insufficient'
-                      ? t(
-                        'advancedIntelligence.firmware.rationale.insufficient',
-                        'The matched windows do not contain enough supported observations for a rollout decision.',
-                      )
-                      : t(
-                        'advancedIntelligence.firmware.rationale.supported',
-                        'The decision reflects target regression relative to the matched peer change and window quality.',
-                      )}
-                  </Text>
-                </div>
+                </Card>
               </article>
             ))}
             {(query.data?.total ?? 0) > PAGE_SIZE ? (
