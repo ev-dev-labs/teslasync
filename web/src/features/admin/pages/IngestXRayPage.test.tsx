@@ -23,7 +23,7 @@
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, waitFor, fireEvent, within } from '@testing-library/react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClient, QueryClientProvider, onlineManager } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
 
@@ -202,6 +202,49 @@ beforeEach(() => {
 });
 
 describe('IngestXRayPage', () => {
+  it('keeps the named refresh action mobile-sized with a decorative shared icon', () => {
+    vehicleHook.data = [];
+    renderPage();
+
+    const refresh = screen.getByRole('button', { name: 'Refresh ingest x-ray' });
+    expect(refresh).toHaveClass('min-h-11', 'min-w-11', 'md:min-h-10', 'md:min-w-10');
+    expect(refresh).toBeDisabled();
+    const icon = refresh.querySelector('svg');
+    expect(icon).toHaveAttribute('aria-hidden', 'true');
+    expect(icon).toHaveAttribute('focusable', 'false');
+    expect(icon).toHaveClass('h-4', 'w-4', 'shrink-0');
+    expect(xrayFn).not.toHaveBeenCalled();
+  });
+
+  it('marks a paused refresh as retained without erasing readings or claiming a read failure', async () => {
+    xrayFn.mockResolvedValue(makeXRay());
+    const page = renderPage();
+    const wasOnline = onlineManager.isOnline();
+
+    try {
+      pickVehicle('1');
+      await screen.findByText('4,096');
+      const callsBefore = xrayFn.mock.calls.length;
+      onlineManager.setOnline(false);
+      fireEvent.click(screen.getByRole('button', { name: 'Refresh ingest x-ray' }));
+
+      const summary = screen.getByTestId('ingest-xray-summary');
+      await waitFor(() => expect(summary).toHaveAttribute('data-retained', 'true'));
+      expect(summary).toHaveTextContent('Showing retained measurements');
+      expect(summary).toHaveTextContent('Retained measurements');
+      expect(summary).not.toHaveTextContent('Source loaded');
+      expect(summary).not.toHaveTextContent('Read failed');
+      expect(screen.getByText('4,096')).toBeInTheDocument();
+      expect(screen.getAllByText('VehicleSpeed').length).toBeGreaterThanOrEqual(1);
+      expect(screen.getByText('Field statistics')).toBeInTheDocument();
+      expect(screen.getByText('Samples per bucket')).toBeInTheDocument();
+      expect(xrayFn).toHaveBeenCalledTimes(callsBefore);
+    } finally {
+      page.unmount();
+      onlineManager.setOnline(wasOnline);
+    }
+  });
+
   it('renders the shared OperationalBrief with numeric fractional mean, full captions and intact bucket action', async () => {
     xrayFn.mockResolvedValue(makeXRay({
       buckets: [{ bucket_start: '2026-07-03T21:58:00Z', count: 2 },

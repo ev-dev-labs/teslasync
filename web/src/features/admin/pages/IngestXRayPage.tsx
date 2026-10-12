@@ -7,7 +7,7 @@
  * returns an `IngestXRayResponse`, laid out as a responsive bento:
  *
  *   1. Toolbar (vehicle + window + bucket + refresh) → PageContainer actions
- *   2. KPI band (aggregate summary + derived peak/avg) → XRayHeader
+ *   2. KPI band (aggregate summary + derived peak/avg) → IngestOperationalBrief
  *   3. Hero bento: bucketed sample-count time-series    → XRayBucketChart
  *      + top-fields-by-volume side panel                → XRayTopFields
  *   4. Detail band: per-field stats table               → XRayFieldsTable
@@ -23,7 +23,7 @@ import { useTranslation } from 'react-i18next';
 import { Info, RefreshCw } from 'lucide-react';
 
 import { PageLayout, LayoutCard } from '@/components/layout';
-import { Button, GlassPanel } from '@/components/ui';
+import { Button, GlassPanel, Icon } from '@/components/ui';
 import { FadeIn } from '@/components/motion';
 import {
   AlertBanner,
@@ -82,7 +82,7 @@ export default function IngestXRayPage() {
   const showError = source.fatalError !== null;
 
   const actions = (
-    <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
+    <div className="flex w-full min-w-0 flex-wrap items-center gap-2 sm:w-auto">
       <XRayControls
         vehicles={vehicles}
         vehicleId={vehicleId}
@@ -94,11 +94,12 @@ export default function IngestXRayPage() {
       />
       <Button
         variant="ghost"
+        className="min-h-11 min-w-11 md:min-h-10 md:min-w-10"
         onClick={refetch}
         disabled={noVehicle || xray.isFetching}
         aria-label={t('admin.xray.actions.refresh', 'Refresh ingest x-ray')}
       >
-        <RefreshCw className="h-4 w-4" aria-hidden="true" />
+        <Icon icon={RefreshCw} />
       </Button>
     </div>
   );
@@ -122,7 +123,7 @@ export default function IngestXRayPage() {
       {noVehicle && (
         <AlertBanner
           variant="info"
-          icon={<Info className="h-5 w-5" aria-hidden="true" />}
+          icon={<Icon icon={Info} size="lg" />}
           title={t('admin.xray.noVehicle.title', 'Select a vehicle')}
         >
           {t(
@@ -138,7 +139,7 @@ export default function IngestXRayPage() {
           <IngestOperationalBrief
             data={xray.data}
             loading={!noVehicle && source.status === 'initial'}
-            retained={source.hasData && xray.isError}
+            retained={source.hasData && source.status === 'stale'}
             enabled={!noVehicle}
             error={source.fatalError}
             windowSel={windowSel}
@@ -151,9 +152,9 @@ export default function IngestXRayPage() {
       <FadeIn delay={0.1}>
         <section
           aria-label={t('admin.xray.hero', 'Sample volume')}
-          className="grid grid-cols-1 gap-4 xl:grid-cols-3 xl:gap-5"
+          className="grid min-w-0 grid-cols-1 gap-4 xl:grid-cols-3 xl:gap-5"
         >
-          <div className="xl:col-span-2">
+          <div className="min-w-0 xl:col-span-2">
             <SectionErrorBoundary name="xray-chart">
               {showError ? (
                 <GlassPanel className="p-4 sm:p-5">
@@ -165,7 +166,7 @@ export default function IngestXRayPage() {
             </SectionErrorBoundary>
           </div>
 
-          <div className="xl:col-span-1">
+          <div className="min-w-0 xl:col-span-1">
             <SectionErrorBoundary name="xray-top-fields">
               <XRayTopFields
                 rows={fields}
