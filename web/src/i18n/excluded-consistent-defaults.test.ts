@@ -96,6 +96,23 @@ const additions = [
   ['a11y.status.streamUpdated', '{{scope}} updated'],
 ] as const
 
+// Accepted Phase4 sticky-control, Watch capability and SignalCatalog repairs.
+// Pin these exact pairs before subtraction; never infer exclusions from catalog roots.
+const acceptedLaterAdditions = [
+  ['a11y.scrollToTop', '{{region}} — scroll to top'],
+  ['watch.capability.notConfigured', 'Watch access is not configured'],
+  ['watch.capability.description', 'Watch readings require a wearable API key in this session. Manage API keys and open your configured watch link to enable readings. Retained readings are not refreshed until access is configured.'],
+  ['watch.capability.configure', 'Manage API keys'],
+  ['watch.capability.readError', 'Watch access could not be checked'],
+  ['watch.capability.readErrorDescription', 'Watch access is unknown because browser session storage could not be read or saved. Retry after storage becomes available. Retained readings remain visible.'],
+  ['widget.signalCatalog.destination', 'Destination: {{destination}}'],
+  ['widget.signalCatalog.valueKind', 'Value kind'],
+  ['widget.signalCatalog.metadataUnavailable', 'Unit and description are not provided by this catalog.'],
+  ['widget.signalCatalog.totalSamples', 'Total observations: {{count}}'],
+  ['widget.signalCatalog.vehicleCount', 'Vehicles observed: {{count}}'],
+  ['widget.signalCatalog.lastSeen', 'Last seen: {{timestamp}}'],
+] as const
+
 const remaining = ['error.request.title', 'error.unavailable.title', 'error.unsupported.title']
 const generated = import.meta.glob<{ default: Json }>('./en/locale-*.json', { eager: true })
 const english = createInstance()
@@ -178,12 +195,24 @@ describe('exact81 feature-owned consistent producer defaults', () => {
       expect(nested(catalog, key)).toBe(value)
       keys.add(key)
     }
+    expect(keys.size).toBe(2919)
+    expect(acceptedLaterAdditions).toHaveLength(12)
+    for (const [key, value] of acceptedLaterAdditions) {
+      expect(keys.has(key), key).toBe(false)
+      expect(nested(catalog, key), key).toBe(value)
+      expect(english.exists(key), key).toBe(true)
+      expect(english.t(key, { skipInterpolation: true, returnObjects: true }), key).toBe(value)
+      expect([shell, ...Object.values(generated).map(module => module.default)]
+        .some(resource => nested(resource, key) === value), key).toBe(true)
+      keys.add(key)
+    }
+    expect(keys.size).toBe(2931)
     const oldEntries = leaves(catalog).filter(([key]) => !keys.has(key))
       .sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0)
     expect(oldEntries).toHaveLength(28176)
     expect(createHash('sha256').update(JSON.stringify(oldEntries)).digest('hex'))
       .toBe('e04f0f9479fe65e8a0346bc7dd53d53f662cc66850c18440ceae702a43698966')
-    expect(leaves(catalog)).toHaveLength(31095)
+    expect(leaves(catalog)).toHaveLength(31095 + acceptedLaterAdditions.length)
     expect(english.t('settings.title')).toBe('Settings')
     expect(catalog.pwa).toMatchObject(shell.pwa)
     expect(shell.pwa.offline).toEqual(catalog.pwa.offline)
