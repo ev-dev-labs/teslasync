@@ -153,6 +153,14 @@ function summaryMetric(label: string) {
   return metric;
 }
 
+function monitorConnectionBadges(connection: string) {
+  return screen.getAllByText(/^(Tail paused|Tail recording enabled)$/).map((status) => {
+    const group = status.parentElement;
+    if (!group) throw new Error('Missing monitor connection metadata group');
+    return within(group).getByText(connection, { selector: 'span' });
+  });
+}
+
 beforeEach(() => {
   h.selected = makeSelected(1, [veh(1)]);
   h.stream = makeStream();
@@ -252,6 +260,66 @@ describe('LiveSignalMonitorPage', () => {
     // Throughput panel swaps to the offline message rather than "waiting".
     expect(screen.getByText('Stream disconnected — no live throughput')).toBeInTheDocument();
     expect(screen.queryByText('Waiting for live throughput…')).toBeNull();
+  });
+
+  it('uses neutral disconnected badges and a decorative canonical warning icon without changing recovery', () => {
+    h.stream = makeStream({ connected: false });
+    const { container, rerender } = renderPage();
+
+    const disconnectedBadges = monitorConnectionBadges('Disconnected');
+    expect(disconnectedBadges).toHaveLength(2);
+    for (const badge of disconnectedBadges) {
+      expect(badge).toHaveClass('text-[var(--text-secondary)]');
+      expect(badge).not.toHaveClass('text-[var(--semantic-danger)]');
+    }
+    expect(screen.getByText(/attempting to reconnect/i)).toBeInTheDocument();
+    const icon = container.querySelector('svg.lucide-wifi-off');
+    expect(icon).toHaveAttribute('aria-hidden', 'true');
+    expect(icon).toHaveAttribute('focusable', 'false');
+    expect(icon).toHaveClass('h-5', 'w-5', 'shrink-0');
+
+    h.stream = makeStream({ connected: true });
+    rerender(<LiveSignalMonitorPage />);
+
+    expect(screen.queryByText(/attempting to reconnect/i)).toBeNull();
+    const connectedBadges = monitorConnectionBadges('Connected');
+    expect(connectedBadges).toHaveLength(2);
+    for (const badge of connectedBadges) {
+      expect(badge).toHaveClass('text-[var(--semantic-success)]');
+    }
+  });
+
+  it('keeps tail recording status separate from transport and preserves buffered analytics while paused', () => {
+    const entries = [entry(1, 'VehicleSpeed', '32.75 m/s', 'number')];
+    h.stream = makeStream({ tailPaused: true, tailEntries: entries, tailRate: 7 });
+    const { rerender } = renderPage();
+
+    expect(screen.getAllByText('Tail paused')).toHaveLength(2);
+    expect(monitorConnectionBadges('Connected')).toHaveLength(2);
+    expect(within(summaryMetric('Signals / sec')).getByText('7')).toBeInTheDocument();
+    expect(within(screen.getByRole('region', { name: 'Live analytics' }))
+      .getByText('Signals per second from the live tail, averaged at 1 Hz; not an all-time ingestion rate.'))
+      .toBeInTheDocument();
+    expect(h.throughputArgs).toEqual({ rate: 7, args: { enabled: true, resetKey: 1 } });
+    expect(screen.getByRole('button', { name: 'Resume' })).toHaveAttribute('aria-pressed', 'true');
+
+    h.stream = makeStream({ connected: false, tailPaused: true, tailEntries: entries, tailRate: 0 });
+    rerender(<LiveSignalMonitorPage />);
+
+    expect(screen.getAllByText('Tail paused')).toHaveLength(2);
+    expect(monitorConnectionBadges('Disconnected')).toHaveLength(2);
+    expect(screen.getAllByText('32.75 m/s')).toHaveLength(2);
+    expect(within(summaryMetric('Buffer size')).getByText('1')).toBeInTheDocument();
+    expect(h.throughputArgs).toEqual({ rate: 0, args: { enabled: true, resetKey: 1 } });
+
+    h.stream = makeStream({ connected: false, tailPaused: false, tailEntries: entries });
+    rerender(<LiveSignalMonitorPage />);
+
+    expect(screen.queryByText('Tail paused')).toBeNull();
+    expect(screen.getAllByText('Tail recording enabled')).toHaveLength(2);
+    expect(monitorConnectionBadges('Disconnected')).toHaveLength(2);
+    expect(screen.getByRole('button', { name: 'Pause' })).toHaveAttribute('aria-pressed', 'false');
+    expect(h.streamOpts).toEqual({ enabled: true, vehicleId: 1, chartSignals: [], tailMax: 500 });
   });
 
   it('wires the live stream and throughput hooks with the selected vehicle + tail config', () => {

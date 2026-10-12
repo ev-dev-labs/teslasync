@@ -15,7 +15,7 @@ import { useTranslation } from 'react-i18next';
 import { WifiOff } from 'lucide-react';
 
 import { Grid, PageLayout, Section } from '@/components/layout';
-import { Badge } from '@/components/ui';
+import { Badge, Icon } from '@/components/ui';
 import { AlertBanner } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 
@@ -103,10 +103,17 @@ export default function LiveSignalMonitorPage() {
 
   const bufferCount = live.tailEntries?.length ?? 0;
   const connectionBadge = (
-    <Badge variant={live.connected ? 'success' : 'danger'} dot>
+    <Badge variant={live.connected ? 'success' : 'neutral'} dot>
       {live.connected
         ? t('liveMonitor.connected', 'Connected')
         : t('liveMonitor.disconnected', 'Disconnected')}
+    </Badge>
+  );
+  const tailRecordingBadge = (
+    <Badge variant="neutral">
+      {live.tailPaused
+        ? t('liveMonitor.brief.tailPaused', 'Tail paused')
+        : t('liveMonitor.brief.tailRecording', 'Tail recording enabled')}
     </Badge>
   );
 
@@ -117,11 +124,12 @@ export default function LiveSignalMonitorPage() {
       metadataActions={
         <div className="flex flex-wrap items-center justify-end gap-3">
           {connectionBadge}
+          {tailRecordingBadge}
         </div>
       }
     >
       {!live.connected && (
-        <AlertBanner variant="warning" icon={<WifiOff className="h-5 w-5" aria-hidden="true" />}>
+        <AlertBanner variant="warning" icon={<Icon icon={WifiOff} size="lg" />}>
           {t(
             'liveMonitor.disconnectedBanner',
             'Live stream disconnected — attempting to reconnect. Figures below reflect the last buffered signals.',
@@ -146,7 +154,14 @@ export default function LiveSignalMonitorPage() {
 
       {/* 2 — Live analytics bento: hero throughput chart + type breakdown */}
       <FadeIn delay={0.1} className="min-w-0 max-w-full">
-        <Section id={analyticsId} title={t('liveMonitor.analytics', 'Live analytics')}>
+        <Section
+          id={analyticsId}
+          title={t('liveMonitor.analytics', 'Live analytics')}
+          description={t(
+            'liveMonitor.brief.sseRate',
+            'Signals per second from the live tail, averaged at 1 Hz; not an all-time ingestion rate.',
+          )}
+        >
           <Grid cols={ANALYTICS_COLUMNS} gap={4} className="min-w-0">
             <LiveThroughputPanel
               className="min-w-0 max-w-full xl:col-span-2"
@@ -180,7 +195,7 @@ export default function LiveSignalMonitorPage() {
         bufferMax={TAIL_MAX}
         showStats={false}
         title={t('liveMonitor.tailTitle', 'Live signal tail')}
-        headerExtra={connectionBadge}
+        headerExtra={<>{connectionBadge}{tailRecordingBadge}</>}
       />
     </PageLayout>
   );
