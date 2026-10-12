@@ -30,6 +30,7 @@ import { haversineDistance } from '@/lib/geo';
 import { formatDate } from '@/lib/dateFormat';
 
 import { cn } from '@/lib/cn';
+import { chartTokens, neonColorMap } from '@/lib/tokens';
 import {
   computeReplayMarkers,
   nearestMarker,
@@ -164,6 +165,14 @@ export default function TripReplayPage() {
     if (!drive) return [];
     const pos = drive.positions ?? [];
     return pos
+      .filter((raw: unknown) => {
+        if (raw == null || typeof raw !== 'object') return false;
+        const p = raw as Record<string, unknown>;
+        return typeof p.latitude === 'number' && Number.isFinite(p.latitude)
+          && Math.abs(p.latitude) <= 90
+          && typeof p.longitude === 'number' && Number.isFinite(p.longitude)
+          && Math.abs(p.longitude) <= 180;
+      })
       .map((raw: unknown) => {
         const p = raw as Record<string, unknown>;
         const tsStr = (p.timestamp as string) ?? (p.created_at as string) ?? (p.createdAt as string) ?? '';
@@ -177,8 +186,8 @@ export default function TripReplayPage() {
           return (fromTel ?? null) as V | null;
         };
         return {
-          latitude: (p.latitude as number) ?? 0,
-          longitude: (p.longitude as number) ?? 0,
+          latitude: p.latitude as number,
+          longitude: p.longitude as number,
           speed: (p.speed as number | null) ?? (t.speed as number | null) ?? null,
           power: pick<number>('power'),
           // DrivePosition requires a number; NaN keeps an unobserved SOC
@@ -194,8 +203,7 @@ export default function TripReplayPage() {
           fanStatus: pick<number>('fanStatus', 'fan_status'),
           isClimateOn: (p.isClimateOn ?? p.is_climate_on ?? t.isClimateOn ?? t.is_climate_on) as DrivePosition['isClimateOn'],
         } as DrivePosition;
-      })
-      .filter((p) => p.latitude !== 0 || p.longitude !== 0);
+      });
   }, [drive, nearestTelemetry]);
 
   /* ---- Replay hook ---- */
@@ -226,14 +234,15 @@ export default function TripReplayPage() {
 
   /* ---- URL deep-linking: ?at=0.42&play=1 (debounced 300ms) ---- */
   const [searchParams, setSearchParams] = useSearchParams();
-  const restoredRef = useRef(false);
+  const restoredDriveRef = useRef<string | null>(null);
+  const writeDriveRef = useRef<string | null>(null);
   const writeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Restore once positions are loaded.
+  // Restore each record, even when the next drive has the same sample count.
   useEffect(() => {
-    if (restoredRef.current) return;
-    if (positions.length === 0) return;
-    restoredRef.current = true;
+    if (!id || restoredDriveRef.current === id) return;
+    if (positions.length === 0 || String(drive?.id) !== id) return;
+    restoredDriveRef.current = id;
     const atParam = searchParams.get('at');
     const playParam = searchParams.get('play');
     if (atParam != null) {
@@ -245,12 +254,17 @@ export default function TripReplayPage() {
     if (playParam === '1') {
       controls.play();
     }
-  }, [positions.length]);
+  }, [id, drive?.id, positions.length, controls, searchParams]);
 
   // Persist (debounced) — write `at` and `play` to the URL.
   useEffect(() => {
-    if (!restoredRef.current) return;
+    if (!id || restoredDriveRef.current !== id) return;
     if (positions.length === 0) return;
+    // The restoration effect has not committed its playhead in this render.
+    if (writeDriveRef.current !== id) {
+      writeDriveRef.current = id;
+      return;
+    }
     if (writeTimerRef.current) clearTimeout(writeTimerRef.current);
     const snapshotProgress = replay.progress;
     const snapshotPlaying = replay.isPlaying;
@@ -273,7 +287,7 @@ export default function TripReplayPage() {
     return () => {
       if (writeTimerRef.current) clearTimeout(writeTimerRef.current);
     };
-  }, [replay.progress, replay.isPlaying, positions.length, setSearchParams]);
+  }, [id, replay.progress, replay.isPlaying, positions.length, setSearchParams]);
 
   /* ---- Elevation profile data ---- */
   // Keep every sample index, including unknown altitude, so elevation
@@ -348,17 +362,19 @@ export default function TripReplayPage() {
 
   /* ---- Speed sparkline behind the scrubber ---- */
   const speedSparkData = useMemo(() => {
-    if (positions.length === 0) return [] as number[];
+    // Sparkline accepts only numbers; omit this decoration rather than
+    // turn an unknown reading into a measured stop. Primary series keep gaps.
+    if (positions.length === 0 || positions.some((p) => p.speed == null || !Number.isFinite(p.speed))) return [] as number[];
     // Downsample to ~80 points so the sparkline isn't a noisy mess.
     const target = 80;
     if (positions.length <= target) {
-      return positions.map((p) => p.speed ?? 0);
+      return positions.map((p) => p.speed as number);
     }
     const stride = positions.length / target;
     const out: number[] = [];
     for (let i = 0; i < target; i++) {
       const idx = Math.min(positions.length - 1, Math.floor(i * stride));
-      out.push(positions[idx].speed ?? 0);
+      out.push(positions[idx].speed as number);
     }
     return out;
   }, [positions]);
@@ -373,7 +389,7 @@ export default function TripReplayPage() {
     (kinds: ReplayMarker['kind'][]): string | undefined => {
       if (!activeMarker) return undefined;
       return kinds.includes(activeMarker.kind)
-        ? 'rounded-md ring-2 ring-cyan-400/60 ring-offset-1 ring-offset-[var(--panel-bg)]'
+        ? cn('rounded-md ring-1 ring-offset-1 ring-offset-[var(--panel-bg)]', neonColorMap.cyan.ring)
         : undefined;
     },
     [activeMarker],
@@ -425,6 +441,7 @@ export default function TripReplayPage() {
           <Button
             variant="ghost"
             size="sm"
+            className="min-h-11 min-w-11 md:min-h-9 md:min-w-9"
             onClick={() => driveQuery.refetch()}
             aria-label={t('replay.refresh', 'Refresh replay data')}
           >
@@ -432,7 +449,7 @@ export default function TripReplayPage() {
           </Button>
           <Link
             to={`/drives/${id}`}
-            className={cn(BUTTON_BASE, BUTTON_VARIANTS.ghost, 'min-h-9 max-w-full px-3 py-1.5')}
+            className={cn(BUTTON_BASE, BUTTON_VARIANTS.ghost, 'min-h-11 min-w-11 max-w-full px-3 py-1.5 md:min-h-9')}
           >
             <ArrowLeft className="h-4 w-4 shrink-0" aria-hidden="true" />
             <Text variant="bodySm" className="min-w-0 break-words">{t('replay.backToDrive', 'Back to Drive')}</Text>
@@ -573,7 +590,7 @@ export default function TripReplayPage() {
                 onStepFrame={controls.stepFrame}
                 scrubberBackground={
                   speedSparkData.length > 1 ? (
-                    <Sparkline data={speedSparkData} color="#22d3ee" height={24} width={400} />
+                    <Sparkline data={speedSparkData} color={chartTokens.series[0]} height={24} width={400} />
                   ) : undefined
                 }
               />
