@@ -7,8 +7,8 @@
  * mocked; the table, buttons, and confirm dialog render for real.
  */
 
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, within, fireEvent, waitFor } from '@testing-library/react';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { act, render, screen, within, fireEvent, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
@@ -66,6 +66,7 @@ import {
 } from '@/api/hooks/useOwnership';
 import JurisdictionCompliancePage from './JurisdictionCompliancePage';
 import type { ComplianceApportionment, ComplianceFiling, JurisdictionRate } from '@/types/ownership';
+import { neonColorMap, typography } from '@/lib/tokens';
 
 const mockSelected = useSelectedVehicle as unknown as ReturnType<typeof vi.fn>;
 const mockRates = useJurisdictionRates as unknown as ReturnType<typeof vi.fn>;
@@ -203,6 +204,159 @@ describe('JurisdictionCompliancePage — confirm-gated delete', () => {
     expect(refetch).toHaveBeenCalledOnce();
     expect(mockFilings).toHaveBeenCalledWith(7, 50, 0);
     expect(mockFiling().mutate).not.toHaveBeenCalled();
+  });
+
+  describe('JurisdictionCompliancePage — restrained presentation and preserved access', () => {
+    afterEach(() => vi.unstubAllGlobals());
+
+    it('keeps missing summary quantities unknown without asserting a recorded period or compliance success', () => {
+      mockSelected.mockReturnValue({ vehicleId: null, vehicle: null, vehicles: [], setVehicleId: vi.fn() });
+      renderPage();
+
+      const summary = card('Period liability');
+      expect(summary.querySelectorAll('[data-operational-metric]')).toHaveLength(6);
+      for (const label of ['Total distance', 'Assigned to a jurisdiction', 'Unassigned', 'Road-usage charge', 'Total liability', 'Attributed emissions']) {
+        expect(summaryStat(label)).toHaveAttribute('data-value-state', 'missing');
+      }
+      expect(within(summary).getByText('Unknown')).toBeInTheDocument();
+      expect(within(summary).queryByText('Recorded apportionment')).not.toBeInTheDocument();
+      expect(within(summary).getByText('No recorded apportionment window is available.')).toBeInTheDocument();
+      expect(screen.getByText('A worksheet, not a tax return')).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: 'Period digest' })).toBeInTheDocument();
+      expect(within(card('Jurisdiction rate table')).getByText('California')).toBeInTheDocument();
+      expect(mockFiling().mutate).not.toHaveBeenCalled();
+      expect(mockCreate().mutate).not.toHaveBeenCalled();
+    });
+
+    it('associates each editor disclosure with its form and keeps drafts on cancel and reopen', () => {
+      renderPage();
+      const rateToggle = screen.getByRole('button', { name: 'Add jurisdiction' });
+      const filingToggle = screen.getByRole('button', { name: 'Seal a period' });
+      expect(rateToggle).toHaveAttribute('aria-expanded', 'false');
+      expect(filingToggle).toHaveAttribute('aria-expanded', 'false');
+      expect(rateToggle.getAttribute('aria-controls')).not.toBe(filingToggle.getAttribute('aria-controls'));
+
+      fireEvent.click(rateToggle);
+      const rateForm = screen.getByLabelText('Jurisdiction code').closest('form');
+      expect(rateForm).toHaveAttribute('id', rateToggle.getAttribute('aria-controls'));
+      expect(rateToggle).toHaveAttribute('aria-expanded', 'true');
+      fireEvent.change(screen.getByLabelText('Jurisdiction code'), { target: { value: 'qa-only' } });
+      fireEvent.change(screen.getByLabelText('Road-usage rate (minor / m)'), { target: { value: '0.003' } });
+      fireEvent.click(rateToggle);
+      expect(rateToggle).toHaveAttribute('aria-expanded', 'false');
+      fireEvent.click(rateToggle);
+      expect(screen.getByLabelText('Jurisdiction code')).toHaveValue('QA-ONLY');
+      expect(screen.getByLabelText('Road-usage rate (minor / m)')).toHaveValue(0.003);
+
+      fireEvent.click(filingToggle);
+      const filingForm = screen.getByLabelText('Period start').closest('form');
+      expect(filingForm).toHaveAttribute('id', filingToggle.getAttribute('aria-controls'));
+      expect(filingToggle).toHaveAttribute('aria-expanded', 'true');
+      fireEvent.change(screen.getByLabelText('Period start'), { target: { value: '2026-01-15' } });
+      fireEvent.click(filingToggle);
+      fireEvent.click(filingToggle);
+      expect(screen.getByLabelText('Period start')).toHaveValue('2026-01-15');
+      expect(mockCreate().mutate).not.toHaveBeenCalled();
+      expect(mockFiling().mutate).not.toHaveBeenCalled();
+    });
+
+    it('uses neutral code for unchanged seals and preserves confidence thresholds with semantic ink', () => {
+      const jurisdiction = {
+        jurisdiction_code: 'QA-A', label: 'Synthetic jurisdiction A', currency: 'USD',
+        distance_m: 10000, distance_share_pct: 80, energy_wh: 20000, drive_count: 8,
+        road_usage_charge_minor: 12345, registration_fee_minor: 6000,
+        total_liability_minor: 18345, emissions_g: 123400, emissions_g_per_m: 12.34,
+        confidence_pct: 90,
+      };
+      mockApportion.mockReturnValue(makeQuery(makeReport({
+        jurisdictions: [
+          jurisdiction,
+          { ...jurisdiction, jurisdiction_code: 'QA-B', label: 'Synthetic jurisdiction B', confidence_pct: 60 },
+          { ...jurisdiction, jurisdiction_code: 'UNASSIGNED', label: 'Synthetic unassigned', confidence_pct: 59 },
+        ],
+      })));
+      mockFilings.mockReturnValue(makeQuery({ items: [makeFiling()] }));
+      renderPage();
+
+      const apportionment = card('Apportionment by jurisdiction');
+      for (const [label, percentage, tone] of [
+        ['Synthetic jurisdiction A', '90.00%', neonColorMap.green.text],
+        ['Synthetic jurisdiction B', '60.00%', neonColorMap.amber.text],
+        ['Synthetic unassigned', '59.00%', neonColorMap.red.text],
+      ]) {
+        const row = within(apportionment).getByText(label).closest('tr') as HTMLElement;
+        expect(within(row).getByText(percentage)).toHaveClass(tone);
+        expect(within(row).getByText('$183.45')).toHaveClass(neonColorMap.amber.text);
+      }
+      const periodDigest = within(card('Period digest')).getByText('current-period-digest');
+      expect(periodDigest.tagName).toBe('CODE');
+      expect(periodDigest).toHaveClass(typography.color.secondary);
+      const seal = within(card('Sealed filings')).getByText('1234567890abcdef…');
+      expect(seal.tagName).toBe('CODE');
+      expect(seal).toHaveAttribute('title', makeFiling().digest);
+      expect(seal).toHaveClass(typography.color.secondary);
+    });
+
+    it('keeps every narrow-table field and confirmed Remove reachable through the existing mobile details owner', async () => {
+      const observers: { element: Element; callback: ResizeObserverCallback }[] = [];
+      vi.stubGlobal('ResizeObserver', class {
+        constructor(private callback: ResizeObserverCallback) {}
+        observe(element: Element) { observers.push({ element, callback: this.callback }); }
+        unobserve() {}
+        disconnect() {}
+      });
+      mockApportion.mockReturnValue(makeQuery(makeReport({
+        jurisdictions: [{
+          jurisdiction_code: 'QA-ONLY', label: 'Synthetic apportionment', currency: 'USD',
+          distance_m: 10000, distance_share_pct: 80, energy_wh: 20000, drive_count: 8,
+          road_usage_charge_minor: 12345, registration_fee_minor: 6000,
+          total_liability_minor: 18345, emissions_g: 123400, emissions_g_per_m: 12.34,
+          confidence_pct: 95,
+        }],
+      })));
+      mockFilings.mockReturnValue(makeQuery({ items: [makeFiling()] }));
+      renderPage();
+      act(() => observers.forEach(({ element, callback }) => callback(
+        [{ target: element, contentRect: { width: 375 } } as ResizeObserverEntry], {} as ResizeObserver,
+      )));
+
+      const apportionment = card('Apportionment by jurisdiction');
+      expect(apportionment.querySelector('[data-mobile-table]')).toBeInTheDocument();
+      fireEvent.click(within(apportionment).getByRole('button', { name: 'Quick view' }));
+      let dialog = screen.getByRole('dialog');
+      for (const field of ['Jurisdiction', 'Distance', 'Drives', 'Energy', 'Road-usage charge', 'Registration', 'Total liability', 'Attributed emissions', 'Confidence']) {
+        expect(within(dialog).getByText(field)).toBeInTheDocument();
+      }
+      expect(within(dialog).getByText('8')).toBeInTheDocument();
+      expect(within(dialog).getByText('$183.45')).toBeInTheDocument();
+      fireEvent.click(within(dialog).getAllByRole('button', { name: 'Close', exact: true })[0]);
+      await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+
+      const rates = card('Jurisdiction rate table');
+      fireEvent.click(within(rates).getAllByRole('button', { name: 'Quick view' })[0]);
+      dialog = screen.getByRole('dialog');
+      for (const field of ['Jurisdiction', 'Road-usage rate', 'Annual registration', 'Grid intensity', 'Bounding box', 'Actions']) {
+        expect(within(dialog).getByText(field)).toBeInTheDocument();
+      }
+      expect(within(dialog).getByRole('button', { name: 'Remove' })).toBeInTheDocument();
+      fireEvent.click(within(dialog).getAllByRole('button', { name: 'Close', exact: true })[0]);
+      await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+      fireEvent.click(within(rates).getAllByRole('button', { name: 'Remove' })[0]);
+      expect(within(screen.getByRole('dialog')).getByText('Delete this jurisdiction rate?')).toBeInTheDocument();
+      expect(mockRemove().mutate).not.toHaveBeenCalled();
+      fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Cancel' }));
+      await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+
+      fireEvent.click(within(card('Sealed filings')).getByRole('button', { name: 'Quick view' }));
+      dialog = screen.getByRole('dialog');
+      for (const field of ['Period', 'Distance', 'Energy', 'Charge', 'Status', 'Seal']) {
+        expect(within(dialog).getByText(field)).toBeInTheDocument();
+      }
+      expect(within(dialog).getByText('$123.45')).toBeInTheDocument();
+      expect(within(dialog).getByText('1234567890abcdef…')).toHaveAttribute('title', makeFiling().digest);
+      expect(mockFiling().mutate).not.toHaveBeenCalled();
+      expect(mockCreate().mutate).not.toHaveBeenCalled();
+    });
   });
 
   describe('JurisdictionCompliancePage — period liability OperationalBrief', () => {

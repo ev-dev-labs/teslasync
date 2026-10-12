@@ -1,4 +1,4 @@
-import { type FormEvent, useMemo, useState } from 'react';
+import { type FormEvent, useId, useMemo, useState } from 'react';
 import { Globe2, Landmark, Stamp, Trash2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -15,7 +15,7 @@ import { useOperationalMetrics } from '@/hooks/useOperationalMetrics';
 
 import { PageLayout } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
-import { Badge, Button, ConfirmDialog, DataTable, Input, Select, Text } from '@/components/ui';
+import { Badge, Button, Code, ConfirmDialog, DataTable, Icon, Input, Select, Text } from '@/components/ui';
 import type { Column } from '@/components/ui';
 import { useConfirm } from '@/hooks/useConfirm';
 import { useDataState } from '@/hooks/useDataState';
@@ -23,6 +23,7 @@ import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useUnits } from '@/hooks/useUnits';
 import { formatDateTime } from '@/lib/dateFormat';
+import { neonColorMap, typography } from '@/lib/tokens';
 
 import type {
   ComplianceFiling,
@@ -55,6 +56,8 @@ export default function JurisdictionCompliancePage() {
   const [windowDays, setWindowDays] = useState(90);
   const [rateOpen, setRateOpen] = useState(false);
   const [filingOpen, setFilingOpen] = useState(false);
+  const rateFormId = useId();
+  const filingFormId = useId();
   const [rateDraft, setRateDraft] = useState({
     jurisdiction_code: '',
     label: '',
@@ -124,9 +127,10 @@ export default function JurisdictionCompliancePage() {
       header: t('ownership.compliance.row.jurisdiction', 'Jurisdiction'),
       render: (row) => (
         <div className="flex items-center gap-2">
-          <Globe2
-            className={`h-4 w-4 ${row.jurisdiction_code === 'UNASSIGNED' ? 'text-[var(--text-muted)]' : 'text-cyan-300'}`}
-            aria-hidden="true"
+          <Icon
+            icon={Globe2}
+            size="md"
+            className={row.jurisdiction_code === 'UNASSIGNED' ? typography.color.muted : typography.color.secondary}
           />
           <div>
             <Text as="p" variant="label">
@@ -191,7 +195,7 @@ export default function JurisdictionCompliancePage() {
       header: t('ownership.compliance.row.liability', 'Total liability'),
       align: 'right',
       render: (row) => (
-        <span className="tabular-nums text-amber-300">
+        <span className={`tabular-nums ${neonColorMap.amber.text}`}>
           {formatCurrencyMinor(row.total_liability_minor, row.currency, units.unitPrefs.locale)}
         </span>
       ),
@@ -220,7 +224,7 @@ export default function JurisdictionCompliancePage() {
       align: 'right',
       render: (row) => (
         <span
-          className={`tabular-nums ${row.confidence_pct >= 90 ? 'text-emerald-300' : row.confidence_pct >= 60 ? 'text-amber-300' : 'text-rose-300'}`}
+          className={`tabular-nums ${row.confidence_pct >= 90 ? neonColorMap.green.text : row.confidence_pct >= 60 ? neonColorMap.amber.text : neonColorMap.red.text}`}
         >
           {formatPct(row.confidence_pct)}
         </span>
@@ -250,13 +254,14 @@ export default function JurisdictionCompliancePage() {
       header: t('ownership.compliance.rate.roadUsage', 'Road-usage rate'),
       align: 'right',
       filterValue: (row) => `${row.currency}:${row.road_usage_minor_per_m}`,
-      filterValueLabel: (_value, row) => formatPricePerDistance(row.road_usage_minor_per_m, row.currency, units.unitPrefs),
+      filterValueLabel: (_value, row) => formatPricePerDistance(row.road_usage_minor_per_m, row.currency, units.unitPrefs, units.unitPrefs.locale),
       render: (row) => (
         <span className="tabular-nums">
           {formatPricePerDistance(
             row.road_usage_minor_per_m,
             row.currency,
             units.unitPrefs,
+            units.unitPrefs.locale,
           )}
         </span>
       ),
@@ -302,7 +307,9 @@ export default function JurisdictionCompliancePage() {
         <Button
           variant="ghost"
           size="sm"
-          icon={<Trash2 className="h-4 w-4" aria-hidden="true" />}
+          icon={<Icon icon={Trash2} size="md" />}
+          className="min-h-11 min-w-11 md:min-h-9 md:min-w-0"
+          wrapLabel
           loading={deleteRate.isPending && deleteRate.variables === row.id}
           onClick={() => void handleRemove(row)}
         >
@@ -354,7 +361,7 @@ export default function JurisdictionCompliancePage() {
       key: 'digest',
       header: t('ownership.compliance.filing.digest', 'Seal'),
       render: (row) => (
-        <span className="font-mono text-xs text-cyan-300">{row.digest.slice(0, 16)}…</span>
+        <Code className={`break-all ${typography.color.secondary}`} title={row.digest}>{row.digest.slice(0, 16)}…</Code>
       ),
     },
   ];
@@ -393,7 +400,7 @@ export default function JurisdictionCompliancePage() {
 
       <FadeIn>
         <OwnershipPanel title={t('ownership.compliance.summary.title', 'Period liability')}
-          source={reportQuery} sourceEnabled={vehicleId != null} empty={!report}>
+          source={reportQuery} sourceEnabled={vehicleId != null} empty={!report} preserveSummary>
           <OperationalBrief
             compact
             testId="compliance-period-liability"
@@ -406,7 +413,8 @@ export default function JurisdictionCompliancePage() {
               ? liabilitySummary.period.reason : liabilitySummary.period.provenance}
             statusLabel={reportState.status === 'stale'
               ? t('dataState.stale.title', 'Data may be stale')
-              : t('ownership.compliance.brief.recorded', 'Recorded apportionment')}
+              : report ? t('ownership.compliance.brief.recorded', 'Recorded apportionment')
+                : t('common.unknown', 'Unknown')}
             statusTone={reportState.status === 'stale' ? 'warning' : 'neutral'}
             freshness={reportState.updatedAt != null
               ? formatDateTime(new Date(reportState.updatedAt).toISOString()) : undefined}
@@ -432,6 +440,16 @@ export default function JurisdictionCompliancePage() {
           <DataTable
             columns={apportionColumns}
             mobileColumns={['jurisdiction', 'liability', 'confidence']}
+            mobilePresentation={{
+              roles: { jurisdiction: 'title', liability: 'primary', distance: 'meta', confidence: 'meta' },
+              displayValue: (row, key) => {
+                if (key === 'jurisdiction') return row.label;
+                if (key === 'liability') return formatCurrencyMinor(row.total_liability_minor, row.currency, units.unitPrefs.locale);
+                if (key === 'distance') return units.formatDistance(row.distance_m);
+                if (key === 'confidence') return formatPct(row.confidence_pct);
+                return null;
+              },
+            }}
             data={jurisdictions}
             keyExtractor={(row) => row.jurisdiction_code}
             tableId="ownership-compliance-apportion"
@@ -454,7 +472,11 @@ export default function JurisdictionCompliancePage() {
             <Button
               variant="secondary"
               size="sm"
-              icon={<Landmark className="h-4 w-4" aria-hidden="true" />}
+              icon={<Icon icon={Landmark} size="md" />}
+              className="min-h-11 min-w-11 md:min-h-9 md:min-w-0"
+              wrapLabel
+              aria-expanded={rateOpen}
+              aria-controls={rateFormId}
               onClick={() => setRateOpen((open) => !open)}
             >
               {rateOpen
@@ -464,7 +486,7 @@ export default function JurisdictionCompliancePage() {
           }
         >
           {rateOpen ? (
-            <form className="mb-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4" onSubmit={submitRate}>
+            <form id={rateFormId} className="mb-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4" onSubmit={submitRate}>
               <Input
                 label={t('ownership.compliance.rateForm.code', 'Jurisdiction code')}
                 value={rateDraft.jurisdiction_code}
@@ -511,6 +533,7 @@ export default function JurisdictionCompliancePage() {
                   rateDraft.road_usage_minor_per_m,
                   rateDraft.currency,
                   units.unitPrefs,
+                  units.unitPrefs.locale,
                 )}
                 onChange={(event) =>
                   setRateDraft((current) => ({
@@ -593,7 +616,7 @@ export default function JurisdictionCompliancePage() {
                 }
               />
               <div className="md:col-span-2 xl:col-span-4">
-                <Button type="submit" loading={createRate.isPending}>
+                <Button type="submit" loading={createRate.isPending} className="min-h-11" wrapLabel>
                   {t('ownership.compliance.rateForm.save', 'Save jurisdiction')}
                 </Button>
                 <MutationError error={createRate.error} />
@@ -605,6 +628,17 @@ export default function JurisdictionCompliancePage() {
             columns={rateColumns}
             enableValueFilters
             mobileColumns={['code', 'roadUsage', 'registration']}
+            mobilePresentation={{
+              roles: { code: 'title', roadUsage: 'primary', registration: 'meta', grid: 'meta' },
+              displayValue: (row, key) => {
+                if (key === 'code') return row.label;
+                if (key === 'roadUsage') return formatPricePerDistance(row.road_usage_minor_per_m, row.currency, units.unitPrefs, units.unitPrefs.locale);
+                if (key === 'registration') return formatCurrencyMinor(row.registration_fee_minor, row.currency, units.unitPrefs.locale);
+                if (key === 'grid') return `${fmtNumber(row.grid_intensity_g_per_wh * 1000)} g/kWh`;
+                return null;
+              },
+              inlineActions: (row) => rateColumns.find((column) => column.key === 'actions')?.render(row),
+            }}
             data={rates}
             keyExtractor={(row) => row.id}
             tableId="ownership-compliance-rates"
@@ -633,7 +667,11 @@ export default function JurisdictionCompliancePage() {
             <Button
               variant="secondary"
               size="sm"
-              icon={<Stamp className="h-4 w-4" aria-hidden="true" />}
+              icon={<Icon icon={Stamp} size="md" />}
+              className="min-h-11 min-w-11 md:min-h-9 md:min-w-0"
+              wrapLabel
+              aria-expanded={filingOpen}
+              aria-controls={filingFormId}
               onClick={() => setFilingOpen((open) => !open)}
             >
               {filingOpen
@@ -643,7 +681,7 @@ export default function JurisdictionCompliancePage() {
           }
         >
           {filingOpen ? (
-            <form className="mb-6 grid gap-4 md:grid-cols-3" onSubmit={submitFiling}>
+            <form id={filingFormId} className="mb-6 grid gap-4 md:grid-cols-3" onSubmit={submitFiling}>
               <Input
                 type="date"
                 label={t('ownership.compliance.filingForm.start', 'Period start')}
@@ -669,7 +707,7 @@ export default function JurisdictionCompliancePage() {
                 }
               />
               <div className="flex items-end">
-                <Button type="submit" loading={createFiling.isPending} disabled={vehicleId == null}>
+                <Button type="submit" loading={createFiling.isPending} disabled={vehicleId == null} className="min-h-11" wrapLabel>
                   {t('ownership.compliance.filingForm.submit', 'Seal period')}
                 </Button>
               </div>
@@ -682,6 +720,15 @@ export default function JurisdictionCompliancePage() {
           <DataTable
             columns={filingColumns}
             mobileColumns={['period', 'status', 'charge']}
+            mobilePresentation={{
+              roles: { period: 'title', charge: 'primary', status: 'meta' },
+              displayValue: (row, key) => {
+                if (key === 'period') return `${formatDateTime(row.period_start)} → ${formatDateTime(row.period_end)}`;
+                if (key === 'charge') return formatCurrencyMinor(row.total_charge_minor, row.currency, units.unitPrefs.locale);
+                if (key === 'status') return row.status;
+                return null;
+              },
+            }}
             data={filings}
             keyExtractor={(row) => row.id}
             tableId="ownership-compliance-filings"
@@ -699,7 +746,7 @@ export default function JurisdictionCompliancePage() {
               'A stable fingerprint of the apportionment above. If the underlying drives change, the digest changes — which is exactly what makes a sealed filing meaningful.',
             )}
           </Text>
-          <p className="mt-2 break-all font-mono text-sm text-cyan-300">{report?.digest || '—'}</p>
+          <Code className={`mt-2 block break-all ${typography.color.secondary}`}>{report?.digest || '—'}</Code>
         </OwnershipPanel>
       </FadeIn>
 
