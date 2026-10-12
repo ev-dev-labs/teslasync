@@ -1311,6 +1311,9 @@
   "entityContext": {
     "title": "Related context"
   },
+  "error": {
+    "loadFailed": "Failed to load data"
+  },
   "export": {
     "jobDrawer": {
       "activeCount": "{{count}} export running",
@@ -2261,7 +2264,9 @@
       "description": "Ask Helix to draft a propose-only paint-color image prompt for this vehicle. Helix only sees the redacted vehicle context (model, trim, current exterior color) — never the display name, VIN, license plate, or location. The draft is never applied automatically; review the proposed image prompt here, then use the existing Color setting below to apply the new paint if you'd like to keep it.",
       "noVehicleHint": "Open a vehicle detail page to enable Helix.",
       "title": "Draft a Helix paint preview"
-    }
+    },
+    "emptyTitle": "No vehicles yet",
+    "loadError": "Failed to load vehicles."
   },
   "voiceMode": {
     "actions": {
