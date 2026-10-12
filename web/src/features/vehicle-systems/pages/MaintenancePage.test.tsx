@@ -722,7 +722,10 @@ describe('MaintenancePage workspace preview scope', () => {
     const previousRecords = [
       makeRecord({ id: 71, vehicle_id: 7, description: 'Retained inspection', notes: 'Retained evidence' }),
     ];
-    h.recordsQuery = makeQuery({ data: previousRecords });
+    const retryItems = vi.fn();
+    const retryRecords = vi.fn();
+    h.itemsQuery = makeQuery({ data: [], refetch: retryItems });
+    h.recordsQuery = makeQuery({ data: previousRecords, refetch: retryRecords });
 
     const view = renderScopedPage();
     fireEvent.click(screen.getByRole('button', { name: 'Inspect service record' }));
@@ -730,13 +733,38 @@ describe('MaintenancePage workspace preview scope', () => {
       data: previousRecords,
       isError: true,
       error: new Error('Previous vehicle records refresh failed'),
+      refetch: retryRecords,
     });
     view.rerenderPage();
 
     const retainedDrawer = screen.getByRole('dialog', { name: 'Retained inspection' });
     expect(within(retainedDrawer).getByText('Retained evidence')).toBeInTheDocument();
     expect(within(retainedDrawer).getByRole('link', { name: 'Vehicle' })).toHaveAttribute('href', '/vehicles/7');
-    expect(screen.getAllByText('Showing retained measurements')).toHaveLength(2);
+    // Retention belongs to each source, not a page-wide copy count: the cost
+    // panel also exposes the embedded operational brief's own retained evidence.
+    for (const title of ['Estimated annual cost', 'Service records']) {
+      const panel = screen.getByRole('heading', { name: title, exact: true }).closest('[data-card]');
+      expect(panel).not.toBeNull();
+      const retry = within(panel as HTMLElement).getByRole('button', { name: /^Retry$/i });
+      const sourceWarning = retry.parentElement;
+      expect(sourceWarning).not.toBeNull();
+      expect(within(sourceWarning as HTMLElement).getByRole('status'))
+        .toHaveTextContent('Showing retained measurements');
+      expect(within(panel as HTMLElement).queryByText(/Can't reach server/i)).not.toBeInTheDocument();
+      fireEvent.click(retry);
+    }
+    expect(retryRecords).toHaveBeenCalledTimes(2);
+    expect(retryItems).not.toHaveBeenCalled();
+
+    const costBrief = screen.getByRole('region', { name: 'Estimated annual cost evidence' });
+    expect(within(costBrief).getByText('Retained evidence')).toBeInTheDocument();
+    expect(costBrief.parentElement).not.toBeNull();
+    expect(within(costBrief.parentElement as HTMLElement).getByRole('status'))
+      .toHaveTextContent('Showing retained measurements');
+    const recordsPanel = screen.getByRole('heading', { name: 'Service records', exact: true }).closest('[data-card]');
+    expect(recordsPanel).not.toBeNull();
+    expect(within(recordsPanel as HTMLElement).getByText('Retained inspection')).toBeInTheDocument();
+    expect(screen.getByRole('dialog', { name: 'Retained inspection' })).toBeInTheDocument();
 
     h.selected.vehicleId = 8;
     h.recordsQuery = makeQuery({
