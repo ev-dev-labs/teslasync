@@ -29,7 +29,7 @@
  *     label, without a duplicate vehicle-scope combobox.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
@@ -42,7 +42,7 @@ import type { UseUnitsResult } from '@/hooks/useUnits';
 vi.mock('@/components/charts', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/components/charts')>();
   const { chartTestDoubles } = await import('@/test/chartTestDoubles');
-  return { ...actual, ...chartTestDoubles };
+  return { ...actual, ...chartTestDoubles, EmbeddedChart: actual.EmbeddedChart };
 });
 
 // ── i18n stub: resolve the fallback (or the key when it IS the template) and
@@ -113,6 +113,9 @@ vi.mock('@/api/hooks/useEnergy', () => ({
 }));
 vi.mock('@/hooks/useSelectedVehicle', () => ({ useSelectedVehicle: vi.fn() }));
 vi.mock('@/hooks/useUnits', () => ({ useUnits: vi.fn() }));
+vi.mock('@/hooks/useChartPalette', () => ({
+  useChartPalette: () => ['var(--series-0)', 'var(--series-1)', 'var(--series-2)', 'var(--series-3)', 'var(--series-4)'],
+}));
 
 // The projection chart uses <ChartContainer annotations=…>, whose annotation
 // hooks reach for a <ToastProvider> (via useMutationToast) and the network.
@@ -133,7 +136,7 @@ const mockSelected = useSelectedVehicle as unknown as ReturnType<typeof vi.fn>;
 const mockUnits = useUnits as unknown as ReturnType<typeof vi.fn>;
 
  
-function makeQuery(over: Record<string, unknown> = {}): any {
+function makeQuery(over: Record<string, unknown> = {}) {
   return {
     data: undefined,
     error: null,
@@ -372,7 +375,7 @@ describe('BatteryDegradationPage — populated (km)', () => {
   it('renders the degradation history table and wires the hooks with the string vehicle id', () => {
     renderPage();
 
-    const table = screen.getByRole('table');
+    const table = screen.getByRole('table', { name: 'Degradation history' });
     for (const header of ['Date', 'Odometer', 'SOH %', 'Capacity', 'Range']) {
       expect(within(table).getByText(header)).toBeInTheDocument();
     }
@@ -431,9 +434,82 @@ describe('BatteryDegradationPage — unit boundary (miles)', () => {
 
     // 20,000 km → 20,000,000 m ÷ 1609.344 ≈ 12,427.42 mi (real converter).
     const expected = `${fmtNumber(convertDistanceFromSI(20000 * 1000, 'mi'))} mi`;
-    expect(within(screen.getByRole('table')).getByText(expected)).toBeInTheDocument();
+    expect(within(screen.getByRole('table', { name: 'Degradation history' })).getByText(expected)).toBeInTheDocument();
     // The km rendering must be gone.
     expect(screen.queryByText('20,000.00 km')).toBeNull();
+  });
+
+  describe('BatteryDegradationPage — modernization evidence', () => {
+    it('exposes every forecast point and both confidence bounds without mutating SI history', () => {
+      renderPage();
+      const table = screen.getByRole('table', { name: 'Health trend & projection — data table' });
+      for (const label of ['Date', 'Actual health %', 'Projected %', 'Lower bound', 'Upper bound']) {
+        expect(within(table).getByRole('columnheader', { name: label })).toBeInTheDocument();
+      }
+      expect(within(table).getAllByRole('row')).toHaveLength(6);
+      const forecast = within(table).getByText('2026-01-01').closest('tr') as HTMLTableRowElement;
+      expect(within(forecast).getAllByRole('cell').map(cell => cell.textContent))
+        .toEqual(['2026-01-01', '—', '87.00%', '84.00%', '90.00%']);
+      expect(HEALTH.history[1].odometer_m).toBe(20_000_000);
+      expect(HEALTH.history[1].capacity_wh).toBe(75_000);
+    });
+
+    it('keeps absent forecast bounds unknown instead of filling an uncertainty band', () => {
+      const health = { ...HEALTH, projections: HEALTH.projections.map(point => ({ ...point })) };
+      Reflect.set(health.projections[1], 'confidence_low', null);
+      Reflect.set(health.projections[1], 'confidence_high', null);
+      mockHealth.mockReturnValue(makeQuery({ data: health }));
+      renderPage();
+      const table = screen.getByRole('table', { name: 'Health trend & projection — data table' });
+      const forecast = within(table).getByText('2026-01-01').closest('tr') as HTMLTableRowElement;
+      expect(within(forecast).getAllByRole('cell').map(cell => cell.textContent))
+        .toEqual(['2026-01-01', '—', '87.00%', '—', '—']);
+    });
+
+    it('labels accessible range readings in the selected display unit', () => {
+      mockUnits.mockReturnValue(unitReturn('mi'));
+      renderPage();
+      const table = screen.getByRole('table', { name: 'Range loss over time — data table' });
+      expect(within(table).getAllByText('310.69 mi')).toHaveLength(4);
+      expect(within(table).getByText('282.72 mi')).toBeInTheDocument();
+      expect(within(table).queryByText(/ km$/)).not.toBeInTheDocument();
+    });
+
+    it.each([
+      { name: 'workspace has no vehicle', vehicle: null, query: {}, message: 'No vehicle selected' },
+      { name: 'initial analytics refresh is paused', vehicle: 7, query: { fetchStatus: 'paused' }, message: 'Battery analytics loading is paused.' },
+    ])('does not assert resolved-empty history when $name', ({ vehicle, query, message }) => {
+      mockSelected.mockReturnValue(selected(vehicle));
+      mockHealth.mockReturnValue(makeQuery(query));
+      renderPage();
+      expect(screen.getAllByText(new RegExp(message)).length).toBeGreaterThanOrEqual(8);
+      expect(screen.getByRole('heading', { name: 'Degradation history' })).toBeInTheDocument();
+      expect(screen.queryByText(/minimum 3 snapshots/)).not.toBeInTheDocument();
+      expect(screen.queryByText('No degradation records found.')).not.toBeInTheDocument();
+      expect(screen.queryByText('Excellent')).not.toBeInTheDocument();
+    });
+
+    it('retains estimates and history after a background refresh failure', () => {
+      mockHealth.mockReturnValue(makeQuery({
+        data: HEALTH, error: new ApiError('refresh failed', 500), isError: true,
+      }));
+      renderPage();
+      expect(metricValue(kpiRegion(), 'Estimated capacity')).toBe('72.5 kWh');
+      expect(screen.getByRole('table', { name: 'Degradation history' })).toBeInTheDocument();
+      expect(screen.getByRole('table', { name: 'Health trend & projection — data table' })).toBeInTheDocument();
+      expect(screen.queryByText('Server error')).not.toBeInTheDocument();
+    });
+
+    it('provides source retry in the summary after an initial fatal failure', () => {
+      const refetch = vi.fn();
+      mockHealth.mockReturnValue(makeQuery({
+        data: undefined, error: new ApiError('initial failure', 500), isError: true, refetch,
+      }));
+      renderPage();
+      fireEvent.click(within(kpiRegion()).getByRole('button', { name: /retry/i }));
+      expect(refetch).toHaveBeenCalledTimes(1);
+      expect(screen.queryByText('Excellent')).not.toBeInTheDocument();
+    });
   });
 });
 
