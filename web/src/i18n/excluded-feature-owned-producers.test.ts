@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { createInstance } from 'i18next'
 import { beforeAll, describe, expect, it } from 'vitest'
+import ts from 'typescript'
 import catalog from './en.json'
 import { authorizedCanonicalAdditions } from './authorized-canonical-recovery.test'
 import { finalFourAdditions, ownerRecoveryAdditions, restoreOwnerRecoverySource } from './authorized-owner-recovery.test'
@@ -1151,6 +1152,165 @@ const sourceHashes = [
 
 const additions = featureOwnedAdditions
 
+// Accepted Phase-4 additions, not a prefix exclusion or a new ownership claim:
+// sticky-control-localization (1), watch-key-capability (3 + 2), and
+// signal-catalog-canonical-repair (6). Subtracting these exact pairs recovers
+// the original 28257-leaf digest below without changing any predecessor value.
+const interveningAdditions = [
+  ['a11y.scrollToTop', '{{region}} — scroll to top'],
+  ['watch.capability.notConfigured', 'Watch access is not configured'],
+  ['watch.capability.description', 'Watch readings require a wearable API key in this session. Manage API keys and open your configured watch link to enable readings. Retained readings are not refreshed until access is configured.'],
+  ['watch.capability.configure', 'Manage API keys'],
+  ['watch.capability.readError', 'Watch access could not be checked'],
+  ['watch.capability.readErrorDescription', 'Watch access is unknown because browser session storage could not be read or saved. Retry after storage becomes available. Retained readings remain visible.'],
+  ['widget.signalCatalog.destination', 'Destination: {{destination}}'],
+  ['widget.signalCatalog.valueKind', 'Value kind'],
+  ['widget.signalCatalog.metadataUnavailable', 'Unit and description are not provided by this catalog.'],
+  ['widget.signalCatalog.totalSamples', 'Total observations: {{count}}'],
+  ['widget.signalCatalog.vehicleCount', 'Vehicles observed: {{count}}'],
+  ['widget.signalCatalog.lastSeen', 'Last seen: {{timestamp}}'],
+] as const
+
+type ProducerProjection = {
+  bindings: string[]
+  calls: { call: string; controls: string[] }[]
+}
+
+// Only the diagnosed source-wide fingerprints use this bounded projection.
+// All 291 original path/hash cases remain below. Unchanged sources still use
+// their original byte digests. Changed sources pin real call ASTs, including
+// key/default/arity/options, translator origins, and enclosing branch inputs.
+// No default/catalog-derived expectation or dynamic source baseline is used.
+function producerProjection(file: string, text: string): ProducerProjection {
+  const tree = ts.createSourceFile(file, text, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX)
+  const printer = ts.createPrinter({ removeComments: true, newLine: ts.NewLineKind.LineFeed })
+  const print = (node: ts.Node) => printer.printNode(ts.EmitHint.Unspecified, node, tree).trim()
+  const projection: ProducerProjection = { bindings: [], calls: [] }
+  const controls = (call: ts.CallExpression): string[] => {
+    const result: string[] = []
+    let child: ts.Node = call
+    for (let parent = child.parent; parent; child = parent, parent = parent.parent) {
+      if (ts.isIfStatement(parent)) {
+        result.push(`if:${print(parent.expression)}:${child === parent.thenStatement ? 'then' : child === parent.elseStatement ? 'else' : 'condition'}`)
+      } else if (ts.isConditionalExpression(parent)) {
+        result.push(`conditional:${print(parent.condition)}:${child === parent.whenTrue ? 'true' : child === parent.whenFalse ? 'false' : 'condition'}`)
+      } else if (ts.isBinaryExpression(parent)
+        && [ts.SyntaxKind.AmpersandAmpersandToken, ts.SyntaxKind.BarBarToken, ts.SyntaxKind.QuestionQuestionToken].includes(parent.operatorToken.kind)) {
+        result.push(`binary:${ts.tokenToString(parent.operatorToken.kind)}:${child === parent.right ? print(parent.left) : 'left'}`)
+      } else if (ts.isFunctionDeclaration(parent) || ts.isFunctionExpression(parent) || ts.isArrowFunction(parent)) {
+        result.push(`parameters:${parent.parameters.map(print).join(', ')}`)
+      }
+    }
+    return result
+  }
+  const visit = (node: ts.Node) => {
+    if (ts.isImportDeclaration(node) && ts.isStringLiteral(node.moduleSpecifier)
+      && ['react-i18next', 'i18next'].includes(node.moduleSpecifier.text)) {
+      projection.bindings.push(print(node))
+    }
+    if (ts.isVariableDeclaration(node) && node.initializer && ts.isCallExpression(node.initializer)
+      && ts.isIdentifier(node.initializer.expression)
+      && ['useTranslation', 'getFixedT', 'useUnits', 'useNumberFormatting'].includes(node.initializer.expression.text)) {
+      projection.bindings.push(print(node))
+    }
+    if (ts.isCallExpression(node) && (ts.isIdentifier(node.expression) && node.expression.text === 't'
+      || ts.isPropertyAccessExpression(node.expression) && node.expression.name.text === 't')) {
+      projection.calls.push({ call: print(node), controls: controls(node) })
+    }
+    ts.forEachChild(node, visit)
+  }
+  visit(tree)
+  return projection
+}
+
+function projectionDigest(projection: ProducerProjection): string {
+  return createHash('sha256').update(JSON.stringify(projection)).digest('hex')
+}
+
+// Explicit failing-path allowlist, not permission to rebaseline arbitrary sources.
+// Tuple: path, translator/formatter binding count, actual call count, AST digest.
+// The 1200 real calls retain every applicable frozen canonical call (checked
+// against the independent literal producerCalls fixture), plus the accepted
+// Watch read-error call. Presentation/type migrations are outside this i18n
+// contract; the original sourceHashes fixture is intentionally not rewritten.
+const acceptedProducerProjections: readonly (readonly [string, number, number, string])[] = [
+  ["web/src/api/hooks/useWatch.ts", 3, 4, "f71981119f3cabbcc7ad7d9e0c9f6898dc57f36d585534a9ddfeb3c329b443f6"],
+  ["web/src/features/admin/components/ApiLogsEvidenceTable.tsx", 6, 48, "dbbe440f44ae0c1942bf1869a032c064a2ee6ae864aeed37f8cbedaa425c197b"],
+  ["web/src/features/admin/components/continuation-admin-1/SchemaBreakdown.tsx", 4, 10, "d5dc5328ef20047570949c5b2dea86aa7b64c0f6bf7b7e53db0f6f13ce1e1752"],
+  ["web/src/features/admin/components/continuation-admin-1/SchemaFingerprints.tsx", 4, 14, "b36bd595f23462b18615df67d4ac4eadb7d5a4e8e581bff1e3374c1d3db68d67"],
+  ["web/src/features/admin/components/continuation-admin-1/SchemaKpis.tsx", 3, 20, "2f9be4640974a5a92f6526c6d2f9725d37c9d5a9dfecb619facaf6ad766ac1b4"],
+  ["web/src/features/admin/components/continuation-admin-1/SlowQuerySummary.tsx", 3, 29, "ec398240bfec61b78fd0e7459ab23d45064f7b1c8661712df8dd740c5846a598"],
+  ["web/src/features/admin/components/continuation-admin-2/AuditExpandedDetail.tsx", 2, 8, "fe0788d9720d27326a268ec79bae90c1230c0acb2ad64159967face7565ab1e5"],
+  ["web/src/features/admin/components/continuation-admin-3/CoverageCategory.tsx", 3, 13, "f9b0c18978ba4af0c62a46de49568196f4baaa8ba37169d31cc2e39152d995a4"],
+  ["web/src/features/admin/components/operationalbrief-a-g/AdminSummary.tsx", 2, 8, "a7964345e78b65cf55e88a3bb99903d9210249800a54c22ca68117f8407f9b51"],
+  ["web/src/features/admin/components/operationalbrief-a-g/DevToolsBrief.tsx", 2, 20, "4dd3e763cc98585bea3c22bf330dfea497aff15001f7e703118bf5b6ca6f3d30"],
+  ["web/src/features/admin/components/operationalbrief-a-g/FleetAPIBrief.tsx", 0, 12, "953a3a3c37fd1fc65be104f49e09bc127b6ea5d41ca7a49a66600b928ca1bb1c"],
+  ["web/src/features/admin/components/operationalbrief-r-z/RbacOperationalBrief.tsx", 2, 11, "acf0fab9b4e2e0ee6f2a9dd0d48629dd3a516c955e9ba16dc6d7676ca05daab1"],
+  ["web/src/features/admin/components/operationalbrief-r-z/SubjectsOperationalBrief.tsx", 2, 10, "33a65da8aaf0597f7278616f19fe7fb347ab6a8a90bea7fca374dea849dcebae"],
+  ["web/src/features/admin/components/operationalbrief-r-z/briefSource.ts", 1, 5, "78914bb0f9a45de3c236caae51118e7657b03416278b642e83acd56e404916e0"],
+  ["web/src/features/admin/components/statstrip-api-quality/ApiLogsSummary.tsx", 2, 21, "f46c90e880b72977d0653163c8334c82c02e8444ebfd4fc6b336891af39b32f2"],
+  ["web/src/features/admin/components/statstrip-coverage-flags-secrets/SecretRotationOperationalBrief.tsx", 4, 23, "9cc641b9ad7207e59c75e12e2413c9fae344b501e949d3259fde1b97e267c714"],
+  ["web/src/features/admin/components/statstrip-ingest-dlq-redis/briefSourceStatus.ts", 0, 6, "9b7fc0d02b12c9a6d52a30407aa45d0c12bf0cc7ab9dbb15ac987de9bd1aa6b9"],
+  ["web/src/features/admin/components/statstrip-ingest-dlq-redis/ingestMetrics.ts", 0, 14, "5fe42eeaeaf12e71cd36843c0b9865e2818d001c0844a5e5fcaf7af43055f9bd"],
+  ["web/src/features/admin/components/statstrip-ingest-dlq-redis/redisMetrics.ts", 0, 12, "190b0fd8434f3dd1d9ff1e155274677282f6baa38f22db9af95f9c9f910a7641"],
+  ["web/src/features/admin/components/statstrip-performance-storage/DiskForecastSummary.tsx", 3, 22, "b365e3dc53962c46270e97677b740f03604242a2b3a906aa5d5cd7676a010596"],
+  ["web/src/features/admin/pages/ApiPlaygroundPage.tsx", 2, 32, "d1efc4b14eaea9e692046464bf6b824eda1df670dede211cc9d9286ed04543fb"],
+  ["web/src/features/admin/pages/SchemaDriftPage.tsx", 2, 8, "c166c5ccedb46850e9a3a7467786c618ea3d1b8093015591e292a206e7e7e455"],
+  ["web/src/features/analytics/components/firmware-impact-modernization/FirmwareImpactChart.tsx", 2, 10, "0b81b79431c3356034ed39f7c3b1194827ed9040ecb3a4f040e2990d328cd3ae"],
+  ["web/src/features/analytics/components/firmware-impact-modernization/FirmwareImpactDetails.tsx", 3, 11, "945f2c128b810b59c25a000fc6bd340a15f6f833e6f7702015ce6c7a56795129"],
+  ["web/src/features/analytics/components/operationalbrief-n-z/FsdOperationalPanel.tsx", 4, 21, "65ce45e616e6e12e9869898a4ff333f157c2291ef29c4cdbd70708c4ecd5279d"],
+  ["web/src/features/analytics/components/operationalbrief-n-z/StatisticsBatteryBrief.tsx", 4, 18, "2af1c04d65675ad8f7dfe52efea9fe67a35023ab63a5ba7e610152a9e21494bd"],
+  ["web/src/features/analytics/components/operationalbrief-n-z/StatisticsMileageBrief.tsx", 3, 20, "6bb6b3357bca400cc32cc4e2b0ef88e183317691db26e444677ef29dc5afee72"],
+  ["web/src/features/analytics/components/operationalbrief-n-z/StatisticsPeriodBrief.tsx", 3, 23, "9290bea85d3ae5b5e5e55e510170b8a6a4a192eb59bcb7494aeee87db7b8d60e"],
+  ["web/src/features/analytics/components/operationalbrief-n-z/TrueCostEvidenceLedger.tsx", 3, 28, "7e35fe4c9845171a3720c63c06fa5bd296a887b1a4e8a8ab7be244ebd2fc64bd"],
+  ["web/src/features/analytics/components/true-cost-modernization/TrueCostFixedLedger.tsx", 3, 9, "6bf88854dfdb04423ac653a65d11e01b27685c268176751b5c57f0b0243ff894"],
+  ["web/src/features/analytics/components/true-cost-modernization/TrueCostLedgerColumns.tsx", 1, 5, "7715d93fea381bb393c64c28a2e69e5f85cad208d8ad24458bb3e20a26c577b0"],
+  ["web/src/features/analytics/components/true-cost-modernization/TrueCostLedgerForm.tsx", 2, 5, "45b7494560eca6c363f8fd3432235e95bf80d94c6c47c8e897e0f82810a230f9"],
+  ["web/src/features/analytics/components/weekly-digest-modernization/FsdPanel.tsx", 4, 15, "cd24102d340b23c39503d6ee643eb7832bbdf66fd13f12f498313c1cf6d7bc3d"],
+  ["web/src/features/battery/components/energy-products-modernization/CapBadge.tsx", 2, 2, "693d37dd2d469266527760f6a40682c1c22ba965e8d88652cfdb6b28920b63e1"],
+  ["web/src/features/battery/components/energy-products-modernization/EnergySiteCard.tsx", 3, 15, "5298c81b63119a8e9ceda7799c9a4253da4dfae51ba211387a9b38755182b283"],
+  ["web/src/features/battery/components/energy-products-modernization/helpers.ts", 0, 5, "932f9a925b6d53de7d6911c7527b9823f95dc5f80af0a6b7d3d90f4cdb4922eb"],
+  ["web/src/features/charging/components/ChargingEvidenceTable.tsx", 4, 28, "f4925c58953804ba619831410d396ecb42f731b0e91d3f738b9370d3e247031b"],
+  ["web/src/features/charging/components/charging-list/ChargingInsights.tsx", 2, 12, "549090a1ae30db52fb4bbff9de3079750657fed7178f90721e4e32e4941488c4"],
+  ["web/src/features/dashboard/components/operationalbrief-all/DashboardSourceBrief.tsx", 2, 6, "b89e9e3e28e27ed7db6ea81ff7468000a4087826eb7c4bbed1753660a0bf309b"],
+  ["web/src/features/dashboard/pages/DashboardPage.tsx", 6, 68, "4fb5c391a8e481aa1837a4bf12456999af0d7720ffa2ade2c8fdea5972c01cd1"],
+  ["web/src/features/driving/components/DrivesEvidenceTable.tsx", 3, 81, "a9fd58d773e69499a7891eba22ee7a95b1ecf0d85d177a04d04c9a4fb02e03eb"],
+  ["web/src/features/driving/components/continuation-driving-secondary/EnergyFlowDiagram.tsx", 2, 4, "cd6b25183183079e1599b52ee3d3b4d24b102a7e2b410a1256784b582d7ed04d"],
+  ["web/src/features/driving/components/drives-orchestrator/DrivesEvidenceEmpty.tsx", 0, 5, "95b37ee55393be6d2e11b15bcfc87ab8175b51e3f7f1d0134f8ce68648484a58"],
+  ["web/src/features/driving/components/drives-orchestrator/DrivesEvidenceHeading.tsx", 0, 10, "a29920d30a5231e1bef6be3f3f25315f4b52d96c5db3b2be8e68a07b3af57598"],
+  ["web/src/features/driving/components/drives-orchestrator/DrivesMobileFilters.tsx", 0, 3, "553e5e8ef2317e002413e81a7ded95ff3089f94c010521330a3025d578ad5a64"],
+  ["web/src/features/driving/components/drives-orchestrator/DrivesStickySummary.tsx", 0, 4, "3a9b3d8e98fc4a13c31c43ac6fb64d6d7e7dc8fb93e14ca1f687863ed34365c8"],
+  ["web/src/features/driving/components/drives-orchestrator/DrivesTrendAnalysis.tsx", 0, 4, "0790251daebab039856c178140c00686bdb5534d02c129efc952f9348151079d"],
+  ["web/src/features/driving/components/drivetrain-health-modernization/MethodologyPanel.tsx", 3, 18, "6239704ddb416e7332731d84cf7884b3ec36a659068759aecb65e6908004f80a"],
+  ["web/src/features/driving/components/drivetrain-health-modernization/StatorHistory.tsx", 3, 16, "b731fc98532da813984c4fbae1b50198ed39ffd0cb2f691aeae6019dcf54e9cb"],
+  ["web/src/features/driving/components/driving-dynamics-modernization/LiveMotorStatus.tsx", 3, 20, "eb5f7a9d8d9bea724444e4c5953064323c643df168299b54136b7388688e4bdf"],
+  ["web/src/features/driving/components/efficiency-modernization/EfficiencyStats.tsx", 3, 8, "679d579cacd19df9d357de1d1693ebf3870c53fa69a8430e20422737280fc6dc"],
+  ["web/src/features/driving/components/fsd-insights/FsdObservatoryJournalTable.tsx", 3, 18, "5c3a748e65ffedd555a966b3b377e639a401cfe00ad2615b27c210ad178b7545"],
+  ["web/src/features/driving/components/operationalbrief-a-m/ArrivalEvidenceBrief.tsx", 2, 24, "1cbbb3b68284de3d8a820e761c10baa7f9754ff8c3c6f29d93ba59c547b71f63"],
+  ["web/src/features/driving/components/operationalbrief-a-m/DepartureEvidenceBrief.tsx", 3, 29, "1602b20f11c88cc6021adec29fd316da5ebf70841679808998f739f92f2468bf"],
+  ["web/src/features/driving/components/operationalbrief-a-m/DestinationEvidenceBrief.tsx", 3, 19, "633364778ad41ec0a1f77fe511c39a5b1c566ff5f0643e0178c7a1becc2096a7"],
+  ["web/src/features/driving/components/operationalbrief-a-m/DriveDnaEvidenceBrief.tsx", 3, 22, "b377789c34b3258bf75c6b6b89f156c6420f810a1a689bcbd2aa87f5ffbe938b"],
+  ["web/src/features/driving/components/operationalbrief-a-m/EfficiencyEvidenceBrief.tsx", 3, 15, "c09e09b82e20b29ce27c1cb25845fc14da9a23c84d96fb86f257198581df0dd7"],
+  ["web/src/features/driving/components/operationalbrief-a-m/FsdEvidenceBrief.tsx", 3, 20, "9de86e1a60d149a2a45dca481d7dbb93d5364a01092d380a3f7c20f0bf6384d6"],
+  ["web/src/features/driving/components/operationalbrief-a-m/JourneyEvidenceBrief.tsx", 2, 30, "7825287e98d104695abd10eda5a93380c84f970994c0c8c80436e8eb8acc11f8"],
+  ["web/src/features/driving/components/operationalbrief-a-m/ScoreEvidenceBrief.tsx", 0, 13, "bed0dd796a6da411041e39b89c8f9c1ec72a85c00e36023980728381c9dd5d94"],
+  ["web/src/features/driving/components/score-orchestrator/ScoreHeroSection.tsx", 0, 8, "3b66d49f2a41bdaaae40d2c4d7aa4f362e8d87ce6d5220e14864621df7776091"],
+  ["web/src/features/driving/components/score-orchestrator/ScoreKpiSection.tsx", 0, 6, "18df2bd12343ec2a0d5708aa347775807d900f916d935525635b60f9602789de"],
+  ["web/src/features/driving/hooks/useDrivesListPageCollections.ts", 0, 13, "1180144cfe175094329173133e5cc9de40d46a83810387b87892b6ee66192248"],
+  ["web/src/features/driving/pages/DriveDetailPage.tsx", 2, 21, "208fd5482d6a6cc4260300c5e221b8282654ead034136ec1f5e8f958875209ae"],
+  ["web/src/features/driving/pages/DriveScorePage.tsx", 0, 6, "e047613499fa7df26af26285cf4ff9c5bbeb419cf111e2aec2eddd8053c9ecfc"],
+  ["web/src/features/notifications/components/NotificationInboxDelivery.tsx", 2, 5, "e2ea33600b46a8343c4602ab0561762cb73d75b182e64925695b6204d6d37d53"],
+  ["web/src/features/notifications/components/NotificationInboxDetails.tsx", 3, 19, "955b4cc728a1a38c62cd673c920eea116f2a93bf3fa24774094c77df1a0ee224"],
+  ["web/src/features/settings/components/statstrip-privacy/PrivacyOperationalBrief.tsx", 2, 23, "b960f3fbc124f764ed2a9c2e5b39e70c20d44c2dbeb2aaa529988f8742e6af84"],
+  ["web/src/features/settings/components/twofactor/TotpCopyAction.tsx", 2, 1, "8e81267ca1cd77583387268eb406b87cc33aa0297d4bb86eefb00141bcbe646f"],
+  ["web/src/features/system/components/operationalbrief-all/SystemSummaryBrief.tsx", 2, 6, "07ee7ea1f0b3431c022bf7ce89a44706f17648acfe2b2dcdaf1e86cce5100b7e"],
+  ["web/src/features/system/components/statstrip-command-summaries/commandSummaryMetrics.tsx", 1, 17, "aafd422cab0e5ba4f0f127839d6c19609771b381fda6a0361f83e1e6b197a89e"],
+  ["web/src/features/telemetry/components/statstrip-correlation/CorrelationStatStrip.tsx", 3, 26, "32deed7cc270ff7e7f56d65d8e4f5195fb223afb74c5dabd9c6ff8b5e9a3f170"],
+  ["web/src/features/telemetry/components/statstrip-signals-mqtt/signalsSummary.ts", 1, 21, "9d6409d56e3845e1e082afdc8711ef6da36a378edeebea963704b3a2d4b90f7b"],
+  ["web/src/features/vehicles/components/modernization/VehicleDetailHistory.tsx", 2, 10, "0dd0aad3aacb755e219a898f8041bae26565dee5789d4f9388ebab9ab7e16139"],
+  ["web/src/features/vehicles/components/modernization/VehicleDetailSkeleton.tsx", 2, 4, "dfa6d107e4d1202d060ac8992e32c10745ef1c137e51e38b0b4f4d3e6c686e24"],
+]
+
 const remaining = ['error.request.title', 'error.unavailable.title', 'error.unsupported.title']
 const generated = import.meta.glob<{ default: Json }>('./en/locale-*.json', { eager: true })
 const resources = [shell, ...Object.values(generated).map(module => module.default)]
@@ -1181,6 +1341,47 @@ beforeAll(async () => {
 })
 
 describe('excluded806 feature-owned actual producer canonical defaults', () => {
+  it('rejects key default option namespace arity multiplicity and gate mutations in producer projections', () => {
+    const fixture = 'import { useTranslation } from "react-i18next"; function Example(enabled: boolean, count: number) { const { t } = useTranslation("translation"); if (enabled) return t("example.summary", "{{count}} results", { count, defaultValue: "{{count}} results" }); return t("example.disabled", "Disabled"); }'
+    const expected: ProducerProjection = {
+      bindings: [
+        'import { useTranslation } from "react-i18next";',
+        '{ t } = useTranslation("translation")',
+      ],
+      calls: [
+        {
+          call: 't("example.summary", "{{count}} results", { count, defaultValue: "{{count}} results" })',
+          controls: ['if:enabled:then', 'parameters:enabled: boolean, count: number'],
+        },
+        {
+          call: 't("example.disabled", "Disabled")',
+          controls: ['parameters:enabled: boolean, count: number'],
+        },
+      ],
+    }
+    expect(producerProjection('fixture.tsx', fixture)).toEqual(expected)
+    const mutations = [
+      ['key', '"example.summary"', '"example.other"'],
+      ['default', '"{{count}} results",', '"wrong default",'],
+      ['option', '{ count, defaultValue:', '{ count: count + 1, defaultValue:'],
+      ['namespace', 'useTranslation("translation")', 'useTranslation("settings")'],
+      ['arity', ', { count, defaultValue: "{{count}} results" }', ''],
+      ['multiplicity', 'return t("example.disabled", "Disabled")', 'return t("example.disabled", "Disabled") + t("example.disabled", "Disabled")'],
+      ['gate', 'if (enabled)', 'if (!enabled)'],
+      ['input', 'count: number)', 'count: number = 0)'],
+    ] as const
+    for (const [name, original, replacement] of mutations) {
+      expect(fixture.split(original), name).toHaveLength(2)
+      const mutated = producerProjection('fixture.tsx', fixture.replace(original, replacement))
+      expect(mutated, name).not.toEqual(expected)
+      expect(projectionDigest(mutated), name).not.toBe(projectionDigest(expected))
+    }
+    // Whitespace/comments and unrelated presentation declarations are not
+    // producer behavior, unlike every concrete mutation above.
+    expect(producerProjection('fixture.tsx', `// accepted presentation edit\nconst className = "min-w-0";\n${fixture.replace('if (enabled)', 'if  ( enabled )')}`))
+      .toEqual(expected)
+  })
+
   it.each(copyOwnerAdditions)('preserves the exact accepted copy split %s', (key, value) => {
     expect(nested(catalog, key)).toBe(value)
   })
@@ -1203,7 +1404,7 @@ describe('excluded806 feature-owned actual producer canonical defaults', () => {
     }
     for (const ns of namespaces) {
       for (const count of hasCount ? [0, 1, 2, 99] : [undefined]) {
-        const controls = { ...options, ...(count === undefined ? {} : { count }) }
+        const controls: Record<string, string | number> = { ...options, ...(count === undefined ? {} : { count }) }
         const expected = value.replace(/\{\{(\w+)\}\}/g, (_, name: string) => String(controls[name]))
         expect(english.t(key, { ...controls, ns, returnObjects: true })).toBe(expected)
       }
@@ -1223,18 +1424,27 @@ describe('excluded806 feature-owned actual producer canonical defaults', () => {
       expect(nested(catalog, key)).toBe(value)
       keys.add(key)
     }
+    expect(interveningAdditions).toHaveLength(12)
+    for (const [key, value] of interveningAdditions) {
+      expect(keys.has(key), key).toBe(false)
+      expect(nested(catalog, key), key).toBe(value)
+      expect(resources.some(resource => nested(resource, key) === value), key).toBe(true)
+      expect(english.t(key, { skipInterpolation: true, returnObjects: true }), key).toBe(value)
+      keys.add(key)
+    }
     const oldEntries = leaves(catalog).filter(([key]) => !keys.has(key))
       .sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0)
     expect(oldEntries).toHaveLength(28257)
     expect(createHash('sha256').update(JSON.stringify(oldEntries)).digest('hex'))
       .toBe('890c0369385274774b8b670dbaa98036c4f0da7bec18213b6f78d35c372e90c6')
-    expect(leaves(catalog)).toHaveLength(31095)
+    expect(leaves(catalog)).toHaveLength(31095 + interveningAdditions.length)
     expect(catalog.settings.title).toBe('Settings')
     expect(catalog.pwa).toMatchObject(shell.pwa)
   })
 
-  it.each(sourceHashes)('keeps the frozen producer and input bytes unchanged: %s', (path, sha256) => {
-    let source = readFileSync(resolve(process.cwd(), '..', path))
+  it.each(sourceHashes)('preserves frozen producer contracts across accepted source modernization: %s', (path, sha256) => {
+    const actualSource = readFileSync(resolve(process.cwd(), '..', path), 'utf8')
+    let source = Buffer.from(actualSource)
     source = Buffer.from(restoreOwnerRecoverySource(path, source.toString('utf8')))
     for (const [file, key, oldKey, value, count] of copyOwnerSourceSplits) {
       if (file !== path) continue
@@ -1246,11 +1456,26 @@ describe('excluded806 feature-owned actual producer canonical defaults', () => {
       expect(text.split(call)).toHaveLength(count + 1)
       source = Buffer.from(text.replaceAll(call, `t('${oldKey}'${args}`))
     }
-    expect(createHash('sha256').update(source).digest('hex')).toBe(sha256)
+    const accepted = acceptedProducerProjections.find(([file]) => file === path)
+    if (accepted) {
+      const [, bindingCount, callCount, digest] = accepted
+      const projection = producerProjection(path, actualSource)
+      expect(projection.bindings, path).toHaveLength(bindingCount)
+      expect(projection.calls, path).toHaveLength(callCount)
+      expect(projectionDigest(projection), path).toBe(digest)
+    } else {
+      expect(createHash('sha256').update(source).digest('hex')).toBe(sha256)
+    }
   })
 
   it('resolves only the exact three formerly missing titles without new suppressions', () => {
     expect(sourceHashes).toHaveLength(291)
+    expect(acceptedProducerProjections).toHaveLength(75)
+    expect(new Set(acceptedProducerProjections.map(([file]) => file)).size).toBe(75)
+    expect(acceptedProducerProjections.reduce((count, [, , calls]) => count + calls, 0)).toBe(1200)
+    for (const [file] of acceptedProducerProjections) {
+      expect(sourceHashes.some(([path]) => path === file), file).toBe(true)
+    }
     expect(baseline).toEqual([])
     expect(runtimeManifest.missing).toEqual([])
     expect(usageManifest.knownMissingKeys).toEqual([])
