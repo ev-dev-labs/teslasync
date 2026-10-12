@@ -9,9 +9,12 @@ import { useDataState } from '@/hooks/useDataState';
 import { FadeIn } from '@/components/motion';
 import { NoVehicleSelected } from '@/features/onboarding/components/NoVehicleSelected';
 import { useFormatting } from '@/hooks/useFormatting';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useRangeState } from '@/hooks/useRangeState';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
+import { tzAbbreviation } from '@/lib/dateFormat';
+import { useTimezone } from '@/lib/timezone';
 
 import {
   ColdStartMethodology,
@@ -35,25 +38,34 @@ export default function ColdStartPage() {
   const { vehicleId } = useSelectedVehicle();
   const vehicleIdStr = vehicleId != null ? String(vehicleId) : undefined;
   const { formatCurrency, costPerKwh } = useFormatting();
-  const { start, end } = useRangeState({
+  const timezone = useTimezone('vehicle');
+  const { formatDateTime } = useDateFormat('vehicle');
+  const { startInstant, endInstantExclusive } = useRangeState({
     persistKey: 'cold-start.range',
     defaultPresetId: 'all',
+    timezone,
   });
 
   const drivesQuery = useDrives(vehicleIdStr, {
-    start,
-    end,
+    start: startInstant,
+    end: endInstantExclusive,
     limit: DRIVE_WINDOW_LIMIT,
   });
   const drives = useMemo(() => drivesQuery.data ?? [], [drivesQuery.data]);
   const sourceState = useDataState(drivesQuery, { provenance: 'historical' });
   const summary = useMemo(() => summarizeColdStarts(drives), [drives]);
   const penaltyCost =
-    summary.totalPenaltyWh != null && costPerKwh != null && costPerKwh > 0
+    summary.totalPenaltyWh != null &&
+    Number.isFinite(summary.totalPenaltyWh) &&
+    costPerKwh != null &&
+    Number.isFinite(costPerKwh) &&
+    costPerKwh > 0
       ? (summary.totalPenaltyWh / 1_000) * costPerKwh
       : null;
   const penaltyCostLabel =
-    penaltyCost != null ? formatCurrency(penaltyCost) : null;
+    penaltyCost != null && Number.isFinite(penaltyCost)
+      ? formatCurrency(penaltyCost)
+      : null;
 
   if (vehicleId == null) {
     return (
@@ -86,7 +98,14 @@ export default function ColdStartPage() {
           summary={summary}
           penaltyCostLabel={penaltyCostLabel}
           {...sectionState}
-          scope={t('coldStart.brief.window', '{{start}}–{{end}}; returned selected-window drives', { start, end })}
+          scope={t(
+            'coldStart.brief.window',
+            '{{start}}–{{end}}; returned selected-window drives',
+            {
+              start: `${formatDateTime(startInstant)} ${tzAbbreviation(startInstant, timezone)}`,
+              end: `${formatDateTime(endInstantExclusive)} ${tzAbbreviation(endInstantExclusive, timezone)}`,
+            },
+          )}
           retained={sourceState.status === 'stale' || sourceState.refreshError != null}
         />
       </FadeIn>
