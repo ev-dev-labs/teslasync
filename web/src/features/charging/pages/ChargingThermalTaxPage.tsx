@@ -40,9 +40,9 @@ export default function ChargingThermalTaxPage() {
   const sessionOptions = useMemo(
     () => sessions.map(session => ({
       value: String(session.id),
-      label: `${formatDateShort(session.started_at)} \u00b7 ${session.charger_type ?? t('chargingThermalTax.unknownCharger', 'Unknown charger')}`,
+      label: `${formatDateShort(session.started_at, { locale: i18n.language })} \u00b7 ${session.charger_type ?? t('chargingThermalTax.unknownCharger', 'Unknown charger')}`,
     })),
-    [sessions, t],
+    [sessions, t, i18n.language],
   );
   const chartData = useMemo(
     () => thermalPowerRows(telemetryQuery.data ?? [], i18n.language),
