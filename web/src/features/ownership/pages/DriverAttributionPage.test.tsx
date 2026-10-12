@@ -272,3 +272,112 @@ describe('DriverAttributionPage — confirm-gated delete', () => {
     expect(removeButton('Alex')).not.toBeDisabled();
   });
 });
+
+describe('DriverAttributionPage — preserved attribution presentation', () => {
+  it('keeps an unrecognized verdict distinct from a weak separation claim', () => {
+    mockReport.mockReturnValue(makeQuery(makeReport()));
+    renderPage();
+    const interpretation = card('Interpretation');
+    expect(within(interpretation).getByText('unlabelled')).toBeInTheDocument();
+    expect(within(interpretation).getByText('Unknown')).toBeInTheDocument();
+    expect(interpretation).not.toHaveTextContent('Behaviour is too similar');
+    expect(mockAssign().mutate).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['strong', 'Clusters are well separated'],
+    ['moderate', 'Clusters overlap somewhat'],
+    ['weak', 'Behaviour is too similar'],
+  ])('retains the existing explanation for a known verdict %s', (verdict, explanation) => {
+    mockReport.mockReturnValue(makeQuery({ ...makeReport(), separation_verdict: verdict }));
+    renderPage();
+    expect(card('Interpretation')).toHaveTextContent(explanation);
+    expect(within(card('Interpretation')).queryByText('Unknown')).not.toBeInTheDocument();
+  });
+
+  it('sorts raw cluster values only on request and retains every specialist column', () => {
+    const report = makeReport(12345);
+    const first = report.clusters![0];
+    report.clusters = [
+      first,
+      { ...first, cluster_id: 1, driver_name: 'Second anonymous cluster', drive_count: 9, distance_m: 5000 },
+    ];
+    mockReport.mockReturnValue(makeQuery(report));
+    renderPage();
+    const table = within(card('Cluster characteristics')).getByRole('table');
+    const rows = () => within(table).getAllByRole('row').slice(1);
+    expect(rows()[0]).toHaveTextContent('Inferred Cost Cluster');
+    fireEvent.click(within(table).getByRole('button', { name: 'Drives' }));
+    expect(rows()[0]).toHaveTextContent('Second anonymous cluster');
+    fireEvent.click(within(table).getByRole('button', { name: 'Drives' }));
+    expect(rows()[0]).toHaveTextContent('Inferred Cost Cluster');
+    for (const name of ['Distance', 'Efficiency', 'Avg speed', 'Regen share', 'Night share', 'Aggression', 'Energy cost share', 'Cohesion']) {
+      expect(within(table).getByRole('columnheader', { name })).toBeInTheDocument();
+    }
+    const meter = within(rows()[0]).getByRole('progressbar', { name: 'Aggression' });
+    expect(meter).toHaveAttribute('aria-valuenow', '25');
+    expect(meter).toHaveAttribute('aria-valuemax', '100');
+    expect(rows()[0]).toHaveTextContent('/100');
+    expect(mockAssign().mutate).not.toHaveBeenCalled();
+  });
+
+  it('keeps mobile actions and all original row fields reachable through the shared detail view', () => {
+    const dimensions = vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({
+      width: 375, height: 300, top: 0, left: 0, right: 375, bottom: 300, x: 0, y: 0,
+      toJSON: () => ({}),
+    });
+    const originalObserver = globalThis.ResizeObserver;
+    class MobileResizeObserver implements ResizeObserver {
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    }
+    globalThis.ResizeObserver = MobileResizeObserver;
+    try {
+      const report = makeReport(12345);
+      report.fingerprints = [{
+        drive_id: 42, started_at: '2026-01-01T00:00:00Z', distance_m: 12000,
+        duration_s: 3600, features: [{
+          code: 'regen', label: 'Regen trait', raw_value: 0.3, si_unit: 'ratio',
+          normalised: 0.3, weight: 1,
+        }],
+        cluster_id: 0, driver_profile_id: null, driver_name: null, source: 'inferred',
+        confidence_pct: 55, distance_to_own_centroid: 0.1,
+        distance_to_next_centroid: 0.2, ambiguous: true,
+      }];
+      report.total = 101;
+      mockReport.mockReturnValue(makeQuery(report));
+      renderPage();
+      const clusters = card('Cluster characteristics');
+      fireEvent.click(within(clusters).getByRole('button', { name: 'Quick view' }));
+      const clusterDetails = screen.getByRole('dialog');
+      expect(clusterDetails).toHaveTextContent('Energy cost share');
+      expect(clusterDetails).toHaveTextContent('$123.45');
+      expect(clusterDetails).toHaveTextContent('Cohesion');
+      expect(clusterDetails).toHaveTextContent('Regen share');
+      fireEvent.click(within(clusterDetails).getByRole('button', { name: 'Close' }));
+
+      const fingerprints = card('Drive fingerprints');
+      expect(fingerprints).toHaveTextContent('Showing 1 of 101 drives');
+      fireEvent.click(within(fingerprints).getByRole('button', { name: 'Quick view' }));
+      const fingerprintDetails = screen.getByRole('dialog');
+      for (const text of ['Drive', 'Attributed to', 'Confidence', 'Distance', 'Duration', 'Separation margin', 'Dominant traits', 'Actions', 'inferred', 'ambiguous', 'Regen trait']) {
+        expect(fingerprintDetails).toHaveTextContent(text);
+      }
+      fireEvent.click(within(fingerprintDetails).getByRole('button', { name: 'Close' }));
+      fireEvent.click(within(fingerprints).getByRole('button', { name: 'Label' }));
+      expect(screen.getByRole('spinbutton', { name: 'Drive ID' })).toHaveValue(42);
+      expect(screen.getByRole('combobox', { name: 'Driver' })).toHaveValue('1');
+      fireEvent.click(within(fingerprints).getByRole('button', { name: 'Cancel' }));
+      expect(mockAssign().mutate).not.toHaveBeenCalled();
+
+      fireEvent.click(within(card('Named drivers')).getAllByRole('button', { name: 'Remove' })[0]);
+      expect(screen.getByRole('dialog')).toHaveTextContent('Delete this driver profile?');
+      fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Cancel' }));
+      expect(mockRemove().mutate).not.toHaveBeenCalled();
+    } finally {
+      dimensions.mockRestore();
+      globalThis.ResizeObserver = originalObserver;
+    }
+  });
+});
