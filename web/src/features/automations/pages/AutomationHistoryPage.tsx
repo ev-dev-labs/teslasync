@@ -4,13 +4,15 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { Activity, Plus } from 'lucide-react';
 import { PageLayout } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
-import { GlassPanel, Pagination, Select, type SelectOption } from '@/components/ui';
+import { BUTTON_BASE, BUTTON_VARIANTS, GlassPanel, Icon, Pagination, Select, type SelectOption } from '@/components/ui';
 import { EmptyState, QueryError, Skeleton, StaleRefreshWarning } from '@/components/feedback';
 import { useAutomations, useAutomationHistoryPage } from '@/api/hooks/useAutomations';
 import type { AutomationHistoryStatus } from '@/api/types';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useRangeState } from '@/hooks/useRangeState';
 import { useDataState } from '@/hooks/useDataState';
+import { cn } from '@/lib/cn';
+import { typography } from '@/lib/tokens';
 import { AutomationHistorySummary } from '../components/AutomationHistorySummary';
 import { AutomationHistoryTrend } from '../components/AutomationHistoryTrend';
 import { AutomationHistoryTable } from '../components/AutomationHistoryTable';
@@ -87,9 +89,13 @@ export default function AutomationHistoryPage() {
       subtitle={t('automations.historyPage.subtitle', 'Review every execution and its outcome across the selected period.')}
       copyLink
       primaryAction={
-        <Link to="/automations/new" className="inline-flex min-h-9 items-center gap-2 rounded-md border border-[var(--control-border)] bg-[var(--control-bg)] px-3 text-sm text-[var(--text-primary)] hover:bg-[var(--control-bg-hover)]">
-          <Plus className="h-4 w-4" aria-hidden="true" />
-          {t('automations.historyPage.new', 'New automation')}
+        <Link
+          to="/automations/new"
+          className={cn(BUTTON_BASE, BUTTON_VARIANTS.secondary, typography.size.sm,
+            'min-h-11 min-w-11 max-w-full px-3 py-2 md:min-h-9 whitespace-normal')}
+        >
+          <Icon icon={Plus} />
+          <span className="min-w-0 break-words">{t('automations.historyPage.new', 'New automation')}</span>
         </Link>
       }
     >
@@ -107,30 +113,34 @@ export default function AutomationHistoryPage() {
       </FadeIn>
       <FadeIn delay={0.05}>
         <AutomationHistoryTrend query={query} />
+        <StaleRefreshWarning state={historyState} label={t('automations.historyPage.title', 'Automation history')} />
       </FadeIn>
       <FadeIn delay={0.1}>
         <GlassPanel className="p-4 sm:p-5">
-          <div className="mb-4 flex flex-wrap items-center gap-3">
-            <Select
-              options={options}
-              value={automationId ? String(automationId) : ''}
-              onChange={(event) => updateFilter('automation_id', event.target.value)}
-              aria-label={t('automations.historyPage.filterRule', 'Filter executions by rule')}
-              className="min-w-0 w-full flex-1 sm:max-w-72"
-            />
-            <Select
-              options={statusOptions}
-              value={status ?? ''}
-              onChange={(event) => updateFilter('status', event.target.value)}
-              aria-label={t('automations.historyPage.filterStatus', 'Filter executions by status')}
-              className="min-w-0 w-full flex-1 sm:max-w-60"
-            />
+          <div className="mb-4 flex flex-wrap items-end gap-3">
+            <div className="w-full min-w-0 sm:flex-1 sm:max-w-72">
+              <Select
+                options={options}
+                value={automationId ? String(automationId) : ''}
+                onChange={(event) => updateFilter('automation_id', event.target.value)}
+                label={t('automations.historyPage.filterRule', 'Filter executions by rule')}
+                aria-label={t('automations.historyPage.filterRule', 'Filter executions by rule')}
+              />
+            </div>
+            <div className="w-full min-w-0 sm:flex-1 sm:max-w-60">
+              <Select
+                options={statusOptions}
+                value={status ?? ''}
+                onChange={(event) => updateFilter('status', event.target.value)}
+                label={t('automations.historyPage.filterStatus', 'Filter executions by status')}
+                aria-label={t('automations.historyPage.filterStatus', 'Filter executions by status')}
+              />
+            </div>
           </div>
           <StaleRefreshWarning state={rulesState} label={t('automations.historyPage.filterRule', 'Filter executions by rule')} />
           {rulesState.fatalError && (
             <QueryError error={rulesState.fatalError} onRetry={() => { void automations.refetch(); }} />
           )}
-          <StaleRefreshWarning state={historyState} label={t('automations.historyPage.title', 'Automation history')} />
           {isInitialLoading ? (
             <div className="space-y-3" aria-label={t('automations.historyPage.loading', 'Loading executions')}>
               {[1, 2, 3, 4].map((key) => <Skeleton key={key} className="h-12 w-full" />)}

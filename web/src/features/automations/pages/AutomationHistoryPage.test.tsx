@@ -188,4 +188,55 @@ describe('Automation History', () => {
     expect(state.filters).toHaveBeenCalledWith(expect.objectContaining({ page: 2, automationId: 7 }));
     expect(screen.queryByText('Server error')).not.toBeInTheDocument();
   });
+
+  it('keeps new automation navigation with shared focus chrome and a wrapping mobile target', () => {
+    render(<MemoryRouter><AutomationHistoryPage /></MemoryRouter>);
+    const link = screen.getByRole('link', { name: 'New automation' });
+    expect(link).toHaveAttribute('href', '/automations/new');
+    expect(link).toHaveClass('rounded-shape-sm', 'min-h-11', 'min-w-11', 'md:min-h-9',
+      'whitespace-normal', 'focus-visible:outline-2', 'focus-visible:outline-offset-2');
+    expect(within(link).getByText('New automation')).toHaveClass('min-w-0', 'break-words');
+    expect(link.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
+  });
+
+  it('allocates filter widths on wrappers and associates visible labels without losing unknown rules', () => {
+    state.data = response([row], 60);
+    render(<MemoryRouter initialEntries={['/automations/history?automation_id=99&status=partial&page=2']}><AutomationHistoryPage /></MemoryRouter>);
+    const rule = screen.getByRole('combobox', { name: 'Filter executions by rule' });
+    const status = screen.getByRole('combobox', { name: 'Filter executions by status' });
+    expect(screen.getByLabelText('Filter executions by rule', { selector: 'select' })).toBe(rule);
+    expect(screen.getByLabelText('Filter executions by status', { selector: 'select' })).toBe(status);
+    expect(screen.getByText('Filter executions by rule', { selector: 'label' })).toHaveAttribute('for', rule.id);
+    expect(screen.getByText('Filter executions by status', { selector: 'label' })).toHaveAttribute('for', status.id);
+    expect(rule.parentElement?.parentElement).toHaveClass('w-full', 'min-w-0', 'sm:flex-1', 'sm:max-w-72');
+    expect(status.parentElement?.parentElement).toHaveClass('w-full', 'min-w-0', 'sm:flex-1', 'sm:max-w-60');
+    expect(rule).not.toHaveClass('flex-1', 'sm:max-w-72');
+    expect(status).not.toHaveClass('flex-1', 'sm:max-w-60');
+    expect(within(rule).getByRole('option', { name: 'Rule #99' })).toHaveValue('99');
+    expect(rule).toHaveValue('99');
+    expect(status).toHaveValue('partial');
+    expect(state.filters).toHaveBeenCalledWith(expect.objectContaining({
+      automationId: 99, status: 'partial', page: 2, pageSize: 25,
+    }));
+    fireEvent.change(rule, { target: { value: '7' } });
+    expect(state.filters).toHaveBeenCalledWith(expect.objectContaining({
+      automationId: 7, status: 'partial', page: 1,
+      since: '2026-09-01T07:00:00.000Z', until: '2026-10-01T07:00:00.000Z',
+    }));
+  });
+
+  it('locates one retained-history recovery beside activity without removing table or summary', () => {
+    state.data = response([row]);
+    state.isError = true;
+    state.error = new Error('background history failure');
+    state.refetch.mockClear();
+    render(<MemoryRouter><AutomationHistoryPage /></MemoryRouter>);
+    const warning = screen.getByTestId('stale-refresh-warning');
+    expect(warning.parentElement).toContainElement(screen.getByText('Execution activity'));
+    expect(screen.getByRole('region', { name: 'Execution summary' })).toBeInTheDocument();
+    expect(screen.getByRole('table', { name: 'Automation history' })).toBeInTheDocument();
+    expect(screen.getAllByTestId('stale-refresh-warning')).toHaveLength(1);
+    fireEvent.click(within(warning).getByRole('button', { name: 'Refresh' }));
+    expect(state.refetch).toHaveBeenCalledOnce();
+  });
 });
