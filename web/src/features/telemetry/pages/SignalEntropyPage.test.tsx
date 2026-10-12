@@ -1,13 +1,14 @@
-import type { ReactNode } from 'react';
+import { Children, isValidElement, type ComponentProps, type ReactNode } from 'react';
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { SignalHistoryResponse } from '@/types/telemetry';
-import { ChartContainer, type ChartContainerProps } from '@/components/charts';
+import { ChartContainer, XAxis, type ChartContainerProps } from '@/components/charts';
 import { useOperationalMetrics } from '@/hooks/useOperationalMetrics';
 import { useSignalAnalysisHistory } from '@/api/hooks/useTelemetry';
 import { getFormatterPreferences, setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat';
+import * as dateFormatting from '@/hooks/useDateFormat';
 import * as entropy from '../lib/signalEntropy';
 import '../components/operationalbrief-all/metricPreferencesTestSetup';
 import SignalEntropyPage from './SignalEntropyPage';
@@ -279,6 +280,37 @@ describe('SignalEntropyPage preservation and presentation', () => {
     expect(screen.getByTestId('signal-entropy-summary')).toHaveTextContent('Source unavailable');
     fireEvent.click(screen.getAllByRole('button', { name: /retry/i })[0]!);
     expect(H.historyRetry).toHaveBeenCalledOnce();
+  });
+
+  it('formats rolling ticks without forwarding numeric indices as date options', () => {
+    const configured = dateFormatting.useDateFormat();
+    const formatDateTime = vi.fn(configured.formatDateTime);
+    vi.spyOn(dateFormatting, 'useDateFormat').mockImplementation(() => ({
+      ...configured, tz: H.tz, formatDateTime,
+    }));
+    const timeAxis = () => {
+      const responsive = latestChart('Rolling information density').children;
+      if (!isValidElement<{ children: ReactNode }>(responsive)) throw new Error('Missing responsive chart');
+      const chart = Children.only(responsive.props.children);
+      if (!isValidElement<{ children: ReactNode }>(chart)) throw new Error('Missing rolling chart');
+      const axis = Children.toArray(chart.props.children).find(child =>
+        isValidElement(child) && child.type === XAxis);
+      if (!isValidElement<ComponentProps<typeof XAxis>>(axis)) throw new Error('Missing time axis');
+      return axis.props;
+    };
+    const view = mountPage(); chooseSignal();
+    const before = latestChart('Rolling information density');
+    const timestamp = '2026-01-01T19:00:00.000Z';
+    formatDateTime.mockClear();
+    expect(timeAxis().tickFormatter?.(timestamp, 3)).toBe('01.01.26, 19:00');
+    expect(formatDateTime).toHaveBeenLastCalledWith(timestamp);
+    H.tz = 'America/Los_Angeles'; view.rerender(<SignalEntropyPage />);
+    formatDateTime.mockClear();
+    expect(timeAxis().tickFormatter?.(timestamp, 8)).toBe('01.01.26, 11:00');
+    expect(formatDateTime).toHaveBeenLastCalledWith(timestamp);
+    const after = latestChart('Rolling information density');
+    expect(after.data).toEqual(before.data);
+    expect(after.metadata).toEqual({ unitLabel: 'bits', rangeLabel: 'America/Los_Angeles' });
   });
 
   it('preserves no-vehicle onboarding without fabricating measurements', () => {

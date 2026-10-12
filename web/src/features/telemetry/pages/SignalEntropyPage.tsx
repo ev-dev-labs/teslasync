@@ -227,7 +227,7 @@ export default function SignalEntropyPage() {
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={rollingSeries}>
                 <CartesianGrid strokeDasharray="3 3" stroke={chartTokens.gridStroke} strokeOpacity={0.4} />
-                <XAxis dataKey="time" tick={axisTick} minTickGap={40} tickFormatter={formatDateTime} />
+                <XAxis dataKey="time" tick={axisTick} minTickGap={40} tickFormatter={(value) => formatDateTime(value)} />
                 <YAxis tick={axisTick} unit=" bits" />
                 <Tooltip content={<ChartTooltip timezone={tz} labelFormatter={(label) => typeof label === 'string' ? formatDateTime(label) : '—'} />} />
                 <Line type="monotone" dataKey="bits" name={t('signalEntropy.col.bits', 'Entropy (bits)')} stroke={chartTokens.series[0]} strokeWidth={2} dot={false} />
