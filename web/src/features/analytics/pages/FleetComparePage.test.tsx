@@ -36,7 +36,20 @@ import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { render, screen, fireEvent, waitFor, within } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter, useLocation } from 'react-router-dom'
-import type { ReactNode } from 'react'
+import type { ComponentProps, ReactNode } from 'react'
+
+const trendEvidence = vi.hoisted(() => vi.fn())
+
+vi.mock('../components/fleet-compare-modernization', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../components/fleet-compare-modernization')>()
+  return {
+    ...actual,
+    FleetTrendCard: (props: ComponentProps<typeof actual.FleetTrendCard>) => {
+      trendEvidence(props)
+      return <actual.FleetTrendCard {...props} />
+    },
+  }
+})
 
 vi.mock('@/components/charts', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/components/charts')>()
@@ -203,6 +216,15 @@ interface InstallOptions {
   vehiclesPending?: boolean
   monthlyEmpty?: boolean
   monthlyError?: boolean
+  monthlyPendingB?: boolean
+  monthlyErrorB?: boolean
+  monthlyForA?: typeof monthlyA
+  stateEvidence?: {
+    live: boolean
+    observed_at: string | null
+    freshness: 'fresh' | 'stale' | 'unknown'
+    verified_fields: string[]
+  }
 }
 
 const never = () => new Promise<never>(() => {})
@@ -213,6 +235,10 @@ function install(opts: InstallOptions = {}) {
     vehiclesPending = false,
     monthlyEmpty = false,
     monthlyError = false,
+    monthlyPendingB = false,
+    monthlyErrorB = false,
+    monthlyForA = monthlyA,
+    stateEvidence,
   } = opts
 
   const idOf = (path: string) => new URLSearchParams(path.split('?')[1] ?? '').get('vehicle_id')
@@ -222,7 +248,7 @@ function install(opts: InstallOptions = {}) {
     if (stateMatch) {
       const id = Number(stateMatch[1])
       const state = id === 1 ? makeState({ vehicle_id: 1 }) : makeState({ vehicle_id: 2, battery_level: 65, is_locked: false, sentry_mode: true, state: 'asleep' })
-      return Promise.resolve({ state, live: false })
+      return Promise.resolve({ state, live: false, ...stateEvidence })
     }
     if (path === '/vehicles') {
       return vehiclesPending ? never() : Promise.resolve(vehicles)
@@ -234,9 +260,11 @@ function install(opts: InstallOptions = {}) {
       return Promise.resolve(idOf(path) === '2' ? costB : costA)
     }
     if (path.startsWith('/mileage/monthly')) {
+      if (idOf(path) === '2' && monthlyPendingB) return never()
+      if (idOf(path) === '2' && monthlyErrorB) return Promise.reject(new Error('monthly peer boom'))
       if (monthlyError) return Promise.reject(new Error('monthly boom'))
       if (monthlyEmpty) return Promise.resolve(monthly(Number(idOf(path)), []))
-      return Promise.resolve(idOf(path) === '2' ? monthlyB : monthlyA)
+      return Promise.resolve(idOf(path) === '2' ? monthlyB : monthlyForA)
     }
     if (path.startsWith('/settings')) return Promise.resolve({ chart_palette: 'cb_safe' })
     return Promise.resolve({})
@@ -248,12 +276,12 @@ function LocationProbe() {
   return <div data-testid="location">{loc.pathname}</div>
 }
 
-function renderPage() {
+function renderPage(path = '/fleet-compare') {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false, retryDelay: 0 } },
   })
   return render(
-    <MemoryRouter initialEntries={['/fleet-compare']}>
+    <MemoryRouter initialEntries={[path]}>
       <QueryClientProvider client={client}>
         <ThemeProvider>
           <ToastProvider>
@@ -268,12 +296,92 @@ function renderPage() {
 
 beforeEach(() => {
   mockedRequest.mockReset()
+  trendEvidence.mockClear()
   window.localStorage.clear()
   // Formatting is driven by module-global precision/locale that useSettings
   // would normally seed; pin them so the assertions are deterministic.
   setGlobalPrecision(2)
   setGlobalLocale('en-US')
   install()
+})
+
+describe('FleetComparePage evidence preservation', () => {
+  const distanceEvidence = () => {
+    const calls = trendEvidence.mock.calls.map(([props]) =>
+      props as ComponentProps<typeof import('../components/fleet-compare-modernization').FleetTrendCard>)
+    const latest = calls.filter(props => props.chartKey === 'fleet-compare-monthly-distance').at(-1)
+    if (!latest) throw new Error('Monthly distance evidence must render')
+    return latest
+  }
+
+  it('keeps missing monthly buckets unknown and observed zero intact', async () => {
+    install({ monthlyForA: monthly(1, [
+      { year_month: '2025-01', total_km: 0, drive_count: 0 },
+      { year_month: '2025-02', total_km: Number.NaN, drive_count: Number.NaN },
+    ]) })
+    renderPage()
+    await waitFor(() => expect(distanceEvidence().data).toEqual([
+      { month: '2025-01', distA: 0, distB: null, drivesA: 0, drivesB: null },
+      { month: '2025-02', distA: null, distB: 300, drivesA: null, drivesB: 18 },
+      { month: '2025-03', distA: null, distB: 480, drivesA: null, drivesB: 22 },
+    ]))
+    const formatA = distanceEvidence().dataColumns?.find(column => column.key === 'distA')?.format
+    expect(formatA?.(null)).toBe('—')
+    expect(formatA?.(0)).toBe('0.00')
+  })
+
+  it.each([
+    { name: 'pending', monthlyPendingB: true, monthlyErrorB: false },
+    { name: 'failed', monthlyPendingB: false, monthlyErrorB: true },
+  ])('retains the working monthly peer when the other is $name', async (options) => {
+    install(options)
+    renderPage()
+    await waitFor(() => expect(distanceEvidence().data).toEqual([
+      { month: '2025-01', distA: 400, distB: null, drivesA: 20, drivesB: null },
+      { month: '2025-02', distA: 550, distB: null, drivesA: 25, drivesB: null },
+    ]))
+    expect(distanceEvidence().hasData).toBe(true)
+    expect(screen.getByRole('heading', { name: 'Lifetime statistics', level: 2 })).toBeInTheDocument()
+  })
+
+  it('announces only actual winner cells without changing their exported readings', async () => {
+    renderPage()
+    const table = within(await screen.findByRole('table'))
+    const winner = await table.findByText('210')
+    expect(within(winner).getByText('Winner')).toHaveClass('sr-only')
+    expect(within(table.getByText('140')).queryByText('Winner')).toBeNull()
+    for (const tiedCell of table.getAllByText('5,000.00 km')) {
+      expect(within(tiedCell).queryByText('Winner')).toBeNull()
+    }
+  })
+
+  it('retains stale snapshot readings and identifies their observation limits', async () => {
+    install({ stateEvidence: {
+      live: true, observed_at: '2025-01-01T00:00:00Z', freshness: 'stale',
+      verified_fields: ['battery_level', 'rated_range', 'is_locked'],
+    } })
+    renderPage()
+    await screen.findByText('72%')
+    expect(screen.getAllByText(/Telemetry stream · Last real observation/)).toHaveLength(2)
+    expect(screen.getAllByText(/Telemetry stream.*Stale/)).toHaveLength(2)
+    expect(screen.getAllByText('Unverified')).toHaveLength(10)
+    expect(screen.getAllByText('Telemetry stream observation does not verify individual reading timestamps or completeness.')).toHaveLength(2)
+    expect(screen.getByText('Locked')).toBeInTheDocument()
+    expect(screen.getByText('Unlocked')).toBeInTheDocument()
+  })
+
+  it('keeps independent deep-linked vehicle selection and peer exclusion', async () => {
+    renderPage('/vehicle-comparison?leftId=2&rightId=1')
+    const left = await screen.findByLabelText('Vehicle A') as HTMLSelectElement
+    const right = screen.getByLabelText('Vehicle B') as HTMLSelectElement
+    await waitFor(() => expect(left.value).toBe('2'))
+    expect(right.value).toBe('1')
+    expect(within(left).getByRole('option', { name: 'Model 3 LR' })).toBeDisabled()
+    expect(within(right).getByRole('option', { name: 'Model Y P' })).toBeDisabled()
+    fireEvent.click(screen.getByRole('button', { name: 'Swap vehicles' }))
+    await waitFor(() => expect(left.value).toBe('1'))
+    expect(right.value).toBe('2')
+  })
 })
 
 describe('FleetComparePage', () => {

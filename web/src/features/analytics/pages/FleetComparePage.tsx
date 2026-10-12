@@ -21,7 +21,7 @@ import {
   chartMarginLabeled, axisTick, chartAnimation,
 } from '@/components/charts';
 
-import { useVehicles, useVehicleState } from '@/api/hooks/useVehicles';
+import { useVehicles, useVehicleState, isVehicleStateFieldCurrent, resolveVehicleStateFreshness } from '@/api/hooks/useVehicles';
 import { useDrivingStats } from '@/api/hooks/useDriving';
 import { useCostBreakdown, useMonthlyMileage } from '@/api/hooks/useAnalytics';
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -35,6 +35,7 @@ import { severityTokens } from '@/lib/tokens';
 import type { Vehicle } from '@/types/vehicle';
 import type { VehicleStateReadings } from '@/api/types';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import {
   FleetTrendCard, formatKnown, getWinner,
   type ComparisonRow,
@@ -43,7 +44,7 @@ import { FleetComparisonBrief as FleetHighlights } from '../components/operation
 
 /* ── Helpers ───────────────────────────────────────────── */
 
-function winnerCell(value: string, side: 'a' | 'b', row: ComparisonRow) {
+function winnerCell(value: string, side: 'a' | 'b', row: ComparisonRow, winnerLabel: string) {
   const winner = getWinner(row.rawA, row.rawB, row.winner);
   const isWinner = winner === side;
   return (
@@ -56,8 +57,10 @@ function winnerCell(value: string, side: 'a' | 'b', row: ComparisonRow) {
       )}
     >
       {value}
-      {/* ✓ pairs the winner color with a non-color signal (a11y). */}
-      {isWinner && <span aria-hidden="true">✓</span>}
+      {isWinner && <>
+        <span aria-hidden="true">✓</span>
+        <span className="sr-only">{winnerLabel}</span>
+      </>}
     </Text>
   );
 }
@@ -72,17 +75,22 @@ const BANNER_DISMISSED_KEY = 'phase40.compareBanner.dismissed.fleet';
 function StatusRow({
   icon,
   label,
+  evidence,
   children,
 }: {
   icon: React.ReactNode;
   label: string;
+  evidence?: string;
   children: React.ReactNode;
 }) {
   return (
     <div className="flex items-center justify-between gap-3">
       <div className="flex min-w-0 items-center gap-2">
         <span className="shrink-0 text-[var(--text-muted)]" aria-hidden="true">{icon}</span>
-        <Text as="span" size="sm" color="secondary" className="break-words">{label}</Text>
+        <div className="min-w-0">
+          <Text as="span" size="sm" color="secondary" className="break-words">{label}</Text>
+          {evidence && <Caption className="block">{evidence}</Caption>}
+        </div>
       </div>
       <div className="min-w-0 text-right">{children}</div>
     </div>
@@ -94,6 +102,7 @@ function StatusRow({
 function VehicleStatusCard({
   vehicle,
   state,
+  trust,
   isLoading,
   isError,
   error,
@@ -103,6 +112,7 @@ function VehicleStatusCard({
 }: {
   vehicle: Vehicle | undefined;
   state: VehicleStateReadings | undefined;
+  trust: ReturnType<typeof useVehicleState>['data'];
   isLoading: boolean;
   isError: boolean;
   error: unknown;
@@ -111,7 +121,17 @@ function VehicleStatusCard({
   formatTemperature: (value: number | null | undefined, precision?: number) => string;
 }) {
   const { t } = useTranslation();
+  const { formatRelativeTime } = useDateFormat();
+  const [now, setNow] = useState(Date.now);
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(Date.now()), 30_000);
+    return () => window.clearInterval(timer);
+  }, []);
   const title = vehicle?.display_name || vehicle?.vin || t('comparison.selectVehicle', 'Select a vehicle');
+  const unverified = t('dashboard.fleetPosture.category.unverified', 'Unverified');
+  const fieldEvidence = (field: Parameters<typeof isVehicleStateFieldCurrent>[1]) =>
+    trust?.live && isVehicleStateFieldCurrent(trust, field, now) ? undefined : unverified;
+  const freshness = resolveVehicleStateFreshness(trust?.freshness, trust?.observedAt ?? null, now);
 
   if (isLoading && !state) {
     return (
@@ -152,11 +172,23 @@ function VehicleStatusCard({
       <Caption className="block break-words">
         {vehicle.model}{vehicle.trim_badging ? ` · ${vehicle.trim_badging}` : ''}
       </Caption>
+      <Caption className="block">
+        {t('statusBar.connectionDiagnostics.telemetry', 'Telemetry stream')}{' · '}
+        {trust?.observedAt != null
+          ? t('dashboard.fleetPosture.scope.observed', 'Last real observation {{age}}', {
+            age: formatRelativeTime(new Date(trust.observedAt)),
+          })
+          : t('dashboard.fleetPosture.scope.noObservation', 'No verified observation time for this vehicle')}
+        {freshness === 'stale' ? ` · ${t('freshness.stale', 'Stale')}` : ''}
+      </Caption>
+      <Caption className="block">
+        {t('vehicleHero.observationLimitation', 'Telemetry stream observation does not verify individual reading timestamps or completeness.')}
+      </Caption>
       {isError && <QueryError error={error} onRetry={onRetry} resourceName={t('comparison.vehicleState', 'Vehicle state')} />}
 
       <div className="space-y-3">
         {/* Battery */}
-        <StatusRow icon={<Battery className="h-4 w-4" />} label={t('comparison.battery', 'Battery')}>
+        <StatusRow icon={<Battery className="h-4 w-4" />} label={t('comparison.battery', 'Battery')} evidence={fieldEvidence('battery_level')}>
           <Text as="span" size="sm" weight="medium" color="primary" className="tabular-nums">
             {formatKnown(batteryLevel, value => `${value}%`)}
           </Text>
@@ -165,15 +197,15 @@ function VehicleStatusCard({
           <div
             className="h-2 w-full overflow-hidden rounded-full bg-[var(--surface-3)]"
             role="progressbar"
-            aria-valuenow={Math.round(batteryLevel)}
+            aria-valuenow={Math.round(Math.min(Math.max(batteryLevel, 0), 100))}
             aria-valuemin={0}
             aria-valuemax={100}
             aria-label={t('comparison.batteryLevel', 'Battery level')}
           >
             <div
               className={cn(
-                'h-full rounded-full transition-all',
-                batteryLevel > 50 ? 'bg-emerald-500' : batteryLevel > 20 ? 'bg-amber-500' : 'bg-rose-500',
+                'h-full rounded-full transition-all motion-reduce:transition-none',
+                batteryLevel > 50 ? severityTokens.success.dot : batteryLevel > 20 ? severityTokens.warn.dot : severityTokens.critical.dot,
               )}
               /* dynamic computed width — allowed inline style */
               style={{ width: `${Math.min(Math.max(batteryLevel, 0), 100)}%` }}
@@ -182,14 +214,15 @@ function VehicleStatusCard({
         )}
 
         {/* Range */}
-        <StatusRow icon={<Gauge className="h-4 w-4" />} label={t('comparison.range', 'Range')}>
+        <StatusRow icon={<Gauge className="h-4 w-4" />} label={t('comparison.range', 'Range')} evidence={fieldEvidence('rated_range')}>
           <Text as="span" size="sm" weight="medium" color="primary" className="tabular-nums">
             {formatKnown(range, formatDistance)}
           </Text>
         </StatusRow>
 
         {/* Temperature */}
-        <StatusRow icon={<Thermometer className="h-4 w-4" />} label={t('comparison.temp', 'Temperature')}>
+        <StatusRow icon={<Thermometer className="h-4 w-4" />} label={t('comparison.temp', 'Temperature')}
+          evidence={fieldEvidence('inside_temp') ?? fieldEvidence('outside_temp')}>
           <Text as="span" size="sm" weight="medium" color="primary" className="tabular-nums">
             {formatKnown(insideTemp, formatTemperature)}
             {outsideTemp != null ? ` / ${formatKnown(outsideTemp, formatTemperature)}` : ''}
@@ -197,7 +230,8 @@ function VehicleStatusCard({
         </StatusRow>
 
         {/* Lock & Sentry */}
-        <StatusRow icon={<Lock className="h-4 w-4" />} label={t('comparison.security', 'Security')}>
+        <StatusRow icon={<Lock className="h-4 w-4" />} label={t('comparison.security', 'Security')}
+          evidence={fieldEvidence('is_locked') ?? fieldEvidence('sentry_mode')}>
           {state ? (
             <div className="flex items-center justify-end gap-2">
               <Text as="span" size="xs" weight="medium" className={cn(
@@ -208,7 +242,7 @@ function VehicleStatusCard({
               {state.sentry_mode && (
                 <span className="inline-flex items-center gap-1 rounded-full border border-[var(--border-default)] bg-[var(--surface-2)] px-1.5 py-0.5 text-[var(--text-primary)]">
                   <Shield className="h-3 w-3" aria-hidden="true" />
-                  <Text as="span" size="2xs" weight="medium">{t('comparison.sentry', 'Sentry')}</Text>
+                  <Text as="span" size="xs" weight="medium">{t('comparison.sentry', 'Sentry')}</Text>
                 </span>
               )}
             </div>
@@ -218,7 +252,7 @@ function VehicleStatusCard({
         </StatusRow>
 
         {/* Status */}
-        <StatusRow icon={<Wifi className="h-4 w-4" />} label={t('comparison.status', 'Status')}>
+        <StatusRow icon={<Wifi className="h-4 w-4" />} label={t('comparison.status', 'Status')} evidence={unverified}>
           <span className={cn(
             'inline-flex items-center rounded-full border px-2 py-0.5',
             isOnline
@@ -392,31 +426,33 @@ export default function FleetComparePage() {
   const monthlyChartData = useMemo(() => {
     const arrA = monthlyA ?? [];
     const arrB = monthlyB ?? [];
-    const monthMap = new Map<string, { month: string; distA: number; distB: number; drivesA: number; drivesB: number }>();
+    const monthMap = new Map<string, { month: string; distA: number | null; distB: number | null; drivesA: number | null; drivesB: number | null }>();
+    const known = (value: number | null | undefined) =>
+      value != null && Number.isFinite(value) ? value : null;
 
     for (const m of arrA) {
       const ym = m.year_month ?? '';
       monthMap.set(ym, {
         month: ym,
-        distA: m.total_km ?? 0,
-        distB: 0,
-        drivesA: m.drive_count ?? 0,
-        drivesB: 0,
+        distA: known(m.total_km),
+        distB: null,
+        drivesA: known(m.drive_count),
+        drivesB: null,
       });
     }
     for (const m of arrB) {
       const ym = m.year_month ?? '';
       const existing = monthMap.get(ym);
       if (existing) {
-        existing.distB = m.total_km ?? 0;
-        existing.drivesB = m.drive_count ?? 0;
+        existing.distB = known(m.total_km);
+        existing.drivesB = known(m.drive_count);
       } else {
         monthMap.set(ym, {
           month: ym,
-          distA: 0,
-          distB: m.total_km ?? 0,
-          drivesA: 0,
-          drivesB: m.drive_count ?? 0,
+          distA: null,
+          distB: known(m.total_km),
+          drivesA: null,
+          drivesB: known(m.drive_count),
         });
       }
     }
@@ -546,14 +582,14 @@ export default function FleetComparePage() {
         align: 'right',
         header: nameA,
         exportValue: r => r.valueA,
-        render: (r) => winnerCell(r.valueA, 'a', r),
+        render: (r) => winnerCell(r.valueA, 'a', r, t('driveCompare.winner', 'Winner')),
       },
       {
         key: 'valueB',
         align: 'right',
         header: nameB,
         exportValue: r => r.valueB,
-        render: (r) => winnerCell(r.valueB, 'b', r),
+        render: (r) => winnerCell(r.valueB, 'b', r, t('driveCompare.winner', 'Winner')),
       },
     ],
     [t, nameA, nameB],
@@ -664,7 +700,9 @@ export default function FleetComparePage() {
               metricId: 'percent', rawA: stateA?.battery_level, rawB: stateB?.battery_level,
               format: value => `${value}%`,
               retained: (stateA != null && (stateQueryA.isError || stateQueryA.fetchStatus === 'paused'))
-                || (stateB != null && (stateQueryB.isError || stateQueryB.fetchStatus === 'paused')),
+                || (stateB != null && (stateQueryB.isError || stateQueryB.fetchStatus === 'paused'))
+                || (stateA != null && (!stateQueryA.data?.live || !isVehicleStateFieldCurrent(stateQueryA.data, 'battery_level')))
+                || (stateB != null && (!stateQueryB.data?.live || !isVehicleStateFieldCurrent(stateQueryB.data, 'battery_level'))),
               value: vs(formatKnown(stateA?.battery_level, value => `${value}%`), formatKnown(stateB?.battery_level, value => `${value}%`)),
               loading: (stateQueryA.isLoading || stateQueryB.isLoading) && !stateA && !stateB,
             },
@@ -714,6 +752,7 @@ export default function FleetComparePage() {
             { id: 'vehicle-a', size: 'half', content: <VehicleStatusCard
               vehicle={vehicleA}
               state={stateA}
+              trust={stateQueryA.data}
               isLoading={stateQueryA.isLoading && !!vehicleIdA}
               isError={stateQueryA.isError && !!vehicleIdA}
               error={stateQueryA.error}
@@ -724,6 +763,7 @@ export default function FleetComparePage() {
             { id: 'vehicle-b', size: 'half', content: <VehicleStatusCard
               vehicle={vehicleB}
               state={stateB}
+              trust={stateQueryB.data}
               isLoading={stateQueryB.isLoading && !!vehicleIdB}
               isError={stateQueryB.isError && !!vehicleIdB}
               error={stateQueryB.error}
@@ -758,8 +798,8 @@ export default function FleetComparePage() {
                   data={monthlyChartData}
                   dataColumns={[
                     { key: 'month', label: t('comparison.month', 'Month') },
-                    { key: 'distA', label: nameA, format: (value) => fmtNumber(Number(value ?? 0)) },
-                    { key: 'distB', label: nameB, format: (value) => fmtNumber(Number(value ?? 0)) },
+                    { key: 'distA', label: nameA, format: (value) => formatKnown(typeof value === 'number' ? value : null, fmtNumber) },
+                    { key: 'distB', label: nameB, format: (value) => formatKnown(typeof value === 'number' ? value : null, fmtNumber) },
                   ]}
                   chartKey="fleet-compare-monthly-distance"
                 >
@@ -786,8 +826,8 @@ export default function FleetComparePage() {
                           )}
                         />
                         <ChartLegend />
-                        <Line {...AREA_DEFAULTS} dataKey="distA" name={nameA} stroke={palette[0]} hide={hiddenSeries?.isHidden('distA')} {...chartAnimation} />
-                        <Line {...AREA_DEFAULTS} dataKey="distB" name={nameB} stroke={palette[1]} hide={hiddenSeries?.isHidden('distB')} {...chartAnimation} />
+                        <Line {...AREA_DEFAULTS} dataKey="distA" name={nameA} stroke={palette[0]} connectNulls={false} hide={hiddenSeries?.isHidden('distA')} {...chartAnimation} />
+                        <Line {...AREA_DEFAULTS} dataKey="distB" name={nameB} stroke={palette[1]} connectNulls={false} hide={hiddenSeries?.isHidden('distB')} {...chartAnimation} />
                       </LineChart>
                     </ResponsiveContainer>
                   )}
@@ -805,8 +845,8 @@ export default function FleetComparePage() {
                   data={drivesChartData}
                   dataColumns={[
                     { key: 'month', label: t('comparison.month', 'Month') },
-                    { key: 'drivesA', label: nameA, format: (value) => fmtInt(Number(value ?? 0)) },
-                    { key: 'drivesB', label: nameB, format: (value) => fmtInt(Number(value ?? 0)) },
+                    { key: 'drivesA', label: nameA, format: (value) => formatKnown(typeof value === 'number' ? value : null, fmtInt) },
+                    { key: 'drivesB', label: nameB, format: (value) => formatKnown(typeof value === 'number' ? value : null, fmtInt) },
                   ]}
                   chartKey="fleet-compare-drives-per-month"
                 >
@@ -829,7 +869,7 @@ export default function FleetComparePage() {
                                 dataKey: entry.dataKey,
                               }))}
                               label={typeof label === 'string' || typeof label === 'number' ? label : undefined}
-                              valueFormatter={(value) => fmtInt(Number(value ?? 0))}
+                              valueFormatter={(value) => formatKnown(typeof value === 'number' ? value : null, fmtInt)}
                             />
                           )}
                         />
@@ -877,8 +917,8 @@ export default function FleetComparePage() {
                   displayValue: (row, key) => key === 'metric' ? row.metric : key === 'valueA' ? row.valueA : key === 'valueB' ? row.valueB : null,
                   allDetails: row => [
                     { key: 'metric', label: t('comparison.metric', 'Metric'), value: row.metric },
-                    { key: 'valueA', label: nameA, value: winnerCell(row.valueA, 'a', row) },
-                    { key: 'valueB', label: nameB, value: winnerCell(row.valueB, 'b', row) },
+                    { key: 'valueA', label: nameA, value: winnerCell(row.valueA, 'a', row, t('driveCompare.winner', 'Winner')) },
+                    { key: 'valueB', label: nameB, value: winnerCell(row.valueB, 'b', row, t('driveCompare.winner', 'Winner')) },
                   ],
                 }}
                 data={comparisonRows}
