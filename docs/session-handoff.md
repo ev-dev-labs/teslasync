@@ -22,30 +22,38 @@ ESLint configuration and ratchets were not weakened.
 The one shared development server uses `http://127.0.0.1:5173`.
 No local Compose services were running at startup. The latest committed
 application snapshot is now running in local Docker; see the rollout below.
-The explicit statistics rescue and canonical-query-owner continuation both
-stopped without a production fix. Maintenance and Dismiss scoped validation
-are accepted. Preserve exhausted attempts; do not reset budgets or remake
-provenance campaigns.
+The retained canonical-query-owner continuation now delivered a production fix
+at `55e519031`, after authorization was widened to its directly coupled
+domain/port/caller/test owners. Original failed attempts and WIP are preserved;
+no budget was reset. Maintenance, Dismiss, and SignalCatalog scoped validation
+remain accepted. Do not remake provenance campaigns.
 
 Pilot pages are Dashboard, Drive History, and Settings. Their migrated source
 is preserved, but complete current screenshots, visual/responsive/accessibility
 review, retained/error/offline-state coverage, and technical acceptance remain.
-Dashboard statistics still returns 500. Do not count historical screenshots,
+Dashboard statistics now returns200 on the actual new Docker image. Do not count historical screenshots,
 an HTTP 200 shell, a build, or source-only repairs as pilot acceptance.
 
-Source HEAD and deployed application snapshot before this document checkpoint:
-`a686691c2d8945575b24dbc7e7ca728fd768a8c5`. The final documentation checkpoint
-does not change application source. Count actual Git history rather than old
-prose; the next historical TypeScript cadence is actual1065.
-Current `npx tsc --noEmit` exited0, as did both sequential Docker builds.
-Neither a complete current full test/lint sweep nor pilot browser acceptance
-is claimed. The canonical-query diagnostic Go regression remains deliberately
-red and explicitly committed as WIP.
+Latest source commits are canonical backend `55e519031`, QA helper `6bcbb5d2d`,
+and parent-owned shared type/documentation `b60b34fcb`. The deployed application
+snapshot remains `55e519031df03109436a2cb71ef555285809e52d`; the later commits
+change QA tooling and erased TypeScript types/documentation, not shipping UI or
+backend behavior. Do not claim those later hashes identify the running images.
+Production `npx tsc --noEmit` exited0 after the shared type edit; its narrow
+repository audit also ran the compiler successfully. Both sequential Docker
+builds of the deployed snapshot passed. Current full lint was actually run and
+exited1 at the query-signal audit: `useWatch.ts:191,210` uses queryFn factories
+that the audit cannot statically verify. This is not yet proof of a runtime
+cancellation defect. The serialized full frontend test gate is in progress;
+no full-test pass or pilot browser acceptance is claimed.
+The original four canonical-schema regression cases are preserved
+and now pass. Latest selected eight-package Go race run has282 RUN/PASS
+entries, zero FAIL/SKIP, exit0; actual API binary compilation exits0.
 
 ## Latest local Docker rollout and test data
 
 API and web were built from an immutable full-repository archive of
-`a686691c2d8945575b24dbc7e7ca728fd768a8c5`, excluding uncommitted files and
+`55e519031df03109436a2cb71ef555285809e52d`, excluding uncommitted files and
 `.env`. Runtime Compose still uses the existing local environment; no secrets
 were printed. Both running image revision labels match the snapshot.
 API, web, PostgreSQL, Redis, and Mosquitto are running and healthy.
@@ -71,11 +79,79 @@ not a hook/router bug. `/api/v1/system/version` uses `app_version`, not
 `version`/`commit`; running image labels establish immutable source identity.
 The Docker-compiled backend reports Go1.27.2; the host test toolchain is1.27.1.
 
-Dashboard `/api/v1/dashboard/stats` still returns500 INTERNAL on this actual
-rollout. The UI also reports degraded Fleet Telemetry/Tesla API; usable stored
-history does not establish fresh live telemetry. No authorization grants,
-fabricated measurements, or production backend changes were introduced.
-The broader modernization task is not complete.
+Dashboard `/api/v1/dashboard/stats` now returns200 with its canonical seven-field
+SI data envelope: fleet3, distance298000m, energy55400Wh, trips2, charging3,
+efficiency0.18590604026845636Wh/m, cost2268cents. The real middleware's configured
+missing-principal rejection and explicit configured dev-mode passthrough are
+preserved; no authentication grant was invented. Canonical metadata reads use
+thirteen actual columns with nullable fields, and identity-safe writes reject
+unsupported live-state values instead of claiming persistence.
+
+The stricter parent verification initially compared these counters to all-time
+database totals (fleet trips9/charging63/cost55324cents) and failed. This was a
+verifier error, not an application defect. The retained owner established the
+preserved contract: a single sampled instant and Go `AddDate(0,-1,0)`, inclusive
+trip/charging `started_at` bounds, all drives linked to selected trips, per-row
+rounded charging cents, all static fleet records, and null efficiency when
+distance is zero. No fixed30-day, all-time, header-range, vehicle, status or limit
+scope was invented. The corrected independent SQL comparison passed all seven
+fields with zero records in the request-time uncertainty bands. The invalid
+all-time probe is separately preserved, not converted into passing evidence.
+
+The existing query-facing `DashboardStats` now declares `avgEfficiency` nullable
+and documents that exact contract. Existing camel aliases supplied by `request()`
+remain; raw wire names are snake_case. This parent-only change at `b60b34fcb`
+changes no UI/runtime behavior. Existing DashboardStatsWidget63/63, production
+TypeScript0, narrow prohibited-pattern audit0, and hook route verification2/2
+against896 mounted routes are recorded. Page line/section comparisons are N/A:
+no page or extracted component was changed.
+
+The UI still truthfully reports degraded Fleet Telemetry/Tesla API; usable
+stored history does not establish fresh live telemetry. The broader
+modernization task is not complete.
+
+For this local preview only, the session Compose override explicitly passes an
+empty `VITE_OTLP_HTTP_ENDPOINT`: the optional tracing collector is not running.
+This removes the observed localhost4318 CSP-export spam without changing `.env`,
+CSP, backend configuration, or source observability behavior. Same-origin web
+vitals remain enabled; the read-only QA helper blocks their POST and reports it.
+
+Official Playwright browser installs failed twice on Node download timeouts.
+Restored the exact official Headless Chrome153.0.8010.12/rev1243 archive through
+native HTTPS, verified its MD5 against independently retrieved Google object
+metadata, checked the executable version, and launched/closed it through the
+locked Playwright1.63.0 package. No dependency-validation result was fabricated.
+The initial restored-browser ten-width Settings check ran but exited2: transient
+loading and real resource/non-read findings prevented its geometry/capture evidence.
+Independent bounded polling establishes settled Settings1440 with114 controls,
+no visible busy indicators and no uncaught page errors. Its real local-mode
+resources still return RBAC/impersonation501, system health503, unset push
+key404; blocked non-read is `/api/v1/web-vitals` POST.
+That exact helper defect was corrected at `6bcbb5d2d`: bounded mounted settlement
+and diagnostic geometry/captures retain FAILED/nonzero resource, write, page-error,
+overflow and capture findings. All28 original Node cases are preserved, plus7
+regressions;35/35 pass. No allowlist, write exemption or policy relaxation.
+Real dark Settings capture at375/768/1440/1920 produced18 valid PNGs with exact
+root/body widths, under repository-root
+`qa-screenshots\2026-10-12T08-07-13.981Z-13176`. All four rows still FAILED/exit1
+for the real local-mode resources and blocked web-vitals POST. This is usable
+diagnostic evidence, not complete visual/a11y/state acceptance. Both retained
+backend and QA helper workers are idle; neither holds an active source claim.
+
+The remaining real light Settings and both-theme Dashboard captures now persist
+diagnostic PNGs too, with root/body geometry at all four capture widths, but no
+native PASSED rows. Concurrent fresh-page capture runs also hit actual429s; do
+not waive rate limits or treat those views as fresh successful data. Both-theme
+Drive History capture is BLOCKED at the screenshot step at all four widths,
+with partial PNGs and geometry retained. A separate read-only real1440 probe
+established changing main extent:679px viewport /1819px initial content; at the
+last tile expected1140px becomes1199px and content grows to1878px. The original
+top0 is restored. This proves the current frozen-extent capture assertion cannot
+complete that evidence, not the cause of the application's height change.
+One narrow `phase4-qa-scroll-extent-settlement` item is queued. It must preserve
+the35 accepted cases and failure/safety bounds; no rework of mounted settlement.
+The MCP browser is closed. Light Settings ten-width overflow retains geometry
+but exits1 for real resource/write findings; it is not native acceptance.
 
 A pre-rollout custom-format database archive is retained in the current
 session artifacts. `pg_restore --list` could read it; the Timescale circular-FK
@@ -86,13 +162,27 @@ Raw evidence is under ignored `logs\`: `local-docker-seed.log`,
 `local-docker-teslasync-api-build-final.log`, `local-docker-web-build-final.log`,
 the two `local-docker-*-up.log` files,
 `local-docker-runtime-verification.log` (initial probe failure), and
-`local-docker-runtime-scoped-verification.log` (correct scoped results).
+`local-docker-runtime-scoped-verification.log` (prior correct scoped results),
+`local-docker-runtime-canonical-verification.log` (current runtime and passing
+exact monthly independent aggregates),
+`local-docker-runtime-alltime-proxy-mismatch.log` (invalid historical probe),
+`phase4-canonical-owner-parent-typescript.log`,
+`phase4-current-settings-overflow-dark-restored-browser.log`,
+`phase4-qa-mounted-diagnostics.log`,
+`phase4-nullable-stats-type-typescript.log`,
+`phase4-nullable-stats-widget-tests.log`,
+`phase4-nullable-stats-type-audit.log`,
+`phase4-canonical-dashboard-hook-contract.log`, and the current
+`full-suite-phase4-lint-20261012T012837.log` /
+`full-suite-phase4-tests-20261012T013354.log` and retained JSON report.
 Both Docker builds passed their bundle/PWA checks, but their container-only
 PWA router cross-check and checkout-based source-map serving check were
 explicitly skipped/deferred. They are not additional completed checks.
 Chrome inline browser inspection succeeded; attempts to persist MCP snapshots
 failed because its configured workspace roots exclude this checkout and the
-session folder. No complete screenshot/responsive/axe matrix was produced.
+session folder. Native tooling now persists diagnostic screenshots at the
+repository root. The complete three-page screenshot/responsive/axe matrix is
+still outstanding.
 
 ## Counts per phase and status
 
@@ -100,22 +190,26 @@ Counts are canonical queue rows, **not pages, components, or percentages**.
 Historical auxiliary rows are excluded rather than reactivated. Source-audit
 completion does not mean the corresponding page was migrated.
 
-| Phase | [x] done | [ ] pending | [!] failed | [b] blocked | [-] excluded |
-| --- | ---: | ---: | ---: | ---: | ---: |
-| 0 | 240 | 0 | 0 | 0 | 4 |
-| 1 | 87 | 0 | 0 | 0 | 1 |
-| 2 | 27 | 0 | 0 | 0 | 0 |
-| 3 | 696 | 0 | 0 | 0 | 118 |
-| 4 | 26 | 0 | 2 | 6 | 34 |
-| 5 | 0 | 0 | 0 | 1 | 1 |
-| 6 | 0 | 0 | 0 | 1 | 0 |
-| 7 | 0 | 0 | 0 | 1 | 0 |
-| Total | 1076 | 0 | 2 | 9 | 158 |
+| Phase | [x] done | [ ] pending | [~] active | [!] failed | [b] blocked | [-] excluded |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| 0 | 240 | 0 | 0 | 0 | 0 | 4 |
+| 1 | 87 | 0 | 0 | 0 | 0 | 1 |
+| 2 | 27 | 0 | 0 | 0 | 0 | 0 |
+| 3 | 696 | 0 | 0 | 0 | 0 | 118 |
+| 4 | 30 | 1 | 0 | 1 | 5 | 34 |
+| 5 | 0 | 0 | 0 | 0 | 1 | 1 |
+| 6 | 0 | 1 | 0 | 0 | 1 | 0 |
+| 7 | 0 | 0 | 0 | 0 | 1 | 0 |
+| Total | 1080 | 2 | 0 | 1 | 8 | 158 |
 
-There are1,245 rows: the original1,243 plus the two narrow failures discovered
-by actual checks. No `[~]` worker reservation remains. Running0/32: no pending
-ready queue item remains; canonical ownership/absence contracts and complete
-pilot acceptance block the next phase. No fake work was created to fill slots.
+There are1,249 rows: the original1,243 plus six narrow failures discovered
+by actual checks. Running0/32: no implementation worker is active; the current
+serialized parent test gate is not a worker. Queued repairs cannot run during
+that full gate. The query-signal finding is deferred to Phase6 and may be pulled
+early; the combined Phase6 sweep has not begun. Original pilot acceptance gates
+the aggregate later-phase placeholders. No fake work was created to fill slots.
+Actual `git rev-list --count HEAD` at `b60b34fcb` is1451; old1065 cadence prose
+was stale. The latest compiler covered the shared type before its commit.
 
 The session SQL todos are historical operational records, not the authoritative
 plan. The queue supersedes stale reservations, pending briefs, and repair-loop
@@ -133,7 +227,7 @@ real page assignments from the inventory only after pilot acceptance.
 | Worker conventions | `docs\frontend-worker-conventions.md` |
 | Screenshots / overflow / style scan | `web\scripts\frontend-qa.mjs` (`capture`, `overflow`, `scan`) |
 | Tooling tests | `web\scripts\__tests__\frontend-qa.test.mjs` |
-| QA configuration / artifacts | `web\playwright.config.ts`; ignored `web\qa-screenshots\` |
+| QA configuration / artifacts | `web\playwright.config.ts`; ignored repository-root `qa-screenshots\` |
 | Extreme-data fixtures | `web\e2e\fixtures\frontend-modernization.ts` (tests/stories only) |
 | Domain fixtures | `web\e2e\operationalbrief-contracts\*.fixtures.ts` |
 | Preservation checker | `web\scripts\check-modernization-preservation.mjs` |
@@ -247,8 +341,10 @@ contrast, performance, or accessibility acceptance.
 
 | Item | Evidence / remaining work |
 | --- | --- |
-| Dashboard statistics | Actual current Docker500 unresolved. Rescue located `internal\adapter\postgres` as the real query owner. Its query still selects absent user_id and nine other dropped columns. Four new canonical-schema cases fail `go test -race`; SQL PREPARE exits3. Methodology was authentically recovered and host Go1.27.1/GCC restored, but caller/port ownership authorization, missing live-state representation, and old query-shape test scopes remain unresolved. WIP diagnostic committed at `a686691c2`; production unchanged. Docker compilation is not a Go-test pass. |
-| Three-page pilot QA | Prior native attempts lacked complete captures/scenarios/axe. Readiness and scroll-restoration assertions failed. Current source/native/full-suite gate remains unaccepted. |
+| Dashboard statistics | Original500 fixed and deployed at55e519031. Canonical schema/auth/nullable metadata regressions pass; stats200, scoped fixtures and all seven exact calendar-month independent SQL aggregates verified with zero boundary records. Historical all-time proxy was invalid. Nullable query contract accepted atb60b34fcb; no remaining stats500 blocker. |
+| Three-page pilot QA | Helper correction6bcbb5d2d preserves35 passing cases and real non-pass findings. Dark Settings has18 diagnostic PNGs, but the complete three-page visual/responsive/state/axe gate remains unaccepted. |
+| Current full lint | Actual gate exit1 at query-signal audit for two `useWatch.ts` queryFn factories; remaining chained audits were not reached. Do not infer runtime cancellation failure or claim full lint clean. |
+| Native Drive History capture | Both themes BLOCKED at screenshot; real main extent/anchored scroll changes invalidate the fixed-extent coverage assertion. One narrow existing-tool repair queued; partial screenshots are not all-section acceptance. |
 | Dashboard layout writes | Three PUTs aborted during navigation without an explicit edit; exact initiator/root cause unknown. No source fix. Preserve legitimate autosave/autofit/draft recovery. |
 | Maintenance accepted continuation | `d770d4079`: corrected the new retained-source assertion, preserving production and original cases. Exact Maintenance18 + RepairCaseWorkspace12 cases pass30/30; strict four-file lint0 after locked dependency restoration. Historical failed assertion/tooling output and original attempt history remain preserved. |
 | Dismiss accepted continuation | Existing `41ebdd7b9a` production/test source remained unchanged. Its12 selected cases and strict lint pass in the combined30-case check. No active worker/lease or pending reset. |
@@ -276,7 +372,8 @@ Current scoped raw logs are `logs\phase4-restored-scoped-tests.log`,
 `logs\phase4-signal-catalog-count-type.log`, and
 `logs\phase4-vehicle-read-schema-contract.log`.
 Summary-wrapper ANSI/Unicode failures are retained separately from the actual
-passing Vitest/lint runner exits. The backend regression's failure is real.
+passing Vitest/lint runner exits. Original backend red evidence remains real
+historical evidence; its retained canonical cases now pass through production fixes.
 
 ## Application definition of done: current evidence, not final acceptance
 
@@ -306,9 +403,9 @@ passing Vitest/lint runner exits. The backend regression's failure is real.
 | Visual consistency sweep completed | Not complete |
 | No major duplicated UI patterns remain | Not established across the application |
 | TypeScript passes | Current production check0; both Docker build compilers passed |
-| Lint passes | Changed scopes passed; current full-application gate not run |
-| Tests pass | Scoped frontend65 cases passed; full-application gate not run;4 new backend schema cases red |
-| Production build passes | Current sequential API/web Docker builds0; not pilot visual acceptance |
+| Lint passes | Changed scopes passed; current full gate exit1 at query-signal audit, later chained audits not run |
+| Tests pass | Scoped frontend65 and DashboardStatsWidget63 cases passed; QA Node35 passed; selected eight-package Go race282 RUN/PASS entries with0 FAIL/SKIP, exit0; current full frontend gate in progress |
+| Production build passes | Deployed55e519031 sequential API/web Docker builds0; not pilot visual acceptance or a later-HEAD build claim |
 
 ## What slowed this session down / avoid repeating
 
@@ -350,10 +447,15 @@ problems, and perform required pilot QA; do not recreate those campaigns.
 | `1563e4907` | docs(frontend): resume existing modernization queue |
 | `d770d4079` | fix(web): finish retained maintenance preview validation |
 | `d73e1d290` | fix(web): keep signal catalog counts typed and formatted |
-| `a686691c2` | wip: phase4-vehicle-read-schema-contract partial; deployed snapshot |
+| `a686691c2` | wip: phase4-vehicle-read-schema-contract partial; prior deployed snapshot |
+| `b7a6781fd` | docs(frontend): record latest Docker rollout and sample data |
+| `55e519031` | fix(api): align canonical vehicle fleet reads; current deployed application |
+| `6bcbb5d2d` | fix(qa): capture settled diagnostics without hiding failures |
+| `b60b34fcb` | fix(web): reflect nullable shared fleet statistics; parent type/docs only |
 
-Final checkpoint message: `checkpoint: session handoff`; obtain its hash with
-`git log -1` rather than attempting a self-referential hash in this document.
+No Phase4-complete checkpoint exists. Metadata commits record progress, not
+pilot acceptance or runtime image identity. Obtain their hashes from actual
+Git history rather than attempting a self-referential hash in this document.
 
 ## Unattributed changes
 
@@ -383,16 +485,23 @@ historical machine and was preserved in its prior handoff, not re-created here:
 ## Next steps, in order
 
 1. Read this handoff, queue, current contract, relevant instructions, and
-   `git status`. Confirm no active workers/leases; preserve all WIP/untracked data.
-2. Finish the real Dashboard500 diagnosis/fix with a clearly recorded authorized
-   scope. Preserve prior failures/attempt counts; do not relabel a forbidden
-   retry or invent fleet/auth/data capabilities.
-3. Keep accepted Maintenance, Dismiss, and SignalCatalog fixes complete. Their
+   `git status`. The two known workers are idle; preserve original WIP and
+   untracked data, but do not resurrect finished reservations.
+2. Collect the running serialized frontend gate result once notified. Handle the
+   real query-signal lint failure and measured scroll-extent capture blocker
+   through their separate narrow queued items after that gate finishes; preserve
+   gate budgets and do not weaken audits or assume an unproved UI defect.
+3. Keep accepted Maintenance, Dismiss, SignalCatalog, canonical vehicle,
+   QA-helper and nullable stats fixes complete. Their
    scoped validation is done; do not redispatch them or replace original tests.
 4. Review actual Dashboard layout PUT provenance before changing autosave behavior.
-5. Complete one coherent original-plan three-page pilot technical and mounted QA
-   pass, addressing real contract/shared issues before page-side workarounds.
+5. Reuse the accepted helper and real dark Settings captures; complete the
+   remaining coherent original-plan
+   three-page pilot technical and mounted QA pass. Preserve real resource findings
+   and review actual rendered evidence; do not turn diagnostic captures into a
+   false native acceptance or bypass unresolved contract/shared issues.
 6. Record pilot acceptance/checkpoint and worker-convention lessons; then expand
    Phase5 page assignments from the inventory. Never repeat completed foundations.
 7. Follow the original Phase6 combined sweep and Phase7 final gates. Count every
-   actual commit; supported production TypeScript cadence is due at1065.
+   actual commit; the latest production TypeScript run already covers the shared
+   nullable type edit. Compute the next cadence from actual history.
