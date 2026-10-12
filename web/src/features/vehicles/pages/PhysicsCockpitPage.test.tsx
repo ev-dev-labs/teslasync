@@ -9,6 +9,16 @@ const h = vi.hoisted(() => ({
   heartbeatError: null as Error | null,
   cockpitMissing: false,
   heartbeatMissing: false,
+  vehicleId: 7 as number | null,
+  certificateError: null as Error | null,
+  certificateMissing: false,
+  certificateLoading: false,
+  certificatePaused: false,
+  nullPark: false,
+  nullRejections: false,
+  nullMeasurements: false,
+  nullCertificateArrays: false,
+  certificateRefetch: vi.fn(),
   refetch: vi.fn(),
 }));
 const { downloadJSON } = vi.hoisted(() => ({ downloadJSON: vi.fn() }));
@@ -25,7 +35,7 @@ vi.mock('react-i18next', () => ({
 
 vi.mock('@/hooks/usePageTitle', () => ({ usePageTitle: () => undefined }));
 vi.mock('@/hooks/useSelectedVehicle', () => ({
-  useSelectedVehicle: () => ({ vehicleId: 7 }),
+  useSelectedVehicle: () => ({ vehicleId: h.vehicleId }),
 }));
 vi.mock('@/hooks/useUnits', () => ({
   useUnits: () => ({
@@ -120,9 +130,23 @@ function queryStub<T>(data: T, error: Error | null = null) {
 }
 
 vi.mock('@/api/hooks/useTeslaPhysics', () => ({
-  usePhysicsCockpit: () => queryStub(h.cockpitMissing ? undefined : cockpit, h.cockpitError),
+  usePhysicsCockpit: () => queryStub(h.cockpitMissing ? undefined : {
+    ...cockpit,
+    ...(h.nullMeasurements ? {
+      battery_level_pct: null, energy_remaining_wh: null, pack_current_a: null,
+      pack_voltage_v: null, driving_distance_m: null, speed_mps: null,
+    } : {}),
+    park: h.nullPark ? null : h.nullRejections ? { ...cockpit.park, rejected: null } : cockpit.park,
+  }, h.cockpitError),
   useFsdHeartbeat: () => queryStub(h.heartbeatMissing ? undefined : heartbeat, h.heartbeatError),
-  useSessionCertificate: () => queryStub(certificate),
+  useSessionCertificate: () => ({
+    ...queryStub(h.certificateMissing ? undefined : h.nullCertificateArrays ? {
+      ...certificate, drives: null, charges: null,
+    } : certificate, h.certificateError),
+    isLoading: h.certificateLoading,
+    fetchStatus: h.certificatePaused ? 'paused' as const : 'idle' as const,
+    refetch: h.certificateRefetch,
+  }),
 }));
 
 import PhysicsCockpitPage from './PhysicsCockpitPage';
@@ -137,6 +161,15 @@ beforeEach(() => {
   h.heartbeatError = null;
   h.cockpitMissing = false;
   h.heartbeatMissing = false;
+  h.vehicleId = 7;
+  h.certificateError = null;
+  h.certificateMissing = false;
+  h.certificateLoading = false;
+  h.certificatePaused = false;
+  h.nullPark = false;
+  h.nullRejections = false;
+  h.nullMeasurements = false;
+  h.nullCertificateArrays = false;
 });
 
 describe('PhysicsCockpitPage', () => {
@@ -194,5 +227,94 @@ describe('PhysicsCockpitPage', () => {
     expect(within(drawer).getByText(/Pack voltage \(V\) and current \(A\)/)).toBeInTheDocument();
     expect(within(drawer).getByText('398.00 V')).toBeInTheDocument();
     expect(within(drawer).getByText('1.20 A')).toBeInTheDocument();
+  });
+
+  it('recovers an initial certificate failure without removing neighboring physics evidence', () => {
+    h.certificateMissing = true;
+    h.certificateError = new Error('certificate initial failure');
+    renderPage();
+    expect(screen.getByText('Unable to load the session certificate.')).toBeVisible();
+    expect(screen.getByRole('button', { name: 'Session certificate' })).toBeDisabled();
+    expect(screen.getByText('Disconnected')).toBeVisible();
+    expect(screen.getByText('Confirmed park')).toBeVisible();
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    expect(h.certificateRefetch).toHaveBeenCalledTimes(1);
+    expect(h.refetch).not.toHaveBeenCalled();
+  });
+
+  it('retains a failed certificate refresh with one source warning and unchanged raw export', () => {
+    h.certificateError = new Error('certificate refresh failed');
+    renderPage();
+    expect(screen.getByText('Session certificate may be out of date')).toBeVisible();
+    expect(screen.getAllByTestId('stale-refresh-warning')).toHaveLength(1);
+    expect(screen.getByText(certificate.rules)).toBeVisible();
+    expect(screen.getByText(certificate.honesty)).toBeVisible();
+    expect(screen.getByText(/Certificate window:/)).toBeVisible();
+    fireEvent.click(screen.getByRole('button', { name: 'Session certificate' }));
+    expect(downloadJSON.mock.calls[0][1]).toBe(certificate);
+    fireEvent.click(screen.getAllByRole('button', { name: 'Refresh' }).at(-1)!);
+    expect(h.certificateRefetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('distinguishes certificate loading from resolved empty evidence', () => {
+    h.certificateMissing = true;
+    h.certificateLoading = true;
+    const view = renderPage();
+    expect(screen.getByRole('status', { name: 'Loading Session certificate' })).toBeVisible();
+    expect(screen.getByRole('button', { name: 'Session certificate' })).toBeDisabled();
+    expect(screen.queryByText('A session certificate is not available for this vehicle yet.')).not.toBeInTheDocument();
+    h.certificateLoading = false;
+    view.rerender(<MemoryRouter><PhysicsCockpitPage /></MemoryRouter>);
+    expect(screen.getByText('A session certificate is not available for this vehicle yet.')).toBeVisible();
+    expect(screen.queryByRole('status', { name: 'Loading Session certificate' })).not.toBeInTheDocument();
+  });
+
+  it('keeps all source shells and disables export when the workspace has no selected vehicle', () => {
+    h.vehicleId = null;
+    h.cockpitMissing = true;
+    h.heartbeatMissing = true;
+    h.certificateMissing = true;
+    renderPage();
+    expect(screen.getByTestId('physics-cockpit-readings')).toBeVisible();
+    expect(screen.getByRole('heading', { name: 'FSD trip-meter heartbeat' })).toBeVisible();
+    expect(screen.getByRole('heading', { name: 'Park truth' })).toBeVisible();
+    expect(screen.getByRole('heading', { name: 'Session certificate' })).toBeVisible();
+    expect(screen.getAllByText('No vehicle selected')).toHaveLength(4);
+    expect(screen.queryByText('Loading source')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Session certificate' })).toBeDisabled();
+    expect(screen.queryByTestId('vehicle-select')).not.toBeInTheDocument();
+  });
+
+  it('keeps null park evidence and numeric measurements unknown instead of inventing zeros', () => {
+    h.nullPark = true;
+    h.nullMeasurements = true;
+    renderPage();
+    expect(screen.getByText('No park evidence has been reported.')).toBeVisible();
+    expect(screen.queryByText('Confirmed park')).not.toBeInTheDocument();
+    expect(screen.queryByText('0 km/h')).not.toBeInTheDocument();
+    const brief = screen.getByTestId('physics-cockpit-readings');
+    for (const id of ['battery', 'pack', 'current', 'energy', 'trip', 'speed']) {
+      expect(brief.querySelector(`[data-operational-metric="cockpit-${id}"]`)).toHaveAttribute('data-value-state', 'missing');
+    }
+    expect(screen.getByText('FSD trip meter — not an engagement flag')).toBeVisible();
+  });
+
+  it('preserves nullable rejection and certificate arrays without normalizing the exported evidence', () => {
+    h.nullRejections = true;
+    h.nullCertificateArrays = true;
+    renderPage();
+    expect(screen.getByText('Confirmed park')).toBeVisible();
+    fireEvent.click(screen.getByRole('button', { name: 'Session certificate' }));
+    expect(downloadJSON.mock.calls[0][1]).toEqual({ ...certificate, drives: null, charges: null });
+    expect(downloadJSON.mock.calls[0][1].hmac_sha256).toBeNull();
+  });
+
+  it('keeps a paused certificate available without claiming the vehicle is offline', () => {
+    h.certificatePaused = true;
+    renderPage();
+    expect(screen.getByText('Session certificate may be out of date')).toBeVisible();
+    expect(screen.getByRole('button', { name: 'Session certificate' })).toBeEnabled();
+    expect(screen.queryByText(/Paused offline|device is offline/i)).not.toBeInTheDocument();
+    expect(screen.getByText(certificate.honesty)).toBeVisible();
   });
 });

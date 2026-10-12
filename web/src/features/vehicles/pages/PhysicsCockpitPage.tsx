@@ -2,9 +2,9 @@ import { useTranslation } from 'react-i18next';
 import { Download } from 'lucide-react';
 
 import { usePhysicsCockpit, useFsdHeartbeat, useSessionCertificate } from '@/api/hooks/useTeslaPhysics';
-import { Badge, Button, Text } from '@/components/ui';
+import { Badge, Button, Icon, Text } from '@/components/ui';
 import { DataProvenanceBadge, type StatMetric } from '@/components/data-display';
-import { QueryError, StaleRefreshWarning } from '@/components/feedback';
+import { EmptyState, QueryError, StaleRefreshWarning } from '@/components/feedback';
 import { PageLayout, LayoutCard, SourceContent } from '@/components/layout';
 
 import { useDataState } from '@/hooks/useDataState';
@@ -28,8 +28,13 @@ export default function PhysicsCockpitPage() {
   const certificateQuery = useSessionCertificate(vehicleIdStr);
   const cockpitState = useDataState(cockpitQuery, { provenance: 'live' });
   const heartbeatState = useDataState(heartbeatQuery, { provenance: 'live' });
+  const certificateState = useDataState(certificateQuery, { provenance: 'historical' });
   const cockpit = cockpitState.data;
   const heartbeat = heartbeatState.data;
+  const certificate = certificateState.data;
+  const hasVehicle = vehicleId != null;
+  const canExport = hasVehicle && certificate?.vehicle_id === vehicleId;
+  const prerequisite = t('common.noVehicleSelected.title', 'No vehicle selected');
   const { formatDistance, formatEnergy, formatSpeed } = useUnits();
   const readings: readonly StatMetric[] = [
     { metricId: 'status', occurrenceId: 'cockpit-gear', label: t('vehicles.physicsCockpit.gear', 'Gear'), rawValue: cockpit?.gear || null },
@@ -63,46 +68,48 @@ export default function PhysicsCockpitPage() {
         <Button
           variant="secondary"
           size="sm"
-          disabled={!certificateQuery.data}
+          disabled={!canExport}
+          wrapLabel
+          className="min-h-11 md:min-h-9"
           onClick={() => {
-            if (!certificateQuery.data) return;
-            downloadJSON(defaultExportFilename('session-certificate'), certificateQuery.data);
+            if (!canExport || !certificate) return;
+            downloadJSON(defaultExportFilename('session-certificate'), certificate);
           }}
         >
-          <Download className="mr-1 h-4 w-4" aria-hidden="true" />
+          <Icon icon={Download} size="md" className="me-1" />
           {t('vehicles.physicsCockpit.certificate', 'Session certificate')}
         </Button>
       )}
-      query={[cockpitQuery, heartbeatQuery]}
+      query={[cockpitQuery, heartbeatQuery, certificateQuery]}
     >
       {cockpit?.honesty && (
         <Text as="p" variant="bodySm">{cockpit.honesty}</Text>
       )}
-      <StaleRefreshWarning state={cockpitState} />
-      {cockpitState.fatalError ? (
+      {!hasVehicle && <EmptyState message={prerequisite} />}
+      <StaleRefreshWarning state={cockpitState} label={t('vehicles.physicsCockpit.snapshot', 'Live cockpit readings')} />
+      {cockpitState.fatalError && (
         <QueryError error={cockpitState.fatalError} onRetry={() => { void cockpitQuery.refetch(); }} />
-      ) : (
+      )}
         <VehicleEvidenceBrief
           id="physics-cockpit-readings"
           title={t('vehicles.physicsCockpit.snapshot', 'Live cockpit readings')}
           description={t('vehicles.physicsCockpit.briefDescription', 'Independently reported cockpit measurements; a missing field is unknown, not zero.')}
-          loading={cockpitQuery.isLoading}
-          status={cockpitState.status}
+          loading={hasVehicle && cockpitQuery.isLoading}
+          status={hasVehicle ? cockpitState.status : 'unavailable'}
           scope={t('vehicles.physicsCockpit.scopeUnknown', 'Latest returned fields; observation time is not supplied')}
           provenance={t('dataSources.labels.liveVehicleState', 'Live vehicle state')}
           freshness={<DataProvenanceBadge provenance={cockpitState.provenance} status={cockpitState.status} updatedAt={cockpitState.updatedAt} />}
           metrics={readings}
         />
-      )}
-      <StaleRefreshWarning state={heartbeatState} />
       <LayoutCard title={heartbeat?.label ?? t('vehicles.physicsCockpit.heartbeat', 'FSD trip-meter heartbeat')}>
         <SourceContent
-          state={heartbeatState.fatalError ? 'error' : heartbeat ? heartbeatState.status === 'stale' ? 'retained' : 'ready' : heartbeatQuery.isLoading ? 'loading' : 'empty'}
+          state={!hasVehicle ? 'empty' : heartbeatState.fatalError ? 'error' : heartbeat ? heartbeatState.status === 'stale' ? 'retained' : 'ready' : heartbeatQuery.isLoading ? 'loading' : 'empty'}
           label={t('vehicles.physicsCockpit.heartbeat', 'FSD trip-meter heartbeat')}
           emptyMessage={t('vehicles.physicsCockpit.noHeartbeat', 'No trip-meter heartbeat has been reported.')}
           errorMessage={t('vehicles.physicsCockpit.heartbeatError', 'Trip-meter heartbeat could not be loaded.')}
           error={heartbeatState.fatalError}
           errorRecovery={{ onRetry: () => { void heartbeatQuery.refetch(); } }}
+          emptyContent={!hasVehicle ? <EmptyState message={prerequisite} /> : undefined}
         >
         {heartbeat && <>
           <VehicleEvidenceBrief id="physics-heartbeat-readings"
@@ -132,12 +139,13 @@ export default function PhysicsCockpitPage() {
       </LayoutCard>
       <LayoutCard title={t('vehicles.physicsCockpit.park', 'Park truth')}>
         <SourceContent
-          state={cockpitState.fatalError ? 'error' : cockpit?.park ? cockpitState.status === 'stale' ? 'retained' : 'ready' : cockpitQuery.isLoading ? 'loading' : 'empty'}
+          state={!hasVehicle ? 'empty' : cockpitState.fatalError ? 'error' : cockpit?.park ? 'ready' : cockpitQuery.isLoading ? 'loading' : 'empty'}
           label={t('vehicles.physicsCockpit.park', 'Park truth')}
           emptyMessage={t('vehicles.physicsCockpit.noPark', 'No park evidence has been reported.')}
           errorMessage={t('vehicles.physicsCockpit.parkError', 'Park evidence could not be loaded.')}
           error={cockpitState.fatalError}
           errorRecovery={{ onRetry: () => { void cockpitQuery.refetch(); } }}
+          emptyContent={!hasVehicle ? <EmptyState message={prerequisite} /> : undefined}
         >
         {cockpit?.park ? <>
           <VehicleEvidenceBrief id="physics-park-readings"
@@ -176,6 +184,28 @@ export default function PhysicsCockpitPage() {
             <Text as="p" key={reason} variant="caption">{reason}</Text>
           ))}
         </> : null}
+        </SourceContent>
+      </LayoutCard>
+      <LayoutCard title={t('vehicles.physicsCockpit.certificate', 'Session certificate')}>
+        <SourceContent
+          state={!hasVehicle ? 'empty' : certificateState.fatalError ? 'error' : certificate ? 'ready' : certificateQuery.isLoading ? 'loading' : 'empty'}
+          label={t('vehicles.physicsCockpit.certificate', 'Session certificate')}
+          emptyMessage={t('system.outage.certificateEmpty', 'A session certificate is not available for this vehicle yet.')}
+          errorMessage={t('system.outage.certificateError', 'Unable to load the session certificate.')}
+          error={certificateState.fatalError}
+          errorRecovery={{ onRetry: () => { void certificateQuery.refetch(); } }}
+          emptyContent={!hasVehicle ? <EmptyState message={prerequisite} /> : undefined}
+        >
+          <StaleRefreshWarning state={certificateState} label={t('vehicles.physicsCockpit.certificate', 'Session certificate')} />
+          {certificate && <>
+            <Text as="p" variant="bodySm">{t('system.outage.certificateReady', 'The session certificate is available for download with its original evidence intact.')}</Text>
+            <Text as="p" variant="caption">{t('teslaOnly.certificateWindow', 'Certificate window: {{from}} to {{to}} · Issued {{issued}}', {
+              from: formatDateTime(certificate.from), to: formatDateTime(certificate.to), issued: formatDateTime(certificate.issued_at),
+            })}</Text>
+            <Text as="p" variant="bodySm">{certificate.rules}</Text>
+            <Text as="p" variant="bodySm">{certificate.honesty}</Text>
+            <DataProvenanceBadge provenance={certificateState.provenance} status={certificateState.status} updatedAt={certificateState.updatedAt} />
+          </>}
         </SourceContent>
       </LayoutCard>
     </PageLayout>
