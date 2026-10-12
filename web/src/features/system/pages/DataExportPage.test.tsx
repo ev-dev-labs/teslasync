@@ -513,12 +513,32 @@ describe('DataExportPage — Project Apex elevation', () => {
   it('names the wizard vehicle selector and preserves all seven export choices', async () => {
     renderPage();
     const selector = await screen.findByRole('combobox', { name: 'STEP 3 — select vehicle' });
-    expect(within(selector).getAllByRole('option').map(option => option.getAttribute('value'))).toEqual(['', '1']);
-    expect(within(selector).getByRole('option', { name: 'All vehicles' })).toBeInTheDocument();
+    // Select prepends its placeholder; the empty-valued real choice must
+    // remain independently available so users can return to all vehicles.
+    const [placeholder, ...vehicleChoices] = within(selector).getAllByRole('option');
+    expect(placeholder).toHaveAttribute('value', '');
+    expect(placeholder).toHaveTextContent(/^All vehicles$/);
+    expect(vehicleChoices.map(option => option.getAttribute('value'))).toEqual(['', '1']);
+    expect(within(selector).getAllByRole('option', { name: 'All vehicles' })).toHaveLength(2);
+    expect(vehicleChoices[0]).toBeInTheDocument();
+    expect(vehicleChoices[0]).toHaveTextContent(/^All vehicles$/);
+    expect(vehicleChoices[0]).toBeEnabled();
     expect(within(selector).getByRole('option', { name: 'Model 3' })).toBeInTheDocument();
     const group = screen.getByRole('radiogroup', { name: 'STEP 1 — select data type' });
     expect(within(group).getAllByRole('radio').map(choice => choice.getAttribute('aria-label')))
       .toEqual(['Drives', 'Charging', 'Trips', 'Analytics', 'Full backup', 'Maintenance', 'Energy']);
+
+    fireEvent.change(selector, { target: { value: '1' } });
+    expect(selector).toHaveValue('1');
+    fireEvent.click(screen.getByRole('button', { name: 'Start export' }));
+    await waitFor(() => expect(lastPostBody('/export/jobs')).toMatchObject({
+      type: 'drives', format: 'csv', vehicle_id: 1,
+    }));
+
+    fireEvent.change(selector, { target: { value: '' } });
+    expect(selector).toHaveValue('');
+    fireEvent.click(screen.getByRole('button', { name: 'Start export' }));
+    await waitFor(() => expect(lastPostBody('/export/jobs')).not.toHaveProperty('vehicle_id'));
   });
 
   it('keeps every history field and download action reachable without mobile hiding', async () => {
