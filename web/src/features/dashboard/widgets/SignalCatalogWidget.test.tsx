@@ -33,7 +33,7 @@
  *   - the a11y search label and the REFRESH control (freshness chip → refetch).
  *
  * Strategy: both data hooks are the network boundary and are fully controllable
- * via hoisted mocks. `react-i18next` echoes each `t(key, fallback)` fallback so
+ * via hoisted mocks. `react-i18next` uses the installed i18next interpolator on fallbacks so
  * assertions read against English copy. The freshness chip's display hooks
  * (`useDateFormat` / `useMotionPreference`) are stubbed so WidgetShell renders
  * synchronously without a Settings/QueryClient provider. The continuation file
@@ -64,19 +64,16 @@ vi.mock('@/api/hooks/useVehicles', () => ({
   useVehicles: () => vehiclesMock(),
 }));
 
-// i18n → echo the developer fallback, interpolating `{{var}}` placeholders so
-// copy reads as English regardless of namespace.
+// Use the installed i18next interpolator for developer fallbacks, including
+// replacement operands, without loading catalogs into the original cases.
 vi.mock('react-i18next', async () => {
   const actual = await vi.importActual<typeof import('react-i18next')>('react-i18next');
-  const interp = (tpl: string, opts?: Record<string, unknown>) =>
-    opts ? tpl.replace(/\{\{(\w+)\}\}/g, (_, k) => (opts[k] != null ? String(opts[k]) : '')) : tpl;
+  const { createInstance } = await vi.importActual<typeof import('i18next')>('i18next');
+  const i18n = createInstance();
+  await i18n.init({ lng: 'en', resources: {}, interpolation: { escapeValue: false } });
   return {
     ...actual,
-    useTranslation: () => ({
-      t: (_key: string, fallback?: string, opts?: Record<string, unknown>) =>
-        typeof fallback === 'string' ? interp(fallback, opts) : _key,
-      i18n: { language: 'en', changeLanguage: vi.fn() },
-    }),
+    useTranslation: () => ({ t: i18n.getFixedT('en'), i18n }),
   };
 });
 

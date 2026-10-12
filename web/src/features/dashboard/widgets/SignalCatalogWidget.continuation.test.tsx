@@ -1,4 +1,6 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { createInstance } from 'i18next';
+import { getGlobalLocale, setGlobalLocale } from '@/lib/numberFormat';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
@@ -7,7 +9,7 @@ import type { WidgetSize } from './types';
 
 const mocks = vi.hoisted(() => ({
   catalog: vi.fn(), observations: vi.fn(), retryCatalog: vi.fn(), retryObservations: vi.fn(),
-  request: vi.fn(), realHooks: false,
+  request: vi.fn(), translation: vi.fn(), realHooks: false,
 }));
 vi.mock('@/api/hooks/useVehicles', () => ({ useVehicles: () => ({ data: [{ id: 1 }] }) }));
 vi.mock('@/api/client', () => ({ request: mocks.request }));
@@ -24,6 +26,21 @@ vi.mock('@/api/hooks/useTelemetry', async () => {
       return useObservations(id);
     },
   };
+});
+
+// Exercise the installed library with the unchanged canonical English labels.
+vi.mock('react-i18next', async () => {
+  const actual = await vi.importActual<typeof import('react-i18next')>('react-i18next');
+  const { createInstance } = await vi.importActual<typeof import('i18next')>('i18next');
+  const { default: english } = await import('@/i18n/en.json');
+  const i18n = createInstance();
+  await i18n.init({
+    lng: 'en',
+    resources: { en: { dashboard: { widget: { signalCatalog: english.widget.signalCatalog } } } },
+    interpolation: { escapeValue: false },
+  });
+  mocks.translation.mockImplementation(i18n.getFixedT('en', 'dashboard'));
+  return { ...actual, useTranslation: () => ({ t: mocks.translation, i18n }) };
 });
 
 import SignalCatalogWidget from './SignalCatalogWidget';
@@ -219,5 +236,84 @@ describe('signal catalog actual query functions and independent source trust', (
     expect(screen.getByRole('heading', { name: /Signal catalog/i })).toBeInTheDocument();
     await waitFor(() => expect(container.querySelector('[data-data-state="partial"]')).toBeTruthy());
     expect(screen.queryByRole('textbox')).toBeNull();
+  });
+});
+
+
+describe('signal catalog numeric translation counts and formatted operands', () => {
+  let originalLocale: string;
+
+  beforeEach(() => {
+    originalLocale = getGlobalLocale();
+    setGlobalLocale('en-US');
+  });
+
+  afterEach(() => {
+    act(() => { setGlobalLocale(originalLocale); });
+  });
+
+  it('uses numeric counts for plural selection and replacement counts for installed i18next interpolation', async () => {
+    const i18n = createInstance();
+    await i18n.init({
+      lng: 'en',
+      resources: { en: { translation: {
+        observations_one: 'One observation: {{count}}',
+        observations_other: 'Many observations: {{count}}',
+      } } },
+      interpolation: { escapeValue: false },
+    });
+    expect(i18n.t('observations', { count: 1, replace: { count: '1' } })).toBe('One observation: 1');
+    expect(i18n.t('observations', { count: 12345, replace: { count: '12,345' } })).toBe('Many observations: 12,345');
+    expect(i18n.t('missing', 'Total observations: {{count}}', {
+      count: 12345, replace: { count: '12,345' },
+    })).toBe('Total observations: 12,345');
+  });
+
+  it('keeps canonical aggregate labels formatted and reactive without refetching either source', () => {
+    const catalog: SignalsCatalogResponse = {
+      ...canonical,
+      signals: [{ ...canonical.signals[0], sample_count_total: 12345, vehicle_count: 6789 }],
+    };
+    mocks.catalog.mockReturnValue(query(catalog, mocks.retryCatalog));
+    mount();
+    expect(screen.getByText(/Total observations: 12,345/)).toHaveTextContent('Vehicles observed: 6,789');
+    expect(mocks.translation).toHaveBeenCalledWith('widget.signalCatalog.totalSamples', 'Total observations: {{count}}', {
+      count: 12345, replace: { count: '12,345' },
+    });
+    expect(mocks.translation).toHaveBeenCalledWith('widget.signalCatalog.vehicleCount', 'Vehicles observed: {{count}}', {
+      count: 6789, replace: { count: '6,789' },
+    });
+    act(() => { setGlobalLocale('de-DE'); });
+    expect(screen.getByText(/Total observations: 12\.345/)).toHaveTextContent('Vehicles observed: 6.789');
+    expect(mocks.translation).toHaveBeenCalledWith('widget.signalCatalog.totalSamples', 'Total observations: {{count}}', {
+      count: 12345, replace: { count: '12.345' },
+    });
+    expect(mocks.translation).toHaveBeenCalledWith('widget.signalCatalog.vehicleCount', 'Vehicles observed: {{count}}', {
+      count: 6789, replace: { count: '6.789' },
+    });
+    expect(mocks.retryCatalog).not.toHaveBeenCalled();
+    expect(mocks.retryObservations).not.toHaveBeenCalled();
+    expect(catalog.signals[0].sample_count_total).toBe(12345);
+    expect(catalog.signals[0].vehicle_count).toBe(6789);
+  });
+
+  it('distinguishes real zero aggregate counts from missing metadata in canonical interpolation', () => {
+    mocks.catalog.mockReturnValue(query({
+      ...canonical,
+      signals: [
+        { ...canonical.signals[0], sample_count_total: 0, vehicle_count: 0 },
+        canonical.signals[1],
+      ],
+    }, mocks.retryCatalog));
+    mount();
+    expect(screen.getByText(/Total observations: 0/)).toHaveTextContent('Vehicles observed: 0');
+    expect(screen.getByText(/Total observations: —/)).toHaveTextContent('Vehicles observed: —');
+    for (const [key, fallback] of [
+      ['widget.signalCatalog.totalSamples', 'Total observations: {{count}}'],
+      ['widget.signalCatalog.vehicleCount', 'Vehicles observed: {{count}}'],
+    ]) {
+      expect(mocks.translation).toHaveBeenCalledWith(key, fallback, { count: 0, replace: { count: '0' } });
+      expect(mocks.translation).toHaveBeenCalledWith(key, fallback, { count: undefined, replace: { count: '—' } });
+    }
   });
 });

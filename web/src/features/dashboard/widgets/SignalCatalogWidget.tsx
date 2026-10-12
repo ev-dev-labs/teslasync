@@ -162,11 +162,13 @@ export default function SignalCatalogWidget({ vehicleId, size }: WidgetProps) {
                             </Text>
                             <Text as="p" variant="caption" className="[overflow-wrap:anywhere]">
                               {t('widget.signalCatalog.totalSamples', 'Total observations: {{count}}', {
-                                count: sig.sample_count_total == null ? '—' : fmtInt(sig.sample_count_total),
+                                count: sig.sample_count_total ?? undefined,
+                                replace: { count: sig.sample_count_total == null ? '—' : fmtInt(sig.sample_count_total) },
                               })}
                               {' · '}
                               {t('widget.signalCatalog.vehicleCount', 'Vehicles observed: {{count}}', {
-                                count: sig.vehicle_count == null ? '—' : fmtInt(sig.vehicle_count),
+                                count: sig.vehicle_count ?? undefined,
+                                replace: { count: sig.vehicle_count == null ? '—' : fmtInt(sig.vehicle_count) },
                               })}
                               {' · '}
                               {t('widget.signalCatalog.lastSeen', 'Last seen: {{timestamp}}', {
