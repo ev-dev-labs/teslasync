@@ -1,4 +1,5 @@
 import type { SecretRotationSeverity, SecretRotationStatus } from '@/types/admin-operator-confidence';
+import { gaugeTone } from '@/lib/tokens';
 
 export const SEVERITY_VARIANT: Record<SecretRotationSeverity, 'success' | 'warning' | 'danger' | 'neutral'> = {
   ok: 'success',
@@ -7,13 +8,13 @@ export const SEVERITY_VARIANT: Record<SecretRotationSeverity, 'success' | 'warni
   unknown: 'neutral',
 };
 
-// Chart-only hex — dynamic fill values, not static CSS vars. `unknown`
-// borrows the muted slate used across the app's neutral chips.
+// Preserve the public export name while sharing mode-aware semantic paint.
+// Unknown stays neutral, independently of server-classified thresholds.
 export const SEVERITY_HEX: Record<SecretRotationSeverity, string> = {
-  ok: '#10b981',
-  warn: '#f59e0b',
-  critical: '#ef4444',
-  unknown: '#64748b',
+  ok: gaugeTone.success,
+  warn: gaugeTone.warning,
+  critical: gaugeTone.danger,
+  unknown: gaugeTone.neutral,
 };
 
 export const SEVERITY_ORDER: SecretRotationSeverity[] = ['critical', 'warn', 'ok', 'unknown'];
