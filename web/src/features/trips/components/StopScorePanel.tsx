@@ -34,7 +34,7 @@ export function StopScorePanel({ session }: { session: JourneySession }) {
   const { t } = useTranslation();
   const [selected, setSelected] = useState<string[]>([]);
   const [arrival, setArrival] = useState(() => toLocalInput(new Date(Date.now() + 2 * 3600_000)));
-  const [chargeNeed, setChargeNeed] = useState(40);
+  const [chargeNeed, setChargeNeed] = useState(40000);
 
   const sitesQuery = useWaitOracleSites();
   const sitesState = useDataState(sitesQuery);
@@ -70,7 +70,7 @@ export function StopScorePanel({ session }: { session: JourneySession }) {
     const byName = new Map(sites.map((s) => [s.name, s]));
     score.mutate({
       id: session.id,
-      energy_wh: chargeNeed * 1000,
+      energy_wh: chargeNeed,
       candidates: selected.flatMap((name) => {
         const site = byName.get(name);
         if (!site) return [];

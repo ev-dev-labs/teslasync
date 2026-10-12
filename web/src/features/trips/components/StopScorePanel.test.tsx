@@ -222,3 +222,58 @@ describe('StopScorePanel', () => {
     expect(mutate).not.toHaveBeenCalled();
   });
 });
+
+describe('StopScorePanel canonical energy input', () => {
+  it('displays the default 40000 Wh as 40 kWh in the real shared control', () => {
+    const mutate = vi.fn();
+    mockScore.mockReturnValue({ mutate, isPending: false, data: undefined });
+    renderPanel();
+    expect(screen.getByRole('textbox', { name: 'Charge needed' })).toHaveValue('40.00');
+    expect(screen.getByTestId('unit-input-symbol')).toHaveTextContent('kWh');
+    fireEvent.click(screen.getByText(/Kettleman City \(200 visits\)/));
+    fireEvent.click(screen.getByRole('button', { name: 'Score 1 stops' }));
+    expect(mutate).toHaveBeenCalledTimes(1);
+    expect(mutate).toHaveBeenCalledWith(expect.objectContaining({ energy_wh: 40000 }));
+  });
+
+  it('submits exactly 25000 Wh after entering 25 kWh in the real shared control', () => {
+    const mutate = vi.fn();
+    mockScore.mockReturnValue({ mutate, isPending: false, data: undefined });
+    renderPanel();
+    fireEvent.click(screen.getByText(/Kettleman City \(200 visits\)/));
+    fireEvent.change(screen.getByLabelText('Arrival'), { target: { value: '2026-09-10T12:00' } });
+    const energy = screen.getByRole('textbox', { name: 'Charge needed' });
+    fireEvent.focus(energy);
+    fireEvent.change(energy, { target: { value: '25' } });
+    fireEvent.blur(energy);
+    expect(energy).toHaveValue('25.00');
+    fireEvent.click(screen.getByRole('button', { name: 'Score 1 stops' }));
+    expect(mutate).toHaveBeenCalledTimes(1);
+    expect(mutate).toHaveBeenCalledWith({
+      id: session.id,
+      energy_wh: 25000,
+      candidates: [{
+        site: sites[0].name,
+        lat: sites[0].lat,
+        lng: sites[0].lng,
+        arrive_at: new Date('2026-09-10T12:00').toISOString(),
+      }],
+    });
+  });
+
+  it('disables scoring and sends no request after clearing the real shared control', () => {
+    const mutate = vi.fn();
+    mockScore.mockReturnValue({ mutate, isPending: false, data: undefined });
+    renderPanel();
+    fireEvent.click(screen.getByText(/Kettleman City \(200 visits\)/));
+    const submit = screen.getByRole('button', { name: 'Score 1 stops' });
+    expect(submit).toBeEnabled();
+    const energy = screen.getByRole('textbox', { name: 'Charge needed' });
+    fireEvent.focus(energy);
+    fireEvent.change(energy, { target: { value: '' } });
+    fireEvent.blur(energy);
+    expect(submit).toBeDisabled();
+    fireEvent.click(submit);
+    expect(mutate).not.toHaveBeenCalled();
+  });
+});
