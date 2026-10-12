@@ -110,6 +110,7 @@ vi.mock('@/components/ai/AINLGrafanaPanel', () => ({
 }));
 
 import GrafanaPanelPage from '@/features/power-user/pages/GrafanaPanelPage';
+import { typography } from '@/lib/tokens';
 
 const clipboardWriteText = vi.fn<(text: string) => Promise<void>>();
 
@@ -151,6 +152,97 @@ function getEditor(): HTMLTextAreaElement {
 }
 
 describe('GrafanaPanelPage', () => {
+  it('associates the visible editor label and manual-copy guidance across draft edits', () => {
+    renderPage();
+    const editor = getEditor();
+    const originalId = editor.id;
+    const descriptionId = editor.getAttribute('aria-describedby');
+    expect(editor.labels).toHaveLength(1);
+    expect(editor.labels?.[0]).toHaveTextContent('Grafana panel JSON editor');
+    expect(editor.labels?.[0]).toHaveAttribute('for', originalId);
+    expect(descriptionId).toBeTruthy();
+    expect(document.getElementById(descriptionId ?? '')).toHaveTextContent(
+      'The browser does not push the panel to Grafana; copy your JSON into your existing Grafana dashboard editor.',
+    );
+    expect(editor).toHaveAccessibleDescription(
+      'Build a Grafana panel JSON envelope against the curated panel-builder catalog below. The browser does not push the panel to Grafana; copy your JSON into your existing Grafana dashboard editor.',
+    );
+    expect(editor).toHaveAttribute('rows', '14');
+    expect(editor).toHaveAttribute('spellcheck', 'false');
+    const rawDraft = '  unparsed user text  ';
+    fireEvent.change(editor, { target: { value: rawDraft } });
+    expect(editor).toHaveValue(rawDraft);
+    expect(editor.id).toBe(originalId);
+    expect(editor).toHaveAttribute('aria-describedby', descriptionId);
+    expect(window.localStorage.getItem(DRAFT_KEY)).toBe(rawDraft);
+    expect(clipboardWriteText).not.toHaveBeenCalled();
+  });
+
+  it('retains every catalog identifier and ordered column on neutral reference surfaces', () => {
+    renderPage();
+    const root = screen.getByTestId('power-grafana-panel-builder-root');
+    const columnsByTable = {
+      drives: ['id', 'vehicle_id', 'started_at', 'ended_at', 'distance_m', 'duration_s', 'energy_used_wh', 'regen_wh', 'avg_speed_mps', 'max_speed_mps'],
+      charging_sessions: ['id', 'vehicle_id', 'started_at', 'ended_at', 'energy_added_wh', 'cost_cents', 'charger_kind', 'max_power_w'],
+      vehicles: ['id', 'vin', 'display_name', 'model', 'color'],
+      alerts: ['id', 'vehicle_id', 'alert_rule_id', 'fired_at', 'level'],
+      signal_log_view: ['vehicle_id', 'signal_name', 'ts', 'num_value', 'str_value'],
+    };
+    for (const [name, columns] of Object.entries(columnsByTable)) {
+      const identity = within(root).getByText(name);
+      const entry = identity.closest('li');
+      expect(identity.tagName).toBe('CODE');
+      expect(entry?.querySelector(':scope > div > code')).toBe(identity);
+      expect(identity.textContent).toBe(name);
+      expect(entry).toHaveClass('min-w-0', 'bg-[var(--surface-2)]', 'border-[var(--border-subtle)]');
+      const columnList = entry?.querySelector(':scope > ul');
+      expect(columnList).not.toBeNull();
+      const columnCodes = Array.from(columnList?.querySelectorAll(':scope > li > code') ?? []);
+      expect(columnCodes.map((code) => code.textContent)).toEqual(columns);
+      for (const code of columnCodes) {
+        expect(code).toHaveClass(typography.color.secondary);
+      }
+    }
+    const referenceCodes = root.querySelectorAll('code');
+    expect(referenceCodes).toHaveLength(50);
+    for (const code of Array.from(referenceCodes)) {
+      expect(code.className).not.toMatch(/text-(?:cyan|emerald)-300|text-neon-/);
+      expect(code).toHaveClass('break-words', '[overflow-wrap:anywhere]');
+    }
+    expect(within(root).getByText('Tesla VIN (PII)')).toBeInTheDocument();
+    expect(within(root).getByText('user-chosen display name (PII)')).toBeInTheDocument();
+    expect(within(root).getByText('numeric value (SI), null if non-numeric')).toBeInTheDocument();
+    expect(root.querySelectorAll('[class*="bg-white/"]')).toHaveLength(0);
+  });
+
+  it('keeps all named section headings and editor actions reachable with shared icon and mobile roles', () => {
+    renderPage();
+    for (const name of [
+      'Manual panel JSON editor',
+      'How it works',
+      'Curated panel types',
+      'Curated datasource types',
+      'Curated table catalog (postgres targets)',
+    ]) {
+      const heading = screen.getByRole('heading', { name });
+      expect(heading).toHaveClass('min-w-0', 'break-words');
+      expect(heading.querySelector('svg')).toHaveClass('shrink-0', typography.color.secondary);
+      expect(heading.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
+      expect(heading.querySelector('svg')).toHaveAttribute('focusable', 'false');
+    }
+    const copy = screen.getByRole('button', { name: 'Copy to clipboard' });
+    const clear = screen.getByRole('button', { name: 'Clear' });
+    expect(copy).toHaveClass('h-auto', 'min-h-11', 'md:min-h-10', 'max-w-full', 'whitespace-normal');
+    expect(clear).toHaveClass('h-auto', 'min-h-11', 'md:min-h-10', 'max-w-full', 'whitespace-normal');
+    expect(copy).toBeDisabled();
+    expect(clear).toBeDisabled();
+    fireEvent.change(getEditor(), { target: { value: '{"title":"Editable reference"}' } });
+    expect(copy).toBeEnabled();
+    expect(clear).toBeEnabled();
+    expect(document.querySelector('iframe')).toBeNull();
+    expect(clipboardWriteText).not.toHaveBeenCalled();
+  });
+
   it('retains all three passive workflow instructions without implying AI apply or a Grafana push', () => {
     renderPage();
     const workflow = screen.getByRole('list', { name: 'How it works' });
