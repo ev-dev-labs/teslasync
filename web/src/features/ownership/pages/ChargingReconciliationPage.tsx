@@ -1,4 +1,4 @@
-import { type FormEvent, useMemo, useState } from 'react';
+import { type FormEvent, useId, useMemo, useState } from 'react';
 import { FileWarning, Gavel, Receipt, Trash2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -12,7 +12,7 @@ import { AlertBanner } from '@/components/feedback';
 
 import { PageLayout } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
-import { Badge, Button, ConfirmDialog, DataTable, Input, Text, Textarea } from '@/components/ui';
+import { Badge, Button, ConfirmDialog, DataTable, Icon, Input, Text, Textarea } from '@/components/ui';
 import type { Column } from '@/components/ui';
 import { useConfirm } from '@/hooks/useConfirm';
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -39,6 +39,8 @@ import { OwnershipBrief } from '../components/operationalbrief-all/OwnershipBrie
 import { specialistDisplay } from '../components/operationalbrief-all/specialistDisplay';
 import { formatCurrencyMinor, formatPct, formatSpan, fromDateInput, toDateInput } from '../formatters';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { cn } from '@/lib/cn';
+import { severityTokens } from '@/lib/tokens';
 
 function blankLine(): InvoiceLine {
   return {
@@ -71,6 +73,8 @@ export default function ChargingReconciliationPage() {
   const [activeInvoice, setActiveInvoice] = useState<number | null>(null);
   const [importOpen, setImportOpen] = useState(false);
   const [disputeOpen, setDisputeOpen] = useState(false);
+  const importEditorId = useId();
+  const disputeEditorId = useId();
   const [draft, setDraft] = useState({
     provider: '',
     invoice_ref: '',
@@ -213,10 +217,12 @@ export default function ChargingReconciliationPage() {
       key: 'actions',
       header: t('ownership.action.header', 'Actions'),
       render: (row) => (
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Button
             variant={activeInvoice === row.id ? 'primary' : 'secondary'}
             size="sm"
+            className="min-h-11 min-w-11 md:min-h-0 md:min-w-0"
+            wrapLabel
             onClick={() => setActiveInvoice(row.id)}
           >
             {t('ownership.reconcile.invoice.audit', 'Audit')}
@@ -224,7 +230,9 @@ export default function ChargingReconciliationPage() {
           <Button
             variant="ghost"
             size="sm"
-            icon={<Trash2 className="h-4 w-4" aria-hidden="true" />}
+            className="min-h-11 min-w-11 md:min-h-0 md:min-w-0"
+            wrapLabel
+            icon={<Icon icon={Trash2} />}
             loading={remove.isPending && remove.variables === row.id}
             onClick={() => void handleRemove(row)}
           >
@@ -259,9 +267,9 @@ export default function ChargingReconciliationPage() {
       render: (row) => (
         <div className="flex items-center gap-2">
           <VerdictBadge value={row.match_state} />
-          <span className="tabular-nums text-xs text-[var(--text-muted)]">
+          <Text as="span" variant="caption" className="tabular-nums">
             {formatPct(row.match_confidence_pct)}
-          </span>
+          </Text>
         </div>
       ),
       sortable: true,
@@ -298,7 +306,7 @@ export default function ChargingReconciliationPage() {
       render: (row) =>
         row.energy_delta_pct != null ? (
           <span
-            className={`tabular-nums ${Math.abs(row.energy_delta_pct) > 5 ? 'text-amber-300' : ''}`}
+            className={cn('tabular-nums', Math.abs(row.energy_delta_pct) > 5 && severityTokens.warn.fg)}
           >
             {formatPct(row.energy_delta_pct)}
           </span>
@@ -338,7 +346,7 @@ export default function ChargingReconciliationPage() {
       filterValueLabel: (_value, row) => money(row.variance_minor),
       render: (row) => (
         <span
-          className={`tabular-nums ${row.variance_minor > 0 ? 'text-rose-300' : row.variance_minor < 0 ? 'text-emerald-300' : ''}`}
+          className={cn('tabular-nums', row.variance_minor > 0 ? severityTokens.critical.fg : row.variance_minor < 0 ? severityTokens.success.fg : undefined)}
         >
           {money(row.variance_minor)}
         </span>
@@ -382,7 +390,7 @@ export default function ChargingReconciliationPage() {
       header: t('ownership.reconcile.bucket.amount', 'Amount'),
       align: 'right',
       render: (row) => (
-        <span className={`tabular-nums ${row.amount_minor > 0 ? 'text-rose-300' : ''}`}>
+        <span className={cn('tabular-nums', row.amount_minor > 0 && severityTokens.critical.fg)}>
           {money(row.amount_minor)}
         </span>
       ),
@@ -393,16 +401,16 @@ export default function ChargingReconciliationPage() {
       header: t('ownership.reconcile.bucket.share', 'Share of variance'),
       align: 'right',
       render: (row) => (
-        <div className="min-w-[7rem]">
+        <div className="min-w-28">
           <div className="h-1.5 w-full overflow-hidden rounded-full bg-[var(--surface-2)]">
             <div
-              className="h-full rounded-full bg-amber-400/70"
+              className={cn('h-full rounded-full', severityTokens.warn.dot)}
               style={{ width: `${Math.min(100, Math.max(0, row.share_pct))}%` }}
             />
           </div>
-          <span className="tabular-nums text-xs text-[var(--text-muted)]">
+          <Text as="span" variant="caption" className="tabular-nums">
             {formatPct(row.share_pct)}
-          </span>
+          </Text>
         </div>
       ),
     },
@@ -503,7 +511,11 @@ export default function ChargingReconciliationPage() {
             <Button
               variant="secondary"
               size="sm"
-              icon={<Receipt className="h-4 w-4" aria-hidden="true" />}
+              className="min-h-11 min-w-11 md:min-h-0 md:min-w-0"
+              wrapLabel
+              icon={<Icon icon={Receipt} />}
+              aria-expanded={importOpen}
+              aria-controls={importOpen ? importEditorId : undefined}
               onClick={() => setImportOpen((open) => !open)}
             >
               {importOpen
@@ -513,7 +525,7 @@ export default function ChargingReconciliationPage() {
           }
         >
           {importOpen ? (
-            <form className="mb-6 space-y-5" onSubmit={submitInvoice}>
+            <form id={importEditorId} className="mb-6 space-y-5" onSubmit={submitInvoice}>
               <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
                 <Input
                   label={t('ownership.reconcile.form.provider', 'Provider')}
@@ -583,7 +595,7 @@ export default function ChargingReconciliationPage() {
               </div>
 
               <div className="space-y-3">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-wrap items-center justify-between gap-3">
                   <Text as="h3" variant="label">
                     {t('ownership.reconcile.form.lines', 'Statement lines')}
                   </Text>
@@ -591,6 +603,8 @@ export default function ChargingReconciliationPage() {
                     type="button"
                     variant="ghost"
                     size="sm"
+                    className="min-h-11 min-w-11 md:min-h-0 md:min-w-0"
+                    wrapLabel
                     onClick={() =>
                       setDraft((current) => ({ ...current, lines: [...current.lines, blankLine()] }))
                     }
@@ -601,7 +615,7 @@ export default function ChargingReconciliationPage() {
                 {draft.lines.map((line, index) => (
                   <div
                     key={index}
-                    className="grid gap-3 rounded-lg border border-white/[0.07] bg-white/[0.02] p-3 md:grid-cols-2 xl:grid-cols-5"
+                    className="grid gap-3 rounded-lg border border-[var(--border-default)] bg-[var(--surface-2)] p-3 md:grid-cols-2 xl:grid-cols-5"
                   >
                     <Input
                       label={t('ownership.reconcile.form.lineRef', 'Line reference')}
@@ -686,7 +700,7 @@ export default function ChargingReconciliationPage() {
                 ))}
               </div>
 
-              <Button type="submit" loading={create.isPending} disabled={vehicleId == null}>
+              <Button type="submit" className="min-h-11 md:min-h-0" wrapLabel loading={create.isPending} disabled={vehicleId == null}>
                 {t('ownership.reconcile.form.save', 'Import and reconcile')}
               </Button>
               <MutationError error={create.error} />
@@ -694,8 +708,23 @@ export default function ChargingReconciliationPage() {
           ) : null}
 
           <DataTable
+            variant="embedded"
+            name={t('ownership.reconcile.invoices.title', 'Provider statements')}
             columns={invoiceColumns}
-            mobileColumns={['ref', 'total', 'status']}
+            rowLabel={(row) => row.invoice_ref}
+            mobilePresentation={{
+              roles: { ref: 'title', total: 'primary', period: 'meta', lines: 'meta' },
+              displayValue: (row, key) => {
+                switch (key) {
+                  case 'ref': return `${row.invoice_ref} · ${row.provider}`;
+                  case 'total': return formatCurrencyMinor(row.billed_total_minor, row.currency, units.unitPrefs.locale);
+                  case 'period': return `${formatDateTime(row.period_start)} → ${formatDateTime(row.period_end)}`;
+                  case 'lines': return fmtInt(row.line_count);
+                  default: return null;
+                }
+              },
+              inlineActions: (row) => invoiceColumns.find((column) => column.key === 'actions')?.render(row),
+            }}
             data={invoices}
             keyExtractor={(row) => row.id}
             tableId="ownership-reconcile-invoices"
@@ -821,9 +850,23 @@ export default function ChargingReconciliationPage() {
           )}
         >
           <DataTable
+            variant="embedded"
+            name={t('ownership.reconcile.lines.title', 'Line-by-line audit')}
             columns={lineColumns}
             enableValueFilters
-            mobileColumns={['ref', 'match', 'variance']}
+            rowLabel={(row) => row.line.line_ref || t('ownership.reconcile.line.unnamed', 'Unnamed line')}
+            mobilePresentation={{
+              roles: { ref: 'title', variance: 'primary', billedEnergy: 'meta', measuredEnergy: 'meta' },
+              displayValue: (row, key) => {
+                switch (key) {
+                  case 'ref': return row.line.line_ref || t('ownership.reconcile.line.unnamed', 'Unnamed line');
+                  case 'variance': return money(row.variance_minor);
+                  case 'billedEnergy': return units.formatEnergy(row.line.billed_energy_wh);
+                  case 'measuredEnergy': return row.measured_energy_wh == null ? null : units.formatEnergy(row.measured_energy_wh);
+                  default: return null;
+                }
+              },
+            }}
             data={lines}
             keyExtractor={(row) => row.line.id || row.line.line_ref}
             tableId="ownership-reconcile-lines"
@@ -863,11 +906,25 @@ export default function ChargingReconciliationPage() {
             'ownership.reconcile.buckets.empty',
             'No material variance was attributed on this statement.',
           )}
-          actions={<FileWarning className="h-4 w-4 text-amber-300" aria-hidden="true" />}
+          actions={<Icon icon={FileWarning} className={severityTokens.warn.fg} />}
         >
           <DataTable
+            variant="embedded"
+            name={t('ownership.reconcile.buckets.title', 'Variance attribution')}
             columns={bucketColumns}
-            mobileColumns={['label', 'amount', 'recoverable']}
+            rowLabel={(row) => row.label}
+            mobilePresentation={{
+              roles: { label: 'title', amount: 'primary', lines: 'meta', share: 'meta' },
+              displayValue: (row, key) => {
+                switch (key) {
+                  case 'label': return row.label;
+                  case 'amount': return money(row.amount_minor);
+                  case 'lines': return fmtInt(row.line_count);
+                  case 'share': return formatPct(row.share_pct);
+                  default: return null;
+                }
+              },
+            }}
             data={buckets}
             keyExtractor={(row) => row.reason}
             tableId="ownership-reconcile-buckets"
@@ -901,9 +958,22 @@ export default function ChargingReconciliationPage() {
           )}
         >
           <DataTable
+            variant="embedded"
+            name={t('ownership.reconcile.uninvoiced.title', 'Sessions the provider never billed')}
             columns={uninvoicedColumns}
             enableValueFilters
-            mobileColumns={['session', 'location', 'energy']}
+            rowLabel={(row) => `#${row.session_id}`}
+            mobilePresentation={{
+              roles: { session: 'title', energy: 'primary', location: 'meta' },
+              displayValue: (row, key) => {
+                switch (key) {
+                  case 'session': return `#${row.session_id} · ${formatDateTime(row.started_at)}`;
+                  case 'energy': return units.formatEnergy(row.energy_wh);
+                  case 'location': return row.location || null;
+                  default: return null;
+                }
+              },
+            }}
             data={uninvoiced}
             keyExtractor={(row) => row.session_id}
             tableId="ownership-reconcile-uninvoiced"
@@ -939,7 +1009,11 @@ export default function ChargingReconciliationPage() {
             <Button
               variant="secondary"
               size="sm"
-              icon={<Gavel className="h-4 w-4" aria-hidden="true" />}
+              className="min-h-11 min-w-11 md:min-h-0 md:min-w-0"
+              wrapLabel
+              icon={<Icon icon={Gavel} />}
+              aria-expanded={disputeOpen}
+              aria-controls={disputeOpen ? disputeEditorId : undefined}
               disabled={!report}
               onClick={() => {
                 setDispute((current) => ({
@@ -956,17 +1030,17 @@ export default function ChargingReconciliationPage() {
             </Button>
           }
         >
-          <div className="rounded-xl border border-white/[0.08] bg-white/[0.025] p-4">
+          <div className="rounded-xl border border-[var(--border-default)] bg-[var(--surface-2)] p-4">
             <Text as="p" variant="caption">
               {t('ownership.reconcile.dispute.digest', 'Dispute packet digest')}
             </Text>
-            <p className="mt-1 break-all font-mono text-sm text-cyan-300">
+            <Text as="p" variant="code" className="mt-1 break-all">
               {report?.dispute_packet_digest || '—'}
-            </p>
+            </Text>
           </div>
 
           {disputeOpen ? (
-            <form className="mt-4 space-y-4" onSubmit={submitDispute}>
+            <form id={disputeEditorId} className="mt-4 space-y-4" onSubmit={submitDispute}>
               <div className="grid gap-4 md:grid-cols-2">
                 <MoneyInput
                   label={t('ownership.reconcile.dispute.claimed', 'Amount claimed')}
@@ -999,7 +1073,7 @@ export default function ChargingReconciliationPage() {
                   setDispute((current) => ({ ...current, note: event.target.value }))
                 }
               />
-              <Button type="submit" loading={openDispute.isPending}>
+              <Button type="submit" className="min-h-11 md:min-h-0" wrapLabel loading={openDispute.isPending}>
                 {t('ownership.reconcile.dispute.submit', 'Record dispute')}
               </Button>
               <MutationError error={openDispute.error} />
@@ -1010,7 +1084,7 @@ export default function ChargingReconciliationPage() {
             {(report?.disputes ?? []).map((item) => (
               <div
                 key={item.id}
-                className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-white/[0.07] bg-white/[0.02] p-3"
+                className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-[var(--border-default)] bg-[var(--surface-2)] p-3"
               >
                 <div>
                   <Text as="p" variant="label">

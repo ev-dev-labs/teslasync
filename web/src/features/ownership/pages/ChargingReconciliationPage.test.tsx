@@ -8,7 +8,7 @@
  * serialization, buttons, and confirm dialog render for real.
  */
 
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { render, screen, within, fireEvent, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
@@ -72,6 +72,7 @@ import { downloadCSV, downloadJSON, objectsToCSV } from '@/lib/csvExport';
 import { expectOperationalBand, summaryMetric } from '../components/operationalbrief-all/testAssertions';
 import type { ChargingInvoice, ReconciledLine, ReconciliationReport } from '@/types/ownership';
 import { formatPct } from '../formatters';
+import { severityTokens, typography } from '@/lib/tokens';
 
 const mockSelected = useSelectedVehicle as unknown as ReturnType<typeof vi.fn>;
 const mockInvoices = useChargingInvoices as unknown as ReturnType<typeof vi.fn>;
@@ -710,5 +711,159 @@ describe('ChargingReconciliationPage — confirm-gated delete', () => {
 
     expect(removeButton('INV-002')).toBeDisabled();
     expect(removeButton('INV-001')).not.toBeDisabled();
+  });
+
+  it('associates both editor toggles with stable mounted forms and retains cancelled drafts', () => {
+    mockReport.mockReturnValue(makeQuery(makeReport()));
+    renderPage();
+    selectInvoice();
+
+    const importToggle = screen.getByRole('button', { name: 'Import statement' });
+    const disputeToggle = screen.getByRole('button', { name: 'Open dispute' });
+    expect(importToggle).toHaveAttribute('aria-expanded', 'false');
+    expect(disputeToggle).toHaveAttribute('aria-expanded', 'false');
+    expect(importToggle).not.toHaveAttribute('aria-controls');
+    expect(disputeToggle).not.toHaveAttribute('aria-controls');
+    fireEvent.click(importToggle);
+    fireEvent.click(disputeToggle);
+    const importId = importToggle.getAttribute('aria-controls');
+    const disputeId = disputeToggle.getAttribute('aria-controls');
+    expect(importId).not.toBe(disputeId);
+    expect(importToggle).toHaveAttribute('aria-expanded', 'true');
+    expect(disputeToggle).toHaveAttribute('aria-expanded', 'true');
+    expect(document.getElementById(importId!)).toContainElement(screen.getByRole('textbox', { name: 'Provider required' }));
+    expect(document.getElementById(disputeId!)).toContainElement(screen.getByRole('textbox', { name: 'Note to the provider' }));
+    fireEvent.change(screen.getByRole('textbox', { name: 'Invoice reference required' }), { target: { value: 'Retained draft' } });
+    fireEvent.change(screen.getByRole('textbox', { name: 'Note to the provider' }), { target: { value: 'Retained claim note' } });
+    fireEvent.click(importToggle);
+    fireEvent.click(disputeToggle);
+    expect(document.getElementById(importId!)).toBeNull();
+    expect(document.getElementById(disputeId!)).toBeNull();
+    fireEvent.click(importToggle);
+    fireEvent.click(disputeToggle);
+    expect(importToggle).toHaveAttribute('aria-controls', importId);
+    expect(disputeToggle).toHaveAttribute('aria-controls', disputeId);
+    expect(screen.getByRole('textbox', { name: 'Invoice reference required' })).toHaveValue('Retained draft');
+    expect(screen.getByRole('textbox', { name: 'Note to the provider' })).toHaveValue('Retained claim note');
+    expect(mockCreate().mutate).not.toHaveBeenCalled();
+    expect(mockDispute().mutate).not.toHaveBeenCalled();
+  });
+
+  it('keeps signed variance and energy tolerance semantics while using restrained roles and neutral digest text', () => {
+    const report = makeReport();
+    report.lines = [
+      makeLine({ energy_delta_pct: 5, variance_minor: 345 }),
+      makeLine({ line: { ...makeLine().line, id: 72, line_ref: 'Negative variance' }, energy_delta_pct: -5.1, variance_minor: -345 }),
+      makeLine({ line: { ...makeLine().line, id: 73, line_ref: 'Positive energy delta' }, energy_delta_pct: 5.1, variance_minor: 0 }),
+    ];
+    report.variance_buckets!.push({ reason: 'negative', label: 'Negative share', line_count: 1, amount_minor: -345, share_pct: -10, recoverable: false });
+    report.variance_buckets![0].share_pct = 120;
+    mockReport.mockReturnValue(makeQuery(report));
+    renderPage();
+    selectInvoice();
+    const row = (label: string) => within(card('Line-by-line audit')).getByText(label).closest('tr')!;
+    expect(within(row('Unknown price line')).getByText(formatPct(5))).not.toHaveClass(severityTokens.warn.fg);
+    expect(within(row('Unknown price line')).getByText('$3.45')).toHaveClass(severityTokens.critical.fg);
+    expect(within(row('Negative variance')).getByText(formatPct(-5.1))).toHaveClass(severityTokens.warn.fg);
+    expect(within(row('Negative variance')).getByText('-$3.45')).toHaveClass(severityTokens.success.fg);
+    expect(within(row('Positive energy delta')).getByText(formatPct(5.1))).toHaveClass(severityTokens.warn.fg);
+    const shares = card('Variance attribution').querySelectorAll<HTMLElement>('[style]');
+    expect(Array.from(shares).map((share) => share.style.width)).toEqual(['100%', '0%']);
+    for (const share of shares) expect(share).toHaveClass(severityTokens.warn.dot);
+    expect(screen.getByText('full-dispute-packet-digest-with-no-truncation')).toHaveClass(...typography.role.code.split(' '));
+    expect(mockDispute().mutate).not.toHaveBeenCalled();
+  });
+
+  describe('allocated-width mobile adoption', () => {
+    beforeEach(() => {
+      const original = HTMLElement.prototype.getBoundingClientRect;
+      vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (this: HTMLElement) {
+        return this.hasAttribute('data-grid-frame') ? new DOMRect(0, 0, 375, 600) : original.call(this);
+      });
+    });
+    afterEach(() => vi.restoreAllMocks());
+
+    it('keeps invoice actions and every reconciliation table field reachable through real mobile details', () => {
+      mockReport.mockReturnValue(makeQuery(makeReport()));
+      const view = renderPage();
+      const statements = card('Provider statements');
+      expect(within(statements).getAllByRole('button', { name: 'Audit' })).toHaveLength(2);
+      expect(within(statements).getAllByRole('button', { name: 'Remove' })).toHaveLength(2);
+      fireEvent.click(within(statements).getAllByRole('button', { name: 'Audit' })[0]);
+      expect(mockReport).toHaveBeenLastCalledWith(1);
+      expect(view.container.querySelectorAll('[data-mobile-table]')).toHaveLength(4);
+      expect(view.container.querySelector('[data-grid-frame] table')).toBeNull();
+      expect(view.container.querySelectorAll('[data-grid-variant="embedded"]')).toHaveLength(4);
+
+      const details = (title: string, index = 0) => {
+        fireEvent.click(within(card(title)).getAllByRole('button', { name: 'Quick view' })[index]);
+        return screen.getByRole('dialog');
+      };
+      const headers = (dialog: HTMLElement) => Array.from(dialog.querySelectorAll('dt')).map((item) => item.textContent);
+      const close = () => {
+        const footer = screen.getByRole('dialog').querySelector('[data-modal-footer="true"]');
+        if (!(footer instanceof HTMLElement)) throw new Error('Missing quick-view footer');
+        fireEvent.click(within(footer).getByRole('button', { name: 'Close' }));
+        expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+      };
+      const invoice = details('Provider statements');
+      expect(headers(invoice)).toEqual(['Invoice', 'Billing period', 'Billed', 'Lines', 'Status', 'Actions']);
+      expect(invoice).toHaveTextContent('GridCo');
+      expect(within(invoice).getByRole('button', { name: 'Audit' })).toBeEnabled();
+      expect(within(invoice).getByRole('button', { name: 'Remove' })).toBeEnabled();
+      close();
+      const unknown = details('Line-by-line audit');
+      expect(headers(unknown)).toEqual(['Line', 'Match', 'Billed energy', 'Measured energy', 'Energy Δ', 'Time Δ', 'Billed', 'Expected', 'Variance', 'Attribution']);
+      expect(Array.from(unknown.querySelectorAll('dd')).map((item) => item.textContent)).toEqual([
+        expect.stringContaining('Site A'), expect.stringContaining(formatPct(80)),
+        expect.stringContaining('12.5'), '—', '—', '—', '$12.50', '—', '$0.00', 'price not observed',
+      ]);
+      close();
+      const zero = details('Line-by-line audit', 1);
+      expect(zero).toHaveTextContent('Observed zero price line');
+      expect(zero.querySelectorAll('dd')[3]).not.toHaveTextContent('—');
+      expect(zero.querySelectorAll('dd')[7]).toHaveTextContent('$0.00');
+      close();
+      const bucket = details('Variance attribution');
+      expect(headers(bucket)).toEqual(['Discrepancy category', 'Lines', 'Amount', 'Share of variance', 'Recoverable']);
+      expect(bucket).toHaveTextContent(formatPct(100));
+      expect(bucket).toHaveTextContent('Disputable');
+      close();
+      const uninvoiced = details('Sessions the provider never billed');
+      expect(headers(uninvoiced)).toEqual(['Session', 'Location', 'Measured energy', 'Why it matters']);
+      expect(uninvoiced).toHaveTextContent('Independent measured session evidence.');
+      close();
+      expect(screen.getByText('full-dispute-packet-digest-with-no-truncation')).toBeInTheDocument();
+      expect(card('Dispute desk')).toHaveTextContent('Retained dispute note.');
+      expect(screen.getByRole('heading', { name: 'Evidence, quality, and limitations' })).toBeInTheDocument();
+      expect(mockCreate().mutate).not.toHaveBeenCalled();
+      expect(mockRemove().mutate).not.toHaveBeenCalled();
+      expect(mockDispute().mutate).not.toHaveBeenCalled();
+    });
+
+    it('retains mobile search export scope and hidden unknown source fields without changing sibling tables', async () => {
+      const report = makeReport();
+      mockReport.mockReturnValue(makeQuery(report));
+      renderPage();
+      fireEvent.click(within(card('Provider statements')).getAllByRole('button', { name: 'Audit' })[0]);
+      const audit = card('Line-by-line audit');
+      fireEvent.change(within(audit).getByRole('searchbox'), { target: { value: 'Unknown price line' } });
+      await waitFor(() => expect(within(audit).queryByText('Observed zero price line')).toBeNull());
+      await exportPanel('Line-by-line audit', 'JSON');
+      expect(downloadJSON).toHaveBeenCalledWith('charging-reconciliation-lines', [{
+        line_ref: 'Unknown price line', location: 'Site A', occurred_at: '2026-01-04T12:00:00Z',
+        match_state: 'probable', match_confidence_pct: 80, billed_energy_wh: 12500,
+        measured_energy_wh: null, energy_delta_pct: null, time_delta_s: null,
+        billed_total_minor: 1250, expected_cost_minor: null, variance_minor: 0,
+        recoverable: false, variance_reasons: ['price_not_observed'],
+      }]);
+      expect(within(card('Provider statements')).getByText('INV-002 · GridCo')).toBeInTheDocument();
+      expect(within(card('Variance attribution')).getByText('Observed energy overcharge')).toBeInTheDocument();
+      expect(within(card('Sessions the provider never billed')).getByText('Unbilled site')).toBeInTheDocument();
+      expect(mockInvoices).toHaveBeenCalledWith(7, 50, 0);
+      expect(mockCreate().mutate).not.toHaveBeenCalled();
+      expect(mockRemove().mutate).not.toHaveBeenCalled();
+      expect(mockDispute().mutate).not.toHaveBeenCalled();
+    });
   });
 });
