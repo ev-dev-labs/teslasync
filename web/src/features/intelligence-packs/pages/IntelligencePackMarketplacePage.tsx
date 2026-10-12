@@ -10,12 +10,12 @@
  * summarized live in the "Security & Methodology" tab below).
  *
  * Mounts `PackRepositoryProvider` at the root so every tab/panel shares one
- * repository instance (IndexedDB, with a documented localStorage
- * fallback — never a server round-trip).
+ * repository instance (IndexedDB, localStorage, or memory according to
+ * browser capabilities — never a server round-trip).
  */
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { LayoutCard, PageLayout } from '@/components/layout';
+import { LayoutCard, PageLayout, Stack } from '@/components/layout';
 import { Tabs, type TabItem } from '@/components/ui';
 import { FadeIn } from '@/components/motion';
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -28,6 +28,7 @@ import { ImportExportPanel } from '../components/ImportExportPanel';
 import { SecurityMethodologyPanel } from '../components/SecurityMethodologyPanel';
 
 type TabKey = 'catalog' | 'installed' | 'sandbox' | 'audit' | 'importExport' | 'security';
+const TAB_ID_BASE = 'intelligence-packs';
 
 function MarketplaceTabs() {
   const { t } = useTranslation();
@@ -43,24 +44,33 @@ function MarketplaceTabs() {
   ];
 
   return (
-    <div className="space-y-4">
+    <Stack gap={4} className="min-w-0">
       <Tabs
+        idBase={TAB_ID_BASE}
         tabs={tabs}
         activeTab={activeTab}
         onChange={(key) => setActiveTab(key as TabKey)}
         ariaLabel={t('intelPacks.tabs.ariaLabel', 'Intelligence-pack marketplace sections')}
       />
       <FadeIn key={activeTab}>
-        <LayoutCard title={tabs.find(tab => tab.key === activeTab)?.label ?? ''}>
-          {activeTab === 'catalog' && <CatalogPanel />}
-          {activeTab === 'installed' && <InstalledInventoryPanel />}
-          {activeTab === 'sandbox' && <SandboxPreviewPanel />}
-          {activeTab === 'audit' && <AuditLogPanel />}
-          {activeTab === 'importExport' && <ImportExportPanel />}
-          {activeTab === 'security' && <SecurityMethodologyPanel />}
-        </LayoutCard>
+        <Stack
+          id={`${TAB_ID_BASE}-panel-${activeTab}`}
+          role="tabpanel"
+          aria-labelledby={`${TAB_ID_BASE}-tab-${activeTab}`}
+          tabIndex={0}
+          className="min-w-0 rounded-shape-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus-ring)]"
+        >
+          <LayoutCard title={tabs.find(tab => tab.key === activeTab)?.label ?? ''}>
+            {activeTab === 'catalog' && <CatalogPanel />}
+            {activeTab === 'installed' && <InstalledInventoryPanel />}
+            {activeTab === 'sandbox' && <SandboxPreviewPanel />}
+            {activeTab === 'audit' && <AuditLogPanel />}
+            {activeTab === 'importExport' && <ImportExportPanel />}
+            {activeTab === 'security' && <SecurityMethodologyPanel />}
+          </LayoutCard>
+        </Stack>
       </FadeIn>
-    </div>
+    </Stack>
   );
 }
 
