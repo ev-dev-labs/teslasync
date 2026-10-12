@@ -18,7 +18,315 @@ Accepted source counts are not a running-actor count.
 Use the user's active seven-phase workflow, not the different feature-order
 numbering in `frontend-mission.md` section 38.
 
-## Active continuation: independent QA and original next-phase dispatch
+## Latest rolling recovery: source count1592
+
+Latest accepted SOURCE HEAD is
+`29d0984c4eacc29c6d0c1739d9e85f52a5eb5935`, actual count1592,
+fully pushed on `fix/dashboard-followups`. Since count1491,101 exact-scope
+source/WIP commits have landed; source acceptance is not application QA.
+Seventh-wave11 remaining deliveries were intaken immediately from their
+already-read turn0 receipts: nine exact commits and two unchanged pairs.
+Their consumed turns are persisted, not reread. FirmwareCanary7/7 and
+SecretPalette4/4 passing files were not rerun. New Entropy unary-adapter
+delivery, Marketplace retained turn1, Locations new turn1 and TeslaOrders
+turn0 were also committed/pushed. Exact hashes are in the queue/ledger.
+
+The SINGLE existing catalog root used a quiescent-reference window normally:
+before1/generate0/after0, zero known-missing/new/resolved keys, no bypass.
+The16 previously-undiscovered final-source files then actually executed241
+cases:230 passed,11 failed across five files;11 files passed. Valid raw JSON
+and commands/exits: `logs\phase5-parent-pending-final-source-tests.*`.
+Five actual narrow failed-case roots were queued, one per affected file:
+MileageBudget, JurisdictionCompliance, ModelTrust, DataExport and SecretBrief.
+These are not re-migrations, full suites or a provenance campaign.
+
+A second covering run of ONLY the still-undiscovered Locations/Entropy final
+files executed39 cases: Locations24/24 passed; Entropy6/15 passed,9 failed.
+Raw report: `logs\phase5-parent-entropy-locations-final-tests.*`.
+ONE new concrete Entropy fixture/oracle repair is queued with its retained
+narrow owner; next output begins at turn1. Original full-page owner400/zero
+terminal remains distinct: partial WIP is preserved, compiler dependency is
+unblocked to pending, and that no-output objective is NOT automatically
+relaunched or called source/native complete. No assertions were weakened.
+
+Literal `npx tsc --noEmit` at actual count1586 exited2; raw diagnostic log is
+`logs\phase5-parent-tsc-count-1586.log`. Locations and SignalEntropy's
+callsite defects no longer appear, but ten other production files still fail.
+Next compiler cadence is1601. No TS lib/target widening or shared API masking.
+Current source is NOT deployable/green; Docker3119/API8080 remain accepted
+immutablea61 with DRILL fixtures unchanged.
+
+Current exclusive actual identities are in `phase5-eighth-wave-agent-map.json`
+and `phase5-ninth-wave-agent-map.json`; assignments reuse the original inventory.
+The eighth refill launched six original pages, three fresh failed-case owners,
+one bounded existing SecretRotation oldest-age derivation owner, and steered
+the existing SecretBrief owner. DataExport launch was actually refused by the
+harness32 limit: no actor/output/attempt was fabricated; its row returned to
+pending0. TeslaOrders subsequently passed15/15 and was accepted immediately.
+The other nine eighth-wave initial deliveries are now runtime-idle but their
+turn0 reports remain UNREAD and must be processed individually, not reread later.
+
+Fresh overview then reported22 runtime-running:16 overdue older continuations,
+EnergyFlow/EnergyLedger own compiler follow-ups, TwoFactor/SecretPalette
+delivered informational actors, and SecretBrief/Entropy retained corrective
+follow-ups. Ten actual ninth-wave launches refill that observed census to32:
+the pending DataExport actual failed-case fix plus nine genuinely unstarted
+pages across distinct domains. This is a time-local refill count, not32
+healthy-progress proofs or a future census. No cancellation capability was
+exposed; preserve still-live claims rather than reverting or double-writing.
+Brief and Entropy new fixes begin at turn1; accepted turn0 is not new work.
+
+Queue after reservations: Phase5 source done122/pending79/held33/blocked2/
+excluded3; Phase6 source done17/pending23/held7/blocked1.
+Held claims include delivered and parent integration claims, not runtime counts.
+SecretRotation's last dependency is now a bounded real oldest-age bug:
+unknown-age first row must not beat a later measured0. Its five child-source
+corrections are accepted; full sensitive/native QA remains unaccepted.
+
+Process each remaining eighth-wave delivery once, commit/push its exact scope,
+and refill immediately on genuine capacity. Continue the concrete failed-case
+roots from their new queue rows, preserve original cases/assertions and report
+actual startup limits. Generated projections remain uncommitted until their
+contributing WIP source is committed. Parent never implements UI. No full
+lint/tests/build gate, Docker rebuild/reseed or capture-helper repair occurred.
+Schedule#1 was verified active; no duplicate. Latest readiness probes were
+5173 HEAD200,3119 HEAD200,8080 `/readyz` GET200 without response bodies.
+Discord remains unavailable because its environment webhook is absent.
+
+## Recovery chronology through source count1578
+
+The user's requested32 third-wave deliveries are now fully processed, not merely
+collected:30 source-only acceptances (27 exact page/test commits and3 verified
+no-change pairs), plus2 FAILED partial pairs preserved/pushed as WIP for retained
+attempt2. All third-wave turn0 reports were already consumed and were not reread.
+The existing intake log is `logs\phase5-parent-rolling-intake.log`; exact hashes
+are in the queue and `phase5-worker-ledger.json`.
+
+The first current runtime overview was31/32, not32: BrowserNotifications had
+finished. Its no-change pair was accepted without claiming tests ran, DevTools
+filled that slot, then returned12/12 scoped tests and was committed/pushed.
+The fourth-wave22 actual IDs are now persisted; all turn0 deliveries have been
+consumed exactly once. BrowserNotifications and DataQuality are no-change
+deliveries. Four fourth-wave pairs have actual compiler failures, were pushed
+as WIP and continued with their original owners;17 other fourth-wave scopes
+have completed sequential exact-file acceptance. No waiting for full suites.
+
+Fourth-wave acceptance finished successfully:17 additional accepted sources,
+four actual compiler-failing pairs preserved/pushed as WIP and retained retry2,
+plus the previously accepted BrowserNotifications no-change scope. Fifth-wave15
+are also consumed and handled:13 page acceptances, the committed/pushed
+NavigationRoute compiler fix, and SecretRotation blocked on six exact reported
+child/adapter fixes (not another unchanged-page retry). Twelve older passing
+second-wave deliveries were intaken using the original600-case JSON receipt;
+no unchanged passing cases were rerun for provenance.
+
+Latest accepted HEAD is `040f68e1f4c0ebb63d2e0f50058b0df85f801523`,
+actual count1578; each exact-scope commit pushed. Recovery has landed87
+sequential exact-scope commits since1491; WIP is distinguished from accepted
+source. All parent intake shell results have been consumed with exit0.
+Next compiler cadence is1586. Runs1496,1511,1526,1541,1556,1571 exited2;
+raw outputs are `logs\phase5-parent-tsc-count-*.log`.
+Do not claim the current source typechecks. Exact defects are inside CausalLab,
+BatteryCells, RemainingUsefulLife, Locations, EnergyFlow, EnergyLedger,
+EmergencyResilience, ChargingHeatmap, SharingTrips, SignalDeadband and
+SignalEntropy. NavigationRoute no longer appears in1541/1556/1571.
+
+Seven original retained attempt2 continuations were sent for the two FAILED
+third-wave partials, four compiler-failing fourth-wave pairs and Locations.
+Fifteen genuinely fresh actors were then launched and persisted in
+`phase5-fifth-wave-agent-map.json`:14 unstarted admin pages plus the ONE new
+actual NavigationRoute Caption-prop compiler fix. With the prior ten reported
+running continuation actors, this restores32 at refill. That is not a future
+runtime census. The prior ten were overdue with old heartbeats; a same-task
+stop/conclude health message was sent, including their precise own compiler
+defects. Preserve their claims until actual terminal delivery; never count a
+held delivered claim as running or reset a live writer as a zombie.
+
+The ONE existing `phase5-integration-wave2-i18n-closure` row owns normal new
+source-reference closure. PowerShell2383 completed before1/generate0/after0,
+knownmissing0/new0/resolved0; its output was consumed. Raw evidence is
+`logs\phase5-integration-status-fix-source-closure.log`. No missing-key acceptance,
+baseline change or guard bypass. Do not duplicate this root or the schedule.
+Discord delivery was attempted as requested but not sent:
+`DISCORD_WEBHOOK_URL` is absent. No endpoint was fabricated or disclosed.
+The exact requested recovery line and truthful first31/32 counts were retained
+in `logs\phase5-status-fix-discord.log`.
+
+Shared5173 HEAD200, Docker3119 HEAD200, API8080 `/readyz` GET200 were actually
+observed during recovery, without response bodies. Docker remains immutablea61
+with unchanged DRILL fixtures. Native/pilot QA remains incomplete; static
+candidates, preservation diagnostics, startup-zero-case runs, resource failures
+and diagnostic PNGs are not full-page or application acceptance.
+
+Sixth-wave fifteen actual IDs are persisted in
+`phase5-sixth-wave-agent-map.json` and the ledger:13 genuinely unstarted pages,
+spread across remaining domains, plus SecretRotation mobile-detail and
+unknown-urgency fixes. Four other precise SecretRotation child/adapter fixes
+remain pending. Previous17 continuation actors still reported runtime-running,
+but their absent/old heartbeats are overdue, not healthy proven progress.
+Conclude/stop health messages were sent; preserve live claims until actual
+terminal delivery. No cancellation capability was exposed, no writer was
+silently killed or uncommitted source reverted. Source EnergyFlow's own color
+prop mismatch newly found at compiler1556 was sent to its active original owner.
+NavigationRoute's earlier unsupported prop no longer appears in1541/1556;
+its narrow source fix is `3b2b70141106d912ea6e973c46ccedbda396e713`.
+
+Latest queue counts: Phase5 done110/pending93/held30/failed0/blocked3/excluded3;
+Phase6 done13/pending24/held4/failed0/blocked1. Queue counts include held
+claims explicitly, not a runtime census. At18:36:37UTC, known-ID readings
+reported18 runtime-running (17 overdue retained continuations plus EnergyFlow's
+current own-compiler correction) and14 newly idle deliveries. Each new turn0
+was consumed once and persisted; no old third-wave reports reread.
+All14 idle scopes are now source-intaken:12 pages (10 exact commits plus
+unchanged SlowQueries/HvacCycling) and2 actual SecretRotation child corrections.
+Those2 returned FAILED solely due external catalog startup, not failed behavior;
+they were accepted SOURCE ONLY under external-failure handling, not called tested.
+
+Seventh-wave actual14 were reserved/launched/persisted to refill real idle
+slots:11 original unstarted pages across domains and3 existing SecretRotation
+chart-typography/palette/brief-trust fixes. Map:
+`phase5-seventh-wave-agent-map.json`, ledger158 at registration.
+SignalEntropy then actually failed400 with0 terminal turns. No terminal
+or full-page source/QA acceptance was fabricated and no same-objective actor
+was relaunched. Its exact claimed partial pair is preserved/pushed as WIP
+`fbefa0a1610ddf80d5337474e00ad620eb4c389c`; its page row is blocked on the ONE
+new real compiler1571 tick-formatter fix. That narrower fix has actual owner
+`c46d7c13-0ab3-46ba-b784-bff0274bf0a3`, map
+`phase6-entropy-axis-agent-map.json`; no whole-page/helper/capture reset.
+EnergyLedger's own new1571 replaceAll/lib mismatch was sent to its original
+active owner, with explicit no compiler-target upgrade.
+
+Existing catalog root shell2677 again completed before1/generate0/after0,
+knownmissing0/new0/resolved0. The needed nine-file scoped parent run then
+actually exited1 BEFORE test discovery because concurrent notification
+references staled locale-notifications/usage-manifest. No cases or JSON report
+were produced. Raw log `logs\phase5-parent-wave6-unexecuted-tests.log`;
+do not call those corrected tests passed or rerun unchanged passing files.
+Startup-affected validation is paused until source references are quiescent;
+independent source/lint work proceeds. No duplicate root, baseline acceptance
+or startup-guard bypass. Generated projections remain uncommitted until their
+real contributing source is committed; no all-green claim.
+
+Thirty-two runtime slots were restored by the observed18 plus14 fresh launches,
+then refilled after the actual SignalEntropy runtime failure. This includes17
+overdue continuations and is NOT32 healthy progress proofs or a future census.
+Preserve still-live claims, await actual new terminal turns, refill each genuine
+slot, and record the runtime cancellation limitation rather than killing writers.
+The five-minute schedule remains active; ticks have now actually been observed.
+No full lint/test/build gate, no pilot/native completion, no Docker rebuild/reseed.
+
+## Periodic orchestration watchdog
+
+At the user's request, schedule `#1` checks this session every5minutes.
+Verify it with the scheduler's list operation on resume; do not duplicate it.
+Each tick must consume new terminal deliveries once, reconcile real worker
+states against held claims, continue authorized repairs, and refill genuinely
+ready slots. Zero running workers with ready work requires action, not merely
+a status report. Preserve completed phases, exclusive scopes, original retry
+budgets, compiler cadence, serialized phase gates and immutable Docker fixtures.
+Stop the schedule on completion/user pause, or explain and stop if all remaining
+work is genuinely blocked with no authorized action.
+
+The previous third-wave32 have now all been read at turn0 and are idle;
+their ledger entries record `LastConsumedTurn=0`, not live/awaiting initial
+notification. Two returned FAILED partial source (ChargingForensics and
+WatchFace); the other30 delivered source or no-change results. Eleven genuine
+second-wave failed test owners were resumed in their existing contexts for
+bounded attempt2, and their new terminal turns remain pending intake.
+Normal third-wave source-reference closure completed generation0/check0 in
+`logs\phase5-integration-wave3-source-closure.log`; no guard/baseline bypass.
+The idle gap was an unprocessed-intake/dispatch gap, not evidence that the
+remaining modernization was complete.
+
+## Latest continuation: delivered sources and shared startup integration
+
+This section supersedes the historical first-dispatch state below. HEAD is
+`182dcbe773a7fad58de01ca1f6c1839d28ea2543`, actual commit count1491,
+fully pushed on `fix/dashboard-followups`. Twelve additional first-wave page
+deliveries and their generated AutomationBuilder i18n closure were committed
+sequentially. Literal `npx tsc --noEmit` at count1481 exited0; next scheduled
+compiler run is1496. Chatbot push failed twice with remote `commit_refs`;
+the subsequent sequential Exports push recovered and included Chatbot.
+
+All sixteen genuine first-wave source deliveries have been consumed. Behavioral
+Sentinel attempt2 passes13/13 and Onboarding attempt2 passes18/18; their exact
+pairs are now committed/pushed at `137f2ce24` and `835233a2d`. Both owners are idle.
+All sixteen first-wave page scopes are accepted source-only, including unchanged
+WholeHomeEnergy and Journeys. A narrow parent runner originally executed245
+cases,227 passed/18 failed; all six actual failing owners continued from their
+existing work and subsequently passed their own files. No assertions were
+dropped to bypass these failures.
+
+Thirty genuinely unstarted next-wave page workers were launched after platform
+recovery restored the32-worker target. All thirty have now been read once and
+are idle, not live workers. Four further deliveries were intaken sequentially,
+including Dashcam `e12b0134b` and Connect `182dcbe77`, leaving28 page claims
+awaiting parent validation/intake. Preserve these delivered files and
+claims; do not redispatch them as zombies or reread agents for provenance.
+Ledger `phase5-worker-ledger.json` records this terminal-delivery state;
+`phase5-second-wave-agent-map.json` supplies the exact retained IDs.
+Twenty-five next-wave pages changed source/test files and five did not.
+Dashcam6, Connect15 and PrivacyBenchmarks4 scoped cases passed. Twenty-three
+changed-page files plus unchanged ShareCard's26-case file await startup closure
+and actual execution, not another full suite.
+
+Concurrent source references stale the existing generated i18n catalogs even
+when canonical keys already exist. The first root was corrected with the
+existing splitter: before-check1, generation0, after-check0, no missing-key or
+baseline acceptance. Only three generated artifacts changed; canonical English
+and missing-key baselines did not. That accepted item remains complete.
+`phase5-integration-wave2-i18n-closure` owns the actual new-wave startup
+failure. Its completed normal regeneration/check exits0, with0 known/new/resolved
+missing keys; canonical English and missing-key baseline are unchanged.
+Ten generated files changed63insertions/25deletions and await contributing
+source commits. No full lint/test/build has run in this segment.
+
+The previously blocked24-file scoped runner actually executed600 cases:
+543 passed/57 failed,13 files passed/11 failed,0 pending, exit1, duration88.08s.
+Raw/JSON evidence is `logs\phase5-parent-wave2-blocked-tests.*`.
+These are genuine assertion failures, not startup failures; continue the eleven
+retained source owners with exact diagnostics and preserve all assertions.
+Do not repeat passed files for provenance. No bounded continuation has yet
+been dispatched for this run.
+
+After the two shared roots were corrected,32 distinct genuinely unstarted
+Phase5 source scopes were reserved and actually launched. Exact assignments
+and IDs are `phase5-third-wave32-assignments.json` and
+`phase5-third-wave-agent-map.json`. These are live background launches, unlike
+the24 prior delivered claims awaiting intake. Four no-change scopes (Carbon,
+PrivacyBenchmarks, ChargerHealth, ArrivalReliability) are now source-only
+accepted at the current source pin, with actual validation limitations retained.
+Do not relaunch the thirteen earlier zero-turn failed objectives.
+
+The parent also confirmed and corrected its own returning-user fixture
+regression: Source5173 was mistakenly nested as a third Docker3119 localStorage
+entry rather than a sibling origin. This caused the reported missing `name`
+schema error before navigation. The corrected session JSON has exactly two
+sibling origins, each with the exact string selected-vehicle4/seen-version0.7.0
+pairs. Actual strict shape assertions exit0 in
+`logs\phase5-parent-storage-fixture-shape.log`. Use `E2E_STORAGE_STATE`, not
+`E2E_STORAGE_STATE_PATH`. This is caller-fixture correction, not helper-source
+repair, a capture retry-budget reset, or retroactive screenshot acceptance.
+
+Twenty-two concrete first-wave outside-owner findings have now been added as
+single-file Phase6 fixes from `phase5-reported-phase6-fixes.json`; no inventory
+or completed shared component was re-audited. Three originally guessed paths
+were corrected to the actual ConditionBuilder, TriggerConfigurator and
+exportStats files. Still resolve exact second-wave integration needs from
+their receipts. Onboarding's inherited grid geometry and Chatbot's inherited
+geometry remain explicitly unaccepted style candidates; ClimateControl also
+reports retained184px geometry. Locations reports intentional identity
+preservation differences requiring precise receipt disposition.
+
+Docker remains immutable accepted application
+`a61cb003f335beceadf546accc43ab0697a57843` on3119/API8080, with the previously
+verified2 DRILL vehicles,4 drives and3 charging sessions. Do not rebuild/reseed
+during source waves or pretend uncommitted sources are the running image.
+Fleet Telemetry/TeslaAPI remains degraded. Pilot/native/full application
+acceptance is still incomplete; the helper's original2 attempts plusONE rescue
+remain exhausted. No `checkpoint: pilot complete` or final-completion claim.
+
+## Historical first dispatch: independent QA and original next-phase dispatch
 
 The latest autonomous continuation directive resumed actual remaining work,
 not another helper repair. Existing pilot rows were assigned independent
