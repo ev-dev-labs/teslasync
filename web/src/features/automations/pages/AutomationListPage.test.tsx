@@ -57,6 +57,94 @@ vi.hoisted(() => {
   }
 });
 
+describe('AutomationListPage source recovery and partial bulk outcomes', () => {
+  it('retains failed bulk IDs with their reasons and retries only those IDs', async () => {
+    const mutateAsync = vi.fn()
+      .mockResolvedValueOnce({ updated: 1, failed: [{ id: 2, reason: 'Rule unavailable' }] })
+      .mockResolvedValueOnce({ updated: 1, failed: [] });
+    useBulkMock.mockReturnValue({ mutateAsync });
+    renderPage();
+    selectRows([1, 2]);
+    fireEvent.click(screen.getByRole('button', { name: 'Enable' }));
+
+    await waitFor(() => expect(captured.table.selectedKeys).toEqual([2]));
+    expect(mutateAsync).toHaveBeenNthCalledWith(1, { ids: [1, 2], op: 'enable' });
+    expect(screen.getByText('Error')).toBeInTheDocument();
+    expect(screen.getByText('#2: Rule unavailable')).toBeInTheDocument();
+    expect(ids(captured.table.automations)).toEqual([1, 2, 3, 4]);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Enable' }));
+    await waitFor(() => expect(mutateAsync).toHaveBeenNthCalledWith(2, { ids: [2], op: 'enable' }));
+    await waitFor(() => expect(captured.table.selectedKeys).toEqual([]));
+    expect(screen.queryByText('Error')).not.toBeInTheDocument();
+  });
+
+  it('preserves newly selected IDs outside the submitted bulk operation', async () => {
+    let finish: (result: { updated: number; failed: { id: number; reason: string }[] }) => void = () => {};
+    const mutateAsync = vi.fn(() => new Promise((resolve) => { finish = resolve; }));
+    useBulkMock.mockReturnValue({ mutateAsync });
+    renderPage();
+    selectRows([1]);
+    fireEvent.click(screen.getByRole('button', { name: 'Enable' }));
+    await waitFor(() => expect(mutateAsync).toHaveBeenCalledWith({ ids: [1], op: 'enable' }));
+    selectRows([1, 3]);
+
+    await act(async () => finish({ updated: 1, failed: [] }));
+    expect(captured.table.selectedKeys).toEqual([3]);
+    expect(screen.getByRole('region', { name: /bulk actions/i })).toHaveTextContent('1 selected');
+  });
+
+  it('keeps all inventory sections while vehicle names are loading', () => {
+    useVehiclesMock.mockReturnValue(makeQuery({ isLoading: true }));
+    renderPage();
+
+    expect(screen.getByRole('status', { name: '' })).toHaveTextContent('Loading');
+    expect(ids(captured.table.automations)).toEqual([1, 2, 3, 4]);
+    expect(captured.table.isLoading).toBe(false);
+    expect(captured.table.vehicleLookup).toEqual(new Map());
+    expect(screen.getByTestId('stub-status')).toBeInTheDocument();
+    expect(screen.getByTestId('routine-wizard')).toBeInTheDocument();
+  });
+
+  it('retries failed vehicle names independently without replacing automation rows', () => {
+    const refetchVehicles = vi.fn();
+    const query = makeQuery({ data: AUTOMATIONS });
+    useAutomationsMock.mockReturnValue(query);
+    useVehiclesMock.mockReturnValue(makeQuery({
+      isError: true, error: new Error('Vehicle names unavailable'), refetch: refetchVehicles,
+    }));
+    renderPage();
+    selectRows([2]);
+
+    expect(screen.getByText("Can't reach server")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    expect(refetchVehicles).toHaveBeenCalledTimes(1);
+    expect(query.refetch).not.toHaveBeenCalled();
+    expect(captured.table.error).toBeNull();
+    expect(captured.table.selectedKeys).toEqual([2]);
+    expect(ids(captured.table.automations)).toEqual([1, 2, 3, 4]);
+    expect(screen.getByTestId('routine-wizard')).toBeInTheDocument();
+  });
+
+  it('keeps retained vehicle names and independently refreshes their stale source', () => {
+    const refetchVehicles = vi.fn();
+    useVehiclesMock.mockReturnValue({
+      data: VEHICLES, isLoading: false, isError: true, error: new Error('Vehicle refresh failed'),
+      isFetching: false, dataUpdatedAt: Date.now(), refetch: refetchVehicles,
+    });
+    renderPage();
+    selectRows([2]);
+
+    expect(screen.getByTestId('stale-refresh-warning')).toHaveTextContent('Vehicles may be out of date');
+    expect((captured.table.vehicleLookup as Map<number, string>).get(1)).toBe('Model 3');
+    expect((captured.table.vehicleLookup as Map<number, string>).get(2)).toBe('VIN-2');
+    expect(captured.table.selectedKeys).toEqual([2]);
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+    expect(refetchVehicles).toHaveBeenCalledTimes(1);
+    expect(captured.table.error).toBeNull();
+  });
+});
+
 // Shared, hoisted test doubles so the mock factories below and the specs can
 // both reach them.
 const { useAutomationsMock, useBulkMock, useVehiclesMock, navigateMock, captured } =
