@@ -1,8 +1,9 @@
 import { useTranslation } from 'react-i18next';
 import { AlertTriangle, ShieldAlert, ShieldCheck } from 'lucide-react';
-import { Badge, Text } from '@/components/ui';
+import { Badge, Icon, Text } from '@/components/ui';
 import { LayoutCard } from '@/components/layout';
 import { useUnits } from '@/hooks/useUnits';
+import { severityTokens } from '@/lib/tokens';
 import type { Violation, ViolationCode } from '../lib/types';
 
 interface ConstraintViolationsPanelProps {
@@ -58,7 +59,7 @@ export function ConstraintViolationsPanel({ violations }: ConstraintViolationsPa
 
       {violations.length === 0 ? (
         <Text as="p" variant="bodySm" color="muted" className="flex items-center gap-2">
-          <ShieldCheck className="h-4 w-4 text-emerald-500" />
+          <Icon icon={ShieldCheck} className={severityTokens.success.fg} />
           {t('homeEnergy.violations.clean', 'This plan satisfies every hard constraint modeled.')}
         </Text>
       ) : (
@@ -69,9 +70,9 @@ export function ConstraintViolationsPanel({ violations }: ConstraintViolationsPa
               className="flex min-w-0 items-start gap-2 rounded-lg border border-[var(--border-subtle)] p-2.5"
             >
               {v.severity === 'error' ? (
-                <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0 text-red-500" />
+                <Icon icon={ShieldAlert} className={`mt-0.5 ${severityTokens.critical.fg}`} />
               ) : (
-                <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-500" />
+                <Icon icon={AlertTriangle} className={`mt-0.5 ${severityTokens.warn.fg}`} />
               )}
               <Text variant="bodySm" color="secondary" className="min-w-0 break-words">{describe(v)}</Text>
             </li>
