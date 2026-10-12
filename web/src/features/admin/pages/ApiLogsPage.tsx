@@ -7,7 +7,7 @@ import {
 
 import { PageLayout } from '@/components/layout';
 import {
-  GlassPanel, Button, Badge,
+  GlassPanel, Button, Badge, Icon,
   PanelTitle, Caption, Text,
 } from '@/components/ui';
 import { FadeIn } from '@/components/motion';
@@ -17,7 +17,7 @@ import { useDataState } from '@/hooks/useDataState';
 import { useRangeState } from '@/hooks/useRangeState';
 import { useUrlNumber, useUrlString, useUrlBatch } from '@/hooks/useUrlState';
 
-import { cn } from '@/lib/cn';
+import { typography } from '@/lib/tokens';
 import { exportAsCSV, exportAsJSON } from '@/lib/export';
 import { useAPICallLogs, useAPICallLogStats, useSystemErrorStats } from '@/api/hooks/useAdmin';
 import type { APICallLog } from '@/api/types';
@@ -37,13 +37,13 @@ import { ApiLogsSummary } from '../components/statstrip-api-quality/ApiLogsSumma
 type LogBadgeVariant = 'success' | 'info' | 'warning' | 'danger' | 'neutral';
 
 const SERVICE_CONFIG: Record<string, { label: string; variant: LogBadgeVariant }> = {
-  'teslasync-api':      { label: 'TeslaSync API',      variant: 'info'    },
-  'tesla-api':          { label: 'Tesla API',          variant: 'info'    },
-  'tesla-auth':         { label: 'Tesla auth',         variant: 'info'    },
-  'geocoder-google':    { label: 'Geocoder (Google)',  variant: 'warning' },
-  'geocoder-nominatim': { label: 'Geocoder (Nominatim)', variant: 'warning' },
-  'geocoder-azure':     { label: 'Geocoder (Azure)',   variant: 'warning' },
-  'geocoder-search':    { label: 'Geocoder (search)',  variant: 'warning' },
+  'teslasync-api':      { label: 'TeslaSync API',      variant: 'neutral' },
+  'tesla-api':          { label: 'Tesla API',          variant: 'neutral' },
+  'tesla-auth':         { label: 'Tesla auth',         variant: 'neutral' },
+  'geocoder-google':    { label: 'Geocoder (Google)',  variant: 'neutral' },
+  'geocoder-nominatim': { label: 'Geocoder (Nominatim)', variant: 'neutral' },
+  'geocoder-azure':     { label: 'Geocoder (Azure)',   variant: 'neutral' },
+  'geocoder-search':    { label: 'Geocoder (search)',  variant: 'neutral' },
   'github-releases':    { label: 'GitHub releases',    variant: 'neutral' },
   'notify-generic':     { label: 'Notifications',      variant: 'neutral' },
   'system-dns-check':   { label: 'DNS health check',   variant: 'neutral' },
@@ -80,7 +80,7 @@ export default function ApiLogsPage() {
       : config;
   }, [t]);
 
-  const [page, setPage] = useUrlNumber('page', 0);
+  const [requestedPage, setPage] = useUrlNumber('page', 0);
   const [method] = useUrlString('method', '');
   const [status] = useUrlString('status', '');
   const [endpoint] = useUrlString('endpoint', '');
@@ -89,6 +89,8 @@ export default function ApiLogsPage() {
   const [key] = useUrlString('key', '');
   const [requestedSize] = useUrlNumber('size', 25);
   const limit = [25, 50, 100].includes(requestedSize) ? requestedSize : 25;
+  const page = Number.isSafeInteger(requestedPage) && requestedPage >= 0
+    && Number.isSafeInteger(requestedPage * limit) ? requestedPage : 0;
 
   // The header owns the `from`/`to` window for both KPIs and request rows.
   const { startInstant, endInstantExclusive, timezone, presetId } = useRangeState({
@@ -103,6 +105,10 @@ export default function ApiLogsPage() {
   // resets `page` AND writes its own key, so all of them MUST go through
   // useUrlBatch. See useUrlState.ts §useUrlBatch JSDoc.
   const setUrl = useUrlBatch();
+  useEffect(() => {
+    if (requestedPage !== page) setUrl({ page: null });
+  }, [requestedPage, page, setUrl]);
+
   const previousRange = useRef(`${startInstant}:${endInstantExclusive}`);
   useEffect(() => {
     const currentRange = `${startInstant}:${endInstantExclusive}`;
@@ -251,7 +257,9 @@ export default function ApiLogsPage() {
         <Button
           variant="ghost"
           size="sm"
-          icon={<RefreshCw className="h-4 w-4" aria-hidden="true" />}
+          wrapLabel
+          className="min-h-11 min-w-11 md:min-h-9 md:min-w-9"
+          icon={<Icon icon={RefreshCw} />}
           disabled={logsQuery.isFetching || statsQuery.isFetching || runtimeQuery.isFetching}
           onClick={() => { void refetchLogs(); void refetchStats(); void refetchRuntime(); }}
         >
@@ -282,7 +290,7 @@ export default function ApiLogsPage() {
             {/* By Service — quick-pick filter list with counts */}
             <GlassPanel className="p-3 sm:p-4">
               <div className="mb-2 flex items-center gap-2">
-                <Layers className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+                <Icon icon={Layers} className={typography.color.muted} />
                 <PanelTitle>{t('apiLogs.byService', 'By service')}</PanelTitle>
               </div>
               <StaleRefreshWarning state={statsState} label={t('apiLogs.byService', 'By service')} hideRetry />
@@ -299,26 +307,27 @@ export default function ApiLogsPage() {
                   message={t('apiLogs.noServices', 'No service activity yet')}
                 />
               ) : (
-                <ul className="flex flex-wrap gap-1.5">
+                <ul className="flex flex-wrap gap-2">
                   {serviceRows.map(({ svc, count }) => {
                     const cfg = serviceConfig(svc);
                     const active = service === svc;
                     return (
-                      <li key={svc}>
+                      <li key={svc} className="min-w-0 max-w-full">
                         <Button
                           type="button"
-                          variant="ghost"
+                          variant={active ? 'secondary' : 'ghost'}
+                          size="sm"
+                          wrapLabel
                           aria-pressed={active}
                           onClick={() => selectService(active ? '' : svc)}
-                          className={cn(
-                            '!h-auto !justify-between gap-2 rounded-lg !px-2.5 !py-1.5 !font-normal',
-                            active && 'bg-white/[0.06] ring-1 ring-inset ring-cyan-400/30',
-                          )}
+                          className="min-h-11 min-w-11 md:min-h-9 md:min-w-9"
                         >
-                          <Badge variant={cfg.variant} size="sm">{cfg.label}</Badge>
-                          <Text as="span" size="xs" mono color="secondary" className="tabular-nums">
-                            {fmtInt(count)}
-                          </Text>
+                          <span className="flex min-w-0 items-center justify-between gap-2">
+                            <Badge variant={cfg.variant} size="sm" className="min-w-0 whitespace-normal break-words">{cfg.label}</Badge>
+                            <Text as="span" variant="caption" mono color="secondary" className="shrink-0 tabular-nums">
+                              {fmtInt(count)}
+                            </Text>
+                          </span>
                         </Button>
                       </li>
                     );
@@ -366,6 +375,7 @@ export default function ApiLogsPage() {
                 page: page + 1,
                 pageSize: limit,
                 total,
+                totalKind: data ? 'exact' : 'unknown',
                 onPageChange: (next) => setPage(next - 1),
                 onPageSizeChange: (size) => setUrl({ size: String(size), page: null }),
               }}

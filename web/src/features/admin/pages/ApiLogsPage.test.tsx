@@ -885,3 +885,97 @@ describe('ApiLogsPage', () => {
     }
   });
 });
+
+describe('ApiLogsPage restrained source adoption', () => {
+  it.each([
+    { case: 'negative index', page: '-2', size: '25' },
+    { case: 'fractional index', page: '2.5', size: '50' },
+    { case: 'unsafe index', page: '9007199254740992', size: '100' },
+    { case: 'unsafe derived offset', page: '9007199254740991', size: '25' },
+  ])('normalizes $case before querying without dropping server scope', async ({ page, size }) => {
+    mockedStats.mockResolvedValue(makeStats());
+    mockedLogs.mockResolvedValue(makeLogsResponse({ total: 200 }));
+    renderPage(`/api-logs?page=${page}&size=${size}&method=POST&service=tesla-api&from=2026-09-19&to=2026-09-25`);
+    await requestRow('/vehicles');
+    const start = new Date('2026-09-19T00:00:00').toISOString();
+    const endExclusive = new Date('2026-09-26T00:00:00').toISOString();
+    for (const [params] of mockedLogs.mock.calls) {
+      expect(params).toEqual(expect.objectContaining({
+        offset: 0, limit: Number(size), method: 'POST', service: 'tesla-api', start, endExclusive,
+      }));
+    }
+    await waitFor(() => expect(new URLSearchParams(screen.getByTestId('api-log-url').textContent ?? '').has('page')).toBe(false));
+    expect(screen.getByRole('textbox', { name: 'Go to page' })).toHaveValue('1');
+    expect(mockedStats).toHaveBeenCalledWith(start, endExclusive, { signal: expect.any(AbortSignal) });
+  });
+
+  it('retains a valid zero-based page and size with their exact server offset', async () => {
+    mockedStats.mockResolvedValue(makeStats());
+    mockedLogs.mockResolvedValue(makeLogsResponse({ total: 400, limit: 50, offset: 150 }));
+    renderPage('/api-logs?page=3&size=50&status=5xx');
+    await requestRow('/vehicles');
+    expect(mockedLogs.mock.lastCall?.[0]).toEqual(expect.objectContaining({
+      offset: 150, limit: 50, status: '5xx',
+    }));
+    expect(new URLSearchParams(screen.getByTestId('api-log-url').textContent ?? '').get('page')).toBe('3');
+    expect(screen.getByRole('textbox', { name: 'Go to page' })).toHaveValue('4');
+  });
+
+  it('keeps an unresolved request total unknown while filters and independent diagnostics remain mounted', async () => {
+    mockedStats.mockResolvedValue(makeStats());
+    mockedLogs.mockReturnValue(new Promise<APICallLogResponse>(() => {}));
+    renderPage('/api-logs?page=3&method=POST');
+    const pagination = screen.getByRole('navigation', { name: 'Pagination' });
+    expect(within(pagination).getByText('Page 4 of Unknown')).toBeInTheDocument();
+    expect(within(pagination).queryByText('Showing 0–0 of 0')).not.toBeInTheDocument();
+    expect(within(pagination).getByRole('button', { name: 'Next page' })).toBeDisabled();
+    expect(screen.getByRole('table', { name: 'API call log' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Method filter' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('region', { name: 'Backend runtime errors' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Frontend error reports' })).toBeInTheDocument();
+    expect(await screen.findByText('1,234')).toBeInTheDocument();
+    expect(screen.queryByText('No API call logs')).not.toBeInTheDocument();
+  });
+
+  it('uses the authoritative zero total only after a successful empty response', async () => {
+    mockedStats.mockResolvedValue(makeStats({ by_service: {} }));
+    mockedLogs.mockResolvedValue(makeLogsResponse({ data: [], total: 0 }));
+    renderPage();
+    await screen.findByText('No API call logs');
+    const pagination = screen.getByRole('navigation', { name: 'Pagination' });
+    expect(within(pagination).getByText('Showing 0–0 of 0')).toBeInTheDocument();
+    expect(within(pagination).queryByText('Page 1 of Unknown')).not.toBeInTheDocument();
+  });
+
+  it('keeps vendor identity neutral, with restrained pressed chrome and wrapping mobile targets', async () => {
+    const longService = 'diagnostic-service-with-a-long-unbroken-identifier-for-narrow-layouts';
+    mockedStats.mockResolvedValue(makeStats({
+      by_service: { [longService]: 1000, 'tesla-api': 900, 'geocoder-google': 300 },
+    }));
+    mockedLogs.mockResolvedValue(makeLogsResponse());
+    renderPage();
+    await screen.findByText('1,234');
+    const geocoder = railChip(/Geocoder \(Google\)/);
+    expect(within(geocoder).getByText('Geocoder (Google)')).toHaveClass(...BADGE_VARIANTS.neutral.split(' '));
+    expect(geocoder).toHaveClass('min-h-11', 'min-w-11', 'md:min-h-9', 'md:min-w-9');
+    expect(geocoder).not.toHaveClass('!h-auto', '!px-2.5', '!py-1.5', 'ring-cyan-400/30');
+    const longChip = railChip(new RegExp(longService));
+    expect(longChip).toHaveClass('max-w-full', 'whitespace-normal');
+    expect(within(longChip).getByText(longService)).toHaveClass('whitespace-normal', 'break-words');
+    expect(longChip.closest('ul')?.firstElementChild).toContainElement(longChip);
+    fireEvent.click(geocoder);
+    await waitFor(() => expect(geocoder).toHaveAttribute('aria-pressed', 'true'));
+    expect(geocoder).toHaveClass('bg-[var(--control-bg)]', 'border-[var(--control-border)]');
+    expect(geocoder).not.toHaveClass('bg-white/[0.06]');
+    expect(mockedLogs.mock.lastCall?.[0]).toEqual(expect.objectContaining({ service: 'geocoder-google', offset: 0 }));
+    const failedRow = await requestRow('/geo/lookup');
+    expect(within(failedRow).getByText('500')).toHaveClass(...BADGE_VARIANTS.danger.split(' '));
+    const serviceCell = failedRow.querySelector<HTMLElement>('[data-column-key="service"]');
+    if (!serviceCell) throw new Error('Missing service identity column');
+    expect(within(serviceCell).getByText('Geocoder (Google)')).toHaveClass(...BADGE_VARIANTS.neutral.split(' '));
+    fireEvent.click(geocoder);
+    await waitFor(() => expect(geocoder).toHaveAttribute('aria-pressed', 'false'));
+    expect(mockedLogs.mock.lastCall?.[0].service).toBeUndefined();
+    expect(screen.getByRole('button', { name: 'Refresh' })).toHaveClass('min-h-11', 'min-w-11', 'md:min-h-9', 'md:min-w-9');
+  });
+});
