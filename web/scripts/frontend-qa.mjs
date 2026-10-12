@@ -220,6 +220,47 @@ async function captureAnchoredMain(page, handle, path, beforeCapture) {
         const style = getComputedStyle(node);
         if (rect.height <= 0 || rect.width <= 0 || !overlaps(rect, bounds) ||
             style.visibility !== 'visible' || style.display === 'none') return [];
+        const painted = { top: rect.top, bottom: rect.bottom, left: rect.left, right: rect.right };
+        for (let parent = node; parent && parent !== element; parent = parent.parentElement) {
+          const css = getComputedStyle(parent);
+          if (css.display === 'none' || Number.parseFloat(css.opacity) === 0) return [];
+          const box = parent.getBoundingClientRect();
+          const paddingTop = box.top + (parent.clientTop ?? 0);
+          const paddingLeft = box.left + (parent.clientLeft ?? 0);
+          if (parent !== node) {
+            if (['hidden', 'clip', 'auto', 'scroll'].includes(css.overflowY)) {
+              painted.top = Math.max(painted.top, paddingTop);
+              painted.bottom = Math.min(painted.bottom, paddingTop + (parent.clientHeight ?? box.height));
+            }
+            if (['hidden', 'clip', 'auto', 'scroll'].includes(css.overflowX)) {
+              painted.left = Math.max(painted.left, paddingLeft);
+              painted.right = Math.min(painted.right, paddingLeft + (parent.clientWidth ?? box.width));
+            }
+          }
+          const clip = css.clip?.match(/^rect\(([^)]+)\)$/);
+          if (clip && ['absolute', 'fixed'].includes(css.position)) {
+            const edges = clip[1].trim().split(/[,\s]+/);
+            if (edges.length !== 4) throw new Error('Capture ancestor clipping geometry is unsupported');
+            const edge = (index, fallback) => {
+              const value = edges[index] === 'auto' ? fallback : Number.parseFloat(edges[index]);
+              if (!Number.isFinite(value)) throw new Error('Capture ancestor clipping geometry is unsupported');
+              return value;
+            };
+            const scaleX = box.width / (parent.offsetWidth || box.width || 1) || 1;
+            const scaleY = box.height / (parent.offsetHeight || box.height || 1) || 1;
+            painted.top = Math.max(painted.top, box.top + edge(0, 0) * scaleY);
+            painted.right = Math.min(painted.right, box.left + edge(1, box.width / scaleX) * scaleX);
+            painted.bottom = Math.min(painted.bottom, box.top + edge(2, box.height / scaleY) * scaleY);
+            painted.left = Math.max(painted.left, box.left + edge(3, 0) * scaleX);
+          }
+        }
+        // Main overflow is recoverable by scrolling, unlike an ancestor's clip.
+        // Clip only against its full reachable extent, not this view's viewport.
+        const y = rect.top - top + element.scrollTop;
+        const requiredStart = Math.max(0, painted.top - rect.top, -y);
+        const requiredEnd = Math.min(rect.height, painted.bottom - rect.top, element.scrollHeight - y);
+        if (painted.right <= Math.max(painted.left, bounds.left) || painted.left >= bounds.right ||
+            requiredEnd <= requiredStart) return [];
         const value = node.textContent + ('value' in node ? node.value : '');
         let identity = state.ids.get(node);
         if (!identity) {
@@ -228,7 +269,7 @@ async function captureAnchoredMain(page, handle, path, beforeCapture) {
         } else if (identity.value !== value || Math.abs(identity.height - rect.height) > 1 || Math.abs(identity.width - rect.width) > 1) {
           Object.assign(identity, { version: identity.version + 1, value, height: rect.height, width: rect.width });
         }
-        let visible = [[Math.max(0, top - rect.top), Math.min(rect.height, bottom - rect.top)]]
+        let visible = [[Math.max(requiredStart, top - rect.top), Math.min(requiredEnd, bottom - rect.top)]]
           .filter(([start, end]) => end > start);
         for (const { node: cover, rect: mask } of occluders) {
           if (cover.contains(node) || !overlaps(mask, rect)) continue;
@@ -239,7 +280,7 @@ async function captureAnchoredMain(page, handle, path, beforeCapture) {
           });
         }
         return [{ id: identity.id, version: identity.version, height: rect.height, width: rect.width,
-          y: rect.top - top + element.scrollTop, visible }];
+          y, required: [[requiredStart, requiredEnd]], visible }];
       });
       return { height: element.clientHeight, total: element.scrollHeight, top: element.scrollTop,
         usable: clipBottom - clipTop, inset: clipTop - top, nodes };
@@ -282,12 +323,14 @@ async function captureAnchoredMain(page, handle, path, beforeCapture) {
   };
   const gap = (current) => {
     for (const node of current.nodes) {
-      let end = 0;
-      for (const [start, bottom] of coverage.get(key(node)) ?? []) {
-        if (start > end + 1) break;
-        end = Math.max(end, bottom);
+      for (const [requiredStart, requiredEnd] of node.required) {
+        let end = requiredStart;
+        for (const [start, bottom] of coverage.get(key(node)) ?? []) {
+          if (start > end + 1) break;
+          end = Math.max(end, bottom);
+        }
+        if (end < requiredEnd - 1) return { node, start: end };
       }
-      if (end < node.height - 1) return { node, start: end };
     }
   };
   const sections = [];
@@ -315,6 +358,8 @@ async function captureAnchoredMain(page, handle, path, beforeCapture) {
         const missing = gap(terminal);
         if (!missing) return { method: 'content-anchored', attempts: attempt + 1, sections,
           anchors: terminal.nodes.length, coveredAnchors: terminal.nodes.length,
+          requiredFragments: terminal.nodes.reduce((sum, node) => sum + node.required.length, 0),
+          coveredFragments: terminal.nodes.reduce((sum, node) => sum + node.required.length, 0),
           terminal: { height: terminal.height, total: terminal.total, top: terminal.top } };
         target = Math.max(0, missing.node.y + missing.start - terminal.inset);
         break;
@@ -397,8 +442,19 @@ export async function captureFullPage(page, path, beforeCapture = async () => {}
     }
     throw new Error('Scroll-section extent remained unstable; all-sections coverage unverified');
   } finally {
-    try { await main.evaluate((element, original) => { element.scrollTop = original; }, geometry.original); }
-    finally { await anchors?.dispose(); }
+    try {
+      const restored = await main.evaluate((element, original) => {
+        element.scrollTop = original;
+        return element.scrollTop;
+      }, geometry.original);
+      if (Math.abs(restored - geometry.original) > 1) throw new Error('Scroll position restoration incomplete');
+      const proof = captureProofs.get(page);
+      if (proof) proof.restoration = { original: geometry.original, actual: restored };
+    } finally {
+      await anchors?.dispose();
+      const proof = captureProofs.get(page);
+      if (proof && anchors) proof.handleDisposed = true;
+    }
   }
 }
 

@@ -185,6 +185,7 @@ function anchoredScrollFixture({ bar = 35, spacing = 24, inaccessible = false, t
   });
   const nodes = [leaf(0, 500, 'first'), leaf(500, 500, 'second'),
     leaf(1000, 400, 'third'), leaf(1400, 300, 'last')];
+  let blockedLeaf;
   const stickyText = leaf(0, bar, 'summary');
   stickyText.getBoundingClientRect = () => ({ left: 0, right: 1000, width: 1000, top: 0, bottom: bar, height: bar });
   const sticky = { children: [stickyText], childNodes: [], textContent: 'summary',
@@ -193,13 +194,13 @@ function anchoredScrollFixture({ bar = 35, spacing = 24, inaccessible = false, t
   const fixedCover = { children: [], childNodes: [], textContent: 'overlay',
     contains: (node) => node === fixedCover,
     getBoundingClientRect: () => {
+      if (blockedLeaf) return blockedLeaf.getBoundingClientRect();
       const top = nodes[0].getBoundingClientRect().top + 300;
       return { left: 0, right: 1000, width: 1000, top, bottom: top + occludedGap, height: occludedGap };
     } };
   if (inaccessible) {
-    const hidden = leaf(0, 20, 'unreachable');
-    hidden.getBoundingClientRect = () => ({ left: 0, right: 1000, width: 1000, top: -40, bottom: -20, height: 20 });
-    nodes.push(hidden);
+    blockedLeaf = leaf(600, 20, 'required painted gap');
+    nodes.push(blockedLeaf);
   }
   const fixture = scrollCaptureFixture({
     height: 679, total: 1731, original: 0,
@@ -219,16 +220,18 @@ function anchoredScrollFixture({ bar = 35, spacing = 24, inaccessible = false, t
   fixture.element.clientTop = 0;
   fixture.element.getBoundingClientRect = () => ({ top: 0, bottom: 679, left: 0, right: 1000, width: 1000, height: 679 });
   fixture.element.querySelectorAll = () => [...nodes, ...(inserted ? [sticky, stickyText] : []),
-    ...(occludedGap ? [fixedCover] : [])];
+    ...(occludedGap || inaccessible ? [fixedCover] : [])];
   const document = { querySelectorAll: () => fixture.element.querySelectorAll() };
   const getComputedStyle = (node) => ({
     position: node === sticky ? 'sticky' : node === fixedCover ? 'fixed' : 'static', display: 'block', visibility: 'visible',
+    ...(node.css ?? {}),
   });
   const main = fixture.page.locator('main').first();
   main.evaluateHandle = async (fn) => {
     const state = fn(fixture.element);
     return {
-      evaluate: async (fn, argument) => runInNewContext(`(${fn})(state, argument)`, {
+      evaluate: async (fn, argument) => {
+        const result = await runInNewContext(`(${fn})(state, argument)`, {
         state, argument, document, getComputedStyle,
         requestAnimationFrame: (done) => {
           if (++fixture.probe.frames % 2 === 0) {
@@ -242,11 +245,14 @@ function anchoredScrollFixture({ bar = 35, spacing = 24, inaccessible = false, t
           onFrame(fixture.element, fixture.probe.frames, fixture.probe, nodes);
           done();
         },
-      }),
+        });
+        (fixture.probe.snapshots ??= []).push(result);
+        return result;
+      },
       dispose: async () => { fixture.probe.handleDisposed = true; },
     };
   };
-  return { ...fixture, nodes };
+  return { ...fixture, nodes, leaf };
 }
 
 test('reversible native sticky insertion covers all persistent content and the settled 1790 terminal without restarting zero', async () => {
@@ -283,9 +289,130 @@ test('content anchored coverage cannot pass with a persistent uncaptured gap and
   const { element, probe, page } = anchoredScrollFixture({ inaccessible: true });
   await assert.rejects(captureFullPage(page, 'gap.png'), /coverage incomplete after bounded reconciliation/);
   assert.equal(probe.screenshots.length, 8);
-  assert.deepEqual(probe.screenshots.map(({ top }) => top), [0, 0, 679, 1111, 1036, 1111, 1036, 1111]);
+  assert.deepEqual(probe.screenshots.map(({ top }) => top), [0, 0, 679, 1111, 624, 1111, 624, 1111]);
   assert.equal(element.scrollTop, 0);
   assert.equal(probe.handleDisposed, true);
+});
+
+test('painted fragments clip partial upper edge to reachable pixels and discard fully above-scrollport geometry', async () => {
+  const fixture = anchoredScrollFixture();
+  const partial = fixture.leaf(-8, 30, 'partial upper edge');
+  const above = fixture.leaf(-40, 20, 'fully above');
+  partial.getBoundingClientRect = () => ({ left: 0, right: 92, width: 92, height: 30,
+    top: -8 - fixture.element.scrollTop, bottom: 22 - fixture.element.scrollTop });
+  above.getBoundingClientRect = () => ({ left: 0, right: 93, width: 93, height: 20,
+    top: -40 - fixture.element.scrollTop, bottom: -20 - fixture.element.scrollTop });
+  fixture.nodes.push(partial, above);
+  await captureFullPage(fixture.page, 'upper-fragments.png');
+  const first = fixture.probe.snapshots[0];
+  assert.deepEqual(JSON.parse(JSON.stringify(first.nodes.find((node) => node.width === 92).required)), [[8, 30]]);
+  assert.deepEqual(JSON.parse(JSON.stringify(first.nodes.find((node) => node.width === 92).visible)), [[8, 30]]);
+  assert.equal(first.nodes.some((node) => node.width === 93), false);
+  assert.deepEqual(fixture.probe.screenshots.map(({ top }) => top), [0, 0, 679, 1111]);
+  assert.equal(fixture.element.scrollTop, 0);
+  assert.equal(fixture.probe.handleDisposed, true);
+});
+
+test('ancestor zero-area legacy CSS clip excludes table descendants both inside and beyond recoverable main extent', async () => {
+  for (const start of [500, 2502.75]) {
+    const fixture = anchoredScrollFixture();
+    const figcaption = fixture.leaf(start, 1, '');
+    figcaption.css = { position: 'absolute', clip: 'rect(0px, 0px, 0px, 0px)',
+      overflowX: 'hidden', overflowY: 'hidden' };
+    figcaption.clientWidth = 1;
+    figcaption.clientHeight = 1;
+    figcaption.parentElement = fixture.element;
+    for (let index = 0; index < 7; index += 1) {
+      const cell = fixture.leaf(start + index * 18, 18, 'accessible data');
+      cell.parentElement = figcaption;
+      cell.getBoundingClientRect = () => ({ left: 0, right: 167, width: 167, height: 18,
+        top: start + index * 18 - fixture.element.scrollTop,
+        bottom: start + index * 18 + 18 - fixture.element.scrollTop });
+      fixture.nodes.push(cell);
+    }
+    await captureFullPage(fixture.page, 'zero-clip.png');
+    assert.ok(fixture.probe.snapshots.every((sample) => sample.nodes.every((node) => node.width !== 167)));
+    assert.deepEqual(fixture.probe.screenshots.map(({ top }) => top), [0, 0, 679, 1111]);
+    assert.equal(fixture.element.scrollTop, 0);
+    assert.equal(fixture.probe.handleDisposed, true);
+  }
+});
+
+test('ancestor overflow clips only the painted local fragment while retaining nonzero clipped content', async () => {
+  const fixture = anchoredScrollFixture();
+  const parent = fixture.leaf(410, 15, '');
+  parent.css = { overflowY: 'hidden', overflowX: 'hidden' };
+  parent.clientHeight = 15;
+  parent.clientWidth = 1000;
+  parent.parentElement = fixture.element;
+  const partial = fixture.leaf(400, 30, 'partially clipped');
+  partial.parentElement = parent;
+  fixture.nodes.push(partial);
+  await captureFullPage(fixture.page, 'overflow-fragment.png');
+  const node = fixture.probe.snapshots[0].nodes.find((candidate) => candidate.height === 30);
+  assert.deepEqual(JSON.parse(JSON.stringify(node.required)), [[10, 25]]);
+  assert.deepEqual(JSON.parse(JSON.stringify(node.visible)), [[10, 25]]);
+  assert.deepEqual(fixture.probe.screenshots.map(({ top }) => top), [0, 0, 679, 1111]);
+});
+
+test('ancestor nonzero legacy clip retains its painted fragment without a selector or zero-clip blanket exemption', async () => {
+  const fixture = anchoredScrollFixture();
+  const parent = fixture.leaf(400, 30, '');
+  parent.css = { position: 'absolute', clip: 'rect(10px, 1000px, 25px, 0px)' };
+  parent.parentElement = fixture.element;
+  const partial = fixture.leaf(400, 30, 'legacy clipped content');
+  partial.parentElement = parent;
+  fixture.nodes.push(partial);
+  await captureFullPage(fixture.page, 'nonzero-clip.png');
+  const node = fixture.probe.snapshots[0].nodes.find((candidate) => candidate.height === 30);
+  assert.deepEqual(JSON.parse(JSON.stringify(node.required)), [[10, 25]]);
+  assert.deepEqual(JSON.parse(JSON.stringify(node.visible)), [[10, 25]]);
+});
+
+test('offscreen main-scroll-recoverable content remains required until its terminal painted fragment is captured', async () => {
+  const fixture = anchoredScrollFixture();
+  const lower = fixture.leaf(1700, 20, 'recoverable terminal content');
+  lower.getBoundingClientRect = () => {
+    const start = fixture.element.scrollHeight - 31;
+    return { left: 0, right: 57, width: 57, height: 20,
+      top: start - fixture.element.scrollTop, bottom: start + 20 - fixture.element.scrollTop };
+  };
+  fixture.nodes.push(lower);
+  await captureFullPage(fixture.page, 'recoverable.png');
+  const first = fixture.probe.snapshots[0].nodes.find((node) => node.width === 57);
+  assert.deepEqual(JSON.parse(JSON.stringify(first.required)), [[0, 20]]);
+  assert.deepEqual(JSON.parse(JSON.stringify(first.visible)), []);
+  const last = fixture.probe.snapshots.at(-1).nodes.find((node) => node.width === 57);
+  assert.deepEqual(JSON.parse(JSON.stringify(last.visible)), [[0, 20]]);
+  assert.equal(fixture.probe.screenshots.at(-1).top, 1111);
+  assert.equal(fixture.element.scrollTop, 0);
+});
+
+test('unsupported ancestor clipping geometry fails closed with restoration and handle disposal', async () => {
+  const fixture = anchoredScrollFixture();
+  const parent = fixture.leaf(400, 30, '');
+  parent.css = { position: 'absolute', clip: 'rect(unknown, 1000px, 30px, 0px)' };
+  parent.parentElement = fixture.element;
+  fixture.nodes[0].parentElement = parent;
+  await assert.rejects(captureFullPage(fixture.page, 'unsupported-clip.png'), /clipping geometry is unsupported/);
+  assert.equal(fixture.probe.screenshots.length, 1);
+  assert.equal(fixture.element.scrollTop, 0);
+  assert.equal(fixture.probe.handleDisposed, true);
+});
+
+test('painted fragment clipping does not forgive a two-pixel hole inside the required ancestor-clipped interval', async () => {
+  const fixture = anchoredScrollFixture({ occludedGap: 2 });
+  const parent = fixture.leaf(290, 30, '');
+  parent.css = { overflowY: 'hidden' };
+  parent.clientHeight = 30;
+  parent.parentElement = fixture.element;
+  fixture.nodes[0].parentElement = parent;
+  await assert.rejects(captureFullPage(fixture.page, 'clipped-gap.png'), /coverage incomplete after bounded reconciliation/);
+  const first = fixture.probe.snapshots[0].nodes.find((node) => node.height === 500);
+  assert.deepEqual(JSON.parse(JSON.stringify(first.required)), [[290, 320]]);
+  assert.deepEqual(JSON.parse(JSON.stringify(first.visible)), [[290, 300], [302, 320]]);
+  assert.equal(fixture.element.scrollTop, 0);
+  assert.equal(fixture.probe.handleDisposed, true);
 });
 
 test('content anchored coverage rejects a two-pixel internal visibility gap rather than treating endpoint captures as contiguous', async () => {
