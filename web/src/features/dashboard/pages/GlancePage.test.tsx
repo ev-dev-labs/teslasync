@@ -43,6 +43,7 @@ import type { ReactNode } from 'react';
 import { ApiError } from '@/lib/resilience';
 import type { VehicleState, LocationSnapshot } from '@/api/types';
 import type { Vehicle } from '@/types/vehicle';
+import type { DataStateSource } from '@/api/dataState';
 
 // ── i18n stub: return the fallback string, interpolating {{var}} options ──
 vi.mock('react-i18next', () => ({
@@ -98,7 +99,8 @@ vi.mock('framer-motion', () => {
 });
 
 // ── Data + environment hooks, driven per test ──
-vi.mock('@/api/hooks/useVehicles', () => ({
+vi.mock('@/api/hooks/useVehicles', async importOriginal => ({
+  ...(await importOriginal<typeof import('@/api/hooks/useVehicles')>()),
   useVehicles: vi.fn(),
   useVehicleState: vi.fn(),
   useLocationSnapshotLatest: vi.fn(),
@@ -159,8 +161,7 @@ const VEHICLES = [
   { id: 2, display_name: 'Car B', model: 'Model Y', vin: 'VINBBBB' },
 ] as unknown as Vehicle[];
 
- 
-function makeQuery(over: Record<string, unknown> = {}): any {
+function makeQuery(over: DataStateSource<unknown> = {}) {
   return {
     data: undefined,
     error: null,
@@ -203,9 +204,23 @@ function makeUnits() {
 
 let units: ReturnType<typeof makeUnits>;
  
-let stateQuery: any;
+let stateQuery: ReturnType<typeof makeQuery>;
  
-let sendCommand: any;
+let sendCommand: {
+  mutate: ReturnType<typeof vi.fn>;
+  isPending: boolean;
+  variables?: { vehicleId: number; command: string };
+};
+
+function stateEnvelope() {
+  return {
+    state: STATE,
+    live: true,
+    observedAt: Date.now(),
+    freshness: 'fresh' as const,
+    verifiedFields: ['battery_level', 'rated_range', 'inside_temp', 'outside_temp', 'odometer', 'speed'],
+  };
+}
 
 function WorkspaceSelectionControl() {
   const { setVehicleId } = useSelectedVehicle();
@@ -252,7 +267,7 @@ function subheadStatusValue(scope: HTMLElement, label: string): string {
 beforeEach(() => {
   vi.clearAllMocks();
   units = makeUnits();
-  stateQuery = makeQuery({ data: { state: STATE, live: true } });
+  stateQuery = makeQuery({ data: stateEnvelope() });
   sendCommand = { mutate: vi.fn(), isPending: false, variables: undefined };
 
   mockUnits.mockReturnValue(units);
@@ -337,7 +352,7 @@ describe('GlancePage — vehicle guard', () => {
 describe('GlancePage — populated overview', () => {
   it('retains independent live evidence and commands when registry, state and location refresh fail', () => {
     mockVehicles.mockReturnValue(makeQuery({ data: VEHICLES, error: new Error('registry refresh'), isError: true }));
-    mockState.mockReturnValue(makeQuery({ data: { state: STATE, live: true }, error: new Error('state refresh'), isError: true }));
+    mockState.mockReturnValue(makeQuery({ data: stateEnvelope(), error: new Error('state refresh'), isError: true }));
     mockLocation.mockReturnValue(makeQuery({ data: LOCATION, error: new Error('location refresh'), isError: true }));
     const { container } = renderPage();
     expect(cardValue(kpiRegion(), 'Battery')).toBe('72.00%');
@@ -666,6 +681,8 @@ describe('GlancePage — null safety + idle branches', () => {
             sentry_mode: false,
           },
           live: true,
+          observedAt: Date.now(),
+          freshness: 'fresh',
         },
       }),
     );
@@ -681,5 +698,106 @@ describe('GlancePage — null safety + idle branches', () => {
     // Lock button now offers "Lock" (drives the inverse command payload).
     fireEvent.click(within(controlsRegion()).getByRole('button', { name: 'Lock' }));
     expect(sendCommand.mutate).toHaveBeenCalledWith({ vehicleId: 1, command: 'lock' });
+  });
+
+  describe('GlancePage — source observation and restrained presentation', () => {
+    it('never treats a successful poll as a verified telemetry observation', () => {
+      mockState.mockReturnValue(makeQuery({
+        data: { state: STATE, live: true, observedAt: null, freshness: 'unknown' },
+        dataUpdatedAt: Date.now(),
+      }));
+      renderPage();
+      expect(cardValue(kpiRegion(), 'Battery')).toBe('72.00%');
+      expect(screen.getAllByText(/No verified observation time for this vehicle/)).toHaveLength(3);
+      expect(screen.queryByRole('img', { name: /Up to date/ })).toBeNull();
+      expect(screen.getByText(/Telemetry stream observation does not verify individual reading timestamps/)).toBeInTheDocument();
+      expect(within(controlsRegion()).getByRole('button', { name: 'Horn' })).toBeDisabled();
+      fireEvent.click(within(controlsRegion()).getByRole('button', { name: 'Horn' }));
+      expect(sendCommand.mutate).not.toHaveBeenCalled();
+    });
+
+    it('retains old observations and every card while disabling stale live actions', () => {
+      mockState.mockReturnValue(makeQuery({
+        data: { ...stateEnvelope(), observedAt: Date.now() - 600_000 },
+        dataUpdatedAt: Date.now(),
+      }));
+      renderPage();
+      expect(cardValue(kpiRegion(), 'Range')).toBe('dist(402336)');
+      expect(rowValue(liveRegion(), 'Doors')).toBe('Locked');
+      expect(rowValue(liveRegion(), 'Destination')).toBe('Office');
+      expect(within(liveRegion()).getByRole('meter', { name: 'Battery' })).toHaveAttribute('aria-valuenow', '72');
+      expect(screen.getAllByText(/Last real observation.*Stale/)).toHaveLength(3);
+      expect(within(controlsRegion()).getByRole('button', { name: 'Unlock' })).toBeDisabled();
+      expect(within(controlsRegion()).getByRole('button', { name: 'Climate off' })).toBeDisabled();
+      expect(within(controlsRegion()).getByRole('button', { name: 'Horn' })).toBeDisabled();
+    });
+
+    it('keeps historical readings separate from the latest location and live commands', () => {
+      renderPage('/glance?as_of=2024-06-01T00%3A00%3A00Z');
+      const historical = screen.getByRole('region', { name: 'Historical signal reconstruction' });
+      expect(cardValue(kpiRegion(), 'Battery')).toBe('72.00%');
+      expect(rowValue(historical, 'Place')).toBe('Home');
+      expect(rowValue(historical, 'Destination')).toBe('Office');
+      expect(screen.getByText('Latest')).toBeInTheDocument();
+      expect(kpiRegion()).toHaveTextContent('Historical signal reconstruction');
+      expect(within(controlsRegion()).getByText(/Read-only point-in-time mode/)).toBeInTheDocument();
+      for (const name of ['Unlock', 'Climate off', 'Horn']) {
+        expect(within(controlsRegion()).getByRole('button', { name })).toBeDisabled();
+      }
+      expect(mockLocation).toHaveBeenCalledWith(1, 30_000);
+      expect(sendCommand.mutate).not.toHaveBeenCalled();
+    });
+
+    it('does not enable remote controls for paused refresh or unestablished live provenance', () => {
+      mockState.mockReturnValue(makeQuery({
+        data: { ...stateEnvelope(), live: false },
+        fetchStatus: 'paused',
+      }));
+      renderPage();
+      expect(cardValue(kpiRegion(), 'Battery')).toBe('72.00%');
+      expect(rowValue(liveRegion(), 'Doors')).toBe('Locked');
+      expect(within(controlsRegion()).getByRole('button', { name: 'Horn' })).toBeDisabled();
+      expect(rowValue(liveRegion(), 'Destination')).toBe('Office');
+    });
+
+    it('preserves all sections, actions and measured zero with neutral gauge and container layout', () => {
+      mockState.mockReturnValue(makeQuery({
+        data: { ...stateEnvelope(), state: { ...STATE, battery_level: 0 } },
+      }));
+      const { container } = renderPage();
+      expect(cardValue(kpiRegion(), 'Battery')).toBe('0.00%');
+      expect(within(liveRegion()).getByRole('meter', { name: 'Battery' })).toHaveAttribute('aria-valuenow', '0');
+      expect(screen.getByRole('heading', { name: 'Charging & climate' })).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: 'Security & location' })).toBeInTheDocument();
+      expect(rowValue(liveRegion(), 'Charger power')).toBe('11.00 kW');
+      expect(rowValue(liveRegion(), 'ETA')).toBe('15.00 min');
+      expect(container.querySelector('[class*="@container/glance"]')?.firstElementChild)
+        .toHaveClass('@2xl/glance:grid-cols-2', '@5xl/glance:grid-cols-3');
+      for (const name of ['Unlock', 'Climate off', 'Horn']) {
+        const action = within(controlsRegion()).getByRole('button', { name });
+        expect(action).toBeEnabled();
+        expect(action.className).not.toContain('border-white');
+        expect(action).toHaveClass('min-h-16', 'min-w-24');
+      }
+      expect(screen.getByRole('link', { name: 'Open full app →' })).toHaveAttribute('href', '/');
+    });
+
+    it('keeps independent location pending and failed recovery inside its original card', () => {
+      mockLocation.mockReturnValue(makeQuery({ isLoading: true }));
+      const page = renderPage();
+      expect(screen.getByRole('heading', { name: 'Security & location' })).toBeInTheDocument();
+      expect(rowValue(liveRegion(), 'Place')).toBe('—');
+      expect(rowValue(liveRegion(), 'Doors')).toBe('Locked');
+      expect(cardValue(kpiRegion(), 'Battery')).toBe('72.00%');
+      page.unmount();
+      const retry = vi.fn();
+      mockLocation.mockReturnValue(makeQuery({ isError: true, error: new ApiError('location unavailable', 500), refetch: retry }));
+      renderPage();
+      expect(rowValue(liveRegion(), 'Place')).toBe('—');
+      expect(rowValue(liveRegion(), 'Doors')).toBe('Locked');
+      fireEvent.click(within(liveRegion()).getByRole('button', { name: 'Retry' }));
+      expect(retry).toHaveBeenCalledTimes(1);
+      expect(within(controlsRegion()).getByRole('button', { name: 'Horn' })).toBeEnabled();
+    });
   });
 });

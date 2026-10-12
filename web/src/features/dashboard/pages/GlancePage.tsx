@@ -25,13 +25,14 @@ import {
   Badge,
   Button,
   GlassPanel,
+  Icon,
   PanelTitle,
   Subhead,
   Text,
   Caption,
 } from '@/components/ui';
 import { LinearGauge } from '@/components/charts';
-import { FreshnessIndicator, KVList } from '@/components/data-display';
+import { useIsStale, KVList } from '@/components/data-display';
 import type { StatMetric } from '@/components/data-display/stat-reference/types';
 import { DashboardSourceBrief } from '../components/operationalbrief-all/DashboardSourceBrief';
 import { EmptyState, Skeleton, QueryError, StaleRefreshWarning } from '@/components/feedback';
@@ -43,16 +44,17 @@ import {
   useVehicles,
   useVehicleState,
   useLocationSnapshotLatest,
+  resolveVehicleStateFreshness,
 } from '@/api/hooks/useVehicles';
 import { useVehicleCommand } from '@/api/hooks/useVehicleCommand';
 import { useUnits } from '@/hooks/useUnits';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useRefreshInterval } from '@/hooks/useRefreshPolicy';
+import { useAsOfDate } from '@/hooks/useAsOfDate';
 
-import { batteryColor, COLOR } from '@/lib/colors';
 import { cn } from '@/lib/cn';
-import type { NeonColor } from '@/lib/tokens';
+import { typography, type NeonColor } from '@/lib/tokens';
 import type { LocationSnapshot } from '@/api/types';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
@@ -87,7 +89,7 @@ interface QuickActionProps {
 }
 
 /** Large, touch-friendly command button for the Controls band. */
-function QuickAction({ icon: Icon, label, onClick, disabled, loading }: QuickActionProps) {
+function QuickAction({ icon, label, onClick, disabled, loading }: QuickActionProps) {
   return (
     <Button
       variant="ghost"
@@ -96,10 +98,10 @@ function QuickAction({ icon: Icon, label, onClick, disabled, loading }: QuickAct
       loading={loading}
       wrapLabel
       aria-label={label}
-      className="flex min-h-[4.5rem] min-w-[5.5rem] flex-1 flex-col items-center justify-center gap-1.5
-        rounded-xl border border-white/[0.06] bg-[var(--surface-2)] p-3 hover:border-white/[0.12]"
+      className="flex min-h-16 min-w-24 flex-1 flex-col items-center justify-center gap-2
+        border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3 hover:border-[var(--border-default)]"
     >
-      {!loading && <Icon className="h-5 w-5 text-[var(--theme-primary)]" aria-hidden="true" />}
+      {!loading && <Icon icon={icon} size="lg" className={typography.color.secondary} />}
       <Caption>{label}</Caption>
     </Button>
   );
@@ -170,33 +172,71 @@ export default function GlancePage() {
    * `false` — rather than a large number — stops TanStack from arming a timer
    * at all. */
   const liveInterval = useRefreshInterval(10_000);
+  const { asOf } = useAsOfDate();
   const stateQuery = useVehicleState(vehicleId, { refetchInterval: liveInterval });
   const {
     data: stateData,
-    dataUpdatedAt,
     isLoading: stateLoading,
     refetch,
   } = stateQuery;
   const state = stateData?.state;
-  const stateTrust = useDataState(stateQuery, { provenance: 'live' });
+  const stateLabel = asOf
+    ? t('timeMachine.summarySource', 'Historical signal reconstruction')
+    : t('glance.liveStatus', 'Live status');
+  const observedAt = stateData?.observedAt;
+  const observationTimestamp = useMemo(
+    () => observedAt != null && Number.isFinite(observedAt) && Number.isFinite(new Date(observedAt).getTime())
+      ? new Date(observedAt).toISOString()
+      : null,
+    [observedAt],
+  );
+  const { ageLabel } = useIsStale(observationTimestamp);
+  const observationFreshness = resolveVehicleStateFreshness(
+    stateData?.freshness, observationTimestamp ? observedAt ?? null : null,
+  );
+  const stateSourceTrust = useDataState(stateQuery, {
+    provenance: asOf ? 'historical' : stateData?.live === true ? 'live' : 'unknown',
+    unavailable: stateData != null && !state,
+    partial: !!state && (
+      observationFreshness === 'unknown' ||
+      (['battery_level', 'rated_range', 'inside_temp', 'outside_temp', 'odometer', 'speed'] as const)
+        .some(field => knownNumber(state[field]) == null || !stateData?.verifiedFields?.includes(field))
+    ),
+  });
+  const stateTrust = !asOf && state && observationFreshness === 'stale' && stateSourceTrust.status !== 'stale'
+    ? { ...stateSourceTrust, status: 'stale' as const, provenance: stateData?.live === true ? 'cached' as const : stateSourceTrust.provenance }
+    : stateSourceTrust;
 
   const locationQuery = useLocationSnapshotLatest(vehicleId, 30_000);
   const { data: location } = locationQuery;
-  const locationTrust = useDataState(locationQuery, { provenance: 'live' });
+  const locationTrust = useDataState(locationQuery, {
+    provenance: 'cached',
+    unavailable: location === null,
+  });
 
   const { formatDistance, formatSpeed, formatTemperature } = useUnits();
   const sendCommand = useVehicleCommand();
 
   const isOnline = state?.state === 'online' || state?.state === 'parked';
-  const canSendCommands = isOnline && !sendCommand.isPending;
+  const hasLiveCommandEvidence = !asOf && stateData?.live === true &&
+    observationFreshness === 'fresh' && liveInterval !== false && !stateTrust.isRefreshBlocked;
+  const canSendCommands = isOnline && hasLiveCommandEvidence && !sendCommand.isPending;
   const locationLabel = getLocationLabel(location, t);
   const vehicleName =
     vehicle?.display_name || vehicle?.model || t('glance.defaultName', 'Tesla');
 
-  // Use the query's dataUpdatedAt as a proxy for "when we last got data".
-  const freshnessTimestamp = useMemo(
-    () => (dataUpdatedAt ? new Date(dataUpdatedAt).toISOString() : null),
-    [dataUpdatedAt],
+  const observation = (
+    <Caption className="block min-w-0 break-words">
+      {asOf ? t('timeMachine.summarySource', 'Historical signal reconstruction') : (
+        <>
+          {t('statusBar.connectionDiagnostics.telemetry', 'Telemetry stream')}{' · '}
+          {observationTimestamp
+            ? t('dashboard.fleetPosture.scope.observed', 'Last real observation {{age}}', { age: ageLabel })
+            : t('dashboard.fleetPosture.scope.noObservation', 'No verified observation time for this vehicle')}
+          {observationFreshness === 'stale' && <> · {t('freshness.stale', 'Stale')}</>}
+        </>
+      )}
+    </Caption>
   );
   const overviewMetrics: readonly StatMetric[] = [
     { metricId: 'percent', rawValue: state?.battery_level, label: t('glance.battery', 'Battery'),
@@ -238,7 +278,7 @@ export default function GlancePage() {
     return (
       <SourceContent
         state={stateLoading ? 'loading' : 'empty'}
-        label={t('glance.liveStatus', 'Live status')}
+        label={stateLabel}
         emptyMessage={emptyMessage}
         errorMessage={emptyMessage}
         loadingContent={<Skeleton height={skeletonHeight} />}
@@ -257,19 +297,21 @@ export default function GlancePage() {
   return (
     <PageLayout
       title={title}
-      subtitle={t('glance.subtitle', 'A quick, live snapshot of your vehicle')}
+      subtitle={asOf
+        ? t('timeMachine.banner.body', 'Read-only point-in-time mode — current state, battery, and other live signals are reconstructed from history. Live actions stay disabled.')
+        : t('glance.subtitle', 'A quick, live snapshot of your vehicle')}
       actions={vehicle ? actions : undefined}
       loading={vehiclesLoading && !vehiclesState.hasData}
       error={vehiclesState.fatalError}
       query={vehicleId > 0 ? stateQuery : undefined}
       dataSources={[
         { id: 'vehicle-registry', label: t('dataSources.labels.vehicleRegistry', 'Vehicle registry'), query: vehiclesQuery },
-        { id: 'live-vehicle-state', label: t('dataSources.labels.liveVehicleState', 'Live vehicle state'), query: stateQuery, enabled: vehicleId > 0 },
+        { id: 'live-vehicle-state', label: asOf ? stateLabel : t('dataSources.labels.liveVehicleState', 'Live vehicle state'), query: stateQuery, enabled: vehicleId > 0 },
         { id: 'live-location', label: t('glance.locationLabel', 'Location'), query: locationQuery, enabled: vehicleId > 0 },
       ]}
     >
       <StaleRefreshWarning state={vehiclesState} label={t('dataSources.labels.vehicleRegistry', 'Vehicle registry')} />
-      <StaleRefreshWarning state={stateTrust} label={t('glance.liveStatus', 'Live status')} />
+      <StaleRefreshWarning state={stateTrust} label={stateLabel} />
       {!vehicle ? (
         <GlassPanel className="p-8">
           <EmptyState
@@ -304,21 +346,25 @@ export default function GlancePage() {
                 title={t('glance.summary.title', 'Vehicle operating summary')}
                 description={t('glance.summary.description', 'Latest returned measurements for the selected vehicle. Poll completion is not a verified observation time for each signal; location has an independent source.')}
                 scope={vehicleName}
-                freshness={<FreshnessIndicator timestamp={freshnessTimestamp} size="sm" />}
+                freshness={observation}
                 loading={stateLoading && !state}
                 testId="glance-operational-brief"
               />
+              <Caption className="mt-2 block">
+                {t('vehicleHero.observationLimitation', 'Telemetry stream observation does not verify individual reading timestamps or completeness.')}
+              </Caption>
             </section>
           </FadeIn>
 
           {/* 2 — Live status bento: hero battery + charging/climate + security/location */}
           <FadeIn delay={0.1}>
-            <Section id="glance-live-status" title={t('glance.liveStatus', 'Live status')}>
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+            <Section id="glance-live-status" title={stateLabel}>
+              <div className="@container/glance min-w-0">
+              <div className="grid grid-cols-1 gap-4 @2xl/glance:grid-cols-2 @5xl/glance:grid-cols-3">
                 {/* Hero — vehicle identity + battery ring */}
-                <GlassPanel className="p-4 sm:p-5 md:col-span-2 xl:col-span-1">
+                <GlassPanel className="min-w-0 p-4 sm:p-5 @2xl/glance:col-span-2 @5xl/glance:col-span-1">
                   <div className="flex items-center justify-between gap-3">
-                    <PanelTitle className="truncate">{vehicleName}</PanelTitle>
+                    <PanelTitle className="min-w-0 break-words">{vehicleName}</PanelTitle>
                     <Badge variant={isOnline ? 'success' : 'neutral'} dot>
                       {state?.state ?? t('glance.unknown', 'Unknown')}
                     </Badge>
@@ -338,11 +384,7 @@ export default function GlancePage() {
                           unit="%"
                           size={180}
                           className="max-w-xs"
-                          color={
-                            state.battery_level != null
-                              ? batteryColor(state.battery_level)
-                              : COLOR.MUTED
-                          }
+                          tone="neutral"
                         />
                       </div>
                       <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
@@ -357,7 +399,7 @@ export default function GlancePage() {
                         )}
                       </div>
                       <div className="mt-4 flex justify-center">
-                        <FreshnessIndicator timestamp={freshnessTimestamp} size="md" />
+                        {observation}
                       </div>
                     </div>
                   )}
@@ -366,7 +408,7 @@ export default function GlancePage() {
                 {/* Charging & climate */}
                 <GlassPanel className="p-4 sm:p-5">
                   <PanelTitle className="mb-3 flex items-center gap-2">
-                    <BatteryCharging className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+                    <Icon icon={BatteryCharging} className={typography.color.secondary} />
                     {t('glance.chargingClimate', 'Charging & climate')}
                   </PanelTitle>
                   {!state ? (
@@ -418,7 +460,7 @@ export default function GlancePage() {
                           </Text>
                         )}
                       </div>
-                      <div className="space-y-1 border-t border-white/[0.06] pt-3">
+                      <div className="space-y-1 border-t border-[var(--border-subtle)] pt-3">
                         <div className="flex items-center justify-between gap-2">
                           <Subhead>{t('glance.climate.title', 'Climate')}</Subhead>
                           <Badge
@@ -451,7 +493,7 @@ export default function GlancePage() {
                 {/* Security & location */}
                 <GlassPanel className="p-4 sm:p-5">
                   <PanelTitle className="mb-3 flex items-center gap-2">
-                    <Shield className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+                    <Icon icon={Shield} className={typography.color.secondary} />
                     {t('glance.securityLocation', 'Security & location')}
                   </PanelTitle>
                   <div className="space-y-4">
@@ -494,11 +536,16 @@ export default function GlancePage() {
                         </StatusRow>
                       </div>
                     )}
-                      <div className="space-y-1 border-t border-white/[0.06] pt-3">
+                      <div className="space-y-1 border-t border-[var(--border-subtle)] pt-3">
                         <Subhead>{t('glance.locationLabel', 'Location')}</Subhead>
+                        {asOf && <Caption className="block">{t('timeMachine.latest', 'Latest')}</Caption>}
                         <StaleRefreshWarning state={locationTrust} label={t('glance.locationLabel', 'Location')} />
                         {locationTrust.fatalError && (
                           <QueryError error={locationTrust.fatalError} onRetry={() => { void locationQuery.refetch(); }} />
+                        )}
+                        {locationQuery.isLoading && !location && <Skeleton height={48} />}
+                        {!locationQuery.isLoading && !location && !locationTrust.fatalError && (
+                          <Caption className="block">{t('common.unknown', 'Unknown')}</Caption>
                         )}
                         <DetailRow
                           icon={MapPin}
@@ -520,11 +567,12 @@ export default function GlancePage() {
                           />
                         )}
                       </div>
-                      <Caption className="block border-t border-white/[0.06] pt-3">
+                      <Caption className="block border-t border-[var(--border-subtle)] pt-3">
                         {t('glance.software', 'Software')}: {state?.software_version || '—'}
                       </Caption>
                   </div>
                 </GlassPanel>
+              </div>
               </div>
             </Section>
           </FadeIn>
@@ -536,6 +584,13 @@ export default function GlancePage() {
                 {!isOnline && (
                   <Text variant="bodySm" className={cn('mb-3 block')}>
                     {t('glance.offlineHint', 'Commands are available when the vehicle is online.')}
+                  </Text>
+                )}
+                {isOnline && !hasLiveCommandEvidence && (
+                  <Text variant="bodySm" className="mb-3 block">
+                    {asOf
+                      ? t('timeMachine.banner.body', 'Read-only point-in-time mode — current state, battery, and other live signals are reconstructed from history. Live actions stay disabled.')
+                      : observation}
                   </Text>
                 )}
                 <div className="flex flex-wrap gap-3">
@@ -598,7 +653,7 @@ export default function GlancePage() {
           <div className="flex justify-center pt-1">
             <Link
               to="/"
-              className="transition-colors hover:text-[var(--text-secondary)]"
+              className="inline-flex min-h-11 min-w-11 items-center rounded-control px-3 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus-ring)]"
             >
               <Caption>{t('glance.openApp', 'Open full app →')}</Caption>
             </Link>
