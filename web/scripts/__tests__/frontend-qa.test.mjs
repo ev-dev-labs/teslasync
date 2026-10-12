@@ -143,6 +143,247 @@ test('section capture failure restores scroll without claiming complete evidence
   assert.equal(element.scrollTop, 300);
 });
 
+function scrollCaptureFixture({ height = 900, total = 2500, original = 300,
+  onFrame = () => {}, onScreenshot = () => {}, onScroll = (top) => top } = {}) {
+  const element = { clientHeight: height, scrollHeight: total };
+  const probe = { frames: 0, scrolls: [], screenshots: [] };
+  let top = original;
+  Object.defineProperty(element, 'scrollTop', {
+    get: () => top,
+    set: (requested) => {
+      probe.scrolls.push(requested);
+      top = onScroll(requested, element, probe);
+    },
+  });
+  const main = {
+    count: async () => 1,
+    evaluate: async (fn, argument) => runInNewContext(`(${fn})(element, argument)`, {
+      element, argument,
+      requestAnimationFrame: (done) => { onFrame(element, ++probe.frames, probe); done(); },
+    }),
+  };
+  const page = {
+    locator: () => ({ first: () => main }),
+    screenshot: async (options) => {
+      probe.screenshots.push({ ...options, top: element.scrollTop,
+        height: element.clientHeight, total: element.scrollHeight });
+      await onScreenshot(element, probe);
+    },
+  };
+  return { element, probe, page };
+}
+
+test('measured Drive History growth and bottom anchoring restart all tiles and cover the settled 1878 pixels', async () => {
+  let grew = false;
+  const { element, probe, page } = scrollCaptureFixture({
+    height: 679, total: 1819, original: 0,
+    onScroll: (top, main) => {
+      if (top === 1140 && !grew) { grew = true; main.scrollHeight = 1878; return 1199; }
+      return top;
+    },
+  });
+  await captureFullPage(page, 'drive.png');
+  assert.deepEqual(probe.screenshots.map(({ top }) => top), [0, 0, 679, 0, 679, 1199]);
+  const complete = probe.screenshots.slice(-3);
+  assert.deepEqual(complete.map(({ path }) => path), [
+    'drive-section-1.png', 'drive-section-2.png', 'drive-section-3.png',
+  ]);
+  assert.deepEqual(complete.map(({ top, height, total }) => [top, top + height, total]), [
+    [0, 679, 1878], [679, 1358, 1878], [1199, 1878, 1878],
+  ]);
+  assert.ok(probe.screenshots.every(({ fullPage }) => fullPage));
+  assert.equal(element.scrollHeight, 1878);
+  assert.equal(element.scrollTop, 0);
+});
+
+test('extent changes during a screenshot invalidate earlier evidence and recapture every settled section', async () => {
+  const { element, probe, page } = scrollCaptureFixture({
+    height: 679, total: 1819, original: 200,
+    onScreenshot: (main, state) => { if (state.screenshots.length === 2) main.scrollHeight = 1878; },
+  });
+  await captureFullPage(page, 'growth.png');
+  assert.deepEqual(probe.screenshots.map(({ top }) => top), [200, 0, 0, 679, 1199]);
+  assert.deepEqual(probe.screenshots.slice(-3).map(({ top, height, total }) => [top, height, total]), [
+    [0, 679, 1878], [679, 679, 1878], [1199, 679, 1878],
+  ]);
+  assert.equal(element.scrollTop, 200);
+});
+
+test('viewport and extent shrink restart coverage using measured heights without gaps and restore the original top', async () => {
+  let shrank = false;
+  const { element, probe, page } = scrollCaptureFixture({
+    onScroll: (top, main) => {
+      if (top === 900 && !shrank) {
+        shrank = true; main.clientHeight = 679; main.scrollHeight = 1819; return 1100;
+      }
+      return top;
+    },
+  });
+  await captureFullPage(page, 'shrink.png');
+  assert.deepEqual(probe.screenshots.map(({ top }) => top), [300, 0, 0, 679, 1140]);
+  assert.deepEqual(probe.screenshots.slice(-3).map(({ top, height, total }) => [top, top + height, total]), [
+    [0, 679, 1819], [679, 1358, 1819], [1140, 1819, 1819],
+  ]);
+  assert.equal(element.scrollTop, 300);
+});
+
+test('finite scroll anchoring without an extent change settles by reapplying the measured target', async () => {
+  let anchored = false;
+  const { element, probe, page } = scrollCaptureFixture({
+    onScroll: (top) => {
+      if (top === 900 && !anchored) { anchored = true; return 959; }
+      return top;
+    },
+  });
+  await captureFullPage(page, 'anchor.png');
+  assert.deepEqual(probe.screenshots.map(({ top }) => top), [300, 0, 900, 1600]);
+  assert.equal(probe.scrolls.filter((top) => top === 900).length, 4);
+  assert.equal(element.scrollTop, 300);
+});
+
+test('settlement accepts exactly three matching samples by the twelfth double-RAF turn and rejects only two', async () => {
+  for (const [unstableTurns, passes] of [[10, true], [11, false]]) {
+    const { element, probe, page } = scrollCaptureFixture({
+      onFrame: (main, frame) => {
+        if (frame % 2 === 0 && frame <= unstableTurns * 2) main.scrollHeight += 1;
+      },
+    });
+    if (passes) {
+      await captureFullPage(page, 'threshold.png');
+      assert.deepEqual(probe.screenshots.map(({ top, total }) => [top, total]), [
+        [300, 2500], [0, 2510], [900, 2510], [1610, 2510],
+      ]);
+      assert.equal(probe.frames, 42); // 12 initial turns, then three turns per remaining tile/final check.
+    } else {
+      await assert.rejects(captureFullPage(page, 'threshold.png'), /geometry did not settle/);
+      assert.equal(probe.frames, 24);
+      assert.equal(probe.screenshots.length, 1);
+    }
+    assert.equal(element.scrollTop, 300);
+  }
+});
+
+test('scroll settlement retains the inclusive one-pixel position threshold and blocks two-pixel drift', async () => {
+  for (const [drift, passes] of [[1, true], [2, false]]) {
+    const { element, probe, page } = scrollCaptureFixture({
+      onScroll: (top) => top === 900 ? top + drift : top,
+    });
+    if (passes) {
+      await captureFullPage(page, 'drift.png');
+      assert.deepEqual(probe.screenshots.map(({ top }) => top), [300, 0, 901, 1600]);
+    } else {
+      await assert.rejects(captureFullPage(page, 'drift.png'), /geometry did not settle/);
+      assert.deepEqual(probe.screenshots.map(({ top }) => top), [300, 0]);
+      assert.equal(probe.frames, 30);
+    }
+    assert.equal(element.scrollTop, 300);
+  }
+});
+
+test('pre-screenshot and post-screenshot checks measure position against the target without compounding one-pixel tolerance', async () => {
+  for (const phase of ['before', 'after']) {
+    const { element, probe, page } = scrollCaptureFixture({
+      onScroll: (top) => top >= 900 && top < 1600 ? top + 1 : top,
+      onScreenshot: (main, state) => {
+        if (phase === 'after' && state.screenshots.length === 3) main.scrollTop = 901;
+      },
+    });
+    let guards = 0;
+    await captureFullPage(page, 'position.png', async () => {
+      if (++guards === 3 && phase === 'before') element.scrollTop = 901;
+    });
+    assert.deepEqual(probe.screenshots.map(({ top }) => top),
+      phase === 'before' ? [300, 0, 0, 901, 1600] : [300, 0, 901, 0, 901, 1600]);
+    assert.equal(guards, 6);
+    assert.equal(element.scrollTop, 300);
+  }
+});
+
+test('permanent extent instability stops after twelve double-RAF turns with no section pass and restores scroll', async () => {
+  const { element, probe, page } = scrollCaptureFixture({
+    onFrame: (main, frame) => { if (frame % 2 === 0) main.scrollHeight += 1; },
+  });
+  await assert.rejects(captureFullPage(page, 'unstable.png'), /geometry did not settle/);
+  assert.equal(probe.frames, 24);
+  assert.equal(probe.screenshots.length, 1);
+  assert.equal(element.scrollHeight, 2512);
+  assert.equal(element.scrollTop, 300);
+});
+
+test('repeated post-screenshot extent changes exhaust three coverage attempts without passing or losing restoration', async () => {
+  const { element, probe, page } = scrollCaptureFixture({
+    onScreenshot: (main, state) => { if (state.screenshots.length > 1) main.scrollHeight += 1; },
+  });
+  await assert.rejects(captureFullPage(page, 'changing.png'), /extent remained unstable/);
+  assert.deepEqual(probe.screenshots.map(({ top, total }) => [top, total]), [
+    [300, 2500], [0, 2500], [0, 2501], [0, 2502],
+  ]);
+  assert.equal(probe.frames, 18);
+  assert.equal(element.scrollTop, 300);
+});
+
+test('post-capture delayed growth is measured before success and restarts complete coverage', async () => {
+  let grew = false;
+  const { element, probe, page } = scrollCaptureFixture({
+    onFrame: (main, _frame, state) => {
+      if (state.screenshots.length === 4 && !grew) { grew = true; main.scrollHeight = 2550; }
+    },
+  });
+  await captureFullPage(page, 'delayed.png');
+  assert.deepEqual(probe.screenshots.map(({ top }) => top), [300, 0, 900, 1600, 0, 900, 1650]);
+  assert.deepEqual(probe.screenshots.slice(-3).map(({ top, total }) => [top, total]), [
+    [0, 2550], [900, 2550], [1650, 2550],
+  ]);
+  assert.equal(element.scrollTop, 300);
+});
+
+test('the original hundred-section cap includes its exact boundary and rejects growth to section one hundred one', async () => {
+  const accepted = scrollCaptureFixture({ height: 100, total: 10000 });
+  await captureFullPage(accepted.page, 'cap.png');
+  assert.equal(accepted.probe.screenshots.length, 101);
+  assert.equal(accepted.probe.screenshots.at(-1).path, 'cap-section-100.png');
+  assert.equal(accepted.probe.screenshots.at(-1).top, 9900);
+  assert.equal(accepted.element.scrollTop, 300);
+  const oversized = scrollCaptureFixture({ height: 100, total: 10001 });
+  await assert.rejects(captureFullPage(oversized.page, 'cap.png'), /exceeds bounded capture limits/);
+  assert.equal(oversized.probe.screenshots.length, 1);
+  assert.equal(oversized.probe.frames, 0);
+  assert.equal(oversized.element.scrollTop, 300);
+  const growing = scrollCaptureFixture({
+    height: 100, total: 10000,
+    onFrame: (main) => { main.scrollHeight = 10001; },
+  });
+  await assert.rejects(captureFullPage(growing.page, 'cap.png'), /exceeds bounded capture limits/);
+  assert.equal(growing.probe.screenshots.length, 1);
+  assert.equal(growing.probe.frames, 2);
+  assert.equal(growing.element.scrollTop, 300);
+});
+
+test('coverage restarts cannot exceed one hundred total section captures', async () => {
+  const { element, probe, page } = scrollCaptureFixture({
+    height: 100, total: 10000,
+    onScreenshot: (main, state) => { if (state.screenshots.length === 101) main.scrollHeight = 9999; },
+  });
+  await assert.rejects(captureFullPage(page, 'budget.png'), /exceeds bounded capture limits/);
+  assert.equal(probe.screenshots.length, 101);
+  assert.equal(probe.screenshots.at(-1).path, 'budget-section-100.png');
+  assert.equal(element.scrollHeight, 9999);
+  assert.equal(element.scrollTop, 300);
+});
+
+test('capture guards run on restarted sections and failures still abort and restore the original top', async () => {
+  const { element, probe, page } = scrollCaptureFixture({
+    onScreenshot: (main, state) => { if (state.screenshots.length === 2) main.scrollHeight = 2550; },
+  });
+  let guards = 0;
+  await assert.rejects(captureFullPage(page, 'guard.png', async () => {
+    if (++guards === 3) throw new Error('Synthetic mounted-mode or busy failure');
+  }), /Synthetic mounted-mode or busy failure/);
+  assert.deepEqual(probe.screenshots.map(({ top }) => top), [300, 0]);
+  assert.equal(guards, 3);
+  assert.equal(element.scrollTop, 300);
+});
+
 test('browser failures preserve allowlisted type, step and network context without private strings', () => {
   const privateText = 'https://user:password@example.com/drives/5YJ3E1EA7KF123456?token=secret&address=private';
   const timeout = Object.assign(new Error(`Timeout navigating ${privateText}`), { name: 'TimeoutError' });
@@ -289,10 +530,14 @@ function browserFixtureCLI(command, fixture = {}) {
       const classes = new Set();
       const root = { style: {}, classList: { contains: (name) => classes.has(name) } };
       const main = { clientHeight: 900, scrollHeight: 2500, scrollTop: 100 };
+      let frames = 0;
       const sandbox = {
         document: { documentElement: root, body: {}, fonts: { ready: Promise.resolve() } },
         localStorage: { getItem: (key) => saved.get(key) ?? null, setItem: (key, value) => saved.set(key, value) },
-        requestAnimationFrame: (done) => done(), Date,
+        requestAnimationFrame: (done) => {
+          if (fixture.permanentExtent && ++frames % 2 === 0) main.scrollHeight += 1;
+          done();
+        }, Date,
         StorageEvent: class { constructor(type, options) { Object.assign(this, options); } },
         window: { dispatchEvent: (event) => {
           const mode = JSON.parse(event.newValue).msg.modeId;
@@ -326,7 +571,8 @@ function browserFixtureCLI(command, fixture = {}) {
         route: async (_pattern, handler) => { routeHandler = handler; },
         setViewportSize: async ({ width, height }) => {
           info.width = width;
-          main.clientHeight = height;
+          main.clientHeight = fixture.changingExtent ? 679 : height;
+          if (fixture.changingExtent) main.scrollHeight = 1819;
           for (const element of [root, sandbox.document.body]) {
             element.clientWidth = width;
             element.scrollWidth = width + (fixture.overflow ? 2 : 0);
@@ -379,7 +625,12 @@ function browserFixtureCLI(command, fixture = {}) {
         },
         screenshot: async ({ path, fullPage }) => {
           if (fixture.captureError && info.screenshots.length === 1) throw new Error('Synthetic capture failure');
-          info.screenshots.push({ path, fullPage, top: main.scrollTop });
+          info.screenshots.push({ path, fullPage, top: main.scrollTop,
+            height: main.clientHeight, total: main.scrollHeight });
+          if (fixture.changingExtent && info.screenshots.length === 3) {
+            main.scrollHeight = 1878;
+            main.scrollTop += 59;
+          }
         },
         close: async () => { info.closed = true; info.restoredTop = main.scrollTop; },
       };
@@ -534,6 +785,51 @@ test('mounted theme and busy guards still block capture after settled classifica
       result.geometry && result.reasons.includes('failed resource 404')));
     assert.ok(probe.pages.every((page) => !page.screenshots.length && page.restoredTop === 100 && page.closed));
   }
+});
+
+test('settled changing-extent capture retains HTTP 429 and blocked-write failures with complete measured section evidence', () => {
+  const { status, report, probe } = browserFixtureCLI('capture', {
+    changingExtent: true, resources: [429], write: true,
+  });
+  assert.equal(status, 1);
+  assert.deepEqual(report.results.map(({ width }) => width), CAPTURE_WIDTHS);
+  for (const result of report.results) {
+    assert.equal(result.status, 'FAILED');
+    assert.deepEqual(result.reasons, ['non-read request blocked', 'failed resource 429']);
+    assert.ok(result.geometry);
+  }
+  for (const page of probe.pages) {
+    assert.deepEqual(page.screenshots.map(({ top }) => top), [100, 0, 679, 0, 679, 1199]);
+    assert.deepEqual(page.screenshots.slice(-3).map(({ top, height, total }) => [top, top + height, total]), [
+      [0, 679, 1878], [679, 1358, 1878], [1199, 1878, 1878],
+    ]);
+    assert.ok(page.screenshots.every(({ fullPage }) => fullPage));
+    assert.equal(page.restoredTop, 100);
+    assert.equal(page.closed, true);
+  }
+  assert.equal(probe.writesBlocked, CAPTURE_WIDTHS.length);
+  assert.equal(probe.readsContinued, CAPTURE_WIDTHS.length);
+  assert.equal(probe.contextClosed, true);
+  assert.equal(probe.browserClosed, true);
+});
+
+test('permanent changing-extent capture remains BLOCKED exit two with retained HTTP 429 findings and restored scroll', () => {
+  const { status, report, probe } = browserFixtureCLI('capture', {
+    permanentExtent: true, resources: [429], write: true,
+  });
+  assert.equal(status, 2);
+  assert.deepEqual(report.results.map(({ width }) => width), CAPTURE_WIDTHS);
+  for (const result of report.results) {
+    assert.equal(result.status, 'BLOCKED');
+    assert.equal(result.failure.step, 'screenshot');
+    assert.deepEqual(result.reasons, ['non-read request blocked', 'failed resource 429']);
+    assert.ok(result.geometry);
+  }
+  assert.ok(probe.pages.every((page) => page.screenshots.length === 1 &&
+    page.restoredTop === 100 && page.closed));
+  assert.equal(probe.writesBlocked, CAPTURE_WIDTHS.length);
+  assert.equal(probe.contextClosed, true);
+  assert.equal(probe.browserClosed, true);
 });
 
 const forcedColorsClasses = [

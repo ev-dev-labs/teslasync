@@ -202,21 +202,55 @@ export async function captureFullPage(page, path, beforeCapture = async () => {}
   if (geometry.height <= 0 || Math.ceil(geometry.total / geometry.height) > 100) {
     throw new Error('Scroll-section coverage exceeds bounded capture limits');
   }
+  const measure = () => main.evaluate((element) => ({
+    height: element.clientHeight, total: element.scrollHeight, top: element.scrollTop,
+  }));
+  // Require three matching samples within twelve double-RAF turns. Re-clamp
+  // against the live extent so a finite layout/anchoring change can settle.
+  const settle = (offset) => main.evaluate(async (element, target) => {
+    let previous;
+    let stable = 0;
+    for (let sample = 0; sample < 12; sample += 1) {
+      element.scrollTop = Math.min(target, Math.max(0, element.scrollHeight - element.clientHeight));
+      await new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(done)));
+      const current = { height: element.clientHeight, total: element.scrollHeight, top: element.scrollTop };
+      if (current.height <= 0 || Math.ceil(current.total / current.height) > 100) {
+        throw new Error('Scroll-section coverage exceeds bounded capture limits');
+      }
+      const expected = Math.min(target, Math.max(0, current.total - current.height));
+      if (Math.abs(current.top - expected) > 1) stable = 0;
+      else stable = previous?.height === current.height && previous.total === current.total &&
+        Math.abs(previous.top - current.top) <= 1 ? stable + 1 : 1;
+      if (stable === 3) return current;
+      previous = current;
+    }
+    throw new Error('Scroll-section geometry did not settle within bounded capture limits');
+  }, offset);
+  const matches = (actual, expected) => actual.height === expected.height && actual.total === expected.total &&
+    Math.abs(actual.top - expected.top) <= 1;
+  let captures = 0;
   try {
-    for (let offset = 0, index = 0; offset < geometry.total; offset += geometry.height, index += 1) {
-      const expected = Math.min(offset, geometry.total - geometry.height);
-      const actual = await main.evaluate(async (element, top) => {
-        element.scrollTop = top;
-        await new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(done)));
-        return element.scrollTop;
-      }, expected);
-      if (Math.abs(actual - expected) > 1) throw new Error('Scroll-section coverage incomplete');
-      await beforeCapture();
-      await page.screenshot({ path: path.replace(/\.png$/, `-section-${index + 1}.png`), fullPage: true });
+    // A changed extent invalidates earlier tiles, not just the bottom target.
+    // Attempt at most three full passes, with at most 100 section captures.
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      const extent = await settle(0);
+      let changed = false;
+      let last;
+      for (let offset = 0, index = 0; offset < extent.total; offset += extent.height, index += 1) {
+        const current = index === 0 ? extent : await settle(offset);
+        if (current.height !== extent.height || current.total !== extent.total) { changed = true; break; }
+        const expected = { ...extent, top: Math.min(offset, Math.max(0, extent.total - extent.height)) };
+        await beforeCapture();
+        if (!matches(await measure(), expected)) { changed = true; break; }
+        if (captures >= 100) throw new Error('Scroll-section coverage exceeds bounded capture limits');
+        captures += 1;
+        await page.screenshot({ path: path.replace(/\.png$/, `-section-${index + 1}.png`), fullPage: true });
+        if (!matches(await measure(), expected)) { changed = true; break; }
+        last = expected;
+      }
+      if (!changed && last && matches(await settle(last.top), last)) return;
     }
-    if (await main.evaluate((element) => element.scrollHeight) !== geometry.total) {
-      throw new Error('Scroll-section extent changed; all-sections coverage unverified');
-    }
+    throw new Error('Scroll-section extent remained unstable; all-sections coverage unverified');
   } finally {
     await main.evaluate((element, original) => { element.scrollTop = original; }, geometry.original);
   }
