@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { PageLayout } from '@/components/layout';
 import { GlassPanel } from '@/components/ui';
@@ -67,21 +67,33 @@ export default function ServiceEvidencePackPage() {
   const updatesQuery = useSoftwareUpdates(vehicleId != null ? String(vehicleId) : '');
   const signalsState = useDataState(workspace.signalsQuery, { provenance: 'historical' });
   const updatesState = useDataState(updatesQuery, { provenance: 'historical' });
+  const availableHistories = workspace.evidenceBundle.data.filter(
+    ({ response }) => (response.data?.length ?? 0) > 0,
+  );
   const evidenceState = useDataState({
     ...workspace.evidenceBundle,
-    data: workspace.evidenceBundle.data.length > 0 ? workspace.evidenceBundle.data : undefined,
+    data: availableHistories.length > 0 ? availableHistories : undefined,
   }, { provenance: 'historical', partial: workspace.evidenceBundle.isError });
 
   const [pack, setPack] = useState<ServiceEvidencePackDocument | null>(null);
   const [packError, setPackError] = useState<string | null>(null);
   const [generating, setGenerating] = useState(false);
+  const generation = useRef(0);
+  const pendingGeneration = useRef<number | null>(null);
 
   // A previously generated pack describes a point-in-time snapshot of a
   // specific vehicle + signal + window. Any of those three changing makes
   // it stale, so it must not linger as exportable without being regenerated.
-  useEffect(() => {
+  useLayoutEffect(() => {
+    generation.current += 1;
+    pendingGeneration.current = null;
     setPack(null);
     setPackError(null);
+    setGenerating(false);
+    return () => {
+      generation.current += 1;
+      pendingGeneration.current = null;
+    };
   }, [vehicleId, workspace.focalSignal, workspace.windowHours]);
 
   const liveCore = useMemo(
@@ -98,7 +110,9 @@ export default function ServiceEvidencePackPage() {
   const canGenerate = workspace.hasChosenSignal && workspace.isDefensible;
 
   const handleGenerate = useCallback(async () => {
-    if (vehicleId == null) return;
+    if (vehicleId == null || !canGenerate || pendingGeneration.current != null) return;
+    const attempt = ++generation.current;
+    pendingGeneration.current = attempt;
     setGenerating(true);
     setPackError(null);
     try {
@@ -108,20 +122,25 @@ export default function ServiceEvidencePackPage() {
         analysis: workspace.analysis,
         softwareUpdates: updatesQuery.data,
       });
-      setPack(doc);
+      if (generation.current === attempt) setPack(doc);
     } catch (err) {
-      setPackError(
-        err instanceof CryptoUnavailableError
-          ? t(
-              'serviceEvidencePack.errors.cryptoUnavailable',
-              'This session cannot compute a SHA-256 integrity digest — Web Crypto requires a secure context (HTTPS or localhost). Try again over HTTPS.',
-            )
-          : t('serviceEvidencePack.errors.generic', 'Something went wrong while generating the pack. Please try again.'),
-      );
+      if (generation.current === attempt) {
+        setPackError(
+          err instanceof CryptoUnavailableError
+            ? t(
+                'serviceEvidencePack.errors.cryptoUnavailable',
+                'This session cannot compute a SHA-256 integrity digest — Web Crypto requires a secure context (HTTPS or localhost). Try again over HTTPS.',
+              )
+            : t('serviceEvidencePack.errors.generic', 'Something went wrong while generating the pack. Please try again.'),
+        );
+      }
     } finally {
-      setGenerating(false);
+      if (generation.current === attempt) {
+        pendingGeneration.current = null;
+        setGenerating(false);
+      }
     }
-  }, [vehicleId, vehicle, workspace.windowHours, workspace.analysis, updatesQuery.data, t]);
+  }, [vehicleId, vehicle, workspace.windowHours, workspace.analysis, updatesQuery.data, canGenerate, t]);
 
   const handleDismissError = useCallback(() => setPackError(null), []);
   const handleExport = useCallback(() => {
@@ -232,7 +251,7 @@ export default function ServiceEvidencePackPage() {
       )}
 
       {/* 2 — KPI band */}
-      <FadeIn delay={0.1}>
+      <FadeIn>
         <section
           aria-label={t('serviceEvidencePack.kpis.sectionLabel', 'Service evidence pack metrics')}
         >
@@ -257,7 +276,7 @@ export default function ServiceEvidencePackPage() {
       </FadeIn>
 
       {/* 3 — Evidence inventory */}
-      <FadeIn delay={0.2}>
+      <FadeIn>
         <ServiceEvidenceInventoryTable
           signalEvidence={liveCore.signalEvidence}
           sources={workspace.evidenceBundle.sources}
@@ -270,12 +289,12 @@ export default function ServiceEvidencePackPage() {
       </FadeIn>
 
       {/* 4 — Privacy manifest */}
-      <FadeIn delay={0.3}>
+      <FadeIn>
         <ServiceEvidencePrivacyPanel />
       </FadeIn>
 
       {/* 5 — Integrity & export */}
-      <FadeIn delay={0.4}>
+      <FadeIn>
         <ServiceEvidenceIntegrityPanel
           canGenerate={canGenerate}
           generating={generating}
@@ -288,7 +307,7 @@ export default function ServiceEvidencePackPage() {
       </FadeIn>
 
       {/* 6 — Pack preview */}
-      <FadeIn delay={0.5}>
+      <FadeIn>
         <ServiceEvidencePackPreview pack={pack} />
       </FadeIn>
     </PageLayout>
