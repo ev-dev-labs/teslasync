@@ -3,6 +3,7 @@ import { act, fireEvent, render, screen, waitFor, within } from '@testing-librar
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { AuditLogRow } from '@/types/admin-operator-confidence';
+import { ApiError } from '@/lib/resilience';
 
 const { mockedRequest } = vi.hoisted(() => ({
   mockedRequest: vi.fn<(path: string, init?: RequestInit) => Promise<unknown>>(),
@@ -11,6 +12,73 @@ const { mockedRequest } = vi.hoisted(() => ({
 vi.mock('@/api/client', async () => {
   const actual = await vi.importActual<typeof import('@/api/client')>('@/api/client');
   return { ...actual, request: mockedRequest };
+});
+
+describe('AuditLogPage deployment capability evidence', () => {
+  it.each([
+    { name: 'uncoded service outage', status: 503, code: undefined },
+    { name: 'coded service outage', status: 503, code: 'UPSTREAM_UNAVAILABLE' },
+    { name: 'non-503 capability code', status: 500, code: 'SUBSYSTEM_NOT_CONFIGURED' },
+  ])('keeps entry retry and independent sections for $name', async ({ status, code }) => {
+    install();
+    const success = mockedRequest.getMockImplementation()!;
+    mockedRequest.mockImplementation(async (path, init) => {
+      if (path.startsWith('/admin/audit-log?')) throw new ApiError('Ledger temporarily unavailable', status, code);
+      return success(path, init);
+    });
+    const { container, client } = renderPage();
+    await waitFor(() => expect(client.getQueryCache().getAll()
+      .find(query => query.queryKey[2] === 'list')?.state.error).toBeInstanceOf(ApiError));
+    expect(screen.queryByText('The audit log subsystem is not configured on this deployment.')).not.toBeInTheDocument();
+    const entries = [...container.querySelectorAll('[data-card]')]
+      .find(card => card.querySelector('[data-card-title]')?.textContent === 'Entries')!;
+    expect(within(entries as HTMLElement).getByRole('button', { name: /retry/i })).toBeInTheDocument();
+    expect(screen.getByRole('textbox', { name: 'Actor' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Verify chain' })).toBeInTheDocument();
+    expect(screen.getByTestId('admin-audit-summary').querySelectorAll('[data-operational-metric]')).toHaveLength(6);
+    install();
+    fireEvent.click(within(entries as HTMLElement).getByRole('button', { name: /retry/i }));
+    await screen.findByText(ROW.actor);
+  });
+
+  it('shows the unsupported notice only for explicit missing-subsystem evidence', async () => {
+    install();
+    const success = mockedRequest.getMockImplementation()!;
+    mockedRequest.mockImplementation(async (path, init) => {
+      if (path.startsWith('/admin/audit-log?')) {
+        throw new ApiError('Audit viewer not configured', 503, 'SUBSYSTEM_NOT_CONFIGURED');
+      }
+      return success(path, init);
+    });
+    const { container } = renderPage();
+    await screen.findByText('The audit log subsystem is not configured on this deployment.');
+    expect([...container.querySelectorAll('[data-card-title]')].map(title => title.textContent))
+      .toEqual(['Filters', 'Hash chain integrity', 'Entries']);
+    expect(screen.getByRole('textbox', { name: 'Actor' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Verify chain' })).toBeInTheDocument();
+  });
+
+  it('retains exact entries on a missing-subsystem refresh error without declaring unsupported', async () => {
+    install();
+    const { client } = renderPage();
+    await screen.findByText(ROW.actor);
+    const success = mockedRequest.getMockImplementation()!;
+    mockedRequest.mockImplementation(async (path, init) => {
+      if (path.startsWith('/admin/audit-log?')) {
+        throw new ApiError('Audit viewer not configured', 503, 'SUBSYSTEM_NOT_CONFIGURED');
+      }
+      return success(path, init);
+    });
+    await act(async () => { await client.invalidateQueries(); });
+    await waitFor(() => expect(client.getQueryCache().getAll()
+      .find(query => query.queryKey[2] === 'list')?.state.error).toBeInstanceOf(ApiError));
+    expect(screen.queryByText('The audit log subsystem is not configured on this deployment.')).not.toBeInTheDocument();
+    expect(screen.getByText(ROW.actor)).toBeInTheDocument();
+    fireEvent.click(screen.getAllByRole('button', { name: 'Details' })[0]!);
+    expect(await screen.findByRole('group', { name: 'Before' })).toHaveTextContent('"locked": false');
+    expect(screen.getByRole('group', { name: 'After' })).toHaveTextContent('"locked": true');
+    expect(screen.getByText(ROW.trace_id ?? '')).toBeInTheDocument();
+  });
 });
 
 import AuditLogPage from './AuditLogPage';

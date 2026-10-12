@@ -3,8 +3,8 @@
  *
  * Full-width modern-ui cockpit: a derived KPI band, a controls bento
  * (filters + hash-chain integrity), and a full-bleed entries table with
- * expandable rows and CSV export. Filters are page-controller state so the query
- * URL reproduces the view.
+ * expandable rows and CSV export. Page-controller filters scope the server
+ * request; they are not persisted in the browser URL.
  *
  * Backed by:
  *   GET /admin/audit-log            (filtered list)
@@ -19,6 +19,7 @@
 import { PageLayout } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
 import { DataStateNotice } from '@/components/feedback';
+import { isApiError } from '@/lib/resilience';
 import { useAuditLogPage } from '../hooks/useAuditLogPage';
 import { AuditLogStatStrip } from '../components/statstrip-audit-vehicle-cost/AuditLogStatStrip';
 import { AuditLogFilters } from '../components/structural-closure/audit-log/AuditLogFilters';
@@ -26,8 +27,16 @@ import { AuditLogIntegrity } from '../components/structural-closure/audit-log/Au
 import { AuditLogEntries } from '../components/structural-closure/audit-log/AuditLogEntries';
 
 export default function AuditLogPage() {
-  const controller = useAuditLogPage();
-  const { t, logQuery, categoriesQuery, actionsQuery, verifyQuery, verifyState, subsystemMissing } = controller;
+  const sourceController = useAuditLogPage();
+  const { fatalError } = sourceController.logState;
+  const subsystemMissing = isApiError(fatalError)
+    && fatalError.status === 503 && fatalError.code === 'SUBSYSTEM_NOT_CONFIGURED';
+  const controller = {
+    ...sourceController,
+    subsystemMissing,
+    tableError: subsystemMissing ? null : fatalError,
+  };
+  const { t, logQuery, categoriesQuery, actionsQuery, verifyQuery, verifyState } = controller;
   return (
     <PageLayout
       title={t('admin.auditLog.pageTitle', 'Audit log')}
