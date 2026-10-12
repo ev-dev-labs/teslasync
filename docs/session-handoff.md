@@ -2,8 +2,9 @@
 
 ## Current phase
 
-**Phases 0-3 complete; Phase 4 (pilot) in progress.** Phase 5 feature
-migration, Phase 6 combined QA, and Phase 7 final gates have not started.
+**Phases 0-3 complete; Phase 4 (pilot) in progress.** Original Phase5
+next-phase page assignments are now dispatched while pilot QA remains pending.
+Phase6 combined QA and Phase7 final gates have not started.
 Twelve real scoped repairs were dispatched: two Phase4 visual/capture dependencies
 and ten deferred Phase6 gate repairs pulled early, not a restart of completed
 phases. All twelve original source deliveries are accepted and pushed. The second
@@ -11,11 +12,73 @@ changing-extent correction is terminal FAILED, with partial source preserved as
 WIP `3a0c50f47`. Its60 passing Node cases do not establish native coverage.
 The user's ONE original-plan blocker-rescue exception is now also spent,
 terminal FAILED, with partial source preserved/pushed as WIP `a80831de8`.
-Original2 attempts remain spent. No live source claim or running worker remains;
-do not grant another automatic helper retry/rescue. Accepted source counts are
-not a running-actor count.
+Original2 attempts remain spent. No helper claim remains; do not grant another
+automatic helper repair/rescue. Later page-worker lifecycle is recorded below.
+Accepted source counts are not a running-actor count.
 Use the user's active seven-phase workflow, not the different feature-order
 numbering in `frontend-mission.md` section 38.
+
+## Active continuation: independent QA and original next-phase dispatch
+
+The latest autonomous continuation directive resumed actual remaining work,
+not another helper repair. Existing pilot rows were assigned independent
+read-only browser QA. Their source is already migrated; ordinary browser
+panel screenshots/AX/state/extreme review may supply missing evidence without
+changing the failed helper or resetting its budgets. Validation tooling is not
+a page import: the previous tool-repair dependency no longer blocks dispatch
+of page review. The parent native acceptance row instead needs the three actual
+pilot reports, avoiding a report/gate dependency cycle.
+
+A returning-user context acknowledges actual generated release0.7.0 through
+`teslasync:changelog:seen-version`, selected synthetic4, with no production
+preference change. Existing768 section4 PNG visibly contains the release
+dialog; production `ChangelogModal` auto-shows after2000ms. ONE unmodified caller
+matrix with acknowledgement still produced375/768 BLOCKED and1440/1920 complete
+fragment proof with resource FAILED. Logs `phase4-pilot-acknowledged-*.json`,
+`phase4-pilot-acknowledged-native-gate.log` and native summary retain that outcome.
+This does not establish the original private Error's cause or fix mobile capture.
+
+Independent Chrome inspection verified exact375x844 via device emulation
+(window resize alone actually yielded500px). Main top353/bottom844,height491,
+total3945; footer676..788 and nav788..844 cover168px. The helper's edge-only
+usable435px counts only the56px nav, not the contiguous footer union. This is
+an actual geometric observation, not a new source repair or accepted coverage.
+Custom screenshot writes were denied by MCP workspace roots; no permission
+workaround followed. Parent isolated Chrome page3 is closed.
+
+The original workflow explicitly pulls ready next-phase pages while the pilot
+finishes. Removing the artificial whole-pilot validation prerequisite therefore
+expands the EXISTING inventory, not a new audit: exactly237 unique mounted
+production modules minus3 pilots gives234 rows. Two Navigate-only legacy
+notification aliases were directly read and preserved/excluded with reason,
+leaving232 substantive nonpilot adoption scopes. One module plus its named
+colocated test is each exclusive claim; shared/extracted-owner changes require
+parent integration. Twenty-nine cross-feature page workers plus3 pilot reviewers
+were genuinely launched; no fake work fills slots.
+
+The specialized Playwright-agent plugin's pinned Claude model is unavailable,
+so those three calls created no agents. Built-in general-purpose launches
+succeeded, but16 of the32 actual workers subsequently failed before first turn:
+platform408 reading request body or connection timeout after runtime retries.
+No source, QA, screenshots or heartbeat was produced by those terminal workers,
+and no implementation/review attempt is charged. Their rows return pending,
+not product FAILED; claims are released. The other16 page agents still await
+terminal notification; source progress is not inferred from runtime count.
+Target temporarily16 after
+platform failures,0 clean completions; do not restart the same failing objectives
+or fill more requests while this platform failure persists.
+
+Current session artifacts `phase5-page-assignments.json`,
+`phase5-first29-assignments.json`, `phase5-worker-ledger.json` and
+`phase5-page-worker-instructions.txt` retain exact mappings and ownership.
+Use known IDs directly; do not rediscover/poll or parent-read claimed source.
+An earlier Git status after external failures showed only parent metadata.
+A later actual status at count1473 shows23 in-progress source/test paths,
+all attributable to remaining page claims, including the new claimed
+ChargeDepartureAlignmentPage.test.tsx. Do not stage or parent-read them until
+their owner returns; no scoped validation/acceptance is inferred from writes.
+Shared5173 and Dockera61/3119 both responded200. Immutable Docker/test data
+remain unchanged. No new source technical or pilot acceptance is claimed.
 
 Session resumed on 2026-10-11 from the existing queue, without repeating
 Phases 0-3. Historical workers and schedules belong to the prior session.
@@ -397,28 +460,31 @@ completion does not mean the corresponding page was migrated.
 | 1 | 87 | 0 | 0 | 0 | 0 | 1 |
 | 2 | 27 | 0 | 0 | 0 | 0 | 0 |
 | 3 | 696 | 0 | 0 | 0 | 0 | 118 |
-| 4 | 33 | 0 | 0 | 2 | 4 | 34 |
-| 5 | 0 | 0 | 0 | 0 | 1 | 1 |
+| 4 | 33 | 3 | 0 | 2 | 1 | 34 |
+| 5 | 0 | 216 | 16 | 0 | 1 | 3 |
 | 6 | 10 | 1 | 0 | 0 | 1 | 0 |
 | 7 | 0 | 0 | 0 | 0 | 1 | 0 |
-| Total | 1093 | 1 | 0 | 2 | 7 | 158 |
+| Total | 1093 | 220 | 16 | 2 | 4 | 160 |
 
-There are1,261 rows: the original1,243 plus eighteen narrow failures discovered
-by actual checks. Twelve original deliveries are accepted and the failed
+There are1,495 rows: the original1,243 plus eighteen narrow failures discovered
+by actual checks and234 original Phase5 mounted-module assignments.
+Twelve original deliveries are accepted and the failed
 partial capture source is committed, not accepted. Its original claim was
 released after terminal intake. Its ONE narrowly bounded rescue is also terminal
 FAILED; partial source is committed and claim released, not accepted as DONE.
-There are0/32 running workers: no ready current/next-phase item, because mobile
-native coverage still blocks the original pilot gate. One future Phase6
-non-blocking copy fix is pending, not pulled into another early repair campaign.
+There are16 workers awaiting terminal notifications after16 external zero-turn
+failures, temporarily targeting16 rather than32. No source progress is inferred
+from that runtime count. Original pilot acceptance still lacks mobile/native/
+state/AX/extreme evidence. One future Phase6 non-blocking copy fix is pending,
+not pulled into another early repair campaign.
 The stable Phase4 technical gate is accepted; no full runner or Docker build
 remains active. Do not repeat the accepted application gate for provenance.
 The combined Phase6 sweep has not
-begun; only explicit gate repairs are pulled early. Original pilot acceptance gates the aggregate later-phase placeholders.
-The native gate's real capture dependency is now recorded explicitly as
-`phase4-qa-native-sticky-scroll-cycle`; the three pilot acceptance rows need
-that native gate and the technical gate, not source re-migration. The failed
-capture dependency transitively blocks all three original pilots. The user's
+begun; only explicit gate repairs were pulled early. Original pilot acceptance
+does not artificially block source work on ready next-phase modules.
+The native gate now assembles the three independent pilot QA reports;
+those rows depend on accepted technical source, not the failed tooling repair.
+The user's
 ONE blocker-rescue exception was used after the stable technical gate and latest
 Docker rollout for that precise measured painted-fragment defect. It is spent;
 it does not reset attempt2 or authorize another generic changing-extent retry.
@@ -430,8 +496,8 @@ Full lint/tests/build remain serialized and forbidden during live workers.
 
 ## Exclusive worker ledger
 
-All use the focused instructions in current session artifacts
-`focused-gate-worker-instructions.txt`. Each updates its own ignored heartbeat
+Earlier repair workers used `focused-gate-worker-instructions.txt`; current
+Phase5 workers use `phase5-page-worker-instructions.txt`. Each updates its own ignored heartbeat
 and log, never Git/queue/handoff. Source writes are limited to the stated claim.
 
 | Item | Agent ID | Exclusive write claim | Lifecycle |
@@ -449,6 +515,27 @@ and log, never Git/queue/handoff. Source writes are limited to the stated claim.
 | phase6-test-cn | `69f0e107-8f20-4e9e-bc43-546be767741a` | `web\src\lib\cn.test.ts` | Accepted `aa5fe53ae`; released |
 | phase6-test-tokens | `829d7ead-6c0a-44b2-9ba6-8b7d9efceb3b` | `web\src\lib\__tests__\tokens.test.ts` | Accepted `75587ae93`; released |
 | phase4-dashboard-mobile-toolbar-overlap | `9e3133f1-f764-48f8-a0f8-e775fa2da040` | `web\src\features\dashboard\pages\DashboardPage.tsx`; `DashboardPage.pilot.test.tsx` | Accepted `e15758f41`; released; optional native edit probe exit2 retained |
+
+Current page agents awaiting terminal notification:
+
+| Item | Agent ID |
+| --- | --- |
+| phase5-page-vehicles-day-log | `451e54fb-9cf7-4232-901c-0593577e2fe6` |
+| phase5-page-charging-charge-departure-alignment | `d697f1ef-a4c1-4280-8e01-77a51e79956c` |
+| phase5-page-trips-journeys | `31c211a3-4b8a-4c3b-8295-767a9229d298` |
+| phase5-page-telemetry-live-signal-monitor | `5605be51-5de3-4962-a905-26404f141c61` |
+| phase5-page-system-activity-timeline | `56b8b046-d197-4310-aa9f-9de2bb45eb10` |
+| phase5-page-maps-geofences | `a464a815-39b0-4c65-8d8a-e12dc0b205b6` |
+| phase5-page-analytics-analytics | `7d767275-08c6-48c4-bfdd-d769df1eed5e` |
+| phase5-page-ownership-charging-reconciliation | `29f090cc-e66e-4d2c-9906-50f5eac0cdf2` |
+| phase5-page-action-center-action-center | `7d82f923-20e8-46c0-b07e-723c47b9f535` |
+| phase5-page-advanced-intelligence-behavioral-sentinel | `37d945f6-e27a-4633-8df4-a3e59322593a` |
+| phase5-page-automations-automation-builder | `cf4402f5-3041-4062-b4b4-069046801220` |
+| phase5-page-exports-exports | `f366ffeb-c02d-4e77-88eb-88051caf5588` |
+| phase5-page-home-energy-whole-home-energy | `f9ee10a1-e95a-4d0c-aa26-1f59de7a333f` |
+| phase5-page-onboarding-onboarding | `de121fa6-8ca8-4ec1-b399-659feb97d426` |
+| phase5-page-telemetry-mqttinspector | `26af35c0-d925-417c-a297-e3ad16f12a5b` |
+| phase5-page-system-chatbot | `dd5897be-3661-482f-89db-ca6f2bd7210b` |
 
 Imported i18n test modules repeat the same assertion families. Root observations:
 225 failing entries at excluded-feature-owned-producers:1249; six each at
@@ -738,8 +825,10 @@ historical machine and was preserved in its prior handoff, not re-created here:
 ## Next steps, in order
 
 1. Read this handoff, queue, current contract, relevant instructions, and
-   `git status`. No worker has a live claim. Preserve both original attempts
-   and the spent ONE rescue/WIP; do not resurrect reservations or reset budgets.
+   `git status`. Sixteen known page agents still await terminal notification;
+   preserve their claims and consume each notification once. External zero-turn
+   failures spend no source attempts. Do not poll/relaunch the failing model
+   objectives; target16 until10 clean completions. Preserve spent helper history.
 2. The stable Phase4 full lint/test/checkout build gate is accepted at
    `a61cb003f`; do not repeat it or the8759-case integration for provenance.
    The accepted shipping changes now run in immutable full-root Dockera61,
@@ -756,13 +845,16 @@ historical machine and was preserved in its prior handoff, not re-created here:
 4. Preserve the exhausted Dashboard implicit-layout-save issue and legitimate
    autosave/autofit/draft recovery; do not reopen it through the accepted toolbar
    change or speculate about a mount defect.
-5. Original three-page mounted QA remains blocked on complete mobile native
-   evidence. Preserve the accepted helper history and real dark Settings captures.
-   Do not dispatch another exhausted helper attempt or mark pilot acceptance,
-   and do not count desktop-only proof or this Docker smoke as full visual,
-   responsive, accessibility, state or extreme-data acceptance.
-6. Record pilot acceptance/checkpoint and worker-convention lessons; then expand
-   Phase5 page assignments from the inventory. Never repeat completed foundations.
+5. Original three-page mounted QA remains incomplete. All three independent
+   reviewer launches failed externally before first turn, not product QA.
+   Preserve helper/Settings/desktop evidence; do not claim mobile/full acceptance
+   or spend another helper repair. Use existing ordinary browser capabilities
+   for genuinely remaining review when available, respecting file-root denials.
+6. Continue the234 original Phase5 rows already expanded from the inventory
+   (two UI-less aliases excluded with preservation reasons), while pilot QA
+   finishes. Do not recreate them or repeat foundations. Intake scoped deliveries
+   sequentially, preserving unrelated writes and shared-owner integration.
+   Actual pilot acceptance/checkpoint still requires missing DoD evidence.
 7. Follow the original Phase6 combined sweep and Phase7 final gates. Count every
    actual commit; the latest production TypeScript run already covers the shared
    nullable type edit. Compute the next cadence from actual history.
