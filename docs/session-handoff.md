@@ -18,80 +18,108 @@ Accepted source counts are not a running-actor count.
 Use the user's active seven-phase workflow, not the different feature-order
 numbering in `frontend-mission.md` section 38.
 
-## Latest rolling recovery: source count1592
+## Latest rolling recovery: pushed snapshot count1619
 
-Latest accepted SOURCE HEAD is
-`29d0984c4eacc29c6d0c1739d9e85f52a5eb5935`, actual count1592,
-fully pushed on `fix/dashboard-followups`. Since count1491,101 exact-scope
-source/WIP commits have landed; source acceptance is not application QA.
-Seventh-wave11 remaining deliveries were intaken immediately from their
-already-read turn0 receipts: nine exact commits and two unchanged pairs.
-Their consumed turns are persisted, not reread. FirmwareCanary7/7 and
-SecretPalette4/4 passing files were not rerun. New Entropy unary-adapter
-delivery, Marketplace retained turn1, Locations new turn1 and TeslaOrders
-turn0 were also committed/pushed. Exact hashes are in the queue/ledger.
+Latest pushed snapshot is
+`b3f2862ffc6f9b7c3442b83c54957fcf765f5856` on
+`fix/dashboard-followups`, actual count1619. This last commit is RemainingLife
+attempt2 WIP, NOT acceptance. Since1491,128 commits have landed:127 exact
+source/WIP commits and one continuation metadata commit. Queue/handoff metadata
+is being persisted separately; this is not a phase-complete checkpoint.
 
-The SINGLE existing catalog root used a quiescent-reference window normally:
-before1/generate0/after0, zero known-missing/new/resolved keys, no bypass.
-The16 previously-undiscovered final-source files then actually executed241
-cases:230 passed,11 failed across five files;11 files passed. Valid raw JSON
-and commands/exits: `logs\phase5-parent-pending-final-source-tests.*`.
-Five actual narrow failed-case roots were queued, one per affected file:
-MileageBudget, JurisdictionCompliance, ModelTrust, DataExport and SecretBrief.
-These are not re-migrations, full suites or a provenance campaign.
+All seventh, eighth and ninth initial turn0 reports are consumed exactly once.
+Eighth source acceptances include Powershare21/21, DriveScore37/37,
+MileageBudget correction15/15 and SecretRotation oldest-age correction3/3.
+Journey/Mileage/Energy and Jurisdiction/ModelTrust first partials were pushed
+as WIP, not accepted or retested successfully. SecretRotation's original
+unchanged page was source-only accepted after all six child corrections.
+Powershare/DriveScore retain reported test style candidates, not all-clean scans.
 
-A second covering run of ONLY the still-undiscovered Locations/Entropy final
-files executed39 cases: Locations24/24 passed; Entropy6/15 passed,9 failed.
-Raw report: `logs\phase5-parent-entropy-locations-final-tests.*`.
-ONE new concrete Entropy fixture/oracle repair is queued with its retained
-narrow owner; next output begins at turn1. Original full-page owner400/zero
-terminal remains distinct: partial WIP is preserved, compiler dependency is
-unblocked to pending, and that no-output objective is NOT automatically
-relaunched or called source/native complete. No assertions were weakened.
+Ninth results were handled individually: DataExport22/22, RoadHazard10/10,
+EnergyProducts27/27 and NotificationHealth9/9 have real scoped passing evidence.
+TeslaRegion, Milestones, SubscriptionROI and DBHealth were source-only accepted
+with zero-discovery catalog startup failures. Milestones' two new arithmetic
+oracle corrections remain unexecuted. DBHealth retains55vh geometry candidate;
+no zero-scan claim. SmartCharge41/42 is pushed WIP333e81c91 and now has a real
+same-owner attempt2, not accepted42/42. Drivetrain's unchanged canonical pair
+passed21/21 and was reclassified SOURCE ONLY from the SAME consumed receipt:
+11 actual child/integration defects were queued, not a whole-page retry.
+No populated/native/application acceptance follows from these source counts.
 
-Literal `npx tsc --noEmit` at actual count1586 exited2; raw diagnostic log is
-`logs\phase5-parent-tsc-count-1586.log`. Locations and SignalEntropy's
-callsite defects no longer appear, but ten other production files still fail.
-Next compiler cadence is1601. No TS lib/target widening or shared API masking.
-Current source is NOT deployable/green; Docker3119/API8080 remain accepted
-immutablea61 with DRILL fixtures unchanged.
+New older terminal1 results are also consumed: WatchFace source-only
+cbd205937 retains32cases126assertions/seven regions and intentional OLED#000000
+candidate, with zero-discovery startup limits. BatteryCells, BatteryHealth,
+GrafanaPanel and RemainingLife concluded real second failures and are[!],
+not automatically recycled pending. RemainingLife WIP1619 contains compatibility
+and selector/chart-observation corrections, lint/style0, but tests NOTRUN under
+the health stop. Original motion assertions/both series remain. No extra rescue
+is authorized for these one-aggregate-dependent leaves.
 
-Current exclusive actual identities are in `phase5-eighth-wave-agent-map.json`
-and `phase5-ninth-wave-agent-map.json`; assignments reuse the original inventory.
-The eighth refill launched six original pages, three fresh failed-case owners,
-one bounded existing SecretRotation oldest-age derivation owner, and steered
-the existing SecretBrief owner. DataExport launch was actually refused by the
-harness32 limit: no actor/output/attempt was fabricated; its row returned to
-pending0. TeslaOrders subsequently passed15/15 and was accepted immediately.
-The other nine eighth-wave initial deliveries are now runtime-idle but their
-turn0 reports remain UNREAD and must be processed individually, not reread later.
+The SINGLE existing catalog root was closed normally again before tenth refill:
+BEFORE1/GENERATE0/AFTER0, knownmissing0/new0/resolved0. Raw log:
+`logs\phase5-integration-tenth-reference-closure.log`. No bypass or duplicate root.
+Generated projections remain uncommitted until contributing source is persistent.
+Previous guarded241-case report remains230passed/11failed; previous39-case report
+is Locations24/24 and Entropy6/15. Unchanged passing files were not rerun.
 
-Fresh overview then reported22 runtime-running:16 overdue older continuations,
-EnergyFlow/EnergyLedger own compiler follow-ups, TwoFactor/SecretPalette
-delivered informational actors, and SecretBrief/Entropy retained corrective
-follow-ups. Ten actual ninth-wave launches refill that observed census to32:
-the pending DataExport actual failed-case fix plus nine genuinely unstarted
-pages across distinct domains. This is a time-local refill count, not32
-healthy-progress proofs or a future census. No cancellation capability was
-exposed; preserve still-live claims rather than reverting or double-writing.
-Brief and Entropy new fixes begin at turn1; accepted turn0 is not new work.
+Literal `npx tsc --noEmit` at1616 ACTUALLY exited2 with eight production files:
+Causal, EmergencyResilience, EnergyFlow, EnergyLedger, ChargingHeatmap,
+RemainingLife, SharingTrips and SignalDeadband. Raw output:
+`logs\phase5-parent-tsc-count-1616.log`. RemainingLife's later compatibility
+correction is NOT compiler-verified. Next cadence1631, not the obsolete1496
+in the existing watchdog's historical prompt. No global TSlib/target widening,
+shared API masking, full lint/tests/build gate or new Docker build occurred.
+Latest source is NOT deployable/green; Docker3119/API8080 remain immutablea61
+with the existing DRILL2vehicles/4drives/3charges unchanged.
 
-Queue after reservations: Phase5 source done122/pending79/held33/blocked2/
-excluded3; Phase6 source done17/pending23/held7/blocked1.
-Held claims include delivered and parent integration claims, not runtime counts.
-SecretRotation's last dependency is now a bounded real oldest-age bug:
-unknown-age first row must not beat a later measured0. Its five child-source
-corrections are accepted; full sensitive/native QA remains unaccepted.
+Tenth refill launched10 real existing narrow fixes and steered four actual
+same-owner partial continuations. ModelTrust's first steering was REFUSED at
+the harness32 limit: no attempt/turn fabricated, reservation returned pending1.
+After the actual24-worker census, the SAME owner was successfully resumed as
+attempt2. Journey/Mileage/Energy/Jurisdiction/ModelTrust await NEW terminal1.
+SmartCharge also awaits NEW terminal1. Brief/Entropy corrective continuations
+are still distinct from their accepted original turn0 reports.
 
-Process each remaining eighth-wave delivery once, commit/push its exact scope,
-and refill immediately on genuine capacity. Continue the concrete failed-case
-roots from their new queue rows, preserve original cases/assertions and report
-actual startup limits. Generated projections remain uncommitted until their
-contributing WIP source is committed. Parent never implements UI. No full
-lint/tests/build gate, Docker rebuild/reseed or capture-helper repair occurred.
-Schedule#1 was verified active; no duplicate. Latest readiness probes were
-5173 HEAD200,3119 HEAD200,8080 `/readyz` GET200 without response bodies.
-Discord remains unavailable because its environment webhook is absent.
+Readiness4/4, ProviderStatus5/5 and filter-clear10/10 source repairs are accepted
+at1616-1618. Clear target has actual guarded44px measurements at375/767 and36px
+at768/1440; this is bounded measurement, not device/full-page acceptance.
+Seven additional existing fixes launched in eleventh refill. Fresh census then
+reported21 runtime-running; twelfth refill successfully launched10 actual narrow
+fixes and its11th DayLog partial-summary launch was REFUSED at harness32.
+DayLog returned pending0 with no actor or attempt fabricated. Census+launch
+projections are time-local, never a claim of32 healthy ongoing implementations.
+
+Actual maps/scopes are in session files:
+`phase5-tenth-wave-agent-map.json`, `phase6-eleventh-wave-agent-map.json`,
+`phase6-twelfth-wave-agent-map.json` and their assignment files.
+The worker ledger now separates consumed results, live claims and historical
+launch observations. New SecretPalette informational turn1 repeats historical
+4/4 without new commands/source; consumed once without duplicate acceptance.
+Many older runtime-running continuations are badly overdue. Parent sent another
+explicit health stop/conclude to the eight compiler owners. No safe cancellation
+tool is exposed; never revert or double-write a still-live scope.
+
+Queue at this source point: Phase5 done134/pending79/held18/failed4/blocked1/
+excluded3. Phase6 done23/pending6/held28/blocked2; these are queue items, NOT
+runtime workers. Phases0-3 remain complete. Current pilot/native gate remains
+blocked; original capture-helper2 attempts plus ONE rescue remain spent forever
+unless authorization changes. Original Phase6 combined sweep/Phase7 not started.
+Other actual child findings are retained in the consumed page logs: TeslaRegion
+account-wide workspace scope/endpoint controls, EvidencePanel/dateFormat,
+Milestone child accessibility/tone, Notification paused/null-tone panels,
+SubscriptionROI child needs and DBHealth DTO/geometry/copy. Add precise fixes
+before performing such work; no unqueued repair campaign.
+
+Next: consume each NEW terminal individually and immediately exact-intake it;
+never reread completed turn0 or batch reports before processing. Remaining
+tenth/eleventh/twelfth initial reports need consumption using their known IDs.
+Refill genuine open capacity, starting pending0 DayLog and other ready fixes.
+Persist catalog projections only when coherent; collect ONLY unpassed final
+scopes after normal closure, not successful files. Preserve first/second-failure
+budgets, raw assertions, independent trust and actual private-data safeguards.
+Parent never implements UI or resets helpers/fixtures. Schedule#1 remains active;
+no duplicate. Readiness probes5173/3119 HEAD200 and8080 `/readyz` GET200 were real,
+without response bodies. Discord is unavailable; no recovery update was sent.
 
 ## Recovery chronology through source count1578
 
