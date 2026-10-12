@@ -18,7 +18,7 @@ func (v *Vehicle) Validate() error {
 	}
 
 	currentYear := time.Now().Year()
-	if v.Year < 2012 || v.Year > currentYear+1 {
+	if v.Year != 0 && (v.Year < 2012 || v.Year > currentYear+1) {
 		errs = append(errs, domain.ValidationError{
 			Field:   "year",
 			Message: fmt.Sprintf("must be between 2012 and %d", currentYear+1),

@@ -39,12 +39,10 @@ func (m *mockVehicleRepo) GetByVIN(_ context.Context, vin string) (*vehicle.Vehi
 	return nil, fmt.Errorf("vehicle vin %s: not found", vin)
 }
 
-func (m *mockVehicleRepo) GetByUserID(_ context.Context, userID string) ([]vehicle.Vehicle, error) {
+func (m *mockVehicleRepo) GetAll(_ context.Context) ([]vehicle.Vehicle, error) {
 	var result []vehicle.Vehicle
 	for _, v := range m.vehicles {
-		if v.UserID == userID {
-			result = append(result, *v)
-		}
+		result = append(result, *v)
 	}
 	return result, nil
 }
@@ -119,7 +117,7 @@ func TestService_Create(t *testing.T) {
 	svc := New(repo, &mockFSMHistory{}, &mockTeslaClient{})
 
 	v := &vehicle.Vehicle{
-		ID: "v1", UserID: "u1", VIN: "5YJ3E1EA7KF123456",
+		ID: "v1", TeslaID: 1, VIN: "5YJ3E1EA7KF123456",
 		DisplayName: "My Tesla", Year: 2020,
 	}
 	err := svc.Create(context.Background(), v)
@@ -134,8 +132,8 @@ func TestService_Create(t *testing.T) {
 	if got.FSMState != vehicle.StateUnknown {
 		t.Errorf("expected FSMState 'unknown', got %q", got.FSMState)
 	}
-	if got.Model != "Model 3" {
-		t.Errorf("expected Model 'Model 3', got %q", got.Model)
+	if got.Model == nil || *got.Model != "Model 3" {
+		t.Errorf("expected Model 'Model 3', got %v", got.Model)
 	}
 }
 
@@ -155,7 +153,7 @@ func TestService_HandleEvent(t *testing.T) {
 	svc := New(repo, history, &mockTeslaClient{})
 
 	v := &vehicle.Vehicle{
-		ID: "v1", UserID: "u1", VIN: "5YJ3E1EA7KF123456",
+		ID: "v1", TeslaID: 1, VIN: "5YJ3E1EA7KF123456",
 		DisplayName: "Test", Year: 2020, FSMState: vehicle.StateUnknown,
 	}
 	_ = repo.Save(context.Background(), v)
@@ -190,7 +188,7 @@ func TestService_Refresh(t *testing.T) {
 	svc := New(repo, &mockFSMHistory{}, tesla)
 
 	v := &vehicle.Vehicle{
-		ID: "v1", UserID: "u1", VIN: "5YJ3E1EA7KF123456",
+		ID: "v1", TeslaID: 1, VIN: "5YJ3E1EA7KF123456",
 		DisplayName: "Test", Year: 2020, CreatedAt: time.Now(),
 	}
 	_ = repo.Save(context.Background(), v)
