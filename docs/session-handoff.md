@@ -6,10 +6,9 @@
 migration, Phase 6 combined QA, and Phase 7 final gates have not started.
 Twelve real scoped repairs were dispatched: two Phase4 visual/capture dependencies
 and ten deferred Phase6 gate repairs pulled early, not a restart of completed
-phases. Eleven original source deliveries are accepted and pushed. Two source
-claims remain: the bounded copy-fixture typing continuation and a second
-changing-extent correction for the now-measured reversible sticky-summary capture
-cycle. Accepted source counts are not a running-actor count.
+phases. All twelve original source deliveries are accepted and pushed. One source
+claim remains: the second changing-extent correction for the now-measured reversible
+sticky-summary capture cycle. Accepted source counts are not a running-actor count.
 Use the user's active seven-phase workflow, not the different feature-order
 numbering in `frontend-mission.md` section 38.
 
@@ -46,7 +45,8 @@ audit correction `38291ea57`, and scoped test contracts `75587ae93`, `aa5fe53ae`
 and `47a8ef13e`, followed by final-four `a2ee93ab9`, owner-recovery `d5e1b7f8f`,
 canonical-recovery `436dbb680`, resolved-baseline `b66f63037` and feature-producer
 `1184a05f2`, plus shipping Dashboard toolbar `e15758f41`. Copy projection
-work is preserved as WIP `4b8e12057`, not accepted complete. The deployed application
+work is preserved as WIP `4b8e12057`, then completed narrowly at `45b86a29b`.
+The deployed application
 snapshot remains `55e519031df03109436a2cb71ef555285809e52d`; the later commits
 mostly change QA tooling, tests and erased TypeScript types/documentation. Watch
 does change shipping hook source while preserving existing runtime cancellation.
@@ -219,10 +219,25 @@ not extra Vitest cases or measured coverage.
 Copy owner delivered39/39 expanded cases (32owned) and strict lint0, but the
 corrected additional scoped compiler still reports unchanged own-file TS2352 at
 the collection-hook fixture207-211. The projection repair is preserved/pushed
-as WIP `4b8e12057`; the same owner continues only that precise typed fixture on
-attempt2, with all original assertions/runtime behavior retained. No production
-compiler failure, attempt reset, unknown-double-cast or out-of-scope repair is
-authorized. Full technical acceptance remains pending integration and gates.
+as WIP `4b8e12057`; the same owner completed only that precise typed fixture on
+attempt2 at `45b86a29b`. It uses the real hook's11 consumed field types and
+explicitly admits the existing unknown-key regression, preserving the identical
+imported function, all39 identities, fixture data and assertions. Final39/39,
+strict lint0 and corrected scoped typing0/zero diagnostics; prior failures remain
+in the log. No invented formatter callbacks, production defaults, unknown-double-
+cast, wrapper/stub, attempt reset or outside repair.
+
+All nine original failing test-file owners are now released. Parent combined
+scoped integration at `45b86a29b` actually passes8759/8759 cases across nine physical
+files, zero failed/pending, exit0. Defaults now has2908/2908 because it imports
+the producer owner's single added negative-probe case; resolved remains2841,
+feature1923, merge994, tokens37, canonical7, owner3, final-four7 and copy39.
+Raw log/JSON: `logs\phase4-nine-file-repair-integration-20261012T100756Z.*`.
+This is not the2438-file full gate. Production `npx tsc --noEmit` at cadence1466
+also exits0 on supported Node26; narrow Dashboard repository audit then runs all
+six prohibited-pattern checks with counts0 and its compiler exits0.
+Full lint/tests/build remain serialized and deferred while the native helper
+owner is active. Do not relabel historical full-gate failure as a pass.
 
 Actual mobile Dashboard review found a distinct interactive overlap, not root
 horizontal overflow: at375px the layout button and Refresh intersect by
@@ -293,12 +308,12 @@ completion does not mean the corresponding page was migrated.
 | 3 | 696 | 0 | 0 | 0 | 0 | 118 |
 | 4 | 32 | 0 | 1 | 2 | 4 | 34 |
 | 5 | 0 | 0 | 0 | 0 | 1 | 1 |
-| 6 | 9 | 0 | 1 | 0 | 1 | 0 |
+| 6 | 10 | 0 | 0 | 0 | 1 | 0 |
 | 7 | 0 | 0 | 0 | 0 | 1 | 0 |
-| Total | 1091 | 0 | 2 | 2 | 7 | 158 |
+| Total | 1092 | 0 | 1 | 2 | 7 | 158 |
 
 There are1,260 rows: the original1,243 plus seventeen narrow failures discovered
-by actual checks. Two disjoint source claims remain after eleven accepted original
+by actual checks. One source claim remains after twelve accepted original
 deliveries; these claim counts are not a verified count of running actors.
 The accepted capture owner now has the precise second changing-extent correction
 claim after terminal evidence-only diagnosis. Lifecycle completion is intaken by exact ID before a claim
@@ -306,10 +321,10 @@ is released. Remaining slots are not filled with fake/provenance work. No full
 gate may run while these workers are active. The combined Phase6 sweep has not
 begun; only explicit gate repairs are pulled early. Original pilot acceptance
 gates the aggregate later-phase placeholders.
-Actual `git rev-list --count HEAD` is1465 at `e15758f41`; the last production
-compiler receipt is from shared-type commit1451. The next fifteenth-commit
-cadence is1466. Old1065 cadence prose was stale. Full gates remain serialized
-and forbidden during live workers; later API/UI changes await the stable gate.
+Actual `git rev-list --count HEAD` is1467 at `45b86a29b`. The production compiler
+cadence1466 at `08a970bf8` exits0, with another production compiler pass in the
+exact Dashboard audit at1467. Next scheduled cadence1481. Old1065 prose was stale.
+Full lint/tests/build remain serialized and forbidden during live workers.
 
 ## Exclusive worker ledger
 
@@ -324,7 +339,7 @@ and log, never Git/queue/handoff. Source writes are limited to the stated claim.
 | phase4-qa-native-sticky-scroll-cycle | `8ae7d8ed-6f8b-4ef4-a577-ba4ca95eea09` | Same released helper/test pair | Second changing-extent-chain correction claimed; diagnosis preserved |
 | phase6-test-authorized-canonical-recovery | `5f6b869b-8be6-4bfd-977c-8ea23eb7f37c` | `web\src\i18n\authorized-canonical-recovery.test.ts` | Accepted `436dbb680`; released |
 | phase6-test-authorized-owner-recovery | `80eedd0e-51b6-497b-b880-27d61dae8e09` | `web\src\i18n\authorized-owner-recovery.test.ts` | Accepted `d5e1b7f8f`; released |
-| phase6-test-copy-owner-contracts | `6135ed89-85b6-4ca0-b657-72d4923d90b5` | `web\src\i18n\copy-owner-contracts.test.ts` | WIP `4b8e12057`; same owner attempt2 typing continuation |
+| phase6-test-copy-owner-contracts | `6135ed89-85b6-4ca0-b657-72d4923d90b5` | `web\src\i18n\copy-owner-contracts.test.ts` | Accepted `45b86a29b`; same owner attempt2 complete/released; WIP retained |
 | phase6-test-excluded-consistent-defaults | `acfa8083-f948-4ad9-b6da-b6d8fd1c7748` | `web\src\i18n\excluded-consistent-defaults.test.ts` | Accepted `47a8ef13e` with external failures; released |
 | phase6-test-excluded-feature-owned-producers | `b4ddb90a-1267-4b0a-8f32-199a50a6babc` | `web\src\i18n\excluded-feature-owned-producers.test.ts` | Accepted `1184a05f2`; released |
 | phase6-test-final-four-localization-gaps | `af5bf88a-0d47-49e6-904c-77aee1271542` | `web\src\i18n\final-four-localization-gaps.test.ts` | Accepted `a2ee93ab9`; released |
