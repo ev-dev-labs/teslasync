@@ -44,12 +44,8 @@ import { AIVehiclePaintPreview } from '@/components/ai'
 export default function VehicleDetailPage() {
   const { t } = useTranslation()
   const { id } = useParams<{ id: string }>()
-  // Guard the deep-link id: a non-numeric/zero/negative id previously flowed
-  // into every query as NaN (silently disabled) and rendered an empty page
-  // shell. Clamp to 0 (which every `enabled`/`> 0` gate already treats as
-  // absent) and render an explicit not-found branch below instead.
   const rawId = Number(id)
-  const hasValidId = Number.isFinite(rawId) && rawId > 0
+  const hasValidId = Number.isSafeInteger(rawId) && rawId > 0
   const vehicleId = hasValidId ? rawId : 0
   usePageTitle(t('vehicles.detail.title', 'Vehicle detail'))
 
@@ -57,7 +53,7 @@ export default function VehicleDetailPage() {
 
   const vehicleQuery = useQuery({
     queryKey: ['vehicles', String(vehicleId)],
-    queryFn: () => request<Vehicle>(`/vehicles/${vehicleId}`),
+    queryFn: ({ signal }) => request<Vehicle>(`/vehicles/${vehicleId}`, { signal }),
     enabled: vehicleId > 0,
   })
   const { data: vehicle, isLoading: vehicleLoading } = vehicleQuery
@@ -74,64 +70,64 @@ export default function VehicleDetailPage() {
 
   const stateQuery = useQuery({
     queryKey: ['vehicle-state', vehicleId],
-    queryFn: () => request<StateResponse>(`/vehicles/${vehicleId}/state`),
+    queryFn: ({ signal }) => request<StateResponse>(`/vehicles/${vehicleId}/state`, { signal }),
     enabled: vehicleId > 0,
     refetchInterval: 30_000,
   })
   const { data: stateData, refetch: refetchState } = stateQuery
-  const stateDataState = useDataState(stateQuery, { provenance: 'live' })
+  const stateDataState = useDataState(stateQuery, { provenance: stateData?.live === true ? 'live' : 'unknown' })
 
   const motorQuery = useQuery({
     queryKey: ['motor-latest', vehicleId],
-    queryFn: () => request<MotorSnapshot | null>(`/motor/latest?vehicle_id=${vehicleId}`),
+    queryFn: ({ signal }) => request<MotorSnapshot | null>(`/motor/latest?vehicle_id=${vehicleId}`, { signal }),
     enabled: vehicleId > 0,
     refetchInterval: 15_000,
   })
 
   const climateQuery = useQuery({
     queryKey: ['climate-latest', vehicleId],
-    queryFn: () => request<ClimateSnapshot | null>(`/climate/latest?vehicle_id=${vehicleId}`),
+    queryFn: ({ signal }) => request<ClimateSnapshot | null>(`/climate/latest?vehicle_id=${vehicleId}`, { signal }),
     enabled: vehicleId > 0,
     refetchInterval: 15_000,
   })
 
   const securityQuery = useQuery({
     queryKey: ['security-latest', vehicleId],
-    queryFn: () => request<SecurityEvent | null>(`/security/latest?vehicle_id=${vehicleId}`),
+    queryFn: ({ signal }) => request<SecurityEvent | null>(`/security/latest?vehicle_id=${vehicleId}`, { signal }),
     enabled: vehicleId > 0,
     refetchInterval: 15_000,
   })
 
   const tireQuery = useQuery({
     queryKey: ['tire-latest', vehicleId],
-    queryFn: () => request<TirePressureSnapshot | null>(`/tire-pressure/latest?vehicle_id=${vehicleId}`),
+    queryFn: ({ signal }) => request<TirePressureSnapshot | null>(`/tire-pressure/latest?vehicle_id=${vehicleId}`, { signal }),
     enabled: vehicleId > 0,
     refetchInterval: 30_000,
   })
 
   const chargingTelemetryQuery = useQuery({
     queryKey: ['charging-telemetry-latest', vehicleId],
-    queryFn: () => request<ChargingTelemetry | null>(`/charging-telemetry/latest?vehicle_id=${vehicleId}`),
+    queryFn: ({ signal }) => request<ChargingTelemetry | null>(`/charging-telemetry/latest?vehicle_id=${vehicleId}`, { signal }),
     enabled: vehicleId > 0,
     refetchInterval: 5_000,
   })
 
   const drivesQuery = useQuery({
     queryKey: ['drives', vehicleId],
-    queryFn: () => request<Drive[]>(`/drives?vehicle_id=${vehicleId}&limit=5`),
+    queryFn: ({ signal }) => request<Drive[]>(`/drives?vehicle_id=${vehicleId}&limit=5`, { signal }),
     enabled: vehicleId > 0,
   })
   const { data: drives } = drivesQuery
 
   const sessionsQuery = useQuery({
     queryKey: ['charging', vehicleId],
-    queryFn: () => request<ChargingSession[]>(`/charging?vehicle_id=${vehicleId}&limit=5`),
+    queryFn: ({ signal }) => request<ChargingSession[]>(`/charging?vehicle_id=${vehicleId}&limit=5`, { signal }),
     enabled: vehicleId > 0,
   })
 
   const vehicleConfigQuery = useQuery({
     queryKey: ['vehicle-config-latest', vehicleId],
-    queryFn: () => request<VehicleConfigSnapshot | null>(`/vehicle-config/latest?vehicle_id=${vehicleId}`),
+    queryFn: ({ signal }) => request<VehicleConfigSnapshot | null>(`/vehicle-config/latest?vehicle_id=${vehicleId}`, { signal }),
     enabled: vehicleId > 0,
     refetchInterval: 30_000,
   })
@@ -152,9 +148,8 @@ export default function VehicleDetailPage() {
   /* ─── Derived state ─── */
 
   const state = stateData?.state
-  // Independent live state remains useful when the vehicle-record read
-  // fails. Keep the existing status derivation, not a fabricated record.
-  const status: VehicleStatus = vehicle || state ? deriveStatus(state) : 'offline'
+  // Keep either source's known status when the independent read is unavailable.
+  const status: VehicleStatus = deriveStatus(state ?? vehicle)
 
   // Model + trim badge shown under the (nickname) title for quick identification.
   const subtitle = vehicle

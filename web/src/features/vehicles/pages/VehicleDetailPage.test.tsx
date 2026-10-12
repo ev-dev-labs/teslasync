@@ -397,6 +397,7 @@ describe('VehicleDetailPage', () => {
     // deriveStatus(state): is_charging === true → 'charging'.
     expect(H.captured.QuickStatsGrid?.status).toBe('charging')
     expect(H.captured.VehicleHeader?.status).toBe('charging')
+    expect(screen.getByLabelText('Live')).toHaveAttribute('data-provenance', 'live')
 
     // Live objects flow through by reference; software_version passes through.
     expect(H.captured.BatteryRangePanel?.state).toBe(STATE)
@@ -495,6 +496,89 @@ describe('VehicleDetailPage', () => {
     expect(await screen.findByRole('heading', { name: 'Vehicle detail' })).toBeInTheDocument()
     expect(H.requestMock).not.toHaveBeenCalled()
     expect(screen.queryByTestId('sec-battery-range-panel')).not.toBeInTheDocument()
+  })
+
+  it.each([
+    { caseName: 'fractional', route: '/vehicles/1.5' },
+    { caseName: 'unsafe integer', route: '/vehicles/9007199254740992' },
+    { caseName: 'nonfinite', route: '/vehicles/Infinity' },
+  ])('rejects a $caseName route identity without starting reads or commands', async ({ route }) => {
+    renderPage(route)
+
+    expect(await screen.findByText('Vehicle not found')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Back to vehicles' })).toHaveAttribute('href', '/vehicles')
+    expect(H.requestMock).not.toHaveBeenCalled()
+    expect(screen.queryByTestId('wake-btn')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('vehicle-detail-skeleton')).not.toBeInTheDocument()
+  })
+
+  it('forwards cancellation for all ten independent reads without changing their scope or polling', async () => {
+    H.requestMock.mockImplementation(() => new Promise<never>(() => {}))
+    const { client, unmount } = renderPage()
+    const reads = [
+      { path: '/vehicles/1', key: ['vehicles', '1'], interval: undefined },
+      { path: '/vehicles/1/state', key: ['vehicle-state', 1], interval: 30_000 },
+      { path: '/motor/latest?vehicle_id=1', key: ['motor-latest', 1], interval: 15_000 },
+      { path: '/climate/latest?vehicle_id=1', key: ['climate-latest', 1], interval: 15_000 },
+      { path: '/security/latest?vehicle_id=1', key: ['security-latest', 1], interval: 15_000 },
+      { path: '/tire-pressure/latest?vehicle_id=1', key: ['tire-latest', 1], interval: 30_000 },
+      { path: '/charging-telemetry/latest?vehicle_id=1', key: ['charging-telemetry-latest', 1], interval: 5_000 },
+      { path: '/drives?vehicle_id=1&limit=5', key: ['drives', 1], interval: undefined },
+      { path: '/charging?vehicle_id=1&limit=5', key: ['charging', 1], interval: undefined },
+      { path: '/vehicle-config/latest?vehicle_id=1', key: ['vehicle-config-latest', 1], interval: 30_000 },
+    ]
+
+    await waitFor(() => expect(H.requestMock).toHaveBeenCalledTimes(reads.length))
+    const signals = reads.map(({ path, key, interval }) => {
+      const call = H.requestMock.mock.calls.find(([requestPath]) => requestPath === path)
+      expect(call?.[1]).toEqual({ signal: expect.any(AbortSignal) })
+      const signal = (call?.[1] as { signal: AbortSignal }).signal
+      expect(signal.aborted).toBe(false)
+      const query = client.getQueryCache().find({ queryKey: key, exact: true })
+      expect(query?.options).toMatchObject({ queryKey: key, enabled: true })
+      if (interval == null) expect(query?.options).not.toHaveProperty('refetchInterval')
+      else expect(query?.options).toHaveProperty('refetchInterval', interval)
+      return signal
+    })
+
+    unmount()
+    for (const signal of signals) expect(signal.aborted).toBe(true)
+  })
+
+  it.each([
+    { caseName: 'cached envelope', response: { state: STATE, live: false } },
+    { caseName: 'missing provenance', response: { state: STATE } },
+  ])('does not assert live provenance for a $caseName and preserves every raw reading', async ({ response }) => {
+    H.requestMock.mockImplementation((path: string, options?: unknown) =>
+      path === '/vehicles/1/state' ? Promise.resolve(response) : defaultRequest(path, options),
+    )
+    renderPage()
+
+    await waitFor(() => {
+      for (const sectionId of ALL_SECTION_IDS) expect(screen.getByTestId(sectionId)).toBeInTheDocument()
+    })
+    expect(screen.getByLabelText('Unknown source')).toHaveAttribute('data-provenance', 'unknown')
+    expect(screen.queryByLabelText('Live')).not.toBeInTheDocument()
+    expect(H.captured.BatteryRangePanel?.state).toBe(STATE)
+    expect(H.captured.BatteryRangeCharts?.state).toBe(STATE)
+    expect(H.captured.SecuritySection?.state).toBe(STATE)
+    expect(H.captured.VehicleHeader?.status).toBe('charging')
+  })
+
+  it('retains the known record status when independent live state is unavailable', async () => {
+    H.requestMock.mockImplementation((path: string, options?: unknown) =>
+      path === '/vehicles/1/state'
+        ? Promise.reject(new ApiError('State unavailable', 500))
+        : defaultRequest(path, options),
+    )
+    renderPage()
+
+    await waitFor(() => expect(screen.getAllByText('Server error')).toHaveLength(3))
+    expect(H.captured.VehicleHeader?.vehicle).toBe(VEHICLE)
+    expect(H.captured.VehicleHeader?.status).toBe('online')
+    expect(H.captured.SecuritySection?.state).toBeUndefined()
+    expect(screen.getByLabelText('Unknown source')).toHaveAttribute('data-provenance', 'unknown')
+    expect(screen.getByTestId('sec-settings')).toBeInTheDocument()
   })
 
   it('retains the complete page and vehicle-record recovery on a failed cached refresh', async () => {
