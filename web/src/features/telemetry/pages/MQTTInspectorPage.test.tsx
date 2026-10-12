@@ -108,13 +108,23 @@ function makeStatus(overrides: Partial<TestStatus> = {}): TestStatus {
   };
 }
 
-type QueryStub = { data?: unknown; isLoading?: boolean; error?: unknown };
+type QueryStub = {
+  data?: unknown;
+  isLoading?: boolean;
+  error?: unknown;
+  refetch?: () => unknown;
+  isFetching?: boolean;
+  fetchStatus?: 'fetching' | 'paused' | 'idle';
+};
 
 function setQuery(stub: QueryStub) {
   mockUseMQTTStatus.mockReturnValue({
     data: stub.data,
     isLoading: stub.isLoading ?? false,
     error: stub.error ?? null,
+    refetch: stub.refetch,
+    isFetching: stub.isFetching ?? false,
+    fetchStatus: stub.fetchStatus ?? 'idle',
   });
 }
 
@@ -165,7 +175,7 @@ describe('MQTTInspectorPage — connected happy path', () => {
     expect(container.querySelector('[data-stat-strip]')).toBeNull();
     expect(screen.getAllByText('Signal throughput').length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText('Connection')).toBeInTheDocument();
-    expect(screen.getByText('Vehicle breakdown')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /Vehicle breakdown/ })).toBeInTheDocument();
     expect(screen.getByText('Refreshes every 5s')).toBeInTheDocument();
   });
 
@@ -207,15 +217,16 @@ describe('MQTTInspectorPage — connected happy path', () => {
 });
 
 describe('MQTTInspectorPage — loading state', () => {
-  it('shows placeholder KPI values and a disconnected chip while the query loads', () => {
+  it('shows placeholder KPI values and unknown connectivity while the query loads', () => {
     setQuery({ data: undefined, isLoading: true });
     renderPage();
 
     // All four MetricCards render the em-dash placeholder while loading.
     expect(screen.getAllByText('—').length).toBeGreaterThanOrEqual(4);
 
-    // No status yet → connected defaults to false.
-    expect(screen.getByText('Disconnected')).toBeInTheDocument();
+    // No snapshot is not evidence of a disconnected broker.
+    expect(screen.getByText('Unknown')).toBeInTheDocument();
+    expect(screen.queryByText('Disconnected')).not.toBeInTheDocument();
 
     // The vehicle-count header span only renders once vehicles exist.
     expect(screen.queryByText(/\d+ vehicles/i)).not.toBeInTheDocument();
@@ -257,7 +268,8 @@ describe('MQTTInspectorPage — error state', () => {
       screen.getAllByText(/Check your internet connection/i).length,
     ).toBeGreaterThanOrEqual(1);
 
-    expect(screen.getByText('Disconnected')).toBeInTheDocument();
+    expect(screen.getByText('Unknown')).toBeInTheDocument();
+    expect(screen.queryByText('Disconnected')).not.toBeInTheDocument();
   });
 });
 
@@ -300,7 +312,8 @@ describe('MQTTInspectorPage — connected but empty', () => {
     expect(
       screen.getByText(/No vehicles currently streaming/i),
     ).toBeInTheDocument();
-    expect(screen.getByText('Disconnected')).toBeInTheDocument();
+    expect(screen.getByText('Unknown')).toBeInTheDocument();
+    expect(screen.queryByText('Disconnected')).not.toBeInTheDocument();
   });
 });
 
@@ -418,5 +431,122 @@ describe('MQTTInspectorPage — throughput accumulation', () => {
     expect(
       document.querySelector('.recharts-responsive-container'),
     ).not.toBeNull();
+  });
+});
+
+describe('MQTTInspectorPage — contract adoption', () => {
+  function useMobileWidth() {
+    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({
+      x: 0, y: 0, top: 0, left: 0, bottom: 640, right: 375,
+      width: 375, height: 640, toJSON: () => ({}),
+    });
+  }
+
+  it('keeps every vehicle field reachable in named mobile details', () => {
+    useMobileWidth();
+    const vehicle = makeStatus().vehicles?.[0];
+    setQuery({ data: makeStatus({ vehicles: vehicle ? [vehicle] : [] }) });
+    renderPage();
+
+    const table = screen.getByRole('group', { name: 'Vehicle breakdown' });
+    expect(table).toHaveAttribute('data-mobile-table');
+    fireEvent.click(within(table).getByRole('button', { name: 'Quick view' }));
+    const details = screen.getByRole('dialog');
+    const fields: Record<string, string | RegExp> = {
+      VIN: '5YJ3E1EA1NF000001',
+      State: 'online',
+      Signals: '12,345',
+      Batches: '678',
+      'Sig/sec': '3.4',
+      'Last received': 'just now',
+      Status: 'Live',
+    };
+    for (const [label, value] of Object.entries(fields)) {
+      const field = within(details).getByText(label, { selector: 'dt' }).parentElement;
+      expect(field).toHaveTextContent(value);
+    }
+    const footer = details.querySelector<HTMLElement>('[data-modal-footer="true"]');
+    if (!footer) throw new Error('Mobile details footer is missing');
+    fireEvent.click(within(footer).getByRole('button', { name: 'Close' }));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(screen.getByText('telemetry/+/errors')).toBeInTheDocument();
+  });
+
+  it('offers one explicit fatal-source refresh without hiding inspector sections', () => {
+    const refetch = vi.fn();
+    setQuery({ error: new Error('broker read unavailable'), refetch });
+    renderPage();
+    const refresh = screen.getByRole('button', { name: 'Refresh' });
+    fireEvent.click(refresh);
+    expect(refetch).toHaveBeenCalledTimes(1);
+    for (const title of ['Signal throughput', 'Connection', 'Vehicle breakdown']) {
+      expect(screen.getAllByText(title).length).toBeGreaterThanOrEqual(1);
+    }
+    expect(screen.getByTestId('mqtt-summary').querySelectorAll('[data-value-state="missing"]')).toHaveLength(4);
+  });
+
+  it('disables fatal-source refresh during an in-flight retry', () => {
+    const refetch = vi.fn();
+    setQuery({ error: new Error('broker read unavailable'), refetch, isFetching: true });
+    renderPage();
+    const refresh = screen.getByRole('button', { name: 'Refresh' });
+    expect(refresh).toBeDisabled();
+    fireEvent.click(refresh);
+    expect(refetch).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    { id: 'reported connected', connected: true, label: 'Connected' },
+    { id: 'reported disconnected', connected: false, label: 'Disconnected' },
+    { id: 'unreported connection', connected: undefined, label: 'Unknown' },
+  ])('shows only source-backed connectivity for $id', ({ connected, label }) => {
+    setQuery({ data: makeStatus({ connected }) });
+    renderPage();
+    expect(screen.getByText(label)).toBeInTheDocument();
+    if (connected === undefined) {
+      expect(screen.queryByText('Connected')).not.toBeInTheDocument();
+      expect(screen.queryByText('Disconnected')).not.toBeInTheDocument();
+    }
+    expect(screen.getByText('mqtt://mosquitto:1883')).toBeInTheDocument();
+  });
+
+  it('retains source-backed connectivity, counters and mobile details when refresh is paused', () => {
+    useMobileWidth();
+    const status = makeStatus({ connected: false, vehicles: makeStatus().vehicles?.slice(0, 1) });
+    setQuery({ data: status, fetchStatus: 'paused' });
+    renderPage();
+    expect(screen.getByText('Disconnected')).toBeInTheDocument();
+    expect(screen.getByTestId('mqtt-summary')).toHaveTextContent('Showing retained measurements');
+    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+    expect(screen.getByText('mqtt://mosquitto:1883')).toBeInTheDocument();
+    const table = screen.getByRole('group', { name: 'Vehicle breakdown' });
+    fireEvent.click(within(table).getByRole('button', { name: 'Quick view' }));
+    expect(screen.getByRole('dialog')).toHaveTextContent('12,345');
+    expect(screen.getByRole('dialog')).toHaveTextContent('678');
+  });
+
+  it.each([
+    { id: 'invalid timestamp', received: 'not-a-timestamp', label: 'Unknown', stale: false },
+    { id: 'future timestamp', received: '2030-01-01T00:01:00.000Z', label: 'Unknown', stale: false },
+    { id: 'exact freshness boundary', received: '2029-12-31T23:58:00.000Z', label: 'Live', stale: false },
+    { id: 'past freshness boundary', received: '2029-12-31T23:57:59.999Z', label: 'Stale', stale: true },
+    { id: 'missing timestamp', received: undefined, label: 'Stale', stale: true },
+  ])('keeps freshness status and stale count consistent for $id', ({ received, label, stale }) => {
+    vi.spyOn(Date, 'now').mockReturnValue(Date.parse('2030-01-01T00:00:00.000Z'));
+    useMobileWidth();
+    setQuery({ data: makeStatus({ vehicles: [{
+      vin: 'DRILL-FRESHNESS-ONLY', state: 'online',
+      signalCount: 12, batchCount: 3, signalsPerSecond: 1,
+      lastReceived: received,
+    }] }) });
+    renderPage();
+    const table = screen.getByRole('group', { name: 'Vehicle breakdown' });
+    fireEvent.click(within(table).getByRole('button', { name: 'Quick view' }));
+    const details = screen.getByRole('dialog');
+    const statusField = within(details).getByText('Status', { selector: 'dt' }).parentElement;
+    expect(statusField).toHaveTextContent(label);
+    if (stale) expect(screen.getByText('1 stale')).toBeInTheDocument();
+    else expect(screen.queryByText('1 stale')).not.toBeInTheDocument();
+    if (label === 'Unknown') expect(within(details).queryByText('Live')).not.toBeInTheDocument();
   });
 });

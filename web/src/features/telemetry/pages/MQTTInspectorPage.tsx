@@ -6,12 +6,12 @@ import {
 } from 'lucide-react';
 
 import { PageLayout } from '@/components/layout';
-import { GlassPanel, Badge, DataTable, PanelTitle, Text, Caption, type Column } from '@/components/ui';
+import { GlassPanel, Badge, Button, DataTable, Icon, PanelTitle, Text, Caption, type Column } from '@/components/ui';
 import { OperationalBrief } from '@/components/data-display';
 import {
   ChartTooltip, ChartGradient,
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  EmbeddedChart,
+  EmbeddedChart, axisTick,
 } from '@/components/charts';
 import { Skeleton, EmptyState, QueryError, AlertBanner, StaleRefreshWarning } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
@@ -21,7 +21,7 @@ import { usePageTitle } from '@/hooks/usePageTitle';
 import { useDataState } from '@/hooks/useDataState';
 import { useDateFormat } from '@/hooks/useDateFormat';
 import { fmtInt, fmtNumber } from '@/lib/numberFormat';
-import { chartTokens } from '@/lib/tokens';
+import { chartTokens, typography } from '@/lib/tokens';
 import type { VehicleTelemetry } from '@/types/telemetry';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { useOperationalMetrics } from '@/hooks/useOperationalMetrics';
@@ -54,7 +54,20 @@ function formatUptime(seconds: number): string {
  */
 function isVehicleStale(v: VehicleTelemetry): boolean {
   if (!v.lastReceived) return true;
-  return (Date.now() - new Date(v.lastReceived).getTime()) / 1000 > STALE_THRESHOLD;
+  return vehicleFreshness(v) === 'stale';
+}
+
+function vehicleFreshness(v: VehicleTelemetry): 'live' | 'stale' | 'unknown' {
+  if (!v.lastReceived) return 'stale';
+  const age = (Date.now() - new Date(v.lastReceived).getTime()) / 1000;
+  if (!Number.isFinite(age) || age < 0) return 'unknown';
+  return age > STALE_THRESHOLD ? 'stale' : 'live';
+}
+
+function freshnessLabel(v: VehicleTelemetry, t: (key: string, fallback: string) => string): string {
+  const freshness = vehicleFreshness(v);
+  return freshness === 'unknown' ? t('common.unknown', 'Unknown')
+    : freshness === 'stale' ? t('mqtt.stale', 'Stale') : t('mqtt.live', 'Live');
 }
 
 /* ------------------------------------------------------------------ */
@@ -70,7 +83,7 @@ function buildVehicleColumns(
       key: 'vin',
       header: t('mqtt.vin', 'VIN'),
       filterValue: (v) => v.vin ?? null,
-      render: (v) => <Text as="span" mono color="primary">{v.vin}</Text>,
+      render: (v) => <Text as="span" mono color="primary" className="break-all">{v.vin}</Text>,
     },
     {
       key: 'state',
@@ -113,18 +126,18 @@ function buildVehicleColumns(
       groupStart: true,
       header: t('mqtt.lastReceived', 'Last received'),
       className: 'text-right',
-      render: (v) => <Text as="span" color="muted" className="whitespace-nowrap">{v.lastReceived ? formatRelative(v.lastReceived) : '—'}</Text>,
+      render: (v) => <Text as="span" color="muted" className="whitespace-nowrap">{v.lastReceived && Number.isFinite(Date.parse(v.lastReceived)) ? formatRelative(v.lastReceived) : '—'}</Text>,
     },
     {
       key: 'status',
       header: t('mqtt.status', 'Status'),
       align: 'center',
-      filterValue: (v) => isVehicleStale(v),
-      filterValueLabel: (_value, v) => isVehicleStale(v) ? t('mqtt.stale', 'Stale') : t('mqtt.live', 'Live'),
+      filterValue: (v) => vehicleFreshness(v) === 'unknown' ? null : isVehicleStale(v),
+      filterValueLabel: (_value, v) => freshnessLabel(v, t),
       className: 'text-center',
       render: (v) => {
-        const isStale = isVehicleStale(v);
-        return <Badge variant={isStale ? 'warning' : 'success'} size="sm" dot>{isStale ? t('mqtt.stale', 'Stale') : t('mqtt.live', 'Live')}</Badge>;
+        const freshness = vehicleFreshness(v);
+        return <Badge variant={freshness === 'unknown' ? 'neutral' : freshness === 'stale' ? 'warning' : 'success'} size="sm" dot>{freshnessLabel(v, t)}</Badge>;
       },
     },
   ];
@@ -185,7 +198,7 @@ export default function MQTTInspectorPage() {
     return { fromUnix: now - 30 * 60, toUnix: now };
   }, []);
 
-  const connected = status?.connected ?? false;
+  const connected = status?.connected;
   const summary = mqttSummary({
     available: !metricsUnavailable, vehicles: vehicles.length,
     signals: totalSignals, batches: totalBatches, rate: totalRate,
@@ -201,21 +214,30 @@ export default function MQTTInspectorPage() {
       metadataActions={
         <div className="flex flex-wrap items-center justify-start gap-2 sm:justify-end sm:gap-3">
           <Caption className="inline-flex items-center gap-1">
-            <RefreshCw className="h-3 w-3" aria-hidden="true" />
+            <Icon icon={RefreshCw} size="xs" />
             {t('mqtt.refreshInterval', 'Refreshes every 5s')}
           </Caption>
-          <Badge variant={connected ? 'success' : 'danger'} dot>
-            {connected
-              ? <><Wifi className="h-3 w-3" aria-hidden="true" /> {t('mqtt.connected', 'Connected')}</>
-              : <><WifiOff className="h-3 w-3" aria-hidden="true" /> {t('mqtt.disconnected', 'Disconnected')}</>}
+          <Badge variant={connected === true ? 'success' : 'neutral'} dot>
+            {connected === true
+              ? <><Icon icon={Wifi} size="xs" /> {t('mqtt.connected', 'Connected')}</>
+              : connected === false
+                ? <><Icon icon={WifiOff} size="xs" /> {t('mqtt.disconnected', 'Disconnected')}</>
+                : t('common.unknown', 'Unknown')}
           </Badge>
         </div>
       }
     >
       {error && (
         <FadeIn>
-          <AlertBanner variant="danger" icon={<AlertCircle className="h-5 w-5" aria-hidden="true" />}>
+          <AlertBanner variant="danger" icon={<Icon icon={AlertCircle} size="lg" />}>
             {t('mqtt.fetchError', 'Unable to load MQTT status')}: {(error as Error)?.message ?? String(error)}
+            <div className="mt-3">
+              <Button variant="secondary" icon={<Icon icon={RefreshCw} />}
+                className="min-h-11" onClick={statusState.retry ?? undefined}
+                disabled={!statusState.retry || statusQuery.isFetching}>
+                {t('common.refresh', 'Refresh')}
+              </Button>
+            </div>
           </AlertBanner>
         </FadeIn>
       )}
@@ -251,7 +273,7 @@ export default function MQTTInspectorPage() {
           {/* Signal throughput — hero visual spanning most of the width */}
           <GlassPanel className="p-4 sm:p-5 xl:col-span-2">
             <PanelTitle className="mb-3 flex items-center gap-2">
-              <Activity className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+              <Icon icon={Activity} className={typography.color.secondary} />
               {t('mqtt.signalThroughput', 'Signal throughput')}
             </PanelTitle>
             {error && !status ? (
@@ -273,11 +295,11 @@ export default function MQTTInspectorPage() {
                 <ResponsiveContainer width="100%" height="100%">
                   <AreaChart data={throughputHistory}>
                     <defs>
-                      <ChartGradient id="throughputGrad" color={THROUGHPUT_COLOR} opacity={0.3} />
+                      <ChartGradient id="throughputGrad" color={THROUGHPUT_COLOR} opacity={0.08} />
                     </defs>
-                    <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
-                    <XAxis dataKey="time" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} />
-                    <YAxis tick={{ fill: 'var(--text-muted)', fontSize: 10 }} allowDecimals={false} />
+                    <CartesianGrid strokeDasharray="3 3" stroke={chartTokens.gridStroke} strokeOpacity={0.4} />
+                    <XAxis dataKey="time" tick={axisTick} />
+                    <YAxis tick={axisTick} allowDecimals={false} />
                     <Tooltip content={<ChartTooltip />} />
                     <Area
                       type="monotone"
@@ -285,7 +307,7 @@ export default function MQTTInspectorPage() {
                       name={t('mqtt.signals', 'Signals')}
                       stroke={THROUGHPUT_COLOR}
                       fill="url(#throughputGrad)"
-                      strokeWidth={1.5}
+                      strokeWidth={2}
                     />
                   </AreaChart>
                 </ResponsiveContainer>
@@ -296,7 +318,7 @@ export default function MQTTInspectorPage() {
           {/* Connection info — broker, uptime, topic patterns */}
           <GlassPanel className="p-4 sm:p-5">
             <PanelTitle className="mb-3 flex items-center gap-2">
-              <Server className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+              <Icon icon={Server} className={typography.color.secondary} />
               {t('mqtt.connectionInfo', 'Connection')}
             </PanelTitle>
             {error && !status ? (
@@ -312,7 +334,7 @@ export default function MQTTInspectorPage() {
                   </div>
                   <div className="min-w-0">
                     <Caption className="mb-1 flex items-center gap-1">
-                      <Clock className="h-3 w-3" aria-hidden="true" />
+                      <Icon icon={Clock} size="xs" />
                       {t('mqtt.uptime', 'Uptime')}
                     </Caption>
                     <Text as="p" mono variant="body" className="break-words">
@@ -325,7 +347,7 @@ export default function MQTTInspectorPage() {
                   {topics.length > 0 ? (
                     <div className="flex flex-wrap gap-1.5">
                       {topics.map((topic) => (
-                        <Badge key={topic} variant="neutral" size="sm">{topic}</Badge>
+                        <Badge key={topic} variant="neutral" size="sm" className="max-w-full break-all">{topic}</Badge>
                       ))}
                     </div>
                   ) : (
@@ -357,7 +379,7 @@ export default function MQTTInspectorPage() {
         <GlassPanel className="p-4 sm:p-5">
           <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
             <PanelTitle className="flex items-center gap-2">
-              <Radio className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+              <Icon icon={Radio} className={typography.color.secondary} />
               {t('mqtt.vehicleBreakdown', 'Vehicle breakdown')}
               {vehicles.length > 0 && (
                 <Text as="span" variant="caption" className="font-normal">
@@ -367,7 +389,7 @@ export default function MQTTInspectorPage() {
             </PanelTitle>
             {staleVehicles.length > 0 && (
               <Badge variant="warning" size="sm" dot>
-                <AlertTriangle className="h-3 w-3" aria-hidden="true" />
+                <Icon icon={AlertTriangle} size="xs" />
                 {staleVehicles.length} {t('mqtt.stale', 'stale')}
               </Badge>
             )}
@@ -382,9 +404,26 @@ export default function MQTTInspectorPage() {
           ) : (
             <DataTable<VehicleTelemetry>
               tableId="telemetry:mqtt-inspector"
+              name={t('mqtt.vehicleBreakdown', 'Vehicle breakdown')}
               enableValueFilters
               columns={vehicleColumns}
               mobileColumns={['vin', 'status', 'lastReceived']}
+              mobilePresentation={{
+                variant: 'cards',
+                roles: { vin: 'title', status: 'badge', lastReceived: 'meta', signals: 'primary' },
+                displayValue: (v, key) => {
+                  switch (key) {
+                    case 'vin': return v.vin;
+                    case 'state': return v.state ?? '—';
+                    case 'signals': return v.signalCount == null ? '—' : fmtInt(v.signalCount);
+                    case 'batches': return v.batchCount == null ? '—' : fmtInt(v.batchCount);
+                    case 'sigPerSec': return v.signalsPerSecond == null ? '—' : fmtNumber(v.signalsPerSecond);
+                    case 'lastReceived': return v.lastReceived && Number.isFinite(Date.parse(v.lastReceived)) ? formatRelative(v.lastReceived) : '—';
+                    case 'status': return freshnessLabel(v, t);
+                    default: return '—';
+                  }
+                },
+              }}
               data={vehicles}
               keyExtractor={(v) => v.vin}
               compact
