@@ -12,13 +12,13 @@ import { Send, Square, History as HistoryIcon } from 'lucide-react';
 import { HelixMark } from '@/components/branding/HelixMark';
 
 import { PageLayout } from '@/components/layout';
-import { GlassPanel, Button, Drawer, Textarea, Text } from '@/components/ui';
+import { GlassPanel, Button, Drawer, Textarea, Text, Icon, IconBox } from '@/components/ui';
 import { FadeIn } from '@/components/motion';
 import { VisuallyHidden } from '@/components/a11y';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useMotionPreference } from '@/hooks/useMotionPreference';
 import { useIsMobile } from '@/hooks/useMediaQuery';
-import { cn } from '@/lib/cn';
+import { iconSize, neonColorMap } from '@/lib/tokens';
 import {
   useChatSessions,
   useChatHistory,
@@ -769,8 +769,9 @@ export default function ChatbotPage() {
             onClick={() => setShowSessions((s) => !s)}
             variant="ghost"
             size="sm"
-            icon={<HistoryIcon className="h-4 w-4" />}
+            icon={<Icon icon={HistoryIcon} />}
             aria-pressed={showSessions}
+            className="min-h-11 min-w-11 md:min-h-9 md:min-w-0"
           >
             {t('chatbot.history', 'History')}
           </Button>
@@ -867,12 +868,11 @@ export default function ChatbotPage() {
                   {isWaiting && (
                     <FadeIn>
                       <div className="flex items-start gap-3">
-                        <div className="rounded-lg border border-purple-500/20 bg-gradient-to-br from-purple-500/20 to-blue-500/20 p-1.5">
-                          <HelixMark className="h-4 w-4 text-purple-300" aria-hidden="true" />
-                        </div>
-                        <GlassPanel className="flex items-center gap-2 !p-3">
-                          <TypingDots reduceMotion={motion.reduce} />
-                          <Text size="sm" color="secondary">
+                        <IconBox color="neutral" size="sm">
+                          <HelixMark className={iconSize.md} aria-hidden="true" />
+                        </IconBox>
+                        <GlassPanel className="min-w-0 !p-3">
+                          <Text as="p" variant="bodySm" className="break-words">
                             {aiStream.activity.length > 0
                               ? t(
                                   'chatbot.grounding',
@@ -890,7 +890,7 @@ export default function ChatbotPage() {
               </div>
             </div>
 
-            <div className="border-t border-[var(--glass-border)] px-3 py-3 sm:px-4">
+            <div className={`border-t ${neonColorMap.neutral.border} px-3 py-3 sm:px-4`}>
               <div className="flex justify-center">
                 <div className="w-full max-w-3xl">
                   <VisuallyHidden as="label" htmlFor="chatbot-input">
@@ -909,7 +909,7 @@ export default function ChatbotPage() {
                           'Ask Helix to investigate, compare, or explain…',
                         )}
                         rows={1}
-                        className="max-h-40 min-h-[44px] resize-none"
+                        className="max-h-40 min-h-11 resize-none"
                         aria-label={t('chatbot.inputLabel', 'Message')}
                       />
                     </div>
@@ -917,10 +917,10 @@ export default function ChatbotPage() {
                       <Button
                         onClick={stopAll}
                         variant="secondary"
-                        icon={<Square className="h-4 w-4" />}
+                        icon={<Icon icon={Square} />}
                         aria-label={t('chatbot.actions.stopStreaming', 'Stop streaming')}
                         title={t('chatbot.actions.stopHint', 'Stop reveal (Esc)')}
-                        className="shrink-0"
+                        className="min-h-11 min-w-11 shrink-0 md:min-h-10 md:min-w-0"
                       >
                         <span className="hidden sm:inline">{t('chatbot.actions.stop', 'Stop')}</span>
                       </Button>
@@ -929,9 +929,9 @@ export default function ChatbotPage() {
                         onClick={handleSend}
                         disabled={!input.trim() || sendMut.isPending || isAiStreaming}
                         variant="primary"
-                        icon={<Send className="h-4 w-4" />}
+                        icon={<Icon icon={Send} />}
                         aria-label={t('chatbot.actions.send', 'Send message')}
-                        className="shrink-0"
+                        className="min-h-11 min-w-11 shrink-0 md:min-h-10 md:min-w-0"
                       />
                     )}
                   </div>
@@ -1074,33 +1074,4 @@ function useTypewriterStream(opts: TypewriterOptions): TypewriterStream {
   useEffect(() => () => cleanup(), [cleanup]);
 
   return { start, stop, isActive: active };
-}
-
-/**
- * Three-dot "thinking" indicator. Honors prefers-reduced-motion by
- * collapsing to a static dot trio when motion is suppressed.
- */
-function TypingDots({ reduceMotion }: { reduceMotion: boolean }) {
-  return (
-    <span
-      className="inline-flex items-center gap-1"
-      aria-hidden="true"
-      role="presentation"
-    >
-      {[0, 1, 2].map((i) => (
-        <span
-          key={i}
-          className={cn(
-            'h-1.5 w-1.5 rounded-full bg-purple-300',
-            !reduceMotion && 'motion-safe:animate-bounce',
-          )}
-          style={
-            !reduceMotion
-              ? { animationDelay: `${i * 120}ms`, animationDuration: '900ms' }
-              : undefined
-          }
-        />
-      ))}
-    </span>
-  );
 }

@@ -51,7 +51,7 @@ import type { ChatMessage, ChatSessionInfo } from '@/api/types';
 import type { UIChatMessage } from '../components/chatbot/ChatMessageItem';
 
 /* ─── controllable AI gate (hoisted so the mock factory can read it) ─── */
-const ctrl = vi.hoisted(() => ({ aiEnabled: false }));
+const ctrl = vi.hoisted(() => ({ aiEnabled: false, reduceMotion: true }));
 
 vi.mock('@/hooks/useAiEnabled', () => ({
   useAiEnabled: () => ctrl.aiEnabled,
@@ -59,7 +59,7 @@ vi.mock('@/hooks/useAiEnabled', () => ({
 
 /* ─── deterministic instant typewriter (no rAF/timer flake) ─────────── */
 vi.mock('@/hooks/useMotionPreference', () => ({
-  useMotionPreference: () => ({ reduce: true, durationMs: 0 }),
+  useMotionPreference: () => ({ reduce: ctrl.reduceMotion, durationMs: 0 }),
 }));
 
 /* ─── network client ─────────────────────────────────────────────────── */
@@ -384,6 +384,7 @@ function lastAssistantRow(): HTMLElement {
 beforeEach(() => {
   reqCalls = [];
   ctrl.aiEnabled = false;
+  ctrl.reduceMotion = true;
   mockedRequest.mockReset();
   installRequest();
   window.localStorage.clear();
@@ -411,11 +412,16 @@ describe('ChatbotPage — scaffolding, a11y, empty state', () => {
     // Icon-only send button MUST expose an accessible name.
     const send = screen.getByRole('button', { name: 'Send message' });
     expect(send).toBeInTheDocument();
+    expect(send).toHaveClass('min-h-11', 'min-w-11', 'md:min-h-10');
+    expect(send.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
     // Empty composer → send disabled.
     expect(send).toBeDisabled();
 
     const history = screen.getByRole('button', { name: 'History' });
     expect(history).toHaveAttribute('aria-pressed', 'false');
+    expect(history).toHaveClass('min-h-11', 'min-w-11', 'md:min-h-9');
+    expect(history.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
+    expect(box).toHaveClass('min-h-11', 'max-h-40', 'resize-none');
 
     // The conversation transcript is an aria-live log region.
     const log = screen.getByRole('log', { name: 'Conversation' });
@@ -658,6 +664,64 @@ describe('ChatbotPage — session management + suggestions', () => {
 });
 
 describe('ChatbotPage — AI-on streaming path', () => {
+  it.each([
+    { name: 'Stop with normal motion', reduceMotion: false, escape: false },
+    { name: 'Escape with reduced motion', reduceMotion: true, escape: true },
+  ])('uses restrained waiting feedback and retains partial evidence on $name', async ({ reduceMotion, escape }) => {
+    ctrl.aiEnabled = true;
+    ctrl.reduceMotion = reduceMotion;
+    let controller!: ReadableStreamDefaultController<Uint8Array>;
+    const body = new ReadableStream<Uint8Array>({
+      start(next) {
+        controller = next;
+      },
+    });
+    globalThis.fetch = vi.fn(async () =>
+      new Response(body, { status: 200, headers: { 'Content-Type': 'text/event-stream' } }),
+    ) as unknown as typeof globalThis.fetch;
+
+    renderPage();
+    await typeAndEnter('Inspect this test-only question');
+    const planning = await screen.findByText('Helix is planning the investigation…');
+    const waiting = planning.parentElement?.parentElement;
+    const iconBox = planning.parentElement?.previousElementSibling;
+    expect(iconBox).toHaveClass(
+      'bg-[var(--surface-2)]',
+      'text-[var(--text-secondary)]',
+      'ring-[var(--border-default)]',
+    );
+    expect(iconBox?.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
+    expect(planning).toHaveClass('text-sm', 'text-[var(--text-secondary)]');
+    expect(waiting?.querySelector('[class*="gradient"], [class*="animate-"], [style*="animation"]')).toBeNull();
+    const stop = screen.getByRole('button', { name: 'Stop streaming' });
+    expect(stop).toHaveClass('min-h-11', 'min-w-11', 'md:min-h-10');
+    expect(stop.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
+
+    await act(async () => {
+      controller.enqueue(new TextEncoder().encode(sseFrame('tool_call', {
+        id: 'test-tool', name: 'query_vehicle_count', arguments: {},
+      })));
+    });
+    expect(await screen.findByText('Helix is grounding the answer in TeslaSync evidence…')).toBeInTheDocument();
+    expect(lastAssistantRow()).toHaveTextContent('query_vehicle_count:running');
+
+    await act(async () => {
+      controller.enqueue(new TextEncoder().encode(sseFrame('delta', { text: 'Test-only partial answer' })));
+    });
+    await screen.findByText('Test-only partial answer');
+    expect(screen.queryByText('Helix is grounding the answer in TeslaSync evidence…')).toBeNull();
+    await act(async () => {
+      if (escape) fireEvent.keyDown(window, { key: 'Escape' });
+      else fireEvent.click(stop);
+      controller.close();
+    });
+    await waitFor(() => expect(lastAssistantRow()).toHaveAttribute('data-streaming', 'false'));
+    expect(lastAssistantRow()).toHaveTextContent('Test-only partial answer');
+    expect(lastAssistantRow()).toHaveTextContent('query_vehicle_count:failed');
+    expect(screen.getByRole('button', { name: 'Send message' })).toBeDisabled();
+    expect(chatPosts()).toHaveLength(0);
+  });
+
   it('carries successful retrieval evidence to the completed assistant turn without trusting other tools', async () => {
     ctrl.aiEnabled = true;
     installRequest();
