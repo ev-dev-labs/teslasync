@@ -15,8 +15,12 @@ import { Link } from 'react-router-dom';
 import { Archive } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { typography } from '@/lib/tokens';
+import { BUTTON_BASE, BUTTON_VARIANTS, Caption, Icon } from '@/components/ui';
 import { PageLayout } from '@/components/layout';
+import { QueryError, Skeleton, StaleRefreshWarning } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
+import { useDataState } from '@/hooks/useDataState';
+import { useMotionPreference } from '@/hooks/useMotionPreference';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useRangeState } from '@/hooks/useRangeState';
 import { useVehicles } from '@/api/hooks/useVehicles';
@@ -34,8 +38,19 @@ export default function InboxPage() {
   usePageTitle(t('notifications.inbox.title', 'Inbox'));
   const { startInstant, endInstantExclusive, timezone } = useRangeState();
 
-  const { data: vehicles = [] } = useVehicles();
-  const { data: rules = [] } = useAlertRules();
+  const { reduce } = useMotionPreference();
+  const vehiclesQuery = useVehicles();
+  const rulesQuery = useAlertRules();
+  const vehiclesState = useDataState({ ...vehiclesQuery, data: vehiclesQuery.data ?? undefined });
+  const rulesState = useDataState({ ...rulesQuery, data: rulesQuery.data ?? undefined });
+  const vehicles = vehiclesQuery.data ?? [];
+  const rules = rulesQuery.data ?? [];
+  const metadataSources = [
+    { id: 'vehicles', label: t('notifications.alertStudio.editor.vehiclesLabel', 'Vehicles'),
+      state: vehiclesState, empty: t('vehicles.emptyTitle', 'No vehicles yet'), count: vehicles.length },
+    { id: 'rules', label: t('notifications.alertStudio.rules.title', 'Rules'),
+      state: rulesState, empty: t('notifications.alertStudio.rules.emptyTitle', 'No alert rules yet'), count: rules.length },
+  ];
 
   // The latest active notifications drive the recent KPI band; historical
   // period totals come from the report rather than this bounded list.
@@ -52,14 +67,14 @@ export default function InboxPage() {
         <Link
           to="/notifications/archived"
           className={cn(
-            'inline-flex min-h-9 items-center gap-1.5 rounded-md px-3 py-2 transition-colors',
+            BUTTON_BASE,
+            BUTTON_VARIANTS.secondary,
+            'min-h-11 min-w-11 max-w-full whitespace-normal break-words px-3 py-2 md:min-h-9',
             typography.size.xs,
-            typography.weight.medium,
-            typography.color.secondary,
-            'hover:bg-white/[0.04] hover:text-[var(--text-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/60',
+            reduce && 'transition-none',
           )}
         >
-          <Archive className="h-3.5 w-3.5" aria-hidden="true" />
+          <Icon icon={Archive} size="sm" />
           {t('notifications.inbox.viewArchived', 'View archived')}
         </Link>
       }
@@ -69,6 +84,26 @@ export default function InboxPage() {
       </FadeIn>
 
       <FadeIn delay={0.05}>
+        <div className="min-w-0 space-y-3">
+          {metadataSources.filter(source => source.state.status !== 'ok' || source.count === 0).map(source => (
+            <section key={source.id} aria-label={source.label} className="min-w-0 space-y-2">
+              <Caption>{source.label}</Caption>
+              {source.state.fatalError ? (
+                <QueryError error={source.state.fatalError} onRetry={source.state.retry ?? undefined}
+                  resourceName={source.label} compact />
+              ) : !source.state.hasData ? (
+                <div role="status" aria-label={t('developerReference.layout.source.loading', 'Loading {{label}}', { label: source.label })}>
+                  <Skeleton className="h-4 w-32 max-w-full" />
+                </div>
+              ) : (
+                <>
+                  <StaleRefreshWarning state={source.state} label={source.label} />
+                  {source.state.status === 'ok' && source.count === 0 ? <Caption>{source.empty}</Caption> : null}
+                </>
+              )}
+            </section>
+          ))}
+        </div>
         <InboxBody archived={false} vehicles={vehicles} rules={rules} />
       </FadeIn>
       <FadeIn delay={0.1}>
