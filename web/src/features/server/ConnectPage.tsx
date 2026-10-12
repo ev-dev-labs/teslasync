@@ -7,11 +7,11 @@
  * a token is required before saving. Saving reloads the app so every
  * query, stream, and provider boots against the picked server.
  */
-import { useState } from 'react'
+import { useId, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Icons } from '@/lib/icons'
+import { KeyRound, Server } from 'lucide-react'
 import { PageHeader } from '@/components/layout'
-import { Button, ErrorText, GlassPanel, Input, Text } from '@/components/ui'
+import { Button, ErrorText, GlassPanel, Icon, Input, Text } from '@/components/ui'
 import { usePageTitle } from '@/hooks/usePageTitle'
 import {
   getServerBaseUrl,
@@ -56,27 +56,34 @@ export default function ConnectPage() {
   const [token, setToken] = useState('')
   const [modeHint, setModeHint] = useState<'open' | 'forward_auth' | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [errorField, setErrorField] = useState<'server' | 'token' | null>(null)
   const [busy, setBusy] = useState(false)
+  const inFlight = useRef(false)
+  const errorId = useId()
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault()
-    if (busy) return
+    if (inFlight.current) return
     setError(null)
+    setErrorField(null)
     setModeHint(null)
 
     const normalized = normalizeServerUrl(server)
     if (!normalized.accepted) {
       const copy = REJECTION_COPY[normalized.rejection ?? 'unparseable']
       setError(t(copy.key, copy.fallback))
+      setErrorField('server')
       return
     }
 
+    inFlight.current = true
     setBusy(true)
     try {
       const probe = await probeServer(normalized.url, token.trim() === '' ? null : token)
       if (!probe.ok) {
         if (probe.authenticationRequired) {
           setModeHint('forward_auth')
+          setErrorField('token')
           setError(token.trim() === ''
             ? t('serverConnect.connect.errorTokenRequired', 'This server needs an access token — paste one to continue.')
             : t('serverConnect.connect.errorTokenRejected', 'This server rejected the access token. Check the key and try again.'))
@@ -87,6 +94,7 @@ export default function ConnectPage() {
       }
       if (probe.mode === 'forward_auth' && token.trim() === '') {
         setModeHint('forward_auth')
+        setErrorField('token')
         setError(t('serverConnect.connect.errorTokenRequired', 'This server needs an access token — paste one to continue.'))
         return
       }
@@ -97,20 +105,18 @@ export default function ConnectPage() {
     } catch {
       setError(t('serverConnect.connect.errorSave', 'Could not save this connection. Check whether browser storage is enabled.'))
     } finally {
+      inFlight.current = false
       setBusy(false)
     }
   }
 
-  const ServerIcon = Icons.server
-  const KeyIcon = Icons.keyRound
-
   return (
     <div className="flex min-h-dvh items-center justify-center p-4">
-      <GlassPanel className="w-full max-w-md p-6">
+      <GlassPanel className="w-full max-w-md p-4 sm:p-6">
         <PageHeader
           title={t('serverConnect.connect.title', 'Connect to your server')}
           subtitle={t('serverConnect.connect.subtitle', 'Enter your TeslaSync address to continue.')}
-          icon={<ServerIcon className="h-5 w-5" aria-hidden="true" />}
+          icon={<Icon icon={Server} size="lg" />}
         />
         <form onSubmit={handleSubmit} className="space-y-4">
           <Input
@@ -122,6 +128,10 @@ export default function ConnectPage() {
             autoComplete="url"
             inputMode="url"
             autoFocus
+            disabled={busy}
+            aria-invalid={errorField === 'server' || undefined}
+            aria-describedby={errorField === 'server' ? errorId : undefined}
+            className="min-h-11 md:min-h-10"
           />
           <Input
             label={`${t('serverConnect.connect.tokenLabel', 'Access token')} (${t('serverConnect.connect.tokenOptional', 'optional')})`}
@@ -131,7 +141,11 @@ export default function ConnectPage() {
             hint={t('serverConnect.connect.tokenHint', 'Only needed when your server uses forward-auth login. Create one under Admin → API Keys.')}
             type="password"
             autoComplete="off"
-            icon={<KeyIcon className="h-4 w-4" aria-hidden="true" />}
+            icon={<Icon icon={KeyRound} />}
+            disabled={busy}
+            aria-invalid={errorField === 'token' || undefined}
+            aria-describedby={errorField === 'token' ? errorId : undefined}
+            className="min-h-11 md:min-h-10"
           />
           {modeHint === 'forward_auth' && (
             <Text as="p" variant="caption">
@@ -139,11 +153,11 @@ export default function ConnectPage() {
             </Text>
           )}
           {error != null && (
-            <ErrorText role="alert">
+            <ErrorText id={errorId} role="alert">
               {error}
             </ErrorText>
           )}
-          <Button type="submit" variant="primary" size="md" loading={busy} className="w-full">
+          <Button type="submit" variant="primary" size="md" loading={busy} wrapLabel className="w-full min-h-11 md:min-h-10">
             {busy
               ? t('serverConnect.connect.connecting', 'Connecting…')
               : t('serverConnect.connect.submit', 'Connect')}

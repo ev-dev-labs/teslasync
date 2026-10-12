@@ -75,6 +75,92 @@ describe('ConnectPage', () => {
     expect(fetchMock).not.toHaveBeenCalled()
   })
 
+  it('associates address failures with the field while retaining its guidance and one alert', async () => {
+    const fetchMock = vi.fn()
+    vi.stubGlobal('fetch', fetchMock)
+    renderPage()
+    const server = screen.getByRole('textbox', { name: 'Server address' })
+    const token = screen.getByLabelText('Access token (optional)')
+    const hintId = server.getAttribute('aria-describedby')
+
+    fireEvent.click(screen.getByRole('button', { name: /^connect$/i }))
+
+    const alert = await screen.findByRole('alert')
+    expect(server).toHaveAttribute('aria-invalid', 'true')
+    expect(server.getAttribute('aria-describedby')?.split(' ')).toEqual([alert.id, hintId])
+    expect(server).toHaveAccessibleDescription(/Enter a server address.*Your self-hosted TeslaSync URL/i)
+    expect(token).not.toHaveAttribute('aria-invalid')
+    expect(screen.getAllByRole('alert')).toHaveLength(1)
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    { name: 'unsupported scheme', address: 'ftp://example.com', message: /http:\/\/ or https:\/\//i },
+    { name: 'malformed address', address: 'https://[', message: /doesn't look valid/i },
+    { name: 'embedded credentials', address: 'https://test-user:test-password@example.com', message: /usernames and passwords/i },
+    { name: 'unsupported path', address: 'https://example.com/subpath', message: /without a \/path/i },
+  ])('retains safe rejection for $name', async ({ address, message }) => {
+    const fetchMock = vi.fn()
+    vi.stubGlobal('fetch', fetchMock)
+    renderPage()
+    fireEvent.change(screen.getByRole('textbox', { name: 'Server address' }), { target: { value: address } })
+    fireEvent.click(screen.getByRole('button', { name: /^connect$/i }))
+    expect(await screen.findByRole('alert')).toHaveTextContent(message)
+    expect(screen.getByRole('textbox', { name: 'Server address' })).toHaveAttribute('aria-invalid', 'true')
+    expect(fetchMock).not.toHaveBeenCalled()
+    expect(window.localStorage.getItem('teslasync-server-base-url')).toBeNull()
+  })
+
+  it('keeps the in-flight candidate fixed and restores editable values after failure', async () => {
+    let settle: (response: { ok: boolean }) => void = () => { throw new Error('Probe not started') }
+    const fetchMock = vi.fn().mockImplementation(() => new Promise<{ ok: boolean }>((resolve) => {
+      settle = resolve
+    }))
+    vi.stubGlobal('fetch', fetchMock)
+    renderPage()
+    const server = screen.getByRole('textbox', { name: 'Server address' })
+    const token = screen.getByLabelText('Access token (optional)')
+    fireEvent.change(server, { target: { value: 'https://pending.example.com' } })
+    fireEvent.change(token, { target: { value: 'test-only-token' } })
+    const form = server.closest('form')
+    if (!form) throw new Error('Missing connection form')
+
+    fireEvent.submit(form)
+    fireEvent.submit(form)
+
+    expect(server).toBeDisabled()
+    expect(token).toBeDisabled()
+    expect(screen.getByRole('button', { name: /Connecting/i })).toBeDisabled()
+    expect(screen.getByRole('button', { name: /Connecting/i })).toHaveAttribute('aria-busy', 'true')
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    expect(fetchMock).toHaveBeenCalledWith('https://pending.example.com/api/v1/system/auth-mode', expect.objectContaining({ credentials: 'omit' }))
+    expect(window.localStorage.getItem('teslasync-server-base-url')).toBeNull()
+
+    settle({ ok: false })
+    expect(await screen.findByRole('alert')).toHaveTextContent(/couldn't reach/i)
+    expect(server).toBeEnabled()
+    expect(token).toBeEnabled()
+    expect(server).toHaveValue('https://pending.example.com')
+    expect(token).toHaveValue('test-only-token')
+    expect(server).not.toHaveAttribute('aria-invalid')
+    expect(token).not.toHaveAttribute('aria-invalid')
+    expect(screen.getByRole('button', { name: /^connect$/i })).toBeEnabled()
+  })
+
+  it('uses growing mobile targets while retaining masked token entry and desktop sizing', () => {
+    renderPage()
+    const server = screen.getByRole('textbox', { name: 'Server address' })
+    const token = screen.getByLabelText('Access token (optional)')
+    const submit = screen.getByRole('button', { name: /^connect$/i })
+    expect(server).toHaveClass('min-h-11', 'md:min-h-10')
+    expect(token).toHaveClass('min-h-11', 'md:min-h-10')
+    expect(token).toHaveAttribute('type', 'password')
+    expect(token).toHaveAttribute('autocomplete', 'off')
+    expect(token).toHaveValue('')
+    expect(submit).toHaveClass('h-auto', 'min-h-11', 'md:min-h-10', 'whitespace-normal')
+    expect(server).toHaveAttribute('inputmode', 'url')
+  })
+
   it('saves and reloads on an open-mode probe', async () => {
     mockProbe('open')
     renderPage()
@@ -96,6 +182,8 @@ describe('ConnectPage', () => {
     })
     fireEvent.click(screen.getByRole('button', { name: /^connect$/i }))
     expect(await screen.findByRole('alert')).toHaveTextContent(/needs an Access token/i)
+    expect(screen.getByLabelText('Access token (optional)')).toHaveAttribute('aria-invalid', 'true')
+    expect(screen.getByLabelText('Access token (optional)')).toHaveAccessibleDescription(/needs an access token.*Only needed/i)
     expect(window.localStorage.getItem('teslasync-server-base-url')).toBeNull()
 
     fireEvent.change(screen.getByPlaceholderText(/ts_/), { target: { value: 'ts_secret' } })
@@ -129,6 +217,28 @@ describe('ConnectPage', () => {
     fireEvent.change(screen.getByPlaceholderText(/ts_/), { target: { value: 'ts_invalid' } })
     fireEvent.click(screen.getByRole('button', { name: /^connect$/i }))
     expect(await screen.findByRole('alert')).toHaveTextContent(/rejected the Access token/i)
+    expect(screen.getByLabelText('Access token (optional)')).toHaveAttribute('aria-invalid', 'true')
+    expect(screen.getByRole('textbox', { name: 'Server address' })).not.toHaveAttribute('aria-invalid')
     expect(window.sessionStorage.getItem('teslasync-access-token')).toBeNull()
+  })
+
+  it('retains both inputs and storage recovery feedback when saving is denied', async () => {
+    mockProbe('open')
+    renderPage()
+    const server = screen.getByRole('textbox', { name: 'Server address' })
+    const token = screen.getByLabelText('Access token (optional)')
+    fireEvent.change(server, { target: { value: 'http://192.168.1.10:4000' } })
+    fireEvent.change(token, { target: { value: 'test-only-token' } })
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => { throw new Error('Storage disabled') })
+    fireEvent.click(screen.getByRole('button', { name: /^connect$/i }))
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(/browser storage is enabled/i)
+    expect(server).toHaveValue('http://192.168.1.10:4000')
+    expect(token).toHaveValue('test-only-token')
+    expect(server).toBeEnabled()
+    expect(token).toBeEnabled()
+    expect(server).not.toHaveAttribute('aria-invalid')
+    expect(token).not.toHaveAttribute('aria-invalid')
+    expect(window.location.href).toBe('http://localhost/connect')
   })
 })
