@@ -579,3 +579,117 @@ describe('GuardModePage — live map', () => {
     expect(section('events').getByText('No guard events yet')).toBeInTheDocument();
   });
 });
+
+describe('GuardModePage vehicle identity', () => {
+  function mountWorkspace() {
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+    });
+    const tree = () => (
+      <MemoryRouter initialEntries={['/guard-mode']}>
+        <QueryClientProvider client={client}>
+          <GuardModePage />
+        </QueryClientProvider>
+      </MemoryRouter>
+    );
+    const view = render(tree());
+    return { refresh: () => view.rerender(tree()) };
+  }
+
+  it('discards previous vehicle drafts and requires a new panic confirmation after selection changes', () => {
+    const view = mountWorkspace();
+    fireEvent.change(screen.getByLabelText('Sensitivity'), { target: { value: 'low' } });
+    fireEvent.change(screen.getByLabelText('Home geofence'), { target: { value: '' } });
+    fireEvent.click(screen.getByRole('switch', { name: 'Auto-panic on trigger' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Activate panic' }));
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+
+    H.vehicle.vehicleId = 84;
+    H.vehicle.vehicle = { display_name: 'Second test vehicle' };
+    install({
+      config: makeQuery<GuardConfig>({
+        data: makeConfig({
+          vehicle_id: 84, enabled: false, sensitivity: 'medium',
+          home_geofence_id: 7, auto_panic: true,
+        }),
+      }),
+      state: makeQuery({ data: makeState({ vehicle_id: 84 }) }),
+      geofences: [makeGeofence({ id: '7', name: 'Test office' })],
+      events: makeQuery<GuardEvent[]>({
+        data: [makeEvent({ id: 84, vehicle_id: 84, event_type: 'test_alert' })],
+      }),
+    });
+    view.refresh();
+
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(H.panic.mutate).not.toHaveBeenCalled();
+    expect(H.setConfig.mutate).not.toHaveBeenCalled();
+    expect(screen.getByLabelText('Sensitivity')).toHaveValue('medium');
+    expect(screen.getByLabelText('Home geofence')).toHaveValue('7');
+    expect(screen.getByRole('switch', { name: 'Auto-panic on trigger' })).toHaveAttribute('aria-checked', 'true');
+    fireEvent.click(screen.getByRole('button', { name: 'Save settings' }));
+    expect(H.setConfig.mutate).toHaveBeenCalledWith({
+      vehicleId: 84, enabled: false, sensitivity: 'medium',
+      home_geofence_id: 7, auto_panic: true,
+    });
+    fireEvent.click(screen.getByRole('switch', { name: 'Guard mode' }));
+    expect(H.setConfig.mutate).toHaveBeenLastCalledWith({
+      vehicleId: 84, enabled: true, sensitivity: 'medium',
+      home_geofence_id: 7, auto_panic: true,
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Acknowledge event' }));
+    expect(H.ackEvent.mutate).toHaveBeenCalledWith({ vehicleId: 84, eventId: 84 });
+    fireEvent.click(screen.getByRole('button', { name: 'Activate panic' }));
+    fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Activate panic' }));
+    expect(H.panic.mutate).toHaveBeenCalledTimes(1);
+    expect(H.panic.mutate).toHaveBeenCalledWith(84);
+  });
+
+  it('retains explicit false, no geofence, and confirmation through same-vehicle refreshes', () => {
+    const view = mountWorkspace();
+    fireEvent.change(screen.getByLabelText('Sensitivity'), { target: { value: 'low' } });
+    fireEvent.change(screen.getByLabelText('Home geofence'), { target: { value: '' } });
+    fireEvent.click(screen.getByRole('switch', { name: 'Auto-panic on trigger' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Activate panic' }));
+    install({ config: makeQuery<GuardConfig>({ data: makeConfig({ sensitivity: 'medium' }) }) });
+    view.refresh();
+
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    expect(H.panic.mutate).not.toHaveBeenCalled();
+    fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Cancel' }));
+    expect(screen.getByLabelText('Sensitivity')).toHaveValue('low');
+    expect(screen.getByLabelText('Home geofence')).toHaveValue('');
+    expect(screen.getByRole('switch', { name: 'Auto-panic on trigger' })).toHaveAttribute('aria-checked', 'false');
+    fireEvent.click(screen.getByRole('button', { name: 'Save settings' }));
+    expect(H.setConfig.mutate).toHaveBeenCalledWith({
+      vehicleId: 42, enabled: true, sensitivity: 'low',
+      home_geofence_id: null, auto_panic: false,
+    });
+  });
+
+  it('revokes the confirmation on vehicle deselection without removing independent sections', () => {
+    const view = mountWorkspace();
+    fireEvent.click(screen.getByRole('button', { name: 'Activate panic' }));
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    H.vehicle.vehicleId = 0;
+    H.vehicle.vehicle = null;
+    install({
+      config: makeQuery<GuardConfig>(),
+      events: makeQuery<GuardEvent[]>(),
+      state: makeQuery<ReturnType<typeof makeState>>(),
+    });
+    view.refresh();
+
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Activate panic' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Save settings' })).toBeDisabled();
+    expect(screen.getByRole('switch', { name: 'Guard mode' })).toBeDisabled();
+    expect(screen.getByRole('region', { name: 'Guard status overview' })).toBeInTheDocument();
+    for (const name of ['map', 'arming', 'panic', 'settings', 'status', 'events']) {
+      expect(document.querySelector(`[data-guard-section="${name}"]`)).toBeInTheDocument();
+    }
+    expect(H.panic.mutate).not.toHaveBeenCalled();
+    expect(H.setConfig.mutate).not.toHaveBeenCalled();
+    expect(H.ackEvent.mutate).not.toHaveBeenCalled();
+  });
+});

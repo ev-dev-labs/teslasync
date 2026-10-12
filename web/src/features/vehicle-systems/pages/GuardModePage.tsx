@@ -6,6 +6,7 @@ import { AlertBanner } from '@/components/feedback';
 import { TimeStamp } from '@/components/data-display';
 import { FadeIn } from '@/components/motion';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import {
   useGuardPageModel, GuardOverview, GuardLiveMap, GuardControls,
   GuardSettings, GuardStatus, GuardEvents, eventLabelKey,
@@ -14,6 +15,13 @@ import {
 /** Workspace scope stays in the application header. Each independent source
  * owns recovery inside its persistent section, not a page-wide data gate. */
 export default function GuardModePage() {
+  const { vehicleId } = useSelectedVehicle();
+  // Vehicle changes must dispose drafts and confirmations before new actions
+  // become available; a confirmation for one vehicle cannot authorize another.
+  return <GuardModeWorkspace key={vehicleId ?? 0} />;
+}
+
+function GuardModeWorkspace() {
   const { t } = useTranslation();
   usePageTitle(t('guard.title', 'Guard mode'));
   const model = useGuardPageModel();
