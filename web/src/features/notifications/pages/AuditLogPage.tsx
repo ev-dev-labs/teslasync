@@ -10,10 +10,10 @@
 
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Clock, AlertTriangle } from 'lucide-react';
+import { Clock } from 'lucide-react';
 import { PageLayout } from '@/components/layout';
-import { Button, DataTable, GlassPanel, PanelTitle, Text, type Column } from '@/components/ui';
-import { Skeleton, StaleRefreshWarning } from '@/components/feedback';
+import { DataTable, GlassPanel, Icon, PanelTitle, Text, type Column } from '@/components/ui';
+import { EmptyState, QueryError, Skeleton, StaleRefreshWarning } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import {
   SearchInput,
@@ -25,6 +25,7 @@ import { useFilteredList } from '@/hooks/useFilteredList';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useDataState } from '@/hooks/useDataState';
 import { formatDateTime } from '@/lib/dateFormat';
+import { typography } from '@/lib/tokens';
 import { useAuditLogs } from '@/api/hooks/useAdmin';
 import type { AuditLogEntry } from '@/types/admin';
 
@@ -32,9 +33,9 @@ export default function AuditLogPage() {
   const { t } = useTranslation();
   usePageTitle(t('audit.title', 'Audit log'));
   const auditQuery = useAuditLogs();
-  const auditState = useDataState(auditQuery);
+  const auditState = useDataState(auditQuery, { provenance: 'historical' });
   const { data: auditLogs } = auditQuery;
-  const isLoading = !auditState.hasData && auditQuery.isLoading;
+  const isLoading = auditState.status === 'initial';
   const error = auditState.fatalError;
 
   const [search, setSearch] = useState('');
@@ -90,30 +91,36 @@ export default function AuditLogPage() {
     >
       <StaleRefreshWarning state={auditState} label={t('audit.title', 'Audit log')} />
       <FadeIn>
-        <GlassPanel className="p-6">
+        <GlassPanel className="min-w-0 p-4 sm:p-6">
           <PanelTitle className="mb-4 flex items-center gap-2">
-            <Clock className="w-5 h-5 text-neon-cyan" aria-hidden="true" />
+            <Icon icon={Clock} size="lg" className={typography.color.muted} />
             {t('audit.recentActivity', 'Recent activity')}
           </PanelTitle>
 
-          {isLoading ? (
-            <div className="space-y-2 mt-4">
+          {isLoading && auditState.isRefreshBlocked ? (
+            <EmptyState
+              title={t('error.waiting.title', 'Waiting for upstream')}
+              message={t('error.waiting.retryMessage', 'Requests are paused briefly. Wait before retrying.')}
+              action={{ label: t('common.retry', 'Retry'), onClick: () => { void auditQuery.refetch(); } }}
+              className="py-6"
+            />
+          ) : isLoading ? (
+            <div role="status" aria-label={t('developerReference.layout.source.loading', 'Loading {{label}}', { label: t('audit.title', 'Audit log') })} className="space-y-2 mt-4">
               {[1, 2, 3, 4, 5].map((i) => (
                 <Skeleton key={i} className="h-8" />
               ))}
             </div>
           ) : error ? (
-            <div className="mt-4 space-y-3">
-              <Text role="alert" variant="bodySm" className="flex items-start gap-2 break-words text-rose-300">
-                <AlertTriangle className="h-4 w-4 shrink-0" aria-hidden="true" />{' '}
-                {t('audit.loadFailed', 'Failed to load audit logs')}:{' '}
-                {(error instanceof Error && error.message) ||
-                  t('audit.loadError.unknown', 'Unknown error')}
-              </Text>
-              <Button wrapLabel size="sm" variant="secondary" onClick={() => { void auditQuery.refetch(); }}>
-                {t('common.retry', 'Retry')}
-              </Button>
-            </div>
+            <QueryError
+              compact
+              className="mt-4"
+              error={error}
+              message={[
+                t('audit.loadFailed', 'Failed to load audit logs'),
+                error.message || t('audit.loadError.unknown', 'Unknown error'),
+              ].join(': ')}
+              onRetry={() => { void auditQuery.refetch(); }}
+            />
           ) : (auditLogs as AuditLogEntry[])?.length ? (
             <div className="mt-4">
               <FilterBar className="mb-3">
@@ -147,6 +154,7 @@ export default function AuditLogPage() {
               {filtered.length > 0 ? (
                 <DataTable
                   tableId="audit-logs"
+                  caption={t('audit.recentActivity', 'Recent activity')}
                   columns={columns}
                   mobileColumns={['time', 'action', 'resource', 'details']}
                   data={filtered}
@@ -157,15 +165,11 @@ export default function AuditLogPage() {
                   pagination={{ defaultPageSize: 50 }}
                 />
               ) : (
-                <Text variant="bodySm" color="muted" className="block">
-                  {t('audit.noMatches', 'No audit entries match your search.')}
-                </Text>
+                <EmptyState message={t('audit.noMatches', 'No audit entries match your search.')} className="py-6" />
               )}
             </div>
           ) : (
-            <Text variant="bodySm" color="muted" className="mt-4 block">
-              {t('audit.noEntries', 'No audit entries found')}
-            </Text>
+            <EmptyState message={t('audit.noEntries', 'No audit entries found')} className="py-6" />
           )}
         </GlassPanel>
       </FadeIn>

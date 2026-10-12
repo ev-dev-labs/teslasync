@@ -27,7 +27,7 @@
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { act, render, screen, fireEvent, waitFor, within } from '@testing-library/react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { onlineManager, QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
 
@@ -108,6 +108,7 @@ import { request, ApiError } from '@/api/client';
 import { downloadCSV, downloadJSON } from '@/lib/csvExport';
 import AuditLogPage from './AuditLogPage';
 import type { AuditLogEntry } from '@/types/admin';
+import { typography } from '@/lib/tokens';
 
 const mockedRequest = request as unknown as ReturnType<typeof vi.fn>;
 
@@ -346,5 +347,46 @@ describe('AuditLogPage — null safety', () => {
     expect(screen.getAllByText('—').length).toBeGreaterThanOrEqual(4);
     // The page did not crash — its heading is still present.
     expect(screen.getByRole('heading', { name: 'Recent activity' })).toBeInTheDocument();
+  });
+});
+
+describe('AuditLogPage — modernization preservation', () => {
+  it('names the audit table with its localized section while preserving loaded-row exports', async () => {
+    mockedRequest.mockResolvedValue(AUDIT);
+    renderPage();
+
+    const table = await screen.findByRole('table', { name: 'Recent activity' });
+    expect(within(table).getAllByRole('columnheader')).toHaveLength(4);
+    expect(screen.getByRole('heading', { name: 'Recent activity' }).querySelector('svg'))
+      .toHaveClass(typography.color.muted);
+    fireEvent.click(screen.getByRole('button', { name: 'Export list' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Download as CSV' }));
+    await waitFor(() => expect(downloadCSV).toHaveBeenCalledOnce());
+    expect(vi.mocked(downloadCSV).mock.calls[0][0]).toBe('audit-logs');
+    expect(vi.mocked(downloadCSV).mock.calls[0][1]).toContain('settings.update');
+    expect(vi.mocked(downloadCSV).mock.calls[0][1]).toContain('apikey.revoke');
+  });
+
+  it('does not claim an empty audit history when the first request is paused and recovers on reconnect', async () => {
+    onlineManager.setOnline(false);
+    try {
+      mockedRequest.mockResolvedValue(AUDIT);
+      renderPage();
+
+      expect(await screen.findByText('Requests are paused briefly. Wait before retrying.')).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: 'Recent activity' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Retry' })).toBeEnabled();
+      expect(screen.queryByText('No audit entries found')).not.toBeInTheDocument();
+      expect(screen.queryByRole('table')).not.toBeInTheDocument();
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+      expect(mockedRequest).not.toHaveBeenCalled();
+
+      act(() => { onlineManager.setOnline(true); });
+      expect(await screen.findByText('settings.update')).toBeInTheDocument();
+      expect(screen.queryByText('Requests are paused briefly. Wait before retrying.')).not.toBeInTheDocument();
+      expect(screen.getByRole('table', { name: 'Recent activity' })).toBeInTheDocument();
+    } finally {
+      onlineManager.setOnline(true);
+    }
   });
 });
