@@ -5,6 +5,7 @@ import { authorizedCanonicalAdditions } from './authorized-canonical-recovery.te
 import { finalFourAdditions, ownerRecoveryAdditions } from './authorized-owner-recovery.test'
 import baseline from './known-missing-keys.json'
 import shell from './en/shell.json'
+import dashboard from './en/locale-dashboard.json'
 import runtimeManifest from './en/runtime-manifest.json'
 import usageManifest from './en/usage-manifest.json'
 import i18n, { flushPendingEnglishResourcesForTest, loadEnglishNamespace } from './index'
@@ -31,6 +32,24 @@ const additions = [
   ['table.genericName', 'Data table'],
   ['table.selection.deselectRowNamed', 'Deselect {{row}}'],
   ['table.selection.selectRowNamed', 'Select {{row}}'],
+] as const
+
+// Accepted after the frozen projection: phase4-sticky-control-localization (1),
+// phase4-watch-key-capability (5), and phase4-signal-catalog-canonical-repair (6).
+// Do not exclude their whole namespaces or the pre-existing observation labels.
+const phase4Additions = [
+  ['a11y.scrollToTop', '{{region}} — scroll to top'],
+  ['watch.capability.notConfigured', 'Watch access is not configured'],
+  ['watch.capability.description', 'Watch readings require a wearable API key in this session. Manage API keys and open your configured watch link to enable readings. Retained readings are not refreshed until access is configured.'],
+  ['watch.capability.configure', 'Manage API keys'],
+  ['watch.capability.readError', 'Watch access could not be checked'],
+  ['watch.capability.readErrorDescription', 'Watch access is unknown because browser session storage could not be read or saved. Retry after storage becomes available. Retained readings remain visible.'],
+  ['widget.signalCatalog.destination', 'Destination: {{destination}}'],
+  ['widget.signalCatalog.valueKind', 'Value kind'],
+  ['widget.signalCatalog.metadataUnavailable', 'Unit and description are not provided by this catalog.'],
+  ['widget.signalCatalog.totalSamples', 'Total observations: {{count}}'],
+  ['widget.signalCatalog.vehicleCount', 'Vehicles observed: {{count}}'],
+  ['widget.signalCatalog.lastSeen', 'Last seen: {{timestamp}}'],
 ] as const
 
 // Exact accepted later producers; only these keys may leave the original fingerprint.
@@ -178,6 +197,17 @@ describe('resolved known-missing canonical producers', () => {
       expect(nested(catalog, key)).toBe(value)
       addedKeys.add(key)
     }
+    expect(phase4Additions).toHaveLength(12)
+    for (const [key, value] of phase4Additions) {
+      expect(addedKeys.has(key), key).toBe(false)
+      expect(nested(catalog, key), key).toBe(value)
+      const namespace = key.split('.')[0]
+      const resource = namespace === 'a11y' ? shell
+        : namespace === 'widget' ? dashboard
+          : generated[`./en/locale-detail-${namespace}.json`].default
+      expect(nested(resource, key), key).toBe(value)
+      addedKeys.add(key)
+    }
     const oldEntries = leaves(catalog)
       .filter(([key]) => !addedKeys.has(key))
       .sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0)
@@ -185,7 +215,7 @@ describe('resolved known-missing canonical producers', () => {
     // Frozen before-producer leaf/value fingerprint, not a regenerated baseline.
     expect(createHash('sha256').update(JSON.stringify(oldEntries)).digest('hex'))
       .toBe('d919112ce76ecf5875dc1641f99561a22871a3ca3c9ce9a58c70d308ce34a6ad')
-    expect(leaves(catalog)).toHaveLength(31095)
+    expect(leaves(catalog)).toHaveLength(31095 + phase4Additions.length)
     expect(catalog.settings.title).toBe('Settings')
     expect(catalog.pwa.offline.banner).toBe(
       'Showing cached data. Operational changes stay disabled until you reconnect.',
