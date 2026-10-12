@@ -122,11 +122,13 @@ vi.mock('@/components/charts', async () => {
       value,
       unit,
       max,
+      color,
     }: {
       label?: string;
-      value?: number;
+      value?: number | null;
       unit?: string;
       max?: number;
+      color?: string;
     }) => (
       <div
         data-testid="gauge"
@@ -134,14 +136,18 @@ vi.mock('@/components/charts', async () => {
         data-value={String(value)}
         data-unit={unit ?? ''}
         data-max={String(max)}
+        data-color={color}
       />
     ),
     ResponsiveContainer: Passthrough,
     AreaChart: Passthrough,
     ComposedChart: Passthrough,
-    Area: () => null,
-    Line: () => null,
-    XAxis: () => null,
+    Area: ({ dataKey, stroke, fillOpacity }: { dataKey: string; stroke: string; fillOpacity?: number }) =>
+      <div data-testid="chart-series" data-key={dataKey} data-stroke={stroke} data-opacity={fillOpacity} />,
+    Line: ({ dataKey, stroke }: { dataKey: string; stroke: string }) =>
+      <div data-testid="chart-series" data-key={dataKey} data-stroke={stroke} />,
+    XAxis: ({ label }: { label?: { value: string } }) =>
+      <div data-testid="chart-axis" data-label={label?.value} />,
     YAxis: () => null,
     Tooltip: () => null,
     ReferenceLine: () => null,
@@ -196,6 +202,9 @@ vi.mock('@/api/hooks/useVehicles', () => ({
 }));
 vi.mock('@/hooks/useUnits', () => ({ useUnits: vi.fn() }));
 vi.mock('@/hooks/useFormatting', () => ({ useFormatting: vi.fn() }));
+vi.mock('@/hooks/useChartPalette', () => ({
+  useChartPalette: () => ['var(--series-a)', 'var(--series-b)', 'var(--series-c)', 'var(--series-d)', 'var(--series-e)'],
+}));
 
 import { useChargingSessionDetail, useChargeTelemetry } from '@/api/hooks/useCharging';
 import { useVehicle, useChargingTelemetryLatest } from '@/api/hooks/useVehicles';
@@ -211,7 +220,7 @@ const mockUnits = useUnits as unknown as ReturnType<typeof vi.fn>;
 const mockFormatting = useFormatting as unknown as ReturnType<typeof vi.fn>;
 
  
-function makeQuery(over: Record<string, unknown> = {}): any {
+function makeQuery(over: Record<string, unknown> = {}) {
   return {
     data: undefined,
     error: null,
@@ -822,5 +831,110 @@ describe('ChargingDetailPage — share dialog wiring', () => {
 
     fireEvent.click(within(dialog).getByRole('button', { name: 'close share dialog' }));
     expect(screen.queryByRole('dialog', { name: 'Share session' })).not.toBeInTheDocument();
+  });
+
+  describe('ChargingDetailPage — restrained presentation and source honesty', () => {
+    it('uses the saved palette for every preserved series and gauge without decorative area fill', () => {
+      renderPage();
+
+      expect(screen.getAllByTestId('chart-series').map(series => [
+        series.getAttribute('data-key'), series.getAttribute('data-stroke'),
+      ])).toEqual([
+        ['power', 'var(--series-e)'],
+        ['soc', 'var(--series-b)'],
+        ['energy', 'var(--series-a)'],
+        ['range', 'var(--series-c)'],
+        ['battery', 'var(--series-d)'],
+        ['inside', 'var(--series-c)'],
+        ['outside', 'var(--series-a)'],
+        ['voltage', 'var(--series-c)'],
+        ['current', 'var(--series-a)'],
+      ]);
+      expect(gauge('Energy Added')).toHaveAttribute('data-color', 'var(--series-a)');
+      expect(gauge('Peak Power')).toHaveAttribute('data-color', 'var(--series-e)');
+      for (const series of screen.getAllByTestId('chart-series').filter(el =>
+        ['power', 'soc'].includes(el.getAttribute('data-key') ?? ''),
+      )) {
+        expect(series).toHaveAttribute('data-opacity', '0.08');
+      }
+      expect(screen.getAllByTestId('chart-axis')[0]).toHaveAttribute('data-label', 'SoC %');
+      expect(screen.getAllByRole('table')).toHaveLength(4);
+    });
+
+    it('keeps missing battery and power readings unknown while all five gauges and section shells remain', () => {
+      mockSession.mockReturnValue(makeQuery({
+        data: makeSession({ start_soc_pct: null, end_soc_pct: null, peak_power_w: null, avg_power_w: null }),
+      }));
+      renderPage();
+
+      expect(screen.getAllByTestId('gauge')).toHaveLength(5);
+      for (const label of ['End SoC', 'Peak Power', 'Avg Power']) {
+        expect(gauge(label)).toHaveAttribute('data-value', 'null');
+      }
+      const progress = within(namedCard('Battery Progress'));
+      for (const label of ['Start SoC', 'End SoC']) {
+        expect(progress.getByRole('progressbar', { name: label })).not.toHaveAttribute('aria-valuenow');
+        expect(progress.getByRole('progressbar', { name: label })).toHaveAttribute('aria-valuetext', 'No reading');
+      }
+      expect(progress.getByText('SoC Gained').closest('p')?.nextElementSibling?.textContent).toBe('—');
+      expect(screen.getByRole('heading', { name: 'Charge Summary' })).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: 'Advanced Charging Parameters' })).toBeInTheDocument();
+    });
+
+    it('preserves measured zero independently from an unknown duration for an ongoing record', () => {
+      mockSession.mockReturnValue(makeQuery({
+        data: makeSession({ ended_at: null, end_soc_pct: 0, peak_power_w: 0, avg_power_w: 0 }),
+      }));
+      renderPage();
+
+      for (const label of ['End SoC', 'Peak Power', 'Avg Power']) {
+        expect(gauge(label)).toHaveAttribute('data-value', '0');
+      }
+      expect(gauge('Duration')).toHaveAttribute('data-value', 'null');
+      expect(within(namedCard('Battery Progress')).getByRole('progressbar', { name: 'End SoC' }))
+        .toHaveAttribute('aria-valuenow', '0');
+    });
+
+    it.each([
+      { name: 'missing start', fields: { start_soc_pct: null } },
+      { name: 'missing end', fields: { end_soc_pct: null } },
+      { name: 'missing peak', fields: { peak_power_w: null } },
+      { name: 'nonfinite peak', fields: { peak_power_w: Infinity } },
+      { name: 'reversed interval', fields: { start_soc_pct: 90, end_soc_pct: 20 } },
+    ])('does not invent model inputs for $name', ({ fields }) => {
+      mockSession.mockReturnValue(makeQuery({ data: makeSession(fields) }));
+      mockTelemetry.mockReturnValue(makeQuery({ data: [] }));
+      renderPage();
+
+      expect(screen.getByRole('region', { name: 'Charge Curve' })).toBeInTheDocument();
+      expect(screen.getByText(/A charge curve cannot be plotted/)).toBeInTheDocument();
+      expect(screen.queryByRole('table', { name: 'Charge Curve — data table' })).toBeNull();
+      expect(screen.queryByText('(estimated)')).toBeNull();
+      expect(screen.getByRole('heading', { name: 'Charge Summary' })).toBeInTheDocument();
+    });
+
+    it('keeps the explicit AC classification and the complete inferred model separate from measured telemetry', () => {
+      mockSession.mockReturnValue(makeQuery({ data: makeSession({ charger_type: 'AC', peak_power_w: 11_000 }) }));
+      mockTelemetry.mockReturnValue(makeQuery({ data: [] }));
+      renderPage();
+
+      expect(within(screen.getByRole('region', { name: 'Session summary' })).getAllByText('AC')).toHaveLength(2);
+      expect(gauge('Peak Power')).toHaveAttribute('data-max', '22');
+      expect(screen.getByText('(estimated)')).toBeInTheDocument();
+      expect(screen.getByText('Estimated').closest('[data-provenance]'))
+        .toHaveAttribute('title', 'Derived from other readings. The vehicle did not report this value directly.');
+      expect(within(screen.getByRole('table', { name: 'Charge Curve — data table' })).getAllByRole('row')).toHaveLength(22);
+    });
+
+    it('qualifies current vehicle state without changing the historical session status or record-owned queries', () => {
+      renderPage();
+
+      const summary = within(screen.getByRole('region', { name: 'Session summary' }));
+      expect(summary.getByText('Latest reported values from the vehicle.')).toBeInTheDocument();
+      expect(summary.getByText('Charging')).toBeInTheDocument();
+      expect(within(namedCard('Charge Summary')).getByText('Complete')).toBeInTheDocument();
+      expect(mockTelemetry).toHaveBeenCalledWith(42);
+      expect(mockLive).toHaveBeenCalledWith(7);
+    });
   });
 });

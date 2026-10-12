@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactNode } from 'react';
+import { useCallback, useMemo, useState, type ReactNode } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
@@ -11,6 +11,7 @@ import { useChargingSessionDetail, useChargeTelemetry } from '@/api/hooks/useCha
 import { useVehicle, useChargingTelemetryLatest } from '@/api/hooks/useVehicles';
 import { useFormatting } from '@/hooks/useFormatting';
 import { useUnits } from '@/hooks/useUnits';
+import { useChartPalette } from '@/hooks/useChartPalette';
 import { convertTempFromSI, convertDistanceFromSI, convertEnergyFromSI, convertPowerFromSI } from '@/lib/unitConversion';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useDataState } from '@/hooks/useDataState';
@@ -24,7 +25,7 @@ import {
   SectionTitle, Text,
 } from '@/components/ui';
 import {
-  MetricBar, InlineMetric, AnimatedNumber, KVList,
+  MetricBar, InlineMetric, KVList,
   DateTime, DataProvenanceBadge,
 } from '@/components/data-display';
 import { LinearGauge } from '@/components/charts';
@@ -50,12 +51,12 @@ import { ChargeBillTruthPanel } from '../components/ChargeBillTruthPanel';
 import { ShareSessionDialog } from '../components/ShareSessionDialog';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { DetailPlacement, DetailSessionStats, DetailSourceOutline } from '../components/detail-modernization';
+import { isDcCharger } from '../lib/chargeBillTruth';
 
 /* ─── helpers ──────────────────────────────────────────────────── */
 
 function isDC(session: ChargingSession): boolean {
-  const ft = session.charger_type?.toLowerCase() ?? '';
-  return ft !== '' && ft !== '<invalid>' && ft !== 'unknown';
+  return isDcCharger(session.charger_type);
 }
 
 /**
@@ -69,11 +70,17 @@ function isDC(session: ChargingSession): boolean {
  */
 const A11Y_TABLE_ROW_CAP = 2000;
 
-/** Synthesize a plausible charge curve when telemetry is absent. */
+/** Keep the existing model distinct from telemetry; missing inputs cannot seed it. */
 function synthesizeCurve(session: ChargingSession): { soc: number; power: number }[] {
-  const startSoc = session.start_soc_pct ?? 0;
-  const endSoc = session.end_soc_pct ?? 100;
-  const peakPower = (session.peak_power_w ?? 50_000) / 1000;
+  const startSoc = session.start_soc_pct;
+  const endSoc = session.end_soc_pct;
+  const peakPowerW = session.peak_power_w;
+  if (
+    startSoc == null || endSoc == null || peakPowerW == null ||
+    !Number.isFinite(startSoc) || !Number.isFinite(endSoc) || !Number.isFinite(peakPowerW) ||
+    startSoc < 0 || endSoc > 100 || endSoc < startSoc || peakPowerW < 0
+  ) return [];
+  const peakPower = convertPowerFromSI(peakPowerW, 'kW');
   const points: { soc: number; power: number }[] = [];
   const steps = 20;
   for (let i = 0; i <= steps; i++) {
@@ -164,7 +171,11 @@ export default function ChargingDetailPage() {
   // Session odometer deltas and live charging distances are canonical meters.
   // Convert once, only at the display boundary.
   const { unitPrefs, formatEnergy, formatPower } = useUnits();
-  const toDistanceDisplay = (value: number) => convertDistanceFromSI(value, unitPrefs.distance);
+  const palette = useChartPalette();
+  const toDistanceDisplay = useCallback(
+    (value: number) => convertDistanceFromSI(value, unitPrefs.distance),
+    [unitPrefs.distance],
+  );
 
   const distanceUnit = unitPrefs.distance;
   const {
@@ -350,45 +361,46 @@ export default function ChargingDetailPage() {
   const gauges = [
     {
       key: 'energy',
-      color: '#00f0ff',
-      glow: 'cyan' as const,
-      value: convertEnergyFromSI(displayEnergyWh ?? 0, unitPrefs.energy),
+      color: palette[0],
+      value: billedEnergyWh != null && billedEnergyWh > 0
+        ? convertEnergyFromSI(billedEnergyWh, unitPrefs.energy)
+        : session.total_energy_added_wh != null
+          ? convertEnergyFromSI(session.total_energy_added_wh, unitPrefs.energy)
+          : null,
       max: Math.max(convertEnergyFromSI(displayEnergyWh || 1, unitPrefs.energy), 80),
       label: t('charging.detail.energyAdded', 'Energy Added'),
       unit: unitPrefs.energy,
     },
     {
       key: 'endSoc',
-      color: '#10b981',
-      glow: 'green' as const,
-      value: session.end_soc_pct ?? 0,
+      color: palette[1],
+      value: session.end_soc_pct,
       max: 100,
       label: t('charging.detail.endSoc', 'End SoC'),
       unit: '%',
     },
     {
       key: 'peakPower',
-      color: '#a855f7',
-      glow: 'purple' as const,
-      value: convertPowerFromSI(session.peak_power_w ?? 0, 'kW'),
+      color: palette[4],
+      value: session.peak_power_w != null ? convertPowerFromSI(session.peak_power_w, 'kW') : null,
       max: dc ? 250 : 22,
       label: t('charging.detail.peakPower', 'Peak Power'),
       unit: 'kW',
     },
     {
       key: 'duration',
-      color: '#f59e0b',
-      glow: 'none' as const,
-      value: durationMin,
+      color: palette[2],
+      value: session.ended_at && Number.isFinite(Date.parse(session.started_at)) &&
+        Number.isFinite(Date.parse(session.ended_at)) &&
+        Date.parse(session.ended_at) >= Date.parse(session.started_at) ? durationMin : null,
       max: Math.max(durationMin || 1, 120),
       label: t('charging.detail.duration', 'Duration'),
       unit: 'min',
     },
     {
       key: 'avgPower',
-      color: '#06b6d4',
-      glow: 'none' as const,
-      value: convertPowerFromSI(session.avg_power_w ?? 0, 'kW'),
+      color: palette[0],
+      value: session.avg_power_w != null ? convertPowerFromSI(session.avg_power_w, 'kW') : null,
       max: dc ? 250 : 22,
       label: t('charging.detail.avgPower', 'Avg Power'),
       unit: 'kW',
@@ -407,6 +419,7 @@ export default function ChargingDetailPage() {
             <Button
               variant="ghost"
               size="sm"
+              className="min-h-11 min-w-11 md:min-h-9"
               onClick={() => setShareDialogOpen(true)}
               icon={<Share2 className="h-4 w-4" aria-hidden="true" />}
             >
@@ -454,9 +467,14 @@ export default function ChargingDetailPage() {
             updatedAt={sessionDataState.updatedAt}
           />
           {chargingState && (
-            <Badge variant={chargingStateVariant(chargingState)} size="sm" dot>
-              {t(`charging.detail.chargingState.${chargingState}`, chargingState)}
-            </Badge>
+            <span className="inline-flex max-w-full flex-wrap items-center gap-2">
+              <Text as="span" variant="caption">
+                {t('charging.detail.advancedHint', 'Latest reported values from the vehicle.')}
+              </Text>
+              <Badge variant={chargingStateVariant(chargingState)} size="sm" dot>
+                {t(`charging.detail.chargingState.${chargingState}`, chargingState)}
+              </Badge>
+            </span>
           )}
           {session.charger_type && (
             <Badge variant="neutral" size="sm">{session.charger_type}</Badge>
@@ -541,7 +559,7 @@ export default function ChargingDetailPage() {
           ) },
           { id: 'gauges', size: 'half', content: (
             <LayoutCard title={t('charging.detail.liveGauges', 'Live Gauges')} actions={
-                <BatteryCharging className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+                <BatteryCharging className="h-4 w-4 text-[var(--text-secondary)]" aria-hidden="true" />
             }>
               <StaggerContainer className="grid grid-cols-2 gap-3 @2xl:grid-cols-3 @4xl:grid-cols-5">
                 {gauges.map((g) => (
@@ -571,16 +589,18 @@ export default function ChargingDetailPage() {
             }>
               <div className="space-y-4">
                 <MetricBar
-                  value={session.start_soc_pct ?? 0}
+                  value={session.start_soc_pct}
                   max={100}
-                  color="#f59e0b"
+                  color={palette[2]}
+                  fill="solid"
                   label={t('charging.detail.startSoc', 'Start SoC')}
                   sublabel={fmtPercent(session.start_soc_pct)}
                 />
                 <MetricBar
-                  value={session.end_soc_pct ?? 0}
+                  value={session.end_soc_pct}
                   max={100}
-                  color="#10b981"
+                  color={palette[1]}
+                  fill="solid"
                   label={t('charging.detail.endSoc', 'End SoC')}
                   sublabel={fmtPercent(session.end_soc_pct)}
                 />
@@ -589,7 +609,9 @@ export default function ChargingDetailPage() {
                 <div>
                   <Text as="p" variant="caption">{t('charging.detail.socGained', 'SoC Gained')}</Text>
                   <Text as="p" size="lg" weight="bold" color="primary" className="tabular-nums">
-                    <AnimatedNumber value={(session.end_soc_pct ?? 0) - (session.start_soc_pct ?? 0)} />%
+                    {session.start_soc_pct != null && session.end_soc_pct != null
+                      ? fmtPercent(session.end_soc_pct - session.start_soc_pct)
+                      : '—'}
                   </Text>
                 </div>
                 <div>
@@ -603,7 +625,7 @@ export default function ChargingDetailPage() {
                 <div>
                   <Text as="p" variant="caption">{t('charging.detail.energyAdded', 'Energy Added')}</Text>
                   <Text as="p" size="lg" weight="bold" color="primary" className="tabular-nums">
-                    {formatEnergy(session.total_energy_added_wh)}
+                    {session.total_energy_added_wh != null ? formatEnergy(session.total_energy_added_wh) : '—'}
                   </Text>
                 </div>
               </div>
@@ -621,11 +643,14 @@ export default function ChargingDetailPage() {
             <section aria-label={t('charging.detail.chargeCurve', 'Charge Curve')} className="min-w-0 space-y-3">
               <div className="flex flex-wrap items-center gap-1.5">
                 <Text as="p" variant="body" weight="medium">{t('charging.detail.chargeCurve', 'Charge Curve')}</Text>
-                <TrendingUp className="h-4 w-4 text-purple-300" aria-hidden="true" />
-                {!hasTelemetry && (
-                  <Text as="span" variant="caption">
-                    ({t('charging.detail.estimated', 'estimated')})
-                  </Text>
+                <TrendingUp className="h-4 w-4 text-[var(--text-secondary)]" aria-hidden="true" />
+                {!hasTelemetry && chargeCurve.length > 0 && (
+                  <>
+                    <Text as="span" variant="caption">
+                      ({t('charging.detail.estimated', 'estimated')})
+                    </Text>
+                    <DataProvenanceBadge provenance="inferred" />
+                  </>
                 )}
                 <HelpTooltip
                   size="sm"
@@ -658,12 +683,12 @@ export default function ChargingDetailPage() {
                 >
                   <ResponsiveContainer width="100%" height="100%">
                     <AreaChart data={chargeCurve} margin={chartMargin}>
-                      {areaGradient('powerGrad', '#a855f7')}
+                      {areaGradient('powerGrad', palette[4])}
                       {chartGrid}
                       <XAxis
                         dataKey="soc"
                         tick={axisTickSm}
-                        label={{ value: 'SoC %', position: 'insideBottom', offset: -2, ...axisTickSm }}
+                        label={{ value: `${t('charging.detail.soc', 'SoC')} %`, position: 'insideBottom', offset: -2, ...axisTickSm }}
                       />
                       <YAxis
                         tick={axisTickSm}
@@ -674,8 +699,10 @@ export default function ChargingDetailPage() {
                         {...AREA_DEFAULTS}
                         {...seriesPerfProps}
                         dataKey="power"
-                        stroke="#a855f7"
+                        stroke={palette[4]}
                         fill="url(#powerGrad)"
+                        fillOpacity={0.08}
+                        strokeWidth={2}
                         name={t('charging.detail.power', 'Power')}
                         unit=" kW"
                       />
@@ -701,12 +728,12 @@ export default function ChargingDetailPage() {
             <LayoutCard title={t('charging.detail.chargeSummary', 'Charge Summary')}>
               <div className="grid grid-cols-1 gap-3 @sm:grid-cols-2 @3xl:grid-cols-4">
                 <InlineMetric
-                  icon={<Gauge className="h-4 w-4 text-purple-300" aria-hidden="true" />}
+                  icon={<Gauge className="h-4 w-4 text-[var(--text-secondary)]" aria-hidden="true" />}
                   label={t('charging.detail.avgPower', 'Avg Power')}
                   value={session.avg_power_w != null ? fmtWithUnit(convertPowerFromSI(session.avg_power_w, 'kW'), 'kW') : '—'}
                 />
                 <InlineMetric
-                  icon={<MapPin className="h-4 w-4 text-emerald-300" aria-hidden="true" />}
+                  icon={<MapPin className="h-4 w-4 text-[var(--text-secondary)]" aria-hidden="true" />}
                   label={t('charging.detail.milesAdded', 'Miles Added')}
                   value={
                     addedDistanceM != null
@@ -715,12 +742,12 @@ export default function ChargingDetailPage() {
                   }
                 />
                 <InlineMetric
-                  icon={<Zap className="h-4 w-4 text-indigo-300" aria-hidden="true" />}
+                  icon={<Zap className="h-4 w-4 text-[var(--text-secondary)]" aria-hidden="true" />}
                   label={t('charging.detail.status', 'Status')}
                   value={session.ended_status ?? '—'}
                 />
                 <InlineMetric
-                  icon={<DollarSign className="h-4 w-4 text-amber-300" aria-hidden="true" />}
+                  icon={<DollarSign className="h-4 w-4 text-[var(--text-secondary)]" aria-hidden="true" />}
                   label={t('charging.detail.currency', 'Currency')}
                   value={session.cost_currency ?? '—'}
                 />
@@ -771,7 +798,7 @@ export default function ChargingDetailPage() {
                             syncMethod={sync.syncMethod}
                             onMouseMove={sync.onMouseMove}
                           >
-                            {areaGradient('socGrad', '#10b981')}
+                            {areaGradient('socGrad', palette[1])}
                             {chartGrid}
                             <XAxis dataKey="time" tick={axisTickSm} />
                             <YAxis yAxisId="left" tick={axisTickSm} domain={[0, 100]} />
@@ -783,8 +810,10 @@ export default function ChargingDetailPage() {
                               {...seriesPerfProps}
                               yAxisId="left"
                               dataKey="soc"
-                              stroke="#10b981"
+                              stroke={palette[1]}
                               fill="url(#socGrad)"
+                              fillOpacity={0.08}
+                              strokeWidth={2}
                               name={t('charging.detail.soc', 'SoC')}
                               unit=" %"
                               hide={hiddenSeries?.isHidden('soc')}
@@ -794,7 +823,7 @@ export default function ChargingDetailPage() {
                               {...seriesPerfProps}
                               yAxisId="right"
                               dataKey="energy"
-                              stroke="#00f0ff"
+                              stroke={palette[0]}
                               name={t('charging.detail.energy', 'Energy')}
                               unit=" kWh"
                               hide={hiddenSeries?.isHidden('energy')}
@@ -804,7 +833,7 @@ export default function ChargingDetailPage() {
                               {...seriesPerfProps}
                               yAxisId="right"
                               dataKey="range"
-                              stroke="#f59e0b"
+                              stroke={palette[2]}
                               name={t('charging.detail.range', 'Range')}
                               unit={` ${distanceUnit}`}
                               hide={hiddenSeries?.isHidden('range')}
@@ -850,7 +879,7 @@ export default function ChargingDetailPage() {
                 <section aria-label={t('charging.detail.temperature', 'Temperature')} className="min-w-0 space-y-3">
                   <div className="flex flex-wrap items-center gap-2">
                     <Text as="p" variant="body" weight="medium">{t('charging.detail.temperature', 'Temperature')}</Text>
-                    <Thermometer className="h-4 w-4 text-rose-300" aria-hidden="true" />
+                    <Thermometer className="h-4 w-4 text-[var(--text-secondary)]" aria-hidden="true" />
                   </div>
                   {telemetryLoading && !telemetryDataState.hasData ? (
                     <ChartBlockSkeleton height={240} />
@@ -901,7 +930,7 @@ export default function ChargingDetailPage() {
                                 {...AREA_DEFAULTS}
                                 {...seriesPerfProps}
                                 dataKey="battery"
-                                stroke="#ef4444"
+                                stroke={palette[3]}
                                 name={t('charging.detail.batteryTemp', 'Battery')}
                                 unit={` ${tempUnit}`}
                                 hide={hiddenSeries?.isHidden('battery')}
@@ -910,7 +939,7 @@ export default function ChargingDetailPage() {
                                 {...AREA_DEFAULTS}
                                 {...seriesPerfProps}
                                 dataKey="inside"
-                                stroke="#f59e0b"
+                                stroke={palette[2]}
                                 name={t('charging.detail.insideTemp', 'Inside')}
                                 unit={` ${tempUnit}`}
                                 hide={hiddenSeries?.isHidden('inside')}
@@ -919,7 +948,7 @@ export default function ChargingDetailPage() {
                                 {...AREA_DEFAULTS}
                                 {...seriesPerfProps}
                                 dataKey="outside"
-                                stroke="#3b82f6"
+                                stroke={palette[0]}
                                 name={t('charging.detail.outsideTemp', 'Outside')}
                                 unit={` ${tempUnit}`}
                                 hide={hiddenSeries?.isHidden('outside')}
@@ -960,7 +989,7 @@ export default function ChargingDetailPage() {
                 <section aria-label={t('charging.detail.voltageCurrent', 'Voltage & Current')} className="min-w-0 space-y-3">
                   <div className="flex flex-wrap items-center gap-2">
                     <Text as="p" variant="body" weight="medium">{t('charging.detail.voltageCurrent', 'Voltage & Current')}</Text>
-                    <Waves className="h-4 w-4 text-amber-300" aria-hidden="true" />
+                    <Waves className="h-4 w-4 text-[var(--text-secondary)]" aria-hidden="true" />
                   </div>
                   {telemetryLoading && !telemetryDataState.hasData ? (
                     <ChartBlockSkeleton height={240} />
@@ -1012,7 +1041,7 @@ export default function ChargingDetailPage() {
                                 {...seriesPerfProps}
                                 yAxisId="v"
                                 dataKey="voltage"
-                                stroke="#f59e0b"
+                                stroke={palette[2]}
                                 name={t('charging.detail.voltage', 'Voltage')}
                                 unit=" V"
                                 hide={hiddenSeries?.isHidden('voltage')}
@@ -1022,7 +1051,7 @@ export default function ChargingDetailPage() {
                                 {...seriesPerfProps}
                                 yAxisId="a"
                                 dataKey="current"
-                                stroke="#06b6d4"
+                                stroke={palette[0]}
                                 name={t('charging.detail.current', 'Current')}
                                 unit=" A"
                                 hide={hiddenSeries?.isHidden('current')}
@@ -1198,7 +1227,7 @@ export default function ChargingDetailPage() {
           ) },
           { id: 'location', size: 'half', content: (
             <LayoutCard title={t('charging.detail.location', 'Location')} actions={
-                <MapPin className="h-4 w-4 text-emerald-300" aria-hidden="true" />
+                <MapPin className="h-4 w-4 text-[var(--text-secondary)]" aria-hidden="true" />
             }>
               {session.start_place ? (
                 <Text as="p" variant="body" className="max-w-prose break-words">{session.start_place}</Text>
@@ -1214,7 +1243,7 @@ export default function ChargingDetailPage() {
           ) },
           { id: 'timestamps', size: 'half', content: (
             <LayoutCard title={t('charging.detail.timestamps', 'Timestamps')} actions={
-                <Clock className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+                <Clock className="h-4 w-4 text-[var(--text-secondary)]" aria-hidden="true" />
             }>
               <div className="grid grid-cols-1 gap-4 @lg:grid-cols-2">
                 <div>
