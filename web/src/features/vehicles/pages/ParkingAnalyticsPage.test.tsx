@@ -179,6 +179,39 @@ function query(overrides: Record<string, unknown> = {}) {
   };
 }
 
+function sampleDrives(count: number): Drive[] {
+  return Array.from({ length: count }, (_, index) => {
+    const startMs = Date.parse('2026-07-01T00:00:00.000Z') + index * 60_000;
+    return {
+      id: index + 1,
+      vehicleId: 42,
+      startTs: new Date(startMs).toISOString(),
+      endTs: new Date(startMs + 30_000).toISOString(),
+      durationS: 30,
+      distanceM: 0,
+      startAddress: null,
+      endAddress: null,
+      startLat: null,
+      startLon: null,
+      endLat: null,
+      endLon: null,
+      startBatteryPct: null,
+      endBatteryPct: null,
+      energyUsedWh: null,
+      regenEnergyWh: null,
+      avgSpeedMps: null,
+      maxSpeedMps: null,
+      avgPowerW: null,
+      outsideTempAvgC: null,
+      insideTempAvgC: null,
+      score: null,
+      endedStatus: null,
+      createdAt: '',
+      updatedAt: '',
+    };
+  });
+}
+
 const SECTION_IDS = [
   'parking-kpis',
   'parking-duration',
@@ -201,6 +234,65 @@ afterEach(() => {
 });
 
 describe('ParkingAnalyticsPage', () => {
+  it.each([
+    { case: 'below cap', count: 999, status: 'Source returned' },
+    { case: 'at cap', count: 1_000, status: 'Partial source coverage' },
+  ])('discloses successful sample coverage $case without changing SI records', ({ count, status }) => {
+    const drives = sampleDrives(count);
+    useDrivesMock.mockReturnValue(query({ data: drives }));
+    render(<ParkingAnalyticsPage />, { wrapper: MemoryRouter });
+
+    const brief = screen.getByTestId('parking-summary');
+    expect(brief).toHaveTextContent(status);
+    if (count === 1_000) {
+      expect(brief).not.toHaveTextContent('Source returned');
+    }
+    expect(summarizeParkingMock.mock.calls[0][0]).toBe(drives);
+    expect(drives[0]).toMatchObject({
+      durationS: 30,
+      distanceM: 0,
+      energyUsedWh: null,
+      endAddress: null,
+    });
+    for (const id of SECTION_IDS) {
+      expect(screen.getByTestId(id)).toBeInTheDocument();
+      if (id !== 'parking-kpis') {
+        expect(screen.getByTestId(id)).toHaveTextContent('ready');
+      }
+    }
+    expect(useDrivesMock).toHaveBeenCalledWith('42', {
+      start: '2026-07-01',
+      end: '2026-08-07',
+      limit: 1_000,
+    });
+  });
+
+  it('retains the refresh-failure status and retry for a capped sample', () => {
+    const refetch = vi.fn();
+    const drives = sampleDrives(1_000);
+    useDrivesMock.mockReturnValue(query({
+      data: drives,
+      isError: true,
+      error: new Error('refresh failed'),
+      refetch,
+    }));
+    render(<ParkingAnalyticsPage />, { wrapper: MemoryRouter });
+
+    const brief = screen.getByTestId('parking-summary');
+    expect(brief).toHaveTextContent('Retained after refresh failure');
+    expect(brief).not.toHaveTextContent('Partial source coverage');
+    const warning = screen.getByTestId('stale-refresh-warning');
+    fireEvent.click(within(warning).getByRole('button'));
+    expect(refetch).toHaveBeenCalledTimes(1);
+    expect(summarizeParkingMock.mock.calls[0][0]).toBe(drives);
+    for (const id of SECTION_IDS) {
+      expect(screen.getByTestId(id)).toBeInTheDocument();
+      if (id !== 'parking-kpis') {
+        expect(screen.getByTestId(id)).toHaveTextContent('ready');
+      }
+    }
+  });
+
   it('mounts all eight sections and requests the selected server window', () => {
     render(<ParkingAnalyticsPage />, { wrapper: MemoryRouter });
 

@@ -66,6 +66,10 @@ export default function ParkingAnalyticsPage() {
       }),
     [drives, end, pageNowMs, start, tz],
   );
+  const summaryStatus =
+    drivesState.status === 'ok' && summary.coverage.possiblyCapped
+      ? 'partial'
+      : drivesState.status;
   const onRetry = useCallback(() => {
     void drivesQuery.refetch();
   }, [drivesQuery.refetch]);
@@ -104,7 +108,7 @@ export default function ParkingAnalyticsPage() {
           <VehicleEvidenceBrief id="parking-summary"
             title={t('parking.kpis', 'Parking summary metrics')}
             description={t('parking.briefDescription', 'Parking is reconstructed between usable drives, not observed continuously. Missing locations and incomplete history remain explicit.')}
-            status={drivesState.status} loading={drivesQuery.isLoading}
+            status={summaryStatus} loading={drivesQuery.isLoading}
             provenance={t('parking.briefSource', 'Drive-derived parking reconstruction')}
             scope={t('parking.briefWindow', '{{sample}} · {{start}} → {{end}} · {{timezone}}', {
               sample: t('parking.kpis.observedSample', '{{drives}} usable drives · {{stints}} reconstructed stints', {
