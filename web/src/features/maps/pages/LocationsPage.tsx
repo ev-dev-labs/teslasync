@@ -29,7 +29,7 @@ import {
 
 import { PageLayout, LayoutCard } from '@/components/layout';
 import { deriveDataState } from '@/api/dataState';
-import { Button, GlassPanel, Pagination, Text } from '@/components/ui';
+import { Button, GlassPanel, Icon, Pagination, Text } from '@/components/ui';
 import { EntityPreviewDrawer } from '@/components/data-display';
 import { MapsOperationalBrief } from '../components/operationalbrief-all/MapsOperationalBrief';
 import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
@@ -49,7 +49,7 @@ import { buildContextHref } from '@/lib/contextNavigation';
 import { request } from '@/api/client';
 import { AIAutoNameUnnamedLocations } from '@/components/ai';
 import { LocationLeaderboardPanel, type LeaderboardDatum } from '../components/LocationLeaderboardPanel';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { chartTokens, typography } from '@/lib/tokens';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -88,19 +88,17 @@ export function truncateLabel(name: string, max = 22): string {
   return value.length > max + 3 ? `${value.slice(0, max)}…` : value;
 }
 
-// rankChipClass tones the leaderboard rank badge by position: gold for
-// #1, cyan for the podium, muted for the rest. Toned 300-level accents
-// paired with a matching tint + border — never neon body text.
+// Rank is conveyed by its number; neutral emphasis keeps the first place distinct.
 export function rankChipClass(index: number): string {
-  if (index === 0) return 'border-amber-400/30 bg-amber-500/15 text-amber-300';
-  if (index < 3) return 'border-cyan-400/20 bg-cyan-500/10 text-cyan-300';
-  return 'border-[var(--glass-border)] bg-[var(--surface-2)] text-[var(--text-muted)]';
+  return cn(
+    'border-[var(--border-default)] bg-[var(--surface-2)]',
+    index === 0 ? typography.color.primary : typography.color.secondary,
+  );
 }
 
 // ─── Page ────────────────────────────────────────────────────────────────────
 
 export default function LocationsPage() {
-  const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   usePageTitle(t('locations.title', 'Visited locations'));
   const { formatDuration } = useUnits();
@@ -109,17 +107,19 @@ export default function LocationsPage() {
   const [page, setPage] = useUrlNumber('page', 1);
   const pageSize = 50;
   const [search, setSearch] = useUrlString('q', '');
-  const [previewLocation, setPreviewLocation] = useState<VisitedLocation | null>(null);
+  const [preview, setPreview] = useState<{ scope: string; location: VisitedLocation } | null>(null);
   // AI applied-name pending hand-off — when the user clicks Apply on
   // an AI proposal, the proposed name is parked here keyed by
   // location.id. The user then writes it into the canonical
   // baseline geofence-create / location-rename UI; the AI panel
   // never persists.
-  const [appliedName, setAppliedName] = useState<{ id: number; name: string } | null>(null);
+  const [appliedName, setAppliedName] = useState<{ scope: string; id: number; name: string } | null>(null);
   const { start, end, startInstant, endInstantExclusive, reset: resetRange } = useRangeState({
     persistKey: 'locations.range',
     defaultPresetId: 'all',
   });
+  const sourceScope = JSON.stringify([vehicleId, page, startInstant, endInstantExclusive]);
+  const previewLocation = preview?.scope === sourceScope ? preview.location : null;
   const previousRange = useRef(`${start}:${end}`);
   useEffect(() => {
     const currentRange = `${start}:${end}`;
@@ -130,7 +130,7 @@ export default function LocationsPage() {
 
   const locationsQuery = useQuery({
     queryKey: ['visited-locations', vehicleId, page, pageSize, startInstant, endInstantExclusive],
-    queryFn: () => {
+    queryFn: ({ signal }) => {
       const params = new URLSearchParams({
         vehicle_id: String(vehicleId),
         limit: String(pageSize),
@@ -138,12 +138,15 @@ export default function LocationsPage() {
         from: startInstant,
         to: endInstantExclusive,
       });
-      return request<VisitedLocation[]>(`/locations?${params}`);
+      return request<VisitedLocation[]>(`/locations?${params}`, { signal });
     },
     enabled: vehicleId !== null,
   });
   const { data: rawLocations, refetch } = locationsQuery;
-  const source = deriveDataState(locationsQuery, { provenance: 'historical' });
+  const source = deriveDataState(locationsQuery, {
+    provenance: 'historical',
+    unavailable: locationsQuery.isSuccess && rawLocations?.length === 0,
+  });
   const isLoading = locationsQuery.isLoading && !source.hasData;
   const isError = source.fatalError !== null;
   const error = source.fatalError;
@@ -181,7 +184,7 @@ export default function LocationsPage() {
   const visitsChartData = useMemo<LeaderboardDatum[]>(
     () =>
       (locations ?? []).slice(0, 15).map((l) => ({
-        name: truncateLabel(l.address_name ?? ''),
+        name: l.address_name ?? '',
         value: l.visit_count ?? 0,
       })),
     [locations],
@@ -197,10 +200,10 @@ export default function LocationsPage() {
         .sort((a, b) => (b.total_duration_s ?? 0) - (a.total_duration_s ?? 0))
         .slice(0, 10)
         .map((l) => ({
-          name: truncateLabel(l.address_name ?? ''),
-          value: +fmtNumber((l.total_duration_s ?? 0) / 3600),
+          name: l.address_name ?? '',
+          value: (l.total_duration_s ?? 0) / 3600,
         })),
-    [locations, fmtNumber],
+    [locations],
   );
 
   const shownCount = locations?.length ?? 0;
@@ -222,6 +225,7 @@ export default function LocationsPage() {
       title={t('locations.title', 'Visited locations')}
       subtitle={t('locations.subtitle', "Places you've been — ranked by frequency")}
       query={locationsQuery}
+      busy={isLoading}
       dataSources={[{ id: 'locations', label: t('locations.title', 'Visited locations'), query: locationsQuery, enabled: vehicleId !== null }]}
     >
       {/* ── 1. KPI band ───────────────────────────────────────────── */}
@@ -239,36 +243,41 @@ export default function LocationsPage() {
 
       {/* ── 2. Charts bento — leaderboards side-by-side on wide screens ─ */}
       <FadeIn delay={0.1}>
+        <Text variant="caption">{briefScope}</Text>
         <section
           aria-label={t('locations.leaderboards', 'Top locations')}
           className="grid grid-cols-1 gap-4 xl:grid-cols-2"
         >
           <LocationLeaderboardPanel
             title={t('locations.byVisits', 'Top locations by visits')}
-            icon={<Hash className="h-4 w-4 text-cyan-300" aria-hidden="true" />}
+            icon={<Icon icon={Hash} size="md" className={typography.color.muted} />}
             seriesLabel={t('locations.visits', 'Visits')}
-            color="#10b981"
+            color={chartTokens.series[0]}
             data={visitsChartData}
             loading={isLoading}
             error={error}
             onRetry={() => refetch()}
-            emptyMessage={t('locations.noVisitData', 'No visited location data')}
-            emptyActionLabel={t('locations.resetDateRange', 'Reset date range')}
-            onResetFilters={resetRange}
+            emptyMessage={vehicleId === null
+              ? t('common.noVehicleSelected.title', 'No vehicle selected')
+              : t('locations.noVisitData', 'No visited location data')}
+            emptyActionLabel={vehicleId === null ? undefined : t('locations.resetDateRange', 'Reset date range')}
+            onResetFilters={vehicleId === null ? undefined : resetRange}
             ariaLabel={t('locations.byVisitsAria', 'Bar chart of the most-visited locations')}
           />
           <LocationLeaderboardPanel
             title={t('locations.byTime', 'Top locations by time spent (hours)')}
-            icon={<Clock className="h-4 w-4 text-cyan-300" aria-hidden="true" />}
+            icon={<Icon icon={Clock} size="md" className={typography.color.muted} />}
             seriesLabel={t('locations.hours', 'Hours')}
-            color="#a855f7"
+            color={chartTokens.series[4]}
             data={timeChartData}
             loading={isLoading}
             error={error}
             onRetry={() => refetch()}
-            emptyMessage={t('locations.noTimeData', 'No time-spent data available')}
-            emptyActionLabel={t('locations.resetDateRange', 'Reset date range')}
-            onResetFilters={resetRange}
+            emptyMessage={vehicleId === null
+              ? t('common.noVehicleSelected.title', 'No vehicle selected')
+              : t('locations.noTimeData', 'No time-spent data available')}
+            emptyActionLabel={vehicleId === null ? undefined : t('locations.resetDateRange', 'Reset date range')}
+            onResetFilters={vehicleId === null ? undefined : resetRange}
             ariaLabel={t('locations.byTimeAria', 'Bar chart of locations by hours spent')}
           />
         </section>
@@ -277,7 +286,7 @@ export default function LocationsPage() {
       {/* ── 3. Detail band — searchable, paginated leaderboard ──────── */}
       <FadeIn delay={0.2}>
         <LayoutCard title={t('locations.all', 'All locations')}>
-
+          <Text variant="caption" className="mb-3">{briefScope}</Text>
           <FilterBar className="mb-3">
             <SearchInput
               value={search}
@@ -312,6 +321,11 @@ export default function LocationsPage() {
             </div>
           ) : isError ? (
             <QueryError error={error} onRetry={() => refetch()} />
+          ) : vehicleId === null ? (
+            <EmptyState
+              icon={<Icon icon={MapPin} size="xl" />}
+              title={t('common.noVehicleSelected.title', 'No vehicle selected')}
+            />
           ) : !hasLocations ? (
             <EmptyState
               icon={<MapPin className="h-12 w-12" />}
@@ -335,7 +349,7 @@ export default function LocationsPage() {
                   const avg = visits > 0 ? totalDuration / visits : 0;
                   return (
                     <li key={loc.id} className="space-y-2">
-                      <GlassPanel className="flex items-center gap-3 p-3 transition-colors hover:border-[var(--border-subtle)] sm:p-4">
+                      <GlassPanel className="flex flex-wrap items-center gap-3 p-3 transition-colors hover:border-[var(--border-subtle)] sm:p-4">
                         <Text
                           as="div"
                           size="xs"
@@ -347,7 +361,7 @@ export default function LocationsPage() {
                         >
                           #{i + 1}
                         </Text>
-                        <div className="min-w-0 flex-1">
+                        <div className="order-last w-full min-w-0 sm:order-none sm:w-auto sm:flex-1">
                           <Text as="p" size="sm" weight="medium" color="primary" className="break-words">
                             {loc.address_name ?? '—'}
                           </Text>
@@ -355,8 +369,8 @@ export default function LocationsPage() {
                             {visits} {t('locations.visits', 'visits')} · {formatDuration(totalDuration)} {t('locations.total', 'total')} · ~{formatDuration(avg)} {t('locations.avg', 'avg')}
                             {loc.last_visited ? ` · ${t('locations.last', 'Last')}: ${formatDate(loc.last_visited)}` : ''}
                           </Text>
-                          {appliedName?.id === loc.id && (
-                            <Text as="span" size="xs" className="mt-1 inline-block text-emerald-300">
+                          {appliedName?.scope === sourceScope && appliedName.id === loc.id && (
+                            <Text as="span" variant="caption" className="mt-1 inline-block">
                               {t('locations.aiAutoName.applied', 'Suggested name ready to save:')}{' '}
                               <Text as="span" color="primary">{appliedName.name}</Text>
                             </Text>
@@ -366,7 +380,7 @@ export default function LocationsPage() {
                           as="div"
                           size="xs"
                           weight="medium"
-                          className="flex shrink-0 items-center gap-1 rounded-lg border border-cyan-400/20 bg-cyan-500/10 px-2 py-1 text-cyan-300"
+                          className="ms-auto flex shrink-0 items-center gap-1 rounded-lg border border-[var(--border-default)] bg-[var(--surface-2)] px-2 py-1"
                         >
                           <Hash className="h-3 w-3" aria-hidden="true" />
                           {visits}
@@ -375,22 +389,23 @@ export default function LocationsPage() {
                           type="button"
                           variant="ghost"
                           size="sm"
-                          className="h-9 w-9 shrink-0 p-0"
+                          className="h-11 w-11 min-h-11 min-w-11 shrink-0 p-0 md:h-9 md:w-9 md:min-h-9 md:min-w-9"
                           aria-label={t(
                             'locations.inspect',
                             'Inspect {{location}}',
                             { location: loc.address_name || t('locations.unknown', 'unknown location') },
                           )}
-                          onClick={() => setPreviewLocation(loc)}
+                          onClick={() => setPreview({ scope: sourceScope, location: loc })}
                         >
-                          <Eye className="h-4 w-4" aria-hidden="true" />
+                          <Icon icon={Eye} size="md" />
                         </Button>
                       </GlassPanel>
                       {isUnnamedLocation(loc.address_name) && (
                         <AIAutoNameUnnamedLocations
+                          key={sourceScope}
                           locationId={loc.id}
                           currentName={loc.address_name}
-                          onApplyName={(name) => setAppliedName({ id: loc.id, name })}
+                          onApplyName={(name) => setAppliedName({ scope: sourceScope, id: loc.id, name })}
                         />
                       )}
                     </li>
@@ -410,7 +425,7 @@ export default function LocationsPage() {
 
       <EntityPreviewDrawer
         open={previewLocation !== null}
-        onClose={() => setPreviewLocation(null)}
+        onClose={() => setPreview(null)}
         eyebrow={t('locations.preview.eyebrow', 'Location evidence')}
         title={previewLocation?.address_name || t('locations.unknown', 'Unknown location')}
         description={
