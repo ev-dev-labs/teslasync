@@ -319,20 +319,115 @@ export function restoreOwnerRecoverySource(file: string, text: string): string {
 }
 const generated = import.meta.glob<{ default: Json }>('./en/locale-*.json', { eager: true })
 
+// Accepted after this recovery: phase4-sticky-control-localization (1),
+// phase4-watch-key-capability (5), phase4-signal-catalog-canonical-repair (6).
+// Subtract exact physical paths, not their namespaces or newer-looking siblings.
+const acceptedLaterAdditions = [
+  ['a11y.scrollToTop', '{{region}} — scroll to top'],
+  ['watch.capability.notConfigured', 'Watch access is not configured'],
+  ['watch.capability.description', 'Watch readings require a wearable API key in this session. Manage API keys and open your configured watch link to enable readings. Retained readings are not refreshed until access is configured.'],
+  ['watch.capability.configure', 'Manage API keys'],
+  ['watch.capability.readError', 'Watch access could not be checked'],
+  ['watch.capability.readErrorDescription', 'Watch access is unknown because browser session storage could not be read or saved. Retry after storage becomes available. Retained readings remain visible.'],
+  ['widget.signalCatalog.destination', 'Destination: {{destination}}'],
+  ['widget.signalCatalog.valueKind', 'Value kind'],
+  ['widget.signalCatalog.metadataUnavailable', 'Unit and description are not provided by this catalog.'],
+  ['widget.signalCatalog.totalSamples', 'Total observations: {{count}}'],
+  ['widget.signalCatalog.vehicleCount', 'Vehicles observed: {{count}}'],
+  ['widget.signalCatalog.lastSeen', 'Last seen: {{timestamp}}'],
+] as const
+
+// The original 115 call sites in sourcePaths order, including repeated keys.
+// Accepted presentation changes may alter surrounding bytes/argument whitespace,
+// but may not move, remove, duplicate or change these translation contracts.
+const expectedOwnerCalls: readonly (readonly string[])[] = [
+  ['vehicleVisualization.status.battery', 'vehicleVisualization.status.charging', 'vehicleVisualization.status.locked', 'vehicleVisualization.status.unlocked', 'vehicleVisualization.status.driving', 'vehicleVisualization.status.climate', 'vehicleVisualization.status.sentry', 'vehicleVisualization.status.charging', 'vehicleVisualization.status.notCharging', 'vehicleVisualization.status.locked', 'vehicleVisualization.status.unlocked', 'vehicleVisualization.status.climate', 'vehicleVisualization.status.sentry', 'vehicleVisualization.status.battery', 'vehicleVisualization.status.charging', 'vehicleVisualization.status.battery'],
+  ['firmwareImpact.chart.title', 'firmwareImpact.chart.aria'],
+  ['regimes.chart.title', 'regimes.chart.aria'],
+  ['statistics.stateDistributionAria', 'statistics.vehicleComparisonAria'],
+  ['battery.cells.chart.spreadTrendAria'],
+  ['battery.degradation.trendTitleAria'],
+  ['charging.curve.chargerTypeAria'],
+  ['charging.curve.sessionComparisonAria'],
+  ['charging.curve.powerVsSocAria'],
+  ['charging.curve.speedTrendAria'],
+  ['charging.curve.yearlyTrendAria'],
+  ['costAnalysis.charts.costPerKwhAria'],
+  ['costAnalysis.charts.monthlyCostAria'],
+  ['dashboard.widgetSettings.allVehicles', 'dashboard.widgetSettings.vehicleName', 'dashboard.widgetSettings.title', 'dashboard.widgetSettings.vehicle', 'dashboard.widgetSettings.vehicle', 'dashboard.widgetSettings.refreshInterval', 'dashboard.widgetSettings.refreshInterval', 'dashboard.widgetSettings.default', 'dashboard.widgetSettings.5s', 'dashboard.widgetSettings.15s', 'dashboard.widgetSettings.30s', 'dashboard.widgetSettings.60s', 'dashboard.widgetSettings.timeRange', 'dashboard.widgetSettings.timeRange', 'dashboard.widgetSettings.24h', 'dashboard.widgetSettings.7d', 'dashboard.widgetSettings.30d', 'dashboard.widgetSettings.90d', 'dashboard.widgetSettings.appearance', 'dashboard.widgetSettings.showTitle'],
+  ['widget.recentDrivesListDrive'],
+  ['widget.recentDrivesDurationUnit'],
+  ['driveScore.categoryBreakdownAria'],
+  ['driveScore.scoreDistributionAria'],
+  ['driveScore.scoreTrendAria'],
+  ['energyAnatomy.sankey.aria'],
+  ['driveDetail.driveChartAria'],
+  ['driveDetail.elevProfileAria'],
+  ['driveDetail.powerProfileAria'],
+  ['driveDetail.socOverTimeAria'],
+  ['driveDetail.speedHistogramAria'],
+  ['driveDetail.temperaturesAria'],
+  ['driveDetail.tirePressureAria'],
+  ['drivetrain.powerOutputAria'],
+  ['drivetrain.powerOutputAria'],
+  ['drivetrain.statorTempHistoryAria'],
+  ['drivetrain.tempHistoryAria'],
+  ['drivetrain.tempHistoryAria'],
+  ['drivetrain.torqueHistoryAria'],
+  ['drivetrain.torqueHistoryAria'],
+  ['dynamics.speedDistributionAria'],
+  ['dynamics.powerOverTimeAria', 'dynamics.torqueHistoryAria', 'dynamics.rpmHistoryAria'],
+  ['dynamics.powerOverTimeAria', 'dynamics.torqueHistoryAria', 'dynamics.rpmHistoryAria'],
+  ['efficiency.speedVsEfficiencyAria', 'efficiency.tempVsEfficiencyAria'],
+  ['efficiency.speedDistAria'],
+  ['efficiency.dailyTrendAria'],
+  ['anomalies.chart.title', 'anomalies.chart.aria'],
+  ['landscape.field.title', 'landscape.field.title', 'landscape.field.aria'],
+  ['energyAnatomy.sankey.title', 'energyAnatomy.sankey.title'],
+  ['share.unavailable.title', 'share.unavailable.description', 'share.unavailable.home', 'share.elevationAria', 'share.speedAria'],
+  ['fsm.timelineChartAria'],
+  ['commandReliability.chart.title', 'commandReliability.chart.aria'],
+  ['dbHealth.chartTitleAria'],
+  ['help.fsm.typeAria', 'help.fsm.liveStateAria', 'fsm.distributionByStateAria'],
+  ['help.signal.snapshotAria', 'help.signal.diffAria'],
+  ['help.signal.layersAria'],
+  ['signalCorrelation.correlogram.title', 'signalCorrelation.correlogram.aria', 'signalCorrelation.overlay.title', 'signalCorrelation.overlay.aria'],
+  ['error.unsupported.title', 'error.unavailable.title', 'error.request.title'],
+  ['share.curveAria'],
+  ['signalLog.compositionNoRecords', 'signalLog.compositionEmpty', 'signalLog.compositionNoRecords'],
+]
+const objectDefaultKeys = new Set([
+  'help.fsm.typeAria', 'help.fsm.liveStateAria',
+  'help.signal.snapshotAria', 'help.signal.diffAria', 'help.signal.layersAria',
+])
+const interpolationOptions = new Map([
+  ['dashboard.widgetSettings.vehicleName', '{ id: v.id }'],
+  ['dashboard.widgetSettings.title', '{ name: def.name }'],
+  ['energyAnatomy.sankey.aria', '{\n          total: formatEnergy(totalEnergyWh),\n        }'],
+  ['landscape.field.aria', "{\n                  best: landscape.best != null ? cellDescription(landscape.best) : '—',\n                  worst: landscape.worst != null ? cellDescription(landscape.worst) : '—',\n                }"],
+])
+
 describe('same attempt3 authorized feature-owned scalar collision recovery', () => {
   it('asserts every exact addition before subtracting only those physical leaves', () => {
     expect(ownerRecoveryAdditions).toHaveLength(95)
     expect(hash(JSON.stringify(ownerRecoveryAdditions))).toBe('a159aee178e404e8e5cfae9fbd480a7e14c3882805b6673f4ea407a8122f969c')
     for (const [key, value] of ownerRecoveryAdditions) expect(nested(catalog, key), key).toBe(value)
-    const accepted = new Set(ownerRecoveryAdditions.map(([key]) => key))
     for (const [key, value] of finalFourAdditions) expect(nested(catalog, key), key).toBe(value)
     expect(finalFourAdditions).toHaveLength(4)
-    const finalPaths = new Set(finalFourAdditions.map(([key]) => JSON.stringify(key.split('.'))))
-    const predecessor = physical(catalog).filter(([parts]) =>
-      !accepted.has(parts.join('.')) && !finalPaths.has(JSON.stringify(parts)))
+    expect(acceptedLaterAdditions).toHaveLength(12)
+    const entries = physical(catalog)
+    const additions = [...ownerRecoveryAdditions, ...finalFourAdditions, ...acceptedLaterAdditions]
+    const acceptedPaths = new Set(additions.map(([key]) => JSON.stringify(key.split('.'))))
+    expect(acceptedPaths.size).toBe(111)
+    for (const [key, value] of additions) {
+      const path = key.split('.')
+      expect(entries.filter(([parts]) => JSON.stringify(parts) === JSON.stringify(path)), key)
+        .toEqual([[path, value]])
+    }
+    const predecessor = entries.filter(([parts]) => !acceptedPaths.has(JSON.stringify(parts)))
     expect(predecessor).toHaveLength(30996)
     expect(hash(JSON.stringify(predecessor))).toBe('38ee93db2c266e856b87a80e4f98a57f83b5f6d64e93bed8101617a217b36ead')
-    expect(physical(catalog)).toHaveLength(31095)
+    expect(entries).toHaveLength(31107)
     expect(catalog.vehicle).toBe('vehicle')
     expect(catalog.dashboard.settings).toBe('Settings')
     expect(catalog.share.curve).toBe('Charge curve')
@@ -342,19 +437,21 @@ describe('same attempt3 authorized feature-owned scalar collision recovery', () 
     expect(catalog.drives.emptyForCollection.title).toBe('No drives in this view')
   })
 
-  it('pins all original source bytes and the exact115 source-call/default/arity/options fixtures', async () => {
+  it('pins the exact115 original source-call/default/arity/options fixtures after accepted presentation changes', async () => {
     const english = createInstance()
     await english.init({ lng: 'en', fallbackLng: 'en', fallbackNS: 'translation', saveMissing: false,
       resources: { en: { translation: catalog } }, interpolation: { escapeValue: false } })
-    const originalHashes: [string, string][] = []
     const callFixtures: [string, string, string, string, number][] = []
     const covered = new Set<string>()
     const reverse = new Map(exactRenames.map(([oldKey, key]) => [key, oldKey]))
-    for (const file of sourcePaths) {
+    expect(expectedOwnerCalls).toHaveLength(54)
+    expect(expectedOwnerCalls.flat()).toHaveLength(115)
+    for (const [index, file] of sourcePaths.entries()) {
       const text = readFileSync(resolve(process.cwd(), '..', file), 'utf8')
       const restored = restoreOwnerRecoverySource(file, text)
-      originalHashes.push([file, hash(restored)])
       const { tree, calls } = acceptedCalls(file, text)
+      expect(calls.map(call => (call.arguments[0] as ts.StringLiteral).text), file)
+        .toEqual(expectedOwnerCalls[index])
       for (const call of calls) {
         const keyArg = call.arguments[0]
         expect(ts.isStringLiteral(keyArg)).toBe(true)
@@ -367,6 +464,22 @@ describe('same attempt3 authorized feature-owned scalar collision recovery', () 
         callFixtures.push([file, originalKey, key, original, call.arguments.length])
         covered.add(key)
         const value = ownerRecoveryAdditions.find(([candidate]) => candidate === key)?.[1]
+        expect(value, key).toBeTypeOf('string')
+        // Canonical English can hide a broken caller fallback. Pin the actual
+        // source defaults and complete option operands separately from rendering.
+        if (objectDefaultKeys.has(key)) {
+          expect(call.arguments[1].getText(tree), file + ': ' + key)
+            .toBe(`{ defaultValue: '${value}' }`)
+        } else {
+          const fallback = call.arguments[1]
+          expect(ts.isStringLiteral(fallback), file + ': ' + key).toBe(true)
+          if (!ts.isStringLiteral(fallback)) throw new Error('Literal fallback required')
+          expect(fallback.text, file + ': ' + key).toBe(value)
+        }
+        const options = interpolationOptions.get(key)
+        expect(call.arguments.length, file + ': ' + key).toBe(options === undefined ? 2 : 3)
+        expect(call.arguments[2]?.getText(tree), file + ': ' + key).toBe(options)
+        expect(restored, file + ': ' + original).toContain(original)
         expect(english.exists(key, { ns: 'translation' }), key).toBe(true)
         expect(english.t(key, { ns: 'translation', skipInterpolation: true }), key).toBe(value)
         // Evaluate the unchanged actual source call, including its real option object.
@@ -380,9 +493,10 @@ describe('same attempt3 authorized feature-owned scalar collision recovery', () 
       }
     }
     expect(sourcePaths).toHaveLength(54)
-    expect(hash(JSON.stringify(sort(originalHashes)))).toBe('ecf1a0597c82b3513cb14c2197253b909c5bba30129c53702e75129dee2ca169')
     expect(callFixtures).toHaveLength(115)
-    expect(hash(JSON.stringify(sort(callFixtures)))).toBe('1106c8de978b2e3f6be9d31ef2d549eb5c7249b01bcbb8a17dd2b7f79fc48e1c')
+    expect(sort(callFixtures.map(([file, originalKey, key]) => [file, originalKey, key])))
+      .toEqual(sort(expectedOwnerCalls.flatMap((keys, index) =>
+        keys.map(key => [sourcePaths[index], reverse.get(key) || key, key]))))
     expect(covered.size).toBe(95)
   })
 
