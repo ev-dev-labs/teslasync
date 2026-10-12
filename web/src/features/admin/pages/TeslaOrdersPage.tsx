@@ -10,15 +10,15 @@
  * Data flows through the `@/api/hooks/useUser` TanStack hooks
  * (`GET /tesla/user/orders`, `POST /tesla/user/orders/refresh`).
  */
-import { useMemo } from 'react';
+import { useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { RefreshCw, ShoppingCart, LayoutGrid, ListOrdered } from 'lucide-react';
 
 import { PageLayout, LayoutCard } from '@/components/layout';
-import { Button } from '@/components/ui';
+import { Button, Icon } from '@/components/ui';
 import { FadeIn } from '@/components/motion';
 import { SectionErrorBoundary } from '@/components/feedback';
-import { cn } from '@/lib/cn';
+import { typography } from '@/lib/tokens';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useTeslaUserOrders, useRefreshTeslaOrders } from '@/api/hooks/useUser';
 import { deriveDataState } from '@/api/dataState';
@@ -40,6 +40,7 @@ export default function TeslaOrdersPage() {
 
   const ordersQuery = useTeslaUserOrders();
   const ordersRefresh = useRefreshTeslaOrders();
+  const refreshInFlight = useRef(false);
   const ordersState = deriveDataState(ordersQuery);
 
   const orders = useMemo(
@@ -63,7 +64,17 @@ export default function TeslaOrdersPage() {
     void ordersQuery.refetch();
   };
 
-  const emptyIcon = <ShoppingCart className="h-10 w-10" aria-hidden="true" />;
+  const refreshOrders = () => {
+    if (refreshInFlight.current || ordersRefresh.isPending) return;
+    refreshInFlight.current = true;
+    ordersRefresh.mutate(undefined, {
+      onSettled: () => {
+        refreshInFlight.current = false;
+      },
+    });
+  };
+
+  const emptyIcon = <Icon icon={ShoppingCart} size="xl" />;
   const emptyMessage = fetchedAt
     ? t('admin.teslaOrders.empty.synced', 'No active orders found on this Tesla account.')
     : t(
@@ -72,7 +83,7 @@ export default function TeslaOrdersPage() {
       );
   const emptyAction = {
     label: t('admin.teslaOrders.refresh', 'Refresh'),
-    onClick: () => ordersRefresh.mutate(),
+    onClick: refreshOrders,
   };
 
   const actions = (
@@ -80,13 +91,10 @@ export default function TeslaOrdersPage() {
       <Button
         variant="secondary"
         size="sm"
-        icon={
-          <RefreshCw
-            className={cn('h-3.5 w-3.5', ordersRefresh.isPending && 'animate-spin')}
-            aria-hidden="true"
-          />
-        }
-        onClick={() => ordersRefresh.mutate()}
+        className="min-h-11 min-w-11 md:min-h-9 md:min-w-0"
+        icon={<Icon icon={RefreshCw} size="sm" />}
+        onClick={refreshOrders}
+        loading={ordersRefresh.isPending}
         disabled={ordersRefresh.isPending}
         aria-busy={ordersRefresh.isPending || undefined}
         wrapLabel
@@ -146,7 +154,7 @@ export default function TeslaOrdersPage() {
       <FadeIn delay={0.2}>
         <SectionErrorBoundary name="tesla-orders-board">
           <LayoutCard title={t('admin.teslaOrders.panels.board', 'Orders')}
-            actions={<LayoutGrid className="h-4 w-4 text-cyan-300" aria-hidden="true" />}>
+            actions={<Icon icon={LayoutGrid} className={typography.color.muted} />}>
             <OrdersSectionState
               status={status}
               error={ordersState.fatalError}
@@ -167,7 +175,7 @@ export default function TeslaOrdersPage() {
       <FadeIn delay={0.3}>
         <SectionErrorBoundary name="tesla-orders-table">
           <LayoutCard title={t('admin.teslaOrders.panels.details', 'Order details')}
-            actions={<ListOrdered className="h-4 w-4 text-cyan-300" aria-hidden="true" />}>
+            actions={<Icon icon={ListOrdered} className={typography.color.muted} />}>
             <OrdersSectionState
               status={status}
               error={ordersState.fatalError}

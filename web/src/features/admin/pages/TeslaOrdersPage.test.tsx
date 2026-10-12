@@ -395,6 +395,80 @@ describe('TeslaOrdersPage — loading, error, empty', () => {
 })
 
 describe('TeslaOrdersPage — interactions', () => {
+  it('uses neutral decorative panel icons and a wrapping mobile refresh target without losing sections', async () => {
+    install()
+    const { container } = renderPage()
+    await screen.findByRole('table')
+
+    expect(headerRefresh()).toHaveClass('min-h-11', 'min-w-11', 'md:min-h-9', 'md:min-w-0')
+    expect(headerRefresh()).toHaveClass('whitespace-normal')
+    for (const glyph of ['lucide-layout-grid', 'lucide-list-ordered']) {
+      const icon = container.querySelector(`svg.${glyph}`)
+      expect(icon).toHaveClass('text-[var(--text-muted)]', 'shrink-0')
+      expect(icon).not.toHaveClass('text-cyan-300')
+      expect(icon).toHaveAttribute('aria-hidden', 'true')
+      expect(icon).toHaveAttribute('focusable', 'false')
+    }
+    expect(kpiRegion()).toBeInTheDocument()
+    expect(insightsRegion()).toBeInTheDocument()
+    expect(screen.getByRole('list', { name: 'Orders board' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Orders' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Order details' })).toBeInTheDocument()
+  })
+
+  it('coalesces both empty-panel refresh actions and the header into one pending request', async () => {
+    install({ orders: [], refreshPending: true })
+    renderPage()
+    await screen.findAllByText('No active orders found on this Tesla account.')
+    const recoveries = screen.getAllByRole('status')
+      .map((host) => within(host).queryByRole('button', { name: 'Refresh' }))
+      .filter((button): button is HTMLElement => button !== null)
+    expect(recoveries).toHaveLength(2)
+
+    await act(async () => {
+      fireEvent.click(recoveries[0])
+      fireEvent.click(recoveries[1])
+      fireEvent.click(headerRefresh())
+    })
+
+    await waitFor(() => expect(
+      mockedRequest.mock.calls.filter((call) => call[0] === REFRESH_PATH),
+    ).toHaveLength(1))
+    expect(mockedRequest).toHaveBeenCalledWith(
+      REFRESH_PATH,
+      expect.objectContaining({ method: 'POST' }),
+    )
+    await waitFor(() => expect(headerRefresh()).toBeDisabled())
+    expect(headerRefresh()).toHaveAttribute('aria-busy', 'true')
+    expect(screen.getAllByText('No active orders found on this Tesla account.')).toHaveLength(2)
+  })
+
+  it('releases the refresh guard after failure and permits a successful empty-panel retry', async () => {
+    install({ orders: [] })
+    const failedRefresh = new Error('refresh unavailable')
+    mockedRequest.mockImplementation((path: string) => {
+      if (path === REFRESH_PATH) return Promise.reject(failedRefresh)
+      return Promise.resolve({ orders: [], fetched_at: SYNCED_AT })
+    })
+    renderPage()
+    await screen.findAllByText('No active orders found on this Tesla account.')
+    fireEvent.click(headerRefresh())
+    await waitFor(() => expect(mockedRequest.mock.calls
+      .filter((call) => call[0] === REFRESH_PATH)).toHaveLength(1))
+    await waitFor(() => expect(headerRefresh()).toBeEnabled())
+
+    install({ orders: [] })
+    const recovery = screen.getAllByRole('status')
+      .map((host) => within(host).queryByRole('button', { name: 'Refresh' }))
+      .find((button) => button !== null)!
+    fireEvent.click(recovery)
+    await waitFor(() => expect(mockedRequest.mock.calls
+      .filter((call) => call[0] === REFRESH_PATH)).toHaveLength(2))
+    await waitFor(() => expect(headerRefresh()).toBeEnabled())
+    await waitFor(() => expect(ordersCallCount()).toBeGreaterThan(1))
+    expect(screen.getAllByText('No active orders found on this Tesla account.')).toHaveLength(2)
+  })
+
   it('retains all orders, aggregate counts, board and table after a failed background read without automatically refreshing Tesla', async () => {
     install()
     const { client } = renderPage()
