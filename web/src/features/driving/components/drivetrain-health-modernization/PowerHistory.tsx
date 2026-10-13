@@ -5,6 +5,7 @@ import {
 } from '@/components/charts';
 import { useUnits } from '@/hooks/useUnits';
 import { useHiddenSeries } from '@/hooks/useHiddenSeries';
+import { chartTokens, typography } from '@/lib/tokens';
 import { PreservedChartFrame } from './PreservedChartFrame';
 import type { DriveHistoryChartProps } from './chartTypes';
 
@@ -12,6 +13,8 @@ export function PowerHistory({ rows, state, loading }: DriveHistoryChartProps) {
   const { t } = useTranslation();
   const { formatPower, unitPrefs } = useUnits();
   const hidden = useHiddenSeries('drivetrain-power-output');
+  const averagePowerLabel = `${t('drivetrain.modernization.peakAveragePower', 'Peak-labelled average drive power')} (${unitPrefs.power})`;
+  const regenPowerLabel = t('drivetrain.powerMin', 'Regen Power (kW)').replace('(kW)', `(${unitPrefs.power})`);
   const table = rows.map(row => ({
     date: row.date,
     power_max_kw: formatPower(row.powerMax),
@@ -32,36 +35,36 @@ export function PowerHistory({ rows, state, loading }: DriveHistoryChartProps) {
       exportData={table}
       dataColumns={[
         { key: 'date', label: t('drivetrain.col.date', 'Date') },
-        { key: 'power_max_kw', label: `${t('drivetrain.modernization.peakAveragePower', 'Peak-labelled average drive power')} (${unitPrefs.power})` },
-        { key: 'power_min_kw', label: t('drivetrain.col.powerMin', 'Regen (kW)') },
+        { key: 'power_max_kw', label: averagePowerLabel },
+        { key: 'power_min_kw', label: t('drivetrain.col.powerMin', 'Regen (kW)').replace('(kW)', `(${unitPrefs.power})`) },
       ]}
     >
       <ResponsiveContainer width="100%" height="100%">
         <AreaChart data={rows}>
-          {areaGradient('dtPwrMaxGrad', '#8b5cf6')}
-          {areaGradient('dtPwrMinGrad', '#ef4444')}
-          <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
-          <XAxis dataKey="date" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} />
-          <YAxis tickFormatter={value => formatPower(Number(value))} tick={{ fill: 'var(--text-muted)', fontSize: 10 }} />
+          {areaGradient('dtPwrMaxGrad', chartTokens.series[4], 0.08)}
+          {areaGradient('dtPwrMinGrad', chartTokens.series[3], 0.08)}
+          <CartesianGrid strokeDasharray="3 3" stroke={chartTokens.gridStroke} strokeOpacity={0.4} />
+          <XAxis dataKey="date" tick={{ fill: chartTokens.axisStroke, className: typography.role.caption }} />
+          <YAxis tickFormatter={value => formatPower(Number(value))} tick={{ fill: chartTokens.axisStroke, className: typography.role.caption }} />
           <Tooltip content={<ChartTooltip valueFormatter={value => formatPower(typeof value === 'number' ? value : null)} />} />
           <ChartLegend state={hidden} />
           <Area
             {...AREA_DEFAULTS}
             dataKey="powerMax"
-            name={t('drivetrain.powerMax', 'Peak Power (kW)')}
-            stroke="#8b5cf6"
+            name={averagePowerLabel}
+            stroke={chartTokens.series[4]}
             fill="url(#dtPwrMaxGrad)"
             hide={hidden.isHidden('powerMax')}
           />
           <Area
             {...AREA_DEFAULTS}
             dataKey="powerMin"
-            name={t('drivetrain.powerMin', 'Regen Power (kW)')}
-            stroke="#ef4444"
+            name={regenPowerLabel}
+            stroke={chartTokens.series[3]}
             fill="url(#dtPwrMinGrad)"
             hide={hidden.isHidden('powerMin')}
           />
-          <ReferenceLine y={0} stroke="#64748b" strokeDasharray="2 2" />
+          <ReferenceLine y={0} stroke={chartTokens.axisStroke} strokeDasharray="2 2" />
         </AreaChart>
       </ResponsiveContainer>
     </PreservedChartFrame>
