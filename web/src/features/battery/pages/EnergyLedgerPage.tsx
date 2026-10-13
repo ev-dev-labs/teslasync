@@ -24,6 +24,9 @@ import { usePageTitle } from '@/hooks/usePageTitle';
 import { useHiddenSeries } from '@/hooks/useHiddenSeries';
 import { useDataState } from '@/hooks/useDataState';
 import { chartTokens } from '@/lib/tokens';
+import { getChartFontFamily, getChartFontSize } from '@/lib/chartTypography';
+import { fmtNumber } from '@/lib/numberFormat';
+import { convertEnergyFromSI } from '@/lib/unitConversion';
 
 import { buildEnergyLedger } from '../lib/energyLedger';
 
@@ -33,8 +36,14 @@ export default function EnergyLedgerPage() {
 
   const { vehicleId } = useSelectedVehicle();
   const vehicleIdStr = vehicleId != null ? String(vehicleId) : undefined;
-  const { formatEnergy, formatPower, formatDistance } = useUnits();
+  const { unitPrefs, formatEnergy, formatPower, formatDistance } = useUnits();
   const ledgerHidden = useHiddenSeries('energy-ledger-monthly');
+  const chartTick = {
+    fill: chartTokens.axisStroke,
+    fontFamily: getChartFontFamily(),
+    fontSize: getChartFontSize(),
+  };
+  const energyLabel = (label: string) => label.replaceAll('kWh', unitPrefs.energy);
 
   const sessionsQuery = useChargingSessions(vehicleIdStr);
   const drivesQuery = useDrives(vehicleIdStr);
@@ -65,13 +74,13 @@ export default function EnergyLedgerPage() {
     () =>
       summary.months.map((m) => ({
         month: m.month,
-        charged: Math.round(m.chargedWh / 100) / 10,
-        driven: -Math.round(m.drivenWh / 100) / 10,
-        standby: -Math.round(m.standbyWh / 100) / 10,
-        stored: Math.round(m.storedDeltaWh / 100) / 10,
-        residual: Math.round(m.residualWh / 100) / 10,
+        charged: Math.round(convertEnergyFromSI(m.chargedWh, unitPrefs.energy) * 10) / 10,
+        driven: -Math.round(convertEnergyFromSI(m.drivenWh, unitPrefs.energy) * 10) / 10,
+        standby: -Math.round(convertEnergyFromSI(m.standbyWh, unitPrefs.energy) * 10) / 10,
+        stored: Math.round(convertEnergyFromSI(m.storedDeltaWh, unitPrefs.energy) * 10) / 10,
+        residual: Math.round(convertEnergyFromSI(m.residualWh, unitPrefs.energy) * 10) / 10,
       })),
-    [summary.months],
+    [summary.months, unitPrefs.energy],
   );
 
   const worstMonth = useMemo(
@@ -95,29 +104,36 @@ export default function EnergyLedgerPage() {
   const isError =
     sessionsState.fatalError != null || drivesState.fatalError != null;
   const error = sessionsState.fatalError ?? drivesState.fatalError;
-  const summaryReady = !isLoading && !isError;
+  const sourcesResolved = sessionsHaveData && drivesHaveData && !isError;
+  const summaryReady = sourcesResolved && summary.months.length > 0;
+  const ratiosReady = summaryReady && summary.totalChargedWh > 0;
+  const standbyReady = summaryReady && summary.gaps.length > 0;
+  const retryFailedSources = () => {
+    if (sessionsState.fatalError) void sessionsQuery.refetch();
+    if (drivesState.fatalError) void drivesQuery.refetch();
+  };
   const summaryMetrics: StatMetric[] = [
     {
       metricId: 'percent', occurrenceId: 'ledger-closure',
       label: t('energyLedger.closure', 'Books Closure'),
-      rawValue: summaryReady ? summary.closureRate * 100 : null,
-      display: { formatter: raw => ({ value: `${Math.round(raw)}%`, unit: '' }) },
-      context: summaryReady ? <><Scale className="h-5 w-5" aria-hidden="true" /><Badge variant={summary.closureRate >= 0.9 ? 'success' : summary.closureRate >= 0.75 ? 'warning' : 'danger'}>{t('energyLedger.closureHint', 'of charged energy accounted for')}</Badge></> : undefined,
+      rawValue: ratiosReady ? summary.closureRate * 100 : null,
+      display: { formatter: raw => ({ value: `${fmtNumber(raw, 0, unitPrefs.locale)}%`, unit: '' }) },
+      context: ratiosReady ? <><Scale className="h-5 w-5" aria-hidden="true" /><Badge variant={summary.closureRate >= 0.9 ? 'success' : summary.closureRate >= 0.75 ? 'warning' : 'danger'}>{t('energyLedger.closureHint', 'of charged energy accounted for')}</Badge></> : undefined,
       description: t('help.energyLedger.closure', 'Energy has to go somewhere. Everything charged either reached the wheels, was lost while standing still, or is still sitting in the pack — so charged minus driven minus standby minus the change in stored energy should come out near zero. Whatever is left over is the ledger residual, and it is the honest measure of how much your data is failing to explain.'),
     },
     {
       metricId: 'percent', occurrenceId: 'ledger-driving',
       label: t('energyLedger.driving', 'Reached the Wheels'),
-      rawValue: summaryReady ? summary.drivingShare * 100 : null,
-      display: { formatter: raw => ({ value: `${Math.round(raw)}%`, unit: '' }) },
+      rawValue: ratiosReady ? summary.drivingShare * 100 : null,
+      display: { formatter: raw => ({ value: `${fmtNumber(raw, 0, unitPrefs.locale)}%`, unit: '' }) },
       context: summaryReady ? <><Sigma className="h-5 w-5" aria-hidden="true" />{formatEnergy(summary.totalDrivenWh)}</> : undefined,
     },
     {
       metricId: 'rate', occurrenceId: 'ledger-vampire',
       label: t('energyLedger.vampire', 'Vampire Drain'),
-      rawValue: summaryReady ? summary.vampireWhPerDay : null,
-      display: { formatter: raw => ({ value: `${Math.round(raw)} Wh/day`, unit: '' }) },
-      context: summaryReady ? <><BatteryWarning className="h-5 w-5" aria-hidden="true" /><Badge variant={summary.vampireWhPerDay > 1000 ? 'danger' : 'neutral'}>{t('energyLedger.standbyPower', 'about {{p}} while parked', { p: formatPower(summary.meanStandbyPowerW) })}</Badge></> : undefined,
+      rawValue: standbyReady ? summary.vampireWhPerDay : null,
+      display: { formatter: raw => ({ value: `${fmtNumber(raw, 0, unitPrefs.locale)} Wh/day`, unit: '' }) },
+      context: standbyReady ? <><BatteryWarning className="h-5 w-5" aria-hidden="true" /><Badge variant={summary.vampireWhPerDay > 1000 ? 'danger' : 'neutral'}>{t('energyLedger.standbyPower', 'about {{p}} while parked', { p: formatPower(summary.meanStandbyPowerW) })}</Badge></> : undefined,
     },
     {
       metricId: 'energy', occurrenceId: 'ledger-residual',
@@ -153,10 +169,7 @@ export default function EnergyLedgerPage() {
         {isError && <SourceContent state="error" label={t('energyLedger.kpis', 'Energy ledger metrics')}
           error={error} errorMessage={t('energyLedger.sourceError', 'Energy ledger evidence is unavailable.')}
           emptyMessage={t('energyLedger.noMonths', 'No complete month has been recorded yet.')}
-          errorRecovery={{ onRetry: () => {
-            if (sessionsState.fatalError) void sessionsQuery.refetch();
-            if (drivesState.fatalError) void drivesQuery.refetch();
-          } }}>{null}</SourceContent>}
+          errorRecovery={{ onRetry: retryFailedSources }}>{null}</SourceContent>}
         </section>
       </FadeIn>
 
@@ -185,29 +198,31 @@ export default function EnergyLedgerPage() {
             )}
             chartKey="energy-ledger-monthly"
             loading={isLoading}
+            error={error}
+            onRetry={retryFailedSources}
             empty={chartData.length === 0}
             height={380}
             data={chartData}
             dataColumns={[
               { key: 'month', label: t('energyLedger.col.month', 'Month') },
-              { key: 'charged', label: t('energyLedger.col.charged', 'Charged (kWh)') },
-              { key: 'driven', label: t('energyLedger.col.driven', 'Driven (kWh)') },
-              { key: 'standby', label: t('energyLedger.col.standby', 'Standby (kWh)') },
-              { key: 'stored', label: t('energyLedger.col.stored', 'Δ stored (kWh)') },
-              { key: 'residual', label: t('energyLedger.col.residual', 'Residual (kWh)') },
+              { key: 'charged', label: energyLabel(t('energyLedger.col.charged', 'Charged (kWh)')) },
+              { key: 'driven', label: energyLabel(t('energyLedger.col.driven', 'Driven (kWh)')) },
+              { key: 'standby', label: energyLabel(t('energyLedger.col.standby', 'Standby (kWh)')) },
+              { key: 'stored', label: energyLabel(t('energyLedger.col.stored', 'Δ stored (kWh)')) },
+              { key: 'residual', label: energyLabel(t('energyLedger.col.residual', 'Residual (kWh)')) },
             ]}
           >
             <ResponsiveContainer width="100%" height="100%">
               <ComposedChart data={chartData} margin={{ top: 16, right: 16, bottom: 24, left: 8 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
-                <XAxis dataKey="month" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} />
-                <YAxis tick={{ fill: 'var(--text-muted)', fontSize: 11 }} unit=" kWh" />
+                <CartesianGrid strokeDasharray="3 3" stroke={chartTokens.gridStroke} strokeOpacity={0.4} />
+                <XAxis dataKey="month" tick={chartTick} />
+                <YAxis tick={chartTick} unit={` ${unitPrefs.energy}`} />
                 <Tooltip content={<ChartTooltip />} />
                 <ChartLegend state={ledgerHidden} />
                 <ReferenceLine y={0} stroke="var(--text-muted)" />
                 <Bar
                   dataKey="charged"
-                  name={t('energyLedger.col.charged', 'Charged (kWh)')}
+                  name={energyLabel(t('energyLedger.col.charged', 'Charged (kWh)'))}
                   stackId="in"
                   fill={chartTokens.series[2]}
                   radius={[3, 3, 0, 0]}
@@ -215,14 +230,14 @@ export default function EnergyLedgerPage() {
                 />
                 <Bar
                   dataKey="driven"
-                  name={t('energyLedger.col.driven', 'Driven (kWh)')}
+                  name={energyLabel(t('energyLedger.col.driven', 'Driven (kWh)'))}
                   stackId="out"
                   fill={chartTokens.series[0]}
                   hide={ledgerHidden.isHidden('driven')}
                 />
                 <Bar
                   dataKey="standby"
-                  name={t('energyLedger.col.standby', 'Standby (kWh)')}
+                  name={energyLabel(t('energyLedger.col.standby', 'Standby (kWh)'))}
                   stackId="out"
                   fill={chartTokens.series[3]}
                   hide={ledgerHidden.isHidden('standby')}
@@ -230,7 +245,7 @@ export default function EnergyLedgerPage() {
                 <Line
                   type="monotone"
                   dataKey="residual"
-                  name={t('energyLedger.col.residual', 'Residual (kWh)')}
+                  name={energyLabel(t('energyLedger.col.residual', 'Residual (kWh)'))}
                   stroke={chartTokens.series[5]}
                   strokeWidth={2}
                   dot={{ r: 3 }}
@@ -252,7 +267,12 @@ export default function EnergyLedgerPage() {
               ariaLabel={t('help.energyLedger.iconLabel', 'More info about the ledger method')}
             />
           }>
-          {isLoading ? (
+          {isError ? (
+            <SourceContent state="error" label={t('energyLedger.detail', 'Month by Month')}
+              error={error} errorMessage={t('energyLedger.sourceError', 'Energy ledger evidence is unavailable.')}
+              emptyMessage={t('energyLedger.noMonths', 'No complete month has been recorded yet.')}
+              errorRecovery={{ onRetry: retryFailedSources }}>{null}</SourceContent>
+          ) : isLoading ? (
             <Skeleton height={180} />
           ) : summary.months.length === 0 ? (
             <EmptyState /* no-action: months appear as charge and drive history accumulates. */
@@ -264,7 +284,7 @@ export default function EnergyLedgerPage() {
               {summary.months.map((m) => (
                 <li
                   key={m.month}
-                  className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3"
+                  className="min-w-0 break-words rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3"
                 >
                   <div className="mb-2 flex flex-wrap items-center gap-2">
                     <Text variant="body" className="font-medium">{m.month}</Text>
@@ -278,7 +298,7 @@ export default function EnergyLedgerPage() {
                       }
                     >
                       {t('energyLedger.closed', '{{pct}}% closed', {
-                        pct: Math.round(m.closureRate * 100),
+                        pct: fmtNumber(m.closureRate * 100, 0, unitPrefs.locale),
                       })}
                     </Badge>
                     {worstMonth != null && worstMonth.month === m.month && summary.months.length > 1 ? (
@@ -287,20 +307,20 @@ export default function EnergyLedgerPage() {
                       </Badge>
                     ) : null}
                   </div>
-                  <div className="grid grid-cols-2 gap-x-4 gap-y-1 sm:grid-cols-4">
+                  <div className="grid min-w-0 grid-cols-2 gap-x-4 gap-y-1 sm:grid-cols-4">
                     <Text variant="caption">
                       {t('energyLedger.charged', 'Charged')}
                     </Text>
-                    <Text variant="bodySm">
+                    <Text variant="bodySm" className="min-w-0 break-words">
                       {t('energyLedger.chargedValue', '{{e}} · {{n}} sessions', {
                         e: formatEnergy(m.chargedWh),
-                        n: m.chargeSessions,
+                        n: fmtNumber(m.chargeSessions, 0, unitPrefs.locale),
                       })}
                     </Text>
                     <Text variant="caption">
                       {t('energyLedger.driven', 'Driven')}
                     </Text>
-                    <Text variant="bodySm">
+                    <Text variant="bodySm" className="min-w-0 break-words">
                       {t('energyLedger.drivenValue', '{{e}} · {{d}}', {
                         e: formatEnergy(m.drivenWh),
                         d: formatDistance(m.distanceM),
@@ -309,16 +329,16 @@ export default function EnergyLedgerPage() {
                     <Text variant="caption">
                       {t('energyLedger.standby', 'Standby')}
                     </Text>
-                    <Text variant="bodySm">
+                    <Text variant="bodySm" className="min-w-0 break-words">
                       {t('energyLedger.standbyValue', '{{e}} over {{h}} h', {
                         e: formatEnergy(m.standbyWh),
-                        h: Math.round(m.idleHours),
+                        h: fmtNumber(m.idleHours, 0, unitPrefs.locale),
                       })}
                     </Text>
                     <Text variant="caption">
                       {t('energyLedger.residual', 'Residual')}
                     </Text>
-                    <Text variant="bodySm">
+                    <Text variant="bodySm" className="min-w-0 break-words">
                       {`${m.residualWh >= 0 ? '+' : '−'}${formatEnergy(Math.abs(m.residualWh))}`}
                     </Text>
                   </div>
