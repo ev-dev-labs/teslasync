@@ -2,6 +2,7 @@ import { fireEvent, render, screen, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
+import type { ChartContainerProps } from '@/components/charts/ChartContainer';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 interface FakeQuery<T> {
@@ -18,17 +19,7 @@ interface FakeQuery<T> {
   refetch: ReturnType<typeof vi.fn>;
 }
 
-interface ChartCapture {
-  title: string;
-  children?: ReactNode;
-  data?: Record<string, string | number>[];
-  dataColumns?: { key: string; label: string }[];
-  chartKey?: string;
-  error?: unknown;
-  onRetry?: () => void;
-  loading?: boolean;
-  exportable?: boolean;
-}
+type ChartCapture = ChartContainerProps;
 
 interface AxisCapture {
   tick?: { fontFamily: string; fontSize: number };
@@ -124,16 +115,19 @@ vi.mock('@/components/motion', () => ({
   FadeIn: ({ children }: { children?: ReactNode }) => <>{children}</>,
 }));
 
+// Spy at the concrete frame boundary used by ChartCard, retaining its real rendering.
+vi.mock('@/components/charts/ChartContainer', async importOriginal => {
+  const actual = await importOriginal<typeof import('@/components/charts/ChartContainer')>();
+  return {
+    ...actual,
+    ChartContainer: (props: ChartContainerProps) => {
+      H.chart = props;
+      return <actual.ChartContainer {...props} />;
+    },
+  };
+});
+
 vi.mock('@/components/charts', () => ({
-  ChartContainer: (props: ChartCapture) => {
-    H.chart = props;
-    return (
-    <section>
-      <h2>{props.title}</h2>
-      {props.children}
-    </section>
-    );
-  },
   ChartTooltip: () => null,
   ChartLegend: () => null,
   ComposedChart: ({ children }: { children?: ReactNode }) => <>{children}</>,
@@ -263,7 +257,7 @@ describe('EnergyLedgerPage partial-data contract', () => {
     }
     expect(within(summary).queryByText('0%')).not.toBeInTheDocument();
     expect(within(summary).queryByText('0 Wh/day')).not.toBeInTheDocument();
-    expect(screen.getByText('Monthly Balance')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Monthly Balance' })).toBeInTheDocument();
     expect(screen.getByText('Month by Month')).toBeInTheDocument();
   });
 
