@@ -29,8 +29,8 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, within, waitFor, fireEvent } from '@testing-library/react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { act, render, screen, within, waitFor, fireEvent } from '@testing-library/react';
+import { onlineManager, QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter, useLocation } from 'react-router-dom';
 import type { ReactNode } from 'react';
 
@@ -439,5 +439,87 @@ describe('SoftwareUpdatesPage — range change resets pagination atomically (reg
       expect(search).toContain('to=2025-02-28');
       expect(search).not.toContain('page=');
     });
+  });
+});
+
+
+describe('SoftwareUpdatesPage — shared trust preservation', () => {
+  it('keeps every populated section and release-note action on a failed background refresh', async () => {
+    renderPage();
+    await screen.findByTestId('cadence-chart');
+    api.mode = 'error';
+
+    fireEvent.click(refreshButton());
+
+    expect(await screen.findByText('Update history could not be refreshed. Retry to recover.')).toBeInTheDocument();
+    expect(within(kpiBand()).getByText('Retained evidence')).toBeInTheDocument();
+    expect(within(kpiCard('Current version')).getByText('2025.20.1')).toBeInTheDocument();
+    expect(screen.getByTestId('cadence-chart')).toBeInTheDocument();
+    expect(screen.getByTestId('status-breakdown')).toHaveAttribute('data-total', '3');
+    expect(within(screen.getByRole('list', { name: 'Update timeline' })).getAllByRole('listitem')).toHaveLength(3);
+    expect(screen.getByRole('link', { name: 'Release notes for 2025.20.1' })).toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: 'Retry' }).length).toBeGreaterThanOrEqual(3);
+    expect(screen.getByTestId('ai-summarizer')).toHaveAttribute('data-vehicle', '1');
+  });
+
+  it('marks all four data sections retained during a paused refresh without inventing a server failure', async () => {
+    renderPage();
+    await screen.findByTestId('cadence-chart');
+    const before = updatePaths().length;
+
+    try {
+      act(() => onlineManager.setOnline(false));
+      fireEvent.click(refreshButton());
+
+      await waitFor(() => expect(within(kpiBand()).getByText('Retained evidence')).toBeInTheDocument());
+      expect(kpiBand().closest('[data-source-period-kind]')).toHaveAttribute('data-source-retained', 'true');
+      expect(screen.getAllByText(/Previously loaded data remains visible while affected sources recover/)).toHaveLength(4);
+      expect(screen.getByTestId('cadence-chart')).toBeInTheDocument();
+      expect(screen.getByTestId('status-breakdown')).toHaveAttribute('data-total', '3');
+      expect(within(screen.getByRole('list', { name: 'Update timeline' })).getAllByRole('listitem')).toHaveLength(3);
+      expect(screen.getAllByRole('button', { name: 'Retry' })).toHaveLength(4);
+      expect(screen.queryByText("Can't reach server")).not.toBeInTheDocument();
+      expect(updatePaths()).toHaveLength(before);
+    } finally {
+      await act(async () => onlineManager.setOnline(true));
+    }
+  });
+
+  it('keeps unresolved counts unknown for malformed rows and preserves every section shell', async () => {
+    api.updates = { unexpected: 'not an update array' };
+    renderPage();
+
+    await waitFor(() => expect(updatePaths()).toHaveLength(1));
+    expect(await screen.findAllByText('Update history is not available. Select a vehicle to load its history.')).toHaveLength(4);
+    expect(screen.getByRole('heading', { name: 'Software update summary' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Update cadence' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'By status' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Update timeline' })).toBeInTheDocument();
+    expect(within(kpiCard('Total updates')).queryByText('0')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('cadence-chart')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('status-breakdown')).not.toBeInTheDocument();
+    expect(screen.getByTestId('ai-summarizer')).toBeInTheDocument();
+  });
+
+  it('preserves status text, encoded firmware links, and vehicle-name fallback without firmware commands', async () => {
+    api.updates = [
+      { ...UPDATES[0], id: 1, vehicle_id: 999, version: '2025.20/beta?', status: 'installing' },
+      { ...UPDATES[1], id: 2, status: 'downloading' },
+      { ...UPDATES[2], id: 3, status: 'scheduled', installed_at: null },
+      { ...UPDATES[2], id: 4, status: 'constructor', installed_at: null },
+    ];
+    renderPage();
+    await screen.findByTestId('cadence-chart');
+
+    const timeline = screen.getByRole('list', { name: 'Update timeline' });
+    for (const status of ['Installing', 'Downloading', 'Scheduled', 'Available']) {
+      expect(within(timeline).getByText(status)).toBeInTheDocument();
+    }
+    expect(within(timeline).getByText('Vehicle 999')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Release notes for 2025.20/beta?' })).toHaveAttribute(
+      'href', 'https://www.notateslaapp.com/software-updates/version/2025.20%2Fbeta%3F/release-notes',
+    );
+    expect(mockRequest.mock.calls.every(([, options]) => !options?.method || options.method === 'GET')).toBe(true);
+    expect(refreshButton()).toHaveClass('h-11', 'w-11');
   });
 });

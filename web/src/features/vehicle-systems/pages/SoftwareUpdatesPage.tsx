@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 
 import { PageLayout, CardGrid, LayoutCard } from '@/components/layout';
-import { Badge, Button, Pagination, Text, Caption } from '@/components/ui';
+import { Badge, Button, IconBox, Pagination, Text, Caption } from '@/components/ui';
 import { type StatMetric } from '@/components/data-display';
 import { VehicleOperationalBrief } from '../components/operationalbrief-all/VehicleOperationalBrief';
 import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
@@ -28,8 +28,6 @@ import { useRangeState } from '@/hooks/useRangeState';
 import { useUrlNumber, useUrlBatch } from '@/hooks/useUrlState';
 import { formatDate } from '@/lib/dateFormat';
 
-import { neonColorMap } from '@/lib/tokens';
-import { cn } from '@/lib/cn';
 import { useSoftwareUpdatesPage, PAGE_SIZE, type SoftwareUpdate } from '@/api/hooks/useSoftwareUpdatesPage';
 
 import { type CadencePoint } from '../components/SoftwareUpdateCadenceChart';
@@ -71,6 +69,9 @@ export default function SoftwareUpdatesPage() {
   const { data, isLoading, isError, error, refetch } = updatesQuery;
   const source = softwareSourceState(data, isLoading, isError);
   const historySource = deriveDataState(updatesQuery, { provenance: 'historical' });
+  // Paused refreshes retain the same historical rows; they are not server failures.
+  const refreshBlocked = source.available && historySource.isRefreshBlocked;
+  const retained = source.retained || refreshBlocked;
 
   // Defensive coercion — an unexpected non-array response shape must not crash
   // the derivations below.
@@ -154,7 +155,9 @@ export default function SoftwareUpdatesPage() {
   const actions = (
     <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3">
       <Button
+        type="button"
         variant="ghost"
+        className="h-11 w-11 p-0 md:h-10 md:w-10"
         onClick={handleRetry}
         aria-label={t('common.refresh', 'Refresh')}
       >
@@ -197,14 +200,19 @@ export default function SoftwareUpdatesPage() {
           metrics={metrics}
           loading={source.initialLoading}
           available={source.available}
-          retained={source.retained}
+          retained={retained}
           error={isError ? t('softwareUpdates.source.failed', 'Update history could not be refreshed. Retry to recover.') : null}
           period={{
             kind: 'unknown',
             label: t('softwareUpdates.source.period', 'Loaded update history'),
             reason: t('softwareUpdates.source.scope', 'Summary and charts describe this page of up to 50 updates in the selected range, not the complete fleet history.'),
           }}
-          footer={!source.available && !isLoading ? retryContent ?? unavailableContent : undefined}
+          footer={refreshBlocked ? (
+            <VehicleSourceContent source={historySource} enabled={vehicleId != null}
+              label={t('softwareUpdates.kpi.label', 'Software update summary')}>
+              {null}
+            </VehicleSourceContent>
+          ) : !source.available && !isLoading ? retryContent ?? unavailableContent : undefined}
         />
       </FadeIn>
 
@@ -217,7 +225,12 @@ export default function SoftwareUpdatesPage() {
               loading={source.initialLoading}
               error={source.fatalError ? error : undefined}
               onRetry={handleRetry}
-              errorContent={source.retained ? retryContent : undefined}
+              errorContent={source.retained ? retryContent : refreshBlocked ? (
+                <VehicleSourceContent source={historySource} enabled={vehicleId != null}
+                  label={t('softwareUpdates.cadence.title', 'Update cadence')}>
+                  {null}
+                </VehicleSourceContent>
+              ) : undefined}
               emptyMessage={source.available ? t('softwareUpdates.cadence.empty', 'No update activity in this range') : unavailableMessage}
               emptyContent={source.available && resetAction ? <Button variant="outline" onClick={resetAction.onClick}>{resetAction.label}</Button> : undefined}
             />
@@ -287,16 +300,15 @@ export default function SoftwareUpdatesPage() {
               <CardGrid label={t('softwareUpdates.timeline.title', 'Update timeline')} items={updates.map((u) => {
                   const meta = getUpdateStatus(u.status);
                   const Icon = meta.icon;
-                  const nc = neonColorMap[meta.color];
                   const vName = vehicleMap.get(u.vehicle_id)
                     ?? t('softwareUpdates.timeline.vehicleFallback', 'Vehicle {{id}}', { id: u.vehicle_id });
                   return { id: String(u.id), size: 'quarter' as const, content: (
                       <SoftwareHistoryItem version={u.version}>
                         <div className="flex items-start justify-between gap-2">
                           <div className="flex min-w-0 items-start gap-3">
-                            <span className={cn('mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full ring-1', nc.bg, nc.ring)}>
-                              <Icon className={cn('h-4 w-4', nc.text)} aria-hidden="true" />
-                            </span>
+                            <IconBox color={meta.color} size="sm" className="mt-0.5" aria-hidden="true">
+                              <Icon className="h-4 w-4" />
+                            </IconBox>
                             <div className="min-w-0">
                               <div className="flex flex-wrap items-center gap-2">
                                 <Badge variant={meta.badgeVariant} size="sm">{t(meta.labelKey, meta.labelFallback)}</Badge>
