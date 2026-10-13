@@ -107,7 +107,7 @@ vi.mock('@/components/charts', () => {
     </div>
   );
   return {
-    CHART_COLORS: ['#00b4d8', '#10b981', '#8b5cf6', '#f59e0b', '#38bdf8'],
+    CHART_COLORS: ['var(--chart-1)', 'var(--chart-2)', 'var(--chart-3)', 'var(--chart-4)', 'var(--chart-5)'],
     ChartContainer: ({
       title,
       ariaLabel,
@@ -283,11 +283,13 @@ describe('SeasonalEfficiencyPage', () => {
       if (id !== failedSection) expect(screen.getByTestId(id)).toBeInTheDocument();
     }
     expect(screen.queryByTestId(failedSection)).toBeNull();
-    expect(screen.getAllByRole('alert')).toHaveLength(1);
+    expect(screen.getAllByText('Synthetic seasonal chart render failure')).toHaveLength(1);
+    expect(screen.getAllByRole('button', { name: 'Retry' })).toHaveLength(1);
     h.failedChart = null;
     fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
     expectEveryShell();
-    expect(screen.queryByRole('alert')).toBeNull();
+    expect(screen.queryByText('Synthetic seasonal chart render failure')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Retry' })).toBeNull();
     expect(refetch).not.toHaveBeenCalled();
   });
 
@@ -295,7 +297,8 @@ describe('SeasonalEfficiencyPage', () => {
     h.history = query({ isSuccess: false });
     renderPage();
     expectEveryShell();
-    expect(screen.getAllByText('Seasonal-history availability has not resolved.').length).toBeGreaterThan(1);
+    expect(screen.getAllByLabelText('Loading seasonal efficiency history').length).toBeGreaterThan(1);
+    expect(screen.getByTestId('seasonal-kpis')).toHaveTextContent('Returned-history coverage has not resolved.');
     expect(screen.queryByText('No drives were returned for this vehicle.')).toBeNull();
     expect(screen.queryByRole('button', { name: 'Retry' })).toBeNull();
   });
