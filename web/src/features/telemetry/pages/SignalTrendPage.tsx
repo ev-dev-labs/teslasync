@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { TrendingUp, Activity, Waypoints } from 'lucide-react';
 
 import { PageLayout } from '@/components/layout';
-import { GlassPanel, PanelTitle, Text, Badge, Select, HelpTooltip } from '@/components/ui';
+import { GlassPanel, PanelTitle, Text, Badge, Select, HelpTooltip, Icon } from '@/components/ui';
 
 import type { StatMetric } from '@/components/data-display';
 import { TelemetrySummaryBrief } from '../components/operationalbrief-all/TelemetrySummaryBrief';
@@ -148,7 +148,7 @@ export default function SignalTrendPage() {
       <FadeIn>
         <GlassPanel className="p-4 sm:p-5">
           <PanelTitle className="mb-3 flex items-center gap-2">
-            <TrendingUp className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+            <Icon icon={TrendingUp} className="text-[var(--text-secondary)]" />
             {t('signalTrend.pick', 'Choose a signal')}
             <HelpTooltip
               size="sm"
@@ -193,55 +193,49 @@ export default function SignalTrendPage() {
 
       {/* 3 — Baseline, actual, and evidence-limited forecast band */}
       <FadeIn delay={0.2}>
-        {!isLoading && !isError && combined.length === 0 ? (
-          <GlassPanel className="p-4 sm:p-5">
-            <EmptyState /* no-action: the trend chart appears once a signal with history is chosen. */
-              icon={<TrendingUp className="h-8 w-8" />}
-              message={chosen ? t('signalTrend.notEnough', 'Not enough history yet for this signal.') : t('signalTrend.pickOne', 'Choose a signal above to compute its trend.')}
-            />
-          </GlassPanel>
-        ) : (
-          <ChartContainer
-            title={t('signalTrend.chart', 'Robust baseline & forecast band')}
-            subtitle={t('signalTrend.chartHint', 'The forecast is never projected further ahead than the signal has actually been observed, and only appears when the trend is significant')}
-            ariaLabel={t('signalTrend.chartAria', 'Composed chart of actual signal values, the fitted robust baseline, and an evidence-limited forecast band')}
-            chartKey="signal-trend-forecast"
-            loading={isLoading}
-            error={isError ? error : null}
-            onRetry={() => historyQuery.refetch()}
-            empty={combined.length === 0}
-            height={340}
-            data={combined}
-            dataColumns={[
-              { key: 'time', label: t('signalTrend.col.time', 'Time') },
-              { key: 'actual', label: t('signalTrend.col.actual', 'Actual') },
-              { key: 'baseline', label: t('signalTrend.col.baseline', 'Baseline') },
-              { key: 'bandBase', label: t('signalTrend.col.low', 'Forecast low') },
-              { key: 'bandHigh', label: t('signalTrend.col.high', 'Forecast high') },
-            ]}
-          >
-            <ResponsiveContainer width="100%" height="100%">
-              <ComposedChart data={combined}>
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
-                <XAxis dataKey="time" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} minTickGap={40} />
-                <YAxis tick={{ fill: 'var(--text-muted)', fontSize: 11 }} domain={['auto', 'auto']} />
-                <Tooltip content={<ChartTooltip />} />
-                <ChartLegend state={hidden} />
-                <Area type="monotone" dataKey="bandBase" stackId="band" stroke="none" fill="transparent" name={t('signalTrend.col.low', 'Forecast low')} hide={hidden.isHidden('forecast')} legendType="none" />
-                <Area type="monotone" dataKey="bandRange" stackId="band" stroke="none" fill={chartTokens.series[2]} fillOpacity={0.18} name={t('signalTrend.forecastBand', 'Forecast band')} hide={hidden.isHidden('forecast')} />
-                <Line type="monotone" dataKey="baseline" name={t('signalTrend.col.baseline', 'Baseline')} stroke={chartTokens.series[1]} strokeWidth={2} strokeDasharray="4 3" dot={false} connectNulls={false} hide={hidden.isHidden('baseline')} />
-                <Line type="monotone" dataKey="actual" name={t('signalTrend.col.actual', 'Actual')} stroke={chartTokens.series[0]} strokeWidth={2} dot={false} connectNulls={false} hide={hidden.isHidden('actual')} />
-              </ComposedChart>
-            </ResponsiveContainer>
-          </ChartContainer>
-        )}
+        {/* Keep the canonical frame and title mounted in every history state. */}
+        <ChartContainer
+          title={t('signalTrend.chart', 'Robust baseline & forecast band')}
+          subtitle={t('signalTrend.chartHint', 'The forecast is never projected further ahead than the signal has actually been observed, and only appears when the trend is significant')}
+          ariaLabel={t('signalTrend.chartAria', 'Composed chart of actual signal values, the fitted robust baseline, and an evidence-limited forecast band')}
+          chartKey="signal-trend-forecast"
+          loading={isLoading}
+          error={isError ? error : null}
+          onRetry={() => historyQuery.refetch()}
+          empty={combined.length === 0}
+          /* no-action: choose a signal above; history arrives from telemetry. */
+          emptyMessage={chosen ? t('signalTrend.notEnough', 'Not enough history yet for this signal.') : t('signalTrend.pickOne', 'Choose a signal above to compute its trend.')}
+          height={340}
+          data={combined}
+          dataColumns={[
+            { key: 'time', label: t('signalTrend.col.time', 'Time') },
+            { key: 'actual', label: t('signalTrend.col.actual', 'Actual') },
+            { key: 'baseline', label: t('signalTrend.col.baseline', 'Baseline') },
+            { key: 'bandBase', label: t('signalTrend.col.low', 'Forecast low') },
+            { key: 'bandHigh', label: t('signalTrend.col.high', 'Forecast high') },
+          ]}
+        >
+          <ResponsiveContainer width="100%" height="100%">
+            <ComposedChart data={combined}>
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
+              <XAxis dataKey="time" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} minTickGap={40} />
+              <YAxis tick={{ fill: 'var(--text-muted)', fontSize: 11 }} domain={['auto', 'auto']} />
+              <Tooltip content={<ChartTooltip />} />
+              <ChartLegend state={hidden} />
+              <Area type="monotone" dataKey="bandBase" stackId="band" stroke="none" fill="transparent" name={t('signalTrend.col.low', 'Forecast low')} hide={hidden.isHidden('forecast')} legendType="none" />
+              <Area type="monotone" dataKey="bandRange" stackId="band" stroke="none" fill={chartTokens.series[2]} fillOpacity={0.08} name={t('signalTrend.forecastBand', 'Forecast band')} hide={hidden.isHidden('forecast')} />
+              <Line type="monotone" dataKey="baseline" name={t('signalTrend.col.baseline', 'Baseline')} stroke={chartTokens.series[1]} strokeWidth={2} strokeDasharray="4 3" dot={false} connectNulls={false} hide={hidden.isHidden('baseline')} />
+              <Line type="monotone" dataKey="actual" name={t('signalTrend.col.actual', 'Actual')} stroke={chartTokens.series[0]} strokeWidth={2} dot={false} connectNulls={false} hide={hidden.isHidden('actual')} />
+            </ComposedChart>
+          </ResponsiveContainer>
+        </ChartContainer>
       </FadeIn>
 
       {/* 4 — Reading the result */}
       <FadeIn delay={0.3}>
         <GlassPanel className="p-4 sm:p-5">
           <PanelTitle className="mb-3 flex items-center gap-2">
-            <Activity className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+            <Icon icon={Activity} className="text-[var(--text-secondary)]" />
             {t('signalTrend.reading', 'Reading the result')}
           </PanelTitle>
           {isLoading ? (
