@@ -811,3 +811,34 @@ describe('TripPlannerPage — AI agent input wiring', () => {
     expect(agent).toHaveAttribute('data-dest', 'To Location');
   });
 });
+
+
+describe('TripPlannerPage — retained source scope', () => {
+  it('distinguishes unavailable weather from a returned neutral factor', () => {
+    renderPage();
+    const plan = makePlan();
+    delete plan.weather_impact;
+    planWith(plan);
+    expect(screen.getByText('Weather impact is unavailable for this plan.')).toBeInTheDocument();
+    expect(screen.queryByText('No significant weather impact expected.')).not.toBeInTheDocument();
+  });
+
+  it('retains submitted SOC threshold when the current form changes', () => {
+    renderPage();
+    planWith(makePlan());
+    fireEvent.change(screen.getByRole('slider', { name: 'Min Arrival SOC' }), { target: { value: '40' } });
+    expect(screen.getByTestId('soc-minarrival')).toHaveTextContent('20');
+    expect(screen.getByTestId('leg-count')).toHaveTextContent('2');
+  });
+
+  it('disables navigation after the workspace vehicle changes without deleting the plan', () => {
+    const view = renderPage();
+    planWith(makePlan());
+    const selected = mockSelectedVehicle();
+    mockSelectedVehicle.mockReturnValue({ ...selected, vehicleId: 2 });
+    view.rerenderPage();
+    expect(screen.getByRole('button', { name: 'Send to Car' })).toBeDisabled();
+    expect(screen.getByTestId('map-legs')).toHaveTextContent('2');
+    expect(screen.getByTestId('leg-count')).toHaveTextContent('2');
+  });
+});

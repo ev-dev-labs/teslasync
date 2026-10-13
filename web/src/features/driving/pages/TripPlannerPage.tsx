@@ -65,6 +65,8 @@ export default function TripPlannerPage() {
 
   // Result state
   const [plan, setPlan] = useState<TripPlan | null>(null);
+  const [submittedRequest, setSubmittedRequest] = useState<TripPlanRequest | null>(null);
+  const [planUpdatedAt, setPlanUpdatedAt] = useState(0);
 
   const activeVehicle = vehicleId != null ? String(vehicleId) : '';
   const canPlan = origin != null && destination != null && activeVehicle !== '';
@@ -106,23 +108,32 @@ export default function TripPlannerPage() {
     };
 
     planMutation.mutate(req, {
-      onSuccess: (data) => setPlan(data),
+      onSuccess: (data) => {
+        setPlan(data);
+        setSubmittedRequest(req);
+        setPlanUpdatedAt(Date.now());
+      },
     });
   }, [origin, destination, activeVehicle, currentSOC, minArrivalSOC, speedFactor, planMutation]);
 
   const handleSendToCar = useCallback(() => {
-    if (!destination || !activeVehicle) return;
+    if (!destination || !activeVehicle || !submittedRequest
+      || submittedRequest.vehicle_id !== Number(activeVehicle)
+      || submittedRequest.destination.lat !== destination.lat
+      || submittedRequest.destination.lng !== destination.lng) return;
     commandMutation.mutate({
       vehicleId: Number(activeVehicle),
       command: 'navigation_request',
       params: { lat: destination.lat, lon: destination.lng },
     });
-  }, [destination, activeVehicle, commandMutation]);
+  }, [destination, activeVehicle, commandMutation, submittedRequest]);
   const planState = useDataState({
     data: plan ?? undefined,
     error: planMutation.error,
     isError: planMutation.isError,
     isFetching: planMutation.isPending,
+    fetchStatus: planMutation.isPaused ? 'paused' : planMutation.isPending ? 'fetching' : 'idle',
+    dataUpdatedAt: planUpdatedAt,
     refetch: handlePlan,
   }, { provenance: 'inferred' });
 
@@ -278,7 +289,10 @@ export default function TripPlannerPage() {
                   wrapLabel
                   onClick={handleSendToCar}
                   variant="secondary"
-                  disabled={commandMutation.isPending}
+                  disabled={commandMutation.isPending || !submittedRequest
+                    || submittedRequest.vehicle_id !== Number(activeVehicle)
+                    || submittedRequest.destination.lat !== destination.lat
+                    || submittedRequest.destination.lng !== destination.lng}
                   className="min-h-11 gap-2"
                 >
                   <Send className="h-4 w-4" aria-hidden="true" />
@@ -309,8 +323,8 @@ export default function TripPlannerPage() {
 
           <div className="min-w-0 xl:col-span-2 3xl:col-span-3">
             <TripPlannerMap
-              origin={origin}
-              destination={destination}
+              origin={submittedRequest?.origin ?? origin}
+              destination={submittedRequest?.destination ?? destination}
               legs={legs}
               chargeStops={chargeStops}
             />
@@ -356,7 +370,7 @@ export default function TripPlannerPage() {
             <SOCRouteChart
               socCurve={socCurve}
               chargeStops={chargeStops}
-              minArrivalSOC={minArrivalSOC}
+              minArrivalSOC={submittedRequest?.min_arrival_soc ?? minArrivalSOC}
             />
           </div>
 
@@ -412,7 +426,7 @@ export default function TripPlannerPage() {
                 )}
 
                 {weather && weather.efficiency_factor !== 1.0 ? (
-                  <div className="flex items-start gap-2 rounded-lg border border-white/[0.06] bg-white/[0.02] p-3">
+                  <div className="flex items-start gap-2 rounded-lg border border-border-subtle bg-surface-2 p-3">
                     <Thermometer className="mt-0.5 h-4 w-4 shrink-0 text-amber-300" aria-hidden="true" />
                     <div className="min-w-0">
                       <Text as="p" size="sm" weight="medium" color="primary">
@@ -430,7 +444,9 @@ export default function TripPlannerPage() {
                   </div>
                 ) : (
                   <Caption className="block">
-                    {t('tripPlanner.insights.noWeather', 'No significant weather impact expected.')}
+                    {weather
+                      ? t('tripPlanner.insights.noWeather', 'No significant weather impact expected.')
+                      : t('tripPlanner.insights.weatherUnavailable', 'Weather impact is unavailable for this plan.')}
                   </Caption>
                 )}
               </div>
