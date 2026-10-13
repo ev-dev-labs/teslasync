@@ -216,11 +216,21 @@ import type { MotorSnapshot } from '@/api/types';
 
 /* ── Fixtures ─────────────────────────────────────────────────────── */
 
-function makeQuery<T>(overrides: { data?: T; isLoading?: boolean; error?: unknown; refetch?: () => void } = {}) {
+function makeQuery<T>(overrides: {
+  data?: T;
+  isLoading?: boolean;
+  isFetching?: boolean;
+  isSuccess?: boolean;
+  fetchStatus?: 'fetching' | 'paused' | 'idle';
+  error?: unknown;
+  refetch?: () => void;
+} = {}) {
   return {
     data: overrides.data,
     isLoading: overrides.isLoading ?? false,
-    isFetching: false,
+    isFetching: overrides.isFetching ?? false,
+    isSuccess: overrides.isSuccess ?? (overrides.data !== undefined && overrides.error == null && !overrides.isLoading),
+    fetchStatus: overrides.fetchStatus ?? 'idle',
     isStale: false,
     isError: overrides.error != null,
     error: overrides.error ?? null,
@@ -361,7 +371,7 @@ function displayUnits(unitPrefs: UnitPref) {
 }
 
 beforeEach(() => {
-  vi.clearAllMocks();
+  vi.resetAllMocks();
   for (const key of Object.keys(captured)) delete captured[key];
 
   healthMock.mockReturnValue(makeQuery<DrivetrainHealthData>({ data: HEALTH, refetch: refetchMock }));
@@ -706,4 +716,161 @@ describe('DrivetrainHealthPage', () => {
     expect(captured.summary.power).toEqual({ peakPower: 0, avgPowerMax: 0, minRegenPower: null });
     expect((captured['Temperature Trend'].data as Record<string, unknown>[])[0].outsideTemp).toBe('0.0°C');
   });
+
+  it('loads drive power independently while health and statistics remain rendered', () => {
+    drivesMock.mockReturnValue(makeQuery<Drive[]>({ isLoading: true }));
+    renderPage();
+
+    const power = screen.getByRole('group', { name: 'Power Summary' });
+    expect(power).toHaveAttribute('aria-busy', 'true');
+    expect(within(power).queryByText('Peak Power')).not.toBeInTheDocument();
+    expect(within(power).queryByText('No data')).not.toBeInTheDocument();
+    const thermal = thermalLoadPanel();
+    expect(within(thermal).queryByText('Returned evidence')).not.toBeInTheDocument();
+    expect(within(thermal).getByText('Drives')).toBeInTheDocument();
+    expect(within(thermal).getByText('12')).toBeInTheDocument();
+    expect(screen.getByText('Drivetrain healthy')).toBeInTheDocument();
+    expect(within(screen.getByRole('group', { name: 'Drive Statistics' })).getByText('2.00 kWh')).toBeInTheDocument();
+  });
+
+  it('loads statistics independently while drive power and health remain rendered', () => {
+    statsMock.mockReturnValue(makeQuery<DrivingStats>({ isLoading: true }));
+    renderPage();
+
+    const statistics = screen.getByRole('group', { name: 'Drive Statistics' });
+    expect(statistics).toHaveAttribute('aria-busy', 'true');
+    expect(within(statistics).queryByText('Total Regen')).not.toBeInTheDocument();
+    expect(within(statistics).queryByText('No drive statistics available yet')).not.toBeInTheDocument();
+    expect(within(thermalLoadPanel()).queryByText('Drives')).not.toBeInTheDocument();
+    expect(within(thermalLoadPanel()).getByText('75.00 kW')).toBeInTheDocument();
+    expect(within(screen.getByRole('group', { name: 'Power Summary' })).getByText('100.00 kW')).toBeInTheDocument();
+    expect(screen.getByText('Drivetrain healthy')).toBeInTheDocument();
+  });
+
+  it.each([
+    { name: 'resolved empty drives', drives: [] },
+    { name: 'loaded drives outside the existing chart range', drives: [DRIVE_BEFORE, DRIVE_AFTER] },
+  ])('shows independent power emptiness for $name', ({ drives }) => {
+    drivesMock.mockReturnValue(makeQuery<Drive[]>({ data: drives }));
+    renderPage();
+
+    const power = screen.getByRole('group', { name: 'Power Summary' });
+    expect(within(power).getByText('No data')).toBeInTheDocument();
+    expect(within(power).queryByText('Avg Peak Power')).not.toBeInTheDocument();
+    const thermal = thermalLoadPanel();
+    expect(within(thermal).getByText('No data')).toBeInTheDocument();
+    expect(within(thermal).queryByText('Returned evidence')).not.toBeInTheDocument();
+    expect(within(thermal).getByText('Drives')).toBeInTheDocument();
+    expect(within(screen.getByRole('group', { name: 'Drive Statistics' })).getByText('2.00 kWh')).toBeInTheDocument();
+    expect(screen.getByText('Drivetrain healthy')).toBeInTheDocument();
+  });
+
+  it('keeps power readings unknown rather than empty when included drives lack power', () => {
+    drivesMock.mockReturnValue(makeQuery<Drive[]>({ data: [makeDrive({ avgPowerW: null })] }));
+    renderPage();
+
+    const power = screen.getByRole('group', { name: 'Power Summary' });
+    expect(within(power).getByText('Avg Peak Power')).toBeInTheDocument();
+    expect(within(power).getAllByText('—')).toHaveLength(3);
+    expect(within(power).queryByText('No data')).not.toBeInTheDocument();
+    expect(within(thermalLoadPanel()).getByText('Returned evidence')).toBeInTheDocument();
+    expect(within(thermalLoadPanel()).queryByText('No data')).not.toBeInTheDocument();
+  });
+
+  it.each([
+    { name: 'undefined payload', data: undefined },
+    { name: 'null payload', data: null },
+  ])('shows successful statistics emptiness for $name without hiding power', ({ data }) => {
+    statsMock.mockReturnValue(makeQuery<DrivingStats | null>({ data, isSuccess: true }));
+    renderPage();
+
+    const statistics = screen.getByRole('group', { name: 'Drive Statistics' });
+    expect(within(statistics).getByText('No drive statistics available yet')).toBeInTheDocument();
+    expect(within(statistics).queryByText('Total Regen')).not.toBeInTheDocument();
+    expect(within(thermalLoadPanel()).getByText('No drive statistics available yet')).toBeInTheDocument();
+    expect(within(thermalLoadPanel()).queryByText('Drives')).not.toBeInTheDocument();
+    expect(within(screen.getByRole('group', { name: 'Power Summary' })).getByText('75.00 kW')).toBeInTheDocument();
+  });
+
+  it('retains independent power and statistics readings through refresh failures', () => {
+    const retryDrives = vi.fn();
+    const retryStats = vi.fn();
+    drivesMock.mockReturnValue(makeQuery({
+      data: DRIVES, error: new Error('drive refresh failed'), isLoading: true, refetch: retryDrives,
+    }));
+    statsMock.mockReturnValue(makeQuery({
+      data: STATS, error: new Error('statistics refresh failed'), isLoading: true, refetch: retryStats,
+    }));
+    renderPage();
+
+    const power = screen.getByRole('group', { name: 'Power Summary' });
+    const statistics = screen.getByRole('group', { name: 'Drive Statistics' });
+    expect(power).not.toHaveAttribute('aria-busy');
+    expect(statistics).not.toHaveAttribute('aria-busy');
+    expect(within(power).getByText('75.00 kW')).toBeInTheDocument();
+    expect(within(statistics).getByText('2.00 kWh')).toBeInTheDocument();
+    expect(within(power).getByTestId('stale-refresh-warning')).toBeInTheDocument();
+    expect(within(statistics).getByTestId('stale-refresh-warning')).toBeInTheDocument();
+    expect(within(thermalLoadPanel()).getAllByTestId('stale-refresh-warning')).toHaveLength(2);
+    fireEvent.click(within(power).getByRole('button', { name: 'Refresh' }));
+    expect(retryDrives).toHaveBeenCalledTimes(1);
+    expect(retryStats).not.toHaveBeenCalled();
+    fireEvent.click(within(statistics).getByRole('button', { name: 'Refresh' }));
+    expect(retryStats).toHaveBeenCalledTimes(1);
+    expect(screen.getByText('Drivetrain healthy')).toBeInTheDocument();
+  });
+
+  it('keeps paused drive evidence beside a fatal statistics source and retries them independently', () => {
+    const retryDrives = vi.fn();
+    const retryStats = vi.fn();
+    drivesMock.mockReturnValue(makeQuery({ data: DRIVES, fetchStatus: 'paused', refetch: retryDrives }));
+    statsMock.mockReturnValue(makeQuery<DrivingStats>({ error: new Error('statistics failed'), refetch: retryStats }));
+    renderPage();
+
+    const power = screen.getByRole('group', { name: 'Power Summary' });
+    const statistics = screen.getByRole('group', { name: 'Drive Statistics' });
+    expect(within(power).getByText('100.00 kW')).toBeInTheDocument();
+    expect(within(power).getByTestId('stale-refresh-warning')).toHaveAttribute('data-refresh-blocked', 'true');
+    expect(within(statistics).getByRole('button', { name: 'Retry' })).toBeInTheDocument();
+    expect(within(statistics).queryByText('No drive statistics available yet')).not.toBeInTheDocument();
+    expect(within(thermalLoadPanel()).getByText('75.00 kW')).toBeInTheDocument();
+    expect(within(thermalLoadPanel()).getByRole('button', { name: 'Retry' })).toBeInTheDocument();
+    fireEvent.click(within(statistics).getByRole('button', { name: 'Retry' }));
+    expect(retryStats).toHaveBeenCalledTimes(1);
+    expect(retryDrives).not.toHaveBeenCalled();
+    expect(screen.getByText('Drivetrain healthy')).toBeInTheDocument();
+  });
+
+  it('keeps statistics visible when drive power fails without retained records', () => {
+    drivesMock.mockReturnValue(makeQuery<Drive[]>({ error: new Error('drives failed'), refetch: refetchMock }));
+    renderPage();
+
+    const power = screen.getByRole('group', { name: 'Power Summary' });
+    expect(within(power).getByRole('button', { name: 'Retry' })).toBeInTheDocument();
+    expect(within(power).queryByText('No data')).not.toBeInTheDocument();
+    expect(within(thermalLoadPanel()).getByText('12')).toBeInTheDocument();
+    expect(within(screen.getByRole('group', { name: 'Drive Statistics' })).getByText('30 kg')).toBeInTheDocument();
+    fireEvent.click(within(power).getByRole('button', { name: 'Retry' }));
+    expect(refetchMock).toHaveBeenCalledTimes(1);
+    expect(screen.getByText('Drivetrain healthy')).toBeInTheDocument();
+  });
+
+  it('does not fabricate per-signal isolation evidence from a connected default zero', () => {
+    vehicleLiveMock.mockReturnValue({ state: { isolationResistance: 0 }, connected: true });
+    renderPage();
+
+    const isolation = screen.getAllByRole('region', { name: 'HV Isolation' })[0];
+    expect(within(isolation).getByText('Source observation time not provided')).toBeInTheDocument();
+    expect(within(isolation).queryByText('0.00')).not.toBeInTheDocument();
+    const table = screen.getByRole('table', { name: 'Live motor record details' });
+    expect(within(table).getByRole('row', { name: 'HV Isolation —' })).toBeInTheDocument();
+    expect(captured.live.isolationState).toBeUndefined();
+    expect(captured.live.isolationPeriod).toBeUndefined();
+  });
 });
+
+function thermalLoadPanel(): HTMLElement {
+  const panel = screen.getByRole('heading', { name: 'Thermal Load Indicators' }).closest<HTMLElement>('[data-card]');
+  if (!panel) throw new Error('Thermal load panel is not mounted');
+  return panel;
+}

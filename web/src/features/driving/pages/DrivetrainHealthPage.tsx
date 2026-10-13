@@ -53,6 +53,8 @@ export default function DrivetrainHealthPage() {
     () => driveSeries(drivesQuery.data, startDate, endDate, formatDateShort),
     [drivesQuery.data, startDate, endDate, formatDateShort],
   );
+  const drivesEmpty = drivesState.hasData && chartData.length === 0;
+  const statsEmpty = statsState.status === 'unavailable' || (statsQuery.isSuccess && stats == null);
   const power = useMemo(() => powerSummary(chartData), [chartData]);
   const motorChartData = useMemo(
     () => motorSeries(motorHistoryQuery.data, formatTime),
@@ -83,6 +85,8 @@ export default function DrivetrainHealthPage() {
           sensors={sensors} power={power} stats={stats}
           healthState={healthState} statsState={statsState} drivesState={drivesState}
           loading={healthQuery.isLoading}
+          drivesLoading={drivesQuery.isLoading} drivesEmpty={drivesEmpty}
+          statsLoading={statsQuery.isLoading} statsEmpty={statsEmpty}
         />
 
         {/* 5: all thirteen motor readings and original isolation policy. */}
@@ -108,6 +112,8 @@ export default function DrivetrainHealthPage() {
           health={health} stats={stats} sensors={sensors} power={power}
           healthState={healthState} drivesState={drivesState} statsState={statsState}
           loading={healthQuery.isLoading}
+          drivesLoading={drivesQuery.isLoading} drivesEmpty={drivesEmpty}
+          statsLoading={statsQuery.isLoading} statsEmpty={statsEmpty}
         />
         <MethodologyPanel />
       </FadeIn>
