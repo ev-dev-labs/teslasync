@@ -167,13 +167,24 @@ import type { GapBuckets } from '../signalGapUtils';
 type LiveEntry = { value: unknown; timestamp: string | null };
 
 function makeQuery(
-  overrides: { data?: unknown; isLoading?: boolean; error?: unknown; refetch?: () => void } = {},
+  overrides: {
+    data?: unknown;
+    isLoading?: boolean;
+    isPending?: boolean;
+    isFetching?: boolean;
+    isStale?: boolean;
+    fetchStatus?: 'fetching' | 'paused' | 'idle';
+    error?: unknown;
+    refetch?: () => void;
+  } = {},
 ) {
   return {
     data: overrides.data,
     isLoading: overrides.isLoading ?? false,
-    isFetching: false,
-    isStale: false,
+    isPending: overrides.isPending ?? false,
+    isFetching: overrides.isFetching ?? false,
+    isStale: overrides.isStale ?? false,
+    fetchStatus: overrides.fetchStatus ?? 'idle',
     isError: overrides.error != null,
     error: overrides.error ?? null,
     dataUpdatedAt: Date.now(),
@@ -354,5 +365,79 @@ describe('SignalGapDetectorPage — degraded data postures', () => {
     expect(refresh).toBeEnabled();
     fireEvent.click(refresh);
     expect(refetchMock).toHaveBeenCalledTimes(1);
+  });
+});
+
+
+describe('SignalGapDetectorPage — unknown and retained trust', () => {
+  it.each([
+    ['paused first load', { isPending: true, fetchStatus: 'paused' as const }],
+    ['empty signal map', { data: {} }],
+  ])('does not present fallback KPI zeros as known for a %s', (_label, overrides) => {
+    signalGapsMock.mockReturnValue(makeQuery(overrides));
+    renderPage();
+
+    expect(captured.kpis.unavailable).toBe(true);
+    expect(captured.kpis.loading).toBe(false);
+    expect(captured.kpis.retained).toBe(false);
+    expect(captured.kpis.hasVehicle).toBe(true);
+    for (const section of ['kpis', 'health', 'freshness', 'catalog']) {
+      expect(screen.getByTestId(section)).toBeInTheDocument();
+    }
+    expect(screen.getByRole('button', REFRESH)).toBeEnabled();
+    expect(captured.catalog.vehicleId).toBe(42);
+  });
+
+  it.each([
+    ['background refresh', { isFetching: true }],
+    ['stale response', { isStale: true }],
+    ['refresh failure', { error: new Error('retained refresh failed') }],
+    ['paused refresh', { fetchStatus: 'paused' as const }],
+  ])('retains observations and marks KPI trust during a %s', (_label, overrides) => {
+    signalGapsMock.mockReturnValue(makeQuery({ data: live, ...overrides }));
+    renderPage();
+
+    expect(captured.kpis.unavailable).toBe(false);
+    expect(captured.kpis.loading).toBe(false);
+    expect(captured.kpis.retained).toBe(true);
+    expect(captured.kpis.freshnessPct).toBe(50);
+    expect(captured.kpis.buckets).toEqual<GapBuckets>({
+      total: 4, active: 1, aging: 1, stale: 1, never: 1,
+    });
+    const analysis = captured.health.analysis as SignalGapAnalysis;
+    expect(analysis.query.data).toBe(live);
+    expect(captured.freshness.analysis).toBe(analysis);
+    for (const section of ['kpis', 'health', 'freshness', 'catalog']) {
+      expect(screen.getByTestId(section)).toBeInTheDocument();
+    }
+    fireEvent.click(screen.getByRole('button', REFRESH));
+    expect(refetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('preserves signed raw SI, zero readings and unknown timestamp observations', () => {
+    const observations = {
+      temperature: { value: -12.5, timestamp: live.battery_level.timestamp },
+      power: { value: 0, timestamp: live.battery_level.timestamp },
+      distance: { value: 12345, timestamp: null },
+      unknown: { value: null, timestamp: 'invalid' },
+    };
+    signalGapsMock.mockReturnValue(makeQuery({ data: observations }));
+    renderPage();
+
+    const analysis = captured.health.analysis as SignalGapAnalysis;
+    expect(analysis.query.data).toBe(observations);
+    expect(analysis.rows.map(({ name, value, timestamp }) => ({ name, value, timestamp })))
+      .toEqual([
+        { name: 'temperature', value: '-12.5', timestamp: live.battery_level.timestamp },
+        { name: 'power', value: '0', timestamp: live.battery_level.timestamp },
+        { name: 'distance', value: '12345', timestamp: null },
+        { name: 'unknown', value: '—', timestamp: null },
+      ]);
+    expect(analysis.topStale).toEqual([]);
+    expect(captured.kpis.buckets).toEqual<GapBuckets>({
+      total: 4, active: 2, aging: 0, stale: 0, never: 2,
+    });
+    expect(captured.kpis.unavailable).toBe(false);
+    expect(captured.kpis.freshnessPct).toBe(50);
   });
 });

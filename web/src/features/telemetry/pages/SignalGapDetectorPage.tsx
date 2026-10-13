@@ -70,7 +70,7 @@ export default function SignalGapDetectorPage() {
 
       {/* 1 — KPI band: full-width staleness summary */}
       <SignalGapKpis buckets={buckets} freshnessPct={freshnessPct} hasVehicle={hasVehicle}
-        unavailable={sourceState.fatalError != null || (query.isLoading && !sourceState.hasData)}
+        unavailable={!sourceState.hasData || buckets.total === 0}
         loading={hasVehicle && query.isLoading && !sourceState.hasData}
         retained={sourceState.hasData && (sourceState.isRefreshing || sourceState.status === 'stale' || sourceState.refreshError != null)} />
 
