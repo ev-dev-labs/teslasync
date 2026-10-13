@@ -11,7 +11,7 @@ import {
   useVehicles, useVehicleState, useSecurityLatest, useChargingTelemetryLatest,
 } from '@/api/hooks/useVehicles';
 import { PageLayout, Section } from '@/components/layout';
-import { Badge, GlassPanel, PanelTitle, Text } from '@/components/ui';
+import { Badge, GlassPanel, Icon, PanelTitle, Text } from '@/components/ui';
 import { OperationalBrief, StatusBadge } from '@/components/data-display';
 import type { StatMetric } from '@/components/data-display/stat-reference/types';
 import { EmptyState, StaleRefreshWarning } from '@/components/feedback';
@@ -24,7 +24,7 @@ import { buildTwinState } from '@/lib/vehicleState';
 import type { WindowState, TurnSignalState } from '@/lib/vehicleState';
 import { deriveVehicleStatus } from '@/api/types';
 import type { VehicleStatus } from '@/api/types';
-import type { NeonColor } from '@/lib/tokens';
+import { typography, type NeonColor } from '@/lib/tokens';
 import { TwinDetailPanel } from '../components/TwinDetailPanel';
 
 const REFRESH_INTERVAL = 5_000;
@@ -255,7 +255,7 @@ export default function DigitalTwinPage() {
         <GlassPanel className="p-8">
           {/* no-action: transient empty state — no vehicle in the fleet yet. */}
           <EmptyState
-            icon={<Car className="h-8 w-8" aria-hidden="true" />}
+            icon={<Icon icon={Car} className="h-8 w-8" aria-hidden />}
             message={t('digitalTwin.noVehicles', 'No vehicles found. Add a vehicle to see its digital twin.')}
           />
         </GlassPanel>
@@ -320,7 +320,7 @@ export default function DigitalTwinPage() {
 
                 <GlassPanel className="flex flex-col p-4 sm:p-5">
                   <PanelTitle className="mb-3 flex items-center gap-2">
-                    <Activity className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+                    <Icon icon={Activity} className={typography.color.secondary} aria-hidden />
                     <span>{t('digitalTwin.liveStatusTitle', 'Live status')}</span>
                   </PanelTitle>
                   <div className="space-y-4">
@@ -350,46 +350,46 @@ export default function DigitalTwinPage() {
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2 2xl:grid-cols-4 xl:gap-5">
                 <TwinDetailPanel
                   title={t('digitalTwin.doorsTitle', 'Doors & openings')}
-                  icon={<DoorOpen className="h-4 w-4 text-cyan-300" aria-hidden="true" />}
+                  icon={<Icon icon={DoorOpen} className={typography.color.secondary} aria-hidden />}
                   items={doorItems}
                   isLoading={securityQ.isLoading}
                   error={securityState.fatalError}
                   isEmpty={!securityData}
-                  emptyIcon={<Info className="h-6 w-6" aria-hidden="true" />}
+                  emptyIcon={<Icon icon={Info} size="xl" aria-hidden />}
                   emptyMessage={t('digitalTwin.noDoorData', 'No door data available')}
                   onRetry={() => securityQ.refetch()}
                 />
                 <TwinDetailPanel
                   title={t('digitalTwin.windowsTitle', 'Windows')}
-                  icon={<AppWindow className="h-4 w-4 text-cyan-300" aria-hidden="true" />}
+                  icon={<Icon icon={AppWindow} className={typography.color.secondary} aria-hidden />}
                   items={windowItems}
                   isLoading={securityQ.isLoading}
                   error={securityState.fatalError}
                   isEmpty={!securityData}
-                  emptyIcon={<Info className="h-6 w-6" aria-hidden="true" />}
+                  emptyIcon={<Icon icon={Info} size="xl" aria-hidden />}
                   emptyMessage={t('digitalTwin.noWindowData', 'No window data available')}
                   onRetry={() => securityQ.refetch()}
                 />
                 <TwinDetailPanel
                   title={t('digitalTwin.securityTitle', 'Security & status')}
-                  icon={<ShieldCheck className="h-4 w-4 text-cyan-300" aria-hidden="true" />}
+                  icon={<Icon icon={ShieldCheck} className={typography.color.secondary} aria-hidden />}
                   items={securityItems}
                   isLoading={combinedLoading}
                   error={combinedError}
                   isEmpty={!anyLiveData}
-                  emptyIcon={<Info className="h-6 w-6" aria-hidden="true" />}
+                  emptyIcon={<Icon icon={Info} size="xl" aria-hidden />}
                   emptyMessage={t('digitalTwin.noSecurityData', 'No live status available')}
                   onRetry={refetchAll}
                   footer={<StatusBadge status={badgeStatus} />}
                 />
                 <TwinDetailPanel
                   title={t('digitalTwin.lightsTitle', 'Lights & signals')}
-                  icon={<Lightbulb className="h-4 w-4 text-cyan-300" aria-hidden="true" />}
+                  icon={<Icon icon={Lightbulb} className={typography.color.secondary} aria-hidden />}
                   items={lightItems}
                   isLoading={securityQ.isLoading}
                   error={securityState.fatalError}
                   isEmpty={!securityData}
-                  emptyIcon={<Info className="h-6 w-6" aria-hidden="true" />}
+                  emptyIcon={<Icon icon={Info} size="xl" aria-hidden />}
                   emptyMessage={t('digitalTwin.noLightData', 'No lights data available')}
                   onRetry={() => securityQ.refetch()}
                 />

@@ -593,3 +593,64 @@ describe('capitalize', () => {
     expect(capitalize('')).toBe('—');
   });
 });
+
+
+describe('DigitalTwinPage shared icon presentation', () => {
+  it.each(['ready', 'empty', 'retained refresh failure'] as const)(
+    'keeps all five decorative panel icons neutral and non-focusable when sources are %s',
+    (sourceState) => {
+      if (sourceState === 'empty') {
+        h.security = makeQuery({ data: null });
+        h.state = makeQuery({ data: null });
+        h.charging = makeQuery({ data: null });
+      } else if (sourceState === 'retained refresh failure') {
+        h.security = makeQuery({ data: makeSecurity(), isError: true, error: new Error('refresh failed') });
+      }
+
+      renderPage();
+      const icons = [
+        screen.getByText('Live status').parentElement?.querySelector('svg'),
+        ...['Doors & openings', 'Windows', 'Security & status', 'Lights & signals'].map((title) =>
+          screen.getByRole('heading', { name: title }).closest('[data-card]')?.querySelector('svg'),
+        ),
+      ];
+      expect(icons).toHaveLength(5);
+      for (const icon of icons) {
+        expect(icon).toBeInTheDocument();
+        expect(icon).toHaveClass('h-4', 'w-4', 'shrink-0', 'text-[var(--text-secondary)]');
+        expect(icon).not.toHaveClass('text-cyan-300');
+        expect(icon).toHaveAttribute('aria-hidden', 'true');
+        expect(icon).toHaveAttribute('focusable', 'false');
+      }
+      expect(screen.getByRole('region', { name: 'Overview' })).toBeInTheDocument();
+      expect(screen.getByRole('region', { name: 'Live overview' })).toBeInTheDocument();
+      expect(screen.getByRole('region', { name: 'Component state' })).toBeInTheDocument();
+    },
+  );
+
+  it('preserves the four source-empty informational glyphs and their original dimensions', () => {
+    h.security = makeQuery({ data: null });
+    h.state = makeQuery({ data: null });
+    h.charging = makeQuery({ data: null });
+    renderPage();
+    const icons = screen.getByRole('region', { name: 'Component state' }).querySelectorAll('svg.lucide-info');
+    expect(icons).toHaveLength(4);
+    for (const icon of icons) {
+      expect(icon).toHaveClass('h-6', 'w-6', 'shrink-0');
+      expect(icon).toHaveAttribute('aria-hidden', 'true');
+      expect(icon).toHaveAttribute('focusable', 'false');
+    }
+  });
+
+  it('preserves the fleet-empty vehicle glyph size without adding an accessible image or action', () => {
+    h.vehicle = null;
+    h.vehicles = [];
+    const { container } = renderPage();
+    const icon = container.querySelector('svg.lucide-car');
+    expect(icon).toHaveClass('h-8', 'w-8', 'shrink-0');
+    expect(icon).toHaveAttribute('aria-hidden', 'true');
+    expect(icon).toHaveAttribute('focusable', 'false');
+    expect(screen.getByText('No vehicles found. Add a vehicle to see its digital twin.')).toBeInTheDocument();
+    expect(screen.queryByRole('img')).not.toBeInTheDocument();
+  });
+});
