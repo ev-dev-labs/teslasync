@@ -4,15 +4,15 @@ import {
   Zap, RefreshCw, MapPin, Receipt, Download, Clock,
 } from 'lucide-react';
 import { PageLayout, LayoutCard } from '@/components/layout';
-import { Button, Select, DataTable, Caption, Text, type Column } from '@/components/ui';
+import { Button, BUTTON_BASE, Select, DataTable, Caption, Text, Icon, type Column, type MobileDataTablePresentation } from '@/components/ui';
 import { MetricBar, type StatMetric } from '@/components/data-display';
 import { ChargingSummaryBrief } from '../components/operationalbrief-all/ChargingSummaryBrief';
 import { FadeIn } from '@/components/motion';
 import {
-  ChartTooltip, ChartGradient, chartGrid, axisTickSm,
+  ChartTooltip, chartGrid, axisTickSm,
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, EmbeddedChart,
 } from '@/components/charts';
-import { DataStateNotice, Skeleton, EmptyState, QueryError, StaleRefreshWarning } from '@/components/feedback';
+import { DataStateNotice, Skeleton, EmptyState, QueryError, StaleRefreshWarning, SectionErrorBoundary } from '@/components/feedback';
 import { SearchInput, FilterBar, ActiveFilterChips, type FilterChipDescriptor } from '@/components/forms';
 import { useFilteredList } from '@/hooks/useFilteredList';
 import { SitePriceRadar } from '../components/SitePriceRadar';
@@ -36,7 +36,7 @@ import { useFormatting } from '@/hooks/useFormatting';
 import { formatDateTime } from '@/lib/dateFormat';
 
 import { formatCurrencyValue, currencyCodeFromSymbol } from '@/lib/currencyFormat';
-import { chartTokens } from '@/lib/tokens';
+import { chartTokens, neonColorMap, typography } from '@/lib/tokens';
 import { cn } from '@/lib/cn';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { useDataState } from '@/hooks/useDataState';
@@ -123,22 +123,23 @@ export default function TeslaChargingHistoryPage() {
   const isLoading = vehiclesLoading || historyLoading;
   const refreshMutation = useRefreshTeslaChargingHistory();
 
-  const allEntries = response?.entries ?? [];
-  // Range filter (client-side) on charge_start_datetime.
-  const { start, end } = useRangeState({
+  const allEntries = useMemo(() => response?.entries ?? [], [response?.entries]);
+  // The read hook still lacks server bounds; retain its lifetime summary
+  // while using the workspace's precise window for the loaded-record view.
+  const { startInstant, endInstantExclusive } = useRangeState({
     persistKey: 'tesla-charging-history.range',
     defaultPresetId: 'all',
   });
   const entries = useMemo(() => {
     if (!allEntries.length) return allEntries;
-    const startMs = new Date(`${start}T00:00:00`).getTime();
-    const endMs = new Date(`${end}T23:59:59.999`).getTime();
+    const startMs = new Date(startInstant).getTime();
+    const endMs = new Date(endInstantExclusive).getTime();
     return allEntries.filter((e) => {
       if (!e.charge_start_datetime) return false;
       const ts = new Date(e.charge_start_datetime).getTime();
-      return ts >= startMs && ts <= endMs;
+      return ts >= startMs && ts < endMs;
     });
-  }, [allEntries, start, end]);
+  }, [allEntries, startInstant, endInstantExclusive]);
   const summary = response?.summary ?? { total_sessions: 0, total_wh: null, total_spend: null, avg_cost_per_kwh: null };
 
   // Derived all-time KPIs (match the server summary's all-time scope).
@@ -167,6 +168,7 @@ export default function TeslaChargingHistoryPage() {
   const topLocationsMax = topLocations.length > 0 ? topLocations[0].total : 0;
 
   const handleRefresh = () => {
+    if (historyState.isRefreshBlocked || refreshMutation.isPending) return;
     refreshMutation.mutate(queryVin ? { vin: queryVin } : undefined);
   };
 
@@ -188,8 +190,8 @@ export default function TeslaChargingHistoryPage() {
       header: t('tesla_charging.col.location', 'Location'),
       render: (row) => (
         <div className="flex items-center gap-1.5">
-          <MapPin className="h-3.5 w-3.5 text-[var(--text-muted)] shrink-0" aria-hidden="true" />
-          <Text variant="body" className="max-w-[200px] truncate">
+          <Icon icon={MapPin} size="sm" className={typography.color.muted} />
+          <Text variant="body" className="min-w-0 break-words">
             {row.site_location_name || '—'}
           </Text>
         </div>
@@ -213,7 +215,7 @@ export default function TeslaChargingHistoryPage() {
       filterValueLabel: (_, row) => row.usage_wh != null ? formatEnergy(row.usage_wh) : '—',
       header: t('tesla_charging.col.energy', 'Energy'),
       render: (row) => (
-        <Text size="sm" weight="medium" className="text-cyan-300">
+        <Text variant="body" className="tabular-nums">
           {row.usage_wh != null ? formatEnergy(row.usage_wh) : '—'}
         </Text>
       ),
@@ -227,7 +229,7 @@ export default function TeslaChargingHistoryPage() {
       filterValueLabel: (_, row) => row.total_due != null ? formatCurrencyValue(row.total_due, row.currency_code ?? userCurrency, locale, precision, { useGrouping: true }) : '—',
       header: t('tesla_charging.col.cost_decimal', 'Cost'),
       render: (row) => (
-        <Text size="sm" weight="medium" className="text-emerald-300">
+        <Text variant="body" className="tabular-nums">
           {row.total_due != null
             ? formatCurrencyValue(row.total_due, row.currency_code ?? userCurrency, locale, precision, { useGrouping: true })
             : '—'}
@@ -259,11 +261,11 @@ export default function TeslaChargingHistoryPage() {
               href={getTeslaChargingInvoiceURL(row.invoice_content_id)}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 text-cyan-300 transition-colors hover:underline"
+              className={cn(BUTTON_BASE, 'min-h-11 min-w-11 px-2 hover:underline', neonColorMap.cyan.text)}
               aria-label={t('tesla_charging.downloadInvoice', 'Download invoice')}
             >
-              <Download className="h-3.5 w-3.5" aria-hidden="true" />
-              <Text size="xs">{t('charging.invoice', 'Invoice')}</Text>
+              <Icon icon={Download} size="sm" />
+              <Text as="span" variant="bodySm" className="text-inherit">{t('charging.invoice', 'Invoice')}</Text>
             </a>
           ) : (
             <Text color="muted">—</Text>
@@ -272,6 +274,21 @@ export default function TeslaChargingHistoryPage() {
       ),
     },
   ], [formatEnergy, t, userCurrency, locale, precision, fmtNumber]);
+
+  const mobilePresentation = useMemo<MobileDataTablePresentation<TeslaChargingHistoryEntry>>(() => ({
+    roles: { location: 'title', cost: 'primary', date: 'meta', energy: 'meta', duration: 'meta' },
+    displayValue: (row, key) => {
+      switch (key) {
+        case 'location': return row.site_location_name || '—';
+        case 'date': return formatDateTime(row.charge_start_datetime);
+        case 'duration': return formatDurationMinutes(durationMinutes(row.charge_start_datetime, row.charge_stop_datetime));
+        case 'energy': return row.usage_wh == null ? null : formatEnergy(row.usage_wh);
+        case 'cost': return row.total_due == null ? null : formatCurrencyValue(row.total_due, row.currency_code ?? userCurrency, locale, precision, { useGrouping: true });
+        case 'rate': return row.rate_base == null ? null : `${fmtNumber(row.rate_base)}/${row.pricing_type ?? 'kWh'}`;
+        default: return null;
+      }
+    },
+  }), [formatEnergy, userCurrency, locale, precision, fmtNumber]);
 
   const [sortKey, setSortKey] = useUrlEnum<'date' | 'energy' | 'cost'>(
     'sort',
@@ -311,11 +328,11 @@ export default function TeslaChargingHistoryPage() {
   }, [filteredEntries, sortKey, sortDir]);
 
   const handleSort = (key: string) => {
+    if (key !== 'date' && key !== 'energy' && key !== 'cost') return;
     if (sortKey === key) {
       setSortDir(d => d === 'asc' ? 'desc' : 'asc');
     } else {
-      // Cast safely — DataTable column keys map 1:1 to our allowed sort keys.
-      setSortKey(key as 'date' | 'energy' | 'cost');
+      setSortKey(key);
       setSortDir('desc');
     }
   };
@@ -399,9 +416,11 @@ export default function TeslaChargingHistoryPage() {
         <Button
           wrapLabel
           onClick={handleRefresh}
-          disabled={refreshMutation.isPending}
+          disabled={refreshMutation.isPending || historyState.isRefreshBlocked}
+          aria-busy={refreshMutation.isPending || undefined}
+          className="min-h-11 md:min-h-10"
           variant="primary"
-          icon={<RefreshCw className={cn('h-4 w-4', refreshMutation.isPending && 'animate-spin')} aria-hidden="true" />}
+          icon={<Icon icon={RefreshCw} className={refreshMutation.isPending ? 'animate-spin motion-reduce:animate-none' : undefined} />}
         >
           {refreshMutation.isPending
             ? t('tesla_charging.refreshing', 'Syncing...')
@@ -419,7 +438,7 @@ export default function TeslaChargingHistoryPage() {
       {lastSyncedAt && (
         <FadeIn>
           <Caption className="flex items-center gap-1.5">
-            <Clock className="h-3.5 w-3.5" aria-hidden="true" />
+            <Icon icon={Clock} size="sm" />
             {t('tesla_charging.lastSync', 'Last synced')}: {formatDateTime(lastSyncedAt)}
           </Caption>
         </FadeIn>
@@ -428,6 +447,7 @@ export default function TeslaChargingHistoryPage() {
       {/* 1 — KPI band: full-width responsive metric grid. */}
       <FadeIn>
         <section aria-label={t('tesla_charging.kpis', 'Charging summary metrics')}>
+          <SectionErrorBoundary name="tesla-charging-history-summary">
           <ChargingSummaryBrief id="tesla-charging-history-summary" metrics={summaryMetrics}
             loading={firstLoading} retained={historyState.hasData && (historyState.refreshError != null || historyState.isRefreshBlocked)}
             period={{
@@ -436,6 +456,7 @@ export default function TeslaChargingHistoryPage() {
             }}
             footer={error ? <QueryError error={error} onRetry={() => refetch()} /> : undefined}
           />
+          </SectionErrorBoundary>
         </section>
       </FadeIn>
 
@@ -443,15 +464,16 @@ export default function TeslaChargingHistoryPage() {
           does not leave an empty two-column row beneath the spending chart. */}
       <section className="grid min-w-0 grid-cols-1 gap-3 sm:gap-4 2xl:grid-cols-3 2xl:items-start">
         <FadeIn delay={0.1} className="min-w-0 2xl:col-span-2">
+          <SectionErrorBoundary name="tesla-charging-history-spending">
           <LayoutCard title={t('tesla_charging.monthlySpending', 'Monthly spending')}
-            actions={<Receipt className="h-4 w-4 text-cyan-300" aria-hidden="true" />}>
+            actions={<Icon icon={Receipt} className={typography.color.muted} />}>
             {firstLoading ? (
               <Skeleton height={288} />
             ) : error ? (
               <QueryError error={error} onRetry={() => refetch()} />
             ) : monthlyData.length === 0 ? (
               <EmptyState
-                icon={<Receipt className="h-10 w-10" aria-hidden="true" />}
+                icon={<Icon icon={Receipt} size="xl" />}
                 message={historyState.hasData ? t('tesla_charging.noChartData', 'No spending data yet. Click "Refresh from Tesla" to sync.') : unavailableMessage}
               />
             ) : (
@@ -472,55 +494,59 @@ export default function TeslaChargingHistoryPage() {
               >
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={monthlyData}>
-                    <defs>
-                      <ChartGradient id="spendGrad" color={chartTokens.series[5]} opacity={0.6} />
-                    </defs>
                     {chartGrid}
                     <XAxis dataKey="month" tick={axisTickSm} />
                     <YAxis tick={axisTickSm} tickFormatter={(v: number) => formatCurrency(v)} />
                     <Tooltip content={<ChartTooltip />} />
-                    <Bar dataKey="total" fill="url(#spendGrad)" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="total" fill={chartTokens.series[0]} radius={[4, 4, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               </EmbeddedChart>
             )}
           </LayoutCard>
+          </SectionErrorBoundary>
         </FadeIn>
         <FadeIn delay={0.1} className="min-w-0 2xl:col-start-3 2xl:row-start-1">
+          <SectionErrorBoundary name="tesla-charging-history-locations">
           <LayoutCard title={t('tesla_charging.topLocations', 'Top locations')}
-            actions={<MapPin className="h-4 w-4 text-cyan-300" aria-hidden="true" />}>
+            actions={<Icon icon={MapPin} className={typography.color.muted} />}>
             {firstLoading ? (
               <Skeleton height={220} />
             ) : error ? (
               <QueryError error={error} onRetry={() => refetch()} />
             ) : topLocations.length === 0 ? (
               <EmptyState
-                icon={<MapPin className="h-10 w-10" aria-hidden="true" />}
+                icon={<Icon icon={MapPin} size="xl" />}
                 message={historyState.hasData ? t('tesla_charging.noLocationData', 'No charging locations in this range yet.') : unavailableMessage}
               />
             ) : (
               <div className="space-y-3">
-                {topLocations.map((loc, i) => (
+                {topLocations.map((loc) => (
                   <MetricBar
                     key={loc.name}
                     label={loc.name}
                     value={loc.total}
                     max={topLocationsMax || loc.total}
-                    color={chartTokens.series[i % chartTokens.series.length]}
+                    color={chartTokens.series[0]}
+                    fill="solid"
                     sublabel={`${formatCurrency(loc.total)} · ${fmtInt(loc.count)}×`}
                   />
                 ))}
               </div>
             )}
           </LayoutCard>
+          </SectionErrorBoundary>
         </FadeIn>
 
         <FadeIn delay={0.12} className="min-w-0 2xl:col-start-3 2xl:row-start-2">
+          <SectionErrorBoundary name="tesla-charging-history-price-radar">
           <SitePriceRadar vin={queryVin || undefined} enabled={!vehiclesLoading} />
+          </SectionErrorBoundary>
         </FadeIn>
 
       {/* Sessions use the space below the chart at wide widths. */}
       <FadeIn delay={0.15} className="min-w-0 2xl:col-span-2 2xl:row-start-2">
+        <SectionErrorBoundary name="tesla-charging-history-sessions">
         <LayoutCard title={t('tesla_charging.sessions', 'Charging sessions')}>
           {firstLoading ? (
             <Skeleton height={400} />
@@ -528,7 +554,7 @@ export default function TeslaChargingHistoryPage() {
             <QueryError error={error} onRetry={() => refetch()} />
           ) : entries.length === 0 ? (
             <EmptyState
-              icon={<Zap className="h-10 w-10" aria-hidden="true" />}
+              icon={<Icon icon={Zap} size="xl" />}
               message={historyState.hasData ? t('tesla_charging.noData', 'No Tesla charging history yet. Click "Refresh from Tesla" to import your Supercharger sessions.') : unavailableMessage}
             />
           ) : (
@@ -554,7 +580,7 @@ export default function TeslaChargingHistoryPage() {
                           onRemove: () => setSearch(''),
                         } satisfies FilterChipDescriptor,
                       ]
-                    : []) as readonly FilterChipDescriptor[]
+                    : [])
                 }
                 onClearAll={() => setSearch('')}
               />
@@ -562,6 +588,8 @@ export default function TeslaChargingHistoryPage() {
                 <DataTable
                   enableValueFilters
                   columns={columns}
+                  name={t('tesla_charging.sessions', 'Charging sessions')}
+                  mobilePresentation={mobilePresentation}
                   data={sortedEntries}
                   keyExtractor={(row) => row.session_id}
                   sortKey={sortKey}
@@ -605,8 +633,10 @@ export default function TeslaChargingHistoryPage() {
                   bulkActions={(rows) => (
                     <Button
                       size="sm"
-                      variant="primary"
-                      icon={<Download className="h-3.5 w-3.5" aria-hidden="true" />}
+                      wrapLabel
+                      className="min-h-11 md:min-h-9"
+                      variant="secondary"
+                      icon={<Icon icon={Download} size="sm" />}
                       onClick={() => exportSelectedCsv(rows)}
                     >
                       {t('table.bulkActions.exportCsv', 'Export CSV')}
@@ -615,13 +645,14 @@ export default function TeslaChargingHistoryPage() {
                 />
               ) : (
                 <EmptyState
-                  icon={<Zap className="h-10 w-10" aria-hidden="true" />}
+                  icon={<Icon icon={Zap} size="xl" />}
                   message={t('tesla_charging.noMatches', 'No sessions match your search.')}
                 />
               )}
             </>
           )}
         </LayoutCard>
+        </SectionErrorBoundary>
       </FadeIn>
       </section>
     </PageLayout>
