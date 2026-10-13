@@ -18,7 +18,78 @@ Accepted source counts are not a running-actor count.
 Use the user's active seven-phase workflow, not the different feature-order
 numbering in `frontend-mission.md` section 38.
 
-## Latest rolling recovery: pushed snapshot count1619
+## Latest rolling recovery: pushed snapshot count1648
+
+Latest pushed source/WIP snapshot is
+`5367d19a631e54d0b6b2c2665dd6db08d5f86e74`, count1648, on
+`fix/dashboard-followups`. This is Consumables attempt2 WIP, NOT acceptance.
+Phases0-3 remain complete, pilot/native acceptance still incomplete, original
+Phase6 combined sweep and Phase7 not started. No phase-complete checkpoint.
+
+All ten twelfth initial receipts are now individually consumed exactly once.
+Stator's already-read receipt was intaken without rereading it. Stator, Torque,
+Temperature, Power, Thermal, Detail, LiveIsolation, ChartPanels, TariffHeatmap
+and RecommendationCard are SOURCE ONLY: their own final runners stopped at the
+external generated-catalog guard with ZERO discovery, not behavioral passes.
+Thermal/Detail expose additive OPTIONAL independent drive/stats loading/empty
+props; their exact imported APIs now unblock the existing caller wiring item.
+LiveIsolation's optional per-signal state/period do not invent presence or
+freshness from the hook's default-filled state or global connected flag.
+Its two exact copy requests are retained in the existing catalog/caller root;
+no new translation campaign or API-wire shape was authorized.
+
+New older terminal1 results: TripList and Consumables are actual second
+failures with repaired assertions/source preserved as WIP; final tests were
+stopped before reported execution, with no proven catalog cause or pass.
+AlertRules concluded second failure with requested Critical repair unexecuted.
+It reported no new attempt2 delta; exact claimed tracked WIP nevertheless
+existed and intake preserved it as38b6f6b5, not verified repair or acceptance.
+EnergyFlow's surgical caller compatibility/palette correction is source-only
+accepted1644; test unchanged, no new test/capture run.
+
+The SINGLE existing catalog root thirteenth closure3490 actually completed:
+BEFORE1/GENERATE0/AFTER0,57groups/177fallbacks/1239shellkeys/knownmissing0/new0/
+resolved0. Raw `logs\phase5-integration-thirteenth-reference-closure.log`.
+No duplicate root/generator/guard bypass. Generated projections remain dirty
+and separate until contributing source is persistent; later source can drift.
+Thirteenth refill actually resumed SAME Resources/EnergyChart/Powerwall owners
+within attempt2 and launched13 real new actors (five existing narrow fixes,
+eight original unstarted pages). All launch identities/claims/consumed turns
+are persisted in the thirteenth maps/assignments and221-entry worker ledger.
+Do not mistake launches, held delivered claims or old census projections for
+32 healthy implementations.
+
+Literal `npx tsc --noEmit`1646 ACTUALLY exited2 in SIX production files:
+Causal312 orientation; Ledger46 replaceAll; Heatmap217 formatter; Sharing225
+currentTarget; Deadband227 locale/index; NEW Statistics127/130 Object.hasOwn
+TSlib incompatibility. Emergency's previous error is now absent. Raw
+`logs\phase5-parent-tsc-count-1646.log`. SAME Statistics owner was immediately
+steered to an owned compatibility correction, no global target/lib widening.
+The five old compiler owners received immediate SAME-attempt stop/conclude.
+Safe actor cancellation remains unavailable; preserve live claims, no revert
+or doublewriting. Next compiler cadence1661, not historical1496/1631.
+
+Latest actual aggregate census observed16 runtime-running; AlertRules then
+concluded. Most old actors are badly overdue; TwoFactor is informational, not
+a genuine new implementation. Only Statistics remained running among the13
+thirteenth fresh launches; other12 have unread initial receipts. Original
+old CommandHistory/Emergency/Brief continuations also no longer appeared in
+the running census and need NEW terminal intake, never reread old turn0.
+Fourteenth refill actually launched the newly unblocked caller and14 original
+unstarted pages. Its16th JourneyFragmentation launch was REFUSED at harness32;
+returned pending0, no actor/source attempt fabricated. Persisted fourteenth
+maps/assignments retain every actual identity and exact claim, ledger236.
+The16-census-plus15launch projection is not ongoing32healthy proof.
+
+Shared5173/Docker3119 HEAD200 and API8080 readyz GET200 were actually observed,
+without exposing bodies. Docker stays immutablea61 and DRILL unchanged.
+No full lint/tests/build gate, Docker rebuild/reseed, helper budget reset or
+native capture acceptance occurred. Discord remains unavailable, not sent.
+Next: exact intake each NEW terminal immediately; refill actual free slots;
+finish only unpassed final scopes after coherent existing-root closure; keep
+old live compiler claims exclusive; persist queue/handoff separately.
+
+## Previous rolling recovery: pushed snapshot count1619
 
 Latest pushed snapshot is
 `b3f2862ffc6f9b7c3442b83c54957fcf765f5856` on
