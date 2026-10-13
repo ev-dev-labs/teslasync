@@ -71,7 +71,7 @@ export function DrivesOperationalBrief({
             value: fmtCompact(currentStats.count),
             detail: t(
               'operations.drives.countDetail',
-              'Completed drives in the selected analysis window.',
+              'Drives in the selected analysis window, including ongoing activity.',
             ),
             tone: 'info',
           },
