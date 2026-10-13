@@ -50,6 +50,7 @@ export function CarbonSectionBody({
   const { t } = useTranslation();
   const source = deriveDataState({
     data: state.hasData ? true : undefined,
+    dataUpdatedAt: state.dataUpdatedAt,
     error: state.error ?? state.refreshError,
     fetchStatus: state.isPaused || state.refreshPaused ? 'paused' : state.isFetching ? 'fetching' : 'idle',
     isFetching: state.isFetching,
