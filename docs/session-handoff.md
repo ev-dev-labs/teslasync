@@ -2,6 +2,49 @@
 
 ## Current phase
 
+### Latest restart: built-in-only unattended continuation
+
+The user's latest restart instructions supersede the operational history below.
+At2026-10-13T06:28Z the built-in agent census was empty. Schedule2 was removed;
+both session custom extension entrypoints were disabled without changing their
+code. Only the existing project code-guardian remains loaded; do not invoke
+custom orchestration tools or develop/debug helpers. Old pending scheduled
+prompts are obsolete. Exactly one new ten-minute schedule3 has the user's exact
+skip-if-health-check-in-progress prompt. No status-file enforcement or external
+messaging is authorized.
+
+All34 held scopes were checked against exact disk claims and existing receipts.
+Fourteen incomplete source/test scopes were committed separately as WIP and
+pushed, ending `fd9f7f90c`; incomplete/unknown-timeout work is not accepted.
+Attempts remain unchanged for restart-killed and false status-file stops.
+Current Timeline's completed literal15/15 receipt and unchanged catalog closure
+were accepted; obsolete guard repair was excluded by the no-tooling instruction.
+All old claims are released because the actual runtime is empty. Fresh tasks
+continue these same retained attempts, not another charged restart attempt.
+
+The restart compiler actually exited2: only SharingTrips225 incompatible
+currentTarget comparison and NEW TripLogbook235 string-valued i18n plural count.
+Earlier Causal/Statistics/EnergyLedger compatibility diagnostics are absent,
+but their scoped behavior tests remain unproven. Raw output
+`logs\unattended-restart-tsc.log`. TripLogbook's correction belongs to its pending
+exact page/test continuation; do not create a duplicate full-page migration.
+
+Every current application delta was attributed to a held row and persisted.
+Only parent queue metadata and the same13 unclaimed Exports diagnostics remain
+after source intake; discard nothing. Shared serverPID9036 on5173 responds200
+and is reused, not duplicated. Frozen Docker/DRILL and prior pilot/helper limits
+are unchanged. Repeated blank-output bounded Vitest timeouts were observed on
+more than three scopes: one bounded root item should investigate the existing
+runner/config without disabling guards or building helper tooling; unrelated
+source work keeps moving.
+
+Next: finish the authorized sole-loop update and push restart metadata; launch32
+genuine file-exclusive pending items with built-in task tools; process each
+receipt/commit/push/refill immediately. The worker box is20min, hard limit25min;
+bounded shell commands stop by15min. Every30min append progress, every2h handoff.
+No full suite while actors run; phase gates get at most two repair rounds.
+The eight-to-nine-hour unattended work is ongoing, not overall completion.
+
 ### Authoritative recovery after fifteen actual cancellations
 
 `docs/orchestrator-loop.md` is the sole operating playbook, committed/pushed

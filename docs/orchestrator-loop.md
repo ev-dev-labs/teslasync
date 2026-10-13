@@ -44,9 +44,9 @@ must reduce neon, glow, saturation, duplicate chrome, and pure-white visual nois
 5. Reset zombie claims only after actual cancellation or confirmed idle plus
    explicit source-write release. Preserve previous work and retry notes.
 6. Ensure one shared dev server exists and is responsive. Reuse a healthy server.
-7. Ensure one five-minute watchdog schedule triggers HEALTH CHECK.
-8. Run UNBLOCKING, push any authorized unpushed commits, and send the immediate
-   Discord resume update when the webhook is available.
+7. Ensure exactly one ten-minute schedule triggers HEALTH CHECK with the exact
+   prompt: `HEALTH CHECK per docs/orchestrator-loop.md. Skip if a health check is already in progress.`
+8. Run UNBLOCKING and push any authorized unpushed commits.
 9. Fill actual open slots and resume rolling dispatch.
 
 ## Queue and file claims
@@ -100,8 +100,7 @@ not running workers.
 ## Never idle
 
 Zero actual running workers while ready `[ ]` work exists is an orchestration bug.
-Immediately reconcile, run UNBLOCKING, refill, and send a Discord stall-recovery
-alert. Do not merely report the gap.
+Immediately reconcile, run UNBLOCKING and refill. Do not merely report the gap.
 
 Wait for the next completion for at most five minutes, then run HEALTH CHECK.
 Do not end the loop while actionable pending or active work remains. A real
@@ -130,8 +129,6 @@ do not bypass it or fabricate active workers.
 - Redirect output to ignored `logs/<item>.log`; inspect summaries or the last
   50 lines, not full background output. Record actual commands, numeric exits,
   discovered/executed/passed/failed/skipped counts, and exact test names.
-- Update `.agent-status/<item>.txt` every three minutes:
-  `timestamp | current step | files touched`.
 - Use the shared server. At most four Playwright/screenshot runs hold explicit
   locks simultaneously. Preserve existing fixture/privacy and helper budgets.
 - Failures solely outside the exclusive scope are external, not item failures,
@@ -140,23 +137,32 @@ do not bypass it or fabricate active workers.
   needed: reason`, `DONE | item | external failure: file and error`, or
   `FAILED | item | reason | done so far`.
 
-## HEALTH CHECK: every five minutes
+## HEALTH CHECK: every ten minutes
+
+Skip if a health check is already in progress. Use session task state to mark
+the check in progress and clear it when finished; never overlap two checks.
+Use built-in agent/result/cancellation tools only. No custom tooling or
+extensions: do not build, edit, test or debug extensions or helper tools.
 
 Actively poll **every current worker's real state**, not just notifications.
 Use known actor IDs and consume each new terminal turn once.
 
 1. Finished but uncollected: collect, verify, commit, push, and handle immediately.
 2. Distinguish a completed idle delivery from an idle/waiting unfinished task.
-3. Idle/waiting unfinished work, no real progress, running over 25 minutes, or no
-   heartbeat for 10 minutes is STUCK. Inspect its heartbeat and exact disk changes,
-   preserve work, and actually cancel it through the host's supported cancellation
-   mechanism. A message asking it to stop is not sufficient.
+3. STUCK means only running over 25 minutes, or idle/finished without a
+   collected result. Inspect exact disk changes and existing results, preserve
+   work and cancel through the built-in cancellation tool when necessary.
+   Never stop an actor because a status file is absent or old.
+   A message asking it to stop is not cancellation. If a message cannot be
+   delivered, cancel directly and release claims after confirmed termination.
+   If the host does not expose built-in cancellation, state that limitation;
+   do not restore a custom extension or pretend a live writer was terminated.
 4. Verify cancellation or release before retiring the claim. Commit complete work;
    preserve incomplete work, reset with accurate notes, apply RETRIES, and split a
    too-large scope. Infrastructure stalls are distinguished from item failures.
 5. Recheck blocked items, perform UNBLOCKING, and refill actual slots immediately.
 6. Check shared-server responsiveness and attributable shells/listeners.
-7. Send the due Discord update and print one truthful progress line.
+7. Print one truthful progress line: `running X/32`, plus the reason if under 32.
 
 Evidence timestamps belong to the artifact or test, not the time it was inspected.
 Progress means attributable source changes, retained completed subtasks, commits,
@@ -182,6 +188,11 @@ The current user-authorized recovery exception resets the 14 manually cancelled
 items with no disk delta to pending, attempts zero, with `reset after stall`;
 this is an infrastructure-stall reset, not an item failure.
 
+The subsequent restart exception preserves attempts for every killed held item
+and every false missing-status stop. Accept complete work with scoped evidence;
+otherwise preserve partial source, reset pending and continue the same attempt.
+Do not charge restart recovery as another attempt or discard retained work.
+
 ## Result handling and commits
 
 Verify actual files, exact scope, changes or justified no-change, and scoped
@@ -196,8 +207,8 @@ or bypass commit hooks. Record the actual hash in the queue.
 
 Push after **every** commit, sequentially. Never force push or pull/rebase/merge
 on your own. On a push failure, retry once after 30 seconds; keep working and
-record unsent commits if it still fails. A remote rejection is a Discord alert
-and pushing blocker, not permission to rewrite history.
+record unsent commits if it still fails. Keep committing locally and retry later.
+A remote rejection is not permission to rewrite history.
 
 Malformed results are failures. Unclaimed changes are preserved and documented.
 Shared failures on three or more items get one existing or newly queued root fix;
@@ -240,16 +251,39 @@ specific Phase 6 fixes; build, typecheck, and real dependency breakers block the
 gate. Do not declare phase completion without the required evidence. Commit a
 checkpoint containing the queue and handoff only when its phase gate is complete.
 
-## Discord and handoff
+## Unattended rules
 
-Read the webhook only from `DISCORD_WEBHOOK_URL`. Never put its URL into a file,
-log, commit, message, or report. If absent, state that once and continue.
+Work autonomously throughout the user's eight-to-nine-hour absence. Never ask
+routine questions or wait for the user. Make the reasonable choice, note it and
+move on. Do not invent evidence, loosen gates or start unrelated campaigns.
 
-Send short plain-text updates every 30 minutes and immediately on phase
-checkpoints, gate results, stalls/stuck workers, push problems, repeated failures,
-resource recovery, and resume. Include actual `running X/32`, phase counts, recent
-item/commit counts, and a meaningful blocker. No code, logs, secrets, or payloads.
-Retry a failed send once; Discord never blocks production work.
+- Keep moving through phases. When a phase finishes, run its gate, commit and
+  push its checkpoint, and start the next phase immediately. Continue through
+  Phases 5, 6 and 7 as far as verified outcomes permit.
+- Gates get at most two repair rounds. Move remaining nonblocking issues into
+  exact Phase6 fix items. Never stall on a gate: run it promptly, then refill.
+  Actual build/type/dependency breakers remain blockers, never green by waiver.
+- Keep32 actual workers whenever ready exclusive work exists; refill after every
+  result. Zero running while work remains is a bug: recover and refill now.
+- Never wait for a worker or command without a limit. Stop any bounded command
+  running over15 minutes using its exact built-in shell handle, preserve output
+  and continue. The deliberately long-lived shared dev server is a service, not
+  a bounded validation command; keep it available while work needs it.
+- The same error on three or more items gets one existing or explicitly queued
+  root fix. Keep everything independent running; never pause all work for it.
+- If the shared server dies, restart it once. If it keeps failing, continue work
+  that does not need it instead of repeatedly restarting it.
+- If pushing fails, continue local exact-scope commits and retry later. No force
+  push, automatic pull/rebase/merge, discarded work or rewritten history.
+- Every30 minutes append one line to `docs/progress-log.md`:
+  `time | phase | running X/32 | done | pending | failed | blocked | commits pushed in last 30 min | notes`.
+  Commit and push it with the next ordinary commit, not a separate campaign.
+- Update `docs/session-handoff.md` every two hours and at phase checkpoints.
+- No external status messages. No custom tooling or extensions. No status-file
+  monitoring or enforcement; only actual lifecycle state and absolute runtime
+  determine stuck-worker handling.
+
+## Handoff
 
 Update `docs/session-handoff.md` at every phase checkpoint and every two hours:
 current phases and counts; remaining work; actual actor/claim state; component
