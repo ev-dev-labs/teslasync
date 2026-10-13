@@ -8,6 +8,62 @@
 `61db5bd81` (1675). It supersedes both older playbooks; do not edit it without
 a new user request. Continue here, not a session restart.
 
+### Step3 actually resumed
+
+Actual2026-10-13T05:15Z public SDK census reports **32 running/32**,
+every owner individually polled, no control errors, no completed uncollected
+fresh result at that census. This is not a reservation projection. Fresh
+starts05:04:31-05:06:17Z have immutable hard deadlines05:29:31-05:31:17Z;
+work boxes end five minutes earlier. The current ledger has one owner per
+item, previous owners archived, actual IDs/deadlines/attempts and
+`LastConsumedTurn=-1`. Exact complete prompts and launch census are session
+`resume-worker-prompts\` and `resume-actual-launch-census.json`.
+
+ONE normal `npm run dev -- --host 127.0.0.1 --port 5173 --strictPort`
+server is actually responsive HTTP200; PID9036,
+shell`modernization-dev-resumed`, parent-owned detached source preview.
+ONE five-minute HEALTH CHECK schedule#2 is active. Real dependency
+UNBLOCKING found no newly ready blocked roots; failed roots had zero real
+dependents, so no exhausted helper/rescue budget was reset or artificial
+split invented. Genuine pending exclusive work sufficed.
+
+Session deadline-control extension PID27900 is actually loaded and armed:
+automatic30-second real census,20-minute conclude request,25-minute real
+cancel,10-minute missing heartbeat detection, exact copies/hashes before
+cancel, post-state confirmation before release. Final focused Node TAP
+8passed/0failed/0skipped/exit0 is `logs\deadline-control.tap`. Exact boundary
+tests include `cancels at the exact twenty-five-minute boundary despite a
+current heartbeat`, `missing or old heartbeat cancels at ten minutes but
+not just before`, and `preserves exact owned work before real cancellation
+and verifies post-state`; unconfirmed cancellation and snapshot failures
+are explicit errors, not success-shaped releases. Actual public
+`tasks.cancel` on an already collected Vampire owner returnedtrue and
+verified`cancelled`; snapshots preceded it. This fixes the previous
+STOP-message fiction; do not fall back to it.
+
+The32 claims include all14 authorized no-delta resets, four genuine
+retained-WIP continuations, the explicitly expanded Drivetrain range
+capability, two newly measured narrow Causal/Sharing compiler fixes and
+eleven genuinely unstarted original pages. Original failed full-page
+Causal/Sharing items remain failed; these two fixes are not remigrations
+or illicit third attempts. Public task starts omit model overrides and
+stop refilling when a registered fresh result awaits immediate intake.
+
+Literal compiler1691 ACTUALLY exited2 with the same four production files
+as1676; raw `logs\phase5-parent-tsc-count-1691.log`, next cadence1706.
+Do not claim TypeScript or a phase gate passed. Phase5 source/native
+acceptance and frozen Docker remain distinct. Discord resume/stall update
+could not be sent because `DISCORD_WEBHOOK_URL` is absent; all other
+operational work resumed without exposing or saving a webhook.
+
+Current queue after actual dispatch: Phase5 x155/pending45/held24/failed12/
+blocked1; Phase6 x51/pending1/held9/blocked1. Held includes the single parent
+catalog maintenance claim;32 actual actors were counted separately.
+Continue individual receipts, exact commit/push and immediate rolling
+refills. Do not wait for a batch or rerun full suites while these owners run.
+
+### Preserved Step2 reconciliation snapshot
+
 All fifteen manually killed owners were actually `Cancelled`. Fourteen had
 no new disk delta and are pending with attempts zero and the exact note
 `reset after stall`. Their old WIP, hashes, failure history and original
@@ -83,8 +139,9 @@ or native capture acceptance happened.
 Correction to the historical cancellation note below: the public installed
 SDK DOES expose `session.rpc.tasks.list/cancel/getProgress/sendMessage`.
 Use supported actual cancellation and verify post-state, never confuse a
-stop message with termination. A session-scoped control scaffold exists;
-it is not implemented or loaded yet. Before fresh launches, provide
+stop message with termination. At the Step2 snapshot a session-scoped
+control scaffold existed, not yet implemented or loaded; Step3 above
+records its actual implementation and activation. Before fresh launches, provide
 enforceable20-minute conclude/25-minute cancel/10-minute heartbeat checks.
 The exhausted capture helper/rescue budgets remain exhausted.
 
