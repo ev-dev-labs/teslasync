@@ -2,6 +2,59 @@
 
 ## Current phase
 
+### Two released source-rescue results collected
+
+BatteryCells341b10bf terminal0+STOPturn1 consumed/released: pair unchanged/
+hashverified, fresh20/20actualcases/Vitestnumeric0, JSON
+`phase6-rescue-battery-battery-cells-20261013T1544118690Z.json`, rawlog with all
+actual names/exits/preservation0. Source881vs863/ninepanels/nineEmptyStates;
+hook-route matches, eligible scans0. Preliminary rg/twoPS scans1 retained,
+replacement0; jsdomchartwarnings remain. Actualcommand7m56/total24m42 exceeded
+20minute target but below25hard; later idle STOP acknowledgement is not new
+work. No source edits/new typecheck/native/fullsuite claim. Source rescue and
+original Phase5 source may be accepted from real current evidence.
+
+PeriodComparef28e61ee terminal0+STOPturn1 consumed/released: one test-line
+semantic parent selector, all five-cell/unit/color assertions preserved;
+production unchanged. Fresh runner emitted noJSON/cases and was stopped,
+start15:53:42.509/stop15:55:12.020Z. Counts/nativeexitUNKNOWN, NOTPASS and no
+externalcause inferred. Preserve exact test WIP only; single userrescue spent,
+no automaticretry/budgetreset/source or native acceptance.
+
+Both original scopes now truly free. Catalog alreadyreleased/pushed7158294c3;
+remaining29claims stay held until actualterminal. Three independent ready
+read-only QA scopes (ApiLogs,BatteryCells,ApiPlayground) refill genuine free
+slots without colliding with unconfirmed writers/native owners. Reports only,
+no source implementation. Source debt26originalfailures remains explicit.
+
+### Current actual dispatch / deadline reconciliation
+
+Actual32 workers launched;15:40:34 active individual census confirmed31new
+actors plus retained trendattempt2 already running. First29ages601s, native2
+ages423s; model-unavailable specialist launches produced no agents and general
+defaults succeeded without model overrides. All32actual IDs are now persisted
+in queue rows and sessionSQL `phase6_actual_workers`; NOT historical idle chats.
+
+Catalog worker terminal0 collected immediately, exact threepaths committed/
+pushed7158294c3. Current31192leaves/one existing change/noadddelete, both real
+projectionmatches0, fivepins unchanged, existingguard receipts0 not rerun.
+Native count confirmation remains separate and unfinished.
+
+Conservative return15:50/hard15:55 elapsed. Actual other31 are still unconfirmed
+after cooperative STOP delivered; no built-in agent cancellation is exposed.
+They MUST retain claims until actual terminal/explicit release, not fabricated
+cancellation. No helper/extension workaround or overlapping retry. Root
+orchestration metadata was late; claims now accurately held, previous notes
+unchanged, original exhausted attempts unchanged. Poll knownIDs and collect
+each result immediately. Stop exact own bounded shell handles over15minutes
+where identifiable; long-lived shared5173 service is exempt.
+
+Catalog completion leaves one genuinely free slot; independent read-only
+ApiLogs finished-page QA is queued to refill it without colliding with31held
+writers or granting an unsafe extra browser. All remaining independent finished
+pages can similarly enter user-authorized Phase6 QA as slots actually release.
+No further source implementation by parent, no Docker or passing-claim shortcut.
+
 ### Phase5 requested gate passed; Phase6 worker dispatch
 
 Pilot checkpoint a63bd78e6 (`checkpoint: pilot complete`) is actually pushed.
