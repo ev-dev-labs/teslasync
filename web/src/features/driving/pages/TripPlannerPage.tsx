@@ -38,6 +38,7 @@ import type { TripLocation, TripPlan, TripPlanRequest } from '@/types/driving';
 import { convertDistanceFromSI } from '@/lib/unitConversion';
 
 import { cn } from '@/lib/cn';
+import { neonColorMap } from '@/lib/tokens';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 const PLACEHOLDER = '—';
@@ -139,7 +140,7 @@ export default function TripPlannerPage() {
 
   const speedOptions = useMemo(() => [
     { value: '0.8', label: t('tripPlanner.speed.relaxed', 'Relaxed (−20%)') },
-    { value: '1.0', label: t('tripPlanner.speed.normal', 'Normal') },
+    { value: '1', label: t('tripPlanner.speed.normal', 'Normal') },
     { value: '1.1', label: t('tripPlanner.speed.brisk', 'Brisk (+10%)') },
     { value: '1.2', label: t('tripPlanner.speed.fast', 'Fast (+20%)') },
   ], [t]);
@@ -375,7 +376,7 @@ export default function TripPlannerPage() {
           </div>
 
           <LayoutCard title={t('tripPlanner.insights.title', 'Trip Insights')} actions={
-              <Info className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+              <Info className={cn("h-4 w-4", neonColorMap.cyan.text)} aria-hidden="true" />
           }>
 
             {!route ? (
@@ -390,14 +391,14 @@ export default function TripPlannerPage() {
                   className={cn(
                     'flex items-start gap-2 rounded-lg border p-3',
                     route.feasible
-                      ? 'border-emerald-500/20 bg-emerald-500/5'
-                      : 'border-rose-500/20 bg-rose-500/5',
+                      ? cn(neonColorMap.green.border, neonColorMap.green.bg)
+                      : cn(neonColorMap.red.border, neonColorMap.red.bg),
                   )}
                 >
                   {route.feasible ? (
-                    <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-300" aria-hidden="true" />
+                    <CheckCircle2 className={cn("mt-0.5 h-4 w-4 shrink-0", neonColorMap.green.text)} aria-hidden="true" />
                   ) : (
-                    <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-rose-300" aria-hidden="true" />
+                    <AlertTriangle className={cn("mt-0.5 h-4 w-4 shrink-0", neonColorMap.red.text)} aria-hidden="true" />
                   )}
                   <div className="min-w-0">
                     <Text as="p" size="sm" weight="medium" color="primary">
@@ -414,8 +415,8 @@ export default function TripPlannerPage() {
                 </div>
 
                 {route.is_estimate && (
-                  <div className="flex items-start gap-2 rounded-lg border border-amber-500/20 bg-amber-500/5 p-3">
-                    <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-300" aria-hidden="true" />
+                  <div className={cn("flex items-start gap-2 rounded-lg border p-3", neonColorMap.amber.border, neonColorMap.amber.bg)}>
+                    <AlertTriangle className={cn("mt-0.5 h-4 w-4 shrink-0", neonColorMap.amber.text)} aria-hidden="true" />
                     <Text as="p" variant="bodySm">
                       {t(
                         'tripPlanner.disclaimer',
@@ -427,7 +428,7 @@ export default function TripPlannerPage() {
 
                 {weather && weather.efficiency_factor !== 1.0 ? (
                   <div className="flex items-start gap-2 rounded-lg border border-border-subtle bg-surface-2 p-3">
-                    <Thermometer className="mt-0.5 h-4 w-4 shrink-0 text-amber-300" aria-hidden="true" />
+                    <Thermometer className={cn("mt-0.5 h-4 w-4 shrink-0", neonColorMap.amber.text)} aria-hidden="true" />
                     <div className="min-w-0">
                       <Text as="p" size="sm" weight="medium" color="primary">
                         {t('tripPlanner.weather.title', 'Weather Impact')}

@@ -814,6 +814,17 @@ describe('TripPlannerPage — AI agent input wiring', () => {
 
 
 describe('TripPlannerPage — retained source scope', () => {
+  it('selects Normal by default and preserves the dimensionless normal speed request', () => {
+    renderPage();
+    expect(screen.getByRole('combobox', { name: 'Driving Speed' })).toHaveValue('1');
+    expect(screen.getByRole('option', { name: 'Normal', selected: true })).toBeInTheDocument();
+    planWith(makePlan());
+    expect(planMutate).toHaveBeenCalledWith(
+      expect.objectContaining({ preferences: expect.objectContaining({ speed_factor: 1 }) }),
+      expect.objectContaining({ onSuccess: expect.any(Function) }),
+    );
+  });
+
   it('distinguishes unavailable weather from a returned neutral factor', () => {
     renderPage();
     const plan = makePlan();
