@@ -100,7 +100,7 @@ export default function ChargingHeatmapPage() {
     { key: 'count', label: t('charging.heatmap.sessionsWord', 'sessions'), kind: 'count' as const },
     {
       key: 'energy_wh', label: t('charging.heatmap.totalEnergy', 'Total Energy'),
-      format: (value: string | number | null | undefined) =>
+      format: (value: unknown) =>
         typeof value === 'number' ? formatEnergy(value) : '—',
     },
     { key: 'energyStatus', label: t('common.status', 'Status') },
