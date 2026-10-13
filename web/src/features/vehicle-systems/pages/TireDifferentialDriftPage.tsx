@@ -1,14 +1,14 @@
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Gauge, Search, Scale, Waypoints } from 'lucide-react';
+import { Car, Gauge, Search, Scale, Waypoints } from 'lucide-react';
 
 import { PageLayout, LayoutCard, ChartCard } from '@/components/layout';
 import { Text, Badge, HelpTooltip } from '@/components/ui';
 
 import { VehicleOperationalBrief } from '../components/operationalbrief-all/VehicleOperationalBrief';
-import { Skeleton, EmptyState } from '@/components/feedback';
+import { Skeleton, EmptyState, EmptyStateGuidanceDetails } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
-import { NoVehicleSelected } from '@/features/onboarding/components/NoVehicleSelected';
+import { getEmptyStateGuidance } from '@/lib/emptyStateGuidance';
 import {
   ChartTooltip, ChartLegend,
   LineChart, Line, BarChart, Bar, Cell,
@@ -26,6 +26,7 @@ import { chartTokens } from '@/lib/tokens';
 
 import { summarizeTireDifferentialDrift, TIRE_CORNERS, type TireCorner } from '../lib/tireDifferentialDrift';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import { deriveDataState } from '@/api/dataState';
 import { VehicleSourceContent } from '../components/VehicleSourceContent';
 
@@ -42,6 +43,8 @@ export default function TireDifferentialDriftPage() {
   usePageTitle(t('tireDifferentialDrift.title', 'Tire differential drift'));
 
   const { vehicleId } = useSelectedVehicle();
+  const vehicleSelected = vehicleId != null;
+  const { formatDateTime, tz } = useDateFormat();
   const vehicleIdStr = vehicleId != null ? String(vehicleId) : '';
   const { unitPrefs, formatPressure } = useUnits();
   const residualHidden = useHiddenSeries('tire-differential-drift-residuals');
@@ -49,51 +52,57 @@ export default function TireDifferentialDriftPage() {
   const historyQuery = useTirePressureAnalysisHistory(vehicleIdStr);
   const historySource = deriveDataState(historyQuery, { provenance: 'historical' });
   const summary = useMemo(
-    () => summarizeTireDifferentialDrift(historyQuery.data ?? []),
-    [historyQuery.data],
+    () => summarizeTireDifferentialDrift(vehicleSelected ? historyQuery.data ?? [] : []),
+    [historyQuery.data, vehicleSelected],
   );
+
+  // A resolved array is source evidence, but model fallback zeros are not readings.
+  const hasUsableEvidence = vehicleSelected && summary.usableSamples > 0;
+  const retained = vehicleSelected && historySource.hasData
+    && (historySource.refreshError != null || historySource.isRefreshBlocked);
+  const noVehicleMessage = t('common.noVehicleSelected.desc', 'Add a vehicle to your fleet to see data on this page.');
+  const noDataMessage = t('tireDifferentialDrift.noData', 'No usable four-corner TPMS history yet. Each row needs a plausible reading on all four tires to compute the common-mode median.');
 
   const cornerLabel = (corner: TireCorner) =>
     t(`tireDifferentialDrift.corner.${corner}`, CORNER_FALLBACK[corner]);
 
   // Pa → kPa (SI floor) → the user's display unit. Purely multiplicative,
   // so this is valid for both absolute residuals and per-day slopes alike.
-  const toDisplay = (pa: number) => convertPressureFromSI(pa / 1000, unitPrefs.pressure);
+  const toDisplay = useCallback((pa: number) => convertPressureFromSI(pa / 1000, unitPrefs.pressure), [unitPrefs.pressure]);
 
   const residualSeries = useMemo(
     () =>
       summary.residuals.map((r) => ({
-        time: new Date(r.ms).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit' }),
+        timestamp: new Date(r.ms).toISOString(),
+        time: formatDateTime(new Date(r.ms)) + ' (' + tz + ')',
         fl: Math.round(toDisplay(r.fl) * 100) / 100,
         fr: Math.round(toDisplay(r.fr) * 100) / 100,
         rl: Math.round(toDisplay(r.rl) * 100) / 100,
         rr: Math.round(toDisplay(r.rr) * 100) / 100,
       })),
-    [summary.residuals, unitPrefs.pressure],
+    [summary.residuals, toDisplay, formatDateTime, tz],
   );
 
   const slopeBars = useMemo(
     () =>
-      summary.corners.map((c) => ({
-        corner: t(`tireDifferentialDrift.corner.${c.corner}`, CORNER_FALLBACK[c.corner]),
+      summary.corners.filter((c) => c.samples >= 2).map((c) => ({
+        corner: c.corner === summary.leakCorner
+          ? t('tireDifferentialDrift.leakCornerLabel', '{{corner}} · {{status}}', { corner: t(`tireDifferentialDrift.corner.${c.corner}`, CORNER_FALLBACK[c.corner]), status: t('tireDifferentialDrift.suspect', 'Leak suspect') })
+          : t(`tireDifferentialDrift.corner.${c.corner}`, CORNER_FALLBACK[c.corner]),
         key: c.corner,
         slope: Math.round(toDisplay(c.slopePaPerDay) * 100) / 100,
         confidence: c.confidence,
       })),
-    [summary.corners, unitPrefs.pressure, t],
+    [summary.corners, summary.leakCorner, toDisplay, t],
   );
 
   const leakDaysToThreshold = summary.leakCorner != null
     ? (summary.corners.find(c => c.corner === summary.leakCorner)?.daysToThreshold ?? null)
     : null;
 
-  if (vehicleId == null) {
-    return <NoVehicleSelected pageTitle={t('tireDifferentialDrift.title', 'Tire differential drift')} />;
-  }
-
-  const isLoading = historyQuery.isLoading && !historySource.hasData;
+  const isLoading = vehicleSelected && historyQuery.isLoading && !historySource.hasData;
   const leakCard = summary.leakCorner != null ? cornerLabel(summary.leakCorner) : null;
-  const imbalanceCard = summary.imbalanceCorner != null ? cornerLabel(summary.imbalanceCorner) : null;
+  const imbalanceCard = hasUsableEvidence && summary.imbalanceCorner != null ? cornerLabel(summary.imbalanceCorner) : null;
   return (
     <PageLayout
       title={t('tireDifferentialDrift.title', 'Tire differential drift')}
@@ -106,42 +115,52 @@ export default function TireDifferentialDriftPage() {
       {/* 1 — KPI band */}
       <FadeIn>
         <LayoutCard title={t('tireDifferentialDrift.kpis', 'Differential drift metrics')}>
-          <VehicleSourceContent source={historySource} label={t('tireDifferentialDrift.kpis', 'Differential drift metrics')}>
+          <VehicleSourceContent source={historySource} enabled={vehicleSelected} label={t('tireDifferentialDrift.kpis', 'Differential drift metrics')}>
+            {!vehicleSelected && <>
+              <EmptyState
+                icon={<Car className="h-8 w-8" aria-hidden="true" />}
+                title={t('common.noVehicleSelected.title', 'No vehicle selected')}
+                message={noVehicleMessage}
+                actionTo={{ label: t('common.noVehicleSelected.action', 'Set up TeslaSync'), to: getEmptyStateGuidance('vehicles.list')?.action.to ?? '/onboarding' }}
+              />
+              <EmptyStateGuidanceDetails guidanceId="vehicles.list" />
+            </>}
             <VehicleOperationalBrief embedded id="tire-differential-drift-summary" loading={isLoading}
               title={t('tireDifferentialDrift.kpis', 'Differential drift metrics')}
-              available={historySource.hasData}
+              available={vehicleSelected && historySource.hasData}
+              retained={retained}
               period={{ kind: 'unknown', label: t('tireDifferentialDrift.title', 'Tire differential drift'),
                 reason: t('tireDifferentialDrift.brief.scope', 'Returned four-corner pressure history only; fitted leak and imbalance inferences are not manufacturer readings.') }}
               metrics={[
                 {
                   metricId: 'text', occurrenceId: 'leak-corner',
                   label: t('tireDifferentialDrift.leakCorner', 'Likely leak corner'),
-                  rawValue: historySource.hasData ? leakCard ?? t('tireDifferentialDrift.none', 'None detected') : null,
+                  rawValue: hasUsableEvidence ? leakCard ?? t('tireDifferentialDrift.none', 'None detected') : null,
                   description: t('help.tireDifferentialDrift.leakCorner', 'Each corner residual (reading minus the four-tire median) gets its own Theil-Sen slope over time. The corner with the strongest, most pairwise-consistent negative slope — clearing minimum samples, span, and agreement bars — is flagged here. A shared weather swing cancels equally, so it cannot trigger this alone.'),
-                  context: <><Search className="h-5 w-5" aria-hidden="true" />{t('tireDifferentialDrift.leakScore', 'evidence score {{score}}', { score: fmtNumber(summary.leakScore) })}</>,
+                  context: <><Search className="h-5 w-5" aria-hidden="true" />{t('tireDifferentialDrift.leakScore', 'evidence score {{score}}', { score: fmtNumber(hasUsableEvidence ? summary.leakScore : null) })}</>,
                 },
                 {
                   metricId: 'pressure', occurrenceId: 'imbalance',
                   label: t('tireDifferentialDrift.imbalance', 'Structural imbalance'),
-                  rawValue: historySource.hasData ? summary.imbalancePa / 1000 : null,
+                  rawValue: hasUsableEvidence ? summary.imbalancePa / 1000 : null,
                   display: { formatter: raw => ({ value: formatPressure(raw), unit: '' }) },
                   description: t('help.tireDifferentialDrift.imbalance', "The spread between each corner's mean (constant) residual — independent of the leak ranking. A corner permanently offset (e.g. after a wheel swap) shows up here with zero slope, invisible to the leak ranking alone."),
                   context: <><Scale className="h-5 w-5" aria-hidden="true" />{imbalanceCard != null
                     ? t('tireDifferentialDrift.imbalanceCorner', 'largest offset: {{corner}}', { corner: imbalanceCard })
-                    : t('tireDifferentialDrift.noImbalance', 'corners evenly matched')}</>,
+                    : hasUsableEvidence ? t('tireDifferentialDrift.noImbalance', 'corners evenly matched') : '—'}</>,
                 },
                 {
                   metricId: 'duration', occurrenceId: 'threshold-days',
                   label: t('tireDifferentialDrift.daysToThreshold', 'Days to threshold'),
-                  rawValue: historySource.hasData && leakDaysToThreshold != null ? leakDaysToThreshold * 86400 : null,
-                  display: { formatter: () => ({ value: String(leakDaysToThreshold), unit: '' }) },
+                  rawValue: hasUsableEvidence && leakDaysToThreshold != null ? leakDaysToThreshold * 86400 : null,
+                  display: { formatter: () => ({ value: fmtNumber(leakDaysToThreshold), unit: '' }) },
                   context: <><Gauge className="h-5 w-5" aria-hidden="true" />{t('tireDifferentialDrift.daysToThresholdHint', 'projected from the fitted trend, evidence-gated')}</>,
                 },
                 {
                   metricId: 'count', occurrenceId: 'usable-samples',
                   label: t('tireDifferentialDrift.samples', 'Samples analyzed'),
-                  rawValue: historySource.hasData ? summary.usableSamples : null,
-                  context: <><Waypoints className="h-5 w-5" aria-hidden="true" />{t('tireDifferentialDrift.samplesHint', '{{span}} day span · {{n}} raw rows', { span: summary.spanDays ?? '—', n: summary.analyzedSamples })}</>,
+                  rawValue: vehicleSelected && historySource.hasData ? summary.usableSamples : null,
+                  context: <><Waypoints className="h-5 w-5" aria-hidden="true" />{t('tireDifferentialDrift.samplesHint', '{{span}} day span · {{n}} raw rows', { span: fmtNumber(hasUsableEvidence ? summary.spanDays : null), n: fmtNumber(vehicleSelected && historySource.hasData ? summary.analyzedSamples : null) })}</>,
                 },
               ]}
             />
@@ -158,18 +177,19 @@ export default function TireDifferentialDriftPage() {
             chartKey="tire-differential-drift-residuals"
             toolbar exportable size="standard"
             loading={isLoading}
-            error={historySource.fatalError}
+            error={vehicleSelected ? historySource.fatalError : null}
             onRetry={historySource.retry ?? undefined}
             empty={residualSeries.length === 0}
-            emptyIcon={<Gauge className="h-8 w-8" />}
-            emptyMessage={t('tireDifferentialDrift.noData', 'No usable four-corner TPMS history yet. Each row needs a plausible reading on all four tires to compute the common-mode median.')}
+            emptyIcon={<Gauge className="h-8 w-8" aria-hidden="true" />}
+            emptyMessage={vehicleSelected ? noDataMessage : noVehicleMessage}
             footer={historySource.hasData && (historySource.refreshError || historySource.isRefreshBlocked)
-              ? <VehicleSourceContent source={historySource} label={t('tireDifferentialDrift.residualTimeline', 'Common-mode-removed residuals')}>{null}</VehicleSourceContent>
+              ? <VehicleSourceContent source={historySource} enabled={vehicleSelected} label={t('tireDifferentialDrift.residualTimeline', 'Common-mode-removed residuals')}>{null}</VehicleSourceContent>
               : undefined}
             height={340}
             data={residualSeries}
             dataColumns={[
               { key: 'time', label: t('tireDifferentialDrift.col.time', 'Time') },
+              { key: 'timestamp', label: t('tireDifferentialDrift.col.timestamp', 'Timestamp (UTC)') },
               { key: 'fl', label: cornerLabel('fl') },
               { key: 'fr', label: cornerLabel('fr') },
               { key: 'rl', label: cornerLabel('rl') },
@@ -209,17 +229,19 @@ export default function TireDifferentialDriftPage() {
           ariaLabel={t('tireDifferentialDrift.slopeRankingAria', 'Bar chart of the fitted residual drift rate per day for each tire corner')}
           loading={isLoading}
           toolbar exportable size="standard"
-          error={historySource.fatalError}
+          error={vehicleSelected ? historySource.fatalError : null}
           onRetry={historySource.retry ?? undefined}
           empty={slopeBars.length === 0}
+          emptyMessage={vehicleSelected ? t('tireDifferentialDrift.noDrift', 'At least two usable four-corner samples at distinct times are needed to fit a drift rate.') : noVehicleMessage}
+          emptyIcon={<Scale className="h-8 w-8" aria-hidden="true" />}
           footer={historySource.hasData && (historySource.refreshError || historySource.isRefreshBlocked)
-            ? <VehicleSourceContent source={historySource} label={t('tireDifferentialDrift.slopeRanking', 'Per-corner drift rate')}>{null}</VehicleSourceContent>
+            ? <VehicleSourceContent source={historySource} enabled={vehicleSelected} label={t('tireDifferentialDrift.slopeRanking', 'Per-corner drift rate')}>{null}</VehicleSourceContent>
             : undefined}
           height={280}
           data={slopeBars}
           dataColumns={[
             { key: 'corner', label: t('tireDifferentialDrift.col.corner', 'Corner') },
-            { key: 'slope', label: t('tireDifferentialDrift.col.slope', `Slope (${unitPrefs.pressure}/day)`) },
+            { key: 'slope', label: t('tireDifferentialDrift.col.slopeUnit', 'Slope ({{unit}}/day)', { unit: unitPrefs.pressure }) },
             { key: 'confidence', label: t('tireDifferentialDrift.col.confidence', 'Confidence') },
           ]}
         >
@@ -231,7 +253,7 @@ export default function TireDifferentialDriftPage() {
               <Tooltip content={<ChartTooltip />} />
               <Bar dataKey="slope" name={t('tireDifferentialDrift.col.slope', 'Slope')} radius={[4, 4, 0, 0]}>
                 {slopeBars.map((bar) => (
-                  <Cell key={bar.key} fill={bar.key === summary.leakCorner ? chartTokens.series[3] : CORNER_COLOR[bar.key]} />
+                  <Cell key={bar.key} fill={CORNER_COLOR[bar.key]} />
                 ))}
               </Bar>
             </BarChart>
@@ -248,18 +270,18 @@ export default function TireDifferentialDriftPage() {
               defaultValue="Every number here is derived from resampled TPMS residuals, not a manufacturer specification. Leak ranking and structural imbalance are independent read-outs of the same residual series and can disagree — a corner can be offset without drifting, or drifting without ever being the most offset."
               ariaLabel={t('help.tireDifferentialDrift.iconLabel', 'More info about this inference')}
             />}>
-          <VehicleSourceContent source={historySource} label={t('tireDifferentialDrift.reading', 'Reading this inference')}>
+          <VehicleSourceContent source={historySource} enabled={vehicleSelected} label={t('tireDifferentialDrift.reading', 'Reading this inference')}>
           {isLoading ? (
             <Skeleton height={140} />
           ) : summary.usableSamples === 0 ? (
             <EmptyState /* no-action: the reading follows from the residual series computed above. */
-              icon={<Scale className="h-8 w-8" />}
-              message={t('tireDifferentialDrift.noReading', 'The reading appears once at least one usable four-corner sample has been analyzed.')}
+              icon={<Scale className="h-8 w-8" aria-hidden="true" />}
+              message={vehicleSelected ? t('tireDifferentialDrift.noReading', 'The reading appears once at least one usable four-corner sample has been analyzed.') : noVehicleMessage}
             />
           ) : (
             <div className="grid gap-3 sm:grid-cols-2">
               {summary.corners.map((c) => (
-                <div key={c.corner} className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3">
+                <div key={c.corner} className="min-w-0 rounded-shape-lg border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3">
                   <div className="mb-1 flex flex-wrap items-center gap-2">
                     <Text variant="body" className="font-medium">{cornerLabel(c.corner)}</Text>
                     {c.corner === summary.leakCorner ? (
@@ -271,8 +293,8 @@ export default function TireDifferentialDriftPage() {
                   </div>
                   <Text variant="caption" as="p">
                     {t('tireDifferentialDrift.cornerStats', 'slope {{slope}}/day · confidence {{conf}} · mean offset {{offset}}', {
-                      slope: formatPressure(c.slopePaPerDay / 1000),
-                      conf: fmtNumber(c.confidence),
+                      slope: formatPressure(c.samples >= 2 ? c.slopePaPerDay / 1000 : null),
+                      conf: fmtNumber(c.samples >= 2 ? c.confidence : null),
                       offset: formatPressure(c.meanResidualPa / 1000),
                     })}
                   </Text>
