@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { CardGrid, LayoutCard } from '@/components/layout/layout-reference';
+import { CardGrid, LayoutCard } from '@/components/layout';
 import { LinearGauge } from '@/components/charts';
 import { NestedDrivingBrief } from '../operationalbrief-a-m/NestedDrivingBrief';
 import { KVList } from '@/components/data-display';
@@ -19,9 +19,21 @@ interface Props {
   statsState: DataState<unknown>;
   drivesState: DataState<unknown>;
   loading: boolean;
+  drivesLoading?: boolean;
+  /** Caller-owned emptiness of the selected-range drive subset, not missing power readings. */
+  drivesEmpty?: boolean;
+  statsLoading?: boolean;
+  statsEmpty?: boolean;
 }
 
-export function ThermalPanels({ sensors, power, stats, healthState, statsState, drivesState, loading }: Props) {
+export function ThermalPanels({
+  sensors, power, stats, healthState, statsState, drivesState, loading,
+  drivesLoading = drivesState.status === 'initial',
+  drivesEmpty = drivesState.status === 'unavailable' ||
+    (Array.isArray(drivesState.data) && drivesState.data.length === 0),
+  statsLoading = statsState.status === 'initial',
+  statsEmpty = statsState.status === 'unavailable' || (statsState.hasData && stats == null),
+}: Props) {
   const { t } = useTranslation();
   const { formatTemperature, unitPrefs } = useUnits();
   const { fmtNumber } = useNumberFormatting();
@@ -82,19 +94,20 @@ export function ThermalPanels({ sensors, power, stats, healthState, statsState, 
       </SourceBoundary>
       {/* Independent neighbors remain visible when the health source fails. */}
       <SourceBoundary state={drivesState} label={t('drivetrain.powerSummary', 'Power Summary')}
-        empty={false} emptyMessage={t('drivetrain.noData', 'No data')}>
+        loading={drivesLoading} empty={drivesEmpty} emptyMessage={t('drivetrain.noData', 'No data')}>
         <NestedDrivingBrief period={{ kind: 'unknown', label: t('drivetrain.modernization.driveSubset', 'Recent drives within the selected range'),
           reason: t('drivetrain.brief.powerScope', 'Loaded recent drives, not a complete selected-range power aggregate.') }}
           title={t('drivetrain.powerSummary', 'Power Summary')}
           description={t('drivetrain.brief.powerScope', 'Loaded recent drives, not a complete selected-range power aggregate.')}
-          retained={drivesState.refreshError != null} unavailable={drivesState.fatalError != null}
+          retained={drivesState.hasData && (drivesState.status === 'stale' || drivesState.refreshError != null || drivesState.isRefreshBlocked)}
+          unavailable={drivesState.fatalError != null}
           preferences={preferences} metrics={[
             { metricId: 'power', label: t('drivetrain.peakPower', 'Peak Power'), rawValue: power.peakPower },
             { metricId: 'power', label: t('drivetrain.avgPower', 'Avg Power'), rawValue: power.avgPowerMax },
           ]} />
       </SourceBoundary>
       <SourceBoundary state={statsState} label={t('drivetrain.driveStats', 'Drive Statistics')}
-        empty={false} emptyMessage={t('drivetrain.noStats', 'No drive statistics available yet')}>
+        loading={statsLoading} empty={statsEmpty} emptyMessage={t('drivetrain.noStats', 'No drive statistics available yet')}>
         <KVList items={[
           { label: t('drivetrain.drivesLabel', 'Drives'), value: finite(stats?.totalDrives) != null ? fmtNumber(stats?.totalDrives, 0) : '—' },
           { label: t('drivetrain.regenRatio', 'Regen Ratio'), value: finite(stats?.regenRatio) != null ? `${fmtNumber((stats?.regenRatio ?? 0) * 100)}%` : '—' },
