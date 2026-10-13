@@ -1,4 +1,4 @@
-import { type FormEvent, useMemo, useState } from 'react';
+import { type FormEvent, useEffect, useId, useMemo, useRef, useState } from 'react';
 import { AlertTriangle, PackagePlus, Trash2, Wrench } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
@@ -14,13 +14,14 @@ import { AlertBanner } from '@/components/feedback';
 import { PageLayout } from '@/components/layout';
 import { KVList } from '@/components/data-display';
 import { FadeIn } from '@/components/motion';
-import { Accordion, Badge, Button, ConfirmDialog, DataTable, Input, Select, Text, Textarea } from '@/components/ui';
+import { Accordion, Badge, Button, ConfirmDialog, DataTable, Icon, Input, Select, Text, Textarea } from '@/components/ui';
 import type { Column } from '@/components/ui';
 import { useConfirm } from '@/hooks/useConfirm';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useUnits } from '@/hooks/useUnits';
 import { formatDateTime } from '@/lib/dateFormat';
+import { neonColorMap } from '@/lib/tokens';
 
 import type {
   ConsumableCategory,
@@ -75,9 +76,9 @@ const EVENT_KIND_LABELS: Record<ConsumableEventKind, (t: TFunction) => string> =
 };
 
 function healthTone(pct: number): string {
-  if (pct >= 60) return 'bg-emerald-400/70';
-  if (pct >= 25) return 'bg-amber-400/70';
-  return 'bg-rose-400/70';
+  if (pct >= 60) return neonColorMap.green.dot;
+  if (pct >= 25) return neonColorMap.amber.dot;
+  return neonColorMap.red.dot;
 }
 
 export default function ConsumablesLifecyclePage() {
@@ -86,7 +87,18 @@ export default function ConsumablesLifecyclePage() {
   const { vehicleId } = useSelectedVehicle();
   const units = useUnits();
   const [formOpen, setFormOpen] = useState(false);
-  const [eventFor, setEventFor] = useState<number | null>(null);
+  const [eventFor, setEventFor] = useState<ConsumableItem | null>(null);
+  const eventHeadingId = useId();
+  const eventHeading = useRef<HTMLHeadingElement>(null);
+  const eventTrigger = useRef<HTMLButtonElement | null>(null);
+  const currentEvent = useRef(eventFor);
+  const currentVehicle = useRef(vehicleId);
+  currentEvent.current = eventFor;
+  currentVehicle.current = vehicleId;
+  useEffect(() => {
+    if (eventFor && eventFor.vehicle_id !== vehicleId) setEventFor(null);
+    else if (eventFor) eventHeading.current?.focus();
+  }, [eventFor, vehicleId]);
   const [draft, setDraft] = useState({
     category: 'tire' as ConsumableCategory,
     label: '',
@@ -125,7 +137,7 @@ export default function ConsumablesLifecyclePage() {
       variant: 'danger',
       confirmLabel: t('common.delete', 'Delete'),
     });
-    if (ok) remove.mutate(row.id);
+    if (ok && currentVehicle.current === row.vehicle_id) remove.mutate(row.id);
   };
   const createEvent = useCreateConsumableEvent();
 
@@ -133,6 +145,15 @@ export default function ConsumablesLifecyclePage() {
   const lifecycles = useMemo(() => report?.items ?? [], [report?.items]);
   const items = useMemo(() => itemsQuery.data?.items ?? [], [itemsQuery.data?.items]);
   const currency = report?.currency ?? draft.currency;
+  const eventEligible = eventFor != null && eventFor.vehicle_id === vehicleId
+    && items.some((item) => item.id === eventFor.id && item.vehicle_id === vehicleId);
+
+  const cancelEvent = () => {
+    setEventFor(null);
+    if (eventFor?.vehicle_id === vehicleId && eventTrigger.current?.isConnected) {
+      eventTrigger.current.focus();
+    }
+  };
 
   const allStress = useMemo(() => {
     const seen = new Map<string, DutyCycleStress>();
@@ -167,10 +188,11 @@ export default function ConsumablesLifecyclePage() {
 
   const submitEvent = (event: FormEvent) => {
     event.preventDefault();
-    if (eventFor == null) return;
+    if (!eventEligible || eventFor == null || createEvent.isPending) return;
+    const target = eventFor;
     createEvent.mutate(
       {
-        item_id: eventFor,
+        item_id: target.id,
         kind: eventDraft.kind,
         occurred_at: new Date().toISOString(),
         odometer_m: eventDraft.odometer_m,
@@ -179,8 +201,10 @@ export default function ConsumablesLifecyclePage() {
       },
       {
         onSuccess: () => {
+          if (currentEvent.current !== target || currentVehicle.current !== target.vehicle_id) return;
           setEventFor(null);
           setEventDraft({ kind: 'inspect' as ConsumableEventKind, odometer_m: null, cost_minor: 0, note: '' });
+          if (eventTrigger.current?.isConnected) eventTrigger.current.focus();
         },
       },
     );
@@ -226,15 +250,39 @@ export default function ConsumablesLifecyclePage() {
       align: 'right',
       header: t('ownership.consumables.stress.multiplier', 'Wear multiplier'),
       render: (row) => (
-        <span
-          className={`tabular-nums ${row.multiplier > 1.15 ? 'text-rose-300' : row.multiplier < 0.9 ? 'text-emerald-300' : ''}`}
+        <Text variant="bodySm"
+          className={`tabular-nums ${row.multiplier > 1.15 ? neonColorMap.red.text : row.multiplier < 0.9 ? neonColorMap.green.text : ''}`}
         >
           ×{fmtNumber(row.multiplier)}
-        </span>
+        </Text>
       ),
       sortable: true,
     },
   ];
+
+  const renderItemActions = (row: ConsumableItem) => (
+    <div className="flex flex-wrap gap-2">
+      <Button
+        variant="secondary" size="sm" wrapLabel
+        icon={<Icon icon={Wrench} size="md" />}
+        disabled={createEvent.isPending || row.vehicle_id !== vehicleId}
+        onClick={(event) => {
+          eventTrigger.current = event.currentTarget;
+          setEventFor(row);
+        }}
+      >
+        {t('ownership.consumables.item.log', 'Log event')}
+      </Button>
+      <Button
+        variant="ghost" size="sm" wrapLabel
+        icon={<Icon icon={Trash2} size="md" />}
+        loading={remove.isPending && remove.variables === row.id}
+        onClick={() => void handleRemove(row)}
+      >
+        {t('ownership.action.remove', 'Remove')}
+      </Button>
+    </div>
+  );
 
   const itemColumns: Column<ConsumableItem>[] = [
     {
@@ -243,7 +291,7 @@ export default function ConsumablesLifecyclePage() {
       filterValue: (row) => row.id,
       filterValueLabel: (_value, row) => row.label,
       render: (row) => (
-        <div>
+        <div className="min-w-0 break-words">
           <Text as="p" variant="label">
             {row.label}
           </Text>
@@ -315,39 +363,19 @@ export default function ConsumablesLifecyclePage() {
     {
       key: 'actions',
       header: t('ownership.action.header', 'Actions'),
-      render: (row) => (
-        <div className="flex gap-2">
-          <Button
-            variant="secondary"
-            size="sm"
-            icon={<Wrench className="h-4 w-4" aria-hidden="true" />}
-            onClick={() => setEventFor(row.id)}
-          >
-            {t('ownership.consumables.item.log', 'Log event')}
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            icon={<Trash2 className="h-4 w-4" aria-hidden="true" />}
-            loading={remove.isPending && remove.variables === row.id}
-            onClick={() => void handleRemove(row)}
-          >
-            {t('ownership.action.remove', 'Remove')}
-          </Button>
-        </div>
-      ),
+      render: renderItemActions,
     },
   ];
 
   const renderLifecycle = (lifecycle: ConsumableLifecycle) => (
     <div
       key={lifecycle.item.id}
-      className="rounded-xl border border-white/[0.08] bg-white/[0.025] p-4"
+      className="min-w-0 rounded-panel border border-[var(--border-default)] bg-[var(--surface-1)] p-4"
     >
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <div className="flex items-center gap-2">
-            <Text as="h3" variant="label">
+        <div className="min-w-0">
+          <div className="flex min-w-0 flex-wrap items-center gap-2">
+            <Text as="h3" variant="label" className="min-w-0 break-words">
               {lifecycle.item.label}
             </Text>
             <VerdictBadge value={lifecycle.status} />
@@ -362,29 +390,21 @@ export default function ConsumablesLifecyclePage() {
             {lifecycle.item.position ? ` · ${lifecycle.item.position}` : ''}
           </Text>
         </div>
-        <div className="text-right">
+        <div className="text-end">
           <Text as="p" variant="caption">
             {t('ownership.consumables.card.health', 'Remaining life')}
           </Text>
-          <p
-            className={`tabular-nums text-lg font-semibold ${
-              lifecycle.health_pct >= 60
-                ? 'text-emerald-300'
-                : lifecycle.health_pct >= 25
-                  ? 'text-amber-300'
-                  : 'text-rose-300'
-            }`}
-          >
+          <Text as="p" variant="metricValue" className="tabular-nums">
             {formatPct(lifecycle.health_pct)}
-          </p>
+          </Text>
         </div>
       </div>
 
-      <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-[var(--surface-2)]">
-        <div
+      <div aria-hidden="true" className="mt-3 h-2 w-full overflow-hidden rounded-full bg-[var(--surface-2)]">
+        {Number.isFinite(lifecycle.health_pct) && <div
           className={`h-full rounded-full ${healthTone(lifecycle.health_pct)}`}
           style={{ width: `${Math.min(100, Math.max(0, lifecycle.health_pct))}%` }}
-        />
+        />}
       </div>
 
       <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
@@ -392,9 +412,9 @@ export default function ConsumablesLifecyclePage() {
           <Text as="p" variant="caption">
             {t('ownership.consumables.card.used', 'Distance on part')}
           </Text>
-          <p className="tabular-nums text-sm text-[var(--text-primary)]">
+          <Text as="p" variant="bodySm" className="tabular-nums">
             {units.formatDistance(lifecycle.distance_used_m)}
-          </p>
+          </Text>
           <Text as="p" variant="caption">
             {lifecycle.distance_life_used_pct != null
               ? t('ownership.consumables.card.ofRated', '{{value}} of rated life', {
@@ -407,11 +427,11 @@ export default function ConsumablesLifecyclePage() {
           <Text as="p" variant="caption">
             {t('ownership.consumables.card.adjusted', 'Duty-adjusted life')}
           </Text>
-          <p className="tabular-nums text-sm text-[var(--text-primary)]">
+          <Text as="p" variant="bodySm" className="tabular-nums">
             {lifecycle.adjusted_life_m != null
               ? units.formatDistance(lifecycle.adjusted_life_m)
               : '—'}
-          </p>
+          </Text>
           <Text as="p" variant="caption">
             {t('ownership.consumables.card.multiplier', 'Wear ×{{value}}', {
               value: fmtNumber(lifecycle.stress_multiplier),
@@ -422,9 +442,9 @@ export default function ConsumablesLifecyclePage() {
           <Text as="p" variant="caption">
             {t('ownership.consumables.card.remaining', 'Remaining')}
           </Text>
-          <p className="tabular-nums text-sm text-[var(--text-primary)]">
+          <Text as="p" variant="bodySm" className="tabular-nums">
             {lifecycle.remaining_m != null ? units.formatDistance(lifecycle.remaining_m) : '—'}
-          </p>
+          </Text>
           <Text as="p" variant="caption">
             {lifecycle.remaining_s != null ? formatSpan(lifecycle.remaining_s) : '—'}
           </Text>
@@ -433,11 +453,11 @@ export default function ConsumablesLifecyclePage() {
           <Text as="p" variant="caption">
             {t('ownership.consumables.card.replace', 'Projected replacement')}
           </Text>
-          <p className="text-sm text-[var(--text-primary)]">
+          <Text as="p" variant="bodySm">
             {lifecycle.projected_replace_at
               ? formatDateTime(lifecycle.projected_replace_at)
               : '—'}
-          </p>
+          </Text>
           <Text as="p" variant="caption">
             {t('ownership.consumables.card.binding', 'Bound by {{limit}}', {
               limit: lifecycle.binding_limit,
@@ -603,7 +623,7 @@ export default function ConsumablesLifecyclePage() {
             'ownership.consumables.lifecycles.empty',
             'Record a part below and its lifecycle projection appears here.',
           )}
-          actions={<AlertTriangle className="h-4 w-4 text-amber-300" aria-hidden="true" />}
+          actions={<Icon icon={AlertTriangle} size="md" className={neonColorMap.amber.text} />}
         >
           <div className="space-y-4">{lifecycles.map(renderLifecycle)}</div>
         </OwnershipPanel>
@@ -625,8 +645,18 @@ export default function ConsumablesLifecyclePage() {
           )}
         >
           <DataTable
+            variant="embedded"
             columns={stressColumns}
-            mobileColumns={['label', 'observed', 'multiplier']}
+            mobilePresentation={{
+              roles: { label: 'title', observed: 'primary', baseline: 'meta', multiplier: 'meta' },
+              displayValue: (row, key) => {
+                if (key === 'label') return row.label;
+                if (key === 'observed') return `${fmtNumber(row.observed_value)} ${row.si_unit}`;
+                if (key === 'baseline') return `${fmtNumber(row.baseline_value)} ${row.si_unit}`;
+                if (key === 'multiplier') return `×${fmtNumber(row.multiplier)}`;
+                return null;
+              },
+            }}
             data={allStress}
             keyExtractor={(row) => row.code}
             tableId="ownership-consumables-stress"
@@ -646,7 +676,8 @@ export default function ConsumablesLifecyclePage() {
             <Button
               variant="secondary"
               size="sm"
-              icon={<PackagePlus className="h-4 w-4" aria-hidden="true" />}
+              icon={<Icon icon={PackagePlus} size="md" />}
+              wrapLabel
               onClick={() => setFormOpen((open) => !open)}
             >
               {formOpen
@@ -775,9 +806,13 @@ export default function ConsumablesLifecyclePage() {
 
           {eventFor != null ? (
             <form
-              className="mb-6 grid gap-4 rounded-lg border border-white/[0.07] bg-white/[0.02] p-4 md:grid-cols-4"
+              aria-labelledby={eventHeadingId}
+              className="mb-6 grid min-w-0 gap-4 rounded-panel border border-[var(--border-default)] bg-[var(--surface-2)] p-4 md:grid-cols-4"
               onSubmit={submitEvent}
             >
+              <h3 id={eventHeadingId} ref={eventHeading} tabIndex={-1} className="min-w-0 break-words md:col-span-4">
+                <Text variant="subhead">{t('ownership.consumables.item.log', 'Log event')}{' — '}{eventFor.label}</Text>
+              </h3>
               <Select
                 label={t('ownership.consumables.event.kind', 'Event')}
                 value={eventDraft.kind}
@@ -807,7 +842,7 @@ export default function ConsumablesLifecyclePage() {
               <MoneyInput
                 label={t('ownership.consumables.event.cost', 'Cost')}
                 value={eventDraft.cost_minor}
-                currency={currency}
+                currency={eventFor.currency}
                 locale={units.unitPrefs.locale}
                 onChange={(value) =>
                   setEventDraft((current) => ({ ...current, cost_minor: value ?? 0 }))
@@ -821,11 +856,11 @@ export default function ConsumablesLifecyclePage() {
                   setEventDraft((current) => ({ ...current, note: event.target.value }))
                 }
               />
-              <div className="md:col-span-4 flex gap-2">
-                <Button type="submit" loading={createEvent.isPending}>
+              <div className="md:col-span-4 flex flex-wrap gap-2">
+                <Button type="submit" loading={createEvent.isPending} disabled={!eventEligible}>
                   {t('ownership.consumables.event.submit', 'Log event')}
                 </Button>
-                <Button type="button" variant="ghost" onClick={() => setEventFor(null)}>
+                <Button type="button" variant="ghost" onClick={cancelEvent}>
                   {t('ownership.action.cancel', 'Cancel')}
                 </Button>
               </div>
@@ -836,9 +871,23 @@ export default function ConsumablesLifecyclePage() {
           ) : null}
 
           <DataTable
+            variant="embedded"
             columns={itemColumns}
             enableValueFilters
-            mobileColumns={['label', 'installed', 'retired']}
+            rowLabel={(row) => row.label}
+            mobilePresentation={{
+              roles: { label: 'title', cost: 'primary', installed: 'meta', rated: 'meta', retired: 'badge', actions: 'hidden' },
+              displayValue: (row, key) => {
+                if (key === 'label') return row.label;
+                if (key === 'cost') return formatCurrencyMinor(row.cost_minor, row.currency, units.unitPrefs.locale);
+                if (key === 'installed') return formatDateTime(row.installed_at);
+                if (key === 'rated') return row.rated_life_m != null ? units.formatDistance(row.rated_life_m) : '—';
+                if (key === 'retired') return row.retired_at
+                  ? formatDateTime(row.retired_at) : t('ownership.consumables.item.inService', 'in service');
+                return null;
+              },
+              inlineActions: renderItemActions,
+            }}
             data={items}
             keyExtractor={(row) => row.id}
             tableId="ownership-consumables-items"

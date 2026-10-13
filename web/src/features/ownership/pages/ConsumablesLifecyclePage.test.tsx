@@ -7,8 +7,8 @@
  * i18n are mocked; the table, buttons, and confirm dialog render for real.
  */
 
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, within, fireEvent, waitFor } from '@testing-library/react';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { act, render, screen, within, fireEvent, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
@@ -178,8 +178,27 @@ function removeButton(label: string): HTMLElement {
   return within(row).getByRole('button', { name: 'Remove' });
 }
 
+const mobileObservers: { element: Element; callback: ResizeObserverCallback }[] = [];
+function useNarrowTables() {
+  vi.stubGlobal('ResizeObserver', class {
+    constructor(private callback: ResizeObserverCallback) {}
+    observe(element: Element) { mobileObservers.push({ element, callback: this.callback }); }
+    unobserve() {}
+    disconnect() {}
+  });
+}
+
+function resizeTables(width: number) {
+  act(() => mobileObservers.forEach(({ element, callback }) => callback(
+    [{ target: element, contentRect: { width } } as ResizeObserverEntry], {} as ResizeObserver,
+  )));
+}
+
+afterEach(() => vi.unstubAllGlobals());
+
 beforeEach(() => {
   vi.clearAllMocks();
+  mobileObservers.length = 0;
   mockSelected.mockReturnValue({
     vehicleId: 7,
     vehicle: null,
@@ -366,5 +385,179 @@ describe('ConsumablesLifecyclePage — confirm-gated delete', () => {
 
     expect(removeButton('Wiper Blades')).toBeDisabled();
     expect(removeButton('Cabin Filter')).not.toBeDisabled();
+  });
+
+  it('keeps mobile part actions and every rated-life, cost and identity detail in the existing table pipeline', () => {
+    useNarrowTables();
+    const item = makeItem({ currency: 'EUR', cost_minor: 4321, notes: 'Raw entry remains unchanged' });
+    mockItems.mockReturnValue(makeQuery({ items: [item] }));
+    renderPage();
+    resizeTables(320);
+    const register = card('Part register');
+    expect(register.querySelector('[data-grid-variant="embedded"]')).toBeInTheDocument();
+    expect(register.querySelector('[data-mobile-table]')).toBeInTheDocument();
+    expect(within(register).getByRole('button', { name: 'Log event' })).toBeEnabled();
+    expect(within(register).getByRole('button', { name: 'Remove' })).toBeEnabled();
+    fireEvent.click(within(register).getByRole('button', { name: 'Quick view' }));
+    const details = screen.getByRole('dialog', { name: 'Cabin Filter' });
+    expect(details).toHaveTextContent('cabin filter · front');
+    expect(details).toHaveTextContent('Installed');
+    expect(details).toHaveTextContent('Rated life');
+    expect(details).toHaveTextContent(/365(?:[.,]0+)? d/);
+    expect(details).toHaveTextContent('€43.21');
+    expect(details).toHaveTextContent('in service');
+    expect(within(details).getByRole('button', { name: 'Log event' })).toBeEnabled();
+    expect(within(details).getByRole('button', { name: 'Remove' })).toBeEnabled();
+    expect(within(details).getAllByRole('button', { name: 'Close' })).toHaveLength(2);
+    const footer = details.querySelector('[data-modal-footer]');
+    if (!(footer instanceof HTMLElement)) throw new Error('Missing part-details footer');
+    fireEvent.click(within(footer).getByRole('button', { name: 'Close' }));
+    resizeTables(900);
+    expect(register.querySelector('[data-mobile-table]')).not.toBeInTheDocument();
+    expect(within(register).getByRole('table', { name: 'ownership-consumables-items' })).toBeInTheDocument();
+    expect(item).toMatchObject({ rated_life_m: 40000, rated_life_s: 365 * 86400, cost_minor: 4321, currency: 'EUR' });
+    expect(mockEvent().mutate).not.toHaveBeenCalled();
+    expect(mockRemove().mutate).not.toHaveBeenCalled();
+  });
+
+  it('retains the measured SI reference and full duty-factor explanation on narrow containers', () => {
+    useNarrowTables();
+    const factor = {
+      code: 'distance', label: 'Recorded duty factor', observed_value: 1234,
+      baseline_value: 987, si_unit: 'm', multiplier: 1.25, narrative: 'Comparison assumption and coverage limits',
+    };
+    mockReport.mockReturnValue(makeQuery(makeReport(makeLifecycle({ stress_factors: [factor] }))));
+    renderPage();
+    resizeTables(375);
+    const stress = card('Why your wear rate differs');
+    expect(stress.querySelector('[data-grid-variant="embedded"]')).toBeInTheDocument();
+    expect(stress).toHaveTextContent('987');
+    expect(stress).toHaveTextContent('Reference');
+    fireEvent.click(within(stress).getByRole('button', { name: 'Quick view' }));
+    const detail = screen.getByRole('dialog');
+    expect(detail).toHaveTextContent('Comparison assumption and coverage limits');
+    expect(detail).toHaveTextContent('987');
+    expect(detail).toHaveTextContent('1,234');
+    expect(detail).toHaveTextContent('m');
+    expect(detail).toHaveTextContent('×1.25');
+    expect(factor.observed_value).toBe(1234);
+    expect(factor.baseline_value).toBe(987);
+  });
+
+  it('labels and focuses the event target, uses its currency and restores the row trigger on cancel', () => {
+    mockItems.mockReturnValue(makeQuery({ items: [makeItem({ currency: 'EUR' })] }));
+    mockReport.mockReturnValue(makeQuery(makeReport()));
+    renderPage();
+    const trigger = screen.getByRole('button', { name: 'Log event' });
+    fireEvent.click(trigger);
+    const editor = screen.getByRole('form', { name: 'Log event — Cabin Filter' });
+    expect(within(editor).getByRole('heading', { name: 'Log event — Cabin Filter' })).toHaveFocus();
+    expect(editor).toHaveTextContent('EUR');
+    expect(editor).not.toHaveTextContent('USD');
+    fireEvent.change(within(editor).getByRole('spinbutton', { name: 'Cost' }), { target: { value: '1234' } });
+    expect(editor).toHaveTextContent('€12.34');
+    fireEvent.click(within(editor).getByRole('button', { name: 'Cancel' }));
+    expect(trigger).toHaveFocus();
+    expect(screen.queryByRole('form', { name: 'Log event — Cabin Filter' })).not.toBeInTheDocument();
+    expect(mockEvent().mutate).not.toHaveBeenCalled();
+  });
+
+  it('closes the old vehicle event editor without submitting or clearing its draft on workspace change', () => {
+    mockItems.mockReturnValue(makeQuery({ items: [makeItem()] }));
+    const view = renderPage();
+    fireEvent.click(screen.getByRole('button', { name: 'Log event' }));
+    fireEvent.change(screen.getByRole('textbox', { name: 'Note' }), { target: { value: 'Retained inspection draft' } });
+    mockSelected.mockReturnValue({ vehicleId: 8 });
+    mockItems.mockReturnValue(makeQuery({ items: [makeItem({ id: 3, vehicle_id: 8, label: 'Other vehicle filter' })] }));
+    view.rerenderPage();
+    expect(screen.queryByRole('form', { name: 'Log event — Cabin Filter' })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Log event' }));
+    expect(screen.getByRole('form', { name: 'Log event — Other vehicle filter' })).toBeInTheDocument();
+    expect(screen.getByRole('textbox', { name: 'Note' })).toHaveValue('Retained inspection draft');
+    expect(mockEvent().mutate).not.toHaveBeenCalled();
+  });
+
+  it('preserves raw SI event payloads and ignores old success callbacks after another target is opened', () => {
+    let settle: (() => void) | undefined;
+    const mutate = vi.fn((_body: unknown, options: { onSuccess: () => void }) => { settle = options.onSuccess; });
+    mockEvent.mockReturnValue(makeMutation({ mutate }));
+    renderPage();
+    fireEvent.click(within(card('Part register')).getAllByRole('button', { name: 'Log event' })[0]);
+    const editor = screen.getByRole('form', { name: 'Log event — Cabin Filter' });
+    fireEvent.change(within(editor).getByRole('spinbutton', { name: 'Odometer' }), { target: { value: '123456' } });
+    fireEvent.change(within(editor).getByRole('spinbutton', { name: 'Cost' }), { target: { value: '4321' } });
+    fireEvent.change(within(editor).getByRole('textbox', { name: 'Note' }), { target: { value: 'SI maintenance event' } });
+    fireEvent.submit(editor);
+    expect(mutate).toHaveBeenCalledTimes(1);
+    expect(mutate.mock.calls[0][0]).toEqual({
+      item_id: 1, kind: 'inspect', occurred_at: expect.any(String),
+      odometer_m: 123456, cost_minor: 4321, note: 'SI maintenance event',
+    });
+    fireEvent.click(within(editor).getByRole('button', { name: 'Cancel' }));
+    const row = screen.getByText('Wiper Blades').closest('tr') as HTMLElement;
+    fireEvent.click(within(row).getByRole('button', { name: 'Log event' }));
+    fireEvent.change(screen.getByRole('textbox', { name: 'Note' }), { target: { value: 'New target draft' } });
+    act(() => settle?.());
+    expect(screen.getByRole('form', { name: 'Log event — Wiper Blades' })).toBeInTheDocument();
+    expect(screen.getByRole('textbox', { name: 'Note' })).toHaveValue('New target draft');
+    expect(mutate).toHaveBeenCalledTimes(1);
+  });
+
+  it('submits part entry in metres, seconds and currency minor units without converting the editable draft', () => {
+    const mutate = vi.fn();
+    mockCreate.mockReturnValue(makeMutation({ mutate }));
+    renderPage();
+    fireEvent.click(screen.getByRole('button', { name: 'Record part' }));
+    const partLabel = screen.getByRole('textbox', { name: 'Part label required' });
+    expect(partLabel).toBeRequired();
+    fireEvent.change(partLabel, { target: { value: 'Recorded tyre' } });
+    fireEvent.change(screen.getByRole('spinbutton', { name: 'Odometer at install' }), { target: { value: '123456' } });
+    fireEvent.change(screen.getByRole('spinbutton', { name: 'Rated life (distance)' }), { target: { value: '60000' } });
+    fireEvent.change(screen.getByRole('spinbutton', { name: 'Rated life (days)' }), { target: { value: '30' } });
+    fireEvent.change(screen.getByRole('spinbutton', { name: 'Replacement cost' }), { target: { value: '4321' } });
+    const currencyCode = screen.getByRole('textbox', { name: 'ISO currency code required' });
+    expect(currencyCode).toBeRequired();
+    fireEvent.change(currencyCode, { target: { value: 'EUR' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save part' }));
+    expect(mutate).toHaveBeenCalledTimes(1);
+    expect(mutate.mock.calls[0][0]).toEqual({
+      vehicle_id: 7, category: 'tire', label: 'Recorded tyre', position: '',
+      installed_at: expect.any(String), installed_odometer_m: 123456,
+      rated_life_m: 60000, rated_life_s: 2592000, cost_minor: 4321, currency: 'EUR', notes: '',
+    });
+    expect(screen.getByRole('spinbutton', { name: 'Odometer at install' })).toHaveValue(123456);
+    expect(screen.getByRole('spinbutton', { name: 'Rated life (days)' })).toHaveValue(30);
+  });
+
+  it('does not remove the previous vehicle part when workspace scope changes during confirmation', async () => {
+    const mutate = vi.fn();
+    mockRemove.mockReturnValue(makeMutation({ mutate }));
+    const view = renderPage();
+    fireEvent.click(removeButton('Cabin Filter'));
+    mockSelected.mockReturnValue({ vehicleId: 8 });
+    mockItems.mockReturnValue(makeQuery({ items: [makeItem({ id: 3, vehicle_id: 8 })] }));
+    view.rerenderPage();
+    fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Delete' }));
+    await act(async () => {});
+    expect(mutate).not.toHaveBeenCalled();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  it('keeps the life bar decorative, clamps only its visual width and leaves missing predictions unknown', () => {
+    mockReport.mockReturnValue(makeQuery(makeReport(makeLifecycle({
+      health_pct: 120, remaining_m: null, remaining_s: null, adjusted_life_m: null,
+    }))));
+    const view = renderPage();
+    const projection = card('Part-by-part projection');
+    expect(projection).toHaveTextContent('120');
+    const fill = projection.querySelector('[style]');
+    expect(fill).toHaveStyle({ width: '100%' });
+    expect(fill?.parentElement).toHaveAttribute('aria-hidden', 'true');
+    expect(within(projection).getByText('Remaining').parentElement).toHaveTextContent('—');
+    expect(within(projection).getByText('Duty-adjusted life').parentElement).toHaveTextContent('—');
+    mockReport.mockReturnValue(makeQuery(makeReport(makeLifecycle({ health_pct: Number.NaN }))));
+    view.rerenderPage();
+    expect(projection.querySelector('[style]')).not.toBeInTheDocument();
+    expect(within(projection).getByText('Remaining life').parentElement).toHaveTextContent('—');
   });
 });
