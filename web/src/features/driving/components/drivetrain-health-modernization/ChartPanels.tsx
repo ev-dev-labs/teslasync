@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { CardGrid } from '@/components/layout/layout-reference';
+import { CardGrid } from '@/components/layout';
 import type { DataState } from '@/api/dataState';
 import type { DriveChartRow, MotorChartRow } from './model';
 import { StatorHistory } from './StatorHistory';
