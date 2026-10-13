@@ -756,3 +756,70 @@ describe('ExplorePage — keyboard', () => {
     expect(document.activeElement).toBe(input);
   });
 });
+
+
+describe('ExplorePage — restrained discovery adoption', () => {
+  it('keeps native feature destinations and keyboard navigation on semantic surfaces with shared focus treatment', () => {
+    const { getLocation } = renderPage('/explore?section=charging');
+    const card = screen.getByTestId('explore-card-/charging');
+    expect(card).toHaveAttribute('href', '/charging');
+    expect(card).toHaveClass(
+      'bg-[var(--surface-1)]', 'border-[var(--border-default)]',
+      'hover:border-[var(--control-border-hover)]',
+      'focus-visible:outline-2', 'focus-visible:outline-offset-2',
+      'focus-visible:outline-[var(--focus-ring)]',
+      'forced-colors:focus-visible:outline-[Highlight]',
+      'forced-colors:border-[ButtonBorder]', 'motion-reduce:transition-none',
+    );
+    const iconTile = card.querySelector('[aria-hidden="true"]');
+    expect(iconTile).toHaveClass('bg-[var(--surface-2)]', 'border-[var(--border-default)]');
+    expect(iconTile).not.toHaveClass('bg-white/[0.04]');
+    card.focus();
+    expect(card).toHaveFocus();
+    fireEvent.click(card, { detail: 0 });
+    expect(getLocation().pathname).toBe('/charging');
+  });
+
+  it('preserves every dense search hit and complete descriptions with neutral, non-color-only emphasis', () => {
+    const { getLocation } = renderPage('/explore?q=battery%20health&section=battery');
+    const card = screen.getByTestId('explore-card-/battery');
+    const marks = Array.from(card.querySelectorAll('mark'));
+    expect(marks.map(mark => mark.textContent?.toLowerCase())).toEqual(expect.arrayContaining(['battery', 'health']));
+    for (const mark of marks) {
+      expect(mark).toHaveClass('bg-[var(--control-bg)]', 'underline', 'text-[var(--text-primary)]');
+      expect(mark).toHaveClass('forced-colors:bg-[Highlight]', 'forced-colors:text-[HighlightText]');
+      expect(mark).not.toHaveClass('bg-[var(--theme-primary)]/25');
+    }
+    const battery = ALL.find(entry => entry.to === '/battery')!;
+    expect(card).toHaveTextContent(battery.description);
+    expect(screen.getByTestId('explore-search-panel')).toBeInTheDocument();
+    expect(screen.getByTestId('explore-operational-brief')).toBeInTheDocument();
+    expect(getLocation().search).toBe('?q=battery%20health&section=battery');
+  });
+
+  it('localizes a long suggested destination without changing near-match ranking, retained fleet gates or clear-and-open navigation', () => {
+    const label = 'Localized battery health destination with complete readable context '.repeat(3).trim();
+    const battery = ALL.find(entry => entry.to === '/battery')!;
+    state.translations['routes.batteryHealth'] = label;
+    state.translations[battery.labelKey] = label;
+    state.vehicles = [{ id: 1 }];
+    state.forwardAuth = false;
+    state.vehicleError = new Error('Refresh unavailable');
+    const { getLocation } = renderPage('/explore?q=batttery&section=home');
+    const suggestions = screen.getByTestId('explore-empty-suggestions');
+    const buttons = within(suggestions).getAllByRole('button');
+    expect(buttons.length).toBeLessThanOrEqual(5);
+    const batteryButton = within(suggestions).getByText('/battery').closest('button')!;
+    expect(within(batteryButton).getByText(label)).toHaveClass('min-w-0', 'break-words');
+    expect(batteryButton).toHaveAccessibleName(label + ' /battery');
+    expect(batteryButton).toHaveClass('h-auto', 'max-w-full', 'whitespace-normal');
+    expect(within(suggestions).queryByText('/vehicle-comparison')).not.toBeInTheDocument();
+    expect(within(suggestions).queryByText('/account/sessions')).not.toBeInTheDocument();
+    expect(kpiValue('Vehicles')).toBe('1');
+    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+    expect(screen.getByTestId('explore-search-panel')).toBeInTheDocument();
+    batteryButton.focus();
+    fireEvent.click(batteryButton, { detail: 0 });
+    expect(getLocation()).toEqual({ pathname: '/battery', search: '' });
+  });
+});

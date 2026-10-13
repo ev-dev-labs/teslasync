@@ -36,6 +36,7 @@ import {
   Input,
   Badge,
   Button,
+  BUTTON_BASE,
   SectionTitle,
   Text,
   Caption,
@@ -428,17 +429,17 @@ function FeatureCard({
           onNavigate(entry.to);
         }}
         className={cn(
-          'group block h-full rounded-xl border border-[var(--glass-border)] bg-[var(--surface-1)] p-4',
-          'hover:border-[var(--glass-border-strong,rgba(255,255,255,0.18))] hover:bg-[var(--surface-2)]',
-          'outline-none focus-visible:ring-2 focus-visible:ring-[var(--theme-primary)]',
-          'transition-colors',
+          BUTTON_BASE,
+          'group block h-full rounded-shape-lg border border-[var(--border-default)] bg-[var(--surface-1)] p-4',
+          'hover:border-[var(--control-border-hover)] hover:bg-[var(--surface-2)]',
+          'forced-colors:border-[ButtonBorder]',
         )}
       >
         <div className="flex items-start gap-3">
           <div
             className={cn(
-              'flex h-9 w-9 shrink-0 items-center justify-center rounded-lg',
-              'border border-[var(--glass-border)] bg-white/[0.04]',
+              'flex h-9 w-9 shrink-0 items-center justify-center rounded-shape-md',
+              'border border-[var(--border-default)] bg-[var(--surface-2)]',
               // Neutral icon tone: per-page rainbow colors carried no
               // information, so color is reserved for status instead.
               'text-[var(--text-secondary)]',
@@ -508,7 +509,7 @@ function Highlight({ text, query }: { text: string; query: string }) {
         return (
           <mark
             key={i}
-            className="rounded bg-[var(--theme-primary)]/25 px-0.5 text-[var(--text-primary)]"
+            className="rounded-shape-xs bg-[var(--control-bg)] px-0.5 font-medium text-[var(--text-primary)] underline decoration-[var(--text-secondary)] underline-offset-2 forced-colors:bg-[Highlight] forced-colors:text-[HighlightText]"
           >
             {part}
           </mark>
@@ -549,7 +550,7 @@ function EmptyResult({
         path: c.to,
         name: c.label.replace(/\s+/g, ''),
         label: c.label,
-        i18nKey: '',
+        i18nKey: c.labelKey,
       })),
       5,
     );
@@ -593,7 +594,7 @@ function EmptyResult({
                   className="w-full justify-between border border-[var(--glass-border)] bg-[var(--surface-1)] text-[var(--text-primary)] hover:bg-[var(--surface-2)]"
                 >
                   <span className="flex min-w-0 flex-wrap items-baseline justify-between gap-x-3 gap-y-1 text-start">
-                    <span className="min-w-0 break-words">{s.label}</span>
+                    <span className="min-w-0 break-words">{t(s.i18nKey, s.label)}</span>
                     <Caption className="break-all">{s.path}</Caption>
                   </span>
                 </Button>
