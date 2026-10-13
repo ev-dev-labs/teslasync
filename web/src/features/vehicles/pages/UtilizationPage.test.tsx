@@ -404,3 +404,86 @@ describe('UtilizationPage', () => {
     expect(within(drawer).getByText('1 drives')).toBeInTheDocument();
   });
 });
+
+
+// Additive coverage: the original assertions and fixture prefix remain unchanged.
+import { deriveDataState } from '@/api/dataState';
+
+describe('UtilizationPage source coverage', () => {
+  it('keeps missing duration and distance unknown in the numeric brief', () => {
+    drivesMock.mockReturnValue(query({ data: [{ ...eligibleDrive(), durationS: null, distanceM: null, energyUsedWh: null }] }));
+    render(<UtilizationPage />, { wrapper: MemoryRouter });
+    const brief = screen.getByTestId('utilization-summary');
+    expect(brief).toHaveTextContent('Partial source coverage');
+    for (const id of ['driving-share', 'distance-per-day', 'cost-per-distance']) {
+      expect(brief.querySelector(`[data-operational-metric="${id}"]`)).toHaveAttribute('data-value-state', 'missing');
+    }
+    for (const id of SECTION_IDS) expect(screen.getByTestId(id)).toBeInTheDocument();
+  });
+
+  it('discloses a capped response without dropping any section or the query limit', () => {
+    drivesMock.mockReturnValue(query({ data: Array.from({ length: 1000 }, (_, index) => ({ ...eligibleDrive(), id: index + 1 })) }));
+    render(<UtilizationPage />, { wrapper: MemoryRouter });
+    expect(screen.getByTestId('utilization-summary')).toHaveTextContent('Partial source coverage');
+    for (const id of SECTION_IDS) expect(screen.getByTestId(id)).toBeInTheDocument();
+    expect(drivesMock).toHaveBeenCalledWith('42', { start: '2026-07-01', end: '2026-07-31', limit: 1000 });
+  });
+
+  it('preserves retained-drive trust ahead of the cap disclosure and retries only drives', () => {
+    const refetch = vi.fn();
+    drivesMock.mockReturnValue(query({ data: Array.from({ length: 1000 }, (_, index) => ({ ...eligibleDrive(), id: index + 1 })), isError: true, error: new Error('refresh failed'), refetch }));
+    render(<UtilizationPage />, { wrapper: MemoryRouter });
+    expect(screen.getByTestId('utilization-summary')).toHaveTextContent('Retained after refresh failure');
+    fireEvent.click(within(screen.getByTestId('stale-refresh-warning')).getByRole('button', { name: 'Refresh' }));
+    expect(refetch).toHaveBeenCalledTimes(1);
+    for (const id of SECTION_IDS) expect(screen.getByTestId(id)).toBeInTheDocument();
+  });
+
+  it('keeps drive metrics visible while the independent electricity rate loads', () => {
+    formattingMock.mockReturnValue({ costPerKwh: 0.15, formatCurrency: (amount: number) => `$${amount.toFixed(2)}`, pricingState: deriveDataState({ isPending: true }) });
+    render(<UtilizationPage />, { wrapper: MemoryRouter });
+    expect(within(screen.getByTestId('utilization-pricing')).getByRole('status')).toHaveAttribute('aria-busy', 'true');
+    expect(screen.getByTestId('utilization-summary').querySelector('[data-operational-metric="cost-per-distance"]')).toHaveAttribute('data-value-state', 'missing');
+    expect(screen.getByTestId('utilization-summary').querySelector('[data-operational-metric="distance-per-day"]')).toHaveAttribute('data-value-state', 'value');
+    for (const id of SECTION_IDS) expect(screen.getByTestId(id)).toBeInTheDocument();
+  });
+
+  it('retries an initial pricing failure independently without marking drives failed', () => {
+    const refetch = vi.fn();
+    const driveRefetch = vi.fn();
+    drivesMock.mockReturnValue(query({ data: [eligibleDrive()], refetch: driveRefetch }));
+    formattingMock.mockReturnValue({ costPerKwh: null, formatCurrency: (amount: number) => `$${amount.toFixed(2)}`, pricingState: deriveDataState({ data: undefined, isError: true, error: new Error('pricing unavailable'), refetch }) });
+    render(<UtilizationPage />, { wrapper: MemoryRouter });
+    fireEvent.click(within(screen.getByTestId('utilization-pricing')).getByRole('button', { name: /retry/i }));
+    expect(refetch).toHaveBeenCalledTimes(1);
+    expect(driveRefetch).not.toHaveBeenCalled();
+    expect(screen.getByTestId('utilization-summary')).toHaveTextContent('Source returned');
+    for (const id of SECTION_IDS) {
+      if (id !== 'utilization-kpis') expect(screen.getByTestId(id)).toHaveTextContent('ready');
+    }
+  });
+
+  it('retains estimated costs with a source-specific warning after pricing refresh fails', () => {
+    const refetch = vi.fn();
+    const driveRefetch = vi.fn();
+    drivesMock.mockReturnValue(query({ data: [eligibleDrive()], refetch: driveRefetch }));
+    formattingMock.mockReturnValue({ costPerKwh: 0.15, formatCurrency: (amount: number) => `$${amount.toFixed(2)}`, pricingState: deriveDataState({ data: { base_cost_per_kwh: 0.15 }, isError: true, error: new Error('pricing refresh failed'), refetch }) });
+    render(<UtilizationPage />, { wrapper: MemoryRouter });
+    const pricing = screen.getByTestId('utilization-pricing');
+    expect(pricing).toHaveTextContent('Settings electricity rate may be out of date');
+    expect(screen.getByTestId('utilization-summary').querySelector('[data-operational-metric="cost-per-distance"]')).toHaveAttribute('data-value-state', 'value');
+    fireEvent.click(within(pricing).getByRole('button', { name: 'Refresh' }));
+    expect(refetch).toHaveBeenCalledTimes(1);
+    expect(driveRefetch).not.toHaveBeenCalled();
+    for (const id of SECTION_IDS) expect(screen.getByTestId(id)).toBeInTheDocument();
+  });
+
+  it('keeps paused pricing distinct from an initial drive error and retains its estimate', () => {
+    formattingMock.mockReturnValue({ costPerKwh: 0.15, formatCurrency: (amount: number) => `$${amount.toFixed(2)}`, pricingState: deriveDataState({ data: { base_cost_per_kwh: 0.15 }, fetchStatus: 'paused', refetch: vi.fn() }) });
+    render(<UtilizationPage />, { wrapper: MemoryRouter });
+    expect(within(screen.getByTestId('utilization-pricing')).getByTestId('stale-refresh-warning')).toHaveAttribute('data-refresh-blocked', 'true');
+    expect(screen.getByTestId('utilization-summary')).toHaveTextContent('Source returned');
+    expect(screen.getByTestId('utilization-summary').querySelector('[data-operational-metric="cost-per-distance"]')).toHaveAttribute('data-value-state', 'value');
+    for (const id of SECTION_IDS) expect(screen.getByTestId(id)).toBeInTheDocument();
+  });
+});

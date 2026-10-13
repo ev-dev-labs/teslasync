@@ -11,8 +11,7 @@ import { usePageTitle } from '@/hooks/usePageTitle';
 import { useRangeState } from '@/hooks/useRangeState';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useDataState } from '@/hooks/useDataState';
-import { StaleRefreshWarning } from '@/components/feedback';
-import { EmptyState, QueryError } from '@/components/feedback';
+import { EmptyState, QueryError, Skeleton, StaleRefreshWarning } from '@/components/feedback';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { convertDistanceToSI } from '@/lib/unitConversion';
 import { useUtilizationDisplay } from '../components/utilization/useUtilizationDisplay';
@@ -44,7 +43,9 @@ export default function UtilizationPage() {
   const { vehicleId } = useSelectedVehicle();
   const vehicleIdStr =
     vehicleId != null ? String(vehicleId) : undefined;
-  const { costPerKwh, formatCurrency } = useFormatting();
+  const { costPerKwh, formatCurrency, pricingState } = useFormatting();
+  // Pricing has its own source lifecycle; never borrow drive-history trust.
+  const availableCostPerKwh = pricingState && !pricingState.hasData ? null : costPerKwh;
   const [asOfMs] = useState(() => Date.now());
   const { start, end } = useRangeState({
     persistKey: 'utilization.range',
@@ -63,14 +64,23 @@ export default function UtilizationPage() {
   const drivesState = useDataState(drivesQuery, { provenance: 'historical' });
   const summary = useMemo(
     () =>
-      summarizeUtilization(drives, costPerKwh, {
+      summarizeUtilization(drives, availableCostPerKwh, {
         rangeStart: start,
         rangeEnd: end,
         asOfMs,
         historyLimit: UTILIZATION_DRIVE_LIMIT,
       }),
-    [asOfMs, costPerKwh, drives, end, start],
+    [asOfMs, availableCostPerKwh, drives, end, start],
   );
+  // Coverage does not erase returned rows or override a retained-source warning.
+  const incompleteMeasurements = summary.accounting.eligibleRows > 0 && (
+    summary.accounting.usableDurationRows < summary.accounting.eligibleRows ||
+    summary.accounting.usableDistanceRows < summary.accounting.eligibleRows ||
+    summary.accounting.usableEnergyRows < summary.accounting.eligibleRows
+  );
+  const summaryStatus = drivesState.status === 'ok' && (
+    summary.accounting.historyCapReached || incompleteMeasurements
+  ) ? 'partial' : drivesState.status;
   const retry = useCallback(() => {
     void drivesQuery.refetch();
   }, [drivesQuery.refetch]);
@@ -112,7 +122,7 @@ export default function UtilizationPage() {
           <VehicleEvidenceBrief id="utilization-summary"
             title={t('utilization.kpis', 'Utilization summary metrics')}
             description={t('utilization.briefDescription', 'Drive-derived utilization over the observed window; energy-only cost is an estimate, not a billed total.')}
-            status={drivesState.status} loading={drivesQuery.isLoading}
+            status={summaryStatus} loading={drivesQuery.isLoading}
             provenance={t('utilization.briefSource', 'Returned drive history and configured energy price')}
             scope={t('utilization.briefWindow', 'Requested {{start}} → {{end}}; metrics use the observed window', {
               start: start || t('vehicles.evidenceBrief.unbounded', 'Unbounded'),
@@ -120,7 +130,7 @@ export default function UtilizationPage() {
             })}
             metrics={[
               { metricId: 'percent', occurrenceId: 'driving-share', label: t('utilization.drivingShare', 'Time driving'),
-                rawValue: drivesState.data == null || summary.drivingShare == null ? null : summary.drivingShare * 100,
+                rawValue: drivesState.data == null || summary.accounting.usableDurationRows === 0 || summary.drivingShare == null ? null : summary.drivingShare * 100,
                 display: { formatter: raw => ({ value: `${fmtNumber(raw)}%`, unit: '' }) },
                 context: t('utilization.ofWindow', 'of the observed window') },
               { metricId: 'percent', occurrenceId: 'active-days', label: t('utilization.activeDays', 'Days used'),
@@ -130,7 +140,7 @@ export default function UtilizationPage() {
                   active: fmtInt(summary.consistency.activeDays), days: fmtInt(summary.observedCalendarDays),
                 }) },
               { metricId: 'distance', occurrenceId: 'distance-per-day', label: t('utilization.perDay', 'Distance per day'),
-                rawValue: drivesState.data == null ? null : summary.distancePerDayM,
+                rawValue: drivesState.data == null || summary.accounting.usableDistanceRows === 0 ? null : summary.distancePerDayM,
                 display: { formatter: raw => ({ value: formatDistance(raw), unit: '' }) },
                 context: t('utilization.driveCount', '{{count}} drives', { count: summary.drives }) },
               { metricId: 'rate', occurrenceId: 'cost-per-distance', label: t('utilization.costPerKmCard', 'Cost per distance'),
@@ -145,6 +155,21 @@ export default function UtilizationPage() {
       </FadeIn>
 
       <FadeIn delay={0.05}>
+        {pricingState ? (
+          <div data-testid="utilization-pricing" role="group"
+            aria-label={t('utilization.energyRate', 'Settings electricity rate')}>
+            <StaleRefreshWarning state={pricingState}
+              label={t('utilization.energyRate', 'Settings electricity rate')} />
+            {pricingState.fatalError ? (
+              <QueryError error={pricingState.fatalError} onRetry={pricingState.retry ?? undefined} />
+            ) : !pricingState.hasData ? (
+              <div role="status" aria-busy="true"
+                aria-label={t('utilization.energyRate', 'Settings electricity rate')}>
+                <Skeleton className="h-11" />
+              </div>
+            ) : null}
+          </div>
+        ) : null}
         <TimeCostOverview
           summary={summary}
           state={sectionState}
