@@ -4,8 +4,11 @@ import {
   CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine, Legend, AREA_DEFAULTS,
 } from '@/components/charts';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { chartTokens, typography } from '@/lib/tokens';
 import { PreservedChartFrame } from './PreservedChartFrame';
 import type { MotorHistoryChartProps } from './chartTypes';
+
+const torqueAxisTick = { fill: chartTokens.axisStroke, className: typography.role.caption };
 
 export function TorqueHistory({ rows, state, loading }: MotorHistoryChartProps) {
   const { t } = useTranslation();
@@ -32,20 +35,20 @@ export function TorqueHistory({ rows, state, loading }: MotorHistoryChartProps) 
     >
       <ResponsiveContainer width="100%" height="100%">
         <AreaChart data={rows}>
-          <defs><ChartGradient id="dtTorqueGrad" color="#00f0ff" /></defs>
-          <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
-          <XAxis dataKey="time" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} />
-          <YAxis tickFormatter={value => fmtNumber(value)} tick={{ fill: 'var(--text-muted)', fontSize: 10 }} />
+          <defs><ChartGradient id="dtTorqueGrad" color={chartTokens.series[0]} opacity={0.08} /></defs>
+          <CartesianGrid strokeDasharray="3 3" stroke={chartTokens.gridStroke} strokeOpacity={0.4} />
+          <XAxis dataKey="time" tick={torqueAxisTick} />
+          <YAxis tickFormatter={value => fmtNumber(value)} tick={torqueAxisTick} />
           <Tooltip content={<ChartTooltip valueFormatter={torque} />} />
           <Legend />
           <Area
             {...AREA_DEFAULTS}
             dataKey="torque"
             name={`${t('drivetrain.torque', 'Torque')} (Nm)`}
-            stroke="#00f0ff"
+            stroke={chartTokens.series[0]}
             fill="url(#dtTorqueGrad)"
           />
-          <ReferenceLine y={0} stroke="#64748b" strokeDasharray="2 2" />
+          <ReferenceLine y={0} stroke={chartTokens.axisStroke} strokeDasharray="2 2" />
         </AreaChart>
       </ResponsiveContainer>
     </PreservedChartFrame>
