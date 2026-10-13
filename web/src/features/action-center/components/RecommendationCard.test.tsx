@@ -1,8 +1,9 @@
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { createInstance } from 'i18next';
 import { I18nextProvider } from 'react-i18next';
 import { MemoryRouter } from 'react-router-dom';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { AppSettings } from '@/api/types';
 import english from '@/i18n/en.json';
 import { typography } from '@/lib/tokens';
 import type {
@@ -11,6 +12,29 @@ import type {
 } from '@/types/actionCenter';
 
 vi.unmock('react-i18next');
+vi.unmock('@/lib/timezone');
+const preferences = vi.hoisted(() => ({
+  locale: 'en-US',
+  tz_display_default: 'user',
+  timezone_user: 'UTC',
+  decimal_precision: 2,
+  unit_of_length: 'km',
+  unit_of_temp: 'C',
+  unit_of_pressure: 'bar',
+} satisfies Pick<AppSettings,
+  'locale' | 'tz_display_default' | 'timezone_user' | 'decimal_precision'
+  | 'unit_of_length' | 'unit_of_temp' | 'unit_of_pressure'
+>));
+vi.mock('@/hooks/useSettings', () => ({
+  useSettings: () => ({
+    settings: preferences,
+    locale: preferences.locale,
+    decimals: preferences.decimal_precision,
+  }),
+}));
+vi.mock('@/hooks/useSelectedVehicle', () => ({
+  useSelectedVehicle: () => ({ vehicle: { timezone: 'Asia/Tokyo' } }),
+}));
 vi.mock('@/api/hooks/useActionCenter', () => ({
   useActionCenterHistory: () => ({
     data: { items: [], total: 0, limit: 25, offset: 0 },
@@ -74,6 +98,8 @@ function card(
 
 beforeEach(async () => {
   onAction.mockReset();
+  preferences.locale = 'en-US';
+  preferences.timezone_user = 'UTC';
   await i18n.init({
     lng: 'en',
     fallbackLng: 'en',
@@ -87,6 +113,72 @@ beforeEach(async () => {
       } },
     },
     interpolation: { escapeValue: false },
+  });
+});
+
+afterEach(() => {
+  vi.restoreAllMocks();
+});
+
+describe('RecommendationCard expiry preferences', () => {
+  it('renders saved locale and timezone instead of explicit browser defaults and reacts to preference changes', () => {
+    // Keep real Intl formatting while fixing browser fallbacks independently of the host.
+    vi.spyOn(Date.prototype, 'toLocaleString').mockImplementation(function (
+      this: Date,
+      locales?: Intl.LocalesArgument,
+      options?: Intl.DateTimeFormatOptions,
+    ) {
+      return new Intl.DateTimeFormat(locales ?? 'en-US', {
+        ...options,
+        timeZone: options?.timeZone ?? 'UTC',
+      }).format(this);
+    });
+    preferences.locale = 'fr-FR';
+    preferences.timezone_user = 'America/Los_Angeles';
+    const original = structuredClone(recommendation);
+    const { rerender } = render(card());
+    expect(screen.getByText('Fixture vehicle · Expires 19 oct. 2026, 17:00')).toBeVisible();
+    expect(screen.queryByText('Fixture vehicle · Expires Oct 20, 2026, 12:00 AM')).not.toBeInTheDocument();
+
+    preferences.timezone_user = 'Europe/Paris';
+    rerender(card());
+    expect(screen.getByText('Fixture vehicle · Expires 20 oct. 2026, 02:00')).toBeVisible();
+    expect(screen.queryByText('Fixture vehicle · Expires 19 oct. 2026, 17:00')).not.toBeInTheDocument();
+
+    preferences.locale = 'en-GB';
+    rerender(card());
+    expect(screen.getByText('Fixture vehicle · Expires 20 Oct 2026, 02:00')).toBeVisible();
+    expect(screen.queryByText('Fixture vehicle · Expires 20 oct. 2026, 02:00')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Acknowledge' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Open source' }));
+    expect(onAction.mock.calls).toEqual([
+      [recommendation, 'acknowledge'],
+      [recommendation, 'navigate'],
+    ]);
+    expect(onAction.mock.calls[0][0]).toBe(recommendation);
+    expect(onAction.mock.calls[1][0]).toBe(recommendation);
+    expect(recommendation).toEqual(original);
+    expect(recommendation.expires_at).toBe('2026-10-20T00:00:00Z');
+  });
+
+  it.each([
+    { name: 'null expiry', expiresAt: null },
+    { name: 'unknown expiry', expiresAt: 'unknown' },
+  ])('keeps the expiry placeholder and original action payload for $name', ({ expiresAt }) => {
+    preferences.locale = 'fr-FR';
+    preferences.timezone_user = 'America/Los_Angeles';
+    const item = {
+      ...recommendation,
+      // Runtime missing data remains unknown even though the wire type requires a timestamp.
+      expires_at: expiresAt,
+    } as ActionCenterRecommendation;
+    const original = structuredClone(item);
+    render(card(item));
+    expect(screen.getByText('Fixture vehicle · Expires —')).toBeVisible();
+    fireEvent.click(screen.getByRole('button', { name: 'Dismiss' }));
+    expect(onAction).toHaveBeenCalledExactlyOnceWith(item, 'dismiss');
+    expect(onAction.mock.calls[0][0]).toBe(item);
+    expect(item).toEqual(original);
   });
 });
 
@@ -120,7 +212,7 @@ describe('RecommendationCard restrained accessible presentation', () => {
   it('keeps every permitted callback bound to the original recommendation and action identity', () => {
     render(card());
     fireEvent.click(screen.getByRole('button', { name: 'Acknowledge' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Snooze' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Snooze 24 hours' }));
     fireEvent.click(screen.getByRole('button', { name: 'Dismiss' }));
     fireEvent.click(screen.getByRole('button', { name: 'Open source' }));
     expect(onAction.mock.calls).toEqual([
@@ -133,8 +225,8 @@ describe('RecommendationCard restrained accessible presentation', () => {
   });
 
   it.each([
-    { name: 'open', state: 'open', allowed: ['Acknowledge', 'Snooze', 'Dismiss'] },
-    { name: 'acknowledged', state: 'acknowledged', allowed: ['Snooze', 'Dismiss', 'Restore'] },
+    { name: 'open', state: 'open', allowed: ['Acknowledge', 'Snooze 24 hours', 'Dismiss'] },
+    { name: 'acknowledged', state: 'acknowledged', allowed: ['Snooze 24 hours', 'Dismiss', 'Restore'] },
     { name: 'snoozed', state: 'snoozed', allowed: ['Acknowledge', 'Dismiss', 'Restore'] },
     { name: 'dismissed', state: 'dismissed', allowed: ['Restore'] },
   ] satisfies Array<{ name: string; state: ActionCenterState; allowed: string[] }>)(
@@ -144,8 +236,8 @@ describe('RecommendationCard restrained accessible presentation', () => {
         ...recommendation,
         current_state: { ...recommendation.current_state, status: state },
       }));
-      for (const name of ['Acknowledge', 'Snooze', 'Dismiss', 'Restore']) {
-        const button = screen.queryByRole('button', { name, exact: true });
+      for (const name of ['Acknowledge', 'Snooze 24 hours', 'Dismiss', 'Restore']) {
+        const button = screen.queryByRole('button', { name });
         if (allowed.includes(name)) {
           expect(button).toBeEnabled();
         } else {
@@ -164,18 +256,18 @@ describe('RecommendationCard restrained accessible presentation', () => {
     expect(screen.queryByRole('button', { name: 'Open source' })).not.toBeInTheDocument();
     rerender(card({ ...recommendation, safe_actions: ['acknowledge'] }));
     expect(screen.getByRole('button', { name: 'Acknowledge' })).toBeEnabled();
-    expect(screen.queryByRole('button', { name: 'Snooze' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Snooze 24 hours' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Dismiss' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Open source' })).not.toBeInTheDocument();
   });
 
-  it('exposes a persistent associated read-only reason while preserving navigation and evidence', () => {
+  it('exposes a persistent associated read-only reason while preserving navigation and evidence', async () => {
     const reason = i18n.t('operationalMode.cached.writeBlocked');
     render(card(recommendation, { actionsDisabled: true, actionsDisabledReason: reason }));
     const explanation = screen.getByText(reason);
     expect(explanation).toBeVisible();
     expect(explanation).toHaveAttribute('id', 'ac_card_access-actions-disabled-reason');
-    for (const name of ['Acknowledge', 'Snooze', 'Dismiss']) {
+    for (const name of ['Acknowledge', 'Snooze 24 hours', 'Dismiss']) {
       const button = screen.getByRole('button', { name });
       expect(button).toBeDisabled();
       expect(button).toHaveAccessibleDescription(reason);
@@ -190,10 +282,14 @@ describe('RecommendationCard restrained accessible presentation', () => {
     const details = screen.getByRole('button', { name: /Evidence, scoring, and outcomes/ });
     fireEvent.click(details);
     expect(details).toHaveAttribute('aria-expanded', 'true');
-    expect(screen.getByText('Persisted evidence remains available.')).toBeVisible();
+    await waitFor(() => {
+      expect(screen.getByText('Persisted evidence remains available.')).toBeVisible();
+    });
     expect(screen.getByText('Priority contributes 300')).toBeVisible();
     expect(screen.getByText('Direct persisted alert')).toBeVisible();
-    expect(screen.getByText('Not a diagnosis.')).toBeVisible();
+    const limitations = screen.getAllByText('Not a diagnosis.');
+    expect(limitations).toHaveLength(2);
+    for (const limitation of limitations) expect(limitation).toBeVisible();
     expect(explanation).toBeVisible();
   });
 
@@ -233,7 +329,7 @@ describe('RecommendationCard restrained accessible presentation', () => {
     render(card());
     for (const name of [
       'Diese ausführliche Empfehlung bestätigen und zur späteren Prüfung aufbewahren',
-      'Snooze', 'Dismiss', 'Open source',
+      'Snooze 24 hours', 'Dismiss', 'Open source',
     ]) {
       const button = screen.getByRole('button', { name });
       expect(button).toHaveClass(
@@ -246,7 +342,7 @@ describe('RecommendationCard restrained accessible presentation', () => {
     }
   });
 
-  it('keeps measured zero and large ranks distinct from unknown vehicle projection and observation', () => {
+  it('keeps measured zero and large ranks distinct from unknown vehicle projection and observation', async () => {
     const unknown = {
       ...recommendation,
       vehicle: null,
@@ -260,9 +356,11 @@ describe('RecommendationCard restrained accessible presentation', () => {
     expect(screen.getByText(/All vehicles · Expires/)).toBeVisible();
     expect(screen.getByText('No projected impact')).toBeVisible();
     fireEvent.click(screen.getByRole('button', { name: /Evidence, scoring, and outcomes/ }));
-    expect(screen.getByText(
-      'No defensible energy, cost, time, or risk projection is available.',
-    )).toBeVisible();
+    await waitFor(() => {
+      expect(screen.getByText(
+        'No defensible energy, cost, time, or risk projection is available.',
+      )).toBeVisible();
+    });
     expect(screen.queryByText('0.00 kWh')).not.toBeInTheDocument();
     expect(screen.queryByText('0m')).not.toBeInTheDocument();
     expect(screen.getByText('Persisted evidence remains available.')).toBeVisible();

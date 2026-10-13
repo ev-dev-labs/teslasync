@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Badge, Button, GlassPanel, HelperText, PanelTitle, Text } from '@/components/ui';
-import { formatDateTime } from '@/lib/dateFormat';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import { Icons, type LucideIcon } from '@/lib/icons';
 import type {
   ActionCenterPriority,
@@ -59,6 +59,7 @@ export function RecommendationCard({
   actionsDisabledReason,
 }: RecommendationCardProps) {
   const { t } = useTranslation();
+  const { formatDateTime } = useDateFormat();
   const [detailsOpen, setDetailsOpen] = useState(false);
   const confidencePct = Math.round(recommendation.confidence.score * 100);
   const disabledReasonId = `${recommendation.id}-actions-disabled-reason`;
