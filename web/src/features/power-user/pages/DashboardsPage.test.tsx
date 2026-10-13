@@ -36,6 +36,18 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, within, fireEvent, waitFor, cleanup, act } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { createInstance } from 'i18next';
+
+const descriptionI18n = createInstance();
+const descriptionT = descriptionI18n.t.bind(descriptionI18n);
+
+vi.mock('react-i18next', async () => {
+  const actual = await vi.importActual<typeof import('react-i18next')>('react-i18next');
+  return {
+    ...actual,
+    useTranslation: () => ({ t: descriptionT, i18n: descriptionI18n }),
+  };
+});
 
 // The AI drafter's own envelope is fixed here so both the stub (hoisted above
 // imports by vi.mock) and the assertions can reference the exact same object.
@@ -104,7 +116,13 @@ function typeInEditor(value: string) {
   fireEvent.change(editor(), { target: { value } });
 }
 
-beforeEach(() => {
+beforeEach(async () => {
+  await descriptionI18n.init({
+    lng: 'en',
+    fallbackLng: 'en',
+    resources: { en: { translation: {} } },
+    interpolation: { escapeValue: false },
+  });
   window.localStorage.removeItem(DRAFT_KEY);
 });
 
@@ -340,5 +358,78 @@ describe('DashboardsPage', () => {
     expect(screen.queryByText(/Clipboard access is not available/i)).not.toBeInTheDocument();
     // The applied draft is persisted like any other edit.
     expect(window.localStorage.getItem(DRAFT_KEY)).toBe(expectedJson);
+  });
+});
+
+
+describe('DashboardsPage restrained catalog presentation', () => {
+  const descriptions = [
+    ['alerts_count_stat', 'Stat panel: count of alerts fired in the last 7 days'],
+    ['battery_soc_stat', 'Stat panel: latest BatteryLevel sample from signal_log_view'],
+    ['charging_sessions_table', 'Table panel: recent rows from the charging_sessions table'],
+    ['drives_per_day_timeseries', 'Timeseries panel: SUM(distance_m)/day from the drives table'],
+    ['energy_used_per_day_barchart', 'Barchart panel: SUM(energy_used_wh)/day from the drives table'],
+    ['vehicles_table', 'Table panel: vehicles metadata overview (id, model, color)'],
+  ] as const;
+
+  it('uses neutral shared icon chrome without changing catalog glyphs or responsive sections', () => {
+    const { container } = renderPage();
+    const workflow = container.querySelector('ol');
+    const catalog = container.querySelector('ul');
+    expect(workflow).not.toBeNull();
+    expect(catalog).not.toBeNull();
+    expect(workflow).toHaveClass('grid-cols-1', 'sm:grid-cols-3');
+    expect(catalog).toHaveClass('grid-cols-1', 'sm:grid-cols-2', 'xl:grid-cols-1', '3xl:grid-cols-2');
+    const items = [
+      ...within(workflow as HTMLElement).getAllByRole('listitem'),
+      ...within(catalog as HTMLElement).getAllByRole('listitem'),
+    ];
+    expect(items).toHaveLength(9);
+    for (const item of items) {
+      const icon = item.querySelector('svg');
+      expect(icon).toHaveAttribute('aria-hidden', 'true');
+      expect(icon).toHaveAttribute('focusable', 'false');
+      expect(icon).toHaveClass('shrink-0');
+      expect(icon?.parentElement).toHaveClass(
+        'bg-[var(--surface-2)]', 'text-[var(--text-secondary)]', 'ring-[var(--border-default)]',
+      );
+    }
+    for (const name of SORTED_PANEL_NAMES) {
+      expect(screen.getByText(name)).toHaveClass('text-[var(--text-primary)]', 'break-all');
+    }
+    expect(container.innerHTML).not.toMatch(/(?:text|bg|ring|border)-cyan-|(?:text|bg|ring)-white/);
+    expect(screen.getByRole('heading', { name: 'How it works' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Manual dashboard JSON editor' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Curated panel catalog' })).toBeInTheDocument();
+  });
+
+  it('retains all six exact English description defaults and SI query identifiers without catalog entries', () => {
+    renderPage();
+    for (const [name, description] of descriptions) {
+      const item = screen.getByText(name).closest('li');
+      expect(item).not.toBeNull();
+      expect(within(item as HTMLElement).getByText(description)).toBeInTheDocument();
+    }
+  });
+
+  it('translates all six descriptions while preserving protocol names and alphabetical order', async () => {
+    const translatedDescriptions = Object.fromEntries(
+      descriptions.map(([name], index) => [name, `Descripcion del panel ${index + 1}`]),
+    );
+    descriptionI18n.addResourceBundle('es', 'translation', {
+      powerDashboards: { panels: { descriptions: translatedDescriptions } },
+    });
+    await descriptionI18n.changeLanguage('es');
+    const { container } = renderPage();
+    const items = within(container.querySelector('ul') as HTMLElement).getAllByRole('listitem');
+    expect(items).toHaveLength(6);
+    descriptions.forEach(([name, fallback], index) => {
+      expect(within(items[index]).getByText(name)).toBeInTheDocument();
+      expect(within(items[index]).getByText(translatedDescriptions[name])).toBeInTheDocument();
+      expect(within(items[index]).queryByText(fallback)).not.toBeInTheDocument();
+    });
+    expect(editor()).toHaveValue('');
+    expect(screen.getByRole('button', { name: /Copy to clipboard/i })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /^Clear$/i })).toBeDisabled();
   });
 });

@@ -2,7 +2,69 @@
 
 ## Current phase
 
-### Current unattended checkpoint: source receipts and measured root closure
+### Current unattended checkpoint: retained proofs and concrete source roots
+
+Verified snapshot at2026-10-13T11:19Z: HEAD `23a0a452e`/1827 is pushed.
+All32 retained catalog-coherent proofs were individually handled through1820:
+17 clean scoped receipts and15 exhausted/incomplete/malformed receipts.
+Allseven followups were subsequently collected, explicitly released and
+individually committed/pushed: four clean scoped receipts and three tested WIPs.
+Warranty's policy/section expectations and Causal's formatter/clock/retained
+Retry correction are persisted; VehicleAccess's expiry fixture, Tariff's real
+provider fixture and ModelTrust's resize fixture are preserved as WIP.
+ModelTrust still fails its Quick view assertion:8of9pass, later mobile checks
+unreached. IncidentTimeline's26native passes still do not repair its missing
+required raw runtime output. These are not falsely green receipts.
+
+Actual literal production `npx tsc --noEmit` at1796,1811 and1826 exited0;
+the1826 run took120.967s and produced no diagnostics. Its raw receipt is
+`web\logs\unattended-tsc-count-1826.log` plus the parent shell3352 result.
+Next regular cadence1841. Production excludes unit tests; this evidence is
+not fixture typing, full-suite/gate, visual/native or deployed acceptance.
+
+Allthree narrower refills have now also returned within20minutes and explicitly
+released every source lease. They are delivered scopes awaiting individual
+intake, NOT live workers: Dashboards19of19pass; VehicleAccess palette39distinct
+latest passing cases from finalpage25 plus unchanged overview14; Tariff callable
+mock types20of20pass and5ownedTS2348diagnostics resolved. The palette literals
+were invitation statuses, not driver roles: the root corrected that hypothesis
+and uses existing semantic roles plus MetricBar's existing solid-fill API.
+Tariff's first19of20run failed before an unchanged isolated20of20pass; cause
+unestablished, retained as possible flakiness rather than called fixed.
+No original bodies/obligations were weakened. Parent must persist each exact
+reported scope, record its actual hash, and reconcile resolved original failed
+rows only from these real independent narrow proofs, never a third remigration.
+
+The current producer introduces exactly six Dashboards description keys.
+`phase5-dashboards-description-catalog` explicitly queues the canonical English
+and three expected normal projections;91650fc9d remains accepted for its older
+snapshot, not reopened. Preserve existing leaves/baselines/guards and normal
+generation/check. Register additional actual output paths before writing.
+Do not write English during active guarded source proof or another English
+owner. The excluded-driving plural item is explicitly deferred until original
+combinedPhase6; it is not early fill work.
+
+At this snapshot actual running is0/32 because the three refills all ended;
+recover immediately after producer persistence with the queued catalog and
+existing retained TwinLab read-only proof. Twin's last actor failed400 at zero
+turns and has no source execution or charged failure: do not blindly relaunch
+that no-output whole-page objective. Parent can run its existing bounded proof
+without reimplementing. Exhausted originals/native-helper budgets are unchanged;
+no genuine failed root with two-plus real dependents was found in the latest
+queue graph. Sources0–3 remain complete, Phase4 native pilot unfinished,
+Phase5 source acceptance incomplete, combinedPhase6/Phase7 gates not complete.
+Never invent work, percentages, workers or a phase checkpoint.
+
+Schedule3 is the sole exact ten-minute skip-if-active schedule. Clear the
+serialized health flag after each completed check, not indefinitely while
+ordinary intake continues. Shared5173 last returnedHTTP200 at10:44; recheck it
+before claiming a newer readiness observation. No new server, Docker rollout,
+reseed, external message, extension/helper development or dependency install.
+Built-in agent cancellation remains absent; actual releases, not cooperative
+messages, retire claims. The unclaimed `.agents` diagnostics remain preserved
+and unstaged. Historical snapshots below are not current actor counts.
+
+### Historical08:59 checkpoint: source receipts and measured root closure
 
 At2026-10-13T08:59Z all originally resumed workers and all subsequent
 file-exclusive original-page refills have returned; every known terminal

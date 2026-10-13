@@ -40,7 +40,7 @@ import {
   type DashboardLayoutDraft,
 } from '@/components/ai';
 import { Grid, PageLayout } from '@/components/layout';
-import { Button, CopyButton, GlassPanel, Heading, HelperText, Text, Textarea } from '@/components/ui';
+import { Button, CopyButton, GlassPanel, Heading, HelperText, Icon, IconBox, Text, Textarea } from '@/components/ui';
 import { InlineCallout, type CalloutVariant } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -57,31 +57,38 @@ const COMPOSER_COLUMNS = { default: 1, xl: 3, '3xl': 4 } as const;
 interface CuratedDashboardPanel {
   name: string;
   description: string;
+  descriptionKey: string;
 }
 
 const CURATED_DASHBOARD_PANELS: CuratedDashboardPanel[] = [
   {
     name: 'drives_per_day_timeseries',
+    descriptionKey: 'powerDashboards.panels.descriptions.drives_per_day_timeseries',
     description: 'Timeseries panel: SUM(distance_m)/day from the drives table',
   },
   {
     name: 'battery_soc_stat',
+    descriptionKey: 'powerDashboards.panels.descriptions.battery_soc_stat',
     description: 'Stat panel: latest BatteryLevel sample from signal_log_view',
   },
   {
     name: 'charging_sessions_table',
+    descriptionKey: 'powerDashboards.panels.descriptions.charging_sessions_table',
     description: 'Table panel: recent rows from the charging_sessions table',
   },
   {
     name: 'alerts_count_stat',
+    descriptionKey: 'powerDashboards.panels.descriptions.alerts_count_stat',
     description: 'Stat panel: count of alerts fired in the last 7 days',
   },
   {
     name: 'vehicles_table',
+    descriptionKey: 'powerDashboards.panels.descriptions.vehicles_table',
     description: 'Table panel: vehicles metadata overview (id, model, color)',
   },
   {
     name: 'energy_used_per_day_barchart',
+    descriptionKey: 'powerDashboards.panels.descriptions.energy_used_per_day_barchart',
     description: 'Barchart panel: SUM(energy_used_wh)/day from the drives table',
   },
 ];
@@ -89,11 +96,11 @@ const CURATED_DASHBOARD_PANELS: CuratedDashboardPanel[] = [
 // Pick a glyph from the curated panel's name suffix so each catalog entry
 // carries a color-independent visual cue for its Grafana panel kind.
 function panelKindIcon(name: string): ReactNode {
-  if (name.endsWith('_timeseries')) return <Activity className="h-4 w-4" aria-hidden="true" />;
-  if (name.endsWith('_barchart')) return <BarChart3 className="h-4 w-4" aria-hidden="true" />;
-  if (name.endsWith('_table')) return <Table className="h-4 w-4" aria-hidden="true" />;
-  if (name.endsWith('_stat')) return <Gauge className="h-4 w-4" aria-hidden="true" />;
-  return <LayoutDashboard className="h-4 w-4" aria-hidden="true" />;
+  if (name.endsWith('_timeseries')) return <Icon icon={Activity} />;
+  if (name.endsWith('_barchart')) return <Icon icon={BarChart3} />;
+  if (name.endsWith('_table')) return <Icon icon={Table} />;
+  if (name.endsWith('_stat')) return <Icon icon={Gauge} />;
+  return <Icon icon={LayoutDashboard} />;
 }
 
 function loadPersistedJson(): string {
@@ -191,7 +198,7 @@ export default function DashboardsPage() {
     () => [
       {
         id: 'pick',
-        icon: <ListChecks className="h-5 w-5" aria-hidden="true" />,
+        icon: <Icon icon={ListChecks} size="lg" />,
         title: t('powerDashboards.howTo.step1.title', 'Pick panels'),
         body: t(
           'powerDashboards.howTo.step1.body',
@@ -200,7 +207,7 @@ export default function DashboardsPage() {
       },
       {
         id: 'compose',
-        icon: <Braces className="h-5 w-5" aria-hidden="true" />,
+        icon: <Icon icon={Braces} size="lg" />,
         title: t('powerDashboards.howTo.step2.title', 'Compose JSON'),
         body: t(
           'powerDashboards.howTo.step2.body',
@@ -209,7 +216,7 @@ export default function DashboardsPage() {
       },
       {
         id: 'copy',
-        icon: <ClipboardCopy className="h-5 w-5" aria-hidden="true" />,
+        icon: <Icon icon={ClipboardCopy} size="lg" />,
         title: t('powerDashboards.howTo.step3.title', 'Copy to Grafana'),
         body: t(
           'powerDashboards.howTo.step3.body',
@@ -254,9 +261,9 @@ export default function DashboardsPage() {
                   key={step.id}
                   className="flex items-start gap-3 rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-1)] p-3"
                 >
-                  <span className="mt-0.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-cyan-500/10 text-cyan-300 ring-1 ring-cyan-400/20">
+                  <IconBox color="neutral" size="sm" className="mt-0.5 h-9 w-9 rounded-lg">
                     {step.icon}
-                  </span>
+                  </IconBox>
                   <div className="min-w-0">
                     <Text as="div" size="sm" weight="semibold" color="primary">
                       <Text as="span" color="muted">{index + 1}. </Text>
@@ -282,7 +289,7 @@ export default function DashboardsPage() {
           <Grid cols={COMPOSER_COLUMNS} gap={4} className="min-w-0">
             <GlassPanel className="min-w-0 max-w-full p-4 sm:p-5 xl:col-span-2 3xl:col-span-2">
               <Heading level="panel" as="h2" className="mb-1 flex min-w-0 items-center gap-2 break-words">
-                <Braces className="h-4 w-4 shrink-0 text-cyan-300" aria-hidden="true" />
+                <Icon icon={Braces} className="text-[var(--text-secondary)]" />
                 {t('powerDashboards.editor.title', 'Manual dashboard JSON editor')}
               </Heading>
               <HelperText className="mb-3">
@@ -314,7 +321,7 @@ export default function DashboardsPage() {
                   label={t('powerDashboards.editor.copy', 'Copy to clipboard')}
                 />
                 <Button variant="secondary" wrapLabel onClick={handleClear} disabled={!canClear}>
-                  <Eraser className="h-4 w-4" aria-hidden="true" />
+                  <Icon icon={Eraser} />
                   {t('powerDashboards.editor.clear', 'Clear')}
                 </Button>
               </div>
@@ -324,9 +331,9 @@ export default function DashboardsPage() {
                     variant={status.variant}
                     icon={
                       status.variant === 'success' ? (
-                        <Check className="h-4 w-4" aria-hidden="true" />
+                        <Icon icon={Check} />
                       ) : (
-                        <AlertTriangle className="h-4 w-4" aria-hidden="true" />
+                        <Icon icon={AlertTriangle} />
                       )
                     }
                   >
@@ -339,7 +346,7 @@ export default function DashboardsPage() {
             {/* Curated panel catalog — reference column beside the editor. */}
             <GlassPanel className="min-w-0 max-w-full p-4 sm:p-5 xl:col-span-1 3xl:col-span-2">
               <Heading level="panel" as="h2" className="mb-1 flex min-w-0 items-center gap-2 break-words">
-                <LayoutDashboard className="h-4 w-4 shrink-0 text-cyan-300" aria-hidden="true" />
+                <Icon icon={LayoutDashboard} className="text-[var(--text-secondary)]" />
                 {t('powerDashboards.panels.title', 'Curated panel catalog')}
               </Heading>
               <HelperText className="mb-3">
@@ -355,15 +362,15 @@ export default function DashboardsPage() {
                     className="rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-1)] p-3"
                   >
                     <div className="flex items-center gap-2">
-                      <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-white/[0.03] text-cyan-300 ring-1 ring-white/[0.06]">
+                      <IconBox color="neutral" size="sm" className="h-7 w-7 rounded-md">
                         {panelKindIcon(panel.name)}
-                      </span>
-                      <Text as="span" mono size="sm" className="min-w-0 break-all text-cyan-300">
+                      </IconBox>
+                      <Text as="span" mono size="sm" color="primary" className="min-w-0 break-all">
                         {panel.name}
                       </Text>
                     </div>
                     <HelperText className="mt-1.5">
-                      {panel.description}
+                      {t(panel.descriptionKey, panel.description)}
                     </HelperText>
                   </li>
                 ))}
