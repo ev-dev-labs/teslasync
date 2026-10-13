@@ -5098,6 +5098,8 @@
       "anomalyTitle_other": "{{count}} energy-intensity exceptions",
       "anomalyDescription": "Review measured high-energy drives against route, speed, temperature, and battery context.",
       "partialEnergyTitle": "{{count}} drives excluded from efficiency",
+      "partialEnergyTitle_one": "{{count}} drive excluded from efficiency",
+      "partialEnergyTitle_other": "{{count}} drives excluded from efficiency",
       "partialEnergyDescription": "Activity remains visible, but efficiency requires measured energy and at least 1 km of distance.",
       "noDataTitle": "No drives in this analysis window",
       "noDataDescription": "Choose a wider window or complete a drive to build an operating baseline.",

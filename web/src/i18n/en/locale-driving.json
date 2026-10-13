@@ -1692,6 +1692,8 @@
       "noDataTitle": "No drives in this analysis window",
       "partialEnergyDescription": "Activity remains visible, but efficiency requires measured energy and at least 1 km of distance.",
       "partialEnergyTitle": "{{count}} drives excluded from efficiency",
+      "partialEnergyTitle_one": "{{count}} drive excluded from efficiency",
+      "partialEnergyTitle_other": "{{count}} drives excluded from efficiency",
       "provenance": "Measured energy and distance stay canonical until display; missing evidence is excluded rather than estimated.",
       "routeCoverageDetail": "{{covered}} of {{total}} drives include both origin and destination evidence.",
       "title": "Activity, efficiency, and exceptions in context"

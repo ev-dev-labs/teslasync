@@ -21530,6 +21530,8 @@
       "operations.drives.noDataTitle",
       "operations.drives.partialEnergyDescription",
       "operations.drives.partialEnergyTitle",
+      "operations.drives.partialEnergyTitle_one",
+      "operations.drives.partialEnergyTitle_other",
       "operations.drives.provenance",
       "operations.drives.routeCoverageDetail",
       "operations.drives.title",
