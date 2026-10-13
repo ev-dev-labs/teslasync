@@ -224,7 +224,7 @@ export default function SignalDeadbandPage() {
               <LineChart data={candidateData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
                 <XAxis dataKey="threshold" tick={axisTick} tickFormatter={(value) => fmtScientificNumber(value, 4)} />
-                <YAxis tick={axisTick} tickFormatter={fmtInt} allowDecimals={false} />
+                <YAxis tick={axisTick} tickFormatter={(value) => fmtInt(value)} allowDecimals={false} />
                 <Tooltip content={<ChartTooltip />} />
                 <Line
                   dataKey="retained"
