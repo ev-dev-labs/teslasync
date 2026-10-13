@@ -47,7 +47,7 @@ export function OperationalModeSegment({
           )
         }
         className={cn(
-          'h-5 min-h-0 min-w-0 gap-1.5 rounded-shape-sm px-1.5 py-0 leading-none',
+          'h-11 min-h-11 min-w-11 shrink-0 gap-1.5 rounded-shape-sm px-1.5 py-0 leading-none md:h-5 md:min-h-0 md:min-w-0 md:shrink',
           typography.size.xs,
           config.tone,
         )}
