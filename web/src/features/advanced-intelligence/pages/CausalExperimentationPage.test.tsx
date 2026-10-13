@@ -265,6 +265,39 @@ describe('CausalExperimentationPage', () => {
     });
   });
 
+  it('stacks every reviewed detail with wrapping while preserving cancel and confirm actions', () => {
+    renderPage();
+    const values = ['2026-10-01T10:00', '2026-10-03T10:00', '2026-10-04T10:00', '2026-10-06T10:00'];
+    setWindows(values);
+    submitReview();
+    const dialog = within(screen.getByRole('dialog'));
+    const list = dialog.getByText('Vehicle', { selector: 'dt' }).closest('dl');
+    if (!list) throw new Error('Expected the shared review details definition list');
+    const rows = Array.from(list.children);
+    expect(rows).toHaveLength(7);
+    expect(Array.from(list.querySelectorAll('dt'), (label) => label.textContent)).toEqual([
+      'Vehicle', 'Intervention', 'Metric', ...windowLabels,
+    ]);
+    expect(Array.from(list.querySelectorAll('dd'), (value) => value.textContent)).toEqual([
+      '4', 'Charging schedule', 'Charging success',
+      ...values.map((value) => `${new Date(value).toISOString()} · UTC`),
+    ]);
+    rows.forEach((row) => {
+      expect(row).toHaveClass('flex', 'min-w-0', 'flex-col', 'gap-1');
+      expect(row).not.toHaveClass('justify-between');
+      row.querySelectorAll('dt, dd').forEach((cell) =>
+        expect(cell).toHaveClass('min-w-0', 'max-w-full', 'whitespace-normal', '[overflow-wrap:anywhere]'));
+    });
+    expect(dialog.getByRole('button', { name: 'Create estimate' })).toBeEnabled();
+    fireEvent.click(dialog.getByRole('button', { name: 'Cancel' }));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(mocks.mutate).not.toHaveBeenCalled();
+    submitReview();
+    fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Create estimate' }));
+    expect(mocks.mutate).toHaveBeenCalledOnce();
+    expect(mocks.mutate.mock.calls[0][0]).toMatchObject({ vehicle_id: 4, confirmed: true });
+  });
+
   it('disables reviewed confirmation after a workspace change without retargeting the request', () => {
     const view = renderPage();
     submitReview();

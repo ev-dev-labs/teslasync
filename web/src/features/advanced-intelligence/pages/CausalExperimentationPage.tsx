@@ -309,7 +309,7 @@ export default function CausalExperimentationPage() {
         confirmLabel={t('advancedIntelligence.causal.confirm.action', 'Create estimate')}
         cancelLabel={t('common.cancel', 'Cancel')}
         details={<div className="min-w-0 space-y-4">
-          {review && <KVList wrap layout="vertical" items={[
+          {review && <KVList wrap layout="stacked" items={[
             { label: t('common.vehicle', 'Vehicle'), value: fmtNumber(review.vehicle_id, 0) },
             { label: t('advancedIntelligence.causal.form.intervention', 'Intervention'), value: labelFor(interventions, review.intervention_kind) },
             { label: t('advancedIntelligence.causal.form.metric', 'Metric'), value: labelFor(metrics, review.metric) },
