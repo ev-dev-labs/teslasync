@@ -7,7 +7,8 @@ import { CarbonBriefBand } from './CarbonBriefBand';
 export function CarbonCoverageBrief({ analysis, states, display }: CarbonSectionProps) {
   const { t } = useTranslation();
   const source = analysis.curve.source;
-  const resolved = states.intensity.hasData;
+  // Query data can exist without a curve array; its fallback counts are not measurements.
+  const resolved = states.intensity.hasData && source.payloadPresent;
   const values = [
     ['carbon.coverage.returned', 'Rows returned', source.returnedRows, 'carbon.coverage.expected', '24 expected clock-hours'],
     ['carbon.coverage.unique', 'Valid unique hours', source.validUniqueHours, 'carbon.coverage.uniqueHint', 'Canonical rows used in analysis'],
