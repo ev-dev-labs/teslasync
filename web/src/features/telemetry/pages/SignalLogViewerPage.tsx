@@ -86,7 +86,9 @@ export default function SignalLogViewerPage() {
   const catalogState = useDataState(signalsQuery);
   const [selectedSignals, setSelectedSignals] = useUrlArray('signals');
 
-  const { start, end } = useRangeState({ defaultPresetId: preferences.defaultAnalysisRange });
+  const { startInstant, endInstantExclusive } = useRangeState({
+    defaultPresetId: preferences.defaultAnalysisRange,
+  });
 
   const [perPage, setPerPage] = useState(50);
   const [page, setPage] = useState(1);
@@ -98,16 +100,11 @@ export default function SignalLogViewerPage() {
   // useDeferredValue would defer nothing.
   const [submittedQuery, setSubmittedQuery] = useState<SubmittedSignalQuery | null>(null);
 
-  const canQuery = selectedSignals.length > 0 && !!start && !!end && vehicleId > 0;
+  const canQuery = selectedSignals.length > 0 && !!startInstant && !!endInstantExclusive && vehicleId > 0;
 
-  const fromIso = useMemo(
-    () => (start ? new Date(`${start}T00:00:00`).toISOString() : ''),
-    [start],
-  );
-  const toIso = useMemo(
-    () => (end ? new Date(`${end}T23:59:59.999`).toISOString() : ''),
-    [end],
-  );
+  // The shared range owner preserves rolling windows, calendar/DST boundaries
+  // and the exclusive upper bound. Capture these instants only on submission;
+  // later header edits must not relabel or refetch the already-loaded evidence.
 
   const handleQuery = useCallback(() => {
     if (!canQuery) return;
@@ -116,12 +113,12 @@ export default function SignalLogViewerPage() {
       revision: (current?.revision ?? 0) + 1,
       vehicleId,
       signals: [...selectedSignals],
-      from: fromIso,
-      to: toIso,
+      from: startInstant,
+      to: endInstantExclusive,
       perPage,
       limit: perPage * 10,
     }));
-  }, [canQuery, fromIso, perPage, selectedSignals, toIso, vehicleId]);
+  }, [canQuery, startInstant, perPage, selectedSignals, endInstantExclusive, vehicleId]);
 
   const signalLogQuery = useSignalHistoryBatch(submittedQuery);
   const signalLogState = useDataState(signalLogQuery, { provenance: 'historical' });
@@ -180,13 +177,32 @@ export default function SignalLogViewerPage() {
         <>
           {/* 1 — Query cockpit: signal selector + rows + Query */}
           <FadeIn>
-            <GlassPanel className="space-y-4 p-4 sm:p-5">
+            <GlassPanel padding="auto" className="min-w-0 max-w-full space-y-4">
               <SignalSelector
                 options={availableSignals ?? []}
                 value={selectedSignals}
                 onChange={setSelectedSignals}
                 max={null}
+                loading={signalsQuery.isLoading}
               />
+
+              {/* Catalog recovery never removes draft selections or neighboring results. */}
+              {catalogState.fatalError && catalogState.retry && (
+                <Button type="button" variant="secondary" wrapLabel
+                  className="min-h-11 max-w-full md:min-h-10" onClick={catalogState.retry}>
+                  {t('error.retry', 'Retry')}
+                </Button>
+              )}
+              {catalogState.hasData && availableSignals?.length === 0 && !signalsQuery.isLoading && !catalogState.refreshError && !catalogState.isRefreshBlocked && (
+                <EmptyState
+                  title={t('common.emptyResultsForTitle', 'No {{title}} found.', {
+                    title: t('dataSources.labels.signalCatalog', 'Signal catalog'),
+                  })}
+                  message={t('common.noDataAvailable', 'No data available')}
+                  action={catalogState.retry ? { label: t('error.retry', 'Retry'), onClick: catalogState.retry } : undefined}
+                  className="py-6"
+                />
+              )}
 
               <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
                 <div className="flex flex-wrap items-end gap-3">
@@ -199,6 +215,8 @@ export default function SignalLogViewerPage() {
                   />
                   <Button
                     variant="primary"
+                    wrapLabel
+                    className="min-h-11 max-w-full md:min-h-10"
                     icon={<Database className="h-4 w-4" aria-hidden="true" />}
                     onClick={handleQuery}
                     disabled={!canQuery}
