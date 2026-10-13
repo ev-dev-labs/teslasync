@@ -79,7 +79,7 @@ export function PowerwallTrajectoryChart({ slots, powerwall }: PowerwallTrajecto
             name={t('homeEnergy.powerwall.soc', 'State of charge')}
             stroke={CHART_COLORS[3]}
             fill={CHART_COLORS[3]}
-            fillOpacity={0.2}
+            fillOpacity={0.08}
           />
         </ComposedChart>
       </ResponsiveContainer>
