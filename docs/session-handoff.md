@@ -2,6 +2,37 @@
 
 ## Current phase
 
+### User-approved pilot closure and Phase5 gate
+
+The latest user instruction closes Phase4 now, with remaining native/visual/
+a11y/state QA moved into Phase6. `checkpoint: pilot complete` records that
+explicit scope decision, NOT a native-matrix pass. Preserve all actual partial
+receipts, historical failures and exhausted helper budgets; no helper revival.
+
+The parent now ONLY orchestrates, runs requested gates, verifies, commits and
+pushes. Workers own catalog integration, retained trend correction, both native
+confirmations and the newly authorized read-only finished-page QA sweep.
+The one shared5173 preview is healthy; no Docker build/update/reseed is allowed.
+
+Catalog source is prepared but uncommitted: exactlyone existing canonical leaf
+and its driving/detail-operations projections. Actual normal generation0/check0/
+namespaceaudit0, snapshotoneleafdiff0 and allfiveprotectedpins unchanged are
+in ignored phase6-native-drives-count-catalog logs. Namespace audit discloses
+2known dotted/24dotless/0newdotted/2newdotless/49resolved; no baseline changes.
+Transfer remaining exact-scope verification/integration to its worker, do not
+rerun these unchanged passing commands or pretend the catalog is committed.
+Trend WIP e75e98460/1843 is pushed; attempt1 failed and attempt2 continues retained
+corrections. Caption31cdc5ef7/1842 and preview9d3f34638/1841 are pushed source-only.
+
+Phase5 requested gate is build plus literal `npx tsc --noEmit`, once, serialized
+with zero workers. Its27 exhausted source failures retain actual reasons; their
+one user-authorized blocker rescues are distinct from ordinary budget resets.
+The old aggregate has one real dependent relation per failed source, not zero:
+queue dependency fields use semicolons as well as commas. Phase6 source debt
+still blocks final QA acceptance, even if the requested technical gate passes.
+Register all worker objectives/scopes first, then refill to32 actual actors.
+No active worker, browser or source claim at this transition; schedule3 retained.
+
 ### Latest three-source intake: 14:52Z
 
 All three owners are terminal0 collected/released by14:44:54, before14:45.
