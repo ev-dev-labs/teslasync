@@ -66,11 +66,21 @@ import { ThemeProvider } from '@/components/ui/ThemeProvider';
 import { expectOperationalBand, summaryMetric } from '../components/operationalbrief-all/testAssertions';
 import type { Tariff, TariffSimulationRequest, TariffSimulationResponse, TariffSimulationResult } from '@/types/ownership';
 
-const mockSelected = useSelectedVehicle as unknown as ReturnType<typeof vi.fn>;
-const mockTariffs = useTariffs as unknown as ReturnType<typeof vi.fn>;
-const mockCreate = useCreateTariff as unknown as ReturnType<typeof vi.fn>;
-const mockRemove = useDeleteTariff as unknown as ReturnType<typeof vi.fn>;
-const mockSimulate = useSimulateTariffs as unknown as ReturnType<typeof vi.fn>;
+// These fixtures return partial hook results; preserve the real callable contracts.
+const mockSelected = vi.mocked(useSelectedVehicle, { partial: true, deep: true });
+// Pick the supplied result fields, not an invented complete TanStack state.
+const mockTariffs = vi.mocked<
+  (...args: Parameters<typeof useTariffs>) => Pick<
+    ReturnType<typeof useTariffs>, 'data' | 'isLoading' | 'isFetching' | 'isError' | 'error' | 'refetch'
+  >
+>(useTariffs, { partial: true, deep: true });
+const mockCreate = vi.mocked(useCreateTariff, { partial: true });
+const mockRemove = vi.mocked(useDeleteTariff, { partial: true });
+const mockSimulate = vi.mocked<
+  (...args: Parameters<typeof useSimulateTariffs>) => Pick<
+    ReturnType<typeof useSimulateTariffs>, 'mutate' | 'isPending' | 'variables' | 'data' | 'error'
+  >
+>(useSimulateTariffs, { partial: true });
 
 function makeTariff(overrides: Partial<Tariff> = {}): Tariff {
   return {
@@ -91,7 +101,7 @@ function makeTariff(overrides: Partial<Tariff> = {}): Tariff {
   };
 }
 
-function makeQuery(data: unknown) {
+function makeQuery(data: Parameters<typeof mockTariffs.mockReturnValue>[0]['data']) {
   return {
     data,
     isLoading: false,
