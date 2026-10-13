@@ -55,7 +55,7 @@ export function DayLogSources({ sources, isLoading, error, onRetry }: DayLogSour
                 'Signal feeds record transitions only — states between samples were never captured and cannot be reconstructed.',
               )}
             </Text>
-            <Table aria-label={t('dayLog.sources.title', 'Sources')}>
+            <Table variant="embedded" tabIndex={0} aria-label={t('dayLog.sources.title', 'Sources')}>
               <tbody>
                 {rows.map((row) => (
                   <tr key={row.source}>
