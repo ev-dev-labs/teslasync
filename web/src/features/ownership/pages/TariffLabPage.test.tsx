@@ -8,7 +8,7 @@
  * render for real.
  */
 
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { act, render, screen, within, fireEvent, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider, useMutation } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
@@ -62,6 +62,7 @@ import {
   useSimulateTariffs,
 } from '@/api/hooks/useOwnership';
 import TariffLabPage from './TariffLabPage';
+import { ThemeProvider } from '@/components/ui/ThemeProvider';
 import { expectOperationalBand, summaryMetric } from '../components/operationalbrief-all/testAssertions';
 import type { Tariff, TariffSimulationRequest, TariffSimulationResponse, TariffSimulationResult } from '@/types/ownership';
 
@@ -145,7 +146,7 @@ function renderPage() {
   });
   function wrapper({ children }: { children: ReactNode }) {
     return <MemoryRouter><QueryClientProvider client={client}>
-      {children}
+      <ThemeProvider>{children}</ThemeProvider>
     </QueryClientProvider></MemoryRouter>;
   }
   return render(<TariffLabPage />, { wrapper });
@@ -344,8 +345,16 @@ describe('TariffLabPage — publication retention', () => {
   });
 });
 
+afterEach(() => {
+  vi.restoreAllMocks();
+});
+
 beforeEach(() => {
   vi.clearAllMocks();
+  // Keep real theme/chart providers; isolate their settings read from the network.
+  vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('{}', {
+    headers: { 'Content-Type': 'application/json' },
+  }));
   mockSelected.mockReturnValue({
     vehicleId: 7,
     vehicle: null,
