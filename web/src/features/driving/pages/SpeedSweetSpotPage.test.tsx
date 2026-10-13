@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
-import { act, render, screen, waitFor } from '@testing-library/react';
+import type { OperationalBriefProps } from '@/components/data-display/OperationalBrief';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Drive } from '@/types/driving';
 
@@ -115,17 +116,45 @@ vi.mock('@/components/motion', () => ({
   FadeIn: ({ children }: { children: ReactNode }) => <>{children}</>,
 }));
 
+// Keep the real state/recovery widgets without importing unrelated barrel widgets.
 vi.mock('@/components/feedback', async () => {
-  const actual = await vi.importActual<typeof import('@/components/feedback')>(
-    '@/components/feedback',
+  const empty = await vi.importActual<typeof import('@/components/feedback/EmptyState')>(
+    '@/components/feedback/EmptyState',
+  );
+  const warning = await vi.importActual<typeof import('@/components/feedback/StaleRefreshWarning')>(
+    '@/components/feedback/StaleRefreshWarning',
   );
   return {
-    ...actual,
+    EmptyState: empty.EmptyState,
+    StaleRefreshWarning: warning.StaleRefreshWarning,
     QueryError: ({ error }: { error: unknown }) => (
       <div role="alert">{String(error)}</div>
     ),
   };
 });
+
+vi.mock('@/hooks/useFormatting', () => ({
+  useFormatting: () => ({ currencySymbol: '$' }),
+}));
+
+// Only isolate the shared renderer. The summary, trust labels, metric validation,
+// preference hooks and SI display formatters all run their production code.
+vi.mock('@/components/data-display', () => ({
+  OperationalBrief: ({ testId, statusLabel, metrics, loading, actions }: OperationalBriefProps) => (
+    <div data-testid={testId}>
+      <p>{statusLabel}</p>
+      {metrics.map((metric) => (
+        <div key={metric.key} data-testid={`metric-${metric.key}`}
+          data-raw-value={metric.rawValue ?? undefined} data-value-state={metric.valueState}>
+          <span>{metric.label}</span>
+          <span>{loading ? 'Loading measurement' : metric.value}</span>
+          {metric.detail}
+        </div>
+      ))}
+      {actions}
+    </div>
+  ),
+}));
 
 vi.mock('@/features/onboarding/components/NoVehicleSelected', () => ({
   NoVehicleSelected: ({ pageTitle }: { pageTitle: string }) => (
@@ -133,7 +162,7 @@ vi.mock('@/features/onboarding/components/NoVehicleSelected', () => ({
   ),
 }));
 
-type State = { isLoading: boolean; error: unknown };
+type State = { isLoading: boolean; error: unknown; onRetry?: () => void };
 type SummaryProbe = {
   sweetSpot: { fromKph: number; whPerKm: number } | null;
 };
@@ -150,6 +179,7 @@ const section = (
     data-model-wh={summary?.sweetSpot?.whPerKm}
   >
     {status(state)}
+    {state.error != null && <button type="button" onClick={state.onRetry}>Retry {testId}</button>}
   </section>
 );
 
@@ -387,6 +417,40 @@ describe('SpeedSweetSpotPage', () => {
     for (const id of SECTION_IDS) {
       expect(screen.getByTestId(id)).toBeInTheDocument();
     }
+  });
+
+  it('keeps unresolved measurements unknown rather than reporting measured zero', () => {
+    useDrivesMock.mockReturnValue(query({ data: undefined, isLoading: true }));
+    render(<SpeedSweetSpotPage />);
+
+    expect(screen.getByText('Loading source')).toBeInTheDocument();
+    expect(screen.queryByText('No drives were returned for this selected window.')).not.toBeInTheDocument();
+    for (const key of ['best-qualified-band', 'band-consumption', 'overall-consumption', 'observed-gap']) {
+      expect(screen.getByTestId(`metric-${key}`)).toHaveAttribute('data-value-state', 'missing');
+      expect(screen.getByTestId(`metric-${key}`)).not.toHaveAttribute('data-raw-value');
+    }
+  });
+
+  it('preserves a measured zero observed gap and the positive SI consumption', () => {
+    useDrivesMock.mockReturnValue(query({ data: [drive(1), drive(2), drive(3)] }));
+    render(<SpeedSweetSpotPage />);
+
+    expect(screen.getByTestId('metric-observed-gap')).toHaveAttribute('data-raw-value', '0');
+    expect(screen.getByTestId('metric-observed-gap')).toHaveAttribute('data-value-state', 'value');
+    expect(screen.getByText('0.00%')).toBeInTheDocument();
+    expect(screen.getByTestId('metric-band-consumption')).toHaveAttribute('data-raw-value', '0.15');
+    expect(screen.getByTestId('metric-best-qualified-band')).toHaveAttribute('data-raw-value', String(100 / 3.6));
+  });
+
+  it('forwards fatal retry actions to the same drives source for every evidence section', () => {
+    const result = query({ data: undefined, isError: true, error: new Error('unavailable') });
+    useDrivesMock.mockReturnValue(result);
+    render(<SpeedSweetSpotPage />);
+
+    for (const id of SECTION_IDS.slice(1)) {
+      fireEvent.click(screen.getByRole('button', { name: `Retry ${id}` }));
+    }
+    expect(result.refetch).toHaveBeenCalledTimes(7);
   });
 
   it('renders the same SI-derived model in metric display units', () => {
