@@ -7,6 +7,7 @@ import type { DataStateSource } from '@/api/dataState';
 import type { AdvancedPage, CausalExperiment } from '@/types/advancedIntelligence';
 import { formatSpeed, type UnitPref } from '@/lib/unitConversion';
 import { fmtNumber } from '@/lib/numberFormat';
+import { formatTime } from '@/lib/dateFormat';
 import CausalExperimentationPage from './CausalExperimentationPage';
 
 const mocks = vi.hoisted(() => ({
@@ -37,7 +38,11 @@ vi.mock('@/hooks/useNumberFormatting', () => ({
   useNumberFormatting: () => ({ fmtNumber }),
 }));
 vi.mock('@/hooks/useDateFormat', () => ({
-  useDateFormat: () => ({ tz: 'UTC', formatDateTime: (value: string) => value }),
+  useDateFormat: () => ({
+    tz: 'UTC',
+    formatDateTime: (value: string) => value,
+    formatTime: (value: Date) => formatTime(value, { tz: 'UTC', locale: 'en-US' }),
+  }),
 }));
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
