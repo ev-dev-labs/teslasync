@@ -44,7 +44,7 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClient, QueryClientProvider, onlineManager } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
 
@@ -128,6 +128,7 @@ vi.mock('@/components/ai/AIQuietHoursSuggestion', () => ({
 }));
 
 import { request } from '@/api/client';
+import { notificationKeys } from '@/api/hooks/useNotifications';
 import { ToastProvider } from '@/components/feedback/Toast';
 import { __resetTitleStoreForTests } from '@/lib/titleStore';
 import type { QuietHoursWindow } from '@/api/types';
@@ -182,10 +183,9 @@ function installRequest(handlers: { quietHours?: Resolver } = {}) {
 const quietHoursCallCount = () =>
   mockedRequest.mock.calls.filter((c) => String(c[0]).startsWith('/notifications/quiet-hours')).length;
 
-function renderPage() {
-  const client = new QueryClient({
-    defaultOptions: { queries: { retry: false, retryDelay: 0 } },
-  });
+function renderPage(client = new QueryClient({
+  defaultOptions: { queries: { retry: false, retryDelay: 0 } },
+})) {
   return render(
     <QueryClientProvider client={client}>
       <MemoryRouter initialEntries={['/notifications/quiet-hours']}>
@@ -219,6 +219,7 @@ describe('QuietHoursPage', () => {
 
     // Both heavy children are orchestrated in, plus the static guide rail.
     expect(screen.getByTestId('quiet-hours-panel')).toBeInTheDocument();
+    expect(within(screen.getByRole('region', { name: 'Quiet hours / do-not-disturb' })).getByTestId('quiet-hours-panel')).toBeInTheDocument();
     expect(screen.getByTestId('ai-suggestion')).toBeInTheDocument();
     expect(screen.getByText('How quiet hours work')).toBeInTheDocument();
 
@@ -319,6 +320,50 @@ describe('QuietHoursPage', () => {
       expect(screen.getByTestId('quiet-hours-panel')).toHaveAttribute('data-seed', 'null'),
     );
     expect(h.captured.panelSeed).toBeNull();
+  });
+
+  it('retains schedules and every independent section when refreshing the source fails', async () => {
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false, retryDelay: 0 } },
+    });
+    client.setQueryData(notificationKeys.quietHours, WINDOWS);
+    installRequest({ quietHours: () => Promise.reject(new Error('refresh failed')) });
+    renderPage(client);
+
+    const region = screen.getByRole('region', { name: 'Quiet hours summary' });
+    await client.invalidateQueries({ queryKey: notificationKeys.quietHours });
+    await waitFor(() => expect(client.getQueryState(notificationKeys.quietHours)?.status).toBe('error'));
+    expect(within(region).getByText('3')).toBeInTheDocument();
+    expect(within(region).getByText('2/3')).toBeInTheDocument();
+    expect(within(region).getByText('critical, warn')).toBeInTheDocument();
+    expect(screen.queryByTestId('stat-grid-skeleton')).not.toBeInTheDocument();
+    expect(screen.getByTestId('quiet-hours-panel')).toBeInTheDocument();
+    expect(screen.getByTestId('ai-suggestion')).toBeInTheDocument();
+    expect(screen.getByText('How quiet hours work')).toBeInTheDocument();
+    client.clear();
+  });
+
+  it('keeps cached schedules and all sections reachable while the source is paused offline', async () => {
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false, retryDelay: 0 } },
+    });
+    client.setQueryData(notificationKeys.quietHours, WINDOWS);
+    onlineManager.setOnline(false);
+    try {
+      renderPage(client);
+      void client.invalidateQueries({ queryKey: notificationKeys.quietHours });
+      await waitFor(() => expect(client.getQueryState(notificationKeys.quietHours)?.fetchStatus).toBe('paused'));
+      const region = screen.getByRole('region', { name: 'Quiet hours summary' });
+      expect(within(region).getByText('3')).toBeInTheDocument();
+      expect(within(region).getByText('2/3')).toBeInTheDocument();
+      expect(screen.getByTestId('quiet-hours-panel')).toBeInTheDocument();
+      expect(screen.getByTestId('ai-suggestion')).toBeInTheDocument();
+      expect(screen.getByText('How quiet hours work')).toBeInTheDocument();
+      expect(quietHoursCallCount()).toBe(0);
+    } finally {
+      client.clear();
+      onlineManager.setOnline(true);
+    }
   });
 
   it('sets the document title to the page title', async () => {

@@ -17,7 +17,6 @@
 import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { PageLayout } from '@/components/layout';
-import { FadeIn } from '@/components/motion';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useQuietHours } from '@/api/hooks/useNotifications';
 import { QuietHoursPanel } from '@/features/settings/components/QuietHoursPanel';
@@ -57,22 +56,25 @@ export default function QuietHoursPage() {
       query={quietHoursQuery}
       copyLink
     >
-      <FadeIn>
-        <QuietHoursSummary query={quietHoursQuery} />
-      </FadeIn>
+      {/* Query metadata belongs to the header; each source owns its loading,
+          empty, paused and retained-error presentation. Never gate this page. */}
+      <QuietHoursSummary query={quietHoursQuery} />
 
-      <div className="grid grid-cols-1 gap-4 xl:grid-cols-3 xl:gap-5">
-        <div className="min-w-0 xl:col-span-2">
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
+        {/* Keep the canonical editor mounted through summary/advisor failures:
+            its validation, confirmations and sole Save path remain local. */}
+        <section
+          aria-label={t('quietHours.title', 'Quiet hours / do-not-disturb')}
+          className="min-w-0 break-words xl:col-span-2"
+        >
           <QuietHoursPanel
             seedDraft={pendingSeed}
             onSeedConsumed={handleSeedConsumed}
           />
-        </div>
-        <div className="min-w-0 space-y-4 xl:space-y-5">
+        </section>
+        <div className="min-w-0 space-y-6 break-words">
           <AIQuietHoursSuggestion onApplyDraft={handleApplyDraft} />
-          <FadeIn delay={0.2}>
-            <QuietHoursGuide />
-          </FadeIn>
+          <QuietHoursGuide />
         </div>
       </div>
     </PageLayout>
