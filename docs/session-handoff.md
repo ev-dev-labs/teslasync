@@ -5,6 +5,27 @@
 ### Latest restart: built-in-only unattended continuation
 
 The user's latest restart instructions supersede the operational history below.
+At2026-10-13T06:53Z the built-in runtime overview verified **32 running/32**.
+All32 real IDs and exclusive claims are recorded in the session
+`unattended-builtin-workers.json` and current `phase5-worker-ledger.json`,
+status `running-builtin-unattended`, initial consumed turn minusone. Runtime
+elapsed at the census is recorded honestly, not represented as an exact host
+start timestamp. The oldest observed actors were778s old, below25min.
+One TwinLab startup failed with400 at zero turns and was collected/released
+immediately, without charging an item attempt. A genuinely independent pending
+APIKeys item filled its slot; Twin stays pending, not automatically retried.
+One measured runner-timeout root is queued and running; it must not disable
+catalog guards or build helper tooling. Current counts: Phase5 x157/pending45/
+held22/failed12/blocked1; Phase6 x51/pending1/held10/blocked1. Held rows are
+these32 exclusive workers, not parent catalog reservations.
+
+The authorized loop/reconciliation/progress update was pushed `2acc6d342`.
+All requested startup steps were actually executed; individual results and
+rolling refills now continue. Shared5173 still responds200. The session custom
+extensions remain disabled, schedule3 is the sole ten-minute schedule, and the
+SQL `orchestration_state.health_check_in_progress` flag serializes checks.
+Do not call any old custom intake/start/cancel tools or helpers.
+
 At2026-10-13T06:28Z the built-in agent census was empty. Schedule2 was removed;
 both session custom extension entrypoints were disabled without changing their
 code. Only the existing project code-guardian remains loaded; do not invoke
