@@ -341,8 +341,9 @@ export function GeneralSettings() {
                   ]}
                 />
 
-                <SettingField label={t('app.timezoneUser', 'My time zone override')}>
+                <SettingField label={t('app.timezoneUser', 'My time zone override')} htmlFor="settings-timezone-user">
                   <Input
+                    id="settings-timezone-user"
                     type="text"
                     value={form.timezone_user ?? ''}
                     onChange={e => setForm({ ...form, timezone_user: e.target.value })}

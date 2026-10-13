@@ -252,6 +252,37 @@ describe('GeneralSettings — decimal precision', () => {
 })
 
 describe('GeneralSettings — interaction', () => {
+  it('associates the visible timezone override label with the editable control and preserves its guidance', async () => {
+    state.settings = makeSettings({ timezone_user: 'America/New_York' })
+    renderPanel()
+    await screen.findByLabelText('Distance unit')
+
+    const timezone = screen.getByLabelText('My time zone override')
+    expect(timezone).toBe(screen.getByRole('textbox', { name: 'My time zone override' }))
+    expect(timezone).toHaveAccessibleName('My time zone override')
+    expect(timezone).toBeEnabled()
+    expect(timezone).toHaveValue('America/New_York')
+    expect(timezone).toHaveAttribute(
+      'placeholder',
+      'e.g. America/Los_Angeles (leave blank for browser default)',
+    )
+    expect(screen.getByText(
+      "IANA tz name. Useful when travelling but you'd rather see times in your home zone.",
+    )).toBeInTheDocument()
+
+    fireEvent.change(timezone, { target: { value: 'America/Los_Angeles' } })
+    expect(timezone).toHaveValue('America/Los_Angeles')
+    fireEvent.click(screen.getByRole('button', { name: /Save settings/i }))
+    await waitFor(() => {
+      expect(mockedRequest).toHaveBeenCalledWith(
+        '/settings',
+        expect.objectContaining({ method: 'PUT' }),
+      )
+    })
+    const put = mockedRequest.mock.calls.find(call => call[1]?.method === 'PUT')
+    expect(JSON.parse(put?.[1].body).timezone_user).toBe('America/Los_Angeles')
+  })
+
   it('updates the bound value when a select changes', async () => {
     renderPanel()
     const distance = (await screen.findByLabelText('Distance unit')) as HTMLSelectElement
