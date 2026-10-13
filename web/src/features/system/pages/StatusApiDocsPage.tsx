@@ -16,7 +16,7 @@ import {
 } from 'lucide-react'
 
 import { PageLayout } from '@/components/layout'
-import { GlassPanel, Button, Badge, SectionTitle, PanelTitle, Text, Caption } from '@/components/ui'
+import { GlassPanel, Button, Badge, SectionTitle, PanelTitle, Text, Caption, IconBox } from '@/components/ui'
 import { KVList } from '@/components/data-display'
 import { SystemSummaryBrief } from '../components/operationalbrief-all/SystemSummaryBrief'
 import { InlineCallout } from '@/components/feedback'
@@ -162,7 +162,7 @@ export default function StatusApiDocsPage() {
       {
         label: t('statusApi.facts.basePath', 'Base path'),
         value: (
-          <Text as="code" mono size="xs" className="text-cyan-300">
+          <Text as="code" mono size="xs" color="secondary">
             {`${API_BASE}/status`}
           </Text>
         ),
@@ -222,9 +222,9 @@ export default function StatusApiDocsPage() {
       {/* 2 — Overview + Integrations bento */}
       <FadeIn delay={0.1}>
         <section className="grid grid-cols-1 gap-4 xl:grid-cols-3">
-          <GlassPanel className="space-y-4 p-4 sm:p-5 xl:col-span-2">
+          <GlassPanel role="region" aria-label={t('statusApi.overview.title', 'Overview')} className="space-y-4 p-4 sm:p-5 xl:col-span-2">
             <PanelTitle className="flex items-center gap-2">
-              <Server className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+              <Server className="h-4 w-4 text-[var(--text-secondary)]" aria-hidden="true" />
               {t('statusApi.overview.title', 'Overview')}
             </PanelTitle>
             <Text as="p" variant="bodySm" className="leading-relaxed">
@@ -242,25 +242,25 @@ export default function StatusApiDocsPage() {
             </InlineCallout>
           </GlassPanel>
 
-          <GlassPanel className="space-y-4 p-4 sm:p-5">
+          <GlassPanel role="region" aria-label={t('statusApi.integrations.title', 'Designed for')} className="space-y-4 p-4 sm:p-5">
             <PanelTitle className="flex items-center gap-2">
-              <Plug className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+              <Plug className="h-4 w-4 text-[var(--text-secondary)]" aria-hidden="true" />
               {t('statusApi.integrations.title', 'Designed for')}
             </PanelTitle>
             <ul className="space-y-2.5">
               {integrations.map(({ name, how, icon: Icon }) => (
                 <li
                   key={name}
-                  className="flex items-center gap-3 rounded-lg bg-white/[0.02] p-2.5 ring-1 ring-white/[0.04]"
+                  className="flex items-center gap-3 rounded-shape-sm border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3"
                 >
-                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-cyan-500/10 text-cyan-300 ring-1 ring-cyan-400/20">
+                  <IconBox color="neutral" size="sm" aria-hidden="true">
                     <Icon className="h-4 w-4" aria-hidden="true" />
-                  </span>
+                  </IconBox>
                   <span className="min-w-0 flex-1">
-                    <Text as="span" size="sm" weight="medium" color="primary" className="block truncate">
+                    <Text as="span" size="sm" weight="medium" color="primary" className="block break-words">
                       {name}
                     </Text>
-                    <Caption className="block truncate">{how}</Caption>
+                    <Caption className="block break-words">{how}</Caption>
                   </span>
                 </li>
               ))}

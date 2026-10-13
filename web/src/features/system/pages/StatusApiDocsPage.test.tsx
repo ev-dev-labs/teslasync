@@ -287,3 +287,107 @@ describe('StatusApiDocsPage — navigation & footer', () => {
     )
   })
 })
+
+
+/** Frozen pre-adoption responses: styling must not rewrite the public examples. */
+const DOCUMENTED_EXAMPLES = [
+{
+          status: 'operational',
+          generated_at: '2025-01-15T14:32:11Z',
+          version: { build: '1.4.2', go_version: 'go1.22.5', started_at: '2025-01-10T08:00:00Z' },
+          counts: { components_total: 8, components_healthy: 8, components_degraded: 0, components_unhealthy: 0 },
+          resources: { goroutines: 142, uptime_seconds: 458321.4, go_version: 'go1.22.5' },
+          incidents: [],
+        },
+{
+          generated_at: '2025-01-15T14:32:11Z',
+          counts: { components_total: 3, components_healthy: 3, components_degraded: 0, components_unhealthy: 0 },
+          components: [
+            { name: 'database', status: 'healthy', consecutive_failures: 0, last_check_at: '2025-01-15T14:32:08Z' },
+            { name: 'mqtt', status: 'healthy', consecutive_failures: 0, last_check_at: '2025-01-15T14:32:08Z' },
+            { name: 'tesla', status: 'healthy', consecutive_failures: 0, last_check_at: '2025-01-15T14:32:08Z' },
+          ],
+        },
+{
+          generated_at: '2025-01-15T14:32:11Z',
+          resources: { goroutines: 142, uptime_seconds: 458321.4, go_version: 'go1.22.5' },
+        },
+{
+          window: '30d',
+          uptime_percent: 100,
+          healthy_count: 8,
+          total_count: 8,
+          generated_at: '2025-01-15T14:32:11Z',
+          historical_source: 'current_snapshot',
+          note: 'Per-window uptime requires the heartbeat history backend (planned). This value reflects the current snapshot only.',
+        },
+{
+          count: 1,
+          incidents: [
+            {
+              id: 17, title: 'MQTT broker reconnect storm', status: 'monitoring', severity: 'minor',
+              source: 'manual', affected_components: ['mqtt'],
+              started_at: '2025-01-15T13:55:00Z', updated_at: '2025-01-15T14:20:00Z',
+              updates: [
+                { at: '2025-01-15T13:55:00Z', status: 'investigating', message: 'Incident opened.', author: 'operator' },
+                { at: '2025-01-15T14:10:00Z', status: 'identified', message: 'Cause: TLS cert rotation gap.', author: 'operator' },
+                { at: '2025-01-15T14:20:00Z', status: 'monitoring', message: 'Cert rotated; watching.', author: 'operator' },
+              ],
+            },
+          ],
+        },
+{
+          note: 'event: status\\ndata: <full StatusSnapshot JSON>\\n\\n',
+        }
+] as const
+
+describe('StatusApiDocsPage — restrained adoption & complete contract retention', () => {
+  it('keeps all documentation sections present without presenting a runtime probe', () => {
+    const fetchSpy = vi.spyOn(globalThis, 'fetch')
+    renderPage()
+
+    for (const name of ['API surface summary', 'Overview', 'Designed for', 'Endpoints']) {
+      expect(screen.getByRole('region', { name })).toBeInTheDocument()
+    }
+    expect(screen.getByText('Bundled documentation, not a runtime availability probe.')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /Open an issue/i })).toBeInTheDocument()
+    expect(fetchSpy).not.toHaveBeenCalled()
+  })
+
+  it('uses shared neutral integration glyphs and wrapping hints rather than decorative cyan or white', () => {
+    renderPage()
+
+    const integrations = screen.getByRole('region', { name: 'Designed for' })
+    const items = within(integrations).getAllByRole('listitem')
+    expect(items).toHaveLength(4)
+    for (const item of items) {
+      expect(item).toHaveClass('bg-[var(--surface-2)]', 'border-[var(--border-subtle)]')
+      const glyph = item.querySelector('svg')?.parentElement
+      expect(glyph).toHaveAttribute('aria-hidden', 'true')
+      expect(glyph).toHaveClass('h-8', 'w-8', 'rounded-shape-sm')
+      expect(item.querySelector('[class*="truncate"]')).toBeNull()
+      expect(item.querySelector('[class*="cyan-"], [class*="white/"]')).toBeNull()
+    }
+    for (const hint of ['JSON datasource', 'HTTP(s) JSON query monitor', 'REST sensor', 'Synthetic monitor']) {
+      expect(within(integrations).getByText(hint)).toBeInTheDocument()
+    }
+  })
+
+  it.each(DOCUMENTED_PATHS)('retains the complete example response for %s', path => {
+    renderPage()
+
+    const grid = screen.getByRole('region', { name: 'Endpoints' })
+    const card = within(grid).getByText(path).closest('[data-print-card]')
+    expect(card).not.toBeNull()
+    if (!(card instanceof HTMLElement)) throw new Error(`Missing endpoint card: ${path}`)
+    const disclosure = within(card).getByRole('button', { name: 'Example response' })
+    expect(disclosure).toHaveAttribute('aria-expanded', 'false')
+    fireEvent.click(disclosure)
+    expect(disclosure).toHaveAttribute('aria-expanded', 'true')
+    const response = card.querySelector('pre')
+    expect(response).not.toBeNull()
+    expect(JSON.parse(response?.textContent ?? '')).toEqual(DOCUMENTED_EXAMPLES[DOCUMENTED_PATHS.indexOf(path)])
+    fireEvent.click(disclosure)
+    expect(disclosure).toHaveAttribute('aria-expanded', 'false')
+  })
+})
