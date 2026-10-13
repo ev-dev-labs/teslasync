@@ -1,15 +1,17 @@
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useActionCenterHistory } from '@/api/hooks/useActionCenter';
 import { QueryError, Skeleton, StaleRefreshWarning } from '@/components/feedback';
 import {
   OperationalNarrativeDetails,
 } from '@/components/data-display';
-import { Accordion, Badge, PanelTitle, Text } from '@/components/ui';
+import { Accordion, Badge, Pagination, PanelTitle, Text } from '@/components/ui';
 import { useDataState } from '@/hooks/useDataState';
 import { useDateFormat } from '@/hooks/useDateFormat';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { useUnits } from '@/hooks/useUnits';
 import { formatDurationSecondsAsMinutes } from '@/lib/dateFormat';
-import type { ActionCenterProjectedImpact, ActionCenterRecommendation } from '@/types/actionCenter';
+import type { ActionCenterHistoryPage, ActionCenterProjectedImpact, ActionCenterRecommendation } from '@/types/actionCenter';
 import type { OperationalNarrative } from '@/types/operationalNarrative';
 
 interface RecommendationDetailsProps {
@@ -38,8 +40,28 @@ export function RecommendationDetails({
   const { t } = useTranslation();
   const { formatEnergy } = useUnits();
   const { formatDateTime, locale } = useDateFormat();
-  const history = useActionCenterHistory(recommendation.id, open);
-  const historyState = useDataState(history, { provenance: 'historical' });
+  const { fmtInt } = useNumberFormatting();
+  const [paging, setPaging] = useState({ id: recommendation.id, offset: 0 });
+  const offset = paging.id === recommendation.id ? paging.offset : 0;
+  if (paging.id !== recommendation.id) setPaging({ id: recommendation.id, offset: 0 });
+  const history = useActionCenterHistory(recommendation.id, open, { limit: 25, offset });
+  const [retained, setRetained] = useState<{
+    id: string; data: ActionCenterHistoryPage; updatedAt: number;
+  } | null>(null);
+  if (retained && retained.id !== recommendation.id) setRetained(null);
+  if (history.data && !history.isPlaceholderData && (
+    retained?.id !== recommendation.id || retained.data !== history.data
+    || retained.updatedAt !== history.dataUpdatedAt
+  )) {
+    setRetained({ id: recommendation.id, data: history.data, updatedAt: history.dataUpdatedAt });
+  }
+  const sameHistory = retained?.id === recommendation.id ? retained : null;
+  const historyState = useDataState({
+    ...history,
+    data: history.data ?? sameHistory?.data,
+    dataUpdatedAt: history.dataUpdatedAt || sameHistory?.updatedAt,
+  }, { provenance: 'historical' });
+  const observedPage = historyState.data;
   const historyItems = historyState.data?.items ?? [];
   const impact = recommendation.projected_impact;
   const riskLabels = {
@@ -196,7 +218,9 @@ export function RecommendationDetails({
           <Skeleton lines={2} className="mt-2" />
         ) : historyItems.length === 0 ? (
           <Text as="p" variant="bodySm" className="mt-2">
-            {t('actionCenter.history.empty', 'No actions have been recorded yet.')}
+            {observedPage?.total === 0
+              ? t('actionCenter.history.empty', 'No actions have been recorded yet.')
+              : t('common.noData', 'No data available')}
           </Text>
         ) : (
           <div className="mt-2 space-y-2">
@@ -213,6 +237,41 @@ export function RecommendationDetails({
                 </Text>
               </div>
             ))}
+          </div>
+        )}
+        {observedPage && (
+          <div className="mt-4 space-y-2">
+            <Text as="p" variant="caption" className="tabular-nums">
+              {t('pagination.showing', 'Showing {{start}}–{{end}} of {{total}}', {
+                start: fmtInt(historyItems.length > 0 ? observedPage.offset + 1 : 0),
+                end: fmtInt(historyItems.length > 0 ? observedPage.offset + historyItems.length : 0),
+                total: fmtInt(observedPage.total),
+              })}
+            </Text>
+            <Text as="p" variant="caption" className="tabular-nums">
+              {t('a11y.status.loadedCount', '{{label}} loaded, {{count}} items', {
+                label: t('actionCenter.history.resource', 'Action history'),
+                count: fmtInt(historyItems.length),
+              })}
+            </Text>
+            <fieldset
+              className="min-w-0"
+              disabled={history.isFetching || historyState.isRefreshBlocked}
+              aria-busy={history.isFetching}
+            >
+              <Pagination
+                page={Math.floor(observedPage.offset / observedPage.limit) + 1}
+                pageSize={observedPage.limit}
+                total={historyItems.length}
+                totalKind="loaded"
+                hasNextPage={observedPage.offset + observedPage.limit < observedPage.total
+                  && observedPage.offset + observedPage.limit <= 100000}
+                onPageChange={(page) => {
+                  const nextOffset = (page - 1) * observedPage.limit;
+                  if (nextOffset <= 100000) setPaging({ id: recommendation.id, offset: nextOffset });
+                }}
+              />
+            </fieldset>
           </div>
         )}
       </section>

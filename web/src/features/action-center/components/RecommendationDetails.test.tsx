@@ -35,6 +35,162 @@ vi.mock('@/hooks/useSettings', async () => {
     useSettings: () => ({ settings: preferences, locale: preferences.locale }),
   };
 });
+
+describe('RecommendationDetails bounded history coverage', () => {
+  function page(total: number, offset = 0, count = Math.min(25, Math.max(0, total - offset))): ActionCenterHistoryPage {
+    return {
+      ...historyPage, total, offset,
+      items: Array.from({ length: count }, (_, index) => ({
+        ...historyPage.items[0], id: offset + index + 1,
+        action: offset === 0 ? 'acknowledge' : 'restore',
+        from_state: offset === 0 ? 'open' : 'acknowledged',
+        to_state: offset === 0 ? 'acknowledged' : 'open',
+      })),
+    };
+  }
+
+  it.each([
+    { total: 0, count: 0, coverage: 'Showing 0–0 of 0', next: false },
+    { total: 25, count: 25, coverage: 'Showing 1–25 of 25', next: false },
+    { total: 26, count: 25, coverage: 'Showing 1–25 of 26', next: true },
+    { total: 71, count: 25, coverage: 'Showing 1–25 of 71', next: true },
+  ])('discloses actual loaded coverage and older access for total $total', ({ total, count, coverage, next }) => {
+    setHistory({ data: page(total) });
+    render(details());
+    const history = screen.getByRole('region', { name: 'Action history' });
+    expect(within(history).getByText(coverage)).toBeVisible();
+    expect(within(history).getByText(`Action history loaded, ${count} items`)).toBeVisible();
+    expect(within(history).getAllByRole('navigation', { name: 'Pagination' })).toHaveLength(1);
+    expect(within(history).getByRole('button', { name: 'Previous page' })).toBeDisabled();
+    expect(within(history).getByRole('button', { name: 'Next page' })).toHaveProperty('disabled', !next);
+    expect(within(history).queryAllByText('Acknowledge · Open → Acknowledged · Applied')).toHaveLength(count);
+    if (total === 0) expect(within(history).getByText('No actions have been recorded yet.')).toBeVisible();
+  });
+
+  it('loads the older page and returns to the previous page with exact bounded offsets', () => {
+    setHistory({ data: page(26) });
+    const { rerender } = render(details());
+    const history = screen.getByRole('region', { name: 'Action history' });
+    fireEvent.click(within(history).getByRole('button', { name: 'Next page' }));
+    expect(historyMock).toHaveBeenLastCalledWith(recommendation.id, true, { limit: 25, offset: 25 });
+    setHistory({ data: page(26, 25) });
+    rerender(details());
+    expect(within(history).getByText('Showing 26–26 of 26')).toBeVisible();
+    expect(within(history).getByText('Action history loaded, 1 items')).toBeVisible();
+    expect(within(history).getByText('Restore · Acknowledged → Open · Applied')).toBeVisible();
+    expect(within(history).getByRole('button', { name: 'Next page' })).toBeDisabled();
+    fireEvent.click(within(history).getByRole('button', { name: 'Previous page' }));
+    expect(historyMock).toHaveBeenLastCalledWith(recommendation.id, true, { limit: 25, offset: 0 });
+    setHistory({ data: page(26) });
+    rerender(details());
+    expect(within(history).getByText('Showing 1–25 of 26')).toBeVisible();
+  });
+
+  it('keeps observed coverage and every neighbor during page loading failure paused retry and recovery', () => {
+    const original = page(26);
+    setHistory({ data: original });
+    const { rerender } = render(details());
+    const history = screen.getByRole('region', { name: 'Action history' });
+    fireEvent.click(within(history).getByRole('button', { name: 'Next page' }));
+    setHistory({ data: undefined, isFetching: true, isPending: true });
+    rerender(details());
+    expect(within(history).getByText('Showing 1–25 of 26')).toBeVisible();
+    expect(within(history).queryByText('Showing 26–26 of 26')).not.toBeInTheDocument();
+    expect(within(history).getAllByText('Acknowledge · Open → Acknowledged · Applied')).toHaveLength(25);
+    expect(within(history).getByRole('button', { name: 'Next page' })).toBeDisabled();
+
+    setHistory({ data: undefined, isError: true, error: new Error('Older history failed') });
+    rerender(details());
+    expect(within(history).getByText('Showing 1–25 of 26')).toBeVisible();
+    expect(within(history).getByTestId('stale-refresh-warning')).toBeVisible();
+    expect(within(history).queryByRole('alert')).not.toBeInTheDocument();
+    fireEvent.click(within(history).getByRole('button', { name: 'Refresh' }));
+    expect(historyRetry).toHaveBeenCalledTimes(1);
+    expect(onOpenChange).not.toHaveBeenCalled();
+
+    setHistory({ data: undefined, fetchStatus: 'paused' });
+    rerender(details());
+    expect(within(history).getByTestId('stale-refresh-warning')).toHaveAttribute('data-refresh-blocked', 'true');
+    expect(within(history).getByText('Action history loaded, 25 items')).toBeVisible();
+    expect(within(history).queryByText(/offline/i)).not.toBeInTheDocument();
+    expect(screen.getByText('Alert persisted.')).toBeVisible();
+    expect(screen.getByText('Rank 450')).toBeVisible();
+    expect(screen.getByText('1.25 kWh')).toBeVisible();
+    expect(screen.getByText('Not a diagnosis.')).toBeVisible();
+
+    setHistory({ data: page(26, 25) });
+    rerender(details());
+    expect(within(history).getByText('Showing 26–26 of 26')).toBeVisible();
+    expect(within(history).getByText('Restore · Acknowledged → Open · Applied')).toBeVisible();
+    expect(within(history).queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
+    expect(original).toEqual(page(26));
+  });
+
+  it('resets paging and retained data immediately when the recommendation identifier changes', () => {
+    setHistory({ data: page(71) });
+    const { rerender } = render(details());
+    fireEvent.click(screen.getByRole('button', { name: 'Next page' }));
+    setHistory({ data: page(71, 25) });
+    rerender(details());
+    const other = { ...recommendation, id: 'ac_other' };
+    setHistory({ data: undefined, isPending: true, isLoading: true });
+    rerender(details(other));
+    expect(historyMock).toHaveBeenLastCalledWith('ac_other', true, { limit: 25, offset: 0 });
+    const history = screen.getByRole('region', { name: 'Action history' });
+    expect(within(history).queryByText('Showing 26–50 of 71')).not.toBeInTheDocument();
+    expect(within(history).queryByText('Restore · Acknowledged → Open · Applied')).not.toBeInTheDocument();
+    expect(within(history).queryByRole('navigation')).not.toBeInTheDocument();
+    rerender(details(recommendation));
+    expect(historyMock).toHaveBeenLastCalledWith(recommendation.id, true, { limit: 25, offset: 0 });
+    expect(within(history).queryByText('Showing 26–50 of 71')).not.toBeInTheDocument();
+    expect(within(history).queryByRole('navigation')).not.toBeInTheDocument();
+  });
+
+  it('uses returned row length and offset rather than nominal request coverage for short pages', () => {
+    setHistory({ data: page(71, 25, 2) });
+    render(details());
+    const history = screen.getByRole('region', { name: 'Action history' });
+    expect(within(history).getByText('Showing 26–27 of 71')).toBeVisible();
+    expect(within(history).getByText('Action history loaded, 2 items')).toBeVisible();
+    expect(within(history).queryByText('Showing 26–50 of 71')).not.toBeInTheDocument();
+    expect(within(history).getAllByText('Restore · Acknowledged → Open · Applied')).toHaveLength(2);
+  });
+
+  it('stops older navigation at the backend offset cap without hiding the real total', () => {
+    setHistory({ data: page(100026, 100000, 25) });
+    render(details());
+    const history = screen.getByRole('region', { name: 'Action history' });
+    expect(within(history).getByText('Showing 100,001–100,025 of 100,026')).toBeVisible();
+    expect(within(history).getByRole('button', { name: 'Next page' })).toBeDisabled();
+    expect(within(history).getByRole('button', { name: 'Previous page' })).toBeEnabled();
+    fireEvent.change(within(history).getByRole('textbox', { name: 'Go to page' }), { target: { value: '4002' } });
+    fireEvent.click(within(history).getByRole('button', { name: 'Go' }));
+    expect(historyMock).toHaveBeenLastCalledWith(recommendation.id, true, { limit: 25, offset: 0 });
+  });
+
+  it('does not relabel an empty older page as no recorded actions when the total remains positive', () => {
+    setHistory({ data: page(26, 25, 0) });
+    render(details());
+    const history = screen.getByRole('region', { name: 'Action history' });
+    expect(within(history).getByText('Showing 0–0 of 26')).toBeVisible();
+    expect(within(history).getByText('Action history loaded, 0 items')).toBeVisible();
+    expect(within(history).getByText('No data available')).toBeVisible();
+    expect(within(history).queryByText('No actions have been recorded yet.')).not.toBeInTheDocument();
+    expect(within(history).getByRole('button', { name: 'Previous page' })).toBeEnabled();
+  });
+
+  it('preserves the selected history page while closed and only enables fetching again on reopen', () => {
+    setHistory({ data: page(71) });
+    const { rerender } = render(details());
+    fireEvent.click(screen.getByRole('button', { name: 'Next page' }));
+    setHistory({ data: page(71, 25) });
+    rerender(details(recommendation, false));
+    expect(historyMock).toHaveBeenLastCalledWith(recommendation.id, false, { limit: 25, offset: 25 });
+    rerender(details());
+    expect(historyMock).toHaveBeenLastCalledWith(recommendation.id, true, { limit: 25, offset: 25 });
+    expect(screen.getByText('Showing 26–50 of 71')).toBeVisible();
+  });
+});
 vi.mock('@/lib/timezone', () => ({
   useTimezone: () => preferences.timezone_user,
 }));
@@ -260,11 +416,11 @@ describe('RecommendationDetails retained history trust', () => {
 
   it('preserves query identity enablement and the public accordion callback', () => {
     const { rerender } = render(details(recommendation, false));
-    expect(historyMock).toHaveBeenLastCalledWith(recommendation.id, false);
+    expect(historyMock).toHaveBeenLastCalledWith(recommendation.id, false, { limit: 25, offset: 0 });
     fireEvent.click(screen.getByRole('button', { name: /Evidence, scoring, and outcomes/ }));
     expect(onOpenChange).toHaveBeenCalledWith(true);
     rerender(details(recommendation, true));
-    expect(historyMock).toHaveBeenLastCalledWith(recommendation.id, true);
+    expect(historyMock).toHaveBeenLastCalledWith(recommendation.id, true, { limit: 25, offset: 0 });
     expect(screen.getByRole('region', { name: 'Action history' })).toBeVisible();
   });
 });

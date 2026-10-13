@@ -20,7 +20,20 @@ export const actionCenterKeys = {
   list: (filter: ActionCenterFilter = {}) => ['action-center', 'list', filter] as const,
   history: (recommendationId: string | undefined) =>
     ['action-center', 'history', recommendationId ?? null] as const,
+  historyPage: (
+    recommendationId: string | undefined,
+    paging: Pick<ActionCenterFilter, 'limit' | 'offset'> = {},
+  ) => [...actionCenterKeys.history(recommendationId), boundedHistoryPaging(paging)] as const,
 };
+
+function boundedHistoryPaging(paging: Pick<ActionCenterFilter, 'limit' | 'offset'>) {
+  return {
+    limit: Number.isFinite(paging.limit)
+      ? Math.max(1, Math.min(100, Math.floor(paging.limit!))) : 25,
+    offset: Number.isFinite(paging.offset)
+      ? Math.max(0, Math.min(100000, Math.floor(paging.offset!))) : 0,
+  };
+}
 
 function actionCenterQueryString(filter: ActionCenterFilter): string {
   const params = new URLSearchParams();
@@ -45,15 +58,20 @@ export function useActionCenter(filter: ActionCenterFilter = {}) {
 export function useActionCenterHistory(
   recommendationId: string | undefined,
   enabled = true,
+  paging: Pick<ActionCenterFilter, 'limit' | 'offset'> = {},
 ) {
+  const { limit, offset } = boundedHistoryPaging(paging);
   return useQuery({
-    queryKey: actionCenterKeys.history(recommendationId),
+    queryKey: actionCenterKeys.historyPage(recommendationId, { limit, offset }),
     queryFn: ({ signal }) =>
       request<ActionCenterHistoryPage>(
-        `/action-center/${encodeURIComponent(recommendationId ?? '')}/history?limit=25&offset=0`,
+        `/action-center/${encodeURIComponent(recommendationId ?? '')}/history?limit=${limit}&offset=${offset}`,
         { signal },
       ),
     enabled: enabled && !!recommendationId,
+    // Retain only another page of this recommendation, never another ID.
+    placeholderData: (previousData, previousQuery) =>
+      previousQuery?.queryKey[2] === recommendationId ? previousData : undefined,
   });
 }
 
