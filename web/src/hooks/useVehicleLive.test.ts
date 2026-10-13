@@ -56,12 +56,12 @@ function emit(payload: unknown) {
 }
 
 describe('useVehicleLive', () => {
-  beforeEach(() => {
+  beforeEach((): void => {
     capturedOnVehicleUpdate = undefined
     capturedEnabled = undefined
     mockConnected = false
     mockInitialData = undefined
-    liveRecoverySpy.mockClear()
+    liveRecoverySpy.mockReset()
   })
 
   it('arms SSE reconnect recovery for the live-signals read', () => {
@@ -294,5 +294,147 @@ describe('useVehicleLive', () => {
     expect(result.current.state.batteryLevel).toBe(55)
     expect(result.current.state.signalCount).toBe(3)
     expect(result.current.state.lastUpdated).toBeInstanceOf(Date)
+  })
+
+  it('resets every retained field before exposing a changed vehicle scope', () => {
+    const observed: Array<{ vehicleId: number; isolation: number; lastUpdated: Date | null }> = []
+    const { result, rerender } = renderHook(({ vehicleId }) => {
+      const live = useVehicleLive(vehicleId)
+      observed.push({ vehicleId, isolation: live.state.isolationResistance, lastUpdated: live.state.lastUpdated })
+      return live
+    }, { initialProps: { vehicleId: 1 } })
+    const emptyState = { ...result.current.state }
+    mockConnected = true
+    emit({
+      vehicle_id: 1,
+      state: {
+        VehicleSpeed: 24, BatteryLevel: 80, Gear: 'D', IsolationResistance: 600,
+        VehicleName: 'First vehicle', SoftwareUpdateVersion: '2026.1',
+        DetailedChargeState: 'DetailedChargeStateCharging', Locked: true,
+        HvacPower: true, DestinationName: 'First destination', TpmsPressureFl: 260,
+      },
+    })
+    expect(result.current.state.isolationResistance).toBe(600)
+    expect(result.current.state.isCharging).toBe(true)
+
+    rerender({ vehicleId: 2 })
+    expect(result.current.state).toEqual(emptyState)
+    expect(result.current.state.lastUpdated).toBeNull()
+    expect(result.current.state.signalCount).toBe(0)
+    expect(result.current.connected).toBe(true)
+    const newScopeRenders = observed.filter(entry => entry.vehicleId === 2)
+    expect(newScopeRenders.length).toBeGreaterThan(0)
+    for (const entry of newScopeRenders) {
+      expect(entry).toEqual({ vehicleId: 2, isolation: 0, lastUpdated: null })
+    }
+    expect(liveRecoverySpy).toHaveBeenLastCalledWith(
+      expect.objectContaining({ queryKeys: [['live-signals', 2]], enabled: true }),
+    )
+
+    emit({ vehicle_id: 2, state: { BatteryLevel: 0 } })
+    expect(result.current.state).toEqual({
+      ...emptyState, batteryLevel: 0, signalCount: 1, lastUpdated: expect.any(Date),
+    })
+  })
+
+  it('clears retained state when selection becomes null and does not rehydrate its old snapshot', () => {
+    mockInitialData = { vehicle_id: 1, signals: { IsolationResistance: { value: 750 }, VehicleName: 'First' } }
+    const { result, rerender } = renderHook(
+      ({ vehicleId }: { vehicleId: number | null }) => useVehicleLive(vehicleId ?? undefined),
+      { initialProps: { vehicleId: 1 as number | null } },
+    )
+    expect(result.current.state.isolationResistance).toBe(750)
+    const oldHandler = capturedOnVehicleUpdate
+
+    rerender({ vehicleId: null })
+    expect(result.current.state.isolationResistance).toBe(0)
+    expect(result.current.state.vehicleName).toBe('')
+    expect(result.current.state.lastUpdated).toBeNull()
+    expect(result.current.state.signalCount).toBe(0)
+    expect(capturedEnabled).toBe(true)
+    expect(liveRecoverySpy).toHaveBeenLastCalledWith(
+      expect.objectContaining({ queryKeys: [['live-signals', undefined]], enabled: false }),
+    )
+    act(() => oldHandler?.({ vehicle_id: 1, state: { IsolationResistance: 900 } }))
+    expect(result.current.state.isolationResistance).toBe(0)
+    expect(result.current.state.lastUpdated).toBeNull()
+  })
+
+  it('retains same-identity readings across rerenders and canonical recovery snapshots', () => {
+    const { result, rerender } = renderHook(
+      ({ vehicleId }) => useVehicleLive(vehicleId),
+      { initialProps: { vehicleId: 1 } },
+    )
+    emit({ vehicle_id: 1, state: { IsolationResistance: 650, VehicleName: 'Retained', Locked: false } })
+    const receivedAt = result.current.state.lastUpdated
+    rerender({ vehicleId: 1 })
+    expect(result.current.state.lastUpdated).toBe(receivedAt)
+    expect(result.current.state.isolationResistance).toBe(650)
+
+    mockInitialData = { vehicle_id: 1, signals: { BatteryLevel: { value: 0 }, PackCurrent: { value: 0 } } }
+    rerender({ vehicleId: 1 })
+    expect(result.current.state.isolationResistance).toBe(650)
+    expect(result.current.state.vehicleName).toBe('Retained')
+    expect(result.current.state.locked).toBe(false)
+    expect(result.current.state.batteryLevel).toBe(0)
+    expect(result.current.state.packCurrent).toBe(0)
+    expect(result.current.state.signalCount).toBe(2)
+    expect(result.current.connected).toBe(false)
+  })
+
+  it('rejects delayed old events and mismatched snapshots after switching vehicles', () => {
+    mockInitialData = { vehicle_id: 1, signals: { IsolationResistance: { value: 800 } } }
+    const { result, rerender } = renderHook(
+      ({ vehicleId }) => useVehicleLive(vehicleId),
+      { initialProps: { vehicleId: 1 } },
+    )
+    const oldHandler = capturedOnVehicleUpdate
+    rerender({ vehicleId: 2 })
+    act(() => oldHandler?.({ vehicle_id: 1, state: { VehicleSpeed: 99 } }))
+    emit({ vehicle_id: 1, state: { IsolationResistance: 999 } })
+    expect(result.current.state.speed).toBe(0)
+    expect(result.current.state.isolationResistance).toBe(0)
+    expect(result.current.state.lastUpdated).toBeNull()
+
+    mockInitialData = { vehicle_id: 2, signals: { BatteryLevel: { value: 42 } } }
+    rerender({ vehicleId: 2 })
+    expect(result.current.state.batteryLevel).toBe(42)
+    expect(result.current.state.isolationResistance).toBe(0)
+    expect(result.current.state.signalCount).toBe(1)
+    expect(result.current.state.lastUpdated).toBeInstanceOf(Date)
+  })
+
+  it('rejects an obsolete callback even after returning to its original vehicle', () => {
+    const { result, rerender } = renderHook(
+      ({ vehicleId }) => useVehicleLive(vehicleId),
+      { initialProps: { vehicleId: 1 } },
+    )
+    emit({ vehicle_id: 1, state: { IsolationResistance: 600 } })
+    const originalHandler = capturedOnVehicleUpdate
+    rerender({ vehicleId: 2 })
+    emit({ vehicle_id: 2, state: { VehicleName: 'Second' } })
+    rerender({ vehicleId: 1 })
+    act(() => originalHandler?.({ vehicle_id: 1, state: { IsolationResistance: 950 } }))
+    expect(result.current.state.isolationResistance).toBe(0)
+    expect(result.current.state.vehicleName).toBe('')
+    expect(result.current.state.lastUpdated).toBeNull()
+    emit({ vehicle_id: 1, state: { VehicleSpeed: 0 } })
+    expect(result.current.state.speed).toBe(0)
+    expect(result.current.state.signalCount).toBe(1)
+    expect(result.current.state.lastUpdated).toBeInstanceOf(Date)
+  })
+
+  it('keeps unscoped SSE support without merging readings from different vehicle identities', () => {
+    const { result } = renderHook(() => useVehicleLive())
+    emit({ vehicle_id: 7, state: { IsolationResistance: 700, VehicleName: 'Seventh' } })
+    emit({ vehicle_id: 7, state: { VehicleSpeed: 12 } })
+    expect(result.current.state.isolationResistance).toBe(700)
+    expect(result.current.state.speed).toBe(12)
+    emit({ vehicle_id: 8, state: { BatteryLevel: 0 } })
+    expect(result.current.state.isolationResistance).toBe(0)
+    expect(result.current.state.vehicleName).toBe('')
+    expect(result.current.state.speed).toBe(0)
+    expect(result.current.state.batteryLevel).toBe(0)
+    expect(result.current.state.signalCount).toBe(1)
   })
 })

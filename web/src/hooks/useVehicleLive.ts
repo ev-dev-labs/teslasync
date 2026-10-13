@@ -436,7 +436,7 @@ function parseSignals(raw: Record<string, unknown>): Partial<VehicleLiveState> {
 
 /**
  * Hook that provides always-complete vehicle live state via SSE.
- * Merges incoming signal updates into the state — never loses known values.
+ * Retains known values within one vehicle identity; a scope change resets them.
  * 
  * Usage:
  * ```
@@ -446,8 +446,17 @@ function parseSignals(raw: Record<string, unknown>): Partial<VehicleLiveState> {
  */
 export function useVehicleLive(vehicleId?: number) {
   const [state, setState] = useState<VehicleLiveState>({ ...EMPTY_STATE })
-  const stateRef = useRef(state)
-  stateRef.current = state
+  const identityRef = useRef({ vehicleId })
+  const liveVehicleIdRef = useRef(vehicleId)
+  const identityChanged = identityRef.current.vehicleId !== vehicleId
+  if (identityChanged) {
+    // Reset before children can consume the new scope. A new token also
+    // rejects old callbacks after an A → B → A selection sequence.
+    identityRef.current = { vehicleId }
+    liveVehicleIdRef.current = vehicleId
+    setState({ ...EMPTY_STATE })
+  }
+  const identity = identityRef.current
   const { data: initialLiveSignals } = useVehicleLiveSignals(vehicleId)
 
   // Redis Pub/Sub does not replay: every `vehicle_update` published while the
@@ -460,6 +469,7 @@ export function useVehicleLive(vehicleId?: number) {
   })
 
   const handleUpdate = useCallback((data: unknown) => {
+    if (identityRef.current !== identity) return
     const update = data as { vehicle_id?: number; state?: Record<string, unknown>; signals?: Record<string, unknown> }
     if (vehicleId && update.vehicle_id !== vehicleId) return
 
@@ -468,13 +478,15 @@ export function useVehicleLive(vehicleId?: number) {
     if (!raw) return
 
     const parsed = parseSignals(raw)
-    setState(prev => ({
-      ...prev,
+    const changedLiveVehicle = liveVehicleIdRef.current !== update.vehicle_id
+    liveVehicleIdRef.current = update.vehicle_id
+    setState(prev => identityRef.current !== identity ? prev : ({
+      ...(!vehicleId && changedLiveVehicle ? EMPTY_STATE : prev),
       ...parsed,
       lastUpdated: new Date(),
       signalCount: Object.keys(raw).length,
     }))
-  }, [vehicleId])
+  }, [vehicleId, identity])
 
   const { connected } = useRealtimeEvents({
     onVehicleUpdate: handleUpdate,
@@ -482,7 +494,8 @@ export function useVehicleLive(vehicleId?: number) {
   })
 
   useEffect(() => {
-    if (!initialLiveSignals?.signals) return
+    if (vehicleId == null || !initialLiveSignals?.signals) return
+    if (initialLiveSignals.vehicle_id != null && initialLiveSignals.vehicle_id !== vehicleId) return
 
     const flat: Record<string, unknown> = {}
     for (const [k, v] of Object.entries(initialLiveSignals.signals)) {
@@ -494,13 +507,13 @@ export function useVehicleLive(vehicleId?: number) {
     }
 
     const parsed = parseSignals(flat)
-    setState(prev => ({
+    setState(prev => identityRef.current !== identity ? prev : ({
       ...prev,
       ...parsed,
       lastUpdated: new Date(),
       signalCount: Object.keys(flat).length,
     }))
-  }, [initialLiveSignals])
+  }, [initialLiveSignals, vehicleId, identity])
 
-  return { state, connected }
+  return { state: identityChanged ? EMPTY_STATE : state, connected }
 }
