@@ -650,3 +650,46 @@ describe('IncidentTimelinePage', () => {
     expect(screen.getByText('System Status Home')).toBeInTheDocument();
   });
 });
+
+
+describe('IncidentTimelinePage section preservation', () => {
+  it.each(['loading', 'error', 'empty'] as const)(
+    'keeps overview, details, timeline and post-update shells visible when the source is %s',
+    state => {
+      mockUseIncident.mockReturnValue({
+        ...loadedQuery(undefined),
+        isLoading: state === 'loading',
+        error: state === 'error' ? new Error('incident source unavailable') : null,
+        isError: state === 'error',
+      });
+      renderAt();
+
+      expect(screen.getByRole('region', { name: 'Incident metrics' })).toBeInTheDocument();
+      const overview = screen.getByRole('region', { name: 'Incident overview and details' });
+      const timeline = screen.getByRole('region', { name: 'Incident timeline and updates' });
+      expect(within(overview).getByText('Details')).toBeInTheDocument();
+      expect(within(timeline).getByText('Timeline')).toBeInTheDocument();
+      expect(within(timeline).getByText('Post an update')).toBeInTheDocument();
+      if (state !== 'loading') {
+        expect(within(overview).getAllByText('Incident window unavailable until the source resolves.')).toHaveLength(2);
+        expect(within(timeline).getAllByText('Incident window unavailable until the source resolves.')).toHaveLength(2);
+      }
+      expect(within(timeline).queryByRole('list', { name: 'Incident updates' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('form', { name: 'Add incident update' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Resolve' })).not.toBeInTheDocument();
+      expect(screen.queryByTestId('ai-summarizer-stub')).not.toBeInTheDocument();
+    },
+  );
+
+  it('uses a neutral decorative timeline icon without changing the canonical updates', () => {
+    mockUseIncident.mockReturnValue(loadedQuery(baseIncident()));
+    renderAt();
+    const region = screen.getByRole('region', { name: 'Incident timeline and updates' });
+    const title = within(region).getByText('Timeline');
+    const icon = title.parentElement?.querySelector('svg');
+    expect(icon).toHaveClass('text-muted');
+    expect(icon).toHaveAttribute('aria-hidden', 'true');
+    expect(icon).toHaveAttribute('focusable', 'false');
+    expect(within(region).getAllByRole('listitem')).toHaveLength(3);
+  });
+});

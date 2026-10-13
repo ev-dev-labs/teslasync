@@ -24,7 +24,7 @@ import {
 } from 'lucide-react'
 import { PageLayout } from '@/components/layout'
 import {
-  GlassPanel, Button, Badge, ConfirmDialog, PanelTitle, Text, Label,
+  GlassPanel, Button, Badge, ConfirmDialog, PanelTitle, Text, Label, Icon,
 } from '@/components/ui'
 import { KVList } from '@/components/data-display'
 import { SystemSummaryBrief } from '../components/operationalbrief-all/SystemSummaryBrief'
@@ -71,7 +71,7 @@ export default function IncidentTimelinePage() {
 
   const backAction = (
     <Button variant="ghost" size="sm" onClick={() => navigate('/system-status')} className="gap-1.5">
-      <ArrowLeft className="h-3.5 w-3.5" aria-hidden="true" />
+      <Icon icon={ArrowLeft} size="sm" />
       {t('incidentTimeline.back', 'Back')}
     </Button>
   )
@@ -91,8 +91,8 @@ export default function IncidentTimelinePage() {
         { metricId: 'duration', occurrenceId: 'duration', rawValue: incident
           ? (Date.parse(incident.resolved_at ?? new Date().toISOString()) - Date.parse(incident.started_at)) / 1000 : null,
           label: t('incidentTimeline.kpi.duration', 'Duration'), display: { formatter: () => ({ value: durationLabel || '—', unit: '' }) } },
-        { metricId: 'count', occurrenceId: 'updates', rawValue: incident ? updates.length : null, label: t('incidentTimeline.kpi.updates', 'Updates') },
-        { metricId: 'count', occurrenceId: 'affected', rawValue: incident ? affected.length : null, label: t('incidentTimeline.kpi.affected', 'Affected') },
+        { metricId: 'count', occurrenceId: 'updates', rawValue: incident?.updates != null ? updates.length : null, label: t('incidentTimeline.kpi.updates', 'Updates') },
+        { metricId: 'count', occurrenceId: 'affected', rawValue: incident?.affected_components != null ? affected.length : null, label: t('incidentTimeline.kpi.affected', 'Affected') },
       ]}
       textMetrics={[
         { key: 'status', label: t('incidentTimeline.kpi.status', 'Status'), value: incident ? statusLabel(incident.status) : '—',
@@ -105,14 +105,45 @@ export default function IncidentTimelinePage() {
     />
   )
 
+  // Keep source-shaped panel shells while the incident source is unavailable.
+  // Missing source data is not a resolved incident or an empty update history.
+  const unavailableContent = isLoading ? (
+    <Skeleton height={160} />
+  ) : (
+    <EmptyState message={t('incidentTimeline.brief.unknownScope', 'Incident window unavailable until the source resolves.')} />
+  )
+  const unavailablePanels = (
+    <>
+      <section aria-label={t('incidentTimeline.overview', 'Incident overview and details')} className="grid min-w-0 grid-cols-1 gap-4 xl:grid-cols-3">
+        <GlassPanel className="min-w-0 p-4 sm:p-5 xl:col-span-2">
+          {unavailableContent}
+        </GlassPanel>
+        <GlassPanel className="min-w-0 p-4 sm:p-5">
+          <PanelTitle className="mb-3">{t('incidentTimeline.details', 'Details')}</PanelTitle>
+          {unavailableContent}
+        </GlassPanel>
+      </section>
+      <section aria-label={t('incidentTimeline.timelineRegion', 'Incident timeline and updates')} className="grid min-w-0 grid-cols-1 gap-4 xl:grid-cols-3">
+        <GlassPanel className="min-w-0 p-4 sm:p-5 xl:col-span-2">
+          <PanelTitle className="mb-3 flex items-center gap-2">
+            <Icon icon={MessageSquare} className="text-muted" />
+            {t('incidentTimeline.timeline', 'Timeline')}
+          </PanelTitle>
+          {unavailableContent}
+        </GlassPanel>
+        <GlassPanel className="min-w-0 p-4 sm:p-5">
+          <PanelTitle className="mb-3">{t('incidentTimeline.postUpdate', 'Post an update')}</PanelTitle>
+          {unavailableContent}
+        </GlassPanel>
+      </section>
+    </>
+  )
+
   if (isLoading && !incident) {
     return (
       <PageLayout title={t('incidentTimeline.title', 'Incident')} subtitle={t('incidentTimeline.loading', 'Loading incident…')} secondaryActions={backAction}>
         {summary}
-        <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
-          <div className="xl:col-span-2"><Skeleton height={240} /></div>
-          <Skeleton height={240} />
-        </div>
+        {unavailablePanels}
       </PageLayout>
     )
   }
@@ -132,7 +163,7 @@ export default function IncidentTimelinePage() {
               />
             ) : (
               <EmptyState
-                icon={<AlertCircle className="h-8 w-8" aria-hidden="true" />}
+                icon={<Icon icon={AlertCircle} size="xl" />}
                 title={t('incidentTimeline.notFoundTitle', 'Incident not found')}
                 message={t('incidentTimeline.notFoundBody', "It may have been deleted or you don't have access.")}
                 actionTo={{ label: t('incidentTimeline.backToStatus', 'Back to system status'), to: '/system-status' }}
@@ -140,6 +171,7 @@ export default function IncidentTimelinePage() {
             )}
           </GlassPanel>
         </FadeIn>
+        {unavailablePanels}
       </PageLayout>
     )
   }
@@ -156,7 +188,7 @@ export default function IncidentTimelinePage() {
   }
 
   const detailItems = [
-    { label: t('incidentTimeline.detail.status', 'Status'), value: <Badge variant={STATUS_BADGE[incident.status]}>{statusLabel(incident.status)}</Badge> },
+    { label: t('incidentTimeline.detail.status', 'Status'), value: <Badge variant={STATUS_BADGE[incident.status] ?? 'neutral'}>{statusLabel(incident.status)}</Badge> },
     { label: t('incidentTimeline.detail.source', 'Source'), value: incident.source ?? '—' },
     { label: t('incidentTimeline.detail.started', 'Started'), value: fmtAbs(incident.started_at) },
     { label: t('incidentTimeline.detail.resolved', 'Resolved'), value: incident.resolved_at ? fmtAbs(incident.resolved_at) : '—' },
@@ -186,7 +218,7 @@ export default function IncidentTimelinePage() {
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div className="flex flex-wrap items-center gap-2">
                 <IncidentSeverityChip severity={incident.severity} />
-                <Badge variant={STATUS_BADGE[incident.status]}>{statusLabel(incident.status)}</Badge>
+                <Badge variant={STATUS_BADGE[incident.status] ?? 'neutral'}>{statusLabel(incident.status)}</Badge>
                 {isResolved ? (
                   <Badge variant="success">{t('incidentTimeline.resolvedFor', 'Resolved')} · {fmtDuration(incident.started_at, incident.resolved_at)}</Badge>
                 ) : (
@@ -195,7 +227,7 @@ export default function IncidentTimelinePage() {
               </div>
               {!isResolved && (
                 <Button type="button" variant="primary" size="sm" onClick={() => setConfirmResolve(true)} disabled={patch.isPending} className="shrink-0 gap-1.5">
-                  <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" />
+                  <Icon icon={CheckCircle2} size="sm" />
                   {t('incidentTimeline.resolve', 'Resolve')}
                 </Button>
               )}
@@ -218,7 +250,7 @@ export default function IncidentTimelinePage() {
               </div>
 
               <Text as="p" variant="caption" className="inline-flex items-center gap-1.5">
-                <Clock className="h-3 w-3" aria-hidden="true" />
+                <Icon icon={Clock} size="xs" />
                 {t('incidentTimeline.started', 'Started')} {fmtAbs(incident.started_at)}
                 {incident.resolved_at ? ` · ${t('incidentTimeline.resolvedAt', 'Resolved')} ${fmtAbs(incident.resolved_at)}` : ''}
               </Text>
@@ -240,7 +272,7 @@ export default function IncidentTimelinePage() {
         <section aria-label={t('incidentTimeline.timelineRegion', 'Incident timeline and updates')} className="grid grid-cols-1 gap-4 xl:grid-cols-3">
           <GlassPanel className="p-4 sm:p-5 xl:col-span-2">
             <PanelTitle className="mb-3 flex items-center gap-2">
-              <MessageSquare className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+              <Icon icon={MessageSquare} className="text-muted" />
               {t('incidentTimeline.timeline', 'Timeline')}
               <Badge variant="neutral" size="sm">{updates.length}</Badge>
             </PanelTitle>
@@ -252,7 +284,7 @@ export default function IncidentTimelinePage() {
             {isResolved ? (
               // no-action: resolved incidents are read-only by design (this file's "canonical close-out" rule) — posting updates is intentionally disabled.
               <EmptyState
-                icon={<CheckCircle2 className="h-8 w-8" aria-hidden="true" />}
+                icon={<Icon icon={CheckCircle2} size="xl" />}
                 title={t('incidentTimeline.resolvedTitle', 'Incident resolved')}
                 message={t('incidentTimeline.resolvedBody', 'This incident is closed. The timeline remains available for reference.')}
               />
