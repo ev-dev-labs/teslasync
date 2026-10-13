@@ -8,7 +8,7 @@ import { useClimateHistory } from '@/api/hooks/useVehicleSystems';
 import { PageLayout } from '@/components/layout';
 import { deriveDataState } from '@/api/dataState';
 import { FadeIn } from '@/components/motion';
-import { Button } from '@/components/ui';
+import { Button, Icon } from '@/components/ui';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useUnits } from '@/hooks/useUnits';
@@ -96,8 +96,8 @@ export default function PreconditioningEffectivenessPage() {
           ),
         isResolved: climateQuery.isSuccess || climateHasData,
         isFetching: climateQuery.isFetching,
-        isPaused:
-          !climateHasData && climateQuery.fetchStatus === 'paused',
+        // A paused refresh still retains historical evidence; it is not a fresh load.
+        isPaused: climateQuery.fetchStatus === 'paused',
         error: climateSource.fatalError,
         refreshError: climateSource.refreshError,
         onRetry: retryClimate,
@@ -115,8 +115,7 @@ export default function PreconditioningEffectivenessPage() {
           ),
         isResolved: drivesQuery.isSuccess || drivesHaveData,
         isFetching: drivesQuery.isFetching,
-        isPaused:
-          !drivesHaveData && drivesQuery.fetchStatus === 'paused',
+        isPaused: drivesQuery.fetchStatus === 'paused',
         error: drivesSource.fatalError,
         refreshError: drivesSource.refreshError,
         onRetry: retryDrives,
@@ -150,6 +149,20 @@ export default function PreconditioningEffectivenessPage() {
       vehicleId,
     ],
   );
+  // SectionBody's current paused guard means 'no usable evidence'. Keep that
+  // presentation contract separate from the ledger's actual transport state,
+  // so offline refreshes disclose retained evidence without blanking its panels.
+  const sectionState: PreconditioningQueryState = {
+    ...queryState,
+    climate: {
+      ...queryState.climate,
+      isPaused: queryState.climate.isPaused && !climateHasData,
+    },
+    drives: {
+      ...queryState.drives,
+      isPaused: queryState.drives.isPaused && !drivesHaveData,
+    },
+  };
   const convertDelta = useCallback<TemperatureDeltaConverter>(
     (valueC) => (
       valueC == null || !Number.isFinite(valueC)
@@ -188,10 +201,12 @@ export default function PreconditioningEffectivenessPage() {
             type="button"
             variant="secondary"
             size="sm"
+            wrapLabel
+            className="min-h-11 md:min-h-9"
             onClick={refreshAll}
             disabled={vehicleId == null}
             loading={refreshing && vehicleId != null}
-            icon={<RefreshCw className="h-4 w-4" aria-hidden="true" />}
+            icon={<Icon icon={RefreshCw} />}
           >
             {t(
               'preconditioningEffectiveness.actions.refresh',
@@ -217,29 +232,29 @@ export default function PreconditioningEffectivenessPage() {
         />
       </FadeIn>
       <FadeIn delay={0.04}>
-        <PreconditioningClimateDisposition summary={summary} state={queryState} />
+        <PreconditioningClimateDisposition summary={summary} state={sectionState} />
       </FadeIn>
       <FadeIn delay={0.05}>
-        <PreconditioningDepartureDisposition summary={summary} state={queryState} />
+        <PreconditioningDepartureDisposition summary={summary} state={sectionState} />
       </FadeIn>
       <FadeIn delay={0.06}>
         <PreconditioningJoinSupport
           summary={summary}
-          state={queryState}
+          state={sectionState}
           formatDuration={formatDuration}
         />
       </FadeIn>
       <FadeIn delay={0.07}>
         <PreconditioningHourlyProfile
           summary={summary}
-          state={queryState}
+          state={sectionState}
           formatDelta={formatDelta}
         />
       </FadeIn>
       <FadeIn delay={0.08}>
         <PreconditioningReadinessComparison
           summary={summary}
-          state={queryState}
+          state={sectionState}
           convertDelta={convertDelta}
           formatDelta={formatDelta}
           temperatureUnit={unitPrefs.temperature}
@@ -248,7 +263,7 @@ export default function PreconditioningEffectivenessPage() {
       <FadeIn delay={0.09}>
         <PreconditioningImprovementComparison
           summary={summary}
-          state={queryState}
+          state={sectionState}
           convertDelta={convertDelta}
           formatDelta={formatDelta}
           temperatureUnit={unitPrefs.temperature}
@@ -257,21 +272,21 @@ export default function PreconditioningEffectivenessPage() {
       <FadeIn delay={0.1}>
         <PreconditioningStrata
           summary={summary}
-          state={queryState}
+          state={sectionState}
           formatDelta={formatDelta}
         />
       </FadeIn>
       <FadeIn delay={0.11}>
         <PreconditioningImprovementDistribution
           summary={summary}
-          state={queryState}
+          state={sectionState}
           formatDelta={formatDelta}
         />
       </FadeIn>
       <FadeIn delay={0.12}>
         <PreconditioningThresholdConfidence
           summary={summary}
-          state={queryState}
+          state={sectionState}
           formatDuration={formatDuration}
           formatDelta={formatDelta}
         />
@@ -279,20 +294,20 @@ export default function PreconditioningEffectivenessPage() {
       <FadeIn delay={0.13}>
         <PreconditioningDepartureDirectory
           summary={summary}
-          state={queryState}
+          state={sectionState}
           locale={locale}
           formatDuration={formatDuration}
           formatDelta={formatDelta}
         />
       </FadeIn>
       <FadeIn delay={0.14}>
-        <PreconditioningExactAccounting summary={summary} state={queryState} />
+        <PreconditioningExactAccounting summary={summary} state={sectionState} />
       </FadeIn>
       <FadeIn delay={0.15}>
-        <PreconditioningDataAvailability summary={summary} state={queryState} />
+        <PreconditioningDataAvailability summary={summary} state={sectionState} />
       </FadeIn>
       <FadeIn delay={0.16}>
-        <PreconditioningMethodology summary={summary} state={queryState} />
+        <PreconditioningMethodology summary={summary} state={sectionState} />
       </FadeIn>
     </PageLayout>
   );

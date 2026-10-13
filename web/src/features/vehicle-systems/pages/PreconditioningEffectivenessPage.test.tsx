@@ -480,4 +480,95 @@ describe('PreconditioningEffectivenessPage', () => {
 
     expect(screen.getAllByText('+18.0 °F').length).toBeGreaterThan(0);
   });
+
+
+  it.each(['climate', 'drives', 'both'] as const)(
+    'retains comparisons and discloses a paused %s refresh',
+    (source) => {
+      const evidence = comparisonEvidence();
+      if (source !== 'drives') {
+        h.climateQuery = query(h.climateRefetch, {
+          data: evidence.climate,
+          fetchStatus: 'paused',
+        });
+      }
+      if (source !== 'climate') {
+        h.driveQuery = query(h.driveRefetch, {
+          data: evidence.drives,
+          fetchStatus: 'paused',
+        });
+      }
+      renderPage();
+
+      expectEverySection();
+      expect(screen.getByText(
+        'Evidence loading is paused while the network is unavailable; no empty response has been inferred.',
+      )).toBeInTheDocument();
+      expect(within(screen.getByTestId('preconditioning-readiness-comparison'))
+        .getByText('Median departure gap by observational group')).toBeInTheDocument();
+      expect(screen.getAllByText('+9.0 °C').length).toBeGreaterThan(0);
+      expect(screen.queryByText('Climate-history query failed')).not.toBeInTheDocument();
+      expect(screen.queryByText('Drive-history query failed')).not.toBeInTheDocument();
+      fireEvent.click(screen.getByRole('button', { name: 'Refresh evidence' }));
+      expect(h.climateRefetch).toHaveBeenCalledTimes(1);
+      expect(h.driveRefetch).toHaveBeenCalledTimes(1);
+    },
+  );
+
+  it('retains exact zero accounting when empty evidence has a paused refresh', () => {
+    h.climateQuery = query<ClimateState[]>(h.climateRefetch, {
+      data: [],
+      fetchStatus: 'paused',
+    });
+    h.driveQuery = query<Drive[]>(h.driveRefetch, {
+      data: [],
+      fetchStatus: 'paused',
+    });
+    renderPage();
+
+    expectEverySection();
+    expect(screen.getByText(
+      'Evidence loading is paused while the network is unavailable; no empty response has been inferred.',
+    )).toBeInTheDocument();
+    expect(within(screen.getByTestId('preconditioning-accounting'))
+      .getAllByText('Balances')).toHaveLength(7);
+  });
+
+  it('clears the paused notice after sources resume without losing sections', () => {
+    const evidence = comparisonEvidence();
+    h.climateQuery = query(h.climateRefetch, {
+      data: evidence.climate,
+      fetchStatus: 'paused',
+    });
+    const view = renderPage();
+    expect(screen.getByText(
+      'Evidence loading is paused while the network is unavailable; no empty response has been inferred.',
+    )).toBeInTheDocument();
+
+    h.climateQuery = query(h.climateRefetch, { data: evidence.climate });
+    view.rerender(
+      <MemoryRouter initialEntries={['/preconditioning-effectiveness']}>
+        <PreconditioningEffectivenessPage />
+      </MemoryRouter>,
+    );
+
+    expectEverySection();
+    expect(screen.queryByText(
+      'Evidence loading is paused while the network is unavailable; no empty response has been inferred.',
+    )).not.toBeInTheDocument();
+    expect(screen.getAllByText('+9.0 °C').length).toBeGreaterThan(0);
+  });
+
+  it('preserves negative observational temperature differences in Fahrenheit', () => {
+    const evidence = comparisonEvidence();
+    evidence.climate[1] = { ...evidence.climate[1]!, insideTemp: 37 };
+    h.climateQuery = query(h.climateRefetch, { data: evidence.climate });
+    h.temperature = '°F';
+    renderPage();
+
+    expectEverySection();
+    expect(screen.getAllByText('-5.4 °F').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('-7.2 °F').length).toBeGreaterThan(0);
+    expect(evidence.climate[1]!.insideTemp).toBe(37);
+  });
 });
