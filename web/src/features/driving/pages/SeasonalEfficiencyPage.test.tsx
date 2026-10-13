@@ -31,6 +31,20 @@ vi.mock('react-i18next', () => ({
   }),
 }));
 
+// Class-based shared boundaries use i18next directly, not useTranslation.
+// Preserve the real module while supplying the same English fallback contract.
+vi.mock('i18next', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('i18next')>();
+  return {
+    ...actual,
+    default: {
+      ...actual.default,
+      t: (key: string, fallback?: string | { defaultValue?: string }) =>
+        typeof fallback === 'string' ? fallback : fallback?.defaultValue ?? key,
+    },
+  };
+});
+
 vi.mock('@/api/hooks/useDriving', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/api/hooks/useDriving')>();
   return {
