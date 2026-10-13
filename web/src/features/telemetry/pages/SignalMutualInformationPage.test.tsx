@@ -1,6 +1,7 @@
 import type { ComponentProps, ReactNode } from 'react';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { MemoryRouter } from 'react-router-dom';
 import type { SignalHistoryResponse } from '@/types/telemetry';
 import type { ChartContainerProps } from '@/components/charts';
 import type { TelemetrySummaryBrief } from '../components/operationalbrief-all/TelemetrySummaryBrief';
@@ -131,7 +132,7 @@ describe('SignalMutualInformationPage', () => {
   it('retains returned source bounds and requested-window provenance', () => {
     H.a = response('NumericA'); H.b = response('NumericB');
     render(<SignalMutualInformationPage />); choosePair();
-    expect(brief().scope).toBe('24h requested Ã‚Â· NumericA / NumericB Ã‚Â· aligned overlap only');
+    expect(brief().scope).toBe('24h requested · NumericA / NumericB · aligned overlap only');
     expect(brief().sourceBounds).toEqual([
       { signal: 'NumericA', from: H.a.from, to: H.a.to }, { signal: 'NumericB', from: H.b.from, to: H.b.to },
     ]);
@@ -145,7 +146,7 @@ describe('SignalMutualInformationPage', () => {
   });
   it('keeps every section and exact failed-source retry on fatal history errors', () => {
     H.aError = new Error('A failed'); H.b = response('NumericB');
-    render(<SignalMutualInformationPage />); choosePair(); assertSections();
+    render(<MemoryRouter><SignalMutualInformationPage /></MemoryRouter>); choosePair(); assertSections();
     expect(brief().unavailable).toBe(true); expect(chart().error).toBe(H.aError);
     chart().onRetry?.(); expect(H.aRetry).toHaveBeenCalledOnce(); expect(H.bRetry).not.toHaveBeenCalled();
   });
