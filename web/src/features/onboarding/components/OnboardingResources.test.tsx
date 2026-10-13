@@ -257,7 +257,7 @@ describe('OnboardingResources restrained full-label presentation', () => {
       ];
 
       for (const resource of resources) {
-        const name = `${resource.title} ${resource.desc}${resource.external ? ' (öffnet in einem neuen Tab)' : ''}`;
+        const name = `${resource.title}${resource.desc}${resource.external ? '(öffnet in einem neuen Tab)' : ''}`;
         const link = within(nav).getByRole('link', { name });
         expect(link).toHaveAttribute('href', resource.href);
         expect(within(link).getByText(resource.title)).toHaveClass('whitespace-normal', 'break-words');
