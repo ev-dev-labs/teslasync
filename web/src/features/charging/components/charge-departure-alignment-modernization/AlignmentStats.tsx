@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { type StatMetric } from '@/components/data-display/stat-reference';
+import type { StatMetric } from '@/components/data-display';
 import { ChargingSummaryBrief } from '../operationalbrief-all/ChargingSummaryBrief';
 import { Badge, HelpTooltip } from '@/components/ui';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
@@ -28,6 +28,21 @@ export function AlignmentStats({ summary, loading, retained, missingReason, hist
     'help.chargeDepartureAlignment.misaligned',
     'Share of pairings that tripped at least one heuristic (a tight margin, a very long or already-full dwell, far more energy added than that trip used, or an inconsistent SoC reading). Each is circumstantial on its own.',
   );
+  const inference = t(
+    'chargeDepartureAlignment.modernization.inference',
+    'Dwell is derived from recorded timestamps; readiness margin is the recorded drive-end SoC. Pairing and flags are model-derived, not measurements of charging intent.',
+  );
+  const sourceStatus = retained
+    ? t('trips.brief.status.stale', 'Retained source')
+    : loading
+      ? t('trips.brief.status.initial', 'Loading source')
+      : !summary
+        ? t('trips.brief.status.unavailable', 'Source unavailable')
+        : !hasPairs
+          ? noPairs
+          : summary.avgReadinessMarginPct == null
+            ? t('trips.brief.status.partial', 'Partial source')
+            : t('notificationLatency.slowest.derived', 'Derived');
   const percentDisplay = { precision, units: { locale } };
   const countDisplay = { precision: 0, units: { locale } };
   const metrics: StatMetric[] = [
@@ -81,6 +96,8 @@ export function AlignmentStats({ summary, loading, retained, missingReason, hist
     <ChargingSummaryBrief
       id="charge-departure-alignment-summary"
       title={t('chargeDepartureAlignment.kpis', 'Charge departure alignment metrics')}
+      description={inference}
+      sourceStatus={sourceStatus}
       metrics={metrics}
       loading={loading}
       retained={retained}
@@ -97,10 +114,6 @@ export function AlignmentStats({ summary, loading, retained, missingReason, hist
         <div className="space-y-3">
           {historyContext}
           <div className="flex flex-wrap items-center gap-2">
-            <span>{t(
-              'chargeDepartureAlignment.modernization.inference',
-              'Dwell is derived from recorded timestamps; readiness margin is the recorded drive-end SoC. Pairing and flags are model-derived, not measurements of charging intent.',
-            )}</span>
             <HelpTooltip i18nKey="help.chargeDepartureAlignment.avgMargin" defaultValue={marginHelp}
               ariaLabel={t('chargeDepartureAlignment.avgMargin', 'Avg. Readiness Margin')} />
             <HelpTooltip i18nKey="help.chargeDepartureAlignment.misaligned" defaultValue={misalignedHelp}
