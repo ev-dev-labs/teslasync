@@ -37,7 +37,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import type { ReactNode } from 'react';
+import type { ComponentProps, ReactNode } from 'react';
 import { ApiError } from '@/lib/resilience';
 import type { TeslaEnergyLiveStatus } from '@/types/energy';
 
@@ -110,6 +110,7 @@ vi.mock('@/api/hooks/useEnergy', () => ({
   useRefreshTeslaEnergyLiveStatus: vi.fn(),
 }));
 vi.mock('@/hooks/useRangeState', () => ({ useRangeState: vi.fn() }));
+const widgetFailures = vi.hoisted(() => ({ powerHistory: false }));
 vi.mock('../components/power-flow', async () => {
   const actual = await vi.importActual<typeof import('../components/power-flow')>(
     '../components/power-flow',
@@ -117,6 +118,10 @@ vi.mock('../components/power-flow', async () => {
   return {
     ...actual,
     SolarChargeAdviceStrip: () => null,
+    PowerHistoryChart: (props: ComponentProps<typeof actual.PowerHistoryChart>) => {
+      if (widgetFailures.powerHistory) throw new Error('Power history renderer failed');
+      return <actual.PowerHistoryChart {...props} />;
+    },
   };
 });
 
@@ -146,7 +151,7 @@ const SINCE = '2026-06-25';
 const UNTIL = '2026-07-01';
 
  
-function makeQuery(over: Record<string, unknown> = {}): any {
+function makeQuery(over: Record<string, unknown> = {}) {
   return {
     data: undefined,
     error: null,
@@ -226,6 +231,7 @@ beforeEach(() => {
   mockHistory.mockReset();
   mockRefresh.mockReset();
   mockRange.mockReset();
+  widgetFailures.powerHistory = false;
 
   refreshMutate = vi.fn();
   setRange = vi.fn();
@@ -491,7 +497,7 @@ describe('PowerFlowDashboardPage — history query error', () => {
 describe('PowerFlowDashboardPage — no-data envelope', () => {
   it('shows the caption, "—" KPIs, and a refresh EmptyState per panel', () => {
     // A response with no `id` is a "no data yet" envelope, not a real snapshot.
-    setLive({ data: { message: 'no data' } as unknown as TeslaEnergyLiveStatus });
+    setLive({ data: { message: 'no data' } });
     renderPage();
 
     expect(
@@ -506,7 +512,7 @@ describe('PowerFlowDashboardPage — no-data envelope', () => {
   });
 
   it('fires the refresh mutation from an EmptyState CTA', () => {
-    setLive({ data: { message: 'no data' } as unknown as TeslaEnergyLiveStatus });
+    setLive({ data: { message: 'no data' } });
     renderPage();
 
     const cta = within(overviewRegion()).getAllByRole('button', { name: 'Refresh from Tesla' });
@@ -520,6 +526,106 @@ describe('PowerFlowDashboardPage — interactions', () => {
     renderPage();
     fireEvent.click(screen.getByRole('button', { name: 'Refresh from Tesla' }));
     expect(refreshMutate).toHaveBeenCalledWith(1);
+  });
+
+  describe('PowerFlowDashboardPage — source and flow preservation', () => {
+    it('exposes signed charging and import readings without changing visible flow magnitudes', () => {
+      renderPage();
+      const battery = within(overviewRegion()).getByRole('group', { name: '-1.50 kW' });
+      const grid = within(overviewRegion()).getByRole('group', { name: '2.00 kW' });
+      expect(within(battery).getByText('Charging')).toHaveClass('sr-only');
+      expect(within(battery).getByText('1.50 kW')).toHaveAttribute('aria-hidden', 'true');
+      expect(within(battery).queryByText('-1.50 kW')).not.toBeInTheDocument();
+      expect(within(grid).getByText('Importing')).toHaveClass('sr-only');
+      expect(within(grid).getByText('2.00 kW')).toHaveAttribute('aria-hidden', 'true');
+    });
+
+    it('exposes signed export and discharge readings independently of decorative arrows', () => {
+      setLive({ data: makeLive({ battery_power: 1500, grid_power: -2000 }) });
+      renderPage();
+      const battery = within(overviewRegion()).getByRole('group', { name: '1.50 kW' });
+      const grid = within(overviewRegion()).getByRole('group', { name: '-2.00 kW' });
+      expect(within(battery).getByText('Discharging')).toHaveClass('sr-only');
+      expect(within(grid).getByText('Exporting')).toHaveClass('sr-only');
+      expect(within(grid).getByText('2.00 kW')).toHaveAttribute('aria-hidden', 'true');
+      expect(within(grid).queryByText('-2.00 kW')).not.toBeInTheDocument();
+    });
+
+    it('keeps nonfinite and missing flows unknown while retaining a measured zero', () => {
+      setLive({ data: makeLive({
+        solar_power: Number.NaN,
+        battery_power: Number.POSITIVE_INFINITY,
+        grid_power: null,
+        grid_services_power: Number.NEGATIVE_INFINITY,
+        load_power: 0,
+        percentage_charged: Number.NaN,
+      }) });
+      renderPage();
+      expect(within(kpiRegion()).getAllByText('—')).toHaveLength(3);
+      expect(within(kpiRegion()).getByText('0.00 W')).toBeInTheDocument();
+      expect(within(kpiRegion()).queryByText('Discharging')).not.toBeInTheDocument();
+      expect(within(kpiRegion()).queryByText('Exporting')).not.toBeInTheDocument();
+      const unknownFlows = within(overviewRegion()).getAllByRole('group', { name: '—' });
+      expect(unknownFlows).toHaveLength(3);
+      unknownFlows.forEach(flow => {
+        expect(flow.querySelector('svg.lucide-arrow-up')).toBeNull();
+        expect(flow.querySelector('svg.lucide-arrow-down')).toBeNull();
+      });
+      expect(within(overviewRegion()).queryByText('Grid Services')).not.toBeInTheDocument();
+      expect(within(overviewRegion()).queryByRole('meter')).not.toBeInTheDocument();
+      expect(within(historyRegion()).getByRole('img', { name: /line chart/i })).toBeInTheDocument();
+    });
+
+    it('retains paused live readings and retries only that source while history stays available', () => {
+      const liveQuery = makeQuery({ data: makeLive(), fetchStatus: 'paused' });
+      const historyQuery = makeQuery({ data: HISTORY });
+      mockLive.mockReturnValue(liveQuery);
+      mockHistory.mockReturnValue(historyQuery);
+      renderPage();
+      const warning = screen.getByTestId('stale-refresh-warning');
+      expect(warning).toHaveAttribute('data-refresh-blocked', 'true');
+      expect(warning).toHaveTextContent('Live energy status may be out of date');
+      expect(within(kpiRegion()).getByText('-1.50 kW')).toBeInTheDocument();
+      expect(within(historyRegion()).getByRole('group', { name: /stacked area chart/i })).toBeInTheDocument();
+      expect(within(historyRegion()).getByRole('img', { name: /line chart/i })).toBeInTheDocument();
+      expect(screen.queryByText(/device.*offline/i)).not.toBeInTheDocument();
+      fireEvent.click(within(warning).getByRole('button', { name: 'Refresh' }));
+      expect(liveQuery.refetch).toHaveBeenCalledTimes(1);
+      expect(historyQuery.refetch).not.toHaveBeenCalled();
+    });
+
+    it('does not relabel an old zero-filled snapshot with the successful fetch time or a freshness claim', () => {
+      setLive({ data: makeLive({
+        solar_power: 0, battery_power: 0, load_power: 0, grid_power: 0,
+        timestamp: '2001-01-02T10:00:00Z', fetched_at: '2040-06-01T10:00:00Z',
+      }), dataUpdatedAt: Date.now() });
+      renderPage();
+      expect(within(kpiRegion()).getAllByText('0.00 W')).toHaveLength(4);
+      expect(within(statusRegion()).getByText(/^Updated:/)).toHaveTextContent('2001');
+      expect(within(statusRegion()).getByText(/^Updated:/)).not.toHaveTextContent('2040');
+      expect(screen.queryByText(/up to date|confirmed fresh/i)).not.toBeInTheDocument();
+      expect(within(kpiRegion()).queryByText('Charging')).not.toBeInTheDocument();
+      expect(within(kpiRegion()).queryByText('Exporting')).not.toBeInTheDocument();
+    });
+
+    it('isolates a power history rendering failure without losing live readings or the SOC chart', () => {
+      widgetFailures.powerHistory = true;
+      const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+      try {
+        renderPage();
+        expect(within(historyRegion()).getByText('Power history renderer failed')).toBeInTheDocument();
+        expect(within(historyRegion()).getByRole('img', { name: /line chart/i })).toBeInTheDocument();
+        expect(within(overviewRegion()).getByRole('meter', { name: /State of Charge/i })).toHaveAttribute('aria-valuenow', '46.3');
+        expect(within(kpiRegion()).getByText('-1.50 kW')).toBeInTheDocument();
+        expect(within(statusRegion()).getByText('Grid: Active')).toBeInTheDocument();
+        widgetFailures.powerHistory = false;
+        fireEvent.click(within(historyRegion()).getByRole('button', { name: 'Retry' }));
+        expect(within(historyRegion()).getByRole('group', { name: /stacked area chart/i })).toBeInTheDocument();
+        expect(within(historyRegion()).getByRole('img', { name: /line chart/i })).toBeInTheDocument();
+      } finally {
+        consoleError.mockRestore();
+      }
+    });
   });
 
   it('consumes the shared range without a duplicate page picker', () => {
