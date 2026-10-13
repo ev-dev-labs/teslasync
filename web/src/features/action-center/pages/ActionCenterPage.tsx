@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -14,6 +14,7 @@ import { useDataState } from '@/hooks/useDataState';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useOperationalMode } from '@/hooks/useOperationalMode';
+import { useUrlBatch, useUrlEnum, useUrlState, useUrlString } from '@/hooks/useUrlState';
 import { Icons } from '@/lib/icons';
 import type {
   ActionCenterFilter,
@@ -31,16 +32,43 @@ import {
 
 const initialFilter: ActionCenterFilter = { state: 'open', limit: 50, offset: 0 };
 
+function parseBoundedInteger(raw: string, min: number, max: number): number | undefined {
+  if (!/^\d+$/.test(raw)) return undefined;
+  const value = Number(raw);
+  return Number.isSafeInteger(value) && value >= min && value <= max ? value : undefined;
+}
+
 export default function ActionCenterPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const toast = useToast();
   const operationalMode = useOperationalMode();
-  const { vehicleId, vehicles, setVehicleId } = useSelectedVehicle();
-  const [filter, setFilter] = useState<ActionCenterFilter>(() => ({
-    ...initialFilter,
-    vehicle_id: vehicleId ?? undefined,
-  }));
+  const { vehicleId, vehicles } = useSelectedVehicle();
+  // Fleet is page-local: removing vehicle_id alone would restore the workspace vehicle.
+  const [vehicleScope] = useUrlEnum('vehicle_scope', ['selected', 'fleet'], 'selected');
+  const [urlVehicle] = useUrlString('vehicle_id');
+  const [priority] = useUrlEnum('priority', ['', 'critical', 'high', 'medium', 'low'], '');
+  const [source] = useUrlEnum('source_feature', [
+    '', 'active_alerts', 'advanced_intelligence', 'battery_health',
+    'charging_reliability', 'drive_efficiency', 'fleet_maintenance',
+    'signal_health', 'system_health', 'vehicle_readiness',
+  ], '');
+  const [state] = useUrlEnum('state', ['all', 'open', 'acknowledged', 'snoozed', 'dismissed'], 'open');
+  const [limit] = useUrlState({
+    key: 'limit', defaultValue: 50, parse: (raw) => parseBoundedInteger(raw, 1, 100),
+  });
+  const [offset] = useUrlState({
+    key: 'offset', defaultValue: 0, parse: (raw) => parseBoundedInteger(raw, 0, 100000),
+  });
+  const setUrl = useUrlBatch();
+  const filter = useMemo<ActionCenterFilter>(() => ({
+    vehicle_id: vehicleScope === 'fleet' ? undefined : vehicleId ?? undefined,
+    priority: priority || undefined,
+    source_feature: source || undefined,
+    state: state === 'all' ? undefined : state,
+    limit,
+    offset,
+  }), [vehicleScope, vehicleId, priority, source, state, limit, offset]);
   const [pending, setPending] = useState<PendingAction | null>(null);
   const query = useActionCenter(filter);
   const actionCenterState = useDataState(query, { provenance: 'inferred' });
@@ -48,21 +76,25 @@ export default function ActionCenterPage() {
   usePageTitle(t('actionCenter.page.title', 'Action center'));
 
   useEffect(() => {
-    setFilter((current) =>
-      current.vehicle_id === (vehicleId ?? undefined)
-        ? current
-        : { ...current, vehicle_id: vehicleId ?? undefined, offset: 0 },
-    );
-  }, [vehicleId]);
+    // Materialize the inherited selection so Copy link does not depend on the recipient's preference.
+    if (vehicleScope !== 'fleet' && !urlVehicle && vehicleId != null) {
+      setUrl({ vehicle_id: String(vehicleId) });
+    }
+  }, [vehicleScope, urlVehicle, vehicleId, setUrl]);
 
   const handleFilterChange = useCallback(
     (next: ActionCenterFilter) => {
-      setFilter(next);
-      if (next.vehicle_id != null && next.vehicle_id !== vehicleId) {
-        setVehicleId(next.vehicle_id);
-      }
+      setUrl({
+        vehicle_scope: next.vehicle_id == null ? 'fleet' : null,
+        vehicle_id: next.vehicle_id == null ? null : String(next.vehicle_id),
+        priority: next.priority,
+        source_feature: next.source_feature,
+        state: next.state === 'open' ? null : next.state ?? 'all',
+        limit: next.limit === 50 ? null : String(next.limit ?? 50),
+        offset: !next.offset ? null : String(Math.min(next.offset, 100000)),
+      });
     },
-    [setVehicleId, vehicleId],
+    [setUrl],
   );
 
   const handleAction = useCallback(
@@ -234,7 +266,7 @@ export default function ActionCenterPage() {
           onAction={handleAction}
           actionsDisabled={!operationalMode.canWrite}
           actionsDisabledReason={operationalMode.writeBlockReason ?? undefined}
-          onClearFilters={() => setFilter(initialFilter)}
+          onClearFilters={() => handleFilterChange(initialFilter)}
         />
         <Pagination
           page={page}
@@ -242,13 +274,13 @@ export default function ActionCenterPage() {
           total={total ?? 0}
           totalKind={hasKnownTotal ? 'exact' : 'unknown'}
           onPageChange={(nextPage) =>
-            setFilter((current) => ({
-              ...current,
+            handleFilterChange({
+              ...filter,
               offset: (nextPage - 1) * pageSize,
-            }))
+            })
           }
           onPageSizeChange={(size) =>
-            setFilter((current) => ({ ...current, limit: size, offset: 0 }))
+            handleFilterChange({ ...filter, limit: size, offset: 0 })
           }
           pageSizeOptions={[25, 50, 100]}
         />

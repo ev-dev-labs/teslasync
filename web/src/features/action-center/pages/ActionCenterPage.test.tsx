@@ -1,10 +1,14 @@
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
+import { fireEvent, render, renderHook, screen, waitFor, within } from '@testing-library/react';
+import { BrowserRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type {
+  ActionCenterFilter,
   ActionCenterRecommendation,
   ActionCenterResponse,
 } from '@/types/actionCenter';
+import type { Vehicle } from '@/types/vehicle';
+import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
+import { SelectedVehicleProvider, __SELECTED_VEHICLE_STORAGE_KEY__ } from '@/store/selectedVehicle';
 
 const useActionCenterMock = vi.fn();
 const useHistoryMock = vi.fn();
@@ -12,7 +16,6 @@ const mutateAsyncMock = vi.fn();
 const toastMock = vi.fn();
 const toastSuccess = vi.fn();
 const toastError = vi.fn();
-const setVehicleIdMock = vi.fn();
 const operationalMetricsInput = vi.fn();
 const operationalModeState = vi.hoisted(() => ({
   canWrite: true,
@@ -27,13 +30,8 @@ vi.mock('@/api/hooks/useActionCenter', () => ({
     isPending: false,
   }),
 }));
-vi.mock('@/hooks/useSelectedVehicle', () => ({
-  useSelectedVehicle: () => ({
-    vehicleId: 7,
-    vehicle: { id: 7, display_name: 'Orion' },
-    vehicles: [{ id: 7, display_name: 'Orion' }],
-    setVehicleId: setVehicleIdMock,
-  }),
+vi.mock('@/api/hooks/useVehicles', () => ({
+  useVehicles: () => ({ data: fleet }),
 }));
 vi.mock('@/components/feedback', async () => {
   const actual = await vi.importActual<typeof import('@/components/feedback')>(
@@ -87,6 +85,15 @@ vi.mock('@/hooks/useOperationalMode', () => ({
 }));
 
 import ActionCenterPage from './ActionCenterPage';
+
+const fleet: Vehicle[] = [
+  { id: 7, vehicle_id: 7, vin: 'SYNTHETIC-AC-7', display_name: 'Orion',
+    model: '', trim_badging: '', exterior_color: '', wheel_type: '', state: 'online',
+    healthy: true, created_at: '', updated_at: '' },
+  { id: 8, vehicle_id: 8, vin: 'SYNTHETIC-AC-8', display_name: 'Lyra',
+    model: '', trim_badging: '', exterior_color: '', wheel_type: '', state: 'online',
+    healthy: true, created_at: '', updated_at: '' },
+];
 
 const recommendation: ActionCenterRecommendation = {
   id: 'ac_0123456789abcdef01234567',
@@ -146,11 +153,14 @@ function queryResult(overrides: Record<string, unknown> = {}) {
   };
 }
 
-function renderPage() {
+function renderPage(url = '/action-center') {
+  window.history.replaceState(null, '', url);
   return render(
-    <MemoryRouter>
-      <ActionCenterPage />
-    </MemoryRouter>,
+    <BrowserRouter>
+      <SelectedVehicleProvider>
+        <ActionCenterPage />
+      </SelectedVehicleProvider>
+    </BrowserRouter>,
   );
 }
 
@@ -160,7 +170,8 @@ beforeEach(() => {
   toastMock.mockReset();
   toastSuccess.mockReset();
   toastError.mockReset();
-  setVehicleIdMock.mockReset();
+  window.localStorage.clear();
+  window.localStorage.setItem(__SELECTED_VEHICLE_STORAGE_KEY__, '7');
   operationalMetricsInput.mockReset();
   operationalModeState.canWrite = true;
   displayPreferences.locale = 'en-US';
@@ -193,6 +204,125 @@ beforeEach(() => {
       state_version: 1,
       occurred_at: '2026-02-20T00:02:00Z',
     },
+  });
+});
+
+describe('ActionCenterPage URL scope roundtrip', () => {
+  it.each([
+    { name: 'All vehicles', clearIndex: null, limit: 25, state: 'dismissed' },
+    { name: 'filter Clear filters', clearIndex: 0, limit: 25, state: 'open' },
+    { name: 'empty Clear filters', clearIndex: 1, limit: 50, state: 'open' },
+  ])('retains fleet-local scope after $name and a real remount', async ({ clearIndex, limit, state }) => {
+    useActionCenterMock.mockReturnValue(queryResult({ data: { ...data, items: [], total: 0 } }));
+    const mounted = renderPage('/action-center?vehicle_id=8&priority=high&state=dismissed&limit=25&offset=25');
+    expect(screen.getByLabelText('Vehicle')).toHaveValue('8');
+    expect(window.localStorage.getItem(__SELECTED_VEHICLE_STORAGE_KEY__)).toBe('8');
+    if (clearIndex == null) {
+      fireEvent.change(screen.getByLabelText('Vehicle'), { target: { value: '' } });
+    } else {
+      fireEvent.click(screen.getAllByRole('button', { name: 'Clear filters' })[clearIndex]!);
+    }
+    const expected: ActionCenterFilter = {
+      vehicle_id: undefined, priority: clearIndex == null ? 'high' : undefined,
+      source_feature: undefined, state: state as ActionCenterFilter['state'], limit, offset: 0,
+    };
+    await waitFor(() => expect(useActionCenterMock).toHaveBeenLastCalledWith(expected));
+    expect(screen.getByLabelText('Vehicle')).toHaveValue('');
+    expect(new URL(window.location.href).searchParams.get('vehicle_scope')).toBe('fleet');
+    expect(new URL(window.location.href).searchParams.has('vehicle_id')).toBe(false);
+    expect(window.localStorage.getItem(__SELECTED_VEHICLE_STORAGE_KEY__)).toBe('8');
+    const url = window.location.href;
+    mounted.unmount();
+    const reopened = renderPage(url);
+    expect(screen.getByLabelText('Vehicle')).toHaveValue('');
+    expect(useActionCenterMock).toHaveBeenLastCalledWith(expected);
+    reopened.unmount();
+    window.history.replaceState(null, '', '/battery');
+    const otherRoute = renderHook(() => useSelectedVehicle(), {
+      wrapper: ({ children }) => (
+        <BrowserRouter><SelectedVehicleProvider>{children}</SelectedVehicleProvider></BrowserRouter>
+      ),
+    });
+    expect(otherRoute.result.current.vehicleId).toBe(8);
+    otherRoute.unmount();
+  });
+
+  it.each([
+    { name: 'fleet and all states', vehicle: '', stateValue: '', expectedState: undefined },
+    { name: 'selected vehicle and dismissed', vehicle: '8', stateValue: 'dismissed', expectedState: 'dismissed' as const },
+  ])('copies and reopens the actual current filters and pagination for $name', async ({ vehicle, stateValue, expectedState }) => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText } });
+    useActionCenterMock.mockReturnValue(queryResult({ data: { ...data, total: 120 } }));
+    const mounted = renderPage('/action-center?context=review');
+    fireEvent.change(screen.getByLabelText('Vehicle'), { target: { value: vehicle } });
+    fireEvent.change(screen.getByLabelText('Priority'), { target: { value: 'critical' } });
+    fireEvent.change(screen.getByLabelText('Source'), { target: { value: 'battery_health' } });
+    fireEvent.change(screen.getByLabelText('State'), { target: { value: stateValue } });
+    fireEvent.change(screen.getByLabelText('Rows per page'), { target: { value: '25' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Next page' }));
+    const expected: ActionCenterFilter = {
+      vehicle_id: vehicle ? 8 : undefined, priority: 'critical', source_feature: 'battery_health',
+      state: expectedState, limit: 25, offset: 25,
+    };
+    expect(useActionCenterMock).toHaveBeenLastCalledWith(expected);
+    expect(screen.getByText('Showing 26–50 of 120')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Copy link to this view' }));
+    await waitFor(() => expect(writeText).toHaveBeenCalledTimes(1));
+    const copied = writeText.mock.calls[0]![0] as string;
+    expect(new URL(copied).searchParams.get('context')).toBe('review');
+    mounted.unmount();
+    window.localStorage.setItem(__SELECTED_VEHICLE_STORAGE_KEY__, '7');
+    const reopened = renderPage(copied);
+    expect(useActionCenterMock).toHaveBeenLastCalledWith(expected);
+    expect(screen.getByLabelText('Vehicle')).toHaveValue(vehicle);
+    expect(screen.getByLabelText('Priority')).toHaveValue('critical');
+    expect(screen.getByLabelText('Source')).toHaveValue('battery_health');
+    expect(screen.getByLabelText('State')).toHaveValue(stateValue);
+    expect(screen.getByLabelText('Rows per page')).toHaveValue('25');
+    expect(screen.getByText('Showing 26–50 of 120')).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('Priority'), { target: { value: 'low' } });
+    expect(useActionCenterMock).toHaveBeenLastCalledWith({ ...expected, priority: 'low', offset: 0 });
+    expect(mutateAsyncMock).not.toHaveBeenCalled();
+    reopened.unmount();
+  });
+
+  it('copies inherited defaults with a concrete scope independent of recipient preference', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText } });
+    const mounted = renderPage();
+    fireEvent.click(screen.getByRole('button', { name: 'Copy link to this view' }));
+    await waitFor(() => expect(writeText).toHaveBeenCalledTimes(1));
+    const copied = writeText.mock.calls[0]![0] as string;
+    expect(new URL(copied).searchParams.get('vehicle_id')).toBe('7');
+    mounted.unmount();
+    window.localStorage.setItem(__SELECTED_VEHICLE_STORAGE_KEY__, '8');
+    renderPage(copied);
+    expect(screen.getByLabelText('Vehicle')).toHaveValue('7');
+    expect(screen.getByLabelText('State')).toHaveValue('open');
+    expect(useActionCenterMock).toHaveBeenLastCalledWith({
+      vehicle_id: 7, priority: undefined, source_feature: undefined, state: 'open', limit: 50, offset: 0,
+    });
+  });
+
+  it.each([
+    { name: 'missing defaults', query: '', limit: 50, offset: 0 },
+    { name: 'lower bounds', query: 'limit=1&offset=0', limit: 1, offset: 0 },
+    { name: 'upper bounds', query: 'limit=100&offset=100000', limit: 100, offset: 100000 },
+    { name: 'below bounds', query: 'limit=0&offset=-1', limit: 50, offset: 0 },
+    { name: 'above bounds', query: 'limit=101&offset=100001', limit: 50, offset: 0 },
+    { name: 'fractional values', query: 'limit=25.5&offset=1.5', limit: 50, offset: 0 },
+    { name: 'non-numeric values', query: 'limit=NaN&offset=Infinity', limit: 50, offset: 0 },
+  ])('hydrates validated defaults and pagination for $name', ({ query, limit, offset }) => {
+    renderPage(`/action-center?priority=invalid&source_feature=invalid&state=invalid&${query}`);
+    expect(useActionCenterMock).toHaveBeenLastCalledWith({
+      vehicle_id: 7, priority: undefined, source_feature: undefined, state: 'open', limit, offset,
+    });
+    expect(screen.getByLabelText('Priority')).toHaveValue('');
+    expect(screen.getByLabelText('Source')).toHaveValue('');
+    expect(screen.getByLabelText('State')).toHaveValue('open');
+    expect(screen.getByText('Source coverage')).toBeInTheDocument();
+    expect(mutateAsyncMock).not.toHaveBeenCalled();
   });
 });
 
