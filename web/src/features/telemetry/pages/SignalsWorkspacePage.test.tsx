@@ -418,3 +418,64 @@ describe('SignalsWorkspacePage — error handling', () => {
     expect(statValue('Mode')).toBe('Historical');
   });
 });
+
+
+describe('SignalsWorkspacePage — restrained accessible mode controls', () => {
+  it('exposes mutually exclusive pressed states and returns to historical when neither mode is active', () => {
+    renderPage('/signals?signals=battery_level,vehicle_speed');
+    expect(screen.getByRole('button', { name: 'Live', pressed: false })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Compare', pressed: false })).toBeEnabled();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Live', pressed: false }));
+    expect(screen.getByRole('button', { name: 'Stop live', pressed: true })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Compare', pressed: false })).toBeInTheDocument();
+    expect(screen.getByTestId('chart-panel')).toHaveAttribute('data-live', 'true');
+    expect(screen.getByTestId('live-tail')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Compare', pressed: false }));
+    expect(screen.getByRole('button', { name: 'Exit compare', pressed: true })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Live', pressed: false })).toBeInTheDocument();
+    expect(screen.getByTestId('compare-controls')).toBeInTheDocument();
+    expect(screen.queryByTestId('live-tail')).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Live', pressed: false }));
+    expect(screen.getByRole('button', { name: 'Stop live', pressed: true })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Compare', pressed: false })).toBeInTheDocument();
+    expect(screen.queryByTestId('compare-controls')).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Stop live', pressed: true }));
+    expect(screen.getByRole('button', { name: 'Live', pressed: false })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Compare', pressed: false })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Run' })).toBeInTheDocument();
+    expect(statValue('Mode')).toBe('Historical');
+    expect(screen.getByText('Pick signals and run a query')).toBeInTheDocument();
+  });
+
+  it('keeps live disabled without selection while comparison remains available', () => {
+    renderPage('/signals');
+    expect(screen.getByRole('button', { name: 'Live', pressed: false })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Compare', pressed: false })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Run' })).toBeDisabled();
+  });
+
+  it('keeps disconnected stream status neutral and live controls static without losing connection labels', () => {
+    const { container } = renderPage('/signals?signals=battery_level');
+    fireEvent.click(screen.getByRole('button', { name: 'Live' }));
+    const stopLive = screen.getByRole('button', { name: 'Stop live', pressed: true });
+    expect(stopLive).not.toHaveClass('bg-[var(--semantic-danger-bg)]');
+    expect(stopLive).toHaveClass('bg-[var(--control-bg)]');
+    expect(stopLive.querySelector('.animate-pulse')).toBeNull();
+    expect(screen.getByText('Disconnected')).toHaveClass('text-[var(--text-secondary)]');
+    expect(container.querySelector('.bg-red-500')).toBeNull();
+    expect(statValue('Live rate')).toContain('0');
+  });
+
+  it('retains the source-confirmed connected label and success status', () => {
+    h.live.connected = true;
+    renderPage('/signals?signals=battery_level');
+    fireEvent.click(screen.getByRole('button', { name: 'Live' }));
+    expect(screen.getByText('Connected')).toHaveClass('text-[var(--semantic-success)]');
+    expect(screen.getByRole('button', { name: 'Stop live', pressed: true })).toBeInTheDocument();
+    expect(screen.getByTestId('live-tail')).toBeInTheDocument();
+  });
+});

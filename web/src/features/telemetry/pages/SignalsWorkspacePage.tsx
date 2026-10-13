@@ -391,7 +391,7 @@ export default function SignalsWorkspacePage() {
       metadataActions={
         <div className="flex flex-wrap items-center justify-end gap-2">
           {isLive ? (
-            <Badge variant={live.connected ? 'success' : 'danger'} dot>
+            <Badge variant={live.connected ? 'success' : 'neutral'} dot>
               {live.connected ? t('liveMonitor.connected', 'Connected') : t('liveMonitor.disconnected', 'Disconnected')}
             </Badge>
           ) : null}
@@ -512,22 +512,19 @@ export default function SignalsWorkspacePage() {
                   </Button>
                 ) : null}
                 <Button
-                  variant={isLive ? 'danger' : 'outline'}
+                  variant={isLive ? 'secondary' : 'outline'}
                   icon={<Radio className="h-4 w-4" />}
                   onClick={toggleLive}
+                  aria-pressed={isLive}
                   disabled={selectedSignals.length === 0 && !isLive}
                 >
-                  {isLive ? (
-                    <span className="flex items-center gap-1.5">
-                      <span aria-hidden="true" className="h-2 w-2 rounded-full bg-red-500 animate-pulse" />
-                      {t('signalsWorkspace.stopLive', 'Stop live')}
-                    </span>
-                  ) : t('signalsWorkspace.live', 'Live')}
+                  {isLive ? t('signalsWorkspace.stopLive', 'Stop live') : t('signalsWorkspace.live', 'Live')}
                 </Button>
                 <Button
                   variant={isCompare ? 'primary' : 'outline'}
                   icon={<GitCompare className="h-4 w-4" />}
                   onClick={toggleCompare}
+                  aria-pressed={isCompare}
                 >
                   {isCompare ? t('signalsWorkspace.exitCompare', 'Exit compare') : t('signalsWorkspace.compare', 'Compare')}
                 </Button>
