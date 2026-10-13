@@ -1,10 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import type { ReactNode } from 'react'
 import TeslaApiUsagePage from './TeslaApiUsagePage'
 import { ROUTE_REGISTRY } from '@/lib/routeRegistry'
 
 const usage = vi.hoisted(() => vi.fn())
+const cycleProps = vi.hoisted(() => vi.fn())
 vi.mock('@/api/hooks/useTeslaUsage', () => ({ useTeslaUsage: usage }))
 vi.mock('@/hooks/usePageTitle', () => ({ usePageTitle: vi.fn() }))
 vi.mock('react-i18next', () => ({ useTranslation: () => ({
@@ -16,8 +17,10 @@ vi.mock('@/components/layout', () => ({
 }))
 vi.mock('@/components/motion', () => ({ FadeIn: ({ children }: { children: ReactNode }) => <>{children}</> }))
 vi.mock('../components/status', () => ({
-  TeslaApiUsageCard: ({ apiUsage, error, loading }: { apiUsage?: { current: { estimated_usd: number } }; error?: Error; loading?: boolean }) =>
-    <section data-testid="cycle">{loading ? 'loading' : error ? 'error' : apiUsage?.current.estimated_usd ?? 'empty'}</section>,
+  TeslaApiUsageCard: ({ apiUsage, error, loading }: { apiUsage?: { current: { estimated_usd: number } }; error?: Error | null; loading?: boolean }) => {
+    cycleProps({ apiUsage, error, loading })
+    return <section data-testid="cycle">{loading ? 'loading' : error ? 'error' : apiUsage?.current.estimated_usd ?? 'empty'}</section>
+  },
   TeslaApiUsageHistory: () => <section data-testid="selected-history">Selected range, distribution and time series</section>,
 }))
 
@@ -48,5 +51,64 @@ describe('Tesla API usage route page', () => {
     expect(screen.getByTestId('cycle')).toHaveTextContent(expected)
     expect(screen.getByTestId('selected-history')).toBeInTheDocument()
     expect(screen.getByText('How the estimate is calculated')).toBeInTheDocument()
+  })
+})
+
+
+describe('Tesla API usage preservation boundaries', () => {
+  it('exposes all three independently named regions even before usage is available', () => {
+    usage.mockReturnValue({ data: undefined, isLoading: false, error: null })
+    render(<TeslaApiUsagePage />)
+    for (const name of ['Current cycle and prior periods', 'Tesla usage history', 'How the estimate is calculated']) {
+      expect(screen.getByRole('region', { name })).toBeInTheDocument()
+    }
+    expect(screen.getByTestId('cycle')).toHaveTextContent('empty')
+    expect(screen.getByText(/Counts come only from locally observed Tesla Fleet Telemetry/)).toBeInTheDocument()
+    expect(screen.getByText(/Retransmitted signals are deduplicated/)).toBeInTheDocument()
+    expect(screen.getByText(/No monthly credit, rounding or invoice adjustments are assumed/)).toBeInTheDocument()
+  })
+
+  it('keeps a measured zero distinct from unavailable cycle data', () => {
+    const data = { current: { estimated_usd: 0 } }
+    usage.mockReturnValue({ data, isLoading: false, error: null })
+    render(<TeslaApiUsagePage />)
+    expect(screen.getByTestId('cycle')).toHaveTextContent(/^0$/)
+    expect(cycleProps).toHaveBeenLastCalledWith({ apiUsage: data, error: null, loading: false })
+    expect(screen.getByTestId('selected-history')).toBeInTheDocument()
+  })
+
+  it('forwards retained usage and refresh failure without replacing history or methodology', () => {
+    const data = { current: { estimated_usd: 4 } }
+    const error = new Error('refresh unavailable')
+    const refetch = vi.fn()
+    usage.mockReturnValue({ data, isLoading: false, error, isError: true, isFetching: false, refetch })
+    render(<TeslaApiUsagePage />)
+    expect(cycleProps).toHaveBeenLastCalledWith({ apiUsage: data, error, loading: false })
+    expect(screen.getByTestId('stale-refresh-warning')).toHaveAttribute('role', 'status')
+    expect(screen.getByText(/Previously loaded data remains visible/)).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }))
+    expect(refetch).toHaveBeenCalledTimes(1)
+    expect(screen.getByTestId('selected-history')).toBeInTheDocument()
+    expect(screen.getByRole('region', { name: 'How the estimate is calculated' })).toBeInTheDocument()
+  })
+
+  it('preserves retained content and explains a paused refresh without inventing an error', () => {
+    const data = { current: { estimated_usd: 4 } }
+    usage.mockReturnValue({ data, isLoading: false, error: null, fetchStatus: 'paused' })
+    render(<TeslaApiUsagePage />)
+    expect(screen.getByTestId('cycle')).toHaveTextContent('4')
+    expect(screen.getByTestId('stale-refresh-warning')).toHaveAttribute('data-refresh-blocked', 'true')
+    expect(cycleProps).toHaveBeenLastCalledWith({ apiUsage: data, error: null, loading: false })
+    expect(screen.getByTestId('selected-history')).toBeInTheDocument()
+    expect(screen.getByText('150,000 / $1')).toBeInTheDocument()
+  })
+
+  it('keeps the complete API pricing reference and enables long-word wrapping', () => {
+    const source = `https://developer.tesla.com/${'pricing-reference'.repeat(30)}`
+    usage.mockReturnValue({ data: { current: { estimated_usd: 4 }, rate_source: source }, isLoading: false, error: null })
+    render(<TeslaApiUsagePage />)
+    expect(screen.getByText(/Tesla Fleet API pricing reference/)).toHaveTextContent(source)
+    expect(screen.getByText(/Tesla Fleet API pricing reference/)).toHaveClass('break-words')
+    expect(screen.getByText(/These are fixed UTC 30-day windows/)).toBeInTheDocument()
   })
 })
