@@ -1662,7 +1662,7 @@
       "anomalyDescription": "Review measured high-energy drives against route, speed, temperature, and battery context.",
       "anomalyTitle_one": "1 energy-intensity exception",
       "anomalyTitle_other": "{{count}} energy-intensity exceptions",
-      "countDetail": "Completed drives in the selected analysis window.",
+      "countDetail": "Drives in the selected analysis window, including ongoing activity.",
       "description": "Measured energy, route context, and exceptions use one vehicle-aware period with direct access to supporting evidence.",
       "distanceDetail": "Total distance traveled using the current display unit.",
       "efficiencyDetail": "{{measured}} of {{total}} drives have measured energy and sufficient distance.",
