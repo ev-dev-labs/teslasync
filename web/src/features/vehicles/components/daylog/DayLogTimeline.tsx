@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react';
+import { useId, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useVirtualizer } from '@tanstack/react-virtual';
@@ -6,6 +6,8 @@ import type { TFunction } from 'i18next';
 import { Badge, Button, Code, GlassPanel, Input, PanelTitle, Text } from '@/components/ui';
 import { EmptyState, QueryError, Skeleton } from '@/components/feedback';
 import { Icons } from '@/lib/icons';
+import { cn } from '@/lib/cn';
+import { neonColorMap, normalizeSeverity, severityTokens } from '@/lib/tokens';
 import { useUnits } from '@/hooks/useUnits';
 import type { DayLogEvent } from '@/api/types';
 import { humanizeManagementLabel } from '../vehicle-management/managementData';
@@ -13,7 +15,6 @@ import {
   DAY_LOG_CATEGORIES,
   DAY_LOG_EVENT_TITLE,
   categoryOf,
-  eventAccent,
   eventHref,
   eventIcon,
   eventKeywords,
@@ -34,7 +35,7 @@ export interface DayLogTimelineProps {
   onRetry: () => void;
 }
 
-type Row = { kind: 'hour'; key: string; hour: string } | { kind: 'event'; key: string; event: DayLogEvent };
+type Row = { kind: 'hour'; key: string; hour: string } | { kind: 'event'; key: string; event: DayLogEvent; position: number };
 
 /**
  * Section 3 — the complete-history list. Every recorded event renders
@@ -59,6 +60,8 @@ export function DayLogTimeline({
   const [hidden, setHidden] = useState<ReadonlySet<DayLogCategory>>(new Set());
   const [expanded, setExpanded] = useState<ReadonlySet<string>>(new Set());
   const parentRef = useRef<HTMLDivElement | null>(null);
+  const titleId = useId();
+  const pendingFocus = useRef<{ key: string; rows: Row[] } | null>(null);
 
   const all = events ?? [];
   const counts = useMemo(() => {
@@ -83,13 +86,13 @@ export function DayLogTimeline({
   const rows = useMemo<Row[]>(() => {
     const out: Row[] = [];
     let lastHour = '';
-    for (const e of filtered) {
+    for (const [position, e] of filtered.entries()) {
       const hour = hourKeyInTz(e.ts, timezone);
       if (hour !== '' && hour !== lastHour) {
         lastHour = hour;
         out.push({ kind: 'hour', key: `hour-${hour}-${out.length}`, hour });
       }
-      out.push({ kind: 'event', key: e.id, event: e });
+      out.push({ kind: 'event', key: e.id, event: e, position });
     }
     return out;
   }, [filtered, timezone]);
@@ -99,7 +102,34 @@ export function DayLogTimeline({
     getScrollElement: () => parentRef.current,
     estimateSize: () => 64,
     overscan: 12,
+    getItemKey: (index) => rows[index].key,
   });
+
+  const navigateEvents = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
+    const current = (event.target as HTMLElement).closest<HTMLElement>('[data-event-position]');
+    const position = current ? Number(current.dataset.eventPosition) : -1;
+    let next: number;
+    switch (event.key) {
+      case 'ArrowDown': next = Math.min(position + 1, filtered.length - 1); break;
+      case 'ArrowUp': next = position < 0 ? filtered.length - 1 : Math.max(position - 1, 0); break;
+      case 'Home': next = 0; break;
+      case 'End': next = filtered.length - 1; break;
+      default: return;
+    }
+    event.preventDefault();
+    const index = rows.findIndex((row) => row.kind === 'event' && row.position === next);
+    if (index < 0) return;
+    pendingFocus.current = { key: rows[index].key, rows };
+    // Keep focus in the list while an offscreen target is being mounted.
+    parentRef.current?.focus({ preventScroll: true });
+    virtualizer.scrollToIndex(index, { align: 'auto' });
+    const target = parentRef.current?.querySelector<HTMLElement>(`[data-event-position="${next}"]`);
+    if (target) {
+      pendingFocus.current = null;
+      target.querySelector<HTMLButtonElement>('button')?.focus({ preventScroll: true });
+    }
+  };
 
   const toggleCategory = (c: DayLogCategory) => {
     setHidden((prev) => {
@@ -130,9 +160,9 @@ export function DayLogTimeline({
   const WarningIcon = Icons.warning;
 
   return (
-    <GlassPanel className="p-6" data-testid="daylog-timeline">
+    <GlassPanel className="min-w-0 p-3 sm:p-6" data-testid="daylog-timeline">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <PanelTitle>{t('dayLog.timeline.title', 'Timeline')}</PanelTitle>
+        <PanelTitle id={titleId}>{t('dayLog.timeline.title', 'Timeline')}</PanelTitle>
         {!isLoading && !error && (
           <Text variant="caption" data-testid="daylog-count">
             {isFiltered
@@ -206,7 +236,7 @@ export function DayLogTimeline({
 
             {truncated && (
               <div className="mt-3 flex items-start gap-2">
-                <WarningIcon className="mt-0.5 h-4 w-4 shrink-0 text-amber-300" />
+                <WarningIcon aria-hidden="true" className={cn('mt-0.5 h-4 w-4 shrink-0', severityTokens.warn.fg)} />
                 <Text variant="caption">
                   {t(
                     'dayLog.timeline.truncated',
@@ -225,20 +255,24 @@ export function DayLogTimeline({
                   action={{ label: t('dayLog.list.showAll', 'Show all'), onClick: showAll }}
                 />
               ) : (
-                <div ref={parentRef} data-testid="daylog-list" role="list" className="h-[55vh] min-h-80 overflow-auto pr-1">
-                  <div style={{ height: `${virtualizer.getTotalSize()}px`, width: '100%', position: 'relative' }}>
+                <div ref={parentRef} data-testid="daylog-list" role="list" aria-labelledby={titleId} tabIndex={-1} onKeyDownCapture={navigateEvents} className="h-[55vh] min-h-80 overflow-auto p-1 focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[var(--focus-ring)]">
+                  <div className="relative w-full" style={{ height: `${virtualizer.getTotalSize()}px` }}>
                     {virtualizer.getVirtualItems().map((vi) => {
                       const row = rows[vi.index];
                       return (
                         <div
                           key={row.key}
                           data-index={vi.index}
-                          ref={virtualizer.measureElement}
+                          ref={(element) => {
+                            virtualizer.measureElement(element);
+                            if (element && pendingFocus.current?.rows === rows && pendingFocus.current.key === row.key) {
+                              pendingFocus.current = null;
+                              element.querySelector<HTMLButtonElement>('button')?.focus({ preventScroll: true });
+                            }
+                          }}
+                          role="presentation"
+                          className="absolute start-0 top-0 w-full"
                           style={{
-                            position: 'absolute',
-                            top: 0,
-                            left: 0,
-                            width: '100%',
                             transform: `translateY(${vi.start}px)`,
                           }}
                         >
@@ -247,6 +281,8 @@ export function DayLogTimeline({
                           ) : (
                             <EventRow
                               event={row.event}
+                              position={row.position}
+                              total={filtered.length}
                               timezone={timezone}
                               expanded={expanded.has(row.event.id)}
                               onToggle={() => toggleExpanded(row.event.id)}
@@ -273,17 +309,19 @@ export function DayLogTimeline({
 function HourSeparator({ hour }: { hour: string }) {
   return (
     <div className="flex items-center gap-2 py-1.5" aria-hidden="true">
-      <div className="h-px flex-1 bg-white/[0.08]" />
+      <div className="h-px flex-1 bg-[var(--border-subtle)]" />
       <Text variant="caption" className="tabular-nums">
         {hour}:00
       </Text>
-      <div className="h-px flex-1 bg-white/[0.08]" />
+      <div className="h-px flex-1 bg-[var(--border-subtle)]" />
     </div>
   );
 }
 
 interface EventRowProps {
   event: DayLogEvent;
+  position: number;
+  total: number;
   timezone: string;
   expanded: boolean;
   onToggle: () => void;
@@ -293,29 +331,40 @@ interface EventRowProps {
   formatDuration: (v: number | null | undefined) => string;
 }
 
-function EventRow({ event, timezone, expanded, onToggle, t, formatDistance, formatEnergy, formatDuration }: EventRowProps) {
+function EventRow({ event, position, total, timezone, expanded, onToggle, t, formatDistance, formatEnergy, formatDuration }: EventRowProps) {
   const Icon = eventIcon(event.type);
   const href = eventHref(event);
   const { title, detail } = describeEvent(t, event, { formatDistance, formatEnergy });
   const ExpandIcon = expanded ? Icons.collapse : Icons.expand;
+  const id = useId();
+  const timeId = `${id}-time`;
+  const titleId = `${id}-title`;
+  const identityId = `${id}-identity`;
+  const actionId = `${id}-action`;
+  const detailsId = `${id}-details`;
+  const severity = payloadString(event.payload ?? {}, 'severity');
+  const tone = event.type === 'tire_warning_on'
+    ? severityTokens[severity === 'hard' ? 'critical' : 'warn']
+    : severity != null && ['info', 'warn', 'warning', 'critical', 'error', 'fatal', 'success', 'ok'].includes(severity.toLowerCase())
+      ? severityTokens[normalizeSeverity(severity)]
+      : null;
 
   return (
-    <div role="listitem" className="border-b border-white/[0.05] py-1.5" data-testid={`daylog-event-${event.id}`}>
+    <div role="listitem" aria-labelledby={`${titleId} ${timeId} ${identityId}`} aria-posinset={position + 1} aria-setsize={total} data-event-position={position} className="min-w-0 border-b border-[var(--border-subtle)] py-1.5" data-testid={`daylog-event-${event.id}`}>
       <div className="flex items-center gap-2.5">
-        <Text variant="caption" className="w-16 shrink-0 tabular-nums">
+        <Text id={timeId} variant="caption" className="w-16 shrink-0 tabular-nums">
           {formatTimeSeconds(event.ts, timezone)}
         </Text>
         <span
-          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full"
-          style={{ backgroundColor: `${eventAccent(event.type)}22`, color: eventAccent(event.type) }}
+          className={cn('flex h-7 w-7 shrink-0 items-center justify-center rounded-full', tone ? [tone.bg, tone.fg] : [neonColorMap.neutral.bg, neonColorMap.neutral.text])}
           aria-hidden="true"
         >
           <Icon className="h-3.5 w-3.5" />
         </span>
         <div className="min-w-0 flex-1">
-          <Text as="div" size="sm" weight="medium" className="truncate">
+          <Text id={titleId} as="div" size="sm" weight="medium" className="break-words">
             {href ? (
-              <Link to={href} className="text-sky-300 underline-offset-2 hover:underline">
+              <Link to={href} className="text-inherit underline underline-offset-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus-ring)]">
                 {title}
               </Link>
             ) : (
@@ -335,18 +384,25 @@ function EventRow({ event, timezone, expanded, onToggle, t, formatDistance, form
           variant="ghost"
           size="sm"
           onClick={onToggle}
+          className="h-11 min-w-11 shrink-0 px-2 md:h-9 md:min-w-9"
           aria-expanded={expanded}
-          aria-label={
+          aria-keyshortcuts="ArrowDown ArrowUp Home End"
+          aria-controls={expanded ? detailsId : undefined}
+          aria-labelledby={`${actionId} ${titleId} ${timeId} ${identityId}`}
+        >
+          <span id={actionId} className="sr-only">
+            {
             expanded
               ? t('dayLog.list.collapse', 'Hide details')
               : t('dayLog.list.expand', 'Show details')
-          }
-        >
-          <ExpandIcon className="h-4 w-4" />
+            }
+          </span>
+          <ExpandIcon aria-hidden="true" className="h-4 w-4" />
         </Button>
       </div>
+      <span id={identityId} className="sr-only">{event.id}</span>
       {expanded && (
-        <div className="ml-[4.75rem] mt-1.5 space-y-1 rounded-md bg-white/[0.03] p-3">
+        <div id={detailsId} className="mt-1.5 min-w-0 space-y-1 rounded-md bg-surface-2 p-3">
           <DetailLine label={t('dayLog.list.detailCategory', 'Category')} value={t(`dayLog.categories.${categoryOf(event.type)}`, categoryOf(event.type))} />
           <DetailLine label={t('dayLog.list.detailSource', 'Source')} value={event.source} mono />
           <DetailLine label={t('dayLog.list.detailId', 'Event')} value={event.id} mono />
@@ -366,14 +422,14 @@ function EventRow({ event, timezone, expanded, onToggle, t, formatDistance, form
 
 function DetailLine({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
   return (
-    <div className="flex flex-wrap gap-x-2">
+    <div className="flex min-w-0 flex-wrap gap-x-2">
       <Text variant="caption" className="font-medium">
         {label}:
       </Text>
       {mono ? (
-        <Code className="break-all text-xs">{value}</Code>
+        <Code className="min-w-0 max-w-full break-all">{value}</Code>
       ) : (
-        <Text variant="caption">{value}</Text>
+        <Text variant="caption" className="min-w-0 max-w-full break-words">{value}</Text>
       )}
     </div>
   );
