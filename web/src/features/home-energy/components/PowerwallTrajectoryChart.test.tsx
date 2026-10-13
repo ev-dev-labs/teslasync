@@ -118,7 +118,9 @@ describe('PowerwallTrajectoryChart restrained area paint', () => {
     expect(container.querySelector('.recharts-yAxis')).toHaveTextContent('0%');
     expect(container.querySelector('.recharts-yAxis')).toHaveTextContent('100%');
     expect(container.querySelector('.recharts-xAxis')).toHaveTextContent(formatTime(slots[0].startIso));
-    expect(screen.getByRole('figure', {
+    // The figure is named by its title; the viewport carries the chart description.
+    expect(screen.getByRole('figure', { name: 'Powerwall trajectory' })).toBeInTheDocument();
+    expect(screen.getByRole('img', {
       name: 'Powerwall state of charge over time, with reserve floor reference line',
     })).toBeInTheDocument();
     expect(screen.getAllByText('Projected state of charge, with the backup reserve floor')).toHaveLength(2);
