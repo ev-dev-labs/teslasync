@@ -174,6 +174,10 @@ export default function CausalExperimentationPage() {
             : t('advancedIntelligence.causal.history.empty', 'No causal experiments have been recorded.')}
         >
           <div className="space-y-4">
+            {historyState.refreshError != null && <Button
+              variant="ghost" disabled={query.isFetching}
+              onClick={() => { void query.refetch(); }}
+            >{t('common.retry', 'Retry')}</Button>}
             {experiments.map((item) => (
               <article key={item.id} className="min-w-0 rounded-panel border border-[var(--border-default)] bg-[var(--surface-2)] p-4">
                 <div className="flex flex-wrap items-start justify-between gap-3">

@@ -6,7 +6,7 @@ import type { ReactNode } from 'react';
 import type { DataStateSource } from '@/api/dataState';
 import type { AdvancedPage, CausalExperiment } from '@/types/advancedIntelligence';
 import { formatSpeed, type UnitPref } from '@/lib/unitConversion';
-import { fmtNumber } from '@/lib/numberFormat';
+import { fmtInt, fmtNumber } from '@/lib/numberFormat';
 import { formatTime } from '@/lib/dateFormat';
 import CausalExperimentationPage from './CausalExperimentationPage';
 
@@ -32,10 +32,10 @@ vi.mock('@/hooks/useSelectedVehicle', () => ({
 }));
 vi.mock('@/hooks/usePageTitle', () => ({ usePageTitle: vi.fn() }));
 vi.mock('@/hooks/useUnits', () => ({
-  useUnits: () => ({ unitPrefs: preferences, formatSpeed: (value: number | null) => formatSpeed(value, 'km/h', { precision: 2, locale: 'en-US' }) }),
+  useUnits: () => ({ unitPrefs: preferences, formatSpeed: (value: number | null) => formatSpeed(value, preferences, { precision: 2 }) }),
 }));
 vi.mock('@/hooks/useNumberFormatting', () => ({
-  useNumberFormatting: () => ({ fmtNumber }),
+  useNumberFormatting: () => ({ fmtInt, fmtNumber }),
 }));
 vi.mock('@/hooks/useDateFormat', () => ({
   useDateFormat: () => ({
@@ -107,7 +107,7 @@ function setWindows(values: string[]) {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  vi.spyOn(Date, 'now').mockReturnValue(Date.UTC(2026, 9, 10, 10));
+  vi.spyOn(Date, 'now').mockReturnValue(new Date(2026, 9, 10, 10).getTime());
   mocks.vehicleId = 4;
   mocks.mutation = { data: undefined, error: null, isPending: false };
   mocks.query.mockReturnValue(query(payload()));
