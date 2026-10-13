@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { EmptyState } from '@/components/feedback';
 import { Badge, Icon, Text, type BadgeProps } from '@/components/ui';
 import { KVList } from '@/components/data-display';
-import { formatDateTime } from '@/lib/dateFormat';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import { cn } from '@/lib/cn';
 import { neonColorMap, typography } from '@/lib/tokens';
 
@@ -30,6 +30,7 @@ export function EvidencePanel({
   limitations,
   unsupported,
 }: EvidencePanelProps) {
+  const { formatDateTime } = useDateFormat();
   const { fmtInt, fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const evidenceItems = evidence ?? [];

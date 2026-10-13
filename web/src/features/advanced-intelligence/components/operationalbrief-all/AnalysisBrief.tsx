@@ -7,7 +7,7 @@ import { Button, Text } from '@/components/ui';
 import { useDataState } from '@/hooks/useDataState';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { useOperationalMetrics } from '@/hooks/useOperationalMetrics';
-import { formatDateTime } from '@/lib/dateFormat';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import type { DataQuality, Evidence } from '@/types/advancedIntelligence';
 
 interface AnalysisBriefProps {
@@ -32,6 +32,7 @@ export function AnalysisBrief({
   id, title, description, emptyMessage, metrics, vehicleId, hasResult,
   pending = false, error, query, quality, evidence, limitations, generatedAt, provenance,
 }: AnalysisBriefProps) {
+  const { formatDateTime } = useDateFormat();
   const { t } = useTranslation();
   const { fmtInt, fmtNumber } = useNumberFormatting();
   const state = useDataState(query ?? {});
