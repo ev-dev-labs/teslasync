@@ -5,6 +5,8 @@ import {
 } from '@/components/charts';
 import { useUnits } from '@/hooks/useUnits';
 import { useHiddenSeries } from '@/hooks/useHiddenSeries';
+import { getChartFontFamily, getChartFontSize } from '@/lib/chartTypography';
+import { chartTokens } from '@/lib/tokens';
 import { PreservedChartFrame } from './PreservedChartFrame';
 import type { MotorHistoryChartProps } from './chartTypes';
 
@@ -12,6 +14,9 @@ export function StatorHistory({ rows, state, loading }: MotorHistoryChartProps) 
   const { t } = useTranslation();
   const { formatTemperature, unitPrefs } = useUnits();
   const hidden = useHiddenSeries('stator-temp-chart');
+  const fontFamily = getChartFontFamily();
+  const fontSize = getChartFontSize(12);
+  const tick = { fill: chartTokens.axisStroke, fontFamily, fontSize };
   const table = rows.map(row => ({
     time: row.time,
     stator: formatTemperature(row.stator),
@@ -40,51 +45,51 @@ export function StatorHistory({ rows, state, loading }: MotorHistoryChartProps) 
     >
       <ResponsiveContainer width="100%" height="100%">
         <LineChart data={rows}>
-          <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
-          <XAxis dataKey="time" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} />
-          <YAxis tickFormatter={value => formatTemperature(Number(value))} tick={{ fill: 'var(--text-muted)', fontSize: 10 }} />
+          <CartesianGrid strokeDasharray="3 3" stroke={chartTokens.gridStroke} strokeOpacity={0.4} />
+          <XAxis dataKey="time" tick={tick} />
+          <YAxis tickFormatter={value => formatTemperature(Number(value))} tick={tick} />
           <Tooltip content={<ChartTooltip valueFormatter={value => formatTemperature(typeof value === 'number' ? value : null)} />} />
           <ChartLegend state={hidden} />
           <Line
             {...AREA_DEFAULTS}
             dataKey="stator"
             name={t('drivetrain.statorTemp', 'Stator Temp')}
-            stroke="#ef4444"
+            stroke={chartTokens.series[3]}
             hide={hidden.isHidden('stator')}
           />
           <Line
             {...AREA_DEFAULTS}
             dataKey="statorRel"
             name={t('drivetrain.statorTempRearLeft', 'Rear-Left Stator Temp')}
-            stroke="#a855f7"
+            stroke={chartTokens.series[4]}
             hide={hidden.isHidden('statorRel')}
           />
           <Line
             {...AREA_DEFAULTS}
             dataKey="statorRer"
             name={t('drivetrain.statorTempRearRight', 'Rear-Right Stator Temp')}
-            stroke="#06b6d4"
+            stroke={chartTokens.series[5]}
             hide={hidden.isHidden('statorRer')}
           />
           {/* SI thresholds share the raw series scale; only text is formatted. */}
           <ReferenceLine
             y={60}
-            stroke="#4ade80"
+            stroke="var(--semantic-success)"
             strokeDasharray="4 4"
             strokeOpacity={0.5}
             label={{
               value: `${t('drivetrain.normal', 'Normal')} · ${formatTemperature(60)}`,
-              position: 'right', fill: '#4ade80', fontSize: 10,
+              position: 'right', fill: 'var(--semantic-success)', fontFamily, fontSize,
             }}
           />
           <ReferenceLine
             y={80}
-            stroke="#fbbf24"
+            stroke="var(--semantic-warning)"
             strokeDasharray="4 4"
             strokeOpacity={0.5}
             label={{
               value: `${t('drivetrain.warm', 'Warm')} · ${formatTemperature(80)}`,
-              position: 'right', fill: '#fbbf24', fontSize: 10,
+              position: 'right', fill: 'var(--semantic-warning)', fontFamily, fontSize,
             }}
           />
         </LineChart>
