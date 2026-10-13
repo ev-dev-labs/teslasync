@@ -145,7 +145,7 @@ vi.mock('@/components/forms', () => ({
     onChange: (range: { start: string; end: string }) => void;
     triggerTestId?: string;
   }) => (
-    <button
+    <Button
       type="button"
       data-testid={triggerTestId}
       data-start={value.start}
@@ -155,7 +155,7 @@ vi.mock('@/components/forms', () => ({
       }
     >
       change range
-    </button>
+    </Button>
   ),
   VehicleSelect: () => <div data-testid="vehicle-select" />,
 }));
@@ -219,6 +219,7 @@ interface QueryStub {
   error: unknown;
   isFetching: boolean;
   isStale: boolean;
+  fetchStatus?: 'fetching' | 'paused' | 'idle';
   dataUpdatedAt: number;
   refetch: () => void;
 }
@@ -260,7 +261,7 @@ function renderPage() {
   return render(
     <QueryClientProvider client={client}>
       <ToastProvider>
-        <MemoryRouter initialEntries={['/driving/regen']}>
+        <MemoryRouter initialEntries={['/regen-efficiency']}>
           <RegenEfficiencyPage />
           <HeaderRangeControl />
         </MemoryRouter>
@@ -392,6 +393,71 @@ describe('RegenEfficiencyPage', () => {
     expect(
       screen.queryByText('No detailed drives were returned for this window.'),
     ).not.toBeInTheDocument();
+  });
+
+  it.each(['aggregate', 'detail'] as const)(
+    'labels paused retained %s evidence without erasing the healthy neighboring source',
+    (source) => {
+      if (source === 'aggregate') {
+        h.aggregate = query({ data: makeAggregate(), fetchStatus: 'paused' });
+      } else {
+        h.drives = query({ data: [makeDrive()], fetchStatus: 'paused' }, drivesRefetch);
+      }
+
+      renderPage();
+
+      const warning = screen.getByTestId('stale-refresh-warning');
+      expect(warning).toHaveAttribute('data-refresh-blocked', 'true');
+      expect(within(warning).getByText(source === 'aggregate'
+        ? 'Complete aggregate may be out of date'
+        : 'Detailed returned sample may be out of date')).toBeInTheDocument();
+      for (const testId of [
+        'regen-selected-window-summary', 'regen-overview-brief', 'regen-coverage-brief',
+      ]) {
+        expect(within(screen.getByTestId(testId)).getByText('Retained source')).toBeInTheDocument();
+      }
+      for (const testId of [
+        'regen-kpis', 'regen-overview', 'regen-monthly', 'regen-distribution',
+        'regen-temperature', 'regen-soc', 'regen-evidence', 'regen-methodology',
+      ]) {
+        expect(screen.getByTestId(testId)).toBeInTheDocument();
+      }
+      expect(screen.getByRole('meter')).toHaveAttribute('aria-valuenow', '25');
+      expect(screen.getByText(source === 'aggregate' ? 'Drive #2' : 'Drive #1')).toBeInTheDocument();
+      expect(screen.queryByText("Can't reach server")).not.toBeInTheDocument();
+      expect(screen.queryByText(/offline/i)).not.toBeInTheDocument();
+      fireEvent.click(within(warning).getByRole('button', { name: 'Refresh' }));
+      expect(source === 'aggregate' ? aggregateRefetch : drivesRefetch).toHaveBeenCalledTimes(1);
+      expect(source === 'aggregate' ? drivesRefetch : aggregateRefetch).not.toHaveBeenCalled();
+    },
+  );
+
+  it('does not label a paused initial source as retained or erase available detail', () => {
+    h.aggregate = query({ data: undefined, isSuccess: false, fetchStatus: 'paused' });
+
+    renderPage();
+
+    expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
+    expect(screen.queryByText('Retained source')).not.toBeInTheDocument();
+    expect(screen.queryByRole('meter')).not.toBeInTheDocument();
+    expect(screen.getByText('Drive #2')).toBeInTheDocument();
+    expect(screen.getByTestId('regen-kpis')).toBeInTheDocument();
+    expect(screen.getByTestId('regen-overview')).toBeInTheDocument();
+  });
+
+  it('keeps ordinary background refresh distinct from degraded retained evidence', () => {
+    h.aggregate = query({ data: makeAggregate(), isFetching: true, fetchStatus: 'fetching' });
+
+    renderPage();
+
+    expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
+    expect(screen.queryByText('Retained source')).not.toBeInTheDocument();
+    expect(screen.getByText('Drive #2')).toBeInTheDocument();
+    for (const testId of [
+      'regen-selected-window-summary', 'regen-overview-brief', 'regen-coverage-brief',
+    ]) {
+      expect(within(screen.getByTestId(testId)).getByText('Source available')).toBeInTheDocument();
+    }
   });
 
   it('isolates an aggregate error while detailed evidence remains available', () => {

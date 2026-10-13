@@ -66,7 +66,11 @@ export default function RegenEfficiencyPage() {
   const summaryScope = startInstant && endInstantExclusive
     ? `${startInstant} — ${endInstantExclusive} (${timezone})`
     : t('regen.brief.allReturned', 'Selected all-time scope; detailed rows remain capped.');
-  const retained = aggregateDataState.refreshError != null || detailDataState.refreshError != null;
+  // Match the shared warning's trust contract: paused refreshes can retain
+  // evidence without a refresh error. An unresolved source is not retained.
+  const retained = [aggregateDataState, detailDataState].some(
+    (state) => state.hasData && state.status !== 'ok',
+  );
 
   return (
     <PageLayout
