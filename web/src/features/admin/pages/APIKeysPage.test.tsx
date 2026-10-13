@@ -5,16 +5,16 @@
  * (KPI band, key inventory, access-levels panel) plus create / revoke / delete
  * mutations. These tests exercise every branch and interaction:
  *
- *   1. Loaded — KPI counts, key cards, count caption, access-levels + guidance.
- *   2. Empty  — EmptyStates render and the KPI band shows a truthful `0`.
- *   3. Error  — BOTH data panels surface <QueryError> AND the KPI band shows
- *               the `'—'` placeholder rather than a fabricated `0` (regression
+ *   1. Loaded â€” KPI counts, key cards, count caption, access-levels + guidance.
+ *   2. Empty  â€” EmptyStates render and the KPI band shows a truthful `0`.
+ *   3. Error  â€” BOTH data panels surface <QueryError> AND the KPI band shows
+ *               the `'â€”'` placeholder rather than a fabricated `0` (regression
  *               guard for the KPI error-state fix).
- *   4. Loading — skeletons render while the query is pending.
- *   5. Create  — the dialog opens, cancels, and on submit POSTs the trimmed
+ *   4. Loading â€” skeletons render while the query is pending.
+ *   5. Create  â€” the dialog opens, cancels, and on submit POSTs the trimmed
  *                name + permission then reveals the one-time secret.
- *   6. Revoke  — an active key POSTs `/api-keys/:id/revoke`.
- *   7. Delete  — a key opens a confirm dialog naming it, then DELETEs on confirm
+ *   6. Revoke  â€” an active key POSTs `/api-keys/:id/revoke`.
+ *   7. Delete  â€” a key opens a confirm dialog naming it, then DELETEs on confirm
  *                and closes the dialog.
  *
  * Network is driven entirely through the mocked `@/api/client` `request`
@@ -25,7 +25,7 @@
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, waitFor, within, fireEvent, act } from '@testing-library/react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClient, QueryClientProvider, onlineManager } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
 
@@ -109,7 +109,7 @@ function threeKeys(): APIKey[] {
       id: 'k3',
       name: 'Roadster',
       permissions: 'read-write',
-      expiresAt: '2020-01-01T00:00:00Z', // in the past → expired
+      expiresAt: '2020-01-01T00:00:00Z', // in the past â†’ expired
     }),
   ];
 }
@@ -244,7 +244,7 @@ describe('APIKeysPage', () => {
       screen.getByText('Permission usage appears once you create a key.'),
     ).toBeInTheDocument();
 
-    // Empty is real data — the KPI legitimately reads 0 (not the em-dash).
+    // Empty is real data â€” the KPI legitimately reads 0 (not the em-dash).
     expect(kpiCardText('Total keys')).toContain('0');
     expect(screen.queryByText('Falcon')).not.toBeInTheDocument();
   });
@@ -260,8 +260,8 @@ describe('APIKeysPage', () => {
     expect(screen.getAllByText("Can't reach server").length).toBe(2);
 
     // Regression guard: the KPI band must not lie with "0" on a failed load.
-    expect(screen.getAllByText('—')).toHaveLength(4);
-    expect(kpiCardText('Total keys')).toContain('—');
+    expect(screen.getAllByText('â€”')).toHaveLength(4);
+    expect(kpiCardText('Total keys')).toContain('â€”');
     expect(kpiCardText('Total keys')).not.toContain('0');
   });
 
@@ -400,4 +400,64 @@ describe('APIKeysPage', () => {
       options != null && typeof options === 'object' && 'method' in options && options.method === 'DELETE',
     )).toBe(false);
   });
+
+  it('uses neutral solid permission tracks without changing their labels, counts or descriptions', async () => {
+    installRequest(threeKeys());
+    renderPage();
+    await screen.findByText('Falcon');
+    for (const [label, description] of [
+      ['Read', 'Read-only access to fleet data.'],
+      ['Read-write', 'Read data and send vehicle commands.'],
+      ['Admin', 'Full administrative access to every resource.'],
+    ]) {
+      const bar = screen.getByRole('progressbar', { name: label });
+      expect(bar).toHaveAttribute('aria-valuenow', '1');
+      expect(bar).toHaveAttribute('aria-valuemax', '3');
+      expect(bar.querySelector('[data-metric-fill]')).toHaveStyle({ background: 'var(--text-secondary)' });
+      expect(screen.getByText(description)).toBeInTheDocument();
+    }
+    expect(screen.getByText('About API keys')).toBeInTheDocument();
+  });
+
+  it('retains every key and permission section when refresh is paused offline', async () => {
+    installRequest(threeKeys());
+    const { client } = renderPage();
+    await screen.findByText('Nova');
+    try {
+      act(() => onlineManager.setOnline(false));
+      await act(async () => { void client.refetchQueries(); });
+      await waitFor(() => expect(client.getQueryCache().getAll().some(query =>
+        query.state.fetchStatus === 'paused',
+      )).toBe(true));
+      expect(screen.getByText('Falcon')).toBeInTheDocument();
+      expect(screen.getByText('Nova')).toBeInTheDocument();
+      expect(screen.getByText('Roadster')).toBeInTheDocument();
+      expect(screen.getAllByRole('progressbar')).toHaveLength(3);
+      expect(kpiCardText('Total keys')).toContain('3');
+      expect(screen.getByText('About API keys')).toBeInTheDocument();
+      expect(screen.queryByText("Can't reach server")).not.toBeInTheDocument();
+      expect(screen.getAllByText('Previously loaded data remains visible while affected sources recover.')).toHaveLength(2);
+    } finally {
+      await act(async () => { onlineManager.setOnline(true); });
+      client.clear();
+    }
+  });
+
+  it('closes pending confirmation when writes become unavailable without sending a mutation', async () => {
+    installRequest(threeKeys());
+    const { rerender, client } = renderPage();
+    await screen.findByText('Nova');
+    fireEvent.click(screen.getByRole('button', { name: 'Delete key Nova' }));
+    expect(await screen.findByRole('dialog')).toHaveTextContent('Nova');
+    operationalMode.canWrite = false;
+    operationalMode.writeBlockReason = 'Reconnect before making operational changes.';
+    // Re-render the same provider tree without resetting query or dialog state.
+    rerender(<MemoryRouter><QueryClientProvider client={client}>
+      <ToastProvider><APIKeysPage /></ToastProvider>
+    </QueryClientProvider></MemoryRouter>);
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    expect(screen.getByRole('button', { name: 'Create key' })).toBeDisabled();
+    expect(mockedRequest.mock.calls.some(([, opts]) => opts?.method === 'DELETE')).toBe(false);
+  });
+
 });
