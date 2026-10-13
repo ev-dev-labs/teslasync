@@ -50,7 +50,7 @@ export default function CausalExperimentationPage() {
   if (pagination.vehicleId !== vehicleId) setPagination({ vehicleId, page: 1 });
   const setPage = (next: number) => setPagination({ vehicleId, page: next });
   const [review, setReview] = useState<CreateCausalExperimentRequest | null>(null);
-  const [invalidWindows, setInvalidWindows] = useState(false);
+  const [validationAttempted, setValidationAttempted] = useState(false);
   const submitting = useRef(false);
   const [form, setForm] = useState<ExperimentForm>({
     intervention_kind: 'charging_schedule',
@@ -116,19 +116,49 @@ export default function CausalExperimentationPage() {
     ];
   };
 
+  const windowHint = t('advancedIntelligence.causal.form.windowHint',
+    'Windows must be ordered and non-overlapping, last from 24 hours to 365 days, and already be observed (up to 1 minute of clock tolerance).');
+  const getWindowErrors = (values: ExperimentForm) => {
+    const instants = windowFields.map((field) => new Date(values[field]).getTime());
+    const [baselineStart, baselineEnd, treatmentStart, treatmentEnd] = instants;
+    const errors: Partial<Record<(typeof windowFields)[number], string>> = {};
+    const day = 24 * 60 * 60 * 1000;
+    windowFields.forEach((field, index) => {
+      if (!Number.isFinite(instants[index])) {
+        errors[field] = t('advancedIntelligence.causal.form.validation.invalidDate', 'Enter a valid date and time.');
+      }
+    });
+    // Duration belongs to its own pair; a missing endpoint must not blame its valid partner.
+    ([['baseline_start', 'baseline_end', baselineStart, baselineEnd],
+      ['treatment_start', 'treatment_end', treatmentStart, treatmentEnd]] as const).forEach(([startField, endField, start, end]) => {
+      if (Number.isFinite(start) && Number.isFinite(end) && (end - start < day || end - start > 365 * day)) {
+        const message = t('advancedIntelligence.causal.form.validation.duration', 'Each window must last from 24 hours to 365 days.');
+        errors[startField] = message;
+        errors[endField] = message;
+      }
+    });
+    if (Number.isFinite(baselineEnd) && Number.isFinite(treatmentStart) && treatmentStart < baselineEnd) {
+      errors.treatment_start ??= t('advancedIntelligence.causal.form.validation.overlap', 'Treatment start must be at or after baseline end.');
+    }
+    if (Number.isFinite(treatmentEnd) && treatmentEnd > Date.now() + 60 * 1000) {
+      errors.treatment_end ??= t('advancedIntelligence.causal.form.validation.future', 'Treatment end must not be more than 1 minute in the future.');
+    }
+    return errors;
+  };
+  // Revalidate after an attempted review so edits clear only errors actually corrected,
+  // including errors on a paired field, without hiding unrelated failures.
+  const windowErrors = validationAttempted ? getWindowErrors(form) : {};
+
   const requestConfirmation = (event: FormEvent) => {
     event.preventDefault();
     if (vehicleId == null || mutation.isPending || submitting.current) return;
     const instants = windowFields.map((field) => new Date(form[field]).getTime());
     const [baselineStart, baselineEnd, treatmentStart, treatmentEnd] = instants;
-    const day = 24 * 60 * 60 * 1000;
-    const invalid = instants.some((instant) => !Number.isFinite(instant))
-      || baselineEnd - baselineStart < day || baselineEnd - baselineStart > 365 * day
-      || treatmentEnd - treatmentStart < day || treatmentEnd - treatmentStart > 365 * day
-      || treatmentStart < baselineEnd || treatmentEnd > Date.now() + 60 * 1000;
-    setInvalidWindows(invalid);
-    if (invalid) {
-      event.currentTarget.querySelector<HTMLInputElement>('input[type="datetime-local"]')?.focus();
+    const errors = getWindowErrors(form);
+    setValidationAttempted(true);
+    const invalidField = windowFields.find((field) => errors[field] !== undefined);
+    if (invalidField) {
+      event.currentTarget.querySelector<HTMLInputElement>(`#causal-${invalidField}`)?.focus();
       return;
     }
     mutation.reset();
@@ -205,10 +235,7 @@ export default function CausalExperimentationPage() {
       <FadeIn delay={0.05}>
         <InsightPanel
           title={t('advancedIntelligence.causal.form.title', 'Create windowed experiment')}
-          description={t(
-            'advancedIntelligence.causal.form.subtitle',
-            'Windows must be ordered, non-overlapping, at least 24 hours, and already observed.',
-          )}
+          description={windowHint}
         >
           <form className="space-y-4" onSubmit={requestConfirmation}>
             <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
@@ -236,9 +263,10 @@ export default function CausalExperimentationPage() {
                 className="min-h-11 md:min-h-10" type="datetime-local"
                 label={t(`advancedIntelligence.causal.form.${windowLabels[index]}`, windowDefaults[index])}
                 value={form[field]} required
-                hint={t('advancedIntelligence.causal.form.subtitle', 'Windows must be ordered, non-overlapping, at least 24 hours, and already observed.')}
-                error={invalidWindows ? t('advancedIntelligence.causal.form.subtitle', 'Windows must be ordered, non-overlapping, at least 24 hours, and already observed.') : undefined}
-                onChange={(event) => { setInvalidWindows(false); setForm((current) => ({ ...current, [field]: event.target.value })); }}
+                hint={windowHint}
+                error={windowErrors[field]}
+                onInvalid={() => setValidationAttempted(true)}
+                onChange={(event) => setForm((current) => ({ ...current, [field]: event.target.value }))}
               />)}
             </div>
             <Button

@@ -377,3 +377,172 @@ describe('CausalExperimentationPage', () => {
     expect(mocks.mutate).not.toHaveBeenCalled();
   });
 });
+
+
+describe('Causal window field validation', () => {
+  const day = 24 * 60 * 60 * 1000;
+  const minute = 60 * 1000;
+  const now = new Date(2026, 9, 10, 10).getTime();
+  const durationError = 'Each window must last from 24 hours to 365 days.';
+  const dateError = 'Enter a valid date and time.';
+  const overlapError = 'Treatment start must be at or after baseline end.';
+  const futureError = 'Treatment end must not be more than 1 minute in the future.';
+  // Build minute-resolution local controls from exact elapsed instants, without
+  // changing the page's existing datetime-local parsing or timezone contract.
+  const localMinute = (instant: number) => {
+    const date = new Date(instant);
+    const pad = (value: number) => String(value).padStart(2, '0');
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+  };
+  const dates = (offsets: number[]) => offsets.map((offset) => localMinute(now + offset));
+  const standard = dates([-9 * day, -7 * day, -6 * day, -4 * day]);
+
+  it.each([
+    { case: 'missing baseline start', values: ['', ...standard.slice(1)], bad: [0], message: dateError },
+    { case: 'missing baseline end', values: [standard[0], '', ...standard.slice(2)], bad: [1], message: dateError },
+    { case: 'missing treatment start', values: [...standard.slice(0, 2), '', standard[3]], bad: [2], message: dateError },
+    { case: 'missing treatment end', values: [...standard.slice(0, 3), ''], bad: [3], message: dateError },
+    { case: 'baseline-only reversed duration', values: dates([-7 * day, -9 * day, -6 * day, -4 * day]), bad: [0, 1], message: durationError },
+    { case: 'treatment-only reversed duration', values: dates([-9 * day, -7 * day, -4 * day, -6 * day]), bad: [2, 3], message: durationError },
+    { case: 'baseline-only one minute below 24 hours', values: dates([-9 * day, -8 * day - minute, -6 * day, -4 * day]), bad: [0, 1], message: durationError },
+    { case: 'treatment-only one minute below 24 hours', values: dates([-9 * day, -7 * day, -6 * day, -5 * day - minute]), bad: [2, 3], message: durationError },
+    { case: 'baseline-only one minute above 365 days', values: dates([-400 * day, -35 * day + minute, -6 * day, -4 * day]), bad: [0, 1], message: durationError },
+    { case: 'treatment-only one minute above 365 days', values: dates([-371 * day, -369 * day, -367 * day, -2 * day + minute]), bad: [2, 3], message: durationError },
+    { case: 'one minute of overlap', values: dates([-9 * day, -7 * day, -7 * day - minute, -4 * day]), bad: [2], message: overlapError },
+    { case: 'treatment ordered before baseline', values: dates([-6 * day, -4 * day, -9 * day, -7 * day]), bad: [2], message: overlapError },
+    { case: 'one millisecond beyond future tolerance', values: dates([-9 * day, -7 * day, -6 * day, minute]), bad: [3], message: futureError, clock: now - 1 },
+  ])('rejects $case with field-specific errors and focus without mutation', ({ values, bad, message, clock }) => {
+    if (clock !== undefined) vi.mocked(Date.now).mockReturnValue(clock);
+    renderPage();
+    setWindows(values);
+    submitReview();
+    windowLabels.forEach((label, index) => {
+      const input = screen.getByLabelText(label, { exact: false });
+      const errorId = `${input.id}-error`;
+      if (bad.includes(index)) {
+        expect(input).toHaveAttribute('aria-invalid', 'true');
+        expect(input).toHaveAttribute('aria-describedby', errorId);
+        expect(document.getElementById(errorId)).toHaveTextContent(message);
+      } else {
+        expect(input).not.toHaveAttribute('aria-invalid', 'true');
+        expect(document.getElementById(errorId)).not.toBeInTheDocument();
+        expect(input).not.toHaveFocus();
+      }
+    });
+    expect(screen.getByLabelText(windowLabels[bad[0]], { exact: false })).toHaveFocus();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(mocks.reset).not.toHaveBeenCalled();
+    expect(mocks.mutate).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    { case: 'exact baseline 24-hour minimum', values: dates([-9 * day, -8 * day, -6 * day, -4 * day]) },
+    { case: 'exact treatment 24-hour minimum', values: dates([-9 * day, -7 * day, -6 * day, -5 * day]) },
+    { case: 'exact baseline 365-day maximum', values: dates([-400 * day, -35 * day, -6 * day, -4 * day]) },
+    { case: 'exact treatment 365-day maximum', values: dates([-371 * day, -369 * day, -367 * day, -2 * day]) },
+    { case: 'touching non-overlapping windows', values: dates([-9 * day, -7 * day, -7 * day, -4 * day]) },
+    { case: 'ordered separated windows', values: standard },
+    { case: 'exact one-minute future tolerance', values: dates([-9 * day, -7 * day, -6 * day, minute]) },
+  ])('reviews $case without invalid fields or pre-confirmation mutation', ({ values }) => {
+    renderPage();
+    setWindows(values);
+    submitReview();
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    windowLabels.forEach((label) => expect(screen.getByLabelText(label, { exact: false })).not.toHaveAttribute('aria-invalid', 'true'));
+    const dialog = within(screen.getByRole('dialog'));
+    values.forEach((value) => expect(dialog.getByText(`${new Date(value).toISOString()} · UTC`)).toBeInTheDocument());
+    expect(mocks.reset).toHaveBeenCalledOnce();
+    expect(mocks.mutate).not.toHaveBeenCalled();
+  });
+
+  it('discloses the 24-hour minimum 365-day maximum and one-minute future tolerance on every field', () => {
+    renderPage();
+    windowLabels.forEach((label) => {
+      const input = screen.getByLabelText(label, { exact: false });
+      const hint = document.getElementById(input.getAttribute('aria-describedby') ?? '');
+      expect(hint).toHaveTextContent('ordered and non-overlapping');
+      expect(hint).toHaveTextContent('24 hours to 365 days');
+      expect(hint).toHaveTextContent('up to 1 minute of clock tolerance');
+      expect(input).not.toHaveAttribute('aria-invalid', 'true');
+    });
+  });
+
+  it('native required invalidation identifies only the missing treatment endpoint', () => {
+    renderPage();
+    setWindows([...standard.slice(0, 3), '']);
+    const treatmentEnd = screen.getByLabelText('Treatment end', { exact: false });
+    fireEvent.invalid(treatmentEnd);
+    expect(treatmentEnd).toHaveAttribute('aria-invalid', 'true');
+    expect(document.getElementById('causal-treatment_end-error')).toHaveTextContent(dateError);
+    windowLabels.slice(0, 3).forEach((label) => expect(screen.getByLabelText(label, { exact: false })).not.toHaveAttribute('aria-invalid', 'true'));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(mocks.mutate).not.toHaveBeenCalled();
+  });
+
+  it('corrective treatment edit clears its paired errors while unrelated baseline errors remain', () => {
+    renderPage();
+    setWindows(dates([-9 * day, -8 * day - minute, -6 * day, -5 * day - minute]));
+    submitReview();
+    windowLabels.forEach((label) => expect(screen.getByLabelText(label, { exact: false })).toHaveAttribute('aria-invalid', 'true'));
+    fireEvent.change(screen.getByLabelText('Metric'), { target: { value: 'average_speed_mps' } });
+    windowLabels.forEach((label) => expect(screen.getByLabelText(label, { exact: false })).toHaveAttribute('aria-invalid', 'true'));
+    fireEvent.change(screen.getByLabelText('Treatment end', { exact: false }), { target: { value: localMinute(now - 5 * day) } });
+    windowLabels.slice(0, 2).forEach((label) => expect(screen.getByLabelText(label, { exact: false })).toHaveAttribute('aria-invalid', 'true'));
+    windowLabels.slice(2).forEach((label) => {
+      const input = screen.getByLabelText(label, { exact: false });
+      expect(input).not.toHaveAttribute('aria-invalid', 'true');
+      expect(document.getElementById(`${input.id}-error`)).not.toBeInTheDocument();
+      expect(input).toHaveAttribute('aria-describedby', `${input.id}-hint`);
+    });
+    submitReview();
+    expect(screen.getByLabelText('Baseline start', { exact: false })).toHaveFocus();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(mocks.mutate).not.toHaveBeenCalled();
+    fireEvent.change(screen.getByLabelText('Baseline end', { exact: false }), { target: { value: localMinute(now - 8 * day) } });
+    windowLabels.forEach((label) => expect(screen.getByLabelText(label, { exact: false })).not.toHaveAttribute('aria-invalid', 'true'));
+    submitReview();
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    expect(mocks.mutate).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    { case: 'missing endpoint', values: [...standard.slice(0, 3), ''], field: 'Treatment end', correction: standard[3] },
+    { case: 'overlap', values: dates([-9 * day, -7 * day, -7 * day - minute, -4 * day]), field: 'Treatment start', correction: standard[2] },
+    { case: 'future endpoint', values: dates([-9 * day, -7 * day, -6 * day, 2 * minute]), field: 'Treatment end', correction: standard[3] },
+  ])('corrective edit clears actual $case error and permits review without mutation', ({ values, field, correction }) => {
+    renderPage();
+    setWindows(values);
+    submitReview();
+    const input = screen.getByLabelText(field, { exact: false });
+    expect(input).toHaveAttribute('aria-invalid', 'true');
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    fireEvent.change(input, { target: { value: correction } });
+    windowLabels.forEach((label) => expect(screen.getByLabelText(label, { exact: false })).not.toHaveAttribute('aria-invalid', 'true'));
+    expect(document.getElementById(`${input.id}-error`)).not.toBeInTheDocument();
+    expect(input).toHaveAttribute('aria-describedby', `${input.id}-hint`);
+    expect(mocks.mutate).not.toHaveBeenCalled();
+    submitReview();
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    expect(mocks.mutate).not.toHaveBeenCalled();
+  });
+
+  it('valid immutable confirmation survives subsequent invalid date edits and duplicate clicks', () => {
+    renderPage();
+    setWindows(standard);
+    submitReview();
+    expect(mocks.mutate).not.toHaveBeenCalled();
+    const reviewed = {
+      vehicle_id: 4, confirmed: true, intervention_kind: 'charging_schedule', metric: 'charging_success_pct',
+      baseline_start: new Date(standard[0]).toISOString(), baseline_end: new Date(standard[1]).toISOString(),
+      treatment_start: new Date(standard[2]).toISOString(), treatment_end: new Date(standard[3]).toISOString(),
+    };
+    setWindows(['', '', '', '']);
+    fireEvent.change(screen.getByLabelText('Intervention'), { target: { value: 'tire_service' } });
+    fireEvent.change(screen.getByLabelText('Metric'), { target: { value: 'average_speed_mps' } });
+    const confirm = within(screen.getByRole('dialog')).getByRole('button', { name: 'Create estimate' });
+    fireEvent.click(confirm);
+    fireEvent.click(confirm);
+    expect(mocks.mutate).toHaveBeenCalledOnce();
+    expect(mocks.mutate.mock.calls[0][0]).toEqual(reviewed);
+  });
+});
