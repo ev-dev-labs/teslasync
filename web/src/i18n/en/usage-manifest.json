@@ -72062,6 +72062,8 @@
       "actionCenter.providers.description",
       "actionCenter.providers.empty",
       "actionCenter.providers.findings",
+      "actionCenter.providers.findings_one",
+      "actionCenter.providers.findings_other",
       "actionCenter.providers.title",
       "actionCenter.resource",
       "actionCenter.source.active_alerts",
