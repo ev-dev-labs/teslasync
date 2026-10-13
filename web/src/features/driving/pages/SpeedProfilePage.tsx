@@ -13,7 +13,7 @@ import {
 import type { StatMetric } from '@/components/data-display/stat-reference';
 import { DrivingSummaryBrief } from '../components/operationalbrief-n-z/DrivingSummaryBrief';
 import { FadeIn } from '@/components/motion';
-import { Skeleton, EmptyState, QueryError, StaleRefreshWarning } from '@/components/feedback';
+import { Skeleton, EmptyState, QueryError, StaleRefreshWarning, SectionErrorBoundary } from '@/components/feedback';
 import { useDataState } from '@/hooks/useDataState';
 
 
@@ -26,7 +26,7 @@ import { cn } from '@/lib/cn';
 
 import { getEfficiency } from '@/lib/drivesAggregation';
 import { neonColorMap, type NeonColor } from '@/lib/tokens';
-import { convertSpeedFromSI } from '@/lib/unitConversion';
+import { convertSpeedFromSI, convertEfficiencyFromSI } from '@/lib/unitConversion';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 /* ------------------------------------------------------------------ */
@@ -35,10 +35,10 @@ import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 /** Map a speed-bucket label to a semantic accent (chip neon + chart fill). */
 export function bucketAccent(range: string): { neon: NeonColor; fill: string } {
-  if (range.startsWith('0') || range.includes('15')) return { neon: 'green', fill: '#10b981' };
-  if (range.startsWith('30') || range.includes('45')) return { neon: 'cyan', fill: '#00f0ff' };
-  if (range.startsWith('60') || range.includes('75')) return { neon: 'amber', fill: '#f59e0b' };
-  return { neon: 'red', fill: '#ef4444' };
+  if (range.startsWith('0') || range.includes('15')) return { neon: 'green', fill: 'var(--semantic-success)' };
+  if (range.startsWith('30') || range.includes('45')) return { neon: 'cyan', fill: 'var(--semantic-info)' };
+  if (range.startsWith('60') || range.includes('75')) return { neon: 'amber', fill: 'var(--semantic-warning)' };
+  return { neon: 'red', fill: 'var(--semantic-danger)' };
 }
 
 export function bucketIcon(range: string) {
@@ -49,9 +49,9 @@ export function bucketIcon(range: string) {
 
 /** Toned 300-level accent for an efficiency figure (lower Wh = better). */
 export function efficiencyClass(eff: number): string {
-  if (eff < 160) return 'text-emerald-300';
-  if (eff < 220) return 'text-amber-300';
-  return 'text-rose-300';
+  if (eff < 160) return neonColorMap.green.text;
+  if (eff < 220) return neonColorMap.amber.text;
+  return neonColorMap.red.text;
 }
 
 export { getEfficiency };
@@ -95,7 +95,7 @@ export default function SpeedProfilePage() {
     [unitPrefs.speed],
   );
   const toEfficiencyDisplay = useCallback(
-    (whPerKm: number) => (unitPrefs.distance === 'mi' ? whPerKm * 1.609344 : whPerKm),
+    (whPerKm: number) => convertEfficiencyFromSI(whPerKm, unitPrefs.distance),
     [unitPrefs.distance],
   );
 
@@ -152,7 +152,7 @@ export default function SpeedProfilePage() {
       points.push({
         speed: Math.round(toSpeedDisplay(d.avgSpeedMps)),
         efficiency: Math.round(eff),
-        color: eff < 140 ? '#10b981' : eff < 200 ? '#00f0ff' : eff < 260 ? '#f59e0b' : '#ef4444',
+        color: raw < 140 ? 'var(--semantic-success)' : raw < 200 ? 'var(--semantic-info)' : raw < 260 ? 'var(--semantic-warning)' : 'var(--semantic-danger)',
       });
     }
     return points;
@@ -226,6 +226,7 @@ export default function SpeedProfilePage() {
       <StaleRefreshWarning state={drivesState} label={t('speedProfile.effVsSpeed', 'Efficiency vs Speed')} />
       {/* 1 — KPI band */}
       <FadeIn>
+        <SectionErrorBoundary name="SpeedProfileSummary">
         <DrivingSummaryBrief
           id="speed-profile-brief"
           title={t('speedProfile.summaryAria', 'Speed summary metrics')}
@@ -238,12 +239,14 @@ export default function SpeedProfilePage() {
           retained={profileState.isRefreshBlocked || drivesState.isRefreshBlocked}
           actions={error ? <QueryError error={error} onRetry={() => refetch()} /> : undefined}
         />
+        </SectionErrorBoundary>
       </FadeIn>
 
       {/* 2 — Hero bento: distribution chart + speed-envelope gauges */}
       <FadeIn delay={0.1}>
         <section className="grid grid-cols-1 gap-4 xl:grid-cols-3 xl:gap-5">
           <GlassPanel className="p-4 sm:p-5 xl:col-span-2">
+            <SectionErrorBoundary name="SpeedProfileDistribution">
             <PanelTitle className="mb-3">{t('speedProfile.distribution', 'Speed Distribution')}</PanelTitle>
             {error ? (
               <QueryError error={error} onRetry={() => refetch()} />
@@ -257,10 +260,14 @@ export default function SpeedProfilePage() {
               />
             ) : (
               <div className="h-64 sm:h-72 xl:h-80">
-                {/* chart-a11y:no-table speed-bucket histogram — bucket count varies by drive set; readings not individually meaningful as rows */}
                 <EmbeddedChart
                   title={t('speedProfile.distribution', 'Speed Distribution')}
                   ariaLabel={t('speedProfile.distributionAria', 'Speed-bucket time-share distribution bar chart')}
+                  data={distributionChartData}
+                  dataColumns={[
+                    { key: 'range', label: t('speedProfile.buckets', 'Speed Buckets') },
+                    { key: 'readings', label: t('speedProfile.readings', 'Readings'), kind: 'count' },
+                  ]}
                   fluid
                 >
                   <ResponsiveContainer width="100%" height="100%">
@@ -279,9 +286,11 @@ export default function SpeedProfilePage() {
                 </EmbeddedChart>
               </div>
             )}
+            </SectionErrorBoundary>
           </GlassPanel>
 
           <GlassPanel className="p-4 sm:p-5 xl:col-span-1">
+            <SectionErrorBoundary name="SpeedProfileEnvelope">
             <PanelTitle className="mb-1">{t('speedProfile.envelope', 'Speed Envelope')}</PanelTitle>
             <Caption className="mb-3 block">
               {t('speedProfile.envelopeHint', 'Average, peak and most-efficient speed')}
@@ -324,6 +333,7 @@ export default function SpeedProfilePage() {
                 />
               </div>
             )}
+            </SectionErrorBoundary>
           </GlassPanel>
         </section>
       </FadeIn>
@@ -376,7 +386,7 @@ export default function SpeedProfilePage() {
                     <dl className="flex-1 space-y-2">
                       <div className="flex items-center justify-between gap-2">
                         <Text as="dt" variant="caption">{t('speedProfile.timeShare', 'Time share')}</Text>
-                        <Text as="dd" size="sm" weight="bold" className={chip.text}>
+                        <Text as="dd" size="sm" weight="bold" color="secondary" className="tabular-nums">
                           {fmtNumber(bucket.pct)}%
                         </Text>
                       </div>
@@ -420,6 +430,7 @@ export default function SpeedProfilePage() {
       <FadeIn delay={0.3}>
         <section className="grid grid-cols-1 gap-4 xl:grid-cols-3 xl:gap-5">
           <GlassPanel className="p-4 sm:p-5 xl:col-span-2">
+            <SectionErrorBoundary name="SpeedProfileScatter">
             <PanelTitle className="mb-1">{t('speedProfile.effVsSpeed', 'Efficiency vs Speed')}</PanelTitle>
             <Caption className="mb-3 block">
               {t('speedProfile.lower', 'Lower')} {efficiencyUnit} = {t('speedProfile.better', 'better')}
@@ -436,11 +447,15 @@ export default function SpeedProfilePage() {
               />
             ) : (
               <>
-                {/* chart-a11y:no-table per-drive scatter cloud — each point is one drive, not meaningful as tabular rows */}
                 <div className="h-56 sm:h-64 xl:h-72">
                   <EmbeddedChart
                     title={t('speedProfile.effVsSpeed', 'Efficiency vs Speed')}
                     ariaLabel={t('speedProfile.effVsSpeedAria', 'Per-drive efficiency versus speed scatter plot')}
+                    data={scatterData}
+                    dataColumns={[
+                      { key: 'speed', label: `${t('speedProfile.speed', 'Speed')} (${speedUnit})`, format: value => typeof value === 'number' ? fmtNumber(value) : '—' },
+                      { key: 'efficiency', label: efficiencyUnit, format: value => typeof value === 'number' ? fmtNumber(value) : '—' },
+                    ]}
                     fluid
                   >
                     <ResponsiveContainer width="100%" height="100%">
@@ -469,23 +484,25 @@ export default function SpeedProfilePage() {
                   </EmbeddedChart>
                 </div>
                 <div className="mt-3 flex flex-wrap items-center justify-end gap-3">
-                  <ScatterLegend colorClass="bg-emerald-400" label={t('speedProfile.efficient', 'Efficient')} />
-                  <ScatterLegend colorClass="bg-amber-400" label={t('speedProfile.moderate', 'Moderate')} />
-                  <ScatterLegend colorClass="bg-rose-400" label={t('speedProfile.highConsumption', 'High consumption')} />
+                  <ScatterLegend colorClass="bg-[var(--semantic-success)]" label={t('speedProfile.efficient', 'Efficient')} />
+                  <ScatterLegend colorClass="bg-[var(--semantic-warning)]" label={t('speedProfile.moderate', 'Moderate')} />
+                  <ScatterLegend colorClass="bg-[var(--semantic-danger)]" label={t('speedProfile.highConsumption', 'High consumption')} />
                 </div>
               </>
             )}
+            </SectionErrorBoundary>
           </GlassPanel>
 
           <GlassPanel className="p-4 sm:p-5 xl:col-span-1">
+            <SectionErrorBoundary name="SpeedProfileInsight">
             <PanelTitle className="mb-3">{t('speedProfile.insightTitle', 'Efficiency Insight')}</PanelTitle>
             {error ? (
               <QueryError error={error} onRetry={() => refetch()} />
             ) : isLoading ? (
               <Skeleton height={120} />
             ) : (data?.optimalSpeedMps ?? 0) > 0 ? (
-              <div className="flex items-start gap-3 rounded-lg border-l-2 border-emerald-400/70 bg-emerald-400/5 p-3">
-                <Zap className="mt-0.5 h-5 w-5 shrink-0 text-emerald-300" aria-hidden="true" />
+              <div className="flex items-start gap-3 rounded-lg border-l-2 border-[var(--border-default)] bg-[var(--surface-2)] p-3">
+                <Zap className="mt-0.5 h-5 w-5 shrink-0 text-[var(--text-secondary)]" aria-hidden="true" />
                 <Text as="p" size="sm" color="secondary">
                   {t('speedProfile.insightText', 'Drives around {{speed}} {{unit}} show the best energy efficiency. Reducing highway speed could improve efficiency by ~15%.', {
                     speed: fmtNumber(toSpeedDisplay(data?.optimalSpeedMps ?? 0)),
@@ -500,6 +517,7 @@ export default function SpeedProfilePage() {
                 actionTo={{ label: t('speedProfile.browseDrives', 'Browse drives'), to: '/drives' }}
               />
             )}
+            </SectionErrorBoundary>
           </GlassPanel>
         </section>
       </FadeIn>

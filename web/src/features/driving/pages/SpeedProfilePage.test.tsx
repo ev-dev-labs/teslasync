@@ -156,6 +156,10 @@ vi.mock('@/components/charts', async () => {
     };
   return {
     ...chartTestDoubles,
+    EmbeddedChart: function EmbeddedChart({ title, data, dataColumns, children }: { title: string; data?: unknown; dataColumns?: unknown; children?: ReactNode }) {
+      captured[title] = { data, dataColumns };
+      return React.createElement('div', { 'data-testid': `embedded-${title}` }, children);
+    },
     ChartTooltip: Null,
     Tooltip: Null,
     XAxis: Null,
@@ -292,11 +296,11 @@ beforeEach(() => {
 
 describe('SpeedProfilePage helpers', () => {
   it('bucketAccent maps each speed band to its semantic accent + chart fill', () => {
-    expect(bucketAccent('0-15')).toEqual({ neon: 'green', fill: '#10b981' });
-    expect(bucketAccent('15-30')).toEqual({ neon: 'green', fill: '#10b981' }); // includes 15
-    expect(bucketAccent('30-45')).toEqual({ neon: 'cyan', fill: '#00f0ff' });
-    expect(bucketAccent('60-75')).toEqual({ neon: 'amber', fill: '#f59e0b' });
-    expect(bucketAccent('90+')).toEqual({ neon: 'red', fill: '#ef4444' });
+    expect(bucketAccent('0-15')).toEqual({ neon: 'green', fill: 'var(--semantic-success)' });
+    expect(bucketAccent('15-30')).toEqual({ neon: 'green', fill: 'var(--semantic-success)' }); // includes 15
+    expect(bucketAccent('30-45')).toEqual({ neon: 'cyan', fill: 'var(--semantic-info)' });
+    expect(bucketAccent('60-75')).toEqual({ neon: 'amber', fill: 'var(--semantic-warning)' });
+    expect(bucketAccent('90+')).toEqual({ neon: 'red', fill: 'var(--semantic-danger)' });
   });
 
   it('bucketIcon picks Car / TrendingUp / Gauge per band', () => {
@@ -308,12 +312,12 @@ describe('SpeedProfilePage helpers', () => {
   });
 
   it('efficiencyClass applies the Wh-per-km thresholds incl. boundaries', () => {
-    expect(efficiencyClass(150)).toBe('text-emerald-300');
-    expect(efficiencyClass(159.9)).toBe('text-emerald-300');
-    expect(efficiencyClass(160)).toBe('text-amber-300'); // boundary → not < 160
-    expect(efficiencyClass(200)).toBe('text-amber-300');
-    expect(efficiencyClass(220)).toBe('text-rose-300'); // boundary → not < 220
-    expect(efficiencyClass(300)).toBe('text-rose-300');
+    expect(efficiencyClass(150)).toBe('text-[var(--semantic-success)]');
+    expect(efficiencyClass(159.9)).toBe('text-[var(--semantic-success)]');
+    expect(efficiencyClass(160)).toBe('text-[var(--semantic-warning)]'); // boundary → not < 160
+    expect(efficiencyClass(200)).toBe('text-[var(--semantic-warning)]');
+    expect(efficiencyClass(220)).toBe('text-[var(--semantic-danger)]'); // boundary → not < 220
+    expect(efficiencyClass(300)).toBe('text-[var(--semantic-danger)]');
   });
 
   it('getEfficiency uses measured energy and never fabricates a battery estimate', () => {
@@ -370,9 +374,9 @@ describe('SpeedProfilePage', () => {
     // D_NULL (no avg speed) + D_ZERO (no distance) are filtered out; the rest
     // carry rounded display speed, display efficiency, and a threshold colour.
     expect(captured.scatterData).toEqual([
-      { speed: 11, efficiency: 120, color: '#10b981' },
-      { speed: 36, efficiency: 150, color: '#00f0ff' },
-      { speed: 65, efficiency: 200, color: '#f59e0b' },
+      { speed: 11, efficiency: 120, color: 'var(--semantic-success)' },
+      { speed: 36, efficiency: 150, color: 'var(--semantic-info)' },
+      { speed: 65, efficiency: 200, color: 'var(--semantic-warning)' },
     ]);
   });
 
@@ -405,7 +409,7 @@ describe('SpeedProfilePage', () => {
     expect(screen.getAllByText('Wh/mi').length).toBeGreaterThanOrEqual(1);
     // Scatter efficiency is Wh/mi (120 · 1.609344 → 193) with its own colour band.
     const scatter = captured.scatterData as { speed: number; efficiency: number; color: string }[];
-    expect(scatter[0]).toEqual({ speed: 7, efficiency: 193, color: '#00f0ff' });
+    expect(scatter[0]).toEqual({ speed: 7, efficiency: 193, color: 'var(--semantic-success)' });
   });
 
   it('surfaces speed-profile query errors with a working retry affordance', () => {
@@ -482,4 +486,32 @@ describe('SpeedProfilePage', () => {
     expect(screen.queryByTestId('range-picker')).not.toBeInTheDocument();
     expect(setRangeMock).not.toHaveBeenCalled();
   });
+  it('supplies complete unit-labelled chart alternatives without color-only data', () => {
+    renderPage();
+    expect(captured['Speed Distribution']).toEqual({
+      data: captured.barChartData,
+      dataColumns: [
+        { key: 'range', label: 'Speed Buckets' },
+        { key: 'readings', label: 'Readings', kind: 'count' },
+      ],
+    });
+    expect(captured['Efficiency vs Speed']).toEqual({
+      data: captured.scatterData,
+      dataColumns: [
+        { key: 'speed', label: 'Speed (km/h)', format: expect.any(Function) },
+        { key: 'efficiency', label: 'Wh/km', format: expect.any(Function) },
+      ],
+    });
+  });
+
+  it('keeps physical efficiency color thresholds stable across distance preferences', () => {
+    unitsMock.mockReturnValue({ unitPrefs: UNIT_PREFS_MI });
+    renderPage();
+    expect(captured.scatterData).toEqual([
+      { speed: 7, efficiency: 193, color: 'var(--semantic-success)' },
+      { speed: 22, efficiency: 241, color: 'var(--semantic-info)' },
+      { speed: 40, efficiency: 322, color: 'var(--semantic-warning)' },
+    ]);
+  });
+
 });
