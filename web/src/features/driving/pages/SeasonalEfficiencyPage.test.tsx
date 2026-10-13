@@ -13,6 +13,7 @@ const h = vi.hoisted(() => ({
   timezoneHook: vi.fn(),
   timeZone: 'UTC',
   hiddenSeries: new Set<string>(),
+  failedChart: null as string | null,
 }));
 const refetch = vi.fn();
 
@@ -117,14 +118,17 @@ vi.mock('@/components/charts', () => {
       ariaLabel: string;
       children?: ReactNode | ((context: { hiddenSeries: { isHidden: (key: string) => boolean } }) => ReactNode);
       data?: unknown[];
-    }) => (
+    }) => {
+      if (h.failedChart === title) throw new Error('Synthetic seasonal chart render failure');
+      return (
       <figure role="img" aria-label={ariaLabel} data-chart-rows={data?.length ?? 0}>
         <figcaption>{title}</figcaption>
         {typeof children === 'function'
           ? children({ hiddenSeries: { isHidden: (key) => h.hiddenSeries.has(key) } })
           : children}
       </figure>
-    ),
+      );
+    },
     Area: passthrough,
     AreaChart: passthrough,
     Bar: series,
@@ -213,14 +217,14 @@ function renderPage() {
   });
   const view = render(
     <QueryClientProvider client={client}>
-      <MemoryRouter initialEntries={['/driving/seasonal-efficiency']}>
+      <MemoryRouter initialEntries={['/seasonal-efficiency']}>
         <SeasonalEfficiencyPage />
       </MemoryRouter>
     </QueryClientProvider>,
   );
   return { ...view, rerenderPage: () => view.rerender(
     <QueryClientProvider client={client}>
-      <MemoryRouter initialEntries={['/driving/seasonal-efficiency']}>
+      <MemoryRouter initialEntries={['/seasonal-efficiency']}>
         <SeasonalEfficiencyPage />
       </MemoryRouter>
     </QueryClientProvider>,
@@ -255,12 +259,57 @@ beforeEach(() => {
   h.timeZone = 'UTC';
   h.history = query({ data: readyHistory() });
   h.hiddenSeries = new Set();
+  h.failedChart = null;
   vi.spyOn(Date, 'now').mockReturnValue(FROZEN_NOW);
 });
 
 afterEach(() => vi.restoreAllMocks());
 
 describe('SeasonalEfficiencyPage', () => {
+
+  it.each([
+    ['365-day fitted intensity', 'seasonal-fitted-curve'],
+    ['Twelve local calendar months', 'seasonal-month-profile'],
+    ['Drive intensity over returned history', 'seasonal-observation-timeline'],
+    ['Seasonally adjusted observed intensity', 'seasonal-deseasonalized-trend'],
+    ['Distance share by residual bin', 'seasonal-residual-distribution'],
+    ['Included samples and observed distance', 'seasonal-month-support'],
+  ])('isolates a %s render failure and retries only that widget', (title, failedSection) => {
+    // Keep all feature sections mounted; only the existing chart boundary fails.
+    h.failedChart = title;
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    renderPage();
+    for (const id of sectionIds) {
+      if (id !== failedSection) expect(screen.getByTestId(id)).toBeInTheDocument();
+    }
+    expect(screen.queryByTestId(failedSection)).toBeNull();
+    expect(screen.getAllByRole('alert')).toHaveLength(1);
+    h.failedChart = null;
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    expectEveryShell();
+    expect(screen.queryByRole('alert')).toBeNull();
+    expect(refetch).not.toHaveBeenCalled();
+  });
+
+  it('keeps unresolved history distinct from an authoritatively empty return', () => {
+    h.history = query({ isSuccess: false });
+    renderPage();
+    expectEveryShell();
+    expect(screen.getAllByText('Seasonal-history availability has not resolved.').length).toBeGreaterThan(1);
+    expect(screen.queryByText('No drives were returned for this vehicle.')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Retry' })).toBeNull();
+  });
+
+  it('does not expose retained vehicle evidence after vehicle selection is cleared', () => {
+    const view = renderPage();
+    h.vehicleId = null;
+    view.rerenderPage();
+    expectEveryShell();
+    expect(h.historyHook).toHaveBeenLastCalledWith(undefined, 1_000);
+    expect(screen.getAllByText('Select a vehicle above to make local seasonal evidence available.').length).toBeGreaterThan(1);
+    expect(screen.queryByRole('img')).toBeNull();
+  });
+
   it('keeps every seasonal fit and accounting shell during a paused retained refresh', () => {
     h.history = { ...query({ data: readyHistory() }), fetchStatus: 'paused' };
     renderPage();

@@ -5,7 +5,7 @@ import { useDriveHistory } from '@/api/hooks/useDriving';
 
 import { Grid, PageLayout } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
-import { StaleRefreshWarning } from '@/components/feedback';
+import { SectionErrorBoundary, StaleRefreshWarning } from '@/components/feedback';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useDataState } from '@/hooks/useDataState';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
@@ -85,46 +85,74 @@ export default function SeasonalEfficiencyPage() {
         <StaleRefreshWarning state={drivesState} label={t('seasonalEfficiency.title', 'Seasonal Efficiency')} />
       )}
       <FadeIn>
-        <SeasonalSummaryBrief {...sectionProps} />
+        <SectionErrorBoundary name="SeasonalSummaryBrief">
+          <SeasonalSummaryBrief {...sectionProps} />
+        </SectionErrorBoundary>
       </FadeIn>
       <FadeIn delay={0.05}>
         <Grid cols={TWO_COLUMNS} gap={4}>
-          <SeasonalCoverageBrief kind="calendar" {...sectionProps} />
-          <SeasonalCoverageBrief kind="support" {...sectionProps} />
+          <SectionErrorBoundary name="SeasonalCoverageBrief-calendar">
+            <SeasonalCoverageBrief kind="calendar" {...sectionProps} />
+          </SectionErrorBoundary>
+          <SectionErrorBoundary name="SeasonalCoverageBrief-support">
+            <SeasonalCoverageBrief kind="support" {...sectionProps} />
+          </SectionErrorBoundary>
         </Grid>
       </FadeIn>
       <FadeIn delay={0.1}>
         <Grid cols={TWO_COLUMNS} gap={4}>
-          <SeasonalFittedCurve {...sectionProps} />
-          <SeasonalMonthProfile {...sectionProps} />
+          <SectionErrorBoundary name="SeasonalFittedCurve">
+            <SeasonalFittedCurve {...sectionProps} />
+          </SectionErrorBoundary>
+          <SectionErrorBoundary name="SeasonalMonthProfile">
+            <SeasonalMonthProfile {...sectionProps} />
+          </SectionErrorBoundary>
         </Grid>
       </FadeIn>
       <FadeIn delay={0.15}>
-        <SeasonalObservationTimeline {...sectionProps} />
+        <SectionErrorBoundary name="SeasonalObservationTimeline">
+          <SeasonalObservationTimeline {...sectionProps} />
+        </SectionErrorBoundary>
       </FadeIn>
       <FadeIn delay={0.2}>
         <Grid cols={TWO_COLUMNS} gap={4}>
-          <SeasonalDeseasonalizedTrend {...sectionProps} />
-          <SeasonalResidualDistribution {...sectionProps} />
+          <SectionErrorBoundary name="SeasonalDeseasonalizedTrend">
+            <SeasonalDeseasonalizedTrend {...sectionProps} />
+          </SectionErrorBoundary>
+          <SectionErrorBoundary name="SeasonalResidualDistribution">
+            <SeasonalResidualDistribution {...sectionProps} />
+          </SectionErrorBoundary>
         </Grid>
       </FadeIn>
       <FadeIn delay={0.25}>
         <Grid cols={TWO_COLUMNS} gap={4}>
-          <SeasonalComponentDiagnostics {...sectionProps} />
-          <SeasonalMonthSupport {...sectionProps} />
+          <SectionErrorBoundary name="SeasonalComponentDiagnostics">
+            <SeasonalComponentDiagnostics {...sectionProps} />
+          </SectionErrorBoundary>
+          <SectionErrorBoundary name="SeasonalMonthSupport">
+            <SeasonalMonthSupport {...sectionProps} />
+          </SectionErrorBoundary>
         </Grid>
       </FadeIn>
       <FadeIn delay={0.3}>
         <Grid cols={TWO_COLUMNS} gap={4}>
-          <SeasonalYearDirectory {...sectionProps} />
-          <SeasonalRankedMonths {...sectionProps} />
+          <SectionErrorBoundary name="SeasonalYearDirectory">
+            <SeasonalYearDirectory {...sectionProps} />
+          </SectionErrorBoundary>
+          <SectionErrorBoundary name="SeasonalRankedMonths">
+            <SeasonalRankedMonths {...sectionProps} />
+          </SectionErrorBoundary>
         </Grid>
       </FadeIn>
       <FadeIn delay={0.35}>
-        <SeasonalCoverageBrief kind="accounting" {...sectionProps} />
+        <SectionErrorBoundary name="SeasonalCoverageBrief-accounting">
+          <SeasonalCoverageBrief kind="accounting" {...sectionProps} />
+        </SectionErrorBoundary>
       </FadeIn>
       <FadeIn delay={0.4}>
-        <SeasonalMethodology {...sectionProps} />
+        <SectionErrorBoundary name="SeasonalMethodology">
+          <SeasonalMethodology {...sectionProps} />
+        </SectionErrorBoundary>
       </FadeIn>
     </PageLayout>
   );
