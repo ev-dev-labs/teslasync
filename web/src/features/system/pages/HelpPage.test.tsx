@@ -36,6 +36,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 
 import type { AppSettings } from '@/api/types';
+import { neonColorMap } from '@/lib/tokens';
 
 vi.mock('@/hooks/useSettings', () => ({
   useSettings: vi.fn(),
@@ -343,5 +344,45 @@ describe('HelpPage', () => {
     // asserts is "all five curated links survive", not "the page has exactly
     // five links in total".
     expect(within(baseline).getAllByRole('link')).toHaveLength(EXPECTED_LINKS.length);
+  });
+
+
+  it('uses neutral shared icon boxes for navigation without assigning status colors to help categories', () => {
+    renderHelp();
+
+    const channels = screen.getByRole('region', { name: 'Getting started' });
+    const channelItems = within(channels).getAllByRole('listitem');
+    expect(channelItems).toHaveLength(3);
+    for (const item of channelItems) {
+      const box = item.querySelector('svg')?.parentElement;
+      expect(box).toHaveClass(neonColorMap.neutral.text);
+      expect(box).toHaveClass(neonColorMap.neutral.bg);
+      expect(box).toHaveClass(neonColorMap.neutral.ring);
+    }
+    for (const { id, href, title } of EXPECTED_LINKS) {
+      const link = screen.getByTestId(`help-baseline-link-${id}`);
+      const box = link.querySelector('svg')?.parentElement;
+      expect(box).toHaveClass(neonColorMap.neutral.text);
+      expect(box).toHaveClass(neonColorMap.neutral.bg);
+      expect(box).toHaveClass(neonColorMap.neutral.ring);
+      expect(link).toHaveAttribute('href', href);
+      expect(link).toHaveTextContent(title);
+    }
+  });
+
+  it('keeps shared channel glyphs decorative and shrink-free inside the original responsive hero', () => {
+    renderHelp();
+
+    const hero = screen.getByRole('region', { name: 'Getting started' });
+    expect(hero).toHaveClass('grid', 'grid-cols-1', 'gap-4', 'xl:grid-cols-3');
+    for (const item of within(hero).getAllByRole('listitem')) {
+      const glyph = item.querySelector('svg');
+      expect(glyph).toHaveAttribute('aria-hidden', 'true');
+      expect(glyph).toHaveAttribute('focusable', 'false');
+      expect(glyph).toHaveClass('h-4', 'w-4', 'shrink-0');
+    }
+    expect(screen.getByTestId('help-baseline-links')).toHaveClass(
+      'grid', 'gap-4', '[grid-template-columns:repeat(auto-fit,minmax(min(100%,17rem),1fr))]',
+    );
   });
 });
