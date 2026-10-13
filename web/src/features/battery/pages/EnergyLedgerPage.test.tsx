@@ -46,12 +46,15 @@ const H = vi.hoisted(() => ({
   axes: [] as AxisCapture[],
   series: [] as { dataKey: string; hide: boolean }[],
   energyUnit: 'Wh' as 'Wh' | 'kWh',
+  repeatedEnergyLabel: false,
 }));
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (_key: string, fallbackOrOptions?: unknown, options?: unknown) => {
-      const fallback = typeof fallbackOrOptions === 'string'
+      const fallback = H.repeatedEnergyLabel && _key === 'energyLedger.col.charged'
+        ? 'Charged (kWh / kWh)'
+        : typeof fallbackOrOptions === 'string'
         ? fallbackOrOptions
         : typeof fallbackOrOptions === 'object'
           && fallbackOrOptions !== null
@@ -193,6 +196,7 @@ beforeEach(() => {
   H.axes = [];
   H.series = [];
   H.energyUnit = 'Wh';
+  H.repeatedEnergyLabel = false;
   document.documentElement.style.removeProperty('--font-scale');
   document.documentElement.style.removeProperty('--font-sans');
   H.sessions.current = query({ data: [], isSuccess: true });
@@ -327,6 +331,28 @@ describe('EnergyLedgerPage partial-data contract', () => {
     expect(residualMetric).toHaveAttribute('data-value-state', 'value');
     expect(residualMetric).toHaveTextContent('0 Wh');
   });
+
+  it.each(['Wh', 'kWh'] as const)(
+    'replaces every translated energy-label occurrence in %s without changing accounting',
+    energy => {
+      H.energyUnit = energy;
+      H.repeatedEnergyLabel = true;
+      H.sessions.current = query({
+        isSuccess: true,
+        data: [{
+          started_at: '2026-01-02T10:00:00Z', ended_at: '2026-01-02T11:00:00Z',
+          total_energy_added_wh: 36_000, start_soc_pct: 20, end_soc_pct: 80,
+        }],
+      });
+      H.drives.current = query({ data: [], isSuccess: true });
+      renderPage();
+
+      expect(H.chart?.dataColumns?.find(column => column.key === 'charged')?.label)
+        .toBe(`Charged (${energy} / ${energy})`);
+      expect(H.chart?.data?.[0]?.charged).toBe(energy === 'Wh' ? 36_000 : 36);
+      expect(screen.getByText('Month by Month')).toBeInTheDocument();
+    },
+  );
 
   it('does not claim measured zero vampire drain when no qualifying idle gap exists', () => {
     H.sessions.current = query({

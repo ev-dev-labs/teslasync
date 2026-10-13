@@ -43,7 +43,7 @@ export default function EnergyLedgerPage() {
     fontFamily: getChartFontFamily(),
     fontSize: getChartFontSize(),
   };
-  const energyLabel = (label: string) => label.replaceAll('kWh', unitPrefs.energy);
+  const energyLabel = (label: string) => label.split('kWh').join(unitPrefs.energy);
 
   const sessionsQuery = useChargingSessions(vehicleIdStr);
   const drivesQuery = useDrives(vehicleIdStr);
