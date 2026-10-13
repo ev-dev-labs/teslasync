@@ -260,8 +260,8 @@ describe('APIKeysPage', () => {
     expect(screen.getAllByText("Can't reach server").length).toBe(2);
 
     // Regression guard: the KPI band must not lie with "0" on a failed load.
-    expect(screen.getAllByText('â€”')).toHaveLength(4);
-    expect(kpiCardText('Total keys')).toContain('â€”');
+    expect(screen.getAllByText('\u2014')).toHaveLength(4);
+    expect(kpiCardText('Total keys')).toContain('\u2014');
     expect(kpiCardText('Total keys')).not.toContain('0');
   });
 
