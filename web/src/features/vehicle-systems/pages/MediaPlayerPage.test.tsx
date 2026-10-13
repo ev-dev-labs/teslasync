@@ -726,7 +726,7 @@ describe('MediaPlayerPage — restrained source presentation', () => {
     mockHistory.mockReturnValue(makeQuery({ data: undefined, isLoading: true }));
     const { container } = renderPage();
     for (const name of ['Now playing', 'Volume', 'Volume over time', 'Source distribution', 'Playback history']) {
-      expect(screen.getByRole('heading', { name, level: 2 })).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name, level: 3 })).toBeInTheDocument();
     }
     expect(statsRegion()).toBeInTheDocument();
     expect(container.querySelector('[class*="--skeleton-bg"]')).toBeTruthy();
