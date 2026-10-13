@@ -1,8 +1,9 @@
-import { Fragment, useMemo } from 'react';
+import { useId, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Caption } from '@/components/ui';
+import { Button, Caption } from '@/components/ui';
 import { LayoutCard } from '@/components/layout';
 import { formatTime } from '@/lib/dateFormat';
+import { chartTokens } from '@/lib/tokens';
 import { useFormatting } from '@/hooks/useFormatting';
 import { useUnits } from '@/hooks/useUnits';
 import type { GridLimits, SlotResult } from '../lib/types';
@@ -13,24 +14,18 @@ interface TariffConstraintHeatmapProps {
   hasPowerwall: boolean;
 }
 
-const CELL_PX = 18;
+const HEAT_LEGEND = [4, 15, 40, 55, 75].map(
+  (intensity) => `color-mix(in srgb, ${chartTokens.series[0]} ${intensity}%, transparent)`,
+);
 
-/** Ratio (0–1) → rgba heat color. Same 5-bucket scale used by the charging-patterns heatmap for visual consistency. */
+/** Preserve the five ratio buckets; intensity is not a success/failure status. */
 function heatColor(ratio: number): string {
-  if (!Number.isFinite(ratio) || ratio <= 0) return 'rgba(0, 240, 255, 0.04)';
-  if (ratio < 0.25) return 'rgba(0, 240, 255, 0.15)';
-  if (ratio < 0.5) return 'rgba(16, 185, 129, 0.4)';
-  if (ratio < 0.75) return 'rgba(245, 158, 11, 0.55)';
-  return 'rgba(239, 68, 68, 0.75)';
+  if (!Number.isFinite(ratio) || ratio <= 0) return HEAT_LEGEND[0];
+  if (ratio < 0.25) return HEAT_LEGEND[1];
+  if (ratio < 0.5) return HEAT_LEGEND[2];
+  if (ratio < 0.75) return HEAT_LEGEND[3];
+  return HEAT_LEGEND[4];
 }
-
-const HEAT_LEGEND: readonly string[] = [
-  'rgba(0, 240, 255, 0.04)',
-  'rgba(0, 240, 255, 0.15)',
-  'rgba(16, 185, 129, 0.4)',
-  'rgba(245, 158, 11, 0.55)',
-  'rgba(239, 68, 68, 0.75)',
-];
 
 /**
  * Tariff price / grid-import utilization / grid-export utilization / vehicle
@@ -43,6 +38,8 @@ export function TariffConstraintHeatmap({ slots, grid, hasPowerwall }: TariffCon
   const { t } = useTranslation();
   const { formatCurrency } = useFormatting();
   const { formatPower } = useUnits();
+  const detailId = useId();
+  const [activeCell, setActiveCell] = useState({ rowKey: 'tariff', index: 0 });
 
   const maxImportPrice = useMemo(
     () => Math.max(0.0001, ...slots.map((s) => s.importPricePerKwh)),
@@ -53,8 +50,7 @@ export function TariffConstraintHeatmap({ slots, grid, hasPowerwall }: TariffCon
     [slots],
   );
 
-  const columnStyle = { gridTemplateColumns: `repeat(${Math.max(1, slots.length)}, ${CELL_PX}px)` };
-  const minWidthPx = Math.max(1, slots.length) * CELL_PX + 80;
+  const columnStyle = { gridTemplateColumns: `repeat(${Math.max(1, slots.length)}, max-content)` };
 
   const rows: Array<{ key: string; label: string; ratio: (s: SlotResult) => number; format: (s: SlotResult) => string }> = [
     {
@@ -92,25 +88,39 @@ export function TariffConstraintHeatmap({ slots, grid, hasPowerwall }: TariffCon
         ]
       : []),
   ];
+  const activeRow = rows.find((row) => row.key === activeCell.rowKey) ?? rows[0];
+  const activeSlot = slots[activeCell.index] ?? slots[0];
 
   return (
     <LayoutCard title={t('homeEnergy.heatmap.title', 'Tariff & constraint heatmap')}>
       {slots.length === 0 ? (
         <Caption>{t('homeEnergy.heatmap.empty', 'No plan slots to display yet.')}</Caption>
       ) : (
-        <div className="overflow-x-auto">
-          <div style={{ minWidth: `${minWidthPx}px` }}>
+        <div className="overflow-x-auto p-1">
+          <div className="w-max">
             {rows.map((row) => (
               <div key={row.key} className="mb-1.5 flex items-center gap-2">
-                <Caption className="w-32 shrink-0 truncate">{row.label}</Caption>
-                <div role="img" aria-label={row.label} className="grid gap-[2px]" style={columnStyle}>
+                <Caption className="w-32 shrink-0 break-words whitespace-normal">{row.label}</Caption>
+                <div role="group" aria-label={row.label} className="grid gap-2" style={columnStyle}>
                   {slots.map((s, i) => (
-                    <div
+                    <Button
                       key={i}
+                      type="button"
+                      variant="ghost"
                       title={`${formatTime(s.startIso)} — ${row.format(s)}`}
-                      className="h-4 rounded-[2px]"
-                      style={{ backgroundColor: heatColor(row.ratio(s)) }}
-                    />
+                      aria-label={`${row.label}: ${formatTime(s.startIso)} — ${row.format(s)}`}
+                      aria-describedby={detailId}
+                      className="h-11 w-11 min-w-11 p-0 md:h-6 md:w-6 md:min-w-6"
+                      onFocus={() => setActiveCell({ rowKey: row.key, index: i })}
+                      onMouseEnter={() => setActiveCell({ rowKey: row.key, index: i })}
+                      onClick={() => setActiveCell({ rowKey: row.key, index: i })}
+                    >
+                      <span
+                        aria-hidden="true"
+                        className="h-4 w-4 rounded-sm"
+                        style={{ backgroundColor: heatColor(row.ratio(s)) }}
+                      />
+                    </Button>
                   ))}
                 </div>
               </div>
@@ -118,12 +128,15 @@ export function TariffConstraintHeatmap({ slots, grid, hasPowerwall }: TariffCon
           </div>
         </div>
       )}
+      {activeSlot && (
+        <Caption as="div" id={detailId} className="mt-2 break-words">
+          {`${activeRow.label}: ${formatTime(activeSlot.startIso)} — ${activeRow.format(activeSlot)}`}
+        </Caption>
+      )}
       <div className="mt-3 flex items-center gap-2">
         <Caption>{t('homeEnergy.heatmap.less', 'Less')}</Caption>
         {HEAT_LEGEND.map((c) => (
-          <Fragment key={c}>
-            <span aria-hidden="true" className="h-3 w-6 rounded-sm" style={{ backgroundColor: c }} />
-          </Fragment>
+          <span key={c} aria-hidden="true" className="h-3 w-6 rounded-sm" style={{ backgroundColor: c }} />
         ))}
         <Caption>{t('homeEnergy.heatmap.more', 'More')}</Caption>
       </div>
