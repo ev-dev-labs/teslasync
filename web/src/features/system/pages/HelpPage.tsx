@@ -202,7 +202,7 @@ export default function HelpPage() {
                 {HELP_CHANNELS.map((ch) => (
                   <li key={ch.id} className="flex items-start gap-3">
                     <IconBox color={ch.accent} size="sm">
-                      <Icon icon={ch.Icon} size="md" aria-hidden="true" />
+                      <Icon icon={ch.Icon} size="md" aria-hidden={true} />
                     </IconBox>
                     <div className="min-w-0 space-y-0.5">
                       <Text as="p" size="sm" weight="medium" color="primary">

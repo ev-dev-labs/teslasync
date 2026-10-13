@@ -160,7 +160,7 @@ export default function AnomalyDashboardPage() {
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={signalFrequency} layout="vertical" margin={{ left: 8, right: 16 }}>
                       <CartesianGrid horizontal={false} strokeDasharray="3 3" stroke={chartTokens.gridStroke} strokeOpacity={0.4} />
-                      <XAxis type="number" tick={{ fill: chartTokens.axisStroke, className: typography.size.xs }} tickLine={false} axisLine={false} allowDecimals={false} tickFormatter={fmtInt} />
+                      <XAxis type="number" tick={{ fill: chartTokens.axisStroke, className: typography.size.xs }} tickLine={false} axisLine={false} allowDecimals={false} tickFormatter={(value) => fmtInt(value)} />
                       <YAxis dataKey="signal" type="category" tick={{ fill: chartTokens.axisStroke, className: typography.size.xs }} tickLine={false} axisLine={false} width={140} />
                       <Tooltip content={<ChartTooltip />} cursor={{ fill: chartTokens.brush.fill }} />
                       <Bar dataKey="count" fill={chartTokens.series[0]} radius={[0, 4, 4, 0]} name={t('anomaly.count', 'Anomalies')} />
