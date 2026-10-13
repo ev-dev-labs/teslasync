@@ -3,16 +3,17 @@ import { useTranslation } from 'react-i18next';
 import { AlertTriangle, MapPinOff } from 'lucide-react';
 
 import { PageLayout, LayoutCard } from '@/components/layout';
-import { Text, Badge, HelpTooltip, Button } from '@/components/ui';
+import { Text, Badge, HelpTooltip, Button, Card } from '@/components/ui';
 
-import { TimeStamp } from '@/components/data-display';
+import { TimeStamp, KVList } from '@/components/data-display';
 import { Skeleton, EmptyState, QueryError, StaleRefreshWarning, DataStateNotice } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { NoVehicleSelected } from '@/features/onboarding/components/NoVehicleSelected';
 import {
   ChartContainer, ChartTooltip, ChartLegend,
   ComposedChart, Bar, Line,
-  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+  XAxis, YAxis, Tooltip, ResponsiveContainer,
+  chartGrid, axisTick, axisTickSm,
 } from '@/components/charts';
 
 import { useChargingHistory } from '@/api/hooks/useCharging';
@@ -104,7 +105,7 @@ export default function ChargeInterruptionPage() {
       {initialPaused && (
         <DataStateNotice state="stale" title={sourceLabel}>
           <Text as="p" variant="bodySm">{pausedMessage}</Text>
-          <Button variant="secondary" onClick={() => { void sessionsQuery.refetch(); }}>
+          <Button variant="secondary" wrapLabel className="min-h-11" onClick={() => { void sessionsQuery.refetch(); }}>
             {t('error.retry', 'Retry')}
           </Button>
         </DataStateNotice>
@@ -154,11 +155,11 @@ export default function ChargeInterruptionPage() {
           >
             <ResponsiveContainer width="100%" height="100%">
               <ComposedChart data={chartData} margin={{ top: 16, right: 16, bottom: 42, left: 8 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
+                {chartGrid}
                 <XAxis dataKey="site" tickFormatter={(label: string) => label.length > 20 ? `${label.slice(0, 19)}…` : label}
-                  tick={{ fill: 'var(--text-muted)', fontSize: 10 }} angle={-30} textAnchor="end" height={64} />
-                <YAxis yAxisId="risk" tick={{ fill: 'var(--text-muted)', fontSize: 11 }} domain={[0, 100]} unit="%" />
-                <YAxis yAxisId="evidence" orientation="right" tick={{ fill: 'var(--text-muted)', fontSize: 11 }} allowDecimals={false} />
+                  tick={axisTickSm} angle={-30} textAnchor="end" height={64} />
+                <YAxis yAxisId="risk" tick={axisTick} domain={[0, 100]} unit="%" />
+                <YAxis yAxisId="evidence" orientation="right" tick={axisTick} allowDecimals={false} />
                 <Tooltip content={<ChartTooltip />} />
                 <ChartLegend state={hiddenSeries} />
                 <Bar
@@ -209,43 +210,57 @@ export default function ChargeInterruptionPage() {
           ) : (
             <ul className="grid min-w-0 grid-cols-1 gap-3 @3xl:grid-cols-2 @6xl:grid-cols-3">
               {summary.sites.map((s) => (
-                <li key={s.key} className="min-w-0 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3">
-                  <div className="mb-2 flex flex-wrap items-center gap-2">
-                    <Text variant="body" className="min-w-0 break-words font-medium">{s.label}</Text>
-                    <Badge variant={TREND_BADGE[s.recentTrend]}>
-                      {t(`chargeInterruption.trend.${s.recentTrend}`, TREND_DEFAULTS[s.recentTrend])}
-                    </Badge>
-                  </div>
-                  <div className="mb-2 grid min-w-0 grid-cols-1 gap-x-4 gap-y-1 @sm:grid-cols-3">
-                    <Text variant="caption">{t('chargeInterruption.risk', 'Posterior risk')}</Text>
-                    <Text variant="bodySm" className="break-words @sm:col-span-2">
-                      {fmtPercent(s.posteriorMean * 100)}
-                      {' '}
-                      <Text as="span" variant="caption">
-                        ({fmtPercent(s.posteriorLow * 100)}–{fmtPercent(s.posteriorHigh * 100)})
-                      </Text>
-                    </Text>
-                    <Text variant="caption">{t('chargeInterruption.evidence', 'Evidence')}</Text>
-                    <Text variant="bodySm" className="break-words @sm:col-span-2">
-                      {t('chargeInterruption.evidenceValue', '{{suspect}} of {{n}} sessions', {
-                        suspect: s.suspectedCount,
-                        n: s.evidenceCount,
-                      })}
-                    </Text>
-                    <Text variant="caption">{t('chargeInterruption.lastSuspected', 'Last suspected')}</Text>
-                    <Text variant="bodySm" className="@sm:col-span-2">
-                      {s.lastSuspectedMs != null ? <TimeStamp value={s.lastSuspectedMs} /> : '—'}
-                    </Text>
-                  </div>
-                  {s.topCauses.length > 0 && (
-                    <div className="flex flex-wrap gap-1.5">
-                      {s.topCauses.map((cause) => (
-                        <Badge key={cause} variant="neutral" size="sm">
-                          <span className="whitespace-normal break-words">{t(`chargeInterruption.cause.${cause}`, CAUSE_DEFAULTS[cause])}</span>
-                        </Badge>
-                      ))}
+                <li key={s.key} className="min-w-0">
+                  <Card padding="sm" className="h-full">
+                    <div className="mb-2 flex flex-wrap items-center gap-2">
+                      <Text variant="body" className="min-w-0 break-words font-medium">{s.label}</Text>
+                      <Badge variant={TREND_BADGE[s.recentTrend]}>
+                        {t(`chargeInterruption.trend.${s.recentTrend}`, TREND_DEFAULTS[s.recentTrend])}
+                      </Badge>
                     </div>
-                  )}
+                    {/* Shared definition rows retain every fact and reflow to the allocated card width. */}
+                    <KVList
+                      layout="responsive"
+                      className="mb-2"
+                      items={[
+                        {
+                          id: 'risk',
+                          label: t('chargeInterruption.risk', 'Posterior risk'),
+                          value: (
+                            <>
+                              {fmtPercent(s.posteriorMean * 100)}
+                              {' '}
+                              <Text as="span" variant="caption">
+                                ({fmtPercent(s.posteriorLow * 100)}–{fmtPercent(s.posteriorHigh * 100)})
+                              </Text>
+                            </>
+                          ),
+                        },
+                        {
+                          id: 'evidence',
+                          label: t('chargeInterruption.evidence', 'Evidence'),
+                          value: t('chargeInterruption.evidenceValue', '{{suspect}} of {{n}} sessions', {
+                            suspect: s.suspectedCount,
+                            n: s.evidenceCount,
+                          }),
+                        },
+                        {
+                          id: 'last-suspected',
+                          label: t('chargeInterruption.lastSuspected', 'Last suspected'),
+                          value: s.lastSuspectedMs != null ? <TimeStamp value={s.lastSuspectedMs} /> : '—',
+                        },
+                      ]}
+                    />
+                    {s.topCauses.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5">
+                        {s.topCauses.map((cause) => (
+                          <Badge key={cause} variant="neutral" size="sm">
+                            <span className="whitespace-normal break-words">{t(`chargeInterruption.cause.${cause}`, CAUSE_DEFAULTS[cause])}</span>
+                          </Badge>
+                        ))}
+                      </div>
+                    )}
+                  </Card>
                 </li>
               ))}
             </ul>
