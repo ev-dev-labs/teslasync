@@ -26,7 +26,7 @@
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { act, render, screen, waitFor, fireEvent, within } from '@testing-library/react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClient, QueryClientProvider, onlineManager } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
 
@@ -214,6 +214,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  onlineManager.setOnline(true);
   vi.clearAllMocks();
 });
 
@@ -511,6 +512,113 @@ describe('PeriodComparePage — toolbar interactions & a11y', () => {
     const before = periodStatsCalls().length;
     fireEvent.click(refreshButtons[refreshButtons.length - 1]);
     await waitFor(() => expect(periodStatsCalls().length).toBeGreaterThan(before));
+  });
+
+  describe('PeriodComparePage — restrained complete comparison evidence', () => {
+    it('keeps all five unit-bearing table fields accessible on narrow screens with a localized name', async () => {
+      installRequest();
+      renderPage();
+      await screen.findByText(/Distance traveled was -50\.00% less/);
+
+      const table = screen.getByRole('table', { name: 'Comparison details' });
+      for (const [metric, unit] of [
+        ['Total distance', 'km'], ['Energy used', 'kWh'], ['Avg efficiency', 'Wh/km'],
+        ['Total cost', '$'], ['CO₂ saved', 'kg'],
+      ]) {
+        const row = within(table).getByRole('row', { name: new RegExp(metric) });
+        expect(within(row).getByText(`(${unit})`)).toBeInTheDocument();
+      }
+      for (const row of within(table).getAllByRole('row').slice(1)) {
+        const cells = within(row).getAllByRole('cell');
+        expect(cells).toHaveLength(5);
+        for (const cell of cells) expect(cell).not.toHaveClass('hidden');
+      }
+      const costChange = within(screen.getByRole('row', { name: /Total cost/ })).getByText('↓ 48.00');
+      expect(costChange).toHaveClass('text-[var(--semantic-success)]');
+      expect(costChange).not.toHaveClass('text-emerald-300', 'text-rose-300');
+    });
+
+    it('preserves measured zero while missing and nonfinite operands never become zero or favorable changes', async () => {
+      installRequest();
+      mockRequest.mockImplementation((url: unknown) => {
+        const path = String(url);
+        if (path.includes('/vehicles')) return Promise.resolve(TWO_VEHICLES);
+        if (path.includes('period-stats')) return Promise.resolve(path.includes('days=90')
+          ? STATS_90 : { ...STATS_30, total_distance: null, avg_efficiency: Infinity, energy_used: 0 });
+        if (path.startsWith('/pinned?')) return Promise.resolve([]);
+        return Promise.resolve({});
+      });
+      renderPage();
+
+      await screen.findByText(/Costs were -54\.55% lower/);
+      expect(screen.getByText('Comparison incomplete')).toBeInTheDocument();
+      for (const metric of ['Total distance', 'Avg efficiency']) {
+        const row = within(screen.getByRole('row', { name: new RegExp(metric) }));
+        expect(row.getAllByText('—')).toHaveLength(3);
+        expect(row.queryByText(/↑|↓|→/)).toBeNull();
+      }
+      const energy = within(screen.getByRole('row', { name: /Energy used/ }));
+      expect(energy.getByText('0.00')).toBeInTheDocument();
+      expect(energy.getByText('↓ 420.00')).toBeInTheDocument();
+      expect(energy.getByText('-100.00%')).toBeInTheDocument();
+      expect(screen.queryByText(/Distance traveled was/)).toBeNull();
+      expect(screen.queryByText(/Efficiency improved/)).toBeNull();
+      expect(screen.getByText(/Costs were -54\.55% lower/)).toBeInTheDocument();
+      expect(screen.getByTestId('period-compare-summary').querySelectorAll('[data-value-state="value"]')).toHaveLength(4);
+    });
+
+    it('retains both operands and semantic deltas after only Period A fails to refresh', async () => {
+      installRequest();
+      renderPage();
+      await screen.findByText(/Distance traveled was -50\.00% less/);
+      mockRequest.mockImplementation((url: unknown) => {
+        const path = String(url);
+        if (path.includes('period-stats')) return path.includes('days=30')
+          ? Promise.reject(new ApiError('refresh failed', 500)) : Promise.resolve(STATS_90);
+        if (path.includes('/vehicles')) return Promise.resolve(TWO_VEHICLES);
+        return Promise.resolve([]);
+      });
+      const refresh = screen.getAllByRole('button', { name: 'Refresh' });
+      fireEvent.click(refresh[refresh.length - 1]);
+
+      expect(await screen.findByText('Retained comparison sources')).toBeInTheDocument();
+      const distance = within(screen.getByRole('row', { name: /Total distance/ }));
+      expect(distance.getByText('1,000.00')).toBeInTheDocument();
+      expect(distance.getByText('2,000.00')).toBeInTheDocument();
+      expect(distance.getByText('-50.00%')).toBeInTheDocument();
+      expect(screen.getByText(/Efficiency improved by 4\.76%/)).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: 'Change vs period B (%)' })).toBeInTheDocument();
+      expect(screen.getByRole('table', { name: 'Comparison details' })).toBeInTheDocument();
+    });
+
+    it('retains comparison readings during paused offline refresh without inventing a server failure', async () => {
+      installRequest();
+      renderPage();
+      await screen.findByText(/Distance traveled was -50\.00% less/);
+      onlineManager.setOnline(false);
+      const refresh = screen.getAllByRole('button', { name: 'Refresh' });
+      fireEvent.click(refresh[refresh.length - 1]);
+
+      expect(await screen.findByText('Comparison refresh paused')).toBeInTheDocument();
+      expect(within(screen.getByRole('row', { name: /Total drives/ })).getByText('50')).toBeInTheDocument();
+      expect(screen.getByText(/Distance traveled was -50\.00% less/)).toBeInTheDocument();
+      expect(screen.queryByText('Server error')).toBeNull();
+      expect(screen.queryByText('Source unavailable')).toBeNull();
+    });
+
+    it('keeps Period B all-time selection independent of the unchanged Period A business window', async () => {
+      installRequest();
+      renderPage();
+      await screen.findByText(/Distance traveled was -50\.00% less/);
+      const before = periodStatsCalls().filter(path => /days=30(?:&|$)/.test(path)).length;
+      fireEvent.change(screen.getByRole('combobox', { name: 'Period B' }), { target: { value: '0' } });
+
+      await waitFor(() => expect(periodStatsCalls().some(path => /vehicle_id=10\b/.test(path) && /days=0(?:&|$)/.test(path))).toBe(true));
+      expect(screen.getByRole('combobox', { name: 'Period A' })).toHaveValue('30');
+      expect(screen.getByRole('combobox', { name: 'Period B' })).toHaveValue('0');
+      expect(periodStatsCalls().filter(path => /days=30(?:&|$)/.test(path))).toHaveLength(before);
+      expect(aiCapture.props).toMatchObject({ vehicleId: '10', daysA: 30, daysB: 0 });
+    });
   });
 
   it('refetches with the newly selected window when Period A changes to 7 days', async () => {
