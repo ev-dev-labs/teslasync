@@ -2,6 +2,72 @@
 
 ## Current phase
 
+### Actual rolling intake and claims,18:47:44Z
+
+Phases4/5 remainclosed by user checkpoints a63bd78e6/58f1a657c and the actual
+15:20build0/literalTSC0 gate; source/native debt was not waived. Phase6 is
+unfinished and Phase7 has notrun. Actualrows: Phase5 219done/20failed/1blocked/
+4excluded; Phase6 89done/13pending/55held/23failed/1blocked. REPORT[x] means
+deliverycomplete only, notsourcecheck/native/application PASS.
+
+Thirty-two actual knownIDs remain reportedrunning after individualpolls/
+confirmedrelease retirement/refill, not55workers. Twenty-four pastconservative
+harddeadline haveSTOPdelivered but no actualrelease yet; hostcancellation is
+unavailable and customworkarounds forbidden. Do not call themhealthy, infer
+closurefrom reportfiles, renewclocks oroverlap theirwriters. Eight newerowners:
+providerretry a69c2eb4,ComponentSurvival9b73b101,Emergency22c39258,Federated
+cd245559,FirmwareCanary8989880e return18:58/hard19:03; relativeDate7f0689df,
+Journey79fd2051,RoadHazardf2d8cb15 return19:05/hard19:10. Earlieractual+20/25wins.
+ExactfullIDs/files/deadlines are inqueue/sessionSQL; latestthree polled52s.
+
+Individuallypushed sincecbd63ac6e: Settingspartial1a1b06e33; driveplural
+608a926e6; Actionreport1b277eafd; Fleetreportdd5fd93bf; Diskreporta7de026a6;
+runnerunknownb325e1a57; Schemareportbb16e6b5a; DLQreportad671ebac;
+Qualityreport139a7a6be; Settingslabelsourcee693301e1; nativecaption42e6dd2a3;
+providerWIP4453a49b5; GDPRreporta413bf2f6. Everypushactuallysucceeded.
+LatestliteralHEADcount1869 at18:30, followed WIP/GDPR imply1871; do notrepresent
+that inference asanother literalcount. Operationalreceipt follows.
+
+Settingslabel exactsource440vs439lines/three sections, 13originaltestbodies
+unchanged plus one concretevisiblelabel/accessiblename/edit/persist regression.
+ActualfreshJSON24/24/0/0,lint/ownedfixturetyping/scans0,currenthashespinned;
+sharedSettingField/Input unchanged. No globalTSC/nativeSettings claim.
+Caption actualcontextclosed17:17:36/final17:20:28, count2 completed190/ongoing191
+and exactqualifiedhint at1440/375. DesktopPNGaccepted, mobilePNGoccluded/rejected,
+correctedmobileDOMline/centerhits actualafter scroll. BothPNGbytes/hash andimages
+inspected, reportJSON0; querypaddedOct1-14 vsdisplayOct8-13 caveatretained.
+
+Providerplural source+twoleaves/generatedActionlocale/usage/test fourfiles WIP
+committed; runtime-manifest unchanged/notstaged. Normalgen/check/strict0,
+actualeight expandednamed0/1/2/providerpreservation cases inspected. Finallint/
+preservation NOTRUN, so retry2 retainswork and mustnotrerununchangedpassing
+commands. SolecurrentEnglishwriter a69c2eb4; DiskForecast/toastcatalog wait.
+Fleetexports and Actiongenerateddate owners actuallyreleased: ownstaticproof0,
+guardstartup1/zerodiscovery/noJSON;12 and6 authoredcases respectivelyNOTRUN.
+Intakepending, preservepartial/source-external classification, notgreenbehavior.
+
+Source-proven Schema/DLQ/Quality/GDPR corrections haveexactqueueitems, grouped
+wherewritefilesoverlap, candidatesunpromoted. GDPR14 findings formeightscopes:
+actualmanifest/encodedpath/polling, pagepaused/expiry, metadata, lifecycle,
+lookupcopy, downloadtruth/chrome, sharedrelativefuturedate, remainingstatuskeys.
+Neverinventphantomwirestatus oraddunusedkeysif actualcontractremovestheproducer.
+Runnercause remainsUNKNOWN, not repaired oraninfrastructure-budget exemption.
+
+Resourceowners: previewcontinuation3eb0dd58 (Playwright) and Settingsf224e1a1
+(Chrome), return18:33/hard18:38 alreadySTOPdelivered, unconfirmed/claimsretained.
+No overlappingprovider grant; guardgaps remainuncertified, no newsource/native
+acceptance fromWIP. Shared5173 HTTP20018:30/PID9036; soletenminute schedule3.
+18:42 actualsaved shellcensus has no runningboundedheaders. NoDocker/reseed/
+sourcepreview restart/fullsuite/heartbeat/Discord/extensions/helperwork.
+
+Remainingdirtyfiles are liveexactclaimedsource/test/catalog/native WIP plus
+releasedread-only reportsawaitingindividualintake. Preserveall; do notstage
+unconfirmedreportfiles. Historical `.agents`, default console/preview/caption
+PNG/YML artifacts remainunattributed/preserved/unstaged. Sameearlierunclaimed
+diagnostics retained. Next: persistthis operationaltruth/clearserializedhealth
+flag, intakeeach releasedpair/report, sourceacceptonlyexactscopeevidence,
+retryfromnotes, refillgenuinefreeslots; Phase6/7 unfinished.
+
 ### Latest release intake and native refill,17:15Z
 
 Preview c784 terminal0/STOP1/2 consumed and all source/report/browser/command
