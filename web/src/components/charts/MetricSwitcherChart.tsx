@@ -226,14 +226,14 @@ export function MetricSwitcherChart<P extends { date: string }>({
       onChange={onMetricChange}
       ariaLabel={`${title} metric`}
       scrollable
-      className="text-xs"
+      className="w-full text-xs md:w-auto md:flex-1"
     />
   );
 
   // We slot the pill bar into ChartContainer's `action` area together
   // with any caller-provided actions so the title-bar layout stays clean.
   const combinedAction = (
-    <div className="flex items-center gap-2">
+    <div className="flex w-full min-w-0 max-w-full flex-wrap items-center gap-2 md:w-auto md:flex-1">
       {switcher}
       {action}
     </div>

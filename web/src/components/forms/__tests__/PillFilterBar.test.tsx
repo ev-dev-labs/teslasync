@@ -1,5 +1,10 @@
 import { describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, within } from '@testing-library/react';
+import { useState } from 'react';
+import { resolve } from 'node:path';
+import postcss from 'postcss';
+import tailwindcss from 'tailwindcss';
+import loadConfig from 'tailwindcss/loadConfig';
 import '@/i18n';
 import { PillFilterBar, type PillItem } from '../PillFilterBar';
 
@@ -303,5 +308,125 @@ describe('PillFilterBar', () => {
     expect(onChange).toHaveBeenLastCalledWith('all');
     fireEvent.keyDown(active, { key: 'End' });
     expect(onChange).toHaveBeenLastCalledWith('commutes');
+  });
+
+  it('generates 44px touch minima below md and restores original md density', async () => {
+    const onChange = vi.fn();
+    const props = { items: items(), activeKey: 'anomalies', onChange, ariaLabel: 'Drive collections' };
+    const { rerender } = render(<PillFilterBar {...props} />);
+    const profiles: { className: string; scrollable: boolean }[] = [];
+    for (const variant of ['pills', 'tabs'] as const) {
+      for (const semanticMode of ['tabs', 'filters'] as const) {
+        for (const scrollable of [true, false]) {
+          rerender(<PillFilterBar {...props} variant={variant} semanticMode={semanticMode} scrollable={scrollable} />);
+          const role = semanticMode === 'tabs' ? 'tab' : 'button';
+          const buttons = screen.getAllByRole(role);
+          expect(buttons.map(button => button.textContent)).toEqual([
+            'All(4)', 'Anomalies(1)', 'Notable(2)', 'Commutes(3)', 'Tagged',
+          ]);
+          const selected = screen.getByRole(role, { name: /anomalies/i });
+          expect(selected).toHaveAttribute(semanticMode === 'tabs' ? 'aria-selected' : 'aria-pressed', 'true');
+          expect(selected).toHaveAttribute('tabIndex', '0');
+          expect(screen.getByRole(role, { name: /all/i })).toHaveAttribute('tabIndex', semanticMode === 'tabs' ? '-1' : '0');
+          const disabled = screen.getByRole(role, { name: 'Tagged' });
+          expect(disabled).toBeDisabled();
+          onChange.mockClear();
+          fireEvent.click(disabled);
+          expect(onChange).not.toHaveBeenCalled();
+          fireEvent.click(screen.getByRole(role, { name: /notable/i }));
+          expect(onChange).toHaveBeenCalledExactlyOnceWith('notable');
+          for (const button of buttons) {
+            expect(button).toHaveClass('min-h-11', 'min-w-11', 'md:min-w-0');
+            expect(button).not.toHaveClass('h-9');
+            profiles.push({ className: button.className, scrollable });
+          }
+        }
+      }
+    }
+    const config = loadConfig(resolve('tailwind.config.js'));
+    const root = (await postcss([tailwindcss({
+      ...config,
+      content: [{ raw: profiles.map(profile => profile.className).join(' '), extension: 'html' }],
+    })]).process('@tailwind utilities;', { from: undefined })).root;
+    const dimensions = (className: string, width: number) => {
+      const classes = className.split(/\s+/);
+      const result: Record<string, string> = {};
+      root.walkRules(rule => {
+        if (!classes.includes(rule.selector.replace(/\\(.)/g, '$1').slice(1))) return;
+        const parent = rule.parent;
+        if (parent instanceof postcss.AtRule && parent.name === 'media') {
+          // Button also retains reduced-motion/forced-colors media rules;
+          // they do not determine viewport sizing.
+          if (!parent.params.startsWith('(min-width:')) return;
+          expect(parent.params).toBe('(min-width: 768px)');
+          if (width < 768) return;
+        }
+        rule.walkDecls(declaration => { result[declaration.prop] = declaration.value; });
+      });
+      return result;
+    };
+    for (const profile of profiles) {
+      for (const width of [375, 767]) {
+        expect(dimensions(profile.className, width)).toMatchObject({
+          height: profile.scrollable ? '2.75rem' : 'auto',
+          'min-height': '2.75rem',
+          'min-width': '2.75rem',
+        });
+      }
+      expect(dimensions(profile.className, 768)).toMatchObject({
+        height: profile.scrollable ? '2.25rem' : 'auto',
+        'min-height': profile.scrollable ? '0px' : '2.25rem',
+        'min-width': '0px',
+      });
+    }
+    console.log('SOURCE CSS: real merged Buttons have 2.75rem (44px at 16px root) minima at 375/767px; original 36px or multiline md density at 768px; native geometry NOTRUN.');
+  });
+
+  it('moves real roving focus and controlled selection with Left Right Home and End', () => {
+    const onChange = vi.fn();
+    const frames: FrameRequestCallback[] = [];
+    const animationFrame = vi.spyOn(window, 'requestAnimationFrame').mockImplementation(callback => {
+      frames.push(callback);
+      return frames.length;
+    });
+    function ControlledTabs() {
+      const [activeKey, setActiveKey] = useState('commutes');
+      return <PillFilterBar
+        items={items()}
+        activeKey={activeKey}
+        onChange={key => { onChange(key); setActiveKey(key); }}
+        ariaLabel="Drive collections"
+      />;
+    }
+    try {
+      render(<ControlledTabs />);
+      const initial = screen.getByRole('tab', { name: /commutes/i });
+      initial.focus();
+      expect(initial).toHaveFocus();
+      for (const [key, expectedKey, name] of [
+        ['ArrowRight', 'all', /all/i],
+        ['ArrowLeft', 'commutes', /commutes/i],
+        ['ArrowLeft', 'notable', /notable/i],
+        ['Home', 'all', /all/i],
+        ['End', 'commutes', /commutes/i],
+      ] as const) {
+        const current = screen.getByRole('tab', { selected: true });
+        expect(fireEvent.keyDown(current, { key })).toBe(false);
+        expect(onChange).toHaveBeenLastCalledWith(expectedKey);
+        act(() => { frames.splice(0).forEach(callback => callback(0)); });
+        const selected = screen.getByRole('tab', { selected: true });
+        expect(selected).toHaveAccessibleName(name);
+        expect(selected).toHaveFocus();
+        expect(selected).toHaveAttribute('tabIndex', '0');
+        for (const other of screen.getAllByRole('tab', { selected: false })) {
+          expect(other).toHaveAttribute('tabIndex', '-1');
+        }
+        expect(screen.getByRole('tab', { name: 'Tagged' })).toBeDisabled();
+        expect(screen.getByRole('tab', { name: 'Tagged' })).not.toHaveFocus();
+      }
+      expect(onChange.mock.calls).toEqual([['all'], ['commutes'], ['notable'], ['all'], ['commutes']]);
+    } finally {
+      animationFrame.mockRestore();
+    }
   });
 });

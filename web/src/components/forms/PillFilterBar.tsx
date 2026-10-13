@@ -166,7 +166,11 @@ export function PillFilterBar({
             disabled={item.disabled}
             onClick={() => onChange(item.key)}
             onKeyDown={isTabs ? (e) => handleKeyDown(e, item.key) : undefined}
-            className={cn(baseClass, !scrollable && 'h-auto min-h-9 max-w-full whitespace-normal')}
+            className={cn(
+              baseClass,
+              'h-11 min-h-11 min-w-11 md:h-9 md:min-h-0 md:min-w-0',
+              !scrollable && 'h-auto max-w-full whitespace-normal md:h-auto md:min-h-9',
+            )}
           >
             {item.icon && (
               <span className="inline-flex items-center [&>svg]:h-3.5 [&>svg]:w-3.5" aria-hidden>
