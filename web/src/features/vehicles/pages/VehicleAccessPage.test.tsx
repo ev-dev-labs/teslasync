@@ -23,7 +23,7 @@
  *     null-expiry pending, an accepted, and an already-expired revoked are all
  *     excluded).
  *   - loading: every data panel stands in a skeleton (no table, no empty copy)
- *     while the KPI band shows zeros.
+ *     while the KPI band keeps unresolved counts unknown.
  *   - empty: each panel surfaces its own empty state rather than a blank panel.
  *   - error: a failed drivers query surfaces QueryError with a working Retry
  *     wired to refetch; the same holds for a failed invitations query.
@@ -138,7 +138,7 @@ const mockRevokeInvitation = useRevokeVehicleInvitation as unknown as ReturnType
 const mockVehicle = useVehicle as unknown as ReturnType<typeof vi.fn>;
 
  
-function makeQuery(over: Record<string, unknown> = {}): any {
+function makeQuery(over: Record<string, unknown> = {}) {
   return {
     data: undefined,
     error: null,
@@ -153,7 +153,7 @@ function makeQuery(over: Record<string, unknown> = {}): any {
 }
 
  
-function makeMutation(over: Record<string, unknown> = {}): any {
+function makeMutation(over: Record<string, unknown> = {}) {
   return { mutate: vi.fn(), isPending: false, ...over };
 }
 
@@ -223,15 +223,17 @@ function renderPage() {
       mutations: { retry: false },
     },
   });
-  return render(
+  const tree = () => (
     <MemoryRouter initialEntries={['/vehicles/7/access']}>
       <QueryClientProvider client={qc}>
         <Routes>
           <Route path="/vehicles/:id/access" element={<VehicleAccessPage />} />
         </Routes>
       </QueryClientProvider>
-    </MemoryRouter>,
+    </MemoryRouter>
   );
+  const view = render(tree());
+  return { ...view, rerenderPage: () => view.rerender(tree()) };
 }
 
 /** The KPI band is the sole ARIA region — scope numeric assertions to it so
@@ -510,5 +512,132 @@ describe('VehicleAccessPage — header actions', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Create invitation' }));
     expect(createInvitationM.mutate).toHaveBeenCalledWith('7');
+  });
+});
+
+
+describe('VehicleAccessPage — preserved mobile capabilities', () => {
+  it('keeps email, invitation creator and Copy in the mobile table markup', () => {
+    renderPopulated();
+    expect(screen.getByText('ada@example.com').closest('td')).not.toHaveClass('hidden');
+    expect(screen.getAllByText('Fleet Admin')[0].closest('td')).not.toHaveClass('hidden');
+    expect(screen.getByRole('button', { name: 'Copy invite link' }).closest('td')).not.toHaveClass('hidden');
+    // These are caller-contract checks, not measured viewport or contrast proof.
+    for (const name of ['Remove driver', 'Revoke invitation', 'Copy invite link']) {
+      expect(screen.getAllByRole('button', { name })[0]).toHaveClass('min-h-11', 'min-w-11');
+    }
+  });
+});
+
+describe('VehicleAccessPage — independent summary trust', () => {
+  it('retains driver counts when invitations are still initially loading', () => {
+    mockDrivers.mockReturnValue(makeQuery({ data: populatedDrivers }));
+    mockInvitations.mockReturnValue(makeQuery({ isLoading: true, isFetching: true }));
+    renderPage();
+    const brief = kpiRegion();
+    expect(brief).not.toHaveAttribute('aria-busy');
+    expect(within(brief).getByText('Partial source coverage')).toBeInTheDocument();
+    expect(within(brief).getByText('2')).toBeInTheDocument();
+    expect(brief.querySelectorAll('[data-value-state="missing"]')).toHaveLength(3);
+    expect(screen.getByText('Ada Lovelace')).toBeInTheDocument();
+  });
+
+  it('retains invitation counts when drivers are still initially loading', () => {
+    mockDrivers.mockReturnValue(makeQuery({ isLoading: true, isFetching: true }));
+    mockInvitations.mockReturnValue(makeQuery({ data: populatedInvites }));
+    renderPage();
+    const brief = kpiRegion();
+    expect(brief).not.toHaveAttribute('aria-busy');
+    expect(within(brief).getByText('5')).toBeInTheDocument();
+    expect(within(brief).getByText('3')).toBeInTheDocument();
+    expect(brief.querySelectorAll('[data-value-state="missing"]')).toHaveLength(1);
+    expect(screen.getByRole('button', { name: 'Copy invite link' })).toBeInTheDocument();
+  });
+
+  it('reports two initial failures as unavailable without inventing zero counts', () => {
+    mockDrivers.mockReturnValue(makeQuery({ isError: true, error: new Error('driver load failed') }));
+    mockInvitations.mockReturnValue(makeQuery({ isError: true, error: new Error('invitation load failed') }));
+    renderPage();
+    const brief = kpiRegion();
+    expect(within(brief).getByText('Source unavailable')).toBeInTheDocument();
+    expect(brief.querySelectorAll('[data-value-state="missing"]')).toHaveLength(4);
+    expect(within(brief).queryByText('0')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Refresh drivers' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Refresh invitations' })).toBeInTheDocument();
+    expect(screen.getByText('Access overview')).toBeInTheDocument();
+  });
+
+  it('retains paused snapshots, both tables and source warnings', () => {
+    mockDrivers.mockReturnValue(makeQuery({ data: populatedDrivers, fetchStatus: 'paused' }));
+    mockInvitations.mockReturnValue(makeQuery({ data: populatedInvites, fetchStatus: 'paused' }));
+    renderPage();
+    expect(screen.getByText('Ada Lovelace')).toBeInTheDocument();
+    expect(screen.getByText('Accepted')).toBeInTheDocument();
+    expect(screen.getAllByTestId('stale-refresh-warning')).toHaveLength(2);
+    expect(screen.getByRole('button', { name: 'Copy invite link' })).toBeInTheDocument();
+  });
+});
+
+describe('VehicleAccessPage — pending destructive confirmations', () => {
+  it('blocks repeat Remove, Cancel and Escape while driver removal is pending', async () => {
+    mockDrivers.mockReturnValue(makeQuery({ data: [makeDriver()] }));
+    const view = renderPage();
+    fireEvent.click(screen.getByRole('button', { name: 'Remove driver' }));
+    const dialog = await screen.findByRole('dialog');
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Remove' }));
+    removeDriverM.isPending = true;
+    view.rerenderPage();
+    expect(within(dialog).getByRole('button', { name: 'Remove' })).toBeDisabled();
+    expect(within(dialog).getByRole('button', { name: 'Cancel' })).toBeDisabled();
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Remove' }));
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Cancel' }));
+    fireEvent.keyDown(window, { key: 'Escape' });
+    expect(removeDriverM.mutate).toHaveBeenCalledTimes(1);
+    expect(dialog).toBeInTheDocument();
+    const [, options] = removeDriverM.mutate.mock.calls[0];
+    act(() => options.onSettled());
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+  });
+
+  it('blocks repeat Revoke and Cancel while invitation revocation is pending', async () => {
+    mockInvitations.mockReturnValue(makeQuery({ data: [makeInvite()] }));
+    const view = renderPage();
+    fireEvent.click(screen.getByRole('button', { name: 'Revoke invitation' }));
+    const dialog = await screen.findByRole('dialog');
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Revoke' }));
+    revokeInvitationM.isPending = true;
+    view.rerenderPage();
+    expect(within(dialog).getByRole('button', { name: 'Revoke' })).toBeDisabled();
+    expect(within(dialog).getByRole('button', { name: 'Cancel' })).toBeDisabled();
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Revoke' }));
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Cancel' }));
+    expect(revokeInvitationM.mutate).toHaveBeenCalledTimes(1);
+    expect(dialog).toBeInTheDocument();
+    const [, options] = revokeInvitationM.mutate.mock.calls[0];
+    act(() => options.onSettled());
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+  });
+});
+
+describe('VehicleAccessPage — cached expiry window', () => {
+  it('ages a retained pending expiry out of the summary and clears its minute timer', () => {
+    vi.useFakeTimers({ toFake: ['Date', 'setInterval', 'clearInterval'] });
+    try {
+      vi.setSystemTime(new Date('2030-01-01T00:00:00Z'));
+      mockInvitations.mockReturnValue(makeQuery({ data: [makeInvite({
+        expires_at: new Date(Date.now() + 30_000).toISOString(),
+      })] }));
+      const view = renderPage();
+      const expiring = kpiRegion().querySelector('[data-operational-metric="expiring"]');
+      expect(expiring).not.toBeNull();
+      expect(expiring?.querySelector('[data-operational-value]')).toHaveTextContent('1');
+      act(() => vi.advanceTimersByTime(60_000));
+      expect(expiring?.querySelector('[data-operational-value]')).toHaveTextContent('0');
+      expect(within(kpiRegion()).getByText('Invitations')).toBeInTheDocument();
+      view.unmount();
+      expect(vi.getTimerCount()).toBe(0);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { RefreshCw, UserPlus, UserMinus, XCircle, Users, Mail } from 'lucide-react';
@@ -13,6 +13,7 @@ import {
   ConfirmDialog,
   PanelTitle,
   Text,
+  Icon,
   type BadgeProps,
   type Column,
 } from '@/components/ui';
@@ -20,7 +21,9 @@ import { EmptyState, Skeleton, QueryError, StaleRefreshWarning } from '@/compone
 import { TimeStamp } from '@/components/data-display';
 import { FadeIn } from '@/components/motion';
 import { usePageTitle } from '@/hooks/usePageTitle';
-import { useDataState } from '@/hooks/useDataState';
+import { useDataState, useCombinedDataState } from '@/hooks/useDataState';
+import { cn } from '@/lib/cn';
+import { severityTokens, typography } from '@/lib/tokens';
 import { VehicleEvidenceBrief } from '../components/operationalbrief-n-z/VehicleEvidenceBrief';
 
 import {
@@ -74,6 +77,7 @@ export default function VehicleAccessPage() {
   const invitationsQuery = useVehicleInvitations(vehicleId);
   const driversState = useDataState(driversQuery);
   const invitationsState = useDataState(invitationsQuery);
+  const briefState = useCombinedDataState([driversState, invitationsState]);
 
   const {
     data: drivers,
@@ -109,12 +113,19 @@ export default function VehicleAccessPage() {
 
   const [removeTarget, setRemoveTarget] = useState<VehicleDriver | null>(null);
   const [revokeTarget, setRevokeTarget] = useState<VehicleInvitation | null>(null);
+  const [now, setNow] = useState(() => Date.now());
+
+  // Cached invitations still age: recompute the seven-day window each minute.
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(Date.now()), 60_000);
+    return () => window.clearInterval(timer);
+  }, []);
 
   const handleRemoveDriver = useCallback(() => {
     // Match the actions-column render predicate (`share_user_id != null`) so a
     // driver whose share id is present-but-falsy (0) is still removable —
     // otherwise the row shows a Remove button that silently no-ops on confirm.
-    if (removeTarget?.share_user_id == null || !vehicleId) return;
+    if (removeDriver.isPending || removeTarget?.share_user_id == null || !vehicleId) return;
     removeDriver.mutate(
       { vehicleId, shareUserId: removeTarget.share_user_id },
       { onSettled: () => setRemoveTarget(null) },
@@ -122,7 +133,7 @@ export default function VehicleAccessPage() {
   }, [removeTarget, vehicleId, removeDriver]);
 
   const handleRevokeInvitation = useCallback(() => {
-    if (!revokeTarget || !vehicleId) return;
+    if (revokeInvitation.isPending || !revokeTarget || !vehicleId) return;
     revokeInvitation.mutate(
       { vehicleId, invitationId: revokeTarget.invitation_id },
       { onSettled: () => setRevokeTarget(null) },
@@ -140,13 +151,12 @@ export default function VehicleAccessPage() {
   );
 
   const expiringSoonCount = useMemo(() => {
-    const now = Date.now();
     return invitationsList.filter((inv) => {
       if (inv.status !== 'pending' || !inv.expires_at) return false;
       const ts = new Date(inv.expires_at).getTime();
       return Number.isFinite(ts) && ts > now && ts - now <= SEVEN_DAYS_MS;
     }).length;
-  }, [invitationsList]);
+  }, [invitationsList, now]);
 
   const statusBreakdown = useMemo<AccessStatusSlice[]>(() => {
     const counts = new Map<string, number>();
@@ -214,9 +224,9 @@ export default function VehicleAccessPage() {
           variant="ghost"
           onClick={() => setRemoveTarget(row)}
           aria-label={t('vehicleAccess.drivers.remove', 'Remove driver')}
-          className="text-rose-300 hover:text-rose-200"
+          className={cn("min-h-11 min-w-11 md:min-h-9 md:min-w-9", severityTokens.critical.fg)}
         >
-          <UserMinus className="h-4 w-4" aria-hidden="true" />
+          <Icon icon={UserMinus} />
         </Button>
       ) : null,
       className: 'w-12',
@@ -261,7 +271,7 @@ export default function VehicleAccessPage() {
           iconOnly
           withToast
           ariaLabel={t('vehicleAccess.invitations.copyLink', 'Copy invite link')}
-          className="text-cyan-300 hover:text-cyan-200"
+          className="min-h-11 min-w-11 md:min-h-9 md:min-w-9"
         />
       ) : (
         <Text color="muted">—</Text>
@@ -277,9 +287,9 @@ export default function VehicleAccessPage() {
           variant="ghost"
           onClick={() => setRevokeTarget(row)}
           aria-label={t('vehicleAccess.invitations.revoke', 'Revoke invitation')}
-          className="text-rose-300 hover:text-rose-200"
+          className={cn("min-h-11 min-w-11 md:min-h-9 md:min-w-9", severityTokens.critical.fg)}
         >
-          <XCircle className="h-4 w-4" aria-hidden="true" />
+          <Icon icon={XCircle} />
         </Button>
       ) : null,
       className: 'w-12',
@@ -303,9 +313,8 @@ export default function VehicleAccessPage() {
         <VehicleEvidenceBrief id="vehicle-access-summary"
           title={t('vehicleAccess.kpis', 'Access summary')}
           description={t('vehicleAccess.briefDescription', 'Driver and invitation records are independent snapshots. Expiring soon means pending invitations expiring within the next seven days.')}
-          status={driversState.status === 'stale' || invitationsState.status === 'stale' ? 'stale'
-            : driversState.data == null || invitationsState.data == null ? 'partial' : 'ok'}
-          loading={driversLoading || invitationsLoading}
+          status={briefState.status}
+          loading={!driversState.hasData && !invitationsState.hasData && (driversLoading || invitationsLoading)}
           scope={t('vehicleAccess.snapshot', 'Latest access records')}
           provenance={`${t('dataSources.labels.vehicleDrivers', 'Vehicle drivers')} / ${t('dataSources.labels.shareInvitations', 'Share invitations')}`}
           metrics={[
@@ -322,7 +331,7 @@ export default function VehicleAccessPage() {
           <GlassPanel className="p-4 sm:p-5 xl:col-span-2" data-tour="vehicle-access">
             <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
               <div className="flex items-center gap-2">
-                <Users className="h-5 w-5 text-cyan-300" aria-hidden="true" />
+                <Icon icon={Users} size="lg" className={typography.color.muted} />
                 <PanelTitle>{t('vehicleAccess.drivers.title', 'Drivers')}</PanelTitle>
                 {driversList.length > 0 && (
                   <Badge variant="neutral">{driversList.length}</Badge>
@@ -333,8 +342,10 @@ export default function VehicleAccessPage() {
                 onClick={() => vehicleId && refreshDrivers.mutate(vehicleId)}
                 loading={refreshDrivers.isPending}
                 aria-label={t('vehicleAccess.drivers.refresh', 'Refresh drivers')}
+                wrapLabel
+                className="min-h-11 min-w-11 md:min-h-10"
               >
-                <RefreshCw className="h-4 w-4" aria-hidden="true" />
+                <Icon icon={RefreshCw} />
                 <span className="hidden sm:inline">{t('vehicleAccess.refresh', 'Refresh')}</span>
               </Button>
             </div>
@@ -349,7 +360,7 @@ export default function VehicleAccessPage() {
               />
             ) : driversList.length === 0 ? (
               <EmptyState /* no-action: transient empty state — surfaces when Tesla has no shared drivers; user can Refresh above */
-                icon={<Users className="h-8 w-8" />}
+                icon={<Icon icon={Users} size="xl" />}
                 message={t('vehicleAccess.drivers.empty', 'No drivers found. Refresh to sync from Tesla.')}
               />
             ) : (
@@ -357,7 +368,7 @@ export default function VehicleAccessPage() {
                 tableId="vehicles:access-drivers"
                 enableValueFilters
                 columns={driverColumns}
-                mobileColumns={['name', 'role', 'actions']}
+                mobileColumns={['name', 'email', 'role', 'actions']}
                 data={driversList}
                 keyExtractor={(row) => row.id}
                 emptyMessage={t('vehicleAccess.drivers.empty', 'No drivers found')}
@@ -385,7 +396,7 @@ export default function VehicleAccessPage() {
         <GlassPanel className="p-4 sm:p-5">
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-2">
-              <Mail className="h-5 w-5 text-cyan-300" aria-hidden="true" />
+              <Icon icon={Mail} size="lg" className={typography.color.muted} />
               <PanelTitle>{t('vehicleAccess.invitations.title', 'Share invitations')}</PanelTitle>
               {invitationsList.length > 0 && (
                 <Badge variant="neutral">{invitationsList.length}</Badge>
@@ -397,16 +408,20 @@ export default function VehicleAccessPage() {
                 onClick={() => vehicleId && refreshInvitations.mutate(vehicleId)}
                 loading={refreshInvitations.isPending}
                 aria-label={t('vehicleAccess.invitations.refresh', 'Refresh invitations')}
+                wrapLabel
+                className="min-h-11 min-w-11 md:min-h-10"
               >
-                <RefreshCw className="h-4 w-4" aria-hidden="true" />
+                <Icon icon={RefreshCw} />
                 <span className="hidden sm:inline">{t('vehicleAccess.refresh', 'Refresh')}</span>
               </Button>
               <Button
                 onClick={() => vehicleId && createInvitation.mutate(vehicleId)}
                 loading={createInvitation.isPending}
                 aria-label={t('vehicleAccess.invitations.create', 'Create invitation')}
+                wrapLabel
+                className="min-h-11 md:min-h-10"
               >
-                <UserPlus className="h-4 w-4" aria-hidden="true" />
+                <Icon icon={UserPlus} />
                 {t('vehicleAccess.invitations.createBtn', 'Invite driver')}
               </Button>
             </div>
@@ -422,7 +437,7 @@ export default function VehicleAccessPage() {
             />
           ) : invitationsList.length === 0 ? (
             <EmptyState /* no-action: transient empty state — surfaces before any invitation is created; user can Invite Driver above */
-              icon={<Mail className="h-8 w-8" />}
+              icon={<Icon icon={Mail} size="xl" />}
               message={t('vehicleAccess.invitations.empty', 'No invitations yet. Create one to share vehicle access.')}
             />
           ) : (
@@ -430,7 +445,7 @@ export default function VehicleAccessPage() {
               tableId="vehicles:access-invitations"
               enableValueFilters
               columns={invitationColumns}
-              mobileColumns={['status', 'expires', 'actions']}
+              mobileColumns={['status', 'createdBy', 'expires', 'link', 'actions']}
               data={invitationsList}
               keyExtractor={(row) => row.id}
               emptyMessage={t('vehicleAccess.invitations.empty', 'No invitations found')}
@@ -448,6 +463,7 @@ export default function VehicleAccessPage() {
         message={t('vehicleAccess.drivers.removeMessage', 'Are you sure you want to remove this driver\'s access? This action cannot be undone.')}
         confirmLabel={t('vehicleAccess.drivers.removeConfirm', 'Remove')}
         variant="danger"
+        loading={removeDriver.isPending}
         onConfirm={handleRemoveDriver}
         onCancel={() => setRemoveTarget(null)}
       />
@@ -457,6 +473,7 @@ export default function VehicleAccessPage() {
         message={t('vehicleAccess.invitations.revokeMessage', 'Are you sure you want to revoke this invitation? The invite link will no longer work.')}
         confirmLabel={t('vehicleAccess.invitations.revokeConfirm', 'Revoke')}
         variant="danger"
+        loading={revokeInvitation.isPending}
         onConfirm={handleRevokeInvitation}
         onCancel={() => setRevokeTarget(null)}
       />
