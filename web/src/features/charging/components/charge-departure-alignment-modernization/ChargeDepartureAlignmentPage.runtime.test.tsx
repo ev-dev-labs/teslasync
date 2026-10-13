@@ -189,7 +189,21 @@ describe('Charge departure modernization (AUTHORED_NOTRUN)', () => {
     const details = screen.getByRole('dialog', { name: 'Charge departure alignment metrics details' });
     const scopeContext = within(details).getByText('What changed', { exact: true }).parentElement;
     if (!scopeContext) throw new Error('Missing narrative scope context');
-    expect(within(scopeContext).getByText(/not complete lifetime coverage/)).toBeInTheDocument();
+    expect(within(scopeContext).getByText(
+      'Dwell is derived from recorded timestamps; readiness margin is the recorded drive-end SoC. Pairing and flags are model-derived, not measurements of charging intent.',
+      { exact: true },
+    )).toBeInTheDocument();
+    expect(within(scopeContext).queryByText(/not complete lifetime coverage/)).not.toBeInTheDocument();
+    const historyScope = 'Selected vehicle · up to 1,000 charges and 1,000 drives from the existing queries. These are loaded records, not complete lifetime coverage; the workspace date range does not filter this model.';
+    const limitationsContext = within(details).getByText('Limitations', { exact: true }).parentElement;
+    if (!limitationsContext) throw new Error('Missing narrative limitations context');
+    expect(within(limitationsContext).getByText(historyScope, { exact: true })).toBeInTheDocument();
+    const calculationDetails = within(details).getByRole('region', {
+      name: 'How this was calculated', exact: true,
+    });
+    const provenanceContext = within(calculationDetails).getByText('Data sources', { exact: true }).closest('div');
+    if (!provenanceContext) throw new Error('Missing calculation provenance context');
+    expect(within(provenanceContext).getByText(historyScope, { exact: true })).toBeInTheDocument();
   });
 
   it('keeps all loaded pairs reachable beyond the original twelve and every field in desktop columns', () => {
