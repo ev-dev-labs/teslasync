@@ -1,8 +1,8 @@
 import { useTranslation } from 'react-i18next';
 import type { MotorSnapshot } from '@/api/types';
 import type { DataState } from '@/api/dataState';
-import { LayoutCard } from '@/components/layout/layout-reference';
-import type { StatMetric, StatPeriod } from '@/components/data-display/stat-reference';
+import { LayoutCard } from '@/components/layout';
+import type { StatMetric, StatPeriod } from '@/components/data-display';
 import { NestedDrivingBrief } from '../operationalbrief-a-m/NestedDrivingBrief';
 import { Badge, DataTable, Text, type Column } from '@/components/ui';
 import { useUnits } from '@/hooks/useUnits';
@@ -13,13 +13,19 @@ import { finite, motorPowerSI } from './model';
 interface Props {
   motorLatest?: MotorSnapshot | null;
   isolationResistance: number | null | undefined;
+  /** Per-signal evidence only; the legacy live-state scalar has no presence metadata. */
+  isolationState?: DataState<number | null>;
+  /** Actual signal scope/observation only, never the motor or fetch timestamp. */
+  isolationPeriod?: StatPeriod;
   state: DataState<unknown>;
   loading: boolean;
   connected: boolean;
 }
 interface DetailRow { key: string; label: string; value: string }
 
-export function LiveMotorPanel({ motorLatest, isolationResistance, state, loading, connected }: Props) {
+export function LiveMotorPanel({
+  motorLatest, isolationResistance, isolationState, isolationPeriod, state, loading, connected,
+}: Props) {
   const { t } = useTranslation();
   const { unitPrefs, formatPower, formatTemperature } = useUnits();
   const { fmtNumber, fmtInt } = useNumberFormatting();
@@ -27,10 +33,11 @@ export function LiveMotorPanel({ motorLatest, isolationResistance, state, loadin
   const scalar = (value: number | null | undefined, unit: string, integer = false) =>
     finite(value) != null ? `${integer ? fmtInt(value ?? 0) : fmtNumber(value ?? 0)} ${unit}` : '—';
   const text = (value: string | null | undefined) => value?.trim() || '—';
-  const isolation = finite(isolationResistance);
-  // Preserve the live hook's existing <=0 sentinel policy. It cannot
-  // distinguish an unobserved default 0 from a measured value.
-  const isolationValue = isolation != null && isolation > 0 ? isolation : null;
+  const isolation = finite(isolationState ? isolationState.data : isolationResistance);
+  // Only explicit per-signal evidence can distinguish measured zero from
+  // the legacy live hook's unobserved default.
+  const isolationValue = isolation != null && (isolation > 0 || (isolationState?.hasData && isolation === 0))
+    ? isolation : null;
   const metrics: StatMetric[] = [
     {
       metricId: 'text',
@@ -108,6 +115,8 @@ export function LiveMotorPanel({ motorLatest, isolationResistance, state, loadin
       label: t('drivetrain.batteryTemp', 'Battery Temp'),
       rawValue: finite(motorLatest?.battery_temp_c),
     },
+  ];
+  const isolationMetrics: StatMetric[] = [
     {
       metricId: 'number',
       occurrenceId: 'isolation',
@@ -131,7 +140,7 @@ export function LiveMotorPanel({ motorLatest, isolationResistance, state, loadin
     formatTemperature(finite(motorLatest?.inverter_temp_c)), formatTemperature(finite(motorLatest?.battery_temp_c)),
     scalar(isolationValue, 'kΩ'),
   ];
-  const details: DetailRow[] = metrics.map((metric, index) => ({
+  const details: DetailRow[] = [...metrics, ...isolationMetrics].map((metric, index) => ({
     key: metric.occurrenceId ?? String(index), label: metric.label ?? '—', value: values[index],
   }));
   const columns: Column<DetailRow>[] = [
@@ -148,6 +157,20 @@ export function LiveMotorPanel({ motorLatest, isolationResistance, state, loadin
       { source: motorLatest?.source?.trim() || t('drivetrain.modernization.unknown', 'Unknown') },
     ),
   };
+  const isolationLabel = t('drivetrain.isolationResistance', 'HV Isolation');
+  const isolationScope: StatPeriod = isolationPeriod ?? {
+    kind: 'unknown',
+    label: isolationLabel,
+    reason: t('driving.brief.observationUnknown', 'Source observation time not provided'),
+  };
+  const isolationRetained = isolationState?.hasData === true
+    && (isolationState.status === 'stale' || isolationState.refreshError != null || isolationState.isRefreshBlocked);
+  const isolationProvenance = isolationScope.kind === 'unknown'
+    ? isolationScope.reason : isolationScope.provenance;
+  const isolationReadings = <NestedDrivingBrief metrics={isolationMetrics} preferences={preferences}
+    title={isolationLabel}
+    description={t('dataSources.labels.liveVehicleState', 'Live vehicle state')}
+    period={isolationScope} retained={isolationRetained} />;
   return <LayoutCard title={t('drivetrain.liveMotor', 'Live Motor Status')}>
     <Badge variant={connected ? 'success' : 'neutral'}>
       {connected ? t('drivetrain.realTime', 'Real-time telemetry active') : t('drivetrain.modernization.liveNotConnected', 'Live telemetry connection not established')}
@@ -157,16 +180,24 @@ export function LiveMotorPanel({ motorLatest, isolationResistance, state, loadin
       <NestedDrivingBrief metrics={metrics} preferences={preferences}
         title={t('drivetrain.brief.liveReadings', 'Returned motor readings')}
         description={period.provenance ?? period.label}
-        loading={loading} unavailable={state.fatalError != null}
+        loading={loading && !state.hasData} unavailable={state.fatalError != null}
         period={period}
-        retained={state.refreshError != null} />
-      <DataTable tableId="drivetrain-health:live-details" variant="embedded" data={details} columns={columns}
+        retained={state.hasData && (state.status === 'stale' || state.refreshError != null || state.isRefreshBlocked)} />
+    </SourceBoundary>
+    <section aria-label={isolationLabel} className="min-w-0">
+      {isolationProvenance && <Text as="p" variant="bodySm">{isolationProvenance}</Text>}
+      {isolationState ? <SourceBoundary state={isolationState} label={isolationLabel}
+        loading={isolationState.status === 'initial'} empty={isolationValue == null}
+        emptyMessage={t('drivetrain.modernization.unknown', 'Unknown')}>
+        {isolationReadings}
+      </SourceBoundary> : isolationReadings}
+    </section>
+    <DataTable tableId="drivetrain-health:live-details" variant="embedded" data={details} columns={columns}
         keyExtractor={row => row.key} caption={t('drivetrain.modernization.liveDetails', 'Live motor record details')}
         mobileColumns={['label', 'value']} mobilePresentation={{
           roles: { label: 'title', value: 'primary' },
           displayValue: (row, key) => key === 'label' ? row.label : row.value,
         }} />
-    </SourceBoundary>
-    <Text as="p" variant="bodySm">{t('drivetrain.modernization.isolationPolicy', 'HV isolation bands are 500 kΩ and 100 kΩ. Non-positive readings use the existing unknown policy.')}</Text>
+    {!isolationState && <Text as="p" variant="bodySm">{t('drivetrain.modernization.isolationPolicy', 'HV isolation bands are 500 kΩ and 100 kΩ. Non-positive readings use the existing unknown policy.')}</Text>}
   </LayoutCard>;
 }
