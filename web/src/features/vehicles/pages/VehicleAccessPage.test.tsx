@@ -632,7 +632,10 @@ describe('VehicleAccessPage — cached expiry window', () => {
       expect(expiring).not.toBeNull();
       expect(expiring?.querySelector('[data-operational-value]')).toHaveTextContent('1');
       act(() => vi.advanceTimersByTime(60_000));
-      expect(expiring?.querySelector('[data-operational-value]')).toHaveTextContent('0');
+      // The motion mock can remount this metric; inspect the live DOM after the tick.
+      const currentExpiring = kpiRegion().querySelector('[data-operational-metric="expiring"]');
+      expect(currentExpiring).toBeInTheDocument();
+      expect(currentExpiring?.querySelector('[data-operational-value]')).toHaveTextContent('0');
       expect(within(kpiRegion()).getByText('Invitations')).toBeInTheDocument();
       view.unmount();
       expect(vi.getTimerCount()).toBe(0);
