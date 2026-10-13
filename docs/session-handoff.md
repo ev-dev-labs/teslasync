@@ -2,6 +2,45 @@
 
 ## Current phase
 
+### Latest release intake and native refill,17:15Z
+
+Preview c784 terminal0/STOP1/2 consumed and all source/report/browser/command
+claims actually released. Native work15:33:32.338--15:53:25.882Z/1193.544s:
+375/767 measured44x44/fivepoints, ten realtouch activations;768mounted36x36,
+Enter/Space/exact190/191/Escape/focus restoration and independentdetails.
+Fourdefault captures/sixmeasurement records; synthetic4/nonfixturevisible0.
+1440 mounts a different32px table control, NOT DriveCard: no fabricated36px
+claim or newtablebug. Missing320/390/430/widerCard applicability remainNOTRUN.
+Firstguard instrumentation lost, no whole-session requestcount claim; existing
+501/503/404/429 retained. Attempt1 incomplete/partial, pending2 continues only
+remaining native cases after current Playwright owner releases; notfullpilot.
+Raw ignored receipt `web\logs\phase6-native-drives-preview-mobile-target-native.json`.
+
+Its genuinely freed slot refilled with existing caption a52107e7-dac5-4e13-
+9991-08b31fc97537, sole writable report
+`docs\frontend-audits\phase6-native-drives-count-caption.json`; all source/
+catalog/tests readonly. Source31cdc and existingleaf715829 accepted; native
+continuation2, no budgetreset. Actual poll96s at17:12:45Z, approximate creation
+17:11:09; conservative return17:30/hard17:35, earlier actual20/25 clock wins.
+Exclusive Playwright grant; ChromeSettings still unconfirmed/not granted.
+
+All32 current IDs individually polled17:12Z, no new completed turns. Thirty
+already overdue then; Analytics subsequently crosses17:12 hard and STOP now
+delivered, plural hard17:05 STOP delivered. Delivered is NOT cancelled/released.
+Only caption is fresh/in budget; do not represent32 live actors as32 healthy
+productive workers. Host exposes no built-in agent-cancel operation; no custom
+workaround, overlapping replacement or speculative claimrelease. Disk QA
+reports/plural canonical/test WIP remain held, not accepted or staged.
+
+Current exact Phase5:219done/20failed/1blocked/4excluded; Phase6:78done/3pending/
+33held/23failed/1blocked, ONEheldparentmilestone not33workers. Pending native
+scopes wait for explicit provider release; original source attempts preserved.
+Shared5173 HTTP20017:12/PID9036; actual shell-header census has zero running
+bounded commands. Sole schedule3 remains tenminutes; overlapping scheduled
+prompt skipped during this check, clear flag after persistence. Latest pushed
+HEAD5afd1c3db/count1857 before this operational receipt; no new source/type/
+full-suite/nativephase acceptance or Docker change.
+
 ### Latest actual health-check census
 
 Individual polls16:54--16:56 confirm32actual current actors, zero new terminal
