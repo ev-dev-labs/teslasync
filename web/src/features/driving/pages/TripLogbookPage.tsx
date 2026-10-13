@@ -161,7 +161,7 @@ export default function TripLogbookPage() {
       key: 'route',
       header: t('logbook.route', 'Route'),
       render: (r) => (
-        <Text variant="bodySm" className="block max-w-[16rem] whitespace-normal break-words" title={r.route}>
+        <Text variant="bodySm" className="block max-w-64 whitespace-normal break-words" title={r.route}>
           {r.route}
         </Text>
       ),
@@ -232,7 +232,7 @@ export default function TripLogbookPage() {
       const totals = summary.perCategory[cat];
       const label = t(meta.i18nKey, meta.fallback);
       const context = sourceAvailable ? <>
-        {formatCurrency(totals.amount)} · {t('logbook.driveCount', '{{count}} drives', { count: fmtInt(totals.count) })}
+        {formatCurrency(totals.amount)} · {t('logbook.driveCount', '{{count}} drives', { count: totals.count, replace: { count: fmtInt(totals.count) } })}
       </> : undefined;
       return [
         {
@@ -346,7 +346,7 @@ export default function TripLogbookPage() {
                       defaultValue={displayRate(cat)}
                       onChange={(e) => handleRateChange(cat, e.target.value)}
                       suffix={<span className="whitespace-nowrap">{rateUnitLabel}</span>}
-                      className="max-w-[10rem]"
+                      className="max-w-40"
                     />
                   </div>
                 );

@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
+import { createInstance, type TOptions } from 'i18next';
 
 const source = readFileSync(new URL('./TripLogbookPage.tsx', import.meta.url), 'utf8');
 
@@ -29,5 +30,38 @@ describe('TripLogbookPage source preservation contract', () => {
   it('preserves rates, visible-range suggestions, loaded exports and pagination', () => {
     for (const contract of ['perMile ? n / KM_PER_MILE : n', 'visible.has(s.driveId)', 'setCategories(suggestions)', 'tableId="driving:trip-logbook"', 'exportFilename="trip-logbook"', 'pagination', 'exportRow={(r)']) expect(source).toContain(contract);
     expect(source).not.toContain('as CategoryFilter');
+  });
+});
+
+describe('TripLogbookPage localized drive count', () => {
+  it('keeps numeric plural selection separate from formatted interpolation in the page', () => {
+    expect(source).toContain("t('logbook.driveCount', '{{count}} drives', { count: totals.count, replace: { count: fmtInt(totals.count) } })");
+    expect(source).not.toContain('count: fmtInt(totals.count) } })');
+  });
+
+  it.each([
+    ['en-US', 0, '0 drives'],
+    ['en-US', 1, '1 drive'],
+    ['en-US', 12345, '12,345 drives'],
+    ['de-DE', 0, '0 drives'],
+    ['de-DE', 1, '1 drive'],
+    ['de-DE', 12345, '12.345 drives'],
+  ])('uses numeric count and locale text for %s with %i drives', async (locale, count, expected) => {
+    const i18n = createInstance();
+    await i18n.init({
+      lng: locale,
+      fallbackLng: 'en',
+      resources: {
+        en: { translation: { logbook: { driveCount_one: '{{count}} drive', driveCount_other: '{{count}} drives' } } },
+        de: { translation: { logbook: { driveCount_one: '{{count}} drive', driveCount_other: '{{count}} drives' } } },
+      },
+    });
+    // i18next selects plural forms using the numeric count, then interpolates
+    // the already locale-formatted text, matching the existing page pattern.
+    const options = {
+      count,
+      replace: { count: new Intl.NumberFormat(locale, { maximumFractionDigits: 0 }).format(count) },
+    } satisfies TOptions;
+    expect(i18n.t('logbook.driveCount', '{{count}} drives', options)).toBe(expected);
   });
 });
