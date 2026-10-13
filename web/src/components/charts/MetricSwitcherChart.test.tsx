@@ -86,7 +86,10 @@ describe('MetricSwitcherChart native trend controls', () => {
         ]);
         expect(screen.getByRole('button', { name: 'Compare drives' }).parentElement).toBe(allocation);
         fireEvent.click(screen.getByRole('button', { name: 'Compare drives' }));
-        expect(onCompare).toHaveBeenCalledExactlyOnceWith();
+        expect(onCompare).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({
+          type: 'click',
+          target: screen.getByRole('button', { name: 'Compare drives' }),
+        }));
         fireEvent.click(within(tablist).getByRole('tab', { name: 'Cost' }));
         expect(onMetricChange).toHaveBeenCalledExactlyOnceWith('cost');
         // The caller still owns selection; a click cannot silently replace its data.
