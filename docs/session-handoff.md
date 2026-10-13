@@ -4,6 +4,21 @@
 
 ### Current unattended checkpoint: retained proofs and concrete source roots
 
+Rolling intake at11:29Z is now persisted through `63b6d3c48`/1830:
+Dashboards `c09b31ec1`, invitation-status palette `91e45f24a`, callable mock
+types `63b6d3c48`, each individually pushed. Original Causal, Access and Tariff
+failed rows are reconciled from these real independent narrow proofs without
+new original workers or budget resets. Phase5+6 rows currently x273/pending2/
+failed28/blocked2 plus one held **parent** catalog claim, not a running agent.
+All actual source actors are collected/released. Parent has added the six exact
+description defaults and is running the normal existing generator/check/strict
+audit with protected snapshots and stable source inputs. Do not claim the root
+complete before its commands and scope/value invariants actually pass. Twin's
+retained read-only covering proof is next after catalog coherence; the deferred
+plural item is still not early fill work. Shared5173 returnedHTTP200 at11:28.
+No native/fullgate/Docker acceptance changed. The earlier snapshot below is
+preserved history, not a current delivered backlog.
+
 Verified snapshot at2026-10-13T11:19Z: HEAD `23a0a452e`/1827 is pushed.
 All32 retained catalog-coherent proofs were individually handled through1820:
 17 clean scoped receipts and15 exhausted/incomplete/malformed receipts.

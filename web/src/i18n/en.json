@@ -38589,7 +38589,15 @@
     "intro": "Compose a Grafana dashboard JSON envelope by picking panels from the curated catalog below and placing them on the 24-column grid. The browser does not push the dashboard to Grafana; copy your JSON into your existing Grafana dashboard editor.",
     "panels": {
       "title": "Curated panel catalog",
-      "intro": "These are the panels the curated catalog exposes. The Helix natural-language composer refuses any panel_name outside this list, and each dashboard may use each panel_name at most once."
+      "intro": "These are the panels the curated catalog exposes. The Helix natural-language composer refuses any panel_name outside this list, and each dashboard may use each panel_name at most once.",
+      "descriptions": {
+        "drives_per_day_timeseries": "Timeseries panel: SUM(distance_m)/day from the drives table",
+        "battery_soc_stat": "Stat panel: latest BatteryLevel sample from signal_log_view",
+        "charging_sessions_table": "Table panel: recent rows from the charging_sessions table",
+        "alerts_count_stat": "Stat panel: count of alerts fired in the last 7 days",
+        "vehicles_table": "Table panel: vehicles metadata overview (id, model, color)",
+        "energy_used_per_day_barchart": "Barchart panel: SUM(energy_used_wh)/day from the drives table"
+      }
     }
   },
   "smallMultiples": {
