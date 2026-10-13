@@ -333,4 +333,114 @@ describe('ConnectionSegment', () => {
     expect(trigger).toHaveAttribute('aria-expanded', 'false');
     expect(trigger).toHaveFocus();
   });
+
+  // Class/DOM regression only: physical target geometry is checked by the parent.
+  it.each([
+    { display: 'text', iconOnly: false },
+    { display: 'icon-only', iconOnly: true },
+  ])('allocates mobile minimums on the direct native $display link and restores md density', ({ iconOnly }) => {
+    renderSegment(
+      { status: 'ok', latencyMs: 42, lastCheckedAt: AT },
+      { iconOnly },
+    );
+    const link = screen.getByRole('link', {
+      name: 'API connection status: Online (42ms)',
+    });
+
+    expect(link.tagName).toBe('A');
+    expect(link).toHaveAttribute('href', '/system-status');
+    expect(link).toHaveClass(
+      'min-h-11', 'min-w-11', 'shrink-0',
+      'md:min-h-0', 'md:min-w-0', 'md:shrink',
+      'inline-flex', 'items-center', 'px-1.5', 'py-0.5',
+    );
+    expect(link).not.toHaveClass('min-h-0');
+    expect(link).not.toHaveClass('min-w-0');
+    expect(link.textContent).toBe(iconOnly ? '' : 'API· 42ms');
+    expect(getDot(link)).toHaveAttribute('aria-hidden');
+    expect(screen.getByRole('tooltip')).toHaveTextContent('Online');
+    link.focus();
+    expect(link).toHaveFocus();
+  });
+
+  it.each([
+    { access: 'unresolved', display: 'text', iconOnly: false, roles: undefined },
+    { access: 'unresolved', display: 'icon-only', iconOnly: true, roles: undefined },
+    { access: 'non-admin', display: 'text', iconOnly: false, roles: ['user'] },
+    { access: 'non-admin', display: 'icon-only', iconOnly: true, roles: ['user'] },
+  ])('allocates mobile minimums on the $access diagnostics fallback native $display link', ({ iconOnly, roles }) => {
+    rbacMock = roles
+      ? { data: { mode: 'session', my_roles: roles, effective_for_me: { 'fleet.read': true } } }
+      : { data: undefined };
+    renderSegment(
+      { status: 'ok', latencyMs: 42, lastCheckedAt: AT },
+      { iconOnly, enableAdminDiagnostics: true },
+    );
+    const link = screen.getByRole('link', {
+      name: 'API connection status: Online (42ms)',
+    });
+
+    expect(link.tagName).toBe('A');
+    expect(link).toHaveAttribute('href', '/system-status');
+    expect(link).toHaveClass(
+      'min-h-11', 'min-w-11', 'shrink-0',
+      'md:min-h-0', 'md:min-w-0', 'md:shrink',
+      'inline-flex', 'items-center', 'px-1.5', 'py-0.5',
+    );
+    expect(link).not.toHaveClass('min-h-0');
+    expect(link).not.toHaveClass('min-w-0');
+    expect(screen.queryByRole('button')).toBeNull();
+    expect(link.textContent).toBe(iconOnly ? '' : 'API· 42ms');
+    expect(screen.getByRole('tooltip')).toHaveTextContent('42ms');
+    link.focus();
+    expect(link).toHaveFocus();
+  });
+
+  it.each<{
+    access: 'role' | 'permission';
+    display: 'text' | 'icon-only';
+    iconOnly: boolean;
+    roles: string[];
+    permissions: Record<string, boolean>;
+  }>([
+    { access: 'role', display: 'text', iconOnly: false, roles: ['admin'], permissions: {} },
+    { access: 'role', display: 'icon-only', iconOnly: true, roles: ['admin'], permissions: {} },
+    { access: 'permission', display: 'text', iconOnly: false, roles: ['user'], permissions: { 'admin.audit': true } },
+    { access: 'permission', display: 'icon-only', iconOnly: true, roles: ['user'], permissions: { 'admin.audit': true } },
+  ])('allocates mobile minimums on the admin $access native $display button and restores md density', ({ iconOnly, roles, permissions }) => {
+    rbacMock = {
+      data: { mode: 'session', my_roles: roles, effective_for_me: permissions },
+    };
+    renderSegment(
+      { status: 'ok', latencyMs: 42, lastCheckedAt: AT },
+      { iconOnly, enableAdminDiagnostics: true },
+    );
+    const trigger = screen.getByRole('button', {
+      name: 'API connection status: Online (42ms). Open connection diagnostics',
+    });
+
+    expect(trigger.tagName).toBe('BUTTON');
+    expect(trigger).toHaveAttribute('type', 'button');
+    expect(trigger).toHaveClass(
+      'h-auto', 'min-h-11', 'min-w-11', 'shrink-0',
+      'md:min-h-5', 'md:min-w-0', 'md:shrink', 'px-1.5', 'py-0',
+    );
+    expect(trigger).not.toHaveClass('min-h-5');
+    expect(trigger).not.toHaveClass('min-w-0');
+    expect(trigger).not.toHaveClass('h-9');
+    expect(trigger).toHaveAttribute('aria-haspopup', 'dialog');
+    expect(trigger).toHaveAttribute('aria-expanded', 'false');
+    expect(trigger.textContent).toBe(iconOnly ? '' : 'API· 42ms');
+    expect(screen.getByRole('tooltip')).toHaveTextContent('Online');
+    trigger.focus();
+    fireEvent.click(trigger);
+    const dialog = screen.getByRole('dialog', { name: 'Connection diagnostics' });
+    expect(trigger).toHaveAttribute('aria-expanded', 'true');
+    expect(within(dialog).getByRole('link')).toHaveAttribute('href', '/system-status');
+    fireEvent.keyDown(dialog, { key: 'Escape' });
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(trigger).toHaveAttribute('aria-expanded', 'false');
+    expect(trigger).toHaveFocus();
+  });
+
 });

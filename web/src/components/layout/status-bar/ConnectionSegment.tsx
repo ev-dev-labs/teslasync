@@ -90,7 +90,7 @@ function AdminConnectionControl({
           to="/system-status"
           aria-label={presentation.ariaLabel}
           className={cn(
-            'inline-flex min-w-0 items-center gap-1.5 rounded-shape-sm px-1.5 py-0.5',
+            'inline-flex min-h-11 min-w-11 shrink-0 items-center gap-1.5 rounded-shape-sm px-1.5 py-0.5 md:min-h-0 md:min-w-0 md:shrink',
             typography.size.xs,
             'hover:bg-[var(--control-bg)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[var(--focus-ring)]',
             presentation.tone,
@@ -156,7 +156,7 @@ function AdminConnectionControl({
           aria-expanded={open}
           onClick={toggle}
           className={cn(
-            'h-auto min-h-5 min-w-0 gap-1.5 rounded-shape-sm px-1.5 py-0',
+            'h-auto min-h-11 min-w-11 shrink-0 gap-1.5 rounded-shape-sm px-1.5 py-0 md:min-h-5 md:min-w-0 md:shrink',
             typography.size.xs,
             presentation.tone,
           )}
@@ -342,7 +342,7 @@ export function ConnectionSegment({
         to="/system-status"
         aria-label={ariaLabel}
         className={cn(
-          'inline-flex min-w-0 items-center gap-1.5 rounded-shape-sm px-1.5 py-0.5',
+          'inline-flex min-h-11 min-w-11 shrink-0 items-center gap-1.5 rounded-shape-sm px-1.5 py-0.5 md:min-h-0 md:min-w-0 md:shrink',
           typography.size.xs,
           'hover:bg-[var(--control-bg)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[var(--focus-ring)]',
           v.text,
