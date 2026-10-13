@@ -2,6 +2,58 @@
 
 ## Current phase
 
+### Latest measured mobile-fix acceptance: 13:29Z
+
+All five actual source owners are terminal, individually collected and explicitly
+released within their original20-minute boxes. Their exact source/test pairs are
+separately committed/pushed as8d8446ff3, a4f27ff41,5323afce6,63eda9e26,
+8f6ff8824 through1838. Banner's two test-line replacements are real-router import/
+configurable mock wiring, not deleted original behavior; all5original bodies
+remain. Actual scoped24+12+27+12+8=83passing cases/23additive, raw/native names
+reconciled0missing, each exact lint0/nine corrected scans0. Original red/capture/
+parser/scan-false-positive trials are retained. Parent semantic programs cover
+all10owned files with0owned and1external context diagnostic each, not a whole
+compiler pass; test-setup's missingglobal ambient is not a new production error.
+
+Existing Dashboard corrective read-only follow-up ran13:19:14.800--
+13:29:54.218Z/639.418s and closed its page/lock before the original20-minute
+boundary. Source input stable8f6ff8824/5173, actual selected DRILL4/roster200,
+no nonfixture identifiers, writes/external reads guarded before navigation,
+no synthetic API responses/server-preference/Docker/reseed/helper changes.
+Receipt `docs\frontend-audits\phase6-native-mobile-targets-20261013.json`
+retains two actual default-output PNGs with verified375x844/1440x936 dimensions,
+byte sizes and hashes. Only saved light/Minimal is captured, not whole acceptance.
+
+Actual six corrected targets meet44px/fivepoint center+21px edge hits at320/
+375/390/430/767, without overlap/clipping/document overflow. Actual768/1024/1440
+restore original16/22px footer text and20px mode heights/minima0,36px banner
+height. Mobile footer remains112px/navigation56/mainpadding168. Genuine main
+maximum scroll2353/2353 leaves all four final links44px/center-clickable and
+clear offooter676. Initial scrollIntoView was NOT maximum and its covered
+rectangles are retained as a nonpassing proxy, not a new frame defect.
+Two real touch flows reach both health destinations. Mode touch emits exactly
+one existing event and opens real inline datetime controls, cancelled via real
+Cancel without submission; zero modal dialogs is correct for an inline picker.
+Initial incorrect/dashboard route/20s timeout and byte-arithmetic PNG parser
+mistake are disclosed/corrected, not hidden or invented product fixes.
+
+Five measured fix rows now[x]: Phase5+6 source/fix x280/pending1/failed28/
+blocked2/held0; Phase6 x69. Only pending plural remains deferred until combined
+Phase6. Original Dashboard pilot remains partial; Drive History/Settings actual
+native acceptance remains outstanding. Other schemes/layouts/states/keyboard/
+contrast/extremes/RTL/zoom/forcedcolors/axe/Lighthouse remain unaccepted.
+Actual501/404/503 resources remain visible/pageexceptions0; not clean runtime.
+No phase checkpoint or full suite/gate claim. Next literal compiler cadence1841
+(last actual production npx tsc at1826 exited0), not inferred from fixture probes.
+
+running0/32: no eligible source writer after exhausted originals/deferredplural;
+parent original pilot native obligations continue, not accepted-source rework.
+Serialized intake flag cleared after actual closure; sole schedule3 unchanged.
+Shared5173HTTP200 at13:17; retain the one shared service. No current bounded
+command/source/browser lease. `.agents` and both automatic console logs remain
+unclaimed, preserved and unstaged. The12:37 launch snapshot below is history,
+not five still-running writers. No questions/external messages/custom tooling.
+
 ### Latest partial native pilot receipt: 12:37Z
 
 Parent Dashboard read-only browser work ran12:17:07.610Z--12:37:11.325Z
