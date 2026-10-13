@@ -2,7 +2,7 @@ import { useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { PageLayout, CardGrid } from '@/components/layout';
-import { QueryError, Skeleton, StaleRefreshWarning } from '@/components/feedback';
+import { QueryError, SectionErrorBoundary, Skeleton, StaleRefreshWarning } from '@/components/feedback';
 import { Badge, SectionTitle, Text } from '@/components/ui';
 
 import { FadeIn } from '@/components/motion';
@@ -192,13 +192,15 @@ export default function DrivingDynamicsPage() {
     >
       <div className="min-w-0 space-y-8 sm:space-y-10">
         <section aria-label={t('dynamics.section.trip', 'Trip review')} className="space-y-4">
-          <DynamicsTripToolbar
-            startDate={startDate}
-            endDate={endDate}
-            drives={filteredDrives}
-            selectedDriveId={selectedDriveId}
-            onSelectDrive={(id) => setDriveParam(id)}
-          />
+          <SectionErrorBoundary name="DynamicsTripToolbar">
+            <DynamicsTripToolbar
+              startDate={startDate}
+              endDate={endDate}
+              drives={filteredDrives}
+              selectedDriveId={selectedDriveId}
+              onSelectDrive={(id) => setDriveParam(id)}
+            />
+          </SectionErrorBoundary>
           {rangeDrivesQuery.isLoading && !rangeDrivesState.hasData ? (
             <Skeleton className="h-12" />
           ) : rangeDrivesState.fatalError ? (
@@ -215,7 +217,9 @@ export default function DrivingDynamicsPage() {
               content: (
                 <DynamicsPlacement>
                   <FadeIn>
-                    <RideOverview drive={selectedDrive} />
+                    <SectionErrorBoundary name="DynamicsRideOverview">
+                      <RideOverview drive={selectedDrive} />
+                    </SectionErrorBoundary>
                   </FadeIn>
                 </DynamicsPlacement>
               ),
@@ -225,7 +229,9 @@ export default function DrivingDynamicsPage() {
               content: (
                 <DynamicsPlacement>
                   <FadeIn delay={0.05}>
-                    <PowertrainSummary vehicleId={vehicleId} historyQuery={historyQuery} />
+                    <SectionErrorBoundary name="DynamicsPowertrainSummary">
+                      <PowertrainSummary vehicleId={vehicleId} historyQuery={historyQuery} />
+                    </SectionErrorBoundary>
                   </FadeIn>
                 </DynamicsPlacement>
               ),
@@ -243,21 +249,29 @@ export default function DrivingDynamicsPage() {
               {t('dynamics.review.evidenceDescription', 'Power delivery, recovered power, axle load, and temperature — sampled only within the selected trip window.')}
             </Text>
           </div>
-          <MotorSamplesBrief
-            vehicleId={vehicleId}
-            historyQuery={historyQuery}
-          />
-          <MotorEfficiencyInsights
-            vehicleId={vehicleId}
-            historyQuery={historyQuery}
-            toTemperatureDisplay={toTemperatureDisplay}
-            tempUnit={tempUnit}
-          />
-          <MotorHistoryCharts
-            vehicleId={vehicleId}
-            historyQuery={historyQuery}
-          />
-          <DrivingTips vehicleId={vehicleId} historyQuery={historyQuery} />
+          <SectionErrorBoundary name="DynamicsMotorSamples">
+            <MotorSamplesBrief
+              vehicleId={vehicleId}
+              historyQuery={historyQuery}
+            />
+          </SectionErrorBoundary>
+          <SectionErrorBoundary name="DynamicsMotorEfficiency">
+            <MotorEfficiencyInsights
+              vehicleId={vehicleId}
+              historyQuery={historyQuery}
+              toTemperatureDisplay={toTemperatureDisplay}
+              tempUnit={tempUnit}
+            />
+          </SectionErrorBoundary>
+          <SectionErrorBoundary name="DynamicsMotorHistory">
+            <MotorHistoryCharts
+              vehicleId={vehicleId}
+              historyQuery={historyQuery}
+            />
+          </SectionErrorBoundary>
+          <SectionErrorBoundary name="DynamicsDrivingTips">
+            <DrivingTips vehicleId={vehicleId} historyQuery={historyQuery} />
+          </SectionErrorBoundary>
         </section>
 
         {/* Current state is deliberately below the historical ride review.
@@ -269,54 +283,78 @@ export default function DrivingDynamicsPage() {
               <SectionTitle id="dynamics-live-heading">
                 {t('dynamics.review.live', 'Vehicle now')}
               </SectionTitle>
-              <Badge variant="info" size="sm">{t('dynamics.review.liveBadge', 'Current signals · not trip history')}</Badge>
+              <Badge variant="neutral" size="sm">{t('dynamics.review.liveBadge', 'Current signals · not trip history')}</Badge>
             </div>
             <Text as="p" variant="bodySm" color="secondary">
               {t('dynamics.review.liveDescription', 'Latest reported motor, pedal, G-force, gear, and cruise state for this vehicle. These readings may be parked or older than now and do not describe the selected ride.')}
             </Text>
           </div>
-          <LiveSourceWarnings vehicleId={vehicleId} />
+          <SectionErrorBoundary name="DynamicsLiveSourceWarnings">
+            <LiveSourceWarnings vehicleId={vehicleId} />
+          </SectionErrorBoundary>
           <FadeIn delay={0.05}>
             <CardGrid label={t('dynamics.review.live', 'Vehicle now')} items={[
               {
                 id: 'dynamics-live-motor', size: 'half',
                 content: (
                   <DynamicsPlacement>
-                    <LiveMotorStatus
-                      vehicleId={vehicleId}
-                      toTemperatureDisplay={toTemperatureDisplay}
-                      tempUnit={tempUnit}
-                    />
+                    <SectionErrorBoundary name="DynamicsLiveMotor">
+                      <LiveMotorStatus
+                        vehicleId={vehicleId}
+                        toTemperatureDisplay={toTemperatureDisplay}
+                        tempUnit={tempUnit}
+                      />
+                    </SectionErrorBoundary>
                   </DynamicsPlacement>
                 ),
               },
               {
                 id: 'dynamics-pedals', size: 'half',
-                content: <DynamicsPlacement><PedalUsage vehicleId={vehicleId} /></DynamicsPlacement>,
+                content: (
+                  <DynamicsPlacement>
+                    <SectionErrorBoundary name="DynamicsPedals">
+                      <PedalUsage vehicleId={vehicleId} />
+                    </SectionErrorBoundary>
+                  </DynamicsPlacement>
+                ),
               },
             ]} />
           </FadeIn>
-          <GrokDynamicsBriefing vehicleId={vehicleId} />
+          <SectionErrorBoundary name="DynamicsInterpretation">
+            <GrokDynamicsBriefing vehicleId={vehicleId} />
+          </SectionErrorBoundary>
           <FadeIn delay={0.1}>
             <CardGrid label={t('dynamics.review.live', 'Vehicle now')} items={[
               {
                 id: 'dynamics-speed-gear', size: 'third',
                 content: (
                   <DynamicsPlacement>
-                    <SpeedGearPanel
-                      vehicleId={vehicleId}
-                      filteredDrives={filteredDrives}
-                    />
+                    <SectionErrorBoundary name="DynamicsSpeedGear">
+                      <SpeedGearPanel
+                        vehicleId={vehicleId}
+                        filteredDrives={filteredDrives}
+                      />
+                    </SectionErrorBoundary>
                   </DynamicsPlacement>
                 ),
               },
               {
                 id: 'dynamics-g-force', size: 'third',
-                content: <GForcePanel vehicleId={vehicleId} />,
+                content: (
+                  <SectionErrorBoundary name="DynamicsGForce">
+                    <GForcePanel vehicleId={vehicleId} />
+                  </SectionErrorBoundary>
+                ),
               },
               {
                 id: 'dynamics-autopilot', size: 'third',
-                content: <DynamicsPlacement><AutopilotSection vehicleId={vehicleId} /></DynamicsPlacement>,
+                content: (
+                  <DynamicsPlacement>
+                    <SectionErrorBoundary name="DynamicsCruise">
+                      <AutopilotSection vehicleId={vehicleId} />
+                    </SectionErrorBoundary>
+                  </DynamicsPlacement>
+                ),
               },
             ]} />
           </FadeIn>
@@ -333,18 +371,22 @@ export default function DrivingDynamicsPage() {
               {t('dynamics.review.contextDescription', 'Vehicle coaching covers the last 30 days. Speed and power analytics cover loaded trips in the selected date range, plus any current drive. Neither is a score for this ride.')}
             </Text>
           </div>
-          <DrivingCoachSection vehicleId={vehicleIdStr} showPerDriveScores={false} />
+          <SectionErrorBoundary name="DynamicsDrivingCoach">
+            <DrivingCoachSection vehicleId={vehicleIdStr} showPerDriveScores={false} />
+          </SectionErrorBoundary>
           <div className="space-y-4 sm:space-y-5">
             <SectionTitle>
               {t('dynamics.review.rangeAnalytics', 'Date-range trip context')}
             </SectionTitle>
-            <DriveAnalyticsSection
-              filteredDrives={filteredDrives}
-              toDistanceDisplay={toDistanceDisplay}
-              toSpeedDisplay={toSpeedDisplay}
-              distanceUnit={distanceUnit}
-              speedUnit={speedUnit}
-            />
+            <SectionErrorBoundary name="DynamicsRangeAnalytics">
+              <DriveAnalyticsSection
+                filteredDrives={filteredDrives}
+                toDistanceDisplay={toDistanceDisplay}
+                toSpeedDisplay={toSpeedDisplay}
+                distanceUnit={distanceUnit}
+                speedUnit={speedUnit}
+              />
+            </SectionErrorBoundary>
           </div>
         </section>
       </div>

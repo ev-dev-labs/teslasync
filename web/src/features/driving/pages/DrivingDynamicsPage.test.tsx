@@ -21,12 +21,17 @@
  * the shared URL window is fixed at [2025-06-09, 2025-06-15].
  */
 
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect, beforeAll, beforeEach, afterEach, vi } from 'vitest';
 import { render, screen, waitFor, fireEvent, within } from '@testing-library/react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClient, QueryClientProvider, QueryObserver, type UseQueryResult } from '@tanstack/react-query';
 import { MemoryRouter, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui';
 import type { ComponentProps, ReactNode } from 'react';
+import type { MotorSnapshot } from '@/api/types';
+import type { DataStateSource } from '@/api/dataState';
+import type { Drive, DrivingCoachData } from '@/types/driving';
+import type { Vehicle } from '@/types/vehicle';
+import i18n from 'i18next';
 
 // i18n stub: echo the fallback string so assertions target rendered English.
 vi.mock('react-i18next', () => ({
@@ -34,8 +39,9 @@ vi.mock('react-i18next', () => ({
     t: (key: string, fallbackOrOpts?: unknown) => {
       if (typeof fallbackOrOpts === 'string') return fallbackOrOpts;
       if (fallbackOrOpts && typeof fallbackOrOpts === 'object') {
-        const o = fallbackOrOpts as Record<string, unknown>;
-        if (typeof o.defaultValue === 'string') return o.defaultValue;
+        if ('defaultValue' in fallbackOrOpts && typeof fallbackOrOpts.defaultValue === 'string') {
+          return fallbackOrOpts.defaultValue;
+        }
       }
       return key;
     },
@@ -47,10 +53,11 @@ vi.mock('react-i18next', () => ({
 
 // Mutable unit preference so one file exercises both the metric and imperial
 // display-conversion branches. Hoisted so the settings factory can close over it.
-const unitState = vi.hoisted(() => ({
-  length: 'km' as 'km' | 'mi',
-  temp: 'C' as 'C' | 'F',
+const unitState = vi.hoisted((): { length: 'km' | 'mi'; temp: 'C' | 'F' } => ({
+  length: 'km',
+  temp: 'C',
 }));
+const presenterState = vi.hoisted(() => ({ failed: new Set<string>() }));
 
 // File-level useSettings mock (overrides the global test-setup stub) so
 // `useUnits()` derives real converters from a flippable preference.
@@ -130,6 +137,10 @@ vi.mock('@/hooks/useSelectedVehicle', async (importActual) => {
 vi.mock('@/hooks/useSignalQueryInvalidation', () => ({
   useSignalQueryInvalidation: vi.fn(),
 }));
+vi.mock('@/lib/errorReporter', async (importActual) => {
+  const actual = await importActual<typeof import('@/lib/errorReporter')>();
+  return { ...actual, reportFrontendError: vi.fn() };
+});
 
 vi.mock('@/components/forms', async (importActual) => {
   const actual = await importActual<typeof import('@/components/forms')>();
@@ -142,13 +153,13 @@ vi.mock('@/components/forms', async (importActual) => {
       <div>
         <span data-testid="range-start">{p.value.start}</span>
         <span data-testid="range-end">{p.value.end}</span>
-        <button
+        <Button
           type="button"
           data-testid="widen-range"
           onClick={() => p.onChange({ start: '2000-01-01', end: '2999-12-31' })}
         >
           widen
-        </button>
+        </Button>
       </div>
     ),
   };
@@ -167,11 +178,14 @@ vi.mock('../components/driving-dynamics-modernization', () => ({
   RideOverview: (p: ComponentProps<ModernPanels['RideOverview']>) => (
     <div data-testid="ride-overview">{p.drive?.id ?? 'none'}</div>
   ),
-  PowertrainSummary: (p: ComponentProps<ModernPanels['PowertrainSummary']>) => (
-    <div data-testid="powertrain-summary">
-      <span data-testid="history-window">{JSON.stringify(p.historyQuery)}</span>
-    </div>
-  ),
+  PowertrainSummary: (p: ComponentProps<ModernPanels['PowertrainSummary']>) => {
+    if (presenterState.failed.has('powertrain-summary')) throw new Error('Synthetic powertrain render failure');
+    return (
+      <div data-testid="powertrain-summary">
+        <span data-testid="history-window">{JSON.stringify(p.historyQuery)}</span>
+      </div>
+    );
+  },
   SummaryStats: (p: ComponentProps<ModernPanels['SummaryStats']>) => (
     <div data-testid="summary"><span data-testid="summary-vid">{String(p.vehicleId)}</span></div>
   ),
@@ -182,7 +196,10 @@ vi.mock('../components/driving-dynamics-modernization', () => ({
       <span data-testid="live-tunit">{p.tempUnit}</span>
     </div>
   ),
-  PedalUsage: (p: ComponentProps<ModernPanels['PedalUsage']>) => <div data-testid="pedal">{String(p.vehicleId)}</div>,
+  PedalUsage: (p: ComponentProps<ModernPanels['PedalUsage']>) => {
+    if (presenterState.failed.has('pedal')) throw new Error('Synthetic pedal render failure');
+    return <div data-testid="pedal">{String(p.vehicleId)}</div>;
+  },
   GForcePanel: (p: ComponentProps<ModernPanels['GForcePanel']>) => <div data-testid="gforce">{String(p.vehicleId)}</div>,
   SpeedGearPanel: (p: ComponentProps<ModernPanels['SpeedGearPanel']>) => (
     <div data-testid="speed-gear">
@@ -190,9 +207,10 @@ vi.mock('../components/driving-dynamics-modernization', () => ({
       <span data-testid="sg-count">{p.filteredDrives.length}</span>
     </div>
   ),
-  MotorHistoryCharts: (p: ComponentProps<ModernPanels['MotorHistoryCharts']>) => (
-    <div data-testid="motor-history"><span data-testid="mh-vid">{String(p.vehicleId)}</span></div>
-  ),
+  MotorHistoryCharts: (p: ComponentProps<ModernPanels['MotorHistoryCharts']>) => {
+    if (presenterState.failed.has('motor-history')) throw new Error('Synthetic history render failure');
+    return <div data-testid="motor-history"><span data-testid="mh-vid">{String(p.vehicleId)}</span></div>;
+  },
   DrivingTips: (p: ComponentProps<ModernPanels['DrivingTips']>) => (
     <div data-testid="tips"><span data-testid="tips-vid">{String(p.vehicleId)}</span></div>
   ),
@@ -208,21 +226,25 @@ vi.mock('../components/driving-dynamics-modernization', () => ({
 }));
 
 // Retained complex presenters still import from the original barrel.
+type DomainPanels = typeof import('../components/driving-dynamics');
 vi.mock('../components/driving-dynamics', () => ({
-  AutopilotSection: (p: any) => <div data-testid="autopilot">{String(p.vehicleId)}</div>,
-  MotorEfficiencyInsights: (p: any) => (
+  AutopilotSection: (p: ComponentProps<DomainPanels['AutopilotSection']>) => <div data-testid="autopilot">{String(p.vehicleId)}</div>,
+  MotorEfficiencyInsights: (p: ComponentProps<DomainPanels['MotorEfficiencyInsights']>) => (
     <div data-testid="efficiency">
       <span data-testid="eff-vid">{String(p.vehicleId)}</span>
       <span data-testid="eff-tunit">{p.tempUnit}</span>
     </div>
   ),
-  DrivingCoachSection: (p: any) => (
-    <div data-testid="coach">
-      {String(p.vehicleId)}
-      <span data-testid="coach-table-visible">{String(p.showPerDriveScores)}</span>
-    </div>
-  ),
-  DriveAnalyticsSection: (p: any) => (
+  DrivingCoachSection: (p: ComponentProps<DomainPanels['DrivingCoachSection']>) => {
+    if (presenterState.failed.has('coach')) throw new Error('Synthetic coach render failure');
+    return (
+      <div data-testid="coach">
+        {String(p.vehicleId)}
+        <span data-testid="coach-table-visible">{String(p.showPerDriveScores)}</span>
+      </div>
+    );
+  },
+  DriveAnalyticsSection: (p: ComponentProps<DomainPanels['DriveAnalyticsSection']>) => (
     <div data-testid="drive-analytics">
       <span data-testid="da-count">{p.filteredDrives.length}</span>
       <span data-testid="da-dunit">{p.distanceUnit}</span>
@@ -231,14 +253,14 @@ vi.mock('../components/driving-dynamics', () => ({
       <span data-testid="da-speed">{p.toSpeedDisplay(10)}</span>
     </div>
   ),
-  GrokDynamicsBriefing: (p: any) => (
+  GrokDynamicsBriefing: (p: ComponentProps<DomainPanels['GrokDynamicsBriefing']>) => (
     <div data-testid="grok-briefing">{String(p.vehicleId)}</div>
   ),
 }));
 
 // jsdom lacks matchMedia; framer-motion (via <FadeIn>) reads it.
 if (typeof window.matchMedia !== 'function') {
-  window.matchMedia = ((query: string) => ({
+  window.matchMedia = (query: string) => ({
     matches: false,
     media: query,
     onchange: null,
@@ -247,7 +269,7 @@ if (typeof window.matchMedia !== 'function') {
     addListener: () => {},
     removeListener: () => {},
     dispatchEvent: () => false,
-  })) as unknown as typeof window.matchMedia;
+  });
 }
 
 import { useMotorLatest, useMotorHistory } from '@/api/hooks/useVehicles';
@@ -263,24 +285,25 @@ const mockCoach = vi.mocked(useDrivingCoach);
 const mockSelectedVehicle = vi.mocked(useSelectedVehicle);
 const mockSignalSync = vi.mocked(useSignalQueryInvalidation);
 
-/** Minimal `UseQueryResult`-shaped stub (incl. DataFreshness fields). */
-function qr(over: Record<string, unknown> = {}): any {
-  return {
-    data: undefined,
-    isLoading: false,
-    error: null,
-    isError: false,
-    isStale: false,
-    isFetching: false,
-    dataUpdatedAt: Date.now(),
-    refetch: vi.fn(),
-    ...over,
-  };
+function qr<T = never>(over: DataStateSource<T> = {}): UseQueryResult<T, Error> {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: Infinity } } });
+  const queryKey = ['dynamics-test-source'];
+  const query = client.getQueryCache().build<T, Error>(client, { queryKey });
+  query.setState({
+    data: over.data,
+    error: over.error instanceof Error ? over.error : null,
+    status: over.isError ? 'error' : over.data === undefined ? 'pending' : 'success',
+    fetchStatus: over.fetchStatus ?? (over.isLoading || over.isFetching ? 'fetching' : 'idle'),
+    dataUpdatedAt: over.dataUpdatedAt ?? Date.now(),
+  });
+  const result = new QueryObserver<T, Error>(client, { queryKey, enabled: false }).getCurrentResult();
+  return { ...result, refetch: vi.fn<UseQueryResult<T, Error>['refetch']>().mockResolvedValue(result) };
 }
 
-function motorSnap(over: Record<string, unknown> = {}): any {
+function motorSnap(over: Partial<MotorSnapshot> = {}): MotorSnapshot {
   return {
     ts: '2025-06-15T12:00:00Z',
+    created_at: '2025-06-15T12:00:00Z',
     power_kw: 0,
     regen_kw: 0,
     torque_nm_front: null,
@@ -289,6 +312,17 @@ function motorSnap(over: Record<string, unknown> = {}): any {
     motor_temp_c_rear: null,
     motor_rpm_front: null,
     motor_rpm_rear: null,
+    di_torque: null,
+    inverter_temp_c: null,
+    inverter_temp_rear: null,
+    heatsink_temp_front: null,
+    heatsink_temp_rear: null,
+    motor_current_front: null,
+    motor_current_rear: null,
+    state_front: null,
+    state_rear: null,
+    vbat_front: null,
+    vbat_rear: null,
     shift_state: 'D',
     ...over,
   };
@@ -300,7 +334,7 @@ const AGGRESSIVE_HISTORY = [
   motorSnap({ power_kw: 110, torque_nm_front: 120, torque_nm_rear: 180, motor_temp_c_front: 60, motor_temp_c_rear: 70, regen_kw: -30 }),
 ];
 
-function drive(over: Record<string, unknown> = {}): any {
+function drive(over: Partial<Drive> = {}): Drive {
   return {
     id: 1,
     vehicleId: 1,
@@ -311,6 +345,21 @@ function drive(over: Record<string, unknown> = {}): any {
     avgSpeedMps: 14,
     maxSpeedMps: 30,
     avgPowerW: 20_000,
+    startAddress: null,
+    endAddress: null,
+    startLat: null,
+    startLon: null,
+    endLat: null,
+    endLon: null,
+    startBatteryPct: null,
+    endBatteryPct: null,
+    energyUsedWh: null,
+    regenEnergyWh: null,
+    outsideTempAvgC: null,
+    insideTempAvgC: null,
+    endedStatus: null,
+    createdAt: '2025-06-01T11:00:00Z',
+    updatedAt: '2025-06-01T11:00:00Z',
     score: 80,
     ...over,
   };
@@ -318,32 +367,48 @@ function drive(over: Record<string, unknown> = {}): any {
 
 // One in the default window, one before it, one after it, and one with a
 // missing timestamp (exercises the `?? ''` guard — always excluded).
-const DRIVES = [
+const DRIVES: (Drive | { id: number; startTs: null })[] = [
   drive({ id: 1, startTs: '2025-06-12T10:00:00Z' }), // in window
   drive({ id: 2, startTs: '2025-03-01T10:00:00Z' }), // before window
   drive({ id: 3, startTs: '2025-12-01T10:00:00Z' }), // after window
-  drive({ id: 4, startTs: null }), // undated — never in any window
+  { id: 4, startTs: null }, // undated — never in any window
 ];
+
+function vehicle(id: number, display_name: string): Vehicle {
+  return {
+    id, vehicle_id: id, display_name, vin: `SYNTHETIC-${id}`, model: '3',
+    trim_badging: '', exterior_color: '', wheel_type: '', state: 'unknown', healthy: false,
+    created_at: '2025-06-01T00:00:00Z', updated_at: '2025-06-01T00:00:00Z',
+  };
+}
 
 function installHappyPath() {
   mockSelectedVehicle.mockReturnValue({
     vehicleId: 1,
     vehicle: null,
     vehicles: [
-      { id: 1, display_name: 'Car One', vin: 'VIN1' },
-      { id: 2, display_name: 'Car Two', vin: 'VIN2' },
-    ] as any,
+      vehicle(1, 'Car One'),
+      vehicle(2, 'Car Two'),
+    ],
     setVehicleId: vi.fn(),
   });
   mockMotorLatest.mockReturnValue(
     qr({ data: motorSnap({ shift_state: 'D', power_kw: 42, motor_temp_c_front: 30, motor_temp_c_rear: 35 }) }),
   );
   mockMotorHistory.mockReturnValue(qr({ data: AGGRESSIVE_HISTORY }));
-  mockDrives.mockImplementation((_vehicleId, options) => qr({
-    data: DRIVES.filter((item) => item.startTs && (!options?.start ||
-      (item.startTs >= options.start && item.startTs < (options.end ?? '9999')))),
-  }));
-  mockCoach.mockReturnValue(qr({ data: { score: 88, style: 'efficient', trend: [] } }));
+  mockDrives.mockImplementation((_vehicleId, options) => {
+    const window = typeof options === 'number' ? undefined : options;
+    return qr({
+      data: DRIVES.filter((item): item is Drive => item.startTs !== null && (!window?.start ||
+        (item.startTs >= window.start && item.startTs < (window.end ?? '9999')))),
+    });
+  });
+  mockCoach.mockReturnValue(qr<DrivingCoachData>({ data: {
+    overall_score: 88, efficiency_wh_km: 160, best_efficiency_wh_km: 145,
+    total_drives_analyzed: 3, style_breakdown: { efficient: 3 },
+    patterns: { hard_accel_pct: 0, hard_brake_pct: 0, highway_pct: 0, short_trip_pct: 0, cold_start_pct: 0 },
+    weekly_trend: [], recommendations: [], per_drive_scores: [],
+  } }));
 }
 
 function HeaderRangeControl() {
@@ -410,8 +475,13 @@ async function renderRealUnitPresenters() {
   return metric;
 }
 
+beforeAll(async () => {
+  await i18n.init({ lng: 'en', resources: { en: { translation: {} } }, initAsync: false });
+});
+
 beforeEach(() => {
   vi.clearAllMocks();
+  presenterState.failed.clear();
   unitState.length = 'km';
   unitState.temp = 'C';
   vi.useFakeTimers({ toFake: ['Date'] });
@@ -494,11 +564,12 @@ describe('DrivingDynamicsPage — live push bridge', () => {
     renderPage();
 
     expect(mockSignalSync).toHaveBeenCalled();
-    const arg = mockSignalSync.mock.calls.at(-1)?.[0] as any;
+    const arg = mockSignalSync.mock.calls.at(-1)?.[0];
+    if (!arg) throw new Error('Expected page signal bindings');
     expect(arg.vehicleId).toBe(1);
 
     const byKey = new Map<string, string[]>(
-      arg.bindings.map((b: any) => [JSON.stringify(b.queryKey), [...b.fields]]),
+      arg.bindings.map((b) => [JSON.stringify(b.queryKey), [...b.fields]]),
     );
 
     // Field names must match the backend projections verbatim — motorMappings
@@ -517,6 +588,9 @@ describe('DrivingDynamicsPage — live push bridge', () => {
       'PedalPosition',
       'BrakePedalPos',
       'BrakePedal',
+    ]);
+    expect(byKey.get(JSON.stringify(['signal-observations', 1]))).toEqual([
+      'CruiseSetSpeed', 'CruiseFollowDistance', 'VehicleSpeed',
     ]);
   });
 });
@@ -641,7 +715,7 @@ describe('DrivingDynamicsPage — no-vehicle state', () => {
     mockSelectedVehicle.mockReturnValue({
       vehicleId: null,
       vehicle: null,
-      vehicles: [] as any,
+      vehicles: [],
       setVehicleId: vi.fn(),
     });
     mockMotorLatest.mockReturnValue(qr({ data: undefined }));
@@ -675,5 +749,127 @@ describe('DrivingDynamicsPage — no-vehicle state', () => {
     expect(screen.getByTestId('coach')).toHaveTextContent('undefined');
     // The page does not render a local vehicle selector when the fleet is empty.
     expect(screen.queryByRole('combobox', { name: 'Select vehicle' })).toBeNull();
+  });
+});
+
+describe('DrivingDynamicsPage — independent source recovery', () => {
+  it('keeps all four groups mounted during initial range loading', () => {
+    const range = qr<Drive[]>({ isLoading: true, isFetching: true });
+    mockDrives.mockImplementation((_vehicleId, options) =>
+      typeof options !== 'number' && options?.limit === 1000 ? range : qr({ data: [] }),
+    );
+    const { container } = renderPage('/driving-dynamics');
+
+    expect(container.querySelector('[data-role="page-container"]')).toHaveAttribute('aria-busy', 'true');
+    expect(screen.getAllByRole('region')).toHaveLength(4);
+    expect(screen.getByTestId('ride-overview')).toHaveTextContent('none');
+    expect(screen.getByTestId('live-vid')).toHaveTextContent('1');
+    expect(screen.getByTestId('coach')).toHaveTextContent('1');
+    expect(screen.queryByRole('button', { name: 'Retry' })).not.toBeInTheDocument();
+  });
+
+  it('recovers the failed range source without discarding an independently returned open drive', () => {
+    const range = qr<Drive[]>({ error: new Error('Synthetic range failure'), isError: true });
+    const latest = qr({ data: [drive({ id: 7, startTs: '2025-06-15T11:00:00Z', endTs: null })] });
+    mockDrives.mockImplementation((_vehicleId, options) =>
+      typeof options !== 'number' && options?.limit === 1000 ? range : latest,
+    );
+    renderPage('/driving-dynamics');
+
+    expect(screen.getAllByRole('region')).toHaveLength(4);
+    expect(screen.getByTestId('ride-overview')).toHaveTextContent('7');
+    expect(screen.getByTestId('tt-count')).toHaveTextContent('1');
+    expect(screen.getByTestId('mh-vid')).toHaveTextContent('1');
+    expect(screen.getByTestId('live-vid')).toHaveTextContent('1');
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    expect(range.refetch).toHaveBeenCalledTimes(1);
+    expect(latest.refetch).not.toHaveBeenCalled();
+  });
+
+  it('retains the selected completed ride on a failed range refresh and retries only that source', () => {
+    const range = qr({
+      data: [drive({ id: 1, startTs: '2025-06-12T10:00:00Z', endTs: '2025-06-12T11:00:00Z' })],
+      error: new Error('Synthetic retained range failure'), isError: true,
+      dataUpdatedAt: Date.parse('2025-06-15T11:00:00Z'),
+    });
+    const latest = qr({ data: [] });
+    mockDrives.mockImplementation((_vehicleId, options) =>
+      typeof options !== 'number' && options?.limit === 1000 ? range : latest,
+    );
+    renderPage('/driving-dynamics?drive=1');
+
+    expect(screen.getByTestId('ride-overview')).toHaveTextContent('1');
+    expect(JSON.parse(screen.getByTestId('history-window').textContent!)).toEqual({
+      start: '2025-06-12T10:00:00Z', end: '2025-06-12T11:00:01.000Z',
+      enabled: true, refetchInterval: false,
+    });
+    const warning = screen.getByTestId('stale-refresh-warning');
+    expect(warning).toHaveTextContent('Previously loaded data remains visible while affected sources recover.');
+    expect(screen.queryByRole('button', { name: 'Retry' })).not.toBeInTheDocument();
+    fireEvent.click(within(warning).getByRole('button', { name: 'Refresh' }));
+    expect(range.refetch).toHaveBeenCalledTimes(1);
+    expect(latest.refetch).not.toHaveBeenCalled();
+    expect(screen.getAllByRole('region')).toHaveLength(4);
+  });
+
+  it('keeps recorded range evidence and retries only an unavailable current-drive source', () => {
+    const range = qr({ data: [drive({ id: 1 })] });
+    const latest = qr<Drive[]>({ error: new Error('Synthetic latest failure'), isError: true });
+    mockDrives.mockImplementation((_vehicleId, options) =>
+      typeof options !== 'number' && options?.limit === 1000 ? range : latest,
+    );
+    renderPage('/driving-dynamics?drive=1');
+
+    expect(screen.getByTestId('ride-overview')).toHaveTextContent('1');
+    expect(screen.getByTestId('da-count')).toHaveTextContent('1');
+    expect(screen.getAllByRole('region')).toHaveLength(4);
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    expect(latest.refetch).toHaveBeenCalledTimes(1);
+    expect(range.refetch).not.toHaveBeenCalled();
+  });
+
+  it('shows blocked refresh without inventing an offline or fatal source failure', () => {
+    const range = qr({ data: [drive()], fetchStatus: 'paused' });
+    const latest = qr({ data: [] });
+    mockDrives.mockImplementation((_vehicleId, options) =>
+      typeof options !== 'number' && options?.limit === 1000 ? range : latest,
+    );
+    renderPage('/driving-dynamics');
+
+    expect(screen.getByTestId('stale-refresh-warning')).toHaveAttribute('data-refresh-blocked', 'true');
+    expect(screen.getByTestId('ride-overview')).toHaveTextContent('1');
+    expect(screen.getAllByRole('region')).toHaveLength(4);
+    expect(screen.queryByRole('button', { name: 'Retry' })).not.toBeInTheDocument();
+    expect(screen.queryByText(/connection lost|paused offline/i)).not.toBeInTheDocument();
+  });
+
+  it.each([
+    { case: 'selected powertrain', failed: 'powertrain-summary', region: 'Trip review' },
+    { case: 'selected motor history', failed: 'motor-history', region: 'Inside this ride' },
+    { case: 'current pedals', failed: 'pedal', region: 'Vehicle now' },
+    { case: 'independent coaching', failed: 'coach', region: 'Beyond this ride' },
+  ])('isolates and retries $case without removing other sources', ({ failed, region }) => {
+    const loggedError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    try {
+      presenterState.failed.add(failed);
+      renderPage('/driving-dynamics?drive=1');
+
+      expect(screen.getAllByRole('region')).toHaveLength(4);
+      const affected = screen.getByRole('region', { name: region });
+      expect(within(affected).getByText('Component failed to load')).toBeInTheDocument();
+      expect(screen.queryByTestId(failed)).not.toBeInTheDocument();
+      expect(screen.getByTestId('ride-overview')).toHaveTextContent('1');
+      expect(screen.getByTestId('live-vid')).toHaveTextContent('1');
+      expect(screen.getByTestId('da-count')).toHaveTextContent('1');
+      expect(screen.getByTestId('tips-vid')).toHaveTextContent('1');
+
+      presenterState.failed.delete(failed);
+      fireEvent.click(within(affected).getByRole('button', { name: 'Retry' }));
+      expect(screen.getByTestId(failed)).toBeInTheDocument();
+      expect(within(affected).queryByText('Component failed to load')).not.toBeInTheDocument();
+      expect(screen.getByTestId('tt-drive')).toHaveTextContent('1');
+    } finally {
+      loggedError.mockRestore();
+    }
   });
 });
