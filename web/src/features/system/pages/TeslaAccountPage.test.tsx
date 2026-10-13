@@ -510,3 +510,70 @@ describe('TeslaAccountPage — null-safety + a11y', () => {
     ).toBeGreaterThanOrEqual(6);
   });
 });
+
+
+describe('TeslaAccountPage — restrained adoption', () => {
+  it('keeps every panel visible without claiming an initial loading profile was never synced', () => {
+    setup(makeQuery({ isLoading: true, isFetching: true, dataUpdatedAt: 0 }));
+    for (const heading of ['Profile', 'Sync', 'Account details', 'Activity']) {
+      expect(panel(heading)).toBeInTheDocument();
+    }
+    expect(within(panel('Sync')).queryByText('Not synced yet')).not.toBeInTheDocument();
+    expect(within(panel('Sync')).getByText('Last synced')).toBeInTheDocument();
+  });
+
+  it('distinguishes an unavailable initial source from a successfully empty profile', () => {
+    setup(makeQuery({ isError: true, error: new ApiError('boom', 500), dataUpdatedAt: 0 }));
+    expect(within(panel('Sync')).getByText('Unavailable')).toBeInTheDocument();
+    expect(within(panel('Sync')).queryByText('Not synced yet')).not.toBeInTheDocument();
+    expect(refreshButtons()).toHaveLength(2);
+  });
+
+  it('shows unknown sync time when no resolved source envelope is available', () => {
+    setup(makeQuery({ dataUpdatedAt: 0 }));
+    expect(within(panel('Sync')).getByText('Unknown')).toBeInTheDocument();
+    expect(within(panel('Sync')).queryByText('Not synced yet')).not.toBeInTheDocument();
+  });
+
+  it('disables all three empty-profile refresh controls while pending without submitting again', () => {
+    const mutation = makeMutation({ isPending: true });
+    setup(makeQuery({ data: envelope(null, null) }), mutation);
+    const buttons = refreshButtons();
+    expect(buttons).toHaveLength(3);
+    for (const button of buttons) {
+      expect(button).toBeDisabled();
+      expect(button).toHaveAttribute('aria-busy', 'true');
+      fireEvent.click(button);
+    }
+    expect(mutation.mutate).not.toHaveBeenCalled();
+    expect(within(panel('Profile')).getByText('No profile synced yet')).toBeInTheDocument();
+  });
+
+  it('retains identity and all lifecycle timestamps while a background refresh is in flight', () => {
+    setup(makeQuery({ data: envelope(PROFILE), isLoading: true, isFetching: true }));
+    expect(within(panel('Profile')).getByText(PROFILE.full_name)).toBeInTheDocument();
+    expect(within(panel('Sync')).getByText(formatDateTime(FETCHED_AT))).toBeInTheDocument();
+    expect(within(panel('Account details')).getByText(PROFILE.email)).toBeInTheDocument();
+    expect(within(panel('Activity')).getAllByRole('listitem')).toHaveLength(3);
+    expect(screen.getByTestId('tesla-account-summary')).toHaveTextContent('Retained source data');
+    expect(refreshButtons()).toHaveLength(2);
+  });
+
+  it('keeps complete long identity values with allocated-container responsive details', () => {
+    const profile = { ...PROFILE, full_name: 'Synthetic '.repeat(18), email: `${'synthetic'.repeat(24)}@example.com` };
+    setup(makeQuery({ data: envelope(profile) }));
+    const hero = within(panel('Profile'));
+    expect(hero.getByText(profile.full_name.trim())).toHaveClass('whitespace-normal');
+    expect(hero.getByText(profile.email)).toHaveClass('[overflow-wrap:anywhere]');
+    const details = panel('Account details');
+    expect(details.querySelector('dl')).toHaveClass('@container/kv-list');
+    expect(within(details).getByText(profile.email)).toHaveClass('[overflow-wrap:anywhere]');
+  });
+
+  it('uses shared neutral lifecycle presentation and semantic confirmed-sync color', () => {
+    setup(makeQuery({ data: envelope(PROFILE) }));
+    expect(panel('Activity').querySelectorAll('[style]')).toHaveLength(0);
+    expect(within(panel('Profile')).getByText('Synced').querySelector('span')).toHaveClass('bg-[var(--semantic-success)]');
+    expect(panel('Sync').querySelector('.bg-\\[var\\(--surface-2\\)\\]')).toBeInTheDocument();
+  });
+});

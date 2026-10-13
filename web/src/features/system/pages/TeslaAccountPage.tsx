@@ -5,7 +5,7 @@ import {
 } from 'lucide-react';
 
 import { PageLayout } from '@/components/layout';
-import { GlassPanel, Button, Badge, StatusPill, Heading, Text, Label, Caption, HelperText } from '@/components/ui';
+import { GlassPanel, Button, Badge, StatusPill, Heading, Text, Label, Caption, HelperText, Icon } from '@/components/ui';
 import { KVList, Avatar, Timeline } from '@/components/data-display';
 import { QueryError, EmptyState, Skeleton, StaleRefreshWarning } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
@@ -15,14 +15,6 @@ import { useDataState } from '@/hooks/useDataState';
 import { useTeslaUserProfile, useRefreshTeslaProfile } from '@/api/hooks/useUser';
 import { formatDateTime, formatRelative } from '@/lib/dateFormat';
 import { TeslaAccountStatStrip } from '../components/statstrip-tesla-account/TeslaAccountStatStrip';
-
-/* Timeline dot hues — toned, CB-safe accents (cyan / purple / emerald). Kept as
- * module-scope data so the Timeline `color` prop receives a stable value. */
-const ACTIVITY_COLORS = {
-  linked: '#22d3ee',
-  updated: '#a78bfa',
-  synced: '#34d399',
-} as const;
 
 export default function TeslaAccountPage() {
   const { t } = useTranslation();
@@ -50,7 +42,10 @@ export default function TeslaAccountPage() {
 
   const accountId = profile?.id != null ? `#${profile.id}` : '—';
 
-  const refresh = () => refreshMutation.mutate();
+  // All refresh entry points share the mutation's pending guard.
+  const refresh = () => {
+    if (!refreshMutation.isPending) refreshMutation.mutate();
+  };
 
   const resourceName = t('teslaAccount.resource', 'Tesla profile');
   const retry = () => { void refetch(); };
@@ -58,8 +53,9 @@ export default function TeslaAccountPage() {
   const actions = (
     <Button
       onClick={refresh}
+      wrapLabel
       loading={refreshMutation.isPending}
-      icon={<RefreshCw className="h-4 w-4" aria-hidden="true" />}
+      icon={<Icon icon={RefreshCw} />}
       aria-label={t('teslaAccount.refresh', 'Refresh from Tesla')}
     >
       {t('teslaAccount.refresh', 'Refresh from Tesla')}
@@ -84,9 +80,9 @@ export default function TeslaAccountPage() {
       {/* 2 — Hero identity + Sync center */}
       <FadeIn delay={0.05}>
         <section className="grid grid-cols-1 gap-4 xl:grid-cols-3">
-          <GlassPanel className="p-4 sm:p-5 xl:col-span-2">
+          <GlassPanel className="min-w-0 p-4 sm:p-5 xl:col-span-2">
             <Heading level="panel" as="h2" className="mb-4 flex items-center gap-2">
-              <User className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+              <Icon icon=User className="text-[var(--text-muted)]" />
               {t('teslaAccount.profile', 'Profile')}
             </Heading>
             {isLoading ? (
@@ -110,21 +106,21 @@ export default function TeslaAccountPage() {
                   className="h-16 w-16 shrink-0 sm:h-20 sm:w-20"
                 />
                 <div className="min-w-0 space-y-2">
-                  <Text as="p" size="xl" weight="bold" color="primary" className="truncate">
+                  <Text as="p" size="xl" weight="bold" color="primary" className="whitespace-normal [overflow-wrap:anywhere]">
                     {profile.full_name || t('teslaAccount.unnamed', 'Tesla driver')}
                   </Text>
                   <div className="flex items-center gap-2 text-[var(--text-secondary)]">
-                    <Mail className="h-4 w-4 shrink-0" aria-hidden="true" />
-                    <Text as="span" variant="body" className="truncate">
+                    <Icon icon={Mail} />
+                    <Text as="span" variant="body" className="whitespace-normal [overflow-wrap:anywhere]">
                       {profile.email || '—'}
                     </Text>
                   </div>
                   <div className="flex flex-wrap items-center gap-2 pt-1">
                     <Badge variant="neutral">
-                      <Hash className="h-3 w-3" aria-hidden="true" />
+                      <Icon icon={Hash} size="xs" />
                       {accountId}
                     </Badge>
-                    <StatusPill color={fetchedAt ? 'bg-emerald-400' : 'bg-amber-400'}>
+                    <StatusPill color={fetchedAt ? 'bg-[var(--semantic-success)]' : 'bg-[var(--text-secondary)]'}>
                       {fetchedAt
                         ? t('teslaAccount.synced', 'Synced')
                         : t('teslaAccount.never', 'Never synced')}
@@ -133,37 +129,51 @@ export default function TeslaAccountPage() {
                 </div>
               </div>
             ) : (
-              <EmptyState /* no-action: EmptyState already renders the Refresh CTA below */
-                icon={<User className="h-10 w-10" aria-hidden="true" />}
+              <div>
+                <EmptyState /* no-action: pending-aware shared Button immediately below */
+                icon={<Icon icon=User size="xl" className="h-10 w-10" />}
                 title={t('teslaAccount.noProfileTitle', 'No profile synced yet')}
                 message={t('teslaAccount.noProfile', 'No profile data yet. Click "Refresh from Tesla" to sync your account.')}
-                action={{ label: t('teslaAccount.refresh', 'Refresh from Tesla'), onClick: refresh }}
-              />
+                />
+                <div className="flex justify-center">
+                  <Button onClick={refresh} loading={refreshMutation.isPending} wrapLabel>
+                    {t('teslaAccount.refresh', 'Refresh from Tesla')}
+                  </Button>
+                </div>
+              </div>
             )}
           </GlassPanel>
 
-          <GlassPanel className="p-4 sm:p-5">
+          <GlassPanel className="min-w-0 p-4 sm:p-5">
             <Heading level="panel" as="h2" className="mb-4 flex items-center gap-2">
-              <RefreshCw className="h-4 w-4 text-emerald-300" aria-hidden="true" />
+              <Icon icon=RefreshCw className="text-[var(--text-muted)]" />
               {t('teslaAccount.sync.title', 'Sync')}
             </Heading>
             <div className="space-y-4">
-              <div className="rounded-lg border border-[var(--border-subtle)] bg-white/[0.02] p-4">
+              <div className="rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-2)] p-4">
                 <Label>{t('teslaAccount.sync.lastSynced', 'Last synced')}</Label>
+                {isLoading ? (
+                  <Skeleton className="mt-2 h-10 w-full" />
+                ) : (
                 <div className="mt-1 flex items-center gap-2">
-                  <Clock className="h-4 w-4 shrink-0 text-[var(--text-muted)]" aria-hidden="true" />
+                  <Icon icon={Clock} className="text-[var(--text-muted)]" />
                   <Text as="span" variant="body">
-                    {fetchedAt ? formatRelative(fetchedAt) : t('teslaAccount.neverSyncedShort', 'Not synced yet')}
+                    {fetchedAt ? formatRelative(fetchedAt)
+                      : isError ? t('common.unavailable', 'Unavailable')
+                      : !profileState.hasData || hasProfile ? t('common.unknown', 'Unknown')
+                      : t('teslaAccount.neverSyncedShort', 'Not synced yet')}
                   </Text>
                 </div>
+                )}
                 {fetchedAt && <Caption className="mt-1 block">{formatDateTime(fetchedAt)}</Caption>}
               </div>
               <Button
                 variant="primary"
+                wrapLabel
                 className="w-full min-h-11"
                 onClick={refresh}
                 loading={refreshMutation.isPending}
-                icon={<RefreshCw className="h-4 w-4" aria-hidden="true" />}
+                icon={<Icon icon={RefreshCw} />}
               >
                 {t('teslaAccount.refresh', 'Refresh from Tesla')}
               </Button>
@@ -178,9 +188,9 @@ export default function TeslaAccountPage() {
       {/* 3 — Account details + Activity */}
       <FadeIn delay={0.1}>
         <section className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-          <GlassPanel className="p-4 sm:p-5">
+          <GlassPanel className="min-w-0 p-4 sm:p-5">
             <Heading level="panel" as="h2" className="mb-4 flex items-center gap-2">
-              <ContactRound className="h-4 w-4 text-indigo-300" aria-hidden="true" />
+              <Icon icon=ContactRound className="text-[var(--text-muted)]" />
               {t('teslaAccount.details.title', 'Account details')}
             </Heading>
             {isLoading ? (
@@ -189,6 +199,7 @@ export default function TeslaAccountPage() {
               <QueryError error={error} onRetry={retry} resourceName={resourceName} />
             ) : hasProfile ? (
               <KVList
+                layout="responsive"
                 items={[
                   { label: t('teslaAccount.name', 'Name'), value: profile.full_name || '—' },
                   { label: t('teslaAccount.email', 'Email'), value: profile.email || '—' },
@@ -207,15 +218,15 @@ export default function TeslaAccountPage() {
               />
             ) : (
               <EmptyState /* no-action: transient empty — recover via header/sync Refresh */
-                icon={<ContactRound className="h-10 w-10" aria-hidden="true" />}
+                icon={<Icon icon=ContactRound size="xl" className="h-10 w-10" />}
                 message={t('teslaAccount.detailsEmpty', 'No account details yet. Sync to populate your profile.')}
               />
             )}
           </GlassPanel>
 
-          <GlassPanel className="p-4 sm:p-5">
+          <GlassPanel className="min-w-0 p-4 sm:p-5">
             <Heading level="panel" as="h2" className="mb-4 flex items-center gap-2">
-              <Activity className="h-4 w-4 text-purple-300" aria-hidden="true" />
+              <Icon icon=Activity className="text-[var(--text-muted)]" />
               {t('teslaAccount.activity.title', 'Activity')}
             </Heading>
             {isLoading ? (
@@ -229,31 +240,28 @@ export default function TeslaAccountPage() {
                 summaryBounds={activityBounds}
                 items={[
                   {
-                    icon: <Link2 className="h-3 w-3" aria-hidden="true" />,
+                    icon: <Icon icon=Link2 size="xs" />,
                     title: t('teslaAccount.activity.linked', 'Account linked'),
                     subtitle: t('teslaAccount.activity.linkedSub', 'Tesla account connected to TeslaSync'),
                     time: formatDateTime(profile.created_at),
-                    color: ACTIVITY_COLORS.linked,
                   },
                   {
-                    icon: <RefreshCw className="h-3 w-3" aria-hidden="true" />,
+                    icon: <Icon icon=RefreshCw size="xs" />,
                     title: t('teslaAccount.activity.updated', 'Profile updated'),
                     subtitle: t('teslaAccount.activity.updatedSub', 'Most recent change to your profile record'),
                     time: formatDateTime(profile.updated_at),
-                    color: ACTIVITY_COLORS.updated,
                   },
                   {
-                    icon: <CheckCircle2 className="h-3 w-3" aria-hidden="true" />,
+                    icon: <Icon icon=CheckCircle2 size="xs" />,
                     title: t('teslaAccount.activity.synced', 'Last synced from Tesla'),
                     subtitle: t('teslaAccount.activity.syncedSub', 'Latest fetch from the Fleet API'),
                     time: formatDateTime(fetchedAt),
-                    color: ACTIVITY_COLORS.synced,
                   },
                 ]}
               />
             ) : (
               <EmptyState /* no-action: transient empty — recover via header/sync Refresh */
-                icon={<Activity className="h-10 w-10" aria-hidden="true" />}
+                icon={<Icon icon=Activity size="xl" className="h-10 w-10" />}
                 message={t('teslaAccount.activity.empty', 'No account activity to show yet.')}
               />
             )}
