@@ -612,7 +612,7 @@ describe('SafetySettingsPage preservation', () => {
     renderPage();
     const table = screen.getByRole('table');
     for (const name of ['Time', 'AEB', 'BSC', 'BSCW', 'FCW', 'LDA', 'ELDA', 'CFD', 'SLW', 'PIN']) {
-      const header = within(table).getByRole('columnheader', { name: new RegExp(name) });
+      const header = within(table).getByRole('columnheader', { name, exact: true });
       expect(header.className).not.toMatch(/hidden/);
     }
   });
