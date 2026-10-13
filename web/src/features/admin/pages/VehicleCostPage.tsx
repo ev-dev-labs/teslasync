@@ -25,7 +25,7 @@ import { useTranslation } from 'react-i18next';
 
 import { PageLayout } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
-import { DataStateNotice } from '@/components/feedback';
+import { DataStateNotice, SectionErrorBoundary } from '@/components/feedback';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useVehicleCost } from '@/api/hooks/useOperatorConfidence';
 import { isApiError } from '@/lib/resilience';
@@ -60,9 +60,11 @@ export default function VehicleCostPage() {
 
   const query = useVehicleCost(since, 100);
   const costState = deriveDataState(query);
-  const subsystemMissing = isApiError(costState.fatalError) && costState.fatalError.status === 503;
+  const subsystemMissing = isApiError(costState.fatalError)
+    && costState.fatalError.status === 503
+    && costState.fatalError.code === 'SUBSYSTEM_NOT_CONFIGURED';
 
-  // When the 503 subsystem-missing banner is already explaining the empty
+  // When the confirmed subsystem-missing banner is already explaining the empty
   // page, suppress the raw query error for the individual sections so they
   // render calm empty states instead of a duplicate "server error" panel.
   const sectionError = subsystemMissing ? null : costState.fatalError;
@@ -110,7 +112,7 @@ export default function VehicleCostPage() {
         ? [{ id: 'vehicle-cost', label: t('admin.vehicleCost.pageTitle', 'Vehicle ingest cost'), query }]
         : undefined}
     >
-      <div className="space-y-6">
+      <div className="min-w-0 space-y-6">
         {subsystemMissing && (
           <DataStateNotice
             state="unsupported"
@@ -125,48 +127,56 @@ export default function VehicleCostPage() {
 
         {/* 1 — Fleet-total KPI band */}
         <FadeIn>
-          <VehicleCostStatStrip
-            totals={totals}
-            vehicleCount={Array.isArray(query.data?.vehicles) ? vehicles.length : null}
-            windowDays={windowDays}
-            loading={costState.status === 'initial'}
-            error={sectionError}
-            refreshError={costState.refreshError}
-            retained={costState.hasData && (costState.isRefreshing || costState.status === 'stale')}
-            onRetry={retry}
-          />
+          <SectionErrorBoundary name="vehicle-cost-summary">
+            <VehicleCostStatStrip
+              totals={totals}
+              vehicleCount={Array.isArray(query.data?.vehicles) ? vehicles.length : null}
+              windowDays={windowDays}
+              loading={costState.status === 'initial'}
+              error={sectionError}
+              refreshError={costState.refreshError}
+              retained={costState.hasData && (costState.isRefreshing || costState.status === 'stale')}
+              onRetry={retry}
+            />
+          </SectionErrorBoundary>
         </FadeIn>
 
         {/* 2 — Hero cost chart + top-talkers side panel */}
         <FadeIn delay={0.1}>
           <section
             aria-label={t('admin.vehicleCost.breakdownRegion', 'Ingest cost breakdown')}
-            className="grid grid-cols-1 gap-4 xl:grid-cols-3 xl:gap-5"
+            className="grid min-w-0 grid-cols-1 gap-4 xl:grid-cols-3 xl:gap-5"
           >
-            <CostByVehicleChart
-              bars={costBars}
-              loading={costState.status === 'initial'}
-              error={sectionError}
-              onRetry={retry}
-            />
-            <VehicleCostTalkers
-              talkers={topTalkers}
-              totalRows={totals?.total_rows}
-              loading={costState.status === 'initial'}
-              error={sectionError}
-              onRetry={retry}
-            />
+            <SectionErrorBoundary name="vehicle-cost-chart">
+              <CostByVehicleChart
+                bars={costBars}
+                loading={costState.status === 'initial'}
+                error={sectionError}
+                onRetry={retry}
+              />
+            </SectionErrorBoundary>
+            <SectionErrorBoundary name="vehicle-cost-talkers">
+              <VehicleCostTalkers
+                talkers={topTalkers}
+                totalRows={totals?.total_rows}
+                loading={costState.status === 'initial'}
+                error={sectionError}
+                onRetry={retry}
+              />
+            </SectionErrorBoundary>
           </section>
         </FadeIn>
 
         {/* 3 — Full-width per-vehicle breakdown table */}
         <FadeIn delay={0.2}>
-          <VehicleCostTable
-            vehicles={vehicles}
-            loading={costState.status === 'initial'}
-            error={sectionError}
-            onRetry={retry}
-          />
+          <SectionErrorBoundary name="vehicle-cost-breakdown">
+            <VehicleCostTable
+              vehicles={vehicles}
+              loading={costState.status === 'initial'}
+              error={sectionError}
+              onRetry={retry}
+            />
+          </SectionErrorBoundary>
         </FadeIn>
       </div>
     </PageLayout>

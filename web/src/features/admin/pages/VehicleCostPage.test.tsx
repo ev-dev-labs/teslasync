@@ -5,7 +5,7 @@
  * (the surface actually under test here) is:
  *
  *   1. window-state → `since` derivation → `useVehicleCost(since, 100)` args.
- *   2. 503 "subsystem missing" detection → banner + `sectionError` suppression
+ *   2. coded 503 "subsystem missing" detection → banner + `sectionError` suppression
  *      so every section renders a calm empty state instead of a red error.
  *   3. generic-error pass-through → `sectionError` handed to every section.
  *   4. null-safe `vehicles` / `totals` extraction.
@@ -24,13 +24,23 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
-import type { ReactNode } from 'react';
+import type { ComponentProps, ReactNode } from 'react';
+import type { DataStateSource } from '@/api/dataState';
+import type { VehicleCostStatStrip } from '../components/statstrip-audit-vehicle-cost/VehicleCostStatStrip';
+import type { VehicleCostTalkers } from '../components/continuation-admin-1/VehicleCostTalkers';
+import type { CostByVehicleChart, VehicleCostTable } from '../components/vehicle-cost';
+
+type KpisProps = ComponentProps<typeof VehicleCostStatStrip>;
+type ChartProps = ComponentProps<typeof CostByVehicleChart>;
+type TalkersProps = ComponentProps<typeof VehicleCostTalkers>;
+type TableProps = ComponentProps<typeof VehicleCostTable>;
+type SectionName = 'kpis' | 'chart' | 'talkers' | 'table';
 
 // jsdom lacks matchMedia; framer-motion / useMotionPreference (reached via the
 // page's <FadeIn> + PageContainer freshness chip) read it at module load.
 vi.hoisted(() => {
   if (typeof window !== 'undefined' && typeof window.matchMedia !== 'function') {
-    window.matchMedia = ((query: string) => ({
+    window.matchMedia = (query: string) => ({
       matches: false,
       media: query,
       onchange: null,
@@ -41,16 +51,33 @@ vi.hoisted(() => {
       dispatchEvent() {
         return false;
       },
-    })) as unknown as typeof window.matchMedia;
+    });
   }
 });
 
 // Shared, hoisted test doubles so the mock factories below and the specs can
 // both reach them.
-const { useVehicleCostMock, captured } = vi.hoisted(() => ({
-  useVehicleCostMock: vi.fn(),
-  captured: {} as Record<string, Record<string, unknown>>,
+const { useVehicleCostMock, kpisMock, chartMock, talkersMock, tableMock, renderFailures } = vi.hoisted(() => ({
+  useVehicleCostMock: vi.fn<(since: Date | null, limit: number) => FakeQuery>(),
+  kpisMock: vi.fn<(props: KpisProps) => void>(),
+  chartMock: vi.fn<(props: ChartProps) => void>(),
+  talkersMock: vi.fn<(props: TalkersProps) => void>(),
+  tableMock: vi.fn<(props: TableProps) => void>(),
+  renderFailures: new Set<SectionName>(),
 }));
+
+function latestProps<T>(mock: { mock: { calls: [T][] } }): T {
+  const latest = mock.mock.calls[mock.mock.calls.length - 1];
+  if (!latest) throw new Error('Expected section to render');
+  return latest[0];
+}
+
+const captured = {
+  get kpis() { return latestProps(kpisMock); },
+  get chart() { return latestProps(chartMock); },
+  get talkers() { return latestProps(talkersMock); },
+  get table() { return latestProps(tableMock); },
+};
 
 // i18n → return the developer fallback string, interpolating `{{vars}}`.
 vi.mock('react-i18next', async () => {
@@ -60,16 +87,15 @@ vi.mock('react-i18next', async () => {
     useTranslation: () => ({
       t: (key: string, fallback?: unknown, opts?: unknown) => {
         const template = typeof fallback === 'string' ? fallback : key;
-        const vars = (
+        const vars =
           opts && typeof opts === 'object'
             ? opts
             : fallback && typeof fallback === 'object'
               ? fallback
-              : undefined
-        ) as Record<string, unknown> | undefined;
+              : undefined;
         if (!vars) return template;
         return template.replace(/{{(\w+)}}/g, (_m, name: string) =>
-          name in vars ? String(vars[name]) : `{{${name}}}`,
+          Object.prototype.hasOwnProperty.call(vars, name) ? String(Reflect.get(vars, name)) : `{{${name}}}`,
         );
       },
       i18n: { language: 'en', changeLanguage: vi.fn() },
@@ -85,7 +111,7 @@ vi.mock('@/api/hooks/useOperatorConfidence', async () => {
   >('@/api/hooks/useOperatorConfidence');
   return {
     ...actual,
-    useVehicleCost: (...args: unknown[]) => useVehicleCostMock(...args),
+    useVehicleCost: (since: Date | null, limit: number) => useVehicleCostMock(since, limit),
   };
 });
 
@@ -96,25 +122,27 @@ vi.mock('../components/vehicle-cost', async () => {
     typeof import('../components/vehicle-cost')
   >('../components/vehicle-cost');
   const React = await vi.importActual<typeof import('react')>('react');
-  const makeStub = (name: string, testid: string) =>
-    function Stub(props: Record<string, unknown>) {
-      captured[name] = props;
-      return React.createElement('div', { 'data-testid': testid });
-    };
   return {
     ...actual,
-    FleetCostKpis: makeStub('kpis', 'stub-kpis'),
-    CostByVehicleChart: makeStub('chart', 'stub-chart'),
-    TopTalkersPanel: makeStub('talkers', 'stub-talkers'),
-    VehicleCostTable: makeStub('table', 'stub-table'),
+    CostByVehicleChart: (props: ChartProps) => {
+      chartMock(props);
+      if (renderFailures.has('chart')) throw new Error('chart render failed');
+      return React.createElement('div', { 'data-testid': 'stub-chart' });
+    },
+    VehicleCostTable: (props: TableProps) => {
+      tableMock(props);
+      if (renderFailures.has('table')) throw new Error('table render failed');
+      return React.createElement('div', { 'data-testid': 'stub-table' });
+    },
   };
 });
 
 vi.mock('../components/statstrip-audit-vehicle-cost/VehicleCostStatStrip', async () => {
   const React = await vi.importActual<typeof import('react')>('react');
   return {
-    VehicleCostStatStrip: (props: Record<string, unknown>) => {
-      captured.kpis = props;
+    VehicleCostStatStrip: (props: KpisProps) => {
+      kpisMock(props);
+      if (renderFailures.has('kpis')) throw new Error('kpis render failed');
       return React.createElement('div', { 'data-testid': 'stub-kpis' });
     },
   };
@@ -123,8 +151,9 @@ vi.mock('../components/statstrip-audit-vehicle-cost/VehicleCostStatStrip', async
 vi.mock('../components/continuation-admin-1/VehicleCostTalkers', async () => {
   const React = await vi.importActual<typeof import('react')>('react');
   return {
-    VehicleCostTalkers: (props: Record<string, unknown>) => {
-      captured.talkers = props;
+    VehicleCostTalkers: (props: TalkersProps) => {
+      talkersMock(props);
+      if (renderFailures.has('talkers')) throw new Error('talkers render failed');
       return React.createElement('div', { 'data-testid': 'stub-talkers' });
     },
   };
@@ -137,9 +166,7 @@ import type {
   VehicleCostRow,
 } from '@/types/admin-operator-confidence';
 
-interface FakeQuery {
-  data?: VehicleCostResponse;
-  error: unknown;
+interface FakeQuery extends DataStateSource<VehicleCostResponse> {
   isLoading: boolean;
   isFetching: boolean;
   isStale: boolean;
@@ -225,8 +252,12 @@ function renderPage() {
 }
 
 beforeEach(() => {
-  useVehicleCostMock.mockReset();
-  for (const key of Object.keys(captured)) delete captured[key];
+  void useVehicleCostMock.mockReset();
+  void kpisMock.mockReset();
+  void chartMock.mockReset();
+  void talkersMock.mockReset();
+  void tableMock.mockReset();
+  renderFailures.clear();
 });
 
 describe('VehicleCostPage', () => {
@@ -257,7 +288,8 @@ describe('VehicleCostPage', () => {
     const [since, limit] = useVehicleCostMock.mock.calls[0];
     expect(since).toBeInstanceOf(Date);
     expect(limit).toBe(100);
-    const daysAgo = (Date.now() - (since as Date).getTime()) / 86_400_000;
+    if (!(since instanceof Date)) throw new Error('Expected a since instant');
+    const daysAgo = (Date.now() - since.getTime()) / 86_400_000;
     expect(Math.round(daysAgo)).toBe(30);
   });
 
@@ -265,8 +297,8 @@ describe('VehicleCostPage', () => {
     useVehicleCostMock.mockReturnValue(makeQuery({ data: RESPONSE }));
     renderPage();
 
-    const bars = captured.chart.bars as Array<{ name: string; bytes: number }>;
-    const talkers = captured.talkers.talkers as Array<{ name: string; rows: number }>;
+    const bars = captured.chart.bars;
+    const talkers = captured.talkers.talkers;
 
     expect(bars.map((b) => b.name)).toEqual(['Cybertruck', 'Vehicle #3', 'Model 3']);
     expect(talkers.map((tk) => tk.name)).toEqual(['Model 3', 'Vehicle #3', 'Cybertruck']);
@@ -292,7 +324,7 @@ describe('VehicleCostPage', () => {
     useVehicleCostMock.mockReturnValue(makeQuery({ data: RESPONSE }));
     renderPage();
 
-    const bars = captured.chart.bars as Array<{ vehicle_id: number; name: string }>;
+    const bars = captured.chart.bars;
     const unnamed = bars.find((b) => b.vehicle_id === 3);
     expect(unnamed?.name).toBe('Vehicle #3');
   });
@@ -305,7 +337,7 @@ describe('VehicleCostPage', () => {
 
     expect(captured.kpis.loading).toBe(true);
     expect(captured.chart.loading).toBe(true);
-    expect((captured.chart.bars as unknown[]).length).toBe(0);
+    expect(captured.chart.bars.length).toBe(0);
     // Refresh is disabled during an in-flight fetch to prevent double-loads.
     expect(
       screen.getByRole('button', { name: 'Refresh vehicle cost data' }),
@@ -346,12 +378,13 @@ describe('VehicleCostPage', () => {
   it('degrades to empty derives when the response omits the vehicles array', () => {
     // Backend contract says `vehicles` is always present, but the page must not
     // assume it — a partial payload must not throw.
-    const partial = { totals: RESPONSE.totals } as VehicleCostResponse;
+    const partial = { ...RESPONSE };
+    Reflect.deleteProperty(partial, 'vehicles');
     useVehicleCostMock.mockReturnValue(makeQuery({ data: partial }));
     renderPage();
 
-    expect((captured.chart.bars as unknown[]).length).toBe(0);
-    expect((captured.table.vehicles as unknown[]).length).toBe(0);
+    expect(captured.chart.bars.length).toBe(0);
+    expect(captured.table.vehicles.length).toBe(0);
     expect(captured.kpis.vehicleCount).toBeNull();
     expect(captured.talkers.totalRows).toBe(RESPONSE.totals.total_rows);
   });
@@ -360,14 +393,16 @@ describe('VehicleCostPage', () => {
     useVehicleCostMock.mockReturnValue(makeQuery({ data: RESPONSE }));
     renderPage();
 
-    const firstSince = useVehicleCostMock.mock.calls[0][0] as Date;
+    const firstSince = useVehicleCostMock.mock.calls[0][0];
+    if (!(firstSince instanceof Date)) throw new Error('Expected initial since instant');
 
     fireEvent.change(screen.getByRole('combobox'), { target: { value: '7' } });
 
     await waitFor(() => expect(captured.kpis.windowDays).toBe(7));
 
     const calls = useVehicleCostMock.mock.calls;
-    const lastSince = calls[calls.length - 1][0] as Date;
+    const lastSince = calls[calls.length - 1][0];
+    if (!(lastSince instanceof Date)) throw new Error('Expected updated since instant');
     // 7 days ago is more recent than 30 days ago ⇒ the window really narrowed.
     expect(lastSince.getTime()).toBeGreaterThan(firstSince.getTime());
     expect(calls[calls.length - 1][1]).toBe(100);
@@ -413,5 +448,119 @@ describe('VehicleCostPage', () => {
     expect(captured.talkers.totalRows).toBeUndefined();
     expect(captured.kpis.vehicleCount).toBe(3);
     expect(captured.table.vehicles).toBe(RESPONSE.vehicles);
+  });
+
+  it.each([
+    { caseId: 'uncoded', code: undefined },
+    { caseId: 'transient', code: 'SERVICE_UNAVAILABLE' },
+  ])('keeps a $caseId 503 retryable instead of labeling the report unsupported', ({ code }) => {
+    const error = new ApiError('service temporarily unavailable', 503, code);
+    const query = makeQuery({ error, isError: true, dataUpdatedAt: 0 });
+    useVehicleCostMock.mockReturnValue(query);
+    renderPage();
+
+    expect(screen.queryByText('Feature not supported')).not.toBeInTheDocument();
+    expect(captured.kpis.error).toBe(error);
+    expect(captured.chart.error).toBe(error);
+    expect(captured.talkers.error).toBe(error);
+    expect(captured.table.error).toBe(error);
+    captured.chart.onRetry();
+    expect(query.refetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps a matching unsupported code on a non-503 response as a fatal service error', () => {
+    const error = new ApiError('service failed', 500, 'SUBSYSTEM_NOT_CONFIGURED');
+    useVehicleCostMock.mockReturnValue(makeQuery({ error, isError: true, dataUpdatedAt: 0 }));
+    renderPage();
+
+    expect(screen.queryByText('Feature not supported')).not.toBeInTheDocument();
+    expect(captured.kpis.error).toBe(error);
+    expect(captured.chart.error).toBe(error);
+    expect(captured.talkers.error).toBe(error);
+    expect(captured.table.error).toBe(error);
+  });
+
+  it('preserves all four resolved-empty sections and a measured zero vehicle count', () => {
+    const response: VehicleCostResponse = {
+      vehicles: [],
+      totals: { total_rows: 0, total_bytes_est: 0, total_rate_per_minute_24h: 0, total_failures_24h: 0 },
+    };
+    useVehicleCostMock.mockReturnValue(makeQuery({ data: response }));
+    renderPage();
+
+    expect(captured.kpis.totals).toBe(response.totals);
+    expect(captured.kpis.vehicleCount).toBe(0);
+    expect(captured.chart.bars).toEqual([]);
+    expect(captured.talkers.talkers).toEqual([]);
+    expect(captured.talkers.totalRows).toBe(0);
+    expect(captured.table.vehicles).toBe(response.vehicles);
+    for (const id of ['kpis', 'chart', 'talkers', 'table']) {
+      expect(screen.getByTestId(`stub-${id}`)).toBeInTheDocument();
+    }
+    expect(captured.kpis.loading).toBe(false);
+    expect(captured.kpis.error).toBeNull();
+  });
+
+  it('retains all data while refresh is paused without fabricating a fatal or refresh error', () => {
+    useVehicleCostMock.mockReturnValue(makeQuery({ data: RESPONSE, fetchStatus: 'paused' }));
+    renderPage();
+
+    expect(captured.table.vehicles).toBe(RESPONSE.vehicles);
+    expect(captured.kpis.totals).toBe(RESPONSE.totals);
+    expect(captured.kpis.retained).toBe(true);
+    expect(captured.kpis.refreshError).toBeNull();
+    for (const props of [captured.kpis, captured.chart, captured.talkers, captured.table]) {
+      expect(props.loading).toBe(false);
+      expect(props.error).toBeNull();
+    }
+    expect(screen.queryByText('Feature not supported')).not.toBeInTheDocument();
+  });
+
+  it('retains data during an active refresh and keeps the refresh control disabled and busy', () => {
+    useVehicleCostMock.mockReturnValue(makeQuery({ data: RESPONSE, isFetching: true, fetchStatus: 'fetching' }));
+    renderPage();
+
+    expect(captured.table.vehicles).toBe(RESPONSE.vehicles);
+    expect(captured.kpis.totals).toBe(RESPONSE.totals);
+    expect(captured.kpis.retained).toBe(true);
+    expect(captured.chart.loading).toBe(false);
+    const refresh = screen.getByRole('button', { name: 'Refresh vehicle cost data' });
+    expect(refresh).toBeDisabled();
+    expect(refresh).toHaveAttribute('aria-busy', 'true');
+  });
+
+  it('forwards each section retry to the same report query without changing its rows', () => {
+    const query = makeQuery({ data: RESPONSE });
+    useVehicleCostMock.mockReturnValue(query);
+    renderPage();
+
+    captured.kpis.onRetry();
+    captured.chart.onRetry();
+    captured.talkers.onRetry();
+    captured.table.onRetry();
+    expect(query.refetch).toHaveBeenCalledTimes(4);
+    expect(captured.table.vehicles).toBe(RESPONSE.vehicles);
+  });
+
+  it.each<{ section: SectionName }>([
+    { section: 'kpis' },
+    { section: 'chart' },
+    { section: 'talkers' },
+    { section: 'table' },
+  ])('isolates a $section render failure and recovers it without blanking neighboring widgets', ({ section }) => {
+    useVehicleCostMock.mockReturnValue(makeQuery({ data: RESPONSE }));
+    renderFailures.add(section);
+    renderPage();
+
+    expect(screen.queryByTestId(`stub-${section}`)).not.toBeInTheDocument();
+    expect(screen.getByText(`${section} render failed`)).toBeInTheDocument();
+    for (const neighbor of ['kpis', 'chart', 'talkers', 'table']) {
+      if (neighbor !== section) expect(screen.getByTestId(`stub-${neighbor}`)).toBeInTheDocument();
+    }
+    expect(screen.getByRole('button', { name: 'Refresh vehicle cost data' })).toBeEnabled();
+    renderFailures.delete(section);
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    expect(screen.getByTestId(`stub-${section}`)).toBeInTheDocument();
+    expect(screen.queryByText(`${section} render failed`)).not.toBeInTheDocument();
   });
 });
