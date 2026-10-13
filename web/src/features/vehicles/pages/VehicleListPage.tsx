@@ -51,11 +51,12 @@ import { usePinned } from '@/api/hooks/usePinned';
 import { convertDistanceFromSI } from '@/lib/unitConversion';
 
 import { formatObservationAge } from '@/lib/observationAge';
-import { batteryColor, statusHexColor } from '@/lib/colors';
+import { batteryColor } from '@/lib/colors';
 import { maskFor } from '@/lib/maskValue';
 import { typography } from '@/lib/tokens';
 import { cn } from '@/lib/cn';
-import { statusVariant } from '@/api/types';
+import { statusVariant, type VehicleStatus } from '@/api/types';
+import { VEHICLE_STATE_LABELS } from '@/types/fsm';
 import type { Vehicle } from '@/types/vehicle';
 import type { VehicleState, VehicleStateReadings } from '@/api/types';
 import type { OperationalNarrative } from '@/types/operationalNarrative';
@@ -217,11 +218,11 @@ function VehicleListSkeleton() {
 /* ── Small building blocks ─────────────────────────────────── */
 
 /** Compact icon + value chip used inside the vehicle card stat row. */
-function StatChip({ icon, label, value }: { icon: ReactNode; label: string; value: string }) {
+function StatChip({ icon, label, value, detail }: { icon: ReactNode; label: string; value: string; detail?: string }) {
   return (
     <span
       className={cn(
-        'inline-flex items-center gap-1 rounded-md bg-[var(--surface-2)] px-2 py-1',
+        'inline-flex min-w-0 max-w-full flex-wrap items-center gap-1 rounded-md bg-[var(--surface-2)] px-2 py-1',
         typography.size.xs,
         typography.color.secondary,
       )}
@@ -229,6 +230,7 @@ function StatChip({ icon, label, value }: { icon: ReactNode; label: string; valu
       {icon}
       <VisuallyHidden>{label}: </VisuallyHidden>
       <Text color="primary" className="tabular-nums">{value}</Text>
+      {detail && <Text variant="caption" className="w-full break-words">{detail}</Text>}
     </span>
   );
 }
@@ -306,7 +308,7 @@ function FleetBatteryPanel({ entries, avgBattery, isLoading, isError, error, onR
     <GlassPanel className="flex h-full flex-col p-4 sm:p-5">
       <div className="mb-4 flex items-center justify-between gap-2">
         <PanelTitle className="flex items-center gap-2">
-          <Activity className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+          <Activity className="h-4 w-4 text-[var(--text-secondary)]" aria-hidden="true" />
           {t('vehicles.batteryStatus', 'Fleet battery status')}
         </PanelTitle>
         <Text variant="bodySm">
@@ -346,12 +348,16 @@ function FleetBatteryPanel({ entries, avgBattery, isLoading, isError, error, onR
         />
       ) : (
         <div className="space-y-3">
-          {entries.map(({ vehicle, state }) => {
-            const label = vehicle.display_name || vehicle.vin;
+          {entries.map((entry) => {
+            const { vehicle, state } = entry;
+            const label = vehicle.display_name || maskFor(vehicle.vin ?? '', 'vin');
             // An unreported state of charge is NOT 0 %. Rendering a full-width
             // empty bar for it would read as "this car is flat".
             const level = knownNumber(state.battery_level);
-            const range = knownNumber(state.rated_range);
+            const range = currentFieldValue(entry, 'rated_range', (reading) => {
+              const value = knownNumber(reading.rated_range);
+              return value == null ? '—' : formatDistance(value);
+            }, t);
             if (level == null) {
               return (
                 <div
@@ -373,7 +379,8 @@ function FleetBatteryPanel({ entries, avgBattery, isLoading, isError, error, onR
                 value={level}
                 max={100}
                 color={batteryColor(level)}
-                sublabel={`${level}% · ${range == null ? '—' : formatDistance(range)}`}
+                fill="solid"
+                sublabel={`${level}% · ${range.value}${range.detail ? ` · ${range.detail}` : ''}`}
               />
             );
           })}
@@ -385,14 +392,14 @@ function FleetBatteryPanel({ entries, avgBattery, isLoading, isError, error, onR
 
 /* ── Fleet status breakdown panel ──────────────────────────── */
 
-interface StatusCount { status: string; count: number }
+interface StatusCount { status: VehicleStatus; count: number }
 
 interface FleetStatusPanelProps {
   counts: StatusCount[];
   total: number;
   currentCount: number;
   isLoading: boolean;
-  /** Aggregate outcome of the per-vehicle fan-out. */
+  /** Aggregate entry trust from the batched live-state source. */
   summary: FleetStatesSummary;
   onRetry: () => void;
 }
@@ -407,11 +414,8 @@ interface FleetStatusPanelProps {
  *     array is built only from those, because `deriveVehicleStatus(null)`
  *     returns `'offline'` and would otherwise manufacture a confident
  *     "everything is offline" breakdown out of an unresolved batch.
- *   - `failedCount` — how many per-vehicle requests failed. `useFleetStates`
- *     resolves each vehicle independently and therefore never rejects, so
- *     `isError` is useless here: a total API outage arrives as a successful
- *     array of failures. This is the only signal that distinguishes it from a
- *     healthy fleet that simply has no snapshots yet.
+ *   - `failedCount` — how many entries carry a failed batch outcome, with
+ *     retained readings kept distinct from an authoritative missing snapshot.
  */
 function FleetStatusPanel({
   counts, total, currentCount, isLoading, summary, onRetry,
@@ -428,7 +432,7 @@ function FleetStatusPanel({
   return (
     <GlassPanel className="flex h-full flex-col p-4 sm:p-5">
       <PanelTitle className="mb-4 flex items-center gap-2">
-        <ListChecks className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+        <ListChecks className="h-4 w-4 text-[var(--text-secondary)]" aria-hidden="true" />
         {t('vehicles.statusBreakdown', 'Fleet status')}
       </PanelTitle>
 
@@ -494,10 +498,11 @@ function FleetStatusPanel({
           {counts.map(({ status, count }) => (
             <MetricBar
               key={status}
-              label={status.charAt(0).toUpperCase() + status.slice(1)}
+              label={t(`vehicle.state.${status}`, VEHICLE_STATE_LABELS[status])}
               value={count}
               max={total || count}
-              color={statusHexColor(status)}
+              color={statusVariant(status) === 'neutral' ? 'var(--text-secondary)' : `var(--semantic-${statusVariant(status)})`}
+              fill="solid"
               sublabel={String(count)}
             />
           ))}
@@ -538,6 +543,7 @@ function VehicleCardMenu({
         type="button"
         variant="ghost"
         size="sm"
+        wrapLabel
         onClick={() => setOpen((value) => !value)}
         aria-haspopup="dialog"
         aria-expanded={open}
@@ -559,12 +565,13 @@ function VehicleCardMenu({
           type="button"
           variant="ghost"
           size="sm"
+          wrapLabel
           onClick={() => {
             setOpen(false);
             onPreview();
           }}
           aria-label={t('vehicles.quickViewAria', 'Quick view {{name}}', { name })}
-          className="w-full justify-start"
+          className="min-h-11 w-full justify-start"
         >
           <Icons.show className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />
           {t('common.quickView', 'Quick view')}
@@ -573,12 +580,13 @@ function VehicleCardMenu({
           type="button"
           variant="ghost"
           size="sm"
+          wrapLabel
           onClick={() => {
             setOpen(false);
             onDelete();
           }}
           aria-label={t('vehicles.removeAria', 'Remove {{name}}', { name })}
-          className="w-full justify-start text-rose-300 hover:bg-rose-500/10 hover:text-rose-200"
+          className="min-h-11 w-full justify-start text-[var(--semantic-danger)] hover:bg-[var(--semantic-danger-bg)]"
         >
           <Icons.delete className="h-4 w-4" aria-hidden="true" />
           {t('vehicles.remove', 'Remove')}
@@ -608,8 +616,23 @@ function VehicleCard({ vehicle, entry, onDelete, onPreview }: VehicleCardProps) 
   // confident operational claim about the car.
   const status = deriveCurrentVehicleStatus(entry);
   const statusLabel = status ?? t('vehicles.statusUnknown', 'Unknown');
-  const level = knownNumber(state?.battery_level);
-  const color = batteryColor(level ?? 0);
+  const level = entry && isFleetStateFieldCurrent(entry, 'battery_level') ? knownNumber(state?.battery_level) : null;
+  const battery = currentFieldValue(entry, 'battery_level', (reading) => {
+    const value = knownNumber(reading.battery_level);
+    return value == null ? '—' : `${fmtNumber(value)}%`;
+  }, t);
+  const distanceReading = (field: 'rated_range' | 'odometer') => currentFieldValue(entry, field, (reading) => {
+    const value = knownNumber(reading[field]);
+    return value == null ? '—' : formatDistance(value);
+  }, t);
+  const range = distanceReading('rated_range');
+  const odometer = distanceReading('odometer');
+  // The existing VehicleState boundary exposes kW, unlike the SI signal store.
+  // Preserve that wire contract here; converting it as watts would corrupt display.
+  const chargingPower = currentFieldValue(entry, 'charger_power', (reading) => {
+    const value = knownNumber(reading.charger_power);
+    return value == null ? '—' : `${fmtNumber(value)} kW`;
+  }, t);
   const name = vehicle.display_name || maskFor(vehicle.vin ?? '', 'vin');
   const modelLine = [vehicle.model, vehicle.trim_badging].filter(Boolean).join(' ');
 
@@ -654,7 +677,7 @@ function VehicleCard({ vehicle, entry, onDelete, onPreview }: VehicleCardProps) 
               />
             </Text>
           </div>
-          <PinButton itemType="vehicle" itemId={vehicle.id} size="md" />
+          <PinButton itemType="vehicle" itemId={vehicle.id} size="md" minTargetSize={44} />
         </div>
 
         {/* Battery */}
@@ -671,19 +694,16 @@ function VehicleCard({ vehicle, entry, onDelete, onPreview }: VehicleCardProps) 
               )}
             </Text>
           </div>
-          <div
-            role="progressbar"
-            aria-valuenow={level ?? undefined}
-            aria-valuemin={0}
-            aria-valuemax={100}
-            aria-label={t('vehicles.batteryLevel', 'Battery level')}
-            className="h-2 overflow-hidden rounded-full bg-[var(--surface-2)]"
-          >
-            <div
-              className="h-full rounded-full transition-all duration-slow"
-              style={{ width: `${level ?? 0}%`, backgroundColor: color }}
-            />
-          </div>
+          <MetricBar
+            value={level}
+            max={100}
+            color={level == null ? 'var(--text-secondary)' : batteryColor(level)}
+            ariaLabel={t('vehicles.batteryLevel', 'Battery level')}
+            showHeader={false}
+            showValue={false}
+            fill="solid"
+          />
+          {state && battery.detail && <Text variant="caption" as="p" className="mt-2 break-words">{battery.detail}</Text>}
         </div>
 
         {/* Stat chips */}
@@ -693,24 +713,25 @@ function VehicleCard({ vehicle, entry, onDelete, onPreview }: VehicleCardProps) 
               <StatChip
                 icon={<Gauge className="h-3.5 w-3.5" aria-hidden="true" />}
                 label={t('vehicles.range', 'Range')}
-                value={formatDistance(state.rated_range ?? 0)}
+                {...range}
               />
               <StatChip
                 icon={<Activity className="h-3.5 w-3.5" aria-hidden="true" />}
                 label={t('vehicles.odometer', 'Odometer')}
-                value={formatDistance(state.odometer ?? 0)}
+                {...odometer}
               />
               {state.is_charging && (
-                <span
-                  className={cn(
-                    'inline-flex items-center gap-1 rounded-md bg-neon-green/10 px-2 py-1 text-emerald-300',
-                    typography.size.xs,
-                    typography.weight.medium,
-                  )}
-                >
-                  <Zap className="h-3.5 w-3.5" aria-hidden="true" />
-                  {fmtNumber(state.charger_power ?? 0)} kW
-                </span>
+                <StatChip
+                  icon={<Zap className="h-3.5 w-3.5" aria-hidden="true" />}
+                  label={t('vehicles.preview.charging', 'Charging')}
+                  value={chargingPower.value}
+                  detail={[
+                    !(entry && isFleetStateFieldCurrent(entry, 'is_charging'))
+                      ? currentFieldValue(entry, 'is_charging', () => t('common.active', 'Active'), t).detail
+                      : undefined,
+                    chargingPower.detail,
+                  ].filter(Boolean).join(' ') || undefined}
+                />
               )}
             </>
           ) : (
@@ -718,12 +739,18 @@ function VehicleCard({ vehicle, entry, onDelete, onPreview }: VehicleCardProps) 
               {t('vehicles.noLiveData', 'No live data')}
             </Text>
           )}
-          <div className="ml-auto flex items-center gap-1.5">
+          <div className="ms-auto flex min-w-0 flex-wrap items-center gap-1.5">
             {state?.is_locked && (
-              <Lock className="h-4 w-4 text-emerald-400" aria-label={t('vehicles.locked', 'Locked')} />
+              entry && isFleetStateFieldCurrent(entry, 'is_locked')
+                ? <Lock className="h-4 w-4 text-[var(--semantic-success)]" aria-label={t('vehicles.locked', 'Locked')} />
+                : <StatChip icon={<Lock className="h-4 w-4" aria-hidden="true" />} label={t('vehicles.locked', 'Locked')}
+                    {...currentFieldValue(entry, 'is_locked', () => t('vehicles.locked', 'Locked'), t)} />
             )}
             {state?.sentry_mode && (
-              <Shield className="h-4 w-4 text-cyan-400" aria-label={t('vehicles.sentryOn', 'Sentry mode on')} />
+              entry && isFleetStateFieldCurrent(entry, 'sentry_mode')
+                ? <Shield className="h-4 w-4 text-[var(--semantic-info)]" aria-label={t('vehicles.sentryOn', 'Sentry mode on')} />
+                : <StatChip icon={<Shield className="h-4 w-4" aria-hidden="true" />} label={t('vehicles.sentryOn', 'Sentry mode on')}
+                    {...currentFieldValue(entry, 'sentry_mode', () => t('vehicles.sentryOn', 'Sentry mode on'), t)} />
             )}
           </div>
         </div>
@@ -734,7 +761,7 @@ function VehicleCard({ vehicle, entry, onDelete, onPreview }: VehicleCardProps) 
             to={`/vehicles/${vehicle.id}`}
             aria-label={t('vehicles.openDetail', 'Open {{name}} details', { name })}
             className={cn(
-              'inline-flex min-h-11 items-center gap-1.5 rounded-md px-2 text-[var(--theme-primary)] transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus-ring)]',
+              'inline-flex min-h-11 min-w-0 max-w-full items-center gap-1.5 break-words rounded-md px-2 text-[var(--theme-primary)] transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus-ring)]',
               typography.size.sm,
               typography.weight.medium,
             )}
@@ -774,7 +801,7 @@ export default function VehicleListPage() {
 
   const statesQuery = useFleetStates(vehicleList);
   const fleetStates = statesQuery.data;
-  /* Aggregate outcome of the per-vehicle fan-out. Everything on this page that
+  /* Aggregate entry trust from batched reads. Everything on this page that
    * used to ask "is `state` null?" now asks this instead, because null covers
    * three different facts (resolved-offline, no-snapshot, request-failed). */
   const fleetSummary = useMemo(
@@ -782,12 +809,8 @@ export default function VehicleListPage() {
     [fleetStates],
   );
   /* Freshness must be driven by WHEN THE READINGS WERE OBSERVED, not by when
-   * the wrapper batch resolved. `useFleetStates` resolves successfully even
-   * when every request failed, so `statesQuery.dataUpdatedAt` advances on
-   * every 30 s poll — a permanently failing fleet rendered a green
-   * "updated just now" chip over readings that were hours old. This synthetic
-   * source substitutes the oldest retained observation and re-injects the
-   * failure the wrapper swallowed. */
+   * the wrapper batch resolved. Failed entries and rejected batches both
+   * retain their original observation; fetch completion is not telemetry. */
   const fleetStateSource = useMemo(() => ({
     data: fleetStates,
     isPending: statesQuery.isPending,
@@ -795,14 +818,14 @@ export default function VehicleListPage() {
     fetchStatus: statesQuery.fetchStatus,
     refetch: statesQuery.refetch,
     dataUpdatedAt: fleetSummary.oldestObservedAt ?? 0,
-    isError: fleetSummary.failedCount > 0,
-    error: fleetSummary.failedCount > 0
+    isError: statesQuery.isError || fleetSummary.failedCount > 0,
+    error: statesQuery.error ?? (fleetSummary.failedCount > 0
       ? new Error(t(
           'operations.vehicles.stateRequestFailed',
           'Live state could not be retrieved for {{count}} vehicle(s).',
           { count: fleetSummary.failedCount },
         ))
-      : undefined,
+      : undefined),
   }), [fleetStates, statesQuery, fleetSummary, t]);
   /** Freshness chip input — same synthetic timestamps as the trust contract. */
   const fleetFreshnessQuery = useMemo(() => ({
@@ -811,24 +834,38 @@ export default function VehicleListPage() {
       statesQuery.isStale ||
       fleetSummary.retainedCount > 0 ||
       fleetSummary.unverifiedCount > 0,
-    isError: fleetSummary.failedCount > 0,
+    isError: statesQuery.isError || fleetSummary.failedCount > 0,
     dataUpdatedAt: fleetSummary.oldestObservedAt ?? 0,
     refetch: statesQuery.refetch,
   }), [statesQuery, fleetSummary]);
   // Live fleet state is pushed/polled current state, so its provenance is
   // `live` — and degrades to `cached` automatically once a refresh fails.
-  // `useFleetStates` never rejects (per-vehicle failures are recorded in the
-  // payload), so partial/unavailable have to be declared from the summary.
+  // Entry-level gaps remain separate from the query's rejected-batch outcome.
   const fleetStateData = useDataState(fleetStateSource, {
     provenance: 'live',
     partial: fleetSummary.status === 'partial',
     unavailable: fleetSummary.status === 'unavailable' || fleetSummary.status === 'absent',
   });
   const workOrdersQuery = useFleetWorkOrders({ limit: 100 });
+  const workOrdersState = useDataState(workOrdersQuery, { provenance: 'historical' });
   const workOrders = workOrdersQuery.data?.items ?? [];
+  const serviceKnown = workOrdersState.hasData;
+  const serviceCurrent = workOrdersState.status === 'ok';
+  const serviceComplete = serviceCurrent && workOrdersQuery.data?.offset === 0
+    && workOrdersQuery.data?.total === workOrders.length;
+  const workOrderCoverage = serviceKnown
+    ? t('fleetOps.brief.listCoverage', '{{loaded}} loaded of {{total}} source records; offset {{offset}}, limit {{limit}}', {
+        loaded: workOrders.length,
+        total: workOrdersQuery.data?.total ?? t('common.unknown', 'Unknown'),
+        offset: workOrdersQuery.data?.offset ?? 0,
+        limit: workOrdersQuery.data?.limit ?? 100,
+      })
+    : t('common.unknown', 'Unknown');
 
   /* Pinned vehicles float to the top of the list. */
-  const { data: vehiclePins = [] } = usePinned('vehicle');
+  const pinsQuery = usePinned('vehicle');
+  const pinsState = useDataState(pinsQuery);
+  const vehiclePins = pinsQuery.data ?? [];
   const sortedVehicleList = useMemo(() => {
     if (vehiclePins.length === 0) return vehicleList;
     const order = new Map<string, number>();
@@ -957,7 +994,7 @@ export default function VehicleListPage() {
    * into a full array of nulls. A vehicle is only offline when the backend
    * returned a snapshot saying so. */
   const statusCounts = useMemo<StatusCount[]>(() => {
-    const counts = new Map<string, number>();
+    const counts = new Map<VehicleStatus, number>();
     for (const entry of fleetStates ?? []) {
       const status = deriveCurrentVehicleStatus(entry);
       if (status == null) continue;
@@ -1079,10 +1116,16 @@ export default function VehicleListPage() {
             'Urgent service work requires attention ({{count}})',
             { count: urgentWorkOrders.length },
           ),
-          description: t(
+          description: [
+            t(
             'operations.vehicles.serviceAttentionDescription',
             'High- or critical-severity maintenance is still open in fleet operations.',
           ),
+            workOrderCoverage,
+            ...(!serviceCurrent
+              ? [t('dataState.stale.message', 'The latest values are temporarily unavailable. Previously loaded data remains visible.')]
+              : []),
+          ].join(' '),
           tone: 'danger' as const,
         }]
       : []),
@@ -1158,7 +1201,7 @@ export default function VehicleListPage() {
               total: vehicleList.length,
               ready: fleet.readyCount,
               batteryCovered: fleet.batteryCoverageCount,
-              urgent: urgentWorkOrders.length,
+              urgent: serviceKnown ? urgentWorkOrders.length : t('common.unknown', 'Unknown'),
             },
           )
         : t(
@@ -1167,7 +1210,7 @@ export default function VehicleListPage() {
             {
               online: fleet.liveStateCount,
               total: vehicleList.length,
-              urgent: urgentWorkOrders.length,
+              urgent: serviceKnown ? urgentWorkOrders.length : t('common.unknown', 'Unknown'),
             },
           ),
     whyItMatters:
@@ -1182,7 +1225,7 @@ export default function VehicleListPage() {
         && fleet.liveStateCount === vehicleList.length
         && fleet.batteryCoverageCount === vehicleList.length
         && fleet.softwareCoverageCount === vehicleList.length
-        && !workOrdersQuery.isError
+        && serviceComplete
           ? 'high'
           : fleet.liveStateCount > 0
             ? 'medium'
@@ -1194,7 +1237,7 @@ export default function VehicleListPage() {
           'Live state resolved for {{online}} of {{total}} registered vehicles.',
           { online: fleet.liveStateCount, total: vehicleList.length },
         ),
-        workOrdersQuery.isError
+        !serviceKnown
           ? t(
               'operations.vehicles.narrative.workOrderLimitedBasis',
               'Fleet operations work orders were unavailable.',
@@ -1204,6 +1247,10 @@ export default function VehicleListPage() {
               '{{count}} open work orders were evaluated for service attention.',
               { count: openWorkOrders.length },
             ),
+        workOrderCoverage,
+        ...(!serviceCurrent && serviceKnown
+          ? [t('dataState.stale.message', 'The latest values are temporarily unavailable. Previously loaded data remains visible.')]
+          : []),
       ],
     },
     likelyCause: null,
@@ -1228,7 +1275,9 @@ export default function VehicleListPage() {
                   'operations.vehicles.narrative.evidenceGapResponse',
                   'Refresh vehicles without verified state, battery, or software evidence before making fleet-wide readiness decisions.',
                 )
-            : t(
+            : !serviceCurrent
+              ? t('operations.vehicles.narrative.workOrderLimitation', 'Service readiness is incomplete while fleet operations work orders are unavailable.')
+              : t(
                 'operations.vehicles.narrative.monitorResponse',
                 'No immediate fleet response is indicated; continue monitoring readiness and service status.',
               ),
@@ -1237,7 +1286,7 @@ export default function VehicleListPage() {
         'operations.vehicles.narrative.snapshotLimitation',
         'Live vehicle state is a current snapshot and does not explain why a vehicle is offline or at a low charge level.',
       ),
-      ...(workOrdersQuery.isError
+      ...(!serviceCurrent
         ? [
             t(
               'operations.vehicles.narrative.workOrderLimitation',
@@ -1257,6 +1306,7 @@ export default function VehicleListPage() {
         'operations.vehicles.narrative.evidenceLimit',
         'Supporting evidence is limited to four vehicle snapshots and two urgent work orders.',
       ),
+      workOrderCoverage,
     ],
     evidence: narrativeEvidence,
     provenance: [
@@ -1335,7 +1385,7 @@ export default function VehicleListPage() {
         value: t('operations.vehicles.softwareVersionCount', '{{count}} versions', { count: raw }), unit: '',
       }) } },
     { metricId: 'count', occurrenceId: 'service',
-      rawValue: workOrdersQuery.isLoading || workOrdersQuery.isError ? null : openWorkOrders.length,
+      rawValue: serviceKnown ? openWorkOrders.length : null,
       display: { formatter: raw => ({
         value: t('operations.vehicles.openWorkOrders', '{{count}} open', { count: raw }), unit: '',
       }) } },
@@ -1376,6 +1426,8 @@ export default function VehicleListPage() {
         vehicleList.length >= 2 ? (
           <Button
             variant="outline"
+            wrapLabel
+            className="min-h-11 md:min-h-10"
             icon={<ArrowLeftRight className="h-4 w-4" />}
             onClick={handleCompare}
           >
@@ -1387,6 +1439,8 @@ export default function VehicleListPage() {
         <Button
           onClick={handleSync}
           loading={syncMut.isPending}
+          wrapLabel
+          className="min-h-11 md:min-h-10"
           icon={<RefreshCw className="h-4 w-4" />}
         >
           {t('vehicles.syncButton', 'Sync from Tesla')}
@@ -1416,7 +1470,7 @@ export default function VehicleListPage() {
           </AlertBanner>
         </FadeIn>
       )}
-      {workOrdersQuery.isError && vehicleList.length > 0 && (
+      {workOrdersState.fatalError && vehicleList.length > 0 && (
         <DataStateNotice
           state="partial"
           title={t(
@@ -1428,6 +1482,9 @@ export default function VehicleListPage() {
             'operations.vehicles.serviceUnavailableDescription',
             'Fleet availability and live state remain visible, but maintenance work orders could not be loaded.',
           )}
+          <Button variant="ghost" wrapLabel className="mt-2 min-h-11" onClick={() => workOrdersQuery.refetch()}>
+            {t('common.retry', 'Retry')}
+          </Button>
         </DataStateNotice>
       )}
       <StaleRefreshWarning
@@ -1438,6 +1495,18 @@ export default function VehicleListPage() {
         state={fleetStateData}
         label={t('dataSources.labels.liveVehicleState', 'Live vehicle state')}
       />
+      <StaleRefreshWarning state={workOrdersState} label={t('operations.vehicles.workOrdersSource', 'Fleet work orders')} />
+      <StaleRefreshWarning state={pinsState} label={t('pin.pinned', 'Pinned')} />
+      {!pinsState.hasData && <DataStateNotice state={pinsState.fatalError ? 'unavailable' : 'partial'}
+        role={pinsState.fatalError ? 'alert' : 'status'}
+        aria-live={pinsState.fatalError ? 'assertive' : 'polite'}
+        aria-label={t('pin.pinned', 'Pinned')}
+        title={t('pin.pinned', 'Pinned')}>
+        <Text variant="bodySm">{pinsState.fatalError ? t('common.unavailable', 'Unavailable') : t('common.loading', 'Loading...')}</Text>
+        {pinsState.fatalError && <Button variant="ghost" wrapLabel className="mt-2 min-h-11" onClick={() => pinsQuery.refetch()}>
+          {t('common.retry', 'Retry')}
+        </Button>}
+      </DataStateNotice>}
 
       {vehicleList.length === 0 && (
         <GlassPanel padding="md">
@@ -1467,14 +1536,14 @@ export default function VehicleListPage() {
             statusLabel={
               fleetStatePending
                 ? t('operations.status.loading', 'Resolving live state')
-                : fleetAttention.length > 0 || evidenceGap
+                : fleetAttention.length > 0 || evidenceGap || !serviceComplete
                 ? t('operations.status.review', 'Review recommended')
                 : t('operations.status.ready', 'Fleet ready')
             }
             statusTone={
               fleetStatePending
                 ? 'neutral'
-                : fleetAttention.length > 0 || evidenceGap
+                : fleetAttention.length > 0 || evidenceGap || !serviceComplete
                   ? 'warning'
                   : 'success'
             }
@@ -1494,6 +1563,8 @@ export default function VehicleListPage() {
                 type="button"
                 variant="outline"
                 size="sm"
+                wrapLabel
+                className="min-h-11 md:min-h-9"
                 icon={<Wrench className="h-4 w-4" aria-hidden="true" />}
                 onClick={() => navigate('/fleet-operations')}
               >
@@ -1593,17 +1664,20 @@ export default function VehicleListPage() {
                 value: postureMetrics[5].value,
                 rawValue: postureMetrics[5].rawValue,
                 valueState: postureMetrics[5].valueState,
-                detail: workOrdersQuery.isError
+                detail: !serviceKnown
                   ? t(
                       'operations.vehicles.serviceUnavailableMetric',
                       'Work-order data is unavailable; live fleet data remains usable.',
                     )
-                  : t(
+                  : [
+                    t(
                       'operations.vehicles.serviceDetail',
                       'High- or critical-severity work orders requiring review: {{urgent}}.',
                       { urgent: urgentWorkOrders.length },
                     ),
-                tone: workOrdersQuery.isLoading || workOrdersQuery.isError
+                    workOrderCoverage,
+                  ].join(' '),
+                tone: !serviceCurrent
                   ? 'neutral'
                   : urgentWorkOrders.length > 0
                     ? 'danger'

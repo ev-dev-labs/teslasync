@@ -628,17 +628,18 @@ describe('VehicleListPage — accessibility & derived per-card data', () => {
     expect(bars[0]).toHaveAttribute('aria-valuenow', '80');
     expect(bars[1]).toHaveAttribute('aria-valuenow', '50');
     // V3 has no live state ⇒ the level is UNKNOWN. `aria-valuenow="0"` would
-    // announce "0 percent", a reading the vehicle never produced; an indefinite
-    // progressbar (no aria-valuenow) is the honest representation.
+    // announce "0 percent", a reading the vehicle never produced.
     expect(bars[2]).not.toHaveAttribute('aria-valuenow');
-    expect(within(grid).getByText('—')).toBeInTheDocument();
+    expect(bars[2]).toHaveAttribute('aria-valuetext', 'No reading');
+    // Battery is missing for V3; odometer is retained but unverified for V1/V2.
+    expect(within(grid).getAllByText('—')).toHaveLength(6);
 
     // Icon-only row actions + status glyphs carry accessible names. Destructive
     // actions sit behind the per-card menu instead of adjacent icon buttons.
     expect(within(grid).getAllByRole('button', { name: /^Actions for / })).toHaveLength(3);
     expect(within(grid).queryByLabelText('Remove Model 3 Alpha')).toBeNull();
-    expect(within(grid).getByLabelText('Locked')).toBeInTheDocument();
-    expect(within(grid).getByLabelText('Sentry mode on')).toBeInTheDocument();
+    expect(within(grid).getByText(/Last known: Locked .* not currently verified/)).toBeInTheDocument();
+    expect(within(grid).getByText(/Last known: Sentry mode on .* not currently verified/)).toBeInTheDocument();
     expect(within(grid).getAllByRole('link', { name: /^Open .+ details$/ })).toHaveLength(3);
   });
 
@@ -1414,5 +1415,137 @@ describe('VehicleListPage — loading, error & empty states', () => {
     expect(notice).toHaveTextContent('2 vehicle(s) have not reported a snapshot yet');
     expect(notice).not.toHaveTextContent(/request\(s\) failed/);
     expect(screen.queryByText("Can't reach server")).toBeNull();
+  });
+});
+
+describe('VehicleListPage — field and independent source qualification', () => {
+  it('keeps sparse card readings retained without claiming current battery range power or security', () => {
+    mockVehicles.mockReturnValue(qr({ data: [V1] }));
+    mockFleetStates.mockReturnValue(qr({ data: [{
+      ...resolvedEntry(V1, S1, Date.now() - 10_000),
+      verifiedFields: ['state'],
+    }] }));
+    renderPage();
+    const grid = cardGrid();
+    const battery = within(grid).getByRole('progressbar', { name: 'Battery level' });
+    expect(battery).not.toHaveAttribute('aria-valuenow');
+    expect(battery).toHaveAttribute('aria-valuetext', 'No reading');
+    expect(battery.querySelector('[data-metric-fill]')).toBeNull();
+    expect(within(grid).getByText(/Last known: 80\.00% .* not currently verified/)).toBeInTheDocument();
+    expect(within(grid).getByText(/Last known: 400\.00 km .* not currently verified/)).toBeInTheDocument();
+    expect(within(grid).getByText(/Last known: 100\.00 km .* not currently verified/)).toBeInTheDocument();
+    expect(within(grid).getByText(/Last known: 11\.00 kW .* not currently verified/)).toBeInTheDocument();
+    expect(within(grid).getByText(/Last known: Locked .* not currently verified/)).toBeInTheDocument();
+    expect(within(grid).getByText(/Last known: Sentry mode on .* not currently verified/)).toBeInTheDocument();
+    expect(within(grid).queryByLabelText('Locked')).toBeNull();
+    expect(within(grid).getByRole('link', { name: 'Open Model 3 Alpha details' })).toHaveAttribute('href', '/vehicles/1');
+  });
+
+  it('distinguishes missing card readings from verified measured zero and preserves the kW boundary', () => {
+    mockVehicles.mockReturnValue(qr({ data: [V1, V2] }));
+    const fields = [...VERIFIED_FIELDS, 'odometer', 'charger_power', 'is_locked', 'sentry_mode'];
+    mockFleetStates.mockReturnValue(qr({ data: [
+      { ...resolvedEntry(V1, S1), verifiedFields: fields,
+        state: { ...S1, battery_level: null, rated_range: null, odometer: null, charger_power: null } },
+      { ...resolvedEntry(V2, makeState({ ...S2, battery_level: 0, rated_range: 0, odometer: 0, is_charging: true, charger_power: 0 })),
+        verifiedFields: fields },
+    ] }));
+    renderPage();
+    const grid = cardGrid();
+    const bars = within(grid).getAllByRole('progressbar', { name: 'Battery level' });
+    expect(bars[0]).not.toHaveAttribute('aria-valuenow');
+    expect(bars[0]).toHaveAttribute('aria-valuetext', 'No reading');
+    expect(bars[1]).toHaveAttribute('aria-valuenow', '0');
+    expect(bars[1]).not.toHaveAttribute('aria-valuetext');
+    expect(within(grid).getAllByText('0.00 km')).toHaveLength(2);
+    expect(within(grid).getByText('0.00 kW')).toBeInTheDocument();
+    expect(within(grid).getAllByText('—')).toHaveLength(4);
+  });
+
+  it('preserves imperial card distance formatting without modifying raw readings', () => {
+    unitState.length = 'mi';
+    mockVehicles.mockReturnValue(qr({ data: [V1] }));
+    mockFleetStates.mockReturnValue(qr({ data: [{
+      ...resolvedEntry(V1, S1),
+      verifiedFields: [...VERIFIED_FIELDS, 'odometer', 'charger_power', 'is_locked', 'sentry_mode'],
+    }] }));
+    renderPage();
+    expect(within(cardGrid()).getByText('248.55 mi')).toBeInTheDocument();
+    expect(within(cardGrid()).getByText('62.14 mi')).toBeInTheDocument();
+    expect(within(cardGrid()).getByText('11.00 kW')).toBeInTheDocument();
+    expect(S1.rated_range).toBe(400_000);
+    expect(S1.odometer).toBe(100_000);
+    expect(S1.charger_power).toBe(11);
+  });
+
+  it('does not claim zero service work or fleet-ready status while work orders are pending', () => {
+    mockFleetWorkOrders.mockReturnValue(qr({ isPending: true, isLoading: true }));
+    renderPage();
+    expect(briefMetric('Service attention')).toHaveAttribute('data-value-state', 'missing');
+    expect(within(briefMetric('Service attention')).queryByText('0 open')).toBeNull();
+    expect(screen.getByText('Review recommended')).toBeInTheDocument();
+    expect(screen.queryByText('Fleet ready')).toBeNull();
+    fireEvent.click(within(screen.getByTestId('fleet-operational-brief')).getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog');
+    expect(within(drawer).getByText(/Unknown urgent work orders remain open/)).toBeInTheDocument();
+    expect(within(drawer).queryByText(/0 open work orders were evaluated/)).toBeNull();
+  });
+
+  it('retains service counts and bounded coverage through work-order refresh failure with independent retry', () => {
+    const refetch = vi.fn();
+    mockFleetWorkOrders.mockReturnValue(qr({
+      data: { items: [OPEN_WORK_ORDER], total: 101, limit: 100, offset: 0 },
+      isError: true, error: new Error('work-order refresh failed'), refetch,
+    }));
+    renderPage();
+    expect(within(briefMetric('Service attention')).getByText('1 open')).toBeInTheDocument();
+    expect(within(briefMetric('Service attention')).getByText(/1 loaded of 101 source records; offset 0, limit 100/)).toBeInTheDocument();
+    const warning = screen.getAllByTestId('stale-refresh-warning')
+      .find((element) => element.textContent?.includes('Fleet work orders may be out of date'));
+    if (!warning) throw new Error('Missing retained work-order warning');
+    fireEvent.click(within(warning).getByRole('button', { name: 'Refresh' }));
+    expect(refetch).toHaveBeenCalledOnce();
+    expect(within(cardGrid()).getByText('Model 3 Alpha')).toBeInTheDocument();
+    expect(screen.queryByText('Fleet ready')).toBeNull();
+    fireEvent.click(within(screen.getByTestId('fleet-operational-brief')).getByRole('button', { name: 'Review details' }));
+    expect(within(screen.getByRole('dialog')).getAllByText(/1 loaded of 101 source records/).length).toBeGreaterThan(0);
+    expect(within(screen.getByRole('dialog')).getAllByText(/Previously loaded data remains visible/).length).toBeGreaterThan(0);
+  });
+
+  it('keeps pin-read uncertainty distinct from unpinned and retries without toggling or hiding cards', () => {
+    const refetch = vi.fn();
+    mockPinned.mockReturnValue(qr({ isError: true, error: new Error('pins failed'), refetch }));
+    renderPage();
+    const notice = screen.getByText('Pinned').closest('[role="alert"]');
+    expect(notice).not.toBeNull();
+    expect(notice).toBe(screen.getByRole('alert', { name: 'Pinned' }));
+    expect(notice).toHaveAttribute('aria-live', 'assertive');
+    expect(notice).toHaveTextContent('Unavailable');
+    expect(notice).not.toHaveTextContent('Unpinned');
+    fireEvent.click(within(notice as HTMLElement).getByRole('button', { name: 'Retry' }));
+    expect(refetch).toHaveBeenCalledOnce();
+    expect(within(cardGrid()).getAllByTestId('pin-button')).toHaveLength(3);
+    within(cardGrid()).getAllByTestId('pin-button').forEach((button) => {
+      expect(button).not.toHaveAttribute('aria-pressed');
+      expect(button).toHaveClass('min-h-11', 'min-w-11');
+    });
+    expect(mockTogglePin().mutate).not.toHaveBeenCalled();
+    expect(within(cardGrid()).getAllByRole('link', { name: /^Open .* details$/ })).toHaveLength(3);
+  });
+
+  it('uses restrained solid overview bars and wrapping reachable overflow actions', async () => {
+    renderPage();
+    const charging = screen.getByRole('progressbar', { name: 'Charging' });
+    const fill = charging.querySelector<HTMLElement>('[data-metric-fill]');
+    expect(fill?.style.background).toBe('var(--semantic-warning)');
+    const grid = cardGrid();
+    fireEvent.click(within(grid).getByRole('button', { name: 'Actions for Model 3 Alpha' }));
+    const quickView = await screen.findByRole('button', { name: 'Quick view Model 3 Alpha' });
+    const remove = screen.getByRole('button', { name: 'Remove Model 3 Alpha' });
+    expect(quickView).toHaveClass('min-h-11', 'whitespace-normal');
+    expect(remove).toHaveClass('min-h-11', 'whitespace-normal');
+    expect(remove).toHaveClass('text-[var(--semantic-danger)]');
+    expect(deleteMut.mutate).not.toHaveBeenCalled();
+    expect(syncMut.mutate).not.toHaveBeenCalled();
   });
 });
