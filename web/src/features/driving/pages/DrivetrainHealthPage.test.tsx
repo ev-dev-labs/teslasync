@@ -889,7 +889,7 @@ describe('DrivetrainHealthPage', () => {
     expect(within(power).getByRole('button', { name: 'Retry' })).toBeInTheDocument();
     expect(within(power).queryByText('No data')).not.toBeInTheDocument();
     expect(within(thermalLoadPanel()).getByText('12')).toBeInTheDocument();
-    expect(within(screen.getByRole('group', { name: 'Drive Statistics' })).getByText('30 kg')).toBeInTheDocument();
+    expect(within(screen.getByRole('group', { name: 'Drive Statistics' })).getByText('30.00 kg')).toBeInTheDocument();
     fireEvent.click(within(power).getByRole('button', { name: 'Retry' }));
     expect(refetchMock).toHaveBeenCalledTimes(1);
     expect(screen.getByText('Drivetrain healthy')).toBeInTheDocument();

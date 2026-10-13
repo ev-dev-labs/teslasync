@@ -14,7 +14,7 @@ const mockedRequest = vi.mocked(request);
 const clients: QueryClient[] = [];
 
 function wrapper() {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } });
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: Infinity } } });
   clients.push(client);
   return {
     client,
