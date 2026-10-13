@@ -34,13 +34,13 @@ export default function SpeedSweetSpotPage() {
 
   const { vehicleId } = useSelectedVehicle();
   const vehicleIdStr = vehicleId != null ? String(vehicleId) : undefined;
-  const { start, end } = useRangeState({
+  const { start, end, startInstant, endInstantExclusive } = useRangeState({
     persistKey: 'speed-sweetspot.range',
     defaultPresetId: 'all',
   });
   const drivesQuery = useDrives(vehicleIdStr, {
-    start,
-    end,
+    start: startInstant,
+    end: endInstantExclusive,
     limit: DRIVE_WINDOW_LIMIT,
   });
   const drives = useMemo(() => drivesQuery.data ?? [], [drivesQuery.data]);
@@ -58,6 +58,8 @@ export default function SpeedSweetSpotPage() {
     );
   }
 
+  // A failed refresh retains the observed sample, but must not claim a healthy source.
+  const retained = sourceState.refreshError != null || sourceState.isRefreshBlocked;
   const sectionState: SpeedSweetSpotSectionState = {
     isLoading: sourceState.status === 'initial',
     error: sourceState.fatalError,
@@ -80,7 +82,7 @@ export default function SpeedSweetSpotPage() {
         <SweetSpotSummaryBrief summary={summary} {...sectionState}
           scope={`${start} — ${end}`}
           resolved={sourceState.hasData || drivesQuery.isSuccess}
-          retained={sourceState.isRefreshBlocked} />
+          retained={retained} />
       </FadeIn>
 
       <FadeIn delay={0.05}>
@@ -91,7 +93,7 @@ export default function SpeedSweetSpotPage() {
             className="xl:col-span-2"
             scope={`${start} — ${end}`}
             resolved={sourceState.hasData || drivesQuery.isSuccess}
-            retained={sourceState.isRefreshBlocked}
+            retained={retained}
           />
           <SpeedBandCoverage
             summary={summary}
@@ -125,7 +127,7 @@ export default function SpeedSweetSpotPage() {
           windowLimit={DRIVE_WINDOW_LIMIT}
           state={sectionState}
           resolved={sourceState.hasData || drivesQuery.isSuccess}
-          retained={sourceState.isRefreshBlocked}
+          retained={retained}
         />
       </FadeIn>
     </PageLayout>

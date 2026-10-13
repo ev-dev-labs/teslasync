@@ -53,7 +53,14 @@ vi.mock('@/hooks/useRangeState', async () => {
         end: '2026-08-07',
       });
       sharedRange.set = setRange;
-      return { ...range, setRange };
+      return {
+        ...range,
+        startInstant: `${range.start}T07:00:00.000Z`,
+        endInstantExclusive: range.end === '2026-07-31'
+          ? '2026-08-01T07:00:00.000Z'
+          : '2026-08-08T07:00:00.000Z',
+        setRange,
+      };
     },
   };
 });
@@ -272,8 +279,8 @@ describe('SpeedSweetSpotPage', () => {
       expect(screen.getByTestId(id)).toBeInTheDocument();
     }
     expect(useDrivesMock).toHaveBeenCalledWith('42', {
-      start: '2025-01-01',
-      end: '2026-08-07',
+      start: '2025-01-01T07:00:00.000Z',
+      end: '2026-08-08T07:00:00.000Z',
       limit: 1000,
     });
     expect(pageTitleMock).toHaveBeenCalledWith('Speed Sweet Spot');
@@ -286,8 +293,8 @@ describe('SpeedSweetSpotPage', () => {
 
     await waitFor(() =>
       expect(useDrivesMock).toHaveBeenLastCalledWith('42', {
-        start: '2026-07-01',
-        end: '2026-07-31',
+        start: '2026-07-01T07:00:00.000Z',
+        end: '2026-08-01T07:00:00.000Z',
         limit: 1000,
       }),
     );
@@ -317,8 +324,8 @@ describe('SpeedSweetSpotPage', () => {
       'Speed Sweet Spot',
     );
     expect(useDrivesMock).toHaveBeenCalledWith(undefined, {
-      start: '2025-01-01',
-      end: '2026-08-07',
+      start: '2025-01-01T07:00:00.000Z',
+      end: '2026-08-08T07:00:00.000Z',
       limit: 1000,
     });
     expect(
@@ -352,6 +359,34 @@ describe('SpeedSweetSpotPage', () => {
       'data-model-wh',
       '150',
     );
+  });
+
+
+  it.each([
+    ['failed refresh', { isError: true, error: new Error('refresh unavailable') }],
+    ['paused refresh', { fetchStatus: 'paused' }],
+  ])('retains SI evidence and every section during a %s', (_reason, overrides) => {
+    useDrivesMock.mockReturnValue(query({ data: [drive(1), drive(2), drive(3)], ...overrides }));
+    render(<SpeedSweetSpotPage />);
+
+    expect(screen.getByText('Retained source')).toBeInTheDocument();
+    expect(screen.queryByText('Source available')).not.toBeInTheDocument();
+    expect(screen.getByText('100.00–110.00 km/h')).toBeInTheDocument();
+    for (const id of SECTION_IDS) {
+      expect(screen.getByTestId(id)).toBeInTheDocument();
+    }
+    expect(screen.getByTestId('speed-sweet-spot-evidence')).toHaveAttribute('data-model-wh', '150');
+  });
+
+  it('keeps a successfully empty window distinct from an unresolved source', () => {
+    useDrivesMock.mockReturnValue(query({ data: [], isSuccess: true }));
+    render(<SpeedSweetSpotPage />);
+
+    expect(screen.getByText('No drives were returned for this selected window.')).toBeInTheDocument();
+    expect(screen.getByText('Source available')).toBeInTheDocument();
+    for (const id of SECTION_IDS) {
+      expect(screen.getByTestId(id)).toBeInTheDocument();
+    }
   });
 
   it('renders the same SI-derived model in metric display units', () => {
