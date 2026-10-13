@@ -3,6 +3,8 @@ import { useTranslation } from 'react-i18next';
 import { PageLayout, CardGrid, Section } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
 import { AIDigestNarration } from '@/components/ai';
+import { StaleRefreshWarning } from '@/components/feedback';
+import { deriveDataState } from '@/api/dataState';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { browserTimezone } from '@/lib/timezone';
 
@@ -62,10 +64,22 @@ export default function WeeklyDigestPage() {
     isReady: !fsdLoading && !fsdError,
   });
 
-  // The KPI band + week-over-week comparison aggregate the drive & charge
-  // domains, so they share those two domains' loading / error state.
-  const summaryLoading = drivesLoading || chargingLoading;
-  const summaryError = drivesError ?? chargingError ?? null;
+  const [driveState, chargingState, alertsState, fsdState] = useMemo(
+    () => freshnessQueries.map(query => deriveDataState<unknown>(query, { provenance: 'historical' })),
+    [freshnessQueries],
+  );
+  // Refresh failures must not replace retained charts, battery readings or
+  // comparison metrics. Each source keeps its own warning and recovery.
+  const driveFatal = driveState ? driveState.fatalError : drivesError;
+  const chargingFatal = chargingState ? chargingState.fatalError : chargingError;
+  const alertsFatal = alertsState ? alertsState.fatalError : alertsError;
+  const fsdFatal = fsdState ? fsdState.fatalError : fsdError;
+  const driveInitialLoading = drivesLoading && !driveState?.hasData;
+  const chargingInitialLoading = chargingLoading && !chargingState?.hasData;
+  const alertsInitialLoading = alertsLoading && !alertsState?.hasData;
+  const fsdInitialLoading = fsdLoading && !fsdState?.hasData;
+  const summaryLoading = driveInitialLoading || chargingInitialLoading;
+  const summaryError = driveFatal ?? chargingFatal ?? null;
   const dataSources = useMemo(
     () => [
       {
@@ -180,30 +194,36 @@ export default function WeeklyDigestPage() {
               id: 'driving',
               size: 'half',
               content: (
+                <>
+                {driveState && <StaleRefreshWarning state={driveState} label={dataSources[0].label} />}
                 <DrivingPanel
                   metrics={metrics}
                   period={period}
                   dailyDistanceData={dailyDistanceData}
-                  isLoading={drivesLoading}
-                  isError={Boolean(drivesError)}
-                  error={drivesError}
+                  isLoading={driveInitialLoading}
+                  isError={Boolean(driveFatal)}
+                  error={driveFatal}
                   onRetry={refetchDrives}
                 />
+                </>
               ),
             },
             {
               id: 'charging',
               size: 'half',
               content: (
+                <>
+                {chargingState && <StaleRefreshWarning state={chargingState} label={dataSources[1].label} />}
                 <ChargingPanel
                   metrics={metrics}
                   period={period}
                   dailyEnergyData={dailyEnergyData}
-                  isLoading={chargingLoading}
-                  isError={Boolean(chargingError)}
-                  error={chargingError}
+                  isLoading={chargingInitialLoading}
+                  isError={Boolean(chargingFatal)}
+                  error={chargingFatal}
                   onRetry={refetchCharging}
                 />
+                </>
               ),
             },
           ]}
@@ -218,15 +238,18 @@ export default function WeeklyDigestPage() {
             id: 'supervised-driving',
             size: 'full',
             content: (
+              <>
+              {fsdState && <StaleRefreshWarning state={fsdState} label={dataSources[3].label} />}
               <FsdOperationalPanel
                 insights={fsdInsights}
                 period={period}
-                isLoading={fsdLoading}
-                isError={Boolean(fsdError)}
-                error={fsdError}
+                isLoading={fsdInitialLoading}
+                isError={Boolean(fsdFatal)}
+                error={fsdFatal}
                 onRetry={refetchFsd}
                 isCurrentWeek={isCurrentWeek}
               />
+              </>
             ),
           }]}
         />
@@ -245,9 +268,9 @@ export default function WeeklyDigestPage() {
                 <BatteryPanel
                   metrics={metrics}
                   period={period}
-                  isLoading={chargingLoading}
-                  isError={Boolean(chargingError)}
-                  error={chargingError}
+                  isLoading={chargingInitialLoading}
+                  isError={Boolean(chargingFatal)}
+                  error={chargingFatal}
                   onRetry={refetchCharging}
                 />
               ),
@@ -256,15 +279,18 @@ export default function WeeklyDigestPage() {
               id: 'alerts',
               size: 'half',
               content: (
+                <>
+                {alertsState && <StaleRefreshWarning state={alertsState} label={dataSources[2].label} />}
                 <AlertsPanel
                   metrics={metrics}
                   period={period}
                   alertPieData={alertPieData}
-                  isLoading={alertsLoading}
-                  isError={Boolean(alertsError)}
-                  error={alertsError}
+                  isLoading={alertsInitialLoading}
+                  isError={Boolean(alertsFatal)}
+                  error={alertsFatal}
                   onRetry={refetchAlerts}
                 />
+                </>
               ),
             },
           ]}

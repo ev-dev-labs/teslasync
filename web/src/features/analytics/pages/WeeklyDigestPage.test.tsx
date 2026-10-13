@@ -204,6 +204,23 @@ function makeHook(over: Partial<HookReturn> = {}): HookReturn {
   return { ...base, ...over };
 }
 
+function makeSource(over: Partial<HookReturn['freshnessQueries'][number]> = {}) {
+  return {
+    data: [],
+    error: null,
+    isLoading: false,
+    isPending: false,
+    isSuccess: true,
+    isError: false,
+    isFetching: false,
+    isStale: false,
+    fetchStatus: 'idle',
+    dataUpdatedAt: Date.now(),
+    refetch: vi.fn(),
+    ...over,
+  } as HookReturn['freshnessQueries'][number];
+}
+
 function renderPage() {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
@@ -521,6 +538,99 @@ describe('WeeklyDigestPage — shared vehicle scope', () => {
     renderPage();
     expect(screen.queryByRole('combobox', { name: 'Select vehicle' })).not.toBeInTheDocument();
     expect(selectedVehicleContext.setVehicleId).not.toHaveBeenCalled();
+  });
+});
+
+describe('WeeklyDigestPage — retained source trust', () => {
+  it('retains weekly charts and battery measurements through independent refresh failures', () => {
+    const drivesError = new Error('Drive refresh failed');
+    const chargingError = new Error('Charging refresh failed');
+    const refetchDrives = vi.fn();
+    const refetchCharging = vi.fn();
+    mockHook.mockReturnValue(makeHook({
+      drivesError,
+      chargingError,
+      refetchDrives,
+      refetchCharging,
+      metrics: {
+        ...baseMetrics,
+        totalDistanceM: 120000,
+        totalDrives: 12,
+        chargeEnergyAddedWh: 20000,
+        chargingSessionCount: 3,
+        batteryStart: 20,
+        batteryEnd: 80,
+      },
+      dailyDistanceData: [{ day: 'Mon', distanceM: 120000 }],
+      dailyEnergyData: [{ day: 'Mon', energyWh: 20000 }],
+      freshnessQueries: [
+        makeSource({ error: drivesError, isError: true, isSuccess: false, refetch: refetchDrives }),
+        makeSource({ error: chargingError, isError: true, isSuccess: false, refetch: refetchCharging }),
+        makeSource(),
+        makeSource({ data: undefined }),
+      ],
+    }));
+    renderPage();
+
+    expect(within(section('driving-section')).getByRole('table')).toHaveTextContent('120');
+    expect(within(section('charging-section')).getByRole('table')).toHaveTextContent('20');
+    expect(section('battery-section')).toHaveTextContent('60');
+    expect(within(section('summary-hero')).getByText(/^120(?:\.00)? km$/)).toBeInTheDocument();
+    expect(errorAttr('battery-section')).toBe('false');
+    expect(errorAttr('summary-hero')).toBe('false');
+    const warnings = screen.getAllByTestId('stale-refresh-warning');
+    expect(warnings).toHaveLength(2);
+    fireEvent.click(within(warnings[0]).getByRole('button', { name: 'Refresh' }));
+    expect(refetchDrives).toHaveBeenCalledTimes(1);
+    expect(refetchCharging).not.toHaveBeenCalled();
+    fireEvent.click(within(warnings[1]).getByRole('button', { name: 'Refresh' }));
+    expect(refetchCharging).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps paused charging readings visible without inventing an offline error', () => {
+    mockHook.mockReturnValue(makeHook({
+      chargingLoading: true,
+      metrics: { ...baseMetrics, chargingSessionCount: 1, batteryStart: 0, batteryEnd: 60 },
+      freshnessQueries: [
+        makeSource(),
+        makeSource({ fetchStatus: 'paused' }),
+        makeSource(),
+        makeSource({ data: undefined }),
+      ],
+    }));
+    renderPage();
+
+    expect(loadingAttr('battery-section')).toBe('false');
+    expect(section('battery-section')).toHaveTextContent('60');
+    expect(errorAttr('battery-section')).toBe('false');
+    expect(errorAttr('driving-section')).toBe('false');
+    const warning = screen.getByTestId('stale-refresh-warning');
+    expect(warning).toHaveAttribute('data-refresh-blocked', 'true');
+    expect(warning).toHaveTextContent('Previously loaded data remains visible');
+    expect(warning).not.toHaveTextContent(/offline/i);
+  });
+
+  it('distinguishes unresolved weekly metrics from returned measured zero totals', () => {
+    mockHook.mockReturnValue(makeHook({
+      freshnessQueries: [
+        makeSource({ data: undefined }),
+        makeSource({ data: undefined }),
+        makeSource({ data: undefined }),
+        makeSource({ data: undefined }),
+      ],
+    }));
+    const first = renderPage();
+    expect(screen.getByTestId('weekly-digest-summary').querySelectorAll('[data-value-state="value"]')).toHaveLength(0);
+    first.unmount();
+
+    mockHook.mockReturnValue(makeHook({
+      freshnessQueries: [makeSource(), makeSource(), makeSource(), makeSource({ data: undefined })],
+    }));
+    renderPage();
+    const summary = screen.getByTestId('weekly-digest-summary');
+    expect(summary.querySelectorAll('[data-value-state="value"]')).toHaveLength(5);
+    expect(within(summary).getByText(/^0(?:\.00)? km$/)).toBeInTheDocument();
+    expect(within(summary).getByText('$0.00')).toBeInTheDocument();
   });
 });
 
