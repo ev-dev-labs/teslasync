@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"math"
+	"time"
 )
 
 // DrivingStats preserves unknown measurements as nil rather than measured zero.
@@ -32,6 +33,12 @@ const drivingStatsSQL = `
 	FROM drives WHERE vehicle_id = $1 AND ended_at IS NOT NULL`
 
 func (r *DriveRepo) GetStats(ctx context.Context, vehicleID int64) (DrivingStats, error) {
+	return r.GetStatsInRange(ctx, vehicleID, time.Time{}, time.Time{})
+}
+
+// GetStatsInRange aggregates all completed drives whose started_at is in
+// [start, endExclusive). Zero bounds retain the corresponding unbounded side.
+func (r *DriveRepo) GetStatsInRange(ctx context.Context, vehicleID int64, start, endExclusive time.Time) (DrivingStats, error) {
 	var stats DrivingStats
 	if r == nil || r.db == nil || r.db.Pool == nil {
 		return stats, fmt.Errorf("driving statistics: database pool unavailable")
@@ -39,7 +46,11 @@ func (r *DriveRepo) GetStats(ctx context.Context, vehicleID int64) (DrivingStats
 	if vehicleID <= 0 {
 		return stats, fmt.Errorf("driving statistics: invalid vehicle ID %d", vehicleID)
 	}
-	err := r.db.Pool.QueryRow(ctx, drivingStatsSQL, vehicleID).Scan(
+	if !start.IsZero() && !endExclusive.IsZero() && start.After(endExclusive) {
+		return stats, fmt.Errorf("driving statistics: start must not be after end")
+	}
+	query, args := drivingStatsQuery(vehicleID, start, endExclusive)
+	err := r.db.Pool.QueryRow(ctx, query, args...).Scan(
 		&stats.Count, &stats.DistanceM, &stats.DurationS, &stats.AvgSpeedMps,
 		&stats.MaxSpeedMps, &stats.EfficiencyWhPerM, &stats.RegenEnergyWh, &stats.RegenRatio,
 	)
@@ -55,4 +66,22 @@ func (r *DriveRepo) GetStats(ctx context.Context, vehicleID int64) (DrivingStats
 		}
 	}
 	return stats, nil
+}
+
+func drivingStatsQuery(vehicleID int64, start, endExclusive time.Time) (string, []any) {
+	query := drivingStatsSQL
+	args := []any{vehicleID}
+	if !start.IsZero() {
+		query += " AND started_at >= $2"
+		args = append(args, start)
+	}
+	if !endExclusive.IsZero() {
+		if start.IsZero() {
+			query += " AND started_at < $2"
+		} else {
+			query += " AND started_at < $3"
+		}
+		args = append(args, endExclusive)
+	}
+	return query, args
 }

@@ -27,15 +27,16 @@ export default function DrivetrainHealthPage() {
 
   const { vehicleId } = useSelectedVehicle();
   const vehicleIdStr = vehicleId != null ? String(vehicleId) : undefined;
-  const { start: startDate, end: endDate } = useRangeState({
+  const { startInstant, endInstantExclusive } = useRangeState({
     persistKey: 'drivetrain-health.range',
   });
 
-  // Deliberately retain these exact calls. Query keys, cancellation, enablement,
-  // retry and defaults live in the existing hooks, which are read-only here.
+  const driveWindow = { start: startInstant, end: endInstantExclusive };
+  // Keep the list's default cap and the chart's 30-row policy. Statistics are
+  // aggregated separately by the server across the entire selected range.
   const healthQuery = useDrivetrainHealth(vehicleIdStr);
-  const drivesQuery = useDrives(vehicleIdStr);
-  const statsQuery = useDrivingStats(vehicleIdStr);
+  const drivesQuery = useDrives(vehicleIdStr, driveWindow);
+  const statsQuery = useDrivingStats(vehicleIdStr, driveWindow);
   const motorLatestQuery = useMotorLatest(vehicleId ?? 0, 5_000);
   const motorHistoryQuery = useMotorHistory(vehicleId ?? 0, 200);
   const { state: liveState, connected } = useVehicleLive(vehicleId ?? undefined);
@@ -50,8 +51,8 @@ export default function DrivetrainHealthPage() {
   const stats = statsQuery.data;
   const sensors = useMemo(() => sensorsFor(health), [health]);
   const chartData = useMemo(
-    () => driveSeries(drivesQuery.data, startDate, endDate, formatDateShort),
-    [drivesQuery.data, startDate, endDate, formatDateShort],
+    () => driveSeries(drivesQuery.data, startInstant, endInstantExclusive, formatDateShort),
+    [drivesQuery.data, startInstant, endInstantExclusive, formatDateShort],
   );
   const drivesEmpty = drivesState.hasData && chartData.length === 0;
   const statsEmpty = statsState.status === 'unavailable' || (statsQuery.isSuccess && stats == null);

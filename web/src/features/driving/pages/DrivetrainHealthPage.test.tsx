@@ -386,6 +386,8 @@ beforeEach(() => {
   rangeStateMock.mockReturnValue({
     start: '2024-01-01',
     end: '2024-01-31',
+    startInstant: '2024-01-01T00:00:00.000Z',
+    endInstantExclusive: '2024-02-01T00:00:00.000Z',
     setRange: setRangeMock,
   });
 });
@@ -611,7 +613,11 @@ describe('DrivetrainHealthPage', () => {
   });
 
   it('filters chart series by the header-owned range', () => {
-    rangeStateMock.mockReturnValue({ start: '2024-03-01', end: '2024-03-31', setRange: setRangeMock });
+    rangeStateMock.mockReturnValue({
+      start: '2024-03-01', end: '2024-03-31', setRange: setRangeMock,
+      startInstant: '2024-03-01T00:00:00.000Z',
+      endInstantExclusive: '2024-04-01T00:00:00.000Z',
+    });
     renderPage();
 
     expect(captured.charts.driveRows).toEqual([]);
@@ -642,13 +648,47 @@ describe('DrivetrainHealthPage', () => {
     renderPage();
 
     expect(healthMock).toHaveBeenCalledWith('42');
-    expect(drivesMock).toHaveBeenCalledWith('42');
-    expect(statsMock).toHaveBeenCalledWith('42');
+    const window = { start: '2024-01-01T00:00:00.000Z', end: '2024-02-01T00:00:00.000Z' };
+    expect(drivesMock).toHaveBeenCalledWith('42', window);
+    expect(statsMock).toHaveBeenCalledWith('42', window);
     expect(motorLatestMock).toHaveBeenCalledWith(42, 5000);
     expect(motorHistoryMock).toHaveBeenCalledWith(42, 200);
     expect(vehicleLiveMock).toHaveBeenCalledWith(42);
     expect(captured.summary.stats).toBe(STATS);
     expect((captured.charts.motorRows as MotorChartRow[]).map(row => row.time)).toEqual(['T:m1', 'T:m2']);
+  });
+
+  it.each([
+    { name: 'rolling 24 hours', start: '2024-03-10T15:42:19.125Z', end: '2024-03-11T15:42:19.125Z' },
+    { name: 'custom timezone spring DST', start: '2024-03-10T08:00:00.000Z', end: '2024-03-11T07:00:00.000Z' },
+    { name: 'custom timezone fall DST', start: '2024-11-03T07:00:00.000Z', end: '2024-11-04T08:00:00.000Z' },
+  ])('shares exact server and model bounds for $name without a loaded-row stats proxy', ({ start, end }) => {
+    rangeStateMock.mockReturnValue({
+      start: '2024-01-01', end: '2024-01-31', startInstant: start, endInstantExclusive: end,
+      setRange: setRangeMock,
+    });
+    const before = new Date(Date.parse(start) - 1).toISOString();
+    const last = new Date(Date.parse(end) - 1).toISOString();
+    drivesMock.mockReturnValue(makeQuery({ data: [
+      makeDrive({ id: 1, startTs: before }),
+      makeDrive({ id: 2, startTs: start }),
+      makeDrive({ id: 3, startTs: last }),
+      makeDrive({ id: 4, startTs: end }),
+    ] }));
+    const fullRangeStats = { ...STATS, totalDrives: 125, totalDistanceKm: 8765 };
+    statsMock.mockReturnValue(makeQuery({ data: fullRangeStats }));
+    renderPage();
+
+    expect(drivesMock).toHaveBeenCalledWith('42', { start, end });
+    expect(statsMock).toHaveBeenCalledWith('42', { start, end });
+    expect(captured.charts.driveRows).toEqual([
+      { date: formatDateShort(start), powerMax: 50000, powerMin: null, outsideTemp: 15, distance: 10000 },
+      { date: formatDateShort(last), powerMax: 50000, powerMin: null, outsideTemp: 15, distance: 10000 },
+    ]);
+    expect(captured.summary.stats).toBe(fullRangeStats);
+    expect(captured.thermal.stats).toBe(fullRangeStats);
+    expect(captured.details.stats).toBe(fullRangeStats);
+    expect(setRangeMock).not.toHaveBeenCalled();
   });
 
   it.each(['warning', 'critical'] as const)('retains the %s score, status and recommendations', overallHealth => {

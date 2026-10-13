@@ -20,11 +20,16 @@ type drivingStatsReader interface {
 	GetStats(context.Context, int64) (drivedb.DrivingStats, error)
 }
 
+type drivingStatsRangeReader interface {
+	GetStatsInRange(context.Context, int64, time.Time, time.Time) (drivedb.DrivingStats, error)
+}
+
 // DriveHandler handles drive-related HTTP requests.
 type DriveHandler struct {
 	db                *database.DB
 	driveRepo         *drivedb.DriveRepo
 	statsRepo         drivingStatsReader
+	statsRangeRepo    drivingStatsRangeReader
 	posRepo           *positiondb.PositionRepo
 	signalLogReader   *signaldb.SignalLogReader
 	live              signal.LiveStateReader
@@ -43,6 +48,7 @@ func NewDriveHandler(db *database.DB, live signal.LiveStateReader) *DriveHandler
 		db:              db,
 		driveRepo:       driveRepo,
 		statsRepo:       driveRepo,
+		statsRangeRepo:  driveRepo,
 		posRepo:         positiondb.NewPositionRepo(db),
 		signalLogReader: signaldb.NewSignalLogReader(db),
 		live:            live,

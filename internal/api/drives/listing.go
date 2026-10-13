@@ -2,8 +2,10 @@ package drives
 
 import (
 	"errors"
+	"fmt"
 	"math"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/ev-dev-labs/teslasync/internal/api/apiparams"
@@ -67,7 +69,7 @@ const (
 	driveStatsSpeedLimitMps  = 130.0 * driveStatsMpsPerMph   // ~58.1152 m/s
 )
 
-// Stats returns aggregate driving statistics for a vehicle.
+// Stats returns full completed-drive statistics scoped by started_at in [start, end).
 func (h *DriveHandler) Stats(w http.ResponseWriter, r *http.Request) {
 	ctx, span := otel.Tracer("api").Start(r.Context(), "api.drives.stats")
 	defer span.End()
@@ -85,11 +87,26 @@ func (h *DriveHandler) Stats(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	reader := h.statsRepo
-	if reader == nil {
-		reader = h.driveRepo
+	start, endExclusive, err := parseDrivingStatsRange(r)
+	if err != nil {
+		span.RecordError(err)
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
 	}
-	stats, err := reader.GetStats(ctx, vehicleID)
+	var stats drivedb.DrivingStats
+	if start.IsZero() && endExclusive.IsZero() {
+		reader := h.statsRepo
+		if reader == nil {
+			reader = h.driveRepo
+		}
+		stats, err = reader.GetStats(ctx, vehicleID)
+	} else {
+		reader := h.statsRangeRepo
+		if reader == nil {
+			reader = h.driveRepo
+		}
+		stats, err = reader.GetStatsInRange(ctx, vehicleID, start, endExclusive)
+	}
 	if err != nil {
 		span.RecordError(err)
 		log.Error().Err(err).Int64("vehicle_id", vehicleID).
@@ -100,6 +117,40 @@ func (h *DriveHandler) Stats(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeJSON(w, http.StatusOK, drivingStatsResponse(stats))
+}
+
+// The legacy shared parser shifts RFC3339 ends and truncates date-only ends
+// for inclusive SQL. This aggregate uses a genuinely exclusive SQL bound.
+func parseDrivingStatsRange(r *http.Request) (time.Time, time.Time, error) {
+	parse := func(raw, name string, upper bool) (time.Time, error) {
+		raw = strings.TrimSpace(raw)
+		if raw == "" {
+			return time.Time{}, nil
+		}
+		if instant, err := time.Parse(time.RFC3339Nano, raw); err == nil {
+			return instant, nil
+		}
+		date, err := time.Parse("2006-01-02", raw)
+		if err != nil {
+			return time.Time{}, fmt.Errorf("%s must be an RFC3339 timestamp or YYYY-MM-DD date", name)
+		}
+		if upper {
+			date = date.AddDate(0, 0, 1)
+		}
+		return date, nil
+	}
+	start, err := parse(r.URL.Query().Get("start"), "start", false)
+	if err != nil {
+		return time.Time{}, time.Time{}, err
+	}
+	endExclusive, err := parse(r.URL.Query().Get("end"), "end", true)
+	if err != nil {
+		return time.Time{}, time.Time{}, err
+	}
+	if err := apiparams.ValidateDateRange(start, endExclusive, 0); err != nil {
+		return time.Time{}, time.Time{}, err
+	}
+	return start, endExclusive, nil
 }
 
 func drivingStatsResponse(stats drivedb.DrivingStats) map[string]any {

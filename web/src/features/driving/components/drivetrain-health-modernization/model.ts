@@ -57,14 +57,14 @@ export interface MotorChartRow {
 
 export function driveSeries(
   drives: readonly Drive[] | null | undefined,
-  start: string, end: string, dateLabel: (value: string) => string,
+  startInstant: string, endInstantExclusive: string, dateLabel: (value: string) => string,
 ): DriveChartRow[] {
-  const startMs = new Date(`${start}T00:00:00`).getTime();
-  const endMs = new Date(`${end}T23:59:59`).getTime();
+  const startMs = new Date(startInstant).getTime();
+  const endMs = new Date(endInstantExclusive).getTime();
   return (drives ?? [])
     .filter(drive => {
       const time = new Date(drive.startTs).getTime();
-      return Number.isFinite(time) && time >= startMs && time <= endMs;
+      return Number.isFinite(time) && time >= startMs && time < endMs;
     })
     .slice()
     .sort((a, b) => new Date(a.startTs).getTime() - new Date(b.startTs).getTime())

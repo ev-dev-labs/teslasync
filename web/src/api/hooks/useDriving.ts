@@ -57,7 +57,10 @@ export const drivingKeys = {
   // all undefined on an array.
   drive: (id: string) => ['drive', id] as const,
   score: (vehicleId?: string) => ['drive-score', vehicleId] as const,
-  stats: (vehicleId?: string) => ['driving-stats', vehicleId] as const,
+  stats: (vehicleId?: string, window?: Pick<DriveWindow, 'start' | 'end'>) =>
+    (window?.start || window?.end
+      ? ['driving-stats', vehicleId, window.start ?? null, window.end ?? null] as const
+      : ['driving-stats', vehicleId] as const),
   dynamics: (vehicleId?: string) => ['driving-dynamics', vehicleId] as const,
   accelerationDistribution: (vehicleId?: string) => ['acceleration-distribution', vehicleId] as const,
   drivetrainHealth: (vehicleId?: string) => ['drivetrain-health', vehicleId] as const,
@@ -215,13 +218,18 @@ export function useDriveScore(vehicleId?: string) {
   });
 }
 
-export function useDrivingStats(vehicleId?: string) {
+/** Full completed-drive aggregate; bounds scope started_at, never the list page. */
+export function useDrivingStats(vehicleId?: string, window?: Pick<DriveWindow, 'start' | 'end'>) {
   return useQuery({
-    queryKey: drivingKeys.stats(vehicleId),
-    queryFn: ({ signal }) =>
-      request<DrivingStats>(
-        vehicleId ? `/drives/stats?vehicle_id=${vehicleId}` : '/drives/stats', { signal },
-      ),
+    queryKey: drivingKeys.stats(vehicleId, window),
+    queryFn: ({ signal }) => {
+      const params = new URLSearchParams();
+      if (vehicleId) params.set('vehicle_id', vehicleId);
+      if (window?.start) params.set('start', window.start);
+      if (window?.end) params.set('end', window.end);
+      const qs = params.toString();
+      return request<DrivingStats>(qs ? `/drives/stats?${qs}` : '/drives/stats', { signal });
+    },
     enabled: !!vehicleId,
     retry: false,
   });
