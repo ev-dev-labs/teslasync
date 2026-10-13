@@ -35,7 +35,7 @@
  * page tests.
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactElement, ReactNode } from 'react';
@@ -514,4 +514,41 @@ describe('SpeedProfilePage', () => {
     ]);
   });
 
+});
+
+
+describe('SpeedProfilePage source-unit and insight regressions', () => {
+  it.each([
+    ['km/h', UNIT_PREFS_KM, '64.80 km/h', '200.00'],
+    ['mph', UNIT_PREFS_MI, '40.26 mph', '321.87'],
+  ])('matches fixed mph source bands with %s display preferences', (_unit, prefs, speed, efficiency) => {
+    unitsMock.mockReturnValue({ unitPrefs: prefs });
+    const sourceBytes = JSON.stringify({ profile: PROFILE, drives: DRIVES });
+    renderPage();
+    const bucket = screen.getByText('30-45').closest('section')!;
+    const card = screen.getByText('30-45').closest('dl')?.parentElement
+      ?? screen.getByText('30-45').parentElement!.parentElement!;
+    expect(within(card).getByText(speed)).toBeInTheDocument();
+    expect(within(card).getByText(efficiency)).toBeInTheDocument();
+    expect(within(bucket).getByText('Source speed buckets are in mph; averages use your selected units.')).toBeInTheDocument();
+    expect(JSON.stringify({ profile: PROFILE, drives: DRIVES })).toBe(sourceBytes);
+  });
+
+  it('keeps source-band membership when speed preferences change without changing distance preferences', () => {
+    const view = renderPage();
+    const card = () => screen.getByText('30-45').parentElement!.parentElement!;
+    expect(within(card()).getByText('64.80 km/h')).toBeInTheDocument();
+    unitsMock.mockReturnValue({ unitPrefs: { ...UNIT_PREFS_KM, speed: 'mph' } });
+    view.rerender(<QueryClientProvider client={new QueryClient()}><MemoryRouter><SpeedProfilePage /></MemoryRouter></QueryClientProvider>);
+    expect(within(card()).getByText('40.26 mph')).toBeInTheDocument();
+    expect(within(card()).getByText('200.00')).toBeInTheDocument();
+    expect(captured.barChartData).toEqual(PROFILE.distribution.map(b => ({ range: b.speedBucket, readings: b.readings })));
+  });
+
+  it('retains the optimal-speed insight but makes no unmeasured percentage claim', () => {
+    renderPage();
+    expect(screen.getByText(/Drives around 54\.00 km\/h show the best energy efficiency/)).toBeInTheDocument();
+    expect(screen.getByText(/This profile does not quantify efficiency gains from reducing highway speed/)).toBeInTheDocument();
+    expect(screen.queryByText(/~15%/)).not.toBeInTheDocument();
+  });
 });

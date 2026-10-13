@@ -166,17 +166,17 @@ export default function SpeedProfilePage() {
       if (d.avgSpeedMps == null) return;
       const eff = getEfficiency(d);
       if (eff == null) return;
-      // Bucket labels ("0-15", "15-30", …) are in the user's display speed
-      // unit, so compare against the converted value while accumulating the
-      // SI value (m/s) for later conversion at display.
-      const speedDisplay = toSpeedDisplay(d.avgSpeedMps);
+      // The source distribution uses fixed mph bands, independently of viewer
+      // preferences. Compare in that source unit; retain raw SI accumulators
+      // and convert averages only when displaying them.
+      const sourceSpeedMph = convertSpeedFromSI(d.avgSpeedMps, 'mph');
       for (const r of ranges) {
         const bucket = r.speedBucket ?? r.speed_bucket ?? '';
         const parts = bucket.match(/(\d+)/g);
         if (!parts) continue;
         const lo = Number(parts[0]);
         const hi = parts.length > 1 ? Number(parts[1]) : Number.POSITIVE_INFINITY;
-        if (speedDisplay >= lo && speedDisplay < hi) {
+        if (sourceSpeedMph >= lo && sourceSpeedMph < hi) {
           const existing = acc.get(bucket) ?? { totalEff: 0, totalSpdMps: 0, count: 0 };
           existing.totalEff += eff;
           existing.totalSpdMps += d.avgSpeedMps;
@@ -191,7 +191,7 @@ export default function SpeedProfilePage() {
       result.set(k, { avgEff: v.totalEff / v.count, avgSpeedMps: v.totalSpdMps / v.count }),
     );
     return result;
-  }, [drives, data, toSpeedDisplay]);
+  }, [drives, data]);
 
   const hasDistribution = distributionChartData.length > 0;
 
@@ -248,6 +248,7 @@ export default function SpeedProfilePage() {
           <GlassPanel className="p-4 sm:p-5 xl:col-span-2">
             <SectionErrorBoundary name="SpeedProfileDistribution">
             <PanelTitle className="mb-3">{t('speedProfile.distribution', 'Speed Distribution')}</PanelTitle>
+            <Caption className="mb-3 block">{t('speedProfile.sourceBucketUnit', 'Source speed buckets are in mph; averages use your selected units.')}</Caption>
             {error ? (
               <QueryError error={error} onRetry={() => refetch()} />
             ) : isLoading ? (
@@ -342,6 +343,7 @@ export default function SpeedProfilePage() {
       <FadeIn delay={0.2}>
         <section aria-label={t('speedProfile.buckets', 'Speed Buckets')}>
           <SectionTitle className="mb-3">{t('speedProfile.buckets', 'Speed Buckets')}</SectionTitle>
+          <Caption className="mb-3 block">{t('speedProfile.sourceBucketUnit', 'Source speed buckets are in mph; averages use your selected units.')}</Caption>
           {error ? (
             <GlassPanel className="p-4 sm:p-5">
               <QueryError error={error} onRetry={() => refetch()} />
@@ -504,7 +506,7 @@ export default function SpeedProfilePage() {
               <div className="flex items-start gap-3 rounded-lg border-l-2 border-[var(--border-default)] bg-[var(--surface-2)] p-3">
                 <Zap className="mt-0.5 h-5 w-5 shrink-0 text-[var(--text-secondary)]" aria-hidden="true" />
                 <Text as="p" size="sm" color="secondary">
-                  {t('speedProfile.insightText', 'Drives around {{speed}} {{unit}} show the best energy efficiency. Reducing highway speed could improve efficiency by ~15%.', {
+                  {t('speedProfile.insightEvidenceText', 'Drives around {{speed}} {{unit}} show the best energy efficiency. This profile does not quantify efficiency gains from reducing highway speed.', {
                     speed: fmtNumber(toSpeedDisplay(data?.optimalSpeedMps ?? 0)),
                     unit: speedUnit,
                   })}
