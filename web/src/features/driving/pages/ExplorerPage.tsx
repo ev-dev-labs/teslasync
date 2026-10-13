@@ -4,9 +4,8 @@ import { useTranslation } from 'react-i18next';
 import { useDriveHistory } from '@/api/hooks/useDriving';
 
 import { Grid, PageLayout } from '@/components/layout';
-import { StaleRefreshWarning } from '@/components/feedback';
+import { SectionErrorBoundary, StaleRefreshWarning } from '@/components/feedback';
 import { useDataState } from '@/hooks/useDataState';
-import { FadeIn } from '@/components/motion';
 import { NoVehicleSelected } from '@/features/onboarding/components/NoVehicleSelected';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
@@ -76,65 +75,70 @@ export default function ExplorerPage() {
         'How far and how wide your car actually roams',
       )}
       query={historyQuery}
+      busy={sectionState.isLoading || sourceState.isRefreshing}
     >
       <StaleRefreshWarning state={sourceState} label={t('explorer.title', 'Explorer')} />
-      <FadeIn>
+      <SectionErrorBoundary name="ExplorerKpis">
         <ExplorerKpis
           summary={summary}
           state={sectionState}
           formatDistance={formatDistance}
           retained={sourceState.status === 'stale' || sourceState.refreshError != null}
         />
-      </FadeIn>
+      </SectionErrorBoundary>
 
-      <FadeIn delay={0.05}>
-        <Grid cols={PRIMARY_COLUMNS} gap={4}>
+      <Grid cols={PRIMARY_COLUMNS} gap={4}>
+        <SectionErrorBoundary name="ExplorerDestinationDirectory">
           <DestinationDirectory
             summary={summary}
             state={sectionState}
             formatDistance={formatDistance}
             className="xl:col-span-3"
           />
+        </SectionErrorBoundary>
+        <SectionErrorBoundary name="ExplorerNewRepeatBehavior">
           <NewRepeatBehavior
             summary={summary}
             state={sectionState}
             className="xl:col-span-2"
           />
-        </Grid>
-      </FadeIn>
+        </SectionErrorBoundary>
+      </Grid>
 
-      <FadeIn delay={0.1}>
+      <SectionErrorBoundary name="ExplorerMonthlyExplorationChart">
         <MonthlyExplorationChart
           summary={summary}
           state={sectionState}
         />
-      </FadeIn>
+      </SectionErrorBoundary>
 
-      <FadeIn delay={0.15}>
-        <Grid cols={EVEN_COLUMNS} gap={4}>
+      <Grid cols={EVEN_COLUMNS} gap={4}>
+        <SectionErrorBoundary name="ExplorerDistanceBandsChart">
           <DistanceBandsChart
             summary={summary}
             state={sectionState}
             formatDistance={formatDistance}
           />
+        </SectionErrorBoundary>
+        <SectionErrorBoundary name="ExplorerDestinationRankings">
           <DestinationRankings
             summary={summary}
             state={sectionState}
             formatDistance={formatDistance}
           />
-        </Grid>
-      </FadeIn>
+        </SectionErrorBoundary>
+      </Grid>
 
-      <FadeIn delay={0.2}>
+      <SectionErrorBoundary name="ExplorerEvidenceCoverage">
         <EvidenceCoverage summary={summary} state={sectionState} />
-      </FadeIn>
+      </SectionErrorBoundary>
 
-      <FadeIn delay={0.25}>
+      <SectionErrorBoundary name="ExplorerMethodology">
         <ExplorerMethodology
           summary={summary}
           state={sectionState}
         />
-      </FadeIn>
+      </SectionErrorBoundary>
     </PageLayout>
   );
 }

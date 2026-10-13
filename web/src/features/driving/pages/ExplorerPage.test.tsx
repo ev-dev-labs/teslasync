@@ -1,6 +1,8 @@
 import type { ReactNode } from 'react';
 import { render, screen } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import userEvent from '@testing-library/user-event';
+import i18n from 'i18next';
+import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { Drive } from '@/types/driving';
 import type { ExplorerSummary } from '../lib/explorer';
@@ -13,6 +15,7 @@ interface StateProbe {
 
 const {
   formatDistanceMock,
+  failedSectionMock,
   historyMock,
   pageTitleMock,
   refetchMock,
@@ -21,6 +24,7 @@ const {
   unitsMock,
 } = vi.hoisted(() => ({
   formatDistanceMock: vi.fn(),
+  failedSectionMock: vi.fn(),
   historyMock: vi.fn(),
   pageTitleMock: vi.fn(),
   refetchMock: vi.fn(),
@@ -65,18 +69,24 @@ vi.mock('@/components/layout', () => ({
     title,
     subtitle,
     actions,
+    busy,
+    loading,
+    error,
     children,
   }: {
     title: string;
     subtitle: string;
     actions: ReactNode;
+    busy?: boolean;
+    loading?: boolean;
+    error?: Error | null;
     children: ReactNode;
   }) => (
-    <main>
+    <main aria-busy={busy || undefined}>
       <h1>{title}</h1>
       <p>{subtitle}</p>
       {actions}
-      {children}
+      {loading || error ? <p>Page content replaced</p> : children}
     </main>
   ),
   Grid: ({ children }: { children: ReactNode }) => <div>{children}</div>,
@@ -97,6 +107,7 @@ vi.mock('../components/explorer', () => {
     summary: ExplorerSummary;
     state: StateProbe;
     formatDistance?: (value: number) => string;
+    retained?: boolean;
   }
   const status = (props: ProbeProps) =>
     props.state.error
@@ -107,18 +118,25 @@ vi.mock('../components/explorer', () => {
           ? 'empty'
           : 'ready';
   const section = (testId: string, props: ProbeProps) => {
+    if (failedSectionMock() === testId) {
+      throw new Error('Synthetic section rendering failure');
+    }
     sectionStates.push(props.state);
     return <section data-testid={testId}>{status(props)}</section>;
   };
 
   return {
     ExplorerKpis: (props: ProbeProps) => {
+      if (failedSectionMock() === 'explorer-kpis') {
+        throw new Error('Synthetic section rendering failure');
+      }
       sectionStates.push(props.state);
       const radius = props.summary.radiusM;
       return (
         <section
           data-testid="explorer-kpis"
           data-model-radius={radius ?? undefined}
+          data-retained={props.retained || undefined}
         >
           {status(props)}
           {radius != null && props.formatDistance
@@ -210,9 +228,14 @@ const SECTION_IDS = [
   'explorer-methodology',
 ];
 
+beforeAll(async () => {
+  await i18n.init({ lng: 'en', fallbackLng: 'en', resources: {} });
+});
+
 beforeEach(() => {
   vi.clearAllMocks();
   sectionStates.length = 0;
+  failedSectionMock.mockReturnValue(null);
   selectedVehicleMock.mockReturnValue({ vehicleId: 42 });
   historyMock.mockReturnValue(query());
   formatDistanceMock.mockImplementation(
@@ -272,4 +295,142 @@ describe('ExplorerPage', () => {
     expect(historyMock).toHaveBeenCalledWith(undefined, 1000);
     expect(screen.queryByTestId('explorer-monthly')).not.toBeInTheDocument();
   });
+
+  it('marks initial work busy without replacing the eight section shells', () => {
+    historyMock.mockReturnValue(query({ data: undefined, isLoading: true }));
+    const { rerender } = render(<ExplorerPage />);
+
+    expect(screen.getByRole('main')).toHaveAttribute('aria-busy', 'true');
+    for (const id of SECTION_IDS) {
+      expect(screen.getByTestId(id)).toHaveTextContent('loading');
+    }
+
+    historyMock.mockReturnValue(query());
+    rerender(<ExplorerPage />);
+
+    expect(screen.getByRole('main')).not.toHaveAttribute('aria-busy');
+    for (const id of SECTION_IDS) {
+      expect(screen.getByTestId(id)).toHaveTextContent('ready');
+    }
+  });
+
+  it('keeps usable history visible while a background refresh is busy', () => {
+    historyMock.mockReturnValue(query({ isFetching: true }));
+    render(<ExplorerPage />);
+
+    expect(screen.getByRole('main')).toHaveAttribute('aria-busy', 'true');
+    for (const id of SECTION_IDS) {
+      expect(screen.getByTestId(id)).toHaveTextContent('ready');
+    }
+    expect(screen.getByTestId('explorer-kpis')).toHaveTextContent('display:111195');
+    expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
+  });
+
+  it('retains historical readings on refresh failure and exposes source retry', async () => {
+    const user = userEvent.setup();
+    historyMock.mockReturnValue(query({
+      isError: true,
+      error: new Error('Synthetic history refresh failure'),
+    }));
+    const { rerender } = render(<ExplorerPage />);
+
+    for (const id of SECTION_IDS) {
+      expect(screen.getByTestId(id)).toHaveTextContent('ready');
+    }
+    expect(screen.getByTestId('explorer-kpis')).toHaveAttribute('data-retained', 'true');
+    expect(screen.getByTestId('explorer-kpis')).toHaveTextContent('display:111195');
+    expect(screen.getByTestId('stale-refresh-warning')).toHaveTextContent(
+      'Previously loaded data remains visible while affected sources recover.',
+    );
+    await user.click(screen.getByRole('button', { name: 'Refresh' }));
+    expect(refetchMock).toHaveBeenCalledOnce();
+
+    historyMock.mockReturnValue(query());
+    rerender(<ExplorerPage />);
+
+    expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
+    expect(screen.getByTestId('explorer-kpis')).not.toHaveAttribute('data-retained');
+    expect(screen.getByTestId('explorer-kpis')).toHaveTextContent('display:111195');
+  });
+
+  it('keeps paused history retained without inventing an offline failure', () => {
+    historyMock.mockReturnValue(query({ fetchStatus: 'paused' }));
+    render(<ExplorerPage />);
+
+    for (const id of SECTION_IDS) {
+      expect(screen.getByTestId(id)).toHaveTextContent('ready');
+    }
+    expect(screen.getByTestId('explorer-kpis')).toHaveAttribute('data-retained', 'true');
+    expect(screen.getByTestId('stale-refresh-warning')).toHaveAttribute(
+      'data-refresh-blocked', 'true',
+    );
+    expect(screen.getByTestId('stale-refresh-warning')).not.toHaveTextContent(/offline/i);
+    expect(screen.getByRole('main')).not.toHaveAttribute('aria-busy');
+    expect(refetchMock).not.toHaveBeenCalled();
+  });
+
+  it('preserves an authoritatively empty retained window after refresh failure', () => {
+    historyMock.mockReturnValue(query({
+      data: [],
+      isError: true,
+      error: new Error('Synthetic empty-window refresh failure'),
+    }));
+    render(<ExplorerPage />);
+
+    for (const id of SECTION_IDS) {
+      expect(screen.getByTestId(id)).toHaveTextContent('empty');
+    }
+    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+    expect(screen.getByTestId('explorer-kpis')).not.toHaveAttribute('data-model-radius');
+    expect(formatDistanceMock).not.toHaveBeenCalled();
+  });
+
+  it('switches workspace vehicle scope without carrying another vehicle radius', () => {
+    const { rerender } = render(<ExplorerPage />);
+    expect(screen.getByTestId('explorer-kpis')).toHaveAttribute(
+      'data-model-radius', '111195',
+    );
+
+    selectedVehicleMock.mockReturnValue({ vehicleId: 7 });
+    historyMock.mockReturnValue(query({ data: undefined, isLoading: true }));
+    rerender(<ExplorerPage />);
+
+    expect(historyMock).toHaveBeenLastCalledWith('7', 1000);
+    expect(screen.getByTestId('explorer-kpis')).not.toHaveAttribute('data-model-radius');
+    expect(screen.getByRole('main')).toHaveAttribute('aria-busy', 'true');
+    for (const id of SECTION_IDS) {
+      expect(screen.getByTestId(id)).toHaveTextContent('loading');
+    }
+    expect(screen.queryByTestId('vehicle-select')).not.toBeInTheDocument();
+  });
+
+  it.each(SECTION_IDS)(
+    'isolates and retries rendering failure in %s without erasing neighboring sections',
+    async (failedId) => {
+      const user = userEvent.setup();
+      const errorLog = vi.spyOn(console, 'error').mockImplementation(() => {});
+      try {
+        failedSectionMock.mockReturnValue(failedId);
+        render(<ExplorerPage />);
+
+        expect(screen.getByRole('heading', { name: 'Explorer' })).toBeInTheDocument();
+        expect(screen.queryByTestId(failedId)).not.toBeInTheDocument();
+        for (const id of SECTION_IDS.filter((id) => id !== failedId)) {
+          expect(screen.getByTestId(id)).toHaveTextContent('ready');
+        }
+        expect(screen.getByText('Component failed to load')).toBeInTheDocument();
+
+        failedSectionMock.mockReturnValue(null);
+        await user.click(screen.getByRole('button', { name: 'Retry' }));
+
+        for (const id of SECTION_IDS) {
+          expect(screen.getByTestId(id)).toHaveTextContent('ready');
+        }
+        expect(screen.queryByText('Component failed to load')).not.toBeInTheDocument();
+        expect(refetchMock).not.toHaveBeenCalled();
+      } finally {
+        errorLog.mockRestore();
+      }
+    },
+  );
 });
