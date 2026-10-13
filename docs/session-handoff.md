@@ -2,6 +2,58 @@
 
 ## Current phase
 
+### Actual quota release, rolling refill and partial preservation,21:32Z
+
+Phases4/5 remainclosed by a63bd78e6/58f1a657c and the actual15:20build0/
+literalTSC0 gate. Phase6 unfinished; Phase7 NOTRUN. Latest measured21:29rows:
+Phase5 219done/20failed/1blocked/4excluded; Phase6 96done/21pending/75held/
+23failed/1blocked. Subsequent actual21:30causal-test launch moves exactlyone
+pendingrow toheld:20pending/76held, notan additional completeditem. Heldrows
+include deliveredintakes/parentmilestone; they are NOT76runningworkers.
+
+Five individualpushes sinceprevious20:45snapshot: d644884a0 metadata,
+5494bcb41 Behavioral sourceQA,812c6ebcc Road sourceQA,f6f81dca4 CarbonCoverage
+WIP,93cc7e673 QualityFieldFixtures WIP. Lastthree sourcecommits fallinactual
+20:59--21:29window. Reportdelivery is notnative/pageacceptance. Carbon
+guard/testhashes4009EE6B/A61E9F69 matchedrelease;18authoredcasesNOTRUN/
+externalguard1/discovery0/noJSON. Qualitytwofixtures individuallypreserved,
+76authoredcasesNOTRUN/guard1/discovery0/noJSON; productionfixesstillpending.
+Bothresetpending with retainedattempt1; no ownfailurechargedforcatalog.
+
+Actual21:26census had31unreleasedsourceowners:27overhardlimit/fourfresh,
+oneactualreplacement refused byMAX32 due retainedSDKchat quota. The released
+CausalLiveGuard b0b4 finallybecameidle; ACK2 collectedat21:29+, originalsource
+release20:22:15Z unchanged. Genuine runtime slot refilledby
+da211e55-a710-40a3-98b5-fc6af19cbe44, one originalcausaltest expectation only,
+firstactualattempt1, pollrunning85s/return21:50/hard21:55 or earlieractualclock.
+This restores32knownsourceowners, NOT32healthyworkers:27olderownersstill
+retainunconfirmedclaims aftercooperativeSTOP; built-incancellation unavailable.
+No lease release, clockreset or termination fiction. Five freshest IDs:
+cc2275fa InsightPanel,2d1dbf84 CycleStress,cf4e9c43 EnergyFlow,3b431f33
+EnergyProducts (return21:40/hard21:45), plusda211e55; fullIDs/claims inqueue/SQL.
+Passport/Advisor and threeAutomation/BatteryQA overdueactorsreceivedHARDSTOP
+21:29 withoutnewclocks or unsafeclaimrelease.
+
+GDPR, ActionScope2, Expiry2 and NativePreview originalresults/ACKs nowcollected/
+explicitlyreleased, notworkers. GDPR22casesNOTRUN/rootthreefilesawaitexactWIP;
+Scope44casesNOTRUN/pairawaitWIP; Expiryretains7dd940034unchanged/17NOTRUN;
+CausalGuard13NOTRUN exactsource/newtesthashes freshlymatched, awaitingWIP.
+Original causaltest expectations handledbyseparatenewactor, notparent.
+NativePreview originalactualrelease18:33:24.585Z/logfinalexit0 confirmsnarrow
+30/30five-point touch/Escape/focusflows and2/2routes; reportawaitspersistence,
+wholepilotPARTIAL/exportlimitations preserved. Both browserproviders now
+explicitlyreleased; provideravailability is notacceptance. Federatedreport5
+findings/4candidates awaitsindividualcommit; trust/date/plural roots overlap
+existingqueuedowners, avoidduplicates. Previousotherreportedintakes/
+unattributeddiagnosticsremainpreserved, discardnothing.
+
+Shared5173 HTTP200/PID9036/free73.86GiB at21:26:41; actual21:29inventory
+runningboundedheaders0/upstream0:0. Sole10minschedule3 unchanged.21:26health
+flagclosed; fresh21:30scheduledcensus nowactive, clearpromptly afterallknown
+IDs/unblocking/server check, notordinarysource/reportpersistence. No Docker,
+reseed, fullgate, passing-suite rerun, Discord, heartbeat, extension orhelper
+development. Parentorchestrationonly; outstanding runtime acceptance is explicit.
+
 ### Rolling release reconciliation and serialized catalog handoff,20:45:09Z snapshot
 
 Phases4/5 remainclosed; Phase6 unfinished/Phase7 NOTRUN. Four actualnew
