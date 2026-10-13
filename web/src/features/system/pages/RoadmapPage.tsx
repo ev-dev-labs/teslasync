@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Icons } from '@/lib/icons';
 
 import { PageLayout } from '@/components/layout';
-import { GlassPanel, IconBox, SectionTitle, PanelTitle, Text } from '@/components/ui';
+import { Badge, type BadgeProps, GlassPanel, IconBox, SectionTitle, PanelTitle, Text } from '@/components/ui';
 import { CompositionRail } from '@/components/data-display';
 import { SystemSummaryBrief } from '../components/operationalbrief-all/SystemSummaryBrief';
 import { EmptyState } from '@/components/feedback';
@@ -25,7 +25,7 @@ const {
 /* ------------------------------------------------------------------ */
 
 interface RoadmapEntry {
-  id?: string;
+  id: string;
   title: string;
   description: string;
   icon: ElementType;
@@ -34,8 +34,9 @@ interface RoadmapEntry {
 }
 
 interface PhaseMeta {
-  /** Toned neon accent used for icon boxes, dots, chips and glows. */
+  /** Existing restrained tokens; editorial phases are not deployment health. */
   neon: NeonColor;
+  badgeVariant: NonNullable<BadgeProps['variant']>;
   /** Icon shown in the phase-band header. */
   icon: ElementType;
   /** Icon shown next to each feature in a card list. */
@@ -51,6 +52,7 @@ const PHASE_ORDER: RoadmapPhase[] = ['done', 'current', 'next', 'future'];
 const PHASE_META: Record<RoadmapPhase, PhaseMeta> = {
   done: {
     neon: 'green',
+    badgeVariant: 'success',
     icon: CheckCircle,
     statusIcon: CheckCircle,
     labelKey: 'roadmap.phase.done',
@@ -60,6 +62,7 @@ const PHASE_META: Record<RoadmapPhase, PhaseMeta> = {
   },
   current: {
     neon: 'cyan',
+    badgeVariant: 'info',
     icon: Zap,
     statusIcon: Zap,
     labelKey: 'roadmap.phase.current',
@@ -68,7 +71,8 @@ const PHASE_META: Record<RoadmapPhase, PhaseMeta> = {
     descFallback: 'Areas receiving attention; priorities may change.',
   },
   next: {
-    neon: 'purple',
+    neon: 'neutral',
+    badgeVariant: 'neutral',
     icon: Star,
     statusIcon: Star,
     labelKey: 'roadmap.phase.next',
@@ -77,7 +81,8 @@ const PHASE_META: Record<RoadmapPhase, PhaseMeta> = {
     descFallback: 'Potential next priorities, not scheduled commitments.',
   },
   future: {
-    neon: 'amber',
+    neon: 'neutral',
+    badgeVariant: 'neutral',
     icon: Rocket,
     statusIcon: Clock,
     labelKey: 'roadmap.phase.future',
@@ -93,6 +98,7 @@ const PHASE_META: Record<RoadmapPhase, PhaseMeta> = {
 
 const roadmapItems: RoadmapEntry[] = [
   {
+    id: 'corePlatform',
     title: 'Core Platform',
     description: 'Real-time fleet monitoring, analytics, and vehicle control',
     icon: Rocket,
@@ -112,6 +118,7 @@ const roadmapItems: RoadmapEntry[] = [
     ],
   },
   {
+    id: 'smartNotifications',
     title: 'Smart Notifications',
     description: 'Multi-channel alerts, scheduling, and custom automation rules',
     icon: Bell,
@@ -129,6 +136,7 @@ const roadmapItems: RoadmapEntry[] = [
     ],
   },
   {
+    id: 'intelligenceObservability',
     title: 'Intelligence & Observability',
     description: 'Advanced analytics, system health, and background processing',
     icon: Brain,
@@ -145,6 +153,7 @@ const roadmapItems: RoadmapEntry[] = [
     ],
   },
   {
+    id: 'fleetTelemetry',
     title: 'Fleet Telemetry',
     description: 'Real-time streaming from vehicles via Tesla Fleet Telemetry',
     icon: Zap,
@@ -160,6 +169,7 @@ const roadmapItems: RoadmapEntry[] = [
     ],
   },
   {
+    id: 'designSystem',
     title: 'Premium UI & Design System',
     description: 'Shared component library, accessibility, and consistent design language',
     icon: Star,
@@ -341,16 +351,14 @@ const roadmapItems: RoadmapEntry[] = [
 ];
 
 /* ------------------------------------------------------------------ */
-/*  PhaseChip — token-based status pill (neon bg + ring + toned text)  */
+/*  PhaseChip — existing semantic Badge, retaining the phase label    */
 /* ------------------------------------------------------------------ */
 
 function PhaseChip({ phase, label }: { phase: RoadmapPhase; label: string }) {
-  const c = neonColorMap[PHASE_META[phase].neon];
   return (
-    <span className={cn('inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 ring-1', c.bg, c.ring)}>
-      <span className={cn('h-1.5 w-1.5 rounded-full', c.dot)} aria-hidden="true" />
-      <Text size="xs" weight="medium" className={c.text}>{label}</Text>
-    </span>
+    <Badge variant={PHASE_META[phase].badgeVariant} dot className="self-start">
+      {label}
+    </Badge>
   );
 }
 
@@ -367,20 +375,17 @@ function RoadmapCard({ item }: { item: RoadmapEntry }) {
   const features = item.features ?? [];
 
   return (
-    <GlassPanel className="relative h-full overflow-hidden p-4 sm:p-5">
-      <div
-        className={cn('pointer-events-none absolute -right-8 -top-8 h-32 w-32 rounded-full opacity-10 blur-3xl', c.dot)}
-        aria-hidden="true"
-      />
-      <div className="relative flex h-full flex-col">
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex min-w-0 items-center gap-3">
+    <GlassPanel className="h-full min-w-0 p-4 sm:p-5">
+      <div className="flex h-full min-w-0 flex-col">
+        {/* Wrap in the allocated card width, not only at a viewport breakpoint. */}
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="flex min-w-0 flex-1 basis-48 items-start gap-3">
             <IconBox color={meta.neon} size="md">
               <Icon className="h-5 w-5" aria-hidden="true" />
             </IconBox>
             <div className="min-w-0">
-              <PanelTitle className="whitespace-normal break-words">{item.id ? t(`roadmap.entries.${item.id}.title`, item.title) : item.title}</PanelTitle>
-              <Text as="p" variant="caption" className="mt-0.5">{item.id ? t(`roadmap.entries.${item.id}.description`, item.description) : item.description}</Text>
+              <PanelTitle className="whitespace-normal break-words">{t(`roadmap.entries.${item.id}.title`, item.title)}</PanelTitle>
+              <Text as="p" variant="caption" className="mt-0.5">{t(`roadmap.entries.${item.id}.description`, item.description)}</Text>
             </div>
           </div>
           <PhaseChip phase={item.phase} label={t(meta.labelKey, meta.labelFallback)} />
@@ -390,7 +395,7 @@ function RoadmapCard({ item }: { item: RoadmapEntry }) {
           {features.map((feature, i) => (
             <li key={i} className="flex items-start gap-2">
               <StatusIcon className={cn('mt-0.5 h-3.5 w-3.5 shrink-0', c.text)} aria-hidden="true" />
-              <Text as="span" variant="bodySm">{item.id ? t(`roadmap.entries.${item.id}.features.${i}`, feature) : feature}</Text>
+              <Text as="span" variant="bodySm">{t(`roadmap.entries.${item.id}.features.${i}`, feature)}</Text>
             </li>
           ))}
         </ul>
@@ -471,7 +476,6 @@ function PhaseSection({
 }) {
   const { t } = useTranslation();
   const meta = PHASE_META[phase];
-  const c = neonColorMap[meta.neon];
   const PhaseIcon = meta.icon;
   const list = items ?? [];
 
@@ -483,13 +487,19 @@ function PhaseSection({
             <PhaseIcon className="h-4 w-4" aria-hidden="true" />
           </IconBox>
           <SectionTitle>{t(meta.labelKey, meta.labelFallback)}</SectionTitle>
-          <span className={cn('inline-flex items-center rounded-full px-2 py-0.5 ring-1', c.bg, c.ring)}>
-            <Text size="xs" weight="semibold" className={cn('tabular-nums', c.text)}>{list.length}</Text>
-          </span>
+          <Badge variant="neutral" size="sm" className="tabular-nums">
+            {list.length}
+          </Badge>
           <Text as="p" variant="caption" className="w-full sm:w-auto">
             {t(meta.descKey, meta.descFallback)}
           </Text>
         </div>
+
+        {phase === 'done' && (
+          <Text as="p" variant="caption">
+            {t('roadmap.brief.scope', 'Bundled roadmap entries, not live deployment or release telemetry.')}
+          </Text>
+        )}
 
         {list.length === 0 ? (
           <GlassPanel className="p-4 sm:p-5">

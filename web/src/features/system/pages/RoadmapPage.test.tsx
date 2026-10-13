@@ -36,7 +36,7 @@
  * that removes animation-frame nondeterminism from jsdom.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
 vi.mock('@/hooks/useSettings', async importOriginal => ({
@@ -52,6 +52,7 @@ vi.mock('react-i18next', async () => {
     ...actual,
     useTranslation: () => ({
       t: (key: string, fallbackOrOpts?: unknown, opts?: unknown) => {
+        translationKeys.push(key);
         if (typeof fallbackOrOpts === 'string') {
           if (opts && typeof opts === 'object') {
             const o = opts as Record<string, unknown>;
@@ -79,6 +80,9 @@ vi.mock('@/components/motion', () => ({
   StaggerContainer: ({ children }: { children?: ReactNode }) => <>{children}</>,
   StaggerItem: ({ children }: { children?: ReactNode }) => <>{children}</>,
 }));
+
+// Record translation identities without changing the original fallback assertions.
+const { translationKeys } = vi.hoisted(() => ({ translationKeys: [] as string[] }));
 
 import RoadmapPage from './RoadmapPage';
 import { __resetTitleStoreForTests } from '@/lib/titleStore';
@@ -120,6 +124,7 @@ function cardByTitle(title: string): HTMLElement {
 }
 
 beforeEach(() => {
+  translationKeys.length = 0;
   __resetTitleStoreForTests();
 });
 afterEach(() => {
@@ -348,5 +353,64 @@ describe('RoadmapPage — data integrity', () => {
       const card = heading.closest('[data-print-card]') as HTMLElement;
       expect(within(card).getAllByRole('listitem').length).toBeGreaterThan(0);
     });
+  });
+});
+
+
+describe('RoadmapPage — restrained adoption and preserved evidence', () => {
+  it('uses semantic status badges without decorative card glows or warning-colored future promises', () => {
+    renderPage();
+
+    for (const [title, tone] of [
+      ['Core Platform', 'success'],
+      ['Reliability & Data Trust', 'info'],
+      ['Helix Quality & Cost Controls', 'neutral'],
+      ['Energy Ecosystem', 'neutral'],
+    ]) {
+      const card = cardByTitle(title);
+      const label = within(card).getByText(tone === 'success' ? 'Completed' : tone === 'info' ? 'Active focus' : title === 'Energy Ecosystem' ? 'Future' : 'Up next');
+      expect(label).toHaveClass('forced-colors:border');
+      expect(label).toHaveClass(tone === 'neutral' ? 'text-[var(--text-secondary)]' : `text-[var(--semantic-${tone})]`);
+      expect(card.querySelector('[class*="blur-"]')).toBeNull();
+      expect(label.parentElement).toHaveClass('flex-wrap');
+    }
+  });
+
+  it('retains all 98 feature bullets and independent phase sections with bundled-source provenance', () => {
+    renderPage();
+
+    const counts = ['Completed', 'Active focus', 'Up next', 'Future'].map(name =>
+      phase(name).getAllByRole('listitem').length,
+    );
+    expect(counts).toEqual([70, 4, 8, 16]);
+    expect(counts.reduce((total, count) => total + count, 0)).toBe(98);
+    expect(phase('Completed').getByText('Bundled roadmap entries, not live deployment or release telemetry.')).toBeInTheDocument();
+    expect(kpi().getByText('Source observation time not supplied')).toBeInTheDocument();
+  });
+
+  it('routes all original first-five entry strings through stable localization identities', () => {
+    renderPage();
+
+    for (const [id, featureCount] of [
+      ['corePlatform', 11], ['smartNotifications', 9],
+      ['intelligenceObservability', 8], ['fleetTelemetry', 7], ['designSystem', 8],
+    ] as const) {
+      expect(translationKeys).toContain(`roadmap.entries.${id}.title`);
+      expect(translationKeys).toContain(`roadmap.entries.${id}.description`);
+      for (let index = 0; index < featureCount; index += 1) {
+        expect(translationKeys).toContain(`roadmap.entries.${id}.features.${index}`);
+      }
+    }
+  });
+
+  it('keeps the existing review-details action and roadmap sections reachable while the drawer is open', () => {
+    renderPage();
+
+    fireEvent.click(kpi().getByRole('button', { name: 'Review details' }));
+    expect(screen.getByRole('dialog', { name: 'Roadmap overview details' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Completed' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Future' })).toBeInTheDocument();
+    fireEvent.click(within(screen.getByRole('dialog', { name: 'Roadmap overview details' })).getAllByRole('button', { name: 'Close' })[0]);
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 });
