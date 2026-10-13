@@ -83,7 +83,7 @@ describe('advanced intelligence writes', () => {
     [useCreateResiliencePlan, 'resilience/plans', false],
     [useRunTCOOptimizer, 'tco-optimizer/scenarios', false],
     [useStartFederatedRound, 'federated-learning/rounds', true],
-    [useCreateCausalExperiment, 'causal-experiments', false],
+    [useCreateCausalExperiment, 'causal-experiments', true],
   ] as const;
 
   it.each(writes)(
