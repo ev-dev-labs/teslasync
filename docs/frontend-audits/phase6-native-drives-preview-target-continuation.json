@@ -1,0 +1,322 @@
+{
+  "schema_version": 1,
+  "item": "phase6-native-drives-preview-mobile-target",
+  "continuation": 2,
+  "status": "NARROW_REMAINING_NATIVE_TARGETS_CONFIRMED",
+  "whole_pilot_status": "PARTIAL_NOT_ACCEPTED",
+  "source_acceptance_distinct_from_native_pilot": true,
+  "owned_files": [
+    "docs\\frontend-audits\\phase6-native-drives-preview-target-continuation.json",
+    "logs\\phase6-native-drives-preview-target-continuation.log"
+  ],
+  "history_preserved": {
+    "accepted_source_commit": "9d3f346383136658edf984cd818889fe85f0d5fe",
+    "existing_real_passed_tests": 33,
+    "tests_rerun": false,
+    "original_native_receipt": "web\\logs\\phase6-native-drives-preview-mobile-target-native.json",
+    "original_native_sha256_before_and_after": "becc17d00f418210e0b74c95c757d324ebb64ca2be452637e6272bf678ccb5d2",
+    "original_native_duration_seconds": 1193.544,
+    "original_native_started_at": "2026-10-13T15:33:32.338Z",
+    "original_native_closed_at": "2026-10-13T15:53:25.882Z",
+    "source_sha256_matches_prior_receipt": "13cac27362a7f9fdae35effd3751c10dbbae066d4968e7d8052b070b7293378c",
+    "test_sha256_matches_prior_receipt": "e49539a3f1b863d22a5e818b62827ee33b9586ce9089929d8697c26c6ab636a9",
+    "prior_375_767_768_proof_rerun": false,
+    "prior_1440_distinct_table_control_rerun_or_reclassified": false,
+    "source_rework": false,
+    "catalog_writes": false,
+    "git_used": false
+  },
+  "execution": {
+    "task_creation_clock_from_assignment": "2026-10-13T18:15:54.689Z",
+    "first_actual_terminal_clock": "2026-10-13T18:17:37.2410840Z",
+    "ten_minute_target": "2026-10-13T18:25:54.689Z",
+    "twenty_minute_max": "2026-10-13T18:35:54.689Z",
+    "twenty_five_minute_hard_deadline": "2026-10-13T18:40:54.689Z",
+    "initial_owned_context_created_at": "2026-10-13T18:20:16.623Z",
+    "initial_guard_installed_at": "2026-10-13T18:20:16.678Z",
+    "initial_navigation_at": "2026-10-13T18:20:21.839Z",
+    "initial_owned_context_close_verified_at": "2026-10-13T18:22:19.891Z",
+    "recovered_owned_context_created_at": "2026-10-13T18:23:03.813Z",
+    "recovered_guard_installed_at": "2026-10-13T18:23:03.814Z",
+    "mobile_flows_finished_at": "2026-10-13T18:25:04.842Z",
+    "last_native_observation_at": "2026-10-13T18:26:12.913Z",
+    "owned_context_close_exact_timestamp": "NOT_RETAINED_EXPORT_FAILED",
+    "owned_context_close_completed_before": "2026-10-13T18:27:25.553Z",
+    "cleanup_verified_at": "2026-10-13T18:27:25.553Z",
+    "task_creation_to_cleanup_verified_seconds": 690.864,
+    "first_context_to_cleanup_verified_seconds": 428.93,
+    "ten_minute_target_exceeded": true,
+    "twenty_minute_max_or_hard_limit_exceeded_at_browser_release": false,
+    "recovery_did_not_reset_clock": true,
+    "no_new_browser_work_after_cleanup_verification": true
+  },
+  "scope_and_safety": {
+    "preview": "http://localhost:5173",
+    "route": "/drives?vehicle_id=4&from=2026-10-08&to=2026-10-13",
+    "only_fixture": 4,
+    "fixture_drive_ids": [190, 191],
+    "provider": "Playwright MCP only",
+    "chrome_provider_used": false,
+    "shared_server_changed": false,
+    "fresh_browser_owned_context": true,
+    "context_guards_installed_before_each_initial_navigation": true,
+    "context_guard_survived_all_viewport_changes_and_detail_navigation": true,
+    "allowed_origin": "http://localhost:5173",
+    "allowed_methods": ["GET", "HEAD", "OPTIONS"],
+    "other_http_requests": "aborted; no fulfill or mock response",
+    "initial_guard_counter_snapshot": {
+      "navigation_artifact_at": "2026-10-13T18:20:21.839Z",
+      "counter_snapshot_exact_clock": "NOT_RETAINED",
+      "allowed": 843,
+      "blocked": 3,
+      "whole_session_count": false
+    },
+    "recovered_guard_blocked_mutation_snapshot": {
+      "at": "2026-10-13T18:26:12.913Z",
+      "count": 0,
+      "whole_session_count": false
+    },
+    "whole_session_request_counts": "NOT_RETAINED; first VM instrumentation handle was unavailable and final export failed",
+    "explicit_local_storage_writes_only": {
+      "teslasync-selected-vehicle": "4",
+      "teslasync:changelog:seen-version": "0.7.0"
+    },
+    "automatic_existing_recent_navigation_storage": "May update through genuine detail navigation; no explicit preference or other localStorage edits.",
+    "server_preference_writes": false,
+    "response_mocks": 0,
+    "response_fulfill_calls": 0,
+    "paid_write_reset_download_export_seed_actions": 0,
+    "physical_device_claim": false,
+    "touch_emulation": "Fresh Playwright context hasTouch:true/isMobile:true; native page.touchscreen.tap. No dispatchEvent.",
+    "roster_status": 200,
+    "fixture4_exists_and_name_drill": true,
+    "roster_contains_nonfixture": true,
+    "nonfixture_identities_captured": false,
+    "initial_nonfixture_visible_count": 0,
+    "final_nonfixture_visible_count": 0,
+    "initial_vin_pattern_count": 0,
+    "final_vin_pattern_count": 0,
+    "final_privacy_check_at": "2026-10-13T18:26:12.912Z"
+  },
+  "range_and_fixture_limits": {
+    "actual_selected_display": "2026-10-08 → 2026-10-13",
+    "actual_selected_route_from": "2026-10-08",
+    "actual_selected_route_to": "2026-10-13",
+    "completed190": true,
+    "ongoing191": true,
+    "actual_returned_row_context_from_preserved_receipts": {
+      "190": {"vehicle_id": 4, "start_ts": "2026-10-09T06:17:43.860814Z", "end_ts": "2026-10-09T07:52:43.860814Z", "duration_s": 5700, "distance_m": 195000},
+      "191": {"vehicle_id": 4, "start_ts": "2026-10-12T04:17:43.860814Z", "end_ts": null, "duration_s": 0, "distance_m": 0}
+    },
+    "existing_padded_query_from_prior_native_receipt": "/api/v1/drives?vehicle_id=4&start=2026-10-01&end=2026-10-14&limit=1000",
+    "prior_query_evidence_owner": "docs\\frontend-audits\\phase6-native-drives-count-caption.json",
+    "current_detailed_query_trace": "NOT_RETAINED_EXPORT_FAILED",
+    "caveat": "Selected Oct8-Oct13 is not the padded Oct1-Oct14 request. Both fixture start timestamps fall in the selected display window. These target/preview checks do not establish exact backend range filtering, pagination completeness, full-range chart correctness or all row-boundary cases."
+  },
+  "mobile_actual_measurements": [
+    {
+      "viewport": [320, 844],
+      "document_width": 320,
+      "coarse_pointer": true,
+      "max_touch_points": 1,
+      "targets": [
+        {"drive_id": 190, "at": "2026-10-13T18:24:58.781Z", "rect": [246, 519.5, 44, 44], "computed_minima": ["44px", "44px"], "main_scroll_top": 3622},
+        {"drive_id": 191, "at": "2026-10-13T18:24:59.832Z", "rect": [246, 519.5, 44, 44], "computed_minima": ["44px", "44px"], "main_scroll_top": 3339}
+      ],
+      "five_points_per_target": [[268, 541.5], [247, 541.5], [289, 541.5], [268, 520.5], [268, 562.5]],
+      "accepted_actual_hit_points": 10,
+      "actual_touch_preview_escape_focus_flows": 10,
+      "passed": 10,
+      "failed": 0
+    },
+    {
+      "viewport": [390, 844],
+      "document_width": 390,
+      "coarse_pointer": true,
+      "max_touch_points": 1,
+      "targets": [
+        {"drive_id": 190, "at": "2026-10-13T18:25:00.865Z", "rect": [316, 500.25, 44, 44], "computed_minima": ["44px", "44px"], "main_scroll_top": 3235},
+        {"drive_id": 191, "at": "2026-10-13T18:25:01.947Z", "rect": [316, 500.25, 44, 44], "computed_minima": ["44px", "44px"], "main_scroll_top": 3036}
+      ],
+      "five_points_per_target": [[338, 522.25], [317, 522.25], [359, 522.25], [338, 501.25], [338, 543.25]],
+      "accepted_actual_hit_points": 10,
+      "actual_touch_preview_escape_focus_flows": 10,
+      "passed": 10,
+      "failed": 0
+    },
+    {
+      "viewport": [430, 844],
+      "document_width": 430,
+      "coarse_pointer": true,
+      "max_touch_points": 1,
+      "targets": [
+        {"drive_id": 190, "at": "2026-10-13T18:25:02.965Z", "rect": [356, 491.75, 44, 44], "computed_minima": ["44px", "44px"], "main_scroll_top": 3064},
+        {"drive_id": 191, "at": "2026-10-13T18:25:03.983Z", "rect": [356, 491.75, 44, 44], "computed_minima": ["44px", "44px"], "main_scroll_top": 2894}
+      ],
+      "five_points_per_target": [[378, 513.75], [357, 513.75], [399, 513.75], [378, 492.75], [378, 534.75]],
+      "accepted_actual_hit_points": 10,
+      "actual_touch_preview_escape_focus_flows": 10,
+      "passed": 10,
+      "failed": 0
+    }
+  ],
+  "native_flow_contract_actually_executed": {
+    "target_locator": "a[href=\"/drives/{190|191}\"] parent row > button with exact accessible name Quick view drive",
+    "hit_test": "document.elementFromPoint at center, x-21, x+21, y-21, y+21; hit must be the real button or its descendant.",
+    "actual_touch_api": "page.touchscreen.tap at each of all five measured points, for both actual fixture rows at each remaining mobile width",
+    "dialog_assertions": ["visible actual dialog", "Completed for190 / In progress for191", "related vehicle4 link", "focus inside dialog"],
+    "dismissal_assertions": ["actual Escape", "dialog hidden", "original trigger regains focus", "URL unchanged", "checkbox selection unchanged"],
+    "actual_touch_preview_escape_focus_flows": 30,
+    "passed": 30,
+    "failed": 0,
+    "additional_exact_route_flows": [
+      {"at": "2026-10-13T18:25:54.991Z", "viewport": [430, 844], "trigger_drive_id": 190, "actual_path": "/drives/190", "real_preview_and_primary_action_touch": true, "primary_action_center_hit": true, "dialog_gone": true, "passed": true},
+      {"at": "2026-10-13T18:26:04.663Z", "viewport": [430, 844], "trigger_drive_id": 191, "actual_path": "/drives/191", "real_preview_and_primary_action_touch": true, "primary_action_center_hit": true, "dialog_gone": true, "passed": true}
+    ],
+    "actual_touchscreen_taps_total": 34,
+    "detail_page_render_acceptance": false,
+    "independent_detail_keyboard_flow_rerun": false,
+    "new_enter_space_reruns": 0,
+    "detailed_individual_flow_chronology": "NOT_RETAINED_EXPORT_FAILED; actual completed aggregate MCP result retained verbatim in the owned log"
+  },
+  "wider_card_applicability": {
+    "source_boundary": {
+      "file": "web\\src\\features\\driving\\hooks\\useDrivesListPageData.ts",
+      "line": 30,
+      "expression": "useMediaQuery('(min-width: 1024px)')",
+      "branch_owner": "web\\src\\features\\driving\\components\\drives-orchestrator\\DrivesEvidenceSection.tsx",
+      "card_owner": "web\\src\\features\\driving\\components\\drives-orchestrator\\DrivesMobileEvidence.tsx",
+      "card_button_file": "web\\src\\features\\driving\\components\\DriveCard.tsx",
+      "card_button_line": 197,
+      "distinct_table_button_file": "web\\src\\features\\driving\\components\\DrivesEvidenceTable.tsx",
+      "distinct_table_button_line": 463
+    },
+    "mounted_1023": {
+      "at": "2026-10-13T18:26:12.666Z",
+      "viewport": [1023, 844],
+      "document_width": 1023,
+      "coarse_pointer": true,
+      "max_touch_points": 1,
+      "desktop_evidence_media": false,
+      "card_container_count": 1,
+      "targets": [
+        {"drive_id": 191, "rect": [949, 457.75, 36, 36], "computed_minima": ["0px", "0px"], "inside_card_list": true, "inside_table": false, "center_hit": true},
+        {"drive_id": 190, "rect": [949, 610.65625, 36, 36], "computed_minima": ["0px", "0px"], "inside_card_list": true, "inside_table": false, "center_hit": true}
+      ],
+      "result": "Actual mounted wider DriveCard restores36x36/minima0. This emulated coarse-pointer observation is not a physical-device or fine-pointer desktop acceptance claim."
+    },
+    "not_applicable_1024": {
+      "at": "2026-10-13T18:26:12.860Z",
+      "viewport": [1024, 844],
+      "document_width": 1024,
+      "desktop_evidence_media": true,
+      "card_container_count": 0,
+      "distinct_table_controls": [
+        {"drive_id": 191, "rect": [3097.078125, 564.75, 32, 32], "inside_card_list": false, "inside_table": true, "center_hit": false},
+        {"drive_id": 190, "rect": [3097.078125, 625.75, 32, 32], "inside_card_list": false, "inside_table": true, "center_hit": false}
+      ],
+      "result": "DriveCard is not mounted at the desktop-evidence boundary. Table targets remain horizontally outside this unscrolled contained table view; no table hit acceptance or new table bug is inferred."
+    },
+    "1440": "Prior absence/different32px table control preserved unchanged; NOT RERUN and not claimed as DriveCard."
+  },
+  "captures": {
+    "new_images": 0,
+    "continuation_image_limit": 2,
+    "prior_default_captures": "Preserved in the unchanged original native receipt; not recaptured, relocated or reclassified.",
+    "new_visual_screenshot_acceptance": false,
+    "identity_capture": false
+  },
+  "retained_nonpassing_trials_and_limits": [
+    {
+      "kind": "instrumentation",
+      "error": "Error: SAFETY_UNAVAILABLE",
+      "detail": "VM-global handle did not survive the second MCP invocation. The installed context guard was not removed. The failed invocation performed no navigation/emulation/action. Owned context was closed before a newly guarded context used the persistent actual provider-page handle."
+    },
+    {
+      "kind": "scroll-position candidate",
+      "at": "2026-10-13T18:23:58.486Z",
+      "viewport": [320, 844],
+      "drive_id": 190,
+      "rect": [246, 645.5, 44, 44],
+      "actual_five_hits": [true, true, true, true, false],
+      "detail": "Initial scrollIntoView placement left the y+21 point occluded. Existing MAIN was scrolled into an actually hit-tested position; no source or preference change. The initial failed placement is retained, not counted among accepted measurements and not presented as a product fix."
+    },
+    {
+      "kind": "raw-export limitation",
+      "error": "TypeError [ERR_VM_DYNAMIC_IMPORT_CALLBACK_MISSING]: A dynamic import callback was not specified.",
+      "detail": "Final attempted node:fs import failed after own page/context/routes were closed and handle removed. No file write occurred. Raw successful MCP results are copied verbatim into the owned log. Detailed in-memory console/request/flow chronology and exact close timestamp are unavailable, not fabricated."
+    },
+    {
+      "kind": "terminal clock arithmetic",
+      "at": "2026-10-13T18:31:59.0231719Z",
+      "invalid_displayed_elapsed_seconds": -24235.666,
+      "second_invalid_displayed_elapsed_seconds": -24194.0993529,
+      "second_clock_command_exit": 1,
+      "detail": "ConvertFrom-Json automatically materialized timestamps as dates; subsequent DateTime/DateTimeOffset parsing used converted representations rather than original ISO8601 strings. Both invalid negative duration outputs remain in the log and are not accepted as timing evidence. Final correction extracts exact strings with System.Text.Json before UTC DateTimeOffset arithmetic and checks nonnegative elapsed below1200s. Native timestamps and browser-close upper bound above are unaffected."
+    }
+  ],
+  "errors_and_warnings_not_waived": {
+    "new_http_error_snapshot_at": "2026-10-13T18:26:12.913Z",
+    "new_http_error_snapshot_counts": {"404": 14, "429": 14, "501": 32, "503": 9},
+    "snapshot_is_whole_session_count": false,
+    "new_detailed_console_and_http_trace": "NOT_RETAINED_EXPORT_FAILED",
+    "no_errors_or_page_exceptions_claim": false,
+    "prior_http_counts_preserved_in_original_raw_receipt": {"404": 4, "429": 3, "501": 32, "503": 14},
+    "prior_raw_log_500_substring_matches": 4,
+    "500_substring_matches_are_http500_response_count": false,
+    "prior_500_and_other_warning_text": "Preserved by leaving original raw logs untouched. No existing API/resource warning, failing request, rate limit or pilot limitation is cleared by these target checks."
+  },
+  "validation": {
+    "source_and_test_hash_check_exit": 0,
+    "original_native_before_after_hash_check_exit": 0,
+    "typescript": "NOTRUN: no source/test changes; assignment forbids new full checks",
+    "tests": "NOTRUN: existing33 real passing cases reused; no changed test/source files",
+    "lint_and_violation_audit": "NOTRUN: evidence-only assignment, not source rework",
+    "line_section_hook_revalidation": "NOTRUN: no page/hook changes and no full source campaign requested",
+    "json_and_numeric_consistency_validation": "PASS: bounded assigned-report JSON/numeric/protected-SHA256 command, actual exit0 at2026-10-13T18:31:05.4661071Z; raw output appended to owned log",
+    "document_validation_exit": 0,
+    "full_suites_phase_gates_deployment": "NOTRUN"
+  },
+  "not_run_or_not_accepted": [
+    "Whole Drive History, original pilot, combined Phase6 or Phase7 acceptance.",
+    "New visual captures, alternate saved layouts/themes, physical mobile device, fine-pointer desktop, contrast, RTL, zoom, long text, forced colors, reduced motion, axe or Lighthouse.",
+    "API/filter/pagination correctness, complete detail-page rendering and all empty/error/loading business states.",
+    "Distinct1024/1440 table controls as DriveCard or as newly accepted touch targets.",
+    "Fresh tests, TypeScript, lint, source/catalog/API edits, mocks, seed changes, paid/mutating actions or new helpers."
+  ],
+  "release": {
+    "verified_at": "2026-10-13T18:27:25.553Z",
+    "owned_open_pages": 0,
+    "remaining_browser_contexts": 1,
+    "provider_default_page": "about:blank",
+    "provider_default_page_preserved": true,
+    "own_two_contexts_closed": true,
+    "own_routes_closed_or_unrouted": true,
+    "owned_provider_handle_present": false,
+    "browser_claim_released": true,
+    "report_log_command_claims": "ALL RELEASED on successful final document-verification exit; final actual UTC recorded in owned log. No running commands or post-return writes.",
+    "source_test_catalog_claims": "READONLY throughout"
+  },
+  "files_read": [
+    "docs\\orchestrator-loop.md",
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-design-contract.md",
+    "docs\\session-handoff.md",
+    "docs\\frontend-audits\\phase6-native-mobile-targets-20261013.json",
+    "docs\\frontend-audits\\phase6-native-drives-count-caption.json",
+    "web\\logs\\phase6-native-drives-preview-mobile-target-native.json",
+    "web\\logs\\phase6-native-drives-preview-mobile-target-native.log",
+    "web\\logs\\phase6-native-drives-preview-mobile-target.json",
+    "web\\src\\features\\driving\\components\\DriveCard.tsx",
+    "web\\src\\features\\driving\\components\\DriveCard.test.tsx (hash only)",
+    "web\\src\\features\\driving\\pages\\DrivesListPage.tsx",
+    "web\\src\\features\\driving\\hooks\\useDrivesListPageData.ts",
+    "web\\src\\features\\driving\\components\\drives-orchestrator\\DrivesEvidenceSection.tsx",
+    "web\\src\\features\\driving\\components\\drives-orchestrator\\DrivesMobileEvidence.tsx",
+    "web\\src\\features\\driving\\components\\continuation-driving-primary\\DrivePreview.tsx",
+    "web\\src\\features\\driving\\components\\DrivesEvidenceTable.tsx",
+    "web\\src\\components\\data-display\\HistoryListRow.tsx",
+    ".github\\instructions\\react-frontend.instructions.md",
+    ".github\\instructions\\frontend-si-cutover.instructions.md"
+  ]
+}
