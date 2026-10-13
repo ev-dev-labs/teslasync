@@ -59,6 +59,7 @@ export function FleetAPIPolling({ controller }: Props) {
                   {t('fleetApi.polling.emergencyNote', 'API actions were suspended previously; supported live requests and commands are blocked. Token refresh continues.')}
                 </InlineCallout>
                 <Button variant="secondary" size="sm" disabled={suspendMut.isPending}
+                  className="h-11 min-h-11 min-w-11 md:h-9 md:min-h-0 md:min-w-0"
                   onClick={() => suspendMut.mutate(false)}>
                   {t('fleetApi.polling.resumeActions', 'Resume API actions')}
                 </Button>
