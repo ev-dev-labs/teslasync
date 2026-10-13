@@ -5,11 +5,11 @@ import {
 } from 'lucide-react';
 
 import { PageLayout } from '@/components/layout';
-import { GlassPanel, PanelTitle } from '@/components/ui';
+import { GlassPanel, Icon, PanelTitle } from '@/components/ui';
 
 import { OperationalBrief } from '@/components/data-display';
 import {
-  ChartTooltip, CHART_COLORS,
+  ChartTooltip,
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   EmbeddedChart, type ChartDataColumn,
 } from '@/components/charts';
@@ -23,12 +23,15 @@ import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useDataState } from '@/hooks/useDataState';
 import { useOperationalMetrics } from '@/hooks/useOperationalMetrics';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { chartTokens, typography } from '@/lib/tokens';
 
 import { AnomalyTimelineCard, SystemHealthCard } from '../components/anomaly-dashboard';
 import { anomalySummary } from '../components/statstrip-anomaly/anomalySummary';
 
 export default function AnomalyDashboardPage() {
   const { t } = useTranslation();
+  const { fmtInt } = useNumberFormatting();
   usePageTitle(t('anomaly.title', 'Anomaly detection'));
 
   const { vehicleId: selectedId } = useSelectedVehicle();
@@ -67,7 +70,7 @@ export default function AnomalyDashboardPage() {
   const signalFrequencyColumns = useMemo<ChartDataColumn[]>(
     () => [
       { key: 'signal', label: t('anomaly.colSignal', 'Signal') },
-      { key: 'count', label: t('anomaly.count', 'Anomalies'), format: (v) => String(v ?? 0) },
+      { key: 'count', label: t('anomaly.count', 'Anomalies'), kind: 'count' },
     ],
     [t],
   );
@@ -127,9 +130,13 @@ export default function AnomalyDashboardPage() {
           className="grid grid-cols-1 gap-4 xl:grid-cols-3"
         >
           {/* Frequency chart — spans two columns on wide screens. */}
-          <GlassPanel className="p-4 sm:p-5 xl:col-span-2">
-            <PanelTitle className="mb-3 flex items-center gap-2">
-              <BarChart3 className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+          <GlassPanel
+            role="region"
+            aria-label={t('anomaly.frequency', 'Most frequent anomalies')}
+            className="min-w-0 p-4 sm:p-5 xl:col-span-2"
+          >
+            <PanelTitle as="h2" className="mb-3 flex items-center gap-2 break-words">
+              <Icon icon={BarChart3} className={typography.color.secondary} />
               {t('anomaly.frequency', 'Most frequent anomalies')}
             </PanelTitle>
             {isLoading ? (
@@ -138,11 +145,11 @@ export default function AnomalyDashboardPage() {
               <QueryError error={error} onRetry={handleRetry} />
             ) : signalFrequency.length === 0 ? (
               <EmptyState /* no-action: transient — appears until the detector has produced results */
-                icon={<BarChart3 className="h-8 w-8" />}
+                icon={<Icon icon={BarChart3} size="xl" />}
                 message={noVehicle ? emptyMessage : t('anomaly.noFrequency', 'Anomaly frequency data will appear after detection runs.')}
               />
             ) : (
-              <div className="h-72 sm:h-80">
+              <div className="h-72 min-w-0 sm:h-80">
                 <EmbeddedChart
                   title={t('anomaly.frequency', 'Most frequent anomalies')}
                   ariaLabel={t('anomaly.frequencyAria', 'Bar chart of the most frequently anomalous signals')}
@@ -152,11 +159,11 @@ export default function AnomalyDashboardPage() {
                 >
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={signalFrequency} layout="vertical" margin={{ left: 8, right: 16 }}>
-                      <CartesianGrid horizontal={false} strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
-                      <XAxis type="number" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} tickLine={false} axisLine={false} allowDecimals={false} />
-                      <YAxis dataKey="signal" type="category" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} tickLine={false} axisLine={false} width={140} />
-                      <Tooltip content={<ChartTooltip />} cursor={{ fill: 'rgba(255,255,255,0.04)' }} />
-                      <Bar dataKey="count" fill={CHART_COLORS[3]} radius={[0, 4, 4, 0]} name={t('anomaly.count', 'Anomalies')} />
+                      <CartesianGrid horizontal={false} strokeDasharray="3 3" stroke={chartTokens.gridStroke} strokeOpacity={0.4} />
+                      <XAxis type="number" tick={{ fill: chartTokens.axisStroke, className: typography.size.xs }} tickLine={false} axisLine={false} allowDecimals={false} tickFormatter={fmtInt} />
+                      <YAxis dataKey="signal" type="category" tick={{ fill: chartTokens.axisStroke, className: typography.size.xs }} tickLine={false} axisLine={false} width={140} />
+                      <Tooltip content={<ChartTooltip />} cursor={{ fill: chartTokens.brush.fill }} />
+                      <Bar dataKey="count" fill={chartTokens.series[0]} radius={[0, 4, 4, 0]} name={t('anomaly.count', 'Anomalies')} />
                     </BarChart>
                   </ResponsiveContainer>
                 </EmbeddedChart>
@@ -165,9 +172,13 @@ export default function AnomalyDashboardPage() {
           </GlassPanel>
 
           {/* System health — compact side panel of category statuses. */}
-          <GlassPanel className="p-4 sm:p-5">
-            <PanelTitle className="mb-3 flex items-center gap-2">
-              <ShieldCheck className="h-4 w-4 text-emerald-300" aria-hidden="true" />
+          <GlassPanel
+            role="region"
+            aria-label={t('anomaly.healthSummary', 'System health')}
+            className="min-w-0 p-4 sm:p-5"
+          >
+            <PanelTitle as="h2" className="mb-3 flex items-center gap-2 break-words">
+              <Icon icon={ShieldCheck} className={typography.color.secondary} />
               {t('anomaly.healthSummary', 'System health')}
             </PanelTitle>
             {isLoading ? (
@@ -176,7 +187,7 @@ export default function AnomalyDashboardPage() {
               <QueryError error={error} onRetry={handleRetry} />
             ) : healthEntries.length === 0 ? (
               <EmptyState /* no-action: transient — health grid populates once telemetry is available */
-                icon={<HeartPulse className="h-8 w-8" />}
+                icon={<Icon icon={HeartPulse} size="xl" />}
                 message={noVehicle ? emptyMessage : t('anomaly.noHealth', 'Health data will appear once telemetry is available.')}
               />
             ) : (
@@ -192,9 +203,13 @@ export default function AnomalyDashboardPage() {
 
       {/* ── 4. Anomaly timeline — full-width detail band, reflows wide ─ */}
       <FadeIn delay={0.2}>
-        <GlassPanel className="p-4 sm:p-5">
-          <PanelTitle className="mb-3 flex items-center gap-2">
-            <AlertTriangle className="h-4 w-4 text-amber-300" aria-hidden="true" />
+        <GlassPanel
+          role="region"
+          aria-label={t('anomaly.timeline', 'Anomaly timeline')}
+          className="min-w-0 p-4 sm:p-5"
+        >
+          <PanelTitle as="h2" className="mb-3 flex items-center gap-2 break-words">
+            <Icon icon={AlertTriangle} className={typography.color.secondary} />
             {t('anomaly.timeline', 'Anomaly timeline')}
           </PanelTitle>
           {isLoading ? (
@@ -207,8 +222,8 @@ export default function AnomalyDashboardPage() {
             <QueryError error={error} onRetry={handleRetry} />
           ) : anomalies.length === 0 ? (
             <EmptyState /* no-action: healthy state — no anomalies detected, nothing to recover */
-              icon={<ShieldCheck className="h-8 w-8" />}
-              message={noVehicle ? emptyMessage : t('anomaly.noAnomalies', 'No anomalies detected — all systems normal.')}
+              icon={<Icon icon={ShieldCheck} size="xl" />}
+              message={noVehicle || !state.hasData ? emptyMessage : t('anomaly.noAnomalies', 'No anomalies detected — all systems normal.')}
             />
           ) : (
             <ul className="grid grid-cols-1 gap-3 md:grid-cols-2 2xl:grid-cols-3 3xl:grid-cols-4">
