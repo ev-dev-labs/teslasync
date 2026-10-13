@@ -930,6 +930,7 @@
       "plan": {
         "bands": "Price bands",
         "compare": "Compare",
+        "compareNamed": "Compare {{name}}",
         "current": "Current",
         "demand": "Demand charge",
         "name": "Plan",

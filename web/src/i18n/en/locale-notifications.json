@@ -794,6 +794,63 @@
       "achievement": "Achievements"
     }
   },
+  "quietHours": {
+    "title": "Quiet hours / do-not-disturb",
+    "subtitle": "Defer non-critical notifications during sleep, meetings, or other time-of-day windows.",
+    "addWindow": "Add window",
+    "edit": "Edit",
+    "delete": "Delete",
+    "enabled": "Enabled",
+    "disabled": "Disabled",
+    "loading": "Loading quiet-hours windows…",
+    "empty": "No quiet-hours windows yet. Add one to defer non-critical notifications during sleep or meetings.",
+    "bypassLabel": "Always allow:",
+    "deferred": "DND deferred",
+    "deferredTooltip": "Held until the active quiet-hours window ends.",
+    "form": {
+      "addTitle": "New quiet-hours window",
+      "editTitle": "Edit window",
+      "enabled": "Enabled",
+      "start": "Start",
+      "end": "End",
+      "timezone": "Timezone (IANA)",
+      "weekdays": "Weekdays",
+      "bypass": "Always allow these severities through",
+      "create": "Create",
+      "update": "Update",
+      "cancel": "Cancel",
+      "saving": "Saving…",
+      "unsaved": "You have unsaved quiet-hours changes. Discard them?"
+    },
+    "weekday": {
+      "sun": "Sun",
+      "mon": "Mon",
+      "tue": "Tue",
+      "wed": "Wed",
+      "thu": "Thu",
+      "fri": "Fri",
+      "sat": "Sat"
+    },
+    "severity": {
+      "info": "Info",
+      "warn": "Warning",
+      "critical": "Critical"
+    },
+    "error": {
+      "startInvalid": "Start must be HH:MM (24-hour).",
+      "endInvalid": "End must be HH:MM (24-hour).",
+      "endEqual": "End must differ from start.",
+      "timezoneRequired": "Timezone is required.",
+      "weekdaysRequired": "Pick at least one weekday.",
+      "bypassRequired": "Pick at least one severity.",
+      "missingDraft": "The quiet-hours draft is unavailable. Reopen the editor."
+    },
+    "deleteConfirm": {
+      "title": "Delete this quiet-hours window?",
+      "message": "Notifications will no longer be deferred during this window. This cannot be undone."
+    },
+    "unavailable": "Quiet-hours windows unavailable."
+  },
   "webhookChannels": {
     "title": "Webhook channels",
     "subtitle": "Forward TeslaSync notifications to Discord, Slack, n8n, Home Assistant, or any HTTP receiver. Each channel can be HMAC-signed so receivers can verify authenticity.",
@@ -2657,61 +2714,6 @@
       "statusNetwork": "Active — your browser or network reported Data Saver / a 2G-class connection.",
       "statusOff": "Not active — the app is using full quality.",
       "statusUser": "Active — enabled manually on this device."
-    }
-  },
-  "quietHours": {
-    "addWindow": "Add window",
-    "bypassLabel": "Always allow:",
-    "delete": "Delete",
-    "deleteConfirm": {
-      "message": "Notifications will no longer be deferred during this window. This cannot be undone.",
-      "title": "Delete this quiet-hours window?"
-    },
-    "disabled": "Disabled",
-    "edit": "Edit",
-    "empty": "No quiet-hours windows yet. Add one to defer non-critical notifications during sleep or meetings.",
-    "enabled": "Enabled",
-    "error": {
-      "bypassRequired": "Pick at least one severity.",
-      "endEqual": "End must differ from start.",
-      "endInvalid": "End must be HH:MM (24-hour).",
-      "missingDraft": "The quiet-hours draft is unavailable. Reopen the editor.",
-      "startInvalid": "Start must be HH:MM (24-hour).",
-      "timezoneRequired": "Timezone is required.",
-      "weekdaysRequired": "Pick at least one weekday."
-    },
-    "form": {
-      "addTitle": "New quiet-hours window",
-      "bypass": "Always allow these severities through",
-      "cancel": "Cancel",
-      "create": "Create",
-      "editTitle": "Edit window",
-      "enabled": "Enabled",
-      "end": "End",
-      "saving": "Saving…",
-      "start": "Start",
-      "timezone": "Timezone (IANA)",
-      "unsaved": "You have unsaved quiet-hours changes. Discard them?",
-      "update": "Update",
-      "weekdays": "Weekdays"
-    },
-    "loading": "Loading quiet-hours windows…",
-    "severity": {
-      "critical": "Critical",
-      "info": "Info",
-      "warn": "Warning"
-    },
-    "subtitle": "Defer non-critical notifications during sleep, meetings, or other time-of-day windows.",
-    "title": "Quiet hours / do-not-disturb",
-    "unavailable": "Quiet-hours windows unavailable.",
-    "weekday": {
-      "fri": "Fri",
-      "mon": "Mon",
-      "sat": "Sat",
-      "sun": "Sun",
-      "thu": "Thu",
-      "tue": "Tue",
-      "wed": "Wed"
     }
   },
   "range": {

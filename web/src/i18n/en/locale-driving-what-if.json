@@ -760,6 +760,7 @@
     "subtitle": "Replay a real drive under different conditions",
     "takeawayCost": "This would cost an extra {{wh}} — arriving with {{soc}} less battery.",
     "takeawaySave": "This would save {{wh}} — arriving with {{soc}} more battery.",
+    "telemetryAssumptions": "Telemetry is incomplete; elevation and climate use model assumptions, not complete observations.",
     "tireHigh": "Over-inflated (+)",
     "tireLow": "Under-inflated (−)",
     "tireNominal": "Nominal",

@@ -1544,6 +1544,7 @@
     "compOther": "Other",
     "takeawaySave": "This would save {{wh}} — arriving with {{soc}} more battery.",
     "takeawayCost": "This would cost an extra {{wh}} — arriving with {{soc}} less battery.",
+    "telemetryAssumptions": "Telemetry is incomplete; elevation and climate use model assumptions, not complete observations.",
     "brief": {
       "description": "Scenario estimates compared with the selected recorded drive; these are model outputs, not observed savings.",
       "noDrive": "No selected recorded drive",
@@ -6460,6 +6461,15 @@
     "ageMinutes": "{{value}}m",
     "ageHours": "{{value}}h",
     "ageDays": "{{value}}d",
+    "ageFresh": "Fresh",
+    "ageStale": "Stale",
+    "ageVeryStale": "Very stale",
+    "fieldAge": "{{status}} · {{age}}",
+    "fieldAgeLabel": "{{status}} observation, changed {{age}} before the reconstruction instant",
+    "invalidHistory": "Timeline bounds unavailable",
+    "invalidHistoryHint": "Recorded timeline bounds could not be interpreted. No reconstruction instant has been selected.",
+    "pendingReconstruction": "The selected instant is pending. Any retained signals and resolved scope still belong to the previously reconstructed instant.",
+    "selectInstant": "A usable timeline is required before a reconstruction instant can be selected.",
     "category": {
       "battery": "Battery & charge",
       "climate": "Climate",
@@ -20978,6 +20988,7 @@
     "moderate": "Moderate",
     "highConsumption": "High consumption",
     "insightTitle": "Efficiency insight",
+    "insightEvidenceText": "Drives around {{speed}} {{unit}} show the best energy efficiency. This profile does not quantify efficiency gains from reducing highway speed.",
     "insightText": "Drives around {{speed}} {{unit}} show the best energy efficiency. Reducing highway speed could improve efficiency by ~15%.",
     "noData": "No speed profile data available yet",
     "readings": "Readings",
@@ -20993,6 +21004,7 @@
     "noBuckets": "No speed buckets recorded for this window",
     "noScatter": "Not enough drive data for the efficiency scatter yet",
     "noInsight": "Efficiency insight appears once optimal-speed data is available",
+    "sourceBucketUnit": "Source speed buckets are in mph; averages use your selected units.",
     "browseDrives": "Browse drives",
     "brief": {
       "driveCoverageUnknown": "Drive sample coverage is unavailable independently of the speed profile.",
@@ -24076,6 +24088,79 @@
       "future": "Ideas to evaluate, not promised releases."
     },
     "entries": {
+      "corePlatform": {
+        "description": "Real-time fleet monitoring, analytics, and vehicle control",
+        "features": {
+          "0": "Real-time vehicle state tracking via SSE",
+          "1": "Live GPS map with animated markers",
+          "2": "Remote vehicle commands with proxy routing",
+          "3": "Drive and charging session recording",
+          "4": "Energy analytics and efficiency scoring",
+          "5": "Battery health monitoring and degradation tracking",
+          "6": "PWA support — installable on any device",
+          "7": "Command palette (Cmd+K) navigation",
+          "8": "Provisioned Grafana dashboards",
+          "9": "MQTT telemetry publishing",
+          "10": "CSV and JSON data export"
+        },
+        "title": "Core Platform"
+      },
+      "designSystem": {
+        "description": "Shared component library, accessibility, and consistent design language",
+        "features": {
+          "0": "Shared UI library (Button, Input, Select, Modal, DataTable, etc.)",
+          "1": "WCAG AA accessibility — focus traps, keyboard nav, ARIA labels, contrast",
+          "2": "Light and dark mode with 5 neon color themes",
+          "3": "Glassmorphism design tokens and cn() utility",
+          "4": "Route-aware error and loading states",
+          "5": "Global decimal precision control (0–20)",
+          "6": "SVG car visualization per Tesla model",
+          "7": "Page title hooks for screen readers"
+        },
+        "title": "Premium UI & Design System"
+      },
+      "fleetTelemetry": {
+        "description": "Real-time streaming from vehicles via Tesla Fleet Telemetry",
+        "features": {
+          "0": "Full signal ingestion (50+ signals — driving, charging, climate, TPMS)",
+          "1": "Hybrid poll/stream mode (auto-reduces polling when streaming)",
+          "2": "Drive & charge session detection from streaming data",
+          "3": "Alert evaluation from streaming signals",
+          "4": "SSE broadcast of streamed telemetry to frontend",
+          "5": "Per-vehicle streaming health monitoring",
+          "6": "Bundled or external Fleet Telemetry server support"
+        },
+        "title": "Fleet Telemetry"
+      },
+      "intelligenceObservability": {
+        "description": "Advanced analytics, system health, and background processing",
+        "features": {
+          "0": "Fleet analytics with deep drive/charging/battery insights",
+          "1": "System status and component health dashboard",
+          "2": "Helix assistant with typed tools for vehicle queries",
+          "3": "Async export worker (MQTT-backed background jobs)",
+          "4": "Audit trail logging",
+          "5": "API key management with HMAC authentication",
+          "6": "25+ developer tools (VIN decoder, JWT decoder, API diagnostics)",
+          "7": "CI tests gate Docker image builds"
+        },
+        "title": "Intelligence & Observability"
+      },
+      "smartNotifications": {
+        "description": "Multi-channel alerts, scheduling, and custom automation rules",
+        "features": {
+          "0": "Discord, Slack, and Telegram integrations",
+          "1": "Webhook, ntfy, and Pushover channels",
+          "2": "Custom alert rules (battery, speed, charge, geofence, sentry)",
+          "3": "Battery level thresholds with configurable triggers",
+          "4": "Geofence enter/exit notifications",
+          "5": "Charging completion alerts",
+          "6": "Notification history, analytics, and metrics",
+          "7": "Scheduled & recurring notifications",
+          "8": "Per-channel notification preferences"
+        },
+        "title": "Smart Notifications"
+      },
       "history": {
         "title": "Vehicle history & physics",
         "description": "Evidence-led history and explainable vehicle behavior",
@@ -25471,7 +25556,9 @@
       "generateButton": "Narrate trend",
       "noVehicleHint": "Pick a vehicle above to enable Helix."
     },
-    "pressureHistoryAria": "Tire pressure over time for all four positions"
+    "pressureHistoryAria": "Tire pressure over time for all four positions",
+    "pressureWithStatus": "{{value}} {{unit}} · {{status}}",
+    "unknownPressure": "— · Unknown"
   },
   "vehicles": {
     "compareButton": "Compare vehicles",
@@ -26880,6 +26967,9 @@
     "hideEmpty": "Hide empty ({{count}})"
   },
   "signalExplorer": {
+    "catalog": {
+      "empty": "No signals are available for this vehicle yet. Retry the catalog or select another vehicle above."
+    },
     "start": {
       "title": "Pick signals and click explore",
       "message": "Choose up to 5 signals, set a date range, then hit explore — or toggle live to stream in real time.",
@@ -27971,6 +28061,12 @@
   },
   "system": {
     "outage": {
+      "awaitingSource": "This source has not resolved yet; missing evidence is not a confirmed empty result.",
+      "detailsUnavailable": "No replay assurance or outage notes were supplied. Missing details do not establish zero incidents.",
+      "evidenceTitle": "Outage evidence",
+      "pausedSource": "Waiting for a connection before this source can load. Missing evidence remains unknown.",
+      "refreshPaused": "Connection paused; source freshness is not confirmed.",
+      "selectVehicle": "Choose a vehicle in the header to view outage evidence and its session certificate.",
       "title": "Outage autobiography",
       "subtitle": "What queued, what replayed with original event time, what stayed unknown.",
       "certificate": "Session certificate",
@@ -31695,6 +31791,7 @@
     "subtitle": "Removes the four-tire common mode at every sample, so what remains is how each corner moves relative to its peers — an inference, not a manufacturer reading",
     "kpis": "Differential drift metrics",
     "leakCorner": "Likely leak corner",
+    "leakCornerLabel": "{{corner}} · {{status}}",
     "none": "None detected",
     "leakScore": "evidence score {{score}}",
     "imbalance": "Structural imbalance",
@@ -31705,14 +31802,17 @@
     "samples": "Samples analyzed",
     "samplesHint": "{{span}} day span · {{n}} raw rows",
     "noData": "No usable four-corner TPMS history yet. Each row needs a plausible reading on all four tires to compute the common-mode median.",
+    "noDrift": "At least two usable four-corner samples at distinct times are needed to fit a drift rate.",
     "residualTimeline": "Common-mode-removed residuals",
     "residualTimelineHint": "Each corner's deviation from the four-tire median at every sample — shared weather swings cancel out, leaving only relative drift",
     "residualTimelineAria": "Line chart of four tire-corner pressure residuals against the common-mode median over time",
     "col": {
       "time": "Time",
+      "timestamp": "Timestamp (UTC)",
       "corner": "Corner",
       "confidence": "Confidence",
-      "slope": "Slope"
+      "slope": "Slope",
+      "slopeUnit": "Slope ({{unit}}/day)"
     },
     "slopeRanking": "Per-corner drift rate",
     "slopeRankingHint": "Theil-Sen slope of each corner's residual, per day — negative means losing pressure relative to the group",
@@ -35322,6 +35422,7 @@
       "plan": {
         "bands": "Price bands",
         "compare": "Compare",
+        "compareNamed": "Compare {{name}}",
         "current": "Current",
         "demand": "Demand charge",
         "name": "Plan",

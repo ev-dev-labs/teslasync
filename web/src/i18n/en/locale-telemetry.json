@@ -399,6 +399,9 @@
     "rangeText": "{{min}} to {{max}} across {{n}} samples in the last {{h}}h window"
   },
   "signalExplorer": {
+    "catalog": {
+      "empty": "No signals are available for this vehicle yet. Retry the catalog or select another vehicle above."
+    },
     "start": {
       "title": "Pick signals and click explore",
       "message": "Choose up to 5 signals, set a date range, then hit explore — or toggle live to stream in real time.",

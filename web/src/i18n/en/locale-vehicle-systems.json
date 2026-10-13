@@ -1469,6 +1469,7 @@
     "subtitle": "Removes the four-tire common mode at every sample, so what remains is how each corner moves relative to its peers — an inference, not a manufacturer reading",
     "kpis": "Differential drift metrics",
     "leakCorner": "Likely leak corner",
+    "leakCornerLabel": "{{corner}} · {{status}}",
     "none": "None detected",
     "leakScore": "evidence score {{score}}",
     "imbalance": "Structural imbalance",
@@ -1479,14 +1480,17 @@
     "samples": "Samples analyzed",
     "samplesHint": "{{span}} day span · {{n}} raw rows",
     "noData": "No usable four-corner TPMS history yet. Each row needs a plausible reading on all four tires to compute the common-mode median.",
+    "noDrift": "At least two usable four-corner samples at distinct times are needed to fit a drift rate.",
     "residualTimeline": "Common-mode-removed residuals",
     "residualTimelineHint": "Each corner's deviation from the four-tire median at every sample — shared weather swings cancel out, leaving only relative drift",
     "residualTimelineAria": "Line chart of four tire-corner pressure residuals against the common-mode median over time",
     "col": {
       "time": "Time",
+      "timestamp": "Timestamp (UTC)",
       "corner": "Corner",
       "confidence": "Confidence",
-      "slope": "Slope"
+      "slope": "Slope",
+      "slopeUnit": "Slope ({{unit}}/day)"
     },
     "slopeRanking": "Per-corner drift rate",
     "slopeRankingHint": "Theil-Sen slope of each corner's residual, per day — negative means losing pressure relative to the group",
@@ -1542,7 +1546,9 @@
       "generateButton": "Narrate trend",
       "noVehicleHint": "Pick a vehicle above to enable Helix."
     },
-    "pressureHistoryAria": "Tire pressure over time for all four positions"
+    "pressureHistoryAria": "Tire pressure over time for all four positions",
+    "pressureWithStatus": "{{value}} {{unit}} · {{status}}",
+    "unknownPressure": "— · Unknown"
   },
   "vehicleSystems": {
     "brief": {

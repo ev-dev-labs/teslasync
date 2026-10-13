@@ -17,6 +17,7 @@
     "moderate": "Moderate",
     "highConsumption": "High consumption",
     "insightTitle": "Efficiency insight",
+    "insightEvidenceText": "Drives around {{speed}} {{unit}} show the best energy efficiency. This profile does not quantify efficiency gains from reducing highway speed.",
     "insightText": "Drives around {{speed}} {{unit}} show the best energy efficiency. Reducing highway speed could improve efficiency by ~15%.",
     "noData": "No speed profile data available yet",
     "readings": "Readings",
@@ -32,6 +33,7 @@
     "noBuckets": "No speed buckets recorded for this window",
     "noScatter": "Not enough drive data for the efficiency scatter yet",
     "noInsight": "Efficiency insight appears once optimal-speed data is available",
+    "sourceBucketUnit": "Source speed buckets are in mph; averages use your selected units.",
     "browseDrives": "Browse drives",
     "brief": {
       "driveCoverageUnknown": "Drive sample coverage is unavailable independently of the speed profile.",

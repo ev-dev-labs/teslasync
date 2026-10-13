@@ -874,6 +874,79 @@
       "future": "Ideas to evaluate, not promised releases."
     },
     "entries": {
+      "corePlatform": {
+        "description": "Real-time fleet monitoring, analytics, and vehicle control",
+        "features": {
+          "0": "Real-time vehicle state tracking via SSE",
+          "1": "Live GPS map with animated markers",
+          "2": "Remote vehicle commands with proxy routing",
+          "3": "Drive and charging session recording",
+          "4": "Energy analytics and efficiency scoring",
+          "5": "Battery health monitoring and degradation tracking",
+          "6": "PWA support — installable on any device",
+          "7": "Command palette (Cmd+K) navigation",
+          "8": "Provisioned Grafana dashboards",
+          "9": "MQTT telemetry publishing",
+          "10": "CSV and JSON data export"
+        },
+        "title": "Core Platform"
+      },
+      "designSystem": {
+        "description": "Shared component library, accessibility, and consistent design language",
+        "features": {
+          "0": "Shared UI library (Button, Input, Select, Modal, DataTable, etc.)",
+          "1": "WCAG AA accessibility — focus traps, keyboard nav, ARIA labels, contrast",
+          "2": "Light and dark mode with 5 neon color themes",
+          "3": "Glassmorphism design tokens and cn() utility",
+          "4": "Route-aware error and loading states",
+          "5": "Global decimal precision control (0–20)",
+          "6": "SVG car visualization per Tesla model",
+          "7": "Page title hooks for screen readers"
+        },
+        "title": "Premium UI & Design System"
+      },
+      "fleetTelemetry": {
+        "description": "Real-time streaming from vehicles via Tesla Fleet Telemetry",
+        "features": {
+          "0": "Full signal ingestion (50+ signals — driving, charging, climate, TPMS)",
+          "1": "Hybrid poll/stream mode (auto-reduces polling when streaming)",
+          "2": "Drive & charge session detection from streaming data",
+          "3": "Alert evaluation from streaming signals",
+          "4": "SSE broadcast of streamed telemetry to frontend",
+          "5": "Per-vehicle streaming health monitoring",
+          "6": "Bundled or external Fleet Telemetry server support"
+        },
+        "title": "Fleet Telemetry"
+      },
+      "intelligenceObservability": {
+        "description": "Advanced analytics, system health, and background processing",
+        "features": {
+          "0": "Fleet analytics with deep drive/charging/battery insights",
+          "1": "System status and component health dashboard",
+          "2": "Helix assistant with typed tools for vehicle queries",
+          "3": "Async export worker (MQTT-backed background jobs)",
+          "4": "Audit trail logging",
+          "5": "API key management with HMAC authentication",
+          "6": "25+ developer tools (VIN decoder, JWT decoder, API diagnostics)",
+          "7": "CI tests gate Docker image builds"
+        },
+        "title": "Intelligence & Observability"
+      },
+      "smartNotifications": {
+        "description": "Multi-channel alerts, scheduling, and custom automation rules",
+        "features": {
+          "0": "Discord, Slack, and Telegram integrations",
+          "1": "Webhook, ntfy, and Pushover channels",
+          "2": "Custom alert rules (battery, speed, charge, geofence, sentry)",
+          "3": "Battery level thresholds with configurable triggers",
+          "4": "Geofence enter/exit notifications",
+          "5": "Charging completion alerts",
+          "6": "Notification history, analytics, and metrics",
+          "7": "Scheduled & recurring notifications",
+          "8": "Per-channel notification preferences"
+        },
+        "title": "Smart Notifications"
+      },
       "history": {
         "title": "Vehicle history & physics",
         "description": "Evidence-led history and explainable vehicle behavior",
@@ -1110,6 +1183,12 @@
   },
   "system": {
     "outage": {
+      "awaitingSource": "This source has not resolved yet; missing evidence is not a confirmed empty result.",
+      "detailsUnavailable": "No replay assurance or outage notes were supplied. Missing details do not establish zero incidents.",
+      "evidenceTitle": "Outage evidence",
+      "pausedSource": "Waiting for a connection before this source can load. Missing evidence remains unknown.",
+      "refreshPaused": "Connection paused; source freshness is not confirmed.",
+      "selectVehicle": "Choose a vehicle in the header to view outage evidence and its session certificate.",
       "title": "Outage autobiography",
       "subtitle": "What queued, what replayed with original event time, what stayed unknown.",
       "certificate": "Session certificate",
