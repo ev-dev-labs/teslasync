@@ -4,9 +4,8 @@ import { useTranslation } from 'react-i18next';
 import { useDriveCalendarHistory } from '@/api/hooks/useDriving';
 
 import { Grid, PageLayout } from '@/components/layout';
-import { StaleRefreshWarning } from '@/components/feedback';
+import { SectionErrorBoundary, StaleRefreshWarning } from '@/components/feedback';
 import { useDataState } from '@/hooks/useDataState';
-import { FadeIn } from '@/components/motion';
 import { NoVehicleSelected } from '@/features/onboarding/components/NoVehicleSelected';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useRangeState } from '@/hooks/useRangeState';
@@ -80,58 +79,66 @@ export default function DrivingRhythmPage() {
       query={drivesQuery}
     >
       <StaleRefreshWarning state={sourceState} label={t('rhythm.title', 'Driving Rhythm')} />
-      <FadeIn>
+      <SectionErrorBoundary name="DrivingRhythmBrief">
         <DrivingRhythmBrief summary={summary} {...sectionState}
           scope={t('rhythm.brief.window', '{{start}}–{{end}} · {{timezone}}', { start, end, timezone })}
           retained={sourceState.status === 'stale' || sourceState.refreshError != null} />
-      </FadeIn>
+      </SectionErrorBoundary>
 
-      <FadeIn delay={0.05}>
+      <SectionErrorBoundary name="WeeklyPunchcard">
         <WeeklyPunchcard summary={summary} state={sectionState} />
-      </FadeIn>
+      </SectionErrorBoundary>
 
-      <FadeIn delay={0.1}>
-        <Grid cols={SPLIT_COLUMNS} gap={4}>
-          <HourlyDistribution
-            summary={summary}
-            state={sectionState}
-            className="xl:col-span-3"
-          />
-          <WeekdayWeekendComparison
-            summary={summary}
-            state={sectionState}
-            className="xl:col-span-2"
-          />
-        </Grid>
-      </FadeIn>
+      <Grid cols={SPLIT_COLUMNS} gap={4}>
+        <div className="min-w-0 xl:col-span-3">
+          <SectionErrorBoundary name="HourlyDistribution">
+            <HourlyDistribution
+              summary={summary}
+              state={sectionState}
+            />
+          </SectionErrorBoundary>
+        </div>
+        <div className="min-w-0 xl:col-span-2">
+          <SectionErrorBoundary name="WeekdayWeekendComparison">
+            <WeekdayWeekendComparison
+              summary={summary}
+              state={sectionState}
+            />
+          </SectionErrorBoundary>
+        </div>
+      </Grid>
 
-      <FadeIn delay={0.15}>
+      <SectionErrorBoundary name="MonthlyRhythmTrend">
         <MonthlyRhythmTrend summary={summary} state={sectionState} />
-      </FadeIn>
+      </SectionErrorBoundary>
 
-      <FadeIn delay={0.2}>
-        <Grid cols={SPLIT_COLUMNS} gap={4}>
-          <DepartureConsistency
-            summary={summary}
-            state={sectionState}
-            className="xl:col-span-3"
-          />
-          <StrongestSlots
-            summary={summary}
-            state={sectionState}
-            className="xl:col-span-2"
-          />
-        </Grid>
-      </FadeIn>
+      <Grid cols={SPLIT_COLUMNS} gap={4}>
+        <div className="min-w-0 xl:col-span-3">
+          <SectionErrorBoundary name="DepartureConsistency">
+            <DepartureConsistency
+              summary={summary}
+              state={sectionState}
+            />
+          </SectionErrorBoundary>
+        </div>
+        <div className="min-w-0 xl:col-span-2">
+          <SectionErrorBoundary name="StrongestSlots">
+            <StrongestSlots
+              summary={summary}
+              state={sectionState}
+            />
+          </SectionErrorBoundary>
+        </div>
+      </Grid>
 
-      <FadeIn delay={0.25}>
+      <SectionErrorBoundary name="DrivingRhythmMethodology">
         <DrivingRhythmMethodology
           summary={summary}
           start={start}
           end={end}
           state={sectionState}
         />
-      </FadeIn>
+      </SectionErrorBoundary>
     </PageLayout>
   );
 }
