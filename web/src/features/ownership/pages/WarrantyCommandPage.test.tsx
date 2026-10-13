@@ -310,13 +310,13 @@ describe('WarrantyCommandPage — restrained shared adoption', () => {
     mockWarranties.mockReturnValue(makeQuery({ items: [] }));
     renderPage();
     for (const title of ['Coverage posture', 'Coverage burn-down', 'Claim readiness checklist',
-      'Recorded coverages', 'Claim ledger', 'Evidence bundle']) {
+      'Recorded coverages', 'Claim ledger', 'Evidence bundle', 'Evidence, quality, and limitations']) {
       expect(screen.getByRole('heading', { name: title })).toBeInTheDocument();
     }
     expect(screen.getByText('No warranties recorded yet.')).toBeInTheDocument();
     expect(screen.getByText('No claims recorded yet.')).toBeInTheDocument();
-    expect(screen.getByText('Interpreting contract exclusions — readiness is factual, not legal advice')).toBeInTheDocument();
-    expect(screen.getByText('Filing the claim with the provider on your behalf')).toBeInTheDocument();
+    expect(screen.getByText('• Interpreting contract exclusions — readiness is factual, not legal advice')).toBeInTheDocument();
+    expect(screen.getByText('• Filing the claim with the provider on your behalf')).toBeInTheDocument();
   });
 
   it('uses named shared usage bars without changing source values or bounded presentation', () => {
