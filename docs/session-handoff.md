@@ -2,6 +2,66 @@
 
 ## Current phase
 
+### Latest actual health-check census
+
+Individual polls16:54--16:56 confirm32actual current actors, zero new terminal
+turns:3original native/report owners,27read-only QA/root owners, plural and
+Analytics. Twenty-five were already past absolute hard clocks; delivered STOP
+is NOT cancellation/release. Five later QA owners approach16:56hard; plural
+return17:00/hard17:05, Analytics17:07/hard17:12. No speculative sourceclaim
+release or over-capacity replacement. Existing report files are WIP while
+owners remain unconfirmed; do not stage them merely because they exist.
+
+Trend source correction1140cdaac nowpushed, all8scoped fresh cases and reused19
+forms real; sourceonly item[x], nativeDrivesmatrix remains separate. Analytics
+e43d4da6 refills its actual released slot. Exact currentqueue:Phase5
+219done/20failed/1blocked/4excluded;Phase6 78done/3pending/33held/23failed/
+1blocked, with ONEheldparentmilestone not a worker. CombinedQA artificial
+dependency on unfinished sourceaggregate replaced by actual accepted technical
+gate perlatestuser;20failedsource rows notwaived, Phase7 stillblocked.
+LiteralcurrentHEADcount1856, source/reports notwholecompiler/nativepass.
+Shared5173 freshHTTP200at16:54, one existingtenminute schedule; clear completed
+health flag after current census/persistence so future check can run.
+
+### Current receipt integration and second rolling intake
+
+All27 single user-authorized source rescues now actually returned/released:
+seven clean proofs (Cells20,Grafana20,Consumables18,MI10,SmartCharge42,RUL15,
+Media21), twenty failed/partial. Fresh nativeJSON and exactdiffs inspected;
+no unchanged passing commands rerun. Original source rows now219done/20failed,
+one aggregate blocked; attempts2 and complete failed chronologies preserved.
+Phase6 after mechanical62-row reconciliation:77done/3pending/32held/23failed/
+2blocked; held counts are leases, not an assertion every owner is productive.
+One metadata parser trial failed1 before writing; corrected bulk fields0,
+no helper/tool/source file created and original notes retained.
+
+Each actual source delta separately committed/pushed: PeriodCompare8c2e55060
+WIP, MI1844c8a93 pass10, Mediaffb7b9250 pass21, APIKeys93af2dd85 WIP,
+TimeMachinedaa0a3e8f WIP, Alerts63336ca5c WIP and SignalTrendc53cdb61b WIP,
+Safetyf0f0509f3 WIP. No unexecuted corrections certified; unknown timeouts
+not claimed platform failures. BMS40/33/7, Route18/16/2 and Outage15/13/2 actual
+failing results remain explicit.
+
+Repeated no-stdout/noJSON symptoms have ONE queued runner-startup root, not
+many speculative repairs. Twenty initial source-only QA/root actors born by
+16:20 (conservative return16:38/hard16:43), two earlier born~16:11 (return16:31/
+hard16:36); five more born~16:33 (return16:51/hard16:56). All known IDs/deadlines
+recorded in queue/sessionSQL. Actual individual27-active census16:30 then five
+new actors individually running189s by16:36. Later hardSTOP delivered to
+overdue owners, NOT cancellation; native/report leases stay until real release.
+No active bounded shell headers in actual16:37 census; healthy shared5173 last
+HTTP20016:14. Host still exposes no agent-cancel operation, no custom workaround.
+
+Deferred plural now eligible and dispatched0640476d at16:41, exact English
+pair/generatedfivepath/focusedtest exception registered; return17:00/hard17:05.
+No Docker or nativegrant. Trend retained attempt2 subsequently collected:
+actual release15:52:49, initial26/27fail1/native1 then correctedchart8pass0 plus
+unchangedforms19pass reused (27uniquevalidated, NOT one green27testcommand).
+Strictlint/ownedfixturetyping0, requirement matrix/hashreceipt retained; only
+adjacent charttest changed. Old2/3STOP acknowledgements do not count as fresh
+work or reset attempt2. Native/global/phase proofNOTRUN; source intake underway.
+Its genuinely released slot refills accepted Analytics source-only QA.
+
 ### Two released source-rescue results collected
 
 BatteryCells341b10bf terminal0+STOPturn1 consumed/released: pair unchanged/
