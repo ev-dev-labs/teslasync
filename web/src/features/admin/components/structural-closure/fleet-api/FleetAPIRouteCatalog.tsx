@@ -18,11 +18,13 @@ export function FleetAPIRouteCatalog({ controller, pollingConfig }: Props) {
               <div className="flex flex-wrap items-center gap-2">
                 <Caption>{t('fleetApi.controls.groupBy', 'Group by')}</Caption>
                 <Button size="sm" variant={groupBy === 'category' ? 'primary' : 'secondary'}
+                  className="h-11 min-w-11 md:h-9 md:min-w-0"
                   aria-pressed={groupBy === 'category'}
                   onClick={() => { setGroupBy('category'); setSelectedGroup('all'); }}>
                   {t('fleetApi.controls.byCategory', 'Category')}
                 </Button>
                 <Button size="sm" variant={groupBy === 'method' ? 'primary' : 'secondary'}
+                  className="h-11 min-w-11 md:h-9 md:min-w-0"
                   aria-pressed={groupBy === 'method'}
                   onClick={() => { setGroupBy('method'); setSelectedGroup('all'); }}>
                   {t('fleetApi.controls.byMethod', 'HTTP method')}
@@ -43,6 +45,7 @@ export function FleetAPIRouteCatalog({ controller, pollingConfig }: Props) {
                       { value: 'auto', label: t('fleetApi.controls.sortAuto', 'Auto-poll state') },
                     ]} />
                   <Button size="sm" variant="secondary" onClick={() => setSortDescending(!sortDescending)}
+                    className="h-11 min-w-11 md:h-9 md:min-w-0"
                     aria-label={sortDescending
                       ? t('fleetApi.controls.sortAscending', 'Sort ascending')
                       : t('fleetApi.controls.sortDescending', 'Sort descending')}>
@@ -74,7 +77,7 @@ export function FleetAPIRouteCatalog({ controller, pollingConfig }: Props) {
                     action={{ label: t('fleetApi.controls.clearSearch', 'Clear search'), onClick: () => setSearch('') }}
                   />
                 ) : endpointGroups.map(([group, endpoints]) => (
-                  <section key={group} aria-label={group} className="overflow-hidden rounded-xl border border-[var(--border-default)]">
+                  <section key={group} aria-label={groupLabel(group)} className="overflow-hidden rounded-xl border border-[var(--border-default)]">
                     <div className="flex items-center justify-between gap-2 bg-[var(--surface-2)] px-4 py-3">
                       <div className="flex items-center gap-3">
                         <PanelTitle>{groupLabel(group)}</PanelTitle>
