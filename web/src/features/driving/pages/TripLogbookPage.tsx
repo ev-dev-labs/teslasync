@@ -7,13 +7,13 @@ import {
 import { PageLayout, LayoutCard } from '@/components/layout';
 import {
   Text, Button, Select, Input, HelpTooltip,
-  DataTable, type Column,
+  DataTable, Icon, type Column,
 } from '@/components/ui';
 
 import { MetricBar } from '@/components/data-display';
 import type { StatMetric } from '@/components/data-display/stat-reference';
 import { DrivingSummaryBrief } from '../components/operationalbrief-n-z/DrivingSummaryBrief';
-import { Skeleton, EmptyState, QueryError, StaleRefreshWarning } from '@/components/feedback';
+import { Skeleton, EmptyState, QueryError, StaleRefreshWarning, SectionErrorBoundary } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { NoVehicleSelected } from '@/features/onboarding/components/NoVehicleSelected';
 
@@ -21,6 +21,7 @@ import { useDrives } from '@/api/hooks/useDriving';
 import { useRangeState } from '@/hooks/useRangeState';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useUnits } from '@/hooks/useUnits';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { useFormatting } from '@/hooks/useFormatting';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useDataState } from '@/hooks/useDataState';
@@ -80,8 +81,9 @@ export default function TripLogbookPage() {
 
   const { formatDistance, unitPrefs } = useUnits();
   const { formatCurrency } = useFormatting();
+  const { fmtInt } = useNumberFormatting();
 
-  const { start, end } = useRangeState({
+  const { start, end, startInstant, endInstantExclusive } = useRangeState({
     persistKey: 'trip-logbook.range',
     defaultPresetId: 'all',
   });
@@ -96,14 +98,14 @@ export default function TripLogbookPage() {
   // Narrow to the picked window so the KPI band, shares, and table agree.
   const drives = useMemo<Drive[]>(() => {
     if (!allDrives.length) return [];
-    const startMs = new Date(`${start}T00:00:00`).getTime();
-    const endMs = new Date(`${end}T23:59:59.999`).getTime();
+    const startMs = Date.parse(startInstant);
+    const endMs = Date.parse(endInstantExclusive);
     return allDrives.filter((d) => {
       if (!d.startTs) return false;
       const ts = new Date(d.startTs).getTime();
-      return ts >= startMs && ts <= endMs;
+      return ts >= startMs && ts < endMs;
     });
-  }, [allDrives, start, end]);
+  }, [allDrives, startInstant, endInstantExclusive]);
 
   const summary = useMemo(
     () => summarizeLogbook(drives, categories, ratesPerKm),
@@ -159,7 +161,7 @@ export default function TripLogbookPage() {
       key: 'route',
       header: t('logbook.route', 'Route'),
       render: (r) => (
-        <Text variant="bodySm" className="block max-w-[16rem] truncate" title={r.route}>
+        <Text variant="bodySm" className="block max-w-[16rem] whitespace-normal break-words" title={r.route}>
           {r.route}
         </Text>
       ),
@@ -194,7 +196,7 @@ export default function TripLogbookPage() {
       sortable: true,
       render: (r) =>
         r.category != null && r.amount > 0 ? (
-          <Text variant="body" className="font-mono tabular-nums text-emerald-300">
+          <Text variant="body" className="font-mono tabular-nums text-[var(--text-primary)]">
             {formatCurrency(r.amount)}
           </Text>
         ) : (
@@ -223,14 +225,14 @@ export default function TripLogbookPage() {
 
   const isLoading = drivesState.status === 'initial';
   const isError = drivesState.fatalError != null;
-  const sourceAvailable = drivesState.hasData || drivesQuery.isSuccess;
+  const sourceAvailable = drivesState.hasData;
   const summaryMetrics: readonly StatMetric[] = [
     ...TRIP_CATEGORIES.flatMap((cat): StatMetric[] => {
       const meta = CATEGORY_META[cat];
       const totals = summary.perCategory[cat];
       const label = t(meta.i18nKey, meta.fallback);
       const context = sourceAvailable ? <>
-        {formatCurrency(totals.amount)} · {t('logbook.driveCount', '{{count}} drives', { count: totals.count })}
+        {formatCurrency(totals.amount)} · {t('logbook.driveCount', '{{count}} drives', { count: fmtInt(totals.count) })}
       </> : undefined;
       return [
         {
@@ -278,6 +280,7 @@ export default function TripLogbookPage() {
       <StaleRefreshWarning state={drivesState} label={t('logbook.title', 'Trip Logbook')} />
       {/* 1 — KPI band */}
       <FadeIn>
+        <SectionErrorBoundary name="TripLogbookSummary">
         <DrivingSummaryBrief
           id="trip-logbook-brief"
           title={t('logbook.kpis', 'Logbook summary metrics')}
@@ -287,16 +290,18 @@ export default function TripLogbookPage() {
           provenance={t('logbook.brief.provenance', 'Returned vehicle drives, local classifications, and saved reimbursement rates; complete server-range coverage is not supplied.')}
           loading={isLoading}
           unavailable={!sourceAvailable}
-          retained={drivesState.isRefreshBlocked}
+          retained={drivesState.isRefreshBlocked || drivesState.refreshError != null}
           actions={isError ? <QueryError error={drivesState.fatalError} onRetry={() => drivesQuery.refetch()} /> : undefined}
         />
+        </SectionErrorBoundary>
       </FadeIn>
 
       {/* 2 — Reimbursement (1/3) + drives table (2/3) */}
       <FadeIn delay={0.1}>
         <section className="grid grid-cols-1 gap-4 xl:grid-cols-3">
+          <SectionErrorBoundary name="TripLogbookReimbursement">
           <LayoutCard title={t('logbook.reimbursement', 'Reimbursement')} actions={<>
-              <Receipt className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+              <Icon icon={Receipt} size="md" />
               <HelpTooltip
                 size="sm"
                 i18nKey="help.tripLogbook.body"
@@ -306,8 +311,8 @@ export default function TripLogbookPage() {
             </>}>
 
             <div className="mb-4 flex items-baseline gap-2">
-              <Text variant="metricValue" className="font-mono tabular-nums text-emerald-300">
-                {isLoading || isError ? '—' : formatCurrency(summary.totalAmount)}
+              <Text variant="metricValue" className="font-mono tabular-nums text-[var(--text-primary)]">
+                {!sourceAvailable ? '—' : formatCurrency(summary.totalAmount)}
               </Text>
               <Text variant="caption">{t('logbook.inPeriod', 'reimbursable in this period')}</Text>
             </div>
@@ -320,10 +325,10 @@ export default function TripLogbookPage() {
                   <div key={cat} className="flex flex-col gap-2">
                     <MetricBar
                       label={t(meta.i18nKey, meta.fallback)}
-                      value={isLoading || isError ? null : totals.distanceM}
+                      value={!sourceAvailable ? null : totals.distanceM}
                       max={Math.max(summary.totalDistanceM, 1)}
                       color={meta.barColor}
-                      sublabel={isLoading || isError ? '—' : formatDistance(totals.distanceM)}
+                      sublabel={!sourceAvailable ? '—' : formatDistance(totals.distanceM)}
                     />
                     <Input
                       type="number"
@@ -348,14 +353,19 @@ export default function TripLogbookPage() {
               })}
             </div>
           </LayoutCard>
+          </SectionErrorBoundary>
 
           <div className="min-w-0 xl:col-span-2">
+          <SectionErrorBoundary name="TripLogbookDrives">
           <LayoutCard title={t('logbook.drives', 'Drives')} actions={<>
-                <NotebookPen className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+                <Icon icon={NotebookPen} size="md" />
               <Select
                 aria-label={t('logbook.filter', 'Filter by category')}
                 value={filter}
-                onChange={(e) => setFilter(e.target.value as CategoryFilter)}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  if (value === 'all' || value === 'unclassified' || isTripCategory(value)) setFilter(value);
+                }}
                 options={[
                   { value: 'all', label: t('logbook.filterAll', 'All categories') },
                   { value: 'unclassified', label: t('logbook.unclassified', 'Unclassified') },
@@ -370,7 +380,7 @@ export default function TripLogbookPage() {
             {suggestions.length > 0 && (
               <div className="mb-3 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3">
                 <div className="flex items-center gap-2">
-                  <Sparkles className="h-4 w-4 shrink-0 text-amber-300" aria-hidden="true" />
+                  <Icon icon={Sparkles} size="md" />
                   <Text variant="bodySm">
                     {t(
                       'logbook.suggestionBanner',
@@ -389,6 +399,8 @@ export default function TripLogbookPage() {
               <QueryError error={drivesState.fatalError} onRetry={() => drivesQuery.refetch()} />
             ) : isLoading ? (
               <Skeleton height={320} />
+            ) : !sourceAvailable ? (
+              <EmptyState message={t('driving.brief.unavailable', 'Source unavailable')} />
             ) : drives.length === 0 ? (
               <EmptyState
                 icon={<NotebookPen className="h-8 w-8" />}
@@ -399,7 +411,8 @@ export default function TripLogbookPage() {
               <DataTable
                 tableId="driving:trip-logbook"
                 columns={columns}
-                mobileColumns={['date', 'route', 'category']}
+                variant="embedded"
+                mobileColumns={['date', 'route', 'distanceM', 'category', 'amount']}
                 data={rows}
                 keyExtractor={(r) => r.id}
                 emptyMessage={t('logbook.noneInFilter', 'No drives in this category yet.')}
@@ -418,6 +431,7 @@ export default function TripLogbookPage() {
               />
             )}
           </LayoutCard>
+          </SectionErrorBoundary>
           </div>
         </section>
       </FadeIn>
