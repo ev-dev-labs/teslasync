@@ -7,6 +7,7 @@ import { QueryError } from '@/components/feedback';
 import { GlassPanel, Text } from '@/components/ui';
 import { useDateFormat } from '@/hooks/useDateFormat';
 import { useOperationalMetrics } from '@/hooks/useOperationalMetrics';
+import { gaugeTone } from '@/lib/tokens';
 
 interface OnboardingSetupStatusBandProps {
   teslaConnected: boolean;
@@ -108,7 +109,7 @@ export function OnboardingSetupStatusBand({
           max={3}
           size={60}
           strokeWidth={6}
-          color={setupComplete ? '#10b981' : '#22d3ee'}
+          color={setupComplete ? gaugeTone.success : gaugeTone.info}
           centerLabel={progressValue}
           ariaLabel={`${progressLabel}: ${progressValue}`}
         />

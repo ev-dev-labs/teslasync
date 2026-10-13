@@ -161,3 +161,113 @@ describe('OnboardingSetupStatusBand — real compact Brief and raw metric bridge
     await waitFor(() => expect(trigger).toHaveFocus());
   });
 });
+
+describe('OnboardingSetupStatusBand — semantic setup ring', () => {
+  beforeEach(() => {
+    retry.mockClear();
+    vi.mocked(formatMetric).mockClear();
+  });
+
+  it.each([
+    {
+      caseName: 'measured zero',
+      props: {},
+      completed: 0,
+      color: 'var(--semantic-info)',
+      status: 'In progress',
+    },
+    {
+      caseName: 'one completed anchor',
+      props: { teslaConnected: true },
+      completed: 1,
+      color: 'var(--semantic-info)',
+      status: 'In progress',
+    },
+    {
+      caseName: 'two completed anchors',
+      props: { teslaConnected: true, vehicleCount: 2 },
+      completed: 2,
+      color: 'var(--semantic-info)',
+      status: 'In progress',
+    },
+    {
+      caseName: 'all anchors without setup confirmation',
+      props: { teslaConnected: true, vehicleCount: 2, telemetryHealth: 'healthy' },
+      completed: 3,
+      color: 'var(--semantic-info)',
+      status: 'In progress',
+    },
+    {
+      caseName: 'confirmed setup during a telemetry outage',
+      props: { setupComplete: true, telemetryHealth: 'stale' },
+      completed: 3,
+      color: 'var(--semantic-success)',
+      status: 'All steps complete',
+    },
+  ] satisfies readonly {
+    caseName: string;
+    props: Partial<BandProps>;
+    completed: number;
+    color: string;
+    status: string;
+  }[])('preserves progress and percentage with semantic paint for $caseName', ({
+    props, completed, color, status,
+  }) => {
+    renderBand(props);
+    const ring = screen.getByRole('img', { name: `Setup progress: ${completed}/3` });
+    const arc = ring.querySelector('circle[stroke-dasharray]');
+    if (!(arc instanceof SVGElement)) throw new Error('Missing setup progress arc');
+
+    expect(arc).toHaveAttribute('stroke', color);
+    expect(arc).toHaveAttribute('stroke-width', '6');
+    expect(ring.querySelector('svg')).toHaveAttribute('width', '60');
+    expect(ring.querySelector('svg')).toHaveAttribute('height', '60');
+    expect(Number(arc.getAttribute('stroke-dasharray'))).toBeCloseTo(169.64600329384882);
+    expect(Number(arc.getAttribute('stroke-dashoffset')))
+      .toBeCloseTo(169.64600329384882 * (1 - completed / 3));
+    expect(within(ring).getByText(`${completed}/3`)).toBeInTheDocument();
+    expect(metric('setup-progress').querySelector('[data-operational-value]'))
+      .toHaveTextContent(`${completed}/3`);
+    expect(screen.getByText(status, { selector: 'span.rounded-full' }))
+      .toBeInTheDocument();
+  });
+
+  it('keeps missing setup unknown without a success ring even when completion is supplied', () => {
+    renderBand({ hasData: false, setupComplete: true, vehicleCount: 0 });
+    expect(screen.getByText('Setup status not yet received')).toBeInTheDocument();
+    expect(screen.queryByRole('img', { name: /Setup progress:/ })).toBeNull();
+    for (const key of ['setup-progress', 'tesla', 'vehicles', 'telemetry']) {
+      expect(metric(key)).toHaveAttribute('data-value-state', 'missing');
+      expect(metric(key).querySelector('[data-operational-value]')).toHaveTextContent('—');
+    }
+  });
+
+  it('retains source warning and retry beside a confirmed semantic ring during refresh failure', () => {
+    renderBand({
+      setupComplete: true,
+      retained: true,
+      telemetryHealth: 'stale',
+      vehicleCount: 0,
+      error: new Error('Setup refresh failed'),
+    });
+    const ring = screen.getByRole('img', { name: 'Setup progress: 3/3' });
+    expect(ring.querySelector('circle[stroke-dasharray]'))
+      .toHaveAttribute('stroke', 'var(--semantic-success)');
+    expect(metric('setup-progress').querySelector('[data-operational-value]')).toHaveTextContent('3/3');
+    expect(metric('vehicles').querySelector('[data-operational-value]')).toHaveTextContent('0');
+    expect(within(metric('telemetry')).getByText('Interrupted')).toBeInTheDocument();
+    expect(screen.getByText('Setup status unavailable')).toBeInTheDocument();
+    expect(screen.getByText('Stored history remains available')).toBeInTheDocument();
+    expect(screen.getByText('Last telemetry time not supplied')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /retry|try again/i }));
+    expect(retry).toHaveBeenCalledOnce();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog', { name: 'Setup status details' });
+    expect(within(drawer).getByText(/completed setup remains complete during a live-service outage/))
+      .toBeInTheDocument();
+    expect(within(drawer).getByRole('img', { name: 'Setup progress: 3/3' })
+      .querySelector('circle[stroke-dasharray]'))
+      .toHaveAttribute('stroke', 'var(--semantic-success)');
+  });
+});
