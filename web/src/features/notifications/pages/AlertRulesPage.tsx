@@ -70,6 +70,14 @@ const SEVERITY_RANK: Record<string, number> = {
   critical: 2,
 };
 
+// Presentation labels belong to this page; SeverityBadge defaults to wire tokens.
+const SEVERITY_LABELS: Record<string, string> = {
+  info: 'Info',
+  success: 'Success',
+  warn: 'Warning',
+  critical: 'Critical',
+};
+
 /** Human label for a rule's monitored subject — the signal name for signal
  *  rules, the metric id for computed-metric rules. */
 export function subjectOf(r: AlertRule): string {
@@ -405,9 +413,13 @@ export default function AlertRulesPage() {
         key: 'severity',
         header: t('alertRules.col.severity', 'Severity'),
         filterValue: (r) => r.severity ?? null,
-        filterValueLabel: (_value, r) => r.severity ? t(`severity.${r.severity}`, r.severity) : '—',
+        filterValueLabel: (_value, r) => r.severity ? t(`severity.${normalizeSeverity(r.severity)}`, SEVERITY_LABELS[normalizeSeverity(r.severity)]) : '—',
         sortable: true,
-        render: (r) => <SeverityBadge severity={r.severity} size="sm" />,
+        render: (r) => (
+          <SeverityBadge severity={r.severity} size="sm">
+            {t(`severity.${normalizeSeverity(r.severity)}`, SEVERITY_LABELS[normalizeSeverity(r.severity)])}
+          </SeverityBadge>
+        ),
       },
       {
         key: 'scope',
@@ -470,7 +482,7 @@ export default function AlertRulesPage() {
         case 'name': return rule.name;
         case 'kind': return kindLabels[rule.kind ?? 'signal'];
         case 'signal_name': return subjectOf(rule);
-        case 'severity': return t(`severity.${normalizeSeverity(rule.severity)}`, rule.severity);
+        case 'severity': return t(`severity.${normalizeSeverity(rule.severity)}`, SEVERITY_LABELS[normalizeSeverity(rule.severity)]);
         case 'scope': return rule.all_vehicles
           ? t('alertRules.scope.all', 'All vehicles')
           : rule.vehicle_ids?.length

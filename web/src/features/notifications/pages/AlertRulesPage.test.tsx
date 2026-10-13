@@ -374,6 +374,15 @@ describe('AlertRulesPage — data state', () => {
     expect(leaf).toBeInTheDocument();
   });
 
+  it('renders the translated severity label at the shared badge boundary', () => {
+    renderPage();
+    const table = screen.getByRole('table');
+    const row = within(table).getByRole('link', { name: 'Zebra' }).closest('tr');
+    if (!row) throw new Error('Critical rule row is missing');
+    expect(within(row).getByText('Critical')).toBeInTheDocument();
+    expect(within(row).queryByText('critical')).toBeNull();
+  });
+
   it('orders rows by name ascending by default', () => {
     renderPage();
     const names = screen.getAllByRole('link').map((a) => a.textContent);
