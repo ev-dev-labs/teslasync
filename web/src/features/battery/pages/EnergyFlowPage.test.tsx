@@ -31,6 +31,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui';
 import type { ReactNode } from 'react';
+import { neonColorMap, typography } from '@/lib/tokens';
 
 vi.mock('@/components/charts', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/components/charts')>();
@@ -460,6 +461,73 @@ describe('EnergyFlowPage — live energy flow', () => {
     // DC leg = 11 kW (also the aggregate connector); AC leg = 0 kW.
     expect(screen.getAllByText('11.00 kW').length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText('0.00 kW')).toBeInTheDocument();
+  });
+
+  it('uses restrained flow roles without dimming unsupported labels or power values', () => {
+    renderPage();
+
+    const chargingConnector = screen.getAllByText('11.00 kW')
+      .find((element) => element.parentElement?.classList.contains('rounded-full'))!;
+    expect(chargingConnector).toHaveClass(neonColorMap.cyan.text);
+    expect(chargingConnector.parentElement).toHaveClass(neonColorMap.cyan.bg, neonColorMap.cyan.border);
+    expect(chargingConnector.parentElement?.style.boxShadow).toBe('');
+
+    const drivingConnector = screen.getByText('Driving').parentElement!;
+    expect(within(drivingConnector).getByText('N/A')).toHaveClass(typography.color.secondary);
+    expect(drivingConnector.querySelector('[class*="opacity-"]')).toBeNull();
+
+    const motor = screen.getByText('Motor').closest('.text-center')!;
+    expect(within(motor).getByText('No live data')).toBeInTheDocument();
+    expect(motor).not.toHaveClass('opacity-50');
+
+    const power = screen.getByRole('heading', { name: 'Live power', exact: true }).closest('[data-card]')!;
+    for (const label of ['HVAC', 'Accessories']) {
+      const row = within(power).getByText(label).parentElement!.parentElement!;
+      expect(within(row).getByText('N/A')).toHaveClass(typography.color.secondary);
+      expect(row).not.toHaveClass('opacity-50');
+    }
+    expect(within(power).getByText('11.00 kW')).toHaveClass(typography.color.primary);
+    expect(within(power).getByText('0.00 kW')).toHaveClass(typography.color.primary);
+  });
+
+  it('keeps missing charging channels unknown and unsupported channels readable', () => {
+    mockFlow.mockReturnValue(qr({ data: makeFlowData({
+      dc_charging_power: null, ac_charging_power: 0, soc: null,
+      energy_remaining: null, charge_state: null,
+    }) }));
+    renderPage();
+
+    const diagram = screen.getByRole('heading', { name: 'Energy flow diagram', exact: true }).closest('[data-card]')!;
+    expect(within(diagram).getAllByText('—')).toHaveLength(2);
+    expect(within(diagram).queryByText('0.00 kW')).not.toBeInTheDocument();
+    expect(within(diagram).getByText('N/A')).toHaveClass(typography.color.secondary);
+
+    const power = screen.getByRole('heading', { name: 'Live power', exact: true }).closest('[data-card]')!;
+    expect(within(power).getByText('—')).toBeInTheDocument();
+    expect(within(power).getByText('0.00 kW')).toBeInTheDocument();
+    expect(within(power).getAllByText('N/A')).toHaveLength(2);
+    expect(metricValue('Total energy')).toBe('42.00 kWh');
+  });
+
+  it('retains historical readings and all section shells when live refresh fails', () => {
+    mockFlow.mockReturnValue(qr({
+      data: makeFlowData(), error: new Error('refresh failed'), isError: true,
+    }));
+    renderPage();
+
+    for (const name of [
+      'Energy summary metrics', 'Energy flow diagram', 'Live power',
+      'Daily energy usage', 'Efficiency metrics', 'Daily distance',
+      'Daily efficiency', 'Daily energy history',
+    ]) {
+      expect(screen.getAllByRole('heading', { name, exact: true }).length).toBeGreaterThan(0);
+    }
+    expect(metricValue('Total charged')).toBe('55.50 kWh');
+    expect(screen.getByText('62.50 kWh')).toBeInTheDocument();
+    expect(screen.getAllByText('11.00 kW')).toHaveLength(2);
+    expect(historyTable()).toBeInTheDocument();
+    fireEvent.click(screen.getAllByRole('button', { name: 'Refresh' })[0]);
+    expect(mockFlow.mock.results[0].value.refetch).toHaveBeenCalledOnce();
   });
 
   it('shows a skeleton (not the gauge) while the flow query is loading', () => {

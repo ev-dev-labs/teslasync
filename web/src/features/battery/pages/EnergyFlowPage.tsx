@@ -9,7 +9,7 @@ import {
 import { PageLayout, CardGrid, LayoutCard } from '@/components/layout';
 import {
   GlassPanel, Badge, DataTable, useSortToggle, type Column,
-  Text, Caption, Label,
+  Text, Caption, Label, Icon,
 } from '@/components/ui';
 
 import { type StatMetric } from '@/components/data-display';
@@ -33,6 +33,7 @@ import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { formatDateShort } from '@/lib/dateFormat';
 
 import { cn } from '@/lib/cn';
+import { neonColorMap, typography } from '@/lib/tokens';
 import { convertDistanceFromSI, convertEnergyFromSI, type DistanceUnitPref } from '@/lib/unitConversion';
 import { useEnergyStats, useEnergyFlow } from '@/api/hooks/useEnergy';
 import type { DailyEnergy, EnergyFlowData } from '@/types/energy';
@@ -137,18 +138,14 @@ export function buildEfficiencyChartData(
 
 /* ───────── Flow diagram building blocks (local, non-exported) ───────── */
 
-/** A directional power chip between two flow nodes. Arrow flips from vertical
- *  (stacked, mobile) to horizontal (row, ≥sm). Colour is data-driven, so the
- *  inline style is a sanctioned dynamic value, not a static token. */
+/** Arrow direction follows the diagram's allocated container width. */
 function FlowConnector({
   label,
   value,
-  color,
   active,
 }: {
   label: string;
   value: string;
-  color: string;
   active: boolean;
 }) {
   return (
@@ -156,18 +153,15 @@ function FlowConnector({
       <Label>{label}</Label>
       <div
         className={cn(
-          'flex items-center gap-1 rounded-full px-3 py-1 transition-opacity',
-          !active && 'opacity-30',
+          'flex items-center gap-1 rounded-full border px-3 py-1',
+          active
+            ? cn(neonColorMap.cyan.bg, neonColorMap.cyan.border, neonColorMap.cyan.text)
+            : cn(neonColorMap.neutral.bg, neonColorMap.neutral.border, typography.color.secondary),
         )}
-        style={{
-          backgroundColor: `${color}18`,
-          color,
-          boxShadow: active ? `0 0 12px ${color}40` : undefined,
-        }}
       >
-        <ArrowDown className="h-3.5 w-3.5 @[640px]:hidden" aria-hidden="true" />
-        <ArrowRight className="hidden h-3.5 w-3.5 @[640px]:block" aria-hidden="true" />
-        <Text size="xs" weight="semibold">{value}</Text>
+        <Icon icon={ArrowDown} size="sm" className="@[640px]:hidden" />
+        <Icon icon={ArrowRight} size="sm" className="hidden @[640px]:block" />
+        <Text size="xs" weight="medium" className={active ? neonColorMap.cyan.text : typography.color.secondary}>{value}</Text>
       </div>
     </div>
   );
@@ -177,24 +171,16 @@ function FlowConnector({
 function FlowNode({
   icon,
   label,
-  glow = 'none',
-  dimmed = false,
   children,
   sublabel,
 }: {
   icon: ReactNode;
   label: string;
-  glow?: 'cyan' | 'green' | 'purple' | 'none';
-  dimmed?: boolean;
   children?: ReactNode;
   sublabel?: string;
 }) {
   return (
-    <GlassPanel
-      hover
-      glow={glow}
-      className={cn('flex flex-col items-center gap-2 p-4 text-center', dimmed && 'opacity-50')}
-    >
+    <GlassPanel className="flex flex-col items-center gap-2 p-4 text-center">
       {icon}
       <Text size="xs" weight="medium" color="secondary">{label}</Text>
       {children}
@@ -208,27 +194,20 @@ function LivePowerRow({
   icon,
   label,
   value,
-  valueClass,
-  dimmed = false,
+  unavailable = false,
 }: {
   icon: ReactNode;
   label: string;
   value: string;
-  valueClass?: string;
-  dimmed?: boolean;
+  unavailable?: boolean;
 }) {
   return (
-    <div
-      className={cn(
-        'flex items-center justify-between gap-3 rounded-lg bg-[var(--surface-2)] px-3 py-2',
-        dimmed && 'opacity-50',
-      )}
-    >
+    <div className="flex items-center justify-between gap-3 rounded-lg bg-[var(--surface-2)] px-3 py-2">
       <div className="flex items-center gap-2">
         {icon}
         <Caption>{label}</Caption>
       </div>
-      <Text size="sm" weight="semibold" className={valueClass ?? 'text-[var(--text-primary)]'}>
+      <Text size="sm" mono color={unavailable ? 'secondary' : 'primary'}>
         {value}
       </Text>
     </div>
@@ -452,7 +431,7 @@ export default function EnergyFlowPage() {
       context: <Badge variant={effVariant} size="sm">{effLabel}</Badge> },
     { ...summaryMetrics[4],
       context: <div className="flex flex-wrap items-center gap-2">
-        <Badge variant="success" size="sm">{t('energyFlow.units.kgCo2', 'kg CO₂')}</Badge>
+        <Badge variant="neutral" size="sm">{t('energyFlow.units.kgCo2', 'kg CO₂')}</Badge>
         <Caption>{t('energyFlow.metrics.estimated', 'Estimated')}</Caption>
       </div> },
     { metricId: 'energy', occurrenceId: 'average-per-day', rawValue: avgEnergyPerDay,
@@ -514,19 +493,18 @@ export default function EnergyFlowPage() {
             >
               <div className="grid grid-cols-1 items-center gap-3 @[640px]:grid-cols-5">
                 <FlowNode
-                  icon={<Plug className="h-8 w-8" style={{ color: CHART_COLORS[1] }} aria-hidden="true" />}
+                  icon={<Icon icon={Plug} size="xl" className={typography.color.secondary} />}
                   label={t('energyFlow.node.grid', 'Grid')}
                 />
 
                 <FlowConnector
                   label={t('energyFlow.node.charging', 'Charging')}
                   value={chargePower != null ? `${fmtNumber(chargePower)} ${t('energyFlow.units.kw', 'kW')}` : DASH}
-                  color={CHART_COLORS[1]}
                   active={chargePower != null && Math.abs(chargePower) > 0.01}
                 />
 
                 <FlowNode
-                  icon={<Battery className="h-8 w-8" style={{ color: CHART_COLORS[0] }} aria-hidden="true" />}
+                  icon={<Icon icon={Battery} size="xl" className={typography.color.primary} />}
                   label={t('energyFlow.node.battery', 'Battery')}
                   sublabel={
                     flow?.energy_remaining != null
@@ -547,13 +525,11 @@ export default function EnergyFlowPage() {
                 <FlowConnector
                   label={t('energyFlow.node.driving', 'Driving')}
                   value={t('energyFlow.na', 'N/A')}
-                  color={CHART_COLORS[0]}
                   active={false}
                 />
 
                 <FlowNode
-                  dimmed
-                  icon={<Car className="h-8 w-8" style={{ color: CHART_COLORS[0] }} aria-hidden="true" />}
+                  icon={<Icon icon={Car} size="xl" className={typography.color.secondary} />}
                   label={t('energyFlow.node.motor', 'Motor')}
                   sublabel={t('energyFlow.node.noLiveData', 'No live data')}
                 />
@@ -578,26 +554,24 @@ export default function EnergyFlowPage() {
             >
               <div className="space-y-2">
                 <LivePowerRow
-                  icon={<Zap className="h-4 w-4 text-cyan-300" aria-hidden="true" />}
+                  icon={<Icon icon={Zap} className={typography.color.secondary} />}
                   label={t('energyFlow.livePower.dc', 'DC power')}
                   value={flow?.dc_charging_power != null ? `${fmtNumber(flow.dc_charging_power)} ${t('energyFlow.units.kw', 'kW')}` : DASH}
-                  valueClass="text-cyan-300"
                 />
                 <LivePowerRow
-                  icon={<Activity className="h-4 w-4 text-indigo-300" aria-hidden="true" />}
+                  icon={<Icon icon={Activity} className={typography.color.secondary} />}
                   label={t('energyFlow.livePower.ac', 'AC power')}
                   value={flow?.ac_charging_power != null ? `${fmtNumber(flow.ac_charging_power)} ${t('energyFlow.units.kw', 'kW')}` : DASH}
-                  valueClass="text-indigo-300"
                 />
                 <LivePowerRow
-                  dimmed
-                  icon={<Thermometer className="h-4 w-4 text-amber-300" aria-hidden="true" />}
+                  unavailable
+                  icon={<Icon icon={Thermometer} className={typography.color.secondary} />}
                   label={t('energyFlow.livePower.hvac', 'HVAC')}
                   value={t('energyFlow.na', 'N/A')}
                 />
                 <LivePowerRow
-                  dimmed
-                  icon={<Cpu className="h-4 w-4 text-purple-300" aria-hidden="true" />}
+                  unavailable
+                  icon={<Icon icon={Cpu} className={typography.color.secondary} />}
                   label={t('energyFlow.livePower.accessories', 'Accessories')}
                   value={t('energyFlow.na', 'N/A')}
                 />
@@ -643,7 +617,7 @@ export default function EnergyFlowPage() {
                 <ResponsiveContainer width="100%" height="100%">
                   <AreaChart data={dailyChartData} margin={chartMarginLabeled} {...chartAnimation}>
                     <defs>
-                      <ChartGradient id="gradEnergy" color={CHART_COLORS[0]} />
+                      <ChartGradient id="gradEnergy" color={CHART_COLORS[0]} opacity={0.08} />
                     </defs>
                     {chartGrid}
                     <XAxis dataKey="date" tick={axisTick} />
