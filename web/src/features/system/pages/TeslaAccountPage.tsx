@@ -82,7 +82,7 @@ export default function TeslaAccountPage() {
         <section className="grid grid-cols-1 gap-4 xl:grid-cols-3">
           <GlassPanel className="min-w-0 p-4 sm:p-5 xl:col-span-2">
             <Heading level="panel" as="h2" className="mb-4 flex items-center gap-2">
-              <Icon icon=User className="text-[var(--text-muted)]" />
+              <Icon icon={User} className="text-[var(--text-muted)]" />
               {t('teslaAccount.profile', 'Profile')}
             </Heading>
             {isLoading ? (
@@ -131,7 +131,7 @@ export default function TeslaAccountPage() {
             ) : (
               <div>
                 <EmptyState /* no-action: pending-aware shared Button immediately below */
-                icon={<Icon icon=User size="xl" className="h-10 w-10" />}
+                icon={<Icon icon={User} size="xl" className="h-10 w-10" />}
                 title={t('teslaAccount.noProfileTitle', 'No profile synced yet')}
                 message={t('teslaAccount.noProfile', 'No profile data yet. Click "Refresh from Tesla" to sync your account.')}
                 />
@@ -146,7 +146,7 @@ export default function TeslaAccountPage() {
 
           <GlassPanel className="min-w-0 p-4 sm:p-5">
             <Heading level="panel" as="h2" className="mb-4 flex items-center gap-2">
-              <Icon icon=RefreshCw className="text-[var(--text-muted)]" />
+              <Icon icon={RefreshCw} className="text-[var(--text-muted)]" />
               {t('teslaAccount.sync.title', 'Sync')}
             </Heading>
             <div className="space-y-4">
@@ -190,7 +190,7 @@ export default function TeslaAccountPage() {
         <section className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           <GlassPanel className="min-w-0 p-4 sm:p-5">
             <Heading level="panel" as="h2" className="mb-4 flex items-center gap-2">
-              <Icon icon=ContactRound className="text-[var(--text-muted)]" />
+              <Icon icon={ContactRound} className="text-[var(--text-muted)]" />
               {t('teslaAccount.details.title', 'Account details')}
             </Heading>
             {isLoading ? (
@@ -218,7 +218,7 @@ export default function TeslaAccountPage() {
               />
             ) : (
               <EmptyState /* no-action: transient empty — recover via header/sync Refresh */
-                icon={<Icon icon=ContactRound size="xl" className="h-10 w-10" />}
+                icon={<Icon icon={ContactRound} size="xl" className="h-10 w-10" />}
                 message={t('teslaAccount.detailsEmpty', 'No account details yet. Sync to populate your profile.')}
               />
             )}
@@ -226,7 +226,7 @@ export default function TeslaAccountPage() {
 
           <GlassPanel className="min-w-0 p-4 sm:p-5">
             <Heading level="panel" as="h2" className="mb-4 flex items-center gap-2">
-              <Icon icon=Activity className="text-[var(--text-muted)]" />
+              <Icon icon={Activity} className="text-[var(--text-muted)]" />
               {t('teslaAccount.activity.title', 'Activity')}
             </Heading>
             {isLoading ? (
@@ -240,19 +240,19 @@ export default function TeslaAccountPage() {
                 summaryBounds={activityBounds}
                 items={[
                   {
-                    icon: <Icon icon=Link2 size="xs" />,
+                    icon: <Icon icon={Link2} size="xs" />,
                     title: t('teslaAccount.activity.linked', 'Account linked'),
                     subtitle: t('teslaAccount.activity.linkedSub', 'Tesla account connected to TeslaSync'),
                     time: formatDateTime(profile.created_at),
                   },
                   {
-                    icon: <Icon icon=RefreshCw size="xs" />,
+                    icon: <Icon icon={RefreshCw} size="xs" />,
                     title: t('teslaAccount.activity.updated', 'Profile updated'),
                     subtitle: t('teslaAccount.activity.updatedSub', 'Most recent change to your profile record'),
                     time: formatDateTime(profile.updated_at),
                   },
                   {
-                    icon: <Icon icon=CheckCircle2 size="xs" />,
+                    icon: <Icon icon={CheckCircle2} size="xs" />,
                     title: t('teslaAccount.activity.synced', 'Last synced from Tesla'),
                     subtitle: t('teslaAccount.activity.syncedSub', 'Latest fetch from the Fleet API'),
                     time: formatDateTime(fetchedAt),
@@ -261,7 +261,7 @@ export default function TeslaAccountPage() {
               />
             ) : (
               <EmptyState /* no-action: transient empty — recover via header/sync Refresh */
-                icon={<Icon icon=Activity size="xl" className="h-10 w-10" />}
+                icon={<Icon icon={Activity} size="xl" className="h-10 w-10" />}
                 message={t('teslaAccount.activity.empty', 'No account activity to show yet.')}
               />
             )}
