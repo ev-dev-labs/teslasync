@@ -19,7 +19,7 @@ import { Link } from 'react-router-dom';
 import { PageLayout } from '@/components/layout';
 import {
   GlassPanel, Input as ControlInput,
-  TabNav, Pagination, PanelTitle, Text, Caption, Badge,
+  TabNav, Pagination, PanelTitle, Text, Caption, Badge, Icon,
 } from '@/components/ui';
 import { OperationalBrief, MetricBar, Timeline } from '@/components/data-display';
 import { useOperationalMetrics } from '@/hooks/useOperationalMetrics';
@@ -27,22 +27,25 @@ import { EmptyState, Skeleton, QueryError, StaleRefreshWarning } from '@/compone
 import { FadeIn } from '@/components/motion';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ChartLegend,
-  ResponsiveContainer, ChartTooltip, CHART_COLORS, axisTickSm, EmbeddedChart,
+  ResponsiveContainer, ChartTooltip, axisTickSm, EmbeddedChart,
 } from '@/components/charts';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useDataState } from '@/hooks/useDataState';
+import { useMotionPreference } from '@/hooks/useMotionPreference';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { useRangeState } from '@/hooks/useRangeState';
 import { useProductPreferences } from '@/hooks/useProductPreferences';
 import { useUrlBatch, useUrlEnum, useUrlNumber, useUrlString } from '@/hooks/useUrlState';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useCommandReliabilityHistory, type CommandLogEntry } from '@/api/hooks/useCommands';
-import { formatDateTime, formatRelative } from '@/lib/dateFormat';
+import { formatDateTime, formatRelative, formatDayKey } from '@/lib/dateFormat';
+import { cn } from '@/lib/cn';
+import { gaugeTone, typography } from '@/lib/tokens';
 import { localDayKey } from '@/lib/drivesAggregation';
 import { useTimezone } from '@/lib/timezone';
 import {
   CheckCircle, XCircle, Terminal, History,
-  Search, Gamepad2, ListChecks, BarChart3, ShieldCheck,
+  Search, Gamepad2, ListChecks, BarChart3, ShieldCheck, CircleHelp,
 } from 'lucide-react';
 import { commandHistoryMetrics } from '../components/statstrip-command-summaries/commandSummaryMetrics';
 
@@ -129,15 +132,16 @@ const STATUS_FILTERS = ['all', 'success', 'failed'] as const;
 type StatusFilter = (typeof STATUS_FILTERS)[number];
 
 // Semantic status colors reused by the chart, timeline dots, and bars.
-const SUCCESS_COLOR = '#22c55e';
-const FAILED_COLOR = '#ef4444';
-const OTHER_COLOR = '#64748b';
+const SUCCESS_COLOR = gaugeTone.success;
+const FAILED_COLOR = gaugeTone.danger;
+const OTHER_COLOR = gaugeTone.neutral;
 
 // ─── Page ────────────────────────────────────────────────────────────────────
 
 export default function CommandHistoryPage() {
   const { t } = useTranslation();
-  const { fmtPercent, precision } = useNumberFormatting();
+  const { fmtPercent, fmtInt, precision, locale } = useNumberFormatting();
+  const { reduce } = useMotionPreference();
   const pctLabel = (n: number, total: number): string =>
     fmtPercent(total > 0 ? (n / total) * 100 : 0);
   usePageTitle(t('commandHistory.title', 'Command history'));
@@ -155,9 +159,12 @@ export default function CommandHistoryPage() {
   // Data — keep the full query so PageContainer can drive a freshness chip and
   // each panel can react to loading/error independently.
   const commandsQuery = useCommandReliabilityHistory(activeVehicleId, startInstant, endInstantExclusive);
-  const { data: commands, isLoading, refetch } = commandsQuery;
+  const { data: commands, refetch } = commandsQuery;
   const state = useDataState(commandsQuery, { provenance: 'historical' });
   const error = state.fatalError;
+  const isLoading = !noVehicle && state.status === 'initial' && !state.isRefreshBlocked;
+  const unresolved = !noVehicle && !state.hasData && !error;
+  const unavailableMessage = t('commandHistory.brief.unavailable', 'Command history unavailable');
   const allCommands = commands ?? [];
 
   // Filters
@@ -261,13 +268,15 @@ export default function CommandHistoryPage() {
       // near-midnight commands for every non-UTC user.
       const day = localDayKey(c.created_at, timeZone);
       if (!day) continue;
-      const bucket = buckets.get(day) ?? { day, label: day.slice(5), success: 0, failed: 0 };
+      const bucket = buckets.get(day) ?? {
+        day, label: formatDayKey(day, { locale }), success: 0, failed: 0,
+      };
       if (c.status === 'success') bucket.success += 1;
       else bucket.failed += 1;
       buckets.set(day, bucket);
     }
     return Array.from(buckets.values()).sort((a, b) => a.day.localeCompare(b.day));
-  }, [allCommands, timeZone]);
+  }, [allCommands, timeZone, locale]);
 
   // Top commands — most-used commands in the range, for the breakdown rail.
   const topCommands = useMemo(() => {
@@ -278,10 +287,9 @@ export default function CommandHistoryPage() {
     return Object.entries(counts)
       .sort((a, b) => b[1] - a[1])
       .slice(0, 8)
-      .map(([command, count], i) => ({
+      .map(([command, count]) => ({
         command,
         count,
-        color: CHART_COLORS[i % CHART_COLORS.length],
       }));
   }, [allCommands]);
   const topCommandsMax = topCommands.length > 0 ? topCommands[0].count : 0;
@@ -298,37 +306,47 @@ export default function CommandHistoryPage() {
   // Timeline data
   const timelineItems = useMemo(
     () =>
-      paginatedCommands.map((cmd) => ({
-        icon:
-          cmd.status === 'success' ? (
-            <CheckCircle className="h-3.5 w-3.5" aria-hidden="true" />
-          ) : (
-            <XCircle className="h-3.5 w-3.5" aria-hidden="true" />
+      paginatedCommands.map((cmd) => {
+        const success = cmd.status === 'success';
+        const failed = cmd.status === 'failed';
+        return {
+          icon: <Icon icon={success ? CheckCircle : failed ? XCircle : CircleHelp} size="sm" />,
+          title: (
+            <span className="flex min-w-0 flex-wrap items-center gap-2">
+              <span className="min-w-0 break-words">{formatCommandName(cmd.command, t)}</span>
+              <Badge variant={success ? 'success' : failed ? 'danger' : 'neutral'} size="sm">
+                {success ? t('commandHistory.success', 'Success')
+                  : failed ? t('commandHistory.failedLabel', 'Failed')
+                    : cmd.status || t('common.unknown', 'Unknown')}
+              </Badge>
+            </span>
           ),
-        title: formatCommandName(cmd.command, t),
-        subtitle: buildSubtitle(cmd, t),
-        time: formatRelative(cmd.created_at, { tz: 'UTC' }),
-        color: cmd.status === 'success' ? SUCCESS_COLOR : FAILED_COLOR,
-      })),
-    [paginatedCommands, t],
+          subtitle: buildSubtitle(cmd, t, timeZone, locale),
+          time: formatRelative(cmd.created_at, { tz: timeZone, locale }),
+          color: success ? SUCCESS_COLOR : failed ? FAILED_COLOR : OTHER_COLOR,
+        };
+      }),
+    [paginatedCommands, t, timeZone, locale],
   );
 
   const statusTabs = [
-    { key: 'all', label: t('commandHistory.filterAll', 'All'), icon: <Terminal className="h-3.5 w-3.5" aria-hidden="true" /> },
-    { key: 'success', label: t('commandHistory.filterSuccess', 'Success'), icon: <CheckCircle className="h-3.5 w-3.5" aria-hidden="true" /> },
-    { key: 'failed', label: t('commandHistory.filterFailed', 'Failed'), icon: <XCircle className="h-3.5 w-3.5" aria-hidden="true" /> },
+    { key: 'all', label: t('commandHistory.filterAll', 'All'), icon: <Icon icon={Terminal} size="sm" /> },
+    { key: 'success', label: t('commandHistory.filterSuccess', 'Success'), icon: <Icon icon={CheckCircle} size="sm" /> },
+    { key: 'failed', label: t('commandHistory.filterFailed', 'Failed'), icon: <Icon icon={XCircle} size="sm" /> },
   ];
 
   const analyticsEmptyMsg = noVehicle
     ? t('commandHistory.selectVehicleActivityPrompt', 'Select a vehicle to view command activity')
-    : t('commandHistory.noRangeData', 'No commands in the selected range');
+    : unresolved ? unavailableMessage
+      : t('commandHistory.noRangeData', 'No commands in the selected range');
 
   const timelineEmptyMsg =
-    searchQuery || statusFilter !== 'all'
-      ? t('commandHistory.noFilterResults', 'No commands match the current filters')
-      : noVehicle
-        ? t('commandHistory.selectVehicleHistoryPrompt', 'Select a vehicle to view command history')
-        : t('commandHistory.noCommands', 'No commands have been sent yet');
+    noVehicle
+      ? t('commandHistory.selectVehicleHistoryPrompt', 'Select a vehicle to view command history')
+      : unresolved ? unavailableMessage
+        : searchQuery || statusFilter !== 'all'
+          ? t('commandHistory.noFilterResults', 'No commands match the current filters')
+          : t('commandHistory.noCommands', 'No commands have been sent yet');
   const operationalMetrics = useOperationalMetrics(commandHistoryMetrics(
     !noVehicle && commands != null ? stats : null,
     t, (command) => formatCommandName(command, t), precision,
@@ -343,9 +361,12 @@ export default function CommandHistoryPage() {
         <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3">
           <Link
             to="/commands"
-            className="inline-flex min-h-11 items-center gap-1.5 rounded-lg px-2 text-xs text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]"
+            className={cn(
+              'inline-flex min-h-11 min-w-11 items-center gap-1.5 rounded-shape-sm px-2 transition-colors duration-fast ease-standard motion-reduce:transition-none hover:bg-[var(--surface-2)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg-app)]',
+              typography.role.bodySm,
+            )}
           >
-            <Gamepad2 className="h-3.5 w-3.5" aria-hidden="true" />
+            <Icon icon={Gamepad2} size="sm" />
             {t('commandHistory.backToCommands', 'Commands')}
           </Link>
         </div>
@@ -371,7 +392,7 @@ export default function CommandHistoryPage() {
               description={t('commandHistory.summary.scope', 'Selected vehicle history; status and search filters apply only to the timeline.')}
               metrics={operationalMetrics}
               loading={isLoading}
-              scope={`${formatDateTime(startInstant, { tz: timeZone })} → ${formatDateTime(endInstantExclusive, { tz: timeZone })}`}
+              scope={`${formatDateTime(startInstant, { tz: timeZone, locale })} → ${formatDateTime(endInstantExclusive, { tz: timeZone, locale })}`}
               provenance={t('commandHistory.summary.scope', 'Selected vehicle history; status and search filters apply only to the timeline.')}
               statusLabel={noVehicle
                 ? t('commandHistory.selectVehicleHistoryPrompt', 'Select a vehicle to view command history')
@@ -382,7 +403,7 @@ export default function CommandHistoryPage() {
                         : t('commandHistory.brief.recorded', 'Recorded command history')}
               statusTone={state.status === 'stale' ? 'warning' : 'neutral'}
               freshness={state.updatedAt != null
-                ? formatDateTime(new Date(state.updatedAt).toISOString()) : undefined}
+                ? formatDateTime(new Date(state.updatedAt).toISOString(), { tz: timeZone, locale }) : undefined}
             />
           )}
         </section>
@@ -392,7 +413,8 @@ export default function CommandHistoryPage() {
       <FadeIn delay={0.05}>
         <GlassPanel className="p-4 sm:p-5">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <TabNav tabs={statusTabs} active={statusFilter} onChange={handleStatusChange} />
+            <TabNav tabs={statusTabs} active={statusFilter} onChange={handleStatusChange}
+              ariaLabel={t('common.status', 'Status')} />
 
             <div className="relative w-full sm:w-64">
               <ControlInput
@@ -401,16 +423,19 @@ export default function CommandHistoryPage() {
                 onChange={handleSearchChange}
                 placeholder={t('commandHistory.searchPlaceholder', 'Search commands…')}
                 aria-label={t('commandHistory.searchCommands', 'Search commands')}
-                icon={<Search className="h-3.5 w-3.5" aria-hidden="true" />}
+                icon={<Icon icon={Search} size="sm" />}
                 size="sm"
-                className="pr-9"
+                className="min-h-11 pe-9 md:min-h-9"
               />
               {isSearchPending && (
                 <span
                   role="status"
                   aria-live="polite"
                   aria-label={t('filter.pending', 'Filtering…')}
-                  className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 inline-block h-3 w-3 animate-spin rounded-full border-2 border-cyan-400/40 border-t-cyan-400"
+                  className={cn(
+                    'pointer-events-none absolute end-3 top-1/2 -translate-y-1/2 inline-block h-3 w-3 rounded-full border-2 border-[var(--border-strong)] border-t-[var(--text-secondary)] motion-reduce:animate-none',
+                    !reduce && 'animate-spin',
+                  )}
                 />
               )}
             </div>
@@ -424,7 +449,7 @@ export default function CommandHistoryPage() {
           {/* Daily activity — hero, spans two columns on wide screens. */}
           <GlassPanel className="p-4 sm:p-5 xl:col-span-2">
             <PanelTitle className="mb-3 flex items-center gap-2">
-              <BarChart3 className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+              <Icon icon={BarChart3} className={typography.color.secondary} />
               {t('commandHistory.dailyActivity', 'Daily activity')}
             </PanelTitle>
             <EmbeddedChart
@@ -462,7 +487,7 @@ export default function CommandHistoryPage() {
           {/* Top commands — most-used commands in the range. */}
           <GlassPanel className="p-4 sm:p-5">
             <PanelTitle className="mb-3 flex items-center gap-2">
-              <ListChecks className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+              <Icon icon={ListChecks} className={typography.color.secondary} />
               {t('commandHistory.topCommands', 'Top commands')}
             </PanelTitle>
             {isLoading ? (
@@ -482,8 +507,9 @@ export default function CommandHistoryPage() {
                     label={formatCommandName(c.command, t)}
                     value={c.count}
                     max={topCommandsMax || c.count}
-                    color={c.color}
-                    sublabel={String(c.count)}
+                    color={OTHER_COLOR}
+                    fill="solid"
+                    sublabel={fmtInt(c.count)}
                   />
                 ))}
               </div>
@@ -498,10 +524,14 @@ export default function CommandHistoryPage() {
           {/* Command timeline — hero detail band, spans two columns. */}
           <GlassPanel className="p-4 sm:p-5 xl:col-span-2">
             <div className="mb-4 flex items-center gap-2">
-              <History className="h-4 w-4 text-[var(--text-secondary)]" aria-hidden="true" />
+              <Icon icon={History} className={typography.color.secondary} />
               <PanelTitle>{t('commandHistory.timelineTitle', 'Command timeline')}</PanelTitle>
-              <Badge variant="neutral" size="sm" className="ml-auto">
-                {t('commandHistory.showing', '{{count}} commands', { count: filtered.length })}
+              <Badge variant="neutral" size="sm" className="ms-auto">
+                {state.hasData
+                  ? t('commandHistory.showing', '{{count}} commands', { count: filtered.length })
+                  : isLoading ? t('commandHistory.brief.loading', 'Loading command history')
+                    : noVehicle ? t('commandHistory.selectVehicleHistoryPrompt', 'Select a vehicle to view command history')
+                      : unavailableMessage}
               </Badge>
             </div>
             {isLoading ? (
@@ -540,7 +570,7 @@ export default function CommandHistoryPage() {
           {/* Status breakdown — success / failed / other in the range. */}
           <GlassPanel className="p-4 sm:p-5">
             <PanelTitle className="mb-3 flex items-center gap-2">
-              <ShieldCheck className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+              <Icon icon={ShieldCheck} className={typography.color.secondary} />
               {t('commandHistory.statusBreakdown', 'Status breakdown')}
             </PanelTitle>
             {isLoading ? (
@@ -559,14 +589,16 @@ export default function CommandHistoryPage() {
                   value={statusBreakdown.success}
                   max={statusBreakdown.total}
                   color={SUCCESS_COLOR}
-                  sublabel={`${statusBreakdown.success} · ${pctLabel(statusBreakdown.success, statusBreakdown.total)}`}
+                  fill="solid"
+                  sublabel={`${fmtInt(statusBreakdown.success)} · ${pctLabel(statusBreakdown.success, statusBreakdown.total)}`}
                 />
                 <MetricBar
                   label={t('commandHistory.failedLabel', 'Failed')}
                   value={statusBreakdown.failed}
                   max={statusBreakdown.total}
                   color={FAILED_COLOR}
-                  sublabel={`${statusBreakdown.failed} · ${pctLabel(statusBreakdown.failed, statusBreakdown.total)}`}
+                  fill="solid"
+                  sublabel={`${fmtInt(statusBreakdown.failed)} · ${pctLabel(statusBreakdown.failed, statusBreakdown.total)}`}
                 />
                 {statusBreakdown.other > 0 && (
                   <MetricBar
@@ -574,13 +606,14 @@ export default function CommandHistoryPage() {
                     value={statusBreakdown.other}
                     max={statusBreakdown.total}
                     color={OTHER_COLOR}
-                    sublabel={`${statusBreakdown.other} · ${pctLabel(statusBreakdown.other, statusBreakdown.total)}`}
+                    fill="solid"
+                    sublabel={`${fmtInt(statusBreakdown.other)} · ${pctLabel(statusBreakdown.other, statusBreakdown.total)}`}
                   />
                 )}
-                <div className="flex items-center justify-between border-t border-white/[0.06] pt-3">
+                <div className="flex items-center justify-between border-t border-[var(--border-default)] pt-3">
                   <Caption>{t('commandHistory.totalInRange', 'Total in range')}</Caption>
                   <Text size="sm" weight="semibold" color="primary" className="tabular-nums">
-                    {statusBreakdown.total}
+                    {fmtInt(statusBreakdown.total)}
                   </Text>
                 </div>
               </div>
@@ -594,7 +627,7 @@ export default function CommandHistoryPage() {
 
 // ─── Subtitle builder ────────────────────────────────────────────────────────
 
-function buildSubtitle(cmd: CommandLogEntry, t: TranslateFn): string {
+function buildSubtitle(cmd: CommandLogEntry, t: TranslateFn, timeZone: string, locale: string): string {
   const parts: string[] = [];
 
   if (cmd.params && cmd.params !== '{}' && cmd.params !== '') {
@@ -618,7 +651,7 @@ function buildSubtitle(cmd: CommandLogEntry, t: TranslateFn): string {
   }
 
   if (parts.length === 0) {
-    parts.push(formatDateTime(cmd.created_at, { tz: 'UTC' }));
+    parts.push(formatDateTime(cmd.created_at, { tz: timeZone, locale }));
   }
 
   return parts.join(' · ');

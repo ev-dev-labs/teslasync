@@ -37,7 +37,7 @@
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { render, screen, waitFor, fireEvent, within, act } from '@testing-library/react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClient, QueryClientProvider, onlineManager } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
 
@@ -241,6 +241,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  onlineManager.setOnline(true);
   vi.clearAllMocks();
 });
 
@@ -417,15 +418,14 @@ describe('CommandHistoryPage — loading / error / empty branches', () => {
 describe('CommandHistoryPage — daily bucketing timezone', () => {
   it('buckets daily activity by the vehicle calendar day, not UTC', async () => {
     tzMock.mockReturnValue('America/New_York');
-    // 00:30 UTC Jan 15 = 19:30 ET Jan 14 → the activity lands on 01-14
-    // (the old UTC slice filed it under 01-15).
+    // Full display dates retain the same vehicle-local bucket and its year.
     installRequest({ commands: [mkCmd({ created_at: '2026-01-15T00:30:00Z' })] });
     renderPage();
 
     const caption = await screen.findByText('Daily activity — data table');
     const table = caption.closest('table') as HTMLElement;
-    expect(within(table).getByText('01-14')).toBeInTheDocument();
-    expect(within(table).queryByText('01-15')).not.toBeInTheDocument();
+    expect(within(table).getByText('Jan 14, 2026')).toBeInTheDocument();
+    expect(within(table).queryByText('Jan 15, 2026')).not.toBeInTheDocument();
   });
 });
 
@@ -587,5 +587,123 @@ describe('CommandHistoryPage — command name & subtitle formatting', () => {
     expect(within(tl).getByText(/Error: Timeout/)).toBeInTheDocument();
     // Subtitle falls back to the raw string when params aren't valid JSON.
     expect(within(tl).getByText(/\{bad json/)).toBeInTheDocument();
+  });
+});
+
+describe('CommandHistoryPage — restrained presentation and trust', () => {
+  it('names every timeline outcome without relabeling unknown raw statuses as failures', async () => {
+    installRequest({
+      commands: [
+        mkCmd({ command: 'lock', status: 'success' }),
+        mkCmd({ command: 'unlock', status: 'failed' }),
+        mkCmd({ command: 'wake_up', status: 'queued' }),
+        mkCmd({ command: 'honk_horn', status: '' }),
+      ],
+    });
+    renderPage();
+    await waitForCount(4);
+
+    const rows = within(timelinePanel()).getAllByRole('listitem');
+    expect(rows).toHaveLength(4);
+    expect(within(rows[0]).getByText('Success')).toBeInTheDocument();
+    expect(within(rows[1]).getByText('Failed')).toBeInTheDocument();
+    expect(within(rows[2]).getByText('queued')).toBeInTheDocument();
+    expect(within(rows[3]).getByText('Unknown')).toBeInTheDocument();
+    expect(rows[2].querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
+    // Assert declared theme roles, not jsdom's unresolved computed CSS variables.
+    const outcomeColors = [
+      'var(--semantic-success)', 'var(--semantic-danger)',
+      'var(--text-secondary)', 'var(--text-secondary)',
+    ];
+    rows.forEach((row, index) => {
+      const marker = row.querySelector<HTMLElement>('span[style]');
+      expect(marker?.style.getPropertyValue('color')).toBe(outcomeColors[index]);
+      expect(marker?.style.getPropertyValue('border-color')).toBe(outcomeColors[index]);
+    });
+    expect(within(statusPanel()).getByRole('progressbar', { name: 'Other' })).toHaveAttribute('aria-valuenow', '2');
+    expect(within(statusPanel()).getByRole('progressbar', { name: 'Failed' })).toHaveAttribute('aria-valuenow', '1');
+  });
+
+  it('keeps source-unresolved paused history distinct from empty or filtered history in every panel', async () => {
+    installRequest({ commands: richCommands() });
+    onlineManager.setOnline(false);
+    renderPage(['/command-history?vehicle_id=10&status=failed&q=lock']);
+
+    await waitFor(() => expect(screen.getAllByText('Command history unavailable').length).toBeGreaterThanOrEqual(5));
+    expect(historyCalls()).toHaveLength(0);
+    expect(within(timelinePanel()).getAllByText('Command history unavailable')).toHaveLength(2);
+    expect(screen.queryByText('No commands in the selected range')).not.toBeInTheDocument();
+    expect(screen.queryByText('No commands match the current filters')).not.toBeInTheDocument();
+    expect(screen.queryByText('0 commands')).not.toBeInTheDocument();
+    expect(kpiBand().querySelectorAll('[data-operational-metric][data-value-state="missing"]')).toHaveLength(6);
+    expect(within(kpiBand()).queryByText('0')).not.toBeInTheDocument();
+  });
+
+  it('prioritizes the vehicle prerequisite over carried filters without sending commands', async () => {
+    installRequest({ vehicles: [], commands: richCommands() });
+    renderPage(['/command-history?status=failed&q=lock&page=3']);
+
+    await screen.findAllByText('Select a vehicle to view command activity');
+    expect(within(timelinePanel()).getAllByText('Select a vehicle to view command history')).toHaveLength(2);
+    expect(screen.queryByText('No commands match the current filters')).not.toBeInTheDocument();
+    expect(screen.getByRole('textbox', { name: 'Search commands' })).toHaveValue('lock');
+    expect(screen.getByRole('group', { name: 'Status' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Failed' })).toHaveAttribute('aria-pressed', 'true');
+    expect(historyCalls()).toHaveLength(0);
+    expect(mockRequest.mock.calls.every((call) => !String(call[0]).includes('/command/'))).toBe(true);
+  });
+
+  it('uses solid neutral rankings and semantic outcome fills while retaining every count', async () => {
+    installRequest({ commands: richCommands() });
+    renderPage();
+    await waitForCount(5);
+
+    const top = screen.getByRole('heading', { name: 'Top commands' }).closest('[data-print-card]') as HTMLElement;
+    const ranked = within(top).getAllByRole('progressbar');
+    expect(ranked).toHaveLength(3);
+    expect(ranked[0]).toHaveAttribute('aria-valuenow', '3');
+    expect(ranked[0]).toHaveAttribute('aria-valuemax', '3');
+    for (const row of ranked) {
+      expect(row.querySelector('[data-metric-fill]')).toHaveStyle({ background: 'var(--text-secondary)' });
+    }
+    expect(within(statusPanel()).getByRole('progressbar', { name: 'Success' }).querySelector('[data-metric-fill]'))
+      .toHaveStyle({ background: 'var(--semantic-success)' });
+    expect(within(statusPanel()).getByRole('progressbar', { name: 'Failed' }).querySelector('[data-metric-fill]'))
+      .toHaveStyle({ background: 'var(--semantic-danger)' });
+    expect(screen.getByRole('textbox', { name: 'Search commands' })).toHaveClass('min-h-11', 'md:min-h-9');
+    expect(screen.getByRole('link', { name: 'Commands' })).toHaveAttribute('href', '/commands');
+  });
+
+  it('retains full calendar-year identities in the daily data alternative', async () => {
+    tzMock.mockReturnValue('America/New_York');
+    installRequest({
+      commands: [
+        mkCmd({ created_at: '2026-01-15T00:30:00Z' }),
+        mkCmd({ created_at: '2025-01-15T00:30:00Z', status: 'failed' }),
+      ],
+    });
+    renderPage();
+    await waitForCount(2);
+
+    const caption = await screen.findByText('Daily activity — data table');
+    const table = caption.closest('table') as HTMLElement;
+    expect(within(table).getByText('Jan 14, 2025')).toBeInTheDocument();
+    expect(within(table).getByText('Jan 14, 2026')).toBeInTheDocument();
+    expect(within(table).queryByText('Jan 15, 2026')).not.toBeInTheDocument();
+    expect(within(table).getAllByRole('row')).toHaveLength(3);
+  });
+
+  it('preserves complete unbroken parameters and error text with the source timeline', async () => {
+    const rawParams = '{malformed-' + 'x'.repeat(240);
+    const rawError = 'test-only-error-' + 'y'.repeat(240);
+    installRequest({ commands: [mkCmd({ status: 'failed', params: rawParams, error: rawError })] });
+    renderPage();
+    await waitForCount(1);
+
+    const row = within(timelinePanel()).getByRole('listitem');
+    expect(row).toHaveTextContent(rawParams);
+    expect(row).toHaveTextContent(`Error: ${rawError}`);
+    expect(row.querySelector('p')).toHaveClass('break-words', 'whitespace-pre-wrap');
+    expect(row.querySelector('p')).not.toHaveClass('truncate');
   });
 });
