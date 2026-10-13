@@ -90,4 +90,23 @@ describe('HonestyMeterSegment', () => {
     expect(link).toHaveTextContent(label)
     expect(link).not.toHaveTextContent('0/0')
   })
+  it.each([
+    { Name: 'icon-only', iconOnly: true, expectedText: '' },
+    { Name: 'text', iconOnly: false, expectedText: 'Fleet · 1/1' },
+  ])('allocates mobile link sizing and restores md density in $Name context', ({ iconOnly, expectedText }) => {
+    render(<MemoryRouter><HonestyMeterSegment iconOnly={iconOnly} /></MemoryRouter>)
+    const link = screen.getByRole('link', { name: 'Telemetry honesty meter' })
+
+    // This checks the utility contract, not native geometry or touch-edge hits.
+    expect(link.tagName).toBe('A')
+    expect(link).toHaveAttribute('href', '/')
+    expect(link).toHaveClass('min-h-11', 'min-w-11', 'shrink-0')
+    expect(link).toHaveClass('md:min-h-0', 'md:min-w-0', 'md:shrink')
+    expect(link).not.toHaveClass('min-w-0')
+    expect(link).toHaveClass('inline-flex', 'items-center', 'px-1.5', 'py-0.5')
+    expect(link).toHaveClass('focus-visible:outline-2', 'focus-visible:outline-offset-2')
+    expect(link.textContent).toBe(expectedText)
+    expect(link.querySelector('.lucide-gauge')).toHaveAttribute('aria-hidden', 'true')
+  })
+
 })

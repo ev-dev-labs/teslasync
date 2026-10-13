@@ -75,7 +75,7 @@ export function HonestyMeterSegment({ iconOnly = false }: { iconOnly?: boolean }
         to="/"
         aria-label={t('honesty.aria', 'Telemetry honesty meter')}
         className={cn(
-          'inline-flex min-w-0 items-center gap-1.5 rounded-shape-sm px-1.5 py-0.5',
+          'inline-flex min-h-11 min-w-11 shrink-0 items-center gap-1.5 rounded-shape-sm px-1.5 py-0.5 md:min-h-0 md:min-w-0 md:shrink',
           typography.size.xs,
           'hover:bg-[var(--surface-3)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus-ring)]',
           TONE[headline],
