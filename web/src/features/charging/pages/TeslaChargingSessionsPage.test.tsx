@@ -29,7 +29,7 @@
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { act, render, screen, fireEvent, waitFor, within } from '@testing-library/react'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { QueryClient, QueryClientProvider, onlineManager } from '@tanstack/react-query'
 import { MemoryRouter } from 'react-router-dom'
 import type { ReactNode } from 'react'
 
@@ -322,7 +322,10 @@ describe('groupSessions', () => {
 
 /* ── Page ─────────────────────────────────────────────── */
 
-afterEach(() => vi.restoreAllMocks())
+afterEach(() => {
+  onlineManager.setOnline(true)
+  vi.restoreAllMocks()
+})
 
 describe('TeslaChargingSessionsPage', () => {
   it('retains lifetime metrics, maps, operational evidence and the sessions table after a background refresh fails', async () => {
@@ -338,8 +341,77 @@ describe('TeslaChargingSessionsPage', () => {
     expect(screen.getByText('250.00 kW')).toBeInTheDocument()
     expect(screen.getByTestId('sessions-map')).toHaveTextContent('map:3')
     expect(screen.getByTestId('charging-operational-brief')).toBeInTheDocument()
+    expect(within(screen.getByTestId('charging-operational-brief')).getByText('Data may be stale')).toBeInTheDocument()
+    expect(within(screen.getByTestId('charging-operational-brief')).queryByText('Source measurements available')).toBeNull()
     expect(screen.getByRole('region', { name: 'Charging sessions table' })).toBeInTheDocument()
     expect(screen.queryAllByText("Can't reach server")).toHaveLength(0)
+  })
+  it('keeps unknown energy and billing distinct from measured zero without losing sessions or map points', async () => {
+    mockedRequest.mockImplementation((path: string) => {
+      if (path === '/vehicles') return Promise.resolve([makeVehicle()])
+      if (path.startsWith('/tesla/charging/sessions')) {
+        return Promise.resolve({
+          sessions: [{ ...makeSession(), total_energy_added_wh: null, total_cost: null }],
+          summary: emptySummary,
+        })
+      }
+      return Promise.resolve([])
+    })
+    renderPage()
+    expect(await screen.findByTestId('sessions-map')).toHaveTextContent('map:1')
+    const brief = screen.getByTestId('charging-operational-brief')
+    for (const label of ['Total energy', 'Total cost']) {
+      const metric = within(brief).getByText(label).closest('[data-operational-metric]')
+      if (!metric) throw new Error(`Missing operational metric: ${label}`)
+      expect(metric).toHaveAttribute('data-value-state', 'missing')
+      expect(within(metric).getByText('—')).toBeInTheDocument()
+    }
+    expect(screen.getByRole('progressbar', { name: 'SUPERCHARGER' })).not.toHaveAttribute('aria-valuenow')
+    expect(screen.getByRole('progressbar', { name: 'Fremont Supercharger' })).not.toHaveAttribute('aria-valuenow')
+    expect(screen.getByText(/No cost data yet/)).toBeInTheDocument()
+    expect(screen.getByRole('region', { name: 'Charging sessions table' })).toHaveTextContent('Charging sessions')
+  })
+
+  it('preserves measured zero energy and cost and excludes negative durations from the operating average', async () => {
+    install({ sessions: [makeSession({ total_energy_added_wh: 0, total_cost: 0, charge_duration_s: -60 })] })
+    renderPage()
+    await screen.findByTestId('sessions-map')
+    const brief = screen.getByTestId('charging-operational-brief')
+    expect(within(brief).getByText('0.00 kWh')).toBeInTheDocument()
+    expect(within(brief).getByText('$0.00')).toBeInTheDocument()
+    const duration = within(brief).getByText('Average duration').closest('[data-operational-metric]')
+    if (!duration) throw new Error('Missing average duration metric')
+    expect(duration).toHaveAttribute('data-value-state', 'missing')
+    expect(within(duration).getByText('—')).toBeInTheDocument()
+    expect(screen.getByRole('progressbar', { name: 'SUPERCHARGER' })).toHaveAttribute('aria-valuenow', '0')
+    expect(screen.getByRole('progressbar', { name: 'Fremont Supercharger' })).toHaveAttribute('aria-valuenow', '0')
+  })
+
+  it('retains evidence and disables Tesla import while an offline refresh is paused', async () => {
+    const { client } = renderPage()
+    await screen.findByText('123.00 kWh')
+    await act(async () => {
+      onlineManager.setOnline(false)
+      void client.invalidateQueries({ queryKey: ['tesla-charging-sessions'] })
+    })
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Refresh from Tesla' })).toBeDisabled())
+    expect(within(screen.getByTestId('charging-operational-brief')).getByText('Data may be stale')).toBeInTheDocument()
+    expect(screen.getByText('123.00 kWh')).toBeInTheDocument()
+    expect(screen.getByTestId('sessions-map')).toHaveTextContent('map:3')
+    expect(screen.queryByText('No sessions in this analysis window')).toBeNull()
+    expect(screen.queryAllByText("Can't reach server")).toHaveLength(0)
+  })
+
+  it('uses the shared custom window to filter loaded evidence while keeping lifetime metrics independent', async () => {
+    renderPage(['/tesla-charging-sessions?from=2025-02-01&to=2025-02-28'])
+    await screen.findByText('123.00 kWh')
+    const brief = screen.getByTestId('charging-operational-brief')
+    expect(within(brief).getByText('1')).toBeInTheDocument()
+    expect(within(brief).getByText('30.00 kWh')).toBeInTheDocument()
+    expect(within(brief).getByText('$7.00')).toBeInTheDocument()
+    expect(screen.getByText('42')).toBeInTheDocument()
+    expect(screen.getByTestId('sessions-map')).toHaveTextContent('map:1')
+    expect(screen.queryByText('DESTINATION')).toBeNull()
   })
   it('updates billing precision and locale while mounted without changing canonical amounts', async () => {
     // jsdom has no layout; expose a viewport so the real virtualizer renders rows.
