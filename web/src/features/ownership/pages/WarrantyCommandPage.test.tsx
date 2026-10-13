@@ -302,3 +302,96 @@ describe('WarrantyCommandPage — confirm-gated delete', () => {
     expect(removeButton('Battery Shield')).not.toBeDisabled();
   });
 });
+
+
+describe('WarrantyCommandPage — restrained shared adoption', () => {
+  it('keeps every section mounted for authoritative empty sources', () => {
+    mockOverview.mockReturnValue(makeQuery({ ...makeOverview(), coverages: [] }));
+    mockWarranties.mockReturnValue(makeQuery({ items: [] }));
+    renderPage();
+    for (const title of ['Coverage posture', 'Coverage burn-down', 'Claim readiness checklist',
+      'Recorded coverages', 'Claim ledger', 'Evidence bundle']) {
+      expect(screen.getByRole('heading', { name: title })).toBeInTheDocument();
+    }
+    expect(screen.getByText('No warranties recorded yet.')).toBeInTheDocument();
+    expect(screen.getByText('No claims recorded yet.')).toBeInTheDocument();
+    expect(screen.getByText('Interpreting contract exclusions — readiness is factual, not legal advice')).toBeInTheDocument();
+    expect(screen.getByText('Filing the claim with the provider on your behalf')).toBeInTheDocument();
+  });
+
+  it('uses named shared usage bars without changing source values or bounded presentation', () => {
+    const overview = makeOverview();
+    overview.coverages[0].time_used_pct = 125;
+    overview.coverages[0].distance_used_pct = -5;
+    mockOverview.mockReturnValue(makeQuery(overview));
+    renderPage();
+    expect(screen.getByRole('progressbar', { name: 'Time consumed' })).toHaveAttribute('aria-valuenow', '100');
+    expect(screen.getByRole('progressbar', { name: 'Distance consumed' })).toHaveAttribute('aria-valuenow', '0');
+    expect(overview.coverages[0].time_used_pct).toBe(125);
+    expect(overview.coverages[0].distance_used_pct).toBe(-5);
+  });
+
+  it('keeps unknown usage unknown and signed battery headroom intact', () => {
+    const overview = makeOverview();
+    overview.coverages[0].time_used_pct = Number.NaN;
+    overview.coverages[0].capacity_retention_pct = 68;
+    overview.coverages[0].capacity_headroom_pct = -2;
+    mockOverview.mockReturnValue(makeQuery(overview));
+    renderPage();
+    const bar = screen.getByRole('progressbar', { name: 'Time consumed' });
+    expect(bar).not.toHaveAttribute('aria-valuenow');
+    expect(bar).toHaveAttribute('aria-valuetext', 'No reading');
+    expect(screen.getByText(/-2.*headroom/)).toBeInTheDocument();
+    expect(overview.coverages[0].capacity_headroom_pct).toBe(-2);
+  });
+
+  it('names readiness outcomes independently of semantic color', () => {
+    const overview = makeOverview();
+    overview.coverages[0].readiness = [
+      { code: 'recorded', label: 'Recorded evidence', detail: 'Available', severity: 'high', satisfied: true },
+      { code: 'missing', label: 'Missing evidence', detail: 'Unavailable', severity: 'critical', satisfied: false },
+    ];
+    mockOverview.mockReturnValue(makeQuery(overview));
+    renderPage();
+    expect(within(card('Claim readiness checklist')).getByRole('img', { name: 'Yes' })).toBeInTheDocument();
+    expect(within(card('Claim readiness checklist')).getByRole('img', { name: 'No' })).toBeInTheDocument();
+  });
+
+  it('keeps initial overview loading independent of the ready coverage register', () => {
+    mockOverview.mockReturnValue({ ...makeQuery(undefined), isLoading: true, isPending: true });
+    renderPage();
+    expect(screen.getByText('Battery Shield')).toBeInTheDocument();
+    expect(within(card('Claim ledger')).queryByText('No claims recorded yet.')).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Coverage burn-down' })).toBeInTheDocument();
+    expect(mockClaim().mutate).not.toHaveBeenCalled();
+  });
+
+  it('retains cached overview claims when refresh is paused', () => {
+    mockOverview.mockReturnValue({ ...makeQuery(makeOverview()), fetchStatus: 'paused' });
+    renderPage();
+    expect(within(card('Claim ledger')).getByText('Observed warranty claim')).toBeInTheDocument();
+    expect(within(card('Claim ledger')).getByText(/Cached evidence remains visible/)).toBeInTheDocument();
+    expect(screen.getByText('complete-warranty-digest')).toBeInTheDocument();
+  });
+
+  it('preserves raw SI coverage submission and confirmed claim recording', () => {
+    renderPage();
+    fireEvent.click(screen.getByRole('button', { name: 'Add coverage' }));
+    fireEvent.change(screen.getByLabelText(/Label/), { target: { value: 'Entered contract' } });
+    const save = screen.getByRole('button', { name: 'Save coverage' });
+    fireEvent.submit(save.closest('form')!);
+    expect(mockCreate().mutate).toHaveBeenCalledWith(expect.objectContaining({
+      vehicle_id: 7, label: 'Entered contract', start_odometer_m: 0,
+      term_s: 1460 * 86400, term_distance_m: 80467, capacity_floor_pct: null,
+      deductible_minor: 0, currency: 'USD',
+    }), expect.objectContaining({ onSuccess: expect.any(Function) }));
+    const row = screen.getByText('Battery Shield').closest('tr')!;
+    fireEvent.click(within(row).getByRole('button', { name: 'Claim' }));
+    fireEvent.change(screen.getByLabelText(/Claim title/), { target: { value: 'Recorded claim' } });
+    fireEvent.submit(screen.getByRole('button', { name: 'Record claim' }).closest('form')!);
+    expect(mockClaim().mutate).toHaveBeenCalledWith({
+      warranty_id: 1, confirmed: true, title: 'Recorded claim', status: 'draft',
+      amount_minor: 0, evidence_note: '',
+    }, expect.objectContaining({ onSuccess: expect.any(Function) }));
+  });
+});

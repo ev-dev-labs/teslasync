@@ -10,16 +10,18 @@ import {
   useWarrantyOverview,
 } from '@/api/hooks/useOwnership';
 import { AlertBanner } from '@/components/feedback';
+import { MetricBar } from '@/components/data-display';
 
 import { PageLayout } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
-import { Badge, Button, ConfirmDialog, DataTable, Input, Select, Text, Textarea } from '@/components/ui';
+import { Badge, Button, Card, ConfirmDialog, DataTable, Icon, Input, Select, Text, Textarea } from '@/components/ui';
 import type { Column } from '@/components/ui';
 import { useConfirm } from '@/hooks/useConfirm';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useUnits } from '@/hooks/useUnits';
 import { formatDateTime } from '@/lib/dateFormat';
+import { gaugeTone, severityTokens } from '@/lib/tokens';
 
 import type {
   ClaimStatus,
@@ -79,7 +81,7 @@ function severityTone(severity: string): 'danger' | 'warning' | 'neutral' {
 function UsageBar({ label, pct, hint }: { label: string; pct: number; hint: string }) {
   useNumberFormatting();
   const clamped = Math.min(100, Math.max(0, pct));
-  const tone = clamped >= 90 ? 'bg-rose-400/70' : clamped >= 70 ? 'bg-amber-400/70' : 'bg-cyan-400/70';
+  const tone = clamped >= 90 ? gaugeTone.danger : clamped >= 70 ? gaugeTone.warning : gaugeTone.info;
   return (
     <div>
       <div className="flex items-baseline justify-between gap-2">
@@ -87,11 +89,12 @@ function UsageBar({ label, pct, hint }: { label: string; pct: number; hint: stri
           {label}
         </Text>
         <span className="tabular-nums text-xs text-[var(--text-secondary)]">
-          {formatPct(clamped)}
+          {Number.isFinite(pct) ? formatPct(clamped) : '—'}
         </span>
       </div>
-      <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-[var(--surface-2)]">
-        <div className={`h-full rounded-full ${tone}`} style={{ width: `${clamped}%` }} />
+      <div className="mt-1">
+        <MetricBar value={pct} max={100} color={tone} ariaLabel={label}
+          showHeader={false} size="slim" fill="solid" />
       </div>
       <Text as="p" variant="caption">
         {hint}
@@ -222,9 +225,9 @@ export default function WarrantyCommandPage() {
       header: t('ownership.warranty.check.state', 'State'),
       render: (row) =>
         row.satisfied ? (
-          <CheckCircle2 className="h-4 w-4 text-emerald-300" aria-hidden="true" />
+          <Icon icon={CheckCircle2} className={severityTokens.success.fg} aria-label={t('common.yes', 'Yes')} />
         ) : (
-          <XCircle className="h-4 w-4 text-rose-300" aria-hidden="true" />
+          <Icon icon={XCircle} className={severityTokens.critical.fg} aria-label={t('common.no', 'No')} />
         ),
     },
     {
@@ -392,7 +395,7 @@ export default function WarrantyCommandPage() {
           <Button
             variant="secondary"
             size="sm"
-            icon={<FilePlus2 className="h-4 w-4" aria-hidden="true" />}
+            icon={<Icon icon={FilePlus2} />}
             onClick={() => setClaimFor(row.id)}
           >
             {t('ownership.warranty.row.claim', 'Claim')}
@@ -400,7 +403,7 @@ export default function WarrantyCommandPage() {
           <Button
             variant="ghost"
             size="sm"
-            icon={<Trash2 className="h-4 w-4" aria-hidden="true" />}
+            icon={<Icon icon={Trash2} />}
             loading={remove.isPending && remove.variables === row.id}
             onClick={() => void handleRemove(row)}
           >
@@ -412,14 +415,11 @@ export default function WarrantyCommandPage() {
   ];
 
   const renderCoverage = (coverage: WarrantyCoverage) => (
-    <div
-      key={coverage.warranty.id}
-      className="rounded-xl border border-white/[0.08] bg-white/[0.025] p-4"
-    >
+    <Card key={coverage.warranty.id} className="shadow-none">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <div className="flex items-center gap-2">
-            <ShieldCheck className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+            <Icon icon={ShieldCheck} className="text-[var(--text-secondary)]" />
             <Text as="h3" variant="label">
               {coverage.warranty.label}
             </Text>
@@ -429,17 +429,17 @@ export default function WarrantyCommandPage() {
             {coverage.warranty.provider} · {coverage.warranty.kind}
           </Text>
         </div>
-        <div className="text-right">
+        <div className="text-end">
           <Text as="p" variant="caption">
             {t('ownership.warranty.card.readiness', 'Claim readiness')}
           </Text>
           <p
             className={`tabular-nums text-lg font-semibold ${
               coverage.readiness_score >= 80
-                ? 'text-emerald-300'
+                ? severityTokens.success.fg
                 : coverage.readiness_score >= 50
-                  ? 'text-amber-300'
-                  : 'text-rose-300'
+                  ? severityTokens.warn.fg
+                  : severityTokens.critical.fg
             }`}
           >
             {fmtNumber(coverage.readiness_score)}/100
@@ -488,7 +488,7 @@ export default function WarrantyCommandPage() {
       </div>
 
       {coverage.capacity_retention_pct != null ? (
-        <div className="mt-4 rounded-lg border border-white/[0.07] bg-white/[0.02] p-3">
+        <Card padding="sm" className="mt-4 shadow-none">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <Text as="span" variant="caption">
               {t('ownership.warranty.card.capacity', 'Battery retention vs. warranty floor')}
@@ -510,7 +510,7 @@ export default function WarrantyCommandPage() {
               })}
             </Text>
           ) : null}
-        </div>
+        </Card>
       ) : null}
 
       <Text as="p" variant="bodySm">
@@ -526,7 +526,7 @@ export default function WarrantyCommandPage() {
           </Badge>
         </div>
       ) : null}
-    </div>
+    </Card>
   );
 
   return (
@@ -647,7 +647,7 @@ export default function WarrantyCommandPage() {
             <Button
               variant="secondary"
               size="sm"
-              icon={<ShieldCheck className="h-4 w-4" aria-hidden="true" />}
+              icon={<Icon icon={ShieldCheck} />}
               onClick={() => setFormOpen((open) => !open)}
             >
               {formOpen
@@ -810,7 +810,7 @@ export default function WarrantyCommandPage() {
         >
           {claimFor != null ? (
             <form
-              className="mb-6 grid gap-4 rounded-lg border border-white/[0.07] bg-white/[0.02] p-4 md:grid-cols-2"
+              className="mb-6 grid gap-4 rounded-lg border border-[var(--border-default)] bg-[var(--surface-1)] p-4 md:grid-cols-2"
               onSubmit={submitClaim}
             >
               <Input
@@ -888,7 +888,7 @@ export default function WarrantyCommandPage() {
               'A stable digest over the coverage terms and readiness state used for this assessment. Quote it when you open a claim so both sides reference the same snapshot.',
             )}
           </Text>
-          <p className="mt-2 break-all font-mono text-sm text-cyan-300">
+          <p className="mt-2 break-all font-mono text-sm text-[var(--text-secondary)]">
             {overview?.evidence_bundle_hash || '—'}
           </p>
         </OwnershipPanel>
