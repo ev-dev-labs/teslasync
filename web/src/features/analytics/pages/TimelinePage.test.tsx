@@ -36,6 +36,15 @@ import { MemoryRouter } from 'react-router-dom'
 import type { ReactNode } from 'react'
 import { Button } from '@/components/ui'
 import { containerPolicy } from '@/components/layout/layout-reference'
+import { chartTokens } from '@/lib/tokens'
+import { formatDateTime } from '@/lib/dateFormat'
+
+const timezoneFixture = vi.hoisted(() => ({ value: 'UTC' }))
+
+vi.mock('@/lib/timezone', async () => {
+  const actual = await vi.importActual<typeof import('@/lib/timezone')>('@/lib/timezone')
+  return { ...actual, useTimezone: () => timezoneFixture.value }
+})
 
 vi.mock('@/api/client', async () => {
   const actual = await vi.importActual<typeof import('@/api/client')>('@/api/client')
@@ -207,6 +216,7 @@ function HeaderVehicleSwitch() {
 }
 
 beforeEach(() => {
+  timezoneFixture.value = 'UTC'
   mockedRequest.mockReset()
   window.localStorage.clear()
   install()
@@ -467,5 +477,88 @@ describe('TimelinePage', () => {
       expect(timelineCalls.every((p) => !p.includes('days='))).toBe(true)
       expect(timelineCalls.some((p) => decodeURIComponent(p).includes('2015-01-01'))).toBe(true)
     })
+  })
+
+  it('recovers the summary source independently without refetching the timeline', async () => {
+    install({ summaryError: true })
+    renderPage()
+    expect(await screen.findByText('Unable to load Summary metrics: summary boom')).toBeInTheDocument()
+    expect(screen.getByRole('table', { name: 'State transitions' })).toHaveTextContent('shift_state')
+    const brief = screen.getByTestId('timeline-summary')
+    expect(within(brief).queryByText('10')).toBeNull()
+    expect(within(brief).queryByText('0m')).toBeNull()
+    const timelineCalls = mockedRequest.mock.calls.filter(([path]) => path.startsWith('/vehicle-states/timeline')).length
+    const summaryCalls = mockedRequest.mock.calls.filter(([path]) => path.startsWith('/vehicle-states/summary')).length
+    install()
+    fireEvent.click(screen.getByRole('button', { name: /Refresh data.*Source: Summary metrics/ }))
+    expect(await within(brief).findByText('10')).toBeInTheDocument()
+    expect(mockedRequest.mock.calls.filter(([path]) => path.startsWith('/vehicle-states/timeline'))).toHaveLength(timelineCalls)
+    expect(mockedRequest.mock.calls.filter(([path]) => path.startsWith('/vehicle-states/summary'))).toHaveLength(summaryCalls + 1)
+    expect(screen.queryByText('Unable to load Summary metrics: summary boom')).toBeNull()
+  })
+
+  it('retains summary measurements and independent transitions after a summary refresh fails', async () => {
+    renderPage()
+    await screen.findByText('10', {}, { timeout: 8000 })
+    install({ summaryError: true })
+    fireEvent.click(screen.getByRole('button', { name: /Refresh data.*Source: Summary metrics/ }))
+    expect(await screen.findByText(/Showing retained Summary metrics after a refresh failed/)).toHaveTextContent('summary boom')
+    const brief = screen.getByTestId('timeline-summary')
+    expect(within(brief).getByText('10')).toBeInTheDocument()
+    expect(within(brief).getByText('2h')).toBeInTheDocument()
+    expect(within(brief).getByText('1h')).toBeInTheDocument()
+    expect(screen.getByRole('table', { name: 'State transitions' })).toHaveTextContent('shift_state')
+    expect(screen.queryByText('No state distribution available yet')).toBeNull()
+    expect(screen.getAllByRole('progressbar')).toHaveLength(4)
+  })
+
+  it('uses restrained solid dwell colors while preserving all eight state identities', async () => {
+    renderPage()
+    await screen.findByText('10', {}, { timeout: 8000 })
+    const distribution = screen.getByRole('group', { name: 'State distribution' })
+    for (const state of ['driving', 'charging', 'idle', 'sleeping', 'online', 'offline', 'parked', 'asleep']) {
+      expect(within(distribution).getAllByText(state).length).toBeGreaterThan(0)
+    }
+    const driving = screen.getByRole('progressbar', { name: 'Driving' })
+    const fill = driving.querySelector<HTMLElement>('[data-metric-fill]')!
+    expect(fill).toHaveStyle({ background: chartTokens.series[1] })
+    expect(fill.style.background).not.toContain('gradient')
+    expect(driving).toHaveAttribute('aria-valuenow', '7199')
+    expect(driving).toHaveTextContent('2h')
+  })
+
+  it('uses the vehicle day for preview navigation without changing UTC daily buckets', async () => {
+    timezoneFixture.value = 'America/Los_Angeles'
+    install()
+    mockedRequest.mockImplementation((path: string) => {
+      if (path === '/vehicles') return Promise.resolve([makeVehicle()])
+      if (path.startsWith('/vehicle-states/summary')) return Promise.resolve(summaryFor(1))
+      if (path.startsWith('/vehicle-states/timeline')) return Promise.resolve({
+        transitions: [
+          { ts: '2025-03-09T07:30:00Z', from_state: 'offline', to_state: 'driving', trigger_field: 'shift_state', trigger_value: 'D' },
+          { ts: '2025-03-09T10:30:00Z', from_state: 'driving', to_state: 'charging', trigger_field: null, trigger_value: null },
+        ],
+      })
+      return Promise.resolve({})
+    })
+    renderPage('/timeline?from=2025-03-08&to=2025-03-09')
+    fireEvent.click(await screen.findByRole('button', { name: 'Inspect transition offline to driving' }))
+    const drawer = screen.getByRole('dialog', { name: 'offline → driving' })
+    expect(within(drawer).getByRole('link', { name: 'Drive history' })).toHaveAttribute('href', '/drives?from=2025-03-08&to=2025-03-08')
+    expect(within(drawer).getByRole('link', { name: 'Telemetry evidence' })).toHaveAttribute('href', '/signals?from=2025-03-08&to=2025-03-08&signals=shift_state')
+    expect(within(drawer).getByText(`Recorded ${formatDateTime('2025-03-09T07:30:00Z', { tz: 'America/Los_Angeles' })}`)).toBeInTheDocument()
+    expect(within(drawer).getByText('3h')).toBeInTheDocument()
+    fireEvent.click(within(drawer).getByText('Close'))
+    const chart = screen.getByRole('group', { name: 'Daily transition counts by vehicle state' })
+    expect(within(chart.closest('figure')!).getByRole('table')).toHaveTextContent('2025-03-09')
+    const table = screen.getByRole('table', { name: 'State transitions' })
+    expect(within(table).getByText('offline')).toHaveClass('bg-[var(--surface-2)]')
+    const rangeCalls = mockedRequest.mock.calls.map(([path]) => path).filter(path => path.startsWith('/vehicle-states/'))
+    for (const path of rangeCalls) {
+      const params = new URLSearchParams(path.split('?')[1])
+      expect(params.get('start')).toBe('2025-03-08T08:00:00.000Z')
+      expect(params.get('end')).toBe('2025-03-10T07:00:00.000Z')
+    }
+    expect(rangeCalls).toHaveLength(2)
   })
 })

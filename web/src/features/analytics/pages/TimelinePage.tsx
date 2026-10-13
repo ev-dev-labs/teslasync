@@ -6,7 +6,7 @@ import {
 } from 'lucide-react';
 
 import { PageLayout, CardGrid, LayoutCard, ChartCard } from '@/components/layout';
-import { Badge, Button, DataTable, Text, Caption, type Column } from '@/components/ui';
+import { Badge, Button, DataTable, Text, Caption, Icon, type Column } from '@/components/ui';
 
 import { useRangeState } from '@/hooks/useRangeState';
 import { useTimezone } from '@/lib/timezone';
@@ -40,6 +40,9 @@ import type { StatPeriod } from '@/lib/metric-reference';
 import { TimelineSource, type TimelineSourceFacts } from '../components/timeline-modernization';
 import { OperationalBrief, type StatMetric } from '@/components/data-display';
 import { useOperationalMetrics } from '@/hooks/useOperationalMetrics';
+import { useDataState } from '@/hooks/useDataState';
+import { chartTokens } from '@/lib/tokens';
+import { getChartFontFamily, getChartFontSize } from '@/lib/chartTypography';
 
 /* ─── Types matching actual API responses ────────────────── */
 
@@ -59,14 +62,14 @@ interface TransitionRow extends TransitionRecord {
 /* ─── Constants ──────────────────────────────────────────── */
 
 const STATE_COLORS: Record<string, string> = {
-  driving: '#10b981',
-  charging: '#0891b2',
-  idle: '#f59e0b',
-  sleeping: '#64748b',
-  online: '#3b82f6',
-  offline: '#374151',
-  parked: '#8b5cf6',
-  asleep: '#64748b',
+  driving: chartTokens.series[1],
+  charging: chartTokens.series[0],
+  idle: chartTokens.series[2],
+  sleeping: 'var(--text-secondary)',
+  online: chartTokens.series[0],
+  offline: 'var(--text-muted)',
+  parked: chartTokens.series[4],
+  asleep: 'var(--text-secondary)',
 };
 
 const STATE_BADGE: Record<string, 'success' | 'info' | 'warning' | 'neutral' | 'danger'> = {
@@ -75,7 +78,7 @@ const STATE_BADGE: Record<string, 'success' | 'info' | 'warning' | 'neutral' | '
   idle: 'warning',
   sleeping: 'neutral',
   online: 'info',
-  offline: 'danger',
+  offline: 'neutral',
   parked: 'warning',
   asleep: 'neutral',
 };
@@ -112,7 +115,7 @@ function transitionDuration(row: TransitionRow): string {
 /* ─── Component ──────────────────────────────────────────── */
 
 export default function TimelinePage() {
-  const { fmtPercent } = useNumberFormatting();
+  const { fmtPercent, locale } = useNumberFormatting();
   const { t } = useTranslation();
   usePageTitle(t('timeline.title', 'Timeline'));
 
@@ -128,17 +131,24 @@ export default function TimelinePage() {
     timezone,
   });
   const [previewTransition, setPreviewTransition] = useState<TransitionRow | null>(null);
-  const previewDay = localDayKey(previewTransition?.ts);
+  const previewDay = localDayKey(previewTransition?.ts, timezone);
 
   const { error: vehiclesError } = useVehicles();
 
   // API integrator's exact extracted contract: string ID, both range operands,
-  // original cache keys/enabled/default policies and unforwarded cancellation.
+  // original cache keys/enabled/default policies and forwarded cancellation.
   const timelineQuery = useTimelinePageTimeline(activeId, startInstant, endInstantExclusive);
   const { data: timelineData, isLoading: tlLoading, error: timelineError, refetch } = timelineQuery;
 
   const summaryQuery = useTimelinePageSummary(activeId, startInstant, endInstantExclusive);
-  const { data: summaryData, isLoading: sumLoading, error: summaryError } = summaryQuery;
+  const { data: summaryData, isLoading: sumLoading } = summaryQuery;
+  const timelineState = useDataState(timelineQuery, { provenance: 'historical' });
+  const summaryState = useDataState(summaryQuery, { provenance: 'historical' });
+  const chartTick = {
+    fill: chartTokens.axisStroke,
+    fontFamily: getChartFontFamily(),
+    fontSize: getChartFontSize(12),
+  };
 
   /* Defensive coercion — even with TanStack handling network errors, an
    * unexpected response shape (e.g. backend returns an array, or an error
@@ -156,15 +166,15 @@ export default function TimelinePage() {
     enabled,
     available: Array.isArray(timelineData?.transitions),
     loading: tlLoading,
-    paused: timelineQuery.isPaused,
-    error: timelineError,
+    paused: timelineState.isRefreshBlocked,
+    error: timelineState.fatalError ?? timelineState.refreshError,
   };
   const summarySource: TimelineSourceFacts = {
     enabled,
     available: Array.isArray(summaryData?.by_state),
     loading: sumLoading,
-    paused: summaryQuery.isPaused,
-    error: summaryError,
+    paused: summaryState.isRefreshBlocked,
+    error: summaryState.fatalError ?? summaryState.refreshError,
   };
   const distributionSource: TimelineSourceFacts = {
     ...summarySource,
@@ -173,8 +183,8 @@ export default function TimelinePage() {
   const summaryPeriod: StatPeriod = {
     kind: 'analysis',
     label: t('timeline.summary.period', '{{start}} – {{end}} (exclusive) · {{timezone}}', {
-      start: formatDateTime(startInstant, { tz: timezone }),
-      end: formatDateTime(endInstantExclusive, { tz: timezone }),
+      start: formatDateTime(startInstant, { tz: timezone, locale }),
+      end: formatDateTime(endInstantExclusive, { tz: timezone, locale }),
       timezone,
     }),
     start: startInstant,
@@ -300,7 +310,7 @@ export default function TimelinePage() {
         header: t('timeline.time', 'Time'),
         sortable: true,
         render: (row) => (
-          <Text variant="body">{formatDateTime(row.ts)}</Text>
+          <Text variant="body">{formatDateTime(row.ts, { tz: timezone, locale })}</Text>
         ),
       },
       {
@@ -379,7 +389,7 @@ export default function TimelinePage() {
         ),
       },
     ],
-    [t],
+    [t, timezone, locale],
   );
 
   /* ─── Refresh action ─── */
@@ -389,9 +399,10 @@ export default function TimelinePage() {
         variant="ghost"
         className="min-h-11 min-w-11"
         onClick={() => refetch()}
+        disabled={!enabled || timelineState.isRefreshBlocked || timelineState.isRefreshing}
         aria-label={t('timeline.refresh', 'Refresh timeline')}
       >
-        <RefreshCw className="h-4 w-4" aria-hidden="true" />
+        <Icon icon={RefreshCw} />
       </Button>
   );
 
@@ -399,11 +410,11 @@ export default function TimelinePage() {
     <PageLayout
       title={t('timeline.title', 'Timeline')}
       subtitle={t('timeline.subtitle', 'Vehicle state history and transitions')}
-      metadataActions={<DataFreshnessAuto query={timelineQuery} />}
+      metadataActions={<DataFreshnessAuto query={timelineQuery} refetchable={enabled && !timelineState.isRefreshBlocked} />}
       secondaryActions={actions}
     >
       {vehiclesError && (
-        <AlertBanner variant="danger" icon={<AlertCircle className="h-5 w-5" aria-hidden="true" />}>
+        <AlertBanner variant="danger" icon={<Icon icon={AlertCircle} size="lg" />}>
           {t('error.loadFailed', 'Failed to load data')}: {getErrorMessage(vehiclesError)}
         </AlertBanner>
       )}
@@ -426,6 +437,13 @@ export default function TimelinePage() {
           provenance={summaryPeriod.provenance}
           loading={summarySource.enabled && summarySource.loading && !summarySource.paused && !summarySource.available}
         />
+        <div className="mt-2 flex min-w-0 flex-wrap items-center gap-2">
+          <Caption>{t('timeline.kpis', 'Summary metrics')}</Caption>
+          <DataFreshnessAuto query={summaryQuery}
+            source={t('timeline.kpis', 'Summary metrics')}
+            refetchable={enabled && !summaryState.isRefreshBlocked}
+          />
+        </div>
         {(!summarySource.available && (!summarySource.loading || summarySource.paused)
           || summarySource.available && (summarySource.error || summarySource.paused)) && (
           <TimelineSource source={summarySource} label={t('timeline.kpis', 'Summary metrics')}>{null}</TimelineSource>
@@ -541,9 +559,9 @@ export default function TimelinePage() {
               {({ hiddenSeries }) => (
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={dailyBreakdown}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
-                    <XAxis dataKey="day" minTickGap={64} interval="preserveStartEnd" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} />
-                    <YAxis tick={{ fill: 'var(--text-muted)', fontSize: 10 }} allowDecimals={false} />
+                    <CartesianGrid strokeDasharray="3 3" stroke={chartTokens.gridStroke} strokeOpacity={0.4} />
+                    <XAxis dataKey="day" minTickGap={64} interval="preserveStartEnd" tick={chartTick} />
+                    <YAxis tick={chartTick} allowDecimals={false} />
                     <Tooltip content={<ChartTooltip />} />
                     <ChartLegend />
                     <Bar dataKey="driving" name={t('timeline.driving', 'Driving')} stackId="a" fill={STATE_COLORS.driving} fillOpacity={0.85} hide={hiddenSeries?.isHidden('driving')} />
@@ -579,6 +597,7 @@ export default function TimelinePage() {
                   value={row.total_seconds}
                   max={totalSeconds || row.total_seconds}
                   color={row.color}
+                  fill="solid"
                   sublabel={`${formatDurationFromSeconds(row.total_seconds)} · ${fmtPercent(row.percentage)}`}
                 />
               ))}
@@ -613,7 +632,7 @@ export default function TimelinePage() {
                 duration: 'primary', trigger_field: 'meta', actions: 'hidden',
               },
               displayValue: (row, key) => {
-                if (key === 'ts') return formatDateTime(row.ts);
+                if (key === 'ts') return formatDateTime(row.ts, { tz: timezone, locale });
                 if (key === 'from_state') return row.from_state ?? '—';
                 if (key === 'to_state') return row.to_state;
                 if (key === 'duration') return transitionDuration(row);
@@ -658,7 +677,7 @@ export default function TimelinePage() {
             ? t(
                 'timeline.preview.description',
                 'Recorded {{time}}',
-                { time: formatDateTime(previewTransition.ts) },
+                { time: formatDateTime(previewTransition.ts, { tz: timezone, locale }) },
               )
             : undefined
         }
@@ -706,7 +725,7 @@ export default function TimelinePage() {
                   key: 'vehicle',
                   label: t('entityContext.vehicle', 'Vehicle'),
                   to: `/vehicles/${vehicleId}`,
-                  icon: <Car className="h-4 w-4" aria-hidden="true" />,
+                  icon: <Icon icon={Car} />,
                 },
                 {
                   key: 'drives',
@@ -715,7 +734,7 @@ export default function TimelinePage() {
                     from: previewDay,
                     to: previewDay,
                   }),
-                  icon: <Route className="h-4 w-4" aria-hidden="true" />,
+                  icon: <Icon icon={Route} />,
                 },
                 {
                   key: 'charging',
@@ -724,7 +743,7 @@ export default function TimelinePage() {
                     from: previewDay,
                     to: previewDay,
                   }),
-                  icon: <BatteryCharging className="h-4 w-4" aria-hidden="true" />,
+                  icon: <Icon icon={BatteryCharging} />,
                 },
                 {
                   key: 'locations',
@@ -733,7 +752,7 @@ export default function TimelinePage() {
                     from: previewDay,
                     to: previewDay,
                   }),
-                  icon: <MapPin className="h-4 w-4" aria-hidden="true" />,
+                  icon: <Icon icon={MapPin} />,
                 },
                 {
                   key: 'alerts',
@@ -742,13 +761,13 @@ export default function TimelinePage() {
                     from: previewDay,
                     to: previewDay,
                   }),
-                  icon: <Bell className="h-4 w-4" aria-hidden="true" />,
+                  icon: <Icon icon={Bell} />,
                 },
                 {
                   key: 'service',
                   label: t('entityContext.service', 'Service history'),
                   to: '/maintenance',
-                  icon: <Wrench className="h-4 w-4" aria-hidden="true" />,
+                  icon: <Icon icon={Wrench} />,
                 },
                 {
                   key: 'telemetry',
@@ -760,7 +779,7 @@ export default function TimelinePage() {
                       ? [previewTransition.trigger_field]
                       : [],
                   }),
-                  icon: <Activity className="h-4 w-4" aria-hidden="true" />,
+                  icon: <Icon icon={Activity} />,
                 },
               ]
             : []
