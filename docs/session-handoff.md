@@ -2,6 +2,98 @@
 
 ## Current phase
 
+### Authoritative recovery after fifteen actual cancellations
+
+`docs/orchestrator-loop.md` is the sole operating playbook, committed/pushed
+`61db5bd81` (1675). It supersedes both older playbooks; do not edit it without
+a new user request. Continue here, not a session restart.
+
+All fifteen manually killed owners were actually `Cancelled`. Fourteen had
+no new disk delta and are pending with attempts zero and the exact note
+`reset after stall`. Their old WIP, hashes, failure history and original
+assertions remain. This is the specific authorized infrastructure exception,
+not blanket forgiveness of other failed items.
+
+Statistics was the only cancelled item with new changes. Its source/test
+pair is preserved/pushed as WIP `25855e6ae` (1680), pending attempt one.
+Current parent proof: normal catalog BEFORE1/GENERATE0/AFTER0; scoped Vitest
+was actually stopped at 180 seconds, exit124, no reported executed cases,
+no inferred catalog cause; scoped ESLint0/source scan0. Its own
+`Object.hasOwn` production compatibility errors remain. The historical
+29-case receipt is not current acceptance. Continue with the owned
+compatibility correction and covering proof; do not widen global TSlib.
+
+Every remaining dirty application pair was individually attributed,
+receipted and committed/pushed. Counts1676-1689 preserve PowerFlow,
+ProjectedRange, SleepEfficiency, VampireDrain, TeslaChargingHistory,
+TeslaChargingSessions, DrivingDynamics, DrivingRhythm, Efficiency,
+EfficiencyTarget and JourneyFragmentation as SOURCE ONLY, not native or
+whole-page behavior acceptance. Their final startup failures executed zero
+cases. Reported inherited fixture/geometry candidates are not zero scans.
+Explorer WIP `c36fb5823` (1687) had20 executed/12passed/8failed; FSDInsights
+WIP `dd3bbbf11` (1688) had27 executed/19passed/8failed. Both corrected
+i18next initialization without rerunning. They remain pending attempt one;
+necessary owned covering reruns are permitted by the updated loop.
+
+All source/WIP contributors are persistent. Eighteen normal generated
+English projections were separately committed/pushed `01ba2f5bf` (1690)
+under the single existing parent catalog root. Canonical `en.json` was not
+changed. The actual ordinary generator produced57groups,177fallbacks,
+1239shellkeys, knownmissing0. No guard, baseline or configuration bypass.
+The serialized maintenance claim remains during continuing source intake.
+
+The startup attribution found46 tracked changed files,
+12594insertions/10411deletions, not independently verified43k new source
+lines. No remaining uncommitted application source was found after intake.
+Thirteen unclaimed diagnostic artifacts remain preserved and unstaged in
+`web\.agents\artifacts\phase6-export-bulk-outcome-toast-20261013T010553Z\`:
+`ast-scans.log`, `eslint-final-test.log`, `eslint.log`,
+`final-test.scan.log`, `heartbeat.log`, `report.json`,
+`result-summary.log`, `scoped-patterns-and-diff.log`,
+`useExports.before.ts`, `useExports.original.test.tsx`,
+`useExports.test.ts.scan.log`, `useExports.ts.scan.log`, `vitest.log`.
+They correlate with Exports but are outside its approved product claim.
+Discard nothing; never stage them as application delivery.
+
+Literal compiler1676 actually exited2 in Causal312 (unsupported vertical
+orientation), Statistics127/130 (`Object.hasOwn`), EnergyLedger46
+(`replaceAll`) and Sharing225 (button/ul currentTarget comparison).
+Raw `logs\phase5-parent-tsc-count-1676.log`; required cadence1691 is next.
+The Drivetrain precise-range item is pending0 after an external backend
+capability blocker, not a source attempt. Its existing exact scope now
+includes the stats hook/handler/repository and covering tests; implement
+inclusive lower/exclusive upper `started_at` bounds, not local page-only
+filtering or global unit/type changes.
+
+At this reconciliation snapshot: Phase4 x33/pending3/failed2/blocked1;
+Phase5 x154/pending68/failed12/blocked1 plus one serialized catalog claim;
+Phase6 x51/pending8/blocked1. Phases0-3 remain complete; pilot/native
+acceptance unfinished, Phase5 source progressing, combined Phase6 and
+Phase7 not started. There are79 dependency-ready rows before scope/capacity
+filtering. Actual running workers are zero during the explicitly ordered
+reconciliation; do not report reservations or retained idle chats as32.
+
+Server5173 was unresponsive and the old watchdog was stopped. Step3 must
+restore ONE responsive shared server and ONE five-minute HEALTH CHECK
+schedule, then unblock and launch actual exclusive workers. Discord webhook
+was absent; no resume message has been sent. Docker3119/API8080 frozena61
+and synthetic DRILL data remain unchanged; no deployment/reseed/full gate
+or native capture acceptance happened.
+
+Correction to the historical cancellation note below: the public installed
+SDK DOES expose `session.rpc.tasks.list/cancel/getProgress/sendMessage`.
+Use supported actual cancellation and verify post-state, never confuse a
+stop message with termination. A session-scoped control scaffold exists;
+it is not implemented or loaded yet. Before fresh launches, provide
+enforceable20-minute conclude/25-minute cancel/10-minute heartbeat checks.
+The exhausted capture helper/rescue budgets remain exhausted.
+
+Next: run the1691 literal compiler after persisting this reconciliation;
+start the shared server/watchdog, implement supported lifecycle control,
+UNBLOCK and refill32 from these genuine pending scopes. Resume from WIP,
+not whole-page rework; archive cancelled owners and record actual fresh IDs,
+starts, deadlines and consumed turns. Push every exact scoped commit.
+
 **Phases 0-3 complete; Phase 4 (pilot) in progress.** Original Phase5
 next-phase page assignments are now dispatched while pilot QA remains pending.
 Phase6 combined QA and Phase7 final gates have not started.
@@ -31,7 +123,7 @@ request. None acknowledged cancellation at dispatch. Ledger marks them
 observations are in session `phase5-user-overdue-health-report.json`.
 Preserve every current WIP/attempt/live source claim until actual conclusion,
 never revert or doublewrite or automatically relaunch these stalled objectives.
-No safe programmatic cancellation tool is exposed. CLI help confirms `/tasks`
+Historically, no safe programmatic cancellation tool had been identified. CLI help confirms `/tasks`
 manages subagents; user-side selective termination is available there. A stop
 message must never be reported as termination. Watchdog timeout enforcement has
 not been effective, despite prior requests; keep this distinction explicit.
