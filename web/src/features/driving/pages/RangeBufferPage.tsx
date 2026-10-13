@@ -5,7 +5,7 @@ import { useDrives } from '@/api/hooks/useDriving';
 
 import { Grid, PageLayout } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
-import { StaleRefreshWarning } from '@/components/feedback';
+import { SectionErrorBoundary, StaleRefreshWarning } from '@/components/feedback';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useDataState } from '@/hooks/useDataState';
 import { useRangeState } from '@/hooks/useRangeState';
@@ -105,87 +105,113 @@ export default function RangeBufferPage() {
         <StaleRefreshWarning state={drivesState} label={t('rangeBuffer.title', 'Range Buffer')} />
       )}
       <FadeIn>
-        <RangeBufferSummaryBrief kind="arrivals" {...summaryProps} />
+        <SectionErrorBoundary name="RangeBufferSummaryBrief-arrivals">
+          <RangeBufferSummaryBrief kind="arrivals" {...summaryProps} />
+        </SectionErrorBoundary>
       </FadeIn>
 
       <FadeIn delay={0.05}>
         <Grid cols={TWO_COLUMNS} gap={4}>
-          <RangeBufferDistribution result={result} state={state} />
-          <RangeBufferMonthTrend
-            result={result}
-            state={state}
-            locale={locale}
-          />
+          <SectionErrorBoundary name="RangeBufferDistribution">
+            <RangeBufferDistribution result={result} state={state} />
+          </SectionErrorBoundary>
+          <SectionErrorBoundary name="RangeBufferMonthTrend">
+            <RangeBufferMonthTrend
+              result={result}
+              state={state}
+              locale={locale}
+            />
+          </SectionErrorBoundary>
         </Grid>
       </FadeIn>
 
       <FadeIn delay={0.1}>
         <Grid cols={TWO_COLUMNS} gap={4}>
-          <RangeBufferThresholdSensitivity
-            result={result}
-            state={state}
-          />
-          <RangeBufferWeekdayProfile
-            result={result}
-            state={state}
-            timeZone={result.timeZone}
-          />
+          <SectionErrorBoundary name="RangeBufferThresholdSensitivity">
+            <RangeBufferThresholdSensitivity
+              result={result}
+              state={state}
+            />
+          </SectionErrorBoundary>
+          <SectionErrorBoundary name="RangeBufferWeekdayProfile">
+            <RangeBufferWeekdayProfile
+              result={result}
+              state={state}
+              timeZone={result.timeZone}
+            />
+          </SectionErrorBoundary>
         </Grid>
       </FadeIn>
 
       <FadeIn delay={0.15}>
         <Grid cols={TWO_COLUMNS} gap={4}>
-          <RangeBufferHourProfile
-            result={result}
-            state={state}
-            timeZone={result.timeZone}
-          />
-          <RangeBufferDistanceProfile
-            result={result}
-            state={state}
-            formatDistance={formatDistance}
-          />
+          <SectionErrorBoundary name="RangeBufferHourProfile">
+            <RangeBufferHourProfile
+              result={result}
+              state={state}
+              timeZone={result.timeZone}
+            />
+          </SectionErrorBoundary>
+          <SectionErrorBoundary name="RangeBufferDistanceProfile">
+            <RangeBufferDistanceProfile
+              result={result}
+              state={state}
+              formatDistance={formatDistance}
+            />
+          </SectionErrorBoundary>
         </Grid>
       </FadeIn>
 
       <FadeIn delay={0.2}>
-        <RangeBufferSummaryBrief kind="context" {...summaryProps} />
+        <SectionErrorBoundary name="RangeBufferSummaryBrief-context">
+          <RangeBufferSummaryBrief kind="context" {...summaryProps} />
+        </SectionErrorBoundary>
       </FadeIn>
 
       <FadeIn delay={0.25}>
-        <RangeBufferDestinationDirectory
-          result={result}
-          state={state}
-          locale={locale}
-          timeZone={result.timeZone}
-          formatDistance={formatDistance}
-        />
+        <SectionErrorBoundary name="RangeBufferDestinationDirectory">
+          <RangeBufferDestinationDirectory
+            result={result}
+            state={state}
+            locale={locale}
+            timeZone={result.timeZone}
+            formatDistance={formatDistance}
+          />
+        </SectionErrorBoundary>
       </FadeIn>
 
       <FadeIn delay={0.3}>
-        <RangeBufferLowArrivals
-          result={result}
-          state={state}
-          locale={locale}
-          timeZone={result.timeZone}
-          formatDistance={formatDistance}
-        />
+        <SectionErrorBoundary name="RangeBufferLowArrivals">
+          <RangeBufferLowArrivals
+            result={result}
+            state={state}
+            locale={locale}
+            timeZone={result.timeZone}
+            formatDistance={formatDistance}
+          />
+        </SectionErrorBoundary>
       </FadeIn>
 
       <FadeIn delay={0.35}>
-        <RangeBufferSummaryBrief kind="support" {...summaryProps} />
+        <SectionErrorBoundary name="RangeBufferSummaryBrief-support">
+          <RangeBufferSummaryBrief kind="support" {...summaryProps} />
+        </SectionErrorBoundary>
       </FadeIn>
 
       <FadeIn delay={0.4}>
-        <RangeBufferSummaryBrief kind="accounting" {...summaryProps} />
+        <SectionErrorBoundary name="RangeBufferSummaryBrief-accounting">
+          <RangeBufferSummaryBrief kind="accounting" {...summaryProps} />
+        </SectionErrorBoundary>
       </FadeIn>
 
       <FadeIn delay={0.45}>
-        <RangeBufferMethodology
-          result={result}
-          startDate={start}
-          endDate={end}
-        />
+        <SectionErrorBoundary name="RangeBufferMethodology">
+          <RangeBufferMethodology
+            result={result}
+            startDate={start}
+            endDate={end}
+          />
+        </SectionErrorBoundary>
       </FadeIn>
     </PageLayout>
   );

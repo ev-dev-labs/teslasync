@@ -13,6 +13,7 @@ const FROZEN_NOW = Date.parse('2026-08-08T12:00:00.000Z');
 const h = vi.hoisted(() => ({
   vehicleId: 7 as number | null,
   drives: undefined as unknown,
+  distributionThrows: false,
   drivesHook: vi.fn(),
   rangeHook: vi.fn(),
   timezoneHook: vi.fn(),
@@ -148,6 +149,17 @@ vi.mock('@/components/forms', () => ({
   }) => <div data-testid={triggerTestId ?? 'range-picker'} />,
 }));
 
+vi.mock('../components/range-buffer', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../components/range-buffer')>();
+  return {
+    ...actual,
+    RangeBufferDistribution: (props: Parameters<typeof actual.RangeBufferDistribution>[0]) => {
+      if (h.distributionThrows) throw new Error('Synthetic distribution render failure');
+      return <actual.RangeBufferDistribution {...props} />;
+    },
+  };
+});
+
 import RangeBufferPage from './RangeBufferPage';
 
 let nextId = 1;
@@ -277,6 +289,7 @@ function expectEverySection(): void {
 beforeEach(() => {
   vi.clearAllMocks();
   nextId = 1;
+  h.distributionThrows = false;
   h.vehicleId = 7;
   h.timeZone = 'America/Los_Angeles';
   h.drives = query({ data: readyDrives() });
@@ -284,6 +297,37 @@ beforeEach(() => {
 });
 
 describe('RangeBufferPage', () => {
+  it('isolates a failed distribution widget and retries without losing sibling evidence or threshold actions', () => {
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+    h.distributionThrows = true;
+    try {
+      renderPage();
+      for (const testId of sectionIds.filter((id) => id !== 'range-buffer-distribution')) {
+        expect(screen.getByTestId(testId)).toBeInTheDocument();
+      }
+      fireEvent.change(screen.getByRole('combobox', {
+        name: 'Arrival battery planning threshold',
+      }), { target: { value: '30' } });
+      expect(within(screen.getByTestId('range-buffer-kpis-brief')).getByText('33.33%')).toBeInTheDocument();
+      h.distributionThrows = false;
+      fireEvent.click(screen.getByRole('button', { name: /retry/i }));
+      expectEverySection();
+      expect(refetch).not.toHaveBeenCalled();
+    } finally {
+      consoleError.mockRestore();
+    }
+  });
+
+  it('keeps unknown availability distinct from successful empty evidence', () => {
+    h.drives = query({ isSuccess: false });
+    renderPage();
+    expectEverySection();
+    expect(screen.getAllByText('Drive-history availability has not resolved.').length).toBeGreaterThan(0);
+    expect(screen.queryByText('No drives were returned for this vehicle-local date window.')).not.toBeInTheDocument();
+    expect(screen.queryByText('0 returned = 0 included + 0 incomplete + 0 invalid time/order + 0 future-dated + 0 invalid arrival SoC.')).not.toBeInTheDocument();
+  });
+
+
   it('retains all arrival evidence and the selected window when its refresh is paused', () => {
     h.drives = { ...query({ data: readyDrives() }), fetchStatus: 'paused' };
     renderPage();
