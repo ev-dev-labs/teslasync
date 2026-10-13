@@ -56,6 +56,10 @@ vi.mock('@/api/hooks/useTimeMachine', () => ({
   },
 }));
 
+// The shared setup pins useTimezone to UTC for provider-free tests. This
+// provider-mounted page must exercise the real vehicle/settings resolver.
+vi.unmock('@/lib/timezone');
+
 import TimeMachinePage, { ageVariant, categorize, groupByCategory } from './TimeMachinePage';
 
 const earliest = '2026-10-01T00:00:00.000Z';
