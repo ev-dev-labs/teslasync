@@ -29,6 +29,7 @@ export function FleetEndpointTable({
       key: 'operation',
       header: t('fleetApi.controls.sortName', 'Operation'),
       filterValue: (endpoint) => endpoint.key,
+      exportValue: (endpoint) => endpoint.key,
       render: (endpoint) => <Text size="sm" weight="medium">{endpoint.key.replace(/\./g, ' › ').replace(/_/g, ' ')}</Text>,
     },
     {
@@ -43,6 +44,7 @@ export function FleetEndpointTable({
       groupStart: true,
       align: 'center',
       filterValue: (endpoint) => access[endpoint.key] ?? null,
+      exportValue: (endpoint) => typeof access[endpoint.key] === 'boolean' ? access[endpoint.key] : null,
       filterValueLabel: (value) => value == null ? '—' : value ? t('common.enabled', 'Enabled') : t('common.disabled', 'Disabled'),
       render: (endpoint) => (
         <Toggle
@@ -59,6 +61,10 @@ export function FleetEndpointTable({
       header: t('fleetApi.controls.autoPoll', 'Auto-poll'),
       align: 'center',
       filterValue: (endpoint) => endpoint.pollable && access[endpoint.key] != null && auto[endpoint.key] != null
+        ? access[endpoint.key] && auto[endpoint.key]
+        : null,
+      exportValue: (endpoint) => endpoint.pollable
+        && typeof access[endpoint.key] === 'boolean' && typeof auto[endpoint.key] === 'boolean'
         ? access[endpoint.key] && auto[endpoint.key]
         : null,
       filterValueLabel: (value) => value == null ? '—' : value ? t('common.enabled', 'Enabled') : t('common.disabled', 'Disabled'),
