@@ -3,7 +3,7 @@
  *
  * TanStack Query bindings for the dead-letter queue inspector routes
  * mounted under `/api/v1/system/dlq*`. Backed by Go handlers in
- * `internal/api/dlq_handler.go`.
+ * `internal/api/dlq/handler.go`.
  *
  * Endpoint summary (router.go ~L3520):
  *   GET    /system/dlq                  → DLQListResponse
@@ -36,9 +36,9 @@ export { SudoCanceledError };
 
 export const dlqKeys = {
   list: ['system', 'dlq', 'list'] as const,
-  entry: (id: number) => ['system', 'dlq', 'entry', id] as const,
+  entry: (id: string | null | undefined) => ['system', 'dlq', 'entry', id] as const,
   audit: (limit: number) => ['system', 'dlq', 'audit', limit] as const,
-  entryAudit: (id: number, limit: number) =>
+  entryAudit: (id: string | null | undefined, limit: number) =>
     ['system', 'dlq', 'entry', id, 'audit', limit] as const,
 };
 
@@ -79,22 +79,21 @@ export function useDLQList() {
 
 /**
  * Full DLQ entry (summary fields + raw + inner payload, base64). Disabled
- * until `id` is truthy + `enabled` is true so the drawer can lazy-load on
+ * until a nonblank opaque `id` exists and `enabled` is true so the drawer can lazy-load on
  * open. `staleTime: STATIC` because a stored DLQ row never changes — once
  * fetched it's safe to read from cache for the lifetime of the page.
  */
-export function useDLQEntry(id: number | null | undefined, enabled = true) {
-  // The id is interpolated straight into a URL path segment the Go handler
-  // parses as an integer, so reject anything that isn't a positive whole
-  // number (NaN / Infinity / fractional) up front — such a value would only
-  // produce a guaranteed 400 round-trip.
-  const numericId =
-    typeof id === 'number' && Number.isInteger(id) && id > 0 ? id : 0;
+export function useDLQEntry(id: string | null | undefined, enabled = true) {
+  // Ring IDs are opaque strings. Preserve identity in the key and encode only
+  // at the path boundary; absence must not fabricate a numeric ID.
+  const hasId = typeof id === 'string' && id.trim().length > 0;
   return useQuery({
-    queryKey: dlqKeys.entry(numericId),
-    queryFn: ({ signal }) =>
-      request<DLQEntryFull>(`/system/dlq/${numericId}`, { signal }),
-    enabled: enabled && numericId > 0,
+    queryKey: dlqKeys.entry(id),
+    queryFn: ({ signal }) => {
+      if (!hasId) throw new Error('DLQ entry ID is required');
+      return request<DLQEntryFull>(`/system/dlq/${encodeURIComponent(id)}`, { signal });
+    },
+    enabled: enabled && hasId,
     staleTime: STALE_TIMES.STATIC,
     retry: 1,
   });
@@ -102,14 +101,16 @@ export function useDLQEntry(id: number | null | undefined, enabled = true) {
 
 /**
  * Recent replay-audit rows. Pass `dlqId` to scope to a single entry's
- * replay history; omit it (or pass 0) for the global feed. `limit` mirrors
+ * replay history; omit it (or pass null) for the global feed. A requested
+ * empty/blank ID stays disabled, never silently becomes global. `limit` mirrors
  * the server-side query param and caps at PAGINATION.MAX_LIMIT.
  */
 export function useDLQAudit(
-  dlqId?: number | null,
+  dlqId?: string | null,
   limit: number = PAGINATION.DEFAULT_LIMIT,
 ) {
-  const scoped = typeof dlqId === 'number' && dlqId > 0;
+  const scoped = dlqId != null;
+  const hasId = typeof dlqId === 'string' && dlqId.trim().length > 0;
   // Clamp once and reuse for both the cache key and the URL so a
   // caller-supplied out-of-range limit can't split the cache from the
   // request it actually made.
@@ -121,11 +122,13 @@ export function useDLQAudit(
   return useQuery({
     queryKey,
     queryFn: ({ signal }) => {
+      if (scoped && !hasId) throw new Error('DLQ entry ID is required');
       const url = scoped
-        ? `/system/dlq/${dlqId}/audit?limit=${safeLimit}`
+        ? `/system/dlq/${encodeURIComponent(dlqId)}/audit?limit=${safeLimit}`
         : `/system/dlq/audit?limit=${safeLimit}`;
       return request<DLQAuditResponse>(url, { signal });
     },
+    enabled: !scoped || hasId,
     staleTime: STALE_TIMES.MODERATE,
     refetchInterval: INTERVALS.STANDARD,
     refetchIntervalInBackground: false,
@@ -149,12 +152,16 @@ export function useDLQAudit(
 export function useDLQReplay() {
   const qc = useQueryClient();
   const { success, error } = useMutationToast();
-  return useMutation<DLQReplayResponse, Error, { id: number }>({
-    mutationFn: ({ id }) =>
-      request<DLQReplayResponse>(`/system/dlq/${id}/replay`, {
+  return useMutation<DLQReplayResponse, Error, { id: string }>({
+    mutationFn: ({ id }) => {
+      if (typeof id !== 'string' || id.trim().length === 0) {
+        throw new Error('DLQ entry ID is required');
+      }
+      return request<DLQReplayResponse>(`/system/dlq/${encodeURIComponent(id)}/replay`, {
         method: 'POST',
         requiresLiveMode: true,
-      }),
+      });
+    },
     onSuccess: (res) => {
       qc.invalidateQueries({ queryKey: ['system', 'dlq'] });
       success('admin.dlq.toast.replaySuccess', 'Replay published to {{topic}}', {

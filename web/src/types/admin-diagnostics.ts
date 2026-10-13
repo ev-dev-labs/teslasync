@@ -5,11 +5,11 @@
  * endpoints added under `/api/v1/system/...` and `/api/v1/drives/{id}/why-ended`.
  *
  * Source of truth (read directly from):
- *   - internal/api/dlq_handler.go            (DLQEntrySummary, DLQEntryFull, DLQReplayResponse)
+ *   - internal/api/dlq/handler.go            (DLQEntrySummary, DLQEntryFull, DLQReplayResponse)
  *   - internal/api/flags_handler.go          (FlagsListResponse, FlagWriteResponse)
  *   - internal/api/ingest_xray_handler.go    (IngestXRayResponse)
  *   - internal/api/drive_diagnostic_handler.go (DriveDiagnosticResponse)
- *   - internal/database/dlq_replay_audit_repo.go (DLQReplayAuditRecord, result enum)
+ *   - internal/database/audit/dlq_replay_repo.go (DLQReplayAuditRecord, result enum)
  *   - internal/database/feature_flag_changes_repo.go (FeatureFlagChange, operation enum)
  *   - internal/database/ingest_xray_repo.go  (IngestXRayFieldStat, IngestXRayBucket)
  *   - internal/database/drive_diagnostic_repo.go (DriveDiagnosticTransition, DriveDiagnosticSignal)
@@ -42,7 +42,7 @@ function isLiteralMember<T extends string>(
 /**
  * Stable string codes returned in `DLQReplayResponse.result` and
  * `DLQReplayAuditRecord.result`. Mirrors the constants block at the top
- * of `internal/database/dlq_replay_audit_repo.go` and is the single source
+ * of `internal/database/audit/dlq_replay_repo.go` and is the single source
  * of truth for the {@link DLQReplayResult} union below.
  *
  * - `ok`             — replay published successfully
@@ -84,16 +84,17 @@ export function isDLQReplaySuccess(result: DLQReplayResult): boolean {
  * cheap; load `DLQEntryFull` via `useDLQEntry(id)` when the drawer opens.
  */
 export interface DLQEntrySummary {
-  id: number;
+  /** Volatile inspector-ring identifier: opaque 128-bit hex, never a DB row id. */
+  id: string;
   arrived_at: string;
   dlq_topic: string;
-  parsed_reason: string;
-  parsed_vehicle_id: number | null;
-  parsed_vin: string | null;
-  parsed_source_topic: string | null;
-  parsed_redeliveries: number | null;
-  parsed_timestamp: string | null;
-  parse_error: string | null;
+  parsed_reason?: string;
+  parsed_vehicle_id?: number;
+  parsed_vin?: string;
+  parsed_source_topic?: string;
+  parsed_redeliveries: number;
+  parsed_timestamp?: string;
+  parse_error?: string;
   replayable: boolean;
   raw_payload_size: number;
   inner_payload_size: number;
@@ -105,7 +106,7 @@ export interface DLQEntrySummary {
  */
 export interface DLQEntryFull extends DLQEntrySummary {
   raw_payload_b64: string;
-  inner_payload_b64: string;
+  inner_payload_b64?: string;
 }
 
 export interface DLQListResponse {
@@ -116,32 +117,34 @@ export interface DLQListResponse {
 
 export interface DLQReplayResponse {
   ok: boolean;
-  replayed_id: number;
-  dst_topic: string;
+  replayed_id: string;
+  dst_topic?: string;
   result: DLQReplayResult;
   error?: string;
-  audit_id?: number;
+  audit_id: number;
 }
 
 export interface DLQReplayAuditRecord {
   id: number;
   replayed_at: string;
   actor: string;
-  actor_ip: string;
-  dlq_id: number;
+  actor_ip?: string;
+  dlq_id: string;
   src_topic: string;
-  dst_topic: string;
-  payload: string;
-  reason: string;
+  dst_topic?: string;
+  /** Go json.RawMessage is emitted as JSON, including a literal JSON null. */
+  payload?: unknown;
+  reason?: string;
   result: DLQReplayResult;
-  error: string;
-  trace_id: string;
+  error?: string;
+  trace_id?: string;
 }
 
 export interface DLQAuditResponse {
   count: number;
   limit: number;
-  dlq_id: number;
+  /** Empty only for the explicitly requested global audit feed. */
+  dlq_id: string;
   rows: DLQReplayAuditRecord[];
 }
 
