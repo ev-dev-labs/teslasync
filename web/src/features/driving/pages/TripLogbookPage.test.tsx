@@ -2,7 +2,8 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { createInstance, type TOptions } from 'i18next';
 
-const source = readFileSync(new URL('./TripLogbookPage.tsx', import.meta.url), 'utf8');
+// Read from the web test root; Vite rewrites source-relative URLs as browser assets.
+const source = readFileSync('src/features/driving/pages/TripLogbookPage.tsx', 'utf8');
 
 describe('TripLogbookPage source preservation contract', () => {
   it('retains all three original sections and isolates render failures', () => {
