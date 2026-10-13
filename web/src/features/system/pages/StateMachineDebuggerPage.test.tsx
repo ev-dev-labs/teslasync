@@ -14,6 +14,7 @@ import { render, screen, within, fireEvent } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
+import { getStateColor } from '@/types/fsm';
 
 // jsdom lacks matchMedia; chart containers read it on mount.
 vi.hoisted(() => {
@@ -252,5 +253,61 @@ describe('StateMachineDebuggerPage — query branches', () => {
     expect(screen.getByText('0 / 0')).toBeInTheDocument();
     expect(screen.getByTestId('fsm-health-all-clear')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Retry' })).not.toBeInTheDocument();
+  });
+});
+
+
+describe('StateMachineDebuggerPage — shared presentation and preservation', () => {
+  it.each(['driving', 'charging', 'unexpected_state'])('uses the canonical non-pulsing vehicle badge for %s', (state) => {
+    mockState.mockReturnValue(makeQuery({
+      data: { state: { state, since: '2026-01-01T00:00:00Z' } },
+    }));
+    renderPage();
+
+    const overview = screen.getByRole('region', { name: 'Vehicle state overview' });
+    const label = within(overview).getByText(state);
+    expect(label).toHaveClass(...getStateColor('vehicle', state).text.split(' '));
+    expect(overview.querySelector('.animate-pulse')).toBeNull();
+    expect(within(overview).getByText('Mode:')).toBeInTheDocument();
+    expect(within(overview).getByText('Since:')).toBeInTheDocument();
+  });
+
+  it('keeps the detail section visible before a transition is selected', () => {
+    renderPage();
+
+    const title = screen.getByRole('heading', { name: 'Transition detail' });
+    expect(within(title.parentElement!).getByText('Select a transition to inspect its snapshot')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Transition log' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Transition counts' })).toBeInTheDocument();
+  });
+
+  it('preserves selected transition identifiers, guard, rounded duration and arbitrary raw details', () => {
+    mockTrans.mockReturnValue(makeQuery({ data: {
+      data: [{ id: 42, vehicle_id: 7, fsm_name: 'vehicle', from_state: 'parked',
+        to_state: 'driving', trigger: 'drive_evidence', ts: '2026-01-07T12:00:00Z',
+        details: { guard: 'safe_guard', duration_in_state_ms: 7199000, raw_speed: 12.345 } }],
+      total: 1,
+    } }));
+    renderPage();
+    fireEvent.click(screen.getByRole('button', { name: 'View detail' }));
+
+    const detail = screen.getByRole('heading', { name: 'Transition detail' }).parentElement!;
+    expect(within(detail).getByText('42')).toBeInTheDocument();
+    expect(within(detail).getByText('7')).toBeInTheDocument();
+    expect(within(detail).getByText('safe_guard')).toBeInTheDocument();
+    expect(within(detail).getByText('2h')).toBeInTheDocument();
+    expect(within(detail).getByText('raw_speed: 12.345')).toBeInTheDocument();
+    expect(mockSnapshot).toHaveBeenCalledWith(7, '2026-01-07T12:00:00Z', '', { enabled: true });
+  });
+
+  it('retains header-owned vehicle scope and half-open transition bounds', () => {
+    renderPage();
+
+    expect(mockState).toHaveBeenCalledWith('7');
+    expect(mockStats).toHaveBeenCalledWith('7');
+    expect(mockTrans).toHaveBeenCalledWith('7', 'all', expect.any(Number), 1, 50,
+      '2026-01-01T00:00:00Z', '2026-01-08T00:00:00Z');
+    expect(screen.queryByTestId('vehicle-select')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('range-picker')).not.toBeInTheDocument();
   });
 });

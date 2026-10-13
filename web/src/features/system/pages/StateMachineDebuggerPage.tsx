@@ -43,21 +43,6 @@ import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { FSMOperationalBrief } from '../components/statstrip-fsm/FSMOperationalBrief';
 import type { StatPeriod } from '@/lib/metric-reference';
 
-/* ─── Vehicle state styling (for live state hero) ─── */
-const vehicleStateStyle: Record<string, { bg: string; text: string; dot: string }> = {
-  driving: { bg: 'bg-green-500/10', text: 'text-green-400', dot: 'bg-green-400' },
-  charging: { bg: 'bg-cyan-500/10', text: 'text-cyan-400', dot: 'bg-cyan-400' },
-  parked: { bg: 'bg-purple-500/10', text: 'text-purple-400', dot: 'bg-purple-400' },
-  online: { bg: 'bg-blue-500/10', text: 'text-blue-400', dot: 'bg-blue-400' },
-  offline: { bg: 'bg-gray-500/10', text: 'text-[var(--text-secondary)]', dot: 'bg-gray-400' },
-  asleep: { bg: 'bg-gray-600/10', text: 'text-[var(--text-muted)]', dot: 'bg-gray-500' },
-};
-
-function getVehicleStyle(state?: string | null) {
-  if (!state) return vehicleStateStyle.offline;
-  return vehicleStateStyle[state.toLowerCase()] ?? vehicleStateStyle.offline;
-}
-
 /**
  * Human-readable duration. Rounds to whole minutes *before* splitting into
  * hours + minutes so a value that rounds up to a full 60 minutes rolls over
@@ -186,7 +171,6 @@ export default function StateMachineDebuggerPage() {
   const stateResponse = stateData as unknown as StateResponse | undefined;
   const currentState = stateResponse?.state;
   const stateName = currentState?.state?.toLowerCase() ?? null;
-  const style = getVehicleStyle(stateName);
 
   const transitions: FSMTransition[] = transData?.data ?? [];
   const totalRows = transData?.total ?? 0;
@@ -643,22 +627,8 @@ export default function StateMachineDebuggerPage() {
               <QueryError error={stateError} onRetry={() => refetchState()} />
             ) : currentState ? (
               <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:gap-8">
-                <div
-                  className={cn(
-                    'rounded-2xl px-6 py-4 text-2xl font-bold tracking-wider sm:px-8 sm:text-4xl',
-                    style.bg,
-                    style.text,
-                  )}
-                >
-                  <span
-                    className={cn(
-                      'mr-3 inline-block h-3 w-3 animate-pulse rounded-full',
-                      style.dot,
-                    )}
-                    aria-hidden="true"
-                  />
-                  {currentState.state ?? '—'}
-                </div>
+                {/* Reuse the canonical FSM presentation; a current state is not a pulsing activity indicator. */}
+                <StateBadge state={currentState.state} fsmType="vehicle" />
                 <div className="space-y-1">
                   <Text as="p" size="sm" color="secondary">
                     <Text color="muted">{t('fsm.type', 'FSM type')}:</Text>{' '}
@@ -908,20 +878,19 @@ export default function StateMachineDebuggerPage() {
         </GlassPanel>
       </FadeIn>
 
-      {/* ──── 11 — Selected Transition Detail (full-width, conditional) ──── */}
-      {selectedId != null && (() => {
-        const selected = transitions.find((tr) => tr.id === selectedId);
-        return selected ? (
-          <FadeIn key={selectedId}>
-            <GlassPanel className="p-4 sm:p-5">
-              <PanelTitle className="mb-4">
-                {t('fsm.detailTitle', 'Transition detail')}
-              </PanelTitle>
-              <TransitionDetail transition={selected} />
-            </GlassPanel>
-          </FadeIn>
-        ) : null;
-      })()}
+      {/* ──── 11 — Selected Transition Detail (full-width) ──── */}
+      <FadeIn>
+        <GlassPanel className="p-4 sm:p-5">
+          <PanelTitle className="mb-4">
+            {t('fsm.detailTitle', 'Transition detail')}
+          </PanelTitle>
+          {selectedTransition ? (
+            <TransitionDetail transition={selectedTransition} />
+          ) : (
+            <EmptyState /* no-action: select a transition using the existing log or timeline controls */ message={t('debugger.inspector.empty', 'Select a transition to inspect its snapshot')} />
+          )}
+        </GlassPanel>
+      </FadeIn>
     </PageLayout>
   );
 }
@@ -976,7 +945,7 @@ function TransitionDetail({ transition }: { transition: FSMTransition }) {
           format="absolute"
           className="text-[var(--text-primary)] font-mono"
         />
-        <span className="ml-2">
+        <span className="ms-2">
           <TimeStamp
             value={transition.ts}
             format="relative"
@@ -989,7 +958,7 @@ function TransitionDetail({ transition }: { transition: FSMTransition }) {
           <Caption className="mb-1 block">{t('fsm.detail.context', 'Details')}</Caption>
           <div className="mt-1 flex flex-wrap gap-2">
             {Object.entries(transition.details).map(([key, val]) => (
-              <Text as="span" size="2xs" color="secondary" mono key={key} className="rounded bg-white/[0.04] px-2 py-0.5">
+              <Text as="span" size="xs" color="secondary" mono key={key} className="rounded bg-[var(--surface-2)] px-2 py-0.5">
                 {key}: {String(val)}
               </Text>
             ))}
