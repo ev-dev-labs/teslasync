@@ -15,6 +15,7 @@ const h = vi.hoisted(() => ({
   historyHook: vi.fn(),
   timezoneHook: vi.fn(),
   timeZone: 'America/Los_Angeles',
+  failedChartTitle: null as string | null,
 }));
 const refetch = vi.fn();
 
@@ -70,6 +71,7 @@ vi.mock('@/lib/timezone', () => ({
 }));
 
 vi.mock('@/hooks/usePageTitle', () => ({ usePageTitle: vi.fn() }));
+vi.mock('@/lib/errorReporter', () => ({ reportFrontendError: vi.fn() }));
 
 vi.mock('@/hooks/useFormatting', () => ({
   useFormatting: () => ({ currencySymbol: '$' }),
@@ -114,7 +116,10 @@ vi.mock('@/components/motion', () => ({
   FadeIn: ({ children }: { children: ReactNode }) => <>{children}</>,
 }));
 
-vi.mock('@/components/ui', () => {
+vi.mock('@/components/ui', async () => {
+  const { Select } = await vi.importActual<typeof import('@/components/ui/Select')>(
+    '@/components/ui/Select',
+  );
   interface Props {
     as?: keyof JSX.IntrinsicElements;
     children?: ReactNode;
@@ -123,21 +128,6 @@ vi.mock('@/components/ui', () => {
   const Text = ({ as = 'span', children }: Props) => createElement(as, {}, children);
   const GlassPanel = ({ children }: { children: ReactNode }) => (
     <section data-testid="analytical-shell">{children}</section>
-  );
-  const Select = ({
-    options,
-    value,
-    onChange,
-    ...props
-  }: {
-    options: Array<{ value: string; label: string }>;
-    value: string;
-    onChange: (event: { target: { value: string } }) => void;
-    'aria-label': string;
-  }) => (
-    <select {...props} value={value} onChange={onChange}>
-      {options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
-    </select>
   );
   const MetricValue = ({ children }: { children: ReactNode }) => <div>{children}</div>;
   return { GlassPanel, MetricValue, Select, Text };
@@ -159,7 +149,16 @@ vi.mock('@/components/data-display', async () => {
   };
 });
 
-vi.mock('@/components/feedback', () => ({
+vi.mock('@/components/feedback', async () => {
+  const { SectionErrorBoundary } = await vi.importActual<typeof import('@/components/feedback/SectionErrorBoundary')>(
+    '@/components/feedback/SectionErrorBoundary',
+  );
+  const { Skeleton } = await vi.importActual<typeof import('@/components/feedback/Skeleton')>(
+    '@/components/feedback/Skeleton',
+  );
+  return {
+  SectionErrorBoundary,
+  Skeleton,
   StaleRefreshWarning: ({ state }: { state: DataState<Drive[]> }) =>
     state.hasData && (state.refreshError || state.isRefreshBlocked) ? (
       <div role="status" data-testid="stale-refresh-warning">
@@ -171,7 +170,8 @@ vi.mock('@/components/feedback', () => ({
   QueryError: ({ onRetry }: { onRetry?: () => void }) => (
     <div role="alert"><button type="button" onClick={onRetry}>Retry</button></div>
   ),
-}));
+  };
+});
 
 vi.mock('@/components/charts', () => {
   interface ChartProps {
@@ -183,13 +183,21 @@ vi.mock('@/components/charts', () => {
     children?: ReactNode;
     data?: ReadonlyArray<Record<string, unknown>>;
   }
-  const ChartContainer = ({ title, subtitle, ariaLabel, loading, empty, children }: ChartProps) => (
+  const ChartContainer = ({ title, subtitle, ariaLabel, loading, empty, children, data }: ChartProps) => {
+    if (h.failedChartTitle === title) throw new Error('Synthetic chart rendering failure');
+    return (
     <section data-testid="analytical-shell" aria-label={ariaLabel}>
       <h2>{title}</h2>
       {subtitle && <p>{subtitle}</p>}
-      {loading ? <p>Loading</p> : empty ? <p>No data available</p> : <div role="img" aria-label={ariaLabel}>{children}</div>}
+      {loading ? <p>Loading</p> : empty ? <p>No data available</p> : (
+        <div role="img" aria-label={ariaLabel}>
+          <output aria-label={`${title} data`}>{JSON.stringify(data)}</output>
+          {children}
+        </div>
+      )}
     </section>
-  );
+    );
+  };
   const ResponsiveContainer = ({ children }: { children?: ReactNode }) => <>{children}</>;
   const passthrough = () => null;
   return {
@@ -315,13 +323,15 @@ function metricValue(label: string): string | null {
 
 function renderPage() {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(
+  const page = () => (
     <QueryClientProvider client={client}>
       <MemoryRouter initialEntries={['/journey-fragmentation']}>
         <JourneyFragmentationPage />
       </MemoryRouter>
-    </QueryClientProvider>,
+    </QueryClientProvider>
   );
+  const rendered = render(page());
+  return { ...rendered, rerenderPage: () => rendered.rerender(page()) };
 }
 
 beforeEach(() => {
@@ -329,6 +339,7 @@ beforeEach(() => {
   vi.spyOn(Date, 'now').mockReturnValue(FROZEN_NOW);
   h.vehicleId = 7;
   h.timeZone = 'America/Los_Angeles';
+  h.failedChartTitle = null;
   h.history = {
     data: readyHistory(),
     isLoading: false,
@@ -475,5 +486,116 @@ describe('JourneyFragmentationPage', () => {
     expect(selector).toHaveValue('30');
     expect(metricValue('Linked pairs')).toBe('0');
     expect(metricValue('Observed journeys')).toBe('3');
+  });
+
+  it('labels the native threshold control visibly and preserves all four choices', () => {
+    renderPage();
+    const selector = screen.getByRole('combobox', { name: 'Maximum parking gap' });
+    expect(screen.getByText('Maximum parking gap', { selector: 'label' })).toBeVisible();
+    expect(selector).toHaveValue('120');
+    expect(within(selector).getAllByRole('option').map((option) => option.textContent))
+      .toEqual(['30 min', '60 min', '120 min', '240 min']);
+    expect(selector).toHaveClass('min-h-11', 'md:min-h-9');
+    expect(screen.queryByTestId('vehicle-select')).not.toBeInTheDocument();
+  });
+
+  it('keeps unresolved report context distinct from an authoritatively empty response', () => {
+    h.history = { data: undefined, isLoading: true, isError: false, error: null, refetch };
+    const { rerenderPage } = renderPage();
+    const context = screen.getByRole('heading', { name: 'Report context' }).closest('section');
+    if (!context) throw new Error('Report context shell is missing');
+    expect(context.querySelector('[aria-busy="true"]')).toBeInTheDocument();
+    expect(within(context).getByText('Drive evidence is not available yet.')).toBeInTheDocument();
+    expect(within(context).queryByText('No returned drive rows are available for this vehicle yet.')).not.toBeInTheDocument();
+
+    h.history = { data: [], isLoading: false, isError: false, error: null, refetch };
+    rerenderPage();
+    expectPersistentAnalyticalShells();
+    expect(within(context).getByText('No returned drive rows are available for this vehicle yet.')).toBeInTheDocument();
+    expect(context.querySelector('[aria-busy="true"]')).not.toBeInTheDocument();
+  });
+
+  it('keeps initial failure context unknown and retries only the actual source', () => {
+    h.history = { data: undefined, isLoading: false, isError: true, error: new Error('source unavailable'), refetch };
+    renderPage();
+    expectPersistentAnalyticalShells();
+    const context = screen.getByRole('heading', { name: 'Report context' }).closest('section');
+    if (!context) throw new Error('Report context shell is missing');
+    expect(within(context).getByText('Drive evidence is not available yet.')).toBeInTheDocument();
+    expect(within(context).queryByText('No returned drive rows are available for this vehicle yet.')).not.toBeInTheDocument();
+    expectOneRecoveryControl();
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    expect(refetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not claim loading completion or measured zero when the first request is paused', () => {
+    h.history = {
+      data: undefined, isLoading: false, isError: false,
+      error: null, refetch, fetchStatus: 'paused',
+    };
+    renderPage();
+    expectPersistentAnalyticalShells();
+    expect(metricValue('Observed journeys')).toBe('—');
+    expect(screen.queryByText('Loading')).not.toBeInTheDocument();
+    expect(screen.getByText('Source unavailable')).toBeInTheDocument();
+    expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
+    expect(screen.queryByText('offline')).not.toBeInTheDocument();
+  });
+
+  it('preserves exact gap boundaries, chronological grouping and the unchanged capped query', () => {
+    const first = driveAt('2026-08-01T08:00:00.000Z', { endAddress: 'Parking A' });
+    const second = driveAt('2026-08-01T10:30:00.000Z', { startAddress: 'Parking A', endAddress: 'Parking B' });
+    const third = driveAt('2026-08-01T13:00:00.001Z', { startAddress: 'Parking B' });
+    const source = [third, first, second];
+    h.history = { data: source, isLoading: false, isError: false, error: null, refetch };
+    renderPage();
+    expect(metricValue('Linked pairs')).toBe('1');
+    expect(metricValue('Observed journeys')).toBe('2');
+    expect(screen.getByLabelText('Chain-length distribution data')).toHaveTextContent(
+      '[{"fragments":"1","journeys":1},{"fragments":"2","journeys":1}]',
+    );
+    fireEvent.change(screen.getByLabelText('Maximum parking gap'), { target: { value: '240' } });
+    expect(metricValue('Linked pairs')).toBe('2');
+    expect(metricValue('Observed journeys')).toBe('1');
+    expect(screen.getByLabelText('Chain-length distribution data')).toHaveTextContent(
+      '[{"fragments":"3","journeys":1}]',
+    );
+    expect(source.map((drive) => drive.id)).toEqual([third.id, first.id, second.id]);
+    expect(h.historyHook.mock.calls.every(([id, limit]) => id === '7' && limit === 1_000)).toBe(true);
+  });
+
+  it('preserves all local start buckets across daylight saving and timezone changes', () => {
+    h.history = {
+      data: [
+        driveAt('2026-03-08T09:30:00.000Z', { endAddress: 'Separate endpoint' }),
+        driveAt('2026-03-08T10:30:00.000Z', { startAddress: 'Different endpoint' }),
+      ],
+      isLoading: false, isError: false, error: null, refetch,
+    };
+    const { rerenderPage } = renderPage();
+    const profile = screen.getByLabelText('Local two-hour journey-start profile data');
+    expect(profile).toHaveTextContent('"period":"00:00","journeys":1');
+    expect(profile).toHaveTextContent('"period":"02:00","journeys":1');
+    expect(profile.textContent?.match(/"period":/g)).toHaveLength(12);
+    expect(metricValue('Observed journeys')).toBe('2');
+    h.timeZone = 'UTC';
+    rerenderPage();
+    expect(profile).toHaveTextContent('"period":"08:00","journeys":1');
+    expect(profile).toHaveTextContent('"period":"10:00","journeys":1');
+    expect(metricValue('Observed journeys')).toBe('2');
+  });
+
+  it('isolates one failed widget and restores it without refetching or removing neighboring sections', () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    h.failedChartTitle = 'Chain-length distribution';
+    renderPage();
+    expect(screen.getAllByTestId('analytical-shell')).toHaveLength(13);
+    expect(screen.getByRole('heading', { name: 'Stopover-gap distribution' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Methodology and interpretation limits' })).toBeInTheDocument();
+    expect(metricValue('Observed journeys')).toBe('2');
+    h.failedChartTitle = null;
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    expectPersistentAnalyticalShells();
+    expect(refetch).not.toHaveBeenCalled();
   });
 });

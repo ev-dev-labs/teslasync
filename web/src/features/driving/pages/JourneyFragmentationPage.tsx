@@ -3,9 +3,8 @@ import { useTranslation } from 'react-i18next';
 
 import { useDriveHistory } from '@/api/hooks/useDriving';
 
-import { EmptyState, StaleRefreshWarning } from '@/components/feedback';
+import { EmptyState, SectionErrorBoundary, Skeleton, StaleRefreshWarning } from '@/components/feedback';
 import { PageLayout, Grid, LayoutCard } from '@/components/layout';
-import { FadeIn } from '@/components/motion';
 import { Select, Text } from '@/components/ui';
 import { useDataState } from '@/hooks/useDataState';
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -51,7 +50,8 @@ export default function JourneyFragmentationPage() {
     ),
     [analysisNowMs, drivesQuery.data, maxGapMin, timeZone],
   );
-  const initialLoading = vehicleId != null && drivesState.status === 'initial';
+  const initialLoading = vehicleId != null && drivesState.status === 'initial' && !drivesState.isRefreshBlocked;
+  const pendingContext = vehicleId != null && !drivesState.hasData;
   const gapOptions = GAP_OPTIONS.map((minutes) => ({
     value: String(minutes),
     label: t('journeyFragmentation.gapMinutes', '{{count}} min', { count: minutes }),
@@ -59,12 +59,14 @@ export default function JourneyFragmentationPage() {
 
   return (
     <PageLayout
+      className="w-full min-w-0"
       title={t('journeyFragmentation.title', 'Journey Fragmentation')}
       query={drivesQuery}
       subtitle={t('journeyFragmentation.subtitle', 'Descriptive continuity analysis of a capped returned drive-history window')}
       contextActions={(
-        <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3">
+        <div className="flex min-w-0 flex-wrap items-center justify-end gap-2 sm:gap-3">
           <Select
+            label={t('journeyFragmentation.maxGap', 'Maximum parking gap')}
             aria-label={t('journeyFragmentation.maxGap', 'Maximum parking gap')}
             value={String(maxGapMin)}
             options={gapOptions}
@@ -75,7 +77,7 @@ export default function JourneyFragmentationPage() {
       )}
     >
       <StaleRefreshWarning state={drivesState} label={t('journeyFragmentation.title', 'Journey Fragmentation')} />
-      <FadeIn>
+      <SectionErrorBoundary name="JourneyFragmentationEvidence">
         <JourneyEvidenceBrief
           result={result}
           loading={initialLoading}
@@ -85,35 +87,66 @@ export default function JourneyFragmentationPage() {
           available={drivesState.hasData}
           retained={drivesState.status === 'stale' || drivesState.refreshError != null}
         />
-      </FadeIn>
+      </SectionErrorBoundary>
 
       <Grid cols={{ default: 1, lg: 2 }} gap={4}>
-        <FadeIn><ChainLengthChart result={result} loading={initialLoading} /></FadeIn>
-        <FadeIn delay={0.05}><StopoverGapChart result={result} loading={initialLoading} /></FadeIn>
-        <FadeIn delay={0.1}><ThresholdSensitivityChart result={result} loading={initialLoading} /></FadeIn>
-        <FadeIn delay={0.15}><ElapsedComposition result={result} loading={initialLoading} /></FadeIn>
+        <SectionErrorBoundary name="JourneyFragmentationChainLength">
+          <ChainLengthChart result={result} loading={initialLoading} />
+        </SectionErrorBoundary>
+        <SectionErrorBoundary name="JourneyFragmentationStopoverGap">
+          <StopoverGapChart result={result} loading={initialLoading} />
+        </SectionErrorBoundary>
+        <SectionErrorBoundary name="JourneyFragmentationThresholdSensitivity">
+          <ThresholdSensitivityChart result={result} loading={initialLoading} />
+        </SectionErrorBoundary>
+        <SectionErrorBoundary name="JourneyFragmentationElapsedComposition">
+          <ElapsedComposition result={result} loading={initialLoading} />
+        </SectionErrorBoundary>
       </Grid>
 
-      <FadeIn delay={0.2}><StructureIndicators result={result} loading={initialLoading} /></FadeIn>
-      <FadeIn delay={0.25}><EnergyIntensityPanel result={result} loading={initialLoading} /></FadeIn>
+      <SectionErrorBoundary name="JourneyFragmentationStructureIndicators">
+        <StructureIndicators result={result} loading={initialLoading} />
+      </SectionErrorBoundary>
+      <SectionErrorBoundary name="JourneyFragmentationEnergyIntensity">
+        <EnergyIntensityPanel result={result} loading={initialLoading} />
+      </SectionErrorBoundary>
 
       <Grid cols={{ default: 1, lg: 2 }} gap={4}>
-        <FadeIn delay={0.3}><StartProfileChart result={result} loading={initialLoading} /></FadeIn>
-        <FadeIn delay={0.35}><WeekdayProfileChart result={result} loading={initialLoading} /></FadeIn>
-        <FadeIn delay={0.4}><MonthlyTrendChart result={result} loading={initialLoading} /></FadeIn>
-        <FadeIn delay={0.45}><JourneyDirectory result={result} /></FadeIn>
+        <SectionErrorBoundary name="JourneyFragmentationStartProfile">
+          <StartProfileChart result={result} loading={initialLoading} />
+        </SectionErrorBoundary>
+        <SectionErrorBoundary name="JourneyFragmentationWeekdayProfile">
+          <WeekdayProfileChart result={result} loading={initialLoading} />
+        </SectionErrorBoundary>
+        <SectionErrorBoundary name="JourneyFragmentationMonthlyTrend">
+          <MonthlyTrendChart result={result} loading={initialLoading} />
+        </SectionErrorBoundary>
+        <SectionErrorBoundary name="JourneyFragmentationDirectory">
+          <JourneyDirectory result={result} loading={initialLoading} />
+        </SectionErrorBoundary>
       </Grid>
 
-      <FadeIn delay={0.5}><AccountingPanel result={result} /></FadeIn>
-      <FadeIn delay={0.55}><MethodologyPanel result={result} /></FadeIn>
+      <SectionErrorBoundary name="JourneyFragmentationAccounting">
+        <AccountingPanel result={result} loading={initialLoading} />
+      </SectionErrorBoundary>
+      <SectionErrorBoundary name="JourneyFragmentationMethodology">
+        <MethodologyPanel result={result} />
+      </SectionErrorBoundary>
 
       <LayoutCard title={t('journeyFragmentation.footer.title', 'Report context')}>
-        <Text as="p" variant="caption">
+        {pendingContext ? (
+          <div aria-busy={initialLoading || undefined} className="min-w-0 space-y-3">
+            <Text as="p" variant="caption">
+              {t('driving.brief.pending', 'Drive evidence is not available yet.')}
+            </Text>
+            {initialLoading && <Skeleton lines={2} />}
+          </div>
+        ) : <Text as="p" variant="caption">
           {result.returnedRows === 0
             ? t('journeyFragmentation.footer.empty', 'All analytical shells remain visible while the returned history window is empty.')
             : t('journeyFragmentation.footer.note', 'Charts and directories describe returned records at the selected continuity threshold.')}
-        </Text>
-        {result.returnedRows === 0 && (
+        </Text>}
+        {!pendingContext && result.returnedRows === 0 && (
           <EmptyState /* no-action: the active filters and recorded telemetry determine this read-only result */
             message={t('journeyFragmentation.footer.waiting', 'No returned drive rows are available for this vehicle yet.')}
           />
