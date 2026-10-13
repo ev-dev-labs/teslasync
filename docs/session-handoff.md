@@ -2,6 +2,91 @@
 
 ## Current phase
 
+### Scheduled census, actual catalog closure and twelve rolling refills,22:54Z
+
+Phases4/5 remainclosed at a63bd78e6/58f1a657c; actual15:20build0/literalTSC0
+gate is historical, not a fresh compiler claim. Phase6 unfinished/Phase7NOTRUN.
+Actual22:51source-row snapshot after the two accepted launches:
+Phase5 219done/20failed/1blocked/4excluded; Phase6 97done/20pending/89held/
+23failed/1blocked. Held includes delivered report/WIP intake and parent
+milestones, not89workers. Later Mileage terminal releases another slot.
+
+Two newly verified individual commits were pushed: fb3c4262b exactfive-file
+DLQcatalog closure and8b4d2e07a original Causal field-fixture WIP. DLQ original
+source release before20:58/finalverification20:55:01.622Z was collected while
+SDK processed old STOPs, then SDKidleACK2 was collected. Parent current five
+SHA256 pins all matched; normalgenerator/check/strict0/0/0; nativeJSON
+7discovered/7executed/7passed/0failed/0skipped in raw root log, no standalone
+JSON. Initial split1 and import.metaURLfixture1/zero tests remain preserved.
+31196 old leaves and182othergenerated files preserved/two exact toast leaves
+added; fullcompiler/suites/browser/API/mountedtoast NOTRUN. Narrow catalog
+item[x], no wholepage acceptance. Its English claim is now held exclusively
+by cec819f5-7154-428b-b0db-f7b138e828fd for the existing exact six Causal/Journey
+hint keys, not a wider campaign.
+
+Causal field-original actor8916 actual release21:57:16.060Z/ACK1 collected.
+One edited fixture's6cae3415 and readonly pageecc2d66e pins matched; four
+original field/focus sets corrected, all29 names/scenarios and27 appended
+bodies preserved. Lint/own semantics/preservation/scans0, but56casesNOTRUN/
+normalusage-manifeststartup1/noJSON. Commit8b4 is WIP, originalattempt1
+unchanged/pending exactcatalogclosure and normal covering proof.
+Earlier individual WIPs8f4e4b44c/816d8e20e/93dfa90ba/2ddfce983 and native
+reportb67362b05 remain pushed; native preview only30/30flows+2/2routes, not
+wholepilot. Carbon source-time fixture has53authoredcases, not14.
+
+Fresh causal native execution from da211 remains29discovered14executed/
+10pass4fail15unselected: old corrected case passed/new13fixture9pass4fail.
+Baseline original TS2769at96:23 reproduced; exact one-line opt-in WIP16b
+pushed. One new measured c9100f70-605c-46dc-92cd-5131ad6a4d9f actor owns only
+the two API fixtures for four runtime expectation/timing defects and the
+baseline typed renderHook boundary. Sourcehook/client/resilience/modes
+readonly, no weakening/passed-nine rerun. Original guard/source acceptance
+waits its actual result.
+
+Twelve actual accepted refills, all first-polled running:
+c910 fixture root; fa46ffbe Carbon53sameattempt1; a9a44380 CarbonCoverage18
+sameattempt1; 83b5e3f3 ChargeInterruptionQA; 52de58f8 ChargerHealthQA;
+d691f2ea ChargerResilienceQA (return22:47/hard22:52 or earlieractualclock);
+cec819f5 exactcatalog; 85cb2985 ActionCenterDate6sameattempt1;
+438b7e2c FleetExport12sameattempt1; e380b6d1 FleetCatalog sameattempt2,
+notthird (conservative return22:54/hard22:59 or earlieractualclock);
+11c8d422 ChargingCurveQA and a67be069 ChargingDetailQA
+(return23:10/hard23:15 or earlieractualclock). Full IDs/files in queue/SQL.
+Firstsix received original-boundary conclude and hardSTOP; unconfirmed
+source leases retained. Do not renew their clocks or call STOP cancellation.
+
+New delayed original releases were collected for MileageBudget/Lifetime/
+BatteryCare/Degradation/AutomationList/Milestones/Mileage and DLQ/field root.
+Their report intake still needs individual JSON/pin/log review and exact
+commits/narrow deduplicated needs; no source remigration. Counts retained:
+Budget4findings3candidates/finalpost-write reparseNOTRUN; Lifetime7/4;
+Care9/6; Degradation17/6; AutomationList8/4; Milestones6/4; Mileage2/3.
+Use original release clocks, not ACK clocks. Federated report uses
+confirmedIssueCount/confirmedIssues (5/4); the earlier parent .issues
+probe printed1 by wrapping missing/null property and is INVALID, not a
+changed finding count. Timeline/TrueCost/Weekly/Year/Builder/History,
+GDPR/source-scope/API-error partials and older diagnostic deliveries remain
+preserved/uncommitted; no discards or broad staging.
+
+Allinitial28 IDs actively polled in serialized22:20census; actual terminal
+leases retired individually; new12 first-polls recorded. Actual32reported
+lifecycle owners at22:51, not32healthy:20olderoverdue, firstsix replacements
+reachhard22:52. Latest Mileage notification frees one additional slot after
+snapshot. Built-in agent cancellation still unavailable: keep unconfirmed
+claims, no custom extensions/tooling or termination fiction. Corrected
+unblocking command after Select-Object -Join syntax1: failed roots blocking
+2+ count0; nativepilot3/originalsourceaggregate20/Phase7one unresolved.
+Closed phases remain closed; those debt aggregates are not waived.
+
+Preview5173/PID9036 actualHTTP200 at22:51:52. Sole schedule3 exact10min prompt
+unchanged; scheduled22:30/40/50 prompts coalesced while census active, flag
+cleared before ordinary intake. Builtin shell inventory22:47 showed five
+bounded handles158-210s, none over15min; this is a snapshot, not current
+elapsed proof. No Docker/reseed/fullgate/unchanged passing-suite rerun,
+Discord/heartbeat/helpers/extensions or parent-authored application source.
+Persist queue/progress/handoff now, continue per-item report intake/refill,
+and enforce next actual worker deadlines without another long health lock.
+
 ### Actual quota release, rolling refill and partial preservation,21:32Z
 
 Phases4/5 remainclosed by a63bd78e6/58f1a657c and the actual15:20build0/
