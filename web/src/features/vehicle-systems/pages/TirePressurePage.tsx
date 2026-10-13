@@ -19,6 +19,7 @@ import { useRangeState } from '@/hooks/useRangeState';
 import { useUnits } from '@/hooks/useUnits';
 import { usePressureFormat } from '@/hooks/usePressureFormat';
 import { formatDateTime } from '@/lib/dateFormat';
+import { gaugeTone } from '@/lib/tokens';
 
 import {
   usePressurePageLatest, usePressurePageHistory, type TirePressureReading,
@@ -131,6 +132,8 @@ export function getTirePressureValue(
   return normaliseTpmsToPa(map[pos]);
 }
 
+// Preserve the inherited helper's exact test contract. Production band colors
+// use shared semantic tokens below, never this fixed compatibility palette.
 export function pressureColor(pa: number): string {
   if (pa >= NORMAL_MIN_PA && pa <= NORMAL_MAX_PA) return '#10b981';
   if (pa >= SOFT_LOW_PA && pa <= SOFT_HIGH_PA) return '#f59e0b';
@@ -182,17 +185,17 @@ export default function TirePressurePage() {
   );
 
   // Backend `front_left`/`front_right`/`rear_left`/`rear_right` arrive
-  // in Pa (SI). `convertPressureFromSI` expects kPa, so divide by 1000
-  // at the boundary.
+  // in Pa (SI). usePressureFormat owns the Pa-to-kPa bridge required by
+  // convertPressureFromSI; do not divide again or guess units by magnitude.
   const pressureDisplayValue = useCallback(
     (pa: number) => toPressureValue(pa) ?? Number.NaN,
     [toPressureValue],
   );
 
   // Qualitative regions of the pressure domain, in display units. Edges and
-  // colours are derived from the same pressureStatus()/pressureColor() helpers
-  // the status Badge uses, so the coloured track can never drift out of sync
-  // with the label sitting next to it.
+  // semantic colors derive from the same pressureStatus()/statusVariant()
+  // mapping as the status Badge. The shared palette follows saved themes;
+  // labels remain explicit so color is never the only carrier of meaning.
   const pressureDomain = useMemo(
     () => ({
       min: pressureDisplayValue(DOMAIN_MIN_PA),
@@ -216,7 +219,7 @@ export default function TirePressurePage() {
       return {
         from: pressureDisplayValue(fromPa),
         to: pressureDisplayValue(toPa),
-        color: `${pressureColor(midPa)}8c`,
+        color: `color-mix(in srgb, ${gaugeTone[statusVariant(pressureStatus(midPa))]} 55%, transparent)`,
         label: statusLabel(pressureStatus(midPa)),
       };
     });
@@ -356,7 +359,13 @@ export default function TirePressurePage() {
             const val = readPressurePa(row, pos);
             return (
               <Badge variant={val != null ? statusVariant(pressureStatus(val)) : 'neutral'} size="sm">
-                {val != null ? fmtNumber(pressureDisplayValue(val)) : '—'}
+                {val != null
+                  ? t('tirePressure.pressureWithStatus', '{{value}} {{unit}} · {{status}}', {
+                      value: fmtNumber(pressureDisplayValue(val)),
+                      unit: pressureUnit,
+                      status: statusLabel(pressureStatus(val)),
+                    })
+                  : t('tirePressure.unknownPressure', '— · Unknown')}
               </Badge>
             );
           },
@@ -397,7 +406,7 @@ export default function TirePressurePage() {
     // pressureUnit rebuilds the render closures with the correct display unit
     // when the user flips their pressure preference; between changes the deps
     // are stable so the columns keep their identity.
-    [t, tireLabel, pressureUnit, fmtNumber, pressureDisplayValue],
+    [t, tireLabel, statusLabel, pressureUnit, fmtNumber, pressureDisplayValue],
   );
 
   /* ---- Render ---- */

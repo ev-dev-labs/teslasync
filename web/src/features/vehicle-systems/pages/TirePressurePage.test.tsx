@@ -594,3 +594,99 @@ describe('TirePressurePage — interactions + a11y', () => {
     expect(H.setRange).not.toHaveBeenCalled();
   });
 });
+
+
+/* Phase 5 page-only adoption: keep the entire inherited suite above intact. */
+describe('TirePressurePage — restrained semantic presentation and preservation', () => {
+  it('uses five theme-aware semantic bands while retaining all four labeled meters', async () => {
+    renderPage();
+    const meter = await screen.findByRole('meter', { name: 'Front left' });
+    expect(screen.getAllByRole('meter')).toHaveLength(4);
+    const bands = [...meter.querySelectorAll<HTMLElement>('[style*="background"]')];
+    expect(bands).toHaveLength(5);
+    expect(bands.map(band => band.style.background)).toEqual([
+      'color-mix(in srgb, var(--semantic-danger) 55%, transparent)',
+      'color-mix(in srgb, var(--semantic-warning) 55%, transparent)',
+      'color-mix(in srgb, var(--semantic-success) 55%, transparent)',
+      'color-mix(in srgb, var(--semantic-warning) 55%, transparent)',
+      'color-mix(in srgb, var(--semantic-danger) 55%, transparent)',
+    ]);
+    expect(meter).toHaveAttribute('aria-valuemin', '1.5');
+    expect(meter).toHaveAttribute('aria-valuemax', '4.5');
+    expect(meter).toHaveAttribute('aria-valuetext', '3.00bar — Normal');
+  });
+
+  it('shows localized pressure units and severity text for every historical corner', async () => {
+    setHistory([makeReading({ front_left: 300_000, front_right: 230_000,
+      rear_left: 370_000, rear_right: 450_000 })]);
+    renderPage();
+    expect(await historyTable().findByText('3.00 bar · Normal')).toBeInTheDocument();
+    expect(historyTable().getByText('2.30 bar · Low')).toBeInTheDocument();
+    expect(historyTable().getByText('3.70 bar · High')).toBeInTheDocument();
+    expect(historyTable().getByText('4.50 bar · Critical')).toBeInTheDocument();
+  });
+
+  it('keeps missing historical corners and absent TPMS flags unknown rather than healthy', async () => {
+    setHistory([makeReading({ front_left: null, front_right: 0,
+      rear_left: Number.NaN, rear_right: Number.POSITIVE_INFINITY })]);
+    renderPage();
+    await historyTable().findByRole('columnheader', { name: /Front left/ });
+    expect(historyTable().getAllByText('— · Unknown')).toHaveLength(4);
+    expect(historyTable().queryByText('OK')).not.toBeInTheDocument();
+    expect(historyTable().queryByText(/0.00 bar/)).not.toBeInTheDocument();
+    pressureMetric('Avg pressure', '3.00', 'bar');
+  });
+
+  it('treats small positive wire values as Pa and bridges to kPa only at display', async () => {
+    H.pressure = 'kPa';
+    const reading = Object.freeze(makeReading({ front_left: 300, front_right: 300,
+      rear_left: 300, rear_right: 300 }));
+    setLatest(reading);
+    setHistory([reading]);
+    renderPage();
+    await kpiCard('Avg pressure').findByText('0.30 kPa', { selector: '[data-operational-value]' });
+    pressureMetric('Min pressure', '0.30', 'kPa');
+    expect(historyTable().getAllByText('0.30 kPa · Critical')).toHaveLength(4);
+    expect(kpiCard('Warning count').getByText('4')).toBeInTheDocument();
+    expect(reading.front_left).toBe(300);
+    expect(screen.queryByText('300.00 kPa')).not.toBeInTheDocument();
+  });
+
+  it('keeps each persistent section visible and makes no requests without a selected vehicle', async () => {
+    H.vehicleId = null;
+    renderPage();
+    expect(screen.getByRole('region', { name: 'Tire pressure summary' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Current readings' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Pressure history' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'History table' })).toBeInTheDocument();
+    expect(await screen.findByText('No current readings available')).toBeInTheDocument();
+    expect(screen.getAllByText('No history data')).toHaveLength(2);
+    expect(H.calls).toEqual({ latest: 0, history: 0 });
+    expect(screen.queryByTestId('vehicle-select')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('tire-pressure-range')).not.toBeInTheDocument();
+  });
+
+  it('preserves latest readings and their summary when only history fails', async () => {
+    setHistory([], 'reject');
+    renderPage();
+    await kpiCard('Avg pressure').findByText('3.00 bar', { selector: '[data-operational-value]' });
+    expect(screen.getAllByRole('meter')).toHaveLength(4);
+    expect(screen.getByRole('heading', { name: 'Pressure history' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'History table' })).toBeInTheDocument();
+    expect(await screen.findByText('Failed')).toBeInTheDocument();
+    pressureMetric('Min pressure', '3.00', 'bar');
+  });
+
+  it('sorts historical pressure columns by raw Pa, not localized severity labels', async () => {
+    setHistory([makeReading({ id: 1, front_left: 400_000 }),
+      makeReading({ id: 2, front_left: 200_000 })]);
+    renderPage();
+    const header = await historyTable().findByRole('columnheader', { name: /Front left/ });
+    fireEvent.click(within(header).getByRole('button'));
+    expect(historyTable().getByRole('columnheader', { name: /Front left/ }))
+      .toHaveAttribute('aria-sort', 'ascending');
+    const values = historyTable().getAllByRole('row').slice(1)
+      .map(row => within(row).getAllByRole('cell')[1].textContent);
+    expect(values).toEqual(['2.00 bar · Low', '4.00 bar · High']);
+  });
+});
