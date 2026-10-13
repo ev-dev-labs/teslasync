@@ -55,6 +55,8 @@ export default function ScienceLabPage() {
             key={preset}
             variant={preset === days ? 'primary' : 'secondary'}
             size="sm"
+            wrapLabel
+            className="min-h-11 md:min-h-9"
             onClick={() => { pickWindow(preset); }}
             aria-pressed={preset === days}
           >

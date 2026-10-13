@@ -264,6 +264,12 @@ describe('ScienceLabPage', () => {
       expect(document.getElementById(`science-${id}`)).toBeInTheDocument();
     }
     expect(screen.getByRole('button', { name: 'Last 7d' })).toHaveAttribute('aria-pressed', 'true');
+    const windowControls = screen.getByRole('group', { name: 'Window' });
+    for (const name of ['Last 7d', 'Last 30d']) {
+      expect(within(windowControls).getByRole('button', { name })).toHaveClass(
+        'min-h-11', 'md:min-h-9', 'h-auto', 'whitespace-normal',
+      );
+    }
   });
 
   it('exposes observed inputs, fit diagnostics, and linked source drives', () => {
