@@ -56,6 +56,11 @@ export function DayLogOperationalSummary({
   ];
   const metrics = useOperationalMetrics(sourceMetrics);
   const hasUnavailableSources = data?.sources?.some((source) => source.status === 'unavailable') ?? false;
+  const isTruncated = data?.truncated === true;
+  const hasPartialHistory = status === 'partial' || isTruncated || hasUnavailableSources;
+  const partialLabel = t('dataState.partial.title', 'Partial data');
+  const description = t('dayLog.brief.description', 'Recorded totals for this vehicle day, independent of timeline search and category filters. Missing measurements are not zero; source availability is listed below.');
+  const truncationNotice = t('dayLog.timeline.truncated', 'Some records may be missing — the day exceeded the signal read cap. What loaded is shown in full.');
   const statusLabel = isLoading
     ? t('dayLog.brief.status.loading', 'Loading recorded history')
     : error
@@ -64,8 +69,10 @@ export function DayLogOperationalSummary({
         ? t('dayLog.brief.status.stale', 'Retained recorded history')
         : summary === null
           ? t('dayLog.brief.status.unknown', 'Day summary unavailable')
-          : hasUnavailableSources
-            ? t('dayLog.brief.status.partial', 'Some sources unavailable')
+          : hasPartialHistory
+            ? hasUnavailableSources
+              ? t('dayLog.brief.status.partial', 'Some sources unavailable')
+              : partialLabel
             : t('dayLog.brief.status.ready', 'Recorded day summary');
 
   return (
@@ -75,9 +82,15 @@ export function DayLogOperationalSummary({
         testId="day-log-summary"
         eyebrow={t('dayLog.brief.eyebrow', 'Vehicle day history')}
         title={t('dayLog.summary.title', 'Day summary')}
-        description={t('dayLog.brief.description', 'Recorded totals for this vehicle day, independent of timeline search and category filters. Missing measurements are not zero; source availability is listed below.')}
+        description={description}
         statusLabel={statusLabel}
-        statusTone={error || status === 'stale' || hasUnavailableSources ? 'warning' : 'neutral'}
+        statusTone={error || status === 'stale' || hasPartialHistory ? 'warning' : 'neutral'}
+        attention={isTruncated ? [{
+          key: 'source-cap',
+          title: partialLabel,
+          description: truncationNotice,
+          tone: 'warning',
+        }] : []}
         metrics={metrics}
         loading={isLoading}
         scope={<Text as="span" variant="caption">{period} · {scope}</Text>}
@@ -100,8 +113,10 @@ export function DayLogOperationalSummary({
         <EmptyState
           className="py-6"
           icon={<Icons.activity className="h-8 w-8" />}
-          message={t('dayLog.summary.empty', 'No drives or charging sessions this day.')}
-          description={t('dayLog.summary.emptyHint', 'Locks, sentry, and state changes below still tell the story when the car stayed put.')}
+          message={hasPartialHistory ? partialLabel : t('dayLog.summary.empty', 'No drives or charging sessions this day.')}
+          description={hasPartialHistory
+            ? isTruncated ? truncationNotice : description
+            : t('dayLog.summary.emptyHint', 'Locks, sentry, and state changes below still tell the story when the car stayed put.')}
           actionTo={{ label: t('dayLog.summary.drivesCta', 'Open drives'), to: '/drives' }}
         />
       ) : null}
