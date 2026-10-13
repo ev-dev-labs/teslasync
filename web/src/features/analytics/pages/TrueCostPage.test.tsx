@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
+import i18n from 'i18next';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ToastProvider } from '@/components/feedback';
@@ -23,9 +24,22 @@ const h = vi.hoisted(() => ({
   gasUnit: 'gallon' as 'gallon' | 'liter',
   vehicleId: 7 as number | null,
   hookIds: [] as string[],
+  directoryFails: false,
+  narrationFails: false,
 }));
 
 const refetch = vi.fn();
+
+vi.mock('../components/true-cost/TrueCostMonthlyDirectory', async importOriginal => {
+  const actual = await importOriginal<typeof import('../components/true-cost/TrueCostMonthlyDirectory')>();
+  return {
+    ...actual,
+    TrueCostMonthlyDirectory: (props: Parameters<typeof actual.TrueCostMonthlyDirectory>[0]) => {
+      if (h.directoryFails) throw new Error('Monthly directory rendering failed');
+      return <actual.TrueCostMonthlyDirectory {...props} />;
+    },
+  };
+});
 
 vi.mock('react-i18next', async () => {
   const actual = await vi.importActual<typeof import('react-i18next')>('react-i18next');
@@ -120,9 +134,10 @@ vi.mock('@/hooks/useFormatting', () => ({
 }));
 
 vi.mock('@/components/ai/AITCONarration', () => ({
-  AITCONarration: ({ vehicleId }: { vehicleId?: number }) => (
-    <div data-testid="ai-tco-narration" data-vehicle-id={vehicleId ?? ''} />
-  ),
+  AITCONarration: ({ vehicleId }: { vehicleId?: number }) => {
+    if (h.narrationFails) throw new Error('Narration rendering failed');
+    return <div data-testid="ai-tco-narration" data-vehicle-id={vehicleId ?? ''} />;
+  },
 }));
 
 import TrueCostPage from './TrueCostPage';
@@ -260,6 +275,8 @@ beforeEach(() => {
   h.distance = 'km';
   h.gasUnit = 'gallon';
   h.vehicleId = 7;
+  h.directoryFails = false;
+  h.narrationFails = false;
   h.query = query({
     data: cost(),
     isSuccess: true,
@@ -389,6 +406,54 @@ describe('TrueCostPage persistent query states', () => {
 });
 
 describe('TrueCostPage evidence rendering', () => {
+  it('isolates a failed monthly directory and retries it without hiding neighboring evidence', async () => {
+    await i18n.init({
+      lng: 'en',
+      resources: {
+        en: {
+          translation: {
+            errorBoundary: {
+              inlineTitle: 'Component failed to load',
+              retry: 'Retry',
+            },
+          },
+        },
+      },
+    });
+    h.directoryFails = true;
+    renderPage();
+
+    const failure = screen.getByText('Monthly directory rendering failed').parentElement?.parentElement;
+    if (!failure) throw new Error('Monthly directory fallback was not rendered');
+    expect(screen.queryByTestId('tco-monthly-directory')).not.toBeInTheDocument();
+    SECTION_IDS.filter(id => id !== 'tco-monthly-directory').forEach(id => {
+      expect(screen.getByTestId(id)).toBeInTheDocument();
+    });
+    expect(screen.getAllByRole('button', { name: 'Export chart' })).toHaveLength(5);
+    expect(screen.getByRole('heading', { name: 'Fixed-cost ledger' })).toBeInTheDocument();
+    expect(failure.closest('[data-tco-layout-slot]')).toHaveAttribute('data-card-size', 'full');
+
+    h.directoryFails = false;
+    fireEvent.click(within(failure).getByRole('button', { name: 'Retry' }));
+
+    expectPersistentShells();
+    expect(screen.queryByText('Monthly directory rendering failed')).not.toBeInTheDocument();
+    expect(refetch).not.toHaveBeenCalled();
+  });
+
+  it('isolates failed opt-in narration while keeping every deterministic section and export available', () => {
+    h.narrationFails = true;
+    renderPage();
+
+    expectPersistentShells();
+    expect(within(screen.getByTestId('tco-ai-slot')).getByText('Narration rendering failed'))
+      .toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Fixed-cost ledger' })).toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: 'Export chart' })).toHaveLength(5);
+    expect(new Set(h.hookIds)).toEqual(new Set(['7']));
+    expect(refetch).not.toHaveBeenCalled();
+  });
+
   it('reviews numeric source operands and preserved costing boundaries in the real drawer', () => {
     renderPage();
     const brief = screen.getByTestId('tco-evidence-kpis');

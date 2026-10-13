@@ -1,8 +1,9 @@
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useCostBreakdown } from '@/api/hooks/useAnalytics';
 import { AITCONarration } from '@/components/ai';
+import { SectionErrorBoundary } from '@/components/feedback';
 
 import { CardGrid, PageLayout, Section, type CardGridItem } from '@/components/layout';
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -31,6 +32,16 @@ import { TrueCostEvidenceLedger } from '../components/operationalbrief-n-z/TrueC
 import { TrueCostFixedLedger, TrueCostLayoutSlot } from '../components/true-cost-modernization';
 import { analyzeTrueCost } from '../lib/trueCost';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+
+function evidenceSlot(id: string, delay: number, content: ReactNode) {
+  return (
+    <TrueCostLayoutSlot delay={delay}>
+      <SectionErrorBoundary name={`TrueCost:${id}`}>
+        {content}
+      </SectionErrorBoundary>
+    </TrueCostLayoutSlot>
+  );
+}
 
 export default function TrueCostPage() {
   useNumberFormatting();
@@ -76,109 +87,77 @@ export default function TrueCostPage() {
   const items: CardGridItem[] = [
     {
       id: 'evidence', size: 'full',
-      content: <TrueCostLayoutSlot delay={0}>
-        <TrueCostEvidenceLedger {...sectionProps} />
-      </TrueCostLayoutSlot>,
+      content: evidenceSlot('evidence', 0, <TrueCostEvidenceLedger {...sectionProps} />),
     },
     {
       id: 'source-scope', size: 'full',
-      content: <TrueCostLayoutSlot delay={0.02}>
-        <TrueCostSourceScopeLedger {...sectionProps} />
-      </TrueCostLayoutSlot>,
+      content: evidenceSlot('source-scope', 0.02, <TrueCostSourceScopeLedger {...sectionProps} />),
     },
     {
       id: 'boundary', size: 'full',
-      content: <TrueCostLayoutSlot delay={0.03}>
-        <TrueCostBoundaryDisclosure {...sectionProps} />
-      </TrueCostLayoutSlot>,
+      content: evidenceSlot('boundary', 0.03, <TrueCostBoundaryDisclosure {...sectionProps} />),
     },
     {
       id: 'savings', size: 'full',
-      content: <TrueCostLayoutSlot delay={0.04}>
-        <TrueCostSavingsEnvelope {...sectionProps} />
-      </TrueCostLayoutSlot>,
+      content: evidenceSlot('savings', 0.04, <TrueCostSavingsEnvelope {...sectionProps} />),
     },
     {
       id: 'fixed-ledger', size: 'full',
-      content: <TrueCostLayoutSlot delay={0.045}>
+      content: evidenceSlot('fixed-ledger', 0.045,
         <TrueCostFixedLedger
           vehicleId={vehicleId ?? undefined}
           totalKm={query.data?.total_km ?? 0}
           totalChargingCost={query.data?.total_charging_cost ?? 0}
         />
-      </TrueCostLayoutSlot>,
+      ),
     },
     {
       id: 'cumulative', size: 'half',
-      content: <TrueCostLayoutSlot delay={0.05}>
-        <TrueCostCumulativeChart {...sectionProps} />
-      </TrueCostLayoutSlot>,
+      content: evidenceSlot('cumulative', 0.05, <TrueCostCumulativeChart {...sectionProps} />),
     },
     {
       id: 'monthly-cost', size: 'half',
-      content: <TrueCostLayoutSlot delay={0.06}>
-        <TrueCostMonthlyCostChart {...sectionProps} />
-      </TrueCostLayoutSlot>,
+      content: evidenceSlot('monthly-cost', 0.06, <TrueCostMonthlyCostChart {...sectionProps} />),
     },
     {
       id: 'monthly-delta', size: 'half',
-      content: <TrueCostLayoutSlot delay={0.07}>
-        <TrueCostMonthlyDeltaChart {...sectionProps} />
-      </TrueCostLayoutSlot>,
+      content: evidenceSlot('monthly-delta', 0.07, <TrueCostMonthlyDeltaChart {...sectionProps} />),
     },
     {
       id: 'energy-trend', size: 'half',
-      content: <TrueCostLayoutSlot delay={0.08}>
-        <TrueCostEnergyCostTrend {...sectionProps} />
-      </TrueCostLayoutSlot>,
+      content: evidenceSlot('energy-trend', 0.08, <TrueCostEnergyCostTrend {...sectionProps} />),
     },
     {
       id: 'per-distance', size: 'full',
-      content: <TrueCostLayoutSlot delay={0.09}>
-        <TrueCostPerDistanceChart {...sectionProps} />
-      </TrueCostLayoutSlot>,
+      content: evidenceSlot('per-distance', 0.09, <TrueCostPerDistanceChart {...sectionProps} />),
     },
     {
       id: 'monthly-directory', size: 'full',
-      content: <TrueCostLayoutSlot delay={0.1}>
-        <TrueCostMonthlyDirectory {...sectionProps} />
-      </TrueCostLayoutSlot>,
+      content: evidenceSlot('monthly-directory', 0.1, <TrueCostMonthlyDirectory {...sectionProps} />),
     },
     {
       id: 'assumptions', size: 'full',
-      content: <TrueCostLayoutSlot delay={0.11}>
-        <TrueCostAssumptionsLedger {...sectionProps} />
-      </TrueCostLayoutSlot>,
+      content: evidenceSlot('assumptions', 0.11, <TrueCostAssumptionsLedger {...sectionProps} />),
     },
     {
       id: 'temporal-coverage', size: 'full',
-      content: <TrueCostLayoutSlot delay={0.12}>
-        <TrueCostTemporalCoverage {...sectionProps} />
-      </TrueCostLayoutSlot>,
+      content: evidenceSlot('temporal-coverage', 0.12, <TrueCostTemporalCoverage {...sectionProps} />),
     },
     {
       id: 'break-even', size: 'half',
-      content: <TrueCostLayoutSlot delay={0.13}>
-        <TrueCostBreakEven {...sectionProps} />
-      </TrueCostLayoutSlot>,
+      content: evidenceSlot('break-even', 0.13, <TrueCostBreakEven {...sectionProps} />),
     },
     {
       id: 'sensitivity', size: 'half',
-      content: <TrueCostLayoutSlot delay={0.14}>
-        <TrueCostSensitivityMatrix {...sectionProps} />
-      </TrueCostLayoutSlot>,
+      content: evidenceSlot('sensitivity', 0.14, <TrueCostSensitivityMatrix {...sectionProps} />),
     },
     {
       id: 'accounting', size: 'full',
-      content: <TrueCostLayoutSlot delay={0.15}>
-        <TrueCostAccountingIdentities {...sectionProps} />
-      </TrueCostLayoutSlot>,
+      content: evidenceSlot('accounting', 0.15, <TrueCostAccountingIdentities {...sectionProps} />),
     },
     {
       id: 'methodology', size: 'full',
-      content: <TrueCostLayoutSlot delay={0.16}>
-        <TrueCostMethodology {...sectionProps} />
-      </TrueCostLayoutSlot>,
+      content: evidenceSlot('methodology', 0.16, <TrueCostMethodology {...sectionProps} />),
     },
   ];
 
@@ -192,7 +171,9 @@ export default function TrueCostPage() {
       query={vehicleId != null ? query : undefined}
     >
       <div data-testid="tco-ai-slot">
-        <AITCONarration {...narrationProps} />
+        <SectionErrorBoundary name="TrueCost:narration">
+          <AITCONarration {...narrationProps} />
+        </SectionErrorBoundary>
       </div>
 
       <Section
