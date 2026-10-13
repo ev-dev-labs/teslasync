@@ -2,6 +2,92 @@
 
 ## Current phase
 
+### Current unattended checkpoint: source receipts and measured root closure
+
+At2026-10-13T08:59Z all originally resumed workers and all subsequent
+file-exclusive original-page refills have returned; every known terminal
+receipt was collected through its built-in ID. Actual running count is **0/32**,
+not52: the52 Phase5 held rows are delivered scopes awaiting serialized
+scope/log/source-or-WIP intake, not live writers. No application delta is to be
+discarded. Untouched original-page dispatch is exhausted; proof-only
+continuations require the measured current catalog closure. Source/WIP intake
+and that existing root remain actionable, so the unattended work is NOT done.
+
+Current pushed HEAD/count: `99b064406`/1732. Phase5:
+x163/pending9/held52/failed13/blocked1; Phase6:
+x58/pending4/held2/failed0/blocked1. Phases0–3 remain complete; Phase4 native
+pilot acceptance is unfinished, Phase5 source adoption continues, combined
+Phase6 and Phase7 gates are not complete. These are source-row counts, not a
+completion percentage or native/deployed acceptance.
+
+Each accepted or partial receipt was independently scoped and committed,
+with a push after each commit. Current real covering proofs include
+FSD27, Jurisdiction15, Powerwall4, Statistics30, VehicleCost24, Mileage20,
+Explorer20, JourneyAssurance13, and the last Drivetrain2-file40-case run.
+The Drivetrain log's52 is invalid historical duplication: do not aggregate it
+or call it52 executed. Own assertion failures and unexecuted corrections are
+preserved as WIP, not accepted; Ledger attempt2 is now failed/exhausted with
+WIP `cf6f61a4b`, not silently granted another attempt. Source-only external
+catalog failures are not behavioral passes. Some newer workers returned inline
+receipts without the required log; persist the work with that limitation,
+never manufacture executed evidence.
+
+Actual literal `npx tsc --noEmit` at1721 found ten newly malformed
+TeslaAccount Icon expressions. Its exact worker source/test delta was first
+pushed WIP `48d684a89`, then only ten JSX braces were fixed in `8489a885b`.
+The next actual compiler exposed Anomaly XAxis formatter locale/index
+incompatibility and Help Icon boolean-ARIA incompatibility. Both producer
+deltas were first pushed separately as WIP `1eacc6367`/`0da150741`; two
+typed caller lines were fixed in `99b064406`. The final literal production
+compiler actually exited0; exact lints and scoped source counts also exited0.
+Evidence: `web\logs\phase6-formatter-icon-callsite-types.log`. This does NOT
+certify unit-test fixture types: `web\tsconfig.json` excludes test files.
+It is not a full test/lint/build gate or native acceptance. Next regular
+compiler cadence remains1736, unless intake updates it with a real run.
+
+One existing current-input catalog root is queued:
+`phase5-current-source-catalog-closure`. Five generated artifacts are proven
+invalid by many guarded runs: locale-notifications, locale-settings,
+locale-driving-speed-profile, runtime-manifest and usage-manifest. Source
+producers also reported exact new canonical English keys, including
+Roadmap's53, TimeMachine's9 and the bounded pressure/outage/catalog labels.
+Register all exact generated output paths before writing; preserve the one
+canonical English source and use only the normal existing generator/check,
+with guards ON and no known-missing/baseline relaxation. Persist contributor
+source item by item before accepting the final projections.
+
+The measured runner investigation found NO configuration defect:
+normal catalog check263.659s and namespace check1.205s, both0; Timeline
+discovery/execution/pass15, wall268.594s. Use480s bounded scoped allowance,
+not the obsolete150s timeout; no helper/config changes or false OOM attribution.
+
+Runtime limitation remains explicit: this host exposes no built-in agent-cancel
+operation. Cooperative conclude messages were delivered, but some reported
+runtime ages exceeded25min while those messages/final acknowledgements were
+processing. These are NOT claimed hard cancellations. Claims were released
+only after actual terminal source-write release, never by a failed message or
+timer assertion. The previously capacity-blocked APIKeys release acknowledgement
+was later delivered and terminal1 explicitly released both files. Do not
+restore custom cancellation/status tooling or repeat false source stops.
+
+The user's updated `docs/orchestrator-loop.md` remains the sole authority.
+Both session custom extension entrypoints stay disabled; no new extension or
+helper was built, edited, tested or debugged. Schedule3 remains the sole
+ten-minute schedule with the exact skip-if-in-progress prompt. No external
+status messages are authorized. Shared5173/PID9036 returned HTTP200 at08:59;
+no competing server, Docker rebuild/reseed, broad process kill or dependency
+install occurred. Frozen Docker/DRILL and exhausted prior native-helper budgets
+remain unchanged. The same13 unclaimed Exports diagnostics are preserved.
+
+Next: immediately keep processing the collected scopes and recover runtime
+capacity with genuinely ready queued work; close the current canonical/generated
+catalog root so bounded retained proof attempts can continue. Do not redispatch
+x rows, reset the user's14 already-reset items, erase WIP/history, grant
+exhausted source/native budgets another attempt, or invent a validation campaign.
+Run actual phase gates only with no actors, at most two repair rounds, and
+advance only verified checkpoints. History below is evidence, not current
+operating instructions or a live worker count.
+
 ### Latest restart: built-in-only unattended continuation
 
 The user's latest restart instructions supersede the operational history below.
