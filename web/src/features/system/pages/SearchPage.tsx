@@ -37,7 +37,7 @@ import { useDataState } from '@/hooks/useDataState'
 import { useUrlString, useUrlArray } from '@/hooks/useUrlState'
 import { useGlobalSearch, SEARCH_MIN_QUERY_LENGTH } from '@/api/hooks/useSearch'
 import type { SearchHit, SearchHitType } from '@/api/types'
-import { neonColorMap, typography, type NeonColor } from '@/lib/tokens'
+import { neonColorMap, typography } from '@/lib/tokens'
 import { cn } from '@/lib/cn'
 
 // All entity types the backend can return — kept in display order so the
@@ -54,20 +54,9 @@ const ALL_TYPES: SearchHitType[] = [
   'trip',
 ]
 
-// Per-type accent — drives the toned icon-chip on each result group + row.
-// Neon hues live only on the chip surface (bg/ring); the glyph uses the
-// toned 300-level `text`, never neon body text.
-const TYPE_ACCENT: Record<SearchHitType, NeonColor> = {
-  vehicle: 'cyan',
-  drive: 'blue',
-  charging: 'green',
-  alert: 'red',
-  notification: 'amber',
-  geofence: 'purple',
-  automation: 'purple',
-  location: 'cyan',
-  trip: 'blue',
-}
+// Entity identity is carried by the icon and translated label, not status hues.
+// Reuse the existing neutral, theme-aware token rather than a local palette.
+const RESULT_ACCENT = neonColorMap.neutral
 
 /**
  * Dedicated app-wide search page.
@@ -131,7 +120,9 @@ export default function SearchPage() {
 
   const isIdle = trimmed.length === 0
   const isActiveSearch = !isIdle && !tooShort && !error
-  const initialLoading = isFetching && hits.length === 0
+  // An empty response is still retained data; refreshing it must not erase
+  // measured zeroes. Pending also covers an initial request paused offline.
+  const initialLoading = searchQuery.isPending && !state.hasData
   const hasResults = groupedHits.length > 0
 
   function toggleType(type: SearchHitType) {
@@ -154,12 +145,14 @@ export default function SearchPage() {
         'Find vehicles, drives, charging, alerts and more across your fleet',
       )}
       query={isActiveSearch ? searchQuery : undefined}
+      busy={!isIdle && !tooShort && isFetching}
       secondaryActions={
         isActiveSearch ? (
           <Button
             variant="ghost"
             onClick={() => refetch()}
             aria-label={t('search.refresh', 'Refresh results')}
+            className="min-h-11 min-w-11"
           >
             <RefreshCw className="h-4 w-4" aria-hidden="true" />
           </Button>
@@ -206,7 +199,8 @@ export default function SearchPage() {
                   variant={active ? 'primary' : 'outline'}
                   aria-pressed={active}
                   onClick={() => toggleType(type)}
-                  className="min-h-11 rounded-full"
+                  wrapLabel
+                  className="min-h-11 max-w-full rounded-full"
                 >
                   {searchHitIconSm(type)}
                   {searchSectionLabel(type, t)}
@@ -234,8 +228,8 @@ export default function SearchPage() {
           <SystemSummaryBrief
             title={t('search.kpis', 'Search summary')}
             description={t('search.brief.description', 'Result counts and category coverage for the current query and selected type filters.')}
-            scope={t('search.kpi.forQuery', 'for “{{query}}”', { query: trimmed })}
-            available={state.hasData} loading={initialLoading} retained={state.hasData && searchQuery.isError}
+            scope={t('search.kpi.forQuery', 'for “{{query}}”', { query: data?.query ?? trimmed })}
+            available={state.hasData} loading={initialLoading} retained={state.hasData && (state.status === 'stale' || searchQuery.isPlaceholderData)}
             metrics={[
               { metricId: 'count', occurrenceId: 'results', rawValue: state.hasData ? hits.length : null, label: t('search.kpi.totalResults', 'Total results'),
                 context: t('search.brief.scope', 'Returned search hits, not an unbounded server total.') },
@@ -298,7 +292,7 @@ export default function SearchPage() {
               title={t('search.noResults.title', 'No results')}
               message={t('search.noResults.message', {
                 query: trimmed,
-                defaultValue: `No matches for "${trimmed}". Try fewer characters or open the command palette.`,
+                defaultValue: 'No matches for "{{query}}". Try fewer characters or open the command palette.',
               })}
             />
           </GlassPanel>
@@ -307,7 +301,7 @@ export default function SearchPage() {
             <SectionTitle>{t('search.results.heading', 'Results')}</SectionTitle>
             <div className="grid grid-cols-1 items-start gap-4 md:grid-cols-2 xl:grid-cols-3 3xl:grid-cols-4">
               {groupedHits.map((group) => {
-                const accent = neonColorMap[TYPE_ACCENT[group.type]]
+                const accent = RESULT_ACCENT
                 return (
                   <GlassPanel key={group.type} className="p-4 sm:p-5">
                     <div className="mb-3 flex items-center gap-2">
@@ -321,7 +315,7 @@ export default function SearchPage() {
                       >
                         {searchHitIconSm(group.type)}
                       </span>
-                      <PanelTitle className="min-w-0 flex-1 truncate">
+                      <PanelTitle className="min-w-0 flex-1 break-words">
                         {searchSectionLabel(group.type, t)}
                       </PanelTitle>
                       <Badge variant="neutral" size="sm">
@@ -340,7 +334,7 @@ export default function SearchPage() {
                             })}
                             wrapLabel
                             className={cn(
-                              'w-full justify-start gap-3 rounded-lg px-2 py-3 text-start',
+                              'w-full flex-wrap justify-start gap-3 rounded-lg px-2 py-3 text-start',
                               typography.weight.regular,
                             )}
                           >
@@ -360,7 +354,7 @@ export default function SearchPage() {
                             {hit.when && (
                               <TimeStamp
                                 value={hit.when}
-                                className={cn('shrink-0 max-w-full break-words', typography.role.caption)}
+                                className={cn('max-w-full basis-full break-words sm:basis-auto sm:shrink-0', typography.role.caption)}
                               />
                             )}
                             <ArrowRight

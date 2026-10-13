@@ -433,3 +433,97 @@ describe('SearchPage', () => {
     );
   });
 });
+
+
+describe('SearchPage restrained migration', () => {
+  it('keeps all nine facets, neutral result icons, complete labels, and ordered API filters', async () => {
+    const title = 'A complete long vehicle name that must remain available';
+    installSearch({ hits: [makeHit('vehicle', 11, { title, when: '2026-10-12T12:00:00Z' })] });
+    renderPage('/search?q=%20model%20&types=drive,vehicle,unknown');
+
+    const filters = screen.getByRole('group', { name: 'Filter results by type' });
+    for (const label of ['Vehicles', 'Drives', 'Charging', 'Alerts', 'Notifications', 'Geofences', 'Automations', 'Locations', 'Trips']) {
+      expect(within(filters).getByRole('button', { name: label })).toBeInTheDocument();
+    }
+    expect(within(filters).getByRole('button', { name: 'Vehicles' })).toHaveClass('max-w-full');
+    const region = await screen.findByRole('region', { name: 'Search results' });
+    expect(within(region).getByText('Vehicles')).not.toHaveClass('truncate');
+    expect(within(region).getByRole('button', { name: `Open ${title}` })).toHaveTextContent(title);
+    expect(region.querySelector('[class~="text-[var(--text-secondary)]"]')).not.toBeNull();
+    expect(region.querySelector('[class*="bg-neon-"]')).toBeNull();
+    expect(region.querySelector('[class~="basis-full"]')).toBeInTheDocument();
+    const [path, options] = mockedRequest.mock.calls[0];
+    expect(path).toBe('/search?q=model&types=drive%2Cvehicle&limit=25');
+    expect(options.signal).toBeInstanceOf(AbortSignal);
+  });
+
+  it('keeps resolved empty results and measured zeroes during a pending refresh', async () => {
+    installSearch({ hits: [] });
+    const { container } = renderPage('/search?q=zzz');
+    await screen.findByText('No results');
+    installSearch({ pending: true });
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh results' }));
+    await waitFor(() => expect(mockedRequest.mock.calls.length).toBe(2));
+
+    expect(screen.getByText('No results')).toBeInTheDocument();
+    expect(metricCard('Total results')).toHaveTextContent('0');
+    expect(metricCard('Total results').querySelector('[data-operational-value]')).not.toBeNull();
+    expect(container.querySelector('[class~="bg-[var(--skeleton-bg)]"][class~="w-1/3"]')).toBeNull();
+    expect(container.querySelector('[aria-busy="true"]')).not.toBeNull();
+  });
+
+  it('retains rows, summary, warning, and retry after a background refresh failure', async () => {
+    installSearch({ hits: [makeHit('drive', 21, { title: 'retained coast run' })] });
+    renderPage('/search?q=model');
+    await screen.findByRole('region', { name: 'Search results' });
+    installSearch({ error: new Error('refresh failed') });
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh results' }));
+
+    expect(await screen.findByTestId('stale-refresh-warning')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Open retained coast run' })).toBeInTheDocument();
+    expect(metricCard('Total results')).toHaveTextContent('1');
+    expect(screen.getByText('Retained source')).toBeInTheDocument();
+    expect(screen.queryByText("Can't reach server")).not.toBeInTheDocument();
+    installSearch({ hits: [makeHit('drive', 21)] });
+    fireEvent.click(within(screen.getByTestId('stale-refresh-warning')).getByRole('button', { name: 'Refresh' }));
+    await waitFor(() => expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument());
+  });
+
+  it('labels placeholder results with their original query while the next query loads', async () => {
+    installSearch({ hits: [makeHit('vehicle', 11)] });
+    renderPage('/search?q=model');
+    await screen.findByRole('region', { name: 'Search results' });
+    installSearch({ pending: true });
+    fireEvent.change(screen.getByRole('searchbox', { name: 'Search query' }), { target: { value: 'roadster' } });
+    await waitFor(() => expect(mockedRequest.mock.calls.some(([path]) => String(path).includes('q=roadster'))).toBe(true));
+
+    expect(screen.getByRole('button', { name: 'Open vehicle-title-11' })).toBeInTheDocument();
+    const summary = screen.getByRole('region', { name: 'Search summary' });
+    expect(summary).toHaveTextContent('for “model”');
+    expect(summary).not.toHaveTextContent('for “roadster”');
+    expect(summary).toHaveTextContent('Retained source');
+  });
+
+  it('handles a null response without crashing or dropping the query and AI controls', async () => {
+    mockedRequest.mockResolvedValue(null);
+    renderPage('/search?q=model');
+    expect(await screen.findByText('No results')).toBeInTheDocument();
+    expect(metricCard('Total results')).toHaveTextContent('0');
+    expect(screen.getByRole('searchbox', { name: 'Search query' })).toBeInTheDocument();
+    expect(screen.getByTestId('ai-nl-search')).toBeInTheDocument();
+    expect(screen.getByRole('group', { name: 'Filter results by type' })).toBeInTheDocument();
+  });
+
+  it('clears retained rows and the summary when the query falls below the minimum', async () => {
+    installSearch({ hits: [makeHit('vehicle', 11)] });
+    renderPage('/search?q=model');
+    await screen.findByRole('region', { name: 'Search results' });
+    const calls = mockedRequest.mock.calls.length;
+    fireEvent.change(screen.getByRole('searchbox', { name: 'Search query' }), { target: { value: 'a' } });
+
+    expect(screen.getByText('Type at least 2 characters')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Open vehicle-title-11' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: 'Search summary' })).not.toBeInTheDocument();
+    expect(mockedRequest.mock.calls.length).toBe(calls);
+  });
+});
