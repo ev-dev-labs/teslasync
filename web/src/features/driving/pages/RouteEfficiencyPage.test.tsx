@@ -35,6 +35,9 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 import type { RouteSummary } from '@/types/driving';
 
+// Hoisted mock factories and each test share the same resettable failure flags.
+const renderFailures = vi.hoisted(() => ({ comparison: false, ai: false }));
+
 // ── i18n stub: resolve a string fallback (or the options-bag defaultValue) and
 //    interpolate {{var}} placeholders so assertions read on human copy. ────────
 vi.mock('react-i18next', () => {
