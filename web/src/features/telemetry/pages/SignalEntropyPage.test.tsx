@@ -122,9 +122,11 @@ function latestChart(title: string) {
   return vi.mocked(ChartContainer).mock.calls.map(call => call[0]).reverse().find(props => props.title === title)!;
 }
 function expectSections() {
+  const selectionHelp = 'Quantile (equal-frequency) binning is used instead of fixed-width bins, so a signal that spends most of its time in a narrow band and rarely spikes still gets a fair, distribution-agnostic entropy estimate.';
   for (const title of ['Choose a signal', 'Entropy metrics', 'Rolling information density',
     'Quantile bin distribution', 'Reading the result']) {
-    expect(screen.getByRole('heading', { name: title })).toBeInTheDocument();
+    const name = title === 'Choose a signal' ? `${title}${selectionHelp}` : title;
+    expect(screen.getByRole('heading', { name })).toBeInTheDocument();
   }
 }
 
@@ -167,13 +169,13 @@ describe('SignalEntropyPage preservation and presentation', () => {
     expect(rolling.data?.[0]?.bits).toBe(2);
     const distribution = latestChart('Quantile bin distribution');
     expect(distribution.data?.map(row => row.count)).toEqual([5, 5, 5, 5, 5, 5, 5, 5]);
-    expect(distribution.data?.[0]).toEqual({ bin: '0–4,875', lo: 0, hi: 4.875, key: 0, count: 5 });
+    expect(distribution.data?.[0]).toEqual({ bin: '0,00000–4,87500', lo: 0, hi: 4.875, key: 0, count: 5 });
     expect(rolling.height).toBe(300); expect(distribution.height).toBe(260);
     const brief = screen.getByTestId('signal-entropy-summary');
     expect(brief).toHaveTextContent('48h requested · NumericSignal');
     expect(brief).toHaveTextContent('2026-01-01T00:00:00.000Z → 2026-01-02T15:00:00.000Z');
     expect(brief).toHaveTextContent('bits');
-    expect(screen.getByText(/0 to 39 across 40 samples/)).toBeInTheDocument();
+    expect(screen.getByText(/0,00000 to 39,00000 across 40 samples/)).toBeInTheDocument();
     expect(screen.getAllByText(/not guaranteed full-window coverage/)).toHaveLength(2);
     fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
     const drawer = screen.getByRole('dialog');
@@ -214,10 +216,10 @@ describe('SignalEntropyPage preservation and presentation', () => {
     mountPage(); chooseSignal();
     expect(latestMetrics().map(metric => metric.rawValue)).toEqual([0, 1, 100, 0]);
     expect(latestChart('Quantile bin distribution').data).toEqual([
-      { bin: '0–0', lo: 0, hi: 0, key: 0, count: 40 },
+      { bin: '0,00000–0,00000', lo: 0, hi: 0, key: 0, count: 40 },
     ]);
     expect(screen.getByText('Mostly parked')).toBeInTheDocument();
-    expect(screen.getByText(/0 to 0 across 40 samples/)).toBeInTheDocument();
+    expect(screen.getByText(/0,00000 to 0,00000 across 40 samples/)).toBeInTheDocument();
   });
 
   it('keeps short-history distribution and interpretation available when rolling samples are insufficient', () => {
