@@ -1619,6 +1619,11 @@
     },
     "unknown": "Unknown"
   },
+  "milestones": {
+    "chart": {
+      "driveCount": "Drive count"
+    }
+  },
   "operationalMode": {
     "writeBlocked": "Return to live mode before making operational changes.",
     "writeNotice": {

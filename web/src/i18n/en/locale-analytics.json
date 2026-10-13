@@ -2548,6 +2548,17 @@
       "title": "Narrate the charging-cost forecast"
     }
   },
+  "dashboard": {
+    "fleetPosture": {
+      "category": {
+        "unverified": "Unverified"
+      },
+      "scope": {
+        "noObservation": "No verified observation time for this vehicle",
+        "observed": "Last real observation {{age}}"
+      }
+    }
+  },
   "dataRepair": {
     "aiSuggestions": {
       "badge": "Helix",
@@ -2743,6 +2754,9 @@
     "restoredItem": "{{noun}} draft restored from {{when}}.",
     "unknownTime": "a moment ago",
     "useDraft": "Use draft"
+  },
+  "driveCompare": {
+    "winner": "Winner"
   },
   "driveDetail": {
     "aiCoaching": {
@@ -3701,6 +3715,9 @@
       "noVehicleHint": "Pick a vehicle above to enable Helix.",
       "title": "Explain the recent vampire drain"
     }
+  },
+  "vehicleHero": {
+    "observationLimitation": "Telemetry stream observation does not verify individual reading timestamps or completeness."
   },
   "vehicles": {
     "aiPaintPreview": {

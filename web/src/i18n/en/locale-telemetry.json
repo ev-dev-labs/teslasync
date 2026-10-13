@@ -101,6 +101,13 @@
     "metrics": "Stream metrics",
     "streamOverview": "Stream overview"
   },
+  "operationalSummary": {
+    "retained": "Retained source data",
+    "unavailable": "Source unavailable",
+    "loading": "Loading sources",
+    "snapshot": "Queried snapshot",
+    "unknown": "Source values unknown"
+  },
   "signalCatalog": {
     "removeSignal": "Remove {{name}} from selection",
     "addSignal": "Add {{name}} to selection"
@@ -2064,13 +2071,6 @@
     "writeNotice": {
       "title": "Operational changes are read-only"
     }
-  },
-  "operationalSummary": {
-    "loading": "Loading sources",
-    "retained": "Retained source data",
-    "snapshot": "Queried snapshot",
-    "unavailable": "Source unavailable",
-    "unknown": "Source values unknown"
   },
   "operations": {
     "attention": "Attention",

@@ -1183,5 +1183,10 @@
     "next": "Next",
     "prev": "Back",
     "skip": "Skip tour"
+  },
+  "vehicles": {
+    "emptyMessage": "Connect your Tesla account and sync your vehicles to get started with fleet tracking, battery monitoring, and trip analysis.",
+    "emptyTitle": "No vehicles yet",
+    "loadError": "Failed to load vehicles."
   }
 }

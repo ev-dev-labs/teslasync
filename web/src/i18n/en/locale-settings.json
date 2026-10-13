@@ -2116,6 +2116,11 @@
     "sheetTitle": "Filters",
     "sheetTrigger": "Filters"
   },
+  "fleetOps": {
+    "brief": {
+      "refreshBlocked": "Refresh paused"
+    }
+  },
   "forms": {
     "unsavedSettings": "You have unsaved settings."
   },

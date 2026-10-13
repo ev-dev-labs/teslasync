@@ -388,7 +388,6 @@
     "peakPower": "Peak power",
     "peakPowerLabel": "Peak power",
     "power": "Power",
-    "powerMax": "Peak power (kW)",
     "powerMin": "Regen power (kW)",
     "powerOutput": "Power output history",
     "powerOutputAria": "Per-drive peak and regen motor power output history area chart",

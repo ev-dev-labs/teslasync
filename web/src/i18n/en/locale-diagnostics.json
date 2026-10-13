@@ -822,6 +822,10 @@
       "description": "Ask Helix to explain the deterministic charging-cost forecast — the historical trend, the projected cost / cost_low / cost_high band, the home-vs-supercharger split, and the deterministic insight. The dollar amounts are the same the chart below shows; the narrator only explains them and is honest that the band is an APPROXIMATE prediction interval, not a strict 95% confidence interval.",
       "generateButton": "Narrate forecast",
       "title": "Narrate the charging-cost forecast"
+    },
+    "forecast": {
+      "lowerBound": "Lower bound",
+      "upperBound": "Upper bound"
     }
   },
   "dashcam": {

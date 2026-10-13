@@ -4015,6 +4015,10 @@
     "firstRunOpen": "Open theme picker",
     "firstRunTitle": "Personalize TeslaSync"
   },
+  "timeMachine": {
+    "latest": "Latest",
+    "summarySource": "Historical signal reconstruction"
+  },
   "timeline": {
     "empty": "No timeline entries yet.",
     "label": "Timeline"

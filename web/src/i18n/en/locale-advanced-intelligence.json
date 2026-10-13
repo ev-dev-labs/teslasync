@@ -657,6 +657,12 @@
     "unavailable": "Not provided",
     "version": "Calculation version"
   },
+  "charging": {
+    "detail": {
+      "currency": "Currency",
+      "ended": "Ended"
+    }
+  },
   "chart": {
     "col": {
       "date": "Date",
@@ -834,6 +840,11 @@
     "restoredItem": "{{noun}} draft restored from {{when}}.",
     "unknownTime": "a moment ago",
     "useDraft": "Use draft"
+  },
+  "drives": {
+    "grid": {
+      "percentagePoints": "percentage points"
+    }
   },
   "editConflict": {
     "banner": {
