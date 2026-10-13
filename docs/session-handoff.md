@@ -2,6 +2,35 @@
 
 ## Current phase
 
+### Phase5 requested gate passed; Phase6 worker dispatch
+
+Pilot checkpoint a63bd78e6 (`checkpoint: pilot complete`) is actually pushed.
+Six unfinished pilot QA/history rows moved to Phase6 with original budgets and
+unabridged prior notes referenced at immutable e75e98460. Phase4 queue now has
+33done/34excluded and no pending/failed/blocked items; this is USER-authorized
+scope closure, never a fabricated complete native/a11y matrix.
+
+Actual serialized gate15:13:56.912--15:20:34.639Z/under15minutes:
+`npm run build` EXIT0, then literal `npx tsc --noEmit` EXIT0 on Node26.11.1.
+Raw build/type logs are `web\logs\phase5-requested-{build,typecheck}-gate.log`.
+Build includes production/SW typing,Vite and real bundle/PWA/source-map checks;
+startup397.2KB against unchanged400KB, public maps0. No full tests/lint/Docker.
+InputHEAD a63bd78e6 plus exactlyTHREE prepared dirty catalog files disclosed.
+
+`checkpoint: pages complete` accepts the requested TECHNICAL gate and user
+scope decision with27 failed source rows and one blocked aggregate retained,
+not a false claim those pages/tests/native nowpass. Original attempts2 stay
+spent. Twenty-seven explicit Phase6 leaf blocker-rescue rows each get exactly
+ONE user rescue using the original retained notes and exact page/test pair.
+They are not new wholepage migrations or ordinary retry-budget resets.
+Rescue failures remain failures; no further automatic retry.
+
+Phase6 tasks are registered before launch:27rescues, one catalog integration,
+original trend attempt2, native preview/caption confirmations and read-only
+finished-page/pilot QA. Parent only orchestrates/verifies/commits/pushes.
+The shared5173 preview remains the sole QA service; Docker stays frozen.
+Sole10minute schedule3 skips this serialized gate/dispatch intake.
+
 ### User-approved pilot closure and Phase5 gate
 
 The latest user instruction closes Phase4 now, with remaining native/visual/
