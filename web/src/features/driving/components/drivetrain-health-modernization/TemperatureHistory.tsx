@@ -4,12 +4,19 @@ import {
   CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine, Legend, AREA_DEFAULTS,
 } from '@/components/charts';
 import { useUnits } from '@/hooks/useUnits';
+import { chartTokens } from '@/lib/tokens';
+import { getChartFontFamily, getChartFontSize } from '@/lib/chartTypography';
 import { PreservedChartFrame } from './PreservedChartFrame';
 import type { DriveHistoryChartProps } from './chartTypes';
 
 export function TemperatureHistory({ rows, state, loading }: DriveHistoryChartProps) {
   const { t } = useTranslation();
   const { formatTemperature, unitPrefs } = useUnits();
+  const chartText = {
+    fill: chartTokens.axisStroke,
+    fontSize: getChartFontSize(12),
+    fontFamily: getChartFontFamily(),
+  };
   const tempRows = rows.filter(row => row.outsideTemp != null);
   const table = tempRows.map(row => ({
     date: row.date,
@@ -33,35 +40,35 @@ export function TemperatureHistory({ rows, state, loading }: DriveHistoryChartPr
     >
       <ResponsiveContainer width="100%" height="100%">
         <LineChart data={tempRows}>
-          <defs><ChartGradient id="dtTempGrad" color="#06b6d4" /></defs>
-          <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
-          <XAxis dataKey="date" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} />
-          <YAxis tickFormatter={value => formatTemperature(Number(value))} tick={{ fill: 'var(--text-muted)', fontSize: 10 }} />
+          <defs><ChartGradient id="dtTempGrad" color={chartTokens.series[0]} /></defs>
+          <CartesianGrid strokeDasharray="3 3" stroke={chartTokens.gridStroke} strokeOpacity={0.4} />
+          <XAxis dataKey="date" tick={chartText} />
+          <YAxis tickFormatter={value => formatTemperature(Number(value))} tick={chartText} />
           <Tooltip content={<ChartTooltip valueFormatter={value => formatTemperature(typeof value === 'number' ? value : null)} />} />
           <Legend />
           <Line
             {...AREA_DEFAULTS}
             dataKey="outsideTemp"
             name={t('drivetrain.outsideTemp', 'Outside Temp')}
-            stroke="#06b6d4"
-            dot={{ r: 3, fill: '#06b6d4' }}
+            stroke={chartTokens.series[0]}
+            dot={{ r: 3, fill: chartTokens.series[0] }}
           />
           <ReferenceLine
             y={35}
-            stroke="#f59e0b"
+            stroke={chartTokens.series[2]}
             strokeDasharray="4 4"
             label={{
               value: `${t('drivetrain.warmZone', 'Warm Zone')} · ${formatTemperature(35)}`,
-              fill: '#f59e0b', fontSize: 10,
+              ...chartText, fill: chartTokens.series[2],
             }}
           />
           <ReferenceLine
             y={0}
-            stroke="#06b6d4"
+            stroke={chartTokens.series[0]}
             strokeDasharray="4 4"
             label={{
               value: `${t('drivetrain.freezing', 'Freezing')} · ${formatTemperature(0)}`,
-              fill: '#06b6d4', fontSize: 10,
+              ...chartText, fill: chartTokens.series[0],
             }}
           />
         </LineChart>
