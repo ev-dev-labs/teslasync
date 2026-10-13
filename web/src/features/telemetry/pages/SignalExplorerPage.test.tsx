@@ -35,6 +35,8 @@ const h = vi.hoisted(() => ({
   connected: false,
   signalsData: ['battery_level', 'speed', 'inside_temp'] as string[] | undefined,
   signalsError: null as unknown,
+  signalsLoading: false,
+  refetchSignals: vi.fn(),
   onVehicleUpdate: null as ((data: unknown) => void) | null,
 }));
 
@@ -49,7 +51,8 @@ vi.mock('@/api/hooks/useTelemetry', () => ({
   useSignals: () => ({
     data: h.signalsData,
     error: h.signalsError,
-    isLoading: false,
+    isLoading: h.signalsLoading,
+    refetch: h.refetchSignals,
   }),
 }));
 
@@ -192,6 +195,8 @@ beforeEach(() => {
   h.connected = false;
   h.signalsData = ['battery_level', 'speed', 'inside_temp'];
   h.signalsError = null;
+  h.signalsLoading = false;
+  h.refetchSignals.mockReset();
   h.onVehicleUpdate = null;
   window.localStorage.clear();
   mockedRequest.mockReset();
@@ -199,6 +204,41 @@ beforeEach(() => {
 });
 
 describe('SignalExplorerPage', () => {
+  it('distinguishes catalog loading from resolved empty choices without blocking other sections', () => {
+    h.signalsData = undefined;
+    h.signalsLoading = true;
+    renderPage(['/signal-explorer?signals=battery_level']);
+    expect(screen.getByRole('status', { name: 'Loading Signal catalog' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Exploration summary' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Explore' })).toBeEnabled();
+    expect(screen.getByText('Pick signals and click explore')).toBeInTheDocument();
+    expect(screen.queryByText(/No signals are available for this vehicle yet/)).not.toBeInTheDocument();
+    expect(mockedRequest).not.toHaveBeenCalled();
+  });
+
+  it('offers local retry for a fatal catalog failure while preserving exploration controls', () => {
+    h.signalsData = undefined;
+    h.signalsError = new Error('catalog unavailable');
+    renderPage(['/signal-explorer?signals=battery_level']);
+    expect(screen.getByText(/catalog unavailable/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    expect(h.refetchSignals).toHaveBeenCalledTimes(1);
+    expect(screen.getByRole('button', { name: 'Explore' })).toBeEnabled();
+    expect(screen.getByRole('region', { name: 'Exploration summary' })).toBeInTheDocument();
+    expect(mockedRequest).not.toHaveBeenCalled();
+  });
+
+  it('explains an empty catalog without discarding URL selections and offers catalog retry', () => {
+    h.signalsData = [];
+    renderPage(['/signal-explorer?signals=battery_level']);
+    expect(screen.getByText(/No signals are available for this vehicle yet/)).toBeInTheDocument();
+    expect(screen.getByText(/Signals \(1 \/ 5\)/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Explore' })).toBeEnabled();
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    expect(h.refetchSignals).toHaveBeenCalledTimes(1);
+    expect(mockedRequest).not.toHaveBeenCalled();
+  });
+
   it('shows the no-vehicle empty state and hides the exploration UI when no vehicle is selected', () => {
     h.vehicleId = null;
 

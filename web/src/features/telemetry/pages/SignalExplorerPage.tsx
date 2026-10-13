@@ -21,7 +21,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { Activity, AlertCircle, Database, Radio } from 'lucide-react';
 
-import { PageLayout } from '@/components/layout';
+import { PageLayout, SourceContent } from '@/components/layout';
 import { GlassPanel, Button, Badge, HelpTooltip, Select } from '@/components/ui';
 import { EmptyState, AlertBanner, StaleRefreshWarning } from '@/components/feedback';
 import type { StatMetric } from '@/components/data-display';
@@ -177,7 +177,7 @@ export default function SignalExplorerPage() {
   const activeChart = isLive ? live.chartData : chartData;
   const activeStats = isLive ? live.chartStats : historicalStats;
   const hasHistorical = exploreKey !== null;
-  const anyError = catalogState.fatalError ?? (!isLive && hasHistorical ? historicalState.fatalError : null);
+  const anyError = !isLive && hasHistorical ? historicalState.fatalError : null;
 
   // Inclusive day span for the KPI band — mirrors the historical query window.
   const rangeDays = useMemo(() => {
@@ -313,12 +313,40 @@ export default function SignalExplorerPage() {
           {/* 2 — Controls: signal picker, per-page, explore / live */}
           <FadeIn delay={0.05}>
             <GlassPanel className="p-4 sm:p-5 space-y-4">
-              <SignalSelector
-                options={availableSignals ?? []}
-                value={selectedSignals}
-                onChange={(next) => setSelectedSignals(next.slice(0, MAX_SIGNALS))}
-                max={MAX_SIGNALS}
-              />
+              {/* Catalog trust is independent of the history and live sources.
+                  Only a fatal first load replaces choices; retained choices stay usable. */}
+              <SourceContent
+                state={catalogState.fatalError ? 'error' : catalogState.status === 'initial' ? 'loading' : 'ready'}
+                label={t('dataSources.labels.signalCatalog', 'Signal catalog')}
+                emptyMessage={t('signalExplorer.catalog.empty', 'No signals are available for this vehicle yet. Retry the catalog or select another vehicle above.')}
+                errorMessage={`${t('error.loadFailed', 'Failed to load data')}: ${getErrorMessage(catalogState.fatalError)}`}
+                error={catalogState.fatalError}
+                errorRecovery={{ onRetry: catalogState.retry ?? undefined }}
+                loadingContent={
+                  <SignalSelector
+                    options={availableSignals ?? []}
+                    value={selectedSignals}
+                    onChange={(next) => setSelectedSignals(next.slice(0, MAX_SIGNALS))}
+                    max={MAX_SIGNALS}
+                    loading
+                  />
+                }
+              >
+                <SignalSelector
+                  options={availableSignals ?? []}
+                  value={selectedSignals}
+                  onChange={(next) => setSelectedSignals(next.slice(0, MAX_SIGNALS))}
+                  max={MAX_SIGNALS}
+                  loading={catalogState.isRefreshing}
+                />
+                {availableSignals?.length === 0 && !catalogState.refreshError && !catalogState.isRefreshBlocked ? (
+                  <EmptyState
+                    message={t('signalExplorer.catalog.empty', 'No signals are available for this vehicle yet. Retry the catalog or select another vehicle above.')}
+                    action={catalogState.retry ? { label: t('error.retry', 'Retry'), onClick: catalogState.retry } : undefined}
+                    className="py-4"
+                  />
+                ) : null}
+              </SourceContent>
 
               <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
                 <div className="flex flex-wrap items-end gap-2 sm:gap-3">
