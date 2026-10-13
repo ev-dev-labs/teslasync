@@ -2,6 +2,55 @@
 
 ## Current phase
 
+### Latest partial native pilot receipt: 12:37Z
+
+Parent Dashboard read-only browser work ran12:17:07.610Z--12:37:11.325Z
+(20m03.715s, below25min hard cap) against actual source4cdf782b4/5173,
+selected acknowledged DRILL4, all writes/external reads guarded before navigation.
+No product/server-preference/Docker edits or synthetic API responses. Page and
+sole browser lock are closed/released; the original QA row returns pending with
+one actual partial attempt, not[x] or another helper/source retry.
+
+Receipt `docs\frontend-audits\phase4-pilot-dashboard-native-20261013.json`
+pins two actual default-output PNGs in `web\.playwright-mcp\` by SHA256.
+They show1440x936 and375x844 saved light/Minimal only. Ten actual light viewport/
+document widths320/375/390/430/768/1024/1280/1440/1920/2560 match; these are
+geometry measurements, not ten screenshots or whole-device/mode acceptance.
+Main has168px bottom padding, actual status112px+navigation56px, and all four
+final vehicle links center-hit correctly at maximum scroll. Do not invent an
+occlusion repair or revive the exhausted capture helper.
+
+Actual375 coarse-pointer/touch1 checks confirm four undersized status targets:
+API36x16, Live36x16, honesty24x16, operational mode36x20; center clicks work
+but neither44px vertical edge does. Existing three utility controls are44x44
+with all three hits true. Two health-banner actions are also confirmed36px
+tall in the375 viewport. Existing MDC mobile allocation explicitly requires
+44px controls; five precise exclusive Phase6 pair fixes are now queued, not
+redispatches of completed Phase3 migration. Preserve all semantics and >=md
+density, no frame/global resize or helper. Initial nine-candidate scan is not
+nine confirmed failures: reject the hidden refresh control and review remaining
+layout/freshness/heading candidates properly before making more work.
+
+Page exceptions0, but repeated actual RBAC/impersonation501, push404 and
+health503 console errors remain visible; not clean resource/runtime acceptance.
+All required modes/core/keyboard/offline/empty/error/extreme/RTL/zoom/contrast/
+axe/Lighthouse coverage remains incomplete. Drive History and Settings original
+native QA are still pending with no executed QA attempt. Phase4 remains partial;
+Phase5's27failures and combinedPhase6/Phase7 blockers remain unchanged.
+Before source dispatch, actual census119retained/consumed idle histories,
+0running, preview5173HTTP200 at12:36 and sole schedule3 unchanged. Scheduled
+12:40 health check is serialized while receipt intake/refill happens.
+Five real exclusive pair actors were subsequently launched by12:50:08Z and are
+recorded by ID in the queue's current native lease table. Return by conservative
+13:09Z; hard13:14Z, no clock reset or heartbeat enforcement. The shared native
+inputs cannot be accepted as stable while those source writers are changing
+them; parent should persist this earlier read-only receipt, prepare remaining
+Drives/Settings QA independently, then recheck measured geometry after release.
+running5/32 actual launches; remaining capacity is unavailable because original
+source retry budgets are exhausted and the one plural item is explicitly deferred.
+The automatic console file and prior `web\.agents\` diagnostics remain
+unclaimed, preserved and unstaged. No routine questions or external messages.
+
 ### Latest retained proof and health check: 11:57Z
 
 Catalog integration is actually pushed as `7bb37b585`/1831: normal generation,

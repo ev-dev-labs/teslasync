@@ -1,0 +1,122 @@
+{
+  "scope": "phase4-pilot-dashboard",
+  "status": "PARTIAL_NOT_ACCEPTED",
+  "sourceCommit": "4cdf782b4042bc6ce3b7364a1f1f1dada97b4fc6",
+  "sourceUrl": "http://localhost:5173/?vehicle_id=4",
+  "startedAt": "2026-10-13T12:17:07.610Z",
+  "closedAt": "2026-10-13T12:37:11.325Z",
+  "durationSeconds": 1203.715,
+  "pageAndBrowserLockReleased": true,
+  "privacy": {
+    "writeGuardInstalledBeforeNavigation": true,
+    "externalReadGuardInstalledBeforeNavigation": true,
+    "syntheticResponses": false,
+    "selectedFixtureVehicleId": 4,
+    "acknowledgedReleaseVersion": "0.7.0",
+    "rosterStatus": 200,
+    "actualVehicleCount": 3,
+    "fixtureIds": [3, 4],
+    "privateIdentifiersVisible": 0,
+    "syntheticMarkerCount": 1,
+    "blockedWritesCount": 0,
+    "serverPreferencesChanged": false,
+    "sourceChanged": false,
+    "dockerSnapshotChanged": false
+  },
+  "renderedContext": {
+    "route": "/",
+    "module": "DashboardPage",
+    "title": "Fleet operations",
+    "mode": "light",
+    "savedLayout": "Minimal",
+    "h1Count": 1,
+    "mainCount": 1,
+    "documentLanguage": "en",
+    "pageErrors": [],
+    "consoleClean": false,
+    "observedUnavailableApiStatuses": [501, 404, 503],
+    "availabilityNote": "RBAC and impersonation unavailable, push key missing, health degraded. Fleet Telemetry/Tesla API degradation remains visible. These are not hidden or claimed repaired."
+  },
+  "screenshots": [
+    {
+      "path": "web\\.playwright-mcp\\page-2026-10-13T12-20-41-588Z.png",
+      "width": 1440,
+      "height": 936,
+      "mode": "light",
+      "sha256": "0ee47308da3cff204acf8ab954fa07414a20b1ccee8a9833c16f8dcadec152b5",
+      "capture": "Actual permitted provider default output, not a custom-path write or generated substitute."
+    },
+    {
+      "path": "web\\.playwright-mcp\\page-2026-10-13T12-29-04-623Z.png",
+      "width": 375,
+      "height": 844,
+      "mode": "light",
+      "sha256": "7232f7ee718d45ad0a0b6b42f1dfcddc675e24b4f6dd1c781feccc147a13e204",
+      "capture": "Actual permitted provider default output, not a custom-path write or generated substitute."
+    }
+  ],
+  "geometry": {
+    "measurement": "Actual viewport and document widths, not screenshots at every width.",
+    "pointerInOriginalWidthMatrix": "fine",
+    "widths": [320, 375, 390, 430, 768, 1024, 1280, 1440, 1920, 2560],
+    "documentWidths": [320, 375, 390, 430, 768, 1024, 1280, 1440, 1920, 2560],
+    "documentOverflowWidths": [],
+    "mobileFooterHeight": 112,
+    "mobileBottomNavigationHeight": 56,
+    "mobileMainBottomPadding": 168,
+    "maximumScrollAt375": 2337,
+    "lastActions": [
+      { "name": "Details", "href": "/vehicles/4", "top": 542.5, "bottom": 586.5, "centerClickable": true },
+      { "name": "Commands", "href": "/commands", "top": 542.5, "bottom": 586.5, "centerClickable": true },
+      { "name": "Live map", "href": "/live", "top": 594.5, "bottom": 638.5, "centerClickable": true },
+      { "name": "Digital twin", "href": "/digital-twin", "top": 594.5, "bottom": 638.5, "centerClickable": true }
+    ],
+    "footerOcclusionRepairJustified": false
+  },
+  "confirmedMobileFooterTargets": {
+    "viewport": [375, 844],
+    "pointerCoarse": true,
+    "touchPoints": 1,
+    "contractMinimum": [44, 44],
+    "method": "Actual element rectangles and elementFromPoint at center and vertical center +/-21px. Earlier fine-pointer check also inspected both pseudo-elements and horizontal edges; no expanded hit surfaces.",
+    "failures": [
+      { "component": "ConnectionSegment", "name": "API connection status", "width": 36, "height": 16, "centerAndVertical44Edges": [true, false, false], "fixItem": "phase6-native-connection-mobile-target" },
+      { "component": "LiveTelemetrySegment", "name": "Live telemetry status", "width": 36, "height": 16, "centerAndVertical44Edges": [true, false, false], "fixItem": "phase6-native-live-telemetry-mobile-target" },
+      { "component": "HonestyMeterSegment", "name": "Telemetry honesty meter", "width": 24, "height": 16, "centerAndVertical44Edges": [true, false, false], "fixItem": "phase6-native-honesty-mobile-target" },
+      { "component": "OperationalModeSegment", "name": "Current data with live actions available.", "width": 36, "height": 20, "centerAndVertical44Edges": [true, false, false], "fixItem": "phase6-native-operational-mode-mobile-target" }
+    ],
+    "passingUtilities": [
+      { "name": "Open recently viewed pages", "width": 44, "height": 44, "centerAndVertical44Edges": [true, true, true] },
+      { "name": "Open more status options", "width": 44, "height": 44, "centerAndVertical44Edges": [true, true, true] },
+      { "name": "Open Helix chat", "width": 44, "height": 44, "centerAndVertical44Edges": [true, true, true] }
+    ]
+  },
+  "confirmedAdditionalMobileTargets": {
+    "viewport": [375, 844],
+    "pointer": "fine",
+    "targets": [
+      { "name": "System status", "width": 285, "height": 36, "centerAndVertical44Edges": [true, false, false] },
+      { "name": "Health alerts", "width": 285, "height": 36, "centerAndVertical44Edges": [true, false, false] }
+    ],
+    "pseudoElementExtension": false,
+    "fixItem": "phase6-native-health-banner-mobile-targets"
+  },
+  "unconfirmedCandidates": [
+    "Layout switcher and freshness controls require effective visibility/hit testing; initial nine-candidate counts are not nine confirmed failures.",
+    "A refresh control in the hidden header failed center hit testing and is excluded from confirmed failures.",
+    "Heading sequence H1 then six H3 then H2 requires contextual semantic review."
+  ],
+  "notRunOrIncomplete": [
+    "Full default/preset/widget matrix",
+    "Dark and saved-custom modes",
+    "Core flows and nested overlays",
+    "Keyboard/focus/trap/restoration acceptance",
+    "Retained/offline/empty/error/retry and extreme-value states",
+    "RTL, long labels and 200% text",
+    "Forced colors and reduced motion",
+    "Composed contrast",
+    "Lighthouse: separate browser was unguarded and not used",
+    "axe: installed axe-core browser payload was not found; no dependency installed",
+    "Full pilot acceptance, phase gate, Docker rollout or reseeding"
+  ]
+}
