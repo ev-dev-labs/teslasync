@@ -12,7 +12,7 @@ import {
   BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, Tooltip, ResponsiveContainer, Legend,
 } from '@/components/charts';
-import { Skeleton, EmptyState } from '@/components/feedback';
+import { Skeleton, EmptyState, StaleRefreshWarning } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
@@ -24,7 +24,9 @@ import { useChartPalette } from '@/hooks/useChartPalette';
 import { useSavedViewUrl } from '@/hooks/useSavedViewUrl';
 import { useRangeState } from '@/hooks/useRangeState';
 import { useHiddenSeries } from '@/hooks/useHiddenSeries';
+import { useDataState } from '@/hooks/useDataState';
 import { convertDistanceFromSI } from '@/lib/unitConversion';
+import { knownNumber } from '@/api/dataState';
 
 import { request } from '@/api/client';
 import {
@@ -37,13 +39,21 @@ import { StatisticsBatteryBrief } from '../components/operationalbrief-n-z/Stati
 const KM_PER_MILE = 1.609344;
 const METERS_PER_KM = 1000;
 
-const STATE_COLORS: Record<string, string> = {
-  driving: '#10b981',
-  charging: '#00f0ff',
-  parked: '#f59e0b',
-  sleeping: '#64748b',
-  online: '#3b82f6',
-  idle: '#a855f7',
+const STATE_SERIES: Record<string, number> = {
+  driving: 1,
+  charging: 0,
+  parked: 2,
+  sleeping: 5,
+  online: 4,
+  idle: 3,
+};
+const STATE_LABELS: Record<string, string> = {
+  driving: 'digitalTwin.statusLabel.driving',
+  charging: 'digitalTwin.statusLabel.charging',
+  parked: 'digitalTwin.statusLabel.parked',
+  sleeping: 'digitalTwin.statusLabel.sleeping',
+  online: 'digitalTwin.statusLabel.online',
+  idle: 'digitalTwin.statusLabel.idle',
 };
 
 /* ── Page ─────────────────────────────────────────────────────────── */
@@ -77,7 +87,7 @@ export default function StatisticsPage() {
     defaultPresetId: '1y',
   });
 
-  // Reactive chart palette: color-blind safe or neon per user preference.
+  // Keep state identities stable in the existing preference-aware palette.
   const palette = useChartPalette();
 
   // Persist hidden series in the URL so users can isolate one fleet metric
@@ -87,7 +97,7 @@ export default function StatisticsPage() {
   /* ── Data hooks ────────────────────────────────────────────────── */
   const statsQuery = useQuery({
     queryKey: ['period-stats', activeId],
-    queryFn: () => request<PeriodStats>(`/analytics/period-stats?vehicle_id=${activeId}`),
+    queryFn: ({ signal }) => request<PeriodStats>(`/analytics/period-stats?vehicle_id=${activeId}`, { signal }),
     enabled: !!activeId,
   });
   const { data: stats, isLoading: statsLoading, error: statsError, refetch } = statsQuery;
@@ -97,7 +107,9 @@ export default function StatisticsPage() {
   const stateQuery = useStateSummary(activeId);
   const { data: stateSummary, isLoading: stateLoading } = stateQuery;
   const fleetQuery = useFleetAnalytics({ start: startDate, end: endDate });
-  const { data: fleet, isLoading: fleetLoading, error: fleetError } = fleetQuery;
+  const { data: fleet, isLoading: fleetLoading } = fleetQuery;
+  const stateSource = useDataState(stateQuery, { provenance: 'historical' });
+  const fleetSource = useDataState(fleetQuery, { provenance: 'historical' });
 
   /* ── Derived ───────────────────────────────────────────────────── */
   const stateData = useMemo(() => {
@@ -105,35 +117,35 @@ export default function StatisticsPage() {
     // Preserve both existing minute shapes at the display boundary.
     // The restored endpoint and inherited hook contract are parent-owned;
     // this presentation change does not reinterpret either source.
-    const total = stateSummary.reduce((s, e) => {
-      const minutes = (e as { totalMin?: number; total_min?: number }).totalMin
-        ?? (e as { total_min?: number }).total_min ?? 0;
-      return s + minutes;
-    }, 0);
-    return stateSummary.map((e) => {
-      const minutes = (e as { totalMin?: number; total_min?: number }).totalMin
-        ?? (e as { total_min?: number }).total_min ?? 0;
+    const minutes = stateSummary.map((e) => knownNumber(e.totalMin)
+      ?? knownNumber((e as { total_min?: number }).total_min));
+    const total = minutes.some(value => value == null || value < 0)
+      ? null : minutes.reduce<number>((sum, value) => sum + (value ?? 0), 0);
+    return stateSummary.map((e, index) => {
       return {
-        name: e.state,
-        value: Math.round((minutes / Math.max(total, 1)) * 100),
-        fill: STATE_COLORS[e.state] ?? palette[5],
+        state: e.state,
+        name: Object.hasOwn(STATE_LABELS, e.state) ? t(STATE_LABELS[e.state]) : e.state,
+        value: total != null && total > 0 && minutes[index] != null
+          ? Math.round((minutes[index] / total) * 100) : null,
+        fill: palette[Object.hasOwn(STATE_SERIES, e.state) ? STATE_SERIES[e.state] : 5],
       };
     });
-  }, [stateSummary, palette]);
+  }, [stateSummary, palette, t]);
 
   const compData = useMemo(() => {
     if (!fleet?.vehicle_comparison) return [];
     return fleet.vehicle_comparison.map((v) => ({
-      name: v.name ?? `Vehicle ${v.id}`,
-      distance: Math.round(fromKm(v.distance)),
-      energy: Math.round(v.energy),
+      name: v.name ?? t('vehiclePicker.fallbackName', 'Vehicle {{id}}', { id: v.id }),
+      distance: knownNumber(v.distance) != null ? Math.round(fromKm(v.distance)) : null,
+      energy: knownNumber(v.energy) != null ? Math.round(v.energy) : null,
     }));
-  }, [fleet, fromKm]);
+  }, [fleet, fromKm, t]);
 
   /* ── Toolbar ───────────────────────────────────────────────────── */
   const refreshAction = (
     <Button
       size="sm"
+      className="min-h-11 min-w-11 md:min-h-9 md:min-w-9"
       onClick={() => { void refetch(); }}
       aria-label={t('common.refresh', 'Refresh')}
     >
@@ -182,6 +194,7 @@ export default function StatisticsPage() {
             { id: 'statistics-battery', size: 'half', content: <StatisticsBatteryBrief query={batteryQuery} /> },
             { id: 'statistics-state', size: 'half', content: (
           <StatisticsChartPlacement>
+          <StaleRefreshWarning state={stateSource} label={t('statistics.stateDistribution', 'State distribution')} />
           <ChartCard
             size="standard"
             title={t('statistics.stateDistribution', 'State distribution')}
@@ -192,6 +205,7 @@ export default function StatisticsPage() {
             data={stateData}
             dataColumns={[
               { key: 'name', label: t('timeline.toState', 'To state') },
+              { key: 'state', label: t('common.state', 'State') },
               { key: 'value', label: t('statistics.stateShare', 'Share of recorded state time (%)') },
             ]}
             exportData={stateData}
@@ -200,7 +214,7 @@ export default function StatisticsPage() {
               hasData={stateSummary != null}
               emptyWhen={stateData.length === 0}
               loading={stateLoading}
-              error={stateQuery.error}
+              error={stateSource.fatalError}
               onRetry={() => { void stateQuery.refetch(); }}
               skeleton={<Skeleton className="h-full w-full rounded-xl" />}
               empty={
@@ -216,7 +230,7 @@ export default function StatisticsPage() {
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie data={stateData} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={50} outerRadius={90} paddingAngle={3}>
-                    {stateData.map((entry, i) => <Cell key={i} fill={entry.fill} />)}
+                    {stateData.map((entry, i) => <Cell key={`${entry.state}-${i}`} fill={entry.fill} />)}
                   </Pie>
                   <Legend />
                   <Tooltip content={<ChartTooltip />} />
@@ -236,6 +250,7 @@ export default function StatisticsPage() {
             { id: 'statistics-mileage', size: 'third', content: <StatisticsMileageBrief query={mileageQuery} fromKm={fromKm} distanceUnit={distanceUnit} /> },
             { id: 'statistics-fleet', size: 'half', content: (
           <StatisticsChartPlacement>
+          <StaleRefreshWarning state={fleetSource} label={t('statistics.vehicleComparison', 'Vehicle comparison')} />
           <ChartCard
             size="standard"
             title={t('statistics.vehicleComparison', 'Vehicle comparison')}
@@ -256,7 +271,7 @@ export default function StatisticsPage() {
               hasData={fleet != null}
               emptyWhen={compData.length <= 1}
               loading={fleetLoading}
-              error={fleetError}
+              error={fleetSource.fatalError}
               onRetry={() => { void fleetQuery.refetch(); }}
               skeleton={<Skeleton className="h-full w-full rounded-xl" />}
               empty={

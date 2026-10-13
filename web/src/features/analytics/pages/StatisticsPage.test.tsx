@@ -186,8 +186,8 @@ let periodStatsHandler: () => Promise<unknown>;
 let setVehicleIdSpy: ReturnType<typeof vi.fn>;
 
 /** Minimal `UseQueryResult`-shaped stub for the mocked data hooks. */
-function qr(over: Record<string, unknown> = {}): any {
-  return { data: undefined, isLoading: false, error: null, refetch: vi.fn(), ...over };
+function qr<T>(over: Record<string, unknown> = {}): T {
+  return { data: undefined, isLoading: false, error: null, refetch: vi.fn(), ...over } as T;
 }
 
 function makeStats(over: Record<string, unknown> = {}) {
@@ -265,7 +265,7 @@ function installHappyPath() {
     vehicles: [
       { id: 1, display_name: 'Car One', vin: 'VIN1' },
       { id: 2, display_name: 'Car Two', vin: 'VIN2' },
-    ] as any,
+    ] as ReturnType<typeof useSelectedVehicle>['vehicles'],
     setVehicleId: setVehicleIdSpy,
   });
   mockBattery.mockReturnValue(qr({ data: makeBattery() }));
@@ -318,6 +318,97 @@ beforeEach(() => {
 });
 
 describe('StatisticsPage', () => {
+  it('keeps all three sections and both charts visible during independent retained refresh failures', async () => {
+    mockStateSummary.mockReturnValue(qr({ data: makeStateSummary(), error: new Error('state refresh failed') }));
+    mockFleet.mockReturnValue(qr({ data: makeFleet(2), error: new Error('fleet refresh failed') }));
+    renderPage();
+    await screen.findByText('500 km');
+
+    expect(screen.getByRole('region', { name: 'Totals and averages' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Battery health and vehicle states' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Mileage and fleet comparison' })).toBeInTheDocument();
+    expect(screen.getAllByTestId('stale-refresh-warning')).toHaveLength(2);
+    expect(screen.getByRole('img', { name: 'Vehicle state distribution pie chart' })).toBeInTheDocument();
+    expect(screen.getByRole('group', { name: 'Distance and energy bar chart comparing all vehicles in the fleet' })).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(screen.queryByText('Add more vehicles to compare')).not.toBeInTheDocument();
+  });
+
+  it('marks a paused retained state source without claiming the vehicle is offline and retries only that source', async () => {
+    const retryState = vi.fn();
+    const retryFleet = vi.fn();
+    mockStateSummary.mockReturnValue(qr({ data: makeStateSummary(), fetchStatus: 'paused', refetch: retryState }));
+    mockFleet.mockReturnValue(qr({ data: makeFleet(2), refetch: retryFleet }));
+    renderPage();
+    await screen.findByText('500 km');
+
+    const warning = screen.getByTestId('stale-refresh-warning');
+    expect(warning).toHaveAttribute('data-refresh-blocked', 'true');
+    expect(within(warning).getByText('State distribution may be out of date')).toBeInTheDocument();
+    expect(warning).not.toHaveTextContent(/offline/i);
+    fireEvent.click(within(warning).getByRole('button', { name: 'Refresh' }));
+    expect(retryState).toHaveBeenCalledOnce();
+    expect(retryFleet).not.toHaveBeenCalled();
+    expect(screen.getByText('92.00')).toBeInTheDocument();
+  });
+
+  it('keeps raw state identities and measured zero while leaving shares unknown when a duration is missing', async () => {
+    mockStateSummary.mockReturnValue(qr({ data: [
+      { state: 'driving', totalMin: 0, count: 1 },
+      { state: 'charging', count: 1 },
+    ] }));
+    renderPage();
+    await screen.findByText('500 km');
+
+    const table = screen.getByRole('table', { name: 'State distribution — data table' });
+    expect(within(table).getByText('driving')).toBeInTheDocument();
+    expect(within(table).getByText('charging')).toBeInTheDocument();
+    expect(within(table).getAllByText('—')).toHaveLength(2);
+    expect(within(table).queryByText('0')).not.toBeInTheDocument();
+  });
+
+  it('preserves a measured zero share and every unknown state row in the accessible chart table', async () => {
+    mockStateSummary.mockReturnValue(qr({ data: [
+      { state: 'driving', totalMin: 0, count: 1 },
+      { state: 'new_source_state', totalMin: 30, count: 1 },
+    ] }));
+    renderPage();
+    await screen.findByText('500 km');
+
+    const table = screen.getByRole('table', { name: 'State distribution — data table' });
+    expect(within(table).getByText('0')).toBeInTheDocument();
+    expect(within(table).getByText('100')).toBeInTheDocument();
+    expect(within(table).getAllByText('new_source_state')).toHaveLength(2);
+    expect(within(table).getByText('digitalTwin.statusLabel.driving')).toBeInTheDocument();
+  });
+
+  it('preserves complete vehicle names and distinguishes missing comparison values from measured zero', async () => {
+    const fleet = makeFleet(2);
+    fleet.vehicle_comparison[0].name = 'A very long synthetic vehicle name retained in full';
+    mockFleet.mockReturnValue(qr({ data: { vehicle_comparison: [
+      { ...fleet.vehicle_comparison[0], distance: 0, energy: 0 },
+      { ...fleet.vehicle_comparison[1], name: null, distance: null, energy: null },
+    ] } }));
+    renderPage();
+    await screen.findByText('500 km');
+
+    const table = screen.getByRole('table', { name: 'Vehicle comparison — data table' });
+    expect(within(table).getByText('A very long synthetic vehicle name retained in full')).toBeInTheDocument();
+    expect(within(table).getByText('Vehicle 2')).toBeInTheDocument();
+    expect(within(table).getAllByText('0')).toHaveLength(2);
+    expect(within(table).getAllByText('—')).toHaveLength(2);
+  });
+
+  it('forwards the period query abort signal and gives the page refresh a mobile-sized target', async () => {
+    renderPage();
+    await screen.findByText('500 km');
+
+    const call = mockedRequest.mock.calls.find(args => args[0] === '/analytics/period-stats?vehicle_id=1');
+    expect(call?.[1]?.signal).toBeInstanceOf(AbortSignal);
+    const refresh = screen.getAllByRole('button', { name: 'Refresh' }).find(el => el.tagName === 'BUTTON');
+    expect(refresh).toHaveClass('min-h-11', 'min-w-11', 'md:min-h-9', 'md:min-w-9');
+  });
+
   it('reviews totals, kilometre cost denominators and mixed mileage windows without another request', async () => {
     renderPage();
     const totals = screen.getByTestId('statistics-totals-brief');
