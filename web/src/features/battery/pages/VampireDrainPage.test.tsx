@@ -41,16 +41,32 @@
  * at 2dp.
  */
 
-import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { render, screen, fireEvent, waitFor, within } from '@testing-library/react'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { QueryClient, QueryClientProvider, onlineManager } from '@tanstack/react-query'
 import { MemoryRouter } from 'react-router-dom'
 import type { ReactNode } from 'react'
 
 vi.mock('@/components/charts', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/components/charts')>()
   const { chartTestDoubles } = await import('@/test/chartTestDoubles')
-  return { ...actual, ...chartTestDoubles }
+  return {
+    ...actual,
+    ...chartTestDoubles,
+    EmbeddedChart: vi.fn(chartTestDoubles.EmbeddedChart),
+  }
+})
+
+const widgetFailure = vi.hoisted(() => ({ culprit: false }))
+vi.mock('../components/vampire-drain-modernization', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../components/vampire-drain-modernization')>()
+  return {
+    ...actual,
+    VampireCulpritPanel: (props: Parameters<typeof actual.VampireCulpritPanel>[0]) => {
+      if (widgetFailure.culprit) throw new Error('Synthetic culprit render failure')
+      return <actual.VampireCulpritPanel {...props} />
+    },
+  }
 })
 
 vi.mock('@/api/client', async () => {
@@ -90,11 +106,13 @@ vi.mock('react-i18next', async () => {
 })
 
 import { request } from '@/api/client'
+import { EmbeddedChart } from '@/components/charts'
 import { ToastProvider } from '@/components/feedback/Toast'
 import { SelectedVehicleProvider } from '@/store/selectedVehicle'
 import { setGlobalPrecision, setGlobalLocale } from '@/lib/numberFormat'
 import VampireDrainPage, { buildDailyDrainRollup } from './VampireDrainPage'
 import type { Vehicle } from '@/types/vehicle'
+import type { ParkTruth, VampireSplit } from '@/types/teslaPhysics'
 
 const mockedRequest = request as unknown as ReturnType<typeof vi.fn>
 const never = () => new Promise<never>(() => {})
@@ -208,6 +226,8 @@ interface InstallOpts {
   events?: VampireDrainEvent[]
   eventsPending?: boolean
   eventsError?: boolean
+  park?: ParkTruth
+  split?: VampireSplit
 }
 
 function install(opts: InstallOpts = {}) {
@@ -219,6 +239,8 @@ function install(opts: InstallOpts = {}) {
     events = defaultEvents,
     eventsPending = false,
     eventsError = false,
+    park,
+    split,
   } = opts
 
   mockedRequest.mockImplementation((path: string) => {
@@ -233,6 +255,8 @@ function install(opts: InstallOpts = {}) {
       if (eventsError) return Promise.reject(new Error('events boom'))
       return Promise.resolve({ vehicle_id: 7, events })
     }
+    if (path.startsWith('/physics/park-truth') && park) return Promise.resolve(park)
+    if (path.startsWith('/physics/vampire') && split) return Promise.resolve(split)
     return Promise.resolve({})
   })
 }
@@ -282,12 +306,20 @@ function panelTitle(name: string) {
 
 beforeEach(() => {
   mockedRequest.mockReset()
+  vi.mocked(EmbeddedChart).mockClear()
+  widgetFailure.culprit = false
+  onlineManager.setOnline(true)
   window.localStorage.clear()
   // fmtNumber / LinearGauge read module-global precision + locale that
   // useSettings would normally seed; pin them so assertions are deterministic.
   setGlobalPrecision(2)
   setGlobalLocale('en-US')
   install()
+})
+
+afterEach(() => {
+  onlineManager.setOnline(true)
+  vi.restoreAllMocks()
 })
 
 describe('VampireDrainPage', () => {
@@ -486,5 +518,190 @@ describe('VampireDrainPage', () => {
     // The sessions table exposes its column headers.
     expect(within(sessionsTable()).getByRole('columnheader', { name: 'Started' })).toBeInTheDocument()
     expect(within(sessionsTable()).getByRole('columnheader', { name: 'Ambient' })).toBeInTheDocument()
+  })
+
+  it.each([
+    { name: 'measured-zero', value: 0, status: 'Low' },
+    { name: 'low-at-boundary', value: 1.5, status: 'Low' },
+    { name: 'medium-above-low-boundary', value: 1.51, status: 'Normal' },
+    { name: 'medium-at-boundary', value: 3, status: 'Normal' },
+    { name: 'high-above-medium-boundary', value: 3.01, status: 'High' },
+  ])('announces the unchanged drain threshold for $name', async ({ value, status }) => {
+    install({ stats: { ...defaultStats, avg_drain_pct_per_day: value } })
+    renderPage()
+
+    const gauge = await screen.findByRole('meter', { name: 'Avg %/day' })
+    expect(gauge).toHaveAttribute('aria-valuenow', String(value))
+    expect(gauge).toHaveAttribute('aria-valuemin', '0')
+    expect(gauge).toHaveAttribute('aria-valuemax', '5')
+    expect(gauge).toHaveAccessibleDescription(expect.stringContaining(status))
+    expect(within(gauge.parentElement!).getByText(status, { selector: 'span' })).toBeInTheDocument()
+    expect(metricValues('Avg drain / day')).toContain(`${value.toFixed(2)}%`)
+  })
+
+  it('retains an above-reference reading without publishing an invalid meter range', async () => {
+    install({ stats: { ...defaultStats, avg_drain_pct_per_day: 7.25 } })
+    renderPage()
+
+    const gauge = await screen.findByRole('group', { name: 'Avg %/day' })
+    expect(within(gauge).getByText('7.25')).toBeInTheDocument()
+    expect(gauge).toHaveAccessibleDescription(expect.stringContaining('7.25%'))
+    expect(gauge).toHaveAccessibleDescription(expect.stringContaining('High'))
+    expect(gauge).not.toHaveAttribute('aria-valuenow')
+    expect(screen.queryByRole('meter', { name: 'Avg %/day' })).not.toBeInTheDocument()
+    expect(metricValues('Avg drain / day')).toContain('7.25%')
+    expect(screen.getByText('Reference: ~5 %/day is a high phantom-drain rate. Lower is better.')).toBeInTheDocument()
+  })
+
+  it.each([
+    { name: 'primary-route', route: '/vampire-drain' },
+    { name: 'charging-alias', route: '/charging/vampire-drain' },
+  ])('keeps selected-vehicle requests bounded and cancellable on $name', async ({ route }) => {
+    renderPage([route])
+    await screen.findByRole('table', { name: 'Drain sessions' })
+
+    expect(mockedRequest).toHaveBeenCalledWith('/vampire-drain/stats?vehicle_id=7', {
+      signal: expect.any(AbortSignal),
+    })
+    expect(mockedRequest).toHaveBeenCalledWith('/vampire-drain?vehicle_id=7&limit=200', {
+      signal: expect.any(AbortSignal),
+    })
+    expect(screen.getAllByText('30-day sample window').length).toBeGreaterThanOrEqual(1)
+    expect(screen.queryByRole('combobox', { name: /vehicle|range/i })).not.toBeInTheDocument()
+  })
+
+  it('preserves both daily series and all loaded trend observations in chart export inputs', async () => {
+    renderPage()
+    await screen.findByRole('table', { name: 'Drain sessions' })
+
+    const calls = vi.mocked(EmbeddedChart).mock.calls.map(([props]) => props)
+    const trend = [...calls].reverse().find(props => props.chartKey === 'vampire-drain-rate-trend')
+    const daily = [...calls].reverse().find(props => props.chartKey === 'vampire-drain-daily')
+    expect(trend).toMatchObject({
+      toolbar: true, fullscreen: true, exportable: true,
+      height: 288, mobileHeight: 224,
+      exportData: [
+        { date: '2025-06-01T20:00:00Z', rate: 2 },
+        { date: '2025-06-02T20:00:00Z', rate: 4 },
+        { date: '2025-06-03T20:00:00Z', rate: 8 },
+      ],
+      dataColumns: [{ key: 'date' }, { key: 'rate' }],
+    })
+    expect(daily).toMatchObject({
+      toolbar: true, fullscreen: true, exportable: true,
+      height: 288, mobileHeight: 224,
+      exportData: [
+        { date: '2025-06-01', drain_pct: 1, hours: 8 },
+        { date: '2025-06-02', drain_pct: 3, hours: 10 },
+        { date: '2025-06-03', drain_pct: 6, hours: 6 },
+      ],
+      dataColumns: [{ key: 'date' }, { key: 'drain_pct' }, { key: 'hours' }],
+    })
+  })
+
+  it('retains statistics and sessions after refresh failures and retries each source independently', async () => {
+    renderPage()
+    await screen.findByRole('table', { name: 'Drain sessions' })
+    const statsBefore = statsCallCount()
+    const eventsBefore = eventsCallCount()
+    install({ statsError: true, eventsError: true })
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh vampire drain' }))
+
+    await screen.findByText('Vampire-drain statistics may be out of date')
+    await screen.findByText('Parked-drain events may be out of date')
+    expect(statsCallCount()).toBe(statsBefore + 1)
+    expect(eventsCallCount()).toBe(eventsBefore + 1)
+    expect(metricValues('Avg drain / day')).toContain('2.34%')
+    expect(screen.getByRole('meter', { name: 'Avg %/day' })).toHaveAttribute('aria-valuenow', '2.34')
+    expect(within(sessionsTable()).getByText('90.00%')).toBeInTheDocument()
+    expect(screen.getAllByTestId('embedded-chart')).toHaveLength(2)
+
+    install()
+    fireEvent.click(screen.getByRole('button', { name: 'Retry Vampire-drain statistics', exact: true }))
+    await waitFor(() => expect(screen.queryByText('Vampire-drain statistics may be out of date')).not.toBeInTheDocument())
+    expect(screen.getByText('Parked-drain events may be out of date')).toBeInTheDocument()
+    expect(eventsCallCount()).toBe(eventsBefore + 1)
+    fireEvent.click(screen.getByRole('button', { name: 'Retry Parked-drain events', exact: true }))
+    await waitFor(() => expect(screen.queryByText('Parked-drain events may be out of date')).not.toBeInTheDocument())
+    expect(statsCallCount()).toBe(statsBefore + 2)
+    expect(eventsCallCount()).toBe(eventsBefore + 2)
+  })
+
+  it('keeps retained observations visible when offline refresh pauses instead of inventing a fatal failure', async () => {
+    renderPage()
+    await screen.findByRole('table', { name: 'Drain sessions' })
+    const statsBefore = statsCallCount()
+    const eventsBefore = eventsCallCount()
+    onlineManager.setOnline(false)
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh vampire drain' }))
+
+    await screen.findByText('Vampire-drain statistics may be out of date')
+    const warnings = screen.getAllByTestId('stale-refresh-warning')
+    expect(warnings.filter(warning => warning.getAttribute('data-refresh-blocked') === 'true')).toHaveLength(2)
+    expect(statsCallCount()).toBe(statsBefore)
+    expect(eventsCallCount()).toBe(eventsBefore)
+    expect(metricValues('Avg drain / day')).toContain('2.34%')
+    expect(within(sessionsTable()).getByText('90.00%')).toBeInTheDocument()
+    expect(screen.queryByText('Parked-drain events are unavailable. Retry the source above.')).not.toBeInTheDocument()
+  })
+
+  it('isolates initial events failure without erasing independently available statistics or tips', async () => {
+    install({ eventsError: true })
+    renderPage()
+
+    await screen.findAllByRole('button', { name: 'Retry Parked-drain events', exact: true })
+    expect(screen.getAllByText('Parked-drain events are unavailable. Retry the source above.')).toHaveLength(3)
+    expect(metricValues('Avg drain / day')).toContain('2.34%')
+    expect(screen.getByRole('meter', { name: 'Avg %/day' })).toHaveAttribute('aria-valuenow', '2.34')
+    expect(screen.getByText(/Disable Sentry Mode/)).toBeInTheDocument()
+    expect(screen.queryByRole('table', { name: 'Drain sessions' })).not.toBeInTheDocument()
+    expect(screen.queryByText('0 sessions')).not.toBeInTheDocument()
+  })
+
+  it('preserves confirmed-Park exclusions, unknown versus zero split totals and source honesty', async () => {
+    install({
+      park: {
+        confirmed_park: false, park_confirmed_at: null, neutral_rolling: true, gear: 'N',
+        sentry_reported: true, sentry_counted: false,
+        cabin_overheat_reported: true, cabin_overheat_counted: false,
+        preconditioning_reported: true, preconditioning_counted: false,
+        rejected: ['neutral_rolling'], honesty: 'Synthetic source: neutral rolling is not confirmed Park.',
+      },
+      split: {
+        vehicle_id: 7,
+        complete_plugged: [],
+        unplugged: [{
+          kind: 'unplugged', started_at: '2025-06-03T20:00:00Z', ended_at: '2025-06-04T02:00:00Z',
+          duration_s: 21600, start_soc_pct: 80, end_soc_pct: 80, drain_pct: 0, park_confirmed: true,
+        }],
+        complete_plugged_drain_pct: null, unplugged_drain_pct: 0,
+        honesty: 'Synthetic source: parked SOC loss is measured, watt-hours are not supplied.',
+      },
+    })
+    renderPage()
+
+    const culprit = within(await screen.findByTestId('vampire-culprits'))
+    await waitFor(() => expect(culprit.getAllByText('Off')).toHaveLength(3))
+    expect(culprit.getByText('Tonight: unknown')).toBeInTheDocument()
+    expect(culprit.queryByText(/Turn Sentry off at home tonight/)).not.toBeInTheDocument()
+    expect(metricValues('At-limit plugged')).toContain('—')
+    expect(metricValues('After unplug')).toContain('0.00%')
+    const split = within(screen.getByTestId('vampire-split'))
+    expect(split.getAllByText('Synthetic source: parked SOC loss is measured, watt-hours are not supplied.').length).toBeGreaterThanOrEqual(1)
+    expect(within(split.getByRole('table')).getByText('0.00%')).toBeInTheDocument()
+    expect(within(sessionsTable()).getByText('6.00h')).toBeInTheDocument()
+  })
+
+  it('contains a culprit rendering failure while deterministic neighboring widgets remain usable', async () => {
+    widgetFailure.culprit = true
+    renderPage()
+
+    await screen.findByRole('table', { name: 'Drain sessions' })
+    expect(screen.getAllByRole('alert').length).toBeGreaterThanOrEqual(1)
+    expect(metricValues('Avg drain / day')).toContain('2.34%')
+    expect(screen.getByRole('meter', { name: 'Avg %/day' })).toHaveAttribute('aria-valuenow', '2.34')
+    expect(screen.getAllByTestId('embedded-chart')).toHaveLength(2)
+    expect(within(sessionsTable()).getByText('90.00%')).toBeInTheDocument()
+    expect(screen.getByText(/Disable Sentry Mode/)).toBeInTheDocument()
   })
 })

@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 
 import { PageLayout, Section, CardGrid, LayoutCard } from '@/components/layout';
-import { Badge, Button, DataTable, Caption, Text, type Column, useSortToggle } from '@/components/ui';
+import { Badge, Button, DataTable, Caption, Icon, Text, type Column, useSortToggle } from '@/components/ui';
 import { StatGroup, useMetricPreferences, type StatMetric } from '@/components/data-display';
 import { BatteryEvidenceBrief } from '../components/operationalbrief-all/BatteryEvidenceBrief';
 import { formatMetric, type StatPeriod } from '@/lib/metric-reference';
@@ -18,7 +18,7 @@ import {
   LineChart, Line, BarChart, Bar,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from '@/components/charts';
-import { Skeleton, EmptyState } from '@/components/feedback';
+import { Skeleton, EmptyState, SectionErrorBoundary } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 
 import { VampireSplitPanel, VampireCulpritPanel, SourceRecovery, sessionPresentation } from '../components/vampire-drain-modernization';
@@ -202,9 +202,13 @@ export default function VampireDrainPage() {
     },
   ];
   const avg = stats?.avg_drain_pct_per_day ?? null;
-  const gaugeColor = avg == null
-    ? CHART_COLORS[0]
-    : avg <= 1.5 ? CHART_COLORS[2] : avg <= 3 ? CHART_COLORS[3] : CHART_COLORS[5];
+  const gaugeTone = avg == null
+    ? 'neutral'
+    : avg <= 1.5 ? 'success' : avg <= 3 ? 'warning' : 'danger';
+  const gaugeStatus = avg == null
+    ? t('common.unknown', 'Unknown')
+    : avg <= 1.5 ? t('common.low', 'Low')
+      : avg <= 3 ? t('common.normal', 'Normal') : t('common.high', 'High');
 
   const columns: Column<VampireDrainEvent>[] = useMemo(() => [
     { key: 'started_at', header: t('vampireDrain.columns.started', 'Started'), sortable: true, render: (r) => formatDateTime(r.started_at) },
@@ -223,10 +227,10 @@ export default function VampireDrainPage() {
   ], [t, formatTemperature, fmtNumber, metricPreferences]);
 
   const tips = useMemo(() => [
-    { icon: <ShieldAlert className="h-4 w-4" aria-hidden="true" />, text: t('vampireDrain.tips.sentry', 'Disable Sentry Mode when parked at home to save 1–2 % per day.') },
-    { icon: <Clock className="h-4 w-4" aria-hidden="true" />, text: t('vampireDrain.tips.polling', 'Reduce third-party app polling intervals to let the car sleep faster.') },
-    { icon: <BatteryWarning className="h-4 w-4" aria-hidden="true" />, text: t('vampireDrain.tips.wake', 'Avoid opening the app frequently — each wake cycle costs battery.') },
-    { icon: <Activity className="h-4 w-4" aria-hidden="true" />, text: t('vampireDrain.tips.energySaver', 'Enable energy-saving mode in vehicle settings for better standby.') },
+    { icon: <Icon icon={ShieldAlert} />, text: t('vampireDrain.tips.sentry', 'Disable Sentry Mode when parked at home to save 1–2 % per day.') },
+    { icon: <Icon icon={Clock} />, text: t('vampireDrain.tips.polling', 'Reduce third-party app polling intervals to let the car sleep faster.') },
+    { icon: <Icon icon={BatteryWarning} />, text: t('vampireDrain.tips.wake', 'Avoid opening the app frequently — each wake cycle costs battery.') },
+    { icon: <Icon icon={Activity} />, text: t('vampireDrain.tips.energySaver', 'Enable energy-saving mode in vehicle settings for better standby.') },
   ], [t]);
 
   const noVehicleMsg = t('vampireDrain.selectVehicle', 'Select a vehicle to view its vampire drain.');
@@ -239,7 +243,7 @@ export default function VampireDrainPage() {
         className="min-h-11 min-w-11"
         onClick={() => { void statsQuery.refetch(); void eventsQuery.refetch(); }}
         aria-label={t('vampireDrain.refresh', 'Refresh vampire drain')}
-        icon={<RefreshCw className="h-4 w-4" aria-hidden="true" />}
+        icon={<Icon icon={RefreshCw} />}
       />
     </>
   );
@@ -254,20 +258,23 @@ export default function VampireDrainPage() {
     >
       {/* AI narrator — opt-in, never replaces the deterministic stats below (ADR-015 §I3/§I5). */}
       <FadeIn>
+        <SectionErrorBoundary name="VampireDrainNarration">
         <AIVampireDrainExplanation
           vehicleId={vehicleId ?? undefined}
           lookbackDays={stats?.sample_window_days}
         />
+        </SectionErrorBoundary>
       </FadeIn>
 
       {/* 1 — KPI band */}
       <FadeIn>
         <Section id="vampire-summary" title={t('vampireDrain.kpis', 'Drain summary')}>
+          <SectionErrorBoundary name="VampireDrainSummary">
           <SourceRecovery state={statsState} label={t('dataSources.labels.vampireDrainStats', 'Vampire-drain statistics')} />
           {!enabled ? (
             <LayoutCard title={t('vampireDrain.kpis', 'Drain summary')}>
               <EmptyState
-                icon={<Zap className="h-8 w-8" />}
+                icon={<Icon icon={Zap} size="xl" />}
                 message={noVehicleMsg}
                 actionTo={{ label: t('common.noVehicleSelected.action', 'Set up TeslaSync'), to: '/onboarding' }}
               />
@@ -276,15 +283,20 @@ export default function VampireDrainPage() {
             <BatteryEvidenceBrief id="vampire-drain-summary" title={t('vampireDrain.brief.title', 'Observed parked-drain statistics')} metrics={metrics} period={period}
               loading={statsState.status === 'initial'} retained={statsState.hasData && statsState.status !== 'ok'} />
           )}
+          </SectionErrorBoundary>
         </Section>
       </FadeIn>
 
       <FadeIn delay={0.04}>
+        <SectionErrorBoundary name="VampireDrainCulprits">
         <VampireCulpritPanel vehicleId={activeId || undefined} />
+        </SectionErrorBoundary>
       </FadeIn>
 
       <FadeIn delay={0.05}>
+        <SectionErrorBoundary name="VampireDrainSplit">
         <VampireSplitPanel vehicleId={activeId || undefined} />
+        </SectionErrorBoundary>
       </FadeIn>
 
       {/* 2 — Primary bento: trend (hero) + rate gauge */}
@@ -294,9 +306,10 @@ export default function VampireDrainPage() {
           <CardGrid label={t('vampireDrain.sections.trend', 'Drain rate trend and gauge')} items={[
             { id: 'drain-trend', size: 'half', content: (
           <LayoutCard title={t('vampireDrain.trend.title', 'Drain rate trend')}>
+            <SectionErrorBoundary name="VampireDrainTrend">
             {!enabled ? (
               <EmptyState
-                icon={<TrendingDown className="h-8 w-8" />}
+                icon={<Icon icon={TrendingDown} size="xl" />}
                 message={noVehicleMsg}
                 actionTo={{ label: t('common.noVehicleSelected.action', 'Set up TeslaSync'), to: '/onboarding' }}
               />
@@ -308,7 +321,7 @@ export default function VampireDrainPage() {
               <EmptyState
                 /* no-action: transient — the trend needs more parked-drain sessions to plot;
                    the header Refresh control (RefreshCw button) already covers manual re-checks. */
-                icon={<TrendingDown className="h-8 w-8" />}
+                icon={<Icon icon={TrendingDown} size="xl" />}
                 message={noEventsMsg}
               />
             ) : (
@@ -344,13 +357,15 @@ export default function VampireDrainPage() {
                 )}
               </EmbeddedChart>
             )}
+            </SectionErrorBoundary>
           </LayoutCard>
             ) },
             { id: 'drain-gauge', size: 'quarter', content: (
           <LayoutCard title={t('vampireDrain.gauge.title', 'Drain rate')}>
+            <SectionErrorBoundary name="VampireDrainGauge">
             {!enabled ? (
               <EmptyState
-                icon={<Gauge className="h-8 w-8" />}
+                icon={<Icon icon={Gauge} size="xl" />}
                 message={noVehicleMsg}
                 actionTo={{ label: t('common.noVehicleSelected.action', 'Set up TeslaSync'), to: '/onboarding' }}
               />
@@ -362,7 +377,7 @@ export default function VampireDrainPage() {
               <EmptyState
                 /* no-action: transient — no parked-drain stats yet to average; the header
                    Refresh control (RefreshCw button) already covers manual re-checks. */
-                icon={<Gauge className="h-8 w-8" />}
+                icon={<Icon icon={Gauge} size="xl" />}
                 message={noEventsMsg}
               />
             ) : (
@@ -370,16 +385,20 @@ export default function VampireDrainPage() {
                 <LinearGauge
                   value={avg}
                   max={GAUGE_MAX}
+                  preserveReadingAndScale
                   label={t('vampireDrain.gauge.label', 'Avg %/day')}
                   unit="%"
-                  color={gaugeColor}
+                  tone={gaugeTone}
+                  status={gaugeStatus}
                   size={168}
                   decimals={displayPrecision}
                 />
+                <Badge variant={gaugeTone}>{gaugeStatus}</Badge>
                 <StatGroup metrics={metrics.slice(1, 3)} period={period} className="w-full" />
                 <Caption>{t('vampireDrain.gauge.caption', 'Reference: ~5 %/day is a high phantom-drain rate. Lower is better.')}</Caption>
               </div>
             )}
+            </SectionErrorBoundary>
           </LayoutCard>
             ) },
           ]} />
@@ -392,9 +411,10 @@ export default function VampireDrainPage() {
           <CardGrid label={t('vampireDrain.sections.daily', 'Daily drain and reduction tips')} items={[
             { id: 'daily-drain', size: 'half', content: (
           <LayoutCard title={t('vampireDrain.daily.title', 'Daily drain while parked')}>
+            <SectionErrorBoundary name="VampireDrainDaily">
             {!enabled ? (
               <EmptyState
-                icon={<BatteryWarning className="h-8 w-8" />}
+                icon={<Icon icon={BatteryWarning} size="xl" />}
                 message={noVehicleMsg}
                 actionTo={{ label: t('common.noVehicleSelected.action', 'Set up TeslaSync'), to: '/onboarding' }}
               />
@@ -406,7 +426,7 @@ export default function VampireDrainPage() {
               <EmptyState
                 /* no-action: transient — daily aggregates build up as parked-drain sessions are
                    recorded; the header Refresh control (RefreshCw button) already covers manual re-checks. */
-                icon={<BatteryWarning className="h-8 w-8" />}
+                icon={<Icon icon={BatteryWarning} size="xl" />}
                 message={noEventsMsg}
               />
             ) : (
@@ -449,6 +469,7 @@ export default function VampireDrainPage() {
                 )}
               </EmbeddedChart>
             )}
+            </SectionErrorBoundary>
           </LayoutCard>
             ) },
             { id: 'drain-tips', size: 'quarter', content: (
@@ -476,9 +497,10 @@ export default function VampireDrainPage() {
                 : t('vampireDrain.modernization.sessionsUnknown', 'Session count unavailable')}
             </Badge>
         }>
+          <SectionErrorBoundary name="VampireDrainSessions">
           {!enabled ? (
             <EmptyState
-              icon={<Activity className="h-8 w-8" />}
+              icon={<Icon icon={Activity} size="xl" />}
               message={noVehicleMsg}
               actionTo={{ label: t('common.noVehicleSelected.action', 'Set up TeslaSync'), to: '/onboarding' }}
             />
@@ -510,6 +532,7 @@ export default function VampireDrainPage() {
               pagination
             />
           )}
+          </SectionErrorBoundary>
         </LayoutCard>
       </FadeIn>
     </PageLayout>
