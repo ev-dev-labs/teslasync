@@ -32,7 +32,7 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi, type Mock } from 'vitest';
-import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
+import { act, render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui';
@@ -158,7 +158,7 @@ function renderPage(initialEntry = '/my-activity') {
       mutations: { retry: false },
     },
   });
-  return render(
+  const view = render(
     <QueryClientProvider client={qc}>
       <MemoryRouter initialEntries={[initialEntry]}>
         <MyActivityPage />
@@ -166,6 +166,7 @@ function renderPage(initialEntry = '/my-activity') {
       </MemoryRouter>
     </QueryClientProvider>,
   );
+  return { ...view, queryClient: qc };
 }
 
 /** Return the KPI card (`div.flex-1`) that owns a given label so the value
@@ -396,4 +397,66 @@ describe('MyActivityPage — Project Apex elevation', () => {
       expect(activityCalls().some((u) => u.includes('start=2015-01-01'))).toBe(true);
     });
   });
+
+  it('uses neutral decorative icons without changing section labels', async () => {
+    renderPage();
+    expect(await within(kpiCard('Total actions')).findByText('6')).toBeInTheDocument();
+
+    for (const title of ['Top actions', 'By category']) {
+      const heading = screen.getByRole('heading', { name: title });
+      const icon = heading.querySelector('svg');
+      expect(icon).not.toBeNull();
+      expect(icon).toHaveAttribute('aria-hidden', 'true');
+      expect(icon).toHaveClass('text-[var(--text-secondary)]');
+      expect(icon).not.toHaveClass('text-cyan-300');
+    }
+  });
+
+  it('does not present unavailable activity as measured zero after an initial failure', async () => {
+    activityError = new ApiError('activity unavailable', 500);
+    renderPage();
+    await screen.findAllByText('Server error');
+
+    for (const label of ['Total actions', 'Active days', 'Action types', 'Entities touched']) {
+      const metric = kpiCard(label);
+      expect(within(metric).queryByText('0')).not.toBeInTheDocument();
+      expect(within(metric).getByText('—')).toBeInTheDocument();
+    }
+    expect(screen.getByText('Activity feed')).toBeInTheDocument();
+    expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
+  });
+
+  it.each([500, 503])('retains every populated section after a failed %i refresh and recovers through the shared retry', async (status) => {
+    const { queryClient } = renderPage();
+    expect(await within(kpiCard('Total actions')).findByText('6')).toBeInTheDocument();
+    const feed = screen.getByRole('heading', { name: 'Activity feed' }).closest('[data-print-card]');
+    expect(feed).not.toBeNull();
+    const before = activityCalls().length;
+
+    activityError = new ApiError('refresh unavailable', status);
+    await act(async () => {
+      await queryClient.refetchQueries({ queryKey: ['users', 'me', 'activity'] });
+    });
+
+    const warning = await screen.findByTestId('stale-refresh-warning');
+    expect(warning).toHaveAttribute('role', 'status');
+    expect(warning).toHaveAttribute('aria-live', 'polite');
+    expect(warning).toHaveTextContent('Previously loaded data remains visible');
+    expect(activityCalls().length).toBeGreaterThan(before);
+    expect(within(kpiCard('Total actions')).getByText('6')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Top actions' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'By category' })).toBeInTheDocument();
+    for (const title of ['Activity over time', 'By hour of day']) {
+      expect(screen.getByRole('figure', { name: title })).toHaveAttribute('data-chart-state', 'ready');
+    }
+    expect(within(feed as HTMLElement).getAllByRole('link').filter(link => link.getAttribute('href') === '/vehicles/10')).toHaveLength(2);
+    expect(screen.queryByText('Server error')).not.toBeInTheDocument();
+    expect(screen.queryByText('Activity feed is not supported')).not.toBeInTheDocument();
+
+    activityError = null;
+    fireEvent.click(within(warning).getByRole('button', { name: 'Refresh' }));
+    await waitFor(() => expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument());
+    expect(within(kpiCard('Total actions')).getByText('6')).toBeInTheDocument();
+  });
+
 });

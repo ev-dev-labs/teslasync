@@ -61,7 +61,8 @@ export default function MyActivityPage() {
   const apiError = query.error instanceof ApiError ? query.error : null;
   const featureDisabled = apiError?.status === 503;
   const unauthenticated = apiError?.status === 401;
-  const hardGate = featureDisabled || unauthenticated;
+  // Retained deployment failures warn without erasing data; identity gates still protect it.
+  const hardGate = (featureDisabled && !state.hasData) || unauthenticated;
 
   const analytics = useMemo(
     () => deriveMyActivityAnalytics(entries, { start, end }),
@@ -131,7 +132,7 @@ export default function MyActivityPage() {
               />
               <ActivityBreakdownPanel
                 title={t('activity.myActivity.topActions.title', 'Top actions')}
-                icon={<Icons.workflow className="h-4 w-4 text-cyan-300" aria-hidden="true" />}
+                icon={<Icons.workflow className="h-4 w-4 text-[var(--text-secondary)]" aria-hidden="true" />}
                 slices={analytics.topActions}
                 isLoading={isLoading}
                 isError={sectionIsError}
@@ -151,7 +152,7 @@ export default function MyActivityPage() {
             >
               <ActivityBreakdownPanel
                 title={t('activity.myActivity.byCategory.title', 'By category')}
-                icon={<Icons.layoutGrid className="h-4 w-4 text-cyan-300" aria-hidden="true" />}
+                icon={<Icons.layoutGrid className="h-4 w-4 text-[var(--text-secondary)]" aria-hidden="true" />}
                 slices={analytics.byCategory}
                 isLoading={isLoading}
                 isError={sectionIsError}
