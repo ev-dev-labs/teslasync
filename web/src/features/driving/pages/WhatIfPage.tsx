@@ -9,12 +9,13 @@ import { GlassPanel, PanelTitle, Text, Button, Badge, Select, Slider, Toggle } f
 
 import type { StatMetric } from '@/components/data-display/stat-reference';
 import { DrivingSummaryBrief } from '../components/operationalbrief-n-z/DrivingSummaryBrief';
-import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
+import { Skeleton, EmptyState, QueryError, DataSourceNotice, SectionErrorBoundary } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 
 import { useDrives, useDrive, useDriveTelemetry } from '@/api/hooks/useDriving';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useUnits } from '@/hooks/useUnits';
+import { useDataState } from '@/hooks/useDataState';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { formatDateShort } from '@/lib/dateFormat';
 import { chartTokens } from '@/lib/tokens';
@@ -24,7 +25,6 @@ import {
   simulateWhatIf,
   DEFAULT_KNOBS,
   type WhatIfKnobs,
-  type TirePreset,
   type EnergyBreakdown,
 } from '../lib/whatIfModel';
 import { WhatIfEnergyBreakdown } from '../components/WhatIfEnergyBreakdown';
@@ -88,9 +88,10 @@ export default function WhatIfPage() {
 
   const componentLabels = useMemo(
     () =>
-      Object.fromEntries(
-        COMPONENTS.map((c) => [c.key, t(c.i18nKey, c.fallback)]),
-      ) as Record<ComponentKey, string>,
+      COMPONENTS.reduce<Record<ComponentKey, string>>((labels, c) => {
+        labels[c.key] = t(c.i18nKey, c.fallback);
+        return labels;
+      }, { aero: '', rolling: '', elevation: '', climate: '', other: '' }),
     [t],
   );
 
@@ -106,7 +107,10 @@ export default function WhatIfPage() {
   const maxTotal = Math.max(result.baseline.total, result.scenario.total, 1);
   const saves = result.energyDeltaWh <= 0;
   const baselineDurationS = driveQuery.data?.durationS;
-  const loading = drivesQuery.isLoading || driveQuery.isLoading || telemetryQuery.isLoading;
+  const drivesState = useDataState(drivesQuery);
+  const driveState = useDataState(driveQuery);
+  const telemetryState = useDataState(telemetryQuery);
+  const loading = driveQuery.isLoading && !driveState.hasData;
   const summaryMetrics: readonly StatMetric[] = [
     {
       metricId: 'energy', occurrenceId: 'scenario-energy',
@@ -136,10 +140,12 @@ export default function WhatIfPage() {
       title={t('whatIf.title', 'What-If Simulator')}
       subtitle={t('whatIf.subtitle', 'Replay a real drive under different conditions')}
       query={[drivesQuery, driveQuery, telemetryQuery]}
+      busy={drivesQuery.isLoading || loading || telemetryQuery.isLoading}
       contextActions={
         <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3">
           {driveOptions.length > 0 && (
             <Select
+              className="min-w-0 max-w-full"
               aria-label={t('whatIf.pickDrive', 'Choose a drive')}
               value={activeId}
               onChange={(e) => setSelectedId(e.target.value)}
@@ -150,6 +156,7 @@ export default function WhatIfPage() {
       }
     >
       <FadeIn>
+        <SectionErrorBoundary name="WhatIfSummary">
         <DrivingSummaryBrief
           id="what-if-brief"
           title={t('whatIf.kpis', 'Simulated drive outcome')}
@@ -159,44 +166,32 @@ export default function WhatIfPage() {
           provenance={t('whatIf.brief.provenance', 'Selected drive and telemetry, recomputed locally with the current simulation knobs.')}
           loading={loading}
           unavailable={!activeId || !result.ok}
-          retained={driveQuery.isError || telemetryQuery.isError}
+          retained={Boolean(drivesState.refreshError || driveState.refreshError || telemetryState.refreshError)}
         />
+        </SectionErrorBoundary>
       </FadeIn>
-      {drivesQuery.isError ? (
+      <DataSourceNotice sources={[
+        { id: 'drives', label: t('whatIf.pickDrive', 'Choose a drive'), query: drivesQuery, enabled: Boolean(vehicleIdStr) },
+        { id: 'drive', label: t('whatIf.baseline', 'Actual drive'), query: driveQuery, enabled: Boolean(activeId) },
+        { id: 'telemetry', label: t('whatIf.breakdown', 'Energy breakdown'), query: telemetryQuery, enabled: Boolean(activeId) },
+      ]} />
+      {drivesState.fatalError ? (
         <GlassPanel className="p-4 sm:p-5">
-          <QueryError error={drivesQuery.error} onRetry={() => drivesQuery.refetch()} />
+          <QueryError error={drivesState.fatalError} onRetry={() => drivesQuery.refetch()} />
         </GlassPanel>
-      ) : loading ? (
-        <>
-          <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
-            <Skeleton height={340} className="rounded-xl xl:col-span-1" />
-            <Skeleton height={340} className="rounded-xl xl:col-span-2" />
-          </div>
-        </>
-      ) : !activeId ? (
+      ) : !activeId && !drivesQuery.isLoading ? (
         <GlassPanel className="p-4 sm:p-5">
-          <EmptyState
-            icon={<FlaskConical className="h-8 w-8" />}
-            message={t('whatIf.noDrives', 'No drives found for this vehicle yet.')}
-            actionTo={{ label: t('whatIf.browseDrives', 'Browse drives'), to: '/drives' }}
-          />
+          <EmptyState icon={<FlaskConical className="h-8 w-8" />} message={t('whatIf.noDrives', 'No drives found for this vehicle yet.')}
+            actionTo={{ label: t('whatIf.browseDrives', 'Browse drives'), to: '/drives' }} />
         </GlassPanel>
-      ) : !result.ok ? (
-        <GlassPanel className="p-4 sm:p-5">
-          <EmptyState /* no-action: nothing the user can do — this drive was imported without energy counters. The drive picker above is the recovery surface. */
-            icon={<FlaskConical className="h-8 w-8" />}
-            message={t('whatIf.noEnergy', 'This drive lacks the energy data needed to simulate.')}
-          />
-        </GlassPanel>
-      ) : (
-        <>
-          {/* 2 — Knobs (1/3) + energy breakdown & takeaway (2/3) */}
+      ) : null}
           <FadeIn delay={0.1}>
             <section className="grid grid-cols-1 gap-4 xl:grid-cols-3">
-              <GlassPanel className="p-4 sm:p-5 xl:col-span-1">
+              <SectionErrorBoundary name="WhatIfKnobs">
+              <GlassPanel className="min-w-0 p-4 sm:p-5 xl:col-span-1">
                 <div className="mb-3 flex items-center justify-between gap-2">
                   <PanelTitle className="flex items-center gap-2">
-                    <Gauge className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+                    <Gauge className="h-4 w-4 text-[var(--text-secondary)]" aria-hidden="true" />
                     {t('whatIf.knobs', 'Knobs')}
                   </PanelTitle>
                   <Button variant="ghost" onClick={() => setKnobs(DEFAULT_KNOBS)}>
@@ -219,7 +214,7 @@ export default function WhatIfPage() {
                     min={0.8}
                     max={1.2}
                     step={0.05}
-                    formatValue={(v) => `${Math.round(v * 100)}%`}
+                    formatValue={(v) => `${fmtNumber(Math.round(v * 100))}%`}
                     onChange={(v) => setKnobs((k) => ({ ...k, speedFactor: v }))}
                   />
 
@@ -230,7 +225,10 @@ export default function WhatIfPage() {
                     <Select
                       aria-label={t('whatIf.tires', 'Tire pressure')}
                       value={knobs.tires}
-                      onChange={(e) => setKnobs((k) => ({ ...k, tires: e.target.value as TirePreset }))}
+                      onChange={(e) => {
+                        const tires = e.target.value;
+                        if (tires === 'low' || tires === 'nominal' || tires === 'high') setKnobs((k) => ({ ...k, tires }));
+                      }}
                       options={[
                         { value: 'low', label: t('whatIf.tireLow', 'Under-inflated (−)') },
                         { value: 'nominal', label: t('whatIf.tireNominal', 'Nominal') },
@@ -257,13 +255,24 @@ export default function WhatIfPage() {
                 </div>
               </GlassPanel>
 
-              <div className="flex flex-col gap-4 xl:col-span-2">
+              </SectionErrorBoundary>
+              <div className="flex min-w-0 flex-col gap-4 xl:col-span-2">
+                <SectionErrorBoundary name="WhatIfEnergy">
                 <GlassPanel className="p-4 sm:p-5">
                   <PanelTitle className="mb-3 flex items-center gap-2">
-                    <Wind className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+                    <Wind className="h-4 w-4 text-[var(--text-secondary)]" aria-hidden="true" />
                     {t('whatIf.breakdown', 'Energy breakdown')}
                   </PanelTitle>
 
+                  {driveState.fatalError ? (
+                    <QueryError error={driveState.fatalError} onRetry={() => driveQuery.refetch()} />
+                  ) : loading || (!activeId && drivesQuery.isLoading) ? (
+                    <Skeleton height={200} />
+                  ) : !result.ok ? (
+                    <EmptyState /* no-action: choose another recorded drive using the picker. */
+                      icon={<FlaskConical className="h-8 w-8" />}
+                      message={t('whatIf.noEnergy', 'This drive lacks the energy data needed to simulate.')} />
+                  ) : (
                   <div className="space-y-4">
                     <WhatIfEnergyBreakdown
                       caption={t('whatIf.baseline', 'Actual drive')}
@@ -283,30 +292,24 @@ export default function WhatIfPage() {
                     />
                   </div>
 
-                  <ul className="mt-4 flex flex-wrap gap-x-4 gap-y-2 border-t border-[var(--border-subtle)] pt-3">
-                    {COMPONENTS.map((c) => (
-                      <li key={c.key} className="flex items-center gap-1.5">
-                        <span
-                          className="h-2 w-2 shrink-0 rounded-full"
-                          style={{ background: c.color }}
-                          aria-hidden="true"
-                        />
-                        <Text variant="caption">{componentLabels[c.key]}</Text>
-                        <Text variant="caption" className="font-mono tabular-nums">
-                          {kwh(result.scenario[c.key])}
-                        </Text>
-                      </li>
-                    ))}
-                  </ul>
-                </GlassPanel>
-
-                <GlassPanel className="flex items-center gap-3 p-4 sm:p-5">
-                  {saves ? (
-                    <TrendingDown className="h-5 w-5 shrink-0 text-emerald-300" aria-hidden="true" />
-                  ) : (
-                    <TrendingUp className="h-5 w-5 shrink-0 text-rose-300" aria-hidden="true" />
                   )}
-                  <Text variant="bodySm" className="flex-1">
+                  {activeId && (!telemetryState.hasData || telemetryQuery.data?.length === 0) && result.ok && (
+                    <Text as="p" variant="caption" className="mt-3">
+                      {t('whatIf.telemetryAssumptions', 'Telemetry is incomplete; elevation and climate use model assumptions, not complete observations.')}
+                    </Text>
+                  )}
+                </GlassPanel>
+                </SectionErrorBoundary>
+                <SectionErrorBoundary name="WhatIfTakeaway">
+                <GlassPanel className="flex min-w-0 flex-wrap items-center gap-3 p-4 sm:p-5">
+                  {result.ok ? (
+                  <>
+                  {saves ? (
+                    <TrendingDown className="h-5 w-5 shrink-0 text-[var(--text-secondary)]" aria-hidden="true" />
+                  ) : (
+                    <TrendingUp className="h-5 w-5 shrink-0 text-[var(--text-secondary)]" aria-hidden="true" />
+                  )}
+                  <Text variant="bodySm" className="min-w-0 flex-1">
                     {saves
                       ? t('whatIf.takeawaySave', 'This would save {{wh}} — arriving with {{soc}} more battery.', {
                           wh: kwh(Math.abs(result.energyDeltaWh)),
@@ -321,12 +324,15 @@ export default function WhatIfPage() {
                     {saves ? '−' : '+'}
                     {kwh(Math.abs(result.energyDeltaWh))}
                   </Badge>
+                  </>
+                  ) : loading ? <Skeleton height={40} /> : (
+                    <Text variant="bodySm">{t('whatIf.noEnergy', 'This drive lacks the energy data needed to simulate.')}</Text>
+                  )}
                 </GlassPanel>
+                </SectionErrorBoundary>
               </div>
             </section>
           </FadeIn>
-        </>
-      )}
     </PageLayout>
   );
 }
