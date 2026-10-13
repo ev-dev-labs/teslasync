@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { Activity, AlertCircle, Bell, Edit3, Filter, Moon, Pause, Play, Plus, Power, RefreshCw, Trash2 } from 'lucide-react';
 
 import { PageLayout } from '@/components/layout';
 import {
@@ -11,10 +12,12 @@ import {
   Select,
   PanelTitle,
   Text,
+  Icon,
   EditableText,
   ConfirmDialog,
   useSortToggle,
   type Column,
+  type MobileDataTablePresentation,
 } from '@/components/ui';
 import { OperationalBrief, DataProvenanceBadge, MetricBar, SeverityBadge, type StatMetric } from '@/components/data-display';
 import {
@@ -50,29 +53,14 @@ import {
   useSaveAlertRule,
 } from '@/api/hooks/useNotifications';
 import type { AlertRule, AlertRuleKind } from '@/api/types';
-import { Icons } from '@/lib/icons';
-import { normalizeSeverity, chartTokens } from '@/lib/tokens';
+import { normalizeSeverity, gaugeTone, severityTokens, typography } from '@/lib/tokens';
+import { cn } from '@/lib/cn';
 
 import { AlertRuleEditor } from '../components/AlertRuleEditor';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { useOperationalMetrics } from '@/hooks/useOperationalMetrics';
 
 /* ─── Constants ──────────────────────────────────────────── */
-
-/** Semantic severity colours for the distribution donut + legend. Mirrors the
- *  `severityTokens` dot hues so the chart reads consistently with the badges. */
-const SEVERITY_COLORS: Record<'info' | 'warn' | 'critical', string> = {
-  info: '#38bdf8',
-  warn: '#f59e0b',
-  critical: '#ef4444',
-};
-
-/** Colours for the status-breakdown bars (enabled / disabled / snoozed). */
-const STATUS_COLORS = {
-  enabled: '#10b981',
-  disabled: '#f59e0b',
-  snoozed: '#8b5cf6',
-} as const;
 
 /** Rank used by the sortable severity column (critical sorts last → first when desc). */
 const SEVERITY_RANK: Record<string, number> = {
@@ -111,12 +99,12 @@ export function isSnoozed(r: AlertRule, now: number): boolean {
 export default function AlertRulesPage() {
   const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
-  const kindLabels: Record<AlertRuleKind, string> = {
+  const kindLabels = useMemo<Record<AlertRuleKind, string>>(() => ({
     signal: t('alertRules.kind.signal', 'Signal'),
     computed_metric: t('alertRules.kind.metric', 'Metric'),
     system_component: t('alertRules.kind.system', 'System service'),
     place: t('alertRules.kind.place', 'Place event'),
-  };
+  }), [t]);
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const editIdParam = searchParams.get('rule');
@@ -137,6 +125,7 @@ export default function AlertRulesPage() {
   const isError = error != null;
   const rules: AlertRule[] = useMemo(() => rulesRaw ?? [], [rulesRaw]);
   const channelsQuery = useNotificationChannels();
+  const channelsState = useDataState(channelsQuery);
   const channels = useMemo(() => channelsQuery.data ?? [], [channelsQuery.data]);
   const [search, setSearch] = useState('');
   const [channelFilter, setChannelFilter] = useState('');
@@ -194,15 +183,15 @@ export default function AlertRulesPage() {
         ] as const
       )
         .filter((s) => s.value > 0)
-        .map((s) => ({ ...s, color: SEVERITY_COLORS[s.key] })),
+        .map((s) => ({ ...s, color: gaugeTone[s.key === 'critical' ? 'danger' : s.key === 'warn' ? 'warning' : 'info'] })),
     [stats.critical, stats.warn, stats.info, t],
   );
 
   const statusRows = useMemo(
     () => [
-      { key: 'enabled', label: t('common.enabled', 'Enabled'), value: stats.enabled, color: STATUS_COLORS.enabled },
-      { key: 'disabled', label: t('common.disabled', 'Disabled'), value: stats.disabled, color: STATUS_COLORS.disabled },
-      { key: 'snoozed', label: t('alertRules.status.snoozed', 'Snoozed'), value: stats.snoozed, color: STATUS_COLORS.snoozed },
+      { key: 'enabled', label: t('common.enabled', 'Enabled'), value: stats.enabled, color: gaugeTone.success },
+      { key: 'disabled', label: t('common.disabled', 'Disabled'), value: stats.disabled, color: gaugeTone.neutral },
+      { key: 'snoozed', label: t('alertRules.status.snoozed', 'Snoozed'), value: stats.snoozed, color: gaugeTone.warning },
     ],
     [stats.enabled, stats.disabled, stats.snoozed, t],
   );
@@ -212,10 +201,10 @@ export default function AlertRulesPage() {
       Array.from(stats.bySignal.entries())
         .sort((a, b) => b[1] - a[1])
         .slice(0, 6)
-        .map(([name, count], i) => ({
+        .map(([name, count]) => ({
           name,
           count,
-          color: chartTokens.series[i % chartTokens.series.length],
+          color: gaugeTone.neutral,
         })),
     [stats.bySignal],
   );
@@ -309,7 +298,9 @@ export default function AlertRulesPage() {
           <Button
             variant="secondary"
             size="sm"
-            icon={<Icons.play className="h-4 w-4" aria-hidden="true" />}
+            className="min-h-11 min-w-11 md:min-h-9 md:min-w-0"
+            wrapLabel
+            icon={<Icon icon={Play} />}
             loading={bulkEnable.isPending}
             onClick={() => handleBulkEnable(ids)}
           >
@@ -318,7 +309,9 @@ export default function AlertRulesPage() {
           <Button
             variant="secondary"
             size="sm"
-            icon={<Icons.pause className="h-4 w-4" aria-hidden="true" />}
+            className="min-h-11 min-w-11 md:min-h-9 md:min-w-0"
+            wrapLabel
+            icon={<Icon icon={Pause} />}
             loading={bulkDisable.isPending}
             onClick={() => handleBulkDisable(ids)}
           >
@@ -327,7 +320,9 @@ export default function AlertRulesPage() {
           <Button
             variant="danger"
             size="sm"
-            icon={<Icons.delete className="h-4 w-4" aria-hidden="true" />}
+            className="min-h-11 min-w-11 md:min-h-9 md:min-w-0"
+            wrapLabel
+            icon={<Icon icon={Trash2} />}
             onClick={() => handleBulkDelete(ids)}
           >
             {t('alertRules.bulk.delete', 'Delete')}
@@ -359,19 +354,21 @@ export default function AlertRulesPage() {
               await saveRule.mutateAsync({ id: r.id, name: next });
             }}
             display={({ value, onStartEdit }) => (
-              <span className="inline-flex items-center gap-2">
+              <span className="inline-flex min-w-0 max-w-full items-center gap-2">
                 <Link
                   to={`/notifications/rules?rule=${r.id}`}
-                  className="font-medium text-cyan-300 underline-offset-2 hover:underline"
+                  className={cn(typography.weight.medium, typography.color.primary,
+                    'min-w-0 break-words underline underline-offset-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus-ring)]')}
                 >
                   {value}
                 </Link>
                 <Button
                   variant="ghost"
                   size="sm"
+                  className="min-h-11 min-w-11 shrink-0 md:min-h-9 md:min-w-0"
                   onClick={onStartEdit}
                   aria-label={t('editableText.rename.alertRule', 'Rename alert rule {{name}}', { name: r.name })}
-                  icon={<Icons.edit className="h-3.5 w-3.5" aria-hidden="true" />}
+                  icon={<Icon icon={Edit3} size="sm" />}
                 />
               </span>
             )}
@@ -463,25 +460,50 @@ export default function AlertRulesPage() {
         ),
       },
     ],
-    [t, saveRule],
+    [t, saveRule, kindLabels],
   );
+
+  const mobilePresentation = useMemo<MobileDataTablePresentation<AlertRule>>(() => ({
+    roles: { name: 'title', signal_name: 'primary', kind: 'meta', scope: 'meta', severity: 'meta', status: 'badge' },
+    displayValue: (rule, key) => {
+      switch (key) {
+        case 'name': return rule.name;
+        case 'kind': return kindLabels[rule.kind ?? 'signal'];
+        case 'signal_name': return subjectOf(rule);
+        case 'severity': return t(`severity.${normalizeSeverity(rule.severity)}`, rule.severity);
+        case 'scope': return rule.all_vehicles
+          ? t('alertRules.scope.all', 'All vehicles')
+          : rule.vehicle_ids?.length
+            ? t('alertRules.scope.count', '{{count}} vehicles', { count: rule.vehicle_ids.length })
+            : t('alertRules.scope.none', '—');
+        case 'status': return isSnoozed(rule, Date.now())
+          ? t('alertRules.status.snoozed', 'Snoozed')
+          : rule.enabled ? t('common.enabled', 'Enabled') : t('common.disabled', 'Disabled');
+        default: return null;
+      }
+    },
+    inlineActions: (rule) => columns[0].render(rule),
+  }), [columns, kindLabels, t]);
 
   /* ─── Header actions ─── */
   const secondaryActions = (
     <Button
       variant="ghost"
       size="sm"
+      className="min-h-11 min-w-11 md:min-h-9 md:min-w-0"
       onClick={() => refetch()}
       aria-label={t('common.refresh', 'Refresh')}
-      icon={<Icons.refresh className="h-4 w-4" aria-hidden="true" />}
+      icon={<Icon icon={RefreshCw} />}
     />
   );
   const primaryAction = (
     <Button
       variant="primary"
       size="sm"
+      className="min-h-11 min-w-11 md:min-h-9 md:min-w-0"
+      wrapLabel
       onClick={() => navigate('/notifications/studio')}
-      icon={<Icons.add className="h-4 w-4" aria-hidden="true" />}
+      icon={<Icon icon={Plus} />}
     >
       {t('alertRules.openStudio', 'Create rule')}
     </Button>
@@ -489,17 +511,17 @@ export default function AlertRulesPage() {
   const ruleProvenance = t('alertRules.brief.provenance', 'Counts cover the loaded rule set before search and channel filtering. Snoozed rules can overlap enabled or disabled rules; snooze status uses the current browser time.');
   const metrics: StatMetric[] = [
     { metricId: 'count', occurrenceId: 'rules-total', rawValue: rulesState.hasData ? stats.total : null,
-      label: t('alertRules.kpi.total', 'Total rules'), context: <Icons.notifications className="h-5 w-5" aria-hidden="true" /> },
+      label: t('alertRules.kpi.total', 'Total rules'), context: <Icon icon={Bell} size="lg" /> },
     { metricId: 'count', occurrenceId: 'rules-enabled', rawValue: rulesState.hasData ? stats.enabled : null,
-      label: t('common.enabled', 'Enabled'), context: <Icons.power className="h-5 w-5" aria-hidden="true" /> },
+      label: t('common.enabled', 'Enabled'), context: <Icon icon={Power} size="lg" /> },
     { metricId: 'count', occurrenceId: 'rules-disabled', rawValue: rulesState.hasData ? stats.disabled : null,
-      label: t('common.disabled', 'Disabled'), context: <Icons.pause className="h-5 w-5" aria-hidden="true" /> },
+      label: t('common.disabled', 'Disabled'), context: <Icon icon={Pause} size="lg" /> },
     { metricId: 'count', occurrenceId: 'rules-critical', rawValue: rulesState.hasData ? stats.critical : null,
-      label: t('severity.critical', 'Critical'), context: <Icons.alertCircle className="h-5 w-5" aria-hidden="true" /> },
+      label: t('severity.critical', 'Critical'), context: <Icon icon={AlertCircle} size="lg" /> },
     { metricId: 'count', occurrenceId: 'rules-snoozed', rawValue: rulesState.hasData ? stats.snoozed : null,
-      label: t('alertRules.status.snoozed', 'Snoozed'), context: <Icons.moon className="h-5 w-5" aria-hidden="true" /> },
+      label: t('alertRules.status.snoozed', 'Snoozed'), context: <Icon icon={Moon} size="lg" /> },
     { metricId: 'count', occurrenceId: 'rules-computed', rawValue: rulesState.hasData ? stats.computed : null,
-      label: t('alertRules.kpi.computed', 'Computed'), context: <Icons.activity className="h-5 w-5" aria-hidden="true" /> },
+      label: t('alertRules.kpi.computed', 'Computed'), context: <Icon icon={Activity} size="lg" /> },
   ];
   const operationalMetrics = useOperationalMetrics(metrics);
 
@@ -583,7 +605,7 @@ export default function AlertRulesPage() {
           {/* Severity distribution donut */}
           <GlassPanel className="p-4 sm:p-5">
             <PanelTitle className="mb-3 flex items-center gap-2">
-              <Icons.alertCircle className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+              <Icon icon={AlertCircle} className={typography.color.secondary} />
               {t('alertRules.insights.severity', 'Severity distribution')}
             </PanelTitle>
             {isLoading ? (
@@ -592,7 +614,7 @@ export default function AlertRulesPage() {
               <QueryError error={error} onRetry={() => refetch()} />
             ) : severitySegments.length === 0 ? (
               <EmptyState
-                icon={<Icons.alertCircle className="h-8 w-8" />}
+                icon={<Icon icon={AlertCircle} size="xl" />}
                 message={t('alertRules.insights.noSeverity', 'No rules to summarise yet')}
                 actionTo={{ label: t('alertRules.empty.cta', 'Create rule'), to: '/notifications/studio' }}
               />
@@ -638,8 +660,8 @@ export default function AlertRulesPage() {
                   {severitySegments.map((seg) => (
                     <div key={seg.key} className="flex items-center gap-1.5">
                       <span
-                        className="inline-block h-2.5 w-2.5 rounded-full"
-                        style={{ backgroundColor: seg.color }}
+                        aria-hidden="true"
+                        className={cn('inline-block h-2.5 w-2.5 rounded-full', severityTokens[seg.key].dot)}
                       />
                       <Text variant="bodySm">
                         {seg.label} · {fmtInt(seg.value)}
@@ -654,7 +676,7 @@ export default function AlertRulesPage() {
           {/* Status breakdown */}
           <GlassPanel className="p-4 sm:p-5">
             <PanelTitle className="mb-3 flex items-center gap-2">
-              <Icons.power className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+              <Icon icon={Power} className={typography.color.secondary} />
               {t('alertRules.insights.status', 'Status breakdown')}
             </PanelTitle>
             {isLoading ? (
@@ -663,7 +685,7 @@ export default function AlertRulesPage() {
               <QueryError error={error} onRetry={() => refetch()} />
             ) : stats.total === 0 ? (
               <EmptyState
-                icon={<Icons.power className="h-8 w-8" />}
+                icon={<Icon icon={Power} size="xl" />}
                 message={t('alertRules.insights.noStatus', 'No rules to summarise yet')}
                 actionTo={{ label: t('alertRules.empty.cta', 'Create rule'), to: '/notifications/studio' }}
               />
@@ -676,6 +698,8 @@ export default function AlertRulesPage() {
                     value={row.value}
                     max={stats.total}
                     color={row.color}
+                    fill="solid"
+                    size="slim"
                     sublabel={fmtInt(row.value)}
                   />
                 ))}
@@ -686,7 +710,7 @@ export default function AlertRulesPage() {
           {/* Top signals */}
           <GlassPanel className="p-4 sm:p-5 md:col-span-2 xl:col-span-1">
             <PanelTitle className="mb-3 flex items-center gap-2">
-              <Icons.filter className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+              <Icon icon={Filter} className={typography.color.secondary} />
               {t('alertRules.insights.topSignals', 'Top monitored signals')}
             </PanelTitle>
             {isLoading ? (
@@ -695,7 +719,7 @@ export default function AlertRulesPage() {
               <QueryError error={error} onRetry={() => refetch()} />
             ) : topSignals.length === 0 ? (
               <EmptyState
-                icon={<Icons.filter className="h-8 w-8" />}
+                icon={<Icon icon={Filter} size="xl" />}
                 message={t('alertRules.insights.noSignals', 'No monitored signals yet')}
                 actionTo={{ label: t('alertRules.empty.cta', 'Create rule'), to: '/notifications/studio' }}
               />
@@ -708,6 +732,8 @@ export default function AlertRulesPage() {
                     value={sig.count}
                     max={maxSignalCount}
                     color={sig.color}
+                    fill="solid"
+                    size="slim"
                     sublabel={fmtInt(sig.count)}
                   />
                 ))}
@@ -721,7 +747,7 @@ export default function AlertRulesPage() {
       <FadeIn delay={0.2}>
         <GlassPanel className="p-4 sm:p-5">
           <PanelTitle className="mb-3 flex items-center gap-2">
-            <Icons.notifications className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+            <Icon icon={Bell} className={typography.color.secondary} />
             {t('alertRules.table.title', 'All rules')}
           </PanelTitle>
           {rules.length > 0 && (
@@ -736,7 +762,7 @@ export default function AlertRulesPage() {
                 aria-label={t('alertPacks.channelFilter', 'Filter by notification channel')}
                 value={channelFilter}
                 onChange={(event) => setChannelFilter(event.target.value)}
-                disabled={channelsQuery.isLoading || channelsQuery.isError}
+                disabled={!channelsState.hasData}
                 options={[
                   { value: '', label: t('alertPacks.filterAllChannels', 'All channels') },
                   { value: 'all', label: t('alertPacks.filterAutomatic', 'Automatic routing') },
@@ -746,8 +772,9 @@ export default function AlertRulesPage() {
               />
             </div>
           )}
-          {channelsQuery.isError && (
-            <QueryError error={channelsQuery.error} onRetry={() => channelsQuery.refetch()} />
+          <StaleRefreshWarning state={channelsState} label={t('alertPacks.channelFilter', 'Filter by notification channel')} />
+          {channelsState.fatalError && (
+            <QueryError error={channelsState.fatalError} onRetry={() => channelsQuery.refetch()} />
           )}
           {isLoading ? (
             <div className="space-y-2">
@@ -784,6 +811,7 @@ export default function AlertRulesPage() {
               sortDir={sortDir}
               onSort={onSort}
               mobileColumns={['name', 'severity', 'status']}
+              mobilePresentation={mobilePresentation}
               columnVisibility
               columnReorder
               resizable
