@@ -3,7 +3,7 @@ import { Download } from 'lucide-react';
 
 import { useOutageAutobiography, useSessionCertificate } from '@/api/hooks/useTeslaPhysics';
 import { Badge, Button, GlassPanel, PanelTitle, Text } from '@/components/ui';
-import { QueryError, StaleRefreshWarning } from '@/components/feedback';
+import { EmptyState, QueryError, StaleRefreshWarning } from '@/components/feedback';
 import { PageLayout, SourceContent } from '@/components/layout';
 
 import { useDataState } from '@/hooks/useDataState';
@@ -26,6 +26,19 @@ export default function OutageAutobiographyPage() {
   const state = useDataState(outageQuery, { provenance: 'live' });
   const certificateState = useDataState(certificateQuery, { provenance: 'historical' });
   const outage = state.data;
+  const vehiclePrerequisite = vehicleId == null
+    ? t('system.outage.selectVehicle', 'Choose a vehicle in the header to view outage evidence and its session certificate.')
+    : undefined;
+  const unresolvedMessage = t('system.outage.awaitingSource', 'This source has not resolved yet; missing evidence is not a confirmed empty result.');
+  const pausedMessage = t('system.outage.pausedSource', 'Waiting for a connection before this source can load. Missing evidence remains unknown.');
+  // A disabled or paused query has not established an authoritative empty result.
+  const outageEmptyContext = vehiclePrerequisite ?? (!state.hasData
+    ? state.isRefreshBlocked ? pausedMessage : !outageQuery.isSuccess ? unresolvedMessage : undefined
+    : undefined);
+  const certificateEmptyContext = vehiclePrerequisite ?? (!certificateState.hasData
+    ? certificateState.isRefreshBlocked ? pausedMessage : !certificateQuery.isSuccess ? unresolvedMessage : undefined
+    : undefined);
+  const notes = outage?.notes ?? [];
 
   return (
     <PageLayout
@@ -35,6 +48,8 @@ export default function OutageAutobiographyPage() {
         <Button
           variant="secondary"
           size="sm"
+          wrapLabel
+          className="min-h-11 max-w-full md:min-h-9"
           disabled={!certificateQuery.data}
           onClick={() => {
             if (!certificateQuery.data) return;
@@ -55,7 +70,12 @@ export default function OutageAutobiographyPage() {
           ? t('system.outage.unknownSince', 'Unknown since {{when}} — a gap is not a measured zero.', { when: formatDateTime(outage.unknown_since) })
           : t('system.outage.brief.scope', 'Selected vehicle outage evidence; no fixed reporting window is supplied.')}
         freshness={outage?.last_telemetry_at ? formatDateTime(outage.last_telemetry_at) : undefined}
-        available={state.hasData} loading={outageQuery.isLoading && !state.hasData} retained={state.hasData && outageQuery.isError}
+        available={state.hasData}
+        loading={vehicleId != null && outageQuery.isLoading && !state.hasData && !state.isRefreshBlocked}
+        retained={state.hasData && state.status === 'stale'}
+        statusLabel={vehiclePrerequisite ?? (state.isRefreshBlocked
+          ? t('system.outage.refreshPaused', 'Connection paused; source freshness is not confirmed.')
+          : state.fatalError ? t('system.outage.loadError', 'Unable to load outage evidence.') : undefined)}
         metrics={[{ metricId: 'duration', occurrenceId: 'gap', rawValue: outage?.gap_s,
           label: t('system.outage.brief.gapLabel', 'Telemetry gap'),
           context: outage?.gap_s != null ? t('system.outage.gap', 'Gap {{minutes}} min', { minutes: fmtNumber(outage.gap_s / 60) }) : undefined,
@@ -75,40 +95,47 @@ export default function OutageAutobiographyPage() {
             })} · {t('system.outage.brief.timestampContext', 'Original event time; a missing timestamp does not imply zero traffic.')}</> },
         ]}
       />
-        <GlassPanel className="space-y-3 p-4 sm:p-5">
+      <GlassPanel className="min-w-0 space-y-3 p-4 sm:p-5">
+        <PanelTitle>{t('system.outage.evidenceTitle', 'Outage evidence')}</PanelTitle>
           <SourceContent
-            state={state.fatalError ? 'error' : outageQuery.isLoading && !outage ? 'loading' : !outage ? 'empty' : 'ready'}
+            state={state.fatalError ? 'error' : !outage && (vehiclePrerequisite || state.isRefreshBlocked) ? 'empty' : outageQuery.isLoading && !outage ? 'loading' : !outage ? 'empty' : 'ready'}
             label={t('system.outage.title', 'Outage autobiography')}
             emptyMessage={t('system.outage.empty', 'No outage evidence has been recorded for this vehicle yet.')}
             errorMessage={t('system.outage.loadError', 'Unable to load outage evidence.')}
+            emptyContent={outageEmptyContext ? <EmptyState message={outageEmptyContext} /> : undefined}
             error={state.fatalError}
             errorRecovery={{ onRetry: () => { void outageQuery.refetch(); } }}
           >
           {outage ? <>
-          <div className="flex flex-wrap gap-2">
-            {outage.replay_preserves_event_time ? (
+          {outage.replay_preserves_event_time ? (
+            <div className="flex flex-wrap gap-2">
               <Badge variant="info" size="sm">{t('system.outage.replay', 'Replay keeps event time')}</Badge>
-            ) : null}
-          </div>
-          <ul className="list-disc space-y-1 ps-5">
-            {(outage.notes ?? []).map((note) => (
-              <li key={note}><Text as="span" variant="caption">{note}</Text></li>
-            ))}
-          </ul>
+            </div>
+          ) : null}
+          {notes.length > 0 ? (
+            <ul className="list-disc space-y-1 break-words ps-5">
+              {notes.map((note) => (
+                <li key={note}><Text as="span" variant="caption">{note}</Text></li>
+              ))}
+            </ul>
+          ) : !outage.replay_preserves_event_time ? (
+            <EmptyState message={t('system.outage.detailsUnavailable', 'No replay assurance or outage notes were supplied. Missing details do not establish zero incidents.')} />
+          ) : null}
           </> : null}
           </SourceContent>
         </GlassPanel>
-      <GlassPanel className="space-y-3 p-4 sm:p-5">
+      <GlassPanel className="min-w-0 space-y-3 p-4 sm:p-5">
         <PanelTitle>{t('system.outage.certificate', 'Session certificate')}</PanelTitle>
         <StaleRefreshWarning state={certificateState} label={t('system.outage.certificate', 'Session certificate')} />
         {certificateState.fatalError ? (
           <QueryError error={certificateState.fatalError} onRetry={() => { void certificateQuery.refetch(); }} />
         ) : (
           <SourceContent
-            state={certificateQuery.isLoading && !certificateState.hasData ? 'loading' : certificateState.hasData ? 'ready' : 'empty'}
+            state={certificateState.hasData ? 'ready' : vehiclePrerequisite || certificateState.isRefreshBlocked ? 'empty' : certificateQuery.isLoading ? 'loading' : 'empty'}
             label={t('system.outage.certificate', 'Session certificate')}
             emptyMessage={t('system.outage.certificateEmpty', 'A session certificate is not available for this vehicle yet.')}
             errorMessage={t('system.outage.certificateError', 'Unable to load the session certificate.')}
+            emptyContent={certificateEmptyContext ? <EmptyState message={certificateEmptyContext} /> : undefined}
           >
             <Text as="p" variant="bodySm">
               {t('system.outage.certificateReady', 'The session certificate is available for download with its original evidence intact.')}

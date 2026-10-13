@@ -3,6 +3,14 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
 
 import type { OutageAutobiography, SessionCertificate } from '@/types/teslaPhysics';
+import { downloadJSON, defaultExportFilename } from '@/lib/csvExport';
+import { formatDateTime } from '@/lib/dateFormat';
+
+const selected = vi.hoisted(() => ({ vehicleId: 7 as number | null }));
+vi.mock('@/lib/csvExport', async importOriginal => ({
+  ...await importOriginal<typeof import('@/lib/csvExport')>(),
+  downloadJSON: vi.fn(),
+}));
 vi.mock('@/hooks/useSettings', async importOriginal => ({
   ...await importOriginal<typeof import('@/hooks/useSettings')>(),
   useSettings: () => ({ settings: { locale: 'en-US', decimal_precision: 2, currency_symbol: '$' }, settingsUnavailable: false }),
@@ -20,7 +28,7 @@ vi.mock('react-i18next', () => ({
 
 vi.mock('@/hooks/usePageTitle', () => ({ usePageTitle: () => undefined }));
 vi.mock('@/hooks/useSelectedVehicle', () => ({
-  useSelectedVehicle: () => ({ vehicleId: 7 }),
+  useSelectedVehicle: () => ({ vehicleId: selected.vehicleId }),
 }));
 vi.mock('@/components/forms', () => ({
   VehicleSelect: () => <div data-testid="vehicle-select" />,
@@ -71,8 +79,8 @@ function queryStub<T>(data: T) {
 }
 
 vi.mock('@/api/hooks/useTeslaPhysics', () => ({
-  useOutageAutobiography: () => sources.outage(),
-  useSessionCertificate: () => sources.certificate(),
+  useOutageAutobiography: (vehicleId: string | undefined) => sources.outage(vehicleId),
+  useSessionCertificate: (vehicleId: string | undefined) => sources.certificate(vehicleId),
 }));
 
 import OutageAutobiographyPage from './OutageAutobiographyPage';
@@ -83,6 +91,10 @@ function renderPage() {
 
 describe('OutageAutobiographyPage', () => {
   beforeEach(() => {
+    selected.vehicleId = 7;
+    vi.mocked(downloadJSON).mockClear();
+    sources.outage.mockClear();
+    sources.certificate.mockClear();
     sources.outage.mockReturnValue(queryStub(outage));
     sources.certificate.mockReturnValue(queryStub(certificate));
   });
@@ -129,5 +141,116 @@ describe('OutageAutobiographyPage', () => {
     expect(screen.getByRole('button', { name: 'Session certificate' })).toBeEnabled();
     expect(screen.getAllByTestId('stale-refresh-warning')).toHaveLength(2);
     expect(within(screen.getAllByTestId('stale-refresh-warning')[0]!).getByText('Outage autobiography may be out of date')).toBeInTheDocument();
+  });
+});
+
+
+describe('OutageAutobiographyPage contract states', () => {
+  beforeEach(() => {
+    selected.vehicleId = 7;
+    sources.outage.mockClear();
+    sources.certificate.mockClear();
+    vi.mocked(downloadJSON).mockClear();
+    sources.outage.mockReturnValue(queryStub(outage));
+    sources.certificate.mockReturnValue(queryStub(certificate));
+  });
+
+  it('keeps both source sections and directs missing selection to the header', () => {
+    selected.vehicleId = null;
+    sources.outage.mockReturnValue({ ...queryStub(undefined), isPending: true, isSuccess: false });
+    sources.certificate.mockReturnValue({ ...queryStub(undefined), isPending: true, isSuccess: false });
+    renderPage();
+    expect(screen.getByRole('heading', { name: 'Outage evidence' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Session certificate' })).toBeInTheDocument();
+    expect(screen.getAllByText('Choose a vehicle in the header to view outage evidence and its session certificate.').length).toBeGreaterThanOrEqual(2);
+    expect(screen.queryByText('No outage evidence has been recorded for this vehicle yet.')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Session certificate' })).toBeDisabled();
+    expect(sources.outage).toHaveBeenCalledWith(undefined);
+    expect(sources.certificate).toHaveBeenCalledWith(undefined);
+  });
+
+  it('keeps initial paused sources unknown rather than claiming empty evidence', () => {
+    const paused = { ...queryStub(undefined), isPending: true, isSuccess: false, fetchStatus: 'paused' as const };
+    sources.outage.mockReturnValue(paused);
+    sources.certificate.mockReturnValue(paused);
+    renderPage();
+    expect(screen.getAllByText('Waiting for a connection before this source can load. Missing evidence remains unknown.')).toHaveLength(2);
+    expect(screen.queryByText('No outage evidence has been recorded for this vehicle yet.')).not.toBeInTheDocument();
+    expect(screen.queryByText('A session certificate is not available for this vehicle yet.')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Retry' })).not.toBeInTheDocument();
+  });
+
+  it('labels paused retained evidence honestly without losing notes or the certificate', () => {
+    sources.outage.mockReturnValue({ ...queryStub(outage), fetchStatus: 'paused' as const });
+    sources.certificate.mockReturnValue({ ...queryStub(certificate), fetchStatus: 'paused' as const });
+    renderPage();
+    expect(screen.getByText('Retained source · Connection paused; source freshness is not confirmed.')).toBeInTheDocument();
+    expect(screen.getByText(outage.notes[0])).toBeInTheDocument();
+    expect(screen.getAllByTestId('stale-refresh-warning')).toHaveLength(2);
+    expect(screen.getByRole('button', { name: 'Session certificate' })).toBeEnabled();
+  });
+
+  it('explains missing details without inventing replay failure or zero incidents', () => {
+    sources.outage.mockReturnValue(queryStub({ ...outage, replay_preserves_event_time: false, notes: [] }));
+    renderPage();
+    expect(screen.getByRole('heading', { name: 'Outage evidence' })).toBeInTheDocument();
+    expect(screen.getByText('No replay assurance or outage notes were supplied. Missing details do not establish zero incidents.')).toBeInTheDocument();
+    expect(screen.queryByText('Replay keeps event time')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Session certificate' })).toBeEnabled();
+  });
+
+  it('isolates outage failure and retry from the available certificate', () => {
+    const retry = vi.fn();
+    sources.outage.mockReturnValue({ ...queryStub(undefined), error: new Error('outage unavailable'), isError: true, isSuccess: false, refetch: retry });
+    renderPage();
+    expect(screen.getAllByText(/Unable to load outage evidence/).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByRole('heading', { name: 'Outage evidence' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Session certificate' })).toBeEnabled();
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    expect(retry).toHaveBeenCalledOnce();
+  });
+
+  it('keeps each source loading independently without displaying confirmed empty copy', () => {
+    sources.outage.mockReturnValue({ ...queryStub(undefined), isPending: true, isLoading: true, isSuccess: false, fetchStatus: 'fetching' as const });
+    renderPage();
+    expect(screen.getByRole('status', { name: 'Loading Outage autobiography' })).toBeInTheDocument();
+    expect(screen.getByText('The session certificate is available for download with its original evidence intact.')).toBeInTheDocument();
+    expect(screen.queryByText('No outage evidence has been recorded for this vehicle yet.')).not.toBeInTheDocument();
+  });
+
+  it('distinguishes an unresolved idle source from a resolved empty source', () => {
+    sources.outage.mockReturnValue({ ...queryStub(undefined), isSuccess: false });
+    sources.certificate.mockReturnValue(queryStub(undefined));
+    renderPage();
+    expect(screen.getByText('This source has not resolved yet; missing evidence is not a confirmed empty result.')).toBeInTheDocument();
+    expect(screen.getByText('A session certificate is not available for this vehicle yet.')).toBeInTheDocument();
+  });
+
+  it.each([true, false])('keeps confirmed MQTT %s distinct from unknown and preserves measured zero', connected => {
+    sources.outage.mockReturnValue(queryStub({ ...outage, mqtt_connected: connected, gap_s: 0 }));
+    renderPage();
+    expect(screen.getByText(connected ? 'MQTT connected' : 'MQTT not connected')).toBeInTheDocument();
+    expect(screen.queryByText('MQTT state unknown')).not.toBeInTheDocument();
+    expect(screen.getByText('Gap 0 min')).toBeInTheDocument();
+  });
+
+  it('exports the original certificate payload and retains a wrapping mobile action', () => {
+    renderPage();
+    const button = screen.getByRole('button', { name: 'Session certificate' });
+    expect(button).toHaveClass('min-h-11', 'md:min-h-9', 'whitespace-normal', 'max-w-full');
+    fireEvent.click(button);
+    expect(downloadJSON).toHaveBeenCalledExactlyOnceWith(defaultExportFilename('session-certificate'), certificate);
+    expect(vi.mocked(downloadJSON).mock.calls[0]?.[1]).toBe(certificate);
+    expect(sources.outage).toHaveBeenCalledWith('7');
+    expect(sources.certificate).toHaveBeenCalledWith('7');
+  });
+
+  it('retains display-time formatting and original event timestamps', () => {
+    renderPage();
+    expect(screen.getAllByText(formatDateTime(outage.last_telemetry_at!)).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByText(/Original event time; a missing timestamp does not imply zero traffic/)).toBeInTheDocument();
+    expect(screen.getByText(outage.notes[0])).toBeInTheDocument();
+    expect(outage.gap_s).toBe(600);
+    expect(certificate.integrity_sha256).toBe('abc');
   });
 });
