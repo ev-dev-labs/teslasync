@@ -1,8 +1,8 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type ComponentProps } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useSleepEfficiency } from '@/api/hooks/useEnergy';
-import { AlertBanner, StaleRefreshWarning } from '@/components/feedback';
+import { AlertBanner, SectionErrorBoundary, StaleRefreshWarning } from '@/components/feedback';
 import { Button, HelpTooltip } from '@/components/ui';
 import { CardGrid, PageLayout } from '@/components/layout';
 import { useDataState } from '@/hooks/useDataState';
@@ -98,6 +98,28 @@ export default function SleepEfficiencyPage() {
     },
   };
   const common = { analysis, state: queryState };
+  const sections: ComponentProps<typeof CardGrid>['items'] = [
+    { id: 'evidence', size: 'full', content: <SleepEvidenceOverview {...common} /> },
+    { id: 'transition-destinations', size: 'half', content: <TransitionDestinationChart {...common} /> },
+    { id: 'transition-composition', size: 'half', content: <TransitionCompositionPanel {...common} /> },
+    { id: 'dwell-duration', size: 'half', content: <DwellDurationChart {...common} /> },
+    { id: 'efficiency-diagnostics', size: 'half', content: <SleepEfficiencyDiagnostics {...common} /> },
+    { id: 'transition-diversity', size: 'half', content: <TransitionDiversityDiagnostics {...common} /> },
+    { id: 'sentry-comparison', size: 'half', content: <SentryComparisonChart {...common} /> },
+    { id: 'state-directory', size: 'full', content: <StateEvidenceDirectory {...common} /> },
+    {
+      id: 'sentry-projection', size: 'half',
+      content: <SentryProjectionContext {...common} formatCurrency={formatCurrency} formatEnergy={formatEnergy} />,
+    },
+    { id: 'drain-profile', size: 'half', content: <DrainEventProfile {...common} /> },
+    {
+      id: 'event-directory', size: 'full',
+      content: <DrainEventDirectory {...common} formatTemperature={formatTemperature} />,
+    },
+    { id: 'availability', size: 'full', content: <DataAvailabilityMatrix {...common} /> },
+    { id: 'range-coverage', size: 'full', content: <RangeSourceCoverage {...common} /> },
+    { id: 'methodology', size: 'full', content: <SleepMethodologyPanel {...common} /> },
+  ];
 
   return (
     <PageLayout
@@ -138,64 +160,30 @@ export default function SleepEfficiencyPage() {
             'sleep.modernization.states.initialPaused',
             'Sleep evidence has not loaded because the request is paused. No drain or sleep-health conclusion is available.',
           )}
-          <Button variant="ghost" size="sm" onClick={queryState.onRetry}>
+          <Button
+            variant="ghost"
+            size="sm"
+            wrapLabel
+            className="min-h-11 md:min-h-9"
+            onClick={queryState.onRetry}
+          >
             {t('common.refresh', 'Refresh')}
           </Button>
         </AlertBanner>
       )}
 
-      {/* Stable source order, measured allocated width, no replacement controller.
-          Real specialist ChartContainers retain export/fullscreen/annotations. */}
       <CardGrid
         label={t('sleep.modernization.layout.evidence', 'Sleep evidence sections')}
-        items={[
-          { id: 'evidence', size: 'full', content: (
-            <SleepSectionPlacement><SleepEvidenceOverview {...common} /></SleepSectionPlacement>
-          ) },
-          { id: 'transition-destinations', size: 'half', content: (
-            <SleepSectionPlacement delay={0.04}><TransitionDestinationChart {...common} /></SleepSectionPlacement>
-          ) },
-          { id: 'transition-composition', size: 'half', content: (
-            <SleepSectionPlacement delay={0.04}><TransitionCompositionPanel {...common} /></SleepSectionPlacement>
-          ) },
-          { id: 'dwell-duration', size: 'half', content: (
-            <SleepSectionPlacement delay={0.08}><DwellDurationChart {...common} /></SleepSectionPlacement>
-          ) },
-          { id: 'efficiency-diagnostics', size: 'half', content: (
-            <SleepSectionPlacement delay={0.08}><SleepEfficiencyDiagnostics {...common} /></SleepSectionPlacement>
-          ) },
-          { id: 'transition-diversity', size: 'half', content: (
-            <SleepSectionPlacement delay={0.12}><TransitionDiversityDiagnostics {...common} /></SleepSectionPlacement>
-          ) },
-          { id: 'sentry-comparison', size: 'half', content: (
-            <SleepSectionPlacement delay={0.12}><SentryComparisonChart {...common} /></SleepSectionPlacement>
-          ) },
-          { id: 'state-directory', size: 'full', content: (
-            <SleepSectionPlacement delay={0.16}><StateEvidenceDirectory {...common} /></SleepSectionPlacement>
-          ) },
-          { id: 'sentry-projection', size: 'half', content: (
-            <SleepSectionPlacement delay={0.2}>
-              <SentryProjectionContext {...common} formatCurrency={formatCurrency} formatEnergy={formatEnergy} />
+        items={sections.map((section) => ({
+          ...section,
+          content: (
+            <SleepSectionPlacement>
+              <SectionErrorBoundary name={`SleepEfficiency:${section.id}`}>
+                {section.content}
+              </SectionErrorBoundary>
             </SleepSectionPlacement>
-          ) },
-          { id: 'drain-profile', size: 'half', content: (
-            <SleepSectionPlacement delay={0.2}><DrainEventProfile {...common} /></SleepSectionPlacement>
-          ) },
-          { id: 'event-directory', size: 'full', content: (
-            <SleepSectionPlacement delay={0.24}>
-              <DrainEventDirectory {...common} formatTemperature={formatTemperature} />
-            </SleepSectionPlacement>
-          ) },
-          { id: 'availability', size: 'full', content: (
-            <SleepSectionPlacement delay={0.28}><DataAvailabilityMatrix {...common} /></SleepSectionPlacement>
-          ) },
-          { id: 'range-coverage', size: 'full', content: (
-            <SleepSectionPlacement delay={0.32}><RangeSourceCoverage {...common} /></SleepSectionPlacement>
-          ) },
-          { id: 'methodology', size: 'full', content: (
-            <SleepSectionPlacement delay={0.36}><SleepMethodologyPanel {...common} /></SleepSectionPlacement>
-          ) },
-        ]}
+          ),
+        }))}
       />
     </PageLayout>
   );
