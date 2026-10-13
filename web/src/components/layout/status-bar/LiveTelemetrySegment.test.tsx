@@ -297,3 +297,37 @@ describe('LiveTelemetrySegment', () => {
     expect(getLink().querySelector('.animate-spin')).toBeNull()
   })
 })
+
+
+describe('LiveTelemetrySegment mobile sizing', () => {
+  // Assert the responsive allocation, not browser-measured touch acceptance.
+  const responsiveClasses = [
+    'inline-flex', 'min-h-11', 'min-w-11', 'max-w-full', 'shrink-0',
+    'items-center', 'justify-center', 'gap-1.5', 'rounded-shape-sm',
+    'px-1.5', 'py-0.5', 'md:min-h-0', 'md:min-w-0', 'md:shrink',
+    'md:justify-start',
+  ]
+
+  it('allocates nonshrinking mobile sizing with md density restoration on the named link', () => {
+    renderSegment()
+
+    const link = screen.getByRole('link', { name: 'Live telemetry status: Live' })
+    expect(link).toHaveAttribute('href', '/signal-diff')
+    expect(link).toHaveClass(...responsiveClasses)
+    expect(link).not.toHaveClass('min-w-0')
+    expect(within(link).getByText('Live')).toBeInTheDocument()
+    expect(link).toHaveTextContent('5s')
+  })
+
+  it('allocates nonshrinking mobile sizing with md density restoration on the iconOnly link', () => {
+    renderSegment({ iconOnly: true })
+
+    const link = screen.getByRole('link', { name: 'Live telemetry status: Live' })
+    expect(link).toHaveAttribute('href', '/signal-diff')
+    expect(link).toHaveClass(...responsiveClasses)
+    expect(link).not.toHaveClass('min-w-0')
+    expect(link.textContent).toBe('')
+    expect(link.querySelector('span[aria-hidden]')).toBeInTheDocument()
+    expect(link.querySelector('svg')).toHaveAttribute('aria-hidden')
+  })
+})

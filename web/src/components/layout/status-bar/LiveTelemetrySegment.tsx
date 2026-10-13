@@ -139,7 +139,7 @@ export function LiveTelemetrySegment({ iconOnly = false }: LiveTelemetrySegmentP
         to="/signal-diff"
         aria-label={ariaLabel}
         className={cn(
-          'inline-flex min-w-0 max-w-full items-center gap-1.5 rounded-shape-sm px-1.5 py-0.5',
+          'inline-flex min-h-11 min-w-11 max-w-full shrink-0 items-center justify-center gap-1.5 rounded-shape-sm px-1.5 py-0.5 md:min-h-0 md:min-w-0 md:shrink md:justify-start',
           typography.size.xs,
           'hover:bg-[var(--control-bg-hover)] focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[var(--focus-ring)] focus-visible:ring-offset-[var(--surface-1)]',
           effectiveVariant.text,
