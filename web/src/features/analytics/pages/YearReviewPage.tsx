@@ -4,10 +4,10 @@ import { useTranslation } from 'react-i18next';
 import { ChevronLeft, ChevronRight, X } from 'lucide-react';
 
 import { PageLayout, Section, CardGrid, LayoutCard } from '@/components/layout';
-import { Button, Text } from '@/components/ui';
+import { Button, Icon, Text } from '@/components/ui';
 import { OperationalBrief, type StatMetric } from '@/components/data-display';
 import { useOperationalMetrics } from '@/hooks/useOperationalMetrics';
-import { Skeleton, EmptyState, QueryError, AlertBanner } from '@/components/feedback';
+import { Skeleton, EmptyState, QueryError, AlertBanner, StaleRefreshWarning } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { AIYearReviewNarration } from '@/components/ai';
 
@@ -25,6 +25,7 @@ import { useUnits } from '@/hooks/useUnits';
 import { useFormatting } from '@/hooks/useFormatting';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
+import { useDataState } from '@/hooks/useDataState';
 
 import type { YearReview } from '@/api/types';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
@@ -45,45 +46,52 @@ export default function YearReviewPage() {
   const { unitPrefs } = useUnits();
   const { currencySymbol } = useFormatting();
 
-  const { isLoading: vehiclesLoading } = useVehicles();
+  const vehiclesQuery = useVehicles();
+  const vehiclesState = useDataState(vehiclesQuery);
   const { vehicleId, vehicles: vehicleList } = useSelectedVehicle();
   const vehicleIdParam = vehicleId == null ? '' : String(vehicleId);
 
   const query = useYearReview(year, vehicleIdParam || undefined);
-  const { data, isLoading, isError, error, refetch } = query;
+  const reviewState = useDataState(query, { provenance: 'historical' });
+  const { data, refetch } = query;
+  const retained = reviewState.status === 'stale';
+  const fleetLabel = t('nav.vehicles', 'Fleet');
 
   const goYear = (y: number) => {
     navigate(`/year-review/${y}${vehicleIdParam ? `?vehicle_id=${vehicleIdParam}` : ''}`);
   };
 
-  const noActivity = !!data && (data.total_drives ?? 0) === 0 && (data.total_charge_sessions ?? 0) === 0;
+  const noActivity = data?.total_drives === 0 && data.total_charge_sessions === 0;
 
   // We don't yet know which vehicle to show while the fleet list is still
   // loading, nor in the render frame before the auto-select effect fires.
   // Both are loading states — surfacing the "pick a vehicle" empty prompt
   // here would be misleading, so the gate treats them as a skeleton. The
   // genuine empty prompt is reserved for a resolved-but-empty fleet.
-  const resolvingVehicle = vehiclesLoading || (!vehicleIdParam && vehicleList.length > 0);
+  const resolvingVehicle = !vehicleIdParam && (vehiclesQuery.isPending || vehicleList.length > 0);
+  const sectionLoading = !data && (resolvingVehicle || (!!vehicleIdParam && query.isPending));
 
   // Each card retains its shell. A refresh error must not discard retained
   // source measurements, chart controls, records or the screenshot recap.
-  const gate = (skeleton: ReactNode, content: (d: YearReview) => ReactNode): ReactNode => {
-    if (isLoading || resolvingVehicle) return skeleton;
+  const gate = (skeleton: ReactNode, content: (d: YearReview) => ReactNode, title?: string): ReactNode => {
     if (data) return content(data);
-    if (isError) return <QueryError error={error} onRetry={refetch} />;
-    return (
+    const placeholder = sectionLoading ? skeleton
+      : reviewState.fatalError ? <QueryError error={reviewState.fatalError} onRetry={refetch} />
+      : vehiclesState.fatalError ? <EmptyState message={t('yearReview.brief.unavailable', 'Year evidence unavailable')} />
+      : (
       <EmptyState
         message={t('yearReview.selectVehiclePrompt', 'Select a vehicle to view its year in review')}
         actionTo={{ label: t('yearReview.goToVehicles', 'Go to vehicles'), to: '/vehicles' }}
       />
     );
+    return title ? <LayoutCard title={title}>{placeholder}</LayoutCard> : placeholder;
   };
 
   const panelSkeleton = <div className="space-y-3"><Skeleton className="h-6 w-2/3" /><Skeleton className="h-24 w-full" /></div>;
-  const sectionLoading = isLoading || resolvingVehicle;
-  const fatalError = !data && isError ? error : undefined;
+  const fatalError = reviewState.fatalError ?? undefined;
   const emptyChartMessage = data
     ? t('chart.noData', 'No data available')
+    : vehiclesState.fatalError ? t('yearReview.brief.unavailable', 'Year evidence unavailable')
     : t('yearReview.selectVehiclePrompt', 'Select a vehicle to view its year in review');
   // The server accepts a calendar year, not start/end instants. Do not invent
   // a timezone or claim an analysis window/coverage absent from this response.
@@ -117,14 +125,15 @@ export default function YearReviewPage() {
   const highlightOperationalMetrics = useOperationalMetrics(highlightMetrics, preferences);
   const extremeOperationalMetrics = useOperationalMetrics(extremeMetrics, preferences);
   const briefStatus = sectionLoading ? t('yearReview.brief.loading', 'Loading year evidence')
-    : isError ? data ? t('yearReview.brief.retained', 'Retained year evidence') : t('yearReview.brief.unavailable', 'Year evidence unavailable')
+    : retained ? t('yearReview.brief.retained', 'Retained year evidence')
+    : reviewState.fatalError || (!vehicleIdParam && vehiclesState.fatalError) ? t('yearReview.brief.unavailable', 'Year evidence unavailable')
     : data ? t('yearReview.brief.available', 'Recorded year evidence') : t('yearReview.brief.selection', 'Vehicle selection required');
   const briefMetadata = {
     compact: true,
     eyebrow: t('yearReview.title', 'Year in review'),
     description: t('yearReview.brief.description', 'Calendar-year totals and records from the year-review response. Observation coverage is not reported.'),
     statusLabel: briefStatus,
-    statusTone: isError ? 'warning' as const : 'neutral' as const,
+    statusTone: retained || reviewState.fatalError ? 'warning' as const : 'neutral' as const,
     scope: String(year),
     provenance: t('yearReview.title', 'Year in review'),
     loading: sectionLoading,
@@ -134,11 +143,11 @@ export default function YearReviewPage() {
     <div className="flex flex-wrap items-center gap-2">
       <div className="flex items-center gap-1">
         <Button variant="ghost" size="sm" className="min-h-11 min-w-11" onClick={() => goYear(year - 1)} aria-label={t('yearReview.prevYear', 'Previous year')}>
-          <ChevronLeft className="h-4 w-4" aria-hidden="true" />
+          <Icon icon={ChevronLeft} />
         </Button>
-        <Text size="sm" weight="semibold" color="primary" className="min-w-[3.5ch] text-center tabular-nums">{year}</Text>
+        <Text size="sm" weight="semibold" color="primary" className="min-w-11 text-center tabular-nums">{year}</Text>
         <Button variant="ghost" size="sm" className="min-h-11 min-w-11" onClick={() => goYear(year + 1)} disabled={year >= currentYear} aria-label={t('yearReview.nextYear', 'Next year')}>
-          <ChevronRight className="h-4 w-4" aria-hidden="true" />
+          <Icon icon={ChevronRight} />
         </Button>
       </div>
     </div>
@@ -156,13 +165,17 @@ export default function YearReviewPage() {
       contextActions={yearControls}
       secondaryActions={
         <Button variant="ghost" size="sm" className="min-h-11 min-w-11" onClick={() => navigate(-1)} aria-label={t('yearReview.close', 'Close')}>
-          <X className="h-4 w-4" aria-hidden="true" />
+          <Icon icon={X} />
         </Button>
       }
       query={query}
       busy={sectionLoading}
     >
-      {isError && data && <QueryError error={error} onRetry={refetch} compact />}
+      {vehiclesState.fatalError && <QueryError error={vehiclesState.fatalError} onRetry={vehiclesQuery.refetch} resourceName={fleetLabel} />}
+      <StaleRefreshWarning state={vehiclesState} label={fleetLabel} />
+      {reviewState.refreshError && <QueryError error={reviewState.refreshError} onRetry={refetch} compact
+        message={t('dataSources.staleMessage', 'Previously loaded data remains visible while affected sources recover.')} />}
+      {!reviewState.refreshError && <StaleRefreshWarning state={reviewState} label={t('yearReview.title', 'Year in review')} />}
       {noActivity && (
         <AlertBanner variant="info">
           {t('yearReview.noActivity', { year, defaultValue: 'No drives or charges were recorded for {{year}} — try another year.' })}
@@ -187,7 +200,7 @@ export default function YearReviewPage() {
             { id: 'charging', size: 'half', content: <YearChargingMix data={data} loading={sectionLoading}
               error={fatalError} onRetry={refetch} emptyMessage={emptyChartMessage} /> },
           ]} />
-          {!data && !sectionLoading && !isError && <Button variant="outline" className="min-h-11" onClick={() => navigate('/vehicles')}>
+          {!data && !sectionLoading && !fatalError && !vehiclesState.fatalError && <Button variant="outline" className="min-h-11" onClick={() => navigate('/vehicles')}>
             {t('yearReview.goToVehicles', 'Go to vehicles')}
           </Button>}
         </Section>
@@ -197,15 +210,12 @@ export default function YearReviewPage() {
       <FadeIn delay={0.1}>
         <Section id="year-review-impact" title={t('yearReview.impact', 'Impact')}>
           <CardGrid label={t('yearReview.impact', 'Impact')} items={[
-            { id: 'savings', size: 'third', content: <LayoutCard title={t('yearReview.youSaved', 'You saved')}>
-              {gate(panelSkeleton, d => <YearSavings data={d} period={period} retained={Boolean(data && isError)} />)}
-            </LayoutCard> },
-            { id: 'environment', size: 'third', content: <LayoutCard title={t('yearReview.co2Offset', 'CO₂ offset')}>
-              {gate(panelSkeleton, d => <YearEnvironment data={d} period={period} retained={Boolean(data && isError)} />)}
-            </LayoutCard> },
-            { id: 'patterns', size: 'third', content: <LayoutCard title={t('yearReview.drivingPatterns', 'Your driving patterns')}>
-              {gate(panelSkeleton, d => <YearPatterns data={d} period={period} retained={Boolean(data && isError)} />)}
-            </LayoutCard> },
+            { id: 'savings', size: 'third', content: gate(panelSkeleton,
+              d => <YearSavings data={d} period={period} retained={retained} />, t('yearReview.youSaved', 'You saved')) },
+            { id: 'environment', size: 'third', content: gate(panelSkeleton,
+              d => <YearEnvironment data={d} period={period} retained={retained} />, t('yearReview.co2Offset', 'CO₂ offset')) },
+            { id: 'patterns', size: 'third', content: gate(panelSkeleton,
+              d => <YearPatterns data={d} period={period} retained={retained} />, t('yearReview.drivingPatterns', 'Your driving patterns')) },
           ]} />
         </Section>
       </FadeIn>

@@ -28,8 +28,8 @@
  * and error surfaces. No fixture renderer supplies expected measurements.
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { render, screen, waitFor, fireEvent, within } from '@testing-library/react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { act, render, screen, waitFor, fireEvent, within } from '@testing-library/react';
+import { onlineManager, QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import type { ReactNode } from 'react';
 import { Button } from '@/components/ui';
@@ -269,6 +269,7 @@ function installRequest({
     }
     if (u.includes('/vehicles')) {
       if (vehiclesMode === 'pending') return new Promise(() => {});
+      if (vehiclesMode === 'reject') return Promise.reject(new ApiError('fleet unavailable', 500));
       return Promise.resolve(vehicles);
     }
     return Promise.resolve({});
@@ -298,7 +299,7 @@ function renderPage(path = '/year-review/2023?vehicle_id=10', withWorkspaceContr
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false, retryDelay: 0 } },
   });
-  return render(
+  const view = render(
     <QueryClientProvider client={client}>
       <MemoryRouter initialEntries={[path]}>
         {withWorkspaceControl && <WorkspaceVehicleControl />}
@@ -309,6 +310,7 @@ function renderPage(path = '/year-review/2023?vehicle_id=10', withWorkspaceContr
       </MemoryRouter>
     </QueryClientProvider>,
   );
+  return { ...view, client };
 }
 
 beforeEach(() => {
@@ -321,6 +323,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  onlineManager.setOnline(true);
   vi.clearAllMocks();
 });
 
@@ -442,6 +445,24 @@ describe('YearReviewPage — happy path', () => {
     expect(screen.getByText('Model 3 · Model S')).toBeInTheDocument();
     expect(aiCapture.props).toMatchObject({ vehicleId: 10 });
   });
+
+  it('uses one impact heading per brief while preserving the cost comparison, trees and driving patterns', async () => {
+    installRequest();
+    renderPage();
+    await waitForReview();
+    const impact = screen.getByRole('region', { name: 'Impact' });
+    for (const title of ['You saved', 'CO₂ offset', 'Your driving patterns']) {
+      expect(within(impact).getAllByRole('heading', { name: title })).toHaveLength(1);
+    }
+    expect(within(impact).getByText('Gas would cost')).toBeInTheDocument();
+    expect(within(impact).getByText('$2,387.00')).toBeInTheDocument();
+    expect(within(impact).getAllByText('$512.00').length).toBeGreaterThan(0);
+    expect(within(impact).getByText("That's 375 cups of coffee!")).toBeInTheDocument();
+    expect(within(impact).getAllByText('Like planting 30 trees').length).toBeGreaterThan(0);
+    expect(within(impact).getByText('Saturday')).toBeInTheDocument();
+    expect(within(impact).getByText('5 PM')).toBeInTheDocument();
+    expect(within(impact).getAllByRole('button', { name: 'Review details' })).toHaveLength(3);
+  });
 });
 
 describe('YearReviewPage — loading / error / empty branches', () => {
@@ -525,6 +546,91 @@ describe('YearReviewPage — loading / error / empty branches', () => {
     expect(screen.queryByText(/Select a vehicle to view/)).toBeNull();
     expect(yearReviewCalls().length).toBe(0);
   });
+
+  it('identifies a failed fleet source without claiming an empty fleet and recovers through its own Retry', async () => {
+    installRequest({ vehiclesMode: 'reject' });
+    renderPage('/year-review/2023');
+
+    expect(await screen.findByText('Server error')).toBeInTheDocument();
+    expect(screen.queryByText(/Select a vehicle to view/)).toBeNull();
+    expect(yearReviewCalls()).toHaveLength(0);
+    for (const name of ['Year highlights', 'Activity', 'Impact', 'Drives of the year', 'Fun facts about your year', 'Recap']) {
+      expect(screen.getByRole('region', { name })).toBeInTheDocument();
+    }
+    expect(screen.getAllByRole('button', { name: 'Retry' })).toHaveLength(1);
+    installRequest();
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    await waitForReview();
+    expect(screen.queryByText('Server error')).toBeNull();
+    expect(yearReviewCalls()).toEqual(expect.arrayContaining(['/analytics/year-review?year=2023&vehicle_id=10']));
+  });
+
+  it('retains independently available year evidence when the fleet source fails and retries only that source', async () => {
+    installRequest({ vehiclesMode: 'reject' });
+    renderPage();
+    await waitForReview();
+    expect(await screen.findByText('Server error')).toBeInTheDocument();
+    expect(document.getElementById('year-review-longest')).toHaveTextContent('320');
+    const reviewRequests = yearReviewCalls().length;
+    installRequest();
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    await waitFor(() => expect(screen.queryByText('Server error')).toBeNull());
+    expect(yearReviewCalls()).toHaveLength(reviewRequests);
+    expect(within(highlights()).getByText('128')).toBeInTheDocument();
+  });
+
+  it('keeps every review panel visible while a retained fleet refresh is pending or fails', async () => {
+    installRequest();
+    const { client } = renderPage();
+    await waitForReview();
+    installRequest({ vehiclesMode: 'pending' });
+    act(() => { void client.refetchQueries({ queryKey: ['vehicles'], exact: true }); });
+    expect(within(highlights()).getByText('128')).toBeInTheDocument();
+    expect(document.getElementById('year-review-savings')).toHaveTextContent('$1,875');
+    await client.cancelQueries({ queryKey: ['vehicles'], exact: true });
+    installRequest({ vehiclesMode: 'reject' });
+    act(() => { void client.refetchQueries({ queryKey: ['vehicles'], exact: true }); });
+    expect(await screen.findByText('Fleet may be out of date')).toBeInTheDocument();
+    expect(screen.getByTestId('stale-refresh-warning')).toHaveTextContent('Previously loaded data remains visible');
+    expect(document.getElementById('year-review-longest')).toHaveTextContent('320');
+    expect(screen.queryByText(/Select a vehicle to view/)).toBeNull();
+    installRequest();
+    fireEvent.click(within(screen.getByTestId('stale-refresh-warning')).getByRole('button', { name: 'Refresh' }));
+    await waitFor(() => expect(screen.queryByText('Fleet may be out of date')).toBeNull());
+  });
+
+  it('shows source-shaped loading instead of empty selection when the first year request is paused', async () => {
+    onlineManager.setOnline(false);
+    installRequest();
+    const { container, client } = renderPage();
+    await waitFor(() => expect(container.querySelectorAll('[class*="--skeleton-bg"]').length).toBeGreaterThan(0));
+    expect(screen.queryByText(/Select a vehicle to view/)).toBeNull();
+    expect(screen.queryByText('Server error')).toBeNull();
+    expect(yearReviewCalls()).toHaveLength(0);
+    expect(screen.getByRole('region', { name: 'Recap' })).toBeInTheDocument();
+    client.clear();
+  });
+
+  it('marks a paused year refresh as retained without inventing an error or losing metrics and exports', async () => {
+    installRequest();
+    const { client } = renderPage();
+    await waitForReview();
+    act(() => {
+      onlineManager.setOnline(false);
+      void client.refetchQueries({ queryKey: ['year-review'] });
+    });
+    const warning = await screen.findByTestId('stale-refresh-warning');
+    expect(warning).toHaveAttribute('data-refresh-blocked', 'true');
+    expect(warning).not.toHaveTextContent('offline');
+    expect(screen.queryByText('Server error')).toBeNull();
+    expect(within(screen.getByTestId('year-review-highlights-stats')).getByText('Retained year evidence')).toBeInTheDocument();
+    expect(within(highlights()).getByText('128')).toBeInTheDocument();
+    const chart = screen.getByRole('group', { name: 'Bar and line chart of monthly drives and distance across the year' }).closest('figure')!;
+    expect(within(chart).getByRole('table')).toHaveTextContent('1100');
+    expect(within(chart).getByRole('table')).toHaveTextContent('160');
+    expect(document.getElementById('year-review-recap')).toHaveTextContent('Model 3');
+    client.clear();
+  });
 });
 
 describe('YearReviewPage — zero-activity banner', () => {
@@ -545,6 +651,19 @@ describe('YearReviewPage — zero-activity banner', () => {
 
     await waitForReview();
     expect(screen.queryByText(/No drives or charges were recorded/)).toBeNull();
+  });
+
+  it('distinguishes missing activity counts from measured zero in the highlights and no-activity announcement', async () => {
+    mockRequest.mockImplementation((url: unknown) => Promise.resolve(
+      String(url).includes('/analytics/year-review')
+        ? { ...NO_ACTIVITY_REVIEW, total_drives: null, total_charge_sessions: null }
+        : TWO_VEHICLES,
+    ));
+    renderPage();
+    await waitFor(() => expect(within(highlights()).getByText('$1,875.00')).toBeInTheDocument());
+    expect(screen.queryByText(/No drives or charges were recorded/)).toBeNull();
+    const brief = screen.getByTestId('year-review-highlights-stats');
+    expect(brief.querySelectorAll('[data-value-state="missing"]')).toHaveLength(2);
   });
 });
 
