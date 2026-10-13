@@ -2,6 +2,57 @@
 
 ## Current phase
 
+### Current corrective dispatch: observed by14:27:46Z
+
+Three actual exclusive owners are running, confirmed by delivered bounded-return
+messages: caption49cdd598, preview11b3cc53, trend7d6fef62. Queue holds their full
+IDs/scopes; conservative return14:45/hard14:50, earlieractual20/25min wins.
+The trend scope explicitly includes its real PillFilterBar target owner/test,
+not a descendant sizing workaround or global Button change. Parent serializes
+canonical caption/projections only after all three source releases. Current
+Phase6 claims3/pending1(deferredplural); the14:18 counts below are historical.
+running3/32: three genuine fresh corrective scopes exist; exhausted original
+budgets and full-sweep deferredplural are not invented capacity. No source or
+native acceptance yet. No active native page/lock; shared5173 is retained.
+
+### Latest partial Drive History native review: 14:08Z
+
+Original Drive QA ran13:49:35.093--14:08:44.805Z/1149.712s against
+cfe5b7498/1839 on the shared5173 preview; page and browser lock actually closed
+before20min. The stale parent reservation is released, with one actual partial
+native attempt, not source rework or an exhausted-helper retry. Read-only/local
+guards preceded navigation; selected synthetic4 and acknowledged0.7.0 only,
+no mocked API responses, server preference changes, rollout or reseed.
+
+Receipt `docs\frontend-audits\phase4-pilot-drives-native-20261013.json` pins
+two permitted default-output1440x936/375x844 PNGs. Actual ten document/viewport
+widths match; saved light/Minimal only. Mobile cards are below1024, desktop
+table at1024+. Actual vehicle timezoneNewYork differs from browserLosAngeles:
+FSD usesOct8T04Z--exclusiveOct14T04Z, while drives retain existing prior-period
+paddingOct1--14. Actual190completed/191ongoing both render. Explicit Quick view
+keyboard Enter opens six-field preview, focus inside, Escape closes/restores.
+Nonmatch search preserves independent brief/overview/workspace range; settled
+clear restores two rows. Wrong searchbox/row-Enter and transient250ms probes
+are disclosed, not invented product fixes.
+
+Three concrete new issues are registered before edits: all-returned count2
+misdescribed as Completed; mobile Quick view36x36/allfour44px edges miss; trend
+tabs36px with firsttwo offscreen and scrollWidth/clientWidth both440. Exact
+owners are private DrivesOperationalBrief, private DriveCard, and shared
+MetricSwitcherChart caller allocation plus the real PillFilterBar target owner.
+Three exclusive corrective scopes
+are ready; parent alone integrates the one existing English leaf/projections.
+These are new measured failures, not accepted-page redispatch or deferredplural.
+
+Phase4 remains partial: done33/pending3/failed2/blocked1/held0 after closure.
+Phase5+6 source/fix totals now280done/4pending/28failed/2blocked/held0, including
+three fresh corrective scopes and the still-deferred plural. Exhausted budgets
+are unchanged. Actual sourceworkers0 at14:18 census; refill these real scopes
+after this ordinary receipt, no fake32. Shared5173HTTP200/PID9036 remains healthy.
+Health intake is serialized; schedule3's overlapping prompt skipped. Automatic
+console logs and `.agents` remain unclaimed/preserved/unstaged. No fullsuite,
+wholecompiler, clean-runtime, originalpilot or deployment claim.
+
 ### Latest measured mobile-fix acceptance: 13:29Z
 
 All five actual source owners are terminal, individually collected and explicitly

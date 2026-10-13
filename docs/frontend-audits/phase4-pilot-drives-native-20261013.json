@@ -1,0 +1,133 @@
+{
+  "item": "phase4-pilot-drives-list",
+  "status": "PARTIAL_NOT_ACCEPTED",
+  "source": {
+    "commit": "cfe5b74989a2c6ca833cc9f831bbbcd086d804bd",
+    "commitCount": 1839,
+    "preview": "http://localhost:5173",
+    "deploymentChanged": false
+  },
+  "execution": {
+    "startedAt": "2026-10-13T13:49:35.093Z",
+    "closedAt": "2026-10-13T14:08:44.805Z",
+    "durationSeconds": 1149.712,
+    "twentyMinuteDeadline": "2026-10-13T14:09:35.093Z",
+    "pageClosed": true,
+    "browserLockReleased": true,
+    "sourceWrites": false
+  },
+  "safety": {
+    "selectedSyntheticVehicleId": 4,
+    "acknowledgedChangelogVersion": "0.7.0",
+    "localOnlyReadOnlyGuardsBeforeNavigation": true,
+    "syntheticApiResponses": false,
+    "serverPreferenceChanges": false,
+    "fixtureOrDockerChanges": false,
+    "nonfixtureIdentifiersExcludedBeforeCapture": true
+  },
+  "scope": {
+    "route": "/drives?vehicle_id=4&from=2026-10-08&to=2026-10-13",
+    "browserTimezone": "America/Los_Angeles",
+    "selectedVehicleTimezone": "America/New_York",
+    "actualDrivesRequest": "/api/v1/drives?vehicle_id=4&start=2026-10-01&end=2026-10-14&limit=1000",
+    "actualFsdBounds": {
+      "vehicle_id": 4,
+      "timezone": "America/New_York",
+      "start": "2026-10-08T04:00:00.000Z",
+      "endExclusive": "2026-10-14T04:00:00.000Z"
+    },
+    "driveFetchPadding": "Existing prior/current-period padding preserved, not a range defect."
+  },
+  "observedFlows": {
+    "actualReturnedDrives": [
+      { "id": 190, "completed": true },
+      { "id": 191, "completed": false }
+    ],
+    "keyboardPreview": {
+      "explicitQuickViewButtonEnterOpensDialog": true,
+      "focusInside": true,
+      "escapeCloses": true,
+      "focusReturnsToTrigger": true,
+      "fields": ["1h 35m", "195 km", "36 kWh", "95% to 41%", "187 Wh/km", "B"],
+      "relatedContext": "Drive's own Oct9 contextual day, not the whole workspace window."
+    },
+    "search": {
+      "actualRole": "combobox",
+      "nonmatchingSearchRemovesEvidenceRows": true,
+      "briefAndOverviewPreserved": true,
+      "workspaceRangePreserved": true,
+      "settledClearRestoresBothRows": true,
+      "transient250msClearObservation": "Zero rows; later settled state restored both. No reset defect established."
+    }
+  },
+  "responsive": {
+    "actualViewportAndDocumentWidthsMatch": [320, 375, 390, 430, 768, 1024, 1280, 1440, 1920, 2560],
+    "mobileEvidenceBelow": 1024,
+    "desktopEvidenceAtOrAbove": 1024,
+    "scheme": "Actual saved light",
+    "layout": "Actual saved Minimal",
+    "tenWidthsAreNotTenScreenshotsOrCompleteAcceptance": true
+  },
+  "findings": [
+    {
+      "item": "phase6-native-drives-count-caption",
+      "observed": "Total2 includes ongoing191, but count hint says Completed drives.",
+      "owner": "DrivesOperationalBrief.tsx and existing operations.drives.countDetail English leaf",
+      "preserve": "All returned activity; do not remove ongoing drives to match the caption."
+    },
+    {
+      "item": "phase6-native-drives-preview-mobile-target",
+      "viewport": [375, 844],
+      "coarsePointer": true,
+      "touchPoints": 1,
+      "rectangle": [309, 588.25, 36, 36],
+      "centerHit": true,
+      "four44pxEdgeHits": [false, false, false, false],
+      "expandedPseudoElement": false,
+      "owner": "DriveCard.tsx"
+    },
+    {
+      "item": "phase6-native-drives-trend-control-allocation",
+      "viewport": [375, 844],
+      "costTabRectangle": [277.859375, 587.998, 50.140625, 35.999878],
+      "centerAndHorizontalHits": true,
+      "vertical44pxEdgeHits": [false, false],
+      "tablistRectangle": [-107.859375, 587.998, 439.859375, 35.999878],
+      "scrollWidth": 440,
+      "clientWidth": 440,
+      "firstTwoTabsOutsideViewport": true,
+      "ownerTrace": "DrivesTrendAnalysis -> DrivesAnalysisSection -> MetricSwitcherChart",
+      "limit": "Measured state needs fresh stable corrective geometry, not a presumed global Tabs defect."
+    }
+  ],
+  "screenshots": [
+    {
+      "path": "web\\.playwright-mcp\\page-2026-10-13T13-50-13-864Z.png",
+      "width": 1440,
+      "height": 936,
+      "bytes": 136624,
+      "sha256": "979bcb725edcb255097ae92907ae78cb6ccddc3ee7ad2053cae3d1bbbf52a40a"
+    },
+    {
+      "path": "web\\.playwright-mcp\\page-2026-10-13T14-01-56-445Z.png",
+      "width": 375,
+      "height": 844,
+      "bytes": 48304,
+      "sha256": "f10b009001ea5c65cfeb5f0c98ae60d42af5c7570042cfe5af3cace6f5c48964"
+    }
+  ],
+  "nonpassingProxiesRetained": [
+    "Row Enter did not open preview; explicit Quick view button succeeded. No row-Enter defect established.",
+    "Wrong searchbox role timed out30s; actual combobox corrected.",
+    "Transient250ms search-clear observation is not settled behavior.",
+    "No document overflow does not prove contained trend controls reachable."
+  ],
+  "remaining": [
+    "Three measured corrective issues and stable native follow-up",
+    "Other saved layouts, schemes and data states",
+    "Full keyboard, RTL, long text, zoom, forced-colors and contrast matrix",
+    "Axe and Lighthouse",
+    "Original three-page pilot acceptance and subsequent phase gates"
+  ],
+  "acceptanceLimits": "No whole-page, clean-resource, device-safe-area, phase, gate or deployment acceptance is claimed. Existing availability failures remain unresolved; this partial read does not repair them."
+}
