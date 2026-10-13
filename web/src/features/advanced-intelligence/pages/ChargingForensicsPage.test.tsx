@@ -135,14 +135,17 @@ describe('ChargingForensicsPage', () => {
     resize(375);
     expect(screen.queryByRole('table')).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Quick view' }));
-    const detail = within(await screen.findByRole('dialog', { name: 'Session #44' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Session #44' });
+    const detail = within(dialog);
     for (const value of ['#44', '12 kWh', '15 kWh', '3 kWh (2 kWh–4 kWh)', '$4.50', '$4.20',
       '$0.30', 'recorded_only', 'USD', '2 Jun 2026, 01:30', 'test-ledger',
       'Test-only recorded energy, not a meter reading.', 'Test-only tariff coverage is absent.']) {
       expect(detail.getByText(value)).toBeInTheDocument();
     }
     expect(detail.getByText('1 samples · 2 Jun 2026, 00:30')).toBeInTheDocument();
-    fireEvent.click(detail.getByRole('button', { name: 'Close', exact: true }));
+    const footer = dialog.querySelector<HTMLElement>('[data-modal-footer="true"]');
+    expect(footer).not.toBeNull();
+    fireEvent.click(within(footer!).getByRole('button', { name: 'Close', exact: true }));
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
     resize(1440);
     expect(screen.getByRole('table', { name: 'Session reconciliation' })).toBeInTheDocument();
