@@ -261,3 +261,34 @@ describe('AccessOverviewPanel', () => {
     expect(screen.getByText(`1 ${MIDDOT} 100.00%`)).toBeInTheDocument();
   });
 });
+
+
+describe('AccessOverviewPanel — palette consumer compatibility', () => {
+  it('renders CSS-variable colors as solid fills with unchanged labels, counts and percentages', () => {
+    const { container } = renderPanel({
+      statusBreakdown: [
+        status({ status: 'pending', count: 3, color: 'var(--semantic-warning)' }),
+        status({ status: 'accepted', count: 1, color: 'var(--semantic-success)' }),
+      ],
+      roleBreakdown: [role({ role: 'owner', count: 1 })],
+      totalInvitations: 4,
+      totalDrivers: 1,
+    });
+    for (const [label, color, count] of [
+      ['Pending', 'var(--semantic-warning)', '3'],
+      ['Accepted', 'var(--semantic-success)', '1'],
+    ]) {
+      const bar = screen.getByRole('progressbar', { name: label });
+      expect(bar).toHaveAttribute('aria-valuenow', count);
+      expect(bar).toHaveAttribute('aria-valuemax', '4');
+      const fill = bar.querySelector<HTMLElement>('[data-metric-fill]');
+      // Exercise the real MetricBar: its gradient appends 99, invalid for var().
+      expect(fill?.style.background).toBe(color);
+      expect(fill).toHaveClass('forced-colors:!bg-[Highlight]', 'forced-colors:!bg-none');
+    }
+    expect(container.querySelectorAll('[data-metric-fill]')).toHaveLength(2);
+    expect(screen.getByText(`3 ${MIDDOT} 75.00%`)).toBeInTheDocument();
+    expect(screen.getByText(`1 ${MIDDOT} 25.00%`)).toBeInTheDocument();
+    expect(within(screen.getByRole('list')).getByText('Owner')).toBeInTheDocument();
+  });
+});

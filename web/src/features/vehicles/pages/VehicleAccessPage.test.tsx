@@ -644,3 +644,47 @@ describe('VehicleAccessPage — cached expiry window', () => {
     }
   });
 });
+
+
+describe('VehicleAccessPage — shared access palette', () => {
+  it('keeps status color identity through count reordering and leaves driver roles neutral', () => {
+    const records = ['pending', 'accepted', 'revoked', 'expired', 'custom'].map((status, index) =>
+      makeInvite({ id: index + 1, invitation_id: `palette-${index}`, status }),
+    );
+    mockDrivers.mockReturnValue(makeQuery({ data: populatedDrivers }));
+    mockInvitations.mockReturnValue(makeQuery({ data: records }));
+    const view = renderPage();
+    const colors = [
+      ['Pending', 'var(--semantic-warning)'],
+      ['Accepted', 'var(--semantic-success)'],
+      ['Revoked', 'var(--semantic-danger)'],
+      ['Expired', 'var(--text-secondary)'],
+      ['Custom', 'var(--text-secondary)'],
+    ] as const;
+    for (const [label, color] of colors) {
+      const bar = screen.getByRole('progressbar', { name: label });
+      expect(bar).toHaveAttribute('aria-valuenow', '1');
+      expect(bar.querySelector<HTMLElement>('[data-metric-fill]')?.style.background).toBe(color);
+    }
+    // Status order may change with counts; paint must stay keyed to its identity.
+    mockInvitations.mockReturnValue(makeQuery({ data: [...records, makeInvite({
+      id: 6, invitation_id: 'palette-accepted-2', status: 'accepted',
+    })] }));
+    view.rerenderPage();
+    expect(screen.getAllByRole('progressbar')[0]).toHaveAccessibleName('Accepted');
+    expect(screen.getByRole('progressbar', { name: 'Accepted' })).toHaveAttribute('aria-valuenow', '2');
+    for (const [label, color] of colors) {
+      expect(screen.getByRole('progressbar', { name: label })
+        .querySelector<HTMLElement>('[data-metric-fill]')?.style.background).toBe(color);
+    }
+    // Roles are identities, not success/error outcomes; their labels/counts survive.
+    const roles = screen.getByText('Driver').closest('ul');
+    if (!roles) throw new Error('Missing driver-role list');
+    expect(within(roles).getAllByRole('listitem')).toHaveLength(2);
+    for (const label of ['Driver', 'Owner']) {
+      const chip = within(roles).getByText(label).closest('span');
+      expect(chip).toHaveTextContent('1');
+      expect(chip).toHaveClass('text-[var(--text-secondary)]');
+    }
+  });
+});

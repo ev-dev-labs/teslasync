@@ -111,6 +111,7 @@ export function AccessOverviewPanel({
                       value={count}
                       max={invitations || count || 1}
                       color={slice.color}
+                      fill="solid"
                       sublabel={`${count} · ${fmtPercent(pct)}`}
                     />
                   );

@@ -48,11 +48,11 @@ type BadgeVariant = NonNullable<BadgeProps['variant']>;
 
 /** Display color per invitation status for the Access Overview bars. */
 const INVITATION_STATUS_COLOR: Record<string, string> = {
-  pending: '#f59e0b',
-  accepted: '#10b981',
-  revoked: '#f43f5e',
-  expired: '#64748b',
-  default: '#64748b',
+  pending: 'var(--semantic-warning)',
+  accepted: 'var(--semantic-success)',
+  revoked: 'var(--semantic-danger)',
+  expired: 'var(--text-secondary)',
+  default: 'var(--text-secondary)',
 };
 
 /** Semantic Badge variant per invitation status (paired with the status text so
