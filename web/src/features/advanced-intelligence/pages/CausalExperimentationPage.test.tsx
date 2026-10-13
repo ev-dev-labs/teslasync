@@ -351,18 +351,31 @@ describe('CausalExperimentationPage', () => {
     { case: 'reversed baseline', values: ['2026-10-03T10:00', '2026-10-01T10:00', '2026-10-04T10:00', '2026-10-06T10:00'] },
     { case: 'short baseline', values: ['2026-10-01T10:00', '2026-10-02T09:59', '2026-10-04T10:00', '2026-10-06T10:00'] },
     { case: 'overlong baseline', values: ['2025-10-01T10:00', '2026-10-01T10:01', '2026-10-04T10:00', '2026-10-06T10:00'] },
-    { case: 'overlapping windows', values: ['2026-10-01T10:00', '2026-10-03T10:00', '2026-10-03T09:59', '2026-10-06T10:00'] },
-    { case: 'short treatment', values: ['2026-10-01T10:00', '2026-10-03T10:00', '2026-10-04T10:00', '2026-10-05T09:59'] },
-    { case: 'overlong treatment', values: ['2025-08-01T10:00', '2025-08-03T10:00', '2025-08-04T10:00', '2026-08-04T10:01'] },
-    { case: 'beyond future tolerance', values: ['2026-10-01T10:00', '2026-10-03T10:00', '2026-10-04T10:00', '2026-10-10T10:02'] },
-  ])('rejects $case before opening review without calling the server', ({ values }) => {
+    { case: 'overlapping windows', values: ['2026-10-01T10:00', '2026-10-03T10:00', '2026-10-03T09:59', '2026-10-06T10:00'], bad: [2] },
+    { case: 'short treatment', values: ['2026-10-01T10:00', '2026-10-03T10:00', '2026-10-04T10:00', '2026-10-05T09:59'], bad: [2, 3] },
+    { case: 'overlong treatment', values: ['2025-08-01T10:00', '2025-08-03T10:00', '2025-08-04T10:00', '2026-08-04T10:01'], bad: [2, 3] },
+    { case: 'beyond future tolerance', values: ['2026-10-01T10:00', '2026-10-03T10:00', '2026-10-04T10:00', '2026-10-10T10:02'], bad: [3] },
+  ])('rejects $case before opening review without calling the server', ({ values, bad }) => {
     renderPage();
     setWindows(values);
     submitReview();
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     expect(mocks.mutate).not.toHaveBeenCalled();
-    expect(screen.getByLabelText('Baseline start', { exact: false })).toHaveAttribute('aria-invalid', 'true');
-    expect(screen.getByLabelText('Baseline start', { exact: false })).toHaveFocus();
+    if (bad) {
+      windowLabels.forEach((label, index) => {
+        const input = screen.getByLabelText(label, { exact: false });
+        if (bad.includes(index)) {
+          expect(input).toHaveAttribute('aria-invalid', 'true');
+        } else {
+          expect(input).not.toHaveAttribute('aria-invalid', 'true');
+          expect(input).not.toHaveFocus();
+        }
+      });
+      expect(screen.getByLabelText(windowLabels[bad[0]], { exact: false })).toHaveFocus();
+    } else {
+      expect(screen.getByLabelText('Baseline start', { exact: false })).toHaveAttribute('aria-invalid', 'true');
+      expect(screen.getByLabelText('Baseline start', { exact: false })).toHaveFocus();
+    }
   });
 
   it.each([
