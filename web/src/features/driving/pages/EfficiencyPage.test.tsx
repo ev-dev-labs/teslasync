@@ -2,7 +2,8 @@
  * EfficiencyPage contract tests.
  *
  * EfficiencyPage turns two TanStack Query hooks — `useDrivingStats` (lifetime
- * aggregates) and `useDrives` (per-drive rows) — into a KPI band, an overview
+ * aggregates) and `useDriveCalendarHistory` (bounded, paginated per-drive
+ * rows) — into a KPI band, an overview
  * gauge + daily-trend chart, speed/temperature scatter clouds and a
  * temperature-bucketed efficiency table. The page owns two subtle unit
  * contracts that these tests pin down:
@@ -30,6 +31,7 @@ import { render, screen, fireEvent, within, waitFor } from '@testing-library/rea
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui';
+import { request } from '@/api/client';
 import type { ReactNode } from 'react';
 import type { Drive, DrivingStats } from '@/types/driving';
 
@@ -67,6 +69,7 @@ const H = vi.hoisted(() => ({
   units: { current: null as unknown as ReturnType<typeof kmUnits> },
   driving: { current: null as unknown as { stats: FakeQuery<DrivingStats>; drives: FakeQuery<Drive[]> } },
   vehicle: { current: { vehicleId: 1 as number | null } },
+  realHistory: false,
 }));
 
 vi.mock('@/hooks/useUnits', () => ({ useUnits: () => H.units.current }));
@@ -77,6 +80,8 @@ vi.mock('@/api/hooks/useDriving', async (importOriginal) => {
     ...actual,
     useDrivingStats: () => H.driving.current.stats,
     useDrives: () => H.driving.current.drives,
+    useDriveCalendarHistory: (...args: Parameters<typeof actual.useDriveCalendarHistory>) =>
+      H.realHistory ? actual.useDriveCalendarHistory(...args) : H.driving.current.drives,
   };
 });
 
@@ -107,13 +112,13 @@ vi.mock('@/components/forms', () => ({
     onChange: (r: { start: string; end: string }) => void;
     triggerTestId?: string;
   }) => (
-    <button
+    <Button
       type="button"
       data-testid={triggerTestId}
       onClick={() => onChange({ start: '2000-01-01', end: '2000-01-02' })}
     >
       range
-    </button>
+    </Button>
   ),
 }));
 
@@ -133,10 +138,12 @@ interface FakeQuery<T> {
   data: T | undefined;
   isLoading: boolean;
   isError: boolean;
+  isSuccess: boolean;
   error: Error | null;
   isFetching: boolean;
   isStale: boolean;
   dataUpdatedAt: number;
+  fetchStatus: 'fetching' | 'paused' | 'idle';
   refetch: () => void;
 }
 
@@ -145,10 +152,12 @@ function makeQuery<T>(over: Partial<FakeQuery<T>> = {}): FakeQuery<T> {
     data: undefined,
     isLoading: false,
     isError: false,
+    isSuccess: true,
     error: null,
     isFetching: false,
     isStale: false,
     dataUpdatedAt: Date.now(),
+    fetchStatus: 'idle',
     refetch: vi.fn(),
     ...over,
   };
@@ -271,6 +280,9 @@ beforeEach(() => {
   setGlobalLocale('en-US');
   H.units.current = kmUnits();
   H.vehicle.current = { vehicleId: 1 };
+  H.realHistory = false;
+  vi.mocked(request).mockReset();
+  vi.mocked(request).mockResolvedValue([]);
   setDriving({ data: makeStats() }, { data: [] });
 });
 
@@ -456,5 +468,128 @@ describe('EfficiencyPage', () => {
       ).toBeInTheDocument(),
     );
     expect(screen.queryByText('20–30°C')).toBeNull();
+  });
+
+  it('loads every server page within both header bounds without changing lifetime statistics', async () => {
+    H.realHistory = true;
+    const start = new Date(2000, 0, 1).toISOString();
+    const end = new Date(2000, 0, 3).toISOString();
+    const firstPage = Array.from({ length: 1000 }, (_, index) => makeDrive({
+      id: index + 1, startTs: start,
+    }));
+    const finalDrive = makeDrive({
+      id: 1001, startTs: new Date(2000, 0, 2).toISOString(), energyUsedWh: 12500,
+    });
+    const windows: URLSearchParams[] = [];
+    vi.mocked(request).mockImplementation(async path => {
+      const url = new URL(path, 'http://localhost');
+      if (url.pathname !== '/drives') return [];
+      windows.push(url.searchParams);
+      return url.searchParams.get('offset') === '0' ? firstPage : [finalDrive];
+    });
+    renderPage('/efficiency?from=2000-01-01&to=2000-01-02');
+
+    await waitFor(() => {
+      const row = screen.getByText('20–30°C').closest('tr');
+      expect(row).not.toBeNull();
+      expect(within(row!).getByText('1,001')).toBeInTheDocument();
+      expect(within(row!).getByText('50,050.00')).toBeInTheDocument();
+      expect(within(row!).getByText('72.00 km/h')).toBeInTheDocument();
+    });
+    expect(windows).toHaveLength(2);
+    for (const params of windows) {
+      expect(params.get('vehicle_id')).toBe('1');
+      expect(params.get('start')).toBe(start);
+      expect(params.get('end')).toBe(end);
+      expect(params.get('limit')).toBe('1000');
+    }
+    expect(windows.map(params => params.get('offset'))).toEqual(['0', '1000']);
+    const kpis = within(screen.getByRole('region', { name: 'Key metrics' }));
+    expect(kpis.getByText('5,000 km', { selector: '[data-operational-value]' })).toBeInTheDocument();
+    expect(kpis.getByText('42')).toBeInTheDocument();
+    expect(screen.queryByTestId('efficiency-range')).not.toBeInTheDocument();
+  });
+
+  it('preserves the half-open range and physical eligibility of temperature observations', () => {
+    const start = new Date(2000, 0, 1).toISOString();
+    const end = new Date(2000, 0, 3).toISOString();
+    setDriving({ data: makeStats() }, { data: [
+      makeDrive({ id: 1, startTs: start, distanceM: 1000, energyUsedWh: 200 }),
+      makeDrive({ id: 2, startTs: new Date(2000, 0, 2).toISOString(), distanceM: 3000, energyUsedWh: 300 }),
+      makeDrive({ id: 3, startTs: end, energyUsedWh: 50000 }),
+      makeDrive({ id: 4, startTs: start, distanceM: 999 }),
+      makeDrive({ id: 5, startTs: start, energyUsedWh: 0 }),
+      makeDrive({ id: 6, startTs: start, energyUsedWh: null }),
+    ] });
+    renderPage('/efficiency?from=2000-01-01&to=2000-01-02');
+    const row = screen.getByText('20–30°C').closest('tr');
+    expect(row).not.toBeNull();
+    const cells = within(row!);
+    expect(cells.getByText('2')).toBeInTheDocument();
+    expect(cells.getByText('150')).toBeInTheDocument();
+    expect(cells.getByText('4.00')).toBeInTheDocument();
+    expect(cells.getByText('72.00 km/h')).toBeInTheDocument();
+  });
+
+  it('retains statistics and observations after refresh failures with source-specific retry', () => {
+    setDriving(
+      { data: makeStats(), isError: true, error: new Error('Summary refresh failed') },
+      { data: [makeDrive()], isError: true, error: new Error('History refresh failed') },
+    );
+    renderPage();
+    const kpis = within(screen.getByRole('region', { name: 'Key metrics' }));
+    expect(kpis.getByText('5,000 km', { selector: '[data-operational-value]' })).toBeInTheDocument();
+    const breakdown = within(screen.getByRole('region', { name: 'Breakdown and insights' }));
+    expect(breakdown.getByText('20–30°C')).toBeInTheDocument();
+    expect(breakdown.getAllByText('Previously loaded data remains visible while affected sources recover.')).toHaveLength(2);
+    fireEvent.click(breakdown.getAllByRole('button', { name: 'Refresh' })[0]);
+    expect(H.driving.current.drives.refetch).toHaveBeenCalledTimes(1);
+    expect(H.driving.current.stats.refetch).not.toHaveBeenCalled();
+    expect(screen.queryByText('Unable to load Key metrics')).not.toBeInTheDocument();
+  });
+
+  it('keeps paused history visible without claiming a source failure or measured zero', () => {
+    setDriving({ data: makeStats() }, { data: [makeDrive()], fetchStatus: 'paused' });
+    renderPage();
+    expect(screen.getByText('20–30°C')).toBeInTheDocument();
+    expect(screen.getByText('150')).toBeInTheDocument();
+    const notices = screen.getAllByTestId('stale-refresh-warning')
+      .filter(node => node.hasAttribute('data-refresh-blocked'));
+    expect(notices).toHaveLength(5);
+    expect(screen.queryByText('Unable to load Efficiency by temperature range')).not.toBeInTheDocument();
+    expect(screen.queryByText('Failed')).not.toBeInTheDocument();
+  });
+
+  it('keeps all section shells and lifetime metrics when history fails initially', () => {
+    setDriving({ data: makeStats() }, {
+      data: undefined, isSuccess: false, isError: true, error: new Error('History unavailable'),
+    });
+    renderPage();
+    for (const name of [
+      'Key metrics', 'Overview and trend', 'Speed and temperature analysis', 'Breakdown and insights',
+    ]) {
+      expect(screen.getByRole('region', { name })).toBeInTheDocument();
+    }
+    expect(screen.getByText('Unable to load Efficiency by temperature range')).toBeInTheDocument();
+    const kpis = within(screen.getByRole('region', { name: 'Key metrics' }));
+    expect(kpis.getByText('60.00 km/h', { selector: '[data-operational-value]' })).toBeInTheDocument();
+  });
+
+  it('isolates an overview render failure from the daily chart and neighboring sections', () => {
+    setDriving({ data: makeStats() }, { data: Array.from({ length: 4 }, (_, index) => makeDrive({ id: index + 1 })) });
+    H.units.current.formatDuration = () => { throw new Error('Synthetic duration formatter failure'); };
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+    try {
+      renderPage();
+      const overview = within(screen.getByRole('region', { name: 'Overview and trend' }));
+      expect(overview.getByText('Synthetic duration formatter failure')).toBeInTheDocument();
+      expect(overview.getByRole('button', { name: 'Retry' })).toBeInTheDocument();
+      expect(screen.getByRole('img', { name: 'Daily efficiency trend area chart' })).toBeInTheDocument();
+      expect(screen.getByText('20–30°C')).toBeInTheDocument();
+      const kpis = within(screen.getByRole('region', { name: 'Key metrics' }));
+      expect(kpis.getByText('42')).toBeInTheDocument();
+    } finally {
+      consoleError.mockRestore();
+    }
   });
 });

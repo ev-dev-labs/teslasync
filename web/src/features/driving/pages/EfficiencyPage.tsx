@@ -3,8 +3,8 @@ import { useTranslation } from 'react-i18next';
 import { SectionTitle } from '@/components/ui';
 import { SavedViewMenu } from '@/components/data-display';
 import { PageLayout, CardGrid } from '@/components/layout';
-import { FadeIn } from '@/components/motion';
-import { useDrivingStats, useDrives } from '@/api/hooks/useDriving';
+import { SectionErrorBoundary } from '@/components/feedback';
+import { useDrivingStats, useDriveCalendarHistory } from '@/api/hooks/useDriving';
 import { useUnits } from '@/hooks/useUnits';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
@@ -29,12 +29,11 @@ export default function EfficiencyPage() {
   const savedView = useSavedViewUrl();
   const { vehicleId } = useSelectedVehicle();
   const vehicleIdStr = vehicleId != null ? String(vehicleId) : undefined;
-  // Exact original hook calls: keys, default row cap, retry and signal ownership
-  // are unchanged. This presentation substep does not expand query scope.
-  const statsQuery = useDrivingStats(vehicleIdStr);
-  const drivesQuery = useDrives(vehicleIdStr);
-  const units = useUnits();
   const { startInstant, endInstantExclusive } = useRangeState({ persistKey: 'efficiency.range' });
+  // Lifetime summary remains independent of the header's bounded observations.
+  const statsQuery = useDrivingStats(vehicleIdStr);
+  const drivesQuery = useDriveCalendarHistory(vehicleIdStr, startInstant, endInstantExclusive);
+  const units = useUnits();
   const statsInspection = inspectStats(statsQuery.data);
   const drivesInspection = useMemo(() => inspectDrives(drivesQuery.data), [drivesQuery.data]);
   const statsState = useDataState(statsQuery, {
@@ -79,42 +78,50 @@ export default function EfficiencyPage() {
       }
     >
       {/* A — all eight original KPIs and the specialist glossary. */}
-      <FadeIn>
-        <section aria-label={t('efficiency.section.kpis', 'Key metrics')} className="min-w-0">
+      <section aria-label={t('efficiency.section.kpis', 'Key metrics')} className="min-w-0">
+        <SectionErrorBoundary name="EfficiencyKeyMetrics">
           <EfficiencyEvidenceBrief {...statsProps} kind="kpis" />
-        </section>
-      </FadeIn>
+        </SectionErrorBoundary>
+      </section>
       {/* B — original overview gauge/bars + annotated daily series. */}
-      <FadeIn delay={0.1}>
-        <section aria-label={t('efficiency.section.overview', 'Overview and trend')} className="min-w-0 space-y-3">
+      <section aria-label={t('efficiency.section.overview', 'Overview and trend')} className="min-w-0 space-y-3">
           <SectionTitle>{t('efficiency.section.overview', 'Overview & trend')}</SectionTitle>
           <CardGrid label={t('efficiency.section.overview', 'Overview and trend')} items={[
-            { id: 'overview', size: 'third', content: <EfficiencyOverview {...statsProps} /> },
-            { id: 'daily-trend', size: 'half', content: <EfficiencyTrend {...drivesProps} selectedVehicleId={vehicleId} /> },
+            { id: 'overview', size: 'third', content: <SectionErrorBoundary name="EfficiencyOverview">
+              <EfficiencyOverview {...statsProps} />
+            </SectionErrorBoundary> },
+            { id: 'daily-trend', size: 'half', content: <SectionErrorBoundary name="EfficiencyDailyTrend">
+              <EfficiencyTrend {...drivesProps} selectedVehicleId={vehicleId} />
+            </SectionErrorBoundary> },
           ]} />
-        </section>
-      </FadeIn>
+      </section>
       {/* C — original distribution and both separate scatter clouds. */}
-      <FadeIn delay={0.2}>
-        <section aria-label={t('efficiency.section.analysis', 'Speed and temperature analysis')} className="min-w-0 space-y-3">
+      <section aria-label={t('efficiency.section.analysis', 'Speed and temperature analysis')} className="min-w-0 space-y-3">
           <SectionTitle>{t('efficiency.section.analysis', 'Speed & temperature analysis')}</SectionTitle>
           <CardGrid label={t('efficiency.section.analysis', 'Speed and temperature analysis')} items={[
-            { id: 'speed-distribution', size: 'third', content: <EfficiencySpeedDistribution {...drivesProps} /> },
-            { id: 'speed-scatter', size: 'third', content: <EfficiencyScatter {...drivesProps} kind="speed" /> },
-            { id: 'temperature-scatter', size: 'third', content: <EfficiencyScatter {...drivesProps} kind="temperature" /> },
+            { id: 'speed-distribution', size: 'third', content: <SectionErrorBoundary name="EfficiencySpeedDistribution">
+              <EfficiencySpeedDistribution {...drivesProps} />
+            </SectionErrorBoundary> },
+            { id: 'speed-scatter', size: 'third', content: <SectionErrorBoundary name="EfficiencySpeedScatter">
+              <EfficiencyScatter {...drivesProps} kind="speed" />
+            </SectionErrorBoundary> },
+            { id: 'temperature-scatter', size: 'third', content: <SectionErrorBoundary name="EfficiencyTemperatureScatter">
+              <EfficiencyScatter {...drivesProps} kind="temperature" />
+            </SectionErrorBoundary> },
           ]} />
-        </section>
-      </FadeIn>
+      </section>
       {/* D — six original table columns and six energy insight occurrences. */}
-      <FadeIn delay={0.3}>
-        <section aria-label={t('efficiency.section.breakdown', 'Breakdown and insights')} className="min-w-0 space-y-3">
+      <section aria-label={t('efficiency.section.breakdown', 'Breakdown and insights')} className="min-w-0 space-y-3">
           <SectionTitle>{t('efficiency.section.breakdown', 'Breakdown & insights')}</SectionTitle>
           <CardGrid label={t('efficiency.section.breakdown', 'Breakdown and insights')} items={[
-            { id: 'temperature-table', size: 'half', content: <EfficiencyTemperatureTable {...drivesProps} /> },
-            { id: 'energy-insights', size: 'third', content: <EfficiencyEvidenceBrief {...statsProps} kind="insights" /> },
+            { id: 'temperature-table', size: 'half', content: <SectionErrorBoundary name="EfficiencyTemperatureTable">
+              <EfficiencyTemperatureTable {...drivesProps} />
+            </SectionErrorBoundary> },
+            { id: 'energy-insights', size: 'third', content: <SectionErrorBoundary name="EfficiencyEnergyInsights">
+              <EfficiencyEvidenceBrief {...statsProps} kind="insights" />
+            </SectionErrorBoundary> },
           ]} />
-        </section>
-      </FadeIn>
+      </section>
     </PageLayout>
   );
 }
