@@ -18,7 +18,45 @@ Accepted source counts are not a running-actor count.
 Use the user's active seven-phase workflow, not the different feature-order
 numbering in `frontend-mission.md` section 38.
 
-## Latest rolling recovery: pushed snapshot count1648
+## User-requested overdue-worker intervention
+
+At actual2026-10-13T03:25:07.402Z, all12 workers pictured by the user still
+reported runtime-running with no NEWterminal1. This is NOT healthy progress:
+their latest owned-file writes were303-818min old (5-13.6hours); nine heartbeats
+were missing and three were299/488/807min old. Causal's latest write818min,
+Sharing638min, Ledger488min. Lifetime timers alone were not used to diagnose.
+Every pictured owner received an actual STOP NOW/no-further-tools/conclude
+request. None acknowledged cancellation at dispatch. Ledger marks them
+`stuck-runtime-running-stop-requested-preserve-claim`, not progressing; exact
+observations are in session `phase5-user-overdue-health-report.json`.
+Preserve every current WIP/attempt/live source claim until actual conclusion,
+never revert or doublewrite or automatically relaunch these stalled objectives.
+No safe programmatic cancellation tool is exposed. CLI help confirms `/tasks`
+manages subagents; user-side selective termination is available there. A stop
+message must never be reported as termination. Watchdog timeout enforcement has
+not been effective, despite prior requests; keep this distinction explicit.
+
+Source has since advanced through1667, pushed55f044930: Entropy's actual NEW
+corrective terminal1 is source-only accepted with15cases70assertions preserved,
+owncatalogstartupZEROcases, not original no-output fullpage acceptance.
+Compiler1661 actualexit2 now FOURfiles Causal/Statistics/Ledger/Sharing; Heatmap
+and Deadband errors disappeared. Their NEW source-only terminal1 corrections
+are committed1664/1665, no own validation after health stop.
+Next compiler1676. Recent real scoped passes: departure oracle17/17,
+DayLog summary14/14, timeline12/12, live vehicle identity27/27, WeeklyDigest28/28.
+Exports19case14pass5fail and VehicleCost/TCO/Twin/Period/Timeline/TrueCost own
+first failures were preserved WIP and genuinely SAME-owner attempt2 steered.
+Final corrections not executed are not passes. Within the unchanged25min
+deadline, necessary OWN fix/covering reruns are permitted; do not create false
+failures merely from an artificial single-intermediate-run ceiling. Unchanged
+passing files and repeated external-startup failures must not be rerun.
+Fourteenth's refused JourneyFragmentation first execution eventually launched
+as genuine fifteenth actor199d2651; ledger237 and exact oneactor map persist.
+TwoFactor NEWinformational1 is consumed without duplicate acceptance/source
+commit; same byte-identical pair and actualVitest1 ZEROcases/usage-manifest
+startup, previous privacy/native limits remain.
+
+## Previous rolling recovery: pushed snapshot count1648
 
 Latest pushed source/WIP snapshot is
 `5367d19a631e54d0b6b2c2665dd6db08d5f86e74`, count1648, on
