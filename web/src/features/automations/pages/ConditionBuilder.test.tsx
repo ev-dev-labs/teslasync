@@ -50,8 +50,8 @@ import type { AutomationConditionStepInput } from '../components/stepInputTypes'
 
 const mockedUseGeofences = vi.mocked(useGeofences);
 
-function geofenceResult(data: unknown) {
-  return { data } as ReturnType<typeof useGeofences>;
+function geofenceResult(data: unknown, state: Partial<ReturnType<typeof useGeofences>> = {}) {
+  return { data, ...state } as ReturnType<typeof useGeofences>;
 }
 
 beforeEach(() => {
@@ -560,5 +560,203 @@ describe('ConditionBuilder — other automation', () => {
     const { onChange } = renderBuilder([{ ...other, other_automation_id: 3 }]);
     fireEvent.change(screen.getByLabelText('State'), { target: { value: 'recently_triggered' } });
     expect(lastArg(onChange)[0]).toMatchObject({ state: 'recently_triggered' });
+  });
+});
+
+describe('ConditionBuilder condition access and lookup trust', () => {
+  const timeWindow: AutomationConditionStepInput = {
+    kind: 'condition_time_window',
+    start_time: '23:00',
+    end_time: '02:00',
+    timezone: 'Europe/London',
+    days_of_week: [0, 6],
+  };
+  const geofence: AutomationConditionStepInput = {
+    kind: 'condition_geofence',
+    place_id: 8,
+    state: 'dwell',
+  };
+  const other: AutomationConditionStepInput = {
+    kind: 'condition_other_automation',
+    other_automation_id: 42,
+    state: 'recently_triggered',
+  };
+
+  it('labels every condition kind control with unique associations and replaces only the selected row', () => {
+    const initial = [signalCondition, timeWindow, geofence, other];
+    const { onChange } = renderBuilder(initial);
+    const selectors = screen.getAllByRole('combobox', { name: 'Condition type' });
+    expect(selectors).toHaveLength(4);
+    expect(new Set(selectors.map((select) => select.id)).size).toBe(4);
+    expect(selectors.map((select) => (select as HTMLSelectElement).value)).toEqual([
+      'condition_signal', 'condition_time_window', 'condition_geofence', 'condition_other_automation',
+    ]);
+    expect(screen.getByLabelText('Start')).toHaveValue('23:00');
+    expect(screen.getByRole('combobox', { name: 'Geofence' })).toHaveValue('8');
+    expect(screen.getByRole('spinbutton', { name: 'Automation ID' })).toHaveValue(42);
+
+    fireEvent.change(selectors[1], { target: { value: 'condition_geofence' } });
+    expect(lastArg(onChange)).toEqual([
+      signalCondition,
+      { kind: 'condition_geofence', place_id: 0, state: 'inside' },
+      geofence,
+      other,
+    ]);
+    expect(screen.getAllByRole('combobox', { name: 'Condition type' })).toHaveLength(4);
+  });
+
+  it('uses full width controls and container reflow while keeping every editor and row action reachable', () => {
+    renderBuilder([{
+      kind: 'condition_signal', signal: 'inside_temp', op: 'between', value_min: 0, value_max: 25,
+    }, timeWindow, geofence, other]);
+    const controls = [
+      ...screen.getAllByRole('combobox'),
+      screen.getByLabelText('Min'),
+      screen.getByLabelText('Max'),
+      screen.getByLabelText('Start'),
+      screen.getByLabelText('End'),
+      screen.getByLabelText('Automation ID'),
+    ];
+    for (const control of controls) expect(control).toHaveClass('w-full', 'min-w-0');
+    const fields = screen.getByRole('combobox', { name: 'Signal' }).parentElement?.parentElement;
+    expect(fields).toHaveClass('grid', 'grid-cols-1', '@sm/condition:grid-cols-2', '@2xl/condition:grid-cols-4');
+    expect(screen.getByRole('group', { name: 'Days' })).toBeInTheDocument();
+    for (const button of screen.getAllByRole('button', { name: 'Remove condition' })) {
+      expect(button).toHaveClass('min-h-11', 'min-w-11', 'md:min-h-9', 'md:min-w-9');
+      expect(button.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
+    }
+    expect(screen.getByRole('button', { name: 'Add condition' })).toHaveClass('min-h-11', 'md:min-h-9');
+  });
+
+  it('shows loading without treating an unresolved lookup as empty or clearing a saved place', () => {
+    mockedUseGeofences.mockReturnValue(geofenceResult(undefined, {
+      isPending: true, isFetching: true, fetchStatus: 'fetching',
+    }));
+    const { onChange } = renderBuilder([signalCondition, geofence]);
+    expect(screen.getByRole('status')).toHaveTextContent('Loading geofences…');
+    const select = screen.getByRole('combobox', { name: 'Geofence' });
+    expect(select).toHaveValue('8');
+    expect(within(select).getByRole('option', { name: 'Unknown' })).toHaveValue('8');
+    expect(screen.queryByText('No geofences configured yet')).not.toBeInTheDocument();
+    expect(screen.getByRole('combobox', { name: 'Signal' })).toHaveValue('battery_level');
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it('keeps paused unresolved lookup unknown instead of claiming empty offline or failed', () => {
+    mockedUseGeofences.mockReturnValue(geofenceResult(undefined, {
+      isPending: true, isFetching: false, fetchStatus: 'paused',
+    }));
+    const { onChange } = renderBuilder([geofence]);
+    expect(screen.getByRole('status')).toHaveTextContent('Unknown');
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(screen.queryByText(/offline/i)).not.toBeInTheDocument();
+    expect(screen.queryByText('No geofences configured yet')).not.toBeInTheDocument();
+    expect(screen.getByRole('combobox', { name: 'Geofence' })).toHaveValue('8');
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it('distinguishes confirmed empty places from an unknown saved place without changing the draft', () => {
+    mockedUseGeofences.mockReturnValue(geofenceResult([], { isSuccess: true, fetchStatus: 'idle' }));
+    const { onChange } = renderBuilder([geofence]);
+    expect(screen.getByRole('status')).toHaveTextContent('No geofences configured yet');
+    expect(screen.getByRole('combobox', { name: 'Geofence' })).toHaveValue('8');
+    expect(screen.getByRole('option', { name: 'Unknown' })).toHaveValue('8');
+    expect(screen.getByRole('combobox', { name: 'State' })).toHaveValue('dwell');
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it('offers independent lookup retry after initial failure without discarding conditions or zero thresholds', () => {
+    const retry = vi.fn();
+    mockedUseGeofences.mockReturnValue(geofenceResult(undefined, {
+      error: new Error('lookup unavailable'), isError: true, refetch: retry,
+    }));
+    const initial = [{ ...signalCondition, value_num: 0 }, geofence, timeWindow];
+    const { onChange } = renderBuilder(initial);
+    expect(screen.getByRole('alert')).toHaveTextContent('Could not load geofences');
+    expect(screen.getByRole('textbox', { name: /^Value/ })).toHaveValue('0.00');
+    expect(screen.getByRole('combobox', { name: 'Geofence' })).toHaveValue('8');
+    fireEvent.click(screen.getByRole('button', { name: 'Retry loading places' }));
+    expect(retry).toHaveBeenCalledTimes(1);
+    expect(onChange).not.toHaveBeenCalled();
+
+    fireEvent.change(screen.getByRole('combobox', { name: 'State' }), { target: { value: 'outside' } });
+    expect(lastArg(onChange)).toEqual([initial[0], { ...geofence, state: 'outside' }, timeWindow]);
+  });
+
+  it('retains named places on refresh failure and retries only the lookup without emitting draft changes', () => {
+    const retry = vi.fn();
+    mockedUseGeofences.mockReturnValue(geofenceResult([{ id: 8, name: 'Work' }], {
+      error: new Error('refresh failed'), isError: true, refetch: retry,
+      dataUpdatedAt: 1_700_000_000_000,
+    }));
+    const { onChange } = renderBuilder([signalCondition, geofence, other]);
+    expect(screen.getByRole('status')).toHaveTextContent(
+      'Previously loaded data remains visible while affected sources recover.',
+    );
+    const select = screen.getByRole('combobox', { name: 'Geofence' });
+    expect(select).toHaveValue('8');
+    expect(within(select).getByRole('option', { name: 'Work' })).toHaveValue('8');
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+    expect(retry).toHaveBeenCalledTimes(1);
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it('retains paused places without an invented error or offline claim', () => {
+    mockedUseGeofences.mockReturnValue(geofenceResult([{ id: 8, name: 'Work' }], {
+      fetchStatus: 'paused', isFetching: false,
+    }));
+    const { onChange } = renderBuilder([geofence]);
+    expect(screen.getByRole('status')).toHaveTextContent('Previously loaded data remains visible.');
+    expect(screen.getByRole('status')).toHaveAttribute('data-refresh-blocked', 'true');
+    expect(screen.getByRole('combobox', { name: 'Geofence' })).toHaveValue('8');
+    expect(screen.queryByText(/offline|Could not load geofences/i)).not.toBeInTheDocument();
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it('recovers a missing place name without overwriting focused raw text SI thresholds or row order', () => {
+    vi.mocked(useSettings).mockReturnValue({
+      settings: inputPreferences({ unit_of_temp: 'F' }),
+    } as ReturnType<typeof useSettings>);
+    mockedUseGeofences.mockReturnValue(geofenceResult(undefined, {
+      isPending: true, isFetching: true,
+    }));
+    const temperature: AutomationConditionStepInput = {
+      kind: 'condition_signal', signal: 'inside_temp', op: 'between',
+      value_min: 20.123456789, value_max: undefined,
+    };
+    const initial = [temperature, geofence, other];
+    const onChange = vi.fn();
+    const { rerender } = render(<ConditionBuilder conditions={initial} onChange={onChange} />);
+    const min = screen.getByRole('textbox', { name: 'Min' });
+    fireEvent.focus(min);
+    fireEvent.change(min, { target: { value: '68.12345' } });
+    expect(lastArg(onChange)).toEqual([
+      { ...temperature, value_min: (68.12345 - 32) * 5 / 9 },
+      geofence,
+      other,
+    ]);
+    onChange.mockClear();
+    mockedUseGeofences.mockReturnValue(geofenceResult([{ id: 8, name: 'Work' }]));
+    rerender(<ConditionBuilder conditions={initial} onChange={onChange} />);
+    expect(min).toHaveValue('68.12345');
+    expect(screen.getByRole('textbox', { name: 'Max' })).toHaveValue('');
+    expect(screen.getByRole('combobox', { name: 'Geofence' })).toHaveValue('8');
+    expect(screen.getByRole('option', { name: 'Work' })).toHaveValue('8');
+    expect(screen.queryByRole('option', { name: 'Unknown' })).not.toBeInTheDocument();
+    expect(onChange).not.toHaveBeenCalled();
+    expect(initial).toEqual([temperature, geofence, other]);
+  });
+
+  it('does not show unrelated geofence lookup failure for other condition kinds', () => {
+    mockedUseGeofences.mockReturnValue(geofenceResult(undefined, {
+      error: new Error('lookup failed'), isError: true,
+    }));
+    const { onChange } = renderBuilder([signalCondition, timeWindow, other]);
+    expect(screen.queryByText('Could not load geofences')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Retry loading places' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(screen.getAllByRole('combobox', { name: 'Condition type' })).toHaveLength(3);
+    expect(onChange).not.toHaveBeenCalled();
   });
 });
