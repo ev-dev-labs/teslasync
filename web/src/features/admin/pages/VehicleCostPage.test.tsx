@@ -20,7 +20,8 @@
  * controllable query result. This keeps the assertions crisp and the render
  * deterministic (no recharts sizing / async react-query timing in the way).
  */
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeAll, beforeEach, vi } from 'vitest';
+import i18n from 'i18next';
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
@@ -250,6 +251,12 @@ function renderPage() {
     </QueryClientProvider>,
   );
 }
+
+beforeAll(async () => {
+  // The real ErrorBoundary reads this singleton, not the hook mock above.
+  // Initialize it so its real fallback labels and Retry action are exercised.
+  await i18n.init({ lng: 'en', fallbackLng: 'en', resources: {} });
+});
 
 beforeEach(() => {
   void useVehicleCostMock.mockReset();
