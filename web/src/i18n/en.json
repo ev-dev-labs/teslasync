@@ -10831,6 +10831,10 @@
         "title": "Replay DLQ entry?",
         "message": "This will republish entry #{{id}} to its source topic. The action is logged and rate-limited.",
         "confirm": "Replay"
+      },
+      "toast": {
+        "replaySuccess": "Replay published to {{topic}}",
+        "replayError": "Replay failed"
       }
     },
     "flags": {

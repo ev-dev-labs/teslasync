@@ -397,6 +397,10 @@
         "title": "Replay DLQ entry?",
         "message": "This will republish entry #{{id}} to its source topic. The action is logged and rate-limited.",
         "confirm": "Replay"
+      },
+      "toast": {
+        "replaySuccess": "Replay published to {{topic}}",
+        "replayError": "Replay failed"
       }
     },
     "flags": {
@@ -4526,6 +4530,11 @@
           "success": "Warranty details refreshed"
         }
       }
+    }
+  },
+  "totp": {
+    "copy": {
+      "manualHint": "Clipboard unavailable. Select the displayed text and copy it manually."
     }
   },
   "tour": {
