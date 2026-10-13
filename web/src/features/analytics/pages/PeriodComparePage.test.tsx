@@ -533,7 +533,7 @@ describe('PeriodComparePage — toolbar interactions & a11y', () => {
         expect(cells).toHaveLength(5);
         for (const cell of cells) expect(cell).not.toHaveClass('hidden');
       }
-      const costChange = within(screen.getByRole('row', { name: /Total cost/ })).getByText('↓ 48.00');
+      const costChange = within(screen.getByRole('row', { name: /Total cost/ })).getByText('↓ 48.00').parentElement!;
       expect(costChange).toHaveClass('text-[var(--semantic-success)]');
       expect(costChange).not.toHaveClass('text-emerald-300', 'text-rose-300');
     });
