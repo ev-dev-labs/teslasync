@@ -95,6 +95,7 @@ export function ExportStatusBreakdown({
                   value={count}
                   max={stats.total}
                   color={statusColor[status]}
+                  fill="solid"
                   sublabel={`${fmtInt(count)} · ${fmtPercent(pct)}`}
                 />
               );

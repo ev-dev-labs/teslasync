@@ -263,3 +263,69 @@ describe('ExportStatusBreakdown', () => {
     });
   });
 });
+
+describe('ExportStatusBreakdown semantic fills', () => {
+  it('keeps all status bars solid semantic with the full denominator', () => {
+    renderBreakdown({
+      stats: makeStats({
+        byStatus: { ready: 3, processing: 2, queued: 2, failed: 2, expired: 1 },
+        total: 11,
+        totalBytes: 2048,
+      }),
+    });
+
+    const statuses = [
+      { label: 'Ready', count: 3, percentage: '27.27%', color: 'var(--semantic-success)' },
+      { label: 'Processing', count: 2, percentage: '18.18%', color: 'var(--semantic-info)' },
+      { label: 'Queued', count: 2, percentage: '18.18%', color: 'var(--semantic-info)' },
+      { label: 'Failed', count: 2, percentage: '18.18%', color: 'var(--semantic-danger)' },
+      { label: 'Expired', count: 1, percentage: '9.09%', color: 'var(--text-secondary)' },
+    ];
+    const bars = screen.getAllByRole('progressbar');
+    expect(bars.map((bar) => bar.getAttribute('aria-label'))).toEqual(
+      statuses.map(({ label }) => label),
+    );
+
+    statuses.forEach(({ label, count, percentage, color }) => {
+      const bar = screen.getByRole('progressbar', { name: label });
+      expect(bar).toHaveAttribute('aria-valuemin', '0');
+      expect(bar).toHaveAttribute('aria-valuenow', String(count));
+      expect(bar).toHaveAttribute('aria-valuemax', '11');
+      expect(bar).toHaveTextContent(`${count} · ${percentage}`);
+      expect(bar.querySelector('[data-metric-track]')).toHaveClass('h-2.5');
+      expect(bar.querySelector('[data-metric-fill]')).toHaveStyle({ background: color });
+    });
+
+    expect(screen.getByText('Storage used')).toBeInTheDocument();
+    expect(screen.getByText('2.00 KB')).toBeInTheDocument();
+  });
+
+  it('keeps unresolved counts distinct from a resolved zero activity summary', () => {
+    const stats = makeStats();
+    const unresolvedMessage = 'Export counts are unknown.';
+    const { rerender, onRetry } = renderBreakdown({ stats, unresolvedMessage });
+
+    expect(screen.getByRole('status')).toHaveTextContent(unresolvedMessage);
+    expect(screen.queryByText('No export activity to summarize yet.')).not.toBeInTheDocument();
+    expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
+    expect(screen.queryByText('Storage used')).not.toBeInTheDocument();
+
+    rerender(
+      <MemoryRouter>
+        <ExportStatusBreakdown
+          stats={stats}
+          isLoading={false}
+          error={null}
+          onRetry={onRetry}
+        />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByRole('status')).toHaveTextContent(
+      'No export activity to summarize yet.',
+    );
+    expect(screen.queryByText(unresolvedMessage)).not.toBeInTheDocument();
+    expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
+    expect(screen.queryByText('Storage used')).not.toBeInTheDocument();
+  });
+});
