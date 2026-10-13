@@ -124,10 +124,10 @@ export default function StatisticsPage() {
     return stateSummary.map((e, index) => {
       return {
         state: e.state,
-        name: Object.hasOwn(STATE_LABELS, e.state) ? t(STATE_LABELS[e.state]) : e.state,
+        name: Object.prototype.hasOwnProperty.call(STATE_LABELS, e.state) ? t(STATE_LABELS[e.state]) : e.state,
         value: total != null && total > 0 && minutes[index] != null
           ? Math.round((minutes[index] / total) * 100) : null,
-        fill: palette[Object.hasOwn(STATE_SERIES, e.state) ? STATE_SERIES[e.state] : 5],
+        fill: palette[Object.prototype.hasOwnProperty.call(STATE_SERIES, e.state) ? STATE_SERIES[e.state] : 5],
       };
     });
   }, [stateSummary, palette, t]);

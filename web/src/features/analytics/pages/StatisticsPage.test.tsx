@@ -382,6 +382,24 @@ describe('StatisticsPage', () => {
     expect(within(table).getByText('digitalTwin.statusLabel.driving')).toBeInTheDocument();
   });
 
+  it('treats prototype property names as unknown state identities without dropping their measured shares', async () => {
+    mockStateSummary.mockReturnValue(qr({ data: [
+      { state: 'constructor', totalMin: 10, count: 1 },
+      { state: 'toString', totalMin: 20, count: 1 },
+      { state: '__proto__', totalMin: 70, count: 1 },
+    ] }));
+    renderPage();
+    await screen.findByText('500 km');
+
+    const table = screen.getByRole('table', { name: 'State distribution — data table' });
+    for (const [state, share] of [['constructor', '10'], ['toString', '20'], ['__proto__', '70']]) {
+      const row = within(table).getAllByRole('row').find(candidate => within(candidate).queryAllByText(state).length > 0);
+      expect(row).toBeDefined();
+      expect(within(row!).getAllByText(state)).toHaveLength(2);
+      expect(within(row!).getByText(share)).toBeInTheDocument();
+    }
+  });
+
   it('preserves complete vehicle names and distinguishes missing comparison values from measured zero', async () => {
     const fleet = makeFleet(2);
     fleet.vehicle_comparison[0].name = 'A very long synthetic vehicle name retained in full';
