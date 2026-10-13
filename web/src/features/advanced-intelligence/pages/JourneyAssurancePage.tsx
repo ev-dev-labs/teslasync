@@ -17,6 +17,7 @@ import { toLocalDatetimeStr } from '@/lib/dateFormat';
 
 import { glassCardClasses } from '@/lib/tokens';
 import { SI } from '@/lib/unitConversion';
+import { browserTimezone } from '@/lib/timezone';
 import type { JourneyAssuranceRequest } from '@/types/advancedIntelligence';
 import { EvidencePanel, InsightPanel, MutationError, SiNumberInput } from '../components';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
@@ -142,6 +143,9 @@ export default function JourneyAssurancePage() {
               <Input
                 type="datetime-local"
                 label={t('advancedIntelligence.journey.form.departure', 'Departure')}
+                hint={t('advancedIntelligence.journey.form.departureZone',
+                  'Enter departure in your browser time zone ({{timeZone}}). Display time zone preferences do not change this entry.',
+                  { timeZone: browserTimezone() })}
                 value={form.departure_at}
                 required
                 onChange={(event) => setForm((current) => ({ ...current, departure_at: event.target.value }))}
