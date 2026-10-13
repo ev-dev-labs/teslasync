@@ -78,7 +78,7 @@ export default function RangeBufferPage() {
   const state: RangeBufferQueryState = {
     vehicleSelected: vehicleId != null,
     isLoading:
-      vehicleId != null && drivesState.status === 'initial',
+      vehicleId != null && drivesState.status === 'initial' && drivesQuery.isLoading,
     isResolved,
     error:
       drivesState.fatalError,

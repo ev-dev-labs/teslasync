@@ -2,7 +2,8 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { MemoryRouter } from 'react-router-dom';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import i18n from 'i18next';
+import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ToastProvider } from '@/components/feedback';
 import type { UseUnitsResult } from '@/hooks/useUnits';
@@ -285,6 +286,11 @@ function expectEverySection(): void {
     expect(screen.getByTestId(testId)).toBeInTheDocument();
   }
 }
+
+// The shared boundary reads the i18next singleton, not the useTranslation mock.
+beforeAll(async () => {
+  await i18n.init({ lng: 'en', resources: { en: { translation: {} } } });
+});
 
 beforeEach(() => {
   vi.clearAllMocks();
