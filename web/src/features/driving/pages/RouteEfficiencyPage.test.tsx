@@ -112,7 +112,9 @@ vi.mock('@/components/charts', () => {
       loading?: boolean;
       empty?: boolean;
       className?: string;
-    }) => (
+    }) => {
+      if (renderFailures.comparison) throw new Error('comparison render failed');
+      return (
       <figure aria-label={ariaLabel} data-testid="chart-container" className={className}>
         <figcaption>{title}</figcaption>
         {loading ? (
@@ -142,7 +144,8 @@ vi.mock('@/components/charts', () => {
           </table>
         )}
       </figure>
-    ),
+      );
+    },
     ChartTooltip: inert,
     BarChart: inert,
     Bar: inert,
@@ -183,9 +186,10 @@ vi.mock('@/components/forms', () => ({
 // ── AI suggestions: surfaces the vehicleId it was handed so the parent wiring
 //    is assertable (production gates its own visibility on ai_mode). ──
 vi.mock('@/components/ai/AIRouteEfficiencySuggestions', () => ({
-  AIRouteEfficiencySuggestions: ({ vehicleId }: { vehicleId?: string }) => (
-    <div data-testid="ai-suggestions" data-vehicle-id={vehicleId ?? ''} />
-  ),
+  AIRouteEfficiencySuggestions: ({ vehicleId }: { vehicleId?: string }) => {
+    if (renderFailures.ai) throw new Error('AI render failed');
+    return <div data-testid="ai-suggestions" data-vehicle-id={vehicleId ?? ''} />;
+  },
 }));
 
 // ── Data + environment hooks, driven per test. ──
@@ -214,7 +218,7 @@ const mockUnits = useUnits as unknown as ReturnType<typeof vi.fn>;
 const KM_PER_MILE = 1.609344;
 
  
-function makeQuery(over: Record<string, unknown> = {}): any {
+function makeQuery(over: Record<string, unknown> = {}) {
   return {
     data: undefined,
     error: null,
@@ -263,7 +267,7 @@ const WORST_WH_KM = 260; // max of worstEfficiency
 const AVG_WH_KM = Math.round((160 + 150 + 210) / 3); // 173
 
  
-function selected(vehicleId: number | null): any {
+function selected(vehicleId: number | null) {
   return {
     vehicleId,
     vehicle: null,
@@ -327,6 +331,8 @@ function kpiValue(label: string): string {
 }
 
 beforeEach(() => {
+  renderFailures.comparison = false;
+  renderFailures.ai = false;
   mockRouteEff.mockReset();
   mockSelected.mockReset();
   mockUnits.mockReset();
@@ -609,5 +615,51 @@ describe('RouteEfficiencyPage — route cards pagination', () => {
       expect(screen.getByTestId('location-search')).toHaveTextContent('to=2026-05-31');
       expect(screen.getByTestId('location-search')).not.toHaveTextContent('page=');
       expect(mockRouteEff).toHaveBeenLastCalledWith('7', '2026-05-01', '2026-05-31');
+  });
+});
+
+
+describe('RouteEfficiencyPage � isolated widgets and restrained metrics', () => {
+  it('isolates a failed comparison while keeping summary, AI, metrics and route cards', () => {
+    renderFailures.comparison = true;
+    const errors = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    try {
+      renderPage();
+      expect(screen.getByRole('alert')).toBeInTheDocument();
+      expect(kpiValue('Routes')).toBe('3');
+      expect(screen.getByTestId('ai-suggestions')).toHaveAttribute('data-vehicle-id', '7');
+      expect(screen.getByRole('progressbar', { name: 'Best Efficiency' })).toBeInTheDocument();
+      expect(within(cardsRegion()).getByText('Beach')).toBeInTheDocument();
+    } finally { errors.mockRestore(); }
+  });
+
+  it('isolates a failed independent AI widget without erasing historical analytics', () => {
+    renderFailures.ai = true;
+    const errors = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    try {
+      renderPage();
+      expect(screen.getByRole('alert')).toBeInTheDocument();
+      expect(kpiValue('Total Trips')).toBe('23');
+      expect(screen.getAllByTestId('chart-row')).toHaveLength(3);
+      expect(screen.getByRole('progressbar', { name: 'Worst Efficiency' })).toBeInTheDocument();
+      expect(within(cardsRegion()).getByText('Office')).toBeInTheDocument();
+    } finally { errors.mockRestore(); }
+  });
+
+  it('uses four solid metric fills without changing consumption or trip bounds', () => {
+    renderPage();
+    const bars = [
+      ['Best Efficiency', 130, 300],
+      ['Avg Efficiency', (160 + 150 + 210) / 3, 300],
+      ['Worst Efficiency', 260, 400],
+      ['Most Driven Route', 12, 20],
+    ] as const;
+    for (const [name, value, max] of bars) {
+      const bar = screen.getByRole('progressbar', { name });
+      expect(bar).toHaveAttribute('aria-valuenow', String(value));
+      expect(bar).toHaveAttribute('aria-valuemax', String(max));
+      expect(bar.querySelector('[data-metric-fill]')?.getAttribute('style')).not.toContain('gradient');
+      expect(bar.querySelector('[data-metric-fill]')).toBeInTheDocument();
+    }
   });
 });

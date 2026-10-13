@@ -3,12 +3,12 @@ import { useTranslation } from 'react-i18next';
 import { Route, Gauge, Activity, Navigation } from 'lucide-react';
 
 import { PageLayout, ChartCard, LayoutCard, Section } from '@/components/layout';
-import { GlassPanel, Pagination, PanelTitle } from '@/components/ui';
+import { GlassPanel, Pagination, PanelTitle, Icon } from '@/components/ui';
 
 import { MetricBar } from '@/components/data-display';
 import type { StatMetric } from '@/components/data-display/stat-reference';
 import { DrivingSummaryBrief } from '../components/operationalbrief-n-z/DrivingSummaryBrief';
-import { Skeleton, EmptyState, QueryError, StaleRefreshWarning } from '@/components/feedback';
+import { Skeleton, EmptyState, QueryError, StaleRefreshWarning, SectionErrorBoundary } from '@/components/feedback';
 import { FadeIn, StaggerContainer, StaggerItem } from '@/components/motion';
 import {
   ChartLegend, ChartTooltip,
@@ -28,6 +28,7 @@ import {
   RouteCard, makeUnitDisplay, ROUTE_EFF_COLORS, MAX_COMPARISON_ROUTES,
 } from '../components/route-efficiency';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { getChartFontFamily, getChartFontSize } from '@/lib/chartTypography';
 
 const ROUTES_PAGE_SIZE = 12;
 
@@ -136,6 +137,7 @@ export default function RouteEfficiencyPage() {
       <StaleRefreshWarning state={routeState} label={t('routeEfficiency.title', 'Route Efficiency')} />
       {/* 1 — KPI band */}
       <FadeIn>
+        <SectionErrorBoundary name="RouteEfficiencySummary">
         <DrivingSummaryBrief
           id="route-efficiency-brief"
           title={t('routeEfficiency.kpisAria', 'Route efficiency summary metrics')}
@@ -148,10 +150,13 @@ export default function RouteEfficiencyPage() {
           retained={routeState.isRefreshBlocked}
           actions={isError ? <QueryError error={error} onRetry={() => refetch()} /> : undefined}
         />
+        </SectionErrorBoundary>
       </FadeIn>
 
       {/* 2 — AI suggestions (hidden by withAiFeature when ai_mode='off') */}
-      <AIRouteEfficiencySuggestions vehicleId={vehicleIdStr} />
+      <SectionErrorBoundary name="RouteEfficiencySuggestions">
+        <AIRouteEfficiencySuggestions vehicleId={vehicleIdStr} />
+      </SectionErrorBoundary>
 
       {/* 3 — Primary bento: comparison chart (hero) + route metrics */}
       <FadeIn delay={0.1}>
@@ -159,15 +164,17 @@ export default function RouteEfficiencyPage() {
           aria-label={t('routeEfficiency.analysisAria', 'Route efficiency analysis')}
           className="grid grid-cols-1 gap-4 xl:grid-cols-3 xl:gap-5"
         >
+          <div className="min-w-0 xl:col-span-2">
+          <SectionErrorBoundary name="RouteEfficiencyComparison">
           {isError ? (
-            <GlassPanel className="p-4 sm:p-5 xl:col-span-2">
+            <GlassPanel className="p-4 sm:p-5">
               <PanelTitle className="mb-3">
                 {t('routeEfficiency.comparison', 'Route Efficiency Comparison')}
               </PanelTitle>
               <QueryError error={error} onRetry={() => refetch()} />
             </GlassPanel>
           ) : (
-            <div className="min-w-0 xl:col-span-2">
+            <div className="min-w-0">
             <ChartCard
               title={t('routeEfficiency.comparison', 'Route Efficiency Comparison')}
               ariaLabel={t(
@@ -193,8 +200,8 @@ export default function RouteEfficiencyPage() {
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={chartData} layout="vertical" margin={{ left: 8, right: 12 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
-                  <XAxis type="number" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} />
-                  <YAxis dataKey="name" type="category" tick={{ fill: 'var(--text-muted)', fontSize: 9 }} width={110} />
+                  <XAxis type="number" tick={{ fill: 'var(--text-muted)', fontSize: getChartFontSize(12), fontFamily: getChartFontFamily() }} />
+                  <YAxis dataKey="name" type="category" tick={{ fill: 'var(--text-muted)', fontSize: getChartFontSize(12), fontFamily: getChartFontFamily() }} width={110} />
                   <Tooltip content={<ChartTooltip />} cursor={{ fill: 'var(--surface-2)', fillOpacity: 0.3 }} />
                   <ChartLegend />
                   <Bar dataKey="best" name={`${t('routeEfficiency.best', 'Best')} ${effUnit}`} fill={ROUTE_EFF_COLORS.best} fillOpacity={0.85} radius={[0, 3, 3, 0]} hide={hiddenSeries?.isHidden('best')} />
@@ -207,8 +214,13 @@ export default function RouteEfficiencyPage() {
             </div>
           )}
 
+          </SectionErrorBoundary>
+          </div>
+
+          <div className="min-w-0">
+          <SectionErrorBoundary name="RouteEfficiencyMetrics">
           <LayoutCard title={t('routeEfficiency.metrics', 'Route Metrics')} actions={
-              <Gauge className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+              <Icon icon={Gauge} size="md" className="text-[var(--text-muted)]" />
           }>
             {isLoading ? (
               <Skeleton height={220} />
@@ -216,13 +228,14 @@ export default function RouteEfficiencyPage() {
               <QueryError error={error} onRetry={() => refetch()} />
             ) : !hasRoutes ? (
               <EmptyState /* no-action: transient — no route metrics for the selected vehicle/range */
-                icon={<Activity className="h-8 w-8 opacity-20" />}
+                icon={<Icon icon={Activity} size="xl" className="text-[var(--text-muted)]" />}
                 message={emptyMessage}
                 className="py-8"
               />
             ) : (
               <div className="space-y-4">
                 <MetricBar
+                  fill="solid"
                   label={t('routeEfficiency.bestLabel', 'Best Efficiency')}
                   value={unit.toEfficiency(bestEff)}
                   max={unit.toEfficiency(300)}
@@ -230,6 +243,7 @@ export default function RouteEfficiencyPage() {
                   sublabel={`${fmtInt(unit.toEfficiency(bestEff))} ${effUnit}`}
                 />
                 <MetricBar
+                  fill="solid"
                   label={t('routeEfficiency.avgLabel', 'Avg Efficiency')}
                   value={unit.toEfficiency(avgEff)}
                   max={unit.toEfficiency(300)}
@@ -237,6 +251,7 @@ export default function RouteEfficiencyPage() {
                   sublabel={`${fmtInt(unit.toEfficiency(avgEff))} ${effUnit}`}
                 />
                 <MetricBar
+                  fill="solid"
                   label={t('routeEfficiency.worstLabel', 'Worst Efficiency')}
                   value={unit.toEfficiency(worstEff)}
                   max={unit.toEfficiency(400)}
@@ -244,6 +259,7 @@ export default function RouteEfficiencyPage() {
                   sublabel={`${fmtInt(unit.toEfficiency(worstEff))} ${effUnit}`}
                 />
                 <MetricBar
+                  fill="solid"
                   label={t('routeEfficiency.mostDrivenLabel', 'Most Driven Route')}
                   value={mostDrivenTrips}
                   max={Math.max(mostDrivenTrips, 20)}
@@ -253,15 +269,16 @@ export default function RouteEfficiencyPage() {
               </div>
             )}
           </LayoutCard>
+          </SectionErrorBoundary>
+          </div>
         </section>
       </FadeIn>
 
       {/* 4 — Detail band: most-driven route cards */}
       <FadeIn delay={0.2}>
         <Section id="route-efficiency-most-driven" title={t('routeEfficiency.mostDriven', 'Most-driven routes')}>
-          <div>
-            <Navigation className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-          </div>
+          <Icon icon={Navigation} size="md" className="text-[var(--text-muted)]" />
+          <SectionErrorBoundary name="RouteEfficiencyRoutes">
           {isLoading ? (
             <div className="grid gap-4 [grid-template-columns:repeat(auto-fill,minmax(min(100%,20rem),1fr))]">
               {Array.from({ length: 6 }).map((_, i) => (
@@ -275,7 +292,7 @@ export default function RouteEfficiencyPage() {
           ) : !hasRoutes ? (
             <GlassPanel className="p-4 sm:p-5">
               <EmptyState /* no-action: transient — no routes recorded for the selected vehicle/range */
-                icon={<Route className="h-8 w-8 opacity-20" />}
+                icon={<Icon icon={Route} size="xl" className="text-[var(--text-muted)]" />}
                 message={emptyMessage}
                 className="py-10"
               />
@@ -284,7 +301,9 @@ export default function RouteEfficiencyPage() {
             <StaggerContainer className="grid gap-4 [grid-template-columns:repeat(auto-fill,minmax(min(100%,20rem),1fr))]">
               {visibleRoutes.map((route) => (
                 <StaggerItem key={`${route.startLocation}-${route.endLocation}`}>
-                  <RouteCard route={route} unit={unit} />
+                  <SectionErrorBoundary name="RouteEfficiencyRouteCard">
+                    <RouteCard route={route} unit={unit} />
+                  </SectionErrorBoundary>
                 </StaggerItem>
               ))}
             </StaggerContainer>
@@ -297,6 +316,7 @@ export default function RouteEfficiencyPage() {
               onPageChange={setPage}
             />
           )}
+          </SectionErrorBoundary>
         </Section>
       </FadeIn>
     </PageLayout>
