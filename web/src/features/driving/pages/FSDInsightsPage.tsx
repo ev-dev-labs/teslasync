@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
 
 import { useFsdInsightsRange } from '@/api/hooks/useAnalytics';
-import { StaleRefreshWarning } from '@/components/feedback';
+import { SectionErrorBoundary, StaleRefreshWarning } from '@/components/feedback';
 import { DataProvenanceBadge } from '@/components/data-display';
 import { Grid, PageLayout } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
@@ -142,40 +142,56 @@ export default function FSDInsightsPage() {
       <StaleRefreshWarning state={insightsState} label={t('fsd.title', 'FSD Insights')} />
 
       <FadeIn>
-        <FsdEvidenceBrief insights={insightsState.data} state={sectionState}
-          scope={t('fsd.brief.window', '{{start}}–{{end}} (exclusive end) · {{timezone}}', {
-            start: startInstant, end: endInstantExclusive, timezone,
-          })}
-          retained={insightsState.status === 'stale' || insightsState.refreshError != null} />
+        <SectionErrorBoundary name="FsdEvidenceBrief">
+          <FsdEvidenceBrief insights={insightsState.data} state={sectionState}
+            scope={t('fsd.brief.window', '{{start}}–{{end}} (exclusive end) · {{timezone}}', {
+              start: startInstant, end: endInstantExclusive, timezone,
+            })}
+            retained={insightsState.status === 'stale' || insightsState.refreshError != null} />
+        </SectionErrorBoundary>
       </FadeIn>
 
       <FadeIn delay={0.04}>
-        <FsdObservatoryPanel insights={insightsState.data} state={sectionState} />
+        <SectionErrorBoundary name="FsdObservatoryPanel">
+          <FsdObservatoryPanel insights={insightsState.data} state={sectionState} />
+        </SectionErrorBoundary>
       </FadeIn>
 
       <FadeIn delay={0.05}>
-        <FsdDistanceTrend insights={insightsState.data} state={sectionState} />
+        <SectionErrorBoundary name="FsdDistanceTrend">
+          <FsdDistanceTrend insights={insightsState.data} state={sectionState} />
+        </SectionErrorBoundary>
       </FadeIn>
 
       <FadeIn delay={0.1}>
         <Grid cols={SPLIT_COLUMNS} gap={4}>
-          <FsdShareTrend insights={insightsState.data} state={sectionState} />
-          <FsdWeekdayPattern insights={insightsState.data} state={sectionState} />
+          <SectionErrorBoundary name="FsdShareTrend">
+            <FsdShareTrend insights={insightsState.data} state={sectionState} />
+          </SectionErrorBoundary>
+          <SectionErrorBoundary name="FsdWeekdayPattern">
+            <FsdWeekdayPattern insights={insightsState.data} state={sectionState} />
+          </SectionErrorBoundary>
         </Grid>
       </FadeIn>
 
       <FadeIn delay={0.15}>
-        <FsdTopDays insights={insightsState.data} state={sectionState} />
+        <SectionErrorBoundary name="FsdTopDays">
+          <FsdTopDays insights={insightsState.data} state={sectionState} />
+        </SectionErrorBoundary>
       </FadeIn>
 
       <FadeIn delay={0.2}>
         <div className="space-y-4 sm:space-y-5">
-          <FsdDriveAnalyticsPanels insights={insightsState.data} state={sectionState} />
+          <SectionErrorBoundary name="FsdDriveAnalyticsPanels">
+            <FsdDriveAnalyticsPanels insights={insightsState.data} state={sectionState} />
+          </SectionErrorBoundary>
         </div>
       </FadeIn>
 
       <FadeIn delay={0.25}>
-        <FsdConfidencePanel insights={insightsState.data} state={sectionState} />
+        <SectionErrorBoundary name="FsdConfidencePanel">
+          <FsdConfidencePanel insights={insightsState.data} state={sectionState} />
+        </SectionErrorBoundary>
       </FadeIn>
     </PageLayout>
   );
