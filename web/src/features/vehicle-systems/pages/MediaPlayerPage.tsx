@@ -10,7 +10,7 @@ import { typography } from '@/lib/tokens';
 
 import { CardGrid, PageLayout, LayoutCard } from '@/components/layout';
 import {
-  Badge, DataTable, Text, Caption, type Column,
+  Badge, DataTable, Text, Caption, Icon, type Column,
 } from '@/components/ui';
 
 import { TimeStamp } from '@/components/data-display';
@@ -66,16 +66,15 @@ function fmtPlayTime(ms: number): string {
   return `${m}:${s.toString().padStart(2, '0')}`;
 }
 
-/** Source → toned accent icon. Decorative — the adjacent text carries meaning. */
+/** Source identity comes from the glyph and label, not decorative status hues. */
 function SourceIcon({ source }: { source: string }) {
   const s = (source ?? '').toLowerCase();
-  const base = 'h-4 w-4';
-  if (s.includes('spotify')) return <Disc3 className={cn(base, 'text-emerald-300')} aria-hidden="true" />;
-  if (s.includes('bluetooth')) return <Bluetooth className={cn(base, 'text-indigo-300')} aria-hidden="true" />;
-  if (s.includes('radio') || s.includes('fm') || s.includes('am'))
-    return <Radio className={cn(base, 'text-amber-300')} aria-hidden="true" />;
-  if (s.includes('podcast')) return <Podcast className={cn(base, 'text-purple-300')} aria-hidden="true" />;
-  return <Headphones className={cn(base, 'text-cyan-300')} aria-hidden="true" />;
+  const icon = s.includes('spotify') ? Disc3
+    : s.includes('bluetooth') ? Bluetooth
+    : s.includes('radio') || s.includes('fm') || s.includes('am') ? Radio
+    : s.includes('podcast') ? Podcast
+    : Headphones;
+  return <Icon icon={icon} className={typography.color.secondary} />;
 }
 
 function statusVariant(status: string): 'success' | 'warning' | 'neutral' {
@@ -347,7 +346,7 @@ export default function MediaPlayerPage() {
               )
             ) : mediaQuery.isLoading && !latest ? (
               <div className="flex items-start gap-4 sm:gap-6">
-                <div className="h-16 w-16 shrink-0 motion-safe:animate-pulse rounded-xl bg-[var(--surface-3)] sm:h-28 sm:w-28" aria-hidden="true" />
+                <div className="h-16 w-16 shrink-0 rounded-xl bg-[var(--surface-3)] sm:h-28 sm:w-28" aria-hidden="true" />
                 <div className="flex-1 space-y-3 py-1">
                   <Skeleton width="60%" height={20} />
                   <Skeleton width="40%" height={14} />

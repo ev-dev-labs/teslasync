@@ -705,3 +705,34 @@ describe('MediaPlayerPage — independent retained source recovery', () => {
     expect(zero.now_playing_elapsed).toBe(0);
   });
 });
+
+
+describe('MediaPlayerPage — restrained source presentation', () => {
+  it('keeps every source glyph decorative and theme-aware without changing its label', () => {
+    renderPage();
+    for (const label of within(nowPlayingRegion()).getAllByText('Spotify')) {
+      const icon = label.parentElement?.querySelector('svg');
+      expect(icon).toHaveAttribute('aria-hidden', 'true');
+      expect(icon).toHaveAttribute('focusable', 'false');
+      expect(icon).toHaveClass('text-[var(--text-secondary)]');
+      expect(icon?.getAttribute('class')).not.toMatch(/text-(emerald|indigo|amber|purple|cyan)-300/);
+    }
+    expect(bodyRows()).toHaveLength(3);
+    expect(kpiValue('Top source')).toBe('Spotify');
+  });
+
+  it('keeps all section shells and source-shaped skeletons mounted without an ambient pulse', () => {
+    mockMedia.mockReturnValue(makeQuery({ data: undefined, isLoading: true }));
+    mockHistory.mockReturnValue(makeQuery({ data: undefined, isLoading: true }));
+    const { container } = renderPage();
+    for (const name of ['Now playing', 'Volume', 'Volume over time', 'Source distribution', 'Playback history']) {
+      expect(screen.getByRole('heading', { name, level: 2 })).toBeInTheDocument();
+    }
+    expect(statsRegion()).toBeInTheDocument();
+    expect(container.querySelector('[class*="--skeleton-bg"]')).toBeTruthy();
+    expect(container.querySelector('[class*="animate-pulse"]')).toBeNull();
+    expect(screen.queryByTestId('volume-chart')).not.toBeInTheDocument();
+    expect(screen.queryByRole('progressbar', { name: 'Playback progress' })).not.toBeInTheDocument();
+    expect(kpiValue('Unique tracks')).toBe('—');
+  });
+});
