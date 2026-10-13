@@ -108,13 +108,17 @@ function setup() {
 
 type Fixture = ReturnType<typeof setup>;
 
-function expectPost(index: number, body: CreateCausalExperimentRequest = payload) {
+function expectPost(
+  index: number,
+  body: CreateCausalExperimentRequest = payload,
+  contentType: 'application/json' | null = 'application/json',
+) {
   const [url, options] = fetchMock.mock.calls[index] as [string, RequestInit];
   expect(url).toBe(endpoint);
   expect(options.method).toBe('POST');
   expect(options.body).toBe(JSON.stringify(body));
   expect(JSON.parse(options.body as string)).toEqual(body);
-  expect(new Headers(options.headers).get('Content-Type')).toBe('application/json');
+  expect(new Headers(options.headers).get('Content-Type')).toBe(contentType);
   // The policy is consumed by request; it must not leak into HTTP RequestInit.
   expect(options).not.toHaveProperty('requiresLiveMode');
 }
@@ -210,6 +214,7 @@ describe('useCreateCausalExperiment real causal live write guard', () => {
     const fixture = setup();
     const body = Object.freeze({ ...payload, metric, intervention_kind: 'synthetic intervention' });
     await act(async () => { await fixture.result.current.mutateAsync(body); });
+    await waitFor(() => expect(fixture.result.current.isSuccess).toBe(true));
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expectPost(0, body);
     expect(fixture.result.current.variables).toBe(body);
@@ -264,7 +269,8 @@ describe('useCreateCausalExperiment real causal live write guard', () => {
     // Preserve the existing direct request followed by normal resilient fallback.
     expect(fetchMock).toHaveBeenCalledTimes(2);
     expectPost(0, body);
-    expectPost(1, body);
+    // resilientFetch preserves supplied headers instead of adding its JSON default.
+    expectPost(1, body, null);
     expect(body.confirmed).toBe(false);
   });
 

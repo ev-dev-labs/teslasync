@@ -91,9 +91,11 @@ describe('advanced intelligence writes', () => {
     async (hook, path, requiresLiveMode) => {
       mockedRequest.mockResolvedValueOnce({});
       const { Wrapper } = wrapper();
-      const { result } = renderHook(() => hook(), { wrapper: Wrapper });
+      const { result } = renderHook<ReturnType<typeof hook>, void>(
+        () => hook(), { wrapper: Wrapper },
+      );
       const body = { vehicle_id: 42, confirmed: true };
-      await act(() => result.current.mutateAsync(body as never));
+      await act(async () => { await result.current.mutateAsync(body as never); });
       const expectedOptions = {
         method: 'POST',
         ...(requiresLiveMode ? { requiresLiveMode: true } : {}),
