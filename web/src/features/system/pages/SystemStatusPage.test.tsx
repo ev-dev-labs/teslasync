@@ -89,6 +89,7 @@ vi.mock('@/api/hooks/useAdmin', () => ({
 vi.mock('@/api/hooks/useSettings', () => ({ useAuthStatus: vi.fn() }))
 vi.mock('@/api/hooks/useVehicles', () => ({ useVehicles: vi.fn() }))
 vi.mock('../hooks/useStatusLiveSSE', () => ({ useStatusLiveSSE: vi.fn() }))
+vi.mock('@/hooks/useMotionPreference', () => ({ useMotionPreference: vi.fn(() => ({ reduce: false, durationMs: 250 })) }))
 
 // Feature-level status cards fetch their own data — stub to prop-exposing
 // stand-ins so the page runs end-to-end without a network.
@@ -145,6 +146,7 @@ import { useAuthStatus } from '@/api/hooks/useSettings'
 import { useVehicles } from '@/api/hooks/useVehicles'
 import { useStatusLiveSSE } from '../hooks/useStatusLiveSSE'
 import SystemStatusPage from './SystemStatusPage'
+import { useMotionPreference } from '@/hooks/useMotionPreference'
 
 const mockUseQuery = vi.mocked(useQuery)
 const mockUseQueryClient = vi.mocked(useQueryClient)
@@ -323,6 +325,7 @@ const actionsRegion = () => within(screen.getByRole('region', { name: 'Operator 
 
 beforeEach(() => {
   vi.clearAllMocks()
+  vi.mocked(useMotionPreference).mockReturnValue({ reduce: false, durationMs: 250 })
   const NOW = Date.now()
   refetchHealth = vi.fn()
   liveReconnect = vi.fn()
@@ -469,7 +472,8 @@ describe('SystemStatusPage — healthy populated view', () => {
     expect(document.querySelector('#errors')).toBeNull()
 
     // Everything healthy → the action list shows its explicit empty state.
-    expect(document.querySelector('#action-items')).toBeNull()
+    // The original empty-action assertion now verifies a persistent neutral panel.
+    expect(actionsRegion().getByText('No current attention items.')).toBeInTheDocument()
   })
 })
 
@@ -641,7 +645,8 @@ describe('SystemStatusPage — missing data placeholders', () => {
     // Infrastructure details are available in the operator disclosure.
     expect(document.querySelector('#operator-details #resources')).not.toBeNull()
     // Nothing actionable → empty action list.
-    expect(document.querySelector('#action-items')).toBeNull()
+    // The original empty-action assertion now verifies a persistent neutral panel.
+    expect(actionsRegion().getByText('No current attention items.')).toBeInTheDocument()
   })
 
   it('does not crash and shows an empty component list when components is missing', () => {
@@ -889,5 +894,53 @@ describe('SystemStatusPage — Resource source adoption', () => {
     }
     expect(extendedRetry).toHaveBeenCalledTimes(3)
     expect(versionRetry).not.toHaveBeenCalled()
+  })
+})
+
+
+describe('SystemStatusPage — independent panels and restrained navigation', () => {
+  it('keeps all sixteen section shells and independent diagnostics while initial health is loading', () => {
+    mockSystemHealth.mockReturnValue(q(undefined, { isLoading: true, isFetching: true, dataUpdatedAt: 0 }) as ReturnType<typeof useSystemHealth>)
+    const { container } = renderPage()
+    expect(screen.getByTestId('status-skeleton')).toBeInTheDocument()
+    expect(container.querySelectorAll('section')).toHaveLength(16)
+    for (const id of ['services', 'action-items', 'incidents', 'health', 'resources', 'database', 'telemetry', 'tesla-auth', 'workers', 'system', 'slo', 'maintenance', 'api-docs']) {
+      expect(container.querySelector(`#${id}`)).toBeInTheDocument()
+    }
+    expect(screen.getByTestId('incident-history')).toBeInTheDocument()
+    expect(screen.getByTestId('slo-card')).toBeInTheDocument()
+    expect(screen.getByTestId('scheduled-maintenance')).toBeInTheDocument()
+    expect(resourcesRegion().getByText('512 MB')).toBeInTheDocument()
+    expect(screen.getByText('1.2.3')).toBeInTheDocument()
+    expect(screen.getByText('Current component status is unavailable.')).toBeInTheDocument()
+  })
+
+  it.each([false, true])('reveals a diagnostic target and honors reduced motion %s', (reduce) => {
+    vi.mocked(useMotionPreference).mockReturnValue({ reduce, durationMs: reduce ? 0 : 250 })
+    renderPage()
+    const details = document.getElementById('operator-details') as HTMLDetailsElement
+    expect(details.open).toBe(false)
+    fireEvent.click(healthRegion().getByRole('button', { name: /Database/ }))
+    expect(details.open).toBe(true)
+    expect(scrollSpy).toHaveBeenCalledWith({ behavior: reduce ? 'auto' : 'smooth', block: 'start' })
+  })
+
+  it('uses the same motion preference for the application scroll container', () => {
+    vi.mocked(useMotionPreference).mockReturnValue({ reduce: true, durationMs: 0 })
+    const { container } = renderPage()
+    container.id = 'main-content'
+    fireEvent.click(healthRegion().getByRole('button', { name: /Database/ }))
+    expect(Element.prototype.scrollTo).toHaveBeenCalledWith({ top: -76, behavior: 'auto' })
+    expect(scrollSpy).not.toHaveBeenCalled()
+  })
+
+  it('keeps diagnostic navigation as neutral wrapping links with the original destinations', () => {
+    renderPage()
+    for (const [name, to] of [['Open live monitor', '/live-monitor'], ['Open DB health', '/db-health'], ['Stable status API for your own dashboards', '/docs/status-api']]) {
+      const link = screen.getByRole('link', { name: new RegExp(name) })
+      expect(link).toHaveAttribute('href', to)
+      expect(link).toHaveClass('min-h-11', 'whitespace-normal', 'break-words')
+      expect(link.className).not.toMatch(/cyan-|bg-white/)
+    }
   })
 })

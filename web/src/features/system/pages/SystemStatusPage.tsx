@@ -28,8 +28,8 @@ import {
 } from 'lucide-react'
 
 import { PageLayout, SourceContent, Masonry } from '@/components/layout'
-import { Skeleton, StaleRefreshWarning } from '@/components/feedback'
-import { GlassPanel, Button, Badge, PanelTitle, SectionTitle, Text, Caption } from '@/components/ui'
+import { EmptyState, Skeleton, StaleRefreshWarning } from '@/components/feedback'
+import { GlassPanel, Button, BUTTON_BASE, BUTTON_VARIANTS, Badge, PanelTitle, SectionTitle, Text, Caption } from '@/components/ui'
 import { KVList } from '@/components/data-display'
 import { FadeIn } from '@/components/motion'
 import {
@@ -39,6 +39,7 @@ import {
 } from '@/components/status'
 import { usePageTitle } from '@/hooks/usePageTitle'
 import { useDataState } from '@/hooks/useDataState'
+import { useMotionPreference } from '@/hooks/useMotionPreference'
 import { useSystemHealth, useBackupRuns, useBackupConfigs, useMaintenanceState } from '@/api/hooks/useAdmin'
 import { useAuthStatus } from '@/api/hooks/useSettings'
 import { useVehicles } from '@/api/hooks/useVehicles'
@@ -77,6 +78,7 @@ const STALE_BACKUP_DAYS = 7
 export default function SystemStatusPage() {
   const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation()
+  const { reduce } = useMotionPreference()
   usePageTitle(t('systemStatus.title', 'System status'))
   const qc = useQueryClient()
   const location = useLocation()
@@ -244,16 +246,19 @@ export default function SystemStatusPage() {
   const scrollToSection = useCallback((id: string) => {
     const el = document.getElementById(id)
     if (!el) return
+    // Reveal the diagnostic target before measuring it inside a closed disclosure.
+    if (operatorDetails.current?.contains(el)) operatorDetails.current.open = true
+    const behavior: ScrollBehavior = reduce ? 'auto' : 'smooth'
     const scrollEl = document.getElementById('main-content')
     if (scrollEl) {
       const elTop = el.getBoundingClientRect().top
       const containerTop = scrollEl.getBoundingClientRect().top
       const target = scrollEl.scrollTop + (elTop - containerTop) - 76
-      scrollEl.scrollTo({ top: target, behavior: 'smooth' })
+      scrollEl.scrollTo({ top: target, behavior })
     } else {
-      el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      el.scrollIntoView({ behavior, block: 'start' })
     }
-  }, [])
+  }, [reduce])
 
   // ── derived metrics ─────────────────────────────────────────────
   const teslaTokenWarn = useMemo(() => {
@@ -521,19 +526,16 @@ export default function SystemStatusPage() {
         }
       `}</style>
 
-      {isLoading && !healthState.hasData ? (
-        <StatusPageSkeleton />
-      ) : (
-        <>
+      {/* Health owns only its hero skeleton; independent sources remain mounted. */}
           <div className="space-y-6 [&_section]:scroll-mt-24">
             {/* 1 ─ Hero ───────────────────────────────────────────── */}
             <FadeIn>
-              <StatusHero
+              {isLoading && !healthState.hasData ? <StatusPageSkeleton /> : <StatusHero
                 id="status-hero"
                 status={healthStale ? 'unknown' : overallStatus}
                 subline={heroSubline}
                 cta={{ label: t('systemStatus.runHealthCheck', 'Run health check'), onClick: handleRefresh, loading: isFetching }}
-              />
+              />}
             </FadeIn>
 
             {/* 1b ─ Update available callout (in-page) ───────────── */}
@@ -571,16 +573,16 @@ export default function SystemStatusPage() {
                       ))}
                     </ul>
                   ) : (
-                    <Text as="p" variant="bodySm">{t('systemStatus.noComponents', 'Current component status is unavailable.')}</Text>
+                    <EmptyState message={t('systemStatus.noComponents', 'Current component status is unavailable.')} className="py-6" />
                   )}
                 </GlassPanel>
               </section>
             </FadeIn>
 
-            {hasAttention && (
               <FadeIn>
                 <section id="action-items" aria-label={t('systemStatus.actionItems', 'Operator action items')}>
                   <ActionItemsPanel title={t('systemStatus.needsAttention', 'Needs your attention')}>
+                    {!hasAttention && <EmptyState message={t('operations.noAttention', 'No current attention items.')} className="py-6" />}
                     {hasMaintenance && (
                       <ActionItem
                         severity="info"
@@ -657,7 +659,6 @@ export default function SystemStatusPage() {
                   </ActionItemsPanel>
                 </section>
               </FadeIn>
-            )}
 
             <FadeIn>
               <section id="incidents" aria-label={t('systemStatus.incidentHistory.title', 'Recent incidents')}>
@@ -861,15 +862,13 @@ export default function SystemStatusPage() {
               <div className={cn('flex justify-center pt-1 pb-4', typography.size.xs, typography.color.muted)} data-status-print-hide>
                 <Link
                   to="/docs/status-api"
-                  className="inline-flex min-h-11 items-center gap-1.5 rounded-md bg-white/[0.03] px-3 py-1.5 hover:bg-white/[0.06] focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/50"
+                  className={cn(BUTTON_BASE, BUTTON_VARIANTS.ghost, 'min-h-11 min-w-0 max-w-full px-3 py-1.5 whitespace-normal break-words')}
                 >
                   {t('systemStatus.stableStatusApi', 'Stable status API for your own dashboards')} →
                 </Link>
               </div>
             </section>
           </div>
-        </>
-      )}
     </PageLayout>
   )
 }
@@ -908,7 +907,8 @@ function DetailLink({ to, label }: { to: string; label: string }) {
       <Link
         to={to}
         className={cn(
-          'inline-flex min-h-11 items-center gap-1.5 rounded-md bg-cyan-500/15 px-3 py-2 text-cyan-300 ring-1 ring-cyan-400/30 transition-colors hover:bg-cyan-500/25 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/60',
+          BUTTON_BASE, BUTTON_VARIANTS.secondary,
+          'min-h-11 min-w-0 max-w-full px-3 py-2 whitespace-normal break-words',
           typography.size.xs,
           typography.weight.medium,
         )}
