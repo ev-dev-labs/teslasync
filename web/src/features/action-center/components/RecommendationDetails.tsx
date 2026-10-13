@@ -1,12 +1,14 @@
 import { useTranslation } from 'react-i18next';
 import { useActionCenterHistory } from '@/api/hooks/useActionCenter';
-import { QueryError, Skeleton } from '@/components/feedback';
+import { QueryError, Skeleton, StaleRefreshWarning } from '@/components/feedback';
 import {
   OperationalNarrativeDetails,
 } from '@/components/data-display';
 import { Accordion, Badge, PanelTitle, Text } from '@/components/ui';
+import { useDataState } from '@/hooks/useDataState';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import { useUnits } from '@/hooks/useUnits';
-import { formatDateTime, formatDurationSecondsAsMinutes } from '@/lib/dateFormat';
+import { formatDurationSecondsAsMinutes } from '@/lib/dateFormat';
 import type { ActionCenterProjectedImpact, ActionCenterRecommendation } from '@/types/actionCenter';
 import type { OperationalNarrative } from '@/types/operationalNarrative';
 
@@ -16,10 +18,10 @@ interface RecommendationDetailsProps {
   onOpenChange: (open: boolean) => void;
 }
 
-function formatCost(impact: ActionCenterProjectedImpact): string | null {
+function formatCost(impact: ActionCenterProjectedImpact, locale: string): string | null {
   if (impact.cost_minor == null || impact.currency == null) return null;
   try {
-    return new Intl.NumberFormat(undefined, {
+    return new Intl.NumberFormat(locale, {
       style: 'currency',
       currency: impact.currency,
     }).format(impact.cost_minor / 100);
@@ -35,14 +37,22 @@ export function RecommendationDetails({
 }: RecommendationDetailsProps) {
   const { t } = useTranslation();
   const { formatEnergy } = useUnits();
+  const { formatDateTime, locale } = useDateFormat();
   const history = useActionCenterHistory(recommendation.id, open);
+  const historyState = useDataState(history, { provenance: 'historical' });
+  const historyItems = historyState.data?.items ?? [];
   const impact = recommendation.projected_impact;
+  const riskLabels = {
+    low: t('common.low', 'Low'),
+    moderate: t('Moderate', 'Moderate'),
+    high: t('common.high', 'High'),
+  };
   const impactValues = impact
     ? [
         impact.energy_wh == null ? null : formatEnergy(impact.energy_wh),
-        formatCost(impact),
+        formatCost(impact, locale),
         impact.time_s == null ? null : formatDurationSecondsAsMinutes(impact.time_s),
-        impact.risk_level,
+        impact.risk_level == null ? null : riskLabels[impact.risk_level],
       ].filter((value): value is string => value != null)
     : [];
   const provenanceLabels: Record<string, string> = {
@@ -154,7 +164,7 @@ export function RecommendationDetails({
           <PanelTitle>
             {t('actionCenter.details.scoring', 'Scoring basis')}
           </PanelTitle>
-          <Text as="p" size="xs" weight="semibold" className="mt-2 text-cyan-300">
+          <Text as="p" size="xs" weight="semibold" color="secondary" className="mt-2">
             {t('actionCenter.details.rankScore', 'Rank {{score}}', {
               score: recommendation.rank.score,
             })}
@@ -171,22 +181,27 @@ export function RecommendationDetails({
         <PanelTitle>
           {t('actionCenter.history.title', 'Action history')}
         </PanelTitle>
-        {history.isLoading ? (
-          <Skeleton lines={2} className="mt-2" />
-        ) : history.error ? (
+        <StaleRefreshWarning
+          state={historyState}
+          label={t('actionCenter.history.resource', 'Action history')}
+          className="mt-2"
+        />
+        {historyState.fatalError ? (
           <QueryError
-            error={history.error}
-            onRetry={() => void history.refetch()}
+            error={historyState.fatalError}
+            onRetry={historyState.retry ?? undefined}
             resourceName={t('actionCenter.history.resource', 'Action history')}
           />
-        ) : (history.data?.items ?? []).length === 0 ? (
+        ) : !historyState.hasData ? (
+          <Skeleton lines={2} className="mt-2" />
+        ) : historyItems.length === 0 ? (
           <Text as="p" variant="bodySm" className="mt-2">
             {t('actionCenter.history.empty', 'No actions have been recorded yet.')}
           </Text>
         ) : (
           <div className="mt-2 space-y-2">
-            {history.data?.items.map((event) => (
-              <div key={event.id} className="flex flex-wrap items-center justify-between gap-2 text-xs">
+            {historyItems.map((event) => (
+              <div key={event.id} className="flex flex-wrap items-center justify-between gap-2">
                 <Text as="span" size="xs" color="secondary">
                   {t(`actionCenter.action.${event.action}`, event.action)} ·{' '}
                   {t(`actionCenter.state.${event.from_state}`, event.from_state)} →{' '}
