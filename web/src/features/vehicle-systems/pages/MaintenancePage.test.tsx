@@ -845,3 +845,86 @@ describe('MaintenancePage workspace preview scope', () => {
     expect(screen.getByText('Selected vehicle inspection')).toBeInTheDocument();
   });
 });
+
+
+describe('MaintenancePage independent source adoption', () => {
+  it('keeps ready service history and header actions available when maintenance fails independently', () => {
+    const retryItems = vi.fn();
+    const retryRecords = vi.fn();
+    h.itemsQuery = makeQuery({
+      data: undefined, isError: true, error: new Error('Maintenance unavailable'),
+      dataUpdatedAt: 0, refetch: retryItems,
+    });
+    h.recordsQuery = makeQuery({
+      data: [makeRecord({ id: 91, description: 'Independent service history', mileage: 30000, cost: 40 })],
+      refetch: retryRecords,
+    });
+
+    renderPage();
+
+    for (const title of ['Maintenance items', 'Service projections', 'Maintenance by category']) {
+      const panel = screen.getByRole('heading', { name: title, exact: true }).closest('[data-card]');
+      expect(panel).not.toBeNull();
+      expect(within(panel as HTMLElement).getByText(/Can't reach server/i)).toBeInTheDocument();
+      fireEvent.click(within(panel as HTMLElement).getByRole('button', { name: /^Retry$/i }));
+    }
+    expect(retryItems).toHaveBeenCalledTimes(3);
+    expect(retryRecords).not.toHaveBeenCalled();
+
+    for (const title of ['Estimated annual cost', 'Service records']) {
+      const panel = screen.getByRole('heading', { name: title, exact: true }).closest('[data-card]');
+      expect(panel).not.toBeNull();
+      expect(within(panel as HTMLElement).queryByText(/Can't reach server/i)).not.toBeInTheDocument();
+      expect(within(panel as HTMLElement).queryByRole('button', { name: /^Retry$/i })).not.toBeInTheDocument();
+    }
+    const history = screen.getByRole('heading', { name: 'Service records', exact: true }).closest('[data-card]');
+    expect(within(history as HTMLElement).getByText('Independent service history')).toBeInTheDocument();
+    expect(within(history as HTMLElement).getByText('30 km')).toBeInTheDocument();
+    expect(within(history as HTMLElement).getByRole('button', { name: 'Inspect service record' })).toBeEnabled();
+    expect(screen.getByRole('region', { name: 'Maintenance summary' })).toBeInTheDocument();
+    expect(screen.getByTestId('ai-predictive-maintenance')).toHaveAttribute('data-vehicle-id', '7');
+    expect(screen.getAllByRole('heading', { level: 1, name: 'Maintenance' })).toHaveLength(1);
+
+    // Schedule remains the inherited no-op: adoption must not invent a write.
+    fireEvent.click(screen.getByRole('button', { name: 'Schedule', exact: true }));
+    expect(retryItems).toHaveBeenCalledTimes(3);
+    expect(retryRecords).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh maintenance data' }));
+    expect(retryItems).toHaveBeenCalledTimes(4);
+    expect(retryRecords).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps ready maintenance sections visible while service history is independently loading', () => {
+    h.itemsQuery = makeQuery({
+      data: [makeItem({
+        id: 92, category: 'tires', name: 'Independent tire service', status: 'soon',
+        current_mileage: 30000, due_mileage: 40000,
+        interval_miles: 20000, last_service_mileage: 20000,
+      })],
+    });
+    h.recordsQuery = makeQuery({
+      data: undefined, isLoading: true, isFetching: true, dataUpdatedAt: 0,
+    });
+
+    renderPage();
+
+    expect(screen.getByRole('heading', { level: 4, name: 'Independent tire service' })).toBeInTheDocument();
+    const summary = screen.getByRole('region', { name: 'Maintenance summary' });
+    expect(summary.querySelector('[data-operational-value]')).toBeInTheDocument();
+    for (const title of ['Maintenance items', 'Service projections', 'Maintenance by category']) {
+      const panel = screen.getByRole('heading', { name: title, exact: true }).closest('[data-card]');
+      expect(panel).not.toBeNull();
+      expect(panel?.querySelector('[class*="--skeleton-bg"]')).not.toBeInTheDocument();
+      expect(within(panel as HTMLElement).queryByText(/Can't reach server/i)).not.toBeInTheDocument();
+    }
+    for (const title of ['Estimated annual cost', 'Service records']) {
+      const panel = screen.getByRole('heading', { name: title, exact: true }).closest('[data-card]');
+      expect(panel).not.toBeNull();
+      expect(panel?.querySelector('[class*="--skeleton-bg"]')).toBeInTheDocument();
+    }
+    expect(screen.queryByText('No service records logged yet.')).not.toBeInTheDocument();
+    expect(screen.queryByText(/No cost data available yet/i)).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Inspect service record' })).not.toBeInTheDocument();
+    expect(screen.getByTestId('ai-predictive-maintenance')).toHaveAttribute('data-vehicle-id', '7');
+  });
+});
