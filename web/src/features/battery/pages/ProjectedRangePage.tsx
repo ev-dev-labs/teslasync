@@ -3,12 +3,14 @@ import { useTranslation } from 'react-i18next';
 import { Route } from 'lucide-react';
 import { CardGrid, LayoutCard, PageLayout } from '@/components/layout';
 import { EmptyState } from '@/components/feedback';
+import { Icon } from '@/components/ui';
 import { FadeIn } from '@/components/motion';
 import { AIRangePrediction } from '@/components/ai';
 import { useRangeProjection } from '@/api/hooks/useAnalytics';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useDataState } from '@/hooks/useDataState';
+import { useLoadAnnouncement } from '@/hooks/useStatusAnnouncer';
 import { RangeSummary } from '../components/projected-range-modernization/RangeSummary';
 import { RangeEfficiency } from '../components/projected-range-modernization/RangeEfficiency';
 import { RangeCurve } from '../components/projected-range-modernization/RangeCurve';
@@ -28,20 +30,28 @@ export default function ProjectedRangePage() {
   const activeId = vehicleId == null ? '' : String(vehicleId);
   const rangeQuery = useRangeProjection(activeId);
   const source = useDataState(rangeQuery, { provenance: 'inferred' });
-  const [whatIfSpeed, setWhatIfSpeed] = useState(80);
-  const [whatIfTemperature, setWhatIfTemperature] = useState(20);
-  const sectionProps = { source, loading: rangeQuery.isLoading };
   const pageProps = {
     title: t('range.title', 'Projected Range'),
     subtitle: t('range.subtitle', 'Personalized range estimates based on your driving patterns, weather, and conditions'),
   };
+  const initialLoading = Boolean(activeId) && rangeQuery.isLoading && !source.hasData;
+  useLoadAnnouncement({
+    label: pageProps.title,
+    isLoading: initialLoading,
+    isError: source.fatalError != null,
+    enabled: Boolean(activeId) && !source.isRefreshBlocked
+      && (initialLoading || source.hasData || source.fatalError != null),
+  });
+  const [whatIfSpeed, setWhatIfSpeed] = useState(80);
+  const [whatIfTemperature, setWhatIfTemperature] = useState(20);
+  const sectionProps = { source, loading: rangeQuery.isLoading };
 
   if (!activeId) {
     return (
       <PageLayout {...pageProps}>
         <LayoutCard title={t('range.title', 'Projected Range')}>
           {/* no-action: The shared header vehicle picker owns selection. */}
-          <EmptyState icon={<Route className="h-8 w-8" aria-hidden="true" />}
+          <EmptyState icon={<Icon icon={Route} size="xl" />}
             message={t('range.selectVehicle', 'Select a vehicle to see its projected range.')} />
         </LayoutCard>
       </PageLayout>
@@ -49,7 +59,8 @@ export default function ProjectedRangePage() {
   }
 
   return (
-    <PageLayout {...pageProps} query={rangeQuery}>
+    <PageLayout {...pageProps} query={rangeQuery}
+      busy={initialLoading || source.isRefreshing} announce={false}>
       <SourceTrustNotice source={source} label={t('range.title', 'Projected Range')} />
       <FadeIn><RangeSummary {...sectionProps} /></FadeIn>
       <FadeIn delay={0.05}>

@@ -29,6 +29,9 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { isValidElement, type ReactElement, type ReactNode } from 'react';
 import { Car, Shield, Snowflake, Zap } from 'lucide-react';
+import { AnnouncerRegion } from '@/components/a11y';
+import { __resetAnnouncePolicyForTests } from '@/lib/announcePolicy';
+import { __resetStatusAnnouncerForTests } from '@/hooks/useStatusAnnouncer';
 
 vi.mock('@/components/charts', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/components/charts')>();
@@ -197,6 +200,7 @@ function makeProjection(overrides: Partial<RangeProjection> = {}): RangeProjecti
 interface QueryOverrides {
   data?: unknown;
   isLoading?: boolean;
+  isFetching?: boolean;
   error?: unknown;
   refetch?: () => void;
   fetchStatus?: 'fetching' | 'paused' | 'idle';
@@ -206,7 +210,7 @@ function makeQuery(overrides: QueryOverrides = {}) {
   return {
     data: overrides.data,
     isLoading: overrides.isLoading ?? false,
-    isFetching: false,
+    isFetching: overrides.isFetching ?? false,
     isStale: false,
     isError: overrides.error != null,
     error: overrides.error ?? null,
@@ -281,13 +285,16 @@ function miSettings(): SettingsMockShape {
 
 function renderPage() {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(
+  const content = () => (
     <QueryClientProvider client={client}>
       <MemoryRouter>
+        <AnnouncerRegion />
         <ProjectedRangePage />
       </MemoryRouter>
-    </QueryClientProvider>,
+    </QueryClientProvider>
   );
+  const view = render(content());
+  return { ...view, rerenderPage: () => view.rerender(content()) };
 }
 
 /** Read the canonical stat tile's complete displayed value by its label. */
@@ -299,6 +306,8 @@ function metricValue(label: string): string {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  __resetAnnouncePolicyForTests();
+  __resetStatusAnnouncerForTests();
   selectedVehicleMock.mockReturnValue({
     vehicleId: 7,
     vehicle: null,
@@ -384,6 +393,95 @@ describe('ProjectedRangePage · pure helpers', () => {
 /* ── Component: gating & async states ─────────────────────────────── */
 
 describe('ProjectedRangePage · states', () => {
+  it('keeps every section mounted while announcing initial projection completion', () => {
+    rangeMock.mockReturnValue(makeQuery({ isLoading: true, isFetching: true }));
+    const view = renderPage();
+    const page = screen.getByRole('heading', { level: 1, name: 'Projected Range' })
+      .closest('[data-role="page-container"]');
+
+    expect(page).toHaveAttribute('aria-busy', 'true');
+    for (const name of [
+      'Efficiency', 'Range Projection Curve', 'Range Scenarios',
+      'Personal Efficiency Matrix (Wh/km)', 'What If Calculator',
+      'Range Factors', 'Tips to Maximize Range',
+    ]) {
+      expect(screen.getByRole('heading', { name, exact: true })).toBeInTheDocument();
+    }
+    expect(screen.getByRole('region', { name: 'Range summary metrics' })).toBeInTheDocument();
+    expect(screen.getByTestId('ai-range-prediction')).toBeInTheDocument();
+    expect(screen.getByTestId('announcer-polite')).toBeEmptyDOMElement();
+
+    rangeMock.mockReturnValue(makeQuery({ data: makeProjection() }));
+    view.rerenderPage();
+
+    expect(page).not.toHaveAttribute('aria-busy');
+    expect(metricValue('Your Estimate')).toBe('300.00 km');
+    expect(screen.getByTestId('announcer-polite')).toHaveTextContent('Projected Range loaded');
+    expect(screen.getByTestId('announcer-assertive')).toBeEmptyDOMElement();
+  });
+
+  it('announces an initial failure without hiding tips or the independent AI surface', () => {
+    rangeMock.mockReturnValue(makeQuery({ isLoading: true }));
+    const view = renderPage();
+    rangeMock.mockReturnValue(makeQuery({ error: new Error('Network down') }));
+    view.rerenderPage();
+
+    expect(screen.getByTestId('announcer-assertive')).toHaveTextContent('Could not refresh Projected Range');
+    expect(screen.getByTestId('announcer-polite')).toBeEmptyDOMElement();
+    expect(screen.getAllByText("Can't reach server").length).toBeGreaterThan(0);
+    expect(screen.getByText('Keep speed under 110 km/h for optimal efficiency.')).toBeInTheDocument();
+    expect(screen.getByTestId('ai-range-prediction')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 1, name: 'Projected Range' })
+      .closest('[data-role="page-container"]')).not.toHaveAttribute('aria-busy');
+  });
+
+  it('retains projection readings while marking a background refresh busy without load announcements', () => {
+    const view = renderPage();
+    rangeMock.mockReturnValue(makeQuery({ data: makeProjection(), isFetching: true }));
+    view.rerenderPage();
+
+    expect(screen.getByRole('heading', { level: 1, name: 'Projected Range' })
+      .closest('[data-role="page-container"]')).toHaveAttribute('aria-busy', 'true');
+    expect(metricValue('Your Estimate')).toBe('300.00 km');
+    expect(screen.getByText('Winter City')).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: 'Rated versus projected range across battery level' })).toBeInTheDocument();
+    expect(screen.getByTestId('announcer-polite')).toBeEmptyDOMElement();
+    expect(screen.getByTestId('announcer-assertive')).toBeEmptyDOMElement();
+
+    rangeMock.mockReturnValue(makeQuery({ data: makeProjection(), error: new Error('refresh failed') }));
+    view.rerenderPage();
+    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+    expect(metricValue('Your Estimate')).toBe('300.00 km');
+    expect(screen.getByTestId('announcer-polite')).toBeEmptyDOMElement();
+  });
+
+  it('does not announce a successful projection when initial work pauses without measurements', () => {
+    rangeMock.mockReturnValue(makeQuery({ isLoading: true }));
+    const view = renderPage();
+    rangeMock.mockReturnValue(makeQuery({ fetchStatus: 'paused' }));
+    view.rerenderPage();
+
+    expect(screen.getByTestId('announcer-polite')).toBeEmptyDOMElement();
+    expect(screen.getByTestId('announcer-assertive')).toBeEmptyDOMElement();
+    expect(metricValue('Your Estimate')).toBe('—');
+    expect(screen.getByRole('heading', { level: 1, name: 'Projected Range' })
+      .closest('[data-role="page-container"]')).not.toHaveAttribute('aria-busy');
+    expect(screen.getByText('Range Scenarios')).toBeInTheDocument();
+    expect(screen.getByTestId('ai-range-prediction')).toBeInTheDocument();
+  });
+
+  it('does not announce success for an unresolved projection after loading', () => {
+    rangeMock.mockReturnValue(makeQuery({ isLoading: true }));
+    const view = renderPage();
+    rangeMock.mockReturnValue(makeQuery());
+    view.rerenderPage();
+
+    expect(screen.getByTestId('announcer-polite')).toBeEmptyDOMElement();
+    expect(screen.getByTestId('announcer-assertive')).toBeEmptyDOMElement();
+    expect(metricValue('Your Estimate')).toBe('—');
+    expect(screen.getByText('Efficiency data unavailable yet.')).toBeInTheDocument();
+  });
+
   it('shows the select-a-vehicle guard (not the dashboard) when no vehicle is scoped', () => {
     selectedVehicleMock.mockReturnValue({ vehicleId: null, vehicle: null, vehicles: [], setVehicleId: vi.fn() });
     renderPage();
