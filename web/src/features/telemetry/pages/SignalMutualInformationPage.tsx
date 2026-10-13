@@ -9,11 +9,11 @@ import {
 } from '@/components/charts';
 import type { StatMetric } from '@/components/data-display';
 import { TelemetrySummaryBrief } from '../components/operationalbrief-all/TelemetrySummaryBrief';
-import { EmptyState, QueryError, Skeleton } from '@/components/feedback';
+import { EmptyState, QueryError, Skeleton, StaleRefreshWarning } from '@/components/feedback';
 
 import { PageLayout } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
-import { Badge, GlassPanel, PanelTitle, Select, Text } from '@/components/ui';
+import { Badge, GlassPanel, Icon, PanelTitle, Select, Text } from '@/components/ui';
 import { NoVehicleSelected } from '@/features/onboarding/components/NoVehicleSelected';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useDataState } from '@/hooks/useDataState';
@@ -26,15 +26,15 @@ import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 const HISTORY_HOURS = 24;
 function heatClass(contribution: number, maximum: number): string {
   const strength = maximum > 0 ? Math.abs(contribution) / maximum : 0;
-  const tone = contribution < 0 ? 'bg-rose-500' : 'bg-cyan-500';
-  const opacity = strength > 0.75
-    ? 'bg-opacity-40'
+  // Neutral intensity conveys magnitude; a dashed edge distinguishes negative cells.
+  const intensity = strength > 0.75
+    ? 'bg-[color-mix(in_srgb,var(--text-secondary)_8%,var(--surface-1))]'
     : strength > 0.4
-      ? 'bg-opacity-25'
+      ? 'bg-[color-mix(in_srgb,var(--text-secondary)_6%,var(--surface-1))]'
       : strength > 0
-        ? 'bg-opacity-10'
-        : 'bg-opacity-5';
-  return cn(tone, opacity);
+        ? 'bg-[color-mix(in_srgb,var(--text-secondary)_4%,var(--surface-1))]'
+        : 'bg-[var(--surface-1)]';
+  return cn(intensity, contribution < 0 ? 'border-dashed' : 'border-solid');
 }
 export default function SignalMutualInformationPage() {
   const { fmtInt, fmtNumber, fmtScientificNumber, fmtPercent } = useNumberFormatting();
@@ -48,8 +48,8 @@ export default function SignalMutualInformationPage() {
   const historyA = useSignalHistory(id, signalA, HISTORY_HOURS);
   const historyB = useSignalHistory(id, signalB, HISTORY_HOURS);
   const catalogState = useDataState(signalsQuery);
-  const historyAState = useDataState(historyA, { provenance: 'historical' });
-  const historyBState = useDataState(historyB, { provenance: 'historical' });
+  const historyAState = useDataState(historyA, { provenance: 'historical', unavailable: historyA.data?.data.length === 0 });
+  const historyBState = useDataState(historyB, { provenance: 'historical', unavailable: historyB.data?.data.length === 0 });
   const signalAChosen = signalA !== '';
   const signalBChosen = signalB !== '';
   const bothChosen = signalAChosen && signalBChosen;
@@ -158,16 +158,17 @@ export default function SignalMutualInformationPage() {
       <FadeIn>
         <GlassPanel className="p-4 sm:p-5">
           <PanelTitle className="mb-3 flex items-center gap-2">
-            <Network className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+            <Icon icon={Network} className="text-[var(--text-secondary)]" />
             {t('signalMutualInformation.selection.title', 'Signals to compare')}
           </PanelTitle>
+          <StaleRefreshWarning state={catalogState} label={t('dataSources.labels.signalCatalog', 'Signal catalog')} />
           {catalogState.fatalError ? (
             <QueryError error={catalogState.fatalError} onRetry={() => signalsQuery.refetch()} />
-          ) : signalsQuery.isLoading ? (
+          ) : signalsQuery.data === undefined && signalsQuery.isLoading ? (
             <Skeleton height={96} />
           ) : options.length === 0 ? (
             <EmptyState /* no-action: the signal catalog populates automatically from ingested telemetry. */
-              icon={<RadioTower className="h-8 w-8" />}
+              icon={<Icon icon={RadioTower} size="xl" />}
               message={t(
                 'signalMutualInformation.selection.empty',
                 'No telemetry signals have been recorded for this vehicle yet.',
@@ -176,6 +177,8 @@ export default function SignalMutualInformationPage() {
           ) : (
             <div className="grid gap-4 sm:grid-cols-2">
               <Select
+                id="mutual-information-signal-a"
+                className="min-h-11 md:min-h-10"
                 label={t('signalMutualInformation.selection.signalA', 'Signal A')}
                 value={signalA}
                 options={options}
@@ -183,6 +186,8 @@ export default function SignalMutualInformationPage() {
                 placeholder={t('signalMutualInformation.selection.placeholder', 'Choose a signal')}
               />
               <Select
+                id="mutual-information-signal-b"
+                className="min-h-11 md:min-h-10"
                 label={t('signalMutualInformation.selection.signalB', 'Signal B')}
                 value={signalB}
                 options={options}
@@ -200,6 +205,8 @@ export default function SignalMutualInformationPage() {
         </GlassPanel>
       </FadeIn>
       <FadeIn delay={0.1}>
+        {signalAChosen && <StaleRefreshWarning state={historyAState} label={t('dataSources.labels.signalAHistory', 'Signal A history')} />}
+        {signalBChosen && <StaleRefreshWarning state={historyBState} label={t('dataSources.labels.signalBHistory', 'Signal B history')} />}
         <TelemetrySummaryBrief title={t('signalMutualInformation.kpis.label', 'Mutual information metrics')}
           metrics={metrics} testId="signal-mutual-information-summary" loading={isLoading}
           unavailable={isError} unknown={!bothChosen || result == null}
@@ -222,14 +229,6 @@ export default function SignalMutualInformationPage() {
         }} />}
       </FadeIn>
       <FadeIn delay={0.2}>
-        {isError ? (
-          <GlassPanel className="p-4 sm:p-5">
-            <QueryError error={error} onRetry={() => {
-              if (historyAState.fatalError) historyAState.retry?.();
-              if (historyBState.fatalError) historyBState.retry?.();
-            }} />
-          </GlassPanel>
-        ) : (
           <ChartContainer
             title={t('signalMutualInformation.contributions.title', 'Top joint-state contributions')}
             subtitle={t(
@@ -241,6 +240,15 @@ export default function SignalMutualInformationPage() {
               'Bar chart of quantile-pair contributions to mutual information',
             )}
             loading={isLoading}
+            error={isError ? error : undefined}
+            onRetry={() => {
+              if (historyAState.fatalError) historyAState.retry?.();
+              if (historyBState.fatalError) historyBState.retry?.();
+            }}
+            className="text-xs"
+            emptyMessage={bothChosen
+              ? t('signalMutualInformation.heatmap.noOverlap', 'At least 20 aligned numeric samples are required.')
+              : t('signalMutualInformation.heatmap.empty', 'Choose two signals to build the joint-state heatmap.')}
             empty={contributionData.length === 0}
             height={320}
             data={contributionData}
@@ -253,9 +261,9 @@ export default function SignalMutualInformationPage() {
             {/* Single contribution series; there is no second metric to toggle. */}
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={contributionData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
-                <XAxis dataKey="cell" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} />
-                <YAxis tick={{ fill: 'var(--text-muted)', fontSize: 11 }} />
+                <CartesianGrid strokeDasharray="3 3" stroke={chartTokens.gridStroke} strokeOpacity={0.4} />
+                <XAxis dataKey="cell" tick={{ fill: chartTokens.axisStroke, fontSize: 'inherit' }} />
+                <YAxis tick={{ fill: chartTokens.axisStroke, fontSize: 'inherit' }} />
                 <Tooltip content={<ChartTooltip />} />
                 <Bar
                   dataKey="contribution"
@@ -266,12 +274,11 @@ export default function SignalMutualInformationPage() {
               </BarChart>
             </ResponsiveContainer>
           </ChartContainer>
-        )}
       </FadeIn>
       <FadeIn delay={0.3}>
         <GlassPanel className="p-4 sm:p-5">
           <PanelTitle className="mb-3 flex items-center gap-2">
-            <Grid3X3 className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+            <Icon icon={Grid3X3} className="text-[var(--text-secondary)]" />
             {t('signalMutualInformation.heatmap.title', 'Contribution heatmap')}
           </PanelTitle>
           {isLoading ? (
@@ -283,7 +290,7 @@ export default function SignalMutualInformationPage() {
             }} />
           ) : result == null ? (
             <EmptyState /* no-action: the two signal selectors above are the relevant next action. */
-              icon={<Grid3X3 className="h-8 w-8" />}
+              icon={<Icon icon={Grid3X3} size="xl" />}
               message={bothChosen
                 ? t('signalMutualInformation.heatmap.noOverlap', 'At least 20 aligned numeric samples are required.')
                 : t('signalMutualInformation.heatmap.empty', 'Choose two signals to build the joint-state heatmap.')}
@@ -294,7 +301,7 @@ export default function SignalMutualInformationPage() {
                 <div
                   key={`${cell.aBin}-${cell.bBin}`}
                   className={cn(
-                    'rounded-lg border border-[var(--border-subtle)] p-2',
+                    'min-w-0 rounded-lg border border-[var(--border-subtle)] p-2 break-words',
                     heatClass(cell.contribution, maxContribution),
                   )}
                   aria-label={t(
