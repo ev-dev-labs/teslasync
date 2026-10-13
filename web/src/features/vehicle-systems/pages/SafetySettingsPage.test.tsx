@@ -197,15 +197,17 @@ vi.mock('@/components/charts', async () => {
       max,
       unit,
       label,
+      color,
     }: {
       value: number;
       max: number;
       unit?: string;
       label?: string;
+      color?: string;
     }) {
       return React.createElement(
         'div',
-        { 'data-testid': 'linear-gauge', 'data-label': label },
+        { 'data-testid': 'linear-gauge', 'data-label': label, 'data-color': color },
         `${value}/${max} ${unit ?? ''}`,
       );
     },
@@ -593,5 +595,65 @@ describe('SafetySettingsPage', () => {
     expect(latestRefetch).toHaveBeenCalledTimes(1);
     expect(historyRefetch).toHaveBeenCalledTimes(1);
     expect(securityRefetch).toHaveBeenCalledTimes(1);
+  });
+});
+
+
+describe('SafetySettingsPage preservation', () => {
+  it('presents configuration coverage neutrally without changing the original threshold helpers', () => {
+    renderPage();
+    expect(screen.getByTestId('linear-gauge')).toHaveAttribute('data-color', 'var(--text-secondary)');
+    expect(screen.getAllByText(/not a driving safety rating or verification/).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByText(/This page does not edit or save settings/)).toBeInTheDocument();
+    expect(screen.getByText(/No live verification command is sent/)).toBeInTheDocument();
+  });
+
+  it('keeps every history column reachable on mobile through the shared table', () => {
+    renderPage();
+    const table = screen.getByRole('table');
+    for (const name of ['Time', 'AEB', 'BSC', 'BSCW', 'FCW', 'LDA', 'ELDA', 'CFD', 'SLW', 'PIN']) {
+      const header = within(table).getByRole('columnheader', { name: new RegExp(name) });
+      expect(header.className).not.toMatch(/hidden/);
+    }
+  });
+
+  it('keeps unknown configuration values distinct from disabled and omits an incomplete gauge', () => {
+    safetyMock.mockReturnValue(makeQuery<SafetySnapshot>({ data: {} }));
+    renderPage();
+    expect(screen.queryByTestId('linear-gauge')).not.toBeInTheDocument();
+    expect(screen.getByText('Feature share unavailable: some settings are unknown.')).toBeInTheDocument();
+    expect(screen.getByText('9 unknown settings')).toBeInTheDocument();
+    expect(screen.getAllByText('Unknown').length).toBeGreaterThanOrEqual(9);
+    expect(screen.getByRole('table')).toBeInTheDocument();
+    expect(screen.getByText('Buckled')).toBeInTheDocument();
+  });
+
+  it('retains all three sources during refresh failures and refreshes them independently', () => {
+    safetyMock.mockReturnValue(makeQuery<SafetySnapshot>({ data: SAFETY, error: new Error('safety refresh failed'), refetch: latestRefetch }));
+    safetyHistoryMock.mockReturnValue(makeQuery<SafetySnapshot[]>({ data: HISTORY, error: new Error('history refresh failed'), refetch: historyRefetch }));
+    securityMock.mockReturnValue(makeQuery<SecurityEvent>({ data: SECURITY, error: new Error('security refresh failed'), refetch: securityRefetch }));
+    renderPage();
+    expect(screen.getByTestId('linear-gauge')).toHaveTextContent('6/9');
+    expect(screen.getByRole('table')).toBeInTheDocument();
+    expect(screen.getByText('Buckled')).toBeInTheDocument();
+    expect(screen.getByText('12.00 km')).toBeInTheDocument();
+    expect(screen.getAllByText(/Previously loaded data remains visible/).length).toBeGreaterThanOrEqual(3);
+    fireEvent.click(screen.getAllByRole('button', { name: 'Refresh' }).find(el => el.tagName === 'BUTTON')!);
+    expect(latestRefetch).toHaveBeenCalledTimes(1);
+    expect(historyRefetch).toHaveBeenCalledTimes(1);
+    expect(securityRefetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('isolates a fatal security failure from configuration and historical content', () => {
+    securityMock.mockReturnValue(makeQuery<SecurityEvent>({ error: new Error('security unavailable'), refetch: securityRefetch }));
+    renderPage();
+    expect(screen.getByTestId('linear-gauge')).toHaveTextContent('6/9');
+    expect(screen.getByRole('table')).toBeInTheDocument();
+    expect(screen.getByText('12.00 km')).toBeInTheDocument();
+    expect(screen.queryByText('Buckled')).not.toBeInTheDocument();
+    fireEvent.click(screen.getAllByRole('button', { name: 'Retry' })[0]);
+    expect(securityRefetch).toHaveBeenCalled();
+    expect(latestRefetch).not.toHaveBeenCalled();
+    expect(historyRefetch).not.toHaveBeenCalled();
   });
 });

@@ -117,8 +117,8 @@ export function summarizeFeatures(snap: SafetySnapshot) {
 
 export const TOTAL_FEATURES = 9;
 
-/** Semantic gauge color — kept as a computed value so it can drive the
- *  LinearGauge `color` prop directly (dynamic, not a static var style). */
+/** Legacy threshold helper retained for compatibility and its original tests.
+ * Configuration coverage is not a safety rating; the page uses a neutral token. */
 export function scoreColor(pct: number): string {
   if (pct >= 80) return '#10b981';
   if (pct >= 50) return '#f59e0b';
@@ -600,10 +600,10 @@ export default function SafetySettingsPage() {
                   value={enabled}
                   max={TOTAL_FEATURES}
                   label={t('safety.settings.enabledShare', 'Enabled feature share')}
-                  color={scoreColor(scorePct)}
+                  color="var(--text-secondary)"
                   size={140}
                 /> : <Text role="status">{t('safety.settings.incomplete', 'Feature share unavailable: some settings are unknown.')}</Text>}
-                <Badge variant={scorePct != null ? scoreBadgeVariant(scorePct) : 'neutral'}>
+                <Badge variant="neutral">
                   {enabled}/{TOTAL_FEATURES} {t('common.enabled', 'Enabled')} · {scorePct != null ? `${fmtInt(scorePct)}%` : '—'}
                 </Badge>
                 <Caption>
@@ -944,7 +944,7 @@ export default function SafetySettingsPage() {
               tableId="vehicle-systems:safety-history"
               enableValueFilters
               columns={historyColumns}
-              mobileColumns={['time', 'aeb', 'fcw']}
+              /* Keep every recorded field reachable through the shared contained scroll on mobile. */
               data={sortedHistory}
               keyExtractor={(row) => row.id ?? 0}
               compact
