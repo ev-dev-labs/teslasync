@@ -2,8 +2,8 @@ import { useTranslation } from 'react-i18next';
 import { OperationalBrief } from '@/components/data-display';
 import type { StatMetric } from '@/components/data-display/stat-reference/types';
 import type { DataProvenance, DataStatus } from '@/api/dataState';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import { useOperationalMetrics } from '@/hooks/useOperationalMetrics';
-import { formatDateTime } from '@/lib/dateFormat';
 import type {
   ActionCenterProviderStatus,
   ActionCenterSummary as Summary,
@@ -23,6 +23,7 @@ export function ActionCenterSummary({
   summary, loading, status, provenance, generatedAt, vehicleName, providers,
 }: ActionCenterSummaryProps) {
   const { t } = useTranslation();
+  const { formatDateTime } = useDateFormat();
   const metrics: readonly StatMetric[] = [
     {
       metricId: 'count', occurrenceId: 'open',
