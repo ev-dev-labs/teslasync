@@ -221,8 +221,11 @@ export default function SharingTripsPage() {
                 role="listbox"
                 onKeyDown={navigateTrips}
                 onFocus={(event) => {
-                  listRef.current?.querySelectorAll<HTMLButtonElement>('[role="option"]').forEach((option) => {
-                    option.tabIndex = option === event.target ? 0 : -1
+                  // Focus bubbles from the option; currentTarget is the owning listbox.
+                  const target: EventTarget = event.target
+                  if (!(target instanceof HTMLButtonElement) || target.getAttribute('role') !== 'option') return
+                  event.currentTarget.querySelectorAll<HTMLButtonElement>('[role="option"]').forEach((option) => {
+                    option.tabIndex = option === target ? 0 : -1
                   })
                 }}
                 aria-label={t('sharing.trips.recent.heading', 'Recent trips')}

@@ -626,6 +626,36 @@ describe('SharingTripsPage — selected scope recovery', () => {
 });
 
 describe('SharingTripsPage — keyboard listbox and reachable refresh', () => {
+  it('tracks the bubbled option focus target without treating the listbox currentTarget as an option', () => {
+    renderPage();
+    const list = screen.getByRole('listbox', { name: 'Recent trips' });
+    const options = within(list).getAllByRole('option');
+    const weekend = within(list).getByRole('option', { name: 'Weekend trip' });
+
+    // A focused but unselected option becomes the sole tab stop, not the UL.
+    weekend.focus();
+    expect(weekend).toHaveFocus();
+    expect(options.map((option) => option.tabIndex)).toEqual([-1, 0, -1]);
+    expect(options.map((option) => option.getAttribute('aria-selected'))).toEqual(['false', 'false', 'false']);
+    expect(screen.getByTestId('ai-card')).toHaveAttribute('data-trip-id', '');
+    expect(screen.getByText(/Select a trip above to preview what you/i)).toBeInTheDocument();
+
+    // Neither a container focus nor a non-button descendant is an option.
+    fireEvent.focus(list);
+    fireEvent.focus(within(weekend).getByText('Weekend trip'));
+    expect(options.map((option) => option.tabIndex)).toEqual([-1, 0, -1]);
+    expect(screen.getByTestId('ai-card')).toHaveAttribute('data-trip-id', '');
+
+    // Navigation still starts at the actual focused option and resolves its trip.
+    fireEvent.keyDown(weekend, { key: 'ArrowDown' });
+    const last = within(list).getByRole('option', { name: 'Trip #103' });
+    expect(last).toHaveFocus();
+    expect(options.map((option) => option.tabIndex)).toEqual([-1, -1, 0]);
+    expect(last).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByTestId('ai-card')).toHaveAttribute('data-trip-id', '103');
+    expect(screen.getByText('Distance')).toBeInTheDocument();
+  });
+
   it('has one tab stop and selects matching preview and draft identity with arrows, Home and End', async () => {
     renderPage();
     const user = userEvent.setup();
