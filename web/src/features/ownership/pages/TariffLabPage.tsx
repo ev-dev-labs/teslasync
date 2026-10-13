@@ -21,6 +21,7 @@ import {
   axisTick,
   chartGrid,
   chartMargin,
+  useThemeChartPalette,
 } from '@/components/charts';
 import { AlertBanner } from '@/components/feedback';
 
@@ -87,6 +88,7 @@ export default function TariffLabPage() {
   const { t } = useTranslation();
   const { vehicleId } = useSelectedVehicle();
   const units = useUnits();
+  const palette = useThemeChartPalette();
   const [windowDays, setWindowDays] = useState(90);
   const [shiftablePct, setShiftablePct] = useState(35);
   const [switchFeeMinor, setSwitchFeeMinor] = useState(0);
@@ -196,6 +198,7 @@ export default function TariffLabPage() {
       render: (row) => (
         <Toggle
           label=""
+          aria-label={t('ownership.tariff.plan.compareNamed', 'Compare {{name}}', { name: row.name })}
           checked={selected.includes(row.id)}
           onChange={() => toggleSelected(row.id)}
         />
@@ -290,7 +293,7 @@ export default function TariffLabPage() {
       align: 'right',
       header: t('ownership.tariff.result.rank', 'Rank'),
       render: (row) => (
-        <span className={`tabular-nums ${row.rank === 1 ? 'text-emerald-300' : ''}`}>
+        <span className={`tabular-nums ${row.rank === 1 ? 'text-[var(--text-secondary)]' : ''}`}>
           #{row.rank}
         </span>
       ),
@@ -323,7 +326,7 @@ export default function TariffLabPage() {
       header: t('ownership.tariff.result.delta', 'vs current'),
       render: (row) => (
         <span
-          className={`tabular-nums ${(row.delta_vs_current_minor ?? 0) < 0 ? 'text-emerald-300' : (row.delta_vs_current_minor ?? 0) > 0 ? 'text-rose-300' : ''}`}
+          className={`tabular-nums ${(row.delta_vs_current_minor ?? 0) < 0 ? 'text-[var(--text-secondary)]' : (row.delta_vs_current_minor ?? 0) > 0 ? 'text-[var(--text-secondary)]' : ''}`}
         >
           {money(row.delta_vs_current_minor)}
         </span>
@@ -350,7 +353,7 @@ export default function TariffLabPage() {
       align: 'right',
       header: t('ownership.tariff.result.shift', 'Load-shift upside'),
       render: (row) => (
-        <span className="tabular-nums text-emerald-300">
+        <span className="tabular-nums text-[var(--text-secondary)]">
           {row.load_shift_saving_minor > 0 ? money(row.load_shift_saving_minor) : '—'}
         </span>
       ),
@@ -571,7 +574,7 @@ export default function TariffLabPage() {
                   {chartData.map((entry) => (
                     <Cell
                       key={entry.name}
-                      fill={entry.isBest ? '#34d399' : entry.isCurrent ? '#22d3ee' : '#64748b'}
+                      fill={entry.isBest ? palette.positive : entry.isCurrent ? palette.primary : palette.neutral}
                     />
                   ))}
                 </Bar>
@@ -625,7 +628,7 @@ export default function TariffLabPage() {
             {results.map((row) => (
               <article
                 key={row.tariff_id}
-                className="rounded-xl border border-white/[0.08] bg-white/[0.025] p-4"
+                className="min-w-0 rounded-[var(--panel-radius)] border border-[var(--border-subtle)] bg-[var(--surface-1)] p-4"
               >
                 <div className="flex items-center justify-between gap-3">
                   <Text as="h3" variant="subhead">
@@ -647,9 +650,17 @@ export default function TariffLabPage() {
                             {units.formatEnergy(band.energy_wh)} · {money(band.cost_minor)}
                           </span>
                         </div>
-                        <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-[var(--surface-2)]">
+                        <div
+                          role="meter"
+                          aria-label={band.label}
+                          aria-valuemin={0}
+                          aria-valuemax={100}
+                          aria-valuenow={Math.min(100, Math.max(0, band.share_pct))}
+                          aria-valuetext={formatPct(band.share_pct)}
+                          className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-[var(--surface-2)]"
+                        >
                           <div
-                            className="h-full rounded-full bg-cyan-400/70"
+                            className="h-full rounded-full bg-[var(--text-secondary)]"
                             style={{ width: `${Math.min(100, Math.max(0, band.share_pct))}%` }}
                           />
                         </div>
@@ -811,7 +822,7 @@ export default function TariffLabPage() {
                 {draft.rates.map((rate, index) => (
                   <div
                     key={index}
-                    className="grid gap-3 rounded-lg border border-white/[0.07] bg-white/[0.02] p-3 md:grid-cols-2 xl:grid-cols-5"
+                    className="grid min-w-0 gap-3 rounded-[var(--panel-radius)] border border-[var(--border-subtle)] bg-[var(--surface-1)] p-3 md:grid-cols-2 xl:grid-cols-5"
                   >
                     <Input
                       label={t('ownership.tariff.form.bandLabel', 'Label')}

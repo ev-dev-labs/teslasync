@@ -505,3 +505,75 @@ describe('TariffLabPage — confirm-gated delete', () => {
     expect(removeButton('EV Nights')).not.toBeDisabled();
   });
 });
+
+
+describe('TariffLabPage — restrained page adoption', () => {
+  it('names each comparison switch with its plan without changing selected IDs', () => {
+    const mutate = vi.fn();
+    mockSimulate.mockReturnValue({ ...makeMutation({ mutate }), data: undefined });
+    renderPage();
+    expect(screen.getByRole('switch', { name: 'Compare EV Nights' })).not.toBeChecked();
+    fireEvent.click(screen.getByRole('switch', { name: 'Compare Flat Saver' }));
+    expect(screen.getByRole('switch', { name: 'Compare Flat Saver' })).toBeChecked();
+    fireEvent.click(screen.getByRole('button', { name: 'Replay load against plans' }));
+    expect(mutate).toHaveBeenCalledWith({
+      vehicle_id: 7, window_days: 90, tariff_ids: [2], shiftable_pct: 35,
+      switch_fee_minor: 0, confirmed: true,
+    });
+  });
+
+  it('keeps all independent sections visible with an authoritatively empty library and no replay', () => {
+    mockTariffs.mockReturnValue(makeQuery({ items: [] }));
+    renderPage();
+    for (const title of [
+      'Comparison parameters', 'Arbitrage summary', 'Annualised cost by plan',
+      'Ranked plan economics', 'Where your energy actually landed',
+      'Your rate plan library', 'Evidence, quality, and limitations',
+    ]) expect(screen.getByRole('heading', { name: title })).toBeInTheDocument();
+    expect(card('Your rate plan library')).toHaveTextContent('No plans yet');
+    expect(screen.getByRole('button', { name: 'Add plan' })).toBeEnabled();
+    expect(mockSimulate().mutate).not.toHaveBeenCalled();
+  });
+
+  it('retains signed replay economics and exposes measured band share without relying on hue', () => {
+    mockSimulate.mockReturnValue({
+      ...makeMutation(),
+      data: makeSimulation({ results: [makeResult({ delta_vs_current_minor: -123 })] }),
+    });
+    renderPage();
+    const row = within(card('Ranked plan economics')).getByText('Replay Nights').closest('tr');
+    expect(row).toHaveTextContent('-$1.23');
+    const meter = within(card('Where your energy actually landed')).getByRole('meter', { name: 'Observed overnight band' });
+    expect(meter).toHaveAttribute('aria-valuenow', '100');
+    expect(meter).toHaveAttribute('aria-valuetext', expect.stringMatching(/^100(?:\.0+)?%$/));
+    expect(meter.firstElementChild).toHaveStyle({ width: '100%' });
+    expect(meter.firstElementChild).toHaveClass('bg-[var(--text-secondary)]');
+    expect(meter.closest('article')).toHaveClass('bg-[var(--surface-1)]', 'border-[var(--border-subtle)]');
+    expect(card('Where your energy actually landed')).toHaveTextContent('$123.45');
+  });
+
+  it('retains raw tariff rate precision and success-only editor completion', () => {
+    const mutate = vi.fn();
+    mockCreate.mockReturnValue(makeMutation({ mutate }));
+    renderPage();
+    fireEvent.click(screen.getByRole('button', { name: 'Add plan' }));
+    fireEvent.change(screen.getByRole('textbox', { name: 'Plan name required' }), { target: { value: 'Precise plan' } });
+    fireEvent.change(screen.getByRole('spinbutton', { name: 'Price (minor per Wh)' }), { target: { value: '0.012345' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save rate plan' }));
+    expect(mutate).toHaveBeenCalledOnce();
+    expect(mutate).toHaveBeenCalledWith(expect.objectContaining({
+      name: 'Precise plan', currency: 'USD', structure: 'tou',
+      standing_charge_minor_per_day: 0, demand_charge_minor_per_w: 0,
+      export_price_minor_per_wh: 0, is_current: false,
+      rates: [expect.objectContaining({
+        day_mask: 127, start_minute: 0, end_minute: 1440,
+        price_minor_per_wh: 0.012345, tier_upper_wh: null,
+        season_start_month: 1, season_end_month: 12,
+      })],
+    }), expect.objectContaining({ onSuccess: expect.any(Function) }));
+    expect(screen.getByRole('textbox', { name: 'Plan name required' })).toHaveValue('Precise plan');
+    act(() => mutate.mock.calls[0][1].onSuccess());
+    expect(screen.queryByRole('textbox', { name: 'Plan name required' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Add plan' })).toBeInTheDocument();
+  });
+});
