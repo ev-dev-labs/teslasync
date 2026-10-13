@@ -2,7 +2,7 @@ import { type FormEvent, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useRunTwinLab } from '@/api/hooks/useAdvancedIntelligence';
 import {
-  Bar, BarChart, CartesianGrid, CHART_COLORS,
+  axisTick, Bar, BarChart, chartGrid, ChartLegend, ChartTooltip, CHART_COLORS,
   ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from '@/components/charts';
 import type { StatMetric } from '@/components/data-display/stat-reference/types';
@@ -22,6 +22,7 @@ import { formatEfficiencyFromSI } from '../formatters';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { AnalysisBrief } from '../components/operationalbrief-all/AnalysisBrief';
 import { useRetainedMutation } from '@/hooks/useRetainedMutation';
+import { useDataState } from '@/hooks/useDataState';
 
 const createScenario = (index: number, name: string): TwinScenarioInput => ({
   name,
@@ -54,11 +55,13 @@ export default function TwinLabPage() {
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
-    if (vehicleId == null) return;
+    if (vehicleId == null || publication.pending) return;
     mutation.mutate({ vehicle_id: vehicleId, scenarios, confirmed: true });
   };
 
   const result = publication.result;
+  const sourceState = useDataState(publication.source, { provenance: 'inferred' });
+  const paused = publication.source.fetchStatus === 'paused';
   const summaryMetrics: readonly StatMetric[] = [
     { occurrenceId: 'model', metricId: 'text', rawValue: result?.model_name,
       label: t('advancedIntelligence.twin.baseline.model', 'Model'),
@@ -143,7 +146,7 @@ export default function TwinLabPage() {
           hasResult={result != null}
           pending={publication.pending}
           error={publication.error}
-          query={result ? publication.source : undefined}
+          query={publication.source}
           quality={result?.data_quality}
           evidence={result?.evidence}
           limitations={result?.limitations}
@@ -172,6 +175,18 @@ export default function TwinLabPage() {
             'Comparison of modeled range uncertainty across twin scenarios',
           )}
           empty={chartData.length < 2}
+          loading={publication.pending && !result && !paused}
+          error={sourceState.fatalError}
+          emptyMessage={paused && !result
+            ? t('advancedIntelligence.panel.paused', 'The initial evidence query is paused; no empty result is inferred.')
+            : t('advancedIntelligence.twin.uncertainty.empty', 'At least two supported scenario results are required.')}
+          metadata={{
+            sourceLabel: t('advancedIntelligence.twin.brief.source', 'Calibrated twin simulation'),
+            unitLabel: units.unitPrefs.distance,
+            freshness: sourceState.status === 'stale' ? 'stale' : 'unknown',
+            freshnessLabel: sourceState.status === 'stale'
+              ? t('advancedIntelligence.brief.retained', 'Retained result') : undefined,
+          }}
           data={chartData}
           dataColumns={[
             { key: 'name', label: t('advancedIntelligence.twin.form.name', 'Scenario name') },
@@ -181,15 +196,16 @@ export default function TwinLabPage() {
           ]}
         >
           {chartData.length >= 2 ? (
-            <ResponsiveContainer width="100%" height={300}>
+            <ResponsiveContainer width="100%" height="100%">
               <BarChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" />
-                <YAxis unit={` ${units.unitPrefs.distance}`} />
-                <Tooltip />
-                <Bar dataKey="low" fill={CHART_COLORS[2]} />
-                <Bar dataKey="estimate" fill={CHART_COLORS[0]} />
-                <Bar dataKey="high" fill={CHART_COLORS[1]} />
+                {chartGrid}
+                <XAxis dataKey="name" tick={axisTick} />
+                <YAxis tick={axisTick} tickFormatter={(value: number) => fmtNumber(value)} unit={` ${units.unitPrefs.distance}`} />
+                <Tooltip content={<ChartTooltip />} />
+                <ChartLegend />
+                <Bar dataKey="low" name={t('advancedIntelligence.twin.uncertainty.low', 'Low')} unit={units.unitPrefs.distance} fill={CHART_COLORS[2]} />
+                <Bar dataKey="estimate" name={t('advancedIntelligence.twin.uncertainty.estimate', 'Estimate')} unit={units.unitPrefs.distance} fill={CHART_COLORS[0]} />
+                <Bar dataKey="high" name={t('advancedIntelligence.twin.uncertainty.high', 'High')} unit={units.unitPrefs.distance} fill={CHART_COLORS[1]} />
               </BarChart>
             </ResponsiveContainer>
           ) : <EmptyState /* no-action: the scenario add/remove controls above this chart are the trigger surface; uncertainty bars appear once at least two scenarios have supported results. */ message={t('advancedIntelligence.twin.uncertainty.empty', 'At least two supported scenario results are required.')} />}
@@ -199,23 +215,30 @@ export default function TwinLabPage() {
       <FadeIn delay={0.15}>
         <InsightPanel
           title={t('advancedIntelligence.twin.sensitivity.title', 'Sensitivity drivers')}
-          empty={!result || result.scenarios.length === 0}
+          query={result || publication.pending || publication.error
+            ? { ...publication.source, isLoading: publication.source.isLoading && !paused }
+            : undefined}
+          empty={!result || (result.scenarios ?? []).length === 0}
           emptyMessage={t(
             'advancedIntelligence.twin.sensitivity.empty',
             'Sensitivity drivers appear after a supported simulation.',
           )}
         >
-          <div className="grid gap-4 md:grid-cols-2">
-            {(result?.scenarios ?? []).map((scenario) => (
-              <div key={scenario.name} className="rounded-lg border border-white/[0.07] p-4">
-                <Text as="h3" variant="label">{scenario.name}</Text>
-                {(scenario.sensitivity_drivers ?? []).map((driver) => (
-                  <div key={driver.driver} className="mt-2 flex justify-between gap-3 text-sm">
-                    <span className="text-[var(--text-muted)]">{driver.driver}</span>
-                    <span>{fmtNumber(driver.effect_pct)}%</span>
+          <div className="grid min-w-0 gap-4 @2xl:grid-cols-2">
+            {(result?.scenarios ?? []).map((scenario, scenarioIndex) => (
+              <article key={scenarioIndex} className="min-w-0 rounded-panel border border-[var(--border-default)] bg-[var(--surface-2)] p-4">
+                <Text as="h3" variant="label" className="break-words">{scenario.name}</Text>
+                {(scenario.sensitivity_drivers ?? []).length > 0 ? (scenario.sensitivity_drivers ?? []).map((driver, driverIndex) => (
+                  <div key={driverIndex} className="mt-2 flex min-w-0 flex-wrap justify-between gap-x-3 gap-y-1">
+                    <Text as="span" variant="bodySm" color="secondary" className="min-w-0 break-words">{driver.driver}</Text>
+                    <Text as="span" variant="bodySm" className="tabular-nums">
+                      {driver.effect_pct == null || !Number.isFinite(driver.effect_pct) ? '—' : `${fmtNumber(driver.effect_pct)}%`}
+                    </Text>
                   </div>
-                ))}
-              </div>
+                )) : <Text as="p" variant="bodySm" color="secondary" className="mt-2">
+                  {t('advancedIntelligence.panel.empty', 'No supported data is available.')}
+                </Text>}
+              </article>
             ))}
           </div>
         </InsightPanel>
