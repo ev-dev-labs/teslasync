@@ -233,6 +233,7 @@ export function useCreateCausalExperiment() {
     mutationFn: (body: CreateCausalExperimentRequest) =>
       request<CausalExperiment>(`${ROOT}/causal-experiments`, {
         method: 'POST',
+        requiresLiveMode: true,
         body: JSON.stringify(body),
       }),
     onSuccess: (_data, variables) => {
