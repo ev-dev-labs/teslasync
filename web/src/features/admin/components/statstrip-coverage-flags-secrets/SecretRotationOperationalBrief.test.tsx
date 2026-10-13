@@ -63,7 +63,9 @@ function expectMissing() {
   expect(summary().querySelectorAll('[data-value-state="value"]')).toHaveLength(0);
 }
 
-beforeEach(() => mockedRequest.mockReset());
+beforeEach(() => {
+  mockedRequest.mockReset();
+});
 afterEach(() => {
   cleanup();
   for (const client of clients.splice(0)) client.clear();
