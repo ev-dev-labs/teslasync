@@ -251,7 +251,7 @@ export function TriggerConfigurator({ trigger, onChange }: TriggerConfiguratorPr
                     selectedDays,
                   );
                 }}
-                className="w-36"
+                className="min-h-11 w-full md:min-h-10 md:w-36"
               />
               <div>
                 <Text as="span" variant="subhead">
@@ -280,7 +280,9 @@ export function TriggerConfigurator({ trigger, onChange }: TriggerConfiguratorPr
               help={{
                 i18nKey: 'help.fields.automations.cronExpr',
                 content: 'Standard 5-field cron syntax (minute hour day-of-month month day-of-week). Use the simple mode above for the most common schedules.',
+                className: 'h-11 w-11 shrink-0 md:h-4 md:w-4',
               }}
+              className="min-h-11 md:min-h-10"
               value={trigger.cron_expr}
               onChange={(event) => onChange({ ...trigger, cron_expr: event.target.value })}
               placeholder={t('automations.builder.cronPlaceholder', '0 8 * * 1-5')}
@@ -293,7 +295,9 @@ export function TriggerConfigurator({ trigger, onChange }: TriggerConfiguratorPr
           <UiButton
             type="button"
             variant="ghost"
-            className="!h-auto !px-0 !py-0 text-xs text-[var(--text-muted)] underline hover:!bg-transparent hover:text-[var(--text-secondary)]"
+            size="sm"
+            wrapLabel
+            className="min-h-11 min-w-11 w-full md:min-h-9 md:w-auto"
             onClick={() => {
               if (showSimple) {
                 setAdvancedMode(true);

@@ -613,3 +613,193 @@ describe('TriggerConfigurator — robustness', () => {
     expect(container.firstChild).toBeNull();
   });
 });
+
+describe('TriggerConfigurator — cron touch adoption', () => {
+  it('uses mobile target classes while switching modes without changing the schedule draft', () => {
+    const { onChange } = renderConfig({
+      kind: 'trigger_schedule',
+      cron_expr: '5 7 * * 5,1,3',
+      timezone: 'Europe/Paris',
+    });
+    expect(screen.getByLabelText('Time')).toHaveClass(
+      'min-h-11', 'w-full', 'md:min-h-10', 'md:w-36',
+    );
+    const days = within(screen.getByRole('group', { name: 'Days' })).getAllByRole('button');
+    expect(days.map(day => day.getAttribute('aria-label'))).toEqual([
+      'Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat',
+    ]);
+    for (const day of days) {
+      expect(day).toHaveClass('min-h-11', 'min-w-11');
+    }
+    const advanced = screen.getByRole('button', { name: 'Use advanced cron expression' });
+    expect(advanced).toHaveClass(
+      'h-auto', 'min-h-11', 'min-w-11', 'w-full', 'md:min-h-9', 'md:w-auto',
+      'whitespace-normal', 'max-w-full',
+    );
+    expect(advanced).toHaveAttribute('type', 'button');
+    fireEvent.click(advanced);
+
+    expect(screen.getByLabelText('Cron expression')).toHaveValue('5 7 * * 5,1,3');
+    expect(screen.getByLabelText('Cron expression')).toHaveClass('min-h-11', 'md:min-h-10');
+    expect(screen.getByRole('button', { name: 'Help for Cron expression' })).toHaveClass(
+      'h-11', 'w-11', 'shrink-0', 'md:h-4', 'md:w-4',
+    );
+    expect(screen.getByLabelText('Timezone')).toHaveValue('Europe/Paris');
+    const simple = screen.getByRole('button', { name: 'Switch to simple mode' });
+    expect(simple).toHaveClass(
+      'h-auto', 'min-h-11', 'min-w-11', 'w-full', 'md:min-h-9', 'md:w-auto',
+      'whitespace-normal', 'max-w-full',
+    );
+    fireEvent.click(simple);
+
+    expect(screen.getByLabelText('Time')).toHaveValue('07:05');
+    expect(screen.queryByLabelText('Cron expression')).toBeNull();
+    expect(screen.getByLabelText('Timezone')).toHaveValue('Europe/Paris');
+    for (const day of ['Mon', 'Wed', 'Fri']) {
+      expect(screen.getByRole('button', { name: day })).toHaveAttribute('aria-pressed', 'true');
+    }
+    for (const day of ['Sun', 'Tue', 'Thu', 'Sat']) {
+      expect(screen.getByRole('button', { name: day })).toHaveAttribute('aria-pressed', 'false');
+    }
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it('keeps raw advanced syntax and timezone edits intact with mobile target classes', () => {
+    const trigger: AutomationTriggerStepInput = {
+      kind: 'trigger_schedule',
+      cron_expr: '*/15 9-17 * * 1-5',
+      timezone: 'Asia/Tokyo',
+    };
+    const { onChange, rerender } = renderConfig(trigger);
+    const cron = screen.getByLabelText('Cron expression');
+    expect(cron).toHaveValue('*/15 9-17 * * 1-5');
+    expect(cron).toHaveClass('min-h-11', 'md:min-h-10');
+    expect(screen.queryByLabelText('Time')).toBeNull();
+    expect(screen.getByText('minute hour day-of-month month day-of-week')).toBeInTheDocument();
+
+    const edited: AutomationTriggerStepInput = {
+      ...trigger, cron_expr: '0,30 6,18 1,15 * 0,6',
+    };
+    fireEvent.change(cron, { target: { value: edited.cron_expr } });
+    expect(onChange).toHaveBeenLastCalledWith(edited);
+    rerender(
+      <MemoryRouter><TriggerConfigurator trigger={edited} onChange={onChange} /></MemoryRouter>,
+    );
+    const timezone = screen.getByLabelText('Timezone');
+    expect(timezone).toHaveClass('min-h-11', 'md:min-h-10');
+    expect(within(timezone).getAllByRole('option').map(option =>
+      (option as HTMLOptionElement).value,
+    )).toEqual([
+      '', 'America/New_York', 'America/Chicago', 'America/Denver',
+      'America/Los_Angeles', 'Europe/London', 'Europe/Berlin', 'Europe/Paris',
+      'Asia/Tokyo', 'Asia/Shanghai', 'Australia/Sydney',
+    ]);
+    for (const value of [
+      '', 'America/New_York', 'America/Chicago', 'America/Denver',
+      'America/Los_Angeles', 'Europe/London', 'Europe/Berlin', 'Europe/Paris',
+      'Asia/Tokyo', 'Asia/Shanghai', 'Australia/Sydney',
+    ]) {
+      fireEvent.change(timezone, { target: { value } });
+      expect(onChange).toHaveBeenLastCalledWith({ ...edited, timezone: value });
+      expect(screen.getByLabelText('Cron expression')).toHaveValue('0,30 6,18 1,15 * 0,6');
+    }
+    expect(onChange).toHaveBeenCalledTimes(12);
+  });
+
+  it('preserves every vehicle event choice and its exact single-trigger payload', () => {
+    const { onChange } = renderConfig({ kind: 'trigger_event', event_type: 'online' });
+    const event = screen.getByLabelText('Event');
+    const choices = [
+      'drive_start', 'drive_end', 'charge_start', 'charge_end', 'sleep_start',
+      'sleep_end', 'online', 'offline', 'sentry_alert',
+    ];
+    expect(within(event).getAllByRole('option').map(option =>
+      (option as HTMLOptionElement).value,
+    )).toEqual(choices);
+    for (const event_type of choices) {
+      fireEvent.change(event, { target: { value: event_type } });
+      expect(onChange).toHaveBeenLastCalledWith({ kind: 'trigger_event', event_type });
+    }
+    expect(onChange).toHaveBeenCalledTimes(9);
+  });
+
+  it('preserves every geofence event and the existing dwell field contract', () => {
+    const trigger: AutomationTriggerStepInput = {
+      kind: 'trigger_geofence', place_id: 20, event: 'dwell', dwell_minutes: 15,
+    };
+    const { onChange } = renderConfig(trigger);
+    const event = screen.getByLabelText('Event');
+    expect(within(event).getAllByRole('option').map(option =>
+      (option as HTMLOptionElement).value,
+    )).toEqual(['enter', 'exit', 'dwell']);
+    const place = screen.getByLabelText('Geofence');
+    expect(within(place).getAllByRole('option').map(option =>
+      (option as HTMLOptionElement).value,
+    )).toEqual(['', '10', '20']);
+    expect(place).toHaveValue('20');
+    expect(screen.getByLabelText('Dwell minutes')).toHaveValue(15);
+    expect(screen.getByLabelText('Dwell minutes')).toHaveAttribute('min', '1');
+    expect(screen.getByLabelText('Dwell minutes')).toHaveAttribute('max', '60');
+    for (const value of ['enter', 'exit', 'dwell']) {
+      fireEvent.change(event, { target: { value } });
+      expect(onChange).toHaveBeenLastCalledWith({
+        ...trigger, event: value, dwell_minutes: value === 'dwell' ? 15 : undefined,
+      });
+    }
+    expect(onChange).toHaveBeenCalledTimes(3);
+  });
+
+  it('preserves all signal choices and numeric boolean and text seeds', () => {
+    const { onChange } = renderConfig(createDefaultTrigger('trigger_signal'));
+    const signal = screen.getByLabelText('Signal');
+    expect(within(signal).getAllByRole('option').map(option =>
+      (option as HTMLOptionElement).value,
+    )).toEqual([
+      'battery_level', 'inside_temp', 'outside_temp', 'speed', 'is_locked',
+      'is_charging', 'is_climate_on', 'sentry_mode', 'state',
+    ]);
+    for (const value of ['battery_level', 'inside_temp', 'outside_temp', 'speed']) {
+      fireEvent.change(signal, { target: { value } });
+      expect(onChange).toHaveBeenLastCalledWith({
+        kind: 'trigger_signal', signal: value, op: '<', value_num: 20,
+      });
+    }
+    for (const value of ['is_locked', 'is_charging', 'is_climate_on', 'sentry_mode']) {
+      fireEvent.change(signal, { target: { value } });
+      expect(onChange).toHaveBeenLastCalledWith({
+        kind: 'trigger_signal', signal: value, op: '=', value_bool: true,
+      });
+    }
+    fireEvent.change(signal, { target: { value: 'state' } });
+    expect(onChange).toHaveBeenLastCalledWith({
+      kind: 'trigger_signal', signal: 'state', op: '=', value_text: 'online',
+    });
+    expect(onChange).toHaveBeenCalledTimes(9);
+  });
+
+  it('preserves every signal operator and both boolean choices without adding trigger semantics', () => {
+    const { onChange } = renderConfig({
+      kind: 'trigger_signal', signal: 'is_locked', op: '=', value_bool: false,
+    });
+    const operator = screen.getByLabelText('Operator');
+    const operators = ['=', '!=', '<', '<=', '>', '>=', 'changed', 'crossed_above', 'crossed_below'];
+    expect(within(operator).getAllByRole('option').map(option =>
+      (option as HTMLOptionElement).value,
+    )).toEqual(operators);
+    expect(within(screen.getByLabelText('Value')).getAllByRole('option').map(option =>
+      (option as HTMLOptionElement).value,
+    )).toEqual(['true', 'false']);
+    expect(screen.getByLabelText('Value')).toHaveValue('false');
+    for (const op of operators) {
+      fireEvent.change(operator, { target: { value: op } });
+      expect(onChange).toHaveBeenLastCalledWith(op === 'changed'
+        ? { kind: 'trigger_signal', signal: 'is_locked', op }
+        : { kind: 'trigger_signal', signal: 'is_locked', op, value_bool: false });
+    }
+    fireEvent.change(screen.getByLabelText('Value'), { target: { value: 'true' } });
+    expect(onChange).toHaveBeenLastCalledWith({
+      kind: 'trigger_signal', signal: 'is_locked', op: '=', value_bool: true,
+    });
+    expect(onChange).toHaveBeenCalledTimes(10);
+  });
+});
