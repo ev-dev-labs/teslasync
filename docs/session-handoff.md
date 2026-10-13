@@ -2,6 +2,107 @@
 
 ## Current phase
 
+### Rolling release reconciliation and serialized catalog handoff,20:45:09Z snapshot
+
+Phases4/5 remainclosed; Phase6 unfinished/Phase7 NOTRUN. Four actualnew
+commits/pushes since20:06:0de3b7296 Journey sourceQA,e3f84198d Causal sourceQA,
+8974f070e DLQ string-contract WIP,025d8cb57 history-paging WIP. HEAD1884.
+Reports are delivery-complete only, notnative/pageacceptance. DLQ authored38
+cases remainNOTRUN afterexternalstartup1/discovery0; ownlint/typing/scans0,
+threefinalhashesmatch. History authored41cases areNOTPASS: typing124/75s and
+Vitest124/180s unknowncause/noJSON. Fourfinalhashesmatch/lint/API/preservation0,
+three sections/281vs222 intact. Parent approved reportedJSX-freehookfixture
+useActionCenter.test.ts instead of earlierqueuetypo.tsx. Newattempt2
+897c9e2c continuesexactfourfiles/rawmatrix, no remigration.
+
+Providerplural4453a49b5 sourceaccepted from retained8passes and actual
+ownedlint0/original31194leaves/projection/pin/add-only preservation. Overall
+preservation1 names threeunowned producers separatelychangedby authorized
+history/dateowners; ownfivepaths vs4453 remainunchangedat20:33. ItsEBUSY and
+wrongsinglenamespace assertion trials remainrawfailures, notquietlyerased.
+ActualEnglishrelease18:50:17Z acknowledgednow; solecurrentcatalogowner
+d4d7bdbb handlesexistingDLQtoastcatalog+three measured stalegenerated artifacts.
+No currentguardpass inferred from older normalgen/check/strict0.
+
+Thirty-two known unreleased actors after rolling refills;25 exceed recordedhard
+deadlines and seven remain inbudget at20:45:09. These are lifecycle states,
+not a fresh simultaneous32-worker census. Many exceedhard
+limits withSTOPdelivered and unconfirmed release. Host has no cancellation,
+so do notcall them32healthy, overlapwriters or renewclocks. Retire actual
+source-write releases even if queuedSTOPack keepschatrunning. Latest genuine
+releases include History(original0 pluslater2), Settings2, Provider1 and
+FleetCatalog2,Federated1,CarbonCoverage1 and QualityFieldTests1. Their original
+turns were collected; the latterthree partials/reports await exact persistence.
+Federated sourceQA reports5findings/4candidates/6pins preserved; CarbonCoverage
+source/fixture18NOTRUN and Quality76authoredtests/productionunchanged staypartial.
+Three genuine slots refilled byAutomationList23d0,AutomationsListb472 and
+BatteryDegradationf833, observedrunning119s at20:45, return21:03/hard21:08
+or earlieractualcreation+20/25. Settings actual18:30:07 releaseunlocksChrome; Playwright remains
+heldby3eb0. Freshsourcefixes: Evidence/Briefdatepreferences9c5d, Causalliveguard
+b0b4, fieldvalidation1d46, Journeyzone3059; exactfullIDs/files/deadlines inqueue/
+SQL. YearReview/Automation/BatteryCare QA are report-only, notnewsourcework.
+
+NewJourney/Causal reports register only exactdate/entryzone/fieldvalidation/
+live-writeguard roots; raw-token labelclassification remainsconditional
+because technicalidentifiers have an exemption. Allnative/newtests/API/whole
+pageacceptance limits remain. Many earlier released report/source pairs still
+await individualpersistence; they are deliveredholds, NOTworkers.
+
+Shared5173 actualHTTP200/PID9036/free74.17GiB at20:43:09; no runningboundedheader
+at20:24, sole10minschedule3. Previous healthflag cleared20:43:09; subsequent
+scheduled checks must pollcurrentowners afresh without holding it through
+ordinary report persistence. No Docker/reseed/gate/repeatedpassingfullsuite,
+Discord/extensions/helper/heartbeat work. Existingunattributeddiagnostics and
+historicalsource/native failures remainpreserved.
+
+### Scheduled health reconciliation and retained refills,19:23:26Z
+
+Phases4/5 stayclosed; Phase6 unfinished/Phase7 NOTRUN. Actual queue counts:
+Phase5 219done/20failed/1blocked/4excluded; Phase6 91done/15pending/54held/
+23failed/1blocked after recording the two new retry owners. Thirty-two current
+known IDs are reportedrunning,27 conservativelyoverdue with cooperativeSTOP,
+five fresh; NOT32healthy workers. No built-in cancellation exists and no custom
+workaround/sourcelease release from disk/mtime is permitted.
+
+All known current IDs individuallypolled in this serializedcheck. FleetResume,
+Carbon, ActionScope, ActionExpiry and FleetCatalog confirmed actualsource
+release; their delayedSTOP acknowledgements did not extend source clocks.
+SourceResume actual7/7/static0/finalhashesmatch accepted/pushed2f82afe8c,
+NOTnativehitgeometry. Carbon report1fbf1de4b has13sections/foursources,
+threeconfirmedsourcefindings/oneunpromotedpalettecandidate; nativeNOTRUN.
+Redis release is retired in SQL; its report still awaits individual intake.
+
+Seven actual pushes since18:54:692f945c3 exportWIP; c9906c3a9 generateddateWIP;
+2f82afe8c Resume;1fbf1de4b CarbonQA;7dd940034 expiryWIP;c5bcf1797 scopeWIP;
+ab26dc59e CatalogWIP. Export/date authored12/6cases stillNOTRUN after external
+catalogstartup1/zero discovery; SAMEattempt1 waits serializedcatalogrelease.
+Expiry finalJSON parsed16/17, one duplicate-limitation selectorfailure, final
+correction/lint/typing/scansunverified; stoppedthirdcommand exitUNKNOWN.
+Catalog finalvalidatedJSON9/12, three wrapped-accessiblename selectorfailures;
+repairedthirdrun stopped/unvalidated. No partial is a behavioralPASS.
+
+Scope actual37/37/static0/sixsections/original20testbodies preserved, but parent
+sourcecheck found a remaining core boundary: shared selected-vehicle rejects
+malformed/deleted URL IDs; new materialization only handles absent rawparameter;
+CopyLink copies raw URL. Effective8 can stillcopy rejectedparameter and reopen
+asrecipient9. ExactpairWIP retained; remainingattempt2 is pending, not[x].
+No shared hook/CopyLink change or invented verification campaign authorized.
+
+Actual fresh owners: Carboncoverage e0beb4a2-990b-4cd6-a63f-d1ffa7ed4656,
+Directory9b2d0835-0345-4fe5-b6ac-9e99e4f23eab, sourceTime
+b5f3aeea-e29b-49df-bbbc-7a5f957c0e28 (return19:25/hard19:30).
+Card retry2 9712a450-edf8-4135-9d04-26e8362ada8f and Catalogretry2
+be43f52b-7830-46f0-8094-d39c489e407b (return19:40/hard19:45).
+Earlieractualcreation+20/25 wins. GDPRroot2cf10f9d retains exactsharedtype/
+hook/test claim after HARD19:15STOP; no actualrelease yet. Native locks remain
+with3eb0Playwright/f224Chrome; do not refill providers until actualrelease.
+
+Shared5173 actualHTTP200/PID9036 at19:23; frozenDocker untouched. Sole schedule3
+remains10minutes;19:00/19:10 prompts coalesced while this check was active.
+Close the health flag after operationalreceipt; ordinary sequential report
+intake is not another prolonged opencheck. Phase5 failures, source/native debt,
+helper budgets and unknown runner diagnosis remain unchanged.
+
 ### Actual rolling intake and claims,18:47:44Z
 
 Phases4/5 remainclosed by user checkpoints a63bd78e6/58f1a657c and the actual
