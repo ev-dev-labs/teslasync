@@ -242,7 +242,6 @@ export default function EmergencyResiliencePage() {
           )}
           loading={sourceState === 'loading'}
           error={resultState.fatalError}
-          retainedMessage={t('advancedIntelligence.resilience.brief.description', 'Modeled energy survival and timeline coverage remain separate from Storm guardian forecast and activity sources.')}
           empty={result != null && chartData.length < 2}
           data={chartData}
           dataColumns={[
@@ -256,6 +255,7 @@ export default function EmergencyResiliencePage() {
             emptyMessage={pendingMessage}
             errorMessage={t('advancedIntelligence.panel.error', 'Intelligence evidence could not be loaded.')}
             error={resultState.fatalError}
+            retainedMessage={t('advancedIntelligence.resilience.brief.description', 'Modeled energy survival and timeline coverage remain separate from Storm guardian forecast and activity sources.')}
             emptyContent={<Text as="p" variant="bodySm" role="status">{pendingMessage}</Text>}
           >
           {chartData.length >= 2 ? (
