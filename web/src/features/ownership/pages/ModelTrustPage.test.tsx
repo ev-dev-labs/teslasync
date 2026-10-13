@@ -315,17 +315,18 @@ describe('ModelTrustPage scoped modernization', () => {
     expect(mockPrediction().mutate).not.toHaveBeenCalled();
   });
 
-  it('exposes every original mobile field and both calibration and scoring actions through shared details', () => {
+  it('exposes every original mobile field and both calibration and scoring actions through shared details', async () => {
     const dimensions = vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({
       width: 375, height: 300, top: 0, left: 0, right: 375, bottom: 300, x: 0, y: 0,
       toJSON: () => ({}),
     });
     const resizeObserver = globalThis.ResizeObserver;
-    // Exercise the real table's allocated-width observer, not only jsdom's rectangle.
+    const observers = new Set<MockResizeObserver>();
+    // Deliver allocated-width changes after mounting, as a browser observer would.
     vi.stubGlobal('ResizeObserver', class extends MockResizeObserver {
       override observe(target: Element) {
         super.observe(target);
-        this.trigger(target);
+        observers.add(this);
       }
     });
     try {
@@ -337,7 +338,12 @@ describe('ModelTrustPage scoped modernization', () => {
         }],
       };
       mockTrust.mockReturnValue(query({ ...report(), scorecards: [defaultCard, scorecard()] }));
-      renderPage();
+      await act(async () => { renderPage(); });
+      await act(async () => {
+        for (const observer of observers) {
+          for (const target of observer.observed) observer.trigger(target);
+        }
+      });
       const cards = card('Model scorecards');
       expect(chartProbe.mock.calls.at(-1)![0].data[0]).toMatchObject({ error: 0.5, bias: 0.25 });
       expect(within(cards).getAllByRole('button', { name: 'Calibration' })[1]).toBeEnabled();
