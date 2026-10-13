@@ -3,7 +3,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ReactNode } from 'react';
 
-import type { SegmentSummary } from '@/api/hooks/useSegments';
+import type { GhostResponse, SegmentSummary } from '@/api/hooks/useSegments';
 
 const state = vi.hoisted(() => ({
   vehicleId: 7 as number | null,
@@ -11,6 +11,7 @@ const state = vi.hoisted(() => ({
   selectedIds: [] as Array<number | null>,
   segmentError: null as Error | null,
   leaderboardError: null as Error | null,
+  ghost: undefined as GhostResponse | undefined,
   segmentRefetch: vi.fn(),
   leaderboardRefetch: vi.fn(),
 }));
@@ -60,7 +61,7 @@ vi.mock('@/api/hooks/useSegments', () => ({
     };
   },
   useSegmentGhost: () => ({
-    data: undefined,
+    data: state.ghost,
     isLoading: false,
     error: null,
     refetch: vi.fn(),
@@ -96,8 +97,17 @@ describe('SegmentsPage pagination', () => {
     state.selectedIds = [];
     state.segmentError = null;
     state.leaderboardError = null;
+    state.ghost = undefined;
     state.segmentRefetch.mockClear();
     state.leaderboardRefetch.mockClear();
+  });
+
+  it('keeps leaderboard and ghost shells visible before a segment is selected', () => {
+    renderPage();
+    expect(screen.getByText('Leaderboard')).toBeInTheDocument();
+    expect(screen.getByText('Ghost Race')).toBeInTheDocument();
+    expect(screen.getByText('Select a route segment to view its ranked attempts.')).toBeInTheDocument();
+    expect(screen.getByText('Choose an A and a B attempt from the leaderboard to start the race.')).toBeInTheDocument();
   });
 
   it('retains selected segments and leaderboard rows through independent failed refreshes', () => {

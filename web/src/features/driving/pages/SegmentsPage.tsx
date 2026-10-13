@@ -37,17 +37,12 @@ import { useUrlNumber } from '@/hooks/useUrlState';
 import { useUnits } from '@/hooks/useUnits';
 import { formatDurationClock, formatDateShort } from '@/lib/dateFormat';
 import { fmtInt } from '@/lib/numberFormat';
-import { cn } from '@/lib/cn';
+import { useChartPalette } from '@/hooks/useChartPalette';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { fmtNumber } from '@/lib/numberFormat';
 
 const DASH = '—';
 
-/* Racer accent colours — cyan for A, fuchsia for B — handed to Recharts as
-   dynamic hex (graphics, not text). The matching Tailwind classes below keep
-   the leaderboard chips and the chart legend on the same two hues. */
-const COLOR_A = '#22d3ee'; // cyan-400
-const COLOR_B = '#e879f9'; // fuchsia-400
 const SEGMENTS_PAGE_SIZE = 12;
 
 /** Segment duration in whole seconds → m:ss clock. */
@@ -70,6 +65,9 @@ function signedDelta(s: number): string {
 
 export default function SegmentsPage() {
   useNumberFormatting();
+  const palette = useChartPalette();
+  const colorA = palette[0];
+  const colorB = palette[1];
   const { t } = useTranslation();
   usePageTitle(t('segments.title', 'Ghost Racing'));
 
@@ -280,7 +278,7 @@ export default function SegmentsPage() {
       <FadeIn>
         <section aria-label={t('segments.list.title', 'Route segments')}>
           <PanelTitle className="mb-3 flex items-center gap-2">
-            <RouteIcon className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+            <RouteIcon className="h-4 w-4 text-[var(--text-secondary)]" aria-hidden="true" />
             {t('segments.list.title', 'Route Segments')}
           </PanelTitle>
 
@@ -335,12 +333,11 @@ export default function SegmentsPage() {
       </FadeIn>
 
       {/* ── 2. Leaderboard for the selected segment ──────────────────────── */}
-      {selectedSegmentId != null ? (
-        <FadeIn delay={0.05}>
+      <FadeIn delay={0.05}>
           <LayoutCard
             title={leaderboard?.segment.name ?? t('segments.board.title', 'Leaderboard')}
             actions={<>
-                <Trophy className="h-4 w-4 text-amber-300" aria-hidden="true" />
+                <Trophy className="h-4 w-4 text-[var(--text-secondary)]" aria-hidden="true" />
               {/* by-time / by-efficiency toggle */}
               <div className="inline-flex rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-elevated)] p-0.5" role="group" aria-label={t('segments.board.orderBy', 'Order by')}>
                 {(['time', 'efficiency'] as const).map((mode) => (
@@ -362,7 +359,12 @@ export default function SegmentsPage() {
           >
             <StaleRefreshWarning state={leaderboardState} label={t('segments.board.title', 'Leaderboard')} />
 
-            {lbLoading && !leaderboard ? (
+            {selectedSegmentId == null ? (
+              <EmptyState /* no-action: selection-gated — select a segment in the list above */
+                icon={<Trophy className="h-8 w-8" />}
+                message={noVehicle ? selectVehicleMsg : t('segments.board.select', 'Select a route segment to view its ranked attempts.')}
+              />
+            ) : lbLoading && !leaderboard ? (
               <Skeleton height={240} className="rounded-xl" />
             ) : lbError ? (
               <QueryError error={lbError} onRetry={onRetryLeaderboard} />
@@ -384,16 +386,14 @@ export default function SegmentsPage() {
             )}
           </LayoutCard>
         </FadeIn>
-      ) : null}
 
       {/* ── 3. Ghost race — head-to-head between the two chosen attempts ──── */}
-      {selectedSegmentId != null ? (
-        <FadeIn delay={0.1}>
+      <FadeIn delay={0.1}>
           <LayoutCard
             title={t('segments.ghost.title', 'Ghost Race')}
             description={t('segments.ghost.subtitle', 'Pick two attempts above (A and B) to race them lap-over-lap on the same route.')}
             actions={
-              <Swords className="h-4 w-4 text-fuchsia-300" aria-hidden="true" />
+              <Swords className="h-4 w-4 text-[var(--text-secondary)]" aria-hidden="true" />
             }
           >
             <StaleRefreshWarning state={ghostState} label={t('segments.ghost.title', 'Ghost Race')} />
@@ -465,7 +465,7 @@ export default function SegmentsPage() {
                             <Line
                               type="monotone" dataKey="a" connectNulls={false}
                               data={raceSeriesA}
-                              stroke={COLOR_A} strokeWidth={2} dot={false}
+                              stroke={colorA} strokeWidth={2} dot={false}
                               name={t('segments.ghost.racerA', 'Attempt A')}
                               animationDuration={700}
                               hide={hiddenSeries?.isHidden('a') ?? false}
@@ -473,7 +473,7 @@ export default function SegmentsPage() {
                             <Line
                               type="monotone" dataKey="b" connectNulls={false}
                               data={raceSeriesB}
-                              stroke={COLOR_B} strokeWidth={2} dot={false}
+                              stroke={colorB} strokeWidth={2} dot={false}
                               name={t('segments.ghost.racerB', 'Attempt B')}
                               animationDuration={700}
                               hide={hiddenSeries?.isHidden('b') ?? false}
@@ -486,7 +486,7 @@ export default function SegmentsPage() {
                 </div>
 
                 {/* Time gap — where A gained or lost against B */}
-                {gapData.length > 0 ? (
+                <div>
                   <div>
                     <div className="min-w-0">
                       {/* chart-a11y:no-table route-fraction time-gap area — dense trace, not tabular */}
@@ -498,10 +498,15 @@ export default function SegmentsPage() {
                         toolbar={false}
                         exportable={false}
                       >
-                        <ResponsiveContainer width="100%" height="100%">
+                        {gapData.length === 0 ? (
+                          <EmptyState /* no-action: transient — comparison has no aligned splits */
+                            icon={<Timer className="h-8 w-8" />}
+                            message={t('segments.ghost.noData', 'Not enough shared telemetry to align these two attempts.')}
+                          />
+                        ) : <ResponsiveContainer width="100%" height="100%">
                           <ComposedChart data={gapData} margin={{ top: 12, right: 16, bottom: 4, left: 4 }}>
                             <defs>
-                              <ChartGradient id="segGapGrad" color={COLOR_A} opacity={0.3} />
+                              <ChartGradient id="segGapGrad" color={colorA} opacity={0.3} />
                             </defs>
                             {chartGrid}
                             <XAxis
@@ -530,20 +535,20 @@ export default function SegmentsPage() {
                             <ReferenceLine y={0} stroke="#94a3b8" strokeDasharray="4 3" strokeOpacity={0.7} />
                             <Area
                               type="monotone" dataKey="delta"
-                              stroke={COLOR_A} strokeWidth={2}
+                              stroke={colorA} strokeWidth={2}
                               fill="url(#segGapGrad)"
                               name={t('segments.ghost.gap', 'Time gap (A vs B)')}
                               isAnimationActive={false}
                             />
                           </ComposedChart>
-                        </ResponsiveContainer>
+                        </ResponsiveContainer>}
                       </ChartCard>
                     </div>
                     <Text as="p" variant="caption" className="mt-2">
                       {t('segments.ghost.gapHelp', 'Below the line, Attempt A is ahead; above it, Attempt B leads.')}
                     </Text>
                   </div>
-                ) : null}
+                </div>
               </div>
             ) : (
               <EmptyState /* no-action: transient — no aligned series for this pair */
@@ -553,7 +558,6 @@ export default function SegmentsPage() {
             )}
           </LayoutCard>
         </FadeIn>
-      ) : null}
     </PageLayout>
   );
 }
@@ -581,12 +585,12 @@ function SegmentCard({ segment: s, selected, disabled, onSelect, formatDistance,
     >
       <div className="flex items-start justify-between gap-2">
         <div className="flex min-w-0 items-center gap-2">
-          <Flag className="h-4 w-4 shrink-0 text-cyan-300" aria-hidden="true" />
+          <Flag className="h-4 w-4 shrink-0 text-[var(--text-secondary)]" aria-hidden="true" />
           <Text as="span" variant="subhead" weight="semibold" className="truncate">
             {s.name}
           </Text>
         </div>
-        <StatusPill color="bg-cyan-400">
+        <StatusPill color="bg-[var(--text-muted)]">
           {t('segments.card.attempts', '{{n}} runs', { n: s.attempt_count })}
         </StatusPill>
       </div>
@@ -607,19 +611,19 @@ function SegmentCard({ segment: s, selected, disabled, onSelect, formatDistance,
         </div>
         <div>
           <Text as="dt" variant="caption" className="flex items-center gap-1">
-            <Trophy className="h-3 w-3 text-amber-300" aria-hidden="true" />
+            <Trophy className="h-3 w-3 text-[var(--text-secondary)]" aria-hidden="true" />
             {t('segments.card.best', 'Best')}
           </Text>
-          <Text as="dd" variant="bodySm" weight="semibold" className="tabular-nums text-amber-300">
+          <Text as="dd" variant="bodySm" weight="semibold" className="tabular-nums text-[var(--text-secondary)]">
             {clock(s.best_time?.duration_s)}
           </Text>
         </div>
         <div>
           <Text as="dt" variant="caption" className="flex items-center gap-1">
-            <Zap className="h-3 w-3 text-emerald-300" aria-hidden="true" />
+            <Zap className="h-3 w-3 text-[var(--text-secondary)]" aria-hidden="true" />
             {t('segments.card.eff', 'Best eff.')}
           </Text>
-          <Text as="dd" variant="bodySm" weight="semibold" className="tabular-nums text-emerald-300">
+          <Text as="dd" variant="bodySm" weight="semibold" className="tabular-nums text-[var(--text-secondary)]">
             {whPerKm(s.best_efficiency?.wh_per_km)}
           </Text>
         </div>
@@ -661,7 +665,7 @@ function LeaderboardTable({ rows, board, racerA, racerB, onPickA, onPickB, t }: 
         <span className="inline-flex items-center gap-2">
           {formatDateShort(row.started_at)}
           {row.is_pr ? (
-            <StatusPill color="bg-amber-400">{t('segments.table.pr', 'PR')}</StatusPill>
+            <StatusPill color="bg-[var(--warning)]">{t('segments.table.pr', 'PR')}</StatusPill>
           ) : null}
         </span>
       ),
@@ -713,13 +717,11 @@ function LeaderboardTable({ rows, board, racerA, racerB, onPickA, onPickB, t }: 
         <div className="inline-flex gap-1">
           <RaceButton
             active={racerA === row.drive_id}
-            color="cyan"
             onClick={() => onPickA(row.drive_id)}
             label="A"
           />
           <RaceButton
             active={racerB === row.drive_id}
-            color="fuchsia"
             onClick={() => onPickB(row.drive_id)}
             label="B"
           />
@@ -742,27 +744,20 @@ function LeaderboardTable({ rows, board, racerA, racerB, onPickA, onPickB, t }: 
 
 interface RaceButtonProps {
   active: boolean;
-  color: 'cyan' | 'fuchsia';
   onClick: () => void;
   label: string;
 }
 
-function RaceButton({ active, color, onClick, label }: RaceButtonProps) {
-  const on = color === 'cyan'
-    ? 'bg-cyan-400/20 text-cyan-200 ring-1 ring-cyan-400/50'
-    : 'bg-fuchsia-400/20 text-fuchsia-200 ring-1 ring-fuchsia-400/50';
+function RaceButton({ active, onClick, label }: RaceButtonProps) {
   return (
     <Button
       type="button"
-      variant="ghost"
+      variant={active ? 'secondary' : 'ghost'}
       size="sm"
       onClick={onClick}
       aria-pressed={active}
       aria-label={`${label}${active ? ' (selected)' : ''}`}
-      className={cn(
-        'h-7 w-7 p-0 text-xs font-bold',
-        active ? on : 'bg-[var(--surface-elevated)] text-[var(--text-muted)] hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)]',
-      )}
+      className="h-7 w-7 p-0 text-xs font-bold"
     >
       {label}
     </Button>
