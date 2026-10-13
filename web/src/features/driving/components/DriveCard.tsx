@@ -194,7 +194,7 @@ function DriveCardImpl({
                 type="button"
                 variant="secondary"
                 size="sm"
-                className="h-9 w-9 p-0"
+                className="h-11 w-11 min-h-11 min-w-11 shrink-0 p-0 md:h-9 md:w-9 md:min-h-0 md:min-w-0"
                 aria-label={t('drives.quickView', 'Quick view drive')}
                 title={t('drives.quickView', 'Quick view drive')}
                 onClick={() => onPreview(drive)}

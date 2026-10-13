@@ -26,7 +26,8 @@
  */
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent, within, act } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
+import userEvent from '@testing-library/user-event';
+import { MemoryRouter, useLocation } from 'react-router-dom';
 import { setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat';
 import { convertDistanceFromSI, convertSpeedFromSI, convertEfficiencyFromSI } from '@/lib/unitConversion';
 
@@ -489,5 +490,179 @@ describe('DriveCard — null safety + hardening', () => {
     expect(screen.getByText('0.00 Wh/km')).toBeInTheDocument();
     // The bare "0" must never leak as its own text node.
     expect(screen.queryByText('0', { selector: 'span' })).toBeNull();
+  });
+});
+
+
+describe('DriveCard mobile preview preservation', () => {
+  const displayProps = {
+    toDistanceDisplay,
+    toSpeedDisplay,
+    toEfficiencyDisplay,
+    distanceUnit: 'km',
+    speedUnit: 'km/h',
+    efficiencyUnit: 'Wh/km',
+  } satisfies Omit<DriveCardProps, 'drive'>;
+
+  function RouteProbe() {
+    const { pathname } = useLocation();
+    return <output aria-label="Current route">{pathname}</output>;
+  }
+
+  it('allocates a nonshrinking mobile preview button and explicitly restores desktop density', () => {
+    renderCard({ onPreview: vi.fn() });
+    const preview = screen.getByRole('button', { name: 'Quick view drive' });
+
+    // Source sizing evidence only: jsdom does not establish native rectangles or edge hits.
+    expect(preview).toHaveClass(
+      'h-11', 'w-11', 'min-h-11', 'min-w-11', 'shrink-0', 'p-0',
+      'md:h-9', 'md:w-9', 'md:min-h-0', 'md:min-w-0',
+    );
+    expect(preview).not.toHaveClass('h-9');
+    expect(preview).not.toHaveClass('w-9');
+    expect(preview.tagName).toBe('BUTTON');
+    expect(preview).toHaveAttribute('type', 'button');
+    expect(preview).toHaveAttribute('title', 'Quick view drive');
+    expect(preview).toHaveClass('focus-visible:outline', 'focus-visible:outline-2');
+    expect(preview.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
+    expect(preview.closest('a')).toBeNull();
+    expect(screen.getByRole('link')).toHaveAttribute('href', '/drives/1');
+  });
+
+  it('previews the exact canonical drive without toggling selection or changing its metrics', () => {
+    const drive = Object.freeze(makeDrive({ id: 7 }));
+    const original = { ...drive };
+    const onPreview = vi.fn<(value: Drive) => void>();
+    const onToggleSelect = vi.fn<(id: number, selected: boolean) => void>();
+    const formatEnergyCost = costSpy();
+    renderCard({ drive, onPreview, onToggleSelect, selected: true, formatEnergyCost });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Quick view drive' }));
+
+    expect(onPreview).toHaveBeenCalledTimes(1);
+    expect(onPreview.mock.calls[0][0]).toBe(drive);
+    expect(onToggleSelect).not.toHaveBeenCalled();
+    expect(screen.getByRole('checkbox')).toBeChecked();
+    expect(screen.getByRole('link')).toHaveAttribute('href', '/drives/7');
+    expect(screen.getByText('50.00 km')).toBeInTheDocument();
+    expect(screen.getByText('Avg 90.00 km/h')).toBeInTheDocument();
+    expect(screen.getByText('Max 144.00 km/h')).toBeInTheDocument();
+    expect(screen.getByLabelText('Battery 80.00% to 70.00%')).toBeInTheDocument();
+    expect(screen.getByText('150.00 Wh/km')).toBeInTheDocument();
+    expect(screen.getByText('~$0.90')).toBeInTheDocument();
+    expect(formatEnergyCost).toHaveBeenCalledWith(7.5);
+    expect(drive).toEqual(original);
+  });
+
+  it('uses the latest preview callback and exact drive after memoized rerenders', () => {
+    const drive = makeDrive({ id: 7 });
+    const firstPreview = vi.fn<(value: Drive) => void>();
+    const latestPreview = vi.fn<(value: Drive) => void>();
+    const view = renderCard({ drive, onPreview: firstPreview });
+    fireEvent.click(screen.getByRole('button', { name: 'Quick view drive' }));
+    expect(firstPreview).toHaveBeenCalledTimes(1);
+    expect(firstPreview.mock.calls[0][0]).toBe(drive);
+
+    view.rerender(
+      <MemoryRouter>
+        <DriveCard {...view.props} onPreview={latestPreview} />
+      </MemoryRouter>,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Quick view drive' }));
+    expect(firstPreview).toHaveBeenCalledTimes(1);
+    expect(latestPreview).toHaveBeenCalledTimes(1);
+    expect(latestPreview.mock.calls[0][0]).toBe(drive);
+
+    const nextDrive = makeDrive({ id: 9, distanceM: 25_000 });
+    view.rerender(
+      <MemoryRouter>
+        <DriveCard {...view.props} drive={nextDrive} onPreview={latestPreview} />
+      </MemoryRouter>,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Quick view drive' }));
+    expect(firstPreview).toHaveBeenCalledTimes(1);
+    expect(latestPreview).toHaveBeenCalledTimes(2);
+    expect(latestPreview.mock.calls[1][0]).toBe(nextDrive);
+    expect(screen.getByRole('link')).toHaveAttribute('href', '/drives/9');
+    expect(screen.getByText('25.00 km')).toBeInTheDocument();
+  });
+
+  it.each([
+    { name: 'Enter', keys: '{Enter}' },
+    { name: 'Space', keys: ' ' },
+  ])('preserves native $name preview activation and independent Enter detail navigation', async ({ keys }) => {
+    const user = userEvent.setup();
+    const drive = makeDrive({ id: 17 });
+    const onPreview = vi.fn<(value: Drive) => void>();
+    const onToggleSelect = vi.fn<(id: number, selected: boolean) => void>();
+    render(
+      <MemoryRouter initialEntries={['/drives']}>
+        <DriveCard {...displayProps} drive={drive} onPreview={onPreview} onToggleSelect={onToggleSelect} selected />
+        <RouteProbe />
+      </MemoryRouter>,
+    );
+
+    await user.tab();
+    expect(screen.getByRole('checkbox')).toHaveFocus();
+    await user.tab();
+    const detail = screen.getByRole('link');
+    expect(detail).toHaveFocus();
+    await user.tab();
+    const preview = screen.getByRole('button', { name: 'Quick view drive' });
+    expect(preview).toHaveFocus();
+    await user.keyboard(keys);
+
+    expect(onPreview).toHaveBeenCalledTimes(1);
+    expect(onPreview.mock.calls[0][0]).toBe(drive);
+    expect(onToggleSelect).not.toHaveBeenCalled();
+    expect(screen.getByRole('checkbox')).toBeChecked();
+    expect(screen.getByLabelText('Current route')).toHaveTextContent(/^\/drives$/);
+    expect(preview).toHaveFocus();
+
+    await user.tab({ shift: true });
+    expect(detail).toHaveFocus();
+    await user.keyboard('{Enter}');
+    expect(screen.getByLabelText('Current route')).toHaveTextContent('/drives/17');
+    expect(onPreview).toHaveBeenCalledTimes(1);
+    expect(onToggleSelect).not.toHaveBeenCalled();
+  });
+
+  it('keeps keyboard selection independent from preview and detail navigation', async () => {
+    const user = userEvent.setup();
+    const drive = makeDrive({ id: 23 });
+    const onPreview = vi.fn<(value: Drive) => void>();
+    const onToggleSelect = vi.fn<(id: number, selected: boolean) => void>();
+    render(
+      <MemoryRouter initialEntries={['/drives']}>
+        <DriveCard {...displayProps} drive={drive} onPreview={onPreview} onToggleSelect={onToggleSelect} selected />
+        <RouteProbe />
+      </MemoryRouter>,
+    );
+
+    await user.tab();
+    const selection = screen.getByRole('checkbox');
+    expect(selection).toHaveFocus();
+    await user.keyboard(' ');
+    expect(onToggleSelect).toHaveBeenCalledExactlyOnceWith(23, false);
+    expect(onPreview).not.toHaveBeenCalled();
+    expect(screen.getByLabelText('Current route')).toHaveTextContent(/^\/drives$/);
+    expect(screen.getByRole('link')).toHaveAttribute('href', '/drives/23');
+    expect(selection).toHaveFocus();
+  });
+
+  it('omits an absent preview handler while keeping the detail link keyboard reachable', async () => {
+    const user = userEvent.setup();
+    render(
+      <MemoryRouter initialEntries={['/drives']}>
+        <DriveCard {...displayProps} drive={makeDrive({ id: 31 })} />
+        <RouteProbe />
+      </MemoryRouter>,
+    );
+
+    expect(screen.queryByRole('button', { name: 'Quick view drive' })).toBeNull();
+    await user.tab();
+    expect(screen.getByRole('link')).toHaveFocus();
+    await user.keyboard('{Enter}');
+    expect(screen.getByLabelText('Current route')).toHaveTextContent('/drives/31');
   });
 });
