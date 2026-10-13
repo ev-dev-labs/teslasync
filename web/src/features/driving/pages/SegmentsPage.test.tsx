@@ -105,7 +105,10 @@ describe('SegmentsPage pagination', () => {
   it('keeps leaderboard and ghost shells visible before a segment is selected', () => {
     renderPage();
     expect(screen.getByText('Leaderboard')).toBeInTheDocument();
-    expect(screen.getByText('Ghost Race')).toBeInTheDocument();
+    expect(screen.getAllByText('Ghost Race').length).toBeGreaterThan(0);
+    expect(screen.getByTestId('segment-ghost-brief')).toBeInTheDocument();
+    expect(screen.getByText('Elapsed time along the route')).toBeInTheDocument();
+    expect(screen.getByText('Time gap (A vs B)')).toBeInTheDocument();
     expect(screen.getByText('Select a route segment to view its ranked attempts.')).toBeInTheDocument();
     expect(screen.getByText('Choose an A and a B attempt from the leaderboard to start the race.')).toBeInTheDocument();
   });

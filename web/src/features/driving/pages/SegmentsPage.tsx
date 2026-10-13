@@ -251,7 +251,7 @@ export default function SegmentsPage() {
     {
       metricId: 'status', occurrenceId: 'winner', rawValue: ghost ? winnerLabel : null,
       label: t('segments.ghost.winner', 'Winner'),
-      context: ghost?.winner_drive_id == null
+      context: !ghost ? undefined : ghost.winner_drive_id == null
         ? t('segments.ghost.tieHelp', 'Identical recorded times.')
         : t('segments.ghost.margin', 'Won by {{margin}}', { margin: clock(ghost.margin_s) }),
     },
@@ -407,7 +407,8 @@ export default function SegmentsPage() {
               <Skeleton height={360} className="rounded-xl" />
             ) : ghostError ? (
               <QueryError error={ghostError} onRetry={onRetryGhost} />
-            ) : ghost ? (
+            ) : null}
+              {/* Keep the summary and both independent chart shells mounted. */}
               <div className="flex flex-col gap-5">
                 {/* Winner banner + the two attempts */}
                 <DrivingSummaryBrief
@@ -415,7 +416,9 @@ export default function SegmentsPage() {
                   title={t('segments.ghost.title', 'Ghost Race')}
                   description={t('segments.brief.description', 'Recorded attempt durations and the original winner result for the selected segment.')}
                   metrics={raceMetrics}
-                  scope={leaderboard?.segment.name ?? String(selectedSegmentId)}
+                  scope={leaderboard?.segment.name ?? (selectedSegmentId == null ? DASH : String(selectedSegmentId))}
+                  loading={ghostLoading}
+                  unavailable={!ghost}
                   provenance={t('segments.brief.provenance', 'Selected A/B ghost comparison response; charts retain independent telemetry samples and recorded margin.')}
                   retained={ghostState.isRefreshBlocked}
                 />
@@ -433,7 +436,14 @@ export default function SegmentsPage() {
                       toolbar={false}
                       exportable={false}
                     >
-                      {({ hiddenSeries }) => (
+                      {({ hiddenSeries }) => ghostLoading && !ghost ? (
+                        <Skeleton height={256} className="rounded-xl" />
+                      ) : raceData.length === 0 ? (
+                        <EmptyState /* no-action: transient — elapsed samples are unavailable */
+                          icon={<Timer className="h-8 w-8" />}
+                          message={t('segments.ghost.noData', 'Not enough shared telemetry to align these two attempts.')}
+                        />
+                      ) : (
                         <ResponsiveContainer width="100%" height="100%">
                           <LineChart data={raceData} margin={{ top: 12, right: 16, bottom: 4, left: 4 }}>
                             {chartGrid}
@@ -498,7 +508,9 @@ export default function SegmentsPage() {
                         toolbar={false}
                         exportable={false}
                       >
-                        {gapData.length === 0 ? (
+                        {ghostLoading && !ghost ? (
+                          <Skeleton height={192} className="rounded-xl" />
+                        ) : gapData.length === 0 ? (
                           <EmptyState /* no-action: transient — comparison has no aligned splits */
                             icon={<Timer className="h-8 w-8" />}
                             message={t('segments.ghost.noData', 'Not enough shared telemetry to align these two attempts.')}
@@ -506,7 +518,7 @@ export default function SegmentsPage() {
                         ) : <ResponsiveContainer width="100%" height="100%">
                           <ComposedChart data={gapData} margin={{ top: 12, right: 16, bottom: 4, left: 4 }}>
                             <defs>
-                              <ChartGradient id="segGapGrad" color={colorA} opacity={0.3} />
+                              <ChartGradient id="segGapGrad" color={colorA} opacity={0.08} />
                             </defs>
                             {chartGrid}
                             <XAxis
@@ -550,12 +562,6 @@ export default function SegmentsPage() {
                   </div>
                 </div>
               </div>
-            ) : (
-              <EmptyState /* no-action: transient — no aligned series for this pair */
-                icon={<Swords className="h-8 w-8" />}
-                message={t('segments.ghost.noData', 'Not enough shared telemetry to align these two attempts.')}
-              />
-            )}
           </LayoutCard>
         </FadeIn>
     </PageLayout>
