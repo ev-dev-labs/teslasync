@@ -248,7 +248,7 @@ describe('SignalTrendPage shared-frame adoption', () => {
     render(pageElement(client));
 
     for (const title of ['Choose a signal', 'Trend metrics', 'Robust baseline & forecast band', 'Reading the result']) {
-      expect(screen.getByText(title)).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: title, exact: true })).toBeInTheDocument();
     }
     expect(H.chartFrame?.emptyMessage).toBe('Choose a signal above to compute its trend.');
     expect(screen.getByText('Pick a signal to see how its trend should be read.')).toBeInTheDocument();
