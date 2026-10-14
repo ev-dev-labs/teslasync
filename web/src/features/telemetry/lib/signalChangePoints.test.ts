@@ -44,6 +44,20 @@ function buildSamples(
 }
 
 describe('toNumericPoints', () => {
+  it('keeps measured zero and signed fractions while excluding invalid measurements', () => {
+    const values = [null, undefined, NaN, Infinity, -Infinity, '0', false, {}, 0, -0.0001234, 0.0005678];
+    const samples = values.map((value, i) => ({
+      ts: new Date(BASE + i * HOUR).toISOString(),
+      kind: 'ValueKindDouble',
+      value,
+    }));
+    expect(toNumericPoints(samples)).toEqual([
+      { ms: BASE + 8 * HOUR, value: 0 },
+      { ms: BASE + 9 * HOUR, value: -0.0001234 },
+      { ms: BASE + 10 * HOUR, value: 0.0005678 },
+    ]);
+  });
+
   it('drops null/undefined/non-numeric samples and sorts ascending', () => {
     const points = toNumericPoints([
       { ts: new Date(BASE + 2 * HOUR).toISOString(), kind: 'ValueKindDouble', value: 3 },
@@ -114,6 +128,17 @@ describe('estimateNoiseScale', () => {
 });
 
 describe('detectChangePoints — flat signal', () => {
+  it('retains a finite, sub-milliscale noise estimate without rounding', () => {
+    const values = Array.from({ length: 60 }, (_, i) => -0.0001234 + jitter(i, 0.00001));
+    const ts = values.map((_, i) => BASE + i * HOUR);
+    const result = detectChangePoints(values, ts);
+    expect(result.globalSpread).toBe(estimateNoiseScale(values));
+    expect(Number.isFinite(result.globalSpread)).toBe(true);
+    expect(result.globalSpread).toBeGreaterThan(1e-9);
+    expect(result.globalSpread).toBeLessThan(0.0005);
+    expect(result.changePoints).toEqual([]);
+  });
+
   it('reports zero change points for a stable, lightly-jittered series', () => {
     const values = Array.from({ length: 60 }, (_, i) => 20 + jitter(i, 1));
     const ts = Array.from({ length: 60 }, (_, i) => BASE + i * HOUR);
@@ -256,6 +281,46 @@ describe('detectChangePoints — empty and tiny inputs', () => {
 });
 
 describe('summarizeSignalChangePoints', () => {
+  it('distinguishes missing and invalid history from a measured zero regime', () => {
+    const samples: ChangePointSample[] = [null, undefined, NaN, Infinity, -Infinity].map((value, i) => ({
+      ts: new Date(BASE + i * HOUR).toISOString(),
+      kind: 'ValueKindDouble',
+      value,
+    }));
+    expect(summarizeSignalChangePoints(samples)).toMatchObject({
+      samples: 0, segments: [], changePoints: [], globalSpread: 0, biggestChange: null,
+    });
+  });
+
+  it.each([1, -1])('selects the largest fractional shift before formatting (sign %s)', (sign) => {
+    const samples = buildSamples([
+      { level: 0, count: 30 },
+      { level: sign * 0.0001, count: 30 },
+      { level: sign * 0.00021, count: 30 },
+    ], 0);
+    const confidenceEffectSizeScale = 1_000_000;
+    const summary = summarizeSignalChangePoints(samples, { confidenceEffectSizeScale });
+    expect(summary.changePoints).toHaveLength(2);
+    expect(summary.globalSpread).toBe(1e-9);
+    const [first, second] = summary.changePoints;
+    expect(second!.magnitude).toBeGreaterThan(first!.magnitude);
+    expect(summary.biggestChange).toBe(second);
+    expect(Math.round(first!.magnitude * 1000)).toBe(Math.round(second!.magnitude * 1000));
+    for (const point of summary.changePoints) {
+      const segment = summary.segments.find((candidate) => candidate.endIndex === point.index - 1)!;
+      const after = samples.slice(point.index, point.index + summary.minSegmentSamples);
+      const afterMean = after.reduce((sum, sample) => sum + Number(sample.value), 0) / after.length;
+      expect(point.beforeMean).toBe(segment.mean);
+      expect(point.afterMean).toBe(afterMean);
+      expect(point.magnitude).toBe(Math.abs(afterMean - segment.mean));
+      expect(point.confidence).toBe(point.magnitude / summary.globalSpread / confidenceEffectSizeScale);
+      expect(point.confidence).toBeGreaterThan(0);
+      expect(point.confidence).toBeLessThan(1);
+      expect(point.direction).toBe(sign > 0 ? 'up' : 'down');
+      expect([point.beforeMean, point.afterMean, point.magnitude, point.confidence].every(Number.isFinite)).toBe(true);
+    }
+  });
+
   it('retains a canonical zero regime without inventing a change point', () => {
     const summary = summarizeSignalChangePoints(buildSamples([{ level: 0, count: 40 }], 0));
     expect(summary.samples).toBe(40);

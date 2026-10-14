@@ -162,6 +162,7 @@ function confidenceFromMagnitude(
 /**
  * Robust two-sided Page-Hinkley change-point detection over a chronological
  * numeric series. `values` and `timestampsMs` must be the same length.
+ * Outputs retain model precision; rounding belongs at the presentation boundary.
  */
 export function detectChangePoints(
   values: readonly number[],
@@ -249,10 +250,10 @@ export function detectChangePoints(
       changePoints.push({
         ms: timestampsMs[i]!,
         index: i,
-        beforeMean: Math.round(before.mean * 1000) / 1000,
-        afterMean: Math.round(afterMean * 1000) / 1000,
-        magnitude: Math.round(magnitude * 1000) / 1000,
-        confidence: Math.round(confidenceFromMagnitude(magnitude, pooledSpread, opts.confidenceEffectSizeScale) * 1000) / 1000,
+        beforeMean: before.mean,
+        afterMean,
+        magnitude,
+        confidence: confidenceFromMagnitude(magnitude, pooledSpread, opts.confidenceEffectSizeScale),
         direction: afterMean >= before.mean ? 'up' : 'down',
       });
     }
@@ -260,7 +261,7 @@ export function detectChangePoints(
 
   finalizeSegment(n);
 
-  return { segments, changePoints, globalSpread: Math.round(globalSpread * 1000) / 1000 };
+  return { segments, changePoints, globalSpread };
 }
 
 export function summarizeSignalChangePoints(
