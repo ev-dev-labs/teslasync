@@ -122,7 +122,7 @@
   },
   "signalChangePoints": {
     "title": "Signal change points",
-    "subtitle": "Robust Page-Hinkley detection of abrupt level shifts in a numeric signal — deliberately distinct from slow drift (Signal trend) and drive-week regime clustering",
+    "subtitle": "Robust Page-Hinkley alarms for cumulative deviations in a numeric signal; sustained drift can also trigger alarms. Use Signal trend to assess drift.",
     "pick": "Choose a signal",
     "noSignals": "No telemetry signals have been recorded for this vehicle yet.",
     "signal": "Signal",
@@ -151,10 +151,10 @@
     },
     "reading": "Reading the Result",
     "noReading": "Pick a signal to see how its change points should be read.",
-    "shifted": "Regime shift detected",
-    "stable": "Stable throughout",
-    "shiftedText": "This signal stepped to a new stable level at least once — a different failure mode from a slow ramp, which would show no alarm here at all.",
-    "stableText": "No abrupt level shift cleared the alarm threshold across the window analyzed; single-sample spikes are deliberately not enough to trigger one.",
+    "shifted": "Alarm threshold crossed",
+    "stable": "No alarm detected",
+    "shiftedText": "Cumulative deviation crossed the alarm threshold at least once. Abrupt shifts or sustained drift can trigger alarms, including repeated alarms after resets; an alarm alone does not establish a stable new level.",
+    "stableText": "No cumulative deviation cleared the alarm threshold in the returned samples. This does not establish stability or rule out drift; individual sample contributions are capped to resist spikes.",
     "scope": "Scope",
     "scopeText": "This detector looks only at this one signal’s raw sample sequence over {{h}}h — it is not the same as the aggregate drive-week regime clustering elsewhere in the app."
   },
@@ -316,8 +316,8 @@
     "preset": {
       "nowVs1h": "Now vs 1h ago",
       "nowVs1d": "Now vs 1 day ago",
-      "beforeAfterCharge": "Before vs after last charge",
-      "lastDrive": "Last drive start vs end",
+      "beforeAfterCharge": "Now vs 4h ago",
+      "lastDrive": "90 min ago vs 5 min ago",
       "todayVsYesterday": "Today vs yesterday (same time)"
     },
     "cat": {
@@ -968,6 +968,13 @@
       "empty": "No recent activity in this window."
     }
   },
+  "admin": {
+    "liveSignals": {
+      "kpi": {
+        "staleHint": "Past 2-min window"
+      }
+    }
+  },
   "ai": {
     "common": {
       "errorUnknown": "unknown",
@@ -1314,7 +1321,9 @@
         "description": "Get a short, Helix-written recap of your week from the digest data above.",
         "generateButton": "Generate narration",
         "noVehicleHint": "Pick a vehicle to enable Helix narration.",
-        "title": "Helix narration"
+        "title": "Helix narration",
+        "utcScope": "Narration uses Monday-to-Monday UTC weeks, which may differ from the local-time totals above.",
+        "weekLimit": "Narration is available only for the current UTC week and the previous 12 weeks. Select a supported week to generate its recap."
       }
     }
   },
@@ -1420,14 +1429,12 @@
   "charging": {
     "aiClustering": {
       "badge": "Helix",
-      "description": "Ask Helix to name and explain each deterministic charging-curve cluster fingerprint. The narrator never changes the cluster bucketing — it grounds every sentence in the same per-cluster numbers the curves below render.",
       "emptyHint": "Select a vehicle to explain its charging-curve clusters.",
       "generateButton": "Explain clusters",
       "title": "Explain the charging-curve cluster fingerprints"
     },
     "aiMlClustering": {
       "badge": "Helix",
-      "description": "Compute per-cluster (L1 overnight / L2 workplace / DC fast) learned charging envelope from this vehicle's recent sessions and walk through how each cluster compares to the deterministic rule-label baseline used by the Charging curve page today.",
       "generateButton": "Train charging-curve clusters",
       "noVehicleHint": "Pick a vehicle to train its charging-curve clusters.",
       "title": "Learn per-vehicle charging-curve clusters"
@@ -1485,11 +1492,6 @@
       "button": "Draft repair plan",
       "description": "Propose a typed repair plan (close, quarantine, or partial-update) for one stale charging session or drive from the inventory below. Helix never writes; review the proposal and use the matching baseline form to apply it.",
       "title": "Helix repair suggestions"
-    }
-  },
-  "dataState": {
-    "staleNamed": {
-      "title": "{{label}} may be out of date"
     }
   },
   "date": {
@@ -2387,18 +2389,11 @@
   },
   "sourceLayer": {
     "age": "age",
-    "l1": {
-      "desc": "Read from the in-process SignalStore (hot path, freshest)."
-    },
-    "l2": {
-      "desc": "Read from Redis cross-pod cache (legacy entry; freshness unknown)."
-    },
     "log": {
       "desc": "Replayed from signal_log (durable history).",
       "label": "Log"
     },
     "stale": {
-      "desc": "Redis-backed value older than the 2-minute freshness window.",
       "label": "Stale"
     },
     "unknown": {
@@ -2444,6 +2439,9 @@
       "generateButton": "Narrate impact",
       "title": "Narrate the cabin-temperature impact"
     }
+  },
+  "timeMachine": {
+    "ageFresh": "Fresh"
   },
   "timeline": {
     "empty": "No timeline entries yet.",
@@ -2672,7 +2670,6 @@
   "tripPlanner": {
     "aiAgent": {
       "badge": "Helix",
-      "description": "Ask Helix to draft a trip plan grounded in your past charging history along the corridor. The plan is never saved automatically — review the proposed plan and click Plan in the form below to save it.",
       "generateButton": "Draft a plan",
       "noDestination": "Set a destination for Helix to plan the route to.",
       "noOrigin": "Set a starting point for Helix to plan the route from.",
@@ -2742,10 +2739,14 @@
     "placeholder": "e.g. how is my battery? Is the car locked? Leave empty for a summary.",
     "title": "Ask Helix about your watch face"
   },
+  "widget": {
+    "motorPerformance": {
+      "outsideScale": "Reading outside displayed scale ({{min}} to {{max}} {{unit}})"
+    }
+  },
   "yearReview": {
     "aiNarration": {
       "badge": "Helix",
-      "description": "Get a short, Helix-written recap of your year from the slide data above.",
       "emptyHint": "Select a vehicle above to recap its year.",
       "generateButton": "Generate narration",
       "title": "Helix narration"

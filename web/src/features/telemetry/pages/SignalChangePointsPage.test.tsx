@@ -6,6 +6,8 @@ import type { SignalHistoryResponse } from '@/types/telemetry';
 import type { ChartContainerProps } from '@/components/charts';
 import type { StatMetric } from '@/components/data-display';
 import { summarizeSignalChangePoints, toNumericPoints } from '../lib/signalChangePoints';
+import canonicalEnglish from '@/i18n/en.json';
+import telemetryEnglish from '@/i18n/en/locale-telemetry.json';
 
 interface Query<T> extends DataStateSource<T> {
   refetch: ReturnType<typeof vi.fn>;
@@ -163,7 +165,7 @@ describe('SignalChangePointsPage evidence preservation', () => {
     }
     expect(state.metrics).toHaveLength(4);
     expect(state.metrics.map((metric) => metric.rawValue)).toEqual([null, undefined, null, null]);
-    expect(screen.queryByText('Stable throughout')).not.toBeInTheDocument();
+    expect(screen.queryByText('No alarm detected')).not.toBeInTheDocument();
     expect(screen.queryByText('no shift detected')).not.toBeInTheDocument();
     expect(screen.queryByText('noise scale scientific:0')).not.toBeInTheDocument();
   });
@@ -188,7 +190,7 @@ describe('SignalChangePointsPage evidence preservation', () => {
       expect(state.metrics[0]?.rawValue).toBeNull();
       expect(state.metrics[3]?.rawValue).toBe(values.length);
       expect(state.chart?.data).toHaveLength(values.length);
-      expect(screen.queryByText('Stable throughout')).not.toBeInTheDocument();
+      expect(screen.queryByText('No alarm detected')).not.toBeInTheDocument();
       expect(screen.getAllByText('Not enough history yet for this signal.').length).toBeGreaterThan(0);
     },
   );
@@ -200,7 +202,34 @@ describe('SignalChangePointsPage evidence preservation', () => {
     expect(state.metrics[0]?.rawValue).toBe(0);
     expect(state.metrics[2]?.rawValue).toBe(1);
     expect(state.metrics[3]?.rawValue).toBe(5);
-    expect(screen.getByText('Stable throughout')).toBeInTheDocument();
+    expect(screen.getByText('No alarm detected')).toBeInTheDocument();
+    expect(screen.getByText(/This does not establish stability or rule out drift/)).toBeInTheDocument();
+  });
+
+  it('explains recurring ramp alarms without claiming an abrupt step or drift immunity', () => {
+    const response = history(Array.from({ length: 60 }, (_, i) => i * 0.01));
+    const expected = summarizeSignalChangePoints(response.data);
+    expect(expected.changePoints.length).toBeGreaterThan(1);
+    state.history = query(response);
+    render(<SignalChangePointsPage />);
+    state.markers = [];
+    choose();
+
+    expect(state.metrics[0]?.rawValue).toBe(expected.changePoints.length);
+    expect(state.markers).toEqual(expected.changePoints.map((point) => point.ms));
+    expect(screen.getByText('Alarm threshold crossed')).toBeInTheDocument();
+    expect(screen.getByText(/Abrupt shifts or sustained drift can trigger alarms/)).toBeInTheDocument();
+    expect(screen.getByText(/including repeated alarms after resets/)).toBeInTheDocument();
+    expect(screen.queryByText(/slow ramp, which would show no alarm/)).not.toBeInTheDocument();
+  });
+
+  it('keeps canonical and runtime English aligned with the statistical policy', () => {
+    for (const key of ['subtitle', 'shifted', 'shiftedText', 'stable', 'stableText'] as const) {
+      expect(telemetryEnglish.signalChangePoints[key]).toBe(canonicalEnglish.signalChangePoints[key]);
+    }
+    expect(canonicalEnglish.signalChangePoints.shiftedText).toContain('sustained drift');
+    expect(canonicalEnglish.signalChangePoints.shiftedText).toContain('repeated alarms after resets');
+    expect(canonicalEnglish.signalChangePoints.stableText).toContain('does not establish stability');
   });
 
   it('keeps raw SI precision, precise timestamps, both series and every detector marker', () => {
@@ -271,7 +300,7 @@ describe('SignalChangePointsPage evidence preservation', () => {
     expect(state.metrics[3]?.rawValue).toBeNull();
     expect(state.chart?.emptyMessage).toBe('Source values unknown');
     expect(screen.queryByText('Not enough history yet for this signal.')).not.toBeInTheDocument();
-    expect(screen.queryByText('Stable throughout')).not.toBeInTheDocument();
+    expect(screen.queryByText('No alarm detected')).not.toBeInTheDocument();
   });
 
   it('shows source loading without fabricating measurements', () => {
@@ -291,7 +320,7 @@ describe('SignalChangePointsPage evidence preservation', () => {
     choose();
     expect(state.chart?.error).toBeNull();
     expect(state.chart?.data).toHaveLength(5);
-    expect(screen.getByText('Stable throughout')).toBeInTheDocument();
+    expect(screen.getByText('No alarm detected')).toBeInTheDocument();
     expect(screen.getByTestId('signal-change-points-summary')).toHaveAttribute('data-retained', 'true');
     expect(screen.getByTestId('signal-change-points-summary')).toHaveAttribute('data-source-status', 'stale');
   });

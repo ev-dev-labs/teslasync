@@ -124,6 +124,26 @@ describe('detectChangePoints — flat signal', () => {
   });
 });
 
+describe('detectChangePoints — sustained drift policy', () => {
+  it.each([{ step: 0.01, direction: 'up' }, { step: -0.01, direction: 'down' }])(
+    'can repeatedly alarm on a slow $direction ramp after resetting the baseline',
+    ({ step, direction }) => {
+      const values = Array.from({ length: 60 }, (_, i) => i * step);
+      const ts = values.map((_, i) => BASE + i * HOUR);
+      const result = detectChangePoints(values, ts);
+
+      expect(result.changePoints.length).toBeGreaterThan(1);
+      expect(result.segments).toHaveLength(result.changePoints.length + 1);
+      expect(result.changePoints.every((point) => point.direction === direction)).toBe(true);
+      for (const [index, point] of result.changePoints.entries()) {
+        const previousIndex = result.changePoints[index - 1]?.index ?? 0;
+        expect(point.index - previousIndex).toBeGreaterThanOrEqual(4);
+        expect(point.ms).toBe(ts[point.index]);
+      }
+    },
+  );
+});
+
 describe('detectChangePoints — single sustained level shift', () => {
   const samples = buildSamples([
     { level: 10, count: 40 },

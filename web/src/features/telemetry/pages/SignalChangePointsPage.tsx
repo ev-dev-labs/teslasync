@@ -138,7 +138,7 @@ export default function SignalChangePointsPage() {
       title={t('signalChangePoints.title', 'Signal change points')}
       subtitle={t(
         'signalChangePoints.subtitle',
-        'Robust Page-Hinkley detection of abrupt level shifts in a numeric signal — deliberately distinct from slow drift (signal trend) and drive-week regime clustering',
+        'Robust Page-Hinkley alarms for cumulative deviations in a numeric signal; sustained drift can also trigger alarms. Use Signal trend to assess drift.',
       )}
       query={[signalsQuery, historyQuery]}
       dataSources={dataSources}
@@ -253,14 +253,14 @@ export default function SignalChangePointsPage() {
                 <div className="mb-1 flex flex-wrap items-center gap-2">
                   <Badge variant={summary.changePoints.length > 0 ? 'warning' : 'success'}>
                     {summary.changePoints.length > 0
-                      ? t('signalChangePoints.shifted', 'Regime shift detected')
-                      : t('signalChangePoints.stable', 'Stable throughout')}
+                      ? t('signalChangePoints.shifted', 'Alarm threshold crossed')
+                      : t('signalChangePoints.stable', 'No alarm detected')}
                   </Badge>
                 </div>
                 <Text variant="body">
                   {summary.changePoints.length > 0
-                    ? t('signalChangePoints.shiftedText', 'This signal stepped to a new stable level at least once — a different failure mode from a slow ramp, which would show no alarm here at all.')
-                    : t('signalChangePoints.stableText', 'No abrupt level shift cleared the alarm threshold across the window analyzed; single-sample spikes are deliberately not enough to trigger one.')}
+                    ? t('signalChangePoints.shiftedText', 'Cumulative deviation crossed the alarm threshold at least once. Abrupt shifts or sustained drift can trigger alarms, including repeated alarms after resets; an alarm alone does not establish a stable new level.')
+                    : t('signalChangePoints.stableText', 'No cumulative deviation cleared the alarm threshold in the returned samples. This does not establish stability or rule out drift; individual sample contributions are capped to resist spikes.')}
                 </Text>
               </div>
               <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3">

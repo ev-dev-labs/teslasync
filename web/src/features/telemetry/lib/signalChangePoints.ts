@@ -1,14 +1,15 @@
 /**
  * Signal Change Points — where did this numeric signal abruptly jump to a
- * new level, as opposed to slowly drifting there?
+ * new level, or accumulate enough deviation to cross an alarm threshold?
  *
  * Deliberately narrow scope: this module detects **abrupt regime shifts** —
  * a signal stepping from one stable level to another over a handful of
- * samples. It is intentionally blind to slow monotonic drift (that is
- * `signalTrend.ts`'s job — a gentle ramp produces no Page-Hinkley alarm
- * here because the running mean tracks it) and to the drive-week
- * aggregate regime clustering elsewhere in the app (this operates on one
- * signal's raw sample sequence, not weekly rollups).
+ * samples. This is not a drift classifier: sustained monotonic drift can
+ * also accumulate enough deviation to trigger alarms, including repeated
+ * alarms after resets. Use `signalTrend.ts` to assess drift; an alarm alone
+ * does not establish an abrupt step or a stable regime. This also differs
+ * from drive-week aggregate regime clustering: it operates on one signal's
+ * raw sample sequence, not weekly rollups.
  *
  * The detector is a **two-sided, robust Page-Hinkley test**: for each new
  * sample it compares the value against the running mean of the *current*

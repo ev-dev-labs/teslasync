@@ -4126,7 +4126,7 @@
       "regenShareHint": "Power-available rows after forward fold, not time share",
       "socChange": "Sampled SoC change",
       "socChangeHint": "Last available minus first available",
-      "capReached": "The selector reached its 1,000-drive history cap; this selected drive’s telemetry remains complete for that drive."
+      "capReached": "The selector reached its 1,000-drive history cap; it does not truncate the selected drive’s full available telemetry emission feed or establish complete drive observations."
     },
     "fingerprint": {
       "sectionAria": "Deterministic fingerprint artwork",
@@ -8675,6 +8675,11 @@
   "search": {
     "title": "Search",
     "placeholder": "Search vehicles, drives, charging…",
+    "completeness": {
+      "title": "Search coverage is limited",
+      "failed": "Some sources did not respond: {{types}}. Available hits remain visible; no matches does not prove there are none.",
+      "limited": "A search result limit was reached. Additional matches may exist; counts describe only returned hits."
+    },
     "input": {
       "label": "Search query"
     },
@@ -21810,8 +21815,36 @@
     "channels": {
       "add": "Add channel",
       "fields": {
+        "webhookUrl": "Webhook URL",
+        "botToken": "Bot token",
+        "chatId": "Chat ID",
+        "smtpHost": "SMTP host",
+        "smtpPort": "SMTP port",
+        "smtpUsername": "SMTP username",
+        "smtpPassword": "SMTP password",
+        "fromAddress": "From address",
+        "toAddresses": "Recipients (comma-separated)",
+        "url": "URL",
+        "serverUrl": "Server URL",
+        "topic": "Topic",
+        "userKey": "User key",
+        "appToken": "App token",
         "signingSecret": "Signing secret"
       },
+      "providerNames": {
+        "discord": "Discord",
+        "slack": "Slack",
+        "telegram": "Telegram",
+        "email": "Email",
+        "webhook": "Webhook",
+        "ntfy": "ntfy",
+        "pushover": "Pushover"
+      },
+      "placeholders": {
+        "signingSecret": "Optional — used for HMAC signing"
+      },
+      "namePlaceholder": "My {{provider}}",
+      "providerConfiguration": "{{provider}} Configuration",
       "addTitle": "Add channel",
       "editTitle": "Edit channel",
       "active": "Active",
@@ -24845,8 +24878,8 @@
     "preset": {
       "nowVs1h": "Now vs 1h ago",
       "nowVs1d": "Now vs 1 day ago",
-      "beforeAfterCharge": "Before vs after last charge",
-      "lastDrive": "Last drive start vs end",
+      "beforeAfterCharge": "Now vs 4h ago",
+      "lastDrive": "90 min ago vs 5 min ago",
       "todayVsYesterday": "Today vs yesterday (same time)"
     },
     "cat": {
@@ -30352,6 +30385,7 @@
     "heaterOnTime": "Heater on time",
     "heaterOnPct": "{{pct}}% of the session",
     "noSession": "no session selected",
+    "unsupportedHeaterPower": "Heater-power analysis is unsupported for these samples: no measured heater power is available. Recorded charging telemetry is preserved; heater state is not a power measurement.",
     "peakHeater": "Peak heater power",
     "peakHeaterHint": "highest single reading",
     "noSelection": "Select a charging session above to see its thermal breakdown.",
@@ -32129,7 +32163,7 @@
   },
   "signalChangePoints": {
     "title": "Signal change points",
-    "subtitle": "Robust Page-Hinkley detection of abrupt level shifts in a numeric signal — deliberately distinct from slow drift (Signal trend) and drive-week regime clustering",
+    "subtitle": "Robust Page-Hinkley alarms for cumulative deviations in a numeric signal; sustained drift can also trigger alarms. Use Signal trend to assess drift.",
     "pick": "Choose a signal",
     "noSignals": "No telemetry signals have been recorded for this vehicle yet.",
     "signal": "Signal",
@@ -32158,10 +32192,10 @@
     },
     "reading": "Reading the Result",
     "noReading": "Pick a signal to see how its change points should be read.",
-    "shifted": "Regime shift detected",
-    "stable": "Stable throughout",
-    "shiftedText": "This signal stepped to a new stable level at least once — a different failure mode from a slow ramp, which would show no alarm here at all.",
-    "stableText": "No abrupt level shift cleared the alarm threshold across the window analyzed; single-sample spikes are deliberately not enough to trigger one.",
+    "shifted": "Alarm threshold crossed",
+    "stable": "No alarm detected",
+    "shiftedText": "Cumulative deviation crossed the alarm threshold at least once. Abrupt shifts or sustained drift can trigger alarms, including repeated alarms after resets; an alarm alone does not establish a stable new level.",
+    "stableText": "No cumulative deviation cleared the alarm threshold in the returned samples. This does not establish stability or rule out drift; individual sample contributions are capped to resist spikes.",
     "scope": "Scope",
     "scopeText": "This detector looks only at this one signal’s raw sample sequence over {{h}}h — it is not the same as the aggregate drive-week regime clustering elsewhere in the app."
   },
@@ -34129,6 +34163,10 @@
     },
     "firmware": {
       "decision": {
+        "rollout": "Rollout",
+        "hold": "Hold",
+        "investigate": "Investigate",
+        "unknownCode": "Unknown decision: {{code}}",
         "subtitle": "Target and peer regressions use comparable pre/post observation windows.",
         "title": "Matched cohort decisions"
       },
@@ -34260,6 +34298,7 @@
       "samples": "Samples",
       "title": "Data quality",
       "unsupported": "Quality metadata is unsupported.",
+      "unknownCode": "Unknown quality: {{code}}",
       "window": "Observation window"
     },
     "resilience": {
