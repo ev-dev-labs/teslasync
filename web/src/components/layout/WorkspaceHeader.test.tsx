@@ -7,6 +7,11 @@ import tailwindcss from 'tailwindcss'
 import loadConfig from 'tailwindcss/loadConfig'
 import { cn } from '@/lib/cn'
 import { WorkspaceScopeProvider } from '@/hooks/useWorkspaceScope'
+import {
+  getWorkspaceQuickRangePresets,
+  getWorkspaceRouteScope,
+  isWorkspaceRangePresetAvailable,
+} from '@/lib/workspaceScope'
 import { WorkspaceHeader } from './WorkspaceHeader'
 
 vi.mock('react-i18next', () => ({
@@ -112,6 +117,51 @@ describe('WorkspaceHeader', () => {
     expect(within(header).getByRole('button', { name: 'Notifications' })).toBeInTheDocument()
     expect(within(header).getByRole('button', { name: 'Theme' })).toBeInTheDocument()
   })
+})
+
+describe('WorkspaceHeader route-specific scope corrections', () => {
+  it.each([
+    ['/notifications', true, false],
+    ['/notifications/inbox', true, false],
+    ['/notifications/archived', true, false],
+    ['/notifications/rules', false, false],
+    ['/notifications/channels', false, false],
+    ['/power/dashboards', false, false],
+    ['/power/dashboards/7', false, true],
+    ['/power/sql', false, true],
+    ['/power/grafana', false, true],
+    ['/power-flow', true, false],
+    ['/drives', true, true],
+    ['/vehicles/42', false, true],
+    ['/settings', false, false],
+  ] as const)('keeps route %s range=%s vehicle=%s in the shared command plane', (path, range, vehicle) => {
+    const scope = getWorkspaceRouteScope(path)
+    expect(scope).toEqual({ range, vehicle })
+    render(
+      <WorkspaceScopeProvider scope={scope}>
+        <WorkspaceHeader />
+      </WorkspaceScopeProvider>,
+    )
+
+    const header = screen.getByRole('banner', { name: 'Workspace command bar' })
+    expect(within(header).getByText('Analysis window').hasAttribute('hidden')).toBe(!range)
+    expect(within(header).queryByTestId('workspace-vehicle-picker') !== null).toBe(vehicle)
+    expect(within(header).getByRole('button', { name: 'Search workspace' })).toBeInTheDocument()
+    expect(within(header).getByTestId('workspace-breadcrumbs')).toBeInTheDocument()
+  })
+
+  it.each(['/notifications', '/notifications/inbox', '/power/dashboards'])(
+    'preserves normalized scope and standard quick presets for %s',
+    (path) => {
+      const scope = getWorkspaceRouteScope(path)
+      for (const variant of [`${path}/`, `${path}?from=2026-10-01&to=2026-10-02`, `${path}#top`, path.slice(1)]) {
+        expect(getWorkspaceRouteScope(variant), variant).toEqual(scope)
+        expect(getWorkspaceQuickRangePresets(variant), variant).toEqual(['24h', '7d', '30d', '90d'])
+        expect(isWorkspaceRangePresetAvailable(variant, '24h'), variant).toBe(true)
+        expect(isWorkspaceRangePresetAvailable(variant, '1y'), variant).toBe(false)
+      }
+    },
+  )
 })
 
 describe('WorkspaceHeader exact geometry naming', () => {
