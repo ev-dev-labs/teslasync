@@ -6,7 +6,6 @@ import {
   ChartContainer,
   ChartLegend,
   ChartTooltip,
-  CHART_COLORS,
   ComposedChart,
   Line,
   ResponsiveContainer,
@@ -18,6 +17,7 @@ import {
 } from '@/components/charts';
 import { EmptyState } from '@/components/feedback';
 import { useUnits } from '@/hooks/useUnits';
+import { useChartPalette } from '@/hooks/useChartPalette';
 
 import { convertDurationFromSI } from '@/lib/unitConversion';
 
@@ -41,6 +41,7 @@ export function DurationDistributionChart({
   const { fmtInt, fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const { unitPrefs } = useUnits();
+  const palette = useChartPalette();
   const durationUnit = unitPrefs.duration;
   const labels: Record<ParkingDurationBandKey, string> = {
     under1h: t('parking.durationBands.under1h', 'Under 1 h'),
@@ -172,7 +173,7 @@ export function DurationDistributionChart({
                     yAxisId="count"
                     dataKey="stints"
                     name={countName}
-                    fill={CHART_COLORS[0]}
+                    fill={palette[0]}
                     radius={[5, 5, 0, 0]}
                     maxBarSize={40}
                     hide={hiddenSeries?.isHidden('stints') ?? false}
@@ -182,7 +183,7 @@ export function DurationDistributionChart({
                     type="monotone"
                     dataKey="dwell"
                     name={dwellName}
-                    stroke={CHART_COLORS[3]}
+                    stroke={palette[3]}
                     strokeWidth={2.5}
                     dot={{ r: 3 }}
                     hide={hiddenSeries?.isHidden('dwell') ?? false}
