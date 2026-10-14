@@ -6,6 +6,7 @@ import {
 } from '@/components/charts';
 import { containerPolicy, useCardPlacement } from '@/components/layout/layout-reference';
 import { useHiddenSeries } from '@/hooks/useHiddenSeries';
+import { useChartPalette } from '@/hooks/useChartPalette';
 import { useUnits } from '@/hooks/useUnits';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { useMotionPreference } from '@/hooks/useMotionPreference';
@@ -29,6 +30,7 @@ export function YearMonthlyActivity({ data, loading, error, onRetry, emptyMessag
   const { unitPrefs } = useUnits();
   const { distance: distanceUnit, locale } = unitPrefs;
   const hidden = useHiddenSeries('year-monthly-chart');
+  const palette = useChartPalette();
   const placement = useCardPlacement();
   const height = containerPolicy(placement?.width ?? 0).chartHeight;
   const { reduce } = useMotionPreference();
@@ -78,9 +80,9 @@ export function YearMonthlyActivity({ data, loading, error, onRetry, emptyMessag
             <YAxis yAxisId="right" orientation="right" tick={axisTick} tickLine={false} axisLine={false} />
             <Tooltip content={<ChartTooltip />} />
             <ChartLegend state={hidden} wrapperStyle={{ fontSize: 12 }} />
-            <Bar yAxisId="left" dataKey="drives" name={drivesName} fill="#a78bfa" radius={[4, 4, 0, 0]} maxBarSize={36}
+            <Bar yAxisId="left" dataKey="drives" name={drivesName} fill={palette[0]} radius={[4, 4, 0, 0]} maxBarSize={36}
               animationDuration={reduce ? 0 : 800} hide={hidden.isHidden('drives')} />
-            <Line yAxisId="right" type="monotone" dataKey="distance" name={distanceName} stroke="#22d3ee" strokeWidth={2} dot={false}
+            <Line yAxisId="right" type="monotone" dataKey="distance" name={distanceName} stroke={palette[1]} strokeWidth={2} dot={false}
               animationDuration={reduce ? 0 : 800} hide={hidden.isHidden('distance')} />
           </ComposedChart>
         </ResponsiveContainer>
