@@ -155,6 +155,7 @@ export interface SleepSentryProjection {
   available: boolean;
   onMonthlyKwh: number | null;
   onMonthlyCost: number | null;
+  /** Nonnegative excess: max(0, Sentry-on minus Sentry-off drain rate). */
   extraDrainRate: number | null;
   extraMonthlyKwh: number | null;
   extraMonthlyCost: number | null;
@@ -165,6 +166,8 @@ export interface SleepSentryAnalysis {
   off: SleepSentryEvidenceGroup;
   hasAnyEvidence: boolean;
   comparisonAvailable: boolean;
+  /** Signed Sentry-on minus Sentry-off drain rate, independent of capacity. */
+  drainRateDifference: number | null;
   context: SleepCapacityContext;
   projection: SleepSentryProjection;
 }
@@ -243,6 +246,7 @@ export interface SleepEvidenceBreadth {
 
 export interface SleepSourceCoverage {
   hasResponse: boolean;
+  hasEvidence: boolean;
   vehicleId: number | null;
   backendPeriodDays: number | null;
   frozenNowMs: number | null;
@@ -798,21 +802,26 @@ function buildSentryAnalysis(
     && off.avgDrainRate != null;
   const projectionAvailable =
     ratesAvailable && batteryCapacityWh != null;
+  const drainRateDifference =
+    ratesAvailable && on.avgDrainRate != null && off.avgDrainRate != null
+      ? on.avgDrainRate - off.avgDrainRate
+      : null;
+  const extraDrainRate =
+    drainRateDifference != null ? Math.max(0, drainRateDifference) : null;
 
   let onMonthlyKwh: number | null = null;
-  let extraDrainRate: number | null = null;
   let extraMonthlyKwh: number | null = null;
   if (
     projectionAvailable
     && on.avgDrainRate != null
     && off.avgDrainRate != null
     && batteryCapacityWh != null
+    && extraDrainRate != null
   ) {
     onMonthlyKwh =
       (on.avgDrainRate / 100)
       * (batteryCapacityWh / 1_000)
       * SENTRY_HOURS_PER_MONTH;
-    extraDrainRate = Math.max(0, on.avgDrainRate - off.avgDrainRate);
     extraMonthlyKwh =
       (extraDrainRate / 100)
       * (batteryCapacityWh / 1_000)
@@ -824,6 +833,7 @@ function buildSentryAnalysis(
     off,
     hasAnyEvidence: on.available || off.available,
     comparisonAvailable,
+    drainRateDifference,
     context,
     projection: {
       available: projectionAvailable,
@@ -1046,6 +1056,17 @@ export function analyzeSleepEfficiency(
     range,
     source: {
       hasResponse: data != null,
+      // Successful empty responses and exclusion accounting do not establish
+      // readings. Valid zero-count rows and count-bearing zero rates do.
+      hasEvidence: data != null && (
+        state.accounting.includedRows > 0
+        || dwell.available
+        || timeToSleepAvgMin != null
+        || sentry.hasAnyEvidence
+        || events.accounting.includedRows > 0
+        || sentry.context.batteryCapacityWh != null
+        || sentry.context.baseCostPerKwh != null
+      ),
       vehicleId: positiveInteger(data?.vehicle_id),
       backendPeriodDays: positiveInteger(data?.period_days),
       frozenNowMs,

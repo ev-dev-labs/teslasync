@@ -44,6 +44,27 @@ function analyze(
 }
 
 describe('sleepEfficiencyAnalysis state accounting', () => {
+  it('derives evidence support independently of requested scope and successful empty responses', () => {
+    const missing = analyze(undefined);
+    expect(missing.range.status).toBe('valid');
+    expect(missing.source).toMatchObject({ hasResponse: false, hasEvidence: false });
+    const empty = analyze({ state_distribution: [], recent_events: [], sentry_comparison: [] });
+    expect(empty.source).toMatchObject({ hasResponse: true, hasEvidence: false });
+    expect(empty.breadth.score).toBe(0);
+    const rejected = analyze({
+      state_distribution: [{ state: '', count: 2, total_minutes: 0 }],
+      recent_events: [event({ duration_hours: -1 })],
+    });
+    expect(rejected.source).toMatchObject({ hasResponse: true, hasEvidence: false });
+    expect(rejected.breadth.partialSources).toBeGreaterThan(0);
+    expect(analyze({
+      state_distribution: [{ state: 'asleep', count: 0, total_minutes: 0 }],
+    }).source.hasEvidence).toBe(true);
+    expect(analyze({
+      sentry_comparison: [{ sentry_mode: true, count: 1, avg_drain_rate: 0, avg_battery_lost: 0 }],
+    }).source.hasEvidence).toBe(true);
+  });
+
   it('assigns every state row to one mutually exclusive category and keeps unknown states', () => {
     const result = analyze({
       state_distribution: [
@@ -142,6 +163,77 @@ describe('sleepEfficiencyAnalysis state accounting', () => {
 });
 
 describe('sleepEfficiencyAnalysis Sentry evidence', () => {
+  it.each([
+    { on: 0, off: 0, difference: 0, excess: 0 },
+    { on: 0.5, off: 0.25, difference: 0.25, excess: 0.25 },
+    { on: 0.125, off: 0.375, difference: -0.25, excess: 0 },
+    { on: 0.25, off: 0.25, difference: 0, excess: 0 },
+  ])('preserves signed fractional comparisons and nonnegative excess for $on minus $off', ({
+    on, off, difference, excess,
+  }) => {
+    const data: SleepEfficiencyData = {
+      battery_capacity_wh: 75_000,
+      base_cost_per_kwh: 0.2,
+      sentry_comparison: [
+        { sentry_mode: true, count: 3, avg_drain_rate: on },
+        { sentry_mode: false, count: 4, avg_drain_rate: off },
+      ],
+    };
+    const result = analyze(data);
+    expect(result.sentry.on.avgDrainRate).toBe(on);
+    expect(result.sentry.off.avgDrainRate).toBe(off);
+    expect(result.sentry.drainRateDifference).toBe(difference);
+    expect(result.sentry.projection.extraDrainRate).toBe(excess);
+    expect(result.sentry.projection.extraMonthlyKwh).toBeCloseTo(excess / 100 * 75 * 730);
+    expect(result.sentry.projection.extraMonthlyCost).toBeCloseTo(excess / 100 * 75 * 730 * 0.2);
+    expect(data.sentry_comparison?.map(row => row.avg_drain_rate)).toEqual([on, off]);
+
+    const withoutCapacity = analyze({ sentry_comparison: data.sentry_comparison });
+    expect(withoutCapacity.sentry.drainRateDifference).toBe(difference);
+    expect(withoutCapacity.sentry.projection.extraDrainRate).toBe(excess);
+    expect(withoutCapacity.sentry.projection.available).toBe(false);
+    expect(withoutCapacity.sentry.projection.extraMonthlyKwh).toBeNull();
+    expect(withoutCapacity.sentry.projection.extraMonthlyCost).toBeNull();
+  });
+
+  it.each([undefined, null, Number.NaN, Infinity, -Infinity, -0.25, Number.MAX_VALUE])(
+    'withholds invalid or missing rates (%s) rather than reporting measured zero',
+    rate => {
+      for (const sentryMode of [true, false]) {
+        const result = analyze({
+          battery_capacity_wh: 75_000,
+          sentry_comparison: [
+            { sentry_mode: sentryMode, count: 3, avg_drain_rate: rate },
+            { sentry_mode: !sentryMode, count: 4, avg_drain_rate: 0 },
+          ],
+        });
+        expect(result.sentry.comparisonAvailable).toBe(true);
+        expect(result.sentry[sentryMode ? 'on' : 'off'].avgDrainRate).toBeNull();
+        expect(result.sentry.drainRateDifference).toBeNull();
+        expect(result.sentry.projection.extraDrainRate).toBeNull();
+        expect(result.sentry.projection.available).toBe(false);
+        expect(result.sentry.projection.extraMonthlyKwh).toBeNull();
+      }
+    },
+  );
+
+  it('withholds differences when a count-bearing group is absent', () => {
+    for (const data of [
+      undefined,
+      {},
+      { sentry_comparison: [] },
+      { sentry_comparison: [{ sentry_mode: true, count: 1, avg_drain_rate: 0 }] },
+      { sentry_comparison: [
+        { sentry_mode: true, count: 1, avg_drain_rate: 0 },
+        { sentry_mode: false, count: 0, avg_drain_rate: 0 },
+      ] },
+    ]) {
+      const result = analyze(data);
+      expect(result.sentry.drainRateDifference).toBeNull();
+      expect(result.sentry.projection.extraDrainRate).toBeNull();
+    }
+  });
+
   it('accepts count-bearing zero rates as legitimate evidence and zero projections', () => {
     const result = analyze({
       battery_capacity_wh: 75_000,

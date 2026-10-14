@@ -165,11 +165,11 @@ export function SentryProjectionContext({
                 'On-minus-off drain rate',
               )}
               value={
-                projection.extraDrainRate != null
+                analysis.sentry.drainRateDifference != null
                   ? t(
                       'sleep.sentryContext.rateValue',
                       '{{value}}%/hr',
-                      { value: fmtNumber(projection.extraDrainRate) },
+                      { value: fmtNumber(analysis.sentry.drainRateDifference) },
                     )
                   : '—'
               }
