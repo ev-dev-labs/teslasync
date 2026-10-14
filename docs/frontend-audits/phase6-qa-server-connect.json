@@ -1,0 +1,733 @@
+{
+  "schemaVersion": 1,
+  "item": "phase6-qa-server-connect",
+  "phase": 6,
+  "attempt": 1,
+  "status": "DONE_SOURCE_QA_WITH_FINDINGS_NOT_RUNTIME_ACCEPTANCE",
+  "page": "web\\src\\features\\server\\ConnectPage.tsx",
+  "routes": [
+    "/connect"
+  ],
+  "startedAt": "2026-10-14T02:26:55.4292536Z",
+  "reservedAt": "2026-10-14T02:22:14.747Z",
+  "returnDeadline": "2026-10-14T02:42:14.747Z",
+  "hardDeadline": "2026-10-14T02:47:14.747Z",
+  "authoredAt": "2026-10-14T02:35:41.835795+00:00",
+  "ownedFiles": [
+    "docs\\frontend-audits\\phase6-qa-server-connect.json",
+    "web\\logs\\phase6-qa-server-connect.log"
+  ],
+  "scope": "READONLY ConnectPage/direct supports/existing tests. No product code imported or executed. Only assigned JSON/log writable.",
+  "queue": {
+    "line": 134,
+    "status": "[~]",
+    "attempt": 1,
+    "dependency": "phase5-page-server-connect [x] at2150",
+    "predecessorCommit": "182dcbe773a7fad58de01ca1f6c1839d28ea2543 from queue only, no Git",
+    "reservation": "actor pending reservation is not an actual running actor claim"
+  },
+  "authorityRead": {
+    "orchestrator": "docs/orchestrator-loop.md read fully via numbered command and ranges1-240/241-EOF",
+    "design": "docs/frontend-design-contract.md relevant core1-605, including foundations, states, privacy, mobile/accessibility and acceptance; unrelated domain addenda excluded",
+    "mission": "docs/frontend-mission.md relevant0-3,13-16,18-25,30-34,40,43-45",
+    "inventory": "docs/frontend-inventory.md ConnectPage row219 and linked audit-page-168 read as historical evidence",
+    "handoff": "docs/session-handoff.md current recovery1-68 and exact queue current lifecycle/claim",
+    "instructions": [
+      ".github/copilot-instructions.md relevant integrity/architecture",
+      ".github/instructions/react-frontend.instructions.md fully read"
+    ],
+    "limits": "No parent orchestration/Git/health/server actions; obsolete neon/SI instruction examples do not supersede current design contract"
+  },
+  "sourcePins": [
+    {
+      "file": "web\\src\\features\\server\\ConnectPage.tsx",
+      "sha256Before": "d7dcf2438b190abfe708a6d65a8dc80912db60e8b471215f20fdeb7e0efa7d96",
+      "bytes": 7108,
+      "sha256After": "d7dcf2438b190abfe708a6d65a8dc80912db60e8b471215f20fdeb7e0efa7d96",
+      "unchanged": true
+    },
+    {
+      "file": "web\\src\\features\\server\\ConnectPage.test.tsx",
+      "sha256Before": "a501bd2ca228bc332ebf73d17d111dcca0376f30e7ca6d0d7848486db9d45e0f",
+      "bytes": 11407,
+      "sha256After": "a501bd2ca228bc332ebf73d17d111dcca0376f30e7ca6d0d7848486db9d45e0f",
+      "unchanged": true
+    },
+    {
+      "file": "web\\src\\features\\server\\ServerGate.tsx",
+      "sha256Before": "a54e5de386715fff4afe3be4c7f0d083ae833aab43638ef6f2a4bb5befee106b",
+      "bytes": 865,
+      "sha256After": "a54e5de386715fff4afe3be4c7f0d083ae833aab43638ef6f2a4bb5befee106b",
+      "unchanged": true
+    },
+    {
+      "file": "web\\src\\lib\\serverConnection.ts",
+      "sha256Before": "03508155b100292b670c613bc5796019b4fb23721e80a12bfab54143eba1462a",
+      "bytes": 10227,
+      "sha256After": "03508155b100292b670c613bc5796019b4fb23721e80a12bfab54143eba1462a",
+      "unchanged": true
+    },
+    {
+      "file": "web\\src\\lib\\serverConnection.test.ts",
+      "sha256Before": "e32deaf6d0bd7fd9b87fadc3b900cee03840cd2f0a5b9f97c5e1eef6119b46f4",
+      "bytes": 10770,
+      "sha256After": "e32deaf6d0bd7fd9b87fadc3b900cee03840cd2f0a5b9f97c5e1eef6119b46f4",
+      "unchanged": true
+    },
+    {
+      "file": "web\\src\\components\\ui\\Input.tsx",
+      "sha256Before": "2c687ddcf37022148906e67b891ddaec5aeb7a6f18385a93e92dba2f32095b40",
+      "bytes": 4738,
+      "sha256After": "2c687ddcf37022148906e67b891ddaec5aeb7a6f18385a93e92dba2f32095b40",
+      "unchanged": true
+    },
+    {
+      "file": "web\\src\\components\\ui\\__tests__\\Input.test.tsx",
+      "sha256Before": "38da4fe2a852dfb8e8c89d4d5ed07d1d7a9827ff6b8b5e5a59c1672e6b048ef4",
+      "bytes": 14752,
+      "sha256After": "38da4fe2a852dfb8e8c89d4d5ed07d1d7a9827ff6b8b5e5a59c1672e6b048ef4",
+      "unchanged": true
+    },
+    {
+      "file": "web\\src\\components\\ui\\Button.tsx",
+      "sha256Before": "e43e202cc9f465efeef93a1be2b156255958934af635abf0eaa408f310dde16c",
+      "bytes": 5174,
+      "sha256After": "e43e202cc9f465efeef93a1be2b156255958934af635abf0eaa408f310dde16c",
+      "unchanged": true
+    },
+    {
+      "file": "web\\src\\components\\ui\\Button.test.tsx",
+      "sha256Before": "dda6285705d0d15264308c1ab1f838afde3ff9d70c53189f2b719fcb6df0d406",
+      "bytes": 12251,
+      "sha256After": "dda6285705d0d15264308c1ab1f838afde3ff9d70c53189f2b719fcb6df0d406",
+      "unchanged": true
+    },
+    {
+      "file": "web\\src\\components\\ui\\GlassPanel.tsx",
+      "sha256Before": "e60a182c5579269b2a3d9869b0fc8fe14b3b1dc191db09a3a3c19bb13a88f3af",
+      "bytes": 3129,
+      "sha256After": "e60a182c5579269b2a3d9869b0fc8fe14b3b1dc191db09a3a3c19bb13a88f3af",
+      "unchanged": true
+    },
+    {
+      "file": "web\\src\\components\\ui\\GlassPanel.test.tsx",
+      "sha256Before": "d0906437515110c2cf71cc5e17f620173f3e8f986b7146ff355fc0e4c275d015",
+      "bytes": 12731,
+      "sha256After": "d0906437515110c2cf71cc5e17f620173f3e8f986b7146ff355fc0e4c275d015",
+      "unchanged": true
+    },
+    {
+      "file": "web\\src\\components\\ui\\Typography.tsx",
+      "sha256Before": "b5d52022d7ca523369bc56c2abb153f8fa1edc0e3e94320905c53a24d94b4b9a",
+      "bytes": 4325,
+      "sha256After": "b5d52022d7ca523369bc56c2abb153f8fa1edc0e3e94320905c53a24d94b4b9a",
+      "unchanged": true
+    },
+    {
+      "file": "web\\src\\components\\ui\\Typography.test.tsx",
+      "sha256Before": "6f3a9bff3fa9b6e853779467985a43199ca3ef5aebdb9619b3d84a7cfe312b7d",
+      "bytes": 11865,
+      "sha256After": "6f3a9bff3fa9b6e853779467985a43199ca3ef5aebdb9619b3d84a7cfe312b7d",
+      "unchanged": true
+    },
+    {
+      "file": "web\\src\\components\\ui\\Icon.tsx",
+      "sha256Before": "1afc4a9b6429a024a5bb979460e9cfef7ff5ce370f643cf92c10b570714701d5",
+      "bytes": 2745,
+      "sha256After": "1afc4a9b6429a024a5bb979460e9cfef7ff5ce370f643cf92c10b570714701d5",
+      "unchanged": true
+    },
+    {
+      "file": "web\\src\\components\\layout\\PageHeader.tsx",
+      "sha256Before": "809dca789ad84d57f5b7f9f95f958121dd26cd1f44b7782de762c2885e488a08",
+      "bytes": 4107,
+      "sha256After": "809dca789ad84d57f5b7f9f95f958121dd26cd1f44b7782de762c2885e488a08",
+      "unchanged": true
+    },
+    {
+      "file": "web\\src\\components\\layout\\PageHeader.test.tsx",
+      "sha256Before": "dd8fdd614f07f2219c3b79cec25db794841042a6c3d295a419d2abf058fbcbde",
+      "bytes": 11858,
+      "sha256After": "dd8fdd614f07f2219c3b79cec25db794841042a6c3d295a419d2abf058fbcbde",
+      "unchanged": true
+    },
+    {
+      "file": "web\\src\\hooks\\usePageTitle.ts",
+      "sha256Before": "d04d8c90812c380005924cd4f004be273f2e89b64d57aa1df880b15bb49e9a9b",
+      "bytes": 1280,
+      "sha256After": "d04d8c90812c380005924cd4f004be273f2e89b64d57aa1df880b15bb49e9a9b",
+      "unchanged": true
+    },
+    {
+      "file": "web\\src\\components\\ui\\Tooltip.tsx",
+      "sha256Before": "6ba505e91c416498cba46f67be1e88770701664a3df6e942ff35e6dd0617d0e7",
+      "bytes": 12768,
+      "sha256After": "6ba505e91c416498cba46f67be1e88770701664a3df6e942ff35e6dd0617d0e7",
+      "unchanged": true
+    },
+    {
+      "file": "web\\src\\components\\ui\\Tooltip.test.tsx",
+      "sha256Before": "e5b6ba45c44758b2c08673a331ef5ec16f050af07c7e7150e3e07cdf41d24976",
+      "bytes": 17139,
+      "sha256After": "e5b6ba45c44758b2c08673a331ef5ec16f050af07c7e7150e3e07cdf41d24976",
+      "unchanged": true
+    },
+    {
+      "file": "web\\src\\components\\ui\\Tooltip.boundary.test.tsx",
+      "sha256Before": "968bba5d7adcfd9f4436c5b61b0d0b1bf3629b1721d972f34f594159c7070ffc",
+      "bytes": 1443,
+      "sha256After": "968bba5d7adcfd9f4436c5b61b0d0b1bf3629b1721d972f34f594159c7070ffc",
+      "unchanged": true
+    },
+    {
+      "file": "web\\src\\components\\ui\\__tests__\\Tooltip.contract.test.tsx",
+      "sha256Before": "cd6a52e106521d35280125b1ce6038e84da964e2bc45cb351448923f786e5b3a",
+      "bytes": 5165,
+      "sha256After": "cd6a52e106521d35280125b1ce6038e84da964e2bc45cb351448923f786e5b3a",
+      "unchanged": true
+    },
+    {
+      "file": "web\\src\\i18n\\en.json",
+      "sha256Before": "183b51d7250c841aff21f0c1aa70170cbd437f3487b7f6647389c5020ac38c07",
+      "bytes": 1843667,
+      "sha256After": "183b51d7250c841aff21f0c1aa70170cbd437f3487b7f6647389c5020ac38c07",
+      "unchanged": true
+    },
+    {
+      "file": "web\\src\\App.tsx",
+      "sha256Before": "10669c20207b9da28a7691107c23bcb6e7f2105bd17bd472aefd92399f1a517c",
+      "bytes": 68125,
+      "sha256After": "10669c20207b9da28a7691107c23bcb6e7f2105bd17bd472aefd92399f1a517c",
+      "unchanged": true
+    }
+  ],
+  "sourcePinStatus": "MATCH",
+  "counts": {
+    "confirmedFindings": 5,
+    "engineeringRuleViolations": 1,
+    "unprovedCandidates": 5,
+    "deduplicatedOwnerNeeds": 4,
+    "logicalRegions": 6,
+    "productionFilesGrepChecked": 11,
+    "sourceAndTestPins": 23,
+    "unchangedPins": 23,
+    "changedPins": 0,
+    "canonicalKeysInspected": 22,
+    "canonicalMissingKeys": 0,
+    "pageTestDeclarationSites": 12,
+    "connectionTestDeclarationSites": 30,
+    "testsExecuted": 0,
+    "testsDiscovered": "NOTRUN",
+    "testsPassed": "NOTRUN",
+    "testsFailed": "NOTRUN",
+    "testsSkipped": "NOTRUN",
+    "commandFailures": 2,
+    "toolShellFailures": 1
+  },
+  "commands": {
+    "log": "web\\logs\\phase6-qa-server-connect.log",
+    "executed": "Get-ChildItem/Get-Content/Select-String; Python pathlib/hashlib/json/re evidence; authorized report/log writes and final parse/pins. Actual check scripts plus raw outputs in log; six existing local tool receipts imported verbatim.",
+    "failures": [
+      {
+        "command": "First Python document index default cp1252",
+        "error": "UnicodeEncodeError: charmap cannot encode character U+2192 in position697",
+        "pythonExit": "NOT_CAPTURED",
+        "wrapperShellExit": 0,
+        "resolution": "UTF8 document reads only, no tests rerun"
+      },
+      {
+        "command": "Oversized inline report constructor",
+        "error": "The filename or extension is too long. (os error 206)",
+        "toolShellId": "2665",
+        "exit": 1,
+        "resolution": "Bounded artifact-only construction; failed command did not execute"
+      }
+    ],
+    "notRun": [
+      "actual server address/auth/token/connect/health/network/API requests",
+      "browser/Playwright/screenshots/clipboard",
+      "tests/test discovery",
+      "lint/build/global npx tsc --noEmit",
+      "helpers/preservation/global audit runners",
+      "Git/install/server/subagents"
+    ],
+    "exits": "Grep/evidence/hash commands emitted0; failed nested Python exit not captured; oversized tool command exit1. Final parse/pin numeric exits logged separately."
+  },
+  "release": {
+    "sourceWriteRelease": true,
+    "artifactWriteRelease": true,
+    "commandRelease": true,
+    "noSourceTestCatalogGitWrites": true,
+    "authorizedWritesOnly": [
+      "docs\\frontend-audits\\phase6-qa-server-connect.json",
+      "web\\logs\\phase6-qa-server-connect.log"
+    ],
+    "acceptance": "Source report only; no page/native/security/application acceptance.",
+    "releasedAt": "2026-10-14T02:38:59.361085+00:00",
+    "noCommandsRunningAfterReturn": true
+  },
+  "confirmedFindings": [
+    {
+      "id": "SC-001",
+      "file": "web\\src\\lib\\serverConnection.ts",
+      "line": 276,
+      "relatedEvidence": [
+        "web\\src\\lib\\serverConnection.ts:240-249,274-279",
+        "web\\src\\features\\server\\ConnectPage.tsx:95-104"
+      ],
+      "rule": "unknown-auth-mode-accepted",
+      "contract": "MDC-025/MDC-026/MDC-046; mission21/25/34",
+      "priority": "high",
+      "confidence": "source-confirmed branch, actual emission NOTRUN",
+      "detail": "Any nonempty string including unsupported enum or whitespace is accepted as successful mode. The page gates token-required only for exactly forward_auth, so unknown can save/reload without token. This is not proof of backend auth bypass.",
+      "mechanism": "String/nonempty predicate276; ok:true279; page95 exact equality; save/reload101-104.",
+      "repro": "NOTRUN static response scenario: conceptually supply successful parsed payload with unsupported nonempty mode and empty token; trace the above branches. No helper/request was executed.",
+      "fix": "Validate supported open/forward_auth enum and fail closed with truthful localized invalid/unsupported response guidance; preserve 401, timeout, origin policy and reload. Mode discovery is not all-API authorization.",
+      "testEvidence": "serverConnection.test.ts228 success and250 missing-mode shape declared; unsupported/blank mode and page save prevention absent in two inspected suites. Tests NOTRUN.",
+      "ownerNeed": "N1",
+      "priorEvidence": "audit-page-168 noted nonempty-string mode limitation; count this mechanism once."
+    },
+    {
+      "id": "SC-002",
+      "file": "web\\src\\lib\\serverConnection.ts",
+      "line": 274,
+      "relatedEvidence": [
+        "web\\src\\lib\\serverConnection.ts:260,275-281",
+        "web\\src\\features\\server\\ConnectPage.tsx:90-93",
+        "web\\src\\i18n\\en.json:37142"
+      ],
+      "rule": "probe-failure-collapsed",
+      "contract": "MDC-026/MDC-046; mission24/25",
+      "priority": "medium",
+      "confidence": "source-confirmed information loss",
+      "detail": "Non-401 HTTP failure, invalid JSON/shape, timeout and unknown transport failure all become ok:false and the same unreachable/server-running advice, including when the server responded.",
+      "mechanism": "Only401 retains discriminator271-272; other branches274-281 discard observed cause; page91 uses one message.",
+      "repro": "NOTRUN source-only alternatives: unsuccessful non401 response, successful response without mode, or aborted request converge on page91. No fetch/timer/connection executed.",
+      "fix": "Existing result contract should retain observable HTTP/invalid-response/timeout reasons with truthful unknown transport fallback; page localizes recovery. Never claim TLS/CORS/offline/DNS can always be distinguished or offer bypass.",
+      "testEvidence": "serverConnection.test.ts250 asserts identical failure for rejection/non-ok/bad shape; ConnectPage.test.ts197 generic unreachable. Read only.",
+      "ownerNeed": "N1",
+      "priorEvidence": "Same remaining objective audit-page-168 and completed phase5 row2150; no duplicate narrow serverConnection owner found."
+    },
+    {
+      "id": "SC-003",
+      "file": "web\\src\\features\\server\\ConnectPage.tsx",
+      "line": 137,
+      "relatedEvidence": [
+        "web\\src\\features\\server\\ConnectPage.tsx:84-99,146-153",
+        "web\\src\\features\\server\\ConnectPage.test.tsx:177-190"
+      ],
+      "rule": "inaccurate-readiness-label",
+      "contract": "MDC-021/MDC-025/MDC-044; mission18/21/30",
+      "priority": "medium",
+      "confidence": "source-confirmed label contradiction",
+      "detail": "Token label remains optional after 401/forward_auth makes token required. Same view invalidates token and explains requirement. Native required semantics do not reflect known requirement.",
+      "mechanism": "Unconditional tokenLabel + tokenOptional assembly137; modeHint only gates separate caption150. Fixed punctuation assembly also needs complete localized-message handling, not untranslated English.",
+      "repro": "NOTRUN static state scenario: follow missing-token forward_auth or401 branch to modeHint forward_auth; unconditional optional label persists. Existing test177 expects that label in required state, not a fresh failed test.",
+      "fix": "Truthful complete localized optional/known-required label, coordinated required/aria-required and custom validation; retain masked token, opaque identity, hints and one alert. Parent serializes exact canonical changes.",
+      "ownerNeed": "N2",
+      "counting": "One token label assembly/readiness mechanism, not separate label/ARIA/punctuation/response/test findings."
+    },
+    {
+      "id": "SC-004",
+      "file": "web\\src\\components\\layout\\PageHeader.tsx",
+      "line": 84,
+      "relatedEvidence": [
+        "web\\src\\features\\server\\ConnectPage.tsx:116-120",
+        "web\\src\\components\\layout\\PageHeader.tsx:77-88",
+        "web\\src\\components\\layout\\PageHeader.test.tsx:284-296"
+      ],
+      "rule": "mobile-target-declaration",
+      "contract": "MDC-040/MDC-043; mission16/30",
+      "priority": "medium",
+      "confidence": "source sizing declaration only, composed pixels/WCAG NOTRUN",
+      "detail": "Compact More info uses44px base then sm:h-9 sm:w-9. Existing sm640/md768 contract declares36px at640-767 below the44px below-md default. Page supplies subtitle/default compact mode.",
+      "mechanism": "sm reduces both dimensions at640 before md768; Button size sm has no44px min to restore size.",
+      "repro": "NOTRUN source breakpoint scenario: select documented640-767 band; inspect classes84 and Button fixed size36-38. No hit rectangle or WCAG spacing measurement claimed.",
+      "fix": "Shared PageHeader owner retains44px below md with intended desktop size, tooltip IDs, keyboard/Escape/focus/wrapping. Do not globally enlarge Button density or weaken assertions.",
+      "testEvidence": "PageHeader.test.ts284 asserts same sm:h-9 sm:w-9, not actual viewport measurement.",
+      "ownerNeed": "N3",
+      "priorEvidence": "External shared gap explicitly retained in phase5 row2150. Completed phase3 mobile fixture1438 is a different equivalence objective; do not reopen it."
+    },
+    {
+      "id": "SC-005",
+      "file": "web\\src\\features\\server\\ConnectPage.tsx",
+      "line": 114,
+      "relatedEvidence": [
+        "web\\src\\features\\server\\ConnectPage.tsx:113-167"
+      ],
+      "rule": "missing-page-container",
+      "contract": "page wrapper guideline; MDC-031; mission14",
+      "priority": "low",
+      "confidence": "wrapper absence confirmed, layout failure not claimed",
+      "detail": "Local div/GlassPanel/PageHeader return has no PageContainer. Direct guideline deviation, but accepted inventory intentionally describes standalone bounded setup form. No claim that max-w-md or centered layout is defective.",
+      "mechanism": "PageContainer presence grep returned0 and root return is div114.",
+      "repro": "Static render-tree inspection113-167, NOTRUN mounting; no wrapper.",
+      "fix": "Existing page/layout contract owner must resolve standalone exception or adopt appropriate existing PageContainer without duplicate heading/shell chrome/query overlay or lost initial form access. Do not invent width engine.",
+      "ownerNeed": "N2",
+      "counting": "One guideline deviation, not visual clipping/runtime defect."
+    }
+  ],
+  "priorityFixes": [
+    "SC-001 fail closed unknown mode",
+    "SC-002 observable failure/recovery",
+    "SC-003 truthful token requirement and SC-004 below-md target",
+    "SC-005 explicit standalone wrapper disposition"
+  ],
+  "filesWithMostIssues": [
+    {
+      "file": "web\\src\\lib\\serverConnection.ts",
+      "count": 2
+    },
+    {
+      "file": "web\\src\\features\\server\\ConnectPage.tsx",
+      "count": 2
+    },
+    {
+      "file": "web\\src\\components\\layout\\PageHeader.tsx",
+      "count": 1
+    }
+  ],
+  "unprovedCandidates": [
+    {
+      "id": "SCC-001",
+      "file": "web\\src\\features\\server\\ConnectPage.tsx",
+      "line": 82,
+      "relatedEvidence": [
+        "web\\src\\features\\server\\ConnectPage.tsx:101-109",
+        "web\\src\\lib\\serverConnection.ts:258-283"
+      ],
+      "kind": "conditional lifecycle",
+      "detail": "No disposal/attempt-authority guard gates persistence after await. Unmount during pending success might still save/reload; inFlight only blocks duplicate submit and helper abort belongs to timeout.",
+      "mechanism": "Async closure can settle after unmount; caller has no abort signal or mounted/attempt check.",
+      "repro": "NOTRUN future synthetic test: hold mocked probe success, unmount, resolve, verify no persistence/reload. No existing such case in two suites.",
+      "reasonUnconfirmed": "No route disposal or late response executed; real navigation/network forbidden.",
+      "ownerNeeds": [
+        "N1",
+        "N2"
+      ]
+    },
+    {
+      "id": "SCC-002",
+      "file": "web\\src\\lib\\serverConnection.ts",
+      "line": 129,
+      "relatedEvidence": [
+        "web\\src\\lib\\serverConnection.ts:129-136",
+        "web\\src\\features\\server\\ConnectPage.tsx:105-106",
+        "web\\src\\features\\server\\ConnectPage.test.tsx:225-242"
+      ],
+      "kind": "conditional storage fault",
+      "detail": "Several token/marker operations precede final origin write. A late storage exception during switching may leave changed token/marker with old origin; alert does not prove storage rollback.",
+      "mechanism": "Sequential storage writes without rollback before136.",
+      "repro": "NOTRUN future safe mock: throw only on later write after earlier success; require coherent original connection. Existing page test throws every setItem, covering immediate denial only.",
+      "reasonUnconfirmed": "No storage reads from live session, writes/fault injection or actual mismatched traffic executed.",
+      "ownerNeeds": [
+        "N1"
+      ]
+    },
+    {
+      "id": "SCC-003",
+      "file": "web\\src\\features\\server\\ConnectPage.tsx",
+      "line": 114,
+      "relatedEvidence": [
+        "web\\src\\features\\server\\ConnectPage.tsx:115,127,130,141,155-164"
+      ],
+      "kind": "native/mobile geometry",
+      "detail": "Centered min-h-dvh, nested padding, long guidance/alerts and virtual keyboard require short-height/safe-area/200%-text reachability. No fixed panel height/overflow-hidden, so clipping cannot be inferred.",
+      "mechanism": "Responsive min-height/centered form plus changing keyboard/text viewport; no measurement.",
+      "repro": "NOTRUN approved future synthetic native matrix at required widths, keyboard open, orientation, long RTL/error text; retain both fields/hints/alert/submit.",
+      "reasonUnconfirmed": "No browser/device/capture or geometry allowed.",
+      "ownerNeeds": [
+        "N4"
+      ]
+    },
+    {
+      "id": "SCC-004",
+      "file": "web\\src\\features\\server\\ConnectPage.tsx",
+      "line": 130,
+      "relatedEvidence": [
+        "web\\src\\components\\layout\\PageHeader.tsx:70-75",
+        "web\\src\\features\\server\\ConnectPage.test.tsx:48-58"
+      ],
+      "kind": "native focus integration",
+      "detail": "Server autofocus coexists with h1 route-focus target; authored test expects field focus but real first-run/manual focus and soft-keyboard order unknown.",
+      "mechanism": "Two intentional focus declarations, integration owner not exercised.",
+      "repro": "NOTRUN approved future safe mount with actual route focus owner; initial focus/Tab/alert and retry focus review.",
+      "reasonUnconfirmed": "No actual focus trap/conflict/lost focus shown.",
+      "ownerNeeds": [
+        "N4"
+      ]
+    },
+    {
+      "id": "SCC-005",
+      "file": "web\\src\\lib\\serverConnection.ts",
+      "line": 266,
+      "relatedEvidence": [
+        "web\\src\\lib\\serverConnection.ts:71-84,262-269",
+        "web\\src\\features\\server\\ConnectPage.tsx:82,101-104"
+      ],
+      "kind": "trust/identity/native transport",
+      "detail": "Preserved explicit HTTP/LAN candidate policy sends supplied token to chosen candidate during probe; cookies omitted, installation header not added. Mode discovery is not trusted identity/TLS/all-API authorization. No new leak/auth bypass is confirmed.",
+      "mechanism": "Existing origin acceptance and imperative candidate probe before save.",
+      "repro": "NOTRUN future design/security review via approved synthetic transport mocks only: trust guidance, redirects/cleartext warning/success handover. No actual address/token/cert/auth bypass.",
+      "reasonUnconfirmed": "No real transport/server/token/identity or existing confirmation mandate examined.",
+      "ownerNeeds": [
+        "N4"
+      ]
+    }
+  ],
+  "ownerNeeds": [
+    {
+      "id": "N1",
+      "owner": "existing serverConnection integration owner",
+      "files": [
+        "web\\src\\lib\\serverConnection.ts",
+        "web\\src\\lib\\serverConnection.test.ts"
+      ],
+      "confirmed": [
+        "SC-001",
+        "SC-002"
+      ],
+      "candidates": [
+        "SCC-001",
+        "SCC-002"
+      ],
+      "need": "One deduplicated existing boundary workstream: enum/invalid-response and observable failure result. Coordinate caller through N2; only investigate disposal/storage candidates when approved. Preserve origin validation/session-local marker policy/cookie and probe identity omission/timeout.",
+      "queueDisposition": "Proposed need only; no narrow current serverConnection fix found. No queue edits or overlapping source writers."
+    },
+    {
+      "id": "N2",
+      "owner": "existing ConnectPage owner plus parent layout/catalog serialization",
+      "files": [
+        "web\\src\\features\\server\\ConnectPage.tsx",
+        "web\\src\\features\\server\\ConnectPage.test.tsx"
+      ],
+      "confirmed": [
+        "SC-003",
+        "SC-005"
+      ],
+      "candidates": [
+        "SCC-001"
+      ],
+      "need": "Truthful localized requirement label; N1 caller adoption; explicit standalone PageContainer exception/adoption decision. Preserve six regions/no duplicate chrome/no fake health. Catalog owner separate serialized parent, not this page claim.",
+      "catalogCandidates": [
+        {
+          "key": "serverConnect.connect.tokenLabelOptional",
+          "fallback": "Access token (optional)"
+        },
+        {
+          "key": "serverConnect.connect.tokenLabelRequired",
+          "fallback": "Access token (required)"
+        }
+      ],
+      "queueDisposition": "Do not reopen completed phase5-page-server-connect; new narrow approved followup only."
+    },
+    {
+      "id": "N3",
+      "owner": "existing shared PageHeader owner",
+      "files": [
+        "web\\src\\components\\layout\\PageHeader.tsx",
+        "web\\src\\components\\layout\\PageHeader.test.tsx"
+      ],
+      "confirmed": [
+        "SC-004"
+      ],
+      "need": "Below-md44px source declaration plus covering authored assertion; runtime hit rectangles separate. Do not patch page or reopen completed mobile equivalence fixture.",
+      "queueDisposition": "No narrow current target row found; historical objective deduplicated."
+    },
+    {
+      "id": "N4",
+      "owner": "parent-approved bounded native/a11y/trust acceptance owner",
+      "files": [],
+      "confirmed": [],
+      "candidates": [
+        "SCC-003",
+        "SCC-004",
+        "SCC-005"
+      ],
+      "need": "Future approved synthetic-only short-height/keyboard/focus/contrast/forced-colors/theme/font/RTL/motion/candidate trust matrix. No browser lock, network/token/server actions authorized here.",
+      "queueDisposition": "Acceptance open; historical15 tests/five masked PNGs not fresh acceptance."
+    }
+  ],
+  "sectionActionMatrix": [
+    {
+      "section": "standalone shell/header",
+      "lines": "113-120",
+      "status": "always rendered",
+      "actions": "Localized title/document title and compact More info. No copyLink prop. SC-005 wrapper guideline disposition."
+    },
+    {
+      "section": "server selection",
+      "lines": "55,71-77,122-135",
+      "status": "always rendered",
+      "actions": "Controlled input from saved normalized origin, URL keyboard/autofocus; six rejection categories. No server dropdown/health polling/workspace vehicle/range."
+    },
+    {
+      "section": "token entry",
+      "lines": "56,82,95-101,136-149",
+      "status": "always rendered",
+      "actions": "Empty initial masked token/no saved-token disclosure; guidance/field feedback. SC-003 optional vs known-required label."
+    },
+    {
+      "section": "auth/readiness guidance",
+      "lines": "57,84-99,150-154",
+      "status": "conditional outcome caption, not hidden data panel",
+      "actions": "Forward-auth requirement only; no invented online/health status. SC-001 unsupported mode."
+    },
+    {
+      "section": "validation/feedback",
+      "lines": "24-49,58-62,67-77,83-99,105-109,155-159",
+      "status": "form retained and one alert when present",
+      "actions": "Field ownership aria-invalid/described-by plus hints; missing/rejected token distinction; storage guidance. SC-002 generic transport."
+    },
+    {
+      "section": "connect/commit",
+      "lines": "64-111,160-164",
+      "status": "always rendered",
+      "actions": "Submit only; synchronous duplicate guard and busy locks both fields/button; localized Connecting/aria-busy. Success-only save/full reload. No separate cancel/disconnect/export/copy/confirmation action."
+    }
+  ],
+  "stateMatrix": {
+    "initial": "Saved accepted origin or blank; token empty, hint/error null, idle. No eager mount probe. Blank configuration is actionable setup, not fake zero/empty telemetry.",
+    "loading": "Imperative user-initiated operation; helper10s abort. inFlight duplicate guard; both inputs disabled; submit loading/aria-busy/localized label. Existing test114 covers fixed candidate/retry values, NOTRUN.",
+    "fatal": "No query fatalError or full-content replacement. URL/token/transport/storage failure preserves shell/form/actions. Render-fatal route boundary mounted acceptance NOTRUN.",
+    "retained": "Entered server/token survive normal failure. Prior origin unaffected before persistence. Late storage coherence only SCC-002, not verified atomic.",
+    "initialPaused": "No Query observer/fetchStatus paused or confirm stream; not applicable to this setup form. Do not fabricate paused dataset/health. Offline attempt currently shares generic transport failure SC-002.",
+    "unknown": "No auth mode before submit is unknown, not offline. Unsupported nonempty returned mode wrongly accepted SC-001. Transport cause remains unknown; do not assert CORS/TLS/offline.",
+    "validation": "Pure origin validator rejects empty/unsupported scheme/unparseable/missing host/credentials/subpath, translated before probe. Existing defaults allow missing scheme HTTPS and explicit LAN HTTP; query/fragment removal to origin preserved.",
+    "confirmation": "User submit is intentional probe/save. No intermediate ConfirmDialog; no device/destructive command or proven prior confirmation mandate. Candidate trust review SCC-005 unproved.",
+    "success": "Probe ok plus exact forward_auth token check before existing persistence then full root reload, preserving origin-wide reboot not hot-swap. Not proof of server identity/all permissions.",
+    "preferences": "No theme/font/unit/timezone/currency/consent/table/chart preference setters/resets. Session token/local origin/required marker only at existing owner. Fixed desktop size md retained; real reload/provider/prefs behavior NOTRUN.",
+    "scopeIdentity": "Standalone /connect; native needsServerSetup and manual ?connect=1. Candidate separate from saved origin until commit. Empty initial token, opaque locale-independent Input useId/errorId. No duplicate range/vehicle/local scope.",
+    "copyFeedback": "22 canonical serverConnect keys present; fallback/REJECTION_COPY through t. One alert; mode caption on requirement outcome. No page copyLink/clipboard action; generic PageHeader copy tests do not add page capability."
+  },
+  "engineeringAudit": {
+    "byRule": {
+      "static-inline-style": 0,
+      "raw-html": 0,
+      "direct-library-import": 0,
+      "old-api-import": 0,
+      "double-prefix": 0,
+      "camelcase-param": 0,
+      "hidden-section": 0,
+      "hardcoded-string": 0,
+      "missing-page-container": 1,
+      "fetch-useeffect": 0
+    },
+    "rawMatches": {
+      "staticInlineStyle": 1,
+      "rawHtmlCorrected": 2,
+      "directLibraryImport": 0,
+      "oldApiImport": 0,
+      "apiPrefix": 2,
+      "camelcaseCorrected": 0,
+      "hiddenGlassPanel": 0,
+      "hardcodedJsxCandidate": 1,
+      "fetchOrUseEffect": 5,
+      "pageContainerPresence": 0
+    },
+    "exceptions": [
+      "Tooltip.tsx263-266 style derives measured translate/maxWidth via conditional spreads; dynamic, not static-inline-style.",
+      "Input.tsx87/Button.tsx64 native controls are allowed shared primitives. Initial case-insensitive/EOL scan wrong candidate retained; corrected case-sensitive grep got two allowed native tags.",
+      "serverConnection.ts156 comment/266 absolute candidate-origin fetch require full prefix, do not call auto-prefixed request/hook; no double prefix.",
+      "Initial case-insensitive camel regex matched lowercase connect comment225; corrected case-sensitive grep0. Manual connect override is lowercase, not camel.",
+      "Tooltip.tsx223 Save is a comment example, not rendered English. All page visible fallback/REJECTION_COPY strings translate.",
+      "ServerGate19 redirect effect, Tooltip156/211 interaction/diagnostic effects, usePageTitle24 title effect are not data fetch. serverConnection266 accepted imperative unsaved-origin setup boundary, not normal cache/query data loading.",
+      "modeHint150/error155 are conditional outcome feedback; shell/form stay rendered. Named Lucide through Icon allowed MDC-016."
+    ],
+    "backendRules": "NOT_APPLICABLE: no assigned internal Go files",
+    "scanLimits": "Regex candidates plus manual full production source inspection; not AST/global lint/compiler. Source10 counts exclude test fixture strings."
+  },
+  "sourceAccessibility": {
+    "declarations": [
+      "Semantic form submit; localized h1/document title and h1 route-focus/tabIndex-1.",
+      "Input label/useId; alert association merged with hints; responsible invalid fields; token masked/autocomplete off; one stable page alert.",
+      "Button native/loading/disabled/aria-busy, decorative spinner and reduced-motion safety; decorative Icons.",
+      "Inputs/submit min-h-11 below md; wrapLabel h-auto/whitespace-normal; w-full max-w-md panel p4/smp6.",
+      "Compact subtitle Tooltip focus/Escape/described-by and dynamic horizontal correction; neutral panel/focus/forced-color roles."
+    ],
+    "limits": "Declarations/assertions only; no actual screen reader/tab order/native focus/composed contrast/OS forced colors. SC-004 remains."
+  },
+  "mobileAcceptance": {
+    "requiredWidths": [
+      320,
+      375,
+      390,
+      430,
+      768,
+      1024,
+      1280,
+      1440,
+      1920,
+      2560
+    ],
+    "status": "NOTRUN",
+    "openMatrix": [
+      "640-767 target",
+      "short-height/native keyboard/rotation/safe areas",
+      "200% text/root scaling, long labels/URLs/errors",
+      "RTL",
+      "dark/light/saved custom modes",
+      "forced colors/composed contrast",
+      "reduced motion/low bandwidth",
+      "native restart/manual-switch focus and trust"
+    ],
+    "historical": "Phase5 row2150 cites15/15 scoped tests/five masked PNGs and original helper fixture FAIL. Inherited only; no fresh pass/full-device acceptance/helper rerun."
+  },
+  "testEvidence": {
+    "status": "READ_ONLY_DECLARATIONS_NOTRUN",
+    "pageDeclarationMath": "12 declaration sites; it.each97 has4 rows giving15 authored source cases, NOT runner discovery or execution. Helper has30 sites; no expanded helper case total claimed.",
+    "coveredDeclarations": [
+      "field/header/autofocus/keyboard help",
+      "URL rejection and one alert/field associations",
+      "duplicate submit/locked candidate/retained failure",
+      "mobile class/masking declaration",
+      "open/forward_auth persistence and reload",
+      "generic unreachable/missing-rejected key",
+      "immediate storage denial",
+      "helper origin/storage/session/native/cookie/installation identity/probe omission"
+    ],
+    "gaps": [
+      "unsupported and whitespace modes",
+      "observable failure/timeout reasons",
+      "unmount late settlement",
+      "late-write storage fault",
+      "truthful required label",
+      "640-767 measured target/composed/native matrix"
+    ],
+    "directTestPins": "10 test files listed in sourcePins; declarations read, none executed. Generic PageHeader clipboard scenarios are not ConnectPage copy actions.",
+    "historical": "No passing reruns; predecessor15/15 is inherited only; original helper capture FAIL preserved."
+  },
+  "routeDeclarations": [
+    {
+      "file": "web\\src\\App.tsx",
+      "line": 11,
+      "source": "import { ServerGate } from '@/features/server/ServerGate'"
+    },
+    {
+      "file": "web\\src\\App.tsx",
+      "line": 356,
+      "source": "const ConnectPage = lazy(routeLoaders.ConnectPage)"
+    },
+    {
+      "file": "web\\src\\App.tsx",
+      "line": 529,
+      "source": "<ServerGate />"
+    },
+    {
+      "file": "web\\src\\App.tsx",
+      "line": 568,
+      "source": "<Route path=\"connect\" element={<SafeRoute name=\"Connect\"><ConnectPage /></SafeRoute>} />"
+    }
+  ],
+  "verification": {
+    "status": "JSON_PARSE_COUNTS_REFERENCES_LINE_BOUNDS_AND_23_FRESH_PINS_PASS",
+    "checkedAt": "2026-10-14T02:38:59.361085+00:00",
+    "parseExit": 0,
+    "pinExit": 0,
+    "pinsMatched": 23,
+    "countsExit": 0,
+    "beforeReturnDeadline": true,
+    "sourceTestsCatalogUnchanged": true,
+    "scope": "read-only document/hash evidence only, not tests/lint/build/tsc/runtime"
+  }
+}
