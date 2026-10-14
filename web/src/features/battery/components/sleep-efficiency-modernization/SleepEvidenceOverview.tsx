@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next';
+import type { DataState } from '@/api/dataState';
 import { type StatMetric } from '@/components/data-display/stat-reference';
 import { BatteryEvidenceBrief } from '../operationalbrief-all/BatteryEvidenceBrief';
 import { AlertBanner, QueryError } from '@/components/feedback';
@@ -7,10 +8,14 @@ import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import type { StatPeriod } from '@/lib/metric-reference';
 import type { SleepEfficiencySectionProps } from '../sleep-efficiency';
 
-export function SleepEvidenceOverview({ analysis, state }: SleepEfficiencySectionProps) {
+export function SleepEvidenceOverview({ analysis, state, trust }: SleepEfficiencySectionProps & {
+  trust: Pick<DataState<unknown>, 'hasData' | 'status' | 'isRefreshBlocked'>;
+}) {
   const { t } = useTranslation();
   const { fmtInt, fmtNumber } = useNumberFormatting();
-  const hasResponse = analysis.source.hasResponse;
+  const hasResponse = state.vehicleSelected && trust.hasData && analysis.source.hasResponse;
+  const loading = state.vehicleSelected && state.isLoading && !trust.hasData && !trust.isRefreshBlocked;
+  const retained = trust.hasData && (trust.status !== 'ok' || Boolean(state.refreshError));
   const rangeValue = analysis.range.status === 'valid'
     && analysis.range.requestedStart && analysis.range.requestedEnd
     ? t('sleep.kpi.rangeValue', '{{start}} to {{end}} UTC', {
@@ -42,7 +47,7 @@ export function SleepEvidenceOverview({ analysis, state }: SleepEfficiencySectio
     },
     {
       metricId: 'percent', occurrenceId: 'sleep-asleep-count-share',
-      rawValue: analysis.transitions.asleepShare != null
+      rawValue: hasResponse && analysis.transitions.asleepShare != null
         ? analysis.transitions.asleepShare * 100 : null,
       display: { formatter: raw => ({ value: t('sleep.kpi.percentValue', '{{value}}%', { value: fmtNumber(raw) }), unit: '' }) },
       label: t('sleep.kpi.asleepTransitionShare', 'Asleep-transition share'),
@@ -51,7 +56,7 @@ export function SleepEvidenceOverview({ analysis, state }: SleepEfficiencySectio
     },
     {
       metricId: 'percent', occurrenceId: 'sleep-duration-efficiency',
-      rawValue: analysis.dwell.recomputedEfficiencyPct,
+      rawValue: hasResponse ? analysis.dwell.recomputedEfficiencyPct : null,
       display: { formatter: raw => ({ value: t('sleep.kpi.percentValue', '{{value}}%', { value: fmtNumber(raw) }), unit: '' }) },
       label: t('sleep.kpi.durationEfficiency', 'Duration-based sleep efficiency'),
       description: t('sleep.kpi.durationEfficiency', 'Duration-based sleep efficiency'),
@@ -61,7 +66,7 @@ export function SleepEvidenceOverview({ analysis, state }: SleepEfficiencySectio
     },
     {
       metricId: 'duration', occurrenceId: 'sleep-average-time-to-sleep',
-      rawValue: analysis.dwell.timeToSleepAvgMin != null
+      rawValue: hasResponse && analysis.dwell.timeToSleepAvgMin != null
         ? analysis.dwell.timeToSleepAvgMin * 60 : null,
       display: { formatter: raw => ({ value: t('sleep.kpi.minutesValue', '{{value}} min', { value: fmtNumber(raw / 60) }), unit: '' }) },
       label: t('sleep.kpi.averageTimeToSleep', 'Average time-to-sleep'),
@@ -95,23 +100,39 @@ export function SleepEvidenceOverview({ analysis, state }: SleepEfficiencySectio
   return (
     <section data-testid="sleep-efficiency-kpi-evidence">
       <LayoutCard title={t('sleep.kpi.title', 'Evidence overview')}>
-        {state.error ? (
+        {state.error && !trust.hasData ? (
           <div data-testid="sleep-query-initial-error">
             <QueryError error={state.error} onRetry={state.onRetry} />
           </div>
         ) : (
           <>
             <div
-              role={state.isLoading ? 'status' : undefined}
-              aria-label={state.isLoading ? t('sleep.states.loadingAria', 'Loading sleep evidence') : undefined}
+              role={loading ? 'status' : undefined}
+              aria-label={loading ? t('sleep.states.loadingAria', 'Loading sleep evidence') : undefined}
             >
               <BatteryEvidenceBrief
                 id="sleep-efficiency-evidence"
                 title={t('sleep.kpi.title', 'Evidence overview')}
                 metrics={metrics}
                 period={period}
-                loading={state.isLoading}
-                retained={Boolean(state.refreshError)}
+                loading={loading}
+                hasEvidence={hasResponse && analysis.source.hasEvidence}
+                retained={retained}
+                secondary={!state.vehicleSelected
+                  ? t('sleep.states.noVehicle', 'Select a vehicle to load its sleep evidence.')
+                  : trust.hasData && state.refreshError
+                    ? t(
+                      'sleep.states.refreshError',
+                      'Sleep evidence could not refresh. Showing the most recently loaded response and its existing evidence gates.',
+                    )
+                    : trust.hasData && trust.isRefreshBlocked
+                      ? t('dataSources.status.paused', 'Refresh paused')
+                      : !hasResponse && trust.isRefreshBlocked
+                        ? t(
+                          'sleep.modernization.states.initialPaused',
+                          'Sleep evidence has not loaded because the request is paused. No drain or sleep-health conclusion is available.',
+                        )
+                        : undefined}
               />
             </div>
             {!state.vehicleSelected && (
