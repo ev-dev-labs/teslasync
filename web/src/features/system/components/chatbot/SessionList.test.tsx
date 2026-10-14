@@ -26,14 +26,40 @@
  * arrive through props). `react-i18next` is pinned to return the developer
  * fallback string, interpolating `{{count}}` so the message-count line resolves
  * to a concrete value and every `aria-label` gets a real accessible name.
- * Interactions use `fireEvent` — the repo's established convention
- * (`@testing-library/user-event` is not a dependency).
+ * Keyboard/pointer flows use user-event; branch checks also use fireEvent.
+ * These are jsdom interaction/source checks, not measured native hitboxes.
  */
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 
 import { SessionList } from './SessionList';
 import type { ChatSessionInfo } from '@/api/types';
+
+const preferences = vi.hoisted(() => ({
+  locale: 'en-US',
+  tz_display_default: 'user' as 'user' | 'vehicle' | 'utc',
+  timezone_user: 'America/Los_Angeles',
+  vehicleTimezone: 'Asia/Tokyo',
+}));
+
+vi.mock('@/hooks/useSettings', () => ({
+  useSettings: () => ({ settings: preferences, locale: preferences.locale }),
+}));
+vi.mock('@/hooks/useSelectedVehicle', () => ({
+  useSelectedVehicle: () => ({ vehicle: { timezone: preferences.vehicleTimezone } }),
+}));
+// Exercise the real saved-mode resolver rather than setup's fixed UTC stub.
+vi.unmock('@/lib/timezone');
+
+beforeEach(() => {
+  Object.assign(preferences, {
+    locale: 'en-US',
+    tz_display_default: 'user',
+    timezone_user: 'America/Los_Angeles',
+    vehicleTimezone: 'Asia/Tokyo',
+  });
+});
 
 // i18n → return the developer fallback string, interpolating {{vars}} so the
 // message-count line and every aria-label resolve to concrete strings.
@@ -294,5 +320,187 @@ describe('SessionList', () => {
     expect(screen.getByRole('button', { name: 'Delete conversation' })).toBeInTheDocument();
     fireEvent.doubleClick(screen.getByText('Rename me'));
     expect(screen.queryByRole('button', { name: 'Delete conversation' })).toBeNull();
+  });
+
+  it('exposes named rename/delete controls without hover and keeps actions outside selection', () => {
+    const { onSelect, onDelete, onRename } = renderList();
+    const rename = screen.getByRole('button', { name: 'Rename conversation' });
+    const remove = screen.getByRole('button', { name: 'Delete conversation' });
+
+    for (const action of [rename, remove]) {
+      expect(action).toBeVisible();
+      expect(action).not.toHaveClass('opacity-0', 'absolute');
+      expect(action.closest('button')).toBe(action);
+      expect(action).toHaveAccessibleDescription('Trip planning');
+      expect(action).toHaveClass('min-h-11', 'min-w-11', 'md:min-h-9', 'md:min-w-9');
+    }
+    fireEvent.click(rename);
+    expect(screen.getByRole('textbox', { name: 'Rename conversation' })).toHaveFocus();
+    expect(onSelect).not.toHaveBeenCalled();
+    expect(onRename).not.toHaveBeenCalled();
+    expect(onDelete).not.toHaveBeenCalled();
+  });
+
+  it('supports keyboard-only rename, Enter save and focus return to the named action', async () => {
+    const user = userEvent.setup();
+    const { onRename, onSelect } = renderList();
+
+    await user.tab();
+    expect(screen.getByRole('button', { name: 'New chat' })).toHaveFocus();
+    await user.tab();
+    expect(screen.getByText('Trip planning').closest('button')).toHaveFocus();
+    await user.tab();
+    expect(screen.getByRole('button', { name: 'Rename conversation' })).toHaveFocus();
+    await user.keyboard('{Enter}');
+    const input = screen.getByRole('textbox', { name: 'Rename conversation' });
+    expect(input).toHaveFocus();
+    await user.clear(input);
+    await user.type(input, 'Keyboard title{Enter}');
+
+    expect(onRename).toHaveBeenCalledExactlyOnceWith('s1', 'Keyboard title');
+    expect(onSelect).not.toHaveBeenCalled();
+    expect(screen.getByRole('button', { name: 'Rename conversation' })).toHaveFocus();
+  });
+
+  it('supports touch rename and Save without selecting or submitting twice', async () => {
+    const user = userEvent.setup();
+    const { onRename, onSelect } = renderList();
+
+    await user.pointer([
+      { keys: '[TouchA>]', target: screen.getByRole('button', { name: 'Rename conversation' }) },
+      { keys: '[/TouchA]' },
+    ]);
+    const input = screen.getByRole('textbox', { name: 'Rename conversation' });
+    await user.clear(input);
+    await user.type(input, 'Touch title');
+    const save = screen.getByRole('button', { name: 'Save' });
+    const cancel = screen.getByRole('button', { name: 'Cancel' });
+    for (const control of [input, save, cancel]) {
+      expect(control).toHaveClass('min-h-11', 'md:min-h-9');
+    }
+    await user.pointer([{ keys: '[TouchB>]', target: save }, { keys: '[/TouchB]' }]);
+
+    expect(onRename).toHaveBeenCalledExactlyOnceWith('s1', 'Touch title');
+    expect(onSelect).not.toHaveBeenCalled();
+    expect(screen.queryByRole('textbox')).toBeNull();
+  });
+
+  it('does not blur-save when tabbing to Cancel, and restores focus after cancellation', async () => {
+    const user = userEvent.setup();
+    const { onRename } = renderList();
+
+    await user.click(screen.getByRole('button', { name: 'Rename conversation' }));
+    await user.type(screen.getByRole('textbox', { name: 'Rename conversation' }), ' change');
+    await user.tab();
+    expect(screen.getByRole('button', { name: 'Save' })).toHaveFocus();
+    expect(onRename).not.toHaveBeenCalled();
+    await user.tab();
+    await user.keyboard(' ');
+
+    expect(onRename).not.toHaveBeenCalled();
+    expect(screen.getByRole('button', { name: 'Rename conversation' })).toHaveFocus();
+  });
+
+  it('supports pointer Cancel without committing the input on blur', async () => {
+    const user = userEvent.setup();
+    const { onRename } = renderList();
+
+    await user.click(screen.getByRole('button', { name: 'Rename conversation' }));
+    await user.type(screen.getByRole('textbox', { name: 'Rename conversation' }), ' changed');
+    await user.click(screen.getByRole('button', { name: 'Cancel' }));
+
+    expect(onRename).not.toHaveBeenCalled();
+    expect(screen.getByText('Trip planning')).toBeInTheDocument();
+  });
+
+  it('seeds named rename with the complete first message and never seeds the untitled label', () => {
+    const first = 'Full question '.repeat(20);
+    const view = renderList({
+      sessions: [makeSession({ title: null, first_message: first })],
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Rename conversation' }));
+    expect(screen.getByRole('textbox')).toHaveValue(first.trim());
+
+    view.unmount();
+    renderList({ sessions: [makeSession({ title: ' ', first_message: null })] });
+    fireEvent.click(screen.getByRole('button', { name: 'Rename conversation' }));
+    expect(screen.getByRole('textbox')).toHaveValue('');
+  });
+
+  it('retains the full first-message title and destructive confirmation before delete', async () => {
+    const user = userEvent.setup();
+    const first = 'A full conversation title '.repeat(12).trim();
+    const { onDelete } = renderList({
+      sessions: [makeSession({ id: 'long-title', title: null, first_message: first })],
+    });
+    await user.click(screen.getByRole('button', { name: 'Delete conversation' }));
+    const dialog = screen.getByRole('dialog', { name: 'Delete conversation?' });
+
+    expect(within(dialog).getByText(first)).toBeInTheDocument();
+    expect(within(dialog).getByText(
+      'This will permanently remove this conversation and all its messages.',
+    )).toBeInTheDocument();
+    expect(within(dialog).getByRole('button', { name: 'Delete' })).toHaveClass(
+      'text-[var(--semantic-danger)]', 'min-h-11',
+    );
+    expect(onDelete).not.toHaveBeenCalled();
+    await user.keyboard('{Escape}');
+    expect(onDelete).not.toHaveBeenCalled();
+    expect(screen.getByRole('button', { name: 'Delete conversation' })).toHaveFocus();
+
+    await user.keyboard('{Enter}');
+    await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Delete' }));
+    expect(onDelete).toHaveBeenCalledExactlyOnceWith('long-title');
+  });
+
+  it('keeps New chat and session selection at existing mobile minima in source', () => {
+    renderList();
+    expect(screen.getByRole('button', { name: 'New chat' })).toHaveClass(
+      'min-h-11', 'min-w-11', 'md:min-h-9', 'md:min-w-0',
+    );
+    expect(screen.getByText('Trip planning').closest('button')).toHaveClass(
+      'min-h-11', 'md:min-h-9', 'min-w-0', 'flex-1',
+    );
+  });
+
+  it.each([
+    { mode: 'user', locale: 'fr-FR', tz: 'America/Los_Angeles' },
+    { mode: 'vehicle', locale: 'de-DE', tz: 'Asia/Tokyo' },
+    { mode: 'utc', locale: 'en-GB', tz: 'UTC' },
+  ] as const)('uses saved $mode timezone/$locale for old-session fallback dates', ({ mode, locale, tz }) => {
+    const timestamp = '2026-06-01T00:30:00Z';
+    const now = vi.spyOn(Date, 'now').mockReturnValue(Date.parse('2026-06-20T12:00:00Z'));
+    preferences.locale = locale;
+    preferences.tz_display_default = mode;
+    const session = makeSession({ last_message_at: timestamp });
+    renderList({ sessions: [session] });
+
+    const expected = new Intl.DateTimeFormat(locale, {
+      timeZone: tz, year: 'numeric', month: 'short', day: 'numeric',
+    }).format(new Date(timestamp));
+    expect(screen.getByText(/msgs/)).toHaveTextContent(expected);
+    expect(session.last_message_at).toBe(timestamp);
+    now.mockRestore();
+  });
+
+  it('responds to saved timezone changes without rewriting the session timestamp', () => {
+    const timestamp = '2026-06-01T00:30:00Z';
+    const now = vi.spyOn(Date, 'now').mockReturnValue(Date.parse('2026-06-20T12:00:00Z'));
+    const session = makeSession({ last_message_at: timestamp });
+    const callbacks = { onSelect: vi.fn(), onNewChat: vi.fn(), onRename: vi.fn(), onDelete: vi.fn() };
+    const view = render(
+      <SessionList sessions={[session]} activeSessionId="" {...callbacks} />,
+    );
+    expect(screen.getByText(/msgs/)).toHaveTextContent('May 31, 2026');
+    preferences.timezone_user = 'Asia/Tokyo';
+    view.rerender(<SessionList sessions={[session]} activeSessionId="" {...callbacks} />);
+    expect(screen.getByText(/msgs/)).toHaveTextContent('Jun 1, 2026');
+    expect(session.last_message_at).toBe(timestamp);
+    now.mockRestore();
+  });
+
+  it('keeps invalid last-message timestamps unknown rather than fabricating a date', () => {
+    renderList({ sessions: [makeSession({ last_message_at: 'not-a-date' })] });
+    expect(screen.getByText(/msgs/)).toHaveTextContent('— · 3 msgs');
   });
 });

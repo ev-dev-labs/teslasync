@@ -1,10 +1,10 @@
-import { useState, useRef, useEffect, type KeyboardEvent } from 'react';
+import { useState, useRef, useEffect, useId, type KeyboardEvent } from 'react';
 import { useTranslation } from 'react-i18next';
-import { MessageSquare, Plus, Trash2 } from 'lucide-react';
-import { Button, ConfirmDialog, GlassPanel, Input, Text } from '@/components/ui';
+import { MessageSquare, Pencil, Plus, Trash2 } from 'lucide-react';
+import { Button, ConfirmDialog, GlassPanel, Icon, Input, Text } from '@/components/ui';
 import { EmptyState } from '@/components/feedback';
 import { cn } from '@/lib/cn';
-import { formatRelative } from '@/lib/dateFormat';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import type { ChatSessionInfo } from '@/api/types';
 
 interface SessionListProps {
@@ -24,7 +24,8 @@ interface SessionListProps {
  * Behaviors:
  *   - "New chat" button always visible at the top.
  *   - Active session gets a highlighted surface.
- *   - Double-click a row title → inline rename (Enter saves, Esc cancels).
+ *   - Named rename action or double-click → inline rename.
+ *   - Enter/Save saves; Escape/Cancel cancels; leaving the editor saves.
  *   - Delete button → ConfirmDialog before mutating.
  *   - Empty state via the shared `<EmptyState>`.
  */
@@ -39,15 +40,22 @@ export function SessionList({
   className,
 }: SessionListProps) {
   const { t } = useTranslation();
+  const { formatRelative } = useDateFormat();
+  const titleId = useId();
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameDraft, setRenameDraft] = useState('');
   const [pendingDelete, setPendingDelete] = useState<ChatSessionInfo | null>(null);
   const renameInputRef = useRef<HTMLInputElement>(null);
+  const renameButtonsRef = useRef(new Map<string, HTMLButtonElement>());
+  const restoreRenameFocusRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (renamingId && renameInputRef.current) {
       renameInputRef.current.focus();
       renameInputRef.current.select();
+    } else if (!renamingId && restoreRenameFocusRef.current) {
+      renameButtonsRef.current.get(restoreRenameFocusRef.current)?.focus();
+      restoreRenameFocusRef.current = null;
     }
   }, [renamingId]);
 
@@ -59,16 +67,18 @@ export function SessionList({
     setRenameDraft(editableTitle(session));
   };
 
-  const commitRename = () => {
+  const commitRename = (restoreFocus = false) => {
     if (!renamingId) return;
     const trimmed = renameDraft.trim();
     if (trimmed) {
       onRename(renamingId, trimmed);
     }
+    restoreRenameFocusRef.current = restoreFocus ? renamingId : null;
     setRenamingId(null);
   };
 
   const cancelRename = () => {
+    restoreRenameFocusRef.current = renamingId;
     setRenamingId(null);
     setRenameDraft('');
   };
@@ -76,7 +86,7 @@ export function SessionList({
   const handleRenameKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
       e.preventDefault();
-      commitRename();
+      commitRename(true);
     } else if (e.key === 'Escape') {
       e.preventDefault();
       cancelRename();
@@ -91,8 +101,9 @@ export function SessionList({
             onClick={onNewChat}
             variant="primary"
             size="sm"
-            icon={<Plus className="h-4 w-4" />}
-            className="w-full"
+            icon={<Icon icon={Plus} size="md" />}
+            wrapLabel
+            className="w-full min-h-11 min-w-11 md:min-h-9 md:min-w-0"
           >
             {t('chatbot.newChat', 'New chat')}
           </Button>
@@ -127,24 +138,53 @@ export function SessionList({
                 <div
                   key={session.id}
                   className={cn(
-                    'group relative rounded-lg border transition-colors',
+                    'flex min-w-0 items-start rounded-lg border transition-colors',
                     isActive
-                      ? 'bg-[var(--surface-2)] border-purple-500/30'
+                      ? 'bg-[var(--surface-2)] border-[var(--control-border-hover)]'
                       : 'border-transparent hover:bg-[var(--surface-1)]',
                   )}
                 >
                   {isRenaming ? (
-                    <div className="p-2 flex items-center gap-1">
+                    <div
+                      className="min-w-0 w-full p-2 space-y-2"
+                      onBlur={(e) => {
+                        // Moving to Save/Cancel is still inside this editor.
+                        if (!e.currentTarget.contains(e.relatedTarget)) commitRename();
+                      }}
+                    >
                       <Input
                         ref={renameInputRef}
                         value={renameDraft}
                         onChange={(e) => setRenameDraft(e.target.value)}
                         onKeyDown={handleRenameKeyDown}
-                        onBlur={commitRename}
                         size="sm"
+                        className="min-h-11 md:min-h-9"
+                        label={t('chatbot.rename.placeholder', 'Conversation name')}
                         placeholder={t('chatbot.rename.placeholder', 'Conversation name')}
                         aria-label={t('chatbot.aria.renameSession', 'Rename conversation')}
                       />
+                      <div className="flex flex-wrap gap-2">
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="secondary"
+                          wrapLabel
+                          className="min-h-11 min-w-11 md:min-h-9 md:min-w-0"
+                          onClick={() => commitRename(true)}
+                        >
+                          {t('common.save', 'Save')}
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="ghost"
+                          wrapLabel
+                          className="min-h-11 min-w-11 md:min-h-9 md:min-w-0"
+                          onClick={cancelRename}
+                        >
+                          {t('common.cancel', 'Cancel')}
+                        </Button>
+                      </div>
                     </div>
                   ) : (
                     <Button
@@ -153,24 +193,19 @@ export function SessionList({
                       size="sm"
                       onClick={() => onSelect(session.id)}
                       onDoubleClick={() => startRename(session)}
-                      className={cn(
-                        'h-auto w-full items-start px-3 py-2 pr-8 text-left rounded-lg flex-col gap-0.5',
-                        'focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-500/40',
-                      )}
+                      className="h-auto min-h-11 min-w-0 flex-1 items-start px-3 py-2 text-start rounded-lg flex-col gap-0.5 md:min-h-9"
                       aria-current={isActive ? 'true' : undefined}
                       title={t('chatbot.aria.doubleClickRename', 'Double-click to rename')}
                     >
                       <Text
+                        id={`${titleId}-${session.id}`}
                         size="xs"
                         weight="medium"
-                        className={cn(
-                          'truncate',
-                          isActive ? 'text-purple-200' : 'text-[var(--text-primary)]',
-                        )}
+                        className="w-full truncate"
                       >
                         {displayTitle(session, t)}
                       </Text>
-                      <Text size="2xs" color="muted" className="truncate">
+                      <Text size="xs" color="muted" className="max-w-full break-words">
                         {session.last_message_at
                           ? formatRelative(session.last_message_at)
                           : t('chatbot.session.empty', 'Empty')}
@@ -183,24 +218,36 @@ export function SessionList({
                   )}
 
                   {!isRenaming && (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setPendingDelete(session);
-                      }}
-                      className={cn(
-                        'absolute top-1.5 right-1.5 h-auto p-1.5 rounded',
-                        'opacity-0 group-hover:opacity-100 focus:opacity-100',
-                        'text-[var(--text-muted)] hover:text-rose-300 hover:bg-rose-500/10',
-                        'focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-500/40',
-                      )}
-                      aria-label={t('chatbot.aria.deleteSession', 'Delete conversation')}
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </Button>
+                    <div className="flex shrink-0 gap-1 p-1">
+                      <Button
+                        ref={(button) => {
+                          if (button) renameButtonsRef.current.set(session.id, button);
+                          else renameButtonsRef.current.delete(session.id);
+                        }}
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => startRename(session)}
+                        className="min-h-11 min-w-11 px-2 md:min-h-9 md:min-w-9"
+                        aria-label={t('chatbot.aria.renameSession', 'Rename conversation')}
+                        aria-describedby={`${titleId}-${session.id}`}
+                        title={t('chatbot.aria.renameSession', 'Rename conversation')}
+                      >
+                        <Icon icon={Pencil} size="sm" />
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setPendingDelete(session)}
+                        className="min-h-11 min-w-11 px-2 md:min-h-9 md:min-w-9 text-[var(--semantic-danger)]"
+                        aria-label={t('chatbot.aria.deleteSession', 'Delete conversation')}
+                        aria-describedby={`${titleId}-${session.id}`}
+                        title={t('chatbot.aria.deleteSession', 'Delete conversation')}
+                      >
+                        <Icon icon={Trash2} size="sm" />
+                      </Button>
+                    </div>
                   )}
                 </div>
               );
@@ -219,6 +266,11 @@ export function SessionList({
         confirmLabel={t('chatbot.delete.confirm', 'Delete')}
         cancelLabel={t('common.cancel', 'Cancel')}
         variant="danger"
+        details={pendingDelete ? (
+          <Text as="p" variant="bodySm" className="whitespace-pre-wrap break-words">
+            {editableTitle(pendingDelete) || t('chatbot.session.untitled', 'Untitled conversation')}
+          </Text>
+        ) : undefined}
         onConfirm={() => {
           if (pendingDelete) {
             onDelete(pendingDelete.id);
