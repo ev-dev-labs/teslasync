@@ -3,7 +3,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { renderHook, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { request } from '@/api/client';
-import { drivingKeys, useDrives, useDrivingStats } from './useDriving';
+import { drivingKeys, useDrives, useDrivingStats, useDriveHistory } from './useDriving';
+import { useChargingHistory } from './useCharging';
+import { useEnergyStats } from './useEnergy';
 
 vi.mock('@/api/client', () => ({ request: vi.fn() }));
 vi.mock('./_toastHelpers', () => ({
@@ -54,6 +56,70 @@ describe('driving exact-range integration', () => {
       expect(options?.signal).toBeInstanceOf(AbortSignal);
     }
     expect(context.client.getQueryState(drivingKeys.stats('42', { start, end }))?.data).toBe(stats);
+  });
+
+  describe.each([
+    {
+      name: 'drive',
+      useHistory: () => useDriveHistory('42'),
+      key: drivingKeys.history('42'),
+      populated: [{ id: 7, startSocPct: null }, null, { id: 8, startSocPct: 80 }],
+      empty: [],
+      invalid: [null, {}, { rows: [] }, 'unavailable'],
+    },
+    {
+      name: 'charging',
+      useHistory: () => useChargingHistory('42'),
+      key: ['charging-sessions', 'history', '42', 1000],
+      populated: [{ id: 7, startSocPct: null }, null, { id: 8, startSocPct: 20 }],
+      empty: [],
+      invalid: [null, {}, { rows: [] }, 'unavailable'],
+    },
+    {
+      name: 'energy',
+      useHistory: () => useEnergyStats('42'),
+      key: ['energy-stats', '42', 'days:30'],
+      populated: { total_wh: 12000, daily_breakdown: [{ date: '2026-01-01', energy_wh: 12000 }, null] },
+      empty: { total_wh: 0, daily_breakdown: [] },
+      invalid: [null, [], {}, { daily_breakdown: null }, { daily_breakdown: {} }],
+    },
+  ])('$name analytical history shape', ({ useHistory, key, populated, empty, invalid }) => {
+    it.each(invalid.map((payload, index) => ({ payload, index })))(
+      'retains populated cache and reports a failed refresh for malformed shape $index',
+      async ({ payload }) => {
+        mockedRequest.mockResolvedValueOnce(populated).mockResolvedValueOnce(payload);
+        const context = wrapper();
+        const { result } = renderHook(useHistory, { wrapper: context.wrapper });
+        await waitFor(() => expect(result.current.isSuccess).toBe(true));
+        expect(result.current.data).toEqual(populated);
+        await result.current.refetch();
+        await waitFor(() => expect(result.current.isRefetchError).toBe(true));
+        expect(result.current.error?.message).toContain('Invalid');
+        expect(result.current.data).toEqual(populated);
+        expect(context.client.getQueryData(key)).toEqual(populated);
+      },
+    );
+
+    it('accepts a legitimate empty history and preserves every returned row before qualification', async () => {
+      mockedRequest.mockResolvedValueOnce(populated).mockResolvedValueOnce(empty);
+      const context = wrapper();
+      const { result } = renderHook(useHistory, { wrapper: context.wrapper });
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+      expect(result.current.data).toEqual(populated);
+      await result.current.refetch();
+      await waitFor(() => expect(result.current.data).toEqual(empty));
+      expect(result.current.isSuccess).toBe(true);
+      expect(context.client.getQueryData(key)).toEqual(empty);
+    });
+
+    it('reports an initial shape failure without inventing empty data', async () => {
+      mockedRequest.mockResolvedValueOnce(null);
+      const context = wrapper();
+      const { result } = renderHook(useHistory, { wrapper: context.wrapper });
+      await waitFor(() => expect(result.current.isError).toBe(true));
+      expect(result.current.data).toBeUndefined();
+      expect(context.client.getQueryData(key)).toBeUndefined();
+    });
   });
 
   it('refetches and isolates stats cache entries when either bound changes', async () => {

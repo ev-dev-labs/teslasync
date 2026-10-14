@@ -8,6 +8,7 @@ import (
 
 	"github.com/ev-dev-labs/teslasync/internal/api/apiparams"
 	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
+	energymodel "github.com/ev-dev-labs/teslasync/internal/models/energy"
 	"github.com/ev-dev-labs/teslasync/internal/service"
 	"github.com/rs/zerolog/log"
 )
@@ -140,6 +141,10 @@ func parseDaysParam(value string, def int) int {
 // package doc). Do not collapse or re-point them without a coordinated
 // frontend change.
 func energyStatsResponse(stats *service.EnergyStats) map[string]interface{} {
+	dailyBreakdown := stats.DailyBreakdown
+	if dailyBreakdown == nil {
+		dailyBreakdown = []*energymodel.EnergyStatsRow{}
+	}
 	return map[string]interface{}{
 		"vehicle_id":              stats.VehicleID,
 		"period_days":             stats.PeriodDays,
@@ -150,6 +155,6 @@ func energyStatsResponse(stats *service.EnergyStats) map[string]interface{} {
 		"total_distance_m":        stats.TotalDistance,
 		"avg_efficiency_wh_per_m": stats.AvgEfficiency,
 		"co2_saved_kg":            stats.CO2Saved,
-		"daily_breakdown":         stats.DailyBreakdown,
+		"daily_breakdown":         dailyBreakdown,
 	}
 }

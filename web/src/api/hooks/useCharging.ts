@@ -3,6 +3,7 @@ import { request } from '../client';
 import { queryPolicy } from '../queryPolicy';
 import { scopedPath } from '../scope';
 import { safeArray } from '@/lib/safeArray';
+import { validateAnalyticalHistory } from '@/lib/analyticalHistory';
 import { STALE_TIMES, INTERVALS } from '@/lib/constants';
 import { useMutationToast } from './_toastHelpers';
 import { invalidateAndBroadcast } from '@/lib/queryBroadcast';
@@ -77,10 +78,9 @@ export function useChargingHistory(vehicleId?: string, limit = 1000) {
       request<ChargingSession[]>(
         `/charging?vehicle_id=${encodeURIComponent(String(vehicleId))}&limit=${boundedLimit}`,
         { signal },
-      ),
+      ).then((rows) => validateAnalyticalHistory(rows, 'charging')),
     enabled: !!vehicleId,
     staleTime: STALE_TIMES.MODERATE,
-    select: safeArray,
   });
 }
 

@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { request } from '../client';
 import { safeArray } from '@/lib/safeArray';
+import { validateAnalyticalHistory } from '@/lib/analyticalHistory';
 import { INTERVALS, STALE_TIMES } from '@/lib/constants';
 import { useMutationToast } from './_toastHelpers';
 import { invalidateAndBroadcast } from '@/lib/queryBroadcast';
@@ -41,7 +42,14 @@ export function useEnergyStats(
 
   return useQuery({
     queryKey: ['energy-stats', vehicleId, windowKey],
-    queryFn: ({ signal }) => request<EnergyStats>(`/vehicles/${vehicleId}/energy?${query}`, { signal }),
+    queryFn: async ({ signal }) => {
+      const stats = await request<EnergyStats>(`/vehicles/${vehicleId}/energy?${query}`, { signal });
+      if (!stats || typeof stats !== 'object' || Array.isArray(stats)) {
+        throw new Error('Invalid energy history response: expected statistics');
+      }
+      validateAnalyticalHistory(stats.daily_breakdown, 'energy');
+      return stats;
+    },
     enabled: vehicleId !== null,
     staleTime: STALE_TIMES.STANDARD,
   });

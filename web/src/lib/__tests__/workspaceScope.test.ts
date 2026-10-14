@@ -27,6 +27,11 @@ const routedPages = [...appSource.matchAll(
 )].map(([, path, name]) => ({ path: `/${path.replace(/^\/+/, '')}`, name }));
 
 describe('getWorkspaceRouteScope', () => {
+  it('keeps the charge advisor observed-history window independent of the header range', () => {
+    for (const path of ['/charge-advisor', '/charge-advisor/', '/charge-advisor?from=2026-01-01']) {
+      expect(getWorkspaceRouteScope(path)).toEqual({ range: false, vehicle: true });
+    }
+  });
   it('does not scope account-wide energy installations to a vehicle or date range', () => {
     for (const path of ['/energy-products', '/energy-products/', '/energy-products?site_id=42']) {
       expect(getWorkspaceRouteScope(path), path).toEqual({ range: false, vehicle: false });

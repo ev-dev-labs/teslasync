@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { request } from '../client';
 import { safeArray } from '@/lib/safeArray';
+import { validateAnalyticalHistory } from '@/lib/analyticalHistory';
 import { STALE_TIMES, INTERVALS } from '@/lib/constants';
 import { invalidateAndBroadcast } from '@/lib/queryBroadcast';
 import { useMutationToast } from './_toastHelpers';
@@ -148,10 +149,9 @@ export function useDriveHistory(vehicleId?: string, limit = 1000) {
       request<Drive[]>(
         `/drives?vehicle_id=${encodeURIComponent(String(vehicleId))}&limit=${boundedLimit}`,
         { signal },
-      ),
+      ).then((rows) => validateAnalyticalHistory(rows, 'drive')),
     enabled: !!vehicleId,
     staleTime: STALE_TIMES.MODERATE,
-    select: safeArray,
   });
 }
 
