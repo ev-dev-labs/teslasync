@@ -11,6 +11,8 @@ import {
   Text,
 } from '@/components/ui';
 import { cn } from '@/lib/cn';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { isFiniteNumber } from '@/lib/numberFormat';
 
 import {
   COLD_GAP_HOURS,
@@ -38,8 +40,25 @@ export function ColdStartMethodology({
   className,
 }: ColdStartMethodologyProps) {
   const { t } = useTranslation();
-  const classified = summary.cold.drives + summary.warm.drives;
-  const capped = observedDrives >= windowLimit;
+  const { fmtInt } = useNumberFormatting();
+  const formatCount = (value: unknown) => isFiniteNumber(value) ? fmtInt(value) : '—';
+  const classified = isFiniteNumber(summary.cold.drives) && isFiniteNumber(summary.warm.drives)
+    ? summary.cold.drives + summary.warm.drives
+    : null;
+  const capped = isFiniteNumber(observedDrives) && isFiniteNumber(windowLimit)
+    && observedDrives >= windowLimit;
+  const confidenceVariant = state.error
+    ? 'danger'
+    : state.isLoading
+      ? 'neutral'
+      : summary.sampleSufficient ? 'success' : 'warning';
+  const confidenceLabel = state.error
+    ? t('common.unavailable', 'Unavailable')
+    : state.isLoading
+      ? t('coldStart.loading', 'Loading cold-start analysis')
+      : summary.sampleSufficient
+        ? t('coldStart.method.ready', 'Penalty claim supported')
+        : t('coldStart.method.building', 'More samples needed');
 
   return (
     <GlassPanel
@@ -53,10 +72,8 @@ export function ColdStartMethodology({
           <FlaskConical className="h-4 w-4 text-purple-300" aria-hidden="true" />
           {t('coldStart.method.title', 'Confidence & method')}
         </PanelTitle>
-        <Badge variant={summary.sampleSufficient ? 'success' : 'warning'} dot>
-          {summary.sampleSufficient
-            ? t('coldStart.method.ready', 'Penalty claim supported')
-            : t('coldStart.method.building', 'More samples needed')}
+        <Badge variant={confidenceVariant} dot>
+          {confidenceLabel}
         </Badge>
       </div>
 
@@ -74,15 +91,15 @@ export function ColdStartMethodology({
           <div className="flex min-h-64 flex-col justify-between gap-4">
             <div className="grid grid-cols-3 gap-2">
               <div className="rounded-xl bg-[var(--surface-2)] p-3">
-                <MetricValue>{summary.cold.drives}/{MIN_GROUP_DRIVES}</MetricValue>
+                <MetricValue>{formatCount(summary.cold.drives)}/{formatCount(MIN_GROUP_DRIVES)}</MetricValue>
                 <MetricLabel>{t('coldStart.method.coldEvidence', 'Cold evidence')}</MetricLabel>
               </div>
               <div className="rounded-xl bg-[var(--surface-2)] p-3">
-                <MetricValue>{summary.warm.drives}/{MIN_GROUP_DRIVES}</MetricValue>
+                <MetricValue>{formatCount(summary.warm.drives)}/{formatCount(MIN_GROUP_DRIVES)}</MetricValue>
                 <MetricLabel>{t('coldStart.method.warmEvidence', 'Warm evidence')}</MetricLabel>
               </div>
               <div className="rounded-xl bg-[var(--surface-2)] p-3">
-                <MetricValue>{classified}</MetricValue>
+                <MetricValue>{formatCount(classified)}</MetricValue>
                 <MetricLabel>{t('coldStart.method.classified', 'Classified')}</MetricLabel>
               </div>
             </div>
@@ -97,7 +114,7 @@ export function ColdStartMethodology({
                     {
                       warm: WARM_GAP_HOURS,
                       cold: COLD_GAP_HOURS,
-                      ambiguous: summary.ambiguous,
+                      ambiguous: formatCount(summary.ambiguous),
                     },
                   )}
                 </Text>
@@ -108,7 +125,7 @@ export function ColdStartMethodology({
                   {t(
                     'coldStart.method.coverage',
                     '{{unclassified}} usable drives could not be classified, including the first observed drive when its preceding park falls outside the window.',
-                    { unclassified: summary.unclassified },
+                    { unclassified: formatCount(summary.unclassified) },
                   )}
                 </Text>
               </div>
@@ -120,12 +137,12 @@ export function ColdStartMethodology({
                   ? t(
                       'coldStart.method.capped',
                       'The selected observed window reached the {{limit}}-drive API cap; older drives inside the range may not be represented.',
-                      { limit: windowLimit },
+                      { limit: formatCount(windowLimit) },
                     )
                   : t(
                       'coldStart.method.window',
                       'This analysis uses {{count}} drives returned for the selected observed window (up to {{limit}}). Consumption is distance-weighted; only drives of at least 1 km with measured energy qualify.',
-                      { count: observedDrives, limit: windowLimit },
+                      { count: formatCount(observedDrives), limit: formatCount(windowLimit) },
                     )}
               </Text>
             </div>

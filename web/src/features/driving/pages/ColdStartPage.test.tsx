@@ -8,7 +8,7 @@ import type { NestedDrivingBrief } from '../components/operationalbrief-a-m/Nest
 
 const { useDrivesMock,
 sharedRange, selectedVehicleMock, pageTitleMock, rangeOptionsMock,
-timezoneMock, briefPropsMock, nestedBriefPropsMock, comparisonPropsMock, formatCurrencyMock, formatting } = vi.hoisted(() => ({
+timezoneMock, briefPropsMock, nestedBriefPropsMock, comparisonPropsMock, chartPropsMock, formatCurrencyMock, numberFormatMock, displayPrefs, formatting } = vi.hoisted(() => ({
   useDrivesMock: vi.fn(),
   sharedRange: {
     set: (_range: {
@@ -25,8 +25,18 @@ timezoneMock, briefPropsMock, nestedBriefPropsMock, comparisonPropsMock, formatC
   briefPropsMock: vi.fn(),
   nestedBriefPropsMock: vi.fn(),
   comparisonPropsMock: vi.fn(),
+  chartPropsMock: vi.fn(),
   formatCurrencyMock: vi.fn(),
-  formatting: { costPerKwh: 0.2 as number | null | undefined },
+  numberFormatMock: vi.fn(),
+  displayPrefs: {
+    distance: 'km' as 'km' | 'mi',
+    temperature: 'C' as 'C' | 'F',
+  },
+  formatting: {
+    costPerKwh: 0.2 as number | null | undefined,
+    locale: 'en-US',
+    timezoneMode: 'vehicle' as 'vehicle' | 'user' | 'utc',
+  },
 }));
 
 vi.mock('react-i18next', () => ({
@@ -63,11 +73,41 @@ vi.mock('@/lib/timezone', () => ({
   useTimezone: (mode: string) => timezoneMock(mode),
 }));
 
-vi.mock('@/hooks/useDateFormat', () => ({
-  useDateFormat: () => ({
-    formatDateTime: (value: string) => `${value} (vehicle time)`,
-  }),
-}));
+vi.mock('@/hooks/useSettings', async () => {
+  const actual = await vi.importActual<typeof import('@/hooks/useSettings')>('@/hooks/useSettings');
+  return {
+    ...actual,
+    useSettings: () => {
+      const result = actual.useSettings();
+      return {
+        ...result,
+        locale: formatting.locale,
+        settings: { ...result.settings, tz_display_default: formatting.timezoneMode },
+      };
+    },
+  };
+});
+
+vi.mock('@/hooks/useDateFormat', async () => {
+  const actual = await vi.importActual<typeof import('@/hooks/useDateFormat')>('@/hooks/useDateFormat');
+  return {
+    useDateFormat: (...args: Parameters<typeof actual.useDateFormat>) => ({
+      ...actual.useDateFormat(...args),
+      formatDateTime: (value: string) => `${value} (vehicle time)`,
+    }),
+  };
+});
+
+vi.mock('@/components/charts', async () => {
+  const actual = await vi.importActual<typeof import('@/components/charts')>('@/components/charts');
+  return {
+    ...actual,
+    ChartContainer: (props: ComponentProps<typeof actual.ChartContainer>) => {
+      chartPropsMock(props);
+      return <div>{props.title}</div>;
+    },
+  };
+});
 
 vi.mock('@/hooks/useRangeState', async () => {
   const React = await vi.importActual<typeof import('react')>('react');
@@ -149,8 +189,11 @@ vi.mock('@/hooks/useMotionPreference', () => ({
   useMotionPreference: () => ({ reduce: true, durationMs: 0 }),
 }));
 
-vi.mock('@/hooks/useNumberFormatting', () => ({
-  useNumberFormatting: () => ({ fmtNumber: (value: number) => String(value) }),
+vi.mock('@/hooks/useNumberFormatting', async () => ({
+  useNumberFormatting: () => ({
+    fmtNumber: numberFormatMock,
+    fmtInt: (value: unknown) => fmtInt(value, formatting.locale),
+  }),
 }));
 
 vi.mock('@/components/data-display', async () => ({
@@ -169,6 +212,13 @@ vi.mock('../components/cold-start/useColdStartDisplay', () => ({
     formatEfficiency: (value: number | null | undefined) =>
       value != null && Number.isFinite(value) ? `${value} Wh/km` : '—',
     formatEnergy: (value: number | null) => value == null ? '—' : `${value} Wh`,
+    formatDistance: (value: number) => `${value} m`,
+    formatDuration: (value: number) => `${value} s`,
+    formatTemperature: (value: number | null) => value == null ? '—' : `${value} °C`,
+    convertEfficiency: (value: number) => value * (displayPrefs.distance === 'mi' ? 1.609344 : 1),
+    efficiencyUnit: displayPrefs.distance === 'mi' ? 'Wh/mi' : 'Wh/km',
+    formatMonth: (value: string) => value,
+    unitPrefs: { ...displayPrefs, locale: 'en-US' },
   }),
 }));
 
@@ -217,7 +267,12 @@ vi.mock('../components/operationalbrief-a-m/ColdStartBrief', async () => {
 import ColdStartPage from './ColdStartPage';
 import { ColdWarmComparison } from '../components/cold-start/ColdWarmComparison';
 import { ColdStartMethodology } from '../components/cold-start/ColdStartMethodology';
+import { ColdStartOpportunities } from '../components/cold-start/ColdStartOpportunities';
+import { TemperatureEfficiencyChart } from '../components/cold-start/TemperatureEfficiencyChart';
+import { MonthlyColdStartChart } from '../components/cold-start/MonthlyColdStartChart';
+import { convertDistanceFromSI, convertTempFromSI } from '@/lib/unitConversion';
 import { summarizeColdStarts } from '../lib/coldStart';
+import { fmtInt } from '@/lib/numberFormat';
 
 function query(overrides: Record<string, unknown> = {}) {
   return {
@@ -281,10 +336,208 @@ function supportedDrives(): Drive[] {
 beforeEach(() => {
   vi.clearAllMocks();
   formatting.costPerKwh = 0.2;
+  formatting.locale = 'en-US';
+  formatting.timezoneMode = 'vehicle';
+  displayPrefs.distance = 'km';
+  displayPrefs.temperature = 'C';
+  numberFormatMock.mockImplementation((value: number) => String(value));
   formatCurrencyMock.mockImplementation((value: number) => `$${value.toFixed(2)}`);
   timezoneMock.mockReturnValue('America/Los_Angeles');
   selectedVehicleMock.mockReturnValue({ vehicleId: 42 });
   useDrivesMock.mockReturnValue(query());
+});
+
+describe('Cold-start methodology count formatting', () => {
+  const state = { isLoading: false, error: null, onRetry: vi.fn() };
+
+  it.each([
+    { name: 'grouped integers', value: 1234, expected: '1,234', classified: '2,468' },
+    { name: 'measured zero', value: 0, expected: '0', classified: '0' },
+    { name: 'signed values', value: -1234, expected: '-1,234', classified: '-2,468' },
+    { name: 'fractional values', value: 1234.6, expected: '1,235', classified: '2,469' },
+    { name: 'signed fractional values', value: -1234.6, expected: '-1,235', classified: '-2,469' },
+    { name: 'missing values', value: null, expected: '—', classified: '—' },
+    { name: 'absent values', value: undefined, expected: '—', classified: '—' },
+    { name: 'NaN values', value: Number.NaN, expected: '—', classified: '—' },
+    { name: 'positive infinity', value: Number.POSITIVE_INFINITY, expected: '—', classified: '—' },
+    { name: 'negative infinity', value: Number.NEGATIVE_INFINITY, expected: '—', classified: '—' },
+  ])('formats $name without changing evidence', ({ value, expected, classified }) => {
+    const summary = summarizeColdStarts(supportedDrives());
+    for (const target of [summary.cold, summary.warm]) Reflect.set(target, 'drives', value);
+    Reflect.set(summary, 'ambiguous', value);
+    Reflect.set(summary, 'unclassified', value);
+    const original = structuredClone(summary);
+    const { rerender } = render(
+      <ColdStartMethodology summary={summary} observedDrives={2000} windowLimit={3000} state={state} />,
+    );
+    const panel = screen.getByTestId('cold-start-method');
+    expect(panel.textContent?.match(new RegExp(`${expected}/5`, 'g'))).toHaveLength(2);
+    expect(screen.getByText(classified, { exact: true })).toBeInTheDocument();
+    expect(panel).toHaveTextContent(`${expected} observations between them remain ambiguous`);
+    expect(panel).toHaveTextContent(`${expected} usable drives could not be classified`);
+    expect(panel).toHaveTextContent('uses 2,000 drives');
+    expect(panel).toHaveTextContent('up to 3,000');
+    expect(summary).toEqual(original);
+
+    const props: ComponentProps<typeof ColdStartMethodology> = {
+      summary, observedDrives: 2000, windowLimit: 3000, state,
+    };
+    Reflect.set(props, 'observedDrives', value);
+    Reflect.set(props, 'windowLimit', value);
+    rerender(<ColdStartMethodology {...props} />);
+    if (value === 0) {
+      expect(panel).toHaveTextContent('Method confidence will appear when drives are returned');
+    } else if (typeof value === 'number' && Number.isFinite(value)) {
+      expect(panel).toHaveTextContent(`reached the ${expected}-drive API cap`);
+    } else {
+      expect(panel).toHaveTextContent(`uses ${expected} drives`);
+      expect(panel).toHaveTextContent(`up to ${expected}`);
+    }
+  });
+
+  it('follows the selected locale for counts and denominators', () => {
+    formatting.locale = 'ar-EG';
+    const summary = summarizeColdStarts(supportedDrives());
+    render(<ColdStartMethodology summary={summary} observedDrives={1234} windowLimit={2000} state={state} />);
+    const panel = screen.getByTestId('cold-start-method');
+    expect(panel).toHaveTextContent(`${fmtInt(5, 'ar-EG')}/${fmtInt(5, 'ar-EG')}`);
+    expect(panel).toHaveTextContent(`uses ${fmtInt(1234, 'ar-EG')} drives`);
+    expect(panel).toHaveTextContent(`up to ${fmtInt(2000, 'ar-EG')}`);
+  });
+
+  it('does not turn a missing cohort into zero when the other cohort is measured', () => {
+    const summary = summarizeColdStarts(supportedDrives());
+    Reflect.set(summary.cold, 'drives', null);
+    render(<ColdStartMethodology summary={summary} observedDrives={11} windowLimit={1000} state={state} />);
+    const panel = screen.getByTestId('cold-start-method');
+    expect(panel).toHaveTextContent('—/5');
+    expect(panel).toHaveTextContent('5/5');
+    expect(screen.getByText('—', { exact: true })).toBeInTheDocument();
+    expect(panel).toHaveTextContent('uses 11 drives');
+    expect(panel).toHaveTextContent('up to 1,000');
+  });
+});
+
+describe('Cold-start chart precision', () => {
+  const state = { isLoading: false, error: null, onRetry: vi.fn() };
+
+  it.each([
+    { distance: 'km' as const, temperature: 'C' as const },
+    { distance: 'mi' as const, temperature: 'F' as const },
+  ])('retains converted rows and formats only display values in $distance/$temperature', (prefs) => {
+    Object.assign(displayPrefs, prefs);
+    numberFormatMock.mockImplementation((value: number) => value.toFixed(3));
+    const drives = supportedDrives().map(drive => ({
+      ...drive,
+      distanceM: 1_234.56,
+      energyUsedWh: drive.energyUsedWh! + 0.789,
+      outsideTempAvgC: -5.1234,
+    }));
+    const summary = summarizeColdStarts(drives);
+    const original = structuredClone(summary);
+    const factor = prefs.distance === 'mi' ? 1.609344 : 1;
+    // Model consumption remains rounded to tenths; display conversion must not round again.
+    expect(summary.temperature[0]!.whPerKm).toBe(
+      Math.round(drives[1]!.energyUsedWh! / (drives[1]!.distanceM / 1_000) * 10) / 10,
+    );
+
+    const monthly = render(<MonthlyColdStartChart months={summary.monthly} state={state} />);
+    const monthlyProps = chartPropsMock.mock.lastCall![0];
+    expect(monthlyProps.data[0]).toMatchObject({
+      cold: summary.monthly[0]!.cold.whPerKm! * factor,
+      warm: summary.monthly[0]!.warm.whPerKm! * factor,
+      coldSamples: 5,
+      warmSamples: 5,
+    });
+    for (const key of ['cold', 'warm']) {
+      const column = monthlyProps.dataColumns.find((item: { key: string }) => item.key === key);
+      expect(column.format(monthlyProps.data[0][key])).toBe(monthlyProps.data[0][key].toFixed(3));
+      expect(column.format(null)).toBe('—');
+    }
+    numberFormatMock.mockImplementation((value: number) => value.toFixed(1));
+    monthly.rerender(<MonthlyColdStartChart months={summary.monthly} state={state} />);
+    expect(chartPropsMock.mock.lastCall![0].data).toEqual(monthlyProps.data);
+    expect(chartPropsMock.mock.lastCall![0].dataColumns[1].format(monthlyProps.data[0].cold))
+      .toBe(monthlyProps.data[0].cold.toFixed(1));
+
+    render(<TemperatureEfficiencyChart points={summary.temperature} state={state} />);
+    const temperatureProps = chartPropsMock.mock.lastCall![0];
+    expect(temperatureProps.data).toHaveLength(10);
+    expect(temperatureProps.data[0]).toMatchObject({
+      temperature: convertTempFromSI(-5.1234, prefs.temperature),
+      consumption: summary.temperature[0]!.whPerKm * factor,
+      distance: convertDistanceFromSI(1_234.56, prefs.distance),
+    });
+    for (const key of ['temperature', 'consumption', 'distance']) {
+      const column = temperatureProps.dataColumns.find((item: { key: string }) => item.key === key);
+      expect(column.format(temperatureProps.data[0][key])).toBe(temperatureProps.data[0][key].toFixed(1));
+    }
+    expect(summary).toEqual(original);
+  });
+});
+
+describe('Cold-start date display', () => {
+  const state = { isLoading: false, error: null, onRetry: vi.fn() };
+
+  it.each([
+    { locale: 'de-DE', mode: 'user' as const, zone: 'America/Los_Angeles', date: '2026-02-01T00:30:00Z', label: '31. Jan. 2026' },
+    { locale: 'fr-FR', mode: 'vehicle' as const, zone: 'Asia/Tokyo', date: '2026-01-31T23:30:00Z', label: '1 févr. 2026' },
+    { locale: 'de-DE', mode: 'utc' as const, zone: 'UTC', date: '2026-02-01T00:30:00Z', label: '1. Feb. 2026' },
+    { locale: 'de-DE', mode: 'user' as const, zone: 'America/Los_Angeles', date: 'invalid', label: '—' },
+    { locale: 'de-DE', mode: 'user' as const, zone: 'America/Los_Angeles', date: '', label: '—' },
+    { locale: 'de-DE', mode: 'user' as const, zone: 'America/Los_Angeles', date: null, label: '—' },
+    { locale: 'de-DE', mode: 'user' as const, zone: 'America/Los_Angeles', date: undefined, label: '—' },
+  ])('uses saved $locale/$mode dates for $date in $zone', ({ locale, mode, zone, date, label }) => {
+    formatting.locale = locale;
+    formatting.timezoneMode = mode;
+    timezoneMock.mockReturnValue(zone);
+    const summary = summarizeColdStarts(supportedDrives());
+    // @ts-expect-error Exercise missing dates from malformed runtime payloads.
+    summary.opportunities = [{ ...summary.opportunities[0]!, startTs: date }];
+    const points = [{ ...summary.temperature[0]!, startTs: date }];
+    const original = structuredClone({ summary, points });
+
+    render(<ColdStartOpportunities summary={summary} state={state} />);
+    // @ts-expect-error Exercise missing dates from malformed runtime payloads.
+    render(<TemperatureEfficiencyChart points={points} state={state} />);
+
+    expect(screen.getByTestId('cold-start-opportunities')).toHaveTextContent(label);
+    expect(chartPropsMock.mock.lastCall?.[0]).toMatchObject({
+      exportable: true,
+      data: [expect.objectContaining({ date: label })],
+    });
+    expect(timezoneMock).toHaveBeenCalledWith(mode);
+    expect({ summary, points }).toEqual(original);
+  });
+
+  it('reformats memoized chart rows when the saved locale and timezone change', () => {
+    const summary = summarizeColdStarts(supportedDrives());
+    const points = [{ ...summary.temperature[0]!, startTs: '2026-02-01T00:30:00Z' }];
+    const view = render(<TemperatureEfficiencyChart points={points} state={state} />);
+    expect(chartPropsMock.mock.lastCall?.[0].data[0].date).toBe('Jan 31, 2026');
+
+    formatting.locale = 'fr-FR';
+    formatting.timezoneMode = 'user';
+    timezoneMock.mockReturnValue('Asia/Tokyo');
+    view.rerender(<TemperatureEfficiencyChart points={points} state={state} />);
+    expect(chartPropsMock.mock.lastCall?.[0].data[0].date).toBe('1 févr. 2026');
+  });
+
+  it('preserves UTC monthly grouping even when displayed dates fall in the previous month', () => {
+    formatting.locale = 'de-DE';
+    formatting.timezoneMode = 'user';
+    timezoneMock.mockReturnValue('America/Los_Angeles');
+    const drives = supportedDrives().slice(0, 2).map((drive, index) => ({
+      ...drive,
+      startTs: index === 0 ? '2026-01-31T22:30:00Z' : '2026-02-01T00:30:00Z',
+      endTs: index === 0 ? '2026-01-31T23:30:00Z' : '2026-02-01T01:30:00Z',
+    }));
+    const summary = summarizeColdStarts(drives);
+    render(<TemperatureEfficiencyChart points={summary.temperature} state={state} />);
+
+    expect(summary.monthly.map(row => row.month)).toEqual(['2026-02']);
+    expect(chartPropsMock.mock.lastCall?.[0].data[0].date).toBe('31. Jan. 2026');
+  });
 });
 
 describe('ColdStartPage', () => {
