@@ -222,6 +222,8 @@ export default function GlancePage() {
     observationFreshness === 'fresh' && liveInterval !== false && !stateTrust.isRefreshBlocked;
   const canSendCommands = isOnline && hasLiveCommandEvidence && !sendCommand.isPending;
   const locationLabel = getLocationLabel(location, t);
+  const timeToFull = knownNumber(state?.time_to_full_charge);
+  const minutesToArrival = knownNumber(location?.minutes_to_arrival);
   const vehicleName =
     vehicle?.display_name || vehicle?.model || t('glance.defaultName', 'Tesla');
 
@@ -446,8 +448,8 @@ export default function GlancePage() {
                               icon={Clock}
                               label={t('glance.charging.timeToFull', 'Time to full')}
                               value={
-                                (knownNumber(state.time_to_full_charge) ?? 0) > 0
-                                  ? `${fmtNumber(state.time_to_full_charge)} h`
+                                timeToFull != null && timeToFull >= 0
+                                  ? `${fmtNumber(timeToFull)} h`
                                   : '—'
                               }
                             />
@@ -559,11 +561,11 @@ export default function GlancePage() {
                             value={location.destination_name}
                           />
                         )}
-                        {(knownNumber(location?.minutes_to_arrival) ?? 0) > 0 && (
+                        {minutesToArrival != null && minutesToArrival >= 0 && (
                           <DetailRow
                             icon={Route}
                             label={t('glance.eta', 'ETA')}
-                            value={`${fmtNumber(location?.minutes_to_arrival ?? 0)} ${t('glance.minutesShort', 'min')}`}
+                            value={`${fmtNumber(minutesToArrival)} ${t('glance.minutesShort', 'min')}`}
                           />
                         )}
                       </div>

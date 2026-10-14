@@ -583,6 +583,60 @@ describe('GlancePage — vehicle selection (URL state)', () => {
 
 // ─────────────────────────────────────────────────────────────────────────
 describe('GlancePage — null safety + idle branches', () => {
+  it.each([null, undefined, NaN, Infinity, -Infinity, -1])(
+    'keeps missing or invalid duration %s distinct from measured zero',
+    value => {
+      mockState.mockReturnValue(makeQuery({
+        data: { ...stateEnvelope(), state: { ...STATE, time_to_full_charge: value } },
+      }));
+      mockLocation.mockReturnValue(makeQuery({
+        data: { ...LOCATION, minutes_to_arrival: value },
+      }));
+      renderPage();
+      expect(rowValue(liveRegion(), 'Time to full')).toBe('—');
+      expect(within(liveRegion()).queryByText('ETA')).toBeNull();
+      expect(within(liveRegion()).queryByText('0.00 h')).toBeNull();
+      expect(within(liveRegion()).queryByText('0.00 min')).toBeNull();
+    },
+  );
+
+  it.each([
+    [0, '0.00'],
+    [0.25, '0.25'],
+    [1.5, '1.50'],
+  ])('preserves duration %s in its existing hour and minute scales', (value, display) => {
+    mockState.mockReturnValue(makeQuery({
+      data: { ...stateEnvelope(), state: { ...STATE, time_to_full_charge: value } },
+    }));
+    mockLocation.mockReturnValue(makeQuery({
+      data: { ...LOCATION, minutes_to_arrival: value },
+    }));
+    renderPage();
+    expect(rowValue(liveRegion(), 'Time to full')).toBe(`${display} h`);
+    expect(rowValue(liveRegion(), 'ETA')).toBe(`${display} min`);
+  });
+
+  it('retains signed and fractional measurements without guessed conversions or scale changes', () => {
+    mockState.mockReturnValue(makeQuery({
+      data: { ...stateEnvelope(), state: {
+        ...STATE, battery_level: 0.5, inside_temp: -2.5, outside_temp: 0,
+        charger_power: -0.25, charge_rate: 0.5, speed: 0.25,
+      } },
+    }));
+    renderPage();
+    expect(cardValue(kpiRegion(), 'Interior')).toBe('temp(-2.5)');
+    expect(cardValue(kpiRegion(), 'Exterior')).toBe('temp(0)');
+    expect(cardValue(kpiRegion(), 'Speed')).toBe('spd(0.25)');
+    expect(rowValue(liveRegion(), 'Charger power')).toBe('-0.25 kW');
+    expect(rowValue(liveRegion(), 'Charge rate')).toBe('dist(0.5)/h');
+    const battery = within(liveRegion()).getByRole('meter', { name: 'Battery' });
+    expect(battery).toHaveAttribute('aria-valuenow', '0.5');
+    expect(battery).toHaveAttribute('aria-valuemax', '100');
+    expect(units.formatTemperature).toHaveBeenCalledWith(-2.5);
+    expect(units.formatDistance).toHaveBeenCalledWith(0.5);
+    expect(units.formatSpeed).toHaveBeenCalledWith(0.25);
+  });
+
   it('preserves independent location evidence even when live security and telemetry are unavailable', () => {
     mockState.mockReturnValue(makeQuery({ error: new Error('live state failed'), isError: true }));
     mockLocation.mockReturnValue(makeQuery({ data: LOCATION }));
