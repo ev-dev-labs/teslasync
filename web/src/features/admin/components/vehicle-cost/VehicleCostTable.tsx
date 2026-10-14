@@ -14,7 +14,7 @@ import { GlassPanel, PanelTitle, Caption, Text, DataTable, type Column } from '@
 import { Skeleton, EmptyState, QueryError, SectionErrorBoundary } from '@/components/feedback';
 
 import { formatRelative } from '@/lib/dateFormat';
-import { vehicleName, type SectionState } from './helpers';
+import { costReading, formatCostReading, vehicleName, type SectionState } from './helpers';
 import type { VehicleCostRow } from '@/types/admin-operator-confidence';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
@@ -51,44 +51,44 @@ export function VehicleCostTable({ vehicles, loading, error, onRetry }: VehicleC
       },
       {
         key: 'rows',
-        filterValue: (r) => r.signal_row_count ?? null,
-        filterValueLabel: (_value, r) => fmtInt(r.signal_row_count),
+        filterValue: (r) => costReading(r.signal_row_count),
+        filterValueLabel: (_value, r) => formatCostReading(r.signal_row_count, fmtInt),
         groupStart: true,
         header: t('admin.vehicleCost.colRows', 'Rows'),
         align: 'right',
-        render: (r) => <Text className="tabular-nums">{fmtInt(r.signal_row_count)}</Text>,
+        render: (r) => <Text className="tabular-nums">{formatCostReading(r.signal_row_count, fmtInt)}</Text>,
       },
       {
         key: 'bytes',
-        filterValue: (r) => r.signal_bytes_est ?? null,
-        filterValueLabel: (_value, r) => formatBytes(r.signal_bytes_est),
+        filterValue: (r) => costReading(r.signal_bytes_est),
+        filterValueLabel: (_value, r) => formatCostReading(r.signal_bytes_est, formatBytes),
         header: t('admin.vehicleCost.colBytes', 'Bytes (est.)'),
         align: 'right',
-        render: (r) => <Text className="tabular-nums">{formatBytes(r.signal_bytes_est)}</Text>,
+        render: (r) => <Text className="tabular-nums">{formatCostReading(r.signal_bytes_est, formatBytes)}</Text>,
       },
       {
         key: 'rate',
-        filterValue: (r) => r.ingest_rate_per_minute_24h ?? null,
-        filterValueLabel: (_value, r) => fmtNumber(r.ingest_rate_per_minute_24h),
+        filterValue: (r) => costReading(r.ingest_rate_per_minute_24h),
+        filterValueLabel: (_value, r) => formatCostReading(r.ingest_rate_per_minute_24h, fmtNumber),
         header: t('admin.vehicleCost.colRate', 'Rate (rows/min, 24h)'),
         align: 'right',
         render: (r) => (
-          <Text className="tabular-nums">{fmtNumber(r.ingest_rate_per_minute_24h)}</Text>
+          <Text className="tabular-nums">{formatCostReading(r.ingest_rate_per_minute_24h, fmtNumber)}</Text>
         ),
       },
       {
         key: 'failures',
-        filterValue: (r) => r.dlq_failures_24h ?? null,
-        filterValueLabel: (_value, r) => r.dlq_failures_24h == null ? '—' : fmtInt(r.dlq_failures_24h),
+        filterValue: (r) => costReading(r.dlq_failures_24h),
+        filterValueLabel: (_value, r) => formatCostReading(r.dlq_failures_24h, fmtInt),
         header: t('admin.vehicleCost.colFailures', 'DLQ (24h)'),
         align: 'right',
         render: (r) => {
-          const failures = r.dlq_failures_24h ?? 0;
+          const failures = costReading(r.dlq_failures_24h);
           const cls =
-            failures > 0
-              ? 'tabular-nums text-amber-300'
+            failures !== null && failures > 0
+              ? 'tabular-nums text-[var(--semantic-warning)]'
               : 'tabular-nums text-[var(--text-secondary)]';
-          return <Text className={cls}>{fmtInt(failures)}</Text>;
+          return <Text className={cls}>{formatCostReading(failures, fmtInt)}</Text>;
         },
       },
       {
@@ -128,6 +128,24 @@ export function VehicleCostTable({ vehicles, loading, error, onRetry }: VehicleC
             tableId="admin:vehicle-cost"
             columns={columns}
             mobileColumns={['vehicle', 'failures', 'last']}
+            rowLabel={(r) => vehicleName(r, t('admin.vehicleCost.unnamed', 'Vehicle #{{id}}', { id: r.vehicle_id }))}
+            mobilePresentation={{
+              roles: {
+                vehicle: 'title', rows: 'primary', bytes: 'meta',
+                rate: 'hidden', failures: 'meta', last: 'meta',
+              },
+              displayValue: (r, key) => {
+                switch (key) {
+                  case 'vehicle': return vehicleName(r, t('admin.vehicleCost.unnamed', 'Vehicle #{{id}}', { id: r.vehicle_id }));
+                  case 'rows': return formatCostReading(r.signal_row_count, fmtInt);
+                  case 'bytes': return formatCostReading(r.signal_bytes_est, formatBytes);
+                  case 'rate': return formatCostReading(r.ingest_rate_per_minute_24h, fmtNumber);
+                  case 'failures': return formatCostReading(r.dlq_failures_24h, fmtInt);
+                  case 'last': return formatRelative(r.last_seen_at);
+                  default: return null;
+                }
+              },
+            }}
             data={vehicleRows}
             enableValueFilters
             keyExtractor={(r) => r.vehicle_id}

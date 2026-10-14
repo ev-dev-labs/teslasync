@@ -7,6 +7,7 @@
  * with `formatBytes` at the display boundary.
  */
 import type { VehicleCostRow } from '@/types/admin-operator-confidence';
+import { isFiniteNumber } from '@/lib/numberFormat';
 
 /**
  * A single vehicle's ingest footprint, normalised + null-safe, prepared for
@@ -15,10 +16,20 @@ import type { VehicleCostRow } from '@/types/admin-operator-confidence';
 export interface VehicleCostBar {
   vehicle_id: number;
   name: string;
-  bytes: number;
-  rows: number;
-  rate: number;
-  failures: number;
+  bytes: number | null;
+  rows: number | null;
+  rate: number | null;
+  failures: number | null;
+}
+
+/** Unknown readings remain distinct from measured zero at the display boundary. */
+export function costReading(value: unknown): number | null {
+  return isFiniteNumber(value) ? value : null;
+}
+
+export function formatCostReading(value: unknown, format: (value: number) => string): string {
+  const reading = costReading(value);
+  return reading === null ? '—' : format(reading);
 }
 
 /**
@@ -43,8 +54,9 @@ export function vehicleName(
 /**
  * Normalise + sort the per-vehicle footprint list. `by` selects the sort key:
  * `'bytes'` powers the cost chart (largest consumer first) and `'rows'` powers
- * the top-talkers share list. Every optional field is coerced to a number so
- * downstream consumers never hit `undefined` in a chart or `.toFixed`.
+ * the top-talkers share list. Missing/nonfinite readings remain null. Unknown
+ * sort keys follow all measured values (including zero and negatives); ties
+ * retain source order. No source rows are discarded before the requested limit.
  */
 export function rankVehicles(
   vehicles: readonly VehicleCostRow[],
@@ -56,12 +68,18 @@ export function rankVehicles(
     .map((v) => ({
       vehicle_id: v.vehicle_id,
       name: nameOf(v),
-      bytes: v.signal_bytes_est ?? 0,
-      rows: v.signal_row_count ?? 0,
-      rate: v.ingest_rate_per_minute_24h ?? 0,
-      failures: v.dlq_failures_24h ?? 0,
+      bytes: costReading(v.signal_bytes_est),
+      rows: costReading(v.signal_row_count),
+      rate: costReading(v.ingest_rate_per_minute_24h),
+      failures: costReading(v.dlq_failures_24h),
     }))
-    .sort((a, b) => (by === 'bytes' ? b.bytes - a.bytes : b.rows - a.rows))
+    .sort((a, b) => {
+      const left = a[by];
+      const right = b[by];
+      if (left === null) return right === null ? 0 : 1;
+      if (right === null) return -1;
+      return right - left;
+    })
     .slice(0, Math.max(0, limit));
 }
 

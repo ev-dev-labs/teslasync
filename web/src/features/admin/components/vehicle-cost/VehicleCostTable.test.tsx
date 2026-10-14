@@ -15,8 +15,8 @@
  *                number ("ID 42"), never inheriting the user's decimal-precision
  *                setting ("ID 42.00"), and it flows through an i18n key.
  *   name       — a missing / blank display_name falls back to "Vehicle #{id}".
- *   DLQ column — a positive failure count is tinted amber; zero (and a missing
- *                count coerced to zero via `?? 0`) stays the muted secondary hue.
+ *   DLQ column — a positive failure count is tinted amber; zero and unknown
+ *                readings stay the muted secondary hue with distinct labels.
  *   states     — loading→skeleton (only while empty), loading-with-data keeps
  *                the table, empty→EmptyState, error→QueryError (error wins over
  *                data) with a working Retry wired to onRetry.
@@ -28,8 +28,9 @@
  * backend. Network is never touched. Renders are wrapped in MemoryRouter because
  * QueryError calls useNavigate() (and EmptyState imports Link).
  */
-import { describe, it, expect, vi, afterEach } from 'vitest';
-import { render, screen, fireEvent, cleanup } from '@testing-library/react';
+import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest';
+import { render, screen, fireEvent, cleanup, act, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import type { ComponentProps, ReactNode } from 'react';
 
@@ -86,7 +87,29 @@ import { fmtNumber, fmtInt, formatBytes } from '@/lib/numberFormat';
 import { formatRelative } from '@/lib/dateFormat';
 import type { VehicleCostRow } from '@/types/admin-operator-confidence';
 
-afterEach(() => cleanup());
+const observers: { element: Element; callback: ResizeObserverCallback }[] = [];
+
+beforeEach(() => {
+  localStorage.clear();
+  observers.length = 0;
+  vi.stubGlobal('ResizeObserver', class {
+    constructor(private callback: ResizeObserverCallback) {}
+    observe(element: Element) { observers.push({ element, callback: this.callback }); }
+    unobserve() {}
+    disconnect() {}
+  });
+});
+
+afterEach(() => {
+  cleanup();
+  vi.unstubAllGlobals();
+});
+
+function resize(width: number) {
+  act(() => observers.forEach(({ element, callback }) => callback(
+    [{ target: element, contentRect: { width } } as ResizeObserverEntry], {} as ResizeObserver,
+  )));
+}
 
 type Props = ComponentProps<typeof VehicleCostTable>;
 
@@ -217,7 +240,7 @@ describe('VehicleCostTable — DLQ failures column', () => {
   it('tints a positive DLQ failure count amber', () => {
     renderTable({ vehicles: [makeRow({ ...base, dlq_failures_24h: 5 })] });
     const cell = screen.getByText(fmtInt(5)); // discrete DLQ count
-    expect(cell).toHaveClass('text-amber-300');
+    expect(cell).toHaveClass('text-[var(--semantic-warning)]');
     expect(cell).toHaveClass('tabular-nums');
   });
 
@@ -225,16 +248,48 @@ describe('VehicleCostTable — DLQ failures column', () => {
     renderTable({ vehicles: [makeRow({ ...base, dlq_failures_24h: 0 })] });
     const cell = screen.getByText(fmtInt(0)); // discrete DLQ count
     expect(cell).toHaveClass('text-[var(--text-secondary)]');
-    expect(cell).not.toHaveClass('text-amber-300');
+    expect(cell).not.toHaveClass('text-[var(--semantic-warning)]');
   });
 
-  it('coerces a missing DLQ count to zero (never NaN) and leaves it un-tinted', () => {
+  it('displays a missing DLQ count as unknown and leaves it un-tinted', () => {
     renderTable({
       vehicles: [makeRow({ ...base, dlq_failures_24h: undefined as unknown as number })],
     });
-    const cell = screen.getByText(fmtInt(0)); // "0" via `?? 0`
+    const cell = screen.getByText('—');
     expect(cell).toBeInTheDocument();
-    expect(cell).not.toHaveClass('text-amber-300');
+    expect(cell).not.toHaveClass('text-[var(--semantic-warning)]');
+  });
+});
+
+describe('VehicleCostTable — unknown readings', () => {
+  it.each([null, undefined, NaN, Infinity, -Infinity])(
+    'renders %s readings as unknown without discarding the vehicle',
+    (value) => {
+      const row = makeRow();
+      Object.assign(row, {
+        signal_row_count: value,
+        signal_bytes_est: value,
+        ingest_rate_per_minute_24h: value,
+        dlq_failures_24h: value,
+      });
+      renderTable({ vehicles: [row] });
+      expect(dataRowCount()).toBe(1);
+      const cells = within(screen.getAllByRole('row')[1]).getAllByRole('cell');
+      expect(cells.slice(1, 5).map(cell => cell.textContent)).toEqual(['—', '—', '—', '—']);
+    },
+  );
+
+  it.each([0, -12, 0.25, -0.25])('formats measured value %s using the existing display precision', (value) => {
+    renderTable({ vehicles: [makeRow({
+      signal_row_count: value,
+      signal_bytes_est: value,
+      ingest_rate_per_minute_24h: value,
+      dlq_failures_24h: value,
+    })] });
+    const cells = within(screen.getAllByRole('row')[1]).getAllByRole('cell');
+    expect(cells.slice(1, 5).map(cell => cell.textContent)).toEqual([
+      fmtInt(value), formatBytes(value), fmtNumber(value), fmtInt(value),
+    ]);
   });
 });
 
@@ -292,6 +347,58 @@ describe('VehicleCostTable — null safety & id formatting', () => {
     ).not.toThrow();
     expect(screen.getByText('No vehicle cost data')).toBeInTheDocument();
     expect(screen.queryByRole('table')).not.toBeInTheDocument();
+  });
+
+  describe('VehicleCostTable — lossless mobile presentation', () => {
+    it('keeps source order and exposes all six fields and row IDs through keyboard-operated details', async () => {
+      const user = userEvent.setup();
+      const first = makeRow({ vehicle_id: 42, display_name: 'First vehicle', dlq_failures_24h: 5 });
+      const second = makeRow({ vehicle_id: 7, display_name: 'Second vehicle' });
+      const { container } = renderTable({ vehicles: [first, second] });
+      resize(375);
+
+      const mobile = container.querySelector('[data-mobile-table]');
+      expect(mobile).not.toBeNull();
+      expect(screen.queryByRole('table')).not.toBeInTheDocument();
+      const quickViews = screen.getAllByRole('button', { name: 'Quick view' });
+      expect(quickViews).toHaveLength(2);
+      quickViews[0].focus();
+      await user.keyboard('{Enter}');
+
+      const dialog = screen.getByRole('dialog', { name: 'First vehicle' });
+      for (const label of ['Vehicle', 'Rows', 'Bytes (est.)', 'Rate (rows/min, 24h)', 'DLQ (24h)', 'Last seen']) {
+        expect(within(dialog).getByText(label)).toBeInTheDocument();
+      }
+      for (const value of ['ID 42', fmtInt(100), formatBytes(1024), fmtNumber(2), fmtInt(5), formatRelative(first.last_seen_at)]) {
+        expect(within(dialog).getByText(value)).toBeInTheDocument();
+      }
+      await user.keyboard('{Escape}');
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+      expect(quickViews[0]).toHaveFocus();
+      quickViews[1].focus();
+      await user.keyboard(' ');
+      expect(screen.getByRole('dialog', { name: 'Second vehicle' })).toHaveTextContent('ID 7');
+      await user.click(screen.getAllByRole('button', { name: 'Close', exact: true }).at(-1)!);
+
+      resize(1280);
+      const rows = screen.getAllByRole('row').slice(1);
+      expect(rows.map(row => within(row).getByText(/ID \d+/).textContent)).toEqual(['ID 42', 'ID 7']);
+      expect(rows[0].querySelectorAll('td')).toHaveLength(6);
+    });
+
+    it('retains persisted hidden fields in mobile details without rewriting column preferences', async () => {
+      const user = userEvent.setup();
+      const key = 'teslasync.table.admin:vehicle-cost.columns';
+      const preference = JSON.stringify({ order: ['vehicle', 'last', 'failures', 'rate', 'bytes', 'rows'], hidden: ['rate', 'bytes'], widths: {} });
+      localStorage.setItem(key, preference);
+      renderTable({ vehicles: [makeRow()] });
+      resize(375);
+      await user.click(screen.getByRole('button', { name: 'Quick view' }));
+      const dialog = screen.getByRole('dialog');
+      expect(within(dialog).getByText('Bytes (est.)')).toBeInTheDocument();
+      expect(within(dialog).getByText('Rate (rows/min, 24h)')).toBeInTheDocument();
+      expect(localStorage.getItem(key)).toBe(preference);
+    });
   });
 
   it('formats the vehicle id as a whole-number identifier, never with decimal precision', () => {
