@@ -7,6 +7,8 @@ import {
 
 import { PageLayout, LayoutCard, ChartCard } from '@/components/layout';
 import { BatteryDegradationStats, DegradationGrid } from '../components/battery-degradation-modernization';
+import type { BatteryDegradationHealth } from '../components/battery-degradation-modernization/BatteryDegradationStats';
+import { capacityEvidence, observationEvidence, driveDropEvidence, predictionIntervalEvidence, batteryNumber, batteryCount, batteryStress } from '../components/battery-degradation-modernization/BatteryDegradationStats';
 
 import {
   GlassPanel, Badge, DataTable, Text, Caption, HelpTooltip, type Column,
@@ -30,17 +32,17 @@ import { useHiddenSeries } from '@/hooks/useHiddenSeries';
 import { useChartPalette } from '@/hooks/useChartPalette';
 import { useUnits } from '@/hooks/useUnits';
 import { convertDistanceFromSI } from '@/lib/unitConversion';
-import { formatDate } from '@/lib/dateFormat';
+import { formatDayKey } from '@/lib/dateFormat';
+import { useDateFormat } from '@/hooks/useDateFormat';
 
 import { cn } from '@/lib/cn';
 import { gaugeTone, neonColorMap, typography, chartTokens } from '@/lib/tokens';
-import type { BatteryHealthSnapshot, RiskFactorData } from '@/types/energy';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { useDataState } from '@/hooks/useDataState';
 
 /* ── Types ─────────────────────────────────────────────── */
 
-type DegradationEntry = BatteryHealthSnapshot;
+type DegradationEntry = BatteryDegradationHealth['history'][number];
 
 /* ── Helpers ───────────────────────────────────────────── */
 
@@ -48,6 +50,10 @@ function scoreVariant(score: number): 'success' | 'warning' | 'danger' {
   if (score >= 80) return 'success';
   if (score >= 50) return 'warning';
   return 'danger';
+}
+
+function validPercent(value: number | null | undefined): value is number {
+  return value != null && Number.isFinite(value) && value >= 0 && value <= 100;
 }
 
 function riskScoreColor(score: number): string {
@@ -87,6 +93,23 @@ function riskFactorIcon(name: string) {
 export default function BatteryDegradationPage() {
   const { fmtInt, fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
+  const { opts, formatDate: formatInstantDate, formatDateTime } = useDateFormat();
+  const formatHistoryDate = useCallback(
+    (key: string | null | undefined) => formatDayKey(key, opts),
+    [opts],
+  );
+  const formatProjectionMonth = useCallback((key: string | null | undefined) => {
+    if (typeof key !== 'string' || !/^\d{4}-\d{2}$/.test(key) ||
+      formatDayKey(`${key}-01`, opts) === '—') return '—';
+    return new Intl.DateTimeFormat(opts.locale, {
+      year: 'numeric', month: 'short', timeZone: 'UTC',
+    }).format(new Date(`${key}-01T12:00:00Z`));
+  }, [opts]);
+  const formatChartDate = useCallback(
+    (key: string | number | undefined) => typeof key !== 'string' ? '—'
+      : /^\d{4}-\d{2}$/.test(key) ? formatProjectionMonth(key) : formatHistoryDate(key),
+    [formatHistoryDate, formatProjectionMonth],
+  );
   usePageTitle(t('battery.degradation.title', 'Battery degradation'));
 
   /* Vehicle selector: header picker is the source of truth. */
@@ -99,7 +122,20 @@ export default function BatteryDegradationPage() {
     provenance: 'inferred',
     maxAgeMs: 24 * 60 * 60 * 1000,
   });
-  const { data, fatalError } = healthState;
+  const { fatalError } = healthState;
+  const data: BatteryDegradationHealth | undefined = healthState.data;
+  const history = useMemo(() => (Array.isArray(data?.history) ? data.history : [])
+    .filter(row => row != null && typeof row === 'object' && !Array.isArray(row))
+    .map(row => ({
+      ...row,
+      date: typeof row.date === 'string' ? row.date : '',
+      soh_pct: batteryNumber(row.soh_pct, 0, 100),
+      capacity_wh: batteryNumber(row.capacity_wh, 0),
+      range_m: batteryNumber(row.range_m, 0),
+      odometer_m: batteryNumber(row.odometer_m, 0),
+      range_sampled_at: typeof row.range_sampled_at === 'string' ? row.range_sampled_at : null,
+      odometer_sampled_at: typeof row.odometer_sampled_at === 'string' ? row.odometer_sampled_at : null,
+    })), [data]);
   const initialLoading = activeId != null && !healthState.hasData &&
     !fatalError && !healthState.isRefreshBlocked;
   const unavailableMessage = activeId == null
@@ -122,41 +158,57 @@ export default function BatteryDegradationPage() {
 
   /* Range-loss chart data */
   const rangeData = useMemo(() => {
-    if (!data?.history || data.history.length === 0) return [];
-    const originalRange = data.history[0].range_m != null && Number.isFinite(data.history[0].range_m)
-      ? fromMeters(data.history[0].range_m) : null;
-    return data.history.map((h) => ({
-      date: formatDate(h.date),
-      original: originalRange,
+    if (history.length === 0) return [];
+    const retainedBaseline = history[0].range_m != null
+      ? fromMeters(history[0].range_m) : null;
+    return history.map((h) => ({
+      date: h.date,
+      original: retainedBaseline,
       current: h.range_m != null && Number.isFinite(h.range_m) ? fromMeters(h.range_m) : null,
+      range_sampled_at: h.range_sampled_at ?? null,
+      baseline_sampled_at: history[0].range_sampled_at ?? null,
     }));
-  }, [data, fromMeters]);
+  }, [history, fromMeters]);
 
-  /* Projection chart: actual history + predicted future with confidence band */
+  /* Projection chart: actual history + predicted future with approximate prediction band */
   const projectionChartData = useMemo(() => {
-    const hist = (data?.history ?? []).map((h) => ({
-      label: formatDate(h.date),
+    const hist = history.map((h) => ({
+      label: h.date,
       health: h.soh_pct,
       projected: undefined as number | undefined,
       confidence_low: undefined as number | undefined,
       confidence_high: undefined as number | undefined,
       confidence_band: undefined as number | undefined,
     }));
-    const projections = data?.projections ?? [];
-    const proj = projections.map((p) => ({
+    const projections = data?.prediction?.fit_valid === true && data.prediction.has_enough_data
+      ? Array.isArray(data.projections) ? data.projections : [] : [];
+    const proj = projections.filter(p => p != null && typeof p === 'object' && !Array.isArray(p) &&
+      typeof p.date === 'string').map((p) => ({
       label: p.date,
       health: undefined as number | undefined,
-      projected: p.health_pct,
-      confidence_low: p.confidence_low,
-      confidence_high: p.confidence_high,
-      confidence_band: Number.isFinite(p.confidence_low) && Number.isFinite(p.confidence_high)
-        ? Math.max(0, p.confidence_high - p.confidence_low) : undefined,
+      projected: batteryNumber(p.health_pct, 0, 100),
+      confidence_low: validPercent(p.confidence_low) && validPercent(p.confidence_high) &&
+        p.confidence_low <= p.confidence_high ? p.confidence_low : undefined,
+      confidence_high: validPercent(p.confidence_low) && validPercent(p.confidence_high) &&
+        p.confidence_low <= p.confidence_high ? p.confidence_high : undefined,
+      confidence_band: validPercent(p.confidence_low) && validPercent(p.confidence_high) &&
+        p.confidence_low <= p.confidence_high ? p.confidence_high - p.confidence_low : undefined,
     }));
-    if (hist.length > 0 && proj.length > 0) {
-      proj[0] = { ...proj[0], health: hist[hist.length - 1].health };
-    }
     return [...hist, ...proj];
-  }, [data]);
+  }, [data, history]);
+  // Join geometry is not another observation and must not enter CSV/table rows.
+  const projectionPlotData = useMemo(() => {
+    const lastObservedIndex = history.length - 1;
+    const firstForecast = projectionChartData[lastObservedIndex + 1];
+    const lastObserved = projectionChartData[lastObservedIndex];
+    return projectionChartData.map((point, index) => ({
+      ...point,
+      forecast_join: lastObserved && firstForecast?.projected != null
+        ? index === lastObservedIndex ? lastObserved.health
+          : index === lastObservedIndex + 1 ? firstForecast.projected : undefined
+        : undefined,
+    }));
+  }, [history, projectionChartData]);
   const formatPercent = useCallback(
     (value: unknown) => typeof value === 'number' && Number.isFinite(value)
       ? `${fmtNumber(value)}%` : '—',
@@ -164,19 +216,35 @@ export default function BatteryDegradationPage() {
   );
 
   const habits = data?.charging_habits;
-  const totalCharges = habits?.fast_charge_count != null && habits?.slow_charge_count != null
+  const totalCharges = batteryCount(habits?.fast_charge_count) != null &&
+    batteryCount(habits?.slow_charge_count) != null && habits
     ? habits.fast_charge_count + habits.slow_charge_count : null;
-  const fastChargePct = totalCharges != null && totalCharges > 0 && habits
+  const fastChargePct = data?.valid_charge_count !== 0 && totalCharges != null && totalCharges > 0 && habits
     ? fmtInt((habits.fast_charge_count / totalCharges) * 100) : '—';
 
-  const cycleDepthScore = data?.avg_depth_of_discharge_pct != null
-    ? Math.max(0, Math.round(100 - data.avg_depth_of_discharge_pct))
+  const avgDoD = (batteryCount(data?.valid_dod_count) ?? 0) > 0 &&
+    validPercent(data?.avg_depth_of_discharge_pct) ? data.avg_depth_of_discharge_pct : null;
+  const cycleDepthScore = avgDoD != null
+    ? 100 - avgDoD
     : null;
+  const habitsScore = data?.charge_habits_available !== false &&
+    validPercent(data?.charge_habits_score) ? data.charge_habits_score : null;
+  const fastPct = totalCharges != null && totalCharges > 0 && data?.valid_charge_count !== 0 &&
+    validPercent(data?.fast_charge_pct) ? data.fast_charge_pct : null;
+  const fullPct = (batteryCount(data?.valid_end_soc_count) ?? 0) > 0 &&
+    validPercent(data?.full_charge_pct) ? data.full_charge_pct : null;
+  const thermalAvailable = data?.temp_exposure_available !== false &&
+    (data?.temp_sample_count == null || (batteryCount(data.temp_sample_count) ?? 0) >= 10) &&
+    data?.temp_exposure_reason == null;
+  const tempScore = thermalAvailable && validPercent(data?.temp_exposure_score) ? data.temp_exposure_score : null;
 
-  const riskFactors = data?.risk_factors ?? [];
-  const recommendations = data?.recommendations ?? [];
-  const stressLevel = data?.stress_level;
-  const soh = data?.current_soh;
+  const riskFactors = (Array.isArray(data?.risk_factors) ? data.risk_factors : [])
+    .filter(row => row != null && typeof row === 'object' && !Array.isArray(row) && typeof row.name === 'string' &&
+      row.name.trim().length > 0);
+  const recommendations = (Array.isArray(data?.recommendations) ? data.recommendations : [])
+    .filter(row => typeof row === 'string' && row.trim().length > 0);
+  const stressLevel = batteryStress(data);
+  const soh = data?.current_soh_available === false ? null : batteryNumber(data?.current_soh, 0, 100);
 
   /* Table columns */
   const columns: Column<DegradationEntry>[] = useMemo(
@@ -184,9 +252,9 @@ export default function BatteryDegradationPage() {
       {
         key: 'date',
         filterValue: (row) => row.date ?? null,
-        filterValueLabel: (_, row) => formatDate(row.date),
+        filterValueLabel: (_, row) => formatHistoryDate(row.date),
         header: t('battery.degradation.date', 'Date'),
-        render: (row: DegradationEntry) => formatDate(row.date),
+        render: (row: DegradationEntry) => formatHistoryDate(row.date),
         sortable: true,
       },
       {
@@ -225,10 +293,10 @@ export default function BatteryDegradationPage() {
         key: 'capacity_wh',
         align: 'right',
         filterValue: (row) => row.capacity_wh ?? null,
-        filterValueLabel: (_, row) => formatEnergy(row.capacity_wh),
+        filterValueLabel: (_, row) => row.capacity_wh != null ? formatEnergy(row.capacity_wh) : '—',
         header: t('battery.degradation.capacity', 'Capacity'),
         render: (row: DegradationEntry) =>
-          formatEnergy(row.capacity_wh),
+          row.capacity_wh != null ? formatEnergy(row.capacity_wh) : '—',
         sortable: true,
       },
       {
@@ -240,8 +308,22 @@ export default function BatteryDegradationPage() {
         render: (row: DegradationEntry) => row.range_m != null ? `${fmtNumber(fromMeters(row.range_m))} ${unitPrefs.distance}` : '—',
         sortable: true,
       },
+      {
+        key: 'range_sampled_at',
+        filterValueLabel: (_, row) => formatDateTime(row.range_sampled_at),
+        header: t('battery.degradation.rangeSampledAt', 'Range sample timestamp'),
+        render: row => formatDateTime(row.range_sampled_at),
+        sortable: true,
+      },
+      {
+        key: 'odometer_sampled_at',
+        filterValueLabel: (_, row) => formatDateTime(row.odometer_sampled_at),
+        header: t('battery.degradation.odometerSampledAt', 'Odometer sample timestamp'),
+        render: row => formatDateTime(row.odometer_sampled_at),
+        sortable: true,
+      },
     ],
-    [t, fromMeters, unitPrefs.distance, formatEnergy, fmtNumber],
+    [t, fromMeters, unitPrefs.distance, formatEnergy, fmtNumber, formatHistoryDate, formatDateTime],
   );
 
   /* ── Render ──────────────────────────────────────────── */
@@ -276,7 +358,7 @@ export default function BatteryDegradationPage() {
           ) : unavailableMessage ? (
             <EmptyState message={unavailableMessage} />
           ) : (
-            <BatteryDegradationStats data={data} loading={initialLoading} />
+            <BatteryDegradationStats data={data} loading={initialLoading} retained={healthState.status === 'stale'} />
           )}
         </section>
       </FadeIn>
@@ -293,8 +375,7 @@ export default function BatteryDegradationPage() {
             size="third"
             actions={
               <HelpTooltip
-                i18nKey="help.battery.soh"
-                defaultValue="State of Health — current usable capacity divided by the original rated capacity, expressed as a percentage. Higher is better; new packs start at 100%."
+                text={`${capacityEvidence(data, t)} ${observationEvidence(data, t, formatInstantDate)}`}
                 className="min-h-11 min-w-11"
               />
             }
@@ -340,7 +421,8 @@ export default function BatteryDegradationPage() {
             <ChartCard
               toolbar exportable size="standard"
               title={t('battery.degradation.trendTitle', 'Health trend & projection')}
-              ariaLabel={t('battery.degradation.trendTitleAria', 'Battery health trend and 95% confidence projection chart')}
+              ariaLabel={t('battery.degradation.predictionBandChartAria', 'Battery health trend and approximate prediction band chart')}
+              subtitle={predictionIntervalEvidence(data, t)}
               height={300}
               chartKey="battery-degradation-trend"
               loading={initialLoading}
@@ -349,6 +431,7 @@ export default function BatteryDegradationPage() {
               empty={projectionChartData.length === 0}
               emptyMessage={unavailableMessage ?? undefined}
               data={projectionChartData}
+              exportData={projectionChartData}
               dataColumns={[
                 { key: 'label', label: t('battery.degradation.date', 'Date') },
                 { key: 'health', label: t('battery.degradation.actualHealth', 'Actual health %'), format: formatPercent },
@@ -360,7 +443,7 @@ export default function BatteryDegradationPage() {
             >
               {({ annotations: chartAnnotations }) => (
                 <ResponsiveContainer width="100%" height="100%">
-                  <ComposedChart data={projectionChartData}>
+                  <ComposedChart data={projectionPlotData}>
                     {chartGrid}
                     <defs>
                       <linearGradient id="ciBand" x1="0" y1="0" x2="0" y2="1">
@@ -368,9 +451,9 @@ export default function BatteryDegradationPage() {
                         <stop offset="100%" stopColor={palette[4]} stopOpacity={0.04} />
                       </linearGradient>
                     </defs>
-                    <XAxis dataKey="label" tick={axisTickSm} tickLine={false} axisLine={false} />
+                    <XAxis dataKey="label" tickFormatter={formatChartDate} tick={axisTickSm} tickLine={false} axisLine={false} />
                     <YAxis domain={[60, 100]} tick={axisTickSm} tickLine={false} axisLine={false} unit="%" />
-                    <Tooltip content={<ChartTooltip />} />
+                    <Tooltip content={<ChartTooltip labelFormatter={formatChartDate} />} />
                     <ChartLegend state={trendHidden} />
                     <ReferenceLine
                       y={80}
@@ -381,7 +464,7 @@ export default function BatteryDegradationPage() {
                     />
                     <ReferenceLine y={70} stroke={chartTokens.axisStroke} strokeWidth={1} strokeDasharray="6 4" />
                     {renderAnnotationLines(chartAnnotations, (ts) => ts)}
-                    {/* Confidence band (stacked areas: transparent base + visible band) */}
+                    {/* Prediction band (stacked areas: transparent base + visible band) */}
                     <Area
                       {...AREA_DEFAULTS}
                       dataKey="confidence_low"
@@ -399,7 +482,7 @@ export default function BatteryDegradationPage() {
                       stroke="none"
                       fill="url(#ciBand)"
                       fillOpacity={1}
-                      name={t('battery.degradation.confidence', '95% confidence')}
+                      name={t('battery.degradation.approximatePredictionBand', 'Approximate prediction band')}
                       connectNulls={false}
                       hide={trendHidden.isHidden('confidence_band')}
                     />
@@ -412,6 +495,19 @@ export default function BatteryDegradationPage() {
                       dot={{ fill: palette[1], r: 3 }}
                       connectNulls={false}
                       hide={trendHidden.isHidden('health')}
+                    />
+                    <Line
+                      {...AREA_DEFAULTS}
+                      dataKey="forecast_join"
+                      stroke={palette[4]}
+                      strokeWidth={2}
+                      strokeDasharray="8 4"
+                      dot={false}
+                      activeDot={false}
+                      tooltipType="none"
+                      legendType="none"
+                      connectNulls={false}
+                      hide={trendHidden.isHidden('projected')}
                     />
                     <Line
                       {...AREA_DEFAULTS}
@@ -452,10 +548,14 @@ export default function BatteryDegradationPage() {
               <QueryError error={fatalError} onRetry={healthState.retry ?? undefined} />
             ) : unavailableMessage ? (
               <EmptyState message={unavailableMessage} />
-            ) : data?.prediction?.has_enough_data ? (
+            ) : data?.prediction?.fit_valid === true && data.prediction.has_enough_data &&
+              data.prediction.slope_per_year != null && Number.isFinite(data.prediction.slope_per_year) ? (
               <div className="space-y-4">
                 <div className="rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-2)] p-4">
                   <Text as="p" variant="bodySm">
+                    {data.prediction.crossing_status === 'future_crossing' &&
+                      data.prediction.years_to_80_pct != null && Number.isFinite(data.prediction.years_to_80_pct) &&
+                      data.prediction.years_to_80_pct > 0 ? <>
                     {t('battery.degradation.predictionDesc', 'At current rate, battery reaches')}{' '}
                     <Text weight="semibold">80%</Text>{' '}
                     {t('battery.degradation.inApprox', 'in approximately')}{' '}
@@ -464,16 +564,21 @@ export default function BatteryDegradationPage() {
                         ? `~${fmtNumber(data.prediction.years_to_80_pct)}` : '—'} {t('battery.degradation.years', 'years')}
                     </Text>
                     {data.prediction.predicted_date && (
-                      <> ({data.prediction.predicted_date})</>
+                      <> ({formatProjectionMonth(data.prediction.predicted_date)})</>
                     )}
+                    </> : data.prediction.crossing_status === 'below_threshold'
+                      ? t('battery.degradation.belowThreshold', 'Fitted health is already at or below 80%.')
+                      : data.prediction.crossing_status === 'no_future_crossing'
+                        ? t('battery.degradation.noFutureCrossing', 'The fitted trend does not predict a future crossing of 80%.')
+                        : t('battery.degradation.crossingUnavailable', 'The 80% crossing estimate is unavailable.')}
                   </Text>
                 </div>
-                <BatteryDegradationStats data={data} prediction />
+                <BatteryDegradationStats data={data} retained={healthState.status === 'stale'} prediction />
               </div>
             ) : (
               <EmptyState /* no-action: prediction needs a minimum snapshot count that isn't met yet */
                 icon={<AlertTriangle className="h-8 w-8" />}
-                message={t('battery.degradation.needMore', 'Need more data points to generate prediction (minimum 3 snapshots required)')}
+                message={t('battery.degradation.needMore', 'Need a valid fit to generate prediction (minimum 3 valid snapshots with time variation required)')}
               />
             )}
           </LayoutCard>
@@ -486,16 +591,18 @@ export default function BatteryDegradationPage() {
               <QueryError error={fatalError} onRetry={healthState.retry ?? undefined} />
             ) : unavailableMessage ? (
               <EmptyState message={unavailableMessage} />
-            ) : habits && stressLevel != null ? (
+            ) : habits ? (
               <AlertBanner
                 variant={
-                  stressLevel === 'Low' ? 'success' :
+                  stressLevel == null ? 'info' : stressLevel === 'Low' ? 'success' :
                   stressLevel === 'Medium' ? 'warning' : 'danger'
                 }
                 icon={<Thermometer className="h-5 w-5" aria-hidden="true" />}
-                title={`${fastChargePct}% ${t('battery.degradation.fastCharges', 'fast charges')}, ${habits.deep_discharge_count != null ? fmtInt(habits.deep_discharge_count) : '—'} ${t('battery.degradation.deepDischarges', 'deep discharges')} — ${t(`battery.degradation.stressValue.${stressLevel}`, stressLevel)} ${t('battery.degradation.stressLabel', 'stress')}`}
+                title={`${fastChargePct}% ${t('battery.degradation.fastCharges', 'fast charges')}, ${batteryCount(habits.deep_discharge_count) != null ? fmtInt(habits.deep_discharge_count) : '—'} ${t('battery.degradation.deepDischarges', 'deep discharges')} — ${stressLevel != null ? t(`battery.degradation.stressValue.${stressLevel}`, stressLevel) : '—'} ${t('battery.degradation.stressLabel', 'stress')}`}
               >
-                {stressLevel === 'Low'
+                {stressLevel == null
+                  ? t('battery.degradation.noStress', 'Charging impact will appear once charging history is available.')
+                  : stressLevel === 'Low'
                   ? t('battery.degradation.stressLow', 'Your charging habits are optimal for battery longevity.')
                   : stressLevel === 'Medium'
                     ? t('battery.degradation.stressMedium', 'Consider reducing fast charging frequency and avoiding full charges when possible.')
@@ -526,17 +633,22 @@ export default function BatteryDegradationPage() {
             ) : unavailableMessage ? (
               <EmptyState message={unavailableMessage} />
             ) : rangeData.length > 0 ? (
+              <>
+              <Caption className="mb-3 block">
+                {t('battery.degradation.retainedRangeEvidence',
+                  'The comparison baseline is the range estimate attached to the first retained history row, not new-pack range. Missing baseline values remain unknown. Sample timestamps identify carried-forward telemetry; the history date is the capacity aggregation day.')}
+              </Caption>
               <EmbeddedChart
                 title={t('battery.degradation.rangeLoss', 'Range loss over time')}
                 ariaLabel={t(
                   'battery.degradation.rangeLossAria',
-                  'Original and current estimated driving range over time',
+                  'First retained comparison baseline and estimated driving range over time',
                 )}
                 data={rangeData}
                 dataColumns={[
                   { key: 'date', label: t('battery.degradation.date', 'Date') },
                   {
-                    key: 'original', label: t('battery.degradation.originalRange', 'Original range'),
+                    key: 'original', label: t('battery.degradation.retainedRangeBaseline', 'First retained range estimate'),
                     format: (value) => typeof value === 'number' && Number.isFinite(value)
                       ? `${fmtNumber(value)} ${unitPrefs.distance}` : '—',
                   },
@@ -545,6 +657,8 @@ export default function BatteryDegradationPage() {
                     format: (value) => typeof value === 'number' && Number.isFinite(value)
                       ? `${fmtNumber(value)} ${unitPrefs.distance}` : '—',
                   },
+                  { key: 'range_sampled_at', label: t('battery.degradation.rangeSampledAt', 'Range sample timestamp') },
+                  { key: 'baseline_sampled_at', label: t('battery.degradation.baselineSampledAt', 'Baseline sample timestamp') },
                 ]}
                 chartKey="battery-degradation-range-loss"
                 fluid={false}
@@ -555,9 +669,9 @@ export default function BatteryDegradationPage() {
                   <ResponsiveContainer width="100%" height="100%">
                     <AreaChart data={rangeData}>
                     {chartGrid}
-                    <XAxis dataKey="date" tick={axisTickSm} tickLine={false} axisLine={false} />
+                    <XAxis dataKey="date" tickFormatter={formatHistoryDate} tick={axisTickSm} tickLine={false} axisLine={false} />
                     <YAxis tick={axisTickSm} tickLine={false} axisLine={false} unit={` ${unitPrefs.distance}`} />
-                    <Tooltip content={<ChartTooltip valueFormatter={(value) =>
+                    <Tooltip content={<ChartTooltip labelFormatter={formatChartDate} valueFormatter={(value) =>
                       typeof value === 'number' ? `${fmtNumber(value)} ${unitPrefs.distance}` : '—'
                     } />} />
                     <ChartLegend />
@@ -566,7 +680,7 @@ export default function BatteryDegradationPage() {
                     <Area
                       {...AREA_DEFAULTS}
                       dataKey="original"
-                      name={t('battery.degradation.originalRange', 'Original range')}
+                      name={t('battery.degradation.retainedRangeBaseline', 'First retained range estimate')}
                       stroke={palette[0]}
                       strokeWidth={2}
                       fill="url(#origRange)"
@@ -589,6 +703,7 @@ export default function BatteryDegradationPage() {
                   </ResponsiveContainer>
                 )}
               </EmbeddedChart>
+              </>
             ) : (
               <EmptyState /* no-action: transient empty state — surfaces when source data is missing */
                 icon={<Battery className="h-8 w-8" />}
@@ -610,30 +725,33 @@ export default function BatteryDegradationPage() {
                 label={t('battery.degradation.riskFactors', 'Risk factors')}
                 sizes={riskFactors.map(() => 'half')}
               >
-                {riskFactors.map((rf: RiskFactorData) => {
+                {riskFactors.map((rf) => {
                   const Icon = riskFactorIcon(rf.name);
+                  const score = rf.available !== false &&
+                    (rf.name !== 'temperature_exposure' || thermalAvailable) &&
+                    validPercent(rf.score) ? rf.score : NaN;
                   return (
                     <GlassPanel key={rf.name} className="p-4 shadow-none">
                       <div className="mb-3 flex flex-wrap items-start justify-between gap-2">
                         <div className="flex min-w-0 max-w-full items-center gap-2">
-                          <Icon className={cn('h-4 w-4 shrink-0', riskScoreColor(rf.score))} aria-hidden="true" />
+                          <Icon className={cn('h-4 w-4 shrink-0', riskScoreColor(score))} aria-hidden="true" />
                           <Text variant="bodySm" className="break-words">
                             {t(`battery.degradation.risk.${rf.name}`, rf.name.replace(/_/g, ' '))}
                           </Text>
                         </div>
-                        <Badge variant={riskBadgeVariant(rf.score)} size="sm">
-                          {rf.label}
+                        <Badge variant={riskBadgeVariant(score)} size="sm">
+                          {Number.isFinite(score) && typeof rf.label === 'string' ? rf.label : '—'}
                         </Badge>
                       </div>
                       <MetricBar
                         label={t('battery.degradation.riskScore', 'Risk score')}
-                        value={rf.score}
+                        value={Number.isFinite(score) ? score : null}
                         max={100}
-                        color={riskBarColor(rf.score)}
+                        color={riskBarColor(score)}
                         fill="solid"
-                        sublabel={`${Number.isFinite(rf.score) ? rf.score : '—'}/100`}
+                        sublabel={`${Number.isFinite(score) ? score : '—'}/100`}
                       />
-                      <Caption className="mt-2 block">{rf.detail}</Caption>
+                      <Caption className="mt-2 block">{Number.isFinite(score) && typeof rf.detail === 'string' ? rf.detail : '—'}</Caption>
                     </GlassPanel>
                   );
                 })}
@@ -696,18 +814,18 @@ export default function BatteryDegradationPage() {
                 <GlassPanel className="p-4 shadow-none">
                   <div className="mb-2 flex flex-wrap items-start justify-between gap-2">
                     <Text variant="bodySm" weight="medium" className="min-w-0 break-words">{t('battery.degradation.chargeHabits', 'Charge habits')}</Text>
-                    <Badge variant={data?.charge_habits_score != null ? scoreVariant(data.charge_habits_score) : 'neutral'} size="sm">
-                      {data?.charge_habits_score != null ? fmtNumber(data.charge_habits_score) : '—'}/100
+                    <Badge variant={habitsScore != null ? scoreVariant(habitsScore) : 'neutral'} size="sm">
+                      {habitsScore != null ? fmtNumber(habitsScore) : '—'}/100
                     </Badge>
                   </div>
                   <div className="space-y-1">
                     <div className="flex flex-wrap justify-between gap-2">
                       <Caption>{t('battery.degradation.fastCharge', 'Fast charge')}</Caption>
-                      <Caption className={typography.weight.medium}>{data?.fast_charge_pct != null ? fmtNumber(data.fast_charge_pct) : '—'}%</Caption>
+                      <Caption className={typography.weight.medium}>{fastPct != null ? fmtNumber(fastPct) : '—'}%</Caption>
                     </div>
                     <div className="flex flex-wrap justify-between gap-2">
                       <Caption>{t('battery.degradation.fullCharge', 'Full charge')}</Caption>
-                      <Caption className={typography.weight.medium}>{data?.full_charge_pct != null ? fmtNumber(data.full_charge_pct) : '—'}%</Caption>
+                      <Caption className={typography.weight.medium}>{fullPct != null ? fmtNumber(fullPct) : '—'}%</Caption>
                     </div>
                   </div>
                 </GlassPanel>
@@ -716,11 +834,11 @@ export default function BatteryDegradationPage() {
                 <GlassPanel className="p-4 shadow-none">
                   <div className="mb-2 flex flex-wrap items-start justify-between gap-2">
                     <Text variant="bodySm" weight="medium" className="min-w-0 break-words">{t('battery.degradation.tempExposure', 'Temperature exposure')}</Text>
-                    <Badge variant={data?.temp_exposure_score != null ? scoreVariant(data.temp_exposure_score) : 'neutral'} size="sm">
-                      {data?.temp_exposure_score != null ? fmtNumber(data.temp_exposure_score) : '—'}/100
+                    <Badge variant={tempScore != null ? riskBadgeVariant(tempScore) : 'neutral'} size="sm">
+                      {tempScore != null ? fmtNumber(tempScore) : '—'}/100
                     </Badge>
                   </div>
-                  {data?.temp_exposure_reason != null && (
+                  {typeof data?.temp_exposure_reason === 'string' && (
                     <Caption className="mt-2 block break-words">{data.temp_exposure_reason}</Caption>
                   )}
                   <div className="flex items-center gap-2">
@@ -741,10 +859,11 @@ export default function BatteryDegradationPage() {
                     <div className="flex flex-wrap justify-between gap-2">
                       <Caption>{t('battery.degradation.avgDoDLabel', 'Avg DoD')}</Caption>
                       <Caption className={typography.weight.medium}>
-                        {data?.avg_depth_of_discharge_pct != null ? fmtNumber(data.avg_depth_of_discharge_pct) : '—'}%
+                        {avgDoD != null ? fmtNumber(avgDoD) : '—'}%
                       </Caption>
                     </div>
                   </div>
+                  <Caption className="mt-2 block">{driveDropEvidence(data, t)}</Caption>
                 </GlassPanel>
               </DegradationGrid>
             )}
@@ -761,11 +880,11 @@ export default function BatteryDegradationPage() {
             <QueryError error={fatalError} onRetry={healthState.retry ?? undefined} />
           ) : unavailableMessage ? (
             <EmptyState message={unavailableMessage} />
-          ) : (data?.history?.length ?? 0) > 0 ? (
+          ) : history.length > 0 ? (
             <DataTable
               enableValueFilters
               name={t('battery.degradation.history', 'Degradation history')}
-              rowLabel={(row: DegradationEntry) => formatDate(row.date)}
+              rowLabel={(row: DegradationEntry) => formatHistoryDate(row.date)}
               tableId="battery:degradation-history"
               columns={columns}
               mobileColumns={['date', 'soh_pct']}
@@ -774,19 +893,22 @@ export default function BatteryDegradationPage() {
                 roles: {
                   date: 'title', soh_pct: 'primary', odometer_m: 'meta',
                   capacity_wh: 'meta', range_m: 'meta',
+                  range_sampled_at: 'meta', odometer_sampled_at: 'meta',
                 },
                 displayValue: (row, key) => {
                   switch (key) {
-                    case 'date': return formatDate(row.date);
+                    case 'date': return formatHistoryDate(row.date);
                     case 'soh_pct': return row.soh_pct != null ? `${fmtNumber(row.soh_pct)}%` : '—';
                     case 'odometer_m': return row.odometer_m != null ? `${fmtNumber(fromMeters(row.odometer_m))} ${unitPrefs.distance}` : '—';
-                    case 'capacity_wh': return formatEnergy(row.capacity_wh);
+                    case 'capacity_wh': return row.capacity_wh != null ? formatEnergy(row.capacity_wh) : '—';
                     case 'range_m': return row.range_m != null ? `${fmtNumber(fromMeters(row.range_m))} ${unitPrefs.distance}` : '—';
+                    case 'range_sampled_at': return formatDateTime(row.range_sampled_at);
+                    case 'odometer_sampled_at': return formatDateTime(row.odometer_sampled_at);
                     default: return null;
                   }
                 },
               }}
-              data={data?.history ?? []}
+              data={history}
               keyExtractor={(row: DegradationEntry) =>
                 `${row.date}-${row.odometer_m}`
               }
