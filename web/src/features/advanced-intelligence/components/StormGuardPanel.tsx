@@ -31,6 +31,17 @@ import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { StormGuardActivity } from './StormGuardActivity';
 import { stormLevelLabel, stormLevelVariant } from './stormguardPresentation';
 
+interface StormGuardDraft {
+  enabled: boolean;
+  lat: string;
+  lng: string;
+  targetSoc: number;
+}
+
+const defaultDraft: StormGuardDraft = {
+  enabled: false, lat: '37.7749', lng: '-122.4194', targetSoc: 90,
+};
+
 export function StormGuardPanel({ vehicleId }: { vehicleId?: number | null }) {
   const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
@@ -41,24 +52,38 @@ export function StormGuardPanel({ vehicleId }: { vehicleId?: number | null }) {
   const saveMutation = useSaveStormguardConfig();
 
   const stored = statusQuery.data?.config;
-  const [enabled, setEnabled] = useState(false);
-  const [lat, setLat] = useState('37.7749');
-  const [lng, setLng] = useState('-122.4194');
-  const [targetSoc, setTargetSoc] = useState(90);
-  const [hydrated, setHydrated] = useState(false);
+  const [drafts, setDrafts] = useState<Record<number, StormGuardDraft>>({});
+  const { enabled, lat, lng, targetSoc } = (vehicleId != null && drafts[vehicleId]) || defaultDraft;
+  const { reset } = saveMutation;
 
   useEffect(() => {
-    if (stored && !hydrated) {
-      setEnabled(stored.enabled);
-      setLat(String(stored.lat));
-      setLng(String(stored.lng));
-      setTargetSoc(stored.target_soc);
-      setHydrated(true);
-    }
-  }, [stored, hydrated]);
+    // Detach the mutation observer from work submitted in the previous scope.
+    reset();
+  }, [vehicleId, reset]);
 
-  const assessment = statusQuery.data?.assessment;
-  const currentSoc = statusQuery.data?.current_soc;
+  useEffect(() => {
+    if (!stored || stored.vehicle_id !== vehicleId) return;
+    setDrafts((previous) => previous[stored.vehicle_id] ? previous : {
+      ...previous,
+      [stored.vehicle_id]: {
+        enabled: stored.enabled, lat: String(stored.lat),
+        lng: String(stored.lng), targetSoc: stored.target_soc,
+      },
+    });
+  }, [stored, vehicleId]);
+
+  const updateDraft = (patch: Partial<StormGuardDraft>) => {
+    if (vehicleId == null) return;
+    setDrafts((previous) => ({
+      ...previous, [vehicleId]: { ...(previous[vehicleId] ?? defaultDraft), ...patch },
+    }));
+  };
+
+  const matchingStatus = stored?.vehicle_id === vehicleId ? statusQuery.data : undefined;
+  const assessment = matchingStatus?.assessment;
+  const currentSoc = matchingStatus?.current_soc;
+  const matchingSave = vehicleId != null && saveMutation.variables?.vehicle_id === vehicleId;
+  const savePending = matchingSave && saveMutation.isPending;
 
   const handleSave = () => {
     if (!vehicleId) return;
@@ -72,7 +97,7 @@ export function StormGuardPanel({ vehicleId }: { vehicleId?: number | null }) {
   };
 
   const saveError =
-    saveMutation.isError
+    matchingSave && saveMutation.isError
       ? (saveMutation.error as Error)?.message || t('stormguard.saveError', 'Save failed')
       : '';
 
@@ -130,19 +155,19 @@ export function StormGuardPanel({ vehicleId }: { vehicleId?: number | null }) {
             <Toggle
               label={t('stormguard.arm', 'Auto pre-charge before storms')}
               checked={enabled}
-              onChange={setEnabled}
+              onChange={(value) => updateDraft({ enabled: value })}
             />
             <div className="grid grid-cols-2 gap-3">
               <Input
                 label={t('stormguard.lat', 'Home latitude')}
                 value={lat}
-                onChange={(e) => setLat(e.target.value)}
+                onChange={(e) => updateDraft({ lat: e.target.value })}
                 inputMode="decimal"
               />
               <Input
                 label={t('stormguard.lng', 'Home longitude')}
                 value={lng}
-                onChange={(e) => setLng(e.target.value)}
+                onChange={(e) => updateDraft({ lng: e.target.value })}
                 inputMode="decimal"
               />
             </div>
@@ -151,13 +176,13 @@ export function StormGuardPanel({ vehicleId }: { vehicleId?: number | null }) {
               value={targetSoc}
               min={50}
               max={100}
-              onChange={setTargetSoc}
+              onChange={(value) => updateDraft({ targetSoc: value })}
               formatValue={(v) => `${v}%`}
             />
             <Button
               onClick={handleSave}
-              disabled={!vehicleId || saveMutation.isPending}
-              loading={saveMutation.isPending}
+              disabled={!vehicleId || savePending}
+              loading={savePending}
             >
               {t('stormguard.save', 'Save guard')}
             </Button>
