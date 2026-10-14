@@ -17,19 +17,19 @@ export const STATUS_BADGES: Record<
   completed: { variant: 'info', labelKey: 'maintenance.status.completed', fallback: 'Completed' },
 };
 
-/** Preserve existing categorical chart colors; surfaces and body text are
- * neutral tokens. Category identity is always visible, never color alone. */
-const CATEGORY_COLORS: Record<string, string> = {
-  tires: '#22d3ee',
-  brakes: '#fb7185',
-  battery: '#34d399',
-  filters: '#fbbf24',
-  fluids: '#818cf8',
-  wipers: '#38bdf8',
-  alignment: '#a78bfa',
-  general: '#94a3b8',
+/** Fixed slots keep category identity independent of count and display order. */
+const CATEGORY_PALETTE_SLOTS = {
+  tires: 0,
+  brakes: 1,
+  battery: 2,
+  filters: 3,
+  fluids: 4,
+  wipers: 5,
+  alignment: 6,
 };
 
-export function categoryColor(category: string): string {
-  return CATEGORY_COLORS[category] ?? '#94a3b8';
+export function categoryColor(category: string, palette: readonly string[]): string {
+  const slot = Object.hasOwn(CATEGORY_PALETTE_SLOTS, category)
+    ? CATEGORY_PALETTE_SLOTS[category as keyof typeof CATEGORY_PALETTE_SLOTS] : undefined;
+  return (slot === undefined ? undefined : palette[slot]) ?? 'var(--text-secondary)';
 }

@@ -4,6 +4,7 @@ import { MetricBar } from '@/components/data-display';
 import { LayoutCard } from '@/components/layout';
 import { EmptyState, Skeleton } from '@/components/feedback';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { useChartPalette } from '@/hooks/useChartPalette';
 import type { CategoryBreakdown, MaintenanceItem } from './maintenanceModel';
 import { categoryColor } from './maintenancePresentation';
 import { MaintenanceSource } from './MaintenanceSource';
@@ -18,7 +19,8 @@ export function MaintenanceCategoriesPanel({
   breakdown: readonly CategoryBreakdown[];
 }) {
   const { t } = useTranslation();
-  const { fmtInt } = useNumberFormatting();
+  const { fmtInt, fmtNumber } = useNumberFormatting();
+  const palette = useChartPalette();
   const empty = <EmptyState message={t('maintenance.noCategory', 'No maintenance items to categorize yet.')}
     action={enabled && source.retry ? { label: t('common.refresh', 'Refresh'), onClick: source.retry } : undefined}
     actionTo={!enabled ? { label: t('nav.manageVehicles', 'Manage vehicles'), to: '/vehicles' } : undefined} />;
@@ -38,8 +40,11 @@ export function MaintenanceCategoriesPanel({
                 label={row.category.charAt(0).toUpperCase() + row.category.slice(1)}
                 value={row.count}
                 max={row.max}
-                color={categoryColor(row.category)}
-                sublabel={`${fmtInt(row.count)} ${t('maintenance.items', 'items')}`}
+                color={categoryColor(row.category, palette)}
+                fill="solid"
+                sublabel={Number.isFinite(row.count)
+                  ? `${Number.isInteger(row.count) ? fmtInt(row.count) : fmtNumber(row.count)} ${t('maintenance.items', 'items')}`
+                  : undefined}
               />
             ))}
           </div>

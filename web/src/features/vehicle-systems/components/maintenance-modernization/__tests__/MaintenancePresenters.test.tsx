@@ -12,6 +12,10 @@ import {
 } from '../index';
 import MaintenancePage from '../../../pages/MaintenancePage';
 import { MaintenanceSource } from '../MaintenanceSource';
+import { MaintenanceRecordsPanel } from '../MaintenanceRecordsPanel';
+import { MaintenanceCategoriesPanel } from '../MaintenanceCategoriesPanel';
+import { categoryColor } from '../maintenancePresentation';
+import { resolveChartPalette } from '@/hooks/useChartPalette';
 import { item, record } from './fixtures';
 
 const h = vi.hoisted(() => ({
@@ -21,6 +25,7 @@ const h = vi.hoisted(() => ({
   precision: 2,
   distance: 'km' as 'km' | 'mi',
   currency: '€',
+  palettePreference: undefined as string | null | undefined,
   request: vi.fn(),
   downloadCSV: vi.fn(),
   downloadJSON: vi.fn(),
@@ -74,6 +79,13 @@ vi.mock('@/hooks/useSettings', () => ({
     isMiles: false, isFahrenheit: false, isPSI: false,
   }),
 }));
+vi.mock('@/hooks/useChartPalette', async importOriginal => {
+  const actual = await importOriginal<typeof import('@/hooks/useChartPalette')>();
+  return {
+    ...actual,
+    useChartPalette: () => actual.resolveChartPalette(h.palettePreference),
+  };
+});
 // Partial motion mock: real motion/AnimatePresence and every other export survive.
 vi.mock('@/components/motion', async importOriginal => ({
   ...await importOriginal<typeof import('@/components/motion')>(),
@@ -135,6 +147,7 @@ beforeEach(() => {
   h.precision = 2;
   h.distance = 'km';
   h.currency = '€';
+  h.palettePreference = undefined;
   h.request.mockImplementation(() => { throw new Error('Unexpected network side effect'); });
 });
 afterEach(() => {
@@ -143,6 +156,142 @@ afterEach(() => {
 });
 
 describe('complete maintenance presenters', () => {
+  it('uses saved palettes with stable category slots and neutral unknown categories', () => {
+    const source = deriveDataState(query([item()]));
+    const breakdown = [
+      { category: 'tires', count: 2, max: 2 },
+      { category: 'brakes', count: 1, max: 2 },
+      { category: 'general', count: 1, max: 2 },
+      { category: 'custom', count: 1, max: 2 },
+    ];
+    const panel = () => <MaintenanceCategoriesPanel source={source} enabled breakdown={breakdown} />;
+    const { rerender } = mount(panel());
+    const fill = (label: string) => screen.getByRole('progressbar', { name: label }).querySelector('[data-metric-fill]');
+    expect(fill('Tires')).toHaveStyle({ background: resolveChartPalette(undefined)[0] });
+    expect(fill('Brakes')).toHaveStyle({ background: resolveChartPalette(undefined)[1] });
+    for (const label of ['General', 'Custom']) {
+      expect(fill(label)).toHaveStyle({ background: 'var(--text-secondary)' });
+    }
+    for (const preference of ['neon', 'cb_safe', 'invalid', null]) {
+      h.palettePreference = preference;
+      breakdown.reverse();
+      rerender(panel());
+      expect(fill('Tires')).toHaveStyle({ background: resolveChartPalette(preference)[0] });
+      expect(fill('Brakes')).toHaveStyle({ background: resolveChartPalette(preference)[1] });
+      expect(screen.getByRole('progressbar', { name: 'Brakes' })).toHaveAttribute('aria-valuemax', '2');
+      expect(screen.getByRole('progressbar', { name: 'Brakes' })).toHaveAttribute('aria-valuenow', '1');
+      expect(h.palettePreference).toBe(preference);
+    }
+    for (const category of ['general', 'custom', 'constructor', '__proto__']) {
+      expect(categoryColor(category, resolveChartPalette('neon'))).toBe('var(--text-secondary)');
+    }
+    expect(categoryColor('alignment', [])).toBe('var(--text-secondary)');
+    expect(h.request).not.toHaveBeenCalled();
+  });
+
+  it.each([NaN, Infinity, -Infinity])('keeps invalid category count %s unavailable rather than measured zero', count => {
+    mount(<MaintenanceCategoriesPanel source={deriveDataState(query([item()]))} enabled
+      breakdown={[{ category: 'tires', count, max: 2 }]} />);
+    const bar = screen.getByRole('progressbar', { name: 'Tires' });
+    expect(bar).not.toHaveAttribute('aria-valuenow');
+    expect(bar).toHaveAttribute('aria-valuetext', 'No reading');
+    expect(bar.querySelector('[data-metric-fill]')).toBeNull();
+    expect(within(bar).getByText('—')).toBeInTheDocument();
+  });
+
+  it.each([0, -1, 0.25])('preserves valid category count %s and its original scale', count => {
+    mount(<MaintenanceCategoriesPanel source={deriveDataState(query([item()]))} enabled
+      breakdown={[{ category: 'tires', count, max: 2 }]} />);
+    const bar = screen.getByRole(count < 0 ? 'group' : 'progressbar', { name: 'Tires' });
+    expect(within(bar).getByText(`${Number.isInteger(count) ? count : count.toFixed(h.precision)} items`)).toBeInTheDocument();
+    expect(bar.querySelector('[data-metric-fill]')).not.toBeNull();
+    expect(bar).not.toHaveAttribute('aria-valuetext', 'No reading');
+    if (count >= 0) {
+      expect(bar).toHaveAttribute('aria-valuenow', String(count));
+      expect(bar).toHaveAttribute('aria-valuemax', '2');
+    } else {
+      expect(bar).not.toHaveAttribute('aria-valuenow');
+    }
+  });
+
+  it('separates selection-required, active loading and paused-without-data from successful empty results', () => {
+    const retryItems = vi.fn();
+    const retryRecords = vi.fn();
+    const panels = (enabled: boolean, paused = false, resolved = false) => (
+      <>
+        <MaintenanceRecordsPanel
+          source={deriveDataState(query<ServiceRecord[]>(resolved ? [] : undefined, {
+            fetchStatus: paused ? 'paused' : 'fetching', refetch: retryRecords,
+          }))}
+          enabled={enabled} records={[]} columns={[]}
+        />
+        <MaintenanceCategoriesPanel
+          source={deriveDataState(query<MaintenanceItem[]>(resolved ? [] : undefined, {
+            fetchStatus: paused ? 'paused' : 'fetching', refetch: retryItems,
+          }))}
+          enabled={enabled} breakdown={[]}
+        />
+      </>
+    );
+    const { rerender } = mount(panels(false));
+    expect(screen.getAllByText('Select a vehicle first.')).toHaveLength(2);
+    for (const link of screen.getAllByRole('link', { name: 'Manage vehicles' })) {
+      expect(link).toHaveAttribute('href', '/vehicles');
+    }
+    expect(screen.queryByRole('button', { name: 'Retry' })).not.toBeInTheDocument();
+    expect(screen.queryByText('No service records logged yet.')).not.toBeInTheDocument();
+    expect(screen.queryByText('No maintenance items to categorize yet.')).not.toBeInTheDocument();
+
+    rerender(panels(true));
+    expect(screen.getAllByRole('status', { name: 'Loading Maintenance' })).toHaveLength(2);
+    expect(screen.queryByText('Select a vehicle first.')).not.toBeInTheDocument();
+    expect(screen.queryByText('No service records logged yet.')).not.toBeInTheDocument();
+
+    rerender(panels(true, true));
+    expect(screen.getAllByText('Maintenance loading is paused. No data has been loaded yet.')).toHaveLength(2);
+    expect(screen.queryByRole('status', { name: 'Loading Maintenance' })).not.toBeInTheDocument();
+    expect(screen.queryByText('No service records logged yet.')).not.toBeInTheDocument();
+    expect(screen.queryByText('No maintenance items to categorize yet.')).not.toBeInTheDocument();
+    for (const button of screen.getAllByRole('button', { name: 'Retry' })) fireEvent.click(button);
+    expect(retryRecords).toHaveBeenCalledTimes(1);
+    expect(retryItems).toHaveBeenCalledTimes(1);
+
+    rerender(panels(true, false, true));
+    expect(screen.getByText('No service records logged yet.')).toBeInTheDocument();
+    expect(screen.getByText('No maintenance items to categorize yet.')).toBeInTheDocument();
+    expect(screen.queryByText('Maintenance loading is paused. No data has been loaded yet.')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Retry' })).not.toBeInTheDocument();
+    expect(h.request).not.toHaveBeenCalled();
+  });
+
+  it('retains confirmed empty results during refresh failure and clears the warning after recovery', () => {
+    const retry = vi.fn();
+    const panels = (failed: boolean) => (
+      <>
+        <MaintenanceRecordsPanel
+          source={deriveDataState(query<ServiceRecord[]>([], {
+            error: failed ? new Error('History refresh failed') : null, refetch: retry,
+          }))}
+          enabled records={[]} columns={[]}
+        />
+        <MaintenanceCategoriesPanel
+          source={deriveDataState(query<MaintenanceItem[]>([]))}
+          enabled breakdown={[]}
+        />
+      </>
+    );
+    const { rerender } = mount(panels(true));
+    expect(screen.getByText('Showing retained measurements')).toBeInTheDocument();
+    expect(screen.getByText('No service records logged yet.')).toBeInTheDocument();
+    expect(screen.getByText('No maintenance items to categorize yet.')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    expect(retry).toHaveBeenCalledTimes(1);
+    rerender(panels(false));
+    expect(screen.queryByText('Showing retained measurements')).not.toBeInTheDocument();
+    expect(screen.getByText('No service records logged yet.')).toBeInTheDocument();
+    expect(screen.getByText('No maintenance items to categorize yet.')).toBeInTheDocument();
+  });
+
   it('keeps resolved null evidence empty and retains real children through refresh failure', () => {
     const empty = <span>No resolved maintenance evidence</span>;
     const children = <span>Measured maintenance evidence</span>;
