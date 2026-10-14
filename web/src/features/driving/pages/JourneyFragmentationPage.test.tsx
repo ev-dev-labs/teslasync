@@ -7,6 +7,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Drive } from '@/types/driving';
 import type { DataState } from '@/api/dataState';
 import type { OperationalBriefProps } from '@/components/data-display/OperationalBrief';
+import { getGlobalLocale, setGlobalLocale } from '@/lib/numberFormat';
 
 const FROZEN_NOW = Date.parse('2026-08-08T12:00:00.000Z');
 const h = vi.hoisted(() => ({
@@ -16,6 +17,7 @@ const h = vi.hoisted(() => ({
   timezoneHook: vi.fn(),
   timeZone: 'America/Los_Angeles',
   failedChartTitle: null as string | null,
+  gapMinutesTemplate: '{{count}} min',
 }));
 const refetch = vi.fn();
 
@@ -26,17 +28,24 @@ interface QueryStub {
   error: unknown;
   refetch: () => Promise<unknown>;
   fetchStatus?: 'idle' | 'fetching' | 'paused';
+  isFetching?: boolean;
+  isPending?: boolean;
 }
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (key: string, fallback?: unknown, options?: unknown) => {
-      const text = typeof fallback === 'string' ? fallback : key;
+      const text = key === 'journeyFragmentation.gapMinutes'
+        ? h.gapMinutesTemplate
+        : typeof fallback === 'string' ? fallback : key;
       const values = options && typeof options === 'object'
         ? options as Record<string, unknown>
         : {};
+      const replacements = values.replace && typeof values.replace === 'object'
+        ? values.replace as Record<string, unknown>
+        : values;
       return text.replace(/\{\{\s*(\w+)\s*\}\}/g, (_match, name: string) =>
-        values[name] == null ? '' : String(values[name]));
+        replacements[name] == null ? '' : String(replacements[name]));
     },
   }),
 }));
@@ -130,7 +139,12 @@ vi.mock('@/components/ui', async () => {
     <section data-testid="analytical-shell">{children}</section>
   );
   const MetricValue = ({ children }: { children: ReactNode }) => <div>{children}</div>;
-  return { GlassPanel, MetricValue, Select, Text };
+  return {
+    GlassPanel, MetricValue, Select, Text,
+    Button: ({ children, onClick }: { children: ReactNode; onClick?: () => void }) => (
+      <button type="button" onClick={onClick}>{children}</button>
+    ),
+  };
 });
 
 vi.mock('@/components/data-display', async () => {
@@ -159,6 +173,9 @@ vi.mock('@/components/feedback', async () => {
   return {
   SectionErrorBoundary,
   Skeleton,
+  AlertBanner: ({ children, title }: { children: ReactNode; title?: string }) => (
+    <div role="status">{title}{children}</div>
+  ),
   StaleRefreshWarning: ({ state }: { state: DataState<Drive[]> }) =>
     state.hasData && (state.refreshError || state.isRefreshBlocked) ? (
       <div role="status" data-testid="stale-refresh-warning">
@@ -180,7 +197,7 @@ vi.mock('@/components/charts', () => {
     ariaLabel: string;
     loading?: boolean;
     empty?: boolean;
-    children?: ReactNode;
+    children?: ReactNode | ((context: { hiddenSeries: null }) => ReactNode);
     data?: ReadonlyArray<Record<string, unknown>>;
   }
   const ChartContainer = ({ title, subtitle, ariaLabel, loading, empty, children, data }: ChartProps) => {
@@ -189,12 +206,12 @@ vi.mock('@/components/charts', () => {
     <section data-testid="analytical-shell" aria-label={ariaLabel}>
       <h2>{title}</h2>
       {subtitle && <p>{subtitle}</p>}
-      {loading ? <p>Loading</p> : empty ? <p>No data available</p> : (
+      {loading ? <p>Loading</p> : empty ? <p>No data available</p> : data ? (
         <div role="img" aria-label={ariaLabel}>
           <output aria-label={`${title} data`}>{JSON.stringify(data)}</output>
-          {children}
+          {typeof children === 'function' ? children({ hiddenSeries: null }) : children}
         </div>
-      )}
+      ) : typeof children === 'function' ? children({ hiddenSeries: null }) : children}
     </section>
     );
   };
@@ -205,6 +222,7 @@ vi.mock('@/components/charts', () => {
     BarChart: passthrough,
     ChartContainer,
     ChartTooltip: passthrough,
+    ChartLegend: passthrough,
     ResponsiveContainer,
     Tooltip: passthrough,
     XAxis: passthrough,
@@ -321,6 +339,15 @@ function metricValue(label: string): string | null {
     ?.querySelector('[data-operational-value]')?.textContent ?? null;
 }
 
+function elapsedBrief() {
+  return screen.getByRole('region', { name: 'Linked journey timing' });
+}
+
+function elapsedValues() {
+  return Array.from(elapsedBrief().querySelectorAll('[data-operational-value]'),
+    element => element.textContent);
+}
+
 function renderPage() {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const page = () => (
@@ -340,6 +367,7 @@ beforeEach(() => {
   h.vehicleId = 7;
   h.timeZone = 'America/Los_Angeles';
   h.failedChartTitle = null;
+  h.gapMinutesTemplate = '{{count}} min';
   h.history = {
     data: readyHistory(),
     isLoading: false,
@@ -368,15 +396,25 @@ describe('JourneyFragmentationPage', () => {
     renderPage();
     expectPersistentAnalyticalShells();
     expect(screen.getByText('Choose a vehicle to populate this observed history window.')).toBeInTheDocument();
-    expect(screen.getByText('No returned drive rows are available for this vehicle yet.')).toBeInTheDocument();
+    expect(screen.queryByText('No returned drive rows are available for this vehicle yet.')).not.toBeInTheDocument();
+    expect(screen.queryByText('No data available')).not.toBeInTheDocument();
+    expect(screen.queryByRole('img')).not.toBeInTheDocument();
     expect(h.historyHook).toHaveBeenCalledWith(undefined, 1_000);
   });
 
   it('keeps all shells visible during selected-vehicle loading', () => {
-    h.history = { data: undefined, isLoading: true, isError: false, error: null, refetch };
+    h.history = { data: undefined, isLoading: true, isPending: true, isFetching: true, fetchStatus: 'fetching', isError: false, error: null, refetch };
     renderPage();
     expectPersistentAnalyticalShells();
     expect(screen.getAllByText('Loading').length).toBeGreaterThanOrEqual(5);
+    expect(screen.queryByText('No data available')).not.toBeInTheDocument();
+    expect(screen.queryByText(/across 0 linked gaps/)).not.toBeInTheDocument();
+    expect(screen.queryByRole('img')).not.toBeInTheDocument();
+    expect(metricValue('Observed journeys')).toBe('—');
+    expect(elapsedBrief()).toHaveAttribute('aria-busy', 'true');
+    expect(within(elapsedBrief()).getByText('Loading source')).toBeInTheDocument();
+    expect(elapsedValues()).toEqual([]);
+    expect(elapsedBrief().querySelectorAll('[data-operational-metric]')).toHaveLength(3);
   });
 
   it('keeps all shells visible and shows one retry on initial query error', () => {
@@ -385,6 +423,11 @@ describe('JourneyFragmentationPage', () => {
     expectPersistentAnalyticalShells();
     expect(screen.getAllByRole('alert')).toHaveLength(1);
     expectOneRecoveryControl();
+    expect(screen.queryByText('No data available')).not.toBeInTheDocument();
+    expect(screen.queryByRole('img')).not.toBeInTheDocument();
+    expect(metricValue('Observed journeys')).toBe('—');
+    expect(within(elapsedBrief()).getByText('Source unavailable')).toBeInTheDocument();
+    expect(elapsedValues()).toEqual(['—', '—', '—']);
   });
 
   it('keeps all shells visible for selected-vehicle empty history', () => {
@@ -393,6 +436,12 @@ describe('JourneyFragmentationPage', () => {
     expectPersistentAnalyticalShells();
     expect(screen.getByText('No returned drive rows are available for this vehicle yet.')).toBeInTheDocument();
     expect(screen.getAllByText('No data available').length).toBeGreaterThanOrEqual(5);
+    expect(metricValue('Observed journeys')).toBe('0');
+    expect(metricValue('Linked pairs')).toBe('0');
+    expect(within(elapsedBrief()).getByText('Returned evidence')).toBeInTheDocument();
+    expect(elapsedValues()).toEqual(['0 min', '0 min', '0']);
+    expect(screen.queryByText('Drive evidence is not available yet.')).not.toBeInTheDocument();
+    expect(screen.queryByRole('img')).not.toBeInTheDocument();
   });
 
   it('keeps all shells visible for a returned window with no continuity links', () => {
@@ -411,6 +460,8 @@ describe('JourneyFragmentationPage', () => {
     expectPersistentAnalyticalShells();
     expect(screen.getByText('Observed window')).toBeInTheDocument();
     expect(metricValue('Linked pairs')).toBe('0');
+    expect(elapsedValues()).toEqual(['90 min', '0 min', '0']);
+    expect(within(elapsedBrief()).getByText('Returned evidence')).toBeInTheDocument();
   });
 
   it('keeps all shells visible and labels a thin observed window', () => {
@@ -468,6 +519,9 @@ describe('JourneyFragmentationPage', () => {
     expect(screen.getByText('Observed journeys')).toBeInTheDocument();
     expect(screen.getByTestId('stale-refresh-warning')).toHaveTextContent('offline');
     expect(screen.queryAllByRole('alert')).toHaveLength(0);
+    expect(elapsedValues()).toEqual(['90 min', '30 min', '1']);
+    expect(within(elapsedBrief()).getByText('Retained source')).toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: /^(Retry|Refresh)$/ })).toHaveLength(1);
   });
 
   it('changes the visible linked-pair and journey metrics at a 30-minute threshold', () => {
@@ -486,6 +540,29 @@ describe('JourneyFragmentationPage', () => {
     expect(selector).toHaveValue('30');
     expect(metricValue('Linked pairs')).toBe('0');
     expect(metricValue('Observed journeys')).toBe('3');
+  });
+
+  it('localizes sensitivity thresholds with canonical minute interpolation without changing counts', () => {
+    const previousLocale = getGlobalLocale();
+    setGlobalLocale('ar-EG');
+    h.gapMinutesTemplate = 'Minutes: {{count}}';
+    h.history = { data: thresholdHistory(), isLoading: false, isError: false, error: null, refetch };
+    const { unmount } = renderPage();
+    try {
+      expect(JSON.parse(screen.getByLabelText('Threshold sensitivity data').textContent ?? 'null'))
+        .toEqual([
+          { threshold: 'Minutes: ٣٠', journeys: 3, linkedPairs: 0 },
+          { threshold: 'Minutes: ٦٠', journeys: 2, linkedPairs: 1 },
+          { threshold: 'Minutes: ١٢٠', journeys: 2, linkedPairs: 1 },
+          { threshold: 'Minutes: ٢٤٠', journeys: 2, linkedPairs: 1 },
+        ]);
+      expect(metricValue('Linked pairs')).toBe('1');
+      expect(metricValue('Observed journeys')).toBe('2');
+      expect(h.historyHook).toHaveBeenCalledWith('7', 1_000);
+    } finally {
+      unmount();
+      setGlobalLocale(previousLocale);
+    }
   });
 
   it('labels the native threshold control visibly and preserves all four choices', () => {
@@ -537,9 +614,93 @@ describe('JourneyFragmentationPage', () => {
     expectPersistentAnalyticalShells();
     expect(metricValue('Observed journeys')).toBe('—');
     expect(screen.queryByText('Loading')).not.toBeInTheDocument();
-    expect(screen.getByText('Source unavailable')).toBeInTheDocument();
+    expect(elapsedBrief()).not.toHaveAttribute('aria-busy');
+    expect(within(elapsedBrief()).getByText('Source unavailable')).toBeInTheDocument();
+    expect(elapsedValues()).toEqual(['—', '—', '—']);
+    expect(screen.getAllByText('The initial evidence query is paused; no empty result is inferred.').length).toBeGreaterThan(1);
+    expectOneRecoveryControl();
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    expect(refetch).toHaveBeenCalledTimes(1);
+    expect(screen.queryByText('No data available')).not.toBeInTheDocument();
+    expect(screen.queryByRole('img')).not.toBeInTheDocument();
     expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
     expect(screen.queryByText('offline')).not.toBeInTheDocument();
+  });
+
+  it('recovers from paused and fatal initial states into authoritative empty evidence', () => {
+    h.history = { data: undefined, isLoading: false, isPending: true, isError: false, error: null, refetch, fetchStatus: 'paused' };
+    const { rerenderPage } = renderPage();
+    expectOneRecoveryControl();
+    expect(metricValue('Observed journeys')).toBe('—');
+    h.history = { ...h.history, fetchStatus: 'idle', isPending: false, isError: true, error: new Error('network') };
+    rerenderPage();
+    expectPersistentAnalyticalShells();
+    expectOneRecoveryControl();
+    expect(screen.getAllByRole('alert')).toHaveLength(1);
+    expect(screen.queryByText('No data available')).not.toBeInTheDocument();
+    h.history = { ...h.history, data: [], isError: false, error: null };
+    rerenderPage();
+    expectPersistentAnalyticalShells();
+    expect(metricValue('Observed journeys')).toBe('0');
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^(Retry|Refresh)$/ })).not.toBeInTheDocument();
+  });
+
+  it('retains every populated payload through refresh failure and clears warnings on recovery', () => {
+    const data = readyHistory();
+    h.history = { data, isLoading: false, isError: false, error: null, refetch };
+    const { rerenderPage } = renderPage();
+    const chartPayloads = () => screen.getAllByRole('img').map(element => element.textContent);
+    const payloads = chartPayloads();
+    const observedJourneys = metricValue('Observed journeys');
+    const elapsed = elapsedValues();
+    expect(elapsed).toEqual(['90 min', '30 min', '1']);
+    h.history = { ...h.history, isError: true, error: new Error('refresh') };
+    rerenderPage();
+    expectPersistentAnalyticalShells();
+    expect(chartPayloads()).toEqual(payloads);
+    expect(metricValue('Observed journeys')).toBe(observedJourneys);
+    expect(elapsedValues()).toEqual(elapsed);
+    expect(within(elapsedBrief()).getByText('Retained source')).toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: /^(Retry|Refresh)$/ })).toHaveLength(1);
+    expect(screen.getByText('Retained evidence')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+    expect(refetch).toHaveBeenCalledTimes(1);
+    h.history = { ...h.history, isError: false, error: null, isFetching: true };
+    rerenderPage();
+    expect(chartPayloads()).toEqual(payloads);
+    expect(screen.queryByText('Loading')).not.toBeInTheDocument();
+    expect(elapsedValues()).toEqual(elapsed);
+    expect(elapsedBrief()).not.toHaveAttribute('aria-busy');
+    h.history = { ...h.history, isFetching: false };
+    rerenderPage();
+    expectPersistentAnalyticalShells();
+    expect(chartPayloads()).toEqual(payloads);
+    expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
+    expect(screen.queryByText('Retained evidence')).not.toBeInTheDocument();
+    expect(elapsedValues()).toEqual(elapsed);
+    expect(within(elapsedBrief()).getByText('Returned evidence')).toBeInTheDocument();
+    expect(within(elapsedBrief()).queryByText('Retained source')).not.toBeInTheDocument();
+  });
+
+  it('retains an authoritative empty result through refresh failure and recovery', () => {
+    h.history = { data: [], isLoading: false, isError: false, error: null, refetch };
+    const { rerenderPage } = renderPage();
+    h.history = { ...h.history, isError: true, error: new Error('refresh') };
+    rerenderPage();
+    expectPersistentAnalyticalShells();
+    expect(metricValue('Observed journeys')).toBe('0');
+    expect(elapsedValues()).toEqual(['0 min', '0 min', '0']);
+    expect(within(elapsedBrief()).getByText('Retained source')).toBeInTheDocument();
+    expect(screen.queryByRole('img')).not.toBeInTheDocument();
+    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+    expect(screen.getByText('No returned drive rows are available for this vehicle yet.')).toBeInTheDocument();
+    h.history = { ...h.history, isError: false, error: null };
+    rerenderPage();
+    expect(metricValue('Observed journeys')).toBe('0');
+    expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
+    expect(elapsedValues()).toEqual(['0 min', '0 min', '0']);
+    expect(within(elapsedBrief()).getByText('Returned evidence')).toBeInTheDocument();
   });
 
   it('preserves exact gap boundaries, chronological grouping and the unchanged capped query', () => {
