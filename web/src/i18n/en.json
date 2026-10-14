@@ -10793,7 +10793,12 @@
         "binaryEnvelope": "(non-UTF-8 envelope, {{n}} bytes — use the copy button to download base64)",
         "empty": "No DLQ entry selected.",
         "payloadView": "Payload view",
-        "loading": "Loading payload details…"
+        "loading": "Loading payload details…",
+        "payloadMissing": "This payload was not included in the entry details.",
+        "payloadInvalid": "This payload is not valid base64. Copy preserves the original encoded value.",
+        "payloadEmpty": "Empty UTF-8 payload (0 bytes).",
+        "pausedInitial": "The payload request is paused. No entry details have loaded yet.",
+        "pausedRetained": "Payload refresh is paused. Previously loaded details remain visible."
       },
       "stats": {
         "total": "Total entries",
@@ -11449,7 +11454,19 @@
       "metaCreated": "Created",
       "metaCompleted": "Completed",
       "metaExpires": "Expires",
+      "metaExportJob": "Export job ID",
+      "metaVehicle": "Vehicle ID",
+      "metaDownloaded": "Downloaded",
+      "metaByteCount": "Byte count",
+      "metaStorageKind": "Storage kind",
+      "metaStoragePath": "Storage path",
+      "metaDownloadCount": "Download count",
       "downloadTitle": "Download",
+      "downloadMissing": "No artifact result is available. Look up an artifact or retry the lookup to inspect download eligibility.",
+      "downloadUnknown": "Download eligibility is unknown because storage or a valid expiry is missing. Refresh the artifact manifest to check its metadata.",
+      "downloadUnsupported": "Downloads are not supported for this artifact’s storage kind.",
+      "downloadUnavailable": "No eligible download link was supplied. Refresh the artifact manifest; metadata does not confirm that the stored file is available.",
+      "downloadManifestHint": "The bundle streams from the backend through this browser. An eligible request can still fail if the file is missing. Download timestamp and counter updates are best effort, not a durable audit record.",
       "lifecycle": {
         "created": "Created",
         "completed": "Completed",
@@ -11480,8 +11497,8 @@
       "idLabel": "Artifact ID",
       "idPlaceholder": "e.g. 8f4c…",
       "lookupButton": "Look up",
-      "lookupHint": "IDs come from the GDPR export queue email or the request response. The artifact polls while queued/running.",
-      "lookupBlurb": "Bundles are streamed straight from the backend and expire after the configured retention window. Look one up to track its status live.",
+      "lookupHint": "Enter an artifact ID to look up its saved metadata. Use Refresh to request an updated snapshot; this page does not poll automatically.",
+      "lookupBlurb": "Lookup and Refresh only read artifact metadata; they do not create exports or download bundles. Bundles expire after the configured retention window. A saved manifest does not confirm current download availability or storage support.",
       "storageLabel": "Storage",
       "refresh": "Refresh artifact status",
       "subtitle": "Look up the status of a GDPR data export by artifact id and download the bundle when it completes. Bundles expire after the configured retention window.",
@@ -11489,12 +11506,28 @@
       "notConfigured": "GDPR export subsystem is not configured on this deployment.",
       "emptyTitle": "No artifact selected",
       "emptyMessage": "Enter an artifact ID above to look up its status. The page will keep refreshing until the export completes.",
+      "manifestRefresh": "Refresh artifact manifest",
+      "manifestSubtitle": "Look up a persisted GDPR export manifest by artifact ID. Refresh explicitly to check metadata; download requests require supported storage and a valid future expiry.",
+      "manifestEmptyMessage": "Enter an artifact ID above to look up its manifest. Use Refresh to check for updated metadata.",
+      "lookupPausedTitle": "Artifact lookup paused",
+      "lookupPausedMessage": "The lookup is paused. No artifact result has been received; this is not an export failure or an empty result. Retry when the request can resume.",
+      "availability": {
+        "unknown": "Download eligibility unknown",
+        "expired": "Expired",
+        "unsupported": "Storage download not supported",
+        "eligible": "Eligible to request download"
+      },
+      "availabilityLabel": "Download eligibility",
+      "availabilityHint": "Only local filesystem downloads are supported. Expired artifacts or unknown identity, storage or expiry do not offer a download. An eligible request can still fail if the stored bundle is missing.",
+      "exportJobLabel": "Export job ID",
       "notFoundTitle": "Artifact not found",
       "notFoundMessage": "No artifact with that id exists, or it has been purged. Check the id and try again.",
       "kpis": "Artifact summary",
       "summary": {
         "source": "Status, format, size, storage and lifecycle timestamps describe only the selected export artifact.",
-        "scope": "Selected artifact snapshot; creation and expiry are lifecycle events, not a shared analysis range."
+        "scope": "Selected artifact snapshot; creation and expiry are lifecycle events, not a shared analysis range.",
+        "manifestSource": "Persisted manifest metadata describes only the selected export artifact, not export-job progress or file availability.",
+        "manifestScope": "Selected artifact snapshot; creation, download and expiry timestamps are manifest events, not a shared analysis range."
       }
     },
     "operationalSummary": {
