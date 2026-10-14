@@ -21,7 +21,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import type { ReactNode } from 'react';
 import { act, renderHook, waitFor } from '@testing-library/react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClient, QueryClientProvider, onlineManager } from '@tanstack/react-query';
 
 // Hoisted so the mock factories (also hoisted by Vitest) close over the
 // same spy instances the assertions read.
@@ -121,6 +121,29 @@ describe('pushKeys', () => {
 
 // ── usePushPublicKey ─────────────────────────────────────────────────────────
 describe('usePushPublicKey', () => {
+  it('keeps an offline initial read paused and unresolved, not disabled', async () => {
+    onlineManager.setOnline(false);
+    const client = makeClient();
+    const { result, unmount } = renderHook(() => usePushPublicKey(), { wrapper: wrapperFor(client) });
+    try {
+      await waitFor(() => expect(result.current.fetchStatus).toBe('paused'));
+      expect(result.current.data).toBeUndefined();
+      expect(result.current.isPending).toBe(true);
+      expect(result.current.isLoading).toBe(false);
+      expect(requestMock).not.toHaveBeenCalled();
+    } finally {
+      unmount();
+      client.clear();
+      onlineManager.setOnline(true);
+    }
+  });
+
+  it('does not misclassify a structured server failure mentioning configuration as disabled', async () => {
+    requestMock.mockRejectedValue(new ApiError('dependency not configured', 500));
+    const { result } = renderHook(() => usePushPublicKey(), { wrapper: wrapperFor(makeClient()) });
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(result.current.data).toBeUndefined();
+  });
   it('GETs /push/public-key with an abort signal and returns the key string', async () => {
     requestMock.mockResolvedValue({ publicKey: 'BJ-vapid-key' });
 
@@ -144,13 +167,13 @@ describe('usePushPublicKey', () => {
     expect(result.current.isError).toBe(false);
   });
 
-  it('falls back to message-matching when a non-ApiError says "not configured"', async () => {
+  it('keeps an unstructured failure mentioning configuration retryable', async () => {
     requestMock.mockRejectedValue(new Error('web push is Not Configured'));
 
     const { result } = renderHook(() => usePushPublicKey(), { wrapper: wrapperFor(makeClient()) });
 
-    await waitFor(() => expect(result.current.isSuccess).toBe(true));
-    expect(result.current.data).toBeNull();
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(result.current.data).toBeUndefined();
   });
 
   it('maps an empty publicKey to null so the UI hides the Enable button', async () => {
@@ -267,6 +290,17 @@ describe('useSubscribePush', () => {
 // ── useUnsubscribePush ───────────────────────────────────────────────────────
 describe('useUnsubscribePush', () => {
   const endpoint = 'https://fcm.googleapis.com/fcm/send/abc';
+
+  it('invalidates server registration without announcing complete browser removal for lifecycle callers', async () => {
+    requestMock.mockResolvedValue(undefined);
+    const client = makeClient();
+    const { result } = renderHook(() => useUnsubscribePush({ notifySuccess: false }), {
+      wrapper: wrapperFor(client),
+    });
+    await act(async () => { await result.current.mutateAsync(endpoint); });
+    expect(invalidateSpy).toHaveBeenCalledWith(client, { queryKey: pushKeys.list });
+    expect(toastSuccess).not.toHaveBeenCalled();
+  });
 
   it('DELETEs /push/subscribe with the endpoint body, invalidates, and toasts success', async () => {
     requestMock.mockResolvedValue(undefined); // backend replies 204 No Content

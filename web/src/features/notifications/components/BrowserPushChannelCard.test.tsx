@@ -25,7 +25,7 @@
  * scenario, mirroring NotificationGroupRow.test.tsx.
  */
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, act, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, act, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import '../../../i18n';
 
@@ -39,6 +39,9 @@ const unsubscribeFn = vi.fn(() => Promise.resolve(true));
 type WebPushOverrides = Partial<{
   isSupported: boolean;
   isPushSupported: boolean;
+  isPushAPISupported: boolean;
+  browserSubscriptionStatus: 'checking' | 'error' | 'absent' | 'subscribed' | 'unsupported';
+  browserSubscriptionError: Error | null;
   isSubscribed: boolean;
   currentEndpoint: string | null;
   permission: NotificationPermission;
@@ -48,6 +51,10 @@ function makeWebPush(overrides: WebPushOverrides = {}) {
   return {
     isSupported: true,
     isPushSupported: true,
+    isPushAPISupported: true,
+    browserSubscriptionStatus: 'absent' as const,
+    browserSubscriptionError: null,
+    retryBrowserSubscription: retryBrowser,
     isSubscribed: false,
     currentEndpoint: null as string | null,
     permission: 'default' as NotificationPermission,
@@ -58,6 +65,7 @@ function makeWebPush(overrides: WebPushOverrides = {}) {
 }
 
 const webPushMock = vi.fn();
+const retryBrowser = vi.fn();
 vi.mock('@/hooks/useWebPush', () => ({
   useWebPush: () => webPushMock(),
 }));
@@ -109,6 +117,7 @@ describe('BrowserPushChannelCard', () => {
     unsubscribeFn.mockReset();
     unsubMutateAsync.mockReset();
     refetchKey.mockReset();
+    retryBrowser.mockReset();
 
     subscribeFn.mockResolvedValue(true);
     unsubscribeFn.mockResolvedValue(true);
@@ -149,7 +158,7 @@ describe('BrowserPushChannelCard', () => {
     expect(retry).toHaveBeenCalledOnce();
   });
 
-  it('retains complete registered-device names and endpoint identity after a list refresh failure', () => {
+  it('retains complete registered-device names and endpoint identity after a list refresh failure', async () => {
     const ua = 'Complete browser and device description that remains readable without truncation';
     const endpoint = 'https://push.example/retained-device';
     const retry = vi.fn();
@@ -164,7 +173,9 @@ describe('BrowserPushChannelCard', () => {
     expect(unsubMutateAsync).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
     expect(retry).toHaveBeenCalledOnce();
-    fireEvent.click(screen.getByRole('button', { name: 'Remove this device' }));
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Remove this device' }));
+    });
     expect(unsubMutateAsync).toHaveBeenCalledWith(endpoint);
   });
 
@@ -226,6 +237,7 @@ describe('BrowserPushChannelCard', () => {
     webPushMock.mockReturnValue(
       makeWebPush({ isSubscribed: true, currentEndpoint: 'https://push.example/a' }),
     );
+    subsMock.mockReturnValue({ data: [makeRow(1, 'https://push.example/a')] });
     renderCard();
     expect(screen.getByText('Active on this device')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /enable on this device/i })).toBeNull();
@@ -282,7 +294,7 @@ describe('BrowserPushChannelCard', () => {
 
   // ── Unsupported reasons ───────────────────────────────────────────────────────
   it('push API unsupported (key resolved, browser lacks it): shows the reason + "Unavailable"', () => {
-    webPushMock.mockReturnValue(makeWebPush({ isPushSupported: false }));
+    webPushMock.mockReturnValue(makeWebPush({ isPushSupported: false, isPushAPISupported: false }));
     publicKeyMock.mockReturnValue({
       data: 'VAPID_PUBLIC_KEY',
       isLoading: false,
@@ -355,7 +367,7 @@ describe('BrowserPushChannelCard', () => {
     expect(screen.getAllByRole('button', { name: /remove this device/i })).toHaveLength(2);
   });
 
-  it('clicking a device Remove calls the unsubscribe mutation with that endpoint', async () => {
+  it('removing the current device uses the browser lifecycle instead of only deleting the server row', async () => {
     webPushMock.mockReturnValue(
       makeWebPush({ isSubscribed: true, currentEndpoint: 'https://push.example/a' }),
     );
@@ -368,8 +380,69 @@ describe('BrowserPushChannelCard', () => {
     await act(async () => {
       fireEvent.click(removeA);
     });
-    expect(unsubMutateAsync).toHaveBeenCalledTimes(1);
-    expect(unsubMutateAsync).toHaveBeenCalledWith('https://push.example/a');
+    expect(unsubscribeFn).toHaveBeenCalledTimes(1);
+    expect(unsubMutateAsync).not.toHaveBeenCalled();
+  });
+
+  it('removing another device deletes only its synthetic endpoint and reconciles this browser', async () => {
+    webPushMock.mockReturnValue(makeWebPush({
+      isSubscribed: true, currentEndpoint: 'https://push.example/current',
+    }));
+    subsMock.mockReturnValue({ data: [
+      makeRow(1, 'https://push.example/current'),
+      makeRow(2, 'https://push.example/other'),
+    ] });
+    renderCard();
+    await act(async () => {
+      fireEvent.click(screen.getAllByRole('button', { name: 'Remove this device' })[1]);
+    });
+    expect(unsubMutateAsync).toHaveBeenCalledWith('https://push.example/other');
+    expect(unsubscribeFn).not.toHaveBeenCalled();
+    expect(retryBrowser).toHaveBeenCalledOnce();
+  });
+
+  it.each([true, false])('shows partial removal when browser registration remains: %s', async (browserRemains) => {
+    const endpoint = 'https://push.example/partial';
+    webPushMock.mockReturnValue(makeWebPush({
+      isSubscribed: true, currentEndpoint: endpoint,
+    }));
+    subsMock.mockReturnValue({ data: [makeRow(1, endpoint)] });
+    unsubscribeFn.mockImplementation(async () => {
+      webPushMock.mockReturnValue(makeWebPush({
+        isSubscribed: browserRemains,
+        currentEndpoint: browserRemains ? endpoint : null,
+      }));
+      subsMock.mockReturnValue({ data: browserRemains ? [] : [makeRow(1, endpoint)] });
+      return false;
+    });
+    renderCard();
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Remove this device' }));
+    });
+    expect(screen.getByRole('alert')).toHaveTextContent('This device could not update');
+    expect(screen.getByText('Partial data')).toBeInTheDocument();
+    expect(screen.queryByText('Active on this device')).not.toBeInTheDocument();
+    expect(screen.queryByText('Not subscribed')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Disable on this device' }) !== null).toBe(browserRemains);
+    expect(screen.queryByText('(this device)')).not.toBeInTheDocument();
+  });
+
+  it('surfaces other-device server deletion failure without clearing its row or this browser', async () => {
+    const endpoint = 'https://push.example/other';
+    webPushMock.mockReturnValue(makeWebPush({
+      isSubscribed: true, currentEndpoint: 'https://push.example/current',
+    }));
+    subsMock.mockReturnValue({ data: [makeRow(1, endpoint)] });
+    unsubMutateAsync.mockRejectedValue(new Error('server deletion failed'));
+    renderCard();
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Remove this device' }));
+    });
+    expect(screen.getByRole('alert')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Remove this device' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Disable on this device' })).toBeEnabled();
+    expect(unsubscribeFn).not.toHaveBeenCalled();
+    expect(retryBrowser).not.toHaveBeenCalled();
   });
 
   it('only the in-flight device Remove button is busy/disabled', () => {
@@ -393,10 +466,11 @@ describe('BrowserPushChannelCard', () => {
   });
 
   // ── Null safety around the subscriptions query ────────────────────────────────
-  it('renders no device section when there are no registered devices', () => {
+  it('keeps the named device section when there are no registered devices', () => {
     subsMock.mockReturnValue({ data: [] });
     renderCard();
-    expect(screen.queryByText('Registered devices')).toBeNull();
+    expect(screen.getByRole('region', { name: 'Registered devices' })).toBeInTheDocument();
+    expect(screen.getByText('No data available')).toBeInTheDocument();
   });
 
   it('tolerates an unresolved subscriptions query (data undefined)', () => {
@@ -404,6 +478,103 @@ describe('BrowserPushChannelCard', () => {
     renderCard();
     // Still renders its header; the device section is simply absent.
     expect(screen.getByRole('heading', { name: /browser push/i })).toBeInTheDocument();
-    expect(screen.queryByText('Registered devices')).toBeNull();
+    expect(screen.getByRole('region', { name: 'Registered devices' })).toBeInTheDocument();
+    expect(screen.queryByText('No data available')).toBeNull();
+  });
+
+  it('does not infer absence or expose enable while browser lookup is unresolved', () => {
+    webPushMock.mockReturnValue(makeWebPush({ browserSubscriptionStatus: 'checking' }));
+    renderCard();
+    expect(screen.getByTestId('webpush-loading')).toBeInTheDocument();
+    expect(screen.queryByText('Not subscribed')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Enable on this device' })).toBeNull();
+  });
+
+  it('retries a failed browser lookup without retrying the server key', () => {
+    webPushMock.mockReturnValue(makeWebPush({
+      browserSubscriptionStatus: 'error', browserSubscriptionError: new Error('browser lookup failed'),
+    }));
+    renderCard();
+    expect(screen.queryByText('Not subscribed')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: /retry/i }));
+    expect(retryBrowser).toHaveBeenCalledOnce();
+    expect(refetchKey).not.toHaveBeenCalled();
+  });
+
+  it('distinguishes a paused initial server-key read from unsupported capability', () => {
+    publicKeyMock.mockReturnValue({
+      data: undefined, isPending: true, isLoading: false, fetchStatus: 'paused', refetch: refetchKey,
+    });
+    renderCard();
+    expect(screen.getByText('Refresh paused')).toBeInTheDocument();
+    expect(screen.queryByText('Unavailable')).toBeNull();
+    expect(screen.queryByText('Not subscribed')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    expect(refetchKey).toHaveBeenCalledOnce();
+    expect(retryBrowser).not.toHaveBeenCalled();
+  });
+
+  it('does not call a browser-only subscription active; offers server registration repair', async () => {
+    webPushMock.mockReturnValue(makeWebPush({
+      isSubscribed: true, currentEndpoint: 'https://push.example/browser-only',
+      browserSubscriptionStatus: 'subscribed',
+    }));
+    renderCard();
+    expect(screen.getByText('Partial data')).toBeInTheDocument();
+    expect(screen.queryByText('Active on this device')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Disable on this device' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Enable on this device' }));
+    await waitFor(() => expect(subscribeFn).toHaveBeenCalledOnce());
+  });
+
+  it('keeps device-list recovery scoped while the initial list is paused', () => {
+    const retry = vi.fn();
+    subsMock.mockReturnValue({ data: undefined, fetchStatus: 'paused', refetch: retry });
+    renderCard();
+    expect(screen.getByRole('region', { name: 'Registered devices' })).toHaveTextContent('Refresh paused');
+    expect(screen.queryByText('No data available')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    expect(retry).toHaveBeenCalledOnce();
+    expect(refetchKey).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    { data: undefined },
+    { data: undefined, fetchStatus: 'paused' },
+    { data: undefined, isError: true, error: new Error('list failed') },
+    { data: [], isError: true, error: new Error('refresh failed') },
+    { data: [], fetchStatus: 'paused' },
+  ])('does not infer missing server registration from an unverified list: %o', (state) => {
+    webPushMock.mockReturnValue(makeWebPush({
+      isSubscribed: true, currentEndpoint: 'https://push.example/browser-only',
+      browserSubscriptionStatus: 'subscribed',
+    }));
+    subsMock.mockReturnValue({ ...state, refetch: vi.fn() });
+    renderCard();
+    expect(screen.queryByText('Active on this device')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Enable on this device' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Disable on this device' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Registered devices' })).toBeInTheDocument();
+  });
+
+  it('keeps browser and server-list retries independent when both lookups fail', () => {
+    const retryList = vi.fn();
+    webPushMock.mockReturnValue(makeWebPush({
+      browserSubscriptionStatus: 'error', browserSubscriptionError: new Error('browser failed'),
+    }));
+    subsMock.mockReturnValue({
+      data: undefined, isError: true, error: new Error('list failed'), refetch: retryList,
+    });
+    renderCard();
+    const devices = screen.getByRole('region', { name: 'Registered devices' });
+    fireEvent.click(within(devices).getByRole('button', { name: /retry/i }));
+    expect(retryList).toHaveBeenCalledOnce();
+    expect(retryBrowser).not.toHaveBeenCalled();
+    const browserRetry = screen.getAllByRole('button', { name: /retry/i })
+      .find((button) => !devices.contains(button));
+    expect(browserRetry).toBeDefined();
+    fireEvent.click(browserRetry!);
+    expect(retryBrowser).toHaveBeenCalledOnce();
+    expect(refetchKey).not.toHaveBeenCalled();
   });
 });
