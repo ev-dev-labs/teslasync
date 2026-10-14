@@ -39,7 +39,7 @@ export function ScoreKpiSection({ model }: ScoreKpiSectionProps) {
             value={hasDrives ? avgScores.total : '—'}
             unit="/100"
             icon={<Icons.target className="h-5 w-5" aria-hidden="true" />}
-            trend={hasDrives ? {
+            trend={hasDrives && overallTrend != null ? {
               direction: overallTrend,
               value: trendLabel,
               positive: overallTrend === 'up',

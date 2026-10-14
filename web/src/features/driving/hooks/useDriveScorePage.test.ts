@@ -1,15 +1,20 @@
 import { renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { Drive } from '@/types/driving';
+import type { Drive, DriveScore } from '@/types/driving';
+import { Icons } from '@/lib/icons';
+import { typography } from '@/lib/tokens';
 import { useDriveScorePage } from './useDriveScorePage';
 
-const state = vi.hoisted(() => ({ drives: [] as Drive[] }));
+const state = vi.hoisted(() => ({
+  drives: [] as Drive[],
+  score: undefined as Partial<DriveScore> | null | undefined,
+}));
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (_key: string, fallback: string) => fallback }),
 }));
 vi.mock('@/api/hooks/useDriving', () => ({
-  useDriveScore: () => ({ data: undefined }),
+  useDriveScore: () => ({ data: state.score }),
   useDriveCalendarHistory: () => ({ data: state.drives }),
 }));
 vi.mock('@/hooks/usePageTitle', () => ({ usePageTitle: vi.fn() }));
@@ -71,7 +76,7 @@ const identities = [
 ];
 
 describe('useDriveScorePage achievement cohort', () => {
-  beforeEach(() => { state.drives = []; });
+  beforeEach(() => { state.drives = []; state.score = undefined; });
 
   it('keeps count achievements locked when all 50 drives lack scoring evidence', () => {
     state.drives = Array.from({ length: 50 }, (_, id) => makeDrive(id, { energyUsedWh: null }));
@@ -80,6 +85,51 @@ describe('useDriveScorePage achievement cohort', () => {
     expect(result.current.unscoredDriveCount).toBe(50);
     expect(result.current.unlockedAchievements.map(({ id }) => id)).toEqual(identities);
     expect(result.current.unlockedAchievements.every(({ unlocked }) => !unlocked)).toBe(true);
+  });
+
+  describe('useDriveScorePage trend evidence', () => {
+    beforeEach(() => {
+      state.score = undefined;
+      state.drives = [makeDrive(1)];
+    });
+
+    it.each([undefined, null, { overall: 87 }])(
+      'keeps missing trend unknown with populated local history (%j)',
+      (score) => {
+        state.score = score;
+        const { result } = renderHook(() => useDriveScorePage());
+        expect(result.current.hasDrives).toBe(true);
+        expect(result.current.overallReading).toBe(score?.overall ?? 100);
+        expect(result.current.overallTrend).toBeNull();
+        expect(result.current.trendLabel).toBe('—');
+        expect(result.current.trendColor).toBe(typography.color.secondary);
+      },
+    );
+
+    it.each([
+      ['up', 'Improving', Icons.trendUp],
+      ['down', 'Declining', Icons.trendDown],
+      ['flat', 'Stable', Icons.remove],
+    ] as const)('preserves a supplied %s trend', (trend, label, icon) => {
+      state.score = {
+        overall: 87, efficiency: 35, smoothness: 25,
+        speedDiscipline: 27, grade: 'A', totalDrives: 12, trend,
+      };
+      const { result } = renderHook(() => useDriveScorePage());
+      expect(result.current.overallReading).toBe(87);
+      expect(result.current.overallGrade).toBe('A');
+      expect(result.current.overallTrend).toBe(trend);
+      expect(result.current.trendLabel).toBe(label);
+      expect(result.current.TrendIcon).toBe(icon);
+    });
+
+    it('keeps trend unknown when both score sources are absent', () => {
+      state.drives = [];
+      const { result } = renderHook(() => useDriveScorePage());
+      expect(result.current.overallReading).toBeNull();
+      expect(result.current.overallTrend).toBeNull();
+      expect(result.current.trendLabel).toBe('—');
+    });
   });
 
   it.each([

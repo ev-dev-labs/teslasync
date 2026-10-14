@@ -117,7 +117,7 @@ export function useDriveScorePage() {
   const overallScore = apiScore?.overall ?? avgScores.total;
   const overallReading = knownNumber(apiScore?.overall ?? (hasDrives ? avgScores.total : null));
   const overallGrade = apiScore?.grade ?? (overallReading != null ? gradeFromScore(overallScore) : '—');
-  const overallTrend = apiScore?.trend ?? 'flat';
+  const overallTrend = apiScore?.trend ?? null;
 
   const efficiencyValue = apiScore?.efficiency ?? avgScores.efficiency;
   const smoothnessValue = apiScore?.smoothness ?? avgScores.smoothness;
@@ -336,7 +336,9 @@ export function useDriveScorePage() {
       ? t('driveScore.trendUp', 'Improving')
       : overallTrend === 'down'
         ? t('driveScore.trendDown', 'Declining')
-        : t('driveScore.trendFlat', 'Stable');
+        : overallTrend === 'flat'
+          ? t('driveScore.trendFlat', 'Stable')
+          : '—';
   const trendColor =
     overallTrend === 'up'
       ? 'text-emerald-300'
