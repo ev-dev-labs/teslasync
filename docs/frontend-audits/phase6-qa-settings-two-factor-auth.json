@@ -1,0 +1,2289 @@
+{
+  "schemaVersion": 1,
+  "item": "phase6-qa-settings-two-factor-auth",
+  "attempt": 1,
+  "phase": 6,
+  "status": "DONE_SOURCE_QA_FINDINGS_NOT_PAGE_ACCEPTANCE",
+  "page": "web/src/features/settings/pages/TwoFactorAuthPage.tsx",
+  "routes": [
+    "/account/2fa"
+  ],
+  "timing": {
+    "actualStartUtc": "2026-10-14T02:26:55.4810689Z",
+    "returnDeadlineUtc": "2026-10-14T02:42:14.747Z",
+    "hardDeadlineUtc": "2026-10-14T02:47:14.747Z",
+    "completedUtc": "2026-10-14T02:41:33.007895+00:00",
+    "returnDeadlineMet": true,
+    "hardDeadlineMet": true,
+    "earlierDeadlineRule": "Fixed queued deadlines earlier than actualstart+20/+25; not renewed.",
+    "releasedUtc": "2026-10-14T02:42:04.333077+00:00"
+  },
+  "scope": {
+    "readonly": [
+      "web/src/api/hooks/useTOTP.ts",
+      "web/src/features/settings/components/TOTPEnrollmentSection.tsx",
+      "web/src/features/settings/components/twofactor/index.ts",
+      "web/src/features/settings/components/twofactor/TotpBackupCodesModal.test.tsx",
+      "web/src/features/settings/components/twofactor/TotpBackupCodesModal.tsx",
+      "web/src/features/settings/components/twofactor/TotpCompatibleApps.test.tsx",
+      "web/src/features/settings/components/twofactor/TotpCompatibleApps.tsx",
+      "web/src/features/settings/components/twofactor/TotpCopyAction.tsx",
+      "web/src/features/settings/components/twofactor/TotpEnrollModal.test.tsx",
+      "web/src/features/settings/components/twofactor/TotpEnrollModal.tsx",
+      "web/src/features/settings/components/twofactor/TotpKpiBand.test.tsx",
+      "web/src/features/settings/components/twofactor/TotpKpiBand.tsx",
+      "web/src/features/settings/components/twofactor/TotpOpenModeNotice.test.tsx",
+      "web/src/features/settings/components/twofactor/TotpOpenModeNotice.tsx",
+      "web/src/features/settings/components/twofactor/TotpRecoveryPanel.test.tsx",
+      "web/src/features/settings/components/twofactor/TotpRecoveryPanel.tsx",
+      "web/src/features/settings/components/twofactor/TotpSetupGuide.test.tsx",
+      "web/src/features/settings/components/twofactor/TotpSetupGuide.tsx",
+      "web/src/features/settings/components/twofactor/TotpStatusHero.test.tsx",
+      "web/src/features/settings/components/twofactor/TotpStatusHero.tsx",
+      "web/src/features/settings/components/twofactor/useTotpEnrollmentFlow.test.tsx",
+      "web/src/features/settings/components/twofactor/useTotpEnrollmentFlow.ts",
+      "web/src/features/settings/pages/TwoFactorAuthPage.test.tsx",
+      "web/src/features/settings/pages/TwoFactorAuthPage.tsx",
+      "web/src/features/settings/components/TOTPEnrollmentSection.test.tsx",
+      "web/src/api/hooks/useTOTP.test.tsx"
+    ],
+    "directSupportPins": [
+      "web/src/api/dataState.ts",
+      "web/src/components/layout/layout-reference/PageLayout.tsx",
+      "web/src/components/layout/PageContainer.tsx",
+      "web/src/components/ui/Input.tsx",
+      "web/src/components/ui/ConfirmDialog.tsx",
+      "web/src/components/ui/Modal.tsx",
+      "web/src/components/ui/CopyButton.tsx",
+      "web/src/components/ui/Button.tsx",
+      "web/src/api/hooks/_toastHelpers.ts",
+      "web/src/features/settings/components/operationalbrief-all/SettingsSummaryBrief.tsx",
+      "web/src/components/motion/FadeIn.tsx",
+      "web/src/api/types.ts",
+      "web/src/hooks/useDateFormat.ts",
+      "web/src/components/ui/IconBox.tsx",
+      "web/src/components/ui/Typography.tsx",
+      "web/src/components/feedback/DataStateNotice.tsx",
+      "web/src/hooks/useDialogFocus.ts",
+      "web/src/hooks/useMotionPreference.ts",
+      "web/src/components/ui/CodeBlock.tsx",
+      "web/src/lib/dateFormat.ts"
+    ],
+    "writableOnly": [
+      "docs/frontend-audits/phase6-qa-settings-two-factor-auth.json",
+      "web/logs/phase6-qa-settings-two-factor-auth.log"
+    ]
+  },
+  "hashes": {
+    "algorithm": "SHA256",
+    "pins": [
+      {
+        "file": "web/src/api/hooks/useTOTP.ts",
+        "beforeSha256": "1e416b307addf6babf7e969c4081ee17738875b42fa745142939587ec71b6743",
+        "baseline": "pre-inspection Get-FileHash SHA256 tool receipts 2587/2595/2601/2622",
+        "afterSha256": "1e416b307addf6babf7e969c4081ee17738875b42fa745142939587ec71b6743",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/features/settings/components/TOTPEnrollmentSection.tsx",
+        "beforeSha256": "faeeb5346d177ce548bd1fdee5fd045378aa5d809e865411d29ac2b0d91d3d39",
+        "baseline": "pre-inspection Get-FileHash SHA256 tool receipts 2587/2595/2601/2622",
+        "afterSha256": "faeeb5346d177ce548bd1fdee5fd045378aa5d809e865411d29ac2b0d91d3d39",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/features/settings/components/twofactor/index.ts",
+        "beforeSha256": "9ebe957e95a59d3ffb525087589dc30010f31434085f569137248917faf3e344",
+        "baseline": "pre-inspection Get-FileHash SHA256 tool receipts 2587/2595/2601/2622",
+        "afterSha256": "9ebe957e95a59d3ffb525087589dc30010f31434085f569137248917faf3e344",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/features/settings/components/twofactor/TotpBackupCodesModal.test.tsx",
+        "beforeSha256": "499f51508404845fcc87c6b68d9ddeef0cb0321410250d7c683d122dd97df784",
+        "baseline": "pre-inspection Get-FileHash SHA256 tool receipts 2587/2595/2601/2622",
+        "afterSha256": "499f51508404845fcc87c6b68d9ddeef0cb0321410250d7c683d122dd97df784",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/features/settings/components/twofactor/TotpBackupCodesModal.tsx",
+        "beforeSha256": "2e3770998b4d96d9cffd7182f40fd5c5f30a9444a3a7155498f490c99a3e5f5b",
+        "baseline": "pre-inspection Get-FileHash SHA256 tool receipts 2587/2595/2601/2622",
+        "afterSha256": "2e3770998b4d96d9cffd7182f40fd5c5f30a9444a3a7155498f490c99a3e5f5b",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/features/settings/components/twofactor/TotpCompatibleApps.test.tsx",
+        "beforeSha256": "57936d9ea643e665fad878f02a013aaf602c856ee7cf5d21e25ce80f81e597db",
+        "baseline": "pre-inspection Get-FileHash SHA256 tool receipts 2587/2595/2601/2622",
+        "afterSha256": "57936d9ea643e665fad878f02a013aaf602c856ee7cf5d21e25ce80f81e597db",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/features/settings/components/twofactor/TotpCompatibleApps.tsx",
+        "beforeSha256": "ce583ef8041391f9a2ea6e5cc8e72493bf9cf2ee14d5caff3084ad36134c169c",
+        "baseline": "pre-inspection Get-FileHash SHA256 tool receipts 2587/2595/2601/2622",
+        "afterSha256": "ce583ef8041391f9a2ea6e5cc8e72493bf9cf2ee14d5caff3084ad36134c169c",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/features/settings/components/twofactor/TotpCopyAction.tsx",
+        "beforeSha256": "cb4a5a94d2df028341cc53b17c93c0fb91dc5078361d0b3d99be4875ebf0103e",
+        "baseline": "pre-inspection Get-FileHash SHA256 tool receipts 2587/2595/2601/2622",
+        "afterSha256": "cb4a5a94d2df028341cc53b17c93c0fb91dc5078361d0b3d99be4875ebf0103e",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/features/settings/components/twofactor/TotpEnrollModal.test.tsx",
+        "beforeSha256": "dfed2719f4210a2622575d24a23be95b1bcf6b5645032d4b3fd898855dc8110e",
+        "baseline": "pre-inspection Get-FileHash SHA256 tool receipts 2587/2595/2601/2622",
+        "afterSha256": "dfed2719f4210a2622575d24a23be95b1bcf6b5645032d4b3fd898855dc8110e",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/features/settings/components/twofactor/TotpEnrollModal.tsx",
+        "beforeSha256": "c7fe0492ff465da9bfe45102c2ddf0286ac8ef8e8a701b5f5c0490a3a70f4193",
+        "baseline": "pre-inspection Get-FileHash SHA256 tool receipts 2587/2595/2601/2622",
+        "afterSha256": "c7fe0492ff465da9bfe45102c2ddf0286ac8ef8e8a701b5f5c0490a3a70f4193",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/features/settings/components/twofactor/TotpKpiBand.test.tsx",
+        "beforeSha256": "53ca3ccf056fa7966ea0992dec5803a30088db43fe15b4cc819bd4ea7e1759cc",
+        "baseline": "pre-inspection Get-FileHash SHA256 tool receipts 2587/2595/2601/2622",
+        "afterSha256": "53ca3ccf056fa7966ea0992dec5803a30088db43fe15b4cc819bd4ea7e1759cc",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/features/settings/components/twofactor/TotpKpiBand.tsx",
+        "beforeSha256": "672c51cb45f45b9b07ba3703a6494ea24aeed0f0bc18da4e594e0662f036c05d",
+        "baseline": "pre-inspection Get-FileHash SHA256 tool receipts 2587/2595/2601/2622",
+        "afterSha256": "672c51cb45f45b9b07ba3703a6494ea24aeed0f0bc18da4e594e0662f036c05d",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/features/settings/components/twofactor/TotpOpenModeNotice.test.tsx",
+        "beforeSha256": "e62edea7a6530c9cffe1b5880da85726437040d604220043060f363644a632c9",
+        "baseline": "pre-inspection Get-FileHash SHA256 tool receipts 2587/2595/2601/2622",
+        "afterSha256": "e62edea7a6530c9cffe1b5880da85726437040d604220043060f363644a632c9",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/features/settings/components/twofactor/TotpOpenModeNotice.tsx",
+        "beforeSha256": "abe3c85f11b1bb75032a9a9db93bf5d09780a7aa1fe6a61888fa4832ccbbaad0",
+        "baseline": "pre-inspection Get-FileHash SHA256 tool receipts 2587/2595/2601/2622",
+        "afterSha256": "abe3c85f11b1bb75032a9a9db93bf5d09780a7aa1fe6a61888fa4832ccbbaad0",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/features/settings/components/twofactor/TotpRecoveryPanel.test.tsx",
+        "beforeSha256": "ea568c1de4c1d02dcd76054e4556e333428e40b7dec126a57e1eab3bd4fd280f",
+        "baseline": "pre-inspection Get-FileHash SHA256 tool receipts 2587/2595/2601/2622",
+        "afterSha256": "ea568c1de4c1d02dcd76054e4556e333428e40b7dec126a57e1eab3bd4fd280f",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/features/settings/components/twofactor/TotpRecoveryPanel.tsx",
+        "beforeSha256": "8c680f4c014b0c70774bb023978b6f5ec4f825710b99722323437c42fbc8b8bd",
+        "baseline": "pre-inspection Get-FileHash SHA256 tool receipts 2587/2595/2601/2622",
+        "afterSha256": "8c680f4c014b0c70774bb023978b6f5ec4f825710b99722323437c42fbc8b8bd",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/features/settings/components/twofactor/TotpSetupGuide.test.tsx",
+        "beforeSha256": "a5b0f68932824786fbda9bc4b9bd23b3d1ee3d96d533c1266118b3383349d438",
+        "baseline": "pre-inspection Get-FileHash SHA256 tool receipts 2587/2595/2601/2622",
+        "afterSha256": "a5b0f68932824786fbda9bc4b9bd23b3d1ee3d96d533c1266118b3383349d438",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/features/settings/components/twofactor/TotpSetupGuide.tsx",
+        "beforeSha256": "58e77d2b5ec08a008568360b615df2ac74b6494e701c515d30a2a3786d5fa052",
+        "baseline": "pre-inspection Get-FileHash SHA256 tool receipts 2587/2595/2601/2622",
+        "afterSha256": "58e77d2b5ec08a008568360b615df2ac74b6494e701c515d30a2a3786d5fa052",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/features/settings/components/twofactor/TotpStatusHero.test.tsx",
+        "beforeSha256": "e9485bbf67832f49d99ab2c4444f1675409033c88159cc2accf219144c0755b6",
+        "baseline": "pre-inspection Get-FileHash SHA256 tool receipts 2587/2595/2601/2622",
+        "afterSha256": "e9485bbf67832f49d99ab2c4444f1675409033c88159cc2accf219144c0755b6",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/features/settings/components/twofactor/TotpStatusHero.tsx",
+        "beforeSha256": "b8bfc3b3d8609302c5370ce3eeb5783a1cf0b9a273e1a2b15a6a806f237c2ec6",
+        "baseline": "pre-inspection Get-FileHash SHA256 tool receipts 2587/2595/2601/2622",
+        "afterSha256": "b8bfc3b3d8609302c5370ce3eeb5783a1cf0b9a273e1a2b15a6a806f237c2ec6",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/features/settings/components/twofactor/useTotpEnrollmentFlow.test.tsx",
+        "beforeSha256": "beb4a018705d1103767ad4f2ffd53d702d4dcd2020ad359605a4ec52e449500f",
+        "baseline": "pre-inspection Get-FileHash SHA256 tool receipts 2587/2595/2601/2622",
+        "afterSha256": "beb4a018705d1103767ad4f2ffd53d702d4dcd2020ad359605a4ec52e449500f",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/features/settings/components/twofactor/useTotpEnrollmentFlow.ts",
+        "beforeSha256": "454e0ed4bb6be834d26ef71724413c3900d96cdf20e81eb5204b0381dc2797b2",
+        "baseline": "pre-inspection Get-FileHash SHA256 tool receipts 2587/2595/2601/2622",
+        "afterSha256": "454e0ed4bb6be834d26ef71724413c3900d96cdf20e81eb5204b0381dc2797b2",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/features/settings/pages/TwoFactorAuthPage.test.tsx",
+        "beforeSha256": "3c65946e611ef0378464418625829255cab992c1f09544bdc3f05f2bd7e8c1a9",
+        "baseline": "pre-inspection Get-FileHash SHA256 tool receipts 2587/2595/2601/2622",
+        "afterSha256": "3c65946e611ef0378464418625829255cab992c1f09544bdc3f05f2bd7e8c1a9",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/features/settings/pages/TwoFactorAuthPage.tsx",
+        "beforeSha256": "ae9c2308644888fcd408582fc672cf47291ee9cc3e8abecfce6fa717b9178a2c",
+        "baseline": "pre-inspection Get-FileHash SHA256 tool receipts 2587/2595/2601/2622",
+        "afterSha256": "ae9c2308644888fcd408582fc672cf47291ee9cc3e8abecfce6fa717b9178a2c",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/features/settings/components/TOTPEnrollmentSection.test.tsx",
+        "beforeSha256": "b61974858e8be6d21e87565537f5e8ecb51e88f05f8d8c5e9eec9e380d278a22",
+        "baseline": "pre-inspection Get-FileHash SHA256 tool receipts 2587/2595/2601/2622",
+        "afterSha256": "b61974858e8be6d21e87565537f5e8ecb51e88f05f8d8c5e9eec9e380d278a22",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/api/hooks/useTOTP.test.tsx",
+        "beforeSha256": "538fc0b462567a4b3f35f324a2d834ec4f6e170dee225f3a0f2402483228c368",
+        "baseline": "pre-inspection Get-FileHash SHA256 tool receipts 2587/2595/2601/2622",
+        "afterSha256": "538fc0b462567a4b3f35f324a2d834ec4f6e170dee225f3a0f2402483228c368",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/api/dataState.ts",
+        "beforeSha256": "21fb454b3c1f01608169f3f3887911de97f7c754663cc001236ebfde58211761",
+        "baseline": "pre-inspection Get-FileHash SHA256 tool receipts 2587/2595/2601/2622",
+        "afterSha256": "21fb454b3c1f01608169f3f3887911de97f7c754663cc001236ebfde58211761",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/components/layout/layout-reference/PageLayout.tsx",
+        "beforeSha256": "7b7ef06a05fe4a97ab0cfbc8e989901db0ffca898dec7d4f5cd796536b4dca3b",
+        "baseline": "pre-inspection Get-FileHash SHA256 tool receipts 2587/2595/2601/2622",
+        "afterSha256": "7b7ef06a05fe4a97ab0cfbc8e989901db0ffca898dec7d4f5cd796536b4dca3b",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/components/layout/PageContainer.tsx",
+        "beforeSha256": "4b718ac20f8a473a3c59b6dbd7031d9bb686e2c3ad93b25ddb94523eea074b4a",
+        "baseline": "pre-inspection Get-FileHash SHA256 tool receipts 2587/2595/2601/2622",
+        "afterSha256": "4b718ac20f8a473a3c59b6dbd7031d9bb686e2c3ad93b25ddb94523eea074b4a",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/components/ui/Input.tsx",
+        "beforeSha256": "2c687ddcf37022148906e67b891ddaec5aeb7a6f18385a93e92dba2f32095b40",
+        "baseline": "pre-inspection Get-FileHash SHA256 tool receipts 2587/2595/2601/2622",
+        "afterSha256": "2c687ddcf37022148906e67b891ddaec5aeb7a6f18385a93e92dba2f32095b40",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/components/ui/ConfirmDialog.tsx",
+        "beforeSha256": "36655275cb1ac502e35da2edc4930cfe4d734add15e8b7cf24490c915c9dadb6",
+        "baseline": "pre-inspection Get-FileHash SHA256 tool receipts 2587/2595/2601/2622",
+        "afterSha256": "36655275cb1ac502e35da2edc4930cfe4d734add15e8b7cf24490c915c9dadb6",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/components/ui/Modal.tsx",
+        "beforeSha256": "bd90f0af735a0219d76ea6491e4ce20c1d62935f71019de445f5a1797de0d383",
+        "baseline": "pre-inspection Get-FileHash SHA256 tool receipts 2587/2595/2601/2622",
+        "afterSha256": "bd90f0af735a0219d76ea6491e4ce20c1d62935f71019de445f5a1797de0d383",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/components/ui/CopyButton.tsx",
+        "beforeSha256": "5c34313cbc9a8147e6f3b0000265d5340a83d7b75a4a2c9181921697de9a3869",
+        "baseline": "pre-inspection Get-FileHash SHA256 tool receipts 2587/2595/2601/2622",
+        "afterSha256": "5c34313cbc9a8147e6f3b0000265d5340a83d7b75a4a2c9181921697de9a3869",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/components/ui/Button.tsx",
+        "beforeSha256": "e43e202cc9f465efeef93a1be2b156255958934af635abf0eaa408f310dde16c",
+        "baseline": "pre-inspection Get-FileHash SHA256 tool receipts 2587/2595/2601/2622",
+        "afterSha256": "e43e202cc9f465efeef93a1be2b156255958934af635abf0eaa408f310dde16c",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/api/hooks/_toastHelpers.ts",
+        "beforeSha256": "96bc3304b4cd5a9fd4ead533b10120fbb2eace1ac162d28b839d3f0843689966",
+        "baseline": "pre-inspection Get-FileHash SHA256 tool receipts 2587/2595/2601/2622",
+        "afterSha256": "96bc3304b4cd5a9fd4ead533b10120fbb2eace1ac162d28b839d3f0843689966",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/features/settings/components/operationalbrief-all/SettingsSummaryBrief.tsx",
+        "beforeSha256": "9075a1bb2c766e225462ee1eaab67e67293f1b97d052e58c1a48e12eb3a07595",
+        "baseline": "pre-inspection Get-FileHash SHA256 tool receipts 2587/2595/2601/2622",
+        "afterSha256": "9075a1bb2c766e225462ee1eaab67e67293f1b97d052e58c1a48e12eb3a07595",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/components/motion/FadeIn.tsx",
+        "beforeSha256": "8624fff5c039500e35b04dd4a53d3697a7186a92bdc922bb2a8e1f69001da32f",
+        "baseline": "pre-inspection Get-FileHash SHA256 tool receipts 2587/2595/2601/2622",
+        "afterSha256": "8624fff5c039500e35b04dd4a53d3697a7186a92bdc922bb2a8e1f69001da32f",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/api/types.ts",
+        "beforeSha256": "11a6003464bc550e085b640fed3779705799a2474ce4f255d1dcaca202ceeb9b",
+        "baseline": "pre-inspection Get-FileHash SHA256 tool receipts 2587/2595/2601/2622",
+        "afterSha256": "11a6003464bc550e085b640fed3779705799a2474ce4f255d1dcaca202ceeb9b",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/hooks/useDateFormat.ts",
+        "beforeSha256": "97b1b0ebd44436cd8274a4927d0df4381b112df1468a22ef6238029675d6a542",
+        "baseline": "pre-inspection Get-FileHash SHA256 tool receipts 2587/2595/2601/2622",
+        "afterSha256": "97b1b0ebd44436cd8274a4927d0df4381b112df1468a22ef6238029675d6a542",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/components/ui/IconBox.tsx",
+        "beforeSha256": "fd0716d5a9ed24e58f5713a690ed464c2dd7d46eb40885b0506d8b7271defc02",
+        "baseline": "pre-inspection Get-FileHash SHA256 tool receipts 2587/2595/2601/2622",
+        "afterSha256": "fd0716d5a9ed24e58f5713a690ed464c2dd7d46eb40885b0506d8b7271defc02",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/components/ui/Typography.tsx",
+        "beforeSha256": "b5d52022d7ca523369bc56c2abb153f8fa1edc0e3e94320905c53a24d94b4b9a",
+        "baseline": "pre-inspection Get-FileHash SHA256 tool receipts 2587/2595/2601/2622",
+        "afterSha256": "b5d52022d7ca523369bc56c2abb153f8fa1edc0e3e94320905c53a24d94b4b9a",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/components/feedback/DataStateNotice.tsx",
+        "beforeSha256": "d96d4e5bc8c1b8ccbddce808bfc31a277dad60b82399d14431b7185e94bea4c6",
+        "baseline": "pre-inspection Get-FileHash SHA256 tool receipts 2587/2595/2601/2622",
+        "afterSha256": "d96d4e5bc8c1b8ccbddce808bfc31a277dad60b82399d14431b7185e94bea4c6",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/hooks/useDialogFocus.ts",
+        "beforeSha256": "c4f2e20b692e4c18a288ae5f99093d11a40b1920af70c61e22eec394ba414e73",
+        "baseline": "pre-inspection Get-FileHash SHA256 tool receipts 2587/2595/2601/2622",
+        "afterSha256": "c4f2e20b692e4c18a288ae5f99093d11a40b1920af70c61e22eec394ba414e73",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/hooks/useMotionPreference.ts",
+        "beforeSha256": "c39d22e8a322d39edfaec23f3bbffe1cc35b6afa02f297e18d617b959043821a",
+        "baseline": "pre-inspection Get-FileHash SHA256 tool receipts 2587/2595/2601/2622",
+        "afterSha256": "c39d22e8a322d39edfaec23f3bbffe1cc35b6afa02f297e18d617b959043821a",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/components/ui/CodeBlock.tsx",
+        "beforeSha256": "d512639539e748184d6af09d1cac226f1f203facf5d0069391c9178538815287",
+        "baseline": "pre-inspection Get-FileHash SHA256 tool receipts 2587/2595/2601/2622",
+        "afterSha256": "d512639539e748184d6af09d1cac226f1f203facf5d0069391c9178538815287",
+        "unchanged": true
+      },
+      {
+        "file": "web/src/lib/dateFormat.ts",
+        "beforeSha256": "30eeb276813505d3cee3d0b1df38a7b13fc97dce388a0c5b2c3c86c902f62f64",
+        "baseline": "pre-read Get-FileHash SHA256 shell2648",
+        "afterSha256": "30eeb276813505d3cee3d0b1df38a7b13fc97dce388a0c5b2c3c86c902f62f64",
+        "unchanged": true
+      }
+    ],
+    "baselineCount": 46,
+    "afterCheck": "46/46 unchanged",
+    "checkedAtUtc": "2026-10-14T02:41:33.007860+00:00"
+  },
+  "staticChecks": [
+    {
+      "rule": "static-inline-style",
+      "pattern": "style\\s*=\\s*\\{\\{",
+      "matches": [],
+      "textMatches": 0,
+      "exitCode": 0,
+      "semanticVerdict": "manual classification required; grep is not a test"
+    },
+    {
+      "rule": "raw-html",
+      "pattern": "<(?:button|input|textarea|select|table)\\b",
+      "matches": [],
+      "textMatches": 0,
+      "exitCode": 0,
+      "semanticVerdict": "manual classification required; grep is not a test"
+    },
+    {
+      "rule": "direct-library-import",
+      "pattern": "\\bfrom\\s+[\\'\\\"](?:recharts|react-leaflet|framer-motion)[\\'\\\"]",
+      "matches": [],
+      "textMatches": 0,
+      "exitCode": 0,
+      "semanticVerdict": "manual classification required; grep is not a test"
+    },
+    {
+      "rule": "old-api-import",
+      "pattern": "\\bfrom\\s+[\\'\\\"](?:\\.\\./)+api[\\'\\\"]",
+      "matches": [],
+      "textMatches": 0,
+      "exitCode": 0,
+      "semanticVerdict": "manual classification required; grep is not a test"
+    },
+    {
+      "rule": "double-prefix",
+      "pattern": "\\brequest(?:<[^\\n]*?>)?\\s*\\(\\s*[\\'\\\"]/api/v1/",
+      "matches": [],
+      "textMatches": 0,
+      "exitCode": 0,
+      "semanticVerdict": "manual classification required; grep is not a test"
+    },
+    {
+      "rule": "camelcase-param",
+      "pattern": "[?&][a-z_]+[A-Z][a-zA-Z_]*=",
+      "matches": [],
+      "textMatches": 0,
+      "exitCode": 0,
+      "semanticVerdict": "manual classification required; grep is not a test"
+    },
+    {
+      "rule": "hidden-section",
+      "pattern": "\\{[^{}\\n]*\\b(?:data|enrollment|codes)\\s*&&\\s*<",
+      "matches": [],
+      "textMatches": 0,
+      "exitCode": 0,
+      "semanticVerdict": "manual classification required; grep is not a test"
+    },
+    {
+      "rule": "hardcoded-string-candidate",
+      "pattern": ">\\s*[A-Za-z][^<>\\n{}]*<",
+      "matches": [
+        {
+          "file": "web/src/api/hooks/useTOTP.ts",
+          "line": 113,
+          "text": "mutationFn: () => request<TOTPEnrollment>('/auth/totp/enroll', { method: 'POST' }),"
+        },
+        {
+          "file": "web/src/api/hooks/useTOTP.ts",
+          "line": 194,
+          "text": "mutationFn: () => request<void>('/auth/totp', { method: 'DELETE' }),"
+        }
+      ],
+      "textMatches": 2,
+      "exitCode": 0,
+      "semanticVerdict": "manual classification required; grep is not a test"
+    },
+    {
+      "rule": "fetch-useeffect-candidate",
+      "pattern": "\\b(?:fetch\\s*\\(|useEffect\\s*\\()",
+      "matches": [
+        {
+          "file": "web/src/features/settings/components/twofactor/TotpCopyAction.tsx",
+          "line": 13,
+          "text": "useEffect(() => {"
+        }
+      ],
+      "textMatches": 1,
+      "exitCode": 0,
+      "semanticVerdict": "manual classification required; grep is not a test"
+    }
+  ],
+  "testSourceInventory": [
+    {
+      "file": "web/src/features/settings/components/twofactor/TotpBackupCodesModal.test.tsx",
+      "declarations": [
+        {
+          "line": 83,
+          "text": "it('renders nothing when open is false', () => {"
+        },
+        {
+          "line": 89,
+          "text": "it('stays hidden when codes is null even if open is true', () => {"
+        },
+        {
+          "line": 97,
+          "text": "it('shows the title, one-time warning and every code as a semantic <code>', () => {"
+        },
+        {
+          "line": 113,
+          "text": "it('exposes labelled copy, download and done controls', () => {"
+        },
+        {
+          "line": 123,
+          "text": "it('copies the newline-joined codes to the clipboard', async () => {"
+        },
+        {
+          "line": 132,
+          "text": "it('retains every one-time code and download when clipboard access is denied', async () => {"
+        },
+        {
+          "line": 147,
+          "text": "it('fires onDownload (and not onClose) from the download button', () => {"
+        },
+        {
+          "line": 154,
+          "text": "it('fires onClose from the primary \"I saved them\" button', () => {"
+        },
+        {
+          "line": 160,
+          "text": "it('fires onClose from the dialog Close (X) affordance', () => {"
+        },
+        {
+          "line": 168,
+          "text": "it('fires onClose when Escape is pressed (keyboard operability)', () => {"
+        },
+        {
+          "line": 176,
+          "text": "it('shows an actionable empty state instead of a blank grid when codes is empty', () => {"
+        },
+        {
+          "line": 196,
+          "text": "it('renders duplicate codes without collapsing the list (key collision safe)', () => {"
+        },
+        {
+          "line": 203,
+          "text": "it('exposes the same component via the default export', () => {"
+        }
+      ],
+      "declarationCount": 13,
+      "expectCallsites": 40,
+      "runtimeDiscovery": "NOTRUN",
+      "executed": 0
+    },
+    {
+      "file": "web/src/features/settings/components/twofactor/TotpCompatibleApps.test.tsx",
+      "declarations": [
+        {
+          "line": 72,
+          "text": "it('renders the translated heading and subtitle', () => {"
+        },
+        {
+          "line": 85,
+          "text": "it('requests the heading and subtitle from i18n with English fallbacks', () => {"
+        },
+        {
+          "line": 98,
+          "text": "it('renders all six compatible-app brand names, in order', () => {"
+        },
+        {
+          "line": 106,
+          "text": "it('never routes brand names through i18n (they are proper nouns)', () => {"
+        },
+        {
+          "line": 122,
+          "text": "it('names the app list via its panel heading (aria-labelledby resolves)', () => {"
+        },
+        {
+          "line": 139,
+          "text": "it('marks every icon as decorative and exposes none as an image', () => {"
+        },
+        {
+          "line": 154,
+          "text": "it('degrades an empty translation to an em-dash instead of a blank header', () => {"
+        },
+        {
+          "line": 174,
+          "text": "it('re-exports the same component as its default and named export', () => {"
+        }
+      ],
+      "declarationCount": 8,
+      "expectCallsites": 20,
+      "runtimeDiscovery": "NOTRUN",
+      "executed": 0
+    },
+    {
+      "file": "web/src/features/settings/components/twofactor/TotpEnrollModal.test.tsx",
+      "declarations": [
+        {
+          "line": 109,
+          "text": "it('renders nothing when open is false', () => {"
+        },
+        {
+          "line": 116,
+          "text": "it('renders nothing when enrollment is null even if open is true', () => {"
+        },
+        {
+          "line": 125,
+          "text": "it('renders the QR, manual secret, input and both actions for a real payload', () => {"
+        },
+        {
+          "line": 140,
+          "text": "it('reflects the controlled code value on the input', () => {"
+        },
+        {
+          "line": 147,
+          "text": "it('raises onCodeChange with the raw typed value', () => {"
+        },
+        {
+          "line": 158,
+          "text": "it('raises onVerify when the Verify button is clicked', () => {"
+        },
+        {
+          "line": 166,
+          "text": "it('raises onClose from both Cancel and the header Close control', () => {"
+        },
+        {
+          "line": 175,
+          "text": "it('submits on Enter in the code input (keyboard operability)', () => {"
+        },
+        {
+          "line": 183,
+          "text": "it('does not submit on Enter while a verify is in flight', () => {"
+        },
+        {
+          "line": 193,
+          "text": "it('renders a role=\"alert\" with the message when error is set', () => {"
+        },
+        {
+          "line": 201,
+          "text": "it('does not render an empty alert when error is an empty string', () => {"
+        },
+        {
+          "line": 211,
+          "text": "it('disables the input, Cancel and Verify and marks Verify busy', () => {"
+        },
+        {
+          "line": 224,
+          "text": "it('copies the secret to the clipboard when Copy is clicked', async () => {"
+        },
+        {
+          "line": 231,
+          "text": "it('keeps the exact selectable secret and verification usable after clipboard denial', async () => {"
+        },
+        {
+          "line": 253,
+          "text": "it('associates the code input with its label and gives the QR alt text', () => {"
+        },
+        {
+          "line": 264,
+          "text": "it('exposes the same component as its default export', () => {"
+        }
+      ],
+      "declarationCount": 16,
+      "expectCallsites": 39,
+      "runtimeDiscovery": "NOTRUN",
+      "executed": 0
+    },
+    {
+      "file": "web/src/features/settings/components/twofactor/TotpKpiBand.test.tsx",
+      "declarations": [
+        {
+          "line": 125,
+          "text": "it('retains the Brief labels while loading and suppresses measured-value claims', () => {"
+        },
+        {
+          "line": 140,
+          "text": "it('keeps the labelled summary region present in both the loading and loaded states', () => {"
+        },
+        {
+          "line": 149,
+          "text": "it('renders the full four-card band with an activated session (§8 always visible)', () => {"
+        },
+        {
+          "line": 157,
+          "text": "it('shows \"Active\" and forwards the raw last_used_at ISO string to the formatter verbatim', () => {"
+        },
+        {
+          "line": 172,
+          "text": "it('shows \"Never\" and never calls the formatter when an activated session has no recorded use', () => {"
+        },
+        {
+          "line": 180,
+          "text": "it('renders \"Not enrolled\" and dashes the per-user cells for a session that is not activated', () => {"
+        },
+        {
+          "line": 190,
+          "text": "it('collapses to \"Unavailable\" with two dashes in open mode, without calling the formatter', () => {"
+        },
+        {
+          "line": 204,
+          "text": "it('treats a missing data object (not loading) as unavailable rather than a blank panel', () => {"
+        },
+        {
+          "line": 214,
+          "text": "it('keeps a missing backup balance unknown instead of inventing an exhausted balance', () => {"
+        },
+        {
+          "line": 229,
+          "text": "it('renders an exhausted backup balance as \"0\" — distinct from the \"—\" of a disabled credential', () => {"
+        },
+        {
+          "line": 244,
+          "text": "it('hides its decorative lucide icons from assistive technology (a11y)', () => {"
+        }
+      ],
+      "declarationCount": 11,
+      "expectCallsites": 36,
+      "runtimeDiscovery": "NOTRUN",
+      "executed": 0
+    },
+    {
+      "file": "web/src/features/settings/components/twofactor/TotpOpenModeNotice.test.tsx",
+      "declarations": [
+        {
+          "line": 56,
+          "text": "it('renders the localized title as an h3 and the forward-auth guidance copy', () => {"
+        },
+        {
+          "line": 67,
+          "text": "it('reads its copy from the `settings` i18n namespace', () => {"
+        },
+        {
+          "line": 75,
+          "text": "it('exposes a polite status region that owns both the heading and message', () => {"
+        },
+        {
+          "line": 85,
+          "text": "it('keeps the warning glyph decorative (aria-hidden) so it is not double-announced', () => {"
+        },
+        {
+          "line": 94,
+          "text": "it('offers no actionable controls — the open-mode gate is view-only', () => {"
+        },
+        {
+          "line": 103,
+          "text": "it('exports the same component as the default and named exports', () => {"
+        }
+      ],
+      "declarationCount": 6,
+      "expectCallsites": 16,
+      "runtimeDiscovery": "NOTRUN",
+      "executed": 0
+    },
+    {
+      "file": "web/src/features/settings/components/twofactor/TotpRecoveryPanel.test.tsx",
+      "declarations": [
+        {
+          "line": 69,
+          "text": "it('always renders the panel heading and subtitle', () => {"
+        },
+        {
+          "line": 77,
+          "text": "it('renders all three recovery tips in a single three-item list', () => {"
+        },
+        {
+          "line": 90,
+          "text": "it('hides every decorative icon from assistive technology', () => {"
+        },
+        {
+          "line": 98,
+          "text": "it('exposes the panel as a region labelled by its heading (not aria-label)', () => {"
+        },
+        {
+          "line": 114,
+          "text": "it('reads from the settings namespace via the exact keys and fallbacks', () => {"
+        },
+        {
+          "line": 125,
+          "text": "it('renders whatever the resolver returns, proving copy is not hardcoded', () => {"
+        },
+        {
+          "line": 140,
+          "text": "it('exposes the same component through the default export', () => {"
+        }
+      ],
+      "declarationCount": 7,
+      "expectCallsites": 24,
+      "runtimeDiscovery": "NOTRUN",
+      "executed": 0
+    },
+    {
+      "file": "web/src/features/settings/components/twofactor/TotpSetupGuide.test.tsx",
+      "declarations": [
+        {
+          "line": 81,
+          "text": "it('renders the translated heading and subtitle', () => {"
+        },
+        {
+          "line": 94,
+          "text": "it('requests the heading and subtitle from i18n with English fallbacks', () => {"
+        },
+        {
+          "line": 107,
+          "text": "it('renders all four steps, in order, each with a 1-based ordinal badge', () => {"
+        },
+        {
+          "line": 121,
+          "text": "it('requests every step title and body from i18n with English fallbacks', () => {"
+        },
+        {
+          "line": 138,
+          "text": "it('names the ordered step list via its panel heading (aria-labelledby resolves)', () => {"
+        },
+        {
+          "line": 153,
+          "text": "it('marks the header icon decorative and exposes no image', () => {"
+        },
+        {
+          "line": 168,
+          "text": "it('never re-runs translations through a hostile locale for the ordinal badges', () => {"
+        },
+        {
+          "line": 181,
+          "text": "it('degrades empty translations to an em-dash without breaking the list', () => {"
+        },
+        {
+          "line": 208,
+          "text": "it('re-exports the same component as its default and named export', () => {"
+        }
+      ],
+      "declarationCount": 9,
+      "expectCallsites": 26,
+      "runtimeDiscovery": "NOTRUN",
+      "executed": 0
+    },
+    {
+      "file": "web/src/features/settings/components/twofactor/TotpStatusHero.test.tsx",
+      "declarations": [
+        {
+          "line": 104,
+          "text": "it('renders the section panel, a level-3 heading and the subtitle', () => {"
+        },
+        {
+          "line": 116,
+          "text": "it('always renders the status pill in both branches', () => {"
+        },
+        {
+          "line": 127,
+          "text": "it('shows \"Not enrolled\", the Enable action and its hint only', () => {"
+        },
+        {
+          "line": 146,
+          "text": "it('raises onEnroll exactly once when Enable is clicked', () => {"
+        },
+        {
+          "line": 154,
+          "text": "it('disables and marks the Enable button busy while enrolling', () => {"
+        },
+        {
+          "line": 162,
+          "text": "it('does not consult the date formatter when not enrolled', () => {"
+        },
+        {
+          "line": 169,
+          "text": "it('shows \"Active\", both management actions and hides Enable', () => {"
+        },
+        {
+          "line": 178,
+          "text": "it('surfaces the remaining backup-code count', () => {"
+        },
+        {
+          "line": 183,
+          "text": "it('delegates the last-used timestamp to formatDateTime with the raw value', () => {"
+        },
+        {
+          "line": 191,
+          "text": "it('shows \"Never\" and skips formatting when no timestamp is present', () => {"
+        },
+        {
+          "line": 198,
+          "text": "it('raises onRegenerate and onDisable from their respective buttons', () => {"
+        },
+        {
+          "line": 209,
+          "text": "it('disables only Regenerate while regenerating — Disable stays operable', () => {"
+        },
+        {
+          "line": 225,
+          "text": "it('clamps a negative backup count to \"0\"', () => {"
+        },
+        {
+          "line": 231,
+          "text": "it.each([undefined, null, Number.NaN, Number.POSITIVE_INFINITY])('keeps an unknown backup count %s distinct from zero', backupRemaining => {"
+        },
+        {
+          "line": 240,
+          "text": "it('preserves a measured exhausted balance as zero', () => {"
+        },
+        {
+          "line": 245,
+          "text": "it('treats a whitespace-only timestamp as \"Never\" (no Invalid Date)', () => {"
+        },
+        {
+          "line": 254,
+          "text": "it('flips the pill variant with the activated flag', () => {"
+        },
+        {
+          "line": 263,
+          "text": "it('exposes the same component as its default export', () => {"
+        }
+      ],
+      "declarationCount": 18,
+      "expectCallsites": 43,
+      "runtimeDiscovery": "NOTRUN",
+      "executed": 0
+    },
+    {
+      "file": "web/src/features/settings/components/twofactor/useTotpEnrollmentFlow.test.tsx",
+      "declarations": [
+        {
+          "line": 128,
+          "text": "it('exposes a closed dialog, empty sub-state, and a localized disable label', async () => {"
+        },
+        {
+          "line": 144,
+          "text": "it('drives the status query off GET /auth/totp', async () => {"
+        },
+        {
+          "line": 156,
+          "text": "it('strips non-digit characters and clamps the code to six digits', async () => {"
+        },
+        {
+          "line": 168,
+          "text": "it('opens the enroll dialog and stores the enrollment on success', async () => {"
+        },
+        {
+          "line": 186,
+          "text": "it('swallows an enroll failure and leaves the dialog closed', async () => {"
+        },
+        {
+          "line": 204,
+          "text": "it('rejects a short code inline and never calls the verify endpoint', async () => {"
+        },
+        {
+          "line": 216,
+          "text": "it('reveals the enrollment backup codes and advances to the backupCodes step on success', async () => {"
+        },
+        {
+          "line": 240,
+          "text": "it('falls back to an empty backup-code list when there is no enrollment (?? [] guard)', async () => {"
+        },
+        {
+          "line": 253,
+          "text": "it('maps TOTP_INVALID to the \"try the next one\" hint and keeps the enroll dialog open', async () => {"
+        },
+        {
+          "line": 274,
+          "text": "it('maps TOTP_RATE_LIMITED to the 15-minute wait message', async () => {"
+        },
+        {
+          "line": 290,
+          "text": "it('maps TOTP_ENROLLMENT_EXPIRED to the \"start over\" message', async () => {"
+        },
+        {
+          "line": 306,
+          "text": "it('surfaces a raw Error message for an unmapped failure', async () => {"
+        },
+        {
+          "line": 325,
+          "text": "it('reveals the fresh codes and switches to the backupCodes view on success', async () => {"
+        },
+        {
+          "line": 344,
+          "text": "it('is null-safe when the regenerate response omits backup_codes (?? [] guard)', async () => {"
+        },
+        {
+          "line": 359,
+          "text": "it('swallows a regenerate failure and stays closed', async () => {"
+        },
+        {
+          "line": 377,
+          "text": "it('toggles the confirmation flag via openDisableConfirm / closeDisableConfirm', async () => {"
+        },
+        {
+          "line": 387,
+          "text": "it('revokes the credential and closes the confirmation on success', async () => {"
+        },
+        {
+          "line": 403,
+          "text": "it('still closes the confirmation when the revoke fails (finally branch)', async () => {"
+        },
+        {
+          "line": 422,
+          "text": "it('resets the enroll/verify sub-state back to closed/empty', async () => {"
+        },
+        {
+          "line": 473,
+          "text": "it('writes a text/plain blob containing the codes and revokes the object URL', async () => {"
+        },
+        {
+          "line": 499,
+          "text": "it('is a no-op when there are no revealed codes', async () => {"
+        }
+      ],
+      "declarationCount": 21,
+      "expectCallsites": 67,
+      "runtimeDiscovery": "NOTRUN",
+      "executed": 0
+    },
+    {
+      "file": "web/src/features/settings/pages/TwoFactorAuthPage.test.tsx",
+      "declarations": [
+        {
+          "line": 118,
+          "text": "it('renders the unavailable KPI + inline notice and never hits the enroll endpoint', async () => {"
+        },
+        {
+          "line": 156,
+          "text": "it('renders the copy-link control, freshness chip and both labelled bento regions', async () => {"
+        },
+        {
+          "line": 183,
+          "text": "it('mirrors the \"Not enrolled\" state across the KPI band and the section pill', async () => {"
+        },
+        {
+          "line": 209,
+          "text": "it('opens the enroll modal and fires POST /auth/totp/enroll on Enable click', async () => {"
+        },
+        {
+          "line": 235,
+          "text": "it('shows the Active KPI + backup count and the Disable/Regenerate controls', async () => {"
+        },
+        {
+          "line": 264,
+          "text": "it('opens the typed-confirmation dialog on Disable without firing DELETE early', async () => {"
+        },
+        {
+          "line": 296,
+          "text": "it('renders the section spinner + static panels while the KPI band is skeletoned', async () => {"
+        },
+        {
+          "line": 319,
+          "text": "it('does not misrepresent a failed status request as open auth mode or expose credentials', async () => {"
+        }
+      ],
+      "declarationCount": 8,
+      "expectCallsites": 52,
+      "runtimeDiscovery": "NOTRUN",
+      "executed": 0
+    },
+    {
+      "file": "web/src/features/settings/components/TOTPEnrollmentSection.test.tsx",
+      "declarations": [
+        {
+          "line": 90,
+          "text": "it('renders inline placeholder and never hits enroll endpoint', async () => {"
+        },
+        {
+          "line": 113,
+          "text": "it('renders the Enable button and opens the enroll modal on click', async () => {"
+        },
+        {
+          "line": 160,
+          "text": "it('verify success flips dialog to backup-codes view', async () => {"
+        },
+        {
+          "line": 215,
+          "text": "it('verify error TOTP_INVALID surfaces the localised message', async () => {"
+        },
+        {
+          "line": 254,
+          "text": "it('verify error TOTP_RATE_LIMITED surfaces the wait message', async () => {"
+        },
+        {
+          "line": 293,
+          "text": "it('renders Active pill, last_used_at, backup count, and Disable + Regenerate buttons', async () => {"
+        },
+        {
+          "line": 317,
+          "text": "it('Disable click opens the typed-confirmation ConfirmDialog', async () => {"
+        }
+      ],
+      "declarationCount": 7,
+      "expectCallsites": 31,
+      "runtimeDiscovery": "NOTRUN",
+      "executed": 0
+    },
+    {
+      "file": "web/src/api/hooks/useTOTP.test.tsx",
+      "declarations": [
+        {
+          "line": 136,
+          "text": "it('exposes a stable status query key tuple', () => {"
+        },
+        {
+          "line": 140,
+          "text": "it('mirrors the backend sentinel codes verbatim so callers avoid magic strings', () => {"
+        },
+        {
+          "line": 148,
+          "text": "it('GETs /auth/totp with an abort signal and returns the active-credential payload', async () => {"
+        },
+        {
+          "line": 162,
+          "text": "it('normalises the 501 AUTH_MODE_OPEN response to { mode: open } as a success', async () => {"
+        },
+        {
+          "line": 174,
+          "text": "it('surfaces every other transport failure as isError (rethrown, not swallowed)', async () => {"
+        },
+        {
+          "line": 185,
+          "text": "it('does not fire a request when enabled is false', async () => {"
+        },
+        {
+          "line": 197,
+          "text": "it('POSTs /auth/totp/enroll, returns the enrollment, and invalidates the status key', async () => {"
+        },
+        {
+          "line": 215,
+          "text": "it('routes a failure through the error toast and rejects', async () => {"
+        },
+        {
+          "line": 235,
+          "text": "it('POSTs the 6-digit code, invalidates the status key, and fires a success toast', async () => {"
+        },
+        {
+          "line": 255,
+          "text": "it('routes a verification failure through the error toast', async () => {"
+        },
+        {
+          "line": 275,
+          "text": "it('POSTs /auth/totp/sudo with a code-only body and caches the minted token', async () => {"
+        },
+        {
+          "line": 297,
+          "text": "it('sends a backup_code-only body when recovering with a backup code', async () => {"
+        },
+        {
+          "line": 310,
+          "text": "it('clamps a malformed expires_at to 0 so a bad response cannot mint a never-expiring grant', async () => {"
+        },
+        {
+          "line": 334,
+          "text": "it('DELETEs /auth/totp, invalidates the status key, and toasts success', async () => {"
+        },
+        {
+          "line": 350,
+          "text": "it('routes a revoke failure through the error toast', async () => {"
+        },
+        {
+          "line": 370,
+          "text": "it('POSTs the regenerate route, returns the fresh codes, invalidates + toasts success', async () => {"
+        },
+        {
+          "line": 391,
+          "text": "it('routes a regenerate failure through the error toast', async () => {"
+        }
+      ],
+      "declarationCount": 17,
+      "expectCallsites": 52,
+      "runtimeDiscovery": "NOTRUN",
+      "executed": 0
+    }
+  ],
+  "findings": [
+    {
+      "id": "TFA-01",
+      "classification": "confirmed-source",
+      "rule": "initial-paused-open-mode",
+      "contract": "MDC-026",
+      "severity": "medium",
+      "file": "web/src/features/settings/components/TOTPEnrollmentSection.tsx",
+      "line": 44,
+      "snippet": "if (status.isLoading) {",
+      "mechanismAndSourceRepro": "data undefined, error null, isLoading false, fetchStatus paused: deriveDataState202-220 is initial/blocked, but section44 skips skeleton,66 skips fatal,76 selects OpenModeNotice. Its32 gives false reverse-proxy configuration advice while page56 summary remains initial.",
+      "reproExecuted": false,
+      "runtime": "NOTRUN",
+      "fix": "Use derived initial/blocked state; open-mode advice only for explicit mode=open. Preserve static sections and retry.",
+      "owner": "enrollment-section",
+      "confidence": "high for source mechanism only",
+      "historicalDuplicate": "audit-page-176 initial-paused finding",
+      "relatedEvidence": [
+        {
+          "file": "web/src/features/settings/components/TOTPEnrollmentSection.tsx",
+          "line": 76
+        },
+        {
+          "file": "web/src/features/settings/components/twofactor/TotpOpenModeNotice.tsx",
+          "line": 32
+        },
+        {
+          "file": "web/src/features/settings/pages/TwoFactorAuthPage.tsx",
+          "line": 56
+        }
+      ]
+    },
+    {
+      "id": "TFA-02",
+      "classification": "confirmed-source",
+      "rule": "field-error-association",
+      "contract": "MDC-021/MDC-040",
+      "severity": "medium",
+      "file": "web/src/features/settings/components/twofactor/TotpEnrollModal.tsx",
+      "line": 73,
+      "snippet": "<Input",
+      "mechanismAndSourceRepro": "Nonempty error renders separate ErrorText92 with no id. Input73-91 receives no error/aria-invalid/aria-describedby. Shared Input55-63/104-112 provides association when error is passed; Typography111 supplies alert only. Existing test193 checks alert, not association.",
+      "reproExecuted": false,
+      "runtime": "NOTRUN",
+      "fix": "Use existing Input error or stable described-by/error ID; preserve localized errors/test selectors without duplicate alerts.",
+      "owner": "enroll-modal",
+      "confidence": "high for source mechanism only",
+      "historicalDuplicate": "audit-page-176 accessibility finding",
+      "relatedEvidence": [
+        {
+          "file": "web/src/features/settings/components/twofactor/TotpEnrollModal.tsx",
+          "line": 92
+        },
+        {
+          "file": "web/src/components/ui/Input.tsx",
+          "line": 55
+        },
+        {
+          "file": "web/src/components/ui/Typography.tsx",
+          "line": 111
+        }
+      ]
+    },
+    {
+      "id": "TFA-03",
+      "classification": "confirmed-source",
+      "rule": "pending-dismissal-authority",
+      "contract": "MDC-024/MDC-046",
+      "severity": "high",
+      "file": "web/src/features/settings/components/twofactor/TotpEnrollModal.tsx",
+      "line": 39,
+      "snippet": "onClose={onClose}",
+      "mechanismAndSourceRepro": "During pending verify, Cancel94/input90 are disabled but header/backdrop/Escape still use unrestricted Modal39 close. closeDialog53-59 clears state with no generation invalidation. Old handleVerify closure82-84 unconditionally restores its enrollment backup_codes and reopens backupCodes after fulfillment. Source repro: deferred verify -> close callback -> old fulfillment; NOT executed.",
+      "reproExecuted": false,
+      "runtime": "NOTRUN",
+      "fix": "Guard every pending dismissal path and correlate attempt/instance settlement. Never claim abort; old completions must not reopen/reset a newer flow.",
+      "owner": "flow-controller",
+      "confidence": "high for source mechanism only",
+      "historicalDuplicate": "audit-page-176 pending-dismissal finding",
+      "relatedEvidence": [
+        {
+          "file": "web/src/features/settings/components/twofactor/useTotpEnrollmentFlow.ts",
+          "line": 53
+        },
+        {
+          "file": "web/src/features/settings/components/twofactor/useTotpEnrollmentFlow.ts",
+          "line": 83
+        },
+        {
+          "file": "web/src/components/ui/Modal.tsx",
+          "line": 72
+        },
+        {
+          "file": "web/src/hooks/useDialogFocus.ts",
+          "line": 179
+        }
+      ]
+    },
+    {
+      "id": "TFA-04",
+      "classification": "confirmed-source",
+      "rule": "live-only-readiness",
+      "contract": "MDC-026/MDC-046",
+      "severity": "medium",
+      "file": "web/src/features/settings/components/TOTPEnrollmentSection.tsx",
+      "line": 98,
+      "snippet": "onEnroll={flow.handleEnroll}",
+      "mechanismAndSourceRepro": "Retained session data with fetchStatus paused passes ordinary actions98-100. Hero disables individual pending commands only; has no source-blocked/read-only readiness prop. Controller61/74/107/117 dispatches mutateAsync without current readiness check. Stale page notice53 is informative, not a command gate. This confirms absent UI/dispatch readiness, not a successful offline API call.",
+      "reproExecuted": false,
+      "runtime": "NOTRUN",
+      "fix": "Existing local capability/live-readiness prop and dispatch recheck; explain blocked commands while preserving retained data. No offline credential queue/invented capability.",
+      "owner": "enrollment-section",
+      "confidence": "high for source mechanism only",
+      "historicalDuplicate": null,
+      "relatedEvidence": [
+        {
+          "file": "web/src/features/settings/components/twofactor/TotpStatusHero.tsx",
+          "line": 94
+        },
+        {
+          "file": "web/src/features/settings/components/twofactor/useTotpEnrollmentFlow.ts",
+          "line": 63
+        },
+        {
+          "file": "web/src/features/settings/pages/TwoFactorAuthPage.tsx",
+          "line": 53
+        }
+      ]
+    },
+    {
+      "id": "TFA-05",
+      "classification": "confirmed-source",
+      "rule": "failed-mutation-dismissal",
+      "contract": "MDC-024/MDC-026/MDC-046",
+      "severity": "medium",
+      "file": "web/src/features/settings/components/twofactor/useTotpEnrollmentFlow.ts",
+      "line": 112,
+      "snippet": "} finally {",
+      "mechanismAndSourceRepro": "Rejected revoke is caught110 and finally112-113 always clears showDisableConfirm, dropping typed-confirmation recovery. Hook199 emits error toast and no success invalidation on failure; no fake success toast alleged. Existing flow test403 deliberately asserts close-on-failure. Source repro: open confirmation -> rejected promise -> close; NOT executed.",
+      "reproExecuted": false,
+      "runtime": "NOTRUN",
+      "fix": "Retain rejected dialog with localized recovery; close/reset after confirmed success or explicit idle Cancel. Owner must deliberately reconcile old close-on-error oracle.",
+      "owner": "flow-controller",
+      "confidence": "high for source mechanism only",
+      "historicalDuplicate": null,
+      "relatedEvidence": [
+        {
+          "file": "web/src/features/settings/components/twofactor/useTotpEnrollmentFlow.ts",
+          "line": 113
+        },
+        {
+          "file": "web/src/features/settings/components/twofactor/useTotpEnrollmentFlow.test.tsx",
+          "line": 403
+        },
+        {
+          "file": "web/src/api/hooks/useTOTP.ts",
+          "line": 199
+        }
+      ]
+    },
+    {
+      "id": "TFA-06",
+      "classification": "confirmed-source",
+      "rule": "decorative-multihue",
+      "contract": "MDC-010/MDC-012",
+      "severity": "low",
+      "file": "web/src/features/settings/components/twofactor/TotpCompatibleApps.tsx",
+      "line": 52,
+      "snippet": "<Smartphone className=\"h-4 w-4 shrink-0 text-cyan-300\" aria-hidden=\"true\" />",
+      "mechanismAndSourceRepro": "Static apps use purple IconBox38 plus fixed cyan list icons52; guide74 cyan; recovery46 amber plus57 emerald. These informational groupings have no operational severity. IconBox20-26 applies selected mapped bg/ring/foreground. Source decoration confirmed; actual composed contrast/intensity unmeasured.",
+      "reproExecuted": false,
+      "runtime": "NOTRUN",
+      "fix": "Existing neutral theme-aware informational roles; retain credential semantic states and QR white scanner backing. No palette/global token rewrite.",
+      "owner": "static-guidance",
+      "confidence": "high for source mechanism only",
+      "historicalDuplicate": "audit-page-176 visual finding",
+      "relatedEvidence": [
+        {
+          "file": "web/src/features/settings/components/twofactor/TotpCompatibleApps.tsx",
+          "line": 38
+        },
+        {
+          "file": "web/src/features/settings/components/twofactor/TotpSetupGuide.tsx",
+          "line": 74
+        },
+        {
+          "file": "web/src/features/settings/components/twofactor/TotpRecoveryPanel.tsx",
+          "line": 46
+        },
+        {
+          "file": "web/src/features/settings/components/twofactor/TotpRecoveryPanel.tsx",
+          "line": 57
+        }
+      ]
+    },
+    {
+      "id": "TFA-07",
+      "classification": "confirmed-source",
+      "rule": "timestamp-normalization",
+      "contract": "MDC-002/MDC-026/MDC-044",
+      "severity": "low",
+      "file": "web/src/features/settings/components/twofactor/TotpKpiBand.tsx",
+      "line": 70,
+      "snippet": "? lastUsedAt",
+      "mechanismAndSourceRepro": "Source fixture session activated true,last_used_at whitespace: KPI69-72 forwards truthy whitespace to formatter54-57 -> dash; Hero45 trims and78 labels Never. Same source gets conflicting unknown/never-used meaning. Hero test245 pins whitespace Never; formatter not executed here.",
+      "reproExecuted": false,
+      "runtime": "NOTRUN",
+      "fix": "One local validity/absence normalization, keep both summary/detail and existing preference-aware formatter; invalid/missing evidence is not proven never-used.",
+      "owner": "status-presentation",
+      "confidence": "high for source mechanism only",
+      "historicalDuplicate": "audit-page-176 timestamp finding",
+      "relatedEvidence": [
+        {
+          "file": "web/src/features/settings/components/twofactor/TotpStatusHero.tsx",
+          "line": 45
+        },
+        {
+          "file": "web/src/features/settings/components/twofactor/TotpStatusHero.tsx",
+          "line": 78
+        },
+        {
+          "file": "web/src/lib/dateFormat.ts",
+          "line": 57
+        }
+      ]
+    },
+    {
+      "id": "TFA-08",
+      "classification": "confirmed-source",
+      "rule": "invalid-count-as-zero",
+      "contract": "MDC-026/MDC-033",
+      "severity": "medium",
+      "file": "web/src/features/settings/components/twofactor/TotpStatusHero.tsx",
+      "line": 42,
+      "snippet": ": Math.max(0, knownBackupRemaining)",
+      "mechanismAndSourceRepro": "Finite negative backupRemaining passes knownNumber378-386, then Math.max0 renders an apparently measured exhausted balance. Invalid negative and genuine0 become indistinguishable. Hero test225 intentionally pins clamp; not a new phase5 regression. No actual negative backend response observed.",
+      "reproExecuted": false,
+      "runtime": "NOTRUN",
+      "fix": "Local nonnegative safe-integer validation and distinct unknown/invalid fallback; retain raw payload and real0. Reconcile old clamp oracle at assigned owner.",
+      "owner": "status-presentation",
+      "confidence": "high for source mechanism only",
+      "historicalDuplicate": null,
+      "relatedEvidence": [
+        {
+          "file": "web/src/features/settings/components/twofactor/TotpStatusHero.test.tsx",
+          "line": 225
+        },
+        {
+          "file": "web/src/api/dataState.ts",
+          "line": 378
+        }
+      ]
+    }
+  ],
+  "conditionalCandidates": [
+    {
+      "id": "TFA-C01",
+      "file": "web/src/features/settings/components/twofactor/TotpStatusHero.tsx",
+      "line": 93,
+      "topic": "regeneration impact confirmation",
+      "mechanism": "Direct handleRegenerate117-119 dispatch; typed ConfirmDialog composed only for Disable.",
+      "condition": "Backend replacement/invalidation and product confirmation policy not proven; step-up authentication is not impact consent.",
+      "reproExecuted": false
+    },
+    {
+      "id": "TFA-C02",
+      "file": "web/src/features/settings/components/twofactor/TotpStatusHero.tsx",
+      "line": 100,
+      "topic": "mutation arbitration",
+      "mechanism": "Disable operable during regeneration, deliberately pinned in test209; late regen settlement125-127 reveals codes without operation-generation guard.",
+      "condition": "Actual obsolete/invalid reveal depends on server ordering/reauth policy. Rapid duplicate dispatch before pending render also untested.",
+      "owner": "flow-controller",
+      "reproExecuted": false
+    },
+    {
+      "id": "TFA-C03",
+      "file": "web/src/api/hooks/useTOTP.ts",
+      "line": 33,
+      "topic": "identity continuity",
+      "mechanism": "Account status key [totp,status], no subject qualifier; volatile flow41-46 has no account-generation check.",
+      "condition": "Subject transition while mounted plus shell/client cache-clear/remount behavior untraced. No cross-account disclosure or auth bypass asserted; no identity requests/values accessed.",
+      "needs": "Existing identity/cache/capability owners separately review continuity.",
+      "reproExecuted": false
+    },
+    {
+      "id": "TFA-C04",
+      "file": "web/src/features/settings/components/twofactor/useTotpEnrollmentFlow.ts",
+      "line": 82,
+      "topic": "verification result shape",
+      "mechanism": "Declared activated:boolean response ignored; any fulfillment advances reveal and hook success toast.",
+      "condition": "Fulfilled activated=false/malformed response must be possible under backend contract; not established by TS type alone.",
+      "reproExecuted": false
+    },
+    {
+      "id": "TFA-C05",
+      "file": "web/src/features/settings/components/twofactor/TotpRecoveryPanel.tsx",
+      "line": 39,
+      "topic": "recovery copy scope",
+      "mechanism": "Backup-code tips followed by Codes rotate every30seconds without naming authenticator codes.",
+      "condition": "Potential reader ambiguity, not proven behavior defect. Product/canonical-copy owner may clarify; no catalogs changed.",
+      "reproExecuted": false
+    }
+  ],
+  "nativeCandidates": [
+    {
+      "id": "TFA-N01",
+      "topic": "mobile targets",
+      "evidence": [
+        "Button.tsx36-46: md40px/wrappedmin40",
+        "CopyButton.tsx59: sm36px default",
+        "Input.tsx31: md40px",
+        "TotpStatusHero90-114/TotpEnrollModal73-103/TotpCopyAction19: no below-md44 caller class",
+        "Modal close44 and ConfirmDialog footer44 explicitly declared"
+      ],
+      "limit": "Actual font/density/wrapping/rectangles unmeasured. Source declaration candidates, not measured undersized failures."
+    },
+    {
+      "id": "TFA-N02",
+      "topic": "containment",
+      "evidence": [
+        "TwoFactorAuthPage64/80 singlecol ->xl3/md2",
+        "TotpBackupCodesModal51 always2col codegrid",
+        "TotpEnrollModal56-58 QR224px",
+        "Modal109-129 viewport/shell cap,161 scrollbody/safe-bottom"
+      ],
+      "limit": "All10mission widths, longcodes/labels,200%text,narrowallocations,shortviewports,safeareas/lastaction reachability NOTRUN."
+    },
+    {
+      "id": "TFA-N03",
+      "topic": "a11y/keyboard/focus",
+      "evidence": [
+        "Modal72 shared focusowner",
+        "Input55-63 IDs/feedback",
+        "EnrollModal81 Enter/90 disabled",
+        "Typography111 alert"
+      ],
+      "limit": "Native focus/trap/restore/topmost reauth,Tabcycle,screenreader and announcement timing NOTRUN. TFA-02/03 not double-counted."
+    },
+    {
+      "id": "TFA-N04",
+      "topic": "preferences/i18n/themes/motion",
+      "evidence": [
+        "useDateFormat74-86 locale/timezone settings",
+        "FadeIn24-33/useMotionPreference44-48 reduced/lowbandwidth",
+        "t(settings),stable IDs and brand/technicaltoken exceptions"
+      ],
+      "limit": "Catalog/namespace resolution,RTL,longtranslations,200%text,dark/light/custom/forcedcolors,contrast and reduced-motion actual behavior NOTRUN."
+    }
+  ],
+  "supportStaticChecks": [
+    {
+      "rule": "static-inline-style",
+      "pattern": "style\\s*=\\s*\\{\\{",
+      "textMatches": 0,
+      "matches": [],
+      "exitCode": 0,
+      "scope": "direct support files",
+      "semanticVerdict": "building-block/delegated-boundary exceptions and non-data effects reviewed separately"
+    },
+    {
+      "rule": "raw-html",
+      "pattern": "<(?:button|input|textarea|select|table)\\b",
+      "textMatches": 7,
+      "matches": [
+        {
+          "file": "web/src/components/ui/Input.tsx",
+          "line": 87,
+          "text": "<input"
+        },
+        {
+          "file": "web/src/components/ui/Modal.tsx",
+          "line": 139,
+          "text": "<button"
+        },
+        {
+          "file": "web/src/components/ui/Button.tsx",
+          "line": 22,
+          "text": "* `<button>` (EmptyState's `actionTo`), and previously hand-copied these"
+        },
+        {
+          "file": "web/src/components/ui/Button.tsx",
+          "line": 64,
+          "text": "<button"
+        },
+        {
+          "file": "web/src/lib/dateFormat.ts",
+          "line": 399,
+          "text": "/** Local datetime string for `<input type=\"datetime-local\">` value: \"2026-04-04T14:30:00\" */"
+        },
+        {
+          "file": "web/src/lib/dateFormat.ts",
+          "line": 406,
+          "text": "* Stored UTC ISO instant → `<input type=\"datetime-local\">` value"
+        },
+        {
+          "file": "web/src/lib/dateFormat.ts",
+          "line": 419,
+          "text": "* `<input type=\"datetime-local\">` value → stored UTC ISO instant. Returns null"
+        }
+      ],
+      "exitCode": 0,
+      "scope": "direct support files",
+      "semanticVerdict": "building-block/delegated-boundary exceptions and non-data effects reviewed separately"
+    },
+    {
+      "rule": "direct-library-import",
+      "pattern": "\\bfrom\\s+[\\'\\\"](?:recharts|react-leaflet|framer-motion)[\\'\\\"]",
+      "textMatches": 2,
+      "matches": [
+        {
+          "file": "web/src/components/motion/FadeIn.tsx",
+          "line": 1,
+          "text": "import { motion } from 'framer-motion'"
+        },
+        {
+          "file": "web/src/hooks/useMotionPreference.ts",
+          "line": 1,
+          "text": "import { useReducedMotion as useFramerReducedMotion } from 'framer-motion'"
+        }
+      ],
+      "exitCode": 0,
+      "scope": "direct support files",
+      "semanticVerdict": "building-block/delegated-boundary exceptions and non-data effects reviewed separately"
+    },
+    {
+      "rule": "old-api-import",
+      "pattern": "\\bfrom\\s+[\\'\\\"](?:\\.\\./)+api[\\'\\\"]",
+      "textMatches": 0,
+      "matches": [],
+      "exitCode": 0,
+      "scope": "direct support files",
+      "semanticVerdict": "building-block/delegated-boundary exceptions and non-data effects reviewed separately"
+    },
+    {
+      "rule": "double-prefix",
+      "pattern": "\\brequest(?:<[^\\n]*?>)?\\s*\\(\\s*[\\'\\\"]/api/v1/",
+      "textMatches": 0,
+      "matches": [],
+      "exitCode": 0,
+      "scope": "direct support files",
+      "semanticVerdict": "building-block/delegated-boundary exceptions and non-data effects reviewed separately"
+    },
+    {
+      "rule": "camelcase-param",
+      "pattern": "[?&][a-z_]+[A-Z][a-zA-Z_]*=",
+      "textMatches": 0,
+      "matches": [],
+      "exitCode": 0,
+      "scope": "direct support files",
+      "semanticVerdict": "building-block/delegated-boundary exceptions and non-data effects reviewed separately"
+    },
+    {
+      "rule": "hidden-section",
+      "pattern": "\\{[^{}\\n]*\\bdata\\s*&&\\s*<",
+      "textMatches": 0,
+      "matches": [],
+      "exitCode": 0,
+      "scope": "direct support files",
+      "semanticVerdict": "building-block/delegated-boundary exceptions and non-data effects reviewed separately"
+    },
+    {
+      "rule": "hardcoded-string-candidate",
+      "pattern": ">\\s*[A-Za-z][^<>\\n{}]*<",
+      "textMatches": 0,
+      "matches": [],
+      "exitCode": 0,
+      "scope": "direct support files",
+      "semanticVerdict": "building-block/delegated-boundary exceptions and non-data effects reviewed separately"
+    },
+    {
+      "rule": "fetch-useeffect-candidate",
+      "pattern": "\\b(?:fetch\\s*\\(|useEffect\\s*\\()",
+      "textMatches": 5,
+      "matches": [
+        {
+          "file": "web/src/components/ui/ConfirmDialog.tsx",
+          "line": 104,
+          "text": "useEffect(() => {"
+        },
+        {
+          "file": "web/src/components/ui/ConfirmDialog.tsx",
+          "line": 115,
+          "text": "useEffect(() => {"
+        },
+        {
+          "file": "web/src/components/ui/ConfirmDialog.tsx",
+          "line": 124,
+          "text": "useEffect(() => {"
+        },
+        {
+          "file": "web/src/components/ui/CopyButton.tsx",
+          "line": 83,
+          "text": "useEffect(() => {"
+        },
+        {
+          "file": "web/src/hooks/useDialogFocus.ts",
+          "line": 152,
+          "text": "useEffect(() => {"
+        }
+      ],
+      "exitCode": 0,
+      "scope": "direct support files",
+      "semanticVerdict": "building-block/delegated-boundary exceptions and non-data effects reviewed separately"
+    }
+  ],
+  "commandFailures": [
+    {
+      "shellId": "2656",
+      "exitCode": 1,
+      "category": "audit-console-encoding",
+      "error": "UnicodeEncodeError: 'charmap' codec can't encode character '\\u2192' in position 56: character maps to <undefined>",
+      "resolution": "Re-executed only the failed support TEXT scan with UTF8 console output; no tests or passing checks rerun."
+    },
+    {
+      "shellId": "2609",
+      "exitCode": 0,
+      "category": "nonterminating-discovery-error",
+      "error": "Cannot find path D:\\repos\\teslasync\\web\\src\\api\\types because it does not exist.",
+      "resolution": "Correct source is web/src/api/types.ts; read and separately pinned."
+    },
+    {
+      "tool": "view",
+      "exitCode": null,
+      "category": "invalid-range",
+      "error": "TotpBackupCodesModal.test.tsx range241,-1 beyond EOF211",
+      "resolution": "Earlier range1,240 had already returned full file."
+    },
+    {
+      "shellId": "2818",
+      "exitCode": 1,
+      "category": "command-startup-length",
+      "rawError": "The filename or extension is too long. (os error 206)",
+      "resolution": "Finalization command did not start. Split into bounded inline artifact-only commands; no tests/reruns."
+    },
+    {
+      "tool": "view",
+      "exitCode": null,
+      "category": "invalid-range",
+      "rawError": "Typography.tsx range215-265 beyond EOF116",
+      "resolution": "Needed ErrorText111 read with Select-String shell2663."
+    }
+  ],
+  "controlReads": {
+    "orchestrator": "docs/orchestrator-loop.md fully read",
+    "designContract": "docs/frontend-design-contract.md fully1-2539; truncated ranges recovered507-655/919-1064",
+    "mission": "Relevant principles/architecture1-210,layout/forms/mobile/states/a11y507-1000,QA/DoD1308-1518",
+    "inventory": "frontend-inventory authority1-45 and TwoFactorAuth row227; audit-page-176 relevant full issue/preservation sections1-230",
+    "handoff": "Current recovery1-47 and conventions2219-2250; history not fresh proof",
+    "instructions": [
+      "root .github/copilot-instructions relevant integrity/frontend/security/testing sections",
+      ".github/instructions/react-frontend.instructions fully",
+      "frontend-worker-conventions fully",
+      "CONTRIBUTING112-193",
+      "I18N_GUIDELINES1-146",
+      "MOBILE_GUIDELINES fully",
+      "A11Y_GUIDELINES1-230"
+    ],
+    "AGENTS": "No AGENTS.md found in inspected ancestor paths. Historical .agents/state preserved, not queue authority.",
+    "exactQueueRow": "| [~] | 6 | phase6-qa-settings-two-factor-auth | read-only-finished-page-QA | docs\\frontend-audits\\phase6-qa-settings-two-factor-auth.json; web\\logs\\phase6-qa-settings-two-factor-auth.log | phase5-page-settings-two-factor-auth | 1 | reserved02:22:14.747Z; actor pending | - | TwoFactorAuthPage/direct supports; UI source-only, no auth/secret/recovery/identity/enrollment/API/browser actions. |",
+    "dependency": "Completed phase5-page-settings-two-factor-auth SOURCE ONLY7d3cba9c00336f36f125acba65d988bfa75ea73c not reopened.",
+    "queueDrift": "Concurrent queue insertions moved historical rows; exact current QA row136 reread shell2663. No queue/Git writes."
+  },
+  "purpose": "Current-account TOTP status/enrollment/verification/recovery/disable UI source-only QA.",
+  "primaryGoal": "Preserve all sections/actions/trust/readiness/validation/feedback without actual authentication, sensitive values, requests or browser actions.",
+  "preservation": {
+    "pageLines": 86,
+    "composedFeatureLines": 1185,
+    "composedScope": "page86+enrollmentsection142+11non-test twofactorfiles957; excludes APIhook221/SettingsSummaryBrief",
+    "featureSections": [
+      {
+        "name": "overview/KPI",
+        "metrics": 4
+      },
+      {
+        "name": "enrollment/status hero"
+      },
+      {
+        "name": "setup guide",
+        "steps": 4
+      },
+      {
+        "name": "compatible apps",
+        "brands": 6
+      },
+      {
+        "name": "recovery guidance",
+        "tips": 3
+      }
+    ],
+    "featureSectionCount": 5,
+    "otherSurfaces": [
+      "header/title/subtitlehelp/linkcopy/freshness",
+      "QR/manualsecret/verify dialog",
+      "one-time backup reveal/empty recovery",
+      "typed disable confirmation"
+    ],
+    "actions": [
+      "header refresh/retry",
+      "copy view link",
+      "Enable TOTP",
+      "copy manual secret",
+      "code edit/Enter/Verify",
+      "Cancel/titleclose/backdrop/Escape",
+      "copy backup codes",
+      "download recovery text",
+      "I saved them/emptyClose",
+      "Regenerate backup codes",
+      "Disable/typedDISABLE/confirm/Keep TOTP enabled"
+    ],
+    "behavior": "Raw payloads/request paths/query policy unchanged; transient modal null guards and empty-array recovery retained; static panels always mounted; no source/test changes."
+  },
+  "dataSources": [
+    {
+      "file": "web/src/api/hooks/useTOTP.ts",
+      "line": 79,
+      "read": "useTOTPStatus /auth/totp; same [totp,status] key for page/controller; AbortSignal; staleTime30000; focusrefetch false; explicit AUTH_MODE_OPEN mapping",
+      "commands": [
+        "POST /auth/totp/enroll",
+        "POST /auth/totp/verify",
+        "DELETE /auth/totp",
+        "POST /auth/totp/backup-codes/regenerate"
+      ],
+      "policy": "TanStack reads/mutations, success invalidation/broadcast, hooktoasts; stepup/interceptor indirect, not comprehensively traced",
+      "runtime": "NOTRUN; no endpoint/middleware proof or request"
+    }
+  ],
+  "states": {
+    "loading": "derived initial KPI and section contextual skeleton; TFA-01 is paused mismatch",
+    "fatal": "source-local QueryError66-73 retry; independent guide/apps/recovery not erased; pagefailuretest319 declaration only",
+    "retained": "page53 stale notice and56 retained brief; same status data kept; command gateTFA-04 separate",
+    "initialPausedUnknown": "TFA-01 false deployment advice, no inferred offline serverfailure",
+    "openMode": "explicit discriminator withholds credential controls",
+    "notEnrolledActive": "Enable vs active lastused/count/regenerate/disable; real0/missing dash retained; invalidcountTFA-08/dateTFA-07",
+    "enrollment": "volatile closed/enroll/backupCodes local state, null-safe arrays and empty recovery; late settlementTFA-03",
+    "validation": "digit stripping/clamp6, shortlength guard, invalid/rate-limit/expired/generic localizedfeedback; associationTFA-02",
+    "confirmation": "danger disable +exactDISABLE +localizedtypedlabel +loading; shared cancel guarded whilepending; rejectioncloseTFA-05. Regen impactconfirm candidateC01",
+    "copyFeedback": "CopyButton successCopied/onCopyError; TotpCopyAction polite manualcopy fallback and text-change reset; copy-denial testdeclarations present, no clipboard/download executed",
+    "identity": "account-only, no vehicle/date picker; conditionalcontinuityC03, no identity access",
+    "readiness": "individual pending Button busy/disabled; missing source-livegateTFA-04"
+  },
+  "components": [
+    "PageLayout44 ->sharedPageContainer11 (valid wrapper, not missing-page-container)",
+    "TotpKpiBand ->SettingsSummaryBrief ->canonicalOperationalBrief/numericbridge",
+    "TOTPEnrollmentSection/useTotpEnrollmentFlow existing businessowner",
+    "SharedModal/Input/ConfirmDialog/CopyButton/CodeBlock APIs suffice; no new sharedengine",
+    "FadeIn/useMotionPreference canonical vendor boundary"
+  ],
+  "responsive": {
+    "declarations": [
+      "base1colpage/hero ->xl3 withhero2span",
+      "context ->md2",
+      "apps ->sm2",
+      "hero detail ->sm2 and wrappedactions/minw0",
+      "Modal viewport cap/shellchrome/safe-bottom/scrollbody",
+      "CodeBlock wrap; backup codegrid fixed2col"
+    ],
+    "actualViewportEvidence": "NOTRUN; native candidatesN01/N02"
+  },
+  "accessibility": {
+    "declarations": [
+      "sharedh1 routefocustarget",
+      "named regions and heading-associated lists",
+      "localized QRalt/decorativehiddenicons",
+      "InputimplicituseId/visiblelabel/numericinputMode/Enter",
+      "Modalnamed dialog/aria-modal/traprestore owner",
+      "busy/status/alert and politecopyfallback",
+      "typed localizeddisablelabel"
+    ],
+    "confirmed": [
+      "TFA-02",
+      "TFA-03"
+    ],
+    "nativeFocusKeyboardScreenReader": "NOTRUN"
+  },
+  "preferencesAndI18n": {
+    "declarations": "Existing useDateFormat locale/timezone and canonicalmetric preferences; t(settings) authored UI; stabletechnical IDs; no resets/persistencewrites/conversions changed.",
+    "exceptions": [
+      "brandpropernouns",
+      "technicalTOTP/RFC identifiers",
+      "DISABLE protocol token",
+      "filename",
+      "QRwhite scanner backing",
+      "computed IconBox activated ternary",
+      "transient modal null guards",
+      "copy-failure reset useEffect is not data fetching"
+    ],
+    "catalogResolutionAndRTL": "NOTRUN; no catalog generator/namespace guard or native longtranslation proof"
+  },
+  "deduplicatedOwners": [
+    {
+      "id": "flow-controller",
+      "files": [
+        "web/src/features/settings/components/twofactor/useTotpEnrollmentFlow.ts",
+        "web/src/features/settings/components/twofactor/useTotpEnrollmentFlow.test.tsx"
+      ],
+      "findings": [
+        "TFA-03",
+        "TFA-05"
+      ],
+      "crossReferences": [
+        "TFA-04 dispatchgate",
+        "C02/C03/C04"
+      ],
+      "needs": "attempt/instance authority; failed confirmation retention; dispatch readiness"
+    },
+    {
+      "id": "enrollment-section",
+      "files": [
+        "web/src/features/settings/components/TOTPEnrollmentSection.tsx",
+        "web/src/features/settings/components/TOTPEnrollmentSection.test.tsx"
+      ],
+      "findings": [
+        "TFA-01",
+        "TFA-04"
+      ],
+      "needs": "derived initial/paused discrimination and readiness wiring"
+    },
+    {
+      "id": "enroll-modal",
+      "files": [
+        "web/src/features/settings/components/twofactor/TotpEnrollModal.tsx",
+        "web/src/features/settings/components/twofactor/TotpEnrollModal.test.tsx"
+      ],
+      "findings": [
+        "TFA-02"
+      ],
+      "crossReferences": [
+        "TFA-03 all-path dismissal"
+      ],
+      "needs": "existing Input association and pending close callback policy"
+    },
+    {
+      "id": "status-presentation",
+      "files": [
+        "web/src/features/settings/components/twofactor/TotpStatusHero.tsx",
+        "web/src/features/settings/components/twofactor/TotpStatusHero.test.tsx",
+        "web/src/features/settings/components/twofactor/TotpKpiBand.tsx",
+        "web/src/features/settings/components/twofactor/TotpKpiBand.test.tsx"
+      ],
+      "findings": [
+        "TFA-07",
+        "TFA-08"
+      ],
+      "crossReferences": [
+        "TFA-04 readinessprops",
+        "N01targets"
+      ],
+      "needs": "local date/count normalization; no global formatter rewrite"
+    },
+    {
+      "id": "static-guidance",
+      "files": [
+        "web/src/features/settings/components/twofactor/TotpCompatibleApps.tsx",
+        "web/src/features/settings/components/twofactor/TotpCompatibleApps.test.tsx",
+        "web/src/features/settings/components/twofactor/TotpSetupGuide.tsx",
+        "web/src/features/settings/components/twofactor/TotpSetupGuide.test.tsx",
+        "web/src/features/settings/components/twofactor/TotpRecoveryPanel.tsx",
+        "web/src/features/settings/components/twofactor/TotpRecoveryPanel.test.tsx"
+      ],
+      "findings": [
+        "TFA-06"
+      ],
+      "crossReferences": [
+        "C05 copyclarity only by authorizedcatalogowner"
+      ],
+      "needs": "neutral informational decoration"
+    }
+  ],
+  "ownerDeduplication": "Five disjoint existing feature file/test scopes, proposed needs only, not dispatched leases. Cross-references do not duplicate findings. Exact queue search found completed historical audit/phase5/Badgefixture/KPItest owners but no TOTP corrective source lease; do not reopen accepted work.",
+  "requiredSharedChanges": [],
+  "integrationNeeds": [
+    "Separate identity/client/cache/capability scope for C03; no shared API expansion proven.",
+    "Product/backend replacement policy for C01 and copy clarityC05; canonical catalog owner only."
+  ],
+  "competingImplementations": {
+    "confirmed": [],
+    "limit": "Inspected page composition only, not globalrepo scan."
+  },
+  "engineeringRuleClassification": {
+    "static-inline-style": "primary/support grep0",
+    "raw-html": "primary0; support7=3native sharedUi controls +4comment examples, exceptions",
+    "direct-library-import": "primary0; support2=sharedFadeIn and canonicaluseMotionPreference owner, not page/feature vendor imports",
+    "old-api-import": "primary/support0",
+    "double-prefix": "primary/support actualrequest regex0; comments/typeURL not requests",
+    "camelcase-param": "primary/support0; TOTP has no queryparams",
+    "hidden-section": "primary/support0; transient dialogs not persistent section hiding",
+    "hardcoded-string": "primaryregex2falsepositives TSgenericrequest; authoredUI manuallyt/brandexceptions; no blanketcatalogacceptance",
+    "missing-page-container": "PageLayout->PageContainer adapter traced",
+    "fetch-useeffect": "primary1/support5 are UI reset/focus/confirmation effects, not source loading",
+    "backendRules": "NOT_APPLICABLE: no assigned internalGo files"
+  },
+  "summary": {
+    "confirmedFindings": 8,
+    "historicalRevalidated": 5,
+    "newSourceFindings": 3,
+    "conditionalCandidates": 5,
+    "nativeCandidates": 4,
+    "deduplicatedOwners": 5,
+    "byRule": {
+      "initial-paused-open-mode": 1,
+      "field-error-association": 1,
+      "pending-dismissal-authority": 1,
+      "live-only-readiness": 1,
+      "failed-mutation-dismissal": 1,
+      "decorative-multihue": 1,
+      "timestamp-normalization": 1,
+      "invalid-count-as-zero": 1
+    },
+    "bySeverity": {
+      "medium": 5,
+      "high": 1,
+      "low": 2
+    },
+    "filesByPrimaryFindingCount": {
+      "web/src/features/settings/components/TOTPEnrollmentSection.tsx": 2,
+      "web/src/features/settings/components/twofactor/TotpEnrollModal.tsx": 2,
+      "web/src/features/settings/components/twofactor/useTotpEnrollmentFlow.ts": 1,
+      "web/src/features/settings/components/twofactor/TotpCompatibleApps.tsx": 1,
+      "web/src/features/settings/components/twofactor/TotpKpiBand.tsx": 1,
+      "web/src/features/settings/components/twofactor/TotpStatusHero.tsx": 1
+    },
+    "countPolicy": "Unique mechanism at primaryowner; child findings not inflated as duplicate page issues."
+  },
+  "priority": [
+    "TFA-03",
+    "TFA-01",
+    "TFA-02",
+    "TFA-04",
+    "TFA-05",
+    "TFA-08",
+    "TFA-07",
+    "TFA-06"
+  ],
+  "testAccounting": {
+    "sourceFiles": 12,
+    "declarations": 141,
+    "expectCallsites": 446,
+    "staticExpandedCandidateCases": 144,
+    "definition": "One literal4-entry it.each expands one declaration to4; staticcounts not runtime discovery/passes.",
+    "pageDeclarations": 8,
+    "pageExpectCallsites": 52,
+    "discovered": null,
+    "executed": 0,
+    "passed": null,
+    "failed": null,
+    "skipped": null,
+    "status": "NOTRUN; user prohibits fresh tests/passing reruns"
+  },
+  "notRun": [
+    "tests/Vitest",
+    "lint/officialaudits",
+    "npx tsc --noEmit/globalTSC",
+    "build/fullgates",
+    "browser/mount/readiness/network/API",
+    "auth/identity/enrollment/stepup/revoke/regenerate",
+    "clipboard/download/export",
+    "viewport/nativecaptures",
+    "keyboard/focus/screenreader/contrast/forcedcolors",
+    "RTL/200%text/safeareas",
+    "cataloggenerator/namespacechecks",
+    "backendrouter/middlewareverification"
+  ],
+  "safety": {
+    "sourceOnly": true,
+    "actualAuthSecretsRecoveryIdentityAccess": false,
+    "appModuleExecution": false,
+    "browserNetworkActions": false,
+    "gitSubagentsInstallsServersHelpers": false,
+    "sourceTestCatalogWrites": false,
+    "onlyWritable": [
+      "docs/frontend-audits/phase6-qa-settings-two-factor-auth.json",
+      "web/logs/phase6-qa-settings-two-factor-auth.log"
+    ],
+    "fixtureLimit": "Only existing testsource read, never imported/run; no fixturecredential values retained in new artifacts.",
+    "globalTree": "NOT_CHECKED; concurrentqueue updates observed, no Git; only46scopedsourcepins certified."
+  },
+  "filesRead": [
+    {
+      "file": "web/src/api/hooks/useTOTP.ts",
+      "coverage": "full feature/test read or relevant directsupport ranges"
+    },
+    {
+      "file": "web/src/features/settings/components/TOTPEnrollmentSection.tsx",
+      "coverage": "full feature/test read or relevant directsupport ranges"
+    },
+    {
+      "file": "web/src/features/settings/components/twofactor/index.ts",
+      "coverage": "full feature/test read or relevant directsupport ranges"
+    },
+    {
+      "file": "web/src/features/settings/components/twofactor/TotpBackupCodesModal.test.tsx",
+      "coverage": "full feature/test read or relevant directsupport ranges"
+    },
+    {
+      "file": "web/src/features/settings/components/twofactor/TotpBackupCodesModal.tsx",
+      "coverage": "full feature/test read or relevant directsupport ranges"
+    },
+    {
+      "file": "web/src/features/settings/components/twofactor/TotpCompatibleApps.test.tsx",
+      "coverage": "full feature/test read or relevant directsupport ranges"
+    },
+    {
+      "file": "web/src/features/settings/components/twofactor/TotpCompatibleApps.tsx",
+      "coverage": "full feature/test read or relevant directsupport ranges"
+    },
+    {
+      "file": "web/src/features/settings/components/twofactor/TotpCopyAction.tsx",
+      "coverage": "full feature/test read or relevant directsupport ranges"
+    },
+    {
+      "file": "web/src/features/settings/components/twofactor/TotpEnrollModal.test.tsx",
+      "coverage": "full feature/test read or relevant directsupport ranges"
+    },
+    {
+      "file": "web/src/features/settings/components/twofactor/TotpEnrollModal.tsx",
+      "coverage": "full feature/test read or relevant directsupport ranges"
+    },
+    {
+      "file": "web/src/features/settings/components/twofactor/TotpKpiBand.test.tsx",
+      "coverage": "full feature/test read or relevant directsupport ranges"
+    },
+    {
+      "file": "web/src/features/settings/components/twofactor/TotpKpiBand.tsx",
+      "coverage": "full feature/test read or relevant directsupport ranges"
+    },
+    {
+      "file": "web/src/features/settings/components/twofactor/TotpOpenModeNotice.test.tsx",
+      "coverage": "full feature/test read or relevant directsupport ranges"
+    },
+    {
+      "file": "web/src/features/settings/components/twofactor/TotpOpenModeNotice.tsx",
+      "coverage": "full feature/test read or relevant directsupport ranges"
+    },
+    {
+      "file": "web/src/features/settings/components/twofactor/TotpRecoveryPanel.test.tsx",
+      "coverage": "full feature/test read or relevant directsupport ranges"
+    },
+    {
+      "file": "web/src/features/settings/components/twofactor/TotpRecoveryPanel.tsx",
+      "coverage": "full feature/test read or relevant directsupport ranges"
+    },
+    {
+      "file": "web/src/features/settings/components/twofactor/TotpSetupGuide.test.tsx",
+      "coverage": "full feature/test read or relevant directsupport ranges"
+    },
+    {
+      "file": "web/src/features/settings/components/twofactor/TotpSetupGuide.tsx",
+      "coverage": "full feature/test read or relevant directsupport ranges"
+    },
+    {
+      "file": "web/src/features/settings/components/twofactor/TotpStatusHero.test.tsx",
+      "coverage": "full feature/test read or relevant directsupport ranges"
+    },
+    {
+      "file": "web/src/features/settings/components/twofactor/TotpStatusHero.tsx",
+      "coverage": "full feature/test read or relevant directsupport ranges"
+    },
+    {
+      "file": "web/src/features/settings/components/twofactor/useTotpEnrollmentFlow.test.tsx",
+      "coverage": "full feature/test read or relevant directsupport ranges"
+    },
+    {
+      "file": "web/src/features/settings/components/twofactor/useTotpEnrollmentFlow.ts",
+      "coverage": "full feature/test read or relevant directsupport ranges"
+    },
+    {
+      "file": "web/src/features/settings/pages/TwoFactorAuthPage.test.tsx",
+      "coverage": "full feature/test read or relevant directsupport ranges"
+    },
+    {
+      "file": "web/src/features/settings/pages/TwoFactorAuthPage.tsx",
+      "coverage": "full feature/test read or relevant directsupport ranges"
+    },
+    {
+      "file": "web/src/features/settings/components/TOTPEnrollmentSection.test.tsx",
+      "coverage": "full feature/test read or relevant directsupport ranges"
+    },
+    {
+      "file": "web/src/api/hooks/useTOTP.test.tsx",
+      "coverage": "full feature/test read or relevant directsupport ranges"
+    },
+    {
+      "file": "web/src/api/dataState.ts",
+      "coverage": "full feature/test read or relevant directsupport ranges"
+    },
+    {
+      "file": "web/src/components/layout/layout-reference/PageLayout.tsx",
+      "coverage": "full feature/test read or relevant directsupport ranges"
+    },
+    {
+      "file": "web/src/components/layout/PageContainer.tsx",
+      "coverage": "full feature/test read or relevant directsupport ranges"
+    },
+    {
+      "file": "web/src/components/ui/Input.tsx",
+      "coverage": "full feature/test read or relevant directsupport ranges"
+    },
+    {
+      "file": "web/src/components/ui/ConfirmDialog.tsx",
+      "coverage": "full feature/test read or relevant directsupport ranges"
+    },
+    {
+      "file": "web/src/components/ui/Modal.tsx",
+      "coverage": "full feature/test read or relevant directsupport ranges"
+    },
+    {
+      "file": "web/src/components/ui/CopyButton.tsx",
+      "coverage": "full feature/test read or relevant directsupport ranges"
+    },
+    {
+      "file": "web/src/components/ui/Button.tsx",
+      "coverage": "full feature/test read or relevant directsupport ranges"
+    },
+    {
+      "file": "web/src/api/hooks/_toastHelpers.ts",
+      "coverage": "full feature/test read or relevant directsupport ranges"
+    },
+    {
+      "file": "web/src/features/settings/components/operationalbrief-all/SettingsSummaryBrief.tsx",
+      "coverage": "full feature/test read or relevant directsupport ranges"
+    },
+    {
+      "file": "web/src/components/motion/FadeIn.tsx",
+      "coverage": "full feature/test read or relevant directsupport ranges"
+    },
+    {
+      "file": "web/src/api/types.ts",
+      "coverage": "targeted source definitions/grep"
+    },
+    {
+      "file": "web/src/hooks/useDateFormat.ts",
+      "coverage": "full feature/test read or relevant directsupport ranges"
+    },
+    {
+      "file": "web/src/components/ui/IconBox.tsx",
+      "coverage": "full feature/test read or relevant directsupport ranges"
+    },
+    {
+      "file": "web/src/components/ui/Typography.tsx",
+      "coverage": "targeted source definitions/grep"
+    },
+    {
+      "file": "web/src/components/feedback/DataStateNotice.tsx",
+      "coverage": "full feature/test read or relevant directsupport ranges"
+    },
+    {
+      "file": "web/src/hooks/useDialogFocus.ts",
+      "coverage": "targeted source definitions/grep"
+    },
+    {
+      "file": "web/src/hooks/useMotionPreference.ts",
+      "coverage": "full feature/test read or relevant directsupport ranges"
+    },
+    {
+      "file": "web/src/components/ui/CodeBlock.tsx",
+      "coverage": "full feature/test read or relevant directsupport ranges"
+    },
+    {
+      "file": "web/src/lib/dateFormat.ts",
+      "coverage": "targeted source definitions/grep"
+    }
+  ],
+  "evidenceLimits": [
+    "Source-only, not page/release/application acceptance.",
+    "Conditional/native candidates not confirmed defects/failedtests.",
+    "Backend/interceptor/identity transition untraced, no authvulnerability asserted.",
+    "Historical receipts not fresh passes.",
+    "Tool truncation/path/range/encoding/commandlength failures retained; only failed local scan retried.",
+    "46 source/testpins stable, not a globaltree/Git claim."
+  ],
+  "release": {
+    "sourceWriteClaimReleased": true,
+    "artifactWriteClaimReleased": true,
+    "ownedShells": "All checks bounded; no ongoing server/worker shells",
+    "artifacts": [
+      "docs/frontend-audits/phase6-qa-settings-two-factor-auth.json",
+      "web/logs/phase6-qa-settings-two-factor-auth.log"
+    ],
+    "finalParsePinCheck": "PASS artifact parse/count/line/owner/exact46pin validation only; not application checks",
+    "releasedUtc": "2026-10-14T02:42:04.333077+00:00",
+    "checkExitCode": 0
+  },
+  "commandLedger": {
+    "inspectionShellsExit0": [
+      "2548",
+      "2556",
+      "2566",
+      "2575",
+      "2587",
+      "2595",
+      "2601",
+      "2609",
+      "2622",
+      "2623",
+      "2648",
+      "2663"
+    ],
+    "checkShellsExit0": [
+      "2646",
+      "2660",
+      "2884",
+      "3001"
+    ],
+    "failures": [
+      {
+        "shellId": "2656",
+        "exitCode": 1,
+        "cause": "console encoding; only failed support textscan rerun"
+      },
+      {
+        "shellId": "2818",
+        "exitCode": 1,
+        "cause": "command never started: Windows length206"
+      }
+    ],
+    "rawEvidence": "Exact invoked Python check commands +raw stdout/exits/failures in log; raw large discovery stdout copied from local tool receipts. All original inspection commands/stdout also returned in caller tool transcript. No fresh tests/lint/build/TSC performed."
+  }
+}
