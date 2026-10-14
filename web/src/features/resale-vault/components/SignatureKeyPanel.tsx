@@ -77,6 +77,13 @@ export function SignatureKeyPanel({ vault }: SignatureKeyPanelProps) {
                 </Badge>
               </div>
               <div className="mt-1 text-[var(--text-muted)]">
+                <Badge variant={key.persisted ? 'success' : 'warning'}>
+                  {key.persisted
+                    ? t('resaleVault.keys.persisted', 'Persisted (survives reload)')
+                    : t('resaleVault.keys.sessionOnly', 'Session-only (lost on reload)')}
+                </Badge>
+              </div>
+              <div className="mt-1 text-[var(--text-muted)]">
                 {t('resaleVault.keys.created', 'Created')}: {key.created_at}
                 {key.rotated_from && ` · ${t('resaleVault.keys.rotatedFrom', 'Rotated from')} ${key.rotated_from}`}
               </div>

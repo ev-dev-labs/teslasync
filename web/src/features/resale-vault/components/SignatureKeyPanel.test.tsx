@@ -59,6 +59,30 @@ describe('SignatureKeyPanel', () => {
     expect(screen.getByText(/does NOT verify the identity/i)).toBeInTheDocument();
   });
 
+  it('shows failed persistence on revoked history even when capability probing originally succeeded', () => {
+    const key: SigningKeyRecord = {
+      key_id: 'key_failed_commit',
+      public_jwk: { kty: 'EC', crv: 'P-256', x: 'x', y: 'y' },
+      created_at: '2024-01-01T00:00:00Z',
+      revoked_at: '2024-02-01T00:00:00Z', revoked_reason: 'manual_revocation',
+      rotated_from: null, persisted: false,
+    };
+    const vault: UseSigningVaultResult = {
+      capability: { supported: true, reason: null },
+      keys: [key], activeKey: null, auditLog: [], isLoading: false, isMutating: false, error: null,
+      generateKey: vi.fn().mockResolvedValue(undefined), rotateKey: vi.fn().mockResolvedValue(undefined),
+      revokeKey: vi.fn().mockResolvedValue(undefined), refresh: vi.fn().mockResolvedValue(undefined),
+    };
+    const { rerender } = render(<SignatureKeyPanel vault={vault} />);
+    expect(screen.getByText('Session-only (lost on reload)')).toBeInTheDocument();
+    expect(screen.queryByText('Persisted (survives reload)')).not.toBeInTheDocument();
+    expect(screen.getByText('key_failed_commit')).toBeInTheDocument();
+    expect(screen.getByText('Revoked')).toBeInTheDocument();
+    rerender(<SignatureKeyPanel vault={{ ...vault, keys: [{ ...key, persisted: true }] }} />);
+    expect(screen.getByText('Persisted (survives reload)')).toBeInTheDocument();
+    expect(screen.queryByText('Session-only (lost on reload)')).not.toBeInTheDocument();
+  });
+
   it('requires the selected key confirmation, supports cancellation and retains the key history through denial and recovery', () => {
     const active: SigningKeyRecord = {
       key_id: 'key_current',
