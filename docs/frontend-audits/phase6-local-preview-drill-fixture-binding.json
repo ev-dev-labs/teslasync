@@ -1,0 +1,267 @@
+{
+  "schema_version": 1,
+  "item": "phase6-local-preview-drill-fixture-binding",
+  "status": "DONE_READONLY_DIAGNOSIS_FIXTURE_CALLER_MAPPING_REQUIRED",
+  "native_acceptance": "NOTRUN; original native continuation remains partial",
+  "owned_files": [
+    "docs\\frontend-audits\\phase6-local-preview-drill-fixture-binding.json",
+    "web\\logs\\phase6-local-preview-drill-fixture-binding.log"
+  ],
+  "clock": {
+    "assignment_utc": "2026-10-14T06:07:20.195Z",
+    "return_deadline_utc": "2026-10-14T06:27:20.195Z",
+    "first_terminal_clock_utc": "2026-10-14T06:07:45.8064312Z",
+    "last_http_observation_utc": "2026-10-14T06:10:40.9855001Z",
+    "observation_commands_released_utc": "2026-10-14T06:11:43.6053171Z",
+    "final_report_log_command_release": "Exact final validation/release UTC is appended to the owned log after successful validation; not the earlier observation release."
+  },
+  "conclusion": {
+    "root": "Stale native caller fixture IDs, not a demonstrated preview proxy mismatch.",
+    "preview_origin": "http://127.0.0.1:5173",
+    "preview_api_target": "http://localhost:8080",
+    "docker_web_origin": "http://127.0.0.1:3119",
+    "current_model_3_vehicle_id": 2,
+    "current_model_3_completed_drive_id": 3,
+    "current_model_3_ongoing_drive_id": 4,
+    "explanation": "The canonical seed deliberately omits GENERATED ALWAYS vehicle IDs and resolves child rows by exact synthetic VIN. The completed local deployment created a fresh database and generated fixture vehicle IDs1/2, not historical3/4. Current readonly SQL and real fixture-scoped HTTP reads agree across8080,3119,5173. The old vehicle4/drive190/191 caller assumptions do not match this database.",
+    "proxy_reconfiguration_required_by_evidence": false,
+    "application_or_hook_defect_inferred": false,
+    "deployment_or_seed_rerun_required": false,
+    "configuration_owner": "Parent runtime/QA orchestration owns approval of the new caller-only fixture map; the existing phase6-native-drives-preview-mobile-target worker owns verification of its remaining native cases."
+  },
+  "preserved_original_failure": {
+    "receipt": "docs\\frontend-audits\\phase6-native-drives-preview-target-continuation.json",
+    "sha256_before": "b8979032390afd02882d36989ac048291c9f7a1deeca8cf4b345d33a86a96dee",
+    "original_fixture_vehicle_id": 4,
+    "original_fixture_drive_ids": [190, 191],
+    "original_selected_range": "2026-10-08 through2026-10-13",
+    "vehicle_get": {
+      "observed_utc": "2026-10-14T05:21:29.061Z",
+      "path": "/api/v1/vehicles/4",
+      "http_status": 404,
+      "command_exit": 2
+    },
+    "drive_get": {
+      "observed_utc": "2026-10-14T05:22:29.581Z",
+      "path": "/api/v1/drives?vehicle_id=4&start=2026-10-01&end=2026-10-14&limit=1000",
+      "http_status": 200,
+      "row_count": 0,
+      "command_exit": 2
+    },
+    "old_fixture_gets_repeated": false,
+    "historic_404_reclassified_as_200": false,
+    "historic_empty_result_reclassified_as_populated": false,
+    "original_native_1193_544_second_receipt": "Historical evidence remains unchanged. Its ignored original native JSON is absent on the recovered checkout, as disclosed by the retained continuation; it was not regenerated or freshly hash-certified.",
+    "original_receipt_write": false,
+    "historic_source_tests_keyboard_touch_captures": "Preserved; not repeated or promoted to current fixture/native acceptance."
+  },
+  "completed_docker_receipt": {
+    "path": "C:\\Users\\AtulM\\.copilot\\session-state\\52d6bc50-50e0-4562-abde-3a8441085408\\files\\local-docker-latest-and-drill-seed-5590146c\\receipt.json",
+    "sha256": "e1718a66d12cfcc1128d97f8acecc5955aa9a8dc1c09d8d687c4496d949ea147",
+    "completed_utc": "2026-10-14T05:19:18.5444758Z",
+    "source_sha": "5590146cdf237eafc9d0d052f553eac1f60f33fa",
+    "project": "teslasync-local-drill",
+    "context": "desktop-linux",
+    "historical_receipt_results": {
+      "build_exits": [1, 0],
+      "up_exit": 0,
+      "seed_exit": 0,
+      "verify_exit": 0,
+      "idempotence_exit": 0,
+      "schema_version": 255,
+      "schema_dirty": false,
+      "fixture_counts": {"vehicles": 2, "drives": 4, "charging_sessions": 3},
+      "nonfixture_counts_before_and_after": [0, 0, 0],
+      "five_services_healthy": true,
+      "served_service_worker_and_api_metrics_matched_sha": true
+    },
+    "fresh_container_metadata": {
+      "command": "docker --context desktop-linux inspect --format [name,id,state,health,compose-project,revision,ports only] [five exact completed-task container names]",
+      "numeric_inspect_exits": [0, 0, 0, 0, 0],
+      "five_container_ids_match_completed_receipt": true,
+      "five_services_running_healthy": true,
+      "api_and_web_revision": "5590146cdf237eafc9d0d052f553eac1f60f33fa",
+      "api_host_binding": "127.0.0.1:8080",
+      "web_host_binding": "127.0.0.1:3119",
+      "no_env_or_secret_or_container_log_body_inspection": true
+    },
+    "fresh_readonly_migration_metadata": "255|false",
+    "latest_checkout_is_running_docker_source": "NOT CLAIMED. Docker is pinned5590146; later source/report work is not silently deployed.",
+    "build_up_seed_deploy_scripts_executed_here": false
+  },
+  "canonical_seed_and_safe_mapping": {
+    "canonical_file": "scripts\\seed-restore-drill.sql",
+    "actually_deployed_seed_file": "C:\\Users\\AtulM\\.copilot\\session-state\\52d6bc50-50e0-4562-abde-3a8441085408\\files\\local-docker-latest-and-drill-seed-5590146c\\source\\scripts\\seed-restore-drill.sql",
+    "deployed_seed_sha256_matches_completed_receipt": "d7c4934fba65ba3c9bc7d0ee00b830b9a0c0b47626f978d565f888d61c5cd66f",
+    "seed_id_contract": "Vehicle surrogate IDs must not be supplied. Child rows JOIN exact synthetic VIN; current IDs must be discovered, not assumed from old receipts.",
+    "readonly_command": "docker --context desktop-linux exec -i teslasync-postgres psql -X -U teslasync -d teslasync -v ON_ERROR_STOP=1 -At [stdin BEGIN READ ONLY; SET LOCAL statement_timeout='5s'; exact two canonical fixture predicates; safe metadata SELECTs; ROLLBACK]",
+    "readonly_command_exit": 0,
+    "readonly_command_completed_utc": "2026-10-14T06:09:31.6606984Z",
+    "database_scope": "Only exact two canonical synthetic VIN predicates and their child vehicle IDs; no unscoped roster or nonfixture identity/location query.",
+    "fixtures": [
+      {
+        "fixture_key": "canonical-model-y",
+        "vehicle_id": 1,
+        "drive_count": 2,
+        "charge_count": 2,
+        "drive_ids": [1, 2],
+        "charge_ids": [1, 2],
+        "both_drives_completed": true
+      },
+      {
+        "fixture_key": "canonical-model-3",
+        "vehicle_id": 2,
+        "drive_count": 2,
+        "charge_count": 1,
+        "drive_ids": [3, 4],
+        "charge_ids": [3],
+        "completed_drive": {
+          "drive_id": 3,
+          "started_at": "2026-10-11T05:17:31.423696Z",
+          "ended_at": "2026-10-11T06:52:31.423696Z"
+        },
+        "ongoing_drive": {
+          "drive_id": 4,
+          "started_at": "2026-10-14T03:17:31.423696Z",
+          "ended_at": null
+        }
+      }
+    ],
+    "historical_seed_log_correspondence": "Existing local-docker-latest-and-drill-seed.log:5696-5699 and5740-5743 already record surrogate IDs1/2; lines5708-5711 and5752-5755 record their actual scoped drive/charge counts. These historical commands were read, not rerun.",
+    "historical_ids_are_not_portable": true
+  },
+  "preview_binding_evidence": {
+    "source_file": "web\\vite.config.ts",
+    "source_lines": [345, 356],
+    "source_sha256": "7e0f246e3d538f48b8df6a024f5cce1e068685023a844cce3b537a1afcf54f58",
+    "api_proxy_rule": {"prefix": "/api/", "target": "http://localhost:8080", "changeOrigin": true},
+    "ws_proxy_rule": {"prefix": "/ws", "target": "ws://localhost:8080"},
+    "ws_connection_attempted": false,
+    "fresh_listener_metadata": [
+      {"address": "127.0.0.1", "port": 5173, "pid": 3876},
+      {"address": "127.0.0.1", "port": 8080, "pid": 20436},
+      {"address": "127.0.0.1", "port": 3119, "pid": 20436}
+    ],
+    "served_preview_document": {
+      "utc": "2026-10-14T06:09:31.2328091Z",
+      "http_status": 200,
+      "content_type": "text/html",
+      "api_base_meta_found": false,
+      "literal_window_api_base_assignment_found": false
+    },
+    "served_vite_config_module": {
+      "utc": "2026-10-14T06:09:31.4822401Z",
+      "http_status": 200,
+      "content_type": "text/javascript",
+      "safe_extracted_targets": ["http://localhost:8080", "ws://localhost:8080"],
+      "raw_body_logged": false
+    },
+    "client_resolution": "web\\src\\api\\client.ts:apiUrl appends /api/v1. web\\src\\lib\\resilience.ts:getApiBase uses saved server origin, then meta/window override, otherwise same-origin. web\\src\\lib\\serverConnection.ts:getServerBaseUrl reads teslasync-server-base-url.",
+    "effective_default_path": "5173/api/v1/... -> Vite /api/ proxy -> localhost:8080 task-owned API. Current fixture identity and history metadata agree with Docker3119 and direct8080.",
+    "limit": "No browser profile/storage was opened. A pre-existing saved remote/demo override in another user's context is unverified, not asserted absent. Serving the config module is source evidence, not private introspection of Vite's resolved in-memory config; actual same-origin fixture HTTP agreement provides the runtime binding evidence."
+  },
+  "actual_http_diagnostics": {
+    "command": "PowerShell HttpClient GETs to allowlisted127.0.0.1 ports8080/3119/5173; AllowAutoRedirect=false, UseProxy=false, UseCookies=false, timeout10s; verify exact canonical fixture identity before scoped child reads; only safe result metadata emitted",
+    "command_exit": 0,
+    "completed_utc": "2026-10-14T06:10:40.9928271Z",
+    "api_get_count": 16,
+    "actual_http200_count": 16,
+    "fixture_vehicle_get_count": 6,
+    "fixture_scoped_drive_get_count": 10,
+    "raw_response_bodies_logged": false,
+    "identity_assertion": "Each of6 vehicle responses matched its proven synthetic vehicle ID and exact canonical synthetic VIN; neither response body nor VIN was printed.",
+    "cross_origin_comparison": [
+      {"origin": "http://127.0.0.1:8080", "vehicle1_get": 200, "vehicle2_get": 200, "vehicle1_drive_ids": [1, 2], "vehicle2_drive_ids": [3, 4]},
+      {"origin": "http://127.0.0.1:3119", "vehicle1_get": 200, "vehicle2_get": 200, "vehicle1_drive_ids": [1, 2], "vehicle2_drive_ids": [3, 4]},
+      {"origin": "http://127.0.0.1:5173", "vehicle1_get": 200, "vehicle2_get": 200, "vehicle1_drive_ids": [1, 2], "vehicle2_drive_ids": [3, 4]}
+    ],
+    "all_returned_rows_match_proven_vehicle_and_drive_ids": true,
+    "completed_and_ongoing_state": "All three origins returned Model3 drive3 completed and drive4 with null end_ts.",
+    "preview_date_only_original_padded_range_with_current_fixture": {
+      "path": "/api/v1/drives?vehicle_id=2&start=2026-10-01&end=2026-10-14&limit=1000",
+      "http_status": 200,
+      "row_count": 2,
+      "drive_ids": [3, 4]
+    },
+    "preview_explicit_original_selected_range_with_current_fixture": {
+      "path": "/api/v1/drives?vehicle_id=2&start=2026-10-08T04%3A00%3A00Z&end=2026-10-14T04%3A00%3A00Z&limit=1000",
+      "http_status": 200,
+      "row_count": 2,
+      "drive_ids": [3, 4]
+    },
+    "range_limit": "The SQL log's historical_oct1_oct14 boolean is a deliberately explicit UTC-midnight exclusive comparison, NOT the date-only API end parser contract. Current real date-only and explicit04Z requests both returned Model3 drives3/4. No range defect, UI range behavior, full aggregate correctness or pagination acceptance is inferred."
+  },
+  "precise_needed_owners": [
+    {
+      "owner": "Parent runtime/QA orchestration",
+      "needed_action": "Approve a superseding caller-only fixture map for the existing pending native continuation: select canonical Model3 vehicle2 and expect completed drive3/ongoing drive4. Preserve historical vehicle4/190/191 and every original failed HTTP/native receipt. Do not change the seed, database IDs, proxy, application hooks, source, env, Docker or shared server.",
+      "existing_configuration_boundary": "The native continuation's returning-user context/caller, not application configuration: teslasync-selected-vehicle must be the string2 in a newly authorized context; the guard's allowed vehicle/detail IDs and exact preview assertions must use2/3/4. Preserve the existing release acknowledgement policy. Any E2E_STORAGE_STATE use must keep5173 and3119 as sibling origins, never rewrite the historical original state.",
+      "remote_override_boundary": "Keep the future QA context deliberately same-origin; its configuration owner must verify no saved teslasync-server-base-url or demo override retargets API requests. No existing user context was inspected or changed here.",
+      "authorization_needed": "This report does not itself grant browser locks, storage-fixture writes, source edits, queue changes or native acceptance."
+    },
+    {
+      "owner": "Existing phase6-native-drives-preview-mobile-target worker after parent grants its browser slot and caller map",
+      "needed_action": "First revalidate fixture2 identity against the canonical synthetic seed through5173; require only drive3/4 and true completed/null-ended states in the unchanged selected NewYork Oct8-Oct13 scope. The two current scoped range probes already show both rows; do not fabricate presence or broaden range merely to manufacture success. Then execute only missing fine-pointer375/320/390/430/767 and768/1023 restoration cases, with existing readonly/privacy guards and no new helper or original passed-case rerun.",
+      "report_owner": "docs\\frontend-audits\\phase6-native-drives-preview-target-continuation.json, superseding additive evidence only under its separate exclusive claim",
+      "verification_limits": "Rebinding fixture IDs establishes availability, not a native target, keyboard, touch, screenshot, complete pilot or Phase6 pass."
+    },
+    {
+      "owner": "Shared preview/runtime configuration owner, conditional only",
+      "needed_action": "No proxy change justified now. If a future controlled same-origin fixture check actually diverges from8080, diagnose the resolved /api/ target and selected server override under a separately authorized config scope. Do not point Vite at3119 or restart anything merely because the old fixture4 returned404."
+    }
+  ],
+  "privacy_and_scope": {
+    "allowed_http_targets": ["http://127.0.0.1:5173", "http://127.0.0.1:8080", "http://127.0.0.1:3119"],
+    "external_http_requests": 0,
+    "business_mutations": 0,
+    "actual_tesla_requests": 0,
+    "unscoped_vehicle_api_requests": 0,
+    "nonfixture_identity_or_location_queries": 0,
+    "nonfixture_identity_location_or_raw_response_body_logging": 0,
+    "secret_env_reads_or_logging": 0,
+    "seed_build_deploy_reruns": 0,
+    "browser_launches_locks_captures": 0,
+    "new_servers_helpers_extensions_installs_nested_agents": 0,
+    "source_env_config_server_queue_git_changes": 0,
+    "only_database_transaction": "BEGIN READ ONLY, bounded SELECTs, ROLLBACK",
+    "sensitive_body_handling": "Fixture API bodies were decoded only in memory to assert exact identity/scope; only fixture keys, IDs, counts and completed/null-ended booleans were emitted."
+  },
+  "validation_and_release": {
+    "typescript_tests_lint_build_full_suites": "NOTRUN: explicit readonly/report-only scope and full-test ban; no source/test changes.",
+    "page_line_section_hook_audit": "NOT APPLICABLE: no page/component/hook changed; no invented audit pass.",
+    "bounded_report_validation": "Final command parses this JSON, reconciles16 actual API result rows in the raw log, asserts exact safe fixture mapping and historical receipt SHA256 unchanged, checks preserved completed receipt/seed/config pins and deadline, then records numeric exit and final report/log/command release UTC in the owned log.",
+    "new_native_measurements": 0,
+    "application_acceptance": "NOT CLAIMED",
+    "observation_command_claims": "Released2026-10-14T06:11:43.6053171Z; all were bounded synchronous commands.",
+    "report_log_command_claims": "Release at successful final validator UTC in exact owned log; no ongoing process, browser or source claim.",
+    "task_owned_services_stopped_or_restarted": false
+  },
+  "retained_validator_trial": {
+    "command": "COMMAND07",
+    "numeric_shell_exit": 0,
+    "json_result_and_four_protected_pin_assertions": "Passed, but this is not accepted as final deadline/release validation.",
+    "raw_release_line_utc": "2026-10-14T06:14:58.2268435Z",
+    "invalid_elapsed_seconds": -24741.773,
+    "cause": "ConvertFrom-Json materialized the ISO clock strings as dates; DateTimeOffset.Parse then interpreted their string representation using the local timezone. The negative elapsed value and its timebox check are invalid.",
+    "premature_release_line_accepted": false,
+    "correction": "Final validator reads original ISO strings with System.Text.Json.JsonDocument.GetString, parses DateTimeOffset with round-trip semantics, and requires elapsed>=0 and elapsed<1200 plus current UTC<deadline. Original COMMAND07 output remains in the owned log; no HTTP/SQL/native rerun."
+  },
+  "files_read": [
+    "docs\\orchestrator-loop.md (full)",
+    "migration-queue.md (exact item, original native dependency and completed Docker rows)",
+    "docs\\session-handoff.md",
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-mission.md:520-560",
+    ".github\\instructions\\observability.instructions.md",
+    "docs\\frontend-audits\\phase6-native-drives-preview-target-continuation.json",
+    "web\\vite.config.ts",
+    "web\\src\\api\\client.ts:1-105",
+    "web\\src\\lib\\resilience.ts:getApiBase",
+    "web\\src\\lib\\serverConnection.ts:1-155",
+    "scripts\\seed-restore-drill.sql",
+    "web\\logs\\local-docker-latest-and-drill-seed.log (narrow safe seed verification lines)",
+    "C:\\Users\\AtulM\\.copilot\\session-state\\52d6bc50-50e0-4562-abde-3a8441085408\\files\\local-docker-latest-and-drill-seed-5590146c\\receipt.json",
+    "C:\\Users\\AtulM\\.copilot\\session-state\\52d6bc50-50e0-4562-abde-3a8441085408\\files\\local-docker-latest-and-drill-seed-5590146c\\seed-and-verify.ps1 (read, not executed)"
+  ]
+}

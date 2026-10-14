@@ -1,0 +1,87 @@
+COMMAND01 | 2026-10-14T06:08:32.5220339Z | safe local receipt pins and listeners
+C:\Users\AtulM\.copilot\session-state\52d6bc50-50e0-4562-abde-3a8441085408\files\local-docker-latest-and-drill-seed-5590146c\receipt.json | SHA256=E1718A66D12CFCC1128D97F8ACECC5955AA9A8DC1C09D8D687C4496D949EA147
+C:\Users\AtulM\.copilot\session-state\52d6bc50-50e0-4562-abde-3a8441085408\files\local-docker-latest-and-drill-seed-5590146c\source\scripts\seed-restore-drill.sql | SHA256=D7C4934FBA65BA3C9BC7D0EE00B830B9A0C0B47626F978D565F888D61C5CD66F
+D:\repos\teslasync\docs\frontend-audits\phase6-native-drives-preview-target-continuation.json | SHA256=B8979032390AFD02882D36989AC048291C9F7A1DEECA8CF4B345D33A86A96DEE
+D:\repos\teslasync\web\vite.config.ts | SHA256=7E0F246E3D538F48B8DF6A024F5CCE1E068685023A844CCE3B537A1AFCF54F58
+COMMAND02 | 2026-10-14T06:08:32.5607499Z | selectively inspect known completed task-owned containers; no env/log body reads
+inspect_exit=0 result=/teslasync-api|280c4d71f183a3790d426aa39230312bee966542a43b540a86c03c9ea8bbcab7|running|healthy|teslasync-local-drill|5590146cdf237eafc9d0d052f553eac1f60f33fa|{"8080/tcp":[{"HostIp":"127.0.0.1","HostPort":"8080"}]}
+inspect_exit=0 result=/teslasync-web|bdeea4fe944d8c639143351ab1a6b599793dfc79c665acc14f2cf1b1ab383df3|running|healthy|teslasync-local-drill|5590146cdf237eafc9d0d052f553eac1f60f33fa|{"80/tcp":[{"HostIp":"127.0.0.1","HostPort":"3119"}]}
+inspect_exit=0 result=/teslasync-postgres|ab704159e3859a21b9459cf523aa8dd24218038ef8ea06f72e173c23b6372be2|running|healthy|teslasync-local-drill|refs/heads/master|{"5432/tcp":null,"8008/tcp":null,"8081/tcp":null}
+inspect_exit=0 result=/teslasync-redis|d4e535772bc58a747c2231c6f548d6b93f708632e6827b4819848014e633c1ad|running|healthy|teslasync-local-drill|<no value>|{"6379/tcp":null}
+inspect_exit=0 result=/teslasync-mosquitto|706a9f72feeec8b140f858aac24e3d3a0c6a48148268ac1130d3aaa11a8cad82|running|healthy|teslasync-local-drill|<no value>|{"1883/tcp":null}
+COMMAND02_completed_utc=2026-10-14T06:08:33.1890870Z
+
+LocalAddress LocalPort OwningProcess
+------------ --------- -------------
+127.0.0.1         8080         20436
+127.0.0.1         5173          3876
+127.0.0.1         3119         20436
+
+
+COMMAND01_exit=0
+COMMAND04 | 2026-10-14T06:09:31.0508051Z | local document and Vite runtime proxy metadata only, raw bodies never printed
+COMMAND03 | 2026-10-14T06:09:31.1257838Z | docker --context desktop-linux exec -i teslasync-postgres psql -X -U teslasync -d teslasync -v ON_ERROR_STOP=1 -At [stdin read-only exact fixture metadata]
+BEGIN READ ONLY;
+SET LOCAL statement_timeout = '5s';
+SELECT 'MIGRATION|' || version::text || '|' || dirty::text FROM schema_migrations;
+WITH fixtures AS (
+ SELECT id, CASE vin WHEN 'DRILL000000000001' THEN 'canonical-model-y' WHEN 'DRILL000000000002' THEN 'canonical-model-3' END AS fixture_key
+ FROM vehicles WHERE vin IN ('DRILL000000000001','DRILL000000000002')
+)
+SELECT 'FIXTURE_MAP|' || json_build_object('fixture_key',f.fixture_key,'vehicle_id',f.id,'drive_count',(SELECT count(*) FROM drives d WHERE d.vehicle_id=f.id),'charge_count',(SELECT count(*) FROM charging_sessions c WHERE c.vehicle_id=f.id))::text FROM fixtures f ORDER BY fixture_key;
+WITH fixtures AS (SELECT id FROM vehicles WHERE vin IN ('DRILL000000000001','DRILL000000000002'))
+SELECT 'DRIVE_METADATA|' || json_build_object('drive_id',d.id,'vehicle_id',d.vehicle_id,'started_at',d.started_at,'ended_at',d.ended_at,'historical_oct1_oct14',d.started_at >= '2026-10-01T00:00:00Z'::timestamptz AND d.started_at < '2026-10-14T00:00:00Z'::timestamptz,'historical_selected_oct8_oct13_newyork',d.started_at >= '2026-10-08T04:00:00Z'::timestamptz AND d.started_at < '2026-10-14T04:00:00Z'::timestamptz)::text
+FROM drives d WHERE d.vehicle_id IN (SELECT id FROM fixtures) ORDER BY d.vehicle_id,d.id;
+WITH fixtures AS (SELECT id FROM vehicles WHERE vin IN ('DRILL000000000001','DRILL000000000002'))
+SELECT 'CHARGE_METADATA|' || json_build_object('session_id',c.id,'vehicle_id',c.vehicle_id)::text FROM charging_sessions c WHERE c.vehicle_id IN (SELECT id FROM fixtures) ORDER BY c.vehicle_id,c.id;
+ROLLBACK;
+{"utc":"2026-10-14T06:09:31.2328091Z","path":"/","http_status":200,"content_type":"text/html","api_meta_present":false,"api_meta_empty":false,"window_api_assignment_present":false,"safe_local_proxy_targets":[]}
+{"utc":"2026-10-14T06:09:31.4822401Z","path":"/vite.config.ts","http_status":200,"content_type":"text/javascript","api_meta_present":false,"api_meta_empty":false,"window_api_assignment_present":false,"safe_local_proxy_targets":["http://localhost:8080","ws://localhost:8080"]}
+COMMAND04_exit=0
+BEGIN
+SET
+MIGRATION|255|false
+FIXTURE_MAP|{"fixture_key" : "canonical-model-3", "vehicle_id" : 2, "drive_count" : 2, "charge_count" : 1}
+FIXTURE_MAP|{"fixture_key" : "canonical-model-y", "vehicle_id" : 1, "drive_count" : 2, "charge_count" : 2}
+DRIVE_METADATA|{"drive_id" : 1, "vehicle_id" : 1, "started_at" : "2026-10-04T05:17:31.423696+00:00", "ended_at" : "2026-10-04T05:59:31.423696+00:00", "historical_oct1_oct14" : true, "historical_selected_oct8_oct13_newyork" : false}
+DRIVE_METADATA|{"drive_id" : 2, "vehicle_id" : 1, "started_at" : "2026-10-07T05:17:31.423696+00:00", "ended_at" : "2026-10-07T05:35:31.423696+00:00", "historical_oct1_oct14" : true, "historical_selected_oct8_oct13_newyork" : false}
+DRIVE_METADATA|{"drive_id" : 3, "vehicle_id" : 2, "started_at" : "2026-10-11T05:17:31.423696+00:00", "ended_at" : "2026-10-11T06:52:31.423696+00:00", "historical_oct1_oct14" : true, "historical_selected_oct8_oct13_newyork" : true}
+DRIVE_METADATA|{"drive_id" : 4, "vehicle_id" : 2, "started_at" : "2026-10-14T03:17:31.423696+00:00", "ended_at" : null, "historical_oct1_oct14" : false, "historical_selected_oct8_oct13_newyork" : true}
+CHARGE_METADATA|{"session_id" : 1, "vehicle_id" : 1}
+CHARGE_METADATA|{"session_id" : 2, "vehicle_id" : 1}
+CHARGE_METADATA|{"session_id" : 3, "vehicle_id" : 2}
+ROLLBACK
+COMMAND03_exit=0 completed_utc=2026-10-14T06:09:31.6606984Z
+COMMAND05 | 2026-10-14T06:10:40.4194587Z | local-only fixture-scoped GET comparisons; redirects/cookies/proxy disabled; no raw API bodies or locations logged
+{"utc":"2026-10-14T06:10:40.5879254Z","method":"GET","url":"http://127.0.0.1:8080/api/v1/vehicles/1","fixture_key":"canonical-model-y","http_status":200,"content_type":"application/json; charset=utf-8","identity_matches_exact_canonical_fixture":true}
+{"utc":"2026-10-14T06:10:40.6277947Z","method":"GET","url":"http://127.0.0.1:8080/api/v1/drives?vehicle_id=1&limit=100","http_status":200,"content_type":"application/json; charset=utf-8","actual_array":true,"row_count":2,"matches_proven_fixture_scope":true,"safe_drive_metadata":[{"completed":true,"vehicle_id":1,"drive_id":2},{"completed":true,"vehicle_id":1,"drive_id":1}]}
+{"utc":"2026-10-14T06:10:40.6361919Z","method":"GET","url":"http://127.0.0.1:8080/api/v1/vehicles/2","fixture_key":"canonical-model-3","http_status":200,"content_type":"application/json; charset=utf-8","identity_matches_exact_canonical_fixture":true}
+{"utc":"2026-10-14T06:10:40.6444575Z","method":"GET","url":"http://127.0.0.1:8080/api/v1/drives?vehicle_id=2&limit=100","http_status":200,"content_type":"application/json; charset=utf-8","actual_array":true,"row_count":2,"matches_proven_fixture_scope":true,"safe_drive_metadata":[{"completed":false,"vehicle_id":2,"drive_id":4},{"completed":true,"vehicle_id":2,"drive_id":3}]}
+{"utc":"2026-10-14T06:10:40.6582929Z","method":"GET","url":"http://127.0.0.1:3119/api/v1/vehicles/1","fixture_key":"canonical-model-y","http_status":200,"content_type":"application/json; charset=utf-8","identity_matches_exact_canonical_fixture":true}
+{"utc":"2026-10-14T06:10:40.6650655Z","method":"GET","url":"http://127.0.0.1:3119/api/v1/drives?vehicle_id=1&limit=100","http_status":200,"content_type":"application/json; charset=utf-8","actual_array":true,"row_count":2,"matches_proven_fixture_scope":true,"safe_drive_metadata":[{"completed":true,"vehicle_id":1,"drive_id":2},{"completed":true,"vehicle_id":1,"drive_id":1}]}
+{"utc":"2026-10-14T06:10:40.6705771Z","method":"GET","url":"http://127.0.0.1:3119/api/v1/vehicles/2","fixture_key":"canonical-model-3","http_status":200,"content_type":"application/json; charset=utf-8","identity_matches_exact_canonical_fixture":true}
+{"utc":"2026-10-14T06:10:40.6767802Z","method":"GET","url":"http://127.0.0.1:3119/api/v1/drives?vehicle_id=2&limit=100","http_status":200,"content_type":"application/json; charset=utf-8","actual_array":true,"row_count":2,"matches_proven_fixture_scope":true,"safe_drive_metadata":[{"completed":false,"vehicle_id":2,"drive_id":4},{"completed":true,"vehicle_id":2,"drive_id":3}]}
+{"utc":"2026-10-14T06:10:40.7122366Z","method":"GET","url":"http://127.0.0.1:5173/api/v1/vehicles/1","fixture_key":"canonical-model-y","http_status":200,"content_type":"application/json; charset=utf-8","identity_matches_exact_canonical_fixture":true}
+{"utc":"2026-10-14T06:10:40.7476465Z","method":"GET","url":"http://127.0.0.1:5173/api/v1/drives?vehicle_id=1&limit=100","http_status":200,"content_type":"application/json; charset=utf-8","actual_array":true,"row_count":2,"matches_proven_fixture_scope":true,"safe_drive_metadata":[{"completed":true,"vehicle_id":1,"drive_id":2},{"completed":true,"vehicle_id":1,"drive_id":1}]}
+{"utc":"2026-10-14T06:10:40.7880113Z","method":"GET","url":"http://127.0.0.1:5173/api/v1/drives?vehicle_id=1&start=2026-10-01&end=2026-10-14&limit=1000","http_status":200,"content_type":"application/json; charset=utf-8","actual_array":true,"row_count":2,"matches_proven_fixture_scope":true,"safe_drive_metadata":[{"completed":true,"vehicle_id":1,"drive_id":2},{"completed":true,"vehicle_id":1,"drive_id":1}]}
+{"utc":"2026-10-14T06:10:40.8228018Z","method":"GET","url":"http://127.0.0.1:5173/api/v1/drives?vehicle_id=1&start=2026-10-08T04%3A00%3A00Z&end=2026-10-14T04%3A00%3A00Z&limit=1000","http_status":200,"content_type":"application/json; charset=utf-8","actual_array":true,"row_count":0,"matches_proven_fixture_scope":true,"safe_drive_metadata":[]}
+{"utc":"2026-10-14T06:10:40.8566896Z","method":"GET","url":"http://127.0.0.1:5173/api/v1/vehicles/2","fixture_key":"canonical-model-3","http_status":200,"content_type":"application/json; charset=utf-8","identity_matches_exact_canonical_fixture":true}
+{"utc":"2026-10-14T06:10:40.8991630Z","method":"GET","url":"http://127.0.0.1:5173/api/v1/drives?vehicle_id=2&limit=100","http_status":200,"content_type":"application/json; charset=utf-8","actual_array":true,"row_count":2,"matches_proven_fixture_scope":true,"safe_drive_metadata":[{"completed":false,"vehicle_id":2,"drive_id":4},{"completed":true,"vehicle_id":2,"drive_id":3}]}
+{"utc":"2026-10-14T06:10:40.9491970Z","method":"GET","url":"http://127.0.0.1:5173/api/v1/drives?vehicle_id=2&start=2026-10-01&end=2026-10-14&limit=1000","http_status":200,"content_type":"application/json; charset=utf-8","actual_array":true,"row_count":2,"matches_proven_fixture_scope":true,"safe_drive_metadata":[{"completed":false,"vehicle_id":2,"drive_id":4},{"completed":true,"vehicle_id":2,"drive_id":3}]}
+{"utc":"2026-10-14T06:10:40.9855001Z","method":"GET","url":"http://127.0.0.1:5173/api/v1/drives?vehicle_id=2&start=2026-10-08T04%3A00%3A00Z&end=2026-10-14T04%3A00%3A00Z&limit=1000","http_status":200,"content_type":"application/json; charset=utf-8","actual_array":true,"row_count":2,"matches_proven_fixture_scope":true,"safe_drive_metadata":[{"completed":false,"vehicle_id":2,"drive_id":4},{"completed":true,"vehicle_id":2,"drive_id":3}]}
+COMMAND05_exit=0 completed_utc=2026-10-14T06:10:40.9928271Z
+COMMAND06 | 2026-10-14T06:11:43.6053171Z | conclude readonly diagnosis; no new API/browser work
+Diagnosis: same-origin preview /api/ configured target http://localhost:8080; current canonical fixture1/2 identity and histories HTTP200 agree on8080,3119,5173. Old fixture4/190/191 is not the new generated-identity database mapping; no proxy mismatch demonstrated.
+Important range limit: COMMAND03 historical_oct1_oct14 flag compares UTC exclusive midnight; it is not the API date-only end parser contract. Actual COMMAND05 date-only end=2026-10-14 and explicit NewYork exclusive04Z requests BOTH returned fixture2 drives3/4. No range defect inferred.
+No original4 GET rerun; its genuine05:21:29 GET404 and05:22:29 scoped200-empty remain historical. No browser, native target, rollout, seed, source, env, config, queue, Git, install or full-test action.
+COMMAND06_exit=0 observation_commands_released_utc=2026-10-14T06:11:43.6053171Z
+COMMAND07 | 2026-10-14T06:14:57.5832883Z | assigned JSON/raw-result/pin/deadline validation only; no runtime rerun
+PROTECTED_INPUT_MATCH D:\repos\teslasync\docs\frontend-audits\phase6-native-drives-preview-target-continuation.json SHA256=b8979032390afd02882d36989ac048291c9f7a1deeca8cf4b345d33a86a96dee
+PROTECTED_INPUT_MATCH C:\Users\AtulM\.copilot\session-state\52d6bc50-50e0-4562-abde-3a8441085408\files\local-docker-latest-and-drill-seed-5590146c\receipt.json SHA256=e1718a66d12cfcc1128d97f8acecc5955aa9a8dc1c09d8d687c4496d949ea147
+PROTECTED_INPUT_MATCH C:\Users\AtulM\.copilot\session-state\52d6bc50-50e0-4562-abde-3a8441085408\files\local-docker-latest-and-drill-seed-5590146c\source\scripts\seed-restore-drill.sql SHA256=d7c4934fba65ba3c9bc7d0ee00b830b9a0c0b47626f978d565f888d61c5cd66f
+PROTECTED_INPUT_MATCH D:\repos\teslasync\web\vite.config.ts SHA256=7e0f246e3d538f48b8df6a024f5cce1e068685023a844cce3b537a1afcf54f58
+JSON_VALIDATION=PASS API_GETS=16 HTTP200=16 VEHICLE_GETS=6 SCOPED_DRIVE_GETS=10 HISTORICAL_VEHICLE4_404_AND_EMPTY_PRESERVED=true PROTECTED_PINS=4/4 CURRENT_FIXTURE_MODEL3=2 COMPLETED_DRIVE=3 ONGOING_DRIVE=4
+COMMAND07_exit=0 REPORT_LOG_COMMAND_CLAIMS_RELEASED_UTC=2026-10-14T06:14:58.2268435+00:00 elapsed_seconds=-24741.773 services_unchanged=true browser_claims=none ongoing_commands=0
+COMMAND08 | 2026-10-14T06:15:57.7365376Z | corrected final JSON/raw-result/protected-pin/deadline check; preserve COMMAND07 invalid elapsed and reject its premature release
+JSON_VALIDATION=PASS API_GETS=16 HTTP200=16 VEHICLE_GETS=6 SCOPED_DRIVE_GETS=10 PROTECTED_PINS=4/4 HISTORICAL_VEHICLE4_404_AND_EMPTY_PRESERVED=true CURRENT_MODEL3=2 COMPLETED_DRIVE=3 ONGOING_DRIVE=4 RAW_ISO_CLOCK_VALID=true elapsed_seconds=517.883 REPORT_SHA256=4a862cebd5086398d3cabfa76c33b3dfd211a8bfa0b36fd23497da7a690bbf4b
+COMMAND08_exit=0 REPORT_LOG_COMMAND_CLAIMS_RELEASED_UTC=2026-10-14T06:15:58.0783397+00:00 deadline_utc=2026-10-14T06:27:20.1950000+00:00 ongoing_commands=0 browser_claims=none source_claims=readonly services_unchanged=true NO_FURTHER_WRITES=true
