@@ -12,10 +12,13 @@ export function AutomationHistoryTable({ rows, onOpen }: {
 }) {
   const { formatDurationMs } = useNumberFormatting();
   const { t } = useTranslation();
+  const ruleName = (row: AutomationHistory) =>
+    row.automation_name || t('automations.historyPage.ruleId', 'Rule #{{id}}', { id: row.automation_id });
+  const executionLabel = (row: AutomationHistory) => `${ruleName(row)} #${row.id}`;
   const columns = useMemo<Column<AutomationHistory>[]>(() => [
     { key: 'time', header: t('automations.historyPage.time', 'Triggered'), render: (row) => <DateTime value={row.triggered_at} in="user" /> },
     { key: 'rule', header: t('automations.historyPage.rule', 'Automation'), visibleOnMobile: true, render: (row) =>
-      <Button variant="ghost" className="!h-auto !justify-start !p-0 text-left" onClick={() => onOpen(row.id)}>
+      <Button variant="ghost" wrapLabel className="min-h-11 min-w-11 justify-start text-left" onClick={() => onOpen(row.id)}>
         {row.automation_name || t('automations.historyPage.ruleId', 'Rule #{{id}}', { id: row.automation_id })}
       </Button> },
     { key: 'status', header: t('automations.historyPage.outcome', 'Outcome'), visibleOnMobile: true, render: (row) =>
@@ -32,7 +35,13 @@ export function AutomationHistoryTable({ rows, onOpen }: {
       columns={columns}
       data={rows}
       keyExtractor={(row) => row.id}
-      rowLabel={(row) => row.automation_name}
+      rowLabel={executionLabel}
+      mobilePresentation={{
+        roles: { rule: 'title', status: 'badge' },
+        displayValue: (row, key) => key === 'rule' ? executionLabel(row)
+          : key === 'status' ? t(`automations.historyPage.status.${row.status}`, row.status) : null,
+        onOpenRow: (row) => onOpen(row.id),
+      }}
       mobileColumns={['rule', 'status']}
       density="compact"
       columnVisibility
