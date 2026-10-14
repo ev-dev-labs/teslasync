@@ -11,8 +11,8 @@
  * These tests pin:
  *   - the exact per-column formatting for every cell type — integer sessions,
  *     `kWh`-suffixed energy, symbol-prefixed <Currency> for cost / avg-rate /
- *     gas-equivalent, and the signed, colour-coded savings figure (emerald with
- *     a leading "+" when non-negative, rose without one when negative);
+ *     gas-equivalent, and the signed savings figure (a leading "+" when
+ *     non-negative, without one when negative) using theme-owned text;
  *   - the client-side sort contract: the default is month-descending, clicking a
  *     numeric header sorts by that key descending, and clicking the active header
  *     again toggles to ascending — verified both through the visible row order
@@ -40,12 +40,19 @@
  */
 
 import type { ComponentProps } from 'react';
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { act, render, screen, fireEvent, within, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 
 import { MonthlyCostTable } from './MonthlyCostTable';
 import type { MonthlyBucket } from './types';
+import { downloadJSON } from '@/lib/csvExport';
+
+vi.mock('@/lib/csvExport', async () => ({
+  ...await vi.importActual<typeof import('@/lib/csvExport')>('@/lib/csvExport'),
+  downloadJSON: vi.fn(),
+}));
 
 vi.mock('react-i18next', async () => {
   const actual = await vi.importActual<typeof import('react-i18next')>('react-i18next');
@@ -145,24 +152,97 @@ describe('MonthlyCostTable — populated rendering & per-column formatting', () 
     expect(feb[2].textContent).toBe('100.00 kWh');
     expect(feb[4].textContent).toBe('$0.25');
 
-    // The cost column carries the toned-down cyan accent (not neon body text).
-    expect(jan[3].querySelector('.text-cyan-300')).not.toBeNull();
+    expect(jan[3].querySelector('.text-cyan-300')).toBeNull();
   });
 
-  it('colours and signs the savings figure by magnitude', () => {
+  it('signs the savings figure without depending on colour', () => {
     const { container } = renderTable();
 
-    // Non-negative savings → leading "+" and emerald, never rose.
+    // Non-negative savings retain the explicit leading "+".
     const jan = rowCells(container, '2025-01');
     expect(jan[6].textContent).toBe('+$7.50');
-    expect(jan[6].querySelector('.text-emerald-300')).not.toBeNull();
+    expect(jan[6].querySelector('.text-emerald-300')).toBeNull();
     expect(jan[6].querySelector('.text-rose-300')).toBeNull();
 
-    // Negative savings → no "+" and rose, never emerald.
+    // Negative savings retain the source sign, with no "+".
     const mar = rowCells(container, '2025-03');
     expect(mar[6].textContent).toBe('$-3.00');
-    expect(mar[6].querySelector('.text-rose-300')).not.toBeNull();
+    expect(mar[6].querySelector('.text-rose-300')).toBeNull();
     expect(mar[6].querySelector('.text-emerald-300')).toBeNull();
+  });
+
+  describe('MonthlyCostTable — mobile presentation preservation', () => {
+    const observers: { element: Element; callback: ResizeObserverCallback }[] = [];
+    const resize = (width: number) => act(() => {
+      observers.forEach(({ element, callback }) => callback(
+        [{ target: element, contentRect: { width } } as ResizeObserverEntry],
+        {} as ResizeObserver,
+      ));
+    });
+
+    beforeEach(() => {
+      observers.length = 0;
+      vi.clearAllMocks();
+      vi.stubGlobal('ResizeObserver', class {
+        constructor(private callback: ResizeObserverCallback) {}
+        observe(element: Element) { observers.push({ element, callback: this.callback }); }
+        unobserve() {}
+        disconnect() {}
+      });
+    });
+    afterEach(() => vi.unstubAllGlobals());
+
+    it('opens all seven formatted fields by keyboard at 375px and restores focus', async () => {
+      const user = userEvent.setup();
+      const { container } = renderTable();
+      resize(375);
+      expect(container.querySelector('table')).toBeNull();
+      const row = screen.getByRole('button', { name: JAN.month });
+      expect(row).toHaveTextContent('$10.50');
+      row.focus();
+      await user.keyboard('{Enter}');
+      const dialog = screen.getByRole('dialog');
+      for (const header of HEADERS) expect(within(dialog).getByText(header)).toBeInTheDocument();
+      expect(within(dialog).getAllByRole('definition').map(field => field.textContent)).toEqual([
+        '2025-01', '3', '40.00 kWh', '$10.50', '$0.26', '$18.00', '+$7.50',
+      ]);
+      await user.keyboard('{Escape}');
+      expect(screen.queryByRole('dialog')).toBeNull();
+      expect(row).toHaveFocus();
+      resize(1024);
+      expect(rowCells(container, JAN.month)).toHaveLength(7);
+    });
+
+    it('keeps every sort control keyboard-operable on mobile', async () => {
+      const user = userEvent.setup();
+      const { container } = renderTable();
+      resize(375);
+      for (const header of HEADERS) expect(screen.getByRole('button', { name: header })).toHaveClass('min-h-11');
+      screen.getByRole('button', { name: 'Sessions' }).focus();
+      await user.keyboard('{Enter}');
+      const order = () => Array.from(container.querySelectorAll('[data-row-key]')).map(row => row.getAttribute('data-row-key'));
+      expect(order()).toEqual([FEB.month, JAN.month, MAR.month]);
+      await user.keyboard(' ');
+      expect(order()).toEqual([MAR.month, JAN.month, FEB.month]);
+    });
+
+    it('exports all loaded rows and raw numeric fields rather than only the mobile page', async () => {
+      const data = Array.from({ length: 30 }, (_, index) => ({
+        ...JAN, month: `month-${String(index).padStart(2, '0')}`, cost: index + 0.125,
+      }));
+      const { container } = renderTable({ data });
+      resize(375);
+      expect(container.querySelectorAll('[data-row-key]')).toHaveLength(25);
+      fireEvent.click(screen.getByRole('button', { name: 'Export list' }));
+      fireEvent.click(screen.getByRole('menuitem', { name: 'Download as JSON' }));
+      await waitFor(() => expect(downloadJSON).toHaveBeenCalledTimes(1));
+      expect(vi.mocked(downloadJSON).mock.calls[0][1]).toEqual([...data].reverse());
+      fireEvent.click(screen.getByRole('button', { name: /Load .* more/ }));
+      expect(container.querySelectorAll('[data-row-key]')).toHaveLength(30);
+      resize(1024);
+      expect(monthOrder(container)).toHaveLength(25);
+      expect(screen.getByRole('table')).toHaveAttribute('aria-label', 'Monthly cost breakdown');
+    });
   });
 });
 
