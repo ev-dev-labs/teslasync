@@ -33,10 +33,12 @@ import {
 } from '@/api/hooks/useFleetSetup'
 import { useAuthStatus } from '@/api/hooks/useSettings'
 import { useConfirm } from '@/hooks/useConfirm'
+import { useDateFormat } from '@/hooks/useDateFormat'
 import { TELEMETRY_FIELDS } from '@/features/admin/components/devtools/constants'
 
 export function FleetSetupSubscribePanel() {
   const { t } = useTranslation('settings')
+  const { formatDateTime } = useDateFormat()
   const authQuery = useAuthStatus()
   const vehiclesQuery = useVehicles()
   const authState = deriveDataState(authQuery)
@@ -170,6 +172,7 @@ export function FleetSetupSubscribePanel() {
       ) : (
         <Select
           id="fleet-setup-vin"
+          className="min-h-11 md:min-h-10"
           label={t('fleetSetup.subscribe.vehicle', 'Vehicle')}
           placeholder={t('fleetSetup.subscribe.placeholder', 'Select a vehicle')}
           options={options}
@@ -226,6 +229,7 @@ export function FleetSetupSubscribePanel() {
         <Button
           variant="secondary"
           wrapLabel
+          className="min-h-11 min-w-11 md:min-h-10 md:min-w-0"
           icon={<SlidersHorizontal className="h-4 w-4" />}
           onClick={() => setSignalModalOpen(true)}
         >
@@ -249,6 +253,7 @@ export function FleetSetupSubscribePanel() {
         <Button
           variant="secondary"
           wrapLabel
+          className="min-h-11 min-w-11 md:min-h-10 md:min-w-0"
           icon={<Power className="h-4 w-4" />}
           onClick={handleWake}
           loading={wake.isPending}
@@ -259,6 +264,7 @@ export function FleetSetupSubscribePanel() {
         <Button
           variant="primary"
           wrapLabel
+          className="min-h-11 min-w-11 md:min-h-10 md:min-w-0"
           icon={<Satellite className="h-4 w-4" />}
           onClick={handleSubscribe}
           loading={subscribe.isPending}
@@ -273,6 +279,7 @@ export function FleetSetupSubscribePanel() {
         <Button
           variant="danger"
           wrapLabel
+          className="min-h-11 min-w-11 md:min-h-10 md:min-w-0"
           icon={<Trash2 className="h-4 w-4" />}
           onClick={() => void handleRemove()}
           loading={unsubscribe.isPending}
@@ -306,7 +313,14 @@ export function FleetSetupSubscribePanel() {
                 variant="warning"
                 title={err.code || t('fleetSetup.subscribe.errorUntitled', 'Tesla telemetry error')}
               >
-                {[err.message, err.timestamp].filter(Boolean).join(' · ') ||
+                {err.message && <span className="whitespace-pre-wrap">{err.message}</span>}
+                {err.message && err.timestamp ? ' · ' : null}
+                {err.timestamp && (
+                  <time dateTime={err.timestamp} title={err.timestamp}>
+                    {formatDateTime(err.timestamp)}
+                  </time>
+                )}
+                {!err.message && !err.timestamp &&
                   t('fleetSetup.subscribe.errorNoDetail', 'Tesla reported a telemetry error for this VIN.')}
               </AlertBanner>
             ))}
@@ -323,7 +337,10 @@ export function FleetSetupSubscribePanel() {
         </SourceContent>
       ) : null}
 
-      <Accordion title={t('fleetSetup.subscribe.advanced', 'Override host, port, or CA')}>
+      <Accordion
+        title={t('fleetSetup.subscribe.advanced', 'Override host, port, or CA')}
+        headerClassName="min-h-11 px-4 py-3 md:min-h-10"
+      >
         <div className="space-y-3">
           <HelperText>
             {t(
@@ -332,12 +349,14 @@ export function FleetSetupSubscribePanel() {
             )}
           </HelperText>
           <Input
+            className="min-h-11 md:min-h-10"
             label={t('fleetSetup.subscribe.hostname', 'Hostname')}
             value={hostname}
             onChange={(e) => setHostname(e.target.value)}
             placeholder="telemetry.example.com"
           />
           <Input
+            className="min-h-11 md:min-h-10"
             label={t('fleetSetup.subscribe.port', 'Port')}
             value={port}
             onChange={(e) => setPort(e.target.value)}
@@ -345,6 +364,7 @@ export function FleetSetupSubscribePanel() {
             inputMode="numeric"
           />
           <Textarea
+            className="min-h-11 md:min-h-0"
             label={t('fleetSetup.subscribe.ca', 'CA certificate (PEM)')}
             value={ca}
             onChange={(e) => setCa(e.target.value)}
@@ -359,6 +379,7 @@ export function FleetSetupSubscribePanel() {
         categories={TELEMETRY_FIELDS}
         initialSelected={selectedSignals.map((s) => s.name)}
         initialInterval={masterInterval}
+        initialIntervals={Object.fromEntries(selectedSignals.map((s) => [s.name, s.interval]))}
         onSubmit={(signals) => {
           setSelectedSignals(signals)
           if (signals.length > 0) setMasterInterval(signals[0]?.interval ?? 10)

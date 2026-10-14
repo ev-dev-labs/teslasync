@@ -22,6 +22,32 @@ import {
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter } from 'react-router-dom'
 import type { ReactNode } from 'react'
+import { formatDateTime, type FormatOptions } from '@/lib/dateFormat'
+
+const datePreferences = vi.hoisted(() => ({
+  current: { locale: 'en-US', tz: 'UTC' } as FormatOptions,
+}))
+
+vi.mock('@/hooks/useDateFormat', () => ({
+  useDateFormat: () => ({
+    formatDateTime: (value: string | Date | null | undefined) =>
+      formatDateTime(value, datePreferences.current),
+  }),
+}))
+
+vi.mock('@/api/hooks/useVehicles', async (importActual) => ({
+  ...await importActual<typeof import('@/api/hooks/useVehicles')>(),
+  useVehicles: vi.fn(),
+  useWakeVehicle: vi.fn(),
+}))
+
+vi.mock('@/api/hooks/useFleetSetup', async (importActual) => ({
+  ...await importActual<typeof import('@/api/hooks/useFleetSetup')>(),
+  useFleetTelemetryConfig: vi.fn(),
+  useFleetTelemetryErrors: vi.fn(),
+  useSubscribeFleetTelemetry: vi.fn(),
+  useUnsubscribeFleetTelemetry: vi.fn(),
+}))
 
 vi.mock('react-i18next', async () => {
   const actual = await vi.importActual<typeof import('react-i18next')>('react-i18next')
@@ -69,6 +95,12 @@ import {
 } from '@/api/hooks/useSettings'
 import { ToastProvider } from '@/components/feedback'
 import { TeslaAccountSection } from './TeslaAccountSection'
+import { FleetSetupSubscribePanel } from './fleet-setup/FleetSetupSubscribePanel'
+import { useVehicles, useWakeVehicle } from '@/api/hooks/useVehicles'
+import {
+  useFleetTelemetryConfig, useFleetTelemetryErrors,
+  useSubscribeFleetTelemetry, useUnsubscribeFleetTelemetry,
+} from '@/api/hooks/useFleetSetup'
 
 const mockedAuthStatus = useAuthStatus as unknown as Mock
 const mockedAuthURL = useAuthURL as unknown as Mock
@@ -106,7 +138,7 @@ function mutation(over: MutationOverrides = {}) {
   }
 }
 
-function tree() {
+function tree(children: ReactNode = <TeslaAccountSection />) {
   const qc = new QueryClient({
     defaultOptions: {
       queries: { retry: false, gcTime: 0 },
@@ -117,7 +149,7 @@ function tree() {
     <MemoryRouter>
     <QueryClientProvider client={qc}>
       <ToastProvider>
-        <TeslaAccountSection />
+        {children}
       </ToastProvider>
     </QueryClientProvider>
     </MemoryRouter>
@@ -131,6 +163,7 @@ function renderSection() {
 
 beforeEach(() => {
   vi.clearAllMocks()
+  datePreferences.current = { locale: 'en-US', tz: 'UTC' }
   mockedAuthStatus.mockReturnValue(authState(undefined))
   mockedAuthURL.mockReturnValue(mutation())
   mockedRefresh.mockReturnValue(mutation())
@@ -139,6 +172,20 @@ beforeEach(() => {
 })
 
 describe('TeslaAccountSection — header + connection status region', () => {
+  it.each([false, true])('keeps account actions touch-sized and wrapping with desktop restoration (connected=%s)', (authenticated) => {
+    mockedAuthStatus.mockReturnValue(authState({ authenticated }))
+    renderSection()
+    const labels = authenticated
+      ? ['Refresh token', 'Sync vehicles', 'Re-authorize', 'Disconnect']
+      : ['Connect Tesla account']
+    for (const name of labels) {
+      expect(screen.getByRole('button', { name })).toHaveClass(
+        'h-auto', 'min-h-11', 'min-w-11', 'md:min-h-10', 'md:min-w-0',
+        'max-w-full', 'whitespace-normal',
+      )
+    }
+  })
+
   it('shows a source failure and read-only retry instead of inventing disconnected status', () => {
     const refetch = vi.fn()
     mockedAuthStatus.mockReturnValue({
@@ -212,6 +259,24 @@ describe('TeslaAccountSection — disconnected / not-connected branch', () => {
 })
 
 describe('TeslaAccountSection — connected branch', () => {
+  it('updates expiry presentation with current date preferences while retaining the raw instant', () => {
+    const expires = '2099-01-01T01:30:00Z'
+    const auth = { authenticated: true, expires_at: expires }
+    mockedAuthStatus.mockReturnValue(authState(auth))
+    const { rerender } = renderSection()
+    const initial = formatDateTime(expires, datePreferences.current)
+    expect(screen.getByText(initial)).toHaveAttribute('datetime', expires)
+    expect(screen.getByText(initial)).toHaveAttribute('title', expires)
+
+    datePreferences.current = { locale: 'de-DE', tz: 'America/Los_Angeles' }
+    rerender()
+    const updated = formatDateTime(expires, datePreferences.current)
+    expect(updated).not.toBe(initial)
+    expect(screen.getByText(updated)).toHaveAttribute('datetime', expires)
+    expect(auth.expires_at).toBe(expires)
+    expect(screen.getByRole('button', { name: 'Refresh token' })).toBeEnabled()
+  })
+
   it('renders the full authenticated action set and hides the connect CTA', () => {
     mockedAuthStatus.mockReturnValue(authState({ authenticated: true }))
     renderSection()
@@ -224,6 +289,71 @@ describe('TeslaAccountSection — connected branch', () => {
     expect(
       screen.queryByRole('button', { name: 'Connect Tesla account' }),
     ).not.toBeInTheDocument()
+  })
+
+  describe('FleetSetupSubscribePanel — telemetry error dates', () => {
+    beforeEach(() => {
+      mockedAuthStatus.mockReturnValue(authState({ authenticated: true }))
+      vi.mocked(useVehicles).mockReturnValue({
+        data: [{ id: 1, vin: 'TEST-VIN', display_name: 'Test vehicle' }],
+        isLoading: false, refetch: vi.fn(),
+      } as ReturnType<typeof useVehicles>)
+      vi.mocked(useFleetTelemetryConfig).mockReturnValue({
+        data: { config: { hostname: 'telemetry.example.com', port: 4443, fields: { Soc: {} } } },
+        isLoading: false, refetch: vi.fn(),
+      } as ReturnType<typeof useFleetTelemetryConfig>)
+      vi.mocked(useWakeVehicle).mockReturnValue(mutation() as ReturnType<typeof useWakeVehicle>)
+      vi.mocked(useSubscribeFleetTelemetry).mockReturnValue(mutation() as ReturnType<typeof useSubscribeFleetTelemetry>)
+      vi.mocked(useUnsubscribeFleetTelemetry).mockReturnValue(mutation() as ReturnType<typeof useUnsubscribeFleetTelemetry>)
+    })
+
+    it('formats error instants with current preferences without losing full messages or populated config', () => {
+      const timestamp = '2026-10-14T01:30:00Z'
+      const message = 'Certificate rejected: full diagnostic detail.\nRetry after replacing the complete CA chain.'
+      const errors = [{ code: 'TLS_ERROR', message, timestamp }]
+      vi.mocked(useFleetTelemetryErrors).mockReturnValue({
+        data: errors, isLoading: false, refetch: vi.fn(),
+      } as ReturnType<typeof useFleetTelemetryErrors>)
+      const rendered = render(tree(<FleetSetupSubscribePanel />))
+      fireEvent.change(screen.getByRole('combobox', { name: 'Vehicle' }), {
+        target: { value: 'TEST-VIN' },
+      })
+      const initial = formatDateTime(timestamp, datePreferences.current)
+      expect(screen.getByText(initial)).toHaveAttribute('datetime', timestamp)
+      expect(screen.getByText(initial)).toHaveAttribute('title', timestamp)
+      expect(screen.getByText(message, { exact: true, collapseWhitespace: false })).toHaveTextContent(
+        'Certificate rejected: full diagnostic detail. Retry after replacing the complete CA chain.',
+      )
+      expect(screen.getByText('telemetry.example.com')).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Subscribe Test vehicle' })).toBeEnabled()
+
+      datePreferences.current = { locale: 'de-DE', tz: 'America/Los_Angeles' }
+      rendered.rerender(tree(<FleetSetupSubscribePanel />))
+      const updated = formatDateTime(timestamp, datePreferences.current)
+      expect(updated).not.toBe(initial)
+      expect(screen.getByText(updated)).toHaveAttribute('datetime', timestamp)
+      expect(errors).toEqual([{ code: 'TLS_ERROR', message, timestamp }])
+    })
+
+    it('retains timestamp-only, message-only and missing-detail error cases', () => {
+      const timestamp = '2026-10-14T01:30:00Z'
+      vi.mocked(useFleetTelemetryErrors).mockReturnValue({
+        data: [
+          { code: 'TIME', message: '', timestamp },
+          { code: 'MESSAGE', message: 'Complete message without a timestamp', timestamp: '' },
+          { code: '', message: '', timestamp: '' },
+        ],
+        isLoading: false, refetch: vi.fn(),
+      } as ReturnType<typeof useFleetTelemetryErrors>)
+      render(tree(<FleetSetupSubscribePanel />))
+      fireEvent.change(screen.getByRole('combobox', { name: 'Vehicle' }), {
+        target: { value: 'TEST-VIN' },
+      })
+      expect(screen.getByText(formatDateTime(timestamp, datePreferences.current))).toBeInTheDocument()
+      expect(screen.getByText('Complete message without a timestamp')).toBeInTheDocument()
+      expect(screen.getByText('Tesla reported a telemetry error for this VIN.')).toBeInTheDocument()
+      expect(screen.getByText('Tesla telemetry error')).toBeInTheDocument()
+    })
   })
 
   it('renders the token-expiry line but no soft-warning pill when expiry is far out', () => {

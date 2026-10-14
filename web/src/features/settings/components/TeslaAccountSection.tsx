@@ -11,7 +11,7 @@ import { deriveDataState } from '@/api/dataState'
 import { useToast } from '@/components/feedback'
 import { useConfirm } from '@/hooks/useConfirm'
 import { cn } from '@/lib/cn'
-import { formatDateTime } from '@/lib/dateFormat'
+import { useDateFormat } from '@/hooks/useDateFormat'
 import { notifyTeslaAuthRecovered } from '@/lib/teslaAuthRecovery'
 import {
   Shield, ExternalLink, RefreshCw, Car, CheckCircle, XCircle, AlertTriangle,
@@ -21,6 +21,7 @@ const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000
 
 export function TeslaAccountSection() {
   const { t } = useTranslation('settings')
+  const { formatDateTime } = useDateFormat()
   const toast = useToast()
   const authQuery = useAuthStatus()
   const authState = deriveDataState(authQuery)
@@ -145,7 +146,10 @@ export function TeslaAccountSection() {
                 </div>
                 {auth.expires_at && (
                   <HelperText as="p">
-                    {t('tesla.tokenExpires', 'Token expires')} {formatDateTime(auth.expires_at)}
+                    {t('tesla.tokenExpires', 'Token expires')}{' '}
+                    <time dateTime={auth.expires_at} title={auth.expires_at}>
+                      {formatDateTime(auth.expires_at)}
+                    </time>
                   </HelperText>
                 )}
               </div>
@@ -174,26 +178,26 @@ export function TeslaAccountSection() {
 
         <div className="flex flex-wrap gap-3">
           {!auth?.authenticated ? (
-            <Button variant="primary" wrapLabel icon={<ExternalLink className="h-4 w-4" />} onClick={handleLogin} loading={authUrlMut.isPending}>
+            <Button variant="primary" wrapLabel className="min-h-11 min-w-11 md:min-h-10 md:min-w-0" icon={<ExternalLink className="h-4 w-4" />} onClick={handleLogin} loading={authUrlMut.isPending}>
               {t('tesla.connect', 'Connect Tesla account')}
             </Button>
           ) : (
             <>
-              <Button variant="secondary" wrapLabel icon={<RefreshCw className={cn('h-4 w-4', refreshMut.isPending && 'animate-spin')} />} onClick={() => refreshMut.mutate(undefined, {
+              <Button variant="secondary" wrapLabel className="min-h-11 min-w-11 md:min-h-10 md:min-w-0" icon={<RefreshCw className={cn('h-4 w-4', refreshMut.isPending && 'animate-spin')} />} onClick={() => refreshMut.mutate(undefined, {
                 onSuccess: () => toast.success(t('toast.tokenRefreshed', 'Token refreshed')),
                 onError: (err: Error) => toast.error(t('toast.tokenRefreshFailed', 'Token refresh failed'), err.message),
               })} disabled={refreshMut.isPending}>
                 {t('tesla.refreshToken', 'Refresh token')}
               </Button>
-              <Button variant="secondary" wrapLabel icon={<Car className={cn('h-4 w-4', syncMut.isPending && 'animate-spin')} />} onClick={() => syncMut.mutate(undefined, {
+              <Button variant="secondary" wrapLabel className="min-h-11 min-w-11 md:min-h-10 md:min-w-0" icon={<Car className={cn('h-4 w-4', syncMut.isPending && 'animate-spin')} />} onClick={() => syncMut.mutate(undefined, {
                 onError: (err: Error) => toast.error(t('toast.syncFailed', 'Vehicle sync failed'), err.message),
               })} disabled={syncMut.isPending}>
                 {t('tesla.syncVehicles', 'Sync vehicles')}
               </Button>
-              <Button variant="secondary" wrapLabel icon={<ExternalLink className="h-4 w-4" />} onClick={handleLogin} disabled={authUrlMut.isPending}>
+              <Button variant="secondary" wrapLabel className="min-h-11 min-w-11 md:min-h-10 md:min-w-0" icon={<ExternalLink className="h-4 w-4" />} onClick={handleLogin} disabled={authUrlMut.isPending}>
                 {t('tesla.reauthorize', 'Re-authorize')}
               </Button>
-              <Button variant="danger" wrapLabel icon={<XCircle className="h-4 w-4" />} onClick={handleDisconnect} disabled={disconnectMut.isPending}>
+              <Button variant="danger" wrapLabel className="min-h-11 min-w-11 md:min-h-10 md:min-w-0" icon={<XCircle className="h-4 w-4" />} onClick={handleDisconnect} disabled={disconnectMut.isPending}>
                 {t('tesla.disconnect', 'Disconnect')}
               </Button>
             </>
