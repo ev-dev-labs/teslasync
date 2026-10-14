@@ -5,8 +5,9 @@ import { FadeIn } from '@/components/motion';
 import { Badge, DataTable, HelpTooltip, Text, type Column } from '@/components/ui';
 import { EmptyState, Skeleton } from '@/components/feedback';
 import { useUnits } from '@/hooks/useUnits';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import type { DataState } from '@/api/dataState';
-import { formatDateShort } from '@/lib/dateFormat';
+import { fmtNumber } from '@/lib/numberFormat';
 import { cn } from '@/lib/cn';
 import type { ChargerHealthSummary, ChargerSite, SiteStatus } from '../../lib/chargerHealth';
 import { ChargerHealthSourceNotice } from './ChargerHealthSourceNotice';
@@ -26,7 +27,8 @@ interface ChargerHealthLocationsProps {
 
 export function ChargerHealthLocations({ summary, state, loading }: ChargerHealthLocationsProps) {
   const { t } = useTranslation();
-  const { formatPower, formatEnergy } = useUnits();
+  const { formatPower, formatEnergy, unitPrefs } = useUnits();
+  const { formatDateShort } = useDateFormat();
   const placement = useCardPlacement();
   const sites = summary.sites ?? [];
   const status = (site: ChargerSite) => t(`chargerHealth.status.${site.status}`, STATUS_DEFAULT[site.status]);
@@ -35,11 +37,14 @@ export function ChargerHealthLocations({ summary, state, loading }: ChargerHealt
   const baseline = (site: ChargerSite) => site.status === 'unknown' ? '—' : formatPower(site.baselineW);
   const recent = (site: ChargerSite) => site.ratedSessions > 0 ? formatPower(site.recentW) : '—';
   const visits = (site: ChargerSite) => t('chargerHealth.visitsValue', '{{n}} ({{rated}} scored)', {
-    n: site.sessions, rated: site.ratedSessions,
+    n: fmtNumber(site.sessions, 0, unitPrefs.locale),
+    rated: fmtNumber(site.ratedSessions, 0, unitPrefs.locale),
   });
-  const lastSeen = (site: ChargerSite) => formatDateShort(new Date(site.lastSeenMs).toISOString());
-  const cost = (site: ChargerSite) => site.hoursLostPerYear > 0
-    ? t('chargerHealth.costValue', '{{h}} h/year', { h: Math.round(site.hoursLostPerYear) }) : '—';
+  const lastSeen = (site: ChargerSite) => formatDateShort(new Date(site.lastSeenMs));
+  const cost = (site: ChargerSite) => site.status === 'unknown' ? '—'
+    : t('chargerHealth.costValue', '{{h}} h/year', {
+      h: fmtNumber(Math.round(site.hoursLostPerYear), 0, unitPrefs.locale),
+    });
   const columns: Column<ChargerSite>[] = [
     { key: 'label', header: t('chargerHealth.col.site', 'Site'), render: site => site.label },
     {
@@ -79,13 +84,19 @@ export function ChargerHealthLocations({ summary, state, loading }: ChargerHealt
   return <FadeIn delay={0.2} className={cn('min-w-0', placement?.className ?? 'col-span-full')}>
     <LayoutCard
     title={t('chargerHealth.detail', 'Locations')}
-    footer={<Text as="p" variant="bodySm">
-      {t('chargerHealth.locations.method', 'The unchanged model requires at least 4 clean sessions, each at least 10 minutes and 2 kWh. Sessions mostly above 80% state of charge are excluded from scoring. The baseline is the high quantile of clean power; recent power averages up to 5 clean sessions. Below 90% is slipping; below 75% is degraded. AC / DC is inferred from observed mean power above 25 kW, not read from charger hardware.')}
-    </Text>}
+    footer={<>
+      <Text as="p" variant="bodySm">
+        {t('chargerHealth.locations.method', 'The unchanged model requires at least 4 clean sessions, each at least 10 minutes and 2 kWh. Sessions mostly above 80% state of charge are excluded from scoring. The baseline is the high quantile of clean power; recent power averages up to 5 clean sessions. Below 90% is slipping; below 75% is degraded. AC / DC is inferred from observed mean power above 25 kW, not read from charger hardware.')}
+      </Text>
+      <Text as="p" variant="bodySm">
+        {t('chargerHealth.presentation.locationScope',
+          'Visits, energy and last visit describe model-admitted sessions only, including tapered sessions. Excluded observations are not included. Annual time loss is a model estimate: rated zero means no modeled loss; unrated remains unknown.')}
+      </Text>
+    </>}
     actions={<HelpTooltip
       size="sm"
-      i18nKey="help.chargerHealth.detail"
-      defaultValue="Sites are grouped by place name where one is known, and otherwise by a rounded coordinate cell, so the same physical stall is recognised across visits even when the reported address wobbles slightly. AC and DC are labelled separately because their expected power differs by an order of magnitude."
+      i18nKey="help.chargerHealth.locationAggregation"
+      defaultValue="Sessions are grouped approximately by case-insensitive place name, or by a rounded 0.01-degree coordinate cell when no name is known. A group can combine multiple stalls and AC / DC sessions. Its single AC / DC class is inferred from admitted mean power, not a hardware or individual-stall identity."
       ariaLabel={t('help.chargerHealth.iconLabel', 'More info about site grouping')}
     />}
   >

@@ -9,6 +9,8 @@ import { FadeIn } from '@/components/motion';
 import type { DataState } from '@/api/dataState';
 import { cn } from '@/lib/cn';
 import { chartTokens } from '@/lib/tokens';
+import { fmtNumber, isFiniteNumber } from '@/lib/numberFormat';
+import { useUnits } from '@/hooks/useUnits';
 import type { ChargerHealthSummary } from '../../lib/chargerHealth';
 import { ChargerHealthSourceNotice } from './ChargerHealthSourceNotice';
 
@@ -20,7 +22,18 @@ interface ChargerHealthChartProps {
 
 export function ChargerHealthChart({ summary, state, loading }: ChargerHealthChartProps) {
   const { t } = useTranslation();
+  const { unitPrefs } = useUnits();
   const placement = useCardPlacement();
+  const displayNumber = (value: unknown) => isFiniteNumber(value)
+    ? fmtNumber(value, 1, unitPrefs.locale) : '—';
+  const displayStatus = (value: unknown) => {
+    switch (value) {
+      case 'healthy': return t('chargerHealth.status.healthy', 'Healthy');
+      case 'degrading': return t('chargerHealth.status.degrading', 'Slipping');
+      case 'degraded': return t('chargerHealth.status.degraded', 'Degraded');
+      default: return t('chargerHealth.status.unknown', 'Not enough data');
+    }
+  };
   // Preserve the original chart's eligibility, scaling, rounding and ordering.
   // baseline/recent are its historical kW fallback-table operands, NOT hook SI.
   const chartData = useMemo(() => summary.sites
@@ -55,10 +68,10 @@ export function ChargerHealthChart({ summary, state, loading }: ChargerHealthCha
       exportData={exportData}
       dataColumns={[
         { key: 'site', label: t('chargerHealth.col.site', 'Site') },
-        { key: 'ratio', label: t('chargerHealth.col.ratio', 'Performance (%)') },
-        { key: 'baseline', label: t('chargerHealth.col.baseline', 'Baseline (kW)') },
-        { key: 'recent', label: t('chargerHealth.col.recent', 'Recent (kW)') },
-        { key: 'status', label: t('chargerHealth.col.status', 'Status') },
+        { key: 'ratio', label: t('chargerHealth.col.ratio', 'Performance (%)'), format: displayNumber },
+        { key: 'baseline', label: t('chargerHealth.col.baseline', 'Baseline (kW)'), format: displayNumber },
+        { key: 'recent', label: t('chargerHealth.col.recent', 'Recent (kW)'), format: displayNumber },
+        { key: 'status', label: t('chargerHealth.col.status', 'Status'), format: displayStatus },
       ]}
     >
       <ResponsiveContainer width="100%" height="100%">

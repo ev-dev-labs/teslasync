@@ -5,6 +5,8 @@ import { ChargingSummaryBrief } from '../operationalbrief-all/ChargingSummaryBri
 import { Badge, Text } from '@/components/ui';
 import type { DataState } from '@/api/dataState';
 import type { ChargerHealthSummary } from '../../lib/chargerHealth';
+import { useUnits } from '@/hooks/useUnits';
+import { fmtNumber } from '@/lib/numberFormat';
 import { ChargerHealthSourceNotice } from './ChargerHealthSourceNotice';
 
 interface ChargerHealthStatsProps {
@@ -15,6 +17,8 @@ interface ChargerHealthStatsProps {
 
 export function ChargerHealthStats({ summary, state, loading }: ChargerHealthStatsProps) {
   const { t } = useTranslation();
+  const { unitPrefs } = useUnits();
+  const cleanSessions = summary.sites.reduce((sum, site) => sum + site.ratedSessions, 0);
   const judged = summary.sites.filter(site => site.status !== 'unknown');
   const hasBenchmarks = state.hasData && judged.length > 0;
   // The specialist returns hours; the shared duration formatter accepts seconds.
@@ -41,7 +45,9 @@ export function ChargerHealthStats({ summary, state, loading }: ChargerHealthSta
       context: <span className="inline-flex flex-wrap items-center gap-1">
         <MapPin className="h-4 w-4" aria-hidden="true" />
         {state.hasData
-          ? t('chargerHealth.sessionsHint', '{{n}} scorable sessions', { n: summary.usableSessions })
+          ? t('chargerHealth.sessionsHint', '{{n}} scorable sessions', {
+            n: fmtNumber(cleanSessions, 0, unitPrefs.locale),
+          })
           : noSource}
       </span>,
     },
@@ -94,9 +100,21 @@ export function ChargerHealthStats({ summary, state, loading }: ChargerHealthSta
     period={period}
     loading={loading}
     retained={state.hasData && state.status === 'stale'}
-    secondary={<Text as="p" variant="bodySm">
-      {t('chargerHealth.metrics.inferred', 'Health is inferred from session energy and duration against each location’s own baseline, not directly measured charger condition. Cold packs, tapering and missing observations can limit the conclusion.')}
-    </Text>}
+    secondary={<>
+      <Text as="p" variant="bodySm">
+        {t('chargerHealth.metrics.inferred', 'Health is inferred from session energy and duration against each location’s own baseline, not directly measured charger condition. Cold packs, tapering and missing observations can limit the conclusion.')}
+      </Text>
+      {state.hasData && <Text as="p" variant="bodySm">
+        {t('chargerHealth.presentation.admission',
+          'Returned sessions: {{returned}}; model-admitted: {{admitted}}; clean for scoring: {{clean}}; excluded before admission: {{excluded}}. Admitted tapered sessions contribute to usage, not scoring.',
+          {
+            returned: fmtNumber(summary.totalSessions, 0, unitPrefs.locale),
+            admitted: fmtNumber(summary.usableSessions, 0, unitPrefs.locale),
+            clean: fmtNumber(cleanSessions, 0, unitPrefs.locale),
+            excluded: fmtNumber(summary.totalSessions - summary.usableSessions, 0, unitPrefs.locale),
+          })}
+      </Text>}
+    </>}
     footer={<ChargerHealthSourceNotice state={state} />}
   />;
 }

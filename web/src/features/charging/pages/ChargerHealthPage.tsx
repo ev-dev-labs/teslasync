@@ -35,8 +35,8 @@ export default function ChargerHealthPage() {
 
   return <PageLayout
     title={t('chargerHealth.title', 'Charger Health')}
-    subtitle={t('chargerHealth.subtitle',
-      'Every charging location benchmarked against its own best behaviour, so a stall that has quietly slowed down cannot hide')}
+    subtitle={t('chargerHealth.presentation.subtitle',
+      'Compare session-derived performance within approximate location groups; individual stalls and charger faults are not identified.')}
     query={sessionsQuery}
     busy={sessionsState.isRefreshing}
   >
