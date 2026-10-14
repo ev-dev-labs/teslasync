@@ -124,8 +124,8 @@ export default function DriverAttributionPage() {
         name: cluster.driver_name || t('ownership.driver.unnamed', 'Cluster {{id}}', {
           id: cluster.cluster_id + 1,
         }),
-        share: Number(cluster.share_pct.toFixed(1)),
-        aggression: Number(cluster.aggression_score.toFixed(1)),
+        share: cluster.share_pct,
+        aggression: cluster.aggression_score,
         accent: cluster.accent,
       })),
     [clusters, t],
@@ -300,10 +300,12 @@ export default function DriverAttributionPage() {
             {row.driver_name ||
               t('ownership.driver.unnamed', 'Cluster {{id}}', { id: row.cluster_id + 1 })}
           </Text>
-          <Badge variant={row.source === 'labelled' ? 'success' : 'info'}>
+          <Badge variant={row.source === 'labelled' ? 'success' : row.source === 'inferred' ? 'info' : 'neutral'}>
             {row.source === 'labelled'
               ? t('ownership.driver.fp.labelled', 'confirmed')
-              : t('ownership.driver.fp.inferred', 'inferred')}
+              : row.source === 'inferred'
+                ? t('ownership.driver.fp.inferred', 'inferred')
+                : <>{t('common.unknown', 'Unknown')}{row.source ? ` (${row.source})` : ''}</>}
           </Badge>
           {row.ambiguous ? (
             <Badge variant="warning">{t('ownership.driver.fp.ambiguous', 'ambiguous')}</Badge>
@@ -507,7 +509,13 @@ export default function DriverAttributionPage() {
                 label: t('ownership.driver.stat.separation', 'Separation score'),
                 rawValue: report?.separation_score,
                 display: specialistDisplay(fmtNumber),
-                context: report?.separation_verdict,
+                context: report?.separation_verdict === 'strong'
+                  ? t('ownership.verdict.strong', 'strong')
+                  : report?.separation_verdict === 'moderate'
+                    ? t('ownership.verdict.moderate', 'moderate')
+                    : report?.separation_verdict === 'weak'
+                      ? t('ownership.verdict.weak', 'weak')
+                      : report?.separation_verdict,
                 tone:
                   report?.separation_verdict === 'strong'
                     ? 'positive'
@@ -688,7 +696,14 @@ export default function DriverAttributionPage() {
               <Select
                 label={t('ownership.driver.form.accent', 'Accent colour')}
                 value={profileDraft.accent}
-                options={ACCENTS.map((accent) => ({ value: accent, label: accent }))}
+                options={[
+                  { value: 'cyan', label: t('ownership.driver.form.accents.cyan', 'cyan') },
+                  { value: 'emerald', label: t('ownership.driver.form.accents.emerald', 'emerald') },
+                  { value: 'amber', label: t('ownership.driver.form.accents.amber', 'amber') },
+                  { value: 'purple', label: t('ownership.driver.form.accents.purple', 'purple') },
+                  { value: 'rose', label: t('ownership.driver.form.accents.rose', 'rose') },
+                  { value: 'indigo', label: t('ownership.driver.form.accents.indigo', 'indigo') },
+                ]}
                 onChange={(event) =>
                   setProfileDraft((current) => ({ ...current, accent: event.target.value }))
                 }

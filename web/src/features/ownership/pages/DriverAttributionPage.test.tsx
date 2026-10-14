@@ -8,11 +8,13 @@
  * dialog render for real.
  */
 
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, within, fireEvent, waitFor } from '@testing-library/react';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { act, render, screen, within, fireEvent, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
+
+const translations = vi.hoisted(() => new Map<string, string>());
 
 vi.mock('react-i18next', () => {
   const interpolate = (str: string, vars?: Record<string, unknown> | null): string => {
@@ -24,6 +26,10 @@ vi.mock('react-i18next', () => {
     return s;
   };
   const t = (key: string, second?: unknown, third?: unknown): string => {
+    const translated = translations.get(key);
+    if (translated != null) {
+      return interpolate(translated, (typeof second === 'object' ? second : third) as Record<string, unknown> | undefined);
+    }
     if (typeof second === 'string') {
       return interpolate(second, third as Record<string, unknown> | undefined);
     }
@@ -68,6 +74,9 @@ import {
 import DriverAttributionPage from './DriverAttributionPage';
 import { expectOperationalBand, summaryMetric } from '../components/operationalbrief-all/testAssertions';
 import type { DriverAttributionReport, DriverProfile } from '@/types/ownership';
+import { getFormatterPreferences, setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat';
+
+const originalFormatterPreferences = getFormatterPreferences();
 
 const mockSelected = useSelectedVehicle as unknown as ReturnType<typeof vi.fn>;
 const mockReport = useDriverAttribution as unknown as ReturnType<typeof vi.fn>;
@@ -152,6 +161,7 @@ function removeButton(name: string): HTMLElement {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  translations.clear();
   mockSelected.mockReturnValue({
     vehicleId: 7,
     vehicle: null,
@@ -166,6 +176,13 @@ beforeEach(() => {
   mockCreate.mockReturnValue(makeMutation());
   mockRemove.mockReturnValue(makeMutation());
   mockGhosts.mockReturnValue(makeQuery({ vehicle_id: 7, scanned: 0, ghosts: [] }) as ReturnType<typeof useGhostDrives>);
+});
+
+afterEach(() => {
+  act(() => {
+    setGlobalLocale(originalFormatterPreferences.locale);
+    setGlobalPrecision(originalFormatterPreferences.precision);
+  });
 });
 
 describe('DriverAttributionPage — confirm-gated delete', () => {
@@ -274,6 +291,95 @@ describe('DriverAttributionPage — confirm-gated delete', () => {
 });
 
 describe('DriverAttributionPage — preserved attribution presentation', () => {
+  it.each([
+    ['labelled', 'confirmed'],
+    ['inferred', 'inferred'],
+    ['unknown', 'Unknown (unknown)'],
+    ['future_source', 'Unknown (future_source)'],
+    ['', 'Unknown'],
+  ])('preserves honest provenance for source %s without changing identity or ambiguity', (source, label) => {
+    const report = makeReport();
+    report.fingerprints = [{
+      drive_id: 42, started_at: '2026-01-01T00:00:00Z', distance_m: 12000,
+      duration_s: 3600, features: [], cluster_id: 0, driver_profile_id: 1,
+      driver_name: 'Untranslated driver name', source, confidence_pct: 55,
+      distance_to_own_centroid: 0.1, distance_to_next_centroid: 0.2, ambiguous: true,
+    }];
+    mockReport.mockReturnValue(makeQuery(report));
+    renderPage();
+    const fingerprints = card('Drive fingerprints');
+    const badge = within(fingerprints).getByText(label);
+    expect(badge).toHaveClass(source === 'labelled'
+      ? 'text-[var(--semantic-success)]'
+      : source === 'inferred' ? 'text-[var(--semantic-info)]' : 'text-[var(--text-secondary)]');
+    expect(fingerprints).toHaveTextContent('Untranslated driver name');
+    expect(within(fingerprints).getByText('ambiguous')).toBeInTheDocument();
+    if (source !== 'inferred') expect(within(fingerprints).queryByText('inferred')).not.toBeInTheDocument();
+    expect(report.fingerprints[0].source).toBe(source);
+    expect(mockAssign().mutate).not.toHaveBeenCalled();
+  });
+
+  it('keeps raw chart values until preference-aware accessible table display', () => {
+    const report = makeReport();
+    report.clusters![0] = { ...report.clusters![0], share_pct: 12.3456, aggression_score: 34.5678 };
+    mockReport.mockReturnValue(makeQuery(report));
+    setGlobalPrecision(4);
+    setGlobalLocale('de-DE');
+    renderPage();
+    const table = within(card('Cluster mix and driving intensity')).getByRole('table');
+    expect(table).toHaveTextContent('12,3456%');
+    expect(table).toHaveTextContent('34,5678/100');
+    expect(table).not.toHaveTextContent('34,5678%');
+    act(() => setGlobalPrecision(3));
+    expect(table).toHaveTextContent('12,346%');
+    expect(table).toHaveTextContent('34,568/100');
+    expect(report.clusters![0].share_pct).toBe(12.3456);
+    expect(report.clusters![0].aggression_score).toBe(34.5678);
+    expect(mockAssign().mutate).not.toHaveBeenCalled();
+  });
+
+  it.each(['cyan', 'emerald', 'amber', 'purple', 'rose', 'indigo'])(
+    'localizes accent %s while submitting the original saved identifier and user name',
+    (accent) => {
+      translations.set(`ownership.driver.form.accents.${accent}`, `Translated ${accent}`);
+      const mutate = vi.fn();
+      mockCreate.mockReturnValue(makeMutation({ mutate }));
+      renderPage();
+      fireEvent.click(within(card('Named drivers')).getByRole('button', { name: 'Add driver' }));
+      const select = screen.getByRole('combobox', { name: 'Accent colour' });
+      expect(within(select).getByRole('option', { name: `Translated ${accent}` })).toHaveValue(accent);
+      expect(within(select).getAllByRole('option')).toHaveLength(6);
+      fireEvent.change(select, { target: { value: accent } });
+      fireEvent.change(screen.getByRole('textbox', { name: 'Display name' }), { target: { value: 'Driver-entered name' } });
+      fireEvent.click(within(card('Named drivers')).getByRole('button', { name: 'Save' }));
+      expect(mutate).toHaveBeenCalledWith(
+        { vehicle_id: 7, name: 'Driver-entered name', accent, is_primary: false },
+        { onSuccess: expect.any(Function) },
+      );
+      expect(mockAssign().mutate).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each(['strong', 'moderate', 'weak'])('uses the existing localized verdict %s in brief and details', (verdict) => {
+    translations.set(`ownership.verdict.${verdict}`, `Translated ${verdict}`);
+    mockReport.mockReturnValue(makeQuery({ ...makeReport(), separation_score: 0.5, separation_verdict: verdict }));
+    renderPage();
+    expect(summaryMetric('Separation quality', 'separation')).toHaveTextContent(`Translated ${verdict}`);
+    expect(card('Interpretation')).toHaveTextContent(`Translated ${verdict}`);
+    fireEvent.click(within(card('Separation quality')).getByRole('button', { name: 'Review details' }));
+    expect(screen.getByRole('dialog')).toHaveTextContent(`Translated ${verdict}`);
+    expect(mockAssign().mutate).not.toHaveBeenCalled();
+  });
+
+  it('preserves unrecognized separation prose unchanged in brief context', () => {
+    const verdict = 'Future_Source: Do NOT recase';
+    translations.set(`ownership.verdict.${verdict}`, 'Must not translate arbitrary source prose');
+    mockReport.mockReturnValue(makeQuery({ ...makeReport(), separation_score: 0.5, separation_verdict: verdict }));
+    renderPage();
+    expect(summaryMetric('Separation quality', 'separation')).toHaveTextContent(verdict);
+    expect(screen.queryByText('Must not translate arbitrary source prose')).not.toBeInTheDocument();
+  });
+
   it('keeps an unrecognized verdict distinct from a weak separation claim', () => {
     mockReport.mockReturnValue(makeQuery(makeReport()));
     renderPage();
