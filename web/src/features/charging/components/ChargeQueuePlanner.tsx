@@ -3,12 +3,14 @@ import { useTranslation } from 'react-i18next';
 import { ListOrdered } from 'lucide-react';
 
 import { GlassPanel, PanelTitle, Text, Caption, Button, Input, Badge, ErrorText } from '@/components/ui';
-import { Skeleton, EmptyState } from '@/components/feedback';
+import { Skeleton, EmptyState, QueryError, DataStateNotice, StaleRefreshWarning } from '@/components/feedback';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { useAdviseChargeQueue } from '@/api/hooks/useCharging';
 import { useDateFormat } from '@/hooks/useDateFormat';
 
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { useDataState } from '@/hooks/useDataState';
+import { typography } from '@/lib/tokens';
 
 interface QueueRow {
   currentSoc: string;
@@ -27,14 +29,15 @@ export function ChargeQueuePlanner() {
   const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const { formatTime } = useDateFormat();
-  const { data: vehicles } = useVehicles();
+  const fleetQuery = useVehicles();
+  const fleetState = useDataState(fleetQuery);
   const advise = useAdviseChargeQueue();
 
   const [rows, setRows] = useState<Record<number, QueueRow>>({});
   const [chargerKw, setChargerKw] = useState('11');
   const result = advise.data ?? null;
 
-  const cars = vehicles ?? [];
+  const cars = fleetState.data ?? [];
   const rowFor = (id: number): QueueRow => rows[id] ?? DEFAULT_ROW;
   const setRow = (id: number, patch: Partial<QueueRow>) =>
     setRows((prev) => ({ ...prev, [id]: { ...rowFor(id), ...patch } }));
@@ -62,7 +65,7 @@ export function ChargeQueuePlanner() {
     <GlassPanel className="p-4 sm:p-5">
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <PanelTitle className="flex items-center gap-2">
-          <ListOrdered className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+          <ListOrdered className={`h-4 w-4 ${typography.color.secondary}`} aria-hidden="true" />
           {t('chargeQueue.title', 'Shared-Charger Queue')}
         </PanelTitle>
         {result && (
@@ -74,11 +77,28 @@ export function ChargeQueuePlanner() {
         )}
       </div>
 
-      {cars.length < 2 ? (
-        <EmptyState /* no-action: informational empty — no CTA */
-          icon={<ListOrdered className="h-8 w-8" />}
-          message={t('chargeQueue.singleCar', 'Add a second vehicle to plan a shared-charger queue.')}
-        />
+      <StaleRefreshWarning state={fleetState} label={t('nav.vehicles', 'Fleet')} />
+      {fleetState.fatalError ? (
+        <QueryError error={fleetState.fatalError} onRetry={fleetState.retry ?? undefined} />
+      ) : !fleetState.hasData ? (
+        fleetState.isRefreshBlocked ? (
+          <DataStateNotice state="partial" title={t('dataSources.status.paused', 'Refresh paused')}>
+            <Button variant="secondary" onClick={fleetState.retry ?? undefined}>
+              {t('error.retry', 'Retry')}
+            </Button>
+          </DataStateNotice>
+        ) : (
+          <div role="status" aria-label={t('common.loading', 'Loading...')}>
+            <Skeleton height={80} />
+          </div>
+        )
+      ) : cars.length < 2 ? (
+        fleetState.status === 'ok' ? (
+          <EmptyState /* no-action: informational empty — no CTA */
+            icon={<ListOrdered className="h-8 w-8" />}
+            message={t('chargeQueue.singleCar', 'Add a second vehicle to plan a shared-charger queue.')}
+          />
+        ) : null
       ) : (
         <div className="space-y-3">
           {cars.map((car) => {
@@ -139,7 +159,7 @@ export function ChargeQueuePlanner() {
               <Text as="p" variant="bodySm">{result.explanation}</Text>
               <ol className="space-y-1.5">
                 {result.slots.map((slot) => (
-                  <li key={slot.vehicle_id} className="flex flex-wrap items-center gap-2 rounded-lg bg-white/[0.03] px-3 py-2">
+                  <li key={slot.vehicle_id} className="flex flex-wrap items-center gap-2 rounded-lg bg-surface-2 px-3 py-2">
                     <Badge variant={slot.feasible ? 'neutral' : 'warning'} size="sm">
                       {slot.position}
                     </Badge>
