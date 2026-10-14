@@ -204,12 +204,17 @@ import type { Drive, SpeedProfileData } from '@/types/driving';
 /* ── Fixtures ─────────────────────────────────────────────────────── */
 
 function makeQuery<T>(
-  overrides: { data?: T; isLoading?: boolean; error?: unknown; refetch?: () => void } = {},
+  overrides: {
+    data?: T; isLoading?: boolean; isFetching?: boolean;
+    fetchStatus?: 'fetching' | 'paused' | 'idle';
+    error?: unknown; refetch?: () => void;
+  } = {},
 ) {
   return {
     data: overrides.data,
     isLoading: overrides.isLoading ?? false,
-    isFetching: false,
+    isFetching: overrides.isFetching ?? overrides.isLoading ?? false,
+    fetchStatus: overrides.fetchStatus ?? (overrides.isLoading ? 'fetching' : 'idle'),
     isStale: false,
     isError: overrides.error != null,
     error: overrides.error ?? null,
@@ -272,13 +277,15 @@ const DRIVES: Drive[] = [D1, D2, D3, D_NULL, D_ZERO];
 
 function renderPage() {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(
+  const element = () => (
     <QueryClientProvider client={client}>
       <MemoryRouter>
         <SpeedProfilePage />
       </MemoryRouter>
-    </QueryClientProvider>,
+    </QueryClientProvider>
   );
+  const view = render(element());
+  return { ...view, rerenderPage: () => view.rerender(element()) };
 }
 
 beforeEach(() => {
@@ -532,6 +539,113 @@ describe('SpeedProfilePage source-unit and insight regressions', () => {
     expect(within(card).getByText(efficiency)).toBeInTheDocument();
     expect(within(bucket).getByText('Source speed buckets are in mph; averages use your selected units.')).toBeInTheDocument();
     expect(JSON.stringify({ profile: PROFILE, drives: DRIVES })).toBe(sourceBytes);
+  });
+
+  describe('SpeedProfilePage bucket drive evidence', () => {
+    const card = (range = '0-15') => within(screen.getByText(range).parentElement!.parentElement!);
+    const expectLabels = () => {
+      expect(card().getByText('Avg Speed')).toBeInTheDocument();
+      expect(card().getByText('Wh/km')).toBeInTheDocument();
+      expect(screen.getByTestId('bar-chart')).toBeInTheDocument();
+      expect(screen.getByTestId('gauge-Avg Speed')).toHaveTextContent('90km/h');
+      expect(screen.getByText(/Drives around 54\.00 km\/h/)).toBeInTheDocument();
+    };
+
+    it('keeps both labels with loading only during an active initial drive request', () => {
+      drivesMock.mockReturnValue(makeQuery<Drive[]>({ isLoading: true }));
+      renderPage();
+      expectLabels();
+      expect(card().getAllByText('Loading source')).toHaveLength(2);
+      expect(card().queryByText('0.00')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('scatter')).not.toBeInTheDocument();
+    });
+
+    it.each(['paused', 'idle'] as const)('shows unknown, not loading or zero, for %s drives without data', fetchStatus => {
+      drivesMock.mockReturnValue(makeQuery<Drive[]>({ fetchStatus }));
+      renderPage();
+      expectLabels();
+      expect(card().getAllByText('Unknown')).toHaveLength(2);
+      expect(card().queryByText('Loading source')).not.toBeInTheDocument();
+      expect(card().queryByText('0.00')).not.toBeInTheDocument();
+      expect(screen.queryByText('Not enough drive data for the efficiency scatter yet')).not.toBeInTheDocument();
+    });
+
+    it('distinguishes successful empty drives from a bucket with no usable measurements', () => {
+      drivesMock.mockReturnValue(makeQuery<Drive[]>({ data: [] }));
+      const view = renderPage();
+      expectLabels();
+      expect(card().getAllByText('Unavailable')).toHaveLength(2);
+      expect(screen.getByText('0 drives analysed')).toBeInTheDocument();
+      drivesMock.mockReturnValue(makeQuery<Drive[]>({ data: [D_NULL] }));
+      view.rerenderPage();
+      expect(card().getAllByText('Unknown')).toHaveLength(2);
+      expect(card().queryByText('0.00')).not.toBeInTheDocument();
+    });
+
+    it('renders measured zero speed and efficiency rather than a missing-value status', () => {
+      drivesMock.mockReturnValue(makeQuery<Drive[]>({
+        data: [makeDrive({ avgSpeedMps: 0, distanceM: 1000, energyUsedWh: 0 })],
+      }));
+      renderPage();
+      expectLabels();
+      expect(card().getByText('0.00 km/h')).toBeInTheDocument();
+      expect(card().getByText('0.00')).toBeInTheDocument();
+      expect(card().queryByText('Unknown')).not.toBeInTheDocument();
+      expect(captured.scatterData).toEqual([{ speed: 0, efficiency: 0, color: 'var(--semantic-success)' }]);
+    });
+
+    it('keeps nonfinite drive measurements unknown rather than formatting them or inventing zero', () => {
+      drivesMock.mockReturnValue(makeQuery<Drive[]>({
+        data: [
+          makeDrive({ avgSpeedMps: Number.NaN, distanceM: 1000, energyUsedWh: 100 }),
+          makeDrive({ avgSpeedMps: 3, distanceM: 1000, energyUsedWh: Number.POSITIVE_INFINITY }),
+        ],
+      }));
+      renderPage();
+      expectLabels();
+      expect(card().getAllByText('Unknown')).toHaveLength(2);
+      expect(screen.queryByTestId('scatter')).not.toBeInTheDocument();
+    });
+
+    it('offers drive-local fatal retry and recovers the bucket without losing profile content', () => {
+      const refetch = vi.fn();
+      drivesMock.mockReturnValue(makeQuery<Drive[]>({ error: new Error('drive failure'), refetch }));
+      const view = renderPage();
+      expectLabels();
+      expect(card().getAllByText('Unavailable')).toHaveLength(2);
+      fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+      expect(refetch).toHaveBeenCalledTimes(1);
+      drivesMock.mockReturnValue(makeQuery<Drive[]>({ data: DRIVES }));
+      view.rerenderPage();
+      expectLabels();
+      expect(card().getByText('10.80 km/h')).toBeInTheDocument();
+      expect(card().getByText('120.00')).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Retry' })).not.toBeInTheDocument();
+    });
+
+    it.each(['failure', 'paused'] as const)('retains drive measurements through refresh %s and clears the warning on recovery', posture => {
+      const refetch = vi.fn();
+      const view = renderPage();
+      drivesMock.mockReturnValue(makeQuery<Drive[]>({
+        data: DRIVES, refetch,
+        ...(posture === 'failure' ? { error: new Error('drive refresh') } : { fetchStatus: 'paused' }),
+      }));
+      view.rerenderPage();
+      expectLabels();
+      expect(card().getByText('10.80 km/h')).toBeInTheDocument();
+      expect(card().getByText('120.00')).toBeInTheDocument();
+      expect(card().getByText('Retained source')).toBeInTheDocument();
+      expect(card('90+').getAllByText('Unknown')).toHaveLength(2);
+      expect(screen.getAllByTestId('stale-refresh-warning')).toHaveLength(1);
+      fireEvent.click(within(screen.getByTestId('stale-refresh-warning')).getByRole('button', { name: 'Refresh' }));
+      expect(refetch).toHaveBeenCalledTimes(1);
+      drivesMock.mockReturnValue(makeQuery<Drive[]>({ data: DRIVES }));
+      view.rerenderPage();
+      expectLabels();
+      expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
+      expect(card().queryByText('Retained source')).not.toBeInTheDocument();
+      expect(card().getByText('120.00')).toBeInTheDocument();
+    });
   });
 
   it('keeps source-band membership when speed preferences change without changing distance preferences', () => {

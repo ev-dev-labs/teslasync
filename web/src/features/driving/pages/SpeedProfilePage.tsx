@@ -79,8 +79,10 @@ export default function SpeedProfilePage() {
   const drivesState = useDataState(drivesQuery, { provenance: 'historical' });
   const data = profileState.data;
   const allDrives = drivesState.data;
-  const isLoading = profileQuery.isLoading && !profileState.hasData;
-  const drivesLoading = drivesQuery.isLoading && !drivesState.hasData;
+  const isLoading = !profileState.hasData && !profileState.fatalError
+    && !profileState.isRefreshBlocked && (profileQuery.isLoading || profileQuery.isFetching);
+  const drivesLoading = !drivesState.hasData && !drivesState.fatalError
+    && !drivesState.isRefreshBlocked && (drivesQuery.isLoading || drivesQuery.isFetching);
   const error = profileState.fatalError;
   const drivesError = drivesState.fatalError;
   const { refetch } = profileQuery;
@@ -147,7 +149,8 @@ export default function SpeedProfilePage() {
     const points: { speed: number; efficiency: number; color: string }[] = [];
     for (const d of drives) {
       const raw = getEfficiency(d);
-      if (d.avgSpeedMps == null || raw == null) continue;
+      if (d.avgSpeedMps == null || !Number.isFinite(d.avgSpeedMps)
+        || raw == null || !Number.isFinite(raw)) continue;
       const eff = toEfficiencyDisplay(raw);
       points.push({
         speed: Math.round(toSpeedDisplay(d.avgSpeedMps)),
@@ -163,9 +166,9 @@ export default function SpeedProfilePage() {
     const acc = new Map<string, { totalEff: number; totalSpdMps: number; count: number }>();
     const ranges = data?.distribution ?? [];
     drives.forEach((d) => {
-      if (d.avgSpeedMps == null) return;
+      if (d.avgSpeedMps == null || !Number.isFinite(d.avgSpeedMps)) return;
       const eff = getEfficiency(d);
-      if (eff == null) return;
+      if (eff == null || !Number.isFinite(eff)) return;
       // The source distribution uses fixed mph bands, independently of viewer
       // preferences. Compare in that source unit; retain raw SI accumulators
       // and convert averages only when displaying them.
@@ -194,6 +197,12 @@ export default function SpeedProfilePage() {
   }, [drives, data]);
 
   const hasDistribution = distributionChartData.length > 0;
+  const drivesRetained = drivesState.status === 'stale';
+  const driveValueStatus = drivesLoading
+    ? t('driving.brief.loading', 'Loading source')
+    : drivesError || (drivesState.hasData && drives.length === 0)
+      ? t('common.unavailable', 'Unavailable')
+      : t('common.unknown', 'Unknown');
 
   const displaySpeed = (mps: number | null | undefined) =>
     mps != null && Number.isFinite(mps) ? toSpeedDisplay(mps) : null;
@@ -236,7 +245,9 @@ export default function SpeedProfilePage() {
           provenance={t('speedProfile.brief.provenance', 'Speed-profile aggregate and returned vehicle drives; the server does not declare complete drive coverage.')}
           loading={isLoading}
           unavailable={!profileState.hasData}
-          retained={profileState.isRefreshBlocked || drivesState.isRefreshBlocked}
+          retained={profileState.status === 'stale'}
+          sourceStatus={!profileState.hasData && !isLoading && !error
+            ? t('common.unknown', 'Unknown') : undefined}
           actions={error ? <QueryError error={error} onRetry={() => refetch()} /> : undefined}
         />
         </SectionErrorBoundary>
@@ -256,7 +267,9 @@ export default function SpeedProfilePage() {
             ) : !hasDistribution ? (
               <EmptyState
                 icon={<Gauge className="h-8 w-8" aria-hidden="true" />}
-                message={t('speedProfile.noDistribution', 'No speed distribution available yet')}
+                message={profileState.hasData
+                  ? t('speedProfile.noDistribution', 'No speed distribution available yet')
+                  : t('common.unknown', 'Unknown')}
                 actionTo={{ label: t('speedProfile.browseDrives', 'Browse drives'), to: '/drives' }}
               />
             ) : (
@@ -303,7 +316,7 @@ export default function SpeedProfilePage() {
             ) : !data ? (
               <EmptyState
                 icon={<Gauge className="h-8 w-8" aria-hidden="true" />}
-                message={t('speedProfile.noData', 'No speed profile data available yet')}
+                message={t('common.unknown', 'Unknown')}
                 actionTo={{ label: t('speedProfile.browseDrives', 'Browse drives'), to: '/drives' }}
               />
             ) : (
@@ -358,7 +371,9 @@ export default function SpeedProfilePage() {
             <GlassPanel className="p-4 sm:p-5">
               <EmptyState
                 icon={<Gauge className="h-8 w-8" aria-hidden="true" />}
-                message={t('speedProfile.noBuckets', 'No speed buckets recorded for this window')}
+                message={profileState.hasData
+                  ? t('speedProfile.noBuckets', 'No speed buckets recorded for this window')
+                  : t('common.unknown', 'Unknown')}
                 actionTo={{ label: t('speedProfile.browseDrives', 'Browse drives'), to: '/drives' }}
               />
             </GlassPanel>
@@ -398,27 +413,28 @@ export default function SpeedProfilePage() {
                           {fmtInt(bucket.readings)}
                         </Text>
                       </div>
-                      {effData ? (
-                        <>
-                          <div className="flex items-center justify-between gap-2">
-                            <Text as="dt" variant="caption">{t('speedProfile.avgSpeed', 'Avg Speed')}</Text>
-                            <Text as="dd" size="sm" weight="bold" color="secondary" className="tabular-nums">
-                              {fmtNumber(toSpeedDisplay(effData.avgSpeedMps))} {speedUnit}
-                            </Text>
-                          </div>
-                          <div className="flex items-center justify-between gap-2">
-                            <Text as="dt" variant="caption">{efficiencyUnit}</Text>
-                            <Text
-                              as="dd"
-                              size="sm"
-                              weight="bold"
-                              className={cn('tabular-nums', efficiencyClass(effData.avgEff))}
-                            >
-                              {fmtNumber(toEfficiencyDisplay(effData.avgEff))}
-                            </Text>
-                          </div>
-                        </>
-                      ) : null}
+                      <div className="flex items-center justify-between gap-2">
+                        <Text as="dt" variant="caption">{t('speedProfile.avgSpeed', 'Avg Speed')}</Text>
+                        <Text as="dd" size="sm" weight="bold" color="secondary" className="tabular-nums">
+                          {effData
+                            ? `${fmtNumber(toSpeedDisplay(effData.avgSpeedMps))} ${speedUnit}`
+                            : driveValueStatus}
+                        </Text>
+                      </div>
+                      <div className="flex items-center justify-between gap-2">
+                        <Text as="dt" variant="caption">{efficiencyUnit}</Text>
+                        <Text
+                          as="dd"
+                          size="sm"
+                          weight="bold"
+                          className={cn('tabular-nums', effData && efficiencyClass(effData.avgEff))}
+                        >
+                          {effData ? fmtNumber(toEfficiencyDisplay(effData.avgEff)) : driveValueStatus}
+                        </Text>
+                      </div>
+                      {drivesRetained && (
+                        <Caption as="div">{t('driving.brief.retained', 'Retained source')}</Caption>
+                      )}
                     </dl>
                   </GlassPanel>
                 );
@@ -444,7 +460,9 @@ export default function SpeedProfilePage() {
             ) : scatterData.length === 0 ? (
               <EmptyState
                 icon={<Activity className="h-8 w-8" aria-hidden="true" />}
-                message={t('speedProfile.noScatter', 'Not enough drive data for the efficiency scatter yet')}
+                message={drivesState.hasData
+                  ? t('speedProfile.noScatter', 'Not enough drive data for the efficiency scatter yet')
+                  : t('common.unknown', 'Unknown')}
                 actionTo={{ label: t('speedProfile.browseDrives', 'Browse drives'), to: '/drives' }}
               />
             ) : (
@@ -515,7 +533,9 @@ export default function SpeedProfilePage() {
             ) : (
               <EmptyState
                 icon={<Zap className="h-8 w-8" aria-hidden="true" />}
-                message={t('speedProfile.noInsight', 'Efficiency insight appears once optimal-speed data is available')}
+                message={profileState.hasData
+                  ? t('speedProfile.noInsight', 'Efficiency insight appears once optimal-speed data is available')
+                  : t('common.unknown', 'Unknown')}
                 actionTo={{ label: t('speedProfile.browseDrives', 'Browse drives'), to: '/drives' }}
               />
             )}
