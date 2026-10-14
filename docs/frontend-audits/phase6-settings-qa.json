@@ -478,5 +478,189 @@
       "validationLog": "web\\logs\\phase6-settings-native-continuation.validation.log"
     },
     "delivery": "Report-only bounded native continuation. Specific timezone visible-label naming/focus confirmed; genuine 1440 measured, requested375 actually500 disclosed, new candidates retained and forbidden state cases NOTRUN. Original accepted report and safety gap preserved. Full Settings/Phase6 acceptance remains incomplete."
+  },
+  "nativeContinuation3": {
+    "status": "NOTRUN",
+    "pageAcceptance": "PARTIAL_NOT_ACCEPTED",
+    "assignmentReceivedAt": "2026-10-14T05:22:02.549Z",
+    "firstMeasuredClock": "2026-10-14T05:22:07.9848509Z",
+    "queueConservativeStartObservedLater": "2026-10-14T05:21:00Z",
+    "returnDeadline": "2026-10-14T05:41:00Z",
+    "hardDeadline": "2026-10-14T05:46:00Z",
+    "clockPolicy": "Earlier parent queue reservation wins over assignment+20/25. Actual lifecycle creation time is not independently exposed; no reset or later-deadline claim.",
+    "boundedCommandLimitSeconds": 900,
+    "scope": "Continue the original pending Phase6 phase4-pilot-settings missing-native-budget2 only. No remigration, repeat helper campaign, new helper, source repair, queue edit or budget reset.",
+    "authority": {
+      "queueRow": "migration-queue.md:2135",
+      "queueStatusRead": "[ ]",
+      "queueStatusReadAtFinalInspection": "[~] with actual actor 41370122-8183-4514-a3ab-920988588322; inspected at 2026-10-14T05:27:14.9269187Z",
+      "queueAttemptsRead": "2",
+      "acceptedTimezoneLabelFix": "e693301e1, supplied authority; not reopened or tested again",
+      "browserLockGrant": [3, 4],
+      "otherBrowserLocks": "1 drives and 2 dashboard; untouched",
+      "allowedBrowserChannel": "msedge",
+      "writableFiles": [
+        "docs\\frontend-audits\\phase6-settings-qa.json",
+        "web\\logs\\phase4-pilot-settings.log"
+      ],
+      "read": [
+        "Full docs\\orchestrator-loop.md and full retained Settings report",
+        "Exact current queue row and current native/privacy dispatch restrictions",
+        "Full docs\\frontend-design-contract.md; mission sections 22-26 and 43-45; inventory authority/preservation",
+        "Current handoff recovery, installed-Edge and retained fixture/privacy conventions",
+        "React frontend, frontend SI cutover, observability and unit-conversion instructions",
+        "docs\\privacy.md",
+        "Existing scripts\\frontend-qa.mjs guard, launch, mode and capture entry points",
+        "Existing playwright.config.ts, e2e\\configEnv.ts and Settings/accessibility/performance harness entry points",
+        "GeneralSettings.tsx accepted explicit timezone label association, read-only; no new issue campaign"
+      ]
+    },
+    "preservation": {
+      "priorReportBytes": 31452,
+      "priorReportSha256": "a131c395707f1dcab8e55974a91fd513bed793be982716e3820f2fc42fa2e778",
+      "priorRootFieldsCanonicalSha256": "0417442ec0ceefc2aa3614cf2db801be8381eba3cd74ab6cd74c61e881bc65f4",
+      "method": "Append this member only. Compare canonical JSON of all prior root fields after removing nativeContinuation3; JSON punctuation changes are not a byte-identical whole-file claim.",
+      "retainedEvidence": "All prior timestamps, receipts, eighteen dark diagnostics, eight categories, search/reset-Cancel/mobile maximum-scroll/contrast evidence and original unsafe emulation interval remain historical, not a whole-page pass. Original requested1440 actual1441x937 and later requested375 actual500 discrepancies remain disclosed.",
+      "previousGuardGap": "Not retroactively certified safe. No unconditional whole-session no-write claim.",
+      "helperAttempts": "Unchanged; no failed/exhausted helper invoked and no native attempt or QA pass invented."
+    },
+    "preview": {
+      "url": "http://localhost:5173/settings",
+      "command": "curl.exe --silent --output NUL --write-out 'preview_http=%{http_code}\\n' --max-time 10 http://localhost:5173/settings",
+      "shellId": "4412",
+      "exit": 0,
+      "rawOutput": "preview_http=200",
+      "meaning": "HTML route responsiveness only. Response body discarded; no JavaScript, API, fixture, backend-health, Settings-data or Docker acceptance.",
+      "runtimeCommand": "node --version",
+      "runtimeRawOutput": "v26.8.1",
+      "fixtureStatus": "NOT_VERIFIED_CURRENT: historical synthetic DRILL4 authority retained; no roster, identity or account read requested.",
+      "backend500": "NOT_OBSERVED_OR_RULED_OUT: no API probe or guarded application mount; historical availability statuses do not establish current backend status.",
+      "docker": "Independent deployment worker untouched; no deployment operation, polling or success assumed."
+    },
+    "confirmedExecutionBlockers": [
+      {
+        "id": "existing-native-provider-unexposed",
+        "owner": "Current host/tool capability, not a Settings source owner",
+        "evidence": "This worker exposes shell/file tools and GitHub MCP only; neither prior chrome-devtools nor Playwright native browser MCP context/page/default-capture operations are exposed. Installed Playwright resolves, but that is not the previously guarded native provider.",
+        "consequence": "Prior document guard cannot be installed/reused through its native provider. No unsafe context/page/emulation operation was attempted to work around it."
+      },
+      {
+        "id": "existing-helper-incompatible-with-exact-grant",
+        "owner": "Existing web\\scripts\\frontend-qa.mjs:164-176,698-724; read-only and exhausted helper budget",
+        "evidence": "Existing browserChecks launches chromium without channel:'msedge', writes a separate qa-screenshots/cache tree, creates context and page before its page.route write guard, and seeds/synchronizes application mode via localStorage. That route callback blocks non-read methods only; it does not exclude identity/token/roster reads or enforce the historical synthetic fixture/storage guard.",
+        "consequence": "Cannot invoke unchanged under installed-Edge-only, existing pre-operation guard, no unsafe preference writes, no identity requests, exact writable paths and unchanged helper-budget policies. No patch, extraction driver, fresh guard/helper or retry campaign authored."
+      },
+      {
+        "id": "existing-e2e-harness-is-mocked-not-native-fixture",
+        "owner": "Existing web\\e2e\\settings.smoke.spec.ts:1-18,accessibility.smoke.spec.ts:1-23,performance.perf.spec.ts:1-8",
+        "evidence": "Existing entry points seed browser preferences and install populated API mocks. Settings harness later edits distance preference; configured projects do not pin the required Edge channel.",
+        "consequence": "These commands cannot establish the requested read-only native/synthetic-backend acceptance. They were not run; no success-shaped fake app data or unsafe edit used."
+      },
+      {
+        "id": "lighthouse-dependency-and-guard-unavailable",
+        "owner": "Current installed audit runtime/guard capability; no install or source owner requested",
+        "evidence": "Local require.resolve('lighthouse') returned MODULE_NOT_FOUND. Playwright and axe-core/axe.min.js do resolve. No guarded native mounted page is available to run axe; no existing guarded Lighthouse navigation is available.",
+        "consequence": "Lighthouse NOTRUN, no install/download/separate unguarded browser. Axe NOTRUN because safe mount is unavailable, not because axe is absent."
+      }
+    ],
+    "remainingMatrix": [
+      {
+        "case": "Dark/auto/saved-custom modes",
+        "status": "NOTRUN",
+        "blocker": "No existing guarded mounted provider; helper seeds/synchronizes forbidden saved preferences. CSS-only impersonation would not prove actual saved-mode behavior."
+      },
+      {
+        "case": "RTL and long labels",
+        "status": "NOTRUN",
+        "blocker": "No existing guarded mounted provider/fixture. No language/preferences/catalog modification or fabricated text campaign authorized."
+      },
+      {
+        "case": "Native zoom and 200% text",
+        "status": "NOTRUN",
+        "blocker": "No existing guard-preserving native device/document operation exposed. Prior emulation guard loss prevents assuming safety; CSS scale is not native zoom acceptance."
+      },
+      {
+        "case": "Forced colors and reduced motion",
+        "status": "NOTRUN",
+        "blocker": "No safely guarded native context/page. Existing tests use mocked app data; no OS-mode or browser emulation acceptance inferred from source."
+      },
+      {
+        "case": "Offline/retained/error/retry/unknown/extreme states",
+        "status": "NOTRUN",
+        "blocker": "No current safely guarded synthetic mount or supplied native state dataset. No response fabrication, connection changes, unsafe reload or backend500 diagnosis."
+      },
+      {
+        "case": "Whole-session full guard, complete keyboard/AT/a11y and contrast",
+        "status": "NOTRUN",
+        "blocker": "Existing guard cannot be installed through prior provider; current helper does not enforce privacy/fixture/storage guard before each operation. Prior partial checks are not repeated or promoted."
+      },
+      {
+        "case": "Lighthouse",
+        "status": "NOTRUN",
+        "blocker": "Installed module unavailable and no safe guarded native navigation; installs/downloads/new helpers expressly forbidden."
+      }
+    ],
+    "privacyAndSafety": {
+      "browserLaunched": false,
+      "contextsCreated": 0,
+      "pagesCreated": 0,
+      "deviceOrEmulationOperations": 0,
+      "newGuardInstalled": false,
+      "guardPolicy": "Pre-operation guard is mandatory. Because the existing eligible guard/provider was unavailable, every browser operation was withheld, not performed first and guarded afterward.",
+      "apiRequestsPerformed": 0,
+      "realIdentityUserTokenRequestsOrCaptures": 0,
+      "appResponsesMockedOrFabricated": 0,
+      "preferenceSaveResetDisconnectPaidActions": 0,
+      "nativeCaptures": [],
+      "nativeMeasurements": [],
+      "newWholeSessionSafetyCertification": false,
+      "prohibitedOperations": "No Git/PR/merge, nested agents, installs, downloads, new helpers/extensions, source/tests/shared helper/catalog/config/queue writes, servers, Docker or full suites."
+    },
+    "protectedInputsBeforeSha256": {
+      "web\\src\\features\\settings\\pages\\SettingsPage.tsx": "4c04502800bc077a58fedec3cf5f6c14c783aeeb0b7e9267eaaebb99cb76d85c",
+      "web\\src\\features\\settings\\components\\GeneralSettings.tsx": "64745e5a2ba11f15ab026c296aaf64ef0d48692d9af6b834bd7401e98326c47a",
+      "web\\src\\features\\settings\\components\\SettingField.tsx": "d7f58ab5ca4b91282725ece716c504d98689c27d9736c0721f93048fe3e73c7c",
+      "web\\src\\features\\settings\\components\\SettingsSearch.tsx": "6d4cf20de8670a98789c7cfd8432f07bc5b13caa54154c52bbcab08f1c7e8c1f",
+      "web\\src\\features\\settings\\components\\SettingsNavigation.tsx": "81348f51d4b06bc135b72e8266610e5b073bc2a46fb364ce5cde0fa53521eae8",
+      "web\\src\\features\\settings\\components\\ResetSection.tsx": "2ac8bacd7ea61b84dee4e44464a31270e979321e8c5d99ffb6df11bf5a3bb22f",
+      "web\\scripts\\frontend-qa.mjs": "e82fb2d99d429af549766ce1a50951f6ace714e8ad2f55cd4fcdf7e4c2067d0c",
+      "web\\e2e\\settings.smoke.spec.ts": "5c565e65d2da71d9025aa430f4c557fe2b3b9305396431ba534b4e2e5a1c039b",
+      "web\\e2e\\configEnv.ts": "37138faf9f796885442112181dec77126c9c10bb84de8df3777cd2cbc2114a2b",
+      "web\\playwright.config.ts": "a5d99ffbc3c7bb4bf615e5fa70884f0bc19e13fe7d304f11a79f19000a676000",
+      "web\\src\\i18n\\en.json": "df6829c0588aa9c6ea9605fd2a6db9f208dfb6c6e8d76bca11b18f89d345eba8",
+      "web\\package.json": "8c1d55d305a1a47a6a5e7ca3dbb0452d129c4cb0dc9f95b9ed9151c9ce93ec7a",
+      "migration-queue.md": "821c7c5a7180b80e40e188ef9bd86124135ed057f577878b6907f39c603d48a3"
+    },
+    "verificationReceipt": {
+      "shellId": "4426",
+      "exit": 1,
+      "measuredAt": "2026-10-14T05:27:05.747622Z",
+      "jsonParse": "PASS",
+      "priorRootFieldsPreserved": 23,
+      "priorRootFieldsCanonicalSha256": "0417442ec0ceefc2aa3614cf2db801be8381eba3cd74ab6cd74c61e881bc65f4",
+      "protectedInputsChecked": 13,
+      "unchangedSourceHelperTestConfigCatalogInputs": 12,
+      "driftedInputs": [
+        {
+          "file": "migration-queue.md",
+          "afterSha256": "8ec8a7f2a4193a9c0080e832b1bb4b45c51bc6e03955a75a9d38c3aba7cd6ec8",
+          "scope": "Shared orchestrator-owned queue stayed read-only to this worker. Fresh exact-row inspection in shell4427 shows pending->in-progress and parent actor/lock/deadline dispatch note, attempts still2. No queue repair or own-write attribution.",
+          "limit": "Exact-row change observed; whole-file drift may include other concurrent changes, whose actors are not established by a hash."
+        }
+      ],
+      "failurePreserved": "The initial broad immutable-input assertion exited1 on shared queue drift, after JSON/history and twelve scoped inputs matched. Do not claim13unchanged or erase this failure.",
+      "finalValidationScope": "Named final command checks JSON, all23 historical root fields and the twelve scoped source/helper/test/config/catalog pins; separately prints current queue hash without certifying queue immutability. Exact command/output/numeric exit and artifact/command release UTC are in the ignored log."
+    },
+    "verificationScope": "JSON parse, unchanged prior-report fields and twelve measured scoped protected hashes only; shared queue drift disclosed. Native tests/captures=0. TypeScript/build/lint/violations audit/API hook audit/line and section comparisons/full suites NOTRUN: evidence-only assignment, no source changes or phase-gate authority.",
+    "closure": {
+      "browserLocksReleasedAt": "2026-10-14T05:24:42.889285Z",
+      "browserLocksReleased": [3, 4],
+      "locksWereNeverUsedForBrowserOperations": true,
+      "ownedBrowserContextsOrPagesRemaining": 0,
+      "backgroundCommandsStarted": 0,
+      "boundedCommandHandlesAtRelease": "4399,4401,4403,4406,4409,4410,4412,4414,4415,4418 all completed exit0; none required termination.",
+      "artifactAndCommandRelease": "Exact final artifact/command release UTC and numeric exit are recorded by bounded shell phase4-pilot-settings-final-validation in web\\logs\\phase4-pilot-settings.log before return; no post-return writes. Earlier queue return05:41/hard05:46 applies."
+    },
+    "delivery": "Original missing-native continuation remains unavailable/NOTRUN, with exact confirmed guard/provider/helper/runtime blockers and narrow owners only. Prior partial native evidence and accepted timezone fix remain intact. No page, Phase6, backend, Docker or whole-session safety pass."
   }
 }
