@@ -298,6 +298,73 @@ afterEach(() => {
 });
 
 describe('ChargeAdvisorPage', () => {
+  it.each([
+    ['drive', 'loading'],
+    ['drive', 'error'],
+    ['charging', 'loading'],
+    ['charging', 'error'],
+  ] as const)('keeps independent accounting and KPI values while %s is %s, then recovers', (source, status) => {
+    const unavailable = query(undefined, status === 'loading'
+      ? { isLoading: true, isSuccess: false }
+      : { isError: true, isSuccess: false, error: new Error(`${source} unavailable`) },
+    source === 'drive' ? h.driveRefetch : h.chargingRefetch);
+    if (source === 'drive') h.drives = unavailable;
+    else h.charging = unavailable;
+    const view = renderPage();
+    expectEveryShell();
+    const availableSource = source === 'drive' ? 'charging' : 'drive';
+    const accounting = within(screen.getByTestId(`charge-advisor-accounting-${availableSource}`));
+    expect(accounting.getByText('Returned rows').closest('[data-operational-metric]')
+      ?.querySelector('[data-operational-value]')).toHaveTextContent(source === 'drive' ? '1' : '8');
+    expect(within(screen.getByTestId(`charge-advisor-accounting-${source}`))
+      .queryByRole('region')).not.toBeInTheDocument();
+    const kpis = screen.getByTestId('charge-advisor-kpis');
+    expect(within(kpis).getByText('Current SoC').closest('[data-operational-metric]')
+      ?.querySelector('[data-operational-value]')).toHaveTextContent('80.00%');
+    expect(within(kpis).getByText(source === 'drive' ? 'Charging evidence' : 'Drive evidence')
+      .closest('[data-operational-metric]')?.querySelector('[data-operational-value]'))
+      .toHaveTextContent(source === 'drive' ? '1' : '8');
+    expect(within(screen.getByTestId('charge-advisor-methodology'))
+      .getByText('Omitted inputs')).toBeInTheDocument();
+    if (status === 'error') {
+      expect(within(screen.getByTestId(`charge-advisor-accounting-${source}`))
+        .getByText(source === 'drive' ? /Drive history is unavailable/ : /Charging history is unavailable/))
+        .toBeInTheDocument();
+      fireEvent.click(screen.getByRole('button', { name: /retry/i }));
+      expect(h.driveRefetch).toHaveBeenCalledTimes(source === 'drive' ? 1 : 0);
+      expect(h.chargingRefetch).toHaveBeenCalledTimes(source === 'charging' ? 1 : 0);
+    }
+    h.drives = query(readyDrives(), {}, h.driveRefetch);
+    h.charging = query([chargingAt('2026-05-30')], {}, h.chargingRefetch);
+    view.rerenderPage();
+    expect(within(screen.getByTestId(`charge-advisor-accounting-${source}`))
+      .getByText('Returned rows')).toBeInTheDocument();
+  });
+
+  it.each(['drive', 'charging'] as const)('shows the completed %s current-state fallback without the other history', source => {
+    h.observations = {
+      batteryLevelObservation: { present: false, valid: false, value: null },
+      chargeLimitSocObservation: { present: false, valid: false, value: null },
+      isChargingObservation: { present: false, valid: false, value: null },
+    };
+    h.provenance = {};
+    const unavailable = query(undefined, { isLoading: true, isSuccess: false });
+    h.drives = source === 'drive' ? query([driveAt('2026-06-01')]) : unavailable;
+    h.charging = source === 'charging' ? query([chargingAt('2026-06-01')]) : unavailable;
+    renderPage();
+    const current = within(screen.getByTestId('charge-advisor-current'));
+    expect(current.getByText(source === 'drive' ? 'Completed drive end' : 'Completed charge end'))
+      .toBeInTheDocument();
+    expect(current.getByText(source === 'drive' ? '75.00%' : '80.00%')).toBeInTheDocument();
+  });
+
+  it('keeps static methodology readable without a selected vehicle', () => {
+    h.vehicleId = null;
+    renderPage();
+    expect(within(screen.getByTestId('charge-advisor-methodology')).getByText('Omitted inputs'))
+      .toBeInTheDocument();
+  });
+
   it('does not use recent unrelated activity to rejuvenate an old battery or charging field', () => {
     h.provenance = {
       batteryLevel: { observedAtMs: FROZEN_NOW - 120_001, ageMs: 120_001, source: 'stale', receivedAtMs: FROZEN_NOW },

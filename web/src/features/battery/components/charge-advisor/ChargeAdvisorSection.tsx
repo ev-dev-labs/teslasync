@@ -14,10 +14,11 @@ interface ChargeAdvisorSectionProps {
   subtitle?: string;
   icon?: ReactNode;
   state: ChargeAdvisorQueryState;
-  dependency?: ChargeAdvisorDependency;
+  dependency?: ChargeAdvisorDependency | 'none';
   dataTestId: string;
   children: ReactNode;
   className?: string;
+  contentOnly?: boolean;
 }
 
 export function ChargeAdvisorSection({
@@ -29,6 +30,7 @@ export function ChargeAdvisorSection({
   dataTestId,
   children,
   className,
+  contentOnly = false,
 }: ChargeAdvisorSectionProps) {
   const { t } = useTranslation();
   const needsDrive = dependency === 'drive' || dependency === 'both';
@@ -39,27 +41,27 @@ export function ChargeAdvisorSection({
   const missingDrive = needsDrive && !state.driveAvailable;
   const missingCharging = needsCharging && !state.chargingAvailable;
 
-  return (
-    <section data-testid={dataTestId} className={cn('min-w-0', className)}>
-      <LayoutCard title={title} description={subtitle}
-        actions={icon ?? <Database className="h-4 w-4 text-cyan-300" aria-hidden="true" />}>
-        {state.vehicleSelected && !loading && (missingDrive || missingCharging) ? (
-          <Text as="p" variant="bodySm" className="py-10 text-center">
-            {missingDrive ? t(
-              'chargeAdvisor.states.driveUnavailable',
-              'Drive history is unavailable; retry from the evidence band above.',
-            ) : t(
-              'chargeAdvisor.states.chargingUnavailable',
-              'Charging history is unavailable. No charging profile is inferred.',
-            )}
-          </Text>
-        ) : <SourceContent
-          label={title}
-          state={!state.vehicleSelected ? 'empty' : loading ? 'loading' : 'ready'}
-          loadingContent={<Skeleton height={180} />}
-          emptyMessage={t('chargeAdvisor.states.selectVehicle', 'Select a vehicle to show its charge-advisor evidence.')}
-          errorMessage={t('chargeAdvisor.states.driveUnavailable', 'Drive history is unavailable; retry from the evidence band above.')}
-          emptyContent={!state.vehicleSelected ? (
+  const content = dependency === 'none' ? children : (
+    state.vehicleSelected && !loading && (missingDrive || missingCharging) ? (
+      <Text as="p" variant="bodySm" className="py-10 text-center">
+        {missingDrive && t(
+          'chargeAdvisor.states.driveUnavailable',
+          'Drive history is unavailable; retry from the evidence band above.',
+        )}
+        {missingDrive && missingCharging && <br />}
+        {missingCharging && t(
+          'chargeAdvisor.states.chargingUnavailable',
+          'Charging history is unavailable. No charging profile is inferred.',
+        )}
+      </Text>
+    ) : (
+      <SourceContent
+        label={title}
+        state={!state.vehicleSelected ? 'empty' : loading ? 'loading' : 'ready'}
+        loadingContent={<Skeleton height={180} />}
+        emptyMessage={t('chargeAdvisor.states.selectVehicle', 'Select a vehicle to show its charge-advisor evidence.')}
+        errorMessage={t('chargeAdvisor.states.driveUnavailable', 'Drive history is unavailable; retry from the evidence band above.')}
+        emptyContent={!state.vehicleSelected ? (
           <EmptyState /* no-action: vehicle and scenario controls in the surrounding section determine this result */
             className="py-10"
             icon={<PlugZap className="h-7 w-7" aria-hidden="true" />}
@@ -69,9 +71,21 @@ export function ChargeAdvisorSection({
             )}
           />
         ) : null}
-        >
-          {children}
-        </SourceContent>}
+      >
+        {children}
+      </SourceContent>
+    )
+  );
+
+  if (contentOnly) {
+    return <div data-testid={dataTestId} className={cn('min-w-0', className)}>{content}</div>;
+  }
+
+  return (
+    <section data-testid={dataTestId} className={cn('min-w-0', className)}>
+      <LayoutCard title={title} description={subtitle}
+        actions={icon ?? <Database className="h-4 w-4 text-[var(--text-secondary)]" aria-hidden="true" />}>
+        {content}
       </LayoutCard>
     </section>
   );

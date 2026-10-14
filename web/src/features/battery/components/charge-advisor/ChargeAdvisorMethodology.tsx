@@ -51,15 +51,15 @@ export function ChargeAdvisorMethodology({ analysis, state }: ChargeAdvisorCompo
         'chargeAdvisor.method.subtitle',
         'Definitions, gates, provenance, and the limits of this descriptive planning view.',
       )}
-      icon={<FlaskConical className="h-4 w-4 text-cyan-300" aria-hidden="true" />}
+      icon={<FlaskConical className="h-4 w-4 text-[var(--text-secondary)]" aria-hidden="true" />}
       state={state}
-      dependency="both"
+      dependency="none"
       dataTestId="charge-advisor-methodology"
     >
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
         {items.map((item) => (
           <article key={item.key} className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3">
-            <div className="mb-2 flex items-center gap-2 text-cyan-300">
+            <div className="mb-2 flex items-center gap-2 text-[var(--text-secondary)]">
               <BookOpen className="h-4 w-4" aria-hidden="true" />
               <Heading level="sub">{item.title}</Heading>
             </div>

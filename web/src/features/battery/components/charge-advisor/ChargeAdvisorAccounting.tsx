@@ -85,15 +85,21 @@ export function ChargeAdvisorAccounting({ analysis, state }: ChargeAdvisorCompon
         'chargeAdvisor.accounting.subtitle',
         'Every returned row is assigned exactly one mutually exclusive category.',
       )}
-      icon={<ClipboardList className="h-4 w-4 text-cyan-300" aria-hidden="true" />}
+      icon={<ClipboardList className="h-4 w-4 text-[var(--text-secondary)]" aria-hidden="true" />}
       state={state}
-      dependency="both"
+      dependency="none"
       dataTestId="charge-advisor-accounting"
     >
       <div className="grid gap-4 lg:grid-cols-2">
-        <div>
+        <ChargeAdvisorSection
+          title={t('chargeAdvisor.accounting.drives', 'Drive rows')}
+          state={state}
+          dependency="drive"
+          dataTestId="charge-advisor-accounting-drive"
+          contentOnly
+        >
           <div className="mb-2 flex items-center gap-2">
-            <Database className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+            <Database className="h-4 w-4 text-[var(--text-secondary)]" aria-hidden="true" />
             <Text className="font-semibold">{t('chargeAdvisor.accounting.drives', 'Drive rows')}</Text>
           </div>
           <BatteryEvidenceBrief
@@ -110,10 +116,16 @@ export function ChargeAdvisorAccounting({ analysis, state }: ChargeAdvisorCompon
               </div>
             ))}
           </div>
-        </div>
-        <div>
+        </ChargeAdvisorSection>
+        <ChargeAdvisorSection
+          title={t('chargeAdvisor.accounting.charging', 'Charging rows')}
+          state={state}
+          dependency="charging"
+          dataTestId="charge-advisor-accounting-charging"
+          contentOnly
+        >
           <div className="mb-2 flex items-center gap-2">
-            <Database className="h-4 w-4 text-emerald-300" aria-hidden="true" />
+            <Database className="h-4 w-4 text-[var(--text-secondary)]" aria-hidden="true" />
             <Text className="font-semibold">{t('chargeAdvisor.accounting.charging', 'Charging rows')}</Text>
           </div>
           <BatteryEvidenceBrief
@@ -130,7 +142,7 @@ export function ChargeAdvisorAccounting({ analysis, state }: ChargeAdvisorCompon
               </div>
             ))}
           </div>
-        </div>
+        </ChargeAdvisorSection>
       </div>
       <Text as="p" variant="caption" className="mt-4">
         {t(

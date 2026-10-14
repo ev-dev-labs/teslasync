@@ -77,7 +77,7 @@ export function ChargeAdvisorKpiBand({ analysis, state }: ChargeAdvisorComponent
     {
       metricId: 'percent', occurrenceId: 'advisor-daily-drop',
       label: t('chargeAdvisor.kpis.typicalUse', 'Daily SoC drop'),
-      rawValue: analysis.burnDistribution.medianPct,
+      rawValue: state.driveAvailable ? analysis.burnDistribution.medianPct : null,
       display: { formatter: raw => ({ value: fmtPercent(raw), unit: '' }) },
       context: <><Activity className="h-5 w-5" aria-hidden="true" />{t('chargeAdvisor.kpis.dailyUseDetail', 'Median across active local days')}</>,
     },
@@ -98,7 +98,7 @@ export function ChargeAdvisorKpiBand({ analysis, state }: ChargeAdvisorComponent
       'Charge advisor guidance and evidence summary',
     )}>
       <LayoutCard title={t('chargeAdvisor.kpis.title', 'Observed charge planning evidence')}>
-        <BatteryEvidenceBrief title={t('chargeAdvisor.kpis.title', 'Observed charge planning evidence')} metrics={metrics} loading={state.isLoading} retained={Boolean(state.refreshError)}
+        <BatteryEvidenceBrief title={t('chargeAdvisor.kpis.title', 'Observed charge planning evidence')} metrics={metrics} retained={Boolean(state.refreshError)}
           period={{ kind: 'unknown', label: t('chargeAdvisor.kpis.title', 'Observed charge planning evidence'),
             reason: t('chargeAdvisor.summaryScope', 'History evidence uses the returned drive and charging windows; current SoC is a separate observed snapshot.') }} />
 
