@@ -1,4 +1,63 @@
-# STRICT RULES — current operating priority
+# TICK MODE — current operating priority
+
+This user-authorized operating mode supersedes the loop, priority order,
+cadence and worker-return instructions below. Each response and each scheduled
+health check performs exactly ONE tick, in this order, then ends.
+
+## TICK
+
+1. **COUNT:** List all subagents. Classify actual lifecycle states as ACTIVE
+   (working), IDLE (finished/completed), or OVERTIME (active over 25 minutes).
+   Never count queue markers, reservations or historical launches as ACTIVE.
+2. **OVERTIME:** Cancel each overtime agent through the exposed lifecycle
+   operation, then treat confirmed terminated agents as IDLE.
+3. **IDLE:** Read finished results without waiting. Fast intake checks scope
+   and non-empty diff, commits, pushes and marks completed items `[x]`.
+   Reset incomplete items to `[ ]` with retained work, notes and unchanged
+   attempts. Then close each agent. Already-consumed deliveries never become
+   duplicate commits or permission to redo completed work.
+4. **DISPATCH:** Launch pending items until 32 agents are actually ACTIVE.
+   Skip items whose writable files overlap an ACTIVE item. Use exact exclusive
+   claims, not reservations; do not manufacture work or redispatch `[x]`.
+5. **REPORT:** Print this line using the actual tick census:
+   `TICK hh:mm | active X/32 | idle 0 | overtime 0 | pending P | done today D | reason if X<32: <specific reason or "none">`
+6. **END THE TICK:** Do not wait for results or continue into another tick.
+
+## Hard bans
+
+- Never wait on a specific agent. Read only agents already finished.
+- Never run tests, verification, fixtures, oracles or investigations in the
+  orchestrator. Workers perform that work; queue any required verification.
+- Never start a tick step out of order. Dispatch occurs in every tick.
+- Never report queue "in progress" counts as real agent activity.
+
+## Schedule and worker prompts
+
+Replace all schedules with ONE schedule every five minutes, with exactly:
+
+`Run one TICK per ../docs/orchestrator-loop.md.`
+
+Every worker prompt MUST contain this exact sentence:
+
+`Time box 20 minutes. Return your result line before 20 minutes no matter what.`
+
+## Evidence and host limitations
+
+Use UTC for the tick clock and the current Phase 6 queue's transitions to `[x]`
+since UTC midnight for "done today"; these are item deliveries, not page or
+application approvals. Preserve original failures, native NOTRUN and partial
+source evidence. The permitted orchestrator operations remain dispatch,
+intake, commits, pushes, queue updates and phase gates.
+
+This host currently exposes neither agent cancellation/closure nor a scheduler.
+Do not invent these operations, wake idle agents to request closure, build a
+custom substitute, or claim a schedule was installed. A requested cancellation
+is not confirmation of termination. Keep an unconfirmed live writer's claim.
+When the requested zero-idle/zero-overtime report is impossible, report the
+actual retained lifecycle counts and the missing capability explicitly rather
+than fabricating zero. Persisting the schedule prompt is not creating a schedule.
+
+# STRICT RULES — historical operating priority, superseded by TICK MODE
 
 These rules supersede conflicting orchestration instructions below. Repository
 engineering, safety, privacy, permission, and evidence-integrity requirements
