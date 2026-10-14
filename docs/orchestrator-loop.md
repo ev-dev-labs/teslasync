@@ -11,14 +11,20 @@ health check performs exactly ONE tick, in this order, then ends.
    Never count queue markers, reservations or historical launches as ACTIVE.
 2. **OVERTIME:** Cancel each overtime agent through the exposed lifecycle
    operation, then treat confirmed terminated agents as IDLE.
-3. **IDLE:** Read finished results without waiting. Fast intake checks scope
+3. **IDLE — maximum five minutes per tick:** Start one five-minute intake
+   deadline when entering this step. Read finished results without waiting.
+   Fast intake checks scope
    and non-empty diff, commits, pushes and marks completed items `[x]`.
    Reset incomplete items to `[ ]` with retained work, notes and unchanged
    attempts. Then close each agent. Already-consumed deliveries never become
    duplicate commits or permission to redo completed work.
+   When the five minutes expire, stop intake immediately, retain every
+   unprocessed result for the next tick, and go straight to DISPATCH.
+   An unfinished intake backlog never postpones dispatch.
 4. **DISPATCH:** Launch pending items until 32 agents are actually ACTIVE.
    Skip items whose writable files overlap an ACTIVE item. Use exact exclusive
    claims, not reservations; do not manufacture work or redispatch `[x]`.
+   Launching happens in every tick, even when intake is unfinished.
 5. **REPORT:** Print this line using the actual tick census:
    `TICK hh:mm | active X/32 | idle 0 | overtime 0 | pending P | done today D | reason if X<32: <specific reason or "none">`
 6. **END THE TICK:** Do not wait for results or continue into another tick.
