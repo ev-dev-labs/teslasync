@@ -246,6 +246,10 @@ export default function DiskForecastPage() {
   );
 
   const retry = () => query.refetch();
+  const unmeasuredMessage = t(
+    'dataSources.unavailableMessage',
+    'No requested source has returned usable data yet.',
+  );
 
   return (
     <PageLayout
@@ -426,7 +430,7 @@ export default function DiskForecastPage() {
             ) : showError ? (
               <QueryError error={query.error} onRetry={retry} />
             ) : !source.hasData ? (
-              <DataStateNotice state="unsupported" title={t('admin.operationalBrief.unmeasured', 'Not measured')} />
+              <Text as="p" variant="bodySm" color="secondary">{unmeasuredMessage}</Text>
             ) : growthLeaders.length === 0 ? (
               <EmptyState /* no-action: growth appears once tables accrue daily deltas */
                 icon={<Icon icon={TrendingUp} size="xl" />}
@@ -455,7 +459,7 @@ export default function DiskForecastPage() {
             ) : showError ? (
               <QueryError error={query.error} onRetry={retry} />
             ) : !source.hasData ? (
-              <DataStateNotice state="unsupported" title={t('admin.operationalBrief.unmeasured', 'Not measured')} />
+              <Text as="p" variant="bodySm" color="secondary">{unmeasuredMessage}</Text>
             ) : quotaWatch.length === 0 ? (
               <EmptyState /* no-action: the source has supplied no quota estimate */
                 icon={<Icon icon={Gauge} size="xl" />}
@@ -499,7 +503,7 @@ export default function DiskForecastPage() {
               ) : showError ? (
                 <QueryError error={query.error} onRetry={retry} />
               ) : !source.hasData ? (
-                <DataStateNotice state="unsupported" title={t('admin.operationalBrief.unmeasured', 'Not measured')} />
+                <Text as="p" variant="bodySm" color="secondary">{unmeasuredMessage}</Text>
               ) : rows.length === 0 ? (
                 <EmptyState /* no-action: hypertable inventory is TimescaleDB system state; not user-creatable */
                   icon={<Icon icon={Database} size="xl" />}

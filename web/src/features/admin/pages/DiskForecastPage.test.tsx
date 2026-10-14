@@ -130,6 +130,7 @@ describe('DiskForecastPage semantic and mobile adoption', () => {
 
 import { request } from '@/api/client'
 import { ApiError } from '@/lib/resilience'
+import { operatorConfidenceKeys } from '@/api/hooks/useOperatorConfidence'
 import DiskForecastPage from './DiskForecastPage'
 import type {
   DiskForecastResponse,
@@ -530,7 +531,8 @@ describe('DiskForecastPage', () => {
     expect(screen.queryByText('No quota estimate available')).not.toBeInTheDocument()
     expect(mockedRequest).not.toHaveBeenCalled()
     if (state === 'paused') {
-      expect(screen.getByText('Paused offline')).toBeInTheDocument()
+      expect(screen.getByText('Refresh paused')).toBeInTheDocument()
+      expect(screen.queryByText('Paused offline')).not.toBeInTheDocument()
       expect(screen.getByRole('button', { name: 'Retry unavailable sources' })).toBeEnabled()
     }
     client.clear()
@@ -544,7 +546,8 @@ describe('DiskForecastPage', () => {
     await waitFor(() => expect(summaryValue('Total disk')).toBe('4.50 GB'))
     act(() => onlineManager.setOnline(false))
     fireEvent.click(screen.getByRole('button', { name: /refresh/i }))
-    await waitFor(() => expect(screen.getByText('Paused offline')).toBeInTheDocument())
+    await waitFor(() => expect(screen.getByText('Refresh paused')).toBeInTheDocument())
+    expect(screen.queryByText('Paused offline')).not.toBeInTheDocument()
 
     expect(summaryValue('Soonest quota')).toBe('5.00 d')
     expect(screen.getByRole('table', { name: 'Hypertables' })).toBeInTheDocument()
@@ -555,7 +558,7 @@ describe('DiskForecastPage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Retry unavailable sources' }))
     act(() => onlineManager.setOnline(true))
     await waitFor(() => expect(mockedRequest.mock.calls.length).toBeGreaterThan(before))
-    await waitFor(() => expect(screen.queryByText('Paused offline')).not.toBeInTheDocument())
+    await waitFor(() => expect(screen.queryByText('Refresh paused')).not.toBeInTheDocument())
     expect(summaryValue('Total disk')).toBe('4.50 GB')
   })
 
@@ -591,5 +594,115 @@ describe('DiskForecastPage', () => {
     expect(fill!.style.background).toBe(color)
     expect(fill!.style.background).not.toContain('linear-gradient')
     expect(bar).toHaveAttribute('aria-valuenow', String(10 * MB))
+  })
+})
+
+describe('DiskForecastPage no-snapshot notice causality', () => {
+  it('keeps a cold query-policy pause cause-neutral and preserves its real notice body and retry', async () => {
+    onlineManager.setOnline(false)
+    mockedRequest.mockImplementation((path: string) =>
+      Promise.resolve(path === '/admin/observability/disk-forecast' ? makeResponse() : []),
+    )
+    const { container } = renderPage()
+
+    const body = screen.getByText('No requested source has returned usable data yet.')
+    const notice = body.closest('[data-data-state]')
+    expect(notice).toHaveAttribute('data-data-state', 'unavailable')
+    expect(notice).not.toHaveAttribute('data-unavailable-reason')
+    expect(notice).toHaveTextContent('Refresh paused')
+    expect(notice).not.toHaveTextContent('This feature is not enabled by the current deployment configuration.')
+    expect(container.querySelector('[data-data-state="unsupported"]')).toBeNull()
+    expect(screen.queryByText('No hypertables')).not.toBeInTheDocument()
+    expect(screen.queryByText('No quota estimate available')).not.toBeInTheDocument()
+    expect(screen.getByTestId('disk-forecast-summary')).toHaveAttribute('aria-busy', 'true')
+    expect(mockedRequest).not.toHaveBeenCalled()
+
+    fireEvent.click(within(notice as HTMLElement).getByRole('button', { name: 'Retry unavailable sources' }))
+    act(() => onlineManager.setOnline(true))
+    await waitFor(() => expect(summaryValue('Total disk')).toBe('4.50 GB'))
+    expect(container.querySelector('[data-data-state="unavailable"]')).toBeNull()
+    expect(container.querySelector('[data-data-state="unsupported"]')).toBeNull()
+  })
+
+  it.each(['fetching', 'idle'] as const)('does not assign a disabled-deployment notice to a cold pending %s query', async (fetchStatus) => {
+    let resolveDisk: ((value: DiskForecastResponse) => void) | undefined
+    mockedRequest.mockImplementation((path: string) =>
+      path === '/admin/observability/disk-forecast'
+        ? new Promise<DiskForecastResponse>((resolve) => { resolveDisk = resolve })
+        : Promise.resolve([]),
+    )
+    const client = new QueryClient({
+      defaultOptions: { queries: { enabled: fetchStatus !== 'idle', retry: false } },
+    })
+    const { container } = renderPage(client)
+
+    expect(client.getQueryState(operatorConfidenceKeys.diskForecast)).toMatchObject({
+      data: undefined, status: 'pending', fetchStatus,
+    })
+    expect(screen.getByTestId('disk-forecast-summary')).toHaveAttribute('aria-busy', 'true')
+    expect(container.querySelector('[data-data-state]')).toBeNull()
+    expect(screen.queryByText('This feature is not enabled by the current deployment configuration.')).not.toBeInTheDocument()
+    expect(screen.queryByText('No requested source has returned usable data yet.')).not.toBeInTheDocument()
+    expect(screen.queryByText('No hypertables')).not.toBeInTheDocument()
+    expect(screen.queryByText('No quota estimate available')).not.toBeInTheDocument()
+    expect(screen.getByRole('region', { name: 'Growth and quota outlook' })).toBeInTheDocument()
+    expect(screen.getByRole('region', { name: 'Hypertables' })).toBeInTheDocument()
+    await act(async () => { resolveDisk?.(makeResponse([])) })
+    client.clear()
+  })
+
+  it('keeps genuine unsupported guidance but makes all three unmeasured section bodies cause-neutral', async () => {
+    mockedRequest.mockRejectedValue(new ApiError('not configured', 503, 'SUBSYSTEM_NOT_CONFIGURED'))
+    const { container } = renderPage()
+
+    const title = await screen.findByText('Feature not supported')
+    const unsupported = title.closest('[data-data-state]')
+    expect(unsupported).toHaveAttribute('data-data-state', 'unsupported')
+    expect(unsupported).toHaveTextContent('TimescaleDB hypertable metrics are unavailable on this deployment. This page requires TimescaleDB to be installed and accessible.')
+    expect(container.querySelectorAll('[data-data-state="unsupported"]')).toHaveLength(1)
+    expect(screen.queryByText('This feature is not enabled by the current deployment configuration.')).not.toBeInTheDocument()
+
+    const outlook = screen.getByRole('region', { name: 'Growth and quota outlook' })
+    const tableSection = screen.getByRole('region', { name: 'Hypertables' })
+    const unmeasured = [
+      ...within(outlook).getAllByText('No requested source has returned usable data yet.'),
+      within(tableSection).getByText('No requested source has returned usable data yet.'),
+    ]
+    expect(unmeasured).toHaveLength(3)
+    for (const body of unmeasured) {
+      expect(body.tagName).toBe('P')
+      expect(body).toHaveClass('text-[var(--text-secondary)]')
+      expect(body.closest('[data-data-state]')).toBeNull()
+    }
+    expect(summaryValue('Total disk')).toBe('—')
+    expect(screen.getByTestId('disk-forecast-summary').querySelectorAll('[data-value-state="missing"]')).toHaveLength(6)
+    expect(screen.queryByText('No hypertables')).not.toBeInTheDocument()
+    expect(screen.queryByText("Can't reach server")).not.toBeInTheDocument()
+  })
+
+  it('keeps a real refresh-error notice stale without replacing retained sections with disabled-deployment claims', async () => {
+    mockedRequest.mockImplementation((path: string) =>
+      Promise.resolve(path === '/admin/observability/disk-forecast' ? makeResponse() : []),
+    )
+    const { container } = renderPage()
+    await waitFor(() => expect(summaryValue('Total disk')).toBe('4.50 GB'))
+    mockedRequest.mockImplementation((path: string) =>
+      path === '/admin/observability/disk-forecast'
+        ? Promise.reject(new ApiError('refresh failed', 500, 'INTERNAL'))
+        : Promise.resolve([]),
+    )
+    fireEvent.click(screen.getByRole('button', { name: /refresh/i }))
+    const body = await screen.findByText('Previously loaded data remains visible while affected sources recover.')
+    const notice = body.closest('[data-data-state]')
+    expect(notice).toHaveAttribute('data-data-state', 'stale')
+    expect(notice).toHaveTextContent('Cached · refresh failed')
+    expect(within(notice as HTMLElement).getByRole('button', { name: 'Retry unavailable sources' })).toBeEnabled()
+    expect(container.querySelector('[data-data-state="unsupported"]')).toBeNull()
+    expect(screen.queryByText('This feature is not enabled by the current deployment configuration.')).not.toBeInTheDocument()
+    expect(summaryValue('Total disk')).toBe('4.50 GB')
+    expect(summaryValue('Soonest quota')).toBe('5.00 d')
+    expect(screen.getByRole('table', { name: 'Hypertables' })).toBeInTheDocument()
+    expect(screen.getByText('Quota pressure')).toBeInTheDocument()
+    expect(screen.getByTestId('disk-forecast-summary').closest('[data-retained]')).toHaveAttribute('data-retained', 'true')
   })
 })
