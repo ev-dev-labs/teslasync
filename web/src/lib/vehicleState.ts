@@ -1,5 +1,5 @@
 import { parseWindowState as parseWindowEnum } from './parseEnums';
-import { asNonEmptyString } from './typeGuards';
+import { asFiniteNumber, asNonEmptyString } from './typeGuards';
 import type { SecurityEvent, ChargingTelemetry } from '@/api/types';
 import type { VehicleLiveState } from '@/hooks/useVehicleLive';
 
@@ -190,12 +190,12 @@ function isVehicleDriving(vehicleState: { state?: string | null; speed?: number 
 
 function isChargingActive(
   vehicleState: { is_charging?: boolean | null; charger_power?: number | null } | null | undefined,
-  charging: { charging_state?: string | null; charger_power_kw?: number | null } | null | undefined,
+  charging: { charging_state?: string | null; charger_power_w?: number | null } | null | undefined,
 ): boolean {
   const normalizedState = charging?.charging_state?.toLowerCase().replace(/[\s_-]/g, '') ?? '';
   return Boolean(vehicleState?.is_charging) ||
-    (vehicleState?.charger_power ?? 0) > 0 ||
-    (charging?.charger_power_kw ?? 0) > 0 ||
+    (asFiniteNumber(vehicleState?.charger_power) ?? 0) > 0 ||
+    (asFiniteNumber(charging?.charger_power_w) ?? 0) > 0 ||
     normalizedState === 'charging' ||
     normalizedState === 'starting';
 }

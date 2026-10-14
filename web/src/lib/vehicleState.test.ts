@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import type { ChargingTelemetry } from '@/api/types';
 import {
   parseDoorState,
   parseWindowState,
@@ -6,6 +7,27 @@ import {
   buildTwinState,
   mapLiveToTwinState as _mapLiveToTwinState,
 } from './vehicleState';
+
+function chargingTelemetry(charger_power_w: number | null): ChargingTelemetry {
+  return {
+    vehicle_id: 1,
+    ts: '2024-01-01',
+    session_id: null,
+    battery_level: null,
+    battery_range_mi: null,
+    charging_state: null,
+    charger_voltage: null,
+    charger_actual_current: null,
+    charger_power_w,
+    charger_phases: null,
+    charge_energy_added_wh: null,
+    range_added_meters: null,
+    range_added_meters_per_hour: null,
+    charger_pilot_current: null,
+    scheduled_charging_at: null,
+    source: 'test',
+  };
+}
 
 describe('parseDoorState', () => {
   it('null/undefined → all null', () => {
@@ -171,7 +193,7 @@ describe('buildTwinState', () => {
         source: 'test',
       },
       { state: 'driving', speed: 12, is_charging: false },
-      { vehicle_id: 1, ts: '2024-01-01', session_id: null, battery_level: null, battery_range_mi: null, charging_state: 'Charging', charger_voltage: null, charger_actual_current: null, charger_power_w: 7, charger_phases: null, charge_total_energy_added_wh: null, range_added_meters: null, range_added_meters_per_hour: null, charger_pilot_current: null, scheduled_charging_at: null, source: 'test' },
+      { ...chargingTelemetry(7), charging_state: 'Charging' },
     );
 
     expect(result.isDriving).toBe(true);
@@ -187,10 +209,69 @@ describe('buildTwinState', () => {
     const result = buildTwinState(
       null,
       null,
-      { vehicle_id: 1, ts: '2024-01-01', session_id: null, battery_level: null, battery_range_mi: null, charging_state: 'Charging', charger_voltage: null, charger_actual_current: null, charger_power_w: 3, charger_phases: null, charge_total_energy_added_wh: null, range_added_meters: null, range_added_meters_per_hour: null, charger_pilot_current: null, scheduled_charging_at: null, source: 'test' },
+      { ...chargingTelemetry(3), charging_state: 'Charging' },
     );
 
     expect(result.isCharging).toBe(true);
     expect(result.chargePortOpen).toBe(true);
+  });
+
+  describe.each(['vehicle', 'telemetry'] as const)('%s power-only charging', (source) => {
+    function stateWithPower(power: unknown) {
+      const vehicle = { charger_power: null };
+      const charging = chargingTelemetry(null);
+      const input = source === 'vehicle' ? vehicle : charging;
+      const key = source === 'vehicle' ? 'charger_power' : 'charger_power_w';
+      Reflect.set(input, key, power);
+      const result = buildTwinState(
+        null,
+        source === 'vehicle' ? vehicle : null,
+        source === 'telemetry' ? charging : null,
+      );
+      expect(Reflect.get(input, key)).toBe(power);
+      return result;
+    }
+
+    it.each([undefined, null])('does not infer charging from missing power %s', (power) => {
+      expect(stateWithPower(power).isCharging).toBe(false);
+    });
+
+    it.each([NaN, Infinity, -Infinity, '7000', true, {}, []])(
+      'does not infer charging from invalid power %j',
+      (power) => {
+        expect(stateWithPower(power).isCharging).toBe(false);
+      },
+    );
+
+    it.each([0, -0])('preserves measured zero %s without inferring charging', (power) => {
+      const result = stateWithPower(power);
+      expect(result.isCharging).toBe(false);
+      expect(result.chargePortOpen).toBeNull();
+    });
+
+    it.each([
+      [7000, true],
+      [-7000, false],
+      [0.5, true],
+      [-0.5, false],
+      [Number.MIN_VALUE, true],
+    ])('uses signed watts %s directly (charging: %s)', (power, expected) => {
+      const result = stateWithPower(power);
+      expect(result.isCharging).toBe(expected);
+      expect(result.chargePortOpen).toBe(expected ? true : null);
+    });
+  });
+
+  it.each([null, 0, -7000])('does not fall back to legacy kilowatts with canonical power %s', (power) => {
+    const charging = { ...chargingTelemetry(power), charger_power_kw: 7 };
+    expect(buildTwinState(null, null, charging).isCharging).toBe(false);
+  });
+
+  it.each(['Charging', 'Starting'])('preserves explicit %s state with zero power', (charging_state) => {
+    expect(buildTwinState(null, null, { ...chargingTelemetry(0), charging_state }).isCharging).toBe(true);
+  });
+
+  it('preserves the explicit charging flag with negative power', () => {
+    expect(buildTwinState(null, { is_charging: true, charger_power: -1 }, chargingTelemetry(-1)).isCharging).toBe(true);
   });
 });
