@@ -64,7 +64,9 @@ export default function PhysicsContradictionsSection({ physics }: { physics: Phy
           { key: 'detail', header: t('teslaOnly.detail', 'Detail'), render: (r) => r.detail },
           { key: 'unknown', header: t('teslaOnly.unknownFlag', 'Unknown flag'), render: (r) => yesNo(r.unknown, t) },
         ]} emptyMessage={t('teslaOnly.noMatchingFindings', 'No findings match this filter.')} /> :
-        <Text as="p" variant="bodySm">{t('teslaOnly.noContradictions', 'No contradictions in the returned window. Complete still latched is expected.')}</Text>}
+        <Text as="p" variant="bodySm">{findings.length
+          ? t('teslaOnly.noMatchingFindings', 'No findings match this filter.')
+          : t('teslaOnly.noContradictions', 'No contradictions in the returned window. Complete still latched is expected.')}</Text>}
       <Text as="p" variant="caption">{t('teslaOnly.conflictNote', 'Compare with charge-port and motion evidence before deciding which sensor is wrong.')}</Text>
       <RawRows title={physics.title} rows={[...findings].reverse()} tableId="physics:findings" t={t}
         disclosureLabel={t('teslaOnly.contradictionAllEpisodes', 'Inspect all {{count}} returned episodes', { count: findings.length })}

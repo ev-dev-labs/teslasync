@@ -2,7 +2,7 @@ import { fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { readFileSync } from 'node:fs';
 import ts from 'typescript';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { lazyBindings, sharedLoaderSpecifiers } from '@/__tests__/lazyRoutes.parse';
 import type { ExclusiveReport } from '@/types/teslaPhysics';
 import { features } from '../components/tesla-physics/PhysicsPageShell';
@@ -25,7 +25,7 @@ vi.mock('@/components/forms', () => ({ VehicleSelect: () => <div data-testid="ve
 
 const start = '2026-03-01T11:00:00Z';
 const end = '2026-03-01T12:00:00Z';
-const queryState = vi.hoisted(() => ({ error: null as Error | null }));
+const queryState = vi.hoisted(() => ({ error: null as Error | null, missing: false, loading: false, paused: false }));
 const report: ExclusiveReport = {
   vehicle_id: 7,
   evidence: {
@@ -89,8 +89,11 @@ const report: ExclusiveReport = {
 
 vi.mock('@/api/hooks/useTeslaPhysics', () => ({
   useTeslaExclusive: () => ({
-    data: report, error: queryState.error, isError: queryState.error != null, isPending: false, isLoading: false,
-    isFetching: false, isSuccess: true, fetchStatus: 'idle', dataUpdatedAt: Date.now(), refetch: vi.fn(),
+    data: queryState.missing ? undefined : report, error: queryState.error, isError: queryState.error != null,
+    isPending: queryState.loading, isLoading: queryState.loading,
+    isFetching: queryState.loading && !queryState.paused, isSuccess: !queryState.missing,
+    fetchStatus: queryState.paused ? 'paused' : queryState.loading ? 'fetching' : 'idle',
+    dataUpdatedAt: Date.now(), refetch: vi.fn(),
   }),
 }));
 
@@ -114,6 +117,35 @@ async function renderAt(path = '/tesla-physics') {
 }
 
 describe('Tesla Physics consolidated workbench', () => {
+  beforeEach(() => {
+    Object.assign(queryState, { error: null, missing: false, loading: false, paused: false });
+  });
+
+  it('shows source-shaped loading on the mounted workbench and keeps investigation navigation', async () => {
+    Object.assign(queryState, { missing: true, loading: true });
+    await renderAt();
+    expect(screen.getByRole('status', { name: 'Loading…' })).toHaveAttribute('aria-busy', 'true');
+    expect(screen.getByRole('heading', { name: 'Evidence boundaries' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Where to start' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Three clocks' })).toHaveAttribute('href', '/tesla-physics/clocks');
+    expect(screen.queryByTestId('tesla-physics-evidence-summary')).toBeNull();
+    expect(screen.queryByText('Select a vehicle to load Tesla physics.')).toBeNull();
+  });
+
+  it('recovers an initial paused workbench without asserting offline or inventing an empty report', async () => {
+    Object.assign(queryState, { missing: true, loading: true, paused: true });
+    const view = await renderAt();
+    expect(screen.getByText('Refresh paused')).toBeInTheDocument();
+    expect(screen.getByText('No requested source has returned usable data yet.')).toBeInTheDocument();
+    expect(screen.queryByRole('status', { name: 'Loading…' })).toBeNull();
+    expect(screen.queryByRole('alert')).toBeNull();
+    expect(screen.queryByTestId('tesla-physics-evidence-summary')).toBeNull();
+    Object.assign(queryState, { missing: false, loading: false, paused: false });
+    view.rerender(<MemoryRouter><TeslaPhysicsPage /></MemoryRouter>);
+    expect(screen.queryByText('Refresh paused')).toBeNull();
+    expect(screen.getByTestId('tesla-physics-evidence-summary')).toBeInTheDocument();
+  });
+
   it.each([
     ['history-unavailable', 'history_available', false],
     ['black-box-unavailable', 'black_box_available', false],
@@ -151,6 +183,26 @@ describe('Tesla Physics consolidated workbench', () => {
       expect(brief.querySelector('[data-operational-metric="coverage"]')).toHaveAttribute('data-value-state', 'missing');
       expect(brief.querySelector('[data-operational-metric="episodes"]')).toHaveAttribute('data-value-state', 'value');
     } finally { report.evidence = saved; }
+  });
+
+  it('keeps independent overview readings and source boundaries when the active investigation slice is absent', async () => {
+    const saved = report.life_tape;
+    // Partial reports can omit a slice despite the complete-report API type.
+    Reflect.deleteProperty(report, 'life_tape');
+    try {
+      await renderAt('/tesla-physics/life-tape');
+      expect(screen.getByText('This evidence slice was not returned. No measurement is inferred from its absence.')).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: 'Evidence at a glance' })).toBeInTheDocument();
+      const brief = screen.getByTestId('tesla-physics-evidence-summary');
+      expect(brief.querySelector('[data-operational-metric="episodes"]')).toHaveAttribute('data-value-state', 'value');
+      expect(brief.querySelector('[data-operational-metric="episodes"]')).toHaveTextContent('80');
+      expect(screen.getByRole('heading', { name: 'Evidence boundaries' })).toBeInTheDocument();
+      expect(screen.getByText('History row cap reached')).toBeInTheDocument();
+      expect(screen.getByRole('link', { name: 'Life tape' })).toHaveAttribute('aria-current', 'page');
+      expect(screen.queryByTestId('physics-life-summary')).toBeNull();
+      fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+      expect(within(screen.getByRole('dialog')).getByText('Returned episodes')).toBeInTheDocument();
+    } finally { report.life_tape = saved; }
   });
 
   it('keeps the returned-source label when all evidence sources are available and uncapped', async () => {
@@ -254,6 +306,13 @@ describe('Tesla Physics consolidated workbench', () => {
       expect(screen.getByText(/Nearest port sample within two minutes:/)).toBeInTheDocument();
       expect(screen.getByRole('button', { name: 'Inspect all 1 returned episodes' })).toBeInTheDocument();
       expect(screen.getByText(/backend groups consecutive matching findings/)).toBeInTheDocument();
+      fireEvent.change(screen.getByLabelText('Filter by uncertainty'), { target: { value: 'unknown' } });
+      expect(screen.getByText('No findings match this filter.')).toBeInTheDocument();
+      expect(screen.queryByText('No contradictions in the returned window. Complete still latched is expected.')).toBeNull();
+      expect(screen.getByRole('button', { name: 'Inspect all 1 returned episodes' })).toBeInTheDocument();
+      fireEvent.change(screen.getByLabelText('Filter by uncertainty'), { target: { value: 'all' } });
+      expect(screen.queryByText('No findings match this filter.')).toBeNull();
+      expect(screen.getByRole('cell', { name: '265' })).toBeInTheDocument();
     } finally { report.contradictions.findings = old; }
   });
 

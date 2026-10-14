@@ -3,7 +3,8 @@ import { fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ExclusiveReport } from '@/types/teslaPhysics';
-import { usePhysicsPage, type PhysicsPage } from '../tesla-physics/PhysicsPageShell';
+import { PhysicsPageShell, usePhysicsPage, type PhysicsPage, type PhysicsSlug } from '../tesla-physics/PhysicsPageShell';
+import { PhysicsInvestigation } from '../tesla-physics/PhysicsInvestigation';
 import PhysicsClocksSection from '../tesla-physics/PhysicsClocksSection';
 import PhysicsLifeTapeSection from '../tesla-physics/PhysicsLifeTapeSection';
 import PhysicsContradictionsSection from '../tesla-physics/PhysicsContradictionsSection';
@@ -20,10 +21,12 @@ import PhysicsModesSection from '../tesla-physics/PhysicsModesSection';
 import PhysicsNervousSystemSection from '../tesla-physics/PhysicsNervousSystemSection';
 import PhysicsRangeSection from '../tesla-physics/PhysicsRangeSection';
 
-const source = vi.hoisted((): { report: Partial<ExclusiveReport> | undefined; error: Error | null; loading: boolean } => ({
+const source = vi.hoisted((): { report: Partial<ExclusiveReport> | undefined; error: Error | null; loading: boolean; paused: boolean; refetch: ReturnType<typeof vi.fn> } => ({
   report: undefined,
   error: null,
   loading: false,
+  paused: false,
+  refetch: vi.fn(),
 }));
 
 vi.mock('react-i18next', () => ({
@@ -39,9 +42,9 @@ vi.mock('@/hooks/useSelectedVehicle', () => ({ useSelectedVehicle: () => ({ vehi
 vi.mock('@/api/hooks/useTeslaPhysics', () => ({
   useTeslaExclusive: () => ({
     data: source.report, error: source.error, isError: source.error != null,
-    isLoading: source.loading, isPending: source.loading, isFetching: false,
-    isSuccess: source.report != null, fetchStatus: 'idle', dataUpdatedAt: 1790812800000,
-    refetch: vi.fn(),
+    isLoading: source.loading, isPending: source.loading, isFetching: source.loading && !source.paused,
+    isSuccess: source.report != null, fetchStatus: source.paused ? 'paused' : source.loading ? 'fetching' : 'idle', dataUpdatedAt: 1790812800000,
+    refetch: source.refetch,
   }),
 }));
 
@@ -76,6 +79,93 @@ beforeEach(() => {
   source.report = boundedReport;
   source.error = null;
   source.loading = false;
+  source.paused = false;
+  source.refetch.mockClear();
+});
+
+function ShellHarness({ slug }: { slug?: PhysicsSlug }) {
+  const physics = usePhysicsPage(slug);
+  return <PhysicsPageShell physics={physics} navigation={<span>Investigation navigation</span>}>
+    <span>Independent overview</span>
+    {slug ? <PhysicsInvestigation slug={slug} physics={physics} /> : <PhysicsLifeTapeSection physics={physics} />}
+  </PhysicsPageShell>;
+}
+
+describe('Tesla physics shell source lifecycle', () => {
+  it('replaces only the missing active investigation and retains independent overview and source boundaries', () => {
+    render(<MemoryRouter><ShellHarness slug="life-tape" /></MemoryRouter>);
+    expect(screen.getByText('This evidence slice was not returned. No measurement is inferred from its absence.')).toBeInTheDocument();
+    expect(screen.getByText('Independent overview')).toBeInTheDocument();
+    expect(screen.getByText('Investigation navigation')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Evidence boundaries' })).toBeInTheDocument();
+    expect(metric('physics-evidence-boundaries', 'history')).toHaveAttribute('data-value-state', 'value');
+    expect(metric('physics-evidence-boundaries', 'history')).toHaveTextContent('0');
+    expect(screen.queryByTestId('physics-life-summary')).toBeNull();
+  });
+
+  it('keeps navigation and evidence-shaped loading without inferred readings or vehicle-selection feedback', () => {
+    source.report = undefined;
+    source.loading = true;
+    render(<MemoryRouter><ShellHarness /></MemoryRouter>);
+    expect(screen.getByRole('status', { name: 'Loading…' })).toHaveAttribute('aria-busy', 'true');
+    expect(screen.getByRole('heading', { name: 'Evidence boundaries' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Where to start' })).toBeInTheDocument();
+    expect(screen.getByText('Investigation navigation')).toBeInTheDocument();
+    expect(screen.queryByText('Select a vehicle to load Tesla physics.')).toBeNull();
+    expect(screen.queryByTestId('physics-life-summary')).toBeNull();
+  });
+
+  it('treats an initial pause as neutral unresolved source rather than loading, empty success or offline failure', () => {
+    source.report = undefined;
+    source.loading = true;
+    source.paused = true;
+    render(<MemoryRouter><ShellHarness /></MemoryRouter>);
+    expect(screen.getByText('Refresh paused')).toBeInTheDocument();
+    expect(screen.getByText('No requested source has returned usable data yet.')).toBeInTheDocument();
+    expect(screen.queryByRole('status', { name: 'Loading…' })).toBeNull();
+    expect(screen.queryByRole('alert')).toBeNull();
+    expect(screen.queryByText(/offline|Select a vehicle to load Tesla physics/)).toBeNull();
+    expect(screen.queryByTestId('physics-life-summary')).toBeNull();
+  });
+
+  it('retries fatal loads and recovers to successful zero evidence and empty intervals', () => {
+    source.report = undefined;
+    source.error = new Error('Initial report failed');
+    const view = render(<MemoryRouter><ShellHarness /></MemoryRouter>);
+    fireEvent.click(screen.getByRole('button', { name: /retry/i }));
+    expect(source.refetch).toHaveBeenCalledTimes(1);
+    source.error = null;
+    source.report = { ...boundedReport, life_tape: {
+      vehicle_id: 7, from: start, to: end, segments: [], honesty: 'Returned intervals only.',
+    } };
+    view.rerender(<MemoryRouter><ShellHarness /></MemoryRouter>);
+    expect(screen.queryByRole('alert')).toBeNull();
+    expect(metric('physics-evidence-boundaries', 'history')).toHaveAttribute('data-value-state', 'value');
+    expect(metric('physics-evidence-boundaries', 'history')).toHaveTextContent('0');
+    expect(metric('physics-life-summary', 'segments')).toHaveTextContent('0 classified intervals');
+    expect(screen.queryByRole('status', { name: 'Loading…' })).toBeNull();
+  });
+
+  it('retains readings during refresh failure and in-flight recovery, then clears the warning', () => {
+    source.report = { ...boundedReport, life_tape: {
+      vehicle_id: 7, from: start, to: end, segments: [], honesty: 'Returned intervals only.',
+    } };
+    const view = render(<MemoryRouter><ShellHarness /></MemoryRouter>);
+    source.error = new Error('Refresh report failed');
+    view.rerender(<MemoryRouter><ShellHarness /></MemoryRouter>);
+    expect(screen.getAllByText('Retained after refresh failure').length).toBeGreaterThan(0);
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+    expect(source.refetch).toHaveBeenCalledTimes(1);
+    source.loading = true;
+    view.rerender(<MemoryRouter><ShellHarness /></MemoryRouter>);
+    expect(metric('physics-life-summary', 'segments')).toHaveTextContent('0 classified intervals');
+    expect(screen.queryByRole('status', { name: 'Loading…' })).toBeNull();
+    source.error = null;
+    source.loading = false;
+    view.rerender(<MemoryRouter><ShellHarness /></MemoryRouter>);
+    expect(screen.queryByText('Retained after refresh failure')).toBeNull();
+    expect(metric('physics-life-summary', 'segments')).toHaveTextContent('0 classified intervals');
+  });
 });
 
 describe('Tesla physics nested summary adoption', () => {
@@ -134,6 +224,42 @@ describe('Tesla physics nested summary adoption', () => {
     expect(metric('physics-modes-crosscheck', 'epochs')).toHaveAttribute('data-value-state', 'missing');
     expect(screen.getByText('Observed only.')).toBeInTheDocument();
     expect(screen.getByText('No historical assignment.')).toBeInTheDocument();
+  });
+
+  it('distinguishes combined contradiction filter misses from returned zero and restores matching episodes', () => {
+    source.report = { ...boundedReport, contradictions: {
+      vehicle_id: 7, honesty: 'Returned episodes only.',
+      findings: [
+        { at: start, kind: 'park_speed', detail: 'Known park conflict', unknown: false, observations: 3 },
+        { at: end, kind: 'unplugged_latched', detail: 'Unknown latch conflict', unknown: true },
+      ],
+    } };
+    renderSection(PhysicsContradictionsSection);
+    fireEvent.change(screen.getByLabelText('Filter by finding'), { target: { value: 'park_speed' } });
+    fireEvent.change(screen.getByLabelText('Filter by uncertainty'), { target: { value: 'unknown' } });
+    expect(screen.getByText('No findings match this filter.')).toBeInTheDocument();
+    expect(screen.queryByText('No contradictions in the returned window. Complete still latched is expected.')).toBeNull();
+    expect(metric('physics-contradictions-summary', 'episodes')).toHaveTextContent('2');
+    expect(screen.getByRole('button', { name: 'Inspect all 2 returned episodes' })).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('Filter by uncertainty'), { target: { value: 'known' } });
+    expect(screen.queryByText('No findings match this filter.')).toBeNull();
+    expect(screen.getByRole('cell', { name: 'Known park conflict' })).toBeInTheDocument();
+    expect(screen.getByRole('cell', { name: '3' })).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('Filter by finding'), { target: { value: '' } });
+    fireEvent.change(screen.getByLabelText('Filter by uncertainty'), { target: { value: 'all' } });
+    expect(screen.getByRole('cell', { name: 'Unknown latch conflict' })).toBeInTheDocument();
+  });
+
+  it('retains the returned-zero contradiction message even when an uncertainty filter is selected', () => {
+    source.report = { ...boundedReport, contradictions: {
+      vehicle_id: 7, findings: [], honesty: 'Returned episodes only.',
+    } };
+    renderSection(PhysicsContradictionsSection);
+    fireEvent.change(screen.getByLabelText('Filter by uncertainty'), { target: { value: 'unknown' } });
+    expect(screen.getByText('No contradictions in the returned window. Complete still latched is expected.')).toBeInTheDocument();
+    expect(screen.queryByText('No findings match this filter.')).toBeNull();
+    expect(metric('physics-contradictions-summary', 'episodes')).toHaveAttribute('data-value-state', 'value');
+    expect(metric('physics-contradictions-summary', 'episodes')).toHaveTextContent('0');
   });
 
   it('retains successful empty interval counts and the original interpolated captions without reusing them as labels', () => {
