@@ -34,16 +34,16 @@ function EnabledToggleCell({ record }: { record: InstalledPackRecord }) {
     <div className="flex items-center gap-2">
       <Toggle
         checked={record.enabled && allowed}
+        disabled={!interactive}
         onChange={(checked) => {
           if (!interactive) return;
           setEnabled.mutate({ packId: record.packId, enabled: checked });
         }}
         size="sm"
         aria-label={t('intelPacks.installed.toggleEnabled', 'Enable {{name}}', { name: record.envelope.manifest.name })}
-        className={!interactive ? 'opacity-50 pointer-events-none' : undefined}
       />
       {!allowed && (
-        <Caption className="text-amber-300">
+        <Caption className="text-[var(--semantic-warning)]">
           {t('intelPacks.installed.noTrustDecision', 'No trust decision on record')}
         </Caption>
       )}
@@ -94,7 +94,7 @@ export function InstalledInventoryPanel() {
       header: t('intelPacks.installed.colName', 'Pack'),
       render: (r) => (
         <div className="min-w-0">
-          <p className="text-sm font-medium text-[var(--text-primary)] truncate">{r.envelope.manifest.name}</p>
+          <p className="text-sm font-medium text-[var(--text-primary)] break-words">{r.envelope.manifest.name}</p>
           <p className="text-xs text-[var(--text-muted)]">v{r.envelope.manifest.version}</p>
         </div>
       ),
@@ -113,7 +113,7 @@ export function InstalledInventoryPanel() {
     },
     {
       key: 'actions',
-      header: '',
+      header: t('common.actions', 'Actions'),
       render: (r) => {
         const catalogEntry = catalogByPackId.get(r.packId);
         const canUpgrade = catalogEntry != null && catalogEntry.envelope.manifest.version !== r.envelope.manifest.version;
@@ -170,7 +170,19 @@ export function InstalledInventoryPanel() {
             onExpandedChange={setExpandedKeys}
             renderExpanded={(r) => <ExpandedDetail record={r} />}
             emptyMessage={t('intelPacks.installed.empty', 'No packs are installed yet. Install one from the catalog tab.')}
-            mobileColumns={['name', 'enabled']}
+            mobilePresentation={{
+              roles: { name: 'title', verification: 'badge' },
+              displayValue: (r, key) => key === 'name'
+                ? `${r.envelope.manifest.name} · v${r.envelope.manifest.version}`
+                : key === 'verification' ? r.verification.status : null,
+              inlineActions: (r) => (
+                <>
+                  <EnabledToggleCell record={r} />
+                  {columns.find((column) => column.key === 'actions')?.render(r)}
+                </>
+              ),
+            }}
+            rowLabel={(r) => r.envelope.manifest.name}
             name="IntelligencePacksInstalled"
           />
 

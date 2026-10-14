@@ -76,7 +76,17 @@ export function AuditLogPanel() {
           data={rows}
           keyExtractor={(r) => r.id}
           pagination
-          mobileColumns={['timestamp', 'action']}
+          mobilePresentation={{
+            roles: { pack: 'title', action: 'badge', timestamp: 'meta' },
+            displayValue: (r, key) => {
+              if (key === 'pack') return r.packName || r.packId;
+              if (key === 'action') return r.action;
+              if (key === 'timestamp') return formatDateTime(r.timestampIso);
+              if (key === 'detail') return r.detail;
+              return null;
+            },
+          }}
+          rowLabel={(r) => r.packName || r.packId}
           emptyMessage={t('intelPacks.audit.empty', 'No actions have been recorded yet.')}
           name="IntelligencePacksAuditLog"
         />
