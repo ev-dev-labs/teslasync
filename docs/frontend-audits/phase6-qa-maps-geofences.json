@@ -1,0 +1,1162 @@
+{
+  "item": "phase6-qa-maps-geofences",
+  "attempt": 1,
+  "phase": 6,
+  "status": "SOURCE_ONLY_QA_REPORT_NOT_PAGE_ACCEPTANCE",
+  "generated_at_utc": "2026-10-14T02:07:30.524714+00:00",
+  "actual_start_utc": "2026-10-14T01:55:04.1920562Z",
+  "release_deadline_utc": "2026-10-14T02:07:59.989Z",
+  "hard_deadline_utc": "2026-10-14T02:12:59.989Z",
+  "page": "web/src/features/maps/pages/GeofencesPage.tsx",
+  "ownedFiles": [
+    "docs/frontend-audits/phase6-qa-maps-geofences.json",
+    "web/logs/phase6-qa-maps-geofences.log"
+  ],
+  "routes": [
+    {
+      "path": "/geofences",
+      "evidence": "docs/frontend-inventory.md:186, historical audit-page-135; mounted route NOTRUN"
+    }
+  ],
+  "purpose": "Review saved boundaries, independent candidates and charging-place pricing/history.",
+  "primaryGoal": "Explicitly review a candidate or AI draft before persistence.",
+  "scope": "READONLY exact page/direct supports/tests; only report/log writable. No real location/geofence/API/mutation/browser access.",
+  "findings": [
+    {
+      "id": "GEO-01",
+      "severity": "P1",
+      "rule": "live-only-mutation",
+      "file": "web/src/features/maps/pages/GeofencesPage.tsx",
+      "line": 199,
+      "excerpt": "request<Geofence>('/geofences', { method: 'POST', body: JSON.stringify(body) }),",
+      "source_sha256": "6b6891f056ece2b72e97465df78022efcbb2e62859a09e52652633661a582732",
+      "title": "Local CRUD omits requiresLiveMode",
+      "classification": "source-confirmed",
+      "mechanism": "POST/PUT/DELETE options omit live flag (199/215/226). client.ts:353 defaults false; operationalMode.ts:71 returns early. Offline unsafe patterns do not include geofences. No auth/demo bypass alleged.",
+      "repro": {
+        "status": "SOURCE-TRACED_SYNTHETIC_NOT_EXECUTED",
+        "steps": "Synthetic as_of/offline request seam: options lack requiresLiveMode:true; source guard therefore permits entry."
+      },
+      "fix": "Reuse typed domain live-mode policy, preserving payload/success/error/invalidation.",
+      "owner": "page/integration",
+      "confidence": "high source mechanism; runtime unverified",
+      "related": [
+        {
+          "file": "web/src/features/maps/pages/GeofencesPage.tsx",
+          "line": 215,
+          "excerpt": "}) => request<Geofence>(`/geofences/${id}`, { method: 'PUT', body: JSON.stringify(body) }),",
+          "source_sha256": "6b6891f056ece2b72e97465df78022efcbb2e62859a09e52652633661a582732"
+        },
+        {
+          "file": "web/src/features/maps/pages/GeofencesPage.tsx",
+          "line": 226,
+          "excerpt": "request<void>(`/geofences/${id}`, { method: 'DELETE' }),",
+          "source_sha256": "6b6891f056ece2b72e97465df78022efcbb2e62859a09e52652633661a582732"
+        },
+        {
+          "file": "web/src/api/client.ts",
+          "line": 353,
+          "excerpt": "requiresLiveMode = false,",
+          "source_sha256": "a9ec99b561c05b73cbbc805f28d770a4e7e132c5cfd8ae8f740e1393311f59a5"
+        },
+        {
+          "file": "web/src/lib/operationalMode.ts",
+          "line": 71,
+          "excerpt": "if (READ_METHODS.has(normalizedMethod) || !requiresLiveMode) return;",
+          "source_sha256": "ee455c50bef62d5751b3cd9c7bf92f342071e740b76b3fd6f8fde8b4773c455d"
+        }
+      ],
+      "queue_disposition": "Deduplicated root, parent exact corrective lease needed; never reopen completed migration generically."
+    },
+    {
+      "id": "GEO-02",
+      "severity": "P2",
+      "rule": "draft-preservation",
+      "file": "web/src/features/maps/pages/GeofencesPage.tsx",
+      "line": 170,
+      "excerpt": "(reviewCandidate !== null && chargingPlace !== (reviewCandidate.charge_count > 0))",
+      "source_sha256": "6b6891f056ece2b72e97465df78022efcbb2e62859a09e52652633661a582732",
+      "title": "Ordinary-create purpose-only change is not dirty",
+      "classification": "source-confirmed",
+      "mechanism": "Purpose comparison runs only for non-null reviewCandidate.",
+      "repro": {
+        "status": "SOURCE-TRACED_SYNTHETIC_NOT_EXECUTED",
+        "steps": "Ordinary Create: change only charging Toggle, then Cancel; form strings unchanged, candidate null, so discard prompt skipped."
+      },
+      "fix": "Snapshot charging purpose for every mode and compare it.",
+      "owner": "page",
+      "confidence": "high source mechanism; runtime unverified",
+      "related": [
+        {
+          "file": "web/src/features/maps/pages/GeofencesPage.tsx",
+          "line": 322,
+          "excerpt": "if (isFormDirty) {",
+          "source_sha256": "6b6891f056ece2b72e97465df78022efcbb2e62859a09e52652633661a582732"
+        },
+        {
+          "file": "web/src/features/maps/pages/GeofencesPage.tsx",
+          "line": 835,
+          "excerpt": "{!reviewCandidate && !editingId && (",
+          "source_sha256": "6b6891f056ece2b72e97465df78022efcbb2e62859a09e52652633661a582732"
+        }
+      ],
+      "queue_disposition": "Deduplicated root, parent exact corrective lease needed; never reopen completed migration generically."
+    },
+    {
+      "id": "GEO-03",
+      "severity": "P1",
+      "rule": "draft-scope",
+      "file": "web/src/features/maps/pages/GeofencesPage.tsx",
+      "line": 379,
+      "excerpt": "const applyAiDraftToForm = useCallback(",
+      "source_sha256": "6b6891f056ece2b72e97465df78022efcbb2e62859a09e52652633661a582732",
+      "title": "AI draft inherits previous charging purpose",
+      "classification": "source-confirmed",
+      "mechanism": "AI initializer omits chargingPlace/reviewCandidate; closeModal clears candidate but not purpose. Create consumes retained flag.",
+      "repro": {
+        "status": "SOURCE-TRACED_SYNTHETIC_NOT_EXECUTED",
+        "steps": "Review synthetic charge_count>0 candidate, close, apply independent valid AI proposal; next Create carries old true purpose."
+      },
+      "fix": "Explicit new-draft purpose/candidate initialization, preserving review-before-save.",
+      "owner": "page",
+      "confidence": "high source mechanism; runtime unverified",
+      "related": [
+        {
+          "file": "web/src/features/maps/pages/GeofencesPage.tsx",
+          "line": 314,
+          "excerpt": "setReviewCandidate(null);",
+          "source_sha256": "6b6891f056ece2b72e97465df78022efcbb2e62859a09e52652633661a582732"
+        },
+        {
+          "file": "web/src/features/maps/pages/GeofencesPage.tsx",
+          "line": 507,
+          "excerpt": "createMut.mutate({ ...payload, is_charging_location: chargingPlace });",
+          "source_sha256": "6b6891f056ece2b72e97465df78022efcbb2e62859a09e52652633661a582732"
+        }
+      ],
+      "queue_disposition": "Deduplicated root, parent exact corrective lease needed; never reopen completed migration generically."
+    },
+    {
+      "id": "GEO-04",
+      "severity": "P2",
+      "rule": "unknown-zero",
+      "file": "web/src/features/maps/pages/GeofencesPage.tsx",
+      "line": 286,
+      "excerpt": "(lat === 0 && lng === 0)",
+      "source_sha256": "6b6891f056ece2b72e97465df78022efcbb2e62859a09e52652633661a582732",
+      "title": "Valid zero-coordinate draft suppressed",
+      "classification": "source-confirmed",
+      "mechanism": "Center/zoom/draft reject explicit (0,0) even though schema accepts zero.",
+      "repro": {
+        "status": "SOURCE-TRACED_SYNTHETIC_NOT_EXECUTED",
+        "steps": "Synthetic valid name,lat0,lon0,radius100: submit validation permits geometry; map has no draft and unrelated fallback center."
+      },
+      "fix": "Distinguish blank/invalid from finite zero; retain signed SI geometry.",
+      "owner": "page",
+      "confidence": "high source mechanism; runtime unverified",
+      "related": [
+        {
+          "file": "web/src/features/maps/pages/GeofencesPage.tsx",
+          "line": 261,
+          "excerpt": "if (!Number.isNaN(lat) && !Number.isNaN(lng) && (lat !== 0 || lng !== 0)) {",
+          "source_sha256": "6b6891f056ece2b72e97465df78022efcbb2e62859a09e52652633661a582732"
+        },
+        {
+          "file": "web/src/features/maps/pages/GeofencesPage.tsx",
+          "line": 274,
+          "excerpt": "return !Number.isNaN(lat) && !Number.isNaN(lng) && (lat !== 0 || lng !== 0) ? 15 : 11;",
+          "source_sha256": "6b6891f056ece2b72e97465df78022efcbb2e62859a09e52652633661a582732"
+        },
+        {
+          "file": "web/src/features/maps/schemas/geofence.ts",
+          "line": 48,
+          "excerpt": "latitude: numericString('Latitude', { min: -90, max: 90 }),",
+          "source_sha256": "245e801c7b39b7f50cc4a49755388b7e13edbf1143afaf58c1be434ecf843402"
+        }
+      ],
+      "queue_disposition": "Deduplicated root, parent exact corrective lease needed; never reopen completed migration generically."
+    },
+    {
+      "id": "GEO-05",
+      "severity": "P2",
+      "rule": "hardcoded-string",
+      "file": "web/src/features/maps/schemas/geofence.ts",
+      "line": 16,
+      "excerpt": ".min(1, `${label} is required`)",
+      "source_sha256": "245e801c7b39b7f50cc4a49755388b7e13edbf1143afaf58c1be434ecf843402",
+      "title": "Field validation stays English",
+      "classification": "source-confirmed",
+      "mechanism": "Five message constructors at16/26/32/46/47; page496 forwards issue.message untranslated.",
+      "repro": {
+        "status": "SOURCE-TRACED_SYNTHETIC_NOT_EXECUTED",
+        "steps": "Non-English locale plus out-of-range latitude or >120-character name shows English field message."
+      },
+      "fix": "Canonical localized validation preserving bounds/finite checks/field associations.",
+      "owner": "page/integration",
+      "confidence": "high source mechanism; runtime unverified",
+      "related": [
+        {
+          "file": "web/src/features/maps/schemas/geofence.ts",
+          "line": 26,
+          "excerpt": "ctx.addIssue({ code: z.ZodIssueCode.custom, message: `${label} must be a number` })",
+          "source_sha256": "245e801c7b39b7f50cc4a49755388b7e13edbf1143afaf58c1be434ecf843402"
+        },
+        {
+          "file": "web/src/features/maps/schemas/geofence.ts",
+          "line": 32,
+          "excerpt": "message: `${label} must be between ${opts.min} and ${opts.max}`,",
+          "source_sha256": "245e801c7b39b7f50cc4a49755388b7e13edbf1143afaf58c1be434ecf843402"
+        },
+        {
+          "file": "web/src/features/maps/schemas/geofence.ts",
+          "line": 46,
+          "excerpt": ".min(1, 'Name is required')",
+          "source_sha256": "245e801c7b39b7f50cc4a49755388b7e13edbf1143afaf58c1be434ecf843402"
+        },
+        {
+          "file": "web/src/features/maps/schemas/geofence.ts",
+          "line": 47,
+          "excerpt": ".max(120, 'Name must be 120 characters or fewer'),",
+          "source_sha256": "245e801c7b39b7f50cc4a49755388b7e13edbf1143afaf58c1be434ecf843402"
+        },
+        {
+          "file": "web/src/features/maps/pages/GeofencesPage.tsx",
+          "line": 496,
+          "excerpt": "if (key && !next[key]) next[key] = issue.message;",
+          "source_sha256": "6b6891f056ece2b72e97465df78022efcbb2e62859a09e52652633661a582732"
+        }
+      ],
+      "queue_disposition": "Deduplicated root, parent exact corrective lease needed; never reopen completed migration generically."
+    },
+    {
+      "id": "GEO-06",
+      "severity": "P2",
+      "rule": "hardcoded-string",
+      "file": "web/src/features/maps/components/operationalbrief-all/MapsOperationalBrief.tsx",
+      "line": 61,
+      "excerpt": "provenance={sources.map(({ label, state }) => `${label}: ${state.provenance}`).join('; ')}",
+      "source_sha256": "ed6e0166d7e517333dc30920c5dc8c5de66f012a175eb3dfb41ce57dad097ed6",
+      "title": "Raw provenance enums shown without i18n",
+      "classification": "source-confirmed",
+      "mechanism": "Visible details provenance interpolates cached/historical/unknown directly. One expression occurrence, not each enum.",
+      "repro": {
+        "status": "SOURCE-TRACED_SYNTHETIC_NOT_EXECUTED",
+        "steps": "Non-English locale -> Review details -> source labels translated but provenance English identifiers remain."
+      },
+      "fix": "Localize existing provenance labels; retain raw source state.",
+      "owner": "domain",
+      "confidence": "high source mechanism; runtime unverified",
+      "related": [],
+      "queue_disposition": "Deduplicated root, parent exact corrective lease needed; never reopen completed migration generically."
+    },
+    {
+      "id": "GEO-07",
+      "severity": "P2",
+      "rule": "saved-date-preferences",
+      "file": "web/src/features/maps/components/operationalbrief-all/MapsOperationalBrief.tsx",
+      "line": 57,
+      "excerpt": "? formatDateTime(new Date(state.updatedAt).toISOString())",
+      "source_sha256": "ed6e0166d7e517333dc30920c5dc8c5de66f012a175eb3dfb41ce57dad097ed6",
+      "title": "Receipt timestamp ignores saved locale/zone",
+      "classification": "source-confirmed",
+      "mechanism": "formatDateTime gets no opts; dateFormat54-61 uses browser defaults, unlike existing useDateFormat.",
+      "repro": {
+        "status": "SOURCE-TRACED_SYNTHETIC_NOT_EXECUTED",
+        "steps": "Saved UTC/non-browser locale with different browser defaults produces browser-formatted receipt."
+      },
+      "fix": "Existing saved-preference date formatter; receipt must not claim observation time.",
+      "owner": "domain",
+      "confidence": "high source mechanism; runtime unverified",
+      "related": [
+        {
+          "file": "web/src/lib/dateFormat.ts",
+          "line": 54,
+          "excerpt": "export function formatDateTime(iso: string | Date | null | undefined, opts?: FormatOptions): string {",
+          "source_sha256": "30eeb276813505d3cee3d0b1df38a7b13fc97dce388a0c5b2c3c86c902f62f64"
+        },
+        {
+          "file": "web/src/hooks/useDateFormat.ts",
+          "line": 74,
+          "excerpt": "const { settings, locale } = useSettings()",
+          "source_sha256": "97b1b0ebd44436cd8274a4927d0df4381b112df1468a22ef6238029675d6a542"
+        }
+      ],
+      "queue_disposition": "Deduplicated root, parent exact corrective lease needed; never reopen completed migration generically."
+    },
+    {
+      "id": "GEO-08",
+      "severity": "P1",
+      "rule": "saved-timezone-bounds",
+      "file": "web/src/features/maps/components/charging-places/RateForm.tsx",
+      "line": 50,
+      "excerpt": "const ms = Date.parse(local);",
+      "source_sha256": "216467bd71bc8d7e5790850c783d56dd3ef1891fdca128b4f72139119838fd9b",
+      "title": "Business date wire instants use browser zone",
+      "classification": "source-confirmed",
+      "mechanism": "Timezone-less Date.parse and prior-day local setHours/setDate ignore saved zone; preview repeats parser. Both bounds affected.",
+      "repro": {
+        "status": "SOURCE-TRACED_SYNTHETIC_NOT_EXECUTED",
+        "steps": "Saved UTC/browser New_York, synthetic2026-01-01T00:00 parses05:00Z, not saved-zone00:00Z; DST/native proof NOTRUN."
+      },
+      "fix": "Existing timezone-aware conversion plus explicit zone; retain independent half-open business intervals.",
+      "owner": "domain/integration",
+      "confidence": "high source mechanism; runtime unverified",
+      "related": [
+        {
+          "file": "web/src/features/maps/components/charging-places/RateForm.tsx",
+          "line": 65,
+          "excerpt": "date.setHours(0, 0, 0, 0);",
+          "source_sha256": "216467bd71bc8d7e5790850c783d56dd3ef1891fdca128b4f72139119838fd9b"
+        },
+        {
+          "file": "web/src/features/maps/components/charging-places/RateForm.tsx",
+          "line": 117,
+          "excerpt": "const toIso = effectiveTo ? localToIso(effectiveTo) : null;",
+          "source_sha256": "216467bd71bc8d7e5790850c783d56dd3ef1891fdca128b4f72139119838fd9b"
+        },
+        {
+          "file": "web/src/features/maps/components/charging-places/PreviewApplyPanel.tsx",
+          "line": 26,
+          "excerpt": "const ms = Date.parse(local);",
+          "source_sha256": "7971c2db267a4700e2f510cbac876792926d785dfbf3c2a78331047778bc2bc6"
+        },
+        {
+          "file": "web/src/features/maps/components/charging-places/PreviewApplyPanel.tsx",
+          "line": 49,
+          "excerpt": "() => ({ from: localToIso(fromLocal), to: localToIso(toLocal) }),",
+          "source_sha256": "7971c2db267a4700e2f510cbac876792926d785dfbf3c2a78331047778bc2bc6"
+        }
+      ],
+      "queue_disposition": "Deduplicated root, parent exact corrective lease needed; never reopen completed migration generically."
+    },
+    {
+      "id": "GEO-09",
+      "severity": "P1",
+      "rule": "initial-paused-trust",
+      "file": "web/src/features/maps/components/charging-places/PlaceDetailPanel.tsx",
+      "line": 281,
+      "excerpt": "label={t('chargingPlaces.rateForm.title', 'Add a rate')}",
+      "source_sha256": "0436d23d9ae681899f65437d6a3a4619d28a694782e13839a078a3dd5d7a9b92",
+      "title": "Initial-paused pricing prerequisites rendered ready",
+      "classification": "source-confirmed",
+      "mechanism": "Pending paused has no data/isLoading=false; pricing ready branch renders RateForm with null currentRate/undefined firstSessionAt, seeding now.",
+      "repro": {
+        "status": "SOURCE-TRACED_SYNTHETIC_NOT_EXECUTED",
+        "steps": "Synthetic rates and first-session pending+paused,no data,no error,isLoading=false -> ready form; entering rate enables Save despite unresolved prerequisites."
+      },
+      "fix": "Explicit unresolved/paused prerequisite handling without invented offline cause; preserve drafts/neighbors.",
+      "owner": "domain",
+      "confidence": "high source mechanism; runtime unverified",
+      "related": [
+        {
+          "file": "web/src/features/maps/components/charging-places/PlaceDetailPanel.tsx",
+          "line": 293,
+          "excerpt": "/>",
+          "source_sha256": "0436d23d9ae681899f65437d6a3a4619d28a694782e13839a078a3dd5d7a9b92"
+        },
+        {
+          "file": "web/src/features/maps/components/charging-places/RateForm.tsx",
+          "line": 87,
+          "excerpt": "const [effectiveFrom, setEffectiveFrom] = useState(() => !currentRate && firstSessionAt ? dayBeforeSessionAsLocalInput(firstSessionAt) : nowAsLocalInput());",
+          "source_sha256": "216467bd71bc8d7e5790850c783d56dd3ef1891fdca128b4f72139119838fd9b"
+        }
+      ],
+      "queue_disposition": "Deduplicated root, parent exact corrective lease needed; never reopen completed migration generically."
+    },
+    {
+      "id": "GEO-10",
+      "severity": "P2",
+      "rule": "paused-retained-recovery",
+      "file": "web/src/features/maps/components/charging-places/ChargingPlacesWorkspace.tsx",
+      "line": 155,
+      "excerpt": "state={needsReviewState.refreshError ? 'retained' : 'ready'}",
+      "source_sha256": "a558dfd1b6883328552bd4d494e5b623784680ba142f66229f4cc35e9b39aea9",
+      "title": "Paused directory trust and individual retry lost",
+      "classification": "source-confirmed",
+      "mechanism": "Three wrappers use refreshError only, ignoring blocked/stale; children get fatalError only and reconstruct state without fetchStatus. Retained errors omit errorRecovery retry. Rows are retained correctly.",
+      "repro": {
+        "status": "SOURCE-TRACED_SYNTHETIC_NOT_EXECUTED",
+        "steps": "Retained source with fetchStatus paused/no error -> ready/no qualifier; retained error -> generic notice without affected-source Retry."
+      },
+      "fix": "Propagate actual DataState/blocked status and one source-specific retry; deduplicate notices, do not rewrite shared SourceContent.",
+      "owner": "domain",
+      "confidence": "high source mechanism; runtime unverified",
+      "related": [
+        {
+          "file": "web/src/features/maps/components/charging-places/ChargingPlacesWorkspace.tsx",
+          "line": 193,
+          "excerpt": "state={ratesState.refreshError ? 'retained' : 'ready'}",
+          "source_sha256": "a558dfd1b6883328552bd4d494e5b623784680ba142f66229f4cc35e9b39aea9"
+        },
+        {
+          "file": "web/src/features/maps/components/charging-places/ChargingPlacesWorkspace.tsx",
+          "line": 208,
+          "excerpt": "state={placesState.refreshError ? 'retained' : 'ready'}",
+          "source_sha256": "a558dfd1b6883328552bd4d494e5b623784680ba142f66229f4cc35e9b39aea9"
+        },
+        {
+          "file": "web/src/features/maps/components/charging-places/ChargingPlacesWorkspace.tsx",
+          "line": 219,
+          "excerpt": "error={placesState.fatalError}",
+          "source_sha256": "a558dfd1b6883328552bd4d494e5b623784680ba142f66229f4cc35e9b39aea9"
+        }
+      ],
+      "queue_disposition": "Deduplicated root, parent exact corrective lease needed; never reopen completed migration generically."
+    },
+    {
+      "id": "GEO-11",
+      "severity": "P1",
+      "rule": "mutation-outcome",
+      "file": "web/src/api/hooks/useLocations.ts",
+      "line": 142,
+      "excerpt": "}",
+      "source_sha256": "548c91d7cb0b48d93561b8fc3b5c8738ec9493809f0a2b946a4eea4e5854a090",
+      "title": "Partial bulk failure reported successful",
+      "classification": "source-confirmed",
+      "mechanism": "Bulk DTO contains failed IDs/reasons but hook success ignores result; page adapter discards it, workspace clears all selection on fulfilled promise.",
+      "repro": {
+        "status": "SOURCE-TRACED_SYNTHETIC_NOT_EXECUTED",
+        "steps": "Synthetic fulfilled {deleted:0,failed:[{id:1,reason:synthetic refusal}]} -> success toast and selection cleared despite no deletion."
+      },
+      "fix": "Interpret partial outcome; retain failed selection/reasons; preserve confirmation/live guard.",
+      "owner": "domain/integration",
+      "confidence": "high source mechanism; runtime unverified",
+      "related": [
+        {
+          "file": "web/src/api/hooks/useLocations.ts",
+          "line": 118,
+          "excerpt": "}",
+          "source_sha256": "548c91d7cb0b48d93561b8fc3b5c8738ec9493809f0a2b946a4eea4e5854a090"
+        },
+        {
+          "file": "web/src/features/maps/pages/GeofencesPage.tsx",
+          "line": 627,
+          "excerpt": "await bulkDelete.mutateAsync(places.map((place) => place.id));",
+          "source_sha256": "6b6891f056ece2b72e97465df78022efcbb2e62859a09e52652633661a582732"
+        },
+        {
+          "file": "web/src/features/maps/components/charging-places/ChargingPlacesWorkspace.tsx",
+          "line": 119,
+          "excerpt": "setSelectedKeys([]);",
+          "source_sha256": "a558dfd1b6883328552bd4d494e5b623784680ba142f66229f4cc35e9b39aea9"
+        }
+      ],
+      "queue_disposition": "Deduplicated root, parent exact corrective lease needed; never reopen completed migration generically."
+    },
+    {
+      "id": "GEO-12",
+      "severity": "P1",
+      "rule": "mobile-preservation",
+      "file": "web/src/features/maps/components/charging-places/RateHistoryPanel.tsx",
+      "line": 199,
+      "excerpt": "mobileColumns={['effective_from', 'rate_per_wh', 'effective_to']}",
+      "source_sha256": "41bbb0f69602805c08295712490df98706fdf13dd4189ca95ac540fd786d9d04",
+      "title": "Mobile allow-lists hide actions/fields without details",
+      "classification": "source-confirmed",
+      "mechanism": "Rate history omits actions/currency; activity omits end-time/energy. No mobilePresentation/expanded details supplied. DataTable742/1180 hides omitted cells; adapter1404 needs mobilePresentation. Source declaration defect, not measured browser acceptance.",
+      "repro": {
+        "status": "SOURCE-TRACED_SYNTHETIC_NOT_EXECUTED",
+        "steps": "Belowmd trace hidden Preview sessions/Cancel scheduled rate; no alternative row handlers. Activity energy/end-time likewise inaccessible."
+      },
+      "fix": "Existing table mobile details/presentation to retain every original action/field.",
+      "owner": "domain/integration",
+      "confidence": "high source mechanism; runtime unverified",
+      "related": [
+        {
+          "file": "web/src/features/maps/components/charging-places/RateHistoryPanel.tsx",
+          "line": 142,
+          "excerpt": "onClick={() => onSelectRate(r)}",
+          "source_sha256": "41bbb0f69602805c08295712490df98706fdf13dd4189ca95ac540fd786d9d04"
+        },
+        {
+          "file": "web/src/features/maps/components/charging-places/RateHistoryPanel.tsx",
+          "line": 152,
+          "excerpt": "onClick={() => void handleDelete(r)}",
+          "source_sha256": "41bbb0f69602805c08295712490df98706fdf13dd4189ca95ac540fd786d9d04"
+        },
+        {
+          "file": "web/src/features/maps/components/charging-places/ChargingActivityList.tsx",
+          "line": 131,
+          "excerpt": "mobileColumns={['started_at', 'cost_decimal', 'cost_source']}",
+          "source_sha256": "962da29b794464dffb7602d0fdaacc55650cda458a6739a725f795b38631ad57"
+        },
+        {
+          "file": "web/src/components/ui/DataTable.tsx",
+          "line": 742,
+          "excerpt": "const colHiddenClass = (key: string) =>",
+          "source_sha256": "a9c394d5830620a8606b85cd376ed748c6f30ab0df70a250accbd4a9093ff282"
+        },
+        {
+          "file": "web/src/components/ui/DataTable.tsx",
+          "line": 1180,
+          "excerpt": "colHiddenClass(col.key),",
+          "source_sha256": "a9c394d5830620a8606b85cd376ed748c6f30ab0df70a250accbd4a9093ff282"
+        }
+      ],
+      "queue_disposition": "Deduplicated root, parent exact corrective lease needed; never reopen completed migration generically."
+    }
+  ],
+  "conditionalCandidates": [
+    {
+      "id": "COND-01",
+      "file": "web/src/features/maps/pages/GeofencesPage.tsx",
+      "line": 471,
+      "excerpt": "setForm((prev) => ({",
+      "source_sha256": "6b6891f056ece2b72e97465df78022efcbb2e62859a09e52652633661a582732",
+      "classification": "conditional-not-confirmed",
+      "title": "Late location result can overwrite reopened draft",
+      "mechanism_and_repro": "No instance/vehicle settlement guard after awaits. Synthetic deferred capture->close/reopen->resolve old result; NOTRUN, never real geolocation.",
+      "needed": "Separately authorized synthetic source/test or native/backend contract proof, not real API."
+    },
+    {
+      "id": "COND-02",
+      "file": "web/src/features/maps/pages/GeofencesPage.tsx",
+      "line": 203,
+      "excerpt": "closeModal();",
+      "source_sha256": "6b6891f056ece2b72e97465df78022efcbb2e62859a09e52652633661a582732",
+      "classification": "conditional-not-confirmed",
+      "title": "Pending CRUD success can close newer form",
+      "mechanism_and_repro": "Unscoped closeModal; Cancel/fields not blocked by isSaving. Deferred save->discard/reopen->old success; NOTRUN.",
+      "needed": "Separately authorized synthetic source/test or native/backend contract proof, not real API."
+    },
+    {
+      "id": "COND-03",
+      "file": "web/src/features/maps/components/charging-places/PreviewApplyPanel.tsx",
+      "line": 49,
+      "excerpt": "() => ({ from: localToIso(fromLocal), to: localToIso(toLocal) }),",
+      "source_sha256": "7971c2db267a4700e2f510cbac876792926d785dfbf3c2a78331047778bc2bc6",
+      "classification": "conditional-not-confirmed",
+      "title": "Invalid/reversed preview bounds",
+      "mechanism_and_repro": "Malformed nonempty parser returns undefined; no ordering validation. Native sanitization/server rejection unknown; do not assert actual widened scope.",
+      "needed": "Separately authorized synthetic source/test or native/backend contract proof, not real API."
+    },
+    {
+      "id": "COND-04",
+      "file": "web/src/features/maps/components/charging-places/RateForm.tsx",
+      "line": 83,
+      "excerpt": "const defaultCurrency = currentRate?.currency ?? currencyCodeFromSymbol(settings.currency_symbol);",
+      "source_sha256": "216467bd71bc8d7e5790850c783d56dd3ef1891fdca128b4f72139119838fd9b",
+      "classification": "conditional-not-confirmed",
+      "title": "Ambiguous symbol inferred to ISO currency",
+      "mechanism_and_repro": "No currentRate -> currencyCodeFromSymbol(saved symbol). $ does not prove USD/CAD/AUD; explicit ISO intent needed before asserting wrong currency.",
+      "needed": "Separately authorized synthetic source/test or native/backend contract proof, not real API."
+    },
+    {
+      "id": "COND-05",
+      "file": "web/src/features/maps/components/charging-places/PlacesTable.tsx",
+      "line": 197,
+      "excerpt": "{place.radius == null ? '—' : `${fmtNumber(place.radius)} ${t('common.units.meterShort', 'm')}`}",
+      "source_sha256": "310293d50ca9bbc8c4b2d4e1cb22456d6cd15484db078aa431fbbd79524261fb",
+      "classification": "conditional-not-confirmed",
+      "title": "Fixed SI radius versus saved unit preference",
+      "mechanism_and_repro": "Raw meters+m, no display conversion. Form/draw intentionally metric; specialized short-radius mapping/disposition unproven. Preserve wire meters.",
+      "needed": "Separately authorized synthetic source/test or native/backend contract proof, not real API."
+    },
+    {
+      "id": "COND-06",
+      "file": "web/src/features/maps/components/charging-places/PlacesTable.tsx",
+      "line": 152,
+      "excerpt": "? t(GEOFENCE_CATEGORY_LABELS[category].key, GEOFENCE_CATEGORY_LABELS[category].fallback)",
+      "source_sha256": "310293d50ca9bbc8c4b2d4e1cb22456d6cd15484db078aa431fbbd79524261fb",
+      "classification": "conditional-not-confirmed",
+      "title": "Unknown category lookup lacks runtime guard",
+      "mechanism_and_repro": "Asserted closed union dereferenced. Only malformed/future category triggers failure; backend enum guarantee unverified; synthetic contract proof needed.",
+      "needed": "Separately authorized synthetic source/test or native/backend contract proof, not real API."
+    }
+  ],
+  "nativeCandidates": [
+    {
+      "id": "NATIVE-01",
+      "file": "web/src/features/maps/components/charging-places/ChargingPlacesWorkspace.tsx",
+      "line": 131,
+      "excerpt": "variant=\"ghost\"",
+      "source_sha256": "a558dfd1b6883328552bd4d494e5b623784680ba142f66229f4cc35e9b39aea9",
+      "classification": "native-unverified",
+      "title": "Support touch targets",
+      "mechanism": "Small support buttons inherit36px minimum; page-owned controls explicitly44px. No actual rectangles or WCAG spacing exception measured.",
+      "needed": "Authorized synthetic matrix320/375/390/430/768/1024/1280/1440/1920/2560; no browser here."
+    },
+    {
+      "id": "NATIVE-02",
+      "file": "web/src/features/maps/pages/GeofencesPage.tsx",
+      "line": 718,
+      "excerpt": "'geofences.drawHint',",
+      "source_sha256": "6b6891f056ece2b72e97465df78022efcbb2e62859a09e52652633661a582732",
+      "classification": "native-unverified",
+      "title": "Map keyboard/Canvas/tiles",
+      "mechanism": "role application and numeric alternatives declared; toolbar/paint/theme/contrast/focus NOTRUN. onEdit/onDelete intentionally absent; create-only tools are not a lost feature.",
+      "needed": "Authorized synthetic matrix320/375/390/430/768/1024/1280/1440/1920/2560; no browser here."
+    },
+    {
+      "id": "NATIVE-03",
+      "file": "web/src/features/maps/components/charging-places/RateForm.tsx",
+      "line": 171,
+      "excerpt": "type=\"datetime-local\"",
+      "source_sha256": "216467bd71bc8d7e5790850c783d56dd3ef1891fdca128b4f72139119838fd9b",
+      "classification": "native-unverified",
+      "title": "Native date/time presentation",
+      "mechanism": "datetime-local popup locale/hourcycle owned by browser; saved preference/native behavior NOTRUN, distinct from confirmed wire-zone bug.",
+      "needed": "Authorized synthetic matrix320/375/390/430/768/1024/1280/1440/1920/2560; no browser here."
+    },
+    {
+      "id": "NATIVE-04",
+      "file": "web/src/features/maps/pages/GeofencesPage.tsx",
+      "line": 654,
+      "excerpt": "disabled={!hasMinimalInput || isSaving}",
+      "source_sha256": "6b6891f056ece2b72e97465df78022efcbb2e62859a09e52652633661a582732",
+      "classification": "native-unverified",
+      "title": "Composed a11y/mobile matrix",
+      "mechanism": "Footer wrapping, tab IDs/tabpanel/labels/responsive grids present; RTL/200%text/long labels/themes/forced colors/keyboard/safe-area/motion/tenwidth geometry NOTRUN.",
+      "needed": "Authorized synthetic matrix320/375/390/430/768/1024/1280/1440/1920/2560; no browser here."
+    }
+  ],
+  "components": [
+    "PageLayout -> PageContainer",
+    "LayoutCard/SourceContent",
+    "MapsOperationalBrief/OperationalBrief/useOperationalMetrics",
+    "Shared UI/forms/feedback/motion/map/AI barrels",
+    "Existing DataTable/helper domain contracts"
+  ],
+  "dataSources": [
+    {
+      "file": "web/src/features/maps/pages/GeofencesPage.tsx",
+      "line": 179,
+      "name": "Fleet-wide active saved summary",
+      "key": [
+        "geofences"
+      ],
+      "path": "/geofences",
+      "policy": "Cancellation signal forwarded; independent from full-directory key"
+    },
+    {
+      "file": "web/src/api/hooks/useLocations.ts",
+      "line": 178,
+      "name": "Visited candidates",
+      "path": "/geofences/visited-candidates",
+      "policy": "safeArray/30s staleTime; historical evidence"
+    },
+    {
+      "file": "web/src/features/maps/components/charging-places/ChargingPlacesWorkspace.tsx",
+      "line": 55,
+      "name": "Directory/review/current rates",
+      "policy": "Separate active/archived keys;15s staleTime/30s polling"
+    },
+    {
+      "file": "web/src/features/maps/components/charging-places/PlaceDetailPanel.tsx",
+      "line": 58,
+      "name": "Rates/first-session/summary/activity/preview/apply",
+      "policy": "ID-enabled, cancellation; 25-row limit/offset activity; explicit live-mode domain mutations"
+    },
+    {
+      "file": "web/src/features/maps/pages/GeofencesPage.tsx",
+      "line": 427,
+      "name": "Vehicle/browser capture and AI proposal",
+      "policy": "Explicit capture; saved-name/geocode fallback; AI apply only opens reviewed form; NOTRUN"
+    }
+  ],
+  "preservation": {
+    "sourceSHA256": "6b6891f056ece2b72e97465df78022efcbb2e62859a09e52652633661a582732",
+    "currentLineCount": 866,
+    "sectionCounts": {
+      "top_level_sections": 3,
+      "section_tags": 2,
+      "GlassPanel": 1,
+      "LayoutCard": 1,
+      "Modal": 1,
+      "ConfirmDialog": 2,
+      "ChartContainer": 0
+    },
+    "sections": [
+      {
+        "name": "Independent four-count summary",
+        "line": 560
+      },
+      {
+        "name": "Opt-in Helix picker/draft",
+        "line": 574
+      },
+      {
+        "name": "Unified directory/needs setup/candidates/rates",
+        "line": 614
+      },
+      {
+        "name": "Create/edit/capture modal",
+        "line": 635
+      },
+      {
+        "name": "Discard and single-delete confirmations",
+        "line": 847
+      },
+      {
+        "name": "Selected place pricing/activity tabs",
+        "file": "web/src/features/maps/components/charging-places/PlaceDetailPanel.tsx",
+        "line": 146
+      }
+    ],
+    "actions": [
+      "Summary Refresh/Add; directory Refresh/Add",
+      "Search/clear/archive filter, pins, sort/value filters/column visibility/pagination",
+      "Review saved discovery versus unmatched candidate; opt-in template/AI draft",
+      "Create/update; vehicle/browser/circle capture; numeric signed geometry/category/charging purpose",
+      "Cancel/discard/keep editing; named delete and bulk confirm",
+      "Manage/rename/category/purpose/review-enable/archive/restore",
+      "Save rate/effective dates; preview/select/cancel future rate; optional bounds/refresh; explicit confirmed apply/assign",
+      "Per-currency summary and 25-row charging activity; summary details"
+    ],
+    "scope_both_bounds": "/geofences not RANGE_ENABLED_PATHS. Fleet-wide directory/candidates explicitly not limited to selected vehicle; shared selected vehicle affects capture only. Rate effective_from/effective_to and preview/apply from/to are independent business dates. Both supplied preview bounds enter query keys/request/apply in useLocations.ts:455-509. No loaded-row-only workspace filtering. Backend exclusive-bound/cost-protection truth NOTRUN.",
+    "raw_si_signs": "Signed coordinates parsed to numeric payload; radius meters. Price/kWh divides1000 only at request boundary to currency/Wh and multiplies1000 at display. Energy uses useUnits, currencies never summed; zero rate/cost preserved, missing dash. Map/AI radius rounding inherited, not changed or claimed fraction-preserving.",
+    "saved_preferences": "NumberFormatting subscribes saved locale/precision. TimeStamp uses saved locale/timezone via useDateFormat; explicit relative/absolute surface formats deliberate. Summary receipts/business zone defects reported; native date/hour presentation and short-radius preference disposition unverified. IDs, pins, keys, units/settings untouched.",
+    "before_sha256": {
+      "web/src/api/dataState.ts": "21fb454b3c1f01608169f3f3887911de97f7c754663cc001236ebfde58211761",
+      "web/src/api/hooks/useLocations.ts": "548c91d7cb0b48d93561b8fc3b5c8738ec9493809f0a2b946a4eea4e5854a090",
+      "web/src/components/data-display/TimeStamp.tsx": "3d4fb838ca18b7d4fa1254c9cc328a30c8e26c3d5bc06eb4d2fec49282de23fb",
+      "web/src/components/layout/layout-reference/PageLayout.tsx": "7b7ef06a05fe4a97ab0cfbc8e989901db0ffca898dec7d4f5cd796536b4dca3b",
+      "web/src/components/maps/GeofenceDrawer.tsx": "c33d1e898f59943307cad96492fef361d7bba8855c710890c7529b77d58999ee",
+      "web/src/components/maps/__tests__/GeofenceDrawer.test.tsx": "90734261c2beff13fca88d12e9169c37642511dd3b4ae1c277fbb4f89d72930b",
+      "web/src/features/maps/components/MobilitySourcePresenters.test.tsx": "9b54c684880da0d5b81bd9429f984f03976948dce6e9b4044d3f3f3b83d62194",
+      "web/src/features/maps/components/charging-places/ChargingActivityList.test.tsx": "f51ce0c2785383a9a5c37be6c0e575b976b60e44da884794da2b0713e3658c73",
+      "web/src/features/maps/components/charging-places/ChargingActivityList.tsx": "962da29b794464dffb7602d0fdaacc55650cda458a6739a725f795b38631ad57",
+      "web/src/features/maps/components/charging-places/ChargingPlacesWorkspace.test.tsx": "f96ce8c88db42388d6ed9365af073dd6292a23c42bc659da9f6bb7054707b1a9",
+      "web/src/features/maps/components/charging-places/ChargingPlacesWorkspace.tsx": "a558dfd1b6883328552bd4d494e5b623784680ba142f66229f4cc35e9b39aea9",
+      "web/src/features/maps/components/charging-places/ChargingSummaryPanel.test.tsx": "ee5e5489a0818f6432b35ad822df367645535fdb4bbc696b41c077040d3530e8",
+      "web/src/features/maps/components/charging-places/ChargingSummaryPanel.tsx": "837474d7276377a1e51cdab30cca818edae9baf8bf556b37329ca72e1d8c5a17",
+      "web/src/features/maps/components/charging-places/NeedsSetupQueue.test.tsx": "5e9a7e8ffca44f3708c804febbd42939aa5842be48f7d8cb27a1a75058171047",
+      "web/src/features/maps/components/charging-places/NeedsSetupQueue.tsx": "a84d7ff453ca5a2d66c496fe70a6acb9c2ad4cb2310f263c3a84db1e038fed34",
+      "web/src/features/maps/components/charging-places/PlaceDetailPanel.test.tsx": "acff042bf3cff4fc070742d98bd291981785791f0f3c8dd1f46483ac4300c65b",
+      "web/src/features/maps/components/charging-places/PlaceDetailPanel.tsx": "0436d23d9ae681899f65437d6a3a4619d28a694782e13839a078a3dd5d7a9b92",
+      "web/src/features/maps/components/charging-places/PlacesTable.test.tsx": "4773c2d25a386481a84c7fe4c420e7cfbabedb917352172a1cbf49feb6226597",
+      "web/src/features/maps/components/charging-places/PlacesTable.tsx": "310293d50ca9bbc8c4b2d4e1cb22456d6cd15484db078aa431fbbd79524261fb",
+      "web/src/features/maps/components/charging-places/PreviewApplyPanel.test.tsx": "72bee11ad52ec241f72f4fd9265aabbaccf5742fced22476ab2eec0042f715bd",
+      "web/src/features/maps/components/charging-places/PreviewApplyPanel.tsx": "7971c2db267a4700e2f510cbac876792926d785dfbf3c2a78331047778bc2bc6",
+      "web/src/features/maps/components/charging-places/RateForm.test.tsx": "b17841790d1e663baa76a33b1942b8d00f24b41b48a060b8ab0b53c9f1aa291b",
+      "web/src/features/maps/components/charging-places/RateForm.tsx": "216467bd71bc8d7e5790850c783d56dd3ef1891fdca128b4f72139119838fd9b",
+      "web/src/features/maps/components/charging-places/RateHistoryPanel.test.tsx": "57e5aeb322b1539a1cf120d53691f1b5a0b31fe24d2c8536ab8c4e9eab949a95",
+      "web/src/features/maps/components/charging-places/RateHistoryPanel.tsx": "41bbb0f69602805c08295712490df98706fdf13dd4189ca95ac540fd786d9d04",
+      "web/src/features/maps/components/charging-places/VisitedCandidates.tsx": "60d78edbead756bb20cc6f1436d2bf1b16ca82756608915f1f0cda7207db4b45",
+      "web/src/features/maps/components/charging-places/helpers.test.ts": "5f5b613cf59dcc42b958d2151670d509d7b1066de3000110f39c946f7b130045",
+      "web/src/features/maps/components/charging-places/helpers.ts": "48dbf0870db3b137accb1587e11e382512bbcc1a0deb4364cc479629d22efca3",
+      "web/src/features/maps/components/charging-places/index.ts": "efb95ed4fb03fa873a05784d455d868903fd54193f2397f88d744cbfb792ccc0",
+      "web/src/features/maps/components/operationalbrief-all/MapsOperationalBrief.test.tsx": "040f8069d31c2d4ff52af8fd62cf411521ca29259ad43d5ab6985fc73890ae7b",
+      "web/src/features/maps/components/operationalbrief-all/MapsOperationalBrief.tsx": "ed6e0166d7e517333dc30920c5dc8c5de66f012a175eb3dfb41ce57dad097ed6",
+      "web/src/features/maps/geofenceCategories.ts": "6861bf8a2abb8aa35ba8216083fa1b35a9d67adc1bbf0176adcd151fcec3709a",
+      "web/src/features/maps/pages/GeofencesPage.catalogCopy.test.tsx": "8eb544f948f156ca219e8ebc50929fa3aecc1f3efe60f1fb5aabbfa7d641c70a",
+      "web/src/features/maps/pages/GeofencesPage.test.tsx": "54b5e1b54fda51f08e21b391e7caea9402c9ddbaeb1ea8d25d5bfef02fcee2a7",
+      "web/src/features/maps/pages/GeofencesPage.tsx": "6b6891f056ece2b72e97465df78022efcbb2e62859a09e52652633661a582732",
+      "web/src/features/maps/schemas/geofence.test.ts": "028a005f3c7b77bc433d33e4071b64db93abad8fdd0bb73cd6991ab7e31b583a",
+      "web/src/features/maps/schemas/geofence.ts": "245e801c7b39b7f50cc4a49755388b7e13edbf1143afaf58c1be434ecf843402",
+      "web/src/hooks/useNumberFormatting.ts": "e32c23df1cb2001d54d324e2e0a7be6077720a26820a1cf2ac6c81358aca2ad7",
+      "web/src/hooks/useSelectedVehicle.ts": "c52768ea42f3e8dd34399f1372a09eb3f70d6c6cb2dddbc41790a6d30e7c4ae3",
+      "web/src/hooks/useUnits.ts": "b90452309357b88fe27edf878a943ff46cf9083015592d1587997b5c0f4a8b14",
+      "web/src/lib/dateFormat.ts": "30eeb276813505d3cee3d0b1df38a7b13fc97dce388a0c5b2c3c86c902f62f64",
+      "web/src/api/client.ts": "a9ec99b561c05b73cbbc805f28d770a4e7e132c5cfd8ae8f740e1393311f59a5",
+      "web/src/components/layout/PageContainer.tsx": "4b718ac20f8a473a3c59b6dbd7031d9bb686e2c3ad93b25ddb94523eea074b4a",
+      "web/src/components/layout/layout-reference/SourceContent.tsx": "9b423c800d3c77d0018a939b1c200a86ff851e781052393a4026dae914b7faa7",
+      "web/src/components/ui/Button.tsx": "e43e202cc9f465efeef93a1be2b156255958934af635abf0eaa408f310dde16c",
+      "web/src/hooks/useDateFormat.ts": "97b1b0ebd44436cd8274a4927d0df4381b112df1468a22ef6238029675d6a542",
+      "web/src/hooks/useSettings.ts": "f0dddd38c53e59a7103f9ee3160263017654f77ac5001c7eb0d941816b9fdca3",
+      "web/src/lib/workspaceScope.ts": "aeb8c01d410f2377aa5fd713de1a678a0360acf647a9c882f03e46c80efdfcd7",
+      "web/src/api/offlineCache.ts": "ede8370b47bc67befd688a6434d6696c1efdae22e77bfdcc56c2d11d2857e6ce",
+      "web/src/components/ai/AISuggestNewGeofences.test.tsx": "7d511acffdb53f6c53f8e8636bcbd9eb64683236ffa8cf8f9c5e3d903ae3c447",
+      "web/src/components/ai/AISuggestNewGeofences.tsx": "ad67748df9ec7c2ea962c4108b2192d0aa9eb9abbd7d9af4d579a6623661bec3",
+      "web/src/components/ui/DataTable.tsx": "a9c394d5830620a8606b85cd376ed748c6f30ab0df70a250accbd4a9093ff282",
+      "web/src/lib/operationalMode.ts": "ee455c50bef62d5751b3cd9c7bf92f342071e740b76b3fd6f8fde8b4773c455d"
+    },
+    "after_sha256": {
+      "web/src/api/dataState.ts": "21fb454b3c1f01608169f3f3887911de97f7c754663cc001236ebfde58211761",
+      "web/src/api/hooks/useLocations.ts": "548c91d7cb0b48d93561b8fc3b5c8738ec9493809f0a2b946a4eea4e5854a090",
+      "web/src/components/data-display/TimeStamp.tsx": "3d4fb838ca18b7d4fa1254c9cc328a30c8e26c3d5bc06eb4d2fec49282de23fb",
+      "web/src/components/layout/layout-reference/PageLayout.tsx": "7b7ef06a05fe4a97ab0cfbc8e989901db0ffca898dec7d4f5cd796536b4dca3b",
+      "web/src/components/maps/GeofenceDrawer.tsx": "c33d1e898f59943307cad96492fef361d7bba8855c710890c7529b77d58999ee",
+      "web/src/components/maps/__tests__/GeofenceDrawer.test.tsx": "90734261c2beff13fca88d12e9169c37642511dd3b4ae1c277fbb4f89d72930b",
+      "web/src/features/maps/components/MobilitySourcePresenters.test.tsx": "9b54c684880da0d5b81bd9429f984f03976948dce6e9b4044d3f3f3b83d62194",
+      "web/src/features/maps/components/charging-places/ChargingActivityList.test.tsx": "f51ce0c2785383a9a5c37be6c0e575b976b60e44da884794da2b0713e3658c73",
+      "web/src/features/maps/components/charging-places/ChargingActivityList.tsx": "962da29b794464dffb7602d0fdaacc55650cda458a6739a725f795b38631ad57",
+      "web/src/features/maps/components/charging-places/ChargingPlacesWorkspace.test.tsx": "f96ce8c88db42388d6ed9365af073dd6292a23c42bc659da9f6bb7054707b1a9",
+      "web/src/features/maps/components/charging-places/ChargingPlacesWorkspace.tsx": "a558dfd1b6883328552bd4d494e5b623784680ba142f66229f4cc35e9b39aea9",
+      "web/src/features/maps/components/charging-places/ChargingSummaryPanel.test.tsx": "ee5e5489a0818f6432b35ad822df367645535fdb4bbc696b41c077040d3530e8",
+      "web/src/features/maps/components/charging-places/ChargingSummaryPanel.tsx": "837474d7276377a1e51cdab30cca818edae9baf8bf556b37329ca72e1d8c5a17",
+      "web/src/features/maps/components/charging-places/NeedsSetupQueue.test.tsx": "5e9a7e8ffca44f3708c804febbd42939aa5842be48f7d8cb27a1a75058171047",
+      "web/src/features/maps/components/charging-places/NeedsSetupQueue.tsx": "a84d7ff453ca5a2d66c496fe70a6acb9c2ad4cb2310f263c3a84db1e038fed34",
+      "web/src/features/maps/components/charging-places/PlaceDetailPanel.test.tsx": "acff042bf3cff4fc070742d98bd291981785791f0f3c8dd1f46483ac4300c65b",
+      "web/src/features/maps/components/charging-places/PlaceDetailPanel.tsx": "0436d23d9ae681899f65437d6a3a4619d28a694782e13839a078a3dd5d7a9b92",
+      "web/src/features/maps/components/charging-places/PlacesTable.test.tsx": "4773c2d25a386481a84c7fe4c420e7cfbabedb917352172a1cbf49feb6226597",
+      "web/src/features/maps/components/charging-places/PlacesTable.tsx": "310293d50ca9bbc8c4b2d4e1cb22456d6cd15484db078aa431fbbd79524261fb",
+      "web/src/features/maps/components/charging-places/PreviewApplyPanel.test.tsx": "72bee11ad52ec241f72f4fd9265aabbaccf5742fced22476ab2eec0042f715bd",
+      "web/src/features/maps/components/charging-places/PreviewApplyPanel.tsx": "7971c2db267a4700e2f510cbac876792926d785dfbf3c2a78331047778bc2bc6",
+      "web/src/features/maps/components/charging-places/RateForm.test.tsx": "b17841790d1e663baa76a33b1942b8d00f24b41b48a060b8ab0b53c9f1aa291b",
+      "web/src/features/maps/components/charging-places/RateForm.tsx": "216467bd71bc8d7e5790850c783d56dd3ef1891fdca128b4f72139119838fd9b",
+      "web/src/features/maps/components/charging-places/RateHistoryPanel.test.tsx": "57e5aeb322b1539a1cf120d53691f1b5a0b31fe24d2c8536ab8c4e9eab949a95",
+      "web/src/features/maps/components/charging-places/RateHistoryPanel.tsx": "41bbb0f69602805c08295712490df98706fdf13dd4189ca95ac540fd786d9d04",
+      "web/src/features/maps/components/charging-places/VisitedCandidates.tsx": "60d78edbead756bb20cc6f1436d2bf1b16ca82756608915f1f0cda7207db4b45",
+      "web/src/features/maps/components/charging-places/helpers.test.ts": "5f5b613cf59dcc42b958d2151670d509d7b1066de3000110f39c946f7b130045",
+      "web/src/features/maps/components/charging-places/helpers.ts": "48dbf0870db3b137accb1587e11e382512bbcc1a0deb4364cc479629d22efca3",
+      "web/src/features/maps/components/charging-places/index.ts": "efb95ed4fb03fa873a05784d455d868903fd54193f2397f88d744cbfb792ccc0",
+      "web/src/features/maps/components/operationalbrief-all/MapsOperationalBrief.test.tsx": "040f8069d31c2d4ff52af8fd62cf411521ca29259ad43d5ab6985fc73890ae7b",
+      "web/src/features/maps/components/operationalbrief-all/MapsOperationalBrief.tsx": "ed6e0166d7e517333dc30920c5dc8c5de66f012a175eb3dfb41ce57dad097ed6",
+      "web/src/features/maps/geofenceCategories.ts": "6861bf8a2abb8aa35ba8216083fa1b35a9d67adc1bbf0176adcd151fcec3709a",
+      "web/src/features/maps/pages/GeofencesPage.catalogCopy.test.tsx": "8eb544f948f156ca219e8ebc50929fa3aecc1f3efe60f1fb5aabbfa7d641c70a",
+      "web/src/features/maps/pages/GeofencesPage.test.tsx": "54b5e1b54fda51f08e21b391e7caea9402c9ddbaeb1ea8d25d5bfef02fcee2a7",
+      "web/src/features/maps/pages/GeofencesPage.tsx": "6b6891f056ece2b72e97465df78022efcbb2e62859a09e52652633661a582732",
+      "web/src/features/maps/schemas/geofence.test.ts": "028a005f3c7b77bc433d33e4071b64db93abad8fdd0bb73cd6991ab7e31b583a",
+      "web/src/features/maps/schemas/geofence.ts": "245e801c7b39b7f50cc4a49755388b7e13edbf1143afaf58c1be434ecf843402",
+      "web/src/hooks/useNumberFormatting.ts": "e32c23df1cb2001d54d324e2e0a7be6077720a26820a1cf2ac6c81358aca2ad7",
+      "web/src/hooks/useSelectedVehicle.ts": "c52768ea42f3e8dd34399f1372a09eb3f70d6c6cb2dddbc41790a6d30e7c4ae3",
+      "web/src/hooks/useUnits.ts": "b90452309357b88fe27edf878a943ff46cf9083015592d1587997b5c0f4a8b14",
+      "web/src/lib/dateFormat.ts": "30eeb276813505d3cee3d0b1df38a7b13fc97dce388a0c5b2c3c86c902f62f64",
+      "web/src/api/client.ts": "a9ec99b561c05b73cbbc805f28d770a4e7e132c5cfd8ae8f740e1393311f59a5",
+      "web/src/components/layout/PageContainer.tsx": "4b718ac20f8a473a3c59b6dbd7031d9bb686e2c3ad93b25ddb94523eea074b4a",
+      "web/src/components/layout/layout-reference/SourceContent.tsx": "9b423c800d3c77d0018a939b1c200a86ff851e781052393a4026dae914b7faa7",
+      "web/src/components/ui/Button.tsx": "e43e202cc9f465efeef93a1be2b156255958934af635abf0eaa408f310dde16c",
+      "web/src/hooks/useDateFormat.ts": "97b1b0ebd44436cd8274a4927d0df4381b112df1468a22ef6238029675d6a542",
+      "web/src/hooks/useSettings.ts": "f0dddd38c53e59a7103f9ee3160263017654f77ac5001c7eb0d941816b9fdca3",
+      "web/src/lib/workspaceScope.ts": "aeb8c01d410f2377aa5fd713de1a678a0360acf647a9c882f03e46c80efdfcd7",
+      "web/src/api/offlineCache.ts": "ede8370b47bc67befd688a6434d6696c1efdae22e77bfdcc56c2d11d2857e6ce",
+      "web/src/components/ai/AISuggestNewGeofences.test.tsx": "7d511acffdb53f6c53f8e8636bcbd9eb64683236ffa8cf8f9c5e3d903ae3c447",
+      "web/src/components/ai/AISuggestNewGeofences.tsx": "ad67748df9ec7c2ea962c4108b2192d0aa9eb9abbd7d9af4d579a6623661bec3",
+      "web/src/components/ui/DataTable.tsx": "a9c394d5830620a8606b85cd376ed748c6f30ab0df70a250accbd4a9093ff282",
+      "web/src/lib/operationalMode.ts": "ee455c50bef62d5751b3cd9c7bf92f342071e740b76b3fd6f8fde8b4773c455d"
+    },
+    "mismatches": [],
+    "historical_parity": "Original audit838lines/hash is historical; current866lines/same section/action families reviewed, not immutable-original byte comparison."
+  },
+  "states": {
+    "loading": "Source-shaped skeletons/missing readings; initial-paused detail gap reported",
+    "fatal": "Per-source fatal bodies, neighboring content retained; no all-page data-null gate",
+    "retained": "Rows/counts retained after errors; visited candidates owns retry. Workspace paused/retry gap reported.",
+    "unknown_zero": "Unknown summary counts dash; authoritative empty arrays/count0 and zero prices preserved; valid zero-coordinate picker defect reported.",
+    "paused": "No invented offline cause; actual network behavior NOTRUN"
+  },
+  "testEvidence": {
+    "status": "NOTRUN; source declarations only",
+    "files_declaration_scanned": 16,
+    "declaration_sites": 210,
+    "page_declaration_sites": 36,
+    "catalogCopy_declaration_sites": 1,
+    "schema_declaration_sites": 15,
+    "discovered": null,
+    "executed": 0,
+    "passed": null,
+    "failed": null,
+    "skipped": null,
+    "limits": "it.each counted as declaration sites, not expanded runtime cases. Page mocks request/maps/geolocation/AI/i18n; real-English catalogCopy mocks directory/summary/map. Workspace/detail suites mock children. Schema bounds/finite/signed/scientific and helper SI/zero/half-open cases declared, not executed."
+  },
+  "rawRuleChecks": {
+    "scope": "16 pinned feature production sources, Python regex line grep, not official AST/lint audit",
+    "raw_matches": {
+      "static-inline-style": 0,
+      "raw-html": 1,
+      "direct-library-import": 0,
+      "old-api-import": 0,
+      "double-prefix": 1,
+      "camelcase-param": 0,
+      "hidden-section": 0,
+      "fetch-useeffect": 8,
+      "PageLayout-or-PageContainer": 1,
+      "hardcoded-candidates": 7
+    },
+    "classification": "Raw HTML/API prefix hits are schema JSDoc. Eight effects reset/synchronize local UI, not data load. PageLayout actually wraps PageContainer. AI/modal/candidate gates are workflow/features, not missing-data panel hiding. Hardcoded regex includes generic syntax false positives and misses required-template/provenance; manual occurrence count recorded separately. No zero overall violations claim.",
+    "confirmed_occurrences": {
+      "hardcoded-string": 6,
+      "static-inline-style": 0,
+      "raw-html": 0,
+      "direct-library-import": 0,
+      "old-api-import": 0,
+      "double-prefix": 0,
+      "camelcase-param": 0,
+      "hidden-section": 0,
+      "fetch-useeffect": 0,
+      "missing-page-container": 0
+    }
+  },
+  "queueDeduplication": {
+    "rows": [
+      {
+        "item": "phase6-qa-maps-geofences",
+        "status": "[~]",
+        "line": 143,
+        "files": "docs\\frontend-audits\\phase6-qa-maps-geofences.json; web\\logs\\phase6-qa-maps-geofences.log",
+        "attempt": "1"
+      },
+      {
+        "item": "phase3-aisuggest-new-geofences",
+        "status": "[x]",
+        "line": 1053,
+        "files": "web\\src\\components\\ai\\AISuggestNewGeofences.tsx; web\\src\\components\\ai\\AISuggestNewGeofences.test.tsx",
+        "attempt": "1"
+      },
+      {
+        "item": "phase3-geofence-canvas-paint-correction",
+        "status": "[x]",
+        "line": 1464,
+        "files": "web\\src\\components\\maps\\GeofenceDrawer.tsx; web\\src\\components\\maps\\__tests__\\GeofenceDrawer.test.tsx",
+        "attempt": "2"
+      },
+      {
+        "item": "phase3-geofence-draw-edit-options",
+        "status": "[x]",
+        "line": 1465,
+        "files": "web\\src\\components\\maps\\GeofenceDrawer.tsx; web\\src\\components\\maps\\__tests__\\GeofenceDrawer.test.tsx",
+        "attempt": "1"
+      },
+      {
+        "item": "phase3-geofence-drawer",
+        "status": "[x]",
+        "line": 1466,
+        "files": "web\\src\\components\\maps\\GeofenceDrawer.tsx; web\\src\\components\\maps\\__tests__\\GeofenceDrawer.test.tsx",
+        "attempt": "2"
+      },
+      {
+        "item": "phase3-geofence-mounted-canvas-proof",
+        "status": "[-]",
+        "line": 1467,
+        "files": "-",
+        "attempt": "-"
+      },
+      {
+        "item": "phase3-maps-operational-brief",
+        "status": "[x]",
+        "line": 1505,
+        "files": "web\\src\\features\\maps\\components\\operationalbrief-all\\MapsOperationalBrief.tsx; web\\src\\features\\maps\\components\\operationalbrief-all\\MapsOperationalBrief.test.tsx",
+        "attempt": "1"
+      },
+      {
+        "item": "phase3-source-content",
+        "status": "[x]",
+        "line": 1620,
+        "files": "web\\src\\components\\layout\\layout-reference\\SourceContent.tsx; web\\src\\components\\layout\\layout-reference\\SourceContent.production.test.tsx",
+        "attempt": "1"
+      },
+      {
+        "item": "phase5-page-maps-geofences",
+        "status": "[x]",
+        "line": 2055,
+        "files": "web\\src\\features\\maps\\pages\\GeofencesPage.tsx; web\\src\\features\\maps\\pages\\GeofencesPage.test.tsx",
+        "attempt": "1"
+      }
+    ],
+    "authority": "Read-only migration-queue.md",
+    "disposition": "No matching open exact geofence/direct-support repair owner found in scoped searches; only active QA owner. Parent must reserve corrective leases. Closed page/summary/SourceContent/AI/renderer owners are context, never redispatched; obsolete map default/CSS-variable claims not repeated. Related sites grouped per root, not extra findings."
+  },
+  "evidenceLimits": {
+    "NOTRUN": [
+      "Fresh tests/Vitest/passing reruns",
+      "Lint/ESLint/official scanners",
+      "npx tsc --noEmit/global TSC",
+      "Build/docs build/preservation helpers",
+      "Browser/Edge/Playwright/native/device/screenshots",
+      "Network/API/backend/mutations/geolocation/map tiles",
+      "Installs/servers/subagents",
+      "Git/queue/source/test/catalog edits"
+    ],
+    "failures": [
+      {
+        "shellId": "1798",
+        "exit": 1,
+        "reason": "Initial discovery Python stdout encoding failure; raw output retained; UTF8 bounded read recovered"
+      },
+      {
+        "shellId": "2011",
+        "exit": 1,
+        "reason": "Metadata queue grep IndexError on prose table; raw error retained; guarded read corrected in2025"
+      },
+      {
+        "shellId": "2180",
+        "exit": 1,
+        "reason": "Report author command rejected before execution: filename/extension too long (os error206). No report written by failed command; bounded authoring continues."
+      }
+    ],
+    "view_failures": [
+      "Requested GeofencesPage.test.tsx range946:-1 beyond actual913lines; all actual1:913 subsequently read."
+    ],
+    "acceptance": "No TS/test/lint/build/native/runtime/visual/API/app acceptance claimed. Source-traced repros are not executed reproductions."
+  },
+  "filesRead": [
+    ".agents/state.md",
+    ".github/copilot-instructions.md",
+    ".github/instructions/frontend-si-cutover.instructions.md",
+    ".github/instructions/react-frontend.instructions.md",
+    ".github/instructions/unit-conversion.instructions.md",
+    "agent-loop-playbook.md",
+    "docs/CONTRIBUTING.md",
+    "docs/frontend-audits/audit-page-135.json",
+    "docs/frontend-design-contract.md",
+    "docs/frontend-inventory.md",
+    "docs/frontend-mission.md",
+    "docs/frontend-worker-conventions.md",
+    "docs/orchestrator-loop.md",
+    "docs/session-handoff.md",
+    "migration-queue.md",
+    "shared-library-loop.md",
+    "web/src/api/client.ts",
+    "web/src/api/dataState.ts",
+    "web/src/api/hooks/useLocations.ts",
+    "web/src/api/offlineCache.ts",
+    "web/src/components/ai/AISuggestNewGeofences.test.tsx",
+    "web/src/components/ai/AISuggestNewGeofences.tsx",
+    "web/src/components/data-display/TimeStamp.tsx",
+    "web/src/components/layout/PageContainer.tsx",
+    "web/src/components/layout/index.ts",
+    "web/src/components/layout/layout-reference/PageLayout.tsx",
+    "web/src/components/layout/layout-reference/SourceContent.tsx",
+    "web/src/components/maps/GeofenceDrawer.tsx",
+    "web/src/components/maps/__tests__/GeofenceDrawer.test.tsx",
+    "web/src/components/ui/Button.tsx",
+    "web/src/components/ui/DataTable.tsx",
+    "web/src/features/maps/components/MobilitySourcePresenters.test.tsx",
+    "web/src/features/maps/components/charging-places/ChargingActivityList.test.tsx",
+    "web/src/features/maps/components/charging-places/ChargingActivityList.tsx",
+    "web/src/features/maps/components/charging-places/ChargingPlacesWorkspace.test.tsx",
+    "web/src/features/maps/components/charging-places/ChargingPlacesWorkspace.tsx",
+    "web/src/features/maps/components/charging-places/ChargingSummaryPanel.test.tsx",
+    "web/src/features/maps/components/charging-places/ChargingSummaryPanel.tsx",
+    "web/src/features/maps/components/charging-places/NeedsSetupQueue.test.tsx",
+    "web/src/features/maps/components/charging-places/NeedsSetupQueue.tsx",
+    "web/src/features/maps/components/charging-places/PlaceDetailPanel.test.tsx",
+    "web/src/features/maps/components/charging-places/PlaceDetailPanel.tsx",
+    "web/src/features/maps/components/charging-places/PlacesTable.test.tsx",
+    "web/src/features/maps/components/charging-places/PlacesTable.tsx",
+    "web/src/features/maps/components/charging-places/PreviewApplyPanel.test.tsx",
+    "web/src/features/maps/components/charging-places/PreviewApplyPanel.tsx",
+    "web/src/features/maps/components/charging-places/RateForm.test.tsx",
+    "web/src/features/maps/components/charging-places/RateForm.tsx",
+    "web/src/features/maps/components/charging-places/RateHistoryPanel.test.tsx",
+    "web/src/features/maps/components/charging-places/RateHistoryPanel.tsx",
+    "web/src/features/maps/components/charging-places/VisitedCandidates.tsx",
+    "web/src/features/maps/components/charging-places/helpers.test.ts",
+    "web/src/features/maps/components/charging-places/helpers.ts",
+    "web/src/features/maps/components/charging-places/index.ts",
+    "web/src/features/maps/components/operationalbrief-all/MapsOperationalBrief.test.tsx",
+    "web/src/features/maps/components/operationalbrief-all/MapsOperationalBrief.tsx",
+    "web/src/features/maps/geofenceCategories.ts",
+    "web/src/features/maps/pages/GeofencesPage.catalogCopy.test.tsx",
+    "web/src/features/maps/pages/GeofencesPage.test.tsx",
+    "web/src/features/maps/pages/GeofencesPage.tsx",
+    "web/src/features/maps/schemas/geofence.test.ts",
+    "web/src/features/maps/schemas/geofence.ts",
+    "web/src/hooks/useDateFormat.ts",
+    "web/src/hooks/useNumberFormatting.ts",
+    "web/src/hooks/useSelectedVehicle.ts",
+    "web/src/hooks/useSettings.ts",
+    "web/src/hooks/useUnits.ts",
+    "web/src/lib/dateFormat.ts",
+    "web/src/lib/operationalMode.ts",
+    "web/src/lib/workspaceScope.ts"
+  ],
+  "needs": "Parent exact corrective leases/copy integration as needed; separately authorized synthetic native/bounds/race proof. No real data access requested.",
+  "validation": {
+    "status": "PASS_JSON_PARSE_EXACT_CITATIONS_AND_FINAL_SOURCE_TEST_PINS",
+    "pin_count": 53,
+    "pin_mismatches": 0,
+    "utc": "2026-10-14T02:08:51.215854+00:00",
+    "not_application_validation": true
+  },
+  "release": {
+    "report": "RELEASED",
+    "log": "RELEASED_AFTER_THIS_COMMAND",
+    "commands": "RELEASED_ON_SYNC_EXIT",
+    "utc": "2026-10-14T02:08:51.215854+00:00"
+  },
+  "counts": {
+    "confirmed_findings": 12,
+    "conditional_candidates": 6,
+    "native_candidates": 4,
+    "total_deduplicated_entries": 22,
+    "confirmed_by_rule": {
+      "live-only-mutation": 1,
+      "draft-preservation": 1,
+      "draft-scope": 1,
+      "unknown-zero": 1,
+      "hardcoded-string": 2,
+      "saved-date-preferences": 1,
+      "saved-timezone-bounds": 1,
+      "initial-paused-trust": 1,
+      "paused-retained-recovery": 1,
+      "mutation-outcome": 1,
+      "mobile-preservation": 1
+    },
+    "confirmed_by_priority": {
+      "P1": 6,
+      "P2": 6
+    },
+    "confirmed_by_primary_file": {
+      "web/src/features/maps/pages/GeofencesPage.tsx": 4,
+      "web/src/features/maps/schemas/geofence.ts": 1,
+      "web/src/features/maps/components/operationalbrief-all/MapsOperationalBrief.tsx": 2,
+      "web/src/features/maps/components/charging-places/RateForm.tsx": 1,
+      "web/src/features/maps/components/charging-places/PlaceDetailPanel.tsx": 1,
+      "web/src/features/maps/components/charging-places/ChargingPlacesWorkspace.tsx": 1,
+      "web/src/api/hooks/useLocations.ts": 1,
+      "web/src/features/maps/components/charging-places/RateHistoryPanel.tsx": 1
+    },
+    "engineering_hardcoded_occurrences": 6,
+    "source_test_pins": 53,
+    "pin_mismatches": 0,
+    "test_declaration_sites": 210,
+    "command_failures": 3,
+    "view_read_failures": 1
+  },
+  "responsive": {
+    "source_defect": "GEO-12",
+    "declarations": "Stacked forms/coordinate grid, sm/xl reflow, wrapped footer/actions,min-w-0,mobile allow-lists",
+    "native": "NATIVE-01/04 NOTRUN"
+  },
+  "accessibility": {
+    "declarations": "Localized labels/named regions/useId tabs/linked tabpanel/shared modal-confirm/numeric map alternatives",
+    "issues": [
+      "GEO-05",
+      "GEO-06",
+      "GEO-12"
+    ],
+    "native": "keyboard/focus/screenreader/contrast/forced colors NOTRUN"
+  },
+  "visualIssues": {
+    "status": "Native NOTRUN; completed restrained renderer correction not redispatched"
+  },
+  "architectureIssues": [
+    "GEO-01",
+    "GEO-10",
+    "GEO-11"
+  ],
+  "priority": {
+    "first": [
+      "GEO-01",
+      "GEO-03",
+      "GEO-08",
+      "GEO-09",
+      "GEO-11",
+      "GEO-12"
+    ],
+    "completion": "Report delivery only, not repaired/page/app accepted"
+  },
+  "duplicatedPatterns": [
+    {
+      "file": "web/src/features/maps/pages/GeofencesPage.tsx",
+      "line": 179,
+      "detail": "Inline query duplicates existing useGeofences; local CRUD policy differs. Full-directory cache intentionally separate."
+    }
+  ],
+  "requiredSharedChanges": [
+    {
+      "name": "Exact domain live/write/outcome/bounds/trust/mobile correction",
+      "existingOwnerFile": "web/src/api/hooks/useLocations.ts",
+      "usedBy": [
+        "web/src/features/maps/pages/GeofencesPage.tsx",
+        "web/src/features/maps/components/charging-places/ChargingPlacesWorkspace.tsx"
+      ],
+      "dependsOn": [
+        "Parent disjoint exclusive corrective leases; accepted shared APIs retained"
+      ]
+    },
+    {
+      "name": "Summary localized provenance/saved receipt formatting",
+      "existingOwnerFile": "web/src/features/maps/components/operationalbrief-all/MapsOperationalBrief.tsx",
+      "usedBy": [
+        "web/src/features/maps/pages/GeofencesPage.tsx"
+      ],
+      "dependsOn": [
+        "Exact domain lease/canonical catalog owner as required"
+      ]
+    }
+  ],
+  "competingImplementations": "No new helper/component/library created."
+}
