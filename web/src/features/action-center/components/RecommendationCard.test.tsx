@@ -13,7 +13,10 @@ import type {
 
 vi.unmock('react-i18next');
 vi.unmock('@/lib/timezone');
-const preferences = vi.hoisted(() => ({
+const preferences = vi.hoisted((): Pick<AppSettings,
+  'locale' | 'tz_display_default' | 'timezone_user' | 'decimal_precision'
+  | 'unit_of_length' | 'unit_of_temp' | 'unit_of_pressure'
+> => ({
   locale: 'en-US',
   tz_display_default: 'user',
   timezone_user: 'UTC',
@@ -21,10 +24,7 @@ const preferences = vi.hoisted(() => ({
   unit_of_length: 'km',
   unit_of_temp: 'C',
   unit_of_pressure: 'bar',
-} satisfies Pick<AppSettings,
-  'locale' | 'tz_display_default' | 'timezone_user' | 'decimal_precision'
-  | 'unit_of_length' | 'unit_of_temp' | 'unit_of_pressure'
->));
+}));
 vi.mock('@/hooks/useSettings', () => ({
   useSettings: () => ({
     settings: preferences,
