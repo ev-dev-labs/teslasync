@@ -11,14 +11,13 @@ import {
   Text,
 } from '@/components/ui';
 import { useUnits } from '@/hooks/useUnits';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { cn } from '@/lib/cn';
-
 
 import type { DrivingRhythm } from '../../lib/drivingRhythm';
 import { DrivingRhythmSectionBody } from './DrivingRhythmSectionBody';
 import type { DrivingRhythmSectionState } from './types';
 import { useRhythmDayLabel } from './useRhythmDayLabel';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface StrongestSlotsProps {
   summary: DrivingRhythm;
@@ -31,7 +30,7 @@ export function StrongestSlots({
   state,
   className,
 }: StrongestSlotsProps) {
-  const { fmtNumber } = useNumberFormatting();
+  const { fmtInt, fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const { formatDistance } = useUnits();
   const dayLabel = useRhythmDayLabel();
@@ -49,7 +48,7 @@ export function StrongestSlots({
     >
       <PanelTitle className="flex items-center gap-2">
         <ListOrdered
-          className="h-4 w-4 text-amber-300"
+          className="h-4 w-4 text-[var(--text-secondary)]"
           aria-hidden="true"
         />
         {t('rhythm.slots.title', 'Strongest time slots')}
@@ -80,7 +79,7 @@ export function StrongestSlots({
               >
                 <Badge variant={slot.rank === 1 ? 'success' : 'neutral'}>
                   {t('rhythm.slots.rank', '#{{rank}}', {
-                    rank: slot.rank,
+                    rank: fmtInt(slot.rank),
                   })}
                 </Badge>
                 <div className="min-w-0">
@@ -105,20 +104,20 @@ export function StrongestSlots({
                             ? slot.distanceM
                             : null,
                         ),
-                        measured: slot.measuredDistanceDrives,
+                        measured: fmtInt(slot.measuredDistanceDrives),
                       },
                     )}
                   </Text>
                 </div>
                 <div className="text-right">
-                  <MetricValue>{slot.count}</MetricValue>
+                  <MetricValue>{fmtInt(slot.count)}</MetricValue>
                   <MetricLabel>
                     {slot.qualified
                       ? t('rhythm.slots.supported', 'sample supported')
                       : t(
                           'rhythm.slots.sparse',
                           'below {{count}}-drive floor',
-                          { count: summary.minSlotDrives },
+                          { count: fmtInt(summary.minSlotDrives) },
                         )}
                   </MetricLabel>
                 </div>
