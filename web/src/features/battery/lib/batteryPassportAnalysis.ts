@@ -609,13 +609,17 @@ function sanitizeMetrics(
     && passport.health_grade.trim() !== ''
       ? passport.health_grade.trim()
       : null;
-  const sohPct = isUnknownSohSentinel(
+  const unknownSoh = isUnknownSohSentinel(
     passport?.soh_pct,
     reportedGrade,
-  )
+  );
+  const sohPct = unknownSoh
     ? null
     : finiteInRange(passport?.soh_pct, 0, 100);
-  const capacityKwh = finiteInRange(passport?.capacity_kwh, 0, 500);
+  // The no-estimate certificate reports raw zero; retain it only as evidence.
+  const capacityKwh = unknownSoh && passport?.capacity_kwh === 0
+    ? null
+    : finiteInRange(passport?.capacity_kwh, 0, 500);
   const originalCapacityKwh = finiteInRange(
     passport?.original_capacity_kwh,
     0,
