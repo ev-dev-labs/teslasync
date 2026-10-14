@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { useId, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Badge, Button, Heading, Text } from '@/components/ui';
 import { cn } from '@/lib/cn';
@@ -34,6 +34,8 @@ export function CommandDomainBrowser({
   renderTile,
 }: CommandDomainBrowserProps) {
   const { t } = useTranslation();
+  const browserId = useId();
+  const panelId = `${browserId}-command-domain`;
   const activeDomain =
     COMMAND_DOMAINS.find((domain) => domain.id === activeDomainId) ??
     COMMAND_DOMAINS[0];
@@ -45,7 +47,7 @@ export function CommandDomainBrowser({
   return (
     <div className="space-y-4">
       <div
-        role="tablist"
+        role="group"
         aria-label={t('commands.domain.aria', 'Command domains')}
         className="grid grid-cols-2 gap-2 xl:grid-cols-4"
       >
@@ -55,12 +57,12 @@ export function CommandDomainBrowser({
           return (
             <Button
               key={domain.id}
+              id={`${browserId}-domain-${domain.id}`}
               type="button"
-              role="tab"
               size="lg"
               variant={selected ? 'secondary' : 'ghost'}
-              aria-selected={selected}
-              aria-controls={`command-domain-${domain.id}`}
+              aria-pressed={selected}
+              aria-controls={panelId}
               onClick={() => onDomainChange(domain.id)}
               className={cn(
                 'h-auto min-h-12 justify-start px-3 text-left',
@@ -77,8 +79,9 @@ export function CommandDomainBrowser({
       </div>
 
       <div
-        id={`command-domain-${activeDomain.id}`}
-        role="tabpanel"
+        id={panelId}
+        role="region"
+        aria-labelledby={`${browserId}-domain-${activeDomain.id}`}
         className="space-y-3 rounded-xl border border-[var(--border-subtle)] bg-white/[0.02] p-3 sm:p-4"
       >
         <div className="flex flex-col gap-1 border-b border-[var(--border-subtle)] pb-3 sm:flex-row sm:items-start sm:justify-between">
