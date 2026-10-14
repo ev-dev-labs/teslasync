@@ -324,7 +324,7 @@ type yrResponse struct {
 	TotalDistanceKm       float64          `json:"total_distance_km"`
 	TotalEnergyKwh        float64          `json:"total_energy_kwh"`
 	TotalChargeSessions   int              `json:"total_charge_sessions"`
-	TotalDrivingMinutes   int              `json:"total_driving_minutes"`
+	TotalDrivingMinutes   float64          `json:"total_driving_minutes"`
 	TotalChargingCost     float64          `json:"total_charging_cost"`
 	GasSavings            float64          `json:"gas_savings"`
 	Co2OffsetKg           float64          `json:"co2_offset_kg"`
@@ -380,6 +380,228 @@ func serve(fq *fakeQuerier, query string) *httptest.ResponseRecorder {
 	rec := httptest.NewRecorder()
 	h.GetYearReview(rec, newRequest(query))
 	return rec
+}
+
+func rawReview(t *testing.T, fq *fakeQuerier) map[string]json.RawMessage {
+	t.Helper()
+	rec := serve(fq, "vehicle_id=42&year=2020")
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d; body=%s", rec.Code, rec.Body.String())
+	}
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(rec.Body.Bytes(), &raw); err != nil {
+		t.Fatal(err)
+	}
+	return raw
+}
+
+func assertWire(t *testing.T, raw map[string]json.RawMessage, key, want string) {
+	t.Helper()
+	if got := string(raw[key]); got != want {
+		t.Errorf("%s = %s, want %s", key, got, want)
+	}
+}
+
+func TestGetYearReview_SecondaryScalarAvailability(t *testing.T) {
+	for _, tt := range []struct {
+		name  string
+		value any
+		want  string
+	}{
+		{"missing", nil, "null"},
+		{"nan", math.NaN(), "null"},
+		{"infinity", math.Inf(1), "null"},
+		{"negative infinity", math.Inf(-1), "null"},
+		{"overflow", math.MaxFloat64, "null"},
+		{"zero", 0.0, "0"},
+		{"fraction", 42.26, "42.3"},
+		{"signed fraction", -5.26, "-5.3"},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			fq := okQuerier()
+			fq.efficiencyRow = fakeRow{vals: []any{tt.value}}
+			fq.socRow = fakeRow{vals: []any{tt.value}}
+			raw := rawReview(t, fq)
+			assertWire(t, raw, "avg_efficiency_wh_km", tt.want)
+			socWant := tt.want
+			if value, ok := tt.value.(float64); ok && (value < 0 || value > 100) {
+				socWant = "null"
+			}
+			assertWire(t, raw, "avg_charge_start_soc", socWant)
+			assertWire(t, raw, "total_drives", "100")
+			assertWire(t, raw, "gas_savings", "123.98")
+		})
+	}
+	for _, err := range []error{pgx.ErrNoRows, errors.New("query failed")} {
+		fq := okQuerier()
+		fq.efficiencyRow, fq.socRow = fakeRow{err: err}, fakeRow{err: err}
+		raw := rawReview(t, fq)
+		assertWire(t, raw, "avg_efficiency_wh_km", "null")
+		assertWire(t, raw, "avg_charge_start_soc", "null")
+		assertWire(t, raw, "total_energy_kwh", "1200")
+	}
+}
+
+func TestGetYearReview_SettingsAvailability(t *testing.T) {
+	for _, tt := range []struct {
+		name       string
+		price, mpg any
+		want       string
+	}{
+		{"missing price", nil, 25.0, "null"},
+		{"missing efficiency", 3.5, nil, "null"},
+		{"invalid price", math.NaN(), 25.0, "null"},
+		{"invalid efficiency", 3.5, math.Inf(1), "null"},
+		{"zero efficiency", 3.5, 0.0, "null"},
+		{"negative efficiency", 3.5, -25.0, "null"},
+		{"negative price", -3.5, 25.0, "null"},
+		{"zero price is measured", 0.0, 25.0, "-50"},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			fq := okQuerier()
+			fq.settingsRow = fakeRow{vals: []any{tt.price, tt.mpg}}
+			raw := rawReview(t, fq)
+			assertWire(t, raw, "gas_savings", tt.want)
+			assertWire(t, raw, "total_charging_cost", "50")
+		})
+	}
+	fq := okQuerier()
+	fq.settingsRow = fakeRow{err: errors.New("unavailable settings")}
+	raw := rawReview(t, fq)
+	assertWire(t, raw, "gas_savings", "null")
+	var cards []comparisonJSON
+	if err := json.Unmarshal(raw["comparisons"], &cards); err != nil {
+		t.Fatal(err)
+	}
+	for _, card := range cards {
+		if card.Label == "Gas money saved" {
+			t.Fatal("unavailable savings produced a comparison")
+		}
+	}
+}
+
+func TestGetYearReview_ActivityAvailability(t *testing.T) {
+	for _, tt := range []struct {
+		name     string
+		row      fakeRow
+		wantHour string
+		wantDay  string
+	}{
+		{"missing", fakeRow{err: pgx.ErrNoRows}, "null", "null"},
+		{"failed", fakeRow{err: errors.New("unavailable")}, "null", "null"},
+		{"invalid negative", fakeRow{vals: []any{-1, 5}}, "null", "null"},
+		{"invalid index", fakeRow{vals: []any{24, 5}}, "null", "null"},
+		{"invalid count", fakeRow{vals: []any{0, 0}}, "null", "null"},
+		{"midnight Sunday", fakeRow{vals: []any{0, 5}}, "0", `"Sunday"`},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			fq := okQuerier()
+			fq.hourRow, fq.dowRow = tt.row, tt.row
+			raw := rawReview(t, fq)
+			assertWire(t, raw, "most_active_hour", tt.wantHour)
+			assertWire(t, raw, "most_active_day_of_week", tt.wantDay)
+			assertWire(t, raw, "avg_efficiency_wh_km", "155.5")
+		})
+	}
+}
+
+func TestGetYearReview_GroupFailuresPreserveNeighbors(t *testing.T) {
+	for _, group := range []string{"drive", "charge", "type"} {
+		for _, failure := range []string{"query", "scan", "iteration"} {
+			t.Run(group+"/"+failure, func(t *testing.T) {
+				fq := okQuerier()
+				fail := errors.New("secondary failure")
+				rows := &fakeRows{rows: [][]any{{6, 40, 800.0}}}
+				if group == "charge" {
+					rows.rows = [][]any{{6, 500.0, 90.0}}
+				} else if group == "type" {
+					rows.rows = [][]any{{"supercharger", 30}}
+				}
+				if failure == "scan" {
+					rows.scanErr = fail
+				} else if failure == "iteration" {
+					rows.iterErr = fail
+				}
+				switch group {
+				case "drive":
+					fq.driveMonthRows = rows
+					if failure == "query" {
+						fq.driveMonthErr = fail
+					}
+				case "charge":
+					fq.chargeMonthRows = rows
+					if failure == "query" {
+						fq.chargeMonthErr = fail
+					}
+				case "type":
+					fq.chargeTypeRows = rows
+					if failure == "query" {
+						fq.chargeTypeErr = fail
+					}
+				}
+				raw := rawReview(t, fq)
+				assertWire(t, raw, "total_drives", "100")
+				assertWire(t, raw, "avg_charge_start_soc", "42")
+				var months []map[string]json.RawMessage
+				if err := json.Unmarshal(raw["monthly_stats"], &months); err != nil {
+					t.Fatal(err)
+				}
+				if len(months) != 12 {
+					t.Fatalf("got %d months", len(months))
+				}
+				for _, month := range months {
+					if group == "drive" {
+						assertWire(t, month, "drives", "null")
+						assertWire(t, month, "distance_km", "null")
+					} else if group == "charge" {
+						assertWire(t, month, "energy_kwh", "null")
+						assertWire(t, month, "cost", "null")
+					}
+				}
+				if group != "charge" {
+					assertWire(t, months[5], "energy_kwh", "500")
+				}
+				if group != "drive" {
+					assertWire(t, months[5], "drives", "40")
+				}
+				for _, key := range []string{"supercharger_pct", "dc_fast_pct", "ac_other_pct"} {
+					if group == "type" {
+						assertWire(t, raw, key, "null")
+					} else if string(raw[key]) == "null" {
+						t.Errorf("successful %s became unavailable", key)
+					}
+				}
+				if failure != "query" && !rows.closed {
+					t.Error("rows not closed")
+				}
+			})
+		}
+	}
+}
+
+func TestGetYearReview_MonthlyValuesAndFractionalDuration(t *testing.T) {
+	fq := okQuerier()
+	fq.driveStatsRow = fakeRow{vals: []any{100, 2000.0, 3000.5, 180.0, -5.0, 38.0}}
+	fq.driveMonthRows = &fakeRows{rows: [][]any{{6, 40, math.NaN()}}}
+	fq.chargeMonthRows = &fakeRows{rows: [][]any{
+		{6, nil, -5.265}, {2, 0.0, 0.0}, {3, 1.26, math.Inf(1)},
+	}}
+	raw := rawReview(t, fq)
+	assertWire(t, raw, "total_driving_minutes", "3000.5")
+	var months []map[string]json.RawMessage
+	if err := json.Unmarshal(raw["monthly_stats"], &months); err != nil {
+		t.Fatal(err)
+	}
+	assertWire(t, months[5], "drives", "40")
+	assertWire(t, months[5], "distance_km", "null")
+	assertWire(t, months[5], "energy_kwh", "null")
+	assertWire(t, months[5], "cost", "-5.27")
+	assertWire(t, months[1], "energy_kwh", "0")
+	assertWire(t, months[1], "cost", "0")
+	assertWire(t, months[2], "energy_kwh", "1.3")
+	assertWire(t, months[2], "cost", "null")
+	assertWire(t, months[0], "drives", "0")
+	assertWire(t, months[0], "energy_kwh", "0")
 }
 
 const jsonCT = "application/json; charset=utf-8"
@@ -589,7 +811,7 @@ func TestGetYearReview_Success(t *testing.T) {
 		t.Errorf("total_charge_sessions = %d, want 50", got.TotalChargeSessions)
 	}
 	if got.TotalDrivingMinutes != 3000 {
-		t.Errorf("total_driving_minutes = %d, want 3000", got.TotalDrivingMinutes)
+		t.Errorf("total_driving_minutes = %v, want 3000", got.TotalDrivingMinutes)
 	}
 	if got.TotalChargingCost != 50 {
 		t.Errorf("total_charging_cost = %v, want 50", got.TotalChargingCost)
@@ -801,7 +1023,7 @@ func TestGetYearReview_ToleratedFailures(t *testing.T) {
 		check  func(t *testing.T, got yrResponse)
 	}{
 		{
-			name: "efficiency query error keeps 200 with zero efficiency",
+			name: "efficiency query error keeps 200",
 			mutate: func(fq *fakeQuerier) {
 				fq.efficiencyRow = fakeRow{err: errors.New("eff boom")}
 			},
@@ -815,14 +1037,13 @@ func TestGetYearReview_ToleratedFailures(t *testing.T) {
 			},
 		},
 		{
-			name: "settings error falls back to gas defaults",
+			name: "settings error leaves savings unavailable",
 			mutate: func(fq *fakeQuerier) {
 				fq.settingsRow = fakeRow{err: errors.New("settings boom")}
 			},
 			check: func(t *testing.T, got yrResponse) {
-				// Default $3.50 / 25mpg reproduce the happy-path savings.
-				if got.GasSavings != 123.98 {
-					t.Errorf("gas_savings = %v, want 123.98 from defaults", got.GasSavings)
+				if got.GasSavings != 0 {
+					t.Errorf("null gas_savings decoded as %v, want zero value", got.GasSavings)
 				}
 			},
 		},
@@ -925,20 +1146,18 @@ func TestGetYearReview_ToleratedFailures(t *testing.T) {
 	}
 }
 
-// TestGetYearReview_GasSavingsClamped verifies that when the equivalent gas
-// cost is below the actual charging cost the reported savings floor at 0 and
-// the "Gas money saved" comparison card is omitted.
-func TestGetYearReview_GasSavingsClamped(t *testing.T) {
+// Negative savings are valid, but must not generate a money-saved card.
+func TestGetYearReview_NegativeGasSavings(t *testing.T) {
 	fq := okQuerier()
-	// Charging cost far exceeds the gas-equivalent -> negative -> clamp 0.
+	// Charging cost far exceeds the gas-equivalent.
 	fq.chargingStatsRow = fakeRow{vals: []any{int(50), 1200.0, 5000.0}}
 	rec := serve(fq, "vehicle_id=42&year=2020")
 	if rec.Code != http.StatusOK {
 		t.Fatalf("status = %d, want 200; body=%s", rec.Code, rec.Body.String())
 	}
 	got := decodeYR(t, rec.Body.Bytes())
-	if got.GasSavings != 0 {
-		t.Errorf("gas_savings = %v, want 0 (clamped)", got.GasSavings)
+	if got.GasSavings != -4826.02 {
+		t.Errorf("gas_savings = %v, want -4826.02", got.GasSavings)
 	}
 	for _, c := range got.Comparisons {
 		if c.Label == "Gas money saved" {

@@ -13,6 +13,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/jackc/pgx/v5"
 	"github.com/rs/zerolog/log"
+	"go.opentelemetry.io/otel"
 )
 
 // yearReviewQueryBudget bounds the whole year-review request. The handler
@@ -54,11 +55,11 @@ type driveHighlight struct {
 }
 
 type monthStat struct {
-	Month      int     `json:"month"`
-	Drives     int     `json:"drives"`
-	DistanceKm float64 `json:"distance_km"`
-	EnergyKwh  float64 `json:"energy_kwh"`
-	Cost       float64 `json:"cost"`
+	Month      int      `json:"month"`
+	Drives     *int     `json:"drives"`
+	DistanceKm *float64 `json:"distance_km"`
+	EnergyKwh  *float64 `json:"energy_kwh"`
+	Cost       *float64 `json:"cost"`
 }
 
 type comparison struct {
@@ -74,8 +75,11 @@ func roundYR(v float64, decimals int) float64 {
 
 // GetYearReview returns a full-year aggregation for a single vehicle.
 func (h *Handler) GetYearReview(w http.ResponseWriter, r *http.Request) {
-	ctx, cancel := context.WithTimeout(r.Context(), yearReviewQueryBudget)
+	ctx, span := otel.Tracer("api").Start(r.Context(), "yearreview.GetYearReview")
+	defer span.End()
+	ctx, cancel := context.WithTimeout(ctx, yearReviewQueryBudget)
 	defer cancel()
+	logger := log.With().Str("trace_id", span.SpanContext().TraceID().String()).Logger()
 
 	vidStr := r.URL.Query().Get("vehicle_id")
 	if vidStr == "" {
@@ -112,7 +116,7 @@ func (h *Handler) GetYearReview(w http.ResponseWriter, r *http.Request) {
 			httpx.WriteError(w, http.StatusNotFound, "vehicle not found")
 			return
 		}
-		log.Error().Err(err).Int64("vehicle_id", vehicleID).Msg("year-review: failed to get vehicle")
+		logger.Error().Err(err).Int64("vehicle_id", vehicleID).Msg("year-review: failed to get vehicle")
 		httpx.WriteError(w, http.StatusInternalServerError, "failed to get vehicle")
 		return
 	}
@@ -139,7 +143,7 @@ func (h *Handler) GetYearReview(w http.ResponseWriter, r *http.Request) {
 		vehicleID, yearStart, yearEnd,
 	).Scan(&totalDrives, &totalDistKm, &totalDrivingMin, &fastestSpeed, &coldestTemp, &hottestTemp)
 	if err != nil {
-		log.Error().Err(err).Msg("year-review: failed to get drive stats")
+		logger.Error().Err(err).Msg("year-review: failed to get drive stats")
 		httpx.WriteError(w, http.StatusInternalServerError, "failed to compute year review")
 		return
 	}
@@ -147,13 +151,13 @@ func (h *Handler) GetYearReview(w http.ResponseWriter, r *http.Request) {
 	// Average efficiency (Wh/km) from SI columns: energy_used_wh,
 	// distance_m. Wh/km = energy_used_wh / (distance_m / 1000). Filter
 	// distance_m > 1609.344 (1 mile, matching the previous threshold).
-	var avgEffWhKm float64
+	var avgEffWhKm *float64
 	if err = h.q.QueryRow(ctx, `
-		SELECT COALESCE(AVG(
-			CASE WHEN distance_m > 1609.344 AND energy_used_wh > 0
+		SELECT AVG(
+			CASE WHEN distance_m > 1609.344
 			THEN energy_used_wh / (distance_m / 1000.0)
 			END
-		), 0)
+		)
 		FROM drives
 		WHERE vehicle_id = $1
 		  AND ended_at IS NOT NULL
@@ -162,6 +166,7 @@ func (h *Handler) GetYearReview(w http.ResponseWriter, r *http.Request) {
 		vehicleID, yearStart, yearEnd,
 	).Scan(&avgEffWhKm); err != nil {
 		log.Warn().Err(err).Int64("vehicle_id", vehicleID).Msg("year-review: failed to get efficiency")
+		avgEffWhKm = nil
 	}
 
 	// SI canonical charging_sessions (migration 000184): total_energy_added_wh,
@@ -171,7 +176,7 @@ func (h *Handler) GetYearReview(w http.ResponseWriter, r *http.Request) {
 	err = h.q.QueryRow(ctx, `
 		SELECT COUNT(*),
 		       COALESCE(SUM(total_energy_added_wh) / 1000.0, 0),
-		       COALESCE(SUM(CASE WHEN cost_decimal > 0 THEN cost_decimal::float8 ELSE 0 END), 0)
+		       COALESCE(SUM(cost_decimal::float8), 0)
 		FROM charging_sessions
 		WHERE vehicle_id = $1
 		  AND ended_at IS NOT NULL
@@ -180,35 +185,29 @@ func (h *Handler) GetYearReview(w http.ResponseWriter, r *http.Request) {
 		vehicleID, yearStart, yearEnd,
 	).Scan(&totalChargeSessions, &totalEnergyKwh, &totalChargingCost)
 	if err != nil {
-		log.Error().Err(err).Msg("year-review: failed to get charging stats")
+		logger.Error().Err(err).Msg("year-review: failed to get charging stats")
 		httpx.WriteError(w, http.StatusInternalServerError, "failed to compute year review")
 		return
 	}
 
-	var gasPrice, gasEffMPG float64
+	var gasPrice, gasEffMPG *float64
 	err = h.q.QueryRow(ctx,
 		`SELECT
-		  COALESCE((SELECT value_num FROM settings WHERE key = 'gas_price_per_unit'), 3.50),
-		  COALESCE((SELECT value_num FROM settings WHERE key = 'gas_efficiency_mpg'), 25)`,
+		  (SELECT value_num FROM settings WHERE key = 'gas_price_per_unit'),
+		  (SELECT value_num FROM settings WHERE key = 'gas_efficiency_mpg')`,
 	).Scan(&gasPrice, &gasEffMPG)
-	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
-		log.Warn().Err(err).Msg("year-review: failed to get settings, using defaults")
-	}
-	if gasPrice <= 0 {
-		gasPrice = 3.50
-	}
-	if gasEffMPG <= 0 {
-		gasEffMPG = 25
+	if err != nil {
+		log.Warn().Err(err).Msg("year-review: failed to get settings")
+		gasPrice, gasEffMPG = nil, nil
 	}
 
-	var gasSavings float64
-	if totalDistKm > 0 {
+	var gasSavings *float64
+	if gasPrice != nil && gasEffMPG != nil && finiteYR(*gasPrice) && finiteYR(*gasEffMPG) &&
+		*gasPrice >= 0 && *gasEffMPG > 0 && finiteYR(totalDistKm) && finiteYR(totalChargingCost) {
 		totalMiles := totalDistKm / 1.60934
-		gasEquivCost := (totalMiles / gasEffMPG) * gasPrice
-		gasSavings = gasEquivCost - totalChargingCost
-		if gasSavings < 0 {
-			gasSavings = 0
-		}
+		gasEquivCost := (totalMiles / *gasEffMPG) * *gasPrice
+		savings := gasEquivCost - totalChargingCost
+		gasSavings = roundNullableYR(&savings, 2)
 	}
 
 	// CO₂ offset: avg ICE emits ~192g CO₂/km
@@ -264,6 +263,7 @@ func (h *Handler) GetYearReview(w http.ResponseWriter, r *http.Request) {
 	var mostEfficient *driveHighlight
 	var leastEfficient *driveHighlight
 
+	// Null means unavailable; zero is published only after a complete query.
 	monthlyMap := make(map[int]*monthStat)
 	for m := 1; m <= 12; m++ {
 		monthlyMap[m] = &monthStat{Month: m}
@@ -271,55 +271,95 @@ func (h *Handler) GetYearReview(w http.ResponseWriter, r *http.Request) {
 
 	driveMonthRows, err := h.q.Query(ctx, `
 		SELECT EXTRACT(MONTH FROM started_at)::int AS m, COUNT(*),
-		       COALESCE(SUM(distance_m) / 1000.0, 0)
+		       SUM(distance_m) / 1000.0
 		FROM drives
 		WHERE vehicle_id = $1 AND ended_at IS NOT NULL AND distance_m > 0
 		  AND started_at >= $2 AND started_at < $3
 		GROUP BY m`,
 		vehicleID, yearStart, yearEnd)
-	if err == nil {
+	driveMonthsOK := err == nil
+	if err != nil {
+		log.Warn().Err(err).Int64("vehicle_id", vehicleID).Msg("year-review: drive-month query failed")
+	} else {
 		defer driveMonthRows.Close()
+		for _, ms := range monthlyMap {
+			zeroCount, zeroDistance := 0, 0.0
+			ms.Drives, ms.DistanceKm = &zeroCount, &zeroDistance
+		}
 		for driveMonthRows.Next() {
 			var m, cnt int
-			var dist float64
-			if driveMonthRows.Scan(&m, &cnt, &dist) == nil {
+			var dist *float64
+			if scanErr := driveMonthRows.Scan(&m, &cnt, &dist); scanErr != nil {
+				log.Warn().Err(scanErr).Int64("vehicle_id", vehicleID).Msg("year-review: drive-month scan failed")
+				driveMonthsOK = false
+			} else {
 				if ms, ok := monthlyMap[m]; ok {
-					ms.Drives = cnt
-					ms.DistanceKm = roundYR(dist, 1)
+					if cnt >= 0 {
+						ms.Drives = &cnt
+					} else {
+						ms.Drives = nil
+					}
+					ms.DistanceKm = roundNullableYR(dist, 1)
+				} else {
+					driveMonthsOK = false
 				}
 			}
 		}
 		if ierr := driveMonthRows.Err(); ierr != nil {
+			driveMonthsOK = false
 			log.Warn().Err(ierr).Int64("vehicle_id", vehicleID).Msg("year-review: drive-month rows iteration failed")
 		}
 		driveMonthRows.Close()
 	}
+	if !driveMonthsOK {
+		for _, ms := range monthlyMap {
+			ms.Drives, ms.DistanceKm = nil, nil
+		}
+	}
 
 	chargeMonthRows, err := h.q.Query(ctx, `
 		SELECT EXTRACT(MONTH FROM started_at)::int AS m,
-		       COALESCE(SUM(total_energy_added_wh) / 1000.0, 0),
-		       COALESCE(SUM(CASE WHEN cost_decimal > 0 THEN cost_decimal::float8 ELSE 0 END), 0)
+		       SUM(total_energy_added_wh) / 1000.0,
+		       SUM(cost_decimal::float8)
 		FROM charging_sessions
 		WHERE vehicle_id = $1 AND ended_at IS NOT NULL
 		  AND started_at >= $2 AND started_at < $3
 		GROUP BY m`,
 		vehicleID, yearStart, yearEnd)
-	if err == nil {
+	chargeMonthsOK := err == nil
+	if err != nil {
+		log.Warn().Err(err).Int64("vehicle_id", vehicleID).Msg("year-review: charge-month query failed")
+	} else {
 		defer chargeMonthRows.Close()
+		for _, ms := range monthlyMap {
+			zeroEnergy, zeroCost := 0.0, 0.0
+			ms.EnergyKwh, ms.Cost = &zeroEnergy, &zeroCost
+		}
 		for chargeMonthRows.Next() {
 			var m int
-			var energy, cost float64
-			if chargeMonthRows.Scan(&m, &energy, &cost) == nil {
+			var energy, cost *float64
+			if scanErr := chargeMonthRows.Scan(&m, &energy, &cost); scanErr != nil {
+				log.Warn().Err(scanErr).Int64("vehicle_id", vehicleID).Msg("year-review: charge-month scan failed")
+				chargeMonthsOK = false
+			} else {
 				if ms, ok := monthlyMap[m]; ok {
-					ms.EnergyKwh = roundYR(energy, 1)
-					ms.Cost = roundYR(cost, 2)
+					ms.EnergyKwh = roundNullableYR(energy, 1)
+					ms.Cost = roundNullableYR(cost, 2)
+				} else {
+					chargeMonthsOK = false
 				}
 			}
 		}
 		if ierr := chargeMonthRows.Err(); ierr != nil {
+			chargeMonthsOK = false
 			log.Warn().Err(ierr).Int64("vehicle_id", vehicleID).Msg("year-review: charge-month rows iteration failed")
 		}
 		chargeMonthRows.Close()
+	}
+	if !chargeMonthsOK {
+		for _, ms := range monthlyMap {
+			ms.EnergyKwh, ms.Cost = nil, nil
+		}
 	}
 
 	monthlyStats := make([]monthStat, 0, 12)
@@ -327,7 +367,7 @@ func (h *Handler) GetYearReview(w http.ResponseWriter, r *http.Request) {
 		monthlyStats = append(monthlyStats, *monthlyMap[m])
 	}
 
-	mostActiveDOW := ""
+	var mostActiveDOW *string
 	var dowIdx, dowCnt int
 	if err := h.q.QueryRow(ctx, `
 		SELECT EXTRACT(DOW FROM started_at)::int AS dow, COUNT(*) AS cnt
@@ -338,12 +378,14 @@ func (h *Handler) GetYearReview(w http.ResponseWriter, r *http.Request) {
 		vehicleID, yearStart, yearEnd,
 	).Scan(&dowIdx, &dowCnt); err == nil {
 		dayNames := []string{"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"}
-		if dowIdx >= 0 && dowIdx < 7 {
-			mostActiveDOW = dayNames[dowIdx]
+		if dowIdx >= 0 && dowIdx < 7 && dowCnt > 0 {
+			mostActiveDOW = &dayNames[dowIdx]
 		}
+	} else if !errors.Is(err, pgx.ErrNoRows) {
+		log.Warn().Err(err).Msg("year-review: active-day query failed")
 	}
 
-	mostActiveHour := 0
+	var mostActiveHour *int
 	var hrIdx, hrCnt int
 	if err := h.q.QueryRow(ctx, `
 		SELECT EXTRACT(HOUR FROM started_at)::int AS hr, COUNT(*) AS cnt
@@ -353,7 +395,11 @@ func (h *Handler) GetYearReview(w http.ResponseWriter, r *http.Request) {
 		GROUP BY hr ORDER BY cnt DESC LIMIT 1`,
 		vehicleID, yearStart, yearEnd,
 	).Scan(&hrIdx, &hrCnt); err == nil {
-		mostActiveHour = hrIdx
+		if hrIdx >= 0 && hrIdx < 24 && hrCnt > 0 {
+			mostActiveHour = &hrIdx
+		}
+	} else if !errors.Is(err, pgx.ErrNoRows) {
+		log.Warn().Err(err).Msg("year-review: active-hour query failed")
 	}
 
 	var avgDrivesPerWeek float64
@@ -394,47 +440,66 @@ func (h *Handler) GetYearReview(w http.ResponseWriter, r *http.Request) {
 		  AND started_at >= $2 AND started_at < $3
 		GROUP BY ctype`,
 		vehicleID, yearStart, yearEnd)
-	if err == nil {
+	chargeTypesOK := err == nil
+	if err != nil {
+		log.Warn().Err(err).Int64("vehicle_id", vehicleID).Msg("year-review: charge-type query failed")
+	} else {
 		defer chargeTypeRows.Close()
 		for chargeTypeRows.Next() {
 			var ct string
 			var cnt int
-			if chargeTypeRows.Scan(&ct, &cnt) == nil {
+			if scanErr := chargeTypeRows.Scan(&ct, &cnt); scanErr != nil {
+				log.Warn().Err(scanErr).Int64("vehicle_id", vehicleID).Msg("year-review: charge-type scan failed")
+				chargeTypesOK = false
+			} else if cnt < 0 {
+				chargeTypesOK = false
+			} else {
 				switch ct {
 				case "supercharger":
 					superchargerCnt = cnt
 				case "dc_fast":
 					dcFastCnt = cnt
-				default:
+				case "ac_other":
 					acOtherCnt = cnt
+				default:
+					chargeTypesOK = false
 				}
 			}
 		}
 		if ierr := chargeTypeRows.Err(); ierr != nil {
+			chargeTypesOK = false
 			log.Warn().Err(ierr).Int64("vehicle_id", vehicleID).Msg("year-review: charge-type rows iteration failed")
 		}
 		chargeTypeRows.Close()
 	}
 
 	totalChargeForPct := superchargerCnt + dcFastCnt + acOtherCnt
-	superchargerPct := 0.0
-	dcFastPct := 0.0
-	acOtherPct := 0.0
-	if totalChargeForPct > 0 {
-		superchargerPct = float64(superchargerCnt) / float64(totalChargeForPct) * 100
-		dcFastPct = float64(dcFastCnt) / float64(totalChargeForPct) * 100
-		acOtherPct = float64(acOtherCnt) / float64(totalChargeForPct) * 100
+	var superchargerPct, dcFastPct, acOtherPct *float64
+	if chargeTypesOK {
+		sc, dc, ac := 0.0, 0.0, 0.0
+		if totalChargeForPct > 0 {
+			sc = float64(superchargerCnt) / float64(totalChargeForPct) * 100
+			dc = float64(dcFastCnt) / float64(totalChargeForPct) * 100
+			ac = float64(acOtherCnt) / float64(totalChargeForPct) * 100
+		}
+		superchargerPct, dcFastPct, acOtherPct = &sc, &dc, &ac
 	}
 
 	// Average charge start SOC from SI column start_soc_pct (REAL).
-	var avgChargeStartSOC float64
-	_ = h.q.QueryRow(ctx, `
-		SELECT COALESCE(AVG(start_soc_pct), 0)
+	var avgChargeStartSOC *float64
+	if err := h.q.QueryRow(ctx, `
+		SELECT AVG(start_soc_pct)
 		FROM charging_sessions
-		WHERE vehicle_id = $1 AND ended_at IS NOT NULL AND start_soc_pct > 0
+		WHERE vehicle_id = $1 AND ended_at IS NOT NULL AND start_soc_pct >= 0 AND start_soc_pct <= 100
 		  AND started_at >= $2 AND started_at < $3`,
 		vehicleID, yearStart, yearEnd,
-	).Scan(&avgChargeStartSOC)
+	).Scan(&avgChargeStartSOC); err != nil {
+		log.Warn().Err(err).Int64("vehicle_id", vehicleID).Msg("year-review: charge-start SOC query failed")
+		avgChargeStartSOC = nil
+	}
+	if avgChargeStartSOC != nil && (*avgChargeStartSOC < 0 || *avgChargeStartSOC > 100) {
+		avgChargeStartSOC = nil
+	}
 
 	km := totalDistKm
 	comparisons := []comparison{
@@ -443,9 +508,9 @@ func (h *Handler) GetYearReview(w http.ResponseWriter, r *http.Request) {
 		{Label: "Marathons", Value: fmt.Sprintf("%.0f", km/42.195), Emoji: "🏃"},
 		{Label: "CO₂ offset", Value: fmt.Sprintf("%.0f kg — like planting %d trees", co2OffsetKg, int(co2OffsetKg/21)), Emoji: "🌱"},
 	}
-	if gasSavings > 0 {
+	if gasSavings != nil && *gasSavings > 0 {
 		comparisons = append(comparisons,
-			comparison{Label: "Gas money saved", Value: fmt.Sprintf("$%.0f — that's %d cups of coffee!", gasSavings, int(gasSavings/5)), Emoji: "☕"},
+			comparison{Label: "Gas money saved", Value: fmt.Sprintf("$%.0f — that's %d cups of coffee!", *gasSavings, int(*gasSavings/5)), Emoji: "☕"},
 		)
 	}
 	if totalDrivingMin > 0 {
@@ -466,9 +531,9 @@ func (h *Handler) GetYearReview(w http.ResponseWriter, r *http.Request) {
 		"total_distance_km":     roundYR(totalDistKm, 1),
 		"total_energy_kwh":      roundYR(totalEnergyKwh, 1),
 		"total_charge_sessions": totalChargeSessions,
-		"total_driving_minutes": int(totalDrivingMin),
+		"total_driving_minutes": roundYR(totalDrivingMin, 1),
 		"total_charging_cost":   roundYR(totalChargingCost, 2),
-		"gas_savings":           roundYR(gasSavings, 2),
+		"gas_savings":           gasSavings,
 		"co2_offset_kg":         roundYR(co2OffsetKg, 1),
 
 		"longest_drive":         longestDrive,
@@ -485,19 +550,23 @@ func (h *Handler) GetYearReview(w http.ResponseWriter, r *http.Request) {
 		"most_active_hour":          mostActiveHour,
 		"avg_drives_per_week":       roundYR(avgDrivesPerWeek, 1),
 		"avg_distance_per_drive_km": roundYR(avgDistPerDrive, 1),
-		"avg_efficiency_wh_km":      roundYR(avgEffWhKm, 1),
+		"avg_efficiency_wh_km":      roundNullableYR(avgEffWhKm, 1),
 
 		// Charging habits
-		"supercharger_pct":     roundYR(superchargerPct, 1),
-		"dc_fast_pct":          roundYR(dcFastPct, 1),
-		"ac_other_pct":         roundYR(acOtherPct, 1),
-		"avg_charge_start_soc": roundYR(avgChargeStartSOC, 1),
+		"supercharger_pct":     roundNullableYR(superchargerPct, 1),
+		"dc_fast_pct":          roundNullableYR(dcFastPct, 1),
+		"ac_other_pct":         roundNullableYR(acOtherPct, 1),
+		"avg_charge_start_soc": roundNullableYR(avgChargeStartSOC, 1),
 
 		// Fun comparisons
 		"comparisons": comparisons,
 	}
 
 	httpx.WriteJSON(w, http.StatusOK, result)
+}
+
+func finiteYR(v float64) bool {
+	return !math.IsNaN(v) && !math.IsInf(v, 0)
 }
 
 // Missing or invalid extremes remain null, distinct from measured zero.
