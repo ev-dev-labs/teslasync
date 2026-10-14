@@ -22,7 +22,7 @@
  *   5. Empty & null-safety (the hardening) — a single point, an empty array, and
  *      an `undefined` chartData all surface the accessible empty state instead of
  *      a blank panel or a `.length`-of-undefined crash; and a missing `stats`
- *      defaults gain/loss/net to zero instead of throwing.
+ *      keeps gain/loss/net unknown instead of throwing or manufacturing zero.
  *
  * Per the repo convention (see BatteryLevelChart.test.tsx / SessionCurveChart.test.tsx):
  * react-i18next is stubbed to echo the English fallback so asserted copy is
@@ -368,6 +368,62 @@ describe('ElevationChart — populated trace', () => {
 // ── 3. Gain / loss / net summary ─────────────────────────────────────────────
 
 describe('ElevationChart — gain / loss / net summary', () => {
+  it.each([
+    [],
+    [null, null],
+    [0],
+    [0, null, 10],
+    [NaN, 0],
+    [0, Infinity],
+    [-Infinity, 0],
+    [-Number.MAX_VALUE, Number.MAX_VALUE],
+  ].map((elevations) => ({ elevations })))('does not turn insufficient deltas into zero for $elevations', ({ elevations }) => {
+    renderChart(elevations.map((elevation) => makePoint({ elevation })), makeStats({ elevGain: 0, elevLoss: 0 }));
+    expect(screen.getAllByRole('cell').map((cell) => cell.textContent)).toEqual(['—', '—', '—']);
+  });
+
+  it.each([0, -12.5, 0.25])('renders measured zero for a flat adjacent pair at %s metres', (elevation) => {
+    renderChart([makePoint({ elevation }), makePoint({ elevation })], makeStats({ elevGain: 0, elevLoss: 0 }));
+    expect(screen.getAllByRole('cell').map((cell) => cell.textContent)).toEqual(['0.00 m', '0.00 m', '0.00 m']);
+  });
+
+  it('renders fractional gain, loss and negative net from signed observations', () => {
+    renderChart([
+      makePoint({ elevation: -2.5 }), makePoint({ elevation: -1.75 }), makePoint({ elevation: -3 }),
+    ], makeStats({ elevGain: 0.75, elevLoss: 1.25 }));
+    expect(screen.getAllByRole('cell').map((cell) => cell.textContent)).toEqual(['0.75 m', '1.25 m', '-0.50 m']);
+  });
+
+  it('uses nullable pair evidence rather than legacy zero stats', () => {
+    render(<ElevationChart chartData={POINTS} stats={{
+      ...makeStats({ elevGain: 0, elevLoss: 0 }),
+      elevationEvidence: { gainM: null, lossM: null, eligiblePairCount: 0, pairCount: 2, coverage: 0 },
+    }} />);
+    expect(screen.getAllByRole('cell').map((cell) => cell.textContent)).toEqual(['—', '—', '—']);
+  });
+
+  it('renders observed partial totals without bridging missing readings', () => {
+    render(<ElevationChart chartData={[
+      makePoint({ elevation: -2.5 }), makePoint({ elevation: -1.75 }),
+      makePoint({ elevation: null }), makePoint({ elevation: 100 }),
+    ]} stats={{
+      ...makeStats(),
+      elevationEvidence: { gainM: 0.75, lossM: 0, eligiblePairCount: 1, pairCount: 3, coverage: 1 / 3 },
+    }} />);
+    expect(screen.getAllByRole('cell').map((cell) => cell.textContent)).toEqual(['0.75 m', '0.00 m', '0.75 m']);
+  });
+
+  it.each([NaN, Infinity, -Infinity])('keeps invalid summary values %s unknown', (invalid) => {
+    renderChart(POINTS, makeStats({ elevGain: invalid, elevLoss: 0 }));
+    expect(screen.getAllByRole('cell').map((cell) => cell.textContent)).toEqual(['—', '0.00 m', '—']);
+  });
+
+  it('normalizes invalid chart readings to gaps while preserving valid zeroes', () => {
+    renderChart([makePoint({ elevation: 0 }), makePoint({ elevation: NaN }), makePoint({ elevation: 0 })]);
+    expect(readChartRows().map((point) => point.elevation)).toEqual([0, null, 0]);
+    expect(screen.getAllByRole('cell').map((cell) => cell.textContent)).toEqual(['—', '—', '—']);
+  });
+
   it('renders climb, descent and the net (gain − loss) from stats', () => {
     const { container } = renderChart(POINTS, makeStats({ elevGain: 120, elevLoss: 45 }));
 
@@ -454,16 +510,13 @@ describe('ElevationChart — empty & null-safety', () => {
     expect(screen.queryByTestId('composed-chart')).not.toBeInTheDocument();
   });
 
-  it('still plots the trace when stats is missing, defaulting gain/loss/net to zero', () => {
-    const { container } = render(
+  it('still plots the trace when stats is missing, keeping gain/loss/net unknown', () => {
+    render(
       <ElevationChart chartData={POINTS} stats={undefined as unknown as DriveStats} />,
     );
 
     // The chart renders (no `stats.elevGain` crash) …
     expect(screen.getByTestId('composed-chart')).toBeInTheDocument();
-    // … and the net summary falls back to a safe zero.
-    const text = container.textContent ?? '';
-    expect(text).toContain('Net');
-    expect(text).toContain('0');
+    expect(screen.getAllByRole('cell').map((cell) => cell.textContent)).toEqual(['—', '—', '—']);
   });
 });

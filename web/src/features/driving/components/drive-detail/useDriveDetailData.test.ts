@@ -97,6 +97,8 @@ vi.mock('@/hooks/useSettings', () => ({
 }));
 
 import { useDriveDetailData } from './useDriveDetailData';
+import { driveEnergyEvidence } from './energyEvidence';
+import { interpretDriveDebrief } from './drivePhysicsDebrief';
 import {
   SPEED_SEGMENT_LOW_MPS,
   SPEED_SEGMENT_MED_MPS,
@@ -235,6 +237,72 @@ beforeEach(() => {
   H.realDates = false;
   H.mode = 'vehicle';
   H.userTimezone = 'Asia/Tokyo';
+});
+
+describe('useDriveDetailData — elevation pair evidence', () => {
+  it.each([
+    [],
+    [null, null],
+    [undefined, undefined],
+    [0],
+    [-12.5],
+    [0, null, 10],
+    [NaN, 0],
+    [0, Infinity],
+    [-Infinity, 0],
+    [-Number.MAX_VALUE, Number.MAX_VALUE],
+  ].map((elevations) => ({ elevations })))('keeps insufficient elevation deltas unknown for $elevations', ({ elevations }) => {
+    const { result } = setup(drive({
+      telemetry: elevations.map((elevation) => tele({ elevation })),
+    }));
+    expect(result.current.stats?.elevationEvidence).toEqual({
+      gainM: null,
+      lossM: null,
+      eligiblePairCount: 0,
+      pairCount: Math.max(elevations.length - 1, 0),
+      coverage: elevations.length > 1 ? 0 : null,
+    });
+  });
+
+  it.each([0, -12.5, 0.25])('keeps actual flat pairs at %s metres as measured zero', (elevation) => {
+    const { result } = setup(drive({
+      telemetry: [tele({ elevation }), tele({ elevation })],
+    }));
+    expect(result.current.stats?.elevationEvidence).toEqual({
+      gainM: 0, lossM: 0, eligiblePairCount: 1, pairCount: 1, coverage: 1,
+    });
+  });
+
+  it.each(['telemetry', 'positions'] as const)('preserves signed fractional %s readings and tracks partial pair coverage', (source) => {
+    const elevations = [-2.5, -1.75, null, 20, 18.5, 19];
+    const { result } = setup(drive(source === 'telemetry'
+      ? { telemetry: elevations.map((elevation) => tele({ elevation })) }
+      : { positions: elevations.map((elevation) => pos({ elevation })) }));
+    expect(result.current.chartData.map((point) => point.elevation)).toEqual(elevations);
+    expect(result.current.stats?.elevationEvidence).toEqual({
+      gainM: 1.25, lossM: 1.5, eligiblePairCount: 3, pairCount: 5, coverage: 0.6,
+    });
+    expect(result.current.stats?.elevGain).toBe(1.25);
+    expect(result.current.stats?.elevLoss).toBe(1.5);
+  });
+
+  it.each([undefined, null, NaN, Infinity, -Infinity, '0', '', false])(
+    'normalizes invalid position elevation %s without manufacturing zero',
+    (elevation) => {
+      const { result } = setup(drive({ positions: [pos({ elevation }), pos({ elevation: 0 })] }));
+      expect(result.current.chartData.map((point) => point.elevation)).toEqual([null, 0]);
+      expect(result.current.stats?.elevationEvidence.gainM).toBeNull();
+      expect(result.current.stats?.elevationEvidence.lossM).toBeNull();
+      expect(result.current.stats?.elevationEvidence.eligiblePairCount).toBe(0);
+    },
+  );
+
+  it('normalizes non-finite telemetry readings to chart gaps', () => {
+    const { result } = setup(drive({
+      telemetry: [tele({ elevation: NaN }), tele({ elevation: Infinity }), tele({ elevation: -Infinity })],
+    }));
+    expect(result.current.chartData.map((point) => point.elevation)).toEqual([null, null, null]);
+  });
 });
 
 describe('useDriveDetailData — record timezone and saved display preferences', () => {
@@ -701,7 +769,7 @@ describe('useDriveDetailData — stats', () => {
     expect(s.powerMax).toBe(-10); // max of [-10,-20]
     expect(s.powerMin).toBe(-20);
     expect(s.avgPower).toBe(-15); // mean of chart powers
-    expect(s.energyWh).toBeCloseTo(15000, 5); // |avgPower| * 1h * 1000
+    expect(s.energyWh).toBeCloseTo(-15000, 5); // signed net pack power * 1h
     expect(s.regenWh).toBeCloseTo(15000, 5); // (10+20) * (1/2) * 1000
     expect(s.minSpd).toBeCloseTo(5 * MPS_TO_KMH, 5); // 18 km/h
   });
@@ -721,6 +789,112 @@ describe('useDriveDetailData — stats', () => {
     expect(s.minSpd).toBe(0);
     expect(s.powerMax).toBe(0); // observed zero power; average is not a peak
     expect(s.powerMin).toBe(0);
+  });
+
+  it.each([null, NaN, Infinity, -Infinity])('retains unknown energy evidence for invalid power %s', (power) => {
+    const input = drive({
+      energyUsedWh: power, regenEnergyWh: power, avgPowerW: power,
+      telemetry: [tele({ power })],
+    });
+    const { result } = setup(input);
+    const s = result.current.stats!;
+    expect(s.energyEvidence).toMatchObject({
+      energyWh: null, regenWh: null, energySource: 'missing', regenSource: 'missing',
+    });
+    expect(driveEnergyEvidence(input, s)).toBe(s.energyEvidence);
+    expect(interpretDriveDebrief(s, result.current.chartData, undefined).regenShare).toBeNull();
+  });
+
+  it.each([0, -0.25, 0.125])('preserves measured summary energy %s without replacing it with estimates', (energy) => {
+    const { result } = setup(drive({
+      energyUsedWh: energy, regenEnergyWh: energy, avgPowerW: 8000,
+      telemetry: [tele({ power: -10 })],
+    }));
+    expect(result.current.stats!.energyWh).toBe(energy);
+    expect(result.current.stats!.regenWh).toBe(energy);
+    expect(result.current.stats!.energyEvidence).toMatchObject({
+      energyWh: energy, regenWh: energy, energySource: 'observed', regenSource: 'observed',
+    });
+  });
+
+  it('recognizes measured zero regen rather than marking it missing', () => {
+    const { result } = setup(drive({
+      energyUsedWh: 0.25, regenEnergyWh: 0, telemetry: [tele({ power: 0 })],
+    }));
+    const debrief = interpretDriveDebrief(result.current.stats, result.current.chartData, undefined);
+    expect(debrief.regenShare).toBe(0);
+    expect(debrief.beats.find((beat) => beat.id === 'regen')?.honesty).toBe('live');
+  });
+
+  it.each([NaN, Infinity, -1])('does not estimate energy from invalid duration %s', (durationS) => {
+    const { result } = setup(drive({ durationS, telemetry: [tele({ power: -0.5 })] }));
+    expect(result.current.stats!.energyEvidence).toMatchObject({
+      energyWh: null, regenWh: null, energySource: 'missing', regenSource: 'missing',
+    });
+  });
+
+  it('preserves fractional signed estimates and reports their provenance', () => {
+    const { result } = setup(drive({
+      durationS: 1.8, telemetry: [tele({ power: -0.5 }), tele({ power: 0.25 })],
+    }));
+    const s = result.current.stats!;
+    expect(s.energyWh).toBeCloseTo(-0.0625);
+    expect(s.regenWh).toBeCloseTo(0.125);
+    expect(s.energyEvidence).toMatchObject({ energySource: 'estimated', regenSource: 'estimated' });
+    const debrief = interpretDriveDebrief(s, result.current.chartData, undefined);
+    expect(debrief.regenShare).toBeCloseTo(2);
+    expect(debrief.beats.find((beat) => beat.id === 'regen')?.honesty).toBe('guessed');
+  });
+
+  it('uses all eligible power observations, including positive and zero, without treating gaps as zero', () => {
+    const { result } = setup(drive({
+      durationS: 3600,
+      telemetry: [-0.5, 0.25, 0, null, NaN, Infinity, -Infinity].map((power) => tele({ power })),
+    }));
+    expect(result.current.stats!.energyEvidence).toMatchObject({
+      powerObservationCount: 3, powerSampleCount: 7,
+      energySource: 'estimated', regenSource: 'estimated',
+    });
+    expect(result.current.stats!.energyEvidence!.energyWh).toBeCloseTo(-250 / 3);
+    expect(result.current.stats!.energyEvidence!.regenWh).toBeCloseTo(500 / 3);
+    expect(result.current.chartData.map((point) => point.power)).toEqual([-0.5, 0.25, 0, null, null, null, null]);
+  });
+
+  it.each([0, 0.25])('keeps nonnegative observed power %s as a known zero regeneration estimate', (power) => {
+    const { result } = setup(drive({
+      durationS: 3600, telemetry: [tele({ power }), tele()],
+    }));
+    expect(result.current.stats!.energyEvidence).toMatchObject({
+      energyWh: power * 1000, regenWh: 0,
+      powerObservationCount: 1, powerSampleCount: 2, regenSource: 'estimated',
+    });
+  });
+
+  it('uses eligible position power observations for regeneration coverage', () => {
+    const { result } = setup(drive({
+      durationS: 3600, positions: [pos({ power: -0.5 }), pos({ power: 0 }), pos()],
+    }));
+    expect(result.current.stats!.energyEvidence).toMatchObject({
+      energyWh: -250, regenWh: 250, powerObservationCount: 2, powerSampleCount: 3,
+    });
+  });
+
+  it('does not borrow position power when the selected telemetry source has none', () => {
+    const { result } = setup(drive({
+      telemetry: [tele()], positions: [pos({ power: 10 })],
+    }));
+    expect(result.current.stats!.energyEvidence).toMatchObject({ energyWh: null, regenWh: null, hasPower: false });
+  });
+
+  it('estimates from position power when telemetry is absent', () => {
+    const { result } = setup(drive({ durationS: 1800, positions: [pos({ power: -0.25 })] }));
+    expect(result.current.stats!.energyEvidence).toMatchObject({ energyWh: -125, regenWh: 125, hasPower: true });
+  });
+
+  it('does not fabricate regen from average power alone', () => {
+    const { result } = setup(drive({ avgPowerW: 0.25 }));
+    expect(result.current.stats!.energyEvidence).toMatchObject({ energyWh: 0.25, regenWh: null });
+    expect(interpretDriveDebrief(result.current.stats, [], undefined).regenShare).toBeNull();
   });
 
   it('returns null stats when there is no drive', () => {

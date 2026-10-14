@@ -13,15 +13,24 @@ import {
 } from '@/lib/unitConversion';
 
 import type { LatLngExpression } from '@/components/maps';
-import type { ChartDataPoint, DriveStats, RoutePoint, SpeedSegment, SpeedHistogramBucket } from './types';
+import type { ChartDataPoint, RoutePoint, SpeedSegment, SpeedHistogramBucket } from './types';
 import { SPEED_SEGMENT_LOW_MPS, SPEED_SEGMENT_MED_MPS, SPEED_SEGMENT_HIGH_MPS } from './constants';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { asFiniteNumber } from '@/lib/typeGuards';
 import { isValidLatLng } from '@/lib/geo';
+import { driveEnergyEvidence, type DriveEnergyStats } from './energyEvidence';
 
 function displaySpeed(value: unknown, unit: 'km/h' | 'mph'): number | null {
   const speed = asFiniteNumber(value);
   return speed == null ? null : asFiniteNumber(convertSpeedFromSI(speed, unit));
+}
+
+export interface DriveElevationEvidence {
+  gainM: number | null;
+  lossM: number | null;
+  eligiblePairCount: number;
+  pairCount: number;
+  coverage: number | null;
 }
 
 export function useDriveDetailData(id: string) {
@@ -125,8 +134,8 @@ export function useDriveDetailData(id: string) {
         time: formatTime(tp.createdAt ?? tp.created_at ?? tp.timestamp, { tz: displayTimezone }),
         speed: displaySpeed(tp.speed, unitPrefs.speed),
         battery: tp.batteryLevel ?? null,
-        elevation: tp.elevation ?? null,
-        power: tp.power ?? null,
+        elevation: asFiniteNumber(tp.elevation),
+        power: asFiniteNumber(tp.power),
         outsideTemp: tp.outsideTemp != null ? convertTempFromSI(tp.outsideTemp, unitPrefs.temperature) : null,
         insideTemp: tp.insideTemp != null ? convertTempFromSI(tp.insideTemp, unitPrefs.temperature) : null,
         driverTemp: tp.driverTemp != null ? convertTempFromSI(tp.driverTemp, unitPrefs.temperature) : null,
@@ -163,8 +172,8 @@ export function useDriveDetailData(id: string) {
       // legacy '_mph' suffix from the mapping is misleading per ADR-004 #6.
       speed: displaySpeed(p.speed, unitPrefs.speed),
       battery: p.batteryLevel ?? p.battery_level ?? null,
-      elevation: p.elevation ?? null,
-      power: p.power ?? null,
+      elevation: asFiniteNumber(p.elevation),
+      power: asFiniteNumber(p.power),
       outsideTemp: (p.outsideTemp ?? p.outside_temp) != null ? convertTempFromSI((p.outsideTemp ?? p.outside_temp)!, unitPrefs.temperature) : null,
       insideTemp: (p.insideTemp ?? p.inside_temp) != null ? convertTempFromSI((p.insideTemp ?? p.inside_temp)!, unitPrefs.temperature) : null,
       driverTemp: null as number | null,
@@ -186,7 +195,7 @@ export function useDriveDetailData(id: string) {
   }, [drive, unitPrefs.speed, unitPrefs.temperature, unitPrefs.distance, unitPrefs.pressure, formatTime, displayTimezone]);
 
   /* ---- Computed stats ---- */
-  const stats = useMemo<DriveStats | null>(() => {
+  const stats = useMemo<(DriveEnergyStats & { elevationEvidence: DriveElevationEvidence }) | null>(() => {
     if (!drive) return null;
     const maxSpd = drive.maxSpeedMps != null ? toSpeedDisplay(drive.maxSpeedMps) : 0;
     const avgSpd = drive.avgSpeedMps != null ? toSpeedDisplay(drive.avgSpeedMps) : 0;
@@ -207,30 +216,33 @@ export function useDriveDetailData(id: string) {
       : (powerValues.length > 0
         ? powerValues.reduce((sum, value) => sum + value, 0) / powerValues.length
         : 0);
-    const durationH = (drive.durationS ?? 0) / 3600;
-    const energyWh = drive.energyUsedWh != null
-      ? drive.energyUsedWh
-      : Math.abs(avgPower) * durationH * 1000;
-    const regenWh = drive.regenEnergyWh != null
-      ? drive.regenEnergyWh
-      : (chartData.length > 0
-        ? powerValues.filter((power) => power < 0).reduce((sum, power) => sum + Math.abs(power), 0) * (durationH / chartData.length) * 1000
-        : 0);
+    const energyEvidence = driveEnergyEvidence(drive);
+    const energyWh = energyEvidence.energyWh ?? 0;
+    const regenWh = energyEvidence.regenWh ?? 0;
     const consumptionWhKm = drive.distanceM > 0 ? energyWh / (drive.distanceM / 1000) : 0;
-    const elevGain = chartData.reduce((sum, d, i) => {
-      if (i === 0) return 0;
+    let elevGain = 0;
+    let elevLoss = 0;
+    let eligiblePairCount = 0;
+    for (let i = 1; i < chartData.length; i++) {
+      const current = chartData[i].elevation;
       const previous = chartData[i - 1].elevation;
-      if (d.elevation == null || previous == null) return sum;
-      const diff = d.elevation - previous;
-      return diff > 0 ? sum + diff : sum;
-    }, 0);
-    const elevLoss = chartData.reduce((sum, d, i) => {
-      if (i === 0) return 0;
-      const previous = chartData[i - 1].elevation;
-      if (d.elevation == null || previous == null) return sum;
-      const diff = d.elevation - previous;
-      return diff < 0 ? sum + Math.abs(diff) : sum;
-    }, 0);
+      if (current == null || previous == null) continue;
+      const diff = asFiniteNumber(current - previous);
+      if (diff == null) continue;
+      eligiblePairCount++;
+      elevGain += Math.max(diff, 0);
+      elevLoss += Math.max(-diff, 0);
+    }
+    const pairCount = Math.max(chartData.length - 1, 0);
+    // Keep nullable evidence beside the legacy numeric stats contract.
+    // Only adjacent observed pairs contribute; gaps are never bridged.
+    const elevationEvidence: DriveElevationEvidence = {
+      gainM: eligiblePairCount > 0 ? asFiniteNumber(elevGain) : null,
+      lossM: eligiblePairCount > 0 ? asFiniteNumber(elevLoss) : null,
+      eligiblePairCount,
+      pairCount,
+      coverage: pairCount > 0 ? eligiblePairCount / pairCount : null,
+    };
 
     const outsideTemps = chartData.filter((d) => d.outsideTemp !== null).map((d) => d.outsideTemp!);
     const insideTemps = chartData.filter((d) => d.insideTemp !== null).map((d) => d.insideTemp!);
@@ -270,6 +282,8 @@ export function useDriveDetailData(id: string) {
     return {
       maxSpd, avgSpd, minSpd, powerMax, powerMin, avgPower,
       energyWh, regenWh, consumptionWhKm, elevGain, elevLoss,
+      energyEvidence,
+      elevationEvidence,
       avgOutsideTemp, avgInsideTemp, hasAnyTemp,
       insideTemps, outsideTemps, driverTemps, passengerTemps,
       climateStatus, avgFanSpeed, maxFanSpeed,

@@ -15,10 +15,12 @@ import { useUnits } from '@/hooks/useUnits';
 
 import type { ChartDataPoint, DriveStats } from './types';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { asFiniteNumber } from '@/lib/typeGuards';
+import type { DriveElevationEvidence } from './useDriveDetailData';
 
 interface ElevationChartProps {
   chartData: ChartDataPoint[];
-  stats: DriveStats;
+  stats: DriveStats & { elevationEvidence?: DriveElevationEvidence };
 }
 
 export function ElevationChart({ chartData, stats }: ElevationChartProps) {
@@ -33,19 +35,31 @@ export function ElevationChart({ chartData, stats }: ElevationChartProps) {
   // telemetry resolves, despite the non-optional prop type. Guard once so the
   // `.length` check and the recharts `data` prop never touch a nullish value,
   // and keep a stable reference so <ComposedChart> isn't fed a fresh array.
-  const points = useMemo(() => chartData ?? [], [chartData]);
-  const elevGain = stats?.elevGain ?? 0;
-  const elevLoss = stats?.elevLoss ?? 0;
-  const elevNet = elevGain - elevLoss;
+  const points = useMemo(() => (chartData ?? []).map((point) => ({
+    ...point, elevation: asFiniteNumber(point.elevation),
+  })), [chartData]);
+  const hasPair = points.some((point, i) => {
+    const previous = points[i - 1]?.elevation;
+    return point.elevation != null && previous != null
+      && asFiniteNumber(point.elevation - previous) != null;
+  });
+  const evidence = stats?.elevationEvidence;
+  const hasDeltas = hasPair && (!evidence || evidence.eligiblePairCount > 0);
+  const elevGain = hasDeltas
+    ? asFiniteNumber(evidence ? evidence.gainM : stats?.elevGain) : null;
+  const elevLoss = hasDeltas
+    ? asFiniteNumber(evidence ? evidence.lossM : stats?.elevLoss) : null;
+  const elevNet = elevGain != null && elevLoss != null
+    ? asFiniteNumber(elevGain - elevLoss) : null;
   const hasChart = points.filter((point) => point.elevation != null).length > 1;
 
   return (
     <FadeIn className="space-y-3">
       <Table variant="embedded" aria-label={t('driveDetail.elevSummary', 'Elevation summary')}>
         <tbody>
-          <tr><th scope="row">{t('driveDetail.gain', 'Gain')}</th><td>{points.some((row) => row.elevation != null) ? `${fmtNumber(elevGain)} m` : '—'}</td></tr>
-          <tr><th scope="row">{t('driveDetail.loss', 'Loss')}</th><td>{points.some((row) => row.elevation != null) ? `${fmtNumber(elevLoss)} m` : '—'}</td></tr>
-          <tr><th scope="row">{t('driveDetail.net', 'Net')}</th><td>{points.some((row) => row.elevation != null) ? `${fmtNumber(elevNet)} m` : '—'}</td></tr>
+          <tr><th scope="row">{t('driveDetail.gain', 'Gain')}</th><td>{elevGain != null ? `${fmtNumber(elevGain)} m` : '—'}</td></tr>
+          <tr><th scope="row">{t('driveDetail.loss', 'Loss')}</th><td>{elevLoss != null ? `${fmtNumber(elevLoss)} m` : '—'}</td></tr>
+          <tr><th scope="row">{t('driveDetail.net', 'Net')}</th><td>{elevNet != null ? `${fmtNumber(elevNet)} m` : '—'}</td></tr>
         </tbody>
       </Table>
       {/* chart-a11y:no-table dense per-sample elevation+speed trace; gain/loss/net stats appear above the chart */}
