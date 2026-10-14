@@ -13,10 +13,9 @@
  *   3. Empty fleet hides the page-specific filters and shows the empty copy.
  *   4. Transition Log renders rows, triggers, badges + per-row detail toggles.
  *   5. Clicking a row's detail toggle expands the Transition Detail panel and
- *      formats `duration_in_state_ms` — exercising the `formatDuration`
- *      hours/minutes rollover fix (7199s → "2h", never "1h 60m").
+ *      formats raw `duration_in_state_ms` through the numeric-duration helper.
  *   6. Distribution legend + Transition Counts summarise by `to_state` and the
- *      avg-interval cell rolls a 7199s gap up to "2h".
+ *      avg-interval cell retains numeric-duration precision.
  *   7. FSM-type + per-page selects are user-operable.
  *   8. The share-permalink control copies the URL to the clipboard.
  *   9. A full-page spinner is shown while every data source is loading.
@@ -33,12 +32,14 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { SelectedVehicleProvider } from '@/store/selectedVehicle';
 import type { ReactNode } from 'react';
 import type { FSMTransition } from '@/types/fsm';
+import { formatDurationMsCompact } from '@/lib/dateFormat';
 
 // ── Mutable per-test fixture (referenced inside hoisted vi.mock factories) ──
 const mockStore = {
   transitions: [] as FSMTransition[],
   total: 0,
   transLoading: false,
+  transPaused: false,
   stats: { enabled: true, stats: {}, active_subs: [] } as unknown,
   statsLoading: false,
   state: undefined as unknown,
@@ -153,8 +154,10 @@ vi.mock('@/api/hooks/useFSM', () => ({
   fsmKeys: { stats: () => [], transitions: () => [] },
   useFSMStats: () => ({ data: mockStore.stats, isLoading: mockStore.statsLoading }),
   useFSMTransitions: () => ({
-    data: { data: mockStore.transitions, total: mockStore.total, page: 1, per_page: 50 },
+    data: mockStore.transLoading || mockStore.transPaused ? undefined
+      : { data: mockStore.transitions, total: mockStore.total, page: 1, per_page: 50 },
     isLoading: mockStore.transLoading,
+    fetchStatus: mockStore.transPaused ? 'paused' : mockStore.transLoading ? 'fetching' : 'idle',
   }),
 }));
 vi.mock('@/api/hooks/useAdmin', () => ({
@@ -164,7 +167,8 @@ vi.mock('@/api/hooks/useAdmin', () => ({
     isFetching: mockStore.stateFetching,
   }),
 }));
-vi.mock('@/api/hooks/useVehicles', () => ({
+vi.mock('@/api/hooks/useVehicles', async (importOriginal) => ({
+  ...await importOriginal<typeof import('@/api/hooks/useVehicles')>(),
   useVehicles: () => ({ data: mockStore.vehicles, isLoading: false }),
 }));
 vi.mock('@/api/hooks/useTelemetry', () => ({
@@ -188,7 +192,9 @@ function makeTransition(overrides: Partial<FSMTransition> = {}): FSMTransition {
 }
 
 function wrapVehicleState(state: Record<string, unknown>) {
-  return { state, live: true, data_source: 'signal_store' };
+  return { state, live: true, data_source: 'live_signal_store',
+    observed_at: new Date().toISOString(), freshness: 'fresh',
+    verified_fields: Object.keys(state) };
 }
 
 function renderPage(initialEntries: string[] = ['/system/fsm']) {
@@ -206,7 +212,7 @@ function renderPage(initialEntries: string[] = ['/system/fsm']) {
 
 /** Resolve the canonical stat tile from its unique source label. */
 function kpiCard(label: string): HTMLElement {
-  const labelEl = screen.getByText(label);
+  const labelEl = within(screen.getByRole('region', { name: 'FSM summary metrics' })).getByText(label);
   const card = labelEl.closest('[data-operational-metric]');
   if (!card) throw new Error(`Stat tile not found for label "${label}"`);
   return card as HTMLElement;
@@ -216,6 +222,7 @@ beforeEach(() => {
   mockStore.transitions = [];
   mockStore.total = 0;
   mockStore.transLoading = false;
+  mockStore.transPaused = false;
   mockStore.stats = { enabled: true, stats: {}, active_subs: [] };
   mockStore.statsLoading = false;
   mockStore.state = undefined;
@@ -276,9 +283,49 @@ describe('StateMachineDebuggerPage — KPI band', () => {
 
     expect(within(kpiCard('Current state')).getByText('—')).toBeInTheDocument();
   });
+
+  it('distinguishes the current-state metric from the populated unconfirmed snapshot heading', () => {
+    mockStore.state = {
+      state: { state: 'parked', is_charging: false, speed: 0 },
+      live: false,
+      data_source: 'db_fallback',
+    };
+
+    renderPage();
+
+    expect(within(kpiCard('Current state')).getByText('parked')).toBeInTheDocument();
+    const overview = screen.getByRole('region', { name: 'Vehicle state overview' });
+    expect(within(overview).getByRole('heading', { name: 'Current state' })).toBeInTheDocument();
+    expect(within(overview).getByText('parked')).toBeInTheDocument();
+    expect(within(overview).queryByText('Vehicle live state')).not.toBeInTheDocument();
+  });
 });
 
 describe('StateMachineDebuggerPage — live-state hero', () => {
+  it.each([
+    { state: 'parked' },
+    { state: 'parked', is_charging: false },
+    { state: 'parked', speed: 0 },
+    { state: 'parked', is_charging: false, speed: null },
+    { state: 'parked', is_charging: false, speed: Number.NaN },
+    { state: 'offline', is_charging: false, speed: 0 },
+  ])('shows Unknown instead of inventing Idle with insufficient evidence: %j', (state) => {
+    mockStore.state = wrapVehicleState(state);
+    renderPage();
+    const overview = screen.getByRole('region', { name: 'Vehicle state overview' });
+    expect(within(overview).getByText('Unknown')).toBeInTheDocument();
+    expect(within(overview).queryByText('Idle')).not.toBeInTheDocument();
+  });
+
+  it('does not treat synthetic default flags and speed as verified idle evidence', () => {
+    mockStore.state = {
+      ...wrapVehicleState({ state: 'parked', is_charging: false, speed: 0 }),
+      verified_fields: ['state'],
+    };
+    renderPage();
+    expect(within(screen.getByRole('region', { name: 'Vehicle state overview' })).getByText('Unknown')).toBeInTheDocument();
+  });
+
   it('shows the resolved state name and "Charging" mode when charging', () => {
     mockStore.state = wrapVehicleState({
       state: 'charging',
@@ -391,7 +438,7 @@ describe('StateMachineDebuggerPage — transition log', () => {
 });
 
 describe('StateMachineDebuggerPage — transition detail panel', () => {
-  it('expands the detail panel and formats duration_in_state_ms without a "1h 60m" artefact', () => {
+  it('expands the detail panel and formats duration_in_state_ms with numeric precision', () => {
     mockStore.transitions = [
       makeTransition({
         id: 42,
@@ -417,8 +464,7 @@ describe('StateMachineDebuggerPage — transition detail panel', () => {
     expect(screen.getByText('42')).toBeInTheDocument();
     // Guard field renders the raw guard string.
     expect(screen.getByText('speed_gt_0')).toBeInTheDocument();
-    // 7199s rounds up to a full 2h — the fix ensures it is never "1h 60m".
-    expect(screen.getByText('2h')).toBeInTheDocument();
+    expect(screen.getByText(formatDurationMsCompact(7_199_000))).toBeInTheDocument();
     expect(screen.queryByText('1h 60m')).toBeNull();
     expect(screen.queryByText('1h 59m')).toBeNull();
   });
@@ -447,7 +493,7 @@ describe('StateMachineDebuggerPage — transition detail panel', () => {
 });
 
 describe('StateMachineDebuggerPage — distribution + counts', () => {
-  it('summarises transitions by to_state and rolls a 7199s avg interval up to 2h', () => {
+  it('summarises transitions by to_state and formats a 7199s avg interval without premature rounding', () => {
     // Two transitions into `driving` spaced exactly 7199s apart → avg 7199s.
     const base = new Date('2026-06-01T00:00:00.000Z').getTime();
     mockStore.transitions = [
@@ -462,8 +508,7 @@ describe('StateMachineDebuggerPage — distribution + counts', () => {
     // Distribution legend + counts table both surface the two states.
     expect(screen.getAllByText('driving').length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText('parked').length).toBeGreaterThanOrEqual(1);
-    // Avg-interval cell: 7199s must render as "2h", never the "1h 60m" artefact.
-    expect(screen.getByText('2h')).toBeInTheDocument();
+    expect(screen.getByText(formatDurationMsCompact(7_199_000))).toBeInTheDocument();
     expect(screen.queryByText('1h 60m')).toBeNull();
   });
 });
@@ -539,6 +584,22 @@ describe('StateMachineDebuggerPage — share permalink', () => {
 });
 
 describe('StateMachineDebuggerPage — loading', () => {
+  it.each(['loading', 'paused'])('does not mount transition-derived children while %s without data', (status) => {
+    mockStore.transLoading = status === 'loading';
+    mockStore.transPaused = status === 'paused';
+    mockStore.state = wrapVehicleState({ state: 'parked' });
+    const { container } = renderPage();
+    expect(container.querySelectorAll('[data-transition-pending]')).toHaveLength(8);
+    expect(screen.queryByTestId('mock-fsm-health')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('mock-fsm-diagram')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('mock-fsm-timeline')).not.toBeInTheDocument();
+    expect(screen.getByTestId('mock-fsm-subfsm')).toBeInTheDocument();
+    expect(screen.queryByTestId('live-controls-counter')).not.toBeInTheDocument();
+    expect(screen.queryByText(/No transitions in/)).not.toBeInTheDocument();
+    expect(within(screen.getByRole('region', { name: 'Vehicle state overview' })).getByText('parked')).toBeInTheDocument();
+    if (status === 'paused') expect(screen.getByText('Refresh paused')).toBeInTheDocument();
+  });
+
   it('shows a full-page spinner while every data source is loading', () => {
     mockStore.stateLoading = true;
     mockStore.transLoading = true;

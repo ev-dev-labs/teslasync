@@ -16,6 +16,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter, useLocation } from 'react-router-dom';
 import type { ReactNode } from 'react';
 import { getStateColor } from '@/types/fsm';
+import { formatDurationMsCompact } from '@/lib/dateFormat';
 
 // jsdom lacks matchMedia; chart containers read it on mount.
 vi.hoisted(() => {
@@ -261,6 +262,137 @@ beforeEach(() => {
 });
 
 describe('StateMachineDebuggerPage — query branches', () => {
+  it.each(['fetching', 'paused'] as const)(
+    'keeps unresolved transition sections source-shaped while %s without hiding independent sources',
+    (fetchStatus) => {
+      mockState.mockReturnValue(makeQuery({ data: { state: { state: 'parked' } } }));
+      mockTrans.mockReturnValue(makeQuery({
+        isPending: true, status: 'pending', fetchStatus,
+        isLoading: fetchStatus === 'fetching', isFetching: fetchStatus === 'fetching',
+        dataUpdatedAt: 0,
+      }));
+      const { container } = renderPage();
+      const placeholders = container.querySelectorAll('[data-transition-pending]');
+      expect(placeholders).toHaveLength(8);
+      for (const placeholder of placeholders) {
+        expect(placeholder).toHaveAttribute('aria-busy', String(fetchStatus === 'fetching'));
+        expect(placeholder.querySelector('.animate-pulse')).not.toBeNull();
+      }
+      const overview = screen.getByRole('region', { name: 'Vehicle state overview' });
+      expect(within(overview).getByText('parked')).toBeInTheDocument();
+      expect(screen.queryByTestId('fsm-health-all-clear')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('live-controls-counter')).not.toBeInTheDocument();
+      expect(screen.queryByText(/No transitions in/)).not.toBeInTheDocument();
+      expect(screen.queryByText('Select a transition to inspect its snapshot')).not.toBeInTheDocument();
+      expect(screen.queryByText('0 / 0')).not.toBeInTheDocument();
+      if (fetchStatus === 'paused') {
+        expect(screen.getByText('Refresh paused')).toBeInTheDocument();
+        expect(screen.queryByText('Failed')).not.toBeInTheDocument();
+        for (const placeholder of placeholders) {
+          expect(placeholder).toHaveClass('[&_.animate-pulse]:animate-none');
+        }
+      }
+    },
+  );
+
+  it('retains selected timelines through refresh, failure and recovery', () => {
+    const ts = new Date(Date.now() - 60_000).toISOString();
+    const data = { data: [{
+      id: 42, vehicle_id: 7, fsm_name: 'vehicle', from_state: 'parked',
+      to_state: 'driving', trigger: 'retained_transition', ts,
+    }], total: 1 };
+    const refetch = vi.fn();
+    mockTrans.mockReturnValue(makeQuery({ data, refetch }));
+    const { rerenderPage, container } = renderPage(`/system/fsm?selected=42&at=${ts}`);
+    const tick = screen.getByTestId('state-timeline-tick-42');
+    const detail = screen.getByRole('region', { name: 'Transition detail' });
+    expect(detail).toHaveTextContent('retained_transition');
+
+    for (const overrides of [
+      { isFetching: true, fetchStatus: 'fetching' },
+      { isError: true, status: 'error', error: new Error('refresh failed') },
+      { fetchStatus: 'paused' },
+    ]) {
+      mockTrans.mockReturnValue(makeQuery({ data, refetch, ...overrides }));
+      rerenderPage();
+      expect(screen.getByTestId('state-timeline-tick-42')).toBe(tick);
+      expect(detail).toHaveTextContent('retained_transition');
+      expect(screen.getByTestId('live-controls-counter')).toHaveTextContent('1 loaded');
+      expect(container.querySelector('[data-transition-pending]')).toBeNull();
+      expect(screen.queryByRole('button', { name: 'Retry' })).not.toBeInTheDocument();
+    }
+    fireEvent.click(within(screen.getByTestId('stale-refresh-warning')).getByRole('button', { name: 'Refresh' }));
+    expect(refetch).toHaveBeenCalledTimes(1);
+    mockTrans.mockReturnValue(makeQuery({ data, refetch }));
+    rerenderPage();
+    expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
+    expect(screen.getByTestId('state-timeline-tick-42')).toBe(tick);
+    expect(detail).toHaveTextContent('retained_transition');
+  });
+
+  it.each([undefined, null, []])('shows Unknown when mode verification is absent: %j', (verifiedFields) => {
+    mockState.mockReturnValue(makeQuery({ data: {
+      state: { state: 'parked', is_charging: false, speed: 0 },
+      live: true, data_source: 'live_signal_store', freshness: 'fresh',
+      observed_at: new Date().toISOString(), verified_fields: verifiedFields,
+    } }));
+    renderPage();
+    const overview = screen.getByRole('region', { name: 'Vehicle state overview' });
+    expect(within(overview).getByText('parked')).toBeInTheDocument();
+    expect(within(overview).getByText('Unknown')).toBeInTheDocument();
+    expect(within(overview).queryByText('Idle')).not.toBeInTheDocument();
+    expect(within(overview).queryByText('Vehicle live state')).not.toBeInTheDocument();
+  });
+
+  it.each([
+    {},
+    { live: true, data_source: 'live_signal_store' },
+    { live: false, data_source: 'db_fallback' },
+    { live: false, data_source: 'as_of' },
+    { live: true, data_source: 'live_signal_store', freshness: 'stale',
+      observed_at: new Date(Date.now() - 300_000).toISOString(), verified_fields: ['state'] },
+    { live: true, data_source: 'live_signal_store', freshness: 'fresh',
+      observed_at: new Date().toISOString(), verified_fields: ['speed'] },
+    { live: true, data_source: 'live_signal_store', freshness: 'fresh',
+      observed_at: 'invalid', verified_fields: ['state'] },
+    { live: true, data_source: 'live_signal_store', freshness: 'fresh',
+      observed_at: new Date(Date.now() - 300_000).toISOString(), verified_fields: ['state'] },
+  ])('preserves populated snapshots without claiming live for unconfirmed provenance: %j', (metadata) => {
+    mockState.mockReturnValue(makeQuery({ data: {
+      state: { state: 'parked', is_charging: false, speed: 0 }, ...metadata,
+    } }));
+    renderPage();
+    const overview = screen.getByRole('region', { name: 'Vehicle state overview' });
+    expect(within(overview).getByText('Current state')).toBeInTheDocument();
+    expect(within(overview).getByText('parked')).toBeInTheDocument();
+    expect(within(overview).queryByText('Vehicle live state')).not.toBeInTheDocument();
+  });
+
+  it('claims live only for a fresh observed and verified state envelope', () => {
+    mockState.mockReturnValue(makeQuery({ data: {
+      state: { state: 'charging', is_charging: true, speed: 0 },
+      live: true, data_source: 'live_signal_store', freshness: 'fresh',
+      observed_at: new Date().toISOString(), verified_fields: ['state', 'is_charging'],
+    } }));
+    renderPage();
+    const overview = screen.getByRole('region', { name: 'Vehicle state overview' });
+    expect(within(overview).getByText('Vehicle live state')).toBeInTheDocument();
+    expect(within(overview).getByText('Charging')).toBeInTheDocument();
+  });
+
+  it('keeps the populated state but removes the live claim after a failed refresh', () => {
+    mockState.mockReturnValue(makeQuery({ data: {
+      state: { state: 'charging', is_charging: true },
+      live: true, data_source: 'live_signal_store', freshness: 'fresh',
+      observed_at: new Date().toISOString(), verified_fields: ['state', 'is_charging'],
+    }, isError: true, status: 'error', error: new Error('state refresh failed') }));
+    renderPage();
+    const overview = screen.getByRole('region', { name: 'Vehicle state overview' });
+    expect(within(overview).getByText('Current state')).toBeInTheDocument();
+    expect(within(overview).getByText('Charging')).toBeInTheDocument();
+    expect(within(overview).queryByText('Vehicle live state')).not.toBeInTheDocument();
+  });
+
   it('shows skeletons (not zeroed cards) while the queries are in flight', () => {
     mockState.mockReturnValue(makeQuery({ isLoading: true, data: undefined }));
     mockTrans.mockReturnValue(makeQuery({ isLoading: true, data: undefined }));
@@ -359,7 +491,8 @@ describe('StateMachineDebuggerPage — query branches', () => {
 
     expect(screen.getByText('Transitions (Page)')).toBeInTheDocument();
     expect(screen.getByText('0 / 0')).toBeInTheDocument();
-    expect(screen.getByTestId('fsm-health-all-clear')).toBeInTheDocument();
+    expect(screen.queryByTestId('fsm-health-all-clear')).not.toBeInTheDocument();
+    expect(screen.getByText(/No transitions in the loaded result/)).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Retry' })).not.toBeInTheDocument();
   });
 });
@@ -583,7 +716,7 @@ describe('StateMachineDebuggerPage — shared presentation and preservation', ()
     expect(screen.getByRole('heading', { name: 'Transition counts' })).toBeInTheDocument();
   });
 
-  it('preserves selected transition identifiers, guard, rounded duration and arbitrary raw details', () => {
+  it('preserves selected transition identifiers, guard, duration precision and arbitrary raw details', () => {
     mockTrans.mockReturnValue(makeQuery({ data: {
       data: [{ id: 42, vehicle_id: 7, fsm_name: 'vehicle', from_state: 'parked',
         to_state: 'driving', trigger: 'drive_evidence', ts: '2026-01-07T12:00:00Z',
@@ -597,9 +730,22 @@ describe('StateMachineDebuggerPage — shared presentation and preservation', ()
     expect(within(detail).getByText('42')).toBeInTheDocument();
     expect(within(detail).getByText('7')).toBeInTheDocument();
     expect(within(detail).getByText('safe_guard')).toBeInTheDocument();
-    expect(within(detail).getByText('2h')).toBeInTheDocument();
+    expect(within(detail).getByText(formatDurationMsCompact(7199000))).toBeInTheDocument();
     expect(within(detail).getByText('raw_speed: 12.345')).toBeInTheDocument();
     expect(mockSnapshot).toHaveBeenCalledWith(7, '2026-01-07T12:00:00Z', '', { enabled: true });
+  });
+
+  it.each([null, 0, 1234.567])('keeps selected duration %s distinct from missing measurements', duration => {
+    mockTrans.mockReturnValue(makeQuery({ data: {
+      data: [{ id: 42, vehicle_id: 7, fsm_name: 'vehicle', from_state: 'parked',
+        to_state: 'driving', trigger: 'drive_evidence', ts: '2026-01-07T12:00:00Z',
+        details: { duration_in_state_ms: duration } }], total: 1,
+    } }));
+    renderPage();
+    fireEvent.click(screen.getByRole('button', { name: 'View detail' }));
+    const detail = screen.getByRole('region', { name: 'Transition detail' });
+    const label = within(detail).getByText('Duration in state');
+    expect(label.parentElement).toHaveTextContent(formatDurationMsCompact(duration));
   });
 
   it('retains header-owned vehicle scope and half-open transition bounds', () => {
