@@ -1,19 +1,47 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
+import type { ReactNode } from 'react';
 import type { NotificationReport } from '@/api/types';
+import type { ChartContainerProps } from '@/components/charts';
+
+const chartBoundary = vi.hoisted(() => ({
+  container: vi.fn(),
+  isHidden: vi.fn<(key: string) => boolean>(() => false),
+}));
 
 vi.mock('@/api/hooks/useNotifications', () => ({ useNotificationReport: vi.fn() }));
+vi.mock('@/hooks/useChartPalette', async (importOriginal) => ({
+  ...await importOriginal<typeof import('@/hooks/useChartPalette')>(),
+  useChartPalette: vi.fn(),
+}));
 vi.mock('@/components/charts', () => ({
-  ChartContainer: ({ title, data }: { title: string; data: unknown[] }) => (
-    <div>{title}<output data-testid="timeline-buckets">{JSON.stringify(data)}</output></div>
+  ChartContainer: (props: ChartContainerProps) => {
+    chartBoundary.container(props);
+    return (
+      <div>
+        {props.title}<output data-testid="timeline-buckets">{JSON.stringify(props.data)}</output>
+        {typeof props.children === 'function' ? props.children({
+          annotations: [],
+          hidden: false,
+          hiddenSeries: {
+            hidden: new Set<string>(),
+            isHidden: chartBoundary.isHidden,
+            toggle: vi.fn(),
+            reset: vi.fn(),
+          },
+        }) : props.children}
+      </div>
+    );
+  },
+  Bar: (props: { dataKey: string; name: string; fill: string; hide: boolean }) => (
+    <output data-testid={`timeline-series-${props.dataKey}`}>{JSON.stringify(props)}</output>
   ),
-  Bar: () => null,
-  BarChart: () => null,
+  BarChart: ({ children }: { children: ReactNode }) => <div>{children}</div>,
   CartesianGrid: () => null,
   ChartLegend: () => null,
   ChartTooltip: () => null,
-  ResponsiveContainer: () => null,
+  ResponsiveContainer: ({ children }: { children: ReactNode }) => <div>{children}</div>,
   Tooltip: () => null,
   XAxis: () => null,
   YAxis: () => null,
@@ -30,9 +58,11 @@ vi.mock('react-i18next', async () => {
 });
 
 import { useNotificationReport } from '@/api/hooks/useNotifications';
+import { resolveChartPalette, useChartPalette } from '@/hooks/useChartPalette';
 import { NotificationReportPanel } from './NotificationReportPanel';
 
 const useReport = vi.mocked(useNotificationReport);
+const usePalette = vi.mocked(useChartPalette);
 const report: NotificationReport = {
   from: '2026-01-01',
   to: '2026-01-30',
@@ -56,10 +86,50 @@ function renderPanel() {
 }
 
 beforeEach(() => {
+  chartBoundary.container.mockClear();
+  chartBoundary.isHidden.mockReset().mockReturnValue(false);
+  usePalette.mockReset().mockReturnValue(resolveChartPalette('cb_safe'));
   useReport.mockReturnValue({ data: report, isLoading: false, isError: false } as ReturnType<typeof useNotificationReport>);
 });
 
 describe('NotificationReportPanel', () => {
+  it.each(['cb_safe', 'neon', undefined, 'unknown'])('uses the accepted saved palette for both series (%s)', (preference) => {
+    const palette = resolveChartPalette(preference);
+    usePalette.mockReturnValue(palette);
+    renderPanel();
+    expect(usePalette).toHaveBeenCalled();
+    expect(JSON.parse(screen.getByTestId('timeline-series-triggered').textContent ?? '')).toEqual({
+      dataKey: 'triggered', name: 'Triggers recorded', fill: palette[0], hide: false,
+    });
+    expect(JSON.parse(screen.getByTestId('timeline-series-deliveries').textContent ?? '')).toEqual({
+      dataKey: 'deliveries', name: 'Channel deliveries', fill: palette[1], hide: false,
+    });
+  });
+
+  it('updates saved palette colors without resetting series visibility or chart evidence/export contracts', () => {
+    chartBoundary.isHidden.mockImplementation(key => key === 'triggered');
+    const view = renderPanel();
+    usePalette.mockReturnValue(resolveChartPalette('neon'));
+    view.rerender(<MemoryRouter><NotificationReportPanel fromInstant="2026-01-01T08:00:00Z" toExclusive="2026-01-31T08:00:00Z" timezone="America/Los_Angeles" /></MemoryRouter>);
+    const palette = resolveChartPalette('neon');
+    expect(JSON.parse(screen.getByTestId('timeline-series-triggered').textContent ?? '')).toMatchObject({ fill: palette[0], hide: true });
+    expect(JSON.parse(screen.getByTestId('timeline-series-deliveries').textContent ?? '')).toMatchObject({ fill: palette[1], hide: false });
+    expect(chartBoundary.isHidden).toHaveBeenCalledWith('triggered');
+    expect(chartBoundary.isHidden).toHaveBeenCalledWith('deliveries');
+    const props = chartBoundary.container.mock.calls.at(-1)?.[0] as ChartContainerProps;
+    expect(props.chartKey).toBe('notification-activity');
+    expect(props.ariaLabel).toBe('Daily notification triggers and channel deliveries');
+    expect(props.data).toEqual([{ period: '2026-01-01', triggered: 3, deliveries: 5 }]);
+    expect(props.dataColumns).toEqual([
+      { key: 'period', label: 'Period' },
+      { key: 'triggered', label: 'Triggers recorded' },
+      { key: 'deliveries', label: 'Channel deliveries' },
+    ]);
+    expect(props.exportable).toBeUndefined();
+    expect(props.exportData).toBeUndefined();
+    expect(screen.getAllByRole('table')).toHaveLength(5);
+  });
+
   it('keeps every breakdown row in the shared evidence table engine', () => {
     renderPanel();
     expect(screen.getAllByRole('table')).toHaveLength(5);

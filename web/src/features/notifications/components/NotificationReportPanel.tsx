@@ -11,11 +11,13 @@ import type { NotificationReport } from '@/api/types';
 import { notificationEventTypeFallback } from '@/lib/notificationEventType';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { useOperationalMetrics } from '@/hooks/useOperationalMetrics';
+import { useChartPalette } from '@/hooks/useChartPalette';
 
 type Breakdown = NotificationReport['by_source'];
 
 export function NotificationReportPanel({ fromInstant, toExclusive, timezone }: { fromInstant: string; toExclusive: string; timezone: string }) {
   const { fmtInt, fmtNumber } = useNumberFormatting();
+  const palette = useChartPalette();
   const { t } = useTranslation();
   const query = useNotificationReport(fromInstant, toExclusive, timezone);
   const state = useDataState(query, { provenance: 'historical' });
@@ -132,8 +134,8 @@ export function NotificationReportPanel({ fromInstant, toExclusive, timezone }: 
               <YAxis allowDecimals={false} />
               <Tooltip content={<ChartTooltip />} />
               <ChartLegend />
-              <Bar dataKey="triggered" name={t('notifications.report.triggered', 'Triggers recorded')} fill="#22d3ee" hide={hiddenSeries?.isHidden('triggered') ?? false} />
-              <Bar dataKey="deliveries" name={t('notifications.report.deliveries', 'Channel deliveries')} fill="#a78bfa" hide={hiddenSeries?.isHidden('deliveries') ?? false} />
+              <Bar dataKey="triggered" name={t('notifications.report.triggered', 'Triggers recorded')} fill={palette[0]} hide={hiddenSeries?.isHidden('triggered') ?? false} />
+              <Bar dataKey="deliveries" name={t('notifications.report.deliveries', 'Channel deliveries')} fill={palette[1]} hide={hiddenSeries?.isHidden('deliveries') ?? false} />
             </BarChart>
           </ResponsiveContainer>
         )}
