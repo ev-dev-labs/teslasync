@@ -1,0 +1,1045 @@
+{
+  "item": "phase6-qa-notifications-alert-studio",
+  "attempt": 1,
+  "status": "SOURCE_QA_REPORT_ONLY",
+  "startUtc": "2026-10-14T02:00:05.4488684Z",
+  "returnBy": "2026-10-14T02:17:57.687Z",
+  "hardLimit": "2026-10-14T02:22:57.687Z",
+  "createdUtc": "2026-10-14T02:16:41.998538+00:00",
+  "scope": {
+    "root": "web/src/features/notifications/pages/AlertStudioPage.tsx",
+    "mode": "READONLY source/direct supports/tests; unrelated shared-module exports not claimed fully audited",
+    "writable": [
+      "docs/frontend-audits/phase6-qa-notifications-alert-studio.json",
+      "web/logs/phase6-qa-notifications-alert-studio.log"
+    ],
+    "codeTestCatalogGitEdits": false,
+    "networkModelAPIConfigurationBrowserActions": false
+  },
+  "authority": {
+    "docs/orchestrator-loop.md": "Full authoritative document read",
+    "docs/frontend-design-contract.md": "Relevant1-654 and return-target2481-2539",
+    "docs/frontend-mission.md": "Relevant principles and sections13-15,17-18,21,23-24,28,31-32,36,40-45/DoD",
+    "docs/frontend-inventory.md": "Studio195/redirect192; reused audit-page144",
+    "docs/session-handoff.md": "Current1-55 and QA419-503",
+    "migration-queue.md": {
+      "currentMatches": [
+        {
+          "line": 55,
+          "text": "| phase6-qa-notifications-alert-studio | 73f8d6fa-021c-4d27-bcc9-e0712d14d20c |"
+        },
+        {
+          "line": 87,
+          "text": "| [~] | 6 | phase6-qa-notifications-alert-studio | read-only-finished-page-QA | docs\\frontend-audits\\phase6-qa-notifications-alert-studio.json; web\\logs\\phase6-qa-notifications-alert-studio.log | phase5-page-notifications-alert-studio | 1 | reserved01:57:57.687Z; actor pending | - | AlertStudioPage/direct supports; source-only, no alerts/test notifications/real data/API requests. |"
+        }
+      ],
+      "originalExactRow": 66,
+      "parentConcurrentEdits": true
+    },
+    ".github/copilot-instructions.md": "Relevant frontend/SI sections",
+    ".github/instructions/react-frontend.instructions.md": "Relevant full frontend1-550",
+    ".github/instructions/frontend-si-cutover.instructions.md": "Full applicable document"
+  },
+  "preservation": {
+    "algorithm": "SHA256",
+    "before": {
+      "web/src/api/hooks/useLocations.ts": "548c91d7cb0b48d93561b8fc3b5c8738ec9493809f0a2b946a4eea4e5854a090",
+      "web/src/api/hooks/useNotifications.ts": "d782e449f6e641b214a9e4fb5e3f91031aefccbf78abf92242191722aa50833f",
+      "web/src/api/hooks/useVehicles.ts": "1d7ae8f07fd26c99622e84be1e6e80b6e7c92e0fb6f17964d06de4017d634d4b",
+      "web/src/components/forms/VehicleMultiSelect.tsx": "411d32135c5e4dfef661f1321d1abd263b5721cf3255b8f159cd84666a79852f",
+      "web/src/features/notifications/components/alert-editor-source-closure/AlertRuleEditor.sourceClosure.test.tsx": "fd7d49520816e62402ad90fba97e153a020df8c88de08779ba298eabd150cea6",
+      "web/src/features/notifications/components/alert-editor-source-closure/ConditionFields.tsx": "10ed09185316302cbe4c6c2e3eddd83820ad9591d1246b4421e5f21a5df4471f",
+      "web/src/features/notifications/components/alert-editor-source-closure/DeliveryBehaviorFields.tsx": "8e00b71491f2726ffe5b1ae418dd9ae958315b0e2b1cc3bc6a52d0edace75be1",
+      "web/src/features/notifications/components/alert-editor-source-closure/EditorActions.tsx": "f9c37a24b6a8b5ea4709f93b65c2411a40e4a5a933e38eafc80028701e2d6ce8",
+      "web/src/features/notifications/components/alert-editor-source-closure/editorHydration.ts": "258a995fe8816a388e8ec743c1a81452d945a58b620a4cc2a58b9c0581e006e0",
+      "web/src/features/notifications/components/alert-editor-source-closure/EditorNotices.tsx": "95c473a64280e9aa9a95a3ff6beba2ec865608fccb348d19e9f65a84d95073be",
+      "web/src/features/notifications/components/alert-editor-source-closure/editorPayload.ts": "65536ae60bc50b75af945adafb60e73e4782dd81d4509963af7baae401e77083",
+      "web/src/features/notifications/components/alert-editor-source-closure/editorPreservation.test.ts": "4c91737190e78cf65d64e282d7191452d3025c6623ea044445c53a2b2f63b939",
+      "web/src/features/notifications/components/alert-editor-source-closure/editorValidation.ts": "4813502ecff3f3bc220659d8264569cd28a65da59d450335ea286bf199a5d273",
+      "web/src/features/notifications/components/alert-editor-source-closure/EscalationFields.tsx": "477fe5f90cf92e5dbf064337781fe2949c365600b9d1b8e5a174100a6e2738d2",
+      "web/src/features/notifications/components/alert-editor-source-closure/IdentityFields.tsx": "e9c7aa2a9d07508e699c82f0556f7ec177146e29a76f75eedee7bc1d30b0f54a",
+      "web/src/features/notifications/components/alert-editor-source-closure/inputValues.ts": "46d691d895ba1985dc92eb439f1a1c319ef9eeb6b5e5c8aeccad364c2773b2d4",
+      "web/src/features/notifications/components/alert-editor-source-closure/MessageFields.tsx": "9c8137dffe015da284f909505e6717dd8287782ff53cea445adc6c8f7e307b2d",
+      "web/src/features/notifications/components/alert-editor-source-closure/RepeatLimitFields.tsx": "f7d4cf566f1cd6b6324b0dfcd2b4477a8c925bcfd12fa8523dbcae6bb68b7167",
+      "web/src/features/notifications/components/alert-editor-source-closure/RuleRoutingFields.tsx": "2ed820967017af1023e51e92e3d9a9f2c14a2e342f33f0cd8c7a026d04067957",
+      "web/src/features/notifications/components/alert-editor-source-closure/ScopeKindFields.tsx": "e3eaddaa7d24bd7548dc7557df5a2e3bea73398c44ea67bf39052da77950a7cb",
+      "web/src/features/notifications/components/alert-editor-source-closure/SeverityFields.tsx": "ea4454c1c7ba7f96c7108d7647653eb549222fad0dbbb4b7b2724a1e00cc1d2e",
+      "web/src/features/notifications/components/alert-editor-source-closure/signalCatalog.ts": "cbc0063793b09293fc38fc54c324071eaa84fc418ff1e2edd9908f41b1926a13",
+      "web/src/features/notifications/components/alert-editor-source-closure/SignalOperandFields.tsx": "f476cb20b62278df661e4bcce3dc5076a70f42d81e7ecac28235ca3109779bb6",
+      "web/src/features/notifications/components/alert-editor-source-closure/TemplateBrowser.tsx": "9a77bde25d9a2c93cc86d4fcc076a8eee9a76c55256f88d94a2a5db93a53efab",
+      "web/src/features/notifications/components/alert-editor-source-closure/TestTargetFields.tsx": "d5927513ecdb18f27f716b1f1f8f32e0ba5bbb15bbaee4c3085fc8aa717f5ed2",
+      "web/src/features/notifications/components/alert-editor-source-closure/TypedValueFields.tsx": "146f2b44ecf8acbc8327897809ec2e0da99de7fe42167ec31f3f406f3feceafc",
+      "web/src/features/notifications/components/alert-editor-source-closure/types.ts": "c6c9b7051e85eb6cb019912fc4acea349c1037152fc1dbab3aa10f1c55feeaef",
+      "web/src/features/notifications/components/alert-editor-source-closure/useEditorOptions.ts": "e1e634b45bc14275d7af8d3ef8b965925dcbc2709ca6b5cb473edd2f74dd4665",
+      "web/src/features/notifications/components/alert-editor-source-closure/useSignalConditionModel.ts": "ceef28e666543738af4058f815f80a432d90241f3d12ae789d4d56e10feae839",
+      "web/src/features/notifications/components/AlertMessageEditor.test.tsx": "008389993657c8b19c9011e7434f0ee84ed4244a7d2c1c1fda34968636195b68",
+      "web/src/features/notifications/components/AlertMessageEditor.tsx": "77df47768ec83734cc795e766f242f6c603cfdb1c8919c1b3abf3a038702dcf9",
+      "web/src/features/notifications/components/AlertRuleEditor.tsx": "ca0532b7b2c3ab0e46cfcda5959a2cb73a2f0e89f8c9e0ceac263161d2e84e44",
+      "web/src/features/notifications/components/ComputedMetricEditor.test.tsx": "f55ed489fc325ab806bb1c59f7e0206dc330e92e8906a6d52637a2a966e70202",
+      "web/src/features/notifications/components/ComputedMetricEditor.tsx": "f1e92c107ee3223f11e3947dbf97956967bc535ece1235496f50842c9dad813f",
+      "web/src/features/notifications/components/PlaceRuleFields.tsx": "5b82e0ee434b9ce40c414b602bac85c078e1f4ad0053f066d0ac702939806705",
+      "web/src/features/notifications/components/SystemComponentRuleFields.tsx": "b92d893a1ee564efa8971f682e1f9d71c85e069136a84607f4098939b6218032",
+      "web/src/features/notifications/hooks/useAlertRuleEditorController.ts": "29772c535294c70a5ab1db80d2698f3ed2bf0a811451e5d8b2fdc093cdd35294",
+      "web/src/features/notifications/lib/alertRuleTemplates.test.ts": "4962a3b697047f67979cc4808d9b0b61e4ffc6ad1e06a5e0a193febd840da2f5",
+      "web/src/features/notifications/lib/alertRuleTemplates.ts": "25ab2281bc63d8621f9be1218ddc5118271ac30e0bd0b26314558b30d13b52a6",
+      "web/src/features/notifications/lib/recommendedTriggerMode.test.ts": "3e5537e17e149641f88f0b4074bb3f061e27d4246d094728432a9435a3183ed1",
+      "web/src/features/notifications/lib/recommendedTriggerMode.ts": "d717ddb4b9b534bb0b48739a42ece7552af94f11e79822cd936443b40c0021df",
+      "web/src/features/notifications/pages/AlertStudioPage.test.tsx": "548620431da3cef8551bbb006dd4c0c622188ca380f17a1914b2a44917d778d2",
+      "web/src/features/notifications/pages/AlertStudioPage.tsx": "97e8f97c1b60de82efecb2e878cd9633c129dfbbcc620edeafc0ef77645602f8",
+      "web/src/features/notifications/schemas/alertRule.test.ts": "2ddb26877456d84b3b1a2e3d78c1818aa60dd886b289a5304b4ed4b7b72823e8",
+      "web/src/features/notifications/schemas/alertRule.ts": "dc9379c589115918e2eafd77e639f7082d2caadd9b3d23537973ef66814b22f8",
+      "web/src/hooks/useUnits.ts": "b90452309357b88fe27edf878a943ff46cf9083015592d1587997b5c0f4a8b14",
+      "web/src/lib/workspaceScope.ts": "aeb8c01d410f2377aa5fd713de1a678a0360acf647a9c882f03e46c80efdfcd7",
+      "web/src/api/hooks/useSignals.ts": "accd8580c7144c90f7b6d1aff14e3a43510c9aa2dd59b5fd85330c9d91ed1966",
+      "web/src/api/hooks/useAlertMessageHelpers.ts": "0fab2930cd6f1fd17f4d6cbb24043badb2a158c07c08a4bf79867c9de0dc0983",
+      "web/src/components/ai/AINLAlertBuilder.tsx": "c0e1ce32bff87d25bf7da8a262603ab6f0c17e19d0cf667fc8c797bbc698c248",
+      "web/src/components/ai/AIAlertMessageTemplateSuggestion.tsx": "5d0ac3622cff10627f1cfe33e6794feca2ec8751e84532801629cb538f9a1efe",
+      "web/src/components/forms/SignalUnitInput.tsx": "20862ca6a2bca1be6b6aea529733923fb7a1f71d6066dff9aae91efce2e6528e",
+      "web/src/components/forms/UnitInput.tsx": "b40549f1b8028537aed5365497b2c7d84f653cb53980960b7bb9ad95f68b56d2",
+      "web/src/components/forms/__tests__/VehicleMultiSelect.test.tsx": "8f8eb120cfb057531288b41a86f7be91e4476251c52c82c25768d25e42f8e0db",
+      "web/src/lib/computedMetricUnits.ts": "40281541a06a5e4ece94a3245069f40bf87988437e5addca061ba333426a4903",
+      "web/src/lib/unitInput.ts": "88111047b6fc12474cc02565f5876dbf4225010a391b7753753da6f0fa7c8416",
+      "web/src/hooks/useSelectedVehicle.ts": "c52768ea42f3e8dd34399f1372a09eb3f70d6c6cb2dddbc41790a6d30e7c4ae3",
+      "web/src/hooks/useDataState.ts": "785bd47e706b066874bec8999d51093982e93b9680b8dec16bddc023dc57fb9b",
+      "web/src/api/dataState.ts": "21fb454b3c1f01608169f3f3887911de97f7c754663cc001236ebfde58211761",
+      "web/src/hooks/useFormDraft.ts": "523049e40f55ff0d69fbc570ee3e582a74e57d2e72fe8e6456fc48e1476dd386",
+      "web/src/hooks/useConfirm.ts": "639e5af08827ea0d0e10c54d3c282356a27cf847fb9247727b8f8c5145496856",
+      "web/src/hooks/useNavigationGuard.ts": "1d58da5eb296ae456ceaaab6eed5a32cfdff91c779060e3bdfd4727c589e2b7a",
+      "web/src/components/feedback/StaleRefreshWarning.tsx": "c8df62e2a4f40f60c2cbd3866c48e0590175f7307814fa7e7daea7e36a0312e9",
+      "web/src/components/layout/layout-reference/PageLayout.tsx": "7b7ef06a05fe4a97ab0cfbc8e989901db0ffca898dec7d4f5cd796536b4dca3b",
+      "web/src/components/ui/Button.tsx": "e43e202cc9f465efeef93a1be2b156255958934af635abf0eaa408f310dde16c",
+      "web/src/components/ui/Select.tsx": "3157a4b90d9142e619e619028ff33d8d980d80e4daf880a45d1b120ed6782cd2",
+      "web/src/components/ui/Modal.tsx": "bd90f0af735a0219d76ea6491e4ce20c1d62935f71019de445f5a1797de0d383",
+      "web/src/components/ui/Popover.tsx": "a56b47356bf7b07bfd5bb9e47b63281f11f7924bf4370bc4a3857bc3ac35ea0b",
+      "web/src/hooks/useAiStream.ts": "acf5503728b53701c63785edc45d987e3a86a70f03f22c429c485f3672143de0",
+      "web/src/components/ai/AIFeatureCard.tsx": "f1e5d2db44dcb81540068c17891f74399694740a22b90080c064002bebc52016",
+      "web/src/components/ai/withAiFeature.tsx": "b97831bcf65326fcf17f77fa6501bda8c42c40a23575edbf35da222e9882fa57",
+      "web/src/components/ai/AINLAlertBuilder.test.tsx": "ecc83b2fdd2cd37f2411d82e01a47f7aab92cc77b546c42a12403f921e03f88f",
+      "web/src/components/ai/AIAlertMessageTemplateSuggestion.test.tsx": "bfc9aac3ac0f74eb252367b12fab45d92bb35edaebc6c4df48fb986aa6598a57",
+      "web/src/api/client.ts": "a9ec99b561c05b73cbbc805f28d770a4e7e132c5cfd8ae8f740e1393311f59a5",
+      "web/src/api/queryClient.ts": "6cebfb8ecdf6f4482756692866bd98b635e84974476d015cce780ecb797ebc57",
+      "web/src/hooks/usePageTitle.ts": "d04d8c90812c380005924cd4f004be273f2e89b64d57aa1df880b15bb49e9a9b",
+      "web/src/components/ui/HelpIcon.tsx": "d169a1bca0a353a892a967912d6ec7d6e59c6fad864408797d77b03c637f251e",
+      "web/src/hooks/useDialogFocus.ts": "c4f2e20b692e4c18a288ae5f99093d11a40b1920af70c61e22eec394ba414e73",
+      "web/src/features/notifications/lib/alertDelivery.ts": "4a46a79787ad85847749f9acacf1a7380f3e9e813d456c246a38cc7f1efb02a4",
+      "web/src/hooks/useDirtyForm.ts": "0c049345ee23ea014d0b7de65b8443870716d3784bf03b1fe4692e724145b235"
+    },
+    "after": {
+      "web/src/api/hooks/useLocations.ts": "548c91d7cb0b48d93561b8fc3b5c8738ec9493809f0a2b946a4eea4e5854a090",
+      "web/src/api/hooks/useNotifications.ts": "d782e449f6e641b214a9e4fb5e3f91031aefccbf78abf92242191722aa50833f",
+      "web/src/api/hooks/useVehicles.ts": "1d7ae8f07fd26c99622e84be1e6e80b6e7c92e0fb6f17964d06de4017d634d4b",
+      "web/src/components/forms/VehicleMultiSelect.tsx": "411d32135c5e4dfef661f1321d1abd263b5721cf3255b8f159cd84666a79852f",
+      "web/src/features/notifications/components/alert-editor-source-closure/AlertRuleEditor.sourceClosure.test.tsx": "fd7d49520816e62402ad90fba97e153a020df8c88de08779ba298eabd150cea6",
+      "web/src/features/notifications/components/alert-editor-source-closure/ConditionFields.tsx": "10ed09185316302cbe4c6c2e3eddd83820ad9591d1246b4421e5f21a5df4471f",
+      "web/src/features/notifications/components/alert-editor-source-closure/DeliveryBehaviorFields.tsx": "8e00b71491f2726ffe5b1ae418dd9ae958315b0e2b1cc3bc6a52d0edace75be1",
+      "web/src/features/notifications/components/alert-editor-source-closure/EditorActions.tsx": "f9c37a24b6a8b5ea4709f93b65c2411a40e4a5a933e38eafc80028701e2d6ce8",
+      "web/src/features/notifications/components/alert-editor-source-closure/editorHydration.ts": "258a995fe8816a388e8ec743c1a81452d945a58b620a4cc2a58b9c0581e006e0",
+      "web/src/features/notifications/components/alert-editor-source-closure/EditorNotices.tsx": "95c473a64280e9aa9a95a3ff6beba2ec865608fccb348d19e9f65a84d95073be",
+      "web/src/features/notifications/components/alert-editor-source-closure/editorPayload.ts": "65536ae60bc50b75af945adafb60e73e4782dd81d4509963af7baae401e77083",
+      "web/src/features/notifications/components/alert-editor-source-closure/editorPreservation.test.ts": "4c91737190e78cf65d64e282d7191452d3025c6623ea044445c53a2b2f63b939",
+      "web/src/features/notifications/components/alert-editor-source-closure/editorValidation.ts": "4813502ecff3f3bc220659d8264569cd28a65da59d450335ea286bf199a5d273",
+      "web/src/features/notifications/components/alert-editor-source-closure/EscalationFields.tsx": "477fe5f90cf92e5dbf064337781fe2949c365600b9d1b8e5a174100a6e2738d2",
+      "web/src/features/notifications/components/alert-editor-source-closure/IdentityFields.tsx": "e9c7aa2a9d07508e699c82f0556f7ec177146e29a76f75eedee7bc1d30b0f54a",
+      "web/src/features/notifications/components/alert-editor-source-closure/inputValues.ts": "46d691d895ba1985dc92eb439f1a1c319ef9eeb6b5e5c8aeccad364c2773b2d4",
+      "web/src/features/notifications/components/alert-editor-source-closure/MessageFields.tsx": "9c8137dffe015da284f909505e6717dd8287782ff53cea445adc6c8f7e307b2d",
+      "web/src/features/notifications/components/alert-editor-source-closure/RepeatLimitFields.tsx": "f7d4cf566f1cd6b6324b0dfcd2b4477a8c925bcfd12fa8523dbcae6bb68b7167",
+      "web/src/features/notifications/components/alert-editor-source-closure/RuleRoutingFields.tsx": "2ed820967017af1023e51e92e3d9a9f2c14a2e342f33f0cd8c7a026d04067957",
+      "web/src/features/notifications/components/alert-editor-source-closure/ScopeKindFields.tsx": "e3eaddaa7d24bd7548dc7557df5a2e3bea73398c44ea67bf39052da77950a7cb",
+      "web/src/features/notifications/components/alert-editor-source-closure/SeverityFields.tsx": "ea4454c1c7ba7f96c7108d7647653eb549222fad0dbbb4b7b2724a1e00cc1d2e",
+      "web/src/features/notifications/components/alert-editor-source-closure/signalCatalog.ts": "cbc0063793b09293fc38fc54c324071eaa84fc418ff1e2edd9908f41b1926a13",
+      "web/src/features/notifications/components/alert-editor-source-closure/SignalOperandFields.tsx": "f476cb20b62278df661e4bcce3dc5076a70f42d81e7ecac28235ca3109779bb6",
+      "web/src/features/notifications/components/alert-editor-source-closure/TemplateBrowser.tsx": "9a77bde25d9a2c93cc86d4fcc076a8eee9a76c55256f88d94a2a5db93a53efab",
+      "web/src/features/notifications/components/alert-editor-source-closure/TestTargetFields.tsx": "d5927513ecdb18f27f716b1f1f8f32e0ba5bbb15bbaee4c3085fc8aa717f5ed2",
+      "web/src/features/notifications/components/alert-editor-source-closure/TypedValueFields.tsx": "146f2b44ecf8acbc8327897809ec2e0da99de7fe42167ec31f3f406f3feceafc",
+      "web/src/features/notifications/components/alert-editor-source-closure/types.ts": "c6c9b7051e85eb6cb019912fc4acea349c1037152fc1dbab3aa10f1c55feeaef",
+      "web/src/features/notifications/components/alert-editor-source-closure/useEditorOptions.ts": "e1e634b45bc14275d7af8d3ef8b965925dcbc2709ca6b5cb473edd2f74dd4665",
+      "web/src/features/notifications/components/alert-editor-source-closure/useSignalConditionModel.ts": "ceef28e666543738af4058f815f80a432d90241f3d12ae789d4d56e10feae839",
+      "web/src/features/notifications/components/AlertMessageEditor.test.tsx": "008389993657c8b19c9011e7434f0ee84ed4244a7d2c1c1fda34968636195b68",
+      "web/src/features/notifications/components/AlertMessageEditor.tsx": "77df47768ec83734cc795e766f242f6c603cfdb1c8919c1b3abf3a038702dcf9",
+      "web/src/features/notifications/components/AlertRuleEditor.tsx": "ca0532b7b2c3ab0e46cfcda5959a2cb73a2f0e89f8c9e0ceac263161d2e84e44",
+      "web/src/features/notifications/components/ComputedMetricEditor.test.tsx": "f55ed489fc325ab806bb1c59f7e0206dc330e92e8906a6d52637a2a966e70202",
+      "web/src/features/notifications/components/ComputedMetricEditor.tsx": "f1e92c107ee3223f11e3947dbf97956967bc535ece1235496f50842c9dad813f",
+      "web/src/features/notifications/components/PlaceRuleFields.tsx": "5b82e0ee434b9ce40c414b602bac85c078e1f4ad0053f066d0ac702939806705",
+      "web/src/features/notifications/components/SystemComponentRuleFields.tsx": "b92d893a1ee564efa8971f682e1f9d71c85e069136a84607f4098939b6218032",
+      "web/src/features/notifications/hooks/useAlertRuleEditorController.ts": "29772c535294c70a5ab1db80d2698f3ed2bf0a811451e5d8b2fdc093cdd35294",
+      "web/src/features/notifications/lib/alertRuleTemplates.test.ts": "4962a3b697047f67979cc4808d9b0b61e4ffc6ad1e06a5e0a193febd840da2f5",
+      "web/src/features/notifications/lib/alertRuleTemplates.ts": "25ab2281bc63d8621f9be1218ddc5118271ac30e0bd0b26314558b30d13b52a6",
+      "web/src/features/notifications/lib/recommendedTriggerMode.test.ts": "3e5537e17e149641f88f0b4074bb3f061e27d4246d094728432a9435a3183ed1",
+      "web/src/features/notifications/lib/recommendedTriggerMode.ts": "d717ddb4b9b534bb0b48739a42ece7552af94f11e79822cd936443b40c0021df",
+      "web/src/features/notifications/pages/AlertStudioPage.test.tsx": "548620431da3cef8551bbb006dd4c0c622188ca380f17a1914b2a44917d778d2",
+      "web/src/features/notifications/pages/AlertStudioPage.tsx": "97e8f97c1b60de82efecb2e878cd9633c129dfbbcc620edeafc0ef77645602f8",
+      "web/src/features/notifications/schemas/alertRule.test.ts": "2ddb26877456d84b3b1a2e3d78c1818aa60dd886b289a5304b4ed4b7b72823e8",
+      "web/src/features/notifications/schemas/alertRule.ts": "dc9379c589115918e2eafd77e639f7082d2caadd9b3d23537973ef66814b22f8",
+      "web/src/hooks/useUnits.ts": "b90452309357b88fe27edf878a943ff46cf9083015592d1587997b5c0f4a8b14",
+      "web/src/lib/workspaceScope.ts": "aeb8c01d410f2377aa5fd713de1a678a0360acf647a9c882f03e46c80efdfcd7",
+      "web/src/api/hooks/useSignals.ts": "accd8580c7144c90f7b6d1aff14e3a43510c9aa2dd59b5fd85330c9d91ed1966",
+      "web/src/api/hooks/useAlertMessageHelpers.ts": "0fab2930cd6f1fd17f4d6cbb24043badb2a158c07c08a4bf79867c9de0dc0983",
+      "web/src/components/ai/AINLAlertBuilder.tsx": "c0e1ce32bff87d25bf7da8a262603ab6f0c17e19d0cf667fc8c797bbc698c248",
+      "web/src/components/ai/AIAlertMessageTemplateSuggestion.tsx": "5d0ac3622cff10627f1cfe33e6794feca2ec8751e84532801629cb538f9a1efe",
+      "web/src/components/forms/SignalUnitInput.tsx": "20862ca6a2bca1be6b6aea529733923fb7a1f71d6066dff9aae91efce2e6528e",
+      "web/src/components/forms/UnitInput.tsx": "b40549f1b8028537aed5365497b2c7d84f653cb53980960b7bb9ad95f68b56d2",
+      "web/src/components/forms/__tests__/VehicleMultiSelect.test.tsx": "8f8eb120cfb057531288b41a86f7be91e4476251c52c82c25768d25e42f8e0db",
+      "web/src/lib/computedMetricUnits.ts": "40281541a06a5e4ece94a3245069f40bf87988437e5addca061ba333426a4903",
+      "web/src/lib/unitInput.ts": "88111047b6fc12474cc02565f5876dbf4225010a391b7753753da6f0fa7c8416",
+      "web/src/hooks/useSelectedVehicle.ts": "c52768ea42f3e8dd34399f1372a09eb3f70d6c6cb2dddbc41790a6d30e7c4ae3",
+      "web/src/hooks/useDataState.ts": "785bd47e706b066874bec8999d51093982e93b9680b8dec16bddc023dc57fb9b",
+      "web/src/api/dataState.ts": "21fb454b3c1f01608169f3f3887911de97f7c754663cc001236ebfde58211761",
+      "web/src/hooks/useFormDraft.ts": "523049e40f55ff0d69fbc570ee3e582a74e57d2e72fe8e6456fc48e1476dd386",
+      "web/src/hooks/useConfirm.ts": "639e5af08827ea0d0e10c54d3c282356a27cf847fb9247727b8f8c5145496856",
+      "web/src/hooks/useNavigationGuard.ts": "1d58da5eb296ae456ceaaab6eed5a32cfdff91c779060e3bdfd4727c589e2b7a",
+      "web/src/components/feedback/StaleRefreshWarning.tsx": "c8df62e2a4f40f60c2cbd3866c48e0590175f7307814fa7e7daea7e36a0312e9",
+      "web/src/components/layout/layout-reference/PageLayout.tsx": "7b7ef06a05fe4a97ab0cfbc8e989901db0ffca898dec7d4f5cd796536b4dca3b",
+      "web/src/components/ui/Button.tsx": "e43e202cc9f465efeef93a1be2b156255958934af635abf0eaa408f310dde16c",
+      "web/src/components/ui/Select.tsx": "3157a4b90d9142e619e619028ff33d8d980d80e4daf880a45d1b120ed6782cd2",
+      "web/src/components/ui/Modal.tsx": "bd90f0af735a0219d76ea6491e4ce20c1d62935f71019de445f5a1797de0d383",
+      "web/src/components/ui/Popover.tsx": "a56b47356bf7b07bfd5bb9e47b63281f11f7924bf4370bc4a3857bc3ac35ea0b",
+      "web/src/hooks/useAiStream.ts": "acf5503728b53701c63785edc45d987e3a86a70f03f22c429c485f3672143de0",
+      "web/src/components/ai/AIFeatureCard.tsx": "f1e5d2db44dcb81540068c17891f74399694740a22b90080c064002bebc52016",
+      "web/src/components/ai/withAiFeature.tsx": "b97831bcf65326fcf17f77fa6501bda8c42c40a23575edbf35da222e9882fa57",
+      "web/src/components/ai/AINLAlertBuilder.test.tsx": "ecc83b2fdd2cd37f2411d82e01a47f7aab92cc77b546c42a12403f921e03f88f",
+      "web/src/components/ai/AIAlertMessageTemplateSuggestion.test.tsx": "bfc9aac3ac0f74eb252367b12fab45d92bb35edaebc6c4df48fb986aa6598a57",
+      "web/src/api/client.ts": "a9ec99b561c05b73cbbc805f28d770a4e7e132c5cfd8ae8f740e1393311f59a5",
+      "web/src/api/queryClient.ts": "6cebfb8ecdf6f4482756692866bd98b635e84974476d015cce780ecb797ebc57",
+      "web/src/hooks/usePageTitle.ts": "d04d8c90812c380005924cd4f004be273f2e89b64d57aa1df880b15bb49e9a9b",
+      "web/src/components/ui/HelpIcon.tsx": "d169a1bca0a353a892a967912d6ec7d6e59c6fad864408797d77b03c637f251e",
+      "web/src/hooks/useDialogFocus.ts": "c4f2e20b692e4c18a288ae5f99093d11a40b1920af70c61e22eec394ba414e73",
+      "web/src/features/notifications/lib/alertDelivery.ts": "4a46a79787ad85847749f9acacf1a7380f3e9e813d456c246a38cc7f1efb02a4",
+      "web/src/hooks/useDirtyForm.ts": "0c049345ee23ea014d0b7de65b8443870716d3784bf03b1fe4692e724145b235"
+    },
+    "changed": [],
+    "limitations": "Newly discovered supports pinned before detailed reads; docs/catalog not claimed immutable"
+  },
+  "counts": {
+    "newSourceRoots": 10,
+    "existingDeduplicatedRoots": 8,
+    "openSourceRoots": 18,
+    "resolvedPriorRoots": 2,
+    "conditionalCandidates": 4,
+    "nativeCandidates": 6,
+    "hardcodedStringOccurrences": 34,
+    "pinnedFiles": 80,
+    "changedPinnedFiles": 0,
+    "shellFailures": 5,
+    "viewFailures": 1
+  },
+  "notRun": [
+    "alerts/create/update/test-send/configuration",
+    "model/AI/network/API/browser",
+    "tests/lint/build/global TSC, passing reruns",
+    "servers/installs/helpers/subagents",
+    "native/mobile/a11y acceptance",
+    "backend auth/bounds/delivery",
+    "Git/source/test/catalog edits"
+  ],
+  "limitations": "Source-only conceptual repros; no runtime acceptance. Historical tests/commits are not fresh passes. Backend rules11-14 out of scope, not zero.",
+  "release": {
+    "status": "RELEASE",
+    "artifacts": [
+      "docs/frontend-audits/phase6-qa-notifications-alert-studio.json",
+      "web/logs/phase6-qa-notifications-alert-studio.log"
+    ],
+    "ownedBackgroundCommands": [],
+    "nativeAcceptance": false,
+    "releasedUtc": "2026-10-14T02:18:39.784008+00:00",
+    "commands": "All bounded checks complete; no owned server/helper/background command",
+    "targetMet": false
+  },
+  "sourceConfirmedFindings": [
+    {
+      "id": "AS-N01",
+      "priority": "P1",
+      "rule": "MDC-026/046",
+      "title": "Save settlement erases newer draft",
+      "evidence": [
+        {
+          "file": "web/src/features/notifications/hooks/useAlertRuleEditorController.ts",
+          "line": 173,
+          "mechanism": "Success unconditionally discardDraft/reset editor at182-185",
+          "exactLine": "    saveRuleMut.mutate(rule ? { ...payload, id: rule.id } : payload, {"
+        },
+        {
+          "file": "web/src/features/notifications/hooks/useAlertRuleEditorController.ts",
+          "line": 62,
+          "mechanism": "Persistence skipped while pending",
+          "exactLine": "      saveRuleMut.isPending || rule != null || JSON.stringify(v) === freshEditorJsonRef.current,"
+        },
+        {
+          "file": "web/src/features/notifications/components/alert-editor-source-closure/MessageFields.tsx",
+          "line": 10,
+          "mechanism": "No save-pending disabled prop",
+          "exactLine": "      <AlertMessageEditor"
+        }
+      ],
+      "repro": {
+        "mode": "source walkthrough only NOTRUN",
+        "steps": "Submit A; while pending edit/reset into B; A success clears B."
+      },
+      "fix": "Revision-bound settlement or coherent pending guard.",
+      "owner": "New exclusive residual lease required; no remediation authority granted"
+    },
+    {
+      "id": "AS-N02",
+      "priority": "P1",
+      "rule": "MDC-021/046",
+      "title": "Invalid repeat cap becomes unlimited",
+      "evidence": [
+        {
+          "file": "web/src/features/notifications/components/alert-editor-source-closure/inputValues.ts",
+          "line": 30,
+          "mechanism": "Invalid nonblank cap normalized null",
+          "exactLine": "export function parseOptionalMaxFires(value: string): number | null {"
+        },
+        {
+          "file": "web/src/features/notifications/components/alert-editor-source-closure/editorValidation.ts",
+          "line": 27,
+          "mechanism": "No cap validity gate",
+          "exactLine": "export function canSaveEditor(editor: EditorState, computedMetrics: ComputedMetricSummary[], unsupportedKind: boolean): boolean {"
+        },
+        {
+          "file": "web/src/features/notifications/components/alert-editor-source-closure/editorPayload.ts",
+          "line": 101,
+          "mechanism": "Normalized null serialized",
+          "exactLine": "    max_fires_per_resolution: parseOptionalMaxFires(state.max_fires_per_resolution),"
+        }
+      ],
+      "repro": {
+        "mode": "source walkthrough only NOTRUN",
+        "steps": "Valid repeat draft with cap0,-1,1.5 remains saveable and serializes unlimited. Native min/step not enforced by button onClick."
+      },
+      "fix": "Separate blank/unlimited from invalid; localized field error.",
+      "owner": "New exclusive residual lease required; no remediation authority granted"
+    },
+    {
+      "id": "AS-N03",
+      "priority": "P1",
+      "rule": "MDC-026/046",
+      "title": "AI proposal outlives draft identity",
+      "evidence": [
+        {
+          "file": "web/src/components/ai/AIAlertMessageTemplateSuggestion.tsx",
+          "line": 148,
+          "mechanism": "ScopeKey does not own proposal reset",
+          "exactLine": "  const scopeKey = `${draft.kind ?? ''}:${draft.signal_name ?? ''}:${draft.op ?? ''}:${draft.metric_id ?? ''}`"
+        },
+        {
+          "file": "web/src/components/ai/AIAlertMessageTemplateSuggestion.tsx",
+          "line": 158,
+          "mechanism": "Cleanup depends on stable cancelStream",
+          "exactLine": "  useEffect(() => {"
+        },
+        {
+          "file": "web/src/hooks/useAiStream.ts",
+          "line": 263,
+          "mechanism": "Stable cancel callback",
+          "exactLine": "  const cancel = useCallback(() => {"
+        },
+        {
+          "file": "web/src/components/ai/AIAlertMessageTemplateSuggestion.tsx",
+          "line": 216,
+          "mechanism": "Apply only checks proposal/isBusy",
+          "exactLine": "              disabled={proposal == null || isBusy}"
+        }
+      ],
+      "repro": {
+        "mode": "source walkthrough only NOTRUN",
+        "steps": "Capture proposal A; change signal/kind; stream clears but local proposal persists and Apply copies A. No actual model action."
+      },
+      "fix": "Bind proposal/application to draft revision/readiness/disabled.",
+      "owner": "New exclusive residual lease required; no remediation authority granted"
+    },
+    {
+      "id": "AS-N04",
+      "priority": "P1",
+      "rule": "MDC-026/046",
+      "title": "Explicit test target lost with empty inventory",
+      "evidence": [
+        {
+          "file": "web/src/features/notifications/components/alert-editor-source-closure/editorPayload.ts",
+          "line": 122,
+          "mechanism": "Empty allIds returns null despite selectedIds",
+          "exactLine": "  if (allIds.length === 0) return null"
+        },
+        {
+          "file": "web/src/features/notifications/hooks/useAlertRuleEditorController.ts",
+          "line": 218,
+          "mechanism": "Null omits target",
+          "exactLine": "    testRuleMut.mutate(target ? { ...baseBody, target } : baseBody)"
+        },
+        {
+          "file": "web/src/features/notifications/components/alert-editor-source-closure/EditorActions.tsx",
+          "line": 32,
+          "mechanism": "Test only name-gated",
+          "exactLine": "        disabled={!editor.name.trim()}"
+        }
+      ],
+      "repro": {
+        "mode": "source walkthrough only NOTRUN",
+        "steps": "Retained selected[77], allChannels[]: buildTestTarget returns null. Existing preservation test135 pins omission. Backend fan-out UNKNOWN."
+      },
+      "fix": "Preserve explicit target or block/reconfirm; do not infer backend semantics.",
+      "owner": "New exclusive residual lease required; no remediation authority granted"
+    },
+    {
+      "id": "AS-N05",
+      "priority": "P2",
+      "rule": "MDC-026",
+      "title": "Initial-paused sources look successfully empty",
+      "evidence": [
+        {
+          "file": "web/src/features/notifications/hooks/useAlertRuleEditorController.ts",
+          "line": 35,
+          "mechanism": "isLoading-only channel readiness",
+          "exactLine": "  const channelsLoading = channelsQuery.isLoading && !channelsState.hasData"
+        },
+        {
+          "file": "web/src/features/notifications/components/alert-editor-source-closure/TestTargetFields.tsx",
+          "line": 74,
+          "mechanism": "False no channels",
+          "exactLine": "          ) : ("
+        },
+        {
+          "file": "web/src/features/notifications/components/PlaceRuleFields.tsx",
+          "line": 34,
+          "mechanism": "False no places",
+          "exactLine": "      {!isInitialLoading && !source.fatalError && options.length === 0 && ("
+        },
+        {
+          "file": "web/src/features/notifications/components/AlertMessageEditor.tsx",
+          "line": 613,
+          "mechanism": "False no matching placeholders",
+          "exactLine": "    >"
+        },
+        {
+          "file": "web/src/features/notifications/components/AlertMessageEditor.tsx",
+          "line": 768,
+          "mechanism": "False no presets",
+          "exactLine": "          <ul className=\"grid grid-cols-1 gap-2 sm:grid-cols-2\">"
+        },
+        {
+          "file": "web/src/features/notifications/components/alert-editor-source-closure/ConditionFields.tsx",
+          "line": 50,
+          "mechanism": "Empty metric choices",
+          "exactLine": "          loading={computedMetricsQuery.isLoading && !metricsState.hasData}"
+        },
+        {
+          "file": "web/src/components/feedback/StaleRefreshWarning.tsx",
+          "line": 60,
+          "mechanism": "No-data warning suppressed",
+          "exactLine": "  if (state.status === 'ok') return null;"
+        }
+      ],
+      "repro": {
+        "mode": "source walkthrough only NOTRUN",
+        "steps": "No retained data,pending+paused,isLoadingfalse,no error: empty branches selected. Vehicle gap is existing E02, not double counted."
+      },
+      "fix": "Render unresolved/initial-blocked source state, not authoritative empty.",
+      "owner": "New exclusive residual lease required; no remediation authority granted"
+    },
+    {
+      "id": "AS-N06",
+      "priority": "P2",
+      "rule": "MDC-026",
+      "title": "Retained preview not labeled updating",
+      "evidence": [
+        {
+          "file": "web/src/features/notifications/components/AlertMessageEditor.tsx",
+          "line": 403,
+          "mechanism": "Preview retained during changed draft",
+          "exactLine": "    useEffect(() => {"
+        },
+        {
+          "file": "web/src/features/notifications/components/AlertMessageEditor.tsx",
+          "line": 544,
+          "mechanism": "Loading only when preview null",
+          "exactLine": "          loading={previewMut.isPending && preview == null}"
+        },
+        {
+          "file": "web/src/features/notifications/components/AlertMessageEditor.tsx",
+          "line": 673,
+          "mechanism": "Previous preview label only on error",
+          "exactLine": "      {error && preview != null && ("
+        }
+      ],
+      "repro": {
+        "mode": "source walkthrough only NOTRUN",
+        "steps": "Preview A; edit B; during debounce/pending A stays plain Preview. Active guard correctly ignores obsolete responses."
+      },
+      "fix": "Track request identity and disclose retained/updating state.",
+      "owner": "New exclusive residual lease required; no remediation authority granted"
+    },
+    {
+      "id": "AS-N07",
+      "priority": "P2",
+      "rule": "hardcoded-string",
+      "title": "Validation/preview failure English bypasses i18n",
+      "evidence": [
+        {
+          "file": "web/src/features/notifications/schemas/alertRule.ts",
+          "line": 65,
+          "mechanism": "30 schema English literals",
+          "exactLine": "      .max(120, 'Name must be 120 characters or fewer'),"
+        },
+        {
+          "file": "web/src/features/notifications/hooks/useAlertRuleEditorController.ts",
+          "line": 169,
+          "mechanism": "Issue.message displayed verbatim",
+          "exactLine": "      setFormError(firstIssue?.message ?? t('forms.validationFailed', 'Please fix the highlighted fields and try again.'))"
+        },
+        {
+          "file": "web/src/features/notifications/components/AlertMessageEditor.tsx",
+          "line": 437,
+          "mechanism": "Literal Preview failed",
+          "exactLine": "            setPreviewError(err instanceof Error ? err.message : 'Preview failed')"
+        }
+      ],
+      "repro": {
+        "mode": "source walkthrough only NOTRUN",
+        "steps": "Non-English locale, valid rule/name121chars: English schema message shown. Other schema branches not all normally UI reachable."
+      },
+      "fix": "Localize issue path/code mapping and failure fallback.",
+      "owner": "New exclusive residual lease required; no remediation authority granted",
+      "literalLines": [
+        64,
+        65,
+        86,
+        97,
+        98,
+        99,
+        111,
+        112,
+        126,
+        127,
+        128,
+        149,
+        168,
+        177,
+        191,
+        200,
+        203,
+        206,
+        213,
+        216,
+        226,
+        233,
+        240,
+        247,
+        258,
+        266,
+        276,
+        284,
+        303,
+        313
+      ],
+      "occurrences": 31
+    },
+    {
+      "id": "AS-N08",
+      "priority": "P2",
+      "rule": "hardcoded-string",
+      "title": "Vehicle fallback English",
+      "evidence": [
+        {
+          "file": "web/src/components/forms/VehicleMultiSelect.tsx",
+          "line": 73,
+          "mechanism": "Vehicle #id fallback",
+          "exactLine": "  const base = v.display_name || v.model || `Vehicle #${v.id}`;"
+        },
+        {
+          "file": "web/src/components/forms/VehicleMultiSelect.tsx",
+          "line": 155,
+          "mechanism": "Known missing name fallback",
+          "exactLine": "        ? veh.display_name || veh.model || `Vehicle #${selectedIds[0]}`"
+        },
+        {
+          "file": "web/src/components/forms/VehicleMultiSelect.tsx",
+          "line": 156,
+          "mechanism": "Unknown single selection fallback",
+          "exactLine": "        : `Vehicle #${selectedIds[0]}`;"
+        }
+      ],
+      "repro": {
+        "mode": "source walkthrough only NOTRUN",
+        "steps": "Non-English locale with unnamed or unknown single ID: summary interpolates English Vehicle #N."
+      },
+      "fix": "Localize generated labels, not user names.",
+      "owner": "New exclusive residual lease required; no remediation authority granted",
+      "occurrences": 3
+    },
+    {
+      "id": "AS-N09",
+      "priority": "P2",
+      "rule": "MDC-021/040",
+      "title": "Validation loses field identity/focus",
+      "evidence": [
+        {
+          "file": "web/src/features/notifications/hooks/useAlertRuleEditorController.ts",
+          "line": 168,
+          "mechanism": "Issue.path discarded",
+          "exactLine": "      const firstIssue = parsed.error.issues[0]"
+        },
+        {
+          "file": "web/src/features/notifications/components/alert-editor-source-closure/EditorNotices.tsx",
+          "line": 20,
+          "mechanism": "Fix highlighted fields without field error linkage",
+          "exactLine": "          <AlertBanner variant=\"danger\" title={t('forms.validationFailed', 'Please fix the highlighted fields and try again.')}>"
+        }
+      ],
+      "repro": {
+        "mode": "source walkthrough only NOTRUN",
+        "steps": "Name121 chars: banner only; no focus/aria-invalid/error association. Existing test337 checks message, NOTRUN."
+      },
+      "fix": "Preserve path/code; shared field errors/summary/focus.",
+      "owner": "New exclusive residual lease required; no remediation authority granted"
+    },
+    {
+      "id": "AS-N10",
+      "priority": "P2",
+      "rule": "MDC-021/040",
+      "title": "Help buttons nested inside labels",
+      "evidence": [
+        {
+          "file": "web/src/features/notifications/components/alert-editor-source-closure/ScopeKindFields.tsx",
+          "line": 13,
+          "mechanism": "HelpIcon nested in vehicle label",
+          "exactLine": "        <label className={fieldLabelRowCls} htmlFor=\"alert-vehicle-picker\">"
+        },
+        {
+          "file": "web/src/features/notifications/components/alert-editor-source-closure/DeliveryBehaviorFields.tsx",
+          "line": 14,
+          "mechanism": "HelpIcon nested cooldown label",
+          "exactLine": "        <label className={fieldLabelRowCls} htmlFor=\"alert-cooldown\">"
+        },
+        {
+          "file": "web/src/features/notifications/components/alert-editor-source-closure/SeverityFields.tsx",
+          "line": 11,
+          "mechanism": "HelpIcon nested severity label",
+          "exactLine": "        <label className={fieldLabelRowCls} htmlFor=\"alert-severity\">"
+        },
+        {
+          "file": "web/src/components/ui/HelpIcon.tsx",
+          "line": 88,
+          "mechanism": "Renders labelable button",
+          "exactLine": "      <button"
+        }
+      ],
+      "repro": {
+        "mode": "source walkthrough only NOTRUN",
+        "steps": "ContextualHelp enabled: label contains other labelable button. Closure test120 expects not contained; no test failure claimed."
+      },
+      "fix": "Separate help/label siblings; retain IDs/contextualHelp.",
+      "owner": "New exclusive residual lease required; no remediation authority granted"
+    }
+  ],
+  "existingFindingsDeduplicated": [
+    {
+      "id": "AS-E01",
+      "title": "Context/AI scope differs from recipient scope",
+      "evidence": [
+        {
+          "file": "web/src/features/notifications/hooks/useAlertRuleEditorController.ts",
+          "line": 44,
+          "mechanism": "Global selected context; local recipient picker different. Old claim universally disabled corrected: first-fleet fallback exists.",
+          "exactLine": "  const { vehicleId: aiVehicleId } = useSelectedVehicle()"
+        }
+      ],
+      "prior": "docs/frontend-audits/audit-page-144.json architectureIssues[0]",
+      "owner": "Existing need; no duplicate dispatch/repair lease",
+      "classification": "Existing source declaration re-confirmed; runtime NOTRUN",
+      "repro": "Inspect cited control/source in applicable kind; source walkthrough only."
+    },
+    {
+      "id": "AS-E02",
+      "title": "Vehicle unresolved/fatal rendered empty fleet",
+      "evidence": [
+        {
+          "file": "web/src/features/notifications/hooks/useAlertRuleEditorController.ts",
+          "line": 40,
+          "mechanism": "[] plus picker Add vehicle; independent QueryError does not stop empty claim.",
+          "exactLine": "  const vehicles = useMemo(() => vehiclesData ?? [], [vehiclesData])"
+        }
+      ],
+      "prior": "docs/frontend-audits/audit-page-144.json states.findings[0]",
+      "owner": "Existing need; no duplicate dispatch/repair lease",
+      "classification": "Existing source declaration re-confirmed; runtime NOTRUN",
+      "repro": "Inspect cited control/source in applicable kind; source walkthrough only."
+    },
+    {
+      "id": "AS-E03",
+      "title": "Template no-match has no direct reset action",
+      "evidence": [
+        {
+          "file": "web/src/features/notifications/components/alert-editor-source-closure/TemplateBrowser.tsx",
+          "line": 88,
+          "mechanism": "Filters/All/search remain accessible; not claimed stranded.",
+          "exactLine": "              <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */"
+        }
+      ],
+      "prior": "docs/frontend-audits/audit-page-144.json states.findings[1]",
+      "owner": "Existing need; no duplicate dispatch/repair lease",
+      "classification": "Existing source declaration re-confirmed; runtime NOTRUN",
+      "repro": "Inspect cited control/source in applicable kind; source walkthrough only."
+    },
+    {
+      "id": "AS-E04",
+      "title": "Selected test-channel neon",
+      "evidence": [
+        {
+          "file": "web/src/features/notifications/components/alert-editor-source-closure/TestTargetFields.tsx",
+          "line": 62,
+          "mechanism": "Fixed cyan selected classes",
+          "exactLine": "                        isSelected ? 'border-neon-cyan/30 bg-neon-cyan/10 text-cyan-300'"
+        }
+      ],
+      "prior": "docs/frontend-audits/audit-page-144.json visualIssues[0]",
+      "owner": "Existing need; no duplicate dispatch/repair lease",
+      "classification": "Existing source declaration re-confirmed; runtime NOTRUN",
+      "repro": "Inspect cited control/source in applicable kind; source walkthrough only."
+    },
+    {
+      "id": "AS-E05",
+      "title": "Decorative fixed cyan/amber",
+      "evidence": [
+        {
+          "file": "web/src/features/notifications/components/AlertRuleEditor.tsx",
+          "line": 46,
+          "mechanism": "Pencil46, sparkles86",
+          "exactLine": "            <Icons.pencil className=\"h-4 w-4 text-cyan-300\" aria-hidden=\"true\" />"
+        }
+      ],
+      "prior": "docs/frontend-audits/audit-page-144.json visualIssues[1]",
+      "owner": "Existing need; no duplicate dispatch/repair lease",
+      "classification": "Existing source declaration re-confirmed; runtime NOTRUN",
+      "repro": "Inspect cited control/source in applicable kind; source walkthrough only."
+    },
+    {
+      "id": "AS-E06",
+      "title": "Autocomplete custom type/fixed cyan",
+      "evidence": [
+        {
+          "file": "web/src/features/notifications/components/AlertMessageEditor.tsx",
+          "line": 639,
+          "mechanism": "text-xs/font-normal; selected cyan641",
+          "exactLine": "                  'w-full justify-start gap-2 rounded px-2 py-1.5 text-left text-xs font-normal',"
+        }
+      ],
+      "prior": "docs/frontend-audits/audit-page-144.json visualIssues[2]",
+      "owner": "Existing need; no duplicate dispatch/repair lease",
+      "classification": "Existing source declaration re-confirmed; runtime NOTRUN",
+      "repro": "Inspect cited control/source in applicable kind; source walkthrough only."
+    },
+    {
+      "id": "AS-E07",
+      "title": "Computed labels not linked",
+      "evidence": [
+        {
+          "file": "web/src/features/notifications/components/ComputedMetricEditor.tsx",
+          "line": 146,
+          "mechanism": "Metric146/window164/op179/threshold196 lack htmlFor; aria-label exists",
+          "exactLine": "      <div className=\"grid grid-cols-1 sm:grid-cols-3 gap-4\">"
+        }
+      ],
+      "prior": "docs/frontend-audits/audit-page-144.json accessibility.findings[1]",
+      "owner": "Existing need; no duplicate dispatch/repair lease",
+      "classification": "Existing source declaration re-confirmed; runtime NOTRUN",
+      "repro": "Inspect cited control/source in applicable kind; source walkthrough only."
+    },
+    {
+      "id": "AS-E08",
+      "title": "Repeat/escalation helper association",
+      "evidence": [
+        {
+          "file": "web/src/features/notifications/components/alert-editor-source-closure/RepeatLimitFields.tsx",
+          "line": 29,
+          "mechanism": "Helper text not aria-describedby; EscalationFields64 also",
+          "exactLine": "      <HelperText className=\"mt-1\">"
+        }
+      ],
+      "prior": "docs/frontend-audits/audit-page-144.json accessibility.findings[2]",
+      "owner": "Existing need; no duplicate dispatch/repair lease",
+      "classification": "Existing source declaration re-confirmed; runtime NOTRUN",
+      "repro": "Inspect cited control/source in applicable kind; source walkthrough only."
+    }
+  ],
+  "resolvedPriorFindings": [
+    {
+      "prior": "audit-page-144 accessibility[0]",
+      "owner": "phase3-vehicle-multi-select completed",
+      "evidence": {
+        "file": "web/src/components/forms/VehicleMultiSelect.tsx",
+        "line": 289,
+        "mechanism": "Named group/checkbox keyboard semantics now declared; no native pass",
+        "exactLine": "      )}"
+      }
+    },
+    {
+      "prior": "audit-page-144 architecture[1]",
+      "owner": "phase3-ainlalert-builder completed",
+      "evidence": {
+        "file": "web/src/components/ai/AINLAlertBuilder.tsx",
+        "line": 60,
+        "mechanism": "Advisory manual-entry text now explicit",
+        "exactLine": "        'Describe the alert you want to receive an advisory text proposal. Review it and manually enter the rule in the standard form before saving; this action does not fill the form, save, or enable an alert.',"
+      }
+    }
+  ],
+  "ownerDedup": "audit-page141/143 references searched; no new direct-support issue objects. phase5-page-notifications-alert-studio completed source-only/no-change; do not redispatch accepted objective. Parent assigns new disjoint residual owners; catalogs remain parent-owned.",
+  "conditionalCandidates": [
+    {
+      "id": "AS-C01",
+      "title": "Malformed metric registry arrays can throw",
+      "evidence": {
+        "file": "web/src/features/notifications/components/alert-editor-source-closure/editorValidation.ts",
+        "line": 11,
+        "mechanism": "windows.includes/ops.includes unguarded",
+        "exactLine": "  if (!def.windows.includes(state.metric_window)) return false"
+      },
+      "condition": "Malformed actual registry plus restored complete draft; backend shape UNKNOWN; no runtime repro."
+    },
+    {
+      "id": "AS-C02",
+      "title": "Test payload lacks computed/system/place condition dimensions",
+      "evidence": {
+        "file": "web/src/features/notifications/hooks/useAlertRuleEditorController.ts",
+        "line": 202,
+        "mechanism": "Send payload differs from message-preview dimensions",
+        "exactLine": "    const baseBody = {"
+      },
+      "condition": "Send-only versus condition-validation semantics needs backend/product contract; no incorrect delivery asserted."
+    },
+    {
+      "id": "AS-C03",
+      "rule": "fetch-useeffect",
+      "rawOccurrences": 2,
+      "evidence": [
+        {
+          "file": "web/src/features/notifications/components/ComputedMetricEditor.tsx",
+          "line": 111,
+          "mechanism": "typed mutation preview effect",
+          "exactLine": "  useEffect(() => {"
+        },
+        {
+          "file": "web/src/features/notifications/components/AlertMessageEditor.tsx",
+          "line": 403,
+          "mechanism": "typed debounced mutation preview effect",
+          "exactLine": "    useEffect(() => {"
+        }
+      ],
+      "condition": "Existing hooks own POST previews; architecture disposition needed, not direct fetch/legacy import."
+    },
+    {
+      "id": "AS-C04",
+      "title": "Computed retained preview only proven with mutable mock",
+      "evidence": {
+        "file": "web/src/features/notifications/components/ComputedMetricEditor.tsx",
+        "line": 137,
+        "mechanism": "Uses mutation.data without separate snapshot",
+        "exactLine": "  ])"
+      },
+      "condition": "Real mutation data lifecycle NOTRUN; mocked retained data is not runtime acceptance."
+    }
+  ],
+  "nativeCandidates": [
+    {
+      "id": "AS-V01",
+      "title": "Effective target height/spacing: sm36px declaration vs44px touch contract",
+      "status": "NOTRUN; no source/native pass or failure inferred"
+    },
+    {
+      "id": "AS-V02",
+      "title": "Autocomplete AT cursor/focus/keyboard announcement",
+      "status": "NOTRUN; no source/native pass or failure inferred"
+    },
+    {
+      "id": "AS-V03",
+      "title": "Preset/discard/nested dialog focus restoration and viewport scroll",
+      "status": "NOTRUN; no source/native pass or failure inferred"
+    },
+    {
+      "id": "AS-V04",
+      "title": "320-2560px/narrow containers/themes/RTL/200% text/forced colors/reduced motion matrix",
+      "status": "NOTRUN; no source/native pass or failure inferred"
+    },
+    {
+      "id": "AS-V05",
+      "title": "Actual auth/capabilities/backend bounds/target default/delivery semantics",
+      "status": "NOTRUN; no source/native pass or failure inferred"
+    },
+    {
+      "id": "AS-V06",
+      "title": "Real query/mutation paused/retained/cancellation and toast/live-region behavior",
+      "status": "NOTRUN; no source/native pass or failure inferred"
+    }
+  ],
+  "sectionActionCoverage": {
+    "route": "Localized title9; positive safe integer rule redirect11-15; null-rule editor17. PageContainer delegated AlertRuleEditor82 -> PageLayout11, not missing.",
+    "templates": "Search/category/count,254 unique name-literal records; filters mounted; explicit clone hydration/dirty guard, not save.",
+    "identityScopeKinds": "Name/enabled; sticky-all/specific/unknown IDs; system forces fleet; signal/computed/system/place Tabs. Unknown !=0/false, empty metric registry remains optimistic existing behavior.",
+    "conditions": "Type-aware signal/operators/numeric/range/text/bool/changed; service outage/recovery; enabled place/enter-leave/unavailable ID; computed metric/window/op/threshold/preview.",
+    "delivery": "Cooldown15min/once default; recommendation advisory; repeat cap blank unlimited; escalation repeat-only paired fields/higher severity; base severity clears invalid tier.",
+    "message": "Include-title false default; manual template1024max; placeholder filter/cursor/arrows/Enter/Tab/Escape/caret; preset tags/modal/apply; optional AI valid-tool proposal/local Apply only; debounced preview active-closure guard.",
+    "routing": "Rule inherit=null/none=[]/specific IDs independent from test destinations; unknown selections preserved except N04; browser/history copy and external channel toggles.",
+    "actions": "Create/save schema/readiness/pending + hook toasts; Test name-only gate is real send intent; dirty New/Reset/clone/cancel confirmation and navigation/beforeunload guards. No new save/test confirmation fabricated.",
+    "draft": "Version6,800ms persistence; recovered draft is baseline; create-success clears draft; pending identity gap N01.",
+    "stateSources": "Vehicle/channel/metric/metadata/place/placeholder/preset hooks inspected: per-source initial/fatal retry/retained warnings. Initial-paused gaps N05/E02. Stale warning requires retained data. Message retains preview on error; pending disclosure N06; metric retention C04.",
+    "scopeBoundsTrust": "No analysis date-range requirement for configuration/catalog editor. Metric windows are business-rule bounds. Query hooks client-relative/cancellable; no backend total/bounds/auth acceptance. Global mutations retry0/networkMode always, no offline replay.",
+    "siPreferences": "Signal raw/canonical thresholds, Pa/kPa bridge, shared preferred display input and focused-text preference snapshot; computed legacy registry bridge preserved. Message locale/language/unit/currency/timezone/timeformat key. Contextual-help and confirm-silence settings retained. No wire-unit backend change."
+  },
+  "engineeringChecks": {
+    "scopedFiles": 30,
+    "rawZeroMatches": {
+      "staticVarInlineStyle": 0,
+      "rawHtmlControl": 0,
+      "directLibraryImport": 0,
+      "oldApiImport": 0,
+      "actualDoublePrefixRequest": 0,
+      "camelcaseQueryParam": 0,
+      "hiddenPanelAndGate": 0,
+      "directFetch": 0
+    },
+    "broadFiles": 67,
+    "broadExceptions": "1 dynamic Popover style;7 shared/comment raw controls;9 /api/v1 comment occurrences;47 naive JSX regex matches are TS/comments, not47 English UI violations. Building-block raw HTML accepted.",
+    "missingContainer": "Delegated shared PageContainer; acceptable",
+    "fetchUseEffect": "Two conditional typed POST preview effects AS-C03",
+    "hardcodedStringOccurrences": 34,
+    "backend": "NOT_APPLICABLE, no internal Go files audited",
+    "i18nKeys": {
+      "staticDistinct": 137,
+      "EnglishCatalogFilesRead": 186,
+      "missing": 0,
+      "limitation": "Existence only, not locale quality/dynamic backend text coverage"
+    }
+  },
+  "testEvidence": {
+    "status": "NOTRUN",
+    "files": 11,
+    "directDeclarations": 188,
+    "parameterTables": 2,
+    "literalRows": [
+      6,
+      2
+    ],
+    "expandedDeclaredCases": 196,
+    "expectCallSites": 547,
+    "meaning": "Lexical source inventory, not runner discovery/pass count; mocks cannot certify real lifecycle. Sources hashed unchanged."
+  },
+  "needs": [
+    "Parent grant new exclusive editor/controller/payload/field repair for N01,N02,N04-N07,N09-N10",
+    "Shared AI proposal owner N03; shared vehicle fallback owner N08; parent catalog integration",
+    "Deduplicate existing needs, do not reopen completed phase3/phase5 objectives",
+    "Separate authorized synthetic/native/contract QA for conditional candidates; no permission for actual sends/model/API actions"
+  ],
+  "commandRegistry": {
+    "initialShells": [
+      {
+        "shellId": "1958",
+        "exit": 0
+      },
+      {
+        "shellId": "1959",
+        "exit": 0
+      },
+      {
+        "shellId": "1977",
+        "exit": 1
+      },
+      {
+        "shellId": "1978",
+        "exit": 1
+      },
+      {
+        "shellId": "1987",
+        "exit": 0
+      },
+      {
+        "shellId": "2010",
+        "exit": 1
+      },
+      {
+        "shellId": "2026",
+        "exit": 0
+      }
+    ],
+    "loggedShells": [
+      {
+        "shellId": "2049",
+        "exit": 0
+      },
+      {
+        "shellId": "2050",
+        "exit": 0
+      },
+      {
+        "shellId": "2060",
+        "exit": 0
+      },
+      {
+        "shellId": "2076",
+        "exit": 0
+      },
+      {
+        "shellId": "2077",
+        "exit": 0
+      },
+      {
+        "shellId": "2103",
+        "exit": 0
+      },
+      {
+        "shellId": "2113",
+        "exit": 0
+      },
+      {
+        "shellId": "2121",
+        "exit": 0
+      },
+      {
+        "shellId": "2143",
+        "exit": 0
+      },
+      {
+        "shellId": "2175",
+        "exit": 0
+      },
+      {
+        "shellId": "2176",
+        "exit": 0
+      },
+      {
+        "shellId": "2219",
+        "exit": 0
+      },
+      {
+        "shellId": "2243",
+        "exit": 0
+      },
+      {
+        "shellId": "2287",
+        "exit": 0
+      },
+      {
+        "shellId": "2407",
+        "exit": 1
+      },
+      {
+        "shellId": "2420",
+        "exit": 1
+      },
+      {
+        "shellId": "2431",
+        "exit": 0
+      },
+      {
+        "shellId": "2446",
+        "exit": 0
+      }
+    ],
+    "rawEvidence": "Executed inline command bodies/raw outputs/numeric exits in named log. Early probes full raw transcript is tool conversation, not falsely claimed complete log. Final command body/raw/exit appended by shell wrapper.",
+    "failures": [
+      "1977/1978 rg unavailable",
+      "2010 cp1252 UnicodeEncodeError",
+      "2407 Windows command too long, script not started",
+      "2420 assertion expected one queue match but claim+task rows=2; source pins80 unchanged; fixed assertion logic, not a passing rerun",
+      "view UnitInput range266-460 beyond EOF221; earlier1-265 read entire file"
+    ]
+  }
+}
