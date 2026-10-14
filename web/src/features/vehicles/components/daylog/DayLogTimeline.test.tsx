@@ -4,6 +4,34 @@ import { MemoryRouter } from 'react-router-dom';
 import type { DayLogEvent } from '@/api/types';
 import { DayLogTimeline, type DayLogTimelineProps } from './DayLogTimeline';
 
+const preferences = vi.hoisted(() => ({
+  locale: 'en-US',
+  timezone: 'America/New_York',
+  translations: {} as Record<string, string>,
+}));
+
+vi.mock('@/hooks/useSettings', () => ({
+  useSettings: () => ({
+    settings: {
+      unit_of_length: 'km', unit_of_temp: 'C', unit_of_pressure: 'bar',
+      locale: preferences.locale, timezone_user: preferences.timezone,
+      decimal_precision: 2,
+    },
+    locale: preferences.locale,
+    decimals: 2,
+  }),
+}));
+
+vi.mock('react-i18next', () => ({
+  useTranslation: () => ({
+    t: (key: string, fallback: string, variables?: Record<string, unknown>) =>
+      (preferences.translations[key] ?? fallback ?? key).replace(
+        /{{\s*(\w+)\s*}}/g,
+        (match, name: string) => String(variables?.[name] ?? match),
+      ),
+  }),
+}));
+
 // Supply jsdom scroll geometry, but retain TanStack's real windowing and measurement lifecycle.
 vi.mock('@tanstack/react-virtual', async (importActual) => {
   const actual = await importActual<typeof import('@tanstack/react-virtual')>();
@@ -43,6 +71,9 @@ vi.mock('@tanstack/react-virtual', async (importActual) => {
 const retry = vi.fn();
 beforeEach(() => {
   retry.mockReset();
+  preferences.locale = 'en-US';
+  preferences.timezone = 'America/New_York';
+  preferences.translations = {};
 });
 
 function event(overrides: Partial<DayLogEvent> = {}): DayLogEvent {
@@ -63,7 +94,7 @@ function mount(overrides: Partial<DayLogTimelineProps> = {}) {
     <MemoryRouter>
       <DayLogTimeline
         events={[event()]}
-        timezone="America/New_York"
+        timezone={preferences.timezone}
         vehicleId={1}
         truncated={false}
         isLoading={false}
@@ -229,5 +260,98 @@ describe('DayLogTimeline assigned receipt correction', () => {
       fireEvent.click(screen.getByRole('button', { name: `Show details Door opened 01:30:00 ${id}` }));
       expect(within(screen.getByTestId(`daylog-event-${id}`)).getByText(timestamp)).toBeInTheDocument();
     }
+  });
+
+  it('searches displayed seconds across local midnight without changing loaded scope or order', () => {
+    preferences.locale = 'de-DE';
+    preferences.timezone = 'Asia/Kolkata';
+    const events = [
+      event({ id: 'after', ts: '2026-11-01T18:30:07Z' }),
+      event({ id: 'before', ts: '2026-11-01T18:29:59Z' }),
+      event({ id: 'same-clock', ts: '2026-10-31T18:30:07Z' }),
+    ];
+    mount({ events, truncated: true });
+    const search = screen.getByRole('textbox', { name: 'Search events' });
+    expect(screen.getByTestId('daylog-event-before')).toHaveTextContent('23:59:59');
+    fireEvent.change(search, { target: { value: '00:00:07' } });
+    expect(screen.getAllByRole('listitem').map((row) => row.dataset.testid)).toEqual([
+      'daylog-event-after', 'daylog-event-same-clock',
+    ]);
+    expect(screen.getByTestId('daylog-count')).toHaveTextContent('Showing 2 of 3 events');
+    expect(screen.getByText(/Some records may be missing/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'doors (3)' })).toBeInTheDocument();
+    fireEvent.change(search, { target: { value: '23:59:59' } });
+    expect(screen.getByTestId('daylog-event-before')).toBeInTheDocument();
+    expect(screen.getByTestId('daylog-count')).toHaveTextContent('Showing 1 of 3 events');
+    fireEvent.click(screen.getByRole('button', { name: 'Show all' }));
+    expect(screen.getAllByRole('listitem').map((row) => row.dataset.testid)).toEqual(
+      events.map((receipt) => `daylog-event-${receipt.id}`),
+    );
+  });
+
+  it('matches translated component titles, descriptions, categories and saved-locale units', () => {
+    preferences.locale = 'de-DE';
+    preferences.translations = {
+      'dayLog.turnSignalTitle.left': 'Linker Blinker',
+      'dayLog.turnSignal.off': 'Aus',
+      'dayLog.turnSignal.left': 'Links',
+      'dayLog.doors.driver_front': 'Fahrertür',
+      'dayLog.state.closed': 'Geschlossen',
+      'dayLog.state.open': 'Offen',
+      'dayLog.categories.doors': 'Türen',
+    };
+    mount({ events: [
+      event({ id: 'turn', type: 'turn_signal', payload: { component: 'left', from: 'off', to: 'left' } }),
+      event({ id: 'door' }),
+      event({ id: 'drive', type: 'drive_end', payload: { distance_m: 1250 } }),
+    ] });
+    const search = screen.getByRole('textbox', { name: 'Search events' });
+    for (const [query, id] of [
+      ['LINKER BLINKER', 'turn'], ['Aus → Links', 'turn'],
+      ['Fahrertür · Geschlossen → Offen', 'door'], ['Türen', 'door'],
+      ['1,25 km', 'drive'], ['driver_front', 'door'],
+    ]) {
+      fireEvent.change(search, { target: { value: query } });
+      expect(screen.getByTestId(`daylog-event-${id}`)).toBeInTheDocument();
+      expect(screen.getByTestId('daylog-count')).toHaveTextContent('Showing 1 of 3 events');
+    }
+  });
+
+  it('keeps invalid and missing dates searchable without fabricating clock times', () => {
+    mount({ events: [
+      event({ id: 'invalid', ts: 'not-a-date' }),
+      event({ id: 'missing', ts: '' }),
+      event({ id: 'valid', ts: '2026-11-01T05:30:09Z' }),
+    ] });
+    const search = screen.getByRole('textbox', { name: 'Search events' });
+    for (const [query, id] of [['not-a-date', 'invalid'], ['missing', 'missing'], ['01:30:09', 'valid']]) {
+      fireEvent.change(search, { target: { value: query } });
+      expect(screen.getByTestId(`daylog-event-${id}`)).toBeInTheDocument();
+      expect(screen.getByTestId('daylog-count')).toHaveTextContent('Showing 1 of 3 events');
+    }
+    fireEvent.change(search, { target: { value: 'Invalid Date' } });
+    expect(screen.getByText('No events match these filters.')).toBeInTheDocument();
+  });
+
+  it('recomputes a retained time query when the caller changes the scoped timezone', () => {
+    const events = [event({ ts: '2026-11-01T05:30:09Z' })];
+    const view = mount({ events, timezone: 'UTC' });
+    fireEvent.change(screen.getByRole('textbox', { name: 'Search events' }), { target: { value: '01:30:09' } });
+    expect(screen.getByText('No events match these filters.')).toBeInTheDocument();
+    view.rerender(
+      <MemoryRouter>
+        <DayLogTimeline
+          events={events}
+          timezone="America/New_York"
+          vehicleId={1}
+          truncated={false}
+          isLoading={false}
+          error={null}
+          onRetry={retry}
+        />
+      </MemoryRouter>,
+    );
+    expect(screen.getByTestId('daylog-event-receipt-1')).toHaveTextContent('01:30:09');
+    expect(screen.getByTestId('daylog-count')).toHaveTextContent('Showing 1 of 1 events');
   });
 });

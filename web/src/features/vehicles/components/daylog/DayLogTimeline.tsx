@@ -76,10 +76,19 @@ export function DayLogTimeline({
     return all.filter((e) => {
       if (hidden.has(categoryOf(e.type))) return false;
       if (query === '') return true;
-      const title = t(`dayLog.events.${e.type}`, e.type).toLowerCase();
-      return title.includes(query) || eventKeywords(e).includes(query);
+      const { title, detail } = describeEvent(t, e, { formatDistance, formatEnergy });
+      const haystack = [
+        title,
+        detail,
+        t(`dayLog.categories.${categoryOf(e.type)}`, categoryOf(e.type)),
+        formatTimeSeconds(e.ts, timezone),
+        e.ts,
+        e.id,
+        eventKeywords(e),
+      ].filter((value): value is string => typeof value === 'string').join(' ').toLowerCase();
+      return haystack.includes(query);
     });
-  }, [all, hidden, query, t]);
+  }, [all, hidden, query, t, timezone, formatDistance, formatEnergy]);
   const isFiltered = query !== '' || hidden.size > 0;
   const allCategoriesHidden = counts.size > 0 && [...counts.keys()].every((category) => hidden.has(category));
 
