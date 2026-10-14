@@ -1,21 +1,65 @@
 import type { ParsedEndpoint } from '../EndpointSidebar';
 import type { HistoryEntry } from '../ResponseViewer';
+import { reportFrontendError } from '@/lib/errorReporter';
 
 const HISTORY_KEY = 'teslasync-api-playground-history';
 export const MAX_HISTORY = 20;
 
+function isHistoryEntry(value: unknown): value is HistoryEntry {
+  if (value === null || typeof value !== 'object' || Array.isArray(value)) return false;
+  const entry = value as Record<string, unknown>;
+  return typeof entry.method === 'string' && entry.method.trim().length > 0
+    && typeof entry.path === 'string' && entry.path.startsWith('/')
+    && typeof entry.status === 'number' && Number.isInteger(entry.status)
+    && entry.status >= 100 && entry.status <= 599
+    && typeof entry.duration === 'number' && Number.isFinite(entry.duration) && entry.duration >= 0
+    && typeof entry.timestamp === 'string' && Number.isFinite(Date.parse(entry.timestamp));
+}
+
+function historyMetadata(entry: HistoryEntry): HistoryEntry {
+  return {
+    method: entry.method,
+    path: entry.path.split(/[?#]/, 1)[0],
+    status: entry.status,
+    duration: entry.duration,
+    timestamp: entry.timestamp,
+  };
+}
+
+/** Invalid envelopes reach the existing render boundary; salvageable rows are reported and filtered. */
 export function loadHistory(): HistoryEntry[] {
+  const raw = sessionStorage.getItem(HISTORY_KEY);
+  if (raw === null) return [];
+  let parsed: unknown;
   try {
-    const raw = sessionStorage.getItem(HISTORY_KEY);
-    return raw ? JSON.parse(raw) as HistoryEntry[] : [];
+    parsed = JSON.parse(raw);
   } catch {
-    return [];
+    // Parser messages can contain stored request secrets.
+    throw new SyntaxError('API playground history is not valid JSON');
   }
+  if (!Array.isArray(parsed)) {
+    throw new TypeError('API playground history must be an array');
+  }
+  const entries: HistoryEntry[] = [];
+  let hasInvalidEntries = false;
+  for (const value of parsed) {
+    if (!isHistoryEntry(value)) {
+      hasInvalidEntries = true;
+      continue;
+    }
+    if (entries.length < MAX_HISTORY) entries.push(historyMetadata(value));
+  }
+  if (hasInvalidEntries) {
+    const error = new TypeError('API playground history contains invalid entries');
+    if (entries.length === 0) throw error;
+    reportFrontendError(error, 'react');
+  }
+  return entries;
 }
 
 export function saveHistory(entries: HistoryEntry[]) {
   try {
-    sessionStorage.setItem(HISTORY_KEY, JSON.stringify(entries.slice(0, MAX_HISTORY)));
+    sessionStorage.setItem(HISTORY_KEY, JSON.stringify(entries.slice(0, MAX_HISTORY).map(historyMetadata)));
   } catch {
     // A full session store must not prevent viewing the response.
   }
