@@ -74,7 +74,7 @@ export default function YearlyTrendChart({ yearlyTrend }: YearlyTrendChartProps)
               value: t('charging.curve.minutes', 'Minutes'),
               angle: -90,
               position: 'insideLeft',
-              style: { fill: 'rgba(255,255,255,0.4)', fontSize: 11 },
+              style: axisTickSm,
             }}
           />
           <YAxis
@@ -85,7 +85,7 @@ export default function YearlyTrendChart({ yearlyTrend }: YearlyTrendChartProps)
               value: t('charging.curve.sessionCount', 'Sessions'),
               angle: 90,
               position: 'insideRight',
-              style: { fill: 'rgba(255,255,255,0.4)', fontSize: 11 },
+              style: axisTickSm,
             }}
           />
           <Tooltip content={<ChartTooltip />} />

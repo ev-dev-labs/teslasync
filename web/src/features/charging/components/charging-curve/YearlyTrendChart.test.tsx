@@ -45,6 +45,7 @@ const chartSpies = vi.hoisted(() => ({
   bar: vi.fn((_props: Record<string, unknown>) => null),
   line: vi.fn((_props: Record<string, unknown>) => null),
   composed: vi.fn(),
+  yAxis: vi.fn((_props: Record<string, unknown>) => null),
 }));
 
 vi.mock('@/components/charts', async (importOriginal) => {
@@ -59,7 +60,7 @@ vi.mock('@/components/charts', async (importOriginal) => {
     Bar: chartSpies.bar,
     Line: chartSpies.line,
     XAxis: () => null,
-    YAxis: () => null,
+    YAxis: chartSpies.yAxis,
     CartesianGrid: () => null,
     Tooltip: () => null,
     ChartLegend: () => null,
@@ -139,6 +140,7 @@ vi.mock('@/api/hooks/useAnnotations', () => ({
 }));
 
 import YearlyTrendChart from './YearlyTrendChart';
+import { axisTickSm } from '@/components/charts';
 
 type TrendPoint = { year: string; avg10to80: number; avg20to80: number; count: number };
 
@@ -215,6 +217,41 @@ describe('YearlyTrendChart — motion-aware series', () => {
 });
 
 describe('YearlyTrendChart — chrome + a11y', () => {
+  it('uses the shared tick token for both localized axis labels', () => {
+    renderChart(TREND);
+
+    const axes = chartSpies.yAxis.mock.calls.map(([props]) => props);
+    expect(axes).toHaveLength(2);
+    expect(axes[0]).toEqual(expect.objectContaining({
+      yAxisId: 'min',
+      orientation: 'left',
+      tick: axisTickSm,
+      label: {
+        value: 'Minutes',
+        angle: -90,
+        position: 'insideLeft',
+        style: axisTickSm,
+      },
+    }));
+    expect(axes[1]).toEqual(expect.objectContaining({
+      yAxisId: 'count',
+      orientation: 'right',
+      tick: axisTickSm,
+      label: {
+        value: 'Sessions',
+        angle: 90,
+        position: 'insideRight',
+        style: axisTickSm,
+      },
+    }));
+    for (const axis of axes) {
+      expect(axis.tick).toBe(axisTickSm);
+      expect((axis.label as { style: unknown }).style).toBe(axisTickSm);
+    }
+    expect(dataRowCells('2022')).toEqual(['2022', '45', '35', '3']);
+    expect(dataRowCells('2023')).toEqual(['2023', '40', '30', '5']);
+  });
+
   it('renders the panel title, subtitle and the accessible chart frame', () => {
     renderChart(TREND);
 
