@@ -32,6 +32,7 @@ import {
 } from '@/api/hooks/useDLQ';
 import type { DLQEntrySummary } from '@/types/admin-diagnostics';
 import { deriveDataState } from '@/api/dataState';
+import { useDataState } from '@/hooks/useDataState';
 import { typography } from '@/lib/tokens';
 
 import {
@@ -60,17 +61,30 @@ export default function DLQInspectorPage() {
   const replay = useDLQReplay();
   const listState = deriveDataState(list);
   const auditState = deriveDataState(audit);
+  const entryState = useDataState(entry);
+  const entryReplayReady = selected !== null
+    && entryState.data?.id === selected.id
+    && entryState.data.replayable
+    && typeof entryState.data.inner_payload_b64 === 'string'
+    && entryState.status === 'ok'
+    && !entryState.isRefreshing
+    && !entryState.isRefreshBlocked
+    && list.data?.replay_enabled === true;
 
   const handleInspect = (row: DLQEntrySummary) => {
     setSelected(row);
   };
 
   const handleAskReplay = () => {
-    if (selected) setPendingReplay(selected);
+    if (selected && entryReplayReady) setPendingReplay(selected);
   };
 
   const handleConfirmReplay = async () => {
     if (!pendingReplay) return;
+    if (!entryReplayReady || entryState.data?.id !== pendingReplay.id) {
+      setPendingReplay(null);
+      return;
+    }
     try {
       const result = await replay.mutateAsync({ id: pendingReplay.id });
       // Server may return 200 OK with result="disabled" via a future
@@ -196,8 +210,9 @@ export default function DLQInspectorPage() {
       <EntryDrawer
         open={selected !== null}
         summary={selected}
-        full={entry.data}
-        loading={entry.isLoading}
+        full={entryState.data}
+        loading={entryState.status === 'initial'}
+        state={entryState}
         replayEnabled={list.data?.replay_enabled ?? false}
         replayInFlight={replay.isPending}
         onClose={() => setSelected(null)}
@@ -210,12 +225,13 @@ export default function DLQInspectorPage() {
         message={t(
           'admin.dlq.confirm.message',
           'This will republish entry #{{id}} to its source topic. The action is logged and rate-limited.',
-          { id: pendingReplay?.id ?? 0 },
+          { id: pendingReplay?.id ?? '—' },
         )}
         confirmLabel={t('admin.dlq.confirm.confirm', 'Replay')}
         cancelLabel={t('common.cancel', 'Cancel')}
         variant="warning"
         loading={replay.isPending}
+        confirmDisabled={!entryReplayReady}
         onConfirm={handleConfirmReplay}
         onCancel={() => setPendingReplay(null)}
       />
