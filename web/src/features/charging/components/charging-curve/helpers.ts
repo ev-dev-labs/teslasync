@@ -16,6 +16,25 @@ export function getChargerLabel(s: ChargingSession): string {
   return 'DC Fast';
 }
 
+/** Provenance describes evidence, not a replacement for the accepted curve buckets. */
+export function getChargerClassification(s: ChargingSession): {
+  isDc: boolean;
+  label: string;
+  provenance: 'reported' | 'inferred' | 'unknown';
+} {
+  let provenance: 'reported' | 'inferred' | 'unknown' = 'unknown';
+  if (s.charger_type) {
+    if (getChargerCategory(s.charger_type) !== 'unknown'
+      || s.charger_type.toLowerCase().includes('tesla')) {
+      provenance = 'reported';
+    }
+  } else if (s.peak_power_w != null && Number.isFinite(s.peak_power_w)
+    && s.peak_power_w > 0) {
+    provenance = 'inferred';
+  }
+  return { isDc: isDcSession(s), label: getChargerLabel(s), provenance };
+}
+
 export function durationMinutes(startedAt: string, endedAt: string | null): number {
   if (!endedAt) return 0;
   const start = new Date(startedAt).getTime();

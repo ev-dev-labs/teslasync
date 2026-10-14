@@ -29,6 +29,7 @@ import type { ChargingSession } from '@/api/types';
 import {
   isDcSession,
   getChargerLabel,
+  getChargerClassification,
   durationMinutes,
   distanceAddedM,
   sessionLabel,
@@ -126,6 +127,59 @@ describe('getChargerLabel', () => {
       expect(sessionLabel(makeSession({ charger_type, peak_power_w: 44_000 }))).toContain('Home / AC');
     },
   );
+});
+
+describe('getChargerClassification', () => {
+  it.each(['AC', 'Home', 'Tesla Wall Connector', 'DC', 'CCS', 'CHAdeMO', 'Supercharger', 'Tesla'])(
+    'exposes reported provenance for %s without changing its accepted bucket',
+    charger_type => {
+      const session = makeSession({ charger_type, peak_power_w: null });
+      expect(getChargerClassification(session)).toEqual({
+        isDc: isDcSession(session),
+        label: getChargerLabel(session),
+        provenance: 'reported',
+      });
+    },
+  );
+
+  it.each([7_000, 20_000, 20_001])(
+    'exposes power-inferred provenance at %s W without changing the threshold',
+    peak_power_w => {
+      for (const charger_type of [null, '']) {
+        const session = makeSession({ charger_type, peak_power_w });
+        expect(getChargerClassification(session)).toEqual({
+          isDc: peak_power_w > 20_000,
+          label: peak_power_w > 20_000 ? 'DC Fast' : 'Home / AC',
+          provenance: 'inferred',
+        });
+      }
+    },
+  );
+
+  it.each([null, 0, -1, NaN, Infinity, -Infinity])(
+    'does not present missing or unusable power (%s) as classification evidence',
+    peak_power_w => {
+      const session = makeSession({ charger_type: null, peak_power_w });
+      expect(getChargerClassification(session)).toEqual({
+        isDc: isDcSession(session),
+        label: getChargerLabel(session),
+        provenance: 'unknown',
+      });
+    },
+  );
+
+  it.each([null, 7_000, 150_000])(
+    'keeps unrecognized populated types in their accepted DC bucket at %s W',
+    peak_power_w => {
+      expect(getChargerClassification(makeSession({ charger_type: 'Unrecognized', peak_power_w })))
+        .toEqual({ isDc: true, label: 'DC Fast', provenance: 'unknown' });
+    },
+  );
+
+  it('preserves reported AC precedence over a high power inference', () => {
+    expect(getChargerClassification(makeSession({ charger_type: 'Tesla Wall Connector', peak_power_w: 44_000 })))
+      .toEqual({ isDc: false, label: 'Home / AC', provenance: 'reported' });
+  });
 });
 
 describe('durationMinutes', () => {
