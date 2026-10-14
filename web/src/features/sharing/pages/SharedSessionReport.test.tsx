@@ -5,18 +5,26 @@
  * unit formatters are mocked. Shared UI (GlassPanel, OperationalBrief, charts) is
  * REAL so the render-boundary wiring is genuinely exercised.
  */
-import { describe, it, expect, vi } from 'vitest';
+import { afterEach, describe, it, expect, vi } from 'vitest';
 import { fireEvent, render, screen, within } from '@testing-library/react';
-import type { ReactNode } from 'react';
+import { Children, isValidElement, type ComponentProps, type ReactNode } from 'react';
+import { Area, Line, Tooltip, ChartTooltip } from '@/components/charts';
+import { chartTokens } from '@/lib/tokens';
 
-vi.mock('@/hooks/useUnits', () => ({
-  useUnits: () => ({
+const chartRender = vi.hoisted(() => vi.fn());
+
+vi.mock('@/hooks/useSettings', async () => ({
+  ...await vi.importActual<typeof import('@/hooks/useSettings')>('@/hooks/useSettings'),
+  usePublicDisplayFormatting: () => ({
     unitPrefs: {
       distance: 'km', speed: 'km/h', temperature: '°C', pressure: 'bar',
       energy: 'kWh', power: 'kW', duration: 'h', locale: 'en-US', precision: 2,
     },
     formatEnergy: (wh: number) => `${(wh / 1000).toFixed(1)} kWh`,
     formatPower: (w: number) => `${(w / 1000).toFixed(1)} kW`,
+    fmtNumber: (value: unknown) => Number(value).toLocaleString('en-US', {
+      minimumFractionDigits: 2, maximumFractionDigits: 2,
+    }),
   }),
 }));
 
@@ -27,6 +35,10 @@ vi.mock('@/components/charts', async () => {
   const actual = await vi.importActual<typeof import('@/components/charts')>('@/components/charts');
   return {
     ...actual,
+    ComposedChart: (props: ComponentProps<typeof actual.ComposedChart>) => {
+      chartRender(props);
+      return <actual.ComposedChart {...props} />;
+    },
     ResponsiveContainer: ({ children }: { children?: ReactNode }) => <>{children}</>,
   };
 });
@@ -58,6 +70,12 @@ const sessionData: SharedSessionData = {
 };
 
 describe('SharedSessionReport', () => {
+  afterEach(() => {
+    localStorage.clear();
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+  });
+
   it('renders the title, place, and stat grid', () => {
     render(<SharedSessionReport data={sessionData} />);
     expect(screen.getByText('Baker Supercharger Stop')).toBeInTheDocument();
@@ -84,6 +102,100 @@ describe('SharedSessionReport', () => {
   it('renders the charge curve chart when points exist', () => {
     render(<SharedSessionReport data={sessionData} />);
     expect(screen.getAllByRole('heading', { name: 'Charge curve' }).filter(heading => heading.hasAttribute('data-card-title'))).toHaveLength(1);
+  });
+
+  it('exposes every disclosed raw curve sample and downloads the complete CSV through the real frame', async () => {
+    const curve = [
+      { t_s: 0, power_kw: 0, battery_pct: 0, energy_kwh: 0 },
+      { t_s: 1.2345, power_kw: 123.4567, battery_pct: null, energy_kwh: 0.012345 },
+      { t_s: 1.2345, power_kw: null, battery_pct: 20.125, energy_kwh: null },
+      ...sessionData.session.curve!,
+    ];
+    const data = { ...sessionData, session: { ...sessionData.session, curve } };
+    const snapshot = structuredClone(data);
+    const createObjectURL = vi.fn((_blob: Blob) => 'blob:shared-curve');
+    vi.stubGlobal('URL', class extends URL {
+      static createObjectURL = createObjectURL;
+      static revokeObjectURL = vi.fn();
+    });
+    const download = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
+    const view = render(<SharedSessionReport data={data} />);
+    const table = screen.getByRole('table', { name: 'Charge curve — data table' });
+    const rows = within(table).getAllByRole('row');
+    expect(rows).toHaveLength(curve.length + 1);
+    expect(within(rows[0]).getAllByRole('columnheader').map(cell => cell.textContent)).toEqual([
+      'Duration (s)', 'Power (kW)', 'Battery (%)', 'Energy added (kWh)',
+    ]);
+    curve.forEach((point, index) => {
+      expect(within(rows[index + 1]).getAllByRole('cell').map(cell => cell.textContent)).toEqual([
+        `${point.t_s} s`,
+        point.power_kw == null ? '—' : `${point.power_kw} kW`,
+        point.battery_pct == null ? '—' : `${point.battery_pct} %`,
+        point.energy_kwh == null ? '—' : `${point.energy_kwh} kWh`,
+      ]);
+    });
+    expect(chartRender.mock.lastCall?.[0].data).toHaveLength(curve.length);
+    fireEvent.click(screen.getByRole('button', { name: 'Export chart' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Download data as CSV' }));
+    expect(download).toHaveBeenCalledOnce();
+    expect(download.mock.instances[0]).toHaveAttribute('download', expect.stringMatching(/\.csv$/));
+    const blob = createObjectURL.mock.calls[0][0] as Blob;
+    const csv = await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result));
+      reader.onerror = () => reject(reader.error);
+      reader.readAsText(blob);
+    });
+    expect(csv.replace(/^\ufeff/, '')).toBe([
+      't_s,power_kw,battery_pct,energy_kwh',
+      '0,0,0,0',
+      '1.2345,123.4567,,0.012345',
+      '1.2345,,20.125,',
+      '0,250,20,0',
+      '1200,120,55,25',
+      '2400,60,80,45',
+    ].join('\r\n'));
+    expect(csv).not.toContain('Baker');
+    expect(data).toEqual(snapshot);
+    view.rerender(<SharedSessionReport data={{
+      ...data, session: { ...data.session, curve: null },
+    }} />);
+    expect(screen.queryByRole('table')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Export chart' })).not.toBeInTheDocument();
+    expect(screen.getByText('The charge curve was not included in this share.')).toBeInTheDocument();
+  });
+
+  it.each(['neon-cyan', 'matrix-green'])('keeps restrained series identities and all samples without resetting saved %s choices', (theme) => {
+    const snapshot = structuredClone(sessionData);
+    localStorage.setItem('teslasync-theme', theme);
+    localStorage.setItem('teslasync-mode', 'auto');
+    const settingsSnapshot = { ...localStorage };
+    render(<SharedSessionReport data={sessionData} />);
+    const props = chartRender.mock.lastCall?.[0] as ComponentProps<
+      typeof import('@/components/charts').ComposedChart
+    >;
+    expect(props.data).toEqual([
+      { minutes: 0, power: 250, soc: 20 },
+      { minutes: 20, power: 120, soc: 55 },
+      { minutes: 40, power: 60, soc: 80 },
+    ]);
+    const children = Children.toArray(props.children);
+    const power = children.find(child => isValidElement(child) && child.type === Area);
+    const battery = children.find(child => isValidElement(child) && child.type === Line);
+    const tooltip = children.find(child => isValidElement(child) && child.type === Tooltip);
+    expect(isValidElement(power) && power.props).toMatchObject({
+      dataKey: 'power', yAxisId: 'power', name: 'Power (kW)',
+      stroke: chartTokens.series[0], fill: chartTokens.series[0], fillOpacity: 0.08,
+      strokeWidth: 2, connectNulls: false,
+    });
+    expect(isValidElement(battery) && battery.props).toMatchObject({
+      dataKey: 'soc', yAxisId: 'soc', name: 'Battery (%)',
+      stroke: chartTokens.series[5], dot: false, strokeWidth: 2, connectNulls: false,
+    });
+    expect(isValidElement<{ content: ReactNode }>(tooltip)
+      && isValidElement(tooltip.props.content) && tooltip.props.content.type).toBe(ChartTooltip);
+    expect({ ...localStorage }).toEqual(settingsSnapshot);
+    expect(sessionData).toEqual(snapshot);
   });
 
   it('shows the no-curve fallback when the curve was not shared', () => {
