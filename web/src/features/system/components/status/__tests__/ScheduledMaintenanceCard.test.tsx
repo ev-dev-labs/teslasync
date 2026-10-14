@@ -76,7 +76,7 @@ function renderCard(now = NOW) {
 }
 
 function getForm(): HTMLFormElement {
-  const form = screen.getByLabelText(/^Start \(local\)/).closest('form')
+  const form = screen.getByLabelText('End time').closest('form')
   if (!form) throw new Error('ScheduledMaintenanceCard: <form> not found')
   return form
 }
@@ -116,20 +116,18 @@ describe('ScheduledMaintenanceCard', () => {
     expect(postCount()).toBe(0)
   })
 
-  it('preserves unsaved business-date fields and discard protection through a read-source refresh failure', async () => {
+  it('preserves the end instant and discard protection through a read-source refresh failure', async () => {
     const { client } = renderCard()
     await waitFor(() => expect(mockRequest).toHaveBeenCalled())
-    fireEvent.click(screen.getByRole('button', { name: 'Schedule a window' }))
-    fireEvent.change(screen.getByLabelText(/^Start \(local\)/), { target: { value: '2026-07-06T02:00' } })
-    fireEvent.change(screen.getByLabelText(/^Duration \(minutes\)/), { target: { value: '90' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Enable immediately' }))
+    fireEvent.change(screen.getByLabelText('End time'), { target: { value: '2026-07-06T02:00' } })
     fireEvent.change(screen.getByLabelText('Operator message'), { target: { value: 'Draft operator context' } })
     mockRequest.mockRejectedValue(new Error('maintenance refresh failed'))
     await act(async () => {
       await client.refetchQueries({ queryKey: ['admin', 'maintenance'] })
     })
     expect(await screen.findByTestId('stale-refresh-warning')).toBeInTheDocument()
-    expect(screen.getByLabelText(/^Start \(local\)/)).toHaveValue('2026-07-06T02:00')
-    expect(screen.getByLabelText(/^Duration \(minutes\)/)).toHaveValue(90)
+    expect(screen.getByLabelText('End time')).toHaveValue('2026-07-06T02:00')
     expect(screen.getByLabelText('Operator message')).toHaveValue('Draft operator context')
     fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
     expect(await screen.findByRole('dialog', { name: 'Unsaved changes' })).toBeInTheDocument()
@@ -139,12 +137,12 @@ describe('ScheduledMaintenanceCard', () => {
   it('preserves read-only evidence and clears a scheduling draft when operational write permission is lost', async () => {
     const { rerender, ui } = renderCard()
     await waitFor(() => expect(mockRequest).toHaveBeenCalled())
-    fireEvent.click(screen.getByRole('button', { name: 'Schedule a window' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Enable immediately' }))
     fireEvent.change(screen.getByLabelText('Operator message'), { target: { value: 'Unsubmitted draft' } })
     mode.canWrite = false
     rerender(ui())
     expect(screen.queryByLabelText('Operator message')).not.toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Schedule a window' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Enable immediately' })).toBeDisabled()
     expect(screen.getByText('Maintenance controls are read-only')).toBeInTheDocument()
     expect(postCount()).toBe(0)
   })
@@ -153,71 +151,87 @@ describe('ScheduledMaintenanceCard', () => {
     renderCard()
     await waitFor(() => expect(mockRequest).toHaveBeenCalled())
 
-    expect(screen.getByRole('heading', { name: 'Scheduled maintenance' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /Schedule a window/ })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Maintenance' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Enable immediately' })).toBeInTheDocument()
     expect(screen.queryByText('Maintenance active')).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /Clear maintenance/ })).not.toBeInTheDocument()
   })
 
-  it('reveals the start/duration/message fields when the operator opens the scheduler', () => {
+  it('offers an immediate action with an end instant, not deferred-start or duration controls', () => {
     renderCard()
-    fireEvent.click(screen.getByRole('button', { name: /Schedule a window/ }))
+    fireEvent.click(screen.getByRole('button', { name: 'Enable immediately' }))
 
-    expect(screen.getByLabelText(/^Start \(local\)/)).toBeInTheDocument()
-    expect(screen.getByLabelText(/^Duration \(minutes\)/)).toHaveValue(60)
+    expect(screen.getByLabelText('End time')).toBeInTheDocument()
+    expect(screen.queryByLabelText(/^Start \(local\)/)).not.toBeInTheDocument()
+    expect(screen.queryByLabelText(/^Duration \(minutes\)/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/schedul/i)).not.toBeInTheDocument()
     expect(screen.getByPlaceholderText("What's happening (optional)")).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Schedule' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Enable immediately' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument()
   })
 
   it('collapses the scheduler again when Cancel is pressed', () => {
     renderCard()
-    fireEvent.click(screen.getByRole('button', { name: /Schedule a window/ }))
-    expect(screen.getByLabelText(/^Start \(local\)/)).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Enable immediately' }))
+    expect(screen.getByLabelText('End time')).toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
-    expect(screen.queryByLabelText(/^Start \(local\)/)).not.toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /Schedule a window/ })).toBeInTheDocument()
+    expect(screen.queryByLabelText('End time')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Enable immediately' })).toBeInTheDocument()
   })
 
   it('protects edited maintenance details from an accidental cancel', async () => {
     renderCard()
-    fireEvent.click(screen.getByRole('button', { name: /Schedule a window/ }))
-    fireEvent.change(screen.getByLabelText(/^Start \(local\)/), {
+    fireEvent.click(screen.getByRole('button', { name: 'Enable immediately' }))
+    fireEvent.change(screen.getByLabelText('End time'), {
       target: { value: '2026-07-06T02:00' },
     })
 
     fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
     const confirm = await screen.findByRole('dialog', { name: 'Unsaved changes' })
-    expect(screen.getByLabelText(/^Start \(local\)/)).toBeInTheDocument()
+    expect(screen.getByLabelText('End time')).toBeInTheDocument()
 
     fireEvent.click(within(confirm).getByRole('button', { name: 'Discard changes' }))
     await waitFor(() => {
-      expect(screen.queryByLabelText(/^Start \(local\)/)).not.toBeInTheDocument()
+      expect(screen.queryByLabelText('End time')).not.toBeInTheDocument()
     })
   })
 
-  it('blocks submission and associates an error when no start time is picked', async () => {
+  it('blocks submission and associates an error when no end time is picked', async () => {
     renderCard()
-    fireEvent.click(screen.getByRole('button', { name: /Schedule a window/ }))
+    fireEvent.click(screen.getByRole('button', { name: 'Enable immediately' }))
     fireEvent.submit(getForm())
 
-    const start = screen.getByLabelText(/^Start \(local\)/)
-    expect(screen.getByText('Pick a start time.')).toBeInTheDocument()
+    const start = screen.getByLabelText('End time')
+    expect(screen.getByText('Enter a valid end time.')).toBeInTheDocument()
     expect(start).toHaveAttribute('aria-invalid', 'true')
     expect(start).toHaveAttribute('aria-describedby')
     expect(postCount()).toBe(0)
   })
 
-  it('POSTs a maintenance window whose `until` = start + duration, then toasts and closes', async () => {
+  it('rejects end instants at or before now without issuing an immediate command', () => {
     renderCard()
-    fireEvent.click(screen.getByRole('button', { name: /Schedule a window/ }))
+    fireEvent.click(screen.getByRole('button', { name: 'Enable immediately' }))
+    const end = screen.getByLabelText('End time')
+    for (const endMs of [NOW - 60_000, NOW]) {
+      const local = new Date(endMs - new Date(endMs).getTimezoneOffset() * 60_000)
+        .toISOString().slice(0, 16)
+      fireEvent.change(end, { target: { value: local } })
+      fireEvent.submit(getForm())
+      expect(end).toHaveAttribute('aria-invalid', 'true')
+      expect(screen.getByText('Enter a valid end time.')).toBeInTheDocument()
+    }
+    expect(postCount()).toBe(0)
+  })
+
+  it('enables maintenance immediately with the exact configured end instant, then toasts and closes', async () => {
+    renderCard()
+    fireEvent.click(screen.getByRole('button', { name: 'Enable immediately' }))
 
     const startVal = '2026-07-06T02:00'
-    const expectedUntil = new Date(Date.parse(startVal) + 90 * 60_000).toISOString()
+    const expectedUntil = new Date(startVal).toISOString()
 
-    fireEvent.change(screen.getByLabelText(/^Start \(local\)/), { target: { value: startVal } })
-    fireEvent.change(screen.getByLabelText(/^Duration \(minutes\)/), { target: { value: '90' } })
+    fireEvent.change(screen.getByLabelText('End time'), { target: { value: startVal } })
     fireEvent.change(screen.getByPlaceholderText("What's happening (optional)"), {
       target: { value: '  Upgrading firmware  ' },
     })
@@ -228,25 +242,25 @@ describe('ScheduledMaintenanceCard', () => {
     expect(url).toBe('/admin/maintenance')
     expect(body).toEqual({ mode: 'maintenance', message: 'Upgrading firmware', until: expectedUntil })
 
-    expect(await screen.findByText('Maintenance window scheduled.')).toBeInTheDocument()
-    await waitFor(() => expect(screen.queryByLabelText(/^Start \(local\)/)).not.toBeInTheDocument())
+    expect((await screen.findAllByText('Maintenance state updated')).length).toBeGreaterThan(0)
+    await waitFor(() => expect(screen.queryByLabelText('End time')).not.toBeInTheDocument())
   })
 
-  it('clamps sub-minimum durations to 5 minutes and auto-fills a default message', async () => {
+  it('preserves the configured end without duration clamping and auto-fills an end-time message', async () => {
     renderCard()
-    fireEvent.click(screen.getByRole('button', { name: /Schedule a window/ }))
+    fireEvent.click(screen.getByRole('button', { name: 'Enable immediately' }))
 
     const startVal = '2026-07-06T02:00'
-    const expectedUntil = new Date(Date.parse(startVal) + 5 * 60_000).toISOString()
+    const expectedUntil = new Date(startVal).toISOString()
 
-    fireEvent.change(screen.getByLabelText(/^Start \(local\)/), { target: { value: startVal } })
-    fireEvent.change(screen.getByLabelText(/^Duration \(minutes\)/), { target: { value: '1' } })
+    fireEvent.change(screen.getByLabelText('End time'), { target: { value: startVal } })
     fireEvent.submit(getForm())
 
     await waitFor(() => expect(postCount()).toBe(1))
     const { body } = lastPost()
     expect(body.until).toBe(expectedUntil)
-    expect(String(body.message)).toContain('Scheduled maintenance')
+    expect(String(body.message)).toContain('Until ')
+    expect(String(body.message)).not.toMatch(/schedul/i)
   })
 
   it('renders the active window with a live "min remaining" countdown and no 24h chip when it ends far out', async () => {
@@ -261,12 +275,13 @@ describe('ScheduledMaintenanceCard', () => {
     expect(screen.queryByText(/Within 24h/)).not.toBeInTheDocument()
   })
 
-  it('flags an imminent window with the amber "Within 24h" heads-up chip', async () => {
+  it('shows a near end as active maintenance, not an imminent scheduled start', async () => {
     const until = new Date(NOW + 3 * 60 * 60 * 1000).toISOString() // 3h out
     stub(makeState({ mode: 'maintenance', maintenance_message: 'Quick reboot', maintenance_until: until }))
     renderCard()
 
-    expect(await screen.findByText(/Within 24h/)).toBeInTheDocument()
+    expect(await screen.findByText('Maintenance active')).toBeInTheDocument()
+    expect(screen.queryByText(/Within 24h/)).not.toBeInTheDocument()
     expect(screen.getByText(/180 min remaining/)).toBeInTheDocument()
   })
 
@@ -285,15 +300,15 @@ describe('ScheduledMaintenanceCard', () => {
   it('surfaces the failure message and keeps the form open when the schedule POST rejects', async () => {
     stub(makeState({ mode: 'ok' }), new Error('backend exploded'))
     renderCard()
-    fireEvent.click(screen.getByRole('button', { name: /Schedule a window/ }))
-    fireEvent.change(screen.getByLabelText(/^Start \(local\)/), { target: { value: '2026-07-06T02:00' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Enable immediately' }))
+    fireEvent.change(screen.getByLabelText('End time'), { target: { value: '2026-07-06T02:00' } })
     fireEvent.submit(getForm())
 
     // Both the hook's onError toast and the component's catch toast carry the
     // same detail, so there may be more than one node — assert at least one.
     const hits = await screen.findAllByText('backend exploded')
     expect(hits.length).toBeGreaterThan(0)
-    expect(screen.getByLabelText(/^Start \(local\)/)).toBeInTheDocument()
+    expect(screen.getByLabelText('End time')).toBeInTheDocument()
   })
 
   it('disables the actions and shows a pending label while the schedule is in flight', async () => {
@@ -303,16 +318,16 @@ describe('ScheduledMaintenanceCard', () => {
       return Promise.resolve(makeState({ mode: 'ok' }))
     })
     renderCard()
-    fireEvent.click(screen.getByRole('button', { name: /Schedule a window/ }))
-    fireEvent.change(screen.getByLabelText(/^Start \(local\)/), { target: { value: '2026-07-06T02:00' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Enable immediately' }))
+    fireEvent.change(screen.getByLabelText('End time'), { target: { value: '2026-07-06T02:00' } })
     fireEvent.submit(getForm())
 
-    const pending = await screen.findByRole('button', { name: /Scheduling/ })
+    const pending = await screen.findByRole('button', { name: /Applying/ })
     expect(pending).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Cancel' })).toBeDisabled()
 
     resolvePost(makeState({ mode: 'ok' }))
-    await waitFor(() => expect(screen.queryByRole('button', { name: /Scheduling/ })).not.toBeInTheDocument())
+    await waitFor(() => expect(screen.queryByRole('button', { name: /Applying/ })).not.toBeInTheDocument())
   })
 
   it('ignores a malformed `maintenance_until` (NaN) instead of painting a stray "Until —" line', async () => {

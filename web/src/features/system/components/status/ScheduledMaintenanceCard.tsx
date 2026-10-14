@@ -1,31 +1,16 @@
 /**
- * ScheduledMaintenanceCard for self-hosted maintenance scheduling.
- *
- * Surfaces upcoming + active maintenance windows on /system-status and
- * lets the operator schedule a new one inline.
+ * Immediate self-hosted maintenance controls with an operator-configured end.
  *
  * Backend integration:
  *   GET  /admin/maintenance      — current state (mode + message + until)
  *   POST /admin/maintenance      — set / clear maintenance mode
  *
- * Behaviour:
- *   • If maintenance is active right now → blue "Maintenance" badge,
- *     "Active until …" + Clear CTA.
- *   • If maintenance is scheduled in the future → "Scheduled in N hours"
- *     with a Cancel CTA. (We intentionally use the same backend slot;
- *     the future timestamp is the "until" value, and the system flips
- *     to "maintenance" at that moment.)
- *   • Otherwise → quick scheduler form (operator-supplied window).
- *
- * 24h pre-banner: when maintenance is scheduled within the next 24
- * hours, this card itself bumps to amber to give the operator a clear
- * heads-up. The full app-wide MaintenanceBanner already handles the
- * "active now" case; we don't double up.
+ * POST changes mode immediately; until is an end instant, never a future start.
  */
 
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { useTranslation } from 'react-i18next'
-import { CalendarClock, AlertTriangle, X } from 'lucide-react'
+import { CalendarClock, X } from 'lucide-react'
 import { GlassPanel, Button, ConfirmDialog, Input, Badge, PanelTitle, Text } from '@/components/ui'
 import { OperationalWriteNotice, QueryError, Skeleton, StaleRefreshWarning, useToast } from '@/components/feedback'
 import { useMaintenanceState, useUpdateMaintenance } from '@/api/hooks/useAdmin'
@@ -38,8 +23,6 @@ import { cn } from '@/lib/cn'
 interface ScheduledMaintenanceCardProps {
   now: number
 }
-
-const ONE_DAY_MS = 24 * 60 * 60 * 1000
 
 function interpolateCopy(template: string, values: Record<string, string | number>): string {
   return Object.entries(values).reduce(
@@ -57,12 +40,10 @@ export function ScheduledMaintenanceCard({ now }: ScheduledMaintenanceCardProps)
   const operationalMode = useOperationalMode()
   const toast = useToast()
   const { formatDateTime } = useDateFormat()
-  const [showSchedule, setShowSchedule] = useState(false)
-  const [whenLocal, setWhenLocal] = useState('')
-  const [duration, setDuration] = useState('60')
+  const [showControls, setShowControls] = useState(false)
+  const [endLocal, setEndLocal] = useState('')
   const [message, setMessage] = useState('')
-  const [startError, setStartError] = useState('')
-  const [durationError, setDurationError] = useState('')
+  const [endError, setEndError] = useState('')
 
   const isActive = state?.mode === 'maintenance'
   // Guard against a malformed `maintenance_until` (non-ISO string → NaN). A raw
@@ -73,26 +54,24 @@ export function ScheduledMaintenanceCard({ now }: ScheduledMaintenanceCardProps)
     const parsed = Date.parse(state.maintenance_until)
     return Number.isFinite(parsed) ? parsed : null
   }, [state])
-  const minutesToStart = useMemo(() => {
+  const minutesRemaining = useMemo(() => {
     if (!untilTs || !isActive) return null
     return Math.floor((untilTs - now) / 60_000)
   }, [untilTs, now, isActive])
-  const discardSchedule = () => {
-    setShowSchedule(false)
-    setWhenLocal('')
-    setDuration('60')
+  const discardDraft = () => {
+    setShowControls(false)
+    setEndLocal('')
     setMessage('')
-    setStartError('')
-    setDurationError('')
+    setEndError('')
   }
   useEffect(() => {
-    if (!operationalMode.canWrite) discardSchedule()
+    if (!operationalMode.canWrite) discardDraft()
   }, [operationalMode.canWrite])
-  const scheduleIsDirty = showSchedule
-    && (whenLocal !== '' || duration !== '60' || message !== '')
+  const draftIsDirty = showControls
+    && (endLocal !== '' || message !== '')
   const { requestClose, dialogProps: discardDialogProps } = useDiscardChangesGuard(
-    scheduleIsDirty,
-    discardSchedule,
+    draftIsDirty,
+    discardDraft,
     {
       message: t(
         'systemStatus.maintenance.unsaved',
@@ -101,60 +80,34 @@ export function ScheduledMaintenanceCard({ now }: ScheduledMaintenanceCardProps)
     },
   )
 
-  const handleSchedule = async (e: FormEvent<HTMLFormElement>) => {
+  const handleEnable = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
-    setStartError('')
-    setDurationError('')
-    if (!whenLocal) {
-      const error = t('systemStatus.maintenance.startRequired', 'Pick a start time.')
-      setStartError(error)
+    setEndError('')
+    const endMs = Date.parse(endLocal)
+    if (!Number.isFinite(endMs) || endMs <= now) {
+      setEndError(t('fleetOps.assignmentDialog.endInvalid', 'Enter a valid end time.'))
       return
     }
-    const startMs = Date.parse(whenLocal)
-    if (!Number.isFinite(startMs)) {
-      const error = t('systemStatus.maintenance.startInvalid', 'Invalid start time.')
-      setStartError(error)
-      return
-    }
-    const parsedDuration = Number(duration)
-    if (!duration.trim() || !Number.isFinite(parsedDuration) || parsedDuration <= 0) {
-      const error = t(
-        'systemStatus.maintenance.durationRequired',
-        'Enter a valid duration in minutes.',
-      )
-      setDurationError(error)
-      return
-    }
-    if (parsedDuration > 1440) {
-      const error = t(
-        'systemStatus.maintenance.durationInvalid',
-        'Duration cannot exceed 1,440 minutes.',
-      )
-      setDurationError(error)
-      return
-    }
-    const durMin = Math.max(5, parsedDuration || 60)
-    const endMs = startMs + durMin * 60_000
     try {
       await mutation.mutateAsync({
         mode: 'maintenance',
         message: message.trim() || interpolateCopy(
           t(
-            'systemStatus.maintenance.defaultMessage',
-            'Scheduled maintenance · ends {{time}}',
+            'systemStatus.maintenance.until',
+            'Until {{time}}',
           ),
           {
-          time: formatDateTime(new Date(endMs)),
+            time: formatDateTime(new Date(endMs)),
           },
         ),
         until: new Date(endMs).toISOString(),
       })
-      discardSchedule()
-      toast.success(t('systemStatus.maintenance.scheduled', 'Maintenance window scheduled.'))
+      discardDraft()
+      toast.success(t('toast.admin.maintenance.success', 'Maintenance state updated'))
     } catch (err) {
       toast.error(err instanceof Error
         ? err.message
-        : t('systemStatus.maintenance.scheduleFailed', 'Failed to schedule'))
+        : t('toast.admin.maintenance.error', 'Failed to update maintenance state'))
     }
   }
 
@@ -169,31 +122,18 @@ export function ScheduledMaintenanceCard({ now }: ScheduledMaintenanceCardProps)
     }
   }
 
-  const within24h = isActive && untilTs != null && untilTs - now <= ONE_DAY_MS && untilTs - now > 0
-  const ringClass = within24h
-    ? 'ring-amber-400/40 bg-amber-500/[0.04]'
-    : isActive
-      ? 'ring-blue-400/30 bg-blue-500/[0.04]'
-      : 'ring-white/5'
-
   return (
-    <GlassPanel className={cn('p-4 ring-1', ringClass)}>
+    <GlassPanel className="p-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="flex min-w-0 flex-wrap items-center gap-2">
-          <CalendarClock className={cn('h-4 w-4', isActive ? 'text-blue-300' : 'text-[var(--text-secondary)]')} aria-hidden />
-          <PanelTitle>{t('systemStatus.maintenance.title', 'Scheduled maintenance')}</PanelTitle>
+          <CalendarClock className={cn('h-4 w-4', isActive ? 'text-[var(--semantic-info)]' : 'text-[var(--text-secondary)]')} aria-hidden />
+          <PanelTitle>{t('serviceMode.admin.modes.maintenance', 'Maintenance')}</PanelTitle>
           {isActive && <Badge variant="info">{t('systemStatus.maintenance.active', 'Maintenance active')}</Badge>}
-          {within24h && (
-            <Text size="xs" className="inline-flex items-center gap-1 text-amber-300">
-              <AlertTriangle className="h-3 w-3" aria-hidden />
-              {t('systemStatus.maintenance.within24h', 'Within 24h')}
-            </Text>
-          )}
         </div>
       </div>
 
       <div className="mt-3 space-y-3">
-        <StaleRefreshWarning state={sourceState} label={t('systemStatus.maintenance.title', 'Scheduled maintenance')} />
+        <StaleRefreshWarning state={sourceState} label={t('serviceMode.admin.modes.maintenance', 'Maintenance')} />
         {sourceState.fatalError && <QueryError error={sourceState.fatalError} onRetry={() => { void query.refetch(); }} />}
         {query.isLoading && !sourceState.hasData && <Skeleton height={44} />}
         <OperationalWriteNotice
@@ -207,7 +147,7 @@ export function ScheduledMaintenanceCard({ now }: ScheduledMaintenanceCardProps)
         )}
         {isActive && untilTs != null && (
           <Text as="p" variant="caption">
-            {minutesToStart != null && minutesToStart > 0
+            {minutesRemaining != null && minutesRemaining > 0
               ? interpolateCopy(
                 t(
                   'systemStatus.maintenance.activeUntil',
@@ -215,7 +155,7 @@ export function ScheduledMaintenanceCard({ now }: ScheduledMaintenanceCardProps)
                 ),
                 {
                   time: formatDateTime(new Date(untilTs)),
-                  minutes: minutesToStart,
+                  minutes: minutesRemaining,
                 },
               )
               : interpolateCopy(
@@ -224,61 +164,36 @@ export function ScheduledMaintenanceCard({ now }: ScheduledMaintenanceCardProps)
               )}
           </Text>
         )}
-        {!isActive && !showSchedule && (
-          <Text as="p" variant="caption">
-            {t(
-              'systemStatus.maintenance.description',
-              'Schedule a window for upgrades or hardware moves. The status banner will switch to blue “Maintenance” instead of red “Down”.',
-            )}
-          </Text>
-        )}
-
-        {!isActive && !showSchedule && (
+        {!isActive && !showControls && (
           <Button
             type="button"
             variant="ghost"
             size="sm"
-            onClick={() => setShowSchedule(true)}
+            onClick={() => setShowControls(true)}
             disabled={!operationalMode.canWrite}
             title={operationalMode.writeBlockReason ?? undefined}
             className="gap-1.5"
             wrapLabel
           >
             <CalendarClock className="h-3.5 w-3.5" aria-hidden />
-            {t('systemStatus.maintenance.scheduleAction', 'Schedule a window')}
+            {t('alertPacks.enableImmediately', 'Enable immediately')}
           </Button>
         )}
 
-        {!isActive && showSchedule && (
-          <form onSubmit={handleSchedule} className="space-y-3 border-t border-[var(--border-subtle)] pt-3">
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <Input
-                label={t('systemStatus.maintenance.start', 'Start (local)')}
-                type="datetime-local"
-                value={whenLocal}
-                onChange={(e) => {
-                  setWhenLocal(e.target.value)
-                  setStartError('')
-                }}
-                error={startError || undefined}
-                disabled={!operationalMode.canWrite}
-                required
-              />
-              <Input
-                label={t('systemStatus.maintenance.duration', 'Duration (minutes)')}
-                type="number"
-                min={5}
-                max={1440}
-                value={duration}
-                onChange={(e) => {
-                  setDuration(e.target.value)
-                  setDurationError('')
-                }}
-                error={durationError || undefined}
-                disabled={!operationalMode.canWrite}
-                required
-              />
-            </div>
+        {!isActive && showControls && (
+          <form onSubmit={handleEnable} className="space-y-3 border-t border-[var(--border-subtle)] pt-3">
+            <Input
+              label={t('chargePlanner.endTime', 'End time')}
+              type="datetime-local"
+              value={endLocal}
+              onChange={(e) => {
+                setEndLocal(e.target.value)
+                setEndError('')
+              }}
+              error={endError || undefined}
+              disabled={!operationalMode.canWrite}
+              required
+            />
             <Input
               label={t('systemStatus.maintenance.message', 'Operator message')}
               hint={t('systemStatus.maintenance.messageHint', 'Optional context shown in the maintenance banner.')}
@@ -302,8 +217,8 @@ export function ScheduledMaintenanceCard({ now }: ScheduledMaintenanceCardProps)
                 wrapLabel
               >
                 {mutation.isPending
-                  ? t('systemStatus.maintenance.scheduling', 'Scheduling…')
-                  : t('systemStatus.maintenance.schedule', 'Schedule')}
+                  ? t('settingsBackup.import.applying', 'Applying…')
+                  : t('alertPacks.enableImmediately', 'Enable immediately')}
               </Button>
             </div>
           </form>
@@ -318,7 +233,7 @@ export function ScheduledMaintenanceCard({ now }: ScheduledMaintenanceCardProps)
             loading={mutation.isPending}
             disabled={!operationalMode.canWrite}
             title={operationalMode.writeBlockReason ?? undefined}
-            className="gap-1.5 text-amber-300"
+            className="gap-1.5"
             wrapLabel
           >
             <X className="h-3.5 w-3.5" aria-hidden />
