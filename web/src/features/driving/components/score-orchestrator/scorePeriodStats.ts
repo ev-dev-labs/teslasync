@@ -1,4 +1,6 @@
 import type { ScoredDrive } from './scoreDomain';
+import { type FormatOptions, ymdInTz } from '@/lib/dateFormat';
+import { addCivilDays } from '@/lib/dateRange';
 
 /** Weekly / monthly roll-up derived from the scored drives in range. */
 export interface PeriodStats {
@@ -19,55 +21,66 @@ export interface PeriodStats {
  *
  * Returns `null` when there are no scored drives so callers render an empty
  * state instead of a grid of zeros.
+ * Pass the saved display formatter options to use its timezone. Periods are
+ * half-open calendar ranges; locale never changes the canonical bucket labels.
+ * Undated drives retain their total/grade counts but have no calendar bucket.
  */
 export function computePeriodStats(
   scoredDrives: ScoredDrive[],
   now: Date,
+  opts?: FormatOptions,
 ): PeriodStats | null {
   if (scoredDrives.length === 0) return null;
 
-  const weekStart = new Date(now);
-  weekStart.setDate(now.getDate() - now.getDay());
-  const lastWeekStart = new Date(weekStart);
-  lastWeekStart.setDate(lastWeekStart.getDate() - 7);
-  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-  const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-  const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0);
+  const today = ymdInTz(now, opts?.tz);
+  const weekStart = today
+    ? addCivilDays(today, -new Date(`${today}T00:00:00Z`).getUTCDay())
+    : null;
+  const nextWeekStart = weekStart ? addCivilDays(weekStart, 7) : null;
+  const lastWeekStart = weekStart ? addCivilDays(weekStart, -7) : null;
+  const monthStart = today ? `${today.slice(0, 7)}-01` : null;
+  const lastMonthStart = monthStart
+    ? `${addCivilDays(monthStart, -1).slice(0, 7)}-01`
+    : null;
+  const nextMonthStart = monthStart
+    ? `${addCivilDays(monthStart, 31).slice(0, 7)}-01`
+    : null;
+  const datedDrives = scoredDrives.flatMap((sd) => {
+    const day = sd.drive.startTs
+      ? ymdInTz(new Date(sd.drive.startTs), opts?.tz)
+      : null;
+    return day ? [{ sd, day }] : [];
+  });
+  // Compare civil days, not elapsed 24-hour durations, across DST changes.
+  const inPeriod = (start: string | null, end: string | null): ScoredDrive[] =>
+    start && end
+      ? datedDrives.filter(({ day }) => day >= start && day < end).map(({ sd }) => sd)
+      : [];
 
   const avg = (items: ScoredDrive[]): number | null =>
     items.length > 0
       ? Math.round(items.reduce((s, d) => s + d.score.total, 0) / items.length)
       : null;
 
-  const thisWeekDrives = scoredDrives.filter(
-    (sd) => new Date(sd.drive.startTs) >= weekStart,
-  );
-  const lastWeekDrives = scoredDrives.filter((sd) => {
-    const d = new Date(sd.drive.startTs);
-    return d >= lastWeekStart && d < weekStart;
-  });
-  const thisMonthDrives = scoredDrives.filter(
-    (sd) => new Date(sd.drive.startTs) >= monthStart,
-  );
-  const lastMonthDrives = scoredDrives.filter((sd) => {
-    const d = new Date(sd.drive.startTs);
-    return d >= lastMonthStart && d <= lastMonthEnd;
-  });
+  const thisWeekDrives = inPeriod(weekStart, nextWeekStart);
+  const lastWeekDrives = inPeriod(lastWeekStart, weekStart);
+  const thisMonthDrives = inPeriod(monthStart, nextMonthStart);
+  const lastMonthDrives = inPeriod(lastMonthStart, monthStart);
 
   const weekMap = new Map<string, ScoredDrive[]>();
   const monthMap = new Map<string, ScoredDrive[]>();
-  scoredDrives.forEach((sd) => {
-    const d = new Date(sd.drive.startTs);
-    const month = String(d.getMonth() + 1).padStart(2, '0');
+  datedDrives.forEach(({ sd, day }) => {
+    const d = new Date(`${day}T00:00:00Z`);
+    const mo = day.slice(0, 7);
+    const firstWeekday = new Date(`${mo}-01T00:00:00Z`).getUTCDay();
     const weekOfMonth = Math.ceil(
-      (d.getDate() + new Date(d.getFullYear(), d.getMonth(), 1).getDay()) / 7,
+      (d.getUTCDate() + firstWeekday) / 7,
     );
     // Key the week bucket by year-MONTH-week. Keying by week-of-month alone
     // collapsed the same week number across different months (e.g. Jun-W3 and
     // Jul-W3) into one bucket, averaging unrelated drives together and
     // corrupting the "Best Week" aggregate + its label.
-    const wk = `${d.getFullYear()}-${month}-W${weekOfMonth}`;
-    const mo = `${d.getFullYear()}-${month}`;
+    const wk = `${mo}-W${weekOfMonth}`;
     if (!weekMap.has(wk)) weekMap.set(wk, []);
     weekMap.get(wk)!.push(sd);
     if (!monthMap.has(mo)) monthMap.set(mo, []);
