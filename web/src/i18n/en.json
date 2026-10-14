@@ -8048,6 +8048,11 @@
       }
     },
     "geofence": {
+      "bulkDelete": {
+        "error": "Failed to delete geofences",
+        "partial": "{{deleted}} geofences deleted; some deletions did not complete",
+        "success": "Geofences deleted"
+      },
       "archive": {
         "success": "Place archived",
         "error": "Failed to archive place"
@@ -21070,6 +21075,19 @@
     }
   },
   "geofences": {
+    "validation": {
+      "latitudeNumber": "Latitude must be a number",
+      "latitudeRange": "Latitude must be between {{min}} and {{max}}",
+      "latitudeRequired": "Latitude is required",
+      "longitudeNumber": "Longitude must be a number",
+      "longitudeRange": "Longitude must be between {{min}} and {{max}}",
+      "longitudeRequired": "Longitude is required",
+      "nameMaxLength": "Name must be {{max}} characters or fewer",
+      "nameRequired": "Name is required",
+      "radiusNumber": "Radius must be a number",
+      "radiusRange": "Radius must be between {{min}} and {{max}}",
+      "radiusRequired": "Radius is required"
+    },
     "visits": {
       "candidates": "Visited candidates",
       "charging": "This is a charging location",
@@ -21183,6 +21201,11 @@
     "geolocationUnsupported": "Geolocation is not supported by this browser"
   },
   "mapOverview": {
+    "historicalSubtitle": "Latest recorded vehicle position and recent history",
+    "lastObserved": "Last observed",
+    "observationFreshness": "Stored observation time. Polling every 15 s checks for positions, not whether this observation is current.",
+    "observedSpeed": "Observed speed",
+    "positionMap": "Recorded location map",
     "pageTitle": "Map overview",
     "colTime": "Time",
     "colLat": "Lat",
@@ -21271,6 +21294,8 @@
     "tipsTitle": "Recommendations",
     "tipOptimal": "Best efficiency observed in the {{range}} range",
     "optimalDesc": "Your most efficient temperature range is {{range}} with an average of {{efficiency}} {{unit}} across {{count}} drives.",
+    "optimalDesc_one": "Your most efficient temperature range is {{range}} with an average of {{efficiency}} {{unit}} across {{count}} drive.",
+    "optimalDesc_other": "Your most efficient temperature range is {{range}} with an average of {{efficiency}} {{unit}} across {{count}} drives.",
     "optimalDelta": "Compared to the worst range ({{worst}}), you save {{delta}} {{unit}} on average.",
     "aiNarrative": {
       "title": "Narrate the cabin-temperature impact",
@@ -21577,6 +21602,8 @@
       },
       "empty": {
         "title": "No notifications",
+        "noMatches": "No notifications match these filters",
+        "noMatchesMessage": "Clear the notification filters or adjust the workspace date range to see other records.",
         "message": "System events, alerts, automation, and scheduled notifications appear here when triggered.",
         "ruleTriggers": "No rule-triggered notifications match these filters. Check the date range or configure a rule in Alert studio.",
         "archivedTitle": "No archived notifications",
@@ -21606,6 +21633,7 @@
         "count": "Notification count"
       },
       "loadedCount": "{{count}} loaded · total unavailable",
+      "loadedPageMembership": "{{count}} notifications in loaded threads on this page",
       "viewArchived": "View archived"
     },
     "bulkRead": {
@@ -21645,6 +21673,12 @@
       "flat": "Flat"
     },
     "group": {
+      "expandFormatted": "Show {{formattedCount}} similar",
+      "markReadSuccessFormatted": "Marked {{formattedCount}} thread members as read",
+      "membersLabel": "Thread members",
+      "similarFormatted": "+{{formattedCount}} similar",
+      "unreadCount": "{{formattedCount}} unread thread members",
+      "vehicleAffectedFormatted": "{{formattedCount}} vehicles affected",
       "expand": "Show {{count}} similar",
       "expand_one": "Show 1 similar",
       "expand_other": "Show {{count}} similar",
@@ -23779,6 +23813,15 @@
     "errorLabel": "Helix error:"
   },
   "chatbot": {
+    "canceled": "Response stopped. Any partial text is incomplete.",
+    "deleteFailed": "Conversation was not deleted. Your messages and draft are retained; try again from History.",
+    "deleting": "Deleting conversation…",
+    "historyFailed": "Conversation history could not be loaded.",
+    "historyLoading": "Loading conversation history…",
+    "historyPaused": "Conversation history is waiting for a connection.",
+    "noOutput": "No response text was returned. You can retry or edit your message.",
+    "processing": "Helix is processing your request…",
+    "responseFailed": "Response failed. You can retry or edit your message.",
     "title": "Helix",
     "subtitle": "Evidence-grounded intelligence across your fleet and TeslaSync knowledge",
     "history": "History",
@@ -28883,6 +28926,7 @@
     "cardsPageSubtitle": "Notification quiet hours, alert digest mode, critical-flash signalling, tab-badge signalling, and the API kill-switch. Use the links on each card to review its configuration documentation."
   },
   "voiceMode": {
+    "processingDisclosure": "Speak to Helix and hear the reply out loud. TeslaSync sends transcribed text, not microphone audio, to the assistant. Your browser's speech recognition service may process audio remotely; on-device recognition is not guaranteed.",
     "title": "Voice mode",
     "description": "Speak to Helix and hear the reply out loud. Voice input and playback both stay on this device — only the transcribed text is sent to the assistant, never the raw audio.",
     "button": "Speak to Helix",
@@ -38410,6 +38454,14 @@
       "packTitle": "Export evidence and readiness"
     }
   },
+  "provenance": {
+    "cached": "Cached",
+    "historical": "Historical",
+    "inferred": "Estimated",
+    "live": "Live",
+    "repaired": "Repaired",
+    "unknown": "Unknown source"
+  },
   "mapsBrief": {
     "status": {
       "retained": "Retained source data",
@@ -38420,6 +38472,7 @@
     },
     "eyebrow": "Location evidence",
     "freshness": {
+      "received": "Received {{time}} (not observation or last visit)",
       "unknown": "Receipt time unknown"
     }
   },
@@ -38930,6 +38983,10 @@
     "itemActionPrefix": "Action:"
   },
   "supportBundle": {
+    "source": {
+      "receivedAt": "Last successful response: {{time}}",
+      "retry": "Retry {{source}}"
+    },
     "download": "Download",
     "reportProblem": "Report a problem",
     "neverTitle": "Never included",

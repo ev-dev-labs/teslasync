@@ -765,6 +765,14 @@
     "submitError": "Could not send the report. Please try again.",
     "title": "Report a problem"
   },
+  "provenance": {
+    "cached": "Cached",
+    "historical": "Historical",
+    "inferred": "Estimated",
+    "live": "Live",
+    "repaired": "Repaired",
+    "unknown": "Unknown source"
+  },
   "pwa": {
     "lowBandwidth": {
       "auto": "Automatic (follow the network)",

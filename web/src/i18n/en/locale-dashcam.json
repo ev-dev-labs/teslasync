@@ -670,6 +670,14 @@
       }
     }
   },
+  "provenance": {
+    "cached": "Cached",
+    "historical": "Historical",
+    "inferred": "Estimated",
+    "live": "Live",
+    "repaired": "Repaired",
+    "unknown": "Unknown source"
+  },
   "pwa": {
     "lowBandwidth": {
       "auto": "Automatic (follow the network)",

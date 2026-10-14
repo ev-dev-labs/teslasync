@@ -1171,6 +1171,10 @@
     }
   },
   "supportBundle": {
+    "source": {
+      "receivedAt": "Last successful response: {{time}}",
+      "retry": "Retry {{source}}"
+    },
     "download": "Download",
     "reportProblem": "Report a problem",
     "neverTitle": "Never included",
@@ -2047,14 +2051,19 @@
       "workspace": "Assistant workspace"
     },
     "askAbout": "Investigate live fleet evidence, compare domains, or ask for cited TeslaSync guidance",
+    "canceled": "Response stopped. Any partial text is incomplete.",
     "citations": "Sources",
     "delete": {
       "confirm": "Delete",
       "message": "This will permanently remove this conversation and all its messages.",
       "title": "Delete conversation?"
     },
-    "grounding": "Helix is grounding the answer in TeslaSync evidence…",
+    "deleteFailed": "Conversation was not deleted. Your messages and draft are retained; try again from History.",
+    "deleting": "Deleting conversation…",
     "history": "History",
+    "historyFailed": "Conversation history could not be loaded.",
+    "historyLoading": "Loading conversation history…",
+    "historyPaused": "Conversation history is waiting for a connection.",
     "howCanIHelp": "How can Helix help you?",
     "inputLabel": "Message",
     "knowledge": {
@@ -2066,12 +2075,14 @@
       "title": "Retrieved documentation"
     },
     "newChat": "New chat",
+    "noOutput": "No response text was returned. You can retry or edit your message.",
     "noSessions": "No conversations yet",
     "placeholder": "Ask Helix to investigate, compare, or explain… (shift+enter for newline)",
-    "planning": "Helix is planning the investigation…",
+    "processing": "Helix is processing your request…",
     "rename": {
       "placeholder": "Conversation name"
     },
+    "responseFailed": "Response failed. You can retry or edit your message.",
     "session": {
       "empty": "Empty",
       "messageCount": "{{count}} msgs",
@@ -2735,6 +2746,9 @@
   "entityContext": {
     "title": "Related context"
   },
+  "errorBoundary": {
+    "body": "An unexpected error occurred. Please try again."
+  },
   "export": {
     "jobDrawer": {
       "activeCount": "{{count}} export running",
@@ -2962,16 +2976,12 @@
     "errorLabel": "Helix error:",
     "evidence": {
       "gathering": "Gathering",
-      "grounded": "Grounded in",
       "limited": "Limited evidence",
       "reading": "Reading",
-      "source": "TeslaSync source",
-      "sources": "TeslaSync sources",
       "successful": "successful",
       "title": "Evidence trail",
       "tokens": "tokens",
-      "unavailable": "Unavailable",
-      "used": "Used"
+      "unavailable": "Unavailable"
     },
     "thinkingButtonLabel": "Helix is thinking…",
     "thinkingStatusLabel": "Helix is thinking",
@@ -3386,6 +3396,14 @@
         "label": "Owner"
       }
     }
+  },
+  "provenance": {
+    "cached": "Cached",
+    "historical": "Historical",
+    "inferred": "Estimated",
+    "live": "Live",
+    "repaired": "Repaired",
+    "unknown": "Unknown source"
   },
   "pwa": {
     "lowBandwidth": {
@@ -4486,7 +4504,6 @@
       "unmuteTtsShort": "Unmute Helix"
     },
     "button": "Speak to Helix",
-    "description": "Speak to Helix and hear the reply out loud. Voice input and playback both stay on this device — only the transcribed text is sent to the assistant, never the raw audio.",
     "emptyHint": "Tap the mic and dictate a question first.",
     "errors": {
       "sttFailed": "Voice input failed: {{reason}}",
@@ -4494,6 +4511,7 @@
     },
     "idleHint": "Tap the mic and ask Helix anything about your Tesla.",
     "listeningHint": "Listening — speak now…",
+    "processingDisclosure": "Speak to Helix and hear the reply out loud. TeslaSync sends transcribed text, not microphone audio, to the assistant. Your browser's speech recognition service may process audio remotely; on-device recognition is not guaranteed.",
     "title": "Voice mode",
     "transcriptLabel": "Voice transcript",
     "unsupportedHint": "Voice input is not available in this browser. You can still type your question into the chatbot below."

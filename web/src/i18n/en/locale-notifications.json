@@ -1538,6 +1538,9 @@
     "title": "Related context",
     "vehicle": "Vehicle"
   },
+  "errorBoundary": {
+    "body": "An unexpected error occurred. Please try again."
+  },
   "export": {
     "jobDrawer": {
       "activeCount": "{{count}} export running",
@@ -1670,16 +1673,12 @@
     "errorLabel": "Helix error:",
     "evidence": {
       "gathering": "Gathering",
-      "grounded": "Grounded in",
       "limited": "Limited evidence",
       "reading": "Reading",
-      "source": "TeslaSync source",
-      "sources": "TeslaSync sources",
       "successful": "successful",
       "title": "Evidence trail",
       "tokens": "tokens",
-      "unavailable": "Unavailable",
-      "used": "Used"
+      "unavailable": "Unavailable"
     },
     "thinkingButtonLabel": "Helix is thinking…",
     "thinkingStatusLabel": "Helix is thinking",
@@ -2192,21 +2191,17 @@
       "collapse": "Hide similar",
       "emptyMessage": "Related notifications are grouped here when they occur repeatedly.",
       "emptyTitle": "No notification threads",
-      "expand": "Show {{count}} similar",
-      "expand_one": "Show 1 similar",
-      "expand_other": "Show {{count}} similar",
+      "expandFormatted": "Show {{formattedCount}} similar",
       "loadingMembers": "Loading thread members…",
       "markRead": "Mark group read",
       "markReadError": "Could not mark group as read",
-      "markReadSuccess": "Marked {{count}} thread members as read",
+      "markReadSuccessFormatted": "Marked {{formattedCount}} thread members as read",
       "membersError": "Could not load thread members",
+      "membersLabel": "Thread members",
       "noMembers": "No thread members found",
-      "similar": "+{{count}} similar",
-      "similar_one": "+1 similar",
-      "similar_other": "+{{count}} similar",
-      "vehicleAffected": "{{count}} vehicle affected",
-      "vehicleAffected_one": "{{count}} vehicle affected",
-      "vehicleAffected_other": "{{count}} vehicles affected"
+      "similarFormatted": "+{{formattedCount}} similar",
+      "unreadCount": "{{formattedCount}} unread thread members",
+      "vehicleAffectedFormatted": "{{formattedCount}} vehicles affected"
     },
     "healthAlerts": {
       "addChannel": "Add notification channel",
@@ -2303,7 +2298,6 @@
         "type": "Type",
         "unread": "Unread"
       },
-      "countError": "Could not load the notification count: {{error}}",
       "countLabel": "{{count}} notifications",
       "delivery": {
         "deferred_dnd": "Deferred by DND",
@@ -2328,6 +2322,8 @@
         "archivedTitle": "No archived notifications",
         "cta": "Configure alert rules",
         "message": "System events, alerts, automation, and scheduled notifications appear here when triggered.",
+        "noMatches": "No notifications match these filters",
+        "noMatchesMessage": "Clear the notification filters or adjust the workspace date range to see other records.",
         "ruleTriggers": "No rule-triggered notifications match these filters. Check the date range or configure a rule in Alert studio.",
         "title": "No notifications"
       },
@@ -2354,9 +2350,7 @@
       },
       "legacyDelivery": "Legacy channel delivery (original source not recorded)",
       "loadedCount": "{{count}} loaded · total unavailable",
-      "notificationCountLabel": "{{count}} notifications",
-      "notificationCountLabel_one": "{{count}} notification",
-      "notificationCountLabel_other": "{{count}} notifications",
+      "loadedPageMembership": "{{count}} notifications in loaded threads on this page",
       "row": {
         "archive": "Archive",
         "inspect": "Inspect notification: {{title}}",
@@ -2702,6 +2696,14 @@
       }
     }
   },
+  "provenance": {
+    "cached": "Cached",
+    "historical": "Historical",
+    "inferred": "Estimated",
+    "live": "Live",
+    "repaired": "Repaired",
+    "unknown": "Unknown source"
+  },
   "pwa": {
     "lowBandwidth": {
       "auto": "Automatic (follow the network)",
@@ -2994,6 +2996,10 @@
       "archive": {
         "success": "Place archived"
       },
+      "bulkDelete": {
+        "partial": "{{deleted}} geofences deleted; some deletions did not complete",
+        "success": "Geofences deleted"
+      },
       "category": {
         "success": "Category updated"
       },
@@ -3225,7 +3231,6 @@
       "unmuteTtsShort": "Unmute Helix"
     },
     "button": "Speak to Helix",
-    "description": "Speak to Helix and hear the reply out loud. Voice input and playback both stay on this device — only the transcribed text is sent to the assistant, never the raw audio.",
     "emptyHint": "Tap the mic and dictate a question first.",
     "errors": {
       "sttFailed": "Voice input failed: {{reason}}",
@@ -3233,6 +3238,7 @@
     },
     "idleHint": "Tap the mic and ask Helix anything about your Tesla.",
     "listeningHint": "Listening — speak now…",
+    "processingDisclosure": "Speak to Helix and hear the reply out loud. TeslaSync sends transcribed text, not microphone audio, to the assistant. Your browser's speech recognition service may process audio remotely; on-device recognition is not guaranteed.",
     "title": "Voice mode",
     "transcriptLabel": "Voice transcript",
     "unsupportedHint": "Voice input is not available in this browser. You can still type your question into the chatbot below."

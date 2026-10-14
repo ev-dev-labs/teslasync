@@ -1,5 +1,14 @@
 {
   "chatbot": {
+    "canceled": "Response stopped. Any partial text is incomplete.",
+    "deleteFailed": "Conversation was not deleted. Your messages and draft are retained; try again from History.",
+    "deleting": "Deleting conversation…",
+    "historyFailed": "Conversation history could not be loaded.",
+    "historyLoading": "Loading conversation history…",
+    "historyPaused": "Conversation history is waiting for a connection.",
+    "noOutput": "No response text was returned. You can retry or edit your message.",
+    "processing": "Helix is processing your request…",
+    "responseFailed": "Response failed. You can retry or edit your message.",
     "title": "Helix",
     "subtitle": "Evidence-grounded intelligence across your fleet and TeslaSync knowledge",
     "history": "History",

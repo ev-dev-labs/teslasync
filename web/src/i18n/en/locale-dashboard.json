@@ -3170,6 +3170,9 @@
   "entityContext": {
     "title": "Related context"
   },
+  "errorBoundary": {
+    "body": "An unexpected error occurred. Please try again."
+  },
   "export": {
     "copyClipboard": "Copy to Clipboard",
     "copyShareUrl": "Copy shareable URL",
@@ -3319,16 +3322,12 @@
     "errorLabel": "Helix error:",
     "evidence": {
       "gathering": "Gathering",
-      "grounded": "Grounded in",
       "limited": "Limited evidence",
       "reading": "Reading",
-      "source": "TeslaSync source",
-      "sources": "TeslaSync sources",
       "successful": "successful",
       "title": "Evidence trail",
       "tokens": "tokens",
-      "unavailable": "Unavailable",
-      "used": "Used"
+      "unavailable": "Unavailable"
     },
     "thinkingButtonLabel": "Helix is thinking…",
     "thinkingStatusLabel": "Helix is thinking",
@@ -3761,6 +3760,14 @@
       }
     }
   },
+  "provenance": {
+    "cached": "Cached",
+    "historical": "Historical",
+    "inferred": "Estimated",
+    "live": "Live",
+    "repaired": "Repaired",
+    "unknown": "Unknown source"
+  },
   "pwa": {
     "lowBandwidth": {
       "auto": "Automatic (follow the network)",
@@ -4108,6 +4115,10 @@
       "archive": {
         "success": "Place archived"
       },
+      "bulkDelete": {
+        "partial": "{{deleted}} geofences deleted; some deletions did not complete",
+        "success": "Geofences deleted"
+      },
       "category": {
         "success": "Category updated"
       },
@@ -4354,7 +4365,6 @@
       "unmuteTtsShort": "Unmute Helix"
     },
     "button": "Speak to Helix",
-    "description": "Speak to Helix and hear the reply out loud. Voice input and playback both stay on this device — only the transcribed text is sent to the assistant, never the raw audio.",
     "emptyHint": "Tap the mic and dictate a question first.",
     "errors": {
       "sttFailed": "Voice input failed: {{reason}}",
@@ -4362,6 +4372,7 @@
     },
     "idleHint": "Tap the mic and ask Helix anything about your Tesla.",
     "listeningHint": "Listening — speak now…",
+    "processingDisclosure": "Speak to Helix and hear the reply out loud. TeslaSync sends transcribed text, not microphone audio, to the assistant. Your browser's speech recognition service may process audio remotely; on-device recognition is not guaranteed.",
     "title": "Voice mode",
     "transcriptLabel": "Voice transcript",
     "unsupportedHint": "Voice input is not available in this browser. You can still type your question into the chatbot below."

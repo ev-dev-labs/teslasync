@@ -1,5 +1,6 @@
 {
   "voiceMode": {
+    "processingDisclosure": "Speak to Helix and hear the reply out loud. TeslaSync sends transcribed text, not microphone audio, to the assistant. Your browser's speech recognition service may process audio remotely; on-device recognition is not guaranteed.",
     "title": "Voice mode",
     "description": "Speak to Helix and hear the reply out loud. Voice input and playback both stay on this device — only the transcribed text is sent to the assistant, never the raw audio.",
     "button": "Speak to Helix",

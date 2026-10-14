@@ -252,6 +252,8 @@
       },
       "empty": {
         "title": "No notifications",
+        "noMatches": "No notifications match these filters",
+        "noMatchesMessage": "Clear the notification filters or adjust the workspace date range to see other records.",
         "message": "System events, alerts, automation, and scheduled notifications appear here when triggered.",
         "ruleTriggers": "No rule-triggered notifications match these filters. Check the date range or configure a rule in Alert studio.",
         "archivedTitle": "No archived notifications",
@@ -281,6 +283,7 @@
         "count": "Notification count"
       },
       "loadedCount": "{{count}} loaded · total unavailable",
+      "loadedPageMembership": "{{count}} notifications in loaded threads on this page",
       "viewArchived": "View archived"
     },
     "bulkRead": {
@@ -320,6 +323,12 @@
       "flat": "Flat"
     },
     "group": {
+      "expandFormatted": "Show {{formattedCount}} similar",
+      "markReadSuccessFormatted": "Marked {{formattedCount}} thread members as read",
+      "membersLabel": "Thread members",
+      "similarFormatted": "+{{formattedCount}} similar",
+      "unreadCount": "{{formattedCount}} unread thread members",
+      "vehicleAffectedFormatted": "{{formattedCount}} vehicles affected",
       "expand": "Show {{count}} similar",
       "expand_one": "Show 1 similar",
       "expand_other": "Show {{count}} similar",

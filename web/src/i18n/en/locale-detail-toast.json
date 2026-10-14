@@ -269,6 +269,11 @@
       }
     },
     "geofence": {
+      "bulkDelete": {
+        "error": "Failed to delete geofences",
+        "partial": "{{deleted}} geofences deleted; some deletions did not complete",
+        "success": "Geofences deleted"
+      },
       "archive": {
         "success": "Place archived",
         "error": "Failed to archive place"

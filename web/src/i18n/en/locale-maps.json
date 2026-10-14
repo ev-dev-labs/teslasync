@@ -164,6 +164,19 @@
     "directoryUnavailable": "Place directory is unavailable."
   },
   "geofences": {
+    "validation": {
+      "latitudeNumber": "Latitude must be a number",
+      "latitudeRange": "Latitude must be between {{min}} and {{max}}",
+      "latitudeRequired": "Latitude is required",
+      "longitudeNumber": "Longitude must be a number",
+      "longitudeRange": "Longitude must be between {{min}} and {{max}}",
+      "longitudeRequired": "Longitude is required",
+      "nameMaxLength": "Name must be {{max}} characters or fewer",
+      "nameRequired": "Name is required",
+      "radiusNumber": "Radius must be a number",
+      "radiusRange": "Radius must be between {{min}} and {{max}}",
+      "radiusRequired": "Radius is required"
+    },
     "visits": {
       "candidates": "Visited candidates",
       "charging": "This is a charging location",
@@ -338,6 +351,11 @@
     "byTimeAria": "Bar chart of locations by hours spent"
   },
   "mapOverview": {
+    "historicalSubtitle": "Latest recorded vehicle position and recent history",
+    "lastObserved": "Last observed",
+    "observationFreshness": "Stored observation time. Polling every 15 s checks for positions, not whether this observation is current.",
+    "observedSpeed": "Observed speed",
+    "positionMap": "Recorded location map",
     "pageTitle": "Map overview",
     "colTime": "Time",
     "colLat": "Lat",
@@ -394,11 +412,20 @@
     },
     "eyebrow": "Location evidence",
     "freshness": {
+      "received": "Received {{time}} (not observation or last visit)",
       "unknown": "Receipt time unknown"
     }
   },
   "navigation": {
     "noRoute": "No active route selected"
+  },
+  "provenance": {
+    "cached": "Cached",
+    "historical": "Historical",
+    "inferred": "Estimated",
+    "live": "Live",
+    "repaired": "Repaired",
+    "unknown": "Unknown source"
   },
   "tempImpact": {
     "tipCold": "Precondition your cabin in cold weather to reduce battery drain",
@@ -420,6 +447,8 @@
     "tipsTitle": "Recommendations",
     "tipOptimal": "Best efficiency observed in the {{range}} range",
     "optimalDesc": "Your most efficient temperature range is {{range}} with an average of {{efficiency}} {{unit}} across {{count}} drives.",
+    "optimalDesc_one": "Your most efficient temperature range is {{range}} with an average of {{efficiency}} {{unit}} across {{count}} drive.",
+    "optimalDesc_other": "Your most efficient temperature range is {{range}} with an average of {{efficiency}} {{unit}} across {{count}} drives.",
     "optimalDelta": "Compared to the worst range ({{worst}}), you save {{delta}} {{unit}} on average.",
     "aiNarrative": {
       "title": "Narrate the cabin-temperature impact",
@@ -1283,6 +1312,9 @@
       "title": "Another browser tab is editing this"
     }
   },
+  "efficiency": {
+    "noStats": "No efficiency data available yet"
+  },
   "emptyState": {
     "generic": "No data available yet.",
     "label": {
@@ -1298,6 +1330,9 @@
     "telemetry": "Telemetry evidence",
     "title": "Related context",
     "vehicle": "Vehicle"
+  },
+  "errorBoundary": {
+    "body": "An unexpected error occurred. Please try again."
   },
   "export": {
     "jobDrawer": {
@@ -1411,16 +1446,12 @@
     "errorLabel": "Helix error:",
     "evidence": {
       "gathering": "Gathering",
-      "grounded": "Grounded in",
       "limited": "Limited evidence",
       "reading": "Reading",
-      "source": "TeslaSync source",
-      "sources": "TeslaSync sources",
       "successful": "successful",
       "title": "Evidence trail",
       "tokens": "tokens",
-      "unavailable": "Unavailable",
-      "used": "Used"
+      "unavailable": "Unavailable"
     },
     "thinkingButtonLabel": "Helix is thinking…",
     "thinkingStatusLabel": "Helix is thinking",
@@ -1902,6 +1933,11 @@
       "title": "Helix FSM narrator"
     }
   },
+  "system": {
+    "outage": {
+      "pausedSource": "Waiting for a connection before this source can load. Missing evidence remains unknown."
+    }
+  },
   "systemStatus": {
     "sourceUnavailable": "{{label}} is unavailable."
   },
@@ -2015,6 +2051,10 @@
     "geofence": {
       "archive": {
         "success": "Place archived"
+      },
+      "bulkDelete": {
+        "partial": "{{deleted}} geofences deleted; some deletions did not complete",
+        "success": "Geofences deleted"
       },
       "category": {
         "success": "Category updated"
@@ -2232,7 +2272,6 @@
       "unmuteTtsShort": "Unmute Helix"
     },
     "button": "Speak to Helix",
-    "description": "Speak to Helix and hear the reply out loud. Voice input and playback both stay on this device — only the transcribed text is sent to the assistant, never the raw audio.",
     "emptyHint": "Tap the mic and dictate a question first.",
     "errors": {
       "sttFailed": "Voice input failed: {{reason}}",
@@ -2240,6 +2279,7 @@
     },
     "idleHint": "Tap the mic and ask Helix anything about your Tesla.",
     "listeningHint": "Listening — speak now…",
+    "processingDisclosure": "Speak to Helix and hear the reply out loud. TeslaSync sends transcribed text, not microphone audio, to the assistant. Your browser's speech recognition service may process audio remotely; on-device recognition is not guaranteed.",
     "title": "Voice mode",
     "transcriptLabel": "Voice transcript",
     "unsupportedHint": "Voice input is not available in this browser. You can still type your question into the chatbot below."
