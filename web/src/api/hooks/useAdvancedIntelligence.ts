@@ -115,28 +115,65 @@ const EXPORT_PAGE_SIZE = 100;
 // Safety stop so a bad `total` can never spin the loop forever.
 const EXPORT_MAX_ROWS = 10_000;
 
+export interface ChargingForensicsExportEvidence {
+  complete: boolean;
+  limitReached: boolean;
+  fetchedRows: number;
+  total: number | null;
+}
+
+export class IncompleteChargingForensicsExportError extends Error {
+  constructor(
+    public readonly evidence: ChargingForensicsExportEvidence,
+  ) {
+    super('Charging forensics export is incomplete');
+    this.name = 'IncompleteChargingForensicsExportError';
+  }
+}
+
 /**
  * Fetch the whole charging-forensics set for CSV export.
  *
  * The table is server-paginated, so exporting only the rows currently on
  * screen would hand the user a dispute packet that silently omits most of
  * the evidence. Pages through at the endpoint's maximum page size instead.
+ * Complete results retain the array API and expose collection evidence.
+ * Incomplete results reject so existing download callers cannot export them
+ * as a full packet; the error exposes the observed total and safety limit.
  */
 export async function fetchAllChargingForensics(
   vehicleId: number,
   signal?: AbortSignal,
-): Promise<ChargingForensicsItem[]> {
+): Promise<ChargingForensicsItem[] & ChargingForensicsExportEvidence> {
   const rows: ChargingForensicsItem[] = [];
+  let total: number | null = null;
   for (let offset = 0; offset < EXPORT_MAX_ROWS; offset += EXPORT_PAGE_SIZE) {
     const page = await request<ChargingForensicsPage>(
       listPath('charging-forensics', vehicleId, EXPORT_PAGE_SIZE, offset),
       { signal },
     );
     const items = page.items ?? [];
+    total = Number.isSafeInteger(page.total) && page.total >= 0 ? page.total : null;
     rows.push(...items);
-    if (items.length < EXPORT_PAGE_SIZE || rows.length >= (page.total ?? rows.length)) break;
+    const complete = total != null
+      ? rows.length === total
+      : Array.isArray(page.items) && items.length < EXPORT_PAGE_SIZE;
+    if (complete) {
+      return Object.assign(rows, {
+        complete: true,
+        limitReached: false,
+        fetchedRows: rows.length,
+        total,
+      });
+    }
+    if (items.length < EXPORT_PAGE_SIZE || (total != null && rows.length > total)) break;
   }
-  return rows;
+  throw new IncompleteChargingForensicsExportError({
+    complete: false,
+    limitReached: rows.length >= EXPORT_MAX_ROWS,
+    fetchedRows: rows.length,
+    total,
+  });
 }
 
 export function useFederatedModelCards(vehicleId: number | null, limit = 25, offset = 0) {
