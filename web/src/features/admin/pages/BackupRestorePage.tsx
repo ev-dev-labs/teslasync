@@ -44,6 +44,7 @@ import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { FormSection } from '@/components/forms';
 import { deriveDataState } from '@/api/dataState';
 import { useMotionPreference } from '@/hooks/useMotionPreference';
+import { useOperationalMode } from '@/hooks/useOperationalMode';
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -91,7 +92,7 @@ interface BackupRun {
 interface RestorePreview {
   tables: { name: string; rows: number }[];
   metadata: Record<string, unknown> | null;
-  checksum_verified: boolean;
+  checksum_verified?: boolean | null;
 }
 
 interface ProviderUsage {
@@ -152,6 +153,14 @@ const EMPTY_FORM: ConfigFormData = {
   encrypt: false,
 };
 
+const RUNS_LIMIT = 50;
+
+function boundedInteger(value: string, max: number): number | null {
+  if (!value.trim()) return null;
+  const number = Number(value);
+  return Number.isSafeInteger(number) && number >= 1 && number <= max ? number : null;
+}
+
 // Provider-specific credential/config fields. `label` doubles as the i18n
 // fallback via `t('backup.field.<key>', label)` so the visible label is
 // translatable while the example placeholders stay as literal technical values.
@@ -191,18 +200,28 @@ export default function BackupRestorePage() {
   const toast = useToast();
   const qc = useQueryClient();
   const { reduce } = useMotionPreference();
+  const { canWrite, writeBlockReason } = useOperationalMode();
   usePageTitle(t('backup.title', 'Backup & restore'));
 
   /* ---- state ---- */
   const [modalOpen, setModalOpen] = useState(false);
   const [editingConfig, setEditingConfig] = useState<BackupConfig | null>(null);
   const [form, setForm] = useState<ConfigFormData>(EMPTY_FORM);
+  const [frequencyInput, setFrequencyInput] = useState(String(EMPTY_FORM.frequency_days));
+  const [retentionInput, setRetentionInput] = useState(String(EMPTY_FORM.max_retention));
+  const formGeneration = useRef(0);
+  const saveBusy = useRef(false);
+  const quickBusy = useRef(false);
+  const [runsOffset, setRunsOffset] = useState(0);
   const [deleteTarget, setDeleteTarget] = useState<BackupConfig | null>(null);
   const [previewData, setPreviewData] = useState<RestorePreview | null>(null);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewPendingId, setPreviewPendingId] = useState<number | null>(null);
   const previewGeneration = useRef(0);
-  useEffect(() => () => { previewGeneration.current += 1; }, []);
+  useEffect(() => () => {
+    previewGeneration.current += 1;
+    formGeneration.current += 1;
+  }, []);
 
   /* ---- queries ---- */
   const configsQuery = useQuery<BackupConfig[]>({
@@ -211,8 +230,11 @@ export default function BackupRestorePage() {
   });
 
   const runsQuery = useQuery<BackupRun[]>({
-    queryKey: ['backup-runs'],
-    queryFn: ({ signal }) => request<BackupRun[]>('/backup/runs', { signal }),
+    queryKey: ['backup-runs', runsOffset],
+    queryFn: ({ signal }) => request<BackupRun[]>(
+      runsOffset === 0 ? '/backup/runs' : `/backup/runs?limit=${RUNS_LIMIT}&offset=${runsOffset}`,
+      { signal },
+    ),
     refetchInterval: (query) => {
       const data = query.state.data;
       if (data?.some((r) => r.status === 'queued' || r.status === 'running')) return 5000;
@@ -282,7 +304,7 @@ export default function BackupRestorePage() {
         : configsError || runsError ? 'error' : 'initial';
 
   const failedRuns = useMemo(
-    () => runs.filter((r) => r.status === 'failed' && r.error_message).slice(0, 5),
+    () => runs.filter((r) => r.status === 'failed').slice(0, 5),
     [runs],
   );
 
@@ -332,30 +354,35 @@ export default function BackupRestorePage() {
   };
 
   const createMutation = useMutation({
-    mutationFn: (body: ConfigFormData) =>
-      request<BackupConfig>('/backup/configs', { method: 'POST', body: JSON.stringify(body) }),
-    onSuccess: () => {
+    networkMode: 'always',
+    mutationFn: ({ body }: { body: ConfigFormData; generation: number }) =>
+      request<BackupConfig>('/backup/configs', { method: 'POST', body: JSON.stringify(body), requiresLiveMode: true }),
+    onSuccess: (_data, { generation }) => {
       invalidateAll();
       toast.success(t('backup.configCreated', 'Config created'));
-      closeModal();
+      if (generation === formGeneration.current) closeModal();
     },
     onError: () => toast.error(t('backup.configCreateFailed', 'Failed to create config')),
+    onSettled: () => { saveBusy.current = false; },
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, body }: { id: number; body: ConfigFormData }) =>
-      request<BackupConfig>(`/backup/configs/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
-    onSuccess: () => {
+    networkMode: 'always',
+    mutationFn: ({ id, body }: { id: number; body: ConfigFormData; generation: number }) =>
+      request<BackupConfig>(`/backup/configs/${id}`, { method: 'PUT', body: JSON.stringify(body), requiresLiveMode: true }),
+    onSuccess: (_data, { generation }) => {
       invalidateAll();
       toast.success(t('backup.configUpdated', 'Config updated'));
-      closeModal();
+      if (generation === formGeneration.current) closeModal();
     },
     onError: () => toast.error(t('backup.configUpdateFailed', 'Failed to update config')),
+    onSettled: () => { saveBusy.current = false; },
   });
 
   const deleteMutation = useMutation({
+    networkMode: 'always',
     mutationFn: (id: number) =>
-      request<void>(`/backup/configs/${id}`, { method: 'DELETE' }),
+      request<void>(`/backup/configs/${id}`, { method: 'DELETE', requiresLiveMode: true }),
     onSuccess: () => {
       invalidateAll();
       toast.success(t('backup.configDeleted', 'Config deleted'));
@@ -365,8 +392,9 @@ export default function BackupRestorePage() {
   });
 
   const triggerMutation = useMutation({
+    networkMode: 'always',
     mutationFn: (configId: number) =>
-      request<void>(`/backup/configs/${configId}/trigger`, { method: 'POST' }),
+      request<void>(`/backup/configs/${configId}/trigger`, { method: 'POST', requiresLiveMode: true }),
     onSuccess: () => {
       invalidateAll();
       toast.success(t('backup.triggered', 'Backup triggered'));
@@ -375,41 +403,57 @@ export default function BackupRestorePage() {
   });
 
   const quickBackupMutation = useMutation({
-    mutationFn: () => request<void>('/backup/quick', { method: 'POST' }),
+    networkMode: 'always',
+    mutationFn: () => request<void>('/backup/quick', { method: 'POST', requiresLiveMode: true }),
     onSuccess: () => {
       invalidateAll();
       toast.success(t('backup.quickStarted', 'Quick backup started'));
     },
     onError: () => toast.error(t('backup.quickFailed', 'Quick backup failed')),
+    onSettled: () => { quickBusy.current = false; },
   });
 
   const verifyMutation = useMutation({
+    networkMode: 'always',
     mutationFn: (runId: number) =>
       // The endpoint may answer 204 (no body) on some deployments — request()
       // resolves that to `undefined`, so the response is modelled as nullable
       // and read defensively below rather than assuming `{ verified }` exists.
-      request<{ verified: boolean } | null>(`/backup/runs/${runId}/verify`, { method: 'POST' }),
+      request<{ verified?: boolean; error?: string } | null>(`/backup/runs/${runId}/verify`, { method: 'POST', requiresLiveMode: true }),
     onSuccess: (data) => {
-      if (data?.verified) toast.success(t('backup.checksumVerified', 'Checksum verified'));
-      else toast.warning(t('backup.checksumMismatch', 'Checksum mismatch'));
+      if (data?.verified === true) toast.success(t('backup.checksumVerified', 'Checksum verified'));
+      else if (data?.verified === false && data.error?.startsWith('checksum mismatch:')) {
+        toast.warning(t('backup.checksumMismatch', 'Checksum mismatch'));
+      } else if (data?.error && data.error !== 'backup has no file path or checksum') {
+        toast.error(t('backup.verifyFailed', 'Verification failed'));
+      } else toast.warning(t('common.unknown', 'Unknown'));
     },
     onError: () => toast.error(t('backup.verifyFailed', 'Verification failed')),
   });
 
   /* ---- callbacks ---- */
   const closeModal = useCallback(() => {
+    formGeneration.current += 1;
     setModalOpen(false);
     setEditingConfig(null);
     setForm(EMPTY_FORM);
+    setFrequencyInput(String(EMPTY_FORM.frequency_days));
+    setRetentionInput(String(EMPTY_FORM.max_retention));
   }, []);
 
   const openCreate = useCallback(() => {
+    formGeneration.current += 1;
     setEditingConfig(null);
     setForm(EMPTY_FORM);
+    setFrequencyInput(String(EMPTY_FORM.frequency_days));
+    setRetentionInput(String(EMPTY_FORM.max_retention));
     setModalOpen(true);
   }, []);
 
   const openEdit = useCallback((cfg: BackupConfig) => {
+    formGeneration.current += 1;
+    setFrequencyInput(String(cfg.frequency_days));
+    setRetentionInput(String(cfg.max_retention));
     setEditingConfig(cfg);
     setForm({
       name: cfg.name,
@@ -426,13 +470,37 @@ export default function BackupRestorePage() {
     setModalOpen(true);
   }, []);
 
+  const frequency = boundedInteger(frequencyInput, 30);
+  const retention = boundedInteger(retentionInput, 100);
+  const validForm = Boolean(form.name.trim()) && frequency !== null && retention !== null
+    && Boolean(PROVIDER_FIELDS[form.provider])
+    && (PROVIDER_FIELDS[form.provider] ?? []).every(
+      (field) => !field.required || Boolean(form.provider_config[field.key]?.trim()),
+    );
+
   const handleSave = useCallback(() => {
+    if (!canWrite || !validForm || saveBusy.current || frequency === null || retention === null) return;
+    saveBusy.current = true;
+    const body = {
+      ...form,
+      frequency_days: frequency,
+      max_retention: retention,
+      provider_config: { ...form.provider_config },
+      include_tables: form.include_tables ? [...form.include_tables] : undefined,
+    };
+    const generation = formGeneration.current;
     if (editingConfig) {
-      updateMutation.mutate({ id: editingConfig.id, body: form });
+      updateMutation.mutate({ id: editingConfig.id, body, generation });
     } else {
-      createMutation.mutate(form);
+      createMutation.mutate({ body, generation });
     }
-  }, [editingConfig, form, updateMutation, createMutation]);
+  }, [canWrite, validForm, frequency, retention, editingConfig, form, updateMutation, createMutation]);
+
+  const handleQuickBackup = useCallback(() => {
+    if (!canWrite || quickBusy.current || quickBackupMutation.isPending) return;
+    quickBusy.current = true;
+    quickBackupMutation.mutate();
+  }, [canWrite, quickBackupMutation]);
 
   const handleDownload = useCallback((runId: number) => {
     // Direct browser navigation (not the request() client) needs the fully
@@ -550,7 +618,9 @@ export default function BackupRestorePage() {
             size="sm"
             variant="ghost"
             icon={<Icons.play className="h-3.5 w-3.5" />}
-            onClick={() => triggerMutation.mutate(row.id)}
+            onClick={() => canWrite && !triggerMutation.isPending && triggerMutation.mutate(row.id)}
+            disabled={!canWrite}
+            title={writeBlockReason ?? undefined}
             loading={triggerMutation.isPending}
             aria-label={t('backup.triggerNow', 'Trigger now')}
           />
@@ -566,6 +636,8 @@ export default function BackupRestorePage() {
             variant="ghost"
             icon={<Icons.delete className={cn('h-3.5 w-3.5', neonColorMap.red.text)} />}
             onClick={() => setDeleteTarget(row)}
+            disabled={!canWrite}
+            title={writeBlockReason ?? undefined}
             aria-label={t('backup.delete', 'Delete')}
           />
         </div>
@@ -689,7 +761,9 @@ export default function BackupRestorePage() {
               size="sm"
               variant="ghost"
               icon={<Icons.securityCheck className="h-3.5 w-3.5" />}
-              onClick={() => verifyMutation.mutate(row.id)}
+              onClick={() => canWrite && !verifyMutation.isPending && verifyMutation.mutate(row.id)}
+              disabled={!canWrite}
+              title={writeBlockReason ?? undefined}
               loading={verifyMutation.isPending}
               aria-label={t('backup.verify', 'Verify')}
             />
@@ -731,12 +805,26 @@ export default function BackupRestorePage() {
     />
   );
   const runsEmpty = (
-    <EmptyState
-      icon={<Icons.clock className="h-10 w-10 text-[var(--text-muted)]" />}
-      title={t('backup.noRuns', 'No backup runs yet')}
-      message={t('backup.noRunsMessage', 'Trigger a backup or wait for the scheduled run.')}
-      action={{ label: t('backup.quickBackup', 'Quick backup'), onClick: () => quickBackupMutation.mutate() }}
-    />
+    <div className="space-y-3">
+      <EmptyState
+        icon={<Icons.clock className="h-10 w-10 text-[var(--text-muted)]" />}
+        title={runsOffset === 0 ? t('backup.noRuns', 'No backup runs yet') : t('backup.history', 'Backup history')}
+        message={runsOffset === 0
+          ? t('backup.noRunsMessage', 'Trigger a backup or wait for the scheduled run.')
+          : t('common.noData', 'No data available')}
+      />
+      <div className="flex justify-center pb-6">
+        <Button
+          variant="secondary"
+          onClick={handleQuickBackup}
+          loading={quickBackupMutation.isPending}
+          disabled={!canWrite}
+          title={writeBlockReason ?? undefined}
+        >
+          {t('backup.quickBackup', 'Quick backup')}
+        </Button>
+      </div>
+    </div>
   );
 
   /* ---- render ---- */
@@ -752,8 +840,10 @@ export default function BackupRestorePage() {
             variant="secondary"
             size="sm"
             icon={<Icons.charging className="h-4 w-4" />}
-            onClick={() => quickBackupMutation.mutate()}
+            onClick={handleQuickBackup}
             loading={quickBackupMutation.isPending}
+            disabled={!canWrite}
+            title={writeBlockReason ?? undefined}
           >
             {t('backup.quickBackup', 'Quick backup')}
           </Button>
@@ -768,6 +858,7 @@ export default function BackupRestorePage() {
         </div>
       }
     >
+      {writeBlockReason && <InlineCallout variant="info">{writeBlockReason}</InlineCallout>}
       {/* ── 1 · KPI band — full-width responsive metric grid ────────── */}
       <FadeIn>
         <AdminSummary metrics={summaryMetrics} testId="backup-restore-summary"
@@ -907,12 +998,12 @@ export default function BackupRestorePage() {
                           <Text weight="medium">
                             {run.file_name ?? t('backup.runN', 'Run #{{id}}', { id: run.id })}
                           </Text>
-                          {run.error_message ? ` — ${run.error_message}` : ''}
+                          {' — '}{run.error_message?.trim() ? run.error_message : t('common.unknownError', 'unknown error')}
                         </InlineCallout>
                       ))}
                     </div>
                   )}
-                </div>
+                    </div>
               </>
             )}
           </LayoutCard>
@@ -928,6 +1019,24 @@ export default function BackupRestorePage() {
               {!loadingRuns && runsState.hasData && (
                 <Badge variant="neutral" size="sm">{fmtInt(runs.length)}</Badge>
               )}
+            <Text as="span" variant="caption">
+              {t('pagination.currentPage', 'Page {{page}} of {{total}}', {
+                page: fmtInt(runsOffset / RUNS_LIMIT + 1),
+                total: t('common.unknown', 'Unknown'),
+              })}
+            </Text>
+            <Button variant="ghost" size="sm"
+              disabled={runsOffset === 0 || runsQuery.isFetching}
+              onClick={() => setRunsOffset((offset) => Math.max(0, offset - RUNS_LIMIT))}>
+              {t('common.previous', 'Previous')}
+            </Button>
+            <Button variant="ghost" size="sm"
+              disabled={!runsState.hasData || runs.length < RUNS_LIMIT || runsQuery.isFetching
+                || runsState.status === 'stale' || runsState.isRefreshBlocked
+                || !Number.isSafeInteger(runsOffset + RUNS_LIMIT)}
+              onClick={() => setRunsOffset((offset) => offset + RUNS_LIMIT)}>
+              {t('common.next', 'Next')}
+            </Button>
             <Button
               variant="ghost"
               size="sm"
@@ -1039,14 +1148,18 @@ export default function BackupRestorePage() {
             <Input
               label={t('backup.frequencyDays', 'Frequency (days)')}
               type="number"
-              value={String(form.frequency_days)}
-              onChange={(e) => setField('frequency_days', Math.max(1, Number(e.target.value)))}
+              required min={1} max={30} step={1}
+              value={frequencyInput}
+              error={frequency === null ? t('common.invalidNumber', 'Enter a valid number') : undefined}
+              onChange={(e) => setFrequencyInput(e.target.value)}
             />
             <Input
               label={t('backup.maxRetention', 'Max retention')}
               type="number"
-              value={String(form.max_retention)}
-              onChange={(e) => setField('max_retention', Math.max(1, Number(e.target.value)))}
+              required min={1} max={100} step={1}
+              value={retentionInput}
+              error={retention === null ? t('common.invalidNumber', 'Enter a valid number') : undefined}
+              onChange={(e) => setRetentionInput(e.target.value)}
             />
           </div>
 
@@ -1105,7 +1218,8 @@ export default function BackupRestorePage() {
               variant="primary"
               onClick={handleSave}
               loading={createMutation.isPending || updateMutation.isPending}
-              disabled={!form.name.trim()}
+              disabled={!canWrite || !validForm}
+              title={writeBlockReason ?? undefined}
             >
               {editingConfig ? t('backup.saveChanges', 'Save changes') : t('backup.create', 'Create')}
             </Button>
@@ -1122,9 +1236,11 @@ export default function BackupRestorePage() {
         })}
         variant="danger"
         loading={deleteMutation.isPending}
+        confirmDisabled={!canWrite}
+        details={writeBlockReason ? <Text>{writeBlockReason}</Text> : undefined}
         confirmLabel={t('backup.delete', 'Delete')}
         cancelLabel={t('common.cancel', 'Cancel')}
-        onConfirm={() => deleteTarget && deleteMutation.mutate(deleteTarget.id)}
+        onConfirm={() => canWrite && !deleteMutation.isPending && deleteTarget && deleteMutation.mutate(deleteTarget.id)}
         onCancel={() => setDeleteTarget(null)}
       />
 
@@ -1146,14 +1262,14 @@ export default function BackupRestorePage() {
               <Icons.securityCheck
                 className={cn(
                   'h-4 w-4',
-                  previewData.checksum_verified ? neonColorMap.green.text : neonColorMap.red.text,
+                  previewData.checksum_verified === true ? neonColorMap.green.text : typography.color.muted,
                 )}
                 aria-hidden="true"
               />
-              <Text as="span" size="sm" className={previewData.checksum_verified ? neonColorMap.green.text : neonColorMap.red.text}>
-                {previewData.checksum_verified
+              <Text as="span" size="sm" className={previewData.checksum_verified === true ? neonColorMap.green.text : typography.color.muted}>
+                {previewData.checksum_verified === true
                   ? t('backup.checksumVerified', 'Checksum verified')
-                  : t('backup.checksumFailed', 'Checksum verification failed')}
+                  : t('common.unknown', 'Unknown')}
               </Text>
             </div>
 
