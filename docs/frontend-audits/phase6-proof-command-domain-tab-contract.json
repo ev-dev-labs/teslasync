@@ -1,0 +1,807 @@
+{
+  "schemaVersion": 1,
+  "item": "phase6-proof-command-domain-tab-contract",
+  "status": "BLOCKED_EXTERNAL_CATALOG_STARTUP_WITH_CONCURRENT_INPUT_DRIFT",
+  "root": "D:\\repos\\teslasync",
+  "cwd": "D:\\repos\\teslasync\\web",
+  "requestedSourceRef": "3d8bfe19db1e68205183865abf9bf94e1630781c",
+  "sourceRefVerification": "No Git operation authorized; source and fixture byte hashes compared with source-owner handoff log FINAL_SHA256.",
+  "sourceHandoffExpectedHashes": {
+    "source": "0040F7494D236E2FD15C038A37F749326E0D8FE3390667FE2DC491B09C17A9C2",
+    "fixture": "EEA425EDE38B18367C4EB17986A2A6FB8CC42BC3DAAAC28C541C262E97E767BF"
+  },
+  "sourceHandoffHashesMatch": true,
+  "requestUtc": "2026-10-14T07:40:55.279Z",
+  "deadlineUtc": "2026-10-14T08:00:55.279Z",
+  "baselineUtc": "2026-10-14T07:43:13.300Z",
+  "writeScope": [
+    "docs\\frontend-audits\\phase6-proof-command-domain-tab-contract.json",
+    "web\\logs\\phase6-proof-command-domain-tab-contract.log"
+  ],
+  "selectedTestFile": "web\\src\\features\\system\\components\\command-center\\CommandDomainBrowser.test.tsx",
+  "suite": "CommandDomainBrowser ordinary button contract (F10)",
+  "authoredCases": [
+    {
+      "name": "names a group of four native pressed buttons without incomplete tab roles",
+      "line": 55,
+      "parameterized": false
+    },
+    {
+      "name": "links every domain button to one existing region named by the active button",
+      "line": 74,
+      "parameterized": false
+    },
+    {
+      "name": "uses unique stable associations for multiple browsers independent of vehicle keys",
+      "line": 93,
+      "parameterized": false
+    },
+    {
+      "name": "keeps controlled selection until the parent accepts a pointer change",
+      "line": 116,
+      "parameterized": false
+    },
+    {
+      "name": "supports native Enter and Space activation without command execution or form submission",
+      "line": 130,
+      "parameterized": false
+    },
+    {
+      "name": "keeps all four domain buttons in forward and backward native Tab order",
+      "line": 152,
+      "parameterized": false
+    },
+    {
+      "name": "does not emulate tab arrows or Home/End on ordinary buttons",
+      "line": 171,
+      "parameterized": false
+    },
+    {
+      "name": "retains fallback selection and full access content for an unknown runtime domain",
+      "line": 182,
+      "parameterized": false
+    },
+    {
+      "name": "preserves access categories, counts, descriptions and every action",
+      "line": 190,
+      "parameterized": true
+    },
+    {
+      "name": "preserves comfort categories, counts, descriptions and every action",
+      "line": 190,
+      "parameterized": true
+    },
+    {
+      "name": "preserves charging categories, counts, descriptions and every action",
+      "line": 190,
+      "parameterized": true
+    },
+    {
+      "name": "preserves vehicle categories, counts, descriptions and every action",
+      "line": 190,
+      "parameterized": true
+    },
+    {
+      "name": "preserves category expansion preferences across domain changes and isolates vehicle keys",
+      "line": 216,
+      "parameterized": false
+    },
+    {
+      "name": "forwards original command definitions to the renderer and retains its independent actions",
+      "line": 239,
+      "parameterized": false
+    },
+    {
+      "name": "retains the two-column mobile/four-column desktop layout and large shared controls",
+      "line": 260,
+      "parameterized": false
+    }
+  ],
+  "runtimeDiscovery": {
+    "status": "BLOCKED_COLLECT_ERROR",
+    "exitCode": 1,
+    "count": 0,
+    "names": [],
+    "filterFiles": 1,
+    "requestedAuthoredCases": 15,
+    "reason": "Ordinary Vite buildStart catalog --check failed before collection; authored names are not runtime discovery."
+  },
+  "execution": {
+    "status": "BLOCKED_STARTUP_ERROR",
+    "exitCode": 1,
+    "executed": 0,
+    "passed": 0,
+    "failed": 0,
+    "skipped": 0,
+    "runtimeSelected": 0,
+    "notExecutedAuthoredCases": 15,
+    "tests": [
+      {
+        "name": "names a group of four native pressed buttons without incomplete tab roles",
+        "fullName": "CommandDomainBrowser ordinary button contract (F10) > names a group of four native pressed buttons without incomplete tab roles",
+        "status": "NOTRUN_STARTUP_BLOCKED",
+        "discovered": false,
+        "executed": false,
+        "passFail": "NOT_EVALUATED"
+      },
+      {
+        "name": "links every domain button to one existing region named by the active button",
+        "fullName": "CommandDomainBrowser ordinary button contract (F10) > links every domain button to one existing region named by the active button",
+        "status": "NOTRUN_STARTUP_BLOCKED",
+        "discovered": false,
+        "executed": false,
+        "passFail": "NOT_EVALUATED"
+      },
+      {
+        "name": "uses unique stable associations for multiple browsers independent of vehicle keys",
+        "fullName": "CommandDomainBrowser ordinary button contract (F10) > uses unique stable associations for multiple browsers independent of vehicle keys",
+        "status": "NOTRUN_STARTUP_BLOCKED",
+        "discovered": false,
+        "executed": false,
+        "passFail": "NOT_EVALUATED"
+      },
+      {
+        "name": "keeps controlled selection until the parent accepts a pointer change",
+        "fullName": "CommandDomainBrowser ordinary button contract (F10) > keeps controlled selection until the parent accepts a pointer change",
+        "status": "NOTRUN_STARTUP_BLOCKED",
+        "discovered": false,
+        "executed": false,
+        "passFail": "NOT_EVALUATED"
+      },
+      {
+        "name": "supports native Enter and Space activation without command execution or form submission",
+        "fullName": "CommandDomainBrowser ordinary button contract (F10) > supports native Enter and Space activation without command execution or form submission",
+        "status": "NOTRUN_STARTUP_BLOCKED",
+        "discovered": false,
+        "executed": false,
+        "passFail": "NOT_EVALUATED"
+      },
+      {
+        "name": "keeps all four domain buttons in forward and backward native Tab order",
+        "fullName": "CommandDomainBrowser ordinary button contract (F10) > keeps all four domain buttons in forward and backward native Tab order",
+        "status": "NOTRUN_STARTUP_BLOCKED",
+        "discovered": false,
+        "executed": false,
+        "passFail": "NOT_EVALUATED"
+      },
+      {
+        "name": "does not emulate tab arrows or Home/End on ordinary buttons",
+        "fullName": "CommandDomainBrowser ordinary button contract (F10) > does not emulate tab arrows or Home/End on ordinary buttons",
+        "status": "NOTRUN_STARTUP_BLOCKED",
+        "discovered": false,
+        "executed": false,
+        "passFail": "NOT_EVALUATED"
+      },
+      {
+        "name": "retains fallback selection and full access content for an unknown runtime domain",
+        "fullName": "CommandDomainBrowser ordinary button contract (F10) > retains fallback selection and full access content for an unknown runtime domain",
+        "status": "NOTRUN_STARTUP_BLOCKED",
+        "discovered": false,
+        "executed": false,
+        "passFail": "NOT_EVALUATED"
+      },
+      {
+        "name": "preserves access categories, counts, descriptions and every action",
+        "fullName": "CommandDomainBrowser ordinary button contract (F10) > preserves access categories, counts, descriptions and every action",
+        "status": "NOTRUN_STARTUP_BLOCKED",
+        "discovered": false,
+        "executed": false,
+        "passFail": "NOT_EVALUATED"
+      },
+      {
+        "name": "preserves comfort categories, counts, descriptions and every action",
+        "fullName": "CommandDomainBrowser ordinary button contract (F10) > preserves comfort categories, counts, descriptions and every action",
+        "status": "NOTRUN_STARTUP_BLOCKED",
+        "discovered": false,
+        "executed": false,
+        "passFail": "NOT_EVALUATED"
+      },
+      {
+        "name": "preserves charging categories, counts, descriptions and every action",
+        "fullName": "CommandDomainBrowser ordinary button contract (F10) > preserves charging categories, counts, descriptions and every action",
+        "status": "NOTRUN_STARTUP_BLOCKED",
+        "discovered": false,
+        "executed": false,
+        "passFail": "NOT_EVALUATED"
+      },
+      {
+        "name": "preserves vehicle categories, counts, descriptions and every action",
+        "fullName": "CommandDomainBrowser ordinary button contract (F10) > preserves vehicle categories, counts, descriptions and every action",
+        "status": "NOTRUN_STARTUP_BLOCKED",
+        "discovered": false,
+        "executed": false,
+        "passFail": "NOT_EVALUATED"
+      },
+      {
+        "name": "preserves category expansion preferences across domain changes and isolates vehicle keys",
+        "fullName": "CommandDomainBrowser ordinary button contract (F10) > preserves category expansion preferences across domain changes and isolates vehicle keys",
+        "status": "NOTRUN_STARTUP_BLOCKED",
+        "discovered": false,
+        "executed": false,
+        "passFail": "NOT_EVALUATED"
+      },
+      {
+        "name": "forwards original command definitions to the renderer and retains its independent actions",
+        "fullName": "CommandDomainBrowser ordinary button contract (F10) > forwards original command definitions to the renderer and retains its independent actions",
+        "status": "NOTRUN_STARTUP_BLOCKED",
+        "discovered": false,
+        "executed": false,
+        "passFail": "NOT_EVALUATED"
+      },
+      {
+        "name": "retains the two-column mobile/four-column desktop layout and large shared controls",
+        "fullName": "CommandDomainBrowser ordinary button contract (F10) > retains the two-column mobile/four-column desktop layout and large shared controls",
+        "status": "NOTRUN_STARTUP_BLOCKED",
+        "discovered": false,
+        "executed": false,
+        "passFail": "NOT_EVALUATED"
+      }
+    ],
+    "startupErrors": 1,
+    "reason": "No test body or assertion executed. Zero passed tests is not a pass."
+  },
+  "preservation": {
+    "domains": [
+      {
+        "id": "access",
+        "categories": [
+          "security",
+          "doors",
+          "drive",
+          "windows",
+          "sunroof"
+        ],
+        "entryCount": 23
+      },
+      {
+        "id": "comfort",
+        "categories": [
+          "climate",
+          "climate_protection"
+        ],
+        "entryCount": 15
+      },
+      {
+        "id": "charging",
+        "categories": [
+          "charging",
+          "schedules"
+        ],
+        "entryCount": 11
+      },
+      {
+        "id": "vehicle",
+        "categories": [
+          "alerts",
+          "navigation",
+          "software",
+          "vehicle",
+          "media"
+        ],
+        "entryCount": 18
+      }
+    ],
+    "domainCount": 4,
+    "categoryCount": 14,
+    "uniqueDomainCategories": 14,
+    "configuredEntries": 67,
+    "uniqueEntryIds": 67,
+    "offActions": 8,
+    "wireActions": 75,
+    "allCategoriesCoveredExactlyOnce": true,
+    "allEntriesReachable": true
+  },
+  "sourceHashes": [
+    {
+      "file": "web\\src\\features\\system\\components\\command-center\\CommandDomainBrowser.tsx",
+      "sha256Before": "0040F7494D236E2FD15C038A37F749326E0D8FE3390667FE2DC491B09C17A9C2",
+      "bytesBefore": 4016,
+      "sha256After": "0040F7494D236E2FD15C038A37F749326E0D8FE3390667FE2DC491B09C17A9C2",
+      "bytesAfter": 4016,
+      "unchanged": true
+    },
+    {
+      "file": "web\\src\\features\\system\\components\\command-center\\CommandDomainBrowser.test.tsx",
+      "sha256Before": "EEA425EDE38B18367C4EB17986A2A6FB8CC42BC3DAAAC28C541C262E97E767BF",
+      "bytesBefore": 12616,
+      "sha256After": "EEA425EDE38B18367C4EB17986A2A6FB8CC42BC3DAAAC28C541C262E97E767BF",
+      "bytesAfter": 12616,
+      "unchanged": true
+    },
+    {
+      "file": "web\\src\\features\\system\\components\\command-center\\commandDomains.ts",
+      "sha256Before": "1BD5EEADEE7E122C73D66250D12B7FD8471BA18274A1FBC0FA747848CDBFFE84",
+      "bytesBefore": 2189,
+      "sha256After": "1BD5EEADEE7E122C73D66250D12B7FD8471BA18274A1FBC0FA747848CDBFFE84",
+      "bytesAfter": 2189,
+      "unchanged": true
+    },
+    {
+      "file": "web\\src\\features\\system\\components\\command-center\\commandDomains.test.ts",
+      "sha256Before": "1672F23BDD37C92E2CEE72B5EAE69C64626B8DBF77423205325652C141507E4C",
+      "bytesBefore": 865,
+      "sha256After": "1672F23BDD37C92E2CEE72B5EAE69C64626B8DBF77423205325652C141507E4C",
+      "bytesAfter": 865,
+      "unchanged": true
+    },
+    {
+      "file": "web\\src\\features\\system\\commands.ts",
+      "sha256Before": "AA4E9A043744F2E763999EAB8C9F0768D327346638F99460CD0E0A2148E15BBA",
+      "bytesBefore": 38289,
+      "sha256After": "D71FCA1C8D68AACCA8910689C7206E7AB9C135C420F8706A1777AA8E388C2580",
+      "bytesAfter": 39641,
+      "unchanged": false
+    },
+    {
+      "file": "web\\src\\features\\system\\commands.test.ts",
+      "sha256Before": "B27E88F233CADC2923AC95B07000EA5F950C6694A9C4FBF233A696E19163E4FD",
+      "bytesBefore": 14685,
+      "sha256After": "E2BCAC55A2A92A5C242D3EF7D9FA78E5C3BA92433049E5C01402916BFA5931C0",
+      "bytesAfter": 17404,
+      "unchanged": false
+    },
+    {
+      "file": "web\\src\\features\\system\\components\\CollapsibleCommandGroup.tsx",
+      "sha256Before": "8DB509B1DC1F73BB89F640BF7D0C2501B927F626F2BDDF27FFB3D7CAC5913A94",
+      "bytesBefore": 2627,
+      "sha256After": "8DB509B1DC1F73BB89F640BF7D0C2501B927F626F2BDDF27FFB3D7CAC5913A94",
+      "bytesAfter": 2627,
+      "unchanged": true
+    },
+    {
+      "file": "web\\src\\components\\ui\\Button.tsx",
+      "sha256Before": "E43E202CC9F465EFEEF93A1BE2B156255958934AF635ABF0EAA408F310DDE16C",
+      "bytesBefore": 5174,
+      "sha256After": "E43E202CC9F465EFEEF93A1BE2B156255958934AF635ABF0EAA408F310DDE16C",
+      "bytesAfter": 5174,
+      "unchanged": true
+    },
+    {
+      "file": "web\\src\\test-setup.ts",
+      "sha256Before": "FB61779479E36B97298928C7BCC0620E8FF2A509A0EA50350F9935D9F260517A",
+      "bytesBefore": 7885,
+      "sha256After": "FB61779479E36B97298928C7BCC0620E8FF2A509A0EA50350F9935D9F260517A",
+      "bytesAfter": 7885,
+      "unchanged": true
+    },
+    {
+      "file": "web\\vite.config.ts",
+      "sha256Before": "7E0F246E3D538F48B8DF6A024F5CCE1E068685023A844CCE3B537A1AFCF54F58",
+      "bytesBefore": 19987,
+      "sha256After": "7E0F246E3D538F48B8DF6A024F5CCE1E068685023A844CCE3B537A1AFCF54F58",
+      "bytesAfter": 19987,
+      "unchanged": true
+    },
+    {
+      "file": "web\\package.json",
+      "sha256Before": "8C1D55D305A1A47A6A5E7CA3DBB0452D129C4CB0DC9F95B9ED9151C9CE93EC7A",
+      "bytesBefore": 10780,
+      "sha256After": "8C1D55D305A1A47A6A5E7CA3DBB0452D129C4CB0DC9F95B9ED9151C9CE93EC7A",
+      "bytesAfter": 10780,
+      "unchanged": true
+    },
+    {
+      "file": "web\\package-lock.json",
+      "sha256Before": "626F096DFDD962204BC6D88931F60469A57DD07F2A8F6B045744BD90F29910DF",
+      "bytesBefore": 497249,
+      "sha256After": "626F096DFDD962204BC6D88931F60469A57DD07F2A8F6B045744BD90F29910DF",
+      "bytesAfter": 497249,
+      "unchanged": true
+    },
+    {
+      "file": "web\\scripts\\split-i18n-catalog.mjs",
+      "sha256Before": "CDA6CCFCDC442BD7524343921C18EFD43FF74DC3FFD6CC61BC34A37631850598",
+      "bytesBefore": 30541,
+      "sha256After": "CDA6CCFCDC442BD7524343921C18EFD43FF74DC3FFD6CC61BC34A37631850598",
+      "bytesAfter": 30541,
+      "unchanged": true
+    },
+    {
+      "file": "web\\scripts\\audit-i18n-namespaces.mjs",
+      "sha256Before": "2869FE9085C8629A0F042634F990088C2B64FB9A4B40E53BBF75BF5FF200BC96",
+      "bytesBefore": 4776,
+      "sha256After": "2869FE9085C8629A0F042634F990088C2B64FB9A4B40E53BBF75BF5FF200BC96",
+      "bytesAfter": 4776,
+      "unchanged": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-system.json",
+      "sha256Before": "A46AC7A78BD89A0311831628B566D434C7A6AD77E0C7C90DE7C94090222F8636",
+      "bytesBefore": 190721,
+      "sha256After": "A46AC7A78BD89A0311831628B566D434C7A6AD77E0C7C90DE7C94090222F8636",
+      "bytesAfter": 190721,
+      "unchanged": true
+    },
+    {
+      "file": "web\\src\\i18n\\en\\usage-manifest.json",
+      "sha256Before": "F675DFEF6EE4F812A664FC41A6F27277D93F2EF3F805A91147CB96EC76A0B820",
+      "bytesBefore": 4489634,
+      "sha256After": "F675DFEF6EE4F812A664FC41A6F27277D93F2EF3F805A91147CB96EC76A0B820",
+      "bytesAfter": 4489634,
+      "unchanged": true
+    }
+  ],
+  "parentOracleIntegration": {
+    "owner": "numeric caller actor",
+    "file": "VehicleCommandCenter.test.tsx",
+    "status": "NOTRUN",
+    "read": false,
+    "modified": false,
+    "reason": "Explicit independent ownership; no stale-tab oracle changes"
+  },
+  "unselected": [
+    {
+      "file": "web\\src\\features\\system\\components\\command-center\\commandDomains.test.ts",
+      "status": "NOTRUN",
+      "reason": "Unchanged original historical contracts; source inventory only"
+    },
+    {
+      "file": "web\\src\\features\\system\\commands.test.ts",
+      "status": "NOTRUN",
+      "reason": "Unchanged outside ordinary-button covering scope; originals preserved"
+    },
+    {
+      "file": "VehicleCommandCenter.test.tsx",
+      "status": "NOTRUN",
+      "reason": "Parent oracle integration owned by numeric caller actor"
+    },
+    {
+      "file": "all other tests",
+      "status": "NOTRUN",
+      "reason": "Unneeded outside affected suite"
+    }
+  ],
+  "claims": {
+    "nativeBrowser": false,
+    "rovingTabs": false,
+    "wholePageAcceptance": false,
+    "globalGate": false
+  },
+  "rawLog": "web\\logs\\phase6-proof-command-domain-tab-contract.log",
+  "runner": {
+    "ordinaryConfig": "web\\vite.config.ts",
+    "pool": "forks",
+    "maxWorkers": 2,
+    "environment": "jsdom",
+    "guardsPreserved": true,
+    "cache": false,
+    "identityEnv": {
+      "VITE_GIT_SHA": "3d8bfe19db1e68205183865abf9bf94e1630781c"
+    },
+    "identityReason": "Avoid the ordinary config build-identity fallback invoking Git, which this proof task prohibits; no catalog/namespace guard override.",
+    "commands": [
+      {
+        "mode": "list",
+        "command": "node node_modules\\vitest\\vitest.mjs list src\\features\\system\\components\\command-center\\CommandDomainBrowser.test.tsx --pool=forks --maxWorkers=2 --no-cache --no-color",
+        "startedUtc": "2026-10-14T07:43:45.027Z",
+        "endedUtc": "2026-10-14T07:47:33.855Z",
+        "durationMs": 228828,
+        "exitCode": 1,
+        "signal": null,
+        "error": null,
+        "rawStdout": "",
+        "rawStderr": "[i18n-split] generated locale files are invalid (locale-detail-errorBoundary.json, locale-system.json, locale-notifications.json, locale-telemetry.json, locale-unreferenced.json, locale-battery.json, locale-driving.json, locale-analytics.json, locale-sharing.json, locale-vehicles.json, locale-automations.json, locale-charging.json, locale-dashboard.json, locale-settings.json, locale-admin.json, locale-vehicle-systems.json, locale-diagnostics.json, locale-maps.json, locale-trips.json, locale-exports.json, locale-power-user.json, locale-driving-route-efficiency.json, locale-driving-trip-planner.json, runtime-manifest.json, usage-manifest.json). Run node scripts/split-i18n-catalog.mjs.\n\n⎯⎯⎯⎯⎯⎯⎯ Collect Error ⎯⎯⎯⎯⎯⎯⎯⎯\nError: Command failed: C:\\Program Files\\nodejs\\node.exe scripts/split-i18n-catalog.mjs --check\n    at genericNodeError (node:internal/errors:999:15)\n    at wrappedFn (node:internal/errors:544:14)\n    at checkExecSyncError (node:child_process:942:11)\n    at execFileSync (node:child_process:978:15)\n    at PluginContext.buildStart (file:///D:/repos/teslasync/web/node_modules/.vite-temp/vite.config.ts.timestamp-1791963825665-fe9633990dc458.mjs:55:5)\n    at EnvironmentPluginContainer.hookParallel (file:///D:/repos/teslasync/web/node_modules/vite/dist/node/chunks/dep-Dm0c1Wj2.js:42315:39)\n    at EnvironmentPluginContainer.buildStart (file:///D:/repos/teslasync/web/node_modules/vite/dist/node/chunks/dep-Dm0c1Wj2.js:42330:12)\n    at file:///D:/repos/teslasync/web/node_modules/vite/dist/node/chunks/dep-Dm0c1Wj2.js:38867:49\n    at initServer (file:///D:/repos/teslasync/web/node_modules/vite/dist/node/chunks/dep-Dm0c1Wj2.js:38875:6)\n    at _createServer (file:///D:/repos/teslasync/web/node_modules/vite/dist/node/chunks/dep-Dm0c1Wj2.js:38890:11) {\n  status: 1,\n  signal: null,\n  output: [ null, null, null ],\n  pid: 44596,\n  stdout: null,\n  stderr: null\n}\n\n\n\n"
+      },
+      {
+        "mode": "run",
+        "command": "node node_modules\\vitest\\vitest.mjs run src\\features\\system\\components\\command-center\\CommandDomainBrowser.test.tsx --pool=forks --maxWorkers=2 --no-cache --no-color --reporter=verbose",
+        "startedUtc": "2026-10-14T07:47:33.861Z",
+        "endedUtc": "2026-10-14T07:51:00.912Z",
+        "durationMs": 207056,
+        "exitCode": 1,
+        "signal": null,
+        "error": null,
+        "rawStdout": "",
+        "rawStderr": "[i18n-split] generated locale files are invalid (locale-detail-errorBoundary.json, locale-system.json, locale-notifications.json, locale-telemetry.json, locale-unreferenced.json, locale-battery.json, locale-driving.json, locale-analytics.json, locale-sharing.json, locale-vehicles.json, locale-automations.json, locale-charging.json, locale-dashboard.json, locale-settings.json, locale-admin.json, locale-vehicle-systems.json, locale-diagnostics.json, locale-maps.json, locale-trips.json, locale-exports.json, locale-power-user.json, locale-driving-route-efficiency.json, locale-driving-trip-planner.json, runtime-manifest.json, usage-manifest.json). Run node scripts/split-i18n-catalog.mjs.\n\n⎯⎯⎯⎯⎯⎯⎯ Startup Error ⎯⎯⎯⎯⎯⎯⎯⎯\nError: Command failed: C:\\Program Files\\nodejs\\node.exe scripts/split-i18n-catalog.mjs --check\n    at genericNodeError (node:internal/errors:999:15)\n    at wrappedFn (node:internal/errors:544:14)\n    at checkExecSyncError (node:child_process:942:11)\n    at execFileSync (node:child_process:978:15)\n    at PluginContext.buildStart (file:///D:/repos/teslasync/web/node_modules/.vite-temp/vite.config.ts.timestamp-1791964054462-b991cccd4d3df.mjs:55:5)\n    at EnvironmentPluginContainer.hookParallel (file:///D:/repos/teslasync/web/node_modules/vite/dist/node/chunks/dep-Dm0c1Wj2.js:42315:39)\n    at EnvironmentPluginContainer.buildStart (file:///D:/repos/teslasync/web/node_modules/vite/dist/node/chunks/dep-Dm0c1Wj2.js:42330:12)\n    at file:///D:/repos/teslasync/web/node_modules/vite/dist/node/chunks/dep-Dm0c1Wj2.js:38867:49\n    at initServer (file:///D:/repos/teslasync/web/node_modules/vite/dist/node/chunks/dep-Dm0c1Wj2.js:38875:6)\n    at _createServer (file:///D:/repos/teslasync/web/node_modules/vite/dist/node/chunks/dep-Dm0c1Wj2.js:38890:11) {\n  status: 1,\n  signal: null,\n  output: [ null, null, null ],\n  pid: 44700,\n  stdout: null,\n  stderr: null\n}\n\n\n\n"
+      }
+    ]
+  },
+  "lastCommandUtc": "2026-10-14T07:51:00.912Z",
+  "proofAccepted": false,
+  "blocker": {
+    "classification": "EXTERNAL_GENERATED_CATALOG_STARTUP",
+    "chargedToOwnedCorrection": false,
+    "chargedOwnedFailures": 0,
+    "guard": "verify-english-catalog-split.buildStart",
+    "failingCommand": "node scripts\\split-i18n-catalog.mjs --check",
+    "failingCommandExitCode": 1,
+    "invalidGeneratedFiles": [
+      "web\\src\\i18n\\en\\locale-detail-errorBoundary.json",
+      "web\\src\\i18n\\en\\locale-system.json",
+      "web\\src\\i18n\\en\\locale-notifications.json",
+      "web\\src\\i18n\\en\\locale-telemetry.json",
+      "web\\src\\i18n\\en\\locale-unreferenced.json",
+      "web\\src\\i18n\\en\\locale-battery.json",
+      "web\\src\\i18n\\en\\locale-driving.json",
+      "web\\src\\i18n\\en\\locale-analytics.json",
+      "web\\src\\i18n\\en\\locale-sharing.json",
+      "web\\src\\i18n\\en\\locale-vehicles.json",
+      "web\\src\\i18n\\en\\locale-automations.json",
+      "web\\src\\i18n\\en\\locale-charging.json",
+      "web\\src\\i18n\\en\\locale-dashboard.json",
+      "web\\src\\i18n\\en\\locale-settings.json",
+      "web\\src\\i18n\\en\\locale-admin.json",
+      "web\\src\\i18n\\en\\locale-vehicle-systems.json",
+      "web\\src\\i18n\\en\\locale-diagnostics.json",
+      "web\\src\\i18n\\en\\locale-maps.json",
+      "web\\src\\i18n\\en\\locale-trips.json",
+      "web\\src\\i18n\\en\\locale-exports.json",
+      "web\\src\\i18n\\en\\locale-power-user.json",
+      "web\\src\\i18n\\en\\locale-driving-route-efficiency.json",
+      "web\\src\\i18n\\en\\locale-driving-trip-planner.json",
+      "web\\src\\i18n\\en\\runtime-manifest.json",
+      "web\\src\\i18n\\en\\usage-manifest.json"
+    ],
+    "invalidGeneratedFilesCount": 25,
+    "sameInvalidListAtDiscoveryAndExecution": true,
+    "owner": "parent/authorized canonical-generated catalog actor; NOT this read-only proof worker",
+    "preciseFixNeeds": [
+      "Authorized catalog owner must restore source-reference closure and regenerate the exact invalid generated files with the existing normal split-i18n-catalog script; no guard bypass, alternative config, custom fixture or test oracle change.",
+      "After regeneration, preserve the ordinary startup checks: node scripts\\split-i18n-catalog.mjs --check and node scripts\\audit-i18n-namespaces.mjs --strict must succeed. Namespace guard was not reached in these attempts.",
+      "Then redispatch the exact CommandDomainBrowser affected ordinary button/group proof under the normal config with forks/maxWorkers=2. Do not repeat unrelated genuine historical passes."
+    ],
+    "catalogWritesThisWorker": false,
+    "guardsBypassed": false
+  },
+  "ownedFailure": {
+    "status": "NOT_EVALUATED",
+    "executedTestFailures": 0,
+    "correctionNeeded": null,
+    "reason": "External startup stopped all selected test bodies. No source/fixture assertion failure observed; do not invent a fix."
+  },
+  "unchangedPinnedInputs": false,
+  "originalTestsPreserved": false,
+  "sourceAndFixtureUnchanged": true,
+  "invalidGeneratedFileHashesAfter": [
+    {
+      "file": "web\\src\\i18n\\en\\locale-detail-errorBoundary.json",
+      "sha256After": null
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-system.json",
+      "sha256After": "A46AC7A78BD89A0311831628B566D434C7A6AD77E0C7C90DE7C94090222F8636"
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-notifications.json",
+      "sha256After": "F0888894C53EF8428DBE8018B62757FE6A2B5916F6EE05436B4F10E614EC0AD0"
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-telemetry.json",
+      "sha256After": "DCF0470308B8D0E1A5F468D413B0945ED69E0976FFB3751B2EE3BC4604AC9C9A"
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-unreferenced.json",
+      "sha256After": "55B9B8DCFD85E50ED4D38EF2A273EB3E47CF14960FB4F22F54AD27C09510E0E9"
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-battery.json",
+      "sha256After": "520A4E02440B7492F6E39E05194B35F43A027CDB15F6579B2E87F86DCB102880"
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-driving.json",
+      "sha256After": "94356FE7FBB3358F1DE0964337821EB8B3E1BF4D8A7B951F3B5E97CF762D5468"
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-analytics.json",
+      "sha256After": "7FCD88A6AC2855A3E3BFD51C7E2B16642A2312AEBB3145AC0A120DFFAC2AA9E5"
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-sharing.json",
+      "sha256After": "94D37FFEBCFB94BE85208DB551CC3873CF1EA8BEB7578E18A267C01734E53ECE"
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-vehicles.json",
+      "sha256After": "BCA10AD642E9C5DBF00CE3A1803D001857328AC85719AD9E4BD87465CE79FDFC"
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-automations.json",
+      "sha256After": "A7517A3426C1DA67AE8685322AD70165B39B9988B9B21611CBC5792467A23F93"
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-charging.json",
+      "sha256After": "003472AB1DAD656D693DBFB327ED5B2FB4A7CBA6234286FF7910D3CE7FB760E2"
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-dashboard.json",
+      "sha256After": "3083BE5D6E947EF6E95F5CC66174F71EE6BCDA4270C2BA42348A84FEF6E251CA"
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-settings.json",
+      "sha256After": "9D282712AB62747546B3EAE352F4A0D1C0C606A573F751B13E18A6987AECB300"
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-admin.json",
+      "sha256After": "7F7AF6E11986B878ABD7A0A44CEF0B15A1609B3CCB0F0F84BC99FF718F27FF0F"
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-vehicle-systems.json",
+      "sha256After": "CC7E0B112A28DDB600D3F4AAAA8923595C761DD0E9ABA3209FF14366586A60A7"
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-diagnostics.json",
+      "sha256After": "4C6362B41BD826472E53B0F4B78763627DE1B6FB3707F511112351A20093FBAE"
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-maps.json",
+      "sha256After": "CC503A2FD557C6FEB835E9DFA7EB684D690B85199D452756ADCE19EE5FEF7362"
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-trips.json",
+      "sha256After": "FB8D100807B2751143A6F8340FFA9169F36BE7F218EC43B6C17F2BE1CEECF037"
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-exports.json",
+      "sha256After": "56250B2502F148B4178359F66668CBBE2134BA7D8E0A842D19087D92778E69FD"
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-power-user.json",
+      "sha256After": "433B041F41305999F6365BA7B04BC853B9BD596D2CCF82DA7E484DE8928A2800"
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-driving-route-efficiency.json",
+      "sha256After": "0F1F1630DB1A9C563887945A847DBFB41D9ECFE81F2AFD4F5DB6A650E35F7985"
+    },
+    {
+      "file": "web\\src\\i18n\\en\\locale-driving-trip-planner.json",
+      "sha256After": "7D946DECC9DAE121F4F1583B8B719429A6479BD5D732A5B345A55C850BF7D3C2"
+    },
+    {
+      "file": "web\\src\\i18n\\en\\runtime-manifest.json",
+      "sha256After": "F12336C510017FC79ED588E01D1DAA3C307F05D3FDC20A857FFCF6AA77FC9B0D"
+    },
+    {
+      "file": "web\\src\\i18n\\en\\usage-manifest.json",
+      "sha256After": "F675DFEF6EE4F812A664FC41A6F27277D93F2EF3F805A91147CB96EC76A0B820"
+    }
+  ],
+  "scopedVerification": {
+    "originalProductionLines": 117,
+    "currentProductionLines": 120,
+    "currentFixtureLines": 270,
+    "extractedProductionComponents": 0,
+    "productionRatio": 1.0256410256410255,
+    "sectionTemplates": {
+      "GlassPanel": {
+        "original": 0,
+        "current": 0
+      },
+      "ChartContainer": {
+        "original": 0,
+        "current": 0
+      },
+      "CollapsibleCommandGroup": {
+        "original": 1,
+        "current": 1
+      },
+      "Heading": {
+        "original": 1,
+        "current": 1
+      },
+      "Badge": {
+        "original": 1,
+        "current": 1
+      }
+    },
+    "rawEvidence": "scoped-read-only-preservation JSON block in exact log",
+    "limitations": "Source-only structural inventory and six exact-pattern counts, not full audit or runtime preservation acceptance.",
+    "hooks": "N/A: no API hooks or URLs in presentational source",
+    "fullTsc": "NOTRUN: unneeded/outside exact proof scope",
+    "fullLint": "NOTRUN: unneeded/outside exact proof scope",
+    "fullBuild": "NOTRUN: unneeded/outside exact proof scope",
+    "fullViolationsAudit": "NOTRUN: unneeded/outside exact proof scope"
+  },
+  "limits": {
+    "sourceWrites": false,
+    "fixtureWrites": false,
+    "catalogWrites": false,
+    "configWrites": false,
+    "helperFileWrites": false,
+    "gitOperations": false,
+    "queueWrites": false,
+    "install": false,
+    "nestedAgents": false,
+    "servers": false,
+    "browsers": false,
+    "docker": false,
+    "guardBypass": false,
+    "parentTestsRead": false,
+    "parentTestsExecuted": false,
+    "parentOracleChanges": false,
+    "runnerNote": "Ordinary Vite bundled config loader created its transient internal .vite-temp config as reported by the raw stack; no alternate loader or config was used. No generated source output was written by this worker."
+  },
+  "releaseUtc": "2026-10-14T07:53:04.429Z",
+  "elapsedMs": 729150,
+  "releasedBeforeDeadline": true,
+  "commandDurationMs": 435884,
+  "lifecycle": {
+    "allOwnBoundedCommandsComplete": true,
+    "runtimeShellId": "command-domain-proof-runtime",
+    "runtimeShellExitCode": 1,
+    "activeOwnedServers": 0,
+    "ownershipReleased": true
+  },
+  "resultLine": "RESULT phase6-proof-command-domain-tab-contract BLOCKED_EXTERNAL_CATALOG_STARTUP; discovery=0 executed=0 passed=0 failedTests=0 NOTRUN=15; listExit=1 runExit=1; externalStartupUncharged; sourceFixtureUnchanged=true; externalCommandsInputDrift=2; releaseUTC=2026-10-14T07:53:04.429Z",
+  "externalInputDrift": {
+    "observed": true,
+    "files": [
+      {
+        "file": "web\\src\\features\\system\\commands.ts",
+        "sha256Before": "AA4E9A043744F2E763999EAB8C9F0768D327346638F99460CD0E0A2148E15BBA",
+        "bytesBefore": 38289,
+        "sha256After": "D71FCA1C8D68AACCA8910689C7206E7AB9C135C420F8706A1777AA8E388C2580",
+        "bytesAfter": 39641,
+        "unchanged": false
+      },
+      {
+        "file": "web\\src\\features\\system\\commands.test.ts",
+        "sha256Before": "B27E88F233CADC2923AC95B07000EA5F950C6694A9C4FBF233A696E19163E4FD",
+        "bytesBefore": 14685,
+        "sha256After": "E2BCAC55A2A92A5C242D3EF7D9FA78E5C3BA92433049E5C01402916BFA5931C0",
+        "bytesAfter": 17404,
+        "unchanged": false
+      }
+    ],
+    "attribution": "Files outside writable proof scope changed concurrently. This worker made no source/test edits; writer identity is not inferred.",
+    "consequence": "No claim that all original test files or all runtime dependency inputs stayed byte-identical. Selected CommandDomainBrowser source/fixture and commandDomains.test.ts are unchanged.",
+    "ownedCorrectionCharge": false,
+    "preciseIntegrationNeed": "Serialized parent intake must reconcile concurrent commands.ts/commands.test.ts changes before rerunning this proof; preserve original cases and catalogue entries. No parent-oracle edit/run authorized here."
+  },
+  "originalTestsPreservation": {
+    "selectedFixtureHashUnchanged": true,
+    "domainMappingOriginalTestHashUnchanged": true,
+    "catalogueOriginalTestHashUnchanged": false,
+    "allOriginalTestsReadOnlyToThisWorker": true,
+    "fullOriginalSuitePreservationAcceptance": false,
+    "reason": "commands.test.ts concurrent external hash drift: do not claim byte preservation or original-suite runtime pass."
+  },
+  "structuralPreservationAfter": {
+    "observedUtc": "2026-10-14T07:53:04.427Z",
+    "sourceHash": "D71FCA1C8D68AACCA8910689C7206E7AB9C135C420F8706A1777AA8E388C2580",
+    "domainCount": 4,
+    "categoryCount": 14,
+    "configuredEntries": 67,
+    "uniqueIds": 67,
+    "allEntriesReachableExactlyOnce": true,
+    "domains": [
+      {
+        "id": "access",
+        "categories": [
+          "security",
+          "doors",
+          "drive",
+          "windows",
+          "sunroof"
+        ],
+        "entryCount": 23
+      },
+      {
+        "id": "comfort",
+        "categories": [
+          "climate",
+          "climate_protection"
+        ],
+        "entryCount": 15
+      },
+      {
+        "id": "charging",
+        "categories": [
+          "charging",
+          "schedules"
+        ],
+        "entryCount": 11
+      },
+      {
+        "id": "vehicle",
+        "categories": [
+          "alerts",
+          "navigation",
+          "software",
+          "vehicle",
+          "media"
+        ],
+        "entryCount": 18
+      }
+    ],
+    "runtimeAcceptance": false
+  }
+}
