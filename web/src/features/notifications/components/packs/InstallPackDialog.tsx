@@ -36,6 +36,7 @@ export default function InstallPackDialog({ pack, onClose }: Props) {
   const install = useInstallAlertPack()
   const desktop = useMediaQuery('(min-width: 1024px)')
   const vehicleId = useId()
+  const validationId = useId()
   const [vehicleSelection, setVehicleSelection] = useState<VehicleSelection>({ kind: 'all_sticky' })
   const [enabled, setEnabled] = useState(false)
   const [name, setName] = useState(pack.id === 'custom' ? pack.name : '')
@@ -110,7 +111,7 @@ export default function InstallPackDialog({ pack, onClose }: Props) {
       <PackRuleDeliveryEditor {...ruleProps(template)} field="behavior" compact /> },
     { key: 'message', header: t('alertPacks.message', 'Notification message'), align: 'left', className: 'w-[30rem] min-w-[30rem] whitespace-normal', render: template => <PackRuleMessageEditor {...ruleProps(template)} compact /> },
     { key: 'channels', header: t('alertPacks.channels', 'Channels'), align: 'left', className: 'w-64 min-w-64 whitespace-normal', render: template => <PackRuleChannels
-      id={template.id} value={resolvePackChannels(selections[template.id], master)} channels={channels.data ?? []} disabled={install.isPending || channels.isLoading} compact
+      id={template.id} value={resolvePackChannels(selections[template.id], master)} channels={channels.data ?? []} disabled={install.isPending || !channelState.hasData} compact
       onChange={channel_ids => ruleProps(template).onChange(withPackChannels(selections[template.id], channel_ids, master))} /> },
     { key: 'title', header: t('alertPacks.titleColumn', 'Include title'), align: 'left', className: 'w-28 min-w-28', render: template =>
       <PackRuleDeliveryEditor {...ruleProps(template)} field="title" compact /> },
@@ -121,14 +122,20 @@ export default function InstallPackDialog({ pack, onClose }: Props) {
     <div data-pack-default-controls className="grid items-start gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-[minmax(9rem,1fr)_minmax(14rem,1.3fr)_minmax(7rem,.7fr)_minmax(14rem,1.3fr)_minmax(12rem,1.2fr)_minmax(14rem,1.3fr)]">
     <PackDeliveryControls value={master} onChange={setMaster} disabled={install.isPending} />
     <PackRuleChannels id="defaults" label={t('alertPacks.defaultChannels', 'Default channels')}
-      value={master.channel_ids} channels={channels.data ?? []} disabled={install.isPending || channels.isLoading}
+      value={master.channel_ids} channels={channels.data ?? []} disabled={install.isPending || !channelState.hasData}
       onChange={channel_ids => setMaster(previous => ({ ...previous, channel_ids }))} />
     <div className="space-y-1">
       <label htmlFor={vehicleId} className="flex items-center"><Text size="sm" weight="medium" color="secondary">{t('alertPacks.vehicles', 'Vehicles')}</Text></label>
-      {vehicles.isLoading ? <Spinner /> : state.fatalError ? <ErrorDisplay error={state.fatalError} onRetry={() => void vehicles.refetch()} />
+      <StaleRefreshWarning state={state} label={t('alertPacks.vehicles', 'Vehicles')} />
+      {state.fatalError ? <ErrorDisplay error={state.fatalError} onRetry={() => void vehicles.refetch()} /> : !state.hasData ? (
+        <div role="status" aria-label={t('alertPacks.vehicles', 'Vehicles')} className="space-y-2">
+          {vehicles.isFetching ? <Spinner /> : <Caption>{state.isRefreshBlocked
+            ? t('dataSources.status.paused', 'Refresh paused') : t('dataSources.status.pending', 'Pending')}</Caption>}
+          {!vehicles.isFetching && <Button variant="ghost" onClick={() => void vehicles.refetch()}>{t('common.retry', 'Retry')}</Button>}
+        </div>
+      )
         : <VehicleMultiSelect id={vehicleId} vehicles={vehicles.data ?? []} value={vehicleSelection} disabled={install.isPending} onChange={setVehicleSelection}
           className="[&>button]:h-11 [&>button]:rounded-shape-md [&>button]:border-[var(--control-border)] [&>button]:bg-[var(--control-bg)]" />}
-      <StaleRefreshWarning state={state} />
     </div>
     <Select label={t('alertPacks.afterInstall', 'After installation')} value={enabled ? 'enabled' : 'paused'} disabled={install.isPending} className="h-11"
       options={[{ value: 'paused', label: t('alertPacks.keepPaused', 'Keep paused (recommended)') },
@@ -157,7 +164,7 @@ export default function InstallPackDialog({ pack, onClose }: Props) {
     <Modal open onClose={close} size="full" className="sm:max-w-[96vw] [&_[data-modal-scroll-body]]:overflow-x-hidden" title={t('alertPacks.preview', 'Preview {{name}}', { name: pack.id === 'custom' ? name : t(`alertPacks.catalog.${pack.id}.name`, pack.name) })}
       footer={result ? <Button onClick={onClose}>{t('alertPacks.done', 'Done')}</Button> : <div className="space-y-2">
         {install.error && <ErrorDisplay error={install.error} compact />}
-        {!valid && <Caption className="block">{t('alertPacks.invalid', 'Select at least one rule and a vehicle scope, and check message, threshold and cooldown values.')}</Caption>}
+        {!valid && <Caption id={validationId} role="status" className="block">{t('alertPacks.invalid', 'Select at least one rule and a vehicle scope, and check message, threshold and cooldown values.')}</Caption>}
         {discard ? <AlertBanner variant="warning">
           <Text as="p">{t('alertPacks.discard', 'Discard this pack configuration? No rules have been installed.')}</Text>
           <div className="mt-2 flex flex-wrap gap-2">
@@ -171,7 +178,8 @@ export default function InstallPackDialog({ pack, onClose }: Props) {
           </div>
           <div className="flex flex-wrap gap-2">
             <Button variant="ghost" onClick={close} disabled={install.isPending}>{t('alertPacks.cancel', 'Cancel')}</Button>
-            <Button aria-label={t('alertPacks.install', 'Install selected rules')} disabled={!valid || vehicles.isLoading || Boolean(state.fatalError) || install.isPending}
+            <Button aria-label={t('alertPacks.install', 'Install selected rules')} aria-describedby={!valid ? validationId : undefined}
+              disabled={!valid || !state.hasData || Boolean(state.fatalError) || install.isPending}
               loading={install.isPending} onClick={() => install.mutate({
                 pack_id: pack.id, version: pack.version, enabled,
                 cooldown_s: master.cooldown_s, trigger_mode: master.trigger_mode, include_title: master.include_title,
@@ -190,6 +198,14 @@ export default function InstallPackDialog({ pack, onClose }: Props) {
         {result.members.map(member => <Text as="p" key={member.template_id} variant="bodySm">{member.name} — {member.owned
           ? t('alertPacks.created', 'Created') : t('alertPacks.reused', 'Existing rule kept unchanged')}{!member.enabled ? ` (${t('alertPacks.disabled', 'disabled')})` : ''}</Text>)}
       </div> : <div className="space-y-4">
+        <StaleRefreshWarning state={channelState} label={t('alertPacks.channels', 'Channels')} />
+        {channelState.fatalError && <ErrorDisplay error={channelState.fatalError} onRetry={() => void channels.refetch()} />}
+        {!channelState.hasData && !channelState.fatalError && <div role="status" aria-label={t('alertPacks.channels', 'Channels')} className="space-y-2">
+          {channels.isFetching ? <Spinner /> : <Caption>{channelState.isRefreshBlocked
+            ? t('dataSources.status.paused', 'Refresh paused') : t('dataSources.status.pending', 'Pending')}</Caption>}
+          {!channels.isFetching && <Button variant="ghost" onClick={() => void channels.refetch()}>{t('common.retry', 'Retry')}</Button>}
+        </div>}
+        {channelState.hasData && !channelState.fatalError && channels.data?.length === 0 && <Caption className="block">{t('alertPacks.noConfiguredChannels', 'No external channels configured.')}</Caption>}
         {pack.id === 'custom' && <Input label={t('alertPacks.packName', 'Pack name')} value={name} maxLength={100} disabled={install.isPending} onChange={e => setName(e.target.value)} />}
         <div className="min-w-0 space-y-4">
           {desktop ? <section aria-label={t('alertPacks.masterSettings', 'Pack defaults')} className="space-y-3 self-start rounded-lg border border-[var(--border-default)] bg-[var(--surface-2)] p-4">
@@ -204,10 +220,6 @@ export default function InstallPackDialog({ pack, onClose }: Props) {
               <PanelTitle>{t('alertPacks.chooseRules', 'Choose rules')}</PanelTitle>
               <Caption className="block">{t('alertPacks.chooseBrief', 'Edit fields directly. Focus a message to read more. Nothing is saved until you install.')}</Caption>
             </div>
-            {channels.isLoading && <Spinner />}
-            {channelState.fatalError && <ErrorDisplay error={channelState.fatalError} onRetry={() => void channels.refetch()} />}
-            {!channels.isLoading && !channelState.fatalError && channels.data?.length === 0 && <Caption className="block">{t('alertPacks.noConfiguredChannels', 'No external channels configured.')}</Caption>}
-            <StaleRefreshWarning state={channelState} />
             <div className="flex flex-wrap items-center gap-3">
               <Checkbox label={t('alertPacks.selectAll', 'Select all')} aria-label={t('alertPacks.selectVisible', 'Select all matching rules')}
                 checked={allMatchingSelected} indeterminate={!allMatchingSelected && filtered.some(rule => selected.includes(rule.id))}

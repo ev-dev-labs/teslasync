@@ -30,7 +30,15 @@ export default function AlertPacksPanel({ onEditRule }: Props) {
   return (
     <GlassPanel className="space-y-5 p-4 sm:p-5">
       <SearchInput value={search} onChange={setSearch} placeholder={t('alertPacks.search', 'Search packs...')} />
-      {catalog.isLoading ? <Spinner /> : catalogState.fatalError ? <ErrorDisplay error={catalogState.fatalError} onRetry={() => void catalog.refetch()} /> : (
+      <StaleRefreshWarning state={catalogState} label={t('alertPacks.title', 'Alert packs')} />
+      {catalogState.fatalError ? <ErrorDisplay error={catalogState.fatalError} onRetry={() => void catalog.refetch()} /> : !catalogState.hasData ? (
+        <div role="status" aria-label={t('alertPacks.title', 'Alert packs')} className="space-y-2">
+          {catalog.isFetching ? <Spinner /> : <Caption>{catalogState.isRefreshBlocked
+            ? t('dataSources.status.paused', 'Refresh paused') : t('dataSources.status.pending', 'Pending')}</Caption>}
+          {!catalog.isFetching && <Button variant="ghost" onClick={() => void catalog.refetch()}>{t('common.retry', 'Retry')}</Button>}
+        </div>
+      ) : packs.length === 0 ? <EmptyState title={t('common.emptyResultsForTitle', 'No {{title}} found.', { title: t('alertPacks.title', 'Alert packs') })}
+        message={t('common.noData', 'No data available')} action={{ label: t('common.refresh', 'Refresh'), onClick: () => void catalog.refetch() }} /> : (
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {filtered.map(pack => (
             <GlassPanel key={pack.id} className="flex flex-col gap-3 p-4">
@@ -46,14 +54,19 @@ export default function AlertPacksPanel({ onEditRule }: Props) {
             action={{ label: t('alertPacks.clear', 'Clear search'), onClick: () => setSearch('') }} />}
         </div>
       )}
-      <StaleRefreshWarning state={catalogState} />
       {packs.find(pack => pack.id === 'custom') && <AIAlertPackBuilder
         catalog={packs.find(pack => pack.id === 'custom')!} onApply={setSelected} />}
       <div className="flex flex-wrap items-center justify-between gap-2">
         <SectionTitle>{t('alertPacks.installedTitle', 'Installed packs')}</SectionTitle>
         <Button variant="ghost" loading={installations.isFetching} onClick={() => void installations.refetch()}>{t('alertPacks.refresh', 'Refresh')}</Button>
       </div>
-      {installations.isLoading ? <Spinner /> : installationState.fatalError ? <ErrorDisplay error={installationState.fatalError} onRetry={() => void installations.refetch()} /> : (
+      <StaleRefreshWarning state={installationState} label={t('alertPacks.installedTitle', 'Installed packs')} />
+      {installationState.fatalError ? <ErrorDisplay error={installationState.fatalError} onRetry={() => void installations.refetch()} /> : !installationState.hasData ? (
+        <div role="status" aria-label={t('alertPacks.installedTitle', 'Installed packs')}>
+          {installations.isFetching ? <Spinner /> : <Caption>{installationState.isRefreshBlocked
+            ? t('dataSources.status.paused', 'Refresh paused') : t('dataSources.status.pending', 'Pending')}</Caption>}
+        </div>
+      ) : (
         <div className="grid gap-4 md:grid-cols-2">
           {installed.map(item => <InstalledPackCard key={item.id} installation={item}
             name={packs.find(pack => pack.id === item.pack_id) ? packName(packs.find(pack => pack.id === item.pack_id)!) : item.name}
@@ -63,7 +76,6 @@ export default function AlertPacksPanel({ onEditRule }: Props) {
             message={t('alertPacks.choosePack', 'Preview a pack above to get started. Existing rules and templates are unchanged.')} />}
         </div>
       )}
-      <StaleRefreshWarning state={installationState} />
       <div className="flex gap-2">
         <Button variant="ghost" disabled={page === 0 || installations.isFetching} onClick={() => setPage(value => value - 1)}>{t('alertPacks.previous', 'Previous')}</Button>
         <Button variant="ghost" disabled={installed.length < 20 || installations.isFetching} onClick={() => setPage(value => value + 1)}>{t('alertPacks.next', 'Next')}</Button>
