@@ -106,7 +106,7 @@ describe('TemperatureHistory', () => {
     expect(screen.getByRole('columnheader', { name: 'Outside Temp (°C)' })).toBeInTheDocument();
     const table = screen.getByRole('table');
     expect(within(table).getAllByRole('row').map(row => row.textContent)).toEqual([
-      'DateOutside Temp (°C)', 'Oct 01-10°C', 'Oct 030°C', 'Oct 0435°C',
+      'DateOutside Temp (°C)', 'Oct 01-10°C', 'Oct 02—', 'Oct 030°C', 'Oct 0435°C',
     ]);
     preferences.temperature = 'F';
     view.rerender(<TemperatureHistory rows={rows} state={sourceState()} loading={false} />);
@@ -119,7 +119,7 @@ describe('TemperatureHistory', () => {
     expect(within(chart).getByText('Warm Zone · 95°F')).toBeInTheDocument();
     expect(within(chart).getByText('Freezing · 32°F')).toBeInTheDocument();
     expect(within(table).getAllByRole('row').map(row => row.textContent)).toEqual([
-      'DateOutside Temp (°F)', 'Oct 0114°F', 'Oct 0332°F', 'Oct 0495°F',
+      'DateOutside Temp (°F)', 'Oct 0114°F', 'Oct 02—', 'Oct 0332°F', 'Oct 0495°F',
     ]);
     expect(rows).toEqual(original);
   });
@@ -148,8 +148,25 @@ describe('TemperatureHistory', () => {
       reader.readAsText(downloaded as Blob);
     });
     expect(csv.replace(/^\uFEFF/, '')).toBe(
-      'date,outsideTemp\r\nOct 01,14°F\r\nOct 03,32°F\r\nOct 04,95°F',
+      'date,outsideTemp\r\nOct 01,14°F\r\nOct 02,—\r\nOct 03,32°F\r\nOct 04,95°F',
     );
+  });
+
+  it('keeps unknown rows as chronological gaps rather than connecting across missing measurements', async () => {
+    const data = [
+      { ...rows[1], date: 'Sep 30' },
+      ...rows,
+      { ...rows[1], date: 'Oct 05' },
+    ];
+    render(<TemperatureHistory rows={data} state={sourceState(data)} loading={false} />);
+    const chart = await renderedChart();
+    const path = chart.querySelector('.recharts-line-curve')?.getAttribute('d');
+    expect(path?.match(/M/g)).toHaveLength(2);
+    expect(within(screen.getByRole('table')).getAllByRole('row').map(row => row.textContent)).toEqual([
+      'DateOutside Temp (°C)', 'Sep 30—', 'Oct 01-10°C', 'Oct 02—',
+      'Oct 030°C', 'Oct 0435°C', 'Oct 05—',
+    ]);
+    expect(screen.getByRole('button', { name: 'Export chart' })).toBeInTheDocument();
   });
 
   it('retains chart and measured zero during refresh failure and paused refresh', async () => {
@@ -166,6 +183,12 @@ describe('TemperatureHistory', () => {
     view.rerender(<TemperatureHistory rows={rows} state={paused} loading />);
     await renderedChart();
     expect(screen.getByTestId('stale-refresh-warning')).toHaveAttribute('data-refresh-blocked', 'true');
+    expect(screen.getByRole('cell', { name: '0°C' })).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(screen.queryByText(/offline/i)).not.toBeInTheDocument();
+    view.rerender(<TemperatureHistory rows={rows} state={sourceState()} loading={false} />);
+    await renderedChart();
+    expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
     expect(screen.getByRole('cell', { name: '0°C' })).toBeInTheDocument();
   });
 

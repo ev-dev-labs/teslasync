@@ -17,8 +17,8 @@ export function TemperatureHistory({ rows, state, loading }: DriveHistoryChartPr
     fontSize: getChartFontSize(12),
     fontFamily: getChartFontFamily(),
   };
-  const tempRows = rows.filter(row => row.outsideTemp != null);
-  const table = tempRows.map(row => ({
+  const measuredCount = rows.filter(row => row.outsideTemp != null).length;
+  const table = rows.map(row => ({
     date: row.date,
     outsideTemp: formatTemperature(row.outsideTemp),
   }));
@@ -30,7 +30,7 @@ export function TemperatureHistory({ rows, state, loading }: DriveHistoryChartPr
       ariaLabel={t('drivetrain.tempHistoryAria', 'Outside temperature trend line chart per recent drive')}
       height={300}
       loading={loading && !state.hasData}
-      empty={tempRows.length <= 1}
+      empty={measuredCount <= 1}
       data={table}
       exportData={table}
       dataColumns={[
@@ -39,7 +39,7 @@ export function TemperatureHistory({ rows, state, loading }: DriveHistoryChartPr
       ]}
     >
       <ResponsiveContainer width="100%" height="100%">
-        <LineChart data={tempRows}>
+        <LineChart data={rows}>
           <defs><ChartGradient id="dtTempGrad" color={chartTokens.series[0]} /></defs>
           <CartesianGrid strokeDasharray="3 3" stroke={chartTokens.gridStroke} strokeOpacity={0.4} />
           <XAxis dataKey="date" tick={chartText} />
