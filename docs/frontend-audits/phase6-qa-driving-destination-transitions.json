@@ -1,0 +1,1210 @@
+{
+  "schemaVersion": 1,
+  "item": "phase6-qa-driving-destination-transitions",
+  "attempt": 1,
+  "actor": "ab1f6a4b-081b-42d4-ad80-671b271c852a",
+  "phase": 6,
+  "status": "SOURCE_QA_COMPLETE_WITH_FINDINGS",
+  "page": "web/src/features/driving/pages/DestinationTransitionsPage.tsx",
+  "routes": [
+    "/destination-transitions"
+  ],
+  "snapshotUTC": "2026-10-14T01:16:36.2064358Z",
+  "purpose": "Source-only QA of the currently accepted destination history page/direct parts and necessary hook/router dependencies; no remigration.",
+  "primaryGoal": "Preserve populations, denominators, chronology, provenance, raw SI, preferences, source trust and every section/action.",
+  "reservation": {
+    "reservedUTC": "2026-10-14T01:00:00.625Z",
+    "actualFirstCheckUTC": "2026-10-14T01:02:06.8074883Z",
+    "returnDeadlineUTC": "2026-10-14T01:20:00.625Z",
+    "hardDeadlineUTC": "2026-10-14T01:25:00.625Z",
+    "earlierClockWins": true
+  },
+  "reuse": {
+    "existingReport": "absent",
+    "existingLog": "absent",
+    "checkUTC": "2026-10-14T01:02:06.8074883Z",
+    "decision": "New report needed; source/testing/configuration changes neither needed nor authorized. ClosedPhases0-5 not restarted."
+  },
+  "acceptedDependency": {
+    "queue": "migration-queue.md",
+    "qaRowLine": 387,
+    "item": "phase5-page-driving-destination-transitions",
+    "line": 1851,
+    "status": "[x]",
+    "receiptCommit": "497a04ef54d5df8deeca6b20d118a2b08cd4d050",
+    "commitEvidence": "Queue text only, no Git run.",
+    "originalAudit": "docs/frontend-audits/audit-page-106.json",
+    "originalAuditQueueLine": 595,
+    "acceptance": "SOURCE ONLY; historical checks/test startup/native failures not rerun or relabeled."
+  },
+  "authorityRead": [
+    "docs/orchestrator-loop.md FULL",
+    "docs/frontend-design-contract.md FULL lines1-2539",
+    "docs/session-handoff.md latest current lines1-132, recovery2026-10-14T00:44Z; historical tail also read",
+    "docs/frontend-mission.md lines1410-1535, sections43-45",
+    "docs/frontend-worker-conventions.md FULL, current assignment overrides historical helpers/heartbeats/browser rules",
+    ".github/instructions/frontend-si-cutover.instructions.md FULL",
+    ".github/instructions/react-frontend.instructions.md FULL including565-EOF continuation",
+    ".github/instructions/observability.instructions.md FULL",
+    ".github/instructions/unit-conversion.instructions.md FULL",
+    "docs/frontend-inventory.md destination entries157,461,463,1237-1239",
+    "migration-queue.md exact reserved/accepted rows and bounded mechanism searches"
+  ],
+  "scope": {
+    "writableOnly": [
+      "docs/frontend-audits/phase6-qa-driving-destination-transitions.json",
+      "web/logs/phase6-qa-driving-destination-transitions.log"
+    ],
+    "sourceClosureFileCount": 32,
+    "sourceClosureLineCount": 5338,
+    "frontendRuleScanFileCount": 31,
+    "frontendRuleScanLineCount": 3737,
+    "modelAdditionalFileCount": 1,
+    "modelAdditionalLineCount": 1601,
+    "sourcePinsCount": 58,
+    "allSourceTestsBackendCatalogConfigurationQueueHandoffReadOnly": true,
+    "coverage": "Full current page, all27 destination-directory files, full1601-line model and DestinationEvidenceBrief/NestedDrivingBrief/DrivingSummaryBrief. Necessary shared sources read only relevant ranges/symbols."
+  },
+  "sourcePins": [
+    {
+      "file": "web/src/api/client.ts",
+      "lines": 458,
+      "sha256": "a9ec99b561c05b73cbbc805f28d770a4e7e132c5cfd8ae8f740e1393311f59a5"
+    },
+    {
+      "file": "web/src/api/dataState.ts",
+      "lines": 434,
+      "sha256": "21fb454b3c1f01608169f3f3887911de97f7c754663cc001236ebfde58211761"
+    },
+    {
+      "file": "web/src/api/hooks/useDriving.ts",
+      "lines": 454,
+      "sha256": "c3dfd3825d09bc1ba37281bfe4d48d5626ddbc27059f0a90eef5f14fffc27392"
+    },
+    {
+      "file": "web/src/App.tsx",
+      "lines": 919,
+      "sha256": "10669c20207b9da28a7691107c23bcb6e7f2105bd17bd472aefd92399f1a517c"
+    },
+    {
+      "file": "web/src/components/charts/ChartContainer.tsx",
+      "lines": 1006,
+      "sha256": "6ac14784e96c7d61b8cae879b7be39ca7b9a54c520f02ef8260845b1d3fd9694"
+    },
+    {
+      "file": "web/src/components/charts/ChartHiddenSeriesContext.tsx",
+      "lines": 58,
+      "sha256": "1daecf7d4cfcc161a3a698ec68ba8971c6d06ba1231025a5a5e7528cd36f7594"
+    },
+    {
+      "file": "web/src/components/charts/ChartLegend.tsx",
+      "lines": 193,
+      "sha256": "e5f0b49f6f1159224d3b000ce2c57800dc13ce33c3053dc72ee1e35b2da67095"
+    },
+    {
+      "file": "web/src/components/charts/EmbeddedChart.tsx",
+      "lines": 42,
+      "sha256": "58c2c8279d0d050b9bd9b9df556bedd70713607a196488943d9425774f475721"
+    },
+    {
+      "file": "web/src/components/feedback/StaleRefreshWarning.tsx",
+      "lines": 115,
+      "sha256": "c8df62e2a4f40f60c2cbd3866c48e0590175f7307814fa7e7daea7e36a0312e9"
+    },
+    {
+      "file": "web/src/components/layout/layout-reference/PageLayout.tsx",
+      "lines": 17,
+      "sha256": "7b7ef06a05fe4a97ab0cfbc8e989901db0ffca898dec7d4f5cd796536b4dca3b"
+    },
+    {
+      "file": "web/src/components/layout/PageContainer.tsx",
+      "lines": 259,
+      "sha256": "4b718ac20f8a473a3c59b6dbd7031d9bb686e2c3ad93b25ddb94523eea074b4a"
+    },
+    {
+      "file": "web/src/components/motion/FadeIn.tsx",
+      "lines": 39,
+      "sha256": "8624fff5c039500e35b04dd4a53d3697a7186a92bdc922bb2a8e1f69001da32f"
+    },
+    {
+      "file": "web/src/components/ui/Button.tsx",
+      "lines": 93,
+      "sha256": "e43e202cc9f465efeef93a1be2b156255958934af635abf0eaa408f310dde16c"
+    },
+    {
+      "file": "web/src/features/driving/components/destination-transitions/DestinationContinuityMetrics.tsx",
+      "lines": 139,
+      "sha256": "b1307f6ee962780c8eb8b54157a5669948a8302abb0f045e95b6231496ccf6e7"
+    },
+    {
+      "file": "web/src/features/driving/components/destination-transitions/DestinationCoverageMetrics.tsx",
+      "lines": 197,
+      "sha256": "d1c530a7b34974f897a93b49a5c14cc69bb9b278573c734efb74c7b4424480f9"
+    },
+    {
+      "file": "web/src/features/driving/components/destination-transitions/DestinationRowAccountingMetrics.tsx",
+      "lines": 130,
+      "sha256": "9d358703a330e590b743f18abd6791fab038aade6dd7c12ede5925d945a365bb"
+    },
+    {
+      "file": "web/src/features/driving/components/destination-transitions/DestinationSupportMetrics.tsx",
+      "lines": 152,
+      "sha256": "60e7ca39798e4e7570f435261906cc91a03aa4ae8ec25426328b9c32fa689518"
+    },
+    {
+      "file": "web/src/features/driving/components/destination-transitions/DestinationTransitionEdgeList.tsx",
+      "lines": 101,
+      "sha256": "7ab3db662dbffbf633b95509013fb296a0e953860ec3539bd449f2f59d17cc67"
+    },
+    {
+      "file": "web/src/features/driving/components/destination-transitions/DestinationTransitionProfilePlot.tsx",
+      "lines": 152,
+      "sha256": "7739495e1b96e6fb2c2e4e11e0cbe0777b00ccce7ce4f9eed0da0055168b8bc7"
+    },
+    {
+      "file": "web/src/features/driving/components/destination-transitions/DestinationTransitionsEvidenceQuality.tsx",
+      "lines": 85,
+      "sha256": "ae37aa1ca1285887e42e004e5604a9ed487ecea51b44a4e84036717fbf12dfb8"
+    },
+    {
+      "file": "web/src/features/driving/components/destination-transitions/DestinationTransitionsKpiBand.tsx",
+      "lines": 48,
+      "sha256": "161e6421217a2713a9592723d135bfc02cb0eea80ec5684f2ab51ccd609e3d2b"
+    },
+    {
+      "file": "web/src/features/driving/components/destination-transitions/DestinationTransitionsKpiCards.tsx",
+      "lines": 173,
+      "sha256": "59471b1bad4e609e3391520be9a38a192d17f12d86e9ed78bf465b9abfd6d309"
+    },
+    {
+      "file": "web/src/features/driving/components/destination-transitions/DestinationTransitionsMethodology.tsx",
+      "lines": 200,
+      "sha256": "3d53f52a55fcbb5b9389e61b33eb1d5b822bf0a05f670d609b34b3bf2ad8fb57"
+    },
+    {
+      "file": "web/src/features/driving/components/destination-transitions/DestinationTransitionsMetricGroup.tsx",
+      "lines": 22,
+      "sha256": "5101eaa1a3d56bea4cb36e7f44e4c0155463733c9a88adbe4af2af6523ec0f4d"
+    },
+    {
+      "file": "web/src/features/driving/components/destination-transitions/DestinationTransitionsQueryStatus.tsx",
+      "lines": 152,
+      "sha256": "cd3bc89a4e391c3016f8b568a76a4d27aa51637086ef3cfb9dbff92601564346"
+    },
+    {
+      "file": "web/src/features/driving/components/destination-transitions/DestinationTransitionsSectionBody.tsx",
+      "lines": 167,
+      "sha256": "20327841c55598333638f16be683b1af52728266a054cb5d51f112f3c97b524f"
+    },
+    {
+      "file": "web/src/features/driving/components/destination-transitions/DestinationVisitShareChart.tsx",
+      "lines": 162,
+      "sha256": "3258efdfe2e21b94b3f3c870279c7b8ec92a2c9a89d2416f08f8e787a1a9d215"
+    },
+    {
+      "file": "web/src/features/driving/components/destination-transitions/EmpiricalInformationEdges.tsx",
+      "lines": 58,
+      "sha256": "941af8ac97e22a274e32eed22a6aacf4c95d45d73ff1bbb55f30b5a6c5dc2cdc"
+    },
+    {
+      "file": "web/src/features/driving/components/destination-transitions/FrequentAcceptedEdges.tsx",
+      "lines": 49,
+      "sha256": "7694a556eeb75a23537b9a8dcb234eff970758315e0b7a7e67f11cf0e4783d69"
+    },
+    {
+      "file": "web/src/features/driving/components/destination-transitions/index.ts",
+      "lines": 36,
+      "sha256": "cf93abebd83b1a702419e9cfc1bb59d8ee3f69a025f22d683f97ae55b8905487"
+    },
+    {
+      "file": "web/src/features/driving/components/destination-transitions/kpiLabels.ts",
+      "lines": 94,
+      "sha256": "96050e4c3beb794353c04db7ce43f832f310c49d4a532b6fff8bab0d0dcb7059"
+    },
+    {
+      "file": "web/src/features/driving/components/destination-transitions/labels.ts",
+      "lines": 121,
+      "sha256": "7df7ec0c4c70bc11e70c53ee6a4fdb7657f5b5a9a7b96fa1826b0aa61b4a83f6"
+    },
+    {
+      "file": "web/src/features/driving/components/destination-transitions/LeadingSuccessorsDirectory.tsx",
+      "lines": 179,
+      "sha256": "1a5f52dbb82a6c61dd6d420fef8c6590718a3e9a8f78151a7c39f055490b3037"
+    },
+    {
+      "file": "web/src/features/driving/components/destination-transitions/LocalTwoHourTransitionProfile.tsx",
+      "lines": 155,
+      "sha256": "c2f374a965ecddbd076f4bb8f6c76f797c64fcaaef8d682e4a51390d4207e81e"
+    },
+    {
+      "file": "web/src/features/driving/components/destination-transitions/MonthlyTransitionTrend.tsx",
+      "lines": 159,
+      "sha256": "0495075cb1f7bee2065172ccd8667ac6b9ec9a495a08d938760275636622ee3e"
+    },
+    {
+      "file": "web/src/features/driving/components/destination-transitions/OriginConcentrationPlot.tsx",
+      "lines": 143,
+      "sha256": "8df80d254e7a29de6309241c5ec72e2e8a0f9918fdad309dd7ccd50d79162380"
+    },
+    {
+      "file": "web/src/features/driving/components/destination-transitions/OriginConcentrationSupportChart.tsx",
+      "lines": 164,
+      "sha256": "c3c960db895702b0ec66124b84472566939de9c6a83eae319a8118a022fa2aac"
+    },
+    {
+      "file": "web/src/features/driving/components/destination-transitions/TopTransitionMatrix.tsx",
+      "lines": 167,
+      "sha256": "f3ca7b6105e2e281516c47676796bcb1ad05c98a51c60282b0df695ebd34f8d3"
+    },
+    {
+      "file": "web/src/features/driving/components/destination-transitions/types.ts",
+      "lines": 15,
+      "sha256": "b3905539abe1cafe822c2bf93f275af3366be6102c511c9fc4cd26719e6467f4"
+    },
+    {
+      "file": "web/src/features/driving/components/destination-transitions/WeekdayTransitionProfile.tsx",
+      "lines": 155,
+      "sha256": "a12552810edb42ccd47fa33443ffeb0f021e133b26f0f3539615e5ff0ab82e32"
+    },
+    {
+      "file": "web/src/features/driving/components/operationalbrief-a-m/DestinationEvidenceBrief.tsx",
+      "lines": 55,
+      "sha256": "648bc81eff899ba8d9fd69f050690bb89020a34ed2c9524c1349135d9c27550c"
+    },
+    {
+      "file": "web/src/features/driving/components/operationalbrief-a-m/DrivingSummaryBrief.tsx",
+      "lines": 53,
+      "sha256": "29b6c288c2dae77b345b0985764480ab7cf99f828d42beb4ba5db63cca422e93"
+    },
+    {
+      "file": "web/src/features/driving/components/operationalbrief-a-m/NestedDrivingBrief.tsx",
+      "lines": 63,
+      "sha256": "682a5d14bb65ba04739960e8c9e08ad15a8c39d32b9d6e5941a7946c226891ba"
+    },
+    {
+      "file": "web/src/features/driving/lib/destinationTransitions.ts",
+      "lines": 1601,
+      "sha256": "59889dd9548e8173dfef6b723db8f29bedcde60a58ec033b9c69e3b8388e2368"
+    },
+    {
+      "file": "web/src/features/driving/pages/DestinationTransitionsPage.tsx",
+      "lines": 191,
+      "sha256": "a457a0b7535f3c7f8504924a06c5280234d455376025cd394ef3d888a356fca3"
+    },
+    {
+      "file": "web/src/hooks/useDataState.ts",
+      "lines": 65,
+      "sha256": "785bd47e706b066874bec8999d51093982e93b9680b8dec16bddc023dc57fb9b"
+    },
+    {
+      "file": "web/src/hooks/useDateFormat.ts",
+      "lines": 148,
+      "sha256": "97b1b0ebd44436cd8274a4927d0df4381b112df1468a22ef6238029675d6a542"
+    },
+    {
+      "file": "web/src/hooks/useHiddenSeries.ts",
+      "lines": 88,
+      "sha256": "a7cfecebbb60e53783e13dbfabcca5ca685b06f72ab6684fe3b6f712409d876e"
+    },
+    {
+      "file": "web/src/hooks/useNumberFormatting.ts",
+      "lines": 47,
+      "sha256": "e32c23df1cb2001d54d324e2e0a7be6077720a26820a1cf2ac6c81358aca2ad7"
+    },
+    {
+      "file": "web/src/hooks/useSelectedVehicle.ts",
+      "lines": 174,
+      "sha256": "c52768ea42f3e8dd34399f1372a09eb3f70d6c6cb2dddbc41790a6d30e7c4ae3"
+    },
+    {
+      "file": "web/src/hooks/useSettings.ts",
+      "lines": 146,
+      "sha256": "f0dddd38c53e59a7103f9ee3160263017654f77ac5001c7eb0d941816b9fdca3"
+    },
+    {
+      "file": "web/src/hooks/useUnits.ts",
+      "lines": 194,
+      "sha256": "b90452309357b88fe27edf878a943ff46cf9083015592d1587997b5c0f4a8b14"
+    },
+    {
+      "file": "web/src/i18n/en.json",
+      "lines": 38994,
+      "sha256": "8d486e4996401ae48b7fbc3399c598885b38ea774b53917f0f4e90490715a893"
+    },
+    {
+      "file": "web/src/lib/dateFormat.ts",
+      "lines": 462,
+      "sha256": "30eeb276813505d3cee3d0b1df38a7b13fc97dce388a0c5b2c3c86c902f62f64"
+    },
+    {
+      "file": "web/src/lib/metric-reference/formatMetric.ts",
+      "lines": 137,
+      "sha256": "0337b9f06cd2e21bbd763e3b7dc1d0c6f13ef3017df0b0ca84b36b2f3083ffe5"
+    },
+    {
+      "file": "web/src/lib/timezone.ts",
+      "lines": 51,
+      "sha256": "4de9f4981d65173697e16db705ca06b279e9ccb700ac6c98d0d27439f25d5f02"
+    },
+    {
+      "file": "web/src/lib/workspaceScope.ts",
+      "lines": 168,
+      "sha256": "aeb8c01d410f2377aa5fd713de1a678a0360acf647a9c882f03e46c80efdfcd7"
+    },
+    {
+      "file": "web/src/types/driving.ts",
+      "lines": 411,
+      "sha256": "ec3c65df87afcc71b65aea70bc3f83ae235150ad66c144243abc603eceb61161"
+    }
+  ],
+  "sourcePinAlgorithm": "SHA-256 of actual bytes; line counts from native Get-Content",
+  "commands": [
+    {
+      "id": "C01",
+      "numericExit": 0,
+      "rawOutput": "COMMAND C01: report/log reuse preflight; accepted queue rows; source pins; scope\nsnapshotUTC=2026-10-14T01:03:36.8106460Z\nreportExists=False\nlogExists=False\n387:| [~] | 6 | phase6-qa-driving-destination-transitions | read-only-finished-page-QA | docs\\frontend-audits\\phase6-qa-driving-destination-transitions.json | phase5-page-driving-destination-transitions | 1 | conservative reservation=2026-10-14T01:00:00.625Z; return=2026-10-14T01:20:00.625Z; hard=2026-10-14T01:25:00.625Z; actor=ab1f6a4b-081b-42d4-ad80-671b271c852a; LastConsumed=-1 | - |CurrentacceptedDestinationTransitionsPage/directparts source-onlyQA; report/logonly/no location/identity/API/browser/native/source/test/catalog/fullsuite. Transitiondenominators/timebounds/unknownzero/SI/preferences/trust/actions/sections; no remigration. Historical start preserved: -. New-machine rolling reservation only, NOT a running worker; exact exclusive files, same recovered attempt or first QA attempt; no browser lock. Actual built-in background launch accepted; exact files owned by ab1f6a4b-081b-42d4-ad80-671b271c852a, no browser lock. |\n1851:| [x] | 5 | phase5-page-driving-destination-transitions | original-page-migration | web\\src\\features\\driving\\pages\\DestinationTransitionsPage.tsx; web\\src\\features\\driving\\pages\\DestinationTransitionsPage.test.tsx | - | 1 | 2026-10-12T16:22:00.1275817Z | 497a04ef54d5df8deeca6b20d118a2b08cd4d050 | Original Phase5 one-page adoption from accepted237-module inventory; aliases=/destination-transitions; audit=docs\\frontend-audits\\audit-page-106.json. First check current page for no-change-needed. Completed shared/domain work stays complete; preserve every section/data/action. Exclusive page+namedcolocatedtest; extracted/shared changes need parent claim/integration. Next-phase work may proceed while pilot QA completes under original concurrency rule; no artificial whole-pilot validation dependency. Complete page QA remains Phase6, source acceptance not visual/fresh-live acceptance. Real fourth-wave source reservation to fill22 open slots alongside10 actually running retained repairs. Shared normal catalog after-check0. Excludes all prior objectives/no-output scopes/held delivery claims; actual actor ID follows. Actual fourth-wave actor=0f298d37-d2f9-4a61-98d3-36324c8bc852; source-only exclusive page/test scope, notification pending, not QA accepted. Consumed actual terminal delivery; accepted SOURCE ONLY, not native/application QA; Scoped lint0/style0/catalog0;182-to191page12sections16originaltests9additive; tests later externalcatalogstartup1 zero cases;capture2/15maskeddesktopPNG/mobileblocked, child legend/matrix/trust needs; no nativeQA; time bound exceeded; commit=497a04ef54d5df8deeca6b20d118a2b08cd4d050; pushed. |\nweb/src/features/driving/pages/DestinationTransitionsPage.tsx|lines=191|sha256=a457a0b7535f3c7f8504924a06c5280234d455376025cd394ef3d888a356fca3\nweb/src/features/driving/components/destination-transitions/DestinationContinuityMetrics.tsx|lines=139|sha256=b1307f6ee962780c8eb8b54157a5669948a8302abb0f045e95b6231496ccf6e7\nweb/src/features/driving/components/destination-transitions/DestinationCoverageMetrics.tsx|lines=197|sha256=d1c530a7b34974f897a93b49a5c14cc69bb9b278573c734efb74c7b4424480f9\nweb/src/features/driving/components/destination-transitions/DestinationRowAccountingMetrics.tsx|lines=130|sha256=9d358703a330e590b743f18abd6791fab038aade6dd7c12ede5925d945a365bb\nweb/src/features/driving/components/destination-transitions/DestinationSupportMetrics.tsx|lines=152|sha256=60e7ca39798e4e7570f435261906cc91a03aa4ae8ec25426328b9c32fa689518\nweb/src/features/driving/components/destination-transitions/DestinationTransitionEdgeList.tsx|lines=101|sha256=7ab3db662dbffbf633b95509013fb296a0e953860ec3539bd449f2f59d17cc67\nweb/src/features/driving/components/destination-transitions/DestinationTransitionProfilePlot.tsx|lines=152|sha256=7739495e1b96e6fb2c2e4e11e0cbe0777b00ccce7ce4f9eed0da0055168b8bc7\nweb/src/features/driving/components/destination-transitions/DestinationTransitionsEvidenceQuality.tsx|lines=85|sha256=ae37aa1ca1285887e42e004e5604a9ed487ecea51b44a4e84036717fbf12dfb8\nweb/src/features/driving/components/destination-transitions/DestinationTransitionsKpiBand.tsx|lines=48|sha256=161e6421217a2713a9592723d135bfc02cb0eea80ec5684f2ab51ccd609e3d2b\nweb/src/features/driving/components/destination-transitions/DestinationTransitionsKpiCards.tsx|lines=173|sha256=59471b1bad4e609e3391520be9a38a192d17f12d86e9ed78bf465b9abfd6d309\nweb/src/features/driving/components/destination-transitions/DestinationTransitionsMethodology.tsx|lines=200|sha256=3d53f52a55fcbb5b9389e61b33eb1d5b822bf0a05f670d609b34b3bf2ad8fb57\nweb/src/features/driving/components/destination-transitions/DestinationTransitionsMetricGroup.tsx|lines=22|sha256=5101eaa1a3d56bea4cb36e7f44e4c0155463733c9a88adbe4af2af6523ec0f4d\nweb/src/features/driving/components/destination-transitions/DestinationTransitionsQueryStatus.tsx|lines=152|sha256=cd3bc89a4e391c3016f8b568a76a4d27aa51637086ef3cfb9dbff92601564346\nweb/src/features/driving/components/destination-transitions/DestinationTransitionsSectionBody.tsx|lines=167|sha256=20327841c55598333638f16be683b1af52728266a054cb5d51f112f3c97b524f\nweb/src/features/driving/components/destination-transitions/DestinationVisitShareChart.tsx|lines=162|sha256=3258efdfe2e21b94b3f3c870279c7b8ec92a2c9a89d2416f08f8e787a1a9d215\nweb/src/features/driving/components/destination-transitions/EmpiricalInformationEdges.tsx|lines=58|sha256=941af8ac97e22a274e32eed22a6aacf4c95d45d73ff1bbb55f30b5a6c5dc2cdc\nweb/src/features/driving/components/destination-transitions/FrequentAcceptedEdges.tsx|lines=49|sha256=7694a556eeb75a23537b9a8dcb234eff970758315e0b7a7e67f11cf0e4783d69\nweb/src/features/driving/components/destination-transitions/index.ts|lines=36|sha256=cf93abebd83b1a702419e9cfc1bb59d8ee3f69a025f22d683f97ae55b8905487\nweb/src/features/driving/components/destination-transitions/kpiLabels.ts|lines=94|sha256=96050e4c3beb794353c04db7ce43f832f310c49d4a532b6fff8bab0d0dcb7059\nweb/src/features/driving/components/destination-transitions/labels.ts|lines=121|sha256=7df7ec0c4c70bc11e70c53ee6a4fdb7657f5b5a9a7b96fa1826b0aa61b4a83f6\nweb/src/features/driving/components/destination-transitions/LeadingSuccessorsDirectory.tsx|lines=179|sha256=1a5f52dbb82a6c61dd6d420fef8c6590718a3e9a8f78151a7c39f055490b3037\nweb/src/features/driving/components/destination-transitions/LocalTwoHourTransitionProfile.tsx|lines=155|sha256=c2f374a965ecddbd076f4bb8f6c76f797c64fcaaef8d682e4a51390d4207e81e\nweb/src/features/driving/components/destination-transitions/MonthlyTransitionTrend.tsx|lines=159|sha256=0495075cb1f7bee2065172ccd8667ac6b9ec9a495a08d938760275636622ee3e\nweb/src/features/driving/components/destination-transitions/OriginConcentrationPlot.tsx|lines=143|sha256=8df80d254e7a29de6309241c5ec72e2e8a0f9918fdad309dd7ccd50d79162380\nweb/src/features/driving/components/destination-transitions/OriginConcentrationSupportChart.tsx|lines=164|sha256=c3c960db895702b0ec66124b84472566939de9c6a83eae319a8118a022fa2aac\nweb/src/features/driving/components/destination-transitions/TopTransitionMatrix.tsx|lines=167|sha256=f3ca7b6105e2e281516c47676796bcb1ad05c98a51c60282b0df695ebd34f8d3\nweb/src/features/driving/components/destination-transitions/types.ts|lines=15|sha256=b3905539abe1cafe822c2bf93f275af3366be6102c511c9fc4cd26719e6467f4\nweb/src/features/driving/components/destination-transitions/WeekdayTransitionProfile.tsx|lines=155|sha256=a12552810edb42ccd47fa33443ffeb0f021e133b26f0f3539615e5ff0ab82e32\nweb/src/features/driving/lib/destinationTransitions.ts|lines=1601|sha256=59889dd9548e8173dfef6b723db8f29bedcde60a58ec033b9c69e3b8388e2368\nweb/src/features/driving/components/operationalbrief-a-m/DestinationEvidenceBrief.tsx|lines=55|sha256=648bc81eff899ba8d9fd69f050690bb89020a34ed2c9524c1349135d9c27550c\nweb/src/features/driving/components/operationalbrief-a-m/NestedDrivingBrief.tsx|lines=63|sha256=682a5d14bb65ba04739960e8c9e08ad15a8c39d32b9d6e5941a7946c226891ba\nEXIT=0"
+    },
+    {
+      "id": "C02",
+      "numericExit": 0,
+      "rawOutput": "COMMAND C02: Select-String exact queue destination mechanisms and hooks/routes headings\n387|status=[~]|item=phase6-qa-driving-destination-transitions|files=docs\\frontend-audits\\phase6-qa-driving-destination-transitions.json\n487|status=[x]|item=phase5-current-source-catalog-closure|files=web\\src\\i18n\\en.json; web\\src\\i18n\\en\\locale-action-center.json; web\\src\\i18n\\en\\locale-admin.json; web\\src\\i18n\\en\\locale-advanced-intelligence.json; web\\src\\i18n\\en\\locale-analytics.json; web\\src\\i18n\\en\\locale-automations.json; web\\src\\i18n\\en\\locale-battery.json; web\\src\\i18n\\en\\locale-benchmarks.json; web\\src\\i18n\\en\\locale-charging.json; web\\src\\i18n\\en\\locale-dashboard.json; web\\src\\i18n\\en\\locale-dashcam.json; web\\src\\i18n\\en\\locale-detail-achievements.json; web\\src\\i18n\\en\\locale-detail-activity.json; web\\src\\i18n\\en\\locale-detail-addressInput.json; web\\src\\i18n\\en\\locale-detail-alerts.json; web\\src\\i18n\\en\\locale-detail-annotation.json; web\\src\\i18n\\en\\locale-detail-anomalies.json; web\\src\\i18n\\en\\locale-detail-apiLogs.json; web\\src\\i18n\\en\\locale-detail-app.json; web\\src\\i18n\\en\\locale-detail-arrivalReliability.json; web\\src\\i18n\\en\\locale-detail-battery.json; web\\src\\i18n\\en\\locale-detail-browserNotifications.json; web\\src\\i18n\\en\\locale-detail-bulk.json; web\\src\\i18n\\en\\locale-detail-calculationDetails.json; web\\src\\i18n\\en\\locale-detail-carbon.json; web\\src\\i18n\\en\\locale-detail-chart.json; web\\src\\i18n\\en\\locale-detail-chatbot.json; web\\src\\i18n\\en\\locale-detail-coldStart.json; web\\src\\i18n\\en\\locale-detail-combobox.json; web\\src\\i18n\\en\\locale-detail-commands.json; web\\src\\i18n\\en\\locale-detail-consent.json; web\\src\\i18n\\en\\locale-detail-dashboard.json; web\\src\\i18n\\en\\locale-detail-dataState.json; web\\src\\i18n\\en\\locale-detail-date.json; web\\src\\i18n\\en\\locale-detail-dayLog.json; web\\src\\i18n\\en\\locale-detail-delta.json; web\\src\\i18n\\en\\locale-detail-departure.json; web\\src\\i18n\\en\\locale-detail-departureForecast.json; web\\src\\i18n\\en\\locale-detail-destinationTransitions.json; web\\src\\i18n\\en\\locale-detail-developerReference.json; web\\src\\i18n\\en\\locale-detail-diagnostic.json; web\\src\\i18n\\en\\locale-detail-digitalTwin.json; web\\src\\i18n\\en\\locale-detail-draft.json; web\\src\\i18n\\en\\locale-detail-driveCompare.json; web\\src\\i18n\\en\\locale-detail-driveDetail.json; web\\src\\i18n\\en\\locale-detail-driveDna.json; web\\src\\i18n\\en\\locale-detail-drives.json; web\\src\\i18n\\en\\locale-detail-driveScore.json; web\\src\\i18n\\en\\locale-detail-drivetrain.json; web\\src\\i18n\\en\\locale-detail-driving.json; web\\src\\i18n\\en\\locale-detail-drivingSecondary.json; web\\src\\i18n\\en\\locale-detail-dynamics.json; web\\src\\i18n\\en\\locale-detail-editConflict.json; web\\src\\i18n\\en\\locale-detail-efficiency.json; web\\src\\i18n\\en\\locale-detail-effTarget.json; web\\src\\i18n\\en\\locale-detail-emptyState.json; web\\src\\i18n\\en\\locale-detail-energyAnatomy.json; web\\src\\i18n\\en\\locale-detail-entityContext.json; web\\src\\i18n\\en\\locale-detail-error.json; web\\src\\i18n\\en\\locale-detail-explorer.json; web\\src\\i18n\\en\\locale-detail-export.json; web\\src\\i18n\\en\\locale-detail-exports.json; web\\src\\i18n\\en\\locale-detail-feedback.json; web\\src\\i18n\\en\\locale-detail-feedbackTriage.json; web\\src\\i18n\\en\\locale-detail-filters.json; web\\src\\i18n\\en\\locale-detail-forms.json; web\\src\\i18n\\en\\locale-detail-freshness.json; web\\src\\i18n\\en\\locale-detail-fsd.json; web\\src\\i18n\\en\\locale-detail-fsm.json; web\\src\\i18n\\en\\locale-detail-glossary.json; web\\src\\i18n\\en\\locale-detail-guard.json; web\\src\\i18n\\en\\locale-detail-helix.json; web\\src\\i18n\\en\\locale-detail-help.json; web\\src\\i18n\\en\\locale-detail-impersonation.json; web\\src\\i18n\\en\\locale-detail-journeyFragmentation.json; web\\src\\i18n\\en\\locale-detail-kiosk.json; web\\src\\i18n\\en\\locale-detail-landscape.json; web\\src\\i18n\\en\\locale-detail-live.json; web\\src\\i18n\\en\\locale-detail-liveLogs.json; web\\src\\i18n\\en\\locale-detail-logbook.json; web\\src\\i18n\\en\\locale-detail-maps.json; web\\src\\i18n\\en\\locale-detail-mqttSseInspector.json; web\\src\\i18n\\en\\locale-detail-notifications.json; web\\src\\i18n\\en\\locale-detail-onboarding.json; web\\src\\i18n\\en\\locale-detail-operationalMode.json; web\\src\\i18n\\en\\locale-detail-operations.json; web\\src\\i18n\\en\\locale-detail-originConcentration.json; web\\src\\i18n\\en\\locale-detail-pagination.json; web\\src\\i18n\\en\\locale-detail-paint.json; web\\src\\i18n\\en\\locale-detail-palette.json; web\\src\\i18n\\en\\locale-detail-polling.json; web\\src\\i18n\\en\\locale-detail-presentation.json; web\\src\\i18n\\en\\locale-detail-problemReport.json; web\\src\\i18n\\en\\locale-detail-productPreferences.json; web\\src\\i18n\\en\\locale-detail-pwa.json; web\\src\\i18n\\en\\locale-detail-rangeBuffer.json; web\\src\\i18n\\en\\locale-detail-rbac.json; web\\src\\i18n\\en\\locale-detail-recentPages.json; web\\src\\i18n\\en\\locale-detail-regen.json; web\\src\\i18n\\en\\locale-detail-replay.json; web\\src\\i18n\\en\\locale-detail-requiresAuth.json; web\\src\\i18n\\en\\locale-detail-rhythm.json; web\\src\\i18n\\en\\locale-detail-routeEfficiency.json; web\\src\\i18n\\en\\locale-detail-savedViews.json; web\\src\\i18n\\en\\locale-detail-search.json; web\\src\\i18n\\en\\locale-detail-seasonalEfficiency.json; web\\src\\i18n\\en\\locale-detail-segments.json; web\\src\\i18n\\en\\locale-detail-serviceMode.json; web\\src\\i18n\\en\\locale-detail-session.json; web\\src\\i18n\\en\\locale-detail-settings.json; web\\src\\i18n\\en\\locale-detail-shortcuts.json; web\\src\\i18n\\en\\locale-detail-signalConfig.json; web\\src\\i18n\\en\\locale-detail-signalQuery.json; web\\src\\i18n\\en\\locale-detail-sourceLayer.json; web\\src\\i18n\\en\\locale-detail-speedProfile.json; web\\src\\i18n\\en\\locale-detail-speedSweetSpot.json; web\\src\\i18n\\en\\locale-detail-stateMachineDebugger.json; web\\src\\i18n\\en\\locale-detail-statusBar.json; web\\src\\i18n\\en\\locale-detail-sudo.json; web\\src\\i18n\\en\\locale-detail-sweetSpot.json; web\\src\\i18n\\en\\locale-detail-systemStatus.json; web\\src\\i18n\\en\\locale-detail-table.json; web\\src\\i18n\\en\\locale-detail-tagInput.json; web\\src\\i18n\\en\\locale-detail-tesla.json; web\\src\\i18n\\en\\locale-detail-teslaOnly.json; web\\src\\i18n\\en\\locale-detail-theme.json; web\\src\\i18n\\en\\locale-detail-timeline.json; web\\src\\i18n\\en\\locale-detail-timeMachine.json; web\\src\\i18n\\en\\locale-detail-toast.json; web\\src\\i18n\\en\\locale-detail-tour.json; web\\src\\i18n\\en\\locale-detail-tripPlanner.json; web\\src\\i18n\\en\\locale-detail-vehicleHero.json; web\\src\\i18n\\en\\locale-detail-voiceMode.json; web\\src\\i18n\\en\\locale-detail-watch.json; web\\src\\i18n\\en\\locale-detail-watchFaceNL.json; web\\src\\i18n\\en\\locale-detail-whatIf.json; web\\src\\i18n\\en\\locale-diagnostics.json; web\\src\\i18n\\en\\locale-driving-arrival-reliability.json; web\\src\\i18n\\en\\locale-driving-cold-start.json; web\\src\\i18n\\en\\locale-driving-departure-forecast.json; web\\src\\i18n\\en\\locale-driving-destination-transitions.json; web\\src\\i18n\\en\\locale-driving-drive-compare.json; web\\src\\i18n\\en\\locale-driving-drive-dna.json; web\\src\\i18n\\en\\locale-driving-drive-score.json; web\\src\\i18n\\en\\locale-driving-drivetrain-health.json; web\\src\\i18n\\en\\locale-driving-driving-dynamics.json; web\\src\\i18n\\en\\locale-driving-driving-rhythm.json; web\\src\\i18n\\en\\locale-driving-efficiency-target.json; web\\src\\i18n\\en\\locale-driving-efficiency.json; web\\src\\i18n\\en\\locale-driving-explorer.json; web\\src\\i18n\\en\\locale-driving-fsdinsights.json; web\\src\\i18n\\en\\locale-driving-journey-fragmentation.json; web\\src\\i18n\\en\\locale-driving-range-buffer.json; web\\src\\i18n\\en\\locale-driving-regen-efficiency.json; web\\src\\i18n\\en\\locale-driving-route-efficiency.json; web\\src\\i18n\\en\\locale-driving-seasonal-efficiency.json; web\\src\\i18n\\en\\locale-driving-segments.json; web\\src\\i18n\\en\\locale-driving-speed-profile.json; web\\src\\i18n\\en\\locale-driving-speed-sweet-spot.json; web\\src\\i18n\\en\\locale-driving-trip-logbook.json; web\\src\\i18n\\en\\locale-driving-trip-planner.json; web\\src\\i18n\\en\\locale-driving-what-if.json; web\\src\\i18n\\en\\locale-driving.json; web\\src\\i18n\\en\\locale-explore.json; web\\src\\i18n\\en\\locale-exports.json; web\\src\\i18n\\en\\locale-fleet-ops.json; web\\src\\i18n\\en\\locale-home-energy.json; web\\src\\i18n\\en\\locale-intelligence-packs.json; web\\src\\i18n\\en\\locale-maps.json; web\\src\\i18n\\en\\locale-notifications.json; web\\src\\i18n\\en\\locale-ownership.json; web\\src\\i18n\\en\\locale-power-user.json; web\\src\\i18n\\en\\locale-resale-vault.json; web\\src\\i18n\\en\\locale-science.json; web\\src\\i18n\\en\\locale-service-intelligence.json; web\\src\\i18n\\en\\locale-settings.json; web\\src\\i18n\\en\\locale-sharing.json; web\\src\\i18n\\en\\locale-system.json; web\\src\\i18n\\en\\locale-telemetry.json; web\\src\\i18n\\en\\locale-trips.json; web\\src\\i18n\\en\\locale-unreferenced.json; web\\src\\i18n\\en\\locale-vehicle-systems.json; web\\src\\i18n\\en\\locale-vehicles.json; web\\src\\i18n\\en\\runtime-manifest.json; web\\src\\i18n\\en\\shell.json; web\\src\\i18n\\en\\usage-manifest.json\n595|status=[x]|item=audit-page-106|files=web\\src\\features\\driving\\pages\\DestinationTransitionsPage.tsx; docs\\frontend-audits\\audit-page-106.json\n1584|status=[x]|item=phase3-suite939-file-131|files=web\\src\\features\\driving\\pages\\DestinationTransitionsPage.test.tsx\n1729|status=[b]|item=phase5-feature-migration|files=-\n1851|status=[x]|item=phase5-page-driving-destination-transitions|files=web\\src\\features\\driving\\pages\\DestinationTransitionsPage.tsx; web\\src\\features\\driving\\pages\\DestinationTransitionsPage.test.tsx\nuseDriving.ts:79:    queryKey: drivingKeys.roadAnomalies(driveId),\nuseDriving.ts:117:    queryKey: drivingKeys.drives(vehicleId, window),\nuseDriving.ts:143:export function useDriveHistory(vehicleId?: string, limit = 1000) {\nuseDriving.ts:146:    queryKey: drivingKeys.history(vehicleId, boundedLimit),\nuseDriving.ts:163:    queryKey: drivingKeys.calendar(vehicleId, start, end),\nuseDriving.ts:199:    queryKey: drivingKeys.drive(id),\nuseDriving.ts:211:    queryKey: drivingKeys.score(vehicleId),\nuseDriving.ts:221:/** Full completed-drive aggregate; bounds scope started_at, never the list page. */\nuseDriving.ts:224:    queryKey: drivingKeys.stats(vehicleId, window),\nuseDriving.ts:240:    queryKey: drivingKeys.dynamics(vehicleId),\nuseDriving.ts:252:    queryKey: drivingKeys.accelerationDistribution(vehicleId),\nuseDriving.ts:266:    queryKey: drivingKeys.drivetrainHealth(vehicleId),\nuseDriving.ts:280:    queryKey: [...drivingKeys.speedProfile(vehicleId), start, end],\nuseDriving.ts:294:    queryKey: [...drivingKeys.regenEfficiency(vehicleId), start, end],\nuseDriving.ts:308:    queryKey: [...drivingKeys.routeEfficiency(vehicleId), start, end],\nuseDriving.ts:322:    queryKey: ['drive-positions', driveId],\nuseDriving.ts:331:    queryKey: ['drive-telemetry', driveId],\nuseDriving.ts:340:    queryKey: drivingKeys.coach(vehicleId, days),\nuseDriving.ts:378:    queryKey: ['geocode-search', query],\nuseDriving.ts:410:        invalidateAndBroadcast(qc, { queryKey: ['drives'] });\nuseDriving.ts:411:        invalidateAndBroadcast(qc, { queryKey: ['drive'] });\nuseDriving.ts:412:        invalidateAndBroadcast(qc, { queryKey: ['analytics', 'fsd'] });\nuseDriving.ts:442:    queryKey: drivingKeys.whyEnded(id, window),\nweb\\src\\lib\\workspaceScope.ts:23:export const RANGE_ENABLED_PATHS: ReadonlySet<string> = new Set([\nweb\\src\\lib\\workspaceScope.ts:165:    range: RANGE_ENABLED_PATHS.has(normalized),\nweb\\src\\App.tsx:100:const DestinationTransitions = lazy(() => import('./features/driving/pages/DestinationTransitionsPage'))\nweb\\src\\App.tsx:870:        <Route path=\"destination-transitions\" element={<SafeRoute name=\"DestinationTransitions\"><DestinationTransitions /></SafeRoute>} />\nweb\\src\\types\\driving.ts:1:export interface Drive {\nweb\\src\\types\\driving.ts:40:export interface DriveDetail extends Drive {\nweb\\src\\types\\driving.ts:45:export interface DrivePosition {\nweb\\src\\types\\driving.ts:64:export interface DriveTelemetryPoint {\nweb\\src\\types\\driving.ts:92:export interface DriveScore {\nweb\\src\\types\\driving.ts:135:export interface DrivetrainHealthData {\nEXIT=0"
+    },
+    {
+      "id": "C03",
+      "numericExit": 0,
+      "rawOutput": "COMMAND C03: Select-String bounded mechanisms and necessary shared source\nQUEUE_PATTERN=DestinationTransitionProfilePlot.tsx|OriginConcentrationPlot.tsx MATCHED_LINES=0\nQUEUE_PATTERN=TopTransitionMatrix.tsx MATCHED_LINES=0\nQUEUE_PATTERN=DestinationTransitionsMetricGroup.tsx|NestedDrivingBrief.tsx MATCHED_LINES=1\n1355|[x]|phase3-nested-driving-brief|phase3-operational-brief\nQUEUE_PATTERN=initial.paused|initial.*paused MATCHED_LINES=6\n293|[~]|phase6-fix-action-center-history-pagination|phase6-qa-action-center\n305|[ ]|phase6-fix-data-quality-source-status|phase6-fix-nested-api-errors; phase6-qa-admin-data-quality\n410|[~]|phase6-fix-behavioral-evidence-source-trust|phase6-qa-advanced-behavioral-sentinel; phase6-qa-advanced-road-hazard-mesh; phase6-fix-advanced-evidence-date-preferences\n1980|[x]|phase5-page-vehicles-vehicle-access|-\n1991|[x]|phase6-action-history-retained-trust|-\n2041|[x]|phase6-vehicle-access-role-palette|-\nQUEUE_PATTERN=phase6.*legend|phase6.*matrix|phase6.*driving.*trust MATCHED_LINES=45\n293|[~]|phase6-fix-action-center-history-pagination|phase6-qa-action-center\n294|[~]|phase6-fix-nested-api-errors|-\n304|[~]|phase6-fix-data-quality-field-presentation|phase6-qa-admin-data-quality\n310|[~]|phase6-fix-gdpr-manifest-contract|phase6-qa-admin-gdprexport\n330|[ ]|phase6-fix-disk-forecast-contracts|phase6-qa-admin-disk-forecast\n333|[~]|phase6-fix-carbon-source-success-time|phase6-qa-analytics-carbon-intelligence\n349|[x]|phase6-fix-advanced-evidence-date-preferences|phase6-qa-advanced-journey-assurance; phase6-qa-advanced-causal-experimentation\n384|[~]|phase6-qa-driving-arrival-reliability|phase5-page-driving-arrival-reliability\n385|[~]|phase6-qa-driving-cold-start|phase5-page-driving-cold-start\n386|[~]|phase6-qa-driving-departure-forecast|phase5-page-driving-departure-forecast\n387|[~]|phase6-qa-driving-destination-transitions|phase5-page-driving-destination-transitions\n388|[~]|phase6-qa-driving-drive-compare|phase5-page-driving-drive-compare\n389|[~]|phase6-qa-driving-drive-detail|phase5-page-driving-drive-detail\n390|[~]|phase6-qa-driving-drive-dna|phase5-page-driving-drive-dna\n391|[~]|phase6-qa-driving-drive-score|phase5-page-driving-drive-score\n392|[~]|phase6-qa-driving-drivetrain-health|phase5-page-driving-drivetrain-health\n393|[~]|phase6-qa-driving-driving-dynamics|phase5-page-driving-driving-dynamics\n394|[~]|phase6-qa-driving-driving-rhythm|phase5-page-driving-driving-rhythm\n395|[~]|phase6-qa-driving-efficiency|phase5-page-driving-efficiency\n396|[ ]|phase6-qa-driving-efficiency-target|phase5-page-driving-efficiency-target\n397|[ ]|phase6-qa-driving-explorer|phase5-page-driving-explorer\n398|[ ]|phase6-qa-driving-fsdinsights|phase5-page-driving-fsdinsights\n399|[ ]|phase6-qa-driving-journey-fragmentation|phase5-page-driving-journey-fragmentation\n400|[ ]|phase6-qa-driving-regen-efficiency|phase5-page-driving-regen-efficiency\n401|[ ]|phase6-qa-driving-segments|phase5-page-driving-segments\n402|[ ]|phase6-qa-driving-speed-profile|phase5-page-driving-speed-profile\n403|[ ]|phase6-qa-driving-speed-sweet-spot|phase5-page-driving-speed-sweet-spot\n415|[ ]|phase6-qa-battery-energy-flow|phase5-page-battery-energy-flow\n1712|[ ]|phase4-pilot-settings|phase4-pilot-current-fullsuite\n1787|[x]|phase5-page-advanced-intelligence-road-hazard-mesh|-\n1851|[x]|phase5-page-driving-destination-transitions|-\n1938|[x]|phase5-page-system-state-machine-debugger|-\n1953|[x]|phase5-page-telemetry-signal-mutual-information|-\n1986|[x]|phase6-home-tariff-heatmap-access|-\n1989|[x]|phase6-home-energy-chart-paint|-\n1990|[x]|phase6-home-powerwall-chart-paint|-\n1991|[x]|phase6-action-history-retained-trust|-\n1997|[x]|phase6-daylog-sources-table|-\n2006|[x]|phase6-export-breakdown-fill|-\n2027|[x]|phase6-drivetrain-power-chart|-\n2028|[x]|phase6-drivetrain-thermal-source-trust|-\n2029|[x]|phase6-drivetrain-detail-source-trust|-\n2030|[x]|phase6-drivetrain-live-isolation-trust|-\n2033|[x]|phase6-drivetrain-source-trust-wiring|phase6-drivetrain-thermal-source-trust; phase6-drivetrain-detail-source-trust\n2034|[x]|phase6-drivetrain-exact-range-integration|-\nQUEUE_PATTERN=workspace.*range|date.*bounds MATCHED_LINES=15\n337|[ ]|phase6-qa-analytics-fleet-compare|phase5-page-analytics-fleet-compare\n346|[ ]|phase6-qa-analytics-year-review|phase5-page-analytics-year-review\n348|[ ]|phase6-qa-automations-automation-history|phase5-page-automations-automation-history\n366|[ ]|phase6-qa-charging-charging-detail|phase5-page-charging-charging-detail\n368|[~]|phase6-qa-charging-charging-list|phase5-page-charging-charging-list\n369|[~]|phase6-qa-charging-charging-thermal-tax|phase5-page-charging-charging-thermal-tax\n478|[x]|phase6-native-drives-trend-control-allocation|phase3-chart-container,primitive-button\n487|[x]|phase5-current-source-catalog-closure|-\n1121|[x]|phase3-full-test-composed-page-scope-scanners|-\n1139|[x]|phase3-full-test-daylog-review-bounds-fixture|-\n1260|[x]|phase3-full-test-timeline-review-description-scope-fixture|-\n1777|[x]|phase5-page-admin-vehicle-cost|-\n1822|[x]|phase5-page-battery-power-flow-dashboard|-\n1911|[x]|phase5-page-science-science-lab|-\n2035|[x]|phase6-departure-runtime-caveat-oracle|phase6-departure-summary-semantics\nweb\\src\\components\\charts\\ChartContainer.tsx:31:import { ChartHiddenSeriesProvider } from './ChartHiddenSeriesContext';\nweb\\src\\components\\charts\\ChartContainer.tsx:69:   * `chartKey` prop (which both opts the chart into URL state AND sets up\nweb\\src\\components\\charts\\ChartContainer.tsx:205:   * `useHiddenSeries(chartKey)` and exposes the resulting state both\nweb\\src\\components\\charts\\ChartContainer.tsx:216:  chartKey?: string;\nweb\\src\\components\\charts\\ChartContainer.tsx:323:      chartKey,\nweb\\src\\components\\charts\\ChartContainer.tsx:352:      annotationsConfig?.scope, annotationKey, chartKey ?? null, variant,\nweb\\src\\components\\charts\\ChartContainer.tsx:514:    // ReferenceLines also render — Tailwind's `hidden sm:block` on the chart\nweb\\src\\components\\charts\\ChartContainer.tsx:544:        data-chart-key={chartKey}\nweb\\src\\components\\charts\\ChartContainer.tsx:595:            'flex min-w-0 flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4',\nweb\\src\\components\\charts\\ChartContainer.tsx:632:            className=\"flex w-full flex-wrap items-center justify-end gap-1 sm:w-auto\"\nweb\\src\\components\\charts\\ChartContainer.tsx:742:            className=\"mb-2 flex flex-wrap gap-1.5 sm:hidden\"\nweb\\src\\components\\charts\\ChartContainer.tsx:773:                  'sm:min-h-[var(--chart-height-desktop)]',\nweb\\src\\components\\charts\\ChartContainer.tsx:777:                  'sm:h-[var(--chart-height-desktop)] sm:min-h-[var(--chart-height-desktop)] sm:max-h-[var(--chart-height-desktop)]',\nweb\\src\\components\\charts\\ChartContainer.tsx:790:          role={loading || error || empty ? undefined : chartKey ? 'group' : 'img'}\nweb\\src\\components\\charts\\ChartContainer.tsx:822:            <ChartHiddenSeriesProvider chartKey={chartKey}>\nweb\\src\\components\\charts\\ChartContainer.tsx:831:            </ChartHiddenSeriesProvider>\nweb\\src\\components\\charts\\ChartHiddenSeriesContext.tsx:6: * `<ChartContainer chartKey=\"…\">`, avoiding prop drilling to legends.\nweb\\src\\components\\charts\\ChartHiddenSeriesContext.tsx:13:export function useChartHiddenSeries(): HiddenSeriesState | null {\nweb\\src\\components\\charts\\ChartHiddenSeriesContext.tsx:19: * {@link useHiddenSeries} only when `chartKey` is truthy so charts that\nweb\\src\\components\\charts\\ChartHiddenSeriesContext.tsx:28:export function ChartHiddenSeriesProvider({\nweb\\src\\components\\charts\\ChartHiddenSeriesContext.tsx:29:  chartKey,\nweb\\src\\components\\charts\\ChartHiddenSeriesContext.tsx:32:  chartKey?: string;\nweb\\src\\components\\charts\\ChartHiddenSeriesContext.tsx:35:  if (!chartKey) {\nweb\\src\\components\\charts\\ChartHiddenSeriesContext.tsx:39:    <ChartHiddenSeriesProviderInner chartKey={chartKey}>\nweb\\src\\components\\charts\\ChartHiddenSeriesContext.tsx:41:    </ChartHiddenSeriesProviderInner>\nweb\\src\\components\\charts\\ChartHiddenSeriesContext.tsx:45:function ChartHiddenSeriesProviderInner({\nweb\\src\\components\\charts\\ChartHiddenSeriesContext.tsx:46:  chartKey,\nweb\\src\\components\\charts\\ChartHiddenSeriesContext.tsx:49:  chartKey: string;\nweb\\src\\components\\charts\\ChartHiddenSeriesContext.tsx:52:  const state = useHiddenSeries(chartKey);\nweb\\src\\components\\ui\\Button.tsx:36:  sm: 'h-9 px-3 text-sm',\nweb\\src\\components\\ui\\Button.tsx:45:  sm: 'h-auto min-h-9 py-1.5',\nweb\\src\\hooks\\useUnits.ts:4:  formatDistance as libFormatDistance,\nweb\\src\\hooks\\useUnits.ts:9:  formatDuration as libFormatDuration,\nweb\\src\\hooks\\useUnits.ts:27: * - Exposes `formatDistance / formatSpeed / formatTemperature /\nweb\\src\\hooks\\useUnits.ts:28: * formatPressure / formatEnergy / formatDuration / formatPower`. Every formatter\nweb\\src\\hooks\\useUnits.ts:62:  formatDistance: UnitFormatter\nweb\\src\\hooks\\useUnits.ts:67:  formatDuration: UnitFormatter\nweb\\src\\hooks\\useUnits.ts:143:  const formatDistance = useCallback<UnitFormatter>(\nweb\\src\\hooks\\useUnits.ts:144:    (value, options) => libFormatDistance(value, unitPrefs, options),\nweb\\src\\hooks\\useUnits.ts:163:  const formatDuration = useCallback<UnitFormatter>(\nweb\\src\\hooks\\useUnits.ts:164:    (value, options) => libFormatDuration(value, unitPrefs, options),\nweb\\src\\hooks\\useUnits.ts:175:      formatDistance,\nweb\\src\\hooks\\useUnits.ts:180:      formatDuration,\nweb\\src\\hooks\\useUnits.ts:185:      formatDistance,\nweb\\src\\hooks\\useUnits.ts:190:      formatDuration,\nEXIT=0"
+    },
+    {
+      "id": "C04",
+      "numericExit": 0,
+      "rawOutput": "COMMAND C04: native Select-String bounded frontend patterns; matches are candidates until source disposition\nSCOPE_FILES=\n31\nSCOPE_LINES=\n3737\nRULE=static-inline-style PATTERN=style\\s*=\\s*\\{\\{.*var\\(-- MATCHED_LINES=0\nRULE=raw-html PATTERN=<(button|input|textarea|select|table)\\b MATCHED_LINES=1\nweb/src/features/driving/components/destination-transitions/DestinationTransitionsQueryStatus.tsx:83:<Button\nRULE=direct-library-import PATTERN=from\\s+['\\\"](?:recharts|react-leaflet|framer-motion)['\\\"] MATCHED_LINES=0\nRULE=old-api-import PATTERN=from\\s+['\\\"](?:\\.\\./)+api['\\\"] MATCHED_LINES=0\nRULE=double-prefix PATTERN=/api/v1/ MATCHED_LINES=0\nRULE=camelcase-param PATTERN=(?:[?&]|params\\.set\\(['\\\"])[a-z]+[A-Z][A-Za-z]*[='\\\"] MATCHED_LINES=0\nRULE=hidden-section PATTERN=\\{\\s*\\w+(?:\\.\\w+)*\\s*&&\\s*<(?:GlassPanel|section|ChartContainer)\\b MATCHED_LINES=0\nRULE=hardcoded-jsx-text-candidate PATTERN=>\\s*[A-Za-z][A-Za-z ,.!?:;-]+\\s*</ MATCHED_LINES=0\nRULE=page-container-direct-candidate PATTERN=<PageContainer\\b MATCHED_LINES=0\nRULE=fetch-useeffect-candidate PATTERN=\\b(?:fetch\\s*\\(|useEffect\\s*\\() MATCHED_LINES=0\nRULE=neon-decoration PATTERN=(?:bg|border|text|shadow)-neon- MATCHED_LINES=1\nweb/src/features/driving/components/destination-transitions/TopTransitionMatrix.tsx:134:? 'border-neon-cyan/20 bg-neon-cyan/5'\nRULE=category-import-candidate PATTERN=@/components/(?!ui['\\\"]|layout['\\\"]|motion['\\\"]|feedback['\\\"]|charts['\\\"]|data-display['\\\"]|data-display/stat-reference['\\\"]) MATCHED_LINES=0\nRULE=unknown-zero-candidate PATTERN=\\?\\?\\s*0 MATCHED_LINES=3\nweb/src/features/driving/components/destination-transitions/DestinationTransitionProfilePlot.tsx:69:format: (v) => String(v ?? 0),\nweb/src/features/driving/components/destination-transitions/OriginConcentrationSupportChart.tsx:40:(origin.transitionConcentrationIndex ?? 0) * 10,\nweb/src/features/driving/components/destination-transitions/OriginConcentrationSupportChart.tsx:44:(origin.leadingSuccessorObservedShare ?? 0) * 1_000,\nRULE=rum-page-candidate PATTERN=\\b(?:initRum|initRUM|startRum|startRUM|EventSource)\\b MATCHED_LINES=0\nPAGE_PAGELAYOUT_MATCHES=1\nIGNORE_RULES\n80:logs/\n110:/.github/prompts/db-refactor/logs\nEXIT=0"
+    },
+    {
+      "id": "C05",
+      "numericExit": 0,
+      "rawOutput": "COMMAND C05: corrected case-sensitive raw HTML grep and literal i18n source/catalog review\nsnapshotUTC=\n2026-10-14T01:06:52.9208068Z\nRAW_HTML_CASE_SENSITIVE_MATCHED_LINES=0\nLITERAL_FALLBACK_CALLS=275\nDISTINCT_LITERAL_KEYS=246\nMISSING_KEY_CALLS=0\nMISMATCH_CALLS=7\nweb\\src\\features\\driving\\pages\\DestinationTransitionsPage.tsx:37:destinationTransitions.title|catalog=Destination transitions|fallback=Destination Transitions\nweb\\src\\features\\driving\\pages\\DestinationTransitionsPage.tsx:87:destinationTransitions.title|catalog=Destination transitions|fallback=Destination Transitions\nweb\\src\\features\\driving\\pages\\DestinationTransitionsPage.tsx:95:destinationTransitions.title|catalog=Destination transitions|fallback=Destination Transitions\nweb\\src\\features\\driving\\components\\destination-transitions\\DestinationTransitionProfilePlot.tsx:83:destinationTransitions.profileTitle|catalog=Destination transition profile|fallback=Destination Transition Profile\nweb\\src\\features\\driving\\components\\destination-transitions\\OriginConcentrationPlot.tsx:83:originConcentration.title|catalog=Origin concentration|fallback=Origin Concentration\nweb\\src\\features\\driving\\components\\operationalbrief-a-m\\DrivingSummaryBrief.tsx:43:driving.brief.loading|catalog=Loading source|fallback=Loading evidence\nweb\\src\\features\\driving\\components\\operationalbrief-a-m\\DrivingSummaryBrief.tsx:45:driving.brief.retained|catalog=Retained source|fallback=Retained evidence\nLimits: regex handles single-quoted literal key + single-quoted fallback only; not a catalog guard/runtime localization check.\nHOOK_RANGE_143_157_RAW_MATCHES\n/api/v1/|MATCHED_LINES=0\nvehicleId=|MATCHED_LINES=0\nvehicle_id=|MATCHED_LINES=1\n\\{ signal \\}|MATCHED_LINES=2\nenabled: !!vehicleId|MATCHED_LINES=1\nselect: safeArray|MATCHED_LINES=1\nparams.*start|params.*end|startInstant|endInstantExclusive|MATCHED_LINES=0\nEXIT=0"
+    },
+    {
+      "id": "C06",
+      "numericExit": 0,
+      "rawOutput": "COMMAND C06: exact line citations, mounted counts and narrow queue dedup\nweb/src/features/driving/pages/DestinationTransitionsPage.tsx:45:() => ({ vehicleId, initialNowMs: Date.now() }),\nweb/src/features/driving/pages/DestinationTransitionsPage.tsx:49:const snapshotAt = drivesState.updatedAt;\nweb/src/features/driving/pages/DestinationTransitionsPage.tsx:51:snapshotAt != null && Number.isFinite(snapshotAt)\nweb/src/features/driving/pages/DestinationTransitionsPage.tsx:52:? snapshotAt\nweb/src/features/driving/pages/DestinationTransitionsPage.tsx:53:: analysisScope.initialNowMs;\nweb/src/features/driving/pages/DestinationTransitionsPage.tsx:74:isLoading:\nweb/src/features/driving/pages/DestinationTransitionsPage.tsx:75:vehicleId != null && drivesState.status === 'initial',\nweb/src/features/driving/pages/DestinationTransitionsPage.tsx:83:const locale = i18n.language;\nweb/src/features/driving/pages/DestinationTransitionsPage.tsx:94:{drivesState.isRefreshBlocked && (\nweb/src/features/driving/pages/DestinationTransitionsPage.tsx:95:<StaleRefreshWarning state={drivesState} label={t('destinationTransitions.title', 'Destination Transitions')} />\nweb/src/features/driving/components/destination-transitions/DestinationTransitionsQueryStatus.tsx:39:if (state.isLoading) {\nweb/src/features/driving/components/destination-transitions/DestinationTransitionsQueryStatus.tsx:83:<Button\nweb/src/features/driving/components/destination-transitions/DestinationTransitionsQueryStatus.tsx:86:size=\"sm\"\nweb/src/features/driving/components/destination-transitions/DestinationTransitionsMetricGroup.tsx:19:return <NestedDrivingBrief title={title} metrics={metrics} description={description}\nweb/src/features/driving/components/destination-transitions/TopTransitionMatrix.tsx:38:cell.status === 'unsupported_origin'\nweb/src/features/driving/components/destination-transitions/TopTransitionMatrix.tsx:66:<Grid3X3 className=\"h-4 w-4 text-cyan-300\" aria-hidden=\"true\" />\nweb/src/features/driving/components/destination-transitions/TopTransitionMatrix.tsx:80:className=\"overflow-x-auto pb-2\"\nweb/src/features/driving/components/destination-transitions/TopTransitionMatrix.tsx:81:role=\"table\"\nweb/src/features/driving/components/destination-transitions/TopTransitionMatrix.tsx:131:cell.status === 'unsupported_origin'\nweb/src/features/driving/components/destination-transitions/TopTransitionMatrix.tsx:133:: cell.status === 'observed'\nweb/src/features/driving/components/destination-transitions/TopTransitionMatrix.tsx:134:? 'border-neon-cyan/20 bg-neon-cyan/5'\nweb/src/features/driving/components/destination-transitions/TopTransitionMatrix.tsx:149:{cell.status === 'unsupported_origin' ? (\nweb/src/features/driving/components/destination-transitions/DestinationTransitionsMethodology.tsx:68:'Adjacent rows connect only when normalized addresses match or valid coordinates are within {{meters}} m, and the current start does not overlap the previous end. {{maxGap}}',\nweb/src/features/driving/components/destination-transitions/DestinationTransitionsMethodology.tsx:70:meters: fmtNumber(model.config.gpsToleranceM, undefined, locale),\nweb/src/features/driving/components/destination-transitions/DestinationTransitionsMethodology.tsx:166:<FlaskConical className=\"h-4 w-4 text-cyan-300\" aria-hidden=\"true\" />\nweb/src/features/driving/components/destination-transitions/DestinationTransitionsMethodology.tsx:181:<div className=\"mb-2 flex items-center gap-2 text-cyan-300\">\nweb/src/features/driving/components/destination-transitions/DestinationContinuityMetrics.tsx:93:metricId: 'distance', rawValue: model.config.gpsToleranceM,\nweb/src/features/driving/components/destination-transitions/DestinationContinuityMetrics.tsx:95:'destinationTransitions.quality.pairs.meters',\nweb/src/features/driving/components/destination-transitions/DestinationContinuityMetrics.tsx:97:{ count: Math.round(model.config.gpsToleranceM) },\nweb/src/features/driving/components/destination-transitions/OriginConcentrationPlot.tsx:81:<EmbeddedChart\nweb/src/features/driving/components/destination-transitions/OriginConcentrationPlot.tsx:82:chartKey=\"origin-concentration\"\nweb/src/features/driving/components/destination-transitions/OriginConcentrationPlot.tsx:83:title={t('originConcentration.title', 'Origin Concentration')}\nweb/src/features/driving/components/destination-transitions/DestinationTransitionProfilePlot.tsx:81:<EmbeddedChart\nweb/src/features/driving/components/destination-transitions/DestinationTransitionProfilePlot.tsx:82:chartKey=\"destination-transition-profile\"\nweb/src/features/driving/components/destination-transitions/DestinationTransitionProfilePlot.tsx:83:title={t('destinationTransitions.profileTitle', 'Destination Transition Profile')}\nweb/src/features/driving/components/destination-transitions/DestinationVisitShareChart.tsx:40:share: Math.round(destination.visitShare * 1_000) / 10,\nweb/src/features/driving/components/destination-transitions/OriginConcentrationSupportChart.tsx:39:Math.round(\nweb/src/features/driving/components/destination-transitions/OriginConcentrationSupportChart.tsx:43:Math.round(\nweb/src/features/driving/components/destination-transitions/OriginConcentrationSupportChart.tsx:48:supportIndex: Math.round(origin.support.index * 10) / 10,\nweb/src/features/driving/components/destination-transitions/OriginConcentrationSupportChart.tsx:83:chartKey=\"destination-origin-concentration\"\nweb/src/features/driving/components/destination-transitions/LocalTwoHourTransitionProfile.tsx:41:? Math.round(point.leadingEdgeShare * 1_000) / 10\nweb/src/features/driving/components/destination-transitions/LocalTwoHourTransitionProfile.tsx:79:chartKey=\"destination-two-hour-profile\"\nweb/src/features/driving/components/destination-transitions/WeekdayTransitionProfile.tsx:41:? Math.round(point.leadingEdgeShare * 1_000) / 10\nweb/src/features/driving/components/destination-transitions/WeekdayTransitionProfile.tsx:79:chartKey=\"destination-weekday-profile\"\nweb/src/features/driving/components/destination-transitions/MonthlyTransitionTrend.tsx:45:? Math.round(point.leadingEdgeShare * 1_000) / 10\nweb/src/features/driving/components/destination-transitions/MonthlyTransitionTrend.tsx:82:chartKey=\"destination-month-trend\"\nPAGE_LINES=191\nDIRECTORY_FILES=27\nDIRECTORY_LINES=3375\nMOUNTED_PRESENTATION_FILES=24\nMOUNTED_PRESENTATION_LINES=3059\nACTUAL_SECTION_TAGS_PRESENTATION=12\nCHART_HOST_FILES=5\nNESTED_CHART_RENDERER_FILES=2\nEXACT_QUEUE_PATTERN=destinationTransitions.quality.pairs.meters MATCHED_LINES=0\nEXACT_QUEUE_PATTERN=destinationTransitions.method.continuityBody MATCHED_LINES=0\nEXACT_QUEUE_PATTERN=destinationTransitions.profileTitle MATCHED_LINES=0\nEXACT_QUEUE_PATTERN=originConcentration.title MATCHED_LINES=0\nEXACT_QUEUE_PATTERN=destinationTransitions.title MATCHED_LINES=0\nEXACT_QUEUE_PATTERN=DestinationTransitionsPage.*locale MATCHED_LINES=0\nEXACT_QUEUE_PATTERN=destination-transition-profile MATCHED_LINES=0\nEXACT_QUEUE_PATTERN=OriginConcentrationPlot MATCHED_LINES=0\nEXACT_QUEUE_PATTERN=TopTransitionMatrix MATCHED_LINES=0\nEXACT_QUEUE_PATTERN=DestinationTransitionsMetricGroup MATCHED_LINES=0\nEXACT_QUEUE_PATTERN=destination.*paused|paused.*destination MATCHED_LINES=1\n1998|[x]|phase6-onboarding-health-touch\nEXIT=0"
+    },
+    {
+      "id": "C07",
+      "numericExit": 0,
+      "rawOutput": "COMMAND C07: necessary supporting file pins, full model bounded grep and copy-parity queue dedup\nweb/src/api/hooks/useDriving.ts|lines=454|sha256=c3dfd3825d09bc1ba37281bfe4d48d5626ddbc27059f0a90eef5f14fffc27392\nweb/src/types/driving.ts|lines=411|sha256=ec3c65df87afcc71b65aea70bc3f83ae235150ad66c144243abc603eceb61161\nweb/src/lib/workspaceScope.ts|lines=168|sha256=aeb8c01d410f2377aa5fd713de1a678a0360acf647a9c882f03e46c80efdfcd7\nweb/src/App.tsx|lines=919|sha256=10669c20207b9da28a7691107c23bcb6e7f2105bd17bd472aefd92399f1a517c\nweb/src/hooks/useSelectedVehicle.ts|lines=174|sha256=c52768ea42f3e8dd34399f1372a09eb3f70d6c6cb2dddbc41790a6d30e7c4ae3\nweb/src/hooks/useDataState.ts|lines=65|sha256=785bd47e706b066874bec8999d51093982e93b9680b8dec16bddc023dc57fb9b\nweb/src/api/dataState.ts|lines=434|sha256=21fb454b3c1f01608169f3f3887911de97f7c754663cc001236ebfde58211761\nweb/src/components/layout/layout-reference/PageLayout.tsx|lines=17|sha256=7b7ef06a05fe4a97ab0cfbc8e989901db0ffca898dec7d4f5cd796536b4dca3b\nweb/src/components/layout/PageContainer.tsx|lines=259|sha256=4b718ac20f8a473a3c59b6dbd7031d9bb686e2c3ad93b25ddb94523eea074b4a\nweb/src/components/charts/EmbeddedChart.tsx|lines=42|sha256=58c2c8279d0d050b9bd9b9df556bedd70713607a196488943d9425774f475721\nweb/src/components/charts/ChartLegend.tsx|lines=193|sha256=e5f0b49f6f1159224d3b000ce2c57800dc13ce33c3053dc72ee1e35b2da67095\nweb/src/components/charts/ChartHiddenSeriesContext.tsx|lines=58|sha256=1daecf7d4cfcc161a3a698ec68ba8971c6d06ba1231025a5a5e7528cd36f7594\nweb/src/components/charts/ChartContainer.tsx|lines=1006|sha256=6ac14784e96c7d61b8cae879b7be39ca7b9a54c520f02ef8260845b1d3fd9694\nweb/src/hooks/useHiddenSeries.ts|lines=88|sha256=a7cfecebbb60e53783e13dbfabcca5ca685b06f72ab6684fe3b6f712409d876e\nweb/src/components/ui/Button.tsx|lines=93|sha256=e43e202cc9f465efeef93a1be2b156255958934af635abf0eaa408f310dde16c\nweb/src/components/feedback/StaleRefreshWarning.tsx|lines=115|sha256=c8df62e2a4f40f60c2cbd3866c48e0590175f7307814fa7e7daea7e36a0312e9\nweb/src/hooks/useNumberFormatting.ts|lines=47|sha256=e32c23df1cb2001d54d324e2e0a7be6077720a26820a1cf2ac6c81358aca2ad7\nweb/src/lib/dateFormat.ts|lines=462|sha256=30eeb276813505d3cee3d0b1df38a7b13fc97dce388a0c5b2c3c86c902f62f64\nweb/src/lib/timezone.ts|lines=51|sha256=4de9f4981d65173697e16db705ca06b279e9ccb700ac6c98d0d27439f25d5f02\nweb/src/hooks/useDateFormat.ts|lines=148|sha256=97b1b0ebd44436cd8274a4927d0df4381b112df1468a22ef6238029675d6a542\nweb/src/hooks/useUnits.ts|lines=194|sha256=b90452309357b88fe27edf878a943ff46cf9083015592d1587997b5c0f4a8b14\nweb/src/hooks/useSettings.ts|lines=146|sha256=f0dddd38c53e59a7103f9ee3160263017654f77ac5001c7eb0d941816b9fdca3\nweb/src/lib/metric-reference/formatMetric.ts|lines=137|sha256=0337b9f06cd2e21bbd763e3b7dc1d0c6f13ef3017df0b0ca84b36b2f3083ffe5\nweb/src/components/motion/FadeIn.tsx|lines=39|sha256=8624fff5c039500e35b04dd4a53d3697a7186a92bdc922bb2a8e1f69001da32f\nweb/src/features/driving/components/operationalbrief-a-m/DrivingSummaryBrief.tsx|lines=53|sha256=29b6c288c2dae77b345b0985764480ab7cf99f828d42beb4ba5db63cca422e93\nweb/src/i18n/en.json|lines=38994|sha256=8d486e4996401ae48b7fbc3399c598885b38ea774b53917f0f4e90490715a893\nMODEL_PATTERN=style\\s*=\\s*\\{\\{ MATCHED_LINES=0\nMODEL_PATTERN=<(button|input|textarea|select|table)\\b MATCHED_LINES=0\nMODEL_PATTERN=from\\s+['\\\"](?:recharts|react-leaflet|framer-motion)['\\\"] MATCHED_LINES=0\nMODEL_PATTERN=from\\s+['\\\"](?:\\.\\./)+api['\\\"] MATCHED_LINES=0\nMODEL_PATTERN=/api/v1/ MATCHED_LINES=0\nMODEL_PATTERN=[?&][a-z]+[A-Z][A-Za-z]*= MATCHED_LINES=0\nMODEL_PATTERN=\\b(?:fetch\\s*\\(|useEffect\\s*\\() MATCHED_LINES=0\nMODEL_PATTERN=>\\s*[A-Za-z][A-Za-z ,.!?:;-]+\\s*</ MATCHED_LINES=0\nMODEL_PATTERN=\\b(?:initRum|initRUM|startRum|startRUM|EventSource)\\b MATCHED_LINES=0\nQUEUE_PATTERN=driving.brief.loading MATCHED_LINES=0\nQUEUE_PATTERN=driving.brief.retained MATCHED_LINES=0\nQUEUE_PATTERN=fallback.*parity|parity.*fallback MATCHED_LINES=6\n1070|[x]|phase3-full-test-admin-badge-semantic-token-fixtures\n1090|[x]|phase3-full-test-api-key-permission-semantic-token-fixtures\n1124|[x]|phase3-full-test-conflict-warning-semantic-border-fixtures\n1165|[x]|phase3-full-test-feedback-category-semantic-token-fixtures\n1241|[x]|phase3-full-test-shared-badge-consumer-token-fixtures\n1286|[x]|phase3-full-test-weekly-highlight-semantic-token-fixtures\nEXIT=0"
+    },
+    {
+      "id": "C08",
+      "numericExit": 1,
+      "rawOutput": "COMMAND C08: attempted combined report construction\nRAW_HOST_ERROR: The filename or extension is too long. (os error 206)\nHOST_EXIT=1; command body did not execute; no report created by C08.\nEXIT=1"
+    },
+    {
+      "id": "C09",
+      "numericExit": 0,
+      "rawOutput": "COMMAND C09: bounded report base write, JSON parse and source pin comparison\nsnapshotUTC=\n2026-10-14T01:16:36.2064358Z\nSOURCE_PINS=\n2\nPIN_MATCHES=\n2\nPIN_DRIFT=0\nJSON_PARSE=0\nEXIT=0"
+    },
+    {
+      "id": "C10",
+      "numericExit": 0,
+      "rawOutput": "COMMAND C10: correct dictionary pin dedup and add confirmed/candidate source mechanisms\nC09 dedup projection collapsed dictionary entries:2 pins, NOT complete verification. Retained raw receipt; corrected by explicit filename-key map.\nSOURCE_PINS=58\nPIN_MATCHES=58\nPIN_DRIFT=0\nFINDINGS=14\nCANDIDATES=5\nJSON_PARSE=0\nEXIT=0"
+    },
+    {
+      "id": "C11",
+      "numericExit": 0,
+      "rawOutput": "COMMAND C11: final structured report completion, JSON parse/counts and full pin verification\nFINAL_UTC=\n2026-10-14T01:19:31.1318486Z\nFINAL_JSON_PARSE=0\nSOURCE_PINS=58\nPIN_MATCHES=58\nPIN_DRIFT=0\nCONFIRMED_FINDINGS=14\nCANDIDATES=5\nLOGICAL_SECTIONS=12\nHOST_CHARTS=5\nPAGE_LINES=191\nMOUNTED_PRESENTATION_LINES=3059\nAPPLICATION_TESTS_LINT_BUILD_TSC=NOTRUN\nSOURCE_ONLY_NOT_NATIVE_OR_PAGE_PASS\nRELEASE_ALL=report;log;all worker bounded commands;no browser lock;no source claim\nEXIT=0",
+      "checks": "ConvertFrom-Json and count assertions; Get-FileHash SHA256 + Get-Content line comparison for every58 pinned source; final JSON parsed again after authorized write."
+    }
+  ],
+  "rawBoundedScans": {
+    "method": "Native Select-String;31 files3737 lines plus complete1601-line pure modelC07 and necessary hook143-157C05.",
+    "initialPatterns": [
+      {
+        "rule": "static-inline-style",
+        "pattern": "style\\s*=\\s*\\{\\{.*var\\(--",
+        "rawMatchedLineCount": 0
+      },
+      {
+        "rule": "raw-html",
+        "pattern": "<(button|input|textarea|select|table)\\b",
+        "rawMatchedLineCount": 1
+      },
+      {
+        "rule": "direct-library-import",
+        "pattern": "from\\s+['\\\"](?:recharts|react-leaflet|framer-motion)['\\\"]",
+        "rawMatchedLineCount": 0
+      },
+      {
+        "rule": "old-api-import",
+        "pattern": "from\\s+['\\\"](?:\\.\\./)+api['\\\"]",
+        "rawMatchedLineCount": 0
+      },
+      {
+        "rule": "double-prefix",
+        "pattern": "/api/v1/",
+        "rawMatchedLineCount": 0
+      },
+      {
+        "rule": "camelcase-param",
+        "pattern": "(?:[?&]|params\\.set\\(['\\\"])[a-z]+[A-Z][A-Za-z]*[='\\\"]",
+        "rawMatchedLineCount": 0
+      },
+      {
+        "rule": "hidden-section",
+        "pattern": "\\{\\s*\\w+(?:\\.\\w+)*\\s*&&\\s*<(?:GlassPanel|section|ChartContainer)\\b",
+        "rawMatchedLineCount": 0
+      },
+      {
+        "rule": "hardcoded-jsx-text-candidate",
+        "pattern": ">\\s*[A-Za-z][A-Za-z ,.!?:;-]+\\s*</",
+        "rawMatchedLineCount": 0
+      },
+      {
+        "rule": "page-container-direct-candidate",
+        "pattern": "<PageContainer\\b",
+        "rawMatchedLineCount": 0
+      },
+      {
+        "rule": "fetch-useeffect-candidate",
+        "pattern": "\\b(?:fetch\\s*\\(|useEffect\\s*\\()",
+        "rawMatchedLineCount": 0
+      },
+      {
+        "rule": "neon-decoration",
+        "pattern": "(?:bg|border|text|shadow)-neon-",
+        "rawMatchedLineCount": 1
+      },
+      {
+        "rule": "category-import-candidate",
+        "pattern": "@/components/(?!ui['\\\"]|layout['\\\"]|motion['\\\"]|feedback['\\\"]|charts['\\\"]|data-display['\\\"]|data-display/stat-reference['\\\"])",
+        "rawMatchedLineCount": 0
+      },
+      {
+        "rule": "unknown-zero-candidate",
+        "pattern": "\\?\\?\\s*0",
+        "rawMatchedLineCount": 3
+      },
+      {
+        "rule": "rum-page-candidate",
+        "pattern": "\\b(?:initRum|initRUM|startRum|startRUM|EventSource)\\b",
+        "rawMatchedLineCount": 0
+      }
+    ],
+    "rawHtmlCorrection": {
+      "initialRawMatches": 1,
+      "disposition": "Case-insensitive original grep matched <Button>. Original raw output retained; corrected case-sensitive grepC05 matched0 raw controls.",
+      "correctedCaseSensitiveRawMatches": 0
+    },
+    "pageContainer": {
+      "directMatches": 0,
+      "pageLayoutMatches": 1,
+      "disposition": "PageLayout renders actual shared PageContainer; not a violation."
+    },
+    "literalI18n": {
+      "literalFallbackCalls": 275,
+      "distinctKeys": 246,
+      "missingKeyCalls": 0,
+      "mismatchedCallSites": 7,
+      "mismatchedKeyMechanisms": 5,
+      "limit": "Single-quoted literal key/fallback regex only, not AST/catalog guard/runtime startup."
+    },
+    "unknownZero": {
+      "rawMatchedLines": 3,
+      "confirmedViolations": 0,
+      "disposition": "Positive-outgoing origin model constraints and known temporal sample counts justify these sites; no speculative payload violation."
+    },
+    "exceptions": [
+      "Dynamic palette array fills and vendor chart stroke props are acceptable.",
+      "Category barrels preserved; expected raw HTML/vendor imports inside actual shared components are not feature violations.",
+      "Always-mounted section shells retain loading/error/empty content gates; no hidden-section violation.",
+      "Settings/selection effects synchronize preferences/state; feature data loads through TanStack hook."
+    ],
+    "backendRules": "Not applicable; no backend SQL/log/panic/context audit run."
+  },
+  "additionalExplorationCommands": [
+    {
+      "shellId": "402",
+      "numericExit": 0,
+      "purpose": "Existing report/log preflight UTC"
+    },
+    {
+      "shellId": "401",
+      "numericExit": 0,
+      "purpose": "Locate docs/instructions"
+    },
+    {
+      "shellId": "411",
+      "numericExit": 0,
+      "purpose": "Inventory; mixed table projection omitted desired fields, later exact reads corrected"
+    },
+    {
+      "shellId": "425",
+      "numericExit": 0,
+      "purpose": "Line counts/search, host truncated28.8KB; bounded follow-up reads used, not claimed complete"
+    },
+    {
+      "shellId": "436",
+      "numericExit": 0,
+      "purpose": "Exact accepted dependency/historical tail/source names"
+    },
+    {
+      "shellId": "445",
+      "numericExit": 0,
+      "purpose": "Current headings/inventory destination matches"
+    },
+    {
+      "shellId": "452",
+      "numericExit": 0,
+      "purpose": "Mission headings/directory counts/UTC"
+    },
+    {
+      "shellId": "579",
+      "numericExit": 0,
+      "purpose": "Preference symbol reads UTC"
+    }
+  ],
+  "viewReadEvidence": "Large initial view outputs were truncated by the host; FULL contract/react reads were completed with subsequent bounded ranges. Raw tool outputs remain in the conversation.",
+  "verification": {
+    "preWriteUTC": "2026-10-14T01:17:51.8391769Z",
+    "preWriteSourcePinCount": 58,
+    "preWriteSourcePinMatches": 58,
+    "preWriteSourcePinDriftCount": 0,
+    "finalFileParse": "VERIFIED",
+    "finalPinVerification": "58/58 byte hashes and line counts matched, no drift",
+    "finalUTC": "2026-10-14T01:19:31.1318486Z"
+  },
+  "release": {
+    "state": "RELEASED",
+    "files": [
+      "docs/frontend-audits/phase6-qa-driving-destination-transitions.json",
+      "web/logs/phase6-qa-driving-destination-transitions.log"
+    ],
+    "sourceClaim": "None acquired",
+    "browserLock": "None granted/acquired",
+    "commands": "Synchronous bounded checks only; no service or ongoing command created.",
+    "UTC": "2026-10-14T01:19:31.1318486Z",
+    "noContinuingWrites": true
+  },
+  "findings": [
+    {
+      "id": "F01",
+      "file": "web/src/features/driving/components/destination-transitions/DestinationTransitionProfilePlot.tsx",
+      "line": 81,
+      "rule": "single-chart-controller",
+      "severity": "high",
+      "confidence": "confirmed-source",
+      "mechanism": "Three distinct host charts wrap a second EmbeddedChart sharing destination-transition-profile URL state. Inner legends read that provider; plotted hide flags OR inner and host state, coupling hour/weekday/month and preventing inner unhide from overriding a hidden host.",
+      "evidence": [
+        "ProfilePlot:81-90,126-143",
+        "LocalTwoHour:79,134-148",
+        "Weekday:79,134-148",
+        "Monthly:82,137-151",
+        "EmbeddedChart:30-40",
+        "ChartContainer:822-831",
+        "ChartHiddenSeriesContext:52-55",
+        "useHiddenSeries:58-60"
+      ],
+      "fix": "Plot/legend must inherit existing authoritative host controllers, preserve URL compatibility deliberately, all metadata/export/null gaps.",
+      "deduplication": "Existing accepted audit-page-106 controller mechanism and queue595/1851 child legend need; no exact file-specific active repair matched.",
+      "owner": "web/src/features/driving/components/destination-transitions/DestinationTransitionProfilePlot.tsx",
+      "contract": "MDC-002/MDC-034/MDC-046"
+    },
+    {
+      "id": "F02",
+      "file": "web/src/features/driving/components/destination-transitions/OriginConcentrationPlot.tsx",
+      "line": 81,
+      "rule": "single-chart-controller",
+      "severity": "high",
+      "confidence": "confirmed-source",
+      "mechanism": "Origin host destination-origin-concentration nests another origin-concentration controller. Inner legend controls inner state while hide combines both; seven-column host alternative is duplicated by three-column inner alternative.",
+      "evidence": [
+        "OriginConcentrationSupportChart:83,142-160",
+        "OriginConcentrationPlot:63-87,89-140",
+        "EmbeddedChart:30-40",
+        "ChartContainer:822-831,890-944"
+      ],
+      "fix": "Use the existing host legend context without losing full outgoing/support/successor columns, exports or saved identities.",
+      "deduplication": "Retained child-legend need queue1851; original audit names this caller. No exact active source repair found.",
+      "owner": "web/src/features/driving/components/destination-transitions/OriginConcentrationPlot.tsx",
+      "contract": "MDC-002/MDC-034/MDC-046"
+    },
+    {
+      "id": "F03",
+      "file": "web/src/features/driving/components/destination-transitions/DestinationTransitionsMetricGroup.tsx",
+      "line": 19,
+      "rule": "retained-source-trust",
+      "severity": "high",
+      "confidence": "confirmed-source",
+      "mechanism": "Four quality groups omit retained/unavailable flags. NestedDrivingBrief defaults to Returned evidence during refresh error while summary marks Retained source. Paused retained trust also is absent from feature QueryState.",
+      "evidence": [
+        "EvidenceQuality:51-61",
+        "MetricGroup:19-21",
+        "NestedDrivingBrief:26-27,55-63",
+        "DestinationEvidenceBrief:51",
+        "Page:71-82",
+        "types:1-8"
+      ],
+      "fix": "Thread source trust through existing quality/metric props and reuse NestedDrivingBrief retained/loading/unavailable API; keep raw metrics and deduplicate retry.",
+      "deduplication": "Exact original audit state issue, queue595/1851 trust need. Completed queue1355 phase3-nested-driving-brief is a renderer owner, not caller repair.",
+      "owner": "web/src/features/driving/components/destination-transitions/DestinationTransitionsMetricGroup.tsx",
+      "contract": "MDC-026"
+    },
+    {
+      "id": "F04",
+      "file": "web/src/features/driving/pages/DestinationTransitionsPage.tsx",
+      "line": 75,
+      "rule": "initial-paused-state",
+      "severity": "high",
+      "confidence": "confirmed-source",
+      "mechanism": "No-data paused query derives initial, mapped to isLoading. The only blocked warning returns null without hasData; QueryStatus displays active Loading and section skeletons, with no initial-paused explanation/recovery.",
+      "evidence": [
+        "Page:74-75,94-95",
+        "api/dataState:194-217",
+        "StaleRefreshWarning:59",
+        "QueryStatus:39-59",
+        "SectionBody:70-83",
+        "types:1-8"
+      ],
+      "fix": "Expose initial pause via existing source state/feedback, distinct from active loading, with honest retry/resume and no device/vehicle offline assertion.",
+      "deduplication": "New exact destination mechanism; unrelated paused-route fixes are not duplicates.",
+      "owner": "web/src/features/driving/pages/DestinationTransitionsPage.tsx",
+      "contract": "MDC-026"
+    },
+    {
+      "id": "F05",
+      "file": "web/src/features/driving/components/destination-transitions/TopTransitionMatrix.tsx",
+      "line": 134,
+      "rule": "neon-decoration",
+      "severity": "medium",
+      "confidence": "confirmed-source",
+      "mechanism": "Observed cells use border-neon-cyan/20 bg-neon-cyan/5 instead of subdued theme-owned presentation. This is source styling, not measured contrast/saturation.",
+      "fix": "Use existing neutral surface/border roles; preserve observed/unsupported counts, dashed/text distinctions and full denominators.",
+      "deduplication": "Exact original audit visual issue, queue595 and retained matrix note1851; no exact active repair.",
+      "owner": "web/src/features/driving/components/destination-transitions/TopTransitionMatrix.tsx",
+      "contract": "MDC-010/MDC-011/MDC-016"
+    },
+    {
+      "id": "F06",
+      "file": "web/src/features/driving/components/destination-transitions/DestinationTransitionsMethodology.tsx",
+      "line": 181,
+      "rule": "decorative-fixed-accent",
+      "severity": "medium",
+      "confidence": "confirmed-source",
+      "mechanism": "All nine mapped methodology heading/icon wrappers use fixed text-cyan-300, grouping explanatory prose by decorative hue rather than semantic meaning or theme roles.",
+      "fix": "Reuse primary/secondary typography and muted icon roles; retain all nine complete explanations and warning.",
+      "deduplication": "Exact original audit visual issue line181. Related cyan title icons are not additional counted findings.",
+      "owner": "web/src/features/driving/components/destination-transitions/DestinationTransitionsMethodology.tsx",
+      "contract": "MDC-010/MDC-011/MDC-016"
+    },
+    {
+      "id": "F07",
+      "file": "web/src/features/driving/components/destination-transitions/DestinationTransitionsQueryStatus.tsx",
+      "line": 86,
+      "rule": "mobile-target-declaration",
+      "severity": "medium",
+      "confidence": "confirmed-source",
+      "mechanism": "Refresh retry uses size sm, no mobile minimum or wrapping. Shared Button:36 declares h-9,36px at16px root, below44px required mobile declaration. No measured rectangle/overlap claimed.",
+      "evidence": [
+        "QueryStatus:83-91",
+        "components/ui/Button:35-36,60-76"
+      ],
+      "fix": "Use growing below-md44px minimum with explicit desktop restoration/wrapping; expose genuine fetching busy/disabled state. Keep source refetch.",
+      "deduplication": "New exact caller mechanism; unrelated touch fixes do not own this source.",
+      "owner": "web/src/features/driving/components/destination-transitions/DestinationTransitionsQueryStatus.tsx",
+      "contract": "MDC-040/MDC-043"
+    },
+    {
+      "id": "F08",
+      "file": "web/src/features/driving/components/destination-transitions/DestinationContinuityMetrics.tsx",
+      "line": 93,
+      "rule": "display-unit-preference-bypass",
+      "severity": "medium",
+      "confidence": "confirmed-source",
+      "mechanism": "Raw SI distance metric preformats fixed-meter displayValue; NestedDrivingBrief custom formatter returns before default distance conversion. Methodology also renders tolerance in meters without useUnits, bypassing saved distance preference.",
+      "evidence": [
+        "ContinuityMetrics:93-97",
+        "Methodology:66-70",
+        "NestedDrivingBrief:30-34",
+        "lib/metric-reference/formatMetric:57-62",
+        "hooks/useUnits:119-144"
+      ],
+      "fix": "Keep raw gpsToleranceM/model threshold in meters; use existing preference-aware distance rendering, retain explicitly identified source-SI explanation if needed; any new unit interpolation requires existing catalog owner, not this audit.",
+      "deduplication": "New mechanism; exact meter/methodology keys had zero queue matches.",
+      "owner": "web/src/features/driving/components/destination-transitions/DestinationContinuityMetrics.tsx",
+      "contract": "MDC-033/MDC-044/MDC-045"
+    },
+    {
+      "id": "F09",
+      "file": "web/src/features/driving/pages/DestinationTransitionsPage.tsx",
+      "line": 83,
+      "rule": "display-locale-preference-bypass",
+      "severity": "medium",
+      "confidence": "confirmed-source",
+      "mechanism": "i18n.language is passed as number/date/profile locale despite independent saved language/locale settings; explicit child formatter locale overrides saved numeric/date preference.",
+      "evidence": [
+        "Page:36,83",
+        "labels:27-121",
+        "hooks/useNumberFormatting:27-39",
+        "hooks/useSettings:31,47,107-114,141",
+        "hooks/useDateFormat:74-87"
+      ],
+      "fix": "Use existing resolved formatter locale for data, useTranslation for copy, retain intentional vehicle-calendar grouping timezone and raw timestamps.",
+      "deduplication": "New exact page mechanism; no page locale repair matched queue.",
+      "owner": "web/src/features/driving/pages/DestinationTransitionsPage.tsx",
+      "contract": "MDC-033/MDC-044/MDC-045"
+    },
+    {
+      "id": "F10",
+      "file": "web/src/features/driving/pages/DestinationTransitionsPage.tsx",
+      "line": 37,
+      "additionalSites": [
+        87,
+        95
+      ],
+      "rule": "catalog-fallback-parity",
+      "severity": "low",
+      "confidence": "confirmed-source",
+      "mechanism": "Three destinationTransitions.title fallbacks Destination Transitions differ from canonical Destination transitions.",
+      "fix": "Reuse current canonical fallback at all three sites; no catalog edit.",
+      "deduplication": "Exact key zero queue matches; one key mechanism, three call sites.",
+      "owner": "web/src/features/driving/pages/DestinationTransitionsPage.tsx",
+      "contract": "MDC-044/frontend-SI i18n"
+    },
+    {
+      "id": "F11",
+      "file": "web/src/features/driving/components/destination-transitions/DestinationTransitionProfilePlot.tsx",
+      "line": 83,
+      "rule": "catalog-fallback-parity",
+      "severity": "low",
+      "confidence": "confirmed-source",
+      "mechanism": "destinationTransitions.profileTitle fallback Destination Transition Profile differs from canonical Destination transition profile.",
+      "fix": "Reuse existing canonical fallback/key at current renderer owner.",
+      "deduplication": "Exact key zero queue matches; no catalog mutation needed.",
+      "owner": "web/src/features/driving/components/destination-transitions/DestinationTransitionProfilePlot.tsx",
+      "contract": "MDC-044/frontend-SI i18n"
+    },
+    {
+      "id": "F12",
+      "file": "web/src/features/driving/components/destination-transitions/OriginConcentrationPlot.tsx",
+      "line": 83,
+      "rule": "catalog-fallback-parity",
+      "severity": "low",
+      "confidence": "confirmed-source",
+      "mechanism": "originConcentration.title fallback Origin Concentration differs from canonical Origin concentration.",
+      "fix": "Reuse current canonical fallback/key at current renderer owner.",
+      "deduplication": "Exact key zero queue matches.",
+      "owner": "web/src/features/driving/components/destination-transitions/OriginConcentrationPlot.tsx",
+      "contract": "MDC-044/frontend-SI i18n"
+    },
+    {
+      "id": "F13",
+      "file": "web/src/features/driving/components/operationalbrief-a-m/DrivingSummaryBrief.tsx",
+      "line": 43,
+      "rule": "catalog-fallback-parity",
+      "severity": "low",
+      "confidence": "confirmed-source",
+      "mechanism": "driving.brief.loading fallback Loading evidence differs from canonical Loading source.",
+      "fix": "Narrowly lease existing shared feature owner for canonical fallback reuse, preserving other callers.",
+      "deduplication": "Exact key zero queue matches; completed migration is not reopened.",
+      "owner": "web/src/features/driving/components/operationalbrief-a-m/DrivingSummaryBrief.tsx",
+      "contract": "MDC-044/frontend-SI i18n"
+    },
+    {
+      "id": "F14",
+      "file": "web/src/features/driving/components/operationalbrief-a-m/DrivingSummaryBrief.tsx",
+      "line": 45,
+      "rule": "catalog-fallback-parity",
+      "severity": "low",
+      "confidence": "confirmed-source",
+      "mechanism": "driving.brief.retained fallback Retained evidence differs from canonical Retained source.",
+      "fix": "Reuse existing canonical fallback in same narrowly leased source owner; preserve warning semantics.",
+      "deduplication": "Exact key zero queue matches; distinct key from F13.",
+      "owner": "web/src/features/driving/components/operationalbrief-a-m/DrivingSummaryBrief.tsx",
+      "contract": "MDC-044/frontend-SI i18n"
+    }
+  ],
+  "candidates": [
+    {
+      "id": "C01",
+      "file": "web/src/features/driving/components/destination-transitions/TopTransitionMatrix.tsx",
+      "line": 78,
+      "rule": "keyboard-scroll/table-review",
+      "detail": "Overflow role-table has no explicit tabIndex/focusable cells/native Table headers. Browser automatic scroll focus may provide access; actual inaccessible columns are unproven.",
+      "nextEvidence": "Existing Table/scroll owner review then authorized Edge keyboard/assistive proof, preserving all top-eight cells.",
+      "deduplication": "Existing original audit candidate; queue1851 matrix need."
+    },
+    {
+      "id": "C02",
+      "file": "web/src/features/driving/components/destination-transitions/DestinationVisitShareChart.tsx",
+      "line": 127,
+      "rule": "narrow-label-review",
+      "detail": "Top-twelve full labels use interval0; top-ten origin plot likewise. Collision/overflow not measured.",
+      "nextEvidence": "Authorized narrow-container/mission-width safe long-label/RTL/200% text review, preserving labels/alternatives.",
+      "deduplication": "Existing original audit responsive risk."
+    },
+    {
+      "id": "C03",
+      "file": "web/src/features/driving/components/destination-transitions/DestinationVisitShareChart.tsx",
+      "line": 40,
+      "rule": "specialist-precision-review",
+      "detail": "Rows pre-round shares/indices to one decimal. Other sites OriginConcentrationSupportChart:39-48, LocalTwoHour:41, Weekday:41, Monthly:45. Transform certain; required specialist analytical display precision unestablished.",
+      "nextEvidence": "Existing formatter/page owner decides specialist precision versus full operands formatted only at presentation; preserve model denominators."
+    },
+    {
+      "id": "C04",
+      "file": "web/src/features/driving/components/destination-transitions/DestinationTransitionProfilePlot.tsx",
+      "line": 128,
+      "rule": "chart-motion-review",
+      "detail": "Raw Bar/Line omit explicit animation policy. FadeIn source honors reduced motion/low bandwidth; that does not demonstrate Recharts suppression.",
+      "nextEvidence": "Existing chart motion policy/composed proof under separate authorization; no runtime defect inferred."
+    },
+    {
+      "id": "C05",
+      "file": "web/src/features/driving/pages/DestinationTransitionsPage.tsx",
+      "line": 49,
+      "rule": "analysis-as-of-recency-review",
+      "detail": "Successful snapshot clock fixes original frozen-mount classification and retains coherence on failure. Age remains snapshot-relative between successes.",
+      "nextEvidence": "Label as-of or establish any advancing-age requirement through existing owner. Fetch time is not a drive observation.",
+      "deduplication": "Original mount-clock finding resolved, not counted again."
+    }
+  ],
+  "summary": {
+    "confirmedFindingCount": 14,
+    "candidateCount": 5,
+    "confirmedByRule": {
+      "single-chart-controller": 2,
+      "retained-source-trust": 1,
+      "initial-paused-state": 1,
+      "neon-decoration": 1,
+      "decorative-fixed-accent": 1,
+      "mobile-target-declaration": 1,
+      "display-unit-preference-bypass": 1,
+      "display-locale-preference-bypass": 1,
+      "catalog-fallback-parity": 5
+    },
+    "existingRecordedMechanisms": 5,
+    "newConfirmedMechanisms": 9,
+    "counting": "14 exact mechanism records; five copy-key mechanisms cover seven call sites. Candidates excluded. Related supporting sites are not counted again.",
+    "filesWithMostIssues": [
+      {
+        "file": "",
+        "findingCount": 14
+      }
+    ],
+    "priority": [
+      "Host legend ownership F01/F02",
+      "Retained/initial-paused trust F03/F04",
+      "Mobile/render preferences F07-F09",
+      "Restrained semantics F05/F06",
+      "Existing canonical copy F10-F14"
+    ],
+    "originalClockIssue": "Resolved in current source; snapshot update clock/vehicle-scoped initial fallback retained."
+  },
+  "routeScope": {
+    "actualRoute": "/destination-transitions",
+    "lazySource": "web/src/App.tsx:100",
+    "mountedRoute": "web/src/App.tsx:870",
+    "vehicle": true,
+    "range": false,
+    "scopeEvidence": "workspaceScope.ts:23-77,157-167",
+    "vehicleEvidence": "Page:39-42; useSelectedVehicle URL/store/known-fleet precedence; no duplicate local picker.",
+    "bounds": "useDriveHistory143-157 accepts vehicle/limit only, no startInstant/endInstantExclusive or date-bound query key/URL. Deliberate capped returned-history window, not selected analysis window/lifetime aggregate.",
+    "disposition": "Preserve existing range-disabled historical route; missing range is not counted as violation. A future dated-window change requires separate route/hook/model ownership.",
+    "backend": "Ordering/authorization/cap enforcement/actual payload/time bounds NOT EXERCISED."
+  },
+  "dataSources": [
+    {
+      "hook": "useDriveHistory(vehicleIdStr,1000)",
+      "file": "web/src/api/hooks/useDriving.ts",
+      "lines": "143-157",
+      "sourceURL": "/drives?vehicle_id=<encoded-selected-vehicle>&limit=<bounded-limit>",
+      "effectiveEndpoint": "GET /api/v1/drives; client prefix contract only, no request",
+      "queryKey": "drivingKeys.history(vehicleId,boundedLimit)",
+      "enabled": "!!vehicleId",
+      "signal": "queryFn signal -> request",
+      "staleTime": "STALE_TIMES.MODERATE",
+      "select": "safeArray",
+      "rawSI": "No conversion in hook/cache."
+    },
+    {
+      "hook": "buildDestinationTransitions",
+      "file": "web/src/features/driving/lib/destinationTransitions.ts",
+      "lines": "1-1601/full",
+      "ownership": "Pure driving-domain calculation; input array/rows not mutated.",
+      "provenance": "Durable returned history/inferred descriptive statistics, not current location, identity, live assurance or forecasts."
+    }
+  ],
+  "populations": {
+    "rows": "Every returned drive enters one of six exclusive inclusion/exclusion categories; chronological placement/unplacement separately accounted.",
+    "visits": "Completed, ordered parseable timestamps, not future at analysis clock, positive finite durationS and locatable end. Arrival calendar uses endMs.",
+    "candidates": "max(0,placed sequence.length-1). Unplaced rows split source-order segments; placed unusable rows remain boundaries, never bridged.",
+    "accepted": "Adjacent placed rows in same segment; both included; locatable current start; no overlap; matching normalized address or SI GPS tolerance; optional max gap. Accepted/excluded buckets partition candidate pairs.",
+    "denominators": "Visits use all included visits; conditional edge shares ALL accepted outgoing transitions for origin; overall shares all accepted transitions. Top matrices do not renormalize displayed subsets.",
+    "entropy": "Successor count entropy; one-successor concentration1, else1-H/log2(successors); global0-100 outgoing-weighted index. Information=-log2(observed conditional share), not future anomaly.",
+    "support": "At least3 outgoing; separate weighted volume/day/week/recurrence0.40/0.25/0.20/0.15 ingredients. Supported-origin coverage uses all accepted transitions.",
+    "calendar": "12 two-hour/7 weekday bins use current transition start in resolved timezone; months only observed accepted months, no fabricated zero months. Timezone may fall back from vehicle to user/browser.",
+    "topPopulations": "12 destinations;10 origins with outgoing evidence;8 matrix states;12 frequent and12 rare edges; full accepted-outgoing origin directory.",
+    "latest": "Actual latest placed row must qualify; indeterminate/unusable latest never backfills older destination. Observation timestamp is drive end, not fetch time.",
+    "clock": "Successful updatedAt analysis-as-of; vehicle-scoped initial fallback; retained classification stays anchored. Default max gap null is explained.",
+    "evidence": [
+      "destinationTransitions.ts:699-756",
+      "destinationTransitions.ts:1018-1168",
+      "destinationTransitions.ts:1211-1368",
+      "destinationTransitions.ts:1371-1601"
+    ],
+    "execution": "Source reviewed only; mathematical/backend tests NOTRUN."
+  },
+  "siPreferencesAndSigns": {
+    "raw": "durationS seconds/GPS tolerance meters remain on wire/cache/model; no hook conversion.",
+    "display": "Labeled-day specialist operands become raw seconds for StatMetric; fractions become percent operands at rendering boundary. Config distance preference bypassF08; explicit page-language locale overrideF09; chart pre-roundingC03.",
+    "unknownZero": "Three ??0 scan sites refer to known temporal sample counts or origins constrained to positive outgoing population. Zero observed matrix counts use positive full denominator; zero-outgoing share null. Unresolved KPI raw values null. Empty successful returned history establishes zero row counts, not absent-source zero.",
+    "signs": "Coordinate numeric0 and signed coordinates accepted through explicit null/finite/range checks. Positive duration gate is intentional validity, not clipping signed energy/power. No signed physical energy/power readings are displayed.",
+    "noRealDataCopied": true
+  },
+  "states": {
+    "noVehicle": "Query disabled; all section shells and method explanations stay; unknown KPI operands and passive selection prompt.",
+    "initialLoading": "Null KPI operands, one polite source status, section-shaped skeletons; methodology always visible.",
+    "initialPaused": "F04: no-data pause appears actively loading, retained warning suppressed.",
+    "fatal": "Only fatalError without retained data gates source bodies; one QueryError/refetch status. Shells/neighbors/methodology preserved.",
+    "retainedError": "Rows/model retained with successful snapshot clock; summary retained label and warning/retry; nested quality trust gapF03.",
+    "retainedPaused": "Top StaleRefreshWarning/source retry preserves payload, no device-offline claim; summary/nested retained flags incomplete. Simultaneous paused+refresh-error can expose two retry surfaces, not separately counted/runtime proven.",
+    "empty": "Zero rows/no qualified visits/no continuity/no supported origins distinct; known accounting zero preserved, unavailable shares/entropy/recency em dash.",
+    "retry": "Fatal/refresh/paused conditional surfaces invoke same drivesQuery.refetch; no retry executed.",
+    "success": "Descriptive historical evidence, not a prediction or source-fresh assurance."
+  },
+  "preservation": {
+    "pageLineCount": 191,
+    "pageSHA256": "a457a0b7535f3c7f8504924a06c5280234d455376025cd394ef3d888a356fca3",
+    "directoryFileCount": 27,
+    "directoryLineCount": 3375,
+    "directoryCaveat": "Includes two unmounted legacy KPI exports and four TS barrel/type/label files; none deleted.",
+    "mountedPresentationFileCount": 24,
+    "mountedPresentationLineCount": 3059,
+    "pagePlusMountedPresentationLineCount": 3250,
+    "logicalSectionCount": 12,
+    "actualSectionTagCount": 12,
+    "sections": [
+      "Continuity-safe destination evidence summary",
+      "Destination visit share",
+      "Origin concentration and support",
+      "Top transition matrix",
+      "Historical leading successors by origin",
+      "Frequent accepted edges",
+      "Empirically rare accepted edges",
+      "Vehicle-local two-hour transition profile",
+      "Vehicle-timezone weekday profile",
+      "Local-month transition trend",
+      "Evidence quality/accounting/continuity",
+      "Methodology and limitations"
+    ],
+    "hostChartCount": 5,
+    "nestedChartInstanceCount": 4,
+    "nestedChartRendererFileCount": 2,
+    "renderedChartFrameInstanceCount": 9,
+    "heroMetricCount": 6,
+    "qualityMetricGroupCount": 4,
+    "methodologyArticleCount": 9,
+    "primaryRetryHandlerCount": 1,
+    "actions": [
+      "Shared header/mobile vehicle scope; no local range/vehicle duplication",
+      "One source refetch with conditional fatal/refresh/paused recovery surfaces",
+      "Five resolved-data host export menus: PNG/SVG/copy image/CSV conditional on data; no export executed",
+      "Four logical legend charts, two series each; controller conflictsF01/F02",
+      "Five full host alternatives:33 columns including24 numeric columns; duplicate nested alternatives must not replace full metadata",
+      "Contained full top matrix scrolling; keyboard access candidateC01",
+      "Shared PageContainer localized subtitle contextual help"
+    ],
+    "exportFilenames": [
+      "destination-visit-share",
+      "destination-origin-concentration",
+      "destination-two-hour-profile",
+      "destination-weekday-profile",
+      "destination-month-trend"
+    ],
+    "notMounted": "No page annotation mutation/zoom/brush/fullscreen prop. Shared fullscreen requires explicit prop; do not invent enabled actions."
+  },
+  "responsiveAccessibility": {
+    "declarations": [
+      "PageLayout -> PageContainer min-w-0/full-width container",
+      "Page paired grid stacks until xl1280",
+      "Directory/methodology md2/xl3 grids, edges stack before sm640",
+      "Matrix owns overflow-x; w-36 origin/w-28 destination columns",
+      "Host chart heights350/370/350/350/360, embedded fluid sizing",
+      "Localized semantic titles/chart names, dashed+text below-gate state",
+      "ChartContainer forced-colors SVG hiding/structured table fallback",
+      "FadeIn shared reduced-motion/low-bandwidth hook; does not establish Recharts behavior"
+    ],
+    "verifiedWidths": [],
+    "mobile": "NOTRUN",
+    "keyboard": "NOTRUN",
+    "screenReader": "NOTRUN",
+    "contrast": "NOTRUN",
+    "touch": "Only source declarationF07, no measured rectangles",
+    "themesRTL200PercentTextExtremeData": "NOTRUN",
+    "missionWidths": [
+      320,
+      375,
+      390,
+      430,
+      768,
+      1024,
+      1280,
+      1440,
+      1920,
+      2560
+    ]
+  },
+  "supportReadRanges": {
+    "web/src/api/hooks/useDriving.ts": "1-162; exact necessary143-157",
+    "web/src/api/client.ts": "1-75",
+    "web/src/types/driving.ts": "1-64",
+    "web/src/lib/workspaceScope.ts": "full",
+    "web/src/App.tsx": "matched100,870",
+    "web/src/api/dataState.ts": "1-281",
+    "web/src/components/layout/PageContainer.tsx": "1-220",
+    "web/src/components/charts/ChartContainer.tsx": "symbols and selected308-344,578-745,765-1006",
+    "web/src/lib/dateFormat.ts": "1-170",
+    "web/src/hooks/useUnits.ts": "83-170 plus symbols",
+    "web/src/hooks/useSettings.ts": "26-57,89-146 plus symbols",
+    "web/src/lib/metric-reference/formatMetric.ts": "1-75",
+    "web/src/i18n/en.json": "parsed for275 literal-call comparisons only, no runtime/guard"
+  },
+  "exactExistingOwnerNeeds": [
+    {
+      "name": "Retained child legends",
+      "files": [
+        "web/src/features/driving/components/destination-transitions/DestinationTransitionProfilePlot.tsx web/src/features/driving/components/destination-transitions/OriginConcentrationPlot.tsx"
+      ],
+      "sharedOwners": [
+        "web/src/components/charts/ChartContainer.tsx",
+        "web/src/components/charts/ChartHiddenSeriesContext.tsx",
+        "web/src/hooks/useHiddenSeries.ts"
+      ],
+      "findings": [
+        "F01",
+        "F02",
+        "F11",
+        "F12"
+      ],
+      "needs": "Parent assign existing renderer continuation, preserve host/URL/table/export contracts; existing queue1851 need, no exact active repair found, no shared API expansion."
+    },
+    {
+      "name": "Retained nested trust",
+      "files": [
+        "web/src/features/driving/components/destination-transitions/DestinationTransitionsEvidenceQuality.tsx web/src/features/driving/components/destination-transitions/DestinationTransitionsMetricGroup.tsx web/src/features/driving/components/destination-transitions/DestinationRowAccountingMetrics.tsx web/src/features/driving/components/destination-transitions/DestinationContinuityMetrics.tsx web/src/features/driving/components/destination-transitions/DestinationCoverageMetrics.tsx web/src/features/driving/components/destination-transitions/DestinationSupportMetrics.tsx web/src/features/driving/components/destination-transitions/types.ts"
+      ],
+      "sharedOwners": [
+        "web/src/features/driving/components/operationalbrief-a-m/NestedDrivingBrief.tsx"
+      ],
+      "findings": [
+        "F03"
+      ],
+      "needs": "Reuse retained/loading/unavailable API; parent narrow caller leases, existing queue595/1851 need, completed shared migration remains closed."
+    },
+    {
+      "name": "Initial pause and retry target",
+      "files": [
+        "web/src/features/driving/pages/DestinationTransitionsPage.tsx",
+        "web/src/features/driving/components/destination-transitions/",
+        "types.ts",
+        "web/src/features/driving/components/destination-transitions/",
+        "DestinationTransitionsQueryStatus.tsx",
+        "web/src/features/driving/components/destination-transitions/",
+        "DestinationTransitionsSectionBody.tsx",
+        "web/src/features/driving/components/operationalbrief-a-m/",
+        "DestinationEvidenceBrief.tsx"
+      ],
+      "sharedOwners": [
+        "web/src/api/dataState.ts",
+        "web/src/components/feedback/StaleRefreshWarning.tsx",
+        "web/src/components/ui/Button.tsx"
+      ],
+      "findings": [
+        "F04",
+        "F07"
+      ],
+      "needs": "Existing state/feedback/Button adoption under parent exclusive source/check claims; no new trust engine or offline assertion."
+    },
+    {
+      "name": "Render preferences",
+      "files": [
+        "web/src/features/driving/pages/DestinationTransitionsPage.tsx",
+        "web/src/features/driving/components/destination-transitions/",
+        "DestinationContinuityMetrics.tsx",
+        "web/src/features/driving/components/destination-transitions/",
+        "DestinationTransitionsMethodology.tsx",
+        "web/src/features/driving/components/destination-transitions/",
+        "labels.ts"
+      ],
+      "sharedOwners": [
+        "web/src/hooks/useUnits.ts",
+        "web/src/hooks/useNumberFormatting.ts",
+        "web/src/hooks/useDateFormat.ts",
+        "web/src/lib/metric-reference/formatMetric.ts"
+      ],
+      "findings": [
+        "F08",
+        "F09"
+      ],
+      "needs": "Existing formatter adoption only, keep raw model/query semantics; any truly necessary unit-copy interpolation is separately leased web/src/i18n/en.json owner with normal generated outputs."
+    },
+    {
+      "name": "Restrained existing matrix/method",
+      "files": [
+        "web/src/features/driving/components/destination-transitions/TopTransitionMatrix.tsx web/src/features/driving/components/destination-transitions/DestinationTransitionsMethodology.tsx"
+      ],
+      "sharedOwners": [
+        "web/src/components/ui/Table.tsx",
+        "web/src/lib/tokens.ts"
+      ],
+      "findings": [
+        "F05",
+        "F06"
+      ],
+      "candidates": [
+        "C01",
+        "C02"
+      ],
+      "needs": "Existing accepted audit/matrix needs; use current roles/primitives, separately authorized mounted proof for unproven accessibility/mobile."
+    },
+    {
+      "name": "Canonical fallback reuse",
+      "files": [
+        "web/src/features/driving/pages/DestinationTransitionsPage.tsx",
+        "web/src/features/driving/components/destination-transitions/",
+        "DestinationTransitionProfilePlot.tsx",
+        "web/src/features/driving/components/destination-transitions/",
+        "OriginConcentrationPlot.tsx",
+        "web/src/features/driving/components/operationalbrief-a-m/",
+        "DrivingSummaryBrief.tsx"
+      ],
+      "findings": [
+        "F10",
+        "F11",
+        "F12",
+        "F13",
+        "F14"
+      ],
+      "needs": "Existing canonical values already present; source-only narrow leases, no catalog/generator campaign."
+    }
+  ],
+  "tests": {
+    "status": "NOTRUN",
+    "discovered": 0,
+    "executed": 0,
+    "passed": 0,
+    "failed": 0,
+    "skipped": 0
+  },
+  "limits": [
+    "SOURCE ONLY, NOT native/page PASS; mission43-45 definitions of done remain unestablished.",
+    "No API, real identity/location/vehicle records, device, mutation, browser, screenshots or fixture injection. No real locations copied to report.",
+    "No tests/lint/build/global or literal npx tsc --noEmit run; no compiler/suite/pass claim.",
+    "Parent preview5173 retained, not probed/started; no browser lock. Later authorization must use installed Edge channel msedge, no downloads.",
+    "No runtime keyboard/screen-reader/contrast/viewport/OS forced-colors/RTL/200% text/extreme-data/export acceptance.",
+    "No Git, source/tests/catalog/backend/config/queue/handoff writes; no installs/subagents/servers/Docker/helpers/extensions/statusfiles/heartbeats.",
+    "Source pins are read snapshots, not Git/native image identity or locks on concurrent source writers.",
+    "C08 host command length failure exit1 preserved, recovered with bounded commands. C09 incomplete2-pin dedup output preserved/corrected by C10 explicit58-pin map.",
+    "Parent alone integrates deduplicated existing needs through future exclusive queue claims; closedPhases0-5 not restarted."
+  ]
+}
