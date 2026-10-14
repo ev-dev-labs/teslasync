@@ -27,6 +27,10 @@ const h = vi.hoisted(() => ({
   timezoneHook: vi.fn(),
   timeZone: 'UTC',
   locale: 'en-US',
+  vehicleTimezone: null as string | null,
+  userTimezone: 'Asia/Tokyo',
+  displayMode: 'user',
+  useSharedTimezone: false,
 }));
 
 const historyRefetch = vi.fn();
@@ -37,8 +41,8 @@ vi.mock('@/hooks/useSettings', () => ({
     decimals: 2,
     settings: {
       locale: h.locale,
-      tz_display_default: 'user',
-      timezone_user: 'Asia/Tokyo',
+      tz_display_default: h.displayMode,
+      timezone_user: h.userTimezone,
       unit_of_length: 'km',
       unit_of_temp: 'C',
       unit_of_pressure: 'bar',
@@ -88,7 +92,7 @@ vi.mock('@/api/hooks/useDriving', async (importOriginal) => {
 vi.mock('@/hooks/useSelectedVehicle', () => ({
   useSelectedVehicle: () => ({
     vehicleId: h.vehicleId,
-    vehicle: null,
+    vehicle: h.vehicleTimezone == null ? null : { id: h.vehicleId, timezone: h.vehicleTimezone },
     vehicles: [],
     setVehicleId: vi.fn(),
   }),
@@ -100,7 +104,9 @@ vi.mock('@/lib/timezone', async (importOriginal) => {
     ...actual,
     useTimezone: (mode: string) => {
       h.timezoneHook(mode);
-      return h.timeZone;
+      return h.useSharedTimezone
+        ? actual.resolveTimezone(mode as 'vehicle' | 'user' | 'utc', h.vehicleTimezone, h.userTimezone)
+        : h.timeZone;
     },
   };
 });
@@ -263,11 +269,189 @@ beforeEach(() => {
   h.vehicleId = 7;
   h.timeZone = 'UTC';
   h.locale = 'en-US';
+  h.vehicleTimezone = null;
+  h.userTimezone = 'Asia/Tokyo';
+  h.displayMode = 'user';
+  h.useSharedTimezone = false;
   h.history = query({ data: weekdayCommute(12) });
   vi.spyOn(Date, 'now').mockReturnValue(FROZEN_NOW);
 });
 
 describe('DepartureForecastPage', () => {
+  it('uses restrained presenter roles without implying forecast success or losing support', () => {
+    renderPage();
+
+    for (const id of [
+      'departure-ranked-windows',
+      'departure-weekday-routines',
+      'departure-evidence-quality',
+    ]) {
+      expect(screen.getByTestId(id).querySelector('svg')).toHaveClass(
+        'text-[var(--text-secondary)]',
+      );
+    }
+    const ranked = within(screen.getByTestId('departure-ranked-windows'));
+    for (const badge of ranked.getAllByText(/% modeled$/)) {
+      expect(badge).toHaveClass('bg-[var(--surface-2)]');
+      expect(badge).not.toHaveClass('bg-[var(--semantic-success-bg)]');
+    }
+    const weekdays = within(screen.getByTestId('departure-weekday-routines'));
+    expect(weekdays.getAllByText('Supported')).toHaveLength(5);
+    expect(weekdays.getAllByText('Unsupported')).toHaveLength(2);
+    for (const badge of weekdays.getAllByText(/^(Supported|Unsupported)$/)) {
+      expect(badge).toHaveClass('bg-[var(--surface-2)]');
+    }
+    for (const id of ['departure-methodology', 'departure-evidence-quality']) {
+      const notice = within(screen.getByTestId(id)).getByText(
+        id === 'departure-methodology'
+          ? 'Planning aid only: no automation is created, and no departure is promised.'
+          : /The support index gates elapsed exposure/,
+      ).closest('.rounded-panel');
+      expect(notice).toHaveClass('bg-[var(--surface-2)]', 'border-[var(--border-subtle)]');
+    }
+    expectEverySection();
+  });
+
+  it('preserves four ordered heatmap intensities, departure counts, and unsupported cells', () => {
+    h.history = query({
+      data: [1, 4, 8, 16].flatMap((count, index) =>
+        Array.from({ length: count }, () =>
+          driveAt(`2026-01-15T${String(8 + index).padStart(2, '0')}:05:00.000Z`),
+        ),
+      ),
+    });
+    renderPage();
+
+    const grid = screen.getByTestId('departure-heatmap-grid');
+    const cells = Array.from(grid.querySelectorAll<HTMLElement>('[title]'));
+    expect(cells).toHaveLength(168);
+    const supported = cells.filter((cell) => !cell.classList.contains('border-dashed'));
+    expect(supported.map((cell) => cell.textContent)).toEqual(['1', '4', '8', '16']);
+    expect(supported.map((cell) => cell.className.match(/text-secondary\)_(\d+)%/)?.[1]))
+      .toEqual(['2', '4', '6', '8']);
+    for (const cell of supported) {
+      expect(cell).toHaveClass('border-[var(--border-default)]');
+      expect(cell.title).toContain(`${cell.textContent} departures across`);
+    }
+    const unsupported = cells.filter((cell) => cell.classList.contains('border-dashed'));
+    expect(unsupported).toHaveLength(164);
+    for (const cell of unsupported) {
+      expect(cell).toHaveTextContent('·');
+      expect(cell).toHaveClass('bg-[var(--surface-1)]');
+      expect(cell.title).toContain('no recorded departures');
+    }
+  });
+
+  it.each([null, 'UTC'])('discloses the shared saved-user fallback for vehicle metadata %s without overriding UTC semantics', (metadata) => {
+    h.useSharedTimezone = true;
+    h.vehicleTimezone = metadata;
+    h.locale = 'de-DE';
+    h.userTimezone = 'Asia/Kolkata';
+    h.displayMode = 'utc';
+    renderPage();
+
+    for (const id of ['departure-kpis', 'departure-methodology']) {
+      const section = screen.getByTestId(id);
+      expect(section).toHaveTextContent('Effective model timezone: Asia/Kolkata.');
+      expect(section).toHaveTextContent('shared vehicle-mode fallback (saved user timezone)');
+      expect(section).toHaveTextContent('vehicle timezone metadata is missing or UTC');
+      expect(section.querySelector('time')).toHaveTextContent(
+        departureDateTime(FROZEN_NOW, 'de-DE', 'Asia/Kolkata'),
+      );
+    }
+    expect(h.timezoneHook).toHaveBeenCalledWith('vehicle');
+    expect(h.vehicleTimezone).toBe(metadata);
+    expect(h.displayMode).toBe('utc');
+    expectEverySection();
+  });
+
+  it('discloses vehicle metadata independently of the saved user timezone', () => {
+    h.useSharedTimezone = true;
+    h.vehicleTimezone = 'America/Los_Angeles';
+    h.locale = 'fr-FR';
+    renderPage();
+    for (const id of ['departure-kpis', 'departure-methodology']) {
+      expect(screen.getByTestId(id)).toHaveTextContent('Effective model timezone: America/Los_Angeles.');
+      expect(screen.getByTestId(id)).toHaveTextContent('Source: selected vehicle timezone metadata (America/Los_Angeles).');
+      expect(screen.getByTestId(id)).not.toHaveTextContent('shared vehicle-mode fallback');
+    }
+  });
+
+  it('identifies the browser fallback when no user timezone is saved', () => {
+    h.useSharedTimezone = true;
+    h.userTimezone = '';
+    renderPage();
+    for (const id of ['departure-kpis', 'departure-methodology']) {
+      expect(screen.getByTestId(id)).toHaveTextContent('shared vehicle-mode fallback (browser timezone, or UTC if unavailable)');
+      expect(screen.getByTestId(id)).toHaveTextContent(
+        `Effective model timezone: ${Intl.DateTimeFormat().resolvedOptions().timeZone}.`,
+      );
+    }
+    expect(h.userTimezone).toBe('');
+  });
+
+  it.each(['Not/AZone', ''])('discloses model-local UTC fallback for invalid resolved zone "%s" without repairing settings', (zone) => {
+    h.useSharedTimezone = zone !== '';
+    h.vehicleTimezone = zone;
+    h.timeZone = zone;
+    renderPage();
+    for (const id of ['departure-kpis', 'departure-methodology']) {
+      expect(screen.getByTestId(id)).toHaveTextContent('Effective model timezone: UTC.');
+      expect(screen.getByTestId(id)).toHaveTextContent('this model uses UTC without changing shared settings');
+      expect(screen.getByTestId(id).querySelector('time')).toHaveTextContent(
+        departureDateTime(FROZEN_NOW, h.locale, 'UTC'),
+      );
+    }
+    expect(h.vehicleTimezone).toBe(zone);
+    expect(h.userTimezone).toBe('Asia/Tokyo');
+    expectEverySection();
+  });
+
+  it('discloses invalid saved-user fallback without rewriting the saved timezone', () => {
+    h.useSharedTimezone = true;
+    h.userTimezone = 'Not/AZone';
+    renderPage();
+    for (const id of ['departure-kpis', 'departure-methodology']) {
+      expect(screen.getByTestId(id)).toHaveTextContent('shared vehicle-mode fallback (saved user timezone)');
+      expect(screen.getByTestId(id)).toHaveTextContent('Effective model timezone: UTC.');
+      expect(screen.getByTestId(id)).toHaveTextContent('The resolved timezone "Not/AZone" is missing or invalid');
+    }
+    expect(h.userTimezone).toBe('Not/AZone');
+  });
+
+  it('excludes missing and invalid drive starts while preserving valid local business days', () => {
+    h.useSharedTimezone = true;
+    h.vehicleTimezone = 'America/Los_Angeles';
+    h.locale = 'de-DE';
+    vi.mocked(Date.now).mockReturnValue(Date.parse('2026-01-06T01:00:00Z'));
+    const missing = driveAt('2026-01-05T00:00:00Z');
+    Reflect.deleteProperty(missing, 'startTs');
+    const drives = [missing, driveAt('invalid'), driveAt(''), driveAt('2026-01-06T00:30:00Z')];
+    const original = structuredClone(drives);
+    h.history = query({ data: drives });
+    renderPage();
+    const weekdays = within(screen.getByTestId('departure-weekday-routines'));
+    expect(within(weekdays.getByText('Monday').closest('li')!).getByText('Supported')).toBeInTheDocument();
+    expect(within(weekdays.getByText('Tuesday').closest('li')!).getByText('Unsupported')).toBeInTheDocument();
+    expect(drives).toEqual(original);
+    expectEverySection();
+  });
+
+  it('preserves repeated DST hour boundaries in the metadata zone with a non-default locale', () => {
+    h.useSharedTimezone = true;
+    h.vehicleTimezone = 'America/Los_Angeles';
+    h.locale = 'de-DE';
+    const anchor = Date.parse('2026-11-01T07:30:00Z');
+    vi.mocked(Date.now).mockReturnValue(anchor);
+    h.history = query({ data: [driveAt('2026-10-25T08:05:00Z')] });
+    renderPage();
+    const table = within(screen.getByTestId('departure-next-24')).getByRole('table');
+    for (const iso of ['2026-11-01T08:00:00Z', '2026-11-01T09:00:00Z']) {
+      expect(within(table).getByText(departureChartLabel(Date.parse(iso), 'de-DE', h.vehicleTimezone))).toBeInTheDocument();
+    }
+    expect(screen.getByTestId('departure-methodology')).toHaveTextContent('Effective model timezone: America/Los_Angeles.');
+  });
+
   it('uses the saved date locale while retaining vehicle-model timezone and raw instants', () => {
     h.locale = 'de-DE';
     h.timeZone = 'America/Los_Angeles';
@@ -479,6 +663,56 @@ describe('DepartureForecastPage', () => {
     expect(
       screen.getAllByText(/in 1 h 30 min/).length,
     ).toBeGreaterThan(0);
+  });
+
+  it('discloses the mount-time anchor through delayed loading, refresh, scope changes, and remount', () => {
+    h.history = query({ isLoading: true });
+    const view = renderPage();
+    const assertAnchor = (anchor: number) => {
+      for (const sectionId of ['departure-kpis', 'departure-methodology']) {
+        const section = screen.getByTestId(sectionId);
+        const time = section.querySelector('time');
+        expect(time).toHaveAttribute('datetime', new Date(anchor).toISOString());
+        expect(time).toHaveTextContent(departureDateTime(anchor, h.locale, h.timeZone));
+        expect(section).toHaveTextContent(h.timeZone);
+      }
+    };
+    assertAnchor(FROZEN_NOW);
+    expect(screen.getByTestId('departure-kpis')).toHaveTextContent(
+      'relative to this fixed anchor, not a live countdown',
+    );
+    expect(screen.getByTestId('departure-methodology')).toHaveTextContent(
+      'not the current clock or the history fetch time',
+    );
+
+    const later = FROZEN_NOW + 3 * 86_400_000;
+    vi.mocked(Date.now).mockReturnValue(later);
+    h.history = query({ data: weekdayCommute(12) });
+    view.rerenderPage();
+    assertAnchor(FROZEN_NOW);
+    expect(screen.getAllByText(/in 1 h 30 min/).length).toBeGreaterThan(0);
+    const tableBeforeRefresh = within(screen.getByTestId('departure-next-24')).getByRole('table').textContent;
+
+    h.history = query({
+      data: [...weekdayCommute(12), driveAt('2026-05-13T08:05:00.000Z')],
+    });
+    view.rerenderPage();
+    assertAnchor(FROZEN_NOW);
+    expect(within(screen.getByTestId('departure-next-24')).getByRole('table').textContent).not.toBe(tableBeforeRefresh);
+    expect(screen.getAllByText(/in 1 h 30 min/).length).toBeGreaterThan(0);
+
+    h.vehicleId = 8;
+    h.timeZone = 'America/Los_Angeles';
+    h.locale = 'de-DE';
+    view.rerenderPage();
+    assertAnchor(FROZEN_NOW);
+    expect(h.historyHook).toHaveBeenLastCalledWith('8', 1_000);
+    expectEverySection();
+
+    view.unmount();
+    renderPage();
+    assertAnchor(later);
+    expectEverySection();
   });
 
   it('keeps all shells visible with one live status while loading', () => {

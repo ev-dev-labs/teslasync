@@ -33,7 +33,7 @@ export function DepartureForecastWeekdayRoutines({
       <GlassPanel className="h-full p-4 sm:p-5">
         <PanelTitle className="mb-1 flex items-center gap-2">
           <CalendarDays
-            className="h-4 w-4 text-cyan-300"
+            className="h-4 w-4 text-[var(--text-secondary)]"
             aria-hidden="true"
           />
           {t('departure.weekdays.title', 'Weekday peaks and routine support')}
@@ -56,7 +56,7 @@ export function DepartureForecastWeekdayRoutines({
                   <Text as="p" variant="bodySm" className="font-medium">
                     {departureWeekdayLabel(t, profile.weekday)}
                   </Text>
-                  <Badge variant={profile.supported ? 'info' : 'neutral'}>
+                  <Badge variant="neutral">
                     {profile.supported
                       ? t('departure.weekdays.supported', 'Supported')
                       : t(

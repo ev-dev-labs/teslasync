@@ -13,21 +13,40 @@ import { GlassPanel, Heading, PanelTitle, Text } from '@/components/ui';
 
 import type { DepartureForecast } from '../../lib/departureForecast';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { departureDateTime } from './labels';
 
 interface DepartureForecastMethodologyProps {
   forecast: DepartureForecast;
   locale: string;
   timeZone: string;
+  timeZoneProvenance?: string;
 }
 
 export function DepartureForecastMethodology({
   forecast,
   locale,
   timeZone,
+  timeZoneProvenance,
 }: DepartureForecastMethodologyProps) {
   const { fmtNumber, fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const items = [
+    {
+      key: 'snapshot',
+      icon: <CalendarRange className="h-5 w-5" aria-hidden="true" />,
+      title: t('departure.method.snapshotTitle', 'Fixed model snapshot'),
+      body: <>
+        {t('departure.brief.snapshotAnchor', 'Model snapshot anchor: ')}
+        <time dateTime={new Date(forecast.nowMs).toISOString()}>
+          {departureDateTime(forecast.nowMs, locale, timeZone)}
+        </time>
+        {' · '}{timeZone}{'. '}
+        {t(
+          'departure.method.snapshotBody',
+          'The clock is captured when this page mounts and stays fixed while it remains mounted, including history refreshes and vehicle or timezone changes. The lookback, next-24-hour horizon, “in” times, and planning marker use that anchor, not the current clock or the history fetch time. Refreshed rows can change the estimates without advancing the anchor.',
+        )}
+      </>,
+    },
     {
       key: 'model',
       icon: <FlaskConical className="h-5 w-5" aria-hidden="true" />,
@@ -58,11 +77,14 @@ export function DepartureForecastMethodology({
       key: 'timezone',
       icon: <CarFront className="h-5 w-5" aria-hidden="true" />,
       title: t('departure.method.timezoneTitle', 'Vehicle-local calendar'),
-      body: t(
-        'departure.method.timezoneBody',
-        'Bucketing, weekday support, DST boundaries, half-hour offsets, and upcoming slots use the selected vehicle timezone: {{timeZone}}.',
+      body: <>
+        {timeZoneProvenance}{' '}
+        {t(
+        'departure.method.modelTimezoneBody',
+        'Bucketing, weekday support, DST boundaries, half-hour offsets, and upcoming slots use the effective model timezone: {{timeZone}}.',
         { timeZone },
-      ),
+        )}
+      </>,
     },
     {
       key: 'events',
@@ -98,7 +120,7 @@ export function DepartureForecastMethodology({
       <GlassPanel className="p-4 sm:p-5">
         <PanelTitle className="mb-1 flex items-center gap-2">
           <FlaskConical
-            className="h-4 w-4 text-cyan-300"
+            className="h-4 w-4 text-[var(--text-secondary)]"
             aria-hidden="true"
           />
           {t('departure.method.title', 'Methodology and limitations')}
@@ -115,7 +137,7 @@ export function DepartureForecastMethodology({
               key={item.key}
               className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-4"
             >
-              <div className="mb-2 flex items-center gap-2 text-cyan-300">
+              <div className="mb-2 flex items-center gap-2 text-[var(--text-secondary)]">
                 {item.icon}
                 <Heading level="sub">{item.title}</Heading>
               </div>
@@ -125,7 +147,7 @@ export function DepartureForecastMethodology({
             </article>
           ))}
         </div>
-        <AlertBanner className="mt-4" variant="warning">
+        <AlertBanner className="mt-4 border-[var(--border-subtle)] bg-[var(--surface-2)]" variant="warning">
           <Text as="p" variant="caption">
             {t(
               'departure.method.notice',

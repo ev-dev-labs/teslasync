@@ -34,7 +34,7 @@ export function DepartureForecastRankedWindows({
     <section data-testid="departure-ranked-windows">
       <GlassPanel className="h-full p-4 sm:p-5">
         <PanelTitle className="mb-1 flex items-center gap-2">
-          <ListOrdered className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+          <ListOrdered className="h-4 w-4 text-[var(--text-secondary)]" aria-hidden="true" />
           {t('departure.ranked.title', 'Strongest upcoming supported windows')}
         </PanelTitle>
         <Text as="p" variant="caption" className="mb-4">
@@ -95,15 +95,7 @@ export function DepartureForecastRankedWindows({
                         )}
                       </Text>
                     </div>
-                    <Badge
-                      variant={
-                        slot.p >= 0.5
-                          ? 'success'
-                          : slot.p >= 0.25
-                            ? 'info'
-                            : 'neutral'
-                      }
-                    >
+                    <Badge variant="neutral">
                       {t(
                         'departure.ranked.likelihood',
                         '{{value}}% modeled',
