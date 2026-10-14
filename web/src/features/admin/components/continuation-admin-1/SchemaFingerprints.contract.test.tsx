@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { MemoryRouter } from 'react-router-dom';
 import { SchemaFingerprints } from './SchemaFingerprints';
 import type { SchemaSectionState } from './schemaPresentation';
 import { getFormatterPreferences, setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat';
@@ -176,7 +177,9 @@ describe('SchemaFingerprints copy and responsive contract', () => {
   });
 
   it('preserves the section shell through loading, empty refresh and query-error recovery', () => {
-    const { rerender } = render(<SchemaFingerprints state={{ ...state, drift: null, isLoading: true }} />);
+    const { rerender } = render(<SchemaFingerprints state={{ ...state, drift: null, isLoading: true }} />, {
+      wrapper: MemoryRouter,
+    });
     expect(screen.getByRole('heading', { name: 'Schema fingerprints' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Copy fingerprint hash' })).not.toBeInTheDocument();
     expect(screen.queryByText('No fingerprint available')).not.toBeInTheDocument();
