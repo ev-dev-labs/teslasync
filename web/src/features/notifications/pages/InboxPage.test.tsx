@@ -406,9 +406,40 @@ describe('InboxPage — restrained navigation and independent registry trust', (
     mockRules.mockReturnValue(qr({ data: null }));
     renderPage();
     expect(captureBody).toHaveBeenLastCalledWith({ archived: false, vehicles: [], rules: [] });
-    expect(screen.getByRole('status', { name: 'Loading Vehicles' })).toBeInTheDocument();
-    expect(screen.getByRole('status', { name: 'Loading Rules' })).toBeInTheDocument();
+    expect(within(screen.getByRole('region', { name: 'Vehicles' })).getByText('Unknown')).toBeInTheDocument();
+    expect(within(screen.getByRole('region', { name: 'Rules' })).getByText('Unknown')).toBeInTheDocument();
+    expect(screen.queryByRole('status', { name: 'Loading Vehicles' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('status', { name: 'Loading Rules' })).not.toBeInTheDocument();
     expect(screen.queryByText('No vehicles yet')).not.toBeInTheDocument();
+  });
+
+  it.each([
+    { name: 'paused', fetchStatus: 'paused', isFetching: false, label: 'Refresh paused' },
+    { name: 'idle', fetchStatus: 'idle', isFetching: false, label: 'Unknown' },
+  ])('keeps no-data $name registries honest and independently recoverable', ({ fetchStatus, isFetching, label }) => {
+    const vehiclesRetry = vi.fn();
+    const rulesRetry = vi.fn();
+    mockVehicles.mockReturnValue(qr({ data: undefined, isPending: true, fetchStatus, isFetching, refetch: vehiclesRetry }));
+    mockRules.mockReturnValue(qr({ data: undefined, isPending: true, fetchStatus, isFetching, refetch: rulesRetry }));
+    renderPage();
+    const vehiclesRegion = within(screen.getByRole('region', { name: 'Vehicles' }));
+    const rulesRegion = within(screen.getByRole('region', { name: 'Rules' }));
+    expect(vehiclesRegion.getByText(label)).toBeInTheDocument();
+    expect(rulesRegion.getByText(label)).toBeInTheDocument();
+    expect(screen.queryByRole('status', { name: 'Loading Vehicles' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('status', { name: 'Loading Rules' })).not.toBeInTheDocument();
+    expect(screen.queryByText('No vehicles yet')).not.toBeInTheDocument();
+    expect(screen.queryByText('No alert rules yet')).not.toBeInTheDocument();
+    expect(screen.queryByText(/offline/i)).not.toBeInTheDocument();
+    fireEvent.click(vehiclesRegion.getByRole('button', { name: 'Retry' }));
+    expect(vehiclesRetry).toHaveBeenCalledTimes(1);
+    expect(rulesRetry).not.toHaveBeenCalled();
+    fireEvent.click(rulesRegion.getByRole('button', { name: 'Retry' }));
+    expect(rulesRetry).toHaveBeenCalledTimes(1);
+    expect(captureBody).toHaveBeenLastCalledWith({ archived: false, vehicles: [], rules: [] });
+    expect(summaryScope().getByText('5')).toBeInTheDocument();
+    expect(screen.getByTestId('notification-report')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'View archived' })).toBeInTheDocument();
   });
 
   it.each([

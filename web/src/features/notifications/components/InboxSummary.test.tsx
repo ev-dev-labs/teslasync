@@ -10,7 +10,7 @@
  *      guard) rather than flashing an empty skeleton.
  *   3. Error branch renders a QueryError alert; Retry calls refetch().
  *   4. Empty backlog → EmptyState placeholder, region still visible.
- *   5. Undefined data (idle query) is treated as empty (null-safety).
+ *   5. Undefined data (idle query) stays unknown, distinct from resolved empty.
  *   6. Populated aggregation: total / unread (+ "N of M" subtitle) / severity
  *      buckets / relative "last received".
  *   7. Null-safety: unknown severities are not miscounted, missing read_at
@@ -18,7 +18,7 @@
  *   8. a11y: labelled landmark region with decorative (aria-hidden) icons.
  */
 
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render, screen, fireEvent, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryObserver, type UseQueryResult } from '@tanstack/react-query';
@@ -26,7 +26,11 @@ import '../../../i18n';
 
 import { InboxSummary } from './InboxSummary';
 import type { NotificationLog } from '@/api/types';
-import { formatDateTime } from '@/lib/dateFormat';
+import { formatDateTime, formatRelativeTime } from '@/lib/dateFormat';
+import * as settingsModule from '@/hooks/useSettings';
+import * as timezoneModule from '@/lib/timezone';
+
+afterEach(() => vi.restoreAllMocks());
 
 let logId = 1;
 function makeLog(overrides: Partial<NotificationLog> = {}): NotificationLog {
@@ -195,7 +199,7 @@ describe('InboxSummary — accepted severity aliases and archived scope', () => 
     fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
     expect(screen.getByRole('dialog')).toHaveTextContent('Latest 50 archived entries · all time');
     expect(screen.getByRole('dialog')).toHaveTextContent('not the workspace period or the server total');
-    expect(screen.getByRole('dialog')).toHaveTextContent(formatDateTime(new Date(archivedAt)));
+    expect(screen.getByRole('dialog')).toHaveTextContent(formatDateTime(new Date(archivedAt), { locale: 'en-US', tz: 'UTC' }));
   });
 
   it('retains cached metrics and explicit paused trust instead of claiming a loaded fresh sample', () => {
@@ -230,12 +234,100 @@ describe('InboxSummary — empty states', () => {
     expect(screen.queryByText('Recent notifications')).not.toBeInTheDocument();
   });
 
-  it('treats an idle query with undefined data as empty (null-safety)', () => {
+  it('keeps an idle query with undefined data unknown rather than empty (null-safety)', () => {
     renderSummary(makeQuery());
 
+    expect(screen.getByText('Unknown')).toBeInTheDocument();
+    expect(screen.queryByText('No notifications yet')).not.toBeInTheDocument();
+    expect(cardValue('Recent notifications')).toBe('—');
+    expect(screen.getByTestId('notification-backlog-brief')).not.toHaveAttribute('aria-busy');
+  });
+});
+
+describe('InboxSummary — initial acquisition is not resolved emptiness', () => {
+  it.each([
+    { fetchStatus: 'fetching' as const, label: 'Loading…', busy: true },
+    { fetchStatus: 'paused' as const, label: 'Refresh paused', busy: false },
+    { fetchStatus: 'idle' as const, label: 'Unknown', busy: false },
+  ])('preserves the six metrics and honest $fetchStatus trust without manufactured totals', ({ fetchStatus, label, busy }) => {
+    const refetch = vi.fn();
+    renderSummary(makeQuery({ fetchStatus, refetch }));
+    const brief = screen.getByTestId('notification-backlog-brief');
+    expect(getRegion()).toBeInTheDocument();
+    expect(screen.getByText(label)).toBeInTheDocument();
+    expect(brief.querySelectorAll('[data-operational-metric]')).toHaveLength(6);
+    expect(brief.hasAttribute('aria-busy')).toBe(busy);
+    expect(brief.querySelectorAll('[data-operational-value]')).toHaveLength(busy ? 0 : 6);
+    expect(screen.queryByText('No notifications yet')).not.toBeInTheDocument();
+    expect(screen.queryByText('Sample loaded')).not.toBeInTheDocument();
+    expect(screen.queryByText('0 of 0')).not.toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(screen.queryByText(/offline/i)).not.toBeInTheDocument();
+    if (!busy) {
+      expect(cardValue('Recent notifications')).toBe('—');
+      fireEvent.click(within(getRegion()).getByRole('button', { name: 'Retry' }));
+      expect(refetch).toHaveBeenCalledTimes(1);
+    }
+  });
+
+  it('does not promote a null payload to a confirmed zero', () => {
+    renderSummary(makeQuery({ data: null as unknown as NotificationLog[] }));
+    expect(screen.getByText('Unknown')).toBeInTheDocument();
+    expect(cardValue('Recent notifications')).toBe('—');
+    expect(screen.queryByText('No notifications yet')).not.toBeInTheDocument();
+  });
+
+  it.each([
+    { name: 'background fetch', isFetching: true },
+    { name: 'failed refresh', error: new Error('Synthetic refresh failure') },
+    { name: 'paused refresh', fetchStatus: 'paused' as const },
+  ])('retains an authoritative empty array during $name', (overrides) => {
+    renderSummary(makeQuery({ data: [], ...overrides }));
     expect(screen.getByText('No notifications yet')).toBeInTheDocument();
-    // Not loading, so no skeleton either — just the placeholder.
-    expect(screen.queryByTestId('stat-grid-skeleton')).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Manage alert rules' })).toHaveAttribute('href', '/notifications/rules');
+    expect(screen.queryByTestId('notification-backlog-brief')).not.toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    if (!overrides.isFetching) expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+  });
+
+  it('replaces unresolved then loaded rows with a newly authoritative empty response', () => {
+    const { rerender } = renderSummary(makeQuery({ fetchStatus: 'paused' }));
+    expect(screen.queryByText('No notifications yet')).not.toBeInTheDocument();
+    const data = [makeLog({ id: 42 })];
+    rerender(<MemoryRouter><InboxSummary query={makeQuery({ data })} /></MemoryRouter>);
+    expect(cardValue('Recent notifications')).toBe('1');
+    expect(data[0].id).toBe(42);
+    rerender(<MemoryRouter><InboxSummary query={makeQuery({ data: [] })} /></MemoryRouter>);
+    expect(screen.getByText('No notifications yet')).toBeInTheDocument();
+    expect(screen.queryByText('Recent notifications')).not.toBeInTheDocument();
+  });
+});
+
+describe('InboxSummary — saved user-context date display', () => {
+  it.each([
+    { locale: 'de-DE-u-hc-h23', tz: 'Pacific/Honolulu', archived: false },
+    { locale: 'en-US-u-hc-h12', tz: 'America/New_York', archived: true },
+    { locale: 'ar-EG-u-nu-arab-hc-h23', tz: 'UTC', archived: false },
+  ])('uses saved $locale / $tz for relative and full dates (archived=$archived)', ({ locale, tz, archived }) => {
+    vi.spyOn(Date, 'now').mockReturnValue(Date.parse('2026-10-14T07:00:00Z'));
+    const preferences = settingsModule.useSettings();
+    vi.spyOn(settingsModule, 'useSettings').mockReturnValue({
+      ...preferences, locale,
+      settings: { ...preferences.settings, locale, timezone_user: tz, tz_display_default: 'vehicle' },
+    });
+    const timezone = vi.spyOn(timezoneModule, 'useTimezone').mockImplementation((mode) =>
+      mode === 'user' ? tz : 'Asia/Tokyo',
+    );
+    const timestamp = new Date(Date.now() - 5 * 60_000).toISOString();
+    const row = makeLog({ created_at: timestamp, archived_at: timestamp });
+    const original = { ...row };
+    renderSummary(makeQuery({ data: [row] }), archived);
+    expect(timezone).toHaveBeenCalledWith('user');
+    expect(cardValue(archived ? 'Last archived' : 'Last received')).toBe(formatRelativeTime(timestamp, { locale, tz }));
+    fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
+    expect(screen.getByRole('dialog')).toHaveTextContent(formatDateTime(timestamp, { locale, tz }));
+    expect(row).toEqual(original);
+    expect(preferences.settings.timezone_user).not.toBe(tz);
   });
 });
 

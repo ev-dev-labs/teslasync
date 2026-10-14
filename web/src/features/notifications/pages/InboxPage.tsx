@@ -15,7 +15,7 @@ import { Link } from 'react-router-dom';
 import { Archive } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { typography } from '@/lib/tokens';
-import { BUTTON_BASE, BUTTON_VARIANTS, Caption, Icon } from '@/components/ui';
+import { BUTTON_BASE, BUTTON_VARIANTS, Button, Caption, Icon } from '@/components/ui';
 import { PageLayout } from '@/components/layout';
 import { QueryError, Skeleton, StaleRefreshWarning } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
@@ -47,9 +47,11 @@ export default function InboxPage() {
   const rules = rulesQuery.data ?? [];
   const metadataSources = [
     { id: 'vehicles', label: t('notifications.alertStudio.editor.vehiclesLabel', 'Vehicles'),
-      state: vehiclesState, empty: t('vehicles.emptyTitle', 'No vehicles yet'), count: vehicles.length },
+      state: vehiclesState, fetching: vehiclesQuery.isFetching,
+      empty: t('vehicles.emptyTitle', 'No vehicles yet'), count: vehicles.length },
     { id: 'rules', label: t('notifications.alertStudio.rules.title', 'Rules'),
-      state: rulesState, empty: t('notifications.alertStudio.rules.emptyTitle', 'No alert rules yet'), count: rules.length },
+      state: rulesState, fetching: rulesQuery.isFetching,
+      empty: t('notifications.alertStudio.rules.emptyTitle', 'No alert rules yet'), count: rules.length },
   ];
 
   // The latest active notifications drive the recent KPI band; historical
@@ -92,8 +94,24 @@ export default function InboxPage() {
                 <QueryError error={source.state.fatalError} onRetry={source.state.retry ?? undefined}
                   resourceName={source.label} compact />
               ) : !source.state.hasData ? (
-                <div role="status" aria-label={t('developerReference.layout.source.loading', 'Loading {{label}}', { label: source.label })}>
-                  <Skeleton className="h-4 w-32 max-w-full" />
+                <div role="status" aria-label={source.fetching && !source.state.isRefreshBlocked
+                  ? t('developerReference.layout.source.loading', 'Loading {{label}}', { label: source.label })
+                  : source.label} className="min-w-0 space-y-2">
+                  {source.fetching && !source.state.isRefreshBlocked ? (
+                    <Skeleton className="h-4 w-32 max-w-full" />
+                  ) : (
+                    <>
+                      <Caption>{source.state.isRefreshBlocked
+                        ? t('fleetOps.brief.refreshBlocked', 'Refresh paused')
+                        : t('common.unknown', 'Unknown')}</Caption>
+                      {source.state.retry ? (
+                        <Button type="button" variant="secondary" size="sm" wrapLabel
+                          className="min-h-11 max-w-full md:min-h-9" onClick={source.state.retry}>
+                          {t('common.retry', 'Retry')}
+                        </Button>
+                      ) : null}
+                    </>
+                  )}
                 </div>
               ) : (
                 <>

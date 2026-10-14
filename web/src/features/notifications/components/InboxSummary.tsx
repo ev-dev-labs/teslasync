@@ -17,13 +17,12 @@ import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { UseQueryResult } from '@tanstack/react-query';
 import { Archive, Inbox, MailWarning, AlertOctagon, AlertTriangle, Info, Clock } from 'lucide-react';
-import { GlassPanel } from '@/components/ui';
+import { Button, GlassPanel } from '@/components/ui';
 import { OperationalBrief, DataProvenanceBadge, type StatMetric } from '@/components/data-display';
 import { EmptyState, QueryError, StaleRefreshWarning } from '@/components/feedback';
 import type { NotificationLog } from '@/api/types';
-import { formatRelativeTime, formatDateTime } from '@/lib/dateFormat';
-
 import { useDataState } from '@/hooks/useDataState';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import { useOperationalMetrics } from '@/hooks/useOperationalMetrics';
 
 export interface InboxSummaryProps {
@@ -44,7 +43,8 @@ interface InboxStats {
 /** Compact backlog context; complete period aggregates remain in the report. */
 export function InboxSummary({ query, archived = false }: InboxSummaryProps) {
   const { t } = useTranslation();
-  const state = useDataState(query);
+  const { formatRelativeTime, formatDateTime } = useDateFormat('user');
+  const state = useDataState({ ...query, data: query.data ?? undefined });
   const rows = useMemo(() => query.data ?? [], [query.data]);
 
   const stats = useMemo<InboxStats>(() => {
@@ -71,10 +71,8 @@ export function InboxSummary({ query, archived = false }: InboxSummaryProps) {
 
   const sectionLabel = archived ? t('notifications.archived.summary.label', 'Archived summary') : t('notifications.inbox.summary.label', 'Inbox summary');
 
-  // Only the genuine first load (no cached rows yet) shows the skeleton.
-  // A background refetch keeps its previously-fetched data, so we keep the
-  // KPIs on screen instead of flashing an empty skeleton grid over them.
-  const firstLoad = query.isLoading && rows.length === 0;
+  // Idle/paused acquisition establishes neither an empty backlog nor active loading.
+  const firstLoad = !state.hasData && !state.isRefreshBlocked && query.isFetching;
   const scope = archived ? t('notifications.archived.summary.recentScope', 'Latest 50 archived entries · all time') : t('notifications.inbox.summary.recentScope', 'Latest 50 active entries · all time');
   const provenance = t('notifications.inbox.summary.brief.provenance', 'Counts describe this bounded unfiltered sample, not the workspace period or the server total. Missing read timestamps count as unread.');
   const lastReceivedValue = stats.lastTs > 0 ? formatRelativeTime(new Date(stats.lastTs)) : null;
@@ -85,7 +83,9 @@ export function InboxSummary({ query, archived = false }: InboxSummaryProps) {
       context: <>{archived ? <Archive className="h-3.5 w-3.5" aria-hidden="true" /> : <Inbox className="h-3.5 w-3.5" aria-hidden="true" />}</> },
     { metricId: 'count', occurrenceId: 'inbox-unread', rawValue: state.hasData ? stats.unread : null,
       label: t('notifications.inbox.summary.unread', 'Unread'),
-      context: <><MailWarning className="h-3.5 w-3.5" aria-hidden="true" />{t('notifications.inbox.summary.unreadOf', '{{unread}} of {{total}}', { unread: stats.unread, total: stats.total })}</> },
+      context: <><MailWarning className="h-3.5 w-3.5" aria-hidden="true" />{state.hasData
+        ? t('notifications.inbox.summary.unreadOf', '{{unread}} of {{total}}', { unread: stats.unread, total: stats.total })
+        : null}</> },
     { metricId: 'count', occurrenceId: 'inbox-critical', rawValue: state.hasData ? stats.critical : null,
       label: t('notifications.inbox.summary.critical', 'Critical'), context: <AlertOctagon className="h-3.5 w-3.5" aria-hidden="true" /> },
     { metricId: 'count', occurrenceId: 'inbox-warn', rawValue: state.hasData ? stats.warn : null,
@@ -104,7 +104,7 @@ export function InboxSummary({ query, archived = false }: InboxSummaryProps) {
         <GlassPanel className="p-4 sm:p-5">
           <QueryError
             error={state.fatalError}
-            onRetry={() => { void query.refetch(); }}
+            onRetry={state.retry ?? undefined}
             resourceName={archived ? t('notifications.archived.summary.resource', 'archived notifications') : t('notifications.inbox.summary.resource', 'notifications')}
           />
         </GlassPanel>
@@ -112,7 +112,7 @@ export function InboxSummary({ query, archived = false }: InboxSummaryProps) {
     );
   }
 
-  if (!firstLoad && stats.total === 0) {
+  if (state.hasData && stats.total === 0) {
     return (
       <section aria-label={sectionLabel}>
         <GlassPanel className="p-4 sm:p-5">
@@ -138,10 +138,17 @@ export function InboxSummary({ query, archived = false }: InboxSummaryProps) {
         description={provenance}
         statusLabel={firstLoad ? t('common.loading', 'Loading…') : state.isRefreshBlocked
           ? t('fleetOps.brief.refreshBlocked', 'Refresh paused')
+          : !state.hasData ? t('common.unknown', 'Unknown')
           : state.status === 'stale' ? t('dataState.stale.title', 'Data may be stale')
             : t('notifications.inbox.summary.brief.available', 'Sample loaded')}
         statusTone={!firstLoad && (state.isRefreshBlocked || state.status === 'stale') ? 'warning' : 'neutral'}
         metrics={operationalMetrics} scope={scope}
+        actions={!state.hasData && !firstLoad && state.retry ? (
+          <Button type="button" variant="secondary" size="sm" wrapLabel
+            className="min-h-11 max-w-full md:min-h-9" onClick={state.retry}>
+            {t('common.retry', 'Retry')}
+          </Button>
+        ) : undefined}
         freshness={<DataProvenanceBadge provenance={state.provenance} status={state.status} updatedAt={state.updatedAt} />}
         provenance={`${scope}. ${provenance}`}
         attention={stats.total > stats.critical + stats.warn + stats.info ? [{
