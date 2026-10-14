@@ -12,6 +12,9 @@ import {
   getFormatterPreferences, setGlobalLocale, setGlobalPrecision,
 } from '@/lib/numberFormat';
 import ChargeInterruptionPage from './ChargeInterruptionPage';
+import { subscribeAnnouncer } from '@/hooks/useAnnouncer';
+import { __resetAnnouncePolicyForTests } from '@/lib/announcePolicy';
+import { __resetStatusAnnouncerForTests } from '@/hooks/useStatusAnnouncer';
 
 const source = vi.hoisted(() => ({
   query: {} as DataStateSource<ChargingSession[]>,
@@ -119,6 +122,8 @@ function assertSeries() {
 }
 
 beforeEach(() => {
+  __resetAnnouncePolicyForTests();
+  __resetStatusAnnouncerForTests();
   source.historyHook.mockReset();
   source.retry.mockReset();
   source.vehicleId = 7;
@@ -137,6 +142,47 @@ afterEach(() => {
 });
 
 describe('ChargeInterruptionPage source adoption and preservation', () => {
+  it.each([
+    { name: 'populated', data: history, error: undefined, message: 'Charging history loaded, 6 items', priority: 'polite' },
+    { name: 'empty', data: [], error: undefined, message: 'No Charging history to show', priority: 'polite' },
+    { name: 'failed', data: undefined, error: new Error('private failure'), message: 'Could not refresh Charging history', priority: 'assertive' },
+  ] as const)('announces the $name source result without replacing section shells', ({ data, error, message, priority }) => {
+    const announcement = vi.fn();
+    const unsubscribe = subscribeAnnouncer(announcement);
+    try {
+      source.query = { isLoading: true, isPending: true, fetchStatus: 'fetching', refetch: source.retry };
+      const result = mountPage();
+      const shell = result.container.querySelector('[data-role="page-container"]');
+      const chart = figure();
+      const details = sites(result.container);
+      expect(shell).toHaveAttribute('aria-busy', 'true');
+      expect(tiles(result.container)).toHaveLength(6);
+      expect(announcement).not.toHaveBeenCalled();
+
+      source.query = { data, error, isError: error != null, isLoading: false, fetchStatus: 'idle', refetch: source.retry };
+      result.rerender(<ChargeInterruptionPage />);
+      expect(figure()).toBe(chart);
+      expect(sites(result.container)).toBe(details);
+      expect(tiles(result.container)).toHaveLength(6);
+      expect(shell).not.toHaveAttribute('aria-busy');
+      expect(announcement).toHaveBeenCalledOnce();
+      expect(announcement).toHaveBeenCalledWith(expect.stringContaining(message), priority);
+      if (data?.length) {
+        assertSeries();
+        expect(details.querySelectorAll('li')).toHaveLength(2);
+        source.query = { ...source.query, isFetching: true, fetchStatus: 'fetching' };
+        result.rerender(<ChargeInterruptionPage />);
+        expect(shell).toHaveAttribute('aria-busy', 'true');
+        expect(details.querySelectorAll('li')).toHaveLength(2);
+        source.query = { ...source.query, isFetching: false, fetchStatus: 'idle' };
+        result.rerender(<ChargeInterruptionPage />);
+        expect(announcement).toHaveBeenCalledOnce();
+      }
+    } finally {
+      unsubscribe();
+    }
+  });
+
   it('preserves original metrics and site facts while completing the loaded/evaluable summary', () => {
     const result = mountPage();
     const summary = analyzeChargeInterruptions(history);

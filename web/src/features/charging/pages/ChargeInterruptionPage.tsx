@@ -25,6 +25,7 @@ import { deriveDataState } from '@/api/dataState';
 import { ChargeInterruptionStats } from '../components/charge-interruption-modernization';
 import { analyzeChargeInterruptions, type InterruptionCause, type InterruptionTrend } from '../lib/chargeInterruption';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { useLoadAnnouncement } from '@/hooks/useStatusAnnouncer';
 
 const CAUSE_DEFAULTS: Record<InterruptionCause, string> = {
   no_end_timestamp: 'No end timestamp recorded',
@@ -62,6 +63,15 @@ export default function ChargeInterruptionPage() {
   const sessionsQuery = useChargingHistory(vehicleIdStr);
   const sessionsState = deriveDataState(sessionsQuery, { provenance: 'historical' });
   const summary = useMemo(() => analyzeChargeInterruptions(sessionsQuery.data ?? []), [sessionsQuery.data]);
+  const isLoading = sessionsQuery.isLoading && !sessionsState.hasData;
+  const sourceLabel = t('chargeInterruption.modernization.source', 'Charging history');
+  useLoadAnnouncement({
+    label: sourceLabel,
+    isLoading: Boolean(isLoading),
+    isError: sessionsState.fatalError != null,
+    count: sessionsQuery.data?.length,
+    enabled: vehicleId != null && !sessionsState.isRefreshBlocked,
+  });
 
   const chartData = useMemo(
     () =>
@@ -81,9 +91,7 @@ export default function ChargeInterruptionPage() {
     return <NoVehicleSelected pageTitle={t('chargeInterruption.title', 'Charge Interruption Risk')} />;
   }
 
-  const isLoading = sessionsQuery.isLoading && !sessionsState.hasData;
   const fatalError = sessionsState.fatalError;
-  const sourceLabel = t('chargeInterruption.modernization.source', 'Charging history');
   const initialPaused = !sessionsState.hasData && sessionsState.isRefreshBlocked && !fatalError;
   const pausedMessage = t(
     'chargeInterruption.modernization.paused',
@@ -98,7 +106,8 @@ export default function ChargeInterruptionPage() {
         'Sessions that may have been cut short or under-delivered, estimated from indirect evidence \u2014 never a hardware diagnosis',
       )}
       query={sessionsQuery}
-      busy={sessionsState.isRefreshing}
+      busy={isLoading || sessionsState.isRefreshing}
+      announce={false}
       className="w-full min-w-0"
     >
       <StaleRefreshWarning state={sessionsState} label={sourceLabel} />
