@@ -231,12 +231,34 @@ import { useChargingSessionsPaginated, useChargingOptimizer, useBulkDeleteChargi
 import { useVehicleState } from '@/api/hooks/useVehicles';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import type { ChargingSession, VehicleState } from '@/api/types';
+import type { ChargingOptimizerData } from '@/types/charging';
 
 const mockSessions = vi.mocked(useChargingSessionsPaginated);
 const mockOptimizer = vi.mocked(useChargingOptimizer);
 const mockBulkDelete = vi.mocked(useBulkDeleteCharging);
 const mockVehicleState = vi.mocked(useVehicleState);
 const mockSelectedVehicle = vi.mocked(useSelectedVehicle);
+
+const OPTIMIZER: ChargingOptimizerData = {
+  current_schedule: {
+    most_common_start_hour: 0,
+    most_common_day: '',
+    avg_sessions_per_week: 0,
+    home_charging_pct: 0,
+    avg_charge_to_pct: 0,
+  },
+  cost_analysis: {
+    peak_hours: [],
+    offpeak_hours: [],
+    peak_cost_per_kwh: 0,
+    offpeak_cost_per_kwh: 0,
+    sessions_during_peak_pct: 0,
+    potential_monthly_savings: 0,
+  },
+  battery_health_score: 0,
+  recommendations: [],
+  weekly_heatmap: [],
+};
 
 /** Minimal `UseQueryResult`-shaped stub (incl. the DataFreshness fields). */
 function qr(over: Record<string, unknown> = {}): any {
@@ -545,6 +567,78 @@ describe('ChargingListPage — responsive evidence adoption', () => {
   });
 });
 
+describe('ChargingListPage — numeric search measurements', () => {
+  it.each(['cost:unknown', 'power:unknown', 'dur:unknown'])('preserves literal fallback for %s', async (query) => {
+    mockSessions.mockReturnValue(qr({ data: [
+      makeSession({ id: 1, start_place: query, cost_decimal: null, peak_power_w: null, ended_at: null }),
+      makeSession({ id: 2 }),
+    ] }));
+    renderPage([`/charging?from=2000-01-01&to=2100-01-01&q=${encodeURIComponent(query)}`]);
+    expect(await findSessionCard(1)).toBeInTheDocument();
+    expect(sessionCard(2)).not.toBeInTheDocument();
+  });
+
+  it.each([
+    ['cost:=0', [6]],
+    ['cost:<1', [6, 7, 8]],
+    ['cost:=-1.25', [7]],
+    ['cost:>=0.5', [8]],
+    ['power:=0', [6]],
+    ['power:<1', [6, 7, 8]],
+    ['power:=-1.25', [7]],
+    ['power:>=0.5', [8]],
+    ['free', [6]],
+    ['charger:home at:home kwh:>=30', [1, 2, 3, 4, 5, 6, 7, 8]],
+  ] as const)('filters %s using only known finite measurements', async (query, expectedIds) => {
+    mediaState.desktop = true;
+    mockSessions.mockReturnValue(qr({ data: [
+      makeSession({ id: 1, cost_decimal: null, peak_power_w: null }),
+      makeSession({ id: 2, cost_decimal: undefined, peak_power_w: undefined }),
+      makeSession({ id: 3, cost_decimal: Number.NaN, peak_power_w: Number.NaN }),
+      makeSession({ id: 4, cost_decimal: Infinity, peak_power_w: Infinity }),
+      makeSession({ id: 5, cost_decimal: -Infinity, peak_power_w: -Infinity }),
+      makeSession({ id: 6, cost_decimal: 0, peak_power_w: 0 }),
+      makeSession({ id: 7, cost_decimal: -1.25, peak_power_w: -1_250 }),
+      makeSession({ id: 8, cost_decimal: 0.5, peak_power_w: 500 }),
+    ] }));
+    renderPage([`/charging?from=2000-01-01&to=2100-01-01&q=${encodeURIComponent(query)}`]);
+    const table = await screen.findByRole('table', { name: 'All charging sessions' });
+    await waitFor(() => {
+      const links = table.querySelectorAll<HTMLAnchorElement>('a[href^="/charging/"]');
+      expect(Array.from(links, (link) => Number(link.getAttribute('href')?.split('/').at(-1))).sort((a, b) => a - b))
+        .toEqual(expectedIds);
+    });
+  });
+
+  it.each([
+    ['dur:=0', []],
+    ['dur:<1m', [8]],
+    ['dur:=30s', [8]],
+    ['dur:>=1m', [9]],
+    ['dur:<0', []],
+  ] as const)('filters %s only with usable completed timestamps', async (query, expectedIds) => {
+    mediaState.desktop = true;
+    mockSessions.mockReturnValue(qr({ data: [
+      makeSession({ id: 1, ended_at: null }),
+      makeSession({ id: 2, ended_at: undefined }),
+      makeSession({ id: 3, started_at: '' }),
+      makeSession({ id: 4, started_at: 'invalid' }),
+      makeSession({ id: 5, ended_at: 'invalid' }),
+      makeSession({ id: 6, ended_at: '2024-06-15T10:00:00Z' }),
+      makeSession({ id: 7, ended_at: '2024-06-15T09:59:00Z' }),
+      makeSession({ id: 8, ended_at: '2024-06-15T10:00:30Z' }),
+      makeSession({ id: 9, ended_at: '2024-06-15T10:01:00Z' }),
+    ] }));
+    renderPage([`/charging?from=2000-01-01&to=2100-01-01&q=${encodeURIComponent(query)}`]);
+    const table = await screen.findByRole('table', { name: 'All charging sessions' });
+    await waitFor(() => {
+      const links = table.querySelectorAll<HTMLAnchorElement>('a[href^="/charging/"]');
+      expect(Array.from(links, (link) => Number(link.getAttribute('href')?.split('/').at(-1))).sort((a, b) => a - b))
+        .toEqual(expectedIds);
+    });
+  });
+});
+
 describe('ChargingListPage — date window', () => {
   it('fetches sessions with vehicle-timezone RFC3339 instants, not UTC date-only days', async () => {
     renderPage();
@@ -642,6 +736,82 @@ describe('ChargingListPage — pagination', () => {
     view.refresh();
     await waitFor(() => expect(urlParams().get('page')).toBeNull());
     expect(screen.getByText('No charging sessions yet')).toBeInTheDocument();
+  });
+});
+
+describe('ChargingListPage — independent optimizer state', () => {
+  const region = () => screen.getByRole('region', { name: 'Cost optimizer & heatmap' });
+
+  it('shows active loading without claiming a successful empty result', () => {
+    mockOptimizer.mockReturnValue(qr({
+      isPending: true, isLoading: true, isFetching: true, fetchStatus: 'fetching',
+    }));
+    renderPage();
+    expect(within(region()).getByRole('status', { name: 'Cost optimizer & heatmap' })).toHaveAttribute('aria-busy', 'true');
+    expect(within(region()).queryByText('Recommendations will appear after more charging sessions.')).toBeNull();
+    expect(within(region()).getByText(/Independent optimizer source/)).toBeInTheDocument();
+  });
+
+  it('shows paused-without-data as unavailable with an optimizer-only retry', () => {
+    const retry = vi.fn();
+    mockOptimizer.mockReturnValue(qr({
+      isPending: true, fetchStatus: 'paused', refetch: retry,
+    }));
+    renderPage();
+    expect(within(region()).queryByRole('status', { name: 'Cost optimizer & heatmap' })).toBeNull();
+    expect(within(region()).getByText('Service unavailable')).toBeInTheDocument();
+    fireEvent.click(within(region()).getByRole('button', { name: 'Refresh' }));
+    expect(retry).toHaveBeenCalledTimes(1);
+    expect(mockSessions.mock.results[0].value.refetch).not.toHaveBeenCalled();
+  });
+
+  it('renders successful empty arrays and zero metrics independently of empty list history', () => {
+    mockSessions.mockReturnValue(qr({ data: [] }));
+    mockOptimizer.mockReturnValue(qr({ data: OPTIMIZER }));
+    renderPage();
+    expect(within(region()).getByRole('heading', { name: 'Charging Habits' })).toBeInTheDocument();
+    expect(within(region()).getByText('Recommendations will appear after more charging sessions.')).toBeInTheDocument();
+    expect(within(region()).getByRole('meter', { name: 'Battery-Friendly Score' })).toHaveAttribute('aria-valuenow', '0');
+    expect(within(region()).queryByText('Service unavailable')).toBeNull();
+    expect(mockOptimizer).toHaveBeenCalledWith('1');
+    expect(OPTIMIZER.weekly_heatmap).toEqual([]);
+  });
+
+  it('retains payload on failed refresh, retries only the optimizer, and recovers', () => {
+    const retry = vi.fn();
+    mockOptimizer.mockReturnValue(qr({
+      data: OPTIMIZER, error: new Error('Optimizer refresh failed'), isError: true, refetch: retry,
+    }));
+    const page = renderPage();
+    expect(within(region()).getByTestId('stale-refresh-warning')).toBeInTheDocument();
+    expect(within(region()).getByRole('heading', { name: 'Charging Habits' })).toBeInTheDocument();
+    fireEvent.click(within(region()).getByRole('button', { name: 'Refresh' }));
+    expect(retry).toHaveBeenCalledTimes(1);
+    expect(mockSessions.mock.results[0].value.refetch).not.toHaveBeenCalled();
+
+    mockOptimizer.mockReturnValue(qr({ data: OPTIMIZER, isFetching: true, refetch: retry }));
+    page.refresh();
+    expect(within(region()).getByRole('heading', { name: 'Charging Habits' })).toBeInTheDocument();
+    mockOptimizer.mockReturnValue(qr({ data: OPTIMIZER, refetch: retry }));
+    page.refresh();
+    expect(within(region()).queryByTestId('stale-refresh-warning')).toBeNull();
+    expect(within(region()).getByRole('meter', { name: 'Battery-Friendly Score' })).toHaveAttribute('aria-valuenow', '0');
+  });
+
+  it('keeps optimizer success visible when list history fails', () => {
+    mockSessions.mockReturnValue(qr({ error: new Error('History failed'), isError: true }));
+    mockOptimizer.mockReturnValue(qr({ data: OPTIMIZER }));
+    renderPage();
+    expect(within(region()).getByRole('heading', { name: 'Charging Habits' })).toBeInTheDocument();
+  });
+
+  it('retries an initial optimizer failure without replacing the list', () => {
+    const retry = vi.fn();
+    mockOptimizer.mockReturnValue(qr({ error: new Error('Optimizer failed'), isError: true, refetch: retry }));
+    renderPage();
+    expect(sessionCard(1)).toBeInTheDocument();
+    fireEvent.click(within(region()).getByRole('button', { name: /Retry/ }));
+    expect(retry).toHaveBeenCalledTimes(1);
   });
 });
 

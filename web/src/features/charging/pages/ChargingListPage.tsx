@@ -7,7 +7,7 @@ import {
   Activity, Bell, Car, MapPin, Route, Wrench,
 } from 'lucide-react';
 import { PageLayout, PageHeaderSticky } from '@/components/layout';
-import { Badge, Caption, GlassPanel, Icon, Pagination, SectionTitle, Text, compactTableValueSelection, matchesTableValueSelection, tableValueKey } from '@/components/ui';
+import { Badge, Button, Caption, GlassPanel, Icon, Pagination, PanelTitle, SectionTitle, Text, compactTableValueSelection, matchesTableValueSelection, tableValueKey } from '@/components/ui';
 import { FadeIn, StaggerContainer, StaggerItem } from '@/components/motion';
 import {
   DataStateNotice, QueryError, StaleRefreshWarning,
@@ -67,6 +67,7 @@ import {
   computeStartLevelDist,
   computeChargeRateStats,
   computeChargerSpecs,
+  OptimizerSection,
 } from '../components/charging-list';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { useOperationalMetrics } from '@/hooks/useOperationalMetrics';
@@ -141,7 +142,39 @@ export default function ChargingListPage() {
   const liveState = vehicleStateQuery.data?.state;
   const [previewSession, setPreviewSession] = useState<ChargingSession | null>(null);
   const vehicleIdStr = vehicleId != null ? String(vehicleId) : null;
-  const { data: optimizer } = useChargingOptimizer(vehicleIdStr);
+  const optimizerQuery = useChargingOptimizer(vehicleIdStr);
+  const optimizerState = useDataState(optimizerQuery, { provenance: 'historical' });
+  const optimizerContent = (
+    <div className="space-y-4">
+      <StaleRefreshWarning state={optimizerState} label={t('charging.section.optimizer', 'Cost optimizer & heatmap')} />
+      {optimizerState.hasData && optimizerState.data ? (
+        <OptimizerSection optimizer={optimizerState.data} />
+      ) : (
+        <GlassPanel className="p-4 sm:p-6">
+          <PanelTitle>{t('charging.section.optimizer', 'Cost optimizer & heatmap')}</PanelTitle>
+          <Text variant="bodySm" color="secondary" className="my-4">
+            {t('charging.brief.optimizerScope', 'Independent optimizer source; its history bounds are not reported. Recommendations and savings are illustrative, not measured outcomes.')}
+          </Text>
+          {optimizerState.fatalError != null ? (
+            <QueryError error={optimizerState.fatalError} onRetry={optimizerState.retry ?? undefined} />
+          ) : optimizerQuery.isFetching && !optimizerState.isRefreshBlocked ? (
+            <div role="status" aria-busy="true" aria-label={t('charging.section.optimizer', 'Cost optimizer & heatmap')}>
+              <Skeleton className="h-40" />
+            </div>
+          ) : (
+            <DataStateNotice state="unavailable">
+              <Text variant="bodySm" color="secondary">
+                {t('dataState.unavailable.message', 'A required service is unavailable. This section will recover when the dependency returns.')}
+              </Text>
+              <Button variant="ghost" size="sm" onClick={optimizerState.retry ?? undefined}>
+                {t('common.refresh', 'Refresh')}
+              </Button>
+            </DataStateNotice>
+          )}
+        </GlassPanel>
+      )}
+    </div>
+  );
 
   /* ── Date filter (vehicle-tz day buckets) ────────────────────── */
   const dateFilteredSessions = useMemo(() => {
@@ -237,7 +270,8 @@ export default function ChargingListPage() {
           cost: (sess, token) => {
             const target = Number(token.value);
             if (!Number.isFinite(target)) return null;
-            return compareNumeric(sess.cost_decimal ?? 0, token.op, target);
+            if (sess.cost_decimal == null || !Number.isFinite(sess.cost_decimal)) return false;
+            return compareNumeric(sess.cost_decimal, token.op, target);
           },
           // kwh:>20
           kwh: (sess, token) => {
@@ -249,14 +283,17 @@ export default function ChargingListPage() {
           power: (sess, token) => {
             const target = Number(token.value);
             if (!Number.isFinite(target)) return null;
-            const peak = (sess.peak_power_w ?? 0) / 1000;
+            if (sess.peak_power_w == null || !Number.isFinite(sess.peak_power_w)) return false;
+            const peak = sess.peak_power_w / 1000;
             return compareNumeric(peak, token.op, target);
           },
           // dur:>1h | dur:30m | dur:>2d
           dur: (sess, token) => {
             const target = parseDurationToken(token.value);
             if (target == null) return null;
-            return compareNumeric(durationMinutes(sess), token.op, target);
+            const minutes = durationMinutes(sess);
+            if (minutes <= 0) return false;
+            return compareNumeric(minutes, token.op, target);
           },
           // in:2025 | in:2025-04 | in:2025-04-15
           in: (sess, token) => {
@@ -1387,11 +1424,15 @@ export default function ChargingListPage() {
             <section aria-label={t('charging.section.insights', 'Charging insights')} className="space-y-4">
               <SectionTitle>{t('charging.insights.title', 'Charging insights')}</SectionTitle>
               <QueryError error={chargingState.fatalError} onRetry={refetch} />
+              <section aria-label={t('charging.section.optimizer', 'Cost optimizer & heatmap')}>
+                {optimizerContent}
+              </section>
             </section>
           ) : <ChargingInsights
             sessions={sessions}
             loading={isLoading || historyPending}
-            optimizer={optimizer}
+            optimizer={optimizerState.data}
+            optimizerContent={optimizerContent}
             acDcBreakdown={acDcBreakdown}
             startLevelDist={startLevelDist}
             chargeRateStats={chargeRateStats}
