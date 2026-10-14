@@ -239,7 +239,7 @@ describe('RoadmapPage — phase bands', () => {
       done.getByRole('heading', { level: 2, name: 'Completed' }),
     ).toBeInTheDocument();
     expect(
-      done.getByText('Shipped and available in your deployment today.'),
+      done.getByText('Marked completed in the bundled roadmap; availability in this deployment is not verified.'),
     ).toBeInTheDocument();
     expect(done.getByText('10')).toBeInTheDocument();
     // Every completed initiative surfaces as a card heading.

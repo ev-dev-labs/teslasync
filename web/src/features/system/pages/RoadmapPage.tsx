@@ -58,7 +58,7 @@ const PHASE_META: Record<RoadmapPhase, PhaseMeta> = {
     labelKey: 'roadmap.phase.done',
     labelFallback: 'Completed',
     descKey: 'roadmap.phaseDesc.done',
-    descFallback: 'Shipped and available in your deployment today.',
+    descFallback: 'Marked completed in the bundled roadmap; availability in this deployment is not verified.',
   },
   current: {
     neon: 'cyan',
