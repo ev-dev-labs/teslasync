@@ -20,9 +20,21 @@ Phase 6 now has 99 done / 144 pending / 23 failed / 1 blocked.
 
 The installed runtime reports Node v26.8.1. One shared source-preview process
 was launched with `npm run dev -- --host 127.0.0.1 --port 5173 --strictPort`,
-shell `modernization-dev-new-machine`; readiness is still pending at this
-receipt. No Docker rebuild, browser download or fixture reseed is authorized.
+shell `modernization-dev-new-machine`, parent-owned detached PID 3876,
+created 2026-10-14T00:43:14Z. Actual readiness at 00:48:34Z is HTTP 200.
+Vite started in 114949ms with the normal catalog/namespace guards intact.
+No Docker rebuild, browser download or fixture reseed is authorized.
 All future browser checks must use the installed Edge, `channel: "msedge"`.
+
+All 32 dependency-ready, file-exclusive first-wave background launches were
+actually accepted and their IDs recorded in the canonical queue and session
+`files\phase6-new-machine-first-wave.json`. Twenty retained fix scopes and
+twelve previously unstarted finished-page source-QA reports own 63 exact
+files with zero overlap. Recovered attempts stay unchanged; first-time QA
+starts at attempt one. Conservative reservation clock 00:45:28.452Z sets
+return 01:05:28.452Z and hard 01:10:28.452Z; do not renew those clocks.
+The 00:48:33Z receipt records accepted launches, not a later real-state census.
+No browser locks are granted. Native/page acceptance and Phase 7 remain open.
 
 This host exposes no built-in recurring scheduler and no agent cancellation
 tool. The historical schedule 3 belongs to the previous session, not this
