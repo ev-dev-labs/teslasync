@@ -1,4 +1,5 @@
 import { AlertTriangle, CheckCircle2, LockKeyhole } from 'lucide-react';
+import { useSyncExternalStore } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import type {
@@ -9,6 +10,12 @@ import { KVList } from '@/components/data-display';
 import { InlineCallout } from '@/components/feedback';
 import { Badge, Caption, SectionTitle, Text } from '@/components/ui';
 import { formatDateTime } from '@/lib/dateFormat';
+import {
+  fmtNumber,
+  getFormatterPreferences,
+  isFiniteNumber,
+  subscribeFormatterPreferences,
+} from '@/lib/numberFormat';
 
 interface RepairImpactSummaryProps {
   preview: RepairImpactPreview;
@@ -20,19 +27,28 @@ function fieldLabel(field: string): string {
     .replace(/^./, (character) => character.toUpperCase());
 }
 
-function formatPreviewValue(value: RepairPreviewValue | undefined): string {
+function formatPreviewValue(value: RepairPreviewValue | undefined, exact = false): string {
   if (!value || value.null || value.type === 'null') return '—';
-  if (value.timestamp) return formatDateTime(value.timestamp);
-  if (value.string != null) return value.string;
-  if (value.int64 != null) return new Intl.NumberFormat().format(value.int64);
-  if (value.float64 != null) {
-    return new Intl.NumberFormat(undefined, { maximumFractionDigits: 2 }).format(value.float64);
+  if (value.type === 'timestamp' && value.timestamp) {
+    return exact ? value.timestamp : formatDateTime(value.timestamp);
+  }
+  if (value.type === 'string') return value.string ?? '—';
+  if (value.type === 'int64' || value.type === 'float64') {
+    const numeric = value.type === 'int64' ? value.int64 : value.float64;
+    if (!isFiniteNumber(numeric)) return '—';
+    if (exact) return Object.is(numeric, -0) ? '-0' : String(numeric);
+    return fmtNumber(numeric);
   }
   return '—';
 }
 
 export function RepairImpactSummary({ preview }: RepairImpactSummaryProps) {
   const { t } = useTranslation();
+  useSyncExternalStore(
+    subscribeFormatterPreferences,
+    getFormatterPreferences,
+    getFormatterPreferences,
+  );
   const changed = preview.fields_changed ?? [];
   const preserved = preview.fields_preserved ?? [];
   const warnings = preview.warnings ?? [];
@@ -51,13 +67,23 @@ export function RepairImpactSummary({ preview }: RepairImpactSummaryProps) {
       </div>
 
       <KVList
+        wrap
         items={changed.map((change) => ({
           label: fieldLabel(change.field),
           value: (
-            <span className="text-right">
-              {formatPreviewValue(change.before)}
-              {' → '}
-              {formatPreviewValue(change.after)}
+            <span className="block text-end">
+              <span>
+                {formatPreviewValue(change.before)}
+                {' → '}
+                {formatPreviewValue(change.after)}
+              </span>
+              <Caption as="span" className="block break-words">
+                {change.field}
+                {': '}
+                {formatPreviewValue(change.before, true)}
+                {' → '}
+                {formatPreviewValue(change.after, true)}
+              </Caption>
             </span>
           ),
         }))}
