@@ -1,12 +1,32 @@
 import { fireEvent, render, screen, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ApiError } from '@/api/client'
 import { ManagementEndpointCard } from './ManagementEndpointCard'
 
+const preferences = vi.hoisted(() => ({
+  locale: 'en-US',
+  timezone: 'UTC',
+}))
+
+vi.mock('@/hooks/useSettings', () => ({
+  useSettings: () => ({
+    settings: { tz_display_default: 'user' },
+    locale: preferences.locale,
+  }),
+}))
+
+vi.mock('@/lib/timezone', () => ({
+  useTimezone: () => preferences.timezone,
+}))
+
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key: string, fallback?: string) => fallback ?? key,
+    t: (key: string, fallback?: string, values?: Record<string, unknown>) =>
+      Object.entries(values ?? {}).reduce(
+        (text, [name, value]) => text.replaceAll(`{{${name}}}`, String(value)),
+        fallback ?? key,
+      ),
     i18n: { language: 'en' },
   }),
 }))
@@ -22,6 +42,45 @@ const baseProps = {
 }
 
 describe('ManagementEndpointCard preservation', () => {
+  beforeEach(() => {
+    preferences.locale = 'en-US'
+    preferences.timezone = 'UTC'
+  })
+
+  it('formats the raw cached instant with current locale and timezone preferences', () => {
+    const props = { ...baseProps, data: Object.freeze({ model: 'Model 3' }) }
+    const { rerender } = render(
+      <MemoryRouter><ManagementEndpointCard {...props} /></MemoryRouter>,
+    )
+    const expectedTime = (locale: string, timeZone: string) =>
+      new Intl.DateTimeFormat(locale, {
+        timeZone,
+        year: 'numeric', month: 'short', day: 'numeric',
+        hour: '2-digit', minute: '2-digit',
+      }).format(new Date(baseProps.fetchedAt))
+
+    expect(screen.getByText(`Cached ${expectedTime('en-US', 'UTC')}`)).toBeInTheDocument()
+
+    preferences.locale = 'de-DE'
+    preferences.timezone = 'America/Los_Angeles'
+    rerender(<MemoryRouter><ManagementEndpointCard {...props} /></MemoryRouter>)
+
+    expect(screen.getByText(`Cached ${expectedTime('de-DE', 'America/Los_Angeles')}`)).toBeInTheDocument()
+    expect(screen.queryByText(`Cached ${expectedTime('en-US', 'UTC')}`)).not.toBeInTheDocument()
+    expect(screen.getByText('Model 3')).toBeInTheDocument()
+    expect(props.fetchedAt).toBe('2026-08-08T12:00:00Z')
+    expect(props.data).toEqual({ model: 'Model 3' })
+  })
+
+  it('preserves the not-cached state when no source timestamp exists', () => {
+    render(<MemoryRouter><ManagementEndpointCard {...baseProps}
+      fetchedAt={null} data={{ model: 'Model 3' }}
+    /></MemoryRouter>)
+    expect(screen.getByText('Not cached')).toBeInTheDocument()
+    expect(screen.getByText('Model 3')).toBeInTheDocument()
+    expect(screen.queryByText(/^Cached /)).not.toBeInTheDocument()
+  })
+
   it('retains cached specifications, endpoint identity and refresh controls on a failed refresh', () => {
     const onRefresh = vi.fn()
     render(<MemoryRouter><ManagementEndpointCard {...baseProps}

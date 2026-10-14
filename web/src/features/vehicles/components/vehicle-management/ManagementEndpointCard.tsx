@@ -8,7 +8,7 @@ import {
 } from '@/components/ui'
 import { AlertBanner } from '@/components/feedback'
 import { LayoutCard } from '@/components/layout'
-import { formatDateTime } from '@/lib/dateFormat'
+import { useDateFormat } from '@/hooks/useDateFormat'
 import { Icons } from '@/lib/icons'
 import type { ManagementEndpointKind } from './managementJson'
 import { ManagementEndpointBody } from './ManagementEndpointBody'
@@ -77,6 +77,7 @@ export function ManagementEndpointCard({
   onRefresh,
 }: ManagementEndpointCardProps) {
   const { t } = useTranslation()
+  const { formatDateTime } = useDateFormat()
   const prerequisiteLabel = {
     user: t('vehicleManagement.prerequisite.user', 'User access'),
     partner: t('vehicleManagement.prerequisite.partner', 'Partner token'),
