@@ -35,8 +35,8 @@ import { formatDateShort } from '@/lib/dateFormat';
 import { cn } from '@/lib/cn';
 import { neonColorMap, typography } from '@/lib/tokens';
 import { convertDistanceFromSI, convertEnergyFromSI, type DistanceUnitPref } from '@/lib/unitConversion';
-import { useEnergyStats, useEnergyFlow } from '@/api/hooks/useEnergy';
-import type { DailyEnergy, EnergyFlowData } from '@/types/energy';
+import { useEnergyStats, useEnergyFlow, type EnergyFlowSnapshot } from '@/api/hooks/useEnergy';
+import type { DailyEnergy } from '@/types/energy';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 /* ───────── Constants ───────── */
@@ -104,11 +104,11 @@ export function efficiencyRating(
   return 'high';
 }
 
-/** Total instantaneous charge power (kW) = DC + AC. Both operands must
+/** Total instantaneous charge power (W) = DC + AC. Both operands must
  * be known; a missing channel cannot silently count as a measured zero. */
-export function computeChargePower(flow: EnergyFlowData | null | undefined): number | null {
-  if (flow?.dc_charging_power == null || flow.ac_charging_power == null) return null;
-  return flow.dc_charging_power + flow.ac_charging_power;
+export function computeChargePower(flow: EnergyFlowSnapshot | null | undefined): number | null {
+  if (flow?.dc_charging_power_w == null || flow.ac_charging_power_w == null) return null;
+  return flow.dc_charging_power_w + flow.ac_charging_power_w;
 }
 
 /** Build the daily energy + distance chart series in the user's display units. */
@@ -134,6 +134,35 @@ export function buildEfficiencyChartData(
       date: formatDateShort(d.date),
       efficiency: scaleEfficiency(d.efficiency_wh_per_m, distanceUnit)!,
     }));
+}
+
+type DailySortKey = 'date' | 'energy_wh' | 'distance_m' | 'efficiency_wh_per_m';
+type NullableDailySortRow = {
+  [Key in DailySortKey]?: DailyEnergy[Key] | null;
+};
+
+/** Missing/invalid values stay last in either direction; ties retain source order. */
+export function compareDailyRows(
+  a: NullableDailySortRow,
+  b: NullableDailySortRow,
+  key: string,
+  direction: 'asc' | 'desc',
+): number {
+  const sortKey: DailySortKey = key === 'energy_wh' || key === 'distance_m'
+    || key === 'efficiency_wh_per_m' ? key : 'date';
+  const value = (row: NullableDailySortRow): number | null => {
+    const raw = row[sortKey];
+    const parsed = sortKey === 'date'
+      ? typeof raw === 'string' && raw.trim() !== '' ? Date.parse(raw) : NaN
+      : raw;
+    return typeof parsed === 'number' && Number.isFinite(parsed) ? parsed : null;
+  };
+  const left = value(a);
+  const right = value(b);
+  if (left == null) return right == null ? 0 : 1;
+  if (right == null) return -1;
+  const order = left < right ? -1 : left > right ? 1 : 0;
+  return direction === 'asc' ? order : -order;
 }
 
 /* ───────── Flow diagram building blocks (local, non-exported) ───────── */
@@ -222,7 +251,7 @@ export default function EnergyFlowPage() {
   usePageTitle(t('energyFlow.title', 'Energy flow'));
 
   const { vehicleId } = useSelectedVehicle();
-  const { formatDistance, formatEnergy, unitPrefs } = useUnits();
+  const { formatDistance, formatEnergy, formatPower, unitPrefs } = useUnits();
   const distanceUnit = unitPrefs.distance;
 
   const { start, end } = useRangeState({
@@ -327,17 +356,12 @@ export default function EnergyFlowPage() {
           : t('energyFlow.efficiency.noData', 'No data');
 
   /* ─── Table ─── */
-  const { sortKey, sortDir, onSort, sortFn } = useSortToggle('date', 'desc');
+  const { sortKey, sortDir, onSort } = useSortToggle('date', 'desc');
 
-  const sortedDailyRows = useMemo(() => {
-    const rows = dailyBreakdown.slice();
-    return sortFn(rows, (row, key) => {
-      if (key === 'energy_wh') return row.energy_wh ?? 0;
-      if (key === 'distance_m') return row.distance_m ?? 0;
-      if (key === 'efficiency_wh_per_m') return row.efficiency_wh_per_m ?? 0;
-      return row.date;
-    });
-  }, [dailyBreakdown, sortFn]);
+  const sortedDailyRows = useMemo(
+    () => dailyBreakdown.slice().sort((a, b) => compareDailyRows(a, b, sortKey, sortDir)),
+    [dailyBreakdown, sortKey, sortDir],
+  );
 
   const historyColumns: Column<DailyEnergy>[] = useMemo(
     () => [
@@ -504,8 +528,8 @@ export default function EnergyFlowPage() {
 
                 <FlowConnector
                   label={t('energyFlow.node.charging', 'Charging')}
-                  value={chargePower != null ? `${fmtNumber(chargePower)} ${t('energyFlow.units.kw', 'kW')}` : DASH}
-                  active={chargePower != null && Math.abs(chargePower) > 0.01}
+                  value={chargePower != null ? formatPower(chargePower) : DASH}
+                  active={chargePower != null && Math.abs(chargePower) > 10}
                 />
 
                 <FlowNode
@@ -513,7 +537,7 @@ export default function EnergyFlowPage() {
                   label={t('energyFlow.node.battery', 'Battery')}
                   sublabel={
                     flow?.energy_remaining != null
-                      ? `${fmtNumber(flow.energy_remaining)} ${t('energyFlow.units.kwh', 'kWh')}`
+                      ? fmtNumber(flow.energy_remaining)
                       : undefined
                   }
                 >
@@ -561,12 +585,12 @@ export default function EnergyFlowPage() {
                 <LivePowerRow
                   icon={<Icon icon={Zap} className={typography.color.secondary} />}
                   label={t('energyFlow.livePower.dc', 'DC power')}
-                  value={flow?.dc_charging_power != null ? `${fmtNumber(flow.dc_charging_power)} ${t('energyFlow.units.kw', 'kW')}` : DASH}
+                  value={flow?.dc_charging_power_w != null ? formatPower(flow.dc_charging_power_w) : DASH}
                 />
                 <LivePowerRow
                   icon={<Icon icon={Activity} className={typography.color.secondary} />}
                   label={t('energyFlow.livePower.ac', 'AC power')}
-                  value={flow?.ac_charging_power != null ? `${fmtNumber(flow.ac_charging_power)} ${t('energyFlow.units.kw', 'kW')}` : DASH}
+                  value={flow?.ac_charging_power_w != null ? formatPower(flow.ac_charging_power_w) : DASH}
                 />
                 <LivePowerRow
                   unavailable

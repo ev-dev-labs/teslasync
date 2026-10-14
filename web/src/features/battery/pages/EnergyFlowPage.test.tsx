@@ -149,15 +149,16 @@ if (typeof window.matchMedia !== 'function') {
   })) as unknown as typeof window.matchMedia;
 }
 
-import { useEnergyStats, useEnergyFlow } from '@/api/hooks/useEnergy';
+import { useEnergyStats, useEnergyFlow, type EnergyFlowSnapshot } from '@/api/hooks/useEnergy';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
-import type { DailyEnergy, EnergyFlowData } from '@/types/energy';
+import type { DailyEnergy } from '@/types/energy';
 import EnergyFlowPage, {
   scaleEfficiency,
   efficiencyRating,
   computeChargePower,
   buildDailyChartData,
   buildEfficiencyChartData,
+  compareDailyRows,
 } from './EnergyFlowPage';
 
 const mockStats = vi.mocked(useEnergyStats);
@@ -211,10 +212,10 @@ function makeStatsData(over: Record<string, unknown> = {}) {
   };
 }
 
-function makeFlowData(over: Partial<EnergyFlowData> = {}): EnergyFlowData {
+function makeFlowData(over: Partial<EnergyFlowSnapshot> = {}): EnergyFlowSnapshot {
   return {
-    dc_charging_power: 11,
-    ac_charging_power: 0,
+    dc_charging_power_w: 11_000,
+    ac_charging_power_w: 0,
     energy_remaining: 62.5,
     pack_voltage: 400,
     pack_current: 27.5,
@@ -284,6 +285,46 @@ beforeEach(() => {
 
 /* ───────────────────────── Pure helper unit tests ───────────────────────── */
 
+describe('compareDailyRows', () => {
+  it.each(['energy_wh', 'distance_m', 'efficiency_wh_per_m'] as const)(
+    'sorts raw %s values without conflating missing/invalid values with zero',
+    (key) => {
+      const values = [null, 0, -0.25, undefined, NaN, 0.125, Infinity, -Infinity, 0.124, 0];
+      const rows = values.map((value, id) => ({ [key]: value, id }));
+      const original = rows.slice();
+      for (const direction of ['asc', 'desc'] as const) {
+        const sorted = rows.slice().sort((a, b) => compareDailyRows(a, b, key, direction));
+        expect(sorted.map(row => row.id)).toEqual(direction === 'asc'
+          ? [2, 1, 9, 8, 5, 0, 3, 4, 6, 7]
+          : [5, 8, 1, 9, 2, 0, 3, 4, 6, 7]);
+        expect(compareDailyRows({ [key]: null }, { [key]: undefined }, key, direction)).toBe(0);
+      }
+      expect(rows).toEqual(original);
+      rows.forEach((row, index) => expect(row[key]).toBe(values[index]));
+    },
+  );
+
+  it('orders valid dates chronologically and keeps invalid/missing dates last and stable', () => {
+    const rows = [
+      { date: null, id: 0 },
+      { date: '1970-01-01T00:00:00Z', id: 1 },
+      { date: 'invalid', id: 2 },
+      { date: '1969-12-31T23:59:59Z', id: 3 },
+      { date: '', id: 4 },
+      { date: '1970-01-01T00:00:00.125Z', id: 5 },
+      { date: undefined, id: 6 },
+      { date: '1970-01-01T01:00:00+01:00', id: 7 },
+      { date: '   ', id: 8 },
+    ];
+    for (const direction of ['asc', 'desc'] as const) {
+      expect(rows.slice().sort((a, b) => compareDailyRows(a, b, 'date', direction))
+        .map(row => row.id)).toEqual(direction === 'asc'
+        ? [3, 1, 7, 5, 0, 2, 4, 6, 8]
+        : [5, 1, 7, 3, 0, 2, 4, 6, 8]);
+    }
+  });
+});
+
 describe('scaleEfficiency', () => {
   it('converts SI Wh/m to whole Wh per display distance unit', () => {
     expect(scaleEfficiency(0.16, 'km')).toBe(160); // 0.16 * 1000
@@ -321,12 +362,12 @@ describe('efficiencyRating', () => {
 
 describe('computeChargePower', () => {
   it('sums known DC + AC power without fabricating a missing channel', () => {
-    expect(computeChargePower(makeFlowData({ dc_charging_power: 10, ac_charging_power: 5 }))).toBe(15);
-    expect(computeChargePower(makeFlowData({ dc_charging_power: null, ac_charging_power: 7 }))).toBeNull();
-    expect(computeChargePower(makeFlowData({ dc_charging_power: 7, ac_charging_power: null }))).toBeNull();
-    expect(computeChargePower(makeFlowData({ dc_charging_power: 0, ac_charging_power: 7 }))).toBe(7);
-    expect(computeChargePower(makeFlowData({ dc_charging_power: 7, ac_charging_power: 0 }))).toBe(7);
-    expect(computeChargePower(makeFlowData({ dc_charging_power: 0, ac_charging_power: 0 }))).toBe(0);
+    expect(computeChargePower(makeFlowData({ dc_charging_power_w: 10_000, ac_charging_power_w: 5_000 }))).toBe(15_000);
+    expect(computeChargePower(makeFlowData({ dc_charging_power_w: null, ac_charging_power_w: 7_000 }))).toBeNull();
+    expect(computeChargePower(makeFlowData({ dc_charging_power_w: 7_000, ac_charging_power_w: null }))).toBeNull();
+    expect(computeChargePower(makeFlowData({ dc_charging_power_w: 0, ac_charging_power_w: 7_000 }))).toBe(7_000);
+    expect(computeChargePower(makeFlowData({ dc_charging_power_w: 7_000, ac_charging_power_w: 0 }))).toBe(7_000);
+    expect(computeChargePower(makeFlowData({ dc_charging_power_w: 0, ac_charging_power_w: 0 }))).toBe(0);
   });
 
   it('keeps missing flow data unknown rather than reporting zero charge power', () => {
@@ -462,6 +503,20 @@ describe('EnergyFlowPage — shell & KPI band', () => {
 });
 
 describe('EnergyFlowPage — live energy flow', () => {
+  it('converts stored watts once and leaves EnergyRemaining raw without inferring its unit', () => {
+    const flow = makeFlowData({ dc_charging_power_w: 48_500, ac_charging_power_w: 7_200 });
+    mockFlow.mockReturnValue(qr({ data: flow }));
+    renderPage();
+    expect(screen.getByText('55.70 kW')).toBeInTheDocument();
+    expect(screen.getByText('48.50 kW')).toBeInTheDocument();
+    expect(screen.getByText('7.20 kW')).toBeInTheDocument();
+    expect(screen.getByText('62.50')).toBeInTheDocument();
+    expect(screen.queryByText('62.50 kWh')).not.toBeInTheDocument();
+    expect(flow.dc_charging_power_w).toBe(48_500);
+    expect(flow.ac_charging_power_w).toBe(7_200);
+    expect(flow.energy_remaining).toBe(62.5);
+  });
+
   it('renders the flow diagram, SOC gauge and charge badge on the happy path', () => {
     renderPage();
     expect(
@@ -471,7 +526,7 @@ describe('EnergyFlowPage — live energy flow', () => {
     // charge-state badge (proves the badge branch fired, not just the label).
     expect(screen.getAllByText('Charging').length).toBeGreaterThanOrEqual(2);
     expect(screen.getByText('82.00')).toBeInTheDocument(); // SOC gauge value
-    expect(screen.getByText('62.50 kWh')).toBeInTheDocument(); // battery energy_remaining
+    expect(screen.getByText('62.50')).toBeInTheDocument(); // raw EnergyRemaining, unit not inferred
     expect(screen.getByText('Grid')).toBeInTheDocument();
   });
 
@@ -516,7 +571,7 @@ describe('EnergyFlowPage — live energy flow', () => {
 
   it('keeps missing charging channels unknown and unsupported channels readable', () => {
     mockFlow.mockReturnValue(qr({ data: makeFlowData({
-      dc_charging_power: null, ac_charging_power: 0, soc: null,
+      dc_charging_power_w: null, ac_charging_power_w: 0, soc: null,
       energy_remaining: null, charge_state: null,
     }) }));
     renderPage();
@@ -547,7 +602,7 @@ describe('EnergyFlowPage — live energy flow', () => {
       expect(screen.getAllByRole('heading', { name, exact: true }).length).toBeGreaterThan(0);
     }
     expect(metricValue('Total charged')).toBe('55.50 kWh');
-    expect(screen.getByText('62.50 kWh')).toBeInTheDocument();
+    expect(screen.getByText('62.50')).toBeInTheDocument();
     expect(screen.getAllByText('11.00 kW')).toHaveLength(2);
     expect(historyTable()).toBeInTheDocument();
     fireEvent.click(screen.getAllByRole('button', { name: 'Refresh' })[0]);
@@ -557,7 +612,7 @@ describe('EnergyFlowPage — live energy flow', () => {
   it('shows a skeleton (not the gauge) while the flow query is loading', () => {
     mockFlow.mockReturnValue(qr({ isLoading: true, isFetching: true }));
     renderPage();
-    expect(screen.queryByText('62.50 kWh')).not.toBeInTheDocument();
+    expect(screen.queryByText('62.50')).not.toBeInTheDocument();
     expect(screen.queryByText('Charging')).not.toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Live power', exact: true }).closest('[data-card]')!.querySelectorAll('[aria-hidden="true"][class~="bg-[var(--skeleton-bg)]"]').length).toBeGreaterThan(0);
   });
@@ -635,6 +690,29 @@ describe('EnergyFlowPage — historical sections', () => {
 
     // Energy-desc → the higher-energy 20 kWh row rises to the top.
     await waitFor(() => expect(firstDataRowText()).toContain('20.00 kWh'));
+  });
+
+  it('keeps missing energy after measured zero and signed values in both table sort directions', () => {
+    const missing = makeDay({ date: '2025-03-09' });
+    Reflect.set(missing, 'energy_wh', null);
+    const rows = [
+      missing,
+      makeDay({ date: '2025-03-08', energy_wh: 0 }),
+      makeDay({ date: '2025-03-07', energy_wh: -250 }),
+      makeDay({ date: '2025-03-06', energy_wh: 125 }),
+    ];
+    mockStats.mockReturnValue(qr({ data: makeStatsData({ daily_breakdown: rows }) }));
+    renderPage();
+    const table = historyTable();
+    const energyCells = () => within(table).getAllByRole('row').slice(1)
+      .map(row => within(row).getAllByRole('cell')[1].textContent);
+    expect(energyCells()).toEqual(['—', '0.00 kWh', '-0.25 kWh', '0.13 kWh']);
+    fireEvent.click(within(table).getByRole('button', { name: 'Energy' }));
+    expect(energyCells()).toEqual(['0.13 kWh', '0.00 kWh', '-0.25 kWh', '—']);
+    fireEvent.click(within(table).getByRole('button', { name: 'Energy' }));
+    expect(energyCells()).toEqual(['-0.25 kWh', '0.00 kWh', '0.13 kWh', '—']);
+    expect(rows[0]).toBe(missing);
+    expect(missing.energy_wh).toBeNull();
   });
 });
 
