@@ -5,8 +5,8 @@ import {
   screen,
   within,
 } from '@testing-library/react';
-import type { ReactNode } from 'react';
-import { MemoryRouter } from 'react-router-dom';
+import { cloneElement, isValidElement, type ReactNode } from 'react';
+import { MemoryRouter, useLocation } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ToastProvider } from '@/components/feedback';
@@ -84,6 +84,17 @@ vi.mock('@/lib/timezone', async (importOriginal) => {
 vi.mock('@/components/forms', () => ({
   VehicleSelect: () => <div data-testid="vehicle-select" />,
 }));
+
+vi.mock('@/components/charts', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/components/charts')>();
+  return {
+    ...actual,
+    ResponsiveContainer: ({ children }: { children: ReactNode }) =>
+      isValidElement<{ width?: number; height?: number }>(children)
+        ? cloneElement(children, { width: 800, height: 360 })
+        : children,
+  };
+});
 
 import DepartureForecastPage from './DepartureForecastPage';
 
@@ -166,29 +177,35 @@ function query(overrides: Partial<QueryStub> = {}): QueryStub {
   };
 }
 
-function tree(client: QueryClient) {
+function LocationProbe() {
+  const location = useLocation();
+  return <output data-testid="forecast-location">{location.search}</output>;
+}
+
+function tree(client: QueryClient, initialEntry: string) {
   return (
     <QueryClientProvider client={client}>
       <ToastProvider>
-        <MemoryRouter initialEntries={['/driving/departure-forecast']}>
+        <MemoryRouter initialEntries={[initialEntry]}>
           <DepartureForecastPage />
+          <LocationProbe />
         </MemoryRouter>
       </ToastProvider>
     </QueryClientProvider>
   );
 }
 
-function renderPage() {
+function renderPage(initialEntry = '/driving/departure-forecast') {
   const client = new QueryClient({
     defaultOptions: {
       queries: { retry: false },
       mutations: { retry: false },
     },
   });
-  const view = render(tree(client));
+  const view = render(tree(client, initialEntry));
   return {
     ...view,
-    rerenderPage: () => view.rerender(tree(client)),
+    rerenderPage: () => view.rerender(tree(client, initialEntry)),
   };
 }
 
@@ -220,6 +237,48 @@ beforeEach(() => {
 });
 
 describe('DepartureForecastPage', () => {
+  it.each([
+    'hidden_departure-forecast-next-24=likelihood',
+    'hidden_departure-forecast-24h=likelihood',
+    'hidden_departure-forecast-next-24=likelihood&hidden_departure-forecast-24h=cumulative',
+  ])('uses one frame and preserves saved series visibility from %s', (search) => {
+    renderPage(`/driving/departure-forecast?${search}&keep=1`);
+
+    const section = screen.getByTestId('departure-next-24');
+    const panel = within(section);
+    expect(section.querySelectorAll('figure[data-chart-key]')).toHaveLength(1);
+    expect(section.querySelector('figure')).toHaveAttribute(
+      'data-chart-key',
+      'departure-forecast-next-24',
+    );
+    expect(section.querySelectorAll('[data-chart-toolbar]')).toHaveLength(1);
+    const table = panel.getByRole('table');
+    expect(within(table).getAllByRole('columnheader').map((cell) => cell.textContent)).toEqual([
+      'Local slot',
+      'Modeled likelihood (%)',
+      'Cumulative estimate (%)',
+      'Historical departures',
+      'Cell occurrences',
+      'Cell support',
+    ]);
+    expect(within(table).getAllByRole('row')).toHaveLength(25);
+    const hourly = panel.getByRole('button', { name: 'Hourly modeled likelihood' });
+    const cumulative = panel.getByRole('button', { name: 'Cumulative modeled likelihood' });
+    expect(hourly).toHaveAttribute('aria-pressed', 'true');
+    expect(cumulative).toHaveAttribute('aria-pressed', String(search.includes('cumulative')));
+    expect(section.querySelector('.recharts-bar-rectangle')).not.toBeInTheDocument();
+
+    fireEvent.click(hourly);
+    expect(hourly).toHaveAttribute('aria-pressed', 'false');
+    expect(section.querySelector('.recharts-bar-rectangle')).toBeInTheDocument();
+    const updated = new URLSearchParams(screen.getByTestId('forecast-location').textContent ?? '');
+    const remaining = search.includes('cumulative') ? 'cumulative' : null;
+    expect(updated.get('hidden_departure-forecast-next-24')).toBe(remaining);
+    expect(updated.get('hidden_departure-forecast-24h')).toBe(remaining);
+    expect(updated.get('keep')).toBe('1');
+    expect(within(table).getAllByRole('row')).toHaveLength(25);
+  });
+
   it('preserves every modeled window while a retained history refresh is paused offline', () => {
     h.history = { ...query({ data: weekdayCommute(12) }), fetchStatus: 'paused' };
     renderPage();
