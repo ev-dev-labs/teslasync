@@ -5,7 +5,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { request } from '@/api/client';
 import { drivingKeys, useDrives, useDrivingStats, useDriveHistory, useDriveCalendarHistory, useDriveScore, useSpeedProfile } from './useDriving';
 import { chargingKeys, useChargingHistory } from './useCharging';
-import { useClimateHistory, useMediaHistory, vehicleSystemsKeys } from './useVehicleSystems';
+import { useClimateHistory, useMediaHistory, useTirePressureAnalysisHistory, vehicleSystemsKeys } from './useVehicleSystems';
 import { useBatteryHealthAnalytics, useEnergyStats, useVampireDrainHistory, useVampireDrainStats } from './useEnergy';
 import { useDriveScorePage } from '@/features/driving/hooks/useDriveScorePage';
 
@@ -110,6 +110,86 @@ describe('vampire-drain history extraction', () => {
 describe('driving exact-range integration', () => {
   const start = '2024-03-10T15:42:19.125Z';
   const end = '2024-03-11T15:42:19.125Z';
+
+  it('sends both TPMS server bounds unchanged and isolates cache by each bound and vehicle', async () => {
+    const rows = [{ ts: start, front_left: 240_000 }];
+    mockedRequest.mockResolvedValue(rows);
+    const context = wrapper();
+    const windows = [
+      { vehicleId: '42', start: '2024-03-10T08:00:00.000Z', end: '2024-03-11T07:00:00.000Z' },
+      { vehicleId: '42', start, end: '2024-03-11T07:00:00.000Z' },
+      { vehicleId: '42', start, end },
+      { vehicleId: '43', start, end },
+    ];
+    const { result, rerender } = renderHook(
+      (props: typeof windows[number]) => useTirePressureAnalysisHistory(props.vehicleId, 30, props),
+      { wrapper: context.wrapper, initialProps: windows[0] },
+    );
+    for (const [index, window] of windows.entries()) {
+      if (index) rerender(window);
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+      expect(result.current.data).toBe(rows);
+      expect(context.client.getQueryData(vehicleSystemsKeys.tirePressureAnalysisHistory(window.vehicleId, 30, window))).toBe(rows);
+      const [path, options] = mockedRequest.mock.calls[index];
+      const url = new URL(path, 'http://fixture.test');
+      expect(url.pathname).toBe('/tire-pressure');
+      expect(url.searchParams.get('vehicle_id')).toBe(window.vehicleId);
+      expect(url.searchParams.get('start')).toBe(window.start);
+      expect(url.searchParams.get('end')).toBe(window.end);
+      expect(options?.signal).toBeInstanceOf(AbortSignal);
+    }
+    expect(mockedRequest).toHaveBeenCalledTimes(4);
+  });
+
+  it('preserves the legacy rolling TPMS window when no workspace bounds are supplied', async () => {
+    mockedRequest.mockResolvedValue([]);
+    const now = Date.now();
+    const context = wrapper();
+    const { result } = renderHook(() => useTirePressureAnalysisHistory('42'), { wrapper: context.wrapper });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    const [path, options] = mockedRequest.mock.calls[0];
+    const url = new URL(path, 'http://fixture.test');
+    expect(url.searchParams.get('vehicle_id')).toBe('42');
+    expect(Date.parse(url.searchParams.get('start')!)).toBeGreaterThanOrEqual(now - 30 * 86_400_000);
+    expect(Date.parse(url.searchParams.get('start')!)).toBeLessThanOrEqual(Date.now() - 30 * 86_400_000);
+    expect(url.searchParams.has('end')).toBe(false);
+    expect(options?.signal).toBeInstanceOf(AbortSignal);
+    expect(context.client.getQueryData(vehicleSystemsKeys.tirePressureAnalysisHistory('42', 30))).toEqual([]);
+  });
+
+  it.each([
+    {}, { start }, { end }, { start: 'invalid', end },
+    { start: '2024-02-30T00:00:00Z', end }, { start: end, end: start }, { start, end: start },
+  ])('rejects incomplete or invalid TPMS bounds before the server can silently default: %j', async range => {
+    const context = wrapper();
+    const { result } = renderHook(() => useTirePressureAnalysisHistory('42', 30, range), { wrapper: context.wrapper });
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(result.current.error?.message).toMatch(/valid start and end/);
+    expect(mockedRequest).not.toHaveBeenCalled();
+  });
+
+  it('keeps TPMS disabled without a vehicle and aborts superseded range and vehicle requests', async () => {
+    mockedRequest.mockImplementation(() => new Promise(() => {}));
+    const context = wrapper();
+    const { rerender, unmount } = renderHook(
+      (props: { vehicleId: string; start: string; end: string }) =>
+        useTirePressureAnalysisHistory(props.vehicleId, 30, props),
+      { wrapper: context.wrapper, initialProps: { vehicleId: '', start, end } },
+    );
+    expect(mockedRequest).not.toHaveBeenCalled();
+    rerender({ vehicleId: '42', start, end });
+    await waitFor(() => expect(mockedRequest).toHaveBeenCalledTimes(1));
+    const firstSignal = mockedRequest.mock.calls[0][1]?.signal;
+    rerender({ vehicleId: '42', start, end: '2024-03-12T15:42:19.125Z' });
+    await waitFor(() => expect(mockedRequest).toHaveBeenCalledTimes(2));
+    expect(firstSignal?.aborted).toBe(true);
+    const secondSignal = mockedRequest.mock.calls[1][1]?.signal;
+    rerender({ vehicleId: '43', start, end });
+    await waitFor(() => expect(mockedRequest).toHaveBeenCalledTimes(3));
+    expect(secondSignal?.aborted).toBe(true);
+    unmount();
+    expect(mockedRequest.mock.calls[2][1]?.signal?.aborted).toBe(true);
+  });
 
   it('scopes both preconditioning sources and caches by each exact bound while retaining the drive cap', async () => {
     mockedRequest.mockResolvedValue([]);

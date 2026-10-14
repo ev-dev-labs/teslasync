@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { request } from '../client';
 import { safeArray } from '@/lib/safeArray';
 import { INTERVALS, STALE_TIMES } from '@/lib/constants';
+import { isDriveDateBound, type DriveWindow } from './useDriving';
 import type { ClimateState, TirePressureReading, MaintenanceItem, ServiceRecord, SoftwareUpdate, SafetySnapshot, MaintenanceForecast } from '@/types/vehicle-systems';
 // MediaSnapshot must be the canonical snake_case shape that matches the Go
 // media handler JSON tags (now_playing_title, playback_source, audio_volume,
@@ -17,8 +18,10 @@ export const vehicleSystemsKeys = {
       : ['climate', 'history', vehicleId] as const,
   tirePressure: (vehicleId: string) => ['tire-pressure', vehicleId] as const,
   tirePressureHistory: (vehicleId: string) => ['tire-pressure', 'history', vehicleId] as const,
-  tirePressureAnalysisHistory: (vehicleId: string, days: number) =>
-    ['tire-pressure', 'analysis-history', vehicleId, days] as const,
+  tirePressureAnalysisHistory: (vehicleId: string, days: number, range?: Pick<DriveWindow, 'start' | 'end'>) =>
+    range
+      ? ['tire-pressure', 'analysis-history', vehicleId, days, range.start ?? null, range.end ?? null] as const
+      : ['tire-pressure', 'analysis-history', vehicleId, days] as const,
   maintenance: ['maintenance'] as const,
   serviceRecords: ['service-records'] as const,
   softwareUpdates: (vehicleId: string) => ['software-updates', vehicleId] as const,
@@ -79,17 +82,28 @@ export function useTirePressureHistory(vehicleId: string) {
   });
 }
 
-/** Fetches an explicit, longer TPMS window for robust drift estimation. */
-export function useTirePressureAnalysisHistory(vehicleId: string, days = 30) {
+/** Workspace bounds override the legacy rolling window; the server filters the complete TPMS timeline. */
+export function useTirePressureAnalysisHistory(
+  vehicleId: string,
+  days = 30,
+  range?: Pick<DriveWindow, 'start' | 'end'>,
+) {
   const boundedDays = Number.isFinite(days)
     ? Math.max(1, Math.min(365, Math.floor(days)))
     : 30;
   return useQuery({
-    queryKey: vehicleSystemsKeys.tirePressureAnalysisHistory(vehicleId, boundedDays),
+    queryKey: vehicleSystemsKeys.tirePressureAnalysisHistory(vehicleId, boundedDays, range),
     queryFn: ({ signal }) => {
-      const start = new Date(Date.now() - boundedDays * 86_400_000).toISOString();
+      if (range && (!range.start || !range.end
+        || !isDriveDateBound(range.start) || !isDriveDateBound(range.end)
+        || Date.parse(range.start) >= Date.parse(range.end))) {
+        throw new Error('Tire pressure analysis requires a valid start and end date range');
+      }
+      const start = range?.start ?? new Date(Date.now() - boundedDays * 86_400_000).toISOString();
+      const params = new URLSearchParams({ vehicle_id: vehicleId, start });
+      if (range?.end) params.set('end', range.end);
       return request<TirePressureReading[]>(
-        `/tire-pressure?vehicle_id=${encodeURIComponent(vehicleId)}&start=${encodeURIComponent(start)}`,
+        `/tire-pressure?${params}`,
         { signal },
       );
     },

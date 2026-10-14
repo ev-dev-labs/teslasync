@@ -169,13 +169,16 @@ export function useDriveHistory(
 
 const CALENDAR_PAGE_SIZE = 1000;
 
-/** Fetch every drive in a bounded calendar or rhythm window, not just the first API page. */
+/** Fetch every drive in a valid bounded history window, preserving both exact bounds on every page. */
 export function useDriveCalendarHistory(vehicleId?: string, start?: string, end?: string) {
   return useQuery({
     queryKey: drivingKeys.calendar(vehicleId, start, end),
     queryFn: async ({ signal }) => {
       if (!vehicleId || !start || !end) {
         throw new Error('Drive calendar vehicle and date range are required');
+      }
+      if (!isDriveDateBound(start) || !isDriveDateBound(end) || Date.parse(start) > Date.parse(end)) {
+        throw new Error('Drive calendar requires a valid start and end date range');
       }
       const drives: Drive[] = [];
       const seenIds = new Set<number>();
@@ -288,10 +291,22 @@ export function useDrivetrainHealth(vehicleId?: string) {
   });
 }
 
+/**
+ * RFC3339 bounds are [start, end). The server's ParseDateRange converts the
+ * exclusive end to an inclusive PostgreSQL microsecond before BETWEEN.
+ * Date-only bounds retain the endpoint's inclusive UTC-calendar semantics.
+ * Omit both bounds for full history; a single bound is not supported.
+ */
 export function useSpeedProfile(vehicleId?: string, start?: string, end?: string) {
   return useQuery({
     queryKey: [...drivingKeys.speedProfile(vehicleId), start, end],
     queryFn: ({ signal }) => {
+      if (start || end) {
+        if (!start || !end || !isDriveDateBound(start)
+          || !isDriveDateBound(end) || Date.parse(start) > Date.parse(end)) {
+          throw new Error('Speed profile requires a valid start and end date range');
+        }
+      }
       if (!vehicleId) return request<SpeedProfileData>('/analytics/speed-profile', { signal });
       const params = new URLSearchParams({ vehicle_id: vehicleId });
       if (start) params.set('start', start);
@@ -300,6 +315,13 @@ export function useSpeedProfile(vehicleId?: string, start?: string, end?: string
     },
     enabled: !!vehicleId,
   });
+}
+
+export function isDriveDateBound(value: string): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}(?:T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2}))?$/.test(value)
+    || !Number.isFinite(Date.parse(value))) return false;
+  const calendarDate = value.slice(0, 10);
+  return new Date(`${calendarDate}T00:00:00Z`).toISOString().slice(0, 10) === calendarDate;
 }
 
 export function useRegenEfficiency(vehicleId?: string, start?: string, end?: string) {

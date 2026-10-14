@@ -27,6 +27,15 @@ const routedPages = [...appSource.matchAll(
 )].map(([, path, name]) => ({ path: `/${path.replace(/^\/+/, '')}`, name }));
 
 describe('getWorkspaceRouteScope', () => {
+  it('owns tire differential drift range and vehicle on the actual normalized route', () => {
+    for (const path of ['/tire-differential-drift', '/tire-differential-drift/',
+      '/tire-differential-drift?from=2024-03-10&to=2024-03-10',
+      '/tire-differential-drift#methodology', 'tire-differential-drift']) {
+      expect(getWorkspaceRouteScope(path), path).toEqual({ range: true, vehicle: true });
+    }
+    expect(getWorkspaceRouteScope('/vehicle-systems/tire-differential-drift').range).toBe(false);
+    expect(getWorkspaceQuickRangePresets('/tire-differential-drift')).toEqual(['24h', '7d', '30d', '90d']);
+  });
   it('owns preconditioning effectiveness range and vehicle on the actual normalized route', () => {
     for (const path of [
       '/preconditioning-effectiveness', '/preconditioning-effectiveness/',

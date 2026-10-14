@@ -1,15 +1,21 @@
 import '@testing-library/jest-dom/vitest';
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import type { ReactNode } from 'react';
+import { cloneElement, type ReactElement, type ReactNode } from 'react';
 import { MemoryRouter, useLocation } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { HiddenSeriesState } from '@/hooks/useHiddenSeries';
 import type { TireDifferentialSample } from '../lib/tireDifferentialDrift';
-import { formatPressure, type UnitPref } from '@/lib/unitConversion';
-import { formatDateTime } from '@/lib/dateFormat';
+import { convertPressureFromSI, formatPressure, type UnitPref } from '@/lib/unitConversion';
+import { fmtNumber, setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat';
+import type { ChartTooltipProps } from '@/components/charts/ChartTooltip';
+import { formatDateTime, formatRelative, formatTime } from '@/lib/dateFormat';
+import type { UseDateFormatResult } from '@/hooks/useDateFormat';
 import { chartTokens } from '@/lib/tokens';
 import { Button } from '@/components/ui';
+import { calendarRangeToInstants } from '@/lib/dateRange';
+import { SHARED_RANGE_STORAGE_KEY } from '@/hooks/useRangeState';
+import type { DriveWindow } from '@/api/hooks/useDriving';
 
 interface QueryStub {
   data: TireDifferentialSample[] | undefined;
@@ -25,6 +31,7 @@ const h = vi.hoisted(() => ({
   vehicleId: 7 as number | null,
   pressure: 'bar' as 'bar' | 'psi',
   locale: 'en-US',
+  precision: 2,
   tz: 'UTC',
   query: undefined as unknown as QueryStub,
   hook: vi.fn(),
@@ -35,11 +42,13 @@ const retry = vi.fn();
 const BASE = Date.parse('2026-01-01T00:15:00.000Z');
 const prefs = (): UnitPref => ({
   distance: 'km', speed: 'km/h', temperature: '°C', pressure: h.pressure,
-  energy: 'kWh', duration: 'h', power: 'kW', locale: h.locale, precision: 2,
+  energy: 'kWh', duration: 'h', power: 'kW', locale: h.locale, precision: h.precision,
 });
 
 vi.mock('@/api/hooks/useVehicleSystems', () => ({
-  useTirePressureAnalysisHistory: (id: string) => { h.hook(id); return h.query; },
+  useTirePressureAnalysisHistory: (id: string, days: number, range: Pick<DriveWindow, 'start' | 'end'>) => {
+    h.hook(id, days, range); return h.query;
+  },
 }));
 vi.mock('@/hooks/useSelectedVehicle', () => ({
   useSelectedVehicle: () => ({ vehicleId: h.vehicleId }),
@@ -50,8 +59,10 @@ vi.mock('@/hooks/useUnits', () => ({
 vi.mock('@/hooks/useDateFormat', () => ({
   useDateFormat: () => ({
     tz: h.tz, locale: h.locale,
-    formatDateTime: (value: Date) => formatDateTime(value, { tz: h.tz, locale: h.locale }),
-  }),
+    formatDateTime: value => formatDateTime(value, { tz: h.tz, locale: h.locale }),
+    formatRelative: value => formatRelative(value, { tz: h.tz, locale: h.locale }),
+    formatTime: value => formatTime(value, { tz: h.tz, locale: h.locale }),
+  } satisfies Pick<UseDateFormatResult, 'tz' | 'locale' | 'formatDateTime' | 'formatRelative' | 'formatTime'>),
 }));
 vi.mock('@/components/motion', () => ({
   FadeIn: ({ children }: { children: ReactNode }) => <>{children}</>,
@@ -74,8 +85,11 @@ vi.mock('@/components/charts', async (importOriginal) => ({
   Cell: ({ fill }: { fill: string }) => <span data-testid="corner-color" data-fill={fill} />,
   CartesianGrid: () => null,
   XAxis: () => null,
-  YAxis: ({ unit }: { unit: string }) => <span data-testid="axis-unit">{unit}</span>,
-  Tooltip: () => null,
+  YAxis: ({ unit, tickFormatter }: { unit: string; tickFormatter: (value: number) => string }) =>
+    <span data-testid="axis-unit">{unit}<span data-testid="axis-value">{tickFormatter(-0.0012345)}</span></span>,
+  Tooltip: ({ content }: { content: ReactElement<ChartTooltipProps> }) => cloneElement(content, {
+    active: true, payload: [{ name: 'Residual', value: h.residuals[1]?.fl }],
+  }),
   ChartLegend: ({ state }: { state: HiddenSeriesState }) => <div>
     {(['fl', 'fr', 'rl', 'rr'] as const).map(key => <Button key={key} type="button" aria-pressed={!state.isHidden(key)} onClick={() => state.toggle(key)}>Toggle {key}</Button>)}
   </div>,
@@ -114,15 +128,59 @@ function brief() { return screen.getByTestId('tire-differential-drift-summary');
 
 beforeEach(() => {
   vi.clearAllMocks();
-  h.vehicleId = 7; h.pressure = 'bar'; h.locale = 'en-US'; h.tz = 'UTC';
+  localStorage.removeItem(SHARED_RANGE_STORAGE_KEY);
+  h.vehicleId = 7; h.pressure = 'bar'; h.locale = 'en-US'; h.tz = 'UTC'; h.precision = 2;
+  setGlobalPrecision(0); setGlobalLocale('en-US');
   h.query = query(); h.residuals = []; h.slopes = [];
 });
 
 describe('TireDifferentialDriftPage', () => {
+  it('sends saved-timezone day boundaries for the actual route without filtering returned evidence', () => {
+    h.locale = 'de-DE'; h.tz = 'America/Los_Angeles';
+    renderPage('/tire-differential-drift?from=2024-03-10&to=2024-03-10');
+    expect(h.hook).toHaveBeenLastCalledWith('7', 30, {
+      start: '2024-03-10T08:00:00.000Z', end: '2024-03-11T07:00:00.000Z',
+    });
+    everySection();
+    expect(h.residuals).toHaveLength(12);
+    expect(screen.queryByRole('button', { name: /select.*range/i })).not.toBeInTheDocument();
+  });
+
+  it.each(['', '?from=invalid&to=invalid', '?from=2024-03-10'])(
+    'uses the saved workspace range when URL dates are missing or invalid: %s', search => {
+      h.locale = 'de-DE'; h.tz = 'America/Los_Angeles';
+      localStorage.setItem(SHARED_RANGE_STORAGE_KEY, JSON.stringify({
+        version: 2, start: '2024-11-03', end: '2024-11-03',
+      }));
+      renderPage(`/tire-differential-drift${search}`);
+      const range = calendarRangeToInstants({
+        startDate: '2024-11-03', endDate: '2024-11-03', timezone: h.tz,
+      });
+      expect(h.hook).toHaveBeenLastCalledWith('7', 30, {
+        start: range.startInstant, end: range.endInstantExclusive,
+      });
+      expect(range).toEqual({
+        startInstant: '2024-11-03T07:00:00.000Z',
+        endInstantExclusive: '2024-11-04T08:00:00.000Z',
+      });
+    },
+  );
+
+  it('renders the real header freshness timestamp with the saved locale and timezone', () => {
+    h.locale = 'de-DE'; h.tz = 'America/Los_Angeles';
+    renderPage(); everySection();
+    const time = formatTime(new Date(BASE), { locale: h.locale, tz: h.tz });
+    expect(screen.getByTitle(`Last updated: ${time}`)).toBeInTheDocument();
+    expect(screen.getByTestId('residual-plot')).toBeInTheDocument();
+    expect(screen.getByTestId('slope-plot')).toBeInTheDocument();
+  });
+
   it('preserves four sections, four metrics, four residual series and four corner readings', () => {
     const raw = structuredClone(h.query.data);
     renderPage(); everySection();
-    expect(h.hook).toHaveBeenLastCalledWith('7');
+    expect(h.hook).toHaveBeenLastCalledWith('7', 30, {
+      start: expect.any(String), end: expect.any(String),
+    });
     for (const key of ['fl', 'fr', 'rl', 'rr']) expect(screen.getByTestId(`line-${key}`)).toBeInTheDocument();
     for (const label of ['Likely leak corner', 'Structural imbalance', 'Days to threshold', 'Samples analyzed']) expect(within(brief()).getByText(label)).toBeInTheDocument();
     expect(h.residuals).toHaveLength(12); expect(h.slopes).toHaveLength(4);
@@ -133,7 +191,9 @@ describe('TireDifferentialDriftPage', () => {
   it('keeps all sections and the original governed onboarding action without a vehicle', () => {
     h.vehicleId = null; h.query = query({ data: undefined });
     renderPage(); everySection();
-    expect(h.hook).toHaveBeenLastCalledWith('');
+    expect(h.hook).toHaveBeenLastCalledWith('', 30, {
+      start: expect.any(String), end: expect.any(String),
+    });
     expect(screen.getByRole('link', { name: 'Set up TeslaSync' })).toHaveAttribute('href', '/onboarding');
     expect(screen.queryByTestId('residual-plot')).not.toBeInTheDocument();
     expect(screen.queryByTestId('slope-plot')).not.toBeInTheDocument();
@@ -164,7 +224,7 @@ describe('TireDifferentialDriftPage', () => {
     renderPage(); everySection();
     expect(h.residuals).toHaveLength(1);
     expect(screen.queryByTestId('slope-plot')).not.toBeInTheDocument();
-    expect(screen.getAllByText(/slope —\/day · confidence —/)).toHaveLength(4);
+    expect(screen.getAllByText(/slope —\/day · confidence 0 ·/)).toHaveLength(4);
     expect(screen.getByText(/mean offset 0.05 bar/)).toBeInTheDocument();
   });
 
@@ -203,10 +263,55 @@ describe('TireDifferentialDriftPage', () => {
     expect(h.slopes[0]?.slope).toBe(-0.01);
     expect(h.residuals[11]?.fl).toBe(-0.11);
     h.pressure = 'psi'; view.rerender(<QueryClientProvider client={new QueryClient()}><MemoryRouter><TireDifferentialDriftPage /></MemoryRouter></QueryClientProvider>);
-    expect(h.slopes[0]?.slope).toBe(-0.15);
-    expect(h.residuals[11]?.fl).toBe(-1.6);
-    expect(screen.getAllByTestId('axis-unit').map(node => node.textContent)).toEqual([' psi', ' psi/d']);
+    expect(h.slopes[0]?.slope).toBe(convertPressureFromSI(-1, 'psi'));
+    expect(h.residuals[11]?.fl).toBe(convertPressureFromSI(-11, 'psi'));
+    expect(screen.getAllByTestId('axis-unit').map(node => node.firstChild?.textContent)).toEqual([' psi', ' psi/d']);
     expect(h.query.data?.[11]?.front_left).toBe(223_500);
+  });
+
+  it.each([undefined, null, NaN, Infinity, -Infinity, 0])('does not turn invalid pressure %s into a measured zero residual', value => {
+    h.query = query({ data: samples(2).map(row => ({ ...row, front_left: value })) });
+    const raw = structuredClone(h.query.data);
+    renderPage(); everySection();
+    expect(h.residuals).toEqual([]);
+    expect(h.slopes).toEqual([]);
+    expect(screen.queryByText('None detected')).not.toBeInTheDocument();
+    expect(screen.queryByText('corners evenly matched')).not.toBeInTheDocument();
+    expect(h.query.data).toEqual(raw);
+  });
+
+  it.each(['bar', 'psi'] as const)('preserves signed fractional %s rows and formats only display surfaces', pressure => {
+    h.pressure = pressure; h.locale = 'de-DE'; h.precision = 5;
+    setGlobalPrecision(5); setGlobalLocale('de-DE');
+    h.query = query({ data: samples(3, -123.45, 67.89) });
+    const raw = structuredClone(h.query.data);
+    const view = renderPage();
+    const negative = convertPressureFromSI((239_376.55 - 239_500) / 1000, pressure);
+    const positive = convertPressureFromSI((239_567.89 - 239_500) / 1000, pressure);
+    expect(h.residuals[1]?.fl).toBe(negative);
+    expect(h.residuals[1]?.rl).toBe(positive);
+    expect(h.residuals[1]?.fr).toBe(0);
+    expect(h.residuals[1]?.rr).toBe(0);
+    expect(h.slopes[0]?.slope).toBeCloseTo(convertPressureFromSI(-0.12345, pressure), 12);
+    expect(typeof h.residuals[1]?.fl).toBe('number');
+    expect(screen.getAllByTestId('axis-value').map(node => node.textContent))
+      .toEqual(Array(2).fill(fmtNumber(-0.0012345, 5, 'de-DE')));
+    for (const tooltip of screen.getAllByRole('tooltip')) {
+      expect(tooltip).toHaveTextContent(fmtNumber(negative, 5, 'de-DE'));
+    }
+    expect(screen.getAllByRole('cell', { name: fmtNumber(negative, 5, 'de-DE') }).length).toBeGreaterThan(0);
+    expect(screen.getAllByRole('cell', { name: fmtNumber(positive, 5, 'de-DE') }).length).toBeGreaterThan(0);
+    const rows = structuredClone(h.residuals);
+    const slopes = structuredClone(h.slopes);
+    h.precision = 2;
+    act(() => setGlobalPrecision(2));
+    view.rerender(<QueryClientProvider client={new QueryClient()}><MemoryRouter><TireDifferentialDriftPage /></MemoryRouter></QueryClientProvider>);
+    expect(h.residuals).toEqual(rows);
+    expect(h.slopes).toEqual(slopes);
+    for (const tooltip of screen.getAllByRole('tooltip')) {
+      expect(tooltip).toHaveTextContent(fmtNumber(negative, 2, 'de-DE'));
+    }
+    expect(h.query.data).toEqual(raw);
   });
 
   it('retains precise UTC identities and localized complete timestamps in the data alternative', () => {

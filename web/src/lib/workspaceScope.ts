@@ -86,6 +86,7 @@ export const RANGE_ENABLED_PATHS: ReadonlySet<string> = new Set([
   '/tesla-charging-sessions',
   '/timeline',
   '/tire-pressure',
+  '/tire-differential-drift',
   '/trips',
   '/utilization',
   '/vehicle-systems/software',

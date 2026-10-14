@@ -27,6 +27,7 @@ import { chartTokens } from '@/lib/tokens';
 import { summarizeTireDifferentialDrift, TIRE_CORNERS, type TireCorner } from '../lib/tireDifferentialDrift';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { useDateFormat } from '@/hooks/useDateFormat';
+import { useRangeState } from '@/hooks/useRangeState';
 import { deriveDataState } from '@/api/dataState';
 import { VehicleSourceContent } from '../components/VehicleSourceContent';
 
@@ -45,11 +46,14 @@ export default function TireDifferentialDriftPage() {
   const { vehicleId } = useSelectedVehicle();
   const vehicleSelected = vehicleId != null;
   const { formatDateTime, tz } = useDateFormat();
+  const { startInstant, endInstantExclusive, timezone } = useRangeState({ timezone: tz });
   const vehicleIdStr = vehicleId != null ? String(vehicleId) : '';
   const { unitPrefs, formatPressure } = useUnits();
   const residualHidden = useHiddenSeries('tire-differential-drift-residuals');
 
-  const historyQuery = useTirePressureAnalysisHistory(vehicleIdStr);
+  const historyQuery = useTirePressureAnalysisHistory(vehicleIdStr, 30, {
+    start: startInstant, end: endInstantExclusive,
+  });
   const historySource = deriveDataState(historyQuery, { provenance: 'historical' });
   const summary = useMemo(
     () => summarizeTireDifferentialDrift(vehicleSelected ? historyQuery.data ?? [] : []),
@@ -74,13 +78,13 @@ export default function TireDifferentialDriftPage() {
     () =>
       summary.residuals.map((r) => ({
         timestamp: new Date(r.ms).toISOString(),
-        time: formatDateTime(new Date(r.ms)) + ' (' + tz + ')',
-        fl: Math.round(toDisplay(r.fl) * 100) / 100,
-        fr: Math.round(toDisplay(r.fr) * 100) / 100,
-        rl: Math.round(toDisplay(r.rl) * 100) / 100,
-        rr: Math.round(toDisplay(r.rr) * 100) / 100,
+        time: formatDateTime(new Date(r.ms)) + ' (' + timezone + ')',
+        fl: toDisplay(r.fl),
+        fr: toDisplay(r.fr),
+        rl: toDisplay(r.rl),
+        rr: toDisplay(r.rr),
       })),
-    [summary.residuals, toDisplay, formatDateTime, tz],
+    [summary.residuals, toDisplay, formatDateTime, timezone],
   );
 
   const slopeBars = useMemo(
@@ -90,7 +94,7 @@ export default function TireDifferentialDriftPage() {
           ? t('tireDifferentialDrift.leakCornerLabel', '{{corner}} · {{status}}', { corner: t(`tireDifferentialDrift.corner.${c.corner}`, CORNER_FALLBACK[c.corner]), status: t('tireDifferentialDrift.suspect', 'Leak suspect') })
           : t(`tireDifferentialDrift.corner.${c.corner}`, CORNER_FALLBACK[c.corner]),
         key: c.corner,
-        slope: Math.round(toDisplay(c.slopePaPerDay) * 100) / 100,
+        slope: toDisplay(c.slopePaPerDay),
         confidence: c.confidence,
       })),
     [summary.corners, summary.leakCorner, toDisplay, t],
@@ -190,18 +194,18 @@ export default function TireDifferentialDriftPage() {
             dataColumns={[
               { key: 'time', label: t('tireDifferentialDrift.col.time', 'Time') },
               { key: 'timestamp', label: t('tireDifferentialDrift.col.timestamp', 'Timestamp (UTC)') },
-              { key: 'fl', label: cornerLabel('fl') },
-              { key: 'fr', label: cornerLabel('fr') },
-              { key: 'rl', label: cornerLabel('rl') },
-              { key: 'rr', label: cornerLabel('rr') },
+              { key: 'fl', label: cornerLabel('fl'), format: fmtNumber },
+              { key: 'fr', label: cornerLabel('fr'), format: fmtNumber },
+              { key: 'rl', label: cornerLabel('rl'), format: fmtNumber },
+              { key: 'rr', label: cornerLabel('rr'), format: fmtNumber },
             ]}
           >
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={residualSeries}>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
                 <XAxis dataKey="time" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} minTickGap={40} />
-                <YAxis tick={{ fill: 'var(--text-muted)', fontSize: 11 }} unit={` ${unitPrefs.pressure}`} />
-                <Tooltip content={<ChartTooltip />} />
+                <YAxis tick={{ fill: 'var(--text-muted)', fontSize: 11 }} unit={` ${unitPrefs.pressure}`} tickFormatter={value => fmtNumber(value)} />
+                <Tooltip content={<ChartTooltip valueFormatter={value => fmtNumber(value)} />} />
                 <ChartLegend state={residualHidden} />
                 {TIRE_CORNERS.map((corner) => (
                   <Line
@@ -241,16 +245,16 @@ export default function TireDifferentialDriftPage() {
           data={slopeBars}
           dataColumns={[
             { key: 'corner', label: t('tireDifferentialDrift.col.corner', 'Corner') },
-            { key: 'slope', label: t('tireDifferentialDrift.col.slopeUnit', 'Slope ({{unit}}/day)', { unit: unitPrefs.pressure }) },
-            { key: 'confidence', label: t('tireDifferentialDrift.col.confidence', 'Confidence') },
+            { key: 'slope', label: t('tireDifferentialDrift.col.slopeUnit', 'Slope ({{unit}}/day)', { unit: unitPrefs.pressure }), format: fmtNumber },
+            { key: 'confidence', label: t('tireDifferentialDrift.col.confidence', 'Confidence'), format: fmtNumber },
           ]}
         >
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={slopeBars}>
               <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
               <XAxis dataKey="corner" tick={{ fill: 'var(--text-muted)', fontSize: 11 }} />
-              <YAxis tick={{ fill: 'var(--text-muted)', fontSize: 11 }} unit={` ${unitPrefs.pressure}/d`} />
-              <Tooltip content={<ChartTooltip />} />
+              <YAxis tick={{ fill: 'var(--text-muted)', fontSize: 11 }} unit={` ${unitPrefs.pressure}/d`} tickFormatter={value => fmtNumber(value)} />
+              <Tooltip content={<ChartTooltip valueFormatter={value => fmtNumber(value)} />} />
               <Bar dataKey="slope" name={t('tireDifferentialDrift.col.slope', 'Slope')} radius={[4, 4, 0, 0]}>
                 {slopeBars.map((bar) => (
                   <Cell key={bar.key} fill={CORNER_COLOR[bar.key]} />
