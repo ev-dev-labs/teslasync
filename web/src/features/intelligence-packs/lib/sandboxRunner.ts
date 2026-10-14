@@ -9,7 +9,7 @@
  */
 
 import { allowedSampleFields } from './capabilityPolicy';
-import { ExpressionBudgetExceededError, evaluateSeries, type ExprEvalBudget, type StepCounter } from './expressionInterpreter';
+import { ExpressionBudgetExceededError, evaluateExpr, type ExprEvalBudget, type StepCounter } from './expressionInterpreter';
 import { MAX_SANDBOX_ROWS, SAMPLE_TELEMETRY_ROWS } from './sampleTelemetry';
 import type { PackCapabilityId, PackDashboardLayout, PackFormula, PackManifest, SampleRowField } from './manifestTypes';
 
@@ -103,15 +103,19 @@ export function runSandboxPreview(manifest: PackManifest, grantedCapabilities: R
   let truncated = false;
   const formulas: FormulaRunResult[] = manifest.formulas.map((formula) => {
     const deniedFieldRefs = Array.from(new Set(collectFieldRefs(formula).filter((f) => !allowed.has(f as SampleRowField))));
-    let series: number[] = [];
+    const series: number[] = [];
     let budgetError: string | null = null;
     try {
-      series = evaluateSeries(formula.expr, maskedRows, coefficients, budget, steps).slice(0, SANDBOX_BUDGETS.maxOutputPoints);
+      for (const row of maskedRows) {
+        const value = evaluateExpr(formula.expr, row, coefficients, budget, steps);
+        if (series.length < SANDBOX_BUDGETS.maxOutputPoints) series.push(value);
+      }
     } catch (err) {
       if (err instanceof ExpressionBudgetExceededError) {
         budgetError = err.message;
         truncated = true;
       } else {
+        series.length = 0;
         budgetError = 'Unexpected evaluation error.';
       }
     }
