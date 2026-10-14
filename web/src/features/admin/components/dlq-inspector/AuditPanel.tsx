@@ -154,6 +154,7 @@ export function AuditPanel({ rows, loading, scopedDlqId }: AuditPanelProps) {
   }
 
   return (
+    <div className="min-w-0 max-w-full max-md:[&_button]:min-h-11 max-md:[&_button]:min-w-11 max-md:[&_[role=button]]:min-h-11 max-md:[&_[role=button]]:min-w-11 max-md:[&_input:not(.sr-only)]:min-h-11 max-md:[&_input:not(.sr-only)]:min-w-11 max-md:[&_select]:min-h-11 max-md:[&_select]:min-w-11">
     <DataTable<DLQReplayAuditRecord>
       tableId={scopedDlqId ? 'admin:dlq-audit-scoped' : 'admin:dlq-audit'}
       name="dlq-audit"
@@ -170,5 +171,6 @@ export function AuditPanel({ rows, loading, scopedDlqId }: AuditPanelProps) {
       mobileColumns={['replayed_at', 'actor', 'dlq_id', 'result', 'dst_topic', 'error', 'trace_id']}
       mobilePresentation={mobilePresentation}
     />
+    </div>
   );
 }

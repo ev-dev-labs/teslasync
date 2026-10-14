@@ -83,6 +83,70 @@ afterEach(() => {
 });
 
 describe('AuditPanel mobile field preservation', () => {
+  it('scopes 44px mobile targets to this caller without overriding md control density', () => {
+    const view = mountMobile([makeRow()]);
+    const frame = view.container.querySelector('[data-grid-frame]');
+    const scope = frame?.parentElement;
+    expect(scope).toHaveClass(
+      'min-w-0', 'max-w-full',
+      'max-md:[&_button]:min-h-11', 'max-md:[&_button]:min-w-11',
+      'max-md:[&_[role=button]]:min-h-11', 'max-md:[&_[role=button]]:min-w-11',
+      'max-md:[&_input:not(.sr-only)]:min-h-11', 'max-md:[&_input:not(.sr-only)]:min-w-11',
+      'max-md:[&_select]:min-h-11', 'max-md:[&_select]:min-w-11',
+    );
+    expect(scope?.className.split(' ').filter(token => token.includes(':'))).toEqual(
+      expect.arrayContaining([
+        'max-md:[&_button]:min-h-11',
+        'max-md:[&_[role=button]]:min-w-11',
+      ]),
+    );
+    expect(scope?.className.split(' ').filter(token => token.includes(':'))
+      .every(token => token.startsWith('max-md:'))).toBe(true);
+    expect(screen.getByRole('button', { name: 'Quick view' })).toHaveClass('min-h-11', 'min-w-11');
+    resize(740);
+    expect(screen.getByRole('button', { name: 'Actor filter' })).toHaveClass('h-11', 'w-11', 'md:h-8', 'md:w-8');
+    resize(768);
+    expect(screen.getByRole('button', { name: 'Export list' })).toHaveClass('md:min-h-9', 'md:min-w-9');
+    expect(screen.getByRole('button', { name: 'Reorder or hide columns' })).toHaveClass('md:min-h-9');
+    expect(screen.getByRole('searchbox', { name: 'Search loaded rows' })).toHaveClass('min-h-10');
+    const compact = screen.getByRole('radio', { name: 'Compact' });
+    expect(compact).toHaveClass('px-2', 'py-1');
+    fireEvent.click(compact);
+    expect(compact).toHaveAttribute('aria-checked', 'true');
+    expect(scope).not.toHaveClass('overflow-hidden');
+  });
+
+  it('keeps long audit evidence reachable in full details without changing the source values', async () => {
+    const row = makeRow({
+      actor: `fixture-operator-${'長'.repeat(120)}`,
+      dlq_id: `fixture-dlq-${'d'.repeat(160)}`,
+      dst_topic: `fixture/destination/${'x'.repeat(200)}`,
+      error: `fixture-error-${'خطأ'.repeat(80)}`,
+      trace_id: `fixture-trace-${'a'.repeat(200)}`,
+    });
+    const before = structuredClone(row);
+    mountMobile([row]);
+    const user = userEvent.setup();
+    const quickView = screen.getByRole('button', { name: 'Quick view' });
+    quickView.focus();
+    await user.keyboard('{Enter}');
+    const dialog = screen.getByRole('dialog');
+    for (const [label, value] of [
+      ['Actor', row.actor], ['DLQ ID', row.dlq_id], ['Destination', row.dst_topic],
+      ['Error', row.error], ['Trace ID', row.trace_id],
+    ] as const) {
+      expect(detailValue(dialog, label)?.textContent).toBe(value);
+      expect(detailValue(dialog, label)?.parentElement).toHaveClass('min-w-0', 'break-words');
+    }
+    expect(row).toEqual(before);
+    const closeButtons = within(dialog).getAllByRole('button', { name: 'Close' });
+    expect(closeButtons).toHaveLength(2);
+    expect(closeButtons[1]).toHaveClass('min-h-11', 'min-w-11');
+    await user.keyboard('{Escape}');
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    expect(quickView).toHaveFocus();
+  });
+
   it('opens all seven original fields even when saved column visibility hides evidence', () => {
     localStorage.setItem('teslasync.table.admin:dlq-audit.columns', JSON.stringify({
       order: keys,
@@ -105,7 +169,8 @@ describe('AuditPanel mobile field preservation', () => {
     expect(detailValue(dialog, 'Trace ID')).toHaveTextContent('fixture-trace-two');
     expect(within(dialog).queryByText('fixture-trace-one')).toBeNull();
     expect(rows).toEqual(before);
-    expect(screen.queryByRole('button', { name: /replay|select$/i })).toBeNull();
+    expect(screen.queryByRole('button', { name: /^replay(?: entry)?$/i })).toBeNull();
+    expect(screen.queryByRole('button', { name: /^select$/i })).toBeNull();
   });
 
   it.each([
@@ -166,7 +231,7 @@ describe('AuditPanel mobile field preservation', () => {
   it('retains loaded search and closes details when their row leaves the filtered view', async () => {
     mountMobile([makeRow(), makeRow({ id: 2, actor: 'fixture-other', trace_id: 'fixture-trace-two' })]);
     fireEvent.click(screen.getAllByRole('button', { name: 'Quick view' })[0]);
-    fireEvent.click(within(screen.getByRole('dialog')).getByText('Close', { selector: 'button' }));
+    fireEvent.click(within(screen.getByRole('dialog')).getAllByRole('button', { name: 'Close' })[0]);
     const search = screen.getByRole('searchbox', { name: 'Search loaded rows' });
     fireEvent.change(search, { target: { value: 'fixture-trace-two' } });
     await waitFor(() => expect(screen.getAllByRole('button', { name: 'Quick view' })).toHaveLength(1));
