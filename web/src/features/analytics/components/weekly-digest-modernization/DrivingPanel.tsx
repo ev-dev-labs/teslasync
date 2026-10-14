@@ -19,7 +19,7 @@ import type { DailyDistanceEntry } from '../weekly-digest/types';
 import type { WeeklyDigestMetrics } from '../weekly-digest/useWeeklyDigest';
 import { formatEfficiencyFromSI } from '../weekly-digest/display';
 import { pctChange } from '../weekly-digest/helpers';
-import { presentedMetric } from './presentation';
+import { numericPresentedMetric, presentedMetric } from './presentation';
 
 interface DrivingPanelProps {
   metrics: WeeklyDigestMetrics;
@@ -53,39 +53,52 @@ export function DrivingPanel({
     [distanceData, unitPrefs.distance],
   );
   const topDriveEfficiencyWhPerM =
-    metrics.topDrive && (metrics.topDrive.distanceM ?? 0) > 0
-      ? (metrics.topDrive.energyUsedWh ?? 0) / metrics.topDrive.distanceM
-      : 0;
+    metrics.topDrive && Number.isFinite(metrics.topDrive.distanceM) && metrics.topDrive.distanceM > 0
+      && typeof metrics.topDrive.energyUsedWh === 'number' && Number.isFinite(metrics.topDrive.energyUsedWh)
+      ? metrics.topDrive.energyUsedWh / metrics.topDrive.distanceM
+      : null;
+  const available = metrics.detailMetrics?.driveAvailable ?? true;
+  const efficiency = metrics.detailMetrics ? metrics.detailMetrics.avgEfficiencyWhPerM : metrics.avgEfficiencyWhPerM;
+  const duration = metrics.detailMetrics ? metrics.detailMetrics.totalDurationS : metrics.totalDurationS;
   const stats = [
-    presentedMetric(
+    numericPresentedMetric(
       'avg-efficiency',
+      'efficiency',
       t('analytics.weeklyDigest.avgEfficiency', 'Avg efficiency'),
-      formatEfficiencyFromSI(metrics.avgEfficiencyWhPerM ?? 0, unitPrefs),
+      efficiency,
+      raw => formatEfficiencyFromSI(raw, unitPrefs),
+      available,
       <BarChart3 className="h-4 w-4" aria-hidden="true" />,
     ),
-    presentedMetric(
+    numericPresentedMetric(
       'driving-time',
+      'duration',
       t('analytics.weeklyDigest.totalDrivingTime', 'Total driving time'),
-      formatDuration(metrics.totalDurationS ?? 0),
+      duration,
+      formatDuration,
+      available,
       <Clock className="h-4 w-4" aria-hidden="true" />,
     ),
-    presentedMetric(
+    numericPresentedMetric(
       'efficiency-change',
+      'percent',
       t('analytics.weeklyDigest.efficiencyChange', 'Efficiency change'),
-      (metrics.prevAvgEfficiencyWhPerM ?? 0) > 0
-        ? `${fmtNumber(pctChange(
-            metrics.avgEfficiencyWhPerM ?? 0,
-            metrics.prevAvgEfficiencyWhPerM ?? 0,
-          ))}%`
-        : '—',
+      efficiency != null && Number.isFinite(efficiency)
+        && Number.isFinite(metrics.prevAvgEfficiencyWhPerM) && metrics.prevAvgEfficiencyWhPerM > 0
+        ? pctChange(efficiency, metrics.prevAvgEfficiencyWhPerM) : null,
+      raw => `${fmtNumber(raw)}%`,
+      available,
       (metrics.avgEfficiencyWhPerM ?? 0) <= (metrics.prevAvgEfficiencyWhPerM ?? 0)
         ? <TrendingDown className="h-4 w-4 text-emerald-300" aria-hidden="true" />
         : <TrendingUp className="h-4 w-4 text-rose-300" aria-hidden="true" />,
     ),
-    presentedMetric(
+    numericPresentedMetric(
       'drives-count',
+      'count',
       t('analytics.weeklyDigest.drivesCount', 'Drives'),
-      fmtInt(metrics.totalDrives ?? 0),
+      metrics.totalDrives,
+      fmtInt,
+      available,
       <Activity className="h-4 w-4" aria-hidden="true" />,
     ),
   ];
@@ -108,20 +121,26 @@ export function DrivingPanel({
                   t('analytics.weeklyDigest.date', 'Date'),
                   formatDate(metrics.topDrive.startTs),
                 ),
-                presentedMetric(
+                numericPresentedMetric(
                   'top-distance',
+                  'distance',
                   t('analytics.weeklyDigest.distance', 'Distance'),
-                  formatDistance(metrics.topDrive.distanceM ?? 0),
+                  metrics.topDrive.distanceM,
+                  formatDistance,
                 ),
-                presentedMetric(
+                numericPresentedMetric(
                   'top-duration',
+                  'duration',
                   t('analytics.weeklyDigest.duration', 'Duration'),
-                  formatDuration(metrics.topDrive.durationS ?? 0),
+                  metrics.topDrive.durationS,
+                  formatDuration,
                 ),
-                presentedMetric(
+                numericPresentedMetric(
                   'top-efficiency',
+                  'efficiency',
                   t('analytics.weeklyDigest.efficiency', 'Efficiency'),
-                  formatEfficiencyFromSI(topDriveEfficiencyWhPerM, unitPrefs),
+                  topDriveEfficiencyWhPerM,
+                  raw => formatEfficiencyFromSI(raw, unitPrefs),
                 ),
               ]}
             />

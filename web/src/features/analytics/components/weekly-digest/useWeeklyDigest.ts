@@ -29,6 +29,15 @@ export type WeeklyDigestMetrics = Omit<DigestMetrics,
   batteryGain?: number | null;
   chargeEnergyAddedWh: number | null;
   prevChargeEnergyWh: number | null;
+  detailMetrics?: {
+    driveAvailable: boolean;
+    chargingAvailable: boolean;
+    avgEfficiencyWhPerM: number | null;
+    totalDurationS: number | null;
+    avgChargePowerW: number | null;
+    chargingCost: number | null;
+  };
+  funFactMultiplier?: number | null;
 };
 
 function averagePresent(values: Array<number | null | undefined>): number | null {
@@ -67,18 +76,21 @@ function efficiencyWhPerM(drives: readonly Drive[]): number {
   return energyWh / distanceM;
 }
 
-function chargingPowerW(session: ChargingSession): number {
-  const reportedPowerW = safeNumber(session.avg_power_w);
-  if (reportedPowerW > 0) return reportedPowerW;
+function chargingPowerW(session: ChargingSession): number | null {
+  if (typeof session.avg_power_w === 'number' && Number.isFinite(session.avg_power_w)) {
+    return session.avg_power_w;
+  }
 
   const startMs = Date.parse(session.started_at);
   const endMs = session.ended_at ? Date.parse(session.ended_at) : Number.NaN;
-  if (!Number.isFinite(startMs) || !Number.isFinite(endMs) || endMs <= startMs) return 0;
+  if (!Number.isFinite(startMs) || !Number.isFinite(endMs) || endMs <= startMs
+    || typeof session.total_energy_added_wh !== 'number'
+    || !Number.isFinite(session.total_energy_added_wh)) return null;
 
   const durationHours = (endMs - startMs) / 3_600_000;
   return durationHours > 0
-    ? safeNumber(session.total_energy_added_wh) / durationHours
-    : 0;
+    ? session.total_energy_added_wh / durationHours
+    : null;
 }
 
 export function useWeeklyDigest() {
@@ -294,12 +306,8 @@ export function useWeeklyDigest() {
         : undefined;
     const chargeEnergyAddedWh = chargingEnergy(weekCharging, chargingSessions != null);
     const prevChargeEnergyWh = chargingEnergy(prevWeekCharging, chargingSessions != null);
-    const chargingPowersW = weekCharging
-      .map((session) => chargingPowerW(session))
-      .filter((powerW) => powerW > 0);
-    const avgChargePowerW = chargingPowersW.length > 0
-      ? chargingPowersW.reduce((sum, powerW) => sum + powerW, 0) / chargingPowersW.length
-      : 0;
+    const measuredChargePowerW = averagePresent(weekCharging.map(chargingPowerW));
+    const avgChargePowerW = measuredChargePowerW ?? 0;
     const batteryStart = averagePresent(weekCharging.map((session) => session.start_soc_pct));
     const batteryEnd = averagePresent(weekCharging.map((session) => session.end_soc_pct));
     const batteryGain = averagePresent(weekCharging.map(session =>
@@ -307,6 +315,25 @@ export function useWeeklyDigest() {
         && session.end_soc_pct != null && Number.isFinite(session.end_soc_pct)
         ? session.end_soc_pct - session.start_soc_pct : null,
     ));
+    const driveAvailable = drives != null;
+    const chargingAvailable = chargingSessions != null;
+    const detailMetrics = {
+      driveAvailable,
+      chargingAvailable,
+      avgEfficiencyWhPerM: driveAvailable && weekDrives.some(drive =>
+        Number.isFinite(drive.distanceM) && drive.distanceM > 0
+        && typeof drive.energyUsedWh === 'number' && Number.isFinite(drive.energyUsedWh))
+        ? avgEfficiencyWhPerM : null,
+      totalDurationS: driveAvailable && weekDrives.every(drive =>
+        typeof drive.durationS === 'number' && Number.isFinite(drive.durationS))
+        ? totalDurationS : null,
+      avgChargePowerW: chargingAvailable ? measuredChargePowerW : null,
+      chargingCost: chargingAvailable && weekCharging.every(session =>
+        typeof session.cost_decimal === 'number' && Number.isFinite(session.cost_decimal))
+        ? chargingCost : null,
+    };
+    const distanceKm = convertDistanceFromSI(totalDistanceM, 'km');
+    const cityPair = distanceKm >= 10 ? findCityPair(distanceKm) : undefined;
 
     const alertsByType: Record<string, number> = {};
     for (const a of weekAlerts) {
@@ -337,8 +364,10 @@ export function useWeeklyDigest() {
       batteryGain,
       alertsByType,
       alertTotal: weekAlerts.length,
+      detailMetrics,
+      funFactMultiplier: driveAvailable && cityPair ? distanceKm / cityPair.km : null,
     };
-  }, [weekDrives, prevWeekDrives, weekCharging, prevWeekCharging, weekAlerts, chargingSessions, displayPrecision, displayLocale]);
+  }, [weekDrives, prevWeekDrives, weekCharging, prevWeekCharging, weekAlerts, drives, chargingSessions, displayPrecision, displayLocale]);
 
   /* ── Daily distance chart data ── */
   const dailyDistanceData: DailyDistanceEntry[] = useMemo(() => {

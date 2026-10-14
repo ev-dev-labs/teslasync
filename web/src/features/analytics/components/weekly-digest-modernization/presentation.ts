@@ -1,15 +1,25 @@
 import type { ReactNode } from 'react';
 import type { StatMetric } from '@/components/data-display/stat-reference';
 import type { StatPeriod } from '@/lib/metric-reference';
+import type { MetricId } from '@/lib/metric-reference';
 
-/**
- * Lossless bridge for the digest's existing specialist display contracts.
- * In particular efficiency is Wh/display-distance, not the reference
- * formatter's preference-energy/display-distance. Currency and SI formatters
- * also have different default precision. Keep those existing formatters;
- * StatTile still owns formatMetric, accessibility and responsive rendering.
- * This adapter performs no formatting, conversion or numeric coercion.
- */
+export function numericPresentedMetric(
+  occurrenceId: string,
+  metricId: MetricId,
+  label: string,
+  rawValue: number | null | undefined,
+  formatter: (raw: number) => string,
+  available = true,
+  context?: ReactNode,
+): StatMetric {
+  return {
+    occurrenceId, metricId, label, description: label, context,
+    rawValue: available ? rawValue : null,
+    display: { formatter: raw => ({ value: formatter(raw), unit: '' }) },
+  };
+}
+
+/** Source text only (for example a formatted date); measurements use numericPresentedMetric. */
 export function presentedMetric(
   occurrenceId: string,
   label: string,

@@ -21,8 +21,8 @@ export function DigestOperationalSummary({
   const { formatDistance, formatEnergy, unitPrefs } = useUnits();
   const { formatCurrency } = useFormatting();
   const { fmtInt, fmtNumber } = useNumberFormatting();
-  const drivesKnown = driveAvailable ?? (!isLoading && !isError);
-  const chargingKnown = chargingAvailable ?? (!isLoading && !isError);
+  const drivesKnown = driveAvailable ?? metrics.detailMetrics?.driveAvailable ?? (!isLoading && !isError);
+  const chargingKnown = chargingAvailable ?? metrics.detailMetrics?.chargingAvailable ?? (!isLoading && !isError);
   const title = comparison ? t('analytics.weeklyDigest.weekOverWeek', 'Week-over-week comparison')
     : t('analytics.weeklyDigest.weekSummary', 'Week summary');
   const trend = (current: number, previous: number, invert = false) => (
@@ -31,44 +31,44 @@ export function DigestOperationalSummary({
   const items: StatMetric[] = [
     { metricId: 'distance', occurrenceId: 'weekly-distance',
       label: comparison ? t('analytics.weeklyDigest.distance', 'Distance') : t('analytics.weeklyDigest.totalDistance', 'Total distance'),
-      rawValue: drivesKnown ? metrics.totalDistanceM ?? 0 : null,
+      rawValue: drivesKnown ? metrics.totalDistanceM : null,
       display: { formatter: raw => ({ value: formatDistance(raw), unit: '' }) },
       comparisonContent: drivesKnown ? trend(metrics.totalDistanceM ?? 0, metrics.prevDistanceM ?? 0) : undefined },
     { metricId: 'count', occurrenceId: 'weekly-drives',
       label: comparison ? t('analytics.weeklyDigest.drives', 'Drives') : t('analytics.weeklyDigest.totalDrives', 'Total drives'),
-      rawValue: drivesKnown ? metrics.totalDrives ?? 0 : null,
+      rawValue: drivesKnown ? metrics.totalDrives : null,
       display: { formatter: raw => ({ value: fmtInt(raw), unit: '' }) },
       comparisonContent: drivesKnown ? trend(metrics.totalDrives ?? 0, metrics.prevDriveCount ?? 0) : undefined },
     { metricId: 'energy', occurrenceId: 'weekly-energy',
       label: comparison ? t('analytics.weeklyDigest.energy', 'Energy') : t('analytics.weeklyDigest.energyUsed', 'Energy used'),
-      rawValue: drivesKnown ? metrics.energyUsedWh ?? 0 : null,
+      rawValue: drivesKnown ? metrics.energyUsedWh : null,
       display: { formatter: raw => ({ value: formatEnergy(raw), unit: '' }) },
       comparisonContent: drivesKnown ? trend(metrics.energyUsedWh ?? 0, metrics.prevEnergyWh ?? 0, true) : undefined },
     { metricId: 'currency', occurrenceId: 'weekly-cost',
       label: comparison ? t('analytics.weeklyDigest.cost', 'Cost') : t('analytics.weeklyDigest.chargingCost', 'Charging cost'),
-      rawValue: chargingKnown ? metrics.chargingCost ?? 0 : null,
+      rawValue: chargingKnown ? metrics.detailMetrics ? metrics.detailMetrics.chargingCost : metrics.chargingCost : null,
       display: { formatter: raw => ({ value: formatCurrency(raw), unit: '' }) },
       comparisonContent: chargingKnown ? trend(metrics.chargingCost ?? 0, metrics.prevChargingCost ?? 0, true) : undefined },
   ];
   if (comparison) items.push({
     metricId: 'efficiency', occurrenceId: 'weekly-efficiency',
     label: t('analytics.weeklyDigest.efficiency', 'Efficiency'),
-    rawValue: drivesKnown ? metrics.avgEfficiencyWhPerM ?? 0 : null,
+    rawValue: drivesKnown ? metrics.detailMetrics ? metrics.detailMetrics.avgEfficiencyWhPerM : metrics.avgEfficiencyWhPerM : null,
     display: { formatter: raw => ({ value: formatEfficiencyFromSI(raw, unitPrefs), unit: '' }) },
     comparisonContent: drivesKnown ? trend(metrics.avgEfficiencyWhPerM ?? 0, metrics.prevAvgEfficiencyWhPerM ?? 0, true) : undefined,
   });
   items.push({
     metricId: 'mass', occurrenceId: 'weekly-co2',
     label: comparison ? t('analytics.weeklyDigest.co2', 'CO₂ saved') : t('analytics.weeklyDigest.co2Saved', 'CO₂ saved'),
-    rawValue: drivesKnown ? metrics.co2Saved ?? 0 : null,
+    rawValue: drivesKnown ? metrics.co2Saved : null,
     display: { formatter: raw => ({ value: fmtNumber(raw), unit: 'kg' }) },
     comparisonContent: drivesKnown ? trend(metrics.co2Saved ?? 0, metrics.prevCo2 ?? 0) : undefined,
   });
   if (!comparison && (funFact || isLoading)) items.push({
     metricId: 'multiplier', occurrenceId: 'weekly-fun-fact',
     label: t('analytics.weeklyDigest.funFact', 'Fun fact'),
-    rawValue: drivesKnown && funFact ? Number(funFact.times) : null,
-    display: { formatter: () => ({ value: funFact?.times ?? '—', unit: '×' }) },
+    rawValue: drivesKnown && funFact ? metrics.funFactMultiplier : null,
+    display: { formatter: raw => ({ value: fmtNumber(raw), unit: '×' }) },
     context: funFact ? t('analytics.weeklyDigest.funFactDesc', '≈ {{times}}× {{from}} → {{to}}', {
       times: funFact.times, from: funFact.from, to: funFact.to,
     }) : undefined,

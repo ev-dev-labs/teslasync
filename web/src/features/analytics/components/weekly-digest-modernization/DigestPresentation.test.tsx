@@ -10,6 +10,7 @@ import { fireEvent, render as renderWithoutRouter, screen, within } from '@testi
 import { MemoryRouter } from 'react-router-dom';
 import type { StatMetric } from '@/components/data-display/stat-reference';
 import type { StatPeriod } from '@/lib/metric-reference';
+import { formatMetric } from '@/lib/metric-reference';
 import type { DigestMetrics } from '../weekly-digest/types';
 import { fsdInsights } from '@/features/driving/components/fsd-insights/__tests__/fixtures';
 import { DigestSummary, WeekNavigation, DrivingPanel, ChargingPanel, BatteryPanel, FsdPanel, AlertsPanel } from './index';
@@ -64,7 +65,10 @@ vi.mock('@/components/data-display/stat-reference', () => {
     return <div data-testid="stats" data-loading={loading}>
       <span>{period.label}</span>
       {metrics.map(metric => <div data-testid="metric" key={metric.occurrenceId}>
-        <span>{metric.label}</span><span>{String(metric.rawValue)}</span>
+        <span>{metric.label}</span><span>{formatMetric(metric.metricId, metric.rawValue, {
+          units: { distance: 'km', energy: 'kWh', duration: 'h', power: 'kW', locale: 'en-US', precision: 2 },
+          currency: { kind: 'symbol', value: '€' },
+        }, undefined, metric.display).text}</span>
         {metric.context}{metric.comparisonContent}
       </div>)}
     </div>;

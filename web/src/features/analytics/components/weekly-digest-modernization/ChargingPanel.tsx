@@ -17,7 +17,7 @@ import type { StatPeriod } from '@/lib/metric-reference';
 import type { DailyEnergyEntry } from '../weekly-digest/types';
 import type { WeeklyDigestMetrics } from '../weekly-digest/useWeeklyDigest';
 import { pctChange } from '../weekly-digest/helpers';
-import { presentedMetric } from './presentation';
+import { numericPresentedMetric } from './presentation';
 
 interface ChargingPanelProps {
   metrics: WeeklyDigestMetrics;
@@ -43,6 +43,7 @@ export function ChargingPanel({
   const { formatCurrency } = useFormatting();
   const { formatEnergy, formatPower, unitPrefs } = useUnits();
   const energyData = dailyEnergyData ?? [];
+  const available = metrics.detailMetrics?.chargingAvailable ?? true;
   const hasChart = energyData.some((entry) => (entry?.energyWh ?? 0) > 0);
   // Exactly the original display-boundary conversion; never alter raw Wh.
   const energyChartData = useMemo(
@@ -58,28 +59,40 @@ export function ChargingPanel({
       <StatGroup
         period={period}
         metrics={[
-          presentedMetric(
+          numericPresentedMetric(
             'sessions',
+            'count',
             t('analytics.weeklyDigest.sessions', 'Sessions'),
-            fmtInt(metrics.chargingSessionCount ?? 0),
+            metrics.chargingSessionCount,
+            fmtInt,
+            available,
             <Zap className="h-4 w-4" aria-hidden="true" />,
           ),
-          presentedMetric(
+          numericPresentedMetric(
             'energy-added',
+            'energy',
             t('analytics.weeklyDigest.totalEnergyAdded', 'Total energy added'),
-            metrics.chargeEnergyAddedWh != null ? formatEnergy(metrics.chargeEnergyAddedWh) : '—',
+            metrics.chargeEnergyAddedWh,
+            formatEnergy,
+            available,
             <Zap className="h-4 w-4" aria-hidden="true" />,
           ),
-          presentedMetric(
+          numericPresentedMetric(
             'avg-charge-rate',
+            'power',
             t('analytics.weeklyDigest.avgChargeRate', 'Avg charge rate'),
-            formatPower(metrics.avgChargePowerW ?? 0),
+            metrics.detailMetrics ? metrics.detailMetrics.avgChargePowerW : metrics.avgChargePowerW,
+            formatPower,
+            available,
             <Activity className="h-4 w-4" aria-hidden="true" />,
           ),
-          presentedMetric(
+          numericPresentedMetric(
             'total-cost',
+            'currency',
             t('analytics.weeklyDigest.totalCost', 'Total cost'),
-            formatCurrency(metrics.chargingCost ?? 0),
+            metrics.detailMetrics ? metrics.detailMetrics.chargingCost : metrics.chargingCost,
+            formatCurrency,
+            available,
             <Fuel className="h-4 w-4" aria-hidden="true" />,
           ),
         ]}
