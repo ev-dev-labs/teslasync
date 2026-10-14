@@ -196,8 +196,8 @@ function cardByLabel(label: string): HTMLElement {
 }
 interface TrendRow {
   year: string;
-  avg10to80: number;
-  avg20to80: number;
+  avg10to80: number | null;
+  avg20to80: number | null;
   count: number;
 }
 function yearlyRows(): TrendRow[] {
@@ -358,9 +358,9 @@ describe('TimeToChargeSection', () => {
     expect(screen.getByTestId('yearly-trend')).toHaveAttribute('data-rows', '2');
     expect(yearlyRows()).toEqual([
       // 2023: s1 (30 min crosses both windows) + s3Live (0 min, excluded).
-      { year: '2023', avg10to80: 30, avg20to80: 30, count: 2 },
-      // 2024: s2 crosses only 20→80 (60 min); 10→80 has no sample ⇒ 0.
-      { year: '2024', avg10to80: 0, avg20to80: 60, count: 1 },
+      { year: '2023', avg10to80: 30, avg20to80: 30, count: 1 },
+      // 2024: s2 crosses only 20→80; the other subgroup is unavailable.
+      { year: '2024', avg10to80: null, avg20to80: 60, count: 1 },
     ]);
   });
 
@@ -386,5 +386,58 @@ describe('TimeToChargeSection', () => {
     expect(rows).toHaveLength(1);
     expect(rows[0].year).toBe('2025');
     rows.forEach((r) => expect(r.year).toMatch(/^\d{4}$/));
+  });
+
+  it('counts only completed qualifying samples and leaves empty subgroups unavailable', () => {
+    const sessions = [
+      s1Fast, s3Live,
+      makeSession({ start_soc_pct: 30, end_soc_pct: 70 }),
+      makeSession({ start_soc_pct: NaN }),
+      makeSession({ start_soc_pct: -Infinity }),
+      makeSession({ end_soc_pct: Infinity }),
+      makeSession({ ended_at: 'bad-date' }),
+      makeSession({ ended_at: '2023-01-01T09:00:00Z' }),
+      makeSession({ started_at: '2023-invalid', ended_at: null }),
+    ];
+    const missingSoc = makeSession();
+    Object.assign(missingSoc, { start_soc_pct: null });
+    sessions.push(missingSoc);
+    render(<TimeToChargeSection sessions={sessions} />);
+    expect(yearlyRows()).toEqual([{ year: '2023', avg10to80: 30, avg20to80: 30, count: 1 }]);
+    expect(cardByLabel(L10).querySelector('[data-operational-value]')).toHaveTextContent('30.00 min');
+  });
+
+  it('retains minute rounding and signed/fractional SOC threshold arithmetic', () => {
+    render(<TimeToChargeSection sessions={[
+      makeSession({ start_soc_pct: -0.5, end_soc_pct: 80.5, ended_at: '2023-01-01T10:01:30Z' }),
+      makeSession({ start_soc_pct: 10.5, ended_at: '2023-01-01T10:03:00Z' }),
+      makeSession({ start_soc_pct: 0, ended_at: '2023-01-01T10:00:29Z' }),
+    ]} />);
+    expect(yearlyRows()).toEqual([{ year: '2023', avg10to80: 2, avg20to80: 2.5, count: 2 }]);
+    expect(cardByLabel(L10).querySelector('[data-operational-value]')).toHaveTextContent('2.00 min');
+    expect(cardByLabel(L20).querySelector('[data-operational-value]')).toHaveTextContent('2.50 min');
+  });
+
+  it('excludes invalid energy and retains the accepted positive-energy rate requirement', () => {
+    const invalidEnergy = [null, undefined, NaN, Infinity, -Infinity, 0, -1.5].map(value => {
+      const session = makeSession({ id: 99 });
+      Object.assign(session, { total_energy_added_wh: value });
+      return session;
+    });
+    render(<TimeToChargeSection sessions={[
+      ...invalidEnergy, makeSession({ id: 42, total_energy_added_wh: 750.5 }),
+    ]} />);
+    for (const label of [L_FAST, L_SLOW]) {
+      expect(cardByLabel(label)).toHaveTextContent('Session #42');
+      expect(cardByLabel(label).querySelector('[data-operational-value]')).toHaveTextContent('1.50 kWh/h');
+    }
+  });
+
+  it('does not invent duration averages or rates for nonqualifying DC sessions', () => {
+    render(<TimeToChargeSection sessions={[
+      makeSession({ start_soc_pct: 30, end_soc_pct: 70, total_energy_added_wh: NaN }),
+    ]} />);
+    expect(yearlyRows()).toEqual([{ year: '2023', avg10to80: null, avg20to80: null, count: 0 }]);
+    cards().forEach(card => expect(card).toHaveAttribute('data-value-state', 'missing'));
   });
 });

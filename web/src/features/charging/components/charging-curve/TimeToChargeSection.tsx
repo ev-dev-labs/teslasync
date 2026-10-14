@@ -5,7 +5,7 @@ import type { ChargingSession } from '@/api/types';
 
 import { type StatMetric } from '@/components/data-display';
 import { ChargingSummaryBrief } from '../operationalbrief-all/ChargingSummaryBrief';
-import { isDcSession, avg, durationMinutes } from './helpers';
+import { isDcSession, availableAverage, crossesSocWindow, durationMinutes } from './helpers';
 import { convertEnergyFromSI } from '@/lib/unitConversion';
 import type { TimeToChargeMetrics } from './types';
 import YearlyTrendChart from './YearlyTrendChart';
@@ -52,14 +52,15 @@ export default function TimeToChargeSection({ sessions }: TimeToChargeSectionPro
         .map((s) => durationMinutes(s.started_at, s.ended_at))
         .filter((d) => d > 0);
 
-    const d10to80 = crossedDurations((s) => s.start_soc_pct <= 10 && (s.end_soc_pct ?? 0) >= 80);
-    const d20to80 = crossedDurations((s) => s.start_soc_pct <= 20 && (s.end_soc_pct ?? 0) >= 80);
+    const d10to80 = crossedDurations((s) => crossesSocWindow(s, 10));
+    const d20to80 = crossedDurations((s) => crossesSocWindow(s, 20));
 
-    const avg10to80 = d10to80.length ? avg(d10to80) : null;
-    const avg20to80 = d20to80.length ? avg(d20to80) : null;
+    const avg10to80 = availableAverage(d10to80);
+    const avg20to80 = availableAverage(d20to80);
 
     const withRate = dcSessions
-      .filter((s) => durationMinutes(s.started_at, s.ended_at) > 0 && s.total_energy_added_wh > 0)
+      .filter((s) => durationMinutes(s.started_at, s.ended_at) > 0
+        && Number.isFinite(s.total_energy_added_wh) && s.total_energy_added_wh > 0)
       .map((s) => ({
         id: s.id,
         rate: (convertEnergyFromSI(s.total_energy_added_wh, 'kWh') / durationMinutes(s.started_at, s.ended_at)) * 60,
@@ -71,23 +72,29 @@ export default function TimeToChargeSection({ sessions }: TimeToChargeSectionPro
     const byYear = new Map<string, { d10: number[]; d20: number[]; count: number }>();
     dcSessions.forEach((s) => {
       const year = (s.started_at ?? '').slice(0, 4);
-      if (!/^\d{4}$/.test(year)) return; // skip sessions we cannot date — no phantom "" bucket
+      if (!/^\d{4}$/.test(year) || !Number.isFinite(Date.parse(s.started_at))) return;
       if (!byYear.has(year)) byYear.set(year, { d10: [], d20: [], count: 0 });
       const g = byYear.get(year)!;
-      g.count++;
       const dur = durationMinutes(s.started_at, s.ended_at);
-      if (dur > 0 && s.start_soc_pct <= 10 && (s.end_soc_pct ?? 0) >= 80) g.d10.push(dur);
-      if (dur > 0 && s.start_soc_pct <= 20 && (s.end_soc_pct ?? 0) >= 80) g.d20.push(dur);
+      const qualifies10 = dur > 0 && crossesSocWindow(s, 10);
+      const qualifies20 = dur > 0 && crossesSocWindow(s, 20);
+      if (qualifies10) g.d10.push(dur);
+      if (qualifies20) g.d20.push(dur);
+      if (qualifies10 || qualifies20) g.count++;
     });
 
     const yearlyTrend = Array.from(byYear.entries())
       .sort(([a], [b]) => a.localeCompare(b))
-      .map(([year, { d10, d20, count }]) => ({
-        year,
-        avg10to80: Math.round(avg(d10) * 10) / 10,
-        avg20to80: Math.round(avg(d20) * 10) / 10,
-        count,
-      }));
+      .map(([year, { d10, d20, count }]) => {
+        const avg10 = availableAverage(d10);
+        const avg20 = availableAverage(d20);
+        return {
+          year,
+          avg10to80: avg10 == null ? null : Math.round(avg10 * 10) / 10,
+          avg20to80: avg20 == null ? null : Math.round(avg20 * 10) / 10,
+          count,
+        };
+      });
 
     return { avg10to80, avg20to80, fastest, slowest, yearlyTrend };
   }, [sessions]);

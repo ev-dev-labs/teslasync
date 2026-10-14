@@ -74,3 +74,17 @@ export function avg(nums: number[]): number {
   if (!Array.isArray(nums) || nums.length === 0) return 0;
   return nums.reduce((a, b) => a + b, 0) / nums.length;
 }
+
+/** Average only recorded finite samples; an unavailable subgroup is not zero. */
+export function availableAverage(nums: readonly (number | null | undefined)[]): number | null {
+  const samples = nums.filter((value): value is number =>
+    typeof value === 'number' && Number.isFinite(value),
+  );
+  return samples.length ? avg(samples) : null;
+}
+
+export function crossesSocWindow(s: ChargingSession, startSoc: number): boolean {
+  return typeof s.start_soc_pct === 'number' && Number.isFinite(s.start_soc_pct)
+    && typeof s.end_soc_pct === 'number' && Number.isFinite(s.end_soc_pct)
+    && s.start_soc_pct <= startSoc && s.end_soc_pct >= 80;
+}

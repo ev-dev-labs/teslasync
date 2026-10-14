@@ -34,10 +34,10 @@ export interface ChargerTypeStats {
 export interface MonthlySpeed {
   /** Month bucket, `YYYY-MM`. */
   month: string;
-  /** Mean DC charging power for the month, in kilowatts (kW). */
-  dcAvgKw: number;
-  /** Mean AC charging power for the month, in kilowatts (kW). */
-  acAvgKw: number;
+  /** Mean recorded DC power in kW, or null when no finite samples exist. */
+  dcAvgKw: number | null;
+  /** Mean recorded AC power in kW, or null when no finite samples exist. */
+  acAvgKw: number | null;
 }
 
 /** A session's average charge rate paired with its session id. */
@@ -57,11 +57,11 @@ export interface ChargeRatePoint {
 export type YearlyTrendPoint = {
   /** Year bucket, `YYYY`. */
   year: string;
-  /** Mean 10% → 80% charge duration, in minutes. */
-  avg10to80: number;
-  /** Mean 20% → 80% charge duration, in minutes. */
-  avg20to80: number;
-  /** Number of DC sessions counted in the year. */
+  /** Mean 10% → 80% duration in minutes, or null when no sessions qualify. */
+  avg10to80: number | null;
+  /** Mean 20% → 80% duration in minutes, or null when no sessions qualify. */
+  avg20to80: number | null;
+  /** Number of completed DC sessions qualifying for either SOC window. */
   count: number;
 };
 

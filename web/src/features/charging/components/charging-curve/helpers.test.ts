@@ -34,6 +34,8 @@ import {
   sessionLabel,
   generateChargingCurve,
   avg,
+  availableAverage,
+  crossesSocWindow,
 } from './helpers';
 
 beforeAll(() => {
@@ -267,6 +269,38 @@ describe('avg', () => {
     expect(avg([10, 20, 30])).toBe(20);
     expect(avg([5])).toBe(5);
     expect(avg([-10, 10])).toBe(0);
+  });
+
+  describe('availableAverage', () => {
+    it('uses only finite recorded samples as the denominator', () => {
+      expect(availableAverage([null, undefined, NaN, Infinity, -Infinity])).toBeNull();
+      expect(availableAverage([])).toBeNull();
+      expect(availableAverage([10, null, undefined, NaN, Infinity, -Infinity, 20])).toBe(15);
+    });
+
+    it('distinguishes measured zero and preserves signed and fractional arithmetic', () => {
+      expect(availableAverage([0])).toBe(0);
+      expect(availableAverage([-10, 10])).toBe(0);
+      expect(availableAverage([-1.25, 0, 2])).toBe(0.25);
+    });
+  });
+
+  describe('crossesSocWindow', () => {
+    it('requires finite recorded SOC bounds rather than coercing missing readings', () => {
+      for (const value of [null, undefined, NaN, Infinity, -Infinity]) {
+        const missingStart = makeSession();
+        Object.assign(missingStart, { start_soc_pct: value });
+        expect(crossesSocWindow(missingStart, 10)).toBe(false);
+        expect(crossesSocWindow(makeSession({ end_soc_pct: value }), 20)).toBe(false);
+      }
+    });
+
+    it('preserves accepted zero, signed and fractional threshold comparisons', () => {
+      expect(crossesSocWindow(makeSession({ start_soc_pct: 0 }), 10)).toBe(true);
+      expect(crossesSocWindow(makeSession({ start_soc_pct: -0.5, end_soc_pct: 80.5 }), 10)).toBe(true);
+      expect(crossesSocWindow(makeSession({ start_soc_pct: 10.5 }), 10)).toBe(false);
+      expect(crossesSocWindow(makeSession({ start_soc_pct: 10.5 }), 20)).toBe(true);
+    });
   });
 
   it('returns 0 for an empty or nullish array instead of NaN/throwing', () => {
