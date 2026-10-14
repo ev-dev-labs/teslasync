@@ -12,7 +12,12 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ToastProvider } from '@/components/feedback';
 import type { Drive } from '@/types/driving';
 
-import { departureChartLabel } from '../components/departure-forecast/labels';
+import {
+  departureChartLabel,
+  departureClock,
+  departureDateTime,
+  departureLocalHour,
+} from '../components/departure-forecast/labels';
 
 const FROZEN_NOW = Date.parse('2026-05-14T06:30:00.000Z');
 const h = vi.hoisted(() => ({
@@ -21,9 +26,28 @@ const h = vi.hoisted(() => ({
   historyHook: vi.fn(),
   timezoneHook: vi.fn(),
   timeZone: 'UTC',
+  locale: 'en-US',
 }));
 
 const historyRefetch = vi.fn();
+
+vi.mock('@/hooks/useSettings', () => ({
+  useSettings: () => ({
+    locale: h.locale,
+    decimals: 2,
+    settings: {
+      locale: h.locale,
+      tz_display_default: 'user',
+      timezone_user: 'Asia/Tokyo',
+      unit_of_length: 'km',
+      unit_of_temp: 'C',
+      unit_of_pressure: 'bar',
+      decimal_precision: 2,
+      currency_symbol: '$',
+      chart_palette: 'cb_safe',
+    },
+  }),
+}));
 
 vi.mock('react-i18next', async () => {
   const actual = await vi.importActual<typeof import('react-i18next')>(
@@ -238,11 +262,81 @@ beforeEach(() => {
   nextId = 1;
   h.vehicleId = 7;
   h.timeZone = 'UTC';
+  h.locale = 'en-US';
   h.history = query({ data: weekdayCommute(12) });
   vi.spyOn(Date, 'now').mockReturnValue(FROZEN_NOW);
 });
 
 describe('DepartureForecastPage', () => {
+  it('uses the saved date locale while retaining vehicle-model timezone and raw instants', () => {
+    h.locale = 'de-DE';
+    h.timeZone = 'America/Los_Angeles';
+    const drives = weekdayCommute(12);
+    const original = structuredClone(drives);
+    h.history = query({ data: drives });
+    const view = renderPage();
+    const slot = Date.parse('2026-05-14T07:00:00.000Z');
+    const expected = departureChartLabel(slot, 'de-DE', h.timeZone);
+    const table = within(screen.getByTestId('departure-next-24')).getByRole('table');
+    expect(within(table).getByText(expected)).toBeInTheDocument();
+    expect(within(table).queryByText(departureChartLabel(slot, 'en-US', h.timeZone))).not.toBeInTheDocument();
+    expect(h.timezoneHook).toHaveBeenCalledWith('vehicle');
+    expect(drives).toEqual(original);
+    expectEverySection();
+
+    h.locale = 'fr-FR';
+    view.rerenderPage();
+    expect(within(table).getByText(departureChartLabel(slot, 'fr-FR', h.timeZone))).toBeInTheDocument();
+    expect(drives).toEqual(original);
+  });
+
+  it.each(['de-DE', 'en-US'])('formats model day boundaries and abstract hours with %s', (locale) => {
+    const zone = 'America/Los_Angeles';
+    for (const iso of ['2026-05-14T06:59:00.000Z', '2026-05-14T07:00:00.000Z']) {
+      const date = new Date(iso);
+      expect(departureDateTime(date.getTime(), locale, zone)).toBe(
+        date.toLocaleString(locale, {
+          timeZone: zone, year: 'numeric', month: 'short', day: 'numeric',
+          hour: '2-digit', minute: '2-digit',
+        }),
+      );
+      expect(departureClock(date.getTime(), locale, zone)).toBe(
+        new Intl.DateTimeFormat(locale, {
+          timeZone: zone, hour: '2-digit', minute: '2-digit',
+        }).format(date),
+      );
+      expect(departureChartLabel(date.getTime(), locale, zone)).toBe(
+        new Intl.DateTimeFormat(locale, {
+          timeZone: zone, month: 'short', day: 'numeric',
+          hour: '2-digit', minute: '2-digit', timeZoneName: 'shortOffset',
+        }).format(date),
+      );
+    }
+    for (const hour of [0, 23]) {
+      expect(departureLocalHour(hour, locale)).toBe(
+        new Intl.DateTimeFormat(locale, {
+          timeZone: 'UTC', hour: '2-digit', minute: '2-digit',
+        }).format(new Date(Date.UTC(2020, 0, 1, hour))),
+      );
+    }
+  });
+
+  it.each([null, undefined, NaN, Infinity, -Infinity, 8.64e15 + 1])(
+    'keeps missing or invalid instant %s unknown rather than showing epoch dates',
+    (ms) => {
+      expect(departureClock(ms, 'de-DE', 'America/Los_Angeles')).toBe('—');
+      expect(departureDateTime(ms, 'de-DE', 'America/Los_Angeles')).toBe('—');
+      expect(departureChartLabel(ms, 'de-DE', 'America/Los_Angeles')).toBe('—');
+    },
+  );
+
+  it('preserves a valid epoch instant and rejects invalid abstract hours', () => {
+    expect(departureDateTime(0, 'de-DE', 'UTC')).not.toBe('—');
+    for (const hour of [NaN, Infinity, -1, 24, 1.5]) {
+      expect(departureLocalHour(hour, 'de-DE')).toBe('—');
+    }
+  });
+
   it.each([
     'hidden_departure-forecast-next-24=likelihood',
     'hidden_departure-forecast-24h=likelihood',

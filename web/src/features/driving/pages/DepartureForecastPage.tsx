@@ -8,8 +8,8 @@ import { FadeIn } from '@/components/motion';
 import { StaleRefreshWarning } from '@/components/feedback';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useDataState } from '@/hooks/useDataState';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
-import { useTimezone } from '@/lib/timezone';
 import type { Drive } from '@/types/driving';
 
 import {
@@ -30,11 +30,11 @@ const DRIVE_HISTORY_LIMIT = 1_000;
 const TWO_COLUMNS = { default: 1, xl: 2 } as const;
 
 export default function DepartureForecastPage() {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   usePageTitle(t('departure.title', 'Departure Forecast'));
 
   const { vehicleId } = useSelectedVehicle();
-  const timeZone = useTimezone('vehicle');
+  const { locale, tz: timeZone } = useDateFormat('vehicle');
   const vehicleIdStr = vehicleId != null ? String(vehicleId) : undefined;
   const drivesQuery = useDriveHistory(
     vehicleIdStr,
@@ -70,7 +70,6 @@ export default function DepartureForecastPage() {
       drivesState.refreshError,
     onRetry: () => void drivesQuery.refetch(),
   };
-  const locale = i18n.language;
   const modelTimeZone = forecast.timeZone;
 
   return (
