@@ -14,6 +14,7 @@ import (
 
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	activitymodel "github.com/ev-dev-labs/teslasync/internal/models/activity"
+	"github.com/jackc/pgx/v5"
 )
 
 // Filters scopes a single activity query. Start/End use the zero time.Time
@@ -30,11 +31,16 @@ type Filters struct {
 
 // Repo composes the activity timeline. Constructed with NewRepo.
 type Repo struct {
-	db *database.DB
+	pool activityPool
+}
+
+type activityPool interface {
+	Query(context.Context, string, ...any) (pgx.Rows, error)
+	QueryRow(context.Context, string, ...any) pgx.Row
 }
 
 func NewRepo(db *database.DB) *Repo {
-	return &Repo{db: db}
+	return &Repo{pool: db.Pool}
 }
 
 // subquery is one UNION ALL branch. Every branch MUST project the exact
@@ -196,6 +202,28 @@ WHERE ($1::bigint IS NULL OR ca.vehicle_id = $1::bigint OR ca.vehicle_id IS NULL
 // requested kinds (defaulting to all of them), returning the SQL and the
 // positional args ($1 vehicle_id, $2 start, $3 end, $4 limit, $5 offset).
 func buildQuery(f Filters) (string, []any) {
+	cte, args := buildActivityCTE(f)
+	limit := f.Limit
+	if limit <= 0 || limit > 500 {
+		limit = 50
+	}
+	offset := f.Offset
+	if offset < 0 {
+		offset = 0
+	}
+
+	query := cte + `
+SELECT source_table, source_id, kind, occurred_at, vehicle_id, title, summary, severity, status, path,
+       duration_s, start_soc_pct, end_soc_pct, energy_added_wh, version,
+       count(*) OVER() AS total_count
+FROM activity
+ORDER BY occurred_at DESC, source_table ASC, source_id DESC
+LIMIT $4 OFFSET $5`
+
+	return query, append(args, limit, offset)
+}
+
+func buildActivityCTE(f Filters) (string, []any) {
 	kinds := f.Kinds
 	if len(kinds) == 0 {
 		kinds = activitymodel.AllKinds
@@ -229,34 +257,18 @@ WHERE FALSE`)
 		endArg = f.End.UTC()
 	}
 
-	limit := f.Limit
-	if limit <= 0 || limit > 500 {
-		limit = 50
-	}
-	offset := f.Offset
-	if offset < 0 {
-		offset = 0
-	}
-
-	query := "WITH activity AS (" + strings.Join(branches, "\nUNION ALL\n") + `
-)
-SELECT source_table, source_id, kind, occurred_at, vehicle_id, title, summary, severity, status, path,
-       duration_s, start_soc_pct, end_soc_pct, energy_added_wh, version,
-       count(*) OVER() AS total_count
-FROM activity
-ORDER BY occurred_at DESC, source_table ASC, source_id DESC
-LIMIT $4 OFFSET $5`
-
-	return query, []any{vehicleIDArg, startArg, endArg, limit, offset}
+	return "WITH activity AS (" + strings.Join(branches, "\nUNION ALL\n") + "\n)",
+		[]any{vehicleIDArg, startArg, endArg}
 }
 
 // List runs the composed activity query and returns the page of items plus
 // the total row count matching the filters (pre-pagination), computed via
-// a single COUNT(*) OVER() window so no second round trip is needed.
+// COUNT(*) OVER() on populated pages, or a scoped count query on empty pages
+// where the window count cannot be returned.
 func (r *Repo) List(ctx context.Context, f Filters) ([]activitymodel.Item, int64, error) {
 	query, args := buildQuery(f)
 
-	rows, err := r.db.Pool.Query(ctx, query, args...)
+	rows, err := r.pool.Query(ctx, query, args...)
 	if err != nil {
 		return nil, 0, fmt.Errorf("query activity timeline: %w", err)
 	}
@@ -282,6 +294,13 @@ func (r *Repo) List(ctx context.Context, f Filters) ([]activitymodel.Item, int64
 	}
 	if err := rows.Err(); err != nil {
 		return nil, 0, fmt.Errorf("iterate activity rows: %w", err)
+	}
+	if len(items) == 0 {
+		rows.Close()
+		cte, countArgs := buildActivityCTE(f)
+		if err := r.pool.QueryRow(ctx, cte+"\nSELECT count(*) FROM activity", countArgs...).Scan(&total); err != nil {
+			return nil, 0, fmt.Errorf("count activity timeline: %w", err)
+		}
 	}
 	return items, total, nil
 }

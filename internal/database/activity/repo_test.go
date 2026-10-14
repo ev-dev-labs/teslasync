@@ -1,12 +1,169 @@
 package activity
 
 import (
+	"context"
+	"errors"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
 
 	activitymodel "github.com/ev-dev-labs/teslasync/internal/models/activity"
+	"github.com/jackc/pgx/v5"
 )
+
+type activityTestRows struct {
+	pgx.Rows
+	values  [][]any
+	index   int
+	closed  bool
+	err     error
+	scanErr error
+}
+
+func (r *activityTestRows) Next() bool {
+	if r.index >= len(r.values) {
+		r.Close()
+		return false
+	}
+	r.index++
+	return true
+}
+
+func (r *activityTestRows) Close()     { r.closed = true }
+func (r *activityTestRows) Err() error { return r.err }
+func (r *activityTestRows) Scan(dest ...any) error {
+	if r.scanErr != nil {
+		return r.scanErr
+	}
+	for i, value := range r.values[r.index-1] {
+		target := reflect.ValueOf(dest[i]).Elem()
+		if value == nil {
+			target.SetZero()
+		} else {
+			target.Set(reflect.ValueOf(value))
+		}
+	}
+	return nil
+}
+
+type activityCountRow struct {
+	total int64
+	err   error
+}
+
+func (r activityCountRow) Scan(dest ...any) error {
+	if r.err != nil {
+		return r.err
+	}
+	*dest[0].(*int64) = r.total
+	return nil
+}
+
+type activityTestPool struct {
+	t          *testing.T
+	rows       *activityTestRows
+	queryErr   error
+	count      activityCountRow
+	countCalls int
+	countSQL   string
+	countArgs  []any
+}
+
+func (p *activityTestPool) Query(context.Context, string, ...any) (pgx.Rows, error) {
+	return p.rows, p.queryErr
+}
+
+func (p *activityTestPool) QueryRow(_ context.Context, sql string, args ...any) pgx.Row {
+	if !p.rows.closed {
+		p.t.Error("page rows must be closed before the count query")
+	}
+	p.countCalls++
+	p.countSQL = sql
+	p.countArgs = args
+	return p.count
+}
+
+func TestListEmptyPageReturnsAuthoritativeScopedTotal(t *testing.T) {
+	t.Parallel()
+	vehicleID := int64(42)
+	start := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+	end := start.Add(24 * time.Hour)
+	for _, tc := range []struct {
+		name   string
+		offset int
+		total  int64
+	}{
+		{"offset beyond results", 100, 23},
+		{"scoped recovery offset", 50, 3},
+		{"empty scope", 0, 0},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			f := Filters{
+				VehicleID: &vehicleID, Start: start, End: end,
+				Kinds: []activitymodel.Kind{activitymodel.KindDrive, activitymodel.KindAnnotation},
+				Limit: 10, Offset: tc.offset,
+			}
+			pool := &activityTestPool{t: t, rows: &activityTestRows{}, count: activityCountRow{total: tc.total}}
+			items, total, err := (&Repo{pool: pool}).List(context.Background(), f)
+			if err != nil || items == nil || len(items) != 0 || total != tc.total {
+				t.Fatalf("List() = %#v, %d, %v; want non-nil empty items and total %d", items, total, err, tc.total)
+			}
+			cte, args := buildActivityCTE(f)
+			if pool.countCalls != 1 || pool.countSQL != cte+"\nSELECT count(*) FROM activity" {
+				t.Fatalf("count must query the identical filtered activity CTE: %q", pool.countSQL)
+			}
+			if !reflect.DeepEqual(pool.countArgs, args) || len(pool.countArgs) != 3 {
+				t.Fatalf("count args = %#v, want scoped args %#v without pagination", pool.countArgs, args)
+			}
+			if strings.Contains(pool.countSQL, "LIMIT") || strings.Contains(pool.countSQL, "OFFSET") {
+				t.Fatal("authoritative count must not be paginated")
+			}
+		})
+	}
+}
+
+func TestListPopulatedPagePreservesWindowCountAndItem(t *testing.T) {
+	t.Parallel()
+	at := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+	pool := &activityTestPool{t: t, rows: &activityTestRows{values: [][]any{{
+		"drives", int64(7), activitymodel.KindDrive, at, nil,
+		"", "", nil, "completed", nil, nil, nil, nil, nil, nil, int64(23),
+	}}}}
+	items, total, err := (&Repo{pool: pool}).List(context.Background(), Filters{Offset: 10})
+	if err != nil || len(items) != 1 || total != 23 {
+		t.Fatalf("List() = %#v, %d, %v", items, total, err)
+	}
+	if items[0].ID != "drives:7" || !items[0].OccurredAt.Equal(at) || items[0].Status != "completed" {
+		t.Fatalf("populated activity changed: %#v", items[0])
+	}
+	if pool.countCalls != 0 {
+		t.Fatal("populated pages must use the window count without a second query")
+	}
+}
+
+func TestListDatabaseErrorsAreNotSuccessfulEmptyPages(t *testing.T) {
+	t.Parallel()
+	boom := errors.New("database failure")
+	for _, tc := range []struct {
+		name       string
+		pool       *activityTestPool
+		countCalls int
+	}{
+		{"query", &activityTestPool{queryErr: boom}, 0},
+		{"iteration", &activityTestPool{rows: &activityTestRows{err: boom}}, 0},
+		{"scan", &activityTestPool{rows: &activityTestRows{values: [][]any{{}}, scanErr: boom}}, 0},
+		{"count", &activityTestPool{rows: &activityTestRows{}, count: activityCountRow{err: boom}}, 1},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			tc.pool.t = t
+			items, total, err := (&Repo{pool: tc.pool}).List(context.Background(), Filters{Offset: 100})
+			if !errors.Is(err, boom) || items != nil || total != 0 || tc.pool.countCalls != tc.countCalls {
+				t.Fatalf("List() = %#v, %d, %v; count calls = %d", items, total, err, tc.pool.countCalls)
+			}
+		})
+	}
+}
 
 // TestBuildQuery_AllKindsByDefault pins the default (no kind filter) shape:
 // every domain's UNION ALL branch is present, in the fixed order AllKinds
