@@ -156,6 +156,112 @@ describe('resilientFetch wire error normalization', () => {
       ['teslasync:upstream-down', { upstream: 'fleet', retryAfterSec: 17 }],
     ])
   })
+
+  it('retains nested rate-limit metadata event and scoped cooldown without retry', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(new Response(JSON.stringify({
+      error: { code: 'RATE_LIMITED', message: 'slow down' },
+    }), { status: 429, headers: { 'Content-Type': 'application/json', 'Retry-After': '23' } }))
+    const eventSpy = vi.spyOn(document, 'dispatchEvent')
+
+    await expect(resilientFetch('/admin/schema-drift', { retries: 2 })).rejects.toMatchObject({
+      name: 'RateLimitError', status: 429, code: 'RATE_LIMITED', message: 'slow down',
+      scope: '/admin', retryAfterSec: 23,
+    })
+    await expect(resilientFetch('/admin/another-source', { retries: 2 })).rejects.toMatchObject({
+      name: 'RateLimitError', status: 429, scope: '/admin',
+    })
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    expect(eventSpy.mock.calls.map(([event]) => [event.type, (event as CustomEvent).detail])).toEqual([
+      ['teslasync:rate-limited', { scope: '/admin', retryAfterSec: 23 }],
+    ])
+  })
+
+  it('keeps nested auth-session polling errors out of the session-expired loop', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(new Response(JSON.stringify({
+      error: { code: 'SESSION_EXPIRED', message: 'sign in again' },
+    }), { status: 401, headers: { 'Content-Type': 'application/json' } }))
+    const eventSpy = vi.spyOn(document, 'dispatchEvent')
+
+    await expect(resilientFetch('/auth/session', { retries: 2 })).rejects.toMatchObject({
+      name: 'ApiError', status: 401, code: 'SESSION_EXPIRED', message: 'sign in again',
+    })
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    expect(eventSpy).not.toHaveBeenCalled()
+  })
+
+  it('preserves nested HTTP errors after a network retry without retrying the HTTP failure', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch')
+      .mockRejectedValueOnce(new Error('network interrupted'))
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        error: { code: 'SCHEMA_DRIFT_FAILED', message: 'comparison failed after retry' },
+      }), { status: 500, headers: { 'Content-Type': 'application/json' } }))
+    const eventSpy = vi.spyOn(document, 'dispatchEvent')
+
+    await expect(resilientFetch('/admin/schema-drift', {
+      retries: 2, retryDelay: 1,
+    })).rejects.toMatchObject({
+      name: 'ApiError', status: 500, code: 'SCHEMA_DRIFT_FAILED', message: 'comparison failed after retry',
+    })
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+    expect(eventSpy).not.toHaveBeenCalled()
+  })
+
+  it('does not turn a non-syntax JSON reader failure into an HTTP fallback', async () => {
+    const failure = new Error('body stream unavailable')
+    const response = new Response('{}', { status: 503, headers: { 'Content-Type': 'application/json' } })
+    vi.spyOn(response, 'json').mockRejectedValueOnce(failure)
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(response)
+
+    await expect(resilientFetch('/admin/schema-drift', { retries: 0 })).rejects.toBe(failure)
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
+
+  it('propagates a text reader AbortError unchanged without retry or auth events', async () => {
+    const aborted = new DOMException('text decode cancelled', 'AbortError')
+    const response = new Response('unused', { status: 503, headers: { 'Content-Type': 'text/plain' } })
+    vi.spyOn(response, 'text').mockRejectedValueOnce(aborted)
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(response)
+    const eventSpy = vi.spyOn(document, 'dispatchEvent')
+
+    await expect(resilientFetch('/admin/schema-drift', { retries: 2 })).rejects.toBe(aborted)
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    expect(eventSpy).not.toHaveBeenCalled()
+  })
+
+  it('deduplicates concurrent nested-error reads without changing their shared rejection', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(new Response(JSON.stringify({
+      error: { code: 'SUBSYSTEM_NOT_CONFIGURED', message: 'schema drift unavailable' },
+    }), { status: 503, headers: { 'Content-Type': 'application/json' } }))
+
+    const results = await Promise.allSettled([
+      resilientFetch('/admin/schema-drift', { retries: 0 }),
+      resilientFetch('/admin/schema-drift', { retries: 0 }),
+    ])
+    expect(results[0]).toMatchObject({
+      status: 'rejected', reason: {
+        name: 'ApiError', status: 503, code: 'SUBSYSTEM_NOT_CONFIGURED', message: 'schema drift unavailable',
+      },
+    })
+    expect(results[1]).toEqual(results[0])
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
+
+  it('keeps null caller signals and retry options out of the wire error decoder', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(new Response(JSON.stringify({
+      error: { code: 'SUBSYSTEM_NOT_CONFIGURED', message: 'schema drift unavailable' },
+    }), { status: 503, headers: { 'Content-Type': 'application/json' } }))
+
+    await expect(resilientFetch('/admin/schema-drift', {
+      signal: null, retries: 2, retryDelay: 1, timeout: 1000, acceptedStatuses: [],
+    })).rejects.toMatchObject({
+      name: 'ApiError', status: 503, code: 'SUBSYSTEM_NOT_CONFIGURED', message: 'schema drift unavailable',
+    })
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    expect(fetchMock.mock.calls[0][1]?.signal).toBeInstanceOf(AbortSignal)
+    for (const option of ['retries', 'retryDelay', 'timeout', 'acceptedStatuses']) {
+      expect(fetchMock.mock.calls[0][1]).not.toHaveProperty(option)
+    }
+  })
 })
 
 describe('ApiError', () => {

@@ -469,6 +469,60 @@ describe('request() — wire error normalization', () => {
     expect(fetchMock).toHaveBeenCalledTimes(1)
     expect(resilientFetchMock).not.toHaveBeenCalled()
   })
+
+  it('propagates a decode AbortError first received by the resilient fallback', async () => {
+    const aborted = new DOMException('fallback decode cancelled', 'AbortError')
+    const response = jsonResponse({ error: 'unused' }, 503)
+    vi.spyOn(response, 'json').mockRejectedValueOnce(aborted)
+    fetchMock
+      .mockRejectedValueOnce(new Error('direct transport unavailable'))
+      .mockResolvedValueOnce(response)
+    const eventSpy = vi.spyOn(document, 'dispatchEvent')
+
+    await expect(request('/admin/observability/schema-drift')).rejects.toBe(aborted)
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+    expect(resilientFetchMock).toHaveBeenCalledTimes(1)
+    expect(eventSpy).not.toHaveBeenCalled()
+  })
+
+  it('does not challenge or retry again when a nested sudo replay is rejected', async () => {
+    fetchMock
+      .mockResolvedValueOnce(jsonResponse({ error: { code: 'SUDO_REQUIRED', message: 'confirm' } }, 401))
+      .mockResolvedValueOnce(jsonResponse({ error: { code: 'RBAC_DENY', message: 'still forbidden' } }, 403))
+    const provider = vi.fn(async (): Promise<SudoCredential> => ({ mode: 'session', token: 'one-replay' }))
+    registerSudoChallengeProvider(provider)
+
+    await expect(request('/api-keys/42', { method: 'DELETE' })).rejects.toMatchObject({
+      name: 'ApiError', status: 403, code: 'RBAC_DENY', message: 'still forbidden',
+    })
+    expect(provider).toHaveBeenCalledTimes(1)
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+    expect(resilientFetchMock).not.toHaveBeenCalled()
+  })
+
+  it('keeps caller headers and cancellation options through a nested-error fallback', async () => {
+    const controller = new AbortController()
+    const headers = new Headers({ 'X-Test-Scope': 'original' })
+    setCachedSudoToken({ token: 'retained-token', expiresAtMs: Date.now() + 60_000 })
+    fetchMock.mockImplementation(async () => jsonResponse({
+      error: { code: 'SCHEMA_DRIFT_FAILED', message: 'comparison failed' },
+    }, 500))
+
+    await expect(request('/admin/observability/schema-drift', {
+      signal: controller.signal, headers,
+    })).rejects.toMatchObject({
+      name: 'ApiError', status: 500, code: 'SCHEMA_DRIFT_FAILED', message: 'comparison failed',
+    })
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+    expect(resilientFetchMock.mock.calls[0][1]).toMatchObject({ signal: controller.signal })
+    expect(headers.get('X-Sudo-Token')).toBeNull()
+    for (const index of [0, 1]) {
+      expect(headersOf(index).get('X-Test-Scope')).toBe('original')
+      expect(headersOf(index).get('X-Sudo-Token')).toBe('retained-token')
+    }
+    expect(fetchMock.mock.calls[0][1]).toHaveProperty('signal', controller.signal)
+    expect(fetchMock.mock.calls[1][1]?.signal).toBeInstanceOf(AbortSignal)
+  })
 })
 
 describe('request() — resilient fall-through', () => {
