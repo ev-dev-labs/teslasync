@@ -365,8 +365,8 @@ describe('StateMachineDebuggerPage — transition detail panel', () => {
 
     renderPage();
 
-    // Detail is collapsed until the toggle is clicked.
-    expect(screen.queryByText('Transition detail')).toBeNull();
+    expect(screen.getByText('Transition detail')).toBeInTheDocument();
+    expect(screen.getAllByText('Select a transition to inspect its snapshot').length).toBeGreaterThan(0);
 
     fireEvent.click(screen.getByRole('button', { name: 'View detail' }));
 
@@ -393,7 +393,8 @@ describe('StateMachineDebuggerPage — transition detail panel', () => {
     expect(screen.getByText('Transition detail')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'View detail' }));
-    expect(screen.queryByText('Transition detail')).toBeNull();
+    expect(screen.getByText('Transition detail')).toBeInTheDocument();
+    expect(screen.getAllByText('Select a transition to inspect its snapshot').length).toBeGreaterThan(0);
   });
 });
 

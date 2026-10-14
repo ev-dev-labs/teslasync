@@ -459,19 +459,21 @@ export default function StateMachineDebuggerPage() {
   const previousAtIso = previousTransition?.ts ?? '';
   const numericVehicleId = Number(activeId) || 0;
 
-  const { data: selectedSnapshot, isFetching: snapshotFetching } = useSignalSnapshot(
+  const selectedSnapshotQuery = useSignalSnapshot(
     numericVehicleId,
     selectedAtIso,
     '',
     { enabled: numericVehicleId > 0 && Boolean(selectedAtIso) },
   );
 
-  const { data: previousSnapshot } = useSignalSnapshot(
+  const previousSnapshotQuery = useSignalSnapshot(
     numericVehicleId,
     previousAtIso,
     '',
     { enabled: numericVehicleId > 0 && Boolean(previousAtIso) },
   );
+  const selectedSnapshotTrust = useDataState(selectedSnapshotQuery, { provenance: 'historical' });
+  const previousSnapshotTrust = useDataState(previousSnapshotQuery, { provenance: 'historical' });
 
   /* ─── Permalink: keep ?vehicle_id / ?fsm / ?selected / ?at in sync ───
    * Vehicle id is owned by useSelectedVehicle (writes ?vehicle_id when
@@ -721,9 +723,13 @@ export default function StateMachineDebuggerPage() {
             <SnapshotInspector
               fsmType={selectedTransition?.fsm_name || subFsmType}
               transition={selectedTransition}
-              snapshot={selectedSnapshot ?? null}
-              previousSnapshot={previousSnapshot ?? null}
-              loading={snapshotFetching}
+              snapshot={selectedSnapshotQuery.data ?? null}
+              previousSnapshot={previousSnapshotQuery.data ?? null}
+              loading={selectedSnapshotQuery.isFetching}
+              selectedTrust={selectedSnapshotTrust}
+              previousTrust={previousSnapshotTrust}
+              previousLoading={previousSnapshotQuery.isFetching}
+              hasPreviousTransition={previousTransition != null}
               lastTransition={windowed.lastTransition}
               inWindowCount={windowed.inWindow.length}
               onJumpToLast={handleJumpToLast}

@@ -21,6 +21,8 @@ import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { SnapshotInspector } from './SnapshotInspector';
 import type { FSMTransition } from '@/types/fsm';
 import type { SignalSnapshotResponse } from '@/api/hooks/useTelemetry';
+import { deriveDataState } from '@/api/dataState';
+import { MemoryRouter } from 'react-router-dom';
 
 // Deterministic i18n: two-arg form returns the default; an options bag
 // interpolates `{{name}}` placeholders. Mirrors the mock used across this tree.
@@ -302,7 +304,7 @@ describe('SnapshotInspector — diff mode', () => {
     const speedRow = screen.getByText('speed').closest('li');
     const batteryRow = screen.getByText('battery').closest('li');
     // speed changed 10 -> 25: highlighted, not dimmed.
-    expect(speedRow?.className).toContain('border-amber-400/30');
+    expect(speedRow?.className).toContain('border-[var(--semantic-warning)]');
     expect(speedRow?.className).not.toContain('opacity-40');
     // battery unchanged: dimmed.
     expect(batteryRow?.className).toContain('opacity-40');
@@ -311,6 +313,108 @@ describe('SnapshotInspector — diff mode', () => {
     const prior = screen.getByText('10');
     expect(prior.className).toContain('line-through');
     expect(speedRow).toContainElement(prior);
+  });
+
+  describe('SnapshotInspector — independent snapshot trust', () => {
+    const transition = makeTransition();
+    const snapshot = makeSnapshot({ speed: { value: 0, source: 'log' } });
+
+    it('distinguishes active loading and paused-without-data from confirmed empty', () => {
+      const { rerender } = render(
+        <SnapshotInspector fsmType="vehicle" transition={transition}
+          selectedTrust={deriveDataState({ isFetching: true })} loading />,
+      );
+      expect(screen.getByText('Loading…')).toBeInTheDocument();
+      expect(screen.queryByTestId('snapshot-inspector-no-signals')).toBeNull();
+      rerender(<SnapshotInspector fsmType="vehicle" transition={transition}
+        selectedTrust={deriveDataState({ fetchStatus: 'paused' })} />);
+      expect(screen.getByText('Refresh paused')).toBeInTheDocument();
+      expect(screen.queryByText('Loading…')).toBeNull();
+      expect(screen.queryByTestId('snapshot-inspector-no-signals')).toBeNull();
+      const empty = makeSnapshot({});
+      rerender(<SnapshotInspector fsmType="vehicle" transition={transition} snapshot={empty}
+        selectedTrust={deriveDataState({ data: empty })} />);
+      expect(screen.getByTestId('snapshot-inspector-no-signals')).toBeInTheDocument();
+    });
+
+    it('does not dim zero-valued signals when no previous transition exists', () => {
+      render(<SnapshotInspector fsmType="vehicle" transition={transition} snapshot={snapshot}
+        selectedTrust={deriveDataState({ data: snapshot })} hasPreviousTransition={false} />);
+      fireEvent.click(screen.getByRole('switch'));
+      expect(screen.getByText('0')).toBeInTheDocument();
+      expect(screen.getByTestId('snapshot-inspector-comparison-status')).toHaveTextContent(
+        'No requested source has returned usable data yet.',
+      );
+      expect(screen.getByText('speed').closest('li')).not.toHaveClass('opacity-40');
+    });
+
+    it('keeps selected signals readable while previous loading or paused prevents comparison', () => {
+      const { rerender } = render(<SnapshotInspector fsmType="vehicle" transition={transition}
+        snapshot={snapshot} hasPreviousTransition
+        previousTrust={deriveDataState({ isFetching: true })} previousLoading />);
+      fireEvent.click(screen.getByRole('switch'));
+      expect(screen.getByText('Loading…')).toBeInTheDocument();
+      expect(screen.getByText('speed').closest('li')).not.toHaveClass('opacity-40');
+      rerender(<SnapshotInspector fsmType="vehicle" transition={transition} snapshot={snapshot}
+        hasPreviousTransition previousTrust={deriveDataState({ fetchStatus: 'paused' })} />);
+      expect(screen.getByText('Refresh paused')).toBeInTheDocument();
+      expect(screen.getByText('0')).toBeInTheDocument();
+    });
+
+    it('retries each failed source independently without inferring an empty response', () => {
+      const selectedRetry = vi.fn();
+      const previousRetry = vi.fn();
+      render(<MemoryRouter><SnapshotInspector fsmType="vehicle" transition={transition}
+        hasPreviousTransition
+        selectedTrust={deriveDataState({ error: new Error('selected failed'), refetch: selectedRetry })}
+        previousTrust={deriveDataState({ error: new Error('previous failed'), refetch: previousRetry })} />
+      </MemoryRouter>);
+      fireEvent.click(screen.getByRole('switch'));
+      const retries = screen.getAllByRole('button', { name: 'Retry' });
+      fireEvent.click(retries[0]);
+      expect(selectedRetry).toHaveBeenCalledTimes(1);
+      expect(previousRetry).not.toHaveBeenCalled();
+      fireEvent.click(retries[1]);
+      expect(previousRetry).toHaveBeenCalledTimes(1);
+      expect(screen.queryByTestId('snapshot-inspector-no-signals')).toBeNull();
+    });
+
+    it('retains both snapshots through refresh failure and removes warnings on recovery', () => {
+      const previous = makeSnapshot({ speed: { value: 10, source: 'log' } });
+      const selectedRetry = vi.fn();
+      const previousRetry = vi.fn();
+      const { rerender } = render(<SnapshotInspector fsmType="vehicle" transition={transition}
+        snapshot={snapshot} previousSnapshot={previous} hasPreviousTransition
+        selectedTrust={deriveDataState({ data: snapshot, error: new Error('refresh'), refetch: selectedRetry })}
+        previousTrust={deriveDataState({ data: previous, error: new Error('refresh'), refetch: previousRetry })} />);
+      fireEvent.click(screen.getByRole('switch'));
+      expect(screen.getAllByTestId('stale-refresh-warning')).toHaveLength(2);
+      expect(screen.getByText('0')).toBeInTheDocument();
+      expect(screen.getByText('10')).toHaveClass('line-through');
+      const refreshes = screen.getAllByRole('button', { name: 'Refresh' });
+      fireEvent.click(refreshes[0]);
+      expect(selectedRetry).toHaveBeenCalledTimes(1);
+      expect(previousRetry).not.toHaveBeenCalled();
+      fireEvent.click(refreshes[1]);
+      expect(previousRetry).toHaveBeenCalledTimes(1);
+      rerender(<SnapshotInspector fsmType="vehicle" transition={transition} snapshot={snapshot}
+        previousSnapshot={previous} hasPreviousTransition
+        selectedTrust={deriveDataState({ data: snapshot })}
+        previousTrust={deriveDataState({ data: previous })} />);
+      expect(screen.queryByTestId('stale-refresh-warning')).toBeNull();
+      expect(screen.getByText('0')).toBeInTheDocument();
+      expect(screen.getByText('10')).toBeInTheDocument();
+    });
+
+    it('treats a successful empty previous snapshot as a valid comparison', () => {
+      const previous = makeSnapshot({});
+      render(<SnapshotInspector fsmType="vehicle" transition={transition} snapshot={snapshot}
+        previousSnapshot={previous} hasPreviousTransition
+        previousTrust={deriveDataState({ data: previous })} />);
+      fireEvent.click(screen.getByRole('switch'));
+      expect(screen.getByText('speed').closest('li')).toHaveClass('border-[var(--semantic-warning)]');
+      expect(screen.queryByText('Awaiting source')).toBeNull();
+    });
   });
 });
 

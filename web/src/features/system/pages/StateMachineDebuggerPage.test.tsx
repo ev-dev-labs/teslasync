@@ -258,6 +258,54 @@ describe('StateMachineDebuggerPage — query branches', () => {
 
 
 describe('StateMachineDebuggerPage — shared presentation and preservation', () => {
+  it('threads independent selected and previous snapshot loading, retries, retention and recovery', () => {
+    const previousAt = '2026-01-07T11:00:00Z';
+    const selectedAt = '2026-01-07T12:00:00Z';
+    mockTrans.mockReturnValue(makeQuery({ data: {
+      data: [
+        { id: 41, vehicle_id: 7, fsm_name: 'vehicle', from_state: 'driving',
+          to_state: 'parked', trigger: 'stop', ts: previousAt },
+        { id: 42, vehicle_id: 7, fsm_name: 'vehicle', from_state: 'parked',
+          to_state: 'driving', trigger: 'start', ts: selectedAt },
+      ], total: 2,
+    } }));
+    const selectedRetry = vi.fn();
+    const previousRetry = vi.fn();
+    let selected = makeQuery({ isFetching: true, refetch: selectedRetry });
+    let previous = makeQuery({ fetchStatus: 'paused', refetch: previousRetry });
+    mockSnapshot.mockImplementation((_id: number, at: string) =>
+      at === selectedAt ? selected : previous);
+    const { rerender } = renderPage();
+    fireEvent.click(screen.getAllByRole('button', { name: 'View detail' })[1]);
+    fireEvent.click(screen.getByRole('switch', { name: 'Diff vs previous' }));
+    expect(screen.getByTestId('snapshot-inspector-comparison-status')).toHaveTextContent('Refresh paused');
+    expect(screen.queryByTestId('snapshot-inspector-no-signals')).toBeNull();
+    fireEvent.click(within(screen.getByTestId('snapshot-inspector-comparison-status'))
+      .getByRole('button', { name: 'Retry' }));
+    expect(previousRetry).toHaveBeenCalledTimes(1);
+    expect(selectedRetry).not.toHaveBeenCalled();
+
+    const snapshot = { vehicle_id: 7, at: selectedAt, count: 1,
+      signals: { speed: { value: 0, source: 'log' } } };
+    selected = makeQuery({ data: snapshot, error: new Error('selected refresh'), refetch: selectedRetry });
+    previous = makeQuery({ data: { ...snapshot, at: previousAt },
+      error: new Error('previous refresh'), refetch: previousRetry });
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const page = () => <MemoryRouter><QueryClientProvider client={client}>
+      <StateMachineDebuggerPage />
+    </QueryClientProvider></MemoryRouter>;
+    rerender(page());
+    expect(screen.getByText('speed')).toBeInTheDocument();
+    expect(screen.getAllByTestId('stale-refresh-warning')).toHaveLength(2);
+    fireEvent.click(screen.getAllByRole('button', { name: 'Refresh' })[0]);
+    expect(selectedRetry).toHaveBeenCalledTimes(1);
+    selected = makeQuery({ data: snapshot, refetch: selectedRetry });
+    previous = makeQuery({ data: { ...snapshot, at: previousAt }, refetch: previousRetry });
+    rerender(page());
+    expect(screen.queryByTestId('stale-refresh-warning')).toBeNull();
+    expect(screen.getByText('speed')).toBeInTheDocument();
+  });
+
   it.each(['driving', 'charging', 'unexpected_state'])('uses the canonical non-pulsing vehicle badge for %s', (state) => {
     mockState.mockReturnValue(makeQuery({
       data: { state: { state, since: '2026-01-01T00:00:00Z' } },
