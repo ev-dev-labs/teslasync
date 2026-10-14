@@ -7,7 +7,7 @@
  * is genuinely exercised.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
@@ -91,11 +91,12 @@ beforeEach(() => {
 function renderPanel() {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
-    <QueryClientProvider client={client}>
-      <MemoryRouter>
-        <WaitOraclePanel />
-      </MemoryRouter>
-    </QueryClientProvider>,
+    <WaitOraclePanel />,
+    { wrapper: ({ children }) => (
+      <QueryClientProvider client={client}>
+        <MemoryRouter>{children}</MemoryRouter>
+      </QueryClientProvider>
+    ) },
   );
 }
 
@@ -150,5 +151,111 @@ describe('WaitOraclePanel', () => {
     renderPanel();
     fireEvent.click(screen.getByText('Retry'));
     expect(refetch).toHaveBeenCalled();
+  });
+
+  it.each(['sites', 'forecast'] as const)('shows active %s loading without an empty or offline claim', (source) => {
+    const query = idle({
+      isLoading: true, isPending: true, isFetching: true, fetchStatus: 'fetching',
+    });
+    if (source === 'sites') {
+      mockSites.mockReturnValue(query);
+      mockForecast.mockReturnValue(idle());
+    } else {
+      mockForecast.mockReturnValue(query);
+    }
+    renderPanel();
+    expect(screen.getByRole('status', {
+      name: source === 'sites' ? 'Loading sites…' : 'Forecasting wait…',
+    })).toBeInTheDocument();
+    expect(screen.queryByText(/No named sites yet/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/offline/i)).not.toBeInTheDocument();
+  });
+
+  it.each(['sites', 'forecast'] as const)('explains paused %s without data and retries only that source', (source) => {
+    const refetch = vi.fn();
+    const query = idle({
+      isPending: true, fetchStatus: 'paused', dataUpdatedAt: 0, refetch,
+    });
+    if (source === 'sites') {
+      mockSites.mockReturnValue(query);
+      mockForecast.mockReturnValue(idle());
+    } else {
+      mockForecast.mockReturnValue(query);
+    }
+    renderPanel();
+    expect(screen.getByText('Refresh paused')).toBeInTheDocument();
+    expect(screen.queryByText(/offline/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/No named sites yet/)).not.toBeInTheDocument();
+    expect(screen.queryByRole('status', { name: /Loading sites|Forecasting wait/ })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', {
+      name: `Retry unavailable sources: ${source === 'sites' ? 'Site' : 'Supercharger Wait Oracle'}`,
+    }));
+    expect(refetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('renders a successful zero-wait forecast with an empty curve as real data', () => {
+    mockForecast.mockReturnValue(idle({
+      data: { ...forecast, expected_wait_s: 0, wait_probability_pct: 0, save_s: 0, hours: [], evidence: [] },
+      isSuccess: true,
+    }));
+    renderPanel();
+    expect(screen.getByText('0.00 min expected wait')).toBeInTheDocument();
+    expect(screen.getByText('0.00% chance of any wait · ~4 stalls')).toBeInTheDocument();
+    expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
+  });
+
+  it.each(['sites', 'forecast'] as const)('retains %s payload and last success through refresh failure and recovery', (source) => {
+    const refetch = vi.fn();
+    const lastSuccess = Date.now() - 60_000;
+    const data = source === 'sites' ? sites : forecast;
+    const mock = source === 'sites' ? mockSites : mockForecast;
+    const retained = idle({ data, dataUpdatedAt: lastSuccess, refetch });
+    mock.mockReturnValue({ ...retained, error: new Error('refresh down'), isError: true });
+    const { rerender } = renderPanel();
+    const warning = screen.getByTestId('stale-refresh-warning');
+    expect(warning).toHaveAttribute('role', 'status');
+    expect(warning).toHaveAttribute('data-last-success-at', String(lastSuccess));
+    expect(screen.getByText('44.10 min expected wait')).toBeInTheDocument();
+    expect(screen.getByDisplayValue(/Kettleman City/)).toBeInTheDocument();
+    expect(screen.queryByText('Retry')).not.toBeInTheDocument();
+    fireEvent.click(within(warning).getByRole('button', { name: 'Refresh' }));
+    expect(refetch).toHaveBeenCalledTimes(1);
+
+    mock.mockReturnValue({ ...retained, isFetching: true, fetchStatus: 'fetching' });
+    rerender(<WaitOraclePanel />);
+    expect(screen.getByText('44.10 min expected wait')).toBeInTheDocument();
+    expect(screen.queryByRole('status', { name: /Loading sites|Forecasting wait/ })).not.toBeInTheDocument();
+
+    mock.mockReturnValue({ ...retained, dataUpdatedAt: lastSuccess + 60_000, isSuccess: true });
+    rerender(<WaitOraclePanel />);
+    expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
+    expect(screen.getByText('44.10 min expected wait')).toBeInTheDocument();
+  });
+
+  it('keeps both retained paused sources visible with independent retries', () => {
+    const sitesRefetch = vi.fn();
+    const forecastRefetch = vi.fn();
+    mockSites.mockReturnValue(idle({ data: sites, fetchStatus: 'paused', refetch: sitesRefetch }));
+    mockForecast.mockReturnValue(idle({ data: forecast, fetchStatus: 'paused', refetch: forecastRefetch }));
+    renderPanel();
+    const warnings = screen.getAllByTestId('stale-refresh-warning');
+    expect(warnings).toHaveLength(2);
+    expect(screen.getByText('44.10 min expected wait')).toBeInTheDocument();
+    expect(screen.queryByText(/offline/i)).not.toBeInTheDocument();
+    for (const warning of warnings) expect(warning).toHaveAttribute('data-refresh-blocked', 'true');
+    fireEvent.click(within(warnings[0]).getByRole('button', { name: 'Refresh' }));
+    expect(sitesRefetch).toHaveBeenCalledTimes(1);
+    expect(forecastRefetch).not.toHaveBeenCalled();
+    fireEvent.click(within(warnings[1]).getByRole('button', { name: 'Refresh' }));
+    expect(forecastRefetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('retains an empty sites response during refresh failure instead of reclassifying it as an initial error', () => {
+    mockSites.mockReturnValue(idle({ data: [], error: new Error('refresh down'), isError: true }));
+    mockForecast.mockReturnValue(idle());
+    renderPanel();
+    expect(screen.getByText(/No named sites yet/)).toBeInTheDocument();
+    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+    expect(screen.queryByText('Retry')).not.toBeInTheDocument();
   });
 });

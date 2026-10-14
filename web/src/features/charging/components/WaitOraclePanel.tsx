@@ -21,7 +21,8 @@ import {
   chartGrid,
 } from '@/components/charts';
 import { Badge, Button, GlassPanel, Input, PanelTitle, Select, Text } from '@/components/ui';
-import { ChartSkeleton, EmptyState, QueryError } from '@/components/feedback';
+import { ChartSkeleton, DataSourceNotice, EmptyState, QueryError, StaleRefreshWarning } from '@/components/feedback';
+import { gaugeTone, typography } from '@/lib/tokens';
 
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
@@ -43,10 +44,10 @@ function verdictVariant(verdict: WaitOracleForecast['verdict']) {
 }
 
 function barFill(busyness: number): string {
-  if (busyness >= 75) return '#fb7185';
-  if (busyness >= 50) return '#fbbf24';
-  if (busyness >= 25) return '#38bdf8';
-  return '#34d399';
+  if (busyness >= 75) return gaugeTone.danger;
+  if (busyness >= 50) return gaugeTone.warning;
+  if (busyness >= 25) return gaugeTone.info;
+  return gaugeTone.success;
 }
 
 function toIsoOrNull(local: string): string | null {
@@ -69,7 +70,7 @@ export function WaitOraclePanel() {
 
   const sitesQuery = useWaitOracleSites();
   const sitesState = useDataState(sitesQuery);
-  const sites = useMemo(() => sitesQuery.data ?? [], [sitesQuery.data]);
+  const sites = useMemo(() => sitesState.data ?? [], [sitesState.data]);
   const activeSite = site ?? sites[0]?.name ?? null;
 
   const arriveAt = useMemo(() => {
@@ -80,7 +81,7 @@ export function WaitOraclePanel() {
 
   const forecastQuery = useWaitOracleForecast(activeSite, arriveAt);
   const forecastState = useDataState(forecastQuery);
-  const forecast = forecastQuery.data ?? null;
+  const forecast = forecastState.data ?? null;
 
   const chartData = useMemo(
     () =>
@@ -96,7 +97,7 @@ export function WaitOraclePanel() {
   return (
     <GlassPanel className="p-4 sm:p-5">
       <PanelTitle className="mb-1 flex items-center gap-2">
-        <Icons.clock className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+        <Icons.clock className={`h-4 w-4 ${typography.color.secondary}`} aria-hidden="true" />
         {t('wait_oracle.title', 'Supercharger Wait Oracle')}
       </PanelTitle>
       <Text as="p" size="sm" color="secondary" className="mb-4">
@@ -145,7 +146,28 @@ export function WaitOraclePanel() {
         </div>
       </div>
 
-      {sitesQuery.isLoading ? (
+      <StaleRefreshWarning
+        state={sitesState}
+        label={t('wait_oracle.site', 'Site')}
+        data-last-success-at={sitesState.updatedAt ?? undefined}
+        className="mb-3"
+      />
+      {activeSite != null && (
+        <StaleRefreshWarning
+          state={forecastState}
+          label={t('wait_oracle.title', 'Supercharger Wait Oracle')}
+          data-last-success-at={forecastState.updatedAt ?? undefined}
+          className="mb-3"
+        />
+      )}
+
+      {!sitesState.hasData && sitesState.isRefreshBlocked ? (
+        <DataSourceNotice sources={[{
+          id: 'wait-oracle-sites',
+          label: t('wait_oracle.site', 'Site'),
+          query: sitesQuery,
+        }]} />
+      ) : !sitesState.hasData && (sitesQuery.isLoading || sitesQuery.isFetching) ? (
         <ChartSkeleton
           className="h-[220px]"
           label={t('wait_oracle.loadingSites', 'Loading sites…')}
@@ -160,7 +182,13 @@ export function WaitOraclePanel() {
             'No named sites yet. Sync fleet charging sessions to build wait forecasts.',
           )}
         />
-      ) : forecastQuery.isLoading ? (
+      ) : !forecastState.hasData && forecastState.isRefreshBlocked ? (
+        <DataSourceNotice sources={[{
+          id: 'wait-oracle-forecast',
+          label: t('wait_oracle.title', 'Supercharger Wait Oracle'),
+          query: forecastQuery,
+        }]} />
+      ) : !forecastState.hasData && (forecastQuery.isLoading || forecastQuery.isFetching) ? (
         <ChartSkeleton
           className="h-[220px]"
           label={t('wait_oracle.loadingForecast', 'Forecasting wait…')}
@@ -190,8 +218,8 @@ export function WaitOraclePanel() {
               })}
             </Text>
             {(forecast.save_s ?? 0) >= 60 ? (
-              <div className="mt-3 flex items-start gap-2 rounded-lg border border-emerald-500/20 bg-emerald-500/5 p-3">
-                <Icons.sparkles className="mt-0.5 h-4 w-4 shrink-0 text-emerald-300" aria-hidden="true" />
+              <div className="mt-3 flex items-start gap-2 rounded-lg border border-[var(--semantic-info-border)] bg-[var(--semantic-info-bg)] p-3">
+                <Icons.sparkles className={`mt-0.5 h-4 w-4 shrink-0 ${typography.color.secondary}`} aria-hidden="true" />
                 <Text as="p" size="sm">
                   {t(
                     'wait_oracle.bestHour',
