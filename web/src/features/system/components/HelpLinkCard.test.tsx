@@ -14,6 +14,7 @@
 
 import type { ReactNode } from 'react'
 import { render, screen, fireEvent, cleanup } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { MemoryRouter, useLocation } from 'react-router-dom'
 import { afterEach, beforeEach, describe, it, expect, vi } from 'vitest'
 import type { LucideIcon } from 'lucide-react'
@@ -115,11 +116,18 @@ describe('HelpLinkCard', () => {
     expect(greenChip.className).toContain('bg-[var(--semantic-success-bg)]')
   })
 
-  it('is a keyboard-focusable target with a visible focus ring', () => {
+  it('is a keyboard-focusable target with a semantic focus outline', () => {
     renderCard(makeLink())
 
     const anchor = screen.getByRole('link')
-    expect(anchor.className).toContain('focus-visible:ring-2')
+    expect(anchor).toHaveClass(
+      'focus-visible:outline',
+      'focus-visible:outline-2',
+      'focus-visible:outline-offset-2',
+      'focus-visible:outline-[var(--focus-ring)]',
+      'forced-colors:focus-visible:outline-[Highlight]',
+    )
+    expect(anchor.className).not.toMatch(/(?:^|\s)(?:focus:|focus-visible:)(?:outline-none|ring-\S+)/)
     anchor.focus()
     expect(anchor).toHaveFocus()
   })
@@ -158,5 +166,60 @@ describe('HelpLinkCard', () => {
     expect(screen.queryByTestId('accent-icon')).toBeNull()
     // Only the decorative arrow survives; the accent glyph was skipped, not thrown.
     expect(container.querySelectorAll('svg[aria-hidden="true"]')).toHaveLength(1)
+  })
+
+  it('retains native tab order and Enter navigation without a disabled or button role', async () => {
+    const user = userEvent.setup()
+    render(
+      <MemoryRouter initialEntries={['/help']}>
+        <HelpLinkCard link={makeLink({ id: 'docs' })} />
+        <HelpLinkCard link={makeLink({ id: 'chatbot', to: '/chatbot' })} />
+        <LocationProbe />
+      </MemoryRouter>,
+    )
+    const docs = screen.getByTestId('help-baseline-link-docs')
+    const chatbot = screen.getByTestId('help-baseline-link-chatbot')
+
+    expect(docs).not.toHaveAttribute('tabindex')
+    expect(docs).not.toHaveAttribute('disabled')
+    expect(docs).not.toHaveAttribute('aria-disabled')
+    expect(docs).not.toHaveAttribute('role')
+    await user.tab()
+    expect(docs).toHaveFocus()
+    await user.tab()
+    expect(chatbot).toHaveFocus()
+    await user.tab({ shift: true })
+    expect(docs).toHaveFocus()
+    await user.keyboard('{Enter}')
+    expect(screen.getByTestId('loc')).toHaveTextContent('/docs/status-api')
+  })
+
+  it.each(['ctrlKey', 'metaKey', 'shiftKey', 'altKey'] as const)(
+    'leaves %s modified clicks to native navigation',
+    (modifier) => {
+      render(
+        <MemoryRouter initialEntries={['/help']}>
+          <HelpLinkCard link={makeLink()} />
+          <LocationProbe />
+        </MemoryRouter>,
+      )
+      const anchor = screen.getByRole('link')
+
+      expect(fireEvent.click(anchor, { [modifier]: true })).toBe(true)
+      expect(anchor).toHaveAttribute('href', '/docs/status-api')
+      expect(screen.getByTestId('loc')).toHaveTextContent('/help')
+    },
+  )
+
+  it('preserves destination query and fragment, card geometry and full visible content', () => {
+    const { container } = renderCard(makeLink({ to: '/docs/status-api?view=all#health' }))
+    const anchor = screen.getByRole('link')
+
+    expect(anchor).toHaveAttribute('href', '/docs/status-api?view=all#health')
+    expect(anchor).toHaveClass('group', 'block', 'h-full', 'rounded-xl')
+    expect(anchor.firstElementChild).toHaveClass('flex', 'h-full', 'min-h-28', 'flex-col', 'gap-3', 'p-4', 'sm:p-5')
+    expect(anchor).toHaveAccessibleName('Docs Title Read the API reference guide.')
+    expect(container.querySelectorAll('a')).toHaveLength(1)
+    expect(container.querySelectorAll('button, input, select, textarea, [tabindex]')).toHaveLength(0)
   })
 })
