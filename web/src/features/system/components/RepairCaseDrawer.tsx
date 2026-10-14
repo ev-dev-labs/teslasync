@@ -146,12 +146,10 @@ export function RepairCaseDrawer({
             <Badge variant={REPAIR_STATUS_BADGE_VARIANTS[repairCase.status]}>
               {repairStatusLabel(t, repairCase.status)}
             </Badge>
-            <Badge variant={repairCase.confidence === 'high' ? 'danger' : repairCase.confidence === 'medium' ? 'warning' : 'neutral'}>
-              {t('dataRepair.cases.confidenceBadge', '{{confidence}} confidence', {
-                confidence: repairCase.confidence === 'high'
-                  ? t('dataRepair.confidence.high', 'High')
-                  : t('dataRepair.confidence.medium', 'Medium'),
-              })}
+            <Badge variant="neutral">
+              {repairCase.confidence === 'high'
+                ? t('dataRepair.confidence.high', 'High confidence')
+                : t('dataRepair.confidence.medium', 'Medium confidence')}
             </Badge>
             <Text variant="caption">
               {t('dataRepair.cases.lastSeen', 'Last seen {{time}}', {
