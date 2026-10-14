@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { OperationalNarrative } from '@/types/operationalNarrative';
 import { OperationalNarrativeDetails } from './OperationalNarrativeDetails';
 import { setGlobalPrecision } from '@/lib/numberFormat';
+import { severityTokens } from '@/lib/tokens';
 
 beforeEach(() => setGlobalPrecision(2));
 
@@ -44,6 +45,56 @@ const narrative: OperationalNarrative = {
 };
 
 describe('OperationalNarrativeDetails', () => {
+  it('preserves authored limitation strings and order in both warning-role lists', () => {
+    const limitations = [
+      'Scope is limited to the selected analysis window.',
+      'Observation time is unknown.',
+      '  Charger-side diagnostics are not available.  ',
+    ];
+    render(
+      <OperationalNarrativeDetails
+        narrative={{ ...narrative, limitations }}
+        className="narrative-context"
+      />,
+    );
+
+    const region = screen.getByRole('region', { name: 'Decision narrative' });
+    expect(region).toHaveClass('narrative-context');
+    const heading = within(region).getByText('Limitations');
+    const entries = Array.from(
+      heading.parentElement?.querySelectorAll('p') ?? [],
+    ).slice(1);
+    expect(entries.map((entry) => entry.textContent)).toEqual(limitations);
+    for (const entry of entries) {
+      expect(entry).toHaveClass(severityTokens.warn.fg);
+      expect(entry).not.toHaveClass('text-amber-300');
+    }
+
+    const calculation = within(region).getByRole('region', {
+      name: 'How this was calculated',
+    });
+    const exclusions = within(calculation).getAllByRole('listitem');
+    expect(exclusions.map((entry) => entry.textContent)).toEqual(
+      limitations.map((limitation) => limitation.trim()),
+    );
+    for (const entry of exclusions) {
+      expect(within(entry).getByText(entry.textContent ?? '')).toHaveClass(
+        severityTokens.warn.fg,
+      );
+    }
+    expect(within(region).getByText(narrative.whatChanged)).toBeInTheDocument();
+    expect(
+      within(region).getByText(narrative.whyItMatters ?? ''),
+    ).toBeInTheDocument();
+    expect(
+      within(region).getByText(narrative.evidence[0].summary),
+    ).toBeInTheDocument();
+    expect(
+      within(region).getByText('Cause is not established by the available evidence.'),
+    ).toBeInTheDocument();
+    expect(limitations[2]).toBe('  Charger-side diagnostics are not available.  ');
+  });
+
   it('updates confidence for a mounted narrative while record IDs and authored strings stay intact', () => {
     render(<OperationalNarrativeDetails narrative={narrative} />);
     act(() => setGlobalPrecision(3));

@@ -1,7 +1,9 @@
 import { useTranslation } from 'react-i18next';
-import { Badge, PanelTitle, Text } from '@/components/ui';
+import { Badge } from '@/components/ui/Badge';
+import { PanelTitle, Text } from '@/components/ui/Typography';
 import { formatDateTime } from '@/lib/dateFormat';
 import { Icons } from '@/lib/icons';
+import { severityTokens } from '@/lib/tokens';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { CalculationDetails } from './CalculationDetails';
 import type {
@@ -158,7 +160,7 @@ export function OperationalNarrativeDetails({
           </Text>
           {narrative.limitations.length > 0 ? (
             narrative.limitations.map((limitation) => (
-              <Text key={limitation} as="p" size="xs" className="text-amber-300">
+              <Text key={limitation} as="p" size="xs" className={severityTokens.warn.fg}>
                 {limitation}
               </Text>
             ))
