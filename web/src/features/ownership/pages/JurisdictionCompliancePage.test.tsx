@@ -13,6 +13,17 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
 
+const preferences = vi.hoisted(() => ({ locale: 'en-US', cancel: 'Cancel' }));
+vi.mock('@/hooks/useNumberFormatting', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/hooks/useNumberFormatting')>();
+  return { ...actual, useNumberFormatting: () => ({ ...actual.useNumberFormatting(), locale: preferences.locale }) };
+});
+vi.mock('@/lib/csvExport', async (importOriginal) => ({
+  ...await importOriginal<typeof import('@/lib/csvExport')>(),
+  downloadCSV: vi.fn(),
+  downloadJSON: vi.fn(),
+}));
+
 vi.mock('react-i18next', () => {
   const interpolate = (str: string, vars?: Record<string, unknown> | null): string => {
     if (!vars) return str;
@@ -23,6 +34,7 @@ vi.mock('react-i18next', () => {
     return s;
   };
   const t = (key: string, second?: unknown, third?: unknown): string => {
+    if (key === 'common.cancel') return preferences.cancel;
     if (typeof second === 'string') {
       return interpolate(second, third as Record<string, unknown> | undefined);
     }
@@ -67,6 +79,8 @@ import {
 import JurisdictionCompliancePage from './JurisdictionCompliancePage';
 import type { ComplianceApportionment, ComplianceFiling, JurisdictionRate } from '@/types/ownership';
 import { neonColorMap, typography } from '@/lib/tokens';
+import { downloadCSV, downloadJSON } from '@/lib/csvExport';
+import { formatDateTime } from '@/lib/dateFormat';
 
 const mockSelected = useSelectedVehicle as unknown as ReturnType<typeof vi.fn>;
 const mockRates = useJurisdictionRates as unknown as ReturnType<typeof vi.fn>;
@@ -172,6 +186,8 @@ function removeButton(label: string): HTMLElement {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  preferences.locale = 'en-US';
+  preferences.cancel = 'Cancel';
   mockSelected.mockReturnValue({
     vehicleId: 7,
     vehicle: null,
@@ -188,7 +204,206 @@ beforeEach(() => {
   mockRemove.mockReturnValue(makeMutation());
 });
 
+afterEach(() => {
+  window.localStorage.removeItem('teslasync.table.ownership-compliance-filings.columns');
+});
+
 describe('JurisdictionCompliancePage — confirm-gated delete', () => {
+  it('pages the complete server register and resets the offset when the selected vehicle changes', () => {
+    mockFilings.mockImplementation((_vehicle: number, limit: number, offset: number) => makeQuery({
+      items: [makeFiling()], total: 51, limit, offset,
+    }));
+    const view = renderPage();
+    const register = card('Sealed filings');
+    expect(within(register).getByText('Showing 1–50 of 51')).toBeInTheDocument();
+    fireEvent.click(within(register).getByRole('button', { name: 'Next page' }));
+    expect(mockFilings).toHaveBeenLastCalledWith(7, 50, 50);
+    expect(within(register).getByText('Showing 51–51 of 51')).toBeInTheDocument();
+    fireEvent.change(within(register).getByRole('combobox', { name: 'Rows per page' }), { target: { value: '25' } });
+    expect(mockFilings).toHaveBeenLastCalledWith(7, 25, 0);
+    fireEvent.click(within(register).getByRole('button', { name: 'Next page' }));
+    expect(mockFilings).toHaveBeenLastCalledWith(7, 25, 25);
+    mockSelected.mockReturnValue({ vehicleId: 9, vehicle: null, vehicles: [], setVehicleId: vi.fn() });
+    view.rerender(<MemoryRouter><QueryClientProvider client={new QueryClient()}>
+      <JurisdictionCompliancePage />
+    </QueryClientProvider></MemoryRouter>);
+    expect(mockFilings).toHaveBeenLastCalledWith(9, 25, 0);
+  });
+
+  it('does not infer register completeness or a next page from an unknown total', () => {
+    mockFilings.mockReturnValue(makeQuery({ items: [makeFiling()] }));
+    renderPage();
+    const register = card('Sealed filings');
+    expect(within(register).getByText('Page 1 of Unknown')).toBeInTheDocument();
+    expect(within(register).getByRole('button', { name: 'Next page' })).toBeDisabled();
+    expect(within(register).getByText('Exports include only matching loaded rows, or selected loaded rows.')).toBeInTheDocument();
+  });
+
+  it('sorts all three apportionment quantities and loaded filing periods in both directions', () => {
+    const row = {
+      jurisdiction_code: 'QA-A', label: 'Small', currency: 'USD', distance_m: 1,
+      distance_share_pct: 10, energy_wh: 1, drive_count: 1, road_usage_charge_minor: 1,
+      registration_fee_minor: 1, total_liability_minor: 2, emissions_g: 1,
+      emissions_g_per_m: 1, confidence_pct: 95,
+    };
+    mockApportion.mockReturnValue(makeQuery(makeReport({
+      jurisdictions: [row, { ...row, jurisdiction_code: 'QA-B', label: 'Large', distance_m: 10,
+        road_usage_charge_minor: 10, total_liability_minor: 20 }],
+    })));
+    mockFilings.mockReturnValue(makeQuery({
+      items: [makeFiling(), { ...makeFiling(), id: 9, period_start: '2026-03-01T00:00:00Z', digest: 'later-digest' }],
+      total: 2, limit: 50, offset: 0,
+    }));
+    renderPage();
+    const table = within(card('Apportionment by jurisdiction')).getByRole('table');
+    for (const header of ['Distance', 'Road-usage charge', 'Total liability']) {
+      fireEvent.click(within(table).getByRole('button', { name: header, exact: true }));
+      expect(within(table).getAllByRole('row')[1]).toHaveTextContent('Large');
+      fireEvent.click(within(table).getByRole('button', { name: header, exact: true }));
+      expect(within(table).getAllByRole('row')[1]).toHaveTextContent('Small');
+    }
+    const register = within(card('Sealed filings')).getByRole('table');
+    fireEvent.click(within(register).getByRole('button', { name: 'Period', exact: true }));
+    expect(within(register).getAllByRole('row')[1]).toHaveTextContent('later-digest');
+    fireEvent.click(within(register).getByRole('button', { name: 'Period', exact: true }));
+    expect(within(register).getAllByRole('row')[1]).toHaveTextContent('1234567890abcdef');
+  });
+
+  it('exports detached full seals, SI quantities, minor money and original instants despite hidden columns', async () => {
+    const filing = makeFiling();
+    mockFilings.mockReturnValue(makeQuery({ items: [filing], total: 51, limit: 50, offset: 0 }));
+    window.localStorage.setItem('teslasync.table.ownership-compliance-filings.columns', JSON.stringify({
+      order: ['period', 'status'], hidden: ['distance', 'energy', 'charge', 'digest'],
+    }));
+    renderPage();
+    const register = card('Sealed filings');
+    expect(within(register).queryByText('1234567890abcdef…')).not.toBeInTheDocument();
+    fireEvent.click(within(register).getByRole('button', { name: /Export/ }));
+    fireEvent.click(screen.getByRole('menuitem', { name: /CSV/ }));
+    await waitFor(() => expect(downloadCSV).toHaveBeenCalledOnce());
+    const csv = vi.mocked(downloadCSV).mock.calls[0][1];
+    for (const value of ['total_distance_m', '12500', 'total_energy_wh', '25000', 'total_charge_minor', '12345',
+      'currency', 'USD', filing.digest, filing.period_start, filing.period_end, 'filed_at', 'created_at']) {
+      expect(csv).toContain(value);
+    }
+    fireEvent.click(within(register).getByRole('button', { name: /Export/ }));
+    fireEvent.click(screen.getByRole('menuitem', { name: /JSON/ }));
+    await waitFor(() => expect(downloadJSON).toHaveBeenCalledOnce());
+    const rows = vi.mocked(downloadJSON).mock.calls[0][1];
+    expect(rows).toEqual([expect.objectContaining(filing)]);
+    expect(Array.isArray(rows) && rows[0]).not.toBe(filing);
+    expect(filing).toEqual(makeFiling());
+    window.localStorage.removeItem('teslasync.table.ownership-compliance-filings.columns');
+  });
+
+  it('exports raw apportionment and rate fields instead of display-unit aliases or action text', async () => {
+    const jurisdiction = {
+      jurisdiction_code: 'QA-ONLY', label: 'Synthetic apportionment', currency: 'GBP',
+      distance_m: 12345, distance_share_pct: 80, energy_wh: 23456, drive_count: 8,
+      road_usage_charge_minor: 12345, registration_fee_minor: 6000,
+      total_liability_minor: 18345, emissions_g: 123400, emissions_g_per_m: 12.34,
+      confidence_pct: 95,
+    };
+    mockApportion.mockReturnValue(makeQuery(makeReport({ jurisdictions: [jurisdiction] })));
+    renderPage();
+    fireEvent.click(within(card('Apportionment by jurisdiction')).getByRole('button', { name: 'Export list' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Download as JSON' }));
+    await waitFor(() => expect(downloadJSON).toHaveBeenCalledOnce());
+    expect(vi.mocked(downloadJSON).mock.calls[0]).toEqual([
+      'jurisdiction-apportionment-worksheet', [expect.objectContaining(jurisdiction)],
+    ]);
+    const rows = vi.mocked(downloadJSON).mock.calls[0][1];
+    expect(Array.isArray(rows) && rows[0]).not.toBe(jurisdiction);
+
+    fireEvent.click(within(card('Jurisdiction rate table')).getByRole('button', { name: 'Export list' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Download as CSV' }));
+    await waitFor(() => expect(downloadCSV).toHaveBeenCalledOnce());
+    const csv = vi.mocked(downloadCSV).mock.calls[0][1];
+    for (const key of ['jurisdiction_code', 'road_usage_minor_per_m', 'registration_fee_minor',
+      'grid_intensity_g_per_wh', 'min_lat', 'max_lat', 'min_lng', 'max_lng', 'currency', 'version', 'created_at', 'updated_at']) {
+      expect(csv).toContain(key);
+    }
+    expect(csv).not.toContain('Remove');
+    expect(mockCreate().mutate).not.toHaveBeenCalled();
+    expect(mockRemove().mutate).not.toHaveBeenCalled();
+  });
+
+  it('rejects reversed spatial bounds with associated feedback and preserves a correctable draft', () => {
+    renderPage();
+    fireEvent.click(screen.getByRole('button', { name: 'Add jurisdiction' }));
+    fireEvent.change(screen.getByRole('textbox', { name: 'Jurisdiction code required' }), { target: { value: 'qa-only' } });
+    fireEvent.change(screen.getByRole('textbox', { name: 'Display name required' }), { target: { value: 'Synthetic jurisdiction' } });
+    const minLat = screen.getByRole('spinbutton', { name: 'Min latitude required' });
+    const maxLat = screen.getByRole('spinbutton', { name: 'Max latitude required' });
+    const minLng = screen.getByRole('spinbutton', { name: 'Min longitude required' });
+    fireEvent.change(minLat, { target: { value: '10' } });
+    fireEvent.change(minLng, { target: { value: '10' } });
+    fireEvent.submit(minLat.closest('form')!);
+    expect(mockCreate().mutate).not.toHaveBeenCalled();
+    expect(minLat).toHaveAttribute('aria-invalid', 'true');
+    expect(minLng).toHaveAttribute('aria-invalid', 'true');
+    expect(minLat).toHaveAccessibleDescription('Latitude must be between -90 and 0');
+    expect(minLat).toHaveValue(10);
+    fireEvent.change(maxLat, { target: { value: '10' } });
+    fireEvent.change(screen.getByRole('spinbutton', { name: 'Max longitude required' }), { target: { value: '10' } });
+    fireEvent.submit(minLat.closest('form')!);
+    expect(mockCreate().mutate).toHaveBeenCalledWith(expect.objectContaining({
+      min_lat: 10, max_lat: 10, min_lng: 10, max_lng: 10,
+    }), expect.any(Object));
+  });
+
+  it('preserves cleared business dates and rejects reversed periods before sealing UTC instants', () => {
+    renderPage();
+    fireEvent.click(screen.getByRole('button', { name: 'Seal a period' }));
+    const start = screen.getByLabelText(/^Period start\s*\*?\s*required$/);
+    const end = screen.getByLabelText(/^Period end\s*\*?\s*required$/);
+    fireEvent.change(start, { target: { value: '' } });
+    expect(start).toHaveValue('');
+    fireEvent.submit(start.closest('form')!);
+    expect(start).toHaveAttribute('aria-invalid', 'true');
+    expect(mockFiling().mutate).not.toHaveBeenCalled();
+    fireEvent.change(start, { target: { value: '2026-03-01' } });
+    fireEvent.change(end, { target: { value: '2026-02-01' } });
+    fireEvent.submit(start.closest('form')!);
+    expect(mockFiling().mutate).not.toHaveBeenCalled();
+    expect(start).toHaveValue('2026-03-01');
+    fireEvent.change(end, { target: { value: '2026-03-01' } });
+    fireEvent.submit(start.closest('form')!);
+    expect(mockFiling().mutate).toHaveBeenCalledWith({
+      vehicle_id: 7, confirmed: true,
+      period_start: '2026-03-01T00:00:00.000Z', period_end: '2026-03-01T00:00:00.000Z',
+    }, expect.any(Object));
+  });
+
+  it('discloses the no-vehicle prerequisite instead of asserting searched-source emptiness', () => {
+    mockSelected.mockReturnValue({ vehicleId: null, vehicle: null, vehicles: [], setVehicleId: vi.fn() });
+    renderPage();
+    for (const heading of ['Period liability', 'Apportionment by jurisdiction', 'Sealed filings', 'Period digest']) {
+      expect(within(card(heading)).getByText('Select a vehicle to begin')).toBeInTheDocument();
+    }
+    expect(screen.queryByText('No drives with usable coordinates in this window.')).not.toBeInTheDocument();
+    expect(screen.queryByText('No periods sealed yet.')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Seal a period' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Add jurisdiction' })).not.toBeDisabled();
+  });
+
+  it('uses the saved locale for period and filing dates and localizes the caller Cancel', () => {
+    preferences.locale = 'de-DE';
+    preferences.cancel = 'Abbrechen';
+    mockApportion.mockReturnValue(makeQuery(makeReport()));
+    mockFilings.mockReturnValue(makeQuery({ items: [makeFiling()] }));
+    renderPage();
+    const filing = makeFiling();
+    expect(within(card('Sealed filings')).getByText(
+      `${formatDateTime(filing.period_start, { locale: 'de-DE' })} → ${formatDateTime(filing.period_end, { locale: 'de-DE' })}`,
+    )).toBeInTheDocument();
+    expect(within(card('Period liability')).getByText(
+      `${formatDateTime(makeReport().window.from, { locale: 'de-DE', tz: 'UTC' })} → ${formatDateTime(makeReport().window.to, { locale: 'de-DE', tz: 'UTC' })}`,
+    )).toBeInTheDocument();
+    fireEvent.click(removeButton('California'));
+    expect(within(screen.getByRole('dialog')).getByRole('button', { name: 'Abbrechen' })).toBeInTheDocument();
+  });
+
   it('keeps retained filing amounts independent of failed current apportionment and rate sources', () => {
     const refetch = vi.fn();
     mockApportion.mockReturnValue({ ...makeQuery(undefined), error: new Error('report failed') });

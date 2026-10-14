@@ -1,4 +1,4 @@
-import { type FormEvent, useId, useMemo, useState } from 'react';
+import { type FormEvent, useEffect, useId, useMemo, useState } from 'react';
 import { Globe2, Landmark, Stamp, Trash2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -15,7 +15,7 @@ import { useOperationalMetrics } from '@/hooks/useOperationalMetrics';
 
 import { PageLayout } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
-import { Badge, Button, Code, ConfirmDialog, DataTable, Icon, Input, Select, Text } from '@/components/ui';
+import { Badge, Button, Code, ConfirmDialog, DataTable, Icon, Input, Select, Text, useSortToggle } from '@/components/ui';
 import type { Column } from '@/components/ui';
 import { useConfirm } from '@/hooks/useConfirm';
 import { useDataState } from '@/hooks/useDataState';
@@ -23,6 +23,7 @@ import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useUnits } from '@/hooks/useUnits';
 import { formatDateTime } from '@/lib/dateFormat';
+import { downloadCSV, downloadJSON, objectsToCSV, type CsvCellValue } from '@/lib/csvExport';
 import { neonColorMap, typography } from '@/lib/tokens';
 
 import type {
@@ -42,11 +43,21 @@ import {
   formatPct,
   formatPricePerDistance,
   fromDateInput,
-  toDateInput,
 } from '../formatters';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 const WINDOW_OPTIONS = [30, 90, 180, 365];
+
+function exportWorksheet(format: 'csv' | 'json', name: string, rows: Record<string, CsvCellValue>[]) {
+  if (format === 'json') downloadJSON(name, rows);
+  else downloadCSV(name, objectsToCSV(rows));
+}
+
+function validBusinessDate(value: string) {
+  const date = new Date(`${value}T00:00:00.000Z`);
+  return /^\d{4}-\d{2}-\d{2}$/.test(value)
+    && Number.isFinite(date.getTime()) && date.toISOString().slice(0, 10) === value;
+}
 
 export default function JurisdictionCompliancePage() {
   const { fmtInt, fmtNumber, fmtScientificNumber, precision, locale } = useNumberFormatting();
@@ -56,6 +67,16 @@ export default function JurisdictionCompliancePage() {
   const [windowDays, setWindowDays] = useState(90);
   const [rateOpen, setRateOpen] = useState(false);
   const [filingOpen, setFilingOpen] = useState(false);
+  const [filingPaging, setFilingPaging] = useState({ vehicleId, limit: 50, offset: 0 });
+  const filingOffset = filingPaging.vehicleId === vehicleId ? filingPaging.offset : 0;
+  useEffect(() => {
+    setFilingPaging((current) => current.vehicleId === vehicleId
+      ? current : { ...current, vehicleId, offset: 0 });
+  }, [vehicleId]);
+  const apportionSort = useSortToggle();
+  const filingSort = useSortToggle();
+  const [rateSubmitted, setRateSubmitted] = useState(false);
+  const [filingSubmitted, setFilingSubmitted] = useState(false);
   const rateFormId = useId();
   const filingFormId = useId();
   const [rateDraft, setRateDraft] = useState({
@@ -71,15 +92,15 @@ export default function JurisdictionCompliancePage() {
     max_lng: 0,
   });
   const [filingDraft, setFilingDraft] = useState({
-    period_start: new Date(Date.now() - 90 * 86400000).toISOString(),
-    period_end: new Date().toISOString(),
+    period_start: new Date(Date.now() - 90 * 86400000).toISOString().slice(0, 10),
+    period_end: new Date().toISOString().slice(0, 10),
   });
 
   usePageTitle(t('ownership.compliance.navTitle', 'Jurisdictional compliance'));
 
   const reportQuery = useComplianceApportionment(vehicleId, windowDays);
   const ratesQuery = useJurisdictionRates();
-  const filingsQuery = useComplianceFilings(vehicleId, 50, 0);
+  const filingsQuery = useComplianceFilings(vehicleId, filingPaging.limit, filingOffset);
   const createRate = useCreateJurisdictionRate();
   const deleteRate = useDeleteJurisdictionRate();
   const { confirm, dialogProps } = useConfirm();
@@ -94,6 +115,7 @@ export default function JurisdictionCompliancePage() {
       ),
       variant: 'danger',
       confirmLabel: t('common.delete', 'Delete'),
+      cancelLabel: t('common.cancel', 'Cancel'),
     });
     if (ok) deleteRate.mutate(row.id);
   };
@@ -106,17 +128,49 @@ export default function JurisdictionCompliancePage() {
   const filings = useMemo(() => filingsQuery.data?.items ?? [], [filingsQuery.data?.items]);
   const liabilitySummary = complianceSummary(report, units.unitPrefs, precision, locale, t);
   const liabilityMetrics = useOperationalMetrics(liabilitySummary.metrics, liabilitySummary.preferences);
+  const periodLabel = liabilitySummary.period.kind === 'analysis'
+    ? `${formatDateTime(liabilitySummary.period.start, { locale, tz: 'UTC' })} → ${formatDateTime(liabilitySummary.period.endExclusive, { locale, tz: 'UTC' })}`
+    : liabilitySummary.period.label;
+  const sortedJurisdictions = useMemo(() => apportionSort.sortFn(jurisdictions, (row, key) => {
+    if (key === 'distance') return row.distance_m;
+    if (key === 'roadUsage') return row.road_usage_charge_minor;
+    return row.total_liability_minor;
+  }), [jurisdictions, apportionSort.sortFn]);
+  // The endpoint has no sort parameter: period sorting is explicitly page-local.
+  const sortedFilings = useMemo(() => filingSort.sortFn(filings, (row) => Date.parse(row.period_start)),
+    [filings, filingSort.sortFn]);
+  const reportedTotal = filingsQuery.data?.total;
+  const filingTotal = reportedTotal != null && Number.isSafeInteger(reportedTotal) && reportedTotal >= 0
+    ? reportedTotal : undefined;
+  const filingLimit = filingsQuery.data && filingsQuery.data.limit > 0 ? filingsQuery.data.limit : filingPaging.limit;
+  const returnedOffset = filingsQuery.data?.offset ?? filingOffset;
+  const vehiclePrerequisite = t('signalLog.noVehicle', 'Select a vehicle to begin');
+  const latitudeInvalid = !Number.isFinite(rateDraft.min_lat) || !Number.isFinite(rateDraft.max_lat)
+    || rateDraft.min_lat < -90 || rateDraft.max_lat > 90 || rateDraft.min_lat > rateDraft.max_lat;
+  const longitudeInvalid = !Number.isFinite(rateDraft.min_lng) || !Number.isFinite(rateDraft.max_lng)
+    || rateDraft.min_lng < -180 || rateDraft.max_lng > 180 || rateDraft.min_lng > rateDraft.max_lng;
+  const datesInvalid = !validBusinessDate(filingDraft.period_start)
+    || !validBusinessDate(filingDraft.period_end) || filingDraft.period_start > filingDraft.period_end;
+  const dateError = filingSubmitted && datesInvalid
+    ? t('vehicleSettings.validation.invalidDate', 'Enter a valid date and time.') : undefined;
 
-  const submitRate = (event: FormEvent) => {
+  const submitRate = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    setRateSubmitted(true);
+    if (latitudeInvalid || longitudeInvalid || !event.currentTarget.reportValidity()) return;
     createRate.mutate(rateDraft, { onSuccess: () => setRateOpen(false) });
   };
 
-  const submitFiling = (event: FormEvent) => {
+  const submitFiling = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (vehicleId == null) return;
+    setFilingSubmitted(true);
+    if (vehicleId == null || datesInvalid || !event.currentTarget.reportValidity()) return;
     createFiling.mutate(
-      { ...filingDraft, vehicle_id: vehicleId, confirmed: true },
+      {
+        period_start: fromDateInput(filingDraft.period_start),
+        period_end: fromDateInput(filingDraft.period_end),
+        vehicle_id: vehicleId, confirmed: true,
+      },
       { onSuccess: () => setFilingOpen(false) },
     );
   };
@@ -325,7 +379,7 @@ export default function JurisdictionCompliancePage() {
       header: t('ownership.compliance.filing.period', 'Period'),
       render: (row) => (
         <Text as="span" variant="caption">
-          {formatDateTime(row.period_start)} → {formatDateTime(row.period_end)}
+          {formatDateTime(row.period_start, { locale })} → {formatDateTime(row.period_end, { locale })}
         </Text>
       ),
       sortable: true,
@@ -400,7 +454,8 @@ export default function JurisdictionCompliancePage() {
 
       <FadeIn>
         <OwnershipPanel title={t('ownership.compliance.summary.title', 'Period liability')}
-          source={reportQuery} sourceEnabled={vehicleId != null} empty={!report} preserveSummary>
+          source={reportQuery} sourceEnabled={vehicleId != null} empty={!report}
+          emptyMessage={vehicleId == null ? vehiclePrerequisite : undefined} preserveSummary>
           <OperationalBrief
             compact
             testId="compliance-period-liability"
@@ -408,7 +463,7 @@ export default function JurisdictionCompliancePage() {
             title={t('ownership.compliance.brief.title', 'Recorded period liability')}
             description={t('ownership.compliance.brief.description', 'Distance, road-usage liability and attributed emissions for the recorded apportionment window.')}
             metrics={liabilityMetrics}
-            scope={liabilitySummary.period.label}
+            scope={periodLabel}
             provenance={liabilitySummary.period.kind === 'unknown'
               ? liabilitySummary.period.reason : liabilitySummary.period.provenance}
             statusLabel={reportState.status === 'stale'
@@ -417,7 +472,7 @@ export default function JurisdictionCompliancePage() {
                 : t('common.unknown', 'Unknown')}
             statusTone={reportState.status === 'stale' ? 'warning' : 'neutral'}
             freshness={reportState.updatedAt != null
-              ? formatDateTime(new Date(reportState.updatedAt).toISOString()) : undefined}
+              ? formatDateTime(new Date(reportState.updatedAt).toISOString(), { locale }) : undefined}
           />
         </OwnershipPanel>
       </FadeIn>
@@ -432,7 +487,7 @@ export default function JurisdictionCompliancePage() {
             'Confidence is 95% when both endpoints fall in the same box, 70% when only one does, and 60% for a cross-border split.',
           )}
           empty={jurisdictions.length === 0}
-          emptyMessage={t(
+          emptyMessage={vehicleId == null ? vehiclePrerequisite : t(
             'ownership.compliance.apportion.empty',
             'No drives with usable coordinates in this window.',
           )}
@@ -450,7 +505,16 @@ export default function JurisdictionCompliancePage() {
                 return null;
               },
             }}
-            data={jurisdictions}
+            data={sortedJurisdictions}
+            sortKey={apportionSort.sortKey}
+            sortDir={apportionSort.sortDir}
+            onSort={apportionSort.onSort}
+            onExport={(format, rows) => exportWorksheet(format, 'jurisdiction-apportionment-worksheet', rows.map((row) => ({
+              ...row,
+              distance_display: units.formatDistance(row.distance_m),
+              energy_display: units.formatEnergy(row.energy_wh),
+              liability_display: formatCurrencyMinor(row.total_liability_minor, row.currency, locale),
+            })))}
             keyExtractor={(row) => row.jurisdiction_code}
             tableId="ownership-compliance-apportion"
           />
@@ -486,7 +550,7 @@ export default function JurisdictionCompliancePage() {
           }
         >
           {rateOpen ? (
-            <form id={rateFormId} className="mb-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4" onSubmit={submitRate}>
+            <form id={rateFormId} className="mb-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4" noValidate onSubmit={submitRate}>
               <Input
                 label={t('ownership.compliance.rateForm.code', 'Jurisdiction code')}
                 value={rateDraft.jurisdiction_code}
@@ -574,6 +638,7 @@ export default function JurisdictionCompliancePage() {
                 step="any"
                 min={-90}
                 max={90}
+                error={rateSubmitted && latitudeInvalid ? t('geofences.validation.latitudeRange', 'Latitude must be between {{min}} and {{max}}', { min: -90, max: rateDraft.max_lat }) : undefined}
                 required
                 onChange={(event) =>
                   setRateDraft((current) => ({ ...current, min_lat: Number(event.target.value) }))
@@ -586,6 +651,7 @@ export default function JurisdictionCompliancePage() {
                 step="any"
                 min={-90}
                 max={90}
+                error={rateSubmitted && latitudeInvalid ? t('geofences.validation.latitudeRange', 'Latitude must be between {{min}} and {{max}}', { min: rateDraft.min_lat, max: 90 }) : undefined}
                 required
                 onChange={(event) =>
                   setRateDraft((current) => ({ ...current, max_lat: Number(event.target.value) }))
@@ -598,6 +664,7 @@ export default function JurisdictionCompliancePage() {
                 step="any"
                 min={-180}
                 max={180}
+                error={rateSubmitted && longitudeInvalid ? t('geofences.validation.longitudeRange', 'Longitude must be between {{min}} and {{max}}', { min: -180, max: rateDraft.max_lng }) : undefined}
                 required
                 onChange={(event) =>
                   setRateDraft((current) => ({ ...current, min_lng: Number(event.target.value) }))
@@ -610,6 +677,7 @@ export default function JurisdictionCompliancePage() {
                 step="any"
                 min={-180}
                 max={180}
+                error={rateSubmitted && longitudeInvalid ? t('geofences.validation.longitudeRange', 'Longitude must be between {{min}} and {{max}}', { min: rateDraft.min_lng, max: 180 }) : undefined}
                 required
                 onChange={(event) =>
                   setRateDraft((current) => ({ ...current, max_lng: Number(event.target.value) }))
@@ -640,6 +708,11 @@ export default function JurisdictionCompliancePage() {
               inlineActions: (row) => rateColumns.find((column) => column.key === 'actions')?.render(row),
             }}
             data={rates}
+            onExport={(format, rows) => exportWorksheet(format, 'jurisdiction-rates-worksheet', rows.map((row) => ({
+              ...row,
+              road_usage_display: formatPricePerDistance(row.road_usage_minor_per_m, row.currency, units.unitPrefs, locale),
+              registration_display: formatCurrencyMinor(row.registration_fee_minor, row.currency, locale),
+            })))}
             keyExtractor={(row) => row.id}
             tableId="ownership-compliance-rates"
             emptyMessage={t(
@@ -661,8 +734,8 @@ export default function JurisdictionCompliancePage() {
             'ownership.compliance.filings.subtitle',
             'Sealing a period snapshots the distance, energy and charge behind a digest, so a later dispute can be settled against the exact figures you filed.',
           )}
-          empty={filings.length === 0 && !filingOpen}
-          emptyMessage={t('ownership.compliance.filings.empty', 'No periods sealed yet.')}
+          empty={filings.length === 0 && !filingOpen && !(filingTotal != null && filingTotal > 0)}
+          emptyMessage={vehicleId == null ? vehiclePrerequisite : t('ownership.compliance.filings.empty', 'No periods sealed yet.')}
           actions={
             <Button
               variant="secondary"
@@ -672,6 +745,8 @@ export default function JurisdictionCompliancePage() {
               wrapLabel
               aria-expanded={filingOpen}
               aria-controls={filingFormId}
+              disabled={vehicleId == null}
+              aria-describedby={filingOpen && vehicleId == null ? `${filingFormId}-prerequisite` : undefined}
               onClick={() => setFilingOpen((open) => !open)}
             >
               {filingOpen
@@ -681,33 +756,39 @@ export default function JurisdictionCompliancePage() {
           }
         >
           {filingOpen ? (
-            <form id={filingFormId} className="mb-6 grid gap-4 md:grid-cols-3" onSubmit={submitFiling}>
+            <form id={filingFormId} className="mb-6 grid gap-4 md:grid-cols-3" noValidate onSubmit={submitFiling}>
+              {vehicleId == null && <Text id={`${filingFormId}-prerequisite`} variant="helper" className="md:col-span-3">{vehiclePrerequisite}</Text>}
               <Input
                 type="date"
                 label={t('ownership.compliance.filingForm.start', 'Period start')}
-                value={toDateInput(filingDraft.period_start)}
+                value={filingDraft.period_start}
+                max={filingDraft.period_end || undefined}
+                error={dateError}
                 required
                 onChange={(event) =>
                   setFilingDraft((current) => ({
                     ...current,
-                    period_start: fromDateInput(event.target.value),
+                    period_start: event.target.value,
                   }))
                 }
               />
               <Input
                 type="date"
                 label={t('ownership.compliance.filingForm.end', 'Period end')}
-                value={toDateInput(filingDraft.period_end)}
+                value={filingDraft.period_end}
+                min={filingDraft.period_start || undefined}
+                error={dateError}
                 required
                 onChange={(event) =>
                   setFilingDraft((current) => ({
                     ...current,
-                    period_end: fromDateInput(event.target.value),
+                    period_end: event.target.value,
                   }))
                 }
               />
               <div className="flex items-end">
-                <Button type="submit" loading={createFiling.isPending} disabled={vehicleId == null} className="min-h-11" wrapLabel>
+                <Button type="submit" loading={createFiling.isPending} disabled={vehicleId == null}
+                  aria-describedby={vehicleId == null ? `${filingFormId}-prerequisite` : undefined} className="min-h-11" wrapLabel>
                   {t('ownership.compliance.filingForm.submit', 'Seal period')}
                 </Button>
               </div>
@@ -723,13 +804,32 @@ export default function JurisdictionCompliancePage() {
             mobilePresentation={{
               roles: { period: 'title', charge: 'primary', status: 'meta' },
               displayValue: (row, key) => {
-                if (key === 'period') return `${formatDateTime(row.period_start)} → ${formatDateTime(row.period_end)}`;
+                if (key === 'period') return `${formatDateTime(row.period_start, { locale })} → ${formatDateTime(row.period_end, { locale })}`;
                 if (key === 'charge') return formatCurrencyMinor(row.total_charge_minor, row.currency, units.unitPrefs.locale);
                 if (key === 'status') return row.status;
                 return null;
               },
             }}
-            data={filings}
+            data={sortedFilings}
+            sortKey={filingSort.sortKey}
+            sortDir={filingSort.sortDir}
+            onSort={filingSort.onSort}
+            exportable
+            onExport={(format, rows) => exportWorksheet(format, 'jurisdiction-filings-worksheet', rows.map((row) => ({
+              ...row,
+              period_display: `${formatDateTime(row.period_start, { locale })} → ${formatDateTime(row.period_end, { locale })}`,
+              distance_display: units.formatDistance(row.total_distance_m),
+              energy_display: units.formatEnergy(row.total_energy_wh),
+              charge_display: formatCurrencyMinor(row.total_charge_minor, row.currency, locale),
+            })))}
+            paginationControls={{
+              page: Math.floor(returnedOffset / filingLimit) + 1,
+              pageSize: filingLimit,
+              total: filingTotal ?? 0,
+              totalKind: filingTotal == null ? 'unknown' : 'exact',
+              onPageChange: (page) => setFilingPaging({ vehicleId, limit: filingLimit, offset: (page - 1) * filingLimit }),
+              onPageSizeChange: (limit) => setFilingPaging({ vehicleId, limit, offset: 0 }),
+            }}
             keyExtractor={(row) => row.id}
             tableId="ownership-compliance-filings"
             emptyMessage={t('ownership.compliance.filings.empty', 'No periods sealed yet.')}
@@ -739,7 +839,8 @@ export default function JurisdictionCompliancePage() {
 
       <FadeIn delay={0.2}>
         <OwnershipPanel title={t('ownership.compliance.digest.title', 'Period digest')}
-          source={reportQuery} sourceEnabled={vehicleId != null} empty={!report}>
+          source={reportQuery} sourceEnabled={vehicleId != null} empty={!report}
+          emptyMessage={vehicleId == null ? vehiclePrerequisite : undefined}>
           <Text as="p" variant="caption">
             {t(
               'ownership.compliance.digest.body',
