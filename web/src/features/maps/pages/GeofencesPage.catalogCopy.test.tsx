@@ -194,11 +194,13 @@ describe('GeofencesPage canonical selection copy', () => {
     expect(within(dialog).getByLabelText(i18n.t('geofences.latitude'))).toHaveValue(41);
     expect(within(dialog).getByLabelText(i18n.t('geofences.longitude'))).toHaveValue(-76);
     expect(within(dialog).getByLabelText(i18n.t('geofences.radiusMeters'))).toHaveValue(200);
+    expect(within(dialog).getByRole('switch', { name: i18n.t('geofences.visits.charging') })).not.toBeChecked();
     expect(createCalls()).toHaveLength(0);
 
     fireEvent.click(within(dialog).getByRole('button', { name: i18n.t('common.create') }));
     await waitFor(() => expect(createCalls()).toHaveLength(1));
-    const options = createCalls()[0][1] as { body: string };
+    const options = createCalls()[0][1] as { body: string; requiresLiveMode: boolean };
+    expect(options.requiresLiveMode).toBe(true);
     expect(JSON.parse(options.body)).toMatchObject({
       name: 'Depot draft',
       latitude: 41,

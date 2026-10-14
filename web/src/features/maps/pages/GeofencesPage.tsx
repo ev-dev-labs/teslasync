@@ -148,6 +148,7 @@ export default function GeofencesPage() {
   const [aiLocationIdRaw, setAiLocationIdRaw] = useState('');
   const [reviewCandidate, setReviewCandidate] = useState<VisitedPlaceCandidate | null>(null);
   const [chargingPlace, setChargingPlace] = useState(false);
+  const [initialChargingPlace, setInitialChargingPlace] = useState(false);
   const candidateQuery = useVisitedPlaceCandidates();
   const aiLocationId = useMemo(() => {
     const parsed = parseInt(aiLocationIdRaw, 10);
@@ -167,9 +168,9 @@ export default function GeofencesPage() {
       form.longitude !== initialForm.longitude ||
       form.radius !== initialForm.radius ||
       form.category !== initialForm.category ||
-      (reviewCandidate !== null && chargingPlace !== (reviewCandidate.charge_count > 0))
+      chargingPlace !== initialChargingPlace
     );
-  }, [modalOpen, form, initialForm, reviewCandidate, chargingPlace]);
+  }, [modalOpen, form, initialForm, chargingPlace, initialChargingPlace]);
 
   const dirtyForm = useDirtyForm(isFormDirty);
   const { confirm: confirmDiscard, dialogProps: discardDialogProps } = useConfirm();
@@ -192,11 +193,12 @@ export default function GeofencesPage() {
   const selectedVehicleId = vehicleId ?? 0;
 
   const createMut = useMutation({
+    networkMode: 'always',
     // origin/needsReview are server-managed (defaulted on create, untouched
     // on update) — the write form never submits them; only the fields the
     // backend's geofenceCreateRequest actually declares belong here.
     mutationFn: (body: GeofencePayload & { is_charging_location?: boolean }) =>
-      request<Geofence>('/geofences', { method: 'POST', body: JSON.stringify(body) }),
+      request<Geofence>('/geofences', { method: 'POST', requiresLiveMode: true, body: JSON.stringify(body) }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['geofences'] });
       toast.success(t('geofences.toastCreated', 'Geofence created'));
@@ -206,13 +208,14 @@ export default function GeofencesPage() {
   });
 
   const updateMut = useMutation({
+    networkMode: 'always',
     mutationFn: ({
       id,
       body,
     }: {
       id: string;
       body: GeofencePayload;
-    }) => request<Geofence>(`/geofences/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
+    }) => request<Geofence>(`/geofences/${id}`, { method: 'PUT', requiresLiveMode: true, body: JSON.stringify(body) }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['geofences'] });
       toast.success(t('geofences.toastUpdated', 'Geofence updated'));
@@ -222,8 +225,9 @@ export default function GeofencesPage() {
   });
 
   const deleteMut = useMutation({
+    networkMode: 'always',
     mutationFn: (id: string) =>
-      request<void>(`/geofences/${id}`, { method: 'DELETE' }),
+      request<void>(`/geofences/${id}`, { method: 'DELETE', requiresLiveMode: true }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['geofences'] });
       toast.success(t('geofences.toastDeleted', 'Geofence deleted'));
@@ -253,42 +257,37 @@ export default function GeofencesPage() {
 
   // ─── Drawer integration ──────────────────────────────────────────────────
 
+  const draftCoordinates = useMemo<[number, number] | null>(() => {
+    const lat = form.latitude.trim() ? Number(form.latitude) : NaN;
+    const lng = form.longitude.trim() ? Number(form.longitude) : NaN;
+    return Number.isFinite(lat) && Number.isFinite(lng) &&
+      lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180
+      ? [lat, lng]
+      : null;
+  }, [form.latitude, form.longitude]);
+
   /* Center the picker map on the form's current coords or fall back to
      the first existing geofence so users have spatial context. */
   const mapPickerCenter = useMemo<[number, number]>(() => {
-    const lat = parseFloat(form.latitude);
-    const lng = parseFloat(form.longitude);
-    if (!Number.isNaN(lat) && !Number.isNaN(lng) && (lat !== 0 || lng !== 0)) {
-      return [lat, lng];
-    }
+    if (draftCoordinates) return draftCoordinates;
     const first = (geofences ?? [])[0];
-    if (first && first.latitude != null && first.longitude != null) {
+    if (first && Number.isFinite(first.latitude) && Number.isFinite(first.longitude)) {
       return [first.latitude, first.longitude];
     }
     return [37.7749, -122.4194];
-  }, [form.latitude, form.longitude, geofences]);
+  }, [draftCoordinates, geofences]);
 
-  const mapPickerZoom = useMemo(() => {
-    const lat = parseFloat(form.latitude);
-    const lng = parseFloat(form.longitude);
-    return !Number.isNaN(lat) && !Number.isNaN(lng) && (lat !== 0 || lng !== 0) ? 15 : 11;
-  }, [form.latitude, form.longitude]);
+  const mapPickerZoom = draftCoordinates ? 15 : 11;
 
   /* Render the in-progress drawing as a draftable fence so editing works. */
   const drawerFences = useMemo<DrawableGeofence[]>(() => {
-    const lat = parseFloat(form.latitude);
-    const lng = parseFloat(form.longitude);
-    const radius = parseFloat(form.radius);
-    if (
-      Number.isNaN(lat) ||
-      Number.isNaN(lng) ||
-      Number.isNaN(radius) ||
-      (lat === 0 && lng === 0)
-    ) {
+    const radius = form.radius.trim() ? Number(form.radius) : NaN;
+    if (!draftCoordinates || !Number.isFinite(radius) || radius <= 0) {
       return [];
     }
+    const [lat, lng] = draftCoordinates;
     return [{ id: 'draft', lat, lng, radius, name: form.name || undefined }];
-  }, [form.latitude, form.longitude, form.radius, form.name]);
+  }, [draftCoordinates, form.radius, form.name]);
 
   const handleDrawerCreate = useCallback((g: NewGeofence) => {
     if (g.shape !== 'circle' || g.lat == null || g.lng == null || g.radius == null) {
@@ -312,6 +311,9 @@ export default function GeofencesPage() {
     setFieldErrors({});
     setFormError(null);
     setReviewCandidate(null);
+    setChargingPlace(false);
+    setInitialChargingPlace(false);
+    setLocationLoading(false);
   }, []);
 
   /**
@@ -345,6 +347,7 @@ export default function GeofencesPage() {
     setEditingId(null);
     setReviewCandidate(null);
     setChargingPlace(false);
+    setInitialChargingPlace(false);
     setForm(EMPTY_FORM);
     setInitialForm(EMPTY_FORM);
     setFieldErrors({});
@@ -363,6 +366,7 @@ export default function GeofencesPage() {
     };
     setReviewCandidate(candidate);
     setChargingPlace(candidate.charge_count > 0);
+    setInitialChargingPlace(candidate.charge_count > 0);
     setEditingId(null);
     setForm(next);
     setInitialForm(next);
@@ -386,6 +390,9 @@ export default function GeofencesPage() {
         category: EMPTY_FORM.category,
       };
       setEditingId(null);
+      setReviewCandidate(null);
+      setChargingPlace(false);
+      setInitialChargingPlace(false);
       setForm(next);
       setInitialForm(EMPTY_FORM);
       setFieldErrors({});
@@ -399,6 +406,8 @@ export default function GeofencesPage() {
   const openEdit = useCallback((g: ApiGeofence) => {
     setEditingId(String(g.id));
     setReviewCandidate(null);
+    setChargingPlace(false);
+    setInitialChargingPlace(false);
     const next: GeofenceFormData = {
       name: g.name,
       latitude: String(g.latitude),
@@ -623,9 +632,7 @@ export default function GeofencesPage() {
             onAdd={openCreate}
             onEdit={openEdit}
             onDelete={setDeleteTarget}
-            onBulkDelete={async (places) => {
-              await bulkDelete.mutateAsync(places.map((place) => place.id));
-            }}
+            onBulkDelete={(places) => bulkDelete.mutateAsync(places.map((place) => place.id))}
             deletePending={bulkDelete.isPending}
           />
         </section>

@@ -30,10 +30,11 @@
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { render, screen, within, waitFor, fireEvent } from '@testing-library/react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClient, QueryClientProvider, onlineManager } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
 import type { Geofence } from '@/types/location';
+import { assertOperationalWriteAllowed } from '@/lib/operationalMode';
 
 // jsdom lacks matchMedia; framer-motion (<FadeIn>/<Stagger*>) + PageContainer's
 // freshness chip read it at module load for the reduced-motion preference.
@@ -54,8 +55,11 @@ vi.hoisted(() => {
   }
 });
 
-const { mockRequest, toastMock, aiEnabledMock } = vi.hoisted(() => ({
+const { mockRequest, wireWriteMock, mapMock, drawerMock, toastMock, aiEnabledMock } = vi.hoisted(() => ({
   mockRequest: vi.fn(),
+  wireWriteMock: vi.fn(),
+  mapMock: vi.fn(),
+  drawerMock: vi.fn(),
   toastMock: { success: vi.fn(), error: vi.fn(), info: vi.fn(), warning: vi.fn() },
   aiEnabledMock: vi.fn<[], boolean>(() => false),
 }));
@@ -105,12 +109,15 @@ vi.mock('react-i18next', async () => {
 vi.mock('@/components/maps', async () => {
   const React = await vi.importActual<typeof import('react')>('react');
   return {
-    MapContainer: ({ children }: { children?: ReactNode }) =>
-      React.createElement('div', { 'data-testid': 'map-container' }, children),
+    MapContainer: ({ children, ...props }: { children?: ReactNode; center: [number, number]; zoom: number }) => {
+      mapMock(props);
+      return React.createElement('div', { 'data-testid': 'map-container' }, children);
+    },
     MapTileLayer: () => React.createElement('div', { 'data-testid': 'map-tile' }),
     MapInvalidator: () => null,
-    GeofenceDrawer: ({ onCreate }: { onCreate: (g: unknown) => void }) =>
-      React.createElement(
+    GeofenceDrawer: ({ onCreate, fences }: { onCreate: (g: unknown) => void; fences: unknown[] }) => {
+      drawerMock(fences);
+      return React.createElement(
         'button',
         {
           type: 'button',
@@ -118,7 +125,8 @@ vi.mock('@/components/maps', async () => {
           onClick: () => onCreate({ shape: 'circle', lat: 1.5, lng: 2.5, radius: 123 }),
         },
         'draw',
-      ),
+      );
+    },
   };
 });
 
@@ -218,13 +226,20 @@ interface Store {
   positions: unknown[];
   pinned: unknown[];
   candidates: unknown[];
+  bulkResult: { deleted: number; failed: { id: number; reason: string }[] };
+  mutationError?: Error;
 }
 let store: Store;
 
 function installRequest() {
-  mockRequest.mockImplementation((url: unknown, options?: { method?: string }) => {
+  mockRequest.mockImplementation((url: unknown, options?: { method?: string; requiresLiveMode?: boolean }) => {
     const u = String(url);
     const method = (options?.method ?? 'GET').toUpperCase();
+    assertOperationalWriteAllowed(method, options?.requiresLiveMode);
+    if (method !== 'GET') {
+      wireWriteMock(u, options);
+      if (store.mutationError) return Promise.reject(store.mutationError);
+    }
 
     if (u === '/geofences' && method === 'GET') {
       if (store.mode === 'pending') return new Promise(() => {});
@@ -252,7 +267,7 @@ function installRequest() {
     if (u === '/geofences/visited-candidates' && method === 'GET') return Promise.resolve(store.candidates);
     if (u === '/geofences/rates/current' && method === 'GET') return Promise.resolve([]);
     if (u === '/geofences/bulk' && method === 'POST') {
-      return Promise.resolve({ deleted: 1, failed: [] });
+      return Promise.resolve(store.bulkResult);
     }
     if (/^\/geofences\/[^/]+$/.test(u) && method === 'PUT') {
       return Promise.resolve(store.geofences[0]);
@@ -322,6 +337,12 @@ async function openCreateModal() {
 
 beforeEach(() => {
   mockRequest.mockReset();
+  wireWriteMock.mockReset();
+  mapMock.mockReset();
+  drawerMock.mockReset();
+  window.history.replaceState({}, '', '/');
+  Object.defineProperty(navigator, 'onLine', { configurable: true, value: true });
+  onlineManager.setOnline(true);
   toastMock.success.mockReset();
   toastMock.error.mockReset();
   toastMock.info.mockReset();
@@ -338,12 +359,16 @@ beforeEach(() => {
     positions: POSITIONS,
     pinned: [],
     candidates: [],
+    bulkResult: { deleted: 1, failed: [] },
   };
   installRequest();
 });
 
 afterEach(() => {
   removeGeolocation();
+  window.history.replaceState({}, '', '/');
+  Reflect.deleteProperty(navigator, 'onLine');
+  onlineManager.setOnline(true);
   vi.clearAllMocks();
 });
 
@@ -546,6 +571,7 @@ describe('GeofencesPage — card mutations', () => {
     await waitFor(() =>
       expect(callsMatching('DELETE', (u) => u === '/geofences/1').length).toBe(1),
     );
+    expect(callsMatching('DELETE', (u) => u === '/geofences/1')[0][1]).toMatchObject({ requiresLiveMode: true });
   });
 
   it('updates a place category through the shared edit modal', async () => {
@@ -568,6 +594,7 @@ describe('GeofencesPage — card mutations', () => {
     expect(body.radius).toBe(100);
     expect(body.category).toBe('work');
     expect(body).not.toHaveProperty('id');
+    expect(put[1]).toMatchObject({ requiresLiveMode: true });
   });
 });
 
@@ -597,6 +624,53 @@ describe('GeofencesPage — bulk selection', () => {
     const body = JSON.parse((post[1] as { body: string }).body);
     // Frontend string ids are coerced to numeric ids for the bulk endpoint.
     expect(body).toEqual({ ids: [1], op: 'delete' });
+  });
+
+  it.each([
+    { deleted: 1, failed: [{ id: 2, reason: 'Synthetic history requires archive' }] },
+    { deleted: 0, failed: [{ id: 1, reason: 'Synthetic refusal' }, { id: 2, reason: 'Synthetic history requires archive' }] },
+  ])('retains failed IDs and reasons for a fulfilled bulk result: %j', async (result) => {
+    store.bulkResult = result;
+    renderPage();
+    await zones().findByText('Home');
+    for (const name of ['Home', 'Work']) {
+      const row = zones().getByText(name).closest('tr');
+      fireEvent.click(within(row as HTMLElement).getByRole('checkbox', { name: 'Select row' }));
+    }
+    const toolbar = await screen.findByRole('region', { name: 'Bulk actions' });
+    fireEvent.click(within(toolbar).getByRole('button', { name: 'Delete' }));
+    const confirm = await screen.findByRole('dialog', { name: 'Delete geofences?' });
+    fireEvent.click(within(confirm).getByRole('button', { name: 'Delete' }));
+
+    await waitFor(() => expect(callsMatching('POST', (url) => url === '/geofences/bulk')).toHaveLength(1));
+    await screen.findByText(/Place 2: Synthetic history requires archive/);
+    const workRow = zones().getByText('Work').closest('tr');
+    expect(within(workRow as HTMLElement).getByRole('checkbox', { name: 'Select row' })).toBeChecked();
+    expect(toastMock.success).not.toHaveBeenCalledWith('Geofences deleted');
+    if (result.deleted === 0) {
+      expect(screen.getByText(/Place 1: Synthetic refusal/)).toBeInTheDocument();
+    }
+  });
+
+  it.each(['transport', 'short-result'] as const)('does not clear unconfirmed deletions after %s', async (mode) => {
+    if (mode === 'short-result') store.bulkResult = { deleted: 1, failed: [] };
+    renderPage();
+    await zones().findByText('Home');
+    for (const name of ['Home', 'Work']) {
+      const row = zones().getByText(name).closest('tr');
+      fireEvent.click(within(row as HTMLElement).getByRole('checkbox', { name: 'Select row' }));
+    }
+    if (mode === 'transport') store.mutationError = new Error('Synthetic transport failure');
+    const toolbar = await screen.findByRole('region', { name: 'Bulk actions' });
+    fireEvent.click(within(toolbar).getByRole('button', { name: 'Delete' }));
+    const confirm = await screen.findByRole('dialog', { name: 'Delete geofences?' });
+    fireEvent.click(within(confirm).getByRole('button', { name: 'Delete' }));
+    await waitFor(() => expect(toastMock[mode === 'transport' ? 'error' : 'warning']).toHaveBeenCalled());
+    for (const name of ['Home', 'Work']) {
+      const row = zones().getByText(name).closest('tr');
+      expect(within(row as HTMLElement).getByRole('checkbox', { name: 'Select row' })).toBeChecked();
+    }
+    expect(toastMock.success).not.toHaveBeenCalledWith('Geofences deleted');
   });
 });
 
@@ -668,6 +742,7 @@ describe('GeofencesPage — create modal', () => {
     expect(body).not.toHaveProperty('enabled');
     expect(body).not.toHaveProperty('costPerKwh');
     expect(toastMock.success).toHaveBeenCalledWith('Geofence created');
+    expect(post[1]).toMatchObject({ requiresLiveMode: true });
   });
 
   it('prompts to discard unsaved edits when cancelling a dirty form', async () => {
@@ -686,6 +761,56 @@ describe('GeofencesPage — create modal', () => {
     await waitFor(() =>
       expect(screen.queryByRole('dialog', { name: 'Create geofence' })).toBeNull(),
     );
+  });
+
+  it('tracks charging-purpose-only edits and keeps or discards the ordinary-create draft', async () => {
+    renderPage();
+    await zones().findByText('Home');
+    const dialog = await openCreateModal();
+    const purpose = within(dialog).getByRole('switch', { name: 'This is a charging location' });
+    fireEvent.click(purpose);
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Cancel' }));
+    let discard = await screen.findByRole('dialog', { name: 'Unsaved changes' });
+    fireEvent.click(within(discard).getByRole('button', { name: 'Keep editing' }));
+    expect(purpose).toBeChecked();
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Cancel' }));
+    discard = await screen.findByRole('dialog', { name: 'Unsaved changes' });
+    fireEvent.click(within(discard).getByRole('button', { name: 'Discard changes' }));
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Create geofence' })).toBeNull());
+    const fresh = await openCreateModal();
+    expect(within(fresh).getByRole('switch', { name: 'This is a charging location' })).not.toBeChecked();
+    fireEvent.click(within(fresh).getByRole('button', { name: 'Cancel' }));
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Create geofence' })).toBeNull());
+    expect(screen.queryByRole('dialog', { name: 'Unsaved changes' })).toBeNull();
+  });
+
+  it('preserves finite zero coordinates in the picker center, zoom, draft and raw create payload', async () => {
+    renderPage();
+    await zones().findByText('Home');
+    const dialog = await openCreateModal();
+    fireEvent.change(within(dialog).getByLabelText('Name'), { target: { value: 'Zero meridian' } });
+    fireEvent.change(within(dialog).getByLabelText('Latitude'), { target: { value: '0' } });
+    fireEvent.change(within(dialog).getByLabelText('Longitude'), { target: { value: '0' } });
+    fireEvent.click(within(dialog).getByRole('tab', { name: 'Draw on map' }));
+    expect(mapMock).toHaveBeenLastCalledWith(expect.objectContaining({ center: [0, 0], zoom: 15 }));
+    expect(drawerMock).toHaveBeenLastCalledWith([{ id: 'draft', lat: 0, lng: 0, radius: 100, name: 'Zero meridian' }]);
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Create' }));
+    await waitFor(() => expect(callsMatching('POST', (url) => url === '/geofences')).toHaveLength(1));
+    const options = callsMatching('POST', (url) => url === '/geofences')[0][1] as { body: string };
+    expect(JSON.parse(options.body)).toMatchObject({ latitude: 0, longitude: 0, radius: 100 });
+  });
+
+  it('does not reinterpret blank or invalid geometry as a finite zero-coordinate draft', async () => {
+    renderPage();
+    await zones().findByText('Home');
+    const dialog = await openCreateModal();
+    fireEvent.click(within(dialog).getByRole('tab', { name: 'Draw on map' }));
+    expect(mapMock).toHaveBeenLastCalledWith(expect.objectContaining({ zoom: 11 }));
+    expect(drawerMock).toHaveBeenLastCalledWith([]);
+    fireEvent.change(within(dialog).getByLabelText('Latitude'), { target: { value: '200' } });
+    fireEvent.change(within(dialog).getByLabelText('Longitude'), { target: { value: '0' } });
+    expect(drawerMock).toHaveBeenLastCalledWith([]);
+    expect(within(dialog).getByRole('button', { name: 'Create' })).toBeDisabled();
   });
 
   it('captures a vehicle position → reverse-geocoded name into the form', async () => {
@@ -882,6 +1007,69 @@ describe('GeofencesPage — AI Helix section', () => {
     expect((within(dialog).getByLabelText('Latitude') as HTMLInputElement).value).toBe('12.5');
     expect((within(dialog).getByLabelText('Longitude') as HTMLInputElement).value).toBe('-34.5');
     expect((within(dialog).getByLabelText('Radius (meters)') as HTMLInputElement).value).toBe('200');
+  });
+
+  it('starts an independent AI draft without a previous candidate or charging purpose', async () => {
+    aiEnabledMock.mockReturnValue(true);
+    store.candidates = [{
+      id: 42, name: 'Charging candidate', latitude: 41, longitude: -76,
+      visit_count: 3, charge_count: 2, first_charge_at: null,
+      last_visited: '2026-09-22T12:00:00Z',
+    }];
+    renderPage();
+    fireEvent.click(await screen.findByRole('button', { name: 'Review place' }));
+    const candidate = await screen.findByRole('dialog', { name: 'Create geofence' });
+    expect(within(candidate).getByRole('switch', { name: 'This is a charging location' })).toBeChecked();
+    fireEvent.click(screen.getByTestId('ai-apply-draft'));
+    const draft = screen.getByRole('dialog', { name: 'Create geofence' });
+    expect(within(draft).queryByText('Confirm detected location')).toBeNull();
+    expect(within(draft).getByRole('switch', { name: 'This is a charging location' })).not.toBeChecked();
+    expect(callsMatching('POST', (url) => url === '/geofences')).toHaveLength(0);
+    fireEvent.click(within(draft).getByRole('button', { name: 'Create' }));
+    await waitFor(() => expect(callsMatching('POST', (url) => url === '/geofences')).toHaveLength(1));
+    const options = callsMatching('POST', (url) => url === '/geofences')[0][1] as { body: string };
+    expect(JSON.parse(options.body)).toMatchObject({ name: 'AI Zone', is_charging_location: false });
+  });
+});
+
+describe('GeofencesPage — live-only write authority', () => {
+  it.each(['as_of', 'offline'] as const)('rejects create, update and delete in %s without losing drafts or selections', async (mode) => {
+    renderPage();
+    await zones().findByText('Home');
+    if (mode === 'as_of') {
+      window.history.replaceState({}, '', '/?as_of=2026-10-01T00%3A00%3A00Z');
+    } else {
+      Object.defineProperty(navigator, 'onLine', { configurable: true, value: false });
+      onlineManager.setOnline(false);
+    }
+    let dialog = await openCreateModal();
+    fireEvent.change(within(dialog).getByLabelText('Name'), { target: { value: 'Retained draft' } });
+    fireEvent.change(within(dialog).getByLabelText('Latitude'), { target: { value: '0' } });
+    fireEvent.change(within(dialog).getByLabelText('Longitude'), { target: { value: '0' } });
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Create' }));
+    await waitFor(() => expect(toastMock.error).toHaveBeenCalledWith('Failed to create geofence', expect.any(String)));
+    expect(within(dialog).getByLabelText('Name')).toHaveValue('Retained draft');
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Cancel' }));
+    const discard = await screen.findByRole('dialog', { name: 'Unsaved changes' });
+    fireEvent.click(within(discard).getByRole('button', { name: 'Discard changes' }));
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Create geofence' })).toBeNull());
+
+    fireEvent.click(screen.getByRole('button', { name: 'Edit geofence Home' }));
+    dialog = await screen.findByRole('dialog', { name: 'Edit geofence' });
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Update' }));
+    await waitFor(() => expect(toastMock.error).toHaveBeenCalledWith('Failed to update geofence', expect.any(String)));
+    expect(within(dialog).getByLabelText('Name')).toHaveValue('Home');
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Cancel' }));
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Edit geofence' })).toBeNull());
+
+    fireEvent.click(screen.getByRole('button', { name: 'Delete geofence Home' }));
+    dialog = await screen.findByRole('dialog', { name: 'Delete geofence' });
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Delete' }));
+    await waitFor(() => expect(toastMock.error).toHaveBeenCalledWith('Failed to delete geofence', expect.any(String)));
+    expect(screen.getByRole('dialog', { name: 'Delete geofence' })).toBeInTheDocument();
+    expect(zones().getByText('Home')).toBeInTheDocument();
+    expect(wireWriteMock).not.toHaveBeenCalled();
+    expect(toastMock.success).not.toHaveBeenCalled();
   });
 });
 
