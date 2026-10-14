@@ -37,6 +37,8 @@ export function SentryComparisonChart({
 }: SleepEfficiencySectionProps) {
   const { fmtInt, fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
+  const available = state.vehicleSelected && state.isResolved
+    && analysis.source.hasResponse && analysis.sentry.comparisonAvailable;
   const data = useMemo<SentryDatum[]>(
     () =>
       [analysis.sentry.on, analysis.sentry.off]
@@ -108,14 +110,17 @@ export function SentryComparisonChart({
           'Grouped bar chart comparing count-bearing Sentry on and off samples',
         )}
         height={320}
-        data={analysis.sentry.comparisonAvailable ? data : []}
+        data={available ? data : []}
         dataColumns={columns}
-        exportData={analysis.sentry.comparisonAvailable ? data : []}
+        exportData={available ? data : []}
         chartKey="sleep-efficiency-sentry-comparison"
       >
         {({ hiddenSeries }) => (
-          <SleepEfficiencySectionBody state={state} skeletonHeight={240}>
-            {analysis.sentry.comparisonAvailable ? (
+          <SleepEfficiencySectionBody
+            state={{ ...state, isResolved: state.isResolved && analysis.source.hasResponse }}
+            skeletonHeight={240}
+          >
+            {available ? (
               <ResponsiveContainer width="100%" height={240}>
                 <BarChart data={data}>
                 {chartGrid}
@@ -126,6 +131,16 @@ export function SentryComparisonChart({
                   axisLine={false}
                 />
                 <YAxis
+                  yAxisId="rate"
+                  unit="%/hr"
+                  tick={axisTick}
+                  tickLine={false}
+                  axisLine={false}
+                />
+                <YAxis
+                  yAxisId="dose"
+                  orientation="right"
+                  unit="%"
                   tick={axisTick}
                   tickLine={false}
                   axisLine={false}
@@ -133,22 +148,24 @@ export function SentryComparisonChart({
                 <Tooltip content={<ChartTooltip />} />
                 <ChartLegend />
                 <Bar
+                  yAxisId="rate"
                   dataKey="drainRate"
                   name={t(
                     'sleep.sentryChart.drainRateShort',
                     'Drain rate (%/hr)',
                   )}
-                  fill="#f59e0b"
+                  fill="var(--chart-3)"
                   radius={[4, 4, 0, 0]}
                   hide={hiddenSeries?.isHidden('drainRate')}
                 />
                 <Bar
+                  yAxisId="dose"
                   dataKey="batteryLost"
                   name={t(
                     'sleep.sentryChart.batteryLostShort',
                     'Battery lost (%)',
                   )}
-                  fill="#a855f7"
+                  fill="var(--chart-4)"
                   radius={[4, 4, 0, 0]}
                   hide={hiddenSeries?.isHidden('batteryLost')}
                 />
