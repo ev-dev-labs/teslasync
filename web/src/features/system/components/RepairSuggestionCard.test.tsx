@@ -18,13 +18,33 @@
  */
 
 import { beforeEach, describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent, within } from '@testing-library/react';
+import { act, render, screen, fireEvent, within } from '@testing-library/react';
 import type { ReactNode } from 'react';
 
 const H = vi.hoisted(() => ({
   preview: vi.fn(),
   reset: vi.fn(),
+  canWrite: true,
+  confirm: undefined as (() => void) | undefined,
 }));
+
+vi.mock('@/hooks/useOperationalMode', () => ({
+  useOperationalMode: () => ({
+    canWrite: H.canWrite,
+    writeBlockReason: H.canWrite ? null : 'Reconnect before making operational changes.',
+  }),
+}));
+
+vi.mock('@/components/ui', async () => {
+  const actual = await vi.importActual<typeof import('@/components/ui')>('@/components/ui');
+  return {
+    ...actual,
+    ConfirmDialog: (props: Parameters<typeof actual.ConfirmDialog>[0]) => {
+      H.confirm = props.onConfirm;
+      return <actual.ConfirmDialog {...props} />;
+    },
+  };
+});
 
 vi.mock('@/api/hooks/useDataRepair', async () => {
   const actual = await vi.importActual<typeof import('@/api/hooks/useDataRepair')>(
@@ -71,7 +91,25 @@ vi.mock('react-i18next', async () => {
 });
 
 import { RepairSuggestionCard } from './RepairSuggestionCard';
-import type { RepairSuggestion } from '@/api/hooks/useDataRepair';
+import type { ApplyRepairInput, RepairImpactPreview, RepairSuggestion } from '@/api/hooks/useDataRepair';
+
+function buildPreview(input: ApplyRepairInput): RepairImpactPreview {
+  return {
+    kind: input.rule.startsWith('drive_') ? 'drive' : 'charging',
+    session_id: input.id,
+    rule: input.rule,
+    source: 'suggestion',
+    status: 'ready',
+    started_at: '2026-03-29T06:00:00Z',
+    current_ended_at: input.expected_stored_ended_at || null,
+    proposed_ended_at: input.ended_at,
+    current_duration_s: null,
+    proposed_duration_s: 3600,
+    fields_changed: [],
+    fields_preserved: [],
+    warnings: ['Original reviewed impact'],
+  };
+}
 
 function buildSuggestion(overrides?: Partial<RepairSuggestion>): RepairSuggestion {
   return {
@@ -107,8 +145,11 @@ describe('RepairSuggestionCard', () => {
   beforeEach(() => {
     H.preview.mockReset();
     H.reset.mockReset();
+    H.canWrite = true;
+    H.confirm = undefined;
     H.preview.mockImplementation(
-      (_input: unknown, options?: { onSuccess?: () => void }) => options?.onSuccess?.(),
+      (input: ApplyRepairInput, options?: { onSuccess?: (impact: RepairImpactPreview) => void }) =>
+        options?.onSuccess?.(buildPreview(input)),
     );
   });
 
@@ -274,5 +315,135 @@ describe('RepairSuggestionCard', () => {
     expect(
       screen.queryByText('Last evidence the session was still running'),
     ).not.toBeInTheDocument();
+  });
+
+  it('rejects changed same-ID evidence while retaining the original reviewed impact and message', () => {
+    const onApply = vi.fn();
+    const original = buildSuggestion({ stored_ended_at: '2026-03-29T09:00:00Z' });
+    const { rerender } = render(<RepairSuggestionCard suggestion={original} onApply={onApply} />);
+    fireEvent.click(screen.getByRole('button', { name: /Review & apply/i }));
+    const message = screen.getByText(/This rewrites Drive #42 to end at/i).textContent;
+    rerender(<RepairSuggestionCard suggestion={buildSuggestion({
+      ...original,
+      suggested_ended_at: '2026-03-29T07:30:00Z',
+      stored_ended_at: '2026-03-29T08:30:00Z',
+    })} onApply={onApply} />);
+    expect(screen.getByText(/This rewrites Drive #42 to end at/i).textContent).toBe(message);
+    expect(screen.getByText('Original reviewed impact')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Apply repair' })).toBeDisabled();
+    act(() => H.confirm?.());
+    expect(onApply).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  it.each([
+    ['vehicle', { vehicle_id: 8 }],
+    ['session', { session_id: 43 }],
+    ['kind', { kind: 'charging', rule: 'charging_open_drive_started' }],
+    ['evidence', { evidence_gap_s: 3599.001 }],
+  ] satisfies [string, Partial<RepairSuggestion>][])('rejects obsolete reviewed %s identity or revision', (_name, change) => {
+    const onApply = vi.fn();
+    const original = buildSuggestion();
+    const { rerender } = render(<RepairSuggestionCard suggestion={original} onApply={onApply} />);
+    fireEvent.click(screen.getByRole('button', { name: /Review & apply/i }));
+    rerender(<RepairSuggestionCard suggestion={{ ...original, ...change }} onApply={onApply} />);
+    act(() => H.confirm?.());
+    expect(onApply).not.toHaveBeenCalled();
+    expect(screen.getByRole('button', { name: 'Apply repair' })).toBeDisabled();
+  });
+
+  it('does not renew an obsolete review after a scope change and return', () => {
+    const onApply = vi.fn();
+    const original = buildSuggestion();
+    const { rerender } = render(<RepairSuggestionCard suggestion={original} onApply={onApply} />);
+    fireEvent.click(screen.getByRole('button', { name: /Review & apply/i }));
+    rerender(<RepairSuggestionCard suggestion={{ ...original, vehicle_id: 8 }} onApply={onApply} />);
+    rerender(<RepairSuggestionCard suggestion={original} onApply={onApply} />);
+    expect(screen.getByRole('button', { name: 'Apply repair' })).toBeDisabled();
+    act(() => H.confirm?.());
+    expect(onApply).not.toHaveBeenCalled();
+  });
+
+  it('preserves raw SI precision and the stored-boundary concurrency pin in an immutable reviewed payload', () => {
+    const onApply = vi.fn();
+    const original = buildSuggestion({
+      stored_ended_at: '2026-03-29T09:00:00.123456Z',
+      suggested_ended_at: '2026-03-29T07:00:00.123456Z',
+      suggested_duration_s: 3600.123456,
+      evidence_gap_s: 3599.876544,
+    });
+    const expected = structuredClone(original);
+    render(<RepairSuggestionCard suggestion={original} onApply={onApply} />);
+    fireEvent.click(screen.getByRole('button', { name: /Review & apply/i }));
+    original.contradicting_evidence.value = 'new unreviewed observation';
+    fireEvent.click(screen.getByRole('button', { name: 'Apply repair' }));
+    expect(onApply).toHaveBeenCalledExactlyOnceWith(expected);
+    expect(onApply.mock.calls[0][0]).not.toBe(original);
+    expect(H.preview.mock.calls[0][0]).toEqual({
+      id: 42,
+      ended_at: expected.suggested_ended_at,
+      rule: expected.rule,
+      expected_stored_ended_at: expected.stored_ended_at,
+    });
+  });
+
+  it.each([
+    ['caller read-only', { disabled: true }],
+    ['blocked', { suggestion: buildSuggestion({ applicable: false }) }],
+    ['already applied', { isApplied: true }],
+    ['applying', { isApplying: true }],
+  ])('guards an already-open confirmation after %s eligibility changes', (_name, props) => {
+    const onApply = vi.fn();
+    const original = buildSuggestion();
+    const { rerender } = render(<RepairSuggestionCard suggestion={original} onApply={onApply} />);
+    fireEvent.click(screen.getByRole('button', { name: /Review & apply/i }));
+    rerender(<RepairSuggestionCard suggestion={original} onApply={onApply} {...props} />);
+    expect(screen.getByRole('button', { name: 'Apply repair' })).toBeDisabled();
+    act(() => H.confirm?.());
+    expect(onApply).not.toHaveBeenCalled();
+  });
+
+  it('uses the actual operational write guard and preserves Cancel and its reason', () => {
+    const onApply = vi.fn();
+    const original = buildSuggestion();
+    const { rerender } = render(<RepairSuggestionCard suggestion={original} onApply={onApply} />);
+    fireEvent.click(screen.getByRole('button', { name: /Review & apply/i }));
+    H.canWrite = false;
+    rerender(<RepairSuggestionCard suggestion={original} onApply={onApply} />);
+    expect(screen.getByRole('button', { name: 'Apply repair' })).toBeDisabled();
+    expect(screen.getByRole('note')).toHaveTextContent('Reconnect before making operational changes.');
+    act(() => H.confirm?.());
+    expect(onApply).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  it('ignores late previews after revision changes and after disposal', () => {
+    let complete: ((impact: RepairImpactPreview) => void) | undefined;
+    H.preview.mockImplementation((_input: ApplyRepairInput, options: { onSuccess: typeof complete }) => {
+      complete = options.onSuccess;
+    });
+    const original = buildSuggestion();
+    const onApply = vi.fn();
+    const { rerender, unmount } = render(<RepairSuggestionCard suggestion={original} onApply={onApply} />);
+    fireEvent.click(screen.getByRole('button', { name: /Review & apply/i }));
+    const impact = buildPreview(H.preview.mock.calls[0][0]);
+    rerender(<RepairSuggestionCard suggestion={{ ...original, vehicle_id: 8 }} onApply={onApply} />);
+    act(() => complete?.(impact));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    unmount();
+    act(() => complete?.(impact));
+    expect(onApply).not.toHaveBeenCalled();
+  });
+
+  it('allows an unchanged cloned suggestion to confirm after an ordinary rerender', () => {
+    const original = buildSuggestion();
+    const onApply = vi.fn();
+    const { rerender } = render(<RepairSuggestionCard suggestion={original} onApply={onApply} />);
+    fireEvent.click(screen.getByRole('button', { name: /Review & apply/i }));
+    rerender(<RepairSuggestionCard suggestion={structuredClone(original)} onApply={onApply} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Apply repair' }));
+    expect(onApply).toHaveBeenCalledExactlyOnceWith(original);
   });
 });
