@@ -35,19 +35,21 @@ vi.mock('@/hooks/useSettings', () => ({
 vi.mock('@/hooks/useSelectedVehicle', () => ({
   useSelectedVehicle: () => ({ vehicle: { timezone: 'Asia/Tokyo' } }),
 }));
-vi.mock('@/api/hooks/useActionCenter', () => ({
-  useActionCenterHistory: () => ({
+vi.mock('@/api/hooks/useActionCenter', () => {
+  const history = {
     data: { items: [], total: 0, limit: 25, offset: 0 },
     isPending: false,
     isLoading: false,
     isFetching: false,
     isError: false,
+    isPlaceholderData: false,
     error: null,
     fetchStatus: 'idle',
     dataUpdatedAt: Date.parse('2026-10-12T15:31:00Z'),
     refetch: vi.fn(),
-  }),
-}));
+  };
+  return { useActionCenterHistory: () => history };
+});
 
 import { RecommendationCard } from './RecommendationCard';
 
@@ -99,6 +101,7 @@ function card(
 beforeEach(async () => {
   onAction.mockReset();
   preferences.locale = 'en-US';
+  preferences.tz_display_default = 'user';
   preferences.timezone_user = 'UTC';
   await i18n.init({
     lng: 'en',
@@ -121,6 +124,27 @@ afterEach(() => {
 });
 
 describe('RecommendationCard expiry preferences', () => {
+  it('renders locale-selected 12-hour and 24-hour expiry in user vehicle and UTC display modes', () => {
+    preferences.timezone_user = 'America/Los_Angeles';
+    const original = structuredClone(recommendation);
+    const { rerender } = render(card());
+    expect(screen.getByText('Fixture vehicle · Expires Oct 19, 2026, 05:00 PM')).toBeVisible();
+
+    preferences.locale = 'en-GB';
+    rerender(card());
+    expect(screen.getByText('Fixture vehicle · Expires 19 Oct 2026, 17:00')).toBeVisible();
+
+    preferences.tz_display_default = 'vehicle';
+    rerender(card());
+    expect(screen.getByText('Fixture vehicle · Expires 20 Oct 2026, 09:00')).toBeVisible();
+
+    preferences.tz_display_default = 'utc';
+    rerender(card());
+    expect(screen.getByText('Fixture vehicle · Expires 20 Oct 2026, 00:00')).toBeVisible();
+    expect(recommendation).toEqual(original);
+    expect(onAction).not.toHaveBeenCalled();
+  });
+
   it('renders saved locale and timezone instead of explicit browser defaults and reacts to preference changes', () => {
     // Keep real Intl formatting while fixing browser fallbacks independently of the host.
     vi.spyOn(Date.prototype, 'toLocaleString').mockImplementation(function (
