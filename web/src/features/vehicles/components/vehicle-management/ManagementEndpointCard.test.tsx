@@ -1,8 +1,9 @@
-import { fireEvent, render, renderHook, screen, within } from '@testing-library/react'
+import { act, fireEvent, render, renderHook, screen, within } from '@testing-library/react'
 import { QueryClient, QueryClientProvider, onlineManager } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
 import { MemoryRouter } from 'react-router-dom'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat'
 import { ApiError } from '@/api/client'
 import { ManagementEndpointCard } from './ManagementEndpointCard'
 import * as apiClient from '@/api/client'
@@ -59,12 +60,113 @@ const baseProps = {
 }
 
 describe('ManagementEndpointCard preservation', () => {
+  it.each([undefined, null, '', 'invalid', NaN, Infinity, -Infinity, true])(
+    'keeps unknown subscription amounts separate from measured zero: %s',
+    (value) => {
+      render(<MemoryRouter><ManagementEndpointCard {...baseProps}
+        endpointId="subscription-eligibility" kind="subscriptions"
+        data={{ eligible: [{ product: 'SUBSCRIPTION', billingOptions: [
+          { price: value, total: value, currencyCode: 'USD', billingPeriod: 'MONTHLY' },
+          { price: 0, total: 0, currencyCode: 'USD', billingPeriod: 'YEARLY' },
+        ] }] }}
+      /></MemoryRouter>)
+      expect(screen.getByText('—')).toBeInTheDocument()
+      expect(screen.getAllByText('$0.00', { exact: false })).toHaveLength(2)
+      expect(screen.getByText('Total $0.00')).toBeInTheDocument()
+      expect(screen.queryByText('Total —')).not.toBeInTheDocument()
+    },
+  )
+
+  it.each([
+    { price: -1234.5678, total: 0, currencyCode: 'EUR', first: '-€1,234.57', second: '-1.234,568 €', totalText: 'Total 0,000 €' },
+    { price: '12.3456', total: '-2.3456', currencyCode: '$', first: '$ 12.35', second: '$ 12,346', totalText: 'Total $ -2,346' },
+    { price: 12.3456, total: -2.3456, currencyCode: null, first: '12.35', second: '12,346', totalText: 'Total -2,346' },
+  ])('reacts to money preferences without guessing currency: %j', ({ price, total, currencyCode, first, second, totalText }) => {
+    setGlobalPrecision(0)
+    const data = Object.freeze({ eligible: [{ product: 'SUBSCRIPTION', billingOptions: [
+      { price, total, currencyCode, billingPeriod: 'MONTHLY' },
+    ] }] })
+    render(<MemoryRouter><ManagementEndpointCard {...baseProps}
+      endpointId="subscription-eligibility" kind="subscriptions" data={data}
+    /></MemoryRouter>)
+    expect(screen.getByText(first, { exact: false })).toBeInTheDocument()
+    act(() => {
+      setGlobalLocale('de-DE')
+      setGlobalPrecision(3)
+    })
+    expect(screen.getByText(second, { exact: false })).toBeInTheDocument()
+    expect(screen.getByText(totalText)).toBeInTheDocument()
+    expect(data.eligible[0].billingOptions[0]).toEqual({ price, total, currencyCode, billingPeriod: 'MONTHLY' })
+  })
+
+  afterEach(() => {
+    act(() => {
+      setGlobalLocale('en-US')
+      setGlobalPrecision(2)
+    })
+  })
+
   beforeEach(() => {
     preferences.locale = 'en-US'
     preferences.timezone = 'UTC'
     operationalMode.canWrite = true
     operationalMode.writeBlockReason = null
   })
+
+  it('updates primary specification numbers with preferences while retaining exact technical values', () => {
+    setGlobalLocale('en-US')
+    setGlobalPrecision(2)
+    const data = Object.freeze({
+      battery_capacity: 1234.56789, offset: -2.34567, count: 0,
+      vehicle_id: 123456, vehicleId: 123456, model_year: 2026,
+      option_code: 12345, latitude: 37.1234567, software_version: 2026.1234,
+      source_precision: 0.1234567, numeric_string: '0012.34567', enabled: false,
+    })
+    render(<MemoryRouter><ManagementEndpointCard {...baseProps} data={data} /></MemoryRouter>)
+    const table = screen.getByRole('table', { name: 'Vehicle specifications' })
+    expect(within(table).getByText('1,234.57')).toBeInTheDocument()
+    expect(within(table).getByText('-2.35')).toBeInTheDocument()
+    expect(within(table).getByText('0.00')).toBeInTheDocument()
+    for (const exact of ['123456', '2026', '12345', '37.1234567', '2026.1234', '0.1234567', '0012.34567', 'No']) {
+      expect(within(table).getByText(exact)).toBeInTheDocument()
+    }
+    expect(within(table).getAllByRole('rowheader', { name: 'Vehicle ID' })).toHaveLength(1)
+    act(() => {
+      setGlobalLocale('de-DE')
+      setGlobalPrecision(3)
+    })
+    expect(within(table).getByText('1.234,568')).toBeInTheDocument()
+    expect(within(table).getByText('-2,346')).toBeInTheDocument()
+    expect(within(table).getByText('0,000')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Technical response details' }))
+    const raw = screen.getByTestId('management-structured-data')
+    expect(within(raw).getByText('1234.56789')).toBeInTheDocument()
+    expect(within(raw).getByText('-2.34567')).toBeInTheDocument()
+    expect(within(raw).getByText('0')).toBeInTheDocument()
+    expect(data.battery_capacity).toBe(1234.56789)
+    expect(table).not.toHaveTextContent(/kWh|Wh|km|mi/)
+  })
+
+  it.each([undefined, null, '', 'invalid', NaN, Infinity, -Infinity])(
+    'does not turn absent or invalid specifications into measured zero: %s',
+    (value) => {
+      setGlobalPrecision(2)
+      render(<MemoryRouter><ManagementEndpointCard {...baseProps}
+        data={{ model: 'Model 3', battery_capacity: value, count: 0 }}
+      /></MemoryRouter>)
+      const table = screen.getByRole('table', { name: 'Vehicle specifications' })
+      expect(within(table).getAllByText('0.00')).toHaveLength(1)
+      const row = within(table).queryByRole('rowheader', { name: 'Battery capacity' })?.closest('tr')
+      if (typeof value === 'string') {
+        expect(row).toHaveTextContent(value)
+        expect(row).not.toHaveTextContent('0.00')
+      } else {
+        expect(row).toBeUndefined()
+      }
+      expect(within(table).getByText('Model 3')).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Technical response details' })).toBeInTheDocument()
+    },
+  )
 
   it.each([undefined, null, '', 'invalid', 0, 1, -1, 0.5, NaN, Infinity])(
     'keeps total-active unknown for an absent or invalid option status: %s',

@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { fireEvent, render, screen, within } from '@testing-library/react'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { act, fireEvent, render, screen, within } from '@testing-library/react'
+import { setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat'
 import { MemoryRouter } from 'react-router-dom'
 import type { Vehicle } from '@/types/vehicle'
 
@@ -150,7 +151,80 @@ beforeEach(() => {
   operationalMode.writeBlockReason = null
 })
 
+afterEach(() => {
+  act(() => {
+    setGlobalLocale('en-US')
+    setGlobalPrecision(2)
+  })
+})
+
 describe('VehicleManagementPage', () => {
+  it('preserves reported subscription currency and signed amounts in the real workspace', () => {
+    workspaceMode.real = true
+    setGlobalLocale('en-US')
+    setGlobalPrecision(2)
+    installHooks({ vehicles: [makeVehicle(1, 'Falcon')] })
+    for (const key of ['options', 'warranty', 'subscriptions', 'upgrades', 'specs', 'roles']) {
+      endpointQueries.set(key, {
+        data: { data: key === 'subscriptions' ? { eligible: [{
+          product: 'SUBSCRIPTION', billingOptions: [{
+            price: -12.3456, total: 0, currencyCode: 'EUR', billingPeriod: 'MONTHLY',
+          }],
+        }] } : null, fetched_at: null },
+        isSuccess: true, isPending: false, isLoading: false, fetchStatus: 'idle',
+      })
+    }
+    renderPage()
+    expect(screen.getByText('-€12.35', { exact: false })).toBeInTheDocument()
+    expect(screen.getByText('Total €0.00')).toBeInTheDocument()
+    act(() => {
+      setGlobalLocale('de-DE')
+      setGlobalPrecision(4)
+    })
+    expect(screen.getByText('-12,3456 €', { exact: false })).toBeInTheDocument()
+    expect(screen.getByText('Total 0,0000 €')).toBeInTheDocument()
+    expect(refreshEndpointMock).not.toHaveBeenCalled()
+    expect(document.querySelectorAll('[data-management-endpoint]')).toHaveLength(8)
+  })
+
+  it('uses numeric preferences in the real workspace without rounding identifiers or raw source data', () => {
+    workspaceMode.real = true
+    setGlobalLocale('en-US')
+    setGlobalPrecision(2)
+    const vehicle = makeVehicle(1, 'Falcon')
+    installHooks({ vehicles: [vehicle], selected: vehicle })
+    const data = Object.freeze({
+      capacity: 1234.56789, offset: -2.34567, count: 0,
+      missing: null, invalid: Infinity, vehicle_id: 123456, model_year: 2026,
+    })
+    for (const key of ['options', 'warranty', 'subscriptions', 'upgrades', 'specs', 'roles']) {
+      endpointQueries.set(key, {
+        data: { data: key === 'specs' ? data : null, fetched_at: null },
+        isSuccess: true, isPending: false, isLoading: false, fetchStatus: 'idle',
+      })
+    }
+    renderPage()
+    const table = screen.getByRole('table', { name: 'Vehicle specifications' })
+    expect(within(table).getByText('1,234.57')).toBeInTheDocument()
+    expect(within(table).getByText('-2.35')).toBeInTheDocument()
+    expect(within(table).getAllByText('0.00')).toHaveLength(1)
+    expect(within(table).queryByRole('rowheader', { name: 'Missing' })).not.toBeInTheDocument()
+    expect(within(table).queryByRole('rowheader', { name: 'Invalid' })).not.toBeInTheDocument()
+    act(() => {
+      setGlobalLocale('de-DE')
+      setGlobalPrecision(3)
+    })
+    expect(within(table).getByText('1.234,568')).toBeInTheDocument()
+    expect(within(table).getByText('123456')).toBeInTheDocument()
+    expect(within(table).getByText('2026')).toBeInTheDocument()
+    const card = table.closest('[data-management-endpoint]')
+    if (!(card instanceof HTMLElement)) throw new Error('Missing specification card')
+    fireEvent.click(within(card).getByRole('button', { name: 'Technical response details' }))
+    expect(within(card).getByText('1234.56789')).toBeInTheDocument()
+    expect(refreshSpecsMock).not.toHaveBeenCalled()
+    expect(document.querySelectorAll('[data-management-endpoint]')).toHaveLength(8)
+  })
+
   it.each([
     { status: null, summary: 'Unknown active of 1 options returned', label: 'Status unknown' },
     { status: false, summary: '0 active of 1 options returned', label: 'Inactive' },

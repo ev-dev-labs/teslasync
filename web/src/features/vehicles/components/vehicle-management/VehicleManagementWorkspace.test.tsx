@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import {
   fireEvent,
+  act,
   render,
   screen,
   waitFor,
@@ -8,7 +9,8 @@ import {
 } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter } from 'react-router-dom'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat'
 import { ToastProvider } from '@/components/feedback'
 
 const operationalMode = vi.hoisted(() => ({
@@ -235,7 +237,59 @@ beforeEach(() => {
   installRequestRouter()
 })
 
+afterEach(() => {
+  act(() => {
+    setGlobalLocale('en-US')
+    setGlobalPrecision(2)
+  })
+})
+
 describe('VehicleManagementWorkspace', () => {
+  it('reformats cached reported subscription money without refetching or changing currency', async () => {
+    setGlobalLocale('en-US')
+    setGlobalPrecision(0)
+    renderWorkspace()
+    await screen.findByText('Extended warranty')
+    const card = endpointCard('subscription-eligibility')
+    expect(card).toHaveTextContent('$60.00 / month')
+    expect(card).toHaveTextContent('Total $60.00')
+    const reads = calls('GET').length
+    act(() => {
+      setGlobalLocale('de-DE')
+      setGlobalPrecision(3)
+    })
+    expect(card).toHaveTextContent('60,000 $ / month')
+    expect(card).toHaveTextContent('Total 60,000 $')
+    expect(calls('GET')).toHaveLength(reads)
+    expect(calls('POST')).toHaveLength(0)
+  })
+
+  it('reformats cached specification numbers without refetching or changing source precision', async () => {
+    setGlobalLocale('en-US')
+    setGlobalPrecision(1)
+    const data = Object.freeze({ capacity: 1234.5678, offset: -2.3456, count: 0, vehicle_id: 123456 })
+    requestMock.mockImplementation((url: string) => Promise.resolve(
+      url.endsWith('/specs') ? { data, fetched_at: cachedAt } : responseFor(url),
+    ))
+    renderWorkspace()
+    const table = await screen.findByRole('table', { name: 'Vehicle specifications' })
+    expect(within(table).getByText('1,234.6')).toBeInTheDocument()
+    expect(within(table).getByText('-2.3')).toBeInTheDocument()
+    expect(within(table).getByText('0.0')).toBeInTheDocument()
+    const reads = calls('GET').length
+    act(() => {
+      setGlobalLocale('de-DE')
+      setGlobalPrecision(3)
+    })
+    expect(within(table).getByText('1.234,568')).toBeInTheDocument()
+    expect(within(table).getByText('123456')).toBeInTheDocument()
+    expect(calls('GET')).toHaveLength(reads)
+    expect(calls('POST')).toHaveLength(0)
+    fireEvent.click(within(endpointCard('vehicle-specs')).getByRole('button', { name: 'Technical response details' }))
+    expect(within(endpointCard('vehicle-specs')).getByText('1234.5678')).toBeInTheDocument()
+    expect(data.capacity).toBe(1234.5678)
+  })
+
   it('keeps mixed option statuses unknown in the workspace summary', async () => {
     requestMock.mockImplementation((url: string) => Promise.resolve(
       url.endsWith('/options')
@@ -292,7 +346,7 @@ describe('VehicleManagementWorkspace', () => {
     expect(screen.getByText('120,000')).toBeInTheDocument()
     expect(screen.getByText('Extended warranty')).toBeInTheDocument()
     expect(endpointCard('subscription-eligibility')).toHaveTextContent(
-      '$60 / month',
+      '$60.00 / month',
     )
     expect(screen.queryByText('warrantyDisplayName')).not.toBeInTheDocument()
     expect(screen.queryByText('must-never-render')).not.toBeInTheDocument()
