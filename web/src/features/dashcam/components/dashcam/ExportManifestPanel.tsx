@@ -6,11 +6,13 @@ import { LayoutCard } from '@/components/layout';
 import { InlineCallout } from '@/components/feedback';
 import type { ClipRecord } from '../../lib/types';
 import type { ReconstructionResult } from '../../lib/timelineAlignment';
-import { buildIncidentManifest, downloadJson, downloadBlobAs, drawRedactedFrame } from '../../lib/redactionExport';
+import { buildIncidentManifest, downloadJson, downloadBlobAs, drawRedactedFrame, type IncidentManifest } from '../../lib/redactionExport';
 
 export interface ExportManifestPanelProps {
   clip: ClipRecord;
   reconstruction: ReconstructionResult | null;
+  /** Optional scoped builder retains the caller's source trust and clock assumptions. */
+  buildManifest?: () => IncidentManifest;
 }
 
 /**
@@ -19,7 +21,7 @@ export interface ExportManifestPanelProps {
  * Neither export is a modified video file — this feature never claims to
  * produce one.
  */
-export function ExportManifestPanel({ clip, reconstruction }: ExportManifestPanelProps) {
+export function ExportManifestPanel({ clip, reconstruction, buildManifest }: ExportManifestPanelProps) {
   const { t } = useTranslation();
   const attemptRef = useRef<{ dispose: () => void } | null>(null);
   const [isPending, setIsPending] = useState(false);
@@ -37,7 +39,7 @@ export function ExportManifestPanel({ clip, reconstruction }: ExportManifestPane
   const handleManifestDownload = () => {
     setExportError(null);
     try {
-      const manifest = buildIncidentManifest(clip, reconstruction);
+      const manifest = buildManifest ? buildManifest() : buildIncidentManifest(clip, reconstruction);
       downloadJson(`${clip.fileName}.incident-manifest.json`, manifest);
     } catch (error) {
       setExportError(error instanceof Error ? error.message : t('dashcam.export.manifestFailed', 'The local manifest export failed.'));
