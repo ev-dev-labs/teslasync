@@ -6,17 +6,18 @@ import {
 } from '@/lib/unitConversion';
 import { getEfficiency } from '@/lib/drivesAggregation';
 import { formatDateShort } from '@/lib/dateFormat';
+import { gaugeTone } from '@/lib/tokens';
 
 /** This is still a Wh/km ceiling, not a display-unit ceiling. */
 export const EFFICIENCY_GAUGE_MAX_WH_PER_KM = 300;
 
-/** Existing semantic chart ramp; never used to color body text. */
+/** Wh/km thresholds use existing theme-aware semantic fills, not series preferences. */
 export function efficiencyColor(wh: number): string {
-  if (wh < 140) return '#39ff14';
-  if (wh < 170) return '#10b981';
-  if (wh < 200) return '#00f0ff';
-  if (wh < 240) return '#f59e0b';
-  return '#ef4444';
+  if (wh < 140) return gaugeTone.success;
+  if (wh < 170) return gaugeTone.success;
+  if (wh < 200) return gaugeTone.info;
+  if (wh < 240) return gaugeTone.warning;
+  return gaugeTone.danger;
 }
 
 export function finite(value: unknown): value is number {
@@ -135,6 +136,7 @@ export function buildEfficiencyModel(
   });
   const speedDist = speedRanges.filter(b => b.count > 0).map(b => ({
     range: `${b.range} ${prefs.speed}`,
+    avgEffWhKm: b.totalEff / b.count,
     avgEff: Math.round(toEfficiencyDisplay(b.totalEff / b.count)),
     count: b.count,
   })).filter(b => finite(b.avgEff));
