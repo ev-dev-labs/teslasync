@@ -2,6 +2,22 @@
 
 ## Current phase
 
+### Local Docker and safe fixture seed, actual05:19:18Z completed
+
+User-authorized local deployment is running at http://localhost:3119 from immutable
+`5590146cdf237eafc9d0d052f553eac1f60f33fa`; served service worker/API metrics matched.
+Actual build1->0 (deployment override timestamp quoting corrected),up0,seed0,verify0,
+idempotence0. Five owned services healthy,health/readiness200,migration255 dirtyfalse.
+Synthetic2vehicles/4drives/3charges; nonfixture records unchanged/reseed skipped.
+Tesla authentication is unconfigured (`no_token`), not a Fleet API acceptance.
+Raw `web\logs\local-docker-latest-and-drill-seed.log`; immutable archive/receipt under
+session `files\local-docker-latest-and-drill-seed-5590146c\`. All bounded work/claims
+released, task-owned containers deliberately left running. No source edits,reset,prune,
+volume deletion or dirty checkout build. Subsequent proof/report commits and active
+MQTT/HomeEnergy repairs are NOT silently included in this pinned deployment.
+Phases0-5 remain closed,Phase6 unfinished,Phase7 NOTRUN; no native/fullgate green.
+
+
 ### Strict actual-worker invariants and fast intake, 2026-10-14T04:48Z
 
 Continue the same branch; Phases0-5 remain closed, Phase6 unfinished,
