@@ -109,9 +109,10 @@ export function EvidencePanel({
               <Text as="p" variant="label">{item.source}</Text>
               <Text as="p" variant="caption">{item.summary}</Text>
               <Text as="p" variant="caption" className="mt-1">
-                {item.sample_count != null
-                  ? t('advancedIntelligence.evidence.sampleLine', '{{count}} samples · {{date}}', {
+                {item.sample_count != null && Number.isFinite(item.sample_count)
+                  ? t('advancedIntelligence.evidence.sampleLine', '{{formattedCount}} samples · {{date}}', {
                     count: item.sample_count,
+                    formattedCount: fmtInt(item.sample_count),
                     date: formatDateTime(item.observed_at),
                   })
                   : formatDateTime(item.observed_at)}
