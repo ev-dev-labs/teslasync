@@ -15,6 +15,10 @@
 
 import { describe, it, expect, vi } from 'vitest'
 import { fireEvent, render, screen } from '@testing-library/react'
+import { createInstance } from 'i18next'
+import * as reactI18next from 'react-i18next'
+import { Button } from '@/components/ui/Button'
+import { Textarea } from '@/components/ui/Textarea'
 
 import { AiOutputPanel, type AiOutputPanelProps } from './AiOutputPanel'
 import { AIFeatureCard, type AIFeatureStream } from './AIFeatureCard'
@@ -281,6 +285,141 @@ describe('AiOutputPanel', () => {
       rerender(<AiOutputPanel text="" state="idle" error={null} />)
       expect(screen.queryByTestId(PANEL)).toBeNull()
       expect(screen.queryByTestId('helix-evidence-trail')).toBeNull()
+    })
+  })
+
+  describe('known transport error recovery', () => {
+    it.each([
+      'stream_no_body',
+      'stream_incomplete',
+      'stream_http_400',
+      'stream_http_404',
+      'stream_http_408',
+      'stream_http_500',
+      'stream_http_502',
+      'stream_http_503',
+      'stream_http_504',
+    ])('explains recovery for %s while retaining literal diagnostics and partial prose', (error) => {
+      const text = 'مرحبا\n\n0 <script>literal</script>'
+      renderPanel({ state: 'error', error, text })
+      const alert = screen.getByRole('alert')
+      expect(alert).toHaveTextContent('Helix temporarily unavailable')
+      expect(alert).toHaveTextContent('Please try again.')
+      expect(alert).toHaveTextContent('The non-Helix baseline continues to work.')
+      expect(alert.querySelector('code')?.textContent).toBe(error)
+      const prose = screen.getByTestId(PANEL).querySelectorAll('p')[1]
+      expect(prose.textContent).toBe(text)
+      expect(prose).toHaveClass('whitespace-pre-wrap', 'break-words')
+      expect(alert.compareDocumentPosition(prose) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+      expect(screen.queryByTestId(THINKING)).toBeNull()
+      expect(screen.queryByText(/offline|successful|verified|last success|updated|no output/i)).toBeNull()
+      expect(screen.getByTestId(PANEL).querySelector('script')).toBeNull()
+    })
+
+    it.each([
+      ['stream_http_401', 'Sign in required', 'Sign in'],
+      ['stream_http_403', 'Permission denied', 'Your account does not have permission'],
+      ['stream_http_429', 'Helix temporarily unavailable', 'Wait before retrying.'],
+    ])('gives accurate recovery for %s without inventing an expired session or provider outage', (error, title, nextStep) => {
+      renderPanel({ state: 'error', error })
+      const alert = screen.getByRole('alert')
+      expect(alert).toHaveTextContent(title)
+      expect(alert).toHaveTextContent(nextStep)
+      expect(alert).toHaveTextContent('The non-Helix baseline continues to work.')
+      expect(alert.querySelector('code')?.textContent).toBe(error)
+      expect(alert).not.toHaveTextContent(/offline|session has expired|provider|automatically/)
+    })
+
+    it.each([
+      'Failed to fetch',
+      'provider_unavailable',
+      'unknown_future_code',
+      'stream_http_999',
+      'stream_http_404: extra diagnostic',
+      ' stream_incomplete ',
+      'toString',
+      '',
+    ])('keeps unknown error %j verbatim without inferring offline or a known-code recovery', (error) => {
+      renderPanel({ state: 'error', error })
+      const alert = screen.getByRole('alert')
+      expect(alert.textContent).toBe(`Helix error: ${error}`)
+      expect(alert.querySelector('code')).toBeNull()
+      expect(alert).not.toHaveTextContent(/offline|temporarily unavailable|try again|provider is not responding/i)
+      expect(screen.getByTestId(PANEL).querySelectorAll('p')).toHaveLength(1)
+    })
+
+    it('uses translated canonical recovery keys and leaves the technical code untranslated', async () => {
+      const instance = createInstance()
+      await instance.init({
+        lng: 'fr',
+        fallbackLng: false,
+        resources: {
+          fr: {
+            translation: {
+              helix: { errorLabel: 'Erreur Helix :' },
+              ai: {
+                limit: {
+                  title: { generic: 'Helix temporairement indisponible' },
+                  desc: { generic: 'La méthode sans Helix reste disponible.' },
+                },
+              },
+              errorBoundary: { body: 'Veuillez réessayer.' },
+            },
+          },
+        },
+      })
+      const translation = vi.spyOn(reactI18next, 'useTranslation').mockImplementation(() => {
+        const result: [typeof instance.t, typeof instance, boolean] = [instance.t, instance, true]
+        return Object.assign(result, { t: instance.t, i18n: instance, ready: true })
+      })
+      try {
+        renderPanel({ state: 'error', error: 'stream_incomplete', text: 'texte conservé' })
+        const alert = screen.getByRole('alert')
+        expect(alert).toHaveTextContent('Erreur Helix :')
+        expect(alert).toHaveTextContent('Helix temporairement indisponible')
+        expect(alert).toHaveTextContent('Veuillez réessayer.')
+        expect(alert).toHaveTextContent('La méthode sans Helix reste disponible.')
+        expect(alert.querySelector('code')?.textContent).toBe('stream_incomplete')
+        expect(alert).not.toHaveTextContent(/temporarily unavailable|Please try again|non-Helix baseline/)
+        expect(screen.getByText('texte conservé')).toBeVisible()
+      } finally {
+        translation.mockRestore()
+      }
+    })
+
+    it('keeps the caller manual baseline, actions and re-draft available across a known failure and retained phases', () => {
+      const start = vi.fn()
+      const copy = vi.fn()
+      const apply = vi.fn()
+      const manualDraft = '{"title":"manual baseline","value":0}'
+      const stream: AIFeatureStream = {
+        state: 'error', text: 'partial draft', error: 'stream_http_404', start,
+      }
+      const card = (current: AIFeatureStream) => (
+        <>
+          <Textarea aria-label="Manual JSON editor" defaultValue={manualDraft} />
+          <Button onClick={copy}>Copy manual draft</Button>
+          <AIFeatureCard title="Dashboard" description="Source context" buttonLabel="Draft dashboard" canStart stream={current}>
+            <Button onClick={apply}>Apply retained proposal</Button>
+          </AIFeatureCard>
+        </>
+      )
+      const { rerender } = render(card(stream))
+      expect(screen.getByRole('textbox', { name: 'Manual JSON editor' })).toHaveValue(manualDraft)
+      fireEvent.click(screen.getByRole('button', { name: 'Copy manual draft' }))
+      fireEvent.click(screen.getByRole('button', { name: 'Apply retained proposal' }))
+      fireEvent.click(screen.getByRole('button', { name: /Draft dashboard/ }))
+      expect(copy).toHaveBeenCalledTimes(1)
+      expect(apply).toHaveBeenCalledTimes(1)
+      expect(start).toHaveBeenCalledTimes(1)
+      expect(screen.getByText('partial draft')).toBeVisible()
+      for (const state of ['idle', 'paused-confirm', 'streaming', 'done'] as const) {
+        rerender(card({ ...stream, state }))
+        expect(screen.queryByRole('alert')).toBeNull()
+        expect(screen.getByText('partial draft')).toBeVisible()
+        expect(screen.getByRole('textbox', { name: 'Manual JSON editor' })).toHaveValue(manualDraft)
+        expect(screen.getByRole('button', { name: /Draft dashboard/ }).hasAttribute('disabled')).toBe(state === 'streaming')
+      }
     })
   })
 })

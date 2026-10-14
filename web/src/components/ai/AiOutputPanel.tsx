@@ -30,6 +30,7 @@
 
 import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
+import type { TFunction } from 'i18next'
 
 import { HelixMark } from '@/components/branding/HelixMark'
 import { AIThinkingIndicator } from '@/components/ai/AIThinkingIndicator'
@@ -61,6 +62,35 @@ export interface AiOutputPanelProps {
   pendingChild?: ReactNode | null
 }
 
+function errorRecovery(t: TFunction, error: string | null) {
+  // Only hook-owned transport codes are classified; arbitrary failures do not
+  // establish connectivity, provider health, or a supported recovery reason.
+  if (
+    error !== 'stream_no_body' &&
+    error !== 'stream_incomplete' &&
+    !/^stream_http_[45]\d{2}$/.test(error ?? '')
+  ) return null
+
+  if (error === 'stream_http_401') {
+    return {
+      title: t('error.unauthorized.title', 'Sign in required'),
+      nextStep: t('error.unauthorized.cta', 'Sign in'),
+    }
+  }
+  if (error === 'stream_http_403') {
+    return {
+      title: t('error.forbidden.title', 'Permission denied'),
+      nextStep: t('error.forbidden.message', 'Your account does not have permission to view or change this resource.'),
+    }
+  }
+  return {
+    title: t('ai.limit.title.generic', 'Helix temporarily unavailable'),
+    nextStep: error === 'stream_http_429'
+      ? t('error.waiting.retryMessage', 'Requests are paused briefly. Wait before retrying.')
+      : t('errorBoundary.body', 'An unexpected error occurred. Please try again.'),
+  }
+}
+
 export function AiOutputPanel({
   text,
   state,
@@ -70,6 +100,7 @@ export function AiOutputPanel({
   pendingChild,
 }: AiOutputPanelProps): JSX.Element | null {
   const { t } = useTranslation()
+  const recovery = state === 'error' ? errorRecovery(t, error) : null
   const hasAnything =
     text.length > 0 ||
     activity.length > 0 ||
@@ -90,7 +121,22 @@ export function AiOutputPanel({
           />
           <span className="min-w-0 break-words">
             <Text weight="medium">{t('helix.errorLabel', 'Helix error:')}</Text>{' '}
-            {error ?? t('ai.common.errorUnknown', 'unknown')}
+            {recovery ? (
+              <>
+                <Text weight="medium">{recovery.title}</Text>
+                <Text as="span" variant="body" className="block">
+                  {recovery.nextStep}
+                </Text>
+                <Text as="span" variant="bodySm" className="block">
+                  {t('ai.limit.desc.generic', 'Helix features are temporarily unavailable. The non-Helix baseline continues to work.')}
+                </Text>
+                <Text as="code" variant="code" className="block whitespace-pre-wrap break-words">
+                  {error}
+                </Text>
+              </>
+            ) : (
+              error ?? t('ai.common.errorUnknown', 'unknown')
+            )}
           </span>
         </Text>
       )}
