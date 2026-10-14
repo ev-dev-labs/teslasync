@@ -1,3 +1,50 @@
+# STRICT RULES — current operating priority
+
+These rules supersede conflicting orchestration instructions below. Repository
+engineering, safety, privacy, permission, and evidence-integrity requirements
+still apply.
+
+## Invariants — after every action and every health check
+
+- **I1:** Keep 32 actual running subagents whenever actionable pending items
+  exist, subject to real runtime capacity and permissions. Queue statuses are
+  never a live-worker count.
+- **I2:** `[~]` must equal the actual live-worker count. Resolve every orphaned
+  `[~]` immediately: available result goes through intake; otherwise reset to
+  `[ ]`, preserving attempts. Never release an unconfirmed live writer.
+- **I3:** Process every returned result through intake before any other work.
+- If an invariant breaks, stop lower-priority work, repair it, then continue.
+
+## Orchestrator scope
+
+The orchestrator only dispatches, intakes, commits, pushes, updates the queue,
+performs health checks, and runs phase gates. Do not run scoped tests,
+verification scripts, oracles, fixture repairs, boundary checks, or
+investigations. Queue that work for an exclusive worker.
+
+## Fast intake — under one minute per item
+
+Check reported files are in scope and the diff is non-empty, commit, push, and
+mark `[x]`. Do not rerun workers' scoped tests. If further verification is
+needed, create a verification-worker item. Preserve failed/unexecuted evidence
+honestly; intake is not native/application acceptance.
+
+## Priority order
+
+1. Fix broken invariants.
+2. Intake returned results.
+3. Refill actual running slots to 32.
+4. Everything else.
+
+Print the actual census as `live X/32 | [~] Y | pending Z`; X and Y must match.
+
+The sole ten-minute health-check schedule uses this exact prompt:
+
+`HEALTH CHECK per ../docs/orchestrator-loop.md. Check invariants I1-I3 first and fix any violation before anything else. Skip if a health check is already in progress.`
+
+If the host exposes no built-in scheduler, record that limitation; never
+invent a schedule or create a custom substitute.
+
 # TeslaSync Frontend Modernization: Orchestrator Loop
 
 This is the sole operating playbook for this modernization session. It
