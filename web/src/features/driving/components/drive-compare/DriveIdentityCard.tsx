@@ -4,7 +4,7 @@ import { CalendarClock, MapPin } from 'lucide-react';
 import { RouteDisplay } from '@/components/data-display';
 import { GlassPanel, Badge, MetricLabel, MetricValue, PanelTitle, Text } from '@/components/ui';
 import { useUnits } from '@/hooks/useUnits';
-import { formatDateTime, formatTime } from '@/lib/dateFormat';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import { cn } from '@/lib/cn';
 import type { DriveDetail } from '@/types/driving';
 
@@ -19,6 +19,7 @@ interface DriveIdentityCardProps {
 export function DriveIdentityCard({ side, drive, state }: DriveIdentityCardProps) {
   const { t } = useTranslation();
   const { formatDistance, formatDuration, formatTemperature } = useUnits();
+  const { formatDateTime, formatTime } = useDateFormat();
   const sideLabel = side === 'a'
     ? t('driveCompare.driveA', 'Drive A')
     : t('driveCompare.driveB', 'Drive B');

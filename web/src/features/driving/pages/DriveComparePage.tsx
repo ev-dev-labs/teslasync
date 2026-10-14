@@ -13,7 +13,7 @@ import { usePageTitle } from '@/hooks/usePageTitle';
 import { useDataState } from '@/hooks/useDataState';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useUnits } from '@/hooks/useUnits';
-import { formatDateShort } from '@/lib/dateFormat';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import type { Drive } from '@/types/driving';
 
 import {
@@ -42,6 +42,7 @@ export default function DriveComparePage() {
   const { vehicleId } = useSelectedVehicle();
   const vehicleIdStr = vehicleId != null ? String(vehicleId) : undefined;
   const { formatDistance } = useUnits();
+  const { formatDateShort } = useDateFormat();
   const drivesQuery = useDrives(vehicleIdStr, DRIVE_HISTORY_WINDOW);
   const drivesState = useDataState(drivesQuery, { provenance: 'historical' });
   const drives = useMemo<Drive[]>(() => drivesQuery.data ?? [], [drivesQuery.data]);
@@ -50,13 +51,13 @@ export default function DriveComparePage() {
   const hasDrive = (id: string) => drives.some((drive) => String(drive.id) === id);
   const requestedA = searchParams.get('drive_a') ?? '';
   const requestedB = searchParams.get('drive_b') ?? '';
-  const activeA = requestedA && hasDrive(requestedA)
+  const activeA = requestedA
     ? requestedA
     : drives[0]
       ? String(drives[0].id)
       : '';
   const fallbackB = drives.find((drive) => String(drive.id) !== activeA);
-  const activeB = requestedB && hasDrive(requestedB)
+  const activeB = requestedB
     ? requestedB
     : fallbackB
       ? String(fallbackB.id)
@@ -79,12 +80,14 @@ export default function DriveComparePage() {
     setSearchParams(next, { replace: true });
   };
 
-  const driveAQuery = useDrive(activeA);
-  const driveBQuery = useDrive(activeB);
+  const detailAId = vehicleId != null && hasDrive(activeA) ? activeA : '';
+  const detailBId = vehicleId != null && hasDrive(activeB) ? activeB : '';
+  const driveAQuery = useDrive(detailAId);
+  const driveBQuery = useDrive(detailBId);
   const driveAState = useDataState(driveAQuery, { provenance: 'historical' });
   const driveBState = useDataState(driveBQuery, { provenance: 'historical' });
-  const driveA = driveAQuery.data ?? null;
-  const driveB = driveBQuery.data ?? null;
+  const driveA = detailAId ? driveAQuery.data ?? null : null;
+  const driveB = detailBId ? driveBQuery.data ?? null : null;
   const sameDrive = activeA !== '' && activeA === activeB;
 
   const rows = useMemo(
@@ -100,26 +103,39 @@ export default function DriveComparePage() {
       value: String(drive.id),
       label: `${formatDateShort(drive.startTs)} · ${formatDistance(drive.distanceM)}`,
     })),
-    [drives, formatDistance],
+    [drives, formatDateShort, formatDistance],
   );
 
   const listError = drivesState.fatalError;
-  const detailAError = driveAState.fatalError;
-  const detailBError = driveBState.fatalError;
+  const detailAError = detailAId ? driveAState.fatalError : null;
+  const detailBError = detailBId ? driveBState.fatalError : null;
   const listLoading = drivesState.status === 'initial';
+  const unavailableSelection = t(
+    'driveCompare.selectionUnavailable',
+    "The requested drive is unavailable in this vehicle's loaded history window. Choose a drive to replace it.",
+  );
+  const unavailableA = !listLoading && !listError && activeA !== '' && !detailAId;
+  const unavailableB = !listLoading && !listError && activeB !== '' && !detailBId;
+  const optionsFor = (id: string) => id && !hasDrive(id)
+    ? [{ value: id, label: listLoading
+        ? t('driveCompare.loading', 'Loading drive comparison')
+        : unavailableSelection, disabled: true }, ...driveOptions]
+    : driveOptions;
   const needTwo = !listLoading && !listError && drives.length < 2;
-  const selectionMessage = needTwo
-    ? t('driveCompare.needTwo', 'At least two drives are needed for a comparison.')
-    : sameDrive
-      ? t(
-          'driveCompare.samePick',
-          'Pick two different drives with the A and B selectors above to continue.',
-        )
-      : null;
+  const selectionMessage = unavailableA || unavailableB
+    ? unavailableSelection
+    : needTwo
+      ? t('driveCompare.needTwo', 'At least two drives are needed for a comparison.')
+      : sameDrive
+        ? t(
+            'driveCompare.samePick',
+            'Pick two different drives with the A and B selectors above to continue.',
+          )
+        : null;
 
   const combinedLoading = listLoading
-    || (activeA !== '' && driveAState.status === 'initial')
-    || (activeB !== '' && driveBState.status === 'initial');
+    || (detailAId !== '' && driveAState.status === 'initial')
+    || (detailBId !== '' && driveBState.status === 'initial');
   const combinedError = listError ?? detailAError ?? detailBError;
   const missingDetails = !combinedLoading && !combinedError && !selectionMessage && (!driveA || !driveB)
     ? t('driveCompare.detailsUnavailable', 'Drive details are not available for this comparison.')
@@ -130,8 +146,8 @@ export default function DriveComparePage() {
     emptyMessage: selectionMessage ?? missingDetails,
     onRetry: () => {
       void drivesQuery.refetch();
-      if (activeA) void driveAQuery.refetch();
-      if (activeB) void driveBQuery.refetch();
+      if (detailAId) void driveAQuery.refetch();
+      if (detailBId) void driveBQuery.refetch();
     },
   };
 
@@ -142,7 +158,7 @@ export default function DriveComparePage() {
     const query = side === 'a' ? driveAQuery : driveBQuery;
     const detailError = side === 'a' ? detailAError : detailBError;
     const source = side === 'a' ? driveAState : driveBState;
-    const activeId = side === 'a' ? activeA : activeB;
+    const activeId = side === 'a' ? detailAId : detailBId;
     const isLoading = listLoading || (activeId !== '' && source.status === 'initial');
     const error = listError ?? detailError;
     const noDetail = !isLoading && !error && !selectionMessage && !hasData
@@ -151,10 +167,12 @@ export default function DriveComparePage() {
     return {
       isLoading,
       error,
-      emptyMessage: selectionMessage ?? noDetail,
+      emptyMessage: (side === 'a' ? unavailableA : unavailableB)
+        ? unavailableSelection
+        : unavailableA || unavailableB ? noDetail : selectionMessage ?? noDetail,
       onRetry: () => {
         void drivesQuery.refetch();
-        if (side === 'a' ? activeA : activeB) void query.refetch();
+        if (activeId) void query.refetch();
       },
     };
   };
@@ -170,14 +188,15 @@ export default function DriveComparePage() {
       query={[drivesQuery, driveAQuery, driveBQuery]}
       contextActions={
         <div className="grid w-full min-w-0 max-w-full grid-cols-1 gap-3 sm:grid-cols-2">
-          {driveOptions.length > 0 ? (
+          {driveOptions.length > 0 || activeA || activeB ? (
             <>
               <Select
                 label={t('driveCompare.pickA', 'Choose drive A')}
                 aria-label={t('driveCompare.pickA', 'Choose drive A')}
                 value={activeA}
                 onChange={(event) => updateSelection('drive_a', event.target.value)}
-                options={driveOptions}
+                options={optionsFor(activeA)}
+                hint={unavailableA ? unavailableSelection : undefined}
                 size="sm"
               />
               <Select
@@ -185,7 +204,8 @@ export default function DriveComparePage() {
                 aria-label={t('driveCompare.pickB', 'Choose drive B')}
                 value={activeB}
                 onChange={(event) => updateSelection('drive_b', event.target.value)}
-                options={driveOptions}
+                options={optionsFor(activeB)}
+                hint={unavailableB ? unavailableSelection : undefined}
                 size="sm"
               />
             </>

@@ -1,20 +1,45 @@
 import type { ChangeEvent, ReactNode } from 'react';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { MemoryRouter, useLocation } from 'react-router-dom';
 
 import type { DriveDetail } from '@/types/driving';
+import { formatDateShort, formatDateTime, formatTime } from '@/lib/dateFormat';
+import { DriveIdentityCard } from '../components/drive-compare/DriveIdentityCard';
+import { HeadToHeadGrid } from '../components/drive-compare/HeadToHeadGrid';
+import { compareDrives } from '../lib/driveCompare';
 
 const {
   pageTitleMock,
   selectedVehicleMock,
   useDriveMock,
   useDrivesMock,
+  settingsMock,
+  timezoneMock,
+  formatDistanceMock,
 } = vi.hoisted(() => ({
   pageTitleMock: vi.fn(),
   selectedVehicleMock: vi.fn(),
   useDriveMock: vi.fn(),
   useDrivesMock: vi.fn(),
+  settingsMock: vi.fn(),
+  timezoneMock: vi.fn(),
+  formatDistanceMock: (value: number) => `${value} m`,
+}));
+
+vi.mock('@/hooks/useSettings', () => ({
+  useSettings: () => settingsMock(),
+}));
+
+vi.mock('@/lib/timezone', () => ({
+  useTimezone: () => timezoneMock(),
+}));
+
+vi.mock('@/hooks/useNumberFormatting', () => ({
+  useNumberFormatting: () => ({
+    fmtNumber: (value: number) => String(value),
+    fmtPercent: (value: number) => `${value}%`,
+  }),
 }));
 
 vi.mock('react-i18next', () => ({
@@ -42,7 +67,12 @@ vi.mock('@/hooks/usePageTitle', () => ({
 
 vi.mock('@/hooks/useUnits', () => ({
   useUnits: () => ({
-    formatDistance: (value: number) => `${value} m`,
+    formatDistance: formatDistanceMock,
+    formatDuration: (value: number) => `${value} s`,
+    formatTemperature: (value: number) => `${value} C`,
+    formatEnergy: (value: number) => `${value} Wh`,
+    formatSpeed: (value: number) => `${value} m/s`,
+    unitPrefs: { distance: 'km' },
   }),
 }));
 
@@ -51,28 +81,38 @@ vi.mock('@/components/forms', () => ({
 }));
 
 vi.mock('@/components/ui', () => ({
+  GlassPanel: ({ children, ...props }: { children: ReactNode }) => <section {...props}>{children}</section>,
+  Badge: ({ children }: { children: ReactNode }) => <span>{children}</span>,
+  MetricLabel: ({ children }: { children: ReactNode }) => <span>{children}</span>,
+  MetricValue: ({ children }: { children: ReactNode }) => <span>{children}</span>,
+  PanelTitle: ({ children }: { children: ReactNode }) => <h2>{children}</h2>,
+  Text: ({ children }: { children: ReactNode }) => <span>{children}</span>,
+  HelpTooltip: () => null,
   Select: ({
     'aria-label': ariaLabel,
     label,
     value,
     onChange,
     options,
+    hint,
   }: {
     'aria-label': string;
     label?: string;
     value: string;
     onChange: (event: ChangeEvent<HTMLSelectElement>) => void;
-    options: Array<{ value: string; label: string }>;
+    options: Array<{ value: string; label: string; disabled?: boolean }>;
+    hint?: string;
   }) => (
     <div>
       <label>
         {label}
         <select aria-label={ariaLabel} value={value} onChange={onChange}>
           {options.map((option) => (
-            <option key={option.value} value={option.value}>{option.label}</option>
+            <option key={option.value} value={option.value} disabled={option.disabled}>{option.label}</option>
           ))}
         </select>
       </label>
+      {hint && <p>{hint}</p>}
     </div>
   ),
 }));
@@ -147,12 +187,14 @@ function LocationEvidence() {
 }
 
 function renderPage(initialEntry = '/drive-compare') {
-  return render(
+  const workspace = () => (
     <MemoryRouter initialEntries={[initialEntry]}>
       <DriveComparePage />
       <LocationEvidence />
     </MemoryRouter>,
   );
+  const result = render(workspace());
+  return { ...result, rerenderPage: () => result.rerender(workspace()) };
 }
 
 function query(overrides: Record<string, unknown> = {}) {
@@ -212,6 +254,8 @@ const SECTION_IDS = [
 
 beforeEach(() => {
   vi.clearAllMocks();
+  settingsMock.mockReturnValue({ settings: { tz_display_default: 'user' }, locale: 'en-US' });
+  timezoneMock.mockReturnValue('UTC');
   selectedVehicleMock.mockReturnValue({ vehicleId: 42 });
   useDrivesMock.mockReturnValue(query({ data: [driveA, driveB] }));
   useDriveMock.mockImplementation((id: string) =>
@@ -219,6 +263,128 @@ beforeEach(() => {
 });
 
 describe('DriveComparePage', () => {
+  it('refreshes memoized option dates on locale and timezone changes without changing either selection or timestamps', () => {
+    const lateDrive = { ...driveA, startTs: '2026-08-01T00:30:00Z' };
+    useDrivesMock.mockReturnValue(query({ data: [lateDrive, driveB] }));
+    const { rerenderPage } = renderPage('/drive-compare?drive_a=2&drive_b=1&origin=history');
+    const expectDates = (locale: string, tz: string) => {
+      for (const label of ['Choose drive A', 'Choose drive B']) {
+        const selector = screen.getByRole('combobox', { name: label });
+        expect(within(selector).getByRole('option', {
+          name: `${formatDateShort(lateDrive.startTs, { locale, tz })} · 10000 m`,
+        })).toHaveValue('1');
+      }
+      expect(screen.getByLabelText('Choose drive A')).toHaveValue('2');
+      expect(screen.getByLabelText('Choose drive B')).toHaveValue('1');
+      expect(screen.getByTestId('location')).toHaveTextContent('?drive_a=2&drive_b=1&origin=history');
+    };
+    expectDates('en-US', 'UTC');
+    timezoneMock.mockReturnValue('America/Los_Angeles');
+    rerenderPage();
+    expectDates('en-US', 'America/Los_Angeles');
+    settingsMock.mockReturnValue({ settings: { tz_display_default: 'user' }, locale: 'de-DE' });
+    rerenderPage();
+    expectDates('de-DE', 'America/Los_Angeles');
+    expect(lateDrive.startTs).toBe('2026-08-01T00:30:00Z');
+    expect(driveB.startTs).toBe('2026-08-02T08:00:00Z');
+  });
+
+  it('updates populated identity dates, end times and head-to-head headers with display preferences', () => {
+    const earlyDrive = { ...driveA, startTs: '2026-08-01T00:30:00Z', endTs: '2026-08-01T01:00:00Z' };
+    const state = { isLoading: false, error: null, emptyMessage: null, onRetry: vi.fn() };
+    const workspace = () => (
+      <>
+        <DriveIdentityCard side="a" drive={earlyDrive} state={state} />
+        <DriveIdentityCard side="b" drive={driveB} state={state} />
+        <HeadToHeadGrid rows={compareDrives(earlyDrive, driveB)} startA={earlyDrive.startTs} startB={driveB.startTs} state={state} />
+      </>
+    );
+    const { rerender } = render(workspace());
+    const expectDates = (locale: string, tz: string) => {
+      const opts = { locale, tz };
+      for (const [side, drive] of [['a', earlyDrive], ['b', driveB]] as const) {
+        expect(screen.getByTestId(`drive-compare-identity-${side}`)).toHaveTextContent(
+          `${formatDateTime(drive.startTs, opts)} – ${formatTime(drive.endTs, opts)}`,
+        );
+        expect(screen.getByTestId('drive-compare-grid')).toHaveTextContent(formatDateShort(drive.startTs, opts));
+      }
+      expect(screen.getByRole('table')).toBeInTheDocument();
+      expect(screen.getAllByRole('rowheader')).toHaveLength(10);
+    };
+    expectDates('en-US', 'UTC');
+    timezoneMock.mockReturnValue('America/Los_Angeles');
+    rerender(workspace());
+    expectDates('en-US', 'America/Los_Angeles');
+    settingsMock.mockReturnValue({ settings: { tz_display_default: 'user' }, locale: 'de-DE' });
+    rerender(workspace());
+    expectDates('de-DE', 'America/Los_Angeles');
+    expect(earlyDrive.startTs).toBe('2026-08-01T00:30:00Z');
+    expect(earlyDrive.endTs).toBe('2026-08-01T01:00:00Z');
+  });
+
+  it('retains requested IDs while history loads and resolves them without substitution', () => {
+    useDrivesMock.mockReturnValue(query());
+    useDriveMock.mockImplementation((id: string) =>
+      query({ data: id === '1' ? driveA : id === '2' ? driveB : undefined }));
+    const { rerenderPage } = renderPage('/drive-compare?drive_a=2&drive_b=1&origin=history');
+
+    expect(screen.getByTestId('location')).toHaveTextContent('?drive_a=2&drive_b=1&origin=history');
+    expect(screen.getByLabelText('Choose drive A')).toHaveValue('2');
+    expect(screen.getByLabelText('Choose drive B')).toHaveValue('1');
+    expect(useDriveMock.mock.calls.every(([id]) => id === '')).toBe(true);
+    for (const id of SECTION_IDS) expect(screen.getByTestId(id)).toHaveTextContent('loading');
+
+    useDrivesMock.mockReturnValue(query({ data: [driveA, driveB] }));
+    rerenderPage();
+
+    expect(screen.getByTestId('location')).toHaveTextContent('?drive_a=2&drive_b=1&origin=history');
+    expect(useDriveMock).toHaveBeenCalledWith('2');
+    expect(useDriveMock).toHaveBeenCalledWith('1');
+    for (const id of SECTION_IDS) expect(screen.getByTestId(id)).toHaveTextContent('ready');
+  });
+
+  it.each(['drive_a', 'drive_b'] as const)(
+    'explains an unavailable %s and replaces it only on deliberate selection',
+    (key) => {
+      renderPage(`/drive-compare?drive_a=${key === 'drive_a' ? '999' : '1'}&drive_b=${key === 'drive_b' ? '999' : '2'}&origin=history`);
+      const selector = screen.getByLabelText(key === 'drive_a' ? 'Choose drive A' : 'Choose drive B');
+      expect(selector).toHaveValue('999');
+      expect(screen.getByTestId('location')).toHaveTextContent(`${key}=999`);
+      expect(useDriveMock).not.toHaveBeenCalledWith('999');
+      expect(screen.getByTestId('compare-grid')).toHaveTextContent(
+        "The requested drive is unavailable in this vehicle's loaded history window. Choose a drive to replace it.",
+      );
+      expect(screen.getByTestId(key === 'drive_a' ? 'compare-identity-b' : 'compare-identity-a')).toHaveTextContent('ready');
+
+      fireEvent.change(selector, { target: { value: key === 'drive_a' ? '1' : '2' } });
+      expect(screen.getByTestId('location')).toHaveTextContent('?drive_a=1&drive_b=2&origin=history');
+      for (const id of SECTION_IDS) expect(screen.getByTestId(id)).toHaveTextContent('ready');
+    },
+  );
+
+  it('defaults only the absent selection and retains it if the history window changes', () => {
+    const { rerenderPage } = renderPage('/drive-compare?drive_a=999&origin=history');
+    expect(screen.getByTestId('location')).toHaveTextContent('?drive_a=999&origin=history&drive_b=1');
+    expect(useDriveMock).not.toHaveBeenCalledWith('999');
+
+    useDrivesMock.mockReturnValue(query({ data: [driveB] }));
+    useDriveMock.mockClear();
+    rerenderPage();
+    expect(screen.getByTestId('location')).toHaveTextContent('?drive_a=999&origin=history&drive_b=1');
+    expect(screen.getByLabelText('Choose drive B')).toHaveValue('1');
+    expect(useDriveMock.mock.calls.every(([id]) => id === '')).toBe(true);
+  });
+
+  it('retains unavailable selections when history is empty, without fetching arbitrary identities', () => {
+    useDrivesMock.mockReturnValue(query({ data: [] }));
+    renderPage('/drive-compare?drive_a=999&drive_b=998');
+    expect(screen.getByTestId('location')).toHaveTextContent('?drive_a=999&drive_b=998');
+    expect(screen.getByLabelText('Choose drive A')).toHaveValue('999');
+    expect(screen.getByLabelText('Choose drive B')).toHaveValue('998');
+    expect(useDriveMock.mock.calls.every(([id]) => id === '')).toBe(true);
+    for (const id of SECTION_IDS) expect(screen.getByTestId(id)).toHaveTextContent('unavailable');
+  });
+
   it('shows distinct visible labels in a bounded stacked mobile selector layout', () => {
     renderPage('/drive-compare?drive_a=2&drive_b=1');
 
