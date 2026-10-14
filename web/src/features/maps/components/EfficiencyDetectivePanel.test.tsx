@@ -66,6 +66,120 @@ beforeEach(() => {
 });
 
 describe('EfficiencyDetectivePanel', () => {
+  it('keeps a selected vehicle awaiting its first connection distinct from resolved empty data and offers recovery', () => {
+    const refetch = vi.fn();
+    mockShift.mockReturnValue({
+      data: undefined, isLoading: false, isPending: true, isSuccess: false,
+      isError: false, error: null, fetchStatus: 'paused', refetch,
+    });
+    const { rerender } = render(<EfficiencyDetectivePanel vehicleId="4" />);
+    expect(screen.getByRole('status')).toHaveTextContent(
+      'Waiting for a connection before this source can load. Missing evidence remains unknown.',
+    );
+    expect(screen.queryByText('Select a vehicle to diagnose efficiency shifts.')).not.toBeInTheDocument();
+    expect(screen.queryByText('No efficiency data available yet')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    expect(refetch).toHaveBeenCalledTimes(1);
+
+    mockShift.mockReturnValue({
+      data: null, isLoading: false, isPending: false, isSuccess: true,
+      isError: false, error: null, fetchStatus: 'idle', refetch,
+    });
+    rerender(<EfficiencyDetectivePanel vehicleId="4" />);
+    expect(screen.getByText('No efficiency data available yet')).toBeInTheDocument();
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
+    expect(screen.queryByText('Select a vehicle to diagnose efficiency shifts.')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    expect(refetch).toHaveBeenCalledTimes(2);
+
+    mockShift.mockReturnValue({
+      data: null, isLoading: false, isPending: false, isSuccess: true,
+      isError: false, error: null, fetchStatus: 'paused', refetch,
+    });
+    rerender(<EfficiencyDetectivePanel vehicleId="4" />);
+    expect(screen.getByText('No efficiency data available yet')).toBeInTheDocument();
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Retry' })).toBeInTheDocument();
+  });
+
+  it('does not call an unresolved idle request empty', () => {
+    mockShift.mockReturnValue({
+      data: undefined, isLoading: false, isPending: true, isSuccess: false,
+      isError: false, error: null, fetchStatus: 'idle', refetch: vi.fn(),
+    });
+    render(<EfficiencyDetectivePanel vehicleId="4" />);
+    expect(screen.getByRole('status')).toHaveTextContent('No requested source has returned usable data yet.');
+    expect(screen.queryByText('No efficiency data available yet')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Retry' })).toBeInTheDocument();
+  });
+
+  it('keeps the disabled no-vehicle prerequisite without requesting an unscoped diagnosis', () => {
+    const refetch = vi.fn();
+    mockShift.mockReturnValue({
+      data: undefined, isLoading: false, isPending: true, isSuccess: false,
+      isError: false, error: null, fetchStatus: 'idle', refetch,
+    });
+    render(<EfficiencyDetectivePanel vehicleId="" />);
+    expect(mockShift).toHaveBeenCalledWith('');
+    expect(screen.getByText('Select a vehicle to diagnose efficiency shifts.')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Retry' })).not.toBeInTheDocument();
+    expect(refetch).not.toHaveBeenCalled();
+  });
+
+  it('keeps active first-load skeletons distinct from empty and blocked data', () => {
+    mockShift.mockReturnValue({
+      data: undefined, isLoading: true, isPending: true, isSuccess: false,
+      isError: false, error: null, fetchStatus: 'fetching', refetch: vi.fn(),
+    });
+    render(<EfficiencyDetectivePanel vehicleId="4" />);
+    expect(screen.getByRole('status', { name: 'Loading Efficiency detective' })).toBeInTheDocument();
+    expect(screen.queryByText('No efficiency data available yet')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Retry' })).not.toBeInTheDocument();
+  });
+
+  it('preserves fatal Retry without claiming that the response was empty', () => {
+    const refetch = vi.fn();
+    mockShift.mockReturnValue({
+      data: undefined, isLoading: false, isError: true,
+      error: new Error('initial load failed'), refetch,
+    });
+    render(<EfficiencyDetectivePanel vehicleId="4" />);
+    expect(screen.getByText('Efficiency diagnosis could not be loaded.')).toBeInTheDocument();
+    expect(screen.queryByText('No efficiency data available yet')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    expect(refetch).toHaveBeenCalledTimes(1);
+  });
+
+  it.each(['failed', 'paused'] as const)('preserves retained diagnosis, its signed detail and Retry during a %s refresh', (refresh) => {
+    const data = Object.freeze(shift());
+    const original = JSON.stringify(data);
+    const refetch = vi.fn();
+    mockShift.mockReturnValue({
+      data, isLoading: false, isError: refresh === 'failed',
+      error: refresh === 'failed' ? new Error('refresh failed') : null,
+      fetchStatus: refresh === 'paused' ? 'paused' : 'idle', refetch,
+    });
+    render(<EfficiencyDetectivePanel vehicleId="4" />);
+    expect(screen.getByText(data.explanation)).toBeInTheDocument();
+    expect(screen.getByText('Colder weather')).toBeInTheDocument();
+    expect(screen.getByText('15.00% vs prior month · 12.00% temperature-attributed · -8.00°C shift')).toBeInTheDocument();
+    expect(screen.getByText('Previously loaded data remains visible while affected sources recover.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Review details' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    expect(refetch).toHaveBeenCalledTimes(1);
+    expect(JSON.stringify(data)).toBe(original);
+  });
+
+  it('uses the existing muted ink for the decorative bulb without replacing the verdict status', () => {
+    const { container } = render(<EfficiencyDetectivePanel vehicleId="4" />);
+    const bulb = container.querySelector('.lucide-lightbulb');
+    expect(bulb).toHaveClass('text-[var(--text-muted)]');
+    expect(bulb).not.toHaveClass('text-cyan-300');
+    expect(bulb).toHaveAttribute('aria-hidden', 'true');
+    expect(bulb).toHaveAttribute('focusable', 'false');
+    expect(screen.getByText('Colder weather')).toBeInTheDocument();
+  });
+
   it('opens the real monthly-details drawer with signed source Celsius shift and retained server explanation', () => {
     mockShift.mockReturnValue({
       data: shift(), isLoading: false, isError: true, error: new Error('refresh failed'), refetch: vi.fn(),
