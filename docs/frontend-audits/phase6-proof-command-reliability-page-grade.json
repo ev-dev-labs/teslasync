@@ -1,0 +1,156 @@
+{
+  "item": "phase6-proof-command-reliability-page-grade",
+  "phase": 6,
+  "kind": "actual-unexecuted-covering-proof",
+  "status": "DONE",
+  "outcome": "PASS_SCOPED_FIXTURE_PROOF",
+  "sourceReference": {
+    "item": "phase6-fix-command-reliability-page-grade",
+    "commitSuppliedByTask": "da89f5d735b2b064e616d9dd23f287e9bdcc82b0",
+    "checkoutCommitIndependentlyVerified": false,
+    "note": "No Git commands were run. Acceptance identifies actual disk inputs by SHA256, not an asserted checkout commit."
+  },
+  "alreadyDoneCheck": {
+    "reportExisted": false,
+    "logExisted": false,
+    "retainedTaskStatus": "PENDING",
+    "historicalEvidence": "Prior normal startup discovered zero tests because of catalog drift; NOTPASS. Unchanged historical passing cases were excluded by the test-name selector."
+  },
+  "accounting": {
+    "attemptsUsedOnEntry": 0,
+    "commandsExecuted": 1,
+    "coveringRuntimeAttemptsExecuted": 1,
+    "coveringRuntimeAttemptsUsedOnExit": 1,
+    "catalogOnlyStartupFailuresThisRun": 0,
+    "apiNetworkFailuresThisRun": 0,
+    "originalHelperNativeBudgetsRenewed": false,
+    "historicalBudgets": "Retained unchanged; no historical original, helper or native attempt was rerun."
+  },
+  "execution": {
+    "cwd": "web",
+    "node": "v26.8.1",
+    "npm": "11.19.0",
+    "vitest": "4.1.11",
+    "command": "npm test -- src\\features\\system\\pages\\CommandReliabilityPage.test.tsx -t \"NEED02 translated grades and locale display\" --reporter=verbose",
+    "environment": {
+      "VITE_GIT_SHA": "da89f5d735b2b064e616d9dd23f287e9bdcc82b0",
+      "NO_COLOR": "1",
+      "FORCE_COLOR": "0"
+    },
+    "environmentReason": "Supply the task's source-reference build identity to prevent Vite configuration from invoking Git discovery. This does not bypass catalog guards, change fixtures or establish an immutable checkout identity.",
+    "configuration": "Existing vite.config.ts and src/test-setup.ts; no alternate configuration or guard bypass.",
+    "startedUtc": "2026-10-14T15:08:46.6804238Z",
+    "endedUtc": "2026-10-14T15:15:36.8239041Z",
+    "exitCode": 0,
+    "testFilesPassed": 1,
+    "testFilesFailed": 0,
+    "casesCollected": 19,
+    "casesSelected": 7,
+    "casesExecuted": 7,
+    "casesPassed": 7,
+    "casesFailed": 0,
+    "casesSkipped": 12,
+    "vitestDurationSeconds": 84.11,
+    "durationNote": "Vitest's reported duration excludes the preceding normal catalog startup.",
+    "rawLog": "web/logs/phase6-proof-command-reliability-page-grade.log",
+    "rawSummary": [
+      "Test Files  1 passed (1)",
+      "Tests  7 passed | 12 skipped (19)",
+      "EXIT=0"
+    ]
+  },
+  "selectedSuite": "CommandReliabilityPage — genuine summary OperationalBrief > CommandReliabilityPage source trust and complete chart evidence > NEED02 translated grades and locale display",
+  "cases": [
+    {
+      "name": "translates excellent in both the six-column fallback and detail badge without changing the CSV grade",
+      "status": "PASS"
+    },
+    {
+      "name": "translates good in both the six-column fallback and detail badge without changing the CSV grade",
+      "status": "PASS"
+    },
+    {
+      "name": "translates flaky in both the six-column fallback and detail badge without changing the CSV grade",
+      "status": "PASS"
+    },
+    {
+      "name": "translates unreliable in both the six-column fallback and detail badge without changing the CSV grade",
+      "status": "PASS"
+    },
+    {
+      "name": "translates unproven in both the six-column fallback and detail badge without changing the CSV grade",
+      "status": "PASS"
+    },
+    {
+      "name": "localizes confidence, retry effort and counts while exporting raw decimals and full colliding identities",
+      "status": "PASS"
+    },
+    {
+      "name": "updates number presentation on locale changes without refetching or changing raw exports",
+      "status": "PASS"
+    }
+  ],
+  "coveringAssertions": [
+    "All five grade lookups appear as controlled German labels in the six-column fallback table and original detail badges.",
+    "CSV preserves the machine grade codes, original field order and raw decimal numbers rather than translated labels or localized grouping.",
+    "Confidence, interval, retry effort, attempt counts and normalized failure counts use effective locale presentation.",
+    "Full colliding command identities remain distinct in table and CSV.",
+    "Locale changes update mounted values without invoking refetch or changing vehicle and date-bound hook arguments.",
+    "Input arrays remain unchanged in the grade matrix and colliding-identity locale cases."
+  ],
+  "normalStartupGuards": {
+    "splitCommand": "node scripts/split-i18n-catalog.mjs --check",
+    "splitCompletedSuccessfully": true,
+    "groupedLocaleBundles": 57,
+    "namespaceFallbacks": 178,
+    "inlinedShellKeys": 1241,
+    "knownMissingKeys": 0,
+    "namespaceCommand": "node scripts/audit-i18n-namespaces.mjs --strict",
+    "namespaceCompletedSuccessfully": true,
+    "knownDottedMisses": 2,
+    "dotlessLabels": 25,
+    "newDottedMisses": 0,
+    "newDotlessLabels": ["Healthy", "Never", "Paused"],
+    "newlyResolvedBaselineEntries": 49,
+    "note": "Both guards ran automatically through the unchanged Vite buildStart hook, which throws on nonzero child exits. Namespace advisories were retained verbatim in the raw log; no catalogs, projections or baselines were regenerated."
+  },
+  "warnings": {
+    "rechartsZeroSizeWarnings": 10,
+    "reactActWarnings": 4,
+    "disposition": "Retained in raw output. jsdom's zero-size chart container and asynchronous React update warnings do not establish browser geometry or native acceptance. No source, fixture or shared-component correction was attempted."
+  },
+  "identityEvidence": {
+    "firstSnapshotUtc": "2026-10-14T15:11:01.3290785Z",
+    "firstSnapshotTiming": "During normal catalog startup, before Vitest collection.",
+    "postProofSnapshotUtc": "2026-10-14T15:16:30.3398382Z",
+    "comparisonExitCode": 0,
+    "allSixInputsUnchanged": true,
+    "sha256": {
+      "web/src/features/system/pages/CommandReliabilityPage.tsx": "30D590CF02FBF34CFD07917EADDF04C2098C48D623EA629880E07409364C1480",
+      "web/src/features/system/pages/CommandReliabilityPage.test.tsx": "FDCB92B311C281FB55E5429ABEA1FEAE67DD6FCB4A90BA3FB64D3D5EA5616B30",
+      "web/src/features/system/lib/commandReliability.ts": "C09666A01C890D0980C74B302A396F052D6CE5CF76AE641C22CE0A6E2CF0EAED",
+      "web/src/features/system/components/statstrip-command-summaries/commandSummaryMetrics.tsx": "265B5F3D4C23EB20C89F6C342F11AA009D7EB99062492138045FD41147D7BCC0",
+      "web/vite.config.ts": "7E0F246E3D538F48B8DF6A024F5CCE1E068685023A844CCE3B537A1AFCF54F58",
+      "web/src/test-setup.ts": "FB61779479E36B97298928C7BCC0620E8FF2A509A0EA50350F9935D9F260517A"
+    },
+    "scopeLimit": "These six identities are not an immutable whole-application or catalog snapshot."
+  },
+  "writes": [
+    "docs/frontend-audits/phase6-proof-command-reliability-page-grade.json",
+    "web/logs/phase6-proof-command-reliability-page-grade.log"
+  ],
+  "limits": {
+    "sourceFixtureCanonicalEdits": 0,
+    "unchangedHistoricalPassingCasesRepeated": 0,
+    "typecheck": "NOTRUN; this evidence-only item permits scoped existing checks, not a global compiler gate.",
+    "lintViolationsAudit": "NOTRUN; no application source changed and no global audit requested.",
+    "build": "NOTRUN; full build explicitly prohibited.",
+    "lineAndSectionBaselineComparison": "NOTRUN; no source rewrite or new migration occurred.",
+    "backendHookRouteAudit": "NOTRUN; hooks and public contracts were not changed.",
+    "canonicalGradeTranslationAcceptance": "NOTCLAIMED; controlled translation fixtures prove lookup behavior, not complete real-language catalog content.",
+    "browserNativeVisualKeyboardAcceptance": "NOTRUN; no browser launch, server startup, downloads or Docker actions.",
+    "wholePageAcceptance": "NOTCLAIMED; twelve unchanged cases deliberately skipped.",
+    "globalPhaseGate": "NOTCLAIMED",
+    "phase7": "NOTRUN"
+  }
+}
