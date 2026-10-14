@@ -39,7 +39,7 @@ import { formatDurationClock, formatDateShort } from '@/lib/dateFormat';
 import { fmtInt } from '@/lib/numberFormat';
 import { useChartPalette } from '@/hooks/useChartPalette';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
-import { fmtNumber } from '@/lib/numberFormat';
+import { fmtNumber, isFiniteNumber } from '@/lib/numberFormat';
 
 const DASH = '—';
 
@@ -57,9 +57,9 @@ function whPerKm(v: number | null | undefined): string {
 }
 
 /** Signed seconds gap, e.g. "+4.2s" / "−1.1s" (minus is faster than the PR). */
-function signedDelta(s: number): string {
-  if (!Number.isFinite(s) || s === 0) return '—';
-  const sign = s < 0 ? '−' : '+';
+function signedDelta(s: unknown): string {
+  if (!isFiniteNumber(s)) return DASH;
+  const sign = s < 0 ? '−' : s > 0 ? '+' : '';
   return `${sign}${fmtNumber(Math.abs(s))}s`;
 }
 
@@ -541,7 +541,7 @@ export default function SegmentsPage() {
                             <Tooltip content={
                               <ChartTooltip
                                 labelFormatter={(l) => pctTick(Number(l))}
-                                valueFormatter={(v) => signedDelta(Number(v))}
+                                valueFormatter={(v) => signedDelta(v)}
                               />
                             } />
                             <ReferenceLine y={0} stroke="#94a3b8" strokeDasharray="4 3" strokeOpacity={0.7} />
@@ -710,7 +710,7 @@ function LeaderboardTable({ rows, board, racerA, racerB, onPickA, onPickB, t }: 
       align: 'right',
       render: (row) => (
         <Text variant="bodySm" color="muted" className="tabular-nums">
-          {row.delta_to_best_s === 0 ? DASH : signedDelta(row.delta_to_best_s)}
+          {signedDelta(row.delta_to_best_s)}
         </Text>
       ),
     },

@@ -3,7 +3,8 @@ import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ReactNode } from 'react';
 
-import type { GhostResponse, SegmentSummary } from '@/api/hooks/useSegments';
+import type { GhostResponse, LeaderboardRow, SegmentSummary } from '@/api/hooks/useSegments';
+import { setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat';
 
 const state = vi.hoisted(() => ({
   vehicleId: 7 as number | null,
@@ -12,6 +13,8 @@ const state = vi.hoisted(() => ({
   segmentError: null as Error | null,
   leaderboardError: null as Error | null,
   ghost: undefined as GhostResponse | undefined,
+  leaderboardRows: [] as LeaderboardRow[],
+  chartInputs: [] as unknown[],
   segmentRefetch: vi.fn(),
   leaderboardRefetch: vi.fn(),
 }));
@@ -40,6 +43,27 @@ vi.mock('@/components/layout', async (importActual) => ({
 vi.mock('@/components/motion', () => ({
   FadeIn: ({ children }: { children: ReactNode }) => <>{children}</>,
 }));
+vi.mock('@/components/charts', async (importActual) => ({
+  ...await importActual<typeof import('@/components/charts')>(),
+  ResponsiveContainer: ({ children }: { children: ReactNode }) => <>{children}</>,
+  LineChart: ({ children }: { children: ReactNode }) => <div>{children}</div>,
+  ComposedChart: ({ children }: { children: ReactNode }) => <div>{children}</div>,
+  YAxis: ({ tickFormatter }: { tickFormatter: (value: number) => string }) => (
+    <div data-testid="chart-axis-values">
+      {state.chartInputs.map((value, index) => (
+        <span key={index}>{tickFormatter(value as number)}</span>
+      ))}
+    </div>
+  ),
+  Tooltip: ({ content }: { content: ReactNode }) => <>{content}</>,
+  ChartTooltip: ({ valueFormatter }: { valueFormatter: (value: unknown) => string }) => (
+    <div data-testid="chart-tooltip-values">
+      {state.chartInputs.map((value, index) => (
+        <span key={index}>{valueFormatter(value)}</span>
+      ))}
+    </div>
+  ),
+}));
 vi.mock('@/api/hooks/useSegments', () => ({
   useSegments: () => ({
     data: { segments: state.segments },
@@ -52,7 +76,7 @@ vi.mock('@/api/hooks/useSegments', () => ({
     return {
       data: id == null ? undefined : {
         segment: { id, name: `Route ${id}` },
-        by_time: [],
+        by_time: state.leaderboardRows,
         by_efficiency: [],
       },
       isLoading: false,
@@ -98,6 +122,10 @@ describe('SegmentsPage pagination', () => {
     state.segmentError = null;
     state.leaderboardError = null;
     state.ghost = undefined;
+    state.leaderboardRows = [];
+    state.chartInputs = [];
+    setGlobalLocale('en-US');
+    setGlobalPrecision(2);
     state.segmentRefetch.mockClear();
     state.leaderboardRefetch.mockClear();
   });
@@ -186,5 +214,54 @@ describe('SegmentsPage pagination', () => {
     state.segments = [segment(1)];
     renderPage();
     expect(screen.queryByRole('navigation', { name: 'Pagination' })).not.toBeInTheDocument();
+  });
+
+  it.each([
+    { input: undefined, expected: '—' },
+    { input: null, expected: '—' },
+    { input: NaN, expected: '—' },
+    { input: Infinity, expected: '—' },
+    { input: -Infinity, expected: '—' },
+    { input: '', expected: '—' },
+    { input: '2', expected: '—' },
+    { input: 0, expected: '0.00s' },
+    { input: -0, expected: '0.00s' },
+    { input: -4, expected: '−4.00s' },
+    { input: 4, expected: '+4.00s' },
+    { input: -1.25, expected: '−1.25s' },
+    { input: 1.25, expected: '+1.25s' },
+  ])('formats the time-gap axis and tooltip for $input as $expected', ({ input, expected }) => {
+    state.chartInputs = [input];
+    state.ghost = {
+      segment: { ...segment(1) },
+      a: { drive_id: 1, duration_s: 60, series: [] },
+      b: { drive_id: 2, duration_s: 60, series: [] },
+      split_deltas: [{ fraction: 0.5, delta_s: 0 }],
+      winner_drive_id: null,
+      margin_s: 0,
+    };
+    renderPage();
+    expect(screen.getByTestId('chart-axis-values')).toHaveTextContent(expected);
+    expect(screen.getByTestId('chart-tooltip-values')).toHaveTextContent(expected);
+    expect(screen.getByText('Below the line, Attempt A is ahead; above it, Attempt B leads.')).toBeInTheDocument();
+  });
+
+  it('shows measured zero and signed fractional gaps in the leaderboard', () => {
+    state.leaderboardRows = [0, -1.25, 1.25, NaN].map((delta, index) => ({
+      rank: index + 1,
+      drive_id: index + 1,
+      started_at: '2026-10-14T12:00:00Z',
+      duration_s: 60,
+      distance_m: 1000,
+      wh_per_km: 150,
+      delta_to_best_s: delta,
+      is_pr: index === 0,
+    }));
+    renderPage();
+    fireEvent.click(screen.getByRole('option', { name: 'Open leaderboard for Route 1' }));
+    expect(screen.getByText('0.00s')).toBeInTheDocument();
+    expect(screen.getByText('−1.25s')).toBeInTheDocument();
+    expect(screen.getByText('+1.25s')).toBeInTheDocument();
+    expect(screen.getByRole('table')).toHaveTextContent('—');
   });
 });
