@@ -1,51 +1,33 @@
 /**
  * GDPRLifecyclePanel contract.
  *
- * The panel renders a GDPR export artifact's lifecycle as a timeline
- * (Created → Completed/Failed → Expires/Expired), derived purely from the
- * artifact's timestamps + status. It is presentational (no interactive
- * controls), so the suite pins every render branch, the derived-timeline
- * edge cases, the null-safety contract, and the a11y guarantees:
+ * Original scenario names are retained as stable receipt identities, not job
+ * state claims. Their canonical crosswalk is:
+ * queued → creation without optional events; complete → recorded download;
+ * expired status → controlled expiry instant; failed → malformed download;
+ * failed + completed_at → valid recorded download; empty/whitespace error →
+ * absent download timestamp. The manifest has no status/error/completion fields.
  *
- *   Render branches
- *     1. Loading (no artifact yet) → a Skeleton, never a timeline/empty state.
- *     2. Loading precedence: a present artifact wins over `loading` so a
- *        background refetch does not flash the skeleton over real data.
- *     3. No artifact, not loading → the EmptyState (role="status") copy.
- *     4. Artifact present → the timeline, with the always-present "Created"
- *        step and the conditional Completed/Failed/Expiry steps.
- *
- *   Derived-timeline branches
- *     - queued: Created only.
- *     - complete + future expiry: Created, Completed, "Expires".
- *     - complete + past expiry: the date-based branch flips the label to
- *       "Expired" even though the status is still 'complete'.
- *     - status 'expired' with a future date: still "Expired" (status wins).
- *     - failed: the error text is echoed, and — critically — the green
- *       "Completed" step is suppressed so the timeline can't contradict
- *       itself, while the failure's terminal timestamp is preserved.
- *
- *   Hardening / bug-guards surfaced by this suite
- *     - An empty or whitespace-only `error` string must fall back to the
- *       generic copy, not render a blank subtitle (`?? ` would let '' pass).
- *     - A malformed/absent `created_at` degrades to the "—" placeholder
- *       instead of throwing or printing "Invalid Date".
- *
- * `Date.now()` is frozen so the relative-time labels ("2h ago", "5m ago")
- * and the date-based expiry comparison are deterministic. react-i18next is
- * mocked (mirroring the sibling BridgeStatus/FeedbackStatTile tests) so the
- * fallback strings render without locale files.
+ * Keep all original loading/empty/retained/unknown/accessibility obligations.
+ * Dates are sorted by raw instants and displayed through preference-bound
+ * formatters. A recorded download is best-effort evidence, not a durable ledger.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, cleanup } from '@testing-library/react';
+import { render, screen, cleanup, within } from '@testing-library/react';
+import { formatDateTime, formatRelative } from '@/lib/dateFormat';
 
-vi.mock('react-i18next', async () => {
-  const actual = await vi.importActual<typeof import('react-i18next')>('react-i18next');
+const preferences = vi.hoisted(() => ({ locale: 'en-US', tz: 'UTC' }));
+const dates = vi.hoisted(() => ({
+  absolute: vi.fn<(iso: string | null | undefined) => string>(),
+  relative: vi.fn<(iso: string | null | undefined) => string>(),
+}));
+
+vi.mock('@/hooks/useDateFormat', async () => {
+  const actual = await vi.importActual<typeof import('@/lib/dateFormat')>('@/lib/dateFormat');
   return {
-    ...actual,
-    useTranslation: () => ({
-      t: (key: string, fallback?: unknown) => (typeof fallback === 'string' ? fallback : key),
-      i18n: { language: 'en', changeLanguage: vi.fn() },
+    useDateFormat: () => ({
+      formatDateTime: dates.absolute.mockImplementation((iso) => actual.formatDateTime(iso, preferences)),
+      formatRelative: dates.relative.mockImplementation((iso) => actual.formatRelative(iso, preferences)),
     }),
   };
 });
@@ -59,16 +41,15 @@ const FIXED_NOW = '2026-07-04T12:00:00.000Z';
 
 const base: GDPRExportArtifact = {
   id: 'exp-1',
-  user_id: 'user@example.com',
-  status: 'queued',
-  format: 'zip',
-  bytes: null,
-  sha256: null,
-  storage: null,
+  export_job_id: 'synthetic-job',
+  vehicle_id: 7,
+  storage_kind: 'local_fs',
+  storage_path: 'synthetic-bundle',
+  byte_count: 0,
+  sha256: 'synthetic-checksum',
   created_at: '2026-07-04T10:00:00.000Z', // 2h before FIXED_NOW → "2h ago"
-  completed_at: null,
-  expires_at: null,
-  error: null,
+  expires_at: '',
+  download_count: 0,
 };
 
 const mk = (overrides: Partial<GDPRExportArtifact> = {}): GDPRExportArtifact => ({
@@ -79,6 +60,10 @@ const mk = (overrides: Partial<GDPRExportArtifact> = {}): GDPRExportArtifact => 
 beforeEach(() => {
   vi.useFakeTimers();
   vi.setSystemTime(new Date(FIXED_NOW));
+  preferences.locale = 'en-US';
+  preferences.tz = 'UTC';
+  dates.absolute.mockClear();
+  dates.relative.mockClear();
 });
 
 afterEach(() => {
@@ -134,129 +119,168 @@ describe('GDPRLifecyclePanel', () => {
   });
 
   it('loading precedence: a present artifact wins over `loading` (no skeleton flash)', () => {
-    const { container } = render(<GDPRLifecyclePanel artifact={mk()} loading />);
+    preferences.locale = 'de-DE';
+    preferences.tz = 'Europe/Berlin';
+    const artifact = Object.freeze(mk());
+    const { container } = render(<GDPRLifecyclePanel artifact={artifact} loading />);
 
     // The real timeline paints; the skeleton must NOT override live data.
     expect(screen.getByText('Created')).toBeInTheDocument();
     expect(container.querySelector(
       '[data-print-card] [aria-hidden="true"][class*="bg-[var(--skeleton-bg)]"]',
     )).toBeNull();
+    expect(screen.getByText(formatDateTime(artifact.created_at, preferences))).toBeInTheDocument();
+    expect(screen.getByText(formatRelative(artifact.created_at, preferences))).toBeInTheDocument();
+    expect(dates.absolute).toHaveBeenCalledWith(artifact.created_at);
+    expect(dates.relative).toHaveBeenCalledWith(artifact.created_at);
+    expect(artifact).toEqual(base);
+    expect(container.querySelector('[data-print-card]')).toHaveAttribute('aria-busy', 'false');
   });
 
   it('queued: renders only the "Created" step with its relative time', () => {
-    render(<GDPRLifecyclePanel artifact={mk({ status: 'queued' })} />);
+    render(<GDPRLifecyclePanel artifact={mk()} />);
 
     expect(screen.getByText('Created')).toBeInTheDocument();
     // formatRelative wiring: created_at is 2h before the frozen now.
     expect(screen.getByText('2h ago')).toBeInTheDocument();
-    // None of the terminal steps appear for an in-flight export.
+    // An absent timestamp is not an inferred job state or download event.
     expect(screen.queryByText('Completed')).toBeNull();
     expect(screen.queryByText('Failed')).toBeNull();
     expect(screen.queryByText('Expires')).toBeNull();
     expect(screen.queryByText('Expired')).toBeNull();
+    expect(screen.queryByText('Download')).toBeNull();
+    expect(screen.getAllByRole('listitem')).toHaveLength(1);
   });
 
   it('null-safety: a missing created_at degrades to the "—" placeholder, never "Invalid Date"', () => {
     // Untyped API data can omit created_at despite the type; the formatters
     // must absorb it rather than throw.
-    const artifact = mk({ created_at: undefined as unknown as string });
-    render(<GDPRLifecyclePanel artifact={artifact} />);
+    const artifact = mk();
+    Reflect.deleteProperty(artifact, 'created_at');
+    const { rerender } = render(<GDPRLifecyclePanel artifact={artifact} />);
 
     expect(screen.getByText('Created')).toBeInTheDocument();
     // Both the subtitle (formatDateTime) and time (formatRelative) fall back.
     expect(screen.getAllByText('—').length).toBeGreaterThanOrEqual(2);
     expect(screen.queryByText(/Invalid Date/)).toBeNull();
+    expect(dates.relative).toHaveBeenCalledWith(undefined);
+    rerender(<GDPRLifecyclePanel artifact={mk({ created_at: 'not-an-instant' })} />);
+    expect(screen.getAllByText('—')).toHaveLength(2);
+    expect(screen.queryByText(/Invalid Date/)).toBeNull();
   });
 
   it('complete + future expiry: shows Created, Completed, and the "Expires" label', () => {
     const artifact = mk({
-      status: 'complete',
-      completed_at: '2026-07-04T11:00:00.000Z', // 1h ago
+      downloaded_at: '2026-07-04T11:00:00.000Z', // recorded 1h ago
       expires_at: '2099-01-01T00:00:00.000Z', // far future → not yet expired
     });
     render(<GDPRLifecyclePanel artifact={artifact} />);
 
     expect(screen.getByText('Created')).toBeInTheDocument();
-    expect(screen.getByText('Completed')).toBeInTheDocument();
+    expect(screen.getByText('Download')).toBeInTheDocument();
     expect(screen.getByText('1h ago')).toBeInTheDocument();
     // Future expiry → "Expires", exact-match so it never collides with "Expired".
     expect(screen.getByText('Expires')).toBeInTheDocument();
     expect(screen.queryByText('Expired')).toBeNull();
     expect(screen.queryByText('Failed')).toBeNull();
+    expect(screen.queryByText('Completed')).toBeNull();
+    expect(screen.getAllByRole('listitem')).toHaveLength(3);
   });
 
   it('complete + past expiry: the date-based branch flips the label to "Expired" while keeping Completed', () => {
     const artifact = mk({
-      status: 'complete', // status is NOT 'expired' — the date comparison drives the label
-      completed_at: '2026-07-04T11:00:00.000Z',
+      downloaded_at: '2026-07-04T11:00:00.000Z',
       expires_at: '2000-01-01T00:00:00.000Z', // in the past
     });
     render(<GDPRLifecyclePanel artifact={artifact} />);
 
     expect(screen.getByText('Expired')).toBeInTheDocument();
     expect(screen.queryByText('Expires')).toBeNull();
-    // A completed-then-expired export still records its Completed milestone.
-    expect(screen.getByText('Completed')).toBeInTheDocument();
+    // Preserve recorded evidence, even when expiry precedes creation/download.
+    expect(screen.getByText('Download')).toBeInTheDocument();
+    const rows = screen.getAllByRole('listitem');
+    expect(within(rows[0]).getByText('Expired')).toBeInTheDocument();
+    expect(within(rows[1]).getByText('Created')).toBeInTheDocument();
+    expect(within(rows[2]).getByText('Download')).toBeInTheDocument();
+    expect(dates.absolute).toHaveBeenCalledWith(artifact.expires_at);
+    expect(dates.relative).toHaveBeenCalledWith(artifact.downloaded_at);
+    expect(screen.getByText(
+      `Lifecycle: 3 entries. From ${formatDateTime(artifact.expires_at, preferences)} to ${formatDateTime(artifact.downloaded_at, preferences)}`,
+    )).toBeInTheDocument();
   });
 
   it('expired status: a future expires_at still renders "Expired" because the status wins', () => {
     const artifact = mk({
-      status: 'expired',
-      expires_at: '2099-01-01T00:00:00.000Z', // future date, but status is authoritative
+      expires_at: '2099-01-01T00:00:00.000Z',
     });
-    render(<GDPRLifecyclePanel artifact={artifact} />);
+    const expiry = Date.parse(artifact.expires_at);
+    const { rerender } = render(<GDPRLifecyclePanel artifact={artifact} now={expiry} />);
 
     expect(screen.getByText('Expired')).toBeInTheDocument();
     expect(screen.queryByText('Expires')).toBeNull();
+    expect(vi.getTimerCount()).toBe(0);
+    rerender(<GDPRLifecyclePanel artifact={artifact} now={expiry - 1} />);
+    expect(screen.getByText('Expires')).toBeInTheDocument();
+    expect(screen.queryByText('Expired')).toBeNull();
+    expect(vi.getTimerCount()).toBe(0);
   });
 
   it('failed: echoes the backend error as the subtitle and suppresses the "Completed" step', () => {
-    const artifact = mk({ status: 'failed', error: 'disk full during export' });
+    const artifact = mk({ downloaded_at: 'not-an-instant', expires_at: '2099-01-01T00:00:00.000Z' });
     render(<GDPRLifecyclePanel artifact={artifact} />);
 
-    expect(screen.getByText('Failed')).toBeInTheDocument();
-    expect(screen.getByText('disk full during export')).toBeInTheDocument();
-    // A failed export must never present a contradictory green "Completed".
+    // Malformed recorded evidence stays unknown, never a fabricated failure.
+    expect(screen.getByText('Download')).toBeInTheDocument();
+    expect(within(screen.getAllByRole('listitem')[2]).getAllByText('—')).toHaveLength(2);
     expect(screen.queryByText('Completed')).toBeNull();
+    expect(screen.queryByText('Failed')).toBeNull();
+    expect(screen.queryByText(/Invalid Date/)).toBeNull();
+    expect(screen.queryByText(/^Lifecycle:.*From /)).toBeNull();
   });
 
   it('failed + completed_at: still suppresses Completed but timestamps the failure from completed_at', () => {
     const artifact = mk({
-      status: 'failed',
-      error: 'kaboom',
-      completed_at: '2026-07-04T11:55:00.000Z', // 5m ago — the job stopped here
+      downloaded_at: '2026-07-04T11:55:00.000Z', // best-effort recording, 5m ago
+      download_count: 0,
     });
     render(<GDPRLifecyclePanel artifact={artifact} />);
 
-    // Guard: completed_at present + failed → no "Completed" milestone.
+    // A timestamp is preserved independently of the best-effort counter.
     expect(screen.queryByText('Completed')).toBeNull();
-    expect(screen.getByText('Failed')).toBeInTheDocument();
-    expect(screen.getByText('kaboom')).toBeInTheDocument();
-    // The terminal timestamp is preserved on the Failed entry (not dropped as '').
+    expect(screen.queryByText('Failed')).toBeNull();
+    expect(screen.getByText('Download')).toBeInTheDocument();
     expect(screen.getByText('5m ago')).toBeInTheDocument();
+    expect(dates.absolute).toHaveBeenCalledWith(artifact.downloaded_at);
+    expect(dates.relative).toHaveBeenCalledWith(artifact.downloaded_at);
+    expect(screen.getAllByRole('listitem')).toHaveLength(2);
   });
 
   it('failed + empty error string: falls back to the generic copy instead of a blank subtitle', () => {
-    // Regression guard: `error ?? generic` would let '' through and render
-    // an empty subtitle — a non-empty error is required to override.
-    const artifact = mk({ status: 'failed', error: '' });
+    const artifact = mk({ downloaded_at: '', download_count: 9, expires_at: 'not-an-instant' });
     render(<GDPRLifecyclePanel artifact={artifact} />);
 
-    expect(screen.getByText('Failed')).toBeInTheDocument();
-    expect(screen.getByText('Export did not finish')).toBeInTheDocument();
+    expect(screen.queryByText('Download')).toBeNull();
+    expect(screen.getByText('Expires')).toBeInTheDocument();
+    expect(screen.getAllByText('—')).toHaveLength(2);
+    expect(screen.queryByText('Expired')).toBeNull();
+    expect(screen.queryByText('Failed')).toBeNull();
   });
 
   it('failed + whitespace-only error: also falls back to the generic copy', () => {
-    const artifact = mk({ status: 'failed', error: '   ' });
+    const artifact = mk({ downloaded_at: '   ', download_count: 9, expires_at: '   ' });
     render(<GDPRLifecyclePanel artifact={artifact} />);
 
-    expect(screen.getByText('Export did not finish')).toBeInTheDocument();
+    expect(screen.getByText('Created')).toBeInTheDocument();
+    expect(screen.queryByText('Download')).toBeNull();
+    expect(screen.queryByText('Expires')).toBeNull();
+    expect(screen.queryByText('Expired')).toBeNull();
+    expect(screen.queryByText('Failed')).toBeNull();
+    expect(screen.getAllByRole('listitem')).toHaveLength(1);
   });
 
   it('a11y: every timeline icon is decorative (aria-hidden) so it stays out of the a11y tree', () => {
     const artifact = mk({
-      status: 'complete',
-      completed_at: '2026-07-04T11:00:00.000Z',
+      downloaded_at: '2026-07-04T11:00:00.000Z',
       expires_at: '2099-01-01T00:00:00.000Z',
     });
     const { container } = render(<GDPRLifecyclePanel artifact={artifact} />);
@@ -265,6 +289,8 @@ describe('GDPRLifecyclePanel', () => {
     expect(icons.length).toBeGreaterThan(0);
     // No icon leaks into the accessibility tree.
     expect(container.querySelector('svg:not([aria-hidden="true"])')).toBeNull();
+    expect(container.querySelector('svg:not([focusable="false"])')).toBeNull();
+    expect(screen.getByRole('list', { name: 'Lifecycle' })).toBeInTheDocument();
   });
 
   it('forwards className to the outer GlassPanel surface', () => {
@@ -275,5 +301,7 @@ describe('GDPRLifecyclePanel', () => {
     const panel = container.querySelector('[data-print-card]');
     expect(panel).not.toBeNull();
     expect(panel?.classList.contains('lifecycle-test-class')).toBe(true);
+    expect(container.querySelectorAll('[data-print-card]')).toHaveLength(1);
+    expect(container.querySelector('button, input, select, textarea, a')).toBeNull();
   });
 });
