@@ -105,13 +105,13 @@ export interface ResidualPoint {
 export interface TireDifferentialDriftSummary {
   corners: CornerDrift[];
   residuals: ResidualPoint[];
-  /** Corner most likely to have an independent slow leak; `null` if none clears the detection bar. */
+  /** Unique highest-scoring leak corner; `null` if none clears the detection bar or the best score is tied. */
   leakCorner: TireCorner | null;
   /** 0 when no corner clears the detection bar. */
   leakScore: number;
   /** Spread of per-corner mean residuals — structural (non-drifting) imbalance, Pa. */
   imbalancePa: number;
-  /** Corner most offset from the group's common mode. */
+  /** Unique largest absolute mean offset; `null` without usable samples, for zero offsets, or for a tie. */
   imbalanceCorner: TireCorner | null;
   analyzedSamples: number;
   usableSamples: number;
@@ -347,8 +347,8 @@ export function summarizeTireDifferentialDrift(
       samples: n,
       slopePaPerDay: Math.round(slope * 100) / 100,
       confidence: Math.round(confidence * 1000) / 1000,
-      meanResidualPa: Math.round(meanResidualPa),
-      lastResidualPa: Math.round(lastResidualPa),
+      meanResidualPa,
+      lastResidualPa,
       daysToThreshold: defensible
         ? daysToThreshold(lastResidualPa, slope, opts.thresholdPa)
         : null,
@@ -369,6 +369,8 @@ export function summarizeTireDifferentialDrift(
     if (score > leakScore) {
       leakScore = score;
       leakCorner = c.corner;
+    } else if (score === leakScore) {
+      leakCorner = null;
     }
   }
 
@@ -376,12 +378,14 @@ export function summarizeTireDifferentialDrift(
   const imbalancePa =
     meanResiduals.length > 0 ? Math.max(...meanResiduals) - Math.min(...meanResiduals) : 0;
   let imbalanceCorner: TireCorner | null = null;
-  if (corners.length > 0) {
-    let best = -Infinity;
+  if (rows.length > 0) {
+    let best = 0;
     for (const c of corners) {
       if (Math.abs(c.meanResidualPa) > best) {
         best = Math.abs(c.meanResidualPa);
         imbalanceCorner = c.corner;
+      } else if (Math.abs(c.meanResidualPa) === best) {
+        imbalanceCorner = null;
       }
     }
   }
@@ -391,7 +395,7 @@ export function summarizeTireDifferentialDrift(
     residuals,
     leakCorner,
     leakScore: Math.round(leakScore * 100) / 100,
-    imbalancePa: Math.round(imbalancePa),
+    imbalancePa,
     imbalanceCorner,
     analyzedSamples: samples.length,
     usableSamples: rows.length,
