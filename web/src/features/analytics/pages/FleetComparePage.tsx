@@ -70,6 +70,22 @@ function winnerCell(value: string, side: 'a' | 'b', row: ComparisonRow, winnerLa
 // have to dismiss it on every visit.
 const BANNER_DISMISSED_KEY = 'phase40.compareBanner.dismissed.fleet';
 
+function comparisonState(state: VehicleStateReadings | undefined): VehicleStateReadings | undefined {
+  if (!state) return undefined;
+  const numeric = (value: number | null | undefined) =>
+    value != null && Number.isFinite(value) ? value : null;
+  // Presence comes from the readings, not verifiedFields (which only attests freshness).
+  return {
+    ...state,
+    battery_level: numeric(state.battery_level),
+    rated_range: numeric(state.rated_range),
+    inside_temp: numeric(state.inside_temp),
+    outside_temp: numeric(state.outside_temp),
+    is_locked: state.is_locked ?? null,
+    sentry_mode: state.sentry_mode ?? null,
+  };
+}
+
 /* ── Status Row (label + value line inside a status card) ── */
 
 function StatusRow({
@@ -239,12 +255,13 @@ function VehicleStatusCard({
               )}>
                 {state.is_locked == null ? '—' : state.is_locked ? t('comparison.locked', 'Locked') : t('comparison.unlocked', 'Unlocked')}
               </Text>
-              {state.sentry_mode && (
-                <span className="inline-flex items-center gap-1 rounded-full border border-[var(--border-default)] bg-[var(--surface-2)] px-1.5 py-0.5 text-[var(--text-primary)]">
-                  <Shield className="h-3 w-3" aria-hidden="true" />
-                  <Text as="span" size="xs" weight="medium">{t('comparison.sentry', 'Sentry')}</Text>
-                </span>
-              )}
+              <span className="inline-flex items-center gap-1 rounded-full border border-[var(--border-default)] bg-[var(--surface-2)] px-1.5 py-0.5 text-[var(--text-primary)]">
+                <Shield className="h-3 w-3" aria-hidden="true" />
+                <Text as="span" size="xs" weight="medium">
+                  {state.sentry_mode == null ? `${t('comparison.sentry', 'Sentry')}: —`
+                    : state.sentry_mode ? t('comparison.sentry', 'Sentry') : t('common.sentryOff', 'Sentry OFF')}
+                </Text>
+              </span>
             </div>
           ) : (
             <Text as="span" size="xs" color="muted">—</Text>
@@ -374,8 +391,8 @@ export default function FleetComparePage() {
   /* ── Vehicle state (live) ── */
   const stateQueryA = useVehicleState(numIdA);
   const stateQueryB = useVehicleState(numIdB);
-  const stateA = stateQueryA.data?.state;
-  const stateB = stateQueryB.data?.state;
+  const stateA = comparisonState(stateQueryA.data?.state);
+  const stateB = comparisonState(stateQueryB.data?.state);
 
   /* ── Driving stats (lifetime) ── */
   const statsQueryA = useDrivingStats(vehicleIdA || undefined);

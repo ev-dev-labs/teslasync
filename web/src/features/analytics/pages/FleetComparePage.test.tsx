@@ -32,9 +32,9 @@
  * real `useUnits`/`useFormatting` formatters render km / °C / $ / kWh.
  */
 
-import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { render, screen, fireEvent, waitFor, within } from '@testing-library/react'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
+import { act, render, screen, fireEvent, waitFor, within } from '@testing-library/react'
+import { onlineManager, QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter, useLocation } from 'react-router-dom'
 import type { ComponentProps, ReactNode } from 'react'
 
@@ -103,8 +103,9 @@ import { ThemeProvider } from '@/components/ui/ThemeProvider'
 import { setGlobalPrecision, setGlobalLocale } from '@/lib/numberFormat'
 import FleetComparePage from './FleetComparePage'
 import type { Vehicle } from '@/types/vehicle'
-import type { VehicleState } from '@/api/types'
+import type { VehicleState, VehicleStateReadings } from '@/api/types'
 import type { DrivingStats } from '@/types/driving'
+import { vehicleKeys } from '@/api/hooks/useVehicles'
 
 const mockedRequest = request as unknown as ReturnType<typeof vi.fn>
 
@@ -219,6 +220,8 @@ interface InstallOptions {
   monthlyPendingB?: boolean
   monthlyErrorB?: boolean
   monthlyForA?: typeof monthlyA
+  stateResponse?: { state?: Partial<VehicleStateReadings> | null; live: boolean } | null
+  statePending?: boolean
   stateEvidence?: {
     live: boolean
     observed_at: string | null
@@ -239,6 +242,8 @@ function install(opts: InstallOptions = {}) {
     monthlyErrorB = false,
     monthlyForA = monthlyA,
     stateEvidence,
+    stateResponse,
+    statePending = false,
   } = opts
 
   const idOf = (path: string) => new URLSearchParams(path.split('?')[1] ?? '').get('vehicle_id')
@@ -246,6 +251,8 @@ function install(opts: InstallOptions = {}) {
   mockedRequest.mockImplementation((path: string) => {
     const stateMatch = path.match(/\/vehicles\/(\d+)\/state/)
     if (stateMatch) {
+      if (statePending) return never()
+      if (stateResponse !== undefined) return Promise.resolve(stateResponse)
       const id = Number(stateMatch[1])
       const state = id === 1 ? makeState({ vehicle_id: 1 }) : makeState({ vehicle_id: 2, battery_level: 65, is_locked: false, sentry_mode: true, state: 'asleep' })
       return Promise.resolve({ state, live: false, ...stateEvidence })
@@ -276,11 +283,10 @@ function LocationProbe() {
   return <div data-testid="location">{loc.pathname}</div>
 }
 
-function renderPage(path = '/fleet-compare') {
-  const client = new QueryClient({
+function renderPage(path = '/fleet-compare', client = new QueryClient({
     defaultOptions: { queries: { retry: false, retryDelay: 0 } },
-  })
-  return render(
+  })) {
+  const result = render(
     <MemoryRouter initialEntries={[path]}>
       <QueryClientProvider client={client}>
         <ThemeProvider>
@@ -292,7 +298,12 @@ function renderPage(path = '/fleet-compare') {
       <LocationProbe />
     </MemoryRouter>,
   )
+  return { ...result, client }
 }
+
+afterEach(() => {
+  onlineManager.setOnline(true)
+})
 
 beforeEach(() => {
   mockedRequest.mockReset()
@@ -306,6 +317,74 @@ beforeEach(() => {
 })
 
 describe('FleetComparePage evidence preservation', () => {
+  it('shows active state loading without invented readings', async () => {
+    install({ statePending: true })
+    const { client } = renderPage()
+    await screen.findByLabelText('Vehicle A')
+    await waitFor(() => expect(client.getQueryState(vehicleKeys.state(1))?.fetchStatus).toBe('fetching'))
+    expect(screen.queryByText('72%')).toBeNull()
+    expect(screen.queryByText('Battery')).toBeNull()
+    expect(screen.queryByText('Unlocked')).toBeNull()
+  })
+
+  it('shows unknown readings, not loading or false, when paused without data', async () => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    client.setQueryData(vehicleKeys.all, [makeVehicle(), makeVehicle({ id: 2 })])
+    onlineManager.setOnline(false)
+    renderPage('/fleet-compare', client)
+    await waitFor(() => expect(client.getQueryState(vehicleKeys.state(1))?.fetchStatus).toBe('paused'))
+    expect(await screen.findAllByText('Battery')).toHaveLength(2)
+    expect(screen.queryByRole('progressbar', { name: 'Battery level' })).toBeNull()
+    expect(screen.queryByText('Unlocked')).toBeNull()
+    expect(screen.queryByText('Sentry OFF')).toBeNull()
+  })
+
+  it.each([
+    null,
+    { state: { vehicle_id: 1 }, live: false },
+    { state: { vehicle_id: 1, battery_level: null, rated_range: null, is_locked: null, sentry_mode: null }, live: false },
+    { state: { vehicle_id: 1, battery_level: Number.NaN, rated_range: Number.POSITIVE_INFINITY }, live: false },
+  ])('renders successful empty state as unknown without fabricated zeros (%j)', async (stateResponse) => {
+    install({ stateResponse })
+    const { client } = renderPage()
+    await waitFor(() => expect(client.getQueryState(vehicleKeys.state(1))?.status).toBe('success'))
+    expect(await screen.findAllByText('Battery')).toHaveLength(2)
+    expect(screen.queryByText('0%')).toBeNull()
+    expect(screen.queryByText('Unlocked')).toBeNull()
+    expect(screen.queryByRole('progressbar', { name: 'Battery level' })).toBeNull()
+  })
+
+  it('preserves durable zero and false through refresh failure and recovery without rewriting cache', async () => {
+    const state = makeState({
+      battery_level: 0, rated_range: 0, inside_temp: 0, outside_temp: 0,
+      is_locked: false, sentry_mode: false,
+    })
+    install({ stateResponse: { state, live: false } })
+    const { client } = renderPage()
+    await screen.findAllByText('0%')
+    expect(screen.getAllByText('Unlocked')).toHaveLength(2)
+    expect(screen.getAllByText('Sentry OFF')).toHaveLength(2)
+    expect(screen.getAllByRole('progressbar', { name: 'Battery level' })[0]).toHaveAttribute('aria-valuenow', '0')
+    const retained = client.getQueryData(vehicleKeys.state(1))
+    const workingRequest = mockedRequest.getMockImplementation()!
+    mockedRequest.mockImplementation((path: string, ...args: unknown[]) =>
+      path === '/vehicles/1/state' ? Promise.reject(new Error('state refresh failed')) : workingRequest(path, ...args))
+    await act(async () => { await client.refetchQueries({ queryKey: vehicleKeys.state(1), exact: true }) })
+    expect(await screen.findByText("Can't reach server")).toBeInTheDocument()
+    expect(client.getQueryData(vehicleKeys.state(1))).toBe(retained)
+    expect(screen.getAllByText('Unlocked')).toHaveLength(2)
+    expect(screen.getAllByText('Sentry OFF')).toHaveLength(2)
+    expect(screen.getAllByText('0%').length).toBeGreaterThanOrEqual(2)
+    mockedRequest.mockImplementation((path: string, ...args: unknown[]) =>
+      path === '/vehicles/1/state'
+        ? Promise.resolve({ state: makeState({ battery_level: 50, sentry_mode: true }), live: false })
+        : workingRequest(path, ...args))
+    await act(async () => { await client.refetchQueries({ queryKey: vehicleKeys.state(1), exact: true }) })
+    expect(await screen.findByText('50%')).toBeInTheDocument()
+    expect(screen.queryByText("Can't reach server")).toBeNull()
+    expect(screen.getAllByText('Sentry OFF')).toHaveLength(1)
+  })
+
   const distanceEvidence = () => {
     const calls = trendEvidence.mock.calls.map(([props]) =>
       props as ComponentProps<typeof import('../components/fleet-compare-modernization').FleetTrendCard>)
