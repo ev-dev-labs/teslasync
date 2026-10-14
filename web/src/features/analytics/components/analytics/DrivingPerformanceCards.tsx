@@ -28,23 +28,24 @@ export function DrivingPerformanceCards({ query }: { query: FleetAnalyticsQuery 
   const ps = da?.power_stats;
   const rs = da?.regen_stats;
   const ds = da?.distance_stats;
+  const hasSamples = (count: number | undefined) => Number.isSafeInteger(count) && (count ?? 0) > 0;
   const metrics: StatMetric[] = [
-    { metricId: 'speed', occurrenceId: 'driving-top-speed', rawValue: ss?.max != null ? ss.max * METERS_PER_KM / SECONDS_PER_HOUR : null,
+    { metricId: 'speed', occurrenceId: 'driving-top-speed', rawValue: hasSamples(ss?.count) && ss?.max != null ? ss.max * METERS_PER_KM / SECONDS_PER_HOUR : null,
       label: t('analytics.driving.topSpeed', 'Top speed'),
       display: { formatter: raw => ({ value: fmtNumber(convertSpeedFromSI(raw, speedUnit)), unit: speedUnit }) } },
-    { metricId: 'speed', occurrenceId: 'driving-average-speed', rawValue: ss?.avg != null ? ss.avg * METERS_PER_KM / SECONDS_PER_HOUR : null,
+    { metricId: 'speed', occurrenceId: 'driving-average-speed', rawValue: hasSamples(ss?.count) && ss?.avg != null ? ss.avg * METERS_PER_KM / SECONDS_PER_HOUR : null,
       label: t('analytics.driving.avgSpeed', 'Avg speed'),
       display: { formatter: raw => ({ value: fmtNumber(convertSpeedFromSI(raw, speedUnit)), unit: speedUnit }) } },
-    { metricId: 'power', occurrenceId: 'driving-peak-power', rawValue: ps?.max != null ? ps.max * 1000 : null,
+    { metricId: 'power', occurrenceId: 'driving-peak-power', rawValue: hasSamples(ps?.count) && ps?.max != null ? ps.max * 1000 : null,
       label: t('analytics.driving.peakPower', 'Peak power'),
       display: { formatter: raw => ({ value: fmtNumber(raw / 1000), unit: 'kW' }) } },
-    { metricId: 'power', occurrenceId: 'driving-peak-regen', rawValue: rs?.max != null ? rs.max * 1000 : null,
+    { metricId: 'power', occurrenceId: 'driving-peak-regen', rawValue: hasSamples(rs?.count) && rs?.max != null ? rs.max * 1000 : null,
       label: t('analytics.driving.peakRegen', 'Peak regen'),
       display: { formatter: raw => ({ value: fmtNumber(raw / 1000), unit: 'kW' }) } },
-    { metricId: 'distance', occurrenceId: 'driving-average-distance', rawValue: ds?.avg != null ? ds.avg * METERS_PER_KM : null,
+    { metricId: 'distance', occurrenceId: 'driving-average-distance', rawValue: hasSamples(ds?.count) && ds?.avg != null ? ds.avg * METERS_PER_KM : null,
       label: t('analytics.driving.avgDriveDist', 'Avg drive distance'),
       display: { formatter: raw => ({ value: fmtNumber(convertDistanceFromSI(raw, distanceUnit)), unit: distanceUnit }) } },
-    { metricId: 'distance', occurrenceId: 'driving-longest-distance', rawValue: ds?.max != null ? ds.max * METERS_PER_KM : null,
+    { metricId: 'distance', occurrenceId: 'driving-longest-distance', rawValue: hasSamples(ds?.count) && ds?.max != null ? ds.max * METERS_PER_KM : null,
       label: t('analytics.driving.longestDrive', 'Longest drive'),
       display: { formatter: raw => ({ value: fmtNumber(convertDistanceFromSI(raw, distanceUnit)), unit: distanceUnit }) } },
   ];

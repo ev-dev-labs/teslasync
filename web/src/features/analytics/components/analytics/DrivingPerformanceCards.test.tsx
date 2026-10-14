@@ -12,8 +12,8 @@
  *     its stat is missing (undefined data, an errored query, or a payload
  *     that simply doesn't carry that stat, as is the case today for the
  *     driving power / regen aggregates),
- *   - clamp non-finite values to 0 through the `safe()` guard rather than
- *     rendering "NaN".
+ *   - keep missing/invalid readings unknown and require a recorded sample
+ *     population without discarding measured zero or signed values.
  *
  * Facets covered:
  *   1. LOADING     — a six-tile skeleton band renders, no metric labels leak,
@@ -30,7 +30,7 @@
  *                    never a blank band.
  *   6. PARTIAL     — only the tiles whose stat is present show a value; the
  *                    rest independently fall back to the placeholder.
- *   7. SAFE        — a non-finite stat value renders "0", not "NaN", while a
+ *   7. SAFE        — a non-finite stat value renders "—", not "NaN", while a
  *                    sibling finite value in the same stat still converts.
  *   8. A11Y        — the band is exposed as a labelled group with one icon
  *                    per tile.
@@ -92,7 +92,7 @@ function settingsFor(length: 'km' | 'mi') {
 }
 
 function stat(partial: Partial<StatsSummary>): StatsSummary {
-  return { min: 0, max: 0, avg: 0, median: 0, p95: 0, count: 0, ...partial };
+  return { min: 0, max: 0, avg: 0, median: 0, p95: 0, count: 3, ...partial };
 }
 
 /** Build a query result carrying only the drive-analytics stats we exercise. */
@@ -131,6 +131,41 @@ afterEach(() => {
 });
 
 describe('DrivingPerformanceCards', () => {
+  it.each([0, -1, 0.5, Number.NaN, Infinity, Number.MAX_SAFE_INTEGER + 1, undefined, null])(
+    'requires valid samples for each statistic with count %s',
+    (count) => {
+      const stats = { ...stat({ max: 25.5, avg: 0 }), count } as unknown as StatsSummary;
+      render(<DrivingPerformanceCards query={queryWith({
+        speed_stats: stats, power_stats: stats, regen_stats: stats, distance_stats: stats,
+      })} />);
+      expect(screen.getAllByText(EM_DASH)).toHaveLength(6);
+      expect(document.querySelectorAll('[data-operational-metric][data-value-state="missing"]')).toHaveLength(6);
+    },
+  );
+
+  it('does not let an empty speed population suppress independently measured distance or regeneration', () => {
+    render(<DrivingPerformanceCards query={queryWith({
+      speed_stats: stat({ count: 0, max: 200 }),
+      distance_stats: stat({ avg: 0.25, max: 0.5 }),
+      regen_stats: stat({ max: -0.25 }),
+    })} />);
+    expect(readTile(LABELS.topSpeed).value).toBe(EM_DASH);
+    expect(readTile(LABELS.avgSpeed).value).toBe(EM_DASH);
+    expect(readTile(LABELS.avgDriveDist).value).toBe('0.25');
+    expect(readTile(LABELS.longestDrive).value).toBe('0.50');
+    expect(readTile(LABELS.peakRegen).value).toBe('-0.25');
+  });
+
+  it('keeps absent and infinite fields unknown despite a valid sample population', () => {
+    render(<DrivingPerformanceCards query={queryWith({
+      speed_stats: { count: 2, max: Infinity } as StatsSummary,
+    })} />);
+    expect(readTile(LABELS.topSpeed).value).toBe(EM_DASH);
+    expect(readTile(LABELS.avgSpeed).value).toBe(EM_DASH);
+    expect(screen.getByText(LABELS.topSpeed).closest('[data-operational-metric]')).toHaveAttribute('data-value-state', 'invalid');
+    expect(screen.getByText(LABELS.avgSpeed).closest('[data-operational-metric]')).toHaveAttribute('data-value-state', 'missing');
+  });
+
   it('keeps the six-metric group while loading without publishing values', () => {
     const query = { data: undefined, isLoading: true } as unknown as FleetAnalyticsQuery;
     const { container } = render(<DrivingPerformanceCards query={query} />);

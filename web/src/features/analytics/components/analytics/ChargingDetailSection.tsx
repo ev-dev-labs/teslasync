@@ -40,11 +40,12 @@ export function ChargingDetailSection({ query }: { query: FleetAnalyticsQuery })
   const chargerTypes = ca?.charger_types ?? [];
   const monthlyTrend = ca?.monthly_trend ?? [];
   const costStats = ca?.cost_stats;
+  const hasCostSamples = Number.isSafeInteger(costStats?.count) && (costStats?.count ?? 0) > 0;
   const metrics: StatMetric[] = [
-    { metricId: 'currency', occurrenceId: 'charging-min-cost', rawValue: costStats?.min, label: t('analytics.charging.minCost', 'Min cost') },
-    { metricId: 'currency', occurrenceId: 'charging-average-cost', rawValue: costStats?.avg, label: t('analytics.charging.avgCost', 'Avg cost') },
-    { metricId: 'currency', occurrenceId: 'charging-median-cost', rawValue: costStats?.median, label: t('analytics.charging.medianCost', 'Median cost') },
-    { metricId: 'currency', occurrenceId: 'charging-max-cost', rawValue: costStats?.max, label: t('analytics.charging.maxCost', 'Max cost') },
+    { metricId: 'currency', occurrenceId: 'charging-min-cost', rawValue: hasCostSamples ? costStats?.min : null, label: t('analytics.charging.minCost', 'Min cost') },
+    { metricId: 'currency', occurrenceId: 'charging-average-cost', rawValue: hasCostSamples ? costStats?.avg : null, label: t('analytics.charging.avgCost', 'Avg cost') },
+    { metricId: 'currency', occurrenceId: 'charging-median-cost', rawValue: hasCostSamples ? costStats?.median : null, label: t('analytics.charging.medianCost', 'Median cost') },
+    { metricId: 'currency', occurrenceId: 'charging-max-cost', rawValue: hasCostSamples ? costStats?.max : null, label: t('analytics.charging.maxCost', 'Max cost') },
   ];
   const costMetrics: StatMetric[] = metrics.map(metric => ({
     ...metric,
@@ -133,7 +134,7 @@ export function ChargingDetailSection({ query }: { query: FleetAnalyticsQuery })
         loading={isLoading}
         error={err}
         onRetry={refetch}
-        isEmpty={!costStats}
+        isEmpty={!hasCostSamples}
         emptyMessage={t('analytics.charging.noCostStats', 'No cost statistics')}
         skeletonHeight={140}
       >

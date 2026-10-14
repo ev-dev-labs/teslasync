@@ -114,7 +114,7 @@ const PANEL_TITLES = [
 ] as const;
 
 function makeStats(overrides: Partial<StatsSummary> = {}): StatsSummary {
-  return { min: 0, max: 0, avg: 0, median: 0, p95: 0, count: 0, ...overrides };
+  return { min: 0, max: 0, avg: 0, median: 0, p95: 0, count: 3, ...overrides };
 }
 
 type ChargingAnalytics = FleetAnalytics['charging_analytics'];
@@ -352,6 +352,56 @@ describe('ChargingTab — a11y', () => {
 });
 
 describe('ChargingTab — null-safety', () => {
+  it.each([0, -1, 0.5, Number.NaN, Infinity, Number.MAX_SAFE_INTEGER + 1, undefined, null])(
+    'keeps aggregate sessions independent of ineligible statistics with count %s',
+    (count) => {
+      const stats = { ...makeStats(), count } as unknown as StatsSummary;
+      const { container } = renderTab(makeQuery({ data: makeFleet({
+        charging_analytics: makeChargingAnalytics({
+          energy_stats: stats, cost_stats: stats, power_stats: stats,
+          duration_stats: stats, efficiency_stats: stats,
+        }),
+      }) }));
+      expect(container.querySelector('[data-operational-metric="charging-sessions"] [data-operational-value]')).toHaveTextContent('128');
+      expect(container.querySelectorAll('[data-operational-metric][data-value-state="missing"]')).toHaveLength(5);
+    },
+  );
+
+  it('uses each statistic population independently and preserves signed fractional cost', () => {
+    const { container } = renderTab(makeQuery({ data: makeFleet({
+      total_cost: -0.25,
+      charging_analytics: makeChargingAnalytics({
+        energy_stats: makeStats({ count: 0 }),
+        power_stats: makeStats({ count: 0 }),
+        duration_stats: makeStats({ avg: 0 }),
+        efficiency_stats: makeStats({ avg: 0.5 }),
+      }),
+    }) }));
+    expect(container.querySelector('[data-operational-metric="charging-total-energy"]')).toHaveAttribute('data-value-state', 'missing');
+    expect(container.querySelector('[data-operational-metric="charging-average-power"]')).toHaveAttribute('data-value-state', 'missing');
+    expect(container.querySelector('[data-operational-metric="charging-total-cost"] [data-operational-value]')).toHaveTextContent('$-0.25');
+    expect(container.querySelector('[data-operational-metric="charging-average-duration"] [data-operational-value]')).toHaveTextContent('0.00 min');
+    expect(container.querySelector('[data-operational-metric="charging-efficiency"] [data-operational-value]')).toHaveTextContent('0.50%');
+  });
+
+  it('does not substitute zeros for missing or invalid readings with eligible samples', () => {
+    const { container } = renderTab(makeQuery({ data: makeFleet({
+      total_energy_kwh: Number.NaN,
+      total_cost: undefined,
+      charging_analytics: makeChargingAnalytics({
+        power_stats: makeStats({ avg: Infinity }),
+        duration_stats: { count: 2 } as StatsSummary,
+        efficiency_stats: makeStats({ avg: Number.NaN }),
+      }),
+    }) }));
+    for (const id of ['charging-total-energy', 'charging-average-power', 'charging-efficiency']) {
+      expect(container.querySelector(`[data-operational-metric="${id}"]`)).toHaveAttribute('data-value-state', 'invalid');
+    }
+    for (const id of ['charging-total-cost', 'charging-average-duration']) {
+      expect(container.querySelector(`[data-operational-metric="${id}"]`)).toHaveAttribute('data-value-state', 'missing');
+    }
+  });
+
   it('preserves real zero totals and exposes source limitations through the real drawer', () => {
     const { container } = renderTab(makeQuery({ data: makeFleet({
       total_charging_sessions: 0, total_energy_kwh: 0, total_cost: 0,

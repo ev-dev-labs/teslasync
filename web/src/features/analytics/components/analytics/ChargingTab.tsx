@@ -34,23 +34,24 @@ export function ChargingTab({ query }: { query: FleetAnalyticsQuery }) {
   const powerStats = ca?.power_stats;
   const durStats = ca?.duration_stats;
   const effStats = ca?.efficiency_stats;
+  const hasSamples = (count: number | undefined) => Number.isSafeInteger(count) && (count ?? 0) > 0;
   const metrics: StatMetric[] = [
     { metricId: 'count', occurrenceId: 'charging-sessions', rawValue: data?.total_charging_sessions,
       label: t('analytics.charging.sessions', 'Sessions'),
       display: { formatter: raw => ({ value: fmtInt(raw), unit: '' }) } },
-    { metricId: 'energy', occurrenceId: 'charging-total-energy', rawValue: data?.total_energy_kwh != null ? data.total_energy_kwh * 1000 : null,
+    { metricId: 'energy', occurrenceId: 'charging-total-energy', rawValue: hasSamples(ca?.energy_stats?.count) && data?.total_energy_kwh != null ? data.total_energy_kwh * 1000 : null,
       label: t('analytics.charging.totalEnergy', 'Total energy'),
       display: { formatter: raw => ({ value: fmtNumber(raw / 1000), unit: 'kWh' }) } },
-    { metricId: 'currency', occurrenceId: 'charging-total-cost', rawValue: data?.total_cost,
+    { metricId: 'currency', occurrenceId: 'charging-total-cost', rawValue: hasSamples(ca?.cost_stats?.count) ? data?.total_cost : null,
       label: t('analytics.charging.totalCost', 'Total cost'),
       display: { formatter: raw => ({ value: formatCurrency(raw), unit: '' }) } },
-    { metricId: 'power', occurrenceId: 'charging-average-power', rawValue: powerStats?.avg != null ? powerStats.avg * 1000 : null,
+    { metricId: 'power', occurrenceId: 'charging-average-power', rawValue: hasSamples(powerStats?.count) && powerStats?.avg != null ? powerStats.avg * 1000 : null,
       label: t('analytics.charging.avgPower', 'Avg power'),
       display: { formatter: raw => ({ value: fmtNumber(raw / 1000), unit: 'kW' }) } },
-    { metricId: 'duration', occurrenceId: 'charging-average-duration', rawValue: durStats?.avg != null ? durStats.avg * 60 : null,
+    { metricId: 'duration', occurrenceId: 'charging-average-duration', rawValue: hasSamples(durStats?.count) && durStats?.avg != null ? durStats.avg * 60 : null,
       label: t('analytics.charging.avgDuration', 'Avg duration'),
       display: { formatter: raw => ({ value: fmtNumber(raw / 60), unit: t('analytics.charging.min', 'min') }) } },
-    { metricId: 'percent', occurrenceId: 'charging-efficiency', rawValue: effStats?.avg,
+    { metricId: 'percent', occurrenceId: 'charging-efficiency', rawValue: hasSamples(effStats?.count) ? effStats?.avg : null,
       label: t('analytics.charging.chargeEff', 'Charge efficiency'),
       display: { formatter: raw => ({ value: fmtNumber(raw), unit: '%' }) } },
   ];

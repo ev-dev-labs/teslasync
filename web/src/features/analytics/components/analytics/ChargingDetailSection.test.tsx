@@ -310,12 +310,36 @@ describe('ChargingDetailSection — null safety', () => {
   it('keeps zero and signed recorded costs distinct from missing cost fields', () => {
     const { container } = renderSection(makeQuery({ data: {
       ...FULL,
-      charging_analytics: { ...CA, cost_stats: { ...STATS, min: -2.5, avg: 0, median: 0, max: 5 } },
+      charging_analytics: { ...CA, cost_stats: { ...STATS, count: 3, min: -2.5, avg: 0, median: 0, max: 5 } },
     } }));
     expect(container.querySelector('[data-operational-metric="charging-min-cost"] [data-operational-value]')).toHaveTextContent('$-2.50');
     expect(container.querySelector('[data-operational-metric="charging-average-cost"] [data-operational-value]')).toHaveTextContent('$0.00');
     fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
     expect(screen.getByRole('dialog')).toBeInTheDocument();
+  });
+
+  it.each([0, -1, 0.5, Number.NaN, Infinity, Number.MAX_SAFE_INTEGER + 1, undefined, null])(
+    'does not present zero-filled costs as measured with count %s',
+    (count) => {
+      renderSection(makeQuery({ data: {
+        ...FULL,
+        charging_analytics: { ...CA, cost_stats: { ...STATS, count } },
+      } as unknown as FleetAnalytics }));
+      expect(screen.getByText('No cost statistics')).toBeInTheDocument();
+      expect(screen.queryByText('$0.00')).not.toBeInTheDocument();
+      expect(screen.getByText('800 sessions')).toBeInTheDocument();
+    },
+  );
+
+  it('keeps missing and invalid cost readings unknown despite recorded samples', () => {
+    const { container } = renderSection(makeQuery({ data: {
+      ...FULL,
+      charging_analytics: { ...CA, cost_stats: { ...STATS, count: 2, min: undefined, avg: Number.NaN, median: Infinity, max: 0.25 } },
+    } as unknown as FleetAnalytics }));
+    expect(container.querySelector('[data-operational-metric="charging-min-cost"]')).toHaveAttribute('data-value-state', 'missing');
+    expect(container.querySelector('[data-operational-metric="charging-average-cost"]')).toHaveAttribute('data-value-state', 'invalid');
+    expect(container.querySelector('[data-operational-metric="charging-median-cost"]')).toHaveAttribute('data-value-state', 'invalid');
+    expect(container.querySelector('[data-operational-metric="charging-max-cost"] [data-operational-value]')).toHaveTextContent('$0.25');
   });
 
   it('renders placeholder labels and zeroed counts without crashing on missing fields', () => {
