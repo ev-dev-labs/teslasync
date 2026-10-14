@@ -43,11 +43,29 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
 
+vi.unmock('@/api/hooks/useAnnotations');
+
 // i18n stub: return the fallback string, interpolating {{var}} tokens so
 // assertions can target the rendered English copy.
-vi.mock('react-i18next', () => ({
+const displayState = vi.hoisted(() => ({ locale: 'en-US', timezone: '', language: 'en' }));
+
+vi.mock('react-i18next', async () => {
+  const { createInstance } = await import('i18next');
+  const { default: en } = await import('@/i18n/en.json');
+  const translations = createInstance();
+  await translations.init({
+    lng: 'en', fallbackLng: 'en',
+    resources: {
+      en: { translation: en },
+      fr: { translation: { statistics: { ageMonths_one: 'mois', ageMonths_other: 'mois' } } },
+    },
+  });
+  return {
   useTranslation: () => ({
     t: (key: string, fallbackOrOpts?: unknown, opts?: unknown) => {
+      if (key === 'statistics.ageMonths') {
+        return translations.t(key, { ...(fallbackOrOpts as { count: number; defaultValue: string }), lng: displayState.language });
+      }
       if (typeof fallbackOrOpts === 'string') {
         if (opts && typeof opts === 'object') {
           const o = opts as Record<string, unknown>;
@@ -67,7 +85,8 @@ vi.mock('react-i18next', () => ({
   }),
   Trans: ({ children }: { children?: ReactNode }) => <>{children}</>,
   initReactI18next: { type: '3rdParty', init: () => undefined },
-}));
+  };
+});
 
 // Mutable unit preference so a single file can exercise both the metric (km)
 // and imperial (mi) display-conversion branches. Hoisted so the settings mock
@@ -116,12 +135,13 @@ vi.mock('@/hooks/useSettings', async (importActual) => {
   return {
     ...actual,
     useSettings: () => ({
-      settings: { ...defaults, unit_of_length: unitState.length },
+      settings: { ...defaults, unit_of_length: unitState.length, locale: displayState.locale,
+        timezone_user: displayState.timezone, tz_display_default: displayState.timezone ? 'user' : 'vehicle' },
       isMiles: unitState.length === 'mi',
       isFahrenheit: false,
       isPSI: false,
       decimals: 2,
-      locale: 'en-US',
+      locale: displayState.locale,
       density: 'comfortable' as const,
       rangeType: 'rated' as const,
     }),
@@ -172,6 +192,7 @@ import { useMileageStats, useStateSummary, useFleetAnalytics } from '@/api/hooks
 import { useBatteryHealthAnalytics } from '@/api/hooks/useEnergy';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { calendarRangeToInstants } from '@/lib/dateRange';
+import { setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat';
 import { ToastProvider } from '@/components/feedback/Toast';
 import { ThemeProvider } from '@/components/ui/ThemeProvider';
 import StatisticsPage from './StatisticsPage';
@@ -308,6 +329,11 @@ function periodStatsCallCount(): number {
 beforeEach(() => {
   vi.clearAllMocks();
   unitState.length = 'km';
+  displayState.locale = 'en-US';
+  displayState.timezone = '';
+  displayState.language = 'en';
+  setGlobalLocale('en-US');
+  setGlobalPrecision(2);
   periodStatsHandler = () => Promise.resolve(makeStats());
   mockedRequest.mockImplementation((path: unknown) => {
     if (typeof path === 'string') {
@@ -879,8 +905,58 @@ describe('StatisticsPage', () => {
     expect(screen.getByText('Capacity')).toBeInTheDocument();
     expect(screen.getByText('71.50 kWh')).toBeInTheDocument();
     expect(screen.getByText('412')).toBeInTheDocument();
-    expect(screen.getByText('30 mo')).toBeInTheDocument();
+    expect(screen.getByText('30.00 months')).toBeInTheDocument();
   });
+
+  it.each([
+    [0, '0.00 months'],
+    [1, '1.00 month'],
+    [1.5, '1.50 months'],
+    [1234.5, '1,234.50 months'],
+  ])('formats source calendar months (%s) with numeric formatting and plural selection', async (age, expected) => {
+    const battery = Object.freeze(makeBattery({ battery_age_months: age }));
+    mockBattery.mockReturnValue(qr({ data: battery }));
+    renderPage();
+    const brief = screen.getByTestId('statistics-battery-brief');
+    expect(within(brief).getByText(expected)).toBeInTheDocument();
+    expect(battery.battery_age_months).toBe(age);
+  });
+
+  it.each([
+    ['2026-03-01T07:59:59Z', '2026-02-28T23:59:59-08:00'],
+    ['2026-03-01T08:00:00Z', '2026-03-01T00:00:00-08:00'],
+    ['2026-03-01T08:00:00Z', 'invalid-date'],
+    ['2026-03-01T08:00:00Z', null],
+    ['2026-03-01T08:00:00Z', undefined],
+  ])('keeps calendar-month age with saved locale/timezone at %s and source date %s', async (now, date) => {
+    displayState.locale = 'fr-FR';
+    displayState.timezone = 'America/Los_Angeles';
+    displayState.language = 'fr';
+    setGlobalLocale(displayState.locale);
+    vi.setSystemTime(new Date(now));
+    try {
+      mockBattery.mockReturnValue(qr({ data: makeBattery({ battery_age_months: 1234.5 }) }));
+      mockMileage.mockReturnValue(qr({ data: makeMileage({ first_drive_at: date, last_drive_at: date }) }));
+      renderPage();
+      expect(within(screen.getByTestId('statistics-battery-brief')).getByText(/1\s234,50 mois/)).toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it.each([undefined, null, NaN, Infinity, -Infinity, '30'])(
+    'does not invent calendar-month age from missing or invalid age (%s)',
+    async battery_age_months => {
+      mockBattery.mockReturnValue(qr({ data: makeBattery({ battery_age_months }) }));
+      renderPage();
+      const age = screen.getByTestId('statistics-battery-brief')
+        .querySelector('[data-operational-metric="statistics-battery-age"]');
+      expect(age).toHaveAttribute('data-value-state', battery_age_months == null ? 'missing' : 'invalid');
+      expect(age).not.toHaveTextContent('0.00 months');
+      expect(age).not.toHaveTextContent('NaN');
+      expect(age).not.toHaveTextContent('Infinity');
+    },
+  );
 
   it.each([undefined, null, NaN, Infinity, -Infinity, '92'])(
     'does not present missing or invalid health (%s) as measured zero',
@@ -927,7 +1003,7 @@ describe('StatisticsPage', () => {
     await screen.findByRole('region', { name: 'Statistics' });
     expect(screen.getByRole('meter', { name: 'Health' })).toHaveAttribute('aria-valuenow', '0');
     expect(screen.getByTestId('statistics-battery-brief').querySelectorAll('[data-value-state="missing"]')).toHaveLength(0);
-    expect(screen.getByText('0 mo')).toBeInTheDocument();
+    expect(screen.getByText('0.00 months')).toBeInTheDocument();
   });
 
   it.each([92.34, -2.34, 102.34])('preserves fractional and signed health %s without rounding or clamping its reading', async current_soh => {
@@ -937,7 +1013,7 @@ describe('StatisticsPage', () => {
     const health = screen.getByRole(current_soh >= 0 && current_soh <= 100 ? 'meter' : 'group', { name: 'Health' });
     expect(within(health).getByText(current_soh.toFixed(2))).toBeInTheDocument();
     expect(screen.getByText('-1.25 %/yr')).toBeInTheDocument();
-    expect(screen.getByText('2.5 mo')).toBeInTheDocument();
+    expect(screen.getByText('2.50 months')).toBeInTheDocument();
   });
 
   it('retains unknown health and measured neighbors during failed battery refresh', async () => {

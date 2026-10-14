@@ -87,6 +87,18 @@ describe('statistics source preservation', () => {
     expect(screen.getByText('Retained measurement: 0')).toBeInTheDocument();
   });
 
+  it('retains localized calendar-month age through refresh failure and recovery', () => {
+    const content = <span>{'1\u202f234,50 mois'}</span>;
+    const { rerender } = render(
+      <StatisticsSource {...common} hasData loading error={new Error('refresh')}>{content}</StatisticsSource>,
+    );
+    expect(screen.getByText(/1\s234,50 mois/)).toBeInTheDocument();
+    expect(screen.getByRole('alert')).toBeInTheDocument();
+    rerender(<StatisticsSource {...common} hasData loading={false}>{content}</StatisticsSource>);
+    expect(screen.getByText(/1\s234,50 mois/)).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
   it('retains CO₂ estimate limitations with a populated mass during refresh failure and recovery', () => {
     const content = <>
       <span>50.00 kg</span>

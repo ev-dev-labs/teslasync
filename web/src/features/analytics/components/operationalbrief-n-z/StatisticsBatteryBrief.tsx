@@ -8,6 +8,7 @@ import { EmptyState, Skeleton } from '@/components/feedback';
 import { useOperationalMetrics } from '@/hooks/useOperationalMetrics';
 import { useUnits } from '@/hooks/useUnits';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { isFiniteNumber } from '@/lib/numberFormat';
 import { StatisticsSource } from '../statistics-modernization/StatisticsSource';
 import type { BatteryStatistics } from '../statistics-modernization/BatteryStatistics';
 
@@ -15,7 +16,16 @@ export function StatisticsBatteryBrief({ query }: ComponentProps<typeof BatteryS
   const { t } = useTranslation();
   const { formatEnergy } = useUnits();
   const { fmtInt, fmtNumber } = useNumberFormatting();
-  const battery = query.data;
+  const battery: (NonNullable<typeof query.data> & { current_soh_available?: boolean }) | null | undefined = query.data;
+  // Older responses encode unsupported SOH as zero; evidence, not the reading's sign, distinguishes it.
+  const hasHealthEvidence = battery != null && (battery.current_soh_available ?? (
+    (isFiniteNumber(battery.estimated_capacity_wh) && battery.estimated_capacity_wh > 0 &&
+      isFiniteNumber(battery.original_capacity_wh) && battery.original_capacity_wh > 0) ||
+    (battery.history ?? []).some(point =>
+      isFiniteNumber(point.soh_pct) && isFiniteNumber(point.capacity_wh) && point.capacity_wh >= 0) ||
+    battery.prediction?.has_enough_data === true
+  ));
+  const health = battery != null && hasHealthEvidence && isFiniteNumber(battery.current_soh) ? battery.current_soh : null;
   const metrics: StatMetric[] = [
     { metricId: 'energy', occurrenceId: 'statistics-battery-capacity',
       rawValue: battery?.estimated_capacity_wh, label: t('statistics.capacity', 'Capacity'),
@@ -28,7 +38,10 @@ export function StatisticsBatteryBrief({ query }: ComponentProps<typeof BatteryS
       display: { formatter: raw => ({ value: fmtInt(raw), unit: '' }) } },
     { metricId: 'rate', occurrenceId: 'statistics-battery-age',
       rawValue: battery?.battery_age_months, label: t('statistics.age', 'Age'),
-      display: { formatter: raw => ({ value: String(raw), unit: 'mo' }) } },
+      display: { formatter: raw => ({
+        value: fmtNumber(raw),
+        unit: t('statistics.ageMonths', { count: raw, defaultValue: raw === 1 ? 'month' : 'months' }),
+      }) } },
   ];
   const operationalMetrics = useOperationalMetrics(metrics);
   return <LayoutCard title={t('statistics.batteryHealth', 'Battery health')}>
@@ -40,8 +53,8 @@ export function StatisticsBatteryBrief({ query }: ComponentProps<typeof BatteryS
         actionTo={{ label: t('routes.batteryHealth', 'Battery health'), to: '/battery' }} className="py-8" />}
     >
       {battery && <div className="flex justify-center">
-        <LinearGauge value={Math.round(battery.current_soh ?? 0)} max={100}
-          label={t('statistics.health', 'Health')} unit="%" tone="success" size={140} className="max-w-xs" />
+        <LinearGauge value={health} preserveReadingAndScale max={100}
+          label={t('statistics.health', 'Health')} unit="%" tone="neutral" size={140} className="max-w-xs" />
       </div>}
     </StatisticsSource>
     <OperationalBrief compact testId="statistics-battery-brief"
