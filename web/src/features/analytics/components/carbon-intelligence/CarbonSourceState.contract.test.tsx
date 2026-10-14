@@ -103,7 +103,7 @@ describe('carbonQueryState authoritative source success time', () => {
     { name: 'absent', timestamp: undefined },
     { name: 'zero', timestamp: 0 },
     { name: 'negative', timestamp: -1 },
-  ])('preserves_unknown_timestamp_for_$name_source_time_without_using_now', ({ timestamp }) => {
+  ])('preserves_unknown_timestamp_for_$name (source_time_without_using_now)', ({ timestamp }) => {
     const state = carbonQueryState(query({ dataUpdatedAt: timestamp }), true, vi.fn());
     expect(state).toHaveProperty('dataUpdatedAt', timestamp);
     expect(state.hasData).toBe(true);
@@ -152,7 +152,7 @@ describe('carbonQueryState authoritative source success time', () => {
     { name: 'false', data: false },
     { name: 'null', data: null },
     { name: 'empty_array', data: [] },
-  ])('preserves_defined_$name_payload_as_resolved_retained_evidence', ({ data }) => {
+  ])('preserves_defined_$name (payload_as_resolved_retained_evidence)', ({ data }) => {
     const state = carbonQueryState(query({ data, isSuccess: false }), true, vi.fn());
     expect(state).toMatchObject({
       hasData: true, isResolved: true, isLoading: false,
@@ -301,7 +301,7 @@ describe('CarbonSectionBody canonical timestamp reconstruction', () => {
       enabled: true,
       message: 'This source is unavailable. Retry it from the source and scope ledger.',
     },
-  ])('preserves_body_$name_replacement_and_own_recovery', ({ source, enabled, message, name }) => {
+  ])('preserves_body_$name (replacement_and_own_recovery)', ({ source, enabled, message, name }) => {
     const retry = vi.fn();
     render(body(carbonQueryState(source, enabled, retry)));
     expect(screen.getByText(message)).toBeInTheDocument();
@@ -362,8 +362,11 @@ describe('CarbonSourceRow existing source metadata presentation', () => {
     expect(screen.getByText('Cached · refresh failed')).toBeInTheDocument();
     expect(screen.getByText('Refresh failed; the most recently loaded evidence remains visible.'))
       .toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Retry refresh' }));
-    expect(retry).toHaveBeenCalledExactlyOnceWith();
+    const retryButton = screen.getByRole('button', { name: 'Retry refresh' });
+    fireEvent.click(retryButton);
+    expect(retry).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({
+      type: 'click', target: retryButton,
+    }));
   });
 
   it('renders_paused_age_without_claiming_refresh_failure', () => {
@@ -455,7 +458,7 @@ describe('CarbonSourceRow existing source metadata presentation', () => {
     { name: 'ready_without_timestamp', source: query({ dataUpdatedAt: undefined }), enabled: true, label: 'Ready' },
     { name: 'ready_zero_timestamp', source: query({ dataUpdatedAt: 0 }), enabled: true, label: 'Ready' },
     { name: 'ready_negative_timestamp', source: query({ dataUpdatedAt: -1 }), enabled: true, label: 'Ready' },
-  ])('preserves_row_$name_label_without_fabricated_age_or_freshness', ({ source, enabled, label, name }) => {
+  ])('preserves_row_$name (label_without_fabricated_age_or_freshness)', ({ source, enabled, label, name }) => {
     const retry = vi.fn();
     render(row(carbonQueryState(source, enabled, retry)));
     expect(screen.getByText(label)).toBeInTheDocument();
@@ -463,8 +466,11 @@ describe('CarbonSourceRow existing source metadata presentation', () => {
     expect(screen.queryByText(/ago|just now|up to date/i)).not.toBeInTheDocument();
     if (name === 'initial_fatal') {
       expect(screen.getByText('Selected-period query failed')).toBeInTheDocument();
-      fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
-      expect(retry).toHaveBeenCalledExactlyOnceWith();
+      const retryButton = screen.getByRole('button', { name: 'Retry' });
+      fireEvent.click(retryButton);
+      expect(retry).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({
+        type: 'click', target: retryButton,
+      }));
     }
   });
 
@@ -473,7 +479,7 @@ describe('CarbonSourceRow existing source metadata presentation', () => {
     { name: 'period', id: 'period', message: 'Selected-period query failed' },
     { name: 'lifetime', id: 'lifetime', message: 'Lifetime summary query failed' },
     { name: 'recommendation', id: 'recommendation', message: 'Recommendation query failed' },
-  ] as const)('preserves_exact_$name_initial_failure_and_source_retry', ({ id, message }) => {
+  ] as const)('preserves_exact_$name (initial_failure_and_source_retry)', ({ id, message }) => {
     const retry = vi.fn();
     render(<CarbonSourceRow
       id={id}
@@ -486,7 +492,10 @@ describe('CarbonSourceRow existing source metadata presentation', () => {
     expect(screen.getByText(message)).toBeInTheDocument();
     expect(screen.getByText('Failed')).toBeInTheDocument();
     expect(screen.queryByRole('status', { name: /Data freshness:/ })).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
-    expect(retry).toHaveBeenCalledExactlyOnceWith();
+    const retryButton = screen.getByRole('button', { name: 'Retry' });
+    fireEvent.click(retryButton);
+    expect(retry).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({
+      type: 'click', target: retryButton,
+    }));
   });
 });
