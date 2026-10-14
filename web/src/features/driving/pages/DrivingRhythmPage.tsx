@@ -4,7 +4,8 @@ import { useTranslation } from 'react-i18next';
 import { useDriveCalendarHistory } from '@/api/hooks/useDriving';
 
 import { Grid, PageLayout } from '@/components/layout';
-import { SectionErrorBoundary, StaleRefreshWarning } from '@/components/feedback';
+import { AlertBanner, SectionErrorBoundary, StaleRefreshWarning } from '@/components/feedback';
+import { Button } from '@/components/ui';
 import { useDataState } from '@/hooks/useDataState';
 import { NoVehicleSelected } from '@/features/onboarding/components/NoVehicleSelected';
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -63,6 +64,11 @@ export default function DrivingRhythmPage() {
 
   const sectionState: DrivingRhythmSectionState = {
     isLoading: sourceState.status === 'initial',
+    retained: sourceState.hasData && (
+      sourceState.status === 'stale' ||
+      sourceState.refreshError != null ||
+      sourceState.isRefreshBlocked
+    ),
     error: sourceState.fatalError,
     onRetry: () => {
       void drivesQuery.refetch();
@@ -77,12 +83,31 @@ export default function DrivingRhythmPage() {
         'When your car actually gets driven',
       )}
       query={drivesQuery}
+      busy={sourceState.status === 'initial' && !sourceState.isRefreshBlocked && drivesQuery.isFetching}
     >
+      {sourceState.status === 'initial' && sourceState.isRefreshBlocked && (
+        <AlertBanner
+          data-testid="driving-rhythm-initial-paused"
+          variant="info"
+          title={t('dataSources.status.paused', 'Refresh paused')}
+        >
+          {t('dataSources.unavailableMessage', 'No requested source has returned usable data yet.')}
+          <Button
+            variant="ghost"
+            size="sm"
+            wrapLabel
+            className="min-h-11 md:min-h-9"
+            onClick={sectionState.onRetry}
+          >
+            {t('common.refresh', 'Refresh')}
+          </Button>
+        </AlertBanner>
+      )}
       <StaleRefreshWarning state={sourceState} label={t('rhythm.title', 'Driving Rhythm')} />
       <SectionErrorBoundary name="DrivingRhythmBrief">
         <DrivingRhythmBrief summary={summary} {...sectionState}
           scope={t('rhythm.brief.window', '{{start}}–{{end}} · {{timezone}}', { start, end, timezone })}
-          retained={sourceState.status === 'stale' || sourceState.refreshError != null} />
+          retained={sectionState.retained} />
       </SectionErrorBoundary>
 
       <SectionErrorBoundary name="WeeklyPunchcard">

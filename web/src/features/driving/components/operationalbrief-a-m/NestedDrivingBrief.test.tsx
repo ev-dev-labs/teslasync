@@ -3,15 +3,16 @@ import { fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { StatMetric } from '@/components/data-display/stat-reference';
-import type { MetricPreferences } from '@/lib/metric-reference';
+import type { StatMetric, MetricPreferences } from '@/components/data-display';
 import type { UnitPref } from '@/lib/unitConversion';
 import { useUnits } from '@/hooks/useUnits';
 import { setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat';
 import { convertDistanceFromSI, convertSpeedFromSI, convertTempFromSI } from '@/lib/unitConversion';
 import { deriveDataState } from '@/api/dataState';
 import { NestedDrivingBrief } from './NestedDrivingBrief';
+import nestedSource from './NestedDrivingBrief.tsx?raw';
 import { DriveDnaCadenceMetrics } from '../drive-dna/DriveDnaCadenceMetrics';
+import cadenceSource from '../drive-dna/DriveDnaCadenceMetrics.tsx?raw';
 import { DriveDnaSignalCoverageGrid } from '../drive-dna/DriveDnaSignalCoverageGrid';
 import { ColdWarmComparison } from '../cold-start/ColdWarmComparison';
 import { CoverageMetrics } from '../explorer/CoverageMetrics';
@@ -78,7 +79,7 @@ vi.mock('@/hooks/useOperationalMetrics', async () => {
   };
 });
 
-const sectionState = { isLoading: false, error: null, onRetry: vi.fn() };
+const sectionState = { isLoading: false, retained: false, error: null, onRetry: vi.fn() };
 const now = Date.parse('2026-08-08T12:00:00Z');
 function show(node: ReactNode) { return render(<MemoryRouter>{node}</MemoryRouter>); }
 function captured(key: string) {
@@ -93,6 +94,16 @@ beforeEach(() => {
 });
 
 describe('NestedDrivingBrief — real compact renderer and unconditional numerical bridge', () => {
+  it('keeps shared brief and Drive DNA cadence type dependencies on the public category', () => {
+    expect(nestedSource).toMatch(/import type \{ StatMetric, StatPeriod \} from '@\/components\/data-display';/);
+    expect(nestedSource).toMatch(/import type \{ MetricPreferences \} from '@\/components\/data-display';/);
+    expect(cadenceSource).toMatch(/import type \{ StatMetric \} from '@\/components\/data-display';/);
+    for (const source of [nestedSource, cadenceSource]) {
+      expect(source).not.toMatch(/from ['"]@\/components\/data-display\//);
+      expect(source).not.toContain('@/lib/metric-reference');
+    }
+  });
+
   const metrics: StatMetric[] = [
     { metricId: 'distance', occurrenceId: 'distance', rawValue: 1000, label: 'Recorded distance' },
     { metricId: 'count', occurrenceId: 'zero', rawValue: 0, label: 'Returned zero', display: { countTotal: 8 } },
@@ -259,7 +270,7 @@ describe('Released nested driving quantity contracts', () => {
   });
   it('accounts for an empty returned rhythm history as measured zero rather than missing', () => {
     const summary = buildDrivingRhythm([], { nowMs: now, timeZone: 'UTC', rangeStart: '2026-08-01', rangeEnd: '2026-08-08' });
-    const { container } = show(<RhythmCoverageSummary summary={summary} />);
+    const { container } = show(<RhythmCoverageSummary summary={summary} state={sectionState} />);
     expect(container.querySelectorAll('[data-operational-metric][data-value-state="value"]')).toHaveLength(4);
     expect(captured('returned')?.rawValue).toBe(0);
     expect(screen.getByText(/selected date scope returns drives/)).toBeVisible();

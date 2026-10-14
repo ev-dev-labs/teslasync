@@ -3,20 +3,23 @@ import { useTranslation } from 'react-i18next';
 
 import { EmptyState } from '@/components/feedback';
 import { Text } from '@/components/ui';
-import type { StatMetric } from '@/components/data-display/stat-reference';
+import type { StatMetric } from '@/components/data-display';
 import { NestedDrivingBrief } from '../operationalbrief-a-m/NestedDrivingBrief';
 import { useUnits } from '@/hooks/useUnits';
 import { formatDateTime } from '@/lib/dateFormat';
 
 
 import type { DrivingRhythm } from '../../lib/drivingRhythm';
+import type { DrivingRhythmSectionState } from './types';
 
 interface RhythmCoverageSummaryProps {
   summary: DrivingRhythm;
+  state: DrivingRhythmSectionState;
 }
 
 export function RhythmCoverageSummary({
   summary,
+  state,
 }: RhythmCoverageSummaryProps) {
   const { t } = useTranslation();
   const { unitPrefs } = useUnits();
@@ -34,6 +37,7 @@ export function RhythmCoverageSummary({
   return (
     <div>
       <NestedDrivingBrief metrics={metrics}
+        loading={state.isLoading} unavailable={state.error != null} retained={state.retained}
         title={t('rhythm.brief.coverage', 'Observed-history coverage')}
         description={t('rhythm.method.coverage', 'All {{count}} drives in the selected dates were fetched across API pages and accounted for.', { count: summary.observed })}
         period={{ kind: 'unknown', label: `${summary.firstStartTs ?? '—'} – ${summary.lastStartTs ?? '—'} · ${summary.timeZone}`,
