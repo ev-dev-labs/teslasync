@@ -7457,8 +7457,8 @@
       "totalCost": "Total cost",
       "avgDuration": "Avg duration",
       "favorite": "Favorite charging time",
-      "favoriteValue": "{{day}}s at {{hour}}",
-      "favoriteSessions": "{{count}} sessions",
+      "favoriteValue": "{{day}} at {{hour}}",
+      "favoriteSessions": "{{formattedCount}} sessions",
       "gridTitle": "Weekly charging heatmap",
       "gridAria": "Charging sessions by weekday and hour of day",
       "sessionsWord": "sessions",
@@ -20819,6 +20819,10 @@
     "drivesAnalyzed": "Drives analyzed",
     "noStatCards": "No driving statistics available yet",
     "dailyTrend": "Daily efficiency ({{unit}})",
+    "perDriveTrend": "Per-drive efficiency ({{unit}})",
+    "perDriveTrendAria": "Per-drive efficiency subset area chart",
+    "perDriveTrendContext": "Up to 30 eligible drive observations in reverse source order; not daily averages.",
+    "perDriveTrendCounts": "Showing {{shown}} of {{eligible}} eligible drives from {{loaded}} range-filtered loaded drives.",
     "speedDist": "Efficiency by speed range",
     "speedVsEfficiency": "Speed vs efficiency",
     "speed": "Speed",
@@ -28990,7 +28994,7 @@
     },
     "aiExplainer": {
       "title": "Explain my safety settings",
-      "description": "Ask Helix to explain the safety-related TeslaSync settings on this page in plain English. Helix only reads the typed envelope of canonical setting values (booleans, enum strings, HH:MM times) — it never reads notification titles, vehicle names, or any other PII, and it never proposes or changes a setting. Use the controls below to update a value yourself; Helix only narrates.",
+      "description": "Ask Helix to explain your safety-related TeslaSync settings in plain English. Helix only reads the typed envelope of canonical setting values (booleans, enum strings, HH:MM times) — it never reads notification titles, vehicle names, or any other PII, and it never proposes or changes a setting. Go to main Settings to update a value yourself; Helix only narrates.",
       "button": "Explain my settings",
       "badge": "Helix",
       "sectionLabel": "Helix assistant"
@@ -33176,6 +33180,12 @@
       "modelSoc": "Current SoC used by model: {{pct}}%"
     },
     "violation": {
+      "deadlineInfeasible": "{{vehicleName}} cannot reach its target state of charge before its departure deadline.",
+      "vehicleShortfall": "{{vehicleName}} is projected to fall short of its target by {{unmet}}.",
+      "panelImportExceeded": "Grid import limit exceeded in slot #{{slot}}.",
+      "panelExportExceeded": "Grid export limit exceeded in slot #{{slot}}.",
+      "powerwallReserveBreach": "Powerwall dropped below its reserve floor in slot #{{slot}}.",
+      "invalidInput": "Some plan inputs were invalid and were adjusted or dropped: {{detail}}",
       "unknownVehicle": "A vehicle"
     },
     "violations": {
@@ -34385,6 +34395,18 @@
       }
     },
     "survival": {
+      "components": {
+        "hv_battery": "High-voltage battery",
+        "tires": "Tires",
+        "brakes": "Brakes",
+        "charging_system": "Charging system"
+      },
+      "interventions": {
+        "battery": "Complete battery inspection",
+        "tires": "Complete tire inspection and alignment",
+        "brakes": "Complete brake inspection",
+        "charging": "Inspect charging equipment and inlet"
+      },
       "adjustedP50": "adjusted P50 {{value}}",
       "cards": {
         "title": "Component survival cards"
@@ -34544,7 +34566,9 @@
       "qualitySamples": "Source quality sample count: {{value}}",
       "qualityCoverage": "Source coverage: {{value}}%",
       "coverageUnknown": "Source coverage not supplied",
-      "evidenceSamples": "{{summary}} · {{count}} samples"
+      "evidenceSamples": "{{summary}} · {{formattedCount}} samples",
+      "evidenceSamples_one": "{{summary}} · {{formattedCount}} sample",
+      "evidenceSamples_other": "{{summary}} · {{formattedCount}} samples"
     }
   },
   "serviceIntelligence": {
@@ -36538,6 +36562,8 @@
     "arm": "Auto pre-charge before storms",
     "lat": "Home latitude",
     "lng": "Home longitude",
+    "latError": "Enter a finite latitude between -90 and 90.",
+    "lngError": "Enter a finite longitude between -180 and 180.",
     "target": "Pre-storm charge target",
     "save": "Save guard",
     "saveError": "Save failed",
