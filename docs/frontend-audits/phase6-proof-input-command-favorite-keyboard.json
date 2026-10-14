@@ -1,0 +1,576 @@
+{
+  "item": "phase6-proof-input-command-favorite-keyboard",
+  "phase": 6,
+  "status": "BLOCKED_EXTERNAL",
+  "outcome": "NOTRUN",
+  "runtimeAccepted": false,
+  "targetSourceCommit": "e9bf7a86ea24e74ac706b23352820c3267524846",
+  "commitIdentityAuthority": "Exact pending root queue row; supplied by parent, not independently verified by Git",
+  "requestUtc": "2026-10-14T07:40:55.229Z",
+  "deadlineUtc": "2026-10-14T08:00:55.229Z",
+  "releaseUtc": "2026-10-14T07:48:42.398Z",
+  "sourceReleaseUtc": "2026-10-14T07:48:42.398Z",
+  "commandReleaseUtc": "2026-10-14T07:48:42.398Z",
+  "elapsedSeconds": 467.169,
+  "writableFiles": [
+    "docs\\frontend-audits\\phase6-proof-input-command-favorite-keyboard.json",
+    "web\\logs\\phase6-proof-input-command-favorite-keyboard.log"
+  ],
+  "applicationWrites": [],
+  "sourceFixtureWrites": [],
+  "queueWrites": [],
+  "gitCommands": [],
+  "nestedAgents": [],
+  "installs": [],
+  "startupGuardBypassed": false,
+  "authorityRead": [
+    "migration-queue.md exact proof row and Current Phase6 dispatch contract",
+    "docs\\frontend-worker-conventions.md"
+  ],
+  "priorEvidence": {
+    "log": "web\\logs\\phase6-fix-input-command-favorite-keyboard.log",
+    "normalVitestExit": 1,
+    "discovered": 0,
+    "executed": 0,
+    "passed": 0,
+    "failedAssertions": 0,
+    "status": "NOTRUN: catalog startup blocked",
+    "originalBodies": 11,
+    "coveringAuthored": 15,
+    "notPromotedToPass": true
+  },
+  "preservation": {
+    "originalBodies": 11,
+    "exactOriginalBodiesPreserved": 11,
+    "originalBodyComparisons": [
+      {
+        "name": "renders the label, sublabel and glyph through i18n with the exact keys + fallbacks",
+        "exactBodyPreserved": true,
+        "bodySha256": "45C3A1C31078FBBB8A473C8B627D34112CEA76100488AF91C26C455285CBE981"
+      },
+      {
+        "name": "exposes the tile as a keyboard-focusable button named after the command",
+        "exactBodyPreserved": true,
+        "bodySha256": "A9BA658D2F6435358E358A2C5E2844815D5F3AB8E29956B69E790122E1E95DB2"
+      },
+      {
+        "name": "opens the input dialog with the command def when clicked",
+        "exactBodyPreserved": true,
+        "bodySha256": "D5CC2243776DA99E7AD48B2F3A78C4EA53778DE495965DF1597EDA476997586B"
+      },
+      {
+        "name": "activates on Enter and Space (cancelling the key default) but ignores other keys",
+        "exactBodyPreserved": true,
+        "bodySha256": "C91CF6A4EC52CC94B620D554586D467378D0D97B68BBC2DE0962677BD4CD2B1D"
+      },
+      {
+        "name": "shows a spinner and blocks activation while loading",
+        "exactBodyPreserved": true,
+        "bodySha256": "EB7148E54DBAD2BF3EA5B7F8A0FE86A8FA82136F2FAF87E9F3F7E97AA09D5FFF"
+      },
+      {
+        "name": "reflects the favourite state and toggles it without opening the dialog",
+        "exactBodyPreserved": true,
+        "bodySha256": "B8D8CA185D5B18E34C9009FC064670F187E90D17E0196EDA0FEFF24DAE9E43A4"
+      },
+      {
+        "name": "marks the favourite control unpressed and the star unfilled when not a favourite",
+        "exactBodyPreserved": true,
+        "bodySha256": "41D8319CB5E884CCD953CA0BDE1C9B091692658F46C65B83AB04124504349A8E"
+      },
+      {
+        "name": "colours a successful status green and a failed status red (announced politely)",
+        "exactBodyPreserved": true,
+        "bodySha256": "3D2E9FDB034957C677B145302DBBE678A505A5558236862D5EDED4E9A82475D7"
+      },
+      {
+        "name": "applies the variant-specific hover accent and falls back to default for unknown variants",
+        "exactBodyPreserved": true,
+        "bodySha256": "0930E89C2EAFEBB3481A69E4D4836660F2E3ADD826BD1B0639EC70B69EB9C622"
+      },
+      {
+        "name": "omits the sublabel when the command has none",
+        "exactBodyPreserved": true,
+        "bodySha256": "2C878D977FA828ABD3786DA92E80E3279434DC7CEF4A96F99DF75A9635C0608D"
+      },
+      {
+        "name": "degrades gracefully when the icon reference is missing (malformed config)",
+        "exactBodyPreserved": true,
+        "bodySha256": "F590E23196D52D22A60C71EF46B20B8EB91ECC594F941CD18CB66686A00FC240"
+      }
+    ],
+    "descendantGuardPresent": true,
+    "productionExactlyHistoricalGuardAndEventTypeOnly": true,
+    "sourceUnchangedThisWorker": true,
+    "fixtureUnchangedThisWorker": true,
+    "setupUnchangedThisWorker": true,
+    "baselineLogUnchangedThisWorker": true
+  },
+  "accounting": {
+    "allAuthoredExpanded": 20,
+    "originalBodies": 11,
+    "newAuthoredExpanded": 9,
+    "coveringAuthored": 15,
+    "requestedSelected": 15,
+    "requestedSelectedNew": 9,
+    "requestedSelectedAffectedOriginal": 6,
+    "discovered": 0,
+    "actualSelected": 0,
+    "executed": 0,
+    "passed": 0,
+    "failedAssertions": 0,
+    "skipped": 0,
+    "actualDiscoveredUnselected": 0,
+    "deliberatelyUnselectedAuthored": 5,
+    "coveringNotRun": 15,
+    "explanation": "20 expanded authored cases = 11 preserved original bodies + 9 new cases. The preserved covering selection remains 15 = 9 new + 6 affected originals. Five other originals were deliberately excluded. Startup failed before discovery; actual discovered/selected/executed/pass/fail/skip counts are zero, NOT a pass. The five planned exclusions are NOT five runtime skips.",
+    "selectedCases": [
+      {
+        "suite": "InputCommandTile",
+        "name": "does not cancel favorite keydown \"Enter\" or request the dialog",
+        "status": "NOTRUN",
+        "reason": "External normal catalog startup guard failed before discovery",
+        "executed": false
+      },
+      {
+        "suite": "InputCommandTile",
+        "name": "does not cancel favorite keydown \" \" or request the dialog",
+        "status": "NOTRUN",
+        "reason": "External normal catalog startup guard failed before discovery",
+        "executed": false
+      },
+      {
+        "suite": "InputCommandTile",
+        "name": "toggles favorites with Enter ({Enter}) while available without opening the dialog",
+        "status": "NOTRUN",
+        "reason": "External normal catalog startup guard failed before discovery",
+        "executed": false
+      },
+      {
+        "suite": "InputCommandTile",
+        "name": "toggles favorites with Space ( ) while available without opening the dialog",
+        "status": "NOTRUN",
+        "reason": "External normal catalog startup guard failed before discovery",
+        "executed": false
+      },
+      {
+        "suite": "InputCommandTile",
+        "name": "toggles favorites with Enter ({Enter}) while loading without opening the dialog",
+        "status": "NOTRUN",
+        "reason": "External normal catalog startup guard failed before discovery",
+        "executed": false
+      },
+      {
+        "suite": "InputCommandTile",
+        "name": "toggles favorites with Space ( ) while loading without opening the dialog",
+        "status": "NOTRUN",
+        "reason": "External normal catalog startup guard failed before discovery",
+        "executed": false
+      },
+      {
+        "suite": "InputCommandTile",
+        "name": "toggles favorites with Enter ({Enter}) while permission-disabled without opening the dialog",
+        "status": "NOTRUN",
+        "reason": "External normal catalog startup guard failed before discovery",
+        "executed": false
+      },
+      {
+        "suite": "InputCommandTile",
+        "name": "toggles favorites with Space ( ) while permission-disabled without opening the dialog",
+        "status": "NOTRUN",
+        "reason": "External normal catalog startup guard failed before discovery",
+        "executed": false
+      },
+      {
+        "suite": "InputCommandTile",
+        "name": "blocks mouse and tile keyboard activation when permission-disabled",
+        "status": "NOTRUN",
+        "reason": "External normal catalog startup guard failed before discovery",
+        "executed": false
+      },
+      {
+        "suite": "InputCommandTile",
+        "name": "exposes the tile as a keyboard-focusable button named after the command",
+        "status": "NOTRUN",
+        "reason": "External normal catalog startup guard failed before discovery",
+        "executed": false
+      },
+      {
+        "suite": "InputCommandTile",
+        "name": "opens the input dialog with the command def when clicked",
+        "status": "NOTRUN",
+        "reason": "External normal catalog startup guard failed before discovery",
+        "executed": false
+      },
+      {
+        "suite": "InputCommandTile",
+        "name": "activates on Enter and Space (cancelling the key default) but ignores other keys",
+        "status": "NOTRUN",
+        "reason": "External normal catalog startup guard failed before discovery",
+        "executed": false
+      },
+      {
+        "suite": "InputCommandTile",
+        "name": "shows a spinner and blocks activation while loading",
+        "status": "NOTRUN",
+        "reason": "External normal catalog startup guard failed before discovery",
+        "executed": false
+      },
+      {
+        "suite": "InputCommandTile",
+        "name": "reflects the favourite state and toggles it without opening the dialog",
+        "status": "NOTRUN",
+        "reason": "External normal catalog startup guard failed before discovery",
+        "executed": false
+      },
+      {
+        "suite": "InputCommandTile",
+        "name": "marks the favourite control unpressed and the star unfilled when not a favourite",
+        "status": "NOTRUN",
+        "reason": "External normal catalog startup guard failed before discovery",
+        "executed": false
+      }
+    ],
+    "unselectedCases": [
+      {
+        "suite": "InputCommandTile",
+        "name": "renders the label, sublabel and glyph through i18n with the exact keys + fallbacks",
+        "status": "NOTSELECTED",
+        "discovered": false,
+        "executed": false
+      },
+      {
+        "suite": "InputCommandTile",
+        "name": "colours a successful status green and a failed status red (announced politely)",
+        "status": "NOTSELECTED",
+        "discovered": false,
+        "executed": false
+      },
+      {
+        "suite": "InputCommandTile",
+        "name": "applies the variant-specific hover accent and falls back to default for unknown variants",
+        "status": "NOTSELECTED",
+        "discovered": false,
+        "executed": false
+      },
+      {
+        "suite": "InputCommandTile",
+        "name": "omits the sublabel when the command has none",
+        "status": "NOTSELECTED",
+        "discovered": false,
+        "executed": false
+      },
+      {
+        "suite": "InputCommandTile",
+        "name": "degrades gracefully when the icon reference is missing (malformed config)",
+        "status": "NOTSELECTED",
+        "discovered": false,
+        "executed": false
+      }
+    ],
+    "passedNames": [],
+    "failedNames": [],
+    "executedNames": [],
+    "discoveredNames": [],
+    "actualSelectedNames": [],
+    "unchangedGenuinePassesRepeated": 0
+  },
+  "commandEvidence": {
+    "invocations": 1,
+    "command": "node node_modules\\vitest\\vitest.mjs run src\\features\\system\\components\\InputCommandTile.test.tsx --pool=forks --maxWorkers=2 --reporter=verbose --reporter=json --outputFile=..\\docs\\frontend-audits\\phase6-proof-input-command-favorite-keyboard.json -t does not cancel favorite|toggles favorites with|blocks mouse and tile|keyboard-focusable|opens the input dialog|activates on Enter|shows a spinner|reflects the favourite|marks the favourite",
+    "cwd": "D:\\repos\\teslasync\\web",
+    "nodeVersion": "v26.8.1",
+    "pool": "forks",
+    "maxWorkers": 2,
+    "startedUtc": "2026-10-14T07:43:41.4992548Z",
+    "endedUtc": "2026-10-14T07:47:31.1488717Z",
+    "durationSeconds": 229.649,
+    "exitCode": 1,
+    "preflightExitCode": 0,
+    "shellId": "input-favorite-proof-20261014",
+    "completed": true,
+    "activeOwnedCommands": 0,
+    "environment": {
+      "VITE_GIT_SHA": "e9bf7a86ea24e74ac706b23352820c3267524846"
+    },
+    "environmentReason": "Prevent normal config build-identity resolver invoking Git; no catalog/plugin/fixture/guard/config change.",
+    "vitestReporterJsonProduced": false,
+    "reportType": "Worker-generated NOTRUN receipt, not a Vitest success JSON",
+    "rawOutput": "[i18n-split] generated locale files are invalid (locale-detail-errorBoundary.json, locale-system.json, locale-notifications.json, locale-telemetry.json, locale-unreferenced.json, locale-battery.json, locale-driving.json, locale-analytics.json, locale-sharing.json, locale-vehicles.json, locale-automations.json, locale-charging.json, locale-dashboard.json, locale-settings.json, locale-admin.json, locale-vehicle-systems.json, locale-diagnostics.json, locale-maps.json, locale-trips.json, locale-exports.json, locale-power-user.json, locale-driving-route-efficiency.json, locale-driving-trip-planner.json, runtime-manifest.json, usage-manifest.json). Run node scripts/split-i18n-catalog.mjs.\n\n⎯⎯⎯⎯⎯⎯⎯ Startup Error ⎯⎯⎯⎯⎯⎯⎯⎯\nError: Command failed: C:\\Program Files\\nodejs\\node.exe scripts/split-i18n-catalog.mjs --check\n    at genericNodeError (node:internal/errors:999:15)\n    at wrappedFn (node:internal/errors:544:14)\n    at checkExecSyncError (node:child_process:942:11)\n    at execFileSync (node:child_process:978:15)\n    at PluginContext.buildStart (file:///D:/repos/teslasync/web/node_modules/.vite-temp/vite.config.ts.timestamp-1791963822274-c228f043c0691.mjs:55:5)\n    at EnvironmentPluginContainer.hookParallel (file:///D:/repos/teslasync/web/node_modules/vite/dist/node/chunks/dep-Dm0c1Wj2.js:42315:39)\n    at EnvironmentPluginContainer.buildStart (file:///D:/repos/teslasync/web/node_modules/vite/dist/node/chunks/dep-Dm0c1Wj2.js:42330:12)\n    at file:///D:/repos/teslasync/web/node_modules/vite/dist/node/chunks/dep-Dm0c1Wj2.js:38867:49\n    at initServer (file:///D:/repos/teslasync/web/node_modules/vite/dist/node/chunks/dep-Dm0c1Wj2.js:38875:6)\n    at _createServer (file:///D:/repos/teslasync/web/node_modules/vite/dist/node/chunks/dep-Dm0c1Wj2.js:38890:11) {\n  status: 1,\n  signal: null,\n  output: [ null, null, null ],\n  pid: 33500,\n  stdout: null,\n  stderr: null\n}\n\n\n\n",
+    "rawOutputSha256": "8E0A12DD62DE5E0A81C727B293E7E1BFEA6603888114AA6265DDB4798B3BFBBB",
+    "rawLog": "web\\logs\\phase6-proof-input-command-favorite-keyboard.log"
+  },
+  "externalBlocker": {
+    "owner": "Parent serialized canonical/generated-catalog projection owner",
+    "chargedOwnFailure": false,
+    "attemptCharge": 0,
+    "classification": "External startup dependency; fixture/import/assertion discovery never began",
+    "check": "node scripts\\split-i18n-catalog.mjs --check",
+    "checkExit": 1,
+    "files": [
+      "web\\src\\i18n\\en\\locale-detail-errorBoundary.json",
+      "web\\src\\i18n\\en\\locale-system.json",
+      "web\\src\\i18n\\en\\locale-notifications.json",
+      "web\\src\\i18n\\en\\locale-telemetry.json",
+      "web\\src\\i18n\\en\\locale-unreferenced.json",
+      "web\\src\\i18n\\en\\locale-battery.json",
+      "web\\src\\i18n\\en\\locale-driving.json",
+      "web\\src\\i18n\\en\\locale-analytics.json",
+      "web\\src\\i18n\\en\\locale-sharing.json",
+      "web\\src\\i18n\\en\\locale-vehicles.json",
+      "web\\src\\i18n\\en\\locale-automations.json",
+      "web\\src\\i18n\\en\\locale-charging.json",
+      "web\\src\\i18n\\en\\locale-dashboard.json",
+      "web\\src\\i18n\\en\\locale-settings.json",
+      "web\\src\\i18n\\en\\locale-admin.json",
+      "web\\src\\i18n\\en\\locale-vehicle-systems.json",
+      "web\\src\\i18n\\en\\locale-diagnostics.json",
+      "web\\src\\i18n\\en\\locale-maps.json",
+      "web\\src\\i18n\\en\\locale-trips.json",
+      "web\\src\\i18n\\en\\locale-exports.json",
+      "web\\src\\i18n\\en\\locale-power-user.json",
+      "web\\src\\i18n\\en\\locale-driving-route-efficiency.json",
+      "web\\src\\i18n\\en\\locale-driving-trip-planner.json",
+      "web\\src\\i18n\\en\\runtime-manifest.json",
+      "web\\src\\i18n\\en\\usage-manifest.json"
+    ],
+    "mechanism": "Normal verify-english-catalog-split Vite buildStart rejects these generated projection artifacts and throws before Vitest collection.",
+    "needs": "Serialized catalog owner must regenerate/verify the exact currently rejected projections through canonical tools; then a separately assigned first actual runtime proof must run the same15 covering selector once. This worker does not edit projections, bypass guards, or repeat the failed startup."
+  },
+  "ownFailure": false,
+  "newOwnedFixNeeds": [],
+  "needs": [
+    {
+      "kind": "external-uncharge",
+      "owner": "parent-serialized-catalog-owner",
+      "files": [
+        "web\\src\\i18n\\en\\locale-detail-errorBoundary.json",
+        "web\\src\\i18n\\en\\locale-system.json",
+        "web\\src\\i18n\\en\\locale-notifications.json",
+        "web\\src\\i18n\\en\\locale-telemetry.json",
+        "web\\src\\i18n\\en\\locale-unreferenced.json",
+        "web\\src\\i18n\\en\\locale-battery.json",
+        "web\\src\\i18n\\en\\locale-driving.json",
+        "web\\src\\i18n\\en\\locale-analytics.json",
+        "web\\src\\i18n\\en\\locale-sharing.json",
+        "web\\src\\i18n\\en\\locale-vehicles.json",
+        "web\\src\\i18n\\en\\locale-automations.json",
+        "web\\src\\i18n\\en\\locale-charging.json",
+        "web\\src\\i18n\\en\\locale-dashboard.json",
+        "web\\src\\i18n\\en\\locale-settings.json",
+        "web\\src\\i18n\\en\\locale-admin.json",
+        "web\\src\\i18n\\en\\locale-vehicle-systems.json",
+        "web\\src\\i18n\\en\\locale-diagnostics.json",
+        "web\\src\\i18n\\en\\locale-maps.json",
+        "web\\src\\i18n\\en\\locale-trips.json",
+        "web\\src\\i18n\\en\\locale-exports.json",
+        "web\\src\\i18n\\en\\locale-power-user.json",
+        "web\\src\\i18n\\en\\locale-driving-route-efficiency.json",
+        "web\\src\\i18n\\en\\locale-driving-trip-planner.json",
+        "web\\src\\i18n\\en\\runtime-manifest.json",
+        "web\\src\\i18n\\en\\usage-manifest.json"
+      ],
+      "action": "Repair/verify normal split projections; do not loosen guard."
+    },
+    {
+      "kind": "actual-unexecuted-covering-proof",
+      "item": "phase6-proof-input-command-favorite-keyboard",
+      "selectedCount": 15,
+      "action": "After external coherence, run actual same15 covering cases; all15 remain NOTRUN, not passed."
+    }
+  ],
+  "before": [
+    {
+      "path": "src\\features\\system\\components\\InputCommandTile.tsx",
+      "sha256": "A28872B7121D53022FCAE4E77F9FA989554351F52FF8129FE637D4EE8D1E3795",
+      "bytes": 4471,
+      "lastWriteUtc": "2026-10-14T06:14:38.602Z",
+      "observedUtc": "2026-10-14T07:43:21.333Z"
+    },
+    {
+      "path": "src\\features\\system\\components\\InputCommandTile.test.tsx",
+      "sha256": "00A5600191BE089BD653BC8479A7793AB1E1AAF252B2E32A712160728258AFAE",
+      "bytes": 11652,
+      "lastWriteUtc": "2026-10-14T06:11:00.584Z",
+      "observedUtc": "2026-10-14T07:43:21.334Z"
+    },
+    {
+      "path": "src\\test-setup.ts",
+      "sha256": "FB61779479E36B97298928C7BCC0620E8FF2A509A0EA50350F9935D9F260517A",
+      "bytes": 7885,
+      "lastWriteUtc": "2026-10-13T06:09:18.665Z",
+      "observedUtc": "2026-10-14T07:43:21.334Z"
+    },
+    {
+      "path": "vite.config.ts",
+      "sha256": "7E0F246E3D538F48B8DF6A024F5CCE1E068685023A844CCE3B537A1AFCF54F58",
+      "bytes": 19987,
+      "lastWriteUtc": "2026-10-14T00:29:41.997Z",
+      "observedUtc": "2026-10-14T07:43:21.334Z"
+    },
+    {
+      "path": "package.json",
+      "sha256": "8C1D55D305A1A47A6A5E7CA3DBB0452D129C4CB0DC9F95B9ED9151C9CE93EC7A",
+      "bytes": 10780,
+      "lastWriteUtc": "2026-10-14T00:34:47.454Z",
+      "observedUtc": "2026-10-14T07:43:21.334Z"
+    },
+    {
+      "path": "src\\i18n\\en.json",
+      "sha256": "4F3772FDB879F420E513CA411442D48D85B7CA2501F16F6113736E6DD89B8202",
+      "bytes": 1849361,
+      "lastWriteUtc": "2026-10-14T07:03:17.125Z",
+      "observedUtc": "2026-10-14T07:43:21.337Z"
+    },
+    {
+      "path": "src\\i18n\\en\\locale-system.json",
+      "sha256": "A46AC7A78BD89A0311831628B566D434C7A6AD77E0C7C90DE7C94090222F8636",
+      "bytes": 190721,
+      "lastWriteUtc": "2026-10-14T07:07:46.659Z",
+      "observedUtc": "2026-10-14T07:43:21.337Z"
+    },
+    {
+      "path": "src\\i18n\\en\\usage-manifest.json",
+      "sha256": "F675DFEF6EE4F812A664FC41A6F27277D93F2EF3F805A91147CB96EC76A0B820",
+      "bytes": 4489634,
+      "lastWriteUtc": "2026-10-14T07:07:46.705Z",
+      "observedUtc": "2026-10-14T07:43:21.342Z"
+    },
+    {
+      "path": "..\\migration-queue.md",
+      "sha256": "447E2EA15F08235B63E961D736B1D1B2AB0F9861FD4538234743ACE541892157",
+      "bytes": 2898636,
+      "lastWriteUtc": "2026-10-14T07:42:35.192Z",
+      "observedUtc": "2026-10-14T07:43:21.346Z"
+    },
+    {
+      "path": "..\\docs\\frontend-worker-conventions.md",
+      "sha256": "98850E87F927CC2DD09088183906B5343C1883E6BA6F14EA6E55A328BE485871",
+      "bytes": 8608,
+      "lastWriteUtc": "2026-10-14T00:29:40.718Z",
+      "observedUtc": "2026-10-14T07:43:21.347Z"
+    },
+    {
+      "path": "logs\\phase6-fix-input-command-favorite-keyboard.log",
+      "sha256": "8DF35BF246F0211381413608A2FA68878879C291F576B26F6FFFBB531D465928",
+      "bytes": 218403,
+      "lastWriteUtc": "2026-10-14T06:21:57.161Z",
+      "observedUtc": "2026-10-14T07:43:21.347Z"
+    }
+  ],
+  "after": [
+    {
+      "path": "src\\features\\system\\components\\InputCommandTile.tsx",
+      "sha256": "A28872B7121D53022FCAE4E77F9FA989554351F52FF8129FE637D4EE8D1E3795",
+      "bytes": 4471,
+      "lastWriteUtc": "2026-10-14T06:14:38.602Z",
+      "observedUtc": "2026-10-14T07:48:42.386Z",
+      "unchanged": true
+    },
+    {
+      "path": "src\\features\\system\\components\\InputCommandTile.test.tsx",
+      "sha256": "00A5600191BE089BD653BC8479A7793AB1E1AAF252B2E32A712160728258AFAE",
+      "bytes": 11652,
+      "lastWriteUtc": "2026-10-14T06:11:00.584Z",
+      "observedUtc": "2026-10-14T07:48:42.387Z",
+      "unchanged": true
+    },
+    {
+      "path": "src\\test-setup.ts",
+      "sha256": "FB61779479E36B97298928C7BCC0620E8FF2A509A0EA50350F9935D9F260517A",
+      "bytes": 7885,
+      "lastWriteUtc": "2026-10-13T06:09:18.665Z",
+      "observedUtc": "2026-10-14T07:48:42.387Z",
+      "unchanged": true
+    },
+    {
+      "path": "vite.config.ts",
+      "sha256": "7E0F246E3D538F48B8DF6A024F5CCE1E068685023A844CCE3B537A1AFCF54F58",
+      "bytes": 19987,
+      "lastWriteUtc": "2026-10-14T00:29:41.997Z",
+      "observedUtc": "2026-10-14T07:48:42.387Z",
+      "unchanged": true
+    },
+    {
+      "path": "package.json",
+      "sha256": "8C1D55D305A1A47A6A5E7CA3DBB0452D129C4CB0DC9F95B9ED9151C9CE93EC7A",
+      "bytes": 10780,
+      "lastWriteUtc": "2026-10-14T00:34:47.454Z",
+      "observedUtc": "2026-10-14T07:48:42.387Z",
+      "unchanged": true
+    },
+    {
+      "path": "src\\i18n\\en.json",
+      "sha256": "20B99693EA4207275A05D693DDFB1D4E7E6EA21F0DFA8891FE2D9749B5A9EB61",
+      "bytes": 1852774,
+      "lastWriteUtc": "2026-10-14T07:48:35.473Z",
+      "observedUtc": "2026-10-14T07:48:42.389Z",
+      "unchanged": false
+    },
+    {
+      "path": "src\\i18n\\en\\locale-system.json",
+      "sha256": "A46AC7A78BD89A0311831628B566D434C7A6AD77E0C7C90DE7C94090222F8636",
+      "bytes": 190721,
+      "lastWriteUtc": "2026-10-14T07:07:46.659Z",
+      "observedUtc": "2026-10-14T07:48:42.389Z",
+      "unchanged": true
+    },
+    {
+      "path": "src\\i18n\\en\\usage-manifest.json",
+      "sha256": "F675DFEF6EE4F812A664FC41A6F27277D93F2EF3F805A91147CB96EC76A0B820",
+      "bytes": 4489634,
+      "lastWriteUtc": "2026-10-14T07:07:46.705Z",
+      "observedUtc": "2026-10-14T07:48:42.393Z",
+      "unchanged": true
+    },
+    {
+      "path": "..\\migration-queue.md",
+      "sha256": "447E2EA15F08235B63E961D736B1D1B2AB0F9861FD4538234743ACE541892157",
+      "bytes": 2898636,
+      "lastWriteUtc": "2026-10-14T07:42:35.192Z",
+      "observedUtc": "2026-10-14T07:48:42.397Z",
+      "unchanged": true
+    },
+    {
+      "path": "..\\docs\\frontend-worker-conventions.md",
+      "sha256": "98850E87F927CC2DD09088183906B5343C1883E6BA6F14EA6E55A328BE485871",
+      "bytes": 8608,
+      "lastWriteUtc": "2026-10-14T00:29:40.718Z",
+      "observedUtc": "2026-10-14T07:48:42.397Z",
+      "unchanged": true
+    },
+    {
+      "path": "logs\\phase6-fix-input-command-favorite-keyboard.log",
+      "sha256": "8DF35BF246F0211381413608A2FA68878879C291F576B26F6FFFBB531D465928",
+      "bytes": 218403,
+      "lastWriteUtc": "2026-10-14T06:21:57.161Z",
+      "observedUtc": "2026-10-14T07:48:42.398Z",
+      "unchanged": true
+    }
+  ],
+  "inputDrift": [
+    {
+      "path": "src\\i18n\\en.json",
+      "sha256": "20B99693EA4207275A05D693DDFB1D4E7E6EA21F0DFA8891FE2D9749B5A9EB61",
+      "bytes": 1852774,
+      "lastWriteUtc": "2026-10-14T07:48:35.473Z",
+      "observedUtc": "2026-10-14T07:48:42.389Z",
+      "unchanged": false
+    }
+  ],
+  "limitations": {
+    "native": "NOTRUN/not authorized",
+    "browser": "NOTRUN/not authorized",
+    "globalPass": false,
+    "fullTypecheck": "NOTRUN: proof-only scope; no source/fixture edits",
+    "lint": "NOTRUN/not assigned",
+    "build": "NOTRUN/not assigned",
+    "violationsAudit": "NOTRUN: proof-only scope; no source/fixture edits",
+    "hooks": "NOTAPPLICABLE: tile fixture proof introduces no hook URL",
+    "additionalApplicationInvestigation": false,
+    "dataTypeFormattingSetup": "Normal src\\test-setup.ts read only; startup failed before importing setup/fixture, so no additional dataType/formatting investigation needed.",
+    "originalSections": "Unchanged byte-identical source; no new page/content rewrite.",
+    "sourceAndFixtures": "Both before/after SHA256 and mtimes preserved.",
+    "reportDeliveryIsRuntimeAcceptance": false
+  }
+}
