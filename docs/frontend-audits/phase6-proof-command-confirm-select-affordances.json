@@ -1,0 +1,291 @@
+{
+  "schemaVersion": 1,
+  "item": "phase6-proof-command-confirm-select-affordances",
+  "status": "EXTERNAL_UNCHARGED_NOTRUN",
+  "delivery": "Completed bounded proof attempt and preserved evidence; runtime proof remains blocked, not passed.",
+  "sourceCommitFromRootQueue": "123e43043556e0306c1d1a9857b27629eabd3b7a",
+  "provenance": "No Git operation. All four current byte hashes match the original corrective owner's FINAL_PIN receipts for the exact root-queue source.",
+  "clocks": {
+    "requestUTC": "2026-10-14T07:40:55.221Z",
+    "conservativeReturnDeadlineUTC": "2026-10-14T08:00:55.221Z",
+    "runStartedUTC": "2026-10-14T07:43:31.0948592Z",
+    "runFinishedUTC": "2026-10-14T07:47:22.1039526Z",
+    "runElapsedSeconds": 231.033,
+    "finalInputHashesUTC": "2026-10-14T07:47:56.002Z"
+  },
+  "releaseUTC": "2026-10-14T07:50:15.909Z",
+  "authority": {
+    "read": [
+      "migration-queue.md: exact phase6-proof-command-confirm-select-affordances and dependency rows",
+      "docs\\orchestrator-loop.md: Worker contract",
+      "docs\\frontend-design-contract.md",
+      "docs\\frontend-mission.md: non-negotiable preservation principles",
+      ".github\\instructions\\react-frontend.instructions.md: applicable architecture, styling, accessibility and verification sections",
+      ".github\\instructions\\frontend-si-cutover.instructions.md",
+      ".github\\instructions\\observability.instructions.md"
+    ],
+    "writableOutputs": [
+      "docs\\frontend-audits\\phase6-proof-command-confirm-select-affordances.json",
+      "web\\logs\\phase6-proof-command-confirm-select-affordances.log"
+    ],
+    "inputOwnership": "Confirm/Select source and tests read-only. CommandInputDialog, PIN/valet behavior and commands definitions remain separate active-owner scope.",
+    "prohibitedOperationsPerformed": [],
+    "sourceWrites": 0,
+    "fixtureWrites": 0,
+    "guardBypasses": 0,
+    "configWrites": 0,
+    "catalogWrites": 0,
+    "gitOperations": 0,
+    "runtimeApiWrites": 0,
+    "nestedAgents": 0,
+    "browserRuns": 0,
+    "dockerRuns": 0,
+    "dependencyInstalls": 0,
+    "explicitServersStarted": 0,
+    "frameworkNote": "Normal Vitest used the unchanged Vite configuration and its internal test startup. No app server or browser was launched."
+  },
+  "normalVitest": {
+    "cwd": "D:\\repos\\teslasync\\web",
+    "nodeVersion": "v26.8.1",
+    "command": "node node_modules\\vitest\\vitest.mjs run src\\features\\system\\components\\CommandConfirmDialog.test.tsx src\\features\\system\\components\\CommandSelectDialog.test.tsx --pool=forks --maxWorkers=2 --reporter=verbose -t \"affordance|gates Confirm|ignores Enter|resets the typed|disables Confirm|keeps Confirm disabled|Cancel button|while loading\"",
+    "environment": {
+      "VITE_GIT_SHA": "123e43043556e0306c1d1a9857b27629eabd3b7a",
+      "reason": "Existing supported build-identity input avoids the unchanged configuration spawning Git. No catalog guard is disabled and no alternate configuration is used."
+    },
+    "runs": 1,
+    "unchangedGenuinePassingReruns": 0,
+    "exitCode": 1,
+    "status": "NOTRUN_STARTUP_ABORTED",
+    "actualCounts": {
+      "discovered": 0,
+      "executed": 0,
+      "passed": 0,
+      "failedAssertions": 0,
+      "skipped": 0
+    },
+    "actualTestNames": [],
+    "rawRunnerTestSummary": null,
+    "countEvidence": "Normal startup threw from verify-english-catalog-split before collection. No runner test names or test summary were printed. Zero is pre-collection accounting, not a passing or skipped-test result.",
+    "rawError": "Error: Command failed: C:\\Program Files\\nodejs\\node.exe scripts/split-i18n-catalog.mjs --check",
+    "rawGuardOutput": "[i18n-split] generated locale files are invalid (locale-detail-errorBoundary.json, locale-system.json, locale-notifications.json, locale-telemetry.json, locale-unreferenced.json, locale-battery.json, locale-driving.json, locale-analytics.json, locale-sharing.json, locale-vehicles.json, locale-automations.json, locale-charging.json, locale-dashboard.json, locale-settings.json, locale-admin.json, locale-vehicle-systems.json, locale-diagnostics.json, locale-maps.json, locale-trips.json, locale-exports.json, locale-power-user.json, locale-driving-route-efficiency.json, locale-driving-trip-planner.json, runtime-manifest.json, usage-manifest.json). Run node scripts/split-i18n-catalog.mjs.",
+    "rawLog": "web\\logs\\phase6-proof-command-confirm-select-affordances.log"
+  },
+  "externalFailure": {
+    "classification": "CATALOG_ONLY_EXTERNAL_UNCHARGED",
+    "attemptsCharged": 0,
+    "guardCommand": "node scripts\\split-i18n-catalog.mjs --check",
+    "guardExitCode": 1,
+    "guardOwner": "Separate canonical/generated catalog closure owner",
+    "namespaceGuard": "NOTRUN: the preceding split guard threw",
+    "invalidGeneratedArtifactCount": 25,
+    "invalidGeneratedArtifacts": [
+      "locale-detail-errorBoundary.json",
+      "locale-system.json",
+      "locale-notifications.json",
+      "locale-telemetry.json",
+      "locale-unreferenced.json",
+      "locale-battery.json",
+      "locale-driving.json",
+      "locale-analytics.json",
+      "locale-sharing.json",
+      "locale-vehicles.json",
+      "locale-automations.json",
+      "locale-charging.json",
+      "locale-dashboard.json",
+      "locale-settings.json",
+      "locale-admin.json",
+      "locale-vehicle-systems.json",
+      "locale-diagnostics.json",
+      "locale-maps.json",
+      "locale-trips.json",
+      "locale-exports.json",
+      "locale-power-user.json",
+      "locale-driving-route-efficiency.json",
+      "locale-driving-trip-planner.json",
+      "runtime-manifest.json",
+      "usage-manifest.json"
+    ],
+    "action": "Preserve this failed attempt. Authorized catalog owner must restore normal generated-artifact closure; then a proof owner may execute the same not-yet-run selector. No catalog/config/fixture workaround or repeated blocked invocation was attempted.",
+    "ownAssertionFailure": null,
+    "ownCorrectionNeeded": null
+  },
+  "testAccounting": {
+    "originalCases": 24,
+    "originalExactAstCallBodiesPreserved": 24,
+    "originalConfirmCases": 15,
+    "originalSelectCases": 9,
+    "newExpectedCases": 8,
+    "newConfirmCases": 5,
+    "newSelectCases": 3,
+    "parameterization": "Select has two new declarations; the loading/empty it.each expands one declaration into two expected cases.",
+    "expectedTotalCasesInFiles": 32,
+    "expectedSelectedCases": 16,
+    "expectedSelectedNewCases": 8,
+    "expectedSelectedCausallyAffectedOriginalCases": 8,
+    "expectedUnselectedOriginalCases": 16,
+    "expectedIsNotActualDiscovery": true,
+    "selectionReason": "New localized linked ERASE-label/identity/footer allocation cases plus only affected original type gate, keyboard guard, reset, countdown, loading and Select cancellation cases. Unrelated originals were preserved without an entire-file rerun.",
+    "newExpectedNamesAllNotRun": {
+      "CommandConfirmDialog.test.tsx": [
+        "affordance: exposes a visible linked ERASE label rather than relying on the placeholder",
+        "affordance: localizes the linked label without changing identity, typed value or the ERASE token",
+        "affordance: retains unique label associations when multiple confirmation instances are mounted",
+        "affordance: declares mobile44 minima and restores desktop compact footer sizing with growing labels",
+        "affordance: retains footer minima, usable cancellation and ERASE gating during countdown and loading"
+      ],
+      "CommandSelectDialog.test.tsx": [
+        "affordance: declares mobile44 Cancel minima with desktop compact restoration and wrapping",
+        "affordance: preserves mobile44 cancellation without selection in the loading state",
+        "affordance: preserves mobile44 cancellation without selection in the empty state"
+      ]
+    },
+    "originalNamesExactBodiesPreserved": {
+      "CommandConfirmDialog.test.tsx": [
+        "renders nothing when open=false",
+        "renders an accessible dialog labelled by the command name",
+        "shows the explicit confirmation copy, Cancel, and an enabled Confirm for a simple action",
+        "falls back to the default confirmation copy when no key or fallback is given",
+        "renders confirmation copy from the confirmKey branch (with fallback)",
+        "fires onConfirm exactly once when Confirm is clicked, without closing",
+        "fires onClose when Cancel is clicked and never confirms",
+        "closes on Escape",
+        "confirms on Enter when the command is confirmable",
+        "gates Confirm behind an exact, case-insensitive, trimmed type-to-confirm word",
+        "ignores Enter until the type-to-confirm word matches",
+        "resets the typed value when the dialog is reopened",
+        "disables Confirm with aria-busy while loading and makes Enter a no-op",
+        "keeps Confirm disabled with a live seconds suffix until the timer elapses",
+        "ignores Enter while the countdown is still running"
+      ],
+      "CommandSelectDialog.test.tsx": [
+        "renders a named dialog with one button per option, descriptions, a decorative icon and Cancel",
+        "renders nothing when open is false",
+        "forwards the selected option value via onSelect without closing itself",
+        "closes via the Cancel button without selecting anything",
+        "disables every option while loading so a click cannot fire onSelect, yet Cancel stays usable",
+        "shows an empty state (and no option buttons) when the command exposes no options",
+        "tolerates a malformed definition with no selectConfig and renders the empty state instead of crashing",
+        "omits the description caption for options that do not define one",
+        "closes when Escape is pressed inside the dialog"
+      ]
+    },
+    "actualStatuses": "All 16 selected expected cases NOTRUN. The other 16 originals were intentionally not selected; startup aborted before any runner skip accounting.",
+    "bodyComparisonMethod": "Installed TypeScript AST extracts original it calls from the corrective owner's BASELINE_JSON and compares each entire call text against the current read-only fixture. This is source preservation, not a Vitest pass."
+  },
+  "hashes": {
+    "algorithm": "SHA-256 of actual bytes",
+    "beforeAndAfterIdentical": true,
+    "exactSourceAndTests": [
+      {
+        "path": "web\\src\\features\\system\\components\\CommandConfirmDialog.tsx",
+        "beforeSha256": "858b3278598a3ca487ef5b12c7309364a6f2055c5de60b5a3864165cd5aa9147",
+        "afterSha256": "858b3278598a3ca487ef5b12c7309364a6f2055c5de60b5a3864165cd5aa9147",
+        "matchesOriginalOwnerFinalPin": true,
+        "originalLines": 149,
+        "currentLines": 149
+      },
+      {
+        "path": "web\\src\\features\\system\\components\\CommandConfirmDialog.test.tsx",
+        "beforeSha256": "0da258dfa7d26cd8cd86da551e8dfc636073cd954e67f748021a28b401b9b5d3",
+        "afterSha256": "0da258dfa7d26cd8cd86da551e8dfc636073cd954e67f748021a28b401b9b5d3",
+        "matchesOriginalOwnerFinalPin": true,
+        "originalLines": 308,
+        "currentLines": 393
+      },
+      {
+        "path": "web\\src\\features\\system\\components\\CommandSelectDialog.tsx",
+        "beforeSha256": "f84a7bf831de0e5e25a33dce7676f205dfd59da08a075d1e51a8324e988b91c0",
+        "afterSha256": "f84a7bf831de0e5e25a33dce7676f205dfd59da08a075d1e51a8324e988b91c0",
+        "matchesOriginalOwnerFinalPin": true,
+        "originalLines": 110,
+        "currentLines": 111
+      },
+      {
+        "path": "web\\src\\features\\system\\components\\CommandSelectDialog.test.tsx",
+        "beforeSha256": "d02ed81f291bb4fdd21c9b8bd442b32609d541e96a5afa4ddb69706f6803692e",
+        "afterSha256": "d02ed81f291bb4fdd21c9b8bd442b32609d541e96a5afa4ddb69706f6803692e",
+        "matchesOriginalOwnerFinalPin": true,
+        "originalLines": 169,
+        "currentLines": 193
+      }
+    ],
+    "unchangedSupportAndConfigSha256": {
+      "web\\src\\components\\ui\\Button.tsx": "e43e202cc9f465efeef93a1be2b156255958934af635abf0eaa408f310dde16c",
+      "web\\src\\components\\ui\\Input.tsx": "2c687ddcf37022148906e67b891ddaec5aeb7a6f18385a93e92dba2f32095b40",
+      "web\\src\\components\\ui\\Modal.tsx": "bd90f0af735a0219d76ea6491e4ce20c1d62935f71019de445f5a1797de0d383",
+      "web\\vite.config.ts": "7e0f246e3d538f48b8df6a024f5cce1e068685023a844cce3b537a1afcf54f58",
+      "web\\tailwind.config.js": "89663c0a141f6d08d9c0f7f3a2724a3f592dbf7d6328aef96a88b5b8d79e6a29",
+      "web\\src\\test-setup.ts": "fb61779479e36b97298928c7bcc0620e8ff2a509a0ea50350f9935d9f260517a"
+    }
+  },
+  "correctedVersusOriginalAccounting": {
+    "historicalReceipt": "web\\logs\\phase6-fix-command-confirm-select-affordances.log",
+    "historicalNormalVitest": {
+      "exitCode": 1,
+      "discovered": 0,
+      "executed": 0,
+      "passed": 0,
+      "status": "NOTRUN",
+      "reason": "Generated locale-system.json and usage-manifest.json invalid"
+    },
+    "historicalSourceVerificationCorrections": [
+      "Original PRESERVATION_EXIT=1 retained. Matcher incorrectly counted two valid @/components/ui category imports; corrected matcher exit=0. Not an assertion or runtime-test failure.",
+      "Original TYPE_ATTEMPT_1_EXIT=1 retained: omitted existing vite-env.d.ts in scoped harness. Corrected scoped compiler exit=0. No full-repository TypeScript claim.",
+      "Original LINT_ATTEMPT_1_EXIT=1 retained: shared log-handle redirection rejected; ESLint execution not established. Corrected lint exit=0.",
+      "Original CSS_ATTEMPT_1_EXIT=1 and CSS_ATTEMPT_2_EXIT=1 retained: module/config resolution failures. Corrected in-memory Tailwind generation exit=0; source CSS declaration proof only."
+    ],
+    "currentOwnVerification": {
+      "sourcePinAndOriginalBodyInventoryExitCode": 0,
+      "postRunInputPinVerificationExitCode": 0,
+      "reportLogReconciliationExitCode": 0,
+      "normalVitestExitCode": 1,
+      "correctedNormalVitestRun": null,
+      "currentSourceOrFixtureCorrections": 0,
+      "currentReruns": 0,
+      "historicalSuccessesNotRerun": "Scoped lint, scoped TypeScript and in-memory generated CSS were not repeated. The sole new normal runtime attempt exercises previously unexecuted affected cases.",
+      "doNotAggregate": "Historical static-verification exit0 does not convert either original or current discovery0 catalog refusal into a test pass."
+    }
+  },
+  "scopedSourceChecks": {
+    "rawCountsPerProductionFile": {
+      "CommandConfirmDialog.tsx": {
+        "inlineStyles": 0,
+        "rawControls": 0,
+        "directVendors": 0,
+        "oldApiImports": 0,
+        "glassPanel": 0,
+        "chartContainer": 0
+      },
+      "CommandSelectDialog.tsx": {
+        "inlineStyles": 0,
+        "rawControls": 0,
+        "directVendors": 0,
+        "oldApiImports": 0,
+        "glassPanel": 0,
+        "chartContainer": 0
+      }
+    },
+    "linePreservation": "Confirm 149/149, Select 111/110; no extracted production components or deleted sections. Fixtures 393/308 and 193/169; all original24 bodies preserved.",
+    "sectionPreservation": "Both are dialogs, not pages. GlassPanel/ChartContainer remain 0/0. Title, warning, linked typed input, countdown, confirm/cancel footer and Select options/descriptions/empty/cancel remain present.",
+    "hookUrls": "NOT_APPLICABLE: both dialog components are presentation over typed props, with no API hooks or request URLs.",
+    "overallViolationsAudit": "NOT_CLAIMED. These four narrow pattern counts do not certify all UI rules; original receipt retains two Select neon hover/focus scanner candidates.",
+    "fullRepositoryTypeScript": "NOTRUN: explicit scoped-only authority; no source changes and no unchanged genuine-pass rerun.",
+    "lintBuildFullSuite": "NOTRUN: prohibited or outside exact proof scope."
+  },
+  "coverageLimits": {
+    "localizedLinkedEraseLabel": "Source and intended existing cases verified; normal runtime execution NOTRUN.",
+    "identityAndTypedValue": "Existing localized case intends to preserve same input id, typed value and ERASE token; NOTRUN.",
+    "mobileFooterAllocation": "Three caller sites declare min-h-11/min-w-11; existing wrapLabel supplies h-auto, whitespace-normal and break-words. Confirm footer flex-wrap preserved. Source/fixture evidence only.",
+    "desktopCompactRestoration": "Existing md:min-h-9/md:min-w-0 declarations retained. No desktop viewport or computed-layout measurement.",
+    "native44PixelHitbox": "NOTRUN. Class or generated-CSS assertions do not establish actual 44px native hitboxes. 2.75rem equals 44px only at a 16px root.",
+    "nativeBrowserMobileRtlForcedColorsContrast": "NOTRUN",
+    "inputPinValetCommandsOwner": "Separate active owner; no edits or validation/repair claims.",
+    "pageOrPhaseAcceptance": false
+  },
+  "needs": [
+    "Separate authorized catalog owner resolves the 25 exact generated artifacts through normal closure, without disabling either guard.",
+    "After closure, complete the same previously-unexecuted affected selector under normal Vitest --pool=forks --maxWorkers=2.",
+    "Any subsequent own assertion failure needs its exact scoped corrective owner; read-only source/fixtures must not be patched or weakened here.",
+    "Native mobile44 hitbox, actual desktop layout and broader page/application acceptance remain independent NOTRUN work."
+  ]
+}
