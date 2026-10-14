@@ -3,6 +3,7 @@ import {
   QueryClientProvider,
 } from '@tanstack/react-query';
 import {
+  act,
   fireEvent,
   render,
   screen,
@@ -450,6 +451,72 @@ afterEach(() => {
 });
 
 describe('BatteryPassportPage', () => {
+  it('keeps every provenance field reachable through mobile key/value details and restores the desktop matrix', () => {
+    const observers = new Map<Element, ResizeObserverCallback>();
+    vi.stubGlobal('ResizeObserver', class {
+      private elements = new Set<Element>();
+      constructor(private callback: ResizeObserverCallback) {}
+      observe(element: Element) {
+        this.elements.add(element);
+        observers.set(element, this.callback);
+      }
+      unobserve(element: Element) {
+        this.elements.delete(element);
+        observers.delete(element);
+      }
+      disconnect() {
+        this.elements.forEach(element => observers.delete(element));
+        this.elements.clear();
+      }
+    });
+    const resize = (width: number) => act(() => {
+      observers.forEach((callback, element) => callback(
+        [{ target: element, contentRect: { width } } as ResizeObserverEntry],
+        {} as ResizeObserver,
+      ));
+    });
+    try {
+      renderPage();
+      const matrix = screen.getByTestId('battery-passport-provenance-matrix');
+      resize(375);
+      expect(matrix.querySelectorAll('[data-kv-row]')).toHaveLength(14);
+      expect(within(matrix).queryByRole('table')).not.toBeInTheDocument();
+
+      const fields = [
+        'vehicle_id', 'first_observed_at day', 'soh_pct', 'capacity_kwh',
+        'equivalent_full_cycles', 'fast_charge_ratio', 'issued_at day',
+        'vin_masked', 'original_capacity_kwh', 'avg_charge_limit_pct',
+        'thermal_exposure', 'health_grade', 'degradation_trend', 'recommendations',
+      ];
+      for (const [index, field] of fields.entries()) {
+        const row = within(matrix).getByRole('button', { name: field, exact: true });
+        row.focus();
+        expect(row).toHaveFocus();
+        fireEvent.keyDown(row, { key: index % 2 === 0 ? 'Enter' : ' ' });
+        const dialog = screen.getByRole('dialog');
+        for (const label of ['Certificate fact', 'Current value', 'Source and meaning', 'Bound by v1 hash']) {
+          expect(within(dialog).getByText(label)).toBeInTheDocument();
+        }
+        expect(within(dialog).getAllByText(field).length).toBeGreaterThan(0);
+        if (field === 'vehicle_id') {
+          expect(dialog).toHaveTextContent('Vehicle identifier; exact integer is in the v1 canonical string.');
+          expect(dialog).toHaveTextContent('Yes');
+        }
+        if (field === 'first_observed_at day') expect(dialog).toHaveTextContent('Yes, UTC day');
+        if (field === 'recommendations') expect(dialog).toHaveTextContent('0 server outputs');
+        fireEvent.keyDown(dialog, { key: 'Escape' });
+        expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+      }
+
+      resize(1440);
+      expect(matrix.querySelector('[data-mobile-table]')).toBeNull();
+      expect(within(matrix).getAllByRole('columnheader')).toHaveLength(4);
+      expect(within(matrix).getByText('Vehicle identifier; exact integer is in the v1 canonical string.')).toBeInTheDocument();
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
   it('keeps the scientific matrix columns fixed', () => {
     renderPage();
     const matrix = screen.getByTestId('battery-passport-provenance-matrix');

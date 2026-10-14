@@ -42,6 +42,11 @@ export function BatteryPassportProvenanceMatrix({
   const recommendationCount = Array.isArray(passport?.recommendations)
     ? passport.recommendations.length
     : 0;
+  const bindingLabels = useMemo(() => ({
+    utc_day: t('batteryPassport.provenance.utcDay', 'Yes, UTC day'),
+    value: t('batteryPassport.provenance.yes', 'Yes'),
+    not_bound: t('batteryPassport.provenance.no', 'No'),
+  }), [t]);
   const rows = useMemo<ProvenanceRow[]>(
     () => [
       {
@@ -293,25 +298,12 @@ export function BatteryPassportProvenanceMatrix({
               row.binding === 'not_bound' ? 'neutral' : 'success'
             }
           >
-            {row.binding === 'utc_day'
-              ? t(
-                  'batteryPassport.provenance.utcDay',
-                  'Yes, UTC day',
-                )
-              : row.binding === 'value'
-                ? t(
-                    'batteryPassport.provenance.yes',
-                    'Yes',
-                  )
-                : t(
-                    'batteryPassport.provenance.no',
-                    'No',
-                  )}
+            {bindingLabels[row.binding]}
           </Badge>
         ),
       },
     ],
-    [t],
+    [t, bindingLabels],
   );
 
   return (
@@ -322,17 +314,32 @@ export function BatteryPassportProvenanceMatrix({
           )} description={t(
             'batteryPassport.provenance.subtitle',
             'Exactly seven facts enter the tsbp-v1 canonical string. Display and analysis fields outside that list are not protected by this digest.',
-          )} actions={<Fingerprint className="h-4 w-4 text-cyan-300" aria-hidden="true" />}>
+          )} actions={<Fingerprint className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />}>
         <BatteryPassportSectionBody state={state}>
           <DataTable
             tableId="battery:passport-provenance"
             resizable={false}
             columnReorder={false}
             columnVisibility={false}
+            name={t(
+              'batteryPassport.provenance.title',
+              'Provenance core-facts matrix',
+            )}
             columns={columns}
             data={rows}
             keyExtractor={(row) => row.field}
-            mobileColumns={['field', 'value', 'binding']}
+            mobilePresentation={{
+              variant: 'keyValue',
+              roles: { field: 'title', value: 'primary', source: 'meta', binding: 'badge' },
+              displayValue: (row, key) => {
+                if (key === 'binding') {
+                  return bindingLabels[row.binding];
+                }
+                return key === 'field' || key === 'value' || key === 'source'
+                  ? row[key]
+                  : undefined;
+              },
+            }}
             density="compact"
             emptyMessage={t(
               'batteryPassport.provenance.empty',
