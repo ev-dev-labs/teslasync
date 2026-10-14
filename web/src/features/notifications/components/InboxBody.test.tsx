@@ -35,7 +35,7 @@
  * global stubs in src/test-setup.ts.
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import {
   render,
   screen,
@@ -45,7 +45,7 @@ import {
   act,
   type RenderResult,
 } from '@testing-library/react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClient, QueryClientProvider, onlineManager } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 
 /* ── Boundary mocks ───────────────────────────────────── */
@@ -194,6 +194,7 @@ interface Handlers {
   groups?: () => Promise<unknown>;
   members?: () => Promise<unknown>;
   total?: number;
+  count?: () => Promise<{ total: number }>;
   report?: () => Promise<unknown>;
   detail?: (path: string, method?: string) => Promise<AlertDetail>;
 }
@@ -210,7 +211,7 @@ function installRequest(h: Handlers = {}) {
       return Promise.resolve({});
     }
     if (path.startsWith('/notifications/report')) return (h.report ?? (() => Promise.reject(new Error('Report unavailable'))))();
-    if (path.includes('count_only=true')) return Promise.resolve({ total: h.total ?? 2 });
+    if (path.includes('count_only=true')) return (h.count ?? (() => Promise.resolve({ total: h.total ?? 2 })))();
     if (path.includes('group_key=')) return (h.members ?? (() => Promise.resolve([])))();
     if (path.includes('grouped=true')) return (h.groups ?? (() => Promise.resolve([])))();
     if (path.startsWith('/notifications/logs')) return (h.logs ?? (() => Promise.resolve([])))();
@@ -262,6 +263,7 @@ function renderInbox(opts: { archived?: boolean; route?: string; report?: boolea
 }
 
 beforeEach(() => {
+  onlineManager.setOnline(true);
   mockedRequest.mockReset();
   mockedExportAsCSV.mockReset();
   mockedExportAsJSON.mockReset();
@@ -272,6 +274,8 @@ beforeEach(() => {
   localStorage.setItem(MARK_ON_OPEN, 'false');
   installRequest();
 });
+
+afterEach(() => { onlineManager.setOnline(true); });
 
 /* ── 1. Flat view ─────────────────────────────────────── */
 
@@ -420,6 +424,52 @@ describe('InboxBody — flat view', () => {
     const cta = screen.getByRole('link', { name: 'Configure alert rules' });
     expect(cta).toHaveAttribute('href', '/notifications/studio');
   });
+
+  it.each([
+    {
+      archived: false,
+      query: 'source=rule',
+      message: 'No rule-triggered notifications match these filters. Check the date range or configure a rule in alert studio.',
+    },
+    {
+      archived: false,
+      query: 'source=all&q=no-match',
+      message: 'Clear the notification filters or adjust the workspace date range to see other records.',
+    },
+    {
+      archived: true,
+      query: 'source=rule',
+      message: 'Clear the notification filters or adjust the workspace date range to see other records.',
+    },
+  ])('keeps authoritative flat no-match copy source-specific ($query, archived=$archived)', async ({ archived, query, message }) => {
+    installRequest({ total: 0 });
+    renderInbox({
+      archived,
+      route: `/notifications/${archived ? 'archived' : 'inbox'}?view=flat&${query}&from=2026-01-01&to=2026-01-30`,
+    });
+
+    expect(await screen.findByText('No notifications match these filters')).toBeInTheDocument();
+    expect(screen.getByText(message)).toBeInTheDocument();
+    expect(screen.queryByText(archived ? 'No archived notifications' : 'No notifications')).not.toBeInTheDocument();
+    if (!archived) {
+      expect(screen.getByRole('link', { name: 'Configure alert rules' })).toHaveAttribute('href', '/notifications/studio');
+    }
+
+    const clearFilters = screen.getAllByRole('button', { name: 'Clear filters' });
+    fireEvent.click(clearFilters[clearFilters.length - 1]);
+    await screen.findByText(archived ? 'No archived notifications' : 'No notifications');
+    await waitFor(() => {
+      const requests = [flatCalls().at(-1), callsFor(path => path.includes('count_only=true')).at(-1)];
+      for (const call of requests) {
+        const params = new URL(String(call?.[0]), 'http://teslasync.local').searchParams;
+        expect(params.has('source')).toBe(false);
+        expect(params.has('q')).toBe(false);
+        expect(params.get('archived')).toBe(String(archived));
+        expect(params.get('from')).toContain('2026-01-01');
+        expect(params.get('to_exclusive')).toContain('2026-01-31');
+      }
+    });
+  });
 });
 
 /* ── 2. Grouped view (opt-in) ─────────────────────────── */
@@ -445,13 +495,113 @@ describe('InboxBody — grouped view', () => {
     expect(screen.getByText('Battery thread')).toBeInTheDocument();
     expect(screen.getByText('One-off ping')).toBeInTheDocument();
     expect(screen.getByTestId('inbox-result-count')).toHaveTextContent(
-      '2 threads · 4 notifications',
+      '2 threads · 4 notifications in loaded threads on this page',
     );
 
     // Grouped endpoint used; the flat endpoint stays untouched.
     expect(groupedCalls().length).toBeGreaterThanOrEqual(1);
     expect(String(groupedCalls()[0][0])).toContain('grouped=true');
     expect(flatCalls()).toHaveLength(0);
+  });
+
+  describe('InboxBody — N04 source trust and recovery', () => {
+    it.each(['flat', 'grouped'])('recovers the %s count independently without making up a total', async view => {
+      let countFailed = true;
+      installRequest({
+        total: 120,
+        count: () => countFailed ? Promise.reject(new Error('Count unavailable')) : Promise.resolve({ total: 120 }),
+        logs: () => Promise.resolve([makeLog({ id: 201, title: 'Count recovery evidence' })]),
+        groups: () => Promise.resolve([makeGroup({ latest: makeLog({ id: 201, title: 'Count recovery evidence' }), count: 3 })]),
+      });
+      renderInbox({ route: `/notifications/inbox?view=${view}` });
+      await screen.findByText('Count recovery evidence');
+      const retry = await screen.findByRole('button', { name: 'Retry' });
+      expect(screen.getByTestId('inbox-result-count')).toHaveTextContent('1 loaded · total unavailable');
+      expect(screen.getByText('Page 1 of Unknown')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Next page' })).toBeDisabled();
+      const rowRequests = flatCalls().length;
+      const threadRequests = callsFor((path, method) => !method && path.includes('grouped=true') && !path.includes('count_only=true')).length;
+      countFailed = false;
+      fireEvent.click(retry);
+      await waitFor(() => expect(screen.getByTestId('inbox-result-count')).toHaveTextContent(view === 'grouped' ? '120 threads' : '120 notifications'));
+      expect(flatCalls()).toHaveLength(rowRequests);
+      expect(callsFor((path, method) => !method && path.includes('grouped=true') && !path.includes('count_only=true'))).toHaveLength(threadRequests);
+    });
+
+    it('retains the real count and page navigation when a count refresh fails', async () => {
+      let countFailed = false;
+      installRequest({
+        count: () => countFailed ? Promise.reject(new Error('Count refresh failed')) : Promise.resolve({ total: 120 }),
+        logs: () => Promise.resolve([makeLog({ title: 'Retained count evidence' })]),
+      });
+      const { client } = renderInbox();
+      await screen.findByText('120 notifications');
+      countFailed = true;
+      await act(async () => {
+        await client.refetchQueries({ predicate: query => query.queryKey[0] === 'notification-logs' && query.queryKey[1] === 'count' });
+      });
+      expect(screen.getByTestId('inbox-result-count')).toHaveTextContent('120 notifications');
+      expect(screen.getByRole('button', { name: 'Next page' })).toBeEnabled();
+      expect(await screen.findByText('Notification count may be out of date')).toBeInTheDocument();
+      countFailed = false;
+      fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+      await waitFor(() => expect(screen.queryByText('Notification count may be out of date')).not.toBeInTheDocument());
+    });
+
+    it.each(['flat', 'grouped'])('does not call a paused unresolved %s source empty or zero', async view => {
+      installRequest();
+      onlineManager.setOnline(false);
+      renderInbox({ route: `/notifications/inbox?view=${view}` });
+      expect(screen.getAllByText(/Refresh paused/).length).toBeGreaterThan(0);
+      expect(screen.getByTestId('inbox-result-count')).toHaveTextContent('Unknown');
+      expect(screen.queryByText('No notifications')).not.toBeInTheDocument();
+      expect(screen.queryByText('No notification threads')).not.toBeInTheDocument();
+      expect(flatCalls()).toHaveLength(0);
+      expect(groupedCalls()).toHaveLength(0);
+      act(() => { onlineManager.setOnline(true); });
+      expect(await screen.findByText(view === 'flat' ? 'No notifications' : 'No notification threads')).toBeInTheDocument();
+    });
+
+    it.each([
+      ['flat', false],
+      ['grouped', false],
+      ['flat', true],
+    ] as const)('distinguishes %s no-match and clears only optional filters (archived=%s)', async (view, archived) => {
+      installRequest({ total: 0 });
+      renderInbox({ archived, route: `/notifications/${archived ? 'archived' : 'inbox'}?view=${view}&q=no-match&severity=critical&vehicle_id=1&rule_id=10&source=rule&read=unread&from=2026-01-01&to=2026-01-30` });
+      await screen.findByText('No notifications match these filters');
+      expect(screen.queryByText('No notifications')).not.toBeInTheDocument();
+      expect(screen.queryByText('No archived notifications')).not.toBeInTheDocument();
+      expect(screen.queryByText('No notification threads')).not.toBeInTheDocument();
+      fireEvent.click(screen.getAllByRole('button', { name: 'Clear filters' }).at(-1)!);
+      await waitFor(() => {
+        const call = view === 'grouped'
+          ? callsFor((path, method) => !method && path.includes('grouped=true') && !path.includes('count_only=true')).at(-1)
+          : flatCalls().at(-1);
+        const params = new URL(String(call?.[0]), 'http://teslasync.local').searchParams;
+        for (const key of ['q', 'severity', 'vehicle_id', 'rule_id', 'source', 'read']) expect(params.has(key)).toBe(false);
+        expect(params.get('from')).toContain('2026-01-01');
+        expect(params.get('to_exclusive')).toContain('2026-01-31');
+        expect(params.get('archived')).toBe(String(archived));
+      });
+    });
+
+    it('keeps persisted severity while unresolved detail lifecycle stays unknown and write-free', async () => {
+      installRequest({
+        logs: () => Promise.resolve([makeLog({ id: 205, title: 'Persisted critical evidence', severity: 'critical' })]),
+        detail: () => Promise.reject(new Error('Detail unavailable')),
+      });
+      renderInbox();
+      fireEvent.click(await screen.findByRole('button', { name: 'Open notification: Persisted critical evidence' }));
+      const drawer = await screen.findByRole('dialog');
+      await within(drawer).findByRole('button', { name: 'Retry' });
+      expect(within(drawer).getByText('Severity').closest('div')).toHaveTextContent('critical');
+      expect(within(drawer).getByText('Owner').closest('div')).toHaveTextContent('Unknown');
+      expect(within(drawer).getByText('Resolution state').closest('div')).toHaveTextContent('Unknown');
+      expect(within(drawer).queryByRole('button', { name: 'Acknowledge alert' })).not.toBeInTheDocument();
+      expect(within(drawer).queryByRole('button', { name: 'Reopen alert' })).not.toBeInTheDocument();
+      expect(callsFor((path, method) => path.startsWith('/alerts/') && method === 'POST')).toHaveLength(0);
+    });
   });
 
   it('shows the thread-specific empty copy when there are no groups', async () => {

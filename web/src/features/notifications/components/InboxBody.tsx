@@ -49,7 +49,7 @@ import {
   type ContextMenuItem,
 } from '@/components/ui';
 import { BulkActionsToolbar, type BulkAction } from '@/components/data-display';
-import { EmptyState, Skeleton, StaleRefreshWarning, useToast } from '@/components/feedback';
+import { EmptyState, InlineCallout, QueryError, Skeleton, StaleRefreshWarning, useToast } from '@/components/feedback';
 import { ListExportMenu, type ExportScope } from '@/components/forms';
 import { FadeIn } from '@/components/motion';
 import { useDataState } from '@/hooks/useDataState';
@@ -251,12 +251,13 @@ export function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
   const groupsQuery = useNotificationGroups(filters, { enabled: isGrouped });
   const {
     data: rawGroups,
-    isLoading: groupsLoading,
     refetch: groupsRefetch,
   } = groupsQuery;
   const groupsState = useDataState(groupsQuery);
   const listState = isGrouped ? groupsState : logsState;
-  const initialLoading = !listState.hasData && (isGrouped ? groupsLoading : isLoading);
+  const listQuery = isGrouped ? groupsQuery : logsQuery;
+  const initialLoading = !listState.hasData && !listState.fatalError && listQuery.fetchStatus === 'fetching';
+  const unresolvedList = !listState.hasData && !listState.fatalError && !initialLoading;
   const groups = useMemo(() => rawGroups ?? [], [rawGroups]);
   const groupedNotificationCount = useMemo(
     () => groups.reduce((total, group) => total + Math.max(0, group.count), 0),
@@ -517,15 +518,19 @@ export function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
     id: openedLog.id,
     vehicle_id: openedVehicle?.id ?? openedRule?.vehicle_id ?? 0,
     type: openedRule?.name ?? openedLog.event_type ?? openedLog.title,
-    severity: openedRule?.severity ?? openedLog.severity ?? '',
+    severity: openedLog.severity ?? '',
     title: openedLog.title,
     message: openedLog.message,
     is_read: !!openedLog.read_at,
     created_at: openedLog.created_at,
     rule_id: openedRule?.id,
     rule_signal: openedRule?.signal_name,
-    acknowledged_at: alertDetail.data?.acknowledged_at ?? null,
   } : null;
+  const canWriteAlert = openedAlert !== null &&
+    alertDetail.data?.id === openedAlert.id &&
+    (alertDetail.data.acknowledged_at === null || Boolean(alertDetail.data.acknowledged_at?.trim())) &&
+    !alertDetail.isFetching && !alertDetail.error &&
+    !acknowledgeAlert.isPending && !reopenAlert.isPending;
 
   const navigate = useNavigate();
   const { openMenu: openRowContextMenu } = useContextMenu();
@@ -573,7 +578,7 @@ export function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
           id: log.id,
           vehicle_id: vehicle?.id ?? rule.vehicle_id ?? 0,
           type: rule.name ?? log.title,
-          severity: rule.severity ?? '',
+          severity: log.severity ?? '',
           title: log.title,
           message: log.message,
           is_read: isRead,
@@ -626,10 +631,12 @@ export function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
           ? isGrouped
             ? t('notifications.inbox.threadCountLabel', '{{count}} threads', { count: countData.total })
             : t('notifications.inbox.countLabel', '{{count}} notifications', { count: countData.total })
-          : t('notifications.inbox.loadedCount', '{{count}} loaded · total unavailable', { count: isGrouped ? groups.length : rows.length })}
-        {isGrouped && <>
+          : listState.hasData
+            ? t('notifications.inbox.loadedCount', '{{count}} loaded · total unavailable', { count: isGrouped ? groups.length : rows.length })
+            : t('common.unknown', 'Unknown')}
+        {isGrouped && listState.hasData && <>
           <span aria-hidden="true"> · </span>
-          {t('notifications.inbox.notificationCountLabel', '{{count}} notifications', { count: groupedNotificationCount })}
+          {t('notifications.inbox.loadedPageMembership', '{{count}} notifications in loaded threads on this page', { count: groupedNotificationCount })}
         </>}
       </span>
     </div>
@@ -688,18 +695,25 @@ export function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
       )}
     </div>
   );
+  const hasOptionalFilters = severity.length > 0 || vehicleIds.length > 0 ||
+    ruleIds.length > 0 || source !== 'all' || search !== '' || readState !== 'all';
+  const clearOptionalFilters = () => handleFiltersChange({ archived });
 
   return (
     <>
     <AlertDetailDrawer
       alert={openedAlert}
       detail={alertDetail.data}
-      isLoading={alertDetail.isLoading}
+      isLoading={alertDetail.isFetching || alertDetail.isLoading || acknowledgeAlert.isPending || reopenAlert.isPending}
       error={alertDetail.error}
       vehicleName={openedVehicle?.display_name}
       onClose={() => setOpenedLog(null)}
-      onAcknowledge={id => acknowledgeAlert.mutate({ id })}
-      onReopen={id => reopenAlert.mutate(id)}
+      onAcknowledge={id => {
+        if (canWriteAlert && id === openedAlert?.id && alertDetail.data?.acknowledged_at === null) acknowledgeAlert.mutate({ id });
+      }}
+      onReopen={id => {
+        if (canWriteAlert && id === openedAlert?.id && alertDetail.data?.acknowledged_at) reopenAlert.mutate(id);
+      }}
       onRetry={() => { void alertDetail.refetch(); }}
     />
     <Modal
@@ -713,7 +727,7 @@ export function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
           <EmptyState message={t('notifications.inbox.detail.empty', 'Select a notification to inspect its details.')} />
         )}
     </Modal>
-    <PullToRefresh onRefresh={async () => { await (isGrouped ? groupsRefetch() : refetch()); }}>
+    <PullToRefresh onRefresh={async () => { await Promise.all([(isGrouped ? groupsRefetch() : refetch()), countQuery.refetch()]); }}>
     <div className="min-w-0 w-full max-w-full space-y-4">
       <GlassPanel className="min-w-0 w-full max-w-full p-3 sm:p-4" data-tour="alerts-list">
       {isGrouped && <FadeIn>
@@ -798,6 +812,15 @@ export function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
             {[1, 2, 3, 4, 5].map(i => <Skeleton key={i} className="h-14" />)}
           </div>
         )}
+        {unresolvedList && (
+          <InlineCallout variant="info" action={listState.retry ? { label: t('common.retry', 'Retry'), onClick: listState.retry } : undefined}>
+            {listState.isRefreshBlocked
+              ? t('dataSources.status.paused', 'Refresh paused')
+              : t('dataSources.status.pending', 'Pending')}
+            {' · '}
+            {t('dataSources.unavailableMessage', 'No requested source has returned usable data yet.')}
+          </InlineCallout>
+        )}
 
         {listState.fatalError && (
           <EmptyState
@@ -811,17 +834,22 @@ export function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
           />
         )}
 
-        {!isGrouped && !initialLoading && !listState.fatalError && rows.length === 0 && (
+        {!isGrouped && listState.hasData && !listState.fatalError && rows.length === 0 && (
           <EmptyState
             icon={<Bell className="h-8 w-8" />}
-            title={archived
+            title={hasOptionalFilters
+              ? t('notifications.inbox.empty.noMatches', 'No notifications match these filters')
+              : archived
               ? t('notifications.inbox.empty.archivedTitle', 'No archived notifications')
               : t('notifications.inbox.empty.title', 'No notifications')}
-            message={archived
-              ? t('notifications.inbox.empty.archivedMessage', 'Archived notifications will appear here.')
-              : source === 'rule'
+            message={hasOptionalFilters
+              ? !archived && source === 'rule'
                 ? t('notifications.inbox.empty.ruleTriggers', 'No rule-triggered notifications match these filters. Check the date range or configure a rule in alert studio.')
-                : t('notifications.inbox.empty.message', 'System events, alerts, automation, and scheduled notifications appear here when triggered.')}
+                : t('notifications.inbox.empty.noMatchesMessage', 'Clear the notification filters or adjust the workspace date range to see other records.')
+              : archived
+              ? t('notifications.inbox.empty.archivedMessage', 'Archived notifications will appear here.')
+              : t('notifications.inbox.empty.message', 'System events, alerts, automation, and scheduled notifications appear here when triggered.')}
+            action={hasOptionalFilters ? { label: t('common.clearFilters', 'Clear filters'), onClick: clearOptionalFilters } : undefined}
             actionTo={archived ? undefined : {
               label: t('notifications.inbox.empty.cta', 'Configure alert rules'),
               to: '/notifications/studio',
@@ -829,11 +857,16 @@ export function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
           />
         )}
 
-        {isGrouped && !initialLoading && !listState.fatalError && groups.length === 0 && (
+        {isGrouped && listState.hasData && !listState.fatalError && groups.length === 0 && (
           <EmptyState
             icon={<Bell className="h-8 w-8" />}
-            title={t('notifications.group.emptyTitle', 'No notification threads')}
-            message={t('notifications.group.emptyMessage', 'Related notifications are grouped here when they occur repeatedly.')}
+            title={hasOptionalFilters
+              ? t('notifications.inbox.empty.noMatches', 'No notifications match these filters')
+              : t('notifications.group.emptyTitle', 'No notification threads')}
+            message={hasOptionalFilters
+              ? t('notifications.inbox.empty.noMatchesMessage', 'Clear the notification filters or adjust the workspace date range to see other records.')
+              : t('notifications.group.emptyMessage', 'Related notifications are grouped here when they occur repeatedly.')}
+            action={hasOptionalFilters ? { label: t('common.clearFilters', 'Clear filters'), onClick: clearOptionalFilters } : undefined}
             actionTo={{
               label: t('notifications.inbox.empty.cta', 'Configure alert rules'),
               to: '/notifications/studio',
@@ -866,7 +899,23 @@ export function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
             ))}
           </div>
         )}
-      {countState.fatalError && <Text variant="bodySm">{t('notifications.inbox.countError', 'Could not load the notification count: {{error}}', { error: String(countState.fatalError) })}</Text>}
+      {countState.fatalError && <QueryError
+        error={countState.fatalError}
+        onRetry={countState.retry ?? undefined}
+        resourceName={t('notifications.inbox.evidence.count', 'Notification count')}
+      />}
+      {!countState.hasData && !countState.fatalError && countQuery.fetchStatus !== 'fetching' && (
+        <InlineCallout variant="info" action={countState.retry ? { label: t('common.retry', 'Retry'), onClick: countState.retry } : undefined}>
+          {t('notifications.inbox.evidence.count', 'Notification count')}
+          {' · '}
+          {countState.isRefreshBlocked ? t('dataSources.status.paused', 'Refresh paused') : t('dataSources.status.pending', 'Pending')}
+        </InlineCallout>
+      )}
+      {!countState.hasData && listState.hasData && (
+        <Pagination page={page} pageSize={pageSize} total={Number.NaN} totalKind="unknown"
+          onPageChange={setPage}
+          onPageSizeChange={(size) => { setPage(1); setFiltersBatch({ size: String(size) }); }} />
+      )}
       {isGrouped && countData && countData.total > 0 && (
         <Pagination page={page} pageSize={pageSize} total={countData.total} onPageChange={setPage}
           onPageSizeChange={(size) => { setPage(1); setFiltersBatch({ size: String(size) }); }} />
