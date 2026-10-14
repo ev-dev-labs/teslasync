@@ -8,6 +8,7 @@ export interface UseReconstructionResult {
   clipEpochMs: number | null;
   /** Hours of telemetry lookback actually requested (bounded by the evidence-bundle hook, from-now only). */
   lookbackHours: number;
+  /** Null until timestamp, positive measured duration and nonnegative roll settings resolve. */
   reconstruction: ReconstructionResult | null;
   /** Alignment is computed before requests resolve; a received signal response is the retained-source boundary. */
   hasRetainedHistory: boolean;
@@ -39,13 +40,16 @@ export function useReconstruction(
   settings: DashcamSettings,
   selectedSignals: string[],
 ): UseReconstructionResult {
-  const clipEpochMs = clip ? resolveClipEpochMs(clip.capturedAtRaw, settings.assumedTimezoneOffsetMinutes) : null;
+  const resolvedEpochMs = clip ? resolveClipEpochMs(clip.capturedAtRaw, settings.assumedTimezoneOffsetMinutes) : null;
+  const clipEpochMs = resolvedEpochMs != null && Number.isFinite(resolvedEpochMs) ? resolvedEpochMs : null;
 
   const lookbackHours = useMemo(() => {
     if (clipEpochMs == null) return 24;
     const ageMs = Date.now() - clipEpochMs;
     const ageHours = ageMs / 3_600_000;
-    const withPostRoll = ageHours + settings.reconstructionPostRollSeconds / 3600 + 1;
+    const postRollSeconds = Number.isFinite(settings.reconstructionPostRollSeconds)
+      && settings.reconstructionPostRollSeconds >= 0 ? settings.reconstructionPostRollSeconds : 0;
+    const withPostRoll = ageHours + postRollSeconds / 3600 + 1;
     return Math.max(1, Math.min(24 * 365, Math.ceil(withPostRoll)));
   }, [clipEpochMs, settings.reconstructionPostRollSeconds]);
 
@@ -53,9 +57,13 @@ export function useReconstruction(
 
   const reconstruction = useMemo<ReconstructionResult | null>(() => {
     if (clip == null || clipEpochMs == null) return null;
+    const durationSeconds = clip.durationSeconds;
+    if (durationSeconds == null || !Number.isFinite(durationSeconds) || durationSeconds <= 0
+      || !Number.isFinite(settings.reconstructionPreRollSeconds) || settings.reconstructionPreRollSeconds < 0
+      || !Number.isFinite(settings.reconstructionPostRollSeconds) || settings.reconstructionPostRollSeconds < 0) return null;
     return alignSignalHistoryToClip({
       clipStartEpochMs: clipEpochMs,
-      clipDurationSeconds: clip.durationSeconds ?? 0,
+      clipDurationSeconds: durationSeconds,
       preRollSeconds: settings.reconstructionPreRollSeconds,
       postRollSeconds: settings.reconstructionPostRollSeconds,
       seriesInput: bundle.data.map((s) => ({
