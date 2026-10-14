@@ -229,7 +229,7 @@ const HEALTH: BatteryDegradationHealth = {
     deep_discharge_count: 5,
     charge_to_full_count: 3,
     high_soc_count: 8,
-    avg_energy_per_session: 38,
+    avg_energy_per_session_wh: 38_000,
     total_count: 100,
   },
   projections: [
@@ -329,6 +329,20 @@ beforeEach(() => {
 });
 
 describe('BatteryDegradationPage — date-preference boundary', () => {
+  it('preserves populated counts and SI capacity with the canonical session-energy contract', () => {
+    const source = structuredClone(HEALTH);
+    source.charging_habits.avg_energy_per_session_wh = 38_125.5;
+    expect(source.charging_habits).not.toHaveProperty('avg_energy_per_session');
+    mockHealth.mockReturnValue(makeQuery({ data: source }));
+    renderPage();
+    expect(metricValue(kpiRegion(), 'Current SOH')).toContain('91');
+    expect(metricValue(kpiRegion(), 'Estimated capacity')).toContain('72.5');
+    expect(screen.getByRole('table', { name: 'Degradation history' })).toHaveTextContent(`${fmtNumber(91)}%`);
+    expect(source.charging_habits.fast_charge_count).toBe(40);
+    expect(source.charging_habits.slow_charge_count).toBe(60);
+    expect(source.charging_habits.avg_energy_per_session_wh).toBe(38_125.5);
+  });
+
   it.each(['America/Los_Angeles', 'Pacific/Kiritimati'])(
     'preserves calendar days while rendering observation instants in %s',
     (timezone) => {

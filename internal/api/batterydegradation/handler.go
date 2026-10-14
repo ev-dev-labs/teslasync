@@ -127,10 +127,6 @@ func (h *Handler) Predict(w http.ResponseWriter, r *http.Request) {
 		// SI charging_sessions schema (migration 000184): peak_power_w
 		// (Watts; >50000W == DC fast charging), total_energy_added_wh
 		// (Watt-hours), start_soc_pct/end_soc_pct (DOUBLE PRECISION).
-		// Convert energy back to kWh at the response boundary so the
-		// JSON key avg_energy_per_session keeps its kilowatt-hour
-		// semantics for the frontend.
-		var avgEnergyWh float64
 		err = h.db.Pool.QueryRow(ctx, `
 			SELECT
 				COUNT(*) FILTER (WHERE peak_power_w > 50000),
@@ -144,14 +140,12 @@ func (h *Handler) Predict(w http.ResponseWriter, r *http.Request) {
 			WHERE vehicle_id = $1`, vehicleID).Scan(
 			&habits.FastChargeCount, &habits.SlowChargeCount,
 			&habits.DeepDischargeCount, &habits.ChargeToFullCount,
-			&habits.HighSocCount, &avgEnergyWh,
+			&habits.HighSocCount, &habits.AvgEnergyPerSessionWh,
 			&habits.TotalCount)
 		if err != nil {
 			log.Warn().Err(err).Int64("vehicleID", vehicleID).Msg("failed to get charging habits")
 		}
-		habits.AvgEnergyPerSession = avgEnergyWh / 1000.0
 	}
-	habits.AvgEnergyPerSession = math.Round(habits.AvgEnergyPerSession*10) / 10
 
 	var currentHealth, currentCapacity, currentDegradation, currentRange, currentTemp float64
 	var currentCycles int
@@ -608,15 +602,7 @@ func (h *Handler) buildBatteryHealth(ctx context.Context, vehicleID int64) (*bat
 		tempScore != nil, observationMonths != nil && *observationMonths > 0 && cyclesAvailable, summary.validStartSocCount > 0)
 	habitsAvailable := validChargeCount > 0 && summary.validEndSocCount > 0 && summary.validStartSocCount > 0
 
-	habits := chargingHabits{
-		FastChargeCount:     summary.fastChargeCount,
-		SlowChargeCount:     summary.slowChargeCount,
-		DeepDischargeCount:  summary.deepDischargeCount,
-		ChargeToFullCount:   summary.fullChargeCount,
-		HighSocCount:        summary.highSocCount,
-		AvgEnergyPerSession: roundTo(summary.avgEnergyWh/1000, 1),
-		TotalCount:          summary.totalCount,
-	}
+	habits := chargingHabitsFromSummary(summary)
 	if history == nil {
 		history = []batteryHealthHistoryPoint{}
 	}

@@ -137,13 +137,13 @@ type horizonOutlook struct {
 }
 
 type chargingHabits struct {
-	FastChargeCount     int     `json:"fast_charge_count"`
-	SlowChargeCount     int     `json:"slow_charge_count"`
-	DeepDischargeCount  int     `json:"deep_discharge_count"`
-	ChargeToFullCount   int     `json:"charge_to_full_count"`
-	HighSocCount        int     `json:"high_soc_count"`
-	AvgEnergyPerSession float64 `json:"avg_energy_per_session"`
-	TotalCount          int     `json:"total_count"`
+	FastChargeCount       int     `json:"fast_charge_count"`
+	SlowChargeCount       int     `json:"slow_charge_count"`
+	DeepDischargeCount    int     `json:"deep_discharge_count"`
+	ChargeToFullCount     int     `json:"charge_to_full_count"`
+	HighSocCount          int     `json:"high_soc_count"`
+	AvgEnergyPerSessionWh float64 `json:"avg_energy_per_session_wh"`
+	TotalCount            int     `json:"total_count"`
 }
 
 type batteryHealthHistoryPoint struct {

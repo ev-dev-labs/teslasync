@@ -7,6 +7,18 @@ import (
 	"time"
 )
 
+func chargingHabitsFromSummary(summary batterySummaryStats) chargingHabits {
+	return chargingHabits{
+		FastChargeCount:       summary.fastChargeCount,
+		SlowChargeCount:       summary.slowChargeCount,
+		DeepDischargeCount:    summary.deepDischargeCount,
+		ChargeToFullCount:     summary.fullChargeCount,
+		HighSocCount:          summary.highSocCount,
+		AvgEnergyPerSessionWh: summary.avgEnergyWh,
+		TotalCount:            summary.totalCount,
+	}
+}
+
 // Recorded charging throughput estimates charge equivalents, not observed
 // discharge/recharge cycles or lifetime pack throughput.
 func chargeEquivalentCycles(energyWh, nominalCapacityWh float64, samples int) (float64, bool) {

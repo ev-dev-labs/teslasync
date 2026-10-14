@@ -17,6 +17,41 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/signal"
 )
 
+func TestChargingHabitsSessionEnergyWireIsWh(t *testing.T) {
+	for _, energyWh := range []float64{0, 38000, 38125.5, 0.125} {
+		t.Run(strconv.FormatFloat(energyWh, 'g', -1, 64), func(t *testing.T) {
+			habits := chargingHabitsFromSummary(batterySummaryStats{
+				avgEnergyWh: energyWh, fastChargeCount: 40, slowChargeCount: 60,
+				deepDischargeCount: 5, fullChargeCount: 3, highSocCount: 8, totalCount: 100,
+			})
+			wire, err := json.Marshal(batteryHealthResponse{ChargingHabits: habits})
+			if err != nil {
+				t.Fatal(err)
+			}
+			var body struct {
+				Habits map[string]interface{} `json:"charging_habits"`
+			}
+			if err := json.Unmarshal(wire, &body); err != nil {
+				t.Fatal(err)
+			}
+			if body.Habits["avg_energy_per_session_wh"] != energyWh {
+				t.Fatalf("SI session energy changed: %s", wire)
+			}
+			if _, exists := body.Habits["avg_energy_per_session"]; exists {
+				t.Fatalf("legacy response shape retained: %s", wire)
+			}
+			for key, want := range map[string]float64{
+				"fast_charge_count": 40, "slow_charge_count": 60, "deep_discharge_count": 5,
+				"charge_to_full_count": 3, "high_soc_count": 8, "total_count": 100,
+			} {
+				if body.Habits[key] != want {
+					t.Fatalf("%s changed: %s", key, wire)
+				}
+			}
+		})
+	}
+}
+
 func TestHealthNumericDomainsPreserveZeroAndFractions(t *testing.T) {
 	for _, value := range []float64{-1, 101, math.NaN(), math.Inf(1), math.MaxFloat64, 0, 91.125} {
 		t.Run(strconv.FormatFloat(value, 'g', -1, 64), func(t *testing.T) {

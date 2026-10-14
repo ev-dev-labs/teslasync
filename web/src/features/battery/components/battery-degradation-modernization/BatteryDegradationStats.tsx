@@ -21,7 +21,11 @@ export function ageLabel(
     : t('battery.degradation.yearsCount', '{{y}} years', { y: years });
 }
 
-export type BatteryDegradationHealth = Omit<BatteryHealthAnalytics, 'history' | 'current_soh' | 'estimated_capacity_wh' | 'charge_habits_score' | 'stress_level' | 'risk_factors' | 'prediction' | 'degradation_rate_pct_per_year' | 'battery_age_months' | 'total_cycles' | 'avg_depth_of_discharge_pct'> & {
+export type BatteryDegradationHealth = Omit<BatteryHealthAnalytics, 'charging_habits' | 'history' | 'current_soh' | 'estimated_capacity_wh' | 'charge_habits_score' | 'stress_level' | 'risk_factors' | 'prediction' | 'degradation_rate_pct_per_year' | 'battery_age_months' | 'total_cycles' | 'avg_depth_of_discharge_pct'> & {
+  charging_habits: Omit<BatteryHealthAnalytics['charging_habits'], 'avg_energy_per_session'> & {
+    /** Raw Wh; optional because this page consumes counts, not session energy. */
+    avg_energy_per_session_wh?: number;
+  };
   history: (Omit<BatteryHealthAnalytics['history'][number], 'range_m' | 'odometer_m' | 'soh_pct' | 'capacity_wh'> & {
     soh_pct: number | null;
     capacity_wh: number | null;
