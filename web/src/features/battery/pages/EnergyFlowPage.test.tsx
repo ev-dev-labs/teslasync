@@ -406,6 +406,30 @@ describe('EnergyFlowPage — shell & KPI band', () => {
     expect(metricValue('Period', kpi)).toBe('7 days');
   });
 
+  it('preserves both energy identities and explains their shared-source alias in context and review details', () => {
+    mockStats.mockReturnValue(qr({ data: makeStatsData({ total_energy_charged_wh: 42_000 }) }));
+    renderPage();
+    const kpi = kpiRegion();
+    const explanation = 'The energy summary currently returns total energy used and total energy charged as aliases of the same source total. These are not independent consumed and charged measurements; distinct totals require a producer with measured consumption and charging semantics.';
+
+    const used = within(kpi).getByText('Total energy').closest('[data-operational-metric]')!;
+    const charged = within(kpi).getByText('Total charged').closest('[data-operational-metric]')!;
+    expect(used.getAttribute('data-operational-metric')).not.toBe(charged.getAttribute('data-operational-metric'));
+    for (const tile of [used, charged]) {
+      expect(within(tile as HTMLElement).getByText('Shared source total')).toBeVisible();
+    }
+    expect(metricValue('Total energy', kpi)).toBe('42.00 kWh');
+    expect(metricValue('Total charged', kpi)).toBe('42.00 kWh');
+
+    fireEvent.click(within(kpi).getByRole('button', { name: 'Review details' }));
+    const details = screen.getByRole('dialog', { name: 'Energy summary metrics details' });
+    expect(within(details).getByText('Total energy')).toBeVisible();
+    expect(within(details).getByText('Total charged')).toBeVisible();
+    expect(within(details).getAllByText('42.00 kWh')).toHaveLength(2);
+    expect(within(details).getAllByText('Shared source total')).toHaveLength(2);
+    expect(within(details).getAllByText(explanation)).toHaveLength(2);
+  });
+
   it('shows an em-dash placeholder in the KPI band when no vehicle is selected', () => {
     mockSelectedVehicle.mockReturnValue({
       vehicleId: null,

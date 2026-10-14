@@ -402,11 +402,16 @@ export default function EnergyFlowPage() {
     reason: t('energyFlow.summary.windowReason', 'The energy endpoint uses a trailing day count; custom calendar bounds are not applied by this source.'),
   };
   const missingReason = t('energyFlow.state.missing', 'No measurement supplied');
+  const sharedEnergyContext = t('energyFlow.metrics.sharedSource', 'Shared source total');
+  const sharedEnergyDescription = t('energyFlow.metrics.sharedSourceAlias',
+    'The energy summary currently returns total energy used and total energy charged as aliases of the same source total. These are not independent consumed and charged measurements; distinct totals require a producer with measured consumption and charging semantics.');
   const summaryMetrics: StatMetric[] = [
     { metricId: 'energy', occurrenceId: 'total-used', rawValue: stats?.total_energy_used_wh,
-      label: t('energyFlow.kpi.totalEnergy', 'Total energy'), missingReason },
+      label: t('energyFlow.kpi.totalEnergy', 'Total energy'), missingReason,
+      context: sharedEnergyContext, description: sharedEnergyDescription },
     { metricId: 'energy', occurrenceId: 'total-charged', rawValue: stats?.total_energy_charged_wh,
-      label: t('energyFlow.kpi.totalCharged', 'Total charged'), missingReason },
+      label: t('energyFlow.kpi.totalCharged', 'Total charged'), missingReason,
+      context: sharedEnergyContext, description: sharedEnergyDescription },
     { metricId: 'distance', rawValue: stats?.total_distance_m,
       label: t('energyFlow.kpi.distance', 'Distance'), missingReason },
     // Preserve the original whole-Wh rating/display calculation. Generic
