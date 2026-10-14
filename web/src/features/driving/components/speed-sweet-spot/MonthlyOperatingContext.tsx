@@ -18,11 +18,15 @@ import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 interface MonthlyOperatingContextProps {
   summary: SweetSpotResult;
   state: SpeedSweetSpotSectionState;
+  resolved: boolean;
+  retained: boolean;
 }
 
 export function MonthlyOperatingContext({
   summary,
   state,
+  resolved,
+  retained,
 }: MonthlyOperatingContextProps) {
   const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
@@ -83,20 +87,27 @@ export function MonthlyOperatingContext({
           'Monthly distance-weighted consumption and aggregate whole-drive average speed with drive counts',
         )}
         action={
+          <div className="flex flex-wrap items-center gap-2">
+          {retained && <Badge variant="warning" dot>{t('driving.brief.retained', 'Retained source')}</Badge>}
           <Badge variant="neutral" dot>
-            {t('sweetSpot.monthly.monthCount', '{{count}} observed months', {
-              count: rows.length,
-            })}
+            {resolved && state.error == null
+              ? t('sweetSpot.monthly.monthCount', '{{count}} observed months', {
+                  count: rows.length,
+                })
+              : t('driving.brief.unavailable', 'Source unavailable')}
           </Badge>
+          </div>
         }
         chartKey="speed-sweet-spot-monthly"
         loading={state.isLoading}
+        error={state.error}
+        onRetry={state.onRetry}
         empty={false}
         height={360}
-        exportable={!state.error && !state.isLoading && rows.length > 0}
+        exportable={resolved && !state.error && !state.isLoading && rows.length > 0}
         exportFilename="speed-sweet-spot-monthly"
         exportData={rows}
-        data={state.error ? [] : rows}
+        data={!resolved || state.error ? [] : rows}
         dataColumns={[
           { key: 'month', label: t('sweetSpot.col.month', 'Month and sample') },
           { key: 'sample', label: t('sweetSpot.col.sample', 'Sample') },
@@ -116,6 +127,8 @@ export function MonthlyOperatingContext({
             <div className="flex h-full items-center justify-center">
               <QueryError error={state.error} onRetry={state.onRetry} />
             </div>
+          ) : !resolved ? (
+            <EmptyState className="h-full" message={t('driving.brief.unavailable', 'Source unavailable')} />
           ) : rows.length === 0 ? (
             <EmptyState /* no-action: monthly context depends on valid drive dates. */
               className="h-full"

@@ -98,6 +98,8 @@ export default function SpeedSweetSpotPage() {
           <SpeedBandCoverage
             summary={summary}
             state={sectionState}
+            resolved={sourceState.hasData || drivesQuery.isSuccess}
+            retained={retained}
             className="xl:col-span-3"
           />
         </Grid>
@@ -108,11 +110,13 @@ export default function SpeedSweetSpotPage() {
       </FadeIn>
 
       <FadeIn delay={0.15}>
-        <DriveEvidenceScatter summary={summary} state={sectionState} />
+        <DriveEvidenceScatter summary={summary} state={sectionState}
+          resolved={sourceState.hasData || drivesQuery.isSuccess} retained={retained} />
       </FadeIn>
 
       <FadeIn delay={0.2}>
-        <MonthlyOperatingContext summary={summary} state={sectionState} />
+        <MonthlyOperatingContext summary={summary} state={sectionState}
+          resolved={sourceState.hasData || drivesQuery.isSuccess} retained={retained} />
       </FadeIn>
 
       <FadeIn delay={0.25}>

@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import type { OperationalBriefProps } from '@/components/data-display/OperationalBrief';
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import type { ChartContainerProps } from '@/components/charts/ChartContainer';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Drive } from '@/types/driving';
 
@@ -127,8 +128,8 @@ vi.mock('@/components/feedback', async () => {
   return {
     EmptyState: empty.EmptyState,
     StaleRefreshWarning: warning.StaleRefreshWarning,
-    QueryError: ({ error }: { error: unknown }) => (
-      <div role="alert">{String(error)}</div>
+    QueryError: ({ error, onRetry }: { error: unknown; onRetry?: () => void }) => (
+      <div role="alert">{String(error)}<button type="button" onClick={onRetry}>Retry</button></div>
     ),
   };
 });
@@ -210,15 +211,49 @@ vi.mock('../components/operationalbrief-n-z/SweetSpotMethodBrief', () => ({
       section('speed-sweet-spot-method', props.state),
 }));
 
-vi.mock('../components/speed-sweet-spot', () => ({
-    SpeedBandCoverage: (props: { state: State }) =>
-      section('speed-sweet-spot-coverage', props.state),
+vi.mock('@/components/charts', () => ({
+  ChartContainer: (props: ChartContainerProps) => (
+    <div data-testid={`${props.chartKey}-frame`}
+      data-row-count={props.data?.length ?? 0}
+      data-exportable={String(props.exportable)}
+      data-chart-state={props.loading ? 'loading' : props.error ? 'error' : 'ready'}>
+      {props.subtitle}
+      {props.action}
+      {props.loading ? 'loading' : props.error ? (
+        <div>error<button type="button" onClick={props.onRetry}>Retry</button></div>
+      ) : (
+        <>ready{typeof props.children === 'function'
+          ? props.children({ hiddenSeries: null, hidden: false, annotations: [] })
+          : props.children}</>
+      )}
+    </div>
+  ),
+  ResponsiveContainer: () => <div data-testid="evidence-plot" />,
+  EmbeddedChart: () => <div data-testid="evidence-plot" />,
+  CHART_COLORS: [],
+  Bar: () => null,
+  Cell: () => null,
+  ChartLegend: () => null,
+  ChartTooltip: () => null,
+  ComposedChart: () => null,
+  Line: () => null,
+  LineChart: () => null,
+  Tooltip: () => null,
+  XAxis: () => null,
+  YAxis: () => null,
+  axisTick: {},
+  chartGrid: null,
+}));
+
+vi.mock('../components/speed-sweet-spot', async () => ({
+    ...(await vi.importActual<typeof import('../components/speed-sweet-spot/SpeedBandCoverage')>(
+      '../components/speed-sweet-spot/SpeedBandCoverage')),
+    ...(await vi.importActual<typeof import('../components/speed-sweet-spot/DriveEvidenceScatter')>(
+      '../components/speed-sweet-spot/DriveEvidenceScatter')),
+    ...(await vi.importActual<typeof import('../components/speed-sweet-spot/MonthlyOperatingContext')>(
+      '../components/speed-sweet-spot/MonthlyOperatingContext')),
     ConsumptionSpeedCurve: (props: { state: State }) =>
       section('speed-sweet-spot-curve', props.state),
-    DriveEvidenceScatter: (props: { state: State }) =>
-      section('speed-sweet-spot-scatter', props.state),
-    MonthlyOperatingContext: (props: { state: State }) =>
-      section('speed-sweet-spot-monthly', props.state),
     SpeedBandScorecard: (props: { state: State }) =>
       section('speed-sweet-spot-scorecard', props.state),
 }));
@@ -399,7 +434,7 @@ describe('SpeedSweetSpotPage', () => {
     useDrivesMock.mockReturnValue(query({ data: [drive(1), drive(2), drive(3)], ...overrides }));
     render(<SpeedSweetSpotPage />);
 
-    expect(screen.getByText('Retained source')).toBeInTheDocument();
+    expect(screen.getAllByText('Retained source')).toHaveLength(4);
     expect(screen.queryByText('Source available')).not.toBeInTheDocument();
     expect(screen.getByText('100.00–110.00 km/h')).toBeInTheDocument();
     for (const id of SECTION_IDS) {
@@ -448,7 +483,7 @@ describe('SpeedSweetSpotPage', () => {
     render(<SpeedSweetSpotPage />);
 
     for (const id of SECTION_IDS.slice(1)) {
-      fireEvent.click(screen.getByRole('button', { name: `Retry ${id}` }));
+      fireEvent.click(within(screen.getByTestId(id)).getByRole('button', { name: /Retry/ }));
     }
     expect(result.refetch).toHaveBeenCalledTimes(7);
   });
@@ -459,5 +494,48 @@ describe('SpeedSweetSpotPage', () => {
 
     expect(screen.getByText('100.00–110.00 km/h')).toBeInTheDocument();
     expect(screen.getAllByText('150.00 Wh/km')).toHaveLength(2);
+  });
+
+  it.each([
+    ['active loading', { isLoading: true, fetchStatus: 'fetching' }],
+    ['paused without data', { isPending: true, fetchStatus: 'paused' }],
+  ])('keeps chart counts unknown during %s', (_label, overrides) => {
+    useDrivesMock.mockReturnValue(query({ data: undefined, dataUpdatedAt: 0, ...overrides }));
+    render(<SpeedSweetSpotPage />);
+    expect(within(screen.getByTestId('speed-sweet-spot-coverage')).getAllByText('Source unavailable').length).toBeGreaterThan(0);
+    expect(within(screen.getByTestId('speed-sweet-spot-monthly')).getAllByText('Source unavailable').length).toBeGreaterThan(0);
+    expect(within(screen.getByTestId('speed-sweet-spot-scatter')).getByText(/— eligible drives/)).toBeInTheDocument();
+    for (const key of ['coverage', 'monthly', 'drive-evidence']) {
+      expect(screen.getByTestId(`speed-sweet-spot-${key}-frame`)).toHaveAttribute('data-row-count', '0');
+      expect(screen.getByTestId(`speed-sweet-spot-${key}-frame`)).toHaveAttribute('data-exportable', 'false');
+    }
+    expect(screen.queryByText('0 qualified')).not.toBeInTheDocument();
+  });
+
+  it('shows genuine zero chart counts after a successful empty result', () => {
+    useDrivesMock.mockReturnValue(query({ data: [], isSuccess: true }));
+    render(<SpeedSweetSpotPage />);
+    expect(screen.getByText('0 qualified')).toBeInTheDocument();
+    expect(screen.getByText('0 observed months')).toBeInTheDocument();
+    expect(screen.getByText(/0 eligible drives; marker size/)).toBeInTheDocument();
+    expect(screen.getByText('All eligible points')).toBeInTheDocument();
+  });
+
+  it('retains chart evidence on refresh failure and clears retained badges on recovery', () => {
+    const data = [drive(1), drive(2), drive(3)];
+    useDrivesMock.mockReturnValue(query({ data, isError: true, error: new Error('refresh failed') }));
+    const { rerender } = render(<SpeedSweetSpotPage />);
+    for (const key of ['coverage', 'monthly', 'drive-evidence']) {
+      const frame = screen.getByTestId(`speed-sweet-spot-${key}-frame`);
+      expect(within(frame).getByText('Retained source')).toBeInTheDocument();
+      expect(frame).toHaveAttribute('data-chart-state', 'ready');
+      expect(frame).toHaveAttribute('data-exportable', 'true');
+      expect(Number(frame.getAttribute('data-row-count'))).toBeGreaterThan(0);
+    }
+    useDrivesMock.mockReturnValue(query({ data, isSuccess: true }));
+    rerender(<SpeedSweetSpotPage />);
+    expect(screen.queryByText('Retained source')).not.toBeInTheDocument();
+    expect(screen.getByText('1 qualified')).toBeInTheDocument();
+    expect(screen.getByText('1 observed months')).toBeInTheDocument();
   });
 });
