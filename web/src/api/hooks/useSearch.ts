@@ -46,12 +46,19 @@ export function useGlobalSearch(query: string, options: UseGlobalSearchOptions =
       if (options.limit && options.limit > 0) {
         params.set('limit', String(options.limit));
       }
-      const res = await request<SearchResponse>(`/search?${params.toString()}`, { signal });
-      // Null-safety: the endpoint always answers `{ hits, query }`, but a 204 or
-      // a malformed body would otherwise leave `data.hits` undefined and crash
-      // the `.map`/`.length` reads at every callsite. Normalise to a well-formed
-      // response so consumers can always treat `hits` as an array.
-      return { hits: res?.hits ?? [], query: res?.query ?? trimmed } satisfies SearchResponse;
+      const res = await request<SearchResponse | null | undefined>(`/search?${params.toString()}`, { signal });
+      if (
+        !res
+        || typeof res !== 'object'
+        || Array.isArray(res)
+        || typeof res.query !== 'string'
+        || (res.hits !== null && !Array.isArray(res.hits))
+      ) {
+        throw new Error('Invalid search response');
+      }
+      // The producer can encode its nil result slice as hits:null, but an
+      // absent/malformed envelope must fail without replacing retained data.
+      return { hits: res.hits ?? [], query: res.query } satisfies SearchResponse;
     },
     enabled,
     staleTime: STALE_TIMES.FAST,
