@@ -1,5 +1,6 @@
 {
   "schema_version": 1,
+  "item": "phase6-qa-battery-battery-degradation",
   "task": "phase6-qa-battery-battery-degradation",
   "result": "DONE_SOURCE_ONLY_QA_WITH_FINDINGS",
   "requested_at": "2026-10-13T13:43:10.871-07:00",
