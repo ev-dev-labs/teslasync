@@ -30,7 +30,7 @@
  *     bucket, not the middle one.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, within, fireEvent, type RenderResult } from '@testing-library/react';
+import { act, render, screen, within, fireEvent, type RenderResult } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
@@ -42,12 +42,40 @@ import {
 } from '@/lib/unitConversion';
 import type { TemperatureImpactResponse, TemperatureImpactPoint } from '@/api/hooks/useAnalytics';
 import type { ChartDataColumn, ChartDataRow, EmbeddedChartProps } from '@/components/charts';
+import { setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat';
 
 const chartFrames = vi.hoisted(() => [] as {
   title: string;
   data?: ReadonlyArray<ChartDataRow>;
   columns?: ReadonlyArray<ChartDataColumn>;
 }[]);
+const scatterSeries = vi.hoisted(() => [] as ReadonlyArray<ChartDataRow>[]);
+const savedDates = vi.hoisted(() => ({
+  locale: 'en-US',
+  mode: 'utc' as 'utc' | 'user' | 'vehicle',
+  timezone: 'UTC',
+}));
+
+vi.mock('@/hooks/useSettings', async (importOriginal) => ({
+  ...await importOriginal<typeof import('@/hooks/useSettings')>(),
+  useSettings: () => ({
+    settings: {
+      tz_display_default: savedDates.mode,
+      timezone_user: savedDates.timezone,
+      locale: savedDates.locale,
+      decimal_precision: 2,
+      currency_symbol: '$',
+      base_cost_per_kwh: 0.12,
+    },
+    locale: savedDates.locale,
+    decimals: 2,
+    settingsUnavailable: false,
+  }),
+}));
+
+vi.mock('@/lib/timezone', async (importOriginal) =>
+  await importOriginal<typeof import('@/lib/timezone')>(),
+);
 
 // ── i18n stub: resolve a string fallback (or the options-bag defaultValue) and
 //    interpolate {{var}} placeholders so assertions read on human copy. ────────
@@ -90,11 +118,8 @@ vi.mock('@/components/motion', async (importOriginal) => ({
   StaggerItem: ({ children }: { children?: ReactNode }) => <div>{children}</div>,
 }));
 
-// ── charts barrel: recharts primitives are inert. ResponsiveContainer renders
-//    nothing so chart internals don't need a layout engine; everything the page
-//    draws OUTSIDE the chart (the bucket-colour legend, KPI band, badges, table)
-//    still renders and stays assertable. The two data constants the page indexes
-//    into (`CHART_COLORS[n]`) / spreads (`AREA_DEFAULTS`) are real-shaped. ──────
+// ── charts barrel: preserve scatter inputs without a chart layout engine;
+//    the legend, KPI band, badges, table and data alternatives remain assertable.
 vi.mock('@/components/charts', async () => {
   const { chartTestDoubles } = await import('@/test/chartTestDoubles');
   const Null = () => null;
@@ -103,9 +128,12 @@ vi.mock('@/components/charts', async () => {
     ChartTooltip: Null,
     CHART_COLORS: ['#06b6d4', '#8b5cf6', '#10b981', '#f59e0b', '#ef4444'],
     AREA_DEFAULTS: {},
-    ResponsiveContainer: Null,
-    ScatterChart: Null,
-    Scatter: Null,
+    ResponsiveContainer: ({ children }: { children?: ReactNode }) => <>{children}</>,
+    ScatterChart: ({ children }: { children?: ReactNode }) => <>{children}</>,
+    Scatter: ({ data, children }: { data: ReadonlyArray<ChartDataRow>; children?: ReactNode }) => {
+      scatterSeries.push(data);
+      return <>{children}</>;
+    },
     Cell: Null,
     XAxis: Null,
     YAxis: Null,
@@ -167,7 +195,7 @@ const B_COLD = '< 0°C';
 const B0to10 = `0${NDASH}10°C`;
 const B10to20 = `10${NDASH}20°C`;
 const B20to30 = `20${NDASH}30°C`;
-const B_HOT = '> 30°C';
+const B_HOT = '≥ 30°C';
 
 // 1 mile in km — matches the KM_PER_MILE constant the page uses, so the mi
 // boundary assertions read on concrete numbers rather than re-deriving maths.
@@ -229,7 +257,7 @@ function selected(vehicleId: number | null) {
   };
 }
 
-function makePrefs(distance: 'km' | 'mi', temperature: '°C' | '°F'): UnitPref {
+function makePrefs(distance: 'km' | 'mi', temperature: '°C' | '°F', precision = 2): UnitPref {
   return {
     distance,
     speed: distance === 'mi' ? 'mph' : 'km/h',
@@ -239,7 +267,7 @@ function makePrefs(distance: 'km' | 'mi', temperature: '°C' | '°F'): UnitPref 
     duration: 'h',
     power: 'kW',
     locale: 'en-US',
-    precision: 2,
+    precision,
   };
 }
 
@@ -247,8 +275,8 @@ function makePrefs(distance: 'km' | 'mi', temperature: '°C' | '°F'): UnitPref 
  * `useUnits` double that keeps the SI→display formatters REAL (delegating to
  * `@/lib/unitConversion`) while letting each test pin the user's unit prefs.
  */
-function units(distance: 'km' | 'mi' = 'km', temperature: '°C' | '°F' = '°C') {
-  const prefs = makePrefs(distance, temperature);
+function units(distance: 'km' | 'mi' = 'km', temperature: '°C' | '°F' = '°C', precision = 2) {
+  const prefs = makePrefs(distance, temperature, precision);
   const passthrough = (v: number | null | undefined) => (v == null ? '—' : String(v));
   return {
     unitPrefs: prefs,
@@ -275,6 +303,11 @@ function renderPage(): RenderResult {
 
 const kpiRegion = () => screen.getByRole('region', { name: 'Summary metrics' });
 
+function latestChart(title: string) {
+  const frames = chartFrames.filter((frame) => frame.title === title);
+  return frames[frames.length - 1];
+}
+
 /** Read a KPI MetricCard's value <p> given its label, scoped to the KPI band. */
 function kpiValue(label: string): string {
   const labelEl = within(kpiRegion()).getByText(label);
@@ -283,6 +316,12 @@ function kpiValue(label: string): string {
 
 beforeEach(() => {
   chartFrames.length = 0;
+  scatterSeries.length = 0;
+  savedDates.locale = 'en-US';
+  savedDates.mode = 'utc';
+  savedDates.timezone = 'UTC';
+  setGlobalLocale('en-US');
+  setGlobalPrecision(2);
   mockTempImpact.mockReset();
   mockSelected.mockReset();
   mockUnits.mockReset();
@@ -515,11 +554,140 @@ describe('TemperatureImpactPage — populated (km)', () => {
     const optimal = screen.getByText(/most efficient temperature range/i);
     expect(optimal).toHaveTextContent(B10to20);
     expect(optimal).toHaveTextContent('150.00 Wh/km');
-    expect(optimal).toHaveTextContent('across 1 drives');
+    expect(optimal).toHaveTextContent('across 1 drive.');
 
     const delta = screen.getByText(/Compared to the worst range/i);
     expect(delta).toHaveTextContent(B_HOT);
     expect(delta).toHaveTextContent('70.00 Wh/km'); // 220 - 150
+  });
+
+  describe('TemperatureImpactPage — scoped trust, date and precision corrections', () => {
+    it('keeps all six sections unresolved with explicit paused context and retry before the first response', () => {
+      const refetch = vi.fn();
+      mockTempImpact.mockReturnValue(makeQuery({
+        data: undefined, isPending: true, status: 'pending', fetchStatus: 'paused', refetch,
+      }));
+      const { container } = renderPage();
+      const blocked = container.querySelectorAll('[data-refresh-blocked]');
+      expect(blocked).toHaveLength(6);
+      for (const panel of blocked) {
+        expect(panel).toHaveAttribute('role', 'status');
+        expect(panel).toHaveTextContent('Refresh paused');
+        expect(panel).toHaveTextContent('No requested source has returned usable data yet.');
+      }
+      expect(screen.queryByText('No drive data available yet')).not.toBeInTheDocument();
+      expect(screen.queryByText('Select a vehicle to view temperature impact')).not.toBeInTheDocument();
+      expect(screen.queryByText(/device is offline/i)).not.toBeInTheDocument();
+      expect(kpiValue('Total data points')).toBe('—');
+      const retry = within(blocked[0] as HTMLElement).getByRole('button', { name: 'Retry' });
+      fireEvent.click(retry);
+      expect(refetch).toHaveBeenCalledTimes(1);
+    });
+
+    it('retains the unselected-vehicle prerequisite even when the disabled query is paused', () => {
+      mockSelected.mockReturnValue(selected(null));
+      mockTempImpact.mockReturnValue(makeQuery({
+        data: undefined, isPending: true, status: 'pending', fetchStatus: 'paused',
+      }));
+      const { container } = renderPage();
+      expect(container.querySelector('[data-refresh-blocked]')).toBeNull();
+      expect(screen.getAllByText('Select a vehicle to view temperature impact')).toHaveLength(6);
+      expect(mockTempImpact).toHaveBeenCalledWith('');
+      expect(screen.getAllByRole('link', { name: 'Manage vehicles' })).toHaveLength(6);
+    });
+
+    it('does not turn an initial failure into a paused or empty result', () => {
+      mockTempImpact.mockReturnValue(makeQuery({
+        data: undefined, isPending: false, isError: true, error: new Error('failed'),
+        fetchStatus: 'paused',
+      }));
+      const { container } = renderPage();
+      expect(container.querySelector('[data-refresh-blocked]')).toBeNull();
+      expect(screen.getAllByRole('button', { name: 'Retry' }).length).toBeGreaterThanOrEqual(6);
+      expect(screen.queryByText('No drive data available yet')).not.toBeInTheDocument();
+    });
+
+    it('uses saved date context in cells and chart alternatives and refreshes memoized columns on preference changes', () => {
+      const data = fullData({ points: [
+        point({ drive_date: '2026-01-01T00:30:00Z' }),
+        point({ drive_date: 'invalid-date' }),
+      ] });
+      const original = JSON.stringify(data);
+      mockTempImpact.mockReturnValue(makeQuery({ data }));
+      savedDates.mode = 'user';
+      savedDates.timezone = 'America/Los_Angeles';
+      savedDates.locale = 'de-DE';
+      const view = renderPage();
+      expect(within(screen.getByRole('table')).getByText('31. Dez. 2025')).toBeInTheDocument();
+      expect(within(screen.getByRole('table')).getByText('—')).toBeInTheDocument();
+      const dateColumn = () => latestChart('Temperature vs efficiency')?.columns?.find((column) => column.key === 'drive_date');
+      expect(dateColumn()?.format?.('2026-01-01T00:30:00Z')).toBe('31. Dez. 2025');
+      expect(dateColumn()?.format?.('invalid-date')).toBe('—');
+
+      savedDates.mode = 'utc';
+      savedDates.locale = 'en-US';
+      view.rerender(
+        <MemoryRouter>
+          <QueryClientProvider client={new QueryClient()}>
+            <TemperatureImpactPage />
+          </QueryClientProvider>
+        </MemoryRouter>,
+      );
+      expect(within(screen.getByRole('table')).getByText('Jan 1, 2026')).toBeInTheDocument();
+      expect(screen.queryByText('31. Dez. 2025')).not.toBeInTheDocument();
+      expect(dateColumn()?.format?.('2026-01-01T00:30:00Z')).toBe('Jan 1, 2026');
+      expect(JSON.stringify(data)).toBe(original);
+    });
+
+    it.each([
+      ['°C', 12.345, '12.345°C', '12.3°C'],
+      ['°F', 54.221, '54.221°F', '54.2°F'],
+    ] as const)('keeps unrounded %s chart numbers while formatting only the saved-precision output', (temperature, expected, precise, rounded) => {
+      const data = fullData({ monthly_trend: [
+        { ...MONTHLY[0], avg_temp: 12.345 },
+        { ...MONTHLY[0], month: '2026-02', avg_temp: -12.345 },
+      ] });
+      const original = JSON.stringify(data);
+      mockTempImpact.mockReturnValue(makeQuery({ data }));
+      mockUnits.mockReturnValue(units('km', temperature, 3));
+      setGlobalPrecision(3);
+      renderPage();
+      const monthly = () => latestChart('Monthly seasonal trend');
+      const column = () => monthly()?.columns?.find((item) => item.key === 'temp');
+      expect(monthly()?.data?.[0].temp).toBeCloseTo(expected, 12);
+      expect(monthly()?.data?.[1].temp).toBeCloseTo(temperature === '°C' ? -12.345 : 9.779, 12);
+      expect(column()?.format?.(monthly()?.data?.[0].temp)).toBe(precise);
+      act(() => setGlobalPrecision(1));
+      expect(column()?.format?.(monthly()?.data?.[0].temp)).toBe(rounded);
+      expect(monthly()?.data?.[0].temp).toBeCloseTo(expected, 12);
+      expect(JSON.stringify(data)).toBe(original);
+    });
+
+    it.each(['°C', '°F'] as const)('describes the existing inclusive hot membership in %s without changing thresholds or signs', (temperature) => {
+      const readings = [-80, -0.01, 0, 9.999, 10, 19.999, 20, 29.999, 30, 60, 70];
+      const data = fullData({ points: readings.map((outside_temp) => point({ outside_temp })) });
+      const original = JSON.stringify(data);
+      mockTempImpact.mockReturnValue(makeQuery({ data }));
+      mockUnits.mockReturnValue(units('km', temperature));
+      renderPage();
+      const buckets = chartFrames.find((frame) => frame.title === 'Efficiency by temperature range');
+      expect(buckets?.data?.map((row) => row.count)).toEqual([2, 2, 2, 2, 3]);
+      expect(buckets?.data?.[4].label).toBe(temperature === '°C' ? '≥ 30°C' : '≥ 86°F');
+      expect(buckets?.data?.map((row) => row.avg)).toEqual([150, 150, 150, 150, 150]);
+      const plotted = scatterSeries[scatterSeries.length - 1];
+      expect(plotted?.map((row) => row.outside_temp)).toEqual(
+        temperature === '°C' ? readings : readings.map((celsius) => celsius * 9 / 5 + 32),
+      );
+      expect(plotted?.[0].fill).toBe('var(--series-cold)');
+      expect(plotted?.[readings.length - 1].fill).toBe('var(--series-hot)');
+      expect(JSON.stringify(data)).toBe(original);
+    });
+
+    it('keeps plural fallback copy for a best bucket with multiple drives', () => {
+      mockTempImpact.mockReturnValue(makeQuery({ data: fullData({ points: [point(), point()] }) }));
+      renderPage();
+      expect(screen.getByText(/most efficient temperature range/i)).toHaveTextContent('across 2 drives.');
+    });
   });
 
   it('renders the three contextual recommendations', () => {

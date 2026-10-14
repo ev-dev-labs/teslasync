@@ -7,9 +7,9 @@ import {
 
 import { PageLayout, LayoutCard } from '@/components/layout';
 import { deriveDataState } from '@/api/dataState';
-import { Badge, Caption, Text, HelperText, DataTable, type Column } from '@/components/ui';
+import { Badge, Button, Caption, Text, HelperText, DataTable, type Column } from '@/components/ui';
 import { MapsOperationalBrief } from '../components/operationalbrief-all/MapsOperationalBrief';
-import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
+import { AlertBanner, Skeleton, EmptyState, QueryError } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 
 import {
@@ -21,12 +21,12 @@ import {
 
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import { useUnits } from '@/hooks/useUnits';
 import { useChartPalette } from '@/hooks/useChartPalette';
 
 import { convertTempFromSI, convertEfficiencyFromSI } from '@/lib/unitConversion';
 import { getChartFontFamily, getChartFontSize } from '@/lib/chartTypography';
-import { formatDate } from '@/lib/dateFormat';
 import { typography } from '@/lib/tokens';
 import {
   useTemperatureImpact,
@@ -97,7 +97,7 @@ function bucketLabel(
   idx: number,
 ): string {
   if (idx === 0) return `< ${Math.round(toTemperatureDisplay(b.max))}${tempUnit}`;
-  if (idx === TEMP_BUCKETS_C.length - 1) return `> ${Math.round(toTemperatureDisplay(b.min))}${tempUnit}`;
+  if (idx === TEMP_BUCKETS_C.length - 1) return `≥ ${Math.round(toTemperatureDisplay(b.min))}${tempUnit}`;
   return `${Math.round(toTemperatureDisplay(b.min))}–${Math.round(toTemperatureDisplay(b.max))}${tempUnit}`;
 }
 
@@ -107,6 +107,7 @@ function bucketLabel(
 
 export default function TemperatureImpactPage() {
   const { fmtNumber } = useNumberFormatting();
+  const { formatDate } = useDateFormat();
   const { t } = useTranslation();
   usePageTitle(t('tempImpact.title', 'Temperature impact'));
 
@@ -213,7 +214,7 @@ export default function TemperatureImpactPage() {
       monthlyTrend.map((m) => ({
         month: m.month ?? '—',
         drives: Number.isSafeInteger(m.drive_count) && m.drive_count >= 0 ? m.drive_count : null,
-        temp: isMeasurement(m.avg_temp) ? Math.round(toTemperatureDisplay(m.avg_temp) * 10) / 10 : null,
+        temp: isMeasurement(m.avg_temp) ? toTemperatureDisplay(m.avg_temp) : null,
       })),
     [monthlyTrend, toTemperatureDisplay],
   );
@@ -270,7 +271,7 @@ export default function TemperatureImpactPage() {
         ),
       },
     ],
-    [t, formatTemperature, formatDistance, toDispEff, effLabel, fmtNumber],
+    [t, formatDate, formatTemperature, formatDistance, toDispEff, effLabel, fmtNumber],
   );
 
   const scatterColumns: ChartDataColumn[] = [
@@ -340,6 +341,22 @@ export default function TemperatureImpactPage() {
       // its last-good content and the header freshness chip owns the degraded
       // signal, rather than collapsing the whole page into retry panels.
       if (source.fatalError) return <QueryError error={source.fatalError} onRetry={() => query.refetch()} />;
+      if (!noVehicle && source.status === 'initial' && source.isRefreshBlocked) {
+        return (
+          <AlertBanner variant="info" title={t('dataSources.status.paused', 'Refresh paused')}
+            role="status" aria-live="polite" data-refresh-blocked>
+            <div className="space-y-3">
+              <Text variant="bodySm" color="secondary">
+                {t('dataSources.unavailableMessage', 'No requested source has returned usable data yet.')}
+              </Text>
+              <Button type="button" variant="secondary" size="sm" wrapLabel
+                className="min-h-11 md:min-h-9" onClick={() => query.refetch()} disabled={query.isFetching}>
+                {t('error.retry', 'Retry')}
+              </Button>
+            </div>
+          </AlertBanner>
+        );
+      }
       if (isEmpty) {
         return (
           <EmptyState
@@ -356,7 +373,7 @@ export default function TemperatureImpactPage() {
       }
       return null;
     },
-    [isLoading, source.fatalError, query, emptyMessage, noVehicle, t],
+    [isLoading, source.fatalError, source.status, source.isRefreshBlocked, query, emptyMessage, noVehicle, t],
   );
 
   const hasPoints = points.length > 0;
@@ -492,7 +509,9 @@ export default function TemperatureImpactPage() {
                     unit: effLabel,
                     count: stats.best.count,
                     defaultValue:
-                      'Your most efficient temperature range is {{range}} with an average of {{efficiency}} {{unit}} across {{count}} drives.',
+                      stats.best.count === 1
+                        ? 'Your most efficient temperature range is {{range}} with an average of {{efficiency}} {{unit}} across {{count}} drive.'
+                        : 'Your most efficient temperature range is {{range}} with an average of {{efficiency}} {{unit}} across {{count}} drives.',
                   })}
                 </Text>
                 {stats.worst && stats.best.label !== stats.worst.label && (
