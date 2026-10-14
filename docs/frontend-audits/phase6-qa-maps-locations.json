@@ -1,0 +1,922 @@
+{
+  "item": "phase6-qa-maps-locations",
+  "attempt": 1,
+  "status": "DONE_SOURCE_QA_WITH_FINDINGS",
+  "page": "web/src/features/maps/pages/LocationsPage.tsx",
+  "routes": [
+    "/locations"
+  ],
+  "actualStart": "2026-10-14T01:55:04.9024168Z",
+  "deliveryDeadline": "2026-10-14T02:07:59.989Z",
+  "hardDeadline": "2026-10-14T02:12:59.989Z",
+  "writtenAt": "2026-10-14T02:06:59.680490+00:00",
+  "scope": "READONLY page/direct supports/tests; only this JSON and matching web/logs/phase6-qa-maps-locations.log written",
+  "confirmedIssues": [
+    {
+      "id": "L01",
+      "file": "web/src/features/maps/pages/LocationsPage.tsx",
+      "line": 150,
+      "rule": "initial-paused-false-empty",
+      "severity": "high",
+      "confidence": "confirmed-source",
+      "mechanism": "TanStack first paused request has isPending=true/isLoading=false, no data/fatalError. Page treats this unresolved source as empty in both leaderboards and list, despite shared notice correctly saying paused/unavailable.",
+      "repro": {
+        "kind": "synthetic source-walk recipe NOT EXECUTED",
+        "steps": "Vehicle7, no cache, status pending/fetchStatus paused: isLoading false; charts arrays empty; !hasLocations renders No visited locations recorded yet."
+      },
+      "fix": "Use !source.hasData/status/isRefreshBlocked for explicit initial-paused/unknown, successful [] only for empty.",
+      "relatedEvidence": [
+        "web/src/features/maps/pages/LocationsPage.tsx:146-151,260-280,316-338",
+        "web/src/api/dataState.ts:187-214",
+        "web/src/features/maps/components/LocationLeaderboardPanel.tsx:106"
+      ],
+      "testGap": "Page tests have fetching/empty/no-vehicle/fatal/retained failure, not selected-vehicle initial-paused."
+    },
+    {
+      "id": "L02",
+      "file": "web/src/features/maps/pages/LocationsPage.tsx",
+      "line": 420,
+      "rule": "fabricated-exact-pagination-total",
+      "severity": "high",
+      "confidence": "confirmed-source",
+      "mechanism": "Full page manufactures total=page*50+1 while Pagination.totalKind defaults exact. Sentinel becomes asserted global count, exact page count and Last page.",
+      "repro": {
+        "kind": "synthetic source-walk recipe NOT EXECUTED",
+        "steps": "First page50 rows from potentially500-row source: total51, Showing1-50 of51, exact2pages. No server count established."
+      },
+      "fix": "Use existing loaded/unknown totalKind and explicit exploratory Next policy; never advertise sentinel as exact total.",
+      "relatedEvidence": [
+        "web/src/components/ui/Pagination.tsx:24-34,63-71",
+        "web/src/features/maps/pages/LocationsPage.tsx:417-421"
+      ],
+      "testGap": "No 50+ row/totalKind/last-page assertion in page tests."
+    },
+    {
+      "id": "L03",
+      "file": "web/src/features/maps/pages/LocationsPage.tsx",
+      "line": 331,
+      "rule": "pagination-recovery-hidden",
+      "severity": "high",
+      "confidence": "confirmed-source",
+      "mechanism": "Pagination exists only inside populated/unfiltered-match list branch. Empty speculative Next or loaded-page no-match removes Previous/First even when earlier pages have data.",
+      "repro": {
+        "kind": "synthetic source-walk recipe NOT EXECUTED",
+        "steps": "Page1 exactly50 rows; Next→page2 returns[]. No pager remains. Also page2 search whose match lies only on another page hides navigation."
+      },
+      "fix": "Keep page recovery/navigation outside row-success-only branch; provide Previous/First on empty requested pages.",
+      "relatedEvidence": [
+        "web/src/features/maps/pages/LocationsPage.tsx:331-348,417-423"
+      ],
+      "testGap": "No empty-next recovery case; no-match test checks only message."
+    },
+    {
+      "id": "L04",
+      "file": "web/src/features/maps/pages/LocationsPage.tsx",
+      "line": 122,
+      "rule": "preview-snapshot-freshness",
+      "severity": "high",
+      "confidence": "confirmed-source",
+      "mechanism": "Stored preview is a whole row object checked only by vehicle/page/bounds. Same-scope refresh changes rows/summary but leaves drawer old; no receipt/status identifies older snapshot. Scope mismatch hides without clearing, so returning to same scope resurrects it.",
+      "repro": {
+        "kind": "synthetic source-walk recipe NOT EXECUTED",
+        "steps": "Inspect id101 visit_count2; same-key cache updates id101 count9/new label or removes row. Drawer still reads captured2/old label. A→B→A can restore it."
+      },
+      "fix": "Resolve selected ID against retained current rows or label a pinned observation with receipt/provenance; clear/revalidate on disappearance/identity transitions.",
+      "relatedEvidence": [
+        "web/src/features/maps/pages/LocationsPage.tsx:110-122,400,429-466"
+      ],
+      "testGap": "LocationsPage.test.tsx:422 only tests A→B closure, not same-key refresh/removal/return."
+    },
+    {
+      "id": "L05",
+      "file": "web/src/features/maps/pages/LocationsPage.tsx",
+      "line": 410,
+      "rule": "ai-apply-without-form-handoff",
+      "severity": "high",
+      "confidence": "confirmed-source",
+      "mechanism": "Apply to form only stores appliedName and renders Suggested name ready to save. No form/save/primary action/review navigation is connected; AI description promises a baseline review/save flow.",
+      "repro": {
+        "kind": "synthetic source-walk recipe NOT EXECUTED",
+        "steps": "Synthetic unnamed id101 accepted proposal: Apply changes local displayed string only; no reachable form/save handoff."
+      },
+      "fix": "Trace existing authorized canonical form and connect explicit review, or label local suggestion honestly; no invented endpoint/automatic persistence.",
+      "relatedEvidence": [
+        "web/src/features/maps/pages/LocationsPage.tsx:110-116,374-377",
+        "web/src/components/ai/AIAutoNameUnnamedLocations.tsx:154-159,209"
+      ],
+      "testGap": "Page:500 checks local text; AI tests assert callback, not real form/save."
+    },
+    {
+      "id": "L06",
+      "file": "web/src/features/maps/components/LocationLeaderboardPanel.tsx",
+      "line": 95,
+      "rule": "number-display-preferences",
+      "severity": "medium",
+      "confidence": "confirmed-source",
+      "mechanism": "Accessible fallback format uses String(v); row/drawer counts are raw React numbers. Saved locale/precision not applied here while brief metrics do use formatting. Raw plotted numbers are correctly unrounded.",
+      "repro": {
+        "kind": "synthetic source-walk recipe NOT EXECUTED",
+        "steps": "de-DE precision2 and1000seconds: fallback emits0.2777777777777778 with dot/full precision. count12345 appears raw in list/drawer."
+      },
+      "fix": "Existing numeric formatter on table/ticks/count labels only; do not round plotted data or alter raw SI.",
+      "relatedEvidence": [
+        "web/src/features/maps/pages/LocationsPage.tsx:371,388,446",
+        "web/src/hooks/useUnits.ts:116-137"
+      ],
+      "testGap": "Page checks chart inputs, panel mocks EmbeddedChart; neither tests real fallback formatting."
+    },
+    {
+      "id": "L07",
+      "file": "web/src/features/maps/pages/LocationsPage.tsx",
+      "line": 372,
+      "rule": "date-display-preferences",
+      "severity": "medium",
+      "confidence": "confirmed-source",
+      "mechanism": "Bare formatDate calls and brief bare formatDateTime omit locale/tz options; dateFormat defaults to host browser, not saved application display mode. Existing useDateFormat supplies locale/tz preference bridge.",
+      "repro": {
+        "kind": "synthetic source-walk recipe NOT EXECUTED",
+        "steps": "Timestamp2026-01-01T00:30:00Z; browser LA/en-US, savedUTC/de-DE: browser date December31 versus preferredJanuary1; receipt also follows host."
+      },
+      "fix": "Use existing useDateFormat in page and shared MapsOperationalBrief; retain UTC raw data/bounds and distinguish receipt from last visit.",
+      "relatedEvidence": [
+        "web/src/features/maps/pages/LocationsPage.tsx:436,466",
+        "web/src/features/maps/components/operationalbrief-all/MapsOperationalBrief.tsx:57",
+        "web/src/lib/dateFormat.ts:36-69",
+        "web/src/hooks/useDateFormat.ts:73-98"
+      ],
+      "testGap": "English/UTC stubs; brief expected receipt uses same bare helper, cannot catch preference divergence."
+    },
+    {
+      "id": "L08",
+      "file": "web/src/features/maps/components/operationalbrief-all/MapsOperationalBrief.tsx",
+      "line": 61,
+      "rule": "hardcoded-string",
+      "severity": "medium",
+      "confidence": "confirmed-source",
+      "mechanism": "Human provenance concatenates internal English state.provenance enum without i18n; translated source labels do not translate historical/cached/unknown.",
+      "repro": {
+        "kind": "synthetic source-walk recipe NOT EXECUTED",
+        "steps": "Non-English locale plus historical source still prints label: historical."
+      },
+      "fix": "Translate presentation of existing enum, retain raw identity. Exact catalog needs belong to serialized owner, not this audit.",
+      "relatedEvidence": [
+        "web/src/api/dataState.ts:42-55"
+      ],
+      "testGap": "Brief tests expect cached/unknown raw strings."
+    },
+    {
+      "id": "L09",
+      "file": "web/src/features/maps/pages/LocationsPage.tsx",
+      "line": 131,
+      "rule": "inline-domain-query",
+      "severity": "medium",
+      "confidence": "confirmed-source",
+      "mechanism": "Visual page constructs requests/private payload interface instead of canonical typed domain hook. Existing useLocations deprecated camelCase hook lacks pagination/both bounds, so blind adoption regresses semantics. Signal forwarding is already correct.",
+      "repro": {
+        "kind": "synthetic source-walk recipe NOT EXECUTED",
+        "steps": "Inspect query block and imports: request/useQuery in page, not api/hooks bounded visited-location hook."
+      },
+      "fix": "Extend existing useLocations.ts owner with canonical bounded/paginated typed read preserving key/signal/enablement/raw SI/policies.",
+      "relatedEvidence": [
+        "web/src/features/maps/pages/LocationsPage.tsx:56-62,131-143",
+        "web/src/api/hooks/useLocations.ts:42-63"
+      ],
+      "testGap": "Page mocks request seam, no bounded canonical hook contract inspected."
+    },
+    {
+      "id": "L10",
+      "file": "web/src/features/maps/components/LocationLeaderboardPanel.tsx",
+      "line": 80,
+      "rule": "unknown-invalid-to-zero",
+      "severity": "medium",
+      "confidence": "confirmed-source",
+      "mechanism": "Panel maps non-finite/null runtime measurement to zero; page also coalesces per-row missing counts/durations into aggregate/chart/row/drawer zeros. Container hasData does not certify each fact.",
+      "repro": {
+        "kind": "synthetic source-walk recipe NOT EXECUTED",
+        "steps": "Synthetic panel valueNaN or row count/durationnull: displays measured0/bar0. This accepted-input transformation is proven; actual backend nullability/frequency unproved."
+      },
+      "fix": "Retain missing/invalid facts in adapters and accessible alternatives; preserve valid zero, validate physical nonnegative duration/count without silent repair.",
+      "relatedEvidence": [
+        "web/src/features/maps/pages/LocationsPage.tsx:162-166,187-203,349-351,446"
+      ],
+      "testGap": "LocationLeaderboardPanel.test.tsx:367 explicitly enshrines null/NaN→0."
+    },
+    {
+      "id": "L11",
+      "file": "web/src/components/ai/AIAutoNameUnnamedLocations.tsx",
+      "line": 83,
+      "rule": "ai-draft-identity-not-validated",
+      "severity": "high",
+      "confidence": "confirmed-source",
+      "mechanism": "Event validates numeric location_id but never equality to current locationId. canApply only tests status/nonblank. Wrong-entity current-response draft can be attributed to parent row; request-generation isolation does not validate envelope ID.",
+      "repro": {
+        "kind": "synthetic source-walk recipe NOT EXECUTED",
+        "steps": "Prop101; current tool_result draft_location_name oktrue data{location_id:202,proposed_name:Synthetic other stop,status:ok}; accepted draft Apply calls parent row101."
+      },
+      "fix": "Require current valid identity on event acceptance and application; preserve rejected/blank handling and cancellation.",
+      "relatedEvidence": [
+        "web/src/components/ai/AIAutoNameUnnamedLocations.tsx:72-97,139-148",
+        "web/src/features/maps/pages/LocationsPage.tsx:410"
+      ],
+      "testGap": "AI test heading claims mismatched ignored; cases441/461 test tool name/missing fields, not different location_id."
+    },
+    {
+      "id": "L12",
+      "file": "web/src/components/ai/AIAutoNameUnnamedLocations.tsx",
+      "line": 203,
+      "rule": "mobile-target-declaration",
+      "severity": "medium",
+      "confidence": "confirmed-source",
+      "mechanism": "Apply Button size sm with no responsive minimum/wrapLabel; Button sm source declares h-9=36px below contract44px mobile default. Declaration only, not native measured geometry/WCAG spacing conclusion.",
+      "repro": {
+        "kind": "synthetic source-walk recipe NOT EXECUTED",
+        "steps": "Accepted synthetic draft belowmd: Apply resolves h-9 and lacks min-h-11 override."
+      },
+      "fix": "Existing responsive44px minimum and long-label wrapping at shared AI owner; preserve compact desktop/disabled.",
+      "relatedEvidence": [
+        "web/src/components/ai/AIAutoNameUnnamedLocations.tsx:201-209",
+        "web/src/components/ui/Button.tsx:35-42"
+      ],
+      "testGap": "AI tests check ARIA/callback, no target/mobile/wrap assertion."
+    },
+    {
+      "id": "L13",
+      "file": "web/src/features/maps/components/LocationLeaderboardPanel.tsx",
+      "line": 49,
+      "rule": "fixed-tooltip-cursor-paint",
+      "severity": "low",
+      "confidence": "confirmed-source",
+      "mechanism": "Cursor fill literal whiteRGBA is not theme-aware chart hover role. Dynamic Bar fill/Recharts API props remain acceptable inline-style exceptions; separate token contract defect.",
+      "repro": {
+        "kind": "synthetic source-walk recipe NOT EXECUTED",
+        "steps": "Source supplies same rgba(255,255,255,0.04) in all themes; no visual contrast claim."
+      },
+      "fix": "Use existing neutral chart cursor/surface role, preserving hover/data.",
+      "relatedEvidence": [
+        "web/src/features/maps/components/LocationLeaderboardPanel.tsx:130"
+      ],
+      "testGap": "Panel:256 test fixes literalRGBA rather than theme role."
+    }
+  ],
+  "unprovedCandidates": [
+    {
+      "id": "U01",
+      "file": "web/src/features/maps/pages/LocationsPage.tsx",
+      "line": 483,
+      "rule": "context-navigation-scope",
+      "detail": "Links explicitly carry calendar from/to and q, not vehicle_id/time_scope/rolling instants; service no bounds. Workspace carry/router may mitigate. Needs authorized synthetic destination scope proof; no other-page/browser exercise."
+    },
+    {
+      "id": "U02",
+      "file": "web/src/features/maps/pages/LocationsPage.tsx",
+      "line": 141,
+      "rule": "server-contract",
+      "detail": "Client both bounds verified; fresh server ordering/filter semantics/counts/source-ID stability/nullability not proved. No backend/API/real location access."
+    },
+    {
+      "id": "U03",
+      "file": "web/src/components/ai/AIAutoNameUnnamedLocations.tsx",
+      "line": 162,
+      "rule": "ai-capability-live-privacy",
+      "detail": "Feature/positive-ID gates present; draft POST source exists. Authorization/consent/read-only restrictions/side effects need separate authorized contract review; no requests executed."
+    },
+    {
+      "id": "U04",
+      "file": "web/src/features/maps/pages/LocationsPage.tsx",
+      "line": 371,
+      "rule": "i18n-catalog-plurals",
+      "detail": "t fallbacks present but count fragments concatenate; real catalog/plurals/RTL not proven by English stubs. Raw provenance separately confirmedL08. No catalog writes/check rerun."
+    }
+  ],
+  "nativeCandidates": [
+    {
+      "id": "NATIVE01",
+      "file": "web/src/features/maps/components/LocationLeaderboardPanel.tsx",
+      "line": 128,
+      "status": "NOTRUN",
+      "detail": "112px Y-axis/fixed geometry, long addresses/proposals, allocated cards and sm/2xl reflow need actual layout proof. Inspect base44px/wrapping already present.",
+      "matrix": "320/375/390/430/768/1024/1280/1440/1920/2560; narrow containers; RTL;200% text; open drawers/AI"
+    },
+    {
+      "id": "NATIVE02",
+      "file": "web/src/features/maps/pages/LocationsPage.tsx",
+      "line": 229,
+      "status": "NOTRUN",
+      "detail": "busy enables aria-busy but shared useLoadAnnouncement consumes loading/error not busy/query; real load announcements, chart fallback keyboard, drawer trap/restore/Escape and search history focus require mounted proof."
+    },
+    {
+      "id": "NATIVE03",
+      "file": "web/src/components/ai/AIAutoNameUnnamedLocations.tsx",
+      "line": 180,
+      "status": "NOTRUN",
+      "detail": "AI cyan/rose draft, chart palettes/cursor/axes and composed dark/light/custom/forced-color contrast, reduced motion/low-bandwidth require native review."
+    }
+  ],
+  "sourcePins": {
+    "algorithm": "SHA256 exact bytes",
+    "count": 30,
+    "allUnchanged": true,
+    "files": [
+      {
+        "file": "web/src/features/maps/pages/LocationsPage.tsx",
+        "before": "93b1d18d4930ce93618a643113b88d02ebee193eae1f493dcff5d529685e18ab",
+        "after": "93b1d18d4930ce93618a643113b88d02ebee193eae1f493dcff5d529685e18ab"
+      },
+      {
+        "file": "web/src/features/maps/pages/LocationsPage.test.tsx",
+        "before": "f8d7d008defac31d07f50522a981994d95ce9d065566c58bd632d01efcf15334",
+        "after": "f8d7d008defac31d07f50522a981994d95ce9d065566c58bd632d01efcf15334"
+      },
+      {
+        "file": "web/src/features/maps/components/LocationLeaderboardPanel.tsx",
+        "before": "0668b9a06da97c0672f096ca939dae15f12937583080c80202a394ccb370b9a9",
+        "after": "0668b9a06da97c0672f096ca939dae15f12937583080c80202a394ccb370b9a9"
+      },
+      {
+        "file": "web/src/features/maps/components/LocationLeaderboardPanel.test.tsx",
+        "before": "c42ec7778461582607367ca1274697ec1e41294ea7e9ce804f80b847f0a2beb7",
+        "after": "c42ec7778461582607367ca1274697ec1e41294ea7e9ce804f80b847f0a2beb7"
+      },
+      {
+        "file": "web/src/features/maps/components/operationalbrief-all/MapsOperationalBrief.tsx",
+        "before": "ed6e0166d7e517333dc30920c5dc8c5de66f012a175eb3dfb41ce57dad097ed6",
+        "after": "ed6e0166d7e517333dc30920c5dc8c5de66f012a175eb3dfb41ce57dad097ed6"
+      },
+      {
+        "file": "web/src/features/maps/components/operationalbrief-all/MapsOperationalBrief.test.tsx",
+        "before": "040f8069d31c2d4ff52af8fd62cf411521ca29259ad43d5ab6985fc73890ae7b",
+        "after": "040f8069d31c2d4ff52af8fd62cf411521ca29259ad43d5ab6985fc73890ae7b"
+      },
+      {
+        "file": "web/src/components/ai/AIAutoNameUnnamedLocations.tsx",
+        "before": "e0efca1e6725121a5f69104ba77cdcedbd6333bff784f40b6457f22f15ffe479",
+        "after": "e0efca1e6725121a5f69104ba77cdcedbd6333bff784f40b6457f22f15ffe479"
+      },
+      {
+        "file": "web/src/api/dataState.ts",
+        "before": "21fb454b3c1f01608169f3f3887911de97f7c754663cc001236ebfde58211761",
+        "after": "21fb454b3c1f01608169f3f3887911de97f7c754663cc001236ebfde58211761"
+      },
+      {
+        "file": "web/src/components/layout/layout-reference/PageLayout.tsx",
+        "before": "7b7ef06a05fe4a97ab0cfbc8e989901db0ffca898dec7d4f5cd796536b4dca3b",
+        "after": "7b7ef06a05fe4a97ab0cfbc8e989901db0ffca898dec7d4f5cd796536b4dca3b"
+      },
+      {
+        "file": "web/src/components/data-display/EntityPreviewDrawer.tsx",
+        "before": "815b8f2ab797b75d6d8d4a4e2e3d269621ca3eb24ed145bc3cae2a84cef9a60e",
+        "after": "815b8f2ab797b75d6d8d4a4e2e3d269621ca3eb24ed145bc3cae2a84cef9a60e"
+      },
+      {
+        "file": "web/src/hooks/useRangeState.ts",
+        "before": "bf267c5a8b69d0fff866ba9b9491b15f03e516fc8599424af881ba08579f2bea",
+        "after": "bf267c5a8b69d0fff866ba9b9491b15f03e516fc8599424af881ba08579f2bea"
+      },
+      {
+        "file": "web/src/hooks/useSelectedVehicle.ts",
+        "before": "c52768ea42f3e8dd34399f1372a09eb3f70d6c6cb2dddbc41790a6d30e7c4ae3",
+        "after": "c52768ea42f3e8dd34399f1372a09eb3f70d6c6cb2dddbc41790a6d30e7c4ae3"
+      },
+      {
+        "file": "web/src/lib/contextNavigation.ts",
+        "before": "f8f99848167df92589120d406b3bda5a9625b0576aa8f31cfbf719372d9a70a5",
+        "after": "f8f99848167df92589120d406b3bda5a9625b0576aa8f31cfbf719372d9a70a5"
+      },
+      {
+        "file": "web/src/hooks/useUnits.ts",
+        "before": "b90452309357b88fe27edf878a943ff46cf9083015592d1587997b5c0f4a8b14",
+        "after": "b90452309357b88fe27edf878a943ff46cf9083015592d1587997b5c0f4a8b14"
+      },
+      {
+        "file": "web/src/lib/dateFormat.ts",
+        "before": "30eeb276813505d3cee3d0b1df38a7b13fc97dce388a0c5b2c3c86c902f62f64",
+        "after": "30eeb276813505d3cee3d0b1df38a7b13fc97dce388a0c5b2c3c86c902f62f64"
+      },
+      {
+        "file": "web/src/components/forms/SearchInput.tsx",
+        "before": "cb2b0e20067112320981252bcdaee4ba6af937e746bcbe5e3308163047f9c8c5",
+        "after": "cb2b0e20067112320981252bcdaee4ba6af937e746bcbe5e3308163047f9c8c5"
+      },
+      {
+        "file": "web/src/components/ui/Pagination.tsx",
+        "before": "7c07a1069af3b7a334382686c315a156643c33c92f6da56bbd3f051188f39c7e",
+        "after": "7c07a1069af3b7a334382686c315a156643c33c92f6da56bbd3f051188f39c7e"
+      },
+      {
+        "file": "web/src/lib/workspaceScope.ts",
+        "before": "aeb8c01d410f2377aa5fd713de1a678a0360acf647a9c882f03e46c80efdfcd7",
+        "after": "aeb8c01d410f2377aa5fd713de1a678a0360acf647a9c882f03e46c80efdfcd7"
+      },
+      {
+        "file": "web/src/components/layout/PageContainer.tsx",
+        "before": "4b718ac20f8a473a3c59b6dbd7031d9bb686e2c3ad93b25ddb94523eea074b4a",
+        "after": "4b718ac20f8a473a3c59b6dbd7031d9bb686e2c3ad93b25ddb94523eea074b4a"
+      },
+      {
+        "file": "web/src/hooks/useAiStream.ts",
+        "before": "acf5503728b53701c63785edc45d987e3a86a70f03f22c429c485f3672143de0",
+        "after": "acf5503728b53701c63785edc45d987e3a86a70f03f22c429c485f3672143de0"
+      },
+      {
+        "file": "web/src/components/ai/AIFeatureCard.tsx",
+        "before": "f1e5d2db44dcb81540068c17891f74399694740a22b90080c064002bebc52016",
+        "after": "f1e5d2db44dcb81540068c17891f74399694740a22b90080c064002bebc52016"
+      },
+      {
+        "file": "web/src/components/ai/withAiFeature.tsx",
+        "before": "b97831bcf65326fcf17f77fa6501bda8c42c40a23575edbf35da222e9882fa57",
+        "after": "b97831bcf65326fcf17f77fa6501bda8c42c40a23575edbf35da222e9882fa57"
+      },
+      {
+        "file": "web/src/components/charts/ChartTooltip.tsx",
+        "before": "3c752e3448f4f2f4e73f0f9ba86a585a0431f641a0b99a89009083be884a7fa2",
+        "after": "3c752e3448f4f2f4e73f0f9ba86a585a0431f641a0b99a89009083be884a7fa2"
+      },
+      {
+        "file": "web/src/api/hooks/useLocations.ts",
+        "before": "548c91d7cb0b48d93561b8fc3b5c8738ec9493809f0a2b946a4eea4e5854a090",
+        "after": "548c91d7cb0b48d93561b8fc3b5c8738ec9493809f0a2b946a4eea4e5854a090"
+      },
+      {
+        "file": "web/src/hooks/useDateFormat.ts",
+        "before": "97b1b0ebd44436cd8274a4927d0df4381b112df1468a22ef6238029675d6a542",
+        "after": "97b1b0ebd44436cd8274a4927d0df4381b112df1468a22ef6238029675d6a542"
+      },
+      {
+        "file": "web/src/components/feedback/DataSourceNotice.tsx",
+        "before": "79b11817e939f044a2c1f6fbfa1617b61a435c8461dc84b99b6014f54059afc6",
+        "after": "79b11817e939f044a2c1f6fbfa1617b61a435c8461dc84b99b6014f54059afc6"
+      },
+      {
+        "file": "web/src/hooks/useFilteredList.ts",
+        "before": "d3bd8e5ec552d4c6f618887266122c5a30f78252157c1dc3ba57ce1279cf8372",
+        "after": "d3bd8e5ec552d4c6f618887266122c5a30f78252157c1dc3ba57ce1279cf8372"
+      },
+      {
+        "file": "web/src/components/ui/Button.tsx",
+        "before": "e43e202cc9f465efeef93a1be2b156255958934af635abf0eaa408f310dde16c",
+        "after": "e43e202cc9f465efeef93a1be2b156255958934af635abf0eaa408f310dde16c"
+      },
+      {
+        "file": "web/src/components/ai/__tests__/AIAutoNameUnnamedLocations.test.tsx",
+        "before": "c1b86f367f44a6dba4f675622883687de8ad668e7bf4daa487ed90f5761f58b6",
+        "after": "c1b86f367f44a6dba4f675622883687de8ad668e7bf4daa487ed90f5761f58b6"
+      },
+      {
+        "file": "web/src/components/ai/__tests__/TestAutoNameLocationsAIOffManualNamingWorks.test.tsx",
+        "before": "a949af6c7773349f5e5ee1ebe8c44e28bacbeb1b4b6365179a1127388b8e4636",
+        "after": "a949af6c7773349f5e5ee1ebe8c44e28bacbeb1b4b6365179a1127388b8e4636"
+      }
+    ],
+    "finalPostWriteCheck": {
+      "status": "PASS",
+      "checkedAt": "2026-10-14T02:08:53.046836+00:00",
+      "count": 30,
+      "allUnchanged": true
+    }
+  },
+  "testEvidence": {
+    "status": "NOTRUN",
+    "authoredDeclarations": 74,
+    "staticallyCountedAuthoredCases": 83,
+    "files": [
+      {
+        "file": "LocationsPage.test.tsx",
+        "declarations": 24,
+        "cases": 24
+      },
+      {
+        "file": "LocationLeaderboardPanel.test.tsx",
+        "declarations": 15,
+        "cases": 15
+      },
+      {
+        "file": "MapsOperationalBrief.test.tsx",
+        "declarations": 10,
+        "cases": 19,
+        "expansion": "7 ordinary + each5/3/4"
+      },
+      {
+        "file": "AIAutoNameUnnamedLocations.test.tsx",
+        "declarations": 17,
+        "cases": 17
+      },
+      {
+        "file": "TestAutoNameLocationsAIOffManualNamingWorks.test.tsx",
+        "declarations": 8,
+        "cases": 8
+      }
+    ],
+    "discovered": null,
+    "executed": 0,
+    "passed": 0,
+    "failed": 0,
+    "skipped": 0,
+    "limits": "Static case counts are NOT test discovery/pass counts. Network/i18n/chart/AI seams mocked. Historical Phase5 24/24 receipt not rerun or claimed current."
+  },
+  "notRun": [
+    "fresh tests/passing reruns",
+    "lint",
+    "build",
+    "npx tsc --noEmit/global TypeScript",
+    "preservation/QA helpers/global guards",
+    "Git commands/writes",
+    "servers/installs/subagents",
+    "browser/native/screenshots/keyboard/contrast/geometry",
+    "HTTP/API/database/model/draft requests",
+    "real addresses/location datasets",
+    "mutation/forms/save actions"
+  ],
+  "evidenceLimits": "Confirmed findings are source/control-flow proofs only. Every synthetic repro recipe is NOT EXECUTED. No native/runtime/backend/authorization/catalog/whole-page acceptance.",
+  "governingRead": {
+    "orchestrator": "docs/orchestrator-loop.md FULLY read",
+    "design": "frontend-design-contract.md base1-654, relevant maps1065-1253; unrelated specialized appendices not audited",
+    "mission": "frontend-mission.md relevant0-4,14-37,43-45",
+    "inventory": "frontend-inventory.md authority1-49 and Locations row187 plus linked audit-page-136.json",
+    "handoff": "session-handoff.md current1-135/conventions/source-QA references",
+    "queue": "migration-queue.md top1-105, exact claim59, accepted dependency1971 and full-file scoped owner searches; no edits",
+    "instructions": [
+      "frontend-worker-conventions.md full",
+      "copilot integrity/SI/prohibited/frontend sections",
+      "react-frontend relevant architecture/states/UI/formatting/a11y sections",
+      "frontend-si-cutover full",
+      "unit-conversion full; legacy examples superseded by current SI contract"
+    ],
+    "limits": "Two discovery/index commands failed; oversized outputs not credited as full reads."
+  },
+  "filesRead": [
+    "web/src/features/maps/pages/LocationsPage.tsx",
+    "web/src/features/maps/pages/LocationsPage.test.tsx",
+    "web/src/features/maps/components/LocationLeaderboardPanel.tsx",
+    "web/src/features/maps/components/LocationLeaderboardPanel.test.tsx",
+    "web/src/features/maps/components/operationalbrief-all/MapsOperationalBrief.tsx",
+    "web/src/features/maps/components/operationalbrief-all/MapsOperationalBrief.test.tsx",
+    "web/src/components/ai/AIAutoNameUnnamedLocations.tsx",
+    "web/src/api/dataState.ts",
+    "web/src/components/layout/layout-reference/PageLayout.tsx",
+    "web/src/components/data-display/EntityPreviewDrawer.tsx",
+    "web/src/hooks/useRangeState.ts",
+    "web/src/hooks/useSelectedVehicle.ts",
+    "web/src/lib/contextNavigation.ts",
+    "web/src/hooks/useUnits.ts",
+    "web/src/lib/dateFormat.ts",
+    "web/src/components/forms/SearchInput.tsx",
+    "web/src/components/ui/Pagination.tsx",
+    "web/src/lib/workspaceScope.ts",
+    "web/src/components/layout/PageContainer.tsx",
+    "web/src/hooks/useAiStream.ts",
+    "web/src/components/ai/AIFeatureCard.tsx",
+    "web/src/components/ai/withAiFeature.tsx",
+    "web/src/components/charts/ChartTooltip.tsx",
+    "web/src/api/hooks/useLocations.ts",
+    "web/src/hooks/useDateFormat.ts",
+    "web/src/components/feedback/DataSourceNotice.tsx",
+    "web/src/hooks/useFilteredList.ts",
+    "web/src/components/ui/Button.tsx",
+    "web/src/components/ai/__tests__/AIAutoNameUnnamedLocations.test.tsx",
+    "web/src/components/ai/__tests__/TestAutoNameLocationsAIOffManualNamingWorks.test.tsx"
+  ],
+  "preservation": {
+    "pageLines": 525,
+    "primarySections": [
+      "Location summary:6 metrics",
+      "Visits leaderboard:15 rows maximum",
+      "Time leaderboard:10 rows maximum",
+      "All locations:searchable50-row page"
+    ],
+    "otherSections": [
+      "Summary Review details drawer",
+      "Entity drawer:4 fields/6 related actions",
+      "Feature-gated unnamed-location AI proposal/review/local Apply"
+    ],
+    "actions": [
+      "header vehicle/range consumption",
+      "summary Review details",
+      "source retry including retained/paused shared notice",
+      "leaderboards Reset range",
+      "search/recent-history/clear chip/all",
+      "empty View drives",
+      "no-vehicle onboarding",
+      "pagination Previous/Next/First/Last/direct jump (findings retained)",
+      "Inspect/Close",
+      "related Vehicle/Drives/Charging/Alerts/Service/Telemetry",
+      "AI Suggest/draft/rejected review/local Apply"
+    ],
+    "scope": "workspaceScope.ts:48 registers /locations; no duplicate picker. useRangeState.ts:301-318 ignores legacy page default/persistKey on header-owned route. Request/key/identity carry both instant bounds and selected vehicle; all metrics/charts are loaded-page-only and disclose that. Server filtering/order not freshly verified.",
+    "SI": "Cache seconds unchanged; /3600 only at chart display derivation, unrounded numeric bars; copy sorted by duration, no localized string parse/sign flip/abs/clamp. No fabricated physical data.",
+    "states": "Initial-fetch skeletons, fatal-only QueryError, successful-empty unavailable, explicit no-vehicle onboarding, filtered-empty clear search, retained rows/charts plus shared warning/retry/receipt remain. Initial-paused and per-row unknown defects below.",
+    "historicalResolved": [
+      "full chart labels",
+      "unrounded chart numbers",
+      "neutral ranks/token chart fills",
+      "44px base Inspect/wrapping row",
+      "no-vehicle/empty source distinctions",
+      "vehicle/page/instant scope guards",
+      "request AbortSignal forwarded"
+    ]
+  },
+  "queueDeduplication": {
+    "claim": {
+      "line": 59,
+      "item": "phase6-qa-maps-locations",
+      "status": "[~]",
+      "attempt": 1,
+      "actor": "reservation actor pending in inspected snapshot; no invented actor ID"
+    },
+    "acceptedDependency": {
+      "line": 1971,
+      "item": "phase5-page-maps-locations",
+      "status": "[x]",
+      "commit": "c383507434c3f09e45723c05bfb1df210ced71ac",
+      "acceptance": "SOURCE ONLY"
+    },
+    "completedDoNotRedispatch": [
+      "audit-page-136",
+      "phase3-pagination",
+      "phase3-maps-operational-brief",
+      "phase3-use-date-format",
+      "phase3-ai-stream-generation-isolation",
+      "phase3-data-source-notice"
+    ],
+    "existingDifferentObjective": "phase6-fix-relative-future-dates [~] owns dateFormat.ts; date caller preferences are distinct, use existing useDateFormat, no overlap.",
+    "sharedNeedDedup": "One MapsOperationalBrief date/provenance owner across maps QA, not one per page. Parent reconcile sibling maps reports; no queue writes/claims."
+  },
+  "failures": [
+    {
+      "shellId": "1765",
+      "exitCode": 1,
+      "error": "rg unavailable; command not recognized; old playbook read not reached",
+      "recovery": "Superseding docs/orchestrator-loop read fully; PowerShell/Python reads without installs"
+    },
+    {
+      "shellId": "1776",
+      "exitCode": 1,
+      "error": "CP1252 stdout UnicodeEncodeError U+2192",
+      "recovery": "UTF-8 stdout in later reads"
+    },
+    {
+      "shellId": "2170",
+      "exitCode": 1,
+      "error": "Windows os error206 filename or extension too long: oversized inline artifact command could not start",
+      "recovery": "Split artifact-only inline writes; no source modification, no tests/reruns"
+    }
+  ],
+  "commands": [
+    {
+      "shellId": "1747",
+      "actualInvocation": "Get-Date -AsUTC -Format o; root/audit directory Get-ChildItem",
+      "exitCode": 0
+    },
+    {
+      "shellId": "1748",
+      "actualInvocation": "Get-ChildItem root orchestrator/map tree/AGENTS",
+      "exitCode": 0
+    },
+    {
+      "shellId": "1765",
+      "actualInvocation": "rg --files with governing globs; Get-Content agent-loop-playbook.md",
+      "exitCode": 1
+    },
+    {
+      "shellId": "1766",
+      "actualInvocation": "Get-ChildItem docs/.github/.agents",
+      "exitCode": 0
+    },
+    {
+      "shellId": "1776",
+      "actualInvocation": "python -: instruction/document index",
+      "exitCode": 1
+    },
+    {
+      "shellId": "1793",
+      "actualInvocation": "python -: broad queue/handoff/convention index (output truncated)",
+      "exitCode": 0
+    },
+    {
+      "shellId": "1806",
+      "actualInvocation": "python -: initial hashes/exact queue/handoff/conventions",
+      "exitCode": 0
+    },
+    {
+      "shellId": "1819",
+      "actualInvocation": "python -: exact claim/handoff refs/AGENTS",
+      "exitCode": 0
+    },
+    {
+      "shellId": "1829",
+      "actualInvocation": "python -: direct hashes/instruction index",
+      "exitCode": 0
+    },
+    {
+      "shellId": "1854",
+      "actualInvocation": "python -: identity/trust/preferences search",
+      "exitCode": 0
+    },
+    {
+      "shellId": "1880",
+      "actualInvocation": "python -: owner/scope/preference grep (oversized output)",
+      "exitCode": 0
+    },
+    {
+      "shellId": "1891",
+      "actualInvocation": "python -: compact exact queue-owner grep18",
+      "exitCode": 0
+    },
+    {
+      "shellId": "1903",
+      "actualInvocation": "python -: support hashes/AI/shared-range grep",
+      "exitCode": 0
+    },
+    {
+      "shellId": "1914",
+      "actualInvocation": "python -: broad relevant owner dedup22",
+      "exitCode": 0
+    },
+    {
+      "shellId": "1934",
+      "actualInvocation": "python -: lexical rule grep/test declarations",
+      "exitCode": 0
+    },
+    {
+      "shellId": "1933",
+      "actualInvocation": "python -: shared stream/trust/location-hook owners",
+      "exitCode": 0
+    },
+    {
+      "shellId": "1951",
+      "actualInvocation": "python -: Button hash/source/mobile owners",
+      "exitCode": 0
+    },
+    {
+      "shellId": "1952",
+      "actualInvocation": "python -: exact mechanism grep",
+      "exitCode": 0
+    },
+    {
+      "shellId": "2023",
+      "actualInvocation": "Get-Date; AI naming file listing; Select-String source formatting/state omissions",
+      "exitCode": 0
+    },
+    {
+      "shellId": "2027",
+      "actualInvocation": "python -: AI test hashes/counts",
+      "exitCode": 0
+    },
+    {
+      "shellId": "2056",
+      "actualInvocation": "python -: AI declaration counts/corrected URL/provenance grep",
+      "exitCode": 0
+    },
+    {
+      "shellId": "2170",
+      "actualInvocation": "python -: oversized artifact write; OS rejected before start",
+      "exitCode": 1
+    },
+    {
+      "shellId": "2192",
+      "actualInvocation": "python -: bounded report base/pin manifest/command register",
+      "exitCode": 0
+    },
+    {
+      "shellId": "2218",
+      "actualInvocation": "python -: findings/candidates/needs artifact write",
+      "exitCode": 0
+    },
+    {
+      "actualInvocation": "python -: final JSON parse/citation/count/source-test SHA256 validation and release",
+      "exitCode": 0,
+      "scope": "authorized artifacts + read-only pinned files"
+    }
+  ],
+  "summary": {
+    "confirmedIssueCount": 13,
+    "unprovedCandidateCount": 4,
+    "nativeCandidateCount": 3,
+    "confirmedByRule": {
+      "initial-paused-false-empty": 1,
+      "fabricated-exact-pagination-total": 1,
+      "pagination-recovery-hidden": 1,
+      "preview-snapshot-freshness": 1,
+      "ai-apply-without-form-handoff": 1,
+      "number-display-preferences": 1,
+      "date-display-preferences": 1,
+      "hardcoded-string": 1,
+      "inline-domain-query": 1,
+      "unknown-invalid-to-zero": 1,
+      "ai-draft-identity-not-validated": 1,
+      "mobile-target-declaration": 1,
+      "fixed-tooltip-cursor-paint": 1
+    },
+    "confirmedByFile": {
+      "web/src/features/maps/pages/LocationsPage.tsx": 7,
+      "web/src/features/maps/components/LocationLeaderboardPanel.tsx": 3,
+      "web/src/features/maps/components/operationalbrief-all/MapsOperationalBrief.tsx": 1,
+      "web/src/components/ai/AIAutoNameUnnamedLocations.tsx": 2
+    },
+    "priority": "initial-paused truth, pagination totals/recovery, preview freshness, AI handoff/identity"
+  },
+  "needs": [
+    {
+      "id": "NEED01",
+      "issues": [
+        "L01",
+        "L02",
+        "L03",
+        "L04"
+      ],
+      "owner": "web/src/features/maps/pages/LocationsPage.tsx + matching test",
+      "dedup": "Completed Phase5 source not redispatched; narrow page fixes. Existing Pagination supports totalKind/hasNextPage; no primitive rewrite."
+    },
+    {
+      "id": "NEED02",
+      "issues": [
+        "L09"
+      ],
+      "owner": "existing api/hooks/useLocations.ts + canonical DTO + page integration",
+      "dedup": "Deprecated current hook not equivalent; no new query framework."
+    },
+    {
+      "id": "NEED03",
+      "issues": [
+        "L05"
+      ],
+      "owner": "page + existing canonical naming review form (confirmed owner not found)",
+      "dedup": "Historical audit-page-136 also records gap; no invented save/API."
+    },
+    {
+      "id": "NEED04",
+      "issues": [
+        "L11",
+        "L12"
+      ],
+      "owner": "web/src/components/ai/AIAutoNameUnnamedLocations.tsx + matching AI test",
+      "dedup": "Completed stream generation-isolation objective is distinct; shared component claim needed."
+    },
+    {
+      "id": "NEED05",
+      "issues": [
+        "L06",
+        "L10",
+        "L13"
+      ],
+      "owner": "page + LocationLeaderboardPanel and tests",
+      "dedup": "Reuse numeric/chart roles; correct false-zero hardening assertion explicitly, preserve raw data."
+    },
+    {
+      "id": "NEED06",
+      "issues": [
+        "L07"
+      ],
+      "owner": "page + MapsOperationalBrief and tests",
+      "dedup": "Use completed useDateFormat; do not overlap active relative-future-dates root. One shared brief need across maps QA."
+    },
+    {
+      "id": "NEED07",
+      "issues": [
+        "L08"
+      ],
+      "owner": "web/src/features/maps/components/operationalbrief-all/MapsOperationalBrief.tsx + serialized i18n integration",
+      "dedup": "One provenance presentation owner across map consumers; parent reconcile siblings, no catalog edits."
+    }
+  ],
+  "ruleChecks": {
+    "scope": [
+      "web/src/features/maps/pages/LocationsPage.tsx",
+      "web/src/features/maps/components/LocationLeaderboardPanel.tsx",
+      "web/src/features/maps/components/operationalbrief-all/MapsOperationalBrief.tsx",
+      "web/src/components/ai/AIAutoNameUnnamedLocations.tsx"
+    ],
+    "method": "Executed scoped regex grep/raw outputs in log; source adjudication, not lint/global scanner",
+    "candidateMatches": {
+      "static-inline-style": 0,
+      "raw-html": 0,
+      "direct-library-import": 0,
+      "old-api-import": 0,
+      "double-prefix": 0,
+      "camelcase-param-broad": 9,
+      "camelcase-url-corrected": 0,
+      "hidden-section": 0,
+      "hardcoded-JSX": 0,
+      "raw-provenance-enum": 1,
+      "fetch-useeffect": 2,
+      "PageLayout-adapter": 1
+    },
+    "exceptions": "camelCase local vars/JSX false positives, actualURL snake_case; effects are page reset and AI cleanup, not loading; PageLayout delegates PageContainer; dynamic chart paint/Recharts API props acceptable; shared raw primitives/test-only buttons not shipping page violations. Typed shared SSE fetching traced, not classified page fetch/useEffect load.",
+    "backend": "rules11-14 NOTAPPLICABLE: internal Go outside assigned source scope",
+    "confirmedTenRuleViolations": {
+      "hardcoded-string": 1
+    }
+  },
+  "release": {
+    "status": "RELEASED_SOURCE_QA_ARTIFACTS_ONLY",
+    "time": "2026-10-14T02:08:53.046836+00:00",
+    "sourceWriteAccessUsed": false,
+    "onlyWrites": [
+      "docs/frontend-audits/phase6-qa-maps-locations.json",
+      "web/logs/phase6-qa-maps-locations.log"
+    ],
+    "deliveryDeadlineMet": false,
+    "hardDeadlineMet": true,
+    "timingLimit": "Soft delivery02:07:59.989Z missed; report findings written02:08:20.965Z after recovery from OS206. Hard deadline preserved. No clock reset."
+  }
+}
