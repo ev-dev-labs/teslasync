@@ -44,7 +44,7 @@ export function ActivityFeedPanel({
     <GlassPanel className={className}>
       <div className="p-4 sm:p-5">
         <PanelTitle className="mb-3 flex items-center gap-2">
-          <Icons.history className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+          <Icons.history className="h-4 w-4 text-[var(--text-secondary)]" aria-hidden="true" />
           {t('activity.myActivity.feed.title', 'Activity feed')}
         </PanelTitle>
         {isLoading ? (
