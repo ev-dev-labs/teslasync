@@ -40,8 +40,9 @@ function InnerSection({ vehicleId }: InnerSectionProps) {
     <AIFeatureCard
       title={t('yearReview.aiNarration.title', 'Helix narration')}
       description={t(
-        'yearReview.aiNarration.description',
-        'Get a short, Helix-written recap of your year from the slide data above.',
+        'yearReview.aiNarration.scopeDescription',
+        'Get a short, Helix-written recap of the previous calendar year ({{year}}), independently of the year selected above.',
+        { year: defaultYear },
       )}
       buttonLabel={t('yearReview.aiNarration.generateButton', 'Generate narration')}
       badgeLabel={t('yearReview.aiNarration.badge', 'Helix')}

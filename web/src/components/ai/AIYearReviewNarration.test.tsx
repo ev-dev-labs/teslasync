@@ -126,7 +126,88 @@ beforeEach(() => {
 })
 
 afterEach(() => {
+  vi.useRealTimers()
+  window.history.replaceState({}, '', '/')
   vi.restoreAllMocks()
+})
+
+describe('AIYearReviewNarration — independent previous-calendar-year scope', () => {
+  it.each([
+    ['saved locale/timezone and a different route year', new Date(2026, 9, 14, 12), '?year=2021&from=2021-01-01&to=2022-01-01', 2025],
+    ['last instant of the calendar year', new Date(2026, 11, 31, 23, 59, 59, 999), '?year=2021', 2025],
+    ['first instant of the calendar year', new Date(2027, 0, 1, 0, 0, 0, 0), '?year=2021', 2026],
+    ['before midnight on an ordinary day', new Date(2026, 5, 14, 23, 59, 59, 999), '?from=2026-06-14&to=2026-06-15', 2025],
+    ['after midnight on an ordinary day', new Date(2026, 5, 15, 0, 0, 0, 0), '?from=2026-06-14&to=2026-06-15', 2025],
+    ['invalid route dates', new Date(2026, 9, 14, 12), '?year=invalid&from=invalid&to=invalid', 2025],
+    ['missing route dates', new Date(2026, 9, 14, 12), '', 2025],
+  ])('preserves the request default with %s', async (_name, now, query, year) => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(now)
+    mockUseSettings.mockReturnValue(enabled({
+      locale: 'de-DE',
+      timezone_user: 'Pacific/Kiritimati',
+      tz_display_default: 'user',
+    }))
+    window.history.replaceState({}, '', `/analytics/year-in-review${query}`)
+    const fetchMock = vi.fn(async () => new Response(
+      makeReadableStream([sseFrame('done', { finish_reason: 'stop' })]),
+      { status: 200, headers: { 'Content-Type': 'text/event-stream' } },
+    ))
+    globalThis.fetch = fetchMock
+
+    render(<AIYearReviewNarration vehicleId={42} />)
+
+    expect(screen.getByText(
+      `Get a short, Helix-written recap of the previous calendar year (${year}), independently of the year selected above.`,
+    )).toBeInTheDocument()
+    expect(screen.queryByText(/from the slide data above/i)).not.toBeInTheDocument()
+    expect(screen.getByText(`${year} Year in review`)).toBeInTheDocument()
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: BUTTON_NAME }))
+    })
+
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    const [, init] = vi.mocked(globalThis.fetch).mock.calls[0]
+    expect(JSON.parse(String(init?.body))).toEqual({ vehicle_id: 42, year })
+  })
+
+  it('aborts an in-flight narration when the vehicle changes or is deselected', async () => {
+    mockUseSettings.mockReturnValue(enabled())
+    const signals: AbortSignal[] = []
+    globalThis.fetch = vi.fn((_input: RequestInfo | URL, init?: RequestInit) => {
+      const signal = init?.signal
+      if (!signal) throw new Error('Expected an abort signal')
+      signals.push(signal)
+      return new Promise<Response>((_resolve, reject) => {
+        signal.addEventListener('abort', () => {
+          reject(new DOMException('Aborted', 'AbortError'))
+        }, { once: true })
+      })
+    })
+    const { rerender } = render(<AIYearReviewNarration vehicleId={42} />)
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: BUTTON_NAME }))
+    })
+    expect(signals).toHaveLength(1)
+    expect(signals[0].aborted).toBe(false)
+
+    rerender(<AIYearReviewNarration vehicleId={7} />)
+    await waitFor(() => expect(signals[0].aborted).toBe(true))
+    expect(screen.getByRole('button', { name: BUTTON_NAME })).not.toBeDisabled()
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: BUTTON_NAME }))
+    })
+    expect(signals).toHaveLength(2)
+    expect(signals[1].aborted).toBe(false)
+
+    rerender(<AIYearReviewNarration />)
+    await waitFor(() => expect(signals[1].aborted).toBe(true))
+    expect(screen.getByRole('button', { name: BUTTON_NAME })).toBeDisabled()
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  })
 })
 
 describe('AIYearReviewNarration — AI-off render gate', () => {
