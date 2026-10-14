@@ -1,0 +1,120 @@
+{
+  "schemaVersion": 1,
+  "item": "phase6-proof-command-reliability-adapter-truth",
+  "phase": 6,
+  "kind": "actual-unexecuted-covering-proof",
+  "status": "DONE",
+  "scope": "Missing runtime proof of the retained command-reliability summary adapter correction only.",
+  "objectiveAlreadyMet": {
+    "metBeforeRun": false,
+    "expectedArtifactsAbsent": true,
+    "historicalStartup": "Exit 1, discovery 0, execution 0; NOTPASS."
+  },
+  "sourceAuthority": {
+    "item": "phase6-fix-command-reliability-adapter-truth",
+    "commitProvidedByPrompt": "3701d5585df861613fe4167ca524eb4745a62285",
+    "gitVerification": "NOTRUN; Git prohibited.",
+    "retainedLog": "web/logs/phase6-fix-command-reliability-adapter-truth.log"
+  },
+  "writeScope": [
+    "docs/frontend-audits/phase6-proof-command-reliability-adapter-truth.json",
+    "web/logs/phase6-proof-command-reliability-adapter-truth.log"
+  ],
+  "runtime": {
+    "node": "v26.8.1",
+    "vitest": "4.1.11",
+    "cwd": "D:\\repos\\teslasync\\web",
+    "environment": {
+      "VITE_GIT_SHA": "dev",
+      "NO_COLOR": "1"
+    },
+    "identityReason": "Explicit dev identity prevents the existing Vite configuration from invoking Git. Catalog checks remain enabled and unchanged."
+  },
+  "proof": {
+    "command": "node .\\node_modules\\vitest\\vitest.mjs run src\\features\\system\\components\\statstrip-command-summaries\\commandSummaryMetrics.test.ts --pool=forks --maxWorkers=2 --reporter=verbose -t \"Command reliability adapter truth and locale|keeps reliability definitions in the existing analyzer\"",
+    "commandStartedUtc": "2026-10-14T15:08:48.6908674Z",
+    "commandEndedUtc": "2026-10-14T15:14:45.6439508Z",
+    "exitCode": 0,
+    "testFilesPassed": 1,
+    "collectedCases": 17,
+    "selectedCases": 15,
+    "executedCases": 15,
+    "passedCases": 15,
+    "failedCases": 0,
+    "skippedCases": 2,
+    "selection": "14 added adapter-truth/locale variants and the affected original mixed-outcome caption case. Two unchanged history cases deliberately excluded.",
+    "catalogSplit": "OK: 57 grouped locale bundles, 178 per-namespace fallbacks, 1241 inlined shell keys, 0 known-missing keys.",
+    "catalogNamespaceOutput": "2 known dotted misses, 25 dotless labels, 0 new dotted, 3 new dotless, 49 newly resolved; existing checker allowed startup. No baseline pruning or catalog writes.",
+    "rawOutput": "web/logs/phase6-proof-command-reliability-adapter-truth.log",
+    "passedNames": [
+      "keeps reliability definitions in the existing analyzer, with rounded percentage points only at display",
+      "keeps nonempty pending-only outcomes unknown without changing analyzer zeros or counts",
+      "keeps nonempty queued-only outcomes unknown without changing analyzer zeros or counts",
+      "keeps nonempty in_progress-only outcomes unknown without changing analyzer zeros or counts",
+      "keeps nonempty sending-only outcomes unknown without changing analyzer zeros or counts",
+      "preserves the declared empty-array numeric convention and caption",
+      "keeps an absent summary missing instead of inventing zero attempts or success",
+      "retains measured zero for a resolved failure without falsely claiming nothing is failing",
+      "preserves a measured perfect rate without upgrading a small sample to proven reliability",
+      "keeps the judged worst-command label, five-attempt threshold, raw rates and retry storms",
+      "uses analyzer-supplied grading options rather than introducing an adapter threshold",
+      "uses the existing translated unknown label for unjudged evidence",
+      "formats the attempts caption using effective en-US locale without formatting raw stats",
+      "formats the attempts caption using effective de-DE locale without formatting raw stats",
+      "formats the attempts caption using effective ar-EG locale without formatting raw stats"
+    ],
+    "skippedNames": [
+      "does not coerce history counts and rates into formatted text",
+      "retains the original empty-history zeros while text measurements remain missing"
+    ]
+  },
+  "unchangedInputs": [
+    {
+      "file": "web/src/features/system/components/statstrip-command-summaries/commandSummaryMetrics.tsx",
+      "beforeSha256": "265B5F3D4C23EB20C89F6C342F11AA009D7EB99062492138045FD41147D7BCC0",
+      "afterSha256": "265B5F3D4C23EB20C89F6C342F11AA009D7EB99062492138045FD41147D7BCC0"
+    },
+    {
+      "file": "web/src/features/system/components/statstrip-command-summaries/commandSummaryMetrics.test.ts",
+      "beforeSha256": "D2336F0247B3D376E3C53EF6DF3F39D008B9D151DDA3AE3CAB0B2FA7DF4CB542",
+      "afterSha256": "D2336F0247B3D376E3C53EF6DF3F39D008B9D151DDA3AE3CAB0B2FA7DF4CB542"
+    },
+    {
+      "file": "web/src/features/system/lib/commandReliability.ts",
+      "beforeSha256": "C09666A01C890D0980C74B302A396F052D6CE5CF76AE641C22CE0A6E2CF0EAED",
+      "afterSha256": "C09666A01C890D0980C74B302A396F052D6CE5CF76AE641C22CE0A6E2CF0EAED"
+    },
+    {
+      "file": "web/src/features/system/lib/commandReliability.test.ts",
+      "beforeSha256": "BC04954FB755B2DB9165DFC7139E5C72ECDD6FEB3A9BDDEC0537C963B792EA07",
+      "afterSha256": "BC04954FB755B2DB9165DFC7139E5C72ECDD6FEB3A9BDDEC0537C963B792EA07"
+    },
+    {
+      "file": "web/src/api/hooks/useCommands.ts",
+      "beforeSha256": "BA78ADF8AD75E41252D7639F56AEED9DB3C18C5B9C69162240B85A84EC4C54E1",
+      "afterSha256": "BA78ADF8AD75E41252D7639F56AEED9DB3C18C5B9C69162240B85A84EC4C54E1"
+    }
+  ],
+  "accounting": {
+    "attemptsUsedBefore": 0,
+    "actualCoveringRuns": 1,
+    "attemptsUsedAfter": 1,
+    "externalStartupFailuresThisItem": 0,
+    "budgetRenewed": false,
+    "historicalPassesRepeated": false,
+    "scopedResultVerificationExit": 0
+  },
+  "limits": {
+    "sourceFixtureCanonicalEdits": false,
+    "guardBypass": false,
+    "historicalEvidence": "Prior scoped typing, lint, audit and preservation results retained as historical only; not rerun or newly claimed.",
+    "globalTypecheck": "NOTRUN; proof-only item requires scoped existing checks.",
+    "globalLintBuildTests": "NOTRUN; prohibited by item scope.",
+    "pageSectionLineCounts": "NOTRUN; no page or component changes; existing preservation evidence retained.",
+    "hookRouteReverification": "NOTRUN; no hook edits; existing protected hook fingerprint unchanged.",
+    "browserNativeAcceptance": "NOTRUN; no browser required for the assigned existing Vitest proof.",
+    "phaseGate": "NOTRUN; no native, whole-page or global gate claim.",
+    "independentCopyNeeds": "Dedicated insufficient-evidence copy and other page-grade/locale/catalog work remain independently owned; this proof does not close them.",
+    "gitDockerServersDownloadsInstalls": "NOTRUN."
+  }
+}
