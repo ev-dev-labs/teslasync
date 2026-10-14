@@ -13,7 +13,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   EmbeddedChart, type ChartDataColumn,
 } from '@/components/charts';
-import { Skeleton, EmptyState, QueryError, StaleRefreshWarning } from '@/components/feedback';
+import { Skeleton, EmptyState, QueryError, StaleRefreshWarning, DataSourceNotice, resolveDataSourceStatus } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 
 import { useAnomalies } from '@/api/hooks/useAnomalies';
@@ -28,6 +28,7 @@ import { chartTokens, typography } from '@/lib/tokens';
 
 import { AnomalyTimelineCard, SystemHealthCard } from '../components/anomaly-dashboard';
 import { anomalySummary } from '../components/statstrip-anomaly/anomalySummary';
+import { healthStatus } from '../components/anomaly-dashboard/anomalyHelpers';
 
 export default function AnomalyDashboardPage() {
   const { t } = useTranslation();
@@ -39,10 +40,15 @@ export default function AnomalyDashboardPage() {
   const noVehicle = activeIdStr === null;
 
   const anomaliesQuery = useAnomalies(activeIdStr);
-  const { data, isLoading: queryLoading, refetch } = anomaliesQuery;
+  const { data, refetch } = anomaliesQuery;
   const state = useDataState(anomaliesQuery, { provenance: 'inferred' });
+  const source = { id: 'anomalies', label: t('anomaly.title', 'Anomaly detection'), query: anomaliesQuery, enabled: !noVehicle };
+  const sourceStatus = resolveDataSourceStatus(source);
   const error = state.fatalError;
-  const isLoading = queryLoading && !state.hasData;
+  const isLoading = !noVehicle && !state.hasData && sourceStatus === 'loading';
+  const initialBlocked = !noVehicle && !state.hasData && sourceStatus === 'paused';
+  const retained = state.hasData && (state.refreshError != null || state.isRefreshBlocked);
+  const pausedLabel = t('dataSources.status.paused', 'Refresh paused');
 
   /* Stable retry handler shared by all three error panels (frequency, health,
      timeline) so we don't allocate three fresh closures on every render. */
@@ -77,7 +83,7 @@ export default function AnomalyDashboardPage() {
 
   const emptyMessage = noVehicle
     ? t('anomaly.selectVehicle', 'Select a vehicle to view its anomaly analysis.')
-    : t('anomaly.noData', 'No data available yet.');
+    : initialBlocked ? pausedLabel : t('anomaly.noData', 'No data available yet.');
 
   return (
     <PageLayout
@@ -86,6 +92,7 @@ export default function AnomalyDashboardPage() {
       query={anomaliesQuery}
     >
       <StaleRefreshWarning state={state} />
+      {initialBlocked && <DataSourceNotice sources={[source]} />}
       {/* ── 1. Summary — independently scoped source metrics ───────── */}
       <FadeIn>
         <section aria-label={t('anomaly.kpis', 'Summary metrics')}>
@@ -99,10 +106,11 @@ export default function AnomalyDashboardPage() {
             scope={summary.period.label}
             statusLabel={isLoading ? t('common.loading', 'Loading')
               : error ? t('error.loadFailed', 'Failed to load data')
-                : state.refreshError || state.isRefreshBlocked ? t('developerReference.stats.state.retained', 'Showing retained measurements')
-                  : data ? t('anomaly.summary.available', 'Detector snapshot available')
+                : initialBlocked ? pausedLabel
+                  : retained ? t('developerReference.stats.state.retained', 'Showing retained measurements')
+                  : state.hasData ? t('anomaly.summary.available', 'Detector snapshot available')
                     : t('anomaly.summary.unavailable', 'Detector snapshot unavailable')}
-            statusTone={error ? 'danger' : state.refreshError || state.isRefreshBlocked ? 'warning' : 'neutral'}
+            statusTone={error ? 'danger' : retained ? 'warning' : 'neutral'}
             loading={isLoading}
           />
         </section>
@@ -146,7 +154,7 @@ export default function AnomalyDashboardPage() {
             ) : signalFrequency.length === 0 ? (
               <EmptyState /* no-action: transient — appears until the detector has produced results */
                 icon={<Icon icon={BarChart3} size="xl" />}
-                message={noVehicle ? emptyMessage : t('anomaly.noFrequency', 'Anomaly frequency data will appear after detection runs.')}
+                message={noVehicle || initialBlocked ? emptyMessage : t('anomaly.noFrequency', 'Anomaly frequency data will appear after detection runs.')}
               />
             ) : (
               <div className="h-72 min-w-0 sm:h-80">
@@ -188,12 +196,12 @@ export default function AnomalyDashboardPage() {
             ) : healthEntries.length === 0 ? (
               <EmptyState /* no-action: transient — health grid populates once telemetry is available */
                 icon={<Icon icon={HeartPulse} size="xl" />}
-                message={noVehicle ? emptyMessage : t('anomaly.noHealth', 'Health data will appear once telemetry is available.')}
+                message={noVehicle || initialBlocked ? emptyMessage : t('anomaly.noHealth', 'Health data will appear once telemetry is available.')}
               />
             ) : (
               <ul className="space-y-2">
                 {healthEntries.map(([category, status]) => (
-                  <SystemHealthCard key={category} category={category} status={status} />
+                  <SystemHealthCard key={category} category={category} status={healthStatus(status)} />
                 ))}
               </ul>
             )}
@@ -221,9 +229,9 @@ export default function AnomalyDashboardPage() {
           ) : error ? (
             <QueryError error={error} onRetry={handleRetry} />
           ) : anomalies.length === 0 ? (
-            <EmptyState /* no-action: healthy state — no anomalies detected, nothing to recover */
-              icon={<Icon icon={ShieldCheck} size="xl" />}
-              message={noVehicle || !state.hasData ? emptyMessage : t('anomaly.noAnomalies', 'No anomalies detected — all systems normal.')}
+            <EmptyState /* no-action: an empty result is not a system-health assessment */
+              icon={<Icon icon={AlertTriangle} size="xl" />}
+              message={emptyMessage}
             />
           ) : (
             <ul className="grid grid-cols-1 gap-3 md:grid-cols-2 2xl:grid-cols-3 3xl:grid-cols-4">

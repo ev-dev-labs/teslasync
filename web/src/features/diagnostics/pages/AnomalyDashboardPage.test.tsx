@@ -100,8 +100,8 @@ vi.mock('@/components/charts', async (importActual) => {
 // Timeline + health cards — prop-capturing stubs echo the threaded row so the
 // page's mapping (one card per anomaly / per health category) is assertable.
 vi.mock('../components/anomaly-dashboard', () => ({
-  AnomalyTimelineCard: ({ anomaly }: { anomaly: { signal: string; severity: string; message: string } }) => (
-    <li data-testid="anomaly-card">{`${anomaly.signal}|${anomaly.severity}|${anomaly.message}`}</li>
+  AnomalyTimelineCard: ({ anomaly }: { anomaly: { signal: string; severity: string; message: string; value: number; baseline: number; z_score: number } }) => (
+    <li data-testid="anomaly-card" data-value={anomaly.value} data-baseline={anomaly.baseline} data-z-score={anomaly.z_score}>{`${anomaly.signal}|${anomaly.severity}|${anomaly.message}`}</li>
   ),
   SystemHealthCard: ({ category, status }: { category: string; status: string }) => (
     <li data-testid="health-card">{`${category}:${status}`}</li>
@@ -280,6 +280,15 @@ describe('AnomalyDashboardPage', () => {
     expect(screen.getAllByTestId('health-card')).toHaveLength(3);
     expect(screen.getAllByTestId('anomaly-card')).toHaveLength(3);
     expect(within(screen.getByRole('region', { name: 'Summary metrics' })).getByText('42')).toBeInTheDocument();
+    expect(within(screen.getByTestId('anomaly-summary')).getByText('Showing retained measurements')).toBeInTheDocument();
+
+    mockedRequest.mockResolvedValue(makeData({ signals_monitored: 43 }));
+    fireEvent.click(within(screen.getByTestId('stale-refresh-warning')).getByRole('button', { name: 'Refresh' }));
+    expect(await within(screen.getByTestId('anomaly-summary')).findByText('43')).toBeInTheDocument();
+    expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
+    expect(within(screen.getByTestId('anomaly-summary')).getByText('Detector snapshot available')).toBeInTheDocument();
+    expect(screen.getAllByTestId('anomaly-card')).toHaveLength(3);
+    expect(screen.getAllByTestId('health-card')).toHaveLength(3);
   });
 
   it('renders the shell — heading, subtitle, three labelled regions, and the page title — and issues no request when no vehicle is scoped', () => {
@@ -328,6 +337,7 @@ describe('AnomalyDashboardPage', () => {
 
     const summary = screen.getByTestId('anomaly-summary');
     expect(summary).toHaveAttribute('aria-busy', 'true');
+    expect(within(summary).getByText('Loading')).toBeInTheDocument();
     expect(summary.querySelectorAll('[data-operational-metric]')).toHaveLength(4);
     expect(summary.querySelector('[data-operational-value]')).toBeNull();
     expect(screen.queryByTestId('freq-bar-chart')).not.toBeInTheDocument();
@@ -425,7 +435,7 @@ describe('AnomalyDashboardPage', () => {
       screen.getByText('Health data will appear once telemetry is available.'),
     ).toBeInTheDocument();
     expect(
-      screen.getByText('No anomalies detected — all systems normal.'),
+      screen.getByText('No data available yet.'),
     ).toBeInTheDocument();
 
     expect(screen.queryByTestId('freq-bar-chart')).not.toBeInTheDocument();
@@ -434,6 +444,11 @@ describe('AnomalyDashboardPage', () => {
     expect(
       screen.queryByText('Select a vehicle to view its anomaly analysis.'),
     ).not.toBeInTheDocument();
+    const summary = screen.getByTestId('anomaly-summary');
+    expect(within(summary).getByText('Detector snapshot available')).toBeInTheDocument();
+    expect(summary.querySelectorAll('[data-value-state="value"]')).toHaveLength(4);
+    for (const value of summary.querySelectorAll('[data-operational-value]')) expect(value).toHaveTextContent(/^0$/);
+    expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
   });
 
   it('on query failure: shows a retryable error in all three data sections, keeps the KPI band, and refetches when Retry is clicked', async () => {
@@ -454,6 +469,42 @@ describe('AnomalyDashboardPage', () => {
     expect(mockedRequest).toHaveBeenCalledTimes(1);
     fireEvent.click(retries[0]);
     await waitFor(() => expect(mockedRequest).toHaveBeenCalledTimes(2));
+  });
+
+  it('never infers category coverage from a nonzero monitored total or legacy normal statuses', async () => {
+    mockedRequest.mockResolvedValue(makeData({
+      anomalies: [], signals_monitored: 42, health_summary: { battery: 'normal', tires: 'unknown' },
+    }));
+    renderPage();
+    expect(await screen.findByText('battery:unknown')).toBeInTheDocument();
+    expect(screen.getByText('tires:unknown')).toBeInTheDocument();
+    expect(screen.queryByText(/all systems normal/i)).not.toBeInTheDocument();
+    for (const name of ['Most frequent anomalies', 'System health', 'Anomaly timeline']) {
+      expect(screen.getByRole('region', { name })).toBeInTheDocument();
+    }
+  });
+
+  it('preserves signed and fractional anomaly evidence', async () => {
+    mockedRequest.mockResolvedValue(makeData({
+      anomalies: [makeAnomaly({ signal: 'OutsideTemp', value: -0.125, baseline: 0, z_score: 3.25 })],
+    }));
+    renderPage();
+    expect(await screen.findByTestId('anomaly-card')).toHaveTextContent('OutsideTemp');
+    expect(screen.getByTestId('anomaly-card')).toHaveAttribute('data-value', '-0.125');
+    expect(screen.getByTestId('anomaly-card')).toHaveAttribute('data-baseline', '0');
+    expect(screen.getByTestId('anomaly-card')).toHaveAttribute('data-z-score', '3.25');
+    expect(screen.getByTestId('freq-row')).toHaveAttribute('data-count', '1');
+  });
+
+  it('keeps invalid source counts distinct from measured zero', async () => {
+    mockedRequest.mockResolvedValue(makeData({
+      signals_monitored: Number.NaN, anomalies_last_7d: -1, anomalies_last_24h: 0,
+    }));
+    renderPage();
+    const summary = screen.getByTestId('anomaly-summary');
+    await within(summary).findByText('0');
+    expect(summary.querySelectorAll('[data-value-state="invalid"]')).toHaveLength(2);
+    expect(summary.querySelectorAll('[data-value-state="value"]')).toHaveLength(2);
   });
 
   it('requests the SI anomalies endpoint with a snake_case vehicle_id, no /api/v1 prefix, and a days window', async () => {
@@ -499,20 +550,69 @@ describe('AnomalyDashboardPage', () => {
     expect(mockedRequest).not.toHaveBeenCalled();
   });
 
-  it('does not claim all systems normal when the initial detector request is paused without a snapshot', async () => {
+  it('distinguishes initially paused acquisition from retained data and recovers the detector snapshot', async () => {
     const { onlineManager } = await import('@tanstack/react-query');
     const wasOnline = onlineManager.isOnline();
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    mockedRequest.mockResolvedValue(makeData());
     onlineManager.setOnline(false);
     const view = renderPage(client);
     try {
       const timeline = screen.getByRole('region', { name: 'Anomaly timeline' });
-      expect(within(timeline).getByText('No data available yet.')).toBeInTheDocument();
+      expect(within(timeline).getByText('Refresh paused')).toBeInTheDocument();
+      const summary = screen.getByTestId('anomaly-summary');
+      expect(within(summary).getByText('Refresh paused')).toBeInTheDocument();
+      expect(summary).not.toHaveAttribute('aria-busy', 'true');
+      expect(screen.queryByText('Showing retained measurements')).not.toBeInTheDocument();
+      expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
+      expect(screen.queryByText(/offline/i)).not.toBeInTheDocument();
+      expect(screen.queryByText('No data available yet.')).not.toBeInTheDocument();
       expect(screen.queryByText('No anomalies detected — all systems normal.')).not.toBeInTheDocument();
       expect(screen.getByTestId('anomaly-summary').querySelectorAll('[data-value-state="missing"]')).toHaveLength(4);
       expect(screen.getByRole('region', { name: 'Most frequent anomalies' })).toBeInTheDocument();
       expect(screen.getByRole('region', { name: 'System health' })).toBeInTheDocument();
       expect(mockedRequest).not.toHaveBeenCalled();
+      await act(async () => { onlineManager.setOnline(true); });
+      expect(await within(summary).findByText('42')).toBeInTheDocument();
+      expect(within(summary).getByText('Detector snapshot available')).toBeInTheDocument();
+      expect(screen.queryByText('Refresh paused')).not.toBeInTheDocument();
+      expect(within(timeline).getAllByTestId('anomaly-card')).toHaveLength(3);
+    } finally {
+      view.unmount();
+      client.clear();
+      onlineManager.setOnline(wasOnline);
+    }
+  });
+
+  it('retains the snapshot during a paused refresh without inventing an offline cause and recovers', async () => {
+    const { onlineManager } = await import('@tanstack/react-query');
+    const wasOnline = onlineManager.isOnline();
+    mockedRequest.mockResolvedValueOnce(makeData()).mockResolvedValueOnce(makeData({ signals_monitored: 43 }));
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const view = renderPage(client);
+    try {
+      await screen.findByTestId('freq-bar-chart');
+      act(() => {
+        onlineManager.setOnline(false);
+        void client.invalidateQueries({ queryKey: ['anomalies', '7', 7] });
+      });
+      const warning = await screen.findByTestId('stale-refresh-warning');
+      expect(warning).toHaveAttribute('data-refresh-blocked', 'true');
+      const summary = screen.getByTestId('anomaly-summary');
+      expect(within(summary).getByText('Showing retained measurements')).toBeInTheDocument();
+      expect(within(summary).getByText('42')).toBeInTheDocument();
+      expect(summary).not.toHaveAttribute('aria-busy', 'true');
+      expect(screen.getByTestId('freq-bar-chart')).toHaveAttribute('data-rows', '2');
+      expect(screen.getAllByTestId('health-card')).toHaveLength(3);
+      expect(screen.getAllByTestId('anomaly-card')).toHaveLength(3);
+      expect(screen.queryByText(/offline/i)).not.toBeInTheDocument();
+      expect(mockedRequest).toHaveBeenCalledTimes(1);
+
+      await act(async () => { onlineManager.setOnline(true); });
+      expect(await within(summary).findByText('43')).toBeInTheDocument();
+      expect(within(summary).getByText('Detector snapshot available')).toBeInTheDocument();
+      expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
+      expect(screen.queryByText('Showing retained measurements')).not.toBeInTheDocument();
     } finally {
       view.unmount();
       client.clear();
