@@ -136,6 +136,7 @@ export default function RoadHazardMeshPage() {
 
       <FadeIn delay={0.05}>
         <EvidencePanel
+          query={query}
           quality={query.data?.data_quality}
           evidence={items.flatMap((item) => item.evidence ?? [])}
           limitations={query.data?.limitations}

@@ -158,6 +158,7 @@ export default function BehavioralSentinelPage() {
 
       <FadeIn delay={0.05}>
         <EvidencePanel
+          query={query}
           quality={query.data?.data_quality}
           evidence={findings.flatMap((finding) => finding.evidence ?? [])}
           limitations={query.data?.limitations}

@@ -1,8 +1,11 @@
 import { AlertTriangle, Database, ShieldCheck } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { EmptyState } from '@/components/feedback';
+import { SourceContent, type SourceState } from '@/components/layout';
 import { Badge, Icon, Text, type BadgeProps } from '@/components/ui';
 import { KVList } from '@/components/data-display';
+import type { DataStateSource } from '@/api/dataState';
+import { useDataState } from '@/hooks/useDataState';
 import { useDateFormat } from '@/hooks/useDateFormat';
 import { cn } from '@/lib/cn';
 import { neonColorMap, typography } from '@/lib/tokens';
@@ -16,6 +19,8 @@ interface EvidencePanelProps {
   evidence?: Evidence[] | null;
   limitations?: string[] | null;
   unsupported?: string[] | null;
+  /** The same source as the caller's insight; its notices and retry remain caller-owned. */
+  query?: DataStateSource<unknown>;
 }
 
 function qualityVariant(status: DataQuality['status'] | undefined): BadgeProps['variant'] {
@@ -29,10 +34,23 @@ export function EvidencePanel({
   evidence,
   limitations,
   unsupported,
+  query,
 }: EvidencePanelProps) {
   const { formatDateTime } = useDateFormat();
   const { fmtInt, fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
+  const dataState = useDataState(query ?? {});
+  const sourceState: SourceState = !query || dataState.hasData ? 'ready'
+    : !dataState.fatalError && (query.isLoading || query.fetchStatus === 'fetching') ? 'loading'
+    : 'empty';
+  const unknownMessage = t('common.unknown', 'Unknown');
+  const sourceContentProps = {
+    state: sourceState,
+    emptyMessage: unknownMessage,
+    errorMessage: t('advancedIntelligence.panel.error', 'Intelligence evidence could not be loaded.'),
+    // Do not repeat the parent insight's failure/paused notice or recovery action.
+    emptyContent: <Text as="p" variant="bodySm" className={typography.color.secondary}>{unknownMessage}</Text>,
+  };
   const evidenceItems = evidence ?? [];
   const limitationItems = limitations ?? [];
   const unsupportedItems = unsupported ?? [];
@@ -45,7 +63,10 @@ export function EvidencePanel({
         'Supported observations are separated from assumptions and unsupported fields.',
       )}
     >
-      <div className="grid min-w-0 gap-5 break-words lg:grid-cols-3">
+      <div className="grid min-w-0 gap-5 break-words lg:grid-cols-3"
+        aria-busy={query ? sourceState === 'loading' || dataState.isRefreshing : undefined}
+        data-source-status={query ? dataState.status : undefined}
+        data-source-provenance={query ? dataState.provenance : undefined}>
         <section aria-label={t('advancedIntelligence.quality.title', 'Data quality')} className="min-w-0 space-y-3">
           <div className="flex items-center gap-2">
             <Icon icon={ShieldCheck} className={typography.color.secondary} aria-hidden={true} />
@@ -53,6 +74,7 @@ export function EvidencePanel({
               {t('advancedIntelligence.quality.title', 'Data quality')}
             </Text>
           </div>
+          <SourceContent {...sourceContentProps} label={t('advancedIntelligence.quality.title', 'Data quality')}>
           {quality ? (
             <>
               <Badge variant={qualityVariant(quality.status)} dot>{quality.status}</Badge>
@@ -71,6 +93,7 @@ export function EvidencePanel({
               {t('advancedIntelligence.quality.unsupported', 'Quality metadata is unsupported.')}
             </Text>
           )}
+          </SourceContent>
         </section>
 
         <section aria-label={t('advancedIntelligence.evidence.sources', 'Evidence sources')} className="min-w-0 space-y-3">
@@ -80,6 +103,7 @@ export function EvidencePanel({
               {t('advancedIntelligence.evidence.sources', 'Evidence sources')}
             </Text>
           </div>
+          <SourceContent {...sourceContentProps} label={t('advancedIntelligence.evidence.sources', 'Evidence sources')}>
           {evidenceItems.length > 0 ? evidenceItems.map((item, index) => (
             <div key={`${item.source}-${index}`} className="min-w-0 rounded-lg border border-[var(--border-default)] bg-[var(--surface-2)] p-3">
               <Text as="p" variant="label">{item.source}</Text>
@@ -100,6 +124,7 @@ export function EvidencePanel({
               message={t('advancedIntelligence.evidence.empty', 'No supporting evidence was returned.')}
             />
           )}
+          </SourceContent>
         </section>
 
         <section aria-label={t('advancedIntelligence.limitations.title', 'Limitations')} className="min-w-0 space-y-3">
@@ -109,6 +134,7 @@ export function EvidencePanel({
               {t('advancedIntelligence.limitations.title', 'Limitations')}
             </Text>
           </div>
+          <SourceContent {...sourceContentProps} label={t('advancedIntelligence.limitations.title', 'Limitations')}>
           {limitationItems.length > 0 ? limitationItems.map((item, index) => (
             <Text as="p" variant="bodySm" key={`${item}-${index}`}>• {item}</Text>
           )) : (
@@ -116,6 +142,7 @@ export function EvidencePanel({
               {t('advancedIntelligence.limitations.empty', 'No additional limitations were returned.')}
             </Text>
           )}
+          </SourceContent>
           {unsupportedItems.length > 0 ? (
             <div className={cn('min-w-0 rounded-lg border p-3', neonColorMap.amber.border, neonColorMap.amber.bg)}>
               <Text as="p" variant="label">
