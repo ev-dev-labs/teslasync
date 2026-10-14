@@ -3,13 +3,16 @@ import { useTranslation } from 'react-i18next';
 
 import { Badge, Text } from '@/components/ui';
 import { formatDateTime } from '@/lib/dateFormat';
+import { isLiveFieldFresh, liveFieldAge, type VehicleLiveState } from '@/hooks/useVehicleLive';
 
 
 import { ChargeAdvisorSection } from './ChargeAdvisorSection';
 import type { ChargeAdvisorComponentProps } from './types';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
-export function ChargeAdvisorCurrentState({ analysis, state }: ChargeAdvisorComponentProps) {
+export function ChargeAdvisorCurrentState({ analysis, state, provenance }: ChargeAdvisorComponentProps & {
+  provenance: VehicleLiveState['advisorProvenance'];
+}) {
   const { fmtNumber, fmtPercent } = useNumberFormatting();
   const { t } = useTranslation();
   const current = analysis.current;
@@ -35,6 +38,24 @@ export function ChargeAdvisorCurrentState({ analysis, state }: ChargeAdvisorComp
       : current.retrievalState === 'unavailable'
         ? t('chargeAdvisor.current.retrievalUnavailable', 'Unavailable')
         : t('chargeAdvisor.current.retrievalUnknown', 'Unknown');
+  const fieldEvidence = (field: keyof typeof provenance) => {
+    const observation = provenance[field];
+    const fieldAge = liveFieldAge(observation, analysis.currentStateNowMs);
+    return (
+      <Text as="p" variant="caption" className="mt-2" data-testid={`charge-advisor-source-${field}`}>
+        {t('chargeAdvisor.current.source', 'Source')}: {observation?.source ?? t('chargeAdvisor.current.unknown', 'Unknown')}
+        {' · '}{t('chargeAdvisor.current.observed', 'Observed')}: {observation?.observedAtMs == null
+          ? '—' : formatDateTime(new Date(observation.observedAtMs), { tz: analysis.timeZone })}
+        {' · '}{fieldAge == null ? t('chargeAdvisor.current.unknown', 'Unknown')
+          : t('chargeAdvisor.current.ageDays', '{{days}} days', { days: fmtNumber(fieldAge / 86_400_000) })}
+        {' · '}{isLiveFieldFresh(observation, analysis.currentStateNowMs)
+          ? t('chargeAdvisor.current.fresh', 'Fresh')
+          : fieldAge == null || observation?.source === 'l2' || observation?.source === 'unknown'
+            ? t('chargeAdvisor.current.unknown', 'Unknown')
+            : t('chargeAdvisor.current.stale', 'Stale')}
+      </Text>
+    );
+  };
 
   return (
     <ChargeAdvisorSection
@@ -70,6 +91,7 @@ export function ChargeAdvisorCurrentState({ analysis, state }: ChargeAdvisorComp
           <Text variant="caption">{t('chargeAdvisor.current.observed', 'Observed')}</Text>
           <Text className="mt-1 text-sm font-semibold">{observed}</Text>
           <Text variant="caption">{age}</Text>
+          {current.source === 'live' && fieldEvidence('batteryLevel')}
         </div>
         <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3">
           <Text variant="caption">{t('chargeAdvisor.current.state', 'Vehicle state')}</Text>
@@ -80,6 +102,7 @@ export function ChargeAdvisorCurrentState({ analysis, state }: ChargeAdvisorComp
                 ? t('chargeAdvisor.current.notCharging', 'Not charging')
                 : t('chargeAdvisor.current.unknown', 'Unknown')}
           </Text>
+          {fieldEvidence('isCharging')}
           <Text variant="caption">
             {current.chargeLimitPct == null
               ? t('chargeAdvisor.current.noLimit', 'Charge limit —')
@@ -87,6 +110,7 @@ export function ChargeAdvisorCurrentState({ analysis, state }: ChargeAdvisorComp
                 pct: fmtNumber(current.chargeLimitPct),
               })}
           </Text>
+          {fieldEvidence('chargeLimitSoc')}
         </div>
         <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3">
           <Text variant="caption">{t('chargeAdvisor.current.retrieval', 'Signal retrieval')}</Text>
@@ -102,6 +126,8 @@ export function ChargeAdvisorCurrentState({ analysis, state }: ChargeAdvisorComp
       </div>
       <Text as="p" variant="caption" className="mt-4">
         <Clock3 className="mr-1 inline h-3.5 w-3.5" aria-hidden="true" />
+        {t('chargeAdvisor.current.sourceLive', 'Live signal')}
+        {' · '}{t('chargeAdvisor.current.fresh', 'Fresh')} ≤ {fmtNumber(2)} {t('common.min', 'min')}.{' '}
         {t(
           'chargeAdvisor.current.note',
           'Historical fallback values older than two days are shown as stale and cannot produce actionable guidance.',

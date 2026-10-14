@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ToastProvider } from '@/components/feedback';
 import type { ChargingSession } from '@/types/charging';
 import type { Drive } from '@/types/driving';
+import type { VehicleLiveState } from '@/hooks/useVehicleLive';
 
 const FROZEN_NOW = Date.parse('2026-06-02T12:00:00.000Z');
 const h = vi.hoisted(() => ({
@@ -18,6 +19,13 @@ const h = vi.hoisted(() => ({
   timezoneHook: vi.fn(),
   driveRefetch: vi.fn(),
   chargingRefetch: vi.fn(),
+  adviceHook: vi.fn(),
+  provenance: null as VehicleLiveState['advisorProvenance'] | null,
+  observations: null as null | {
+    batteryLevelObservation: { present: boolean; valid: boolean; value: number | null };
+    chargeLimitSocObservation: { present: boolean; valid: boolean; value: number | null };
+    isChargingObservation: { present: boolean; valid: boolean; value: boolean | null };
+  },
   live: {
     state: {
       batteryLevel: 80,
@@ -82,9 +90,39 @@ vi.mock('@/lib/timezone', async (importOriginal) => {
   };
 });
 
-vi.mock('@/hooks/useVehicleLive', () => ({
-  useVehicleLive: () => h.live,
+vi.mock('@/hooks/useVehicleLive', async (importOriginal) => ({
+  ...await importOriginal<typeof import('@/hooks/useVehicleLive')>(),
+  useVehicleLive: () => ({
+    ...h.live,
+    state: {
+      ...h.live.state,
+      advisorProvenance: h.provenance ?? Object.fromEntries(
+        ['batteryLevel', 'chargeLimitSoc', 'isCharging'].map(field => [field, {
+          observedAtMs: h.live.state.lastUpdated?.getTime() ?? null,
+          ageMs: null,
+          source: h.live.state.lastUpdated == null ? 'unknown' : 'l1',
+          receivedAtMs: FROZEN_NOW,
+        }]),
+      ),
+      ...(h.observations ?? {
+        batteryLevelObservation: { present: h.live.state.signalCount > 0, valid: h.live.state.signalCount > 0, value: h.live.state.signalCount > 0 ? h.live.state.batteryLevel : null },
+        chargeLimitSocObservation: { present: h.live.state.signalCount > 0, valid: h.live.state.signalCount > 0, value: h.live.state.signalCount > 0 ? h.live.state.chargeLimitSoc : null },
+        isChargingObservation: { present: h.live.state.signalCount > 0, valid: h.live.state.signalCount > 0, value: h.live.state.signalCount > 0 ? h.live.state.isCharging : null },
+      }),
+    },
+  }),
 }));
+
+vi.mock('../lib/chargeAdvisor', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../lib/chargeAdvisor')>();
+  return {
+    ...actual,
+    computeChargeAdvice: (...args: Parameters<typeof actual.computeChargeAdvice>) => {
+      h.adviceHook(...args);
+      return actual.computeChargeAdvice(...args);
+    },
+  };
+});
 
 vi.mock('@/hooks/useUnits', () => ({
   useUnits: () => ({
@@ -236,6 +274,8 @@ function expectEveryShell(): void {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  h.observations = null;
+  h.provenance = null;
   h.vehicleId = 7;
   h.timeZone = 'America/Los_Angeles';
   h.drives = query(readyDrives(), {}, h.driveRefetch);
@@ -258,6 +298,106 @@ afterEach(() => {
 });
 
 describe('ChargeAdvisorPage', () => {
+  it('does not use recent unrelated activity to rejuvenate an old battery or charging field', () => {
+    h.provenance = {
+      batteryLevel: { observedAtMs: FROZEN_NOW - 120_001, ageMs: 120_001, source: 'stale', receivedAtMs: FROZEN_NOW },
+      isCharging: { observedAtMs: FROZEN_NOW - 120_001, ageMs: 120_001, source: 'stale', receivedAtMs: FROZEN_NOW },
+      chargeLimitSoc: { observedAtMs: FROZEN_NOW, ageMs: 0, source: 'l1', receivedAtMs: FROZEN_NOW },
+    };
+    h.live.state.isCharging = true;
+    const view = renderPage();
+    const current = within(screen.getByTestId('charge-advisor-current'));
+    expect(current.getByText('Live signal')).toBeInTheDocument();
+    expect(current.getByTestId('charge-advisor-source-batteryLevel')).toHaveTextContent('stale');
+    expect(current.getByTestId('charge-advisor-source-isCharging')).toHaveTextContent('Stale');
+    expect(current.getByTestId('charge-advisor-source-chargeLimitSoc')).toHaveTextContent('Fresh');
+    expect(current.getByText('Charge limit 80.00%')).toBeInTheDocument();
+    expect(screen.getByText('Current state is stale')).toBeInTheDocument();
+    expect(screen.queryByText('Already charging')).not.toBeInTheDocument();
+    vi.mocked(Date.now).mockReturnValue(FROZEN_NOW + 60_000);
+    h.live.state.lastUpdated = new Date(FROZEN_NOW + 60_000);
+    view.rerenderPage();
+    expect(h.adviceHook.mock.lastCall?.[2]).toMatchObject({ observedAtMs: FROZEN_NOW - 120_001 });
+    expect(screen.getByText('Current state is stale')).toBeInTheDocument();
+    expectEveryShell();
+  });
+
+  it('keeps a recent completed endpoint fallback distinct from the live freshness window', () => {
+    h.provenance = {};
+    h.charging = query([chargingAt('2026-06-01')]);
+    renderPage();
+    const current = within(screen.getByTestId('charge-advisor-current'));
+    expect(current.getByText('Completed charge end')).toBeInTheDocument();
+    expect(current.getByText('Fresh')).toBeInTheDocument();
+    expect(current.getByText('80.00%')).toBeInTheDocument();
+    expect(screen.queryByText('Charge limit 80.00%')).not.toBeInTheDocument();
+    expectEveryShell();
+  });
+
+  it('honors unknown source classification even when an envelope supplies a recent timestamp', () => {
+    h.drives = query([]);
+    h.charging = query([]);
+    h.provenance = {
+      batteryLevel: { observedAtMs: FROZEN_NOW, ageMs: 0, source: 'l2', receivedAtMs: FROZEN_NOW },
+    };
+    renderPage();
+    expect(screen.getByText('Current state is stale')).toBeInTheDocument();
+    expect(screen.queryByText('Already charging')).not.toBeInTheDocument();
+    expectEveryShell();
+  });
+
+  it('uses a fresh charging observation independently of an aged battery snapshot', () => {
+    h.live.state.isCharging = true;
+    h.provenance = {
+      batteryLevel: { observedAtMs: FROZEN_NOW - 120_001, ageMs: 120_001, source: 'stale', receivedAtMs: FROZEN_NOW },
+      isCharging: { observedAtMs: FROZEN_NOW, ageMs: 0, source: 'l1', receivedAtMs: FROZEN_NOW },
+    };
+    renderPage();
+    expect(screen.getByText('Already charging')).toBeInTheDocument();
+    expect(screen.getByText('Charging now')).toBeInTheDocument();
+    expectEveryShell();
+  });
+
+  it.each([false, true])('passes null for independently missing or invalid live fields (present=%s)', present => {
+    h.observations = {
+      batteryLevelObservation: { present, valid: false, value: null },
+      chargeLimitSocObservation: { present, valid: false, value: null },
+      isChargingObservation: { present, valid: false, value: null },
+    };
+    renderPage();
+    expectEveryShell();
+    expect(h.adviceHook.mock.lastCall?.[2]).toMatchObject({
+      batteryPct: null, chargeLimitPct: null, isCharging: null,
+    });
+  });
+
+  it.each([0, 0.25, 80.6])('passes exact observed percentage %s without rounding or truthiness defaults', value => {
+    h.observations = {
+      batteryLevelObservation: { present: true, valid: true, value },
+      chargeLimitSocObservation: { present: true, valid: true, value },
+      isChargingObservation: { present: true, valid: true, value: false },
+    };
+    renderPage();
+    expect(h.adviceHook.mock.lastCall?.[2]).toMatchObject({
+      batteryPct: value, chargeLimitPct: value, isCharging: false,
+    });
+    expect(within(screen.getByTestId('charge-advisor-current')).getByText(`${value.toFixed(2)}%`)).toBeInTheDocument();
+  });
+
+  it('does not fill missing charging fields from a valid battery observation', () => {
+    h.observations = {
+      batteryLevelObservation: { present: true, valid: true, value: 80 },
+      chargeLimitSocObservation: { present: false, valid: false, value: null },
+      isChargingObservation: { present: false, valid: false, value: null },
+    };
+    renderPage();
+    expect(h.adviceHook.mock.lastCall?.[2]).toMatchObject({
+      batteryPct: 80, chargeLimitPct: null, isCharging: null,
+    });
+    expect(screen.queryByText('Charge limit 80.00%')).not.toBeInTheDocument();
+    expect(screen.queryByText('Already charging')).not.toBeInTheDocument();
+  });
+
   it('reviews real independent drive and charging row evidence without replacing the accounting categories', () => {
     renderPage();
     const accounting = screen.getByTestId('charge-advisor-accounting');
@@ -560,7 +700,7 @@ describe('ChargeAdvisorPage', () => {
     expect(current.getByText('Fresh')).toBeInTheDocument();
     expect(screen.queryByText('Current state is stale')).not.toBeInTheDocument();
 
-    vi.mocked(Date.now).mockReturnValue(FROZEN_NOW + 2 * 86_400_000 + 60_000);
+    vi.mocked(Date.now).mockReturnValue(FROZEN_NOW + 120_001);
     act(() => vi.advanceTimersByTime(60_000));
 
     expectEveryShell();

@@ -5,9 +5,42 @@ import { useVehicleLiveSignals } from '@/api/hooks/useTelemetry'
 import { telemetryKeys } from '@/api/hooks/useTelemetry'
 import { parseEnumBool, parseBuckleStatus } from '../lib/parseEnums'
 
+interface LiveObservation<T> {
+  present: boolean
+  valid: boolean
+  value: T | null
+}
+
+export const LIVE_FRESHNESS_MS = 120_000
+
+export interface LiveFieldProvenance {
+  observedAtMs: number | null
+  ageMs: number | null
+  source: string
+  receivedAtMs: number
+}
+
+type AdvisorProvenance = Partial<Record<'batteryLevel' | 'chargeLimitSoc' | 'isCharging', LiveFieldProvenance>>
+
+export function liveFieldAge(provenance: LiveFieldProvenance | undefined, nowMs: number): number | null {
+  if (!provenance || provenance.observedAtMs == null || provenance.observedAtMs > nowMs) return null
+  return Math.max(
+    nowMs - provenance.observedAtMs,
+    (provenance.ageMs ?? 0) + Math.max(0, nowMs - provenance.receivedAtMs),
+  )
+}
+
+export function isLiveFieldFresh(provenance: LiveFieldProvenance | undefined, nowMs: number): boolean {
+  const age = liveFieldAge(provenance, nowMs)
+  return age != null && age <= LIVE_FRESHNESS_MS
+    && (provenance?.source === 'l1' || provenance?.source === 'timestamp')
+}
+
 /**
  * Vehicle live state from the in-memory SignalStore via SSE.
  * Always complete — never has null fields for known signals.
+ * Advisor observations distinguish missing/invalid evidence from measured zero
+ * and retain percentage precision independently of the rounded display fields.
  * Replaces polling multiple endpoints every 3-5 seconds.
  */
 export interface VehicleLiveState {
@@ -20,6 +53,7 @@ export interface VehicleLiveState {
 
   // Battery / Range
   batteryLevel: number
+  batteryLevelObservation: LiveObservation<number>
   soc: number
   idealRange: number
   ratedRange: number
@@ -67,8 +101,10 @@ export interface VehicleLiveState {
   chargeRate: number
   chargerPower: number
   chargeLimitSoc: number
+  chargeLimitSocObservation: LiveObservation<number>
   timeToFullCharge: number
   isCharging: boolean
+  isChargingObservation: LiveObservation<boolean>
   chargePortLatch: string
   packCurrent: number
   packVoltage: number
@@ -178,11 +214,15 @@ export interface VehicleLiveState {
   // Meta
   lastUpdated: Date | null
   signalCount: number
+  advisorProvenance: AdvisorProvenance
 }
 
 const EMPTY_STATE: VehicleLiveState = {
   speed: 0, odometer: 0, gear: '', power: 0, heading: 0,
   batteryLevel: 0, soc: 0, idealRange: 0, ratedRange: 0, estRange: 0, energyRemaining: 0,
+  batteryLevelObservation: { present: false, valid: false, value: null },
+  chargeLimitSocObservation: { present: false, valid: false, value: null },
+  isChargingObservation: { present: false, valid: false, value: null },
   latitude: 0, longitude: 0,
   insideTemp: 0, outsideTemp: 0, hvacPower: false, fanSpeed: 0,
   hvacACEnabled: false, hvacAutoMode: '', hvacFanStatus: 0,
@@ -224,6 +264,64 @@ const EMPTY_STATE: VehicleLiveState = {
   setting24HourTime: false, settingChargeUnit: '', settingDistanceUnit: '',
   settingTemperatureUnit: '', settingTirePressureUnit: '',
   lastUpdated: null, signalCount: 0,
+  advisorProvenance: {},
+}
+
+function parseLiveSignals(raw: Record<string, unknown>, receivedAtMs: number) {
+  const flat: Record<string, unknown> = {}
+  const metadata: Record<string, LiveFieldProvenance> = {}
+  for (const [key, entry] of Object.entries(raw)) {
+    const envelope = entry != null && typeof entry === 'object' && 'value' in entry
+      ? entry as Record<string, unknown>
+      : null
+    flat[key] = envelope ? envelope.value : entry
+    const timestamp = envelope?.timestamp ?? envelope?.ts
+    const parsedTimestamp = typeof timestamp === 'string' ? Date.parse(timestamp) : NaN
+    const observedAtMs = Number.isFinite(parsedTimestamp) && parsedTimestamp > 0 ? parsedTimestamp : null
+    metadata[key] = {
+      observedAtMs,
+      ageMs: typeof envelope?.age_ms === 'number' && Number.isFinite(envelope.age_ms) && envelope.age_ms >= 0
+        ? envelope.age_ms : null,
+      source: typeof envelope?.source === 'string' ? envelope.source : observedAtMs == null ? 'unknown' : 'timestamp',
+      receivedAtMs,
+    }
+  }
+  const parsed = parseSignals(flat)
+  const provenance: AdvisorProvenance = {}
+  if (parsed.batteryLevelObservation) provenance.batteryLevel = metadata.BatteryLevel
+  if (parsed.chargeLimitSocObservation) provenance.chargeLimitSoc = metadata.ChargeLimitSoc
+  if (parsed.isChargingObservation) {
+    // The status is authoritative when valid; otherwise current supplies the evidence.
+    const status = typeof flat.DetailedChargeState === 'string'
+      ? flat.DetailedChargeState.replace(/^DetailedChargeState/, '') : ''
+    const statusValid = ['Charging', 'Starting', 'Complete', 'Stopped', 'Disconnected', 'NoPower'].includes(status)
+    const statusCharging = status === 'Charging' || status === 'Starting'
+    provenance.isCharging = statusValid && (statusCharging || !(typeof flat.ChargeAmps === 'number' && flat.ChargeAmps > 1))
+      ? metadata.DetailedChargeState : metadata.ChargeAmps ?? metadata.DetailedChargeState
+  }
+  return { parsed, provenance }
+}
+
+function mergeAdvisorProvenance(previous: VehicleLiveState, parsed: Partial<VehicleLiveState>, provenance: AdvisorProvenance, raw?: Record<string, unknown>) {
+  const merged = { ...previous.advisorProvenance }
+  const fields = [
+    ['batteryLevel', 'batteryLevelObservation'],
+    ['chargeLimitSoc', 'chargeLimitSocObservation'],
+    ['isCharging', 'isChargingObservation'],
+  ] as const
+  for (const [field, observation] of fields) {
+    const incoming = provenance[field]
+    if (!incoming) continue
+    // Repeated untimed full-state values do not refresh a retained observation.
+    const unchanged = parsed[observation]?.value === previous[observation].value
+      && parsed[observation]?.valid === previous[observation].valid
+    const keys = field === 'batteryLevel' ? ['BatteryLevel']
+      : field === 'chargeLimitSoc' ? ['ChargeLimitSoc'] : ['DetailedChargeState', 'ChargeAmps']
+    const untimedScalar = raw != null && keys.every(key => raw[key] == null || typeof raw[key] !== 'object')
+    if (untimedScalar && incoming.observedAtMs == null && incoming.source === 'unknown' && unchanged && merged[field]) continue
+    merged[field] = incoming
+  }
+  return merged
 }
 
 function parseSignals(raw: Record<string, unknown>): Partial<VehicleLiveState> {
@@ -237,6 +335,16 @@ function parseSignals(raw: Record<string, unknown>): Partial<VehicleLiveState> {
     return typeof v === 'string' ? v : ''
   }
   const bool = (key: string): boolean => parseEnumBool(raw[key])
+  const present = (key: string): boolean => Object.prototype.hasOwnProperty.call(raw, key)
+  const finiteNumber = (key: string): number | null => {
+    const value = raw[key]
+    return typeof value === 'number' && Number.isFinite(value) ? value : null
+  }
+  const percentageObservation = (key: string): LiveObservation<number> => {
+    const value = finiteNumber(key)
+    const valid = value != null && value >= 0 && value <= 100
+    return { present: true, valid, value: valid ? value : null }
+  }
 
   // Driving
   if (raw['VehicleSpeed'] != null) s.speed = n('VehicleSpeed')
@@ -253,6 +361,7 @@ function parseSignals(raw: Record<string, unknown>): Partial<VehicleLiveState> {
 
   // Battery
   if (raw['BatteryLevel'] != null) s.batteryLevel = Math.round(n('BatteryLevel'))
+  if (present('BatteryLevel')) s.batteryLevelObservation = percentageObservation('BatteryLevel')
   if (raw['Soc'] != null) s.soc = n('Soc')
   if (raw['IdealBatteryRange'] != null) s.idealRange = n('IdealBatteryRange')
   if (raw['RatedRange'] != null) s.ratedRange = n('RatedRange')
@@ -306,6 +415,7 @@ function parseSignals(raw: Record<string, unknown>): Partial<VehicleLiveState> {
   if (raw['DCChargingPower'] != null) s.chargerPower = n('DCChargingPower')
   else if (raw['ACChargingPower'] != null) s.chargerPower = n('ACChargingPower')
   if (raw['ChargeLimitSoc'] != null) s.chargeLimitSoc = Math.round(n('ChargeLimitSoc'))
+  if (present('ChargeLimitSoc')) s.chargeLimitSocObservation = percentageObservation('ChargeLimitSoc')
   if (raw['TimeToFullCharge'] != null) s.timeToFullCharge = n('TimeToFullCharge')
   if (raw['ChargePortLatch'] != null) s.chargePortLatch = str('ChargePortLatch')
   if (raw['PackCurrent'] != null) s.packCurrent = n('PackCurrent')
@@ -320,6 +430,17 @@ function parseSignals(raw: Record<string, unknown>): Partial<VehicleLiveState> {
   const dcs = str('DetailedChargeState')
   if (raw['DetailedChargeState'] != null || raw['ChargeAmps'] != null) {
     s.isCharging = dcs.includes('Charging') || dcs.includes('Starting') || n('ChargeAmps') > 1
+  }
+  if (present('DetailedChargeState') || present('ChargeAmps')) {
+    const chargeStatus = dcs.replace(/^DetailedChargeState/, '')
+    const statusValid = ['Charging', 'Starting', 'Complete', 'Stopped', 'Disconnected', 'NoPower'].includes(chargeStatus)
+    const amps = finiteNumber('ChargeAmps')
+    const valid = statusValid || amps != null
+    s.isChargingObservation = {
+      present: true,
+      valid,
+      value: valid ? (statusValid && (chargeStatus === 'Charging' || chargeStatus === 'Starting')) || (amps != null && amps > 1) : null,
+    }
   }
 
   // Security
@@ -477,19 +598,27 @@ export function useVehicleLive(vehicleId?: number) {
     const raw = update.state || update.signals
     if (!raw) return
 
-    const parsed = parseSignals(raw)
+    const receivedAtMs = Date.now()
+    const { parsed, provenance } = parseLiveSignals(raw, receivedAtMs)
     const changedLiveVehicle = liveVehicleIdRef.current !== update.vehicle_id
     liveVehicleIdRef.current = update.vehicle_id
     setState(prev => identityRef.current !== identity ? prev : ({
       ...(!vehicleId && changedLiveVehicle ? EMPTY_STATE : prev),
       ...parsed,
-      lastUpdated: new Date(),
+      advisorProvenance: mergeAdvisorProvenance(!vehicleId && changedLiveVehicle ? EMPTY_STATE : prev, parsed, provenance, raw),
+      lastUpdated: new Date(receivedAtMs),
       signalCount: Object.keys(raw).length,
     }))
   }, [vehicleId, identity])
 
   const { connected } = useRealtimeEvents({
     onVehicleUpdate: handleUpdate,
+    onSignalChange: (data: unknown) => {
+      if (data == null || typeof data !== 'object') return
+      const event = data as Record<string, unknown>
+      if (typeof event.field !== 'string') return
+      handleUpdate({ vehicle_id: event.vehicle_id, signals: { [event.field]: event } })
+    },
     enabled: true,
   })
 
@@ -497,21 +626,14 @@ export function useVehicleLive(vehicleId?: number) {
     if (vehicleId == null || !initialLiveSignals?.signals) return
     if (initialLiveSignals.vehicle_id != null && initialLiveSignals.vehicle_id !== vehicleId) return
 
-    const flat: Record<string, unknown> = {}
-    for (const [k, v] of Object.entries(initialLiveSignals.signals)) {
-      if (v && typeof v === 'object' && 'value' in (v as Record<string, unknown>)) {
-        flat[k] = (v as Record<string, unknown>).value
-      } else {
-        flat[k] = v
-      }
-    }
-
-    const parsed = parseSignals(flat)
+    const receivedAtMs = Date.now()
+    const { parsed, provenance } = parseLiveSignals(initialLiveSignals.signals, receivedAtMs)
     setState(prev => identityRef.current !== identity ? prev : ({
       ...prev,
       ...parsed,
-      lastUpdated: new Date(),
-      signalCount: Object.keys(flat).length,
+      advisorProvenance: mergeAdvisorProvenance(prev, parsed, provenance),
+      lastUpdated: new Date(receivedAtMs),
+      signalCount: Object.keys(initialLiveSignals.signals!).length,
     }))
   }, [initialLiveSignals, vehicleId, identity])
 

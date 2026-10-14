@@ -9,6 +9,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 // initial hydration source). They are only dereferenced inside the mock
 // functions, which run at test time, so plain `let` bindings are safe here.
 let capturedOnVehicleUpdate: ((data: unknown) => void) | undefined
+let capturedOnSignalChange: ((data: unknown) => void) | undefined
 let capturedEnabled: boolean | undefined
 let mockConnected = false
 let mockInitialData:
@@ -18,9 +19,11 @@ let mockInitialData:
 vi.mock('./useRealtimeEvents', () => ({
   useRealtimeEvents: (opts: {
     onVehicleUpdate?: (data: unknown) => void
+    onSignalChange?: (data: unknown) => void
     enabled?: boolean
   }) => {
     capturedOnVehicleUpdate = opts.onVehicleUpdate
+    capturedOnSignalChange = opts.onSignalChange
     capturedEnabled = opts.enabled
     return {
       connected: mockConnected,
@@ -46,7 +49,7 @@ vi.mock('./useLiveRecovery', () => ({
 }))
 
 // Import AFTER the mocks are registered so the hook binds to the fakes.
-import { useVehicleLive } from './useVehicleLive'
+import { isLiveFieldFresh, liveFieldAge, useVehicleLive } from './useVehicleLive'
 
 /** Fire a live `vehicle_update` payload through the captured SSE handler. */
 function emit(payload: unknown) {
@@ -58,10 +61,122 @@ function emit(payload: unknown) {
 describe('useVehicleLive', () => {
   beforeEach((): void => {
     capturedOnVehicleUpdate = undefined
+    capturedOnSignalChange = undefined
     capturedEnabled = undefined
     mockConnected = false
     mockInitialData = undefined
     liveRecoverySpy.mockReset()
+  })
+
+  it('preserves source time, age and classification through hydration and unrelated messages', () => {
+    const observedAtMs = Date.now() - 120_001
+    mockInitialData = { signals: {
+      BatteryLevel: { value: 80.4, timestamp: new Date(observedAtMs).toISOString(), age_ms: 120_001, source: 'stale' },
+      ChargeLimitSoc: { value: 90, ts: new Date(observedAtMs + 120_000).toISOString(), source: 'l1', age_ms: 1 },
+      DetailedChargeState: { value: 'DetailedChargeStateCharging', ts: new Date(observedAtMs).toISOString(), source: 'stale' },
+    } }
+    const { result } = renderHook(() => useVehicleLive(1))
+    const before = result.current.state.advisorProvenance
+    expect(before.batteryLevel).toMatchObject({ observedAtMs, ageMs: 120_001, source: 'stale' })
+    expect(isLiveFieldFresh(before.batteryLevel, observedAtMs + 120_001)).toBe(false)
+    expect(isLiveFieldFresh(before.chargeLimitSoc, observedAtMs + 120_001)).toBe(true)
+    emit({ vehicle_id: 1, state: { VehicleSpeed: 25, BatteryLevel: 80.4 } })
+    expect(result.current.state.advisorProvenance).toEqual(before)
+    expect(result.current.state.batteryLevelObservation.value).toBe(80.4)
+    expect(liveFieldAge(before.batteryLevel, before.batteryLevel!.receivedAtMs + 60_000)).toBeGreaterThanOrEqual(180_001)
+  })
+
+  it('does not invent source time for a legacy scalar or unknown envelope', () => {
+    mockInitialData = { signals: {
+      BatteryLevel: 80,
+      ChargeLimitSoc: { value: 90, source: 'l2', timestamp: '0001-01-01T00:00:00Z' },
+    } }
+    const { result } = renderHook(() => useVehicleLive(1))
+    expect(result.current.state.advisorProvenance.batteryLevel).toMatchObject({ observedAtMs: null, source: 'unknown' })
+    expect(result.current.state.advisorProvenance.chargeLimitSoc).toMatchObject({ observedAtMs: null, source: 'l2' })
+    expect(isLiveFieldFresh(result.current.state.advisorProvenance.batteryLevel, Date.now())).toBe(false)
+  })
+
+  it('ages each field independently at the exact two-minute boundary', () => {
+    const now = Date.now()
+    const { result } = renderHook(() => useVehicleLive(1))
+    emit({ vehicle_id: 1, signals: {
+      BatteryLevel: { value: 80, ts: new Date(now).toISOString() },
+      ChargeLimitSoc: { value: 90, ts: new Date(now - 120_001).toISOString() },
+    } })
+    expect(isLiveFieldFresh(result.current.state.advisorProvenance.batteryLevel, now + 120_000)).toBe(true)
+    expect(isLiveFieldFresh(result.current.state.advisorProvenance.batteryLevel, now + 120_001)).toBe(false)
+    expect(isLiveFieldFresh(result.current.state.advisorProvenance.chargeLimitSoc, now)).toBe(false)
+    emit({ vehicle_id: 1, signals: { DetailedChargeState: { value: 'DetailedChargeStateCharging', ts: new Date(now).toISOString() } } })
+    expect(result.current.state.advisorProvenance.batteryLevel?.observedAtMs).toBe(now)
+    expect(result.current.state.advisorProvenance.chargeLimitSoc?.observedAtMs).toBe(now - 120_001)
+  })
+
+  it('retains the typed signal-change source time instead of its receipt time', () => {
+    const timestamp = new Date(Date.now() - 300_000).toISOString()
+    const { result } = renderHook(() => useVehicleLive(1))
+    act(() => capturedOnSignalChange?.({ vehicle_id: 1, field: 'BatteryLevel', value: 79.5, ts: timestamp }))
+    expect(result.current.state.batteryLevelObservation.value).toBe(79.5)
+    expect(result.current.state.advisorProvenance.batteryLevel?.observedAtMs).toBe(Date.parse(timestamp))
+    expect(isLiveFieldFresh(result.current.state.advisorProvenance.batteryLevel, Date.now())).toBe(false)
+    act(() => capturedOnSignalChange?.({ vehicle_id: 2, field: 'BatteryLevel', value: 40, ts: timestamp }))
+    expect(result.current.state.batteryLevelObservation.value).toBe(79.5)
+  })
+
+  it('does not infer advisor observations from unrelated signals', () => {
+    const { result } = renderHook(() => useVehicleLive(1))
+    emit({ vehicle_id: 1, state: { VehicleSpeed: 0 } })
+    for (const observation of [
+      result.current.state.batteryLevelObservation,
+      result.current.state.chargeLimitSocObservation,
+      result.current.state.isChargingObservation,
+    ]) {
+      expect(observation).toEqual({ present: false, valid: false, value: null })
+    }
+  })
+
+  it.each([null, undefined, '', '0', false, {}, NaN, Infinity, -Infinity])(
+    'marks invalid advisor inputs (%s) as observed but unusable',
+    value => {
+      const { result } = renderHook(() => useVehicleLive(1))
+      emit({ vehicle_id: 1, state: { BatteryLevel: value, ChargeLimitSoc: value, ChargeAmps: value, DetailedChargeState: value } })
+      expect(result.current.state.batteryLevelObservation).toEqual({ present: true, valid: false, value: null })
+      expect(result.current.state.chargeLimitSocObservation).toEqual({ present: true, valid: false, value: null })
+      expect(result.current.state.isChargingObservation).toEqual({ present: true, valid: false, value: null })
+    },
+  )
+
+  it.each([0, 0.25, 79.6, 100])('preserves the exact measured percentage %s', value => {
+    mockInitialData = { signals: { BatteryLevel: { value }, ChargeLimitSoc: { value }, ChargeAmps: { value: 0 } } }
+    const { result } = renderHook(() => useVehicleLive(1))
+    expect(result.current.state.batteryLevelObservation).toEqual({ present: true, valid: true, value })
+    expect(result.current.state.chargeLimitSocObservation).toEqual({ present: true, valid: true, value })
+    expect(result.current.state.isChargingObservation).toEqual({ present: true, valid: true, value: false })
+    emit({ vehicle_id: 1, state: { VehicleSpeed: 12 } })
+    expect(result.current.state.batteryLevelObservation.value).toBe(value)
+  })
+
+  it.each([-1, 100.1])('rejects out-of-range percentages %s', value => {
+    const { result } = renderHook(() => useVehicleLive(1))
+    emit({ vehicle_id: 1, state: { BatteryLevel: value, ChargeLimitSoc: value } })
+    expect(result.current.state.batteryLevelObservation.valid).toBe(false)
+    expect(result.current.state.chargeLimitSocObservation.value).toBeNull()
+  })
+
+  it.each([-16, -0.25, 0, 0.5, 1.25, 16])('accepts signed and fractional measured charge current %s', amps => {
+    const { result } = renderHook(() => useVehicleLive(1))
+    emit({ vehicle_id: 1, state: { ChargeAmps: amps } })
+    expect(result.current.state.isChargingObservation).toEqual({ present: true, valid: true, value: amps > 1 })
+  })
+
+  it('invalidates previously valid observations without losing independent fields', () => {
+    const { result } = renderHook(() => useVehicleLive(1))
+    emit({ vehicle_id: 1, state: { BatteryLevel: 80.4, ChargeLimitSoc: 90.2, DetailedChargeState: 'DetailedChargeStateCharging' } })
+    expect(result.current.state.isChargingObservation.value).toBe(true)
+    emit({ vehicle_id: 1, state: { BatteryLevel: null, DetailedChargeState: 'Unknown' } })
+    expect(result.current.state.batteryLevelObservation).toEqual({ present: true, valid: false, value: null })
+    expect(result.current.state.isChargingObservation.value).toBeNull()
+    expect(result.current.state.chargeLimitSocObservation.value).toBe(90.2)
   })
 
   it('arms SSE reconnect recovery for the live-signals read', () => {
@@ -181,6 +296,7 @@ describe('useVehicleLive', () => {
     const { result } = renderHook(() => useVehicleLive(1))
     emit({ vehicle_id: 1, state: { DetailedChargeState: 'DetailedChargeStateCharging' } })
     expect(result.current.state.isCharging).toBe(true)
+    expect(result.current.state.isChargingObservation).toEqual({ present: true, valid: true, value: true })
     // Charging finished: state no longer indicates charging and amps drop to 0.
     // Previously isCharging was sticky-true and never reset — guard against it.
     emit({
@@ -188,6 +304,7 @@ describe('useVehicleLive', () => {
       state: { DetailedChargeState: 'DetailedChargeStateComplete', ChargeAmps: 0 },
     })
     expect(result.current.state.isCharging).toBe(false)
+    expect(result.current.state.isChargingObservation).toEqual({ present: true, valid: true, value: false })
   })
 
   it('flags isCharging from a meaningful charge current alone', () => {
@@ -333,7 +450,10 @@ describe('useVehicleLive', () => {
 
     emit({ vehicle_id: 2, state: { BatteryLevel: 0 } })
     expect(result.current.state).toEqual({
-      ...emptyState, batteryLevel: 0, signalCount: 1, lastUpdated: expect.any(Date),
+      ...emptyState, batteryLevel: 0,
+      batteryLevelObservation: { present: true, valid: true, value: 0 },
+      advisorProvenance: { batteryLevel: expect.objectContaining({ observedAtMs: null, source: 'unknown' }) },
+      signalCount: 1, lastUpdated: expect.any(Date),
     })
   })
 

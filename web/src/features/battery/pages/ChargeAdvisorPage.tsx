@@ -12,7 +12,7 @@ import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useDataState } from '@/hooks/useDataState';
 import { useUnits } from '@/hooks/useUnits';
-import { useVehicleLive } from '@/hooks/useVehicleLive';
+import { isLiveFieldFresh, liveFieldAge, LIVE_FRESHNESS_MS, useVehicleLive } from '@/hooks/useVehicleLive';
 import { useTimezone } from '@/lib/timezone';
 import type { ChargeAdvisorLiveSnapshot } from '../lib/chargeAdvisor';
 import {
@@ -75,37 +75,61 @@ export default function ChargeAdvisorPage() {
   );
   const liveSnapshot = useMemo<ChargeAdvisorLiveSnapshot>(
     () => ({
-      batteryPct: live.state.signalCount > 0 ? live.state.batteryLevel : null,
-      observedAtMs: live.state.signalCount > 0 ? live.state.lastUpdated?.getTime() ?? null : null,
-      source: live.state.signalCount > 0 ? 'live' : 'unknown',
+      batteryPct: live.state.batteryLevelObservation.value,
+      observedAtMs: live.state.advisorProvenance.batteryLevel?.observedAtMs ?? null,
+      source: live.state.batteryLevelObservation.present ? 'live' : 'unknown',
       retrievalState: live.state.signalCount > 0
         ? live.connected ? 'connected' : 'disconnected'
         : 'unavailable',
       connected: live.state.signalCount > 0 ? live.connected : null,
-      isCharging: live.state.signalCount > 0 ? live.state.isCharging : null,
-      chargeLimitPct: live.state.signalCount > 0 ? live.state.chargeLimitSoc : null,
+      isCharging: isLiveFieldFresh(live.state.advisorProvenance.isCharging, currentStateNowMs)
+        ? live.state.isChargingObservation.value : null,
+      chargeLimitPct: isLiveFieldFresh(live.state.advisorProvenance.chargeLimitSoc, currentStateNowMs)
+        ? live.state.chargeLimitSocObservation.value : null,
     }),
-    [live.connected, live.state],
+    [currentStateNowMs, live.connected, live.state],
   );
   const analysis = useMemo(
-    () => computeChargeAdvice(
-      drives,
-      chargingSessions,
-      liveSnapshot,
-      analysisNowMs,
-      timeZone,
-      {
+    () => {
+      const options = {
         historyLimit: HISTORY_LIMIT,
         reserveFloorPct,
         currentStateNowMs,
-      },
-    ),
+      };
+      let result = computeChargeAdvice(
+        drives, chargingSessions, liveSnapshot, analysisNowMs, timeZone, options,
+      );
+      // Endpoint fallback remains two days; only a selected live SoC uses two minutes.
+      if (result.current.source === 'live') {
+        result = computeChargeAdvice(
+          drives, chargingSessions, liveSnapshot, analysisNowMs, timeZone,
+          { ...options, fallbackMaxAgeMs: LIVE_FRESHNESS_MS },
+        );
+        result = {
+          ...result,
+          current: { ...result.current, ageMs: liveFieldAge(live.state.advisorProvenance.batteryLevel, currentStateNowMs) },
+        };
+        if (!isLiveFieldFresh(live.state.advisorProvenance.batteryLevel, currentStateNowMs)) {
+          result = { ...result, current: { ...result.current, freshness: 'stale' }, guidance: 'stale' };
+        }
+      }
+      const isCharging = isLiveFieldFresh(live.state.advisorProvenance.isCharging, currentStateNowMs)
+        ? live.state.isChargingObservation.value : null;
+      const chargeLimitPct = isLiveFieldFresh(live.state.advisorProvenance.chargeLimitSoc, currentStateNowMs)
+        ? live.state.chargeLimitSocObservation.value : null;
+      return {
+        ...result,
+        current: { ...result.current, isCharging, chargeLimitPct },
+        guidance: isCharging === true ? 'already_charging' as const : result.guidance,
+      };
+    },
     [
       analysisNowMs,
       chargingSessions,
       currentStateNowMs,
       drives,
       liveSnapshot,
+      live.state,
       reserveFloorPct,
       timeZone,
     ],
@@ -176,7 +200,7 @@ export default function ChargeAdvisorPage() {
         />
       )}
       <FadeIn delay={0.05}>
-        <ChargeAdvisorCurrentState analysis={analysis} state={state} />
+        <ChargeAdvisorCurrentState analysis={analysis} state={state} provenance={live.state.advisorProvenance} />
       </FadeIn>
       <FadeIn delay={0.1}>
         <ChargeAdvisorScenarioChart analysis={analysis} state={state} />
