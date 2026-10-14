@@ -1,0 +1,681 @@
+{
+  "item": "phase6-qa-vehicles-tesla-physics",
+  "attempt": 1,
+  "actor": "6c045a81-d5e5-49b9-abe6-021916a227a2",
+  "mode": "READONLY source-only QA, no accepted-page redo",
+  "outcome": "Source review complete; implementation/native acceptance NOTRUN",
+  "clocks": {
+    "firstToolUTC": "2026-10-14T01:27:50.6682863Z",
+    "returnByUTC": "2026-10-14T01:44:50.678Z",
+    "hardByUTC": "2026-10-14T01:49:50.678Z",
+    "noReset": true
+  },
+  "authority": {
+    "playbook": "Sole docs/orchestrator-loop.md fully read296 lines",
+    "contract": "docs/frontend-design-contract.md fully read2539 lines including addenda",
+    "mission": "docs/frontend-mission.md principles/architecture and final QA/DoD sections read",
+    "handoff": "docs/session-handoff.md current1-100 read",
+    "inventory": "docs/frontend-inventory.md285; audit-page-234.json fully read",
+    "queue": "migration-queue.md lifecycle/current exact QA74, actor, accepted predecessor2019 and targeted owner searches; citations shifted1 line during parent edits",
+    "instructions": "Copilot, React frontend, frontend SI cutover, unit conversion and frontend-worker-conventions read fully",
+    "predecessor": "phase5-page-vehicles-tesla-physics",
+    "commit": "052906b7fd6f7de6777aac062f92acd12c55ec09",
+    "historicalOnly": "54/54 tests/lint/style accepted historically; native capture failed before viewport assertions. Not rerun. Phases0-5 remain closed,6 unfinished,7 NOTRUN."
+  },
+  "counts": {
+    "confirmedMechanisms": 7,
+    "candidates": 4,
+    "deduplicatedNeeds": 4,
+    "pageLines": 55,
+    "historicalPageLines": 50,
+    "presentationFiles": 22,
+    "presentationLines": 1359,
+    "primaryScannedFiles": 23,
+    "routes": 16,
+    "lazyInvestigations": 15,
+    "evidencePanels": 29,
+    "rawRows": 14,
+    "directTables": 4,
+    "rawRowsMobileAllowlists": 10,
+    "totalMobileAllowlists": 14,
+    "hiddenColumnProjections": 31,
+    "sectionLossAgainstInventory": 0,
+    "staticTCalls": 486,
+    "distinctStaticKeys": 382,
+    "canonicalMissingStaticKeys": 0,
+    "pageAuthoredCases": 54,
+    "helperAuthoredCases": 20,
+    "smokeAuthoredTests": 1,
+    "authoredTotal": 75,
+    "testsExecuted": 0,
+    "testsDiscovered": null,
+    "testsPassed": null,
+    "testsFailed": null,
+    "testsSkipped": null,
+    "sourceTestPins": 55,
+    "pinMismatches": 0,
+    "nonzeroCommandAttempts": 4
+  },
+  "sections": {
+    "overview": "Five returned-evidence metrics; common navigation/boundaries/summary",
+    "clocks": "2 panels; event/ingest/display, signed lag, gaps/denominators/interval filter/recent and raw",
+    "life-tape": "2; state duration/window overlaps/longest/latest/state filter/raw",
+    "contradictions": "2; episodes/observations/uncertainty and kind filters/nearest port noncausal/raw",
+    "meters": "2; current counters/drop magnitudes/ratio not engagement/firmware crosscheck/raw",
+    "unknown": "2; requested/sample/unknown hours and overlapping per-signal budgets not summed",
+    "car-kept-living": "2; telemetry/broker/queue/replay snapshots and offset/lag limits",
+    "logbook": "2; telemetry state versus drive/charge boundaries/kind filter/recent/raw/session links",
+    "firmware-epochs": "2; observed chronology/signed counter change/drop/dwell/version filter/raw, not installation time",
+    "charge-port": "2; state/gear/firmware/latch/schedule/signed current/door/transitions/filter/raw",
+    "black-box": "2; latest trigger/window/frame/current coverage/caps/changes/full raw, not complete history",
+    "dictionary": "2; dictionary versus returned vault median/bounds/quartiles/population/distribution",
+    "vault": "1; certificate window/issued/rules/hash/HMAC verification limits/session caps/3 raw disclosures",
+    "modes": "2; nullable booleans/current versus historical counter/firmware interpretations",
+    "nervous-system": "2; classifications/attention/exact signal budget matches/status filter/raw",
+    "range": "2; estimates/energy/spread/intensity/pairwise direction and magnitude/forecast limits"
+  },
+  "actions": [
+    "Copy link",
+    "Fatal retry",
+    "Retained refresh",
+    "Overview/investigation navigation",
+    "Mobile labeled Select",
+    "Ledger/science links",
+    "Raw Accordion disclosures",
+    "Pagination25/50/100",
+    "Brief review drawers",
+    "Clock interval filter",
+    "Life state filter",
+    "Contradiction kind/uncertainty filters",
+    "Logbook kind filter",
+    "Firmware version filter",
+    "Port state filter",
+    "Nervous status filter",
+    "Positive-ID drive/charge drilldowns",
+    "Related investigation links"
+  ],
+  "scope": {
+    "header": "workspaceScope.ts23-77 excludes all16 aliases from range-enabled set; vehicle enabled, no local picker. Not a silently ignored visible range selector.",
+    "hook": "useTeslaPhysics.ts109-117 vehicle-only QueryScope; both start/end absent. GET /physics/exclusive with scoped snake_case vehicle_id and AbortSignal. Scope helper can serialize both bounds if supplied; actual server exclusive/cap/filter semantics NOTRUN.",
+    "window": "Requested/recorded bounds and max14-day/cap disclosures shown; they are report provenance, not proof of header propagation. Fetch time labeled Report received, not observation.",
+    "policy": "Historical5min stale/30minGC, no polling/focus/reconnect/mount refetch; retries ambient. Backend/request availability NOTRUN."
+  },
+  "physicalReview": {
+    "SI": "DTO meters/Wh/seconds/amps preserved; explicit legacy report-hours and Wh/km not guessed or renamed. Raw cache/report unchanged; meter/Wh display via unit hooks, report hours adapted to seconds for duration metrics.",
+    "signs": "Signed ingest-event lag and signed amps/firmware changes preserved. formatMetric ordinary custom duration does not reject negative lag; only roundedMinutes duration does. Helper authored tests101-122 signed-2s/zero gap and153-164 signed-1.25A support source reading, not executed passes. Historical sign-loss suspicion rejected.",
+    "magnitudes": "Drop from-before/to-after and pair absolute separation have explicit magnitude meanings, not blanket sign removal. F07 is equality ordering only.",
+    "model": "Range estimates are not calibrated uncertainty/true range/distance-to-empty. No remaining-energy/intensity division invents range. Modes current not historical; firmware first-observed not installation/cause; meter ratio not FSD engagement.",
+    "unknownZero": "Missing ratios/durations/current/lag remain unknown. Returned empty counts may0 but not lifetime absence. Empty life duration unknown, false mode distinct from null. Unknown budgets overlap and are not summed. No missing nerves population converted to measured0%alive.",
+    "trust": "MQTT connected not event receipt, queue snapshot not lost-event count, replay event time retained. Sparse black-box not event absence. HMAC/hash configuration not actual verification/completeness. Domain caveats/provenance present."
+  },
+  "states": {
+    "initial": "F01 incorrect selected-vehicle body; query prop only freshness, no explicit loading",
+    "initialPaused": "F01 no-data paused blocked reason omitted; StaleRefreshWarning59 suppresses without retained data",
+    "fatal": "QueryError/refetch with no retained data; appropriate replacement, nav survives",
+    "retained": "Data remains on failure/paused; warning/refresh and stale overview retained. Generic stale label says after refresh failure even paused; C04 wording only",
+    "missingSlice": "F02 active fallback also erases independent overview",
+    "missingMetadata": "Overview/boundaries partial; nested coverage unknown explicit, C04",
+    "filteredEmpty": "F03 not equivalent to no returned source"
+  },
+  "confirmedFindings": [
+    {
+      "id": "F01",
+      "rule": "initial-source-presentation",
+      "severity": "high",
+      "file": "web/src/features/vehicles/components/tesla-physics/PhysicsPageShell.tsx",
+      "line": 103,
+      "relatedLines": [
+        64,
+        69,
+        70,
+        75,
+        101
+      ],
+      "mechanism": "Selected vehicle with undefined report/no fatal falls to Select a vehicle to load Tesla physics. PageLayout forwards query without loading/busy; PageContainer244-260 skeleton needs explicit loading. Initial-paused dataState plus StaleRefreshWarning59 has no retained-data blocked explanation.",
+      "repro": "NOTEXECUTED source recipe: selected7, dataundefined,errornull,isPendingtrue,fetchStatusfetching then paused; body incorrectly tells user to select vehicle instead of source loading/initial blocked.",
+      "fix": "Existing shell source-shaped loading/neutral initial-paused feedback; retain fatal retry and retained source."
+    },
+    {
+      "id": "F02",
+      "rule": "hidden-section",
+      "severity": "high",
+      "file": "web/src/features/vehicles/components/tesla-physics/PhysicsPageShell.tsx",
+      "line": 97,
+      "relatedLines": [
+        99,
+        100
+      ],
+      "mechanism": "Missing active slice replaces all children, including independent overview TeslaPhysicsPage.tsx28-54. Boundaries survive but returned other-slice metrics disappear.",
+      "repro": "NOTEXECUTED: supported missing-slice fixture /clocks with clocksnull and other slices populated; placeholder present, tesla-physics-evidence-summary absent. Existing test454-467 checks only placeholder; no backend null incident asserted.",
+      "fix": "Fallback only active investigation; retain independent overview and source boundaries."
+    },
+    {
+      "id": "F03",
+      "rule": "filtered-empty-claim",
+      "severity": "medium",
+      "file": "web/src/features/vehicles/components/tesla-physics/PhysicsContradictionsSection.tsx",
+      "line": 67,
+      "relatedLines": [
+        15,
+        16,
+        59,
+        66
+      ],
+      "mechanism": "Filtered episodes empty claims No contradictions in returned window; accurate table no-matches message unreachable when episodes.length0.",
+      "repro": "NOTEXECUTED: nonempty findings all unknownfalse; choose uncertaintyunknown. All-findings disclosure still populated while false source-absence statement appears.",
+      "fix": "Separate filtered no-match from returned0; existing teslaOnly.noMatchingFindings key."
+    },
+    {
+      "id": "F04",
+      "rule": "date-preferences",
+      "severity": "medium",
+      "file": "web/src/features/vehicles/components/tesla-physics/PhysicsPageShell.tsx",
+      "line": 20,
+      "sites": [
+        {
+          "file": "web/src/features/vehicles/components/tesla-physics/PhysicsClocksSection.tsx",
+          "line": 20
+        },
+        {
+          "file": "web/src/features/vehicles/components/operationalbrief-n-z/PhysicsEvidenceBrief.tsx",
+          "line": 14
+        },
+        {
+          "file": "web/src/features/vehicles/components/operationalbrief-n-z/PhysicsEvidenceBrief.tsx",
+          "line": 30
+        }
+      ],
+      "mechanism": "Bare formatDateTime(value) uses browser defaults(dateFormat44-61); clocks toLocaleString(undefined) also omits saved locale/tz. Existing useDateFormat74-85/timezone28-47 resolves settings.",
+      "repro": "NOTEXECUTED: browser en-US/Los_Angeles, saved de-DE/UTC or different user zone, fixed ISO timestamp. These sites keep browser locale/zone. No invented saved12/24 setting bug.",
+      "fix": "Existing settings-aware formatting with clocks second precision preserved; normal hook minute defaults alone insufficient."
+    },
+    {
+      "id": "F05",
+      "rule": "unit-preferences",
+      "severity": "medium",
+      "file": "web/src/features/vehicles/components/tesla-physics/PhysicsRangeSection.tsx",
+      "line": 40,
+      "relatedLines": [
+        45
+      ],
+      "mechanism": "Correct Wh/km->Wh/m raw adapter followed by custom formatter*1000 and fixed Wh/km bypasses saved distance-unit efficiency conversion; caption repeats fixed source unit.",
+      "repro": "NOTEXECUTED: savedmi, intensity200Wh/km; distances become miles but intensity stays200Wh/km instead of equivalent321.8688Wh/mi or0.3218688kWh/mi. Numeric locale/precision still used.",
+      "fix": "Canonical preference-aware efficiency display/caption; raw SI/source values unchanged."
+    },
+    {
+      "id": "F06",
+      "rule": "mobile-evidence-loss",
+      "severity": "high",
+      "file": "web/src/features/vehicles/components/tesla-physics/Evidence.tsx",
+      "line": 21,
+      "sites": [
+        {
+          "file": "web/src/features/vehicles/components/tesla-physics/PhysicsClocksSection.tsx",
+          "line": 80
+        },
+        {
+          "file": "web/src/features/vehicles/components/tesla-physics/PhysicsClocksSection.tsx",
+          "line": 90
+        }
+      ],
+      "mechanism": "14 tables pass mobileColumns but no mobilePresentation/expandable/full details. DataTable479 expandablefalse;506 adapter opt-in;733-743 hidden md:table-cell;1180 hidden cells. Raw Accordion uses same projection, not recovery.",
+      "repro": "NOTEXECUTED source/CSS recipe: width390, paired clock rows, open raw; ingest/display/unknown cells hidden below768, no detail action. Other raw fields: lifeend, meterbefore/after/cause, portcurrent/door/schedule, black-boxlatch/door/schedule, logkind/end, nervdetail, vaultend. Firmware full chronology is alternate-access exception.",
+      "fix": "Reuse existing mobilePresentation/full-detail or row-expansion API locally; no global/new table framework.",
+      "counting": "31 hidden column projections across14 declarations, not31 findings/unique lost fields."
+    },
+    {
+      "id": "F07",
+      "rule": "equal-estimate-claim",
+      "severity": "medium",
+      "file": "web/src/features/vehicles/components/tesla-physics/PhysicsRangeSection.tsx",
+      "line": 54,
+      "relatedLines": [
+        53,
+        55
+      ],
+      "mechanism": "difference>=0 chooses first label then says is higher. Exact valid equality produces strict-order claim beside0 apart.",
+      "repro": "NOTEXECUTED: rated400000,typical400000,idealnull;0 separation but Rated is higher. Existing unequal fixture does not cover tie.",
+      "fix": "Explicit equality wording; retain signed nonzero direction, raw values and zero/null denominator guards."
+    }
+  ],
+  "candidates": [
+    {
+      "id": "C01",
+      "file": "web/src/api/hooks/useTeslaPhysics.ts",
+      "line": 110,
+      "type": "Product/API scope decision",
+      "detail": "Fixed14-day/range-disabled report exemption versus future shared both-bound support; not confirmed ignored header range. Backend semantics NOTRUN."
+    },
+    {
+      "id": "C02",
+      "file": "web/src/features/vehicles/components/tesla-physics/PhysicsUnknownSection.tsx",
+      "line": 16,
+      "type": "Conditional invalid DTO",
+      "detail": "Coverage clamps/negative duration exclusion/nonfinite formatter0 could mask malformed data; actual invalid source not established. Do not promote required-field guesses."
+    },
+    {
+      "id": "C03",
+      "file": "web/src/features/vehicles/components/tesla-physics/PhysicsInvestigationNav.tsx",
+      "line": 17,
+      "type": "Native acceptance",
+      "detail": "Overview/footer links51-55 lack local44px declarations; long unknown/range rows may overflow. No measured hit rectangles/spacing exception/contrast/focus/RTL/200% text/native proof. Investigation links min-h-11, labeled Select preserved."
+    },
+    {
+      "id": "C04",
+      "file": "web/src/features/vehicles/components/operationalbrief-n-z/PhysicsEvidenceBrief.tsx",
+      "line": 21,
+      "type": "Trust wording policy",
+      "detail": "Absent metadata available slice may Source returned despite overviewpartial; unknown scope explicit. Generic stale label after refresh failure on retainedpaused, HMAC tint with verification caveat. Not proven completeness/authentication/failure assurance."
+    }
+  ],
+  "needs": [
+    {
+      "id": "N01",
+      "findings": [
+        "F01",
+        "F02",
+        "F04"
+      ],
+      "owners": "Existing PhysicsPageShell/PhysicsClocksSection/PhysicsEvidenceBrief; bounded trust and local date presentation with tests"
+    },
+    {
+      "id": "N02",
+      "findings": [
+        "F03"
+      ],
+      "owners": "Existing PhysicsContradictionsSection; filtered no-match fix/test"
+    },
+    {
+      "id": "N03",
+      "findings": [
+        "F05",
+        "F07"
+      ],
+      "owners": "One existing PhysicsRangeSection owner for unit/tie fixes/tests"
+    },
+    {
+      "id": "N04",
+      "findings": [
+        "F06"
+      ],
+      "owners": "Existing Evidence RawRows and4 direct tables: clocks,contradictions,logbook,nerves; adopt existing mobile details APIs/test"
+    }
+  ],
+  "queueDedup": "Exact current Physics phase6 file/objective search found assigned QA only, no corrective owner. Unrelated advanced-evidence/action-center/data-quality/secret-rotation/model-trust owners are not Physics owners. Four needs are parent recommendations, not queued leases. Serialize N01/N04 Clocks and N02/N04 Contradictions overlaps; never concurrent shared file writers. No queue/catalog writes.",
+  "checks": {
+    "method": "Actual native Select-String23 explicit production files, manual classification; raw commands/output in log",
+    "correctedRawCounts": {
+      "style-props": 0,
+      "raw-html": 0,
+      "direct-library-import": 0,
+      "old-api-import": 0,
+      "double-prefix": 0,
+      "camelcase-param": 0,
+      "fetch-useeffect": 0,
+      "hardcoded-candidates": 19,
+      "hidden-ternary-lines": 2
+    },
+    "exceptions": "Initial static-var26 were class tokens, raw-html9 were shared Select(case-insensitive), optional-chain64 were not section guards. Corrected case-sensitive scans0. Page wraps Shell->PageLayout->PageContainer, not missing container. Shared UI HTML/vendor/dynamic style expected.19 hardcoded candidates not19 violations. Canonical static keys382 all present; dynamic keys/runtime localization NOTRUN."
+  },
+  "tests": "No tests executed. Page524 lines:28 singles+each6/5/15=54; helper174 lines:5+15=20; smoke86 lines:1 test loops4 theme/width combinations using mocks, not4 discovered tests. Accepted tests not rerun. Covering shell/filter/preferences/tie/mobile tests need separate authorization; preserve original cases.",
+  "summary": {
+    "mostIssues": [
+      "PhysicsPageShell:3(F01,F02,F04)",
+      "PhysicsRangeSection:2(F05,F07)"
+    ],
+    "priority": "Source-state/independent evidence and mobile detail access, then filter/date/unit/tie correctness"
+  },
+  "limits": {
+    "NOTRUN": [
+      "global npx tsc --noEmit",
+      "tests/lint/build/full suites",
+      "browser/Playwright/native",
+      "API/backend/device",
+      "real mobile geometry/accessibility/focus/contrast/RTL/forced colors",
+      "catalog/namespace/performance gates"
+    ],
+    "failures": "1076 exit1 invalid regex;1109/1110 exit1 rg unavailable;1510 exit1 Windows oversized command launch os206, nothing executed. Native probes recovered.1309/1322 exit0 with nonterminating missing settings.ts errors, not successful settings-type scans. Three failed views: formatMetric211 beyond138; DTO411 beyond402; operationalMetrics.ts absent resolved.tsx. definitions.ts unavailable resolved glossary.ts. All recorded honestly.",
+    "sourceProof": "Repros are source-derived NOTEXECUTED, not live incidents or mounted passes. Partial direct-support reads/pins not global audit. Baselines staged as discovered; some initial discovery reads preceded hashes, not atomic repo freeze.55 first pins preserved. Only assigned report/log writes; pre-existing dirty work untouched. No helpers/subagents/installs/servers/Git mutation/source/test/catalog writes."
+  },
+  "ownedFiles": [
+    "docs/frontend-audits/phase6-qa-vehicles-tesla-physics.json",
+    "web/logs/phase6-qa-vehicles-tesla-physics.log"
+  ],
+  "release": {
+    "source": "No source write lease held",
+    "reportLogCommands": "Release immediately after final independent JSON/pin check; all work synchronous, no background services started"
+  },
+  "sourcePins": [
+    {
+      "file": "web/src/features/vehicles/pages/TeslaPhysicsPage.tsx",
+      "sha256Before": "A48686932F20C791FA1176D61CB8BB535C18225689BAD88A125AE80B7A59DBD9",
+      "sha256After": "A48686932F20C791FA1176D61CB8BB535C18225689BAD88A125AE80B7A59DBD9",
+      "match": true
+    },
+    {
+      "file": "web/src/features/vehicles/pages/TeslaPhysicsPage.test.tsx",
+      "sha256Before": "B83797235B0D278709EEA12C085EB36D26EE7AF058837FD3BE05A976AFA3B7BD",
+      "sha256After": "B83797235B0D278709EEA12C085EB36D26EE7AF058837FD3BE05A976AFA3B7BD",
+      "match": true
+    },
+    {
+      "file": "web/src/api/hooks/useTeslaPhysics.ts",
+      "sha256Before": "6D2C93C912837E1F886C9DA7DB3D5617CF594735B5B7D48FDBDD6E1E9BEC7236",
+      "sha256After": "6D2C93C912837E1F886C9DA7DB3D5617CF594735B5B7D48FDBDD6E1E9BEC7236",
+      "match": true
+    },
+    {
+      "file": "web/src/types/teslaPhysics.ts",
+      "sha256Before": "7E7D50D4658120F675D69F70A3140F4DA1596A7B714C6CA648E4E36246212B14",
+      "sha256After": "7E7D50D4658120F675D69F70A3140F4DA1596A7B714C6CA648E4E36246212B14",
+      "match": true
+    },
+    {
+      "file": "web/src/features/vehicles/components/operationalbrief-n-z/VehicleEvidenceBrief.tsx",
+      "sha256Before": "9DE001133E32EE63E950FDACF113D195845DEE7D1595B4EA3A92E09267844F75",
+      "sha256After": "9DE001133E32EE63E950FDACF113D195845DEE7D1595B4EA3A92E09267844F75",
+      "match": true
+    },
+    {
+      "file": "web/src/features/vehicles/components/operationalbrief-n-z/PhysicsHelperBriefs.test.tsx",
+      "sha256Before": "D137D815596963A214A12C3FA67A365F99A9637AC5D98EAA3A7139A3DCF1DC99",
+      "sha256After": "D137D815596963A214A12C3FA67A365F99A9637AC5D98EAA3A7139A3DCF1DC99",
+      "match": true
+    },
+    {
+      "file": "web/e2e/tesla-physics.smoke.spec.ts",
+      "sha256Before": "ACB122AB288F1F2A459C77AB12638DC11908FB8C7320445572AEC18E090F9802",
+      "sha256After": "ACB122AB288F1F2A459C77AB12638DC11908FB8C7320445572AEC18E090F9802",
+      "match": true
+    },
+    {
+      "file": "web/src/features/vehicles/components/tesla-physics/Evidence.tsx",
+      "sha256Before": "698381A34EE68A060C67EF10D6EAE47979B1D01629AA1451928CA6140BB8C5A3",
+      "sha256After": "698381A34EE68A060C67EF10D6EAE47979B1D01629AA1451928CA6140BB8C5A3",
+      "match": true
+    },
+    {
+      "file": "web/src/features/vehicles/components/tesla-physics/PhysicsBlackBoxSection.tsx",
+      "sha256Before": "63C3DA4024F9E46DC20A1EF3ADBE10AB464F23F8EB3163FC64C4DF6E6CC50010",
+      "sha256After": "63C3DA4024F9E46DC20A1EF3ADBE10AB464F23F8EB3163FC64C4DF6E6CC50010",
+      "match": true
+    },
+    {
+      "file": "web/src/features/vehicles/components/tesla-physics/PhysicsCarKeptLivingSection.tsx",
+      "sha256Before": "D9B41769929CF16ED18D3E0C0A17A7B1FD404457A03DC8B6337A076E4D97751E",
+      "sha256After": "D9B41769929CF16ED18D3E0C0A17A7B1FD404457A03DC8B6337A076E4D97751E",
+      "match": true
+    },
+    {
+      "file": "web/src/features/vehicles/components/tesla-physics/PhysicsChargePortSection.tsx",
+      "sha256Before": "40825D02B6E86B68CA8A605855E8C8820770284A35734990E6835C343B6A16AD",
+      "sha256After": "40825D02B6E86B68CA8A605855E8C8820770284A35734990E6835C343B6A16AD",
+      "match": true
+    },
+    {
+      "file": "web/src/features/vehicles/components/tesla-physics/PhysicsClocksSection.tsx",
+      "sha256Before": "BD4AE0340B4BB3F73E89F905A1CE79CD90EC53ED9ECAAC990E645B3DC90209D5",
+      "sha256After": "BD4AE0340B4BB3F73E89F905A1CE79CD90EC53ED9ECAAC990E645B3DC90209D5",
+      "match": true
+    },
+    {
+      "file": "web/src/features/vehicles/components/tesla-physics/PhysicsContradictionsSection.tsx",
+      "sha256Before": "D6D63DB4F05BDCC56DDCD3A16DFB5686EE401B041B90B665825E8903D552CCD8",
+      "sha256After": "D6D63DB4F05BDCC56DDCD3A16DFB5686EE401B041B90B665825E8903D552CCD8",
+      "match": true
+    },
+    {
+      "file": "web/src/features/vehicles/components/tesla-physics/PhysicsDictionarySection.tsx",
+      "sha256Before": "9F848FFBA51EF57F02BDEBF04EB67CD7495C05075DD11ADBB068D502B711BBDF",
+      "sha256After": "9F848FFBA51EF57F02BDEBF04EB67CD7495C05075DD11ADBB068D502B711BBDF",
+      "match": true
+    },
+    {
+      "file": "web/src/features/vehicles/components/tesla-physics/PhysicsFirmwareEpochsSection.tsx",
+      "sha256Before": "EC117A9137A355FCBA2BBA23CDE234EBBB72B7952C526AE23216201AE4386BA3",
+      "sha256After": "EC117A9137A355FCBA2BBA23CDE234EBBB72B7952C526AE23216201AE4386BA3",
+      "match": true
+    },
+    {
+      "file": "web/src/features/vehicles/components/tesla-physics/PhysicsInvestigation.tsx",
+      "sha256Before": "5F9CFBA79B3A7A2BA32EEB50A863845AB01DAD3405951CA9EC37A06E26DC8E2D",
+      "sha256After": "5F9CFBA79B3A7A2BA32EEB50A863845AB01DAD3405951CA9EC37A06E26DC8E2D",
+      "match": true
+    },
+    {
+      "file": "web/src/features/vehicles/components/tesla-physics/PhysicsInvestigationNav.tsx",
+      "sha256Before": "EB0DD4FE6E5D9C3B0919E497848AF2D2EAE1BC448946A6B916B09152278B19F4",
+      "sha256After": "EB0DD4FE6E5D9C3B0919E497848AF2D2EAE1BC448946A6B916B09152278B19F4",
+      "match": true
+    },
+    {
+      "file": "web/src/features/vehicles/components/tesla-physics/PhysicsLifeTapeSection.tsx",
+      "sha256Before": "9DAB2B7B2C6F1055225FD49DD5CA28F53E651DAE9EB29509F674EE4D96E1D6EB",
+      "sha256After": "9DAB2B7B2C6F1055225FD49DD5CA28F53E651DAE9EB29509F674EE4D96E1D6EB",
+      "match": true
+    },
+    {
+      "file": "web/src/features/vehicles/components/tesla-physics/PhysicsLogbookSection.tsx",
+      "sha256Before": "D798B6E11A0594EC1E139633D882A7C0980EA1E853FE31DAD1009F7B1EA5E6EC",
+      "sha256After": "D798B6E11A0594EC1E139633D882A7C0980EA1E853FE31DAD1009F7B1EA5E6EC",
+      "match": true
+    },
+    {
+      "file": "web/src/features/vehicles/components/tesla-physics/PhysicsMetersSection.tsx",
+      "sha256Before": "20E0D7AE457DBEDAAE37A091A683F6CF301E9FEC3B6197597051FD75B453C992",
+      "sha256After": "20E0D7AE457DBEDAAE37A091A683F6CF301E9FEC3B6197597051FD75B453C992",
+      "match": true
+    },
+    {
+      "file": "web/src/features/vehicles/components/tesla-physics/PhysicsModesSection.tsx",
+      "sha256Before": "B0F69798E35C9122344D7594859BAC5A7F76DF28764FF2226456FC951A3599F7",
+      "sha256After": "B0F69798E35C9122344D7594859BAC5A7F76DF28764FF2226456FC951A3599F7",
+      "match": true
+    },
+    {
+      "file": "web/src/features/vehicles/components/tesla-physics/PhysicsNervousSystemSection.tsx",
+      "sha256Before": "A420A712A2FDB95AB7B062C65BCA3EA33C11EB278F30D9D8518E27ABD0389144",
+      "sha256After": "A420A712A2FDB95AB7B062C65BCA3EA33C11EB278F30D9D8518E27ABD0389144",
+      "match": true
+    },
+    {
+      "file": "web/src/features/vehicles/components/tesla-physics/PhysicsPageShell.tsx",
+      "sha256Before": "3A749DE4C2FB6E4EA52471B5E2311F0E5F1926B4E20E4A08B1B589C93A4DA309",
+      "sha256After": "3A749DE4C2FB6E4EA52471B5E2311F0E5F1926B4E20E4A08B1B589C93A4DA309",
+      "match": true
+    },
+    {
+      "file": "web/src/features/vehicles/components/tesla-physics/PhysicsRangeSection.tsx",
+      "sha256Before": "DAEE08692F93170FE4A16B5F461734E9D31C0F0D2C05FC64C4A30A06FBD51E11",
+      "sha256After": "DAEE08692F93170FE4A16B5F461734E9D31C0F0D2C05FC64C4A30A06FBD51E11",
+      "match": true
+    },
+    {
+      "file": "web/src/features/vehicles/components/tesla-physics/PhysicsUnknownSection.tsx",
+      "sha256Before": "82BBA540279F09C15CAF0089F161C5C4EB4BC12592315C53084FD0612BDBF96E",
+      "sha256After": "82BBA540279F09C15CAF0089F161C5C4EB4BC12592315C53084FD0612BDBF96E",
+      "match": true
+    },
+    {
+      "file": "web/src/features/vehicles/components/tesla-physics/PhysicsVaultSection.tsx",
+      "sha256Before": "4F083D52B3024FD42B9F6BECC2C943F6EAD30BF08818852446765241A73FDCD7",
+      "sha256After": "4F083D52B3024FD42B9F6BECC2C943F6EAD30BF08818852446765241A73FDCD7",
+      "match": true
+    },
+    {
+      "file": "web/src/features/vehicles/components/operationalbrief-n-z/PhysicsEvidenceBrief.tsx",
+      "sha256Before": "5E939942FD885F9D6F1C75C1C3D2F9CAB0D949993A40FD7AA67C570D4AD66F41",
+      "sha256After": "5E939942FD885F9D6F1C75C1C3D2F9CAB0D949993A40FD7AA67C570D4AD66F41",
+      "match": true
+    },
+    {
+      "file": "web/src/api/scope.ts",
+      "sha256Before": "135F29C962A5E0C647C9D3A5724AF2A77FE8795C82ED45ED87D7F0F26A103CC1",
+      "sha256After": "135F29C962A5E0C647C9D3A5724AF2A77FE8795C82ED45ED87D7F0F26A103CC1",
+      "match": true
+    },
+    {
+      "file": "web/src/api/queryPolicy.ts",
+      "sha256Before": "F48B0314865D68357DFB904BCE6D2055C3660963D21A8E8866CDA60E54A04524",
+      "sha256After": "F48B0314865D68357DFB904BCE6D2055C3660963D21A8E8866CDA60E54A04524",
+      "match": true
+    },
+    {
+      "file": "web/src/api/dataState.ts",
+      "sha256Before": "21FB454B3C1F01608169F3F3887911DE97F7C754663CC001236EBFDE58211761",
+      "sha256After": "21FB454B3C1F01608169F3F3887911DE97F7C754663CC001236EBFDE58211761",
+      "match": true
+    },
+    {
+      "file": "web/src/hooks/useDataState.ts",
+      "sha256Before": "785BD47E706B066874BEC8999D51093982E93B9680B8DEC16BDDC023DC57FB9B",
+      "sha256After": "785BD47E706B066874BEC8999D51093982E93B9680B8DEC16BDDC023DC57FB9B",
+      "match": true
+    },
+    {
+      "file": "web/src/lib/workspaceScope.ts",
+      "sha256Before": "AEB8C01D410F2377AA5FD713DE1A678A0360ACF647A9C882F03E46C80EFDFCD7",
+      "sha256After": "AEB8C01D410F2377AA5FD713DE1A678A0360ACF647A9C882F03E46C80EFDFCD7",
+      "match": true
+    },
+    {
+      "file": "web/src/lib/dateFormat.ts",
+      "sha256Before": "30EEB276813505D3CEE3D0B1DF38A7B13FC97DCE388A0C5B2C3C86C902F62F64",
+      "sha256After": "30EEB276813505D3CEE3D0B1DF38A7B13FC97DCE388A0C5B2C3C86C902F62F64",
+      "match": true
+    },
+    {
+      "file": "web/src/lib/numberFormat.ts",
+      "sha256Before": "513E7EDF9F917D3B085D36C9449B9D2FE2DE7EE17A7B08D4C10A5A0329DA52C3",
+      "sha256After": "513E7EDF9F917D3B085D36C9449B9D2FE2DE7EE17A7B08D4C10A5A0329DA52C3",
+      "match": true
+    },
+    {
+      "file": "web/src/hooks/useNumberFormatting.ts",
+      "sha256Before": "E32C23DF1CB2001D54D324E2E0A7BE6077720A26820A1CF2AC6C81358ACA2AD7",
+      "sha256After": "E32C23DF1CB2001D54D324E2E0A7BE6077720A26820A1CF2AC6C81358ACA2AD7",
+      "match": true
+    },
+    {
+      "file": "web/src/hooks/useUnits.ts",
+      "sha256Before": "B90452309357B88FE27EDF878A943FF46CF9083015592D1587997B5C0F4A8B14",
+      "sha256After": "B90452309357B88FE27EDF878A943FF46CF9083015592D1587997B5C0F4A8B14",
+      "match": true
+    },
+    {
+      "file": "web/src/hooks/useDateFormat.ts",
+      "sha256Before": "97B1B0EBD44436CD8274A4927D0DF4381B112DF1468A22EF6238029675D6A542",
+      "sha256After": "97B1B0EBD44436CD8274A4927D0DF4381B112DF1468A22EF6238029675D6A542",
+      "match": true
+    },
+    {
+      "file": "web/src/components/layout/layout-reference/PageLayout.tsx",
+      "sha256Before": "7B7EF06A05FE4A97AB0CFBC8E989901DB0FFCA898DEC7D4F5CD796536B4DCA3B",
+      "sha256After": "7B7EF06A05FE4A97AB0CFBC8E989901DB0FFCA898DEC7D4F5CD796536B4DCA3B",
+      "match": true
+    },
+    {
+      "file": "web/src/components/layout/PageContainer.tsx",
+      "sha256Before": "4B718AC20F8A473A3C59B6DBD7031D9BB686E2C3AD93B25DDB94523EEA074B4A",
+      "sha256After": "4B718AC20F8A473A3C59B6DBD7031D9BB686E2C3AD93B25DDB94523EEA074B4A",
+      "match": true
+    },
+    {
+      "file": "web/src/components/feedback/StaleRefreshWarning.tsx",
+      "sha256Before": "C8DF62E2A4F40F60C2CBD3866C48E0590175F7307814FA7E7DAEA7E36A0312E9",
+      "sha256After": "C8DF62E2A4F40F60C2CBD3866C48E0590175F7307814FA7E7DAEA7E36A0312E9",
+      "match": true
+    },
+    {
+      "file": "web/src/lib/metric-reference/formatMetric.ts",
+      "sha256Before": "0337B9F06CD2E21BBD763E3B7DC1D0C6F13EF3017DF0B0CA84B36B2F3083FFE5",
+      "sha256After": "0337B9F06CD2E21BBD763E3B7DC1D0C6F13EF3017DF0B0CA84B36B2F3083FFE5",
+      "match": true
+    },
+    {
+      "file": "web/src/hooks/useOperationalMetrics.tsx",
+      "sha256Before": "B94754AB501D0894B95B46FE87F8879D6EEFD03FEABBA07C98ABEF12CF09F554",
+      "sha256After": "B94754AB501D0894B95B46FE87F8879D6EEFD03FEABBA07C98ABEF12CF09F554",
+      "match": true
+    },
+    {
+      "file": "web/src/components/ui/DataTable.tsx",
+      "sha256Before": "A9C394D5830620A8606B85CD376ED748C6F30AB0DF70A250ACCBD4A9093FF282",
+      "sha256After": "A9C394D5830620A8606B85CD376ED748C6F30AB0DF70A250ACCBD4A9093FF282",
+      "match": true
+    },
+    {
+      "file": "web/src/components/ui/MobileDataTableAdapter.tsx",
+      "sha256Before": "FE665076A69BA80CA5500CD62ECD2FBA8CCDE216C0A704964D236C01327D0E21",
+      "sha256After": "FE665076A69BA80CA5500CD62ECD2FBA8CCDE216C0A704964D236C01327D0E21",
+      "match": true
+    },
+    {
+      "file": "web/src/components/data-display/OperationalBrief.tsx",
+      "sha256Before": "A5C23FD85C5C557A68589728A3C5EA539E7E7FE7E86397B8DED5F9D7D7AB22A7",
+      "sha256After": "A5C23FD85C5C557A68589728A3C5EA539E7E7FE7E86397B8DED5F9D7D7AB22A7",
+      "match": true
+    },
+    {
+      "file": "web/src/hooks/useSettings.ts",
+      "sha256Before": "F0DDDD38C53E59A7103F9EE3160263017654F77AC5001C7EB0D941816B9FDCA3",
+      "sha256After": "F0DDDD38C53E59A7103F9EE3160263017654F77AC5001C7EB0D941816B9FDCA3",
+      "match": true
+    },
+    {
+      "file": "web/src/lib/timezone.ts",
+      "sha256Before": "4DE9F4981D65173697E16DB705CA06B279E9CCB700AC6C98D0D27439F25D5F02",
+      "sha256After": "4DE9F4981D65173697E16DB705CA06B279E9CCB700AC6C98D0D27439F25D5F02",
+      "match": true
+    },
+    {
+      "file": "web/src/lib/unitConversion.ts",
+      "sha256Before": "5584045F063774DE76F9DEA32303C3EC3819F9CD47C95B2C467EF2CB87814FCE",
+      "sha256After": "5584045F063774DE76F9DEA32303C3EC3819F9CD47C95B2C467EF2CB87814FCE",
+      "match": true
+    },
+    {
+      "file": "web/src/lib/metric-reference/glossary.ts",
+      "sha256Before": "3CDD7E4655B6ECD584D6FD0F799B740D762A5448F563BA12D22D54967F7D57A4",
+      "sha256After": "3CDD7E4655B6ECD584D6FD0F799B740D762A5448F563BA12D22D54967F7D57A4",
+      "match": true
+    },
+    {
+      "file": "web/src/App.tsx",
+      "sha256Before": "10669C20207B9DA28A7691107C23BCB6E7F2105BD17BD472AEFD92399F1A517C",
+      "sha256After": "10669C20207B9DA28A7691107C23BCB6E7F2105BD17BD472AEFD92399F1A517C",
+      "match": true
+    },
+    {
+      "file": "web/src/lib/routeRegistry.ts",
+      "sha256Before": "2F59A162F3DC2180031DF87AED196830767FD7720388FA1E6F0C211E550C0A97",
+      "sha256After": "2F59A162F3DC2180031DF87AED196830767FD7720388FA1E6F0C211E550C0A97",
+      "match": true
+    },
+    {
+      "file": "web/src/lib/routeLoaders.ts",
+      "sha256Before": "506F38FA71F84362044F3D99923E8347B31E4329D63D0365C81B29E90A614C58",
+      "sha256After": "506F38FA71F84362044F3D99923E8347B31E4329D63D0365C81B29E90A614C58",
+      "match": true
+    },
+    {
+      "file": "web/src/lib/routePrefetch.ts",
+      "sha256Before": "63CF77FE5B5687C3C7A8D7F0F188E38767C408B1B254DA31C44859D289DF82A2",
+      "sha256After": "63CF77FE5B5687C3C7A8D7F0F188E38767C408B1B254DA31C44859D289DF82A2",
+      "match": true
+    },
+    {
+      "file": "web/src/__tests__/lazyRoutes.parse.ts",
+      "sha256Before": "EAE5E49DD543BA4E4946B998FFF56BFA2B49BD84DB722061302B99288E911C92",
+      "sha256After": "EAE5E49DD543BA4E4946B998FFF56BFA2B49BD84DB722061302B99288E911C92",
+      "match": true
+    },
+    {
+      "file": "web/src/lib/operationalMetrics.tsx",
+      "sha256Before": "211E403D2B7170A9AE96103D2694CD032560E2DCA81CD02AC2BD235B604C807E",
+      "sha256After": "211E403D2B7170A9AE96103D2694CD032560E2DCA81CD02AC2BD235B604C807E",
+      "match": true
+    }
+  ],
+  "snapshotUTC": "2026-10-14T01:44:47.0085063Z"
+}
