@@ -2,6 +2,64 @@
 
 ## Current phase
 
+### Strict actual-worker invariants and fast intake, 2026-10-14T04:48Z
+
+Continue the same branch; Phases0-5 remain closed, Phase6 unfinished,
+Phase7 NOTRUN. User-authorized strict rules are now at the top of
+`docs\orchestrator-loop.md`, committed/pushed `d0796da8b7`. Parent performs
+orchestration/intake/commits/pushes/queue/health/phase gates only: no scoped
+tests, fixture repairs, or source investigation. Workers own unmet proof.
+
+Of the164 old live markers,161 orphan claims were reset pending with
+attempts/history unchanged; the three real original owners were protected.
+Sample-count and RoadHazard later returned and were individually committed/
+pushed as `44af6b59bf` and `2de7efbf2f`. Original Details nine passing cases
+were separately intaken as `e1830b6a9f`. Neutral original profile transport
+guard remains accepted at `ef3c953271`,34 cumulative unique passes, not a
+fresh full34 run. Ten released QA reports were individually intaken/pushed;
+report delivery is NOT native/page approval. Remaining released reports
+still need fast intake, not a repeat audit or a fictitious running marker.
+
+Actual32 known IDs were individually polled running at04:42Z: one retained
+account write-affordance actor plus31 genuine pending continuations. Exact
+IDs are in canonical queue notes and session `files\strict-live-actors.json`.
+Every live marker has a real actor; reservations and delivered chats are
+not counted. Latest04:48 queue snapshot, Phases5+6:358done/190pending/
+32running/43failed/2blocked/5excluded. HEAD `161d2e7d3f`, count1954,
+17 actual successful pushes in04:18:08--04:48:08, before this receipt.
+
+Account actor `c16f9726-a078-4f2c-b9ad-529a99c9bb70` still reports running
+after its immutable04:44 hard limit; conclude and HARD STOP delivered.
+Cancellation tool is unavailable: claim retained, NOT claimed terminated
+or healthy. Other29 continuations started about04:38; final Insight and
+HomeEnergy QA started about04:40. Return at actual launch+20min/hard+25min;
+never renew clocks. HomeEnergy owns the sole active Edge browser lock1/4.
+
+Only catalog writer `61b5316f-52cd-4572-83a3-5b619849a928` has the explicit
+strict-worker-only exception for exactly two Evidence sampleLine plurals
+and normal generated projections. No other English changes/baseline edits.
+All other workers preserve their exact existing source/fixture scopes,
+continue retained attempts, and never rerun unchanged genuine passes.
+
+Known real failures remain explicit: original GDPR covering72/68pass/4fail
+plus CancelledError; Details9 and Lifecycle15 passed, Page/constants
+corrections are assigned workers. Disk five new causal cases passed but
+old neutral-pause oracle failed; its worker owns the correction. Evidence
+corrected observer case passed after35 earlier passes; corrected fixture
+still needs exact intake. Road source-check shell subsequently returned
+exit1/OWN_SEMANTIC_ROOTS=2;19 causal tests passed but source semantics
+are not certified. Delegate that exact missing diagnosis, never parent
+investigation or a fake global green. Literal production compiler1936
+exit0 is historical; required1951 cadence is queued for an actual worker.
+
+Shared sole preview5173 returnedHTTP200 at04:41:35, not backend/native
+readiness. No built-in scheduler exists; requested exact invariant-first
+ten-minute prompt is persisted in the playbook, NOT an installed schedule.
+No cancellation workaround, extension/helper, Docker rebuild, browser
+download, fullgate or guard bypass. Inherited package allowScripts delta
+remains unstaged. Continue immediate returned-result intake, refill actual
+slots and persist released reports individually; no phase completion claim.
+
 ### Caller proof, released intake and rolling source QA, 2026-10-14T02:47Z
 
 Continue the same `fix/dashboard-followups` branch. Phases0-5 stay closed;
