@@ -6,27 +6,22 @@ import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/cn';
 import { GlassPanel, Badge, Toggle, ConfirmDialog, PinButton, PanelTitle, Text, Caption } from '@/components/ui';
 import { Zap } from 'lucide-react';
-import type { Automation } from '@/api/types';
+import { automationStatus, type AutomationListItem } from '@/api/hooks/useAutomations';
 import { AutomationCardActions } from '../components/automation-helper-source-closure/AutomationCardActions';
 import { AutomationCardStatistics } from '../components/automation-helper-source-closure/AutomationCardStatistics';
 import { AutomationCardNotices } from '../components/automation-helper-source-closure/AutomationCardNotices';
 
-type AutomationUIStatus = 'active' | 'disabled' | 'auto-disabled';
-
-function getUIStatus(a: Automation): AutomationUIStatus {
-  if (a.auto_disabled) return 'auto-disabled';
-  if (!a.enabled) return 'disabled';
-  return 'active';
-}
+type AutomationUIStatus = 'active' | 'disabled' | 'auto-disabled' | 'unknown';
 
 const statusStyles: Record<AutomationUIStatus, { label: string; variant: 'success' | 'neutral' | 'danger' }> = {
   active: { label: 'Active', variant: 'success' },
   disabled: { label: 'Disabled', variant: 'neutral' },
   'auto-disabled': { label: 'Auto-disabled', variant: 'danger' },
+  unknown: { label: 'Unknown', variant: 'neutral' },
 };
 
 interface AutomationCardProps {
-  automation: Automation;
+  automation: AutomationListItem;
   isFiring: boolean;
   vehicleName?: string;
   onToggle: (id: number, enabled: boolean) => void;
@@ -50,7 +45,7 @@ export function AutomationCard({
 }: AutomationCardProps) {
   const { t } = useTranslation();
   const [confirmDelete, setConfirmDelete] = useState(false);
-  const uiStatus = useMemo(() => getUIStatus(a), [a]);
+  const uiStatus = useMemo(() => automationStatus(a) ?? 'unknown', [a]);
   const status = statusStyles[uiStatus];
 
   useEffect(() => {
@@ -83,7 +78,9 @@ export function AutomationCard({
           <div className="min-w-0 flex-1 basis-48">
             <div className="flex min-w-0 flex-wrap items-center gap-2">
               <PanelTitle className="min-w-0 break-words">{a.name}</PanelTitle>
-              <Badge variant={status.variant}>{t(`automations.status.${uiStatus}`, status.label)}</Badge>
+              <Badge variant={status.variant}>{uiStatus === 'unknown'
+                ? t('common.unknown', 'Unknown')
+                : t(`automations.status.${uiStatus}`, status.label)}</Badge>
               {isFiring && (
                 <Caption className="flex items-center gap-1 animate-pulse motion-reduce:animate-none">
                   <Zap className="h-3 w-3 shrink-0 text-[var(--theme-primary)]" aria-hidden="true" />
@@ -96,18 +93,25 @@ export function AutomationCard({
             )}
           </div>
           <div className="flex max-w-full flex-wrap items-center gap-2">
-            <PinButton itemType="automation" itemId={a.id} size="sm" minTargetSize={44} />
-            <Toggle
-              checked={a.auto_disabled ? false : a.enabled}
-              onChange={handleToggle}
-              disabled={actionsDisabled}
+            <PinButton
+              itemType="automation"
+              itemId={a.id}
               size="sm"
-              aria-label={t('automations.toggleLabel', 'Toggle automation')}
+              minTargetSize={44}
+              ariaLabel={t('automations.card.pinLabel', { name: a.name, defaultValue: 'Pin automation {{name}}' })}
+            />
+            <Toggle
+              checked={a.auto_disabled === true ? false : a.enabled === true}
+              onChange={handleToggle}
+              disabled={actionsDisabled || typeof a.enabled !== 'boolean'}
+              size="sm"
+              aria-label={t('automations.card.toggleLabel', { name: a.name, defaultValue: 'Toggle automation {{name}}' })}
               title={actionsDisabledReason}
             />
             <AutomationCardActions
               automationId={a.id}
-              autoDisabled={a.auto_disabled}
+              automationName={a.name}
+              autoDisabled={a.auto_disabled === true}
               actionsDisabled={actionsDisabled}
               actionsDisabledReason={actionsDisabledReason}
               onTestRun={onTestRun}

@@ -14,6 +14,8 @@ import { render, screen, fireEvent, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 
+const translations = vi.hoisted(() => ({} as Record<string, string>));
+
 // i18n stub — resolve to the provided English default, honouring both the
 // `t(key, 'Default')` and `t(key, { defaultValue, ...vars })` call shapes and
 // interpolating `{{var}}` tokens so the delete-confirm copy is readable.
@@ -22,7 +24,7 @@ vi.mock('react-i18next', () => ({
     t: (key: string, opts?: string | Record<string, unknown>) => {
       if (typeof opts === 'string') return opts || key;
       if (opts && typeof opts === 'object') {
-        let out = typeof opts.defaultValue === 'string' ? opts.defaultValue : key;
+        let out = translations[key] ?? (typeof opts.defaultValue === 'string' ? opts.defaultValue : key);
         for (const [k, v] of Object.entries(opts)) {
           if (k === 'defaultValue') continue;
           out = out.replace(new RegExp(`{{\\s*${k}\\s*}}`, 'g'), String(v));
@@ -136,16 +138,47 @@ function renderCard(
 }
 
 function openMenu() {
-  fireEvent.click(screen.getByRole('button', { name: 'Actions menu' }));
+  fireEvent.click(screen.getByRole('button', { name: /^Actions for / }));
 }
 
 beforeEach(() => {
   vi.clearAllMocks();
+  for (const key of Object.keys(translations)) delete translations[key];
 });
 
 // ── Status badge + toggle state ───────────────────────────────────────────────
 
 describe('AutomationCard — status', () => {
+  it('localizes rule-specific control names without changing state or delete confirmation', () => {
+    translations['automations.card.pinLabel'] = 'Anheften: {{name}}';
+    translations['automations.card.toggleLabel'] = 'Umschalten: {{name}}';
+    translations['automations.card.menuLabel'] = 'Aktionen: {{name}}';
+    const name = 'Morning warmup';
+    const { handlers } = renderCard(makeAutomation({ id: 41, name, enabled: true }));
+    renderCard(makeAutomation({ id: 42, name: 'Nightly report', enabled: false }));
+
+    expect(screen.getByRole('button', { name: `Anheften: ${name}` })).toHaveAttribute('aria-pressed', 'false');
+    expect(screen.getByRole('button', { name: 'Anheften: Nightly report' })).toBeInTheDocument();
+    const toggle = screen.getByRole('switch', { name: `Umschalten: ${name}` });
+    expect(toggle).toHaveAttribute('aria-checked', 'true');
+    expect(screen.getByRole('switch', { name: 'Umschalten: Nightly report' })).toHaveAttribute('aria-checked', 'false');
+    fireEvent.click(toggle);
+    expect(handlers.onToggle).toHaveBeenCalledWith(41, false);
+
+    const trigger = screen.getByRole('button', { name: `Aktionen: ${name}` });
+    expect(trigger).toHaveAttribute('aria-expanded', 'false');
+    fireEvent.click(trigger);
+    expect(trigger).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getByLabelText(`Aktionen: ${name}`, { selector: '[role="dialog"]' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
+    expect(trigger).toHaveAttribute('aria-expanded', 'false');
+    const dialog = screen.getByRole('dialog');
+    expect(dialog).toHaveTextContent(name);
+    expect(handlers.onDelete).not.toHaveBeenCalled();
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Delete' }));
+    expect(handlers.onDelete).toHaveBeenCalledWith(41);
+  });
+
   it('keeps distinct reachable header targets and wraps populated narrow cards', () => {
     const name = 'A long automation name with all departure conditions preserved';
     const { container } = renderCard(makeAutomation({
@@ -155,9 +188,9 @@ describe('AutomationCard — status', () => {
     }));
     const pin = screen.getByTestId('pin-button');
     expect(pin).toHaveClass('min-h-11', 'min-w-11');
-    const toggle = screen.getByRole('switch', { name: 'Toggle automation' });
+    const toggle = screen.getByRole('switch', { name: `Toggle automation ${name}` });
     expect(toggle).toHaveClass('h-11', 'min-w-11', 'shrink-0');
-    expect(screen.getByRole('button', { name: 'Actions menu' })).toHaveClass('min-h-11', 'min-w-11');
+    expect(screen.getByRole('button', { name: `Actions for ${name}` })).toHaveClass('min-h-11', 'min-w-11');
     expect(toggle.parentElement?.parentElement).toHaveClass('flex-wrap', 'gap-2', 'max-w-full');
     expect(screen.getByRole('heading', { name })).toHaveClass('min-w-0', 'break-words');
     expect(container.textContent).toContain('Runs: 42');
@@ -269,7 +302,7 @@ describe('AutomationCard — toggle routing', () => {
 describe('AutomationCard — actions menu', () => {
   it('toggles aria-expanded and reveals the base action items', () => {
     renderCard(makeAutomation({ auto_disabled: false }));
-    const trigger = screen.getByRole('button', { name: 'Actions menu' });
+    const trigger = screen.getByRole('button', { name: 'Actions for Precondition at 7am' });
     expect(trigger).toHaveAttribute('aria-expanded', 'false');
     expect(trigger).toHaveAttribute('aria-haspopup', 'true');
 
@@ -298,7 +331,7 @@ describe('AutomationCard — actions menu', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Test run' }));
     expect(handlers.onTestRun).toHaveBeenCalledWith(22);
     // Menu collapses after the action fires.
-    expect(screen.getByRole('button', { name: 'Actions menu' })).toHaveAttribute(
+    expect(screen.getByRole('button', { name: 'Actions for Precondition at 7am' })).toHaveAttribute(
       'aria-expanded',
       'false',
     );

@@ -318,6 +318,11 @@
     "noHistory": "No execution history yet",
     "firing": "Firing",
     "toggleLabel": "Toggle automation",
+    "card": {
+      "pinLabel": "Pin automation {{name}}",
+      "toggleLabel": "Toggle automation {{name}}",
+      "menuLabel": "Actions for {{name}}"
+    },
     "menu": "Actions menu",
     "testRun": "Test run",
     "reEnable": "Re-enable",

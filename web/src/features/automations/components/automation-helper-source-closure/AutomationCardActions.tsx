@@ -5,6 +5,7 @@ import { MoreVertical, Play, RotateCcw, Copy, Download, Trash2 } from 'lucide-re
 
 interface AutomationCardActionsProps {
   automationId: number;
+  automationName: string;
   autoDisabled: boolean;
   actionsDisabled: boolean;
   actionsDisabledReason?: string;
@@ -14,7 +15,7 @@ interface AutomationCardActionsProps {
 }
 
 export function AutomationCardActions({
-  automationId, autoDisabled, actionsDisabled, actionsDisabledReason,
+  automationId, automationName, autoDisabled, actionsDisabled, actionsDisabledReason,
   onTestRun, onReEnable, onRequestDelete,
 }: AutomationCardActionsProps) {
   const { t } = useTranslation();
@@ -32,6 +33,7 @@ export function AutomationCardActions({
   }, [menuOpen]);
 
   const actionClassName = 'min-h-11 w-full justify-start rounded-none px-3 py-2 text-start';
+  const menuLabel = t('automations.card.menuLabel', { name: automationName, defaultValue: 'Actions for {{name}}' });
 
   return (
     <>
@@ -42,7 +44,7 @@ export function AutomationCardActions({
         size="sm"
         className="min-h-11 min-w-11"
         onClick={() => setMenuOpen(!menuOpen)}
-        aria-label={t('automations.menu', 'Actions menu')}
+        aria-label={menuLabel}
         aria-haspopup="true"
         aria-expanded={menuOpen}
       >
@@ -53,7 +55,7 @@ export function AutomationCardActions({
         onClose={closeMenu}
         anchorRef={anchorRef}
         align="end"
-        ariaLabel={t('automations.menu', 'Actions menu')}
+        ariaLabel={menuLabel}
         className="w-56 max-w-[calc(100vw-1rem)] max-h-[calc(100dvh-1rem)] overflow-y-auto py-1"
       >
         <Button
