@@ -2,11 +2,13 @@ import { fireEvent, render, renderHook, screen, waitFor, within } from '@testing
 import { MemoryRouter } from 'react-router-dom';
 import { describe, expect, it, vi } from 'vitest';
 import type { StatMetric } from '@/components/data-display';
+import { CardGrid } from '@/components/layout';
 import { useOperationalMetrics } from '@/hooks/useOperationalMetrics';
 import { VehicleOperationalBrief } from './VehicleOperationalBrief';
 import { deriveDataState } from '@/api/dataState';
 import type { MediaSnapshot } from '@/api/types';
 import { MediaStats } from '../media-player-modernization/MediaStats';
+import { MediaSlot } from '../media-player-modernization/MediaSlot';
 import { playbackProgress } from '../media-player-modernization/mediaPresentation';
 
 vi.mock('@/hooks/useUnits', () => ({
@@ -33,6 +35,26 @@ const period = {
 };
 
 describe('real vehicle OperationalBrief and numeric bridge', () => {
+  it('preserves the media slot fallback and public CardGrid placement without adding a panel', () => {
+    const content = <div data-testid="media-content">Recorded track</div>;
+    const view = render(<MediaSlot>{content}</MediaSlot>);
+    const fallback = view.container.querySelector('[data-media-slot]');
+    expect(fallback).toHaveAttribute('data-card-size', 'full');
+    expect(fallback).toHaveAttribute('data-card-resolved-span', '1');
+    expect(fallback).toHaveClass('min-w-0', '[&>div]:h-full', 'col-span-1');
+    expect(screen.getByTestId('media-content').parentElement).toBe(fallback);
+
+    view.rerender(<CardGrid label="Media placement" items={[
+      { id: 'track', size: 'half', content: <MediaSlot>{content}</MediaSlot> },
+    ]} />);
+    const placed = view.container.querySelector('[data-media-slot]');
+    expect(placed).toHaveAttribute('data-card-size', 'half');
+    expect(placed).toHaveAttribute('data-card-resolved-span', '1');
+    expect(placed).toHaveClass('min-w-0', '[&>div]:h-full', 'col-span-1');
+    expect(screen.getByTestId('media-content').parentElement).toBe(placed);
+    expect(placed?.parentElement).toHaveClass('grid');
+  });
+
   it.each([
     [250, 125, 0.25, 0.125, 50],
     [1499, 749, 1.499, 0.749, 749 / 1499 * 100],

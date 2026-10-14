@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { useCardPlacement } from '@/components/layout/layout-reference';
+import { useCardPlacement } from '@/components/layout';
 import { cn } from '@/lib/cn';
 
 /** Placement only: the existing section owns its panel, state and semantics. */

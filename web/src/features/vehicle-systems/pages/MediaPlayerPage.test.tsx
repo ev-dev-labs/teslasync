@@ -267,6 +267,26 @@ function renderPage() {
 const statsRegion = () => screen.getByRole('region', { name: 'Listening stats' });
 const nowPlayingRegion = () => screen.getByRole('region', { name: 'Now playing' });
 
+describe('MediaPlayerPage media slot placement', () => {
+  it('keeps all four populated sections in their existing half-card slots and order', () => {
+    const view = renderPage();
+    const slots = Array.from(view.container.querySelectorAll('[data-media-slot]'));
+    expect(slots).toHaveLength(4);
+    for (const slot of slots) {
+      expect(slot).toHaveAttribute('data-card-size', 'half');
+      expect(slot).toHaveAttribute('data-card-resolved-span', '1');
+      expect(slot).toHaveClass('min-w-0', '[&>div]:h-full', 'col-span-1');
+      expect(slot.parentElement).toHaveClass('grid');
+    }
+    expect(slots[0]).toContainElement(nowPlayingRegion());
+    expect(slots[0]).toHaveTextContent('Now Song');
+    expect(slots[1]).toContainElement(screen.getByTestId('linear-gauge'));
+    expect(slots[2]).toContainElement(screen.getByTestId('volume-chart'));
+    expect(slots[3]).toHaveTextContent('Spotify');
+    expect(bodyRows()).toHaveLength(3);
+  });
+});
+
 /** Read the shared stat tile's value, excluding its help and source context. */
 function kpiValue(label: string): string {
   const span = within(statsRegion()).getByText(label, { selector: '[data-operational-metric] > div:first-child > :first-child' });
